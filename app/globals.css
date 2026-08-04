@@ -1,0 +1,69 @@
+:root {
+  --background: #f4f7fb;
+  --surface: #ffffff;
+  --surface-muted: #eef2f7;
+  --foreground: #111827;
+  --muted-foreground: #667085;
+  --border: #dfe5ec;
+  --primary: #111827;
+  --primary-foreground: #ffffff;
+  --accent: #2f6fed;
+  --accent-soft: #eaf1ff;
+  --success: #168f5b;
+  --warning: #c77b11;
+  --danger: #c63f4b;
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --shadow-lg: 0 28px 80px rgba(15, 23, 42, 0.12);
+  --shadow-md: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--background);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(47, 111, 237, 0.1), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(91, 74, 245, 0.08), transparent 26%),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  border: 0;
+}
+
+::selection {
+  background: rgba(47, 111, 237, 0.2);
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.brand-type {
+  font-family: var(--font-montserrat), Arial, sans-serif;
+}
