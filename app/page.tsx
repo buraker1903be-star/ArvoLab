@@ -1,4 +1,5 @@
 import { ArrowRight, BookOpenCheck, ChartNoAxesCombined, FileCheck2, ShieldCheck } from "lucide-react";
+import { login } from "@/app/actions/auth";
 
 const highlights = [
   {
@@ -18,7 +19,19 @@ const highlights = [
   },
 ];
 
-export default function HomePage() {
+type HomePageProps = {
+  searchParams: Promise<{ error?: string }>;
+};
+
+const errorMessages: Record<string, string> = {
+  "missing-credentials": "E-posta adresi ve şifre zorunludur.",
+  "invalid-credentials": "E-posta adresi veya şifre hatalı.",
+};
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const params = await searchParams;
+  const errorMessage = params.error ? errorMessages[params.error] : null;
+
   return (
     <main className="login-page">
       <section className="login-showcase" aria-label="ArvoLab tanıtımı">
@@ -66,29 +79,17 @@ export default function HomePage() {
             <p>Kurumsal e-posta adresiniz ve şifrenizle devam edin.</p>
           </div>
 
-          <form className="login-form">
+          {errorMessage ? <p className="login-error" role="alert">{errorMessage}</p> : null}
+
+          <form className="login-form" action={login}>
             <label htmlFor="email">E-posta adresi</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="ornek@kurum.com"
-              required
-            />
+            <input id="email" name="email" type="email" autoComplete="email" placeholder="ornek@kurum.com" required />
 
             <div className="password-label-row">
               <label htmlFor="password">Şifre</label>
               <a href="#">Şifremi unuttum</a>
             </div>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="Şifrenizi girin"
-              required
-            />
+            <input id="password" name="password" type="password" autoComplete="current-password" placeholder="Şifrenizi girin" required />
 
             <button className="login-button" type="submit">
               Giriş yap
@@ -99,10 +100,8 @@ export default function HomePage() {
           <div className="login-footer">
             <p>Hesabınız yoksa kurum yöneticinizden davet talep edin.</p>
             <div>
-              <a href="#">Gizlilik</a>
-              <span aria-hidden="true">•</span>
-              <a href="#">Destek</a>
-              <span aria-hidden="true">•</span>
+              <a href="#">Gizlilik</a><span aria-hidden="true">•</span>
+              <a href="#">Destek</a><span aria-hidden="true">•</span>
               <a href="#">Sistem durumu</a>
             </div>
           </div>
