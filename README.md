@@ -75,11 +75,13 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 ## Yol Haritası
 
 - [x] Kimlik doğrulama
-- [x] Akademik çalışma kayıtları (arayüz)
+- [x] Roller ve kurum yapısı
+- [x] "Yeni çalışma" formu Supabase'e gerçek kayıt yazıyor
+- [x] Çalışmalar listesi ve dashboard istatistikleri gerçek verilerle çalışıyor
 - [x] APA 7 kaynakça doğrulama
-- [ ] "Yeni çalışma" formunun Supabase'e gerçek kayıt yazması
-- [ ] Çalışmalar listesinin gerçek verilerle çalışması
+- [x] Marka kimliği (logo, renkler)
 - [ ] Üniversite tez yazım kılavuzu veritabanı + uyum kontrolü
+- [ ] Kontrolör onay akışı (arayüz)
 - [ ] ArvoLab Orijinallik Ön-Kontrolü (kendi markalı benzerlik taraması)
 - [ ] Doçentlik puan hesaplayıcı (ÜAK kriterleri)
 - [ ] MAXQDA / SPSS çıktı yorumlama asistanı

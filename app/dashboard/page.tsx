@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import {
   BookOpenCheck,
   ChartNoAxesCombined,
@@ -8,34 +9,32 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-
-const stats = [
-  { label: "Aktif çalışmalar", value: "17", icon: FolderKanban },
-  { label: "Revizyon bekleyen", value: "4", icon: Clock3 },
-  { label: "Kaynak doğrulama", value: "5", icon: BookOpenCheck },
-  { label: "Analiz süreci", value: "2", icon: ChartNoAxesCombined },
-];
+import { getProjects } from "@/app/actions/projects";
 
 const workstreams = [
   {
     title: "Akademik çalışmalar",
     description: "Tez, makale ve proje süreçlerini tek merkezden yönetin.",
     icon: FolderKanban,
+    href: "/dashboard/projects",
   },
   {
     title: "Literatür merkezi",
     description: "Kaynak havuzlarını, DOI kayıtlarını ve doğrulama durumlarını izleyin.",
     icon: BookOpenCheck,
+    href: null,
   },
   {
     title: "Belge kontrolü",
     description: "Üniversite kılavuzu, APA 7 ve biçim denetimlerini çalıştırın.",
     icon: FileCheck2,
+    href: "/dashboard/documents",
   },
   {
     title: "Analiz merkezi",
     description: "Nicel ve nitel analiz taleplerini takip edin.",
     icon: ChartNoAxesCombined,
+    href: null,
   },
 ];
 
@@ -50,6 +49,19 @@ export default async function DashboardPage() {
   }
 
   const displayName = user.user_metadata?.full_name || user.email || "Kullanıcı";
+  const projects = await getProjects();
+
+  const activeCount = projects.filter((p) => p.status !== "delivered" && p.status !== "archived").length;
+  const revisionCount = projects.filter((p) => p.status === "revision").length;
+  const analysisCount = projects.filter((p) => p.status === "analysis").length;
+  const referenceCount = projects.filter((p) => p.status === "review" || p.status === "turnitin").length;
+
+  const stats = [
+    { label: "Aktif çalışmalar", value: String(activeCount), icon: FolderKanban },
+    { label: "Revizyon bekleyen", value: String(revisionCount), icon: Clock3 },
+    { label: "Kaynak/biçim incelemesinde", value: String(referenceCount), icon: BookOpenCheck },
+    { label: "Analiz süreci", value: String(analysisCount), icon: ChartNoAxesCombined },
+  ];
 
   return (
     <main className="dashboard-page">
@@ -80,14 +92,22 @@ export default async function DashboardPage() {
       </section>
 
       <section className="dashboard-grid" aria-label="ArvoLab modülleri">
-        {workstreams.map(({ title, description, icon: Icon }) => (
+        {workstreams.map(({ title, description, icon: Icon, href }) => (
           <article className="dashboard-module-card" key={title}>
             <div className="dashboard-module-icon">
               <Icon size={22} strokeWidth={1.8} />
             </div>
             <h2>{title}</h2>
             <p>{description}</p>
-            <button type="button">Modülü aç</button>
+            {href ? (
+              <Link href={href}>
+                <button type="button">Modülü aç</button>
+              </Link>
+            ) : (
+              <button type="button" disabled style={{ opacity: 0.5, cursor: "not-allowed" }}>
+                Yakında
+              </button>
+            )}
           </article>
         ))}
       </section>

@@ -1,7 +1,21 @@
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Save } from "lucide-react";
+import { createProject } from "@/app/actions/projects";
 
-export default function NewProjectPage() {
+const errorMessages: Record<string, string> = {
+  "missing-title": "Çalışma başlığı en az 3 karakter olmalıdır.",
+  "missing-type": "Lütfen çalışma türünü seçin.",
+  "save-failed": "Kaydedilirken bir hata oluştu, lütfen tekrar deneyin.",
+};
+
+type NewProjectPageProps = {
+  searchParams: Promise<{ error?: string }>;
+};
+
+export default async function NewProjectPage({ searchParams }: NewProjectPageProps) {
+  const params = await searchParams;
+  const errorMessage = params.error ? errorMessages[params.error] : null;
+
   return (
     <main className="dashboard-page">
       <section className="projects-header">
@@ -16,7 +30,13 @@ export default function NewProjectPage() {
         </Link>
       </section>
 
-      <form className="project-form">
+      {errorMessage ? (
+        <p className="login-error" role="alert" style={{ marginBottom: 16 }}>
+          {errorMessage}
+        </p>
+      ) : null}
+
+      <form className="project-form" action={createProject}>
         <section className="project-form-card">
           <div className="project-form-heading">
             <h2>Temel bilgiler</h2>
