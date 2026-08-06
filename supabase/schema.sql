@@ -329,3 +329,69 @@ create policy "Users can delete their own files"
     bucket_id = 'project-files'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
+-- ============================================================
+-- Üniversite Tez Yazım Kılavuzları
+-- Proje dosyası Bölüm 5.6 "Üniversite Kılavuzları" ile uyumlu.
+-- Kılavuzlar burada YAPILANDIRILMIŞ kurallar (zorunlu bölümler,
+-- kaynakça sistemi, sayfa aralığı) olarak tutulur; belge yükleme
+-- akışında bu kurallara göre otomatik ön kontrol yapılabilir.
+-- Ekleme/güncelleme/silme yalnızca Akademik Yönetici ve üzeri
+-- rollere açıktır; okuma tüm kimlik doğrulaması yapılmış
+-- kullanıcılara açıktır (paylaşılan referans verisi).
+-- ============================================================
+create table if not exists public.thesis_guidelines (
+  id uuid primary key default gen_random_uuid(),
+  university_name text not null,
+  institute_name text,
+  version_label text,              -- örn. "2025 Güz"
+  source_url text,                 -- kılavuzun resmi kaynağı
+  citation_style text not null default 'apa7' check (citation_style in ('apa7', 'vancouver', 'chicago', 'ieee')),
+  required_sections text[] not null default '{}', -- örn. {"Giriş","Yöntem","Bulgular","Sonuç","Kaynakça"}
+  min_pages integer,
+  max_pages integer,
+  notes text,
+  is_active boolean not null default true,
+  created_by uuid references auth.users(id),
+  last_checked_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists thesis_guidelines_university_idx
+  on public.thesis_guidelines(university_name);
+
+alter table public.thesis_guidelines enable row level security;
+
+grant select, insert, update, delete on public.thesis_guidelines to authenticated;
+
+create policy "All authenticated users can view guidelines"
+  on public.thesis_guidelines
+  for select
+  to authenticated
+  using (true);
+
+create policy "Academic managers and above can create guidelines"
+  on public.thesis_guidelines
+  for insert
+  to authenticated
+  with check (
+    created_by = (select auth.uid())
+    and public.has_role(array['academic_manager','system_admin','founder']::public.user_role[])
+  );
+
+create policy "Academic managers and above can update guidelines"
+  on public.thesis_guidelines
+  for update
+  to authenticated
+  using (public.has_role(array['academic_manager','system_admin','founder']::public.user_role[]))
+  with check (public.has_role(array['academic_manager','system_admin','founder']::public.user_role[]));
+
+create policy "Academic managers and above can delete guidelines"
+  on public.thesis_guidelines
+  for delete
+  to authenticated
+  using (public.has_role(array['academic_manager','system_admin','founder']::public.user_role[]));
+
+-- academic_projects'i bir kılavuza bağlama imkânı
+alter table public.academic_projects
+  add column if not exists guideline_id uuid references public.thesis_guidelines(id);

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Save } from "lucide-react";
 import { createProject } from "@/app/actions/projects";
+import { getGuidelines } from "@/app/actions/guidelines";
 
 const errorMessages: Record<string, string> = {
   "missing-title": "Çalışma başlığı en az 3 karakter olmalıdır.",
@@ -15,6 +16,7 @@ type NewProjectPageProps = {
 export default async function NewProjectPage({ searchParams }: NewProjectPageProps) {
   const params = await searchParams;
   const errorMessage = params.error ? errorMessages[params.error] : null;
+  const guidelines = await getGuidelines();
 
   return (
     <main className="dashboard-page">
@@ -84,6 +86,21 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
                 <option value="ieee">IEEE</option>
               </select>
             </label>
+
+            {guidelines.length > 0 ? (
+              <label>
+                <span>Tez yazım kılavuzu (opsiyonel)</span>
+                <select name="guidelineId" defaultValue="">
+                  <option value="">Kılavuz seçilmedi</option>
+                  {guidelines.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.university_name}
+                      {g.institute_name ? ` — ${g.institute_name}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
           </div>
         </section>
 

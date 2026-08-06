@@ -80,9 +80,10 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] Çalışmalar listesi ve dashboard istatistikleri gerçek verilerle çalışıyor
 - [x] Kontrolör onay akışı (Kontrolör/Akademik Yönetici/Sistem Yöneticisi/Kurucu bir çalışmayı onaylayabilir/geri alabilir)
 - [x] Doküman yükleme (DOCX/PDF) + otomatik kaynakça/atıf analizi
+- [x] Üniversite tez yazım kılavuzu veritabanı + uyum kontrolü (zorunlu bölüm ve kaynakça sistemi denetimi)
 - [x] APA 7 kaynakça doğrulama
 - [x] Marka kimliği (logo, renkler)
-- [ ] Üniversite tez yazım kılavuzu veritabanı + uyum kontrolü
+- [ ] "Uzmandan destek iste" talep akışı
 - [ ] ArvoLab Orijinallik Ön-Kontrolü (kendi markalı benzerlik taraması)
 - [ ] Doçentlik puan hesaplayıcı (ÜAK kriterleri)
 - [ ] MAXQDA / SPSS çıktı yorumlama asistanı

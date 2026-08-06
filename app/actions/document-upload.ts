@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { detectDocType, extractTextFromBuffer, splitBodyAndReferences } from "@/lib/document-extract";
+import { checkGuidelineCompliance, type GuidelineComplianceResult } from "@/lib/guideline-check";
 import {
   parseReferenceList,
   extractInTextCitations,
@@ -23,6 +24,7 @@ export interface UploadResult {
       citationsWithoutReference: unknown[];
       referencesWithoutCitation: unknown[];
     };
+    guidelineCompliance?: GuidelineComplianceResult | null;
   };
 }
 
@@ -82,6 +84,32 @@ export async function uploadAndAnalyzeDocument(formData: FormData): Promise<Uplo
     const split = splitBodyAndReferences(extractedText);
     referenceText = split.referenceText;
 
+    let guidelineCompliance: GuidelineComplianceResult | null = null;
+    if (projectId) {
+      const { data: project } = await supabase
+        .from("academic_projects")
+        .select("guideline_id, citation_style")
+        .eq("id", projectId)
+        .single();
+
+      if (project?.guideline_id) {
+        const { data: guideline } = await supabase
+          .from("thesis_guidelines")
+          .select("required_sections, citation_style")
+          .eq("id", project.guideline_id)
+          .single();
+
+        if (guideline) {
+          guidelineCompliance = checkGuidelineCompliance(
+            split.bodyText,
+            guideline.required_sections ?? [],
+            guideline.citation_style,
+            project.citation_style ?? null
+          );
+        }
+      }
+    }
+
     if (referenceText.trim().length > 0) {
       const references = parseReferenceList(referenceText);
       const citations = extractInTextCitations(split.bodyText);
@@ -93,6 +121,7 @@ export async function uploadAndAnalyzeDocument(formData: FormData): Promise<Uplo
         crossCheck: cross,
         complianceScore: score,
         referenceSectionFound: true,
+        guidelineCompliance,
       };
     } else {
       analysis = {
@@ -101,6 +130,7 @@ export async function uploadAndAnalyzeDocument(formData: FormData): Promise<Uplo
         crossCheck: { citationsWithoutReference: [], referencesWithoutCitation: [] },
         complianceScore: null,
         referenceSectionFound: false,
+        guidelineCompliance,
       };
     }
   } catch (err) {
@@ -155,6 +185,7 @@ export interface DocumentUploadRecord {
       citationsWithoutReference: { raw: string }[];
       referencesWithoutCitation: { raw: string }[];
     };
+    guidelineCompliance?: GuidelineComplianceResult | null;
   } | null;
   created_at: string;
 }

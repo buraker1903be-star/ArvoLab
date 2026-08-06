@@ -8,6 +8,7 @@ export interface AcademicProject {
   id: string;
   owner_id: string;
   organization_id: string | null;
+  guideline_id: string | null;
   title: string;
   project_type: string;
   university: string | null;
@@ -56,9 +57,12 @@ export async function createProject(formData: FormData) {
     .eq("id", user.id)
     .single();
 
+  const guidelineIdRaw = String(formData.get("guidelineId") ?? "").trim();
+
   const { error } = await supabase.from("academic_projects").insert({
     owner_id: user.id,
     organization_id: profile?.organization_id ?? null,
+    guideline_id: guidelineIdRaw || null,
     title,
     project_type: type,
     university: String(formData.get("university") ?? "").trim() || null,
@@ -93,7 +97,7 @@ export async function getProjects(): Promise<AcademicProject[]> {
   const { data, error } = await supabase
     .from("academic_projects")
     .select(
-      "id, owner_id, organization_id, title, project_type, university, institute, department, citation_style, research_method, assignee_name, due_date, priority, status, notes, progress, controller_approved_by, controller_approved_at, created_at"
+      "id, owner_id, organization_id, guideline_id, title, project_type, university, institute, department, citation_style, research_method, assignee_name, due_date, priority, status, notes, progress, controller_approved_by, controller_approved_at, created_at"
     )
     .order("created_at", { ascending: false });
 

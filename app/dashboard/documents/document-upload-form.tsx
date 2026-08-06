@@ -10,6 +10,13 @@ interface Project {
   university: string | null;
 }
 
+interface GuidelineComplianceView {
+  sections: { section: string; found: boolean }[];
+  missingSections: string[];
+  citationStyleExpected: string;
+  citationStyleMatches: boolean | null;
+}
+
 interface AnalysisResult {
   complianceScore: number | null;
   referenceSectionFound: boolean;
@@ -18,6 +25,7 @@ interface AnalysisResult {
     citationsWithoutReference: { raw: string }[];
     referencesWithoutCitation: { raw: string }[];
   };
+  guidelineCompliance?: GuidelineComplianceView | null;
 }
 
 export default function DocumentUploadForm({ projects }: { projects: Project[] }) {
@@ -124,6 +132,32 @@ export default function DocumentUploadForm({ projects }: { projects: Project[] }
 
       {result && (
         <div style={{ marginTop: 24, borderTop: "1px solid var(--border)", paddingTop: 20 }}>
+          {result.guidelineCompliance ? (
+            <div style={{ marginBottom: 20 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                Kılavuz Uygunluğu
+              </h3>
+              {result.guidelineCompliance.sections.length > 0 ? (
+                <ul style={{ fontSize: 13, paddingLeft: 18, marginBottom: 8 }}>
+                  {result.guidelineCompliance.sections.map((s, i) => (
+                    <li key={i} style={{ color: s.found ? "#16a34a" : "#dc2626" }}>
+                      {s.found ? "✓" : "✗"} {s.section}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+                  Seçili kılavuzda zorunlu bölüm tanımlanmamış.
+                </p>
+              )}
+              {result.guidelineCompliance.citationStyleMatches === false ? (
+                <p style={{ fontSize: 13, color: "#d97706" }}>
+                  Kılavuz {result.guidelineCompliance.citationStyleExpected.toUpperCase()} kaynakça sistemi bekliyor, çalışmanızda farklı bir sistem seçili.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           {result.referenceSectionFound ? (
             <>
               <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>

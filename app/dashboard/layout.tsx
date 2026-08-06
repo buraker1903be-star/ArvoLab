@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Bell,
+  BookMarked,
   BookOpenCheck,
   ChartNoAxesCombined,
   FileCheck2,
@@ -18,6 +19,7 @@ const navigation = [
   { label: "Çalışmalar", href: "/dashboard/projects", icon: FolderKanban },
   { label: "Literatür", href: "/dashboard/literature", icon: BookOpenCheck },
   { label: "Belge Kontrolü", href: "/dashboard/documents", icon: FileCheck2 },
+  { label: "Kılavuzlar", href: "/dashboard/guidelines", icon: BookMarked },
   { label: "Analiz Merkezi", href: "/dashboard/analysis", icon: ChartNoAxesCombined },
   { label: "Doçentlik", href: "/dashboard/associate-professorship", icon: GraduationCap },
 ];
