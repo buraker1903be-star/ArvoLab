@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { extractPlainText, extractHeadings, countWords, type TiptapDoc } from "@/lib/tiptap-text";
-import { splitBodyAndReferences } from "@/lib/document-extract";
+import { splitBodyAndReferences } from "@/lib/text-split";
 import {
   parseReferenceList,
   extractInTextCitations,

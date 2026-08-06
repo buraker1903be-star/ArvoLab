@@ -1,5 +1,3 @@
-import { PDFParse } from "pdf-parse";
-
 /**
  * Kılavuz Tarama Yardımcısı
  * ------------------------------------------------------------
@@ -65,6 +63,7 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
   if (contentType.includes("pdf") || url.toLowerCase().endsWith(".pdf")) {
     const arrayBuffer = await res.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: buffer });
     try {
       const result = await parser.getText();
