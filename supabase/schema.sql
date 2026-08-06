@@ -395,3 +395,81 @@ create policy "Academic managers and above can delete guidelines"
 -- academic_projects'i bir kılavuza bağlama imkânı
 alter table public.academic_projects
   add column if not exists guideline_id uuid references public.thesis_guidelines(id);
+
+-- ============================================================
+-- Doçentlik Puan Hesaplayıcı
+-- ÖNEMLİ: ÜAK puanlama kriterleri temel alana göre değişir ve
+-- periyodik olarak güncellenir. ArvoLab resmi/güncel sayıları
+-- kendiliğinden UYDURMAZ; kriterler ve puan değerleri Akademik
+-- Yönetici tarafından güncel resmi duyuruya göre girilir/güncellenir.
+-- Sistem yalnızca kullanıcının kendi beyan ettiği yayın/faaliyet
+-- sayılarına bu kriterleri uygulayarak toplam puanı hesaplar.
+-- ============================================================
+create table if not exists public.scoring_criteria (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,          -- örn. "A1", "B2"
+  label text not null,                -- örn. "SCI-E indeksli makale"
+  category_group text,                -- örn. "Makaleler", "Kitaplar", "Atıflar"
+  points_per_unit numeric not null default 0,
+  notes text,
+  is_active boolean not null default true,
+  updated_by uuid references auth.users(id),
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+alter table public.scoring_criteria enable row level security;
+
+grant select, insert, update, delete on public.scoring_criteria to authenticated;
+
+create policy "All authenticated users can view scoring criteria"
+  on public.scoring_criteria
+  for select
+  to authenticated
+  using (true);
+
+create policy "Academic managers and above can manage scoring criteria"
+  on public.scoring_criteria
+  for all
+  to authenticated
+  using (public.has_role(array['academic_manager','system_admin','founder']::public.user_role[]))
+  with check (public.has_role(array['academic_manager','system_admin','founder']::public.user_role[]));
+
+create table if not exists public.academic_score_entries (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  criteria_id uuid not null references public.scoring_criteria(id),
+  title text not null,
+  unit_count numeric not null default 1 check (unit_count > 0),
+  computed_points numeric not null, -- girildiği andaki points_per_unit * unit_count (geçmişe dönük tutarlılık için sabitlenir)
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists academic_score_entries_owner_id_idx
+  on public.academic_score_entries(owner_id);
+
+alter table public.academic_score_entries enable row level security;
+
+grant select, insert, delete on public.academic_score_entries to authenticated;
+
+create policy "Users can view their own score entries"
+  on public.academic_score_entries
+  for select
+  to authenticated
+  using (
+    owner_id = (select auth.uid())
+    or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
+  );
+
+create policy "Users can create their own score entries"
+  on public.academic_score_entries
+  for insert
+  to authenticated
+  with check (owner_id = (select auth.uid()));
+
+create policy "Users can delete their own score entries"
+  on public.academic_score_entries
+  for delete
+  to authenticated
+  using (owner_id = (select auth.uid()));
