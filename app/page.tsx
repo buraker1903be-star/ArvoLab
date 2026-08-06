@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ArrowRight, BookOpenCheck, ChartNoAxesCombined, FileCheck2, ShieldCheck } from "lucide-react";
 import { login } from "@/app/actions/auth";
 
@@ -36,10 +37,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     <main className="login-page">
       <section className="login-showcase" aria-label="ArvoLab tanıtımı">
         <div className="brand-lockup">
-          <div className="brand-mark">A</div>
+          <Image
+            src="/arvolab-logo.png"
+            alt="ArvoLab"
+            width={220}
+            height={56}
+            priority
+            style={{ height: "40px", width: "auto", filter: "brightness(0) invert(1)" }}
+          />
           <div>
-            <p className="brand-name brand-type">ArvoLab</p>
-            <p className="brand-subtitle">Akademik Araştırma ve Analiz Sistemi</p>
+            <p className="brand-subtitle" style={{ marginTop: 6 }}>
+              Akademik Araştırma ve Analiz İşletim Sistemi
+            </p>
           </div>
         </div>
 
