@@ -6,6 +6,7 @@ create extension if not exists pgcrypto;
 -- ============================================================
 do $$ begin
   create type public.user_role as enum (
+    'client',            -- Üye/Öğrenci (varsayılan — kendi çalışmasını kendi yürütür)
     'employee',          -- Çalışan
     'expert',            -- Uzman
     'controller',        -- Kontrolör
@@ -31,7 +32,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   organization_id uuid references public.organizations(id),
   full_name text,
-  role public.user_role not null default 'employee',
+  role public.user_role not null default 'client',
   created_at timestamptz not null default now()
 );
 
@@ -39,6 +40,7 @@ alter table public.organizations enable row level security;
 alter table public.profiles enable row level security;
 
 grant select on public.organizations to authenticated;
+grant insert, update on public.organizations to authenticated;
 grant select, update on public.profiles to authenticated;
 
 create policy "Members can view their own organization"
@@ -47,6 +49,7 @@ create policy "Members can view their own organization"
   to authenticated
   using (
     id in (select organization_id from public.profiles where id = (select auth.uid()))
+    or public.has_role(array['system_admin','founder']::public.user_role[])
   );
 
 create policy "Users can view profiles in their organization"
@@ -56,6 +59,7 @@ create policy "Users can view profiles in their organization"
   using (
     id = (select auth.uid())
     or organization_id = (select organization_id from public.profiles where id = (select auth.uid()))
+    or public.has_role(array['system_admin','founder']::public.user_role[])
   );
 
 create policy "Users can update their own profile (not their role)"
@@ -65,8 +69,57 @@ create policy "Users can update their own profile (not their role)"
   using (id = (select auth.uid()))
   with check (id = (select auth.uid()));
 
--- Yeni auth kullanıcısı oluştuğunda otomatik profil satırı açar (varsayılan rol: employee).
--- Rol yükseltmeleri yalnızca güvenilir bir yönetici tarafından SQL/servis anahtarıyla yapılmalıdır.
+-- GÜVENLİK: Yukarıdaki politika satır erişimini kısıtlar ama sütun
+-- bazlı bir kısıtlama SAĞLAMAZ — Postgres RLS sütun bazlı olamaz.
+-- Bu yüzden bir kullanıcının KENDİ satırını güncellerken role veya
+-- organization_id alanlarını değiştirmesini bu trigger engeller.
+-- Yalnızca Sistem Yöneticisi/Kurucu rolündeki kullanıcılar (kendi
+-- satırları dahil, ayrı bir politika üzerinden) bu alanları değiştirebilir.
+create or replace function public.prevent_self_role_escalation()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if (new.role is distinct from old.role or new.organization_id is distinct from old.organization_id)
+     and not public.has_role(array['system_admin','founder']::public.user_role[]) then
+    raise exception 'Rol veya kurum değişikliği için yetkiniz yok.';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_self_role_escalation_trigger on public.profiles;
+create trigger prevent_self_role_escalation_trigger
+  before update on public.profiles
+  for each row execute function public.prevent_self_role_escalation();
+
+-- Sistem Yöneticisi/Kurucu herhangi bir kullanıcının profilini
+-- (rolünü, kurumunu) güncelleyebilir — personel ataması için gerekli.
+create policy "System admins and founders can update any profile"
+  on public.profiles
+  for update
+  to authenticated
+  using (public.has_role(array['system_admin','founder']::public.user_role[]))
+  with check (public.has_role(array['system_admin','founder']::public.user_role[]));
+
+create policy "System admins and founders can create organizations"
+  on public.organizations
+  for insert
+  to authenticated
+  with check (public.has_role(array['system_admin','founder']::public.user_role[]));
+
+create policy "System admins and founders can update organizations"
+  on public.organizations
+  for update
+  to authenticated
+  using (public.has_role(array['system_admin','founder']::public.user_role[]))
+  with check (public.has_role(array['system_admin','founder']::public.user_role[]));
+
+-- Yeni auth kullanıcısı oluştuğunda otomatik profil satırı açar
+-- (varsayılan rol: client — yeni üye kendi çalışmasını kendi yürütür).
+-- AkademikMerkez personeli olacak kullanıcılar, Sistem Yöneticisi/Kurucu
+-- tarafından "Ekip Yönetimi" panelinden ilgili role yükseltilir.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql

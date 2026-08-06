@@ -13,9 +13,11 @@ import {
   Quote,
   Settings,
   ShieldCheck,
+  UserCog,
   Users,
 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
+import { getCurrentProfile } from "@/app/actions/profile";
 
 const navigation = [
   { label: "Ana Sayfa", href: "/dashboard", icon: LayoutDashboard },
@@ -30,7 +32,10 @@ const navigation = [
   { label: "Uygulama Destek Talep", href: "/dashboard/support", icon: LifeBuoy },
 ];
 
-export default function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const profile = await getCurrentProfile();
+  const isAdmin = profile?.role === "system_admin" || profile?.role === "founder";
+
   return (
     <div className="dashboard-shell">
       <aside className="dashboard-sidebar">
@@ -52,6 +57,12 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
         </nav>
 
         <div className="dashboard-sidebar-footer">
+          {isAdmin ? (
+            <Link href="/dashboard/team" className="dashboard-nav-link">
+              <UserCog size={18} strokeWidth={1.8} />
+              <span>Ekip Yönetimi</span>
+            </Link>
+          ) : null}
           <Link href="/dashboard/settings" className="dashboard-nav-link">
             <Settings size={18} strokeWidth={1.8} />
             <span>Ayarlar</span>

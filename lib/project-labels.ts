@@ -27,12 +27,23 @@ export function statusLabel(status: string) {
 }
 
 export type UserRole =
+  | "client"
   | "employee"
   | "expert"
   | "controller"
   | "academic_manager"
   | "system_admin"
   | "founder";
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  client: "Üye / Öğrenci",
+  employee: "Çalışan",
+  expert: "Uzman",
+  controller: "Kontrolör",
+  academic_manager: "Akademik Yönetici",
+  system_admin: "Sistem Yöneticisi",
+  founder: "Kurucu/Yönetim",
+};
 
 const OVERSIGHT_ROLES: UserRole[] = ["controller", "academic_manager", "system_admin", "founder"];
 
