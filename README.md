@@ -110,6 +110,16 @@ fonksiyonlar, teslim öncesinde şu şekilde test edilmiştir:
 ReDoS). Bu riski azaltmak için dosya ayrıştırma tamamen kullanıcının
 tarayıcısında yapılır (sunucuda değil) — bu, olası bir istismarın etkisini
 yalnızca dosyayı yükleyen kullanıcının kendi oturumuyla sınırlar.
+
+## Hata Düzeltmesi — Dosya Yükleme Boyutu Sınırı
+
+Next.js Server Action'ları varsayılan olarak **1 MB** gövde boyutu
+sınırına sahiptir; bunun üzerindeki bir DOCX/PDF yüklemesi, uygulama
+içi bir hata mesajı bile göstermeden ham bir tarayıcı hatasıyla
+başarısız olur ("This page couldn't load"). `next.config.ts`'te
+`experimental.serverActions.bodySizeLimit` değeri **25 MB**'a
+yükseltildi (uygulama içi 20 MB dosya boyutu kontrolüne uyumlu,
+üzerine biraz pay bırakılarak).
 - [x] Marka tutarlılığı düzeltmesi: 17 eksik CSS sınıfı (project-card, project-form-grid, projects-primary-button vb.) tanımlandı — Çalışmalar listesi, formlar ve tüm alt sayfalar artık ArvoLab tasarım diliyle tutarlı
 - [x] Navigasyon yeniden yapılandırıldı (10 madde): Ana Sayfa, Belge Editörü, Literatür Taraması, Kaynakça Doğrulama, Analiz Merkezi, Belge Kontrol, Kılavuzlar, Doçentlik Puan Sorgulama, Uzman Desteği, Uygulama Destek Talep
 - [x] Müşteri odaklı akış düzeltmesi: "Yeni Çalışma" formundan "Atanan çalışan" alanı kaldırıldı (müşteri kendi çalışmasını oluştururken bir çalışan seçmemeli). Atama artık çalışma oluşturulduktan sonra, yalnızca Kontrolör ve üzeri roller tarafından Belge Editörü listesinden yapılıyor.
