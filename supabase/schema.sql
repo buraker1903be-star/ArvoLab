@@ -232,3 +232,100 @@ create policy "Users can delete their own citation checks"
   for delete
   to authenticated
   using (created_by = (select auth.uid()));
+
+-- ============================================================
+-- Doküman Yükleme ve Otomatik Analiz
+-- Kullanıcı DOCX/PDF yükler; sistem metni çıkarıp kaynakça/atıf
+-- kontrolünden geçirir. Dosyanın kendisi Storage'da, çıkarılan
+-- metin ve analiz sonucu burada JSON olarak tutulur.
+-- İÇERİK ÜRETİLMEZ; yalnızca kullanıcının kendi dosyası okunup
+-- kural bazlı denetlenir.
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('project-files', 'project-files', false)
+on conflict (id) do nothing;
+
+create table if not exists public.document_uploads (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.academic_projects(id) on delete cascade,
+  project_title text, -- proje seçilmediyse geçici etiket
+  uploaded_by uuid not null references auth.users(id) on delete cascade,
+  file_name text not null,
+  storage_path text not null,
+  mime_type text,
+  file_size bigint,
+  extracted_text text,
+  reference_text text,
+  analysis jsonb, -- APA7 motor çıktısı (parsed_references, cross_check, complianceScore)
+  status text not null default 'processing' check (status in ('processing', 'analyzed', 'failed')),
+  error_message text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists document_uploads_project_id_idx
+  on public.document_uploads(project_id);
+
+create index if not exists document_uploads_uploaded_by_idx
+  on public.document_uploads(uploaded_by);
+
+alter table public.document_uploads enable row level security;
+
+grant select, insert, delete on public.document_uploads to authenticated;
+
+create policy "Users can view their own document uploads"
+  on public.document_uploads
+  for select
+  to authenticated
+  using (
+    uploaded_by = (select auth.uid())
+    or exists (
+      select 1 from public.academic_projects p
+      where p.id = document_uploads.project_id
+      and (p.owner_id = (select auth.uid()) or p.assignee_id = (select auth.uid()))
+    )
+    or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
+  );
+
+create policy "Users can create their own document uploads"
+  on public.document_uploads
+  for insert
+  to authenticated
+  with check (uploaded_by = (select auth.uid()));
+
+create policy "Users can delete their own document uploads"
+  on public.document_uploads
+  for delete
+  to authenticated
+  using (uploaded_by = (select auth.uid()));
+
+-- Storage nesne erişimi: yalnızca dosyayı yükleyen kişi kendi
+-- klasöründeki (kullanıcı-id/...) dosyalara erişebilir.
+create policy "Users can upload to their own folder"
+  on storage.objects
+  for insert
+  to authenticated
+  with check (
+    bucket_id = 'project-files'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+create policy "Users can read their own files"
+  on storage.objects
+  for select
+  to authenticated
+  using (
+    bucket_id = 'project-files'
+    and (
+      (storage.foldername(name))[1] = (select auth.uid())::text
+      or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
+    )
+  );
+
+create policy "Users can delete their own files"
+  on storage.objects
+  for delete
+  to authenticated
+  using (
+    bucket_id = 'project-files'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );

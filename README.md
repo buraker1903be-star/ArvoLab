@@ -79,6 +79,7 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] "Yeni çalışma" formu Supabase'e gerçek kayıt yazıyor
 - [x] Çalışmalar listesi ve dashboard istatistikleri gerçek verilerle çalışıyor
 - [x] Kontrolör onay akışı (Kontrolör/Akademik Yönetici/Sistem Yöneticisi/Kurucu bir çalışmayı onaylayabilir/geri alabilir)
+- [x] Doküman yükleme (DOCX/PDF) + otomatik kaynakça/atıf analizi
 - [x] APA 7 kaynakça doğrulama
 - [x] Marka kimliği (logo, renkler)
 - [ ] Üniversite tez yazım kılavuzu veritabanı + uyum kontrolü
