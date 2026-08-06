@@ -544,3 +544,50 @@ create policy "Owner can delete their own requests"
   for delete
   to authenticated
   using (requested_by = (select auth.uid()));
+
+-- ============================================================
+-- ArvoLab Orijinallik Ön-Kontrolü
+-- ÖNEMLİ: Bu, Turnitin'in resmi raporunun YERİNE GEÇMEZ ve onu
+-- taklit etmez — Turnitin'in dünya çapındaki kapalı veritabanına
+-- erişimimiz yok. Bu araç yalnızca ArvoLab'a yüklenmiş, kullanıcının
+-- erişim yetkisi olan belge havuzuyla karşılaştırma yapan, kendi
+-- markalı bir ÖN-KONTROL aracıdır. Amaç, resmi teslimden önce
+-- kurum içi tekrar/çakışma riskini erken görebilmektir.
+-- ============================================================
+create table if not exists public.originality_checks (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references public.document_uploads(id) on delete cascade,
+  requested_by uuid not null references auth.users(id) on delete cascade,
+  overall_similarity numeric not null default 0, -- 0-100 arası, en yüksek eşleşme
+  compared_document_count integer not null default 0,
+  matches jsonb not null default '[]'::jsonb, -- [{documentId, fileName, similarity, sampleOverlap}]
+  created_at timestamptz not null default now()
+);
+
+create index if not exists originality_checks_document_id_idx
+  on public.originality_checks(document_id);
+
+alter table public.originality_checks enable row level security;
+
+grant select, insert, delete on public.originality_checks to authenticated;
+
+create policy "Users can view their own originality checks"
+  on public.originality_checks
+  for select
+  to authenticated
+  using (
+    requested_by = (select auth.uid())
+    or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
+  );
+
+create policy "Users can create their own originality checks"
+  on public.originality_checks
+  for insert
+  to authenticated
+  with check (requested_by = (select auth.uid()));
+
+create policy "Users can delete their own originality checks"
+  on public.originality_checks
+  for delete
+  to authenticated
+  using (requested_by = (select auth.uid()));

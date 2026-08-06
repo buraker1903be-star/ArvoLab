@@ -83,9 +83,9 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] Üniversite tez yazım kılavuzu veritabanı + uyum kontrolü (zorunlu bölüm ve kaynakça sistemi denetimi)
 - [x] Doçentlik puan hesaplayıcı (yönetilebilir kriterler + kullanıcı beyanına göre toplam puan)
 - [x] "Uzmandan destek iste" talep akışı (açık talepler, üstlenme, tamamlama)
+- [x] ArvoLab Orijinallik Ön-Kontrolü (erişilebilir belge havuzuyla shingle-tabanlı benzerlik taraması — Turnitin değildir)
 - [x] APA 7 kaynakça doğrulama
 - [x] Marka kimliği (logo, renkler)
-- [ ] ArvoLab Orijinallik Ön-Kontrolü (kendi markalı benzerlik taraması)
 - [ ] MAXQDA / SPSS çıktı yorumlama asistanı
 
 ## Proje Yapısı
