@@ -127,6 +127,163 @@ button { border: 0; }
 .dashboard-module-card p { min-height: 58px; margin: 0; color: var(--muted-foreground); font-size: 13px; line-height: 1.55; }
 .dashboard-module-card button { margin-top: 18px; padding: 10px 12px; border-radius: 10px; background: var(--primary); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
 
+/* ---------------------------------------------------------------
+   Çalışmalar / Formlar / Kartlar
+   (projects, documents, guidelines, scoring, expert-requests
+   sayfalarının tümü bu ortak sınıfları kullanır)
+--------------------------------------------------------------- */
+.projects-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+.projects-header > div:first-child { max-width: 640px; }
+.projects-header h1 { margin: 8px 0 8px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -0.03em; }
+.projects-header p { margin: 0; color: var(--muted-foreground); line-height: 1.6; }
+
+.projects-primary-button, .projects-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.projects-primary-button {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 1px solid var(--primary);
+  box-shadow: 0 10px 22px rgba(0, 32, 69, 0.16);
+}
+.projects-primary-button:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(0, 32, 69, 0.22); }
+.projects-primary-button:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+.projects-filter-button {
+  background: #fff;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+.projects-filter-button:hover { border-color: var(--accent); color: var(--accent); }
+
+.projects-list { display: grid; gap: 14px; }
+
+.project-card {
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.project-card:hover { border-color: rgba(0, 32, 69, 0.16); box-shadow: var(--shadow-md); }
+
+.project-card-main { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.project-card-main h2 { margin: 6px 0 4px; font-size: 17px; letter-spacing: -0.02em; }
+.project-card-main p { margin: 0; color: var(--muted-foreground); font-size: 13px; }
+
+.project-status {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.project-progress { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 90px; }
+.project-progress strong { font-size: 15px; }
+.project-progress-track { width: 90px; height: 6px; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+.project-progress-track span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+.project-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.project-card-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.project-card-meta a { color: var(--accent); font-weight: 700; }
+
+/* Formlar */
+.project-form { display: grid; gap: 20px; }
+.project-form-card {
+  padding: 26px 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+.project-form-heading { margin-bottom: 18px; }
+.project-form-heading h2 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.02em; }
+.project-form-heading p { margin: 0; color: var(--muted-foreground); font-size: 13px; line-height: 1.55; }
+
+.project-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+.project-form-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; color: var(--foreground); }
+.project-form-grid label > span { color: var(--muted-foreground); font-weight: 700; }
+.project-form-full { grid-column: 1 / -1; }
+
+.project-form-grid input[type="text"],
+.project-form-grid input[type="email"],
+.project-form-grid input[type="password"],
+.project-form-grid input[type="date"],
+.project-form-grid input[type="number"],
+.project-form-grid input[type="url"],
+.project-form-grid input[type="file"],
+.project-form-grid select,
+.project-form-grid textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--foreground);
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.project-form-grid textarea { min-height: 100px; padding: 12px 14px; resize: vertical; line-height: 1.55; }
+.project-form-grid input:focus,
+.project-form-grid select:focus,
+.project-form-grid textarea:focus {
+  border-color: rgba(111, 149, 72, .7);
+  box-shadow: 0 0 0 4px rgba(111, 149, 72, .11);
+}
+.project-form-grid input::placeholder,
+.project-form-grid textarea::placeholder { color: #9aa4b2; }
+
+.project-date-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--muted-foreground);
+}
+.project-date-field input[type="date"] { border: 0; padding: 0; height: auto; min-height: 0; flex: 1; }
+.project-date-field input[type="date"]:focus { box-shadow: none; }
+
+.project-form-actions { display: flex; align-items: center; gap: 12px; }
+
+@media (max-width: 720px) {
+  .project-form-grid { grid-template-columns: 1fr; }
+  .project-card-main { flex-direction: column; }
+  .project-progress { align-items: flex-start; width: 100%; }
+  .project-progress-track { width: 100%; }
+}
+
 @media (max-width: 1100px) {
   .login-page { grid-template-columns: 1fr; }
   .login-showcase, .login-panel { min-height: auto; }
