@@ -176,3 +176,39 @@ export async function revokeApproval(projectId: string) {
   revalidatePath("/dashboard/editor");
   return { success: true };
 }
+
+// Sorumlu uzman ataması, çalışma müşteri tarafından oluşturulduktan
+// SONRA, yalnızca Kontrolör ve üzeri roller tarafından yapılır.
+// Müşteriye açık "Yeni Çalışma" formunda bu alan bulunmaz.
+export async function assignProject(projectId: string, assigneeName: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const oversightRoles = ["controller", "academic_manager", "system_admin", "founder"];
+  if (!profile || !oversightRoles.includes(profile.role)) {
+    return { error: "Bu işlem için Kontrolör veya üzeri bir role sahip olmalısınız." };
+  }
+
+  const trimmed = assigneeName.trim();
+  const { error } = await supabase
+    .from("academic_projects")
+    .update({ assignee_name: trimmed || null })
+    .eq("id", projectId);
+
+  if (error) {
+    console.error(error);
+    return { error: "Atama sırasında bir hata oluştu." };
+  }
+
+  revalidatePath("/dashboard/editor");
+  return { success: true };
+}

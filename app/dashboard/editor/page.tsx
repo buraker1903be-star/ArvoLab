@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, CheckCircle2, PenLine, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
-import { getProjects, approveProject, revokeApproval } from "@/app/actions/projects";
+import { getProjects, approveProject, revokeApproval, assignProject } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
 
@@ -35,6 +35,12 @@ export default async function ProjectsPage() {
   async function handleRevoke(projectId: string) {
     "use server";
     await revokeApproval(projectId);
+  }
+
+  async function handleAssign(projectId: string, formData: FormData) {
+    "use server";
+    const assigneeName = String(formData.get("assigneeName") ?? "");
+    await assignProject(projectId, assigneeName);
   }
 
   return (
@@ -124,6 +130,32 @@ export default async function ProjectsPage() {
                       </form>
                     )}
                   </div>
+                ) : null}
+
+                {canApprove ? (
+                  <form
+                    action={handleAssign.bind(null, project.id)}
+                    style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}
+                  >
+                    <input
+                      name="assigneeName"
+                      type="text"
+                      defaultValue={project.assignee_name ?? ""}
+                      placeholder="Sorumlu uzman ata (ör. Ayşe Demir)"
+                      style={{
+                        height: 38,
+                        padding: "0 12px",
+                        borderRadius: 10,
+                        border: "1px solid var(--border)",
+                        fontSize: 12,
+                        flex: "0 1 240px",
+                      }}
+                    />
+                    <button type="submit" className="projects-filter-button" style={{ height: 38 }}>
+                      <UserRound size={14} />
+                      Ata
+                    </button>
+                  </form>
                 ) : null}
 
                 <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>

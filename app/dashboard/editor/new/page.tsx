@@ -107,7 +107,7 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
         <section className="project-form-card">
           <div className="project-form-heading">
             <h2>Yöntem ve planlama</h2>
-            <p>Çalışmanın yöntemini, sorumlusunu ve teslim tarihini tanımlayın.</p>
+            <p>Çalışmanın yöntemini ve teslim tarihini tanımlayın. Sorumlu uzman ataması, çalışma oluşturulduktan sonra ekibimiz tarafından yapılır.</p>
           </div>
 
           <div className="project-form-grid">
@@ -120,11 +120,6 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
                 <option value="mixed">Karma</option>
                 <option value="review">Derleme</option>
               </select>
-            </label>
-
-            <label>
-              <span>Atanan çalışan</span>
-              <input name="assignee" type="text" placeholder="Çalışan adı" />
             </label>
 
             <label>
