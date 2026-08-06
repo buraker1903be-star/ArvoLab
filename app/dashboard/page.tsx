@@ -32,9 +32,9 @@ const workstreams = [
   },
   {
     title: "Analiz merkezi",
-    description: "Nicel ve nitel analiz taleplerini takip edin.",
+    description: "SPSS çıktısını APA biçimine çevirin, MAXQDA kod kitabınızı kontrol edin.",
     icon: ChartNoAxesCombined,
-    href: null,
+    href: "/dashboard/analysis",
   },
 ];
 
