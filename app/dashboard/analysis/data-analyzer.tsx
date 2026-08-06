@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { UploadCloud, Play, Table as TableIcon } from "lucide-react";
+import { UploadCloud, Play, Table as TableIcon, FileBarChart } from "lucide-react";
 import {
   describeNumeric,
   independentTTest,
@@ -9,6 +9,8 @@ import {
   pearsonCorrelation,
   chiSquareIndependence,
   cronbachAlpha,
+  frequencyTable,
+  correlationMatrix,
   type DescriptiveStats,
 } from "@/lib/stats-tests-core";
 import { formatP, isSignificant, formatNumber } from "@/lib/apa-format";
@@ -69,6 +71,7 @@ export default function DataAnalyzer() {
 
   const [result, setResult] = useState<React.ReactNode>(null);
   const [resultError, setResultError] = useState<string | null>(null);
+  const [fullReport, setFullReport] = useState<React.ReactNode>(null);
 
   const handleFile = useCallback(async (file: File) => {
     setLoading(true);
@@ -135,6 +138,142 @@ export default function DataAnalyzer() {
     });
     return map;
   }
+
+  const handleGenerateFullReport = useCallback(() => {
+    if (!dataset) return;
+    setFullReport(null);
+
+    const numericSections = dataset.numericColumns.map((col) => {
+      const stats = describeNumeric(getNumericColumn(col));
+      return { col, stats };
+    });
+
+    const categoricalSections = dataset.categoricalColumns.map((col) => {
+      const values = dataset.rows
+        .map((r) => r[col])
+        .filter((v): v is string | number => v !== null && v !== "");
+      return { col, freq: frequencyTable(values) };
+    });
+
+    const numericForMatrix = dataset.numericColumns.map((col) => ({
+      name: col,
+      values: getNumericColumn(col),
+    }));
+    const matrix = numericForMatrix.length >= 2 ? correlationMatrix(numericForMatrix) : [];
+
+    setFullReport(
+      <div style={{ display: "grid", gap: 24 }}>
+        {numericSections.length > 0 && (
+          <div>
+            <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+              1. Betimsel İstatistikler (Sayısal Değişkenler)
+            </h3>
+            <table className="stats-result-table">
+              <thead>
+                <tr>
+                  <th>Değişken</th>
+                  <th>N</th>
+                  <th>Ortalama</th>
+                  <th>SS</th>
+                  <th>Min</th>
+                  <th>Maks</th>
+                  <th>Medyan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {numericSections.map(({ col, stats }) => (
+                  <tr key={col}>
+                    <td>{col}</td>
+                    <td>{stats.n}</td>
+                    <td>{formatNumber(stats.mean)}</td>
+                    <td>{formatNumber(stats.sd)}</td>
+                    <td>{formatNumber(stats.min)}</td>
+                    <td>{formatNumber(stats.max)}</td>
+                    <td>{formatNumber(stats.median)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {categoricalSections.length > 0 && (
+          <div>
+            <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+              2. Frekans Tabloları (Kategorik Değişkenler)
+            </h3>
+            {categoricalSections.map(({ col, freq }) => (
+              <div key={col} style={{ marginBottom: 14 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{col}</p>
+                <table className="stats-result-table">
+                  <thead>
+                    <tr>
+                      <th>Değer</th>
+                      <th>Frekans</th>
+                      <th>Yüzde</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {freq.map((f) => (
+                      <tr key={f.value}>
+                        <td>{f.value}</td>
+                        <td>{f.count}</td>
+                        <td>%{formatNumber(f.percent, 1)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {matrix.length > 0 && (
+          <div>
+            <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+              3. Korelasyon Matrisi (Sayısal Değişken Çiftleri)
+            </h3>
+            <table className="stats-result-table">
+              <thead>
+                <tr>
+                  <th>Değişken 1</th>
+                  <th>Değişken 2</th>
+                  <th>r</th>
+                  <th>p</th>
+                  <th>N</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.map((c, i) => {
+                  const sig = isSignificant(c.p);
+                  return (
+                    <tr key={i}>
+                      <td>{c.varA}</td>
+                      <td>{c.varB}</td>
+                      <td style={{ color: sig ? "#16a34a" : undefined, fontWeight: sig ? 700 : 400 }}>
+                        {formatNumber(c.r)}
+                      </td>
+                      <td>{formatP(c.p)}</td>
+                      <td>{c.n}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 6 }}>
+              Yeşil/kalın satırlar p &lt; .05 düzeyinde istatistiksel olarak anlamlıdır.
+            </p>
+          </div>
+        )}
+
+        {numericSections.length === 0 && categoricalSections.length === 0 && (
+          <p style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+            Rapor oluşturmak için okunabilir sayısal veya kategorik sütun bulunamadı.
+          </p>
+        )}
+      </div>
+    );
+  }, [dataset]);
 
   const handleRunAnalysis = useCallback(() => {
     if (!dataset) return;
@@ -426,12 +565,44 @@ export default function DataAnalyzer() {
                 setDataset(null);
                 setResult(null);
                 setFileName(null);
+                setFullReport(null);
               }}
             >
               Yeni dosya yükle
             </button>
           </div>
 
+          <div className="project-form-card" style={{ marginBottom: 20, background: "var(--surface-muted)" }}>
+            <div className="project-form-heading">
+              <h2 style={{ fontSize: 14 }}>
+                <FileBarChart size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+                SPSS Tarzı Kapsamlı Analiz Raporu
+              </h2>
+              <p>
+                Tek tıkla, veri setinizdeki TÜM değişkenler için betimsel
+                istatistikleri, frekans tablolarını ve sayısal değişken
+                çiftleri arasındaki korelasyon matrisini otomatik oluşturur —
+                tıpkı SPSS&apos;te &quot;Analyze &gt; Descriptives&quot; ve
+                &quot;Correlate&quot; çalıştırmak gibi. Belirli bir
+                hipotezi test etmek isterseniz aşağıdaki tekil testleri
+                kullanın.
+              </p>
+            </div>
+            <button type="button" className="projects-primary-button" onClick={handleGenerateFullReport}>
+              <FileBarChart size={15} />
+              Kapsamlı Raporu Oluştur
+            </button>
+
+            {fullReport && (
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)", fontSize: 13 }}>
+                {fullReport}
+              </div>
+            )}
+          </div>
+
+          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>
+            Veya Belirli Bir Test Seçin
+          </h3>
           <div className="project-form-grid">
             <label>
               <span>Analiz türü</span>

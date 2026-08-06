@@ -120,6 +120,20 @@ başarısız olur ("This page couldn't load"). `next.config.ts`'te
 `experimental.serverActions.bodySizeLimit` değeri **25 MB**'a
 yükseltildi (uygulama içi 20 MB dosya boyutu kontrolüne uyumlu,
 üzerine biraz pay bırakılarak).
+
+## Yeni Özellik — SPSS Tarzı Kapsamlı Analiz Raporu
+
+Analiz Merkezi'nde artık tek testleri tek tek seçmek yerine **"Kapsamlı
+Raporu Oluştur"** butonuyla, yüklenen veri setindeki TÜM değişkenler için
+otomatik olarak şunlar üretiliyor:
+1. Tüm sayısal değişkenler için betimsel istatistikler (N, ortalama, SS, min, maks, medyan)
+2. Tüm kategorik değişkenler için frekans tabloları (frekans + yüzde)
+3. Tüm sayısal değişken çiftleri için korelasyon matrisi (r, p, N — p<.05 olanlar yeşil/kalın işaretli)
+
+Belirli bir hipotezi (örn. iki grup arasında fark var mı) test etmek
+isteyenler için tekil test seçimi (t-testi, ANOVA, ki-kare, güvenilirlik)
+ayrıca mevcut. Gerçek bir örnek veri setiyle uçtan uca test edildi;
+sonuçlar elle hesaplanan değerlerle birebir eşleşti.
 - [x] Marka tutarlılığı düzeltmesi: 17 eksik CSS sınıfı (project-card, project-form-grid, projects-primary-button vb.) tanımlandı — Çalışmalar listesi, formlar ve tüm alt sayfalar artık ArvoLab tasarım diliyle tutarlı
 - [x] Navigasyon yeniden yapılandırıldı (10 madde): Ana Sayfa, Belge Editörü, Literatür Taraması, Kaynakça Doğrulama, Analiz Merkezi, Belge Kontrol, Kılavuzlar, Doçentlik Puan Sorgulama, Uzman Desteği, Uygulama Destek Talep
 - [x] Müşteri odaklı akış düzeltmesi: "Yeni Çalışma" formundan "Atanan çalışan" alanı kaldırıldı (müşteri kendi çalışmasını oluştururken bir çalışan seçmemeli). Atama artık çalışma oluşturulduktan sonra, yalnızca Kontrolör ve üzeri roller tarafından Belge Editörü listesinden yapılıyor.

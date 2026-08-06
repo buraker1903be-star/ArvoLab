@@ -162,6 +162,49 @@ export function chiSquareIndependence(table: number[][]): ChiSquareResult {
   return { chi2, df, p, n: grandTotal };
 }
 
+export interface FrequencyRow {
+  value: string;
+  count: number;
+  percent: number;
+}
+
+export function frequencyTable(values: (string | number)[]): FrequencyRow[] {
+  const counts = new Map<string, number>();
+  for (const v of values) {
+    const key = String(v);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const total = values.length;
+  return [...counts.entries()]
+    .map(([value, count]) => ({ value, count, percent: (count / total) * 100 }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export interface CorrelationMatrixCell {
+  varA: string;
+  varB: string;
+  r: number;
+  p: number;
+  n: number;
+}
+
+export function correlationMatrix(
+  columns: { name: string; values: number[] }[]
+): CorrelationMatrixCell[] {
+  const results: CorrelationMatrixCell[] = [];
+  for (let i = 0; i < columns.length; i++) {
+    for (let j = i + 1; j < columns.length; j++) {
+      const a = columns[i],
+        b = columns[j];
+      const n = Math.min(a.values.length, b.values.length);
+      if (n < 3) continue;
+      const r = pearsonCorrelation(a.values.slice(0, n), b.values.slice(0, n));
+      results.push({ varA: a.name, varB: b.name, r: r.r, p: r.p, n: r.n });
+    }
+  }
+  return results;
+}
+
 export interface CronbachAlphaResult {
   alpha: number;
   k: number;
