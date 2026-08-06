@@ -89,6 +89,27 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] MAXQDA / SPSS çıktı yorumlama asistanı (SPSS → APA7 biçimlendirme + kod kitabı kalite kontrolü)
 - [x] Panelde Yazma: tam özellikli editör (başlık, tablo, resim, dipnot) + manuel kılavuz/APA7 kontrolü + gerçek .docx dışa aktarım
 - [x] **Kritik hata düzeltmesi:** "Panelde Yaz" sayfası `DOMMatrix is not defined` hatasıyla çöküyordu. Sebep: `pdf-parse` kütüphanesi statik import edildiği için, onu hiç kullanmayan sayfalar bile (Turbopack'in paylaşılan derleme parçaları yüzünden) onu yükleyip tarayıcıya özgü API'leri (DOMMatrix) polyfill etmeye çalışıyordu. Çözüm: `pdf-parse` ve `mammoth` artık yalnızca gerçekten çağrıldıkları anda dinamik `import()` ile yükleniyor.
+- [x] **Gerçek veri analizi motoru:** Analiz Merkezi'ne Excel/CSV yükleyip gerçek istatistiksel testler (betimsel istatistik, bağımsız örneklem t-testi, tek yönlü ANOVA, Pearson korelasyonu, ki-kare bağımsızlık testi, Cronbach Alpha güvenilirlik analizi) çalıştırma özelliği eklendi. Tüm hesaplama motoru sıfırdan yazıldı (Lanczos log-gamma, tamamlanmamış beta/gamma fonksiyonları) ve bilinen kritik tablo değerleri + elle hesaplanmış örneklerle doğrulandı (bkz. aşağıdaki "Doğrulama Notu"). Hesaplama tamamen tarayıcıda yapılır, veri sunucuya yüklenmez.
+
+## Doğrulama Notu — Veri Analizi Motoru
+
+`lib/stats-math.ts` ve `lib/stats-tests-core.ts` içindeki tüm istatistiksel
+fonksiyonlar, teslim öncesinde şu şekilde test edilmiştir:
+- t, F ve χ² dağılımlarının p-değerleri, ders kitabı kritik tablo
+  değerleriyle (df=10,20,30 için t; çeşitli df kombinasyonları için F ve χ²)
+  4 ondalık basamağa kadar birebir eşleşecek şekilde doğrulandı.
+- Bağımsız örneklem t-testi, tek yönlü ANOVA, Pearson korelasyonu, ki-kare
+  bağımsızlık testi ve Cronbach Alpha, elle hesaplanabilir küçük örnek
+  veri setleriyle doğrulandı (sonuçlar beklenen değerlerle birebir eşleşti).
+- Uçtan uca: gerçek bir Excel dosyası oluşturulup uygulamaya yüklendi,
+  t-testi çalıştırıldı, arayüzdeki sonuç (t(8) = -2.00, p = .081) elle
+  hesaplanan değerle doğrulandı.
+
+**Bilinen sınırlama:** `xlsx` (SheetJS) npm paketinin bilinen, npm
+üzerinden düzeltmesi olmayan güvenlik açıkları vardır (prototip kirliliği,
+ReDoS). Bu riski azaltmak için dosya ayrıştırma tamamen kullanıcının
+tarayıcısında yapılır (sunucuda değil) — bu, olası bir istismarın etkisini
+yalnızca dosyayı yükleyen kullanıcının kendi oturumuyla sınırlar.
 - [x] Marka tutarlılığı düzeltmesi: 17 eksik CSS sınıfı (project-card, project-form-grid, projects-primary-button vb.) tanımlandı — Çalışmalar listesi, formlar ve tüm alt sayfalar artık ArvoLab tasarım diliyle tutarlı
 - [x] Navigasyon yeniden yapılandırıldı (10 madde): Ana Sayfa, Belge Editörü, Literatür Taraması, Kaynakça Doğrulama, Analiz Merkezi, Belge Kontrol, Kılavuzlar, Doçentlik Puan Sorgulama, Uzman Desteği, Uygulama Destek Talep
 - [x] Müşteri odaklı akış düzeltmesi: "Yeni Çalışma" formundan "Atanan çalışan" alanı kaldırıldı (müşteri kendi çalışmasını oluştururken bir çalışan seçmemeli). Atama artık çalışma oluşturulduktan sonra, yalnızca Kontrolör ve üzeri roller tarafından Belge Editörü listesinden yapılıyor.

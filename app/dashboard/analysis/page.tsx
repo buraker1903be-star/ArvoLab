@@ -1,3 +1,4 @@
+import DataAnalyzer from "./data-analyzer";
 import AnalysisTools from "./analysis-tools";
 
 export default function AnalysisPage() {
@@ -6,17 +7,21 @@ export default function AnalysisPage() {
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Analiz merkezi</span>
-          <h1 className="brand-type">SPSS ve MAXQDA Çıktı Asistanı</h1>
+          <h1 className="brand-type">Veri Analizi ve İstatistik Asistanı</h1>
           <p>
-            Bu araçlar yeni analiz yapmaz veya sonuç üretmez; yalnızca sizin
-            zaten hesapladığınız istatistik değerlerini APA 7 biçimine
-            çevirir ve nitel kod listenizin kalitesini kontrol eder. Analiz
-            ve yorum sorumluluğu araştırmacıya/uzmana aittir.
+            Excel/CSV verinizi yükleyip gerçek istatistiksel testler
+            çalıştırabilir, ya da SPSS&apos;ten kopyaladığınız hazır çıktıyı
+            APA 7 biçimine çevirebilirsiniz. Sistem sayısal sonucu hesaplar
+            ve anlamlılığı işaretler; bulguların araştırma bağlamındaki
+            yorumu her zaman size/uzmanınıza aittir.
           </p>
         </div>
       </section>
 
-      <AnalysisTools />
+      <div style={{ display: "grid", gap: 24 }}>
+        <DataAnalyzer />
+        <AnalysisTools />
+      </div>
     </main>
   );
 }
