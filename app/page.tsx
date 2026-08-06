@@ -36,24 +36,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   return (
     <main className="login-page">
       <section className="login-showcase" aria-label="ArvoLab tanıtımı">
-        <div className="brand-lockup">
+        <div className="brand-lockup" style={{ flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
           <Image
             src="/arvolab-logo.png"
             alt="ArvoLab"
-            width={220}
-            height={56}
+            width={440}
+            height={112}
             priority
-            style={{ height: "40px", width: "auto", filter: "brightness(0) invert(1)" }}
+            style={{ height: "96px", width: "auto", filter: "brightness(0) invert(1)" }}
           />
-          <div>
-            <p className="brand-subtitle" style={{ marginTop: 6 }}>
-              Akademik Araştırma ve Analiz İşletim Sistemi
-            </p>
-          </div>
+          <span className="eyebrow" style={{ marginTop: 2 }}>Research Operating System</span>
         </div>
 
         <div className="showcase-copy">
-          <span className="eyebrow">Research Operating System</span>
           <h1 className="brand-type">Akademik üretimi tek, güvenli ve izlenebilir çalışma alanında yönetin.</h1>
           <p>
             Literatür taramasından belge kontrolüne, veri analizinden akademik kalite onayına kadar tüm süreçleri ArvoLab üzerinden yürütün.
