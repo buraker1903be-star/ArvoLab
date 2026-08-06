@@ -1,14 +1,12 @@
-import { getMyProjects, getMyCitationChecks } from "@/app/actions/citation-check";
+import { getMyProjects } from "@/app/actions/citation-check";
 import { getMyDocumentUploads } from "@/app/actions/document-upload";
 import { runOriginalityCheck, getOriginalityChecksForDocument } from "@/app/actions/originality";
-import CitationCheckForm from "./citation-check-form";
 import DocumentUploadForm from "./document-upload-form";
 import { ShieldQuestion } from "lucide-react";
 
 export default async function DocumentsPage() {
-  const [projects, history, uploads] = await Promise.all([
+  const [projects, uploads] = await Promise.all([
     getMyProjects(),
-    getMyCitationChecks(),
     getMyDocumentUploads(),
   ]);
 
@@ -28,12 +26,18 @@ export default async function DocumentsPage() {
     <main className="dashboard-page">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Belge kontrolü</span>
-          <h1 className="brand-type">Doküman ve Kaynakça Doğrulama</h1>
+          <span className="dashboard-kicker">Belge kontrol</span>
+          <h1 className="brand-type">Belge Kontrol</h1>
           <p>
-            Bu araç içerik üretmez; yalnızca yüklediğiniz belgeyi okuyarak
-            kaynakça formatını ve metin içi atıf / kaynakça tutarlılığını
-            kural bazlı olarak denetler.
+            Tam bir tez/makale dosyası (.docx/.pdf) yükleyin; sistem içerik
+            üretmez, yalnızca metni okuyup kaynakça formatını, kılavuz
+            uygunluğunu ve ArvoLab belge havuzuyla örtüşmeyi (orijinallik
+            ön-kontrolü) denetler. Yalnızca kaynakça listenizi kontrol etmek
+            isterseniz{" "}
+            <a href="/dashboard/citations" style={{ color: "var(--accent)", fontWeight: 700 }}>
+              Kaynakça Doğrulama
+            </a>{" "}
+            sayfasını kullanın.
           </p>
         </div>
       </section>
@@ -130,36 +134,6 @@ export default async function DocumentsPage() {
                 </article>
               );
             })}
-          </div>
-        </section>
-      )}
-
-      <section style={{ marginTop: 32 }}>
-        <h2 style={{ fontSize: 15, marginBottom: 12 }}>Manuel Kaynakça Kontrolü</h2>
-        <p style={{ fontSize: 13, color: "var(--muted-foreground)", marginBottom: 12 }}>
-          Dosya yüklemek yerine kaynakça listenizi doğrudan yapıştırmak
-          isterseniz aşağıdaki formu kullanabilirsiniz.
-        </p>
-        <CitationCheckForm projects={projects} />
-      </section>
-
-      {history.length > 0 && (
-        <section style={{ marginTop: 32 }}>
-          <h2 style={{ fontSize: 15, marginBottom: 12 }}>Son Manuel Kontroller</h2>
-          <div className="projects-list">
-            {history.map((h) => (
-              <article className="project-card" key={h.id}>
-                <div className="project-card-main">
-                  <div>
-                    <h2>{h.project_title || "İsimsiz kontrol"}</h2>
-                    <p>{new Date(h.created_at).toLocaleString("tr-TR")}</p>
-                  </div>
-                  <div className="project-progress">
-                    <strong>{h.compliance_score ?? "-"}/100</strong>
-                  </div>
-                </div>
-              </article>
-            ))}
           </div>
         </section>
       )}

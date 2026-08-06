@@ -659,3 +659,113 @@ create policy "Users can update manuscripts they have project access to"
   );
 
 -- Editörde eklenen resimler için ayrı klasör alanı (project-files bucket'ı zaten var)
+
+-- ============================================================
+-- Literatür Taraması: Kaynak Havuzu
+-- Kullanıcının literatür taraması sırasında bulduğu kaynakları
+-- (henüz kaynakça biçimine sokulmamış, incelenecek/okunan/
+-- kullanılan) takip etmesini sağlar. İçerik/özet ÜRETMEZ;
+-- yalnızca kullanıcının kendi bulduğu kaynakların listesini tutar.
+-- ============================================================
+create table if not exists public.literature_sources (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  project_id uuid references public.academic_projects(id) on delete set null,
+  title text not null,
+  authors text,
+  year text,
+  source_type text not null default 'article' check (source_type in ('article', 'book', 'chapter', 'thesis', 'report', 'website', 'other')),
+  doi_or_url text,
+  status text not null default 'to_review' check (status in ('to_review', 'read', 'used')),
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists literature_sources_owner_id_idx
+  on public.literature_sources(owner_id);
+
+alter table public.literature_sources enable row level security;
+
+grant select, insert, update, delete on public.literature_sources to authenticated;
+
+create policy "Users can view their own literature sources"
+  on public.literature_sources
+  for select
+  to authenticated
+  using (
+    owner_id = (select auth.uid())
+    or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
+  );
+
+create policy "Users can create their own literature sources"
+  on public.literature_sources
+  for insert
+  to authenticated
+  with check (owner_id = (select auth.uid()));
+
+create policy "Users can update their own literature sources"
+  on public.literature_sources
+  for update
+  to authenticated
+  using (owner_id = (select auth.uid()))
+  with check (owner_id = (select auth.uid()));
+
+create policy "Users can delete their own literature sources"
+  on public.literature_sources
+  for delete
+  to authenticated
+  using (owner_id = (select auth.uid()));
+
+-- ============================================================
+-- Uygulama Destek Talebi
+-- ArvoLab uygulamasının kendisiyle ilgili (hata bildirimi,
+-- erişim sorunu, özellik talebi vb.) teknik destek talepleri.
+-- Akademik danışmanlık talebi olan consultancy_requests'ten
+-- FARKLIDIR — bu tamamen uygulama/teknik destek içindir.
+-- ============================================================
+create table if not exists public.app_support_requests (
+  id uuid primary key default gen_random_uuid(),
+  requested_by uuid not null references auth.users(id) on delete cascade,
+  subject text not null,
+  message text not null,
+  category text not null default 'other' check (category in ('bug', 'access', 'feature_request', 'billing', 'other')),
+  priority text not null default 'normal' check (priority in ('low', 'normal', 'high', 'urgent')),
+  status text not null default 'open' check (status in ('open', 'in_progress', 'resolved')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists app_support_requests_status_idx
+  on public.app_support_requests(status);
+
+alter table public.app_support_requests enable row level security;
+
+grant select, insert, update on public.app_support_requests to authenticated;
+
+create policy "Users can view their own support requests"
+  on public.app_support_requests
+  for select
+  to authenticated
+  using (
+    requested_by = (select auth.uid())
+    or public.has_role(array['system_admin','founder']::public.user_role[])
+  );
+
+create policy "Users can create their own support requests"
+  on public.app_support_requests
+  for insert
+  to authenticated
+  with check (requested_by = (select auth.uid()));
+
+create policy "Owner or system admin can update support requests"
+  on public.app_support_requests
+  for update
+  to authenticated
+  using (
+    requested_by = (select auth.uid())
+    or public.has_role(array['system_admin','founder']::public.user_role[])
+  )
+  with check (
+    requested_by = (select auth.uid())
+    or public.has_role(array['system_admin','founder']::public.user_role[])
+  );

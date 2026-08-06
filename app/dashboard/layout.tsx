@@ -5,10 +5,12 @@ import {
   BookOpenCheck,
   ChartNoAxesCombined,
   FileCheck2,
-  FolderKanban,
   GraduationCap,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
+  PenLine,
+  Quote,
   Settings,
   ShieldCheck,
   Users,
@@ -17,13 +19,15 @@ import { logout } from "@/app/actions/auth";
 
 const navigation = [
   { label: "Ana Sayfa", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Çalışmalar", href: "/dashboard/projects", icon: FolderKanban },
-  { label: "Literatür", href: "/dashboard/literature", icon: BookOpenCheck },
-  { label: "Belge Kontrolü", href: "/dashboard/documents", icon: FileCheck2 },
-  { label: "Kılavuzlar", href: "/dashboard/guidelines", icon: BookMarked },
-  { label: "Uzman Desteği", href: "/dashboard/expert-requests", icon: Users },
+  { label: "Belge Editörü", href: "/dashboard/editor", icon: PenLine },
+  { label: "Literatür Taraması", href: "/dashboard/literature", icon: BookOpenCheck },
+  { label: "Kaynakça Doğrulama", href: "/dashboard/citations", icon: Quote },
   { label: "Analiz Merkezi", href: "/dashboard/analysis", icon: ChartNoAxesCombined },
-  { label: "Doçentlik", href: "/dashboard/associate-professorship", icon: GraduationCap },
+  { label: "Belge Kontrol", href: "/dashboard/documents", icon: FileCheck2 },
+  { label: "Kılavuzlar", href: "/dashboard/guidelines", icon: BookMarked },
+  { label: "Doçentlik Puan Sorgulama", href: "/dashboard/associate-professorship", icon: GraduationCap },
+  { label: "Uzman Desteği", href: "/dashboard/expert-requests", icon: Users },
+  { label: "Uygulama Destek Talep", href: "/dashboard/support", icon: LifeBuoy },
 ];
 
 export default function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {

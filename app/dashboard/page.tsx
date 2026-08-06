@@ -6,6 +6,8 @@ import {
   Clock3,
   FileCheck2,
   FolderKanban,
+  PenLine,
+  Quote,
   ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -13,25 +15,31 @@ import { getProjects } from "@/app/actions/projects";
 
 const workstreams = [
   {
-    title: "Akademik çalışmalar",
-    description: "Tez, makale ve proje süreçlerini tek merkezden yönetin.",
-    icon: FolderKanban,
-    href: "/dashboard/projects",
+    title: "Belge Editörü",
+    description: "Tez, makale ve proje çalışmalarınızı panelde oluşturun ve yazın.",
+    icon: PenLine,
+    href: "/dashboard/editor",
   },
   {
-    title: "Literatür merkezi",
-    description: "Kaynak havuzlarını, DOI kayıtlarını ve doğrulama durumlarını izleyin.",
+    title: "Literatür Taraması",
+    description: "Bulduğunuz kaynakları kaydedin, okuma durumunu izleyin.",
     icon: BookOpenCheck,
-    href: null,
+    href: "/dashboard/literature",
   },
   {
-    title: "Belge kontrolü",
-    description: "Üniversite kılavuzu, APA 7 ve biçim denetimlerini çalıştırın.",
+    title: "Kaynakça Doğrulama",
+    description: "Kaynakça listenizi yapıştırıp APA 7 kurallarına göre denetleyin.",
+    icon: Quote,
+    href: "/dashboard/citations",
+  },
+  {
+    title: "Belge Kontrol",
+    description: "Tam belgenizi yükleyin; kılavuz uyumu ve orijinallik ön-kontrolü çalıştırın.",
     icon: FileCheck2,
     href: "/dashboard/documents",
   },
   {
-    title: "Analiz merkezi",
+    title: "Analiz Merkezi",
     description: "SPSS çıktısını APA biçimine çevirin, MAXQDA kod kitabınızı kontrol edin.",
     icon: ChartNoAxesCombined,
     href: "/dashboard/analysis",

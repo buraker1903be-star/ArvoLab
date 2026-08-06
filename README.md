@@ -89,6 +89,22 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] MAXQDA / SPSS çıktı yorumlama asistanı (SPSS → APA7 biçimlendirme + kod kitabı kalite kontrolü)
 - [x] Panelde Yazma: tam özellikli editör (başlık, tablo, resim, dipnot) + manuel kılavuz/APA7 kontrolü + gerçek .docx dışa aktarım
 - [x] Marka tutarlılığı düzeltmesi: 17 eksik CSS sınıfı (project-card, project-form-grid, projects-primary-button vb.) tanımlandı — Çalışmalar listesi, formlar ve tüm alt sayfalar artık ArvoLab tasarım diliyle tutarlı
+- [x] Navigasyon yeniden yapılandırıldı (10 madde): Ana Sayfa, Belge Editörü, Literatür Taraması, Kaynakça Doğrulama, Analiz Merkezi, Belge Kontrol, Kılavuzlar, Doçentlik Puan Sorgulama, Uzman Desteği, Uygulama Destek Talep
+
+## Navigasyon → Route Haritası
+
+| Nav öğesi | Route | İçerik |
+|---|---|---|
+| Ana Sayfa | `/dashboard` | Özet istatistikler + modül kısayolları |
+| Belge Editörü | `/dashboard/editor` | Çalışma listesi + yeni çalışma + panelde yazma (eski "Çalışmalar") |
+| Literatür Taraması | `/dashboard/literature` | Kaynak havuzu takibi (yeni) |
+| Kaynakça Doğrulama | `/dashboard/citations` | Manuel APA7 kaynakça kontrolü (Belge Kontrol'den ayrıldı) |
+| Analiz Merkezi | `/dashboard/analysis` | SPSS→APA7, MAXQDA kod kontrolü |
+| Belge Kontrol | `/dashboard/documents` | DOCX/PDF yükleme + analiz + kılavuz uyumu + orijinallik |
+| Kılavuzlar | `/dashboard/guidelines` | Üniversite tez yazım kılavuzları |
+| Doçentlik Puan Sorgulama | `/dashboard/associate-professorship` | Puan hesaplayıcı |
+| Uzman Desteği | `/dashboard/expert-requests` | Akademik danışmanlık talebi |
+| Uygulama Destek Talep | `/dashboard/support` | Teknik/uygulama destek talebi (yeni) |
 
 ## Faz 1 Tamamlandı 🎉
 

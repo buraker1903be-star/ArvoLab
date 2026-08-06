@@ -43,10 +43,10 @@ export async function createProject(formData: FormData) {
   const type = String(formData.get("type") ?? "");
 
   if (!title || title.length < 3) {
-    redirect("/dashboard/projects/new?error=missing-title");
+    redirect("/dashboard/editor/new?error=missing-title");
   }
   if (!PROJECT_TYPES.includes(type)) {
-    redirect("/dashboard/projects/new?error=missing-type");
+    redirect("/dashboard/editor/new?error=missing-type");
   }
 
   const dueDateRaw = String(formData.get("dueDate") ?? "").trim();
@@ -79,12 +79,12 @@ export async function createProject(formData: FormData) {
 
   if (error) {
     console.error(error);
-    redirect("/dashboard/projects/new?error=save-failed");
+    redirect("/dashboard/editor/new?error=save-failed");
   }
 
-  revalidatePath("/dashboard/projects");
+  revalidatePath("/dashboard/editor");
   revalidatePath("/dashboard");
-  redirect("/dashboard/projects");
+  redirect("/dashboard/editor");
 }
 
 export async function getProjects(): Promise<AcademicProject[]> {
@@ -146,7 +146,7 @@ export async function approveProject(projectId: string) {
     return { error: "Onaylanırken bir hata oluştu." };
   }
 
-  revalidatePath("/dashboard/projects");
+  revalidatePath("/dashboard/editor");
   return { success: true };
 }
 
@@ -173,6 +173,6 @@ export async function revokeApproval(projectId: string) {
     return { error: "İşlem sırasında bir hata oluştu." };
   }
 
-  revalidatePath("/dashboard/projects");
+  revalidatePath("/dashboard/editor");
   return { success: true };
 }
