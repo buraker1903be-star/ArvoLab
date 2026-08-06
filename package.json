@@ -11,7 +11,10 @@
     "start": "next start",
     "lint": "eslint .",
     "academic-directory:crawl": "node scripts/academic-directory/crawl.mjs",
-    "academic-directory:check": "node --check scripts/academic-directory/crawl.mjs"
+    "academic-directory:diff": "node scripts/academic-directory/diff.mjs",
+    "academic-directory:approve": "node scripts/academic-directory/approve-snapshot.mjs",
+    "academic-directory:check": "node --check scripts/academic-directory/crawl.mjs && node --check scripts/academic-directory/diff.mjs && node --check scripts/academic-directory/approve-snapshot.mjs",
+    "academic-directory:refresh": "npm run academic-directory:crawl && npm run academic-directory:diff"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
