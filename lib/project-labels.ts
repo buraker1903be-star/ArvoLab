@@ -25,3 +25,17 @@ export function projectTypeLabel(type: string) {
 export function statusLabel(status: string) {
   return STATUS_LABELS[status] ?? status;
 }
+
+export type UserRole =
+  | "employee"
+  | "expert"
+  | "controller"
+  | "academic_manager"
+  | "system_admin"
+  | "founder";
+
+const OVERSIGHT_ROLES: UserRole[] = ["controller", "academic_manager", "system_admin", "founder"];
+
+export function isOversightRole(role: UserRole | null | undefined) {
+  return !!role && OVERSIGHT_ROLES.includes(role);
+}

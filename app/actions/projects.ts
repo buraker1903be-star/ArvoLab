@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export interface AcademicProject {
   id: string;
+  owner_id: string;
+  organization_id: string | null;
   title: string;
   project_type: string;
   university: string | null;
@@ -19,6 +21,8 @@ export interface AcademicProject {
   status: string;
   notes: string | null;
   progress: number;
+  controller_approved_by: string | null;
+  controller_approved_at: string | null;
   created_at: string;
 }
 
@@ -46,8 +50,15 @@ export async function createProject(formData: FormData) {
 
   const dueDateRaw = String(formData.get("dueDate") ?? "").trim();
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", user.id)
+    .single();
+
   const { error } = await supabase.from("academic_projects").insert({
     owner_id: user.id,
+    organization_id: profile?.organization_id ?? null,
     title,
     project_type: type,
     university: String(formData.get("university") ?? "").trim() || null,
@@ -82,7 +93,7 @@ export async function getProjects(): Promise<AcademicProject[]> {
   const { data, error } = await supabase
     .from("academic_projects")
     .select(
-      "id, title, project_type, university, institute, department, citation_style, research_method, assignee_name, due_date, priority, status, notes, progress, created_at"
+      "id, owner_id, organization_id, title, project_type, university, institute, department, citation_style, research_method, assignee_name, due_date, priority, status, notes, progress, controller_approved_by, controller_approved_at, created_at"
     )
     .order("created_at", { ascending: false });
 
@@ -91,4 +102,73 @@ export async function getProjects(): Promise<AcademicProject[]> {
     return [];
   }
   return data ?? [];
+}
+
+// Yalnızca Kontrolör / Akademik Yönetici / Sistem Yöneticisi / Kurucu rolleri
+// bir çalışmayı onaylayabilir (proje dosyası 6.2 "Biçim" aşaması onayı).
+// RLS bu yetkiyi veritabanı seviyesinde de zorunlu kılar; buradaki kontrol
+// kullanıcıya erken/anlaşılır bir hata mesajı vermek içindir.
+export async function approveProject(projectId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Oturum bulunamadı." };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const oversightRoles = ["controller", "academic_manager", "system_admin", "founder"];
+  if (!profile || !oversightRoles.includes(profile.role)) {
+    return { error: "Bu işlem için Kontrolör veya üzeri bir role sahip olmalısınız." };
+  }
+
+  const { error } = await supabase
+    .from("academic_projects")
+    .update({
+      controller_approved_by: user.id,
+      controller_approved_at: new Date().toISOString(),
+      status: "ready",
+    })
+    .eq("id", projectId);
+
+  if (error) {
+    console.error(error);
+    return { error: "Onaylanırken bir hata oluştu." };
+  }
+
+  revalidatePath("/dashboard/projects");
+  return { success: true };
+}
+
+export async function revokeApproval(projectId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Oturum bulunamadı." };
+  }
+
+  const { error } = await supabase
+    .from("academic_projects")
+    .update({
+      controller_approved_by: null,
+      controller_approved_at: null,
+      status: "revision",
+    })
+    .eq("id", projectId);
+
+  if (error) {
+    console.error(error);
+    return { error: "İşlem sırasında bir hata oluştu." };
+  }
+
+  revalidatePath("/dashboard/projects");
+  return { success: true };
 }

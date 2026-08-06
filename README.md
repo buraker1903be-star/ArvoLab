@@ -78,10 +78,10 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] Roller ve kurum yapısı
 - [x] "Yeni çalışma" formu Supabase'e gerçek kayıt yazıyor
 - [x] Çalışmalar listesi ve dashboard istatistikleri gerçek verilerle çalışıyor
+- [x] Kontrolör onay akışı (Kontrolör/Akademik Yönetici/Sistem Yöneticisi/Kurucu bir çalışmayı onaylayabilir/geri alabilir)
 - [x] APA 7 kaynakça doğrulama
 - [x] Marka kimliği (logo, renkler)
 - [ ] Üniversite tez yazım kılavuzu veritabanı + uyum kontrolü
-- [ ] Kontrolör onay akışı (arayüz)
 - [ ] ArvoLab Orijinallik Ön-Kontrolü (kendi markalı benzerlik taraması)
 - [ ] Doçentlik puan hesaplayıcı (ÜAK kriterleri)
 - [ ] MAXQDA / SPSS çıktı yorumlama asistanı
