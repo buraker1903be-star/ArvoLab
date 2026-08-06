@@ -82,9 +82,9 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] Doküman yükleme (DOCX/PDF) + otomatik kaynakça/atıf analizi
 - [x] Üniversite tez yazım kılavuzu veritabanı + uyum kontrolü (zorunlu bölüm ve kaynakça sistemi denetimi)
 - [x] Doçentlik puan hesaplayıcı (yönetilebilir kriterler + kullanıcı beyanına göre toplam puan)
+- [x] "Uzmandan destek iste" talep akışı (açık talepler, üstlenme, tamamlama)
 - [x] APA 7 kaynakça doğrulama
 - [x] Marka kimliği (logo, renkler)
-- [ ] "Uzmandan destek iste" talep akışı
 - [ ] ArvoLab Orijinallik Ön-Kontrolü (kendi markalı benzerlik taraması)
 - [ ] MAXQDA / SPSS çıktı yorumlama asistanı
 

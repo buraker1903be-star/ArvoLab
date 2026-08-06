@@ -11,6 +11,7 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
+  Users,
 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 
@@ -20,6 +21,7 @@ const navigation = [
   { label: "Literatür", href: "/dashboard/literature", icon: BookOpenCheck },
   { label: "Belge Kontrolü", href: "/dashboard/documents", icon: FileCheck2 },
   { label: "Kılavuzlar", href: "/dashboard/guidelines", icon: BookMarked },
+  { label: "Uzman Desteği", href: "/dashboard/expert-requests", icon: Users },
   { label: "Analiz Merkezi", href: "/dashboard/analysis", icon: ChartNoAxesCombined },
   { label: "Doçentlik", href: "/dashboard/associate-professorship", icon: GraduationCap },
 ];

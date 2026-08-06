@@ -473,3 +473,74 @@ create policy "Users can delete their own score entries"
   for delete
   to authenticated
   using (owner_id = (select auth.uid()));
+
+-- ============================================================
+-- Uzmandan Destek Talebi
+-- Kullanıcı bir çalışma için uzman desteği talep edebilir;
+-- Uzman/Kontrolör/Akademik Yönetici/Sistem Yöneticisi/Kurucu
+-- rolündeki kişiler açık talepleri görüp üstlenebilir.
+-- ============================================================
+create table if not exists public.consultancy_requests (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid references public.academic_projects(id) on delete cascade,
+  project_title text, -- proje bağlı değilse geçici etiket
+  requested_by uuid not null references auth.users(id) on delete cascade,
+  request_type text not null check (request_type in ('analysis', 'editing', 'methodology', 'statistics', 'full_review', 'other')),
+  message text,
+  status text not null default 'open' check (status in ('open', 'accepted', 'completed', 'cancelled')),
+  assigned_expert_id uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists consultancy_requests_status_idx
+  on public.consultancy_requests(status);
+
+create index if not exists consultancy_requests_requested_by_idx
+  on public.consultancy_requests(requested_by);
+
+alter table public.consultancy_requests enable row level security;
+
+grant select, insert, update, delete on public.consultancy_requests to authenticated;
+
+-- Görme yetkisi: talebi açan kişi, atanan uzman, ya da
+-- Uzman/Kontrolör/Akademik Yönetici/Sistem Yöneticisi/Kurucu rolleri
+-- (açık talepleri görüp üstlenebilmeleri için).
+create policy "View own, assigned, or expert-eligible requests"
+  on public.consultancy_requests
+  for select
+  to authenticated
+  using (
+    requested_by = (select auth.uid())
+    or assigned_expert_id = (select auth.uid())
+    or public.has_role(array['expert','controller','academic_manager','system_admin','founder']::public.user_role[])
+  );
+
+create policy "Users can create their own requests"
+  on public.consultancy_requests
+  for insert
+  to authenticated
+  with check (requested_by = (select auth.uid()));
+
+-- Güncelleme: talebi açan kişi (iptal edebilir) veya uzman rolündeki
+-- kişiler (üstlenme/tamamlama) güncelleyebilir.
+create policy "Owner or expert-eligible roles can update requests"
+  on public.consultancy_requests
+  for update
+  to authenticated
+  using (
+    requested_by = (select auth.uid())
+    or assigned_expert_id = (select auth.uid())
+    or public.has_role(array['expert','controller','academic_manager','system_admin','founder']::public.user_role[])
+  )
+  with check (
+    requested_by = (select auth.uid())
+    or assigned_expert_id = (select auth.uid())
+    or public.has_role(array['expert','controller','academic_manager','system_admin','founder']::public.user_role[])
+  );
+
+create policy "Owner can delete their own requests"
+  on public.consultancy_requests
+  for delete
+  to authenticated
+  using (requested_by = (select auth.uid()));

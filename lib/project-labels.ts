@@ -39,3 +39,20 @@ const OVERSIGHT_ROLES: UserRole[] = ["controller", "academic_manager", "system_a
 export function isOversightRole(role: UserRole | null | undefined) {
   return !!role && OVERSIGHT_ROLES.includes(role);
 }
+
+export function isExpertEligible(role: UserRole | null | undefined) {
+  return role === "expert" || isOversightRole(role);
+}
+
+const REQUEST_TYPE_LABELS: Record<string, string> = {
+  analysis: "Analiz desteği",
+  editing: "Dil/biçim düzenleme",
+  methodology: "Metodoloji danışmanlığı",
+  statistics: "İstatistik desteği",
+  full_review: "Kapsamlı inceleme",
+  other: "Diğer",
+};
+
+export function requestTypeLabel(type: string) {
+  return REQUEST_TYPE_LABELS[type] ?? type;
+}
