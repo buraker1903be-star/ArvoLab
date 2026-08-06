@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+
+// Resim yükleme büyük dosyalarda zaman alabilir.
+export const maxDuration = 60;
 import { getManuscript } from "@/app/actions/manuscript";
 import ManuscriptEditor from "./manuscript-editor";
 

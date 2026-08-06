@@ -180,6 +180,24 @@ Sıradaki adımlar için proje dosyasının Faz 3-5 bölümlerine (gelişmiş
 SPSS/nitel analiz otomasyonu, kılavuz otomatik izleme, ArvoOS
 entegrasyonu, çoklu kurum SaaS modeli) bakılabilir.
 
+## Hata Düzeltmesi — Sunucu Fonksiyonu Zaman Aşımı
+
+Vercel'in sunucu fonksiyonları varsayılan olarak **10 saniye** zaman
+aşımına sahiptir. Büyük dosya yükleme/analiz (Belge Kontrol), resim
+yükleme (Panelde Yazma) ve dış URL'den kılavuz tarama gibi işlemler bunu
+aşabilir — bu da uygulama içi hata göstermeden ham bir tarayıcı hatasına
+("This page couldn't load") yol açar. İlgili sayfalara
+(`app/dashboard/documents/page.tsx`, `app/dashboard/editor/[id]/write/page.tsx`,
+`app/dashboard/guidelines/page.tsx`) ve dışa aktarım API route'una
+`export const maxDuration = 60;` eklendi.
+
+**Önemli not:** Bu ayar `"use server"` server action dosyalarına
+DEĞİL, onları çağıran sayfa dosyalarına eklenmelidir — React'ın
+kuralı gereği bir server action modülü yalnızca async fonksiyon
+export edebilir, başka bir sabit export edilirse (maxDuration gibi)
+tüm modülün export'ları algılanamaz hale gelir ve build hata verir.
+Bunu ilk denemede yanlış yere ekleyip yakalayıp düzelttim.
+
 ## Yeni Özellik — AI Geri Bildirimi (ChatGPT/OpenAI)
 
 Belge Kontrol sayfasında, analiz edilmiş her belge için **"AI Geri

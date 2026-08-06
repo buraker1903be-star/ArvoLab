@@ -1,6 +1,14 @@
 import { getMyProjects } from "@/app/actions/citation-check";
 import { getMyDocumentUploads } from "@/app/actions/document-upload";
 import { runOriginalityCheck, getOriginalityChecksForDocument } from "@/app/actions/originality";
+
+// Belge yükleme + analiz (mammoth/pdf-parse) büyük dosyalarda Vercel'in
+// varsayılan 10 saniyelik zaman aşımını aşabilir; bu da kullanıcıya
+// uygulama içi hata göstermeden ham bir tarayıcı hatasına ("This page
+// couldn't load") yol açar. Bu sayfadaki server action'lar (dosya
+// yükleme, AI geri bildirimi, orijinallik taraması) için süreyi
+// 60 saniyeye çıkarıyoruz.
+export const maxDuration = 60;
 import { getLatestFeedback } from "@/app/actions/ai-feedback";
 import DocumentUploadForm from "./document-upload-form";
 import AiFeedbackButton from "./ai-feedback-button";
