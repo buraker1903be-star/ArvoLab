@@ -180,6 +180,34 @@ Sıradaki adımlar için proje dosyasının Faz 3-5 bölümlerine (gelişmiş
 SPSS/nitel analiz otomasyonu, kılavuz otomatik izleme, ArvoOS
 entegrasyonu, çoklu kurum SaaS modeli) bakılabilir.
 
+## Yeni Özellik — AI Geri Bildirimi (ChatGPT/OpenAI)
+
+Belge Kontrol sayfasında, analiz edilmiş her belge için **"AI Geri
+Bildirimi Al"** butonu eklendi. Bu özellik **İÇERİK ÜRETMEZ**:
+
+- Yapay zeka yalnızca belgenin YAPISI ve RETORİĞİ hakkında geri bildirim
+  verir (ör. "giriş bölümünde amaç cümlesi net değil", "bu paragrafta
+  birden fazla fikir karışık veriliyor")
+- Sistem prompt'u (`lib/ai-feedback.ts`), modelin yeniden yazım/alternatif
+  cümle önermesini, araştırma bulgularını yorumlamasını ve kopyalanabilir
+  metin üretmesini AÇIKÇA YASAKLAR
+- Arayüzde geri bildirim, turuncu/kesikli çizgili bir uyarı kutusunda,
+  "öğreticidir, doğrudan kopyalamayın" ibaresiyle gösterilir — normal
+  belge içeriğiyle karışmayacak şekilde görsel olarak ayrıştırılmıştır
+
+**Kurulum gerekli:** Bu özelliğin çalışması için Vercel proje ayarlarına
+şu ortam değişkenini eklemeniz gerekiyor:
+- `OPENAI_API_KEY` — OpenAI hesabınızdan alacağınız API anahtarı
+  (platform.openai.com/api-keys)
+- `OPENAI_MODEL` (opsiyonel) — varsayılan `gpt-4o-mini`, isterseniz
+  değiştirebilirsiniz
+
+**Not:** API anahtarınız olmadan bu sandbox'ta canlı bir OpenAI isteği
+test edemedim (dış API'ye erişimim yok); ancak istek/yanıt işleme
+mantığını sahte (mock) bir yanıtla test ettim ve kod tabanı tam
+derlemeden hatasız geçti. Anahtarı ekledikten sonra ilk denemede bir
+sorun çıkarsa (özellikle OpenAI'dan dönen hata mesajı varsa) paylaşın.
+
 ## Proje Yapısı
 
 ```

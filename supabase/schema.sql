@@ -997,3 +997,47 @@ insert into public.universities (name, city, university_type) values
   ('Yozgat Bozok Üniversitesi', 'Yozgat', 'devlet'),
   ('Zonguldak Bülent Ecevit Üniversitesi', 'Zonguldak', 'devlet')
 on conflict (name) do nothing;
+-- ============================================================
+-- AI Geri Bildirimi (ChatGPT/OpenAI entegrasyonu)
+-- ÖNEMLİ: Bu özellik İÇERİK ÜRETMEZ. Yapay zeka yalnızca
+-- yüklenen belgenin YAPISI ve RETORİĞİ hakkında öğretici geri
+-- bildirim verir (ör. "giriş bölümünde amaç cümlesi eksik").
+-- Öğrencinin çalışmasına doğrudan yapıştırılabilecek metin
+-- ÜRETMEZ; bulguların araştırma bağlamındaki anlamını
+-- YORUMLAMAZ. Bu ilke prompt seviyesinde (lib/ai-feedback.ts)
+-- ve arayüz seviyesinde zorunlu kılınır.
+-- ============================================================
+create table if not exists public.ai_feedback_requests (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references public.document_uploads(id) on delete cascade,
+  requested_by uuid not null references auth.users(id) on delete cascade,
+  feedback_text text,
+  model text,
+  status text not null default 'processing' check (status in ('processing', 'completed', 'failed')),
+  error_message text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists ai_feedback_requests_document_id_idx
+  on public.ai_feedback_requests(document_id);
+
+alter table public.ai_feedback_requests enable row level security;
+
+grant select, insert on public.ai_feedback_requests to authenticated;
+
+drop policy if exists "Users can view their own ai feedback" on public.ai_feedback_requests;
+create policy "Users can view their own ai feedback"
+  on public.ai_feedback_requests
+  for select
+  to authenticated
+  using (
+    requested_by = (select auth.uid())
+    or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
+  );
+
+drop policy if exists "Users can create their own ai feedback" on public.ai_feedback_requests;
+create policy "Users can create their own ai feedback"
+  on public.ai_feedback_requests
+  for insert
+  to authenticated
+  with check (requested_by = (select auth.uid()));
