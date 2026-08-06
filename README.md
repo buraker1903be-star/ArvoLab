@@ -92,6 +92,20 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] Navigasyon yeniden yapılandırıldı (10 madde): Ana Sayfa, Belge Editörü, Literatür Taraması, Kaynakça Doğrulama, Analiz Merkezi, Belge Kontrol, Kılavuzlar, Doçentlik Puan Sorgulama, Uzman Desteği, Uygulama Destek Talep
 - [x] Müşteri odaklı akış düzeltmesi: "Yeni Çalışma" formundan "Atanan çalışan" alanı kaldırıldı (müşteri kendi çalışmasını oluştururken bir çalışan seçmemeli). Atama artık çalışma oluşturulduktan sonra, yalnızca Kontrolör ve üzeri roller tarafından Belge Editörü listesinden yapılıyor.
 - [x] Rol modeli düzeltmesi: Yeni kayıt olan her kullanıcı artık varsayılan olarak **Üye/Öğrenci (client)** rolüyle başlıyor (önceden yanlışlıkla "Çalışan" idi). AkademikMerkez personeli olmak, yalnızca Sistem Yöneticisi/Kurucu'nun yeni **Ekip Yönetimi** panelinden (`/dashboard/team`) bilinçli rol ataması yapmasıyla mümkün. Ayrıca kullanıcıların kendi rollerini kendilerine yükseltmesini engelleyen bir veritabanı güvenlik önlemi (trigger) eklendi.
+- [x] Türkiye üniversiteleri referans listesi (204 devlet + vakıf üniversite, YÖK listesi baz alınarak) — Yeni Çalışma ve Kılavuz formlarında arama/otomatik tamamlama olarak kullanılıyor.
+- [x] Kılavuz Tarama Aracı (yarı otomatik): Akademik Yönetici bir üniversitenin resmî tez yazım kılavuzu URL'sini (PDF/HTML) girip "Tara" diyebiliyor; sistem metni çıkarıp olası bölüm başlıklarını ve kaynakça sistemini öneriyor. **Hiçbir şeyi otomatik uygulamaz** — insan onayı her zaman gereklidir.
+
+## Önemli Sınırlama — Kılavuz Tarama
+
+"Otomatik kılavuz tarama" tam anlamıyla insansız/kendi kendine güncellenen bir
+sistem DEĞİLDİR ve olmamalıdır: 200'den fazla üniversitenin resmî sayfalarını
+hatasız yorumlayıp doğrudan kural olarak uygulayan bir yapay zeka, yanlış
+kural çıkarımıyla öğrencilere zarar verebilir. Bunun yerine kurulan sistem:
+Akademik Yönetici bir URL girer → sistem metni çeker ve olası bölüm
+başlıklarını/kaynakça sistemini **önerir** → yönetici bu önerileri inceleyip
+kendi onayıyla "Yeni Kılavuz Ekle" formuna işler. Bu, proje dosyasının kendi
+"Kılavuz Güncelleme Akışı" ilkesiyle (Bölüm 6.3: değişiklikler akademik
+yöneticiye sunulur, onaylanan sürüm etkinleşir) birebir uyumludur.
 
 ## Navigasyon → Route Haritası
 

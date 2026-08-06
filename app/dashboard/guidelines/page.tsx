@@ -1,7 +1,9 @@
 import { BookMarked, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { getGuidelines, createGuideline, deleteGuideline } from "@/app/actions/guidelines";
+import { getUniversities } from "@/app/actions/universities";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { isOversightRole } from "@/lib/project-labels";
+import GuidelineScanner from "./guideline-scanner";
 
 const errorMessages: Record<string, string> = {
   "missing-university": "Üniversite adı zorunludur.",
@@ -23,7 +25,11 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
   const params = await searchParams;
   const errorMessage = params.error ? errorMessages[params.error] : null;
 
-  const [guidelines, profile] = await Promise.all([getGuidelines(), getCurrentProfile()]);
+  const [guidelines, profile, universities] = await Promise.all([
+    getGuidelines(),
+    getCurrentProfile(),
+    getUniversities(),
+  ]);
   // Kılavuz ekleme/silme yalnızca Akademik Yönetici ve üzeri rollere açık
   // (proje dosyası Bölüm 5.6: kural sürümleri akademik yönetici onayıyla etkinleşir).
   const canManage =
@@ -56,6 +62,8 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
         </p>
       ) : null}
 
+      {canManage ? <GuidelineScanner /> : null}
+
       {canManage ? (
         <section className="project-form-card" style={{ marginBottom: 24 }}>
           <div className="project-form-heading">
@@ -66,7 +74,19 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
           <form className="project-form-grid" action={createGuideline}>
             <label>
               <span>Üniversite adı</span>
-              <input name="universityName" type="text" placeholder="Örn. Marmara Üniversitesi" required />
+              <input
+                name="universityName"
+                type="text"
+                list="university-options-guideline"
+                placeholder="Örn. Marmara Üniversitesi"
+                autoComplete="off"
+                required
+              />
+              <datalist id="university-options-guideline">
+                {universities.map((u) => (
+                  <option key={u.id} value={u.name} />
+                ))}
+              </datalist>
             </label>
 
             <label>

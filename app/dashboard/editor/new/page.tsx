@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, Save } from "lucide-react";
 import { createProject } from "@/app/actions/projects";
 import { getGuidelines } from "@/app/actions/guidelines";
+import { getUniversities } from "@/app/actions/universities";
 
 const errorMessages: Record<string, string> = {
   "missing-title": "Çalışma başlığı en az 3 karakter olmalıdır.",
@@ -17,6 +18,7 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
   const params = await searchParams;
   const errorMessage = params.error ? errorMessages[params.error] : null;
   const guidelines = await getGuidelines();
+  const universities = await getUniversities();
 
   return (
     <main className="dashboard-page">
@@ -64,7 +66,18 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
 
             <label>
               <span>Üniversite</span>
-              <input name="university" type="text" placeholder="Üniversite adı" />
+              <input
+                name="university"
+                type="text"
+                list="university-options"
+                placeholder="Üniversite adını yazmaya başlayın..."
+                autoComplete="off"
+              />
+              <datalist id="university-options">
+                {universities.map((u) => (
+                  <option key={u.id} value={u.name} />
+                ))}
+              </datalist>
             </label>
 
             <label>
