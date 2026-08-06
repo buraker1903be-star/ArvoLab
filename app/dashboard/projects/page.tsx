@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, Plus, RotateCcw, ShieldCheck, UserRound } from "lucide-react";
+import { CalendarDays, CheckCircle2, PenLine, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
 import { getProjects, approveProject, revokeApproval } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -107,7 +107,7 @@ export default async function ProjectsPage() {
                 </div>
 
                 {canApprove ? (
-                  <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+                  <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
                     {isApproved ? (
                       <form action={handleRevoke.bind(null, project.id)}>
                         <button type="submit" className="projects-filter-button">
@@ -125,6 +125,17 @@ export default async function ProjectsPage() {
                     )}
                   </div>
                 ) : null}
+
+                <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <Link href={`/dashboard/projects/${project.id}/write`} className="projects-primary-button">
+                    <PenLine size={15} />
+                    Panelde Yaz
+                  </Link>
+                  <Link href="/dashboard/documents" className="projects-filter-button">
+                    <Upload size={15} />
+                    Hazır Belge Yükle
+                  </Link>
+                </div>
               </article>
             );
           })}

@@ -1,0 +1,200 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { extractPlainText, extractHeadings, countWords, type TiptapDoc } from "@/lib/tiptap-text";
+import { splitBodyAndReferences } from "@/lib/document-extract";
+import {
+  parseReferenceList,
+  extractInTextCitations,
+  crossCheck,
+  computeComplianceScore,
+} from "@/lib/apa7";
+import { checkGuidelineCompliance } from "@/lib/guideline-check";
+
+export interface ManuscriptData {
+  content: TiptapDoc;
+  wordCount: number;
+  updatedAt: string;
+}
+
+export async function getManuscript(projectId: string): Promise<ManuscriptData | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("project_manuscripts")
+    .select("content, word_count, updated_at")
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return null;
+  }
+  if (!data) return null;
+
+  return {
+    content: data.content as TiptapDoc,
+    wordCount: data.word_count,
+    updatedAt: data.updated_at,
+  };
+}
+
+export async function saveManuscript(projectId: string, content: TiptapDoc) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const plainText = extractPlainText(content);
+  const wordCount = countWords(content);
+
+  const { error } = await supabase.from("project_manuscripts").upsert(
+    {
+      project_id: projectId,
+      content,
+      plain_text: plainText,
+      word_count: wordCount,
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "project_id" }
+  );
+
+  if (error) {
+    console.error(error);
+    return { error: "Kaydedilirken bir hata oluştu." };
+  }
+
+  return { success: true, wordCount };
+}
+
+export async function uploadEditorImage(formData: FormData): Promise<{ url?: string; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Geçersiz dosya." };
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return { error: "Resim boyutu 8 MB sınırını aşıyor." };
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${user.id}/editor-images/${Date.now()}-${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("project-files")
+    .upload(path, buffer, { contentType: file.type || undefined, upsert: false });
+
+  if (uploadError) {
+    console.error(uploadError);
+    return { error: "Resim yüklenirken hata oluştu." };
+  }
+
+  // MVP: uzun ömürlü imzalı URL (bucket özel olduğu için doğrudan public URL çalışmaz)
+  const { data: signed, error: signError } = await supabase.storage
+    .from("project-files")
+    .createSignedUrl(path, 60 * 60 * 24 * 365); // 1 yıl
+
+  if (signError || !signed) {
+    console.error(signError);
+    return { error: "Resim bağlantısı oluşturulamadı." };
+  }
+
+  return { url: signed.signedUrl };
+}
+
+export interface ManuscriptCheckResult {
+  wordCount: number;
+  guidelineCompliance: ReturnType<typeof checkGuidelineCompliance> | null;
+  apa7: {
+    referenceSectionFound: boolean;
+    complianceScore: number | null;
+    references: ReturnType<typeof parseReferenceList>;
+    crossCheck: ReturnType<typeof crossCheck>;
+  };
+}
+
+export async function runManuscriptCheck(projectId: string): Promise<{ error?: string; result?: ManuscriptCheckResult }> {
+  const supabase = await createClient();
+
+  const { data: manuscript, error: manuscriptError } = await supabase
+    .from("project_manuscripts")
+    .select("content")
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (manuscriptError || !manuscript) {
+    return { error: "Önce çalışmayı kaydedin, sonra kontrol edin." };
+  }
+
+  const { data: project } = await supabase
+    .from("academic_projects")
+    .select("guideline_id, citation_style")
+    .eq("id", projectId)
+    .single();
+
+  const content = manuscript.content as TiptapDoc;
+  const fullText = extractPlainText(content);
+  const split = splitBodyAndReferences(fullText);
+
+  let guidelineCompliance: ReturnType<typeof checkGuidelineCompliance> | null = null;
+  if (project?.guideline_id) {
+    const { data: guideline } = await supabase
+      .from("thesis_guidelines")
+      .select("required_sections, citation_style")
+      .eq("id", project.guideline_id)
+      .single();
+
+    if (guideline) {
+      guidelineCompliance = checkGuidelineCompliance(
+        split.bodyText,
+        guideline.required_sections ?? [],
+        guideline.citation_style,
+        project.citation_style ?? null
+      );
+    }
+  }
+
+  let apa7Result: ManuscriptCheckResult["apa7"];
+  if (split.referenceText.trim().length > 0) {
+    const references = parseReferenceList(split.referenceText);
+    const citations = extractInTextCitations(split.bodyText);
+    const cross = crossCheck(citations, references);
+    const score = computeComplianceScore(references, cross);
+    apa7Result = { referenceSectionFound: true, complianceScore: score, references, crossCheck: cross };
+  } else {
+    apa7Result = {
+      referenceSectionFound: false,
+      complianceScore: null,
+      references: [],
+      crossCheck: { citationsWithoutReference: [], referencesWithoutCitation: [] },
+    };
+  }
+
+  return {
+    result: {
+      wordCount: countWords(content),
+      guidelineCompliance,
+      apa7: apa7Result,
+    },
+  };
+}
+
+export async function getManuscriptHeadings(projectId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("project_manuscripts")
+    .select("content")
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (!data) return [];
+  return extractHeadings(data.content as TiptapDoc);
+}

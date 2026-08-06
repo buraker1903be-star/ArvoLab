@@ -591,3 +591,71 @@ create policy "Users can delete their own originality checks"
   for delete
   to authenticated
   using (requested_by = (select auth.uid()));
+
+-- ============================================================
+-- Panelde Yazma: Çalışma Metni (Manuscript)
+-- Öğrenci/çalışan tezini/makalesini doğrudan ArvoLab editöründe
+-- yazar. İçerik Tiptap/ProseMirror JSON formatında saklanır.
+-- Bu, "yükle-sonra-kontrol-et" akışına EK bir seçenektir; belge
+-- yükleme özelliği (document_uploads) kaldırılmamıştır.
+-- ============================================================
+create table if not exists public.project_manuscripts (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null unique references public.academic_projects(id) on delete cascade,
+  content jsonb not null default '{"type":"doc","content":[]}'::jsonb,
+  plain_text text, -- her kayıtta güncellenen düz metin önbelleği (kontrol motorları için)
+  word_count integer not null default 0,
+  updated_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.project_manuscripts enable row level security;
+
+grant select, insert, update on public.project_manuscripts to authenticated;
+
+create policy "Users can view manuscripts they have project access to"
+  on public.project_manuscripts
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.academic_projects p
+      where p.id = project_manuscripts.project_id
+      and (p.owner_id = (select auth.uid()) or p.assignee_id = (select auth.uid()))
+    )
+    or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
+  );
+
+create policy "Users can create manuscripts for their own projects"
+  on public.project_manuscripts
+  for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.academic_projects p
+      where p.id = project_manuscripts.project_id
+      and (p.owner_id = (select auth.uid()) or p.assignee_id = (select auth.uid()))
+    )
+  );
+
+create policy "Users can update manuscripts they have project access to"
+  on public.project_manuscripts
+  for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.academic_projects p
+      where p.id = project_manuscripts.project_id
+      and (p.owner_id = (select auth.uid()) or p.assignee_id = (select auth.uid()))
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.academic_projects p
+      where p.id = project_manuscripts.project_id
+      and (p.owner_id = (select auth.uid()) or p.assignee_id = (select auth.uid()))
+    )
+  );
+
+-- Editörde eklenen resimler için ayrı klasör alanı (project-files bucket'ı zaten var)

@@ -87,6 +87,7 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] APA 7 kaynakça doğrulama
 - [x] Marka kimliği (logo, renkler)
 - [x] MAXQDA / SPSS çıktı yorumlama asistanı (SPSS → APA7 biçimlendirme + kod kitabı kalite kontrolü)
+- [x] Panelde Yazma: tam özellikli editör (başlık, tablo, resim, dipnot) + manuel kılavuz/APA7 kontrolü + gerçek .docx dışa aktarım
 
 ## Faz 1 Tamamlandı 🎉
 
