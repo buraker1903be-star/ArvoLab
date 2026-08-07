@@ -3,6 +3,7 @@ import { ArrowLeft, CalendarDays, Save } from "lucide-react";
 import { createProject } from "@/app/actions/projects";
 import { getGuidelines } from "@/app/actions/guidelines";
 import { getUniversities } from "@/app/actions/universities";
+import AcademicUnitFields from "./academic-unit-fields";
 
 const errorMessages: Record<string, string> = {
   "missing-title": "Çalışma başlığı en az 3 karakter olmalıdır.",
@@ -64,31 +65,7 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
               </select>
             </label>
 
-            <label>
-              <span>Üniversite</span>
-              <input
-                name="university"
-                type="text"
-                list="university-options"
-                placeholder="Üniversite adını yazmaya başlayın..."
-                autoComplete="off"
-              />
-              <datalist id="university-options">
-                {universities.map((u) => (
-                  <option key={u.id} value={u.name} />
-                ))}
-              </datalist>
-            </label>
-
-            <label>
-              <span>Enstitü / Fakülte</span>
-              <input name="institute" type="text" placeholder="Enstitü veya fakülte adı" />
-            </label>
-
-            <label>
-              <span>Bölüm / Ana bilim dalı</span>
-              <input name="department" type="text" placeholder="Bölüm adı" />
-            </label>
+            <AcademicUnitFields universities={universities} />
 
             <label>
               <span>Kaynakça sistemi</span>
