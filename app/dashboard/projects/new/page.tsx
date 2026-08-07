@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, Save } from "lucide-react";
 import { createProject } from "@/app/actions/projects";
 import { getGuidelines } from "@/app/actions/guidelines";
+import { getUniversities } from "@/app/actions/universities";
+import AcademicUnitFields from "./academic-unit-fields";
 
 const errorMessages: Record<string, string> = {
   "missing-title": "Çalışma başlığı en az 3 karakter olmalıdır.",
@@ -16,7 +18,10 @@ type NewProjectPageProps = {
 export default async function NewProjectPage({ searchParams }: NewProjectPageProps) {
   const params = await searchParams;
   const errorMessage = params.error ? errorMessages[params.error] : null;
-  const guidelines = await getGuidelines();
+  const [guidelines, universities] = await Promise.all([
+    getGuidelines(),
+    getUniversities(),
+  ]);
 
   return (
     <main className="dashboard-page">
@@ -62,20 +67,7 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
               </select>
             </label>
 
-            <label>
-              <span>Üniversite</span>
-              <input name="university" type="text" placeholder="Üniversite adı" />
-            </label>
-
-            <label>
-              <span>Enstitü / Fakülte</span>
-              <input name="institute" type="text" placeholder="Enstitü veya fakülte adı" />
-            </label>
-
-            <label>
-              <span>Bölüm / Ana bilim dalı</span>
-              <input name="department" type="text" placeholder="Bölüm adı" />
-            </label>
+            <AcademicUnitFields universities={universities} />
 
             <label>
               <span>Kaynakça sistemi</span>

@@ -24,6 +24,10 @@ create table if not exists public.organizations (
   created_at timestamptz not null default now()
 );
 
+-- auth.users tablosunu genişleten profil kaydı.
+-- ÖNEMLİ: rol bilgisi burada (güvenli veritabanı tablosunda) tutulur,
+-- kullanıcı tarafından değiştirilebilir JWT/user_metadata'da DEĞİL
+-- (bkz. proje dosyası Bölüm 3.1 Yetkilendirme İlkeleri).
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   organization_id uuid references public.organizations(id),
@@ -39,7 +43,6 @@ grant select on public.organizations to authenticated;
 grant insert, update on public.organizations to authenticated;
 grant select, update on public.profiles to authenticated;
 
-drop policy if exists "Members can view their own organization" on public.organizations;
 create policy "Members can view their own organization"
   on public.organizations
   for select
@@ -49,7 +52,6 @@ create policy "Members can view their own organization"
     or public.has_role(array['system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can view profiles in their organization" on public.profiles;
 create policy "Users can view profiles in their organization"
   on public.profiles
   for select
@@ -60,7 +62,6 @@ create policy "Users can view profiles in their organization"
     or public.has_role(array['system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can update their own profile (not their role)" on public.profiles;
 create policy "Users can update their own profile (not their role)"
   on public.profiles
   for update
@@ -68,6 +69,12 @@ create policy "Users can update their own profile (not their role)"
   using (id = (select auth.uid()))
   with check (id = (select auth.uid()));
 
+-- GÜVENLİK: Yukarıdaki politika satır erişimini kısıtlar ama sütun
+-- bazlı bir kısıtlama SAĞLAMAZ — Postgres RLS sütun bazlı olamaz.
+-- Bu yüzden bir kullanıcının KENDİ satırını güncellerken role veya
+-- organization_id alanlarını değiştirmesini bu trigger engeller.
+-- Yalnızca Sistem Yöneticisi/Kurucu rolündeki kullanıcılar (kendi
+-- satırları dahil, ayrı bir politika üzerinden) bu alanları değiştirebilir.
 create or replace function public.prevent_self_role_escalation()
 returns trigger
 language plpgsql
@@ -87,7 +94,8 @@ create trigger prevent_self_role_escalation_trigger
   before update on public.profiles
   for each row execute function public.prevent_self_role_escalation();
 
-drop policy if exists "System admins and founders can update any profile" on public.profiles;
+-- Sistem Yöneticisi/Kurucu herhangi bir kullanıcının profilini
+-- (rolünü, kurumunu) güncelleyebilir — personel ataması için gerekli.
 create policy "System admins and founders can update any profile"
   on public.profiles
   for update
@@ -95,14 +103,12 @@ create policy "System admins and founders can update any profile"
   using (public.has_role(array['system_admin','founder']::public.user_role[]))
   with check (public.has_role(array['system_admin','founder']::public.user_role[]));
 
-drop policy if exists "System admins and founders can create organizations" on public.organizations;
 create policy "System admins and founders can create organizations"
   on public.organizations
   for insert
   to authenticated
   with check (public.has_role(array['system_admin','founder']::public.user_role[]));
 
-drop policy if exists "System admins and founders can update organizations" on public.organizations;
 create policy "System admins and founders can update organizations"
   on public.organizations
   for update
@@ -110,6 +116,10 @@ create policy "System admins and founders can update organizations"
   using (public.has_role(array['system_admin','founder']::public.user_role[]))
   with check (public.has_role(array['system_admin','founder']::public.user_role[]));
 
+-- Yeni auth kullanıcısı oluştuğunda otomatik profil satırı açar
+-- (varsayılan rol: client — yeni üye kendi çalışmasını kendi yürütür).
+-- AkademikMerkez personeli olacak kullanıcılar, Sistem Yöneticisi/Kurucu
+-- tarafından "Ekip Yönetimi" panelinden ilgili role yükseltilir.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -128,6 +138,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- Yardımcı fonksiyon: çağıran kullanıcının rolü belirtilen listede mi?
 create or replace function public.has_role(roles public.user_role[])
 returns boolean
 language sql
@@ -144,7 +155,7 @@ create table if not exists public.academic_projects (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
   organization_id uuid references public.organizations(id),
-  assignee_id uuid references public.profiles(id),
+  assignee_id uuid references public.profiles(id), -- proje dosyası 6.1: sorumlu çalışan ataması
   title text not null check (char_length(title) between 3 and 240),
   project_type text not null check (project_type in ('thesis', 'article', 'project', 'associate-professorship')),
   university text,
@@ -152,12 +163,13 @@ create table if not exists public.academic_projects (
   department text,
   citation_style text not null default 'apa7' check (citation_style in ('apa7', 'vancouver', 'chicago', 'ieee')),
   research_method text check (research_method in ('quantitative', 'qualitative', 'mixed', 'review')),
-  assignee_name text,
+  assignee_name text, -- geriye dönük uyumluluk (assignee_id boşken serbest metin etiket)
   due_date date,
   priority text not null default 'normal' check (priority in ('low', 'normal', 'high', 'urgent')),
   status text not null default 'new' check (status in ('new', 'planned', 'writing', 'analysis', 'review', 'revision', 'turnitin', 'ready', 'delivered', 'archived')),
   notes text,
   progress smallint not null default 0 check (progress between 0 and 100),
+  -- Kontrolör onayı: proje dosyası 6.2 "Tez ve Makale Üretim Akışı" - Biçim/Teslim aşaması onayı
   controller_approved_by uuid references public.profiles(id),
   controller_approved_at timestamptz,
   created_at timestamptz not null default now(),
@@ -174,7 +186,9 @@ alter table public.academic_projects enable row level security;
 
 grant select, insert, update, delete on public.academic_projects to authenticated;
 
-drop policy if exists "View own, assigned, or oversight-role projects" on public.academic_projects;
+-- Görme yetkisi: sahibi, atanan çalışan, ya da denetim rolündeki kullanıcılar
+-- (Kontrolör / Akademik Yönetici / Sistem Yöneticisi / Kurucu) - proje dosyası
+-- Bölüm 3 "Hedef Kullanıcılar ve Roller" ile uyumlu.
 create policy "View own, assigned, or oversight-role projects"
   on public.academic_projects
   for select
@@ -185,14 +199,12 @@ create policy "View own, assigned, or oversight-role projects"
     or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can create their own academic projects" on public.academic_projects;
 create policy "Users can create their own academic projects"
   on public.academic_projects
   for insert
   to authenticated
   with check ((select auth.uid()) = owner_id);
 
-drop policy if exists "Update own, assigned, or oversight-role projects" on public.academic_projects;
 create policy "Update own, assigned, or oversight-role projects"
   on public.academic_projects
   for update
@@ -208,7 +220,6 @@ create policy "Update own, assigned, or oversight-role projects"
     or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Owner or oversight-role can delete projects" on public.academic_projects;
 create policy "Owner or oversight-role can delete projects"
   on public.academic_projects
   for delete
@@ -218,10 +229,16 @@ create policy "Owner or oversight-role can delete projects"
     or public.has_role(array['academic_manager','system_admin','founder']::public.user_role[])
   );
 
+-- ============================================================
+-- APA7 Kaynakça Doğrulama Kayıtları
+-- Her kayıt bir academic_projects satırına bağlıdır.
+-- Bu tablo İÇERİK ÜRETMEZ; yalnızca kural bazlı format/atıf
+-- denetim sonuçlarını saklar (ArvoLab dahili doğrulama motoru).
+-- ============================================================
 create table if not exists public.citation_checks (
   id uuid primary key default gen_random_uuid(),
   project_id uuid references public.academic_projects(id) on delete cascade,
-  project_title text,
+  project_title text, -- academic_projects henüz seçilmediyse/kaydedilmediyse geçici etiket
   raw_reference_list text not null,
   body_text text,
   parsed_references jsonb not null default '[]'::jsonb,
@@ -242,7 +259,7 @@ alter table public.citation_checks enable row level security;
 
 grant select, insert, delete on public.citation_checks to authenticated;
 
-drop policy if exists "Users can view their own citation checks" on public.citation_checks;
+-- Kaydı oluşturan kişi görebilir; ayrıca bağlı bir projeye sahipse o yoldan da erişebilir
 create policy "Users can view their own citation checks"
   on public.citation_checks
   for select
@@ -257,20 +274,26 @@ create policy "Users can view their own citation checks"
     or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can create their own citation checks" on public.citation_checks;
 create policy "Users can create their own citation checks"
   on public.citation_checks
   for insert
   to authenticated
   with check (created_by = (select auth.uid()));
 
-drop policy if exists "Users can delete their own citation checks" on public.citation_checks;
 create policy "Users can delete their own citation checks"
   on public.citation_checks
   for delete
   to authenticated
   using (created_by = (select auth.uid()));
 
+-- ============================================================
+-- Doküman Yükleme ve Otomatik Analiz
+-- Kullanıcı DOCX/PDF yükler; sistem metni çıkarıp kaynakça/atıf
+-- kontrolünden geçirir. Dosyanın kendisi Storage'da, çıkarılan
+-- metin ve analiz sonucu burada JSON olarak tutulur.
+-- İÇERİK ÜRETİLMEZ; yalnızca kullanıcının kendi dosyası okunup
+-- kural bazlı denetlenir.
+-- ============================================================
 insert into storage.buckets (id, name, public)
 values ('project-files', 'project-files', false)
 on conflict (id) do nothing;
@@ -278,7 +301,7 @@ on conflict (id) do nothing;
 create table if not exists public.document_uploads (
   id uuid primary key default gen_random_uuid(),
   project_id uuid references public.academic_projects(id) on delete cascade,
-  project_title text,
+  project_title text, -- proje seçilmediyse geçici etiket
   uploaded_by uuid not null references auth.users(id) on delete cascade,
   file_name text not null,
   storage_path text not null,
@@ -286,7 +309,7 @@ create table if not exists public.document_uploads (
   file_size bigint,
   extracted_text text,
   reference_text text,
-  analysis jsonb,
+  analysis jsonb, -- APA7 motor çıktısı (parsed_references, cross_check, complianceScore)
   status text not null default 'processing' check (status in ('processing', 'analyzed', 'failed')),
   error_message text,
   created_at timestamptz not null default now()
@@ -302,7 +325,6 @@ alter table public.document_uploads enable row level security;
 
 grant select, insert, delete on public.document_uploads to authenticated;
 
-drop policy if exists "Users can view their own document uploads" on public.document_uploads;
 create policy "Users can view their own document uploads"
   on public.document_uploads
   for select
@@ -317,21 +339,20 @@ create policy "Users can view their own document uploads"
     or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can create their own document uploads" on public.document_uploads;
 create policy "Users can create their own document uploads"
   on public.document_uploads
   for insert
   to authenticated
   with check (uploaded_by = (select auth.uid()));
 
-drop policy if exists "Users can delete their own document uploads" on public.document_uploads;
 create policy "Users can delete their own document uploads"
   on public.document_uploads
   for delete
   to authenticated
   using (uploaded_by = (select auth.uid()));
 
-drop policy if exists "Users can upload to their own folder" on storage.objects;
+-- Storage nesne erişimi: yalnızca dosyayı yükleyen kişi kendi
+-- klasöründeki (kullanıcı-id/...) dosyalara erişebilir.
 create policy "Users can upload to their own folder"
   on storage.objects
   for insert
@@ -341,7 +362,6 @@ create policy "Users can upload to their own folder"
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
-drop policy if exists "Users can read their own files" on storage.objects;
 create policy "Users can read their own files"
   on storage.objects
   for select
@@ -354,7 +374,6 @@ create policy "Users can read their own files"
     )
   );
 
-drop policy if exists "Users can delete their own files" on storage.objects;
 create policy "Users can delete their own files"
   on storage.objects
   for delete
@@ -364,14 +383,24 @@ create policy "Users can delete their own files"
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
+-- ============================================================
+-- Üniversite Tez Yazım Kılavuzları
+-- Proje dosyası Bölüm 5.6 "Üniversite Kılavuzları" ile uyumlu.
+-- Kılavuzlar burada YAPILANDIRILMIŞ kurallar (zorunlu bölümler,
+-- kaynakça sistemi, sayfa aralığı) olarak tutulur; belge yükleme
+-- akışında bu kurallara göre otomatik ön kontrol yapılabilir.
+-- Ekleme/güncelleme/silme yalnızca Akademik Yönetici ve üzeri
+-- rollere açıktır; okuma tüm kimlik doğrulaması yapılmış
+-- kullanıcılara açıktır (paylaşılan referans verisi).
+-- ============================================================
 create table if not exists public.thesis_guidelines (
   id uuid primary key default gen_random_uuid(),
   university_name text not null,
   institute_name text,
-  version_label text,
-  source_url text,
+  version_label text,              -- örn. "2025 Güz"
+  source_url text,                 -- kılavuzun resmi kaynağı
   citation_style text not null default 'apa7' check (citation_style in ('apa7', 'vancouver', 'chicago', 'ieee')),
-  required_sections text[] not null default '{}',
+  required_sections text[] not null default '{}', -- örn. {"Giriş","Yöntem","Bulgular","Sonuç","Kaynakça"}
   min_pages integer,
   max_pages integer,
   notes text,
@@ -388,14 +417,12 @@ alter table public.thesis_guidelines enable row level security;
 
 grant select, insert, update, delete on public.thesis_guidelines to authenticated;
 
-drop policy if exists "All authenticated users can view guidelines" on public.thesis_guidelines;
 create policy "All authenticated users can view guidelines"
   on public.thesis_guidelines
   for select
   to authenticated
   using (true);
 
-drop policy if exists "Academic managers and above can create guidelines" on public.thesis_guidelines;
 create policy "Academic managers and above can create guidelines"
   on public.thesis_guidelines
   for insert
@@ -405,7 +432,6 @@ create policy "Academic managers and above can create guidelines"
     and public.has_role(array['academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Academic managers and above can update guidelines" on public.thesis_guidelines;
 create policy "Academic managers and above can update guidelines"
   on public.thesis_guidelines
   for update
@@ -413,21 +439,30 @@ create policy "Academic managers and above can update guidelines"
   using (public.has_role(array['academic_manager','system_admin','founder']::public.user_role[]))
   with check (public.has_role(array['academic_manager','system_admin','founder']::public.user_role[]));
 
-drop policy if exists "Academic managers and above can delete guidelines" on public.thesis_guidelines;
 create policy "Academic managers and above can delete guidelines"
   on public.thesis_guidelines
   for delete
   to authenticated
   using (public.has_role(array['academic_manager','system_admin','founder']::public.user_role[]));
 
+-- academic_projects'i bir kılavuza bağlama imkânı
 alter table public.academic_projects
   add column if not exists guideline_id uuid references public.thesis_guidelines(id);
 
+-- ============================================================
+-- Doçentlik Puan Hesaplayıcı
+-- ÖNEMLİ: ÜAK puanlama kriterleri temel alana göre değişir ve
+-- periyodik olarak güncellenir. ArvoLab resmi/güncel sayıları
+-- kendiliğinden UYDURMAZ; kriterler ve puan değerleri Akademik
+-- Yönetici tarafından güncel resmi duyuruya göre girilir/güncellenir.
+-- Sistem yalnızca kullanıcının kendi beyan ettiği yayın/faaliyet
+-- sayılarına bu kriterleri uygulayarak toplam puanı hesaplar.
+-- ============================================================
 create table if not exists public.scoring_criteria (
   id uuid primary key default gen_random_uuid(),
-  code text not null unique,
-  label text not null,
-  category_group text,
+  code text not null unique,          -- örn. "A1", "B2"
+  label text not null,                -- örn. "SCI-E indeksli makale"
+  category_group text,                -- örn. "Makaleler", "Kitaplar", "Atıflar"
   points_per_unit numeric not null default 0,
   notes text,
   is_active boolean not null default true,
@@ -440,14 +475,12 @@ alter table public.scoring_criteria enable row level security;
 
 grant select, insert, update, delete on public.scoring_criteria to authenticated;
 
-drop policy if exists "All authenticated users can view scoring criteria" on public.scoring_criteria;
 create policy "All authenticated users can view scoring criteria"
   on public.scoring_criteria
   for select
   to authenticated
   using (true);
 
-drop policy if exists "Academic managers and above can manage scoring criteria" on public.scoring_criteria;
 create policy "Academic managers and above can manage scoring criteria"
   on public.scoring_criteria
   for all
@@ -461,7 +494,7 @@ create table if not exists public.academic_score_entries (
   criteria_id uuid not null references public.scoring_criteria(id),
   title text not null,
   unit_count numeric not null default 1 check (unit_count > 0),
-  computed_points numeric not null,
+  computed_points numeric not null, -- girildiği andaki points_per_unit * unit_count (geçmişe dönük tutarlılık için sabitlenir)
   notes text,
   created_at timestamptz not null default now()
 );
@@ -473,7 +506,6 @@ alter table public.academic_score_entries enable row level security;
 
 grant select, insert, delete on public.academic_score_entries to authenticated;
 
-drop policy if exists "Users can view their own score entries" on public.academic_score_entries;
 create policy "Users can view their own score entries"
   on public.academic_score_entries
   for select
@@ -483,24 +515,28 @@ create policy "Users can view their own score entries"
     or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can create their own score entries" on public.academic_score_entries;
 create policy "Users can create their own score entries"
   on public.academic_score_entries
   for insert
   to authenticated
   with check (owner_id = (select auth.uid()));
 
-drop policy if exists "Users can delete their own score entries" on public.academic_score_entries;
 create policy "Users can delete their own score entries"
   on public.academic_score_entries
   for delete
   to authenticated
   using (owner_id = (select auth.uid()));
 
+-- ============================================================
+-- Uzmandan Destek Talebi
+-- Kullanıcı bir çalışma için uzman desteği talep edebilir;
+-- Uzman/Kontrolör/Akademik Yönetici/Sistem Yöneticisi/Kurucu
+-- rolündeki kişiler açık talepleri görüp üstlenebilir.
+-- ============================================================
 create table if not exists public.consultancy_requests (
   id uuid primary key default gen_random_uuid(),
   project_id uuid references public.academic_projects(id) on delete cascade,
-  project_title text,
+  project_title text, -- proje bağlı değilse geçici etiket
   requested_by uuid not null references auth.users(id) on delete cascade,
   request_type text not null check (request_type in ('analysis', 'editing', 'methodology', 'statistics', 'full_review', 'other')),
   message text,
@@ -520,7 +556,9 @@ alter table public.consultancy_requests enable row level security;
 
 grant select, insert, update, delete on public.consultancy_requests to authenticated;
 
-drop policy if exists "View own, assigned, or expert-eligible requests" on public.consultancy_requests;
+-- Görme yetkisi: talebi açan kişi, atanan uzman, ya da
+-- Uzman/Kontrolör/Akademik Yönetici/Sistem Yöneticisi/Kurucu rolleri
+-- (açık talepleri görüp üstlenebilmeleri için).
 create policy "View own, assigned, or expert-eligible requests"
   on public.consultancy_requests
   for select
@@ -531,14 +569,14 @@ create policy "View own, assigned, or expert-eligible requests"
     or public.has_role(array['expert','controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can create their own requests" on public.consultancy_requests;
 create policy "Users can create their own requests"
   on public.consultancy_requests
   for insert
   to authenticated
   with check (requested_by = (select auth.uid()));
 
-drop policy if exists "Owner or expert-eligible roles can update requests" on public.consultancy_requests;
+-- Güncelleme: talebi açan kişi (iptal edebilir) veya uzman rolündeki
+-- kişiler (üstlenme/tamamlama) güncelleyebilir.
 create policy "Owner or expert-eligible roles can update requests"
   on public.consultancy_requests
   for update
@@ -554,20 +592,28 @@ create policy "Owner or expert-eligible roles can update requests"
     or public.has_role(array['expert','controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Owner can delete their own requests" on public.consultancy_requests;
 create policy "Owner can delete their own requests"
   on public.consultancy_requests
   for delete
   to authenticated
   using (requested_by = (select auth.uid()));
 
+-- ============================================================
+-- ArvoLab Orijinallik Ön-Kontrolü
+-- ÖNEMLİ: Bu, Turnitin'in resmi raporunun YERİNE GEÇMEZ ve onu
+-- taklit etmez — Turnitin'in dünya çapındaki kapalı veritabanına
+-- erişimimiz yok. Bu araç yalnızca ArvoLab'a yüklenmiş, kullanıcının
+-- erişim yetkisi olan belge havuzuyla karşılaştırma yapan, kendi
+-- markalı bir ÖN-KONTROL aracıdır. Amaç, resmi teslimden önce
+-- kurum içi tekrar/çakışma riskini erken görebilmektir.
+-- ============================================================
 create table if not exists public.originality_checks (
   id uuid primary key default gen_random_uuid(),
   document_id uuid not null references public.document_uploads(id) on delete cascade,
   requested_by uuid not null references auth.users(id) on delete cascade,
-  overall_similarity numeric not null default 0,
+  overall_similarity numeric not null default 0, -- 0-100 arası, en yüksek eşleşme
   compared_document_count integer not null default 0,
-  matches jsonb not null default '[]'::jsonb,
+  matches jsonb not null default '[]'::jsonb, -- [{documentId, fileName, similarity, sampleOverlap}]
   created_at timestamptz not null default now()
 );
 
@@ -578,7 +624,6 @@ alter table public.originality_checks enable row level security;
 
 grant select, insert, delete on public.originality_checks to authenticated;
 
-drop policy if exists "Users can view their own originality checks" on public.originality_checks;
 create policy "Users can view their own originality checks"
   on public.originality_checks
   for select
@@ -588,25 +633,30 @@ create policy "Users can view their own originality checks"
     or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can create their own originality checks" on public.originality_checks;
 create policy "Users can create their own originality checks"
   on public.originality_checks
   for insert
   to authenticated
   with check (requested_by = (select auth.uid()));
 
-drop policy if exists "Users can delete their own originality checks" on public.originality_checks;
 create policy "Users can delete their own originality checks"
   on public.originality_checks
   for delete
   to authenticated
   using (requested_by = (select auth.uid()));
 
+-- ============================================================
+-- Panelde Yazma: Çalışma Metni (Manuscript)
+-- Öğrenci/çalışan tezini/makalesini doğrudan ArvoLab editöründe
+-- yazar. İçerik Tiptap/ProseMirror JSON formatında saklanır.
+-- Bu, "yükle-sonra-kontrol-et" akışına EK bir seçenektir; belge
+-- yükleme özelliği (document_uploads) kaldırılmamıştır.
+-- ============================================================
 create table if not exists public.project_manuscripts (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null unique references public.academic_projects(id) on delete cascade,
   content jsonb not null default '{"type":"doc","content":[]}'::jsonb,
-  plain_text text,
+  plain_text text, -- her kayıtta güncellenen düz metin önbelleği (kontrol motorları için)
   word_count integer not null default 0,
   updated_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
@@ -617,7 +667,6 @@ alter table public.project_manuscripts enable row level security;
 
 grant select, insert, update on public.project_manuscripts to authenticated;
 
-drop policy if exists "Users can view manuscripts they have project access to" on public.project_manuscripts;
 create policy "Users can view manuscripts they have project access to"
   on public.project_manuscripts
   for select
@@ -631,7 +680,6 @@ create policy "Users can view manuscripts they have project access to"
     or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can create manuscripts for their own projects" on public.project_manuscripts;
 create policy "Users can create manuscripts for their own projects"
   on public.project_manuscripts
   for insert
@@ -644,7 +692,6 @@ create policy "Users can create manuscripts for their own projects"
     )
   );
 
-drop policy if exists "Users can update manuscripts they have project access to" on public.project_manuscripts;
 create policy "Users can update manuscripts they have project access to"
   on public.project_manuscripts
   for update
@@ -664,6 +711,15 @@ create policy "Users can update manuscripts they have project access to"
     )
   );
 
+-- Editörde eklenen resimler için ayrı klasör alanı (project-files bucket'ı zaten var)
+
+-- ============================================================
+-- Literatür Taraması: Kaynak Havuzu
+-- Kullanıcının literatür taraması sırasında bulduğu kaynakları
+-- (henüz kaynakça biçimine sokulmamış, incelenecek/okunan/
+-- kullanılan) takip etmesini sağlar. İçerik/özet ÜRETMEZ;
+-- yalnızca kullanıcının kendi bulduğu kaynakların listesini tutar.
+-- ============================================================
 create table if not exists public.literature_sources (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
@@ -685,7 +741,6 @@ alter table public.literature_sources enable row level security;
 
 grant select, insert, update, delete on public.literature_sources to authenticated;
 
-drop policy if exists "Users can view their own literature sources" on public.literature_sources;
 create policy "Users can view their own literature sources"
   on public.literature_sources
   for select
@@ -695,14 +750,12 @@ create policy "Users can view their own literature sources"
     or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can create their own literature sources" on public.literature_sources;
 create policy "Users can create their own literature sources"
   on public.literature_sources
   for insert
   to authenticated
   with check (owner_id = (select auth.uid()));
 
-drop policy if exists "Users can update their own literature sources" on public.literature_sources;
 create policy "Users can update their own literature sources"
   on public.literature_sources
   for update
@@ -710,13 +763,19 @@ create policy "Users can update their own literature sources"
   using (owner_id = (select auth.uid()))
   with check (owner_id = (select auth.uid()));
 
-drop policy if exists "Users can delete their own literature sources" on public.literature_sources;
 create policy "Users can delete their own literature sources"
   on public.literature_sources
   for delete
   to authenticated
   using (owner_id = (select auth.uid()));
 
+-- ============================================================
+-- Uygulama Destek Talebi
+-- ArvoLab uygulamasının kendisiyle ilgili (hata bildirimi,
+-- erişim sorunu, özellik talebi vb.) teknik destek talepleri.
+-- Akademik danışmanlık talebi olan consultancy_requests'ten
+-- FARKLIDIR — bu tamamen uygulama/teknik destek içindir.
+-- ============================================================
 create table if not exists public.app_support_requests (
   id uuid primary key default gen_random_uuid(),
   requested_by uuid not null references auth.users(id) on delete cascade,
@@ -736,7 +795,6 @@ alter table public.app_support_requests enable row level security;
 
 grant select, insert, update on public.app_support_requests to authenticated;
 
-drop policy if exists "Users can view their own support requests" on public.app_support_requests;
 create policy "Users can view their own support requests"
   on public.app_support_requests
   for select
@@ -746,14 +804,12 @@ create policy "Users can view their own support requests"
     or public.has_role(array['system_admin','founder']::public.user_role[])
   );
 
-drop policy if exists "Users can create their own support requests" on public.app_support_requests;
 create policy "Users can create their own support requests"
   on public.app_support_requests
   for insert
   to authenticated
   with check (requested_by = (select auth.uid()));
 
-drop policy if exists "Owner or system admin can update support requests" on public.app_support_requests;
 create policy "Owner or system admin can update support requests"
   on public.app_support_requests
   for update
@@ -766,7 +822,13 @@ create policy "Owner or system admin can update support requests"
     requested_by = (select auth.uid())
     or public.has_role(array['system_admin','founder']::public.user_role[])
   );
-
+-- ============================================================
+-- Türkiye Üniversiteleri Referans Listesi
+-- YÖK'ün resmi listesi baz alınarak derlenmiştir (204 üniversite).
+-- Bu, editördeki üniversite seçimini ve kılavuz eşleştirmesini
+-- destekleyen bir REFERANS tablosudur. Akademik Yönetici gerekirse
+-- yeni kurulan üniversiteleri buraya ekleyebilir.
+-- ============================================================
 create table if not exists public.universities (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
@@ -778,19 +840,18 @@ create table if not exists public.universities (
 alter table public.universities enable row level security;
 grant select, insert on public.universities to authenticated;
 
-drop policy if exists "All authenticated users can view universities" on public.universities;
 create policy "All authenticated users can view universities"
   on public.universities
   for select
   to authenticated
   using (true);
 
-drop policy if exists "Academic managers and above can add universities" on public.universities;
 create policy "Academic managers and above can add universities"
   on public.universities
   for insert
   to authenticated
   with check (public.has_role(array['academic_manager','system_admin','founder']::public.user_role[]));
+
 insert into public.universities (name, city, university_type) values
   ('Adana Alparslan Türkeş Bilim ve Teknoloji Üniversitesi', 'Adana', 'devlet'),
   ('Çukurova Üniversitesi', 'Adana', 'devlet'),
@@ -997,47 +1058,3 @@ insert into public.universities (name, city, university_type) values
   ('Yozgat Bozok Üniversitesi', 'Yozgat', 'devlet'),
   ('Zonguldak Bülent Ecevit Üniversitesi', 'Zonguldak', 'devlet')
 on conflict (name) do nothing;
--- ============================================================
--- AI Geri Bildirimi (ChatGPT/OpenAI entegrasyonu)
--- ÖNEMLİ: Bu özellik İÇERİK ÜRETMEZ. Yapay zeka yalnızca
--- yüklenen belgenin YAPISI ve RETORİĞİ hakkında öğretici geri
--- bildirim verir (ör. "giriş bölümünde amaç cümlesi eksik").
--- Öğrencinin çalışmasına doğrudan yapıştırılabilecek metin
--- ÜRETMEZ; bulguların araştırma bağlamındaki anlamını
--- YORUMLAMAZ. Bu ilke prompt seviyesinde (lib/ai-feedback.ts)
--- ve arayüz seviyesinde zorunlu kılınır.
--- ============================================================
-create table if not exists public.ai_feedback_requests (
-  id uuid primary key default gen_random_uuid(),
-  document_id uuid not null references public.document_uploads(id) on delete cascade,
-  requested_by uuid not null references auth.users(id) on delete cascade,
-  feedback_text text,
-  model text,
-  status text not null default 'processing' check (status in ('processing', 'completed', 'failed')),
-  error_message text,
-  created_at timestamptz not null default now()
-);
-
-create index if not exists ai_feedback_requests_document_id_idx
-  on public.ai_feedback_requests(document_id);
-
-alter table public.ai_feedback_requests enable row level security;
-
-grant select, insert on public.ai_feedback_requests to authenticated;
-
-drop policy if exists "Users can view their own ai feedback" on public.ai_feedback_requests;
-create policy "Users can view their own ai feedback"
-  on public.ai_feedback_requests
-  for select
-  to authenticated
-  using (
-    requested_by = (select auth.uid())
-    or public.has_role(array['controller','academic_manager','system_admin','founder']::public.user_role[])
-  );
-
-drop policy if exists "Users can create their own ai feedback" on public.ai_feedback_requests;
-create policy "Users can create their own ai feedback"
-  on public.ai_feedback_requests
-  for insert
-  to authenticated
-  with check (requested_by = (select auth.uid()));
