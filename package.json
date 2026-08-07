@@ -9,7 +9,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run build",
+    "academic-directory:check": "node --check scripts/academic-directory/crawl.mjs && node --check scripts/academic-directory/diff.mjs && node --check scripts/academic-directory/generate-sync-sql.mjs && node --check scripts/academic-directory/approve-snapshot.mjs",
+    "academic-directory:crawl": "node scripts/academic-directory/crawl.mjs",
+    "academic-directory:diff": "node scripts/academic-directory/diff.mjs",
+    "academic-directory:sql": "node scripts/academic-directory/generate-sync-sql.mjs",
+    "academic-directory:refresh": "npm run academic-directory:crawl && npm run academic-directory:diff && npm run academic-directory:sql",
+    "academic-directory:approve": "node scripts/academic-directory/approve-snapshot.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
