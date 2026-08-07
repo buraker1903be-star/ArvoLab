@@ -14,10 +14,18 @@ export async function runGuidelineScan(url: string): Promise<ScanResponse> {
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", (await supabase.auth.getUser()).data.user?.id ?? "")
+    .eq("id", user.id)
     .single();
 
   const oversightRoles = ["academic_manager", "system_admin", "founder"];
