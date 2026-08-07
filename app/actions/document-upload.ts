@@ -11,7 +11,7 @@ import {
   computeComplianceScore,
 } from "@/lib/apa7";
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB — Supabase Storage tarafındaki gerçek sınır
 
 export interface UploadResult {
   error?: string;
@@ -28,7 +28,29 @@ export interface UploadResult {
   };
 }
 
-export async function uploadAndAnalyzeDocument(formData: FormData): Promise<UploadResult> {
+/**
+ * ÖNEMLİ MİMARİ NOT:
+ * Dosyanın kendisi bu server action'a GÖNDERİLMEZ. Vercel'in
+ * sunucu fonksiyonlarında platform seviyesinde, next.config.ts
+ * ile aşılamayan sabit bir istek boyutu sınırı (~4.5 MB) vardır;
+ * gerçek bir tez/makale dosyası bunu kolayca aşar ve
+ * "413 FUNCTION_PAYLOAD_TOO_LARGE" hatasına yol açar.
+ *
+ * Bunun yerine: dosya, TARAYICIDAN DOĞRUDAN Supabase Storage'a
+ * yüklenir (bkz. document-upload-form.tsx — browser Supabase
+ * istemcisi kullanır). Bu server action'a yalnızca depolama
+ * yolu (storagePath) gibi küçük metin verileri gelir; dosyanın
+ * kendisini bu fonksiyon Supabase'ten SUNUCU TARAFINDA indirir
+ * (bu, gelen istek boyutu sınırına tabi değildir).
+ */
+export async function analyzeUploadedDocument(params: {
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  projectId: string | null;
+  projectTitle: string | null;
+}): Promise<UploadResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -37,42 +59,28 @@ export async function uploadAndAnalyzeDocument(formData: FormData): Promise<Uplo
     return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
   }
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Lütfen bir dosya seçin." };
-  }
-  if (file.size > MAX_FILE_SIZE) {
+  if (params.fileSize > MAX_FILE_SIZE) {
     return { error: "Dosya boyutu 20 MB sınırını aşıyor." };
   }
 
-  const docType = detectDocType(file.name, file.type);
+  const docType = detectDocType(params.fileName, params.mimeType);
   if (!docType) {
     return { error: "Yalnızca .docx ve .pdf dosyaları desteklenir." };
   }
 
-  const projectId = String(formData.get("projectId") ?? "").trim() || null;
-  const projectTitle = String(formData.get("projectTitle") ?? "").trim() || null;
-
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  // 1) Storage'a yükle
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const storagePath = `${user.id}/${Date.now()}-${safeName}`;
-
-  const { error: uploadError } = await supabase.storage
+  // Dosyayı Supabase Storage'dan SUNUCU TARAFINDA indir
+  const { data: fileBlob, error: downloadError } = await supabase.storage
     .from("project-files")
-    .upload(storagePath, buffer, {
-      contentType: file.type || undefined,
-      upsert: false,
-    });
+    .download(params.storagePath);
 
-  if (uploadError) {
-    console.error(uploadError);
-    return { error: "Dosya depolamaya yüklenirken hata oluştu." };
+  if (downloadError || !fileBlob) {
+    console.error(downloadError);
+    return { error: "Yüklenen dosya depodan okunamadı." };
   }
 
-  // 2) Metni çıkar ve analiz et
+  const arrayBuffer = await fileBlob.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
   let extractedText = "";
   let status: "analyzed" | "failed" = "analyzed";
   let errorMessage: string | null = null;
@@ -85,11 +93,11 @@ export async function uploadAndAnalyzeDocument(formData: FormData): Promise<Uplo
     referenceText = split.referenceText;
 
     let guidelineCompliance: GuidelineComplianceResult | null = null;
-    if (projectId) {
+    if (params.projectId) {
       const { data: project } = await supabase
         .from("academic_projects")
         .select("guideline_id, citation_style")
-        .eq("id", projectId)
+        .eq("id", params.projectId)
         .single();
 
       if (project?.guideline_id) {
@@ -139,17 +147,16 @@ export async function uploadAndAnalyzeDocument(formData: FormData): Promise<Uplo
     errorMessage = "Dosyadan metin çıkarılırken bir hata oluştu.";
   }
 
-  // 3) Kayıt oluştur
   const { data: inserted, error: insertError } = await supabase
     .from("document_uploads")
     .insert({
-      project_id: projectId,
-      project_title: projectTitle,
+      project_id: params.projectId,
+      project_title: params.projectTitle,
       uploaded_by: user.id,
-      file_name: file.name,
-      storage_path: storagePath,
-      mime_type: file.type || null,
-      file_size: file.size,
+      file_name: params.fileName,
+      storage_path: params.storagePath,
+      mime_type: params.mimeType || null,
+      file_size: params.fileSize,
       extracted_text: extractedText || null,
       reference_text: referenceText || null,
       analysis,

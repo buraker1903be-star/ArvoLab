@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { extractPlainText, extractHeadings, countWords, type TiptapDoc } from "@/lib/tiptap-text";
-import { splitBodyAndReferences } from "@/lib/document-extract";
+import { splitBodyAndReferences } from "@/lib/text-split";
 import {
   parseReferenceList,
   extractInTextCitations,
@@ -68,47 +68,10 @@ export async function saveManuscript(projectId: string, content: TiptapDoc) {
   return { success: true, wordCount };
 }
 
-export async function uploadEditorImage(formData: FormData): Promise<{ url?: string; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Oturum bulunamadı." };
-
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Geçersiz dosya." };
-  }
-  if (file.size > 8 * 1024 * 1024) {
-    return { error: "Resim boyutu 8 MB sınırını aşıyor." };
-  }
-
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `${user.id}/editor-images/${Date.now()}-${safeName}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("project-files")
-    .upload(path, buffer, { contentType: file.type || undefined, upsert: false });
-
-  if (uploadError) {
-    console.error(uploadError);
-    return { error: "Resim yüklenirken hata oluştu." };
-  }
-
-  // MVP: uzun ömürlü imzalı URL (bucket özel olduğu için doğrudan public URL çalışmaz)
-  const { data: signed, error: signError } = await supabase.storage
-    .from("project-files")
-    .createSignedUrl(path, 60 * 60 * 24 * 365); // 1 yıl
-
-  if (signError || !signed) {
-    console.error(signError);
-    return { error: "Resim bağlantısı oluşturulamadı." };
-  }
-
-  return { url: signed.signedUrl };
-}
+// NOT: Resim yükleme artık burada değil, doğrudan tarayıcıda
+// (manuscript-editor.tsx) yapılıyor — Vercel'in sunucu fonksiyonu
+// istek boyutu sınırını (~4.5 MB, aşılamaz) atlamak için. Bkz.
+// document-upload.ts'teki aynı mimari not.
 
 export interface ManuscriptCheckResult {
   wordCount: number;

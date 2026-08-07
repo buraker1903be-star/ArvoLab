@@ -30,7 +30,8 @@ import {
 } from "lucide-react";
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import type { TiptapDoc } from "@/lib/tiptap-text";
-import { saveManuscript, uploadEditorImage, runManuscriptCheck, type ManuscriptCheckResult } from "@/app/actions/manuscript";
+import { saveManuscript, runManuscriptCheck, type ManuscriptCheckResult } from "@/app/actions/manuscript";
+import { createClient } from "@/lib/supabase/client";
 
 interface ManuscriptEditorProps {
   projectId: string;
@@ -105,12 +106,47 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
   const handleImageUpload = useCallback(
     async (file: File) => {
       if (!editor) return;
-      const formData = new FormData();
-      formData.set("file", file);
-      const res = await uploadEditorImage(formData);
-      if (res.url) {
-        editor.chain().focus().setImage({ src: res.url }).run();
+      if (file.size > 8 * 1024 * 1024) {
+        window.alert("Resim boyutu 8 MB sınırını aşıyor.");
+        return;
       }
+
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        window.alert("Oturum bulunamadı.");
+        return;
+      }
+
+      // Resim, Vercel'in sunucu fonksiyonu istek boyutu sınırını
+      // (~4.5 MB, aşılamaz) atlamak için doğrudan tarayıcıdan
+      // Supabase Storage'a yüklenir (belge yüklemeyle aynı mimari).
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${user.id}/editor-images/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("project-files")
+        .upload(path, file, { contentType: file.type || undefined, upsert: false });
+
+      if (uploadError) {
+        console.error(uploadError);
+        window.alert("Resim yüklenirken hata oluştu.");
+        return;
+      }
+
+      const { data: signed, error: signError } = await supabase.storage
+        .from("project-files")
+        .createSignedUrl(path, 60 * 60 * 24 * 365); // 1 yıl
+
+      if (signError || !signed) {
+        console.error(signError);
+        window.alert("Resim bağlantısı oluşturulamadı.");
+        return;
+      }
+
+      editor.chain().focus().setImage({ src: signed.signedUrl }).run();
     },
     [editor]
   );

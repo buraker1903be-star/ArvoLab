@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
-import { uploadAndAnalyzeDocument } from "@/app/actions/document-upload";
+import { analyzeUploadedDocument } from "@/app/actions/document-upload";
+import { createClient } from "@/lib/supabase/client";
 
 interface Project {
   id: string;
@@ -42,11 +43,59 @@ export default function DocumentUploadForm({ projects }: { projects: Project[] }
     setError(null);
     setResult(null);
     try {
-      const selectedProject = projects.find((p) => p.id === projectId);
-      formData.set("projectId", projectId || "");
-      formData.set("projectTitle", selectedProject ? selectedProject.title : projectTitle);
+      const file = formData.get("file");
+      if (!(file instanceof File) || file.size === 0) {
+        setError("Lütfen bir dosya seçin.");
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        setError("Dosya boyutu 20 MB sınırını aşıyor.");
+        return;
+      }
 
-      const res = await uploadAndAnalyzeDocument(formData);
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+        return;
+      }
+
+      // 1) Dosyayı DOĞRUDAN TARAYICIDAN Supabase Storage'a yükle.
+      // Bu, dosyanın Vercel'in sunucu fonksiyonu üzerinden geçmesini
+      // engeller — Vercel'in platform seviyesinde ~4.5 MB'lık, hiçbir
+      // ayarla aşılamayan bir istek boyutu sınırı vardır. Gerçek tez/
+      // makale dosyaları bunu kolayca aşabildiği için, dosya transferi
+      // tamamen Vercel'i atlayarak doğrudan Supabase'e yapılır.
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const storagePath = `${user.id}/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("project-files")
+        .upload(storagePath, file, {
+          contentType: file.type || undefined,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error(uploadError);
+        setError("Dosya depolamaya yüklenirken hata oluştu.");
+        return;
+      }
+
+      // 2) Yalnızca küçük metin verisiyle (dosya yolu vb.) sunucu
+      // fonksiyonunu çağır; dosyanın kendisi buraya gelmez.
+      const selectedProject = projects.find((p) => p.id === projectId);
+      const res = await analyzeUploadedDocument({
+        storagePath,
+        fileName: file.name,
+        mimeType: file.type || "",
+        fileSize: file.size,
+        projectId: projectId || null,
+        projectTitle: selectedProject ? selectedProject.title : projectTitle || null,
+      });
+
       if (res.error) {
         setError(res.error);
         return;

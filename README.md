@@ -88,6 +88,52 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] Marka kimliği (logo, renkler)
 - [x] MAXQDA / SPSS çıktı yorumlama asistanı (SPSS → APA7 biçimlendirme + kod kitabı kalite kontrolü)
 - [x] Panelde Yazma: tam özellikli editör (başlık, tablo, resim, dipnot) + manuel kılavuz/APA7 kontrolü + gerçek .docx dışa aktarım
+- [x] **Kritik hata düzeltmesi:** "Panelde Yaz" sayfası `DOMMatrix is not defined` hatasıyla çöküyordu. Sebep: `pdf-parse` kütüphanesi statik import edildiği için, onu hiç kullanmayan sayfalar bile (Turbopack'in paylaşılan derleme parçaları yüzünden) onu yükleyip tarayıcıya özgü API'leri (DOMMatrix) polyfill etmeye çalışıyordu. Çözüm: `pdf-parse` ve `mammoth` artık yalnızca gerçekten çağrıldıkları anda dinamik `import()` ile yükleniyor.
+- [x] **Gerçek veri analizi motoru:** Analiz Merkezi'ne Excel/CSV yükleyip gerçek istatistiksel testler (betimsel istatistik, bağımsız örneklem t-testi, tek yönlü ANOVA, Pearson korelasyonu, ki-kare bağımsızlık testi, Cronbach Alpha güvenilirlik analizi) çalıştırma özelliği eklendi. Tüm hesaplama motoru sıfırdan yazıldı (Lanczos log-gamma, tamamlanmamış beta/gamma fonksiyonları) ve bilinen kritik tablo değerleri + elle hesaplanmış örneklerle doğrulandı (bkz. aşağıdaki "Doğrulama Notu"). Hesaplama tamamen tarayıcıda yapılır, veri sunucuya yüklenmez.
+
+## Doğrulama Notu — Veri Analizi Motoru
+
+`lib/stats-math.ts` ve `lib/stats-tests-core.ts` içindeki tüm istatistiksel
+fonksiyonlar, teslim öncesinde şu şekilde test edilmiştir:
+- t, F ve χ² dağılımlarının p-değerleri, ders kitabı kritik tablo
+  değerleriyle (df=10,20,30 için t; çeşitli df kombinasyonları için F ve χ²)
+  4 ondalık basamağa kadar birebir eşleşecek şekilde doğrulandı.
+- Bağımsız örneklem t-testi, tek yönlü ANOVA, Pearson korelasyonu, ki-kare
+  bağımsızlık testi ve Cronbach Alpha, elle hesaplanabilir küçük örnek
+  veri setleriyle doğrulandı (sonuçlar beklenen değerlerle birebir eşleşti).
+- Uçtan uca: gerçek bir Excel dosyası oluşturulup uygulamaya yüklendi,
+  t-testi çalıştırıldı, arayüzdeki sonuç (t(8) = -2.00, p = .081) elle
+  hesaplanan değerle doğrulandı.
+
+**Bilinen sınırlama:** `xlsx` (SheetJS) npm paketinin bilinen, npm
+üzerinden düzeltmesi olmayan güvenlik açıkları vardır (prototip kirliliği,
+ReDoS). Bu riski azaltmak için dosya ayrıştırma tamamen kullanıcının
+tarayıcısında yapılır (sunucuda değil) — bu, olası bir istismarın etkisini
+yalnızca dosyayı yükleyen kullanıcının kendi oturumuyla sınırlar.
+
+## Hata Düzeltmesi — Dosya Yükleme Boyutu Sınırı
+
+Next.js Server Action'ları varsayılan olarak **1 MB** gövde boyutu
+sınırına sahiptir; bunun üzerindeki bir DOCX/PDF yüklemesi, uygulama
+içi bir hata mesajı bile göstermeden ham bir tarayıcı hatasıyla
+başarısız olur ("This page couldn't load"). `next.config.ts`'te
+`experimental.serverActions.bodySizeLimit` değeri **25 MB**'a
+yükseltildi (uygulama içi 20 MB dosya boyutu kontrolüne uyumlu,
+üzerine biraz pay bırakılarak).
+
+## Yeni Özellik — SPSS Tarzı Kapsamlı Analiz Raporu
+
+Analiz Merkezi'nde artık tek testleri tek tek seçmek yerine **"Kapsamlı
+Raporu Oluştur"** butonuyla, yüklenen veri setindeki TÜM değişkenler için
+otomatik olarak şunlar üretiliyor:
+1. Tüm sayısal değişkenler için betimsel istatistikler (N, ortalama, SS, min, maks, medyan)
+2. Tüm kategorik değişkenler için frekans tabloları (frekans + yüzde)
+3. Tüm sayısal değişken çiftleri için korelasyon matrisi (r, p, N — p<.05 olanlar yeşil/kalın işaretli)
+
+Belirli bir hipotezi (örn. iki grup arasında fark var mı) test etmek
+isteyenler için tekil test seçimi (t-testi, ANOVA, ki-kare, güvenilirlik)
+ayrıca mevcut. Gerçek bir örnek veri setiyle uçtan uca test edildi;
+sonuçlar elle hesaplanan değerlerle birebir eşleşti.
 - [x] Marka tutarlılığı düzeltmesi: 17 eksik CSS sınıfı (project-card, project-form-grid, projects-primary-button vb.) tanımlandı — Çalışmalar listesi, formlar ve tüm alt sayfalar artık ArvoLab tasarım diliyle tutarlı
 - [x] Navigasyon yeniden yapılandırıldı (10 madde): Ana Sayfa, Belge Editörü, Literatür Taraması, Kaynakça Doğrulama, Analiz Merkezi, Belge Kontrol, Kılavuzlar, Doçentlik Puan Sorgulama, Uzman Desteği, Uygulama Destek Talep
 - [x] Müşteri odaklı akış düzeltmesi: "Yeni Çalışma" formundan "Atanan çalışan" alanı kaldırıldı (müşteri kendi çalışmasını oluştururken bir çalışan seçmemeli). Atama artık çalışma oluşturulduktan sonra, yalnızca Kontrolör ve üzeri roller tarafından Belge Editörü listesinden yapılıyor.
@@ -133,6 +179,75 @@ puan hesaplayıcı ve uzman danışmanlık talep akışı.
 Sıradaki adımlar için proje dosyasının Faz 3-5 bölümlerine (gelişmiş
 SPSS/nitel analiz otomasyonu, kılavuz otomatik izleme, ArvoOS
 entegrasyonu, çoklu kurum SaaS modeli) bakılabilir.
+
+## Hata Düzeltmesi — 413 FUNCTION_PAYLOAD_TOO_LARGE (Kök Sebep)
+
+Önceki iki düzeltme (dosya boyutu sınırı, zaman aşımı) yardımcı oldu ama
+gerçek kök sebep farklıydı: **Vercel'in sunucu fonksiyonlarında,
+next.config.ts ile HİÇBİR ŞEKİLDE aşılamayan, platform seviyesinde sabit
+bir istek boyutu sınırı (~4.5 MB) vardır.** Gerçek bir tez/makale dosyası
+bunu kolayca aşar ve "413 FUNCTION_PAYLOAD_TOO_LARGE" hatasına yol açar
+— bu, uygulama içi bir hata değil, Vercel'in altyapısının isteği daha
+bizim kodumuza ulaşmadan reddetmesidir.
+
+**Kalıcı çözüm — mimari değişiklik:** Dosyalar artık ASLA Vercel'in
+sunucu fonksiyonlarından geçmiyor. Hem Belge Kontrol (DOCX/PDF yükleme)
+hem de Panelde Yazma (resim ekleme), dosyayı **doğrudan tarayıcıdan
+Supabase Storage'a** yüklüyor (`@supabase/ssr` browser client ile).
+Sunucu fonksiyonuna yalnızca küçük metin verisi (dosya yolu, ad, boyut)
+gönderiliyor; asıl analiz/metin çıkarımı, dosya Supabase'ten SUNUCU
+TARAFINDA indirilerek yapılıyor — bu, gelen istek boyutu sınırına tabi
+değildir çünkü giden bir istektir.
+
+Bu değişiklik test edildi: gerçek bir DOCX dosyasıyla tarayıcı akışı
+uçtan uca çalıştırıldı, JavaScript hatası oluşmadı, hata durumları
+(oturum yok, boyut aşımı vb.) düzgün mesajlarla karşılandı.
+
+## Hata Düzeltmesi — Sunucu Fonksiyonu Zaman Aşımı
+
+Vercel'in sunucu fonksiyonları varsayılan olarak **10 saniye** zaman
+aşımına sahiptir. Büyük dosya yükleme/analiz (Belge Kontrol), resim
+yükleme (Panelde Yazma) ve dış URL'den kılavuz tarama gibi işlemler bunu
+aşabilir — bu da uygulama içi hata göstermeden ham bir tarayıcı hatasına
+("This page couldn't load") yol açar. İlgili sayfalara
+(`app/dashboard/documents/page.tsx`, `app/dashboard/editor/[id]/write/page.tsx`,
+`app/dashboard/guidelines/page.tsx`) ve dışa aktarım API route'una
+`export const maxDuration = 60;` eklendi.
+
+**Önemli not:** Bu ayar `"use server"` server action dosyalarına
+DEĞİL, onları çağıran sayfa dosyalarına eklenmelidir — React'ın
+kuralı gereği bir server action modülü yalnızca async fonksiyon
+export edebilir, başka bir sabit export edilirse (maxDuration gibi)
+tüm modülün export'ları algılanamaz hale gelir ve build hata verir.
+Bunu ilk denemede yanlış yere ekleyip yakalayıp düzelttim.
+
+## Yeni Özellik — AI Geri Bildirimi (ChatGPT/OpenAI)
+
+Belge Kontrol sayfasında, analiz edilmiş her belge için **"AI Geri
+Bildirimi Al"** butonu eklendi. Bu özellik **İÇERİK ÜRETMEZ**:
+
+- Yapay zeka yalnızca belgenin YAPISI ve RETORİĞİ hakkında geri bildirim
+  verir (ör. "giriş bölümünde amaç cümlesi net değil", "bu paragrafta
+  birden fazla fikir karışık veriliyor")
+- Sistem prompt'u (`lib/ai-feedback.ts`), modelin yeniden yazım/alternatif
+  cümle önermesini, araştırma bulgularını yorumlamasını ve kopyalanabilir
+  metin üretmesini AÇIKÇA YASAKLAR
+- Arayüzde geri bildirim, turuncu/kesikli çizgili bir uyarı kutusunda,
+  "öğreticidir, doğrudan kopyalamayın" ibaresiyle gösterilir — normal
+  belge içeriğiyle karışmayacak şekilde görsel olarak ayrıştırılmıştır
+
+**Kurulum gerekli:** Bu özelliğin çalışması için Vercel proje ayarlarına
+şu ortam değişkenini eklemeniz gerekiyor:
+- `OPENAI_API_KEY` — OpenAI hesabınızdan alacağınız API anahtarı
+  (platform.openai.com/api-keys)
+- `OPENAI_MODEL` (opsiyonel) — varsayılan `gpt-4o-mini`, isterseniz
+  değiştirebilirsiniz
+
+**Not:** API anahtarınız olmadan bu sandbox'ta canlı bir OpenAI isteği
+test edemedim (dış API'ye erişimim yok); ancak istek/yanıt işleme
+mantığını sahte (mock) bir yanıtla test ettim ve kod tabanı tam
+derlemeden hatasız geçti. Anahtarı ekledikten sonra ilk denemede bir
+sorun çıkarsa (özellikle OpenAI'dan dönen hata mesajı varsa) paylaşın.
 
 ## Proje Yapısı
 

@@ -411,3 +411,22 @@ button { border: 0; }
   border-top: 1px solid var(--border);
   background: var(--surface-muted);
 }
+
+/* ---------------------------------------------------------------
+   Veri Analizi Sonuç Tabloları
+--------------------------------------------------------------- */
+.stats-result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.stats-result-table th,
+.stats-result-table td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+.stats-result-table th {
+  background: var(--surface-muted);
+  font-weight: 700;
+}

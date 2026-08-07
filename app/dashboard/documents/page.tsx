@@ -1,7 +1,17 @@
 import { getMyProjects } from "@/app/actions/citation-check";
 import { getMyDocumentUploads } from "@/app/actions/document-upload";
 import { runOriginalityCheck, getOriginalityChecksForDocument } from "@/app/actions/originality";
+
+// Belge yükleme + analiz (mammoth/pdf-parse) büyük dosyalarda Vercel'in
+// varsayılan 10 saniyelik zaman aşımını aşabilir; bu da kullanıcıya
+// uygulama içi hata göstermeden ham bir tarayıcı hatasına ("This page
+// couldn't load") yol açar. Bu sayfadaki server action'lar (dosya
+// yükleme, AI geri bildirimi, orijinallik taraması) için süreyi
+// 60 saniyeye çıkarıyoruz.
+export const maxDuration = 60;
+import { getLatestFeedback } from "@/app/actions/ai-feedback";
 import DocumentUploadForm from "./document-upload-form";
+import AiFeedbackButton from "./ai-feedback-button";
 import { ShieldQuestion } from "lucide-react";
 
 export default async function DocumentsPage() {
@@ -16,6 +26,13 @@ export default async function DocumentsPage() {
       .map(async (u) => ({ documentId: u.id, checks: await getOriginalityChecksForDocument(u.id) }))
   );
   const originalityMap = new Map(originalityResults.map((r) => [r.documentId, r.checks[0] ?? null]));
+
+  const feedbackResults = await Promise.all(
+    uploads
+      .filter((u) => u.status === "analyzed")
+      .map(async (u) => ({ documentId: u.id, feedback: await getLatestFeedback(u.id) }))
+  );
+  const feedbackMap = new Map(feedbackResults.map((r) => [r.documentId, r.feedback]));
 
   async function handleRunOriginality(documentId: string) {
     "use server";
@@ -32,7 +49,11 @@ export default async function DocumentsPage() {
             Tam bir tez/makale dosyası (.docx/.pdf) yükleyin; sistem içerik
             üretmez, yalnızca metni okuyup kaynakça formatını, kılavuz
             uygunluğunu ve ArvoLab belge havuzuyla örtüşmeyi (orijinallik
-            ön-kontrolü) denetler. Yalnızca kaynakça listenizi kontrol etmek
+            ön-kontrolü) denetler. Ayrıca isteğe bağlı olarak, belgenizin
+            yapısı ve akıcılığı hakkında yapay zeka destekli (ChatGPT) bir
+            geri bildirim alabilirsiniz — bu geri bildirim yalnızca
+            öğreticidir, tezinize/makalenize doğrudan kopyalanacak bir metin
+            içermez. Yalnızca kaynakça listenizi kontrol etmek
             isterseniz{" "}
             <a href="/dashboard/citations" style={{ color: "var(--accent)", fontWeight: 700 }}>
               Kaynakça Doğrulama
@@ -129,6 +150,11 @@ export default async function DocumentsPage() {
                         Bu tarama yalnızca erişim yetkiniz olan ArvoLab belge
                         havuzuyla karşılaştırır; Turnitin&apos;in yerini tutmaz.
                       </p>
+
+                      <AiFeedbackButton
+                        documentId={u.id}
+                        initialFeedback={feedbackMap.get(u.id)?.feedback_text ?? null}
+                      />
                     </div>
                   ) : null}
                 </article>

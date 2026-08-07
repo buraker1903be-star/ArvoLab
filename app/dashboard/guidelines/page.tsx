@@ -1,6 +1,9 @@
 import { BookMarked, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { getGuidelines, createGuideline, deleteGuideline } from "@/app/actions/guidelines";
 import { getUniversities } from "@/app/actions/universities";
+
+// Kılavuz tarama aracı dış URL çekip PDF ayrıştırabilir, zaman alabilir.
+export const maxDuration = 60;
 import { getCurrentProfile } from "@/app/actions/profile";
 import { isOversightRole } from "@/lib/project-labels";
 import GuidelineScanner from "./guideline-scanner";
