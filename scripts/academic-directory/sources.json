@@ -1,0 +1,106 @@
+[
+  {
+    "universityName": "Ankara Üniversitesi",
+    "officialDomains": ["ankara.edu.tr"],
+    "pages": [
+      "https://uyum.ankara.edu.tr/fakulteler/",
+      "https://www.erasmus.ankara.edu.tr/anlasmalar-listesi/"
+    ]
+  },
+  {
+    "universityName": "Hacettepe Üniversitesi",
+    "officialDomains": ["hacettepe.edu.tr"],
+    "pages": ["https://www.hacettepe.edu.tr/hakkinda/iletisim"]
+  },
+  {
+    "universityName": "Gazi Üniversitesi",
+    "officialDomains": ["gazi.edu.tr"],
+    "pages": [
+      "https://gazi.edu.tr/view/faculties-and-vocational-schools",
+      "https://sgk.gazi.edu.tr/view/page/291466/birim-stratejik-planlari"
+    ]
+  },
+  {
+    "universityName": "Orta Doğu Teknik Üniversitesi (ODTÜ)",
+    "officialDomains": ["metu.edu.tr"],
+    "pages": ["https://www.metu.edu.tr/faculties-institutes-schools"]
+  },
+  {
+    "universityName": "Ankara Yıldırım Beyazıt Üniversitesi",
+    "officialDomains": ["aybu.edu.tr"],
+    "pages": [
+      "https://aybu.edu.tr/adayogrenci/tr/sayfa/6180/Fak%C3%BClteler-ve-Y%C3%BCksekokullar",
+      "https://www.aybu.edu.tr/aybu/tr/sayfa/9625"
+    ]
+  },
+  {
+    "universityName": "Ankara Sosyal Bilimler Üniversitesi",
+    "officialDomains": ["asbu.edu.tr"],
+    "pages": ["https://www.asbu.edu.tr/tr/akademik-birimler"]
+  },
+  {
+    "universityName": "Ankara Hacı Bayram Veli Üniversitesi",
+    "officialDomains": ["hacibayram.edu.tr"],
+    "pages": ["https://hacibayram.edu.tr/web/akademik-birimler?tab=fakulteler"]
+  },
+  {
+    "universityName": "Ankara Müzik ve Güzel Sanatlar Üniversitesi",
+    "officialDomains": ["mgu.edu.tr"],
+    "pages": [
+      "https://www.mgu.edu.tr/mgu-fakulteler/",
+      "https://www.mgu.edu.tr/muzik-ve-guzel-sanatlar-enstitusu/"
+    ]
+  },
+  {
+    "universityName": "Bilkent Üniversitesi",
+    "officialDomains": ["bilkent.edu.tr"],
+    "pages": ["https://w3.bilkent.edu.tr/www/akademik/fakulte-ve-bolumler/"]
+  },
+  {
+    "universityName": "Başkent Üniversitesi",
+    "officialDomains": ["baskent.edu.tr"],
+    "pages": ["https://www.baskent.edu.tr/tr/akademik/akademik/"]
+  },
+  {
+    "universityName": "TOBB Ekonomi ve Teknoloji Üniversitesi",
+    "officialDomains": ["etu.edu.tr"],
+    "pages": ["https://www.etu.edu.tr/tr/akademik"]
+  },
+  {
+    "universityName": "İstanbul Üniversitesi",
+    "officialDomains": ["istanbul.edu.tr"],
+    "pages": ["https://www.istanbul.edu.tr/tr/content/akademik/bolumler"],
+    "parser": {
+      "includeTypes": ["faculty", "institute", "school", "vocational_school", "conservatory", "department"],
+      "excludePatterns": [
+        { "pattern": "uygulama ve araştırma merkezi$", "flags": "iu" },
+        { "pattern": "koordinatörlüğü$", "flags": "iu" }
+      ]
+    }
+  },
+  {
+    "universityName": "Marmara Üniversitesi",
+    "officialDomains": ["marmara.edu.tr"],
+    "pages": [
+      "https://www.marmara.edu.tr/akademik/fakulteler/",
+      "https://www.marmara.edu.tr/akademik/enstituler/"
+    ],
+    "parser": {
+      "includeTypes": ["faculty", "institute", "school", "vocational_school", "conservatory"]
+    }
+  },
+  {
+    "universityName": "Boğaziçi Üniversitesi",
+    "officialDomains": ["bogazici.edu.tr"],
+    "pages": [
+      "https://bogazici.edu.tr/tr/pages/fakulteler/18",
+      "https://bogazici.edu.tr/tr/pages/institutes/5677"
+    ],
+    "parser": {
+      "includeTypes": ["faculty", "institute"],
+      "excludePatterns": [
+        { "pattern": "^(kimya|matematik|fizik|iktisat|işletme)$", "flags": "iu" }
+      ]
+    }
+  }
+]

@@ -4,9 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { buildDocxFromTiptap } from "@/lib/tiptap-docx";
 import type { TiptapDoc } from "@/lib/tiptap-text";
 
-// Büyük/resimli belgelerde Word oluşturma zaman alabilir.
-export const maxDuration = 60;
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }

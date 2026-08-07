@@ -1,0 +1,72 @@
+name: Academic Directory
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "20 3 * * 1"
+  pull_request:
+    paths:
+      - "scripts/academic-directory/**"
+      - "data/academic-directory/approved_snapshot.csv"
+      - "package.json"
+      - ".github/workflows/academic-directory.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate academic directory scripts
+        run: npm run academic-directory:check
+
+      - name: Crawl sources and calculate changes
+        run: npm run academic-directory:refresh
+
+      - name: Add change summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f data/academic-directory/change-report.json ]; then
+            node -e '
+              const fs = require("fs");
+              const report = JSON.parse(fs.readFileSync("data/academic-directory/change-report.json", "utf8"));
+              const lines = [
+                "## Academic directory refresh",
+                "",
+                `- Current rows: ${report.currentCount}`,
+                `- Previous rows: ${report.previousCount}`,
+                `- Added: ${report.addedCount}`,
+                `- Removed: ${report.removedCount}`,
+                `- Type changed: ${report.typeChangedCount}`,
+                `- Snapshot missing: ${report.snapshotMissing ? "yes" : "no"}`
+              ];
+              fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`);
+            '
+          else
+            echo "Change report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload generated directory files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: academic-directory-${{ github.run_id }}
+          path: data/academic-directory/
+          if-no-files-found: warn
+          retention-days: 14
