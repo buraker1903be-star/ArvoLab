@@ -11,6 +11,7 @@ import {
   FootnoteReferenceRun,
   AlignmentType,
   convertInchesToTwip,
+  convertMillimetersToTwip,
 } from "docx";
 
 interface TiptapMark {
@@ -37,6 +38,22 @@ const HEADING_LEVELS = [
   HeadingLevel.HEADING_3,
   HeadingLevel.HEADING_4,
 ];
+
+// Editördeki "lineSpacing" değeri (ör. "1.5", "2") docx.js'in
+// beklediği "line" birimine (240 = tekli aralık) çevrilir.
+function spacingFromAttrs(attrs: Record<string, unknown> | undefined) {
+  const lineSpacing = attrs?.lineSpacing as string | undefined;
+  if (!lineSpacing) return undefined;
+  const multiplier = parseFloat(lineSpacing);
+  if (!multiplier || Number.isNaN(multiplier)) return undefined;
+  return { line: Math.round(240 * multiplier), lineRule: "auto" as const };
+}
+
+function indentFromAttrs(attrs: Record<string, unknown> | undefined) {
+  const firstLineIndent = attrs?.firstLineIndent as boolean | undefined;
+  if (!firstLineIndent) return undefined;
+  return { firstLine: convertMillimetersToTwip(12.5) }; // 1.25 cm — yaygın tez girinti standardı
+}
 
 interface ConversionContext {
   footnotes: Record<string, { children: Paragraph[] }>;
@@ -92,6 +109,7 @@ async function blockNodeToDocxElements(
       return [
         new Paragraph({
           heading: HEADING_LEVELS[Math.max(0, level)],
+          spacing: spacingFromAttrs(node.attrs),
           children: textRunsFromInline(node.content ?? [], ctx),
         }),
       ];
@@ -108,6 +126,8 @@ async function blockNodeToDocxElements(
       return [
         new Paragraph({
           alignment: alignmentMap[align] ?? AlignmentType.LEFT,
+          spacing: spacingFromAttrs(node.attrs),
+          indent: indentFromAttrs(node.attrs),
           children: textRunsFromInline(node.content ?? [], ctx),
         }),
       ];
@@ -201,9 +221,10 @@ export interface BuildDocxOptions {
   title: string;
   doc: TiptapDoc;
   fetchImage: ConversionContext["fetchImage"];
+  margins?: { top: number; bottom: number; left: number; right: number }; // cm cinsinden
 }
 
-export async function buildDocxFromTiptap({ title, doc, fetchImage }: BuildDocxOptions): Promise<Document> {
+export async function buildDocxFromTiptap({ title, doc, fetchImage, margins }: BuildDocxOptions): Promise<Document> {
   const ctx: ConversionContext = { footnotes: {}, nextFootnoteId: 1, fetchImage };
 
   const bodyElements: (Paragraph | Table)[] = [];
@@ -211,6 +232,8 @@ export async function buildDocxFromTiptap({ title, doc, fetchImage }: BuildDocxO
     const elements = await blockNodeToDocxElements(node, ctx);
     bodyElements.push(...elements);
   }
+
+  const m = margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
 
   return new Document({
     title,
@@ -228,7 +251,15 @@ export async function buildDocxFromTiptap({ title, doc, fetchImage }: BuildDocxO
     sections: [
       {
         properties: {
-          page: { size: { width: 11906, height: 16838 } }, // A4
+          page: {
+            size: { width: 11906, height: 16838 }, // A4
+            margin: {
+              top: convertMillimetersToTwip(m.top * 10),
+              bottom: convertMillimetersToTwip(m.bottom * 10),
+              left: convertMillimetersToTwip(m.left * 10),
+              right: convertMillimetersToTwip(m.right * 10),
+            },
+          },
         },
         children: bodyElements.length > 0 ? bodyElements : [new Paragraph({ children: [] })],
       },

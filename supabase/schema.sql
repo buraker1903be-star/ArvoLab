@@ -1041,3 +1041,16 @@ create policy "Users can create their own ai feedback"
   for insert
   to authenticated
   with check (requested_by = (select auth.uid()));
+
+-- ============================================================
+-- Sayfa Kenar Boşlukları (Panelde Yazma)
+-- Türkiye'deki üniversitelerin tez yazım kılavuzlarında sık talep
+-- edilen sayfa kenar boşluğu ayarları. Kurum/kılavuza göre değiştiği
+-- için sabit bir değer dayatılmaz; kullanıcı serbestçe düzenler ve
+-- Word'e aktarımda gerçekten uygulanır.
+-- ============================================================
+alter table public.project_manuscripts
+  add column if not exists margin_top_cm numeric not null default 2.5,
+  add column if not exists margin_bottom_cm numeric not null default 2.5,
+  add column if not exists margin_left_cm numeric not null default 2.5,
+  add column if not exists margin_right_cm numeric not null default 2.5;

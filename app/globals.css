@@ -444,3 +444,39 @@ button { border: 0; }
 .manuscript-toolbar .toolbar-select:hover {
   border-color: var(--accent);
 }
+
+.manuscript-page-settings {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.manuscript-page-settings-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+.manuscript-page-settings label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.manuscript-page-settings input[type="number"] {
+  width: 60px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+.manuscript-page-settings-hint {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  margin-left: auto;
+}

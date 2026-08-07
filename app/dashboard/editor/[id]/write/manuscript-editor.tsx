@@ -30,14 +30,17 @@ import {
   AlignJustify,
 } from "lucide-react";
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
+import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import type { TiptapDoc } from "@/lib/tiptap-text";
-import { saveManuscript, runManuscriptCheck, type ManuscriptCheckResult } from "@/app/actions/manuscript";
+import { saveManuscript, runManuscriptCheck, type ManuscriptCheckResult, type PageMargins } from "@/app/actions/manuscript";
 import { createClient } from "@/lib/supabase/client";
+import { IndentIncrease, Settings2, AlignVerticalSpaceAround } from "lucide-react";
 
 interface ManuscriptEditorProps {
   projectId: string;
   initialContent: object | null;
   requiredSections: string[];
+  initialMargins?: PageMargins;
 }
 
 // Türkiye'deki üniversitelerin tez/makale yazım kılavuzlarında en sık
@@ -56,13 +59,17 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = [9, 10, 10.5, 11, 12, 13, 14, 16, 18, 20, 24];
 
-export default function ManuscriptEditor({ projectId, initialContent, requiredSections }: ManuscriptEditorProps) {
+export default function ManuscriptEditor({ projectId, initialContent, requiredSections, initialMargins }: ManuscriptEditorProps) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [checkResult, setCheckResult] = useState<ManuscriptCheckResult | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [, forceRerender] = useState(0);
+  const [margins, setMargins] = useState<PageMargins>(
+    initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
+  );
+  const [showPageSettings, setShowPageSettings] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
@@ -75,6 +82,7 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
       }),
       TextStyleKit,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      ParagraphFormatting,
       Placeholder.configure({ placeholder: "Çalışmanızı buraya yazmaya başlayın..." }),
       CharacterCount,
       TiptapImage,
@@ -95,14 +103,14 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
     setSaving(true);
     try {
       const json = editor.getJSON() as unknown as TiptapDoc;
-      const res = await saveManuscript(projectId, json);
+      const res = await saveManuscript(projectId, json, margins);
       if (res.success) {
         setLastSaved(new Date().toLocaleTimeString("tr-TR"));
       }
     } finally {
       setSaving(false);
     }
-  }, [editor, projectId]);
+  }, [editor, projectId, margins]);
 
   const handleCheck = useCallback(async () => {
     setChecking(true);
@@ -285,6 +293,36 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
 
         <span className="toolbar-divider" />
 
+        <select
+          className="toolbar-select"
+          title="Satır aralığı"
+          value={editor.getAttributes("paragraph").lineSpacing ?? editor.getAttributes("heading").lineSpacing ?? ""}
+          onChange={(e) => {
+            const value = e.target.value || null;
+            editor.chain().focus().setLineSpacing(value).run();
+          }}
+        >
+          <option value="">Satır aralığı</option>
+          <option value="1">Tek (1.0)</option>
+          <option value="1.15">1.15</option>
+          <option value="1.5">1.5</option>
+          <option value="2">Çift (2.0)</option>
+        </select>
+
+        <button
+          type="button"
+          onClick={() => {
+            const current = editor.getAttributes("paragraph").firstLineIndent ?? false;
+            editor.chain().focus().setFirstLineIndent(!current).run();
+          }}
+          className={editor.getAttributes("paragraph").firstLineIndent ? "is-active" : ""}
+          title="İlk satır girintisi (1.25 cm)"
+        >
+          <IndentIncrease size={16} />
+        </button>
+
+        <span className="toolbar-divider" />
+
         <button
           type="button"
           onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
@@ -318,7 +356,47 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
         <button type="button" onClick={() => editor.chain().focus().redo().run()} title="Yinele">
           <Redo2 size={16} />
         </button>
+
+        <span className="toolbar-divider" />
+
+        <button
+          type="button"
+          onClick={() => setShowPageSettings((v) => !v)}
+          className={showPageSettings ? "is-active" : ""}
+          title="Sayfa kenar boşlukları"
+        >
+          <Settings2 size={16} />
+        </button>
       </div>
+
+      {showPageSettings && (
+        <div className="manuscript-page-settings">
+          <span className="manuscript-page-settings-label">
+            <AlignVerticalSpaceAround size={14} />
+            Sayfa kenar boşlukları (cm)
+          </span>
+          {(["top", "bottom", "left", "right"] as const).map((side) => (
+            <label key={side}>
+              <span>
+                {side === "top" ? "Üst" : side === "bottom" ? "Alt" : side === "left" ? "Sol" : "Sağ"}
+              </span>
+              <input
+                type="number"
+                step={0.1}
+                min={0}
+                max={10}
+                value={margins[side]}
+                onChange={(e) =>
+                  setMargins((prev) => ({ ...prev, [side]: parseFloat(e.target.value) || 0 }))
+                }
+              />
+            </label>
+          ))}
+          <span className="manuscript-page-settings-hint">
+            Değerler kaydedince ve Word&apos;e aktarırken uygulanır.
+          </span>
+        </div>
+      )}
 
       <EditorContent editor={editor} />
 

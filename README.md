@@ -1,5 +1,33 @@
 # ArvoLab
 
+## Yeni Özellik — Tez Formatlama: Satır Aralığı, Girinti, Kenar Boşlukları
+
+Panelde Yazma editörüne üç yeni kontrol eklendi (Türkiye'deki
+üniversitelerin tez/makale kılavuzlarında sık istenen özellikler):
+
+- **Satır aralığı** (araç çubuğunda dropdown): Tek (1.0), 1.15, 1.5, Çift (2.0)
+- **İlk satır girintisi** (araç çubuğunda buton, aç/kapa): 1.25 cm standart girinti
+- **Sayfa kenar boşlukları** (araç çubuğundaki dişli ikonuyla açılan panel):
+  üst/alt/sol/sağ, santimetre cinsinden, tamamen serbestçe düzenlenebilir
+
+Üçü de hem editörde uygulanır hem de **Word'e aktarımda gerçekten
+etkilidir** — varsayılan değer dayatılmaz (kurumdan kuruma değiştiği
+için), kullanıcı serbestçe ayarlar. Gerçek bir .docx dosyası oluşturup
+LibreOffice ile render ederek doğrulandı: asimetrik kenar boşlukları
+(sol/üst geniş, sağ/alt dar), ilk satır girintisi ve 1.5 satır aralığı
+hepsi doğru şekilde çıktıya yansıdı.
+
+**Supabase değişikliği gerekli:** `project_manuscripts` tablosuna
+kenar boşluğu sütunları eklendi — aşağıdaki SQL'i çalıştırın:
+
+```sql
+alter table public.project_manuscripts
+  add column if not exists margin_top_cm numeric not null default 2.5,
+  add column if not exists margin_bottom_cm numeric not null default 2.5,
+  add column if not exists margin_left_cm numeric not null default 2.5,
+  add column if not exists margin_right_cm numeric not null default 2.5;
+```
+
 Akademik Araştırma ve Analiz Sistemi — çalışanlarınız ve müşterileriniz için
 akademik operasyon paneli.
 

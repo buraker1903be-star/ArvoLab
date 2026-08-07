@@ -11,17 +11,25 @@ import {
 } from "@/lib/apa7";
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
 
+export interface PageMargins {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
 export interface ManuscriptData {
   content: TiptapDoc;
   wordCount: number;
   updatedAt: string;
+  margins: PageMargins;
 }
 
 export async function getManuscript(projectId: string): Promise<ManuscriptData | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("project_manuscripts")
-    .select("content, word_count, updated_at")
+    .select("content, word_count, updated_at, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm")
     .eq("project_id", projectId)
     .maybeSingle();
 
@@ -35,10 +43,16 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
     content: data.content as TiptapDoc,
     wordCount: data.word_count,
     updatedAt: data.updated_at,
+    margins: {
+      top: data.margin_top_cm ?? 2.5,
+      bottom: data.margin_bottom_cm ?? 2.5,
+      left: data.margin_left_cm ?? 2.5,
+      right: data.margin_right_cm ?? 2.5,
+    },
   };
 }
 
-export async function saveManuscript(projectId: string, content: TiptapDoc) {
+export async function saveManuscript(projectId: string, content: TiptapDoc, margins?: PageMargins) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -56,6 +70,14 @@ export async function saveManuscript(projectId: string, content: TiptapDoc) {
       word_count: wordCount,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
+      ...(margins
+        ? {
+            margin_top_cm: margins.top,
+            margin_bottom_cm: margins.bottom,
+            margin_left_cm: margins.left,
+            margin_right_cm: margins.right,
+          }
+        : {}),
     },
     { onConflict: "project_id" }
   );

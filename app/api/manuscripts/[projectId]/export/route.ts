@@ -29,7 +29,7 @@ export async function GET(
 
   const { data: manuscript, error } = await supabase
     .from("project_manuscripts")
-    .select("content")
+    .select("content, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm")
     .eq("project_id", projectId)
     .maybeSingle();
 
@@ -40,6 +40,12 @@ export async function GET(
   const doc = await buildDocxFromTiptap({
     title: project?.title ?? "ArvoLab Çalışması",
     doc: manuscript.content as TiptapDoc,
+    margins: {
+      top: manuscript.margin_top_cm ?? 2.5,
+      bottom: manuscript.margin_bottom_cm ?? 2.5,
+      left: manuscript.margin_left_cm ?? 2.5,
+      right: manuscript.margin_right_cm ?? 2.5,
+    },
     fetchImage: async (url: string) => {
       try {
         const res = await fetch(url);
