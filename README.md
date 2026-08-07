@@ -180,6 +180,24 @@ Sıradaki adımlar için proje dosyasının Faz 3-5 bölümlerine (gelişmiş
 SPSS/nitel analiz otomasyonu, kılavuz otomatik izleme, ArvoOS
 entegrasyonu, çoklu kurum SaaS modeli) bakılabilir.
 
+## Yeni Özellik — Yazı Tipi ve Boyutu Seçimi (Belge Editörü)
+
+Panelde Yazma editörünün araç çubuğuna iki yeni seçici eklendi:
+- **Yazı tipi:** Times New Roman (Türkiye'deki üniversitelerin çoğunun
+  tez/makale kılavuzlarında talep ettiği font), Arial, Calibri, Cambria,
+  Garamond, Georgia, Verdana, Book Antiqua — seçim tamamen serbest,
+  hiçbir kısıtlama yok.
+- **Yazı boyutu:** 9-24 punto arası yaygın değerler (10, 10.5, 11, 12,
+  13, 14 dahil).
+
+Seçilen yazı tipi/boyutu hem editörde **canlı olarak görünür** hem de
+**Word'e aktarımda gerçekten uygulanır** (docx.js `TextRun`'a `font` ve
+`size` — yarım punto cinsinden — olarak geçirilir). Bu, gerçek bir
+belgeyle uçtan uca test edildi: Times New Roman + 12pt seçilen bir
+paragraf, LibreOffice ile render edilen çıktı Word dosyasında gerçekten
+serif ve doğru boyutta görünüyor; biçim uygulanmayan metin varsayılan
+fontta kalıyor.
+
 ## Hata Düzeltmesi — 413 FUNCTION_PAYLOAD_TOO_LARGE (Kök Sebep)
 
 Önceki iki düzeltme (dosya boyutu sınırı, zaman aşımı) yardımcı oldu ama

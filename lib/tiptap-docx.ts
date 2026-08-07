@@ -15,6 +15,7 @@ import {
 
 interface TiptapMark {
   type: string;
+  attrs?: Record<string, unknown>;
 }
 
 interface TiptapNode {
@@ -47,13 +48,24 @@ function textRunsFromInline(nodes: TiptapNode[], ctx: ConversionContext): (TextR
   const runs: (TextRun | FootnoteReferenceRun)[] = [];
   for (const node of nodes) {
     if (node.type === "text") {
-      const marks = (node.marks ?? []).map((m) => m.type);
+      const marks = node.marks ?? [];
+      const markTypes = marks.map((m) => m.type);
+      const textStyleMark = marks.find((m) => m.type === "textStyle");
+      const fontFamily = textStyleMark?.attrs?.fontFamily as string | undefined;
+      const fontSizeRaw = textStyleMark?.attrs?.fontSize as string | undefined;
+      // fontSize editörde "12pt" gibi saklanır; docx.js yarım punto (half-point) bekler.
+      const fontSizeHalfPoints = fontSizeRaw
+        ? Math.round(parseFloat(fontSizeRaw) * 2)
+        : undefined;
+
       runs.push(
         new TextRun({
           text: node.text ?? "",
-          bold: marks.includes("bold"),
-          italics: marks.includes("italic"),
-          underline: marks.includes("underline") ? {} : undefined,
+          bold: markTypes.includes("bold"),
+          italics: markTypes.includes("italic"),
+          underline: markTypes.includes("underline") ? {} : undefined,
+          font: fontFamily || undefined,
+          size: fontSizeHalfPoints,
         })
       );
     } else if (node.type === "footnoteReference") {

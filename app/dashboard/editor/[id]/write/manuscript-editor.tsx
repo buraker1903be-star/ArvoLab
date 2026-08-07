@@ -8,6 +8,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import TiptapImage from "@tiptap/extension-image";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
+import { TextStyleKit } from "@tiptap/extension-text-style";
 import {
   Bold as BoldIcon,
   Italic as ItalicIcon,
@@ -39,6 +40,22 @@ interface ManuscriptEditorProps {
   requiredSections: string[];
 }
 
+// Türkiye'deki üniversitelerin tez/makale yazım kılavuzlarında en sık
+// istenen yazı tipleri (Times New Roman başta olmak üzere). Seçim
+// tamamen serbesttir — burası yalnızca sık kullanılanları listeler.
+const FONT_FAMILIES = [
+  { label: "Times New Roman", value: "Times New Roman" },
+  { label: "Arial", value: "Arial" },
+  { label: "Calibri", value: "Calibri" },
+  { label: "Cambria", value: "Cambria" },
+  { label: "Garamond", value: "Garamond" },
+  { label: "Georgia", value: "Georgia" },
+  { label: "Verdana", value: "Verdana" },
+  { label: "Book Antiqua", value: "Book Antiqua" },
+];
+
+const FONT_SIZES = [9, 10, 10.5, 11, 12, 13, 14, 16, 18, 20, 24];
+
 export default function ManuscriptEditor({ projectId, initialContent, requiredSections }: ManuscriptEditorProps) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -56,6 +73,7 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
       StarterKit.configure({
         link: { openOnClick: false },
       }),
+      TextStyleKit,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Placeholder.configure({ placeholder: "Çalışmanızı buraya yazmaya başlayın..." }),
       CharacterCount,
@@ -170,6 +188,50 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
   return (
     <div className="manuscript-editor-shell">
       <div className="manuscript-toolbar">
+        <select
+          className="toolbar-select"
+          title="Yazı tipi"
+          value={editor.getAttributes("textStyle").fontFamily ?? ""}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value) {
+              editor.chain().focus().setFontFamily(value).run();
+            } else {
+              editor.chain().focus().unsetFontFamily().run();
+            }
+          }}
+        >
+          <option value="">Varsayılan yazı tipi</option>
+          {FONT_FAMILIES.map((f) => (
+            <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="toolbar-select"
+          title="Yazı boyutu"
+          value={editor.getAttributes("textStyle").fontSize ?? ""}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value) {
+              editor.chain().focus().setFontSize(value).run();
+            } else {
+              editor.chain().focus().unsetFontSize().run();
+            }
+          }}
+        >
+          <option value="">Varsayılan boyut</option>
+          {FONT_SIZES.map((s) => (
+            <option key={s} value={`${s}pt`}>
+              {s} pt
+            </option>
+          ))}
+        </select>
+
+        <span className="toolbar-divider" />
+
         <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive("bold") ? "is-active" : ""} title="Kalın">
           <BoldIcon size={16} />
         </button>
