@@ -6,9 +6,10 @@
  * başlıklarını (Giriş, Yöntem, Bulgular vb.) heuristik olarak
  * önerir. SONUÇLARI OTOMATİK OLARAK UYGULAMAZ — yalnızca Akademik
  * Yönetici'ye bir ön inceleme sunar; kılavuzu aktifleştirmek
- * her zaman insan onayı gerektirir (proje dosyası Bölüm 6.3
- * "Kılavuz Güncelleme Akışı" ile uyumlu).
+ * her zaman insan onayı gerektirir.
  */
+
+import { safeFetch } from "@/lib/safe-fetch";
 
 const CANDIDATE_SECTIONS = [
   "Özet",
@@ -49,8 +50,10 @@ function stripHtml(html: string): string {
 }
 
 export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult> {
-  const res = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (ArvoLab Kılavuz Tarayıcı)" },
+  const res = await safeFetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (ArvoLab Kilavuz Tarayici)" },
+    timeoutMs: 15_000,
+    maxBytes: 25 * 1024 * 1024,
   });
 
   if (!res.ok) {
@@ -60,11 +63,9 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
   const contentType = res.headers.get("content-type") ?? "";
   let text: string;
 
-  if (contentType.includes("pdf") || url.toLowerCase().endsWith(".pdf")) {
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+  if (contentType.includes("pdf") || res.url.pathname.toLowerCase().endsWith(".pdf")) {
     const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: buffer });
+    const parser = new PDFParse({ data: Buffer.from(res.bytes) });
     try {
       const result = await parser.getText();
       text = result.text;
@@ -72,13 +73,10 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
       await parser.destroy();
     }
   } else {
-    const html = await res.text();
-    text = stripHtml(html);
+    text = stripHtml(res.text());
   }
 
   const suggestedSections = CANDIDATE_SECTIONS.filter((section) => {
-    // \b, Türkçe karakterlerde (ş, ı, ğ vb.) güvenilir çalışmadığı için
-    // Unicode harf/rakam olmayan bir karakterle sınır kontrolü yapılır.
     const re = new RegExp(`(^|\\n)\\s*\\d*[.)]?\\s*${section}(?![\\p{L}\\p{N}])`, "iu");
     return re.test(text);
   });
