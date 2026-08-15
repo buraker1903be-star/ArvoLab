@@ -174,6 +174,13 @@ export async function approveGuideline(guidelineId: string) {
     return { error: "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir." };
   }
 
+  const { data: guideline, error: guidelineError } = await supabase
+    .from("thesis_guidelines")
+    .select("university_name, institute_name, citation_style")
+    .eq("id", guidelineId)
+    .single();
+  if (guidelineError || !guideline) return { error: "Kılavuz bulunamadı." };
+
   const { error } = await supabase
     .from("thesis_guidelines")
     .update({
@@ -185,7 +192,19 @@ export async function approveGuideline(guidelineId: string) {
     .eq("id", guidelineId);
 
   if (error) return { error: error.message };
+
+  // Kılavuz eklenmeden önce açılmış tezleri de kurumsal eşleşmeye bağla.
+  let projects = supabase
+    .from("academic_projects")
+    .update({ guideline_id: guidelineId, citation_style: guideline.citation_style })
+    .eq("project_type", "thesis")
+    .eq("university", guideline.university_name)
+    .is("guideline_id", null);
+  if (guideline.institute_name) projects = projects.eq("institute", guideline.institute_name);
+  await projects;
+
   revalidatePath("/dashboard/guidelines");
+  revalidatePath("/dashboard/editor");
   return { success: true };
 }
 
