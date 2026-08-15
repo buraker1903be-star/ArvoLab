@@ -518,3 +518,17 @@ button { border: 0; }
 @media (max-width: 640px) {
   .manuscript-cover-page-grid { grid-template-columns: 1fr; }
 }
+.guideline-match-status {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  border-radius: 12px;
+  background: rgba(240, 253, 250, 0.72);
+  color: #35514d;
+  font-size: 0.88rem;
+}
+
+.guideline-match-status strong {
+  color: #0f766e;
+}
