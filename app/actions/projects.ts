@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { findMatchingGuideline } from "@/app/actions/guidelines";
 
 export interface AcademicProject {
   id: string;
@@ -57,18 +58,26 @@ export async function createProject(formData: FormData) {
     .eq("id", user.id)
     .single();
 
-  const guidelineIdRaw = String(formData.get("guidelineId") ?? "").trim();
+  const universityId = String(formData.get("universityId") ?? "").trim();
+  const academicUnitId = String(formData.get("academicUnitId") ?? "").trim();
+  const departmentId = String(formData.get("departmentId") ?? "").trim();
+  const matchedGuideline = universityId
+    ? await findMatchingGuideline(universityId, academicUnitId || null, departmentId || null)
+    : null;
 
   const { error } = await supabase.from("academic_projects").insert({
     owner_id: user.id,
     organization_id: profile?.organization_id ?? null,
-    guideline_id: guidelineIdRaw || null,
+    guideline_id: matchedGuideline?.id ?? null,
     title,
     project_type: type,
     university: String(formData.get("university") ?? "").trim() || null,
     institute: String(formData.get("institute") ?? "").trim() || null,
     department: String(formData.get("department") ?? "").trim() || null,
-    citation_style: String(formData.get("citationStyle") ?? "apa7"),
+    citation_style:
+      type === "thesis" && matchedGuideline
+        ? matchedGuideline.citation_style
+        : String(formData.get("citationStyle") ?? "apa7"),
     research_method: String(formData.get("method") ?? "") || null,
     assignee_name: String(formData.get("assignee") ?? "").trim() || null,
     due_date: dueDateRaw || null,
