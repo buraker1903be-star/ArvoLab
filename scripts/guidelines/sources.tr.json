@@ -38,5 +38,85 @@
     "sourceUrl": "https://webupload.gazi.edu.tr/upload/51/2022/8/31/b23c491f-71ba-4d22-8b83-da2b38941176-kilavuz-2016.pdf",
     "verifiedAt": "2026-08-15",
     "statusNote": "Resmî üniversite alanında erişilebilir; daha yeni sürüm bulunamadığı için akademik inceleme gerektirir."
+  },
+  {
+    "universityName": "Ankara Yıldırım Beyazıt Üniversitesi",
+    "instituteName": "Sağlık Bilimleri Enstitüsü",
+    "documentTitle": "Lisansüstü Tez Yazım Kılavuzu",
+    "versionLabel": "2026",
+    "effectiveFrom": "2026-06-01",
+    "sourceUrl": "https://aybu.edu.tr/GetFile?id=Upload%2Fc3ab2dfa-67d6-4782-8e84-8aa95646e2db.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî AYBÜ alanındaki güncel PDF doğrulandı."
+  },
+  {
+    "universityName": "Ankara Sosyal Bilimler Üniversitesi",
+    "instituteName": null,
+    "documentTitle": "Lisansüstü Tez Yazım Kılavuzu",
+    "versionLabel": null,
+    "effectiveFrom": null,
+    "sourceUrl": "https://bce.asbu.edu.tr/sites/enstituler/asben.asbu.edu.tr/files/inline-files/ASB%C3%9C%20Lisans%C3%BCst%C3%BC%20Tez%20Yaz%C4%B1m%20K%C4%B1lavuzu-Y%C3%BCklenecek.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî ASBÜ alanındaki PDF doğrulandı; sürüm tarihi belgede ayrıca kontrol edilmelidir."
+  },
+  {
+    "universityName": "Ankara Hacı Bayram Veli Üniversitesi",
+    "instituteName": null,
+    "documentTitle": "Tez Yazım Kılavuzu",
+    "versionLabel": "26.06.2025",
+    "effectiveFrom": "2025-06-26",
+    "sourceUrl": "https://hacibayram.edu.tr/api/files/1/Hac%C4%B1bayram%20AHBV/le%28tr-TR%29/Tez%20ve%20Mezuniyet/TEZ%20YAZIM%20KILAVUZU%20VE%20%C5%9EABLONLARI%20%28GAZ%C4%B0%29/AHBV/12.03.2024/TEZ%20YAZIM%20KLAVUZU%2026.06.2025.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî üniversite alanındaki 26.06.2025 tarihli PDF doğrulandı."
+  },
+  {
+    "universityName": "Hacettepe Üniversitesi",
+    "instituteName": "Tıp Fakültesi",
+    "documentTitle": "Tıp Fakültesi Tez Yazım Kılavuzu",
+    "versionLabel": null,
+    "effectiveFrom": null,
+    "sourceUrl": "https://meds.hacettepe.edu.tr/fakulte/arastirma_gorevlileri_icin/tez/icindekiler.html",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî Hacettepe Tıp Fakültesi HTML kılavuzu doğrulandı."
+  },
+  {
+    "universityName": "Başkent Üniversitesi",
+    "instituteName": null,
+    "documentTitle": "Tez Yazım Kılavuzu",
+    "versionLabel": "2024",
+    "effectiveFrom": "2024-01-01",
+    "sourceUrl": "https://www.baskent.edu.tr/belgeler/tez-yazim-klavuzu-2024.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî Başkent Üniversitesi alanındaki 2024 PDF doğrulandı."
+  },
+  {
+    "universityName": "Bilkent Üniversitesi",
+    "instituteName": "Arkeoloji Bölümü",
+    "documentTitle": "HART MA Thesis Guidelines",
+    "versionLabel": "Spring 2025",
+    "effectiveFrom": "2025-02-01",
+    "sourceUrl": "https://arkeo.bilkent.edu.tr/wp-content/uploads/2025/02/HART-MA-thesis-Guidelines_Spring-2025-1.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî Bilkent Arkeoloji alanındaki program özel kılavuzu doğrulandı."
+  },
+  {
+    "universityName": "Atılım Üniversitesi",
+    "instituteName": "Sosyal Bilimler Enstitüsü",
+    "documentTitle": "Thesis Writing Directive",
+    "versionLabel": null,
+    "effectiveFrom": null,
+    "sourceUrl": "https://www.atilim.edu.tr/files/sbe-Ekler/Thesis_Writing_Directive_of_At%C4%B1l%C4%B1m_University_Graduate_School_of_Social_Sciences.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî Atılım Üniversitesi alanındaki İngilizce kılavuz doğrulandı; sürüm tarihi ayrıca kontrol edilmelidir."
+  },
+  {
+    "universityName": "Ankara Medipol Üniversitesi",
+    "instituteName": "Sağlık Bilimleri Enstitüsü",
+    "documentTitle": "Tez Yazım Kılavuzu",
+    "versionLabel": null,
+    "effectiveFrom": null,
+    "sourceUrl": "https://new.ankaramedipol.edu.tr/sites/default/files/document/SaglikBilimleriEnstitusuTezYazimKilavuzu_0.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî Ankara Medipol alanındaki PDF doğrulandı; sürüm tarihi ayrıca kontrol edilmelidir."
   }
 ]
