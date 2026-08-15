@@ -12,6 +12,8 @@ import {
   AlignmentType,
   convertInchesToTwip,
   convertMillimetersToTwip,
+  Footer,
+  PageNumber,
 } from "docx";
 
 interface TiptapMark {
@@ -222,9 +224,16 @@ export interface BuildDocxOptions {
   doc: TiptapDoc;
   fetchImage: ConversionContext["fetchImage"];
   margins?: { top: number; bottom: number; left: number; right: number }; // cm cinsinden
+  showPageNumbers?: boolean;
 }
 
-export async function buildDocxFromTiptap({ title, doc, fetchImage, margins }: BuildDocxOptions): Promise<Document> {
+export async function buildDocxFromTiptap({
+  title,
+  doc,
+  fetchImage,
+  margins,
+  showPageNumbers = true,
+}: BuildDocxOptions): Promise<Document> {
   const ctx: ConversionContext = { footnotes: {}, nextFootnoteId: 1, fetchImage };
 
   const bodyElements: (Paragraph | Table)[] = [];
@@ -261,6 +270,20 @@ export async function buildDocxFromTiptap({ title, doc, fetchImage, margins }: B
             },
           },
         },
+        footers: showPageNumbers
+          ? {
+              default: new Footer({
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [
+                      new TextRun({ children: [PageNumber.CURRENT] }),
+                    ],
+                  }),
+                ],
+              }),
+            }
+          : undefined,
         children: bodyElements.length > 0 ? bodyElements : [new Paragraph({ children: [] })],
       },
     ],

@@ -23,13 +23,16 @@ export interface ManuscriptData {
   wordCount: number;
   updatedAt: string;
   margins: PageMargins;
+  showPageNumbers: boolean;
 }
 
 export async function getManuscript(projectId: string): Promise<ManuscriptData | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("project_manuscripts")
-    .select("content, word_count, updated_at, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm")
+    .select(
+      "content, word_count, updated_at, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm, show_page_numbers"
+    )
     .eq("project_id", projectId)
     .maybeSingle();
 
@@ -49,10 +52,16 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
       left: data.margin_left_cm ?? 2.5,
       right: data.margin_right_cm ?? 2.5,
     },
+    showPageNumbers: data.show_page_numbers ?? true,
   };
 }
 
-export async function saveManuscript(projectId: string, content: TiptapDoc, margins?: PageMargins) {
+export async function saveManuscript(
+  projectId: string,
+  content: TiptapDoc,
+  margins?: PageMargins,
+  showPageNumbers?: boolean
+) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -78,6 +87,7 @@ export async function saveManuscript(projectId: string, content: TiptapDoc, marg
             margin_right_cm: margins.right,
           }
         : {}),
+      ...(showPageNumbers !== undefined ? { show_page_numbers: showPageNumbers } : {}),
     },
     { onConflict: "project_id" }
   );

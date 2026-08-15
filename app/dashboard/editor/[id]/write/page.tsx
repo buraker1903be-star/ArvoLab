@@ -52,6 +52,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
         initialContent={manuscript?.content ?? null}
         requiredSections={requiredSections}
         initialMargins={manuscript?.margins}
+        initialShowPageNumbers={manuscript?.showPageNumbers}
       />
     </main>
   );

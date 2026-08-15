@@ -41,6 +41,7 @@ interface ManuscriptEditorProps {
   initialContent: object | null;
   requiredSections: string[];
   initialMargins?: PageMargins;
+  initialShowPageNumbers?: boolean;
 }
 
 // Türkiye'deki üniversitelerin tez/makale yazım kılavuzlarında en sık
@@ -59,7 +60,7 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = [9, 10, 10.5, 11, 12, 13, 14, 16, 18, 20, 24];
 
-export default function ManuscriptEditor({ projectId, initialContent, requiredSections, initialMargins }: ManuscriptEditorProps) {
+export default function ManuscriptEditor({ projectId, initialContent, requiredSections, initialMargins, initialShowPageNumbers }: ManuscriptEditorProps) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [checkResult, setCheckResult] = useState<ManuscriptCheckResult | null>(null);
@@ -69,6 +70,7 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
   const [margins, setMargins] = useState<PageMargins>(
     initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
   );
+  const [showPageNumbers, setShowPageNumbers] = useState(initialShowPageNumbers ?? true);
   const [showPageSettings, setShowPageSettings] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -103,14 +105,14 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
     setSaving(true);
     try {
       const json = editor.getJSON() as unknown as TiptapDoc;
-      const res = await saveManuscript(projectId, json, margins);
+      const res = await saveManuscript(projectId, json, margins, showPageNumbers);
       if (res.success) {
         setLastSaved(new Date().toLocaleTimeString("tr-TR"));
       }
     } finally {
       setSaving(false);
     }
-  }, [editor, projectId, margins]);
+  }, [editor, projectId, margins, showPageNumbers]);
 
   const handleCheck = useCallback(async () => {
     setChecking(true);
@@ -392,6 +394,14 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
               />
             </label>
           ))}
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <input
+              type="checkbox"
+              checked={showPageNumbers}
+              onChange={(e) => setShowPageNumbers(e.target.checked)}
+            />
+            <span>Sayfa numarası ekle</span>
+          </label>
           <span className="manuscript-page-settings-hint">
             Değerler kaydedince ve Word&apos;e aktarırken uygulanır.
           </span>

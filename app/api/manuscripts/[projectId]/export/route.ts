@@ -29,7 +29,7 @@ export async function GET(
 
   const { data: manuscript, error } = await supabase
     .from("project_manuscripts")
-    .select("content, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm")
+    .select("content, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm, show_page_numbers")
     .eq("project_id", projectId)
     .maybeSingle();
 
@@ -46,6 +46,7 @@ export async function GET(
       left: manuscript.margin_left_cm ?? 2.5,
       right: manuscript.margin_right_cm ?? 2.5,
     },
+    showPageNumbers: manuscript.show_page_numbers ?? true,
     fetchImage: async (url: string) => {
       try {
         const res = await fetch(url);

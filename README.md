@@ -1,5 +1,21 @@
 # ArvoLab
 
+## Yeni Özellik — Sayfa Numarası
+
+Panelde Yazma editöründeki "Sayfa Ayarları" paneline bir **"Sayfa
+numarası ekle"** anahtarı eklendi (varsayılan: açık). Açıkken, Word'e
+aktarılan belgenin her sayfasının altına ortalanmış, otomatik
+numaralanan bir sayfa numarası ekleniyor (gerçek Word alan kodu
+kullanılarak — sabit metin değil, Word'ün kendi sayfa sayacı).
+Gerçek bir .docx oluşturup LibreOffice ile render ederek doğrulandı.
+
+**Supabase değişikliği gerekli:**
+
+```sql
+alter table public.project_manuscripts
+  add column if not exists show_page_numbers boolean not null default true;
+```
+
 ## Yeni Özellik — Tez Formatlama: Satır Aralığı, Girinti, Kenar Boşlukları
 
 Panelde Yazma editörüne üç yeni kontrol eklendi (Türkiye'deki

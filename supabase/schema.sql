@@ -1054,3 +1054,12 @@ alter table public.project_manuscripts
   add column if not exists margin_bottom_cm numeric not null default 2.5,
   add column if not exists margin_left_cm numeric not null default 2.5,
   add column if not exists margin_right_cm numeric not null default 2.5;
+
+-- ============================================================
+-- Sayfa Numarası (Panelde Yazma)
+-- Türkiye'deki üniversitelerin neredeyse tamamı tez/makalede
+-- sayfa numarası ister; varsayılan olarak açık, kullanıcı isterse
+-- kapatabilir.
+-- ============================================================
+alter table public.project_manuscripts
+  add column if not exists show_page_numbers boolean not null default true;
