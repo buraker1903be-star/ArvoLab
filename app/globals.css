@@ -552,3 +552,13 @@ button { border: 0; }
   .guideline-applied-banner { flex-direction: column; }
   .guideline-applied-banner > span { text-align: left; }
 }
+.guideline-review-details { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+.guideline-review-details summary { cursor: pointer; font-weight: 700; color: var(--brand-navy); }
+.guideline-review-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.guideline-review-form label { display: grid; gap: 6px; font-size: 12px; font-weight: 700; }
+.guideline-review-form input, .guideline-review-form select, .guideline-review-form textarea { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; background: var(--surface); }
+.guideline-review-full { grid-column: 1 / -1; }
+.guideline-review-check { display: flex !important; align-items: center; grid-column: 1 / -1; }
+.guideline-review-check input { width: auto; }
+@media (max-width: 900px) { .guideline-review-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .guideline-review-form { grid-template-columns: 1fr; } }
