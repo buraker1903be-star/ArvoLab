@@ -532,3 +532,23 @@ button { border: 0; }
 .guideline-match-status strong {
   color: #0f766e;
 }
+.guideline-applied-banner {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(111, 149, 72, 0.35);
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--brand-navy);
+  font-size: 12px;
+}
+
+.guideline-applied-banner div { display: grid; gap: 3px; }
+.guideline-applied-banner > span { color: var(--muted-foreground); text-align: right; }
+
+@media (max-width: 640px) {
+  .guideline-applied-banner { flex-direction: column; }
+  .guideline-applied-banner > span { text-align: left; }
+}

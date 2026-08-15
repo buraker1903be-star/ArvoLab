@@ -35,6 +35,7 @@ import type { TiptapDoc } from "@/lib/tiptap-text";
 import { saveManuscript, runManuscriptCheck, type ManuscriptCheckResult, type PageMargins, type CoverPage } from "@/app/actions/manuscript";
 import { createClient } from "@/lib/supabase/client";
 import { IndentIncrease, Settings2, AlignVerticalSpaceAround, FileBadge } from "lucide-react";
+import type { GuidelineEditorSettings } from "@/lib/guideline-editor-settings";
 
 interface ProjectDefaults {
   title: string;
@@ -60,6 +61,12 @@ interface ManuscriptEditorProps {
   initialShowPageNumbers?: boolean;
   initialCoverPage?: CoverPage | null;
   projectDefaults?: ProjectDefaults;
+  appliedGuideline?: {
+    label: string;
+    citationStyle: string;
+    settings: GuidelineEditorSettings;
+    usedAsDefaults: boolean;
+  } | null;
 }
 
 // Türkiye'deki üniversitelerin tez/makale yazım kılavuzlarında en sık
@@ -86,6 +93,7 @@ export default function ManuscriptEditor({
   initialShowPageNumbers,
   initialCoverPage,
   projectDefaults,
+  appliedGuideline,
 }: ManuscriptEditorProps) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -138,7 +146,14 @@ export default function ManuscriptEditor({
     ],
     content: initialContent ?? "",
     editorProps: {
-      attributes: { class: "manuscript-editor-content" },
+      attributes: {
+        class: "manuscript-editor-content",
+        style: [
+          appliedGuideline?.settings.fontFamily ? `font-family: '${appliedGuideline.settings.fontFamily}'` : "",
+          appliedGuideline?.settings.fontSizePt ? `font-size: ${appliedGuideline.settings.fontSizePt}pt` : "",
+          appliedGuideline?.settings.lineSpacing ? `line-height: ${appliedGuideline.settings.lineSpacing}` : "",
+        ].filter(Boolean).join("; "),
+      },
     },
   });
 
@@ -526,6 +541,19 @@ export default function ManuscriptEditor({
           )}
         </div>
       )}
+
+      {appliedGuideline ? (
+        <div className="guideline-applied-banner" role="status">
+          <div>
+            <strong>Tez kılavuzu otomatik uygulandı</strong>
+            <span>{appliedGuideline.label}</span>
+          </div>
+          <span>
+            {appliedGuideline.citationStyle ? `${appliedGuideline.citationStyle.toUpperCase()} · ` : ""}
+            {appliedGuideline.usedAsDefaults ? "Sayfa ayarları kılavuzdan yüklendi" : "Kayıtlı kişisel ayarlar korundu"}
+          </span>
+        </div>
+      ) : null}
 
       {showPageSettings && (
         <div className="manuscript-page-settings">
