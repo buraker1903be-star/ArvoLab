@@ -1,0 +1,42 @@
+[
+  {
+    "universityName": "Ankara Üniversitesi",
+    "instituteName": "Sağlık Bilimleri Enstitüsü",
+    "documentTitle": "Tez Yazım Kılavuzu",
+    "versionLabel": "08.10.2025 V2",
+    "effectiveFrom": "2025-10-08",
+    "sourceUrl": "https://sagbilens.ankara.edu.tr/wp-content/uploads/sites/766/2026/07/Tez-Yazim-Kilavuzu-08.10.2025_V2.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî enstitü alan adındaki PDF doğrulandı."
+  },
+  {
+    "universityName": "Ankara Üniversitesi",
+    "instituteName": "Fen Bilimleri Enstitüsü",
+    "documentTitle": "Tez Yazım Kılavuzu",
+    "versionLabel": "2024",
+    "effectiveFrom": "2024-01-01",
+    "sourceUrl": "https://fenbilimleri.ankara.edu.tr/wp-content/uploads/sites/79/2024/01/Tez_Yazim_Kilavuzu.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî sayfada önceki kılavuz olarak işaretlenmiş; güncel sürüm bulunana kadar inceleme kaydıdır."
+  },
+  {
+    "universityName": "Ankara Üniversitesi",
+    "instituteName": "Sosyal Bilimler Enstitüsü",
+    "documentTitle": "Tez Yazım Kılavuzu",
+    "versionLabel": "2025",
+    "effectiveFrom": "2025-03-01",
+    "sourceUrl": "https://sosbilens.ankara.edu.tr/wp-content/uploads/sites/271/2025/03/tezyazim.yeni1_.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî enstitü alan adındaki PDF doğrulandı."
+  },
+  {
+    "universityName": "Gazi Üniversitesi",
+    "instituteName": null,
+    "documentTitle": "Lisansüstü Tez ve Tez Önerisi Yazım Kılavuzu",
+    "versionLabel": "2016",
+    "effectiveFrom": "2016-01-01",
+    "sourceUrl": "https://webupload.gazi.edu.tr/upload/51/2022/8/31/b23c491f-71ba-4d22-8b83-da2b38941176-kilavuz-2016.pdf",
+    "verifiedAt": "2026-08-15",
+    "statusNote": "Resmî üniversite alanında erişilebilir; daha yeni sürüm bulunamadığı için akademik inceleme gerektirir."
+  }
+]
