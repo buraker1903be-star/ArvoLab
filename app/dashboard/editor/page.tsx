@@ -3,6 +3,7 @@ import { CalendarDays, CheckCircle2, PenLine, Plus, RotateCcw, ShieldCheck, Uplo
 import { getProjects, approveProject, revokeApproval, assignProject } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
+import DeleteProjectButton from "./delete-project-button";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "Teslim tarihi belirtilmedi";
@@ -26,6 +27,10 @@ function formatDateTime(dateStr: string | null) {
 export default async function ProjectsPage() {
   const [projects, profile] = await Promise.all([getProjects(), getCurrentProfile()]);
   const canApprove = isOversightRole(profile?.role);
+  // Silme yetkisi RLS ile aynı: sahibi ya da Akademik Yönetici/Sistem
+  // Yöneticisi/Kurucu (Kontrolör silme yetkisine sahip DEĞİL).
+  const canDeleteAnyProject =
+    profile?.role === "academic_manager" || profile?.role === "system_admin" || profile?.role === "founder";
 
   async function handleApprove(projectId: string) {
     "use server";
@@ -167,6 +172,9 @@ export default async function ProjectsPage() {
                     <Upload size={15} />
                     Hazır Belge Yükle
                   </Link>
+                  {(profile?.id === project.owner_id || canDeleteAnyProject) && (
+                    <DeleteProjectButton projectId={project.id} projectTitle={project.title} />
+                  )}
                 </div>
               </article>
             );

@@ -212,3 +212,26 @@ export async function assignProject(projectId: string, assigneeName: string) {
   revalidatePath("/dashboard/editor");
   return { success: true };
 }
+
+// Silme yetkisi RLS'te zaten tanımlı: çalışmanın sahibi ya da
+// Akademik Yönetici/Sistem Yöneticisi/Kurucu rolleri silebilir
+// (bkz. "Owner or oversight-role can delete projects" politikası).
+// İlişkili kayıtlar (kaynakça kontrolleri, belge yüklemeleri, panelde
+// yazma metni vb.) veritabanında ON DELETE CASCADE ile otomatik silinir.
+export async function deleteProject(projectId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const { error } = await supabase.from("academic_projects").delete().eq("id", projectId);
+
+  if (error) {
+    console.error(error);
+    return { error: "Silme yetkiniz yok ya da bir hata oluştu." };
+  }
+
+  revalidatePath("/dashboard/editor");
+  return { success: true };
+}

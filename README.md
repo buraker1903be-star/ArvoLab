@@ -1,5 +1,24 @@
 # ArvoLab
 
+## Yeni Özellik — Çalışma Silme Butonu
+
+Belge Editörü listesindeki her çalışma kartına **"Çalışmayı Sil"**
+butonu eklendi. Yetki, veritabanı seviyesindeki (RLS) kuralla
+birebir aynı: çalışmanın **sahibi** ya da **Akademik Yönetici/Sistem
+Yöneticisi/Kurucu** rolleri silebilir (Kontrolör silme yetkisine
+sahip değildir — bu bilinçli bir tercihtir, Kontrolör onay verir
+ama kayıt silemez). Silmeden önce, çalışmanın adını içeren bir onay
+penceresi çıkar ve bağlı tüm verilerin (belge yüklemeleri, kaynakça
+kontrolleri, panelde yazılmış metin) de silineceği açıkça belirtilir
+— bu veriler veritabanında `ON DELETE CASCADE` ile zaten otomatik
+temizlenecek şekilde kurulu. Gerçek tarayıcıda test edildi: onay
+penceresi doğru metinle çıkıyor, "İptal" seçilince hiçbir şey
+silinmiyor.
+
+**Supabase değişikliği gerekmiyor** — silme yetkisi ve kaskad kurallar
+zaten önceki kurulumda mevcuttu, yalnızca arayüze eksik olan buton
+eklendi.
+
 ## Yeni Özellik — Kapak Sayfası Şablonu
 
 Panelde Yazma editöründe artık bir **"Kapak sayfası"** butonu var
