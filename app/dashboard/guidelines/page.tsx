@@ -1,5 +1,5 @@
 import { BookMarked, ExternalLink, Plus, Trash2 } from "lucide-react";
-import { getGuidelines, createGuideline, deleteGuideline, approveGuideline } from "@/app/actions/guidelines";
+import { getGuidelines, createGuideline, deleteGuideline, approveGuideline, updateGuidelineRules } from "@/app/actions/guidelines";
 import { getUniversities } from "@/app/actions/universities";
 
 // Kılavuz tarama aracı dış URL çekip PDF ayrıştırabilir, zaman alabilir.
@@ -48,6 +48,11 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
   async function handleApprove(guidelineId: string) {
     "use server";
     await approveGuideline(guidelineId);
+  }
+
+  async function handleRuleUpdate(guidelineId: string, formData: FormData) {
+    "use server";
+    await updateGuidelineRules(guidelineId, formData);
   }
 
   return (
@@ -199,6 +204,45 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
                   </a>
                 ) : null}
               </div>
+
+              {canManage ? (
+                <details className="guideline-review-details">
+                  <summary>Kuralları incele ve düzenle</summary>
+                  <form className="guideline-review-form" action={handleRuleUpdate.bind(null, g.id)}>
+                    <label>
+                      <span>Kaynakça sistemi</span>
+                      <select name="citationStyle" defaultValue={g.citation_style}>
+                        <option value="apa7">APA 7</option><option value="vancouver">Vancouver</option>
+                        <option value="chicago">Chicago</option><option value="ieee">IEEE</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Yazı tipi</span>
+                      <select name="fontFamily" defaultValue={String(g.extracted_rules?.font_family ?? "Times New Roman")}>
+                        {["Times New Roman", "Arial", "Calibri", "Cambria", "Garamond", "Georgia", "Verdana", "Book Antiqua"].map((font) => <option key={font}>{font}</option>)}
+                      </select>
+                    </label>
+                    <label><span>Punto</span><input name="fontSizePt" type="number" min="8" max="24" step="0.5" defaultValue={Number(g.extracted_rules?.font_size_pt ?? 12)} required /></label>
+                    <label><span>Satır aralığı</span><input name="lineSpacing" type="number" min="1" max="3" step="0.15" defaultValue={Number(g.extracted_rules?.line_spacing ?? 1.5)} required /></label>
+                    {(["Top", "Bottom", "Left", "Right"] as const).map((side) => {
+                      const key = side.toLowerCase() as "top" | "bottom" | "left" | "right";
+                      const margins = (g.extracted_rules?.margins_cm ?? {}) as Record<string, unknown>;
+                      const labels = { top: "Üst boşluk (cm)", bottom: "Alt boşluk (cm)", left: "Sol boşluk (cm)", right: "Sağ boşluk (cm)" };
+                      return <label key={side}><span>{labels[key]}</span><input name={`margin${side}`} type="number" min="0" max="10" step="0.1" defaultValue={Number(margins[key] ?? 2.5)} required /></label>;
+                    })}
+                    <label className="guideline-review-full">
+                      <span>Zorunlu bölümler</span>
+                      <input name="requiredSections" defaultValue={g.required_sections.join(", ")} placeholder="Giriş, Yöntem, Bulgular, Sonuç, Kaynakça" required />
+                    </label>
+                    <label className="guideline-review-check">
+                      <input name="showPageNumbers" type="checkbox" defaultChecked={g.extracted_rules?.show_page_numbers !== false} />
+                      <span>Sayfa numarası kullan</span>
+                    </label>
+                    <label className="guideline-review-full"><span>İnceleme notu</span><textarea name="reviewNotes" rows={2} defaultValue={g.review_notes ?? ""} /></label>
+                    <button type="submit" className="projects-filter-button">Kuralları kaydet</button>
+                  </form>
+                </details>
+              ) : null}
 
               {canManage ? (
                 <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
