@@ -18,6 +18,8 @@ export interface ThesisGuideline {
   is_active: boolean;
   last_checked_at: string;
   created_at: string;
+  analysis_status: string;
+  review_notes: string | null;
 }
 
 export interface GuidelineMatch {
@@ -82,7 +84,7 @@ export async function getGuidelines(): Promise<ThesisGuideline[]> {
   const { data, error } = await supabase
     .from("thesis_guidelines")
     .select(
-      "id, university_name, institute_name, version_label, source_url, citation_style, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at"
+      "id, university_name, institute_name, version_label, source_url, citation_style, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at, analysis_status, review_notes"
     )
     .order("university_name", { ascending: true });
 
@@ -115,10 +117,32 @@ export async function createGuideline(formData: FormData) {
 
   const minPagesRaw = String(formData.get("minPages") ?? "").trim();
   const maxPagesRaw = String(formData.get("maxPages") ?? "").trim();
+  const instituteName = String(formData.get("instituteName") ?? "").trim();
+
+  const { data: university } = await supabase
+    .from("universities")
+    .select("id")
+    .ilike("name", universityName)
+    .limit(1)
+    .maybeSingle();
+
+  let academicUnitId: string | null = null;
+  if (university?.id && instituteName) {
+    const { data: unit } = await supabase
+      .from("academic_units")
+      .select("id")
+      .eq("university_id", university.id)
+      .ilike("name", instituteName)
+      .limit(1)
+      .maybeSingle();
+    academicUnitId = unit?.id ?? null;
+  }
 
   const { error } = await supabase.from("thesis_guidelines").insert({
     university_name: universityName,
-    institute_name: String(formData.get("instituteName") ?? "").trim() || null,
+    institute_name: instituteName || null,
+    university_id: university?.id ?? null,
+    academic_unit_id: academicUnitId,
     version_label: String(formData.get("versionLabel") ?? "").trim() || null,
     source_url: String(formData.get("sourceUrl") ?? "").trim() || null,
     citation_style: String(formData.get("citationStyle") ?? "apa7"),
@@ -127,6 +151,8 @@ export async function createGuideline(formData: FormData) {
     max_pages: maxPagesRaw ? Number(maxPagesRaw) : null,
     notes: String(formData.get("notes") ?? "").trim() || null,
     created_by: user.id,
+    analysis_status: "needs_review",
+    review_notes: "Yeni kayıt; müşteri projelerinde kullanılmadan önce akademik onay gerekiyor.",
   });
 
   if (error) {
@@ -136,6 +162,31 @@ export async function createGuideline(formData: FormData) {
 
   revalidatePath("/dashboard/guidelines");
   redirect("/dashboard/guidelines");
+}
+
+export async function approveGuideline(guidelineId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (!profile || !["academic_manager", "system_admin", "founder"].includes(profile.role)) {
+    return { error: "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir." };
+  }
+
+  const { error } = await supabase
+    .from("thesis_guidelines")
+    .update({
+      analysis_status: "approved",
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+      review_notes: "Akademik yönetici tarafından onaylandı.",
+    })
+    .eq("id", guidelineId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/guidelines");
+  return { success: true };
 }
 
 export async function deleteGuideline(guidelineId: string) {
