@@ -1,3 +1,5 @@
+import { fetchOfficialSource } from "@/lib/safe-official-fetch";
+
 /**
  * Kılavuz Tarama Yardımcısı
  * ------------------------------------------------------------
@@ -35,6 +37,13 @@ export interface GuidelineScanResult {
   fullTextLength: number;
   suggestedSections: string[];
   detectedCitationHint: string | null;
+  sourceChecksum: string;
+  sourceContentType: string;
+}
+
+async function sha256(data: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function stripHtml(html: string): string {
@@ -49,20 +58,18 @@ function stripHtml(html: string): string {
 }
 
 export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult> {
-  const res = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (ArvoLab Kılavuz Tarayıcı)" },
-  });
+  const res = await fetchOfficialSource(url);
 
   if (!res.ok) {
     throw new Error(`Kaynak alınamadı (HTTP ${res.status}).`);
   }
 
   const contentType = res.headers.get("content-type") ?? "";
+  const sourceBytes = await res.arrayBuffer();
   let text: string;
 
   if (contentType.includes("pdf") || url.toLowerCase().endsWith(".pdf")) {
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(sourceBytes);
     const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: buffer });
     try {
@@ -72,7 +79,7 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
       await parser.destroy();
     }
   } else {
-    const html = await res.text();
+    const html = new TextDecoder().decode(sourceBytes);
     text = stripHtml(html);
   }
 
@@ -98,5 +105,7 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
     fullTextLength: text.length,
     suggestedSections,
     detectedCitationHint: citationHint,
+    sourceChecksum: await sha256(sourceBytes),
+    sourceContentType: contentType || "application/octet-stream",
   };
 }

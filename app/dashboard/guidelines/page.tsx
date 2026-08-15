@@ -1,5 +1,5 @@
 import { BookMarked, ExternalLink, Plus, Trash2 } from "lucide-react";
-import { getGuidelines, createGuideline, deleteGuideline } from "@/app/actions/guidelines";
+import { getGuidelines, createGuideline, deleteGuideline, approveGuideline } from "@/app/actions/guidelines";
 import { getUniversities } from "@/app/actions/universities";
 
 // Kılavuz tarama aracı dış URL çekip PDF ayrıştırabilir, zaman alabilir.
@@ -43,6 +43,11 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
   async function handleDelete(guidelineId: string) {
     "use server";
     await deleteGuideline(guidelineId);
+  }
+
+  async function handleApprove(guidelineId: string) {
+    "use server";
+    await approveGuideline(guidelineId);
   }
 
   return (
@@ -165,6 +170,9 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
               <div className="project-card-main">
                 <div>
                   <span className="project-status">{CITATION_LABELS[g.citation_style] ?? g.citation_style}</span>
+                  <span className="project-status" style={{ marginLeft: 8 }}>
+                    {g.analysis_status === "approved" ? "Onaylı" : g.analysis_status === "needs_review" ? "İnceleme gerekli" : g.analysis_status}
+                  </span>
                   <h2>
                     {g.university_name}
                     {g.institute_name ? ` — ${g.institute_name}` : ""}
@@ -193,12 +201,19 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
               </div>
 
               {canManage ? (
-                <form action={handleDelete.bind(null, g.id)} style={{ marginTop: 12 }}>
-                  <button type="submit" className="projects-filter-button">
-                    <Trash2 size={14} />
-                    Sil
-                  </button>
-                </form>
+                <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                  {g.analysis_status !== "approved" ? (
+                    <form action={handleApprove.bind(null, g.id)}>
+                      <button type="submit" className="projects-primary-button">Onayla ve uygula</button>
+                    </form>
+                  ) : null}
+                  <form action={handleDelete.bind(null, g.id)}>
+                    <button type="submit" className="projects-filter-button">
+                      <Trash2 size={14} />
+                      Sil
+                    </button>
+                  </form>
+                </div>
               ) : null}
             </article>
           ))}
