@@ -6,10 +6,8 @@ import { fetchOfficialSource } from "@/lib/safe-official-fetch";
  * Bir üniversitenin tez yazım kılavuzu URL'sini (PDF veya HTML
  * sayfa) alır, düz metni çıkarır ve olası zorunlu bölüm
  * başlıklarını (Giriş, Yöntem, Bulgular vb.) heuristik olarak
- * önerir. SONUÇLARI OTOMATİK OLARAK UYGULAMAZ — yalnızca Akademik
- * Yönetici'ye bir ön inceleme sunar; kılavuzu aktifleştirmek
- * her zaman insan onayı gerektirir (proje dosyası Bölüm 6.3
- * "Kılavuz Güncelleme Akışı" ile uyumlu).
+ * önerir. Temel biçim kurallarının tamamı açıkça bulunursa yüksek
+ * güvenli bir öneri üretir; eksik/çelişkili belgeler insan incelemesine kalır.
  */
 
 const CANDIDATE_SECTIONS = [
@@ -39,6 +37,61 @@ export interface GuidelineScanResult {
   detectedCitationHint: string | null;
   sourceChecksum: string;
   sourceContentType: string;
+  suggestedRules: Record<string, unknown>;
+  confidence: number;
+  warnings: string[];
+}
+
+function detectedNumber(text: string, pattern: RegExp): number | undefined {
+  const match = pattern.exec(text);
+  if (!match?.[1]) return undefined;
+  const value = Number(match[1].replace(",", "."));
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function extractFormattingRules(text: string, sectionCount: number, hasCitation: boolean) {
+  const compact = text.replace(/\s+/g, " ");
+  const margin = (label: string) => detectedNumber(
+    compact,
+    new RegExp(`(?:${label})(?:\\s+kenar(?:ından|ı)?|\\s+boşlu(?:ğu|k))?[^.;]{0,55}?(\\d{1,2}(?:[,.]\\d+)?)\\s*(?:cm|santimetre)`, "iu")
+  );
+  const margins = {
+    top: margin("üst|üstten"), bottom: margin("alt|alttan"),
+    left: margin("sol|soldan"), right: margin("sağ|sağdan"),
+  };
+  const fontFamily = /times\s+new\s+roman/i.test(compact) ? "Times New Roman"
+    : /\barial\b/i.test(compact) ? "Arial"
+    : /\bcalibri\b/i.test(compact) ? "Calibri"
+    : /\bcambria\b/i.test(compact) ? "Cambria" : undefined;
+  const fontSizePt = detectedNumber(compact, /(\d{1,2}(?:[,.]\d+)?)\s*(?:punto|pt)\b/iu);
+  const lineSpacing = detectedNumber(compact, /(\d(?:[,.]\d+)?)\s*(?:satır\s+aralığı|satır\s+aralıklı)/iu);
+  const validFontSize = fontSizePt && fontSizePt >= 8 && fontSizePt <= 24 ? fontSizePt : undefined;
+  const validLineSpacing = lineSpacing && lineSpacing >= 1 && lineSpacing <= 3 ? lineSpacing : undefined;
+  const warnings: string[] = [];
+  if (Object.values(margins).some((value) => value === undefined)) warnings.push("Tüm kenar boşlukları açıkça bulunamadı.");
+  if (!fontFamily) warnings.push("Yazı tipi açıkça bulunamadı.");
+  if (!validFontSize) warnings.push("Geçerli yazı boyutu açıkça bulunamadı.");
+  if (!validLineSpacing) warnings.push("Geçerli satır aralığı açıkça bulunamadı.");
+  if (sectionCount < 4) warnings.push("Yeterli sayıda zorunlu bölüm tespit edilemedi.");
+  if (!hasCitation) warnings.push("Kaynakça sistemi açıkça bulunamadı.");
+
+  const score = [
+    Object.values(margins).every((value) => value !== undefined) ? 0.35 : 0,
+    fontFamily ? 0.15 : 0, validFontSize ? 0.15 : 0, validLineSpacing ? 0.15 : 0,
+    sectionCount >= 4 ? 0.1 : 0, hasCitation ? 0.1 : 0,
+  ].reduce((sum, value) => sum + value, 0);
+
+  return {
+    suggestedRules: {
+      ...(Object.values(margins).every((value) => value !== undefined) ? { margins_cm: margins } : {}),
+      ...(fontFamily ? { font_family: fontFamily } : {}),
+      ...(validFontSize ? { font_size_pt: validFontSize } : {}),
+      ...(validLineSpacing ? { line_spacing: validLineSpacing } : {}),
+      show_page_numbers: /sayfa\s+numara(?:sı|ları|landırma)/iu.test(compact),
+    },
+    confidence: Math.round(score * 100) / 100,
+    warnings,
+  };
 }
 
 async function sha256(data: ArrayBuffer): Promise<string> {
@@ -99,6 +152,7 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
     : /ieee/i.test(text)
     ? "IEEE"
     : null;
+  const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint));
 
   return {
     textPreview: text.slice(0, 4000),
@@ -107,5 +161,6 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
     detectedCitationHint: citationHint,
     sourceChecksum: await sha256(sourceBytes),
     sourceContentType: contentType || "application/octet-stream",
+    ...formatting,
   };
 }
