@@ -20,6 +20,7 @@ export interface ThesisGuideline {
   created_at: string;
   analysis_status: string;
   review_notes: string | null;
+  extracted_rules: Record<string, unknown>;
 }
 
 export interface GuidelineMatch {
@@ -84,7 +85,7 @@ export async function getGuidelines(): Promise<ThesisGuideline[]> {
   const { data, error } = await supabase
     .from("thesis_guidelines")
     .select(
-      "id, university_name, institute_name, version_label, source_url, citation_style, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at, analysis_status, review_notes"
+      "id, university_name, institute_name, version_label, source_url, citation_style, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at, analysis_status, review_notes, extracted_rules"
     )
     .order("university_name", { ascending: true });
 
@@ -93,6 +94,63 @@ export async function getGuidelines(): Promise<ThesisGuideline[]> {
     return [];
   }
   return data ?? [];
+}
+
+const REVIEW_FONTS = ["Times New Roman", "Arial", "Calibri", "Cambria", "Garamond", "Georgia", "Verdana", "Book Antiqua"];
+
+export async function updateGuidelineRules(guidelineId: string, formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (!profile || !["academic_manager", "system_admin", "founder"].includes(profile.role)) {
+    return { error: "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir." };
+  }
+
+  const numberInRange = (name: string, min: number, max: number) => {
+    const value = Number(String(formData.get(name) ?? "").replace(",", "."));
+    return Number.isFinite(value) && value >= min && value <= max ? value : null;
+  };
+  const fontFamily = String(formData.get("fontFamily") ?? "");
+  const margins = {
+    top: numberInRange("marginTop", 0, 10),
+    bottom: numberInRange("marginBottom", 0, 10),
+    left: numberInRange("marginLeft", 0, 10),
+    right: numberInRange("marginRight", 0, 10),
+  };
+  const fontSizePt = numberInRange("fontSizePt", 8, 24);
+  const lineSpacing = numberInRange("lineSpacing", 1, 3);
+  if (Object.values(margins).some((value) => value === null) || !fontSizePt || !lineSpacing || !REVIEW_FONTS.includes(fontFamily)) {
+    return { error: "Biçim ayarlarından biri geçersiz." };
+  }
+
+  const requiredSections = String(formData.get("requiredSections") ?? "")
+    .split(",").map((value) => value.trim()).filter(Boolean);
+  const citationStyle = String(formData.get("citationStyle") ?? "apa7");
+  if (!requiredSections.length || !["apa7", "vancouver", "chicago", "ieee"].includes(citationStyle)) {
+    return { error: "Kaynakça sistemi ve en az bir zorunlu bölüm gereklidir." };
+  }
+
+  const { error } = await supabase.from("thesis_guidelines").update({
+    citation_style: citationStyle,
+    required_sections: requiredSections,
+    extracted_rules: {
+      margins_cm: margins,
+      font_family: fontFamily,
+      font_size_pt: fontSizePt,
+      line_spacing: lineSpacing,
+      show_page_numbers: formData.get("showPageNumbers") === "on",
+    },
+    analysis_status: "needs_review",
+    reviewed_by: null,
+    reviewed_at: null,
+    review_notes: String(formData.get("reviewNotes") ?? "").trim() || "Biçim kuralları güncellendi; yeniden onay gerekiyor.",
+  }).eq("id", guidelineId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/guidelines");
+  return { success: true };
 }
 
 export async function createGuideline(formData: FormData) {
@@ -176,10 +234,13 @@ export async function approveGuideline(guidelineId: string) {
 
   const { data: guideline, error: guidelineError } = await supabase
     .from("thesis_guidelines")
-    .select("university_name, institute_name, citation_style")
+    .select("university_name, institute_name, citation_style, required_sections, extracted_rules")
     .eq("id", guidelineId)
     .single();
   if (guidelineError || !guideline) return { error: "Kılavuz bulunamadı." };
+  if (!guideline.required_sections?.length || !guideline.extracted_rules || Object.keys(guideline.extracted_rules).length === 0) {
+    return { error: "Onaylamadan önce biçim kurallarını ve zorunlu bölümleri kaydedin." };
+  }
 
   const { error } = await supabase
     .from("thesis_guidelines")
