@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 export const maxDuration = 60;
 import { getManuscript } from "@/app/actions/manuscript";
 import ManuscriptEditor from "./manuscript-editor";
+import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
 
 export default async function WriteManuscriptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,13 +19,21 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
     .single();
 
   let requiredSections: string[] = [];
+  let guidelineLabel: string | null = null;
+  let guidelineCitationStyle: string | null = null;
+  let guidelineSettings = normalizeGuidelineEditorSettings(null);
   if (project?.guideline_id) {
     const { data: guideline } = await supabase
       .from("thesis_guidelines")
-      .select("required_sections")
+      .select("university_name, institute_name, document_title, version_label, citation_style, required_sections, extracted_rules, analysis_status")
       .eq("id", project.guideline_id)
       .single();
-    requiredSections = guideline?.required_sections ?? [];
+    if (guideline?.analysis_status === "approved") {
+      requiredSections = guideline.required_sections ?? [];
+      guidelineCitationStyle = guideline.citation_style;
+      guidelineSettings = normalizeGuidelineEditorSettings(guideline.extracted_rules);
+      guidelineLabel = guideline.document_title ?? `${guideline.university_name}${guideline.institute_name ? ` — ${guideline.institute_name}` : ""}${guideline.version_label ? ` (${guideline.version_label})` : ""}`;
+    }
   }
 
   const manuscript = await getManuscript(id);
@@ -60,9 +69,15 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
         projectId={id}
         initialContent={manuscript?.content ?? null}
         requiredSections={requiredSections}
-        initialMargins={manuscript?.margins}
-        initialShowPageNumbers={manuscript?.showPageNumbers}
+        initialMargins={manuscript?.margins ?? guidelineSettings.margins}
+        initialShowPageNumbers={manuscript?.showPageNumbers ?? guidelineSettings.showPageNumbers}
         initialCoverPage={manuscript?.coverPage}
+        appliedGuideline={guidelineLabel ? {
+          label: guidelineLabel,
+          citationStyle: guidelineCitationStyle ?? "",
+          settings: guidelineSettings,
+          usedAsDefaults: !manuscript,
+        } : null}
         projectDefaults={{
           title: project?.title ?? "",
           university: project?.university ?? "",
