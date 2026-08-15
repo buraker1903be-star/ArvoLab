@@ -20,6 +20,63 @@ export interface ThesisGuideline {
   created_at: string;
 }
 
+export interface GuidelineMatch {
+  id: string;
+  university_name: string;
+  institute_name: string | null;
+  document_title: string | null;
+  version_label: string | null;
+  citation_style: string;
+  match_level: "department" | "academic_unit" | "university";
+}
+
+/** En özel onaylı kılavuzu seçer; gerekirse üst kuruma geri düşer. */
+export async function findMatchingGuideline(
+  universityId: string,
+  academicUnitId?: string | null,
+  departmentId?: string | null
+): Promise<GuidelineMatch | null> {
+  if (!universityId) return null;
+
+  const supabase = await createClient();
+  const select =
+    "id, university_name, institute_name, document_title, version_label, citation_style, academic_unit_id";
+
+  for (const candidate of [
+    { id: departmentId, level: "department" as const },
+    { id: academicUnitId, level: "academic_unit" as const },
+  ]) {
+    if (!candidate.id) continue;
+    const { data } = await supabase
+      .from("thesis_guidelines")
+      .select(select)
+      .eq("university_id", universityId)
+      .eq("academic_unit_id", candidate.id)
+      .eq("is_active", true)
+      .eq("analysis_status", "approved")
+      .order("effective_from", { ascending: false, nullsFirst: false })
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data) return { ...data, match_level: candidate.level };
+  }
+
+  const { data } = await supabase
+    .from("thesis_guidelines")
+    .select(select)
+    .eq("university_id", universityId)
+    .is("academic_unit_id", null)
+    .eq("is_active", true)
+    .eq("analysis_status", "approved")
+    .order("effective_from", { ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data ? { ...data, match_level: "university" } : null;
+}
+
 export async function getGuidelines(): Promise<ThesisGuideline[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
