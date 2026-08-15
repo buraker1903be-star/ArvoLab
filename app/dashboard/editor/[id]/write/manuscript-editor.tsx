@@ -32,9 +32,25 @@ import {
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import type { TiptapDoc } from "@/lib/tiptap-text";
-import { saveManuscript, runManuscriptCheck, type ManuscriptCheckResult, type PageMargins } from "@/app/actions/manuscript";
+import { saveManuscript, runManuscriptCheck, type ManuscriptCheckResult, type PageMargins, type CoverPage } from "@/app/actions/manuscript";
 import { createClient } from "@/lib/supabase/client";
-import { IndentIncrease, Settings2, AlignVerticalSpaceAround } from "lucide-react";
+import { IndentIncrease, Settings2, AlignVerticalSpaceAround, FileBadge } from "lucide-react";
+
+interface ProjectDefaults {
+  title: string;
+  university: string;
+  institute: string;
+  department: string;
+  authorName: string;
+  projectType: string;
+}
+
+const DEGREE_TYPE_BY_PROJECT_TYPE: Record<string, string> = {
+  thesis: "Yüksek Lisans Tezi",
+  article: "Makale",
+  project: "Proje Raporu",
+  "associate-professorship": "Doçentlik Eser Dosyası",
+};
 
 interface ManuscriptEditorProps {
   projectId: string;
@@ -42,6 +58,8 @@ interface ManuscriptEditorProps {
   requiredSections: string[];
   initialMargins?: PageMargins;
   initialShowPageNumbers?: boolean;
+  initialCoverPage?: CoverPage | null;
+  projectDefaults?: ProjectDefaults;
 }
 
 // Türkiye'deki üniversitelerin tez/makale yazım kılavuzlarında en sık
@@ -60,7 +78,15 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = [9, 10, 10.5, 11, 12, 13, 14, 16, 18, 20, 24];
 
-export default function ManuscriptEditor({ projectId, initialContent, requiredSections, initialMargins, initialShowPageNumbers }: ManuscriptEditorProps) {
+export default function ManuscriptEditor({
+  projectId,
+  initialContent,
+  requiredSections,
+  initialMargins,
+  initialShowPageNumbers,
+  initialCoverPage,
+  projectDefaults,
+}: ManuscriptEditorProps) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [checkResult, setCheckResult] = useState<ManuscriptCheckResult | null>(null);
@@ -72,6 +98,22 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
   );
   const [showPageNumbers, setShowPageNumbers] = useState(initialShowPageNumbers ?? true);
   const [showPageSettings, setShowPageSettings] = useState(false);
+  const [showCoverPageEditor, setShowCoverPageEditor] = useState(false);
+  const [coverPageEnabled, setCoverPageEnabled] = useState(!!initialCoverPage);
+  const [coverPage, setCoverPage] = useState<CoverPage>(
+    initialCoverPage ?? {
+      university: projectDefaults?.university ?? "",
+      institute: projectDefaults?.institute ?? "",
+      department: projectDefaults?.department ?? "",
+      program: "",
+      degreeType: DEGREE_TYPE_BY_PROJECT_TYPE[projectDefaults?.projectType ?? "thesis"] ?? "Yüksek Lisans Tezi",
+      title: projectDefaults?.title ?? "",
+      authorName: projectDefaults?.authorName ?? "",
+      advisorName: "",
+      city: "",
+      year: String(new Date().getFullYear()),
+    }
+  );
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
@@ -105,14 +147,14 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
     setSaving(true);
     try {
       const json = editor.getJSON() as unknown as TiptapDoc;
-      const res = await saveManuscript(projectId, json, margins, showPageNumbers);
+      const res = await saveManuscript(projectId, json, margins, showPageNumbers, coverPageEnabled ? coverPage : null);
       if (res.success) {
         setLastSaved(new Date().toLocaleTimeString("tr-TR"));
       }
     } finally {
       setSaving(false);
     }
-  }, [editor, projectId, margins, showPageNumbers]);
+  }, [editor, projectId, margins, showPageNumbers, coverPageEnabled, coverPage]);
 
   const handleCheck = useCallback(async () => {
     setChecking(true);
@@ -369,7 +411,121 @@ export default function ManuscriptEditor({ projectId, initialContent, requiredSe
         >
           <Settings2 size={16} />
         </button>
+
+        <button
+          type="button"
+          onClick={() => setShowCoverPageEditor((v) => !v)}
+          className={showCoverPageEditor ? "is-active" : ""}
+          title="Kapak sayfası"
+        >
+          <FileBadge size={16} />
+        </button>
       </div>
+
+      {showCoverPageEditor && (
+        <div className="manuscript-page-settings manuscript-cover-page-editor">
+          <label style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", fontWeight: 700 }}>
+            <input
+              type="checkbox"
+              checked={coverPageEnabled}
+              onChange={(e) => setCoverPageEnabled(e.target.checked)}
+            />
+            <span>Kapak sayfası oluştur (Word&apos;e aktarınca belgenin ilk sayfası olur)</span>
+          </label>
+
+          {coverPageEnabled && (
+            <div className="manuscript-cover-page-grid">
+              <label>
+                <span>Üniversite</span>
+                <input
+                  type="text"
+                  value={coverPage.university}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, university: e.target.value }))}
+                />
+              </label>
+              <label>
+                <span>Enstitü / Fakülte</span>
+                <input
+                  type="text"
+                  value={coverPage.institute}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, institute: e.target.value }))}
+                />
+              </label>
+              <label>
+                <span>Anabilim Dalı / Bölüm</span>
+                <input
+                  type="text"
+                  value={coverPage.department}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, department: e.target.value }))}
+                />
+              </label>
+              <label>
+                <span>Program (varsa)</span>
+                <input
+                  type="text"
+                  value={coverPage.program}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, program: e.target.value }))}
+                />
+              </label>
+              <label className="manuscript-cover-page-full">
+                <span>Tez / Çalışma Başlığı</span>
+                <input
+                  type="text"
+                  value={coverPage.title}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, title: e.target.value }))}
+                />
+              </label>
+              <label>
+                <span>Yazar Adı Soyadı</span>
+                <input
+                  type="text"
+                  value={coverPage.authorName}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, authorName: e.target.value }))}
+                />
+              </label>
+              <label>
+                <span>Çalışma Türü</span>
+                <select
+                  value={coverPage.degreeType}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, degreeType: e.target.value }))}
+                >
+                  <option value="Yüksek Lisans Tezi">Yüksek Lisans Tezi</option>
+                  <option value="Doktora Tezi">Doktora Tezi</option>
+                  <option value="Lisans Bitirme Tezi">Lisans Bitirme Tezi</option>
+                  <option value="Makale">Makale</option>
+                  <option value="Proje Raporu">Proje Raporu</option>
+                  <option value="Doçentlik Eser Dosyası">Doçentlik Eser Dosyası</option>
+                </select>
+              </label>
+              <label>
+                <span>Danışman (varsa)</span>
+                <input
+                  type="text"
+                  placeholder="Unvan Adı Soyadı"
+                  value={coverPage.advisorName}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, advisorName: e.target.value }))}
+                />
+              </label>
+              <label>
+                <span>Şehir</span>
+                <input
+                  type="text"
+                  value={coverPage.city}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, city: e.target.value }))}
+                />
+              </label>
+              <label>
+                <span>Yıl</span>
+                <input
+                  type="text"
+                  value={coverPage.year}
+                  onChange={(e) => setCoverPage((p) => ({ ...p, year: e.target.value }))}
+                />
+              </label>
+            </div>
+          )}
+        </div>
+      )}
 
       {showPageSettings && (
         <div className="manuscript-page-settings">

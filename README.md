@@ -1,5 +1,35 @@
 # ArvoLab
 
+## Yeni Özellik — Kapak Sayfası Şablonu
+
+Panelde Yazma editöründe artık bir **"Kapak sayfası"** butonu var
+(araç çubuğunun sağında). Açtığınızda: üniversite, enstitü/fakülte,
+anabilim dalı/bölüm, program, çalışma türü (Yüksek Lisans/Doktora/
+Lisans/Makale/Proje/Doçentlik), başlık, yazar adı, danışman ve
+şehir/yıl bilgilerini girebileceğiniz bir form açılır — çoğu alan
+çalışmanızın mevcut bilgilerinden (üniversite, enstitü, bölüm, başlık,
+kendi adınız) otomatik doldurulur, isterseniz değiştirebilirsiniz.
+
+Kapak sayfası açıksa, Word'e aktarımda belgenin **ilk sayfası** olarak
+otomatik oluşturulur (standart Türkçe tez kapağı düzeninde: üstte
+kurum bilgileri, ortada büyük harfli başlık, altta yazar/danışman/
+şehir-yıl) ve ardından gerçek içeriğiniz yeni bir sayfada başlar.
+Gerçek verilerle test edildi: LibreOffice'te render edilen çıktıda
+kapak sayfası doğru düzende, sayfa geçişi ve sayfa numaralandırması
+(1→2) sorunsuz çalışıyor.
+
+**Bilinen basitleştirme:** Kapak sayfası da diğer sayfalar gibi
+numaralandırılıyor (bazı kılavuzlar kapağın numarasız olmasını ister).
+İsterseniz bunu ayrı bir adımda "ilk sayfada farklı üstbilgi/altbilgi"
+özelliğiyle geliştirebiliriz.
+
+**Supabase değişikliği gerekli:**
+
+```sql
+alter table public.project_manuscripts
+  add column if not exists cover_page jsonb;
+```
+
 ## Yeni Özellik — Sayfa Numarası
 
 Panelde Yazma editöründeki "Sayfa Ayarları" paneline bir **"Sayfa

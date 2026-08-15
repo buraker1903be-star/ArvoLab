@@ -480,3 +480,41 @@ button { border: 0; }
   font-size: 11px;
   margin-left: auto;
 }
+
+.manuscript-cover-page-editor {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.manuscript-cover-page-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  width: 100%;
+}
+.manuscript-cover-page-grid label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.manuscript-cover-page-grid label > span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+.manuscript-cover-page-grid input,
+.manuscript-cover-page-grid select {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+.manuscript-cover-page-full {
+  grid-column: 1 / -1;
+}
+@media (max-width: 640px) {
+  .manuscript-cover-page-grid { grid-template-columns: 1fr; }
+}

@@ -1063,3 +1063,12 @@ alter table public.project_manuscripts
 -- ============================================================
 alter table public.project_manuscripts
   add column if not exists show_page_numbers boolean not null default true;
+
+-- ============================================================
+-- Kapak Sayfası Şablonu (Panelde Yazma)
+-- Türkiye'deki tez/makale yazım kılavuzlarının neredeyse tamamında
+-- istenen standart kapak sayfası bilgileri. Doldurulursa Word'e
+-- aktarımda belgenin ilk sayfası olarak otomatik oluşturulur.
+-- ============================================================
+alter table public.project_manuscripts
+  add column if not exists cover_page jsonb;

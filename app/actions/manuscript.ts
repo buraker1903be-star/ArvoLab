@@ -18,12 +18,26 @@ export interface PageMargins {
   right: number;
 }
 
+export interface CoverPage {
+  university: string;
+  institute: string;
+  department: string;
+  program: string;
+  degreeType: string; // "Yüksek Lisans Tezi" | "Doktora Tezi" | "Lisans Bitirme Tezi" | "Makale" vb.
+  title: string;
+  authorName: string;
+  advisorName: string;
+  city: string;
+  year: string;
+}
+
 export interface ManuscriptData {
   content: TiptapDoc;
   wordCount: number;
   updatedAt: string;
   margins: PageMargins;
   showPageNumbers: boolean;
+  coverPage: CoverPage | null;
 }
 
 export async function getManuscript(projectId: string): Promise<ManuscriptData | null> {
@@ -31,7 +45,7 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
   const { data, error } = await supabase
     .from("project_manuscripts")
     .select(
-      "content, word_count, updated_at, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm, show_page_numbers"
+      "content, word_count, updated_at, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm, show_page_numbers, cover_page"
     )
     .eq("project_id", projectId)
     .maybeSingle();
@@ -53,6 +67,7 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
       right: data.margin_right_cm ?? 2.5,
     },
     showPageNumbers: data.show_page_numbers ?? true,
+    coverPage: (data.cover_page as CoverPage) ?? null,
   };
 }
 
@@ -60,7 +75,8 @@ export async function saveManuscript(
   projectId: string,
   content: TiptapDoc,
   margins?: PageMargins,
-  showPageNumbers?: boolean
+  showPageNumbers?: boolean,
+  coverPage?: CoverPage | null
 ) {
   const supabase = await createClient();
   const {
@@ -88,6 +104,7 @@ export async function saveManuscript(
           }
         : {}),
       ...(showPageNumbers !== undefined ? { show_page_numbers: showPageNumbers } : {}),
+      ...(coverPage !== undefined ? { cover_page: coverPage } : {}),
     },
     { onConflict: "project_id" }
   );

@@ -13,7 +13,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
 
   const { data: project } = await supabase
     .from("academic_projects")
-    .select("id, title, guideline_id")
+    .select("id, title, guideline_id, university, institute, department, project_type")
     .eq("id", id)
     .single();
 
@@ -28,6 +28,15 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
   }
 
   const manuscript = await getManuscript(id);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let authorFullName = "";
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+    authorFullName = profile?.full_name ?? "";
+  }
 
   return (
     <main className="dashboard-page">
@@ -53,6 +62,15 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
         requiredSections={requiredSections}
         initialMargins={manuscript?.margins}
         initialShowPageNumbers={manuscript?.showPageNumbers}
+        initialCoverPage={manuscript?.coverPage}
+        projectDefaults={{
+          title: project?.title ?? "",
+          university: project?.university ?? "",
+          institute: project?.institute ?? "",
+          department: project?.department ?? "",
+          authorName: authorFullName,
+          projectType: project?.project_type ?? "thesis",
+        }}
       />
     </main>
   );

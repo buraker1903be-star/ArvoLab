@@ -14,6 +14,7 @@ import {
   convertMillimetersToTwip,
   Footer,
   PageNumber,
+  PageBreak,
 } from "docx";
 
 interface TiptapMark {
@@ -55,6 +56,72 @@ function indentFromAttrs(attrs: Record<string, unknown> | undefined) {
   const firstLineIndent = attrs?.firstLineIndent as boolean | undefined;
   if (!firstLineIndent) return undefined;
   return { firstLine: convertMillimetersToTwip(12.5) }; // 1.25 cm — yaygın tez girinti standardı
+}
+
+export interface CoverPageData {
+  university: string;
+  institute: string;
+  department: string;
+  program: string;
+  degreeType: string;
+  title: string;
+  authorName: string;
+  advisorName: string;
+  city: string;
+  year: string;
+}
+
+// Türkiye'deki tez yazım kılavuzlarında standart kabul edilen kapak
+// sayfası düzeni (üstte kurum bilgileri, ortada başlık, altta
+// yazar/danışman/şehir-yıl). Kurumdan kuruma küçük farklar olabilir;
+// bu makul bir varsayılan düzendir, kullanıcı alanları kendi
+// doldurur.
+function buildCoverPageParagraphs(cover: CoverPageData): Paragraph[] {
+  const blank = () => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun("")] });
+  const centered = (text: string, opts: { bold?: boolean; size?: number } = {}) =>
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text, bold: opts.bold ?? false, size: opts.size })],
+    });
+
+  const paragraphs: Paragraph[] = [
+    centered(cover.university.toLocaleUpperCase("tr-TR"), { bold: true, size: 28 }),
+    centered(cover.institute.toLocaleUpperCase("tr-TR"), { bold: true, size: 24 }),
+  ];
+  if (cover.department) {
+    paragraphs.push(centered(cover.department.toLocaleUpperCase("tr-TR"), { size: 24 }));
+  }
+  if (cover.program) {
+    paragraphs.push(centered(cover.program, { size: 22 }));
+  }
+
+  for (let i = 0; i < 6; i++) paragraphs.push(blank());
+
+  paragraphs.push(centered(cover.title.toLocaleUpperCase("tr-TR"), { bold: true, size: 30 }));
+
+  for (let i = 0; i < 4; i++) paragraphs.push(blank());
+
+  paragraphs.push(centered(cover.authorName, { bold: true, size: 24 }));
+  paragraphs.push(blank());
+  paragraphs.push(centered(cover.degreeType, { size: 22 }));
+
+  if (cover.advisorName) {
+    paragraphs.push(blank());
+    paragraphs.push(blank());
+    paragraphs.push(centered(`Danışman: ${cover.advisorName}`, { size: 22 }));
+  }
+
+  for (let i = 0; i < 4; i++) paragraphs.push(blank());
+
+  const cityYear = [cover.city, cover.year].filter(Boolean).join(", ");
+  if (cityYear) {
+    paragraphs.push(centered(cityYear, { bold: true, size: 22 }));
+  }
+
+  // Kapak sayfasından sonra yeni sayfaya geç
+  paragraphs.push(new Paragraph({ children: [new PageBreak()] }));
+
+  return paragraphs;
 }
 
 interface ConversionContext {
@@ -225,6 +292,7 @@ export interface BuildDocxOptions {
   fetchImage: ConversionContext["fetchImage"];
   margins?: { top: number; bottom: number; left: number; right: number }; // cm cinsinden
   showPageNumbers?: boolean;
+  coverPage?: CoverPageData | null;
 }
 
 export async function buildDocxFromTiptap({
@@ -233,10 +301,14 @@ export async function buildDocxFromTiptap({
   fetchImage,
   margins,
   showPageNumbers = true,
+  coverPage,
 }: BuildDocxOptions): Promise<Document> {
   const ctx: ConversionContext = { footnotes: {}, nextFootnoteId: 1, fetchImage };
 
   const bodyElements: (Paragraph | Table)[] = [];
+  if (coverPage) {
+    bodyElements.push(...buildCoverPageParagraphs(coverPage));
+  }
   for (const node of doc.content ?? []) {
     const elements = await blockNodeToDocxElements(node, ctx);
     bodyElements.push(...elements);
