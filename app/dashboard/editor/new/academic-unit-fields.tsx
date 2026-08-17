@@ -13,14 +13,20 @@ type AcademicUnitFieldsProps = {
 };
 
 const ROOT_UNIT_TYPES = [
-  "faculty",
-  "institute",
-  "school",
-  "conservatory",
-  "vocational_school",
+  "fakulte",
+  "enstitu",
+  "yuksekokul",
+  "konservatuvar",
+  "meslek_yuksekokulu",
 ] as const;
 
-const CHILD_UNIT_TYPES = ["department", "division", "program"] as const;
+const CHILD_UNIT_TYPES = [
+  "bolum",
+  "anabilim_dali",
+  "anasanat_dali",
+  "bilim_dali",
+  "program",
+] as const;
 
 export default function AcademicUnitFields({ universities }: AcademicUnitFieldsProps) {
   const [universityName, setUniversityName] = useState("");
