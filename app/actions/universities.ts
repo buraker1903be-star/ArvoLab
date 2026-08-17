@@ -26,7 +26,7 @@ export async function getUniversities(): Promise<University[]> {
 export interface AcademicUnit {
   id: string;
   university_id: string;
-  parent_id: string | null;
+  parent_unit_id: string | null;
   name: string;
   unit_type: string;
 }
@@ -46,13 +46,15 @@ export async function getAcademicUnits(
   const supabase = await createClient();
   let query = supabase
     .from("academic_units")
-    .select("id, university_id, parent_id, name, unit_type")
+    .select("id, university_id, parent_unit_id, name, unit_type")
     .eq("university_id", universityId)
     .eq("is_active", true)
     .in("unit_type", unitTypes)
     .order("name");
 
-  query = parentId === null ? query.is("parent_id", null) : query.eq("parent_id", parentId);
+  query = parentId === null
+    ? query.is("parent_unit_id", null)
+    : query.eq("parent_unit_id", parentId);
 
   const { data, error } = await query;
 
