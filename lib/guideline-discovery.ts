@@ -8,8 +8,12 @@ type Candidate = {
   title: string;
 };
 
-const SEARCH_URL = "https://html.duckduckgo.com/html/";
 const MAX_CANDIDATES_PER_UNIVERSITY = 3;
+const SEARCH_PROVIDERS = [
+  (query: string) => `https://www.bing.com/search?q=${encodeURIComponent(query)}`,
+  (query: string) => `https://www.google.com/search?hl=tr&num=10&q=${encodeURIComponent(query)}`,
+  (query: string) => `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+];
 
 function decodeHtml(value: string) {
   return value
@@ -50,7 +54,7 @@ function belongsToUniversity(scan: GuidelineScanResult, universityName: string) 
 function extractTargetUrl(rawHref: string) {
   const href = decodeHtml(rawHref);
   const redirect = new URL(href, "https://duckduckgo.com");
-  const target = redirect.searchParams.get("uddg") ?? redirect.toString();
+  const target = redirect.searchParams.get("uddg") ?? redirect.searchParams.get("q") ?? redirect.toString();
   const url = new URL(target);
   const hostname = url.hostname.toLowerCase();
   if (url.protocol !== "https:" || !(hostname === "edu.tr" || hostname.endsWith(".edu.tr"))) return null;
@@ -59,29 +63,45 @@ function extractTargetUrl(rawHref: string) {
 
 async function discoverCandidates(universityName: string): Promise<Candidate[]> {
   const query = `"${universityName}" "tez yazım kılavuzu" filetype:pdf`;
-  const response = await fetch(`${SEARCH_URL}?q=${encodeURIComponent(query)}`, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(20_000),
-    headers: { "user-agent": "Mozilla/5.0 (compatible; ArvoLabGuidelineDiscovery/1.0)" },
-  });
-  if (!response.ok) throw new Error(`Kılavuz araması başarısız: HTTP ${response.status}`);
+  const providerErrors: string[] = [];
 
-  const html = await response.text();
-  const candidates = new Map<string, Candidate>();
-  const resultPattern = /class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
-  for (const match of html.matchAll(resultPattern)) {
+  for (const providerUrl of SEARCH_PROVIDERS) {
     try {
-      const url = extractTargetUrl(match[1]);
-      if (!url || candidates.has(url)) continue;
-      const title = decodeHtml(match[2]);
-      if (!/tez|thesis/i.test(`${title} ${url}`) || !/k[ıi]lavuz|guide|yaz[ıi]m/i.test(`${title} ${url}`)) continue;
-      candidates.set(url, { url, title });
-      if (candidates.size >= MAX_CANDIDATES_PER_UNIVERSITY) break;
-    } catch {
-      // Ignore malformed or non-official search results.
+      const response = await fetch(providerUrl(query), {
+        cache: "no-store",
+        signal: AbortSignal.timeout(20_000),
+        headers: { "user-agent": "Mozilla/5.0 (compatible; ArvoLabGuidelineDiscovery/1.1)" },
+      });
+      if (!response.ok) {
+        providerErrors.push(`HTTP ${response.status}`);
+        continue;
+      }
+
+      const html = await response.text();
+      const candidates = new Map<string, Candidate>();
+      const resultPattern = /<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+      for (const match of html.matchAll(resultPattern)) {
+        try {
+          const url = extractTargetUrl(match[1]);
+          if (!url || candidates.has(url)) continue;
+          const title = decodeHtml(match[2]);
+          if (!/tez|thesis/i.test(`${title} ${url}`) || !/k[ıi]lavuz|guide|yaz[ıi]m/i.test(`${title} ${url}`)) continue;
+          candidates.set(url, { url, title });
+          if (candidates.size >= MAX_CANDIDATES_PER_UNIVERSITY) break;
+        } catch {
+          // Ignore malformed or non-official search results.
+        }
+      }
+      if (candidates.size > 0) return [...candidates.values()];
+    } catch (error) {
+      providerErrors.push(error instanceof Error ? error.message : "arama hatası");
     }
   }
-  return [...candidates.values()];
+
+  if (providerErrors.length === SEARCH_PROVIDERS.length) {
+    throw new Error(`Tüm kılavuz arama sağlayıcıları başarısız: ${providerErrors.join(", ")}`);
+  }
+  return [];
 }
 
 function scanUpdate(scan: GuidelineScanResult, detectedAt: string) {
