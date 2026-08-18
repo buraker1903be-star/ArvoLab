@@ -9,12 +9,13 @@ export default async function CitationsPage() {
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Kaynakça</span>
-          <h1 className="brand-type">Kaynakça Doğrulama</h1>
+          <h1 className="brand-type">Kaynakça ve Atıf Doğrulama</h1>
           <p>
-            Kaynakça listenizi yapıştırın; sistem içerik üretmez, yalnızca
-            APA 7 format kurallarını ve metin içi atıf / kaynakça
-            tutarlılığını kural bazlı olarak denetler. Tam bir belgeyi
-            (.docx/.pdf) yükleyip analiz etmek isterseniz{" "}
+            Kaynakçanızı APA 7 biçimi, metin içi atıf tutarlılığı ve gerçek
+            akademik kayıt eşleşmesi açısından denetleyin. Crossref ve OpenAlex
+            sonuçları DOI bilgisiyle karşılaştırılır; her kaynak için Google
+            Scholar araması da sunulur. Tam bir belgeyi (.docx/.pdf) incelemek
+            için{" "}
             <a href="/dashboard/documents" style={{ color: "var(--accent)", fontWeight: 700 }}>
               Belge Kontrol
             </a>{" "}
@@ -29,15 +30,15 @@ export default async function CitationsPage() {
         <section style={{ marginTop: 32 }}>
           <h2 style={{ fontSize: 15, marginBottom: 12 }}>Son Kontroller</h2>
           <div className="projects-list">
-            {history.map((h) => (
-              <article className="project-card" key={h.id}>
+            {history.map((historyItem) => (
+              <article className="project-card" key={historyItem.id}>
                 <div className="project-card-main">
                   <div>
-                    <h2>{h.project_title || "İsimsiz kontrol"}</h2>
-                    <p>{new Date(h.created_at).toLocaleString("tr-TR")}</p>
+                    <h2>{historyItem.project_title || "İsimsiz kontrol"}</h2>
+                    <p>{new Date(historyItem.created_at).toLocaleString("tr-TR")}</p>
                   </div>
                   <div className="project-progress">
-                    <strong>{h.compliance_score ?? "-"}/100</strong>
+                    <strong>{historyItem.compliance_score ?? "-"}/100</strong>
                   </div>
                 </div>
               </article>
