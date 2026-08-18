@@ -123,6 +123,12 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
 
   if (contentType.includes("pdf") || url.toLowerCase().endsWith(".pdf")) {
     const buffer = Buffer.from(sourceBytes);
+    const canvas = await import("@napi-rs/canvas");
+    Object.assign(globalThis, {
+      DOMMatrix: globalThis.DOMMatrix ?? canvas.DOMMatrix,
+      ImageData: globalThis.ImageData ?? canvas.ImageData,
+      Path2D: globalThis.Path2D ?? canvas.Path2D,
+    });
     const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: buffer });
     try {
