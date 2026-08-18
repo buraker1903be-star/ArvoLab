@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scanGuidelineUrl, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { crawlOfficialGuidelineCandidates, resolveOfficialUniversityDomain } from "@/lib/official-guideline-crawl";
 
 type University = { id: string; name: string };
 
@@ -62,6 +63,11 @@ function extractTargetUrl(rawHref: string) {
 }
 
 async function discoverCandidates(universityName: string): Promise<Candidate[]> {
+  const officialDomain = await resolveOfficialUniversityDomain(universityName).catch(() => null);
+  if (officialDomain) {
+    const officialCandidates = await crawlOfficialGuidelineCandidates(officialDomain).catch(() => []);
+    if (officialCandidates.length > 0) return officialCandidates.slice(0, MAX_CANDIDATES_PER_UNIVERSITY);
+  }
   const query = `"${universityName}" "tez yazım kılavuzu" filetype:pdf`;
   const providerErrors: string[] = [];
 
