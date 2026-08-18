@@ -7,6 +7,7 @@ import {
   crossCheck,
   computeComplianceScore,
 } from "@/lib/apa7";
+import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 
 export async function getMyProjects() {
   const supabase = await createClient();
@@ -43,9 +44,23 @@ export async function runCitationCheck(input: {
   }
 
   const references = parseReferenceList(input.referenceList);
+  if (references.length === 0) {
+    return { error: "Doğrulanabilecek bir kaynakça girdisi bulunamadı." };
+  }
+  if (references.length > 25) {
+    return { error: "Tek kontrolde en fazla 25 kaynak doğrulanabilir." };
+  }
+
   const citations = input.bodyText ? extractInTextCitations(input.bodyText) : [];
   const cross = crossCheck(citations, references);
   const score = computeComplianceScore(references, cross);
+  const academicVerification = await verifyAcademicReferences(references);
+  const verificationSummary = {
+    verified: academicVerification.filter((item) => item.status === "verified").length,
+    possible: academicVerification.filter((item) => item.status === "possible_match").length,
+    notFound: academicVerification.filter((item) => item.status === "not_found").length,
+    insufficientData: academicVerification.filter((item) => item.status === "insufficient_data").length,
+  };
 
   const { error } = await supabase.from("citation_checks").insert({
     project_id: input.projectId,
@@ -54,7 +69,7 @@ export async function runCitationCheck(input: {
     body_text: input.bodyText || null,
     parsed_references: references,
     in_text_citations: citations,
-    cross_check: cross,
+    cross_check: { ...cross, academicVerification, verificationSummary },
     compliance_score: score,
     created_by: user.id,
   });
@@ -64,7 +79,14 @@ export async function runCitationCheck(input: {
     return { error: "Sonuç kaydedilirken bir hata oluştu." };
   }
 
-  return { references, citations, crossCheck: cross, complianceScore: score };
+  return {
+    references,
+    citations,
+    crossCheck: cross,
+    complianceScore: score,
+    academicVerification,
+    verificationSummary,
+  };
 }
 
 export async function getMyCitationChecks() {
