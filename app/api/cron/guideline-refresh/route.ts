@@ -1,5 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scanGuidelineUrl } from "@/lib/guideline-scan";
+import {
+  discoverGuidelinesForUniversity,
+  getUniversitiesDueForGuidelineDiscovery,
+} from "@/lib/guideline-discovery";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -10,13 +14,35 @@ export async function GET(request: Request) {
   }
 
   const supabase = createAdminClient();
+  const discoveryResults: Array<{
+    university: string | null;
+    status: "discovered" | "already_known" | "not_found" | "failed";
+    url?: string;
+    error?: string;
+  }> = [];
+  try {
+    const universities = await getUniversitiesDueForGuidelineDiscovery(2);
+    for (const university of universities) {
+      discoveryResults.push({
+        university: university.name,
+        ...await discoverGuidelinesForUniversity(university),
+      });
+    }
+  } catch (discoveryError) {
+    discoveryResults.push({
+      university: null,
+      status: "failed" as const,
+      error: discoveryError instanceof Error ? discoveryError.message : "Keşif kuyruğu alınamadı.",
+    });
+  }
+
   const { data: guidelines, error } = await supabase
     .from("thesis_guidelines")
     .select("id, source_url, source_checksum, analysis_status, university_name, institute_name")
     .not("source_url", "is", null)
     .eq("is_active", true)
     .order("last_checked_at", { ascending: true })
-    .limit(8);
+    .limit(6);
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
@@ -78,5 +104,10 @@ export async function GET(request: Request) {
     }
   }
 
-  return Response.json({ checked: results.length, results });
+  return Response.json({
+    discovered: discoveryResults.filter((item) => item.status === "discovered").length,
+    discoveryResults,
+    checked: results.length,
+    results,
+  });
 }
