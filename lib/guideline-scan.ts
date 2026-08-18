@@ -131,6 +131,10 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
     } finally {
       await parser.destroy();
     }
+  } else if (contentType.includes("wordprocessingml") || url.toLowerCase().endsWith(".docx")) {
+    const mammoth = await import("mammoth");
+    const result = await mammoth.extractRawText({ buffer: Buffer.from(sourceBytes) });
+    text = result.value;
   } else {
     const html = new TextDecoder().decode(sourceBytes);
     text = stripHtml(html);
