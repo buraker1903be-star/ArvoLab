@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-/** Yalnızca zamanlanmış sunucu görevlerinde kullanılmalıdır. */
+/** Yalnızca güvenilir sunucu görevlerinde ve doğrulanmış sunucu aksiyonlarında kullanılmalıdır. */
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secret = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
