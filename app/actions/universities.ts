@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { ensureYokAtlasDirectory } from "@/lib/yok-atlas-directory";
 
 export interface University {
   id: string;
@@ -44,6 +45,25 @@ export async function getAcademicUnits(
   unitTypes: string[]
 ): Promise<AcademicUnit[]> {
   const supabase = await createClient();
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) return [];
+
+  if (parentId === null) {
+    const { data: university } = await supabase
+      .from("universities")
+      .select("name")
+      .eq("id", universityId)
+      .single();
+
+    if (university?.name) {
+      try {
+        await ensureYokAtlasDirectory(universityId, university.name);
+      } catch (error) {
+        console.error("YÖK Atlas akademik birim senkronizasyonu başarısız:", error);
+      }
+    }
+  }
+
   let query = supabase
     .from("academic_units")
     .select("id, university_id, parent_unit_id, name, unit_type")
