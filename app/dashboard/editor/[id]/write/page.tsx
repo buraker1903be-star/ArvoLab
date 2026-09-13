@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,7 +17,10 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
     .from("academic_projects")
     .select("id, title, guideline_id, university, institute, department, project_type")
     .eq("id", id)
-    .single();
+    .maybeSingle();
+
+  // Çalışma yoksa ya da kullanıcının erişimi yoksa (RLS) boş editör yerine 404.
+  if (!project) notFound();
 
   let requiredSections: string[] = [];
   let guidelineLabel: string | null = null;

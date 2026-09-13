@@ -2,6 +2,7 @@ import { ShieldAlert, UserCog, Building2, Plus } from "lucide-react";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { getAllProfiles, getOrganizations, updateUserRole, updateUserOrganization, createOrganization } from "@/app/actions/team";
 import { ROLE_LABELS, type UserRole } from "@/lib/project-labels";
+import ActionForm from "../action-form";
 
 const ROLE_ORDER: UserRole[] = [
   "client",
@@ -35,18 +36,18 @@ export default async function TeamPage() {
   async function handleRoleChange(userId: string, formData: FormData) {
     "use server";
     const role = String(formData.get("role") ?? "");
-    await updateUserRole(userId, role);
+    return updateUserRole(userId, role);
   }
 
   async function handleOrgChange(userId: string, formData: FormData) {
     "use server";
     const organizationId = String(formData.get("organizationId") ?? "");
-    await updateUserOrganization(userId, organizationId);
+    return updateUserOrganization(userId, organizationId);
   }
 
   async function handleCreateOrganization(formData: FormData) {
     "use server";
-    await createOrganization(formData);
+    return createOrganization(formData);
   }
 
   return (
@@ -71,7 +72,7 @@ export default async function TeamPage() {
           </h2>
           <p>Kullanıcıları bir kuruma bağlamak için önce kurumu burada oluşturun.</p>
         </div>
-        <form className="project-form-grid" action={handleCreateOrganization}>
+        <ActionForm className="project-form-grid" action={handleCreateOrganization} successMessage="Kurum eklendi.">
           <label>
             <span>Kurum adı</span>
             <input name="name" type="text" placeholder="Örn. AkademikMerkez" required />
@@ -82,7 +83,7 @@ export default async function TeamPage() {
               Kurumu ekle
             </button>
           </div>
-        </form>
+        </ActionForm>
         {organizations.length > 0 && (
           <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 12 }}>
             Mevcut kurumlar: {organizations.map((o) => o.name).join(", ")}
@@ -107,7 +108,11 @@ export default async function TeamPage() {
               </div>
 
               <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                <form action={handleRoleChange.bind(null, m.id)} style={{ display: "flex", gap: 8 }}>
+                <ActionForm
+                  action={handleRoleChange.bind(null, m.id)}
+                  style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
+                  successMessage="Rol kaydedildi."
+                >
                   <select
                     name="role"
                     defaultValue={m.role}
@@ -128,10 +133,14 @@ export default async function TeamPage() {
                   <button type="submit" className="projects-filter-button" style={{ height: 38 }}>
                     Rolü kaydet
                   </button>
-                </form>
+                </ActionForm>
 
                 {organizations.length > 0 && (
-                  <form action={handleOrgChange.bind(null, m.id)} style={{ display: "flex", gap: 8 }}>
+                  <ActionForm
+                    action={handleOrgChange.bind(null, m.id)}
+                    style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
+                    successMessage="Kurum kaydedildi."
+                  >
                     <select
                       name="organizationId"
                       defaultValue={m.organization_id ?? ""}
@@ -153,7 +162,7 @@ export default async function TeamPage() {
                     <button type="submit" className="projects-filter-button" style={{ height: 38 }}>
                       Kurumu kaydet
                     </button>
-                  </form>
+                  </ActionForm>
                 )}
               </div>
             </article>

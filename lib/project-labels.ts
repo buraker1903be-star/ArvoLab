@@ -45,7 +45,14 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   founder: "Kurucu/Yönetim",
 };
 
-const OVERSIGHT_ROLES: UserRole[] = ["controller", "academic_manager", "system_admin", "founder"];
+export const ALL_ROLES = Object.keys(ROLE_LABELS) as UserRole[];
+
+// Rol grupları — hem arayüzde hem server action yetki kontrollerinde
+// kullanılır; RLS politikalarındaki rol listeleriyle aynı tutulmalıdır.
+export const OVERSIGHT_ROLES: readonly UserRole[] = ["controller", "academic_manager", "system_admin", "founder"];
+export const MANAGER_ROLES: readonly UserRole[] = ["academic_manager", "system_admin", "founder"];
+export const ADMIN_ROLES: readonly UserRole[] = ["system_admin", "founder"];
+export const EXPERT_ROLES: readonly UserRole[] = ["expert", ...OVERSIGHT_ROLES];
 
 export function isOversightRole(role: UserRole | null | undefined) {
   return !!role && OVERSIGHT_ROLES.includes(role);

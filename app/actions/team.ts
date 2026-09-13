@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { UserRole } from "@/lib/project-labels";
+import { requireRole, type ActionResult } from "@/lib/auth-guards";
+import { ADMIN_ROLES, ALL_ROLES, type UserRole } from "@/lib/project-labels";
+
+const PAGE_PATH = "/dashboard/team";
+const ADMIN_ONLY = "Bu işlem için Sistem Yöneticisi veya Kurucu rolüne sahip olmalısınız.";
 
 export interface TeamMember {
   id: string;
@@ -46,57 +50,74 @@ export async function getOrganizations(): Promise<OrganizationOption[]> {
   return data ?? [];
 }
 
-export interface UpdateResult {
-  error?: string;
-  success?: boolean;
-}
+export type UpdateResult = ActionResult;
 
 // RLS + trigger (prevent_self_role_escalation) veritabanı seviyesinde
-// de zorunlu kılar; burası yalnızca kullanıcıya anlaşılır bir hata
-// mesajı vermek içindir.
+// de zorunlu kılar; buradaki kontroller yetkisiz bir isteğin sessizce
+// "başarılı" görünmesini engeller.
 export async function updateUserRole(userId: string, role: string): Promise<UpdateResult> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("profiles").update({ role }).eq("id", userId);
+  const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
+  if ("error" in auth) return { error: auth.error };
+
+  if (!ALL_ROLES.includes(role as UserRole)) return { error: "Geçersiz rol." };
+  if (userId === auth.user.id) {
+    return { error: "Kendi rolünüzü değiştiremezsiniz; başka bir yöneticiden isteyin." };
+  }
+
+  const { data: target } = await auth.supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (!target) return { error: "Kullanıcı bulunamadı." };
+  if ((role === "founder" || target.role === "founder") && auth.role !== "founder") {
+    return { error: "Kurucu rolünü yalnızca bir Kurucu atayabilir veya kaldırabilir." };
+  }
+
+  const { data, error } = await auth.supabase.from("profiles").update({ role }).eq("id", userId).select("id");
 
   if (error) {
     console.error(error);
     if (error.message?.includes("yetkiniz yok") || error.code === "42501") {
-      return { error: "Bu işlem için Sistem Yöneticisi veya Kurucu rolüne sahip olmalısınız." };
+      return { error: ADMIN_ONLY };
     }
     return { error: "Rol güncellenirken bir hata oluştu." };
   }
+  if (!data?.length) return { error: "Rol güncellenemedi." };
 
-  revalidatePath("/dashboard/team");
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }
 
 export async function updateUserOrganization(userId: string, organizationId: string): Promise<UpdateResult> {
-  const supabase = await createClient();
-  const { error } = await supabase
+  const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
+  if ("error" in auth) return { error: auth.error };
+
+  const { data, error } = await auth.supabase
     .from("profiles")
     .update({ organization_id: organizationId || null })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "Kurum güncellenirken bir hata oluştu." };
   }
+  if (!data?.length) return { error: "Kullanıcı bulunamadı." };
 
-  revalidatePath("/dashboard/team");
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }
 
 export async function createOrganization(formData: FormData): Promise<UpdateResult> {
-  const supabase = await createClient();
+  const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
+  if ("error" in auth) return { error: auth.error };
+
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { error: "Kurum adı zorunludur." };
 
-  const { error } = await supabase.from("organizations").insert({ name });
+  const { error } = await auth.supabase.from("organizations").insert({ name });
   if (error) {
     console.error(error);
     return { error: "Kurum oluşturulurken bir hata oluştu." };
   }
 
-  revalidatePath("/dashboard/team");
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }

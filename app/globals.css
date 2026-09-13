@@ -232,6 +232,35 @@ button { border: 0; }
 .project-form-grid label > span { color: var(--muted-foreground); font-weight: 700; }
 .project-form-full { grid-column: 1 / -1; }
 
+/* Server action sonuç mesajları (bkz. app/dashboard/action-form.tsx) */
+.action-form-fieldset { display: contents; border: 0; margin: 0; padding: 0; min-width: 0; }
+.action-form-message { flex-basis: 100%; grid-column: 1 / -1; margin: 6px 0 0; font-size: 12px; font-weight: 650; line-height: 1.5; }
+.action-form-error { color: var(--danger); }
+.action-form-success { color: var(--success); }
+
+/* Şifre sıfırlama / 404 gibi tek kartlı sayfalar */
+.auth-simple-page { min-height: 100vh; display: grid; place-items: center; padding: 28px; }
+.auth-simple-page .login-card { padding: clamp(28px, 5vw, 44px); border: 1px solid var(--border); border-radius: 24px; background: rgba(255,255,255,.94); box-shadow: var(--shadow-md); }
+.auth-simple-page .login-button { display: flex; align-items: center; }
+.auth-back-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 22px; color: var(--muted-foreground); font-size: 13px; font-weight: 650; }
+.auth-back-link:hover { color: var(--accent); }
+.login-notice { margin: -12px 0 18px; padding: 12px 14px; border: 1px solid rgba(22,143,91,.22); border-radius: 12px; background: rgba(22,143,91,.08); color: var(--success); font-size: 13px; line-height: 1.55; }
+
+/* Ayarlar */
+.settings-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 0 0 20px; }
+.settings-facts div { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
+.settings-facts dt { color: var(--muted-foreground); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.settings-facts dd { margin: 4px 0 0; font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
+
+/* Yükleniyor / hata durumları */
+.dashboard-state-card { text-align: center; padding: 48px 24px; }
+.dashboard-state-card h1 { margin: 0 0 8px; font-size: 18px; }
+.dashboard-state-card p { max-width: 520px; margin: 0 auto 18px; color: var(--muted-foreground); line-height: 1.6; }
+.dashboard-loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 240px; color: var(--muted-foreground); font-size: 13px; }
+.dashboard-loading-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: dashboard-spin .8s linear infinite; }
+@keyframes dashboard-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .dashboard-loading-spinner { animation: none; } }
+
 .project-form-grid input[type="text"],
 .project-form-grid input[type="email"],
 .project-form-grid input[type="password"],

@@ -3,6 +3,10 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { MANAGER_ROLES } from "@/lib/project-labels";
+
+const PAGE_PATH = "/dashboard/associate-professorship";
 
 export interface ScoringCriterion {
   id: string;
@@ -24,6 +28,10 @@ export interface ScoreEntry {
   created_at: string;
 }
 
+function parseDecimal(raw: string) {
+  return Number(raw.trim().replace(",", "."));
+}
+
 export async function getCriteria(): Promise<ScoringCriterion[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -40,49 +48,68 @@ export async function getCriteria(): Promise<ScoringCriterion[]> {
 }
 
 export async function createCriterion(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/?error=invalid-credentials");
+  const auth = await requireRole(MANAGER_ROLES);
+  if ("error" in auth) {
+    redirect(auth.reason === "unauthenticated" ? "/" : `${PAGE_PATH}?error=forbidden`);
+  }
 
   const code = String(formData.get("code") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim();
   const pointsRaw = String(formData.get("pointsPerUnit") ?? "").trim();
 
   if (!code || !label || !pointsRaw) {
-    redirect("/dashboard/scoring?error=missing-fields");
+    redirect(`${PAGE_PATH}?error=missing-fields`);
   }
 
-  const { error } = await supabase.from("scoring_criteria").insert({
+  const points = parseDecimal(pointsRaw);
+  if (!Number.isFinite(points) || points < 0) {
+    redirect(`${PAGE_PATH}?error=invalid-points`);
+  }
+
+  const { error } = await auth.supabase.from("scoring_criteria").insert({
     code,
     label,
     category_group: String(formData.get("categoryGroup") ?? "").trim() || null,
-    points_per_unit: Number(pointsRaw),
+    points_per_unit: points,
     notes: String(formData.get("notes") ?? "").trim() || null,
-    updated_by: user.id,
+    updated_by: auth.user.id,
   });
 
   if (error) {
     console.error(error);
     if (error.code === "23505") {
-      redirect("/dashboard/scoring?error=duplicate-code");
+      redirect(`${PAGE_PATH}?error=duplicate-code`);
     }
-    redirect("/dashboard/scoring?error=save-failed");
+    redirect(`${PAGE_PATH}?error=save-failed`);
   }
 
-  revalidatePath("/dashboard/scoring");
-  redirect("/dashboard/scoring");
+  revalidatePath(PAGE_PATH);
+  redirect(PAGE_PATH);
 }
 
-export async function deleteCriterion(criterionId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("scoring_criteria").delete().eq("id", criterionId);
-  if (error) {
+export async function deleteCriterion(criterionId: string): Promise<ActionResult> {
+  const auth = await requireRole(MANAGER_ROLES, "Kriterleri yalnızca Akademik Yönetici ve üzeri roller silebilir.");
+  if ("error" in auth) return { error: auth.error };
+
+  const { error } = await auth.supabase.from("scoring_criteria").delete().eq("id", criterionId);
+
+  if (error?.code === "23503") {
+    // Kritere bağlı kullanıcı kayıtları var: kayıtları bozmamak için
+    // kriteri silmek yerine pasife alıyoruz (listeden kalkar, geçmiş puanlar korunur).
+    const { error: deactivateError } = await auth.supabase
+      .from("scoring_criteria")
+      .update({ is_active: false, updated_by: auth.user.id })
+      .eq("id", criterionId);
+    if (deactivateError) {
+      console.error(deactivateError);
+      return { error: "Kriter pasife alınırken bir hata oluştu." };
+    }
+  } else if (error) {
     console.error(error);
     return { error: "Silinirken bir hata oluştu." };
   }
-  revalidatePath("/dashboard/scoring");
+
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }
 
@@ -120,54 +147,67 @@ export async function addScoreEntry(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/?error=invalid-credentials");
+  if (!user) redirect("/");
 
   const criteriaId = String(formData.get("criteriaId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
-  const unitCountRaw = String(formData.get("unitCount") ?? "1").trim();
+  const unitCountRaw = String(formData.get("unitCount") ?? "1").trim() || "1";
 
   if (!criteriaId || !title) {
-    redirect("/dashboard/scoring?error=missing-entry-fields");
+    redirect(`${PAGE_PATH}?error=missing-entry-fields`);
+  }
+
+  const unitCount = parseDecimal(unitCountRaw);
+  if (!Number.isFinite(unitCount) || unitCount <= 0) {
+    redirect(`${PAGE_PATH}?error=invalid-unit`);
   }
 
   const { data: criterion, error: criterionError } = await supabase
     .from("scoring_criteria")
     .select("points_per_unit")
     .eq("id", criteriaId)
+    .eq("is_active", true)
     .single();
 
   if (criterionError || !criterion) {
-    redirect("/dashboard/scoring?error=invalid-criterion");
+    redirect(`${PAGE_PATH}?error=invalid-criterion`);
   }
-
-  const unitCount = Number(unitCountRaw) || 1;
-  const computedPoints = unitCount * criterion.points_per_unit;
 
   const { error } = await supabase.from("academic_score_entries").insert({
     owner_id: user.id,
     criteria_id: criteriaId,
     title,
     unit_count: unitCount,
-    computed_points: computedPoints,
+    computed_points: unitCount * criterion.points_per_unit,
     notes: String(formData.get("notes") ?? "").trim() || null,
   });
 
   if (error) {
     console.error(error);
-    redirect("/dashboard/scoring?error=save-entry-failed");
+    redirect(`${PAGE_PATH}?error=save-entry-failed`);
   }
 
-  revalidatePath("/dashboard/scoring");
-  redirect("/dashboard/scoring");
+  revalidatePath(PAGE_PATH);
+  redirect(PAGE_PATH);
 }
 
-export async function deleteScoreEntry(entryId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("academic_score_entries").delete().eq("id", entryId);
+export async function deleteScoreEntry(entryId: string): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+
+  const { data, error } = await ctx.supabase
+    .from("academic_score_entries")
+    .delete()
+    .eq("id", entryId)
+    .eq("owner_id", ctx.user.id)
+    .select("id");
+
   if (error) {
     console.error(error);
     return { error: "Silinirken bir hata oluştu." };
   }
-  revalidatePath("/dashboard/scoring");
+  if (!data?.length) return { error: "Kayıt bulunamadı ya da size ait değil." };
+
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }

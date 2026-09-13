@@ -6,6 +6,7 @@ import {
   deleteLiteratureSource,
 } from "@/app/actions/literature";
 import { getMyProjects } from "@/app/actions/citation-check";
+import ActionForm from "../action-form";
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
   article: "Makale",
@@ -46,12 +47,12 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
 
   async function handleAdvanceStatus(sourceId: string, nextStatus: string) {
     "use server";
-    await updateLiteratureStatus(sourceId, nextStatus);
+    return updateLiteratureStatus(sourceId, nextStatus);
   }
 
   async function handleDelete(sourceId: string) {
     "use server";
-    await deleteLiteratureSource(sourceId);
+    return deleteLiteratureSource(sourceId);
   }
 
   return (
@@ -184,31 +185,34 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
 
                   <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {statusKey !== "to_review" && (
-                      <form action={handleAdvanceStatus.bind(null, s.id, "to_review")}>
+                      <ActionForm action={handleAdvanceStatus.bind(null, s.id, "to_review")}>
                         <button type="submit" className="projects-filter-button">
                           İncelenecek yap
                         </button>
-                      </form>
+                      </ActionForm>
                     )}
                     {statusKey !== "read" && (
-                      <form action={handleAdvanceStatus.bind(null, s.id, "read")}>
+                      <ActionForm action={handleAdvanceStatus.bind(null, s.id, "read")}>
                         <button type="submit" className="projects-filter-button">
                           Okundu yap
                         </button>
-                      </form>
+                      </ActionForm>
                     )}
                     {statusKey !== "used" && (
-                      <form action={handleAdvanceStatus.bind(null, s.id, "used")}>
+                      <ActionForm action={handleAdvanceStatus.bind(null, s.id, "used")}>
                         <button type="submit" className="projects-primary-button">
                           Kullanıldı yap
                         </button>
-                      </form>
+                      </ActionForm>
                     )}
-                    <form action={handleDelete.bind(null, s.id)}>
-                      <button type="submit" className="projects-filter-button">
+                    <ActionForm
+                      action={handleDelete.bind(null, s.id)}
+                      confirmMessage={`"${s.title}" kaynağını silmek istediğinize emin misiniz?`}
+                    >
+                      <button type="submit" className="projects-filter-button" aria-label="Kaynağı sil">
                         <Trash2 size={14} />
                       </button>
-                    </form>
+                    </ActionForm>
                   </div>
                 </article>
               ))}

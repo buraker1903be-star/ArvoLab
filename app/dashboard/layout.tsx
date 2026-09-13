@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  Bell,
   BookMarked,
   BookOpenCheck,
   ChartNoAxesCombined,
@@ -84,9 +83,6 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
             <strong>Akademik Operasyon Paneli</strong>
           </div>
           <div className="dashboard-header-actions">
-            <button type="button" className="dashboard-icon-button" aria-label="Bildirimler">
-              <Bell size={18} />
-            </button>
             <form action={logout}>
               <button type="submit" className="dashboard-logout-button">
                 <LogOut size={17} />

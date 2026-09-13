@@ -4,6 +4,7 @@ import { getProjects, approveProject, revokeApproval, assignProject } from "@/ap
 import { projectTypeLabel, statusLabel, isOversightRole } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
 import DeleteProjectButton from "./delete-project-button";
+import ActionForm from "../action-form";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "Teslim tarihi belirtilmedi";
@@ -34,18 +35,18 @@ export default async function ProjectsPage() {
 
   async function handleApprove(projectId: string) {
     "use server";
-    await approveProject(projectId);
+    return approveProject(projectId);
   }
 
   async function handleRevoke(projectId: string) {
     "use server";
-    await revokeApproval(projectId);
+    return revokeApproval(projectId);
   }
 
   async function handleAssign(projectId: string, formData: FormData) {
     "use server";
     const assigneeName = String(formData.get("assigneeName") ?? "");
-    await assignProject(projectId, assigneeName);
+    return assignProject(projectId, assigneeName);
   }
 
   return (
@@ -120,27 +121,27 @@ export default async function ProjectsPage() {
                 {canApprove ? (
                   <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
                     {isApproved ? (
-                      <form action={handleRevoke.bind(null, project.id)}>
+                      <ActionForm action={handleRevoke.bind(null, project.id)}>
                         <button type="submit" className="projects-filter-button">
                           <RotateCcw size={15} />
                           Onayı geri al
                         </button>
-                      </form>
+                      </ActionForm>
                     ) : (
-                      <form action={handleApprove.bind(null, project.id)}>
+                      <ActionForm action={handleApprove.bind(null, project.id)}>
                         <button type="submit" className="projects-primary-button">
                           <CheckCircle2 size={15} />
                           Kontrolör olarak onayla
                         </button>
-                      </form>
+                      </ActionForm>
                     )}
                   </div>
                 ) : null}
 
                 {canApprove ? (
-                  <form
+                  <ActionForm
                     action={handleAssign.bind(null, project.id)}
-                    style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}
+                    style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}
                   >
                     <input
                       name="assigneeName"
@@ -160,7 +161,7 @@ export default async function ProjectsPage() {
                       <UserRound size={14} />
                       Ata
                     </button>
-                  </form>
+                  </ActionForm>
                 ) : null}
 
                 <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>

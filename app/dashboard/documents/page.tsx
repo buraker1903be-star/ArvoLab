@@ -12,6 +12,7 @@ export const maxDuration = 60;
 import { getLatestFeedback } from "@/app/actions/ai-feedback";
 import DocumentUploadForm from "./document-upload-form";
 import AiFeedbackButton from "./ai-feedback-button";
+import ActionForm from "../action-form";
 import { ShieldQuestion } from "lucide-react";
 
 export default async function DocumentsPage() {
@@ -36,7 +37,8 @@ export default async function DocumentsPage() {
 
   async function handleRunOriginality(documentId: string) {
     "use server";
-    await runOriginalityCheck(documentId);
+    const result = await runOriginalityCheck(documentId);
+    return result.error ? { error: result.error } : { success: true };
   }
 
   return (
@@ -131,20 +133,20 @@ export default async function DocumentsPage() {
                               {m.sampleOverlap ? ` · örnek: "${m.sampleOverlap}"` : ""}
                             </div>
                           ))}
-                          <form action={handleRunOriginality.bind(null, u.id)} style={{ marginTop: 8 }}>
+                          <ActionForm action={handleRunOriginality.bind(null, u.id)} style={{ marginTop: 8 }}>
                             <button type="submit" className="projects-filter-button">
                               <ShieldQuestion size={14} />
                               Yeniden tara
                             </button>
-                          </form>
+                          </ActionForm>
                         </div>
                       ) : (
-                        <form action={handleRunOriginality.bind(null, u.id)}>
+                        <ActionForm action={handleRunOriginality.bind(null, u.id)}>
                           <button type="submit" className="projects-filter-button">
                             <ShieldQuestion size={14} />
                             ArvoLab Ön-Kontrolü Çalıştır (orijinallik taraması)
                           </button>
-                        </form>
+                        </ActionForm>
                       )}
                       <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 6 }}>
                         Bu tarama yalnızca erişim yetkiniz olan ArvoLab belge

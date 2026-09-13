@@ -6,6 +6,7 @@ import {
   updateSupportRequestStatus,
 } from "@/app/actions/support";
 import { getCurrentProfile } from "@/app/actions/profile";
+import ActionForm from "../action-form";
 
 const CATEGORY_LABELS: Record<string, string> = {
   bug: "Hata bildirimi",
@@ -44,7 +45,7 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
 
   async function handleUpdateStatus(requestId: string, status: string) {
     "use server";
-    await updateSupportRequestStatus(requestId, status);
+    return updateSupportRequestStatus(requestId, status);
   }
 
   return (
@@ -135,16 +136,16 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
                   <span>Öncelik: {r.priority}</span>
                   <span>{STATUS_LABELS[r.status]}</span>
                 </div>
-                <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {r.status !== "in_progress" && (
-                    <form action={handleUpdateStatus.bind(null, r.id, "in_progress")}>
+                    <ActionForm action={handleUpdateStatus.bind(null, r.id, "in_progress")}>
                       <button type="submit" className="projects-filter-button">İşleme al</button>
-                    </form>
+                    </ActionForm>
                   )}
                   {r.status !== "resolved" && (
-                    <form action={handleUpdateStatus.bind(null, r.id, "resolved")}>
+                    <ActionForm action={handleUpdateStatus.bind(null, r.id, "resolved")}>
                       <button type="submit" className="projects-primary-button">Çözüldü işaretle</button>
-                    </form>
+                    </ActionForm>
                   )}
                 </div>
               </article>

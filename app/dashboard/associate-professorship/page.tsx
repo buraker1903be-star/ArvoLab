@@ -8,8 +8,12 @@ import {
   deleteScoreEntry,
 } from "@/app/actions/scoring";
 import { getCurrentProfile } from "@/app/actions/profile";
+import ActionForm from "../action-form";
 
 const errorMessages: Record<string, string> = {
+  forbidden: "Kriter eklemek için Akademik Yönetici veya üzeri bir rol gerekir.",
+  "invalid-points": "Birim başına puan 0 veya daha büyük bir sayı olmalıdır.",
+  "invalid-unit": "Adet / birim sayısı 0'dan büyük bir sayı olmalıdır.",
   "missing-fields": "Kod, etiket ve puan alanları zorunludur.",
   "duplicate-code": "Bu kriter kodu zaten kullanılıyor.",
   "save-failed": "Kriter kaydedilirken bir hata oluştu.",
@@ -47,12 +51,12 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
 
   async function handleDeleteEntry(entryId: string) {
     "use server";
-    await deleteScoreEntry(entryId);
+    return deleteScoreEntry(entryId);
   }
 
   async function handleDeleteCriterion(criterionId: string) {
     "use server";
-    await deleteCriterion(criterionId);
+    return deleteCriterion(criterionId);
   }
 
   return (
@@ -66,7 +70,7 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
             güncel puanlama kriterlerini uygulayarak toplam puanınızı
             hesaplar. <strong>Resmi ÜAK duyurusunun yerini tutmaz</strong> —
             kriterler alana ve döneme göre değiştiği için puan değerlerini
-            güncel tutmak Akademik Yönetici'nin sorumluluğundadır.
+            güncel tutmak Akademik Yönetici&apos;nin sorumluluğundadır.
           </p>
         </div>
       </section>
@@ -177,12 +181,16 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
                     <strong>{e.computed_points.toFixed(1)}</strong>
                   </div>
                 </div>
-                <form action={handleDeleteEntry.bind(null, e.id)} style={{ marginTop: 10 }}>
+                <ActionForm
+                  action={handleDeleteEntry.bind(null, e.id)}
+                  style={{ marginTop: 10 }}
+                  confirmMessage={`"${e.title}" kaydını silmek istediğinize emin misiniz?`}
+                >
                   <button type="submit" className="projects-filter-button">
                     <Trash2 size={14} />
                     Kaydı sil
                   </button>
-                </form>
+                </ActionForm>
               </article>
             ))}
           </div>
@@ -248,11 +256,14 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
                   <span>
                     <strong>{c.code}</strong> — {c.label} ({c.points_per_unit} puan)
                   </span>
-                  <form action={handleDeleteCriterion.bind(null, c.id)}>
-                    <button type="submit" className="projects-filter-button">
+                  <ActionForm
+                    action={handleDeleteCriterion.bind(null, c.id)}
+                    confirmMessage={`"${c.code}" kriterini silmek istediğinize emin misiniz? Bu kritere bağlı kullanıcı kayıtları varsa kriter silinmez, pasife alınır (geçmiş puanlar korunur).`}
+                  >
+                    <button type="submit" className="projects-filter-button" aria-label={`${c.code} kriterini sil`}>
                       <Trash2 size={13} />
                     </button>
-                  </form>
+                  </ActionForm>
                 </div>
               ))}
             </div>

@@ -1,5 +1,38 @@
 # ArvoLab
 
+## Faz 1 — Güvenlik ve Kırık Akış Düzeltmeleri
+
+- **Giriş koruması:** `proxy.ts` (Next.js 16'nın middleware katmanı) oturumu
+  olmayan ziyaretçiyi `/dashboard` altındaki tüm sayfalardan giriş sayfasına
+  yönlendirir (girişten sonra kaldığı sayfaya döner) ve Supabase oturum
+  çerezini her istekte yeniler.
+- **Rol kontrolleri:** Onay geri alma, uzman talebi üstlenme/tamamlama/iptal,
+  destek talebi durumu, doçentlik kriteri, kılavuz ekleme/silme ve ekip
+  rol/kurum işlemleri artık server action'da rolü ve sahipliği doğruluyor
+  (`lib/auth-guards.ts`). Yetkisiz işlemler sessizce "başarılı" görünmüyor.
+- **Hata mesajları:** Sayfalardaki buton formları `app/dashboard/action-form.tsx`
+  üzerinden çalışıyor; hata olursa butonun altında gösteriliyor. Silme
+  işlemleri onay penceresi soruyor.
+- **Doçentlik modülü:** Kayıt/kriter formları var olmayan `/dashboard/scoring`
+  adresine gidip 404 veriyordu; düzeltildi. Kayıtlı kullanıcıları olan bir
+  kriter silinmek yerine pasife alınıyor.
+- **Yeni sayfalar:** `/dashboard/settings` (profil + şifre değiştirme),
+  `/forgot-password`, `/reset-password`, `/auth/confirm`, Türkçe 404,
+  dashboard yükleniyor/hata ekranları.
+- `npm run lint` artık çalışıyor (`eslint.config.mjs`), `.env.example` tüm
+  değişkenleri içeriyor. İşlevsiz bildirim zili kaldırıldı.
+
+**Supabase'de yapılması gerekenler:**
+
+1. SQL Editor'de `supabase/migrations/20260913120000_phase1_role_guards.sql`
+   dosyasını çalıştırın. Bu dosya, kullanıcıların kendi çalışmasına Kontrolör
+   onayı yazmasını ve kendi talebini "tamamlandı/çözüldü" yapmasını veritabanı
+   seviyesinde engeller.
+2. **Authentication → URL Configuration:** Site URL'i panel adresiniz yapın ve
+   Redirect URLs listesine `https://<alan-adınız>/auth/confirm**` ekleyin
+   (şifre sıfırlama bağlantısı için).
+3. Vercel'e `NEXT_PUBLIC_SITE_URL` ekleyin (ör. `https://panel.arvolab.com`).
+
 ## Yeni Özellik — Çalışma Silme Butonu
 
 Belge Editörü listesindeki her çalışma kartına **"Çalışmayı Sil"**

@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireRole, type ActionResult } from "@/lib/auth-guards";
+import { MANAGER_ROLES } from "@/lib/project-labels";
 
 export interface ThesisGuideline {
   id: string;
@@ -154,13 +156,11 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
 }
 
 export async function createGuideline(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/?error=invalid-credentials");
+  const auth = await requireRole(MANAGER_ROLES);
+  if ("error" in auth) {
+    redirect(auth.reason === "unauthenticated" ? "/" : "/dashboard/guidelines?error=forbidden");
   }
+  const { supabase, user } = auth;
 
   const universityName = String(formData.get("universityName") ?? "").trim();
   if (!universityName) {
@@ -269,13 +269,22 @@ export async function approveGuideline(guidelineId: string) {
   return { success: true };
 }
 
-export async function deleteGuideline(guidelineId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("thesis_guidelines").delete().eq("id", guidelineId);
+export async function deleteGuideline(guidelineId: string): Promise<ActionResult> {
+  const auth = await requireRole(MANAGER_ROLES, "Kılavuzları yalnızca Akademik Yönetici ve üzeri roller silebilir.");
+  if ("error" in auth) return { error: auth.error };
+
+  const { data, error } = await auth.supabase.from("thesis_guidelines").delete().eq("id", guidelineId).select("id");
+  if (error?.code === "23503") {
+    return {
+      error: "Bu kılavuza bağlı çalışmalar var, bu yüzden silinemez. Kuralları güncelleyerek yeni sürümü onaylayabilirsiniz.",
+    };
+  }
   if (error) {
     console.error(error);
     return { error: "Silinirken bir hata oluştu." };
   }
+  if (!data?.length) return { error: "Kılavuz bulunamadı." };
+
   revalidatePath("/dashboard/guidelines");
   return { success: true };
 }

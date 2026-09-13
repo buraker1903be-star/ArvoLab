@@ -3,6 +3,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+
+const PAGE_PATH = "/dashboard/literature";
+const STATUSES = ["to_review", "read", "used"];
+const SOURCE_TYPES = ["article", "book", "chapter", "thesis", "report", "website", "other"];
 
 export interface LiteratureSource {
   id: string;
@@ -42,12 +47,15 @@ export async function createLiteratureSource(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/?error=invalid-credentials");
+  if (!user) redirect("/");
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) {
-    redirect("/dashboard/literature?error=missing-title");
+    redirect(`${PAGE_PATH}?error=missing-title`);
   }
+
+  const sourceType = String(formData.get("sourceType") ?? "article");
+  const status = String(formData.get("status") ?? "to_review");
 
   const { error } = await supabase.from("literature_sources").insert({
     owner_id: user.id,
@@ -55,39 +63,60 @@ export async function createLiteratureSource(formData: FormData) {
     title,
     authors: String(formData.get("authors") ?? "").trim() || null,
     year: String(formData.get("year") ?? "").trim() || null,
-    source_type: String(formData.get("sourceType") ?? "article"),
+    source_type: SOURCE_TYPES.includes(sourceType) ? sourceType : "other",
     doi_or_url: String(formData.get("doiOrUrl") ?? "").trim() || null,
-    status: String(formData.get("status") ?? "to_review"),
+    status: STATUSES.includes(status) ? status : "to_review",
     notes: String(formData.get("notes") ?? "").trim() || null,
   });
 
   if (error) {
     console.error(error);
-    redirect("/dashboard/literature?error=save-failed");
+    redirect(`${PAGE_PATH}?error=save-failed`);
   }
 
-  revalidatePath("/dashboard/literature");
-  redirect("/dashboard/literature");
+  revalidatePath(PAGE_PATH);
+  redirect(PAGE_PATH);
 }
 
-export async function updateLiteratureStatus(sourceId: string, status: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("literature_sources").update({ status }).eq("id", sourceId);
+export async function updateLiteratureStatus(sourceId: string, status: string): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+  if (!STATUSES.includes(status)) return { error: "Geçersiz durum." };
+
+  const { data, error } = await ctx.supabase
+    .from("literature_sources")
+    .update({ status })
+    .eq("id", sourceId)
+    .eq("owner_id", ctx.user.id)
+    .select("id");
+
   if (error) {
     console.error(error);
     return { error: "Güncellenirken bir hata oluştu." };
   }
-  revalidatePath("/dashboard/literature");
+  if (!data?.length) return { error: "Kaynak bulunamadı ya da size ait değil." };
+
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }
 
-export async function deleteLiteratureSource(sourceId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("literature_sources").delete().eq("id", sourceId);
+export async function deleteLiteratureSource(sourceId: string): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+
+  const { data, error } = await ctx.supabase
+    .from("literature_sources")
+    .delete()
+    .eq("id", sourceId)
+    .eq("owner_id", ctx.user.id)
+    .select("id");
+
   if (error) {
     console.error(error);
     return { error: "Silinirken bir hata oluştu." };
   }
-  revalidatePath("/dashboard/literature");
+  if (!data?.length) return { error: "Kaynak bulunamadı ya da size ait değil." };
+
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }

@@ -11,6 +11,7 @@ import {
 import { getMyProjects } from "@/app/actions/citation-check";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { isExpertEligible, requestTypeLabel } from "@/lib/project-labels";
+import ActionForm from "../action-form";
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Açık",
@@ -44,15 +45,15 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
 
   async function handleAccept(requestId: string) {
     "use server";
-    await acceptRequest(requestId);
+    return acceptRequest(requestId);
   }
   async function handleComplete(requestId: string) {
     "use server";
-    await completeRequest(requestId);
+    return completeRequest(requestId);
   }
   async function handleCancel(requestId: string) {
     "use server";
-    await cancelRequest(requestId);
+    return cancelRequest(requestId);
   }
 
   return (
@@ -142,12 +143,12 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
                     <p>{r.message || "Ek mesaj yok"}</p>
                   </div>
                 </div>
-                <form action={handleAccept.bind(null, r.id)} style={{ marginTop: 10 }}>
+                <ActionForm action={handleAccept.bind(null, r.id)} style={{ marginTop: 10 }}>
                   <button type="submit" className="projects-primary-button">
                     <CheckCircle2 size={15} />
                     Talebi üstlen
                   </button>
-                </form>
+                </ActionForm>
               </article>
             ))}
           </div>
@@ -168,12 +169,12 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
                   </div>
                 </div>
                 {r.status === "accepted" ? (
-                  <form action={handleComplete.bind(null, r.id)} style={{ marginTop: 10 }}>
+                  <ActionForm action={handleComplete.bind(null, r.id)} style={{ marginTop: 10 }}>
                     <button type="submit" className="projects-primary-button">
                       <CheckCircle2 size={15} />
                       Tamamlandı olarak işaretle
                     </button>
-                  </form>
+                  </ActionForm>
                 ) : null}
               </article>
             ))}
@@ -199,12 +200,16 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
                   </div>
                 </div>
                 {r.status === "open" ? (
-                  <form action={handleCancel.bind(null, r.id)} style={{ marginTop: 10 }}>
+                  <ActionForm
+                    action={handleCancel.bind(null, r.id)}
+                    style={{ marginTop: 10 }}
+                    confirmMessage="Bu destek talebini iptal etmek istediğinize emin misiniz?"
+                  >
                     <button type="submit" className="projects-filter-button">
                       <XCircle size={14} />
                       İptal et
                     </button>
-                  </form>
+                  </ActionForm>
                 ) : null}
               </article>
             ))}

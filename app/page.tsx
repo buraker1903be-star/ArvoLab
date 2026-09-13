@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowRight, BookOpenCheck, ChartNoAxesCombined, FileCheck2, ShieldCheck } from "lucide-react";
 import { login } from "@/app/actions/auth";
 
@@ -21,17 +22,19 @@ const highlights = [
 ];
 
 type HomePageProps = {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 };
 
 const errorMessages: Record<string, string> = {
   "missing-credentials": "E-posta adresi ve şifre zorunludur.",
   "invalid-credentials": "E-posta adresi veya şifre hatalı.",
+  "link-invalid": "Bağlantı geçersiz ya da süresi dolmuş. Lütfen yeniden şifre sıfırlama isteyin.",
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const errorMessage = params.error ? errorMessages[params.error] : null;
+  const next = params.next?.startsWith("/dashboard") ? params.next : "";
 
   return (
     <main className="login-page">
@@ -86,12 +89,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           {errorMessage ? <p className="login-error" role="alert">{errorMessage}</p> : null}
 
           <form className="login-form" action={login}>
+            {next ? <input type="hidden" name="next" value={next} /> : null}
             <label htmlFor="email">E-posta adresi</label>
             <input id="email" name="email" type="email" autoComplete="email" placeholder="ornek@kurum.com" required />
 
             <div className="password-label-row">
               <label htmlFor="password">Şifre</label>
-              <a href="#">Şifremi unuttum</a>
+              <Link href="/forgot-password">Şifremi unuttum</Link>
             </div>
             <input id="password" name="password" type="password" autoComplete="current-password" placeholder="Şifrenizi girin" required />
 

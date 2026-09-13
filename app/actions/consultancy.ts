@@ -3,6 +3,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { EXPERT_ROLES } from "@/lib/project-labels";
+
+const PAGE_PATH = "/dashboard/expert-requests";
+const REQUEST_TYPES = ["analysis", "editing", "methodology", "statistics", "full_review", "other"];
 
 export interface ConsultancyRequest {
   id: string;
@@ -16,19 +21,33 @@ export interface ConsultancyRequest {
   created_at: string;
 }
 
-
-
 export async function createConsultancyRequest(formData: FormData) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/?error=invalid-credentials");
+  if (!user) redirect("/");
 
-  const projectId = String(formData.get("projectId") ?? "").trim() || null;
-  const projectTitle = String(formData.get("projectTitle") ?? "").trim() || null;
-  const requestType = String(formData.get("requestType") ?? "other");
+  let projectId = String(formData.get("projectId") ?? "").trim() || null;
+  let projectTitle = String(formData.get("projectTitle") ?? "").trim() || null;
+  const requestTypeRaw = String(formData.get("requestType") ?? "other");
+  const requestType = REQUEST_TYPES.includes(requestTypeRaw) ? requestTypeRaw : "other";
   const message = String(formData.get("message") ?? "").trim() || null;
+
+  if (projectId) {
+    // Çalışma seçildiyse başlığı talebe yaz (listelerde "Bağımsız talep"
+    // görünmesin) ve yalnızca kullanıcının erişebildiği bir çalışmaya bağla.
+    const { data: project } = await supabase
+      .from("academic_projects")
+      .select("title")
+      .eq("id", projectId)
+      .maybeSingle();
+    if (project) {
+      projectTitle = project.title;
+    } else {
+      projectId = null;
+    }
+  }
 
   const { error } = await supabase.from("consultancy_requests").insert({
     project_id: projectId,
@@ -41,11 +60,11 @@ export async function createConsultancyRequest(formData: FormData) {
 
   if (error) {
     console.error(error);
-    redirect("/dashboard/expert-requests?error=save-failed");
+    redirect(`${PAGE_PATH}?error=save-failed`);
   }
 
-  revalidatePath("/dashboard/expert-requests");
-  redirect("/dashboard/expert-requests");
+  revalidatePath(PAGE_PATH);
+  redirect(PAGE_PATH);
 }
 
 export async function getMyRequests(): Promise<ConsultancyRequest[]> {
@@ -104,53 +123,67 @@ export async function getAssignedToMe(): Promise<ConsultancyRequest[]> {
   return data ?? [];
 }
 
-export async function acceptRequest(requestId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Oturum bulunamadı." };
+export async function acceptRequest(requestId: string): Promise<ActionResult> {
+  const auth = await requireRole(EXPERT_ROLES, "Talepleri yalnızca Uzman ve üzeri roller üstlenebilir.");
+  if ("error" in auth) return { error: auth.error };
 
-  const { error } = await supabase
+  const { data, error } = await auth.supabase
     .from("consultancy_requests")
-    .update({ assigned_expert_id: user.id, status: "accepted", updated_at: new Date().toISOString() })
+    .update({ assigned_expert_id: auth.user.id, status: "accepted", updated_at: new Date().toISOString() })
     .eq("id", requestId)
-    .eq("status", "open"); // yalnızca hâlâ açık bir talep üstlenilebilir (yarış durumunu önler)
+    .eq("status", "open") // yalnızca hâlâ açık bir talep üstlenilebilir (yarış durumunu önler)
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "Talep üstlenilirken bir hata oluştu." };
   }
-  revalidatePath("/dashboard/expert-requests");
+  if (!data?.length) return { error: "Bu talep artık açık değil; başka bir uzman üstlenmiş olabilir." };
+
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }
 
-export async function completeRequest(requestId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase
+export async function completeRequest(requestId: string): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+
+  const { data, error } = await ctx.supabase
     .from("consultancy_requests")
     .update({ status: "completed", updated_at: new Date().toISOString() })
-    .eq("id", requestId);
+    .eq("id", requestId)
+    .eq("assigned_expert_id", ctx.user.id)
+    .eq("status", "accepted")
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "İşlem sırasında bir hata oluştu." };
   }
-  revalidatePath("/dashboard/expert-requests");
+  if (!data?.length) return { error: "Bu talebi yalnızca üstlenen uzman tamamlayabilir." };
+
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }
 
-export async function cancelRequest(requestId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase
+export async function cancelRequest(requestId: string): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+
+  const { data, error } = await ctx.supabase
     .from("consultancy_requests")
     .update({ status: "cancelled", updated_at: new Date().toISOString() })
-    .eq("id", requestId);
+    .eq("id", requestId)
+    .eq("requested_by", ctx.user.id)
+    .eq("status", "open")
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "İşlem sırasında bir hata oluştu." };
   }
-  revalidatePath("/dashboard/expert-requests");
+  if (!data?.length) return { error: "Yalnızca açık durumdaki kendi talebinizi iptal edebilirsiniz." };
+
+  revalidatePath(PAGE_PATH);
   return { success: true };
 }

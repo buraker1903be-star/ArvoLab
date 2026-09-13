@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { findMatchingGuideline } from "@/app/actions/guidelines";
+import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { OVERSIGHT_ROLES } from "@/lib/project-labels";
+
+const OVERSIGHT_ONLY = "Bu işlem için Kontrolör veya üzeri bir role sahip olmalısınız.";
 
 export interface AcademicProject {
   id: string;
@@ -37,7 +41,7 @@ export async function createProject(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/?error=invalid-credentials");
+    redirect("/");
   }
 
   const title = String(formData.get("title") ?? "").trim();
@@ -119,104 +123,77 @@ export async function getProjects(): Promise<AcademicProject[]> {
 
 // Yalnızca Kontrolör / Akademik Yönetici / Sistem Yöneticisi / Kurucu rolleri
 // bir çalışmayı onaylayabilir (proje dosyası 6.2 "Biçim" aşaması onayı).
-// RLS bu yetkiyi veritabanı seviyesinde de zorunlu kılar; buradaki kontrol
-// kullanıcıya erken/anlaşılır bir hata mesajı vermek içindir.
-export async function approveProject(projectId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: "Oturum bulunamadı." };
-  }
+// Veritabanında guard_academic_project_update tetikleyicisi de bunu zorunlu
+// kılar; buradaki kontrol kullanıcıya erken/anlaşılır bir hata mesajı vermek içindir.
+export async function approveProject(projectId: string): Promise<ActionResult> {
+  const auth = await requireRole(OVERSIGHT_ROLES, OVERSIGHT_ONLY);
+  if ("error" in auth) return { error: auth.error };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const oversightRoles = ["controller", "academic_manager", "system_admin", "founder"];
-  if (!profile || !oversightRoles.includes(profile.role)) {
-    return { error: "Bu işlem için Kontrolör veya üzeri bir role sahip olmalısınız." };
-  }
-
-  const { error } = await supabase
+  const { data, error } = await auth.supabase
     .from("academic_projects")
     .update({
-      controller_approved_by: user.id,
+      controller_approved_by: auth.user.id,
       controller_approved_at: new Date().toISOString(),
       status: "ready",
     })
-    .eq("id", projectId);
+    .eq("id", projectId)
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "Onaylanırken bir hata oluştu." };
   }
+  if (!data?.length) return { error: "Çalışma bulunamadı." };
 
   revalidatePath("/dashboard/editor");
+  revalidatePath("/dashboard");
   return { success: true };
 }
 
-export async function revokeApproval(projectId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: "Oturum bulunamadı." };
-  }
+export async function revokeApproval(projectId: string): Promise<ActionResult> {
+  const auth = await requireRole(OVERSIGHT_ROLES, OVERSIGHT_ONLY);
+  if ("error" in auth) return { error: auth.error };
 
-  const { error } = await supabase
+  const { data, error } = await auth.supabase
     .from("academic_projects")
     .update({
       controller_approved_by: null,
       controller_approved_at: null,
       status: "revision",
     })
-    .eq("id", projectId);
+    .eq("id", projectId)
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "İşlem sırasında bir hata oluştu." };
   }
+  if (!data?.length) return { error: "Çalışma bulunamadı." };
 
   revalidatePath("/dashboard/editor");
+  revalidatePath("/dashboard");
   return { success: true };
 }
 
 // Sorumlu uzman ataması, çalışma müşteri tarafından oluşturulduktan
 // SONRA, yalnızca Kontrolör ve üzeri roller tarafından yapılır.
 // Müşteriye açık "Yeni Çalışma" formunda bu alan bulunmaz.
-export async function assignProject(projectId: string, assigneeName: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Oturum bulunamadı." };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const oversightRoles = ["controller", "academic_manager", "system_admin", "founder"];
-  if (!profile || !oversightRoles.includes(profile.role)) {
-    return { error: "Bu işlem için Kontrolör veya üzeri bir role sahip olmalısınız." };
-  }
+export async function assignProject(projectId: string, assigneeName: string): Promise<ActionResult> {
+  const auth = await requireRole(OVERSIGHT_ROLES, OVERSIGHT_ONLY);
+  if ("error" in auth) return { error: auth.error };
 
   const trimmed = assigneeName.trim();
-  const { error } = await supabase
+  const { data, error } = await auth.supabase
     .from("academic_projects")
     .update({ assignee_name: trimmed || null })
-    .eq("id", projectId);
+    .eq("id", projectId)
+    .select("id");
 
   if (error) {
     console.error(error);
     return { error: "Atama sırasında bir hata oluştu." };
   }
+  if (!data?.length) return { error: "Çalışma bulunamadı." };
 
   revalidatePath("/dashboard/editor");
   return { success: true };
@@ -227,20 +204,19 @@ export async function assignProject(projectId: string, assigneeName: string) {
 // (bkz. "Owner or oversight-role can delete projects" politikası).
 // İlişkili kayıtlar (kaynakça kontrolleri, belge yüklemeleri, panelde
 // yazma metni vb.) veritabanında ON DELETE CASCADE ile otomatik silinir.
-export async function deleteProject(projectId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Oturum bulunamadı." };
+export async function deleteProject(projectId: string): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
 
-  const { error } = await supabase.from("academic_projects").delete().eq("id", projectId);
+  const { data, error } = await ctx.supabase.from("academic_projects").delete().eq("id", projectId).select("id");
 
   if (error) {
     console.error(error);
-    return { error: "Silme yetkiniz yok ya da bir hata oluştu." };
+    return { error: "Silme sırasında bir hata oluştu." };
   }
+  if (!data?.length) return { error: "Bu çalışmayı silme yetkiniz yok." };
 
   revalidatePath("/dashboard/editor");
+  revalidatePath("/dashboard");
   return { success: true };
 }

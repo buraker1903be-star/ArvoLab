@@ -5,10 +5,11 @@ import { getUniversities } from "@/app/actions/universities";
 // Kılavuz tarama aracı dış URL çekip PDF ayrıştırabilir, zaman alabilir.
 export const maxDuration = 60;
 import { getCurrentProfile } from "@/app/actions/profile";
-import { isOversightRole } from "@/lib/project-labels";
 import GuidelineScanner from "./guideline-scanner";
+import ActionForm from "../action-form";
 
 const errorMessages: Record<string, string> = {
+  forbidden: "Kılavuz eklemek için Akademik Yönetici veya üzeri bir rol gerekir.",
   "missing-university": "Üniversite adı zorunludur.",
   "save-failed": "Kılavuz kaydedilirken bir hata oluştu. Yetkinizi kontrol edin.",
 };
@@ -42,17 +43,17 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
 
   async function handleDelete(guidelineId: string) {
     "use server";
-    await deleteGuideline(guidelineId);
+    return deleteGuideline(guidelineId);
   }
 
   async function handleApprove(guidelineId: string) {
     "use server";
-    await approveGuideline(guidelineId);
+    return approveGuideline(guidelineId);
   }
 
   async function handleRuleUpdate(guidelineId: string, formData: FormData) {
     "use server";
-    await updateGuidelineRules(guidelineId, formData);
+    return updateGuidelineRules(guidelineId, formData);
   }
 
   return (
@@ -208,7 +209,11 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
               {canManage ? (
                 <details className="guideline-review-details">
                   <summary>Kuralları incele ve düzenle</summary>
-                  <form className="guideline-review-form" action={handleRuleUpdate.bind(null, g.id)}>
+                  <ActionForm
+                    className="guideline-review-form"
+                    action={handleRuleUpdate.bind(null, g.id)}
+                    successMessage="Kurallar kaydedildi. Projelerde kullanılabilmesi için kılavuzu yeniden onaylayın."
+                  >
                     <label>
                       <span>Kaynakça sistemi</span>
                       <select name="citationStyle" defaultValue={g.citation_style}>
@@ -240,23 +245,26 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
                     </label>
                     <label className="guideline-review-full"><span>İnceleme notu</span><textarea name="reviewNotes" rows={2} defaultValue={g.review_notes ?? ""} /></label>
                     <button type="submit" className="projects-filter-button">Kuralları kaydet</button>
-                  </form>
+                  </ActionForm>
                 </details>
               ) : null}
 
               {canManage ? (
-                <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {g.analysis_status !== "approved" ? (
-                    <form action={handleApprove.bind(null, g.id)}>
+                    <ActionForm action={handleApprove.bind(null, g.id)}>
                       <button type="submit" className="projects-primary-button">Onayla ve uygula</button>
-                    </form>
+                    </ActionForm>
                   ) : null}
-                  <form action={handleDelete.bind(null, g.id)}>
+                  <ActionForm
+                    action={handleDelete.bind(null, g.id)}
+                    confirmMessage={`${g.university_name} kılavuzunu silmek istediğinize emin misiniz?`}
+                  >
                     <button type="submit" className="projects-filter-button">
                       <Trash2 size={14} />
                       Sil
                     </button>
-                  </form>
+                  </ActionForm>
                 </div>
               ) : null}
             </article>
