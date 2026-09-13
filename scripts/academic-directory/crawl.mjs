@@ -9,14 +9,15 @@ const rootDir = path.resolve(__dirname, "../..");
 const sourcePath = path.join(__dirname, "sources.json");
 const outputDir = path.join(rootDir, "data", "academic-directory");
 
+// Değerler public.academic_units.unit_type kısıtıyla birebir aynı olmalıdır.
 const TYPE_RULES = [
-  ["vocational_school", /meslek\s+y[uü]ksekokulu$/iu],
-  ["conservatory", /konservatuvar[ıi]$/iu],
-  ["faculty", /fak[uü]ltesi$/iu],
-  ["institute", /enstit[uü]s[uü]$/iu],
-  ["school", /y[uü]ksekokulu$/iu],
-  ["department", /b[oö]l[uü]m[uü]$/iu],
-  ["division", /ana\s*bilim\s*dal[ıi]$/iu],
+  ["meslek_yuksekokulu", /meslek\s+y[uü]ksekokulu$/iu],
+  ["konservatuvar", /konservatuvar[ıi]$/iu],
+  ["fakulte", /fak[uü]ltesi$/iu],
+  ["enstitu", /enstit[uü]s[uü]$/iu],
+  ["yuksekokul", /y[uü]ksekokulu$/iu],
+  ["bolum", /b[oö]l[uü]m[uü]$/iu],
+  ["anabilim_dali", /ana\s*bilim\s*dal[ıi]$/iu],
   ["program", /program[ıi]$/iu],
 ];
 

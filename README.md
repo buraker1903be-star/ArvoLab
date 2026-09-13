@@ -1,5 +1,32 @@
 # ArvoLab
 
+## Faz 2 — Veritabanı Dosyaları Canlı Yapıyla Hizalandı
+
+Repodaki SQL dosyaları canlı Supabase veritabanından farklıydı; sıfırdan
+kurulum `schema.sql`'in ilk politikasında çöküyordu. Artık `schema.sql` →
+`supabase/migrations/*` (tarih sırasıyla) → `supabase/seeds/*` sırası temiz
+bir veritabanında hatasız çalışıyor ve `academic_units` canlıyla birebir aynı
+yapıda oluşuyor (PGlite üzerinde test edildi, rol/RLS davranış testleri dahil).
+
+- `schema.sql`: `has_role()` ve `get_my_organization_id()` politikalardan önce
+  tanımlanıyor; `profiles` okuma politikası canlıdaki gibi
+  `get_my_organization_id()` kullanıyor (önceki hali sonsuz döngüye giriyordu).
+- `prevent_self_role_escalation`: SQL Editor'den (JWT olmadan) rol atamaya
+  artık izin veriyor — aşağıdaki "ilk yöneticiyi yükseltin" adımı önceden
+  bu tetikleyiciye takılıyordu.
+- `academic_units` migration'ı canlı yapıya çevrildi: `parent_unit_id`,
+  Türkçe birim türleri (`fakulte`, `enstitu`, `bolum`…), `normalized_name`,
+  `education_level`, `yok_unit_id`, `source_checked_at`.
+- Eski içe aktarma hattı (`scripts/academic-directory` → staging →
+  `import_academic_units()`) ve Ankara seed'leri Türkçe türlere uyarlandı.
+  GitHub Actions iş akışının çağırdığı `academic-directory:*` npm betikleri
+  bir önceki yüklemede silinmişti; geri eklendi.
+
+**Canlıda yapılması gereken:** SQL Editor'de
+`supabase/migrations/20260914090000_phase2_live_alignment.sql` dosyasını
+çalıştırın (rol yükseltme tetikleyicisi + içe aktarma hattı; tekrar
+çalıştırılabilir, mevcut veriyi değiştirmez).
+
 ## Faz 1 — Güvenlik ve Kırık Akış Düzeltmeleri
 
 - **Giriş koruması:** `proxy.ts` (Next.js 16'nın middleware katmanı) oturumu

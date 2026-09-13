@@ -67,7 +67,7 @@ where g.academic_unit_id is null
   and g.university_id = au.university_id
   and g.institute_name is not null
   and lower(trim(g.institute_name)) = lower(trim(au.name))
-  and au.unit_type in ('institute', 'faculty', 'school', 'vocational_school', 'conservatory');
+  and au.unit_type in ('enstitu', 'fakulte', 'yuksekokul', 'meslek_yuksekokulu', 'konservatuvar');
 
 comment on column public.thesis_guidelines.extracted_rules is
   'Normalized, human-reviewable thesis formatting rules extracted from the official source.';

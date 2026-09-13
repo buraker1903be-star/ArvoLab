@@ -1,52 +1,77 @@
--- Bulk import pipeline for verified academic unit data.
--- Load rows into public.academic_unit_import_staging, then call
--- select * from public.import_academic_units();
+-- Faz 2 — Canlı veritabanı hizalaması
 --
--- Faz 2 notu: Birim türleri academic_units ile aynı Türkçe değerlere,
--- üst birim sütunu parent_unit_id'ye çevrildi (canlı yapıyla hizalı).
--- Canlı veritabanındaki staging tablosu ve fonksiyon
--- 20260914090000_phase2_live_alignment.sql ile güncellenir.
+-- Canlıda çalıştırılması güvenlidir (tekrar çalıştırılabilir). Şunları yapar:
+--   1) İlk yöneticinin SQL Editor'den atanabilmesi: prevent_self_role_escalation
+--      tetikleyicisi auth.uid() boşken (SQL Editor / service role) artık engellemez.
+--      Önceden README'deki "update profiles set role = 'founder'" adımı reddediliyordu.
+--   2) Eski birim içe aktarma hattını (staging + import_academic_units) canlı
+--      academic_units yapısına uyarlar: Türkçe birim türleri ve parent_unit_id.
+--      Önceki fonksiyon parent_id ve İngilizce türler kullandığı için canlıda
+--      çalışamazdı.
 
-create table if not exists public.academic_unit_import_staging (
-  id bigint generated always as identity primary key,
-  university_name text not null,
-  parent_name text,
-  unit_name text not null,
-  unit_type text not null,
-  source_url text,
-  external_code text,
-  imported_at timestamptz,
-  import_error text,
-  created_at timestamptz not null default now(),
-  constraint academic_unit_import_staging_unit_type_check check (
-    unit_type in (
-      'enstitu',
-      'fakulte',
-      'yuksekokul',
-      'konservatuvar',
-      'meslek_yuksekokulu',
-      'bolum',
-      'anabilim_dali',
-      'anasanat_dali',
-      'bilim_dali',
-      'program',
-      'merkez',
-      'diger'
-    )
-  )
-);
+-- ------------------------------------------------------------
+-- 1) Rol yükseltme tetikleyicisi
+-- ------------------------------------------------------------
+create or replace function public.prevent_self_role_escalation()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
 
-create index if not exists academic_unit_import_staging_pending_idx
-  on public.academic_unit_import_staging (imported_at, university_name, parent_name);
+  if (new.role is distinct from old.role or new.organization_id is distinct from old.organization_id)
+     and not public.has_role(array['system_admin','founder']::public.user_role[]) then
+    raise exception 'Rol veya kurum değişikliği için yetkiniz yok.';
+  end if;
+  return new;
+end;
+$$;
 
-alter table public.academic_unit_import_staging enable row level security;
+-- ------------------------------------------------------------
+-- 2) Birim içe aktarma hattı
+-- ------------------------------------------------------------
+do $$
+declare
+  existing record;
+begin
+  if to_regclass('public.academic_unit_import_staging') is null then
+    return;
+  end if;
 
-revoke all on public.academic_unit_import_staging from anon, authenticated;
-grant select, insert, update, delete on public.academic_unit_import_staging
-  to service_role;
+  for existing in
+    select conname from pg_constraint
+    where conrelid = 'public.academic_unit_import_staging'::regclass
+      and contype = 'c'
+      and pg_get_constraintdef(oid) ilike '%unit_type%'
+  loop
+    execute format('alter table public.academic_unit_import_staging drop constraint %I', existing.conname);
+  end loop;
 
-grant usage, select on sequence public.academic_unit_import_staging_id_seq
-  to service_role;
+  update public.academic_unit_import_staging
+  set unit_type = case unit_type
+    when 'faculty' then 'fakulte'
+    when 'institute' then 'enstitu'
+    when 'school' then 'yuksekokul'
+    when 'conservatory' then 'konservatuvar'
+    when 'vocational_school' then 'meslek_yuksekokulu'
+    when 'department' then 'bolum'
+    when 'division' then 'anabilim_dali'
+    else unit_type
+  end
+  where unit_type in ('faculty', 'institute', 'school', 'conservatory', 'vocational_school', 'department', 'division');
+
+  alter table public.academic_unit_import_staging
+    add constraint academic_unit_import_staging_unit_type_check check (
+      unit_type in (
+        'enstitu', 'fakulte', 'yuksekokul', 'konservatuvar', 'meslek_yuksekokulu',
+        'bolum', 'anabilim_dali', 'anasanat_dali', 'bilim_dali', 'program', 'merkez', 'diger'
+      )
+    );
+end;
+$$;
 
 create or replace function public.import_academic_units()
 returns table (
@@ -170,9 +195,3 @@ $$;
 
 revoke all on function public.import_academic_units() from public, anon, authenticated;
 grant execute on function public.import_academic_units() to service_role;
-
-comment on table public.academic_unit_import_staging is
-  'Staging area for verified university faculty, institute, department and program data.';
-
-comment on function public.import_academic_units() is
-  'Imports pending staging rows idempotently into public.academic_units and records row-level errors.';

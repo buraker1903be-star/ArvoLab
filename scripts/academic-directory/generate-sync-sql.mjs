@@ -20,11 +20,11 @@ function stagingInsert(row) {
 }
 
 function deactivateStatement(row) {
-  return `update public.academic_units au\nset is_active = false, updated_at = now()\nfrom public.universities u\nwhere au.university_id = u.id\n  and lower(trim(u.name)) = lower(trim(${sqlLiteral(row.university_name)}))\n  and lower(trim(au.name)) = lower(trim(${sqlLiteral(row.unit_name)}))\n  and au.unit_type = ${sqlLiteral(row.unit_type)}\n  and au.parent_id is null\n  and au.is_active = true;`;
+  return `update public.academic_units au\nset is_active = false, updated_at = now()\nfrom public.universities u\nwhere au.university_id = u.id\n  and lower(trim(u.name)) = lower(trim(${sqlLiteral(row.university_name)}))\n  and lower(trim(au.name)) = lower(trim(${sqlLiteral(row.unit_name)}))\n  and au.unit_type = ${sqlLiteral(row.unit_type)}\n  and au.parent_unit_id is null\n  and au.is_active = true;`;
 }
 
 function typeChangeStatement(row) {
-  return `update public.academic_units au\nset unit_type = ${sqlLiteral(row.current_unit_type)},\n    source_url = coalesce(${sqlLiteral(row.source_url)}, au.source_url),\n    updated_at = now()\nfrom public.universities u\nwhere au.university_id = u.id\n  and lower(trim(u.name)) = lower(trim(${sqlLiteral(row.university_name)}))\n  and lower(trim(au.name)) = lower(trim(${sqlLiteral(row.unit_name)}))\n  and au.unit_type = ${sqlLiteral(row.previous_unit_type)}\n  and au.parent_id is null;`;
+  return `update public.academic_units au\nset unit_type = ${sqlLiteral(row.current_unit_type)},\n    source_url = coalesce(${sqlLiteral(row.source_url)}, au.source_url),\n    updated_at = now()\nfrom public.universities u\nwhere au.university_id = u.id\n  and lower(trim(u.name)) = lower(trim(${sqlLiteral(row.university_name)}))\n  and lower(trim(au.name)) = lower(trim(${sqlLiteral(row.unit_name)}))\n  and au.unit_type = ${sqlLiteral(row.previous_unit_type)}\n  and au.parent_unit_id is null;`;
 }
 
 async function main() {

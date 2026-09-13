@@ -39,6 +39,31 @@ grant select on public.organizations to authenticated;
 grant insert, update on public.organizations to authenticated;
 grant select, update on public.profiles to authenticated;
 
+-- Yetki yardımcıları. Aşağıdaki tüm RLS politikaları bunları kullandığı için
+-- politikalardan ÖNCE tanımlanmalıdır. security definer: profiles üzerindeki
+-- RLS'i atlayarak okur; aksi halde profiles politikası kendini sorgulayıp
+-- sonsuz döngüye (infinite recursion) girer.
+create or replace function public.has_role(roles public.user_role[])
+returns boolean
+language sql
+stable
+security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = any(roles)
+  );
+$$;
+
+create or replace function public.get_my_organization_id()
+returns uuid
+language sql
+stable
+security definer set search_path = public
+as $$
+  select organization_id from public.profiles where id = auth.uid();
+$$;
+
 drop policy if exists "Members can view their own organization" on public.organizations;
 create policy "Members can view their own organization"
   on public.organizations
@@ -56,7 +81,7 @@ create policy "Users can view profiles in their organization"
   to authenticated
   using (
     id = (select auth.uid())
-    or organization_id = (select organization_id from public.profiles where id = (select auth.uid()))
+    or organization_id = public.get_my_organization_id()
     or public.has_role(array['system_admin','founder']::public.user_role[])
   );
 
@@ -74,6 +99,12 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
+  -- auth.uid() boşsa istek bir uç kullanıcıdan gelmiyordur (SQL Editor,
+  -- service role). İlk yöneticinin SQL Editor'den atanabilmesi için gerekli.
+  if auth.uid() is null then
+    return new;
+  end if;
+
   if (new.role is distinct from old.role or new.organization_id is distinct from old.organization_id)
      and not public.has_role(array['system_admin','founder']::public.user_role[]) then
     raise exception 'Rol veya kurum değişikliği için yetkiniz yok.';
@@ -127,18 +158,6 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-
-create or replace function public.has_role(roles public.user_role[])
-returns boolean
-language sql
-stable
-security definer set search_path = public
-as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid() and role = any(roles)
-  );
-$$;
 
 create table if not exists public.academic_projects (
   id uuid primary key default gen_random_uuid(),
