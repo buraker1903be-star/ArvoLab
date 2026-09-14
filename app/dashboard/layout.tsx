@@ -8,6 +8,7 @@ import SidebarNav from "./_components/sidebar-nav";
 import HeaderTitle from "./_components/header-title";
 import MobileNav from "./_components/mobile-nav";
 import Toaster from "./_components/toaster";
+import NotificationBell from "./_components/notification-bell";
 import { NAV_COOKIE } from "./_components/navigation";
 
 function initialsOf(name: string) {
@@ -48,6 +49,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         <header className="dashboard-header">
           <HeaderTitle />
           <div className="dashboard-header-actions">
+            <NotificationBell />
             <ThemeToggle />
             <div className="dashboard-user">
               <span className="dashboard-user-avatar" aria-hidden="true">
