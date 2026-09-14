@@ -44,10 +44,12 @@ import {
   Search,
   FileUp,
   Images,
+  Keyboard,
 } from "lucide-react";
 import FindReplaceBar from "./find-replace-bar";
 import ImportDialog, { type ImportMode } from "./import-dialog";
 import ImageLibraryDialog from "./image-library-dialog";
+import ShortcutsDialog from "./shortcuts-dialog";
 import type { FormatLossReport } from "@/lib/format-loss";
 import VersionsDialog from "./versions-dialog";
 import CiteDialog from "./cite-dialog";
@@ -275,6 +277,7 @@ export default function ManuscriptEditor({
   const [importOpen, setImportOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [formatLossDismissed, setFormatLossDismissed] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [margins, setMargins] = useState<PageMargins>(
     initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
   );
@@ -793,6 +796,8 @@ export default function ManuscriptEditor({
     <div className="manuscript-main">
     <div className="manuscript-editor-shell">
       <div className="manuscript-toolbar" role="toolbar" aria-label="Biçimlendirme">
+        {/* Masaüstünde düğmeler satırlara sarılır; telefonda tek satırda yatay kayar (workspace.css) */}
+        <div className="toolbar-tools">
         <select
           className="toolbar-select"
           title="Yazı tipi"
@@ -983,6 +988,11 @@ export default function ManuscriptEditor({
         <ToolbarButton label="Bul ve değiştir (Ctrl+F)" active={findOpen} onClick={() => setFindOpen((open) => !open)}>
           <Search size={16} />
         </ToolbarButton>
+
+        <ToolbarButton label="Klavye kısayolları" onClick={() => setShortcutsOpen(true)}>
+          <Keyboard size={16} />
+        </ToolbarButton>
+        </div>
 
         <span className="toolbar-spacer" />
         <button
@@ -1377,6 +1387,7 @@ export default function ManuscriptEditor({
         onClose={() => setLibraryOpen(false)}
         onPick={(src, name) => editor.chain().focus().setImage({ src, alt: name }).run()}
       />
+      <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {guideline ? (
         <Dialog

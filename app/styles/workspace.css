@@ -346,6 +346,60 @@
 @media (max-width: 900px) {
   .manuscript-toolbar { top: calc(56px + env(safe-area-inset-top)); }
 }
+
+/* Araç çubuğu düğme grubu: masaüstünde görünmez sarmalayıcı (bugünkü satır düzeni) */
+.manuscript-toolbar .toolbar-tools { display: contents; }
+
+/* Telefonda: düğmeler tek satırda yatay kayar, kayıt durumu sağda sabit kalır */
+@media (max-width: 760px) {
+  .manuscript-toolbar { flex-wrap: wrap; gap: 6px; padding: 6px 8px; }
+  .manuscript-toolbar .toolbar-tools {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .manuscript-toolbar .toolbar-tools::-webkit-scrollbar { display: none; }
+  .manuscript-toolbar .toolbar-tools > * { flex-shrink: 0; }
+  .manuscript-toolbar .toolbar-spacer { display: none; }
+  .manuscript-toolbar .toolbar-tools button { min-width: 36px; height: 36px; }
+  .save-status { flex-shrink: 0; padding: 0 8px; font-size: var(--fs-micro); }
+}
+
+/* Klavye kısayolları */
+.shortcut-list { display: grid; margin: 0; }
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.shortcut-row:last-child { border-bottom: 0; }
+.shortcut-row dt { display: flex; flex-shrink: 0; gap: 4px; }
+.shortcut-row dd { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); text-align: right; }
+.shortcut-row kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: var(--r-xs);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+}
 @media (max-width: 640px) {
   .manuscript-cover-page-grid { grid-template-columns: 1fr; }
   .guideline-applied-banner { flex-direction: column; }
@@ -530,6 +584,10 @@
     overflow: visible;
   }
   .outline-headings { max-height: 200px; overflow-y: auto; }
+}
+@media (max-width: 760px) {
+  /* Telefonda önce yazma alanı: kılavuz listesi, ilerleme ve yorumlar editörün altında */
+  .manuscript-outline { order: 1; }
 }
 @media (max-width: 640px) {
   /* Telefonda belge planı yer kaplamasın; kılavuz listesi ve ilerleme kalır */
