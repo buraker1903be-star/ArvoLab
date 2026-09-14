@@ -10,6 +10,8 @@ import TiptapImage from "@tiptap/extension-image";
 import { Superscript } from "@tiptap/extension-superscript";
 import { Caption } from "@/lib/tiptap-caption";
 import { SearchHighlight } from "@/lib/tiptap-search";
+import { HeadingNumbers } from "@/lib/tiptap-heading-numbers";
+import { hasManualNumber } from "@/lib/heading-numbering";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { TextStyleKit } from "@tiptap/extension-text-style";
 import {
@@ -126,6 +128,8 @@ interface ManuscriptEditorProps {
   editHref: string;
   /** Word çıktısına içindekiler tablosu */
   initialIncludeToc: boolean;
+  /** Başlıklar otomatik numaralanır ("1.", "1.1.") */
+  initialHeadingNumbering?: boolean;
   /** Çalışmanın kaynakça sistemi (atıf biçimi) */
   citationStyle: string;
   /** Eski kayıt hatasından etkilenmişse neyin kaybolduğu (etkilenmediyse null) */
@@ -271,6 +275,7 @@ export default function ManuscriptEditor({
   guidelineSync,
   editHref,
   initialIncludeToc,
+  initialHeadingNumbering = false,
   citationStyle,
   formatLoss,
 }: ManuscriptEditorProps) {
@@ -290,6 +295,7 @@ export default function ManuscriptEditor({
   const [syncMode, setSyncMode] = useState<GuidelineSyncMode>(guidelineSync.mode);
   const [guidelineOpen, setGuidelineOpen] = useState(false);
   const [includeToc, setIncludeToc] = useState(initialIncludeToc);
+  const [headingNumbering, setHeadingNumbering] = useState(initialHeadingNumbering);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
@@ -331,7 +337,14 @@ export default function ManuscriptEditor({
   const blockedRef = useRef(false);
   /** Son kaydedilen içeriğin JSON boyutu (otomatik kayıt aralığını belirler) */
   const payloadBytesRef = useRef(0);
-  const settingsRef = useRef({ margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource, includeToc });
+  const settingsRef = useRef({
+    margins,
+    showPageNumbers,
+    coverPage: coverPageEnabled ? coverPage : null,
+    settingsSource,
+    includeToc,
+    headingNumbering,
+  });
   const saveNowRef = useRef<(force?: boolean) => Promise<boolean>>(async () => false);
   const markDirtyRef = useRef<() => void>(() => undefined);
   const openFootnoteRef = useRef<(pos: number, text: string) => void>(() => undefined);
@@ -481,6 +494,7 @@ export default function ManuscriptEditor({
       FootnoteReference,
       Caption,
       SearchHighlight,
+      HeadingNumbers.configure({ enabled: initialHeadingNumbering }),
     ],
     content: initialContent ?? "",
     onCreate: ({ editor: created }) => {
@@ -544,14 +558,19 @@ export default function ManuscriptEditor({
   // (geliştirmedeki çift effect çalıştırması boş kayıt tetiklemesin).
   const settingsSnapshot = useRef<string | null>(null);
   useEffect(() => {
-    const next = { margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource, includeToc };
+    const next = { margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource, includeToc, headingNumbering };
     const serialized = JSON.stringify(next);
     settingsRef.current = next;
     const previous = settingsSnapshot.current;
     settingsSnapshot.current = serialized;
     if (previous === null || previous === serialized) return;
     markDirtyRef.current();
-  }, [margins, showPageNumbers, coverPageEnabled, coverPage, settingsSource, includeToc]);
+  }, [margins, showPageNumbers, coverPageEnabled, coverPage, settingsSource, includeToc, headingNumbering]);
+
+  // Numaralar editörde süsleme olarak gösterilir; açıp kapatmak metni değiştirmez.
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) editor.commands.setHeadingNumbering(headingNumbering);
+  }, [editor, headingNumbering]);
 
   // Kılavuzun yeni sürümü kendiliğinden uygulandıysa kalıcı olsun (bir kez).
   const autoAppliedRef = useRef(false);
@@ -794,6 +813,8 @@ export default function ManuscriptEditor({
   const requiredSections = guideline?.requiredSections ?? [];
   const isThesis = (projectDefaults?.projectType ?? "thesis") === "thesis";
   const sections = sectionStatuses(stats.headings, requiredSections);
+  // Otomatik numara açıkken elle "1.2. Amaç" yazılmış başlıklar çift numaralı görünür.
+  const manualNumbered = headingNumbering ? stats.headings.filter((heading) => hasManualNumber(heading.text)).length : 0;
   const pages = estimatePages(stats.words, {
     fontSizePt: guideline?.settings.fontSizePt,
     lineSpacing: guideline?.settings.lineSpacing,
@@ -1293,6 +1314,26 @@ export default function ManuscriptEditor({
             <input type="checkbox" checked={includeToc} onChange={(e) => setIncludeToc(e.target.checked)} />
             <span>İçindekiler tablosu (Word)</span>
           </label>
+          <label className="checkbox-label">
+            <input type="checkbox" checked={headingNumbering} onChange={(e) => setHeadingNumbering(e.target.checked)} />
+            <span>Başlıkları otomatik numarala (1., 1.1.)</span>
+          </label>
+          {manualNumbered > 0 ? (
+            <span className="manuscript-page-settings-hint">
+              {manualNumbered} başlıkta elle yazılmış numara var; çift numara olmaması için{" "}
+              <button
+                type="button"
+                className="result-link"
+                onClick={() => {
+                  editor.chain().focus().stripManualHeadingNumbers().run();
+                  showToast("success", "Elle yazılmış başlık numaraları kaldırıldı (Geri al ile geri alınabilir).");
+                }}
+              >
+                elle yazılanları kaldırın
+              </button>
+              .
+            </span>
+          ) : null}
           <span className="manuscript-page-settings-hint">
             Otomatik kaydedilir, Word&apos;e aktarırken uygulanır.
           </span>

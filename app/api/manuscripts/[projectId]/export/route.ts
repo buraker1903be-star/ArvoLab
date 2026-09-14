@@ -95,6 +95,7 @@ export async function GET(
     coverPage: manuscript.cover_page ?? null,
     textDefaults,
     includeToc: manuscript.include_toc ?? false,
+    headingNumbering: manuscript.heading_numbering ?? false,
     // Resimler dış adresten değil, yalnızca metnin yazarlarının depo klasöründen alınır (SSRF yok);
     // böylece imzalı bağlantının süresi dolsa ya da çıktıyı atanan uzman alsa da resim Word'e girer.
     fetchImage: async (src: string) => {

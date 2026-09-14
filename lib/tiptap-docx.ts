@@ -21,6 +21,7 @@ import {
   type ParagraphChild,
 } from "docx";
 import { CAPTION_LABELS, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
+import { headingNumberMap } from "@/lib/heading-numbering";
 
 interface TiptapMark {
   type: string;
@@ -148,6 +149,8 @@ interface ConversionContext {
   nextListInstance: number;
   contentWidthTwip: number;
   fetchImage: (url: string) => Promise<DocxImage | null>;
+  /** Otomatik başlık numaraları (kapalıysa boş) */
+  headingNumbers: Map<object, string>;
 }
 
 interface BlockOptions {
@@ -252,12 +255,14 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
     case "heading": {
       const level = Math.min(Math.max(((node.attrs?.level as number) ?? 1) - 1, 0), HEADING_LEVELS.length - 1);
       const align = node.attrs?.textAlign as string | undefined;
+      // Numara başlık metninin parçası olarak yazılır: Word'ün içindekiler tablosunda da görünür.
+      const number = ctx.headingNumbers.get(node);
       return [
         new Paragraph({
           heading: HEADING_LEVELS[level],
           alignment: align ? ALIGNMENTS[align] : undefined,
           spacing: lineSpacingValue(node.attrs?.lineSpacing),
-          children: inlineChildren(node.content ?? [], ctx),
+          children: [...(number ? [new TextRun({ text: `${number} ` })] : []), ...inlineChildren(node.content ?? [], ctx)],
         }),
       ];
     }
@@ -388,6 +393,8 @@ export interface BuildDocxOptions {
   textDefaults?: DocxTextDefaults;
   /** Kapaktan sonra içindekiler tablosu (Word, dosya açılınca alanları günceller) */
   includeToc?: boolean;
+  /** Başlıkların önüne otomatik numara ("1.", "1.1.") */
+  headingNumbering?: boolean;
 }
 
 export async function buildDocxFromTiptap({
@@ -399,6 +406,7 @@ export async function buildDocxFromTiptap({
   coverPage,
   textDefaults = {},
   includeToc = false,
+  headingNumbering = false,
 }: BuildDocxOptions): Promise<Document> {
   const m = margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
   const marginTwip = {
@@ -413,6 +421,7 @@ export async function buildDocxFromTiptap({
     nextListInstance: 1,
     contentWidthTwip: Math.max(A4_WIDTH_TWIP - marginTwip.left - marginTwip.right, 2000),
     fetchImage,
+    headingNumbers: headingNumbering ? headingNumberMap(doc) : new Map(),
   };
 
   const bodyElements: (Paragraph | Table | TableOfContents)[] = [];

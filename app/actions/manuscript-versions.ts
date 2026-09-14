@@ -120,6 +120,7 @@ export async function restoreManuscriptVersion(
       ...pick("show_page_numbers"),
       ...pick("cover_page"),
       ...pick("include_toc"),
+      ...pick("heading_numbering"),
       updated_by: ctx.user.id,
       updated_at: new Date().toISOString(),
     })
