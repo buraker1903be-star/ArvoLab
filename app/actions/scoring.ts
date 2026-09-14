@@ -87,6 +87,42 @@ export async function createCriterion(formData: FormData) {
   redirect(PAGE_PATH);
 }
 
+// Kriter kodu değiştirilemez (kayıtlar ona bağlı). Puan değişikliği yalnızca
+// bundan sonra eklenen faaliyetlere uygulanır; mevcut kayıtların puanı,
+// eklendiği andaki değerle saklanır.
+export async function updateCriterion(criterionId: string, formData: FormData): Promise<ActionResult> {
+  const auth = await requireRole(MANAGER_ROLES, "Kriterleri yalnızca Akademik Yönetici ve üzeri roller düzenleyebilir.");
+  if ("error" in auth) return { error: auth.error };
+
+  const label = String(formData.get("label") ?? "").trim();
+  if (!label) return { error: "Etiket zorunludur." };
+
+  const points = parseDecimal(String(formData.get("pointsPerUnit") ?? ""));
+  if (!Number.isFinite(points) || points < 0) return { error: "Birim başına puan 0 veya daha büyük bir sayı olmalıdır." };
+
+  const { data, error } = await auth.supabase
+    .from("scoring_criteria")
+    .update({
+      label,
+      category_group: String(formData.get("categoryGroup") ?? "").trim() || null,
+      points_per_unit: points,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+      updated_by: auth.user.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", criterionId)
+    .select("id");
+
+  if (error) {
+    console.error(error);
+    return { error: "Kriter güncellenirken bir hata oluştu." };
+  }
+  if (!data?.length) return { error: "Kriter bulunamadı." };
+
+  revalidatePath(PAGE_PATH);
+  return { success: true };
+}
+
 export async function deleteCriterion(criterionId: string): Promise<ActionResult> {
   const auth = await requireRole(MANAGER_ROLES, "Kriterleri yalnızca Akademik Yönetici ve üzeri roller silebilir.");
   if ("error" in auth) return { error: auth.error };

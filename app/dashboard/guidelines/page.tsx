@@ -1,5 +1,12 @@
 import { BookMarked, ExternalLink, Plus, Trash2 } from "lucide-react";
-import { getGuidelines, createGuideline, deleteGuideline, approveGuideline, updateGuidelineRules } from "@/app/actions/guidelines";
+import {
+  getGuidelines,
+  createGuideline,
+  deleteGuideline,
+  approveGuideline,
+  updateGuidelineRules,
+  updateGuidelineDetails,
+} from "@/app/actions/guidelines";
 import { getUniversities } from "@/app/actions/universities";
 
 // Kılavuz tarama aracı dış URL çekip PDF ayrıştırabilir, zaman alabilir.
@@ -54,6 +61,11 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
   async function handleRuleUpdate(guidelineId: string, formData: FormData) {
     "use server";
     return updateGuidelineRules(guidelineId, formData);
+  }
+
+  async function handleDetailsUpdate(guidelineId: string, formData: FormData) {
+    "use server";
+    return updateGuidelineDetails(guidelineId, formData);
   }
 
   return (
@@ -245,6 +257,57 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
                     </label>
                     <label className="guideline-review-full"><span>İnceleme notu</span><textarea name="reviewNotes" rows={2} defaultValue={g.review_notes ?? ""} /></label>
                     <button type="submit" className="projects-filter-button">Kuralları kaydet</button>
+                  </ActionForm>
+                </details>
+              ) : null}
+
+              {canManage ? (
+                <details className="guideline-review-details">
+                  <summary>Kılavuz bilgilerini düzenle</summary>
+                  <ActionForm
+                    className="guideline-review-form"
+                    action={handleDetailsUpdate.bind(null, g.id)}
+                    successMessage="Kılavuz bilgileri kaydedildi."
+                  >
+                    <label className="guideline-review-full">
+                      <span>Üniversite adı</span>
+                      <input
+                        name="universityName"
+                        type="text"
+                        list="university-options-guideline"
+                        defaultValue={g.university_name}
+                        autoComplete="off"
+                        required
+                      />
+                    </label>
+                    <label>
+                      <span>Enstitü</span>
+                      <input name="instituteName" type="text" defaultValue={g.institute_name ?? ""} />
+                    </label>
+                    <label>
+                      <span>Sürüm etiketi</span>
+                      <input name="versionLabel" type="text" defaultValue={g.version_label ?? ""} />
+                    </label>
+                    <label>
+                      <span>Min. sayfa</span>
+                      <input name="minPages" type="number" min={0} defaultValue={g.min_pages ?? ""} />
+                    </label>
+                    <label>
+                      <span>Maks. sayfa</span>
+                      <input name="maxPages" type="number" min={0} defaultValue={g.max_pages ?? ""} />
+                    </label>
+                    <label className="guideline-review-full">
+                      <span>Kaynak URL (resmî kılavuz)</span>
+                      <input name="sourceUrl" type="url" defaultValue={g.source_url ?? ""} />
+                    </label>
+                    <label className="guideline-review-full">
+                      <span>Notlar</span>
+                      <textarea name="notes" rows={2} defaultValue={g.notes ?? ""} />
+                    </label>
+                    <p className="guideline-review-full" style={{ margin: 0, fontSize: 12, color: "var(--muted-foreground)" }}>
+                      Üniversite ya da enstitü değişirse kılavuz yeniden onaya düşer.
+                    </p>
+                    <button type="submit" className="projects-filter-button">Bilgileri kaydet</button>
                   </ActionForm>
                 </details>
               ) : null}

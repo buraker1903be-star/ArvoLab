@@ -2,6 +2,7 @@ import { GraduationCap, Plus, Settings2, Trash2 } from "lucide-react";
 import {
   getCriteria,
   createCriterion,
+  updateCriterion,
   deleteCriterion,
   getMyScoreEntries,
   addScoreEntry,
@@ -57,6 +58,11 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
   async function handleDeleteCriterion(criterionId: string) {
     "use server";
     return deleteCriterion(criterionId);
+  }
+
+  async function handleUpdateCriterion(criterionId: string, formData: FormData) {
+    "use server";
+    return updateCriterion(criterionId, formData);
   }
 
   return (
@@ -242,28 +248,50 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
           {criteria.length > 0 && (
             <div style={{ marginTop: 20 }}>
               {criteria.map((c) => (
-                <div
-                  key={c.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "8px 0",
-                    borderBottom: "1px solid var(--border)",
-                    fontSize: 13,
-                  }}
-                >
-                  <span>
-                    <strong>{c.code}</strong> — {c.label} ({c.points_per_unit} puan)
-                  </span>
-                  <ActionForm
-                    action={handleDeleteCriterion.bind(null, c.id)}
-                    confirmMessage={`"${c.code}" kriterini silmek istediğinize emin misiniz? Bu kritere bağlı kullanıcı kayıtları varsa kriter silinmez, pasife alınır (geçmiş puanlar korunur).`}
-                  >
-                    <button type="submit" className="projects-filter-button" aria-label={`${c.code} kriterini sil`}>
-                      <Trash2 size={13} />
-                    </button>
-                  </ActionForm>
+                <div key={c.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                    <span>
+                      <strong>{c.code}</strong> — {c.label} ({c.points_per_unit} puan)
+                    </span>
+                    <ActionForm
+                      action={handleDeleteCriterion.bind(null, c.id)}
+                      confirmMessage={`"${c.code}" kriterini silmek istediğinize emin misiniz? Bu kritere bağlı kullanıcı kayıtları varsa kriter silinmez, pasife alınır (geçmiş puanlar korunur).`}
+                    >
+                      <button type="submit" className="projects-filter-button" aria-label={`${c.code} kriterini sil`}>
+                        <Trash2 size={13} />
+                      </button>
+                    </ActionForm>
+                  </div>
+                  <details className="guideline-review-details" style={{ marginTop: 8, paddingTop: 8 }}>
+                    <summary>Düzenle</summary>
+                    <ActionForm
+                      className="guideline-review-form"
+                      action={handleUpdateCriterion.bind(null, c.id)}
+                      successMessage="Kriter güncellendi."
+                    >
+                      <label>
+                        <span>Etiket</span>
+                        <input name="label" type="text" defaultValue={c.label} required />
+                      </label>
+                      <label>
+                        <span>Kategori grubu</span>
+                        <input name="categoryGroup" type="text" defaultValue={c.category_group ?? ""} />
+                      </label>
+                      <label>
+                        <span>Birim başına puan</span>
+                        <input name="pointsPerUnit" type="number" step={0.1} min={0} defaultValue={c.points_per_unit} required />
+                      </label>
+                      <label>
+                        <span>Notlar</span>
+                        <input name="notes" type="text" defaultValue={c.notes ?? ""} />
+                      </label>
+                      <p className="guideline-review-full" style={{ margin: 0, fontSize: 12, color: "var(--muted-foreground)" }}>
+                        Puan değişikliği yalnızca bundan sonra eklenen faaliyetlere uygulanır; mevcut kayıtlar
+                        eklendikleri andaki puanla korunur.
+                      </p>
+                      <button type="submit" className="projects-filter-button">Kaydet</button>
+                    </ActionForm>
+                  </details>
                 </div>
               ))}
             </div>

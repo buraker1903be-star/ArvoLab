@@ -1,25 +1,15 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/auth-guards";
+import { siteOrigin } from "@/lib/site-url";
 
 const MIN_PASSWORD_LENGTH = 8;
 
 // Yalnızca panel içi yollara dönülür; dış adrese yönlendirme (open redirect) engellenir.
 function safeNextPath(raw: string) {
   return raw.startsWith("/dashboard") && !raw.startsWith("//") ? raw : "/dashboard";
-}
-
-async function siteOrigin() {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
-
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${protocol}://${host}`;
 }
 
 export async function login(formData: FormData) {

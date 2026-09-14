@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, PenLine, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
-import { getProjects, approveProject, revokeApproval, assignProject } from "@/app/actions/projects";
-import { projectTypeLabel, statusLabel, isOversightRole } from "@/lib/project-labels";
+import { CalendarDays, CheckCircle2, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
+import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff } from "@/app/actions/projects";
+import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
 import DeleteProjectButton from "./delete-project-button";
 import ActionForm from "../action-form";
@@ -28,6 +28,7 @@ function formatDateTime(dateStr: string | null) {
 export default async function ProjectsPage() {
   const [projects, profile] = await Promise.all([getProjects(), getCurrentProfile()]);
   const canApprove = isOversightRole(profile?.role);
+  const staff = canApprove ? await getAssignableStaff() : [];
   // Silme yetkisi RLS ile aynı: sahibi ya da Akademik Yönetici/Sistem
   // Yöneticisi/Kurucu (Kontrolör silme yetkisine sahip DEĞİL).
   const canDeleteAnyProject =
@@ -45,8 +46,8 @@ export default async function ProjectsPage() {
 
   async function handleAssign(projectId: string, formData: FormData) {
     "use server";
-    const assigneeName = String(formData.get("assigneeName") ?? "");
-    return assignProject(projectId, assigneeName);
+    const assigneeId = String(formData.get("assigneeId") ?? "");
+    return assignProject(projectId, assigneeId);
   }
 
   return (
@@ -81,6 +82,9 @@ export default async function ProjectsPage() {
         <section className="projects-list" aria-label="Akademik çalışma listesi">
           {projects.map((project) => {
             const isApproved = !!project.controller_approved_at;
+            const canEdit = canApprove || profile?.id === project.owner_id || profile?.id === project.assignee_id;
+            // Eski kayıtlarda sorumlu yalnızca serbest metin olarak tutuluyordu (assignee_id boş).
+            const legacyAssignee = !project.assignee_id && project.assignee_name;
             return (
               <article className="project-card" key={project.id}>
                 <div className="project-card-main">
@@ -142,21 +146,28 @@ export default async function ProjectsPage() {
                   <ActionForm
                     action={handleAssign.bind(null, project.id)}
                     style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}
+                    successMessage="Sorumlu kaydedildi."
                   >
-                    <input
-                      name="assigneeName"
-                      type="text"
-                      defaultValue={project.assignee_name ?? ""}
-                      placeholder="Sorumlu uzman ata (ör. Ayşe Demir)"
+                    <select
+                      name="assigneeId"
+                      defaultValue={project.assignee_id ?? ""}
+                      aria-label="Sorumlu personel"
                       style={{
                         height: 38,
-                        padding: "0 12px",
+                        padding: "0 10px",
                         borderRadius: 10,
                         border: "1px solid var(--border)",
                         fontSize: 12,
-                        flex: "0 1 240px",
+                        flex: "0 1 280px",
                       }}
-                    />
+                    >
+                      <option value="">{legacyAssignee ? `${project.assignee_name} (listede değil)` : "Sorumlu atanmadı"}</option>
+                      {staff.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.full_name || "İsimsiz personel"} · {ROLE_LABELS[member.role]}
+                        </option>
+                      ))}
+                    </select>
                     <button type="submit" className="projects-filter-button" style={{ height: 38 }}>
                       <UserRound size={14} />
                       Ata
@@ -169,6 +180,12 @@ export default async function ProjectsPage() {
                     <PenLine size={15} />
                     Panelde Yaz
                   </Link>
+                  {canEdit ? (
+                    <Link href={`/dashboard/editor/${project.id}/edit`} className="projects-filter-button">
+                      <Pencil size={15} />
+                      Düzenle
+                    </Link>
+                  ) : null}
                   <Link href="/dashboard/documents" className="projects-filter-button">
                     <Upload size={15} />
                     Hazır Belge Yükle

@@ -1,5 +1,5 @@
 import { getMyProjects } from "@/app/actions/citation-check";
-import { getMyDocumentUploads } from "@/app/actions/document-upload";
+import { deleteDocumentUpload, getMyDocumentUploads } from "@/app/actions/document-upload";
 import { runOriginalityCheck, getOriginalityChecksForDocument } from "@/app/actions/originality";
 
 // Belge yükleme + analiz (mammoth/pdf-parse) büyük dosyalarda Vercel'in
@@ -13,7 +13,7 @@ import { getLatestFeedback } from "@/app/actions/ai-feedback";
 import DocumentUploadForm from "./document-upload-form";
 import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
-import { ShieldQuestion } from "lucide-react";
+import { ShieldQuestion, Trash2 } from "lucide-react";
 
 export default async function DocumentsPage() {
   const [projects, uploads] = await Promise.all([
@@ -39,6 +39,11 @@ export default async function DocumentsPage() {
     "use server";
     const result = await runOriginalityCheck(documentId);
     return result.error ? { error: result.error } : { success: true };
+  }
+
+  async function handleDelete(documentId: string) {
+    "use server";
+    return deleteDocumentUpload(documentId);
   }
 
   return (
@@ -159,6 +164,17 @@ export default async function DocumentsPage() {
                       />
                     </div>
                   ) : null}
+
+                  <ActionForm
+                    action={handleDelete.bind(null, u.id)}
+                    style={{ marginTop: 12 }}
+                    confirmMessage={`"${u.file_name}" belgesini silmek istediğinize emin misiniz? Dosya, analiz sonuçları, orijinallik taramaları ve AI geri bildirimleri kalıcı olarak silinir.`}
+                  >
+                    <button type="submit" className="projects-filter-button" style={{ color: "var(--danger)" }}>
+                      <Trash2 size={14} />
+                      Belgeyi sil
+                    </button>
+                  </ActionForm>
                 </article>
               );
             })}

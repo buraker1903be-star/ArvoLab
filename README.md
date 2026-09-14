@@ -1,5 +1,34 @@
 # ArvoLab
 
+## Faz 3 — Yönetim Ekranları
+
+- **Çalışma düzenleme** (`/dashboard/editor/[id]/edit`): başlık, kaynakça
+  sistemi (onaylı kılavuz yoksa), yöntem, durum, ilerleme (%), teslim tarihi,
+  öncelik ve notlar. Sahibi, atanan personel ve Kontrolör+ düzenleyebilir.
+  "Teslime hazır / Teslim edildi" durumları yalnızca Kontrolör+ tarafından
+  verilir (veritabanı tetikleyicisiyle de korunur). Ana sayfa istatistikleri
+  artık bu durumlardan beslenir.
+- **Personel ataması:** Serbest metin yerine ekipten kişi seçilir;
+  `assignee_id` dolduğu için atanan kişi çalışmayı kendi listesinde görür
+  ve panelde yazabilir.
+- **Ekip yönetimi:** E-postayla kullanıcı daveti (rol ve kurumla birlikte),
+  kullanıcı listesinde e-posta ve "davet bekliyor" durumu, erişimi durdurma /
+  yeniden açma. Bunlar sunucuda `SUPABASE_SECRET_KEY` gerektirir.
+- **Düzenleme/silme:** Literatür kaynağı düzenleme, kılavuz kimlik bilgilerini
+  düzenleme (üniversite/enstitü değişirse yeniden onaya düşer), doçentlik
+  kriteri düzenleme, yüklenen belgeyi (dosya + analizler) silme.
+
+**Supabase'de yapılması gereken (davet için):** Authentication → Email
+Templates → **Invite user** şablonundaki bağlantıyı şu şekilde değiştirin:
+
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/reset-password">Daveti kabul et</a>
+```
+
+Varsayılan şablon bağlantıyı tarayıcı tarafında (URL `#` kısmında) işler;
+sunucu tarafı oturum kullanan bu panelde davetli kişinin şifre belirleyebilmesi
+için `token_hash` biçimi gerekir. Site URL'in panel adresi olduğundan emin olun.
+
 ## Faz 2 — Veritabanı Dosyaları Canlı Yapıyla Hizalandı
 
 Repodaki SQL dosyaları canlı Supabase veritabanından farklıydı; sıfırdan

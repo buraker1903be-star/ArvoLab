@@ -18,6 +18,12 @@ const STATUS_LABELS: Record<string, string> = {
   archived: "Arşivlendi",
 };
 
+export const PROJECT_STATUSES = Object.keys(STATUS_LABELS);
+
+// Kontrolör onayı gerektiren durumlar — guard_academic_project_update
+// tetikleyicisindeki listeyle aynı tutulmalıdır.
+export const OVERSIGHT_ONLY_STATUSES = ["ready", "delivered"];
+
 export function projectTypeLabel(type: string) {
   return PROJECT_TYPES[type] ?? type;
 }
@@ -53,6 +59,8 @@ export const OVERSIGHT_ROLES: readonly UserRole[] = ["controller", "academic_man
 export const MANAGER_ROLES: readonly UserRole[] = ["academic_manager", "system_admin", "founder"];
 export const ADMIN_ROLES: readonly UserRole[] = ["system_admin", "founder"];
 export const EXPERT_ROLES: readonly UserRole[] = ["expert", ...OVERSIGHT_ROLES];
+// Çalışmalara sorumlu olarak atanabilecek personel (Üye/Öğrenci hariç herkes).
+export const STAFF_ROLES: readonly UserRole[] = ["employee", ...EXPERT_ROLES];
 
 export function isOversightRole(role: UserRole | null | undefined) {
   return !!role && OVERSIGHT_ROLES.includes(role);

@@ -3,6 +3,7 @@ import {
   getLiteratureSources,
   createLiteratureSource,
   updateLiteratureStatus,
+  updateLiteratureSource,
   deleteLiteratureSource,
 } from "@/app/actions/literature";
 import { getMyProjects } from "@/app/actions/citation-check";
@@ -53,6 +54,11 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
   async function handleDelete(sourceId: string) {
     "use server";
     return deleteLiteratureSource(sourceId);
+  }
+
+  async function handleEdit(sourceId: string, formData: FormData) {
+    "use server";
+    return updateLiteratureSource(sourceId, formData);
   }
 
   return (
@@ -214,6 +220,47 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
                       </button>
                     </ActionForm>
                   </div>
+
+                  <details className="guideline-review-details">
+                    <summary>Kaynağı düzenle</summary>
+                    <ActionForm
+                      className="guideline-review-form"
+                      action={handleEdit.bind(null, s.id)}
+                      successMessage="Kaynak güncellendi."
+                    >
+                      <label className="guideline-review-full">
+                        <span>Başlık</span>
+                        <input name="title" type="text" defaultValue={s.title} required />
+                      </label>
+                      <label>
+                        <span>Yazar(lar)</span>
+                        <input name="authors" type="text" defaultValue={s.authors ?? ""} />
+                      </label>
+                      <label>
+                        <span>Yıl</span>
+                        <input name="year" type="text" defaultValue={s.year ?? ""} />
+                      </label>
+                      <label>
+                        <span>Kaynak türü</span>
+                        <select name="sourceType" defaultValue={s.source_type}>
+                          {Object.entries(SOURCE_TYPE_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>DOI / URL</span>
+                        <input name="doiOrUrl" type="text" defaultValue={s.doi_or_url ?? ""} />
+                      </label>
+                      <label className="guideline-review-full">
+                        <span>Notlar</span>
+                        <textarea name="notes" rows={2} defaultValue={s.notes ?? ""} />
+                      </label>
+                      <button type="submit" className="projects-filter-button">Kaydet</button>
+                    </ActionForm>
+                  </details>
                 </article>
               ))}
             </div>

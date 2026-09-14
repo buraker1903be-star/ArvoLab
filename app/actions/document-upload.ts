@@ -197,6 +197,41 @@ export interface DocumentUploadRecord {
   created_at: string;
 }
 
+// Kaydı ve depodaki dosyayı siler. Orijinallik taramaları ve AI geri
+// bildirimleri veritabanında ON DELETE CASCADE ile birlikte silinir.
+export async function deleteDocumentUpload(documentId: string): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+
+  const { data: document } = await supabase
+    .from("document_uploads")
+    .select("id, storage_path")
+    .eq("id", documentId)
+    .eq("uploaded_by", user.id)
+    .maybeSingle();
+  if (!document) return { error: "Belge bulunamadı ya da size ait değil." };
+
+  const { error } = await supabase
+    .from("document_uploads")
+    .delete()
+    .eq("id", documentId)
+    .eq("uploaded_by", user.id);
+  if (error) {
+    console.error(error);
+    return { error: "Belge silinirken bir hata oluştu." };
+  }
+
+  // Kayıt silindi; dosya depodan silinemezse yalnızca yer kaplar, kullanıcıya hata göstermiyoruz.
+  const { error: storageError } = await supabase.storage.from("project-files").remove([document.storage_path]);
+  if (storageError) console.error(storageError);
+
+  revalidatePath("/dashboard/documents");
+  return { success: true };
+}
+
 export async function getMyDocumentUploads(): Promise<DocumentUploadRecord[]> {
   const supabase = await createClient();
   const {

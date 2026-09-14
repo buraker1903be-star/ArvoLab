@@ -222,6 +222,91 @@ export async function createGuideline(formData: FormData) {
   redirect("/dashboard/guidelines");
 }
 
+// Kılavuzun kimlik bilgileri (üniversite, enstitü, sürüm, kaynak, sayfa aralığı).
+// Üniversite ya da enstitü değişirse kılavuz yanlış kuruma uygulanmasın diye
+// yeniden akademik onaya düşer.
+export async function updateGuidelineDetails(guidelineId: string, formData: FormData): Promise<ActionResult> {
+  const auth = await requireRole(MANAGER_ROLES, "Kılavuzları yalnızca Akademik Yönetici ve üzeri roller düzenleyebilir.");
+  if ("error" in auth) return { error: auth.error };
+
+  const universityName = String(formData.get("universityName") ?? "").trim();
+  if (!universityName) return { error: "Üniversite adı zorunludur." };
+  const instituteName = String(formData.get("instituteName") ?? "").trim();
+
+  const parsePages = (name: string) => {
+    const raw = String(formData.get(name) ?? "").trim();
+    if (!raw) return null;
+    const value = Number(raw);
+    return Number.isInteger(value) && value >= 0 ? value : Number.NaN;
+  };
+  const minPages = parsePages("minPages");
+  const maxPages = parsePages("maxPages");
+  if (Number.isNaN(minPages) || Number.isNaN(maxPages)) return { error: "Sayfa sayıları 0 veya daha büyük tam sayı olmalı." };
+  if (minPages !== null && maxPages !== null && minPages > maxPages) {
+    return { error: "Minimum sayfa, maksimum sayfadan büyük olamaz." };
+  }
+
+  const { data: current } = await auth.supabase
+    .from("thesis_guidelines")
+    .select("university_name, institute_name")
+    .eq("id", guidelineId)
+    .maybeSingle();
+  if (!current) return { error: "Kılavuz bulunamadı." };
+
+  const institutionChanged =
+    current.university_name !== universityName || (current.institute_name ?? "") !== instituteName;
+
+  const { data: university } = await auth.supabase
+    .from("universities")
+    .select("id")
+    .ilike("name", universityName)
+    .limit(1)
+    .maybeSingle();
+
+  let academicUnitId: string | null = null;
+  if (university?.id && instituteName) {
+    const { data: unit } = await auth.supabase
+      .from("academic_units")
+      .select("id")
+      .eq("university_id", university.id)
+      .ilike("name", instituteName)
+      .limit(1)
+      .maybeSingle();
+    academicUnitId = unit?.id ?? null;
+  }
+
+  const { error } = await auth.supabase
+    .from("thesis_guidelines")
+    .update({
+      university_name: universityName,
+      institute_name: instituteName || null,
+      university_id: university?.id ?? null,
+      academic_unit_id: academicUnitId,
+      version_label: String(formData.get("versionLabel") ?? "").trim() || null,
+      source_url: String(formData.get("sourceUrl") ?? "").trim() || null,
+      min_pages: minPages,
+      max_pages: maxPages,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+      ...(institutionChanged
+        ? {
+            analysis_status: "needs_review",
+            reviewed_by: null,
+            reviewed_at: null,
+            review_notes: "Kurum bilgisi değişti; yeniden akademik onay gerekiyor.",
+          }
+        : {}),
+    })
+    .eq("id", guidelineId);
+
+  if (error) {
+    console.error(error);
+    return { error: "Kılavuz güncellenirken bir hata oluştu." };
+  }
+
+  revalidatePath("/dashboard/guidelines");
+  return { success: true };
+}
+
 export async function approveGuideline(guidelineId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

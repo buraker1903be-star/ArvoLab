@@ -100,6 +100,38 @@ export async function updateLiteratureStatus(sourceId: string, status: string): 
   return { success: true };
 }
 
+export async function updateLiteratureSource(sourceId: string, formData: FormData): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { error: "Kaynak başlığı zorunludur." };
+  const sourceType = String(formData.get("sourceType") ?? "article");
+
+  const { data, error } = await ctx.supabase
+    .from("literature_sources")
+    .update({
+      title,
+      authors: String(formData.get("authors") ?? "").trim() || null,
+      year: String(formData.get("year") ?? "").trim() || null,
+      source_type: SOURCE_TYPES.includes(sourceType) ? sourceType : "other",
+      doi_or_url: String(formData.get("doiOrUrl") ?? "").trim() || null,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+    })
+    .eq("id", sourceId)
+    .eq("owner_id", ctx.user.id)
+    .select("id");
+
+  if (error) {
+    console.error(error);
+    return { error: "Güncellenirken bir hata oluştu." };
+  }
+  if (!data?.length) return { error: "Kaynak bulunamadı ya da size ait değil." };
+
+  revalidatePath(PAGE_PATH);
+  return { success: true };
+}
+
 export async function deleteLiteratureSource(sourceId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;
