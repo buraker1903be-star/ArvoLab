@@ -8,6 +8,8 @@ import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import TiptapImage from "@tiptap/extension-image";
 import { Superscript } from "@tiptap/extension-superscript";
+import { Caption } from "@/lib/tiptap-caption";
+import { SearchHighlight } from "@/lib/tiptap-search";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { TextStyleKit } from "@tiptap/extension-text-style";
 import {
@@ -37,7 +39,11 @@ import {
   History,
   BookMarked,
   Printer,
+  Captions,
+  TableProperties,
+  Search,
 } from "lucide-react";
+import FindReplaceBar from "./find-replace-bar";
 import VersionsDialog from "./versions-dialog";
 import CiteDialog from "./cite-dialog";
 import ManuscriptComments from "./manuscript-comments";
@@ -188,8 +194,14 @@ type FootnoteDialogState = { mode: "insert"; text: string } | { mode: "edit"; po
 function selectToolbarState({ editor }: { editor: Editor | null }) {
   if (!editor) return null;
   const footnotes: { pos: number; text: string }[] = [];
+  let figures = 0;
+  let tables = 0;
   editor.state.doc.descendants((node, pos) => {
     if (node.type.name === "footnoteReference") footnotes.push({ pos, text: String(node.attrs.text ?? "") });
+    else if (node.type.name === "paragraph") {
+      if (node.attrs.caption === "figure") figures += 1;
+      else if (node.attrs.caption === "table") tables += 1;
+    }
   });
   return {
     fontFamily: (editor.getAttributes("textStyle").fontFamily as string | undefined) ?? "",
@@ -214,6 +226,9 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
     footnotes,
     headings: collectHeadings(editor.state.doc),
     empty: isDocumentEmpty(editor.state.doc),
+    caption: (editor.getAttributes("paragraph").caption as string | null | undefined) ?? null,
+    figures,
+    tables,
   };
 }
 
@@ -248,6 +263,7 @@ export default function ManuscriptEditor({
   const [includeToc, setIncludeToc] = useState(initialIncludeToc);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
   const [margins, setMargins] = useState<PageMargins>(
     initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
   );
@@ -406,6 +422,8 @@ export default function ManuscriptEditor({
       TableHeader,
       TableCell,
       FootnoteReference,
+      Caption,
+      SearchHighlight,
     ],
     content: initialContent ?? "",
     onCreate: ({ editor: created }) => {
@@ -423,6 +441,9 @@ export default function ManuscriptEditor({
       attributes: {
         class: "manuscript-editor-content",
         "aria-label": "Çalışma metni",
+        // Tarayıcının yazım denetimi Türkçe sözlükle çalışsın
+        spellcheck: "true",
+        lang: "tr",
         style: [
           guideline?.settings.fontFamily ? `font-family: '${guideline.settings.fontFamily}'` : "",
           guideline?.settings.fontSizePt ? `font-size: ${guideline.settings.fontSizePt}pt` : "",
@@ -467,6 +488,13 @@ export default function ManuscriptEditor({
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         void saveNowRef.current();
+      } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        // Yalnızca editör alanındayken; sayfanın başka yerinde tarayıcının kendi araması çalışır.
+        const target = event.target as HTMLElement | null;
+        if (target?.closest?.(".manuscript-layout")) {
+          event.preventDefault();
+          setFindOpen(true);
+        }
       }
     };
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -888,6 +916,20 @@ export default function ManuscriptEditor({
         <ToolbarButton label="Kaynaktan atıf ekle" onClick={() => setCiteOpen(true)}>
           <BookMarked size={16} />
         </ToolbarButton>
+        <ToolbarButton
+          label="Şekil başlığı (otomatik numaralı)"
+          active={ui.caption === "figure"}
+          onClick={() => editor.chain().focus().toggleCaption("figure").run()}
+        >
+          <Captions size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Tablo başlığı (otomatik numaralı)"
+          active={ui.caption === "table"}
+          onClick={() => editor.chain().focus().toggleCaption("table").run()}
+        >
+          <TableProperties size={16} />
+        </ToolbarButton>
 
         <span className="toolbar-divider" />
 
@@ -909,6 +951,9 @@ export default function ManuscriptEditor({
         <ToolbarButton label="Sürüm geçmişi" onClick={() => setVersionsOpen(true)}>
           <History size={16} />
         </ToolbarButton>
+        <ToolbarButton label="Bul ve değiştir (Ctrl+F)" active={findOpen} onClick={() => setFindOpen((open) => !open)}>
+          <Search size={16} />
+        </ToolbarButton>
 
         <span className="toolbar-spacer" />
         <button
@@ -921,6 +966,7 @@ export default function ManuscriptEditor({
         >
           {statusLabel}
         </button>
+        {findOpen ? <FindReplaceBar editor={editor} onClose={() => setFindOpen(false)} /> : null}
       </div>
 
       {draftOffer ? (
@@ -1233,6 +1279,8 @@ export default function ManuscriptEditor({
         maxPages={guideline?.maxPages ?? null}
         pageTone={pageTone}
         documentEmpty={ui.empty}
+        figures={ui.figures}
+        tables={ui.tables}
         onJump={handleJump}
         onInsert={handleInsertSections}
         onTemplate={handleTemplate}

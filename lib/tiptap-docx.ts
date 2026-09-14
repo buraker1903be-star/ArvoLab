@@ -17,8 +17,10 @@ import {
   PageNumber,
   PageBreak,
   TableOfContents,
+  SequentialIdentifier,
   type ParagraphChild,
 } from "docx";
+import { CAPTION_LABELS, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
 
 interface TiptapMark {
   type: string;
@@ -213,6 +215,22 @@ function inlineChildren(nodes: TiptapNode[], ctx: ConversionContext): ParagraphC
 function paragraphFrom(node: TiptapNode, ctx: ConversionContext, opts: BlockOptions) {
   const align = node.attrs?.textAlign as string | undefined;
   const list = opts.list;
+  const caption = node.attrs?.caption;
+  if (!list && isCaptionKind(caption)) {
+    // "Şekil 3. …" — numara Word'ün SEQ alanıdır; şekil/tablo listeleri bu alanlardan oluşur.
+    const label = CAPTION_LABELS[caption];
+    return new Paragraph({
+      alignment: AlignmentType.CENTER,
+      keepNext: caption === "table",
+      spacing: lineSpacingValue(node.attrs?.lineSpacing),
+      children: [
+        new TextRun({ text: `${label} `, bold: true }),
+        new SequentialIdentifier(label),
+        new TextRun({ text: ". ", bold: true }),
+        ...inlineChildren(node.content ?? [], ctx),
+      ],
+    });
+  }
   return new Paragraph({
     alignment: align ? ALIGNMENTS[align] : undefined,
     spacing: lineSpacingValue(node.attrs?.lineSpacing),
@@ -345,6 +363,14 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
   }
 }
 
+function captionKinds(nodes: TiptapNode[], found = new Set<CaptionKind>()): Set<CaptionKind> {
+  for (const node of nodes) {
+    if (node.type === "paragraph" && isCaptionKind(node.attrs?.caption)) found.add(node.attrs.caption);
+    if (node.content) captionKinds(node.content, found);
+  }
+  return found;
+}
+
 /** Kılavuzdan gelen gövde metni varsayılanları (editördeki görünümle aynı) */
 export interface DocxTextDefaults {
   fontFamily?: string;
@@ -403,6 +429,21 @@ export async function buildDocxFromTiptap({
       new TableOfContents("İçindekiler", { hyperlink: true, headingStyleRange: "1-3" }),
       new Paragraph({ children: [new PageBreak()] })
     );
+    // Türk tez kılavuzlarındaki sıra: Tablolar Listesi, ardından Şekiller Listesi (varsa).
+    const kinds = captionKinds(doc.content ?? []);
+    for (const kind of ["table", "figure"] as CaptionKind[]) {
+      if (!kinds.has(kind)) continue;
+      const label = CAPTION_LABELS[kind];
+      bodyElements.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 240 },
+          children: [new TextRun({ text: kind === "table" ? "TABLOLAR LİSTESİ" : "ŞEKİLLER LİSTESİ", bold: true })],
+        }),
+        new TableOfContents(`${label} listesi`, { hyperlink: true, captionLabelIncludingNumbers: label }),
+        new Paragraph({ children: [new PageBreak()] })
+      );
+    }
   }
   for (const node of doc.content ?? []) {
     bodyElements.push(...(await blockToDocx(node, ctx, { quoteDepth: 0 })));

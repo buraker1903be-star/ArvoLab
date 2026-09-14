@@ -14,6 +14,8 @@ interface ManuscriptOutlineProps {
   maxPages: number | null;
   pageTone: PageRangeTone;
   documentEmpty: boolean;
+  figures: number;
+  tables: number;
   onJump: (heading: OutlineHeading) => void;
   onInsert: (sections: string[]) => void;
   onTemplate: () => void;
@@ -39,6 +41,8 @@ export default function ManuscriptOutline({
   maxPages,
   pageTone,
   documentEmpty,
+  figures,
+  tables,
   onJump,
   onInsert,
   onTemplate,
@@ -114,6 +118,11 @@ export default function ManuscriptOutline({
               {PAGE_HINT[pageTone] ? ` · ${PAGE_HINT[pageTone]}` : ""}
             </p>
           </>
+        ) : null}
+        {figures || tables ? (
+          <p className="muted text-sm">
+            {[tables ? `${tables} tablo` : null, figures ? `${figures} şekil` : null].filter(Boolean).join(" · ")}
+          </p>
         ) : null}
         <p className="muted text-micro">Tahmin; şekil, tablo ve kapak dahil değildir.</p>
       </section>

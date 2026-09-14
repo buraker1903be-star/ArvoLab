@@ -60,6 +60,7 @@
 .print-body pre { white-space: pre-wrap; font-size: .9em; }
 .print-body a { color: inherit; }
 .print-body .print-fn { font-size: .7em; }
+.print-body .print-caption { text-align: center; font-size: .95em; break-after: avoid; }
 .print-body hr { border: 0; border-top: 1px solid var(--print-ink); }
 
 .print-cover {

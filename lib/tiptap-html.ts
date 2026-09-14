@@ -51,7 +51,10 @@ function blockStyle(attrs: Record<string, unknown> = {}) {
 
 interface RenderContext {
   footnotes: string[];
+  captions: { figure: number; table: number };
 }
+
+const CAPTION_LABELS = { figure: "Şekil", table: "Tablo" } as const;
 
 function renderText(node: Node): string {
   let html = escapeHtml(node.text ?? "");
@@ -107,8 +110,13 @@ function renderNode(node: Node, ctx: RenderContext): string {
     case "footnoteReference":
       ctx.footnotes.push(String(attrs.text ?? ""));
       return `<sup class="print-fn">${ctx.footnotes.length}</sup>`;
-    case "paragraph":
+    case "paragraph": {
+      if (attrs.caption === "figure" || attrs.caption === "table") {
+        const number = ++ctx.captions[attrs.caption];
+        return `<p class="print-caption"${blockStyle(attrs)}><strong>${CAPTION_LABELS[attrs.caption]} ${number}.</strong> ${renderNodes(node.content, ctx)}</p>`;
+      }
       return `<p${blockStyle(attrs)}>${renderNodes(node.content, ctx) || "&nbsp;"}</p>`;
+    }
     case "heading": {
       const level = Math.min(Math.max(Number(attrs.level) || 1, 1), 4);
       return `<h${level}${blockStyle(attrs)}>${renderNodes(node.content, ctx)}</h${level}>`;
@@ -149,6 +157,6 @@ function renderNode(node: Node, ctx: RenderContext): string {
 }
 
 export function renderTiptapHtml(doc: { content?: Node[] } | null | undefined): { html: string; footnotes: string[] } {
-  const ctx: RenderContext = { footnotes: [] };
+  const ctx: RenderContext = { footnotes: [], captions: { figure: 0, table: 0 } };
   return { html: renderNodes(doc?.content, ctx), footnotes: ctx.footnotes };
 }
