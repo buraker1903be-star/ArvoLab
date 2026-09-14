@@ -59,7 +59,7 @@ import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/lit
 import type { CitationStyle } from "@/lib/citation-format";
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
-import type { TiptapDoc } from "@/lib/tiptap-text";
+import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
   saveManuscript,
   runManuscriptCheck,
@@ -1463,6 +1463,7 @@ export default function ManuscriptEditor({
         projectId={projectId}
         flush={() => saveNow()}
         onRestored={handleRestored}
+        getCurrentText={() => extractPlainText(JSON.parse(JSON.stringify(editor.getJSON())) as TiptapDoc)}
       />
       <CiteDialog open={citeOpen} onClose={() => setCiteOpen(false)} projectId={projectId} style={style} onPick={handleCite} />
       <ImportDialog

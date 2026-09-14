@@ -69,6 +69,20 @@ export async function getVersionPreview(versionId: string): Promise<{ text?: str
   return { text: (data.plain_text ?? "").slice(0, 6000), wordCount: data.word_count ?? 0 };
 }
 
+/** Karşılaştırma için sürümün tam düz metni (RLS: yalnızca erişimi olanlar) */
+export async function getVersionText(versionId: string): Promise<{ text?: string; createdAt?: string; label?: string | null; error?: string }> {
+  if (!UUID_PATTERN.test(versionId)) return { error: "Geçersiz sürüm." };
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+  const { data, error } = await ctx.supabase
+    .from("project_manuscript_versions")
+    .select("plain_text, created_at, label")
+    .eq("id", versionId)
+    .maybeSingle();
+  if (error || !data) return { error: "Sürüm bulunamadı." };
+  return { text: (data.plain_text ?? "").slice(0, 3_000_000), createdAt: data.created_at, label: data.label };
+}
+
 // Geri yüklemeden önce mevcut hâl "restore" sürümü olarak saklanır; geri yükleme de geri alınabilir.
 export async function restoreManuscriptVersion(
   projectId: string,

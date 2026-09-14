@@ -543,6 +543,28 @@
   .cite-form-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Sürüm karşılaştırma */
+.compare-back { justify-self: start; }
+.compare-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--fs-sm); font-weight: 650; }
+.diff-list {
+  display: grid;
+  gap: 6px;
+  max-height: 55vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.diff-list li { padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface-2); overflow-wrap: anywhere; }
+.diff-list .diff-same { padding: 2px; background: none; color: var(--muted); font-size: var(--fs-micro); text-align: center; }
+.diff-list .diff-added { border-left: 3px solid var(--success); }
+.diff-list .diff-removed { border-left: 3px solid var(--danger); }
+.diff-list .diff-changed { border-left: 3px solid var(--warning); }
+.diff-list ins { border-radius: 2px; background: color-mix(in srgb, var(--success) 22%, transparent); color: var(--ink); text-decoration: none; }
+.diff-list del { border-radius: 2px; background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--ink-soft); text-decoration: line-through; }
+
 /* Word'den aktarma seçenekleri */
 .import-modes { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
 .import-modes legend { margin-bottom: 4px; padding: 0; }

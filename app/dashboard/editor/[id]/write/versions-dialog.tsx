@@ -6,11 +6,21 @@ import Dialog from "@/app/dashboard/_components/dialog";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import {
   getVersionPreview,
+  getVersionText,
   listManuscriptVersions,
   restoreManuscriptVersion,
   saveNamedVersion,
   type ManuscriptVersion,
 } from "@/app/actions/manuscript-versions";
+import { diffTexts, type TextDiff } from "@/lib/text-diff";
+
+interface CompareState {
+  version: ManuscriptVersion;
+  diff: TextDiff | null;
+  error?: string;
+}
+
+const MAX_BLOCKS_SHOWN = 400;
 
 const KIND_LABEL: Record<ManuscriptVersion["kind"], string> = {
   auto: "Otomatik",
@@ -29,17 +39,20 @@ interface VersionsDialogProps {
   flush: () => Promise<boolean>;
   /** Geri yükleme bitince editör yeniden yüklenir */
   onRestored: () => void;
+  /** Karşılaştırma için ekrandaki metnin düz hâli */
+  getCurrentText: () => string;
 }
 
 // Sürüm geçmişi: otomatik (10 dakikada bir), adlandırılmış ve geri yükleme öncesi yedekler.
 // Geri yükleme de geri alınabilir: mevcut hâl önce yedeklenir.
-export default function VersionsDialog({ open, onClose, projectId, flush, onRestored }: VersionsDialogProps) {
+export default function VersionsDialog({ open, onClose, projectId, flush, onRestored, getCurrentText }: VersionsDialogProps) {
   const [versions, setVersions] = useState<ManuscriptVersion[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<{ id: string; text: string } | null>(null);
+  const [compare, setCompare] = useState<CompareState | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +71,19 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
   const close = () => {
     setPreview(null);
     setVersions(null);
+    setCompare(null);
     onClose();
+  };
+
+  // Seçilen sürüm ile ekrandaki metin: paragraf ve kelime düzeyinde fark (tarayıcıda hesaplanır).
+  const startCompare = async (version: ManuscriptVersion) => {
+    setCompare({ version, diff: null });
+    const result = await getVersionText(version.id);
+    if (result.error) {
+      setCompare({ version, diff: null, error: result.error });
+      return;
+    }
+    setCompare({ version, diff: diffTexts(result.text ?? "", getCurrentText()) });
   };
 
   const saveVersion = async () => {
@@ -121,6 +146,9 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
       title="Önceki sürümler"
       description="Yazarken en fazla 10 dakikada bir otomatik sürüm alınır. Önemli anları adlandırarak saklayabilirsiniz."
     >
+      {compare ? (
+        <ComparePanel compare={compare} onBack={() => setCompare(null)} />
+      ) : (
       <div className="stack">
         <form
           className="version-save"
@@ -164,10 +192,15 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
                       {version.authorName ? ` · ${version.authorName}` : ""}
                     </small>
                   </button>
-                  <button type="button" className="projects-filter-button" disabled={busy} onClick={() => void restore(version)}>
-                    <RotateCcw size={14} aria-hidden="true" />
-                    Geri yükle
-                  </button>
+                  <span className="cluster">
+                    <button type="button" className="projects-filter-button" disabled={busy} onClick={() => void startCompare(version)}>
+                      Karşılaştır
+                    </button>
+                    <button type="button" className="projects-filter-button" disabled={busy} onClick={() => void restore(version)}>
+                      <RotateCcw size={14} aria-hidden="true" />
+                      Geri yükle
+                    </button>
+                  </span>
                 </div>
                 {preview?.id === version.id ? <div className="version-preview">{preview.text}</div> : null}
               </li>
@@ -175,6 +208,64 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
           </ul>
         )}
       </div>
+      )}
     </Dialog>
+  );
+}
+
+function ComparePanel({ compare, onBack }: { compare: CompareState; onBack: () => void }) {
+  const { version, diff, error } = compare;
+  return (
+    <div className="stack">
+      <button type="button" className="result-link compare-back" onClick={onBack}>
+        ← Sürümlere dön
+      </button>
+      <p className="muted text-sm">
+        <strong>{version.label ?? KIND_LABEL[version.kind]}</strong> ({formatTime(version.createdAt)}) ile şimdiki metin
+      </p>
+      {error ? (
+        <p className="alert" data-tone="danger" role="alert">{error}</p>
+      ) : !diff ? (
+        <p className="muted text-sm" aria-busy="true">Karşılaştırılıyor…</p>
+      ) : diff.identical ? (
+        <p className="tone-text" data-tone="success">Bu sürümden bu yana metinde değişiklik yok.</p>
+      ) : (
+        <>
+          <div className="compare-stats">
+            <span className="tone-text" data-tone="success">+{diff.stats.addedWords.toLocaleString("tr-TR")} kelime</span>
+            <span className="tone-text" data-tone="danger">−{diff.stats.removedWords.toLocaleString("tr-TR")} kelime</span>
+            <span className="muted">
+              {diff.stats.changedParagraphs} paragraf değişti · {diff.stats.addedParagraphs} eklendi · {diff.stats.removedParagraphs} silindi
+            </span>
+          </div>
+          <ol className="diff-list" aria-label="Değişiklikler">
+            {diff.blocks.slice(0, MAX_BLOCKS_SHOWN).map((block, index) =>
+              block.kind === "same" ? (
+                <li key={index} className="diff-same">… {block.count} paragraf aynı …</li>
+              ) : block.kind === "added" ? (
+                <li key={index} className="diff-added"><ins>{block.text}</ins></li>
+              ) : block.kind === "removed" ? (
+                <li key={index} className="diff-removed"><del>{block.text}</del></li>
+              ) : (
+                <li key={index} className="diff-changed">
+                  {block.parts.map((part, partIndex) =>
+                    part.type === "same" ? (
+                      <span key={partIndex}>{part.text}</span>
+                    ) : part.type === "added" ? (
+                      <ins key={partIndex}>{part.text}</ins>
+                    ) : (
+                      <del key={partIndex}>{part.text}</del>
+                    )
+                  )}
+                </li>
+              )
+            )}
+          </ol>
+          {diff.blocks.length > MAX_BLOCKS_SHOWN ? (
+            <p className="muted text-sm">İlk {MAX_BLOCKS_SHOWN} fark gösteriliyor.</p>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }
