@@ -57,6 +57,8 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// _next/ altındaki her şey (static, image, geliştirmede hmr soketi) proxy'den geçmez;
+// aksi halde geliştirme sunucusunun canlı yenileme bağlantısı kopuyordu.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|api/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: ["/((?!_next/|api/|favicon.ico|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };

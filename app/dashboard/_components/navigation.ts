@@ -14,6 +14,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+/** Kenar çubuğu daraltma tercihi (sidebar-toggle.tsx yazar, dashboard düzeni okur). */
+export const NAV_COOKIE = "arvolab_nav";
+
 export interface NavItem {
   label: string;
   /** Mobil alt sekme çubuğundaki kısa ad */

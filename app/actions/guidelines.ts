@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
@@ -155,17 +154,16 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
   return { success: true };
 }
 
-export async function createGuideline(formData: FormData) {
-  const auth = await requireRole(MANAGER_ROLES);
-  if ("error" in auth) {
-    redirect(auth.reason === "unauthenticated" ? "/" : "/dashboard/guidelines?error=forbidden");
-  }
+export async function createGuideline(formData: FormData): Promise<ActionResult> {
+  const auth = await requireRole(MANAGER_ROLES, "Kılavuz eklemek için Akademik Yönetici veya üzeri bir rol gerekir.");
+  if ("error" in auth) return { error: auth.error };
   const { supabase, user } = auth;
 
   const universityName = String(formData.get("universityName") ?? "").trim();
-  if (!universityName) {
-    redirect("/dashboard/guidelines?error=missing-university");
-  }
+  if (!universityName) return { error: "Üniversite adı zorunludur." };
+
+  const citationStyle = String(formData.get("citationStyle") ?? "apa7");
+  if (!["apa7", "vancouver", "chicago", "ieee"].includes(citationStyle)) return { error: "Geçersiz kaynakça sistemi." };
 
   const requiredSectionsRaw = String(formData.get("requiredSections") ?? "");
   const requiredSections = requiredSectionsRaw
@@ -203,7 +201,7 @@ export async function createGuideline(formData: FormData) {
     academic_unit_id: academicUnitId,
     version_label: String(formData.get("versionLabel") ?? "").trim() || null,
     source_url: String(formData.get("sourceUrl") ?? "").trim() || null,
-    citation_style: String(formData.get("citationStyle") ?? "apa7"),
+    citation_style: citationStyle,
     required_sections: requiredSections,
     min_pages: minPagesRaw ? Number(minPagesRaw) : null,
     max_pages: maxPagesRaw ? Number(maxPagesRaw) : null,
@@ -215,11 +213,11 @@ export async function createGuideline(formData: FormData) {
 
   if (error) {
     console.error(error);
-    redirect("/dashboard/guidelines?error=save-failed");
+    return { error: "Kılavuz kaydedilirken bir hata oluştu." };
   }
 
   revalidatePath("/dashboard/guidelines");
-  redirect("/dashboard/guidelines");
+  return { success: true };
 }
 
 // Kılavuzun kimlik bilgileri (üniversite, enstitü, sürüm, kaynak, sayfa aralığı).

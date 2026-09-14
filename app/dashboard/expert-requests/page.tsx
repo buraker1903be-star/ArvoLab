@@ -12,6 +12,7 @@ import { getMyProjects } from "@/app/actions/citation-check";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { isExpertEligible, requestTypeLabel } from "@/lib/project-labels";
 import ActionForm from "../action-form";
+import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -21,18 +22,7 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "İptal edildi",
 };
 
-const errorMessages: Record<string, string> = {
-  "save-failed": "Talep oluşturulurken bir hata oluştu.",
-};
-
-type ExpertRequestsPageProps = {
-  searchParams: Promise<{ error?: string }>;
-};
-
-export default async function ExpertRequestsPage({ searchParams }: ExpertRequestsPageProps) {
-  const params = await searchParams;
-  const errorMessage = params.error ? errorMessages[params.error] : null;
-
+export default async function ExpertRequestsPage() {
   const [projects, myRequests, profile] = await Promise.all([
     getMyProjects(),
     getMyRequests(),
@@ -68,64 +58,58 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
             kurum uzmanlarından profesyonel danışmanlık talep edebilirsiniz.
           </p>
         </div>
-      </section>
+        <PanelDrawer
+          triggerLabel="Yeni talep"
+          triggerIcon={<Plus size={16} aria-hidden="true" />}
+          kicker="Danışmanlık"
+          title="Uzmandan destek iste"
+          description="Hangi konuda desteğe ihtiyacınız var, kısaca belirtin."
+        >
+          <ActionForm className="project-form-grid" action={createConsultancyRequest} successMessage="Talebiniz uzmanlara iletildi.">
+            {projects.length > 0 ? (
+              <label>
+                <span>Bağlı çalışma (opsiyonel)</span>
+                <select name="projectId" defaultValue="">
+                  <option value="">Seçili çalışma yok</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <label>
+                <span>Çalışma başlığı (opsiyonel etiket)</span>
+                <input name="projectTitle" type="text" placeholder="Örn. Eğitim Bilimleri Tezi" />
+              </label>
+            )}
 
-      {errorMessage ? (
-        <p className="alert" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
-
-      <section className="project-form-card mb-lg">
-        <div className="project-form-heading">
-          <h2>Yeni Talep Oluştur</h2>
-          <p>Hangi konuda desteğe ihtiyacınız var, kısaca belirtin.</p>
-        </div>
-
-        <form className="project-form-grid" action={createConsultancyRequest}>
-          {projects.length > 0 ? (
             <label>
-              <span>Bağlı çalışma (opsiyonel)</span>
-              <select name="projectId" defaultValue="">
-                <option value="">Seçili çalışma yok</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
+              <span>Destek türü</span>
+              <select name="requestType" defaultValue="analysis">
+                <option value="analysis">Analiz desteği</option>
+                <option value="editing">Dil/biçim düzenleme</option>
+                <option value="methodology">Metodoloji danışmanlığı</option>
+                <option value="statistics">İstatistik desteği</option>
+                <option value="full_review">Kapsamlı inceleme</option>
+                <option value="other">Diğer</option>
               </select>
             </label>
-          ) : (
-            <label>
-              <span>Çalışma başlığı (opsiyonel etiket)</span>
-              <input name="projectTitle" type="text" placeholder="Örn. Eğitim Bilimleri Tezi" />
+
+            <label className="project-form-full">
+              <span>Mesaj</span>
+              <textarea name="message" rows={4} placeholder="İhtiyacınızı kısaca açıklayın" />
             </label>
-          )}
 
-          <label>
-            <span>Destek türü</span>
-            <select name="requestType" defaultValue="analysis">
-              <option value="analysis">Analiz desteği</option>
-              <option value="editing">Dil/biçim düzenleme</option>
-              <option value="methodology">Metodoloji danışmanlığı</option>
-              <option value="statistics">İstatistik desteği</option>
-              <option value="full_review">Kapsamlı inceleme</option>
-              <option value="other">Diğer</option>
-            </select>
-          </label>
-
-          <label className="project-form-full">
-            <span>Mesaj</span>
-            <textarea name="message" rows={4} placeholder="İhtiyacınızı kısaca açıklayın" />
-          </label>
-
-          <div className="project-form-actions">
-            <button type="submit" className="projects-primary-button">
-              <Plus size={16} aria-hidden="true" />
-              Talebi gönder
-            </button>
-          </div>
-        </form>
+            <div className="project-form-actions">
+              <button type="submit" className="projects-primary-button">
+                <Plus size={16} aria-hidden="true" />
+                Talebi gönder
+              </button>
+            </div>
+          </ActionForm>
+        </PanelDrawer>
       </section>
 
       {canActAsExpert && openRequests.length > 0 && (
@@ -144,7 +128,7 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
                     <p>{r.message || "Ek mesaj yok"}</p>
                   </div>
                 </div>
-                <ActionForm action={handleAccept.bind(null, r.id)} className="mt-sm">
+                <ActionForm action={handleAccept.bind(null, r.id)} className="mt-sm" successMessage="Talebi üstlendiniz.">
                   <button type="submit" className="projects-primary-button">
                     <CheckCircle2 size={15} aria-hidden="true" />
                     Talebi üstlen
@@ -172,7 +156,7 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
                   </div>
                 </div>
                 {r.status === "accepted" ? (
-                  <ActionForm action={handleComplete.bind(null, r.id)} className="mt-sm">
+                  <ActionForm action={handleComplete.bind(null, r.id)} className="mt-sm" successMessage="Talep tamamlandı.">
                     <button type="submit" className="projects-primary-button">
                       <CheckCircle2 size={15} aria-hidden="true" />
                       Tamamlandı olarak işaretle
@@ -207,6 +191,7 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
                     action={handleCancel.bind(null, r.id)}
                     className="mt-sm"
                     confirmMessage="Bu destek talebini iptal etmek istediğinize emin misiniz?"
+                    successMessage="Talep iptal edildi."
                   >
                     <button type="submit" className="projects-filter-button">
                       <XCircle size={14} aria-hidden="true" />

@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
@@ -42,23 +41,18 @@ export async function getLiteratureSources(): Promise<LiteratureSource[]> {
   return data ?? [];
 }
 
-export async function createLiteratureSource(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
+export async function createLiteratureSource(formData: FormData): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
 
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) {
-    redirect(`${PAGE_PATH}?error=missing-title`);
-  }
+  if (!title) return { error: "Kaynak başlığı zorunludur." };
 
   const sourceType = String(formData.get("sourceType") ?? "article");
   const status = String(formData.get("status") ?? "to_review");
 
-  const { error } = await supabase.from("literature_sources").insert({
-    owner_id: user.id,
+  const { error } = await ctx.supabase.from("literature_sources").insert({
+    owner_id: ctx.user.id,
     project_id: String(formData.get("projectId") ?? "").trim() || null,
     title,
     authors: String(formData.get("authors") ?? "").trim() || null,
@@ -71,11 +65,11 @@ export async function createLiteratureSource(formData: FormData) {
 
   if (error) {
     console.error(error);
-    redirect(`${PAGE_PATH}?error=save-failed`);
+    return { error: "Kaydedilirken bir hata oluştu." };
   }
 
   revalidatePath(PAGE_PATH);
-  redirect(PAGE_PATH);
+  return { success: true };
 }
 
 export async function updateLiteratureStatus(sourceId: string, status: string): Promise<ActionResult> {

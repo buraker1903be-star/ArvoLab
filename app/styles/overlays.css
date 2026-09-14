@@ -1,0 +1,224 @@
+/* ============================================================
+   Katmanlar: bildirim (toast) ve pencere / alttan açılan sayfa.
+   Bileşenler: app/dashboard/_components/toaster.tsx, panel-drawer.tsx
+   ============================================================ */
+
+/* ---------- Bildirim ---------- */
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, -20px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes toast-up { from { opacity: 0; transform: translate(-50%, 18px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes check-pop { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes check-draw { to { stroke-dashoffset: 0; } }
+
+.toast {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(440px, calc(100vw - 28px));
+  padding: 14px 12px 14px 14px;
+  border: 1px solid color-mix(in srgb, var(--danger) 22%, var(--line));
+  border-radius: var(--r-lg);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--brand-900) 20%, transparent);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  transform: translateX(-50%);
+  animation: toast-in .55s var(--ease-spring) both;
+}
+.toast-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--fs-md);
+  font-weight: 800;
+}
+.toast-body { flex: 1; min-width: 0; padding-top: 4px; }
+.toast-body strong { display: block; margin-bottom: 2px; color: var(--danger); font-size: var(--fs-body); }
+.toast-body span { color: var(--muted); font-size: var(--fs-base); }
+.toast-close {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+}
+.toast-close::after { content: ""; position: absolute; inset: -8px; }
+.toast.is-success { border-color: color-mix(in srgb, var(--success) 28%, var(--line)); }
+.toast.is-success .toast-icon {
+  background: var(--success);
+  color: var(--n-0);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--success) 35%, transparent);
+  animation: check-pop .55s var(--ease-spring) both;
+}
+.toast.is-success .toast-icon path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: check-draw .4s .18s ease-out forwards; }
+.toast.is-success .toast-body strong { color: var(--ink); }
+
+/* Mobilde iOS gibi altta: sekme çubuğunun ve ev çubuğu payının üstünde */
+@media (max-width: 900px) {
+  .toast {
+    top: auto;
+    bottom: calc(var(--tabbar-height) + 14px + env(safe-area-inset-bottom));
+    width: min(440px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    animation-name: toast-up;
+  }
+}
+
+/* ---------- Pencere (masaüstü) / alttan açılan sayfa (telefon) ---------- */
+html.drawer-open { overflow: hidden; }
+
+.drawer-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+  visibility: hidden;
+  transition: visibility 0s linear .35s;
+}
+.drawer-root.open { pointer-events: auto; visibility: visible; transition: visibility 0s; }
+.drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay);
+  opacity: 0;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  cursor: default;
+  transition: opacity .3s ease;
+}
+.drawer-root.open .drawer-backdrop { opacity: 1; }
+
+.drawer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(680px, 100%);
+  max-height: min(88dvh, 900px);
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-xl);
+  outline: none;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(10px) scale(.97);
+  transition: opacity .22s ease, transform .5s var(--ease-spring);
+}
+.drawer-root.open .drawer { opacity: 1; transform: none; }
+
+.drawer-header {
+  position: relative;
+  flex: none;
+  padding: 24px 76px 18px 26px;
+  border-bottom: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+.drawer-header .dashboard-kicker { display: block; margin-bottom: 6px; }
+.drawer-header h2 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.2; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.drawer-header p { margin: 8px 0 0; color: var(--muted); font-size: var(--fs-base); line-height: 1.55; }
+.drawer-close {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: transform .34s var(--ease-spring), background-color .2s ease;
+}
+.drawer-close::after { content: ""; position: absolute; inset: -6px; }
+.drawer-close:active { transform: scale(.92); transition-duration: .08s; }
+
+.drawer-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 22px 26px 26px; }
+/* Pencerede hata mesajı formun en üstünde (kaydet çubuğunun arkasında kalmasın) */
+.drawer-body .action-form-error {
+  order: -1;
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 22%, transparent);
+  border-radius: var(--r-sm);
+  background: var(--danger-soft);
+}
+.drawer-body .guideline-review-form { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; }
+/* Kaydet çubuğu: gövdenin altına yapışık, buzlu */
+.drawer-body .project-form-actions {
+  position: sticky;
+  bottom: -26px;
+  z-index: 2;
+  margin: 18px -26px -26px;
+  padding: 14px 26px;
+  border-top: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+@media (max-width: 760px) {
+  .drawer-root { align-items: flex-end; padding: max(10px, env(safe-area-inset-top)) 0 0; transition: visibility 0s linear .5s; }
+  /* Zayıf cihazda tam ekran bulanıklık kasıyor: düz karartma */
+  .drawer-backdrop { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .drawer {
+    width: 100%;
+    max-height: calc(100dvh - max(10px, env(safe-area-inset-top)) - 6px);
+    border: 0;
+    border-radius: 22px 22px 0 0;
+    opacity: 1;
+    box-shadow: 0 -16px 48px color-mix(in srgb, var(--brand-950) 26%, transparent);
+    transform: translateY(104%);
+    transition: transform .5s var(--ease-sheet);
+  }
+  .drawer-header { padding: 24px 64px 14px 20px; background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  /* Tutma çizgisi */
+  .drawer-header::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 38px;
+    height: 5px;
+    margin-left: -19px;
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--muted) 40%, transparent);
+  }
+  .drawer-header h2 { font-size: var(--fs-xl); }
+  .drawer-close { top: 18px; right: 16px; width: 32px; height: 32px; }
+  .drawer-body { padding: 18px 20px calc(24px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+  .drawer-body :is(.project-form-grid, .guideline-review-form) { grid-template-columns: 1fr; }
+  .drawer-body .project-form-actions {
+    bottom: calc(-24px - env(safe-area-inset-bottom));
+    margin: 16px -20px calc(-24px - env(safe-area-inset-bottom));
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  }
+  .drawer-body .project-form-actions > * { flex: 1 1 0; min-height: 48px; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .toast,
+  .drawer-header,
+  .drawer-body .project-form-actions { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

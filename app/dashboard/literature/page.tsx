@@ -1,4 +1,4 @@
-import { BookOpenCheck, ExternalLink, Plus, Trash2 } from "lucide-react";
+import { BookOpenCheck, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   getLiteratureSources,
   createLiteratureSource,
@@ -8,6 +8,7 @@ import {
 } from "@/app/actions/literature";
 import { getMyProjects } from "@/app/actions/citation-check";
 import ActionForm from "../action-form";
+import PanelDrawer from "../_components/panel-drawer";
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
   article: "Makale",
@@ -25,19 +26,7 @@ const STATUS_LABELS: Record<string, string> = {
   used: "Kullanıldı",
 };
 
-const errorMessages: Record<string, string> = {
-  "missing-title": "Kaynak başlığı zorunludur.",
-  "save-failed": "Kaydedilirken bir hata oluştu.",
-};
-
-type LiteraturePageProps = {
-  searchParams: Promise<{ error?: string }>;
-};
-
-export default async function LiteraturePage({ searchParams }: LiteraturePageProps) {
-  const params = await searchParams;
-  const errorMessage = params.error ? errorMessages[params.error] : null;
-
+export default async function LiteraturePage() {
   const [sources, projects] = await Promise.all([getLiteratureSources(), getMyProjects()]);
 
   const grouped = {
@@ -73,87 +62,81 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
             bulduğunuz kaynakların listesini tutmanıza yardımcı olur.
           </p>
         </div>
-      </section>
+        <PanelDrawer
+          triggerLabel="Yeni kaynak"
+          triggerIcon={<Plus size={16} aria-hidden="true" />}
+          kicker="Literatür"
+          title="Yeni kaynak ekle"
+          description="Taramada bulduğunuz bir kaynağı kaydedin."
+        >
+          <ActionForm className="project-form-grid" action={createLiteratureSource} successMessage="Kaynak eklendi.">
+            <label className="project-form-full">
+              <span>Başlık</span>
+              <input name="title" type="text" placeholder="Kaynağın başlığı" required />
+            </label>
 
-      {errorMessage ? (
-        <p className="alert" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
-
-      <section className="project-form-card mb-lg">
-        <div className="project-form-heading">
-          <h2>Yeni Kaynak Ekle</h2>
-          <p>Taramada bulduğunuz bir kaynağı kaydedin.</p>
-        </div>
-
-        <form className="project-form-grid" action={createLiteratureSource}>
-          <label className="project-form-full">
-            <span>Başlık</span>
-            <input name="title" type="text" placeholder="Kaynağın başlığı" required />
-          </label>
-
-          <label>
-            <span>Yazar(lar)</span>
-            <input name="authors" type="text" placeholder="Yılmaz, A. ve Demir, B." />
-          </label>
-
-          <label>
-            <span>Yıl</span>
-            <input name="year" type="text" placeholder="2023" />
-          </label>
-
-          <label>
-            <span>Kaynak türü</span>
-            <select name="sourceType" defaultValue="article">
-              {Object.entries(SOURCE_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>DOI / URL</span>
-            <input name="doiOrUrl" type="text" placeholder="https://doi.org/..." />
-          </label>
-
-          {projects.length > 0 && (
             <label>
-              <span>Bağlı çalışma (opsiyonel)</span>
-              <select name="projectId" defaultValue="">
-                <option value="">Seçili çalışma yok</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
+              <span>Yazar(lar)</span>
+              <input name="authors" type="text" placeholder="Yılmaz, A. ve Demir, B." />
+            </label>
+
+            <label>
+              <span>Yıl</span>
+              <input name="year" type="text" inputMode="numeric" placeholder="2023" />
+            </label>
+
+            <label>
+              <span>Kaynak türü</span>
+              <select name="sourceType" defaultValue="article">
+                {Object.entries(SOURCE_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
                   </option>
                 ))}
               </select>
             </label>
-          )}
 
-          <label>
-            <span>Durum</span>
-            <select name="status" defaultValue="to_review">
-              <option value="to_review">İncelenecek</option>
-              <option value="read">Okundu</option>
-              <option value="used">Kullanıldı</option>
-            </select>
-          </label>
+            <label>
+              <span>DOI / URL</span>
+              <input name="doiOrUrl" type="text" placeholder="https://doi.org/..." />
+            </label>
 
-          <label className="project-form-full">
-            <span>Notlar</span>
-            <textarea name="notes" rows={3} placeholder="Kaynakla ilgili kendi notlarınız" />
-          </label>
+            {projects.length > 0 && (
+              <label>
+                <span>Bağlı çalışma (opsiyonel)</span>
+                <select name="projectId" defaultValue="">
+                  <option value="">Seçili çalışma yok</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
-          <div className="project-form-actions">
-            <button type="submit" className="projects-primary-button">
-              <Plus size={16} aria-hidden="true" />
-              Kaynağı ekle
-            </button>
-          </div>
-        </form>
+            <label>
+              <span>Durum</span>
+              <select name="status" defaultValue="to_review">
+                <option value="to_review">İncelenecek</option>
+                <option value="read">Okundu</option>
+                <option value="used">Kullanıldı</option>
+              </select>
+            </label>
+
+            <label className="project-form-full">
+              <span>Notlar</span>
+              <textarea name="notes" rows={3} placeholder="Kaynakla ilgili kendi notlarınız" />
+            </label>
+
+            <div className="project-form-actions">
+              <button type="submit" className="projects-primary-button">
+                <Plus size={16} aria-hidden="true" />
+                Kaynağı ekle
+              </button>
+            </div>
+          </ActionForm>
+        </PanelDrawer>
       </section>
 
       {(["to_review", "read", "used"] as const).map((statusKey) => (
@@ -191,76 +174,81 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
 
                   <div className="cluster cluster-spaced">
                     {statusKey !== "to_review" && (
-                      <ActionForm action={handleAdvanceStatus.bind(null, s.id, "to_review")}>
+                      <ActionForm action={handleAdvanceStatus.bind(null, s.id, "to_review")} successMessage="İncelenecek olarak işaretlendi.">
                         <button type="submit" className="projects-filter-button">
                           İncelenecek yap
                         </button>
                       </ActionForm>
                     )}
                     {statusKey !== "read" && (
-                      <ActionForm action={handleAdvanceStatus.bind(null, s.id, "read")}>
+                      <ActionForm action={handleAdvanceStatus.bind(null, s.id, "read")} successMessage="Okundu olarak işaretlendi.">
                         <button type="submit" className="projects-filter-button">
                           Okundu yap
                         </button>
                       </ActionForm>
                     )}
                     {statusKey !== "used" && (
-                      <ActionForm action={handleAdvanceStatus.bind(null, s.id, "used")}>
+                      <ActionForm action={handleAdvanceStatus.bind(null, s.id, "used")} successMessage="Kullanıldı olarak işaretlendi.">
                         <button type="submit" className="projects-primary-button">
                           Kullanıldı yap
                         </button>
                       </ActionForm>
                     )}
+                    <PanelDrawer
+                      triggerLabel="Düzenle"
+                      triggerIcon={<Pencil size={14} aria-hidden="true" />}
+                      triggerClassName="projects-filter-button"
+                      kicker="Kaynağı düzenle"
+                      title={s.title}
+                    >
+                      <ActionForm className="project-form-grid" action={handleEdit.bind(null, s.id)} successMessage="Kaynak güncellendi.">
+                        <label className="project-form-full">
+                          <span>Başlık</span>
+                          <input name="title" type="text" defaultValue={s.title} required />
+                        </label>
+                        <label>
+                          <span>Yazar(lar)</span>
+                          <input name="authors" type="text" defaultValue={s.authors ?? ""} />
+                        </label>
+                        <label>
+                          <span>Yıl</span>
+                          <input name="year" type="text" inputMode="numeric" defaultValue={s.year ?? ""} />
+                        </label>
+                        <label>
+                          <span>Kaynak türü</span>
+                          <select name="sourceType" defaultValue={s.source_type}>
+                            {Object.entries(SOURCE_TYPE_LABELS).map(([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          <span>DOI / URL</span>
+                          <input name="doiOrUrl" type="text" defaultValue={s.doi_or_url ?? ""} />
+                        </label>
+                        <label className="project-form-full">
+                          <span>Notlar</span>
+                          <textarea name="notes" rows={3} defaultValue={s.notes ?? ""} />
+                        </label>
+                        <div className="project-form-actions">
+                          <button type="submit" className="projects-primary-button">
+                            Kaydet
+                          </button>
+                        </div>
+                      </ActionForm>
+                    </PanelDrawer>
                     <ActionForm
                       action={handleDelete.bind(null, s.id)}
                       confirmMessage={`"${s.title}" kaynağını silmek istediğinize emin misiniz?`}
+                      successMessage="Kaynak silindi."
                     >
                       <button type="submit" className="projects-filter-button" aria-label="Kaynağı sil">
                         <Trash2 size={14} aria-hidden="true" />
                       </button>
                     </ActionForm>
                   </div>
-
-                  <details className="guideline-review-details">
-                    <summary>Kaynağı düzenle</summary>
-                    <ActionForm
-                      className="guideline-review-form"
-                      action={handleEdit.bind(null, s.id)}
-                      successMessage="Kaynak güncellendi."
-                    >
-                      <label className="guideline-review-full">
-                        <span>Başlık</span>
-                        <input name="title" type="text" defaultValue={s.title} required />
-                      </label>
-                      <label>
-                        <span>Yazar(lar)</span>
-                        <input name="authors" type="text" defaultValue={s.authors ?? ""} />
-                      </label>
-                      <label>
-                        <span>Yıl</span>
-                        <input name="year" type="text" defaultValue={s.year ?? ""} />
-                      </label>
-                      <label>
-                        <span>Kaynak türü</span>
-                        <select name="sourceType" defaultValue={s.source_type}>
-                          {Object.entries(SOURCE_TYPE_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>DOI / URL</span>
-                        <input name="doiOrUrl" type="text" defaultValue={s.doi_or_url ?? ""} />
-                      </label>
-                      <label className="guideline-review-full">
-                        <span>Notlar</span>
-                        <textarea name="notes" rows={2} defaultValue={s.notes ?? ""} />
-                      </label>
-                      <button type="submit" className="projects-filter-button">Kaydet</button>
-                    </ActionForm>
-                  </details>
                 </article>
               ))}
             </div>

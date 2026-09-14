@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
@@ -21,12 +20,10 @@ export interface ConsultancyRequest {
   created_at: string;
 }
 
-export async function createConsultancyRequest(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
+export async function createConsultancyRequest(formData: FormData): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+  const { supabase, user } = ctx;
 
   let projectId = String(formData.get("projectId") ?? "").trim() || null;
   let projectTitle = String(formData.get("projectTitle") ?? "").trim() || null;
@@ -60,11 +57,11 @@ export async function createConsultancyRequest(formData: FormData) {
 
   if (error) {
     console.error(error);
-    redirect(`${PAGE_PATH}?error=save-failed`);
+    return { error: "Talep oluşturulurken bir hata oluştu." };
   }
 
   revalidatePath(PAGE_PATH);
-  redirect(PAGE_PATH);
+  return { success: true };
 }
 
 export async function getMyRequests(): Promise<ConsultancyRequest[]> {

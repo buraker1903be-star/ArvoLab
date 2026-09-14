@@ -1,4 +1,4 @@
-import { GraduationCap, Plus, Settings2, Trash2 } from "lucide-react";
+import { GraduationCap, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import {
   getCriteria,
   createCriterion,
@@ -10,27 +10,9 @@ import {
 } from "@/app/actions/scoring";
 import { getCurrentProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
+import PanelDrawer from "../_components/panel-drawer";
 
-const errorMessages: Record<string, string> = {
-  forbidden: "Kriter eklemek için Akademik Yönetici veya üzeri bir rol gerekir.",
-  "invalid-points": "Birim başına puan 0 veya daha büyük bir sayı olmalıdır.",
-  "invalid-unit": "Adet / birim sayısı 0'dan büyük bir sayı olmalıdır.",
-  "missing-fields": "Kod, etiket ve puan alanları zorunludur.",
-  "duplicate-code": "Bu kriter kodu zaten kullanılıyor.",
-  "save-failed": "Kriter kaydedilirken bir hata oluştu.",
-  "missing-entry-fields": "Kriter ve başlık alanları zorunludur.",
-  "invalid-criterion": "Seçilen kriter bulunamadı.",
-  "save-entry-failed": "Kayıt eklenirken bir hata oluştu.",
-};
-
-type ScoringPageProps = {
-  searchParams: Promise<{ error?: string }>;
-};
-
-export default async function ScoringPage({ searchParams }: ScoringPageProps) {
-  const params = await searchParams;
-  const errorMessage = params.error ? errorMessages[params.error] : null;
-
+export default async function ScoringPage() {
   const [criteria, entries, profile] = await Promise.all([
     getCriteria(),
     getMyScoreEntries(),
@@ -79,13 +61,55 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
             güncel tutmak Akademik Yönetici&apos;nin sorumluluğundadır.
           </p>
         </div>
-      </section>
+        {criteria.length > 0 ? (
+          <PanelDrawer
+            triggerLabel="Faaliyet ekle"
+            triggerIcon={<Plus size={16} aria-hidden="true" />}
+            kicker="Doçentlik"
+            title="Yeni faaliyet ekle"
+            description="Yayınınızı veya faaliyetinizi ilgili kritere göre kaydedin."
+          >
+            <ActionForm className="project-form-grid" action={addScoreEntry} successMessage="Faaliyet eklendi.">
+              <label className="project-form-full">
+                <span>Kriter</span>
+                <select name="criteriaId" defaultValue="" required>
+                  <option value="" disabled>
+                    Seçiniz
+                  </option>
+                  {criteria.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.category_group ? `${c.category_group} · ` : ""}
+                      {c.code} — {c.label} ({c.points_per_unit} puan/birim)
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-      {errorMessage ? (
-        <p className="alert" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
+              <label>
+                <span>Başlık / açıklama</span>
+                <input name="title" type="text" placeholder="Yayın veya faaliyetin adı" required />
+              </label>
+
+              <label>
+                <span>Adet / birim sayısı</span>
+                <input name="unitCount" type="number" min={0.1} step={0.1} defaultValue={1} inputMode="decimal" />
+              </label>
+
+              <label className="project-form-full">
+                <span>Notlar</span>
+                <input name="notes" type="text" placeholder="Dergi adı, yayın yılı vb." />
+              </label>
+
+              <div className="project-form-actions">
+                <button type="submit" className="projects-primary-button">
+                  <Plus size={16} aria-hidden="true" />
+                  Kaydı ekle
+                </button>
+              </div>
+            </ActionForm>
+          </PanelDrawer>
+        ) : null}
+      </section>
 
       <section className="dashboard-stats mb-lg" aria-label="Puan özeti">
         <article className="dashboard-stat-card">
@@ -114,57 +138,11 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
         <section className="empty-state mb-lg">
           <p>
             {canManageCriteria
-              ? "Henüz puanlama kriteri tanımlanmadı. Aşağıdan ilk kriteri ekleyin."
+              ? "Henüz puanlama kriteri tanımlanmadı. Aşağıdaki “Kriter ekle” düğmesiyle ilk kriteri ekleyin."
               : "Henüz puanlama kriteri tanımlanmadı. Akademik Yönetici'nizden kriterleri girmesini isteyin."}
           </p>
         </section>
-      ) : (
-        <section className="project-form-card mb-lg">
-          <div className="project-form-heading">
-            <h2>Yeni Faaliyet Ekle</h2>
-            <p>Yayınınızı veya faaliyetinizi ilgili kritere göre kaydedin.</p>
-          </div>
-
-          <form className="project-form-grid" action={addScoreEntry}>
-            <label>
-              <span>Kriter</span>
-              <select name="criteriaId" defaultValue="" required>
-                <option value="" disabled>
-                  Seçiniz
-                </option>
-                {criteria.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.category_group ? `${c.category_group} · ` : ""}
-                    {c.code} — {c.label} ({c.points_per_unit} puan/birim)
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span>Başlık / açıklama</span>
-              <input name="title" type="text" placeholder="Yayın veya faaliyetin adı" required />
-            </label>
-
-            <label>
-              <span>Adet / birim sayısı</span>
-              <input name="unitCount" type="number" min={0.1} step={0.1} defaultValue={1} />
-            </label>
-
-            <label className="project-form-full">
-              <span>Notlar</span>
-              <input name="notes" type="text" placeholder="Dergi adı, yayın yılı vb." />
-            </label>
-
-            <div className="project-form-actions">
-              <button type="submit" className="projects-primary-button">
-                <Plus size={16} aria-hidden="true" />
-                Kaydı ekle
-              </button>
-            </div>
-          </form>
-        </section>
-      )}
+      ) : null}
 
       {entries.length > 0 && (
         <section className="section">
@@ -191,6 +169,7 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
                   action={handleDeleteEntry.bind(null, e.id)}
                   className="mt-sm"
                   confirmMessage={`"${e.title}" kaydını silmek istediğinize emin misiniz?`}
+                  successMessage="Kayıt silindi."
                 >
                   <button type="submit" className="projects-filter-button">
                     <Trash2 size={14} aria-hidden="true" />
@@ -204,98 +183,112 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
       )}
 
       {canManageCriteria ? (
-        <section className="project-form-card">
-          <div className="project-form-heading">
-            <h2>
+        <section className="section">
+          <div className="section-head">
+            <h2 className="section-title">
               <Settings2 size={16} aria-hidden="true" />
-              Puanlama Kriterlerini Yönet
+              Puanlama Kriterleri
             </h2>
-            <p>
-              Bu bölüm yalnızca Akademik Yönetici ve üzeri rollere açıktır.
-              Güncel resmi ÜAK duyurusundaki puan değerlerini buraya girin.
-            </p>
+            <PanelDrawer
+              triggerLabel="Kriter ekle"
+              triggerIcon={<Plus size={16} aria-hidden="true" />}
+              triggerClassName="projects-filter-button"
+              kicker="Puanlama kriterleri"
+              title="Yeni kriter ekle"
+              description="Güncel resmi ÜAK duyurusundaki puan değerlerini girin. Bu bölüm yalnızca Akademik Yönetici ve üzeri rollere açıktır."
+            >
+              <ActionForm className="project-form-grid" action={createCriterion} successMessage="Kriter eklendi.">
+                <label>
+                  <span>Kriter kodu</span>
+                  <input name="code" type="text" placeholder="Örn. A1" required />
+                </label>
+                <label>
+                  <span>Birim başına puan</span>
+                  <input name="pointsPerUnit" type="number" step={0.1} min={0} inputMode="decimal" required />
+                </label>
+                <label className="project-form-full">
+                  <span>Etiket</span>
+                  <input name="label" type="text" placeholder="Örn. SCI-E indeksli makale" required />
+                </label>
+                <label>
+                  <span>Kategori grubu</span>
+                  <input name="categoryGroup" type="text" placeholder="Örn. Makaleler" />
+                </label>
+                <label>
+                  <span>Notlar</span>
+                  <input name="notes" type="text" placeholder="Kaynak, şart, açıklama" />
+                </label>
+                <div className="project-form-actions">
+                  <button type="submit" className="projects-primary-button">
+                    <Plus size={16} aria-hidden="true" />
+                    Kriteri kaydet
+                  </button>
+                </div>
+              </ActionForm>
+            </PanelDrawer>
           </div>
 
-          <form className="project-form-grid" action={createCriterion}>
-            <label>
-              <span>Kriter kodu</span>
-              <input name="code" type="text" placeholder="Örn. A1" required />
-            </label>
-            <label>
-              <span>Etiket</span>
-              <input name="label" type="text" placeholder="Örn. SCI-E indeksli makale" required />
-            </label>
-            <label>
-              <span>Kategori grubu</span>
-              <input name="categoryGroup" type="text" placeholder="Örn. Makaleler" />
-            </label>
-            <label>
-              <span>Birim başına puan</span>
-              <input name="pointsPerUnit" type="number" step={0.1} min={0} required />
-            </label>
-            <label className="project-form-full">
-              <span>Notlar</span>
-              <input name="notes" type="text" placeholder="Kaynak, şart, açıklama" />
-            </label>
-            <div className="project-form-actions">
-              <button type="submit" className="projects-primary-button">
-                <Plus size={16} aria-hidden="true" />
-                Kriteri kaydet
-              </button>
-            </div>
-          </form>
-
-          {criteria.length > 0 && (
-            <div className="mt-lg">
+          {criteria.length > 0 ? (
+            <div className="project-form-card">
               {criteria.map((c) => (
                 <div key={c.id} className="list-row text-base">
                   <div className="cluster cluster-between">
                     <span>
                       <strong>{c.code}</strong> — {c.label} ({c.points_per_unit} puan)
+                      {c.category_group ? <span className="muted"> · {c.category_group}</span> : null}
                     </span>
-                    <ActionForm
-                      action={handleDeleteCriterion.bind(null, c.id)}
-                      confirmMessage={`"${c.code}" kriterini silmek istediğinize emin misiniz? Bu kritere bağlı kullanıcı kayıtları varsa kriter silinmez, pasife alınır (geçmiş puanlar korunur).`}
-                    >
-                      <button type="submit" className="projects-filter-button" aria-label={`${c.code} kriterini sil`}>
-                        <Trash2 size={13} aria-hidden="true" />
-                      </button>
-                    </ActionForm>
+                    <div className="cluster">
+                      <PanelDrawer
+                        triggerLabel="Düzenle"
+                        triggerIcon={<Pencil size={13} aria-hidden="true" />}
+                        triggerClassName="projects-filter-button button-compact"
+                        kicker="Kriteri düzenle"
+                        title={`${c.code} — ${c.label}`}
+                        description="Puan değişikliği yalnızca bundan sonra eklenen faaliyetlere uygulanır; mevcut kayıtlar eklendikleri andaki puanla korunur."
+                      >
+                        <ActionForm
+                          className="project-form-grid"
+                          action={handleUpdateCriterion.bind(null, c.id)}
+                          successMessage="Kriter güncellendi."
+                        >
+                          <label className="project-form-full">
+                            <span>Etiket</span>
+                            <input name="label" type="text" defaultValue={c.label} required />
+                          </label>
+                          <label>
+                            <span>Kategori grubu</span>
+                            <input name="categoryGroup" type="text" defaultValue={c.category_group ?? ""} />
+                          </label>
+                          <label>
+                            <span>Birim başına puan</span>
+                            <input name="pointsPerUnit" type="number" step={0.1} min={0} inputMode="decimal" defaultValue={c.points_per_unit} required />
+                          </label>
+                          <label className="project-form-full">
+                            <span>Notlar</span>
+                            <input name="notes" type="text" defaultValue={c.notes ?? ""} />
+                          </label>
+                          <div className="project-form-actions">
+                            <button type="submit" className="projects-primary-button">
+                              Kaydet
+                            </button>
+                          </div>
+                        </ActionForm>
+                      </PanelDrawer>
+                      <ActionForm
+                        action={handleDeleteCriterion.bind(null, c.id)}
+                        confirmMessage={`"${c.code}" kriterini silmek istediğinize emin misiniz? Bu kritere bağlı kullanıcı kayıtları varsa kriter silinmez, pasife alınır (geçmiş puanlar korunur).`}
+                        successMessage="Kriter kaldırıldı."
+                      >
+                        <button type="submit" className="projects-filter-button button-compact" aria-label={`${c.code} kriterini sil`}>
+                          <Trash2 size={13} aria-hidden="true" />
+                        </button>
+                      </ActionForm>
+                    </div>
                   </div>
-                  <details className="guideline-review-details">
-                    <summary>Düzenle</summary>
-                    <ActionForm
-                      className="guideline-review-form"
-                      action={handleUpdateCriterion.bind(null, c.id)}
-                      successMessage="Kriter güncellendi."
-                    >
-                      <label>
-                        <span>Etiket</span>
-                        <input name="label" type="text" defaultValue={c.label} required />
-                      </label>
-                      <label>
-                        <span>Kategori grubu</span>
-                        <input name="categoryGroup" type="text" defaultValue={c.category_group ?? ""} />
-                      </label>
-                      <label>
-                        <span>Birim başına puan</span>
-                        <input name="pointsPerUnit" type="number" step={0.1} min={0} defaultValue={c.points_per_unit} required />
-                      </label>
-                      <label>
-                        <span>Notlar</span>
-                        <input name="notes" type="text" defaultValue={c.notes ?? ""} />
-                      </label>
-                      <p className="guideline-review-full hint">
-                        Puan değişikliği yalnızca bundan sonra eklenen faaliyetlere uygulanır; mevcut kayıtlar
-                        eklendikleri andaki puanla korunur.
-                      </p>
-                      <button type="submit" className="projects-filter-button">Kaydet</button>
-                    </ActionForm>
-                  </details>
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
         </section>
       ) : null}
     </main>

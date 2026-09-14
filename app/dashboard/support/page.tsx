@@ -7,6 +7,7 @@ import {
 } from "@/app/actions/support";
 import { getCurrentProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
+import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -23,19 +24,14 @@ const STATUS_LABELS: Record<string, string> = {
   resolved: "Çözüldü",
 };
 
-const errorMessages: Record<string, string> = {
-  "missing-fields": "Konu ve mesaj alanları zorunludur.",
-  "save-failed": "Talep gönderilirken bir hata oluştu.",
+const PRIORITY_LABELS: Record<string, string> = {
+  low: "Düşük",
+  normal: "Normal",
+  high: "Yüksek",
+  urgent: "Acil",
 };
 
-type SupportPageProps = {
-  searchParams: Promise<{ error?: string }>;
-};
-
-export default async function SupportPage({ searchParams }: SupportPageProps) {
-  const params = await searchParams;
-  const errorMessage = params.error ? errorMessages[params.error] : null;
-
+export default async function SupportPage() {
   const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "system_admin" || profile?.role === "founder";
 
@@ -62,59 +58,54 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
             Desteği&quot; sayfasını kullanın.
           </p>
         </div>
-      </section>
+        <PanelDrawer
+          triggerLabel="Yeni talep"
+          triggerIcon={<Plus size={16} aria-hidden="true" />}
+          kicker="Destek"
+          title="Yeni destek talebi"
+          description="Sorununuzu veya talebinizi kısaca açıklayın."
+        >
+          <ActionForm className="project-form-grid" action={createSupportRequest} successMessage="Destek talebiniz iletildi.">
+            <label className="project-form-full">
+              <span>Konu</span>
+              <input name="subject" type="text" placeholder="Kısa bir başlık" required />
+            </label>
 
-      {errorMessage ? (
-        <p className="alert" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
+            <label>
+              <span>Kategori</span>
+              <select name="category" defaultValue="other">
+                {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-      <section className="project-form-card mb-lg">
-        <div className="project-form-heading">
-          <h2>Yeni Talep Oluştur</h2>
-          <p>Sorununuzu veya talebinizi kısaca açıklayın.</p>
-        </div>
+            <label>
+              <span>Öncelik</span>
+              <select name="priority" defaultValue="normal">
+                {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <form className="project-form-grid" action={createSupportRequest}>
-          <label className="project-form-full">
-            <span>Konu</span>
-            <input name="subject" type="text" placeholder="Kısa bir başlık" required />
-          </label>
+            <label className="project-form-full">
+              <span>Mesaj</span>
+              <textarea name="message" rows={5} placeholder="Sorunu veya talebi detaylandırın" required />
+            </label>
 
-          <label>
-            <span>Kategori</span>
-            <select name="category" defaultValue="other">
-              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Öncelik</span>
-            <select name="priority" defaultValue="normal">
-              <option value="low">Düşük</option>
-              <option value="normal">Normal</option>
-              <option value="high">Yüksek</option>
-              <option value="urgent">Acil</option>
-            </select>
-          </label>
-
-          <label className="project-form-full">
-            <span>Mesaj</span>
-            <textarea name="message" rows={5} placeholder="Sorunu veya talebi detaylandırın" required />
-          </label>
-
-          <div className="project-form-actions">
-            <button type="submit" className="projects-primary-button">
-              <Plus size={16} aria-hidden="true" />
-              Talebi gönder
-            </button>
-          </div>
-        </form>
+            <div className="project-form-actions">
+              <button type="submit" className="projects-primary-button">
+                <Plus size={16} aria-hidden="true" />
+                Talebi gönder
+              </button>
+            </div>
+          </ActionForm>
+        </PanelDrawer>
       </section>
 
       {isAdmin && allRequests.length > 0 && (
@@ -128,23 +119,30 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
               <article className="project-card" key={r.id}>
                 <div className="project-card-main">
                   <div>
-                    <span className="status-pill" data-tone="neutral">{CATEGORY_LABELS[r.category]}</span>
+                    <div className="pill-row">
+                      <span className="status-pill" data-tone={statusTone(r.status)}>
+                        {STATUS_LABELS[r.status]}
+                      </span>
+                      <span className="status-pill" data-tone="neutral">
+                        {CATEGORY_LABELS[r.category]}
+                      </span>
+                    </div>
                     <h2>{r.subject}</h2>
                     <p>{r.message}</p>
                   </div>
                 </div>
                 <div className="project-card-meta">
-                  <span>Öncelik: {r.priority}</span>
-                  <span>{STATUS_LABELS[r.status]}</span>
+                  <span>Öncelik: {PRIORITY_LABELS[r.priority] ?? r.priority}</span>
+                  <span>{new Date(r.created_at).toLocaleString("tr-TR")}</span>
                 </div>
                 <div className="cluster mt-sm">
                   {r.status !== "in_progress" && (
-                    <ActionForm action={handleUpdateStatus.bind(null, r.id, "in_progress")}>
+                    <ActionForm action={handleUpdateStatus.bind(null, r.id, "in_progress")} successMessage="Talep işleme alındı.">
                       <button type="submit" className="projects-filter-button">İşleme al</button>
                     </ActionForm>
                   )}
                   {r.status !== "resolved" && (
-                    <ActionForm action={handleUpdateStatus.bind(null, r.id, "resolved")}>
+                    <ActionForm action={handleUpdateStatus.bind(null, r.id, "resolved")} successMessage="Talep çözüldü olarak işaretlendi.">
                       <button type="submit" className="projects-primary-button">Çözüldü işaretle</button>
                     </ActionForm>
                   )}

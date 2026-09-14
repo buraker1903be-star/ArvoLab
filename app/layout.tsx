@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Inter, Montserrat } from "next/font/google";
 import "./styles/tokens.css";
 import "./styles/base.css";
@@ -6,6 +7,7 @@ import "./styles/components.css";
 import "./styles/shell.css";
 import "./styles/auth.css";
 import "./styles/workspace.css";
+import "./styles/overlays.css";
 
 // Tek yazı ailesi: Apple cihazlarında sistemin SF Pro'su (-apple-system),
 // diğerlerinde ona en yakın açık yazı tipi Inter. preload kapalı: Apple
@@ -54,10 +56,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
-      </head>
-      <body className={`${inter.variable} ${montserrat.variable}`}>{children}</body>
+      <body className={`${inter.variable} ${montserrat.variable}`}>
+        {/* beforeInteractive: Next betiği <head>'e, sayfa boyanmadan önce yerleştirir */}
+        <Script id="theme-init" strategy="beforeInteractive">
+          {themeInit}
+        </Script>
+        {children}
+      </body>
     </html>
   );
 }

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { ACCOUNT_ITEMS, NAV_GROUPS, isActive } from "./navigation";
+import SidebarToggle from "./sidebar-toggle";
 
-export default function SidebarNav({ isAdmin }: { isAdmin: boolean }) {
+export default function SidebarNav({ isAdmin, collapsed }: { isAdmin: boolean; collapsed: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -19,6 +20,7 @@ export default function SidebarNav({ isAdmin }: { isAdmin: boolean }) {
                 key={href}
                 href={href}
                 className="dashboard-nav-link"
+                title={label}
                 aria-current={isActive(pathname, href) ? "page" : undefined}
               >
                 <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
@@ -30,18 +32,20 @@ export default function SidebarNav({ isAdmin }: { isAdmin: boolean }) {
       </nav>
 
       <div className="dashboard-sidebar-footer">
+        <SidebarToggle initialCollapsed={collapsed} />
         {ACCOUNT_ITEMS.filter((item) => !item.adminOnly || isAdmin).map(({ label, href, icon: Icon }) => (
           <Link
             key={href}
             href={href}
             className="dashboard-nav-link"
+            title={label}
             aria-current={isActive(pathname, href) ? "page" : undefined}
           >
             <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
             <span>{label}</span>
           </Link>
         ))}
-        <div className="dashboard-security-card">
+        <div className="dashboard-security-card" title="Güvenli oturum">
           <ShieldCheck size={18} aria-hidden="true" />
           <div>
             <strong>Güvenli oturum</strong>

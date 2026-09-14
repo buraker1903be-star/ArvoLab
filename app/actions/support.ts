@@ -1,9 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 
 const PAGE_PATH = "/dashboard/support";
@@ -21,24 +20,19 @@ export interface AppSupportRequest {
   created_at: string;
 }
 
-export async function createSupportRequest(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
+export async function createSupportRequest(formData: FormData): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
 
   const subject = String(formData.get("subject") ?? "").trim();
   const message = String(formData.get("message") ?? "").trim();
-  if (!subject || !message) {
-    redirect(`${PAGE_PATH}?error=missing-fields`);
-  }
+  if (!subject || !message) return { error: "Konu ve mesaj alanları zorunludur." };
 
   const category = String(formData.get("category") ?? "other");
   const priority = String(formData.get("priority") ?? "normal");
 
-  const { error } = await supabase.from("app_support_requests").insert({
-    requested_by: user.id,
+  const { error } = await ctx.supabase.from("app_support_requests").insert({
+    requested_by: ctx.user.id,
     subject,
     message,
     category: CATEGORIES.includes(category) ? category : "other",
@@ -48,11 +42,11 @@ export async function createSupportRequest(formData: FormData) {
 
   if (error) {
     console.error(error);
-    redirect(`${PAGE_PATH}?error=save-failed`);
+    return { error: "Talep gönderilirken bir hata oluştu." };
   }
 
   revalidatePath(PAGE_PATH);
-  redirect(PAGE_PATH);
+  return { success: true };
 }
 
 export async function getMySupportRequests(): Promise<AppSupportRequest[]> {

@@ -57,6 +57,9 @@
   letter-spacing: -.01em;
 }
 .section-title > svg { color: var(--muted); flex: none; }
+/* Bölüm başlığı + sağında düğme(ler) */
+.section-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 12px; margin-bottom: 12px; }
+.section-head .section-title { margin: 0; }
 .inline-icon { display: inline; margin-right: 6px; vertical-align: -2px; }
 
 /* ---------- Düğmeler ---------- */

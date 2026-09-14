@@ -19,6 +19,15 @@ kaynaklı bir sisteme taşındı.
   `lib/status-tone.ts`), `alert`, `callout`, `empty-state`, `section-title`,
   `cluster` / `stack`, `result-*`, `chip`, `segmented`, `compact-select`,
   `button-danger` / `button-success` ve mevcut `projects-*` / `project-*`.
+- **Pencere / alttan açılan sayfa:** `app/dashboard/_components/panel-drawer.tsx`
+  masaüstünde ortada pencere, 760px altında iOS gibi alttan kayan sayfa (tutma
+  çizgisi, yapışık kaydet çubuğu). "Yeni … ekle" formları ve düzenlemeler bu
+  pencerelerde açılır; sayfalar listeyle başlar.
+- **Bildirim:** `ActionForm` başarıda iOS benzeri bir bildirim gösterir
+  (`toaster.tsx`; masaüstünde üstte, mobilde sekme çubuğunun üstünde) ve açık
+  pencereyi kapatır. Hata mesajı formun içinde kalır.
+- **Kenar çubuğu:** "Menüyü daralt" ile simge moduna küçülür; tercih çerezde
+  (`arvolab_nav`) tutulur, sayfa açılışında titreme olmaz.
 - **Yazı:** Apple cihazlarda SF Pro, diğerlerinde Inter; Montserrat yalnızca
   logo ve marka yazısında.
 - **Kurallar:** TSX'te satır içi stil ve hex renk yok (yalnızca veriye bağlı

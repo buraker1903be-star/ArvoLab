@@ -114,6 +114,51 @@
 .dashboard-security-card strong { color: var(--sidebar-ink); font-size: var(--fs-sm); }
 .dashboard-security-card span { margin-top: 2px; color: var(--sidebar-muted); font-size: var(--fs-micro); }
 
+/* ---------- Kenar çubuğunu daraltma (masaüstü) ---------- */
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 11px;
+  color: var(--sidebar-muted);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .2s ease, color .2s ease, transform .34s var(--ease-spring);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-toggle:hover { background: var(--sidebar-hover); color: var(--sidebar-ink); }
+}
+.sidebar-toggle:active { transform: scale(.97); transition-duration: .08s; }
+
+@media (min-width: 901px) {
+  .dashboard-shell { transition: grid-template-columns .5s var(--ease-sheet); }
+  .dashboard-shell.is-nav-collapsed { grid-template-columns: 84px minmax(0, 1fr); }
+  .is-nav-collapsed .dashboard-sidebar { padding-inline: 12px; }
+  .is-nav-collapsed :is(.dashboard-brand > div:last-child, .dashboard-nav-title, .dashboard-security-card > div) { display: none; }
+  /* Adlar görsel olarak gizli, ekran okuyucuda kalır; fareyle üzerine gelince title ipucu */
+  .is-nav-collapsed :is(.dashboard-nav-link, .sidebar-toggle) > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .is-nav-collapsed :is(.dashboard-nav-link, .sidebar-toggle, .dashboard-brand) { justify-content: center; padding-inline: 0; }
+  .is-nav-collapsed .dashboard-nav { gap: 10px; }
+  .is-nav-collapsed .dashboard-nav-group + .dashboard-nav-group { padding-top: 10px; border-top: 1px solid var(--sidebar-line); }
+  .is-nav-collapsed .dashboard-security-card { grid-template-columns: 1fr; justify-items: center; padding: 10px; }
+  .is-nav-collapsed .dashboard-nav-link[aria-current="page"]::before { left: -12px; }
+}
+@media (max-width: 900px) {
+  .sidebar-toggle { display: none; }
+}
+
 /* ---------- İçerik alanı ---------- */
 .dashboard-content-shell { display: flex; flex-direction: column; min-width: 0; }
 .dashboard-main-content { flex: 1; padding: 26px 32px 48px; }

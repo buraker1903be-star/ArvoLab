@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/team";
 import { ROLE_LABELS, type UserRole } from "@/lib/project-labels";
 import ActionForm from "../action-form";
+import PanelDrawer from "../_components/panel-drawer";
 
 const ROLE_ORDER: UserRole[] = [
   "client",
@@ -78,90 +79,88 @@ export default async function TeamPage() {
             kullanıcılar <strong>Üye / Öğrenci</strong> rolüyle başlar ve yalnızca kendi çalışmasını görür.
           </p>
         </div>
+        <div className="cluster">
+          <PanelDrawer
+            triggerLabel="Kurum ekle"
+            triggerIcon={<Building2 size={16} aria-hidden="true" />}
+            triggerClassName="projects-filter-button"
+            kicker="Ekip"
+            title="Yeni kurum ekle"
+            description="Kullanıcıları bir kuruma bağlamak için önce kurumu oluşturun."
+          >
+            <ActionForm className="project-form-grid" action={handleCreateOrganization} successMessage="Kurum eklendi.">
+              <label className="project-form-full">
+                <span>Kurum adı</span>
+                <input name="name" type="text" placeholder="Örn. AkademikMerkez" required />
+              </label>
+              {organizations.length > 0 ? (
+                <p className="hint project-form-full">Mevcut kurumlar: {organizations.map((o) => o.name).join(", ")}</p>
+              ) : null}
+              <div className="project-form-actions">
+                <button type="submit" className="projects-primary-button">
+                  <Plus size={16} aria-hidden="true" />
+                  Kurumu ekle
+                </button>
+              </div>
+            </ActionForm>
+          </PanelDrawer>
+
+          {directoryAvailable ? (
+            <PanelDrawer
+              triggerLabel="Kullanıcı davet et"
+              triggerIcon={<MailPlus size={16} aria-hidden="true" />}
+              kicker="Ekip"
+              title="Kullanıcı davet et"
+              description="Davet edilen kişiye şifresini belirleyeceği bir bağlantı gönderilir. Rol ve kurum davetle birlikte atanır."
+            >
+              <ActionForm className="project-form-grid" action={handleInvite} successMessage="Davet e-postası gönderildi.">
+                <label>
+                  <span>E-posta</span>
+                  <input name="email" type="email" placeholder="ornek@kurum.com" autoComplete="off" required />
+                </label>
+                <label>
+                  <span>Ad soyad</span>
+                  <input name="fullName" type="text" placeholder="Ayşe Demir" maxLength={120} />
+                </label>
+                <label>
+                  <span>Rol</span>
+                  <select name="role" defaultValue="employee">
+                    {assignableRoles.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>Kurum</span>
+                  <select name="organizationId" defaultValue={profile?.organization_id ?? ""}>
+                    <option value="">Kurum yok</option>
+                    {organizations.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="project-form-actions">
+                  <button type="submit" className="projects-primary-button">
+                    <MailPlus size={16} aria-hidden="true" />
+                    Davet gönder
+                  </button>
+                </div>
+              </ActionForm>
+            </PanelDrawer>
+          ) : null}
+        </div>
       </section>
 
-      <section className="project-form-card mb-lg">
-        <div className="project-form-heading">
-          <h2>
-            <MailPlus size={16} aria-hidden="true" />
-            Kullanıcı Davet Et
-          </h2>
-          <p>
-            Davet edilen kişiye şifresini belirleyeceği bir bağlantı gönderilir. Rol ve kurum davetle birlikte atanır.
-          </p>
-        </div>
-        {directoryAvailable ? (
-          <ActionForm className="project-form-grid" action={handleInvite} successMessage="Davet e-postası gönderildi.">
-            <label>
-              <span>E-posta</span>
-              <input name="email" type="email" placeholder="ornek@kurum.com" autoComplete="off" required />
-            </label>
-            <label>
-              <span>Ad soyad</span>
-              <input name="fullName" type="text" placeholder="Ayşe Demir" maxLength={120} />
-            </label>
-            <label>
-              <span>Rol</span>
-              <select name="role" defaultValue="employee">
-                {assignableRoles.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Kurum</span>
-              <select name="organizationId" defaultValue={profile?.organization_id ?? ""}>
-                <option value="">Kurum yok</option>
-                {organizations.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="project-form-actions project-form-full">
-              <button type="submit" className="projects-primary-button">
-                <MailPlus size={16} aria-hidden="true" />
-                Davet gönder
-              </button>
-            </div>
-          </ActionForm>
-        ) : (
-          <p className="alert" role="alert">
-            Davet, e-posta listesi ve erişim durdurma için sunucuda <code>SUPABASE_SECRET_KEY</code> ortam değişkeni
-            tanımlı olmalı.
-          </p>
-        )}
-      </section>
-
-      <section className="project-form-card mb-lg">
-        <div className="project-form-heading">
-          <h2>
-            <Building2 size={16} aria-hidden="true" />
-            Yeni Kurum Ekle
-          </h2>
-          <p>Kullanıcıları bir kuruma bağlamak için önce kurumu burada oluşturun.</p>
-        </div>
-        <ActionForm className="project-form-grid" action={handleCreateOrganization} successMessage="Kurum eklendi.">
-          <label>
-            <span>Kurum adı</span>
-            <input name="name" type="text" placeholder="Örn. AkademikMerkez" required />
-          </label>
-          <div className="project-form-actions">
-            <button type="submit" className="projects-primary-button">
-              <Plus size={16} aria-hidden="true" />
-              Kurumu ekle
-            </button>
-          </div>
-        </ActionForm>
-        {organizations.length > 0 && (
-          <p className="hint">
-            Mevcut kurumlar: {organizations.map((o) => o.name).join(", ")}
-          </p>
-        )}
-      </section>
+      {!directoryAvailable ? (
+        <p className="alert" data-tone="warning" role="status">
+          Davet, e-posta listesi ve erişim durdurma için sunucuda <code>SUPABASE_SECRET_KEY</code> ortam değişkeni
+          tanımlı olmalı.
+        </p>
+      ) : null}
 
       <section className="section">
         <h2 className="section-title">
@@ -242,6 +241,7 @@ export default async function TeamPage() {
                           ? `${m.full_name || m.email || "Bu kullanıcı"} için erişim yeniden açılsın mı?`
                           : `${m.full_name || m.email || "Bu kullanıcı"} için erişim durdurulsun mu? Kullanıcı giriş yapamaz; açık oturumu en geç 1 saat içinde kapanır.`
                       }
+                      successMessage={m.disabled ? "Erişim yeniden açıldı." : "Erişim durduruldu."}
                     >
                       <button
                         type="submit"

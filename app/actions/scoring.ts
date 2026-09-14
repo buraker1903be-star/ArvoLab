@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
@@ -47,23 +46,19 @@ export async function getCriteria(): Promise<ScoringCriterion[]> {
   return data ?? [];
 }
 
-export async function createCriterion(formData: FormData) {
-  const auth = await requireRole(MANAGER_ROLES);
-  if ("error" in auth) {
-    redirect(auth.reason === "unauthenticated" ? "/" : `${PAGE_PATH}?error=forbidden`);
-  }
+export async function createCriterion(formData: FormData): Promise<ActionResult> {
+  const auth = await requireRole(MANAGER_ROLES, "Kriter eklemek için Akademik Yönetici veya üzeri bir rol gerekir.");
+  if ("error" in auth) return { error: auth.error };
 
   const code = String(formData.get("code") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim();
   const pointsRaw = String(formData.get("pointsPerUnit") ?? "").trim();
 
-  if (!code || !label || !pointsRaw) {
-    redirect(`${PAGE_PATH}?error=missing-fields`);
-  }
+  if (!code || !label || !pointsRaw) return { error: "Kod, etiket ve puan alanları zorunludur." };
 
   const points = parseDecimal(pointsRaw);
   if (!Number.isFinite(points) || points < 0) {
-    redirect(`${PAGE_PATH}?error=invalid-points`);
+    return { error: "Birim başına puan 0 veya daha büyük bir sayı olmalıdır." };
   }
 
   const { error } = await auth.supabase.from("scoring_criteria").insert({
@@ -77,14 +72,11 @@ export async function createCriterion(formData: FormData) {
 
   if (error) {
     console.error(error);
-    if (error.code === "23505") {
-      redirect(`${PAGE_PATH}?error=duplicate-code`);
-    }
-    redirect(`${PAGE_PATH}?error=save-failed`);
+    return { error: error.code === "23505" ? "Bu kriter kodu zaten kullanılıyor." : "Kriter kaydedilirken bir hata oluştu." };
   }
 
   revalidatePath(PAGE_PATH);
-  redirect(PAGE_PATH);
+  return { success: true };
 }
 
 // Kriter kodu değiştirilemez (kayıtlar ona bağlı). Puan değişikliği yalnızca
@@ -178,24 +170,20 @@ export async function getMyScoreEntries(): Promise<(ScoreEntry & { criteria: Sco
   });
 }
 
-export async function addScoreEntry(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
+export async function addScoreEntry(formData: FormData): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+  const { supabase, user } = ctx;
 
   const criteriaId = String(formData.get("criteriaId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const unitCountRaw = String(formData.get("unitCount") ?? "1").trim() || "1";
 
-  if (!criteriaId || !title) {
-    redirect(`${PAGE_PATH}?error=missing-entry-fields`);
-  }
+  if (!criteriaId || !title) return { error: "Kriter ve başlık alanları zorunludur." };
 
   const unitCount = parseDecimal(unitCountRaw);
   if (!Number.isFinite(unitCount) || unitCount <= 0) {
-    redirect(`${PAGE_PATH}?error=invalid-unit`);
+    return { error: "Adet / birim sayısı 0'dan büyük bir sayı olmalıdır." };
   }
 
   const { data: criterion, error: criterionError } = await supabase
@@ -205,9 +193,7 @@ export async function addScoreEntry(formData: FormData) {
     .eq("is_active", true)
     .single();
 
-  if (criterionError || !criterion) {
-    redirect(`${PAGE_PATH}?error=invalid-criterion`);
-  }
+  if (criterionError || !criterion) return { error: "Seçilen kriter bulunamadı." };
 
   const { error } = await supabase.from("academic_score_entries").insert({
     owner_id: user.id,
@@ -220,11 +206,11 @@ export async function addScoreEntry(formData: FormData) {
 
   if (error) {
     console.error(error);
-    redirect(`${PAGE_PATH}?error=save-entry-failed`);
+    return { error: "Kayıt eklenirken bir hata oluştu." };
   }
 
   revalidatePath(PAGE_PATH);
-  redirect(PAGE_PATH);
+  return { success: true };
 }
 
 export async function deleteScoreEntry(entryId: string): Promise<ActionResult> {
