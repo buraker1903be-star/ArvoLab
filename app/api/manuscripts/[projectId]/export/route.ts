@@ -1,14 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Packer } from "docx";
 import { createClient } from "@/lib/supabase/server";
-import { buildDocxFromTiptap } from "@/lib/tiptap-docx";
+import { buildDocxFromTiptap, type DocxImage } from "@/lib/tiptap-docx";
+import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
+import { readImageInfo } from "@/lib/image-info";
 import type { TiptapDoc } from "@/lib/tiptap-text";
 
 // Büyük/resimli belgelerde Word oluşturma zaman alabilir.
 export const maxDuration = 60;
 
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const IMAGE_BUCKET = "project-files";
+
+// Editördeki resimler kendi depomuzdaki imzalı bağlantılardır. Sunucu,
+// verilen adrese körü körüne istek atmaz (SSRF): yalnızca kendi Supabase
+// deposundaki dosya yolunu çıkarıp kullanıcının yetkisiyle indirir. Böylece
+// imzalı bağlantının süresi dolsa bile resim Word'e aktarılır.
+function storagePathFromUrl(src: string): string | null {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!base) return null;
+  try {
+    const url = new URL(src);
+    if (url.origin !== new URL(base).origin) return null;
+    const match = url.pathname.match(/^\/storage\/v1\/object\/(?:sign|public|authenticated)\/project-files\/(.+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function toDocxImage(buffer: Buffer): DocxImage | null {
+  if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES) return null;
+  const info = readImageInfo(buffer);
+  return info ? { data: buffer, ...info } : null;
+}
+
+// Word dosya adı: Türkçe karakterler korunur (RFC 5987), eski tarayıcılar için ASCII yedek.
+function contentDisposition(title: string) {
+  const clean = title.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) || "arvolab-calisma";
+  const ascii = clean
+    .replace(/ı/g, "i")
+    .replace(/İ/g, "I")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9-_ ]/g, "")
+    .trim()
+    .replace(/\s+/g, "_") || "arvolab-calisma";
+  return `attachment; filename="${ascii}.docx"; filename*=UTF-8''${encodeURIComponent(`${clean}.docx`)}`;
+}
+
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
@@ -23,9 +65,13 @@ export async function GET(
 
   const { data: project } = await supabase
     .from("academic_projects")
-    .select("title")
+    .select("title, guideline_id")
     .eq("id", projectId)
-    .single();
+    .maybeSingle();
+
+  if (!project) {
+    return NextResponse.json({ error: "Çalışma bulunamadı." }, { status: 404 });
+  }
 
   const { data: manuscript, error } = await supabase
     .from("project_manuscripts")
@@ -33,12 +79,30 @@ export async function GET(
     .eq("project_id", projectId)
     .maybeSingle();
 
-  if (error || !manuscript) {
+  if (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Metin okunamadı." }, { status: 500 });
+  }
+  if (!manuscript) {
     return NextResponse.json({ error: "Bu çalışma için henüz kaydedilmiş bir metin yok." }, { status: 404 });
   }
 
+  // Editörde görünen gövde yazı tipi/boyutu/satır aralığı onaylı kılavuzdan gelir; Word'de de aynısı.
+  let textDefaults = {};
+  if (project.guideline_id) {
+    const { data: guideline } = await supabase
+      .from("thesis_guidelines")
+      .select("extracted_rules, analysis_status")
+      .eq("id", project.guideline_id)
+      .maybeSingle();
+    if (guideline?.analysis_status === "approved") {
+      const { fontFamily, fontSizePt, lineSpacing } = normalizeGuidelineEditorSettings(guideline.extracted_rules);
+      textDefaults = { fontFamily, fontSizePt, lineSpacing };
+    }
+  }
+
   const doc = await buildDocxFromTiptap({
-    title: project?.title ?? "ArvoLab Çalışması",
+    title: project.title ?? "ArvoLab Çalışması",
     doc: manuscript.content as TiptapDoc,
     margins: {
       top: manuscript.margin_top_cm ?? 2.5,
@@ -48,15 +112,17 @@ export async function GET(
     },
     showPageNumbers: manuscript.show_page_numbers ?? true,
     coverPage: manuscript.cover_page ?? null,
-    fetchImage: async (url: string) => {
+    textDefaults,
+    fetchImage: async (src: string) => {
       try {
-        const res = await fetch(url);
-        if (!res.ok) return null;
-        const arrayBuffer = await res.arrayBuffer();
-        // Görsel piksel boyutlarını basitçe tespit edemediğimiz için
-        // makul bir varsayılan oran kullanılır; buildDocxFromTiptap
-        // içindeki ölçekleme mantığı genişliği sınırlar.
-        return { data: Buffer.from(arrayBuffer), width: 800, height: 600 };
+        const dataUrl = src.match(/^data:image\/(?:png|jpeg|gif);base64,(.+)$/);
+        if (dataUrl) return toDocxImage(Buffer.from(dataUrl[1], "base64"));
+
+        const path = storagePathFromUrl(src);
+        if (!path) return null;
+        const { data, error: downloadError } = await supabase.storage.from(IMAGE_BUCKET).download(path);
+        if (downloadError || !data) return null;
+        return toDocxImage(Buffer.from(await data.arrayBuffer()));
       } catch {
         return null;
       }
@@ -68,7 +134,8 @@ export async function GET(
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Content-Disposition": `attachment; filename="${(project?.title ?? "arvolab-calisma").replace(/[^a-zA-Z0-9-_]/g, "_")}.docx"`,
+      "Content-Disposition": contentDisposition(project.title ?? "arvolab-calisma"),
+      "Cache-Control": "no-store",
     },
   });
 }

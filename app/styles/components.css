@@ -391,6 +391,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .callout strong { color: var(--tone); }
 .callout[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); border-style: dashed; }
 .callout[data-tone="accent"] { --tone: var(--accent-strong); --tone-soft: var(--accent-soft); }
+.callout[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
 .callout-body { margin-top: 6px; white-space: pre-wrap; color: var(--ink); }
 
 /* ---------- Boş durum ---------- */

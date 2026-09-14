@@ -65,11 +65,11 @@
 .manuscript-toolbar .toolbar-select:focus { outline: none; border-color: var(--accent-500); }
 
 /* ---------- Belge alanı ---------- */
+/* Belge sayfayla birlikte uzar (iç kaydırma çubuğu yok); araç çubuğu üstte yapışık kalır */
 .manuscript-editor-content {
-  min-height: 480px;
-  max-height: 70vh;
-  overflow-y: auto;
+  min-height: 60vh;
   padding: 32px clamp(18px, 5vw, 48px);
+  counter-reset: footnote;
   color: var(--ink);
   font-size: var(--fs-md);
   line-height: 1.75;
@@ -85,7 +85,71 @@
 .manuscript-editor-content table { width: 100%; margin: 10px 0; border-collapse: collapse; }
 .manuscript-editor-content :is(td, th) { padding: 6px 10px; border: 1px solid var(--line); }
 .manuscript-editor-content th { background: var(--surface-2); }
-.manuscript-editor-content .footnote-marker { color: var(--accent); font-weight: 700; cursor: help; }
+/* Dipnot numaraları belge sırasına göre otomatik (1, 2, 3…); tıklayınca düzenlenir */
+.manuscript-editor-content .footnote-marker {
+  counter-increment: footnote;
+  padding: 0 2px;
+  border-radius: 4px;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+.manuscript-editor-content .footnote-marker::after { content: counter(footnote); }
+.manuscript-editor-content .footnote-marker:hover { background: var(--accent-soft); }
+
+/* Kaydetme durumu (araç çubuğunun sağında, her zaman görünür) */
+.manuscript-toolbar .toolbar-spacer { flex: 1; }
+.save-status {
+  --tone: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  color: var(--tone);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.save-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.save-status[data-state="saved"] { --tone: var(--success); }
+.save-status[data-state="saving"],
+.save-status[data-state="dirty"] { --tone: var(--muted); }
+.save-status[data-state="saving"]::before { animation: save-pulse 1s ease-in-out infinite; }
+.save-status[data-state="error"],
+.save-status[data-state="conflict"] { --tone: var(--danger); background: var(--danger-soft); }
+@keyframes save-pulse { 50% { opacity: .25; } }
+
+/* Editör üstü uyarı şeritleri (taslak geri yükleme, çakışma) */
+.editor-notice { margin: 0; border-radius: 0; border-width: 0 0 1px; }
+.editor-notice .cluster { margin-left: auto; }
+
+/* Dipnotlar listesi (belgenin altında; telefonda üzerine gelme olmadığı için) */
+.footnote-list { margin: 0; padding: 14px 18px 18px 40px; border-top: 1px solid var(--line-soft); font-size: var(--fs-base); }
+.footnote-list li { padding: 3px 0; color: var(--ink-soft); }
+.footnote-list button { color: inherit; text-align: left; cursor: pointer; }
+.footnote-list button:hover { color: var(--accent); }
+
+/* Kısa pencere (dipnot vb.) */
+.drawer.drawer-compact { width: min(520px, 100%); }
+.dialog-field { display: grid; gap: 6px; }
+.dialog-field > span { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.dialog-field textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.dialog-field textarea:focus { outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* Editör yüklenirken yer tutucu (sayfa zıplamasın) */
+.manuscript-editor-loading { min-height: 70vh; background: var(--surface-2); }
 .manuscript-editor-content p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;

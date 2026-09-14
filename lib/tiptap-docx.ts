@@ -9,12 +9,14 @@ import {
   WidthType,
   ImageRun,
   FootnoteReferenceRun,
+  ExternalHyperlink,
   AlignmentType,
   convertInchesToTwip,
   convertMillimetersToTwip,
   Footer,
   PageNumber,
   PageBreak,
+  type ParagraphChild,
 } from "docx";
 
 interface TiptapMark {
@@ -42,20 +44,31 @@ const HEADING_LEVELS = [
   HeadingLevel.HEADING_4,
 ];
 
+const ALIGNMENTS: Record<string, (typeof AlignmentType)[keyof typeof AlignmentType]> = {
+  left: AlignmentType.LEFT,
+  center: AlignmentType.CENTER,
+  right: AlignmentType.RIGHT,
+  justify: AlignmentType.JUSTIFIED,
+};
+
+const A4_WIDTH_TWIP = 11906;
+const A4_HEIGHT_TWIP = 16838;
+const TWIP_PER_PIXEL = 15; // 96 dpi
+const MAX_LIST_LEVEL = 8;
+
 // Editördeki "lineSpacing" değeri (ör. "1.5", "2") docx.js'in
 // beklediği "line" birimine (240 = tekli aralık) çevrilir.
-function spacingFromAttrs(attrs: Record<string, unknown> | undefined) {
-  const lineSpacing = attrs?.lineSpacing as string | undefined;
-  if (!lineSpacing) return undefined;
-  const multiplier = parseFloat(lineSpacing);
+function lineSpacingValue(value: unknown) {
+  const multiplier = typeof value === "number" ? value : parseFloat(String(value ?? ""));
   if (!multiplier || Number.isNaN(multiplier)) return undefined;
   return { line: Math.round(240 * multiplier), lineRule: "auto" as const };
 }
 
-function indentFromAttrs(attrs: Record<string, unknown> | undefined) {
-  const firstLineIndent = attrs?.firstLineIndent as boolean | undefined;
-  if (!firstLineIndent) return undefined;
-  return { firstLine: convertMillimetersToTwip(12.5) }; // 1.25 cm — yaygın tez girinti standardı
+function indentFromAttrs(attrs: Record<string, unknown> | undefined, quoteDepth: number) {
+  const firstLine = attrs?.firstLineIndent ? convertMillimetersToTwip(12.5) : undefined; // 1.25 cm — yaygın tez girinti standardı
+  const left = quoteDepth > 0 ? convertInchesToTwip(0.4 * quoteDepth) : undefined;
+  if (firstLine === undefined && left === undefined) return undefined;
+  return { firstLine, left };
 }
 
 export interface CoverPageData {
@@ -84,16 +97,11 @@ function buildCoverPageParagraphs(cover: CoverPageData): Paragraph[] {
       children: [new TextRun({ text, bold: opts.bold ?? false, size: opts.size })],
     });
 
-  const paragraphs: Paragraph[] = [
-    centered(cover.university.toLocaleUpperCase("tr-TR"), { bold: true, size: 28 }),
-    centered(cover.institute.toLocaleUpperCase("tr-TR"), { bold: true, size: 24 }),
-  ];
-  if (cover.department) {
-    paragraphs.push(centered(cover.department.toLocaleUpperCase("tr-TR"), { size: 24 }));
-  }
-  if (cover.program) {
-    paragraphs.push(centered(cover.program, { size: 22 }));
-  }
+  const paragraphs: Paragraph[] = [];
+  if (cover.university) paragraphs.push(centered(cover.university.toLocaleUpperCase("tr-TR"), { bold: true, size: 28 }));
+  if (cover.institute) paragraphs.push(centered(cover.institute.toLocaleUpperCase("tr-TR"), { bold: true, size: 24 }));
+  if (cover.department) paragraphs.push(centered(cover.department.toLocaleUpperCase("tr-TR"), { size: 24 }));
+  if (cover.program) paragraphs.push(centered(cover.program, { size: 22 }));
 
   for (let i = 0; i < 6; i++) paragraphs.push(blank());
 
@@ -124,157 +132,206 @@ function buildCoverPageParagraphs(cover: CoverPageData): Paragraph[] {
   return paragraphs;
 }
 
+export interface DocxImage {
+  data: Buffer;
+  width: number;
+  height: number;
+  type: "png" | "jpg" | "gif";
+}
+
 interface ConversionContext {
   footnotes: Record<string, { children: Paragraph[] }>;
   nextFootnoteId: number;
-  fetchImage: (url: string) => Promise<{ data: Buffer; width: number; height: number } | null>;
+  nextListInstance: number;
+  contentWidthTwip: number;
+  fetchImage: (url: string) => Promise<DocxImage | null>;
 }
 
-function textRunsFromInline(nodes: TiptapNode[], ctx: ConversionContext): (TextRun | FootnoteReferenceRun)[] {
-  const runs: (TextRun | FootnoteReferenceRun)[] = [];
+interface BlockOptions {
+  quoteDepth: number;
+  list?: { level: number; ordered: boolean; instance: number };
+}
+
+// Yalnızca güvenli bağlantı türleri Word'e köprü olarak aktarılır.
+function safeHref(marks: TiptapMark[]) {
+  const href = marks.find((m) => m.type === "link")?.attrs?.href;
+  if (typeof href !== "string") return null;
+  return /^(https?:|mailto:)/i.test(href.trim()) ? href.trim() : null;
+}
+
+function textRun(node: TiptapNode, isLink: boolean) {
+  const marks = node.marks ?? [];
+  const has = (type: string) => marks.some((m) => m.type === type);
+  const textStyle = marks.find((m) => m.type === "textStyle")?.attrs ?? {};
+  const fontFamily = textStyle.fontFamily as string | undefined;
+  // fontSize editörde "12pt" gibi saklanır; docx.js yarım punto (half-point) bekler.
+  const fontSize = parseFloat(String(textStyle.fontSize ?? ""));
+  const color = typeof textStyle.color === "string" && /^#[0-9a-f]{6}$/i.test(textStyle.color)
+    ? textStyle.color.slice(1)
+    : undefined;
+
+  return new TextRun({
+    text: node.text ?? "",
+    bold: has("bold"),
+    italics: has("italic"),
+    underline: has("underline") ? {} : undefined,
+    strike: has("strike"),
+    superScript: has("superscript"),
+    subScript: has("subscript"),
+    font: has("code") ? "Courier New" : fontFamily || undefined,
+    size: Number.isFinite(fontSize) && fontSize > 0 ? Math.round(fontSize * 2) : undefined,
+    color,
+    style: isLink ? "Hyperlink" : undefined,
+  });
+}
+
+function inlineChildren(nodes: TiptapNode[], ctx: ConversionContext): ParagraphChild[] {
+  const children: ParagraphChild[] = [];
   for (const node of nodes) {
     if (node.type === "text") {
-      const marks = node.marks ?? [];
-      const markTypes = marks.map((m) => m.type);
-      const textStyleMark = marks.find((m) => m.type === "textStyle");
-      const fontFamily = textStyleMark?.attrs?.fontFamily as string | undefined;
-      const fontSizeRaw = textStyleMark?.attrs?.fontSize as string | undefined;
-      // fontSize editörde "12pt" gibi saklanır; docx.js yarım punto (half-point) bekler.
-      const fontSizeHalfPoints = fontSizeRaw
-        ? Math.round(parseFloat(fontSizeRaw) * 2)
-        : undefined;
-
-      runs.push(
-        new TextRun({
-          text: node.text ?? "",
-          bold: markTypes.includes("bold"),
-          italics: markTypes.includes("italic"),
-          underline: markTypes.includes("underline") ? {} : undefined,
-          font: fontFamily || undefined,
-          size: fontSizeHalfPoints,
-        })
-      );
+      const href = safeHref(node.marks ?? []);
+      const run = textRun(node, Boolean(href));
+      children.push(href ? new ExternalHyperlink({ link: href, children: [run] }) : run);
+    } else if (node.type === "hardBreak") {
+      children.push(new TextRun({ break: 1 }));
     } else if (node.type === "footnoteReference") {
+      // Numara belge sırasından gelir (editördeki gibi); Word kendisi numaralar.
       const id = ctx.nextFootnoteId++;
-      const footnoteText = (node.attrs?.text as string) || "";
+      const footnoteText = String(node.attrs?.text ?? "");
       ctx.footnotes[String(id)] = {
-        children: [new Paragraph({ children: [new TextRun(footnoteText)] })],
+        children: [new Paragraph({ children: [new TextRun({ text: footnoteText, size: 20 })] })],
       };
-      runs.push(new FootnoteReferenceRun(id));
+      children.push(new FootnoteReferenceRun(id));
     } else if (node.content) {
-      runs.push(...textRunsFromInline(node.content, ctx));
+      children.push(...inlineChildren(node.content, ctx));
     }
   }
-  return runs;
+  return children;
 }
 
-async function blockNodeToDocxElements(
-  node: TiptapNode,
-  ctx: ConversionContext
-): Promise<(Paragraph | Table)[]> {
+function paragraphFrom(node: TiptapNode, ctx: ConversionContext, opts: BlockOptions) {
+  const align = node.attrs?.textAlign as string | undefined;
+  const list = opts.list;
+  return new Paragraph({
+    alignment: align ? ALIGNMENTS[align] : undefined,
+    spacing: lineSpacingValue(node.attrs?.lineSpacing),
+    indent: list ? undefined : indentFromAttrs(node.attrs, opts.quoteDepth),
+    bullet: list && !list.ordered ? { level: list.level } : undefined,
+    numbering: list?.ordered ? { reference: "arvolab-numbering", level: list.level, instance: list.instance } : undefined,
+    children: inlineChildren(node.content ?? [], ctx),
+  });
+}
+
+async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: BlockOptions): Promise<(Paragraph | Table)[]> {
+  const convertAll = async (nodes: TiptapNode[], childOpts: BlockOptions) => {
+    const out: (Paragraph | Table)[] = [];
+    for (const child of nodes) out.push(...(await blockToDocx(child, ctx, childOpts)));
+    return out;
+  };
+
   switch (node.type) {
     case "heading": {
-      const level = Math.min(((node.attrs?.level as number) ?? 1) - 1, HEADING_LEVELS.length - 1);
+      const level = Math.min(Math.max(((node.attrs?.level as number) ?? 1) - 1, 0), HEADING_LEVELS.length - 1);
+      const align = node.attrs?.textAlign as string | undefined;
       return [
         new Paragraph({
-          heading: HEADING_LEVELS[Math.max(0, level)],
-          spacing: spacingFromAttrs(node.attrs),
-          children: textRunsFromInline(node.content ?? [], ctx),
+          heading: HEADING_LEVELS[level],
+          alignment: align ? ALIGNMENTS[align] : undefined,
+          spacing: lineSpacingValue(node.attrs?.lineSpacing),
+          children: inlineChildren(node.content ?? [], ctx),
         }),
       ];
     }
 
-    case "paragraph": {
-      const align = (node.attrs?.textAlign as string) || "left";
-      const alignmentMap: Record<string, (typeof AlignmentType)[keyof typeof AlignmentType]> = {
-        left: AlignmentType.LEFT,
-        center: AlignmentType.CENTER,
-        right: AlignmentType.RIGHT,
-        justify: AlignmentType.JUSTIFIED,
-      };
-      return [
-        new Paragraph({
-          alignment: alignmentMap[align] ?? AlignmentType.LEFT,
-          spacing: spacingFromAttrs(node.attrs),
-          indent: indentFromAttrs(node.attrs),
-          children: textRunsFromInline(node.content ?? [], ctx),
-        }),
-      ];
-    }
+    case "paragraph":
+      return [paragraphFrom(node, ctx, opts)];
 
     case "bulletList":
     case "orderedList": {
-      const items: Paragraph[] = [];
+      const ordered = node.type === "orderedList";
+      // Her numaralı liste 1'den başlar (önceden tüm listeler tek sayaçtan devam ediyordu).
+      const instance = ordered ? ctx.nextListInstance++ : 0;
+      const level = opts.list ? Math.min(opts.list.level + 1, MAX_LIST_LEVEL) : 0;
+      const out: (Paragraph | Table)[] = [];
       for (const item of node.content ?? []) {
-        const itemParagraphs = item.content ?? [];
-        for (const p of itemParagraphs) {
-          items.push(
-            new Paragraph({
-              bullet: node.type === "bulletList" ? { level: 0 } : undefined,
-              numbering: node.type === "orderedList" ? { reference: "default-numbering", level: 0 } : undefined,
-              children: textRunsFromInline(p.content ?? [], ctx),
-            })
-          );
+        for (const child of item.content ?? []) {
+          if (child.type === "paragraph") {
+            out.push(paragraphFrom(child, ctx, { ...opts, list: { level, ordered, instance } }));
+          } else {
+            out.push(...(await blockToDocx(child, ctx, { ...opts, list: { level, ordered, instance } })));
+          }
         }
       }
-      return items;
+      return out;
     }
 
-    case "blockquote": {
-      const paragraphs: Paragraph[] = [];
-      for (const child of node.content ?? []) {
-        paragraphs.push(
-          new Paragraph({
-            indent: { left: convertInchesToTwip(0.4) },
-            children: textRunsFromInline(child.content ?? [], ctx),
-          })
-        );
-      }
-      return paragraphs;
+    case "blockquote":
+      return convertAll(node.content ?? [], { ...opts, quoteDepth: opts.quoteDepth + 1 });
+
+    case "codeBlock": {
+      const text = (node.content ?? []).map((child) => child.text ?? "").join("");
+      return text.split("\n").map(
+        (line) => new Paragraph({ children: [new TextRun({ text: line, font: "Courier New", size: 20 })] })
+      );
     }
+
+    case "horizontalRule":
+      return [new Paragraph({ thematicBreak: true, children: [] })];
 
     case "table": {
+      const rowNodes = node.content ?? [];
+      const colCount = Math.max(
+        1,
+        ...rowNodes.map((row) =>
+          (row.content ?? []).reduce((sum, cell) => sum + (Number(cell.attrs?.colspan) || 1), 0)
+        )
+      );
+      const colWidth = Math.floor(ctx.contentWidthTwip / colCount);
       const rows: TableRow[] = [];
-      for (const row of node.content ?? []) {
+      for (const [rowIndex, row] of rowNodes.entries()) {
         const cells: TableCell[] = [];
+        let isHeaderRow = rowIndex === 0;
         for (const cell of row.content ?? []) {
-          const cellParagraphs: Paragraph[] = [];
-          for (const child of cell.content ?? []) {
-            cellParagraphs.push(new Paragraph({ children: textRunsFromInline(child.content ?? [], ctx) }));
-          }
+          if (cell.type !== "tableHeader") isHeaderRow = false;
+          const span = Number(cell.attrs?.colspan) || 1;
+          const children = (await convertAll(cell.content ?? [], { quoteDepth: 0 })).filter(
+            (child): child is Paragraph => child instanceof Paragraph
+          );
           cells.push(
             new TableCell({
-              width: { size: 2000, type: WidthType.DXA },
-              children: cellParagraphs.length > 0 ? cellParagraphs : [new Paragraph({ children: [] })],
+              width: { size: colWidth * span, type: WidthType.DXA },
+              columnSpan: span > 1 ? span : undefined,
+              children: children.length > 0 ? children : [new Paragraph({ children: [] })],
             })
           );
         }
-        rows.push(new TableRow({ children: cells }));
+        rows.push(new TableRow({ children: cells, tableHeader: isHeaderRow }));
       }
-      const colCount = rows[0]?.CellCount ?? 1;
+      if (rows.length === 0) return [];
       return [
         new Table({
           rows,
-          columnWidths: Array.from({ length: colCount }, () => 2000),
-          width: { size: colCount * 2000, type: WidthType.DXA },
+          columnWidths: Array.from({ length: colCount }, () => colWidth),
+          width: { size: colWidth * colCount, type: WidthType.DXA },
         }),
       ];
     }
 
     case "image": {
-      const src = (node.attrs?.src as string) || "";
+      const src = String(node.attrs?.src ?? "");
       const img = await ctx.fetchImage(src);
-      if (!img) return [];
-      // En-boy oranını koruyarak makul bir genişliğe (450px) ölçekle
-      const maxWidth = 450;
+      if (!img || !img.width || !img.height) return [];
+      // En-boy oranı korunur, sayfa yazı alanını aşmaz.
+      const maxWidth = Math.floor(ctx.contentWidthTwip / TWIP_PER_PIXEL);
       const scale = img.width > maxWidth ? maxWidth / img.width : 1;
       return [
         new Paragraph({
+          alignment: AlignmentType.CENTER,
           children: [
             new ImageRun({
               data: img.data,
               transformation: { width: Math.round(img.width * scale), height: Math.round(img.height * scale) },
-              type: "png",
+              type: img.type,
             }),
           ],
         }),
@@ -282,8 +339,16 @@ async function blockNodeToDocxElements(
     }
 
     default:
-      return [];
+      // Bilinmeyen kapsayıcılar içeriğini kaybetmesin
+      return node.content ? convertAll(node.content, opts) : [];
   }
+}
+
+/** Kılavuzdan gelen gövde metni varsayılanları (editördeki görünümle aynı) */
+export interface DocxTextDefaults {
+  fontFamily?: string;
+  fontSizePt?: number;
+  lineSpacing?: number;
 }
 
 export interface BuildDocxOptions {
@@ -293,6 +358,7 @@ export interface BuildDocxOptions {
   margins?: { top: number; bottom: number; left: number; right: number }; // cm cinsinden
   showPageNumbers?: boolean;
   coverPage?: CoverPageData | null;
+  textDefaults?: DocxTextDefaults;
 }
 
 export async function buildDocxFromTiptap({
@@ -302,30 +368,64 @@ export async function buildDocxFromTiptap({
   margins,
   showPageNumbers = true,
   coverPage,
+  textDefaults = {},
 }: BuildDocxOptions): Promise<Document> {
-  const ctx: ConversionContext = { footnotes: {}, nextFootnoteId: 1, fetchImage };
+  const m = margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
+  const marginTwip = {
+    top: convertMillimetersToTwip(m.top * 10),
+    bottom: convertMillimetersToTwip(m.bottom * 10),
+    left: convertMillimetersToTwip(m.left * 10),
+    right: convertMillimetersToTwip(m.right * 10),
+  };
+  const ctx: ConversionContext = {
+    footnotes: {},
+    nextFootnoteId: 1,
+    nextListInstance: 1,
+    contentWidthTwip: Math.max(A4_WIDTH_TWIP - marginTwip.left - marginTwip.right, 2000),
+    fetchImage,
+  };
 
   const bodyElements: (Paragraph | Table)[] = [];
   if (coverPage) {
     bodyElements.push(...buildCoverPageParagraphs(coverPage));
   }
   for (const node of doc.content ?? []) {
-    const elements = await blockNodeToDocxElements(node, ctx);
-    bodyElements.push(...elements);
+    bodyElements.push(...(await blockToDocx(node, ctx, { quoteDepth: 0 })));
   }
 
-  const m = margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
+  const font = textDefaults.fontFamily ?? "Times New Roman";
+  const baseSize = Math.round((textDefaults.fontSizePt ?? 12) * 2);
+  const headingRun = { font, bold: true, italics: false, color: "000000" };
+  const headingParagraph = { spacing: { before: 240, after: 120 }, keepNext: true };
 
   return new Document({
     title,
     footnotes: ctx.footnotes,
+    styles: {
+      default: {
+        document: {
+          run: { font, size: baseSize },
+          paragraph: { spacing: { after: 120, ...lineSpacingValue(textDefaults.lineSpacing) } },
+        },
+        heading1: { run: { ...headingRun, size: baseSize + 4 }, paragraph: headingParagraph },
+        heading2: { run: { ...headingRun, size: baseSize + 2 }, paragraph: headingParagraph },
+        heading3: { run: { ...headingRun, size: baseSize }, paragraph: headingParagraph },
+        heading4: { run: { ...headingRun, size: baseSize }, paragraph: headingParagraph },
+      },
+    },
     numbering: {
       config: [
         {
-          reference: "default-numbering",
-          levels: [
-            { level: 0, format: "decimal", text: "%1.", alignment: AlignmentType.START },
-          ],
+          reference: "arvolab-numbering",
+          levels: Array.from({ length: MAX_LIST_LEVEL + 1 }, (_, level) => ({
+            level,
+            format: level % 3 === 1 ? "lowerLetter" : level % 3 === 2 ? "lowerRoman" : "decimal",
+            text: `%${level + 1}.`,
+            alignment: AlignmentType.START,
+            style: {
+              paragraph: { indent: { left: convertInchesToTwip(0.35 * (level + 1)), hanging: convertInchesToTwip(0.25) } },
+            },
+          })),
         },
       ],
     },
@@ -333,13 +433,8 @@ export async function buildDocxFromTiptap({
       {
         properties: {
           page: {
-            size: { width: 11906, height: 16838 }, // A4
-            margin: {
-              top: convertMillimetersToTwip(m.top * 10),
-              bottom: convertMillimetersToTwip(m.bottom * 10),
-              left: convertMillimetersToTwip(m.left * 10),
-              right: convertMillimetersToTwip(m.right * 10),
-            },
+            size: { width: A4_WIDTH_TWIP, height: A4_HEIGHT_TWIP },
+            margin: marginTwip,
           },
         },
         footers: showPageNumbers
@@ -348,9 +443,7 @@ export async function buildDocxFromTiptap({
                 children: [
                   new Paragraph({
                     alignment: AlignmentType.CENTER,
-                    children: [
-                      new TextRun({ children: [PageNumber.CURRENT] }),
-                    ],
+                    children: [new TextRun({ children: [PageNumber.CURRENT] })],
                   }),
                 ],
               }),

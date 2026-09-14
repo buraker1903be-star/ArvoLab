@@ -2,9 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-
-// Resim yükleme büyük dosyalarda zaman alabilir.
-export const maxDuration = 60;
 import { getManuscript } from "@/app/actions/manuscript";
 import ManuscriptEditor from "./manuscript-editor";
 import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
@@ -58,9 +55,8 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
           <span className="dashboard-kicker">Panelde yazma</span>
           <h1>{project?.title ?? "Çalışma"}</h1>
           <p>
-            Çalışmanızı burada kendiniz yazın. ArvoLab içerik üretmez;
-            yalnızca &quot;Kontrol Et&quot; butonuna bastığınızda kılavuz
-            uygunluğu ve kaynakça denetimi yapar.
+            Yazdıklarınız otomatik kaydedilir. ArvoLab içerik üretmez;
+            &quot;Kontrol Et&quot; ile kılavuz uygunluğu ve kaynakça denetimi yapar.
           </p>
         </div>
         <Link href="/dashboard/editor" className="projects-filter-button">
@@ -72,6 +68,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
       <ManuscriptEditor
         projectId={id}
         initialContent={manuscript?.content ?? null}
+        initialUpdatedAt={manuscript?.updatedAt ?? null}
         requiredSections={requiredSections}
         initialMargins={manuscript?.margins ?? guidelineSettings.margins}
         initialShowPageNumbers={manuscript?.showPageNumbers ?? guidelineSettings.showPageNumbers}

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth-guards";
 import { extractPlainText, extractHeadings, countWords, type TiptapDoc } from "@/lib/tiptap-text";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import {
@@ -40,6 +41,9 @@ export interface ManuscriptData {
   coverPage: CoverPage | null;
 }
 
+// Veritabanı hatasında null DÖNMEZ, hata fırlatır: önceden hata "henüz metin
+// yok" gibi görünüyor, editör boş açılıyor ve ilk kayıt gerçek metnin üzerine
+// yazıyordu. Hata artık dashboard/error.tsx ekranına düşer.
 export async function getManuscript(projectId: string): Promise<ManuscriptData | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -52,7 +56,7 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
 
   if (error) {
     console.error(error);
-    return null;
+    throw new Error("Çalışma metni yüklenemedi. Lütfen sayfayı yenileyin.");
   }
   if (!data) return null;
 
@@ -71,50 +75,97 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
   };
 }
 
-export async function saveManuscript(
-  projectId: string,
-  content: TiptapDoc,
-  margins?: PageMargins,
-  showPageNumbers?: boolean,
-  coverPage?: CoverPage | null
-) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Oturum bulunamadı." };
+export interface SaveManuscriptInput {
+  content: TiptapDoc;
+  margins?: PageMargins;
+  showPageNumbers?: boolean;
+  coverPage?: CoverPage | null;
+  /** Editörün açtığı sürümün zamanı; null = henüz hiç kaydedilmemiş belge */
+  expectedUpdatedAt: string | null;
+  /** Çakışmada kullanıcı "benim sürümümü kaydet" derse */
+  force?: boolean;
+}
 
-  const plainText = extractPlainText(content);
+export type SaveManuscriptResult =
+  | { success: true; updatedAt: string; wordCount: number }
+  | { success?: false; error: string; conflict?: boolean; sessionExpired?: boolean };
+
+// İyimser eşzamanlılık: kayıt yalnızca veritabanındaki sürüm editörün
+// açtığı sürümle aynıysa yapılır. Başka sekme/kişi arada kaydettiyse
+// sessizce üzerine yazmak yerine "conflict" döner.
+export async function saveManuscript(projectId: string, input: SaveManuscriptInput): Promise<SaveManuscriptResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) {
+    return {
+      error: "Oturumunuz sona erdi. Yeniden giriş yapın; yazdıklarınız bu tarayıcıda saklanıyor.",
+      sessionExpired: true,
+    };
+  }
+
+  const { content, margins, showPageNumbers, coverPage } = input;
   const wordCount = countWords(content);
+  const row = {
+    content,
+    plain_text: extractPlainText(content),
+    word_count: wordCount,
+    updated_by: ctx.user.id,
+    updated_at: new Date().toISOString(),
+    ...(margins
+      ? {
+          margin_top_cm: margins.top,
+          margin_bottom_cm: margins.bottom,
+          margin_left_cm: margins.left,
+          margin_right_cm: margins.right,
+        }
+      : {}),
+    ...(showPageNumbers !== undefined ? { show_page_numbers: showPageNumbers } : {}),
+    ...(coverPage !== undefined ? { cover_page: coverPage } : {}),
+  };
 
-  const { error } = await supabase.from("project_manuscripts").upsert(
-    {
-      project_id: projectId,
-      content,
-      plain_text: plainText,
-      word_count: wordCount,
-      updated_by: user.id,
-      updated_at: new Date().toISOString(),
-      ...(margins
-        ? {
-            margin_top_cm: margins.top,
-            margin_bottom_cm: margins.bottom,
-            margin_left_cm: margins.left,
-            margin_right_cm: margins.right,
-          }
-        : {}),
-      ...(showPageNumbers !== undefined ? { show_page_numbers: showPageNumbers } : {}),
-      ...(coverPage !== undefined ? { cover_page: coverPage } : {}),
-    },
-    { onConflict: "project_id" }
-  );
+  const conflict = {
+    error: "Bu belge başka bir sekmede ya da başka biri tarafından değiştirildi.",
+    conflict: true,
+  } as const;
 
-  if (error) {
+  if (input.force) {
+    const { data, error } = await ctx.supabase
+      .from("project_manuscripts")
+      .upsert({ project_id: projectId, ...row }, { onConflict: "project_id" })
+      .select("updated_at")
+      .single();
+    if (error || !data) {
+      console.error(error);
+      return { error: "Kaydedilirken bir hata oluştu." };
+    }
+    return { success: true, updatedAt: data.updated_at, wordCount };
+  }
+
+  if (input.expectedUpdatedAt) {
+    const { data, error } = await ctx.supabase
+      .from("project_manuscripts")
+      .update(row)
+      .eq("project_id", projectId)
+      .eq("updated_at", input.expectedUpdatedAt)
+      .select("updated_at");
+    if (error) {
+      console.error(error);
+      return { error: "Kaydedilirken bir hata oluştu." };
+    }
+    if (!data?.length) return conflict;
+    return { success: true, updatedAt: data[0].updated_at, wordCount };
+  }
+
+  const { data, error } = await ctx.supabase
+    .from("project_manuscripts")
+    .insert({ project_id: projectId, ...row })
+    .select("updated_at")
+    .single();
+  if (error?.code === "23505") return conflict;
+  if (error || !data) {
     console.error(error);
     return { error: "Kaydedilirken bir hata oluştu." };
   }
-
-  return { success: true, wordCount };
+  return { success: true, updatedAt: data.updated_at, wordCount };
 }
 
 // NOT: Resim yükleme artık burada değil, doğrudan tarayıcıda
@@ -124,7 +175,11 @@ export async function saveManuscript(
 
 export interface ManuscriptCheckResult {
   wordCount: number;
+  citationStyle: string;
+  /** Otomatik kaynakça denetimi şimdilik yalnızca APA 7 için yapılır */
+  citationCheckSupported: boolean;
   guidelineCompliance: ReturnType<typeof checkGuidelineCompliance> | null;
+  missingSections: string[];
   apa7: {
     referenceSectionFound: boolean;
     complianceScore: number | null;
@@ -134,7 +189,9 @@ export interface ManuscriptCheckResult {
 }
 
 export async function runManuscriptCheck(projectId: string): Promise<{ error?: string; result?: ManuscriptCheckResult }> {
-  const supabase = await createClient();
+  const ctx = await getAuthContext();
+  if (!ctx) return { error: "Oturumunuz sona erdi. Yeniden giriş yapın." };
+  const { supabase } = ctx;
 
   const { data: manuscript, error: manuscriptError } = await supabase
     .from("project_manuscripts")
@@ -142,9 +199,11 @@ export async function runManuscriptCheck(projectId: string): Promise<{ error?: s
     .eq("project_id", projectId)
     .maybeSingle();
 
-  if (manuscriptError || !manuscript) {
-    return { error: "Önce çalışmayı kaydedin, sonra kontrol edin." };
+  if (manuscriptError) {
+    console.error(manuscriptError);
+    return { error: "Metin okunamadı; bu çalışmaya erişiminizi kontrol edin." };
   }
+  if (!manuscript) return { error: "Kontrol için önce biraz metin yazın." };
 
   const { data: project } = await supabase
     .from("academic_projects")
@@ -155,45 +214,53 @@ export async function runManuscriptCheck(projectId: string): Promise<{ error?: s
   const content = manuscript.content as TiptapDoc;
   const fullText = extractPlainText(content);
   const split = splitBodyAndReferences(fullText);
+  const citationStyle = project?.citation_style ?? "apa7";
 
+  // Editörle tutarlı: yalnızca onaylı kılavuzun kuralları denetlenir.
   let guidelineCompliance: ReturnType<typeof checkGuidelineCompliance> | null = null;
   if (project?.guideline_id) {
     const { data: guideline } = await supabase
       .from("thesis_guidelines")
-      .select("required_sections, citation_style")
+      .select("required_sections, citation_style, analysis_status")
       .eq("id", project.guideline_id)
       .single();
 
-    if (guideline) {
+    if (guideline?.analysis_status === "approved") {
       guidelineCompliance = checkGuidelineCompliance(
         split.bodyText,
         guideline.required_sections ?? [],
         guideline.citation_style,
-        project.citation_style ?? null
+        citationStyle
       );
     }
   }
 
-  let apa7Result: ManuscriptCheckResult["apa7"];
-  if (split.referenceText.trim().length > 0) {
+  const citationCheckSupported = citationStyle === "apa7";
+  let apa7Result: ManuscriptCheckResult["apa7"] = {
+    referenceSectionFound: false,
+    complianceScore: null,
+    references: [],
+    crossCheck: { citationsWithoutReference: [], referencesWithoutCitation: [] },
+  };
+  if (citationCheckSupported && split.referenceText.trim().length > 0) {
     const references = parseReferenceList(split.referenceText);
     const citations = extractInTextCitations(split.bodyText);
     const cross = crossCheck(citations, references);
-    const score = computeComplianceScore(references, cross);
-    apa7Result = { referenceSectionFound: true, complianceScore: score, references, crossCheck: cross };
-  } else {
     apa7Result = {
-      referenceSectionFound: false,
-      complianceScore: null,
-      references: [],
-      crossCheck: { citationsWithoutReference: [], referencesWithoutCitation: [] },
+      referenceSectionFound: true,
+      complianceScore: computeComplianceScore(references, cross),
+      references,
+      crossCheck: cross,
     };
   }
 
   return {
     result: {
       wordCount: countWords(content),
+      citationStyle,
+      citationCheckSupported,
       guidelineCompliance,
+      missingSections: guidelineCompliance?.sections.filter((s) => !s.found).map((s) => s.section) ?? [],
       apa7: apa7Result,
     },
   };
