@@ -8,6 +8,9 @@ import { resolveGuidelineSync } from "@/lib/guideline-sync";
 import { refreshImageUrls } from "@/lib/manuscript-images";
 import ManuscriptEditor from "./manuscript-editor";
 
+// Bu sayfanın sunucu eylemleri (Word'den aktarma, resimli dönüştürme) büyük dosyalarda zaman alabilir.
+export const maxDuration = 60;
+
 export default async function WriteManuscriptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();

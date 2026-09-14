@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Check, Circle, ListTree, Plus, Wand2 } from "lucide-react";
+import { Check, Circle, FileUp, ListTree, Plus, Wand2 } from "lucide-react";
 import type { OutlineHeading, SectionStatus } from "./editor-navigation";
 import type { PageRangeTone } from "@/lib/page-estimate";
 
@@ -19,6 +19,8 @@ interface ManuscriptOutlineProps {
   onJump: (heading: OutlineHeading) => void;
   onInsert: (sections: string[]) => void;
   onTemplate: () => void;
+  /** Word dosyasından aktarma penceresini açar */
+  onImport: () => void;
   /** İlerleme kartından sonra gösterilen ek kartlar (ör. yorumlar) */
   children?: ReactNode;
 }
@@ -46,6 +48,7 @@ export default function ManuscriptOutline({
   onJump,
   onInsert,
   onTemplate,
+  onImport,
   children,
 }: ManuscriptOutlineProps) {
   const missing = sections.filter((item) => !item.heading).map((item) => item.section);
@@ -102,6 +105,12 @@ export default function ManuscriptOutline({
         <header className="outline-head">
           <strong>İlerleme</strong>
         </header>
+        {documentEmpty ? (
+          <button type="button" className="projects-filter-button outline-action" onClick={onImport}>
+            <FileUp size={15} aria-hidden="true" />
+            Word dosyasından aktar
+          </button>
+        ) : null}
         <p className="outline-stat">
           <span>{words.toLocaleString("tr-TR")} kelime</span>
           <span>≈ {pages} sayfa</span>

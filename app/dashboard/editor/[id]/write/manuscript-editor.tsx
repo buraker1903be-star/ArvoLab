@@ -42,8 +42,10 @@ import {
   Captions,
   TableProperties,
   Search,
+  FileUp,
 } from "lucide-react";
 import FindReplaceBar from "./find-replace-bar";
+import ImportDialog, { type ImportMode } from "./import-dialog";
 import VersionsDialog from "./versions-dialog";
 import CiteDialog from "./cite-dialog";
 import ManuscriptComments from "./manuscript-comments";
@@ -264,6 +266,7 @@ export default function ManuscriptEditor({
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [margins, setMargins] = useState<PageMargins>(
     initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
   );
@@ -337,7 +340,11 @@ export default function ManuscriptEditor({
         setSaveState("saving");
         try {
           const res = await saveManuscript(projectId, {
-            content: editor.getJSON() as unknown as TiptapDoc,
+            // ProseMirror öznitelik nesneleri prototipsizdir (Object.create(null)); React'in sunucu
+            // eylemi kodlayıcısı bunları düz nesne saymayıp "$T" (geçici referans) olarak gönderir ve
+            // sunucuya hiçbir şey ulaşmaz: başlık düzeyi, resim adresi, dipnot metni vb. kaybolurdu.
+            // Düz JSON'a çevirerek gönderiyoruz.
+            content: JSON.parse(JSON.stringify(editor.getJSON())) as TiptapDoc,
             ...settingsRef.current,
             expectedUpdatedAt: updatedAtRef.current,
             force,
@@ -751,6 +758,14 @@ export default function ManuscriptEditor({
     clearDraft(projectId);
     window.location.reload();
   };
+  // Word'den gelen içerik: boş belgede ya da "yerine koy"da tüm metin, aksi hâlde sona eklenir.
+  const handleImported = (html: string, mode: ImportMode) => {
+    if (mode === "replace" || ui.empty) editor.commands.setContent(html);
+    else editor.chain().insertContentAt(editor.state.doc.content.size, html).run();
+    markDirtyRef.current();
+    const first = collectHeadings(editor.state.doc)[0];
+    if (first) jumpToHeading(editor, first);
+  };
 
   const statusLabel =
     saveState === "saving"
@@ -915,6 +930,9 @@ export default function ManuscriptEditor({
         </ToolbarButton>
         <ToolbarButton label="Kaynaktan atıf ekle" onClick={() => setCiteOpen(true)}>
           <BookMarked size={16} />
+        </ToolbarButton>
+        <ToolbarButton label="Word dosyasından aktar" onClick={() => setImportOpen(true)}>
+          <FileUp size={16} />
         </ToolbarButton>
         <ToolbarButton
           label="Şekil başlığı (otomatik numaralı)"
@@ -1284,6 +1302,7 @@ export default function ManuscriptEditor({
         onJump={handleJump}
         onInsert={handleInsertSections}
         onTemplate={handleTemplate}
+        onImport={() => setImportOpen(true)}
       >
         <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
       </ManuscriptOutline>
@@ -1296,6 +1315,14 @@ export default function ManuscriptEditor({
         onRestored={handleRestored}
       />
       <CiteDialog open={citeOpen} onClose={() => setCiteOpen(false)} projectId={projectId} style={style} onPick={handleCite} />
+      <ImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        projectId={projectId}
+        documentEmpty={ui.empty}
+        flush={() => saveNow()}
+        onImported={handleImported}
+      />
 
       {guideline ? (
         <Dialog

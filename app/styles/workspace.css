@@ -440,6 +440,10 @@
 .comment-quote:hover { color: var(--ink); }
 .comment-actions { display: flex; gap: 12px; }
 
+/* Word'den aktarma seçenekleri */
+.import-modes { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.import-modes legend { margin-bottom: 4px; padding: 0; }
+
 /* Seçim listeleri (sürüm geçmişi, kaynaktan atıf) */
 .picker-search {
   width: 100%;

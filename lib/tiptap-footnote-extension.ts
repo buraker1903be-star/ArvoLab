@@ -39,6 +39,9 @@ export const FootnoteReference = Node.create({
     return [
       {
         tag: "sup[data-footnote-id]",
+        // Üst simge (Superscript) biçimi de <sup> yakalar; dipnot işareti önce eşleşmeli
+        // (Word'den aktarma ve yapıştırmada dipnotlar kaybolmasın).
+        priority: 100,
         getAttrs: (element) => ({
           id: element.getAttribute("data-footnote-id"),
           text: element.getAttribute("data-footnote-text") ?? element.getAttribute("title") ?? "",
