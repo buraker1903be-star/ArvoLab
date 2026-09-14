@@ -53,6 +53,8 @@ export interface ManuscriptData {
   settingsSource: SettingsSource;
   /** Word çıktısına içindekiler tablosu */
   includeToc: boolean;
+  /** Başlıklar otomatik numaralanır ("1.", "1.1.") */
+  headingNumbering: boolean;
 }
 
 // Veritabanı hatasında null DÖNMEZ, hata fırlatır: önceden hata "henüz metin
@@ -91,6 +93,7 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
       customized: data.settings_customized ?? false,
     },
     includeToc: data.include_toc ?? false,
+    headingNumbering: data.heading_numbering ?? false,
   };
 }
 
@@ -101,6 +104,7 @@ export interface SaveManuscriptInput {
   coverPage?: CoverPage | null;
   settingsSource?: SettingsSource;
   includeToc?: boolean;
+  headingNumbering?: boolean;
   /** Editörün açtığı sürümün zamanı; null = henüz hiç kaydedilmemiş belge */
   expectedUpdatedAt: string | null;
   /** Çakışmada kullanıcı "benim sürümümü kaydet" derse */
@@ -127,7 +131,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     };
   }
 
-  const { content, margins, showPageNumbers, coverPage, settingsSource, includeToc } = input;
+  const { content, margins, showPageNumbers, coverPage, settingsSource, includeToc, headingNumbering } = input;
   // Biçim bilgisi (başlık düzeyi, resim adresi, dipnot metni…) sunucuya eksik ulaştıysa
   // kaydetme: eksik metni üzerine yazmak yerine hata göster, taslak tarayıcıda kalır.
   if (!content || content.type !== "doc" || hasNonPlainAttributes(content)) {
@@ -162,6 +166,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
         }
       : {}),
     ...(includeToc !== undefined ? { include_toc: includeToc } : {}),
+    ...(headingNumbering !== undefined ? { heading_numbering: headingNumbering } : {}),
   };
   const fullRow = { ...baseRow, ...optionalColumns };
   const hasOptionalColumns = Object.keys(optionalColumns).length > 0;

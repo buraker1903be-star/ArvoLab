@@ -2,6 +2,7 @@
 // Ham HTML hiç geçirilmez: metin kaçışlanır; yazı tipi, boyut, renk, hizalama,
 // bağlantı ve resim kaynakları izin listesinden geçer. Dipnotlar sırayla
 // numaralanır ve belgenin sonunda listelenir.
+import { headingNumberMap } from "@/lib/heading-numbering";
 
 interface Mark {
   type: string;
@@ -52,6 +53,8 @@ function blockStyle(attrs: Record<string, unknown> = {}) {
 interface RenderContext {
   footnotes: string[];
   captions: { figure: number; table: number };
+  /** Otomatik başlık numaraları (kapalıysa boş) */
+  headingNumbers: Map<object, string>;
 }
 
 const CAPTION_LABELS = { figure: "Şekil", table: "Tablo" } as const;
@@ -119,7 +122,8 @@ function renderNode(node: Node, ctx: RenderContext): string {
     }
     case "heading": {
       const level = Math.min(Math.max(Number(attrs.level) || 1, 1), 4);
-      return `<h${level}${blockStyle(attrs)}>${renderNodes(node.content, ctx)}</h${level}>`;
+      const number = ctx.headingNumbers.get(node);
+      return `<h${level}${blockStyle(attrs)}>${number ? `${escapeHtml(number)} ` : ""}${renderNodes(node.content, ctx)}</h${level}>`;
     }
     case "bulletList":
       return `<ul>${renderNodes(node.content, ctx)}</ul>`;
@@ -156,7 +160,14 @@ function renderNode(node: Node, ctx: RenderContext): string {
   }
 }
 
-export function renderTiptapHtml(doc: { content?: Node[] } | null | undefined): { html: string; footnotes: string[] } {
-  const ctx: RenderContext = { footnotes: [], captions: { figure: 0, table: 0 } };
+export function renderTiptapHtml(
+  doc: { content?: Node[] } | null | undefined,
+  options: { headingNumbering?: boolean } = {}
+): { html: string; footnotes: string[] } {
+  const ctx: RenderContext = {
+    footnotes: [],
+    captions: { figure: 0, table: 0 },
+    headingNumbers: options.headingNumbering ? headingNumberMap(doc) : new Map(),
+  };
   return { html: renderNodes(doc?.content, ctx), footnotes: ctx.footnotes };
 }

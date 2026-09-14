@@ -72,6 +72,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
         guidelineSync={{ mode: sync.mode, source: sync.source }}
         editHref={`/dashboard/editor/${id}/edit`}
         initialIncludeToc={manuscript?.includeToc ?? false}
+        initialHeadingNumbering={manuscript?.headingNumbering ?? false}
         citationStyle={project.citation_style ?? "apa7"}
         projectDefaults={{
           title: project.title ?? "",

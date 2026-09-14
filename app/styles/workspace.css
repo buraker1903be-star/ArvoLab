@@ -78,6 +78,8 @@
 .manuscript-editor-content h1 { margin: 22px 0 10px; font-size: 22px; font-weight: 700; }
 .manuscript-editor-content h2 { margin: 18px 0 8px; font-size: var(--fs-xl); font-weight: 650; }
 .manuscript-editor-content h3 { margin: 14px 0 6px; font-size: var(--fs-md); font-weight: 650; }
+/* Otomatik başlık numarası (metne yazılmaz; lib/tiptap-heading-numbers.ts) */
+.manuscript-editor-content [data-heading-number]::before { content: attr(data-heading-number) "\00a0"; font-variant-numeric: tabular-nums; }
 .manuscript-editor-content p { margin: 0 0 10px; }
 .manuscript-editor-content :is(ul, ol) { margin: 0 0 10px; padding-left: 22px; }
 .manuscript-editor-content blockquote { margin: 0 0 10px; padding-left: 14px; border-left: 3px solid var(--accent-300); color: var(--muted); }
