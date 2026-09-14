@@ -3,6 +3,8 @@ import type { PageMargins } from "@/app/actions/manuscript";
 export interface GuidelineEditorSettings {
   margins?: PageMargins;
   showPageNumbers?: boolean;
+  /** Kılavuz başlıkların ondalık numaralanmasını istiyor ("1.", "1.1.") */
+  headingNumbering?: boolean;
   fontFamily?: string;
   fontSizePt?: number;
   lineSpacing?: number;
@@ -40,6 +42,7 @@ export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorS
       : typeof rules.page_numbers === "boolean"
         ? { showPageNumbers: rules.page_numbers }
         : {}),
+    ...(typeof rules.heading_numbering === "boolean" ? { headingNumbering: rules.heading_numbering } : {}),
     ...(fontFamily ? { fontFamily } : {}),
     ...(fontSizePt && fontSizePt >= 8 && fontSizePt <= 24 ? { fontSizePt } : {}),
     ...(lineSpacing && lineSpacing >= 1 && lineSpacing <= 3 ? { lineSpacing } : {}),

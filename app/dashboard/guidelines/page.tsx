@@ -278,6 +278,10 @@ export default async function GuidelinesPage() {
                           <input name="showPageNumbers" type="checkbox" defaultChecked={g.extracted_rules?.show_page_numbers !== false} />
                           <span>Sayfa numarası kullan</span>
                         </label>
+                        <label className="guideline-review-check checkbox-label">
+                          <input name="headingNumbering" type="checkbox" defaultChecked={g.extracted_rules?.heading_numbering === true} />
+                          <span>Başlıklar ondalık numaralı (1., 1.1., 1.1.1.)</span>
+                        </label>
                         <label className="guideline-review-full">
                           <span>İnceleme notu</span>
                           <textarea name="reviewNotes" rows={2} defaultValue={g.review_notes ?? ""} />

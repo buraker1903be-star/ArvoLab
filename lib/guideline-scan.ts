@@ -42,6 +42,11 @@ export interface GuidelineScanResult {
   warnings: string[];
 }
 
+// "ondalık sistem/numaralandırma", "başlıklar … numaralandırılır", ya da örnek "1.1.1." numarası.
+// Aradaki "1.1" gibi rakamlar arası nokta cümle sonu sayılmaz; "numaralandırılmaz" kural değildir.
+export const HEADING_NUMBERING =
+  /ondal[ıi]k(?:l[ıi])?\s+(?:sistem|numara)|başl[ıi]k(?:lar[ıi]?n?)?(?:[^.;]|(?<=\d)\.(?=\d)){0,60}numaraland[ıi]r(?![ıi]lmaz|[ıi]lmamal|may)|(?:^|\s)1\.1\.1\.?\s/iu;
+
 function detectedNumber(text: string, pattern: RegExp): number | undefined {
   const match = pattern.exec(text);
   if (!match?.[1]) return undefined;
@@ -88,6 +93,9 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
       ...(validFontSize ? { font_size_pt: validFontSize } : {}),
       ...(validLineSpacing ? { line_spacing: validLineSpacing } : {}),
       show_page_numbers: /sayfa\s+numara(?:sı|ları|landırma)/iu.test(compact),
+      // Ondalık başlık numaralandırması ("1.1.1.") yalnızca açıkça geçiyorsa önerilir;
+      // bulunamazsa kural hiç yazılmaz (kapalı sayılmaz, yönetici karar verir).
+      ...(HEADING_NUMBERING.test(compact) ? { heading_numbering: true } : {}),
     },
     confidence: Math.round(score * 100) / 100,
     warnings,
