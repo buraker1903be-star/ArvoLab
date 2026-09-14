@@ -51,6 +51,9 @@
 .print-body h1 { font-size: 1.17em; }
 .print-body h2 { font-size: 1.08em; }
 .print-body :is(h3, h4) { font-size: 1em; }
+/* Kılavuzun ana bölüm kuralları: büyük harf; yeni sayfa sınıfını Word'le aynı kural verir (lib/chapter-rules.ts) */
+.print-sheet[data-chapter-case="upper"] .print-body h1 { text-transform: uppercase; }
+.print-body .print-new-page { break-before: page; }
 .print-body p { margin: 0 0 .6em; orphans: 3; widows: 3; }
 .print-body :is(ul, ol) { margin: 0 0 .6em; padding-left: 1.2cm; }
 .print-body blockquote { margin: .6em 0 .6em 1.2cm; }

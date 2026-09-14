@@ -282,6 +282,14 @@ export default async function GuidelinesPage() {
                           <input name="headingNumbering" type="checkbox" defaultChecked={g.extracted_rules?.heading_numbering === true} />
                           <span>Başlıklar ondalık numaralı (1., 1.1., 1.1.1.)</span>
                         </label>
+                        <label className="guideline-review-check checkbox-label">
+                          <input name="chapterUppercase" type="checkbox" defaultChecked={g.extracted_rules?.chapter_uppercase === true} />
+                          <span>Ana bölüm başlıkları büyük harfle</span>
+                        </label>
+                        <label className="guideline-review-check checkbox-label">
+                          <input name="chapterNewPage" type="checkbox" defaultChecked={g.extracted_rules?.chapter_new_page === true} />
+                          <span>Her ana bölüm yeni sayfadan başlar</span>
+                        </label>
                         <label className="guideline-review-full">
                           <span>İnceleme notu</span>
                           <textarea name="reviewNotes" rows={2} defaultValue={g.review_notes ?? ""} />

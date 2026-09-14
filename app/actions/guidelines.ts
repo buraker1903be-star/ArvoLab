@@ -143,6 +143,8 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
       line_spacing: lineSpacing,
       show_page_numbers: formData.get("showPageNumbers") === "on",
       heading_numbering: formData.get("headingNumbering") === "on",
+      chapter_uppercase: formData.get("chapterUppercase") === "on",
+      chapter_new_page: formData.get("chapterNewPage") === "on",
     },
     analysis_status: "needs_review",
     reviewed_by: null,

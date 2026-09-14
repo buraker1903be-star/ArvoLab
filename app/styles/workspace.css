@@ -101,6 +101,10 @@
 .live-check[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
 .live-check[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
 .live-check[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
+
+/* Kılavuzun ana bölüm kuralları (metin değişmez; Word ve baskı da aynı kuralı uygular) */
+.manuscript-editor-content[data-chapter-case="upper"] h1 { text-transform: uppercase; }
+.manuscript-editor-content[data-chapter-new-page] h1:not(:first-child) { margin-top: 34px; padding-top: 22px; border-top: 1px dashed var(--line); }
 .manuscript-editor-content p { margin: 0 0 10px; }
 .manuscript-editor-content :is(ul, ol) { margin: 0 0 10px; padding-left: 22px; }
 .manuscript-editor-content blockquote { margin: 0 0 10px; padding-left: 14px; border-left: 3px solid var(--accent-300); color: var(--muted); }

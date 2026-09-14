@@ -78,6 +78,8 @@ export async function GET(
         fontFamily: guideline.settings.fontFamily,
         fontSizePt: guideline.settings.fontSizePt,
         lineSpacing: guideline.settings.lineSpacing,
+        chapterUppercase: guideline.settings.chapterUppercase,
+        chapterNewPage: guideline.settings.chapterNewPage,
       }
     : {};
   const writerIds = [project.owner_id, project.assignee_id];

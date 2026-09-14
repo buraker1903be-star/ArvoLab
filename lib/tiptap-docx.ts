@@ -22,6 +22,7 @@ import {
 } from "docx";
 import { CAPTION_LABELS, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
 import { headingNumberMap } from "@/lib/heading-numbering";
+import { chapterBreakSet } from "@/lib/chapter-rules";
 
 interface TiptapMark {
   type: string;
@@ -151,6 +152,8 @@ interface ConversionContext {
   fetchImage: (url: string) => Promise<DocxImage | null>;
   /** Otomatik başlık numaraları (kapalıysa boş) */
   headingNumbers: Map<object, string>;
+  /** Yeni sayfadan başlayacak ana bölüm başlıkları (kural kapalıysa boş; lib/chapter-rules.ts) */
+  chapterBreaks: Set<object>;
 }
 
 interface BlockOptions {
@@ -257,9 +260,12 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
       const align = node.attrs?.textAlign as string | undefined;
       // Numara başlık metninin parçası olarak yazılır: Word'ün içindekiler tablosunda da görünür.
       const number = ctx.headingNumbers.get(node);
+      // Ana bölüm yeni sayfadan (baskıyla aynı kural: öncesinde içerik varsa).
+      const newPage = ctx.chapterBreaks.has(node);
       return [
         new Paragraph({
           heading: HEADING_LEVELS[level],
+          pageBreakBefore: newPage || undefined,
           alignment: align ? ALIGNMENTS[align] : undefined,
           spacing: lineSpacingValue(node.attrs?.lineSpacing),
           children: [...(number ? [new TextRun({ text: `${number} ` })] : []), ...inlineChildren(node.content ?? [], ctx)],
@@ -381,6 +387,10 @@ export interface DocxTextDefaults {
   fontFamily?: string;
   fontSizePt?: number;
   lineSpacing?: number;
+  /** Birinci düzey başlıklar büyük harfle (Word "Tümü büyük harf" biçimi; metin değişmez) */
+  chapterUppercase?: boolean;
+  /** Her birinci düzey başlık yeni sayfadan (ilki hariç: kapak/içindekiler zaten sayfa sonuyla biter) */
+  chapterNewPage?: boolean;
 }
 
 export interface BuildDocxOptions {
@@ -422,6 +432,7 @@ export async function buildDocxFromTiptap({
     contentWidthTwip: Math.max(A4_WIDTH_TWIP - marginTwip.left - marginTwip.right, 2000),
     fetchImage,
     headingNumbers: headingNumbering ? headingNumberMap(doc) : new Map(),
+    chapterBreaks: textDefaults.chapterNewPage ? chapterBreakSet(doc) : new Set(),
   };
 
   const bodyElements: (Paragraph | Table | TableOfContents)[] = [];
@@ -473,7 +484,10 @@ export async function buildDocxFromTiptap({
           run: { font, size: baseSize },
           paragraph: { spacing: { after: 120, ...lineSpacingValue(textDefaults.lineSpacing) } },
         },
-        heading1: { run: { ...headingRun, size: baseSize + 4 }, paragraph: headingParagraph },
+        heading1: {
+          run: { ...headingRun, size: baseSize + 4, ...(textDefaults.chapterUppercase ? { allCaps: true } : {}) },
+          paragraph: headingParagraph,
+        },
         heading2: { run: { ...headingRun, size: baseSize + 2 }, paragraph: headingParagraph },
         heading3: { run: { ...headingRun, size: baseSize }, paragraph: headingParagraph },
         heading4: { run: { ...headingRun, size: baseSize }, paragraph: headingParagraph },
