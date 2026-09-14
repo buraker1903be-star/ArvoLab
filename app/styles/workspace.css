@@ -80,6 +80,27 @@
 .manuscript-editor-content h3 { margin: 14px 0 6px; font-size: var(--fs-md); font-weight: 650; }
 /* Otomatik başlık numarası (metne yazılmaz; lib/tiptap-heading-numbers.ts) */
 .manuscript-editor-content [data-heading-number]::before { content: attr(data-heading-number) "\00a0"; font-variant-numeric: tabular-nums; }
+
+/* Canlı yapı denetimi göstergesi (alt çubuk) */
+.live-check {
+  --tone: var(--ink-soft);
+  --tone-soft: var(--surface-sunken);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, var(--line-soft));
+  border-radius: var(--r-pill);
+  background: var(--tone-soft);
+  color: var(--tone);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  cursor: pointer;
+}
+.live-check[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
+.live-check[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
+.live-check[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
 .manuscript-editor-content p { margin: 0 0 10px; }
 .manuscript-editor-content :is(ul, ol) { margin: 0 0 10px; padding-left: 22px; }
 .manuscript-editor-content blockquote { margin: 0 0 10px; padding-left: 14px; border-left: 3px solid var(--accent-300); color: var(--muted); }

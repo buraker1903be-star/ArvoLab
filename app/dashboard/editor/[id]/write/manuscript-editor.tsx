@@ -47,6 +47,8 @@ import {
   FileUp,
   Images,
   Keyboard,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import FindReplaceBar from "./find-replace-bar";
 import ImportDialog, { type ImportMode } from "./import-dialog";
@@ -236,6 +238,9 @@ function computeDocStats(editor: Editor) {
 
 type DocStats = ReturnType<typeof computeDocStats>;
 
+/** Yazma durduktan sonra canlı yapı denetimi (190 sayfalık tezde ~7 ms) */
+const LIVE_CHECK_DELAY_MS = 2500;
+
 // Araç çubuğu yalnızca bu (seçime bağlı, ucuz) değerler değişince yeniden çizilir
 // (önceden her tuş vuruşunda tüm editör bileşeni yeniden çiziliyordu).
 function selectToolbarState({ editor }: { editor: Editor | null }) {
@@ -289,6 +294,8 @@ export default function ManuscriptEditor({
   const [exporting, setExporting] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [structureIssues, setStructureIssues] = useState<StructureIssue[] | null>(null);
+  const [liveIssues, setLiveIssues] = useState<StructureIssue[] | null>(null);
+  const [issuesOpen, setIssuesOpen] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [footnoteDialog, setFootnoteDialog] = useState<FootnoteDialogState>(null);
   const [settingsSource, setSettingsSource] = useState<SettingsSource>(guidelineSync.source);
@@ -572,6 +579,36 @@ export default function ManuscriptEditor({
     if (editor && !editor.isDestroyed) editor.commands.setHeadingNumbering(headingNumbering);
   }, [editor, headingNumbering]);
 
+  // Canlı yapı denetimi: yazma durunca atıf–kaynakça, şekil/tablo, başlık ve boş bölüm
+  // sorunları kendiliğinden bulunur ve alt çubukta gösterilir ("Kontrol Et"e gerek kalmaz).
+  useEffect(() => {
+    if (!editor) return;
+    let timer: number | null = null;
+    const run = () => {
+      timer = null;
+      // Arka plan sekmesinde açılan editörün görünümü henüz bağlanmamış olabilir: ilk denetimi
+      // atlamak yerine sonra yeniden dene (bileşen kaldırılınca temizlik zamanlayıcıyı iptal eder).
+      if (editor.isDestroyed) {
+        schedule(1000);
+        return;
+      }
+      setLiveIssues(checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle }));
+    };
+    const schedule = (delay: number) => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(run, delay);
+    };
+    const onUpdate = () => schedule(LIVE_CHECK_DELAY_MS);
+    schedule(600);
+    editor.on("update", onUpdate);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      editor.off("update", onUpdate);
+    };
+  }, [editor, citationStyle]);
+
+  const closeIssues = useCallback(() => setIssuesOpen(false), []);
+
   // Kılavuzun yeni sürümü kendiliğinden uygulandıysa kalıcı olsun (bir kez).
   const autoAppliedRef = useRef(false);
   useEffect(() => {
@@ -645,7 +682,11 @@ export default function ManuscriptEditor({
       }
       // Yapı ve bütünlük kontrolü ekrandaki içerik üzerinde tarayıcıda anında çalışır.
       const current = editorRef.current;
-      if (current) setStructureIssues(checkStructure(JSON.parse(JSON.stringify(current.getJSON())), { citationStyle }));
+      if (current) {
+        const issues = checkStructure(JSON.parse(JSON.stringify(current.getJSON())), { citationStyle });
+        setStructureIssues(issues);
+        setLiveIssues(issues);
+      }
       const res = await runManuscriptCheck(projectId);
       if (res.error) {
         setCheckError(res.error);
@@ -824,6 +865,55 @@ export default function ManuscriptEditor({
   const pageTone = pageRangeTone(pages, guideline?.minPages ?? null, guideline?.maxPages ?? null);
 
   const handleJump = (heading: OutlineHeading) => jumpToHeading(editor, heading);
+
+  // Yapı denetimi listesi: canlı gösterge penceresi ve "Kontrol Et" sonucu aynı listeyi kullanır.
+  const recheckStructure = () => {
+    const issues = checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle });
+    setLiveIssues(issues);
+    setStructureIssues((current) => (current ? issues : current));
+  };
+  const renderIssueList = (issues: StructureIssue[], onNavigate?: () => void) =>
+    issues.length === 0 ? (
+      <p className="tone-text" data-tone="success">
+        ✓ Boş bölüm, başlık atlaması, şekil/tablo ya da atıf tutarsızlığı bulunmadı.
+      </p>
+    ) : (
+      <ul className="result-list">
+        {issues.map((issue, i) => (
+          <li key={i} className="tone-text result-action-row" data-tone={issue.tone}>
+            <span>{issue.message}</span>
+            {issue.action === "sort-references" ? (
+              <button
+                type="button"
+                className="result-link"
+                onClick={() => {
+                  const sorted = sortReferences(editor);
+                  if (sorted < 0) {
+                    showToast("error", "Kaynakça liste ya da tablo içinde olduğu için otomatik sıralanamadı.");
+                    return;
+                  }
+                  showToast("success", `${sorted} kaynak alfabetik sıralandı. Geri almak için Ctrl+Z.`);
+                  recheckStructure();
+                }}
+              >
+                Alfabetik sırala
+              </button>
+            ) : issue.target ? (
+              <button
+                type="button"
+                className="result-link"
+                onClick={() => {
+                  onNavigate?.();
+                  handleFindText(issue.target!);
+                }}
+              >
+                Göster
+              </button>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    );
   const handleInsertSections = (list: string[]) => {
     insertSections(editor, requiredSections, list);
     showToast("success", list.length > 1 ? `${list.length} bölüm kılavuz sırasına göre eklendi.` : `"${list[0]}" bölümü eklendi.`);
@@ -1363,10 +1453,26 @@ export default function ManuscriptEditor({
       ) : null}
 
       <div className="manuscript-footer">
-        <span className="muted text-sm">
-          {stats.words.toLocaleString("tr-TR")} kelime · ≈ {pages} sayfa
-          {stats.footnotes.length > 0 ? ` · ${stats.footnotes.length} dipnot` : ""}
-        </span>
+        <div className="cluster">
+          <span className="muted text-sm">
+            {stats.words.toLocaleString("tr-TR")} kelime · ≈ {pages} sayfa
+            {stats.footnotes.length > 0 ? ` · ${stats.footnotes.length} dipnot` : ""}
+          </span>
+          {liveIssues ? (
+            <button
+              type="button"
+              className="live-check"
+              data-tone={
+                liveIssues.length === 0 ? "success" : liveIssues.some((issue) => issue.tone === "danger") ? "danger" : "warning"
+              }
+              onClick={() => setIssuesOpen(true)}
+              title="Yazarken kendiliğinden denetlenir"
+            >
+              {liveIssues.length === 0 ? <CheckCircle2 size={14} aria-hidden="true" /> : <AlertTriangle size={14} aria-hidden="true" />}
+              {liveIssues.length === 0 ? "Yapı sorunsuz" : `${liveIssues.length} yapı uyarısı`}
+            </button>
+          ) : null}
+        </div>
 
         <div className="cluster cluster-lg">
           <button type="button" className="projects-primary-button" onClick={handleCheck} disabled={checking}>
@@ -1385,6 +1491,16 @@ export default function ManuscriptEditor({
       </div>
 
     </div>{/* .manuscript-editor-shell */}
+
+      <Dialog
+        open={issuesOpen}
+        onClose={closeIssues}
+        kicker="Canlı kontrol"
+        title="Yapı ve bütünlük"
+        description="Yazarken kendiliğinden denetlenir: boş bölümler, başlık atlamaları, şekil/tablo numaraları, atıf–kaynakça uyumu ve boş dipnotlar."
+      >
+        {renderIssueList(liveIssues ?? [], closeIssues)}
+      </Dialog>
 
       {checkError && (
         <p className="alert mt-md" data-tone="danger" role="alert">
@@ -1426,42 +1542,7 @@ export default function ManuscriptEditor({
           {structureIssues ? (
             <div className="result-block">
               <strong className="text-base">Yapı ve bütünlük</strong>
-              {structureIssues.length === 0 ? (
-                <p className="tone-text" data-tone="success">
-                  ✓ Boş bölüm, başlık atlaması, şekil/tablo ya da atıf tutarsızlığı bulunmadı.
-                </p>
-              ) : (
-                <ul className="result-list">
-                  {structureIssues.map((issue, i) => (
-                    <li key={i} className="tone-text result-action-row" data-tone={issue.tone}>
-                      <span>{issue.message}</span>
-                      {issue.action === "sort-references" ? (
-                        <button
-                          type="button"
-                          className="result-link"
-                          onClick={() => {
-                            const sorted = sortReferences(editor);
-                            if (sorted < 0) {
-                              showToast("error", "Kaynakça liste ya da tablo içinde olduğu için otomatik sıralanamadı.");
-                              return;
-                            }
-                            showToast("success", `${sorted} kaynak alfabetik sıralandı. Geri almak için Ctrl+Z.`);
-                            setStructureIssues(
-                              checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle })
-                            );
-                          }}
-                        >
-                          Alfabetik sırala
-                        </button>
-                      ) : issue.target ? (
-                        <button type="button" className="result-link" onClick={() => handleFindText(issue.target!)}>
-                          Göster
-                        </button>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {renderIssueList(structureIssues)}
             </div>
           ) : null}
 
