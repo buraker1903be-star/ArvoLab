@@ -93,6 +93,21 @@ export function checkStructure(doc: { content?: DocNode[] } | null | undefined, 
     if (text && !filled) add({ tone: "warning", message: `${quote(text)} bölümü henüz boş.`, target: text });
   });
 
+  // Kaynakça bölümü: başlığından sonraki, aynı ya da üst düzey ilk başlığa (ör. "EKLER") kadar.
+  // Sonrasındaki ekler yine gövde metnidir: eklerde anılan şekil/tablo "anılmıyor" sayılmaz.
+  let referencesEnd = blocks.length;
+  if (referencesIndex >= 0) {
+    const referencesLevel = Number(blocks[referencesIndex].attrs?.level) || 1;
+    for (let next = referencesIndex + 1; next < blocks.length; next++) {
+      const block = blocks[next];
+      if (block.type === "heading" && (Number(block.attrs?.level) || 1) <= referencesLevel) {
+        referencesEnd = next;
+        break;
+      }
+    }
+  }
+  const inReferences = (index: number) => referencesIndex >= 0 && index > referencesIndex && index < referencesEnd;
+
   // ---------- Şekil/tablo başlıkları ve metindeki anılmaları ----------
   const captions = { figure: [] as string[], table: [] as string[] };
   const bodyTexts: string[] = [];
@@ -117,7 +132,7 @@ export function checkStructure(doc: { content?: DocNode[] } | null | undefined, 
       walk(node.content, inReferences);
     }
   };
-  blocks.forEach((block, index) => walk([block], referencesIndex >= 0 && index > referencesIndex));
+  blocks.forEach((block, index) => walk([block], inReferences(index)));
   const body = bodyTexts.join("\n");
 
   for (const kind of ["table", "figure"] as const) {
@@ -146,16 +161,11 @@ export function checkStructure(doc: { content?: DocNode[] } | null | undefined, 
     });
   }
 
-  // Kaynakça girdileri: Kaynakça başlığından sonraki, aynı ya da üst düzey ilk başlığa
-  // (ör. "EKLER") kadar olan dolu paragraflar.
+  // Kaynakça girdileri: Kaynakça bölümündeki dolu paragraflar (gövde metniyle aynı sınır).
   const referenceEntries: string[] = [];
-  if (referencesIndex >= 0) {
-    const referencesLevel = Number(blocks[referencesIndex].attrs?.level) || 1;
-    for (const block of blocks.slice(referencesIndex + 1)) {
-      if (block.type === "heading" && (Number(block.attrs?.level) || 1) <= referencesLevel) break;
-      if (block.type === "paragraph" && textOf(block).trim()) referenceEntries.push(textOf(block).trim());
-    }
-  }
+  blocks.forEach((block, index) => {
+    if (inReferences(index) && block.type === "paragraph" && textOf(block).trim()) referenceEntries.push(textOf(block).trim());
+  });
 
   // ---------- Yazar-tarih stilleri: kaynakça alfabetik mi ----------
   const style = options.citationStyle;
