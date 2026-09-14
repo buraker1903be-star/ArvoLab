@@ -51,6 +51,7 @@ import ImportDialog, { type ImportMode } from "./import-dialog";
 import ImageLibraryDialog from "./image-library-dialog";
 import ShortcutsDialog from "./shortcuts-dialog";
 import type { FormatLossReport } from "@/lib/format-loss";
+import { checkStructure, type StructureIssue } from "@/lib/structure-check";
 import VersionsDialog from "./versions-dialog";
 import CiteDialog from "./cite-dialog";
 import ManuscriptComments from "./manuscript-comments";
@@ -265,6 +266,7 @@ export default function ManuscriptEditor({
   const [checking, setChecking] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
+  const [structureIssues, setStructureIssues] = useState<StructureIssue[] | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const [footnoteDialog, setFootnoteDialog] = useState<FootnoteDialogState>(null);
   const [settingsSource, setSettingsSource] = useState<SettingsSource>(guidelineSync.source);
@@ -562,6 +564,9 @@ export default function ManuscriptEditor({
         setCheckError("Kontrolden önce metin kaydedilemedi. Kayıt durumunu kontrol edip yeniden deneyin.");
         return;
       }
+      // Yapı ve bütünlük kontrolü ekrandaki içerik üzerinde tarayıcıda anında çalışır.
+      const current = editorRef.current;
+      if (current) setStructureIssues(checkStructure(JSON.parse(JSON.stringify(current.getJSON())), { citationStyle }));
       const res = await runManuscriptCheck(projectId);
       if (res.error) {
         setCheckError(res.error);
@@ -573,7 +578,7 @@ export default function ManuscriptEditor({
     } finally {
       setChecking(false);
     }
-  }, [projectId, saveNow]);
+  }, [projectId, saveNow, citationStyle]);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
@@ -1307,6 +1312,30 @@ export default function ManuscriptEditor({
               </ul>
             </div>
           )}
+
+          {structureIssues ? (
+            <div className="result-block">
+              <strong className="text-base">Yapı ve bütünlük</strong>
+              {structureIssues.length === 0 ? (
+                <p className="tone-text" data-tone="success">
+                  ✓ Boş bölüm, başlık atlaması, şekil/tablo ya da atıf tutarsızlığı bulunmadı.
+                </p>
+              ) : (
+                <ul className="result-list">
+                  {structureIssues.map((issue, i) => (
+                    <li key={i} className="tone-text result-action-row" data-tone={issue.tone}>
+                      <span>{issue.message}</span>
+                      {issue.target ? (
+                        <button type="button" className="result-link" onClick={() => handleFindText(issue.target!)}>
+                          Göster
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
 
           {checkResult.citationCheckSupported ? (
             <div>
