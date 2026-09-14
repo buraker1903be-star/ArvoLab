@@ -315,3 +315,80 @@
   .guideline-applied-banner { flex-direction: column; }
   .guideline-applied-banner > span { text-align: left; }
 }
+
+/* ---------- Editör yerleşimi: belge + yol gösteren yan panel ---------- */
+.manuscript-layout { display: grid; grid-template-columns: minmax(0, 1fr) 272px; gap: 18px; align-items: start; }
+.manuscript-main { min-width: 0; }
+.manuscript-outline {
+  position: sticky;
+  top: calc(var(--topbar-height) + 16px);
+  display: grid;
+  gap: 12px;
+  max-height: calc(100vh - var(--topbar-height) - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.outline-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.outline-card p { margin: 0; }
+.outline-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.outline-head strong { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-base); }
+.outline-action { width: 100%; justify-content: center; }
+.outline-sections,
+.outline-headings { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.outline-sections button,
+.outline-headings button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--r-xs);
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.outline-sections button:hover,
+.outline-headings button:hover { background: var(--surface-2); color: var(--ink); }
+.outline-sections [data-found="true"] svg { flex-shrink: 0; color: var(--success); }
+.outline-sections [data-found="false"] button { color: var(--muted); }
+.outline-sections [data-found="false"] svg { flex-shrink: 0; color: var(--dim); }
+.outline-sections .outline-add { margin-left: auto; color: var(--accent); }
+.outline-headings [data-level="2"] button { padding-left: 20px; }
+.outline-headings [data-level="3"] button { padding-left: 32px; color: var(--muted); }
+.outline-stat { display: flex; justify-content: space-between; gap: 8px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.outline-progress { --tone: var(--accent); height: 6px; overflow: hidden; border-radius: var(--r-pill); background: var(--surface-2); }
+.outline-progress span { display: block; height: 100%; border-radius: inherit; background: var(--tone); }
+.outline-progress[data-tone="warning"] { --tone: var(--warning); }
+.outline-progress[data-tone="success"] { --tone: var(--success); }
+.outline-progress[data-tone="danger"] { --tone: var(--danger); }
+
+/* Kontrol sonuçlarında "Git / Ekle / Göster" */
+.result-action-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.result-link { flex-shrink: 0; color: var(--accent); font-size: var(--fs-sm); font-weight: 650; cursor: pointer; }
+.result-link:hover { text-decoration: underline; }
+
+@media (max-width: 1180px) {
+  .manuscript-layout { grid-template-columns: minmax(0, 1fr); }
+  .manuscript-outline {
+    position: static;
+    order: -1;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    max-height: none;
+    overflow: visible;
+  }
+  .outline-headings { max-height: 200px; overflow-y: auto; }
+}
+@media (max-width: 640px) {
+  /* Telefonda belge planı yer kaplamasın; kılavuz listesi ve ilerleme kalır */
+  .manuscript-outline > .outline-card:last-child { display: none; }
+}

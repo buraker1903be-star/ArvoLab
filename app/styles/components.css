@@ -247,6 +247,15 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .project-form-heading h2 > svg { color: var(--muted); }
 .project-form-heading p { margin: 0; color: var(--muted); font-size: var(--fs-base); line-height: 1.55; }
 
+/* Katlanır form bölümü (isteğe bağlı alanlar) */
+.form-details > summary { display: grid; gap: 2px; cursor: pointer; list-style: none; }
+.form-details > summary::-webkit-details-marker { display: none; }
+.form-details > summary > span { color: var(--ink); font-size: var(--fs-md); font-weight: 700; }
+.form-details > summary > span::after { content: " ▾"; color: var(--muted); }
+.form-details[open] > summary > span::after { content: " ▴"; }
+.form-details > summary > small { color: var(--muted); font-size: var(--fs-sm); }
+.form-details[open] > summary { margin-bottom: 16px; }
+
 .project-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
 .project-form-grid label,
 .guideline-review-form label { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); font-weight: 600; color: var(--ink-soft); }
@@ -423,6 +432,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .stack-sm { display: grid; gap: 12px; }
 .muted { color: var(--muted); }
 .text-sm { font-size: var(--fs-sm); }
+.text-micro { font-size: var(--fs-micro); }
 .text-base { font-size: var(--fs-base); }
 .hint { margin: 6px 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.5; }
 .mono { font-family: var(--font-mono); font-size: var(--fs-micro); }

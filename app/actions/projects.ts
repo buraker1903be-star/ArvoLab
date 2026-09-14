@@ -66,24 +66,23 @@ function readInstitution(formData: FormData) {
   };
 }
 
-export async function createProject(formData: FormData) {
+// Hatalar formun içinde gösterilir (yazılanlar kaybolmaz); başarıda editör açılır.
+export async function createProject(formData: FormData): Promise<ActionResult> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/");
-  }
+  if (!user) return SESSION_MISSING;
 
   const title = String(formData.get("title") ?? "").trim();
   const type = String(formData.get("type") ?? "");
 
-  if (!title || title.length < 3) {
-    redirect("/dashboard/editor/new?error=missing-title");
+  if (title.length < 3 || title.length > 240) {
+    return { error: "Çalışma başlığı 3 ile 240 karakter arasında olmalıdır." };
   }
   if (!PROJECT_TYPES.includes(type)) {
-    redirect("/dashboard/editor/new?error=missing-type");
+    return { error: "Lütfen çalışma türünü seçin." };
   }
 
   const dueDateRaw = String(formData.get("dueDate") ?? "").trim();
@@ -119,7 +118,7 @@ export async function createProject(formData: FormData) {
 
   if (error || !created) {
     console.error(error);
-    redirect("/dashboard/editor/new?error=save-failed");
+    return { error: "Kaydedilirken bir hata oluştu, lütfen tekrar deneyin." };
   }
 
   revalidatePath("/dashboard/editor");

@@ -254,8 +254,9 @@ export async function runManuscriptCheck(projectId: string): Promise<{ error?: s
 
   // Editör ve Word çıktısıyla aynı kaynak: kılavuzun son onaylı sürümü.
   const guideline = await loadAppliedGuideline(supabase, project?.guideline_id);
+  // Tam metinde aranır: gövde metni "Kaynakça" başlığından önce biter, o bölüm hep eksik görünüyordu.
   const guidelineCompliance = guideline
-    ? checkGuidelineCompliance(split.bodyText, guideline.requiredSections, guideline.citationStyle, citationStyle)
+    ? checkGuidelineCompliance(fullText, guideline.requiredSections, guideline.citationStyle, citationStyle)
     : null;
 
   const citationCheckSupported = citationStyle === "apa7";

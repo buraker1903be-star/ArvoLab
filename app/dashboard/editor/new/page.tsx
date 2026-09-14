@@ -1,22 +1,13 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, Save } from "lucide-react";
+import { ArrowLeft, CalendarDays, PenLine } from "lucide-react";
 import { createProject } from "@/app/actions/projects";
 import { getUniversities } from "@/app/actions/universities";
+import ActionForm from "../../action-form";
 import AcademicUnitFields from "./academic-unit-fields";
 
-const errorMessages: Record<string, string> = {
-  "missing-title": "Çalışma başlığı en az 3 karakter olmalıdır.",
-  "missing-type": "Lütfen çalışma türünü seçin.",
-  "save-failed": "Kaydedilirken bir hata oluştu, lütfen tekrar deneyin.",
-};
-
-type NewProjectPageProps = {
-  searchParams: Promise<{ error?: string }>;
-};
-
-export default async function NewProjectPage({ searchParams }: NewProjectPageProps) {
-  const params = await searchParams;
-  const errorMessage = params.error ? errorMessages[params.error] : null;
+// Müşteri yalnızca başlığı ve kurumunu seçer; kılavuz otomatik bağlanır ve
+// kayıttan sonra doğrudan editör açılır. Planlama alanları isteğe bağlıdır.
+export default async function NewProjectPage() {
   const universities = await getUniversities();
 
   return (
@@ -25,7 +16,7 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
         <div>
           <span className="dashboard-kicker">Yeni kayıt</span>
           <h1>Yeni Akademik Çalışma</h1>
-          <p>Çalışmanın temel akademik ve operasyonel bilgilerini girin.</p>
+          <p>Başlığı ve kurumunuzu seçin; tez yazım kılavuzunuz otomatik uygulanır ve editör açılır.</p>
         </div>
         <Link href="/dashboard/editor" className="projects-filter-button">
           <ArrowLeft size={17} aria-hidden="true" />
@@ -33,37 +24,28 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
         </Link>
       </section>
 
-      {errorMessage ? (
-        <p className="alert" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
-
-      <form className="project-form" action={createProject}>
+      <ActionForm action={createProject} className="project-form">
         <section className="project-form-card">
           <div className="project-form-heading">
-            <h2>Temel bilgiler</h2>
-            <p>Çalışmanın adı, türü ve bağlı olduğu akademik kurumu belirleyin.</p>
+            <h2>Çalışmanız</h2>
+            <p>Kurumunuzu listeden seçerseniz kılavuzun kuralları editöre kendiliğinden uygulanır.</p>
           </div>
 
           <div className="project-form-grid">
-            <label>
+            <label className="project-form-full">
               <span>Çalışma başlığı</span>
-              <input name="title" type="text" placeholder="Örn. Eğitim Bilimleri Yüksek Lisans Tezi" required />
+              <input name="title" type="text" placeholder="Örn. Öğretmenlerin Dijital Okuryazarlık Düzeyleri" minLength={3} maxLength={240} required />
             </label>
 
             <label>
               <span>Çalışma türü</span>
-              <select name="type" defaultValue="">
-                <option value="" disabled>Seçiniz</option>
+              <select name="type" defaultValue="thesis" required>
                 <option value="thesis">Tez</option>
                 <option value="article">Makale</option>
                 <option value="project">Proje</option>
                 <option value="associate-professorship">Doçentlik dosyası</option>
               </select>
             </label>
-
-            <AcademicUnitFields universities={universities} />
 
             <label>
               <span>Kaynakça sistemi</span>
@@ -73,22 +55,24 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
                 <option value="chicago">Chicago</option>
                 <option value="ieee">IEEE</option>
               </select>
+              <small>Tezlerde onaylı kılavuz varsa ondan belirlenir.</small>
             </label>
 
+            <AcademicUnitFields universities={universities} />
           </div>
         </section>
 
-        <section className="project-form-card">
-          <div className="project-form-heading">
-            <h2>Yöntem ve planlama</h2>
-            <p>Çalışmanın yöntemini ve teslim tarihini tanımlayın. Sorumlu uzman ataması, çalışma oluşturulduktan sonra ekibimiz tarafından yapılır.</p>
-          </div>
+        <details className="project-form-card form-details">
+          <summary>
+            <span>İsteğe bağlı bilgiler</span>
+            <small>Araştırma yöntemi, teslim tarihi, öncelik ve notlar — sonradan da ekleyebilirsiniz.</small>
+          </summary>
 
           <div className="project-form-grid">
             <label>
               <span>Araştırma yöntemi</span>
               <select name="method" defaultValue="">
-                <option value="" disabled>Seçiniz</option>
+                <option value="">Belirtilmedi</option>
                 <option value="quantitative">Nicel</option>
                 <option value="qualitative">Nitel</option>
                 <option value="mixed">Karma</option>
@@ -116,19 +100,19 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
 
             <label className="project-form-full">
               <span>Konu ve çalışma notları</span>
-              <textarea name="notes" rows={7} placeholder="Araştırma konusu, kapsamı, danışman notları ve özel gereksinimler" />
+              <textarea name="notes" rows={5} placeholder="Araştırma konusu, kapsamı, danışman notları ve özel gereksinimler" />
             </label>
           </div>
-        </section>
+        </details>
 
         <div className="project-form-actions">
           <Link href="/dashboard/editor" className="projects-filter-button">İptal</Link>
           <button type="submit" className="projects-primary-button">
-            <Save size={17} />
-            Çalışmayı kaydet
+            <PenLine size={17} />
+            Oluştur ve yazmaya başla
           </button>
         </div>
-      </form>
+      </ActionForm>
     </main>
   );
 }

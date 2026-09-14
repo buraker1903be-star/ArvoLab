@@ -52,6 +52,18 @@ import type { GuidelineSyncMode } from "@/lib/guideline-sync";
 import Link from "next/link";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
+import { estimatePages, pageRangeTone } from "@/lib/page-estimate";
+import ManuscriptOutline from "./manuscript-outline";
+import {
+  applyTemplate,
+  collectHeadings,
+  insertSections,
+  isDocumentEmpty,
+  jumpToHeading,
+  sectionStatuses,
+  selectText,
+  type OutlineHeading,
+} from "./editor-navigation";
 
 interface ProjectDefaults {
   title: string;
@@ -184,6 +196,8 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
     canRedo: editor.can().redo(),
     words: (editor.storage.characterCount?.words?.() as number | undefined) ?? 0,
     footnotes,
+    headings: collectHeadings(editor.state.doc),
+    empty: isDocumentEmpty(editor.state.doc),
   };
 }
 
@@ -646,6 +660,26 @@ export default function ManuscriptEditor({
   const ui = toolbarState ?? selectToolbarState({ editor })!;
   const requiredSections = guideline?.requiredSections ?? [];
   const isThesis = (projectDefaults?.projectType ?? "thesis") === "thesis";
+  const sections = sectionStatuses(ui.headings, requiredSections);
+  const pages = estimatePages(ui.words, {
+    fontSizePt: guideline?.settings.fontSizePt,
+    lineSpacing: guideline?.settings.lineSpacing,
+    margins,
+  });
+  const pageTone = pageRangeTone(pages, guideline?.minPages ?? null, guideline?.maxPages ?? null);
+
+  const handleJump = (heading: OutlineHeading) => jumpToHeading(editor, heading);
+  const handleInsertSections = (list: string[]) => {
+    insertSections(editor, requiredSections, list);
+    showToast("success", list.length > 1 ? `${list.length} bölüm kılavuz sırasına göre eklendi.` : `"${list[0]}" bölümü eklendi.`);
+  };
+  const handleTemplate = () => {
+    applyTemplate(editor, requiredSections);
+    showToast("success", "Kılavuzun bölümleriyle taslak oluşturuldu.");
+  };
+  const handleFindText = (text: string) => {
+    if (!selectText(editor, text)) showToast("error", "Bu ifade metinde bulunamadı; değiştirilmiş olabilir.");
+  };
 
   const statusLabel =
     saveState === "saving"
@@ -661,6 +695,8 @@ export default function ManuscriptEditor({
               : "Otomatik kayıt açık";
 
   return (
+    <div className="manuscript-layout">
+    <div className="manuscript-main">
     <div className="manuscript-editor-shell">
       <div className="manuscript-toolbar" role="toolbar" aria-label="Biçimlendirme">
         <select
@@ -1037,7 +1073,7 @@ export default function ManuscriptEditor({
 
       <div className="manuscript-footer">
         <span className="muted text-sm">
-          {ui.words.toLocaleString("tr-TR")} kelime
+          {ui.words.toLocaleString("tr-TR")} kelime · ≈ {pages} sayfa
           {ui.footnotes.length > 0 ? ` · ${ui.footnotes.length} dipnot` : ""}
         </span>
 
@@ -1053,11 +1089,7 @@ export default function ManuscriptEditor({
         </div>
       </div>
 
-      {requiredSections.length > 0 && (
-        <div className="muted text-sm mt-md">
-          Kılavuzun zorunlu tuttuğu bölümler: {requiredSections.join(", ")}
-        </div>
-      )}
+    </div>{/* .manuscript-editor-shell */}
 
       {checkError && (
         <p className="alert mt-md" data-tone="danger" role="alert">
@@ -1073,11 +1105,25 @@ export default function ManuscriptEditor({
             <div className="result-block">
               <strong className="text-base">Kılavuz Uygunluğu</strong>
               <ul className="result-list">
-                {checkResult.guidelineCompliance.sections.map((s, i) => (
-                  <li key={i} className="tone-text" data-tone={s.found ? "success" : "danger"}>
-                    {s.found ? "✓" : "✗"} {s.section}
-                  </li>
-                ))}
+                {checkResult.guidelineCompliance.sections.map((s, i) => {
+                  const heading = sections.find((item) => item.section === s.section)?.heading ?? null;
+                  return (
+                    <li key={i} className="tone-text result-action-row" data-tone={s.found ? "success" : "danger"}>
+                      <span>
+                        {s.found ? "✓" : "✗"} {s.section}
+                      </span>
+                      {heading ? (
+                        <button type="button" className="result-link" onClick={() => handleJump(heading)}>
+                          Git
+                        </button>
+                      ) : !s.found ? (
+                        <button type="button" className="result-link" onClick={() => handleInsertSections([s.section])}>
+                          Ekle
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -1092,13 +1138,19 @@ export default function ManuscriptEditor({
               {checkResult.apa7.referenceSectionFound && (
                 <ul className="result-list">
                   {checkResult.apa7.crossCheck.referencesWithoutCitation.map((r, i) => (
-                    <li key={`rw-${i}`} className="tone-text" data-tone="warning">
-                      Kaynakçada var, metinde atıf yok: {r.raw}
+                    <li key={`rw-${i}`} className="tone-text result-action-row" data-tone="warning">
+                      <span>Kaynakçada var, metinde atıf yok: {r.raw}</span>
+                      <button type="button" className="result-link" onClick={() => handleFindText(r.raw)}>
+                        Göster
+                      </button>
                     </li>
                   ))}
                   {checkResult.apa7.crossCheck.citationsWithoutReference.map((c, i) => (
-                    <li key={`cw-${i}`} className="tone-text" data-tone="warning">
-                      Metinde atıf var, kaynakçada yok: {c.raw}
+                    <li key={`cw-${i}`} className="tone-text result-action-row" data-tone="warning">
+                      <span>Metinde atıf var, kaynakçada yok: {c.raw}</span>
+                      <button type="button" className="result-link" onClick={() => handleFindText(c.raw)}>
+                        Göster
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -1112,6 +1164,22 @@ export default function ManuscriptEditor({
           )}
         </div>
       )}
+
+    </div>{/* .manuscript-main */}
+
+      <ManuscriptOutline
+        headings={ui.headings}
+        sections={sections}
+        words={ui.words}
+        pages={pages}
+        minPages={guideline?.minPages ?? null}
+        maxPages={guideline?.maxPages ?? null}
+        pageTone={pageTone}
+        documentEmpty={ui.empty}
+        onJump={handleJump}
+        onInsert={handleInsertSections}
+        onTemplate={handleTemplate}
+      />
 
       {guideline ? (
         <Dialog
