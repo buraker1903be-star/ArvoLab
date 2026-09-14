@@ -12,7 +12,8 @@ import {
   Upload,
   UserRound,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { editedAgo, getWritingStats } from "@/lib/writing-stats";
+import { dueInfo } from "@/lib/due-date";
 import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -37,42 +38,6 @@ function formatDateTime(dateStr: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function relativeTime(dateStr: string) {
-  const minutes = Math.round((Date.now() - new Date(dateStr).getTime()) / 60000);
-  if (minutes < 1) return "az önce";
-  if (minutes < 60) return `${minutes} dk önce`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} saat önce`;
-  const days = Math.round(hours / 24);
-  if (days === 1) return "dün";
-  if (days < 7) return `${days} gün önce`;
-  return formatDateTime(dateStr);
-}
-
-interface WritingStats {
-  words: number;
-  updatedAt: string;
-}
-
-// Kartlarda yazım durumu: kelime sayısı, son düzenleme ve başkalarından gelen açık yorumlar.
-async function getWritingStats(projectIds: string[], currentUserId: string | undefined) {
-  const stats = new Map<string, WritingStats>();
-  const openComments = new Map<string, number>();
-  if (projectIds.length === 0) return { stats, openComments };
-
-  const supabase = await createClient();
-  const [manuscripts, comments] = await Promise.all([
-    supabase.from("project_manuscripts").select("project_id, word_count, updated_at").in("project_id", projectIds),
-    supabase.from("manuscript_comments").select("project_id, author_id").in("project_id", projectIds).is("resolved_at", null),
-  ]);
-  for (const row of manuscripts.data ?? []) stats.set(row.project_id, { words: row.word_count ?? 0, updatedAt: row.updated_at });
-  for (const row of comments.data ?? []) {
-    if (row.author_id === currentUserId) continue;
-    openComments.set(row.project_id, (openComments.get(row.project_id) ?? 0) + 1);
-  }
-  return { stats, openComments };
 }
 
 export default async function ProjectsPage() {
@@ -133,6 +98,7 @@ export default async function ProjectsPage() {
             const canEdit = canApprove || profile?.id === project.owner_id || profile?.id === project.assignee_id;
             // Eski kayıtlarda sorumlu yalnızca serbest metin olarak tutuluyordu (assignee_id boş).
             const legacyAssignee = !project.assignee_id && project.assignee_name;
+            const due = dueInfo(project.due_date, project.status);
             return (
               <article className="project-card" key={project.id}>
                 <div className="project-card-main">
@@ -162,11 +128,16 @@ export default async function ProjectsPage() {
                   <span>
                     <CalendarDays size={15} aria-hidden="true" />
                     {formatDate(project.due_date)}
+                    {due ? (
+                      <span className="chip" data-tone={due.tone}>
+                        {due.label}
+                      </span>
+                    ) : null}
                   </span>
                   <span>
                     <FileText size={15} aria-hidden="true" />
                     {stats.has(project.id)
-                      ? `${stats.get(project.id)!.words.toLocaleString("tr-TR")} kelime · ${relativeTime(stats.get(project.id)!.updatedAt)} düzenlendi`
+                      ? `${stats.get(project.id)!.words.toLocaleString("tr-TR")} kelime · ${editedAgo(stats.get(project.id)!.updatedAt)} düzenlendi`
                       : "Henüz yazılmadı"}
                   </span>
                   {openComments.get(project.id) ? (
