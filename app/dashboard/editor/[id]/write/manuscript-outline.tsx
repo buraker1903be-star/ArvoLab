@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Check, Circle, ListTree, Plus, Wand2 } from "lucide-react";
 import type { OutlineHeading, SectionStatus } from "./editor-navigation";
 import type { PageRangeTone } from "@/lib/page-estimate";
@@ -16,6 +17,8 @@ interface ManuscriptOutlineProps {
   onJump: (heading: OutlineHeading) => void;
   onInsert: (sections: string[]) => void;
   onTemplate: () => void;
+  /** İlerleme kartından sonra gösterilen ek kartlar (ör. yorumlar) */
+  children?: ReactNode;
 }
 
 const PAGE_HINT: Record<PageRangeTone, string> = {
@@ -39,6 +42,7 @@ export default function ManuscriptOutline({
   onJump,
   onInsert,
   onTemplate,
+  children,
 }: ManuscriptOutlineProps) {
   const missing = sections.filter((item) => !item.heading).map((item) => item.section);
   const target = maxPages ?? minPages;
@@ -113,6 +117,8 @@ export default function ManuscriptOutline({
         ) : null}
         <p className="muted text-micro">Tahmin; şekil, tablo ve kapak dahil değildir.</p>
       </section>
+
+      {children}
 
       <section className="outline-card">
         <header className="outline-head">

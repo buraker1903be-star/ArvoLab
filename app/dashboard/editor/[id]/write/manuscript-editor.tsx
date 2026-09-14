@@ -34,7 +34,15 @@ import {
   AlignVerticalSpaceAround,
   FileBadge,
   Trash2,
+  History,
+  BookMarked,
+  Printer,
 } from "lucide-react";
+import VersionsDialog from "./versions-dialog";
+import CiteDialog from "./cite-dialog";
+import ManuscriptComments from "./manuscript-comments";
+import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
+import type { CitationStyle } from "@/lib/citation-format";
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import type { TiptapDoc } from "@/lib/tiptap-text";
@@ -58,12 +66,16 @@ import {
   applyTemplate,
   collectHeadings,
   insertSections,
+  insertCitation,
   isDocumentEmpty,
   jumpToHeading,
   sectionStatuses,
+  selectedText,
   selectText,
   type OutlineHeading,
 } from "./editor-navigation";
+
+const CITATION_STYLES: CitationStyle[] = ["apa7", "chicago", "ieee", "vancouver"];
 
 interface ProjectDefaults {
   title: string;
@@ -96,6 +108,10 @@ interface ManuscriptEditorProps {
   guidelineSync: { mode: GuidelineSyncMode; source: SettingsSource };
   /** Kurum seçimi için çalışma düzenleme sayfası */
   editHref: string;
+  /** Word çıktısına içindekiler tablosu */
+  initialIncludeToc: boolean;
+  /** Çalışmanın kaynakça sistemi (atıf biçimi) */
+  citationStyle: string;
 }
 
 const formatDate = (value: string | null | undefined) => {
@@ -212,6 +228,8 @@ export default function ManuscriptEditor({
   guideline,
   guidelineSync,
   editHref,
+  initialIncludeToc,
+  citationStyle,
 }: ManuscriptEditorProps) {
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -227,6 +245,9 @@ export default function ManuscriptEditor({
   const [settingsSource, setSettingsSource] = useState<SettingsSource>(guidelineSync.source);
   const [syncMode, setSyncMode] = useState<GuidelineSyncMode>(guidelineSync.mode);
   const [guidelineOpen, setGuidelineOpen] = useState(false);
+  const [includeToc, setIncludeToc] = useState(initialIncludeToc);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [citeOpen, setCiteOpen] = useState(false);
   const [margins, setMargins] = useState<PageMargins>(
     initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
   );
@@ -259,7 +280,7 @@ export default function ManuscriptEditor({
   const saveTimerRef = useRef<number | null>(null);
   const draftTimerRef = useRef<number | null>(null);
   const blockedRef = useRef(false);
-  const settingsRef = useRef({ margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource });
+  const settingsRef = useRef({ margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource, includeToc });
   const saveNowRef = useRef<(force?: boolean) => Promise<boolean>>(async () => false);
   const markDirtyRef = useRef<() => void>(() => undefined);
   const openFootnoteRef = useRef<(pos: number, text: string) => void>(() => undefined);
@@ -422,14 +443,14 @@ export default function ManuscriptEditor({
   // (geliştirmedeki çift effect çalıştırması boş kayıt tetiklemesin).
   const settingsSnapshot = useRef<string | null>(null);
   useEffect(() => {
-    const next = { margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource };
+    const next = { margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource, includeToc };
     const serialized = JSON.stringify(next);
     settingsRef.current = next;
     const previous = settingsSnapshot.current;
     settingsSnapshot.current = serialized;
     if (previous === null || previous === serialized) return;
     markDirtyRef.current();
-  }, [margins, showPageNumbers, coverPageEnabled, coverPage, settingsSource]);
+  }, [margins, showPageNumbers, coverPageEnabled, coverPage, settingsSource, includeToc]);
 
   // Kılavuzun yeni sürümü kendiliğinden uygulandıysa kalıcı olsun (bir kez).
   const autoAppliedRef = useRef(false);
@@ -680,6 +701,28 @@ export default function ManuscriptEditor({
   const handleFindText = (text: string) => {
     if (!selectText(editor, text)) showToast("error", "Bu ifade metinde bulunamadı; değiştirilmiş olabilir.");
   };
+  const style: CitationStyle = CITATION_STYLES.includes(citationStyle as CitationStyle) ? (citationStyle as CitationStyle) : "apa7";
+  const handleCite = (source: LiteratureSource) => {
+    const { citation, addedReference } = insertCitation(editor, source, style);
+    showToast("success", addedReference ? `${citation} eklendi; kaynak Kaynakça'ya yazıldı.` : `${citation} eklendi.`);
+    void updateLiteratureStatus(source.id, "used");
+  };
+  // Yazdırma sekmesi tıklamayla hemen açılır (açılır pencere engelleyicisine takılmasın), metin kaydedilince yüklenir.
+  const handlePrint = async () => {
+    const printWindow = window.open("", "_blank");
+    const target = `/print/manuscript/${projectId}?auto=1`;
+    if (!(await saveNow())) {
+      printWindow?.close();
+      showToast("error", "Metin kaydedilemediği için PDF hazırlanamadı.");
+      return;
+    }
+    if (printWindow) printWindow.location.href = target;
+    else window.open(target, "_self");
+  };
+  const handleRestored = () => {
+    clearDraft(projectId);
+    window.location.reload();
+  };
 
   const statusLabel =
     saveState === "saving"
@@ -842,6 +885,9 @@ export default function ManuscriptEditor({
         <ToolbarButton label="Dipnot ekle" onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
           <StickyNote size={16} />
         </ToolbarButton>
+        <ToolbarButton label="Kaynaktan atıf ekle" onClick={() => setCiteOpen(true)}>
+          <BookMarked size={16} />
+        </ToolbarButton>
 
         <span className="toolbar-divider" />
 
@@ -859,6 +905,9 @@ export default function ManuscriptEditor({
         </ToolbarButton>
         <ToolbarButton label="Kapak sayfası" active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
           <FileBadge size={16} />
+        </ToolbarButton>
+        <ToolbarButton label="Sürüm geçmişi" onClick={() => setVersionsOpen(true)}>
+          <History size={16} />
         </ToolbarButton>
 
         <span className="toolbar-spacer" />
@@ -1051,6 +1100,10 @@ export default function ManuscriptEditor({
             />
             <span>Sayfa numarası ekle</span>
           </label>
+          <label className="checkbox-label">
+            <input type="checkbox" checked={includeToc} onChange={(e) => setIncludeToc(e.target.checked)} />
+            <span>İçindekiler tablosu (Word)</span>
+          </label>
           <span className="manuscript-page-settings-hint">
             Otomatik kaydedilir, Word&apos;e aktarırken uygulanır.
           </span>
@@ -1085,6 +1138,10 @@ export default function ManuscriptEditor({
           <button type="button" className="projects-filter-button" onClick={handleExport} disabled={exporting}>
             <FileDown size={15} />
             {exporting ? "Hazırlanıyor..." : "Word olarak indir"}
+          </button>
+          <button type="button" className="projects-filter-button" onClick={() => void handlePrint()}>
+            <Printer size={15} />
+            PDF / Yazdır
           </button>
         </div>
       </div>
@@ -1179,7 +1236,18 @@ export default function ManuscriptEditor({
         onJump={handleJump}
         onInsert={handleInsertSections}
         onTemplate={handleTemplate}
+      >
+        <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
+      </ManuscriptOutline>
+
+      <VersionsDialog
+        open={versionsOpen}
+        onClose={() => setVersionsOpen(false)}
+        projectId={projectId}
+        flush={() => saveNow()}
+        onRestored={handleRestored}
       />
+      <CiteDialog open={citeOpen} onClose={() => setCiteOpen(false)} projectId={projectId} style={style} onPick={handleCite} />
 
       {guideline ? (
         <Dialog

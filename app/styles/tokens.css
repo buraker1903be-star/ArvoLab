@@ -166,6 +166,20 @@
   --radius-lg: var(--r-xl);
 }
 
+/* Yazdırma / PDF: kâğıt her temada beyaz, mürekkep siyah (karanlık temada yeniden tanımlanmaz) */
+:root {
+  --print-paper: #ffffff;
+  --print-ink: #111111;
+  --print-desk: #e6e9ee;
+  --print-font: 'Times New Roman', serif;
+  --print-size: 12pt;
+  --print-line: 1.5;
+  --print-margin-top: 2.5cm;
+  --print-margin-right: 2.5cm;
+  --print-margin-bottom: 2.5cm;
+  --print-margin-left: 2.5cm;
+}
+
 html[data-theme="dark"] {
   --bg: var(--brand-950);
   --surface: #0e1829;

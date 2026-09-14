@@ -13,7 +13,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
 
   const { data: project } = await supabase
     .from("academic_projects")
-    .select("id, title, guideline_id, university, institute, department, project_type")
+    .select("id, title, guideline_id, university, institute, department, project_type, citation_style")
     .eq("id", id)
     .maybeSingle();
 
@@ -61,6 +61,8 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
         guideline={guideline}
         guidelineSync={{ mode: sync.mode, source: sync.source }}
         editHref={`/dashboard/editor/${id}/edit`}
+        initialIncludeToc={manuscript?.includeToc ?? false}
+        citationStyle={project.citation_style ?? "apa7"}
         projectDefaults={{
           title: project.title ?? "",
           university: project.university ?? "",

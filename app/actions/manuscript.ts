@@ -12,6 +12,7 @@ import {
 } from "@/lib/apa7";
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
 
 export interface PageMargins {
   top: number;
@@ -49,6 +50,8 @@ export interface ManuscriptData {
   showPageNumbers: boolean;
   coverPage: CoverPage | null;
   settingsSource: SettingsSource;
+  /** Word çıktısına içindekiler tablosu */
+  includeToc: boolean;
 }
 
 // Veritabanı hatasında null DÖNMEZ, hata fırlatır: önceden hata "henüz metin
@@ -86,6 +89,7 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
       version: data.settings_guideline_version ?? null,
       customized: data.settings_customized ?? false,
     },
+    includeToc: data.include_toc ?? false,
   };
 }
 
@@ -95,6 +99,7 @@ export interface SaveManuscriptInput {
   showPageNumbers?: boolean;
   coverPage?: CoverPage | null;
   settingsSource?: SettingsSource;
+  includeToc?: boolean;
   /** Editörün açtığı sürümün zamanı; null = henüz hiç kaydedilmemiş belge */
   expectedUpdatedAt: string | null;
   /** Çakışmada kullanıcı "benim sürümümü kaydet" derse */
@@ -119,7 +124,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     };
   }
 
-  const { content, margins, showPageNumbers, coverPage, settingsSource } = input;
+  const { content, margins, showPageNumbers, coverPage, settingsSource, includeToc } = input;
   const wordCount = countWords(content);
   const baseRow = {
     content,
@@ -138,14 +143,19 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     ...(showPageNumbers !== undefined ? { show_page_numbers: showPageNumbers } : {}),
     ...(coverPage !== undefined ? { cover_page: coverPage } : {}),
   };
-  const fullRow = settingsSource
-    ? {
-        ...baseRow,
-        settings_guideline_id: settingsSource.guidelineId,
-        settings_guideline_version: settingsSource.version,
-        settings_customized: settingsSource.customized,
-      }
-    : baseRow;
+  // Sonradan eklenen kolonlar: migration henüz çalıştırılmadıysa bunlar olmadan yeniden denenir.
+  const optionalColumns = {
+    ...(settingsSource
+      ? {
+          settings_guideline_id: settingsSource.guidelineId,
+          settings_guideline_version: settingsSource.version,
+          settings_customized: settingsSource.customized,
+        }
+      : {}),
+    ...(includeToc !== undefined ? { include_toc: includeToc } : {}),
+  };
+  const fullRow = { ...baseRow, ...optionalColumns };
+  const hasOptionalColumns = Object.keys(optionalColumns).length > 0;
 
   const failed = { error: "Kaydedilirken bir hata oluştu." } as const;
   const conflict = {
@@ -200,8 +210,17 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
 
   // Kılavuz senkron migration'ı henüz çalıştırılmadıysa metin yine kaydedilsin.
   let result = await write(fullRow);
-  if (result === "missing-column" && fullRow !== baseRow) result = await write(baseRow);
-  return result === "missing-column" ? failed : result;
+  if (result === "missing-column" && hasOptionalColumns) result = await write(baseRow);
+  if (result === "missing-column") return failed;
+
+  // Sürüm geçmişi: en fazla 10 dakikada bir otomatik anlık görüntü (başarısızlığı kaydı etkilemez).
+  if (result.success) {
+    await snapshotManuscript(ctx.supabase, projectId, ctx.user.id, {
+      kind: "auto",
+      onlyIfOlderThanMs: AUTO_VERSION_INTERVAL_MS,
+    });
+  }
+  return result;
 }
 
 // NOT: Resim yükleme artık burada değil, doğrudan tarayıcıda

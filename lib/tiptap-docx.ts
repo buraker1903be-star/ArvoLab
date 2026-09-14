@@ -16,6 +16,7 @@ import {
   Footer,
   PageNumber,
   PageBreak,
+  TableOfContents,
   type ParagraphChild,
 } from "docx";
 
@@ -359,6 +360,8 @@ export interface BuildDocxOptions {
   showPageNumbers?: boolean;
   coverPage?: CoverPageData | null;
   textDefaults?: DocxTextDefaults;
+  /** Kapaktan sonra içindekiler tablosu (Word, dosya açılınca alanları günceller) */
+  includeToc?: boolean;
 }
 
 export async function buildDocxFromTiptap({
@@ -369,6 +372,7 @@ export async function buildDocxFromTiptap({
   showPageNumbers = true,
   coverPage,
   textDefaults = {},
+  includeToc = false,
 }: BuildDocxOptions): Promise<Document> {
   const m = margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
   const marginTwip = {
@@ -385,9 +389,20 @@ export async function buildDocxFromTiptap({
     fetchImage,
   };
 
-  const bodyElements: (Paragraph | Table)[] = [];
+  const bodyElements: (Paragraph | Table | TableOfContents)[] = [];
   if (coverPage) {
     bodyElements.push(...buildCoverPageParagraphs(coverPage));
+  }
+  if (includeToc) {
+    bodyElements.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 240 },
+        children: [new TextRun({ text: "İÇİNDEKİLER", bold: true })],
+      }),
+      new TableOfContents("İçindekiler", { hyperlink: true, headingStyleRange: "1-3" }),
+      new Paragraph({ children: [new PageBreak()] })
+    );
   }
   for (const node of doc.content ?? []) {
     bodyElements.push(...(await blockToDocx(node, ctx, { quoteDepth: 0 })));
@@ -401,6 +416,7 @@ export async function buildDocxFromTiptap({
   return new Document({
     title,
     footnotes: ctx.footnotes,
+    ...(includeToc ? { features: { updateFields: true } } : {}),
     styles: {
       default: {
         document: {

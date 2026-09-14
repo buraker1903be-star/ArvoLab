@@ -75,7 +75,7 @@ export async function GET(
 
   const { data: manuscript, error } = await supabase
     .from("project_manuscripts")
-    .select("content, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm, show_page_numbers, cover_page")
+    .select("*")
     .eq("project_id", projectId)
     .maybeSingle();
 
@@ -109,6 +109,7 @@ export async function GET(
     showPageNumbers: manuscript.show_page_numbers ?? true,
     coverPage: manuscript.cover_page ?? null,
     textDefaults,
+    includeToc: manuscript.include_toc ?? false,
     fetchImage: async (src: string) => {
       try {
         const dataUrl = src.match(/^data:image\/(?:png|jpeg|gif);base64,(.+)$/);

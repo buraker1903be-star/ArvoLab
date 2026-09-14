@@ -1,6 +1,7 @@
 import type { Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { headingMatchesSection } from "@/lib/section-match";
+import { formatInTextCitation, formatReferenceParts, type CitableSource, type CitationStyle } from "@/lib/citation-format";
 
 export interface OutlineHeading {
   pos: number;
@@ -118,6 +119,90 @@ export function applyTemplate(editor: Editor, requiredSections: string[]) {
   const paragraphStart = first.pos + (node?.nodeSize ?? 0) + 1;
   editor.chain().focus().setTextSelection(Math.min(paragraphStart, editor.state.doc.content.size)).run();
   scrollToPos(editor, first.pos);
+}
+
+const REFERENCE_SECTIONS = ["Kaynakça", "Kaynaklar", "References", "Bibliography", "Bibliyografya"];
+
+interface ReferencesSection {
+  end: number;
+  paragraphs: { pos: number; node: ProseMirrorNode }[];
+}
+
+function findReferencesSection(doc: ProseMirrorNode): ReferencesSection | null {
+  const headings = collectHeadings(doc);
+  const index = headings.findIndex((heading) => REFERENCE_SECTIONS.some((name) => headingMatchesSection(heading.text, name)));
+  if (index < 0) return null;
+  const heading = headings[index];
+  const next = headings.slice(index + 1).find((item) => item.level <= heading.level);
+  const start = heading.pos + (doc.nodeAt(heading.pos)?.nodeSize ?? 0);
+  const end = next ? next.pos : doc.content.size;
+  const paragraphs: ReferencesSection["paragraphs"] = [];
+  doc.nodesBetween(start, end, (node, pos) => {
+    if (node.type.name === "paragraph") {
+      if (pos >= start) paragraphs.push({ pos, node });
+      return false;
+    }
+    return true;
+  });
+  return { end, paragraphs };
+}
+
+/**
+ * Literatür kaynağından atıf: metin içi atıf imlecin olduğu yere eklenir; kaynak
+ * Kaynakça bölümünde yoksa (başlığa göre) bölümün sonuna biçimlenmiş girdi olarak
+ * eklenir, bölüm hiç yoksa belgenin sonunda oluşturulur. Numaralı stillerde
+ * (IEEE, Vancouver) numara kaynakçadaki sıradır; aynı kaynağa ikinci atıf aynı numarayı alır.
+ */
+export function insertCitation(
+  editor: Editor,
+  source: CitableSource,
+  style: CitationStyle
+): { citation: string; addedReference: boolean } {
+  const section = findReferencesSection(editor.state.doc);
+  const entries = section?.paragraphs.filter((item) => item.node.textContent.trim()) ?? [];
+  const titleKey = source.title.trim().toLocaleLowerCase("tr-TR").slice(0, 60);
+  const existingIndex = titleKey
+    ? entries.findIndex((item) => item.node.textContent.toLocaleLowerCase("tr-TR").includes(titleKey))
+    : -1;
+  const number = existingIndex >= 0 ? existingIndex + 1 : entries.length + 1;
+  const citation = formatInTextCitation(source, style, number);
+
+  const { from, to } = editor.state.selection;
+  const before = editor.state.doc.textBetween(Math.max(0, from - 1), from);
+  const text = `${before && !/[\s(\[]/.test(before) ? " " : ""}${citation}`;
+  editor.chain().focus().insertContentAt({ from: to, to }, { type: "text", text }).run();
+
+  if (existingIndex >= 0) return { citation, addedReference: false };
+
+  const parts = formatReferenceParts(source, style, number);
+  const paragraph = editor.schema.nodeFromJSON({
+    type: "paragraph",
+    content: parts
+      .filter((part) => part.text)
+      .map((part) => ({ type: "text", text: part.text, ...(part.italic ? { marks: [{ type: "italic" }] } : {}) })),
+  });
+  editor
+    .chain()
+    .command(({ tr }) => {
+      const current = findReferencesSection(tr.doc);
+      if (!current) {
+        const heading = editor.schema.nodeFromJSON({ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Kaynakça" }] });
+        tr.insert(tr.doc.content.size, [heading, paragraph]);
+        return true;
+      }
+      const last = current.paragraphs[current.paragraphs.length - 1];
+      if (last && last.node.childCount === 0) tr.replaceWith(last.pos, last.pos + last.node.nodeSize, paragraph);
+      else tr.insert(current.end, paragraph);
+      return true;
+    })
+    .run();
+  return { citation, addedReference: true };
+}
+
+/** Seçili metin (yoruma alıntı olarak eklenir) */
+export function selectedText(editor: Editor): string {
+  const { from, to } = editor.state.selection;
+  return from === to ? "" : editor.state.doc.textBetween(from, to, " ").trim().slice(0, 500);
 }
 
 /** Belge boş mu (yalnızca boş paragraflar) */

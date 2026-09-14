@@ -126,8 +126,9 @@ export function parseReferenceList(rawList: string): ParsedReference[] {
 // --- Metin içi atıf tespiti -------------------------------------------------
 
 // (Yazar, 2020) veya (Yazar & Yazar2, 2020) veya Yazar (2020) formatlarını yakalar
-const INTEXT_PAREN_RE = /\(([\p{L}şığüöçİĞÜŞÖÇ.,&\s]+?),\s*(\d{4}[a-z]?|n\.d\.)\)/gu;
-const INTEXT_NARRATIVE_RE = /([A-ZÇĞİÖŞÜ][\p{L}]+(?:\s*(?:&|ve)\s*[A-ZÇĞİÖŞÜ][\p{L}]+)?)\s*\((\d{4}[a-z]?|n\.d\.)\)/gu;
+// Tarihsiz kaynak: "n.d." ya da Türkçe "t.y."
+const INTEXT_PAREN_RE = /\(([\p{L}şığüöçİĞÜŞÖÇ.,&\s]+?),\s*(\d{4}[a-z]?|n\.d\.|t\.y\.)\)/gu;
+const INTEXT_NARRATIVE_RE = /([A-ZÇĞİÖŞÜ][\p{L}]+(?:\s*(?:&|ve)\s*[A-ZÇĞİÖŞÜ][\p{L}]+)?)\s*\((\d{4}[a-z]?|n\.d\.|t\.y\.)\)/gu;
 
 export function extractInTextCitations(bodyText: string): InTextCitation[] {
   const results: InTextCitation[] = [];

@@ -8,6 +8,7 @@ import "./styles/shell.css";
 import "./styles/auth.css";
 import "./styles/workspace.css";
 import "./styles/overlays.css";
+import "./styles/print.css";
 
 // Tek yazı ailesi: Apple cihazlarında sistemin SF Pro'su (-apple-system),
 // diğerlerinde ona en yakın açık yazı tipi Inter. preload kapalı: Apple
