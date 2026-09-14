@@ -17,12 +17,15 @@ export interface GuidelineSyncResolution {
   mode: GuidelineSyncMode;
   margins: PageMargins;
   showPageNumbers: boolean;
+  headingNumbering: boolean;
   source: SettingsSource;
 }
 
 interface ManuscriptSettings {
   margins: PageMargins;
   showPageNumbers: boolean;
+  /** Eski kayıtlarda (migration öncesi) olmayabilir */
+  headingNumbering?: boolean;
   settingsSource: SettingsSource;
 }
 
@@ -34,7 +37,7 @@ const sameMargins = (a: PageMargins, b: PageMargins) =>
 // Metnin sayfa ayarlarını kılavuzun son onaylı sürümüyle karşılaştırır.
 // Yazı tipi, boyut, satır aralığı, zorunlu bölümler ve kaynakça sistemi her
 // zaman canlı olarak kılavuzdan gelir; burada yalnızca metne kaydedilen
-// ayarlar (kenar boşlukları, sayfa numarası) için karar verilir.
+// ayarlar (kenar boşlukları, sayfa numarası, başlık numaralandırma) için karar verilir.
 export function resolveGuidelineSync(
   guideline: AppliedGuideline | null,
   manuscript: ManuscriptSettings | null
@@ -44,6 +47,7 @@ export function resolveGuidelineSync(
       mode: "none",
       margins: manuscript?.margins ?? DEFAULT_MARGINS,
       showPageNumbers: manuscript?.showPageNumbers ?? true,
+      headingNumbering: manuscript?.headingNumbering ?? false,
       source: manuscript?.settingsSource ?? { guidelineId: null, version: null, customized: false },
     };
   }
@@ -52,17 +56,26 @@ export function resolveGuidelineSync(
   const fromGuideline = {
     margins: guideline.settings.margins ?? manuscript?.margins ?? DEFAULT_MARGINS,
     showPageNumbers: guideline.settings.showPageNumbers ?? manuscript?.showPageNumbers ?? true,
+    headingNumbering: guideline.settings.headingNumbering ?? manuscript?.headingNumbering ?? false,
   };
   if (!manuscript) return { mode: "fresh", ...fromGuideline, source: stamp };
 
-  const current = { margins: manuscript.margins, showPageNumbers: manuscript.showPageNumbers };
+  const current = {
+    margins: manuscript.margins,
+    showPageNumbers: manuscript.showPageNumbers,
+    headingNumbering: manuscript.headingNumbering ?? false,
+  };
   const source = manuscript.settingsSource;
   if (source.guidelineId === guideline.id && source.version === guideline.version) {
     return { mode: "current", ...current, source };
   }
 
   // Ayarlar zaten yeni sürümle aynıysa sormaya gerek yok (bir sonraki kayıtta sürüm işlenir).
-  if (sameMargins(current.margins, fromGuideline.margins) && current.showPageNumbers === fromGuideline.showPageNumbers) {
+  if (
+    sameMargins(current.margins, fromGuideline.margins) &&
+    current.showPageNumbers === fromGuideline.showPageNumbers &&
+    current.headingNumbering === fromGuideline.headingNumbering
+  ) {
     return { mode: "current", ...current, source: stamp };
   }
 

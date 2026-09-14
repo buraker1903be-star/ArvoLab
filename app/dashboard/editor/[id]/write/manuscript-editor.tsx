@@ -752,6 +752,7 @@ export default function ManuscriptEditor({
     if (!guideline) return;
     if (guideline.settings.margins) setMargins(guideline.settings.margins);
     if (guideline.settings.showPageNumbers !== undefined) setShowPageNumbers(guideline.settings.showPageNumbers);
+    if (guideline.settings.headingNumbering !== undefined) setHeadingNumbering(guideline.settings.headingNumbering);
     setSettingsSource({ guidelineId: guideline.id, version: guideline.version, customized: false });
     setSyncMode("current");
     showToast("success", "Sayfa ayarları kılavuzun güncel sürümüne göre güncellendi.");
@@ -1315,7 +1316,14 @@ export default function ManuscriptEditor({
             <span>İçindekiler tablosu (Word)</span>
           </label>
           <label className="checkbox-label">
-            <input type="checkbox" checked={headingNumbering} onChange={(e) => setHeadingNumbering(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={headingNumbering}
+              onChange={(e) => {
+                markCustomized();
+                setHeadingNumbering(e.target.checked);
+              }}
+            />
             <span>Başlıkları otomatik numarala (1., 1.1.)</span>
           </label>
           {manualNumbered > 0 ? (
@@ -1584,6 +1592,12 @@ export default function ManuscriptEditor({
               <>
                 <dt>Sayfa numarası</dt>
                 <dd>{guideline.settings.showPageNumbers ? "Var" : "Yok"}</dd>
+              </>
+            ) : null}
+            {guideline.settings.headingNumbering !== undefined ? (
+              <>
+                <dt>Başlık numaralandırma</dt>
+                <dd>{guideline.settings.headingNumbering ? "Ondalık (1., 1.1., 1.1.1.)" : "Numarasız"}</dd>
               </>
             ) : null}
             {guideline.minPages || guideline.maxPages ? (
