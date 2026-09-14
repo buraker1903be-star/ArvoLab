@@ -130,7 +130,10 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 
             <label>
               <span>İlerleme (%)</span>
-              <input name="progress" type="number" min={0} max={100} step={5} defaultValue={project.progress} required />
+              <input name="progress" type="number" min={0} max={100} step={1} defaultValue={project.progress} required />
+              {project.guideline_id ? (
+                <small className="muted text-sm">Yazdıkça kılavuzun bölümlerine ve sayfa sınırına göre otomatik güncellenir.</small>
+              ) : null}
             </label>
 
             <label>

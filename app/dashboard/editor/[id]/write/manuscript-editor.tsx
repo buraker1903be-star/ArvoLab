@@ -75,6 +75,7 @@ import Link from "next/link";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone } from "@/lib/page-estimate";
+import { writingProgress } from "@/lib/writing-progress";
 import ManuscriptOutline from "./manuscript-outline";
 import {
   applyTemplate,
@@ -376,11 +377,27 @@ export default function ManuscriptEditor({
           // Düz JSON'a çevirerek gönderiyoruz; boyutu otomatik kayıt aralığını belirler.
           const serialized = JSON.stringify(editor.getJSON());
           payloadBytesRef.current = serialized.length;
+          // Kartlardaki ilerleme çubuğu: kılavuzun bölümleri ve sayfa alt sınırına göre.
+          const progress = guideline
+            ? writingProgress({
+                sectionsFound: sectionStatuses(collectHeadings(editor.state.doc), guideline.requiredSections).filter((item) => item.heading)
+                  .length,
+                sectionsRequired: guideline.requiredSections.length,
+                pages: estimatePages((editor.storage.characterCount?.words?.() as number | undefined) ?? 0, {
+                  fontSizePt: guideline.settings.fontSizePt,
+                  lineSpacing: guideline.settings.lineSpacing,
+                  margins: settingsRef.current.margins,
+                }),
+                minPages: guideline.minPages,
+                maxPages: guideline.maxPages,
+              })
+            : null;
           const res = await saveManuscript(projectId, {
             content: JSON.parse(serialized) as TiptapDoc,
             ...settingsRef.current,
             expectedUpdatedAt: updatedAtRef.current,
             force,
+            progress,
           });
           if (res.success) {
             updatedAtRef.current = res.updatedAt;
@@ -428,7 +445,7 @@ export default function ManuscriptEditor({
         inFlightRef.current = null;
       }
     },
-    [projectId, persistDraft, scheduleSave]
+    [projectId, guideline, persistDraft, scheduleSave]
   );
 
   const markDirty = useCallback(() => {

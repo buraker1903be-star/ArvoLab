@@ -105,6 +105,8 @@ export interface SaveManuscriptInput {
   expectedUpdatedAt: string | null;
   /** Çakışmada kullanıcı "benim sürümümü kaydet" derse */
   force?: boolean;
+  /** Editörün kılavuza göre hesapladığı yazım ilerlemesi (0–100); null = hesaplanamadı */
+  progress?: number | null;
 }
 
 export type SaveManuscriptResult =
@@ -226,6 +228,18 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
       kind: "auto",
       onlyIfOlderThanMs: AUTO_VERSION_INTERVAL_MS,
     });
+    // Kartlardaki ilerleme çubuğu yazdıkça kendiliğinden güncellenir. Yalnızca değer değiştiyse
+    // yazılır; teslime hazır/teslim edilmiş/arşivlenmiş çalışmalarda elle verilen değer korunur.
+    const { progress } = input;
+    if (typeof progress === "number" && Number.isInteger(progress) && progress >= 0 && progress <= 100) {
+      const { error: progressError } = await ctx.supabase
+        .from("academic_projects")
+        .update({ progress })
+        .eq("id", projectId)
+        .neq("progress", progress)
+        .not("status", "in", "(ready,delivered,archived)");
+      if (progressError) console.error(progressError);
+    }
   }
   return result;
 }
