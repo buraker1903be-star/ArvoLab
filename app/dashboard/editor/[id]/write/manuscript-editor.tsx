@@ -154,6 +154,11 @@ const FONT_FAMILIES = [
 const FONT_SIZES = [9, 10, 10.5, 11, 12, 13, 14, 16, 18, 20, 24];
 
 const AUTOSAVE_DELAY_MS = 1500;
+// Büyük belgelerde (190 sayfalık tez ≈ 0,9 MB) her 1,5 sn'de tüm metni göndermek ve tarayıcı
+// taslağına yazmak bağlantıyı ve cihazı yorar; aralık belgenin boyutuna göre açılır.
+const LARGE_DOC_BYTES = 300_000;
+const autosaveDelay = (bytes: number) => (bytes > LARGE_DOC_BYTES ? 4000 : AUTOSAVE_DELAY_MS);
+const draftDelay = (bytes: number) => (bytes > LARGE_DOC_BYTES ? 3000 : 500);
 const RETRY_DELAY_MS = 10000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif"];
@@ -199,10 +204,10 @@ const timeLabel = (date: Date) => date.toLocaleTimeString("tr-TR", { hour: "2-di
 
 type FootnoteDialogState = { mode: "insert"; text: string } | { mode: "edit"; pos: number; text: string } | null;
 
-// Araç çubuğu yalnızca bu değerler değişince yeniden çizilir
-// (önceden her tuş vuruşunda tüm editör bileşeni yeniden çiziliyordu).
-function selectToolbarState({ editor }: { editor: Editor | null }) {
-  if (!editor) return null;
+// Belge geneli istatistikler (kelime, başlık, dipnot, şekil/tablo). Tüm belgeyi gezdiği için
+// (190 sayfalık tezde ~5 ms) her tuşta ve imleç hareketinde değil, metin değişince kısa bir
+// beklemeyle hesaplanır.
+function computeDocStats(editor: Editor) {
   const footnotes: { pos: number; text: string }[] = [];
   let figures = 0;
   let tables = 0;
@@ -213,6 +218,22 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
       else if (node.attrs.caption === "table") tables += 1;
     }
   });
+  return {
+    words: (editor.storage.characterCount?.words?.() as number | undefined) ?? 0,
+    footnotes,
+    headings: collectHeadings(editor.state.doc),
+    empty: isDocumentEmpty(editor.state.doc),
+    figures,
+    tables,
+  };
+}
+
+type DocStats = ReturnType<typeof computeDocStats>;
+
+// Araç çubuğu yalnızca bu (seçime bağlı, ucuz) değerler değişince yeniden çizilir
+// (önceden her tuş vuruşunda tüm editör bileşeni yeniden çiziliyordu).
+function selectToolbarState({ editor }: { editor: Editor | null }) {
+  if (!editor) return null;
   return {
     fontFamily: (editor.getAttributes("textStyle").fontFamily as string | undefined) ?? "",
     fontSize: (editor.getAttributes("textStyle").fontSize as string | undefined) ?? "",
@@ -232,13 +253,7 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
     firstLineIndent: Boolean(editor.getAttributes("paragraph").firstLineIndent),
     canUndo: editor.can().undo(),
     canRedo: editor.can().redo(),
-    words: (editor.storage.characterCount?.words?.() as number | undefined) ?? 0,
-    footnotes,
-    headings: collectHeadings(editor.state.doc),
-    empty: isDocumentEmpty(editor.state.doc),
     caption: (editor.getAttributes("paragraph").caption as string | null | undefined) ?? null,
-    figures,
-    tables,
   };
 }
 
@@ -312,6 +327,8 @@ export default function ManuscriptEditor({
   const saveTimerRef = useRef<number | null>(null);
   const draftTimerRef = useRef<number | null>(null);
   const blockedRef = useRef(false);
+  /** Son kaydedilen içeriğin JSON boyutu (otomatik kayıt aralığını belirler) */
+  const payloadBytesRef = useRef(0);
   const settingsRef = useRef({ margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource, includeToc });
   const saveNowRef = useRef<(force?: boolean) => Promise<boolean>>(async () => false);
   const markDirtyRef = useRef<() => void>(() => undefined);
@@ -352,12 +369,14 @@ export default function ManuscriptEditor({
       const run = (async () => {
         setSaveState("saving");
         try {
+          // ProseMirror öznitelik nesneleri prototipsizdir (Object.create(null)); React'in sunucu
+          // eylemi kodlayıcısı bunları düz nesne saymayıp "$T" (geçici referans) olarak gönderir ve
+          // sunucuya hiçbir şey ulaşmaz: başlık düzeyi, resim adresi, dipnot metni vb. kaybolurdu.
+          // Düz JSON'a çevirerek gönderiyoruz; boyutu otomatik kayıt aralığını belirler.
+          const serialized = JSON.stringify(editor.getJSON());
+          payloadBytesRef.current = serialized.length;
           const res = await saveManuscript(projectId, {
-            // ProseMirror öznitelik nesneleri prototipsizdir (Object.create(null)); React'in sunucu
-            // eylemi kodlayıcısı bunları düz nesne saymayıp "$T" (geçici referans) olarak gönderir ve
-            // sunucuya hiçbir şey ulaşmaz: başlık düzeyi, resim adresi, dipnot metni vb. kaybolurdu.
-            // Düz JSON'a çevirerek gönderiyoruz.
-            content: JSON.parse(JSON.stringify(editor.getJSON())) as TiptapDoc,
+            content: JSON.parse(serialized) as TiptapDoc,
             ...settingsRef.current,
             expectedUpdatedAt: updatedAtRef.current,
             force,
@@ -374,7 +393,7 @@ export default function ManuscriptEditor({
               clearDraft(projectId);
             } else {
               setSaveState("dirty");
-              scheduleSave(AUTOSAVE_DELAY_MS);
+              scheduleSave(autosaveDelay(payloadBytesRef.current));
             }
             return true;
           }
@@ -415,8 +434,8 @@ export default function ManuscriptEditor({
     revisionRef.current += 1;
     setSaveState((state) => (state === "conflict" || state === "saving" ? state : "dirty"));
     if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
-    draftTimerRef.current = window.setTimeout(persistDraft, 500);
-    if (!blockedRef.current) scheduleSave(AUTOSAVE_DELAY_MS);
+    draftTimerRef.current = window.setTimeout(persistDraft, draftDelay(payloadBytesRef.current));
+    if (!blockedRef.current) scheduleSave(autosaveDelay(payloadBytesRef.current));
   }, [persistDraft, scheduleSave]);
 
   useEffect(() => {
@@ -479,6 +498,29 @@ export default function ManuscriptEditor({
   });
 
   const toolbarState = useEditorState({ editor, selector: selectToolbarState });
+
+  // Belge istatistikleri metin değişince 250 ms beklemeyle güncellenir; imleç hareketinde çalışmaz.
+  const [docStats, setDocStats] = useState<DocStats | null>(null);
+  useEffect(() => {
+    if (!editor) return;
+    let timer: number | null = null;
+    const refresh = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        if (!editor.isDestroyed) setDocStats(computeDocStats(editor));
+      }, 250);
+    };
+    const initial = window.setTimeout(() => {
+      if (!editor.isDestroyed) setDocStats(computeDocStats(editor));
+    }, 0);
+    editor.on("update", refresh);
+    return () => {
+      window.clearTimeout(initial);
+      if (timer) window.clearTimeout(timer);
+      editor.off("update", refresh);
+    };
+  }, [editor]);
 
   // Sayfa ayarları ve kapak da otomatik kaydedilir — yalnızca gerçekten değişince
   // (geliştirmedeki çift effect çalıştırması boş kayıt tetiklemesin).
@@ -730,10 +772,11 @@ export default function ManuscriptEditor({
   // Editör oluştuğu ilk çizimde abonelik henüz anlık görüntü üretmemiş olabilir;
   // o an için durum doğrudan okunur (ilk işlemden sonra abonelik devralır).
   const ui = toolbarState ?? selectToolbarState({ editor })!;
+  const stats = docStats ?? computeDocStats(editor);
   const requiredSections = guideline?.requiredSections ?? [];
   const isThesis = (projectDefaults?.projectType ?? "thesis") === "thesis";
-  const sections = sectionStatuses(ui.headings, requiredSections);
-  const pages = estimatePages(ui.words, {
+  const sections = sectionStatuses(stats.headings, requiredSections);
+  const pages = estimatePages(stats.words, {
     fontSizePt: guideline?.settings.fontSizePt,
     lineSpacing: guideline?.settings.lineSpacing,
     margins,
@@ -776,7 +819,7 @@ export default function ManuscriptEditor({
   };
   // Word'den gelen içerik: boş belgede ya da "yerine koy"da tüm metin, aksi hâlde sona eklenir.
   const handleImported = (html: string, mode: ImportMode) => {
-    if (mode === "replace" || ui.empty) editor.commands.setContent(html);
+    if (mode === "replace" || stats.empty) editor.commands.setContent(html);
     else editor.chain().insertContentAt(editor.state.doc.content.size, html).run();
     markDirtyRef.current();
     const first = collectHeadings(editor.state.doc)[0];
@@ -1240,9 +1283,9 @@ export default function ManuscriptEditor({
 
       <EditorContent editor={editor} />
 
-      {ui.footnotes.length > 0 ? (
+      {stats.footnotes.length > 0 ? (
         <ol className="footnote-list" aria-label="Dipnotlar">
-          {ui.footnotes.map((footnote) => (
+          {stats.footnotes.map((footnote) => (
             <li key={footnote.pos}>
               <button type="button" onClick={() => openFootnoteEditor(footnote.pos, footnote.text)}>
                 {footnote.text || "(boş dipnot)"}
@@ -1254,8 +1297,8 @@ export default function ManuscriptEditor({
 
       <div className="manuscript-footer">
         <span className="muted text-sm">
-          {ui.words.toLocaleString("tr-TR")} kelime · ≈ {pages} sayfa
-          {ui.footnotes.length > 0 ? ` · ${ui.footnotes.length} dipnot` : ""}
+          {stats.words.toLocaleString("tr-TR")} kelime · ≈ {pages} sayfa
+          {stats.footnotes.length > 0 ? ` · ${stats.footnotes.length} dipnot` : ""}
         </span>
 
         <div className="cluster cluster-lg">
@@ -1377,16 +1420,16 @@ export default function ManuscriptEditor({
     </div>{/* .manuscript-main */}
 
       <ManuscriptOutline
-        headings={ui.headings}
+        headings={stats.headings}
         sections={sections}
-        words={ui.words}
+        words={stats.words}
         pages={pages}
         minPages={guideline?.minPages ?? null}
         maxPages={guideline?.maxPages ?? null}
         pageTone={pageTone}
-        documentEmpty={ui.empty}
-        figures={ui.figures}
-        tables={ui.tables}
+        documentEmpty={stats.empty}
+        figures={stats.figures}
+        tables={stats.tables}
         onJump={handleJump}
         onInsert={handleInsertSections}
         onTemplate={handleTemplate}
@@ -1407,7 +1450,7 @@ export default function ManuscriptEditor({
         open={importOpen}
         onClose={() => setImportOpen(false)}
         projectId={projectId}
-        documentEmpty={ui.empty}
+        documentEmpty={stats.empty}
         flush={() => saveNow()}
         onImported={handleImported}
       />
