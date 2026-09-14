@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { resolveGuidelineSync } from "@/lib/guideline-sync";
+import { refreshImageUrls } from "@/lib/manuscript-images";
 import ManuscriptEditor from "./manuscript-editor";
 
 export default async function WriteManuscriptPage({ params }: { params: Promise<{ id: string }> }) {
@@ -13,7 +14,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
 
   const { data: project } = await supabase
     .from("academic_projects")
-    .select("id, title, guideline_id, university, institute, department, project_type, citation_style")
+    .select("id, title, guideline_id, university, institute, department, project_type, citation_style, owner_id, assignee_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -26,6 +27,8 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
     supabase.auth.getUser(),
   ]);
   const sync = resolveGuidelineSync(guideline, manuscript);
+  // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
+  const content = manuscript ? await refreshImageUrls(manuscript.content, [project.owner_id, project.assignee_id]) : null;
 
   const user = userResult.data.user;
   let authorFullName = "";
@@ -53,7 +56,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
 
       <ManuscriptEditor
         projectId={id}
-        initialContent={manuscript?.content ?? null}
+        initialContent={content}
         initialUpdatedAt={manuscript?.updatedAt ?? null}
         initialMargins={sync.margins}
         initialShowPageNumbers={sync.showPageNumbers}

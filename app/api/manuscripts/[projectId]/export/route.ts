@@ -4,30 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { buildDocxFromTiptap, type DocxImage } from "@/lib/tiptap-docx";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { readImageInfo } from "@/lib/image-info";
+import { downloadWriterImage, storagePathFromUrl } from "@/lib/manuscript-images";
 import type { TiptapDoc } from "@/lib/tiptap-text";
 
 // Büyük/resimli belgelerde Word oluşturma zaman alabilir.
 export const maxDuration = 60;
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const IMAGE_BUCKET = "project-files";
-
-// Editördeki resimler kendi depomuzdaki imzalı bağlantılardır. Sunucu,
-// verilen adrese körü körüne istek atmaz (SSRF): yalnızca kendi Supabase
-// deposundaki dosya yolunu çıkarıp kullanıcının yetkisiyle indirir. Böylece
-// imzalı bağlantının süresi dolsa bile resim Word'e aktarılır.
-function storagePathFromUrl(src: string): string | null {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!base) return null;
-  try {
-    const url = new URL(src);
-    if (url.origin !== new URL(base).origin) return null;
-    const match = url.pathname.match(/^\/storage\/v1\/object\/(?:sign|public|authenticated)\/project-files\/(.+)$/);
-    return match ? decodeURIComponent(match[1]) : null;
-  } catch {
-    return null;
-  }
-}
 
 function toDocxImage(buffer: Buffer): DocxImage | null {
   if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES) return null;
@@ -63,9 +46,10 @@ export async function GET(
     return NextResponse.json({ error: "Oturum bulunamadı." }, { status: 401 });
   }
 
+  // RLS: çalışmayı göremeyen kullanıcı buradan öteye geçemez.
   const { data: project } = await supabase
     .from("academic_projects")
-    .select("title, guideline_id")
+    .select("title, guideline_id, owner_id, assignee_id")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -96,6 +80,7 @@ export async function GET(
         lineSpacing: guideline.settings.lineSpacing,
       }
     : {};
+  const writerIds = [project.owner_id, project.assignee_id];
 
   const doc = await buildDocxFromTiptap({
     title: project.title ?? "ArvoLab Çalışması",
@@ -110,6 +95,8 @@ export async function GET(
     coverPage: manuscript.cover_page ?? null,
     textDefaults,
     includeToc: manuscript.include_toc ?? false,
+    // Resimler dış adresten değil, yalnızca metnin yazarlarının depo klasöründen alınır (SSRF yok);
+    // böylece imzalı bağlantının süresi dolsa ya da çıktıyı atanan uzman alsa da resim Word'e girer.
     fetchImage: async (src: string) => {
       try {
         const dataUrl = src.match(/^data:image\/(?:png|jpeg|gif);base64,(.+)$/);
@@ -117,9 +104,8 @@ export async function GET(
 
         const path = storagePathFromUrl(src);
         if (!path) return null;
-        const { data, error: downloadError } = await supabase.storage.from(IMAGE_BUCKET).download(path);
-        if (downloadError || !data) return null;
-        return toDocxImage(Buffer.from(await data.arrayBuffer()));
+        const data = await downloadWriterImage(path, writerIds);
+        return data ? toDocxImage(data) : null;
       } catch {
         return null;
       }

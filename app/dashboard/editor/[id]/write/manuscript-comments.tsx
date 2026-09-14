@@ -40,6 +40,14 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
     };
   }, [projectId, reloadKey]);
 
+  // Karşı tarafın yeni yorumları sayfa açıkken de gelsin: sekme görünürken dakikada bir yenilenir.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") setReloadKey((key) => key + 1);
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const refresh = () => setReloadKey((key) => key + 1);
   const open = (comments ?? []).filter((comment) => !comment.resolvedAt);
   const visible = showResolved ? comments ?? [] : open;

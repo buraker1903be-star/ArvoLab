@@ -586,7 +586,7 @@ export default function ManuscriptEditor({
 
         const { data: signed, error: signError } = await supabase.storage
           .from("project-files")
-          .createSignedUrl(path, 60 * 60 * 24 * 365); // 1 yıl
+          .createSignedUrl(path, 60 * 60 * 24 * 30); // 30 gün; editör/yazdırma/Word açılışta depo yolundan yeniler
         if (signError || !signed) {
           console.error(signError);
           showToast("error", "Resim bağlantısı oluşturulamadı.");

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { renderTiptapHtml } from "@/lib/tiptap-html";
+import { refreshImageUrls } from "@/lib/manuscript-images";
 import PrintActions from "./print-actions";
 
 export const metadata: Metadata = { title: "Yazdır · ArvoLab", robots: { index: false } };
@@ -28,13 +29,15 @@ export default async function PrintManuscriptPage({
 
   const { data: project } = await supabase
     .from("academic_projects")
-    .select("id, title, guideline_id")
+    .select("id, title, guideline_id, owner_id, assignee_id")
     .eq("id", id)
     .maybeSingle();
   if (!project) notFound();
 
   const [manuscript, guideline] = await Promise.all([getManuscript(id), loadAppliedGuideline(supabase, project.guideline_id)]);
-  const { html, footnotes } = renderTiptapHtml(manuscript?.content);
+  // Resim bağlantıları depo yolundan tazelenir (süresi dolmuş imzalı bağlantılar çıktıda kaybolmasın).
+  const doc = manuscript ? await refreshImageUrls(manuscript.content, [project.owner_id, project.assignee_id]) : null;
+  const { html, footnotes } = renderTiptapHtml(doc);
 
   const margins = manuscript?.margins ?? guideline?.settings.margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
   const m = {

@@ -1,5 +1,18 @@
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  FileText,
+  MessageSquare,
+  PenLine,
+  Pencil,
+  Plus,
+  RotateCcw,
+  ShieldCheck,
+  Upload,
+  UserRound,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -26,8 +39,48 @@ function formatDateTime(dateStr: string | null) {
   });
 }
 
+function relativeTime(dateStr: string) {
+  const minutes = Math.round((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (minutes < 1) return "az önce";
+  if (minutes < 60) return `${minutes} dk önce`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} saat önce`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return "dün";
+  if (days < 7) return `${days} gün önce`;
+  return formatDateTime(dateStr);
+}
+
+interface WritingStats {
+  words: number;
+  updatedAt: string;
+}
+
+// Kartlarda yazım durumu: kelime sayısı, son düzenleme ve başkalarından gelen açık yorumlar.
+async function getWritingStats(projectIds: string[], currentUserId: string | undefined) {
+  const stats = new Map<string, WritingStats>();
+  const openComments = new Map<string, number>();
+  if (projectIds.length === 0) return { stats, openComments };
+
+  const supabase = await createClient();
+  const [manuscripts, comments] = await Promise.all([
+    supabase.from("project_manuscripts").select("project_id, word_count, updated_at").in("project_id", projectIds),
+    supabase.from("manuscript_comments").select("project_id, author_id").in("project_id", projectIds).is("resolved_at", null),
+  ]);
+  for (const row of manuscripts.data ?? []) stats.set(row.project_id, { words: row.word_count ?? 0, updatedAt: row.updated_at });
+  for (const row of comments.data ?? []) {
+    if (row.author_id === currentUserId) continue;
+    openComments.set(row.project_id, (openComments.get(row.project_id) ?? 0) + 1);
+  }
+  return { stats, openComments };
+}
+
 export default async function ProjectsPage() {
   const [projects, profile] = await Promise.all([getProjects(), getCurrentProfile()]);
+  const { stats, openComments } = await getWritingStats(
+    projects.map((project) => project.id),
+    profile?.id
+  );
   const canApprove = isOversightRole(profile?.role);
   const staff = canApprove ? await getAssignableStaff() : [];
   // Silme yetkisi RLS ile aynı: sahibi ya da Akademik Yönetici/Sistem
@@ -110,6 +163,18 @@ export default async function ProjectsPage() {
                     <CalendarDays size={15} aria-hidden="true" />
                     {formatDate(project.due_date)}
                   </span>
+                  <span>
+                    <FileText size={15} aria-hidden="true" />
+                    {stats.has(project.id)
+                      ? `${stats.get(project.id)!.words.toLocaleString("tr-TR")} kelime · ${relativeTime(stats.get(project.id)!.updatedAt)} düzenlendi`
+                      : "Henüz yazılmadı"}
+                  </span>
+                  {openComments.get(project.id) ? (
+                    <Link href={`/dashboard/editor/${project.id}/write`} className="tone-text" data-tone="warning">
+                      <MessageSquare size={15} aria-hidden="true" />
+                      {openComments.get(project.id)} açık yorum
+                    </Link>
+                  ) : null}
 
                   {isApproved ? (
                     <span className="tone-text" data-tone="success">
