@@ -6,6 +6,7 @@ import { getManuscript } from "@/app/actions/manuscript";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { resolveGuidelineSync } from "@/lib/guideline-sync";
 import { refreshImageUrls } from "@/lib/manuscript-images";
+import { detectFormatLoss } from "@/lib/format-loss";
 import ManuscriptEditor from "./manuscript-editor";
 
 // Bu sayfanın sunucu eylemleri (Word'den aktarma, resimli dönüştürme) büyük dosyalarda zaman alabilir.
@@ -32,6 +33,8 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
   const sync = resolveGuidelineSync(guideline, manuscript);
   // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
   const content = manuscript ? await refreshImageUrls(manuscript.content, [project.owner_id, project.assignee_id]) : null;
+  // Eski kayıt hatasından etkilenen belge: kullanıcıya neyin kaybolduğu gösterilir.
+  const formatLoss = manuscript ? detectFormatLoss(manuscript.content) : null;
 
   const user = userResult.data.user;
   let authorFullName = "";
@@ -60,6 +63,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
       <ManuscriptEditor
         projectId={id}
         initialContent={content}
+        formatLoss={formatLoss?.affected ? formatLoss : null}
         initialUpdatedAt={manuscript?.updatedAt ?? null}
         initialMargins={sync.margins}
         initialShowPageNumbers={sync.showPageNumbers}

@@ -13,6 +13,7 @@ import {
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
+import { hasNonPlainAttributes } from "@/lib/format-loss";
 
 export interface PageMargins {
   top: number;
@@ -125,6 +126,12 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   }
 
   const { content, margins, showPageNumbers, coverPage, settingsSource, includeToc } = input;
+  // Biçim bilgisi (başlık düzeyi, resim adresi, dipnot metni…) sunucuya eksik ulaştıysa
+  // kaydetme: eksik metni üzerine yazmak yerine hata göster, taslak tarayıcıda kalır.
+  if (!content || content.type !== "doc" || hasNonPlainAttributes(content)) {
+    console.error("saveManuscript: içerik biçim bilgisi eksik ulaştı, kayıt durduruldu");
+    return { error: "Metnin biçim bilgisi sunucuya eksik ulaştı; üzerine yazmamak için kaydı durdurduk. Sayfayı yenileyin — yazdıklarınız bu tarayıcıda saklanıyor." };
+  }
   const wordCount = countWords(content);
   const baseRow = {
     content,

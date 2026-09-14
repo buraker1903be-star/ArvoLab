@@ -43,9 +43,12 @@ import {
   TableProperties,
   Search,
   FileUp,
+  Images,
 } from "lucide-react";
 import FindReplaceBar from "./find-replace-bar";
 import ImportDialog, { type ImportMode } from "./import-dialog";
+import ImageLibraryDialog from "./image-library-dialog";
+import type { FormatLossReport } from "@/lib/format-loss";
 import VersionsDialog from "./versions-dialog";
 import CiteDialog from "./cite-dialog";
 import ManuscriptComments from "./manuscript-comments";
@@ -120,6 +123,8 @@ interface ManuscriptEditorProps {
   initialIncludeToc: boolean;
   /** Çalışmanın kaynakça sistemi (atıf biçimi) */
   citationStyle: string;
+  /** Eski kayıt hatasından etkilenmişse neyin kaybolduğu (etkilenmediyse null) */
+  formatLoss: FormatLossReport | null;
 }
 
 const formatDate = (value: string | null | undefined) => {
@@ -247,6 +252,7 @@ export default function ManuscriptEditor({
   editHref,
   initialIncludeToc,
   citationStyle,
+  formatLoss,
 }: ManuscriptEditorProps) {
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -267,6 +273,8 @@ export default function ManuscriptEditor({
   const [citeOpen, setCiteOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [formatLossDismissed, setFormatLossDismissed] = useState(false);
   const [margins, setMargins] = useState<PageMargins>(
     initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
   );
@@ -934,6 +942,9 @@ export default function ManuscriptEditor({
         <ToolbarButton label="Word dosyasından aktar" onClick={() => setImportOpen(true)}>
           <FileUp size={16} />
         </ToolbarButton>
+        <ToolbarButton label="Resimlerim (daha önce yüklenenler)" onClick={() => setLibraryOpen(true)}>
+          <Images size={16} />
+        </ToolbarButton>
         <ToolbarButton
           label="Şekil başlığı (otomatik numaralı)"
           active={ui.caption === "figure"}
@@ -996,6 +1007,44 @@ export default function ManuscriptEditor({
           <span className="cluster">
             <button type="button" className="projects-primary-button" onClick={restoreDraft}>Geri yükle</button>
             <button type="button" className="projects-filter-button" onClick={discardDraft}>Yok say</button>
+          </span>
+        </div>
+      ) : null}
+
+      {formatLoss && !formatLossDismissed ? (
+        <div className="callout editor-notice" data-tone="warning" role="status">
+          <strong>Bu belgenin bazı biçim bilgileri eski bir kayıt hatası nedeniyle kaybolmuş.</strong>
+          <ul className="format-loss-list">
+            {formatLoss.nodesWithoutAttrs > 0 ? (
+              <li>
+                Başlık düzeylerini (H1–H3), hizalamayı ve şekil/tablo başlıklarını kontrol edin; düzelttiğiniz hâl
+                artık eksiksiz kaydedilir.
+              </li>
+            ) : null}
+            {formatLoss.missingImages > 0 ? (
+              <li>
+                {formatLoss.missingImages} resim görüntülenemiyor: boş resim kutularını silip “Resimlerim”den yeniden
+                ekleyebilirsiniz.
+              </li>
+            ) : null}
+            {formatLoss.emptyFootnotes > 0 ? (
+              <li>{formatLoss.emptyFootnotes} dipnotun metni boş: dipnot işaretine tıklayıp metnini yeniden yazın.</li>
+            ) : null}
+            <li>
+              Word dosyanız varsa “Word&apos;den aktar → Yerine koy” ile metni tüm biçimiyle yeniden alabilirsiniz
+              (mevcut hâl önce sürüm olarak saklanır).
+            </li>
+          </ul>
+          <span className="cluster mt-sm">
+            <button type="button" className="projects-filter-button" onClick={() => setLibraryOpen(true)}>
+              Resimlerim
+            </button>
+            <button type="button" className="projects-filter-button" onClick={() => setImportOpen(true)}>
+              Word&apos;den aktar
+            </button>
+            <button type="button" className="projects-filter-button" onClick={() => setFormatLossDismissed(true)}>
+              Anladım
+            </button>
           </span>
         </div>
       ) : null}
@@ -1322,6 +1371,11 @@ export default function ManuscriptEditor({
         documentEmpty={ui.empty}
         flush={() => saveNow()}
         onImported={handleImported}
+      />
+      <ImageLibraryDialog
+        open={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        onPick={(src, name) => editor.chain().focus().setImage({ src, alt: name }).run()}
       />
 
       {guideline ? (
