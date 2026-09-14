@@ -8,8 +8,21 @@ import {
 } from "@/app/actions/universities";
 import { findMatchingGuideline, type GuidelineMatch } from "@/app/actions/guidelines";
 
+export interface InstitutionValue {
+  university: string;
+  universityId: string | null;
+  institute: string;
+  academicUnitId: string | null;
+  department: string;
+  departmentId: string | null;
+}
+
 type AcademicUnitFieldsProps = {
   universities: University[];
+  /** Düzenleme sayfasında mevcut kurum */
+  initial?: InstitutionValue;
+  /** Mevcut kılavuzun adı (düzenleme sayfası) */
+  initialGuidelineLabel?: string | null;
 };
 
 const ROOT_UNIT_TYPES = [
@@ -28,83 +41,82 @@ const CHILD_UNIT_TYPES = [
   "program",
 ] as const;
 
-export default function AcademicUnitFields({ universities }: AcademicUnitFieldsProps) {
-  const [universityName, setUniversityName] = useState("");
-  const [unitName, setUnitName] = useState("");
-  const [departmentName, setDepartmentName] = useState("");
+// Üniversite → enstitü/fakülte → bölüm seçimi. Kimlikler gizli alanlarla gönderilir;
+// tezlerde kılavuzu bu kimliklerden veritabanı belirler. Burada yalnızca önizleme yapılır.
+export default function AcademicUnitFields({ universities, initial, initialGuidelineLabel }: AcademicUnitFieldsProps) {
+  const [universityName, setUniversityName] = useState(initial?.university ?? "");
+  const [unitName, setUnitName] = useState(initial?.institute ?? "");
+  const [unitId, setUnitId] = useState(initial?.academicUnitId ?? "");
+  const [departmentName, setDepartmentName] = useState(initial?.department ?? "");
+  const [departmentId, setDepartmentId] = useState(initial?.departmentId ?? "");
   const [units, setUnits] = useState<AcademicUnit[]>([]);
   const [departments, setDepartments] = useState<AcademicUnit[]>([]);
   const [isPending, startTransition] = useTransition();
   const [guideline, setGuideline] = useState<GuidelineMatch | null>(null);
-  const [matchChecked, setMatchChecked] = useState(false);
+  const [matchState, setMatchState] = useState<"idle" | "checked" | "initial">(initialGuidelineLabel !== undefined ? "initial" : "idle");
 
   const universityByName = useMemo(
     () => new Map(universities.map((item) => [item.name, item])),
     [universities]
   );
+  const university = universityByName.get(universityName) ?? null;
+
+  function previewGuideline(uId: string, aId: string | null, dId: string | null) {
+    startTransition(async () => {
+      const match = await findMatchingGuideline(uId, aId, dId);
+      setGuideline(match);
+      setMatchState("checked");
+    });
+  }
+
+  function loadUnits(uId: string) {
+    startTransition(async () => {
+      setUnits(await getAcademicUnits(uId, null, [...ROOT_UNIT_TYPES]));
+    });
+  }
+
+  function loadDepartments(uId: string, aId: string) {
+    startTransition(async () => {
+      setDepartments(await getAcademicUnits(uId, aId, [...CHILD_UNIT_TYPES]));
+    });
+  }
 
   function handleUniversityChange(value: string) {
     setUniversityName(value);
     setUnitName("");
+    setUnitId("");
     setDepartmentName("");
+    setDepartmentId("");
     setUnits([]);
     setDepartments([]);
     setGuideline(null);
-    setMatchChecked(false);
+    setMatchState("idle");
 
-    const selectedUniversity = universityByName.get(value);
-    if (!selectedUniversity) return;
-
-    startTransition(async () => {
-      const result = await getAcademicUnits(
-        selectedUniversity.id,
-        null,
-        [...ROOT_UNIT_TYPES]
-      );
-      setUnits(result);
-    });
+    const selected = universityByName.get(value);
+    if (!selected) return;
+    loadUnits(selected.id);
+    previewGuideline(selected.id, null, null);
   }
 
   function handleUnitChange(value: string) {
     setUnitName(value);
     setDepartmentName("");
+    setDepartmentId("");
     setDepartments([]);
-    setGuideline(null);
-    setMatchChecked(false);
 
-    const selectedUniversity = universityByName.get(universityName);
-    const selectedUnit = units.find((item) => item.name === value);
-    if (!selectedUniversity || !selectedUnit) return;
-
-    startTransition(async () => {
-      const result = await getAcademicUnits(
-        selectedUniversity.id,
-        selectedUnit.id,
-        [...CHILD_UNIT_TYPES]
-      );
-      setDepartments(result);
-    });
+    const selected = units.find((item) => item.name === value);
+    setUnitId(selected?.id ?? "");
+    if (!university || !selected) return;
+    loadDepartments(university.id, selected.id);
+    previewGuideline(university.id, selected.id, null);
   }
 
   function handleDepartmentChange(value: string) {
     setDepartmentName(value);
-    setGuideline(null);
-    setMatchChecked(false);
-
-    const university = universityByName.get(universityName);
-    const unit = units.find((item) => item.name === unitName);
-    const department = departments.find((item) => item.name === value);
-    if (!university) return;
-
-    startTransition(async () => {
-      const match = await findMatchingGuideline(
-        university.id,
-        unit?.id ?? null,
-        department?.id ?? null
-      );
-      setGuideline(match);
-      setMatchChecked(true);
-    });
+    const selected = departments.find((item) => item.name === value);
+    setDepartmentId(selected?.id ?? "");
+    if (!university || !selected) return;
+    previewGuideline(university.id, unitId || null, selected.id);
   }
 
   return (
@@ -121,14 +133,14 @@ export default function AcademicUnitFields({ universities }: AcademicUnitFieldsP
           autoComplete="off"
         />
         <datalist id="university-options">
-          {universities.map((university) => (
-            <option key={university.id} value={university.name}>
-              {university.city ?? ""}
+          {universities.map((item) => (
+            <option key={item.id} value={item.name}>
+              {item.city ?? ""}
             </option>
           ))}
         </datalist>
       </label>
-      <input type="hidden" name="universityId" value={universityByName.get(universityName)?.id ?? ""} />
+      <input type="hidden" name="universityId" value={university?.id ?? ""} />
 
       <label>
         <span>Enstitü / Fakülte</span>
@@ -138,13 +150,13 @@ export default function AcademicUnitFields({ universities }: AcademicUnitFieldsP
           list="academic-unit-options"
           value={unitName}
           onChange={(event) => handleUnitChange(event.target.value)}
-          placeholder={
-            universityByName.has(universityName)
-              ? "Yazarak enstitü veya fakülte seçin"
-              : "Önce üniversite seçin"
-          }
+          // Düzenleme sayfasında liste ilk odaklanınca yüklenir.
+          onFocus={() => {
+            if (university && units.length === 0) loadUnits(university.id);
+          }}
+          placeholder={university ? "Yazarak enstitü veya fakülte seçin" : "Önce üniversite seçin"}
           autoComplete="off"
-          disabled={isPending && units.length === 0}
+          disabled={!university}
         />
         <datalist id="academic-unit-options">
           {units.map((unit) => (
@@ -152,7 +164,7 @@ export default function AcademicUnitFields({ universities }: AcademicUnitFieldsP
           ))}
         </datalist>
       </label>
-      <input type="hidden" name="academicUnitId" value={units.find((item) => item.name === unitName)?.id ?? ""} />
+      <input type="hidden" name="academicUnitId" value={university ? unitId : ""} />
 
       <label>
         <span>Bölüm / Ana bilim dalı</span>
@@ -162,13 +174,12 @@ export default function AcademicUnitFields({ universities }: AcademicUnitFieldsP
           list="department-options"
           value={departmentName}
           onChange={(event) => handleDepartmentChange(event.target.value)}
-          placeholder={
-            units.some((item) => item.name === unitName)
-              ? "Yazarak bölüm veya ana bilim dalı seçin"
-              : "Önce enstitü veya fakülte seçin"
-          }
+          onFocus={() => {
+            if (university && unitId && departments.length === 0) loadDepartments(university.id, unitId);
+          }}
+          placeholder={unitId ? "Yazarak bölüm veya ana bilim dalı seçin" : "Önce enstitü veya fakülte seçin"}
           autoComplete="off"
-          disabled={isPending && departments.length === 0}
+          disabled={!unitId}
         />
         <datalist id="department-options">
           {departments.map((department) => (
@@ -176,23 +187,35 @@ export default function AcademicUnitFields({ universities }: AcademicUnitFieldsP
           ))}
         </datalist>
       </label>
-      <input type="hidden" name="departmentId" value={departments.find((item) => item.name === departmentName)?.id ?? ""} />
+      <input type="hidden" name="departmentId" value={unitId ? departmentId : ""} />
 
       <div className="project-form-full guideline-match-status" aria-live="polite">
         {isPending ? (
           <span>Kurumunuza ait onaylı tez yazım kılavuzu aranıyor…</span>
+        ) : matchState === "initial" ? (
+          initialGuidelineLabel ? (
+            <>
+              <strong>Uygulanan kılavuz</strong>
+              <span>{initialGuidelineLabel}. Kurumu değiştirirseniz kılavuz yeniden eşleştirilir.</span>
+            </>
+          ) : (
+            <span>Bu çalışmaya henüz onaylı bir kılavuz bağlı değil. Kurum seçildiğinde otomatik eşleştirilir.</span>
+          )
         ) : guideline ? (
           <>
-            <strong>Kılavuz otomatik eşleştirildi</strong>
+            <strong>Kılavuz otomatik eşleştirilecek</strong>
             <span>
               {guideline.document_title ?? guideline.university_name}
               {guideline.version_label ? ` — ${guideline.version_label}` : ""} · {guideline.citation_style.toUpperCase()}
+              {" · tez çalışmalarında uygulanır"}
             </span>
           </>
-        ) : matchChecked ? (
-          <span>Bu akademik birim için henüz onaylı ve güncel bir kılavuz bulunamadı.</span>
+        ) : matchState === "checked" ? (
+          <span>
+            Bu birim için henüz onaylı bir kılavuz yok. Ekibimiz ekleyip onayladığında çalışmanıza kendiliğinden uygulanır.
+          </span>
         ) : (
-          <span>Üniversite, fakülte/enstitü ve bölüm seçildiğinde kılavuz otomatik belirlenir.</span>
+          <span>Üniversite, fakülte/enstitü ve bölüm seçildiğinde tez kılavuzu otomatik belirlenir.</span>
         )}
       </div>
     </>

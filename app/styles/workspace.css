@@ -234,8 +234,17 @@
   color: var(--ink);
   font-size: var(--fs-sm);
 }
-.guideline-applied-banner div { display: grid; gap: 3px; }
+.guideline-applied-banner > div:first-child { display: grid; gap: 3px; min-width: 0; }
 .guideline-applied-banner > span { color: var(--muted); text-align: right; }
+.guideline-applied-banner > .cluster { flex-shrink: 0; align-items: center; }
+.guideline-applied-banner[data-tone="muted"] { border-color: var(--line-soft); background: var(--surface-2); }
+.guideline-meta { color: var(--muted); }
+
+/* Kılavuz kuralları (pencere içinde) */
+.guideline-rules { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: var(--fs-base); }
+.guideline-rules dt { color: var(--muted); font-weight: 600; }
+.guideline-rules dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.guideline-sections { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* ---------- Analiz sonuç tabloları ---------- */
 .table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--line-soft); border-radius: var(--r-md); }

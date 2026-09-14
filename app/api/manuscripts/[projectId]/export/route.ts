@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Packer } from "docx";
 import { createClient } from "@/lib/supabase/server";
 import { buildDocxFromTiptap, type DocxImage } from "@/lib/tiptap-docx";
-import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
+import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { readImageInfo } from "@/lib/image-info";
 import type { TiptapDoc } from "@/lib/tiptap-text";
 
@@ -87,19 +87,15 @@ export async function GET(
     return NextResponse.json({ error: "Bu çalışma için henüz kaydedilmiş bir metin yok." }, { status: 404 });
   }
 
-  // Editörde görünen gövde yazı tipi/boyutu/satır aralığı onaylı kılavuzdan gelir; Word'de de aynısı.
-  let textDefaults = {};
-  if (project.guideline_id) {
-    const { data: guideline } = await supabase
-      .from("thesis_guidelines")
-      .select("extracted_rules, analysis_status")
-      .eq("id", project.guideline_id)
-      .maybeSingle();
-    if (guideline?.analysis_status === "approved") {
-      const { fontFamily, fontSizePt, lineSpacing } = normalizeGuidelineEditorSettings(guideline.extracted_rules);
-      textDefaults = { fontFamily, fontSizePt, lineSpacing };
-    }
-  }
+  // Editörde görünen gövde yazı tipi/boyutu/satır aralığı kılavuzun son onaylı sürümünden gelir; Word'de de aynısı.
+  const guideline = await loadAppliedGuideline(supabase, project.guideline_id);
+  const textDefaults = guideline
+    ? {
+        fontFamily: guideline.settings.fontFamily,
+        fontSizePt: guideline.settings.fontSizePt,
+        lineSpacing: guideline.settings.lineSpacing,
+      }
+    : {};
 
   const doc = await buildDocxFromTiptap({
     title: project.title ?? "ArvoLab Çalışması",

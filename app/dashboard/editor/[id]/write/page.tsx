@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
+import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import { resolveGuidelineSync } from "@/lib/guideline-sync";
 import ManuscriptEditor from "./manuscript-editor";
-import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
 
 export default async function WriteManuscriptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,29 +20,14 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
   // Çalışma yoksa ya da kullanıcının erişimi yoksa (RLS) boş editör yerine 404.
   if (!project) notFound();
 
-  let requiredSections: string[] = [];
-  let guidelineLabel: string | null = null;
-  let guidelineCitationStyle: string | null = null;
-  let guidelineSettings = normalizeGuidelineEditorSettings(null);
-  if (project?.guideline_id) {
-    const { data: guideline } = await supabase
-      .from("thesis_guidelines")
-      .select("university_name, institute_name, document_title, version_label, citation_style, required_sections, extracted_rules, analysis_status")
-      .eq("id", project.guideline_id)
-      .single();
-    if (guideline?.analysis_status === "approved") {
-      requiredSections = guideline.required_sections ?? [];
-      guidelineCitationStyle = guideline.citation_style;
-      guidelineSettings = normalizeGuidelineEditorSettings(guideline.extracted_rules);
-      guidelineLabel = guideline.document_title ?? `${guideline.university_name}${guideline.institute_name ? ` — ${guideline.institute_name}` : ""}${guideline.version_label ? ` (${guideline.version_label})` : ""}`;
-    }
-  }
+  const [guideline, manuscript, userResult] = await Promise.all([
+    loadAppliedGuideline(supabase, project.guideline_id),
+    getManuscript(id),
+    supabase.auth.getUser(),
+  ]);
+  const sync = resolveGuidelineSync(guideline, manuscript);
 
-  const manuscript = await getManuscript(id);
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = userResult.data.user;
   let authorFullName = "";
   if (user) {
     const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
@@ -53,7 +39,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Panelde yazma</span>
-          <h1>{project?.title ?? "Çalışma"}</h1>
+          <h1>{project.title ?? "Çalışma"}</h1>
           <p>
             Yazdıklarınız otomatik kaydedilir. ArvoLab içerik üretmez;
             &quot;Kontrol Et&quot; ile kılavuz uygunluğu ve kaynakça denetimi yapar.
@@ -69,23 +55,19 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
         projectId={id}
         initialContent={manuscript?.content ?? null}
         initialUpdatedAt={manuscript?.updatedAt ?? null}
-        requiredSections={requiredSections}
-        initialMargins={manuscript?.margins ?? guidelineSettings.margins}
-        initialShowPageNumbers={manuscript?.showPageNumbers ?? guidelineSettings.showPageNumbers}
+        initialMargins={sync.margins}
+        initialShowPageNumbers={sync.showPageNumbers}
         initialCoverPage={manuscript?.coverPage}
-        appliedGuideline={guidelineLabel ? {
-          label: guidelineLabel,
-          citationStyle: guidelineCitationStyle ?? "",
-          settings: guidelineSettings,
-          usedAsDefaults: !manuscript,
-        } : null}
+        guideline={guideline}
+        guidelineSync={{ mode: sync.mode, source: sync.source }}
+        editHref={`/dashboard/editor/${id}/edit`}
         projectDefaults={{
-          title: project?.title ?? "",
-          university: project?.university ?? "",
-          institute: project?.institute ?? "",
-          department: project?.department ?? "",
+          title: project.title ?? "",
+          university: project.university ?? "",
+          institute: project.institute ?? "",
+          department: project.department ?? "",
           authorName: authorFullName,
-          projectType: project?.project_type ?? "thesis",
+          projectType: project.project_type ?? "thesis",
         }}
       />
     </main>

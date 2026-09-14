@@ -11,11 +11,15 @@ import {
   statusLabel,
 } from "@/lib/project-labels";
 import ActionForm from "../../../action-form";
+import { getUniversities } from "@/app/actions/universities";
+import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import AcademicUnitFields from "../../new/academic-unit-fields";
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [project, ctx] = await Promise.all([getProjectForEdit(id), getAuthContext()]);
+  const [project, ctx, universities] = await Promise.all([getProjectForEdit(id), getAuthContext(), getUniversities()]);
   if (!project || !ctx) notFound();
+  const guideline = await loadAppliedGuideline(ctx.supabase, project.guideline_id);
 
   const canOversee = isOversightRole(ctx.role);
   const canEdit = canOversee || project.owner_id === ctx.user.id || project.assignee_id === ctx.user.id;
@@ -52,8 +56,8 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
           <div className="project-form-heading">
             <h2>Temel bilgiler</h2>
             <p>
-              Çalışma türü ve kurum bilgisi kılavuz eşleştirmesini belirlediği için buradan değiştirilemez.
-              {project.university ? ` Kurum: ${project.university}.` : ""}
+              Tezlerde tez yazım kılavuzu seçtiğiniz kuruma göre otomatik belirlenir; kurumu değiştirirseniz
+              kılavuz ve kaynakça sistemi yeniden eşleştirilir.
             </p>
           </div>
 
@@ -62,6 +66,19 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
               <span>Çalışma başlığı</span>
               <input name="title" type="text" defaultValue={project.title} minLength={3} maxLength={240} required />
             </label>
+
+            <AcademicUnitFields
+              universities={universities}
+              initial={{
+                university: project.university ?? "",
+                universityId: project.university_id,
+                institute: project.institute ?? "",
+                academicUnitId: project.academic_unit_id,
+                department: project.department ?? "",
+                departmentId: project.department_id,
+              }}
+              initialGuidelineLabel={guideline ? `${guideline.label} · ${guideline.citationStyle.toUpperCase()}` : null}
+            />
 
             <label>
               <span>Kaynakça sistemi</span>

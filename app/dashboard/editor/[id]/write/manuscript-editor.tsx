@@ -38,9 +38,18 @@ import {
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import type { TiptapDoc } from "@/lib/tiptap-text";
-import { saveManuscript, runManuscriptCheck, type ManuscriptCheckResult, type PageMargins, type CoverPage } from "@/app/actions/manuscript";
+import {
+  saveManuscript,
+  runManuscriptCheck,
+  type ManuscriptCheckResult,
+  type PageMargins,
+  type CoverPage,
+  type SettingsSource,
+} from "@/app/actions/manuscript";
 import { createClient } from "@/lib/supabase/client";
-import type { GuidelineEditorSettings } from "@/lib/guideline-editor-settings";
+import type { AppliedGuideline } from "@/lib/guideline-rules";
+import type { GuidelineSyncMode } from "@/lib/guideline-sync";
+import Link from "next/link";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 
@@ -65,18 +74,24 @@ interface ManuscriptEditorProps {
   initialContent: object | null;
   /** Veritabanındaki sürümün zamanı (çakışma denetimi için); null = hiç kaydedilmemiş */
   initialUpdatedAt: string | null;
-  requiredSections: string[];
   initialMargins?: PageMargins;
   initialShowPageNumbers?: boolean;
   initialCoverPage?: CoverPage | null;
   projectDefaults?: ProjectDefaults;
-  appliedGuideline?: {
-    label: string;
-    citationStyle: string;
-    settings: GuidelineEditorSettings;
-    usedAsDefaults: boolean;
-  } | null;
+  /** Çalışmaya bağlı kılavuzun son onaylı sürümü */
+  guideline: AppliedGuideline | null;
+  /** Sayfa ayarlarının kılavuzla senkron durumu (sunucuda hesaplanır) */
+  guidelineSync: { mode: GuidelineSyncMode; source: SettingsSource };
+  /** Kurum seçimi için çalışma düzenleme sayfası */
+  editHref: string;
 }
+
+const formatDate = (value: string | null | undefined) => {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString("tr-TR") : null;
+};
+
+const safeExternalUrl = (value: string | null) => (value && /^https?:\/\//i.test(value) ? value : null);
 
 // Türkiye'deki üniversitelerin tez/makale yazım kılavuzlarında en sık
 // istenen yazı tipleri (Times New Roman başta olmak üzere). Seçim
@@ -176,12 +191,13 @@ export default function ManuscriptEditor({
   projectId,
   initialContent,
   initialUpdatedAt,
-  requiredSections,
   initialMargins,
   initialShowPageNumbers,
   initialCoverPage,
   projectDefaults,
-  appliedGuideline,
+  guideline,
+  guidelineSync,
+  editHref,
 }: ManuscriptEditorProps) {
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -194,6 +210,9 @@ export default function ManuscriptEditor({
   const [checkError, setCheckError] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const [footnoteDialog, setFootnoteDialog] = useState<FootnoteDialogState>(null);
+  const [settingsSource, setSettingsSource] = useState<SettingsSource>(guidelineSync.source);
+  const [syncMode, setSyncMode] = useState<GuidelineSyncMode>(guidelineSync.mode);
+  const [guidelineOpen, setGuidelineOpen] = useState(false);
   const [margins, setMargins] = useState<PageMargins>(
     initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
   );
@@ -226,7 +245,7 @@ export default function ManuscriptEditor({
   const saveTimerRef = useRef<number | null>(null);
   const draftTimerRef = useRef<number | null>(null);
   const blockedRef = useRef(false);
-  const settingsRef = useRef({ margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null });
+  const settingsRef = useRef({ margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource });
   const saveNowRef = useRef<(force?: boolean) => Promise<boolean>>(async () => false);
   const markDirtyRef = useRef<() => void>(() => undefined);
   const openFootnoteRef = useRef<(pos: number, text: string) => void>(() => undefined);
@@ -370,9 +389,9 @@ export default function ManuscriptEditor({
         class: "manuscript-editor-content",
         "aria-label": "Çalışma metni",
         style: [
-          appliedGuideline?.settings.fontFamily ? `font-family: '${appliedGuideline.settings.fontFamily}'` : "",
-          appliedGuideline?.settings.fontSizePt ? `font-size: ${appliedGuideline.settings.fontSizePt}pt` : "",
-          appliedGuideline?.settings.lineSpacing ? `line-height: ${appliedGuideline.settings.lineSpacing}` : "",
+          guideline?.settings.fontFamily ? `font-family: '${guideline.settings.fontFamily}'` : "",
+          guideline?.settings.fontSizePt ? `font-size: ${guideline.settings.fontSizePt}pt` : "",
+          guideline?.settings.lineSpacing ? `line-height: ${guideline.settings.lineSpacing}` : "",
         ].filter(Boolean).join("; "),
       },
       handleClickOn: (_view, pos, node) => {
@@ -389,14 +408,22 @@ export default function ManuscriptEditor({
   // (geliştirmedeki çift effect çalıştırması boş kayıt tetiklemesin).
   const settingsSnapshot = useRef<string | null>(null);
   useEffect(() => {
-    const next = { margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null };
+    const next = { margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource };
     const serialized = JSON.stringify(next);
     settingsRef.current = next;
     const previous = settingsSnapshot.current;
     settingsSnapshot.current = serialized;
     if (previous === null || previous === serialized) return;
     markDirtyRef.current();
-  }, [margins, showPageNumbers, coverPageEnabled, coverPage]);
+  }, [margins, showPageNumbers, coverPageEnabled, coverPage, settingsSource]);
+
+  // Kılavuzun yeni sürümü kendiliğinden uygulandıysa kalıcı olsun (bir kez).
+  const autoAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!editor || guidelineSync.mode !== "auto-applied" || autoAppliedRef.current) return;
+    autoAppliedRef.current = true;
+    markDirtyRef.current();
+  }, [editor, guidelineSync.mode]);
 
   // Kısayol, sekme kapatma uyarısı, sekme gizlenince kaydet, sayfadan ayrılınca kaydet.
   useEffect(() => {
@@ -549,6 +576,27 @@ export default function ManuscriptEditor({
   }, [openFootnoteEditor]);
 
   const closeFootnoteDialog = useCallback(() => setFootnoteDialog(null), []);
+  const closeGuideline = useCallback(() => setGuidelineOpen(false), []);
+
+  // Kullanıcı sayfa ayarlarını kendisi değiştirdi: yeni kılavuz sürümü artık kendiliğinden uygulanmaz, önerilir.
+  const markCustomized = useCallback(() => {
+    setSettingsSource((source) => (source.customized ? source : { ...source, customized: true }));
+  }, []);
+
+  const acceptGuidelineSettings = useCallback(() => {
+    if (!guideline) return;
+    if (guideline.settings.margins) setMargins(guideline.settings.margins);
+    if (guideline.settings.showPageNumbers !== undefined) setShowPageNumbers(guideline.settings.showPageNumbers);
+    setSettingsSource({ guidelineId: guideline.id, version: guideline.version, customized: false });
+    setSyncMode("current");
+    showToast("success", "Sayfa ayarları kılavuzun güncel sürümüne göre güncellendi.");
+  }, [guideline]);
+
+  const keepOwnSettings = useCallback(() => {
+    if (!guideline) return;
+    setSettingsSource({ guidelineId: guideline.id, version: guideline.version, customized: true });
+    setSyncMode("current");
+  }, [guideline]);
 
   const submitFootnote = useCallback(() => {
     if (!editor || !footnoteDialog) return;
@@ -596,6 +644,8 @@ export default function ManuscriptEditor({
   // Editör oluştuğu ilk çizimde abonelik henüz anlık görüntü üretmemiş olabilir;
   // o an için durum doğrudan okunur (ilk işlemden sonra abonelik devralır).
   const ui = toolbarState ?? selectToolbarState({ editor })!;
+  const requiredSections = guideline?.requiredSections ?? [];
+  const isThesis = (projectDefaults?.projectType ?? "thesis") === "thesis";
 
   const statusLabel =
     saveState === "saving"
@@ -624,7 +674,7 @@ export default function ManuscriptEditor({
             else editor.chain().focus().unsetFontFamily().run();
           }}
         >
-          <option value="">{appliedGuideline?.settings.fontFamily ? `Kılavuz (${appliedGuideline.settings.fontFamily})` : "Varsayılan yazı tipi"}</option>
+          <option value="">{guideline?.settings.fontFamily ? `Kılavuz (${guideline.settings.fontFamily})` : "Varsayılan yazı tipi"}</option>
           {FONT_FAMILIES.map((font) => (
             <option key={font} value={font} style={{ fontFamily: font }}>
               {font}
@@ -643,7 +693,7 @@ export default function ManuscriptEditor({
             else editor.chain().focus().unsetFontSize().run();
           }}
         >
-          <option value="">{appliedGuideline?.settings.fontSizePt ? `Kılavuz (${appliedGuideline.settings.fontSizePt} pt)` : "Varsayılan boyut"}</option>
+          <option value="">{guideline?.settings.fontSizePt ? `Kılavuz (${guideline.settings.fontSizePt} pt)` : "Varsayılan boyut"}</option>
           {FONT_SIZES.map((s) => (
             <option key={s} value={`${s}pt`}>
               {s} pt
@@ -715,7 +765,7 @@ export default function ManuscriptEditor({
           value={ui.lineSpacing}
           onChange={(e) => editor.chain().focus().setLineSpacing(e.target.value || null).run()}
         >
-          <option value="">{appliedGuideline?.settings.lineSpacing ? `Aralık: kılavuz (${appliedGuideline.settings.lineSpacing})` : "Satır aralığı"}</option>
+          <option value="">{guideline?.settings.lineSpacing ? `Aralık: kılavuz (${guideline.settings.lineSpacing})` : "Satır aralığı"}</option>
           <option value="1">Tek (1.0)</option>
           <option value="1.15">1.15</option>
           <option value="1.5">1.5</option>
@@ -881,15 +931,51 @@ export default function ManuscriptEditor({
         </div>
       )}
 
-      {appliedGuideline ? (
+      {guideline ? (
         <div className="guideline-applied-banner" role="status">
           <div>
-            <strong>Tez kılavuzu otomatik uygulandı</strong>
-            <span>{appliedGuideline.label}</span>
+            <strong>{syncMode === "auto-applied" ? "Kılavuzun yeni sürümü uygulandı" : "Tez kılavuzu otomatik uygulanıyor"}</strong>
+            <span>{guideline.label}</span>
+            <span className="guideline-meta text-sm">
+              {guideline.citationStyle.toUpperCase()}
+              {guideline.versionLabel ? ` · ${guideline.versionLabel}` : ""}
+              {formatDate(guideline.version) ? ` · Onay: ${formatDate(guideline.version)}` : ""}
+              {guideline.updatePending ? " · Yeni sürüm ekibimizce inceleniyor" : ""}
+            </span>
           </div>
+          <div className="cluster">
+            <button type="button" className="projects-filter-button" onClick={() => setGuidelineOpen(true)}>
+              Kuralları gör
+            </button>
+          </div>
+        </div>
+      ) : isThesis ? (
+        <div className="guideline-applied-banner" data-tone="muted" role="status">
+          <div>
+            <strong>Bu çalışmaya bağlı onaylı kılavuz yok</strong>
+            <span>
+              Üniversite, enstitü ve bölümünüzü seçin; kılavuzunuz onaylandığında editöre kendiliğinden uygulanır.
+            </span>
+          </div>
+          <div className="cluster">
+            <Link href={editHref} className="projects-filter-button">Kurumu seç</Link>
+          </div>
+        </div>
+      ) : null}
+
+      {guideline && syncMode === "offer" ? (
+        <div className="callout editor-notice cluster" data-tone="accent" role="status">
           <span>
-            {appliedGuideline.citationStyle ? `${appliedGuideline.citationStyle.toUpperCase()} · ` : ""}
-            {appliedGuideline.usedAsDefaults ? "Sayfa ayarları kılavuzdan yüklendi" : "Kayıtlı kişisel ayarlar korundu"}
+            Kılavuzun yeni sürümü onaylandı. Kenar boşluklarını ya da sayfa numarasını siz değiştirdiğiniz için
+            sayfa ayarlarınızı kendiliğinden değiştirmedik.
+          </span>
+          <span className="cluster">
+            <button type="button" className="projects-primary-button" onClick={acceptGuidelineSettings}>
+              Kılavuza göre güncelle
+            </button>
+            <button type="button" className="projects-filter-button" onClick={keepOwnSettings}>
+              Ayarlarımı koru
+            </button>
           </span>
         </div>
       ) : null}
@@ -911,9 +997,10 @@ export default function ManuscriptEditor({
                 min={0}
                 max={10}
                 value={margins[side]}
-                onChange={(e) =>
-                  setMargins((prev) => ({ ...prev, [side]: Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 10) }))
-                }
+                onChange={(e) => {
+                  markCustomized();
+                  setMargins((prev) => ({ ...prev, [side]: Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 10) }));
+                }}
               />
             </label>
           ))}
@@ -921,7 +1008,10 @@ export default function ManuscriptEditor({
             <input
               type="checkbox"
               checked={showPageNumbers}
-              onChange={(e) => setShowPageNumbers(e.target.checked)}
+              onChange={(e) => {
+                markCustomized();
+                setShowPageNumbers(e.target.checked);
+              }}
             />
             <span>Sayfa numarası ekle</span>
           </label>
@@ -1022,6 +1112,110 @@ export default function ManuscriptEditor({
           )}
         </div>
       )}
+
+      {guideline ? (
+        <Dialog
+          open={guidelineOpen}
+          onClose={closeGuideline}
+          kicker="Tez yazım kılavuzu"
+          title={guideline.label}
+          description="Ekibimizin onayladığı son sürüm. Yeni sürüm onaylandığında editörünüze kendiliğinden yansır."
+        >
+          <dl className="guideline-rules">
+            <dt>Kurum</dt>
+            <dd>
+              {guideline.universityName}
+              {guideline.instituteName ? ` — ${guideline.instituteName}` : ""}
+            </dd>
+            <dt>Kaynakça</dt>
+            <dd>{guideline.citationStyle.toUpperCase()}</dd>
+            {guideline.settings.fontFamily || guideline.settings.fontSizePt ? (
+              <>
+                <dt>Yazı</dt>
+                <dd>
+                  {[guideline.settings.fontFamily, guideline.settings.fontSizePt ? `${guideline.settings.fontSizePt} pt` : null]
+                    .filter(Boolean)
+                    .join(", ")}
+                </dd>
+              </>
+            ) : null}
+            {guideline.settings.lineSpacing ? (
+              <>
+                <dt>Satır aralığı</dt>
+                <dd>{guideline.settings.lineSpacing}</dd>
+              </>
+            ) : null}
+            {guideline.settings.margins ? (
+              <>
+                <dt>Kenar boşlukları</dt>
+                <dd>
+                  Üst {guideline.settings.margins.top} · Alt {guideline.settings.margins.bottom} · Sol{" "}
+                  {guideline.settings.margins.left} · Sağ {guideline.settings.margins.right} cm
+                </dd>
+              </>
+            ) : null}
+            {guideline.settings.showPageNumbers !== undefined ? (
+              <>
+                <dt>Sayfa numarası</dt>
+                <dd>{guideline.settings.showPageNumbers ? "Var" : "Yok"}</dd>
+              </>
+            ) : null}
+            {guideline.minPages || guideline.maxPages ? (
+              <>
+                <dt>Sayfa sayısı</dt>
+                <dd>
+                  {guideline.minPages ? `en az ${guideline.minPages}` : ""}
+                  {guideline.minPages && guideline.maxPages ? ", " : ""}
+                  {guideline.maxPages ? `en fazla ${guideline.maxPages}` : ""}
+                </dd>
+              </>
+            ) : null}
+            {guideline.versionLabel ? (
+              <>
+                <dt>Sürüm</dt>
+                <dd>{guideline.versionLabel}</dd>
+              </>
+            ) : null}
+            {formatDate(guideline.version) ? (
+              <>
+                <dt>Onay tarihi</dt>
+                <dd>{formatDate(guideline.version)}</dd>
+              </>
+            ) : null}
+            {formatDate(guideline.lastCheckedAt) ? (
+              <>
+                <dt>Son kaynak kontrolü</dt>
+                <dd>
+                  {formatDate(guideline.lastCheckedAt)}
+                  {guideline.updatePending ? " · yeni sürüm inceleniyor" : ""}
+                </dd>
+              </>
+            ) : null}
+          </dl>
+
+          {requiredSections.length > 0 ? (
+            <div className="stack mt-md">
+              <strong>Zorunlu bölümler</strong>
+              <div className="guideline-sections">
+                {requiredSections.map((section) => (
+                  <span key={section} className="chip">{section}</span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {safeExternalUrl(guideline.sourceUrl) ? (
+            <a
+              href={safeExternalUrl(guideline.sourceUrl)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="projects-filter-button mt-md"
+            >
+              Resmî kılavuzu aç
+            </a>
+          ) : null}
+        </Dialog>
+      ) : null}
 
       <Dialog
         open={footnoteDialog !== null}

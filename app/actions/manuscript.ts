@@ -11,6 +11,7 @@ import {
   computeComplianceScore,
 } from "@/lib/apa7";
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
+import { loadAppliedGuideline } from "@/lib/guideline-rules";
 
 export interface PageMargins {
   top: number;
@@ -32,6 +33,14 @@ export interface CoverPage {
   year: string;
 }
 
+/** Sayfa ayarlarının (kenar boşlukları, sayfa numarası) hangi kılavuz sürümünden geldiği */
+export interface SettingsSource {
+  guidelineId: string | null;
+  version: string | null;
+  /** Kullanıcı ayarları kendisi değiştirdi: yeni kılavuz sürümü kendiliğinden uygulanmaz, önerilir */
+  customized: boolean;
+}
+
 export interface ManuscriptData {
   content: TiptapDoc;
   wordCount: number;
@@ -39,6 +48,7 @@ export interface ManuscriptData {
   margins: PageMargins;
   showPageNumbers: boolean;
   coverPage: CoverPage | null;
+  settingsSource: SettingsSource;
 }
 
 // Veritabanı hatasında null DÖNMEZ, hata fırlatır: önceden hata "henüz metin
@@ -46,11 +56,10 @@ export interface ManuscriptData {
 // yazıyordu. Hata artık dashboard/error.tsx ekranına düşer.
 export async function getManuscript(projectId: string): Promise<ManuscriptData | null> {
   const supabase = await createClient();
+  // "*": kılavuz senkron kolonları henüz eklenmemiş veritabanlarında da çalışır.
   const { data, error } = await supabase
     .from("project_manuscripts")
-    .select(
-      "content, word_count, updated_at, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm, show_page_numbers, cover_page"
-    )
+    .select("*")
     .eq("project_id", projectId)
     .maybeSingle();
 
@@ -72,6 +81,11 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
     },
     showPageNumbers: data.show_page_numbers ?? true,
     coverPage: (data.cover_page as CoverPage) ?? null,
+    settingsSource: {
+      guidelineId: data.settings_guideline_id ?? null,
+      version: data.settings_guideline_version ?? null,
+      customized: data.settings_customized ?? false,
+    },
   };
 }
 
@@ -80,6 +94,7 @@ export interface SaveManuscriptInput {
   margins?: PageMargins;
   showPageNumbers?: boolean;
   coverPage?: CoverPage | null;
+  settingsSource?: SettingsSource;
   /** Editörün açtığı sürümün zamanı; null = henüz hiç kaydedilmemiş belge */
   expectedUpdatedAt: string | null;
   /** Çakışmada kullanıcı "benim sürümümü kaydet" derse */
@@ -89,6 +104,8 @@ export interface SaveManuscriptInput {
 export type SaveManuscriptResult =
   | { success: true; updatedAt: string; wordCount: number }
   | { success?: false; error: string; conflict?: boolean; sessionExpired?: boolean };
+
+const isMissingColumn = (error: { code?: string } | null) => error?.code === "PGRST204" || error?.code === "42703";
 
 // İyimser eşzamanlılık: kayıt yalnızca veritabanındaki sürüm editörün
 // açtığı sürümle aynıysa yapılır. Başka sekme/kişi arada kaydettiyse
@@ -102,9 +119,9 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     };
   }
 
-  const { content, margins, showPageNumbers, coverPage } = input;
+  const { content, margins, showPageNumbers, coverPage, settingsSource } = input;
   const wordCount = countWords(content);
-  const row = {
+  const baseRow = {
     content,
     plain_text: extractPlainText(content),
     word_count: wordCount,
@@ -121,51 +138,70 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     ...(showPageNumbers !== undefined ? { show_page_numbers: showPageNumbers } : {}),
     ...(coverPage !== undefined ? { cover_page: coverPage } : {}),
   };
+  const fullRow = settingsSource
+    ? {
+        ...baseRow,
+        settings_guideline_id: settingsSource.guidelineId,
+        settings_guideline_version: settingsSource.version,
+        settings_customized: settingsSource.customized,
+      }
+    : baseRow;
 
+  const failed = { error: "Kaydedilirken bir hata oluştu." } as const;
   const conflict = {
     error: "Bu belge başka bir sekmede ya da başka biri tarafından değiştirildi.",
     conflict: true,
   } as const;
 
-  if (input.force) {
+  const write = async (row: Record<string, unknown>): Promise<SaveManuscriptResult | "missing-column"> => {
+    if (input.force) {
+      const { data, error } = await ctx.supabase
+        .from("project_manuscripts")
+        .upsert({ project_id: projectId, ...row }, { onConflict: "project_id" })
+        .select("updated_at")
+        .single();
+      if (isMissingColumn(error)) return "missing-column";
+      if (error || !data) {
+        console.error(error);
+        return failed;
+      }
+      return { success: true, updatedAt: data.updated_at, wordCount };
+    }
+
+    if (input.expectedUpdatedAt) {
+      const { data, error } = await ctx.supabase
+        .from("project_manuscripts")
+        .update(row)
+        .eq("project_id", projectId)
+        .eq("updated_at", input.expectedUpdatedAt)
+        .select("updated_at");
+      if (isMissingColumn(error)) return "missing-column";
+      if (error) {
+        console.error(error);
+        return failed;
+      }
+      if (!data?.length) return conflict;
+      return { success: true, updatedAt: data[0].updated_at, wordCount };
+    }
+
     const { data, error } = await ctx.supabase
       .from("project_manuscripts")
-      .upsert({ project_id: projectId, ...row }, { onConflict: "project_id" })
+      .insert({ project_id: projectId, ...row })
       .select("updated_at")
       .single();
+    if (isMissingColumn(error)) return "missing-column";
+    if (error?.code === "23505") return conflict;
     if (error || !data) {
       console.error(error);
-      return { error: "Kaydedilirken bir hata oluştu." };
+      return failed;
     }
     return { success: true, updatedAt: data.updated_at, wordCount };
-  }
+  };
 
-  if (input.expectedUpdatedAt) {
-    const { data, error } = await ctx.supabase
-      .from("project_manuscripts")
-      .update(row)
-      .eq("project_id", projectId)
-      .eq("updated_at", input.expectedUpdatedAt)
-      .select("updated_at");
-    if (error) {
-      console.error(error);
-      return { error: "Kaydedilirken bir hata oluştu." };
-    }
-    if (!data?.length) return conflict;
-    return { success: true, updatedAt: data[0].updated_at, wordCount };
-  }
-
-  const { data, error } = await ctx.supabase
-    .from("project_manuscripts")
-    .insert({ project_id: projectId, ...row })
-    .select("updated_at")
-    .single();
-  if (error?.code === "23505") return conflict;
-  if (error || !data) {
-    console.error(error);
-    return { error: "Kaydedilirken bir hata oluştu." };
-  }
-  return { success: true, updatedAt: data.updated_at, wordCount };
+  // Kılavuz senkron migration'ı henüz çalıştırılmadıysa metin yine kaydedilsin.
+  let result = await write(fullRow);
+  if (result === "missing-column" && fullRow !== baseRow) result = await write(baseRow);
+  return result === "missing-column" ? failed : result;
 }
 
 // NOT: Resim yükleme artık burada değil, doğrudan tarayıcıda
@@ -216,24 +252,11 @@ export async function runManuscriptCheck(projectId: string): Promise<{ error?: s
   const split = splitBodyAndReferences(fullText);
   const citationStyle = project?.citation_style ?? "apa7";
 
-  // Editörle tutarlı: yalnızca onaylı kılavuzun kuralları denetlenir.
-  let guidelineCompliance: ReturnType<typeof checkGuidelineCompliance> | null = null;
-  if (project?.guideline_id) {
-    const { data: guideline } = await supabase
-      .from("thesis_guidelines")
-      .select("required_sections, citation_style, analysis_status")
-      .eq("id", project.guideline_id)
-      .single();
-
-    if (guideline?.analysis_status === "approved") {
-      guidelineCompliance = checkGuidelineCompliance(
-        split.bodyText,
-        guideline.required_sections ?? [],
-        guideline.citation_style,
-        citationStyle
-      );
-    }
-  }
+  // Editör ve Word çıktısıyla aynı kaynak: kılavuzun son onaylı sürümü.
+  const guideline = await loadAppliedGuideline(supabase, project?.guideline_id);
+  const guidelineCompliance = guideline
+    ? checkGuidelineCompliance(split.bodyText, guideline.requiredSections, guideline.citationStyle, citationStyle)
+    : null;
 
   const citationCheckSupported = citationStyle === "apa7";
   let apa7Result: ManuscriptCheckResult["apa7"] = {

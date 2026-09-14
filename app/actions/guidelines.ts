@@ -57,7 +57,7 @@ export async function findMatchingGuideline(
       .eq("university_id", universityId)
       .eq("academic_unit_id", candidate.id)
       .eq("is_active", true)
-      .eq("analysis_status", "approved")
+      .not("approved_snapshot", "is", null)
       .order("effective_from", { ascending: false, nullsFirst: false })
       .order("updated_at", { ascending: false })
       .limit(1)
@@ -72,7 +72,7 @@ export async function findMatchingGuideline(
     .eq("university_id", universityId)
     .is("academic_unit_id", null)
     .eq("is_active", true)
-    .eq("analysis_status", "approved")
+    .not("approved_snapshot", "is", null)
     .order("effective_from", { ascending: false, nullsFirst: false })
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -290,6 +290,8 @@ export async function updateGuidelineDetails(guidelineId: string, formData: Form
             analysis_status: "needs_review",
             reviewed_by: null,
             reviewed_at: null,
+            // Eski kuruma verilmiş onay yeni kuruma taşınmaz.
+            approved_snapshot: null,
             review_notes: "Kurum bilgisi değişti; yeniden akademik onay gerekiyor.",
           }
         : {}),
@@ -299,6 +301,12 @@ export async function updateGuidelineDetails(guidelineId: string, formData: Form
   if (error) {
     console.error(error);
     return { error: "Kılavuz güncellenirken bir hata oluştu." };
+  }
+
+  if (institutionChanged) {
+    // Bu kılavuza bağlı tezler kurumlarına uygun başka bir onaylı kılavuza geçer.
+    const { error: resyncError } = await auth.supabase.rpc("resync_project_guidelines", { p_guideline_id: guidelineId });
+    if (resyncError) console.error(resyncError);
   }
 
   revalidatePath("/dashboard/guidelines");
@@ -317,7 +325,9 @@ export async function approveGuideline(guidelineId: string) {
 
   const { data: guideline, error: guidelineError } = await supabase
     .from("thesis_guidelines")
-    .select("university_name, institute_name, citation_style, required_sections, extracted_rules")
+    .select(
+      "citation_style, required_sections, extracted_rules, min_pages, max_pages, version_label, document_title, source_url, source_checksum, ai_analysis"
+    )
     .eq("id", guidelineId)
     .single();
   if (guidelineError || !guideline) return { error: "Kılavuz bulunamadı." };
@@ -325,27 +335,44 @@ export async function approveGuideline(guidelineId: string) {
     return { error: "Onaylamadan önce biçim kurallarını ve zorunlu bölümleri kaydedin." };
   }
 
+  const approvedAt = new Date().toISOString();
+  // Kaynakta algılanan yeni sürüm incelenip onaylandıysa onun imzası artık onaylı sürümdür.
+  const analysis = (guideline.ai_analysis ?? null) as Record<string, unknown> | null;
+  const pendingChecksum = typeof analysis?.pendingChecksum === "string" ? analysis.pendingChecksum : null;
+
   const { error } = await supabase
     .from("thesis_guidelines")
     .update({
       analysis_status: "approved",
       reviewed_by: user.id,
-      reviewed_at: new Date().toISOString(),
+      reviewed_at: approvedAt,
       review_notes: "Akademik yönetici tarafından onaylandı.",
+      // Müşteri editörleri bu sürümü kullanır; yeni onayda kendiliğinden güncellenir.
+      approved_snapshot: {
+        citation_style: guideline.citation_style,
+        required_sections: guideline.required_sections,
+        extracted_rules: guideline.extracted_rules,
+        min_pages: guideline.min_pages,
+        max_pages: guideline.max_pages,
+        version_label: guideline.version_label,
+        document_title: guideline.document_title,
+        source_url: guideline.source_url,
+        approved_at: approvedAt,
+      },
+      ...(pendingChecksum
+        ? {
+            source_checksum: pendingChecksum,
+            ai_analysis: { ...analysis, pendingReview: false, pendingChecksum: null },
+          }
+        : {}),
     })
     .eq("id", guidelineId);
 
   if (error) return { error: error.message };
 
-  // Kılavuz eklenmeden önce açılmış tezleri de kurumsal eşleşmeye bağla.
-  let projects = supabase
-    .from("academic_projects")
-    .update({ guideline_id: guidelineId, citation_style: guideline.citation_style })
-    .eq("project_type", "thesis")
-    .eq("university", guideline.university_name)
-    .is("guideline_id", null);
-  if (guideline.institute_name) projects = projects.eq("institute", guideline.institute_name);
-  await projects;
+  // Aynı kurumdaki tezler en özel onaylı kılavuza yeniden bağlanır (veritabanı eşleştirir).
+  const { error: resyncError } = await supabase.rpc("resync_project_guidelines", { p_guideline_id: guidelineId });
+  if (resyncError) console.error(resyncError);
 
   revalidatePath("/dashboard/guidelines");
   revalidatePath("/dashboard/editor");
