@@ -23,6 +23,8 @@ export interface StructureIssue {
   message: string;
   /** Metinde aranıp seçilecek ifade (başlık, şekil başlığı, atıf) */
   target?: string;
+  /** Editörün tek tıkla yapabileceği düzeltme */
+  action?: "sort-references";
 }
 
 const MAX_ISSUES = 60;
@@ -144,12 +146,35 @@ export function checkStructure(doc: { content?: DocNode[] } | null | undefined, 
     });
   }
 
-  // ---------- Numaralı atıf stilleri: metin ↔ kaynakça ----------
+  // Kaynakça girdileri: Kaynakça başlığından sonraki, aynı ya da üst düzey ilk başlığa
+  // (ör. "EKLER") kadar olan dolu paragraflar.
+  const referenceEntries: string[] = [];
+  if (referencesIndex >= 0) {
+    const referencesLevel = Number(blocks[referencesIndex].attrs?.level) || 1;
+    for (const block of blocks.slice(referencesIndex + 1)) {
+      if (block.type === "heading" && (Number(block.attrs?.level) || 1) <= referencesLevel) break;
+      if (block.type === "paragraph" && textOf(block).trim()) referenceEntries.push(textOf(block).trim());
+    }
+  }
+
+  // ---------- Yazar-tarih stilleri: kaynakça alfabetik mi ----------
   const style = options.citationStyle;
+  if ((style === "apa7" || style === "chicago") && referenceEntries.length > 1) {
+    const unsorted = referenceEntries.some(
+      (entry, index) => index > 0 && referenceEntries[index - 1].localeCompare(entry, "tr", { sensitivity: "base" }) > 0
+    );
+    if (unsorted) {
+      add({
+        tone: "warning",
+        message: "Kaynakça yazar soyadına göre alfabetik sırada değil.",
+        action: "sort-references",
+      });
+    }
+  }
+
+  // ---------- Numaralı atıf stilleri: metin ↔ kaynakça ----------
   if (style === "ieee" || style === "vancouver") {
-    const references = referencesIndex >= 0
-      ? blocks.slice(referencesIndex + 1).filter((block) => block.type !== "heading" && textOf(block).trim()).length
-      : 0;
+    const references = referenceEntries.length;
     const pattern = style === "ieee" ? /\[(\d+(?:\s*[,–-]\s*\d+)*)\]/g : /\((\d+(?:\s*[,–-]\s*\d+)*)\)/g;
     const cited = new Set<number>();
     for (const match of body.matchAll(pattern)) for (const number of expandNumbers(match[1])) cited.add(number);

@@ -8,6 +8,12 @@ export interface CitableSource {
   year: string | null;
   source_type: string;
   doi_or_url: string | null;
+  /** Dergi / kitap (bölüm için) adı */
+  container_title?: string | null;
+  volume?: string | null;
+  issue?: string | null;
+  pages?: string | null;
+  publisher?: string | null;
 }
 
 export type CitationStyle = "apa7" | "chicago" | "ieee" | "vancouver";
@@ -71,33 +77,93 @@ interface TextPart {
   italic?: boolean;
 }
 
-/** Kaynakça girdisi (italik başlık ayrımıyla, Tiptap metin düğümlerine çevrilebilir) */
+const field = (value: string | null | undefined) => value?.trim() || null;
+
+/** Kaynakça girdisi (italik ayrımıyla, Tiptap metin düğümlerine çevrilebilir) */
 export function formatReferenceParts(source: CitableSource, style: CitationStyle, number: number): TextPart[] {
   const authors = (source.authors ?? "").trim();
   const title = source.title.trim().replace(/\.$/, "");
   const url = link(source);
   const italic = ITALIC_TITLE_TYPES.has(source.source_type);
+  const container = field(source.container_title);
+  const volume = field(source.volume);
+  const issue = field(source.issue);
+  const pages = field(source.pages);
+  const publisher = field(source.publisher);
+  const isChapter = source.source_type === "chapter";
   const parts: TextPart[] = [];
+  const push = (text: string, isItalic = false) => {
+    if (text) parts.push(isItalic ? { text, italic: true } : { text });
+  };
 
   switch (style) {
-    case "ieee":
-      parts.push({ text: `[${number}] ${authors ? `${authors}, ` : ""}` });
-      parts.push(italic ? { text: title, italic: true } : { text: `"${title},"` });
-      parts.push({ text: ` ${yearOf(source)}.${url ? ` ${url}` : ""}` });
+    case "ieee": {
+      push(`[${number}] ${authors ? `${authors}, ` : ""}`);
+      if (italic) push(title, true);
+      else push(`"${title},"`);
+      if (container) {
+        push(isChapter ? " in " : " ");
+        push(container, true);
+        push(",");
+      }
+      if (volume) push(` vol. ${volume},`);
+      if (issue) push(` no. ${issue},`);
+      if (pages) push(` pp. ${pages},`);
+      if (publisher && !container) push(` ${publisher},`);
+      push(` ${yearOf(source)}.${url ? ` ${url}` : ""}`);
       break;
-    case "vancouver":
-      parts.push({ text: `${number}. ${authors ? `${authors.replace(/\.$/, "")}. ` : ""}` });
-      parts.push({ text: `${title}. ${yearOf(source)}.${url ? ` ${url}` : ""}` });
+    }
+    case "vancouver": {
+      push(`${number}. ${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${title}. `);
+      if (container) push(`${isChapter ? "In: " : ""}${container}. `);
+      if (publisher && !container) push(`${publisher}; `);
+      push(`${yearOf(source)}`);
+      if (volume) push(`;${volume}${issue ? `(${issue})` : ""}`);
+      if (pages) push(`:${pages}`);
+      push(`.${url ? ` ${url}` : ""}`);
       break;
-    case "chicago":
-      parts.push({ text: `${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${yearOf(source)}. ` });
-      parts.push(italic ? { text: title, italic: true } : { text: `"${title}."` });
-      if (url) parts.push({ text: ` ${url}` });
+    }
+    case "chicago": {
+      push(`${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${yearOf(source)}. `);
+      if (italic && !container) push(title, true);
+      else push(`"${title}."`);
+      if (container) {
+        push(isChapter ? " In " : " ");
+        push(container, true);
+        if (volume) push(` ${volume}`);
+        if (issue) push(` (${issue})`);
+        if (pages) push(`${isChapter ? ", " : ": "}${pages}`);
+        push(".");
+      }
+      if (publisher && (isChapter || !container)) push(` ${publisher}.`);
+      if (url) push(` ${url}`);
       break;
-    default:
-      parts.push({ text: `${authors ? `${authors} ` : ""}(${yearOf(source)}). ` });
-      parts.push({ text: `${title}.`, italic });
-      if (url) parts.push({ text: ` ${url}` });
+    }
+    default: {
+      // APA 7: Yazar (Yıl). Başlık. *Dergi*, *Cilt*(Sayı), sayfalar. DOI
+      push(`${authors ? `${authors} ` : ""}(${yearOf(source)}). `);
+      if (container && !isChapter) {
+        push(`${title}. `);
+        push(container, true);
+        if (volume) {
+          push(", ");
+          push(volume, true);
+        }
+        if (issue) push(`(${issue})`);
+        if (pages) push(`, ${pages}`);
+        push(".");
+      } else if (isChapter && container) {
+        push(`${title}. In `);
+        push(container, true);
+        push(`${pages ? ` (ss. ${pages})` : ""}.`);
+        if (publisher) push(` ${publisher}.`);
+      } else {
+        push(title, italic);
+        push(".");
+        if (publisher) push(` ${publisher}.`);
+      }
+      if (url) push(` ${url}`);
+    }
   }
   return parts;
 }

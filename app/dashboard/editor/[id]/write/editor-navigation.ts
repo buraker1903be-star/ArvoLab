@@ -199,6 +199,32 @@ export function insertCitation(
   return { citation, addedReference: true };
 }
 
+/**
+ * Kaynakçayı yazar soyadına göre Türkçe alfabetik sıralar (APA/Chicago). Girdiler ardışık
+ * paragraflar değilse (liste, tablo) dokunmaz ve -1 döner; sıralanan girdi sayısını döndürür.
+ */
+export function sortReferences(editor: Editor): number {
+  const section = findReferencesSection(editor.state.doc);
+  if (!section || section.paragraphs.length < 2) return 0;
+  const first = section.paragraphs[0];
+  const last = section.paragraphs[section.paragraphs.length - 1];
+  const from = first.pos;
+  const to = last.pos + last.node.nodeSize;
+  const contiguous = section.paragraphs.reduce((size, item) => size + item.node.nodeSize, 0) === to - from;
+  if (!contiguous) return -1;
+  const entries = section.paragraphs.filter((item) => item.node.textContent.trim());
+  const sorted = [...entries].sort((a, b) => a.node.textContent.localeCompare(b.node.textContent, "tr", { sensitivity: "base" }));
+  editor
+    .chain()
+    .focus()
+    .command(({ tr }) => {
+      tr.replaceWith(from, to, sorted.map((item) => item.node));
+      return true;
+    })
+    .run();
+  return sorted.length;
+}
+
 /** Seçili metin (yoruma alıntı olarak eklenir) */
 export function selectedText(editor: Editor): string {
   const { from, to } = editor.state.selection;

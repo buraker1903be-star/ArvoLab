@@ -523,6 +523,26 @@
 .format-loss-list { margin: 6px 0 0; padding-left: 18px; }
 .format-loss-list li { margin: 2px 0; }
 
+/* Atıf penceresi: yeni kaynak (DOI ile) */
+.doi-row { display: flex; gap: 8px; }
+.doi-row .picker-search { flex: 1; min-width: 0; }
+.cite-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.cite-form-grid .cite-form-full { grid-column: 1 / -1; }
+.cite-preview {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent-300);
+  border-radius: var(--r-xs);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .doi-row { flex-direction: column; }
+  .cite-form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Word'den aktarma seçenekleri */
 .import-modes { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
 .import-modes legend { margin-bottom: 4px; padding: 0; }

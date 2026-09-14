@@ -86,6 +86,7 @@ import {
   sectionStatuses,
   selectedText,
   selectText,
+  sortReferences,
   type OutlineHeading,
 } from "./editor-navigation";
 
@@ -1368,7 +1369,25 @@ export default function ManuscriptEditor({
                   {structureIssues.map((issue, i) => (
                     <li key={i} className="tone-text result-action-row" data-tone={issue.tone}>
                       <span>{issue.message}</span>
-                      {issue.target ? (
+                      {issue.action === "sort-references" ? (
+                        <button
+                          type="button"
+                          className="result-link"
+                          onClick={() => {
+                            const sorted = sortReferences(editor);
+                            if (sorted < 0) {
+                              showToast("error", "Kaynakça liste ya da tablo içinde olduğu için otomatik sıralanamadı.");
+                              return;
+                            }
+                            showToast("success", `${sorted} kaynak alfabetik sıralandı. Geri almak için Ctrl+Z.`);
+                            setStructureIssues(
+                              checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle })
+                            );
+                          }}
+                        >
+                          Alfabetik sırala
+                        </button>
+                      ) : issue.target ? (
                         <button type="button" className="result-link" onClick={() => handleFindText(issue.target!)}>
                           Göster
                         </button>

@@ -101,6 +101,28 @@ export default async function LiteraturePage() {
               <input name="doiOrUrl" type="text" placeholder="https://doi.org/..." />
             </label>
 
+            {/* Yayın bilgileri: kaynakça girdisi eksiksiz olsun (editörde DOI ile otomatik de dolar) */}
+            <label className="project-form-full">
+              <span>Dergi / kitap adı (opsiyonel)</span>
+              <input name="containerTitle" type="text" placeholder="Makale için dergi, bölüm için kitap adı" />
+            </label>
+            <label>
+              <span>Cilt</span>
+              <input name="volume" type="text" />
+            </label>
+            <label>
+              <span>Sayı</span>
+              <input name="issue" type="text" />
+            </label>
+            <label>
+              <span>Sayfalar</span>
+              <input name="pages" type="text" placeholder="45–67" />
+            </label>
+            <label>
+              <span>Yayınevi</span>
+              <input name="publisher" type="text" />
+            </label>
+
             {projects.length > 0 && (
               <label>
                 <span>Bağlı çalışma (opsiyonel)</span>
@@ -227,6 +249,26 @@ export default async function LiteraturePage() {
                         <label>
                           <span>DOI / URL</span>
                           <input name="doiOrUrl" type="text" defaultValue={s.doi_or_url ?? ""} />
+                        </label>
+                        <label className="project-form-full">
+                          <span>Dergi / kitap adı</span>
+                          <input name="containerTitle" type="text" defaultValue={s.container_title ?? ""} />
+                        </label>
+                        <label>
+                          <span>Cilt</span>
+                          <input name="volume" type="text" defaultValue={s.volume ?? ""} />
+                        </label>
+                        <label>
+                          <span>Sayı</span>
+                          <input name="issue" type="text" defaultValue={s.issue ?? ""} />
+                        </label>
+                        <label>
+                          <span>Sayfalar</span>
+                          <input name="pages" type="text" defaultValue={s.pages ?? ""} />
+                        </label>
+                        <label>
+                          <span>Yayınevi</span>
+                          <input name="publisher" type="text" defaultValue={s.publisher ?? ""} />
                         </label>
                         <label className="project-form-full">
                           <span>Notlar</span>
