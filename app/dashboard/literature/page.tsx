@@ -66,7 +66,7 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Literatür</span>
-          <h1 className="brand-type">Literatür Taraması</h1>
+          <h1>Literatür Taraması</h1>
           <p>
             Bulduğunuz kaynakları buraya kaydedin, okuma durumunu takip edin.
             Bu araç kaynak özeti ya da yorum ÜRETMEZ — yalnızca kendi
@@ -76,12 +76,12 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
       </section>
 
       {errorMessage ? (
-        <p className="login-error" role="alert" style={{ marginBottom: 16 }}>
+        <p className="alert" role="alert">
           {errorMessage}
         </p>
       ) : null}
 
-      <section className="project-form-card" style={{ marginBottom: 24 }}>
+      <section className="project-form-card mb-lg">
         <div className="project-form-heading">
           <h2>Yeni Kaynak Ekle</h2>
           <p>Taramada bulduğunuz bir kaynağı kaydedin.</p>
@@ -147,9 +147,9 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
             <textarea name="notes" rows={3} placeholder="Kaynakla ilgili kendi notlarınız" />
           </label>
 
-          <div className="project-form-actions" style={{ gridColumn: "1 / -1" }}>
+          <div className="project-form-actions">
             <button type="submit" className="projects-primary-button">
-              <Plus size={16} />
+              <Plus size={16} aria-hidden="true" />
               Kaynağı ekle
             </button>
           </div>
@@ -157,20 +157,20 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
       </section>
 
       {(["to_review", "read", "used"] as const).map((statusKey) => (
-        <section key={statusKey} style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 15, marginBottom: 12 }}>
-            <BookOpenCheck size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+        <section key={statusKey} className="section">
+          <h2 className="section-title">
+            <BookOpenCheck size={16} aria-hidden="true" />
             {STATUS_LABELS[statusKey]} ({grouped[statusKey].length})
           </h2>
           {grouped[statusKey].length === 0 ? (
-            <p style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Bu durumda kaynak yok.</p>
+            <p className="muted text-base">Bu durumda kaynak yok.</p>
           ) : (
             <div className="projects-list">
               {grouped[statusKey].map((s) => (
                 <article className="project-card" key={s.id}>
                   <div className="project-card-main">
                     <div>
-                      <span className="project-status">{SOURCE_TYPE_LABELS[s.source_type]}</span>
+                      <span className="status-pill">{SOURCE_TYPE_LABELS[s.source_type]}</span>
                       <h2>{s.title}</h2>
                       <p>
                         {s.authors || "Yazar belirtilmedi"}
@@ -182,14 +182,14 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
                   <div className="project-card-meta">
                     {s.doi_or_url ? (
                       <a href={s.doi_or_url} target="_blank" rel="noreferrer">
-                        <ExternalLink size={14} />
+                        <ExternalLink size={14} aria-hidden="true" />
                         Kaynağa git
                       </a>
                     ) : null}
                     {s.notes ? <span>{s.notes}</span> : null}
                   </div>
 
-                  <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <div className="cluster cluster-spaced">
                     {statusKey !== "to_review" && (
                       <ActionForm action={handleAdvanceStatus.bind(null, s.id, "to_review")}>
                         <button type="submit" className="projects-filter-button">
@@ -216,7 +216,7 @@ export default async function LiteraturePage({ searchParams }: LiteraturePagePro
                       confirmMessage={`"${s.title}" kaynağını silmek istediğinize emin misiniz?`}
                     >
                       <button type="submit" className="projects-filter-button" aria-label="Kaynağı sil">
-                        <Trash2 size={14} />
+                        <Trash2 size={14} aria-hidden="true" />
                       </button>
                     </ActionForm>
                   </div>

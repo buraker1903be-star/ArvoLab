@@ -7,9 +7,10 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/check-css-tokens.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
+    "check:css": "node scripts/check-css-tokens.mjs",
     "guidelines:seed-sql": "node scripts/guidelines/generate-seed.mjs",
     "academic-directory:crawl": "node scripts/academic-directory/crawl.mjs",
     "academic-directory:diff": "node scripts/academic-directory/diff.mjs",

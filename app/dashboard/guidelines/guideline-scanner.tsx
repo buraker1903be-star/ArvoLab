@@ -28,7 +28,7 @@ export default function GuidelineScanner() {
   }
 
   return (
-    <section className="project-form-card" style={{ marginBottom: 24 }}>
+    <section className="project-form-card mb-lg">
       <div className="project-form-heading">
         <h2>Kılavuz Tarama Aracı (Yarı Otomatik)</h2>
         <p>
@@ -40,40 +40,35 @@ export default function GuidelineScanner() {
         </p>
       </div>
 
-      <div style={{ display: "flex", gap: 10 }}>
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://sbe.ornek.edu.tr/tez-yazim-kilavuzu.pdf"
-          style={{
-            flex: 1,
-            height: 46,
-            padding: "0 14px",
-            borderRadius: 12,
-            border: "1px solid var(--border)",
-            fontSize: 13,
-          }}
-        />
+      <div className="project-card-main">
+        <div>
+          <input
+            type="url"
+            className="field-control"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://sbe.ornek.edu.tr/tez-yazim-kilavuzu.pdf"
+          />
+        </div>
         <button
           type="button"
           className="projects-primary-button"
           onClick={handleScan}
           disabled={loading || !url.trim()}
         >
-          <Radar size={16} />
+          <Radar size={16} aria-hidden="true" />
           {loading ? "Taranıyor..." : "Tara"}
         </button>
       </div>
 
       {error && (
-        <p className="login-error" role="alert" style={{ marginTop: 12 }}>
+        <p className="alert mt-sm" data-tone="danger" role="alert">
           {error}
         </p>
       )}
 
       {result && (
-        <div style={{ marginTop: 16, fontSize: 13 }}>
+        <div className="mt-md text-base">
           <p>
             <strong>{result.fullTextLength.toLocaleString("tr-TR")}</strong> karakter
             metin çıkarıldı.
@@ -87,40 +82,29 @@ export default function GuidelineScanner() {
           )}
 
           {result.suggestedSections.length > 0 ? (
-            <div style={{ marginTop: 8 }}>
+            <div className="mt-sm">
               <strong>Tespit edilen olası bölüm başlıkları:</strong>
-              <p style={{ marginTop: 4, color: "var(--muted-foreground)" }}>
+              <p className="muted">
                 {result.suggestedSections.join(", ")}
               </p>
-              <p style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+              <p className="hint">
                 Bu listeyi kopyalayıp aşağıdaki formdaki &quot;Zorunlu bölümler&quot;
                 alanına yapıştırabilirsiniz. Tespit edilemeyen ama kılavuzda
                 geçen bölümler olabilir — metin önizlemesini kontrol edin.
               </p>
             </div>
           ) : (
-            <p style={{ color: "var(--warning)" }}>
+            <p className="tone-text" data-tone="warning">
               Otomatik olarak bölüm başlığı tespit edilemedi. Aşağıdaki metin
               önizlemesinden elle inceleyip formu doldurun.
             </p>
           )}
 
-          <details style={{ marginTop: 12 }}>
-            <summary style={{ cursor: "pointer", fontWeight: 700 }}>
+          <details className="guideline-review-details">
+            <summary>
               Çıkarılan metnin ilk kısmını göster
             </summary>
-            <pre
-              style={{
-                marginTop: 8,
-                padding: 12,
-                background: "var(--surface-muted)",
-                borderRadius: 10,
-                fontSize: 11,
-                whiteSpace: "pre-wrap",
-                maxHeight: 300,
-                overflowY: "auto",
-              }}
-            >
+            <pre className="raw-text-box">
               {result.textPreview}
             </pre>
           </details>

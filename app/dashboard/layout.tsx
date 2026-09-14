@@ -1,91 +1,61 @@
-import Link from "next/link";
-import {
-  BookMarked,
-  BookOpenCheck,
-  ChartNoAxesCombined,
-  FileCheck2,
-  GraduationCap,
-  LayoutDashboard,
-  LifeBuoy,
-  LogOut,
-  PenLine,
-  Quote,
-  Settings,
-  ShieldCheck,
-  UserCog,
-  Users,
-} from "lucide-react";
+import { LogOut } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
+import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
+import ThemeToggle from "@/app/_components/theme-toggle";
+import SidebarNav from "./_components/sidebar-nav";
+import HeaderTitle from "./_components/header-title";
+import MobileNav from "./_components/mobile-nav";
 
-const navigation = [
-  { label: "Ana Sayfa", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Belge Editörü", href: "/dashboard/editor", icon: PenLine },
-  { label: "Literatür Taraması", href: "/dashboard/literature", icon: BookOpenCheck },
-  { label: "Kaynakça Doğrulama", href: "/dashboard/citations", icon: Quote },
-  { label: "Analiz Merkezi", href: "/dashboard/analysis", icon: ChartNoAxesCombined },
-  { label: "Belge Kontrol", href: "/dashboard/documents", icon: FileCheck2 },
-  { label: "Kılavuzlar", href: "/dashboard/guidelines", icon: BookMarked },
-  { label: "Doçentlik Puan Sorgulama", href: "/dashboard/associate-professorship", icon: GraduationCap },
-  { label: "Uzman Desteği", href: "/dashboard/expert-requests", icon: Users },
-  { label: "Uygulama Destek Talep", href: "/dashboard/support", icon: LifeBuoy },
-];
+function initialsOf(name: string) {
+  const letters = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("");
+  return letters.toLocaleUpperCase("tr") || "A";
+}
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const profile = await getCurrentProfile();
-  const isAdmin = profile?.role === "system_admin" || profile?.role === "founder";
+  const isAdmin = !!profile && ADMIN_ROLES.includes(profile.role);
+  const userName = profile?.full_name?.trim() || "Kullanıcı";
+  const roleLabel = profile ? ROLE_LABELS[profile.role] : "";
+  const initials = initialsOf(userName);
 
   return (
     <div className="dashboard-shell">
       <aside className="dashboard-sidebar">
         <div className="dashboard-brand">
-          <div className="brand-mark">A</div>
+          <div className="brand-mark" aria-hidden="true">
+            A
+          </div>
           <div>
-            <strong className="brand-type">ArvoLab</strong>
-            <span>Research OS</span>
+            <strong>ArvoLab</strong>
+            <span lang="en">Research OS</span>
           </div>
         </div>
-
-        <nav className="dashboard-nav" aria-label="Ana menü">
-          {navigation.map(({ label, href, icon: Icon }) => (
-            <Link key={href} href={href} className="dashboard-nav-link">
-              <Icon size={18} strokeWidth={1.8} />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        <div className="dashboard-sidebar-footer">
-          {isAdmin ? (
-            <Link href="/dashboard/team" className="dashboard-nav-link">
-              <UserCog size={18} strokeWidth={1.8} />
-              <span>Ekip Yönetimi</span>
-            </Link>
-          ) : null}
-          <Link href="/dashboard/settings" className="dashboard-nav-link">
-            <Settings size={18} strokeWidth={1.8} />
-            <span>Ayarlar</span>
-          </Link>
-          <div className="dashboard-security-card">
-            <ShieldCheck size={18} />
-            <div>
-              <strong>Güvenli oturum</strong>
-              <span>Kurumsal koruma aktif</span>
-            </div>
-          </div>
-        </div>
+        <SidebarNav isAdmin={isAdmin} />
       </aside>
 
       <div className="dashboard-content-shell">
         <header className="dashboard-header">
-          <div>
-            <span className="dashboard-header-label">ArvoLab</span>
-            <strong>Akademik Operasyon Paneli</strong>
-          </div>
+          <HeaderTitle />
           <div className="dashboard-header-actions">
-            <form action={logout}>
+            <ThemeToggle />
+            <div className="dashboard-user">
+              <span className="dashboard-user-avatar" aria-hidden="true">
+                {initials}
+              </span>
+              <span className="dashboard-user-text">
+                <strong>{userName}</strong>
+                <span>{roleLabel}</span>
+              </span>
+            </div>
+            <form action={logout} className="dashboard-logout-form">
               <button type="submit" className="dashboard-logout-button">
-                <LogOut size={17} />
+                <LogOut size={16} aria-hidden="true" />
                 Çıkış yap
               </button>
             </form>
@@ -94,6 +64,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
         <div className="dashboard-main-content">{children}</div>
       </div>
+
+      <MobileNav isAdmin={isAdmin} userName={userName} roleLabel={roleLabel} initials={initials} />
     </div>
   );
 }

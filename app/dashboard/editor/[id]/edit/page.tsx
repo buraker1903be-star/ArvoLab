@@ -38,11 +38,11 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">{projectTypeLabel(project.project_type)}</span>
-          <h1 className="brand-type">Çalışmayı düzenle</h1>
+          <h1>Çalışmayı düzenle</h1>
           <p>Çalışmanın planlama bilgilerini, durumunu ve ilerlemesini güncelleyin.</p>
         </div>
         <Link href="/dashboard/editor" className="projects-filter-button">
-          <ArrowLeft size={17} />
+          <ArrowLeft size={17} aria-hidden="true" />
           Çalışmalara dön
         </Link>
       </section>
@@ -72,7 +72,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
                 <option value="ieee">IEEE</option>
               </select>
               {project.guideline_id ? (
-                <small style={{ color: "var(--muted-foreground)" }}>Onaylı kılavuza göre belirlenir.</small>
+                <small>Onaylı kılavuza göre belirlenir.</small>
               ) : null}
             </label>
 

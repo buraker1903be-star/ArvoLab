@@ -17,7 +17,7 @@ export default function DashboardError({ error, retry }: { error: Error & { dige
           bildirin{error.digest ? ` (hata kodu: ${error.digest})` : ""}.
         </p>
         <button type="button" className="projects-primary-button" onClick={() => retry()}>
-          <RotateCcw size={15} />
+          <RotateCcw size={15} aria-hidden="true" />
           Tekrar dene
         </button>
       </section>

@@ -1,0 +1,213 @@
+/* ============================================================
+   ArvoLab tasarım tokenları
+   ArvoOS panel sisteminin (iOS benzeri malzeme, yay hareketleri,
+   buzlu cam) ArvoLab marka renkleriyle tek kaynaklı karşılığı.
+
+   Kurallar (scripts/check-css-tokens.mjs derlemede denetler):
+   - Ham renk (hex/rgb) yalnızca bu dosyada tanımlanır; diğer dosyalar
+     var(--…) ve color-mix() kullanır.
+   - Palet değişkenleri (--brand-*, --accent-*, --n-*) yalnızca burada.
+   - En küçük yazı boyutu 11px.
+   Tema: <html data-theme="light|dark"> (app/layout.tsx ön-boya betiği).
+   ============================================================ */
+
+:root {
+  /* ---- Palet: lacivert (logo #002045 = 800) ---- */
+  --brand-50: #eef2f8;
+  --brand-100: #d8e1ee;
+  --brand-200: #b1c2dc;
+  --brand-300: #8199bf;
+  --brand-400: #4f6d9c;
+  --brand-500: #2a4a7a;
+  --brand-600: #153563;
+  --brand-700: #0a2a52;
+  --brand-800: #002045;
+  --brand-900: #001733;
+  --brand-950: #000d1f;
+
+  /* ---- Palet: yeşil vurgu (logo #6f9548 = 500) ---- */
+  --accent-50: #f3f7ee;
+  --accent-100: #e4edd9;
+  --accent-200: #c9dbb4;
+  --accent-300: #a8c388;
+  --accent-400: #89ab63;
+  --accent-500: #6f9548;
+  --accent-600: #587a37;
+  --accent-700: #46612d;
+  --accent-800: #384d26;
+  --accent-900: #2c3c1f;
+
+  /* ---- Palet: iOS nötrleri (koyu uç lacivert tonlu) ---- */
+  --n-0: #ffffff;
+  --n-50: #f9f9fb;
+  --n-100: #f2f2f7;
+  --n-150: #ececf1;
+  --n-200: #e5e5ea;
+  --n-300: #d1d1d6;
+  --n-400: #a1a1a6;
+  --n-500: #6e6e73;
+  --n-600: #515154;
+  --n-700: #3a3a3c;
+  --n-800: #1c2638;
+  --n-900: #0d1b2e;
+
+  /* ---- Anlamsal: zemin ve yüzeyler ---- */
+  --bg: var(--n-100);
+  --surface: var(--n-0);
+  --surface-2: var(--n-50);
+  --surface-sunken: var(--n-150);
+  --surface-raised: var(--n-0);
+  --overlay: #04101f75;
+
+  /* ---- Anlamsal: yazı ---- */
+  --ink: var(--n-900);
+  --ink-soft: var(--n-700);
+  --muted: var(--n-500);
+  --dim: var(--n-400);
+  --on-brand: var(--n-0);
+
+  /* ---- Anlamsal: çizgiler ---- */
+  --line: var(--n-200);
+  --line-soft: var(--n-150);
+
+  /* ---- Anlamsal: marka ----
+     --accent küçük yazıda okunaklı (AA) koyu yeşil; --accent-bright süs öğeleri. */
+  --primary: var(--brand-800);
+  --primary-strong: var(--brand-950);
+  --accent: var(--accent-600);
+  --accent-strong: var(--accent-800);
+  --accent-bright: var(--accent-500);
+  --accent-soft: var(--accent-100);
+  --focus: #6f954866;
+
+  /* ---- Anlamsal: durum tonları (metin + yumuşak zemin) ---- */
+  --success: #2f7d57;
+  --success-soft: #e7f3ec;
+  --warning: #9a6a14;
+  --warning-soft: #faf0dc;
+  --danger: #b83c3c;
+  --danger-soft: #f9e9e7;
+  --info: #2f5f9e;
+  --info-soft: #e8eff8;
+  --neutral: var(--n-600);
+  --neutral-soft: var(--n-150);
+
+  /* ---- Kenar çubuğu (her iki temada koyu) ---- */
+  --sidebar-from: #03264d;
+  --sidebar-to: var(--brand-950);
+  --sidebar-ink: var(--n-0);
+  --sidebar-muted: #ffffffa6;
+  --sidebar-line: #ffffff17;
+  --sidebar-hover: #ffffff12;
+
+  /* ---- Gölgeler ---- */
+  --shadow-sm: 0 1px 2px #0b1b2e0a, 0 4px 14px #0b1b2e09;
+  --shadow-md: 0 2px 6px #0b1b2e0a, 0 16px 38px #0b1b2e14;
+  --shadow-lg: 0 28px 70px #050c1a2e;
+  --shadow-inset: inset 0 1px 1px #0f233c06;
+
+  /* ---- Yarıçaplar ---- */
+  --r-xs: 8px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* ---- Tipografi ----
+     Apple cihazlarda sistemin SF Pro'su, diğerlerinde Inter (app/layout.tsx). */
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter, "Inter"),
+    "Helvetica Neue", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-brand: var(--font-montserrat, "Montserrat"), var(--font-body);
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --fs-micro: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+  --fs-body: 14px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 20px;
+  --fs-title: clamp(26px, 2.3vw, 32px);
+
+  /* ---- Katmanlar ---- */
+  --z-sticky: 20;
+  --z-topbar: 40;
+  --z-tabbar: 210;
+  --z-drawer-backdrop: 240;
+  --z-drawer: 250;
+  --z-toast: 1100;
+
+  /* ---- Hareket ve malzeme ---- */
+  --ease-spring: cubic-bezier(.22, 1, .36, 1);
+  --ease-sheet: cubic-bezier(.32, .72, 0, 1);
+  --glass-bg: color-mix(in srgb, var(--surface) 72%, transparent);
+  --glass-strong: color-mix(in srgb, var(--surface) 86%, transparent);
+  --glass-blur: saturate(180%) blur(22px);
+
+  /* ---- Yerleşim ---- */
+  --sidebar-width: 264px;
+  --topbar-height: 64px;
+  --tabbar-height: 58px;
+  --content-max: 1320px;
+
+  color-scheme: light;
+
+  /* ---- Eski adlar (satır içi stillerde ve eski sınıflarda kullanılıyor) ---- */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --muted-foreground: var(--muted);
+  --border: var(--line);
+  --surface-muted: var(--surface-sunken);
+  --primary-foreground: var(--on-brand);
+  --brand-navy: var(--brand-800);
+  --brand-green: var(--accent-500);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-xl);
+}
+
+html[data-theme="dark"] {
+  --bg: var(--brand-950);
+  --surface: #0e1829;
+  --surface-2: #0a1322;
+  --surface-sunken: #08101d;
+  --surface-raised: #122036;
+  --overlay: #000000a3;
+
+  --ink: var(--n-100);
+  --ink-soft: var(--n-300);
+  --muted: var(--n-400);
+  --dim: var(--n-500);
+
+  --line: #1f2b40;
+  --line-soft: #172234;
+
+  --primary: var(--brand-500);
+  --primary-strong: var(--brand-700);
+  --accent: var(--accent-400);
+  --accent-strong: var(--accent-300);
+  --accent-bright: var(--accent-400);
+  --accent-soft: #1d2a14;
+  --focus: #89ab6366;
+
+  --success: #5bbf8a;
+  --success-soft: #12301f;
+  --warning: #e0b056;
+  --warning-soft: #3a2c10;
+  --danger: #f07a6f;
+  --danger-soft: #3a1716;
+  --info: #7ea8e6;
+  --info-soft: #132844;
+  --neutral: var(--n-400);
+  --neutral-soft: #172234;
+
+  --sidebar-from: #04203f;
+  --sidebar-to: #000814;
+
+  --shadow-sm: 0 1px 2px #00000033, 0 6px 18px #00000024;
+  --shadow-md: 0 16px 40px #0000004d;
+  --shadow-lg: 0 28px 70px #0000008c;
+  --shadow-inset: inset 0 1px 1px #00000033;
+
+  color-scheme: dark;
+}

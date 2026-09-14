@@ -7,6 +7,7 @@ import {
 } from "@/app/actions/support";
 import { getCurrentProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
+import { statusTone } from "@/lib/status-tone";
 
 const CATEGORY_LABELS: Record<string, string> = {
   bug: "Hata bildirimi",
@@ -53,7 +54,7 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Destek</span>
-          <h1 className="brand-type">Uygulama Destek Talebi</h1>
+          <h1>Uygulama Destek Talebi</h1>
           <p>
             ArvoLab uygulamasıyla ilgili bir hata, erişim sorunu ya da
             özellik talebiniz varsa buradan iletin. Bu, akademik danışmanlık
@@ -64,12 +65,12 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
       </section>
 
       {errorMessage ? (
-        <p className="login-error" role="alert" style={{ marginBottom: 16 }}>
+        <p className="alert" role="alert">
           {errorMessage}
         </p>
       ) : null}
 
-      <section className="project-form-card" style={{ marginBottom: 24 }}>
+      <section className="project-form-card mb-lg">
         <div className="project-form-heading">
           <h2>Yeni Talep Oluştur</h2>
           <p>Sorununuzu veya talebinizi kısaca açıklayın.</p>
@@ -107,9 +108,9 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
             <textarea name="message" rows={5} placeholder="Sorunu veya talebi detaylandırın" required />
           </label>
 
-          <div className="project-form-actions" style={{ gridColumn: "1 / -1" }}>
+          <div className="project-form-actions">
             <button type="submit" className="projects-primary-button">
-              <Plus size={16} />
+              <Plus size={16} aria-hidden="true" />
               Talebi gönder
             </button>
           </div>
@@ -117,9 +118,9 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
       </section>
 
       {isAdmin && allRequests.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 15, marginBottom: 12 }}>
-            <LifeBuoy size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+        <section className="section">
+          <h2 className="section-title">
+            <LifeBuoy size={16} aria-hidden="true" />
             Tüm Açık Talepler (Sistem Yöneticisi görünümü)
           </h2>
           <div className="projects-list">
@@ -127,7 +128,7 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
               <article className="project-card" key={r.id}>
                 <div className="project-card-main">
                   <div>
-                    <span className="project-status">{CATEGORY_LABELS[r.category]}</span>
+                    <span className="status-pill" data-tone="neutral">{CATEGORY_LABELS[r.category]}</span>
                     <h2>{r.subject}</h2>
                     <p>{r.message}</p>
                   </div>
@@ -136,7 +137,7 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
                   <span>Öncelik: {r.priority}</span>
                   <span>{STATUS_LABELS[r.status]}</span>
                 </div>
-                <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className="cluster mt-sm">
                   {r.status !== "in_progress" && (
                     <ActionForm action={handleUpdateStatus.bind(null, r.id, "in_progress")}>
                       <button type="submit" className="projects-filter-button">İşleme al</button>
@@ -154,17 +155,19 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
         </section>
       )}
 
-      <section>
-        <h2 style={{ fontSize: 15, marginBottom: 12 }}>Taleplerim</h2>
+      <section className="section">
+        <h2 className="section-title">Taleplerim</h2>
         {myRequests.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Henüz bir destek talebiniz yok.</p>
+          <p className="muted text-base">Henüz bir destek talebiniz yok.</p>
         ) : (
           <div className="projects-list">
             {myRequests.map((r) => (
               <article className="project-card" key={r.id}>
                 <div className="project-card-main">
                   <div>
-                    <span className="project-status">{STATUS_LABELS[r.status]}</span>
+                    <span className="status-pill" data-tone={statusTone(r.status)}>
+                      {STATUS_LABELS[r.status]}
+                    </span>
                     <h2>{r.subject}</h2>
                     <p>{CATEGORY_LABELS[r.category]} · {new Date(r.created_at).toLocaleString("tr-TR")}</p>
                   </div>

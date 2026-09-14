@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
+  ArrowRight,
   BookOpenCheck,
   ChartNoAxesCombined,
   Clock3,
@@ -65,10 +66,10 @@ export default async function DashboardPage() {
   const referenceCount = projects.filter((p) => p.status === "review" || p.status === "turnitin").length;
 
   const stats = [
-    { label: "Aktif çalışmalar", value: String(activeCount), icon: FolderKanban },
-    { label: "Revizyon bekleyen", value: String(revisionCount), icon: Clock3 },
-    { label: "Kaynak/biçim incelemesinde", value: String(referenceCount), icon: BookOpenCheck },
-    { label: "Analiz süreci", value: String(analysisCount), icon: ChartNoAxesCombined },
+    { label: "Aktif çalışmalar", value: activeCount, icon: FolderKanban },
+    { label: "Revizyon bekleyen", value: revisionCount, icon: Clock3 },
+    { label: "Kaynak/biçim incelemesinde", value: referenceCount, icon: BookOpenCheck },
+    { label: "Analiz süreci", value: analysisCount, icon: ChartNoAxesCombined },
   ];
 
   return (
@@ -76,11 +77,11 @@ export default async function DashboardPage() {
       <section className="dashboard-hero">
         <div>
           <span className="dashboard-kicker">ArvoLab çalışma alanı</span>
-          <h1 className="brand-type">Hoş geldiniz, {displayName}</h1>
+          <h1>Hoş geldiniz, {displayName}</h1>
           <p>Akademik operasyonlarınızın güncel durumunu buradan takip edin.</p>
         </div>
         <div className="dashboard-security">
-          <ShieldCheck size={18} />
+          <ShieldCheck size={16} aria-hidden="true" />
           <span>Güvenli oturum aktif</span>
         </div>
       </section>
@@ -88,7 +89,7 @@ export default async function DashboardPage() {
       <section className="dashboard-stats" aria-label="Günlük özet">
         {stats.map(({ label, value, icon: Icon }) => (
           <article className="dashboard-stat-card" key={label}>
-            <div className="dashboard-stat-icon">
+            <div className="dashboard-stat-icon" aria-hidden="true">
               <Icon size={20} strokeWidth={1.8} />
             </div>
             <div>
@@ -101,22 +102,17 @@ export default async function DashboardPage() {
 
       <section className="dashboard-grid" aria-label="ArvoLab modülleri">
         {workstreams.map(({ title, description, icon: Icon, href }) => (
-          <article className="dashboard-module-card" key={title}>
-            <div className="dashboard-module-icon">
+          <Link className="dashboard-module-card" href={href} key={title}>
+            <div className="dashboard-module-icon" aria-hidden="true">
               <Icon size={22} strokeWidth={1.8} />
             </div>
             <h2>{title}</h2>
             <p>{description}</p>
-            {href ? (
-              <Link href={href}>
-                <button type="button">Modülü aç</button>
-              </Link>
-            ) : (
-              <button type="button" disabled style={{ opacity: 0.5, cursor: "not-allowed" }}>
-                Yakında
-              </button>
-            )}
-          </article>
+            <span className="dashboard-module-link">
+              Modülü aç
+              <ArrowRight size={15} aria-hidden="true" />
+            </span>
+          </Link>
         ))}
       </section>
     </main>

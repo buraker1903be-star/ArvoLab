@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { runCitationCheck } from "@/app/actions/citation-check";
+import type { Tone } from "@/lib/status-tone";
 
 interface Project {
   id: string;
@@ -50,12 +51,12 @@ interface CheckResult {
   };
 }
 
-const STATUS_META = {
-  verified: { label: "Doğrulandı", color: "#15803d", background: "#f0fdf4" },
-  possible_match: { label: "Olası eşleşme", color: "#b45309", background: "#fffbeb" },
-  not_found: { label: "Kayıt bulunamadı", color: "#b91c1c", background: "#fef2f2" },
-  insufficient_data: { label: "Yetersiz veri", color: "#475569", background: "#f8fafc" },
-} as const;
+const STATUS_META: Record<AcademicVerification["status"], { label: string; tone: Tone }> = {
+  verified: { label: "Doğrulandı", tone: "success" },
+  possible_match: { label: "Olası eşleşme", tone: "warning" },
+  not_found: { label: "Kayıt bulunamadı", tone: "danger" },
+  insufficient_data: { label: "Yetersiz veri", tone: "neutral" },
+};
 
 export default function CitationCheckForm({ projects }: { projects: Project[] }) {
   const [projectId, setProjectId] = useState<string>("");
@@ -91,7 +92,7 @@ export default function CitationCheckForm({ projects }: { projects: Project[] })
   }
 
   return (
-    <section className="project-form-card" style={{ marginTop: 20 }}>
+    <section className="project-form-card mt-md">
       <div className="project-form-heading">
         <h2>Kaynakça ve Atıf Doğrulama</h2>
         <p>
@@ -100,16 +101,7 @@ export default function CitationCheckForm({ projects }: { projects: Project[] })
         </p>
       </div>
 
-      <div style={{
-        padding: "12px 14px",
-        marginBottom: 18,
-        border: "1px solid #bae6fd",
-        borderRadius: 12,
-        background: "#f0f9ff",
-        color: "#0c4a6e",
-        fontSize: 13,
-        lineHeight: 1.55,
-      }}>
+      <div className="callout mb-md" data-tone="info">
         Bibliyografik bilgiler Crossref ve OpenAlex üzerinden doğrulanır. Her sonuçta
         ayrıca Google Scholar’da aynı kaynağı açan bağımsız arama bağlantısı verilir.
         Tek seferde en fazla 25 kaynak kontrol edilir.
@@ -171,58 +163,53 @@ export default function CitationCheckForm({ projects }: { projects: Project[] })
       </div>
 
       {error && (
-        <p className="login-error" role="alert" style={{ marginTop: 12 }}>{error}</p>
+        <p className="alert mt-sm" data-tone="danger" role="alert">{error}</p>
       )}
 
       {result && (
-        <div style={{ marginTop: 24, borderTop: "1px solid var(--border)", paddingTop: 20 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
-            <strong style={{ padding: "9px 12px", borderRadius: 10, background: "#f1f5f9" }}>
+        <div className="results-divider">
+          <div className="chip-row">
+            <strong className="chip">
               APA 7 Uyum: {result.complianceScore}/100
             </strong>
-            <span style={{ padding: "9px 12px", borderRadius: 10, color: "#15803d", background: "#f0fdf4" }}>
+            <span className="chip" data-tone="success">
               {result.verificationSummary.verified} doğrulandı
             </span>
-            <span style={{ padding: "9px 12px", borderRadius: 10, color: "#b45309", background: "#fffbeb" }}>
+            <span className="chip" data-tone="warning">
               {result.verificationSummary.possible} olası eşleşme
             </span>
-            <span style={{ padding: "9px 12px", borderRadius: 10, color: "#b91c1c", background: "#fef2f2" }}>
+            <span className="chip" data-tone="danger">
               {result.verificationSummary.notFound} bulunamadı
             </span>
           </div>
 
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
+          <div className="result-block">
+            <h3 className="result-heading-lg">
               Akademik Kayıt Doğrulaması
             </h3>
-            <div style={{ display: "grid", gap: 10 }}>
+            <div>
               {result.academicVerification.map((item, index) => {
                 const meta = STATUS_META[item.status];
                 return (
-                  <article key={index} style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    padding: 14,
-                    background: "#fff",
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ color: "var(--muted-foreground)", fontSize: 12, marginBottom: 7 }}>
+                  <article key={index} className="result-item" data-tone={meta.tone}>
+                    <div className="project-card-main">
+                      <div>
+                        <div className="muted text-sm">
                           {item.reference}
                         </div>
                         {item.bestMatch ? (
                           <>
-                            <strong style={{ display: "block", fontSize: 14, lineHeight: 1.4 }}>
-                              {item.bestMatch.title}
-                            </strong>
-                            <div style={{ fontSize: 12, marginTop: 5, color: "var(--muted-foreground)" }}>
+                            <div className="mt-sm">
+                              <strong>{item.bestMatch.title}</strong>
+                            </div>
+                            <div className="hint">
                               {item.bestMatch.authors.slice(0, 4).join(", ") || "Yazar bilgisi yok"}
                               {item.bestMatch.year ? ` · ${item.bestMatch.year}` : ""}
                               {item.bestMatch.venue ? ` · ${item.bestMatch.venue}` : ""}
                             </div>
-                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 9, fontSize: 12 }}>
+                            <div className="cluster cluster-spaced text-sm">
                               {item.bestMatch.url && (
-                                <a href={item.bestMatch.url} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", fontWeight: 700 }}>
+                                <a href={item.bestMatch.url} target="_blank" rel="noreferrer" className="link-accent">
                                   {item.bestMatch.doi ? `DOI: ${item.bestMatch.doi}` : "Akademik kaydı aç"}
                                 </a>
                               )}
@@ -236,73 +223,69 @@ export default function CitationCheckForm({ projects }: { projects: Project[] })
                             </div>
                           </>
                         ) : (
-                          <div style={{ fontSize: 13 }}>
+                          <div className="text-base mt-sm">
                             Crossref ve OpenAlex üzerinde yeterince güçlü bir eşleşme bulunamadı.
                           </div>
                         )}
                       </div>
-                      <span style={{
-                        flexShrink: 0,
-                        color: meta.color,
-                        background: meta.background,
-                        borderRadius: 999,
-                        padding: "5px 9px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                      }}>
+                      <span className="status-pill" data-tone={meta.tone}>
                         {meta.label}
                       </span>
                     </div>
-                    <a
-                      href={item.googleScholarUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ display: "inline-block", marginTop: 10, color: "#1a73e8", fontSize: 12, fontWeight: 700 }}
-                    >
-                      Google Scholar’da kontrol et ↗
-                    </a>
+                    <div className="mt-sm text-sm">
+                      <a
+                        href={item.googleScholarUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="link-accent"
+                      >
+                        Google Scholar’da kontrol et ↗
+                      </a>
+                    </div>
                   </article>
                 );
               })}
             </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>APA 7 Biçim Sorunları</h3>
-            {result.references.map((reference, index) => (
-              <div key={index} style={{ fontSize: 13, marginBottom: 8 }}>
-                <div style={{ color: "var(--muted-foreground)" }}>{reference.raw}</div>
-                {reference.issues.length === 0 ? (
-                  <div style={{ color: "#16a34a" }}>Biçim sorunu bulunamadı.</div>
-                ) : reference.issues.map((issue, issueIndex) => (
-                  <div key={issueIndex} style={{ color: issue.severity === "error" ? "#dc2626" : "#d97706" }}>
-                    [{issue.severity}] {issue.message}
-                  </div>
-                ))}
-              </div>
-            ))}
+          <div className="result-block">
+            <h3 className="result-heading">APA 7 Biçim Sorunları</h3>
+            <div className="stack-sm text-base">
+              {result.references.map((reference, index) => (
+                <div key={index}>
+                  <div className="muted">{reference.raw}</div>
+                  {reference.issues.length === 0 ? (
+                    <div className="tone-text" data-tone="success">Biçim sorunu bulunamadı.</div>
+                  ) : reference.issues.map((issue, issueIndex) => (
+                    <div key={issueIndex} className="tone-text" data-tone={issue.severity === "error" ? "danger" : "warning"}>
+                      [{issue.severity}] {issue.message}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+          <div className="result-block">
+            <h3 className="result-heading">
               Kaynakçada olup metinde atıfı bulunmayanlar
             </h3>
-            <ul style={{ fontSize: 13, paddingLeft: 18 }}>
+            <ul className="result-list">
               {result.crossCheck.referencesWithoutCitation.map((reference, index) => <li key={index}>{reference.raw}</li>)}
               {result.crossCheck.referencesWithoutCitation.length === 0 && (
-                <li style={{ listStyle: "none", marginLeft: -18, color: "#16a34a" }}>Yok</li>
+                <li className="result-ok">Yok</li>
               )}
             </ul>
           </div>
 
           <div>
-            <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+            <h3 className="result-heading">
               Metinde atıfı olup kaynakçada bulunmayanlar
             </h3>
-            <ul style={{ fontSize: 13, paddingLeft: 18 }}>
+            <ul className="result-list">
               {result.crossCheck.citationsWithoutReference.map((citation, index) => <li key={index}>{citation.raw}</li>)}
               {result.crossCheck.citationsWithoutReference.length === 0 && (
-                <li style={{ listStyle: "none", marginLeft: -18, color: "#16a34a" }}>Yok</li>
+                <li className="result-ok">Yok</li>
               )}
             </ul>
           </div>

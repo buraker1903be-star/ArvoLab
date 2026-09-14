@@ -21,17 +21,17 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
       <div className="login-card">
         <div className="login-heading">
           <span className="login-kicker">Şifre sıfırlama</span>
-          <h2 className="brand-type">Şifrenizi mi unuttunuz?</h2>
+          <h2>Şifrenizi mi unuttunuz?</h2>
           <p>Hesabınıza bağlı e-posta adresini girin, şifrenizi yenilemeniz için bir bağlantı gönderelim.</p>
         </div>
 
         {sent ? (
-          <p className="login-notice" role="status">
+          <p className="alert" data-tone="success" role="status">
             Bu adres kayıtlıysa birkaç dakika içinde bir sıfırlama bağlantısı gelecek. Bağlantıyı bu cihazda ve aynı
             tarayıcıda açın; spam klasörünü de kontrol edin.
           </p>
         ) : null}
-        {errorMessage ? <p className="login-error" role="alert">{errorMessage}</p> : null}
+        {errorMessage ? <p className="alert" role="alert">{errorMessage}</p> : null}
 
         <form className="login-form" action={requestPasswordReset}>
           <label htmlFor="email">E-posta adresi</label>

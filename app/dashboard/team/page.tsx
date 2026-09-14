@@ -22,14 +22,6 @@ const ROLE_ORDER: UserRole[] = [
   "founder",
 ];
 
-const compactSelectStyle = {
-  height: 38,
-  padding: "0 10px",
-  borderRadius: 10,
-  border: "1px solid var(--border)",
-  fontSize: 12,
-} as const;
-
 export default async function TeamPage() {
   const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "system_admin" || profile?.role === "founder";
@@ -37,11 +29,9 @@ export default async function TeamPage() {
   if (!isAdmin) {
     return (
       <main className="dashboard-page">
-        <section className="project-form-card" style={{ textAlign: "center", padding: "48px 24px" }}>
-          <ShieldAlert size={28} style={{ marginBottom: 12, opacity: 0.5 }} />
-          <p style={{ margin: 0, color: "var(--muted-foreground)" }}>
-            Bu sayfaya yalnızca Sistem Yöneticisi ve Kurucu rolleri erişebilir.
-          </p>
+        <section className="empty-state">
+          <ShieldAlert size={28} aria-hidden="true" />
+          <p>Bu sayfaya yalnızca Sistem Yöneticisi ve Kurucu rolleri erişebilir.</p>
         </section>
       </main>
     );
@@ -82,7 +72,7 @@ export default async function TeamPage() {
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Yönetim</span>
-          <h1 className="brand-type">Ekip Yönetimi</h1>
+          <h1>Ekip Yönetimi</h1>
           <p>
             Yeni kullanıcıları e-postayla davet edin, rollerini ve kurumlarını belirleyin. Davetsiz kayıt olan
             kullanıcılar <strong>Üye / Öğrenci</strong> rolüyle başlar ve yalnızca kendi çalışmasını görür.
@@ -90,10 +80,10 @@ export default async function TeamPage() {
         </div>
       </section>
 
-      <section className="project-form-card" style={{ marginBottom: 24 }}>
+      <section className="project-form-card mb-lg">
         <div className="project-form-heading">
           <h2>
-            <MailPlus size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+            <MailPlus size={16} aria-hidden="true" />
             Kullanıcı Davet Et
           </h2>
           <p>
@@ -131,25 +121,25 @@ export default async function TeamPage() {
                 ))}
               </select>
             </label>
-            <div className="project-form-actions" style={{ gridColumn: "1 / -1" }}>
+            <div className="project-form-actions project-form-full">
               <button type="submit" className="projects-primary-button">
-                <MailPlus size={16} />
+                <MailPlus size={16} aria-hidden="true" />
                 Davet gönder
               </button>
             </div>
           </ActionForm>
         ) : (
-          <p className="login-error" role="alert" style={{ margin: 0 }}>
+          <p className="alert" role="alert">
             Davet, e-posta listesi ve erişim durdurma için sunucuda <code>SUPABASE_SECRET_KEY</code> ortam değişkeni
             tanımlı olmalı.
           </p>
         )}
       </section>
 
-      <section className="project-form-card" style={{ marginBottom: 24 }}>
+      <section className="project-form-card mb-lg">
         <div className="project-form-heading">
           <h2>
-            <Building2 size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+            <Building2 size={16} aria-hidden="true" />
             Yeni Kurum Ekle
           </h2>
           <p>Kullanıcıları bir kuruma bağlamak için önce kurumu burada oluşturun.</p>
@@ -161,21 +151,21 @@ export default async function TeamPage() {
           </label>
           <div className="project-form-actions">
             <button type="submit" className="projects-primary-button">
-              <Plus size={16} />
+              <Plus size={16} aria-hidden="true" />
               Kurumu ekle
             </button>
           </div>
         </ActionForm>
         {organizations.length > 0 && (
-          <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 12 }}>
+          <p className="hint">
             Mevcut kurumlar: {organizations.map((o) => o.name).join(", ")}
           </p>
         )}
       </section>
 
-      <section>
-        <h2 style={{ fontSize: 15, marginBottom: 12 }}>
-          <UserCog size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+      <section className="section">
+        <h2 className="section-title">
+          <UserCog size={16} aria-hidden="true" />
           Kullanıcılar ({members.length})
         </h2>
         <div className="projects-list">
@@ -185,39 +175,41 @@ export default async function TeamPage() {
               <article className="project-card" key={m.id}>
                 <div className="project-card-main">
                   <div>
-                    <span className="project-status">{ROLE_LABELS[m.role]}</span>
-                    {m.pendingInvite ? (
-                      <span className="project-status" style={{ marginLeft: 8 }}>
-                        Davet bekliyor
-                      </span>
-                    ) : null}
-                    {m.disabled ? (
-                      <span className="project-status" style={{ marginLeft: 8, color: "var(--danger)" }}>
-                        Erişim durduruldu
-                      </span>
-                    ) : null}
+                    <div className="pill-row">
+                      <span className="status-pill" data-tone="neutral">{ROLE_LABELS[m.role]}</span>
+                      {m.pendingInvite ? (
+                        <span className="status-pill" data-tone="warning">
+                          Davet bekliyor
+                        </span>
+                      ) : null}
+                      {m.disabled ? (
+                        <span className="status-pill" data-tone="danger">
+                          Erişim durduruldu
+                        </span>
+                      ) : null}
+                    </div>
                     <h2>
                       {m.full_name || "İsimsiz kullanıcı"}
                       {isSelf ? " (siz)" : ""}
                     </h2>
-                    <p>{m.email ?? <span style={{ fontFamily: "monospace", fontSize: 11 }}>{m.id}</span>}</p>
+                    <p>{m.email ?? <span className="mono">{m.id}</span>}</p>
                   </div>
                 </div>
 
-                <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <div className="cluster cluster-lg cluster-spaced">
                   <ActionForm
                     action={handleRoleChange.bind(null, m.id)}
-                    style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
+                    className="cluster"
                     successMessage="Rol kaydedildi."
                   >
-                    <select name="role" defaultValue={m.role} style={compactSelectStyle} disabled={isSelf} aria-label="Rol">
+                    <select name="role" defaultValue={m.role} className="compact-select" disabled={isSelf} aria-label="Rol">
                       {ROLE_ORDER.map((r) => (
                         <option key={r} value={r}>
                           {ROLE_LABELS[r]}
                         </option>
                       ))}
                     </select>
-                    <button type="submit" className="projects-filter-button" style={{ height: 38 }} disabled={isSelf}>
+                    <button type="submit" className="projects-filter-button button-compact" disabled={isSelf}>
                       Rolü kaydet
                     </button>
                   </ActionForm>
@@ -225,10 +217,10 @@ export default async function TeamPage() {
                   {organizations.length > 0 && (
                     <ActionForm
                       action={handleOrgChange.bind(null, m.id)}
-                      style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
+                      className="cluster"
                       successMessage="Kurum kaydedildi."
                     >
-                      <select name="organizationId" defaultValue={m.organization_id ?? ""} style={compactSelectStyle} aria-label="Kurum">
+                      <select name="organizationId" defaultValue={m.organization_id ?? ""} className="compact-select" aria-label="Kurum">
                         <option value="">Kurum yok</option>
                         {organizations.map((o) => (
                           <option key={o.id} value={o.id}>
@@ -236,7 +228,7 @@ export default async function TeamPage() {
                           </option>
                         ))}
                       </select>
-                      <button type="submit" className="projects-filter-button" style={{ height: 38 }}>
+                      <button type="submit" className="projects-filter-button button-compact">
                         Kurumu kaydet
                       </button>
                     </ActionForm>
@@ -253,10 +245,9 @@ export default async function TeamPage() {
                     >
                       <button
                         type="submit"
-                        className="projects-filter-button"
-                        style={{ height: 38, color: m.disabled ? "var(--success)" : "var(--danger)" }}
+                        className={m.disabled ? "button-success button-compact" : "button-danger button-compact"}
                       >
-                        {m.disabled ? <ShieldCheck size={14} /> : <Ban size={14} />}
+                        {m.disabled ? <ShieldCheck size={14} aria-hidden="true" /> : <Ban size={14} aria-hidden="true" />}
                         {m.disabled ? "Erişimi aç" : "Erişimi durdur"}
                       </button>
                     </ActionForm>

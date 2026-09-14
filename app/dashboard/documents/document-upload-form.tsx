@@ -111,7 +111,7 @@ export default function DocumentUploadForm({ projects }: { projects: Project[] }
   }
 
   return (
-    <section className="project-form-card" style={{ marginTop: 20 }}>
+    <section className="project-form-card mt-md">
       <div className="project-form-heading">
         <h2>Doküman Yükle (DOCX / PDF)</h2>
         <p>
@@ -162,45 +162,45 @@ export default function DocumentUploadForm({ projects }: { projects: Project[] }
           />
         </label>
 
-        <div className="project-form-actions" style={{ gridColumn: "1 / -1" }}>
+        <div className="project-form-actions">
           <button type="submit" className="projects-primary-button" disabled={loading}>
-            <UploadCloud size={16} />
+            <UploadCloud size={16} aria-hidden="true" />
             {loading ? "Yükleniyor ve analiz ediliyor..." : "Yükle ve Analiz Et"}
           </button>
           {fileName ? (
-            <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>{fileName}</span>
+            <span className="muted text-base">{fileName}</span>
           ) : null}
         </div>
       </form>
 
       {error && (
-        <p className="login-error" role="alert" style={{ marginTop: 12 }}>
+        <p className="alert mt-sm" data-tone="danger" role="alert">
           {error}
         </p>
       )}
 
       {result && (
-        <div style={{ marginTop: 24, borderTop: "1px solid var(--border)", paddingTop: 20 }}>
+        <div className="results-divider">
           {result.guidelineCompliance ? (
-            <div style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+            <div className="result-block">
+              <h3 className="result-heading">
                 Kılavuz Uygunluğu
               </h3>
               {result.guidelineCompliance.sections.length > 0 ? (
-                <ul style={{ fontSize: 13, paddingLeft: 18, marginBottom: 8 }}>
+                <ul className="result-list">
                   {result.guidelineCompliance.sections.map((s, i) => (
-                    <li key={i} style={{ color: s.found ? "#16a34a" : "#dc2626" }}>
+                    <li key={i} className="tone-text" data-tone={s.found ? "success" : "danger"}>
                       {s.found ? "✓" : "✗"} {s.section}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+                <p className="muted text-base">
                   Seçili kılavuzda zorunlu bölüm tanımlanmamış.
                 </p>
               )}
               {result.guidelineCompliance.citationStyleMatches === false ? (
-                <p style={{ fontSize: 13, color: "#d97706" }}>
+                <p className="tone-text text-base" data-tone="warning">
                   Kılavuz {result.guidelineCompliance.citationStyleExpected.toUpperCase()} kaynakça sistemi bekliyor, çalışmanızda farklı bir sistem seçili.
                 </p>
               ) : null}
@@ -209,65 +209,68 @@ export default function DocumentUploadForm({ projects }: { projects: Project[] }
 
           {result.referenceSectionFound ? (
             <>
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
+              <div className="result-heading-lg">
                 Uyum Skoru: {result.complianceScore}/100
               </div>
 
               {result.references.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                <div className="result-block">
+                  <h3 className="result-heading">
                     Kaynak Bazlı Sorunlar
                   </h3>
-                  {result.references.map((r, i) => (
-                    <div key={i} style={{ fontSize: 13, marginBottom: 8 }}>
-                      <div style={{ color: "var(--muted-foreground)" }}>{r.raw}</div>
-                      {r.issues.length === 0 ? (
-                        <div style={{ color: "#16a34a" }}>Sorun bulunamadı.</div>
-                      ) : (
-                        r.issues.map((issue, j) => (
-                          <div
-                            key={j}
-                            style={{ color: issue.severity === "error" ? "#dc2626" : "#d97706" }}
-                          >
-                            [{issue.severity}] {issue.message}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ))}
+                  <div className="stack-sm text-base">
+                    {result.references.map((r, i) => (
+                      <div key={i}>
+                        <div className="muted">{r.raw}</div>
+                        {r.issues.length === 0 ? (
+                          <div className="tone-text" data-tone="success">Sorun bulunamadı.</div>
+                        ) : (
+                          r.issues.map((issue, j) => (
+                            <div
+                              key={j}
+                              className="tone-text"
+                              data-tone={issue.severity === "error" ? "danger" : "warning"}
+                            >
+                              [{issue.severity}] {issue.message}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              <div style={{ marginBottom: 8 }}>
-                <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+              <div>
+                <h3 className="result-heading">
                   Kaynakçada olup metinde atıfı bulunmayanlar
                 </h3>
-                <ul style={{ fontSize: 13, paddingLeft: 18 }}>
+                <ul className="result-list">
                   {result.crossCheck.referencesWithoutCitation.map((r, i) => (
                     <li key={i}>{r.raw}</li>
                   ))}
                   {result.crossCheck.referencesWithoutCitation.length === 0 && (
-                    <li style={{ listStyle: "none", marginLeft: -18, color: "#16a34a" }}>Yok</li>
+                    <li className="result-ok">Yok</li>
                   )}
                 </ul>
               </div>
 
               <div>
-                <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                <h3 className="result-heading">
                   Metinde atıfı olup kaynakçada bulunmayanlar
                 </h3>
-                <ul style={{ fontSize: 13, paddingLeft: 18 }}>
+                <ul className="result-list">
                   {result.crossCheck.citationsWithoutReference.map((c, i) => (
                     <li key={i}>{c.raw}</li>
                   ))}
                   {result.crossCheck.citationsWithoutReference.length === 0 && (
-                    <li style={{ listStyle: "none", marginLeft: -18, color: "#16a34a" }}>Yok</li>
+                    <li className="result-ok">Yok</li>
                   )}
                 </ul>
               </div>
             </>
           ) : (
-            <p style={{ color: "var(--warning)" }}>
+            <p className="tone-text" data-tone="warning">
               Belgede otomatik olarak &quot;Kaynakça&quot; / &quot;References&quot; başlığı
               bulunamadı, bu yüzden atıf denetimi yapılamadı. Aşağıdaki
               &quot;Kaynakça Kontrolü&quot; bölümünden metni elle yapıştırarak

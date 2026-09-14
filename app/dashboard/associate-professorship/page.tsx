@@ -70,7 +70,7 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Kariyer süreci</span>
-          <h1 className="brand-type">Doçentlik Puan Hesaplayıcı</h1>
+          <h1>Doçentlik Puan Hesaplayıcı</h1>
           <p>
             Kendi beyan ettiğiniz yayın ve faaliyetlere, kurumunuzun girdiği
             güncel puanlama kriterlerini uygulayarak toplam puanınızı
@@ -82,15 +82,15 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
       </section>
 
       {errorMessage ? (
-        <p className="login-error" role="alert" style={{ marginBottom: 16 }}>
+        <p className="alert" role="alert">
           {errorMessage}
         </p>
       ) : null}
 
-      <section className="dashboard-stats" aria-label="Puan özeti" style={{ marginBottom: 24 }}>
+      <section className="dashboard-stats mb-lg" aria-label="Puan özeti">
         <article className="dashboard-stat-card">
           <div className="dashboard-stat-icon">
-            <GraduationCap size={20} strokeWidth={1.8} />
+            <GraduationCap size={20} strokeWidth={1.8} aria-hidden="true" />
           </div>
           <div>
             <strong>{totalPoints.toFixed(1)}</strong>
@@ -100,7 +100,7 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
         {Object.entries(groupedTotals).map(([group, points]) => (
           <article className="dashboard-stat-card" key={group}>
             <div className="dashboard-stat-icon">
-              <GraduationCap size={20} strokeWidth={1.8} />
+              <GraduationCap size={20} strokeWidth={1.8} aria-hidden="true" />
             </div>
             <div>
               <strong>{points.toFixed(1)}</strong>
@@ -111,15 +111,15 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
       </section>
 
       {criteria.length === 0 ? (
-        <section className="project-form-card" style={{ textAlign: "center", padding: "48px 24px", marginBottom: 24 }}>
-          <p style={{ margin: 0, color: "var(--muted-foreground)" }}>
+        <section className="empty-state mb-lg">
+          <p>
             {canManageCriteria
               ? "Henüz puanlama kriteri tanımlanmadı. Aşağıdan ilk kriteri ekleyin."
               : "Henüz puanlama kriteri tanımlanmadı. Akademik Yönetici'nizden kriterleri girmesini isteyin."}
           </p>
         </section>
       ) : (
-        <section className="project-form-card" style={{ marginBottom: 24 }}>
+        <section className="project-form-card mb-lg">
           <div className="project-form-heading">
             <h2>Yeni Faaliyet Ekle</h2>
             <p>Yayınınızı veya faaliyetinizi ilgili kritere göre kaydedin.</p>
@@ -156,9 +156,9 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
               <input name="notes" type="text" placeholder="Dergi adı, yayın yılı vb." />
             </label>
 
-            <div className="project-form-actions" style={{ gridColumn: "1 / -1" }}>
+            <div className="project-form-actions">
               <button type="submit" className="projects-primary-button">
-                <Plus size={16} />
+                <Plus size={16} aria-hidden="true" />
                 Kaydı ekle
               </button>
             </div>
@@ -167,14 +167,14 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
       )}
 
       {entries.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 15, marginBottom: 12 }}>Kayıtlı Faaliyetleriniz</h2>
+        <section className="section">
+          <h2 className="section-title">Kayıtlı Faaliyetleriniz</h2>
           <div className="projects-list">
             {entries.map((e) => (
               <article className="project-card" key={e.id}>
                 <div className="project-card-main">
                   <div>
-                    <span className="project-status">
+                    <span className="status-pill">
                       {e.criteria?.code} {e.criteria?.category_group ? `· ${e.criteria.category_group}` : ""}
                     </span>
                     <h2>{e.title}</h2>
@@ -189,11 +189,11 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
                 </div>
                 <ActionForm
                   action={handleDeleteEntry.bind(null, e.id)}
-                  style={{ marginTop: 10 }}
+                  className="mt-sm"
                   confirmMessage={`"${e.title}" kaydını silmek istediğinize emin misiniz?`}
                 >
                   <button type="submit" className="projects-filter-button">
-                    <Trash2 size={14} />
+                    <Trash2 size={14} aria-hidden="true" />
                     Kaydı sil
                   </button>
                 </ActionForm>
@@ -207,7 +207,7 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
         <section className="project-form-card">
           <div className="project-form-heading">
             <h2>
-              <Settings2 size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+              <Settings2 size={16} aria-hidden="true" />
               Puanlama Kriterlerini Yönet
             </h2>
             <p>
@@ -237,19 +237,19 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
               <span>Notlar</span>
               <input name="notes" type="text" placeholder="Kaynak, şart, açıklama" />
             </label>
-            <div className="project-form-actions" style={{ gridColumn: "1 / -1" }}>
+            <div className="project-form-actions">
               <button type="submit" className="projects-primary-button">
-                <Plus size={16} />
+                <Plus size={16} aria-hidden="true" />
                 Kriteri kaydet
               </button>
             </div>
           </form>
 
           {criteria.length > 0 && (
-            <div style={{ marginTop: 20 }}>
+            <div className="mt-lg">
               {criteria.map((c) => (
-                <div key={c.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <div key={c.id} className="list-row text-base">
+                  <div className="cluster cluster-between">
                     <span>
                       <strong>{c.code}</strong> — {c.label} ({c.points_per_unit} puan)
                     </span>
@@ -258,11 +258,11 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
                       confirmMessage={`"${c.code}" kriterini silmek istediğinize emin misiniz? Bu kritere bağlı kullanıcı kayıtları varsa kriter silinmez, pasife alınır (geçmiş puanlar korunur).`}
                     >
                       <button type="submit" className="projects-filter-button" aria-label={`${c.code} kriterini sil`}>
-                        <Trash2 size={13} />
+                        <Trash2 size={13} aria-hidden="true" />
                       </button>
                     </ActionForm>
                   </div>
-                  <details className="guideline-review-details" style={{ marginTop: 8, paddingTop: 8 }}>
+                  <details className="guideline-review-details">
                     <summary>Düzenle</summary>
                     <ActionForm
                       className="guideline-review-form"
@@ -285,7 +285,7 @@ export default async function ScoringPage({ searchParams }: ScoringPageProps) {
                         <span>Notlar</span>
                         <input name="notes" type="text" defaultValue={c.notes ?? ""} />
                       </label>
-                      <p className="guideline-review-full" style={{ margin: 0, fontSize: 12, color: "var(--muted-foreground)" }}>
+                      <p className="guideline-review-full hint">
                         Puan değişikliği yalnızca bundan sonra eklenen faaliyetlere uygulanır; mevcut kayıtlar
                         eklendikleri andaki puanla korunur.
                       </p>

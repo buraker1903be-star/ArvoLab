@@ -24,17 +24,17 @@ export default async function NewProjectPage({ searchParams }: NewProjectPagePro
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Yeni kayıt</span>
-          <h1 className="brand-type">Yeni Akademik Çalışma</h1>
+          <h1>Yeni Akademik Çalışma</h1>
           <p>Çalışmanın temel akademik ve operasyonel bilgilerini girin.</p>
         </div>
         <Link href="/dashboard/editor" className="projects-filter-button">
-          <ArrowLeft size={17} />
+          <ArrowLeft size={17} aria-hidden="true" />
           Çalışmalara dön
         </Link>
       </section>
 
       {errorMessage ? (
-        <p className="login-error" role="alert" style={{ marginBottom: 16 }}>
+        <p className="alert" role="alert">
           {errorMessage}
         </p>
       ) : null}

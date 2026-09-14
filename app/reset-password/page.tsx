@@ -9,7 +9,7 @@ export default function ResetPasswordPage() {
       <div className="login-card">
         <div className="login-heading">
           <span className="login-kicker">Şifre sıfırlama</span>
-          <h2 className="brand-type">Yeni şifrenizi belirleyin</h2>
+          <h2>Yeni şifrenizi belirleyin</h2>
           <p>En az 8 karakterlik yeni bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz.</p>
         </div>
 

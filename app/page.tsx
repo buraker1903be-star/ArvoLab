@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpenCheck, ChartNoAxesCombined, FileCheck2, ShieldCheck } from "lucide-react";
 import { login } from "@/app/actions/auth";
+import ThemeToggle from "@/app/_components/theme-toggle";
 
 const highlights = [
   {
@@ -39,22 +40,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   return (
     <main className="login-page">
       <section className="login-showcase" aria-label="ArvoLab tanıtımı">
-        <div className="brand-lockup" style={{ flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
-          <Image
-            src="/arvolab-logo.png"
-            alt="ArvoLab"
-            width={440}
-            height={112}
-            priority
-            style={{ height: "96px", width: "auto", filter: "brightness(0) invert(1)" }}
-          />
-          <span className="eyebrow" style={{ marginTop: 2 }}>Research Operating System</span>
+        <div className="brand-lockup">
+          <Image src="/arvolab-logo.png" alt="ArvoLab" width={440} height={112} priority />
+          {/* lang="en": Türkçe büyük harf dönüşümü "i"yi "İ" yapmasın */}
+          <span className="eyebrow" lang="en">
+            Research Operating System
+          </span>
         </div>
 
         <div className="showcase-copy">
-          <h1 className="brand-type">Akademik üretimi tek, güvenli ve izlenebilir çalışma alanında yönetin.</h1>
+          <h1>Akademik üretimi tek, güvenli ve izlenebilir çalışma alanında yönetin.</h1>
           <p>
-            Literatür taramasından belge kontrolüne, veri analizinden akademik kalite onayına kadar tüm süreçleri ArvoLab üzerinden yürütün.
+            Literatür taramasından belge kontrolüne, veri analizinden akademik kalite onayına kadar tüm süreçleri ArvoLab
+            üzerinden yürütün.
           </p>
         </div>
 
@@ -79,14 +77,29 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       <section className="login-panel" aria-label="ArvoLab giriş formu">
+        <ThemeToggle className="dashboard-icon-button login-theme-toggle" />
         <div className="login-card">
+          <div className="login-mobile-brand">
+            <div className="brand-mark" aria-hidden="true">
+              A
+            </div>
+            <div>
+              <strong>ArvoLab</strong>
+              <span lang="en">Research OS</span>
+            </div>
+          </div>
+
           <div className="login-heading">
             <span className="login-kicker">Çalışma alanına erişim</span>
-            <h2 className="brand-type">ArvoLab&apos;a giriş yapın</h2>
+            <h2>ArvoLab&apos;a giriş yapın</h2>
             <p>Kurumsal e-posta adresiniz ve şifrenizle devam edin.</p>
           </div>
 
-          {errorMessage ? <p className="login-error" role="alert">{errorMessage}</p> : null}
+          {errorMessage ? (
+            <p className="alert" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
 
           <form className="login-form" action={login}>
             {next ? <input type="hidden" name="next" value={next} /> : null}
@@ -97,7 +110,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <label htmlFor="password">Şifre</label>
               <Link href="/forgot-password">Şifremi unuttum</Link>
             </div>
-            <input id="password" name="password" type="password" autoComplete="current-password" placeholder="Şifrenizi girin" required />
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Şifrenizi girin"
+              required
+            />
 
             <button className="login-button" type="submit">
               Giriş yap
@@ -107,11 +127,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
           <div className="login-footer">
             <p>Hesabınız yoksa kurum yöneticinizden davet talep edin.</p>
-            <div>
-              <a href="#">Gizlilik</a><span aria-hidden="true">•</span>
-              <a href="#">Destek</a><span aria-hidden="true">•</span>
-              <a href="#">Sistem durumu</a>
-            </div>
           </div>
         </div>
       </section>

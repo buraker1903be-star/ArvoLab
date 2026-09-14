@@ -14,6 +14,7 @@ import DocumentUploadForm from "./document-upload-form";
 import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
 import { ShieldQuestion, Trash2 } from "lucide-react";
+import { similarityTone, statusTone } from "@/lib/status-tone";
 
 export default async function DocumentsPage() {
   const [projects, uploads] = await Promise.all([
@@ -51,7 +52,7 @@ export default async function DocumentsPage() {
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Belge kontrol</span>
-          <h1 className="brand-type">Belge Kontrol</h1>
+          <h1>Belge Kontrol</h1>
           <p>
             Tam bir tez/makale dosyası (.docx/.pdf) yükleyin; sistem içerik
             üretmez, yalnızca metni okuyup kaynakça formatını, kılavuz
@@ -62,7 +63,7 @@ export default async function DocumentsPage() {
             öğreticidir, tezinize/makalenize doğrudan kopyalanacak bir metin
             içermez. Yalnızca kaynakça listenizi kontrol etmek
             isterseniz{" "}
-            <a href="/dashboard/citations" style={{ color: "var(--accent)", fontWeight: 700 }}>
+            <a href="/dashboard/citations" className="link-accent">
               Kaynakça Doğrulama
             </a>{" "}
             sayfasını kullanın.
@@ -73,8 +74,8 @@ export default async function DocumentsPage() {
       <DocumentUploadForm projects={projects} />
 
       {uploads.length > 0 && (
-        <section style={{ marginTop: 32 }}>
-          <h2 style={{ fontSize: 15, marginBottom: 12 }}>Yüklenen Belgeler</h2>
+        <section className="section mt-lg">
+          <h2 className="section-title">Yüklenen Belgeler</h2>
           <div className="projects-list">
             {uploads.map((u) => {
               const originality = originalityMap.get(u.id);
@@ -82,7 +83,7 @@ export default async function DocumentsPage() {
                 <article className="project-card" key={u.id}>
                   <div className="project-card-main">
                     <div>
-                      <span className="project-status">
+                      <span className="status-pill" data-tone={statusTone(u.status)}>
                         {u.status === "analyzed"
                           ? "Analiz edildi"
                           : u.status === "failed"
@@ -104,43 +105,33 @@ export default async function DocumentsPage() {
                     </div>
                   </div>
                   {u.status === "failed" && u.error_message ? (
-                    <p style={{ color: "var(--danger)", fontSize: 13, marginTop: 8 }}>
+                    <p className="tone-text text-base mt-sm" data-tone="danger">
                       {u.error_message}
                     </p>
                   ) : null}
                   {u.status === "analyzed" && u.analysis && !u.analysis.referenceSectionFound ? (
-                    <p style={{ color: "var(--warning)", fontSize: 13, marginTop: 8 }}>
+                    <p className="tone-text text-base mt-sm" data-tone="warning">
                       Kaynakça bölümü otomatik tespit edilemedi.
                     </p>
                   ) : null}
 
                   {u.status === "analyzed" ? (
-                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+                    <div className="results-divider">
                       {originality ? (
-                        <div style={{ fontSize: 13 }}>
-                          <div
-                            style={{
-                              fontWeight: 600,
-                              color:
-                                originality.overall_similarity >= 40
-                                  ? "#dc2626"
-                                  : originality.overall_similarity >= 15
-                                  ? "#d97706"
-                                  : "#16a34a",
-                            }}
-                          >
+                        <div className="text-base">
+                          <div className="tone-text" data-tone={similarityTone(originality.overall_similarity)}>
                             ArvoLab Ön-Kontrol: en yüksek örtüşme %{originality.overall_similarity}
                             {" "}({originality.compared_document_count} belgeyle karşılaştırıldı)
                           </div>
                           {originality.matches.slice(0, 3).map((m, i) => (
-                            <div key={i} style={{ color: "var(--muted-foreground)", marginTop: 4 }}>
+                            <div key={i} className="muted">
                               %{m.similarity} — {m.fileName}
                               {m.sampleOverlap ? ` · örnek: "${m.sampleOverlap}"` : ""}
                             </div>
                           ))}
-                          <ActionForm action={handleRunOriginality.bind(null, u.id)} style={{ marginTop: 8 }}>
+                          <ActionForm action={handleRunOriginality.bind(null, u.id)} className="mt-sm">
                             <button type="submit" className="projects-filter-button">
-                              <ShieldQuestion size={14} />
+                              <ShieldQuestion size={14} aria-hidden="true" />
                               Yeniden tara
                             </button>
                           </ActionForm>
@@ -148,12 +139,12 @@ export default async function DocumentsPage() {
                       ) : (
                         <ActionForm action={handleRunOriginality.bind(null, u.id)}>
                           <button type="submit" className="projects-filter-button">
-                            <ShieldQuestion size={14} />
+                            <ShieldQuestion size={14} aria-hidden="true" />
                             ArvoLab Ön-Kontrolü Çalıştır (orijinallik taraması)
                           </button>
                         </ActionForm>
                       )}
-                      <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 6 }}>
+                      <p className="hint">
                         Bu tarama yalnızca erişim yetkiniz olan ArvoLab belge
                         havuzuyla karşılaştırır; Turnitin&apos;in yerini tutmaz.
                       </p>
@@ -167,11 +158,11 @@ export default async function DocumentsPage() {
 
                   <ActionForm
                     action={handleDelete.bind(null, u.id)}
-                    style={{ marginTop: 12 }}
+                    className="mt-sm"
                     confirmMessage={`"${u.file_name}" belgesini silmek istediğinize emin misiniz? Dosya, analiz sonuçları, orijinallik taramaları ve AI geri bildirimleri kalıcı olarak silinir.`}
                   >
-                    <button type="submit" className="projects-filter-button" style={{ color: "var(--danger)" }}>
-                      <Trash2 size={14} />
+                    <button type="submit" className="button-danger">
+                      <Trash2 size={14} aria-hidden="true" />
                       Belgeyi sil
                     </button>
                   </ActionForm>

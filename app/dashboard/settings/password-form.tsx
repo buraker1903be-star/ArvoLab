@@ -17,7 +17,7 @@ export default function PasswordForm({ action, variant, submitLabel }: PasswordF
   if (variant === "login") {
     return (
       <form className="login-form" action={formAction}>
-        {state?.error ? <p className="login-error" role="alert">{state.error}</p> : null}
+        {state?.error ? <p className="alert" role="alert">{state.error}</p> : null}
         <label htmlFor="password">Yeni şifre</label>
         <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
         <label htmlFor="passwordConfirm">Yeni şifre (tekrar)</label>
@@ -40,9 +40,9 @@ export default function PasswordForm({ action, variant, submitLabel }: PasswordF
         <span>Yeni şifre (tekrar)</span>
         <input name="passwordConfirm" type="password" autoComplete="new-password" minLength={8} required />
       </label>
-      <div className="project-form-actions" style={{ gridColumn: "1 / -1" }}>
+      <div className="project-form-actions">
         <button type="submit" className="projects-primary-button" disabled={pending}>
-          <KeyRound size={16} />
+          <KeyRound size={16} aria-hidden="true" />
           {pending ? "Kaydediliyor…" : submitLabel}
         </button>
       </div>

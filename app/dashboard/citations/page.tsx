@@ -9,14 +9,14 @@ export default async function CitationsPage() {
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Kaynakça</span>
-          <h1 className="brand-type">Kaynakça ve Atıf Doğrulama</h1>
+          <h1>Kaynakça ve Atıf Doğrulama</h1>
           <p>
             Kaynakçanızı APA 7 biçimi, metin içi atıf tutarlılığı ve gerçek
             akademik kayıt eşleşmesi açısından denetleyin. Crossref ve OpenAlex
             sonuçları DOI bilgisiyle karşılaştırılır; her kaynak için Google
             Scholar araması da sunulur. Tam bir belgeyi (.docx/.pdf) incelemek
             için{" "}
-            <a href="/dashboard/documents" style={{ color: "var(--accent)", fontWeight: 700 }}>
+            <a href="/dashboard/documents" className="link-accent">
               Belge Kontrol
             </a>{" "}
             sayfasını kullanın.
@@ -27,8 +27,8 @@ export default async function CitationsPage() {
       <CitationCheckForm projects={projects} />
 
       {history.length > 0 && (
-        <section style={{ marginTop: 32 }}>
-          <h2 style={{ fontSize: 15, marginBottom: 12 }}>Son Kontroller</h2>
+        <section className="section mt-lg">
+          <h2 className="section-title">Son Kontroller</h2>
           <div className="projects-list">
             {history.map((historyItem) => (
               <article className="project-card" key={historyItem.id}>

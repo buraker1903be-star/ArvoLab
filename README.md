@@ -1,5 +1,30 @@
 # ArvoLab
 
+## Tasarım Sistemi (ArvoOS tabanlı, iOS benzeri)
+
+ArvoOS panelinin görsel dili ArvoLab'ın lacivert/yeşil marka renkleriyle tek
+kaynaklı bir sisteme taşındı.
+
+- **Stiller** `app/styles/` altında: `tokens.css` (renk, yarıçap, gölge,
+  tipografi, hareket; açık ve koyu tema), `base.css`, `components.css`,
+  `shell.css` (kenar çubuğu, üst çubuk, mobil gezinme), `auth.css`,
+  `workspace.css` (editör, analiz tabloları).
+- **Tema:** `<html data-theme="light|dark">`. Boyamadan önce `app/layout.tsx`
+  yazar (kayıtlı tercih, yoksa işletim sistemi); düğme
+  `app/_components/theme-toggle.tsx`.
+- **Kabuk:** masaüstünde gruplu kenar çubuğu (aktif sayfa vurgulu) ve buzlu
+  cam üst çubuk; 900px altında iOS gezinme çubuğu, alt sekme çubuğu ve sağdan
+  açılan menü. Menü tanımı tek yerde: `app/dashboard/_components/navigation.ts`.
+- **Bileşen sınıfları:** `status-pill` + `data-tone` (tonlar
+  `lib/status-tone.ts`), `alert`, `callout`, `empty-state`, `section-title`,
+  `cluster` / `stack`, `result-*`, `chip`, `segmented`, `compact-select`,
+  `button-danger` / `button-success` ve mevcut `projects-*` / `project-*`.
+- **Yazı:** Apple cihazlarda SF Pro, diğerlerinde Inter; Montserrat yalnızca
+  logo ve marka yazısında.
+- **Kurallar:** TSX'te satır içi stil ve hex renk yok (yalnızca veriye bağlı
+  değerler); ham renk yalnızca `tokens.css`'te; en küçük yazı 11px.
+  `npm run check:css` denetler, `npm run build` bunu otomatik çalıştırır.
+
 ## Faz 3 — Yönetim Ekranları
 
 - **Çalışma düzenleme** (`/dashboard/editor/[id]/edit`): başlık, kaynakça

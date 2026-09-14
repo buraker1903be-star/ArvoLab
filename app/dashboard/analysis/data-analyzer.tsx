@@ -162,12 +162,13 @@ export default function DataAnalyzer() {
     const matrix = numericForMatrix.length >= 2 ? correlationMatrix(numericForMatrix) : [];
 
     setFullReport(
-      <div style={{ display: "grid", gap: 24 }}>
+      <div className="stack">
         {numericSections.length > 0 && (
           <div>
-            <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+            <h3 className="result-heading">
               1. Betimsel İstatistikler (Sayısal Değişkenler)
             </h3>
+            <div className="table-scroll">
             <table className="stats-result-table">
               <thead>
                 <tr>
@@ -194,17 +195,19 @@ export default function DataAnalyzer() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
         {categoricalSections.length > 0 && (
           <div>
-            <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+            <h3 className="result-heading">
               2. Frekans Tabloları (Kategorik Değişkenler)
             </h3>
             {categoricalSections.map(({ col, freq }) => (
-              <div key={col} style={{ marginBottom: 14 }}>
-                <p style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{col}</p>
+              <div key={col} className="result-block">
+                <p className="result-heading text-sm">{col}</p>
+                <div className="table-scroll">
                 <table className="stats-result-table">
                   <thead>
                     <tr>
@@ -223,6 +226,7 @@ export default function DataAnalyzer() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             ))}
           </div>
@@ -230,9 +234,10 @@ export default function DataAnalyzer() {
 
         {matrix.length > 0 && (
           <div>
-            <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+            <h3 className="result-heading">
               3. Korelasyon Matrisi (Sayısal Değişken Çiftleri)
             </h3>
+            <div className="table-scroll">
             <table className="stats-result-table">
               <thead>
                 <tr>
@@ -250,7 +255,7 @@ export default function DataAnalyzer() {
                     <tr key={i}>
                       <td>{c.varA}</td>
                       <td>{c.varB}</td>
-                      <td style={{ color: sig ? "#16a34a" : undefined, fontWeight: sig ? 700 : 400 }}>
+                      <td className={sig ? "stats-significant" : undefined}>
                         {formatNumber(c.r)}
                       </td>
                       <td>{formatP(c.p)}</td>
@@ -260,14 +265,15 @@ export default function DataAnalyzer() {
                 })}
               </tbody>
             </table>
-            <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 6 }}>
+            </div>
+            <p className="hint">
               Yeşil/kalın satırlar p &lt; .05 düzeyinde istatistiksel olarak anlamlıdır.
             </p>
           </div>
         )}
 
         {numericSections.length === 0 && categoricalSections.length === 0 && (
-          <p style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+          <p className="muted text-base">
             Rapor oluşturmak için okunabilir sayısal veya kategorik sütun bulunamadı.
           </p>
         )}
@@ -287,6 +293,7 @@ export default function DataAnalyzer() {
           return { col, stats };
         });
         setResult(
+          <div className="table-scroll">
           <table className="stats-result-table">
             <thead>
               <tr>
@@ -313,6 +320,7 @@ export default function DataAnalyzer() {
               ))}
             </tbody>
           </table>
+          </div>
         );
       }
 
@@ -340,7 +348,7 @@ export default function DataAnalyzer() {
               <br />
               <strong>{g2name}</strong>: N={r.n2}, Ort={formatNumber(r.m2)}, SS={formatNumber(r.sd2)}
             </p>
-            <p style={{ color: sig ? "#16a34a" : "#d97706", fontWeight: 700 }}>
+            <p className="tone-text" data-tone={sig ? "success" : "warning"}>
               t({r.df}) = {formatNumber(r.t)}, {formatP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
@@ -365,6 +373,7 @@ export default function DataAnalyzer() {
         const sig = isSignificant(r.p);
         setResult(
           <div>
+            <div className="table-scroll">
             <table className="stats-result-table">
               <thead>
                 <tr>
@@ -383,7 +392,8 @@ export default function DataAnalyzer() {
                 ))}
               </tbody>
             </table>
-            <p style={{ color: sig ? "#16a34a" : "#d97706", fontWeight: 700, marginTop: 10 }}>
+            </div>
+            <p className="tone-text mt-sm" data-tone={sig ? "success" : "warning"}>
               F({r.dfb}, {r.dfw}) = {formatNumber(r.f)}, {formatP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
@@ -402,7 +412,7 @@ export default function DataAnalyzer() {
         const r = pearsonCorrelation(x.slice(0, n), y.slice(0, n));
         const sig = isSignificant(r.p);
         setResult(
-          <p style={{ color: sig ? "#16a34a" : "#d97706", fontWeight: 700 }}>
+          <p className="tone-text" data-tone={sig ? "success" : "warning"}>
             r({r.df}) = {formatNumber(r.r)}, {formatP(r.p)}
             {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
           </p>
@@ -426,6 +436,7 @@ export default function DataAnalyzer() {
         const sig = isSignificant(r.p);
         setResult(
           <div>
+            <div className="table-scroll">
             <table className="stats-result-table">
               <thead>
                 <tr>
@@ -448,7 +459,8 @@ export default function DataAnalyzer() {
                 ))}
               </tbody>
             </table>
-            <p style={{ color: sig ? "#16a34a" : "#d97706", fontWeight: 700, marginTop: 10 }}>
+            </div>
+            <p className="tone-text mt-sm" data-tone={sig ? "success" : "warning"}>
               χ²({r.df}, N = {r.n}) = {formatNumber(r.chi2)}, {formatP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
@@ -480,9 +492,11 @@ export default function DataAnalyzer() {
             ? "şüpheli"
             : "düşük";
         setResult(
-          <p style={{ fontWeight: 700 }}>
-            Cronbach&apos;s α = {formatNumber(r.alpha, 3)} ({r.k} madde, N = {r.n}) — güvenilirlik düzeyi:{" "}
-            {level}
+          <p>
+            <strong>
+              Cronbach&apos;s α = {formatNumber(r.alpha, 3)} ({r.k} madde, N = {r.n}) — güvenilirlik düzeyi:{" "}
+              {level}
+            </strong>
           </p>
         );
       }
@@ -506,27 +520,15 @@ export default function DataAnalyzer() {
       </div>
 
       {!dataset && (
-        <label
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            border: "2px dashed var(--border)",
-            borderRadius: 14,
-            padding: "40px 20px",
-            cursor: "pointer",
-          }}
-        >
-          <UploadCloud size={28} style={{ opacity: 0.5 }} />
-          <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+        <label className="dropzone">
+          <UploadCloud size={28} aria-hidden="true" />
+          <span className="text-base">
             {loading ? "Okunuyor..." : "Excel veya CSV dosyası seçmek için tıklayın"}
           </span>
           <input
             type="file"
             accept=".xlsx,.xls,.csv"
-            style={{ display: "none" }}
+            hidden
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) handleFile(file);
@@ -537,24 +539,16 @@ export default function DataAnalyzer() {
       )}
 
       {parseError && (
-        <p className="login-error" role="alert" style={{ marginTop: 12 }}>
+        <p className="alert mt-sm" data-tone="danger" role="alert">
           {parseError}
         </p>
       )}
 
       {dataset && (
-        <div style={{ marginTop: 8 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 16,
-              fontSize: 13,
-            }}
-          >
+        <div>
+          <div className="file-info-bar mb-md">
             <span>
-              <TableIcon size={14} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+              <TableIcon size={14} className="inline-icon" aria-hidden="true" />
               <strong>{fileName}</strong> — {dataset.rows.length} satır, {dataset.columns.length} sütun (
               {dataset.numericColumns.length} sayısal, {dataset.categoricalColumns.length} kategorik)
             </span>
@@ -572,10 +566,10 @@ export default function DataAnalyzer() {
             </button>
           </div>
 
-          <div className="project-form-card" style={{ marginBottom: 20, background: "var(--surface-muted)" }}>
+          <div className="sub-card mb-lg">
             <div className="project-form-heading">
-              <h2 style={{ fontSize: 14 }}>
-                <FileBarChart size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+              <h2>
+                <FileBarChart size={16} aria-hidden="true" />
                 SPSS Tarzı Kapsamlı Analiz Raporu
               </h2>
               <p>
@@ -589,18 +583,18 @@ export default function DataAnalyzer() {
               </p>
             </div>
             <button type="button" className="projects-primary-button" onClick={handleGenerateFullReport}>
-              <FileBarChart size={15} />
+              <FileBarChart size={15} aria-hidden="true" />
               Kapsamlı Raporu Oluştur
             </button>
 
             {fullReport && (
-              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)", fontSize: 13 }}>
+              <div className="results-divider text-base">
                 {fullReport}
               </div>
             )}
           </div>
 
-          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>
+          <h3 className="result-heading">
             Veya Belirli Bir Test Seçin
           </h3>
           <div className="project-form-grid">
@@ -676,7 +670,7 @@ export default function DataAnalyzer() {
                   onChange={(e) =>
                     setReliabilityItems(Array.from(e.target.selectedOptions, (o) => o.value))
                   }
-                  style={{ minHeight: 120 }}
+                  size={6}
                 >
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
@@ -688,21 +682,21 @@ export default function DataAnalyzer() {
             )}
           </div>
 
-          <div className="project-form-actions" style={{ marginTop: 16 }}>
+          <div className="project-form-actions mt-md">
             <button type="button" className="projects-primary-button" onClick={handleRunAnalysis}>
-              <Play size={15} />
+              <Play size={15} aria-hidden="true" />
               Analizi Çalıştır
             </button>
           </div>
 
           {resultError && (
-            <p className="login-error" role="alert" style={{ marginTop: 16 }}>
+            <p className="alert mt-md" data-tone="danger" role="alert">
               {resultError}
             </p>
           )}
 
           {result && (
-            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)", fontSize: 13 }}>
+            <div className="results-divider text-base">
               {result}
             </div>
           )}

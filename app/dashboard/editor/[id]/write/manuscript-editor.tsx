@@ -396,7 +396,7 @@ export default function ManuscriptEditor({
           ref={imageInputRef}
           type="file"
           accept="image/*"
-          style={{ display: "none" }}
+          hidden
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) handleImageUpload(file);
@@ -439,13 +439,13 @@ export default function ManuscriptEditor({
 
       {showCoverPageEditor && (
         <div className="manuscript-page-settings manuscript-cover-page-editor">
-          <label style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", fontWeight: 700 }}>
+          <label className="checkbox-label">
             <input
               type="checkbox"
               checked={coverPageEnabled}
               onChange={(e) => setCoverPageEnabled(e.target.checked)}
             />
-            <span>Kapak sayfası oluştur (Word&apos;e aktarınca belgenin ilk sayfası olur)</span>
+            <strong>Kapak sayfası oluştur (Word&apos;e aktarınca belgenin ilk sayfası olur)</strong>
           </label>
 
           {coverPageEnabled && (
@@ -578,7 +578,7 @@ export default function ManuscriptEditor({
               />
             </label>
           ))}
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <label className="checkbox-label">
             <input
               type="checkbox"
               checked={showPageNumbers}
@@ -595,12 +595,12 @@ export default function ManuscriptEditor({
       <EditorContent editor={editor} />
 
       <div className="manuscript-footer">
-        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+        <span className="muted text-sm">
           {editor.storage.characterCount?.words?.() ?? 0} kelime
           {lastSaved ? ` · Son kayıt: ${lastSaved}` : ""}
         </span>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="cluster cluster-lg">
           <button type="button" className="projects-filter-button" onClick={handleSave} disabled={saving}>
             <Save size={15} />
             {saving ? "Kaydediliyor..." : "Kaydet"}
@@ -617,27 +617,27 @@ export default function ManuscriptEditor({
       </div>
 
       {requiredSections.length > 0 && (
-        <div style={{ marginTop: 16, fontSize: 12, color: "var(--muted-foreground)" }}>
+        <div className="muted text-sm mt-md">
           Kılavuzun zorunlu tuttuğu bölümler: {requiredSections.join(", ")}
         </div>
       )}
 
       {checkError && (
-        <p className="login-error" role="alert" style={{ marginTop: 16 }}>
+        <p className="alert mt-md" data-tone="danger" role="alert">
           {checkError}
         </p>
       )}
 
       {checkResult && (
-        <div className="project-form-card" style={{ marginTop: 16 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>Kontrol Sonucu</h3>
+        <div className="project-form-card mt-md">
+          <h3 className="result-heading-lg">Kontrol Sonucu</h3>
 
           {checkResult.guidelineCompliance && (
-            <div style={{ marginBottom: 16 }}>
-              <strong style={{ fontSize: 13 }}>Kılavuz Uygunluğu</strong>
-              <ul style={{ fontSize: 13, paddingLeft: 18, marginTop: 6 }}>
+            <div className="result-block">
+              <strong className="text-base">Kılavuz Uygunluğu</strong>
+              <ul className="result-list">
                 {checkResult.guidelineCompliance.sections.map((s, i) => (
-                  <li key={i} style={{ color: s.found ? "#16a34a" : "#dc2626" }}>
+                  <li key={i} className="tone-text" data-tone={s.found ? "success" : "danger"}>
                     {s.found ? "✓" : "✗"} {s.section}
                   </li>
                 ))}
@@ -646,21 +646,21 @@ export default function ManuscriptEditor({
           )}
 
           <div>
-            <strong style={{ fontSize: 13 }}>
+            <strong className="text-base">
               {checkResult.apa7.referenceSectionFound
                 ? `APA7 Uyum Skoru: ${checkResult.apa7.complianceScore}/100`
                 : "Kaynakça bölümü bulunamadı"}
             </strong>
             {checkResult.apa7.referenceSectionFound && (
               <>
-                <ul style={{ fontSize: 13, paddingLeft: 18, marginTop: 6 }}>
+                <ul className="result-list">
                   {checkResult.apa7.crossCheck.referencesWithoutCitation.map((r, i) => (
-                    <li key={`rw-${i}`} style={{ color: "#d97706" }}>
+                    <li key={`rw-${i}`} className="tone-text" data-tone="warning">
                       Kaynakçada var, metinde atıf yok: {r.raw}
                     </li>
                   ))}
                   {checkResult.apa7.crossCheck.citationsWithoutReference.map((c, i) => (
-                    <li key={`cw-${i}`} style={{ color: "#d97706" }}>
+                    <li key={`cw-${i}`} className="tone-text" data-tone="warning">
                       Metinde atıf var, kaynakçada yok: {c.raw}
                     </li>
                   ))}

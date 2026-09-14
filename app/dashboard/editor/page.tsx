@@ -5,6 +5,7 @@ import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS } from "@/l
 import { getCurrentProfile } from "@/app/actions/profile";
 import DeleteProjectButton from "./delete-project-button";
 import ActionForm from "../action-form";
+import { statusTone } from "@/lib/status-tone";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "Teslim tarihi belirtilmedi";
@@ -55,26 +56,20 @@ export default async function ProjectsPage() {
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Belge editörü</span>
-          <h1 className="brand-type">Çalışmalarım</h1>
+          <h1>Çalışmalarım</h1>
           <p>Tez, makale, proje ve analiz çalışmalarınızı buradan oluşturun, panelde yazın ve yönetin.</p>
         </div>
         <Link href="/dashboard/editor/new" className="projects-primary-button">
-          <Plus size={18} />
+          <Plus size={18} aria-hidden="true" />
           Yeni çalışma
         </Link>
       </section>
 
       {projects.length === 0 ? (
-        <section className="project-form-card" style={{ textAlign: "center", padding: "48px 24px" }}>
-          <p style={{ margin: 0, color: "var(--muted-foreground)" }}>
-            Henüz kayıtlı bir çalışma yok.
-          </p>
-          <Link
-            href="/dashboard/editor/new"
-            className="projects-primary-button"
-            style={{ display: "inline-flex", marginTop: 16 }}
-          >
-            <Plus size={18} />
+        <section className="empty-state">
+          <p>Henüz kayıtlı bir çalışma yok.</p>
+          <Link href="/dashboard/editor/new" className="projects-primary-button">
+            <Plus size={18} aria-hidden="true" />
             İlk çalışmayı oluştur
           </Link>
         </section>
@@ -89,7 +84,9 @@ export default async function ProjectsPage() {
               <article className="project-card" key={project.id}>
                 <div className="project-card-main">
                   <div>
-                    <span className="project-status">{statusLabel(project.status)}</span>
+                    <span className="status-pill" data-tone={statusTone(project.status)}>
+                      {statusLabel(project.status)}
+                    </span>
                     <h2>{project.title}</h2>
                     <p>
                       {projectTypeLabel(project.project_type)}
@@ -106,35 +103,35 @@ export default async function ProjectsPage() {
 
                 <div className="project-card-meta">
                   <span>
-                    <UserRound size={15} />
+                    <UserRound size={15} aria-hidden="true" />
                     {project.assignee_name || "Sorumlu atanmadı"}
                   </span>
                   <span>
-                    <CalendarDays size={15} />
+                    <CalendarDays size={15} aria-hidden="true" />
                     {formatDate(project.due_date)}
                   </span>
 
                   {isApproved ? (
-                    <span style={{ color: "var(--success)", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <ShieldCheck size={15} />
+                    <span className="tone-text" data-tone="success">
+                      <ShieldCheck size={15} aria-hidden="true" />
                       Kontrolör onayı verildi{project.controller_approved_at ? ` · ${formatDateTime(project.controller_approved_at)}` : ""}
                     </span>
                   ) : null}
                 </div>
 
                 {canApprove ? (
-                  <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <div className="cluster cluster-lg cluster-spaced">
                     {isApproved ? (
                       <ActionForm action={handleRevoke.bind(null, project.id)}>
                         <button type="submit" className="projects-filter-button">
-                          <RotateCcw size={15} />
+                          <RotateCcw size={15} aria-hidden="true" />
                           Onayı geri al
                         </button>
                       </ActionForm>
                     ) : (
                       <ActionForm action={handleApprove.bind(null, project.id)}>
                         <button type="submit" className="projects-primary-button">
-                          <CheckCircle2 size={15} />
+                          <CheckCircle2 size={15} aria-hidden="true" />
                           Kontrolör olarak onayla
                         </button>
                       </ActionForm>
@@ -145,21 +142,14 @@ export default async function ProjectsPage() {
                 {canApprove ? (
                   <ActionForm
                     action={handleAssign.bind(null, project.id)}
-                    style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}
+                    className="cluster mt-sm"
                     successMessage="Sorumlu kaydedildi."
                   >
                     <select
                       name="assigneeId"
                       defaultValue={project.assignee_id ?? ""}
                       aria-label="Sorumlu personel"
-                      style={{
-                        height: 38,
-                        padding: "0 10px",
-                        borderRadius: 10,
-                        border: "1px solid var(--border)",
-                        fontSize: 12,
-                        flex: "0 1 280px",
-                      }}
+                      className="compact-select grow-select"
                     >
                       <option value="">{legacyAssignee ? `${project.assignee_name} (listede değil)` : "Sorumlu atanmadı"}</option>
                       {staff.map((member) => (
@@ -168,26 +158,26 @@ export default async function ProjectsPage() {
                         </option>
                       ))}
                     </select>
-                    <button type="submit" className="projects-filter-button" style={{ height: 38 }}>
-                      <UserRound size={14} />
+                    <button type="submit" className="projects-filter-button button-compact">
+                      <UserRound size={14} aria-hidden="true" />
                       Ata
                     </button>
                   </ActionForm>
                 ) : null}
 
-                <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <div className="cluster cluster-lg cluster-spaced">
                   <Link href={`/dashboard/editor/${project.id}/write`} className="projects-primary-button">
-                    <PenLine size={15} />
+                    <PenLine size={15} aria-hidden="true" />
                     Panelde Yaz
                   </Link>
                   {canEdit ? (
                     <Link href={`/dashboard/editor/${project.id}/edit`} className="projects-filter-button">
-                      <Pencil size={15} />
+                      <Pencil size={15} aria-hidden="true" />
                       Düzenle
                     </Link>
                   ) : null}
                   <Link href="/dashboard/documents" className="projects-filter-button">
-                    <Upload size={15} />
+                    <Upload size={15} aria-hidden="true" />
                     Hazır Belge Yükle
                   </Link>
                   {(profile?.id === project.owner_id || canDeleteAnyProject) && (

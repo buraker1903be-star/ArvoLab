@@ -14,6 +14,7 @@ export const maxDuration = 60;
 import { getCurrentProfile } from "@/app/actions/profile";
 import GuidelineScanner from "./guideline-scanner";
 import ActionForm from "../action-form";
+import { statusTone } from "@/lib/status-tone";
 
 const errorMessages: Record<string, string> = {
   forbidden: "Kılavuz eklemek için Akademik Yönetici veya üzeri bir rol gerekir.",
@@ -73,7 +74,7 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Referans veri</span>
-          <h1 className="brand-type">Üniversite Tez Yazım Kılavuzları</h1>
+          <h1>Üniversite Tez Yazım Kılavuzları</h1>
           <p>
             Üniversitelerin zorunlu tuttuğu bölümler, kaynakça sistemi ve
             sayfa aralığı burada tutulur. Belge yükleme sırasında bu
@@ -83,7 +84,7 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
       </section>
 
       {errorMessage ? (
-        <p className="login-error" role="alert" style={{ marginBottom: 16 }}>
+        <p className="alert" role="alert">
           {errorMessage}
         </p>
       ) : null}
@@ -91,7 +92,7 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
       {canManage ? <GuidelineScanner /> : null}
 
       {canManage ? (
-        <section className="project-form-card" style={{ marginBottom: 24 }}>
+        <section className="project-form-card mb-lg">
           <div className="project-form-heading">
             <h2>Yeni Kılavuz Ekle</h2>
             <p>Yalnızca Akademik Yönetici ve üzeri roller kılavuz ekleyebilir/güncelleyebilir.</p>
@@ -164,9 +165,9 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
               <textarea name="notes" rows={3} placeholder="Ek biçimsel notlar" />
             </label>
 
-            <div className="project-form-actions" style={{ gridColumn: "1 / -1" }}>
+            <div className="project-form-actions">
               <button type="submit" className="projects-primary-button">
-                <Plus size={16} />
+                <Plus size={16} aria-hidden="true" />
                 Kılavuzu kaydet
               </button>
             </div>
@@ -175,11 +176,9 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
       ) : null}
 
       {guidelines.length === 0 ? (
-        <section className="project-form-card" style={{ textAlign: "center", padding: "48px 24px" }}>
-          <BookMarked size={28} style={{ marginBottom: 12, opacity: 0.5 }} />
-          <p style={{ margin: 0, color: "var(--muted-foreground)" }}>
-            Henüz kayıtlı bir üniversite kılavuzu yok.
-          </p>
+        <section className="empty-state">
+          <BookMarked size={28} aria-hidden="true" />
+          <p>Henüz kayıtlı bir üniversite kılavuzu yok.</p>
         </section>
       ) : (
         <section className="projects-list" aria-label="Kılavuz listesi">
@@ -187,10 +186,12 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
             <article className="project-card" key={g.id}>
               <div className="project-card-main">
                 <div>
-                  <span className="project-status">{CITATION_LABELS[g.citation_style] ?? g.citation_style}</span>
-                  <span className="project-status" style={{ marginLeft: 8 }}>
-                    {g.analysis_status === "approved" ? "Onaylı" : g.analysis_status === "needs_review" ? "İnceleme gerekli" : g.analysis_status}
-                  </span>
+                  <div className="pill-row">
+                    <span className="status-pill">{CITATION_LABELS[g.citation_style] ?? g.citation_style}</span>
+                    <span className="status-pill" data-tone={statusTone(g.analysis_status)}>
+                      {g.analysis_status === "approved" ? "Onaylı" : g.analysis_status === "needs_review" ? "İnceleme gerekli" : g.analysis_status}
+                    </span>
+                  </div>
                   <h2>
                     {g.university_name}
                     {g.institute_name ? ` — ${g.institute_name}` : ""}
@@ -211,8 +212,8 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
                   </span>
                 ) : null}
                 {g.source_url ? (
-                  <a href={g.source_url} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                    <ExternalLink size={14} />
+                  <a href={g.source_url} target="_blank" rel="noreferrer">
+                    <ExternalLink size={14} aria-hidden="true" />
                     Resmî kaynak
                   </a>
                 ) : null}
@@ -304,7 +305,7 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
                       <span>Notlar</span>
                       <textarea name="notes" rows={2} defaultValue={g.notes ?? ""} />
                     </label>
-                    <p className="guideline-review-full" style={{ margin: 0, fontSize: 12, color: "var(--muted-foreground)" }}>
+                    <p className="guideline-review-full hint">
                       Üniversite ya da enstitü değişirse kılavuz yeniden onaya düşer.
                     </p>
                     <button type="submit" className="projects-filter-button">Bilgileri kaydet</button>
@@ -313,7 +314,7 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
               ) : null}
 
               {canManage ? (
-                <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div className="cluster cluster-spaced">
                   {g.analysis_status !== "approved" ? (
                     <ActionForm action={handleApprove.bind(null, g.id)}>
                       <button type="submit" className="projects-primary-button">Onayla ve uygula</button>
@@ -324,7 +325,7 @@ export default async function GuidelinesPage({ searchParams }: GuidelinesPagePro
                     confirmMessage={`${g.university_name} kılavuzunu silmek istediğinize emin misiniz?`}
                   >
                     <button type="submit" className="projects-filter-button">
-                      <Trash2 size={14} />
+                      <Trash2 size={14} aria-hidden="true" />
                       Sil
                     </button>
                   </ActionForm>

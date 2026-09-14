@@ -54,7 +54,7 @@ export default function CitationCheckForm({ projects }: { projects: Project[] })
   }
 
   return (
-    <section className="project-form-card" style={{ marginTop: 20 }}>
+    <section className="project-form-card mt-md">
       <div className="project-form-heading">
         <h2>Kaynakça ve Atıf Kontrolü</h2>
         <p>Bir çalışma seçin veya geçici bir başlık girin, ardından kaynakça listenizi yapıştırın.</p>
@@ -118,64 +118,67 @@ export default function CitationCheckForm({ projects }: { projects: Project[] })
       </div>
 
       {error && (
-        <p className="login-error" role="alert" style={{ marginTop: 12 }}>
+        <p className="alert mt-sm" data-tone="danger" role="alert">
           {error}
         </p>
       )}
 
       {result && (
-        <div style={{ marginTop: 24, borderTop: "1px solid var(--border)", paddingTop: 20 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
+        <div className="results-divider">
+          <div className="result-heading-lg">
             Uyum Skoru: {result.complianceScore}/100
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+          <div className="result-block">
+            <h3 className="result-heading">
               Kaynak Bazlı Sorunlar
             </h3>
-            {result.references.map((r, i) => (
-              <div key={i} style={{ fontSize: 13, marginBottom: 8 }}>
-                <div style={{ color: "var(--muted-foreground)" }}>{r.raw}</div>
-                {r.issues.length === 0 ? (
-                  <div style={{ color: "#16a34a" }}>Sorun bulunamadı.</div>
-                ) : (
-                  r.issues.map((issue, j) => (
-                    <div
-                      key={j}
-                      style={{ color: issue.severity === "error" ? "#dc2626" : "#d97706" }}
-                    >
-                      [{issue.severity}] {issue.message}
-                    </div>
-                  ))
-                )}
-              </div>
-            ))}
+            <div className="stack-sm text-base">
+              {result.references.map((r, i) => (
+                <div key={i}>
+                  <div className="muted">{r.raw}</div>
+                  {r.issues.length === 0 ? (
+                    <div className="tone-text" data-tone="success">Sorun bulunamadı.</div>
+                  ) : (
+                    r.issues.map((issue, j) => (
+                      <div
+                        key={j}
+                        className="tone-text"
+                        data-tone={issue.severity === "error" ? "danger" : "warning"}
+                      >
+                        [{issue.severity}] {issue.message}
+                      </div>
+                    ))
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+          <div className="result-block">
+            <h3 className="result-heading">
               Kaynakçada olup metinde atıfı bulunmayanlar
             </h3>
-            <ul style={{ fontSize: 13, paddingLeft: 18 }}>
+            <ul className="result-list">
               {result.crossCheck.referencesWithoutCitation.map((r, i) => (
                 <li key={i}>{r.raw}</li>
               ))}
               {result.crossCheck.referencesWithoutCitation.length === 0 && (
-                <li style={{ listStyle: "none", marginLeft: -18, color: "#16a34a" }}>Yok</li>
+                <li className="result-ok">Yok</li>
               )}
             </ul>
           </div>
 
           <div>
-            <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+            <h3 className="result-heading">
               Metinde atıfı olup kaynakçada bulunmayanlar
             </h3>
-            <ul style={{ fontSize: 13, paddingLeft: 18 }}>
+            <ul className="result-list">
               {result.crossCheck.citationsWithoutReference.map((c, i) => (
                 <li key={i}>{c.raw}</li>
               ))}
               {result.crossCheck.citationsWithoutReference.length === 0 && (
-                <li style={{ listStyle: "none", marginLeft: -18, color: "#16a34a" }}>Yok</li>
+                <li className="result-ok">Yok</li>
               )}
             </ul>
           </div>

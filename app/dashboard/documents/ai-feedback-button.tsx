@@ -37,43 +37,23 @@ export default function AiFeedbackButton({ documentId, initialFeedback }: AiFeed
     : [];
 
   return (
-    <div style={{ marginTop: 10 }}>
+    <div className="mt-sm">
       <button type="button" className="projects-filter-button" onClick={handleClick} disabled={loading}>
-        <Sparkles size={14} />
+        <Sparkles size={14} aria-hidden="true" />
         {loading ? "AI geri bildirimi hazırlanıyor..." : feedback ? "Yeniden geri bildirim al" : "AI Geri Bildirimi Al (ChatGPT)"}
       </button>
 
       {error && (
-        <p style={{ color: "var(--danger)", fontSize: 12, marginTop: 6 }}>{error}</p>
+        <p className="alert mt-sm" data-tone="danger" role="alert">{error}</p>
       )}
 
       {feedback && (
-        <div
-          style={{
-            marginTop: 10,
-            padding: "12px 14px",
-            background: "#fffbeb",
-            border: "1px dashed #d97706",
-            borderRadius: 10,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#92400e",
-              marginBottom: 8,
-              textTransform: "uppercase",
-              letterSpacing: ".03em",
-            }}
-          >
-            <AlertTriangle size={13} />
+        <div className="callout" data-tone="warning">
+          <strong className="dashboard-kicker cluster">
+            <AlertTriangle size={13} aria-hidden="true" />
             AI geri bildirimi — öğreticidir, tezinize/makalenize doğrudan kopyalamayın
-          </div>
-          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: "#78350f", lineHeight: 1.6 }}>
+          </strong>
+          <ul className="callout-body result-list">
             {bullets.map((b, i) => (
               <li key={i}>{b.replace(/^[-•]\s*/, "")}</li>
             ))}

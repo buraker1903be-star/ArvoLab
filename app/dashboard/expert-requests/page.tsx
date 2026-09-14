@@ -12,6 +12,7 @@ import { getMyProjects } from "@/app/actions/citation-check";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { isExpertEligible, requestTypeLabel } from "@/lib/project-labels";
 import ActionForm from "../action-form";
+import { statusTone } from "@/lib/status-tone";
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Açık",
@@ -61,7 +62,7 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Danışmanlık</span>
-          <h1 className="brand-type">Uzmandan Destek İste</h1>
+          <h1>Uzmandan Destek İste</h1>
           <p>
             Çalışmanızı kendiniz yürütebilir ya da ihtiyaç duyduğunuzda
             kurum uzmanlarından profesyonel danışmanlık talep edebilirsiniz.
@@ -70,12 +71,12 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
       </section>
 
       {errorMessage ? (
-        <p className="login-error" role="alert" style={{ marginBottom: 16 }}>
+        <p className="alert" role="alert">
           {errorMessage}
         </p>
       ) : null}
 
-      <section className="project-form-card" style={{ marginBottom: 24 }}>
+      <section className="project-form-card mb-lg">
         <div className="project-form-heading">
           <h2>Yeni Talep Oluştur</h2>
           <p>Hangi konuda desteğe ihtiyacınız var, kısaca belirtin.</p>
@@ -118,9 +119,9 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
             <textarea name="message" rows={4} placeholder="İhtiyacınızı kısaca açıklayın" />
           </label>
 
-          <div className="project-form-actions" style={{ gridColumn: "1 / -1" }}>
+          <div className="project-form-actions">
             <button type="submit" className="projects-primary-button">
-              <Plus size={16} />
+              <Plus size={16} aria-hidden="true" />
               Talebi gönder
             </button>
           </div>
@@ -128,9 +129,9 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
       </section>
 
       {canActAsExpert && openRequests.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 15, marginBottom: 12 }}>
-            <HandHelping size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+        <section className="section">
+          <h2 className="section-title">
+            <HandHelping size={16} aria-hidden="true" />
             Açık Talepler
           </h2>
           <div className="projects-list">
@@ -138,14 +139,14 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
               <article className="project-card" key={r.id}>
                 <div className="project-card-main">
                   <div>
-                    <span className="project-status">{requestTypeLabel(r.request_type)}</span>
+                    <span className="status-pill">{requestTypeLabel(r.request_type)}</span>
                     <h2>{r.project_title || "Bağımsız talep"}</h2>
                     <p>{r.message || "Ek mesaj yok"}</p>
                   </div>
                 </div>
-                <ActionForm action={handleAccept.bind(null, r.id)} style={{ marginTop: 10 }}>
+                <ActionForm action={handleAccept.bind(null, r.id)} className="mt-sm">
                   <button type="submit" className="projects-primary-button">
-                    <CheckCircle2 size={15} />
+                    <CheckCircle2 size={15} aria-hidden="true" />
                     Talebi üstlen
                   </button>
                 </ActionForm>
@@ -156,22 +157,24 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
       )}
 
       {canActAsExpert && assignedToMe.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 15, marginBottom: 12 }}>Bana Atananlar</h2>
+        <section className="section">
+          <h2 className="section-title">Bana Atananlar</h2>
           <div className="projects-list">
             {assignedToMe.map((r) => (
               <article className="project-card" key={r.id}>
                 <div className="project-card-main">
                   <div>
-                    <span className="project-status">{STATUS_LABELS[r.status]}</span>
+                    <span className="status-pill" data-tone={statusTone(r.status)}>
+                      {STATUS_LABELS[r.status]}
+                    </span>
                     <h2>{r.project_title || "Bağımsız talep"}</h2>
                     <p>{requestTypeLabel(r.request_type)} · {r.message || "Ek mesaj yok"}</p>
                   </div>
                 </div>
                 {r.status === "accepted" ? (
-                  <ActionForm action={handleComplete.bind(null, r.id)} style={{ marginTop: 10 }}>
+                  <ActionForm action={handleComplete.bind(null, r.id)} className="mt-sm">
                     <button type="submit" className="projects-primary-button">
-                      <CheckCircle2 size={15} />
+                      <CheckCircle2 size={15} aria-hidden="true" />
                       Tamamlandı olarak işaretle
                     </button>
                   </ActionForm>
@@ -182,19 +185,19 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
         </section>
       )}
 
-      <section>
-        <h2 style={{ fontSize: 15, marginBottom: 12 }}>Taleplerim</h2>
+      <section className="section">
+        <h2 className="section-title">Taleplerim</h2>
         {myRequests.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
-            Henüz bir destek talebiniz yok.
-          </p>
+          <p className="muted text-base">Henüz bir destek talebiniz yok.</p>
         ) : (
           <div className="projects-list">
             {myRequests.map((r) => (
               <article className="project-card" key={r.id}>
                 <div className="project-card-main">
                   <div>
-                    <span className="project-status">{STATUS_LABELS[r.status]}</span>
+                    <span className="status-pill" data-tone={statusTone(r.status)}>
+                      {STATUS_LABELS[r.status]}
+                    </span>
                     <h2>{r.project_title || "Bağımsız talep"}</h2>
                     <p>{requestTypeLabel(r.request_type)} · {r.message || "Ek mesaj yok"}</p>
                   </div>
@@ -202,11 +205,11 @@ export default async function ExpertRequestsPage({ searchParams }: ExpertRequest
                 {r.status === "open" ? (
                   <ActionForm
                     action={handleCancel.bind(null, r.id)}
-                    style={{ marginTop: 10 }}
+                    className="mt-sm"
                     confirmMessage="Bu destek talebini iptal etmek istediğinize emin misiniz?"
                   >
                     <button type="submit" className="projects-filter-button">
-                      <XCircle size={14} />
+                      <XCircle size={14} aria-hidden="true" />
                       İptal et
                     </button>
                   </ActionForm>

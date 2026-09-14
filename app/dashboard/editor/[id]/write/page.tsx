@@ -56,7 +56,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Panelde yazma</span>
-          <h1 className="brand-type">{project?.title ?? "Çalışma"}</h1>
+          <h1>{project?.title ?? "Çalışma"}</h1>
           <p>
             Çalışmanızı burada kendiniz yazın. ArvoLab içerik üretmez;
             yalnızca &quot;Kontrol Et&quot; butonuna bastığınızda kılavuz

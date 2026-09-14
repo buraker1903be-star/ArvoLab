@@ -32,15 +32,15 @@ export default async function SettingsPage() {
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Hesap</span>
-          <h1 className="brand-type">Ayarlar</h1>
+          <h1>Ayarlar</h1>
           <p>Profil bilgilerinizi ve şifrenizi buradan yönetin. Rol ve kurum değişiklikleri Sistem Yöneticisi tarafından yapılır.</p>
         </div>
       </section>
 
-      <section className="project-form-card" style={{ marginBottom: 24 }}>
+      <section className="project-form-card mb-lg">
         <div className="project-form-heading">
           <h2>
-            <UserRound size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+            <UserRound size={16} aria-hidden="true" />
             Profil
           </h2>
           <p>Ad soyadınız kapak sayfası ve ekip listesinde kullanılır.</p>
@@ -66,9 +66,9 @@ export default async function SettingsPage() {
             <span>Ad soyad</span>
             <input name="fullName" type="text" defaultValue={profile?.full_name ?? ""} minLength={2} maxLength={120} required />
           </label>
-          <div className="project-form-actions" style={{ alignSelf: "end" }}>
+          <div className="project-form-actions">
             <button type="submit" className="projects-primary-button">
-              <Save size={16} />
+              <Save size={16} aria-hidden="true" />
               Kaydet
             </button>
           </div>
@@ -78,7 +78,7 @@ export default async function SettingsPage() {
       <section className="project-form-card">
         <div className="project-form-heading">
           <h2>
-            <KeyRound size={16} style={{ display: "inline", marginRight: 6, verticalAlign: -2 }} />
+            <KeyRound size={16} aria-hidden="true" />
             Şifre değiştir
           </h2>
           <p>En az 8 karakter. Şifrenizi değiştirdikten sonra diğer cihazlardaki oturumlarınız açık kalabilir.</p>
