@@ -28,9 +28,12 @@ export interface ParsedReference {
 
 export interface InTextCitation {
   raw: string;
+  /** İlk yazarın soyadı ya da kurum adı (Türkçe küçük harf) */
   authorKey: string;
   year: string | null;
   position: number;
+  /** "(Yılmaz, 2020)" parantez içi; "Yılmaz (2020)" anlatı biçimi */
+  kind: "parenthetical" | "narrative";
 }
 
 export interface CrossCheckResult {
@@ -40,7 +43,8 @@ export interface CrossCheckResult {
 
 // --- Kaynakça girdisi ayrıştırma -------------------------------------------
 
-const YEAR_RE = /\((\d{4}[a-z]?|n\.d\.)\)/;
+// Tarihsiz kaynak: APA'da "n.d.", Türkçe kaynaklarda "t.y."
+const YEAR_RE = /\((\d{4}[a-z]?|n\.d\.|t\.y\.)\)/;
 
 export function parseReferenceEntry(raw: string): ParsedReference {
   const issues: ReferenceIssue[] = [];
@@ -124,68 +128,100 @@ export function parseReferenceList(rawList: string): ParsedReference[] {
 }
 
 // --- Metin içi atıf tespiti -------------------------------------------------
+//
+// Parantez içi: "(Yılmaz, 2020)", "(Yılmaz, 2020; Demir & Kaya, 2019)", "(Yılmaz, 2020, s. 15)",
+//   "(Yılmaz, 2020: 15)", "(bkz. Yılmaz, 2019, 2020a)", "(Türkiye İstatistik Kurumu, 2021)"
+// Anlatı: "Yılmaz (2020)", "Demir ve Kaya (2019)", "Arslan vd. (2018)", "Kurum Adı (2021, s. 3)"
 
-// (Yazar, 2020) veya (Yazar & Yazar2, 2020) veya Yazar (2020) formatlarını yakalar
-// Tarihsiz kaynak: "n.d." ya da Türkçe "t.y."
-const INTEXT_PAREN_RE = /\(([\p{L}şığüöçİĞÜŞÖÇ.,&\s]+?),\s*(\d{4}[a-z]?|n\.d\.|t\.y\.)\)/gu;
-const INTEXT_NARRATIVE_RE = /([A-ZÇĞİÖŞÜ][\p{L}]+(?:\s*(?:&|ve)\s*[A-ZÇĞİÖŞÜ][\p{L}]+)?)\s*\((\d{4}[a-z]?|n\.d\.|t\.y\.)\)/gu;
+const YEAR = "(?:\\d{4}[a-z]?|n\\.d\\.|t\\.y\\.)";
+const YEARS = `${YEAR}(?:\\s*,\\s*${YEAR})*`;
+const PAGE = "(?:\\s*(?:,\\s*(?:s|ss|sf|p|pp)\\.?|:)\\s*[\\d–-]+)?";
+const NAME = "\\p{Lu}[\\p{L}'’-]+";
+const ET_AL = "(?:vd\\.|ve\\s+ark\\.|ve\\s+diğerleri|et\\s+al\\.)";
+
+const PAREN_GROUP_RE = /\(([^()]{3,300}?)\)/g;
+const CITATION_PART_RE = new RegExp(
+  `^(?:(?:bkz\\.|bk\\.|örn\\.|örneğin|ayrıca|see|e\\.g\\.,?|cf\\.)\\s+)?(\\p{Lu}.*?),\\s*(${YEARS})${PAGE}$`,
+  "iu"
+);
+const NARRATIVE_RE = new RegExp(
+  `(${NAME}(?:\\s+${NAME}){0,4}?(?:\\s+(?:ve|&|and)\\s+${NAME}|\\s+${ET_AL})?)\\s*\\((${YEARS})${PAGE}\\)`,
+  "gu"
+);
+
+const normalizeName = (value: string) =>
+  value.toLocaleLowerCase("tr-TR").replace(/[.,;:]+$/, "").replace(/\s+/g, " ").trim();
+const normalizeYear = (year: string | null) => (year ? year.toLowerCase().replace("n.d.", "t.y.") : null);
+
+/** "Demir & Kaya" → "demir", "Arslan vd." → "arslan", "Türkiye İstatistik Kurumu" → aynen */
+function authorKey(author: string): string {
+  const first = author
+    .replace(new RegExp(`\\s+${ET_AL}\\s*$`, "iu"), "")
+    .split(/\s+(?:ve|and)\s+|\s*&\s*/u)[0];
+  return normalizeName(first);
+}
 
 export function extractInTextCitations(bodyText: string): InTextCitation[] {
   const results: InTextCitation[] = [];
-  let match: RegExpExecArray | null;
 
-  const paren = new RegExp(INTEXT_PAREN_RE);
-  while ((match = paren.exec(bodyText)) !== null) {
-    results.push({
-      raw: match[0],
-      authorKey: normalizeAuthorKey(match[1]),
-      year: match[2],
-      position: match.index,
-    });
+  for (const group of bodyText.matchAll(PAREN_GROUP_RE)) {
+    for (const part of group[1].split(";")) {
+      const match = CITATION_PART_RE.exec(part.trim());
+      if (!match) continue;
+      const key = authorKey(match[1]);
+      if (!key) continue;
+      for (const year of match[2].split(",")) {
+        results.push({ raw: group[0], authorKey: key, year: year.trim(), position: group.index ?? 0, kind: "parenthetical" });
+      }
+    }
   }
 
-  const narrative = new RegExp(INTEXT_NARRATIVE_RE);
-  while ((match = narrative.exec(bodyText)) !== null) {
-    results.push({
-      raw: match[0],
-      authorKey: normalizeAuthorKey(match[1]),
-      year: match[2],
-      position: match.index,
-    });
+  for (const match of bodyText.matchAll(NARRATIVE_RE)) {
+    const key = authorKey(match[1]);
+    if (!key) continue;
+    for (const year of match[2].split(",")) {
+      results.push({ raw: match[0], authorKey: key, year: year.trim(), position: match.index ?? 0, kind: "narrative" });
+    }
   }
 
   return results;
 }
 
-function normalizeAuthorKey(s: string): string {
-  return s
-    .replace(/\bve\b|&/gi, "")
-    .split(",")[0]
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)[0]; // ilk soyadı anahtar olarak al
-}
-
 // --- Çapraz kontrol: metin içi atıf <-> kaynakça listesi -------------------
+
+const referenceKey = (reference: ParsedReference) =>
+  reference.authors?.[0] ? normalizeName(reference.authors[0].split(",")[0]) : "";
+
+// Anlatı atfının önünde cümle başı kelimesi olabilir ("Ayrıca Yılmaz (2020)"); kurum adında
+// "ve" geçebilir ("Milli Eğitim ve Kültür Bakanlığı"): kelime sınırında önek/sonek de eşleşir.
+const keysMatch = (citation: string, reference: string) =>
+  citation === reference ||
+  citation.startsWith(`${reference} `) ||
+  reference.startsWith(`${citation} `) ||
+  citation.endsWith(` ${reference}`);
 
 export function crossCheck(
   citations: InTextCitation[],
   references: ParsedReference[]
 ): CrossCheckResult {
-  const refKeys = references.map((r) => ({
-    ref: r,
-    key: r.authors && r.authors[0] ? r.authors[0].split(",")[0].trim().toLowerCase() : "",
-    year: r.year,
-  }));
+  const refKeys = references.map((ref) => ({ ref, key: referenceKey(ref), year: normalizeYear(ref.year) }));
+  const cites = (citation: InTextCitation, rk: (typeof refKeys)[number]) =>
+    Boolean(rk.key) && rk.year === normalizeYear(citation.year) && keysMatch(citation.authorKey, rk.key);
 
-  const citationsWithoutReference = citations.filter(
-    (c) => !refKeys.some((rk) => rk.key === c.authorKey && rk.year === c.year)
-  );
-
-  const referencesWithoutCitation = references.filter((r) => {
-    const key = r.authors && r.authors[0] ? r.authors[0].split(",")[0].trim().toLowerCase() : "";
-    return !citations.some((c) => c.authorKey === key && c.year === r.year);
+  // Karşılıksız atıf yalnızca parantez içi atıflarda raporlanır: "Türkiye (2020)" gibi
+  // anlatı biçimine benzeyen her ifade atıf değildir (yanlış alarm olmasın).
+  const seen = new Set<string>();
+  const citationsWithoutReference = citations.filter((citation) => {
+    if (citation.kind !== "parenthetical" || refKeys.some((rk) => cites(citation, rk))) return false;
+    const id = `${citation.authorKey}|${normalizeYear(citation.year)}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
   });
+
+  const referencesWithoutCitation = refKeys
+    .filter((rk) => !citations.some((citation) => cites(citation, rk)))
+    .map((rk) => rk.ref);
 
   return { citationsWithoutReference, referencesWithoutCitation };
 }

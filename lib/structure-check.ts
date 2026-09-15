@@ -9,6 +9,7 @@
 
 import { headingMatchesSection } from "@/lib/section-match";
 import type { AbstractRules } from "@/lib/guideline-editor-settings";
+import { crossCheck, extractInTextCitations, parseReferenceEntry } from "@/lib/apa7";
 
 interface DocNode {
   type?: string;
@@ -29,6 +30,8 @@ export interface StructureIssue {
 }
 
 const MAX_ISSUES = 60;
+/** Atıf–kaynakça uyuşmazlıklarından her türde en fazla bu kadarı tek tek listelenir */
+const CITATION_ISSUE_LIMIT = 10;
 const REFERENCE_SECTIONS = ["Kaynakça", "Kaynaklar", "References", "Bibliography", "Bibliyografya"];
 const CAPTION_LABEL = { figure: "Şekil", table: "Tablo" } as const;
 const ABSTRACT_SECTIONS = ["Özet", "Öz", "Abstract"];
@@ -187,6 +190,27 @@ export function checkStructure(
         message: "Kaynakça yazar soyadına göre alfabetik sırada değil.",
         action: "sort-references",
       });
+    }
+  }
+
+  // ---------- APA 7: metin içi atıf ↔ kaynakça (yazar-tarih; lib/apa7.ts ile aynı eşleştirme) ----------
+  if (style === "apa7" && referenceEntries.length > 0) {
+    // Yazarı ve yılı ayrıştırılamayan girdiler eşleştirilmez (biçim hatası "Kontrol Et"te raporlanır)
+    const references = referenceEntries.map(parseReferenceEntry).filter((reference) => reference.year && reference.authors?.length);
+    if (references.length > 0) {
+      const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(extractInTextCitations(body), references);
+      citationsWithoutReference.slice(0, CITATION_ISSUE_LIMIT).forEach((citation) =>
+        add({ tone: "danger", message: `Metindeki ${quote(citation.raw)} atfının kaynakçada karşılığı yok.`, target: citation.raw })
+      );
+      if (citationsWithoutReference.length > CITATION_ISSUE_LIMIT) {
+        add({ tone: "danger", message: `…ve kaynakçada karşılığı olmayan ${citationsWithoutReference.length - CITATION_ISSUE_LIMIT} atıf daha.` });
+      }
+      referencesWithoutCitation.slice(0, CITATION_ISSUE_LIMIT).forEach((reference) =>
+        add({ tone: "warning", message: `Kaynakçadaki ${quote(reference.raw)} metinde anılmıyor.`, target: reference.raw.slice(0, 40) })
+      );
+      if (referencesWithoutCitation.length > CITATION_ISSUE_LIMIT) {
+        add({ tone: "warning", message: `…ve metinde anılmayan ${referencesWithoutCitation.length - CITATION_ISSUE_LIMIT} kaynak daha.` });
+      }
     }
   }
 
