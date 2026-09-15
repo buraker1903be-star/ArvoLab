@@ -51,6 +51,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ClipboardCheck,
+  Share2,
 } from "lucide-react";
 import FindReplaceBar from "./find-replace-bar";
 import ImportDialog, { type ImportMode } from "./import-dialog";
@@ -60,6 +61,7 @@ import type { FormatLossReport } from "@/lib/format-loss";
 import { checkStructure, type StructureIssue } from "@/lib/structure-check";
 import VersionsDialog from "./versions-dialog";
 import SubmissionChecklistDialog from "./submission-checklist";
+import ShareDialog from "./share-dialog";
 import { buildSubmissionChecklist, type ChecklistAction } from "@/lib/submission-checklist";
 import CiteDialog from "./cite-dialog";
 import ManuscriptComments from "./manuscript-comments";
@@ -318,6 +320,7 @@ export default function ManuscriptEditor({
   const [liveIssues, setLiveIssues] = useState<StructureIssue[] | null>(null);
   const [issuesOpen, setIssuesOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [footnoteDialog, setFootnoteDialog] = useState<FootnoteDialogState>(null);
   const [settingsSource, setSettingsSource] = useState<SettingsSource>(guidelineSync.source);
@@ -636,6 +639,7 @@ export default function ManuscriptEditor({
 
   const closeIssues = useCallback(() => setIssuesOpen(false), []);
   const closeChecklist = useCallback(() => setChecklistOpen(false), []);
+  const closeShare = useCallback(() => setShareOpen(false), []);
 
   // Kılavuzun yeni sürümü kendiliğinden uygulandıysa kalıcı olsun (bir kez).
   const autoAppliedRef = useRef(false);
@@ -1276,6 +1280,9 @@ export default function ManuscriptEditor({
         <ToolbarButton label="Kapak sayfası" active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
           <FileBadge size={16} />
         </ToolbarButton>
+        <ToolbarButton label="Danışmana paylaş (salt okunur bağlantı)" onClick={() => setShareOpen(true)}>
+          <Share2 size={16} />
+        </ToolbarButton>
         <ToolbarButton label="Sürüm geçmişi" onClick={() => setVersionsOpen(true)}>
           <History size={16} />
         </ToolbarButton>
@@ -1616,6 +1623,8 @@ export default function ManuscriptEditor({
       </div>
 
     </div>{/* .manuscript-editor-shell */}
+
+      <ShareDialog open={shareOpen} onClose={closeShare} projectId={projectId} />
 
       <SubmissionChecklistDialog open={checklistOpen} onClose={closeChecklist} checklist={checklist} onAction={handleChecklistAction} />
 
