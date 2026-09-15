@@ -20,7 +20,7 @@ interface ImportDialogProps {
   documentEmpty: boolean;
   /** Ekrandaki metni kaydeder (değiştirmeden önce sürüm almak için) */
   flush: () => Promise<boolean>;
-  onImported: (html: string, mode: ImportMode) => void;
+  onImported: (html: string, mode: ImportMode, stats?: DocxImportStats) => void;
 }
 
 function summary(stats: DocxImportStats) {
@@ -30,6 +30,7 @@ function summary(stats: DocxImportStats) {
     stats.images ? `${stats.images} resim` : null,
     stats.footnotes ? `${stats.footnotes} dipnot` : null,
     stats.captions ? `${stats.captions} şekil/tablo başlığı` : null,
+    stats.tocLines ? `eski içindekiler listesi (${stats.tocLines} satır) kaldırıldı` : null,
   ].filter(Boolean);
   return parts.length ? parts.join(", ") : "metin";
 }
@@ -93,7 +94,7 @@ export default function ImportDialog({ open, onClose, projectId, documentEmpty, 
         showToast("error", result.error ?? "Word dosyası dönüştürülemedi.");
         return;
       }
-      onImported(result.html, effectiveMode);
+      onImported(result.html, effectiveMode, result.stats);
       showToast("success", `Word dosyası aktarıldı: ${summary(result.stats!)}${result.stats?.skippedImages ? ` (${result.stats.skippedImages} resim aktarılamadı)` : ""}.`);
       onClose();
     } catch {
@@ -113,7 +114,7 @@ export default function ImportDialog({ open, onClose, projectId, documentEmpty, 
       }}
       kicker="Word'den aktar"
       title="Word dosyasını editöre al"
-      description="Başlıklar, listeler, tablolar, dipnotlar, resimler ve şekil/tablo başlıkları korunur. Yazı tipi ve boşluklar kılavuzunuza göre uygulanır."
+      description="Başlıklar, listeler, tablolar, dipnotlar, resimler ve şekil/tablo başlıkları korunur. Yazı tipi ve boşluklar kılavuzunuza göre uygulanır. Eski içindekiler, tablolar ve şekiller listesi kaldırılır; güncelleri Word çıktısında kendiliğinden oluşur."
     >
       <div className="stack">
         {!documentEmpty ? (
