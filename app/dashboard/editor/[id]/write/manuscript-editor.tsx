@@ -50,6 +50,7 @@ import {
   Keyboard,
   CheckCircle2,
   AlertTriangle,
+  ClipboardCheck,
 } from "lucide-react";
 import FindReplaceBar from "./find-replace-bar";
 import ImportDialog, { type ImportMode } from "./import-dialog";
@@ -58,6 +59,8 @@ import ShortcutsDialog from "./shortcuts-dialog";
 import type { FormatLossReport } from "@/lib/format-loss";
 import { checkStructure, type StructureIssue } from "@/lib/structure-check";
 import VersionsDialog from "./versions-dialog";
+import SubmissionChecklistDialog from "./submission-checklist";
+import { buildSubmissionChecklist, type ChecklistAction } from "@/lib/submission-checklist";
 import CiteDialog from "./cite-dialog";
 import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
@@ -242,6 +245,16 @@ type DocStats = ReturnType<typeof computeDocStats>;
 /** Yazma durduktan sonra canlı yapı denetimi (190 sayfalık tezde ~7 ms) */
 const LIVE_CHECK_DELAY_MS = 2500;
 
+/** Teslim kontrolünde kapakta dolu olması beklenen alanlar */
+const COVER_REQUIRED: [keyof CoverPage, string][] = [
+  ["university", "Üniversite"],
+  ["title", "Tez başlığı"],
+  ["authorName", "Yazar"],
+  ["advisorName", "Danışman"],
+  ["city", "Şehir"],
+  ["year", "Yıl"],
+];
+
 // Araç çubuğu yalnızca bu (seçime bağlı, ucuz) değerler değişince yeniden çizilir
 // (önceden her tuş vuruşunda tüm editör bileşeni yeniden çiziliyordu).
 function selectToolbarState({ editor }: { editor: Editor | null }) {
@@ -297,6 +310,7 @@ export default function ManuscriptEditor({
   const [structureIssues, setStructureIssues] = useState<StructureIssue[] | null>(null);
   const [liveIssues, setLiveIssues] = useState<StructureIssue[] | null>(null);
   const [issuesOpen, setIssuesOpen] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [footnoteDialog, setFootnoteDialog] = useState<FootnoteDialogState>(null);
   const [settingsSource, setSettingsSource] = useState<SettingsSource>(guidelineSync.source);
@@ -614,6 +628,7 @@ export default function ManuscriptEditor({
   }, [editor, citationStyle, guideline]);
 
   const closeIssues = useCallback(() => setIssuesOpen(false), []);
+  const closeChecklist = useCallback(() => setChecklistOpen(false), []);
 
   // Kılavuzun yeni sürümü kendiliğinden uygulandıysa kalıcı olsun (bir kez).
   const autoAppliedRef = useRef(false);
@@ -872,6 +887,62 @@ export default function ManuscriptEditor({
     margins,
   });
   const pageTone = pageRangeTone(pages, guideline?.minPages ?? null, guideline?.maxPages ?? null);
+
+  // Teslim kontrolü: editördeki denetimlerin tek listede özeti (lib/submission-checklist.ts)
+  const missingSections = sections.filter((item) => !item.heading).map((item) => item.section);
+  const checklist = buildSubmissionChecklist({
+    isThesis,
+    hasGuideline: Boolean(guideline),
+    sections: { total: sections.length, missing: missingSections },
+    pages,
+    minPages: guideline?.minPages ?? null,
+    maxPages: guideline?.maxPages ?? null,
+    issues: liveIssues
+      ? {
+          danger: liveIssues.filter((issue) => issue.tone === "danger").length,
+          warning: liveIssues.filter((issue) => issue.tone === "warning").length,
+        }
+      : null,
+    cover: {
+      enabled: coverPageEnabled,
+      missingFields: COVER_REQUIRED.filter(([key]) => !String(coverPage[key] ?? "").trim()).map(([, label]) => label),
+    },
+    includeToc,
+    headingNumbering: { enabled: headingNumbering, guidelineRule: guideline?.settings.headingNumbering, manualNumbered },
+    saveState,
+  });
+  const handleChecklistAction = (action: ChecklistAction) => {
+    switch (action) {
+      case "link-guideline":
+        window.open(editHref, "_self");
+        break;
+      case "insert-sections":
+        if (missingSections.length) handleInsertSections(missingSections);
+        break;
+      case "open-issues":
+        setChecklistOpen(false);
+        setIssuesOpen(true);
+        break;
+      case "open-cover":
+        setChecklistOpen(false);
+        setCoverPageEnabled(true);
+        setShowCoverPageEditor(true);
+        break;
+      case "enable-toc":
+        setIncludeToc(true);
+        showToast("success", "Word çıktısına içindekiler tablosu eklenecek.");
+        break;
+      case "apply-numbering":
+        if (guideline?.settings.headingNumbering !== undefined) setHeadingNumbering(guideline.settings.headingNumbering);
+        break;
+      case "strip-manual-numbers":
+        editor.chain().focus().stripManualHeadingNumbers().run();
+        break;
+      case "save":
+        void saveNow();
+        break;
+    }
+  };
 
   const handleJump = (heading: OutlineHeading) => jumpToHeading(editor, heading);
 
@@ -1487,6 +1558,15 @@ export default function ManuscriptEditor({
         </div>
 
         <div className="cluster cluster-lg">
+          <button
+            type="button"
+            className="projects-filter-button"
+            onClick={() => setChecklistOpen(true)}
+            title="Teslimden önce bakılacaklar"
+          >
+            <ClipboardCheck size={15} aria-hidden="true" />
+            Teslim kontrolü {checklist.done}/{checklist.total}
+          </button>
           <button type="button" className="projects-primary-button" onClick={handleCheck} disabled={checking}>
             <ShieldCheck size={15} />
             {checking ? "Kontrol ediliyor..." : "Kontrol Et"}
@@ -1503,6 +1583,8 @@ export default function ManuscriptEditor({
       </div>
 
     </div>{/* .manuscript-editor-shell */}
+
+      <SubmissionChecklistDialog open={checklistOpen} onClose={closeChecklist} checklist={checklist} onAction={handleChecklistAction} />
 
       <Dialog
         open={issuesOpen}
