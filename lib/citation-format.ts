@@ -40,6 +40,8 @@ export function surname(author: string): string {
 }
 
 const yearOf = (source: CitableSource) => source.year?.trim() || "t.y.";
+/** Ardından nokta gelen yerlerde yıl: "t.y." sonundaki nokta düşer ("t.y.." olmasın) */
+const yearText = (source: CitableSource) => yearOf(source).replace(/\.$/, "");
 
 /** APA/Chicago metin içi atıf etiketi: "Yılmaz", "Yılmaz ve Demir", "Yılmaz vd." */
 export function authorLabel(source: CitableSource): string {
@@ -110,7 +112,7 @@ export function formatReferenceParts(source: CitableSource, style: CitationStyle
       if (issue) push(` no. ${issue},`);
       if (pages) push(` pp. ${pages},`);
       if (publisher && !container) push(` ${publisher},`);
-      push(` ${yearOf(source)}.${url ? ` ${url}` : ""}`);
+      push(` ${yearText(source)}.${url ? ` ${url}` : ""}`);
       break;
     }
     case "vancouver": {
@@ -120,11 +122,12 @@ export function formatReferenceParts(source: CitableSource, style: CitationStyle
       push(`${yearOf(source)}`);
       if (volume) push(`;${volume}${issue ? `(${issue})` : ""}`);
       if (pages) push(`:${pages}`);
-      push(`.${url ? ` ${url}` : ""}`);
+      // "t.y." ile biterse ikinci nokta eklenmez
+      push(`${!volume && !pages && yearOf(source).endsWith(".") ? "" : "."}${url ? ` ${url}` : ""}`);
       break;
     }
     case "chicago": {
-      push(`${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${yearOf(source)}. `);
+      push(`${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${yearText(source)}. `);
       if (italic && !container) push(title, true);
       else push(`"${title}."`);
       if (container) {

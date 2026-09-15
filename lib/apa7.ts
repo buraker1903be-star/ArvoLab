@@ -12,6 +12,8 @@
  * denetim aracıdır, otomatik metin üretici değildir.
  */
 
+import { splitAuthors } from "@/lib/citation-format";
+
 export interface ReferenceIssue {
   field: string;
   message: string;
@@ -127,6 +129,18 @@ export function parseReferenceList(rawList: string): ParsedReference[] {
   return entries.map(parseReferenceEntry);
 }
 
+// Chicago yazar-tarih kaynakçası: "Yılmaz, A. 2020. "Başlık." Dergi 12 (3): 1-20." — yıl parantezsiz,
+// yazardan sonra gelir. Yalnızca atıf eşleştirmesi için yazar ve yıl ayrıştırılır.
+// "t.y." / "n.d." noktayı kendi içinde taşır: ardından ikinci nokta gelmeyebilir.
+const CHICAGO_REFERENCE_RE = /^(.+?)\.\s+(\d{4}[a-z]?|n\.d\.|t\.y\.)\.?(?=\s|$)/u;
+
+export function parseChicagoReference(raw: string): ParsedReference {
+  const trimmed = raw.trim();
+  const match = CHICAGO_REFERENCE_RE.exec(trimmed);
+  const authors = match ? splitAuthors(match[1]) : [];
+  return { raw: trimmed, authors: authors.length ? authors : null, year: match ? match[2] : null, title: null, issues: [] };
+}
+
 // --- Metin içi atıf tespiti -------------------------------------------------
 //
 // Parantez içi: "(Yılmaz, 2020)", "(Yılmaz, 2020; Demir & Kaya, 2019)", "(Yılmaz, 2020, s. 15)",
@@ -140,10 +154,21 @@ const NAME = "\\p{Lu}[\\p{L}'’-]+";
 const ET_AL = "(?:vd\\.|ve\\s+ark\\.|ve\\s+diğerleri|et\\s+al\\.)";
 
 const PAREN_GROUP_RE = /\(([^()]{3,300}?)\)/g;
-const CITATION_PART_RE = new RegExp(
-  `^(?:(?:bkz\\.|bk\\.|örn\\.|örneğin|ayrıca|see|e\\.g\\.,?|cf\\.)\\s+)?(\\p{Lu}.*?),\\s*(${YEARS})${PAGE}$`,
-  "iu"
+// Büyük/küçük harf duyarsız bayrak kullanılmaz: /i ile \p{Lu} küçük harfle başlayan ifadeleri de
+// ("(ortalama, 2020)") yazar sayardı. Önekler her iki yazımla ayrıca verilir.
+const PREFIX = "(?:(?:[Bb]kz\\.|[Bb]k\\.|[Öö]rn\\.|[Öö]rneğin|[Aa]yrıca|[Ss]ee|e\\.g\\.,?|cf\\.)\\s+)?";
+const CITATION_PART_RE = new RegExp(`^${PREFIX}(\\p{Lu}.*?),\\s*(${YEARS})${PAGE}$`, "u");
+// Chicago yazar-tarih: "(Yılmaz 2020)", "(Yılmaz ve Demir 2019, 15)" — virgül isteğe bağlı.
+const CHICAGO_PART_RE = new RegExp(
+  `^${PREFIX}(\\p{Lu}.*?),?\\s+(${YEARS})(?:\\s*,\\s*(?:(?:s|ss|sf|p|pp)\\.?\\s*)?[\\d–-]+)?$`,
+  "u"
 );
+// "(Haziran 2020)", "(Bahar, 2021)" gibi tarih ifadeleri atıf değildir.
+const NOT_AUTHORS = new Set([
+  "ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül", "ekim", "kasım", "aralık",
+  "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
+  "ilkbahar", "bahar", "yaz", "sonbahar", "güz", "kış", "spring", "summer", "fall", "autumn", "winter",
+]);
 const NARRATIVE_RE = new RegExp(
   `(${NAME}(?:\\s+${NAME}){0,4}?(?:\\s+(?:ve|&|and)\\s+${NAME}|\\s+${ET_AL})?)\\s*\\((${YEARS})${PAGE}\\)`,
   "gu"
@@ -161,15 +186,20 @@ function authorKey(author: string): string {
   return normalizeName(first);
 }
 
-export function extractInTextCitations(bodyText: string): InTextCitation[] {
+export function extractInTextCitations(
+  bodyText: string,
+  options: { style?: "apa7" | "chicago" } = {}
+): InTextCitation[] {
   const results: InTextCitation[] = [];
+  const partRe = options.style === "chicago" ? CHICAGO_PART_RE : CITATION_PART_RE;
 
   for (const group of bodyText.matchAll(PAREN_GROUP_RE)) {
     for (const part of group[1].split(";")) {
-      const match = CITATION_PART_RE.exec(part.trim());
-      if (!match) continue;
+      const match = partRe.exec(part.trim());
+      // İçinde rakam geçen "yazar" (Tablo 3, COVID-19) atıf sayılmaz
+      if (!match || /\d/.test(match[1])) continue;
       const key = authorKey(match[1]);
-      if (!key) continue;
+      if (!key || NOT_AUTHORS.has(key)) continue;
       for (const year of match[2].split(",")) {
         results.push({ raw: group[0], authorKey: key, year: year.trim(), position: group.index ?? 0, kind: "parenthetical" });
       }
@@ -178,7 +208,7 @@ export function extractInTextCitations(bodyText: string): InTextCitation[] {
 
   for (const match of bodyText.matchAll(NARRATIVE_RE)) {
     const key = authorKey(match[1]);
-    if (!key) continue;
+    if (!key || NOT_AUTHORS.has(key)) continue;
     for (const year of match[2].split(",")) {
       results.push({ raw: match[0], authorKey: key, year: year.trim(), position: match.index ?? 0, kind: "narrative" });
     }
@@ -193,12 +223,14 @@ const referenceKey = (reference: ParsedReference) =>
   reference.authors?.[0] ? normalizeName(reference.authors[0].split(",")[0]) : "";
 
 // Anlatı atfının önünde cümle başı kelimesi olabilir ("Ayrıca Yılmaz (2020)"); kurum adında
-// "ve" geçebilir ("Milli Eğitim ve Kültür Bakanlığı"): kelime sınırında önek/sonek de eşleşir.
+// "ve" geçebilir ("Milli Eğitim ve Kültür Bakanlığı"); kaynakçada ad önce yazılmış olabilir
+// ("Ahmet Yılmaz"): kelime sınırında önek/sonek de eşleşir.
 const keysMatch = (citation: string, reference: string) =>
   citation === reference ||
   citation.startsWith(`${reference} `) ||
   reference.startsWith(`${citation} `) ||
-  citation.endsWith(` ${reference}`);
+  citation.endsWith(` ${reference}`) ||
+  reference.endsWith(` ${citation}`);
 
 export function crossCheck(
   citations: InTextCitation[],

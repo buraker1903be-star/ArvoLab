@@ -9,7 +9,7 @@
 
 import { headingMatchesSection } from "@/lib/section-match";
 import type { AbstractRules } from "@/lib/guideline-editor-settings";
-import { crossCheck, extractInTextCitations, parseReferenceEntry } from "@/lib/apa7";
+import { crossCheck, extractInTextCitations, parseChicagoReference, parseReferenceEntry } from "@/lib/apa7";
 
 interface DocNode {
   type?: string;
@@ -193,12 +193,13 @@ export function checkStructure(
     }
   }
 
-  // ---------- APA 7: metin içi atıf ↔ kaynakça (yazar-tarih; lib/apa7.ts ile aynı eşleştirme) ----------
-  if (style === "apa7" && referenceEntries.length > 0) {
+  // ---------- Yazar-tarih (APA 7, Chicago): metin içi atıf ↔ kaynakça (lib/apa7.ts ile aynı eşleştirme) ----------
+  if ((style === "apa7" || style === "chicago") && referenceEntries.length > 0) {
     // Yazarı ve yılı ayrıştırılamayan girdiler eşleştirilmez (biçim hatası "Kontrol Et"te raporlanır)
-    const references = referenceEntries.map(parseReferenceEntry).filter((reference) => reference.year && reference.authors?.length);
+    const parse = style === "chicago" ? parseChicagoReference : parseReferenceEntry;
+    const references = referenceEntries.map(parse).filter((reference) => reference.year && reference.authors?.length);
     if (references.length > 0) {
-      const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(extractInTextCitations(body), references);
+      const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(extractInTextCitations(body, { style }), references);
       citationsWithoutReference.slice(0, CITATION_ISSUE_LIMIT).forEach((citation) =>
         add({ tone: "danger", message: `Metindeki ${quote(citation.raw)} atfının kaynakçada karşılığı yok.`, target: citation.raw })
       );
