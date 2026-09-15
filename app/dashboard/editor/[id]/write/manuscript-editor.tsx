@@ -101,6 +101,7 @@ import {
   selectText,
   sortReferences,
   fixReferencePunctuationInEditor,
+  convertReferenceListsToParagraphs,
   type OutlineHeading,
 } from "./editor-navigation";
 
@@ -1002,6 +1003,22 @@ export default function ManuscriptEditor({
                 }}
               >
                 Alfabetik sırala
+              </button>
+            ) : issue.action === "convert-reference-lists" ? (
+              <button
+                type="button"
+                className="result-link"
+                onClick={() => {
+                  const converted = convertReferenceListsToParagraphs(editor);
+                  if (converted === 0) {
+                    showToast("error", "Kaynakçada paragrafa çevrilecek liste bulunamadı.");
+                    return;
+                  }
+                  showToast("success", `${converted} kaynak ayrı paragraflara çevrildi. Geri almak için Ctrl+Z.`);
+                  recheckStructure();
+                }}
+              >
+                Paragraflara çevir
               </button>
             ) : issue.action === "fix-reference-punctuation" ? (
               <button
