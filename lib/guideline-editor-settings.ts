@@ -5,6 +5,10 @@ export interface GuidelineEditorSettings {
   showPageNumbers?: boolean;
   /** Kılavuz başlıkların ondalık numaralanmasını istiyor ("1.", "1.1.") */
   headingNumbering?: boolean;
+  /** Birinci düzey (ana bölüm) başlıkları büyük harfle */
+  chapterUppercase?: boolean;
+  /** Her ana bölüm yeni sayfadan başlar */
+  chapterNewPage?: boolean;
   fontFamily?: string;
   fontSizePt?: number;
   lineSpacing?: number;
@@ -43,6 +47,8 @@ export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorS
         ? { showPageNumbers: rules.page_numbers }
         : {}),
     ...(typeof rules.heading_numbering === "boolean" ? { headingNumbering: rules.heading_numbering } : {}),
+    ...(typeof rules.chapter_uppercase === "boolean" ? { chapterUppercase: rules.chapter_uppercase } : {}),
+    ...(typeof rules.chapter_new_page === "boolean" ? { chapterNewPage: rules.chapter_new_page } : {}),
     ...(fontFamily ? { fontFamily } : {}),
     ...(fontSizePt && fontSizePt >= 8 && fontSizePt <= 24 ? { fontSizePt } : {}),
     ...(lineSpacing && lineSpacing >= 1 && lineSpacing <= 3 ? { lineSpacing } : {}),

@@ -44,6 +44,14 @@ export interface GuidelineScanResult {
 
 // "ondalık sistem/numaralandırma", "başlıklar … numaralandırılır", ya da örnek "1.1.1." numarası.
 // Aradaki "1.1" gibi rakamlar arası nokta cümle sonu sayılmaz; "numaralandırılmaz" kural değildir.
+// "Her ana bölüm yeni bir sayfadan başlar" — "başlamaz" kural değildir.
+export const CHAPTER_NEW_PAGE =
+  /bölüm(?:ler(?:i|in)?)?(?:\s+başl[ıi]klar[ıi])?[^.;]{0,50}yeni\s+(?:bir\s+)?sayfa(?:dan|da|ya)?\s+(?:başla(?!maz|mamal)|geç)|her\s+(?:ana\s+)?bölüm[^.;]{0,30}yeni\s+(?:bir\s+)?sayfa/iu;
+
+// "Birinci düzey / ana bölüm başlıkları büyük harfle yazılır" — "yazılmaz" kural değildir.
+export const CHAPTER_UPPERCASE =
+  /(?:birinci\s+düzey|ana\s+bölüm|bölüm)\s+başl[ıi]k(?:lar[ıi]?)?[^.;]{0,50}büyük\s+harf(?!\p{L}*\s+yaz[ıi]lmaz)/iu;
+
 export const HEADING_NUMBERING =
   /ondal[ıi]k(?:l[ıi])?\s+(?:sistem|numara)|başl[ıi]k(?:lar[ıi]?n?)?(?:[^.;]|(?<=\d)\.(?=\d)){0,60}numaraland[ıi]r(?![ıi]lmaz|[ıi]lmamal|may)|(?:^|\s)1\.1\.1\.?\s/iu;
 
@@ -96,6 +104,8 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
       // Ondalık başlık numaralandırması ("1.1.1.") yalnızca açıkça geçiyorsa önerilir;
       // bulunamazsa kural hiç yazılmaz (kapalı sayılmaz, yönetici karar verir).
       ...(HEADING_NUMBERING.test(compact) ? { heading_numbering: true } : {}),
+      ...(CHAPTER_UPPERCASE.test(compact) ? { chapter_uppercase: true } : {}),
+      ...(CHAPTER_NEW_PAGE.test(compact) ? { chapter_new_page: true } : {}),
     },
     confidence: Math.round(score * 100) / 100,
     warnings,

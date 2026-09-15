@@ -518,6 +518,9 @@ export default function ManuscriptEditor({
     editorProps: {
       attributes: {
         class: "manuscript-editor-content",
+        // Kılavuzun ana bölüm kuralları editörde de görünür (metin değişmez; CSS workspace.css)
+        ...(guideline?.settings.chapterUppercase ? { "data-chapter-case": "upper" } : {}),
+        ...(guideline?.settings.chapterNewPage ? { "data-chapter-new-page": "true" } : {}),
         "aria-label": "Çalışma metni",
         // Tarayıcının yazım denetimi Türkçe sözlükle çalışsın
         spellcheck: "true",
@@ -1679,6 +1682,16 @@ export default function ManuscriptEditor({
               <>
                 <dt>Başlık numaralandırma</dt>
                 <dd>{guideline.settings.headingNumbering ? "Ondalık (1., 1.1., 1.1.1.)" : "Numarasız"}</dd>
+              </>
+            ) : null}
+            {guideline.settings.chapterUppercase || guideline.settings.chapterNewPage ? (
+              <>
+                <dt>Ana bölüm başlıkları</dt>
+                <dd>
+                  {[guideline.settings.chapterUppercase ? "büyük harfle" : "", guideline.settings.chapterNewPage ? "her biri yeni sayfadan" : ""]
+                    .filter(Boolean)
+                    .join(", ")}
+                </dd>
               </>
             ) : null}
             {guideline.minPages || guideline.maxPages ? (

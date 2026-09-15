@@ -37,7 +37,10 @@ export default async function PrintManuscriptPage({
   const [manuscript, guideline] = await Promise.all([getManuscript(id), loadAppliedGuideline(supabase, project.guideline_id)]);
   // Resim bağlantıları depo yolundan tazelenir (süresi dolmuş imzalı bağlantılar çıktıda kaybolmasın).
   const doc = manuscript ? await refreshImageUrls(manuscript.content, [project.owner_id, project.assignee_id]) : null;
-  const { html, footnotes } = renderTiptapHtml(doc, { headingNumbering: manuscript?.headingNumbering ?? false });
+  const { html, footnotes } = renderTiptapHtml(doc, {
+    headingNumbering: manuscript?.headingNumbering ?? false,
+    chapterNewPage: guideline?.settings.chapterNewPage ?? false,
+  });
 
   const margins = manuscript?.margins ?? guideline?.settings.margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
   const m = {
@@ -71,7 +74,12 @@ export default async function PrintManuscriptPage({
       <style>{pageRule}</style>
       <PrintActions backHref={`/dashboard/editor/${id}/write`} autoPrint={auto === "1"} />
 
-      <article className="print-sheet" style={sheetStyle} aria-label={project.title}>
+      <article
+        className="print-sheet"
+        style={sheetStyle}
+        aria-label={project.title}
+        data-chapter-case={guideline?.settings.chapterUppercase ? "upper" : undefined}
+      >
         {cover ? (
           <section className="print-cover">
             <div className="print-cover-block">

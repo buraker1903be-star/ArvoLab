@@ -3,6 +3,7 @@
 // bağlantı ve resim kaynakları izin listesinden geçer. Dipnotlar sırayla
 // numaralanır ve belgenin sonunda listelenir.
 import { headingNumberMap } from "@/lib/heading-numbering";
+import { chapterBreakSet } from "@/lib/chapter-rules";
 
 interface Mark {
   type: string;
@@ -55,6 +56,8 @@ interface RenderContext {
   captions: { figure: number; table: number };
   /** Otomatik başlık numaraları (kapalıysa boş) */
   headingNumbers: Map<object, string>;
+  /** Yeni sayfadan başlayacak ana bölüm başlıkları (kural kapalıysa boş) */
+  chapterBreaks: Set<object>;
 }
 
 const CAPTION_LABELS = { figure: "Şekil", table: "Tablo" } as const;
@@ -123,7 +126,8 @@ function renderNode(node: Node, ctx: RenderContext): string {
     case "heading": {
       const level = Math.min(Math.max(Number(attrs.level) || 1, 1), 4);
       const number = ctx.headingNumbers.get(node);
-      return `<h${level}${blockStyle(attrs)}>${number ? `${escapeHtml(number)} ` : ""}${renderNodes(node.content, ctx)}</h${level}>`;
+      const newPage = ctx.chapterBreaks.has(node) ? ' class="print-new-page"' : "";
+      return `<h${level}${newPage}${blockStyle(attrs)}>${number ? `${escapeHtml(number)} ` : ""}${renderNodes(node.content, ctx)}</h${level}>`;
     }
     case "bulletList":
       return `<ul>${renderNodes(node.content, ctx)}</ul>`;
@@ -162,12 +166,13 @@ function renderNode(node: Node, ctx: RenderContext): string {
 
 export function renderTiptapHtml(
   doc: { content?: Node[] } | null | undefined,
-  options: { headingNumbering?: boolean } = {}
+  options: { headingNumbering?: boolean; chapterNewPage?: boolean } = {}
 ): { html: string; footnotes: string[] } {
   const ctx: RenderContext = {
     footnotes: [],
     captions: { figure: 0, table: 0 },
     headingNumbers: options.headingNumbering ? headingNumberMap(doc) : new Map(),
+    chapterBreaks: options.chapterNewPage ? chapterBreakSet(doc) : new Set(),
   };
   return { html: renderNodes(doc?.content, ctx), footnotes: ctx.footnotes };
 }
