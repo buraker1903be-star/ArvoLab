@@ -242,6 +242,39 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .resume-pace { margin: 0; line-height: 1.45; }
 .resume-pace[data-tone="neutral"] { color: var(--ink-soft); font-weight: 500; }
 
+/* Personel: dikkat isteyenler (sayı + etiket; tıklayınca filtrelenmiş çalışma listesi) */
+.attention-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.attention-list { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.attention-item {
+  --tone: var(--ink-soft);
+  --tone-soft: var(--surface-sunken);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--tone) 25%, var(--line-soft));
+  border-radius: var(--r-sm);
+  background: var(--tone-soft);
+  color: var(--ink);
+  text-decoration: none;
+}
+.attention-item strong { color: var(--tone); font-size: var(--fs-lg); font-variant-numeric: tabular-nums; }
+.attention-item span { font-size: var(--fs-sm); }
+.attention-item[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
+.attention-item[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
+.attention-item[data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
+@media (hover: hover) and (pointer: fine) {
+  .attention-item:hover { border-color: var(--tone); }
+}
+
 /* İlerleme */
 .project-progress { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 96px; }
 .project-progress strong { font-size: var(--fs-md); font-weight: 650; font-variant-numeric: tabular-nums; }
