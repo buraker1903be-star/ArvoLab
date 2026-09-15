@@ -506,6 +506,9 @@
 .outline-progress[data-tone="warning"] { --tone: var(--warning); }
 .outline-progress[data-tone="success"] { --tone: var(--success); }
 .outline-progress[data-tone="danger"] { --tone: var(--danger); }
+/* Yazım temposu satırı (tonu .tone-text verir; nötrde normal metin rengi) */
+.outline-pace { margin: 0; line-height: 1.45; }
+.outline-pace[data-tone="neutral"] { color: var(--ink-soft); font-weight: 500; }
 
 /* Yorumlar (yan panel) */
 .outline-textarea {

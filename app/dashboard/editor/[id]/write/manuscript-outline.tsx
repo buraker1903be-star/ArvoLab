@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Check, Circle, FileUp, ListTree, Plus, Wand2 } from "lucide-react";
 import type { OutlineHeading, SectionStatus } from "./editor-navigation";
 import type { PageRangeTone } from "@/lib/page-estimate";
+import type { WritingPace } from "@/lib/writing-pace";
 
 interface ManuscriptOutlineProps {
   headings: OutlineHeading[];
@@ -13,6 +14,8 @@ interface ManuscriptOutlineProps {
   minPages: number | null;
   maxPages: number | null;
   pageTone: PageRangeTone;
+  /** Sayfa hedefine kalan kelime ve teslim tarihine göre günlük hedef (hedef yoksa null) */
+  pace?: WritingPace | null;
   documentEmpty: boolean;
   figures: number;
   tables: number;
@@ -42,6 +45,7 @@ export default function ManuscriptOutline({
   minPages,
   maxPages,
   pageTone,
+  pace = null,
   documentEmpty,
   figures,
   tables,
@@ -126,6 +130,11 @@ export default function ManuscriptOutline({
               {maxPages ? `en fazla ${maxPages}` : ""} sayfa
               {PAGE_HINT[pageTone] ? ` · ${PAGE_HINT[pageTone]}` : ""}
             </p>
+            {pace && !documentEmpty ? (
+              <p className="tone-text text-sm outline-pace" data-tone={pace.tone}>
+                {pace.detail}
+              </p>
+            ) : null}
           </>
         ) : null}
         {figures || tables ? (

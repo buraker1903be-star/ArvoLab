@@ -84,6 +84,7 @@ import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone } from "@/lib/page-estimate";
 import { writingProgress } from "@/lib/writing-progress";
+import { writingPace } from "@/lib/writing-pace";
 import ManuscriptOutline from "./manuscript-outline";
 import {
   applyTemplate,
@@ -136,6 +137,9 @@ interface ManuscriptEditorProps {
   initialIncludeToc: boolean;
   /** Başlıklar otomatik numaralanır ("1.", "1.1.") */
   initialHeadingNumbering?: boolean;
+  /** Çalışmanın teslim tarihi ve durumu (yazım temposu için) */
+  dueDate?: string | null;
+  projectStatus?: string | null;
   /** Çalışmanın kaynakça sistemi (atıf biçimi) */
   citationStyle: string;
   /** Eski kayıt hatasından etkilenmişse neyin kaybolduğu (etkilenmediyse null) */
@@ -295,6 +299,8 @@ export default function ManuscriptEditor({
   editHref,
   initialIncludeToc,
   initialHeadingNumbering = false,
+  dueDate = null,
+  projectStatus = null,
   citationStyle,
   formatLoss,
 }: ManuscriptEditorProps) {
@@ -887,6 +893,16 @@ export default function ManuscriptEditor({
     margins,
   });
   const pageTone = pageRangeTone(pages, guideline?.minPages ?? null, guideline?.maxPages ?? null);
+
+  // Yazım temposu: sayfa hedefine kalan kelime ve teslim tarihine göre günlük hedef
+  const pace = writingPace({
+    words: stats.words,
+    minPages: guideline?.minPages ?? null,
+    maxPages: guideline?.maxPages ?? null,
+    dueDate,
+    status: projectStatus,
+    settings: { fontSizePt: guideline?.settings.fontSizePt, lineSpacing: guideline?.settings.lineSpacing, margins },
+  });
 
   // Teslim kontrolü: editördeki denetimlerin tek listede özeti (lib/submission-checklist.ts)
   const missingSections = sections.filter((item) => !item.heading).map((item) => item.section);
@@ -1687,6 +1703,7 @@ export default function ManuscriptEditor({
         minPages={guideline?.minPages ?? null}
         maxPages={guideline?.maxPages ?? null}
         pageTone={pageTone}
+        pace={pace}
         documentEmpty={stats.empty}
         figures={stats.figures}
         tables={stats.tables}
