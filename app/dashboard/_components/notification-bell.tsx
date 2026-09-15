@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, BookOpenCheck, CheckCheck, MessageSquare, ShieldCheck, UserPlus, Workflow } from "lucide-react";
+import { Bell, BookOpenCheck, CheckCheck, Eye, MessageSquare, ShieldCheck, UserPlus, Workflow } from "lucide-react";
 import Dialog from "./dialog";
 import { listNotifications, markNotificationsRead, type NotificationKind, type PanelNotification } from "@/app/actions/notifications";
 
@@ -14,6 +14,7 @@ const KIND_ICON: Record<NotificationKind, typeof Bell> = {
   status: Workflow,
   approval: ShieldCheck,
   guideline_update: BookOpenCheck,
+  share_view: Eye,
 };
 
 const relativeTime = new Intl.RelativeTimeFormat("tr", { numeric: "auto" });
