@@ -173,10 +173,32 @@ export function checkStructure(
     });
   }
 
-  // Kaynakça girdileri: Kaynakça bölümündeki dolu paragraflar (gövde metniyle aynı sınır).
+  // Kaynakça girdileri: Kaynakça bölümündeki (gövde metniyle aynı sınır) dolu paragraflar ve
+  // liste maddeleri. Word'de kaynakça sık sık numaralı/madde işaretli liste olarak yazılır;
+  // önceden bunlar "0 kaynak" sayılıyordu. İç içe liste maddeleri ayrı girdidir.
   const referenceEntries: string[] = [];
+  let referencesInList = false;
+  const collectEntries = (node: DocNode) => {
+    if (node.type === "paragraph") {
+      const text = textOf(node).trim();
+      if (text) referenceEntries.push(text);
+      return;
+    }
+    if (node.type !== "bulletList" && node.type !== "orderedList") return;
+    referencesInList = true;
+    for (const item of node.content ?? []) {
+      const children = item.content ?? [];
+      const text = children
+        .filter((child) => child.type === "paragraph")
+        .map(textOf)
+        .join(" ")
+        .trim();
+      if (text) referenceEntries.push(text);
+      for (const child of children) collectEntries(child.type === "paragraph" ? {} : child);
+    }
+  };
   blocks.forEach((block, index) => {
-    if (inReferences(index) && block.type === "paragraph" && textOf(block).trim()) referenceEntries.push(textOf(block).trim());
+    if (inReferences(index)) collectEntries(block);
   });
 
   // ---------- Kaynakça noktalaması: çift nokta, noktalamadan önce boşluk (tüm stiller) ----------
@@ -197,11 +219,16 @@ export function checkStructure(
       (entry, index) => index > 0 && referenceEntries[index - 1].localeCompare(entry, "tr", { sensitivity: "base" }) > 0
     );
     if (unsorted) {
-      add({
-        tone: "warning",
-        message: "Kaynakça yazar soyadına göre alfabetik sırada değil.",
-        action: "sort-references",
-      });
+      // Editörün tek tık sıralaması yalnızca ardışık paragraflarda çalışır (listede düğme gösterilmez).
+      add(
+        referencesInList
+          ? {
+              tone: "warning",
+              message:
+                "Kaynakça yazar soyadına göre alfabetik sırada değil (kaynakça liste biçiminde: sıralamayı elle yapın ya da listeyi normal paragraflara çevirin).",
+            }
+          : { tone: "warning", message: "Kaynakça yazar soyadına göre alfabetik sırada değil.", action: "sort-references" }
+      );
     }
   }
 
