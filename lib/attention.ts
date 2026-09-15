@@ -1,6 +1,6 @@
 // Personel ana sayfası: dikkat isteyen çalışmaların sayıları. Her madde Çalışmalarım listesini
 // ilgili filtreyle açar (lib/project-filters.ts adres parametreleri). Sıfır olan maddeler gösterilmez.
-import { dueInfo } from "@/lib/due-date";
+import { dueInfo, DUE_SOON_DAYS } from "@/lib/due-date";
 import type { Tone } from "@/lib/status-tone";
 
 export interface AttentionProject {
@@ -23,7 +23,6 @@ export interface AttentionItem {
 }
 
 const CLOSED_STATUSES = new Set(["delivered", "archived"]);
-const DUE_SOON_DAYS = 7;
 
 export function computeAttention(
   projects: AttentionProject[],
@@ -39,14 +38,14 @@ export function computeAttention(
       label: "Teslim tarihi geçmiş",
       count: days.filter((day) => day !== null && day < 0).length,
       tone: "danger",
-      href: "/dashboard/editor?durum=aktif&sirala=teslim",
+      href: "/dashboard/editor?durum=gecikmis&sirala=teslim",
     },
     {
       id: "due-soon",
       label: `${DUE_SOON_DAYS} gün içinde teslim`,
       count: days.filter((day) => day !== null && day >= 0 && day <= DUE_SOON_DAYS).length,
       tone: "warning",
-      href: "/dashboard/editor?durum=aktif&sirala=teslim",
+      href: "/dashboard/editor?durum=yaklasan&sirala=teslim",
     },
     {
       id: "unassigned",
