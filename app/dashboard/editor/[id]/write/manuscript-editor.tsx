@@ -12,6 +12,7 @@ import { Caption } from "@/lib/tiptap-caption";
 import { SearchHighlight } from "@/lib/tiptap-search";
 import { HeadingNumbers } from "@/lib/tiptap-heading-numbers";
 import { hasManualNumber } from "@/lib/heading-numbering";
+import { describeAbstractRules } from "@/lib/guideline-editor-settings";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { TextStyleKit } from "@tiptap/extension-text-style";
 import {
@@ -595,7 +596,9 @@ export default function ManuscriptEditor({
         schedule(1000);
         return;
       }
-      setLiveIssues(checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle }));
+      setLiveIssues(
+        checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle, abstract: guideline?.settings.abstract })
+      );
     };
     const schedule = (delay: number) => {
       if (timer) window.clearTimeout(timer);
@@ -608,7 +611,7 @@ export default function ManuscriptEditor({
       if (timer) window.clearTimeout(timer);
       editor.off("update", onUpdate);
     };
-  }, [editor, citationStyle]);
+  }, [editor, citationStyle, guideline]);
 
   const closeIssues = useCallback(() => setIssuesOpen(false), []);
 
@@ -686,7 +689,10 @@ export default function ManuscriptEditor({
       // Yapı ve bütünlük kontrolü ekrandaki içerik üzerinde tarayıcıda anında çalışır.
       const current = editorRef.current;
       if (current) {
-        const issues = checkStructure(JSON.parse(JSON.stringify(current.getJSON())), { citationStyle });
+        const issues = checkStructure(JSON.parse(JSON.stringify(current.getJSON())), {
+          citationStyle,
+          abstract: guideline?.settings.abstract,
+        });
         setStructureIssues(issues);
         setLiveIssues(issues);
       }
@@ -701,7 +707,7 @@ export default function ManuscriptEditor({
     } finally {
       setChecking(false);
     }
-  }, [projectId, saveNow, citationStyle]);
+  }, [projectId, saveNow, citationStyle, guideline]);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
@@ -871,7 +877,10 @@ export default function ManuscriptEditor({
 
   // Yapı denetimi listesi: canlı gösterge penceresi ve "Kontrol Et" sonucu aynı listeyi kullanır.
   const recheckStructure = () => {
-    const issues = checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle });
+    const issues = checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), {
+      citationStyle,
+      abstract: guideline?.settings.abstract,
+    });
     setLiveIssues(issues);
     setStructureIssues((current) => (current ? issues : current));
   };
@@ -1692,6 +1701,12 @@ export default function ManuscriptEditor({
                     .filter(Boolean)
                     .join(", ")}
                 </dd>
+              </>
+            ) : null}
+            {guideline.settings.abstract ? (
+              <>
+                <dt>Özet</dt>
+                <dd>{describeAbstractRules(guideline.settings.abstract)}</dd>
               </>
             ) : null}
             {guideline.minPages || guideline.maxPages ? (
