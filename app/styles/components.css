@@ -241,6 +241,10 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 /* Yazım temposu (tonu .tone-text verir; nötrde normal metin rengi) */
 .resume-pace { margin: 0; line-height: 1.45; }
 .resume-pace[data-tone="neutral"] { color: var(--ink-soft); font-weight: 500; }
+/* Teslim hazırlığı özeti (editördeki Teslim kontrolüyle aynı hesap) */
+.resume-readiness { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--ink-soft); line-height: 1.45; }
+.resume-readiness svg { flex: none; margin-top: 2px; }
+.resume-readiness[data-ready="true"] { color: var(--success); }
 
 /* Personel: dikkat isteyenler (sayı + etiket; tıklayınca filtrelenmiş çalışma listesi) */
 .attention-card {

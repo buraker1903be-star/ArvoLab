@@ -2,6 +2,22 @@
 // denetimi, kapak, içindekiler, başlık numaralandırma, kayıt) tek listede toplar. Her eksiğin
 // yanında editörün tek tıkla yapabileceği düzeltme durur. Jüri/danışman kontrolünün yerini tutmaz.
 
+import type { CoverPage } from "@/app/actions/manuscript";
+
+/** Teslim kontrolünde kapakta dolu olması beklenen alanlar (editör ve ana sayfa ortak) */
+export const COVER_REQUIRED_FIELDS: [keyof CoverPage, string][] = [
+  ["university", "Üniversite"],
+  ["title", "Tez başlığı"],
+  ["authorName", "Yazar"],
+  ["advisorName", "Danışman"],
+  ["city", "Şehir"],
+  ["year", "Yıl"],
+];
+
+export function missingCoverFields(cover: Partial<CoverPage>): string[] {
+  return COVER_REQUIRED_FIELDS.filter(([key]) => !String(cover[key] ?? "").trim()).map(([, label]) => label);
+}
+
 export type ChecklistStatus = "ok" | "warning" | "todo";
 
 export type ChecklistAction =

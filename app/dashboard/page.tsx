@@ -14,12 +14,14 @@ import {
   Plus,
   Quote,
   ShieldCheck,
+  ClipboardCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProjects } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole, STAFF_ROLES } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { computeAttention } from "@/lib/attention";
+import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
@@ -107,6 +109,24 @@ export default async function DashboardPage() {
           },
         })
       : null;
+  // Teslim hazırlığı: editördeki "Teslim kontrolü" ile aynı hesap, kaydedilmiş metinden (yalnızca bu çalışma)
+  const { data: resumeManuscript } =
+    resume && resumeStats
+      ? await supabase.from("project_manuscripts").select("*").eq("project_id", resume.id).maybeSingle()
+      : { data: null };
+  const resumeReadiness =
+    resume && resumeManuscript
+      ? manuscriptReadiness({
+          manuscript: resumeManuscript,
+          guideline: resumeGuideline ?? null,
+          projectType: resume.project_type,
+          citationStyle: resume.citation_style ?? "apa7",
+        })
+      : null;
+  // Eksikler önce, bakılması gerekenler sonra
+  const readinessGaps = (resumeReadiness?.items ?? [])
+    .filter((item) => item.status !== "ok")
+    .sort((a, b) => (a.status === "todo" ? 0 : 1) - (b.status === "todo" ? 0 : 1));
 
   const upcoming = activeProjects
     .map((project) => ({ project, due: dueInfo(project.due_date, project.status) }))
@@ -182,6 +202,24 @@ export default async function DashboardPage() {
             {resumePace && resumeStats ? (
               <p className="tone-text text-sm resume-pace" data-tone={resumePace.tone}>
                 {resumePace.detail}
+              </p>
+            ) : null}
+            {resumeReadiness ? (
+              <p className="text-sm resume-readiness" data-ready={readinessGaps.length === 0 ? "true" : undefined}>
+                <ClipboardCheck size={15} aria-hidden="true" />
+                <span>
+                  Teslim hazırlığı:{" "}
+                  <strong>
+                    {resumeReadiness.done}/{resumeReadiness.total}
+                  </strong>{" "}
+                  madde hazır
+                  {readinessGaps.length === 0
+                    ? " · teslime hazır görünüyor"
+                    : ` · Bakılacak: ${readinessGaps
+                        .slice(0, 2)
+                        .map((item) => item.label)
+                        .join(", ")}${readinessGaps.length > 2 ? ` ve ${readinessGaps.length - 2} madde daha` : ""}`}
+                </span>
               </p>
             ) : null}
             <div className="cluster">

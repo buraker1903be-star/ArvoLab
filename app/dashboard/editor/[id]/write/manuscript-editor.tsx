@@ -63,7 +63,7 @@ import { checkStructure, type StructureIssue } from "@/lib/structure-check";
 import VersionsDialog from "./versions-dialog";
 import SubmissionChecklistDialog from "./submission-checklist";
 import ShareDialog from "./share-dialog";
-import { buildSubmissionChecklist, type ChecklistAction } from "@/lib/submission-checklist";
+import { buildSubmissionChecklist, missingCoverFields, type ChecklistAction } from "@/lib/submission-checklist";
 import CiteDialog from "./cite-dialog";
 import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
@@ -253,16 +253,6 @@ type DocStats = ReturnType<typeof computeDocStats>;
 
 /** Yazma durduktan sonra canlı yapı denetimi (190 sayfalık tezde ~7 ms) */
 const LIVE_CHECK_DELAY_MS = 2500;
-
-/** Teslim kontrolünde kapakta dolu olması beklenen alanlar */
-const COVER_REQUIRED: [keyof CoverPage, string][] = [
-  ["university", "Üniversite"],
-  ["title", "Tez başlığı"],
-  ["authorName", "Yazar"],
-  ["advisorName", "Danışman"],
-  ["city", "Şehir"],
-  ["year", "Yıl"],
-];
 
 // Araç çubuğu yalnızca bu (seçime bağlı, ucuz) değerler değişince yeniden çizilir
 // (önceden her tuş vuruşunda tüm editör bileşeni yeniden çiziliyordu).
@@ -928,7 +918,7 @@ export default function ManuscriptEditor({
       : null,
     cover: {
       enabled: coverPageEnabled,
-      missingFields: COVER_REQUIRED.filter(([key]) => !String(coverPage[key] ?? "").trim()).map(([, label]) => label),
+      missingFields: missingCoverFields(coverPage),
     },
     includeToc,
     headingNumbering: { enabled: headingNumbering, guidelineRule: guideline?.settings.headingNumbering, manualNumbered },
