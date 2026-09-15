@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashShareToken, isShareTokenFormat } from "@/lib/share-token";
+import { recordShareView } from "@/lib/share-views";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { refreshImageUrls } from "@/lib/manuscript-images";
 import { buildPrintSheet } from "@/lib/print-sheet";
@@ -35,7 +36,7 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
   const admin = createAdminClient();
   const { data: link } = await admin
     .from("manuscript_share_links")
-    .select("id, project_id, expires_at, view_count")
+    .select("id, project_id, expires_at, view_count, created_by, label")
     .eq("token_hash", hashShareToken(token))
     .is("revoked_at", null)
     .gt("expires_at", new Date().toISOString())
@@ -69,11 +70,8 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
   // Resimler yalnızca metnin yazarlarının depo klasöründen imzalanır.
   const doc = row ? await refreshImageUrls(row.content as TiptapDoc, [project.owner_id, project.assignee_id], admin) : null;
 
-  // Görüntülenme sayısı (en iyi çaba; sahibi pencerede görür)
-  await admin
-    .from("manuscript_share_links")
-    .update({ view_count: (link.view_count ?? 0) + 1, last_viewed_at: new Date().toISOString() })
-    .eq("id", link.id);
+  // Görüntülenme sayısı; ilk açılışta bağlantıyı oluşturana panel içi bildirim (en iyi çaba)
+  await recordShareView(admin, link, project.title ?? "Çalışma");
 
   const sheet = buildPrintSheet(manuscript, guideline, doc);
   const until = new Date(link.expires_at).toLocaleDateString("tr-TR", { dateStyle: "long" });

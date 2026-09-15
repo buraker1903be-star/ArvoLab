@@ -2,7 +2,7 @@
 
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 
-export type NotificationKind = "comment" | "assignment" | "status" | "approval" | "guideline_update";
+export type NotificationKind = "comment" | "assignment" | "status" | "approval" | "guideline_update" | "share_view";
 
 export interface PanelNotification {
   id: string;
