@@ -27,7 +27,7 @@ export interface StructureIssue {
   /** Metinde aranıp seçilecek ifade (başlık, şekil başlığı, atıf) */
   target?: string;
   /** Editörün tek tıkla yapabileceği düzeltme */
-  action?: "sort-references" | "fix-reference-punctuation";
+  action?: "sort-references" | "fix-reference-punctuation" | "convert-reference-lists";
 }
 
 const MAX_ISSUES = 60;
@@ -224,12 +224,20 @@ export function checkStructure(
         referencesInList
           ? {
               tone: "warning",
-              message:
-                "Kaynakça yazar soyadına göre alfabetik sırada değil (kaynakça liste biçiminde: sıralamayı elle yapın ya da listeyi normal paragraflara çevirin).",
+              message: "Kaynakça yazar soyadına göre alfabetik sırada değil (önce listeyi paragraflara çevirin; ardından tek tıkla sıralanır).",
             }
           : { tone: "warning", message: "Kaynakça yazar soyadına göre alfabetik sırada değil.", action: "sort-references" }
       );
     }
+  }
+
+  // APA/Chicago'da kaynakça girdileri madde işareti ya da numara taşımaz: tek tıkla paragraflara çevrilir.
+  if ((style === "apa7" || style === "chicago") && referencesInList) {
+    add({
+      tone: "warning",
+      message: "Kaynakça liste biçiminde (madde işareti/numara); APA ve Chicago'da kaynaklar liste işareti olmadan, ayrı paragraflar olarak yazılır.",
+      action: "convert-reference-lists",
+    });
   }
 
   // ---------- Yazar-tarih (APA 7, Chicago): metin içi atıf ↔ kaynakça (lib/apa7.ts ile aynı eşleştirme) ----------

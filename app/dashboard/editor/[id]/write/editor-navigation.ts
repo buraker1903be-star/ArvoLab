@@ -125,6 +125,8 @@ export function applyTemplate(editor: Editor, requiredSections: string[]) {
 const REFERENCE_SECTIONS = ["Kaynakça", "Kaynaklar", "References", "Bibliography", "Bibliyografya"];
 
 interface ReferencesSection {
+  /** Kaynakça başlığından sonraki ilk konum */
+  start: number;
   end: number;
   paragraphs: { pos: number; node: ProseMirrorNode }[];
 }
@@ -145,7 +147,7 @@ function findReferencesSection(doc: ProseMirrorNode): ReferencesSection | null {
     }
     return true;
   });
-  return { end, paragraphs };
+  return { start, end, paragraphs };
 }
 
 /**
@@ -252,6 +254,38 @@ export function fixReferencePunctuationInEditor(editor: Pick<Editor, "state" | "
   }
   if (changedEntries) editor.view.dispatch(tr.scrollIntoView());
   return changedEntries;
+}
+
+/**
+ * Kaynakçadaki madde işaretli/numaralı listeleri ayrı paragraflara çevirir (APA ve Chicago'da
+ * kaynaklar liste işareti taşımaz). İç içe maddeler de sırayla paragraf olur; biçimlendirme
+ * korunur, tek geri alma adımıdır. Paragrafa çevrilen girdi sayısını döndürür.
+ */
+export function convertReferenceListsToParagraphs(editor: Pick<Editor, "state" | "view">): number {
+  const section = findReferencesSection(editor.state.doc);
+  if (!section) return 0;
+  const lists: { pos: number; node: ProseMirrorNode }[] = [];
+  editor.state.doc.forEach((node, pos) => {
+    if (pos >= section.start && pos < section.end && (node.type.name === "bulletList" || node.type.name === "orderedList")) {
+      lists.push({ pos, node });
+    }
+  });
+  if (lists.length === 0) return 0;
+  const { tr } = editor.state;
+  let converted = 0;
+  // Sondan başa: öndeki listelerin konumları değişmez.
+  for (const { pos, node } of [...lists].reverse()) {
+    const paragraphs: ProseMirrorNode[] = [];
+    node.descendants((child) => {
+      if (child.type.name !== "paragraph") return true;
+      if (child.textContent.trim()) paragraphs.push(child);
+      return false;
+    });
+    converted += paragraphs.length;
+    tr.replaceWith(pos, pos + node.nodeSize, paragraphs);
+  }
+  editor.view.dispatch(tr.scrollIntoView());
+  return converted;
 }
 
 /** Seçili metin (yoruma alıntı olarak eklenir) */
