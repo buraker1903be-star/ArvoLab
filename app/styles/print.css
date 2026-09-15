@@ -27,6 +27,10 @@
   backdrop-filter: var(--glass-blur);
 }
 .print-hint { color: var(--muted); font-size: var(--fs-sm); }
+/* Danışman paylaşımı: geçersiz/süresi dolmuş bağlantı */
+.share-unavailable { max-width: 560px; margin: 12vh auto; padding: 0 20px; color: var(--ink); }
+.share-unavailable h1 { margin: 0 0 10px; font-size: var(--fs-xl); }
+.share-unavailable p { margin: 0; color: var(--muted); line-height: 1.55; }
 
 .print-sheet {
   box-sizing: border-box;
