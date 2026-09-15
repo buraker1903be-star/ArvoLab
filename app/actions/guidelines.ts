@@ -133,6 +133,24 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
     return { error: "Kaynakça sistemi ve en az bir zorunlu bölüm gereklidir." };
   }
 
+  // Özet sınırları isteğe bağlı: boş alan = kural yok, geçersiz sayı = hata.
+  const optionalInt = (name: string, min: number, max: number) => {
+    const raw = String(formData.get(name) ?? "").trim();
+    if (!raw) return undefined;
+    const value = Number(raw);
+    return Number.isInteger(value) && value >= min && value <= max ? value : null;
+  };
+  const abstractMinWords = optionalInt("abstractMinWords", 20, 2000);
+  const abstractMaxWords = optionalInt("abstractMaxWords", 20, 2000);
+  const keywordsMin = optionalInt("keywordsMin", 1, 20);
+  const keywordsMax = optionalInt("keywordsMax", 1, 20);
+  if ([abstractMinWords, abstractMaxWords, keywordsMin, keywordsMax].includes(null)) {
+    return { error: "Özet kelime sınırları 20–2000, anahtar kelime sınırları 1–20 arasında tam sayı olmalı." };
+  }
+  if ((abstractMinWords && abstractMaxWords && abstractMinWords > abstractMaxWords) || (keywordsMin && keywordsMax && keywordsMin > keywordsMax)) {
+    return { error: "Alt sınır üst sınırdan büyük olamaz." };
+  }
+
   const { error } = await supabase.from("thesis_guidelines").update({
     citation_style: citationStyle,
     required_sections: requiredSections,
@@ -145,6 +163,10 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
       heading_numbering: formData.get("headingNumbering") === "on",
       chapter_uppercase: formData.get("chapterUppercase") === "on",
       chapter_new_page: formData.get("chapterNewPage") === "on",
+      ...(abstractMinWords ? { abstract_min_words: abstractMinWords } : {}),
+      ...(abstractMaxWords ? { abstract_max_words: abstractMaxWords } : {}),
+      ...(keywordsMin ? { keywords_min: keywordsMin } : {}),
+      ...(keywordsMax ? { keywords_max: keywordsMax } : {}),
     },
     analysis_status: "needs_review",
     reviewed_by: null,

@@ -52,6 +52,44 @@ export const CHAPTER_NEW_PAGE =
 export const CHAPTER_UPPERCASE =
   /(?:birinci\s+düzey|ana\s+bölüm|bölüm)\s+başl[ıi]k(?:lar[ıi]?)?[^.;]{0,50}büyük\s+harf(?!\p{L}*\s+yaz[ıi]lmaz)/iu;
 
+// Özet/Abstract kelime sınırları ve anahtar kelime sayısı ("Özet 150-250 kelime", "300 kelimeyi
+// geçmemelidir", "Anahtar kelimeler 3-5"). "Özgün" gibi kelimeler "öz" sayılmaz.
+const ABSTRACT_WORD = "(?<![\\p{L}])(?:özet|öz|abstract)(?![\\p{L}])";
+const WORD_UNIT = "(?:kelime|sözcük|words?)";
+const ABSTRACT_RANGE = new RegExp(`${ABSTRACT_WORD}[^.;]{0,80}?(\\d{2,4})\\s*(?:-|–|ile|ila)\\s*(\\d{2,4})\\s*${WORD_UNIT}`, "iu");
+const ABSTRACT_MAX = new RegExp(
+  `${ABSTRACT_WORD}[^.;]{0,80}?(?:(?:en\\s+fazla|en\\s+çok|azami|maksimum)\\s*(\\d{2,4})\\s*${WORD_UNIT}|(\\d{2,4})\\s*${WORD_UNIT}\\p{L}*\\s+(?:geçmemeli|aşmamalı|geçemez|aşamaz))`,
+  "iu"
+);
+const ABSTRACT_MIN = new RegExp(`${ABSTRACT_WORD}[^.;]{0,80}?en\\s+az\\s*(\\d{2,4})\\s*${WORD_UNIT}`, "iu");
+const KEYWORDS_RANGE =
+  /anahtar\s+(?:kelime|sözcük)\p{L}*[^.;]{0,60}?(\d{1,2})\s*(?:-|–|ile|ila)\s*(\d{1,2})|(\d{1,2})\s*(?:-|–|ile|ila)\s*(\d{1,2})\s*(?:adet\s+)?anahtar\s+(?:kelime|sözcük)|anahtar\s+(?:kelime|sözcük)\p{L}*[^.;]{0,40}?en\s+az\s*(\d{1,2})[^.;]{0,20}?en\s+(?:fazla|çok)\s*(\d{1,2})/iu;
+
+export function detectAbstractRules(compact: string): Record<string, number> {
+  const words = (value?: string) => {
+    const n = Number(value);
+    return Number.isInteger(n) && n >= 20 && n <= 2000 ? n : undefined;
+  };
+  const count = (value?: string) => {
+    const n = Number(value);
+    return Number.isInteger(n) && n >= 1 && n <= 20 ? n : undefined;
+  };
+  const range = ABSTRACT_RANGE.exec(compact);
+  const max = ABSTRACT_MAX.exec(compact);
+  const min = ABSTRACT_MIN.exec(compact);
+  const keywords = KEYWORDS_RANGE.exec(compact);
+  const minWords = words(range?.[1]) ?? words(min?.[1]);
+  const maxWords = words(range?.[2]) ?? words(max?.[1] ?? max?.[2]);
+  const keywordsMin = count(keywords?.[1] ?? keywords?.[3] ?? keywords?.[5]);
+  const keywordsMax = count(keywords?.[2] ?? keywords?.[4] ?? keywords?.[6]);
+  return {
+    ...(minWords && (!maxWords || minWords <= maxWords) ? { abstract_min_words: minWords } : {}),
+    ...(maxWords ? { abstract_max_words: maxWords } : {}),
+    ...(keywordsMin && (!keywordsMax || keywordsMin <= keywordsMax) ? { keywords_min: keywordsMin } : {}),
+    ...(keywordsMax ? { keywords_max: keywordsMax } : {}),
+  };
+}
+
 export const HEADING_NUMBERING =
   /ondal[ıi]k(?:l[ıi])?\s+(?:sistem|numara)|başl[ıi]k(?:lar[ıi]?n?)?(?:[^.;]|(?<=\d)\.(?=\d)){0,60}numaraland[ıi]r(?![ıi]lmaz|[ıi]lmamal|may)|(?:^|\s)1\.1\.1\.?\s/iu;
 
@@ -106,6 +144,7 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
       ...(HEADING_NUMBERING.test(compact) ? { heading_numbering: true } : {}),
       ...(CHAPTER_UPPERCASE.test(compact) ? { chapter_uppercase: true } : {}),
       ...(CHAPTER_NEW_PAGE.test(compact) ? { chapter_new_page: true } : {}),
+      ...detectAbstractRules(compact),
     },
     confidence: Math.round(score * 100) / 100,
     warnings,

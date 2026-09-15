@@ -290,6 +290,22 @@ export default async function GuidelinesPage() {
                           <input name="chapterNewPage" type="checkbox" defaultChecked={g.extracted_rules?.chapter_new_page === true} />
                           <span>Her ana bölüm yeni sayfadan başlar</span>
                         </label>
+                        <label>
+                          <span>Özet en az kelime</span>
+                          <input name="abstractMinWords" type="number" min="20" max="2000" step="1" defaultValue={String(g.extracted_rules?.abstract_min_words ?? "")} placeholder="Yok" />
+                        </label>
+                        <label>
+                          <span>Özet en fazla kelime</span>
+                          <input name="abstractMaxWords" type="number" min="20" max="2000" step="1" defaultValue={String(g.extracted_rules?.abstract_max_words ?? "")} placeholder="Yok" />
+                        </label>
+                        <label>
+                          <span>Anahtar kelime en az</span>
+                          <input name="keywordsMin" type="number" min="1" max="20" step="1" defaultValue={String(g.extracted_rules?.keywords_min ?? "")} placeholder="Yok" />
+                        </label>
+                        <label>
+                          <span>Anahtar kelime en fazla</span>
+                          <input name="keywordsMax" type="number" min="1" max="20" step="1" defaultValue={String(g.extracted_rules?.keywords_max ?? "")} placeholder="Yok" />
+                        </label>
                         <label className="guideline-review-full">
                           <span>İnceleme notu</span>
                           <textarea name="reviewNotes" rows={2} defaultValue={g.review_notes ?? ""} />

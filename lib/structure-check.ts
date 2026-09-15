@@ -8,6 +8,7 @@
 // Her sorun, metinde bulunup seçilebilecek bir "hedef" metin taşır.
 
 import { headingMatchesSection } from "@/lib/section-match";
+import type { AbstractRules } from "@/lib/guideline-editor-settings";
 
 interface DocNode {
   type?: string;
@@ -30,6 +31,10 @@ export interface StructureIssue {
 const MAX_ISSUES = 60;
 const REFERENCE_SECTIONS = ["Kaynakça", "Kaynaklar", "References", "Bibliography", "Bibliyografya"];
 const CAPTION_LABEL = { figure: "Şekil", table: "Tablo" } as const;
+const ABSTRACT_SECTIONS = ["Özet", "Öz", "Abstract"];
+// "Anahtar Kelimeler: a, b, c" / "Keywords: a; b"
+const KEYWORDS_LINE = /^(?:anahtar\s+(?:kelime|sözcük)\p{L}*|keywords?|key\s+words)\s*[:：]\s*(.*)$/iu;
+const countWords = (text: string) => text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
 
 const textOf = (node: DocNode): string =>
   node.type === "text" ? (node.text ?? "") : (node.content ?? []).map(textOf).join("");
@@ -51,7 +56,10 @@ function expandNumbers(list: string): number[] {
 
 const quote = (text: string) => `“${text.length > 60 ? `${text.slice(0, 57)}…` : text}”`;
 
-export function checkStructure(doc: { content?: DocNode[] } | null | undefined, options: { citationStyle?: string } = {}): StructureIssue[] {
+export function checkStructure(
+  doc: { content?: DocNode[] } | null | undefined,
+  options: { citationStyle?: string; abstract?: AbstractRules } = {}
+): StructureIssue[] {
   const issues: StructureIssue[] = [];
   const add = (issue: StructureIssue) => {
     if (issues.length < MAX_ISSUES) issues.push(issue);
@@ -201,6 +209,63 @@ export function checkStructure(doc: { content?: DocNode[] } | null | undefined, 
     for (let n = 1; n <= references; n++) {
       if (!cited.has(n)) add({ tone: "warning", message: `Kaynakçadaki ${n}. kaynağa metinde atıf yapılmamış.` });
     }
+  }
+
+  // ---------- Özet / Abstract: kılavuzun kelime ve anahtar kelime sınırları ----------
+  const abstract = options.abstract;
+  if (abstract && (abstract.minWords || abstract.maxWords || abstract.keywordsMin || abstract.keywordsMax)) {
+    const keywordRange =
+      abstract.keywordsMin && abstract.keywordsMax
+        ? `${abstract.keywordsMin}–${abstract.keywordsMax}`
+        : abstract.keywordsMin
+          ? `en az ${abstract.keywordsMin}`
+          : `en fazla ${abstract.keywordsMax}`;
+    blocks.forEach((block, index) => {
+      if (block.type !== "heading") return;
+      const title = textOf(block).trim();
+      if (!ABSTRACT_SECTIONS.some((name) => headingMatchesSection(title, name))) return;
+      const level = Number(block.attrs?.level) || 1;
+      let words = 0;
+      let keywords: string[] | null = null;
+      for (let next = index + 1; next < blocks.length; next++) {
+        const candidate = blocks[next];
+        if (candidate.type === "heading" && (Number(candidate.attrs?.level) || 1) <= level) break;
+        const text = textOf(candidate).trim();
+        const keywordLine = KEYWORDS_LINE.exec(text);
+        if (keywordLine) {
+          keywords = keywordLine[1]
+            .split(/[,;]/)
+            .map((keyword) => keyword.replace(/[.\s]+$/, "").trim())
+            .filter(Boolean);
+          continue;
+        }
+        words += countWords(text);
+      }
+      if (words === 0) return; // boş bölüm yukarıda raporlanır
+      if (abstract.maxWords && words > abstract.maxWords) {
+        add({ tone: "danger", message: `${quote(title)} ${words} kelime; kılavuz en fazla ${abstract.maxWords} kelime istiyor.`, target: title });
+      } else if (abstract.minWords && words < abstract.minWords) {
+        add({ tone: "warning", message: `${quote(title)} ${words} kelime; kılavuz en az ${abstract.minWords} kelime istiyor.`, target: title });
+      }
+      if (abstract.keywordsMin || abstract.keywordsMax) {
+        if (!keywords) {
+          add({
+            tone: "warning",
+            message: `${quote(title)} bölümünde anahtar kelime satırı yok (“Anahtar Kelimeler: …”); kılavuz ${keywordRange} anahtar kelime istiyor.`,
+            target: title,
+          });
+        } else if (
+          (abstract.keywordsMin && keywords.length < abstract.keywordsMin) ||
+          (abstract.keywordsMax && keywords.length > abstract.keywordsMax)
+        ) {
+          add({
+            tone: "warning",
+            message: `${quote(title)} bölümünde ${keywords.length} anahtar kelime var; kılavuz ${keywordRange} istiyor.`,
+            target: title,
+          });
+        }
+      }
+    });
   }
 
   // ---------- Dipnotlar ----------
