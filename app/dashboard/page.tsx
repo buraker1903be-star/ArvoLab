@@ -17,7 +17,9 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProjects } from "@/app/actions/projects";
-import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
+import { projectTypeLabel, statusLabel, isOversightRole, STAFF_ROLES } from "@/lib/project-labels";
+import { getCurrentProfile } from "@/app/actions/profile";
+import { computeAttention } from "@/lib/attention";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
@@ -72,7 +74,7 @@ export default async function DashboardPage() {
   }
 
   const displayName = user.user_metadata?.full_name || user.email || "Kullanıcı";
-  const projects = await getProjects();
+  const [projects, profile] = await Promise.all([getProjects(), getCurrentProfile()]);
   const activeProjects = projects.filter((p) => isActive(p.status));
   const { stats: writing, openComments } = await getWritingStats(
     activeProjects.map((p) => p.id),
@@ -113,6 +115,10 @@ export default async function DashboardPage() {
     )
     .sort((a, b) => a.due.days - b.due.days)
     .slice(0, UPCOMING_LIMIT);
+
+  // Personel için "dikkat isteyenler" (öğrencinin ana sayfası değişmez); sorumlu ataması yalnızca denetim rollerinde
+  const isStaff = profile?.role ? STAFF_ROLES.includes(profile.role) : false;
+  const attention = isStaff ? computeAttention(projects, openComments, { includeUnassigned: isOversightRole(profile?.role) }) : null;
 
   const revisionCount = projects.filter((p) => p.status === "revision").length;
   const analysisCount = projects.filter((p) => p.status === "analysis").length;
@@ -226,6 +232,28 @@ export default async function DashboardPage() {
           )}
         </article>
       </section>
+
+      {attention ? (
+        <section className="attention-card" aria-label="Dikkat isteyenler">
+          <span className="dashboard-kicker">Dikkat isteyenler</span>
+          {attention.length === 0 ? (
+            <p className="tone-text text-sm" data-tone="success">
+              ✓ Gecikmiş, sorumlusuz, onay ya da yanıt bekleyen çalışma yok.
+            </p>
+          ) : (
+            <ul className="attention-list">
+              {attention.map((item) => (
+                <li key={item.id}>
+                  <Link href={item.href} className="attention-item" data-tone={item.tone}>
+                    <strong>{item.count}</strong>
+                    <span>{item.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
 
       <section className="dashboard-stats" aria-label="Günlük özet">
         {stats.map(({ label, value, icon: Icon }) => (
