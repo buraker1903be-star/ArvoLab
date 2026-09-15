@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 import FindReplaceBar from "./find-replace-bar";
 import ImportDialog, { type ImportMode } from "./import-dialog";
+import type { DocxImportStats } from "@/lib/docx-import";
 import ImageLibraryDialog from "./image-library-dialog";
 import ShortcutsDialog from "./shortcuts-dialog";
 import type { FormatLossReport } from "@/lib/format-loss";
@@ -1068,10 +1069,15 @@ export default function ManuscriptEditor({
     window.location.reload();
   };
   // Word'den gelen içerik: boş belgede ya da "yerine koy"da tüm metin, aksi hâlde sona eklenir.
-  const handleImported = (html: string, mode: ImportMode) => {
+  const handleImported = (html: string, mode: ImportMode, importStats?: DocxImportStats) => {
     if (mode === "replace" || stats.empty) editor.commands.setContent(html);
     else editor.chain().insertContentAt(editor.state.doc.content.size, html).run();
     markDirtyRef.current();
+    // Word belgesinde içindekiler vardı: eskisi kaldırıldı, güncel olanı Word çıktısında oluşsun.
+    if (importStats?.tocLines && !includeToc) {
+      setIncludeToc(true);
+      showToast("success", "Word çıktısına güncel içindekiler tablosu eklenecek (Sayfa ayarlarından kapatılabilir).");
+    }
     const first = collectHeadings(editor.state.doc)[0];
     if (first) jumpToHeading(editor, first);
   };
