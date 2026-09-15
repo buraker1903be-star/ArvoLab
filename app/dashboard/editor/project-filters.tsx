@@ -33,6 +33,8 @@ export default function ProjectFilters({
       <select name="durum" defaultValue={filters.status} onChange={submit} className="compact-select" aria-label="Durum">
         <option value="tumu">Tüm durumlar</option>
         <option value="aktif">Aktif (teslim edilmemiş)</option>
+        <option value="gecikmis">Teslimi geçmiş</option>
+        <option value="yaklasan">7 gün içinde teslim</option>
         {statuses.map((status) => (
           <option key={status.value} value={status.value}>
             {status.label}

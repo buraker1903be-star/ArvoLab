@@ -1,12 +1,17 @@
 // Çalışmalarım listesi: arama, durum/sorumlu filtresi ve sıralama. Değerler adres satırında
 // (?q=…&durum=…&sirala=…&atanan=…) tutulur; geçersiz değerler varsayılana döner.
 
+import { dueInfo, DUE_SOON_DAYS } from "@/lib/due-date";
+
 export type ProjectSort = "yeni" | "duzenleme" | "teslim" | "baslik";
 export type AssigneeFilter = "tumu" | "benim" | "atanmamis";
 
 export interface ProjectFilters {
   q: string;
-  /** "tumu", "aktif" (teslim edilmemiş/arşivlenmemiş) ya da tek bir durum */
+  /**
+   * "tumu", "aktif" (teslim edilmemiş/arşivlenmemiş), "gecikmis" (teslim tarihi geçmiş),
+   * "yaklasan" (DUE_SOON_DAYS gün içinde teslim) ya da tek bir durum
+   */
   status: string;
   sort: ProjectSort;
   assignee: AssigneeFilter;
@@ -26,6 +31,7 @@ export interface ProjectFilterInput {
 export const DEFAULT_PROJECT_FILTERS: ProjectFilters = { q: "", status: "tumu", sort: "yeni", assignee: "tumu" };
 
 const SORTS: ProjectSort[] = ["yeni", "duzenleme", "teslim", "baslik"];
+const SPECIAL_STATUSES = ["aktif", "gecikmis", "yaklasan"];
 const ASSIGNEE_FILTERS: AssigneeFilter[] = ["tumu", "benim", "atanmamis"];
 const CLOSED_STATUSES = new Set(["delivered", "archived"]);
 
@@ -37,7 +43,7 @@ export function parseProjectFilters(params: Record<string, string | string[] | u
   const assignee = firstValue(params.atanan) as AssigneeFilter;
   return {
     q: firstValue(params.q).trim().slice(0, 100),
-    status: status === "aktif" || statuses.includes(status) ? status : "tumu",
+    status: SPECIAL_STATUSES.includes(status) || statuses.includes(status) ? status : "tumu",
     sort: SORTS.includes(sort) ? sort : "yeni",
     assignee: ASSIGNEE_FILTERS.includes(assignee) ? assignee : "tumu",
   };
@@ -52,14 +58,32 @@ const fold = (text: string) => text.toLocaleLowerCase("tr-TR").normalize("NFC");
 export function applyProjectFilters<T extends ProjectFilterInput>(
   projects: T[],
   filters: ProjectFilters,
-  context: { lastEdited: (projectId: string) => string | undefined; userId?: string; canFilterAssignee: boolean }
+  context: { lastEdited: (projectId: string) => string | undefined; userId?: string; canFilterAssignee: boolean; now?: Date }
 ): T[] {
   const needle = fold(filters.q);
+  // Teslim tarihine kalan gün: rozetlerle aynı hesap (Türkiye saati; teslim edilmiş/arşivde null)
+  const daysLeft = (project: T) => dueInfo(project.due_date, project.status, context.now)?.days ?? null;
+  const matchesStatus = (project: T) => {
+    switch (filters.status) {
+      case "tumu":
+        return true;
+      case "aktif":
+        return !CLOSED_STATUSES.has(project.status);
+      case "gecikmis": {
+        const days = daysLeft(project);
+        return days !== null && days < 0;
+      }
+      case "yaklasan": {
+        const days = daysLeft(project);
+        return days !== null && days >= 0 && days <= DUE_SOON_DAYS;
+      }
+      default:
+        return project.status === filters.status;
+    }
+  };
   const result = projects.filter((project) => {
     if (needle && !fold(`${project.title} ${project.university ?? ""}`).includes(needle)) return false;
-    if (filters.status === "aktif" ? CLOSED_STATUSES.has(project.status) : filters.status !== "tumu" && project.status !== filters.status) {
-      return false;
-    }
+    if (!matchesStatus(project)) return false;
     // Sorumlu filtresi yalnızca tüm çalışmaları gören denetim rollerinde anlamlıdır
     if (context.canFilterAssignee) {
       if (filters.assignee === "benim" && project.assignee_id !== context.userId) return false;

@@ -8,6 +8,8 @@ export interface DueInfo {
 }
 
 const DAY_MS = 86_400_000;
+/** "Yakında teslim" eşiği (panel kartı ve liste filtresi aynı değeri kullanır) */
+export const DUE_SOON_DAYS = 7;
 const CLOSED_STATUSES = new Set(["delivered", "archived"]);
 
 // Takvim günü Türkiye saatine göre: gece yarısından sonra "yarın" hemen "bugün" olur.
