@@ -2,6 +2,7 @@ import type { Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { headingMatchesSection } from "@/lib/section-match";
 import { formatInTextCitation, formatReferenceParts, type CitableSource, type CitationStyle } from "@/lib/citation-format";
+import { fixReferencePunctuation } from "@/lib/reference-punctuation";
 
 export interface OutlineHeading {
   pos: number;
@@ -223,6 +224,34 @@ export function sortReferences(editor: Editor): number {
     })
     .run();
   return sorted.length;
+}
+
+/**
+ * Kaynakça girdilerindeki çift nokta ve noktalamadan önceki boşlukları düzeltir (tek geri alma
+ * adımı). Metin parçaları tek tek düzeltilir; hata iki farklı biçimlendirilmiş parçanın arasına
+ * düşüyorsa (ör. italik başlık + düz nokta) dokunulmaz. Değişen girdi sayısını döndürür.
+ */
+export function fixReferencePunctuationInEditor(editor: Pick<Editor, "state" | "schema" | "view">): number {
+  const section = findReferencesSection(editor.state.doc);
+  if (!section) return 0;
+  const { tr } = editor.state;
+  let changedEntries = 0;
+  for (const { pos, node } of section.paragraphs) {
+    let changed = false;
+    node.descendants((child, offset) => {
+      if (!child.isText || !child.text) return;
+      const fixed = fixReferencePunctuation(child.text);
+      if (fixed === child.text) return;
+      // Paragraf içeriği pos + 1'de başlar; önceki düzeltmelerin kaydırması eşlenir.
+      const from = tr.mapping.map(pos + 1 + offset);
+      const to = tr.mapping.map(pos + 1 + offset + child.text.length);
+      tr.replaceWith(from, to, editor.schema.text(fixed, child.marks));
+      changed = true;
+    });
+    if (changed) changedEntries += 1;
+  }
+  if (changedEntries) editor.view.dispatch(tr.scrollIntoView());
+  return changedEntries;
 }
 
 /** Seçili metin (yoruma alıntı olarak eklenir) */

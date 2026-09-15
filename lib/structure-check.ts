@@ -10,6 +10,7 @@
 import { headingMatchesSection } from "@/lib/section-match";
 import type { AbstractRules } from "@/lib/guideline-editor-settings";
 import { crossCheck, extractInTextCitations, parseChicagoReference, parseReferenceEntry } from "@/lib/apa7";
+import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 
 interface DocNode {
   type?: string;
@@ -26,7 +27,7 @@ export interface StructureIssue {
   /** Metinde aranıp seçilecek ifade (başlık, şekil başlığı, atıf) */
   target?: string;
   /** Editörün tek tıkla yapabileceği düzeltme */
-  action?: "sort-references";
+  action?: "sort-references" | "fix-reference-punctuation";
 }
 
 const MAX_ISSUES = 60;
@@ -177,6 +178,17 @@ export function checkStructure(
   blocks.forEach((block, index) => {
     if (inReferences(index) && block.type === "paragraph" && textOf(block).trim()) referenceEntries.push(textOf(block).trim());
   });
+
+  // ---------- Kaynakça noktalaması: çift nokta, noktalamadan önce boşluk (tüm stiller) ----------
+  const punctuationProblems = referenceEntries.filter(hasReferencePunctuationIssue);
+  if (punctuationProblems.length > 0) {
+    add({
+      tone: "warning",
+      message: `Kaynakçada ${punctuationProblems.length} girdide noktalama hatası var (çift nokta ya da noktalama işaretinden önce boşluk).`,
+      target: punctuationProblems[0].slice(0, 40),
+      action: "fix-reference-punctuation",
+    });
+  }
 
   // ---------- Yazar-tarih stilleri: kaynakça alfabetik mi ----------
   const style = options.citationStyle;

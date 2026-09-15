@@ -97,6 +97,7 @@ import {
   selectedText,
   selectText,
   sortReferences,
+  fixReferencePunctuationInEditor,
   type OutlineHeading,
 } from "./editor-navigation";
 
@@ -996,6 +997,22 @@ export default function ManuscriptEditor({
                 }}
               >
                 Alfabetik sırala
+              </button>
+            ) : issue.action === "fix-reference-punctuation" ? (
+              <button
+                type="button"
+                className="result-link"
+                onClick={() => {
+                  const fixed = fixReferencePunctuationInEditor(editor);
+                  if (fixed === 0) {
+                    showToast("error", "Otomatik düzeltilemedi (hata farklı biçimlendirilmiş parçalar arasında); lütfen elle düzeltin.");
+                    return;
+                  }
+                  showToast("success", `${fixed} kaynak girdisinde noktalama düzeltildi. Geri almak için Ctrl+Z.`);
+                  recheckStructure();
+                }}
+              >
+                Düzelt
               </button>
             ) : issue.target ? (
               <button
