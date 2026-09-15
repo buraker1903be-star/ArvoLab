@@ -150,6 +150,25 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 }
 .project-form-card { padding: 22px 24px; border-radius: var(--r-lg); }
 .projects-list { display: grid; gap: 12px; }
+/* Çalışma listesi: arama, filtre, sıralama */
+.project-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.project-filter-search {
+  display: inline-flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 360px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--muted);
+}
+.project-filter-search input { flex: 1; min-width: 0; min-height: 38px; border: 0; background: transparent; color: var(--ink); font: inherit; }
+.project-filter-search input:focus { outline: none; }
+.project-filter-search:focus-within { border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-soft); }
+.project-filter-count { margin-left: auto; }
 .project-card {
   padding: 18px 20px;
   border-radius: var(--r-lg);

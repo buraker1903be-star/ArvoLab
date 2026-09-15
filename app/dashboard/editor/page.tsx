@@ -18,7 +18,9 @@ import { loadAppliedGuidelines } from "@/lib/guideline-rules";
 import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
 import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff } from "@/app/actions/projects";
-import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS } from "@/lib/project-labels";
+import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS, PROJECT_STATUSES } from "@/lib/project-labels";
+import { applyProjectFilters, isFiltered, parseProjectFilters } from "@/lib/project-filters";
+import ProjectFilters from "./project-filters";
 import { getCurrentProfile } from "@/app/actions/profile";
 import DeleteProjectButton from "./delete-project-button";
 import ActionForm from "../action-form";
@@ -43,8 +45,12 @@ function formatDateTime(dateStr: string | null) {
   });
 }
 
-export default async function ProjectsPage() {
-  const [projects, profile] = await Promise.all([getProjects(), getCurrentProfile()]);
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [projects, profile, params] = await Promise.all([getProjects(), getCurrentProfile(), searchParams]);
   const [{ stats, openComments }, guidelines] = await Promise.all([
     getWritingStats(
       projects.map((project) => project.id),
@@ -54,6 +60,13 @@ export default async function ProjectsPage() {
     createClient().then((supabase) => loadAppliedGuidelines(supabase, projects.map((project) => project.guideline_id))),
   ]);
   const canApprove = isOversightRole(profile?.role);
+  // Arama, filtre ve sıralama (adres satırındaki ?q=…&durum=…&sirala=…&atanan=…)
+  const filters = parseProjectFilters(params, PROJECT_STATUSES);
+  const visible = applyProjectFilters(projects, filters, {
+    lastEdited: (projectId) => stats.get(projectId)?.updatedAt,
+    userId: profile?.id,
+    canFilterAssignee: canApprove,
+  });
   const staff = canApprove ? await getAssignableStaff() : [];
   // Silme yetkisi RLS ile aynı: sahibi ya da Akademik Yönetici/Sistem
   // Yöneticisi/Kurucu (Kontrolör silme yetkisine sahip DEĞİL).
@@ -99,8 +112,26 @@ export default async function ProjectsPage() {
           </Link>
         </section>
       ) : (
+        <>
+        <ProjectFilters
+          key={JSON.stringify(filters)}
+          filters={filters}
+          statuses={PROJECT_STATUSES.map((status) => ({ value: status, label: statusLabel(status) }))}
+          showAssignee={canApprove}
+          total={projects.length}
+          shown={visible.length}
+          filtered={isFiltered(filters)}
+        />
+        {visible.length === 0 ? (
+          <section className="empty-state">
+            <p>Filtreye uyan çalışma yok.</p>
+            <Link href="/dashboard/editor" className="projects-filter-button">
+              Filtreyi temizle
+            </Link>
+          </section>
+        ) : (
         <section className="projects-list" aria-label="Akademik çalışma listesi">
-          {projects.map((project) => {
+          {visible.map((project) => {
             const isApproved = !!project.controller_approved_at;
             const canEdit = canApprove || profile?.id === project.owner_id || profile?.id === project.assignee_id;
             // Eski kayıtlarda sorumlu yalnızca serbest metin olarak tutuluyordu (assignee_id boş).
@@ -256,6 +287,8 @@ export default async function ProjectsPage() {
             );
           })}
         </section>
+        )}
+        </>
       )}
     </main>
   );
