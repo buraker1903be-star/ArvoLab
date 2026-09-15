@@ -13,6 +13,9 @@ import {
   UserRound,
 } from "lucide-react";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
+import { createClient } from "@/lib/supabase/server";
+import { loadAppliedGuidelines } from "@/lib/guideline-rules";
+import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
 import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS } from "@/lib/project-labels";
@@ -42,10 +45,14 @@ function formatDateTime(dateStr: string | null) {
 
 export default async function ProjectsPage() {
   const [projects, profile] = await Promise.all([getProjects(), getCurrentProfile()]);
-  const { stats, openComments } = await getWritingStats(
-    projects.map((project) => project.id),
-    profile?.id
-  );
+  const [{ stats, openComments }, guidelines] = await Promise.all([
+    getWritingStats(
+      projects.map((project) => project.id),
+      profile?.id
+    ),
+    // Kartlardaki yazım temposu için kılavuzlar tek sorguda
+    createClient().then((supabase) => loadAppliedGuidelines(supabase, projects.map((project) => project.guideline_id))),
+  ]);
   const canApprove = isOversightRole(profile?.role);
   const staff = canApprove ? await getAssignableStaff() : [];
   // Silme yetkisi RLS ile aynı: sahibi ya da Akademik Yönetici/Sistem
@@ -99,6 +106,22 @@ export default async function ProjectsPage() {
             // Eski kayıtlarda sorumlu yalnızca serbest metin olarak tutuluyordu (assignee_id boş).
             const legacyAssignee = !project.assignee_id && project.assignee_name;
             const due = dueInfo(project.due_date, project.status);
+            const guideline = project.guideline_id ? guidelines.get(project.guideline_id) : undefined;
+            const pace =
+              guideline && stats.has(project.id)
+                ? writingPace({
+                    words: stats.get(project.id)!.words,
+                    minPages: guideline.minPages,
+                    maxPages: guideline.maxPages,
+                    dueDate: project.due_date,
+                    status: project.status,
+                    settings: {
+                      fontSizePt: guideline.settings.fontSizePt,
+                      lineSpacing: guideline.settings.lineSpacing,
+                      margins: guideline.settings.margins,
+                    },
+                  })
+                : null;
             return (
               <article className="project-card" key={project.id}>
                 <div className="project-card-main">
@@ -139,6 +162,15 @@ export default async function ProjectsPage() {
                     {stats.has(project.id)
                       ? `${stats.get(project.id)!.words.toLocaleString("tr-TR")} kelime · ${editedAgo(stats.get(project.id)!.updatedAt)} düzenlendi`
                       : "Henüz yazılmadı"}
+                    {pace?.perDay ? (
+                      <span className="chip" data-tone={pace.tone} title={pace.detail}>
+                        günde ~{pace.perDay.toLocaleString("tr-TR")} kelime
+                      </span>
+                    ) : pace && pace.remainingWords === 0 ? (
+                      <span className="chip" data-tone="success">
+                        Sayfa hedefine ulaşıldı
+                      </span>
+                    ) : null}
                   </span>
                   {openComments.get(project.id) ? (
                     <Link href={`/dashboard/editor/${project.id}/write`} className="tone-text" data-tone="warning">

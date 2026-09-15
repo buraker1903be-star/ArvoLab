@@ -219,6 +219,9 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .upcoming-title { min-width: 0; overflow: hidden; font-size: var(--fs-sm); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .upcoming-list .chip,
 .project-card-meta .chip { flex: none; }
+/* Yazım temposu (tonu .tone-text verir; nötrde normal metin rengi) */
+.resume-pace { margin: 0; line-height: 1.45; }
+.resume-pace[data-tone="neutral"] { color: var(--ink-soft); font-weight: 500; }
 
 /* İlerleme */
 .project-progress { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 96px; }

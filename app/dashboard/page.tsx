@@ -21,6 +21,8 @@ import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
+import { loadAppliedGuidelines } from "@/lib/guideline-rules";
+import { writingPace } from "@/lib/writing-pace";
 
 const workstreams = [
   {
@@ -85,6 +87,24 @@ export default async function DashboardPage() {
   const resumeStats = resume ? writing.get(resume.id) : undefined;
   const resumeDue = resume ? dueInfo(resume.due_date, resume.status) : null;
   const resumeComments = resume ? openComments.get(resume.id) ?? 0 : 0;
+  // Yazım temposu (editördekiyle aynı hesap): kılavuzun sayfa hedefi ve teslim tarihine göre
+  const guidelines = await loadAppliedGuidelines(supabase, resume ? [resume.guideline_id] : []);
+  const resumeGuideline = resume?.guideline_id ? guidelines.get(resume.guideline_id) : undefined;
+  const resumePace =
+    resume && resumeGuideline
+      ? writingPace({
+          words: resumeStats?.words ?? 0,
+          minPages: resumeGuideline.minPages,
+          maxPages: resumeGuideline.maxPages,
+          dueDate: resume.due_date,
+          status: resume.status,
+          settings: {
+            fontSizePt: resumeGuideline.settings.fontSizePt,
+            lineSpacing: resumeGuideline.settings.lineSpacing,
+            margins: resumeGuideline.settings.margins,
+          },
+        })
+      : null;
 
   const upcoming = activeProjects
     .map((project) => ({ project, due: dueInfo(project.due_date, project.status) }))
@@ -153,6 +173,11 @@ export default async function DashboardPage() {
                 </span>
               ) : null}
             </div>
+            {resumePace && resumeStats ? (
+              <p className="tone-text text-sm resume-pace" data-tone={resumePace.tone}>
+                {resumePace.detail}
+              </p>
+            ) : null}
             <div className="cluster">
               <Link href={`/dashboard/editor/${resume.id}/write`} className="projects-primary-button">
                 <PenLine size={16} aria-hidden="true" />
