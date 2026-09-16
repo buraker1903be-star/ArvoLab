@@ -3,7 +3,9 @@
 import { useEffect } from "react";
 import { RotateCcw } from "lucide-react";
 
-export default function DashboardError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
+// Next hata sınırına prop'u "reset" adıyla geçirir; "retry" diye okununca
+// undefined oluyor ve tek kurtarma düğmesi tıklanınca TypeError fırlatıyordu.
+export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -16,7 +18,7 @@ export default function DashboardError({ error, retry }: { error: Error & { dige
           Geçici bir hata olabilir. Tekrar deneyin; sorun sürerse &quot;Uygulama Destek Talep&quot; sayfasından bize
           bildirin{error.digest ? ` (hata kodu: ${error.digest})` : ""}.
         </p>
-        <button type="button" className="projects-primary-button" onClick={() => retry()}>
+        <button type="button" className="projects-primary-button" onClick={() => reset()}>
           <RotateCcw size={15} aria-hidden="true" />
           Tekrar dene
         </button>
