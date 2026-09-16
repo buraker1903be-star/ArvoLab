@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
@@ -60,6 +60,7 @@ import ImageLibraryDialog from "./image-library-dialog";
 import ShortcutsDialog from "./shortcuts-dialog";
 import type { FormatLossReport } from "@/lib/format-loss";
 import { checkStructure, type StructureIssue } from "@/lib/structure-check";
+import { describeParagraphFormat, type ParagraphFormatRules } from "@/lib/paragraph-format";
 import VersionsDialog from "./versions-dialog";
 import SubmissionChecklistDialog from "./submission-checklist";
 import ShareDialog from "./share-dialog";
@@ -101,6 +102,7 @@ import {
   selectText,
   sortReferences,
   fixReferencePunctuationInEditor,
+  applyParagraphFormat,
   convertReferenceListsToParagraphs,
   type OutlineHeading,
 } from "./editor-navigation";
@@ -318,6 +320,14 @@ export default function ManuscriptEditor({
   const [settingsSource, setSettingsSource] = useState<SettingsSource>(guidelineSync.source);
   const [syncMode, setSyncMode] = useState<GuidelineSyncMode>(guidelineSync.mode);
   const [guidelineOpen, setGuidelineOpen] = useState(false);
+  // Kılavuzun paragraf düzeni kuralı: yoksa denetim bu konuya hiç bakmaz.
+  const paragraphFormat = useMemo<ParagraphFormatRules>(
+    () => ({
+      ...(guideline?.settings.paragraphIndentCm ? { indentCm: guideline.settings.paragraphIndentCm } : {}),
+      ...(guideline?.settings.justify ? { justify: true } : {}),
+    }),
+    [guideline]
+  );
   const [includeToc, setIncludeToc] = useState(initialIncludeToc);
   const [headingNumbering, setHeadingNumbering] = useState(initialHeadingNumbering);
   const [versionsOpen, setVersionsOpen] = useState(false);
@@ -613,7 +623,7 @@ export default function ManuscriptEditor({
         return;
       }
       setLiveIssues(
-        checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle, abstract: guideline?.settings.abstract })
+        checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle, abstract: guideline?.settings.abstract, paragraphFormat })
       );
     };
     const schedule = (delay: number) => {
@@ -627,7 +637,7 @@ export default function ManuscriptEditor({
       if (timer) window.clearTimeout(timer);
       editor.off("update", onUpdate);
     };
-  }, [editor, citationStyle, guideline]);
+  }, [editor, citationStyle, guideline, paragraphFormat]);
 
   const closeIssues = useCallback(() => setIssuesOpen(false), []);
   const closeChecklist = useCallback(() => setChecklistOpen(false), []);
@@ -710,6 +720,7 @@ export default function ManuscriptEditor({
         const issues = checkStructure(JSON.parse(JSON.stringify(current.getJSON())), {
           citationStyle,
           abstract: guideline?.settings.abstract,
+          paragraphFormat,
         });
         setStructureIssues(issues);
         setLiveIssues(issues);
@@ -725,7 +736,7 @@ export default function ManuscriptEditor({
     } finally {
       setChecking(false);
     }
-  }, [projectId, saveNow, citationStyle, guideline]);
+  }, [projectId, saveNow, citationStyle, guideline, paragraphFormat]);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
@@ -964,6 +975,7 @@ export default function ManuscriptEditor({
     const issues = checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), {
       citationStyle,
       abstract: guideline?.settings.abstract,
+      paragraphFormat,
     });
     setLiveIssues(issues);
     setStructureIssues((current) => (current ? issues : current));
@@ -1009,6 +1021,22 @@ export default function ManuscriptEditor({
                 }}
               >
                 Paragraflara çevir
+              </button>
+            ) : issue.action === "apply-paragraph-format" ? (
+              <button
+                type="button"
+                className="result-link"
+                onClick={() => {
+                  const applied = applyParagraphFormat(editor, paragraphFormat);
+                  if (applied === 0) {
+                    showToast("error", "Kılavuz düzenine çevrilecek gövde paragrafı bulunamadı.");
+                    return;
+                  }
+                  showToast("success", `${applied} paragraf kılavuzun düzenine getirildi. Geri almak için Ctrl+Z.`);
+                  recheckStructure();
+                }}
+              >
+                Kılavuza göre düzenle
               </button>
             ) : issue.action === "fix-reference-punctuation" ? (
               <button
@@ -1845,6 +1873,12 @@ export default function ManuscriptEditor({
                     .filter(Boolean)
                     .join(", ")}
                 </dd>
+              </>
+            ) : null}
+            {paragraphFormat.indentCm || paragraphFormat.justify ? (
+              <>
+                <dt>Paragraf düzeni</dt>
+                <dd>{describeParagraphFormat(paragraphFormat)}</dd>
               </>
             ) : null}
             {guideline.settings.abstract ? (

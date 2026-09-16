@@ -4,6 +4,7 @@
 // numaralanır ve belgenin sonunda listelenir.
 import { headingNumberMap } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
+import { indentCmOf } from "@/lib/paragraph-format";
 
 interface Mark {
   type: string;
@@ -47,7 +48,8 @@ function blockStyle(attrs: Record<string, unknown> = {}) {
   if (typeof attrs.textAlign === "string" && ALIGNMENTS.has(attrs.textAlign)) styles.push(`text-align:${attrs.textAlign}`);
   const spacing = Number(attrs.lineSpacing);
   if (Number.isFinite(spacing) && spacing >= 1 && spacing <= 3) styles.push(`line-height:${spacing}`);
-  if (attrs.firstLineIndent) styles.push("text-indent:1.25cm");
+  const indentCm = indentCmOf(attrs);
+  if (indentCm) styles.push(`text-indent:${indentCm}cm`);
   return styles.length ? ` style="${styles.join(";")}"` : "";
 }
 

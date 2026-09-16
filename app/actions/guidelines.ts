@@ -1,5 +1,6 @@
 "use server";
 
+import { validIndentCm } from "@/lib/paragraph-format";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
@@ -151,6 +152,13 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
     return { error: "Alt sınır üst sınırdan büyük olamaz." };
   }
 
+  // Paragraf girintisi isteğe bağlı: boş alan = kural yok.
+  const indentRaw = String(formData.get("paragraphIndentCm") ?? "").trim();
+  const paragraphIndentCm = indentRaw ? validIndentCm(indentRaw) : undefined;
+  if (indentRaw && !paragraphIndentCm) {
+    return { error: "Paragraf girintisi 0,3–3 cm arasında olmalı." };
+  }
+
   const { error } = await supabase.from("thesis_guidelines").update({
     citation_style: citationStyle,
     required_sections: requiredSections,
@@ -163,6 +171,8 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
       heading_numbering: formData.get("headingNumbering") === "on",
       chapter_uppercase: formData.get("chapterUppercase") === "on",
       chapter_new_page: formData.get("chapterNewPage") === "on",
+      justify: formData.get("justify") === "on",
+      ...(paragraphIndentCm ? { paragraph_indent_cm: paragraphIndentCm } : {}),
       ...(abstractMinWords ? { abstract_min_words: abstractMinWords } : {}),
       ...(abstractMaxWords ? { abstract_max_words: abstractMaxWords } : {}),
       ...(keywordsMin ? { keywords_min: keywordsMin } : {}),
