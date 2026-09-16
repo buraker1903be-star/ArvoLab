@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getLicenseState } from "@/lib/license";
 import { ensureSubscription } from "@/lib/subscription";
@@ -31,7 +32,11 @@ const open = (kind: AccessKind, status: string): AccessState => ({
   blocked: false, kind, status, trialEndsAt: null, periodEnd: null, organizationName: null, plans: [],
 });
 
-export async function getAccessState(profile: { id: string; role: UserRole; organization_id: string | null; full_name: string | null } | null): Promise<AccessState> {
+// cache(): aynı istekte hem panel düzeni hem ana sayfa sorar; ArvoOS'a
+// yalnızca bir kez gidilir.
+export const getAccessState = cache(async function getAccessState(
+  profile: { id: string; role: UserRole; organization_id: string | null; full_name: string | null } | null
+): Promise<AccessState> {
   if (!profile) return open("staff", "unknown");
   if (ADMIN_ROLES.includes(profile.role)) return open("staff", "internal");
 
@@ -66,4 +71,4 @@ export async function getAccessState(profile: { id: string; role: UserRole; orga
     organizationName: null,
     plans: subscription.plans,
   };
-}
+});

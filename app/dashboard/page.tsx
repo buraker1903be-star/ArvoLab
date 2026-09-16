@@ -20,6 +20,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getProjects } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole, STAFF_ROLES } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
+import { getAccessState } from "@/lib/access";
+import LicenseCard from "./_components/license-card";
 import { computeAttention } from "@/lib/attention";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 import { statusTone } from "@/lib/status-tone";
@@ -77,6 +79,8 @@ export default async function DashboardPage() {
 
   const displayName = user.user_metadata?.full_name || user.email || "Kullanıcı";
   const [projects, profile] = await Promise.all([getProjects(), getCurrentProfile()]);
+  // Panel düzeniyle aynı istekte paylaşılır (lib/access.ts cache'li).
+  const access = await getAccessState(profile);
   const activeProjects = projects.filter((p) => isActive(p.status));
   const { stats: writing, openComments } = await getWritingStats(
     activeProjects.map((p) => p.id),
@@ -164,6 +168,8 @@ export default async function DashboardPage() {
           <span>Güvenli oturum aktif</span>
         </div>
       </section>
+
+      <LicenseCard access={access} />
 
       <section className="dashboard-focus" aria-label="Bugün">
         {resume ? (
