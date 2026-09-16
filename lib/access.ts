@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getLicenseState } from "@/lib/license";
 import { ensureSubscription } from "@/lib/subscription";
 import { ADMIN_ROLES, type UserRole } from "@/lib/project-labels";
+import type { BillingPlan } from "@/lib/billing-plan";
 
 // ArvoLab'a kimin gireceği tek yerde karara bağlanır. İki yol var:
 //  - Kurum üyesi: lisansı kurumu öder, durum ArvoOS'tan organizations
@@ -22,11 +23,12 @@ export interface AccessState {
   trialEndsAt: string | null;
   periodEnd: string | null;
   organizationName: string | null;
-  monthlyFee: number | null;
+  /** Bireysel abone için ArvoOS'un sunduğu planlar (aylık, yıllık) */
+  plans: BillingPlan[];
 }
 
 const open = (kind: AccessKind, status: string): AccessState => ({
-  blocked: false, kind, status, trialEndsAt: null, periodEnd: null, organizationName: null, monthlyFee: null,
+  blocked: false, kind, status, trialEndsAt: null, periodEnd: null, organizationName: null, plans: [],
 });
 
 export async function getAccessState(profile: { id: string; role: UserRole; organization_id: string | null; full_name: string | null } | null): Promise<AccessState> {
@@ -42,7 +44,8 @@ export async function getAccessState(profile: { id: string; role: UserRole; orga
       trialEndsAt: null,
       periodEnd: license.periodEnd,
       organizationName: license.organizationName,
-      monthlyFee: null,
+      // Kurumun aboneliğini kurumu öder; burada ödeme planı gösterilmez.
+      plans: [],
     };
   }
 
@@ -61,6 +64,6 @@ export async function getAccessState(profile: { id: string; role: UserRole; orga
     trialEndsAt: subscription.trialEndsAt,
     periodEnd: subscription.currentPeriodEnd,
     organizationName: null,
-    monthlyFee: subscription.monthlyFee,
+    plans: subscription.plans,
   };
 }

@@ -632,6 +632,21 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 }
 .dashboard-hero h1 { margin: 6px 0; font-size: var(--fs-title); font-weight: 700; line-height: 1.12; letter-spacing: -.025em; }
 .dashboard-hero p { margin: 0; color: var(--muted); }
+
+/* Abonelik planları (aylık / yıllık) */
+.subscription-plans { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.subscription-plans li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.subscription-plans li > span { color: var(--ink); font-weight: 600; }
 .dashboard-security {
   display: inline-flex;
   align-items: center;
