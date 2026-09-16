@@ -3,6 +3,7 @@ import { LogOut } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
+import { getLicenseState } from "@/lib/license";
 import ThemeToggle from "@/app/_components/theme-toggle";
 import SidebarNav from "./_components/sidebar-nav";
 import HeaderTitle from "./_components/header-title";
@@ -29,6 +30,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const initials = initialsOf(userName);
   // Daraltma tercihi ilk çizimde uygulanır: sayfa açılırken menü genişleyip daralmaz
   const navCollapsed = cookieStore.get(NAV_COOKIE)?.value === "collapsed";
+  // Abonelik ArvoOS üzerinden; durum oradan yansıtılır (lib/license.ts).
+  const license = await getLicenseState(profile?.organization_id ?? null);
 
   return (
     <div className={navCollapsed ? "dashboard-shell is-nav-collapsed" : "dashboard-shell"}>
@@ -69,7 +72,24 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           </div>
         </header>
 
-        <div className="dashboard-main-content">{children}</div>
+        <div className="dashboard-main-content">
+          {license.blocked ? (
+            <main className="dashboard-page">
+              <section className="dashboard-hero">
+                <div>
+                  <span className="dashboard-kicker">Abonelik</span>
+                  <h1>Erişiminiz şu an kapalı</h1>
+                  <p>
+                    {license.organizationName ?? "Kurumunuzun"} ArvoLab aboneliği{" "}
+                    {license.status === "suspended" ? "askıya alındı" : license.periodEnd ? "sona erdi" : "henüz başlatılmadı"}.
+                    Çalışmalarınız duruyor, silinmedi; abonelik yenilenince kaldığınız yerden devam edersiniz.
+                  </p>
+                  <p>Yenilemek için ArvoOS panelinizdeki Ödeme ve Lisans sayfasından ArvoLab aboneliğini ödeyin ya da bizimle iletişime geçin.</p>
+                </div>
+              </section>
+            </main>
+          ) : children}
+        </div>
       </div>
 
       <MobileNav isAdmin={isAdmin} userName={userName} roleLabel={roleLabel} initials={initials} />
