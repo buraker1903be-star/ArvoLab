@@ -321,6 +321,12 @@
 .guideline-applied-banner[data-tone="muted"] { border-color: var(--line-soft); background: var(--surface-2); }
 .guideline-meta { color: var(--muted); }
 
+/* Kılavuz sürümüyle değişen sayfa ayarları (banner ve "güncelle" bildiriminde) */
+.sync-changes { display: block; margin-top: 6px; font-size: var(--fs-sm); }
+.sync-changes-title { color: var(--muted); }
+.sync-changes ul { display: grid; gap: 2px; margin: 2px 0 0; padding-left: 18px; }
+.sync-change-from { color: var(--muted); text-decoration: line-through; }
+
 /* Kılavuz kuralları (pencere içinde) */
 .guideline-rules { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: var(--fs-base); }
 .guideline-rules dt { color: var(--muted); font-weight: 600; }

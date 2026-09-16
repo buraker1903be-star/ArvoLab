@@ -81,7 +81,7 @@ import {
 } from "@/app/actions/manuscript";
 import { createClient } from "@/lib/supabase/client";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
-import type { GuidelineSyncMode } from "@/lib/guideline-sync";
+import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-sync";
 import Link from "next/link";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
@@ -135,7 +135,7 @@ interface ManuscriptEditorProps {
   /** Çalışmaya bağlı kılavuzun son onaylı sürümü */
   guideline: AppliedGuideline | null;
   /** Sayfa ayarlarının kılavuzla senkron durumu (sunucuda hesaplanır) */
-  guidelineSync: { mode: GuidelineSyncMode; source: SettingsSource };
+  guidelineSync: { mode: GuidelineSyncMode; source: SettingsSource; changes: GuidelineSyncChange[] };
   /** Kurum seçimi için çalışma düzenleme sayfası */
   editHref: string;
   /** Word çıktısına içindekiler tablosu */
@@ -1464,6 +1464,9 @@ export default function ManuscriptEditor({
               {formatDate(guideline.version) ? ` · Onay: ${formatDate(guideline.version)}` : ""}
               {guideline.updatePending ? " · Yeni sürüm ekibimizce inceleniyor" : ""}
             </span>
+            {syncMode === "auto-applied" && guidelineSync.changes.length > 0 ? (
+              <SyncChangeList title="Değişen ayarlar:" changes={guidelineSync.changes} />
+            ) : null}
           </div>
           <div className="cluster">
             <button type="button" className="projects-filter-button" onClick={() => setGuidelineOpen(true)}>
@@ -1490,6 +1493,9 @@ export default function ManuscriptEditor({
           <span>
             Kılavuzun yeni sürümü onaylandı. Kenar boşluklarını ya da sayfa numarasını siz değiştirdiğiniz için
             sayfa ayarlarınızı kendiliğinden değiştirmedik.
+            {guidelineSync.changes.length > 0 ? (
+              <SyncChangeList title="Güncellerseniz şunlar değişir:" changes={guidelineSync.changes} />
+            ) : null}
           </span>
           <span className="cluster">
             <button type="button" className="projects-primary-button" onClick={acceptGuidelineSettings}>
@@ -1980,6 +1986,25 @@ function ToolbarButton({
     >
       {children}
     </button>
+  );
+}
+
+// Kılavuz sürümü değiştiğinde hangi sayfa ayarının neye döndüğünü açıkça gösterir.
+function SyncChangeList({ title, changes }: { title: string; changes: GuidelineSyncChange[] }) {
+  return (
+    <span className="sync-changes">
+      <span className="sync-changes-title">{title}</span>
+      <ul>
+        {changes.map((change) => (
+          <li key={change.label}>
+            {change.label}: <span className="sync-change-from">{change.from}</span>
+            <span aria-hidden="true"> → </span>
+            <span className="sr-only"> yerine </span>
+            <strong>{change.to}</strong>
+          </li>
+        ))}
+      </ul>
+    </span>
   );
 }
 

@@ -69,7 +69,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
         initialShowPageNumbers={sync.showPageNumbers}
         initialCoverPage={manuscript?.coverPage}
         guideline={guideline}
-        guidelineSync={{ mode: sync.mode, source: sync.source }}
+        guidelineSync={{ mode: sync.mode, source: sync.source, changes: sync.changes }}
         editHref={`/dashboard/editor/${id}/edit`}
         initialIncludeToc={manuscript?.includeToc ?? false}
         initialHeadingNumbering={sync.headingNumbering}
