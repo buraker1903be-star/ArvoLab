@@ -1,3 +1,5 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+
 // Bireysel abonelik ArvoOS'ta tutulur: fiyat, deneme süresi ve askıya alma
 // kararı oradadır. ArvoLab yalnızca "durumum ne" diye sorar ve ödeme
 // bağlantısı ister. Çağrı sunucudan sunucuya yapılır; paylaşılan gizli
@@ -9,6 +11,33 @@
 import { normalizePlans, type BillingPlan } from "@/lib/billing-plan";
 
 const PRODUCT = "arvolab";
+
+/*
+  Köprünün durumu kendi veritabanımıza yazılır. ArvoOS Platform ekranı bunu
+  okuyup uyarı gösterir — köprü kopuk olsa bile bu yol çalışır, çünkü ArvoOS
+  buraya doğrudan servis anahtarıyla bağlanıyor.
+
+  Yanlış yazılmış bir PRODUCT_BRIDGE_SECRET köprüyü kalıcı olarak kırar ve
+  herkes süresiz bedava kullanır; tek iz sunucu log'u olursa aylarca fark
+  edilmez. Kullanıcıyı engellemiyoruz ama sessiz de kalmıyoruz.
+
+  Kaydetme başarısız olursa yutulur: sağlık kaydı yüzünden girişi bozmak anlamsız.
+*/
+async function recordHealth(ok: boolean, message?: string, kind: "permanent" | "transient" = "transient") {
+  try {
+    const admin = createAdminClient();
+    const now = new Date().toISOString();
+    await admin.from("bridge_health").upsert({
+      id: "arvoos",
+      ...(ok
+        ? { last_ok_at: now }
+        : { last_error_at: now, last_error: (message ?? "").slice(0, 500), last_error_kind: kind }),
+      updated_at: now,
+    }, { onConflict: "id" });
+  } catch (error) {
+    console.error("[abonelik] köprü sağlık kaydı yazılamadı", error instanceof Error ? error.message : error);
+  }
+}
 
 export interface SubscriptionState {
   status: string;
@@ -35,7 +64,11 @@ async function call(
   planCode?: string | null
 ) {
   const target = endpoint();
-  if (!target) return null;
+  if (!target) {
+    // Ortam değişkeni eksik: kalıcı yapılandırma hatası, kendiliğinden düzelmez.
+    await recordHealth(false, "ARVOOS_BRIDGE_URL veya PRODUCT_BRIDGE_SECRET tanımlı değil", "permanent");
+    return null;
+  }
   try {
     const response = await fetch(target.url, {
       method: "POST",
@@ -52,13 +85,23 @@ async function call(
       cache: "no-store",
     });
     if (!response.ok) {
-      console.error("[abonelik] ArvoOS yanıtı", action, response.status, await response.text().catch(() => ""));
+      const body = await response.text().catch(() => "");
+      console.error("[abonelik] ArvoOS yanıtı", action, response.status, body);
+      /*
+        401 anahtar uyuşmuyor, 400 istek hatalı: ikisi de kendiliğinden
+        düzelmez, yapılandırma düzeltilmeli. Diğerleri geçici sayılır.
+      */
+      const kind = response.status === 401 || response.status === 400 ? "permanent" : "transient";
+      await recordHealth(false, `${action}: HTTP ${response.status} ${body}`.trim(), kind);
       return null;
     }
     const payload = (await response.json()) as Record<string, unknown>;
+    await recordHealth(true);
     return { ...(payload as unknown as SubscriptionState), plans: normalizePlans(payload) };
   } catch (error) {
-    console.error("[abonelik] ArvoOS'a ulaşılamadı", action, error instanceof Error ? error.message : error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[abonelik] ArvoOS'a ulaşılamadı", action, message);
+    await recordHealth(false, `${action}: ${message}`, "transient");
     return null;
   }
 }
