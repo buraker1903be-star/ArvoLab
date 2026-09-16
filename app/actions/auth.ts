@@ -2,6 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email/resend";
+import { resetPasswordEmail } from "@/lib/email/auth-emails";
 import type { ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -47,16 +50,35 @@ export async function requestPasswordReset(formData: FormData) {
     redirect("/forgot-password?error=missing-email");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await siteOrigin()}/auth/confirm?next=/reset-password`,
+  /*
+    Bağlantıyı biz üretip e-postayı kendimiz gönderiyoruz. Supabase'in yerleşik
+    gönderimi üretim için değil: saatlik sınırı çok düşük ve aşıldığında şifre
+    sıfırlama isteyen kullanıcı hiç e-posta alamıyor. Ayrıca kendi şablonumuz
+    ArvoLab kimliğinde.
+  */
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (adminError) {
+    console.error("Şifre sıfırlama: sunucu anahtarı yok", adminError);
+    redirect("/forgot-password?sent=1");
+  }
+
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo: `${await siteOrigin()}/auth/confirm?next=/reset-password` },
   });
 
   if (error) {
-    console.error(error);
-    if (error.status === 429) {
-      redirect("/forgot-password?error=rate-limited");
-    }
+    /*
+      Kayıtlı olmayan e-posta da hata döndürür. Mesajı ayırmıyoruz: hangi
+      adreslerin kayıtlı olduğunu öğrenmek için kullanılabilirdi.
+    */
+    console.warn("Şifre sıfırlama bağlantısı üretilemedi:", error.message);
+  } else {
+    const link = data.properties?.action_link;
+    if (link) await sendEmail({ to: email, ...resetPasswordEmail(link) });
   }
 
   // Hesabın var olup olmadığını sızdırmamak için her durumda aynı mesaj gösterilir.

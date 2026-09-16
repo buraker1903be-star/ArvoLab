@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email/resend";
+import { inviteEmail } from "@/lib/email/auth-emails";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { ADMIN_ROLES, ALL_ROLES, type UserRole } from "@/lib/project-labels";
@@ -202,9 +204,19 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
     return { error: MISSING_SECRET };
   }
 
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-    data: fullName ? { full_name: fullName } : undefined,
-    redirectTo: `${await siteOrigin()}/auth/confirm?next=/reset-password`,
+  /*
+    inviteUserByEmail e-postayı Supabase'in yerleşik gönderimiyle yollardı;
+    saatlik sınırı düşük ve şablonu markasız. generateLink kullanıcıyı yine
+    oluşturuyor ama e-postayı göndermiyor — onu kendi şablonumuzla biz
+    gönderiyoruz (lib/email/auth-emails.ts).
+  */
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "invite",
+    email,
+    options: {
+      data: fullName ? { full_name: fullName } : undefined,
+      redirectTo: `${await siteOrigin()}/auth/confirm?next=/reset-password`,
+    },
   });
 
   if (error) {
@@ -214,6 +226,19 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
     }
     if (error.status === 429) return { error: "E-posta gönderim sınırına ulaşıldı; biraz sonra tekrar deneyin." };
     return { error: "Davet gönderilemedi. Supabase e-posta ayarlarını kontrol edin." };
+  }
+
+  /*
+    Davet e-postası. Gönderilemezse davet yine de geçerli: kullanıcı oluştu ve
+    bağlantı üretildi; yönetici gerekirse bağlantıyı elden iletebilir.
+  */
+  const inviteLink = data.properties?.action_link;
+  if (inviteLink) {
+    // Davet edenin adı e-postada görünsün; okunamazsa davet yine gider.
+    const { data: davetEden } = await auth.supabase
+      .from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
+    const gonderim = await sendEmail({ to: email, ...inviteEmail(inviteLink, davetEden?.full_name) });
+    if (!gonderim.ok) console.error("Davet e-postası gönderilemedi:", email, gonderim.reason);
   }
 
   // Profil satırı kayıt tetikleyicisiyle (handle_new_user) "Üye / Öğrenci" olarak açılır.
