@@ -27,13 +27,19 @@ async function recordHealth(ok: boolean, message?: string, kind: "permanent" | "
   try {
     const admin = createAdminClient();
     const now = new Date().toISOString();
-    await admin.from("bridge_health").upsert({
+    /*
+      Supabase istemcisi sorgu hatasında istisna FIRLATMAZ, { error } döndürür.
+      Bu satır eskiden error'ı hiç okumuyordu: izin eksikliği yüzünden hiçbir
+      şey yazılmıyordu ama log'a da bir şey düşmüyordu, sorun görünmez kaldı.
+    */
+    const { error } = await admin.from("bridge_health").upsert({
       id: "arvoos",
       ...(ok
         ? { last_ok_at: now }
         : { last_error_at: now, last_error: (message ?? "").slice(0, 500), last_error_kind: kind }),
       updated_at: now,
     }, { onConflict: "id" });
+    if (error) console.error("[abonelik] köprü sağlık kaydı yazılamadı", error.message);
   } catch (error) {
     console.error("[abonelik] köprü sağlık kaydı yazılamadı", error instanceof Error ? error.message : error);
   }
