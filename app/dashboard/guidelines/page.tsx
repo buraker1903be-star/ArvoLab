@@ -290,6 +290,22 @@ export default async function GuidelinesPage() {
                           <input name="chapterNewPage" type="checkbox" defaultChecked={g.extracted_rules?.chapter_new_page === true} />
                           <span>Her ana bölüm yeni sayfadan başlar</span>
                         </label>
+                        <label className="guideline-review-check checkbox-label">
+                          <input name="justify" type="checkbox" defaultChecked={g.extracted_rules?.justify === true} />
+                          <span>Gövde metni iki yana yaslı</span>
+                        </label>
+                        <label>
+                          <span>Paragraf girintisi (cm)</span>
+                          <input
+                            name="paragraphIndentCm"
+                            type="number"
+                            min="0.3"
+                            max="3"
+                            step="0.05"
+                            defaultValue={String(g.extracted_rules?.paragraph_indent_cm ?? "")}
+                            placeholder="Yok"
+                          />
+                        </label>
                         <label>
                           <span>Özet en az kelime</span>
                           <input name="abstractMinWords" type="number" min="20" max="2000" step="1" defaultValue={String(g.extracted_rules?.abstract_min_words ?? "")} placeholder="Yok" />

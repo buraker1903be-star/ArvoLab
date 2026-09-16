@@ -1,3 +1,4 @@
+import { DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
 import { fetchOfficialSource } from "@/lib/safe-official-fetch";
 
 /**
@@ -90,6 +91,21 @@ export function detectAbstractRules(compact: string): Record<string, number> {
   };
 }
 
+// "Paragraf başlarında 1,25 cm girinti", "ilk satır girintisi 1.25 cm", "paragraflar
+// 1,25 cm içeriden başlar". Ölçü yazmayan kılavuzlar için yaygın 1,25 cm varsayılır.
+// "İlk" büyük İ ile yazıldığında /i bayrağı eşleştirmez (Türkçe noktalı İ), açıkça yazılır.
+const PARAGRAPH_SUBJECT = "(?:paragraf\\p{L}*|[i\u0130]lk\\s+sat[\u0131i]r\\p{L}*)";
+export const PARAGRAPH_INDENT_CM = new RegExp(
+  `${PARAGRAPH_SUBJECT}[^.;]{0,60}?girinti\\p{L}*[^.;]{0,25}?(\\d(?:[,.]\\d+)?)\\s*cm|${PARAGRAPH_SUBJECT}[^.;]{0,60}?(\\d(?:[,.]\\d+)?)\\s*cm[^.;]{0,25}?(?:girinti|i\u00e7eriden)`,
+  "iu"
+);
+export const PARAGRAPH_INDENT = new RegExp(
+  `${PARAGRAPH_SUBJECT}[^.;]{0,60}?girinti(?!\\p{L}*\\s+(?:\\p{L}*(?:maz|mamal)\\p{L}*|yoktur))`,
+  "iu"
+);
+// "Metin iki yana yaslanmalıdır", "iki yana yaslı (justified)"
+export const JUSTIFY = /iki\s+yana\s+(?:yasl|hizal)(?!\p{L}*(?:maz|mamal))/iu;
+
 export const HEADING_NUMBERING =
   /ondal[ıi]k(?:l[ıi])?\s+(?:sistem|numara)|başl[ıi]k(?:lar[ıi]?n?)?(?:[^.;]|(?<=\d)\.(?=\d)){0,60}numaraland[ıi]r(?![ıi]lmaz|[ıi]lmamal|may)|(?:^|\s)1\.1\.1\.?\s/iu;
 
@@ -118,7 +134,18 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
   const lineSpacing = detectedNumber(compact, /(\d(?:[,.]\d+)?)\s*(?:satır\s+aralığı|satır\s+aralıklı)/iu);
   const validFontSize = fontSizePt && fontSizePt >= 8 && fontSizePt <= 24 ? fontSizePt : undefined;
   const validLineSpacing = lineSpacing && lineSpacing >= 1 && lineSpacing <= 3 ? lineSpacing : undefined;
+  // Paragraf girintisi: önce ölçü aranır, yoksa kural varlığına bakılır.
+  const indentMatch = PARAGRAPH_INDENT_CM.exec(compact);
+  const indentCm = validIndentCm(indentMatch?.[1] ?? indentMatch?.[2]);
+  const wantsIndent = PARAGRAPH_INDENT.test(compact);
+  const paragraphIndentRule = indentCm
+    ? { paragraph_indent_cm: indentCm }
+    : wantsIndent
+      ? { paragraph_indent_cm: DEFAULT_INDENT_CM }
+      : {};
+
   const warnings: string[] = [];
+  if (!indentCm && wantsIndent) warnings.push("Paragraf girintisi ölçüsü bulunamadı; 1,25 cm varsayıldı.");
   if (Object.values(margins).some((value) => value === undefined)) warnings.push("Tüm kenar boşlukları açıkça bulunamadı.");
   if (!fontFamily) warnings.push("Yazı tipi açıkça bulunamadı.");
   if (!validFontSize) warnings.push("Geçerli yazı boyutu açıkça bulunamadı.");
@@ -144,6 +171,8 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
       ...(HEADING_NUMBERING.test(compact) ? { heading_numbering: true } : {}),
       ...(CHAPTER_UPPERCASE.test(compact) ? { chapter_uppercase: true } : {}),
       ...(CHAPTER_NEW_PAGE.test(compact) ? { chapter_new_page: true } : {}),
+      ...paragraphIndentRule,
+      ...(JUSTIFY.test(compact) ? { justify: true } : {}),
       ...detectAbstractRules(compact),
     },
     confidence: Math.round(score * 100) / 100,

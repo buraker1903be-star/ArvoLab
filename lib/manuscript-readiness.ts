@@ -51,7 +51,14 @@ export function manuscriptReadiness(input: {
   const headings = headingTexts(doc?.content);
   const required = guideline?.requiredSections ?? [];
   const missing = required.filter((section) => !headings.some((heading) => headingMatchesSection(heading, section)));
-  const issues = checkStructure(doc as never, { citationStyle: input.citationStyle, abstract: guideline?.settings.abstract });
+  const issues = checkStructure(doc as never, {
+    citationStyle: input.citationStyle,
+    abstract: guideline?.settings.abstract,
+    paragraphFormat: {
+      ...(guideline?.settings.paragraphIndentCm ? { indentCm: guideline.settings.paragraphIndentCm } : {}),
+      ...(guideline?.settings.justify ? { justify: true } : {}),
+    },
+  });
   const pages = estimatePages(manuscript.word_count ?? 0, {
     fontSizePt: guideline?.settings.fontSizePt,
     lineSpacing: guideline?.settings.lineSpacing,

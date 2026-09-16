@@ -1,4 +1,5 @@
 import { Extension } from "@tiptap/core";
+import { indentCmOf, parseIndentStyle } from "@/lib/paragraph-format";
 
 /**
  * Paragraf Biçimlendirme Extension'ı — Satır Aralığı ve İlk Satır Girintisi
@@ -18,7 +19,7 @@ declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     paragraphFormatting: {
       setLineSpacing: (value: string | null) => ReturnType;
-      setFirstLineIndent: (value: boolean) => ReturnType;
+      setFirstLineIndent: (value: boolean | number) => ReturnType;
     };
   }
 }
@@ -45,12 +46,14 @@ export const ParagraphFormatting = Extension.create<ParagraphFormattingOptions>(
               return { style: `line-height: ${attributes.lineSpacing}` };
             },
           },
+          // true = 1,25 cm (eski kayıtlar), sayı = kılavuzun istediği cm
           firstLineIndent: {
             default: false,
-            parseHTML: (element: HTMLElement) => element.style.textIndent === "1.25cm",
-            renderHTML: (attributes: { firstLineIndent?: boolean }) => {
-              if (!attributes.firstLineIndent) return {};
-              return { style: "text-indent: 1.25cm" };
+            parseHTML: (element: HTMLElement) => parseIndentStyle(element.style.textIndent),
+            renderHTML: (attributes: { firstLineIndent?: boolean | number }) => {
+              const cm = indentCmOf(attributes as Record<string, unknown>);
+              if (!cm) return {};
+              return { style: `text-indent: ${cm}cm` };
             },
           },
         },
@@ -70,7 +73,7 @@ export const ParagraphFormatting = Extension.create<ParagraphFormattingOptions>(
           return ok;
         },
       setFirstLineIndent:
-        (value: boolean) =>
+        (value: boolean | number) =>
         ({ commands }: { commands: { updateAttributes: (type: string, attrs: Record<string, unknown>) => boolean } }) => {
           let ok = true;
           for (const type of this.options.types) {

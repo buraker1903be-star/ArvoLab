@@ -1,4 +1,5 @@
 import type { PageMargins } from "@/app/actions/manuscript";
+import { validIndentCm } from "@/lib/paragraph-format";
 
 export interface GuidelineEditorSettings {
   margins?: PageMargins;
@@ -9,6 +10,10 @@ export interface GuidelineEditorSettings {
   chapterUppercase?: boolean;
   /** Her ana bölüm yeni sayfadan başlar */
   chapterNewPage?: boolean;
+  /** Gövde paragraflarının ilk satır girintisi (cm) */
+  paragraphIndentCm?: number;
+  /** Gövde paragrafları iki yana yaslı */
+  justify?: boolean;
   /** Özet/Abstract kelime ve anahtar kelime sınırları */
   abstract?: AbstractRules;
   fontFamily?: string;
@@ -90,6 +95,8 @@ export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorS
     ...(typeof rules.heading_numbering === "boolean" ? { headingNumbering: rules.heading_numbering } : {}),
     ...(typeof rules.chapter_uppercase === "boolean" ? { chapterUppercase: rules.chapter_uppercase } : {}),
     ...(typeof rules.chapter_new_page === "boolean" ? { chapterNewPage: rules.chapter_new_page } : {}),
+    ...(validIndentCm(rules.paragraph_indent_cm) ? { paragraphIndentCm: validIndentCm(rules.paragraph_indent_cm) } : {}),
+    ...(typeof rules.justify === "boolean" ? { justify: rules.justify } : {}),
     ...abstractRulesFrom(rules),
     ...(fontFamily ? { fontFamily } : {}),
     ...(fontSizePt && fontSizePt >= 8 && fontSizePt <= 24 ? { fontSizePt } : {}),

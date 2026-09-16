@@ -23,6 +23,7 @@ import {
 import { CAPTION_LABELS, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
 import { headingNumberMap } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
+import { indentCmOf } from "@/lib/paragraph-format";
 
 interface TiptapMark {
   type: string;
@@ -70,7 +71,8 @@ function lineSpacingValue(value: unknown) {
 }
 
 function indentFromAttrs(attrs: Record<string, unknown> | undefined, quoteDepth: number) {
-  const firstLine = attrs?.firstLineIndent ? convertMillimetersToTwip(12.5) : undefined; // 1.25 cm — yaygın tez girinti standardı
+  const indentCm = indentCmOf(attrs); // true (eski kayıt) = 1,25 cm; sayı = kılavuzun ölçüsü
+  const firstLine = indentCm ? convertMillimetersToTwip(indentCm * 10) : undefined;
   const left = quoteDepth > 0 ? convertInchesToTwip(0.4 * quoteDepth) : undefined;
   if (firstLine === undefined && left === undefined) return undefined;
   return { firstLine, left };

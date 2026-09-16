@@ -11,6 +11,7 @@ import { headingMatchesSection } from "@/lib/section-match";
 import type { AbstractRules } from "@/lib/guideline-editor-settings";
 import { crossCheck, extractInTextCitations, parseChicagoReference, parseReferenceEntry } from "@/lib/apa7";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
+import { checkParagraphFormat, describeParagraphFormat, type ParagraphFormatRules } from "@/lib/paragraph-format";
 
 interface DocNode {
   type?: string;
@@ -27,7 +28,7 @@ export interface StructureIssue {
   /** Metinde aranıp seçilecek ifade (başlık, şekil başlığı, atıf) */
   target?: string;
   /** Editörün tek tıkla yapabileceği düzeltme */
-  action?: "sort-references" | "fix-reference-punctuation" | "convert-reference-lists";
+  action?: "sort-references" | "fix-reference-punctuation" | "convert-reference-lists" | "apply-paragraph-format";
 }
 
 const MAX_ISSUES = 60;
@@ -62,7 +63,7 @@ const quote = (text: string) => `“${text.length > 60 ? `${text.slice(0, 57)}�
 
 export function checkStructure(
   doc: { content?: DocNode[] } | null | undefined,
-  options: { citationStyle?: string; abstract?: AbstractRules } = {}
+  options: { citationStyle?: string; abstract?: AbstractRules; paragraphFormat?: ParagraphFormatRules } = {}
 ): StructureIssue[] {
   const issues: StructureIssue[] = [];
   const add = (issue: StructureIssue) => {
@@ -338,6 +339,24 @@ export function checkStructure(
         }
       }
     });
+  }
+
+  // ---------- Paragraf düzeni (kılavuzda girinti/yaslama kuralı varsa) ----------
+  if (options.paragraphFormat) {
+    const report = checkParagraphFormat(doc, options.paragraphFormat);
+    const off = report ? Math.max(report.wrongIndent, report.notJustified) : 0;
+    if (report && off > 0) {
+      const parts = [
+        report.wrongIndent ? `${report.wrongIndent} paragrafta girinti kılavuzdaki gibi değil` : "",
+        report.notJustified ? `${report.notJustified} paragraf iki yana yaslı değil` : "",
+      ].filter(Boolean);
+      add({
+        tone: "warning",
+        message: `${parts.join(", ")} (kılavuz: ${describeParagraphFormat(options.paragraphFormat)}). Toplam ${report.total} gövde paragrafı.`,
+        target: report.firstTarget,
+        action: "apply-paragraph-format",
+      });
+    }
   }
 
   // ---------- Dipnotlar ----------

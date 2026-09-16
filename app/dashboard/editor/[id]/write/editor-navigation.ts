@@ -3,6 +3,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { headingMatchesSection } from "@/lib/section-match";
 import { formatInTextCitation, formatReferenceParts, type CitableSource, type CitationStyle } from "@/lib/citation-format";
 import { fixReferencePunctuation } from "@/lib/reference-punctuation";
+import { indentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
 
 export interface OutlineHeading {
   pos: number;
@@ -286,6 +287,39 @@ export function convertReferenceListsToParagraphs(editor: Pick<Editor, "state" |
   }
   editor.view.dispatch(tr.scrollIntoView());
   return converted;
+}
+
+/**
+ * Kılavuzun paragraf düzenini (ilk satır girintisi, iki yana yaslama) gövde paragraflarına
+ * uygular: liste maddeleri, tablo hücreleri, şekil/tablo yazıları, blok alıntılar ve boş
+ * paragraflar dışarıda kalır. Tek geri alma adımıdır; değişen paragraf sayısını döndürür.
+ */
+export function applyParagraphFormat(
+  editor: Pick<Editor, "state" | "view">,
+  rules: ParagraphFormatRules
+): number {
+  if (!rules.indentCm && !rules.justify) return 0;
+  const { tr } = editor.state;
+  let changed = 0;
+  // Yalnızca belgenin doğrudan çocuğu olan dolu paragraflar (lib/paragraph-format.ts ile aynı kapsam).
+  const visit = (node: ProseMirrorNode, contentStart: number) => {
+    node.forEach((child, childOffset) => {
+      const start = contentStart + childOffset;
+      if (child.type.name === "paragraph") {
+        if (!child.textContent.trim()) return;
+        const next: Record<string, unknown> = {};
+        if (rules.indentCm && indentCmOf(child.attrs) !== rules.indentCm) next.firstLineIndent = rules.indentCm;
+        if (rules.justify && child.attrs.textAlign !== "justify") next.textAlign = "justify";
+        if (Object.keys(next).length === 0) return;
+        tr.setNodeMarkup(start, undefined, { ...child.attrs, ...next });
+        changed += 1;
+        return;
+      }
+    });
+  };
+  visit(editor.state.doc, 0);
+  if (changed) editor.view.dispatch(tr.scrollIntoView());
+  return changed;
 }
 
 /** Seçili metin (yoruma alıntı olarak eklenir) */
