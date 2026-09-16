@@ -1,11 +1,10 @@
 import { payArvolabSubscription } from "@/app/actions/subscription";
 import type { AccessState } from "@/lib/access";
+import { describePlan, planButtonLabel } from "@/lib/billing-plan";
 
 // Erişimi kapalı kullanıcıya gösterilen ekran. Kurum üyesi ödeme yapamaz
-// (kurumu öder); bireysel kullanıcı buradan kartla ödeyip hemen devam eder.
-
-const formatTry = (value: number) =>
-  new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(value / 100);
+// (kurumu öder); bireysel kullanıcı buradan aylık ya da yıllık planı seçip
+// kartla ödeyerek hemen devam eder. Planları ve tutarları ArvoOS bildirir.
 
 function reason(access: AccessState) {
   if (access.status === "suspended") return "askıya alındı";
@@ -28,13 +27,28 @@ export default function SubscriptionNotice({ access }: { access: AccessState }) 
             {reason(access)}. Çalışmalarınız duruyor, silinmedi; abonelik yenilenince kaldığınız yerden devam edersiniz.
           </p>
           {individual ? (
-            access.monthlyFee ? (
-              <form action={payArvolabSubscription}>
-                <p>Aylık {formatTry(access.monthlyFee)}. Güvenli PayTR ödeme sayfasına yönlendirilirsiniz; ödeme onaylanınca erişiminiz hemen açılır.</p>
-                <button type="submit" className="projects-primary-button">Kartla öde · {formatTry(access.monthlyFee)}</button>
-              </form>
+            access.plans.length > 0 ? (
+              <>
+                <p>
+                  Güvenli PayTR ödeme sayfasına yönlendirilirsiniz; ödeme onaylanınca erişiminiz hemen açılır.
+                  {access.plans.length > 1 ? " Size uygun dönemi seçin." : ""}
+                </p>
+                <ul className="subscription-plans">
+                  {access.plans.map((plan, index) => (
+                    <li key={plan.code ?? plan.interval ?? index}>
+                      <span>{describePlan(plan)}</span>
+                      <form action={payArvolabSubscription}>
+                        {plan.code ? <input type="hidden" name="plan" value={plan.code} /> : null}
+                        <button type="submit" className={index === 0 ? "projects-primary-button" : "projects-filter-button"}>
+                          Kartla öde · {planButtonLabel(plan)}
+                        </button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              </>
             ) : (
-              <p>Abonelik ücreti henüz tanımlanmadı. Bizimle iletişime geçin.</p>
+              <p>Abonelik planı henüz tanımlanmadı. Bizimle iletişime geçin.</p>
             )
           ) : (
             <p>Yenilemek için ArvoOS panelinizdeki Ödeme ve Lisans sayfasından ArvoLab aboneliğini ödeyin ya da bizimle iletişime geçin.</p>
