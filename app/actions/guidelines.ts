@@ -159,7 +159,7 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
     return { error: "Paragraf girintisi 0,3–3 cm arasında olmalı." };
   }
 
-  const { error } = await supabase.from("thesis_guidelines").update({
+  const { data: updated, error } = await supabase.from("thesis_guidelines").update({
     citation_style: citationStyle,
     required_sections: requiredSections,
     extracted_rules: {
@@ -182,9 +182,14 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
     reviewed_by: null,
     reviewed_at: null,
     review_notes: String(formData.get("reviewNotes") ?? "").trim() || "Biçim kuralları güncellendi; yeniden onay gerekiyor.",
-  }).eq("id", guidelineId);
+  }).eq("id", guidelineId).select("id");
 
-  if (error) return { error: error.message };
+  // Satır sayısı okunmazsa silinmiş bir kılavuza yazmak "başarılı" görünür ve
+  // yöneticinin düzenlemesi sessizce kaybolur.
+  if (error || !updated?.length) {
+    console.error(error);
+    return { error: "Kurallar kaydedilemedi. Kılavuz silinmiş olabilir; sayfayı yenileyip tekrar deneyin." };
+  }
   revalidatePath("/dashboard/guidelines");
   return { success: true };
 }
@@ -375,7 +380,7 @@ export async function approveGuideline(guidelineId: string) {
   const analysis = (guideline.ai_analysis ?? null) as Record<string, unknown> | null;
   const pendingChecksum = typeof analysis?.pendingChecksum === "string" ? analysis.pendingChecksum : null;
 
-  const { error } = await supabase
+  const { data: approved, error } = await supabase
     .from("thesis_guidelines")
     .update({
       analysis_status: "approved",
@@ -401,9 +406,13 @@ export async function approveGuideline(guidelineId: string) {
           }
         : {}),
     })
-    .eq("id", guidelineId);
+    .eq("id", guidelineId)
+    .select("id");
 
-  if (error) return { error: error.message };
+  if (error || !approved?.length) {
+    console.error(error);
+    return { error: "Kılavuz onaylanamadı. Kılavuz silinmiş olabilir; sayfayı yenileyip tekrar deneyin." };
+  }
 
   // Aynı kurumdaki tezler en özel onaylı kılavuza yeniden bağlanır (veritabanı eşleştirir).
   const { error: resyncError } = await supabase.rpc("resync_project_guidelines", { p_guideline_id: guidelineId });

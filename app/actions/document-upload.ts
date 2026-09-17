@@ -68,6 +68,17 @@ export async function analyzeUploadedDocument(params: {
     return { error: "Yalnızca .docx ve .pdf dosyaları desteklenir." };
   }
 
+  /*
+    Yol kullanıcıdan geliyor: yalnızca kendi klasöründeki dosya okunabilir.
+    Depolama politikası controller ve üstü rollere bütün kovayı açtığı için,
+    bu denetim olmadan o roldeki biri başkasının dosyasının yolunu vererek
+    metnini kendi kaydına kopyalayabilirdi (bkz. manuscript-import.ts).
+  */
+  const ownFile = params.storagePath.startsWith(`${user.id}/`) && !params.storagePath.includes("..");
+  if (!ownFile) {
+    return { error: "Geçersiz dosya yolu." };
+  }
+
   // Dosyayı Supabase Storage'dan SUNUCU TARAFINDA indir
   const { data: fileBlob, error: downloadError } = await supabase.storage
     .from("project-files")
