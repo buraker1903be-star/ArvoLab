@@ -305,6 +305,10 @@ notu artık elle değil burada kanıtlanıyor.
 
 Bir hata düzeltince onu sabitleyen testi de ekleyin.
 
+Her push ve PR'da `.github/workflows/ci.yml` şunları çalıştırır: tip denetimi,
+lint, CSS token denetimi, migration denetimi ve birim testleri. Derleme CI'da
+değil, Vercel tarafında yapılır.
+
 ## Migration Kuralı
 
 Yeni migration açarken **`supabase migration new` kullanmayın**:
