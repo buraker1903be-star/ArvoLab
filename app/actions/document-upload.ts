@@ -11,7 +11,15 @@ import {
   computeComplianceScore,
 } from "@/lib/apa7";
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB — Supabase Storage tarafındaki gerçek sınır
+/*
+  20 MB. Buradaki kontrol istemcinin BİLDİRDİĞİ boyuta bakar ve dosya o
+  noktada zaten yüklenmiştir; yani erken ve nazik bir uyarıdır, güvenlik
+  sınırı değil. Gerçek sınır kovanın kendisinde:
+  supabase/migrations/20260924100000_project_files_bucket_limits.sql
+  (eskiden bu satırda "Supabase Storage tarafındaki gerçek sınır" yazıyordu,
+  oysa kovada hiçbir sınır tanımlı değildi).
+*/
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 export interface UploadResult {
   error?: string;
