@@ -117,15 +117,18 @@ export default function DataAnalyzer() {
     return [...set];
   }, [dataset, groupVar]);
 
-  function getNumericColumn(col: string): number[] {
+  // Her ikisi de yalnızca dataset'e kapanıyor; useCallback ile kimlikleri
+  // dataset değiştiğinde değişiyor. Aşağıdaki iki useCallback zaten dataset'e
+  // bağlı olduğu için davranış aynı — bağımlılık listeleri artık eksiksiz.
+  const getNumericColumn = useCallback((col: string): number[] => {
     if (!dataset) return [];
     return dataset.rows
       .map((r) => r[col])
       .filter((v) => v !== null && v !== "" && !isNaN(Number(v)))
       .map(Number);
-  }
+  }, [dataset]);
 
-  function getGroupedNumeric(numericCol: string, groupCol: string): Map<string, number[]> {
+  const getGroupedNumeric = useCallback((numericCol: string, groupCol: string): Map<string, number[]> => {
     const map = new Map<string, number[]>();
     if (!dataset) return map;
     dataset.rows.forEach((r) => {
@@ -137,7 +140,7 @@ export default function DataAnalyzer() {
       map.get(key)!.push(Number(v));
     });
     return map;
-  }
+  }, [dataset]);
 
   const handleGenerateFullReport = useCallback(() => {
     if (!dataset) return;
@@ -279,7 +282,7 @@ export default function DataAnalyzer() {
         )}
       </div>
     );
-  }, [dataset]);
+  }, [dataset, getNumericColumn]);
 
   const handleRunAnalysis = useCallback(() => {
     if (!dataset) return;
@@ -504,7 +507,7 @@ export default function DataAnalyzer() {
       console.error(err);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems]);
+  }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems, getNumericColumn, getGroupedNumeric]);
 
   return (
     <section className="project-form-card">

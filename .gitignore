@@ -9,3 +9,6 @@ coverage
 *.tsbuildinfo
 *.log
 .DS_Store
+
+# Next, dev ile build arasında bu dosyayı sürekli yeniden yazıyor.
+next-env.d.ts
