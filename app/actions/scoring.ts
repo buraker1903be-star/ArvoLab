@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { MANAGER_ROLES } from "@/lib/project-labels";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 const PAGE_PATH = "/dashboard/associate-professorship";
 
@@ -173,6 +174,8 @@ export async function getMyScoreEntries(): Promise<(ScoreEntry & { criteria: Sco
 export async function addScoreEntry(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;
+  /* Abonelik kapısı: Doçentlik puanlama ücretli bir özellik; yeni kayıt üretir. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
   const { supabase, user } = ctx;
 
   const criteriaId = String(formData.get("criteriaId") ?? "").trim();

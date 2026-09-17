@@ -8,6 +8,7 @@ import {
   computeComplianceScore,
 } from "@/lib/apa7";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 export async function getMyProjects() {
   const supabase = await createClient();
@@ -42,6 +43,8 @@ export async function runCitationCheck(input: {
   if (!user) {
     return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
   }
+  /* Abonelik kapısı: Atıf denetimi ücretli bir özellik ve sonucu veritabanına yazılıyor. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   /*
     project_id kullanıcıdan geliyordu ve doğrulanmıyordu: kayıt BAŞKASININ

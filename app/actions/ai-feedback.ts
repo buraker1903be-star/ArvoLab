@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getDocumentFeedback } from "@/lib/ai-feedback";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 export interface AiFeedbackResponse {
   error?: string;
@@ -16,6 +17,9 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Oturum bulunamadı." };
+  /* Abonelik kapısı: her çağrı OpenAI'ye gidiyor. Aboneliği bitmiş kullanıcı
+     bu işlemi doğrudan çağırıp fatura üretebilirdi. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   const { data: doc, error: docError } = await supabase
     .from("document_uploads")

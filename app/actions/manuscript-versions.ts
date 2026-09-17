@@ -2,6 +2,7 @@
 
 import { getAuthContext, SESSION_MISSING } from "@/lib/auth-guards";
 import { snapshotManuscript, type VersionKind } from "@/lib/manuscript-versions";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 export interface ManuscriptVersion {
   id: string;
@@ -52,6 +53,9 @@ export async function listManuscriptVersions(projectId: string): Promise<{ versi
 export async function saveNamedVersion(projectId: string, label: string): Promise<{ error?: string; success?: boolean }> {
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;
+  /* Abonelik kapısı: Yeni sürüm yazmak saveManuscript ile aynı kapıya tabi.
+     Listeleme ve önizleme açık: geçmişini görebilmeli. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
   const ok = await snapshotManuscript(ctx.supabase, projectId, ctx.user.id, { kind: "manual", label });
   return ok ? { success: true } : { error: "Sürüm kaydedilemedi. Önce metnin kaydedildiğinden emin olun." };
 }
@@ -91,6 +95,8 @@ export async function restoreManuscriptVersion(
   if (!UUID_PATTERN.test(versionId)) return { error: "Geçersiz sürüm." };
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;
+  /* Abonelik kapısı: Geri yükleme metnin üzerine yazar; saveManuscript ile aynı kapı. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   const { data: version, error: versionError } = await ctx.supabase
     .from("project_manuscript_versions")

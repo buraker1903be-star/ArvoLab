@@ -10,6 +10,7 @@ import {
   crossCheck,
   computeComplianceScore,
 } from "@/lib/apa7";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 /*
   20 MB. Buradaki kontrol istemcinin BİLDİRDİĞİ boyuta bakar ve dosya o
@@ -66,6 +67,9 @@ export async function analyzeUploadedDocument(params: {
   if (!user) {
     return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
   }
+  /* Abonelik kapısı: Belge çözümleme hem depolama hem işlem maliyeti üretir.
+     Silme ve listeleme açık kalır: kullanıcı kendi verisine erişebilmeli. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   if (params.fileSize > MAX_FILE_SIZE) {
     return { error: "Dosya boyutu 20 MB sınırını aşıyor." };

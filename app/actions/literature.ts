@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork, type DoiMetadata } from "@/lib/doi";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 const PAGE_PATH = "/dashboard/literature";
 const STATUSES = ["to_review", "read", "used"];
@@ -70,6 +71,9 @@ const isMissingColumn = (error: { code?: string } | null) => error?.code === "PG
 export async function createLiteratureSource(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;
+  /* Abonelik kapısı: Yeni kaynak eklemek içerik üretir. Okuma, güncelleme ve silme
+     açık kalır: mevcut kaynaklarını yönetebilmeli. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "Kaynak başlığı zorunludur." };
@@ -222,6 +226,8 @@ export interface CitationSourceInput {
 export async function createCitationSource(input: CitationSourceInput): Promise<{ error?: string; source?: LiteratureSource }> {
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;
+  /* Abonelik kapısı: Atıf kaynağı da yeni içeriktir. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   const title = text(input.title, 500);
   if (!title) return { error: "Kaynak başlığı zorunludur." };

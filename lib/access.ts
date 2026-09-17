@@ -102,6 +102,26 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  *
  * Yazan ya da veri dışarı çıkaran her giriş noktası bunu çağırmalı.
  * loadCurrentProfile ve accessFor istek başına önbellekli; ek maliyeti yok.
+ *
+ * Kapı KİMDE var: dış maliyet üreten (OpenAI, depolama, ağır çözümleme) ya da
+ * yeni içerik yazan işlemler — requestAiFeedback, runOriginalityCheck,
+ * runCitationCheck, analyzeUploadedDocument, importWordDocument,
+ * saveManuscript, saveNamedVersion, restoreManuscriptVersion,
+ * createLiteratureSource, createCitationSource, addManuscriptComment,
+ * addScoreEntry, createProject, createShareLink.
+ *
+ * Kapı KİMDE YOK, bilerek:
+ *  - auth.ts ve subscription.ts: engellenen kullanıcı giriş yapabilmeli ve
+ *    ödeme yapabilmeli; buraya kapı koymak kendi kilidini açmasını engeller.
+ *  - support.ts: yardım isteyebilmeli.
+ *  - Okumalar, silmeler ve mevcut kaydın güncellenmesi: kullanıcı kendi
+ *    verisini görebilmeli ve yönetebilmeli. Yeni değer üretmiyorlar.
+ *  - guidelines.ts, team.ts, guideline-scan.ts, universities.ts: personel
+ *    akışları, kendi rol kontrolleri var. ADMIN_ROLES yalnızca system_admin
+ *    ve founder olduğu için buraya kapı koymak academic_manager, controller
+ *    ve expert rollerini de dışarıda bırakırdı.
+ *  - consultancy.ts: danışmanlık talebi satış kanalı sayılıyor; aboneliği
+ *    bitmiş kullanıcının talep açması engellenmiyor.
  */
 export async function isSubscriptionBlocked(): Promise<boolean> {
   const profile = await loadCurrentProfile();

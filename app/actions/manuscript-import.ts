@@ -3,6 +3,7 @@
 import { getAuthContext, SESSION_MISSING } from "@/lib/auth-guards";
 import { convertDocxToEditorHtml, type DocxImportStats } from "@/lib/docx-import";
 import { IMAGE_BUCKET, SIGNED_URL_TTL_SECONDS } from "@/lib/manuscript-images";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 const MAX_DOCX_BYTES = 25 * 1024 * 1024;
 
@@ -18,6 +19,8 @@ export async function importWordDocument(
 ): Promise<{ error?: string; html?: string; stats?: DocxImportStats }> {
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;
+  /* Abonelik kapısı: Word içe aktarma yeni içerik üretir; saveManuscript ile aynı kapı. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   const bucket = ctx.supabase.storage.from(IMAGE_BUCKET);
   const ownImport = storagePath.startsWith(`${ctx.user.id}/imports/`) && /\.docx$/i.test(storagePath) && !storagePath.includes("..");

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buildShingles, computeSimilarity } from "@/lib/similarity-check";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 export interface OriginalityMatch {
   documentId: string;
@@ -31,6 +32,9 @@ export async function runOriginalityCheck(documentId: string): Promise<Originali
   if (!user) {
     return { error: "Oturum bulunamadı." };
   }
+  /* Abonelik kapısı: Özgünlük denetimi ücretli bir özellik; paneldeki kapı yalnızca
+     ekranı kapatır, işlem doğrudan çağrılabilir. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   const { data: targetDoc, error: targetError } = await supabase
     .from("document_uploads")

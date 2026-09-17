@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 export interface ManuscriptComment {
   id: string;
@@ -54,6 +55,9 @@ export async function listManuscriptComments(projectId: string): Promise<{ comme
 export async function addManuscriptComment(projectId: string, body: string, quote: string | null): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;
+  /* Abonelik kapısı: Yeni yorum içerik üretir. Yorumlar yalnızca panel editöründen
+     eklenir; paylaşım bağlantısıyla gelen okuyucu bu yolu kullanmaz. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
   const text = body.trim();
   if (!text) return { error: "Yorum boş olamaz." };
   if (text.length > 2000) return { error: "Yorum en fazla 2000 karakter olabilir." };
