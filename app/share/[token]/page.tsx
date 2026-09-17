@@ -29,31 +29,59 @@ function Unavailable() {
   );
 }
 
+/*
+  Okuma hatası "geçersiz bağlantı" DEĞİLDİR. Üç sorgunun da error'ı
+  okunmuyordu; service_role izinleri verilmediği için her geçerli bağlantı
+  "permission denied" alıyor, kullanıcı ise "süresi dolmuş" görüyordu.
+  Özellik uçtan uca ölüydü ve sebebi hiçbir yerde görünmüyordu. İki durumu
+  ayırmak, aynı sınıftan bir hatanın bir daha sessizce yaşamasını engeller.
+*/
+function TemporarilyUnavailable() {
+  return (
+    <main className="share-unavailable">
+      <h1>Bağlantı şu anda açılamıyor</h1>
+      <p>Geçici bir sorun oluştu. Lütfen birkaç dakika sonra tekrar deneyin.</p>
+    </main>
+  );
+}
+
 export default async function SharedManuscriptPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!isShareTokenFormat(token)) return <Unavailable />;
 
   const admin = createAdminClient();
-  const { data: link } = await admin
+  const { data: link, error: linkError } = await admin
     .from("manuscript_share_links")
     .select("id, project_id, expires_at, view_count, created_by, label")
     .eq("token_hash", hashShareToken(token))
     .is("revoked_at", null)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
+  if (linkError) {
+    console.error("[share] bağlantı okunamadı", { code: linkError.code, message: linkError.message });
+    return <TemporarilyUnavailable />;
+  }
   if (!link) return <Unavailable />;
 
-  const { data: project } = await admin
+  const { data: project, error: projectError } = await admin
     .from("academic_projects")
     .select("title, guideline_id, owner_id, assignee_id")
     .eq("id", link.project_id)
     .maybeSingle();
+  if (projectError) {
+    console.error("[share] çalışma okunamadı", { code: projectError.code, message: projectError.message });
+    return <TemporarilyUnavailable />;
+  }
   if (!project) return <Unavailable />;
 
-  const [{ data: row }, guideline] = await Promise.all([
+  const [{ data: row, error: manuscriptError }, guideline] = await Promise.all([
     admin.from("project_manuscripts").select("*").eq("project_id", link.project_id).maybeSingle(),
     loadAppliedGuideline(admin, project.guideline_id),
   ]);
+  if (manuscriptError) {
+    console.error("[share] metin okunamadı", { code: manuscriptError.code, message: manuscriptError.message });
+    return <TemporarilyUnavailable />;
+  }
   const manuscript = row
     ? {
         margins: {

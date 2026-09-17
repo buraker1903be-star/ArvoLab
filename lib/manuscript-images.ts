@@ -10,7 +10,20 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // birinin dosya yolunu metne yazmak o dosyaya erişim sağlamaz. Sunucu dış adreslere istek atmaz.
 
 export const IMAGE_BUCKET = "project-files";
-export const SIGNED_URL_TTL_SECONDS = 30 * 24 * 60 * 60;
+
+/*
+  İmzalı görsel bağlantısının ömrü.
+
+  30 GÜNDÜ ve bu, paylaşım iptalini delik bırakıyordu: bağlantıyı bir kez
+  açan kişi, bağlantı aynı gün iptal edilse bile metindeki bütün görselleri
+  30 gün daha indirebiliyordu. İmzalı URL geri çağrılamaz; tek sınırı süresi.
+
+  Kısaltmak güvenli, çünkü üç gösterim yolu da (editör, yazdırma sayfası,
+  paylaşım sayfası) refreshImageUrls ile HER AÇILIŞTA depo yolundan yeniden
+  imzalıyor — yukarıdaki nota bakın. Süre yalnızca "sayfa açıkken görselin
+  ne kadar süre yüklenebileceğini" belirliyor.
+*/
+export const SIGNED_URL_TTL_SECONDS = 2 * 60 * 60;
 
 const EDITOR_IMAGE_PATH = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/editor-images\/[^/]+$/i;
 
