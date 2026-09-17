@@ -5,8 +5,9 @@
  * tamamlanmamış gamma/beta fonksiyonları için seri/devam kesri
  * algoritmaları — Numerical Recipes'te tarif edilen klasik
  * yöntemler) t, F ve χ² dağılımlarının p-değerlerini hesaplar.
- * Bilinen kritik tablo değerleriyle (df=10,20,30 için t; çeşitli
- * df kombinasyonları için F ve χ²) doğrulanmıştır.
+ * Bilinen kritik tablo değerleriyle (t, F ve χ² için çeşitli df
+ * kombinasyonları) doğrulanmıştır; bu doğrulama artık elle değil
+ * tests/unit/stats-math.test.ts içinde otomatik çalışır.
  */
 
 function lgamma(x: number): number {

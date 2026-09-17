@@ -2,6 +2,7 @@
   "name": "arvolab",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "engines": {
     "node": ">=22"
   },
@@ -9,6 +10,7 @@
     "dev": "next dev",
     "build": "node scripts/check-css-tokens.mjs && node scripts/check-migrations.mjs && next build",
     "start": "next start",
+    "test:unit": "node --import ./tests/register.mjs --test 'tests/unit/*.test.ts'",
     "lint": "eslint .",
     "check:css": "node scripts/check-css-tokens.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",

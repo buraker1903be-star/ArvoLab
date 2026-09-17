@@ -283,6 +283,28 @@ npm run dev
    update public.profiles set organization_id = '<yukarıdaki-id>' where id = '<auth-user-uuid>';
    ```
 
+## Testler
+
+```bash
+npm run test:unit
+```
+
+`tests/unit/` yalnızca Next, React ya da Supabase'e dokunmayan saf mantık
+modüllerini kapsar: istatistiksel dağılımlar (`stats-math`), lisans kararı
+(`license-decision`), APA atıf çapraz denetimi (`apa7`), DOI normalleştirme
+(`doi`) ve benzerlik motoru (`similarity-check`).
+
+Derleme adımı yok: Node 24 TypeScript'i kendisi sıyırıyor, `tests/register.mjs`
+yalnızca `@/…` takma adını ve uzantısız import'ları tsconfig'deki gibi çözüyor.
+Ek bağımlılık gerekmez.
+
+`stats-math` testleri standart istatistik tablolarından alınan kritik
+değerleri kullanır: her kritik değerde p tam olarak 0.05 (ve ayrıca 0.01)
+çıkmalıdır. Dosyanın başındaki "bilinen tablo değerleriyle doğrulanmıştır"
+notu artık elle değil burada kanıtlanıyor.
+
+Bir hata düzeltince onu sabitleyen testi de ekleyin.
+
 ## Migration Kuralı
 
 Yeni migration açarken **`supabase migration new` kullanmayın**:

@@ -1,5 +1,6 @@
 // Kurum lisansından erişim kararı. Saf: veritabanı ve Next'e bağlı değil,
-// böylece birim testiyle sınanır. Okuma tarafı lib/license.ts'tedir.
+// böylece birim testiyle sınanır (tests/unit/license-decision.test.ts).
+// Okuma tarafı lib/license.ts'tedir.
 //
 // Üç bilinçli karar — hepsi aynı ilkeden: kapıyı yalnızca net bir "lisans yok"
 // cevabı kapatır, bilgisizlik kapatmaz.
