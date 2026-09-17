@@ -283,6 +283,32 @@ npm run dev
    update public.profiles set organization_id = '<yukarıdaki-id>' where id = '<auth-user-uuid>';
    ```
 
+## Migration Kuralı
+
+Yeni migration açarken **`supabase migration new` kullanmayın**:
+
+```bash
+npm run db:new -- "paylasim baglantisi suresi"
+```
+
+Nedeni: bu projede migration dosyaları bir dönem gerçek tarihle değil "bir
+sonraki gün" mantığıyla adlandırıldı ve sapma 24 Eylül 2026'ya kadar çıktı
+(dosyalar 17 Eylül'de yazıldığı hâlde `20260924…` adını taşıyor). Uygulanmış
+migration'lar Supabase tarafında sürüm dizesiyle izlendiği için geriye dönük
+yeniden adlandırma defteri bozardı; dosyalar olduğu gibi bırakıldı.
+
+Sonuç olarak bugünün gerçek zaman damgasıyla açılan bir dosya, zaten
+uygulanmış olanların **önüne** sıralanır. `db:new` sürümü
+`max(şimdi, son + 1 saniye)` olarak hesaplayıp bunu engeller.
+
+`npm run build` (ve `npm run check:migrations`) şunları denetler: ad biçimi,
+sürüm benzersizliği, tarihin gerçekten geçerli olması ve yeni bir dosyanın
+git'te izlenen (yani gönderilmiş) en son sürümden büyük olması. Gerçek zaman
+`20260924100000`'i geçtikten sonra normal zaman damgaları yeniden güvenli
+hâle gelir ve denetim sessizce geçer.
+
+Yeni tablo eklerken RLS'i açıp politikalarını aynı migration içinde yazın.
+
 ## Vercel Deploy
 
 Mevcut Vercel hesabınızda **yeni bir proje** olarak bu GitHub reposunu bağlayın,
