@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
@@ -21,6 +22,19 @@ export default async function PrintManuscriptPage({
 }) {
   const [{ id }, { auto }] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
+
+  /*
+    Abonelik kapısı: bu sayfa /dashboard DIŞINDA olduğu için paneldeki kapıya
+    takılmıyordu. Deneme süresi bittikten sonra metnin tamamı yazdırma
+    görünümünde açılmaya devam ediyordu.
+  */
+  if (await isSubscriptionBlocked()) {
+    return (
+      <div className="print-page">
+        <p style={{ padding: "2rem", textAlign: "center" }}>{SUBSCRIPTION_BLOCKED_MESSAGE}</p>
+      </div>
+    );
+  }
 
   const { data: project } = await supabase
     .from("academic_projects")

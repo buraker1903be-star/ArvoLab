@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Packer } from "docx";
 import { createClient } from "@/lib/supabase/server";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { buildDocxFromTiptap, type DocxImage } from "@/lib/tiptap-docx";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { readImageInfo } from "@/lib/image-info";
@@ -44,6 +45,15 @@ export async function GET(
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Oturum bulunamadı." }, { status: 401 });
+  }
+
+  /*
+    Abonelik kapısı: route handler app/dashboard/layout.tsx'i ÇALIŞTIRMAZ, bu
+    yüzden buradaki kontrol şart. Deneme süresi bittikten sonra da tam Word
+    çıktısı indirilmeye devam ediyordu.
+  */
+  if (await isSubscriptionBlocked()) {
+    return NextResponse.json({ error: SUBSCRIPTION_BLOCKED_MESSAGE }, { status: 402 });
   }
 
   // RLS: çalışmayı göremeyen kullanıcı buradan öteye geçemez.

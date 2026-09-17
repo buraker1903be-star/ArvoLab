@@ -79,6 +79,29 @@ export async function analyzeUploadedDocument(params: {
     return { error: "Geçersiz dosya yolu." };
   }
 
+  /*
+    project_id de kullanıcıdan geliyor ve doğrulanmıyordu. document_uploads
+    INSERT politikası yalnızca "uploaded_by = auth.uid()" istiyor, yani satır
+    BAŞKASININ projesine bağlanabiliyordu: kurban, kendi çalışmasının altında
+    yabancı bir dosyayı, çıkarılmış metnini ve analizini görüyordu. (Depolama
+    yolu denetimi yukarıda ayrı bir açığı kapatıyor; bu onun eşi.)
+
+    Okuma RLS'e tabi, yani göremediği bir çalışmanın kimliğini veren kullanıcı
+    burada durur.
+  */
+  if (params.projectId) {
+    const { data: ownProject, error: projectError } = await supabase
+      .from("academic_projects")
+      .select("id")
+      .eq("id", params.projectId)
+      .maybeSingle();
+    if (projectError) {
+      console.error(projectError);
+      return { error: "Çalışma doğrulanamadı." };
+    }
+    if (!ownProject) return { error: "Bu çalışmaya belge ekleyemezsiniz." };
+  }
+
   // Dosyayı Supabase Storage'dan SUNUCU TARAFINDA indir
   const { data: fileBlob, error: downloadError } = await supabase.storage
     .from("project-files")

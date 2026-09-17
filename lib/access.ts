@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getLicenseState } from "@/lib/license";
 import { ensureSubscription } from "@/lib/subscription";
 import { ADMIN_ROLES, type UserRole } from "@/lib/project-labels";
+import { loadCurrentProfile } from "@/lib/current-profile";
 import type { BillingPlan } from "@/lib/billing-plan";
 
 // ArvoLab'a kimin gireceği tek yerde karara bağlanır. İki yol var:
@@ -85,4 +86,25 @@ export async function getAccessState(
 ): Promise<AccessState> {
   if (!profile) return open("staff", "unknown");
   return accessFor(profile.id, profile.role, profile.organization_id, profile.full_name);
+}
+
+export const SUBSCRIPTION_BLOCKED_MESSAGE =
+  "Aboneliğiniz sona erdi. Devam etmek için planınızı yenileyin.";
+
+/**
+ * Erişim kapısı, çağıran taraf profili kendisi okumadan.
+ *
+ * Kapı uzun süre TEK BİR JSX satırında duruyordu (app/dashboard/layout.tsx):
+ * engellenen kullanıcıya panel yerine abonelik kartı gösteriliyordu, ama
+ * /dashboard DIŞINDAKİ her yol açık kalıyordu — Word dışa aktarma adresi,
+ * yazdırma sayfası ve bütün sunucu işlemleri. Deneme süresi biterken editör
+ * sekmesi açık kalan kullanıcının otomatik kaydı kesintisiz sürüyordu.
+ *
+ * Yazan ya da veri dışarı çıkaran her giriş noktası bunu çağırmalı.
+ * loadCurrentProfile ve accessFor istek başına önbellekli; ek maliyeti yok.
+ */
+export async function isSubscriptionBlocked(): Promise<boolean> {
+  const profile = await loadCurrentProfile();
+  const access = await getAccessState(profile);
+  return access.blocked;
 }

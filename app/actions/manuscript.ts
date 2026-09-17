@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { extractPlainText, extractHeadings, countWords, type TiptapDoc } from "@/lib/tiptap-text";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import {
@@ -130,6 +131,12 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
       sessionExpired: true,
     };
   }
+  /*
+    Abonelik kapısı burada da gerekli: paneldeki kapı yalnızca ekran çizimini
+    engelliyor. Deneme süresi biterken editör sekmesi açık kalan kullanıcının
+    otomatik kaydı kesintisiz sürüyordu.
+  */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   const { content, margins, showPageNumbers, coverPage, settingsSource, includeToc, headingNumbering } = input;
   // Biçim bilgisi (başlık düzeyi, resim adresi, dipnot metni…) sunucuya eksik ulaştıysa

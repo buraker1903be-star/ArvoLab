@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { generateShareToken } from "@/lib/share-token";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -57,6 +58,10 @@ export async function createShareLink(
 ): Promise<{ url?: string; expiresAt?: string; error?: string }> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: SESSION_MISSING.error };
+  /* Aboneliği bitmiş kullanıcı YENİ paylaşım bağlantısı üretemez. Mevcut
+     bağlantılar süreleri dolana kadar çalışmaya devam eder: bağlantıyı alan
+     danışmanın elindeki adresi geriye dönük kırmak doğru olmaz. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
   if (!UUID_PATTERN.test(projectId)) return { error: "Geçersiz çalışma." };
   if (!DURATIONS_DAYS.includes(input.days)) return { error: "Geçerlilik süresi 7, 30 ya da 90 gün olabilir." };
   const label = input.label?.trim().slice(0, 120) || null;

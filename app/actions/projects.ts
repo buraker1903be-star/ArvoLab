@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import {
   OVERSIGHT_ONLY_STATUSES,
   OVERSIGHT_ROLES,
@@ -74,6 +75,9 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
   } = await supabase.auth.getUser();
 
   if (!user) return SESSION_MISSING;
+  /* Paneldeki kapı yalnızca ekranı kapatıyor; sunucu işlemi doğrudan
+     çağrılabildiği için abonelik burada da denetlenmeli. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   const title = String(formData.get("title") ?? "").trim();
   const type = String(formData.get("type") ?? "");

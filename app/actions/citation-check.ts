@@ -43,6 +43,25 @@ export async function runCitationCheck(input: {
     return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
   }
 
+  /*
+    project_id kullanıcıdan geliyordu ve doğrulanmıyordu: kayıt BAŞKASININ
+    çalışmasına bağlanabiliyor, kurban kendi çalışmasının altında yabancı bir
+    atıf denetimi görüyordu. document-upload.ts'teki denetimin eşi; okuma
+    RLS'e tabi olduğu için göremediği çalışmanın kimliğini veren burada durur.
+  */
+  if (input.projectId) {
+    const { data: ownProject, error: projectError } = await supabase
+      .from("academic_projects")
+      .select("id")
+      .eq("id", input.projectId)
+      .maybeSingle();
+    if (projectError) {
+      console.error(projectError);
+      return { error: "Çalışma doğrulanamadı." };
+    }
+    if (!ownProject) return { error: "Bu çalışmaya atıf denetimi ekleyemezsiniz." };
+  }
+
   const references = parseReferenceList(input.referenceList);
   if (references.length === 0) {
     return { error: "Doğrulanabilecek bir kaynakça girdisi bulunamadı." };
