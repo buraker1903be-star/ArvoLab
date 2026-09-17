@@ -23,10 +23,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      # Node 24: "academic-directory:check" adımı node --check ile dört .mjs
+      # dosyasını doğruluyor. Node 22'de bu adım 17 Ağustos 2026'dan beri her
+      # haftalık çalışmada düşüyordu; aynı dosyalar Node 24'te sorunsuz
+      # geçiyor. Kontrol workflow'u ve yerel geliştirme de 24 kullanıyor.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
