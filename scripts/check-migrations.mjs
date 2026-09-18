@@ -30,6 +30,25 @@ if (!fs.existsSync(DIR)) {
   process.exit(0);
 }
 
+// Git'te izlenen dosya üretime çıkmış sayılır: sürümü Supabase tarafında
+// durur, adı ne olursa olsun geçmiştir ve değiştirilmez. Biçim ve tarih
+// kuralları yalnızca YENİ (izlenmeyen) dosyalara uygulanır. Böylece eski
+// adlandırmalar (ör. "0002_…", "20260731_000001_…") ve gün içinde saatler
+// tükenince yazılmış geçersiz saatler ("…280000" = saat 28) denetimi
+// kırmaz, ama bir daha eklenemez.
+let tracked = null;
+try {
+  tracked = new Set(
+    execFileSync("git", ["ls-files", "--", "supabase/migrations"], { cwd: root, encoding: "utf8" })
+      .split("\n")
+      .map((line) => path.basename(line.trim()))
+      .filter(Boolean),
+  );
+} catch {
+  // git yoksa (ör. dışa aktarılmış kaynak) bütün dosyalar yeni sayılır.
+}
+const isShipped = (name) => Boolean(tracked && tracked.has(name));
+
 const problems = [];
 const entries = fs.readdirSync(DIR).filter((name) => name.endsWith(".sql")).sort();
 const versions = new Map();
@@ -37,12 +56,14 @@ const versions = new Map();
 for (const name of entries) {
   const match = NAME_PATTERN.exec(name);
   if (!match) {
-    problems.push(`${name}: ad biçimi YYYYMMDDHHMMSS_kucuk_harf_ad.sql olmalı`);
+    if (!isShipped(name)) problems.push(`${name}: ad biçimi YYYYMMDDHHMMSS_kucuk_harf_ad.sql olmalı`);
     continue;
   }
   const version = match[1];
   if (versions.has(version)) {
-    problems.push(`${name}: ${versions.get(version)} ile aynı sürümü (${version}) kullanıyor`);
+    if (!isShipped(name) || !isShipped(versions.get(version))) {
+      problems.push(`${name}: ${versions.get(version)} ile aynı sürümü (${version}) kullanıyor`);
+    }
     continue;
   }
   versions.set(version, name);
@@ -56,33 +77,19 @@ for (const name of entries) {
   const roundTrips =
     asDate.getUTCFullYear() === y && asDate.getUTCMonth() === mo - 1 && asDate.getUTCDate() === d &&
     asDate.getUTCHours() === h && asDate.getUTCMinutes() === mi && asDate.getUTCSeconds() === s;
-  if (!roundTrips) problems.push(`${name}: ${version} geçerli bir tarih/saat değil`);
+  if (!roundTrips && !isShipped(name)) problems.push(`${name}: ${version} geçerli bir tarih/saat değil`);
 }
 
-// Asıl kural: HENÜZ GÖNDERİLMEMİŞ bir migration, gönderilmiş olanların en
-// büyüğünden büyük bir sürüm taşımalı. "Gönderilmiş" ölçütü git'tir: HEAD'de
-// izlenen dosya üretime çıkmış sayılır, sürümü Supabase defterinde durur.
-// Yeni dosya onun altında bir sürüm alırsa uygulanmışların önüne sıralanır.
-let tracked = null;
-try {
-  tracked = new Set(
-    execFileSync("git", ["ls-files", "--", "supabase/migrations"], { cwd: root, encoding: "utf8" })
-      .split("\n")
-      .map((line) => path.basename(line.trim()))
-      .filter(Boolean),
-  );
-} catch {
-  // git yoksa (ör. dışa aktarılmış kaynak) bu kontrol atlanır.
-}
-
+// Asıl kural: yeni bir migration, gönderilmiş olanların en büyüğünden büyük
+// bir sürüm taşımalı; yoksa uygulanmışların önüne sıralanır.
 if (tracked && tracked.size) {
   const shippedMax = [...versions.entries()]
-    .filter(([, name]) => tracked.has(name))
+    .filter(([, name]) => isShipped(name))
     .map(([version]) => version)
     .sort()
     .pop();
   for (const [version, name] of versions) {
-    if (tracked.has(name)) continue;
+    if (isShipped(name)) continue;
     if (shippedMax && version <= shippedMax) {
       problems.push(
         `${name}: sürümü (${version}) gönderilmiş en son migration'dan (${shippedMax}) küçük. ` +

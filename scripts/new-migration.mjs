@@ -1,9 +1,13 @@
 // Yeni migration dosyası açar: npm run db:new -- <ad>
 //
-// "supabase migration new" gerçek zaman damgasını kullanır; bu projede son
-// sürüm şu an için ileri tarihli olduğundan o dosya uygulanmışların ÖNÜNE
-// sıralanırdı (gerekçe: scripts/check-migrations.mjs). Bu betik sürümü
-// max(şimdi, son + 1 saniye) olarak hesaplar, yani her zaman sona eklenir.
+// Sürüm max(şimdi, son sürüm + 1 saniye) olarak hesaplanır, yani dosya her
+// zaman gönderilmiş olanların SONUNA eklenir. "supabase migration new" ve
+// elle yazılan zaman damgası bunu garanti etmez: ArvoLab'da sürümler bir
+// dönem ileri tarihliydi (bugünün damgası uygulanmışların önüne düşerdi),
+// ArvoOS ve ARC'ta gün içinde saatler tükenince "…250000" (saat 25) gibi
+// geçersiz damgalar yazıldı. Denetim: scripts/check-migrations.mjs.
+//
+// Aynı dosya ArvoOS, ArvoARC ve ArvoLab'da birebir durur.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
