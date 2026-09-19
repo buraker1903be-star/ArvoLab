@@ -268,6 +268,8 @@ export async function updateProject(projectId: string, formData: FormData): Prom
 
   revalidatePath("/dashboard/editor");
   revalidatePath("/dashboard");
+  // Düzenleme sayfası da yeni değerlerle çizilsin; form kayıttan sonra bu değerlerle yeniden kurulur (action-form.tsx).
+  revalidatePath(`/dashboard/editor/${projectId}/edit`);
   return { success: true };
 }
 

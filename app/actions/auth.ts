@@ -7,6 +7,7 @@ import { sendEmail } from "@/lib/email/resend";
 import { resetPasswordEmail } from "@/lib/email/auth-emails";
 import type { ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
+import { authConfirmLink } from "@/lib/auth-link";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -67,7 +68,6 @@ export async function requestPasswordReset(formData: FormData) {
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email,
-    options: { redirectTo: `${await siteOrigin()}/auth/confirm?next=/reset-password` },
   });
 
   if (error) {
@@ -77,8 +77,9 @@ export async function requestPasswordReset(formData: FormData) {
     */
     console.warn("Şifre sıfırlama bağlantısı üretilemedi:", error.message);
   } else {
-    const link = data.properties?.action_link;
-    if (link) await sendEmail({ to: email, ...resetPasswordEmail(link) });
+    // action_link değil: o bağlantı oturumu #access_token ile döndürür, sunucu göremez (lib/auth-link.ts).
+    const token = data.properties?.hashed_token;
+    if (token) await sendEmail({ to: email, ...resetPasswordEmail(authConfirmLink(await siteOrigin(), token, "recovery")) });
   }
 
   // Hesabın var olup olmadığını sızdırmamak için her durumda aynı mesaj gösterilir.

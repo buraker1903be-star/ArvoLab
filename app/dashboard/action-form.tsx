@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useTransition, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useActionState, useRef, useState, useTransition, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import type { ActionResult } from "@/lib/auth-guards";
 import { announceActionSuccess, showToast } from "./_components/toast-events";
 
@@ -22,12 +22,22 @@ interface ActionFormProps {
 // - başarı: iOS benzeri bildirim + form sıfırlanır + açık PanelDrawer penceresi kapanır
 export default function ActionForm({ action, children, className, style, confirmMessage, successMessage }: ActionFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [surum, setSurum] = useState(0);
   const [, startTransition] = useTransition();
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(async (_previous, formData) => {
     const result = (await action(formData)) ?? null;
     if (result?.success) {
       showToast("success", successMessage ?? "İşlem tamamlandı.");
-      formRef.current?.reset();
+      /*
+        Alanlar yeniden kurulur (fieldset'in anahtarı değişir), sunucunun
+        yeni gönderdiği defaultValue'larla. Eskiden form.reset() çağrılıyordu:
+        React 19 <select defaultValue> değişince seçeneğin varsayılanını
+        güncellemediği için reset listeyi sayfanın ilk açıldığı değere
+        döndürüyordu; düzenleme formunda ikinci kayıt da eski değeri geri
+        yazıyordu (durum, rol, kurum, sorumlu). Ekleme formlarında sonuç aynı:
+        varsayılanlar boş olduğu için alanlar temizlenir.
+      */
+      setSurum((s) => s + 1);
       announceActionSuccess();
     }
     return result;
@@ -44,7 +54,7 @@ export default function ActionForm({ action, children, className, style, confirm
   return (
     // method="post": sayfa henüz etkileşimli değilken gönderilse bile alanlar (notlar vb.) adres çubuğuna yazılmaz.
     <form ref={formRef} method="post" onSubmit={handleSubmit} className={className} style={style} aria-busy={pending}>
-      <fieldset disabled={pending} className="action-form-fieldset">
+      <fieldset key={surum} disabled={pending} className="action-form-fieldset">
         {children}
       </fieldset>
       {state?.error ? (

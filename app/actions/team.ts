@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email/resend";
 import { inviteEmail } from "@/lib/email/auth-emails";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
+import { authConfirmLink } from "@/lib/auth-link";
 import { ADMIN_ROLES, ALL_ROLES, type UserRole } from "@/lib/project-labels";
 
 const PAGE_PATH = "/dashboard/team";
@@ -215,7 +216,6 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
     email,
     options: {
       data: fullName ? { full_name: fullName } : undefined,
-      redirectTo: `${await siteOrigin()}/auth/confirm?next=/reset-password`,
     },
   });
 
@@ -232,7 +232,8 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
     Davet e-postası. Gönderilemezse davet yine de geçerli: kullanıcı oluştu ve
     bağlantı üretildi; yönetici gerekirse bağlantıyı elden iletebilir.
   */
-  const inviteLink = data.properties?.action_link;
+  // action_link değil: o bağlantı oturumu #access_token ile döndürür, sunucu göremez (lib/auth-link.ts).
+  const inviteLink = data.properties?.hashed_token ? authConfirmLink(await siteOrigin(), data.properties.hashed_token, "invite") : null;
   if (inviteLink) {
     // Davet edenin adı e-postada görünsün; okunamazsa davet yine gider.
     const { data: davetEden } = await auth.supabase
