@@ -35,3 +35,5 @@ jobs:
         run: npm run check:migrations
       - name: Birim testleri
         run: npm run test:unit
+      - name: Veritabanı testleri
+        run: npm run test:db

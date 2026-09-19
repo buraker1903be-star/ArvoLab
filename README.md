@@ -542,7 +542,6 @@ app/
   actions/auth.ts                    # giriş/çıkış server action'ları
   actions/citation-check.ts          # APA7 kontrolünü çalıştırır + kaydeder
   dashboard/documents/               # Belge Kontrolü (APA7) sayfası
-  api/apa7/validate/route.ts         # APA7 doğrulama API'si (bağımsız kullanım için)
 lib/
   apa7.ts                            # kural bazlı doğrulama motoru
   supabase/client.ts, server.ts      # Supabase istemcileri
