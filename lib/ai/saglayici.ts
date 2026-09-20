@@ -102,11 +102,37 @@ export function saglayiciHatasi(durum: number, govde: string): string {
   return `Yapay zeka isteği başarısız oldu (HTTP ${durum}).`;
 }
 
-/** response_format desteklemeyen sunucularda gelen hata mı? */
-const jsonDesteklenmiyor = (durum: number, govde: string) =>
-  durum === 400 && /response_format|json_object|not supported|unrecognized/i.test(govde);
+export type IstekBayraklari = { json: boolean; sicaklik: boolean };
 
-type Istek = { model: string; mesajlar: Mesaj[]; secenek: SorSecenek; json: boolean };
+/*
+  Sunucular istemediğimiz bir parametreyi hata sayıp isteği tümden
+  reddedebiliyor. İkisini gördük:
+  - Açık ağırlıklı model sunucularının bir kısmı response_format'ı bilmiyor.
+  - claude-sonnet-5 "temperature is deprecated for this model" diyor (canlıda
+    20.09.2026'da HTTP 400; asistan hiçbir yetenekte çalışmadı).
+  İkisi de isteğin vazgeçilebilir parçası: biçimi istemde zaten anlatıyoruz
+  ve çözümleyici toleranslı. Bu yüzden hatayı kullanıcıya göstermeden önce
+  suçlu parametreyi düşürüp bir kez daha deniyoruz.
+
+  Saf fonksiyon; testi tests/unit/ai-saglayici.test.ts.
+*/
+export function parametreDusur(
+  durum: number,
+  govde: string,
+  bayraklar: IstekBayraklari,
+  bicimi: Bicim,
+): IstekBayraklari | null {
+  if (durum !== 400) return null;
+  if (bayraklar.sicaklik && /temperature/i.test(govde) && /deprecat|unsupport|not supported|invalid|unrecognized/i.test(govde))
+    return { ...bayraklar, sicaklik: false };
+  // Anthropic'te JSON response_format ile değil prefill ile isteniyor;
+  // orada düşürülecek bir şey yok.
+  if (bayraklar.json && bicimi === "openai" && /response_format|json_object|not supported|unrecognized/i.test(govde))
+    return { ...bayraklar, json: false };
+  return null;
+}
+
+type Istek = { model: string; mesajlar: Mesaj[]; secenek: SorSecenek } & IstekBayraklari;
 
 /*
   Anthropic'te sistem istemi bir mesaj değil, üst düzey "system" alanı; ve
@@ -114,12 +140,12 @@ type Istek = { model: string; mesajlar: Mesaj[]; secenek: SorSecenek; json: bool
   (prefill): model devamını yazıyor, biz başa "{" ekliyoruz. Belgelenmiş,
   güvenli bir yöntem ve çözümleyiciyi kurtarıyor.
 */
-function anthropicGovde({ model, mesajlar, secenek, json }: Istek) {
+function anthropicGovde({ model, mesajlar, secenek, json, sicaklik }: Istek) {
   const sistem = mesajlar.filter((m) => m.rol === "sistem").map((m) => m.metin).join("\n\n");
   const govde: Record<string, unknown> = {
     model,
     max_tokens: secenek.enFazlaJeton ?? 900,
-    temperature: secenek.sicaklik ?? 0.2,
+    ...(sicaklik ? { temperature: secenek.sicaklik ?? 0.2 } : {}),
     messages: [
       ...mesajlar.filter((m) => m.rol !== "sistem").map((m) => ({ role: "user", content: m.metin })),
       ...(json ? [{ role: "assistant", content: "{" }] : []),
@@ -130,7 +156,7 @@ function anthropicGovde({ model, mesajlar, secenek, json }: Istek) {
 }
 
 async function gonder(istek: Istek) {
-  const { model, mesajlar, secenek, json } = istek;
+  const { model, mesajlar, secenek, json, sicaklik } = istek;
   const basliklar: Record<string, string> = { "Content-Type": "application/json" };
   const key = anahtar();
   const anthropic = bicim() === "anthropic";
@@ -153,7 +179,7 @@ async function gonder(istek: Istek) {
         : {
             model,
             messages: mesajlar.map((m) => ({ role: m.rol === "sistem" ? "system" : "user", content: m.metin })),
-            temperature: secenek.sicaklik ?? 0.2,
+            ...(sicaklik ? { temperature: secenek.sicaklik ?? 0.2 } : {}),
             max_tokens: secenek.enFazlaJeton ?? 900,
             ...(json ? { response_format: { type: "json_object" } } : {}),
           },
@@ -179,39 +205,38 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
     throw new Error("Yapay zeka sunucusu tanımlı değil (AI_TABAN_URL ya da AI_ANAHTAR). Yönetici ortam değişkenlerini eklemeli.");
 
   const model = secenek.model ?? process.env.AI_MODEL ?? process.env.OPENAI_MODEL ?? VARSAYILAN_MODEL;
-  const istek: Istek = { model, mesajlar, secenek, json: Boolean(secenek.jsonBekle) };
+  const bicimi = bicim();
+  let istek: Istek = { model, mesajlar, secenek, json: Boolean(secenek.jsonBekle), sicaklik: true };
 
-  let yanit: Response;
-  try {
-    yanit = await gonder(istek);
-  } catch (hata) {
-    // AbortSignal.timeout TimeoutError fırlatır; ağ hatası TypeError.
-    if (hata instanceof Error && hata.name === "TimeoutError")
-      throw new Error("Yapay zeka zamanında yanıt vermedi. Daha kısa bir metinle tekrar deneyin.");
-    throw new Error("Yapay zeka sunucusuna bağlanılamadı.");
+  async function calis(denenen: Istek) {
+    let cevap: Response;
+    try {
+      cevap = await gonder(denenen);
+    } catch (hata) {
+      // AbortSignal.timeout TimeoutError fırlatır; ağ hatası TypeError.
+      if (hata instanceof Error && hata.name === "TimeoutError")
+        throw new Error("Yapay zeka zamanında yanıt vermedi. Daha kısa bir metinle tekrar deneyin.");
+      throw new Error("Yapay zeka sunucusuna bağlanılamadı.");
+    }
+    return { cevap, govde: cevap.ok ? "" : await cevap.text().catch(() => "") };
+  }
+
+  let { cevap: yanit, govde } = await calis(istek);
+  for (let deneme = 0; deneme < 2 && !yanit.ok; deneme += 1) {
+    const sonraki = parametreDusur(yanit.status, govde, istek, bicimi);
+    if (!sonraki) break;
+    console.warn("[ai] sunucu parametreyi reddetti, düşürülüp tekrar deneniyor", { ...aiKurulumu(), sonraki });
+    istek = { ...istek, ...sonraki };
+    ({ cevap: yanit, govde } = await calis(istek));
   }
 
   if (!yanit.ok) {
-    let govde = await yanit.text().catch(() => "");
-    /*
-      Açık ağırlıklı model sunucularının bir kısmı response_format'ı
-      bilmiyor ve isteği tümden reddediyor. Biçimi istemde zaten
-      anlatıyoruz (lib/ai/bulgu.ts), çözümleyici de toleranslı; bu yüzden
-      bir kez de onsuz deniyoruz. Aksi halde kendi sunucusuna geçen kurulum
-      hiçbir yetenekte çalışmazdı.
-    */
-    if (istek.json && bicim() === "openai" && jsonDesteklenmiyor(yanit.status, govde)) {
-      yanit = await gonder({ ...istek, json: false }).catch(() => yanit);
-      if (!yanit.ok) govde = await yanit.text().catch(() => "");
-    }
-    if (!yanit.ok) {
-      console.error("[ai] sunucu hatası", { ...aiKurulumu(), durum: yanit.status, govde: govde.slice(0, 500) });
-      throw new Error(saglayiciHatasi(yanit.status, govde));
-    }
+    console.error("[ai] sunucu hatası", { ...aiKurulumu(), durum: yanit.status, govde: govde.slice(0, 500) });
+    throw new Error(saglayiciHatasi(yanit.status, govde));
   }
 
   const veri = await yanit.json().catch(() => null);
-  const metin = yanitMetni(veri, bicim(), istek.json);
+  const metin = yanitMetni(veri, bicimi, istek.json);
   if (!metin) throw new Error("Yapay zeka boş yanıt verdi. Tekrar deneyin.");
 
   return { metin, model };

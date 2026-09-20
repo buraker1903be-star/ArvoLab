@@ -1,6 +1,6 @@
 import { describe, test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { bicim, yanitMetni } from "../../lib/ai/saglayici";
+import { bicim, parametreDusur, yanitMetni } from "../../lib/ai/saglayici";
 
 const KAYITLI = { ...process.env };
 afterEach(() => {
@@ -49,5 +49,33 @@ describe("yanıt metni", () => {
   test("boş yanıt null döner", () => {
     assert.equal(yanitMetni({ content: [] }, "anthropic", true), null);
     assert.equal(yanitMetni({ choices: [] }, "openai", false), null);
+  });
+});
+
+describe("reddedilen parametreyi düşürme", () => {
+  const tam = { json: true, sicaklik: true };
+
+  test("temperature deprecated ise sıcaklık düşer", () => {
+    // 20.09.2026 canlı hatası: claude-sonnet-5 temperature kabul etmiyor ve
+    // isteği tümden reddediyordu; asistan hiçbir yetenekte çalışmadı.
+    const govde = '{"error":{"message":"`temperature` is deprecated for this model."}}';
+    assert.deepEqual(parametreDusur(400, govde, tam, "anthropic"), { json: true, sicaklik: false });
+  });
+
+  test("response_format bilinmiyorsa JSON biçimi düşer (yalnızca openai)", () => {
+    const govde = '{"error":{"message":"response_format is not supported"}}';
+    assert.deepEqual(parametreDusur(400, govde, tam, "openai"), { json: false, sicaklik: true });
+    // Anthropic'te JSON prefill ile isteniyor; düşürülecek parametre yok.
+    assert.equal(parametreDusur(400, govde, { json: true, sicaklik: false }, "anthropic"), null);
+  });
+
+  test("zaten düşürülmüş parametre ikinci kez düşürülmez", () => {
+    const govde = '{"error":{"message":"`temperature` is deprecated for this model."}}';
+    assert.equal(parametreDusur(400, govde, { json: false, sicaklik: false }, "anthropic"), null);
+  });
+
+  test("400 dışındaki hatalarda ve ilgisiz gövdede dokunulmaz", () => {
+    assert.equal(parametreDusur(401, "`temperature` is deprecated", tam, "anthropic"), null);
+    assert.equal(parametreDusur(400, "credit balance is too low", tam, "anthropic"), null);
   });
 });
