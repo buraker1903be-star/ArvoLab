@@ -150,11 +150,34 @@ export default async function DashboardPage() {
   const analysisCount = projects.filter((p) => p.status === "analysis").length;
   const referenceCount = projects.filter((p) => p.status === "review" || p.status === "turnitin").length;
 
-  const stats = [
-    { label: "Aktif çalışmalar", value: activeProjects.length, icon: FolderKanban },
-    { label: "Revizyon bekleyen", value: revisionCount, icon: Clock3 },
-    { label: "Kaynak/biçim incelemesinde", value: referenceCount, icon: BookOpenCheck },
-    { label: "Analiz süreci", value: analysisCount, icon: ChartNoAxesCombined },
+  const teslimEdilen = projects.filter((p) => p.status === "delivered").length;
+  const yaklasan = upcoming.length;
+  /*
+    Özet kartları: sayının yanında bir alt satır ve duruma göre ton. Kartlar
+    aynı görünüp yalnızca sayı değiştiği için ekran ölüydü; sayının anlamı
+    (yaklaşan teslim var mı, revizyon bekliyor mu) görünmüyordu.
+  */
+  const stats: { label: string; value: number; icon: typeof FolderKanban; tone: string; note: string }[] = [
+    {
+      label: "Aktif çalışmalar", value: activeProjects.length, icon: FolderKanban,
+      tone: activeProjects.length ? "info" : "neutral",
+      note: yaklasan ? `${yaklasan} tanesinin teslimi yaklaştı` : teslimEdilen ? `${teslimEdilen} çalışma teslim edildi` : "teslim tarihi yaklaşan yok",
+    },
+    {
+      label: "Revizyon bekleyen", value: revisionCount, icon: Clock3,
+      tone: revisionCount ? "warning" : "success",
+      note: revisionCount ? "düzeltme bekliyor" : "revizyon bekleyen yok",
+    },
+    {
+      label: "Kaynak/biçim incelemesinde", value: referenceCount, icon: BookOpenCheck,
+      tone: referenceCount ? "info" : "neutral",
+      note: referenceCount ? "kontrol sürüyor" : "incelemede çalışma yok",
+    },
+    {
+      label: "Analiz süreci", value: analysisCount, icon: ChartNoAxesCombined,
+      tone: analysisCount ? "info" : "neutral",
+      note: analysisCount ? "veri analizi aşamasında" : "analizde çalışma yok",
+    },
   ];
 
   return (
@@ -211,6 +234,19 @@ export default async function DashboardPage() {
               <p className="tone-text text-sm resume-pace" data-tone={resumePace.tone}>
                 {resumePace.detail}
               </p>
+            ) : null}
+            {resumeReadiness ? (
+              <div
+                className="readiness-bar"
+                data-ready={readinessGaps.length === 0 ? "true" : undefined}
+                role="progressbar"
+                aria-valuenow={resumeReadiness.done}
+                aria-valuemin={0}
+                aria-valuemax={resumeReadiness.total}
+                aria-label="Teslim hazırlığı"
+              >
+                <i style={{ "--w": `${Math.round((resumeReadiness.done / Math.max(1, resumeReadiness.total)) * 100)}%` } as React.CSSProperties} />
+              </div>
             ) : null}
             {resumeReadiness ? (
               <p className="text-sm resume-readiness" data-ready={readinessGaps.length === 0 ? "true" : undefined}>
@@ -302,14 +338,15 @@ export default async function DashboardPage() {
       ) : null}
 
       <section className="dashboard-stats" aria-label="Günlük özet">
-        {stats.map(({ label, value, icon: Icon }) => (
-          <article className="dashboard-stat-card" key={label}>
+        {stats.map(({ label, value, icon: Icon, tone, note }) => (
+          <article className="dashboard-stat-card" data-tone={tone} key={label}>
             <div className="dashboard-stat-icon" aria-hidden="true">
               <Icon size={20} strokeWidth={1.8} />
             </div>
             <div>
               <strong>{value}</strong>
               <span>{label}</span>
+              <em>{note}</em>
             </div>
           </article>
         ))}
