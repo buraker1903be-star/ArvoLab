@@ -62,6 +62,51 @@ async function readText(url: string) {
   return metniOku(response);
 }
 
+/*
+  Enstitülerin kendi alt alan adları.
+
+  Tez yazım kılavuzu enstitü düzeyinde yayımlanır ve enstitülerin çoğunun
+  ayrı sitesi vardır (sbe.gazi.edu.tr gibi). Üniversitenin ana site
+  haritası bu alt alanlara bağlanmaz; yalnızca ana alan adı taranınca
+  enstitü kılavuzlarının büyük kısmı hiç görünmüyordu.
+
+  Liste bilerek kısa: her ek önek, her üniversite için fazladan bir istek
+  demek. Yaygın kısaltmalar kapsanıyor.
+*/
+const ENSTITU_ONEKLERI = ["sbe", "fbe", "sagbil", "ebe", "lee", "gse", "sosyalbilimler", "fenbilimleri"];
+
+/** İsteklerin arasına konan nezaket gecikmesi (aynı kuruma arka arkaya yüklenmemek için). */
+const bekle = (ms: number) => new Promise((coz) => setTimeout(coz, ms));
+
+/**
+ * Üniversitenin ana alan adı + enstitü alt alan adları taranır.
+ *
+ * Alt alanlar yalnızca var olanlar için maliyet üretir: çözümlenemeyen ad
+ * fetch aşamasında hata verir ve atlanır.
+ */
+export async function crawlUniversityAndInstitutes(domain: string) {
+  const hepsi: OfficialGuidelineCandidate[] = [];
+  const gorulen = new Set<string>();
+
+  const ekle = (adaylar: OfficialGuidelineCandidate[]) => {
+    for (const aday of adaylar) {
+      if (gorulen.has(aday.url)) continue;
+      gorulen.add(aday.url);
+      hepsi.push(aday);
+    }
+  };
+
+  ekle(await crawlOfficialGuidelineCandidates(domain).catch(() => []));
+
+  // Ana alan adı "www." taşıyorsa alt alan onun değil, kök alanın altındadır.
+  const kok = domain.replace(/^www\./, "");
+  for (const onek of ENSTITU_ONEKLERI) {
+    await bekle(400);
+    ekle(await crawlOfficialGuidelineCandidates(`${onek}.${kok}`).catch(() => []));
+  }
+  return hepsi;
+}
+
 export async function crawlOfficialGuidelineCandidates(domain: string) {
   const sitemapUrls = new Set([
     `https://${domain}/sitemap.xml`, `https://${domain}/sitemap_index.xml`,

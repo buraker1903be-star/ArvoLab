@@ -17,7 +17,9 @@ export async function GET(request: Request) {
   const discoveryResults: Array<{
     university: string | null;
     status: "discovered" | "already_known" | "not_found" | "failed";
-    url?: string;
+    /* Bir üniversitede birden çok enstitü kılavuzu bulunabilir. */
+    count?: number;
+    institutes?: string[];
     error?: string;
   }> = [];
   try {

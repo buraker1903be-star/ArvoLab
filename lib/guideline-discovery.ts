@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { scanGuidelineUrl, type GuidelineScanResult } from "@/lib/guideline-scan";
-import { crawlOfficialGuidelineCandidates, resolveOfficialUniversityDomain } from "@/lib/official-guideline-crawl";
+import { scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { enstituTespitEt, fakulteVeyaBolumBelgesi } from "@/lib/enstitu-tespiti";
+import { crawlUniversityAndInstitutes, resolveOfficialUniversityDomain } from "@/lib/official-guideline-crawl";
 import { metniOku } from "@/lib/safe-official-fetch";
 
 type University = { id: string; name: string };
@@ -10,7 +11,13 @@ type Candidate = {
   title: string;
 };
 
-const MAX_CANDIDATES_PER_UNIVERSITY = 3;
+/*
+  Enstitü düzeyine geçince aday sayısı arttı: bir üniversitenin Sosyal,
+  Fen ve Sağlık Bilimleri enstitüleri ayrı kılavuz yayımlar ve hepsi ayrı
+  birer adaydır. Eskiden ilk bulunanda durulduğu için üniversite başına tek
+  kayıt oluşuyordu.
+*/
+const MAX_CANDIDATES_PER_UNIVERSITY = 8;
 const SEARCH_PROVIDERS = [
   (query: string) => `https://www.bing.com/search?q=${encodeURIComponent(query)}`,
   (query: string) => `https://www.google.com/search?hl=tr&num=10&q=${encodeURIComponent(query)}`,
@@ -66,7 +73,8 @@ function extractTargetUrl(rawHref: string) {
 async function discoverCandidates(universityName: string): Promise<Candidate[]> {
   const officialDomain = await resolveOfficialUniversityDomain(universityName).catch(() => null);
   if (officialDomain) {
-    const officialCandidates = await crawlOfficialGuidelineCandidates(officialDomain).catch(() => []);
+    // Ana alan adı + enstitü alt alan adları (sbe., fbe., …)
+    const officialCandidates = await crawlUniversityAndInstitutes(officialDomain).catch(() => []);
     if (officialCandidates.length > 0) return officialCandidates.slice(0, MAX_CANDIDATES_PER_UNIVERSITY);
   }
   const query = `"${universityName}" "tez yazım kılavuzu" filetype:pdf`;
@@ -111,6 +119,26 @@ async function discoverCandidates(universityName: string): Promise<Candidate[]> 
   return [];
 }
 
+/**
+ * Enstitüye karşılık gelen academic_units kaydı; yoksa null.
+ *
+ * Dizin (YÖK Atlas senkronu) henüz enstitü üretmiyor, bu yüzden çoğu
+ * durumda null döner. Bağ kurulabildiğinde kılavuz eşleştirmesi
+ * best_guideline_for üzerinden birim düzeyinde çalışır — adla eşleştirme
+ * kaba bir tahmindir, kimlikle bağ kesindir.
+ */
+async function enstituBirimi(universityId: string, enstituAdi: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("academic_units")
+    .select("id")
+    .eq("university_id", universityId)
+    .eq("unit_type", "enstitu")
+    .ilike("name", enstituAdi)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
 function scanUpdate(scan: GuidelineScanResult, detectedAt: string) {
   const citationStyle = scan.detectedCitationHint?.toLowerCase().replace(" ", "") ?? null;
   return {
@@ -131,6 +159,7 @@ function scanUpdate(scan: GuidelineScanResult, detectedAt: string) {
       fullTextLength: scan.fullTextLength,
       detectedAt,
       discoveredAutomatically: true,
+      scannerVersion: TARAYICI_SURUMU,
     },
     review_notes: `Resmî .edu.tr kaynağından otomatik keşfedildi; kurallar kullanım öncesinde akademik inceleme bekliyor (güven: %${Math.round(scan.confidence * 100)}).`,
   };
@@ -141,10 +170,42 @@ export async function discoverGuidelinesForUniversity(university: University) {
   const checkedAt = new Date().toISOString();
   try {
     const candidates = await discoverCandidates(university.name);
+
+    /*
+      Eskiden ilk uygun adayda return ediliyordu: üniversite başına en fazla
+      TEK kılavuz kaydedilebiliyordu ve 30 gün boyunca yeniden bakılmıyordu.
+      Oysa aynı üniversitenin Sosyal, Fen ve Sağlık Bilimleri enstitüleri
+      ayrı kurallar koyar — atıf sistemi bile farklı olabilir. Artık bütün
+      adaylar gezilir ve her ENSTİTÜ için ayrı kayıt açılır.
+    */
+    const eklenenEnstituler = new Set<string>();
+    const bulunanlar: string[] = [];
+    let zatenBilinen = 0;
+    const atlananlar: string[] = [];
+
     for (const candidate of candidates) {
       try {
         const scan = await scanGuidelineUrl(candidate.url);
         if (!belongsToUniversity(scan, university.name)) continue;
+
+        /*
+          Fakülte ya da bölüm belgesi enstitü kuralı değildir; üniversite
+          geneline uygulanırsa yanlış olur. Canlıda "Tıp Fakültesi" ve
+          "Arkeoloji Bölümü" kayıtları bu yüzden oluşmuştu.
+        */
+        if (fakulteVeyaBolumBelgesi({ metin: scan.textPreview, baslik: candidate.title })) {
+          atlananlar.push("fakülte/bölüm belgesi");
+          continue;
+        }
+
+        const enstitu = enstituTespitEt({
+          metin: scan.textPreview,
+          url: candidate.url,
+          baslik: candidate.title,
+        });
+        // Aynı turda aynı enstitü için ikinci bir aday kaydedilmez.
+        const anahtar = enstitu?.ad ?? "__universite__";
+        if (eklenenEnstituler.has(anahtar)) continue;
 
         const { data: duplicateByUrl } = await admin
           .from("thesis_guidelines")
@@ -156,21 +217,37 @@ export async function discoverGuidelinesForUniversity(university: University) {
           .select("id")
           .eq("source_checksum", scan.sourceChecksum)
           .maybeSingle();
-        const duplicate = duplicateByUrl ?? duplicateByChecksum;
-        if (duplicate) {
-          await admin.from("universities").update({
-            guideline_discovery_checked_at: checkedAt,
-            guideline_discovery_status: "already_known",
-            guideline_discovery_note: candidate.url,
-          }).eq("id", university.id);
-          return { status: "already_known" as const, url: candidate.url };
+        if (duplicateByUrl ?? duplicateByChecksum) {
+          zatenBilinen += 1;
+          eklenenEnstituler.add(anahtar);
+          continue;
+        }
+
+        /*
+          Aynı enstitünün kılavuzu zaten kayıtlıysa (başka adresten) yenisi
+          açılmaz: aynı kurallar iki kayıt hâlinde durursa hangisinin
+          geçerli olduğu belirsizleşir.
+        */
+        if (enstitu) {
+          const { data: ayniEnstitu } = await admin
+            .from("thesis_guidelines")
+            .select("id")
+            .eq("university_id", university.id)
+            .eq("institute_name", enstitu.ad)
+            .maybeSingle();
+          if (ayniEnstitu) {
+            zatenBilinen += 1;
+            eklenenEnstituler.add(anahtar);
+            continue;
+          }
         }
 
         const { error: insertError } = await admin.from("thesis_guidelines").insert({
           university_id: university.id,
           university_name: university.name,
-          institute_name: null,
-          academic_unit_id: null,
+          institute_name: enstitu?.ad ?? null,
+          // Kimlikle bağ, adla eşleştirmenin önüne geçer (best_guideline_for).
+          academic_unit_id: enstitu ? await enstituBirimi(university.id, enstitu.ad) : null,
           document_title: candidate.title || "Tez Yazım Kılavuzu",
           document_type: "guideline",
           source_url: candidate.url,
@@ -179,21 +256,39 @@ export async function discoverGuidelinesForUniversity(university: University) {
         });
         if (insertError) throw insertError;
 
-        await admin.from("universities").update({
-          guideline_discovery_checked_at: checkedAt,
-          guideline_discovery_status: "discovered",
-          guideline_discovery_note: candidate.url,
-        }).eq("id", university.id);
-        return { status: "discovered" as const, url: candidate.url };
-      } catch {
-        // Try the next official candidate.
+        eklenenEnstituler.add(anahtar);
+        bulunanlar.push(enstitu?.ad ?? "üniversite geneli");
+      } catch (adayHatasi) {
+        /*
+          Eskiden boş catch vardı: ayrıştırma ve insert hataları izsiz
+          kayboluyordu. Sıradaki adaya geçilir ama sebep kaydedilir.
+        */
+        atlananlar.push(adayHatasi instanceof Error ? adayHatasi.message : "aday okunamadı");
       }
+    }
+
+    if (bulunanlar.length) {
+      await admin.from("universities").update({
+        guideline_discovery_checked_at: checkedAt,
+        guideline_discovery_status: "discovered",
+        guideline_discovery_note: `${bulunanlar.length} kılavuz: ${bulunanlar.join(", ")}`.slice(0, 500),
+      }).eq("id", university.id);
+      return { status: "discovered" as const, count: bulunanlar.length, institutes: bulunanlar };
+    }
+
+    if (zatenBilinen) {
+      await admin.from("universities").update({
+        guideline_discovery_checked_at: checkedAt,
+        guideline_discovery_status: "already_known",
+        guideline_discovery_note: `${zatenBilinen} aday zaten kayıtlı.`,
+      }).eq("id", university.id);
+      return { status: "already_known" as const, count: zatenBilinen };
     }
 
     await admin.from("universities").update({
       guideline_discovery_checked_at: checkedAt,
       guideline_discovery_status: "not_found",
-      guideline_discovery_note: `${candidates.length} resmî aday incelendi.`,
+      guideline_discovery_note: `${candidates.length} resmî aday incelendi${atlananlar.length ? `; atlananlar: ${atlananlar.slice(0, 3).join(", ")}` : ""}.`.slice(0, 500),
     }).eq("id", university.id);
     return { status: "not_found" as const };
   } catch (error) {
