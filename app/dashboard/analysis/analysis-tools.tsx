@@ -4,10 +4,7 @@ import { useState, useTransition } from "react";
 import { detectStatistics, type DetectedStatistic } from "@/lib/stats-interpreter";
 import { parseCodebook, type CodebookCheckResult } from "@/lib/codebook-check";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
-import AsistanPuan from "../_components/asistan-puan";
-
-const BULGU_TONU = { uyari: "danger", oneri: "warning", bilgi: "info" } as const;
-const BULGU_ETIKETI = { uyari: "Eksik", oneri: "Öneri", bilgi: "Not" } as const;
+import AsistanSonuc from "../_components/asistan-sonuc";
 
 export default function AnalysisTools({ asistanAcik }: { asistanAcik: boolean }) {
   const [statsInput, setStatsInput] = useState("");
@@ -18,6 +15,23 @@ export default function AnalysisTools({ asistanAcik }: { asistanAcik: boolean })
   const [orneklem, setOrneklem] = useState("");
   const [denetim, setDenetim] = useState<AnalizDenetimYaniti | null>(null);
   const [bekleniyor, basla] = useTransition();
+
+  // zorla=true: kayıtlı cevap atlanır, modele yeniden sorulur.
+  function denetle(zorla: boolean) {
+    if (!statsResult) return;
+    basla(async () => {
+      setDenetim(null);
+      setDenetim(
+        await analizDenetle({
+          istatistikMetni: statsInput,
+          apaSatirlari: statsResult.map((s) => s.apaSentenceFragment),
+          arastirmaSorusu,
+          orneklem,
+          zorla,
+        }),
+      );
+    });
+  }
 
   const [codebookInput, setCodebookInput] = useState("");
   const [codebookResult, setCodebookResult] = useState<CodebookCheckResult | null>(null);
@@ -84,8 +98,8 @@ export default function AnalysisTools({ asistanAcik }: { asistanAcik: boolean })
         )}
 
         {statsResult && statsResult.length > 0 && (
-          <div className="ai-denetim mt-md">
-            <div className="project-form-heading">
+          <div className="asistan-kart mt-md">
+            <div className="asistan-kart-ust">
               <h3>Asistan denetlesin</h3>
               <p>
                 Asistan raporlamayı denetler: eksik etki büyüklüğü, eksik
@@ -123,56 +137,26 @@ export default function AnalysisTools({ asistanAcik }: { asistanAcik: boolean })
                 type="button"
                 className="projects-primary-button"
                 disabled={!asistanAcik || bekleniyor}
-                onClick={() =>
-                  basla(async () => {
-                    setDenetim(null);
-                    setDenetim(
-                      await analizDenetle({
-                        istatistikMetni: statsInput,
-                        apaSatirlari: statsResult.map((s) => s.apaSentenceFragment),
-                        arastirmaSorusu,
-                        orneklem,
-                      }),
-                    );
-                  })
-                }
+                onClick={() => denetle(false)}
               >
                 {bekleniyor ? "Denetleniyor…" : "Raporlamayı Denetle"}
               </button>
             </div>
 
             {!asistanAcik && (
-              <p className="muted text-base mt-sm">
+              <p className="asistan-uyari" data-tone="neutral">
                 Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
               </p>
             )}
 
-            {denetim?.hata && (
-              <p className="tone-text mt-sm text-base" data-tone="danger" role="alert">{denetim.hata}</p>
-            )}
-
-            {denetim?.kirpilanlar && denetim.kirpilanlar.length > 0 && (
-              <p className="muted text-base mt-sm">
-                Uzunluk sınırı nedeniyle asistana gönderilemeyen bölümler: {denetim.kirpilanlar.join(", ")}.
-              </p>
-            )}
-
-            {denetim?.bulgular && denetim.bulgular.length > 0 && (
-              <ul className="ai-bulgu-listesi mt-sm">
-                {denetim.bulgular.map((bulgu, i) => (
-                  <li className="attention-item" data-tone={BULGU_TONU[bulgu.tur]} key={i}>
-                    <strong>{BULGU_ETIKETI[bulgu.tur]}</strong>
-                    <span>
-                      <b>{bulgu.baslik}</b>
-                      <br />
-                      {bulgu.aciklama}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {denetim?.bulgular && denetim.bulgular.length > 0 && <AsistanPuan kayitId={denetim.kayitId} />}
+            <AsistanSonuc
+              sonuc={denetim}
+              yetenek="analiz"
+              etiketler={{ uyari: "Eksik", oneri: "Öneri", bilgi: "Not" }}
+              bulguBasligi="Denetim bulguları"
+              bekleniyor={bekleniyor}
+              onYenidenSorgula={() => denetle(true)}
+            />
           </div>
         )}
       </section>

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-kaynakca";
-import AsistanPuan from "../_components/asistan-puan";
+import AsistanSonuc from "../_components/asistan-sonuc";
 import { runCitationCheck } from "@/app/actions/citation-check";
 import type { Tone } from "@/lib/status-tone";
 
@@ -65,9 +65,6 @@ const STATUS_META: Record<AcademicVerification["status"], { label: string; tone:
   insufficient_data: { label: "Yetersiz veri", tone: "neutral" },
 };
 
-const BULGU_TONU = { uyari: "danger", oneri: "warning", bilgi: "info" } as const;
-const BULGU_ETIKETI = { uyari: "Sorun", oneri: "Öneri", bilgi: "Not" } as const;
-
 export default function CitationCheckForm({ projects, asistanAcik }: { projects: Project[]; asistanAcik: boolean }) {
   const [projectId, setProjectId] = useState<string>("");
   const [projectTitle, setProjectTitle] = useState("");
@@ -78,6 +75,29 @@ export default function CitationCheckForm({ projects, asistanAcik }: { projects:
   const [error, setError] = useState<string | null>(null);
   const [denetim, setDenetim] = useState<KaynakcaDenetimYaniti | null>(null);
   const [bekleniyor, basla] = useTransition();
+
+  // zorla=true: kayıtlı cevap atlanır, modele yeniden sorulur.
+  function yorumlat(zorla: boolean) {
+    if (!result) return;
+    basla(async () => {
+      setDenetim(null);
+      setDenetim(
+        await kaynakcaDenetle({
+          kaynaklar: result.academicVerification.map((item, index) => ({
+            sira: index + 1,
+            ham: item.reference,
+            durum: item.status,
+            bicimSorunlari: (result.references[index]?.issues ?? []).map((sorun) => `${sorun.field}: ${sorun.message}`),
+            eslesmeBasligi: item.bestMatch?.title ?? null,
+          })),
+          eksikKaynaklar: result.crossCheck.citationsWithoutReference.map((c) => c.raw),
+          kullanilmayanKaynaklar: result.crossCheck.referencesWithoutCitation.map((r) => r.raw),
+          atiflar: (result.citations ?? []).map((c) => c.raw),
+          zorla,
+        }),
+      );
+    });
+  }
 
   async function handleCheck() {
     setLoading(true);
@@ -302,8 +322,8 @@ export default function CitationCheckForm({ projects, asistanAcik }: { projects:
             </ul>
           </div>
 
-          <div className="ai-denetim">
-            <div className="project-form-heading">
+          <div className="asistan-kart">
+            <div className="asistan-kart-ust">
               <h3>Asistan yorumlasın</h3>
               <p>
                 Yukarıdaki sonuçlar mekanik: dizinde bulunmayan her kayıt hata
@@ -323,64 +343,26 @@ export default function CitationCheckForm({ projects, asistanAcik }: { projects:
                 type="button"
                 className="projects-primary-button"
                 disabled={!asistanAcik || bekleniyor}
-                onClick={() =>
-                  basla(async () => {
-                    setDenetim(null);
-                    setDenetim(
-                      await kaynakcaDenetle({
-                        kaynaklar: result.academicVerification.map((item, index) => ({
-                          sira: index + 1,
-                          ham: item.reference,
-                          durum: item.status,
-                          bicimSorunlari: (result.references[index]?.issues ?? []).map(
-                            (sorun) => `${sorun.field}: ${sorun.message}`,
-                          ),
-                          eslesmeBasligi: item.bestMatch?.title ?? null,
-                        })),
-                        eksikKaynaklar: result.crossCheck.citationsWithoutReference.map((c) => c.raw),
-                        kullanilmayanKaynaklar: result.crossCheck.referencesWithoutCitation.map((r) => r.raw),
-                        atiflar: (result.citations ?? []).map((c) => c.raw),
-                      }),
-                    );
-                  })
-                }
+                onClick={() => yorumlat(false)}
               >
                 {bekleniyor ? "Denetleniyor…" : "Kaynakçayı Yorumlat"}
               </button>
             </div>
 
             {!asistanAcik && (
-              <p className="muted text-base mt-sm">
+              <p className="asistan-uyari" data-tone="neutral">
                 Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
               </p>
             )}
 
-            {denetim?.hata && (
-              <p className="tone-text mt-sm text-base" data-tone="danger" role="alert">{denetim.hata}</p>
-            )}
-
-            {denetim?.kirpilanlar && denetim.kirpilanlar.length > 0 && (
-              <p className="muted text-base mt-sm">
-                Uzunluk sınırı nedeniyle asistana gönderilemeyen bölümler: {denetim.kirpilanlar.join(", ")}.
-              </p>
-            )}
-
-            {denetim?.bulgular && denetim.bulgular.length > 0 && (
-              <ul className="ai-bulgu-listesi mt-sm">
-                {denetim.bulgular.map((bulgu, index) => (
-                  <li className="attention-item" data-tone={BULGU_TONU[bulgu.tur]} key={index}>
-                    <strong>{BULGU_ETIKETI[bulgu.tur]}</strong>
-                    <span>
-                      <b>{bulgu.baslik}</b>
-                      <br />
-                      {bulgu.aciklama}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {denetim?.bulgular && denetim.bulgular.length > 0 && <AsistanPuan kayitId={denetim.kayitId} />}
+            <AsistanSonuc
+              sonuc={denetim}
+              yetenek="kaynakca"
+              etiketler={{ uyari: "Sorun", oneri: "Öneri", bilgi: "Not" }}
+              bulguBasligi="Asistan bulguları"
+              bekleniyor={bekleniyor}
+              onYenidenSorgula={() => yorumlat(true)}
+            />
           </div>
         </div>
       )}

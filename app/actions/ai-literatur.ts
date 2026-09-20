@@ -2,10 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
-import { asistanKapisi } from "@/lib/ai/erisim";
+import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import type { Bulgu } from "@/lib/ai/bulgu";
 import { kunyeIzi, literaturIstemi, taramaCozumle, type KayitOzeti } from "@/lib/ai/literatur-taramasi";
 import { asistanKaydet } from "@/lib/ai/kayit";
+import { oncekiCevap } from "@/lib/ai/gecmis";
 
 /*
   Asistanın literatür tarama yardımı. Kaynak listesi istemciden GELMEZ,
@@ -16,7 +17,9 @@ import { asistanKaydet } from "@/lib/ai/kayit";
 const EN_UZUN_SORU = 1_000;
 const EN_FAZLA_KAYIT = 80;
 
-export type LiteraturDenetimGirdisi = { arastirmaSorusu: string; projectId?: string | null };
+export type LiteraturDenetimGirdisi = {
+  /** true: kayıtlı cevap atlanır, modele yeniden sorulur. */
+  zorla?: boolean; arastirmaSorusu: string; projectId?: string | null };
 
 export type LiteraturDenetimYaniti = {
   hata?: string;
@@ -27,6 +30,8 @@ export type LiteraturDenetimYaniti = {
   model?: string;
   /** Çalışma kaydının kimliği; kullanıcı buna puan veriyor. */
   kayitId?: string | null;
+  /** Kayıtlı cevap gösterildi: model çağrılmadı, hak yanmadı. */
+  kayitliCevap?: { tarih: string } | null;
 };
 
 export const literaturAsistaniAcik = async () => aiYapilandirildi();
@@ -61,6 +66,22 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
   }));
 
   const { mesajlar, kaynak, kirpilanlar } = literaturIstemi({ arastirmaSorusu, kayitlar });
+
+  /*
+    Aynı bağlam daha önce sorulduysa modele gidilmez. Aynı analizi ikinci kez
+    denetletmek kimseye bir şey kazandırmıyor: kullanıcı bekliyor, hesaptan
+    para çıkıyor, cevap zaten kayıtlı. Kullanıcı "yeniden sorgula" ile
+    zorlayabilir.
+  */
+  if (!girdi.zorla) {
+    const onceki = await oncekiCevap(kapi.kullaniciId, "literatur", kaynak);
+    if (onceki)
+      return { bulgular: onceki.bulgular, aramalar: onceki.aramalar ?? [], kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+  }
+
+  // Hak yalnızca modele gidilecekse yanar.
+  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
+  if (hakHatasi) return { hata: hakHatasi };
 
   const basladi = Date.now();
 

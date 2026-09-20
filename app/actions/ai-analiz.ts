@@ -1,10 +1,11 @@
 "use server";
 
 import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
-import { asistanKapisi } from "@/lib/ai/erisim";
+import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { bulgulariCozumle, bulgulariDogrula, type Bulgu } from "@/lib/ai/bulgu";
 import { analizIstemi } from "@/lib/ai/analiz-yorumu";
 import { asistanKaydet } from "@/lib/ai/kayit";
+import { oncekiCevap } from "@/lib/ai/gecmis";
 
 /*
   Asistanın analiz denetimi. Oturum, abonelik ve saatlik hak ortak kapıda
@@ -16,6 +17,8 @@ const EN_UZUN_CIKTI = 20_000;
 const EN_UZUN_ALAN = 2_000;
 
 export type AnalizDenetimGirdisi = {
+  /** true: kayıtlı cevap atlanır, modele yeniden sorulur. */
+  zorla?: boolean;
   istatistikMetni: string;
   apaSatirlari?: string[];
   arastirmaSorusu?: string;
@@ -31,6 +34,8 @@ export type AnalizDenetimYaniti = {
   model?: string;
   /** Çalışma kaydının kimliği; kullanıcı buna puan veriyor. */
   kayitId?: string | null;
+  /** Kayıtlı cevap gösterildi: model çağrılmadı, hak yanmadı. */
+  kayitliCevap?: { tarih: string } | null;
 };
 
 const kisalt = (deger: unknown, sinir: number) => String(deger ?? "").slice(0, sinir).trim();
@@ -52,6 +57,22 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
     orneklem: kisalt(girdi.orneklem, EN_UZUN_ALAN),
     yontem: kisalt(girdi.yontem, EN_UZUN_ALAN),
   });
+
+  /*
+    Aynı bağlam daha önce sorulduysa modele gidilmez. Aynı analizi ikinci kez
+    denetletmek kimseye bir şey kazandırmıyor: kullanıcı bekliyor, hesaptan
+    para çıkıyor, cevap zaten kayıtlı. Kullanıcı "yeniden sorgula" ile
+    zorlayabilir.
+  */
+  if (!girdi.zorla) {
+    const onceki = await oncekiCevap(kapi.kullaniciId, "analiz", kaynak);
+    if (onceki)
+      return { bulgular: onceki.bulgular, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+  }
+
+  // Hak yalnızca modele gidilecekse yanar.
+  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
+  if (hakHatasi) return { hata: hakHatasi };
 
   const basladi = Date.now();
 

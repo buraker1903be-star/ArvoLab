@@ -1,10 +1,11 @@
 "use server";
 
 import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
-import { asistanKapisi } from "@/lib/ai/erisim";
+import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { bulgulariCozumle, bulgulariDogrula, type Bulgu } from "@/lib/ai/bulgu";
 import { kaynakcaIstemi, type KaynakDurumu, type KaynakSatiri } from "@/lib/ai/kaynakca-denetimi";
 import { asistanKaydet } from "@/lib/ai/kayit";
+import { oncekiCevap } from "@/lib/ai/gecmis";
 
 /*
   Asistanın kaynakça denetimi. Mekanik denetimin (lib/apa7.ts +
@@ -19,6 +20,8 @@ const EN_FAZLA_ATIF = 120;
 const DURUMLAR = new Set<KaynakDurumu>(["verified", "possible_match", "not_found", "insufficient_data"]);
 
 export type KaynakcaDenetimGirdisi = {
+  /** true: kayıtlı cevap atlanır, modele yeniden sorulur. */
+  zorla?: boolean;
   kaynaklar: KaynakSatiri[];
   eksikKaynaklar?: string[];
   kullanilmayanKaynaklar?: string[];
@@ -33,6 +36,8 @@ export type KaynakcaDenetimYaniti = {
   model?: string;
   /** Çalışma kaydının kimliği; kullanıcı buna puan veriyor. */
   kayitId?: string | null;
+  /** Kayıtlı cevap gösterildi: model çağrılmadı, hak yanmadı. */
+  kayitliCevap?: { tarih: string } | null;
 };
 
 const kisalt = (deger: unknown, sinir: number) => String(deger ?? "").slice(0, sinir).trim();
@@ -64,6 +69,22 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     // yiyor ve eşleştirmeye hiçbir şey katmıyor.
     atiflar: [...new Set(liste(girdi.atiflar, 300, 120))].slice(0, EN_FAZLA_ATIF),
   });
+
+  /*
+    Aynı bağlam daha önce sorulduysa modele gidilmez. Aynı analizi ikinci kez
+    denetletmek kimseye bir şey kazandırmıyor: kullanıcı bekliyor, hesaptan
+    para çıkıyor, cevap zaten kayıtlı. Kullanıcı "yeniden sorgula" ile
+    zorlayabilir.
+  */
+  if (!girdi.zorla) {
+    const onceki = await oncekiCevap(kapi.kullaniciId, "kaynakca", kaynak);
+    if (onceki)
+      return { bulgular: onceki.bulgular, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+  }
+
+  // Hak yalnızca modele gidilecekse yanar.
+  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
+  if (hakHatasi) return { hata: hakHatasi };
 
   const basladi = Date.now();
 

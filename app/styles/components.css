@@ -935,35 +935,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   .projects-list > .project-card,
   .project-progress-track span { animation: none; }
 }
-
-/* Asistan denetimi (analiz merkezi). Bulgular .attention-item tonlarını
-   kullanır; burada yalnızca yerleşim var. */
-.ai-denetim { border-top: 1px solid var(--line-soft); padding-top: 18px; }
-.ai-denetim h3 { margin: 0; font-size: var(--fs-lg); }
-.ai-bulgu-listesi { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.ai-bulgu-listesi .attention-item { align-items: flex-start; }
-.ai-bulgu-listesi .attention-item strong { min-width: 62px; font-size: var(--fs-sm); }
-.ai-bulgu-listesi .attention-item b { color: var(--ink); }
-.ai-arama-listesi { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
-.ai-arama-listesi code {
-  display: block; padding: 8px 10px; border-radius: var(--r-sm);
-  background: var(--surface-2); color: var(--ink);
-  font-size: var(--fs-sm); word-break: break-word;
-}
-
-/* Asistan değerlendirmesi: üç yetenekte de aynı soru sorulur. */
-.asistan-puan { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
-.asistan-puan-dugmeler { display: flex; gap: 6px; }
-.asistan-puan-dugme {
-  padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--r-pill);
-  background: var(--surface); color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer;
-}
-.asistan-puan-dugme:disabled { opacity: .6; cursor: default; }
-.asistan-puan-tesekkur { color: var(--ink-soft); }
-@media (hover: hover) and (pointer: fine) {
-  .asistan-puan-dugme:hover:not(:disabled) { border-color: var(--accent-500); color: var(--ink); }
-}
-
 /* Asistan kayıtları (iç ekip) */
 .asistan-kayit-etiketler { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .asistan-kayit-detay { margin-top: 10px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
@@ -972,4 +943,90 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   margin: 6px 0 12px; padding: 10px 12px; border-radius: var(--r-sm);
   background: var(--surface-2); color: var(--ink);
   font-size: var(--fs-sm); white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto;
+}
+
+/* ------------------------------------------------------------------
+   Asistan panelleri. Üç yetenek de aynı kabuğu kullanır: daha önce her
+   sayfa kendi işaretlemesini taşıyordu ve bulgu kutusunun tonu, boşluğu
+   sayfadan sayfaya kayıyordu.
+   ------------------------------------------------------------------ */
+.asistan-kart { border-top: 1px solid var(--line-soft); padding-top: 18px; }
+.asistan-kart-ust { margin-bottom: 14px; }
+.asistan-kart-ust :is(h2, h3) { margin: 0 0 4px; font-size: var(--fs-lg); }
+.asistan-kart-ust p { margin: 0; color: var(--ink-soft); font-size: var(--fs-body); line-height: 1.55; }
+
+/* Bilgi şeridi: hata, kayıtlı cevap, kırpılan bölüm. */
+.asistan-uyari {
+  display: block; margin: 12px 0 0; padding: 10px 14px;
+  border-radius: var(--r-sm); background: var(--tone-soft, var(--surface-2));
+  color: var(--tone, var(--ink-soft)); font-size: var(--fs-body); line-height: 1.5;
+}
+.asistan-uyari[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
+.asistan-uyari[data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
+.asistan-uyari[data-tone="neutral"] { --tone: var(--muted); --tone-soft: var(--surface-2); }
+.asistan-uyari-eylemli { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+
+.asistan-ikincil-dugme {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border: 1px solid currentColor; border-radius: var(--r-pill);
+  background: transparent; color: inherit; font-size: var(--fs-sm); cursor: pointer;
+}
+.asistan-ikincil-dugme:disabled { opacity: .55; cursor: default; }
+
+.asistan-bolum { margin-top: 16px; }
+.asistan-bolum-baslik { margin: 0 0 8px; color: var(--ink-soft); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; }
+
+.asistan-bulgular { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.asistan-bulgu {
+  display: grid; grid-template-columns: 72px 1fr; gap: 12px; align-items: start;
+  padding: 12px 14px; border-radius: var(--r-sm);
+  border-left: 3px solid var(--tone, var(--line));
+  background: var(--tone-soft, var(--surface-2));
+}
+.asistan-bulgu[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
+.asistan-bulgu[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
+.asistan-bulgu[data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
+.asistan-bulgu-etiket { color: var(--tone); font-size: var(--fs-sm); font-weight: 600; }
+.asistan-bulgu-metin { color: var(--ink); font-size: var(--fs-body); line-height: 1.55; }
+.asistan-bulgu-metin b { display: block; margin-bottom: 2px; }
+
+.asistan-aramalar { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.asistan-aramalar code {
+  display: block; padding: 9px 12px; border-radius: var(--r-sm);
+  background: var(--surface-sunken); color: var(--ink);
+  font-size: var(--fs-sm); line-height: 1.5; word-break: break-word;
+}
+
+/* Değerlendirme: üç yetenekte de aynı soru sorulur, yoksa veri karşılaştırılamaz. */
+.asistan-puan { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.asistan-puan-dugmeler { display: flex; gap: 6px; }
+.asistan-puan-dugme {
+  padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--r-pill);
+  background: var(--surface); color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer;
+}
+.asistan-puan-dugme:disabled { opacity: .6; cursor: default; }
+.asistan-puan-tesekkur { margin-top: 12px; color: var(--ink-soft); }
+
+/* Geçmiş: amacı sonuca bakarken "bunu zaten sormuştum" dedirtmek. */
+.asistan-gecmis { margin-top: 16px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.asistan-gecmis > summary { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); font-size: var(--fs-body); cursor: pointer; }
+.asistan-gecmis-bos { margin: 10px 0 0; color: var(--muted); font-size: var(--fs-body); }
+.asistan-gecmis-listesi { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.asistan-gecmis-listesi > li { border: 1px solid var(--line-soft); border-radius: var(--r-sm); }
+.asistan-gecmis-listesi summary {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: space-between;
+  padding: 10px 12px; cursor: pointer;
+}
+.asistan-gecmis-listesi summary b { color: var(--ink); font-size: var(--fs-body); font-weight: 500; }
+.asistan-gecmis-listesi summary small { color: var(--muted); font-size: var(--fs-sm); }
+.asistan-gecmis-listesi details[open] summary { border-bottom: 1px solid var(--line-soft); }
+.asistan-gecmis-listesi .asistan-bolum { margin: 12px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .asistan-puan-dugme:hover:not(:disabled) { border-color: var(--accent-500); color: var(--ink); }
+  .asistan-ikincil-dugme:hover:not(:disabled) { background: color-mix(in srgb, currentColor 10%, transparent); }
+}
+
+@media (max-width: 640px) {
+  .asistan-bulgu { grid-template-columns: 1fr; gap: 4px; }
 }
