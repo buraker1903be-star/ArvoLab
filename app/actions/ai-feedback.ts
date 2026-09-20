@@ -34,13 +34,20 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
   try {
     const result = await getDocumentFeedback(doc.extracted_text);
 
-    await supabase.from("ai_feedback_requests").insert({
+    /*
+      Insert hatası okunmuyordu: tablo canlıda hiç oluşturulmamıştı ve geri
+      bildirim geçmişi sessizce boş kalıyordu (migration 20260924100004).
+      Kayıt tutulamasa da kullanıcı geri bildirimini görmeli, bu yüzden hata
+      yalnızca log'a yazılır.
+    */
+    const { error: kayitHatasi } = await supabase.from("ai_feedback_requests").insert({
       document_id: documentId,
       requested_by: user.id,
       feedback_text: result.feedback,
       model: result.model,
       status: "completed",
     });
+    if (kayitHatasi) console.error("AI geri bildirimi kaydedilemedi:", kayitHatasi.message);
 
     revalidatePath("/dashboard/documents");
     return { feedback: result.feedback, truncated: result.truncated };
@@ -48,12 +55,13 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
     console.error(err);
     const message = err instanceof Error ? err.message : "AI geri bildirimi alınırken bir hata oluştu.";
 
-    await supabase.from("ai_feedback_requests").insert({
+    const { error: kayitHatasi } = await supabase.from("ai_feedback_requests").insert({
       document_id: documentId,
       requested_by: user.id,
       status: "failed",
       error_message: message,
     });
+    if (kayitHatasi) console.error("AI geri bildirimi hatası kaydedilemedi:", kayitHatasi.message);
 
     return { error: message };
   }
