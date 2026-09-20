@@ -9,6 +9,7 @@ import {
   PenLine,
   Quote,
   Settings,
+  Sparkles,
   UserCog,
   Users,
   type LucideIcon,
@@ -61,6 +62,9 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 export const ACCOUNT_ITEMS: NavItem[] = [
+  // İç ekip görünümü; sayfa kontrolör ve akademik yöneticiye de açık ama
+  // menüde yalnızca yöneticiye gösteriliyor (adminOnly'nin anlamı bu).
+  { label: "Asistan Kayıtları", href: "/dashboard/asistan", icon: Sparkles, adminOnly: true },
   { label: "Ekip Yönetimi", href: "/dashboard/team", icon: UserCog, adminOnly: true },
   { label: "Ayarlar", href: "/dashboard/settings", icon: Settings },
 ];

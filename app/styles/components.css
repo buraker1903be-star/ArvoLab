@@ -963,3 +963,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 @media (hover: hover) and (pointer: fine) {
   .asistan-puan-dugme:hover:not(:disabled) { border-color: var(--accent-500); color: var(--ink); }
 }
+
+/* Asistan kayıtları (iç ekip) */
+.asistan-kayit-etiketler { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.asistan-kayit-detay { margin-top: 10px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+.asistan-kayit-detay summary { cursor: pointer; color: var(--ink-soft); font-size: var(--fs-sm); }
+.asistan-kayit-detay pre {
+  margin: 6px 0 12px; padding: 10px 12px; border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--ink);
+  font-size: var(--fs-sm); white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto;
+}
