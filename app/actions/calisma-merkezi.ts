@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { AsistanBulgusu, CalismaOzeti } from "@/lib/calisma-ozeti";
 import { calismaKilavuzu } from "@/app/actions/guidelines";
 import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
+import { loadAppliedGuidelines } from "@/lib/guideline-rules";
+import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 
 /*
   Çalışma merkezinin verisi: bir çalışmaya bağlı bütün birimler tek yerde.
@@ -34,7 +36,7 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
   const { data: calisma, error } = await supabase
     .from("academic_projects")
     .select(
-      "id, title, project_type, status, progress, university, institute, department, citation_style, research_method, due_date, priority, assignee_name, updated_at",
+      "id, title, project_type, status, progress, university, institute, department, citation_style, research_method, due_date, priority, assignee_name, updated_at, guideline_id",
     )
     .eq("id", projectId)
     .maybeSingle();
@@ -47,7 +49,7 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
     supabase.from(tablo).select("id", { count: "exact", head: true }).eq("project_id", projectId);
 
   const [musvedde, literatur, okunan, kullanilan, denetim, belgeler, danismanlik, asistan, kilavuz, kaynakListesi] = await Promise.all([
-    supabase.from("project_manuscripts").select("word_count, updated_at, plain_text").eq("project_id", projectId).maybeSingle(),
+    supabase.from("project_manuscripts").select("*").eq("project_id", projectId).maybeSingle(),
     sayim("literature_sources"),
     supabase
       .from("literature_sources")
@@ -75,7 +77,20 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
       .eq("status", "completed")
       .order("created_at", { ascending: false })
       .limit(1),
-    calismaKilavuzu(calisma.university, calisma.institute),
+    /*
+      Kılavuz önce çalışmaya BAĞLI olandan okunur (academic_projects.
+      guideline_id): kullanıcı onu bilerek seçmiş. Ada göre eşleştirme
+      yalnızca bağlı kılavuz yoksa devreye girer — kaba bir tahmindir,
+      seçilmiş olanın önüne geçmemeli.
+    */
+    calisma.guideline_id
+      ? supabase
+          .from("thesis_guidelines")
+          .select("id, university_name, institute_name, document_title, version_label, citation_style, academic_unit_id")
+          .eq("id", calisma.guideline_id)
+          .maybeSingle()
+          .then((sonuc) => (sonuc.data ? { ...sonuc.data, match_level: "university" as const } : null))
+      : calismaKilavuzu(calisma.university, calisma.institute),
     // Tutarsızlık denetimi için kaynakların kendisi gerekiyor, sayısı değil.
     supabase
       .from("literature_sources")
@@ -87,8 +102,25 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
   for (const sonuc of [literatur, okunan, kullanilan, belgeler, danismanlik, denetim, musvedde, asistan, kaynakListesi])
     if (sonuc.error) console.error("[merkez] birim okunamadı:", sonuc.error.message);
 
+  /*
+    Teslim hazırlığı: editördeki "Teslim kontrolü" ve ana sayfadaki çubukla
+    aynı hesap (lib/manuscript-readiness.ts). Asıl yeri burası — çalışmanın
+    bütün birimlerinin toplandığı sayfa.
+  */
+  const uygulananlar = await loadAppliedGuidelines(supabase, calisma.guideline_id ? [calisma.guideline_id] : []);
+  const hazirlik =
+    musvedde.data
+      ? manuscriptReadiness({
+          manuscript: musvedde.data,
+          guideline: (calisma.guideline_id ? uygulananlar.get(calisma.guideline_id) : null) ?? null,
+          projectType: calisma.project_type,
+          citationStyle: calisma.citation_style ?? "apa7",
+        })
+      : null;
+
   return {
     calisma,
+    hazirlik,
     musvedde: musvedde.data ? { kelime: musvedde.data.word_count ?? 0, guncellendi: musvedde.data.updated_at } : null,
     literatur: {
       toplam: literatur.count ?? 0,

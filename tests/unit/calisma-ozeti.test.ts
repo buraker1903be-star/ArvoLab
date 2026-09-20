@@ -17,10 +17,12 @@ const CALISMA = {
   priority: "normal",
   assignee_name: null,
   updated_at: "2026-09-20T10:00:00Z",
+  guideline_id: null,
 };
 
 const ozet = (parca: Partial<CalismaOzeti> = {}): CalismaOzeti => ({
   calisma: CALISMA,
+  hazirlik: null,
   musvedde: null,
   literatur: { toplam: 0, okunan: 0, kullanilan: 0 },
   kaynakca: null,

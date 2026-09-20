@@ -13,6 +13,7 @@
 */
 
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
+import type { SubmissionChecklist } from "@/lib/submission-checklist";
 
 export type CalismaKaydi = {
   id: string;
@@ -29,10 +30,13 @@ export type CalismaKaydi = {
   priority: string;
   assignee_name: string | null;
   updated_at: string;
+  guideline_id: string | null;
 };
 
 export type CalismaOzeti = {
   calisma: CalismaKaydi;
+  /** Teslim hazırlığı; müsvedde yoksa null (lib/manuscript-readiness.ts). */
+  hazirlik: SubmissionChecklist | null;
   musvedde: { kelime: number; guncellendi: string } | null;
   literatur: { toplam: number; okunan: number; kullanilan: number };
   kaynakca: { id: string; skor: number | null; tarih: string } | null;

@@ -50,8 +50,12 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
   const ozet = await calismaOzeti(id);
   if (!ozet) notFound();
 
-  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan, kilavuz, tutarsizliklar } = ozet;
+  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan, kilavuz, tutarsizliklar, hazirlik } = ozet;
   const stilCelisiyor = atifStiliCelisiyorMu(ozet);
+  // Eksikler önce, bakılması gerekenler sonra (ana sayfadaki sıralamanın aynısı).
+  const eksikMaddeler = (hazirlik?.items ?? [])
+    .filter((madde) => madde.status !== "ok")
+    .sort((a, b) => (a.status === "todo" ? 0 : 1) - (b.status === "todo" ? 0 : 1));
   const adimlar = siradakiAdimlar(ozet);
   const ilerleme = birimIlerlemesi(adimlar);
 
@@ -96,6 +100,11 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
           <span>
             {literatur.okunan} okundu · {literatur.kullanilan} kullanıldı
           </span>
+        </article>
+        <article className="merkez-kutu">
+          <small>Teslim hazırlığı</small>
+          <strong>{hazirlik ? `${hazirlik.done}/${hazirlik.total}` : "—"}</strong>
+          <span>{hazirlik ? (hazirlik.done === hazirlik.total ? "Hazır görünüyor" : "madde hazır") : "Müsvedde yok"}</span>
         </article>
         <article className="merkez-kutu">
           <small>Asistan denetimi</small>
@@ -177,6 +186,26 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
                 <span className="asistan-bulgu-metin">
                   <b>{bulgu.baslik}</b>
                   {bulgu.aciklama}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {eksikMaddeler.length > 0 && (
+        <section className="section mt-lg">
+          <h2 className="section-title">Teslim öncesi bakılacaklar</h2>
+          <p className="muted text-base">
+            Editördeki &ldquo;Teslim kontrolü&rdquo; ile aynı liste; kaydedilmiş metinden hesaplanır.
+          </p>
+          <ul className="asistan-bulgular mt-sm">
+            {eksikMaddeler.map((madde) => (
+              <li className="asistan-bulgu" data-tone={madde.status === "todo" ? "danger" : "warning"} key={madde.id}>
+                <span className="asistan-bulgu-etiket">{madde.status === "todo" ? "Eksik" : "Bakılacak"}</span>
+                <span className="asistan-bulgu-metin">
+                  <b>{madde.label}</b>
+                  {madde.detail}
                 </span>
               </li>
             ))}
