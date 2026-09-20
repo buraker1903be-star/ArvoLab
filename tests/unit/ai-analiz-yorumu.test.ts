@@ -73,12 +73,20 @@ describe("uydurma sayı denetimi", () => {
   });
 });
 
-describe("sağlayıcı hata metni", () => {
+describe("sunucu hata metni", () => {
   test("kullanıcıya İngilizce gövde değil, nedeni gösterilir", () => {
-    assert.match(saglayiciHatasi(401, "Incorrect API key provided: sk-..."), /anahtarı reddedildi/);
+    // Gövde anahtar parçası ve kuruluş kimliği içerebiliyor; kullanıcıya
+    // hiç gösterilmiyor. Metinlerde sağlayıcı markası da geçmez.
+    assert.match(saglayiciHatasi(401, "Incorrect API key provided: sk-..."), /isteği reddetti/);
     assert.match(saglayiciHatasi(429, ""), /sınırladı/);
+    assert.match(saglayiciHatasi(404, ""), /model bulunamadı/);
     assert.match(saglayiciHatasi(503, ""), /ulaşılamıyor/);
     assert.match(saglayiciHatasi(400, "maximum context length is 128000 tokens"), /sınırını aştı/);
     assert.match(saglayiciHatasi(418, ""), /HTTP 418/);
+  });
+
+  test("hata metinlerinde marka adı geçmez", () => {
+    for (const durum of [401, 404, 429, 500, 418])
+      assert.doesNotMatch(saglayiciHatasi(durum, ""), /openai|gpt|claude|gemini/i);
   });
 });

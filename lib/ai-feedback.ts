@@ -16,6 +16,8 @@
  * işaretli görünüm) ek bir güvenlik katmanı uygulanır.
  */
 
+import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+
 const MAX_INPUT_CHARS = 12000; // ~3000 token civarı, maliyet/limit kontrolü için
 
 const SYSTEM_PROMPT = `Sen bir akademik yazım koçusun. Sana bir öğrencinin tez/makale taslağından bir alıntı verilecek.
@@ -42,49 +44,26 @@ export interface AiFeedbackResult {
   truncated: boolean;
 }
 
-/** Anahtar yoksa özellik kapalı gösterilir; düğme boşuna tıklanmasın. */
-export const aiFeedbackConfigured = () => Boolean(process.env.OPENAI_API_KEY);
+/** Sunucu tanımlı değilse özellik kapalı gösterilir; düğme boşuna tıklanmasın. */
+export const aiFeedbackConfigured = () => aiYapilandirildi();
 
 export async function getDocumentFeedback(text: string): Promise<AiFeedbackResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "OPENAI_API_KEY tanımlı değil. Vercel proje ayarlarına bu ortam değişkenini eklemeniz gerekiyor."
-    );
-  }
-
   const truncated = text.length > MAX_INPUT_CHARS;
   const inputText = truncated ? text.slice(0, MAX_INPUT_CHARS) : text;
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  /*
+    Eskiden burada doğrudan OpenAI çağrılıyordu: adres, model adı, zaman
+    aşımı ve hata metni bu dosyaya gömülüydü. Artık ortak katman üzerinden
+    gidiyor (lib/ai/saglayici.ts), böylece kendi sunucumuzdaki modele
+    geçmek bu dosyada hiçbir değişiklik gerektirmiyor.
+  */
+  const yanit = await sor(
+    [
+      { rol: "sistem", metin: SYSTEM_PROMPT },
+      { rol: "kullanici", metin: `İncelenecek metin:\n\n${inputText}` },
+    ],
+    { sicaklik: 0.4, enFazlaJeton: 700 },
+  );
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `İncelenecek metin:\n\n${inputText}` },
-      ],
-      temperature: 0.4,
-      max_tokens: 700,
-    }),
-  });
-
-  if (!res.ok) {
-    const errBody = await res.text().catch(() => "");
-    throw new Error(`OpenAI API hatası (HTTP ${res.status}): ${errBody.slice(0, 300)}`);
-  }
-
-  const data = await res.json();
-  const feedback = data?.choices?.[0]?.message?.content;
-  if (!feedback) {
-    throw new Error("OpenAI API beklenen formatta yanıt vermedi.");
-  }
-
-  return { feedback, model, truncated };
+  return { feedback: yanit.metin, model: yanit.model, truncated };
 }

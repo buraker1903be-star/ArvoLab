@@ -522,12 +522,19 @@ Bildirimi Al"** butonu eklendi. Bu özellik **İÇERİK ÜRETMEZ**:
   "öğreticidir, doğrudan kopyalamayın" ibaresiyle gösterilir — normal
   belge içeriğiyle karışmayacak şekilde görsel olarak ayrıştırılmıştır
 
-**Kurulum gerekli:** Bu özelliğin çalışması için Vercel proje ayarlarına
-şu ortam değişkenini eklemeniz gerekiyor:
-- `OPENAI_API_KEY` — OpenAI hesabınızdan alacağınız API anahtarı
-  (platform.openai.com/api-keys)
-- `OPENAI_MODEL` (opsiyonel) — varsayılan `gpt-4o-mini`, isterseniz
-  değiştirebilirsiniz
+**Kurulum gerekli:** ArvoLab hiçbir yapay zeka markasına bağımlı değildir;
+model ortam değişkenleriyle seçilir (`lib/ai/saglayici.ts`). Kendi
+sunucunuzdaki açık ağırlıklı bir model de olabilir — Ollama, vLLM, LM Studio
+ve TGI aynı arayüzü konuştuğu için kodda hiçbir değişiklik gerekmez.
+
+- `AI_TABAN_URL` — model sunucusunun adresi. Kendi sunucunuz için
+  `http://10.0.0.5:11434/v1` (Ollama) ya da `http://sunucu:8000/v1` (vLLM).
+  Verilmezse OpenAI adresi kullanılır (geçiş dönemi).
+- `AI_MODEL` — model adı, örn. `qwen2.5:14b-instruct`.
+- `AI_ANAHTAR` — varsa gönderilir. Kendi sunucunuzda genellikle gerekmez;
+  eski kurulumlar için `OPENAI_API_KEY` de okunur.
+- `AI_ZAMAN_ASIMI_MS` (opsiyonel) — varsayılan 45.000. Kendi sunucunuz soğuk
+  başlangıçta yavaşsa uzatın.
 
 **Not:** API anahtarınız olmadan bu sandbox'ta canlı bir OpenAI isteği
 test edemedim (dış API'ye erişimim yok); ancak istek/yanıt işleme

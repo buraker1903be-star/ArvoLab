@@ -7,7 +7,7 @@ import { requestAiFeedback } from "@/app/actions/ai-feedback";
 interface AiFeedbackButtonProps {
   documentId: string;
   initialFeedback: string | null;
-  /** OPENAI_API_KEY tanımlı değilse düğme yerine açıklama gösterilir. */
+  /** Yapay zeka sunucusu tanımlı değilse düğme yerine açıklama gösterilir. */
   configured: boolean;
 }
 
