@@ -188,21 +188,27 @@ export async function discoverGuidelinesForUniversity(university: University) {
         const scan = await scanGuidelineUrl(candidate.url);
         if (!belongsToUniversity(scan, university.name)) continue;
 
-        /*
-          Fakülte ya da bölüm belgesi enstitü kuralı değildir; üniversite
-          geneline uygulanırsa yanlış olur. Canlıda "Tıp Fakültesi" ve
-          "Arkeoloji Bölümü" kayıtları bu yüzden oluşmuştu.
-        */
-        if (fakulteVeyaBolumBelgesi({ metin: scan.textPreview, baslik: candidate.title })) {
-          atlananlar.push("fakülte/bölüm belgesi");
-          continue;
-        }
-
         const enstitu = enstituTespitEt({
           metin: scan.textPreview,
           url: candidate.url,
           baslik: candidate.title,
         });
+
+        /*
+          Fakülte ya da bölüm belgesi enstitü kuralı değildir; üniversite
+          geneline uygulanırsa yanlış olur. Canlıda "Tıp Fakültesi" ve
+          "Arkeoloji Bölümü" kayıtları bu yüzden oluşmuştu.
+
+          Eleme, enstitü TESPİT EDİLEMEDİYSE yapılır: enstitü belliyse belge
+          zaten doğru düzeydedir. Ayrıca üniversite geneli kılavuzlar da
+          (senato kararıyla çıkan, enstitüsüz olanlar) elenmemeli; onlarda
+          "Fakültesi" sözcüğü örnek olarak geçebilir ama metinde
+          "Enstitüsü" hiç geçmeyebilir.
+        */
+        if (!enstitu && fakulteVeyaBolumBelgesi({ metin: scan.textPreview, baslik: candidate.title })) {
+          atlananlar.push("fakülte/bölüm belgesi");
+          continue;
+        }
         // Aynı turda aynı enstitü için ikinci bir aday kaydedilmez.
         const anahtar = enstitu?.ad ?? "__universite__";
         if (eklenenEnstituler.has(anahtar)) continue;
