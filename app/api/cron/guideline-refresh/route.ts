@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { scanGuidelineUrl } from "@/lib/guideline-scan";
+import { scanGuidelineUrl, TARAYICI_SURUMU } from "@/lib/guideline-scan";
 import {
   discoverGuidelinesForUniversity,
   getUniversitiesDueForGuidelineDiscovery,
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
   const { data: guidelines, error } = await supabase
     .from("thesis_guidelines")
-    .select("id, source_url, source_checksum, analysis_status, university_name, institute_name, extracted_rules")
+    .select("id, source_url, source_checksum, analysis_status, university_name, institute_name, extracted_rules, ai_analysis")
     .not("source_url", "is", null)
     .eq("is_active", true)
     .order("last_checked_at", { ascending: true })
@@ -54,10 +54,18 @@ export async function GET(request: Request) {
       const changed = Boolean(previousChecksum && previousChecksum !== scan.sourceChecksum);
       const isApproved = guideline.analysis_status === "approved";
       const hasRules = Boolean(guideline.extracted_rules && Object.keys(guideline.extracted_rules).length > 0);
+      /*
+        Çıkarım kuralları düzeldiğinde eski kayıtlar da düzelsin: dosya
+        değişmemiş olsa bile eski sürümle çıkarılmış kayıt yeniden işlenir.
+        Onaylı kayıtlar bunun dışında (aşağıdaki ilk dal).
+      */
+      const eskiSurum = Number((guideline.ai_analysis as { scannerVersion?: unknown } | null)?.scannerVersion ?? 0);
+      const surumEskimis = eskiSurum < TARAYICI_SURUMU;
       const citationStyle = scan.detectedCitationHint?.toLowerCase().replace(" ", "") ?? null;
       const readyForApproval = scan.confidence >= 0.9 && scan.suggestedSections.length >= 4 && Boolean(citationStyle);
       const detectedAt = new Date().toISOString();
       const analysis = {
+        scannerVersion: TARAYICI_SURUMU,
         detectedCitationHint: scan.detectedCitationHint,
         suggestedSections: scan.suggestedSections,
         suggestedRules: scan.suggestedRules,
@@ -88,7 +96,7 @@ export async function GET(request: Request) {
             : {}),
         };
         status = changed ? "new_version_pending" : "unchanged";
-      } else if (changed || !hasRules) {
+      } else if (changed || !hasRules || surumEskimis) {
         // Onay bekleyen kayıt: yalnızca dosya değiştiyse ya da henüz kural yoksa öneriler yazılır.
         update = {
           source_checksum: scan.sourceChecksum,
@@ -105,7 +113,11 @@ export async function GET(request: Request) {
             ? `Kurallar otomatik dolduruldu (güven: %${Math.round(scan.confidence * 100)}); tek adım onay bekliyor.`
             : `Otomatik çıkarım inceleme gerektiriyor (güven: %${Math.round(scan.confidence * 100)}).`,
         };
-        status = readyForApproval ? "ready_for_approval" : "needs_review";
+        status = surumEskimis && !changed && hasRules
+          ? "rescanned_new_scanner"
+          : readyForApproval
+            ? "ready_for_approval"
+            : "needs_review";
       } else {
         // Onay bekleyen, dosyası değişmemiş: yöneticinin yaptığı düzenlemeler ezilmez.
         update = { ...checksumPatch, source_content_type: scan.sourceContentType, last_checked_at: detectedAt, ai_analysis: analysis };

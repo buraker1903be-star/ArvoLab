@@ -1,4 +1,4 @@
-import { fetchOfficialSource } from "@/lib/safe-official-fetch";
+import { fetchOfficialSource, metniOku } from "@/lib/safe-official-fetch";
 
 export type OfficialGuidelineCandidate = { url: string; title: string };
 
@@ -35,7 +35,7 @@ async function yokDirectoryHtml() {
       headers: { "user-agent": "ArvoLabGuidelineDirectory/1.0" },
     });
     if (!response.ok) throw new Error(`YÖK üniversite dizini alınamadı: HTTP ${response.status}`);
-    return response.text();
+    return metniOku(response);
   })).then((pages) => pages.join("\n"));
   return yokDirectoryPromise;
 }
@@ -59,7 +59,7 @@ export async function resolveOfficialUniversityDomain(universityName: string) {
 async function readText(url: string) {
   const response = await fetchOfficialSource(url);
   if (!response.ok) return null;
-  return response.text();
+  return metniOku(response);
 }
 
 export async function crawlOfficialGuidelineCandidates(domain: string) {

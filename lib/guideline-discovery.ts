@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scanGuidelineUrl, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { crawlOfficialGuidelineCandidates, resolveOfficialUniversityDomain } from "@/lib/official-guideline-crawl";
+import { metniOku } from "@/lib/safe-official-fetch";
 
 type University = { id: string; name: string };
 
@@ -83,7 +84,7 @@ async function discoverCandidates(universityName: string): Promise<Candidate[]> 
         continue;
       }
 
-      const html = await response.text();
+      const html = await metniOku(response);
       const candidates = new Map<string, Candidate>();
       const resultPattern = /<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
       for (const match of html.matchAll(resultPattern)) {

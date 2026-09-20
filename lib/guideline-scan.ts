@@ -1,5 +1,6 @@
 import { DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
-import { fetchOfficialSource } from "@/lib/safe-official-fetch";
+import { fetchOfficialSource, kaynagiOku } from "@/lib/safe-official-fetch";
+import { atifSistemiSec } from "@/lib/atif-sistemi";
 
 /**
  * Kılavuz Tarama Yardımcısı
@@ -30,6 +31,25 @@ const CANDIDATE_SECTIONS = [
   "Ekler",
   "Özgeçmiş",
 ];
+
+/*
+  Tarayıcı sürümü.
+
+  Çıkarım kuralları düzeldiğinde eski kayıtların kendiliğinden düzelmesi
+  gerekir. Cron yalnızca "dosya değişti ya da hiç kural yok" durumunda
+  yeniden çıkarım yapıyordu; atıf sistemi seçimindeki hata düzeltildiğinde
+  (sürüm 2) yanlış "Chicago" kayıtları dosyaları değişmediği için sonsuza
+  kadar yanlış kalırdı.
+
+  Sürüm artınca cron onay BEKLEYEN kayıtları yeniden çıkarır. Onaylı
+  kayıtlara dokunulmaz: onaylı kurallar hiçbir zaman otomatik değişmez
+  (müşterinin editörü bozulmasın), yalnızca yöneticiye yeni sürüm bildirilir.
+
+  Sürüm geçmişi:
+    1 — ilk çıkarım kümesi
+    2 — atıf sistemi sayım/baskınlık ile seçiliyor (lib/atif-sistemi.ts)
+*/
+export const TARAYICI_SURUMU = 2;
 
 export interface GuidelineScanResult {
   textPreview: string;
@@ -204,7 +224,8 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
   }
 
   const contentType = res.headers.get("content-type") ?? "";
-  const sourceBytes = await res.arrayBuffer();
+  // Sınırsız okuma yok: bkz. lib/safe-official-fetch.ts
+  const sourceBytes = await kaynagiOku(res);
   let text: string;
 
   if (contentType.includes("pdf") || url.toLowerCase().endsWith(".pdf")) {
@@ -239,15 +260,13 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
     return re.test(text);
   });
 
-  const citationHint = /apa\s*7|apa7/i.test(text)
-    ? "APA 7"
-    : /vancouver/i.test(text)
-    ? "Vancouver"
-    : /chicago/i.test(text)
-    ? "Chicago"
-    : /ieee/i.test(text)
-    ? "IEEE"
-    : null;
+  /*
+    Atıf sistemi sayıma ve baskınlığa göre seçilir (lib/atif-sistemi.ts).
+    Eskiden metinde geçen İLK ad kazanıyordu: baştan sona APA anlatan bir
+    kılavuzda geçen tek bir "Chicago" sistemi Chicago yapıyordu.
+  */
+  const atifSecimi = atifSistemiSec(text);
+  const citationHint = atifSecimi?.etiket ?? null;
   const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint));
 
   return {
@@ -258,5 +277,10 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
     sourceChecksum: await sha256(sourceBytes),
     sourceContentType: contentType || "application/octet-stream",
     ...formatting,
+    /*
+      formatting'den SONRA gelmeli: yayma onu ezerdi. Atıf seçiminin ne
+      kadar net olduğu yöneticiye söylenir; sessiz bir tahmin bırakılmaz.
+    */
+    warnings: [...formatting.warnings, ...(atifSecimi?.uyarilar ?? [])],
   };
 }

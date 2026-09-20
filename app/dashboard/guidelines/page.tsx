@@ -1,4 +1,4 @@
-import { BookMarked, ExternalLink, FilePenLine, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
+import { BookMarked, ExternalLink, FilePenLine, Plus, RefreshCw, SlidersHorizontal, Trash2 } from "lucide-react";
 import {
   getGuidelines,
   createGuideline,
@@ -18,6 +18,7 @@ import BosDurum from "../_components/bos-durum";
 import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
 import CikarimOzeti from "./cikarim-ozeti";
+import { kilavuzuYenidenTara } from "@/app/actions/guideline-scan";
 
 const CITATION_LABELS: Record<string, string> = {
   apa7: "APA 7",
@@ -65,6 +66,11 @@ export default async function GuidelinesPage() {
   async function handleDelete(guidelineId: string) {
     "use server";
     return deleteGuideline(guidelineId);
+  }
+
+  async function handleRescan(guidelineId: string) {
+    "use server";
+    return kilavuzuYenidenTara(guidelineId);
   }
 
   async function handleApprove(guidelineId: string) {
@@ -279,6 +285,20 @@ export default async function GuidelinesPage() {
                     {g.analysis_status !== "approved" ? (
                       <ActionForm action={handleApprove.bind(null, g.id)} successMessage="Kılavuz onaylandı ve uygulandı.">
                         <button type="submit" className="projects-primary-button">Onayla ve uygula</button>
+                      </ActionForm>
+                    ) : null}
+
+                    {/* Gece çalışan cron'u beklemeden: çıkarım düzeldiğinde ya da
+                        kurumda yeni sürüm yayımlandığında hemen uygulansın. */}
+                    {g.analysis_status !== "approved" && g.source_url ? (
+                      <ActionForm
+                        action={handleRescan.bind(null, g.id)}
+                        successMessage="Kılavuz yeniden tarandı; kurallar güncellendi."
+                      >
+                        <button type="submit" className="projects-filter-button">
+                          <RefreshCw size={14} aria-hidden="true" />
+                          Şimdi yeniden tara
+                        </button>
                       </ActionForm>
                     ) : null}
 
