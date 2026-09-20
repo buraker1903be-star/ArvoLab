@@ -4,6 +4,7 @@ import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
 import { asistanKapisi } from "@/lib/ai/erisim";
 import { bulgulariCozumle, bulgulariDogrula, type Bulgu } from "@/lib/ai/bulgu";
 import { kaynakcaIstemi, type KaynakDurumu, type KaynakSatiri } from "@/lib/ai/kaynakca-denetimi";
+import { asistanKaydet } from "@/lib/ai/kayit";
 
 /*
   Asistanın kaynakça denetimi. Mekanik denetimin (lib/apa7.ts +
@@ -30,6 +31,8 @@ export type KaynakcaDenetimYaniti = {
   bulgular?: Bulgu[];
   kirpilanlar?: string[];
   model?: string;
+  /** Çalışma kaydının kimliği; kullanıcı buna puan veriyor. */
+  kayitId?: string | null;
 };
 
 const kisalt = (deger: unknown, sinir: number) => String(deger ?? "").slice(0, sinir).trim();
@@ -51,7 +54,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
   if (!kaynaklar.some((kaynak) => kaynak.ham)) return { hata: "Denetlenecek kaynak bulunamadı." };
 
   const kapi = await asistanKapisi();
-  if (kapi.hata) return { hata: kapi.hata };
+  if (!kapi.ok) return { hata: kapi.hata };
 
   const { mesajlar, kaynak, kirpilanlar } = kaynakcaIstemi({
     kaynaklar,
@@ -62,11 +65,15 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     atiflar: [...new Set(liste(girdi.atiflar, 300, 120))].slice(0, EN_FAZLA_ATIF),
   });
 
+  const basladi = Date.now();
+
   try {
     const yanit = await sor(mesajlar, { jsonBekle: true, sicaklik: 0.1, enFazlaJeton: 900 });
     const bulgular = bulgulariCozumle(yanit.metin);
-    if (!bulgular.length)
+    if (!bulgular.length) {
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "kaynakca", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
       return { hata: "Asistan kaynakçada denetlenecek bir şey bulamadı.", kirpilanlar };
+    }
 
     /*
       Uydurma sayı denetimi: kaynakçada en sık uydurulan şey yıl, cilt, sayı
@@ -76,16 +83,19 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     const dogrulama = bulgulariDogrula(bulgular, kaynak);
     if (!dogrulama.gecti) {
       console.error("[ai] kaynakça denetimi uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "kaynakca", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
       return {
         hata: "Asistan verilmeyen künye bilgileri ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
         kirpilanlar,
       };
     }
 
-    return { bulgular, kirpilanlar, model: yanit.model };
+    const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "kaynakca", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
+    return { bulgular, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[ai] kaynakça denetimi başarısız", mesaj);
+    await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "kaynakca", durum: "failed", baglam: kaynak, basladi });
     return { hata: mesaj, kirpilanlar };
   }
 }

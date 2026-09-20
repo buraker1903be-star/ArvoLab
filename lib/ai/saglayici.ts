@@ -8,12 +8,18 @@
   değişir. Ürün arayüzünde sağlayıcının adı hiç geçmez; kullanıcı "ArvoLab
   Asistanı" görür.
 
+  İki tel biçimi destekleniyor: "openai" (chat/completions — OpenAI, Ollama,
+  vLLM, LM Studio, TGI hepsi bunu konuşur) ve "anthropic" (/v1/messages).
+  Biçim adresten anlaşılır, AI_BICIM ile elle de verilebilir.
+
   AI_TABAN_URL   Sunucu adresi. Örn. http://10.0.0.5:11434/v1 (Ollama),
-                 http://sunucu:8000/v1 (vLLM). Verilmezse OPENAI_TABAN_URL,
-                 o da yoksa OpenAI'nin adresi kullanılır (geçiş dönemi).
-  AI_MODEL       Model adı. Örn. "qwen2.5:14b-instruct".
+                 http://sunucu:8000/v1 (vLLM), https://api.anthropic.com/v1.
+                 Verilmezse OPENAI_TABAN_URL, o da yoksa OpenAI'nin adresi
+                 kullanılır (geçiş dönemi).
+  AI_MODEL       Model adı. Örn. "qwen2.5:14b-instruct", "claude-sonnet-5".
   AI_ANAHTAR     Varsa gönderilir. Kendi sunucunuzda genellikle gerekmez;
                  eski kurulumlar için OPENAI_API_KEY de okunur.
+  AI_BICIM       "openai" | "anthropic". Verilmezse adresten çıkarılır.
 
   Zaman aşımı şart: fetch varsayılanda süresiz bekler. Vercel isteği kendi
   sınırında keser ve kullanıcı "hiçbir şey olmadı" görür; burada kesersek
@@ -45,8 +51,26 @@ const tabanUrl = () =>
 
 const anahtar = () => process.env.AI_ANAHTAR || process.env.OPENAI_API_KEY || "";
 
-/** Kendi sunucumuzda mıyız? Anahtar zorunluluğu buna göre değişir. */
-const kendiSunucu = () => tabanUrl() !== VARSAYILAN_TABAN_URL;
+export type Bicim = "openai" | "anthropic";
+
+/** Tel biçimi: elle verilmemişse adresten çıkarılır. */
+export function bicim(): Bicim {
+  const secilen = (process.env.AI_BICIM || "").toLowerCase();
+  if (secilen === "anthropic" || secilen === "openai") return secilen;
+  // Son çapa şart: "anthropic.com.baskasi.net" Anthropic değildir ve
+  // anahtarı onun başlık biçiminde göndermek yanlış sunucuya güven demekti.
+  return /(^|\.)anthropic\.com$/.test(new URL(tabanUrl()).hostname) ? "anthropic" : "openai";
+}
+
+/*
+  Kendi sunucumuzda mıyız? Anahtar zorunluluğu buna göre değişir. Bilinen
+  bulut sağlayıcıları anahtar ister; geri kalan her adres kendi sunucumuz
+  sayılır.
+*/
+const kendiSunucu = () => {
+  const makine = new URL(tabanUrl()).hostname;
+  return !/(^|\.)(openai\.com|anthropic\.com)$/.test(makine);
+};
 
 /**
  * Asistan bu kurulumda çalışabilir mi? Kendi sunucunuz tanımlıysa anahtar
@@ -84,25 +108,69 @@ const jsonDesteklenmiyor = (durum: number, govde: string) =>
 
 type Istek = { model: string; mesajlar: Mesaj[]; secenek: SorSecenek; json: boolean };
 
-async function gonder({ model, mesajlar, secenek, json }: Istek) {
+/*
+  Anthropic'te sistem istemi bir mesaj değil, üst düzey "system" alanı; ve
+  response_format yok. JSON'u garantilemek için yanıt "{" ile başlatılıyor
+  (prefill): model devamını yazıyor, biz başa "{" ekliyoruz. Belgelenmiş,
+  güvenli bir yöntem ve çözümleyiciyi kurtarıyor.
+*/
+function anthropicGovde({ model, mesajlar, secenek, json }: Istek) {
+  const sistem = mesajlar.filter((m) => m.rol === "sistem").map((m) => m.metin).join("\n\n");
+  const govde: Record<string, unknown> = {
+    model,
+    max_tokens: secenek.enFazlaJeton ?? 900,
+    temperature: secenek.sicaklik ?? 0.2,
+    messages: [
+      ...mesajlar.filter((m) => m.rol !== "sistem").map((m) => ({ role: "user", content: m.metin })),
+      ...(json ? [{ role: "assistant", content: "{" }] : []),
+    ],
+  };
+  if (sistem) govde.system = sistem;
+  return govde;
+}
+
+async function gonder(istek: Istek) {
+  const { model, mesajlar, secenek, json } = istek;
   const basliklar: Record<string, string> = { "Content-Type": "application/json" };
   const key = anahtar();
-  if (key) basliklar.Authorization = `Bearer ${key}`;
+  const anthropic = bicim() === "anthropic";
 
-  return fetch(`${tabanUrl()}/chat/completions`, {
+  if (key) {
+    if (anthropic) basliklar["x-api-key"] = key;
+    else basliklar.Authorization = `Bearer ${key}`;
+  }
+  if (anthropic) basliklar["anthropic-version"] = "2023-06-01";
+
+  return fetch(`${tabanUrl()}${anthropic ? "/messages" : "/chat/completions"}`, {
     method: "POST",
     signal: AbortSignal.timeout(
       secenek.zamanAsimiMs ?? (Number(process.env.AI_ZAMAN_ASIMI_MS) || VARSAYILAN_ZAMAN_ASIMI),
     ),
     headers: basliklar,
-    body: JSON.stringify({
-      model,
-      messages: mesajlar.map((m) => ({ role: m.rol === "sistem" ? "system" : "user", content: m.metin })),
-      temperature: secenek.sicaklik ?? 0.2,
-      max_tokens: secenek.enFazlaJeton ?? 900,
-      ...(json ? { response_format: { type: "json_object" } } : {}),
-    }),
+    body: JSON.stringify(
+      anthropic
+        ? anthropicGovde(istek)
+        : {
+            model,
+            messages: mesajlar.map((m) => ({ role: m.rol === "sistem" ? "system" : "user", content: m.metin })),
+            temperature: secenek.sicaklik ?? 0.2,
+            max_tokens: secenek.enFazlaJeton ?? 900,
+            ...(json ? { response_format: { type: "json_object" } } : {}),
+          },
+    ),
   });
+}
+
+/** İki biçimin yanıtından metni çıkarır. */
+export function yanitMetni(veri: unknown, bicimi: Bicim, prefill: boolean): string | null {
+  const kok = veri as { choices?: { message?: { content?: unknown } }[]; content?: { type?: string; text?: unknown }[] };
+  const ham =
+    bicimi === "anthropic"
+      ? (kok?.content ?? []).filter((p) => p?.type === "text").map((p) => String(p.text ?? "")).join("")
+      : kok?.choices?.[0]?.message?.content;
+  if (typeof ham !== "string" || !ham.trim()) return null;
+  // Prefill ile başlattığımız "{" yanıtta dönmüyor; başa geri konur.
+  return bicimi === "anthropic" && prefill ? `{${ham}` : ham;
 }
 
 /** Modele sorar. Hata durumunda Türkçe mesajla Error fırlatır. */
@@ -132,7 +200,7 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
       bir kez de onsuz deniyoruz. Aksi halde kendi sunucusuna geçen kurulum
       hiçbir yetenekte çalışmazdı.
     */
-    if (istek.json && jsonDesteklenmiyor(yanit.status, govde)) {
+    if (istek.json && bicim() === "openai" && jsonDesteklenmiyor(yanit.status, govde)) {
       yanit = await gonder({ ...istek, json: false }).catch(() => yanit);
       if (!yanit.ok) govde = await yanit.text().catch(() => "");
     }
@@ -143,9 +211,8 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
   }
 
   const veri = await yanit.json().catch(() => null);
-  const metin = veri?.choices?.[0]?.message?.content;
-  if (typeof metin !== "string" || !metin.trim())
-    throw new Error("Yapay zeka boş yanıt verdi. Tekrar deneyin.");
+  const metin = yanitMetni(veri, bicim(), istek.json);
+  if (!metin) throw new Error("Yapay zeka boş yanıt verdi. Tekrar deneyin.");
 
   return { metin, model };
 }

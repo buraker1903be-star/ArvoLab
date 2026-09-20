@@ -533,6 +533,9 @@ ve TGI aynı arayüzü konuştuğu için kodda hiçbir değişiklik gerekmez.
 - `AI_MODEL` — model adı, örn. `qwen2.5:14b-instruct`.
 - `AI_ANAHTAR` — varsa gönderilir. Kendi sunucunuzda genellikle gerekmez;
   eski kurulumlar için `OPENAI_API_KEY` de okunur.
+- `AI_BICIM` (opsiyonel) — `openai` ya da `anthropic`. Verilmezse adresten
+  çıkarılır. Claude için: `AI_TABAN_URL=https://api.anthropic.com/v1`,
+  `AI_MODEL=claude-sonnet-5` (ucuzu: `claude-haiku-4-5-20251001`).
 - `AI_ZAMAN_ASIMI_MS` (opsiyonel) — varsayılan 45.000. Kendi sunucunuz soğuk
   başlangıçta yavaşsa uzatın.
 

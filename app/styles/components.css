@@ -950,3 +950,16 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   background: var(--surface-2); color: var(--ink);
   font-size: var(--fs-sm); word-break: break-word;
 }
+
+/* Asistan değerlendirmesi: üç yetenekte de aynı soru sorulur. */
+.asistan-puan { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.asistan-puan-dugmeler { display: flex; gap: 6px; }
+.asistan-puan-dugme {
+  padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--r-pill);
+  background: var(--surface); color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer;
+}
+.asistan-puan-dugme:disabled { opacity: .6; cursor: default; }
+.asistan-puan-tesekkur { color: var(--ink-soft); }
+@media (hover: hover) and (pointer: fine) {
+  .asistan-puan-dugme:hover:not(:disabled) { border-color: var(--accent-500); color: var(--ink); }
+}

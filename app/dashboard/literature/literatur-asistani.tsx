@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { literaturTara, type LiteraturDenetimYaniti } from "@/app/actions/ai-literatur";
+import AsistanPuan from "../_components/asistan-puan";
 
 const BULGU_TONU = { uyari: "danger", oneri: "warning", bilgi: "info" } as const;
 const BULGU_ETIKETI = { uyari: "Boşluk", oneri: "Öneri", bilgi: "Not" } as const;
@@ -111,6 +112,8 @@ export default function LiteraturAsistani({ projeler, asistanAcik }: { projeler:
           </ul>
         </div>
       )}
+
+      {(sonuc?.bulgular?.length || sonuc?.aramalar?.length) ? <AsistanPuan kayitId={sonuc?.kayitId} /> : null}
     </section>
   );
 }

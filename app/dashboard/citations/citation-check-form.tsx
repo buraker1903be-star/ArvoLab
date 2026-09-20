@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-kaynakca";
+import AsistanPuan from "../_components/asistan-puan";
 import { runCitationCheck } from "@/app/actions/citation-check";
 import type { Tone } from "@/lib/status-tone";
 
@@ -378,6 +379,8 @@ export default function CitationCheckForm({ projects, asistanAcik }: { projects:
                 ))}
               </ul>
             )}
+
+            {denetim?.bulgular && denetim.bulgular.length > 0 && <AsistanPuan kayitId={denetim.kayitId} />}
           </div>
         </div>
       )}

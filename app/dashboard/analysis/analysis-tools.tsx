@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { detectStatistics, type DetectedStatistic } from "@/lib/stats-interpreter";
 import { parseCodebook, type CodebookCheckResult } from "@/lib/codebook-check";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
+import AsistanPuan from "../_components/asistan-puan";
 
 const BULGU_TONU = { uyari: "danger", oneri: "warning", bilgi: "info" } as const;
 const BULGU_ETIKETI = { uyari: "Eksik", oneri: "Öneri", bilgi: "Not" } as const;
@@ -170,6 +171,8 @@ export default function AnalysisTools({ asistanAcik }: { asistanAcik: boolean })
                 ))}
               </ul>
             )}
+
+            {denetim?.bulgular && denetim.bulgular.length > 0 && <AsistanPuan kayitId={denetim.kayitId} />}
           </div>
         )}
       </section>

@@ -17,17 +17,17 @@ import { aiYapilandirildi } from "./saglayici";
 
 export const SAATLIK_HAK = 20;
 
-export type KapiSonucu = { hata: string; kullaniciId?: undefined } | { hata: null; kullaniciId: string };
+export type KapiSonucu = { ok: false; hata: string } | { ok: true; kullaniciId: string };
 
 export async function asistanKapisi(): Promise<KapiSonucu> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { hata: "Oturum bulunamadı." };
-  if (await isSubscriptionBlocked()) return { hata: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!user) return { ok: false, hata: "Oturum bulunamadı." };
+  if (await isSubscriptionBlocked()) return { ok: false, hata: SUBSCRIPTION_BLOCKED_MESSAGE };
   if (!aiYapilandirildi())
-    return { hata: "Asistan bu kurulumda kapalı. Yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor." };
+    return { ok: false, hata: "Asistan bu kurulumda kapalı. Yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor." };
 
   /*
     Sayaç veritabanında: sunucu her istekte başka bir örnekte çalışabiliyor,
@@ -44,8 +44,8 @@ export async function asistanKapisi(): Promise<KapiSonucu> {
     // Sayaç okunamadıysa (geçici arıza) akış durmaz; kapı sert kapanmamalı.
     if (error) console.error("[ai] hız sınırı okunamadı:", error.message);
     else if (izin === false)
-      return { hata: `Saatlik asistan hakkınız doldu (${SAATLIK_HAK}). Bir süre sonra tekrar deneyin.` };
+      return { ok: false, hata: `Saatlik asistan hakkınız doldu (${SAATLIK_HAK}). Bir süre sonra tekrar deneyin.` };
   }
 
-  return { hata: null, kullaniciId: user.id };
+  return { ok: true, kullaniciId: user.id };
 }

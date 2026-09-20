@@ -52,6 +52,11 @@ davranış da yazılır ("Eskiden … oluyordu"). Yeni kod bu üsluba uyar.
 - **Asistan kaynak önermez.** Literatür yeteneği arama stratejisi üretir;
   yazar, başlık, dergi ya da DOI yazması yasaktır (`kunyeIzi` kodda da
   denetler). Uydurma künye akademik çalışmada en ağır hatadır.
+- **Her asistan çalışması kaydedilir** (`lib/ai/kayit.ts` →
+  `ai_assistant_runs`). Bu tablo ArvoLab'ın kendi modelini eğitecek veridir;
+  asıl varlık model değil, buradaki gerçek girdi/çıktı ve kullanıcının
+  değerlendirmesidir. Kayıt akışı düşürmez: yazılamazsa yalnızca log'a gider.
+  İçerik sonradan değiştirilemez (`guard_ai_run_update`).
 - **Yeni yetenek `lib/ai/erisim.ts` kapısından geçer.** Oturum, abonelik,
   kurulum ve KULLANICI başına saatlik hak orada; yetenek başına ayrı sayaç
   tutulmaz, yoksa aynı kullanıcı her yetenekten ayrı hak kazanır.
