@@ -1142,16 +1142,20 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   background: var(--surface-2); box-shadow: var(--shadow-inset);
 }
 .calisma-serit-baslik {
-  display: flex; align-items: baseline; gap: 8px; min-width: 0;
+  display: flex; align-items: baseline; gap: 8px;
+  /* Daralabilmeli: flex çocuğunun varsayılan min-width'i "auto" olduğu için
+     uzun tez başlığı şeridi taşırıyordu. */
+  flex: 1 1 260px; min-width: 0; max-width: 100%; overflow: hidden;
   color: var(--ink); font-size: var(--fs-body); text-decoration: none;
 }
 .calisma-serit-baslik svg { align-self: center; color: var(--muted); flex: none; }
 .calisma-serit-etiket {
-  color: var(--muted); font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .05em;
+  flex: none; color: var(--muted); font-size: var(--fs-micro);
+  text-transform: uppercase; letter-spacing: .05em; white-space: nowrap;
 }
-/* Uzun tez başlıkları şeridi iki satıra bölmesin. */
+/* Uzun tez başlıkları şeridi iki satıra bölmesin, taşırmasın da. */
 .calisma-serit-baslik strong {
-  overflow: hidden; max-width: 46ch; font-weight: 600; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap;
 }
 .calisma-serit-birimler { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .calisma-serit-birim {
@@ -1173,7 +1177,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 
 @media (max-width: 640px) {
   .calisma-serit { flex-direction: column; align-items: stretch; }
-  .calisma-serit-baslik strong { max-width: none; }
+  /* Sütun yönünde flex-basis YÜKSEKLİĞE uygulanır; satır için verilen
+     260px burada şeridi 260px boyunda bir kutuya çeviriyordu. */
+  .calisma-serit-baslik { flex: 0 0 auto; }
   /* Dar ekranda sekmeler sarmak yerine yatay kayar: şerit yer kaplamasın. */
   .calisma-serit-birimler { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
   .calisma-serit-birim { white-space: nowrap; }
