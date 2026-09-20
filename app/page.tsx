@@ -30,6 +30,7 @@ const errorMessages: Record<string, string> = {
   "missing-credentials": "E-posta adresi ve şifre zorunludur.",
   "invalid-credentials": "E-posta adresi veya şifre hatalı.",
   "link-invalid": "Bağlantı geçersiz ya da süresi dolmuş. Lütfen yeniden şifre sıfırlama isteyin.",
+  "session-missing": "Oturumunuz sona ermiş. Lütfen tekrar giriş yapın.",
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {

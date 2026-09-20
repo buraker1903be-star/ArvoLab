@@ -9,6 +9,7 @@ import { getCurrentProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
+import { trTarihSaat } from "@/lib/tr-time";
 
 const CATEGORY_LABELS: Record<string, string> = {
   bug: "Hata bildirimi",
@@ -133,7 +134,7 @@ export default async function SupportPage() {
                 </div>
                 <div className="project-card-meta">
                   <span>Öncelik: {PRIORITY_LABELS[r.priority] ?? r.priority}</span>
-                  <span>{new Date(r.created_at).toLocaleString("tr-TR")}</span>
+                  <span>{trTarihSaat(r.created_at)}</span>
                 </div>
                 <div className="cluster mt-sm">
                   {r.status !== "in_progress" && (
@@ -167,7 +168,7 @@ export default async function SupportPage() {
                       {STATUS_LABELS[r.status]}
                     </span>
                     <h2>{r.subject}</h2>
-                    <p>{CATEGORY_LABELS[r.category]} · {new Date(r.created_at).toLocaleString("tr-TR")}</p>
+                    <p>{CATEGORY_LABELS[r.category]} · {trTarihSaat(r.created_at)}</p>
                   </div>
                 </div>
               </article>

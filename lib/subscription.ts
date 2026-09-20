@@ -89,6 +89,10 @@ async function call(
         ...(planCode ? { plan: planCode } : {}),
       }),
       cache: "no-store",
+      // Zaman aşımı olmadan ArvoOS asılı kalırsa panel de fonksiyon zaman
+      // aşımına kadar donuyordu; "ulaşılamazsa kimse engellenmez" ilkesi
+      // pratikte bozuluyordu (lib/license-decision.ts).
+      signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) {
       const body = await response.text().catch(() => "");

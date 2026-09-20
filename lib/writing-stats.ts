@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { trTarihSaat } from "./tr-time";
 
 /** "3 saat önce", "dün", "12 Eylül 14:05" */
 export function editedAgo(dateStr: string, now = Date.now()) {
@@ -10,7 +11,7 @@ export function editedAgo(dateStr: string, now = Date.now()) {
   const days = Math.round(hours / 24);
   if (days === 1) return "dün";
   if (days < 7) return `${days} gün önce`;
-  return new Date(dateStr).toLocaleString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  return trTarihSaat(dateStr);
 }
 
 export interface WritingStats {

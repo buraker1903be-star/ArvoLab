@@ -25,24 +25,16 @@ import { getCurrentProfile } from "@/app/actions/profile";
 import DeleteProjectButton from "./delete-project-button";
 import ActionForm from "../action-form";
 import { statusTone } from "@/lib/status-tone";
+import { trTarihSaat, trUzunTarih } from "@/lib/tr-time";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "Teslim tarihi belirtilmedi";
-  return new Date(dateStr).toLocaleDateString("tr-TR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  return trUzunTarih(dateStr);
 }
 
 function formatDateTime(dateStr: string | null) {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleString("tr-TR", {
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return trTarihSaat(dateStr);
 }
 
 export default async function ProjectsPage({

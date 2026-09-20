@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { LogOut } from "lucide-react";
 import { logout } from "@/app/actions/auth";
@@ -12,6 +13,7 @@ import MobileNav from "./_components/mobile-nav";
 import Toaster from "./_components/toaster";
 import NotificationBell from "./_components/notification-bell";
 import { NAV_COOKIE } from "./_components/navigation";
+import ActionErrorToast from "./_components/action-error-toast";
 
 function initialsOf(name: string) {
   const letters = name
@@ -74,6 +76,9 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         </header>
 
         <div className="dashboard-main-content">
+          <Suspense>
+            <ActionErrorToast />
+          </Suspense>
           {access.blocked ? <SubscriptionNotice access={access} /> : children}
         </div>
       </div>

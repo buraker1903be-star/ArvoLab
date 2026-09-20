@@ -477,8 +477,23 @@ export default function ManuscriptEditor({
             }
           }
           return false;
-        } catch {
+        } catch (hata) {
           persistDraft();
+          /*
+            Yeni sürüm yayınlanınca açık sayfadaki server action kimliği
+            geçersizleşir ("Failed to find Server Action"). Bu ağ hatası değil:
+            yeniden denemek asla başarmaz, sayfa yenilenmelidir. Eskiden 10
+            saniyede bir sonsuza kadar deneniyordu.
+          */
+          const eskiSurum = /Failed to find Server Action|Server Action .* was not found/i.test(
+            hata instanceof Error ? hata.message : String(hata),
+          );
+          if (eskiSurum) {
+            blockedRef.current = true;
+            setSaveError("Yeni bir sürüm yayınlandı. Yazdıklarınız bu tarayıcıda saklandı; sayfayı yenileyin, kaldığınız yerden devam edin.");
+            setSaveState("error");
+            return false;
+          }
           setSaveError("Bağlantı sorunu nedeniyle kaydedilemedi. Yazdıklarınız bu tarayıcıda saklanıyor; birazdan yeniden denenecek.");
           setSaveState("error");
           scheduleSave(RETRY_DELAY_MS);
@@ -746,10 +761,26 @@ export default function ManuscriptEditor({
         showToast("error", "Metin kaydedilemediği için Word dosyası oluşturulmadı.");
         return;
       }
+      /*
+        Eskiden <a download> tıklanıyordu: 402 (abonelik), 404 ve 500
+        yanıtlarındaki Türkçe açıklama hiçbir yerde görünmüyor, indirme
+        sessizce boş kalıyordu. Artık yanıt okunup hata bildirimle gösterilir.
+      */
+      const response = await fetch(`/api/manuscripts/${projectId}/export`, { cache: "no-store" });
+      if (!response.ok) {
+        const govde = (await response.json().catch(() => null)) as { error?: string } | null;
+        showToast("error", govde?.error ?? "Word dosyası oluşturulamadı. Metin çok büyükse resimleri küçültüp tekrar deneyin.");
+        return;
+      }
+      const blob = await response.blob();
+      const adBasligi = response.headers.get("Content-Disposition") ?? "";
+      const eslesme = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(adBasligi);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = `/api/manuscripts/${projectId}/export`;
-      link.download = "";
+      link.href = url;
+      link.download = eslesme ? decodeURIComponent(eslesme[1]) : "calisma.docx";
       link.click();
+      URL.revokeObjectURL(url);
     } finally {
       window.setTimeout(() => setExporting(false), 1500);
     }

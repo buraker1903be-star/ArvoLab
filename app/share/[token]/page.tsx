@@ -8,6 +8,7 @@ import { buildPrintSheet } from "@/lib/print-sheet";
 import type { CoverPage } from "@/app/actions/manuscript";
 import type { TiptapDoc } from "@/lib/tiptap-text";
 import ManuscriptSheet from "@/app/print/manuscript/manuscript-sheet";
+import { trUzunTarih } from "@/lib/tr-time";
 
 // Danışmana salt okunur paylaşım: giriş gerekmez; bağlantı özetine göre sunucuda (service role)
 // aranır, süresi dolmuş ya da iptal edilmişse metin gösterilmez. Arama motorlarına kapalıdır,
@@ -102,7 +103,7 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
   await recordShareView(admin, link, project.title ?? "Çalışma");
 
   const sheet = buildPrintSheet(manuscript, guideline, doc);
-  const until = new Date(link.expires_at).toLocaleDateString("tr-TR", { dateStyle: "long" });
+  const until = trUzunTarih(link.expires_at);
 
   return (
     <div className="print-page">

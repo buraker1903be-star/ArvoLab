@@ -15,6 +15,7 @@ import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
 import { ShieldQuestion, Trash2 } from "lucide-react";
 import { similarityTone, statusTone } from "@/lib/status-tone";
+import { trTarihSaat } from "@/lib/tr-time";
 
 export default async function DocumentsPage() {
   const [projects, uploads] = await Promise.all([
@@ -93,7 +94,7 @@ export default async function DocumentsPage() {
                       <h2>{u.file_name}</h2>
                       <p>
                         {u.project_title || "Bağımsız yükleme"} ·{" "}
-                        {new Date(u.created_at).toLocaleString("tr-TR")}
+                        {trTarihSaat(u.created_at)}
                       </p>
                     </div>
                     <div className="project-progress">

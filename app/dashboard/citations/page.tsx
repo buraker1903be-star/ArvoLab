@@ -1,5 +1,6 @@
 import { getMyProjects, getMyCitationChecks } from "@/app/actions/citation-check";
 import CitationCheckForm from "./citation-check-form";
+import { trTarihSaat } from "@/lib/tr-time";
 
 export default async function CitationsPage() {
   const [projects, history] = await Promise.all([getMyProjects(), getMyCitationChecks()]);
@@ -35,7 +36,7 @@ export default async function CitationsPage() {
                 <div className="project-card-main">
                   <div>
                     <h2>{historyItem.project_title || "İsimsiz kontrol"}</h2>
-                    <p>{new Date(historyItem.created_at).toLocaleString("tr-TR")}</p>
+                    <p>{trTarihSaat(historyItem.created_at)}</p>
                   </div>
                   <div className="project-progress">
                     <strong>{historyItem.compliance_score ?? "-"}/100</strong>

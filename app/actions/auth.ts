@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -62,6 +63,31 @@ export async function requestPasswordReset(formData: FormData) {
     admin = createAdminClient();
   } catch (adminError) {
     console.error("Şifre sıfırlama: sunucu anahtarı yok", adminError);
+    redirect("/forgot-password?sent=1");
+  }
+
+  /*
+    Hız sınırı: aynı adrese 15 dakikada en fazla 3, aynı IP'den en fazla 10.
+    Sınır olmadan biri döngüyle çağırıp kayıtlı bir adrese sınırsız e-posta
+    yağdırabiliyor ve her yeni bağlantı öncekini geçersiz kıldığı için kurbanın
+    şifre sıfırlaması kilitleniyordu. Sayaç veritabanında (migration
+    20260924100002); sunucu her istekte başka bir örnekte çalışabiliyor.
+    Sınıra takılan da "gönderildi" görür: hangi adreslerin kayıtlı olduğu
+    sızmasın.
+  */
+  const istek = await headers();
+  const ip = (istek.get("x-forwarded-for") ?? "").split(",")[0].trim() || "bilinmiyor";
+  const izin = await Promise.all([
+    admin.rpc("rate_limit_hit", { p_key: `sifre:${email.toLowerCase()}`, p_limit: 3, p_window: "15 minutes" }),
+    admin.rpc("rate_limit_hit", { p_key: `sifre-ip:${ip}`, p_limit: 10, p_window: "15 minutes" }),
+  ]);
+  const engellendi = izin.some((sonuc) => sonuc.data === false);
+  if (izin.some((sonuc) => sonuc.error)) {
+    // Sayaç okunamadıysa (tablo yok, geçici arıza) akış durmaz; e-posta gider.
+    console.error("Şifre sıfırlama hız sınırı okunamadı:", izin.find((sonuc) => sonuc.error)?.error?.message);
+  }
+  if (engellendi) {
+    console.warn("Şifre sıfırlama hız sınırı:", ip);
     redirect("/forgot-password?sent=1");
   }
 
