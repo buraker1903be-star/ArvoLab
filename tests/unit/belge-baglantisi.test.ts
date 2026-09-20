@@ -45,10 +45,27 @@ describe("sayfadan kılavuz belgesi seçimi", () => {
     assert.match(belgeBaglantisiSec(html, TABAN) ?? "", /turkce/);
   });
 
-  test("ipucu taşımayan belge seçilmez", () => {
-    // Sayfadaki rastgele bir form kılavuz değildir; yanlış belgeden
-    // çıkarılan kural, kuralsızlıktan kötüdür.
+  test("form ve dilekçe hiçbir koşulda seçilmez", () => {
+    // Kılavuz sayfasında kılavuzun yanında başka belgeler de durur; yanlış
+    // belgeden çıkarılan kural, kuralsızlıktan kötüdür.
     assert.equal(belgeBaglantisiSec(bag("https://x.edu.tr/danisman-degisiklik-formu.pdf", "Form"), TABAN), null);
+    assert.equal(belgeBaglantisiSec(bag("https://x.edu.tr/tez-basvuru-dilekcesi.pdf", "Dilekçe"), TABAN), null);
+  });
+
+  test("ipucu taşımayan belge de aday olur", () => {
+    /*
+      Gerçek örnek: Abdullah Gül Üniversitesi sosyal bilimler enstitüsünün
+      kılavuzu "AGU_Social_Sciences_Institute_Gr - 2025.docx" adıyla
+      duruyor — dosya adında ne "tez" ne "kılavuz" var. İpucu zorunluyken
+      bu kılavuz tamamen kaçırılıyordu.
+    */
+    const html = bag("https://sbe-tr.agu.edu.tr/uploads/docs/AGU_Social_Sciences_Institute_Gr%20-%202025.docx", "Guidelines");
+    assert.match(belgeBaglantisiSec(html, TABAN) ?? "", /AGU_Social_Sciences/);
+  });
+
+  test("ipuçlu belge, ipucusuza tercih edilir", () => {
+    const html = `${bag("https://x.edu.tr/belge.pdf", "Belge")}${bag("https://x.edu.tr/tez-yazim-kilavuzu.pdf", "Kılavuz")}`;
+    assert.match(belgeBaglantisiSec(html, TABAN) ?? "", /tez-yazim-kilavuzu/);
   });
 
   test("resmî olmayan alan adı alınmaz", () => {

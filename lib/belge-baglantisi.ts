@@ -25,6 +25,13 @@ const UZANTILAR = [".pdf", ".docx", ".doc"];
 const KILAVUZ_IPUCU = /(tez|thesis)/i;
 const YAZIM_IPUCU = /(k[ıi]lavuz|klavuz|guide|yaz[ıi]m|template|taslak|format)/i;
 
+/*
+  Kılavuz sayfalarında kılavuzun yanında başka belgeler de durur: danışman
+  değişiklik formu, başvuru dilekçesi, imza beyanı. Bunlar hiçbir koşulda
+  kılavuz değildir.
+*/
+const KILAVUZ_DEGIL = /(form(?:u|lar)?\b|dilekçe|başvuru|basvuru|beyan|taahh|imza\s*sirkü|öneri\s*formu)/i;
+
 /** Adres zaten bir belgeye mi işaret ediyor? */
 export function belgeAdresiMi(url: string): boolean {
   try {
@@ -68,14 +75,20 @@ export function belgeBaglantisiSec(html: string, tabanUrl: string): string | nul
     const birlesik = `${decodeURIComponent(yol)} ${metin}`;
 
     /*
-      En az bir ipucu ZORUNLU. Sayfadaki rastgele bir PDF (danışman
-      değişiklik formu, başvuru dilekçesi) kılavuz değildir; yanlış
-      belgeden çıkarılan kural, kuralsızlıktan kötüdür. Tek ipucu yeterli
-      sayılıyor çünkü bağlantının bulunduğu sayfa zaten kılavuz sayfası.
+      Açıkça kılavuz olmayan belgeler (form, dilekçe, beyan) her durumda
+      elenir: yanlış belgeden çıkarılan kural, kuralsızlıktan kötüdür.
+
+      İpucu ise ZORUNLU DEĞİL, yalnızca puan getirir. Eskiden zorunluydu ve
+      gerçek kılavuzları kaçırıyordu: Abdullah Gül Üniversitesi'nin sosyal
+      bilimler enstitüsü kılavuzu "AGU_Social_Sciences_Institute_Gr -
+      2025.docx" adıyla duruyor — dosya adında ne "tez" ne "kılavuz" var.
+      Bağlantının bulunduğu sayfa zaten kılavuz sayfası olduğu için
+      (isGuidelineUrl süzgecinden geçti), ipucusuz belge de adaydır;
+      ipuçlusu varsa o kazanır.
     */
+    if (KILAVUZ_DEGIL.test(birlesik)) continue;
     const tezIpucu = KILAVUZ_IPUCU.test(birlesik);
     const yazimIpucu = YAZIM_IPUCU.test(birlesik);
-    if (!tezIpucu && !yazimIpucu) continue;
 
     /*
       PDF, Word şablonuna tercih edilir: şablon dosyası çoğu zaman boş bir
