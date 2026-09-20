@@ -689,3 +689,48 @@
   /* Telefonda belge planı yer kaplamasın; kılavuz listesi ve ilerleme kalır */
   .manuscript-outline > .outline-card:last-child { display: none; }
 }
+
+/* ---------- Editör alt çubuğu: sayfa hedefi ve kayıt onayı ---------- */
+/* Kılavuzun sayfa hedefine göre dolan çubuk (manuscript-editor.tsx). */
+.page-goal {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 5px;
+  border-radius: var(--r-pill);
+  border: 1px solid color-mix(in srgb, var(--tone, var(--accent-500)) 30%, var(--line-soft));
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+.page-goal[data-tone="success"] { --tone: var(--success); color: var(--success); }
+.page-goal[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); color: var(--tone); }
+.page-goal[data-tone="danger"] { --tone: var(--danger); color: var(--danger); }
+.page-goal > i {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  width: var(--w, 0%);
+  background: var(--tone, var(--accent-500));
+  animation: page-goal-fill .8s var(--ease-spring) both;
+}
+@keyframes page-goal-fill { from { width: 0; } }
+
+/* Kaydedildi: nokta bir kez büyüyüp yerine oturur; otomatik kaydın
+   gerçekten çalıştığı görünmüyordu (durum sessizce metinle değişiyordu). */
+.save-status[data-state="saved"]::before { animation: save-tick .5s var(--ease-spring); }
+@keyframes save-tick { 0% { transform: scale(.4); opacity: .3; } 55% { transform: scale(1.5); opacity: 1; } 100% { transform: scale(1); } }
+
+/* Teslim kontrolü tamamlandıysa düğme yeşile döner. */
+.manuscript-footer .projects-filter-button[data-tone="success"] {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--line));
+  color: var(--success);
+  background: var(--success-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-goal > i, .save-status[data-state="saved"]::before { animation: none; }
+}

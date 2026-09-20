@@ -1671,6 +1671,28 @@ export default function ManuscriptEditor({
             {stats.words.toLocaleString("tr-TR")} kelime · ≈ {pages} sayfa
             {stats.footnotes.length > 0 ? ` · ${stats.footnotes.length} dipnot` : ""}
           </span>
+          {/*
+            Sayfa hedefi: kılavuzun alt/üst sınırına ne kadar kaldığı yalnızca
+            "Kontrol Et" sonrasında görünüyordu; yazarken hedefin neresinde
+            olduğu belli değildi. Çubuk alt sınıra göre dolar, sınır aşılınca
+            uyarı tonuna geçer.
+          */}
+          {guideline?.minPages ? (
+            <span
+              className="page-goal"
+              data-tone={pageTone}
+              title={`Kılavuz hedefi: ${guideline.minPages}${guideline.maxPages ? `–${guideline.maxPages}` : "+"} sayfa`}
+              role="progressbar"
+              aria-valuenow={pages}
+              aria-valuemin={0}
+              aria-valuemax={guideline.maxPages ?? guideline.minPages}
+              aria-label="Sayfa hedefi"
+            >
+              <i style={{ "--w": `${Math.min(100, Math.round((pages / guideline.minPages) * 100))}%` } as React.CSSProperties} />
+              {pages}/{guideline.minPages}
+              {guideline.maxPages ? `–${guideline.maxPages}` : ""} sayfa
+            </span>
+          ) : null}
           {liveIssues ? (
             <button
               type="button"
@@ -1691,6 +1713,7 @@ export default function ManuscriptEditor({
           <button
             type="button"
             className="projects-filter-button"
+            data-tone={checklist.done === checklist.total ? "success" : undefined}
             onClick={() => setChecklistOpen(true)}
             title="Teslimden önce bakılacaklar"
           >
