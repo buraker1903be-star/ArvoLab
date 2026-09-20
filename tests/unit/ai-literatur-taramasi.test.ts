@@ -40,6 +40,9 @@ describe("literatür istemi", () => {
     */
     assert.match(sistem, /TIRNAK içinde/);
     assert.match(sistem, /En az bir Boole operatörü/);
+    // Parantezsiz OR grubu sessiz bir hatadır: dize çalışır ama ilk terimi
+    // geçen her şeyi döndürür. claude-haiku altı dizeden birinde unuttu.
+    assert.match(sistem, /HER OR grubu PARANTEZ içine alınacak/);
     assert.match(sistem, /kök operatörü/);
     assert.match(sistem, /gri literatüre ayır/);
     assert.ok(kaynak.includes("Harmanlanmış öğrenmenin matematik"));
