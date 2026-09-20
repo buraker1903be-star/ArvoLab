@@ -1,11 +1,12 @@
 import DataAnalyzer from "./data-analyzer";
 import AnalysisTools from "./analysis-tools";
 import { analizAsistaniAcik } from "@/app/actions/ai-analiz";
+import { getMyProjects } from "@/app/actions/citation-check";
 
 export default async function AnalysisPage() {
   // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
   // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
-  const asistanAcik = await analizAsistaniAcik();
+  const [asistanAcik, calismalar] = await Promise.all([analizAsistaniAcik(), getMyProjects()]);
   return (
     <main className="dashboard-page">
       <section className="projects-header">
@@ -24,7 +25,7 @@ export default async function AnalysisPage() {
 
       <div className="stack">
         <DataAnalyzer />
-        <AnalysisTools asistanAcik={asistanAcik} />
+        <AnalysisTools asistanAcik={asistanAcik} calismalar={calismalar} />
       </div>
     </main>
   );

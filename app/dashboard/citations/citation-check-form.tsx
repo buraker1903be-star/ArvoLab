@@ -93,6 +93,7 @@ export default function CitationCheckForm({ projects, asistanAcik }: { projects:
           eksikKaynaklar: result.crossCheck.citationsWithoutReference.map((c) => c.raw),
           kullanilmayanKaynaklar: result.crossCheck.referencesWithoutCitation.map((r) => r.raw),
           atiflar: (result.citations ?? []).map((c) => c.raw),
+          projectId: projectId || null,
           zorla,
         }),
       );

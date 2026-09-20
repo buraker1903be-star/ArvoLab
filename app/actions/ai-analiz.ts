@@ -6,6 +6,7 @@ import { bulgulariCozumle, bulgulariDogrula, type Bulgu } from "@/lib/ai/bulgu";
 import { analizIstemi } from "@/lib/ai/analiz-yorumu";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
+import { calismaBaglami } from "@/lib/ai/calisma-baglami";
 
 /*
   Asistanın analiz denetimi. Oturum, abonelik ve saatlik hak ortak kapıda
@@ -17,6 +18,8 @@ const EN_UZUN_CIKTI = 20_000;
 const EN_UZUN_ALAN = 2_000;
 
 export type AnalizDenetimGirdisi = {
+  /** Bağlı akademik çalışma (isteğe bağlı). */
+  projectId?: string | null;
   /** true: kayıtlı cevap atlanır, modele yeniden sorulur. */
   zorla?: boolean;
   istatistikMetni: string;
@@ -49,8 +52,17 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
   const kapi = await asistanKapisi();
   if (!kapi.ok) return { hata: kapi.hata };
 
+  /*
+    Çalışma bağlamı: atıf stili, araştırma yöntemi ve tür. Bunları bilmeden
+    verilen denetim genel kalıyordu — APA beklenen yerde Vancouver kuralı,
+    nitel çalışmada etki büyüklüğü. Erişim RLS'e tabi: yabancı bir çalışmanın
+    kimliği gönderilse satır dönmez, kayıt da ona iliştirilemez.
+  */
+  const calisma = await calismaBaglami(girdi.projectId);
+
   const apaSatirlari = (girdi.apaSatirlari ?? []).slice(0, 50).map((satir) => kisalt(satir, 300));
   const { mesajlar, kaynak, kirpilanlar } = analizIstemi({
+    calisma: calisma?.metin,
     istatistikMetni,
     apaSatirlari,
     arastirmaSorusu: kisalt(girdi.arastirmaSorusu, EN_UZUN_ALAN),
@@ -80,7 +92,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
     const yanit = await sor(mesajlar, { yetenek: "analiz", jsonBekle: true, sicaklik: 0.1, enFazlaJeton: 3000 });
     const bulgular = bulgulariCozumle(yanit.metin);
     if (!bulgular.length) {
-      await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "analiz", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
       return {
         hata: "Asistan denetlenebilir bir yapı bulamadı. Çıktıyı test adı ve değerleriyle birlikte yapıştırmayı deneyin.",
         kirpilanlar,
@@ -95,19 +107,19 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
     const dogrulama = bulgulariDogrula(bulgular, kaynak, { ekKaynaklar: apaSatirlari });
     if (!dogrulama.gecti) {
       console.error("[ai] analiz denetimi uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
-      await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "analiz", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
       return {
         hata: "Asistan verilmeyen sayılar ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
         kirpilanlar,
       };
     }
 
-    const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "analiz", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
+    const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
     return { bulgular, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[ai] analiz denetimi başarısız", mesaj);
-    await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "analiz", durum: "failed", baglam: kaynak, basladi });
+    await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "failed", baglam: kaynak, basladi });
     return { hata: mesaj, kirpilanlar };
   }
 }

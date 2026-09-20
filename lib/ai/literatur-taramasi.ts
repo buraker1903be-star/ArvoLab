@@ -34,6 +34,8 @@ export type KayitOzeti = {
 };
 
 export type LiteraturGirdisi = {
+  /** Bağlı akademik çalışmanın künyesi (lib/ai/calisma-baglami.ts). */
+  calisma?: string;
   arastirmaSorusu: string;
   calismaBasligi?: string;
   kayitlar?: KayitOzeti[];
@@ -81,6 +83,7 @@ export function kayitOzeti(kayitlar: KayitOzeti[]): string {
 /** Modele gönderilecek mesajlar ve doğrulamada kaynak sayılacak metin. */
 export function literaturIstemi(girdi: LiteraturGirdisi, butce = BAGLAM_BUTCESI) {
   const parcalar: BaglamParca[] = [
+    { baslik: "Çalışma", metin: girdi.calisma ?? "", oncelik: 1 },
     { baslik: "Araştırma sorusu", metin: girdi.arastirmaSorusu, oncelik: 1 },
     { baslik: "Çalışma başlığı", metin: girdi.calismaBasligi ?? "", oncelik: 2 },
     { baslik: "Toplanan kaynaklar", metin: kayitOzeti(girdi.kayitlar ?? []), oncelik: 3 },

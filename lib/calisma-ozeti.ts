@@ -36,6 +36,8 @@ export type CalismaOzeti = {
   kaynakca: { id: string; skor: number | null; tarih: string } | null;
   belgeSayisi: number;
   danismanlikSayisi: number;
+  /** Bu çalışmaya bağlı asistan denetimleri (migration 20260924100006). */
+  asistan: { toplam: number; sonTarih: string | null };
 };
 
 export type Adim = {

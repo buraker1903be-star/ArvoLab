@@ -23,6 +23,8 @@ export type RedNedeni = "uydurma_sayi" | "kunye" | "bos";
 
 export type AsistanKaydi = {
   kullaniciId: string;
+  /** Bağlı akademik çalışma; yoksa null (migration 20260924100006). */
+  calismaId?: string | null;
   yetenek: Yetenek;
   durum: "completed" | "rejected" | "failed";
   redNedeni?: RedNedeni;
@@ -50,6 +52,7 @@ export async function asistanKaydet(kayit: AsistanKaydi): Promise<string | null>
       .from("ai_assistant_runs")
       .insert({
         user_id: kayit.kullaniciId,
+        project_id: kayit.calismaId ?? null,
         capability: kayit.yetenek,
         status: kayit.durum,
         reject_reason: kayit.redNedeni ?? null,

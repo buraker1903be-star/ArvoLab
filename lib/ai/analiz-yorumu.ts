@@ -25,6 +25,8 @@ import type { Mesaj } from "./saglayici";
 export { bulgulariCozumle, bulgulariDogrula, type Bulgu, type BulguTuru } from "./bulgu";
 
 export type YorumGirdisi = {
+  /** Bağlı akademik çalışmanın künyesi (lib/ai/calisma-baglami.ts). */
+  calisma?: string;
   /** Kullanıcının yapıştırdığı ham çıktı (SPSS, R, Jamovi…). */
   istatistikMetni: string;
   /** detectStatistics'in ürettiği APA satırları: doğrulanmış sayı kaynağı. */
@@ -58,6 +60,7 @@ ${YANIT_BICIMI}`;
 /** Modele gönderilecek mesajlar ve doğrulamada kaynak sayılacak metin. */
 export function analizIstemi(girdi: YorumGirdisi, butce = BAGLAM_BUTCESI) {
   const parcalar: BaglamParca[] = [
+    { baslik: "Çalışma", metin: girdi.calisma ?? "", oncelik: 1 },
     { baslik: "Analiz çıktısı", metin: girdi.istatistikMetni, oncelik: 1 },
     { baslik: "Tespit edilen istatistikler (APA 7)", metin: (girdi.apaSatirlari ?? []).join("\n"), oncelik: 1 },
     { baslik: "Araştırma sorusu", metin: girdi.arastirmaSorusu ?? "", oncelik: 2 },

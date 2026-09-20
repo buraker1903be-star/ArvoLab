@@ -38,7 +38,7 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
   const sayim = (tablo: string) =>
     supabase.from(tablo).select("id", { count: "exact", head: true }).eq("project_id", projectId);
 
-  const [musvedde, literatur, okunan, kullanilan, denetim, belgeler, danismanlik] = await Promise.all([
+  const [musvedde, literatur, okunan, kullanilan, denetim, belgeler, danismanlik, asistan] = await Promise.all([
     supabase.from("project_manuscripts").select("word_count, updated_at").eq("project_id", projectId).maybeSingle(),
     sayim("literature_sources"),
     supabase
@@ -60,9 +60,16 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
       .maybeSingle(),
     sayim("document_uploads"),
     sayim("consultancy_requests"),
+    supabase
+      .from("ai_assistant_runs")
+      .select("created_at", { count: "exact" })
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1),
   ]);
 
-  for (const sonuc of [literatur, okunan, kullanilan, belgeler, danismanlik, denetim, musvedde])
+  for (const sonuc of [literatur, okunan, kullanilan, belgeler, danismanlik, denetim, musvedde, asistan])
     if (sonuc.error) console.error("[merkez] birim okunamadı:", sonuc.error.message);
 
   return {
@@ -78,5 +85,6 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
       : null,
     belgeSayisi: belgeler.count ?? 0,
     danismanlikSayisi: danismanlik.count ?? 0,
+    asistan: { toplam: asistan.count ?? 0, sonTarih: asistan.data?.[0]?.created_at ?? null },
   };
 }

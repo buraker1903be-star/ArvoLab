@@ -6,6 +6,7 @@ import { bulgulariCozumle, bulgulariDogrula, type Bulgu } from "@/lib/ai/bulgu";
 import { kaynakcaIstemi, type KaynakDurumu, type KaynakSatiri } from "@/lib/ai/kaynakca-denetimi";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
+import { calismaBaglami } from "@/lib/ai/calisma-baglami";
 
 /*
   Asistanın kaynakça denetimi. Mekanik denetimin (lib/apa7.ts +
@@ -20,6 +21,8 @@ const EN_FAZLA_ATIF = 120;
 const DURUMLAR = new Set<KaynakDurumu>(["verified", "possible_match", "not_found", "insufficient_data"]);
 
 export type KaynakcaDenetimGirdisi = {
+  /** Bağlı akademik çalışma (isteğe bağlı). */
+  projectId?: string | null;
   /** true: kayıtlı cevap atlanır, modele yeniden sorulur. */
   zorla?: boolean;
   kaynaklar: KaynakSatiri[];
@@ -61,7 +64,16 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
   const kapi = await asistanKapisi();
   if (!kapi.ok) return { hata: kapi.hata };
 
+  /*
+    Çalışma bağlamı: atıf stili, araştırma yöntemi ve tür. Bunları bilmeden
+    verilen denetim genel kalıyordu — APA beklenen yerde Vancouver kuralı,
+    nitel çalışmada etki büyüklüğü. Erişim RLS'e tabi: yabancı bir çalışmanın
+    kimliği gönderilse satır dönmez, kayıt da ona iliştirilemez.
+  */
+  const calisma = await calismaBaglami(girdi.projectId);
+
   const { mesajlar, kaynak, kirpilanlar } = kaynakcaIstemi({
+    calisma: calisma?.metin,
     kaynaklar,
     eksikKaynaklar: liste(girdi.eksikKaynaklar, EN_FAZLA_LISTE, 300),
     kullanilmayanKaynaklar: liste(girdi.kullanilmayanKaynaklar, EN_FAZLA_LISTE, EN_UZUN_KAYNAK),
@@ -92,7 +104,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     const yanit = await sor(mesajlar, { yetenek: "kaynakca", jsonBekle: true, sicaklik: 0.1, enFazlaJeton: 3000 });
     const bulgular = bulgulariCozumle(yanit.metin);
     if (!bulgular.length) {
-      await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "kaynakca", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
       return { hata: "Asistan kaynakçada denetlenecek bir şey bulamadı.", kirpilanlar };
     }
 
@@ -104,19 +116,19 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     const dogrulama = bulgulariDogrula(bulgular, kaynak);
     if (!dogrulama.gecti) {
       console.error("[ai] kaynakça denetimi uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
-      await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "kaynakca", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
       return {
         hata: "Asistan verilmeyen künye bilgileri ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
         kirpilanlar,
       };
     }
 
-    const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "kaynakca", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
+    const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
     return { bulgular, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[ai] kaynakça denetimi başarısız", mesaj);
-    await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "kaynakca", durum: "failed", baglam: kaynak, basladi });
+    await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "failed", baglam: kaynak, basladi });
     return { hata: mesaj, kirpilanlar };
   }
 }

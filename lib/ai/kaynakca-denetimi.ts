@@ -45,6 +45,8 @@ export type KaynakSatiri = {
 };
 
 export type KaynakcaGirdisi = {
+  /** Bağlı akademik çalışmanın künyesi (lib/ai/calisma-baglami.ts). */
+  calisma?: string;
   kaynaklar: KaynakSatiri[];
   /** Metinde geçip kaynakçada olmayan atıflar. */
   eksikKaynaklar?: string[];
@@ -103,7 +105,8 @@ export function kaynakOzeti(kaynaklar: KaynakSatiri[]): string {
 /** Modele gönderilecek mesajlar ve doğrulamada kaynak sayılacak metin. */
 export function kaynakcaIstemi(girdi: KaynakcaGirdisi, butce = BAGLAM_BUTCESI) {
   const parcalar: BaglamParca[] = [
-    {
+{ baslik: "Çalışma", metin: girdi.calisma ?? "", oncelik: 1 },
+        {
       baslik: "Metinde geçip kaynakçada olmayan atıflar",
       metin: (girdi.eksikKaynaklar ?? []).join("\n"),
       oncelik: 1,

@@ -8,6 +8,7 @@ import {
   PenLine,
   Quote,
   Settings2,
+  Sparkles,
   Users,
 } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
@@ -38,7 +39,7 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
   const ozet = await calismaOzeti(id);
   if (!ozet) notFound();
 
-  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi } = ozet;
+  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan } = ozet;
   const adimlar = siradakiAdimlar(ozet);
   const ilerleme = birimIlerlemesi(adimlar);
 
@@ -83,6 +84,11 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
           <span>
             {literatur.okunan} okundu · {literatur.kullanilan} kullanıldı
           </span>
+        </article>
+        <article className="merkez-kutu">
+          <small>Asistan denetimi</small>
+          <strong>{asistan.toplam}</strong>
+          <span>{asistan.sonTarih ? `Son: ${trTarihSaat(asistan.sonTarih)}` : "Henüz denetim yok"}</span>
         </article>
         <article className="merkez-kutu">
           <small>Kaynakça uyumu</small>
@@ -133,6 +139,13 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
             <span>
               <b>Uzman desteği</b>
               {danismanlikSayisi ? `${danismanlikSayisi} talep açıldı` : "Talep yok"}
+            </span>
+          </Link>
+          <Link href="/dashboard/analysis" className="merkez-baglanti">
+            <Sparkles size={18} aria-hidden="true" />
+            <span>
+              <b>Asistan denetimi</b>
+              {asistan.toplam ? `${asistan.toplam} denetim bu çalışmaya bağlı` : "Analiz ve kaynakça denetlenmedi"}
             </span>
           </Link>
           <Link href="/dashboard/guidelines" className="merkez-baglanti">

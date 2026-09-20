@@ -7,6 +7,7 @@ import type { Bulgu } from "@/lib/ai/bulgu";
 import { kunyeIzi, literaturIstemi, taramaCozumle, type KayitOzeti } from "@/lib/ai/literatur-taramasi";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
+import { calismaBaglami } from "@/lib/ai/calisma-baglami";
 
 /*
   Asistanın literatür tarama yardımı. Kaynak listesi istemciden GELMEZ,
@@ -44,6 +45,14 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
   const kapi = await asistanKapisi();
   if (!kapi.ok) return { hata: kapi.hata };
 
+  /*
+    Çalışma bağlamı: atıf stili, araştırma yöntemi ve tür. Bunları bilmeden
+    verilen denetim genel kalıyordu — APA beklenen yerde Vancouver kuralı,
+    nitel çalışmada etki büyüklüğü. Erişim RLS'e tabi: yabancı bir çalışmanın
+    kimliği gönderilse satır dönmez, kayıt da ona iliştirilemez.
+  */
+  const calisma = await calismaBaglami(girdi.projectId);
+
   const supabase = await createClient();
   let sorgu = supabase
     .from("literature_sources")
@@ -65,7 +74,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
     yayin: satir.container_title ? String(satir.container_title).slice(0, 200) : null,
   }));
 
-  const { mesajlar, kaynak, kirpilanlar } = literaturIstemi({ arastirmaSorusu, kayitlar });
+  const { mesajlar, kaynak, kirpilanlar } = literaturIstemi({ calisma: calisma?.metin, arastirmaSorusu, kayitlar });
 
   /*
     Aynı bağlam daha önce sorulduysa modele gidilmez. Aynı analizi ikinci kez
@@ -89,7 +98,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
     const yanit = await sor(mesajlar, { yetenek: "literatur", jsonBekle: true, sicaklik: 0.3, enFazlaJeton: 3200 });
     const { bulgular, aramalar } = taramaCozumle(yanit.metin);
     if (!bulgular.length && !aramalar.length) {
-      await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "literatur", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
       return { hata: "Asistan tarama stratejisi üretemedi. Araştırma sorusunu biraz daha açık yazmayı deneyin.", kirpilanlar };
     }
 
@@ -101,19 +110,19 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
     */
     if (kunyeIzi(bulgular)) {
       console.error("[ai] literatür yanıtı künye içeriyor", { model: yanit.model });
-      await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "literatur", durum: "rejected", redNedeni: "kunye", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "rejected", redNedeni: "kunye", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
       return {
         hata: "Asistan kaynak künyesi ürettiği için cevap gösterilmedi. Kaynakları dizinden kendiniz doğrulamalısınız; tekrar deneyebilirsiniz.",
         kirpilanlar,
       };
     }
 
-    const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "literatur", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular: { bulgular, aramalar }, basladi });
+    const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular: { bulgular, aramalar }, basladi });
     return { bulgular, aramalar, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[ai] literatür taraması başarısız", mesaj);
-    await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "literatur", durum: "failed", baglam: kaynak, basladi });
+    await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "failed", baglam: kaynak, basladi });
     return { hata: mesaj, kirpilanlar };
   }
 }

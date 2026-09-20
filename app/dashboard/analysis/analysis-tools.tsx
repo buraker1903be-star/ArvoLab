@@ -6,13 +6,22 @@ import { parseCodebook, type CodebookCheckResult } from "@/lib/codebook-check";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
 import AsistanSonuc from "../_components/asistan-sonuc";
 
-export default function AnalysisTools({ asistanAcik }: { asistanAcik: boolean }) {
+type Calisma = { id: string; title: string };
+
+export default function AnalysisTools({
+  asistanAcik,
+  calismalar = [],
+}: {
+  asistanAcik: boolean;
+  calismalar?: Calisma[];
+}) {
   const [statsInput, setStatsInput] = useState("");
   const [statsResult, setStatsResult] = useState<DetectedStatistic[] | null>(null);
 
   // Asistan denetimi: tespit edilen istatistikler + çalışmanın kısa bağlamı.
   const [arastirmaSorusu, setArastirmaSorusu] = useState("");
   const [orneklem, setOrneklem] = useState("");
+  const [calismaId, setCalismaId] = useState("");
   const [denetim, setDenetim] = useState<AnalizDenetimYaniti | null>(null);
   const [bekleniyor, basla] = useTransition();
 
@@ -27,6 +36,7 @@ export default function AnalysisTools({ asistanAcik }: { asistanAcik: boolean })
           apaSatirlari: statsResult.map((s) => s.apaSentenceFragment),
           arastirmaSorusu,
           orneklem,
+          projectId: calismaId || null,
           zorla,
         }),
       );
@@ -130,6 +140,17 @@ export default function AnalysisTools({ asistanAcik }: { asistanAcik: boolean })
                   onChange={(e) => setOrneklem(e.target.value)}
                 />
               </label>
+              {calismalar.length > 0 && (
+                <label>
+                  <span>Çalışma (isteğe bağlı)</span>
+                  <select value={calismaId} onChange={(e) => setCalismaId(e.target.value)}>
+                    <option value="">Bağlı değil</option>
+                    {calismalar.map((calisma) => (
+                      <option key={calisma.id} value={calisma.id}>{calisma.title}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
 
             <div className="project-form-actions mt-sm">
