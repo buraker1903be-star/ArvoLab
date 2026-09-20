@@ -154,7 +154,7 @@ export default async function DocumentsPage({
                               {m.sampleOverlap ? ` · örnek: "${m.sampleOverlap}"` : ""}
                             </div>
                           ))}
-                          <ActionForm action={handleRunOriginality.bind(null, u.id)} className="mt-sm">
+                          <ActionForm action={handleRunOriginality.bind(null, u.id)} className="mt-sm" successMessage="Orijinallik taraması tamamlandı; sonuç aşağıda.">
                             <button type="submit" className="projects-filter-button">
                               <ShieldQuestion size={14} aria-hidden="true" />
                               Yeniden tara
@@ -162,7 +162,7 @@ export default async function DocumentsPage({
                           </ActionForm>
                         </div>
                       ) : (
-                        <ActionForm action={handleRunOriginality.bind(null, u.id)}>
+                        <ActionForm action={handleRunOriginality.bind(null, u.id)} successMessage="Orijinallik taraması tamamlandı; sonuç aşağıda.">
                           <button type="submit" className="projects-filter-button">
                             <ShieldQuestion size={14} aria-hidden="true" />
                             ArvoLab Ön-Kontrolü Çalıştır (orijinallik taraması)
@@ -186,6 +186,7 @@ export default async function DocumentsPage({
                     action={handleDelete.bind(null, u.id)}
                     className="mt-sm"
                     confirmMessage={`"${u.file_name}" belgesini silmek istediğinize emin misiniz? Dosya, analiz sonuçları, orijinallik taramaları ve AI geri bildirimleri kalıcı olarak silinir.`}
+                    successMessage="Belge silindi."
                   >
                     <button type="submit" className="button-danger">
                       <Trash2 size={14} aria-hidden="true" />

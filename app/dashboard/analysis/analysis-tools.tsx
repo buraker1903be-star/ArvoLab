@@ -255,7 +255,7 @@ export default function AnalysisTools({
 
             <div className="mt-sm">
               <strong>Frekans Tablosu (azalan sırada)</strong>
-              <div className="table-scroll mt-sm">
+              <div className="table-scroll mt-sm" role="region" aria-label="Frekans tablosu" tabIndex={0}>
                 <table className="stats-result-table">
                   <tbody>
                     {codebookResult.codes.map((c, i) => (

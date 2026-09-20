@@ -260,14 +260,21 @@ export default async function ProjectsPage({
                 {canApprove ? (
                   <div className="cluster cluster-lg cluster-spaced">
                     {isApproved ? (
-                      <ActionForm action={handleRevoke.bind(null, project.id)}>
+                      <ActionForm
+                        action={handleRevoke.bind(null, project.id)}
+                        /* Onayı iptal eden düğme, "onayla" ile aynı yerde
+                           dönüşümlü çiziliyor: yanlış tıklama kolay, sonucu
+                           ağır. */
+                        confirmMessage={`"${project.title}" çalışmasının kontrolör onayını geri almak istediğinize emin misiniz? Çalışma yeniden inceleme bekler duruma döner.`}
+                        successMessage="Kontrolör onayı geri alındı."
+                      >
                         <button type="submit" className="projects-filter-button">
                           <RotateCcw size={15} aria-hidden="true" />
                           Onayı geri al
                         </button>
                       </ActionForm>
                     ) : (
-                      <ActionForm action={handleApprove.bind(null, project.id)}>
+                      <ActionForm action={handleApprove.bind(null, project.id)} successMessage="Çalışma kontrolör onayı aldı.">
                         <button type="submit" className="projects-primary-button">
                           <CheckCircle2 size={15} aria-hidden="true" />
                           Kontrolör olarak onayla

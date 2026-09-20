@@ -171,7 +171,7 @@ export default function DataAnalyzer() {
             <h3 className="result-heading">
               1. Betimsel İstatistikler (Sayısal Değişkenler)
             </h3>
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="Analiz sonuç tablosu" tabIndex={0}>
             <table className="stats-result-table">
               <thead>
                 <tr>
@@ -210,7 +210,7 @@ export default function DataAnalyzer() {
             {categoricalSections.map(({ col, freq }) => (
               <div key={col} className="result-block">
                 <p className="result-heading text-sm">{col}</p>
-                <div className="table-scroll">
+                <div className="table-scroll" role="region" aria-label="Analiz sonuç tablosu" tabIndex={0}>
                 <table className="stats-result-table">
                   <thead>
                     <tr>
@@ -240,7 +240,7 @@ export default function DataAnalyzer() {
             <h3 className="result-heading">
               3. Korelasyon Matrisi (Sayısal Değişken Çiftleri)
             </h3>
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="Analiz sonuç tablosu" tabIndex={0}>
             <table className="stats-result-table">
               <thead>
                 <tr>
@@ -296,7 +296,7 @@ export default function DataAnalyzer() {
           return { col, stats };
         });
         setResult(
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="Analiz sonuç tablosu" tabIndex={0}>
           <table className="stats-result-table">
             <thead>
               <tr>
@@ -376,7 +376,7 @@ export default function DataAnalyzer() {
         const sig = isSignificant(r.p);
         setResult(
           <div>
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="Analiz sonuç tablosu" tabIndex={0}>
             <table className="stats-result-table">
               <thead>
                 <tr>
@@ -439,7 +439,7 @@ export default function DataAnalyzer() {
         const sig = isSignificant(r.p);
         setResult(
           <div>
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="Analiz sonuç tablosu" tabIndex={0}>
             <table className="stats-result-table">
               <thead>
                 <tr>

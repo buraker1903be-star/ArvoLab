@@ -38,6 +38,11 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
   return (
     <div className={navCollapsed ? "dashboard-shell is-nav-collapsed" : "dashboard-shell"}>
+      {/* Klavye kullanıcısı her sayfada menüdeki ~15 bağlantıyı geçmek
+          zorunda kalıyordu. Bağlantı yalnızca odaklanınca görünür. */}
+      <a href="#panel-icerik" className="skip-link">
+        İçeriğe atla
+      </a>
       <aside className="dashboard-sidebar">
         <div className="dashboard-brand">
           <div className="brand-mark" aria-hidden="true">
@@ -75,7 +80,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           </div>
         </header>
 
-        <div className="dashboard-main-content">
+        <div className="dashboard-main-content" id="panel-icerik" tabIndex={-1}>
           <Suspense>
             <ActionErrorToast />
             <NavProgress />

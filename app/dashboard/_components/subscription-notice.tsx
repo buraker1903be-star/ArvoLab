@@ -1,6 +1,7 @@
 import { payArvolabSubscription } from "@/app/actions/subscription";
 import type { AccessState } from "@/lib/access";
 import { describePlan, planButtonLabel } from "@/lib/billing-plan";
+import OdemeButonu from "./odeme-butonu";
 
 // Erişimi kapalı kullanıcıya gösterilen ekran. Kurum üyesi ödeme yapamaz
 // (kurumu öder); bireysel kullanıcı buradan aylık ya da yıllık planı seçip
@@ -39,9 +40,7 @@ export default function SubscriptionNotice({ access }: { access: AccessState }) 
                       <span>{describePlan(plan)}</span>
                       <form action={payArvolabSubscription}>
                         {plan.code ? <input type="hidden" name="plan" value={plan.code} /> : null}
-                        <button type="submit" className={index === 0 ? "projects-primary-button" : "projects-filter-button"}>
-                          Kartla öde · {planButtonLabel(plan)}
-                        </button>
+                        <OdemeButonu birincil={index === 0} ikonlu={false} etiket={`Kartla öde · ${planButtonLabel(plan)}`} />
                       </form>
                     </li>
                   ))}

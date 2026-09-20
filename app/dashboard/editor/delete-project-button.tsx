@@ -9,6 +9,7 @@ export default function DeleteProjectButton({ projectId, projectTitle }: { proje
     <ActionForm
       action={deleteProject.bind(null, projectId)}
       confirmMessage={`"${projectTitle}" adlı çalışmayı silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz — çalışmaya bağlı tüm belge yüklemeleri, kaynakça kontrolleri ve panelde yazılmış metin de silinecektir.`}
+      successMessage={`"${projectTitle}" silindi.`}
     >
       <button type="submit" className="button-danger">
         <Trash2 size={15} aria-hidden="true" />

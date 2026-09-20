@@ -66,7 +66,7 @@ export default async function AsistanKayitlariSayfasi() {
             aciklama="Henüz asistan çalışması kaydedilmedi. Abonelerin her sorgusu burada modele göre toplanır; Sonnet ile Haiku'yu karşılaştırmak için kullanılır."
           />
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" role="region" aria-label="Model karşılaştırma tablosu" tabIndex={0}>
             <table className="stats-result-table">
               <thead>
                 <tr>

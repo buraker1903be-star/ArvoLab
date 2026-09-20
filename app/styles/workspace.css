@@ -334,7 +334,10 @@
 .guideline-sections { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* ---------- Analiz sonuç tabloları ---------- */
+/* tabindex ile klavyeden odaklanabilir (TSX'te role="region" + aria-label):
+   eskiden 9 sütunlu tabloyu klavyeyle yatay kaydırmak imkânsızdı. */
 .table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--line-soft); border-radius: var(--r-md); }
+.table-scroll:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .stats-result-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 .stats-result-table :is(th, td) { padding: 8px 12px; border-bottom: 1px solid var(--line-soft); text-align: left; }
 .stats-result-table th {

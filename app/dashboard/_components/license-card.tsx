@@ -1,8 +1,9 @@
-import { BadgeCheck, CalendarClock, CreditCard } from "lucide-react";
+import { BadgeCheck, CalendarClock } from "lucide-react";
 import { payArvolabSubscription } from "@/app/actions/subscription";
 import { licenseSummary } from "@/lib/license-summary";
 import { planButtonLabel } from "@/lib/billing-plan";
 import type { AccessState } from "@/lib/access";
+import OdemeButonu from "./odeme-butonu";
 
 // Ana sayfadaki lisans/abonelik bölümü: aktif mi, ödeme alınmadıysa neden ve
 // geçerlilik tarihi. İç ekipte ve durum bilinmiyorken hiç gösterilmez.
@@ -34,10 +35,7 @@ export default function LicenseCard({ access }: { access: AccessState }) {
             {access.plans.map((plan, index) => (
               <form action={payArvolabSubscription} key={plan.code ?? plan.interval ?? index}>
                 {plan.code ? <input type="hidden" name="plan" value={plan.code} /> : null}
-                <button type="submit" className={index === 0 ? "projects-primary-button" : "projects-filter-button"}>
-                  <CreditCard size={16} aria-hidden="true" />
-                  Kartla öde · {planButtonLabel(plan)}
-                </button>
+                <OdemeButonu birincil={index === 0} etiket={`Kartla öde · ${planButtonLabel(plan)}`} />
               </form>
             ))}
           </div>

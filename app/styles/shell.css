@@ -4,6 +4,18 @@
    Masaüstü/mobil geçişi 900px.
    ============================================================ */
 
+/* "İçeriğe atla": yalnızca klavyeyle odaklanınca görünür. Menüdeki ~15
+   bağlantıyı her sayfada tek tek geçmek zorunda kalmamak için. */
+.skip-link {
+  position: fixed; top: 8px; left: 8px; z-index: var(--z-toast);
+  padding: 10px 16px; border-radius: var(--r-sm);
+  background: var(--primary); color: var(--on-brand);
+  font-size: var(--fs-body); font-weight: 600; text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-160%);
+}
+.skip-link:focus-visible { transform: translateY(0); }
+
 .dashboard-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);

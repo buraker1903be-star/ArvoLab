@@ -42,7 +42,14 @@ export default function GuidelineScanner() {
 
       <div className="project-card-main">
         <div>
+          {/* Eskiden yalnızca placeholder vardı: ekran okuyucu alanın ne
+              istediğini söyleyemiyordu, yazmaya başlayınca ipucu da
+              kayboluyordu. */}
+          <label className="sr-only" htmlFor="kilavuz-adresi">
+            Kılavuz PDF adresi
+          </label>
           <input
+            id="kilavuz-adresi"
             type="url"
             className="field-control"
             value={url}
