@@ -82,15 +82,52 @@ export async function GET(request: Request) {
     });
   }
 
-  const { data: guidelines, error } = await supabase
+  const SUTUNLAR =
+    "id, source_url, source_checksum, analysis_status, university_name, institute_name, extracted_rules, ai_analysis, source_etag, source_last_modified";
+  const TUR_BASINA = 12;
+
+  /*
+    HİÇ TARANMAMIŞ kayıtlar öne alınır.
+
+    Sıra yalnızca last_checked_at'e göreydi ve bu, yeni eklenen kayıtları en
+    arkaya atıyordu: eklenme anı "şimdi" olduğu için sıraları en sonda
+    oluyor, oysa kuralları bomboş ve hiçbir çalışmada kullanılamıyorlar.
+    Eski kayıtlar ise zaten taranmış; onların turu bir gün gecikse bir şey
+    kaybedilmez. Üstelik koşullu istek sayesinde değişmemiş bir kayıt
+    neredeyse bedava (gövdesiz 304), yani öne almanın maliyeti de yok.
+
+    Canlıda 25 kayıt tek seferde eklendiğinde ortaya çıktı.
+  */
+  const { data: taranmamis, error: taranmamisHatasi } = await supabase
     .from("thesis_guidelines")
-    .select("id, source_url, source_checksum, analysis_status, university_name, institute_name, extracted_rules, ai_analysis, source_etag, source_last_modified")
+    .select(SUTUNLAR)
     .not("source_url", "is", null)
     .eq("is_active", true)
-    .order("last_checked_at", { ascending: true })
-    .limit(12);
+    .or("extracted_rules.is.null,extracted_rules.eq.{}")
+    .order("created_at", { ascending: true })
+    .limit(TUR_BASINA);
+
+  if (taranmamisHatasi) return Response.json({ error: taranmamisHatasi.message }, { status: 500 });
+
+  const kalanYer = Math.max(0, TUR_BASINA - (taranmamis?.length ?? 0));
+  const { data: eskiler, error } = kalanYer
+    ? await supabase
+        .from("thesis_guidelines")
+        .select(SUTUNLAR)
+        .not("source_url", "is", null)
+        .eq("is_active", true)
+        .order("last_checked_at", { ascending: true })
+        .limit(kalanYer + TUR_BASINA)
+    : { data: [], error: null };
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
+
+  // İki sorgu çakışabilir; aynı kayıt iki kez işlenmesin.
+  const gorulen = new Set((taranmamis ?? []).map((kayit) => kayit.id));
+  const guidelines = [
+    ...(taranmamis ?? []),
+    ...(eskiler ?? []).filter((kayit) => !gorulen.has(kayit.id)).slice(0, kalanYer),
+  ];
 
   const results: Array<{ id: string; status: string; error?: string }> = [];
   for (const guideline of guidelines ?? []) {
