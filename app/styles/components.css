@@ -1274,3 +1274,38 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .sayfa-detay > summary::before { content: "▸"; font-size: var(--fs-sm); }
 .sayfa-detay[open] > summary::before { content: "▾"; }
 .sayfa-detay > p { margin: 8px 0 0; color: var(--muted); font-size: var(--fs-base); line-height: 1.55; }
+
+/* ---- Kılavuz onay kuyruğu ve otomatik çıkarım özeti ----
+   Onaylanmayan kılavuz hiçbir çalışmada uygulanmaz; bekleyen kayıt,
+   sessizce çalışmayan bir özellik demektir. */
+.onay-kuyrugu {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin-top: 16px; padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--line-soft));
+  border-radius: var(--r-lg);
+  background: var(--warning-soft);
+}
+.onay-kuyrugu strong { display: block; color: var(--ink); font-size: var(--fs-md); font-weight: 650; }
+.onay-kuyrugu p { margin: 4px 0 0; color: var(--ink-soft); font-size: var(--fs-base); line-height: 1.55; }
+
+.cikarim-ozeti {
+  display: grid; gap: 8px;
+  margin-top: 12px; padding: 12px 14px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.cikarim-satir { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.cikarim-uyarilar { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.cikarim-uyarilar li {
+  display: flex; align-items: flex-start; gap: 6px;
+  color: color-mix(in srgb, var(--warning) 85%, var(--ink)); font-size: var(--fs-sm); line-height: 1.5;
+}
+.cikarim-uyarilar svg { flex: none; margin-top: 2px; }
+/* Önizleme belgenin ham metni: doğru kılavuz mu, ilk bakışta anlaşılsın. */
+.cikarim-onizleme {
+  max-height: 160px; overflow: auto;
+  padding: 10px 12px; border-radius: var(--r-sm);
+  background: var(--surface); color: var(--ink-soft);
+  font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5;
+  white-space: pre-wrap;
+}

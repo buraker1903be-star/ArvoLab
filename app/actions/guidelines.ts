@@ -23,6 +23,29 @@ export interface ThesisGuideline {
   analysis_status: string;
   review_notes: string | null;
   extracted_rules: Record<string, unknown>;
+  /* Onay kuyruğu (migration 20260924100007): satırdan türetilir, elle yazılmaz. */
+  ready_for_approval: boolean;
+  /*
+    Otomatik çıkarımın kendisi. Eskiden bu alan hiç okunmuyordu: yönetici
+    güven puanını, uyarıları ve metin önizlemesini göremeden "Onayla"ya
+    basıyordu. Onay, körlemesine tıklanan bir düğmeydi.
+    (Ad yanıltıcı: içerik yapay zekâ değil, kural tabanlı çıkarım —
+    lib/guideline-scan.ts.)
+  */
+  ai_analysis: GuidelineCikarimi | null;
+}
+
+/** lib/guideline-scan.ts çıktısının panelde kullanılan alanları. */
+export interface GuidelineCikarimi {
+  detectedCitationHint?: string | null;
+  suggestedSections?: string[];
+  confidence?: number;
+  warnings?: string[];
+  textPreview?: string;
+  fullTextLength?: number;
+  detectedAt?: string;
+  /** Onaylı kılavuzun kaynağında yeni sürüm algılandı. */
+  pendingReview?: boolean;
 }
 
 export interface GuidelineMatch {
@@ -87,7 +110,7 @@ export async function getGuidelines(): Promise<ThesisGuideline[]> {
   const { data, error } = await supabase
     .from("thesis_guidelines")
     .select(
-      "id, university_name, institute_name, version_label, source_url, citation_style, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at, analysis_status, review_notes, extracted_rules"
+      "id, university_name, institute_name, version_label, source_url, citation_style, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at, analysis_status, review_notes, extracted_rules, ready_for_approval, ai_analysis"
     )
     .order("university_name", { ascending: true });
 

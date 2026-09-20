@@ -17,6 +17,7 @@ import ActionForm from "../action-form";
 import BosDurum from "../_components/bos-durum";
 import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
+import CikarimOzeti from "./cikarim-ozeti";
 
 const CITATION_LABELS: Record<string, string> = {
   apa7: "APA 7",
@@ -39,6 +40,27 @@ export default async function GuidelinesPage() {
     profile?.role === "academic_manager" ||
     profile?.role === "system_admin" ||
     profile?.role === "founder";
+
+  /*
+    Onay kuyruğu. Otomatik keşif her gece çalışıyor ama ürettiği kayıtlar
+    listenin içinde üniversite adına göre sıralı duruyordu; bekleyen iş hiç
+    görünmüyordu. Canlıda 18 kılavuzun tamamı aylarca onaysız kaldı ve
+    approved_snapshot boş olduğu için kılavuz özelliği müşteride hiç
+    çalışmadı.
+
+    Bekleyenler öne alınır, içlerinde tek adım onaylanabilecekler en üste.
+    Onaylı kayıtlar eski sırasını (üniversite adı) korur.
+  */
+  const bekleyenler = guidelines.filter((g) => g.analysis_status !== "approved");
+  const hazirSayisi = bekleyenler.filter((g) => g.ready_for_approval).length;
+  const yeniSurumlu = guidelines.filter((g) => g.ai_analysis?.pendingReview).length;
+  const siraliKilavuzlar = canManage
+    ? [...guidelines].sort((a, b) => {
+        const oncelik = (g: (typeof guidelines)[number]) =>
+          g.analysis_status === "approved" ? 2 : g.ready_for_approval ? 0 : 1;
+        return oncelik(a) - oncelik(b) || a.university_name.localeCompare(b.university_name, "tr");
+      })
+    : guidelines;
 
   async function handleDelete(guidelineId: string) {
     "use server";
@@ -154,6 +176,29 @@ export default async function GuidelinesPage() {
         ) : null}
       </section>
 
+      {/*
+        Bekleyen iş sayfanın başında duyurulur. Kılavuz onaylanmadıkça
+        approved_snapshot boş kalır ve kural hiçbir çalışmada uygulanmaz —
+        bekleyen kayıt, sessizce çalışmayan bir özellik demektir.
+      */}
+      {canManage && bekleyenler.length > 0 ? (
+        <section className="onay-kuyrugu" role="status">
+          <div>
+            <strong>
+              {bekleyenler.length} kılavuz onay bekliyor
+              {hazirSayisi > 0 ? ` · ${hazirSayisi} tanesi tek adım` : ""}
+            </strong>
+            <p>
+              Onaylanmayan kılavuz hiçbir çalışmada uygulanmaz: zorunlu bölümler, sayfa sınırı, atıf
+              sistemi ve editör sayfa ayarları öğrencinin ekranına ancak onaydan sonra iner.
+              {yeniSurumlu > 0
+                ? ` ${yeniSurumlu} onaylı kılavuzun resmî kaynağında yeni sürüm algılandı; eski kurallar korunuyor.`
+                : ""}
+            </p>
+          </div>
+        </section>
+      ) : null}
+
       {canManage ? (
         <>
           {/* Yeni ve düzenleme pencerelerindeki üniversite alanlarının önerileri */}
@@ -178,7 +223,7 @@ export default async function GuidelinesPage() {
         />
       ) : (
         <section className="projects-list" aria-label="Kılavuz listesi">
-          {guidelines.map((g) => {
+          {siraliKilavuzlar.map((g) => {
             const margins = (g.extracted_rules?.margins_cm ?? {}) as Record<string, unknown>;
             const guidelineName = `${g.university_name}${g.institute_name ? ` — ${g.institute_name}` : ""}`;
             return (
@@ -194,6 +239,13 @@ export default async function GuidelinesPage() {
                             ? "İnceleme gerekli"
                             : g.analysis_status}
                       </span>
+                      {/* Kuyruktaki sıra: tek adım onaylanabilecekler ayrılır. */}
+                      {g.ready_for_approval ? (
+                        <span className="status-pill" data-tone="success">Tek adım onaya hazır</span>
+                      ) : null}
+                      {g.ai_analysis?.pendingReview ? (
+                        <span className="status-pill" data-tone="warning">Kaynakta yeni sürüm</span>
+                      ) : null}
                     </div>
                     <h2>{guidelineName}</h2>
                     <p>
@@ -218,6 +270,9 @@ export default async function GuidelinesPage() {
                     </a>
                   ) : null}
                 </div>
+
+                {/* Yönetici neye dayanarak onayladığını görsün. */}
+                {canManage ? <CikarimOzeti cikarim={g.ai_analysis} /> : null}
 
                 {canManage ? (
                   <div className="cluster cluster-spaced">
