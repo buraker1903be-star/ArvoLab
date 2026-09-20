@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MessageSquare } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, MessageSquare } from "lucide-react";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import {
   addManuscriptComment,
@@ -18,6 +18,10 @@ interface ManuscriptCommentsProps {
   /** Alıntıya tıklayınca metinde o yeri bul */
   onFind: (quote: string) => void;
 }
+
+/** "Ayşe Yılmaz" → "AY"; yorumun kime ait olduğu listede bir bakışta görünsün. */
+const basHarfler = (ad: string) =>
+  ad.trim().split(/\s+/).slice(0, 2).map((parca) => parca[0]?.toLocaleUpperCase("tr-TR") ?? "").join("") || "?";
 
 const formatTime = (value: string) => new Date(value).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" });
 
@@ -47,6 +51,31 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
     }, 60_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  /*
+    Sekme açıkken dakikada bir yenileniyor; karşı taraf yorum yazınca liste
+    sessizce değişiyor ve yeni notun geldiği fark edilmiyordu. İlk yüklemeden
+    sonra gelen yorumlar kısa süre vurgulanır.
+  */
+  const bilinenler = useRef<Set<string> | null>(null);
+  const [yeniler, setYeniler] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!comments) return;
+    const simdiki = new Set(comments.map((comment) => comment.id));
+    if (bilinenler.current === null) {
+      bilinenler.current = simdiki;
+      return;
+    }
+    const gelenler = comments.filter((comment) => !bilinenler.current!.has(comment.id)).map((comment) => comment.id);
+    bilinenler.current = simdiki;
+    if (gelenler.length === 0) return;
+    const t = window.setTimeout(() => setYeniler(new Set(gelenler)), 0);
+    const temizlik = window.setTimeout(() => setYeniler(new Set()), 6000);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(temizlik);
+    };
+  }, [comments]);
 
   const refresh = () => setReloadKey((key) => key + 1);
   const open = (comments ?? []).filter((comment) => !comment.resolvedAt);
@@ -109,9 +138,21 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
       {visible.length > 0 ? (
         <ul className="comment-list">
           {visible.map((comment) => (
-            <li key={comment.id} className="comment-item" data-resolved={comment.resolvedAt ? "true" : "false"}>
+            <li
+              key={comment.id}
+              className="comment-item"
+              data-resolved={comment.resolvedAt ? "true" : "false"}
+              data-mine={comment.isMine ? "true" : undefined}
+              data-new={yeniler.has(comment.id) ? "true" : undefined}
+            >
               <div className="comment-meta">
-                <span>{comment.isMine ? "Siz" : comment.authorName ?? "Ekip üyesi"}</span>
+                <span className="comment-author">
+                  <span className="comment-avatar" aria-hidden="true">{basHarfler(comment.isMine ? "Siz" : comment.authorName ?? "Ekip üyesi")}</span>
+                  {comment.isMine ? "Siz" : comment.authorName ?? "Ekip üyesi"}
+                  {comment.resolvedAt ? (
+                    <span className="comment-resolved" title="Çözüldü"><Check size={12} aria-hidden="true" />Çözüldü</span>
+                  ) : null}
+                </span>
                 <span>{formatTime(comment.createdAt)}</span>
               </div>
               {comment.quote ? (

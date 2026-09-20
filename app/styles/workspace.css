@@ -734,3 +734,35 @@
 @media (prefers-reduced-motion: reduce) {
   .page-goal > i, .save-status[data-state="saved"]::before { animation: none; }
 }
+
+/* ---------- Yorumlar: kim yazdı, yeni gelen, çözülen ---------- */
+.comment-item { position: relative; border: 1px solid var(--line-soft); animation: ui-rise .4s var(--ease-spring) backwards; }
+.comment-list > :nth-child(2) { animation-delay: .04s; }
+.comment-list > :nth-child(3) { animation-delay: .08s; }
+.comment-list > :nth-child(n+4) { animation-delay: .12s; }
+.comment-item[data-mine="true"] { border-color: color-mix(in srgb, var(--accent-500) 35%, var(--line-soft)); }
+.comment-author { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; color: var(--ink-soft); }
+.comment-avatar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.comment-item[data-mine="true"] .comment-avatar { background: var(--accent-500); color: var(--on-brand); }
+.comment-resolved { display: inline-flex; align-items: center; gap: 3px; color: var(--success); font-weight: 700; }
+/* Sekme açıkken gelen yorum kısa süre vurgulanır (manuscript-comments.tsx). */
+.comment-item[data-new="true"] {
+  border-color: color-mix(in srgb, var(--accent-500) 55%, var(--line));
+  animation: comment-new 2.4s ease-in-out 2;
+}
+@keyframes comment-new {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-500) 0%, transparent); }
+  35% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-500) 18%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .comment-item, .comment-item[data-new="true"] { animation: none; } }
