@@ -50,7 +50,7 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
   const ozet = await calismaOzeti(id);
   if (!ozet) notFound();
 
-  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan, kilavuz } = ozet;
+  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan, kilavuz, tutarsizliklar } = ozet;
   const stilCelisiyor = atifStiliCelisiyorMu(ozet);
   const adimlar = siradakiAdimlar(ozet);
   const ilerleme = birimIlerlemesi(adimlar);
@@ -117,6 +117,27 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
           <b>{ATIF_ETIKETI[kilavuz?.atifStili ?? ""] ?? kilavuz?.atifStili}</b> istiyor. Çalışma ayarlarından
           düzeltin ya da kılavuzun bu çalışma için geçerli olmadığını doğrulayın.
         </p>
+      )}
+
+      {tutarsizliklar.length > 0 && (
+        <section className="section mt-lg">
+          <h2 className="section-title">Birimler arası tutarsızlıklar</h2>
+          <p className="muted text-base">
+            Metniniz ile literatür listeniz karşılaştırıldı. Bu denetim kendiliğinden çalışır;
+            hiçbir şey yapıştırmanız gerekmez.
+          </p>
+          <ul className="asistan-bulgular mt-sm">
+            {tutarsizliklar.map((sorun) => (
+              <li className="asistan-bulgu" data-tone="warning" key={sorun.tur}>
+                <span className="asistan-bulgu-etiket">Tutarsızlık</span>
+                <span className="asistan-bulgu-metin">
+                  <b>{sorun.baslik}</b>
+                  {sorun.aciklama}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <section className="section mt-lg">

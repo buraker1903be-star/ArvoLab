@@ -27,6 +27,7 @@ const ozet = (parca: Partial<CalismaOzeti> = {}): CalismaOzeti => ({
   belgeSayisi: 0,
   danismanlikSayisi: 0,
   asistan: { toplam: 0, sonTarih: null, sonBulgular: [] },
+  tutarsizliklar: [],
   kilavuz: null,
   ...parca,
 });

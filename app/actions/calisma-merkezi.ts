@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AsistanBulgusu, CalismaOzeti } from "@/lib/calisma-ozeti";
 import { calismaKilavuzu } from "@/app/actions/guidelines";
+import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 
 /*
   Çalışma merkezinin verisi: bir çalışmaya bağlı bütün birimler tek yerde.
@@ -45,8 +46,8 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
   const sayim = (tablo: string) =>
     supabase.from(tablo).select("id", { count: "exact", head: true }).eq("project_id", projectId);
 
-  const [musvedde, literatur, okunan, kullanilan, denetim, belgeler, danismanlik, asistan, kilavuz] = await Promise.all([
-    supabase.from("project_manuscripts").select("word_count, updated_at").eq("project_id", projectId).maybeSingle(),
+  const [musvedde, literatur, okunan, kullanilan, denetim, belgeler, danismanlik, asistan, kilavuz, kaynakListesi] = await Promise.all([
+    supabase.from("project_manuscripts").select("word_count, updated_at, plain_text").eq("project_id", projectId).maybeSingle(),
     sayim("literature_sources"),
     supabase
       .from("literature_sources")
@@ -75,9 +76,15 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
       .order("created_at", { ascending: false })
       .limit(1),
     calismaKilavuzu(calisma.university, calisma.institute),
+    // Tutarsızlık denetimi için kaynakların kendisi gerekiyor, sayısı değil.
+    supabase
+      .from("literature_sources")
+      .select("id, title, authors, year, status")
+      .eq("project_id", projectId)
+      .limit(500),
   ]);
 
-  for (const sonuc of [literatur, okunan, kullanilan, belgeler, danismanlik, denetim, musvedde, asistan])
+  for (const sonuc of [literatur, okunan, kullanilan, belgeler, danismanlik, denetim, musvedde, asistan, kaynakListesi])
     if (sonuc.error) console.error("[merkez] birim okunamadı:", sonuc.error.message);
 
   return {
@@ -98,6 +105,7 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
       sonTarih: asistan.data?.[0]?.created_at ?? null,
       sonBulgular: sonBulgular(asistan.data?.[0]?.findings),
     },
+    tutarsizliklar: metinListeTutarsizliklari(musvedde.data?.plain_text ?? null, kaynakListesi.data ?? []),
     kilavuz: kilavuz
       ? {
           id: kilavuz.id,

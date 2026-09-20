@@ -12,6 +12,8 @@
   ilgili sayfaya götürür.
 */
 
+import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
+
 export type CalismaKaydi = {
   id: string;
   title: string;
@@ -38,6 +40,8 @@ export type CalismaOzeti = {
   danismanlikSayisi: number;
   /** Bu çalışmaya bağlı asistan denetimleri (migration 20260924100006). */
   asistan: { toplam: number; sonTarih: string | null; sonBulgular: AsistanBulgusu[] };
+  /** Müsvedde ile literatür listesi arasındaki tutarsızlıklar. */
+  tutarsizliklar: Tutarsizlik[];
   /** Kurum adıyla eşleşen tez yazım kılavuzu; yoksa null. */
   kilavuz: {
     id: string;
