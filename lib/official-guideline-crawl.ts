@@ -16,8 +16,18 @@ function decodeXml(value: string) {
   return value.replace(/&amp;/g, "&").replace(/&#x2F;/gi, "/").trim();
 }
 
+/*
+  Makale, dergi ve bildiri yazım kuralları tez kılavuzu DEĞİLDİR ama
+  süzgeçten geçebiliyorlar: Çukurova'nın "tez-ve-dergi/makale-yazim-
+  kurallari" adresi "tez" ve "yazim" içerdiği için kılavuz sanılıp
+  doğrulanmış kaynak listesine girmişti. Dergi kuralları öğrencinin tezine
+  uygulanırsa tamamen yanlış biçim dayatılır.
+*/
+const KILAVUZ_DEGIL_YOL = /(makale|dergi|journal|bildiri|poster|sempozyum|kongre)/i;
+
 function isGuidelineUrl(url: string) {
   const decoded = decodeURIComponent(url).toLocaleLowerCase("tr-TR");
+  if (KILAVUZ_DEGIL_YOL.test(decoded)) return false;
   return /(tez|thesis)/i.test(decoded) && /(kılavuz|kilavuz|klavuz|guide|yazım|yazim)/i.test(decoded);
 }
 

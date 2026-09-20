@@ -41,6 +41,41 @@ const BASLANGIC = Number(arg("baslangic", 0));
 const LIMIT = Number(arg("limit", 10));
 const CIKTI = path.resolve(process.cwd(), arg("cikti", path.join(dizin, "sources.tr.json")));
 
+/*
+  YÖK dizini adları BÜYÜK HARF veriyor ("ANKARA ÜNİVERSİTESİ"), veritabanı
+  ise düzgün yazımla tutuyor ("Ankara Üniversitesi"). Seed SQL'i iki adı
+  lower() ile eşleştiriyor ama Türkçe büyük İ küçültülünce birleşik nokta
+  üretiyor ("i̇") ve normal "i" ile EŞLEŞMİYOR — kayıtların hiçbiri
+  bağlanamazdı.
+
+  Bu yüzden adlar veritabanındaki kanonik hâline çevrilir; eşleşme
+  aksansız ve noktalamasız bir anahtar üzerinden yapılır.
+*/
+function adAnahtari(ad) {
+  const sade = ad
+    .replace(/İ/g, "I").replace(/ı/g, "i")
+    .replace(/Ş/g, "S").replace(/ş/g, "s")
+    .replace(/Ğ/g, "G").replace(/ğ/g, "g")
+    .replace(/Ü/g, "U").replace(/ü/g, "u")
+    .replace(/Ö/g, "O").replace(/ö/g, "o")
+    .replace(/Ç/g, "C").replace(/ç/g, "c")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return sade.replace(/[^A-Za-z0-9]+/g, " ").trim().toUpperCase();
+}
+
+/** supabase/schema.sql'deki üniversite adları: veritabanının kanonik yazımı. */
+function kanonikAdlar() {
+  const sema = fs.readFileSync(path.join(dizin, "..", "..", "supabase", "schema.sql"), "utf8");
+  const bas = sema.indexOf("insert into public.universities");
+  const blok = sema.slice(bas, sema.indexOf(";", bas));
+  const harita = new Map();
+  for (const eslesme of blok.matchAll(/\('([^']+)',\s*'[^']*',\s*'(?:devlet|vakif)'\)/g)) {
+    harita.set(adAnahtari(eslesme[1]), eslesme[1]);
+  }
+  return harita;
+}
+
 /** Üniversite adlarını YÖK'ün kendi dizininden alır; elle liste tutulmaz. */
 async function universiteAdlari() {
   const sayfalar = await Promise.all(
@@ -59,6 +94,7 @@ async function universiteAdlari() {
   return [...adlar].sort((a, b) => a.localeCompare(b, "tr"));
 }
 
+const KANONIK = kanonikAdlar();
 const mevcut = fs.existsSync(CIKTI) ? JSON.parse(fs.readFileSync(CIKTI, "utf8")) : [];
 const bilinenAdresler = new Set(mevcut.map((k) => k.sourceUrl));
 const bugun = new Date().toISOString().slice(0, 10);
@@ -89,7 +125,19 @@ async function universiteyiTara(ad) {
       yazmak, listenin anlamını yok ederdi.
     */
     const kuralSayisi = Object.keys(tarama.suggestedRules ?? {}).length;
-    if (tarama.fullTextLength < 2000 || tarama.suggestedSections.length < 2 || kuralSayisi < 2) continue;
+    if (tarama.fullTextLength < 2000) continue;
+    /*
+      Zayıf kanıtla listeye girilmez. İlk denemede Çukurova'nın "makale
+      yazım kuralları" sayfası (2 bölüm, 2 kural, güven %15) listeye
+      girmişti — dergi kuralları tez kılavuzu değildir ve öğrencinin
+      tezine uygulanırsa tamamen yanlış biçim dayatır.
+
+      Ya bölüm sayısı açıkça yeterli olmalı, ya da kural kümesi dolu ve
+      güven makul olmalı. İngilizce kılavuzlarda Türkçe bölüm başlıkları
+      az eşleşiyor; ikinci koşul onları kurtarıyor.
+    */
+    const yeterliKanit = tarama.suggestedSections.length >= 4 || (kuralSayisi >= 4 && tarama.confidence >= 0.25);
+    if (!yeterliKanit) continue;
 
     const enstitu = enstituTespitEt({ metin: tarama.textPreview, url: aday.url, baslik: aday.title });
     if (!enstitu && fakulteVeyaBolumBelgesi({ metin: tarama.textPreview, baslik: aday.title })) continue;
@@ -99,7 +147,7 @@ async function universiteyiTara(ad) {
     gorulenEnstitu.add(anahtar);
 
     bulunanlar.push({
-      universityName: ad,
+      universityName: KANONIK.get(adAnahtari(ad)) ?? ad,
       instituteName: enstitu?.ad ?? null,
       documentTitle: aday.title || "Tez Yazım Kılavuzu",
       versionLabel: tarama.versionLabel,
