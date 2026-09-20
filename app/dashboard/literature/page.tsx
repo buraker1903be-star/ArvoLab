@@ -9,6 +9,8 @@ import {
 import { getMyProjects } from "@/app/actions/citation-check";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
+import LiteraturAsistani from "./literatur-asistani";
+import { literaturAsistaniAcik } from "@/app/actions/ai-literatur";
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
   article: "Makale",
@@ -27,7 +29,13 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function LiteraturePage() {
-  const [sources, projects] = await Promise.all([getLiteratureSources(), getMyProjects()]);
+  // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
+  // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
+  const [sources, projects, asistanAcik] = await Promise.all([
+    getLiteratureSources(),
+    getMyProjects(),
+    literaturAsistaniAcik(),
+  ]);
 
   const grouped = {
     to_review: sources.filter((s) => s.status === "to_review"),
@@ -160,6 +168,11 @@ export default async function LiteraturePage() {
           </ActionForm>
         </PanelDrawer>
       </section>
+
+      <LiteraturAsistani
+        projeler={projects.map((proje) => ({ id: proje.id, title: proje.title }))}
+        asistanAcik={asistanAcik}
+      />
 
       {(["to_review", "read", "used"] as const).map((statusKey) => (
         <section key={statusKey} className="section">
