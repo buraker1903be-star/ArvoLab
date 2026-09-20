@@ -1,7 +1,11 @@
 import DataAnalyzer from "./data-analyzer";
 import AnalysisTools from "./analysis-tools";
+import { analizAsistaniAcik } from "@/app/actions/ai-analiz";
 
-export default function AnalysisPage() {
+export default async function AnalysisPage() {
+  // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
+  // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
+  const asistanAcik = await analizAsistaniAcik();
   return (
     <main className="dashboard-page">
       <section className="projects-header">
@@ -20,7 +24,7 @@ export default function AnalysisPage() {
 
       <div className="stack">
         <DataAnalyzer />
-        <AnalysisTools />
+        <AnalysisTools asistanAcik={asistanAcik} />
       </div>
     </main>
   );

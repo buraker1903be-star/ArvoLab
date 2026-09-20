@@ -935,3 +935,18 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   .projects-list > .project-card,
   .project-progress-track span { animation: none; }
 }
+
+/* Asistan denetimi (analiz merkezi). Bulgular .attention-item tonlarını
+   kullanır; burada yalnızca yerleşim var. */
+.ai-denetim { border-top: 1px solid var(--line-soft); padding-top: 18px; }
+.ai-denetim h3 { margin: 0; font-size: var(--fs-lg); }
+.ai-bulgu-listesi { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ai-bulgu-listesi .attention-item { align-items: flex-start; }
+.ai-bulgu-listesi .attention-item strong { min-width: 62px; font-size: var(--fs-sm); }
+.ai-bulgu-listesi .attention-item b { color: var(--ink); }
+.ai-arama-listesi { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.ai-arama-listesi code {
+  display: block; padding: 8px 10px; border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--ink);
+  font-size: var(--fs-sm); word-break: break-word;
+}

@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { detectStatistics, type DetectedStatistic } from "@/lib/stats-interpreter";
 import { parseCodebook, type CodebookCheckResult } from "@/lib/codebook-check";
+import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
 
-export default function AnalysisTools() {
+const BULGU_TONU = { uyari: "danger", oneri: "warning", bilgi: "info" } as const;
+const BULGU_ETIKETI = { uyari: "Eksik", oneri: "Öneri", bilgi: "Not" } as const;
+
+export default function AnalysisTools({ asistanAcik }: { asistanAcik: boolean }) {
   const [statsInput, setStatsInput] = useState("");
   const [statsResult, setStatsResult] = useState<DetectedStatistic[] | null>(null);
+
+  // Asistan denetimi: tespit edilen istatistikler + çalışmanın kısa bağlamı.
+  const [arastirmaSorusu, setArastirmaSorusu] = useState("");
+  const [orneklem, setOrneklem] = useState("");
+  const [denetim, setDenetim] = useState<AnalizDenetimYaniti | null>(null);
+  const [bekleniyor, basla] = useTransition();
 
   const [codebookInput, setCodebookInput] = useState("");
   const [codebookResult, setCodebookResult] = useState<CodebookCheckResult | null>(null);
@@ -65,6 +75,97 @@ export default function AnalysisTools() {
                     <strong className="tone-text" data-tone={s.significant ? "success" : "warning"}>
                       {s.apaSentenceFragment}
                     </strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {statsResult && statsResult.length > 0 && (
+          <div className="ai-denetim mt-md">
+            <div className="project-form-heading">
+              <h3>Asistan denetlesin</h3>
+              <p>
+                Asistan raporlamayı denetler: eksik etki büyüklüğü, eksik
+                serbestlik derecesi, p değeri biçimi, varsayımlar. Metninizi
+                yazmaz ve bulgunuzu yorumlamaz; size verilmeyen hiçbir sayıyı
+                da üretemez — ürettiği anda cevap gösterilmez.
+              </p>
+            </div>
+
+            <div className="project-form-grid">
+              <label>
+                <span>Araştırma sorusu (isteğe bağlı)</span>
+                <input
+                  type="text"
+                  maxLength={2000}
+                  placeholder="İki öğretim yöntemi arasında başarı farkı var mı?"
+                  value={arastirmaSorusu}
+                  onChange={(e) => setArastirmaSorusu(e.target.value)}
+                />
+              </label>
+              <label>
+                <span>Örneklem (isteğe bağlı)</span>
+                <input
+                  type="text"
+                  maxLength={2000}
+                  placeholder="N = 60, iki bağımsız grup"
+                  value={orneklem}
+                  onChange={(e) => setOrneklem(e.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className="project-form-actions mt-sm">
+              <button
+                type="button"
+                className="projects-primary-button"
+                disabled={!asistanAcik || bekleniyor}
+                onClick={() =>
+                  basla(async () => {
+                    setDenetim(null);
+                    setDenetim(
+                      await analizDenetle({
+                        istatistikMetni: statsInput,
+                        apaSatirlari: statsResult.map((s) => s.apaSentenceFragment),
+                        arastirmaSorusu,
+                        orneklem,
+                      }),
+                    );
+                  })
+                }
+              >
+                {bekleniyor ? "Denetleniyor…" : "Raporlamayı Denetle"}
+              </button>
+            </div>
+
+            {!asistanAcik && (
+              <p className="muted text-base mt-sm">
+                Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
+              </p>
+            )}
+
+            {denetim?.hata && (
+              <p className="tone-text mt-sm text-base" data-tone="danger" role="alert">{denetim.hata}</p>
+            )}
+
+            {denetim?.kirpilanlar && denetim.kirpilanlar.length > 0 && (
+              <p className="muted text-base mt-sm">
+                Uzunluk sınırı nedeniyle asistana gönderilemeyen bölümler: {denetim.kirpilanlar.join(", ")}.
+              </p>
+            )}
+
+            {denetim?.bulgular && denetim.bulgular.length > 0 && (
+              <ul className="ai-bulgu-listesi mt-sm">
+                {denetim.bulgular.map((bulgu, i) => (
+                  <li className="attention-item" data-tone={BULGU_TONU[bulgu.tur]} key={i}>
+                    <strong>{BULGU_ETIKETI[bulgu.tur]}</strong>
+                    <span>
+                      <b>{bulgu.baslik}</b>
+                      <br />
+                      {bulgu.aciklama}
+                    </span>
                   </li>
                 ))}
               </ul>

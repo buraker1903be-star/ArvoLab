@@ -1,0 +1,82 @@
+"use server";
+
+import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { asistanKapisi } from "@/lib/ai/erisim";
+import { bulgulariCozumle, bulgulariDogrula, type Bulgu } from "@/lib/ai/bulgu";
+import { analizIstemi } from "@/lib/ai/analiz-yorumu";
+
+/*
+  Asistanın analiz denetimi. Oturum, abonelik ve saatlik hak ortak kapıda
+  (lib/ai/erisim.ts): model çağrısı para harcıyor ve bu işlem paneldeki
+  düğmeden bağımsız, doğrudan çağrılabiliyor.
+*/
+
+const EN_UZUN_CIKTI = 20_000;
+const EN_UZUN_ALAN = 2_000;
+
+export type AnalizDenetimGirdisi = {
+  istatistikMetni: string;
+  apaSatirlari?: string[];
+  arastirmaSorusu?: string;
+  orneklem?: string;
+  yontem?: string;
+};
+
+export type AnalizDenetimYaniti = {
+  hata?: string;
+  bulgular?: Bulgu[];
+  /** Uzunluk sınırı nedeniyle asistana gönderilemeyen bölümler. */
+  kirpilanlar?: string[];
+  model?: string;
+};
+
+const kisalt = (deger: unknown, sinir: number) => String(deger ?? "").slice(0, sinir).trim();
+
+export const analizAsistaniAcik = async () => aiYapilandirildi();
+
+export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<AnalizDenetimYaniti> {
+  const istatistikMetni = kisalt(girdi.istatistikMetni, EN_UZUN_CIKTI);
+  if (istatistikMetni.length < 10) return { hata: "Denetlenecek bir analiz çıktısı yapıştırın." };
+
+  const kapi = await asistanKapisi();
+  if (kapi.hata) return { hata: kapi.hata };
+
+  const apaSatirlari = (girdi.apaSatirlari ?? []).slice(0, 50).map((satir) => kisalt(satir, 300));
+  const { mesajlar, kaynak, kirpilanlar } = analizIstemi({
+    istatistikMetni,
+    apaSatirlari,
+    arastirmaSorusu: kisalt(girdi.arastirmaSorusu, EN_UZUN_ALAN),
+    orneklem: kisalt(girdi.orneklem, EN_UZUN_ALAN),
+    yontem: kisalt(girdi.yontem, EN_UZUN_ALAN),
+  });
+
+  try {
+    const yanit = await sor(mesajlar, { jsonBekle: true, sicaklik: 0.1, enFazlaJeton: 900 });
+    const bulgular = bulgulariCozumle(yanit.metin);
+    if (!bulgular.length)
+      return {
+        hata: "Asistan denetlenebilir bir yapı bulamadı. Çıktıyı test adı ve değerleriyle birlikte yapıştırmayı deneyin.",
+        kirpilanlar,
+      };
+
+    /*
+      Uydurma sayı denetimi (lib/ai/sayi-denetimi.ts). Bir kısmı doğru olan
+      listeye güvenmek en tehlikelisi: hangi değerin uydurulduğunu kullanıcı
+      ayıklayamaz. Bu yüzden tek bir uydurma sayıda cevabın tamamı düşer.
+    */
+    const dogrulama = bulgulariDogrula(bulgular, kaynak, ...apaSatirlari);
+    if (!dogrulama.gecti) {
+      console.error("[ai] analiz denetimi uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
+      return {
+        hata: "Asistan verilmeyen sayılar ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
+        kirpilanlar,
+      };
+    }
+
+    return { bulgular, kirpilanlar, model: yanit.model };
+  } catch (hata) {
+    const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
+    console.error("[ai] analiz denetimi başarısız", mesaj);
+    return { hata: mesaj, kirpilanlar };
+  }
+}
