@@ -158,9 +158,10 @@ describe("fonksiyon yetkileri", () => {
           and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
           and has_function_privilege($1, p.oid, 'execute') order by 1`, [rolAdi])).rows.map((r) => r.proname);
 
-  // Politikalarda geçen yardımcılar açık kalır (kendi bilgini döndürür); notify,
-  // bump_share_view, import gibi iç fonksiyonlar kapalı.
-  const POLITIKA = ["can_view_project", "can_write_project", "get_my_organization_id", "has_role"];
+  // Politikalarda geçen yardımcılar açık kalır (kendi bilgini döndürür; ör.
+  // subscription_open depolama yükleme politikasında). notify, bump_share_view,
+  // rate_limit_hit gibi iç fonksiyonlar kapalı.
+  const POLITIKA = ["can_view_project", "can_write_project", "get_my_organization_id", "has_role", "subscription_open"];
 
   test("anon yalnızca politika yardımcılarını çağırabilir", async () => {
     assert.deepEqual(await acik("anon"), POLITIKA);

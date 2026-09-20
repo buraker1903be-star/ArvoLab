@@ -45,6 +45,29 @@ async function recordHealth(ok: boolean, message?: string, kind: "permanent" | "
   }
 }
 
+/*
+  Bireysel aboneliğin ArvoLab'daki aynası. Abonelik ArvoOS'ta tutuluyor ama
+  veritabanı kapısı (public.subscription_open, migration 20260924100003)
+  PostgREST'e doğrudan gelen isteği de durdurabilmek için yerel bir kayda
+  bakmak zorunda. Ayna yoksa kimse engellenmez, bu yüzden yazılamaması akışı
+  bozmaz: yalnızca log'a düşer.
+*/
+async function mirrorSubscription(userId: string, state: SubscriptionState) {
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.from("individual_subscriptions").upsert({
+      user_id: userId,
+      status: state.status ?? "unknown",
+      trial_ends_at: state.trialEndsAt ?? null,
+      current_period_end: state.currentPeriodEnd ?? null,
+      synced_at: new Date().toISOString(),
+    }, { onConflict: "user_id" });
+    if (error) console.error("[abonelik] yerel ayna yazılamadı", error.message);
+  } catch (error) {
+    console.error("[abonelik] yerel ayna yazılamadı", error instanceof Error ? error.message : error);
+  }
+}
+
 export interface SubscriptionState {
   status: string;
   access: boolean;
@@ -107,7 +130,9 @@ async function call(
     }
     const payload = (await response.json()) as Record<string, unknown>;
     await recordHealth(true);
-    return { ...(payload as unknown as SubscriptionState), plans: normalizePlans(payload) };
+    const state = { ...(payload as unknown as SubscriptionState), plans: normalizePlans(payload) };
+    await mirrorSubscription(user.id, state);
+    return state;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[abonelik] ArvoOS'a ulaşılamadı", action, message);
