@@ -105,6 +105,7 @@ export async function kilavuzuYenidenTara(guidelineId: string): Promise<ActionRe
       ...(stil ? { citation_style: stil } : {}),
       ai_analysis: {
         scannerVersion: TARAYICI_SURUMU,
+        ocrUsed: scan.ocrKullanildi,
         detectedCitationHint: scan.detectedCitationHint,
         suggestedSections: scan.suggestedSections,
         suggestedRules: scan.suggestedRules,

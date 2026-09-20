@@ -1,6 +1,7 @@
 import { DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
 import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
 import { atifSistemiSec } from "@/lib/atif-sistemi";
+import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
 
 /**
  * Kılavuz Tarama Yardımcısı
@@ -61,6 +62,8 @@ export interface GuidelineScanResult {
   /* Koşullu istek için saklanır; sunucudan geldiği gibi geri gönderilir. */
   sourceEtag: string | null;
   sourceLastModified: string | null;
+  /* Metin OCR ile okundu: gürültülü olabilir, tek adım onaya girmez. */
+  ocrKullanildi: boolean;
   suggestedRules: Record<string, unknown>;
   confidence: number;
   warnings: string[];
@@ -248,6 +251,9 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   }
 
   const contentType = res.headers.get("content-type") ?? "";
+  let ocrKullanildi = false;
+  let ocrSayfa = 0;
+  let ocrGuven = 0;
   // Sınırsız okuma yok: bkz. lib/safe-official-fetch.ts
   const sourceBytes = await kaynagiOku(res);
   let text: string;
@@ -262,11 +268,29 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     });
     const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: buffer });
+    let sayfaSayisi = 0;
     try {
       const result = await parser.getText();
       text = result.text;
+      sayfaSayisi = result.total ?? result.pages?.length ?? 0;
     } finally {
       await parser.destroy();
+    }
+
+    /*
+      Taranmış (görüntü) PDF: pdf-parse boş metin döndürüyor ve hata
+      vermiyordu. Kural çıkarımı hiçbir şey bulamıyor, güven 0 çıkıyor ve
+      kayıt sessizce "inceleme gerekli"de kalıyordu — kimse belgenin
+      OKUNAMADIĞINI bilmiyordu, kılavuz kötü yazılmış gibi görünüyordu.
+    */
+    if (taranmisBelgeMi(text, sayfaSayisi)) {
+      const ocr = await pdfMetniniOcrIleOku(buffer, sayfaSayisi);
+      if (ocr.metin.trim().length > text.trim().length) {
+        text = ocr.metin;
+        ocrKullanildi = true;
+        ocrSayfa = ocr.sayfa;
+        ocrGuven = ocr.guven;
+      }
     }
   } else if (contentType.includes("wordprocessingml") || url.toLowerCase().endsWith(".docx")) {
     const mammoth = await import("mammoth");
@@ -302,11 +326,25 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     sourceContentType: contentType || "application/octet-stream",
     sourceEtag: res.headers.get("etag"),
     sourceLastModified: res.headers.get("last-modified"),
+    ocrKullanildi,
     ...formatting,
     /*
       formatting'den SONRA gelmeli: yayma onu ezerdi. Atıf seçiminin ne
       kadar net olduğu yöneticiye söylenir; sessiz bir tahmin bırakılmaz.
     */
-    warnings: [...formatting.warnings, ...(atifSecimi?.uyarilar ?? [])],
+    warnings: [
+      ...formatting.warnings,
+      ...(atifSecimi?.uyarilar ?? []),
+      /*
+        OCR metni gürültülüdür ("ÜNİVERSİTESİ" bir yerde "ONİVER"
+        çıkabiliyor). Kullanıcıya söylenmezse, çıkarımın neden eksik
+        olduğu anlaşılmaz.
+      */
+      ...(ocrKullanildi
+        ? [
+            `Belge taranmış görüntüden oluşuyor; metin OCR ile okundu (${ocrSayfa} sayfa, tanıma güveni %${Math.round(ocrGuven * 100)}). Kurallar eksik ya da hatalı çıkmış olabilir.`,
+          ]
+        : []),
+    ],
   };
 }

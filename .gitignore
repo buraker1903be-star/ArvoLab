@@ -12,3 +12,8 @@ coverage
 
 # Next, dev ile build arasında bu dosyayı sürekli yeniden yazıyor.
 next-env.d.ts
+
+# OCR dil verisi: tesseract.js calisma aninda indirir (lib/ocr.ts cachePath=/tmp).
+# Yerel denemelerde proje koklerine dusebiliyor; depoya girmemeli (~10 MB).
+*.traineddata
+*.traineddata.gz

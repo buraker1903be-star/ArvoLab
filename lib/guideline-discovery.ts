@@ -117,6 +117,7 @@ function scanUpdate(scan: GuidelineScanResult, detectedAt: string) {
       detectedAt,
       discoveredAutomatically: true,
       scannerVersion: TARAYICI_SURUMU,
+      ocrUsed: scan.ocrKullanildi,
     },
     review_notes: `Resmî .edu.tr kaynağından otomatik keşfedildi; kurallar kullanım öncesinde akademik inceleme bekliyor (güven: %${Math.round(scan.confidence * 100)}).`,
   };

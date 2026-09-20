@@ -312,6 +312,10 @@ export default async function GuidelinesPage() {
                       {g.ai_analysis?.pendingReview ? (
                         <span className="status-pill" data-tone="warning">Kaynakta yeni sürüm</span>
                       ) : null}
+                      {/* Gürültülü metin: kurallar belgeyle karşılaştırılmalı. */}
+                      {g.ai_analysis?.ocrUsed ? (
+                        <span className="status-pill" data-tone="warning">OCR ile okundu</span>
+                      ) : null}
                       {/* Bilinen bir çıkarım hatasıyla onaylanmış olabilir. */}
                       {g.ai_analysis?.scannerOutdated ? (
                         <span className="status-pill" data-tone="danger">Eski çıkarımla onaylandı</span>

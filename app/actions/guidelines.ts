@@ -48,6 +48,8 @@ export interface GuidelineCikarimi {
   pendingReview?: boolean;
   /** Kayıt, çıkarım kuralları düzelmeden önceki bir sürümle onaylandı. */
   scannerOutdated?: boolean;
+  /** Metin taranmış görüntüden OCR ile okundu; gürültülü olabilir. */
+  ocrUsed?: boolean;
 }
 
 export interface GuidelineMatch {

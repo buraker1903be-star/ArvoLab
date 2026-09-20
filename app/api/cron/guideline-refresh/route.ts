@@ -140,6 +140,8 @@ export async function GET(request: Request) {
       const detectedAt = new Date().toISOString();
       const analysis = {
         scannerVersion: TARAYICI_SURUMU,
+        // OCR'lı metinden çıkarılan kurallar tek adım onaya girmez.
+        ocrUsed: scan.ocrKullanildi,
         detectedCitationHint: scan.detectedCitationHint,
         suggestedSections: scan.suggestedSections,
         suggestedRules: scan.suggestedRules,
