@@ -17,7 +17,14 @@ export async function GET(request: Request) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  const candidates = (universities ?? [])
+  /*
+    Sıra en eski kontrolden başlıyordu; YÖK Atlas'ta eşleşmeyen üniversitenin
+    kontrol zamanı hiç yazılmadığı için (hata fırlatılıyor) o üniversite hep
+    başta kalıyor ve her gün aynı beşi deneniyordu — diğerleri hiç
+    yenilenmiyordu. Artık liste ada göre sabit sıralanıp her gün beşer beşer
+    kaydırılıyor: eşleşmeyenler kuyruğu tıkamıyor, sıra herkese geliyor.
+  */
+  const tumu = (universities ?? [])
     .map((university) => {
       const yokChecks = (university.academic_units ?? [])
         .filter((unit) => unit.source_url === "https://yokatlas.yok.gov.tr/")
@@ -26,8 +33,14 @@ export async function GET(request: Request) {
         .sort();
       return { ...university, lastCheckedAt: yokChecks.at(-1) ?? null };
     })
-    .sort((a, b) => (a.lastCheckedAt ?? "").localeCompare(b.lastCheckedAt ?? ""))
-    .slice(0, 5);
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), "tr"));
+
+  const GUNLUK = 5;
+  const gun = Math.floor(Date.now() / 86_400_000);
+  const baslangic = tumu.length ? ((gun * GUNLUK) % tumu.length) : 0;
+  const candidates = tumu.length <= GUNLUK
+    ? tumu
+    : Array.from({ length: GUNLUK }, (_, i) => tumu[(baslangic + i) % tumu.length]);
 
   const results: Array<Record<string, unknown>> = [];
   for (const university of candidates) {

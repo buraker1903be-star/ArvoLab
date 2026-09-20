@@ -77,8 +77,10 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const displayName = user.user_metadata?.full_name || user.email || "Kullanıcı";
   const [projects, profile] = await Promise.all([getProjects(), getCurrentProfile()]);
+  // Ad profilden: Ayarlar'dan değiştirilen ad yalnızca profiles'a yazılıyor,
+  // karşılama satırı kayıttaki eski adı (user_metadata) gösteriyordu.
+  const displayName = profile?.full_name || user.email || "Kullanıcı";
   // Panel düzeniyle aynı istekte paylaşılır (lib/access.ts cache'li).
   const access = await getAccessState(profile);
   const activeProjects = projects.filter((p) => isActive(p.status));

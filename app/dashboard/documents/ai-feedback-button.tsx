@@ -7,9 +7,11 @@ import { requestAiFeedback } from "@/app/actions/ai-feedback";
 interface AiFeedbackButtonProps {
   documentId: string;
   initialFeedback: string | null;
+  /** OPENAI_API_KEY tanımlı değilse düğme yerine açıklama gösterilir. */
+  configured: boolean;
 }
 
-export default function AiFeedbackButton({ documentId, initialFeedback }: AiFeedbackButtonProps) {
+export default function AiFeedbackButton({ documentId, initialFeedback, configured }: AiFeedbackButtonProps) {
   const [feedback, setFeedback] = useState<string | null>(initialFeedback);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +40,16 @@ export default function AiFeedbackButton({ documentId, initialFeedback }: AiFeed
 
   return (
     <div className="mt-sm">
-      <button type="button" className="projects-filter-button" onClick={handleClick} disabled={loading}>
-        <Sparkles size={14} aria-hidden="true" />
-        {loading ? "AI geri bildirimi hazırlanıyor..." : feedback ? "Yeniden geri bildirim al" : "AI Geri Bildirimi Al (ChatGPT)"}
-      </button>
+      {configured ? (
+        <button type="button" className="projects-filter-button" onClick={handleClick} disabled={loading}>
+          <Sparkles size={14} aria-hidden="true" />
+          {loading ? "AI geri bildirimi hazırlanıyor..." : feedback ? "Yeniden geri bildirim al" : "AI Geri Bildirimi Al (ChatGPT)"}
+        </button>
+      ) : (
+        /* Eskiden düğme görünüyor, her tıklama "Vercel ayarlarına anahtar
+           ekleyin" diyen bir hata ve başarısız bir kayıt üretiyordu. */
+        <p className="alert" data-tone="info">AI geri bildirimi şu an kapalı.</p>
+      )}
 
       {error && (
         <p className="alert mt-sm" data-tone="danger" role="alert">{error}</p>

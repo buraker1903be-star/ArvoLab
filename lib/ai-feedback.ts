@@ -42,6 +42,9 @@ export interface AiFeedbackResult {
   truncated: boolean;
 }
 
+/** Anahtar yoksa özellik kapalı gösterilir; düğme boşuna tıklanmasın. */
+export const aiFeedbackConfigured = () => Boolean(process.env.OPENAI_API_KEY);
+
 export async function getDocumentFeedback(text: string): Promise<AiFeedbackResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {

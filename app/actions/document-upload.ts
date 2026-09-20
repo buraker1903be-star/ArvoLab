@@ -69,16 +69,9 @@ export async function analyzeUploadedDocument(params: {
   }
   /* Abonelik kapısı: Belge çözümleme hem depolama hem işlem maliyeti üretir.
      Silme ve listeleme açık kalır: kullanıcı kendi verisine erişebilmeli. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
-
-  if (params.fileSize > MAX_FILE_SIZE) {
-    return { error: "Dosya boyutu 20 MB sınırını aşıyor." };
-  }
-
+  const abonelikKapali = await isSubscriptionBlocked();
+  const boyutAsimi = params.fileSize > MAX_FILE_SIZE;
   const docType = detectDocType(params.fileName, params.mimeType);
-  if (!docType) {
-    return { error: "Yalnızca .docx ve .pdf dosyaları desteklenir." };
-  }
 
   /*
     Yol kullanıcıdan geliyor: yalnızca kendi klasöründeki dosya okunabilir.
@@ -90,6 +83,25 @@ export async function analyzeUploadedDocument(params: {
   if (!ownFile) {
     return { error: "Geçersiz dosya yolu." };
   }
+
+  /*
+    Dosya bu noktadan önce tarayıcıdan depoya yüklenmiş oluyor. Aşağıdaki
+    denetimlerden biri reddederse dosya depoda sahipsiz kalıyordu (aboneliği
+    biten kullanıcı hata mesajı alıyor ama dosya yer kaplamaya devam ediyordu).
+    Reddedilen her yolda dosya siliniyor; silme başarısız olursa akış durmaz.
+  */
+  const dosyayiSil = async () => {
+    const { error } = await supabase.storage.from("project-files").remove([params.storagePath]);
+    if (error) console.error("Reddedilen yükleme silinemedi:", params.storagePath, error.message);
+  };
+  const reddet = async (mesaj: string): Promise<UploadResult> => {
+    await dosyayiSil();
+    return { error: mesaj };
+  };
+
+  if (abonelikKapali) return reddet(SUBSCRIPTION_BLOCKED_MESSAGE);
+  if (boyutAsimi) return reddet("Dosya boyutu 20 MB sınırını aşıyor.");
+  if (!docType) return reddet("Yalnızca .docx ve .pdf dosyaları desteklenir.");
 
   /*
     project_id de kullanıcıdan geliyor ve doğrulanmıyordu. document_uploads
@@ -109,9 +121,9 @@ export async function analyzeUploadedDocument(params: {
       .maybeSingle();
     if (projectError) {
       console.error(projectError);
-      return { error: "Çalışma doğrulanamadı." };
+      return reddet("Çalışma doğrulanamadı.");
     }
-    if (!ownProject) return { error: "Bu çalışmaya belge ekleyemezsiniz." };
+    if (!ownProject) return reddet("Bu çalışmaya belge ekleyemezsiniz.");
   }
 
   // Dosyayı Supabase Storage'dan SUNUCU TARAFINDA indir
@@ -121,7 +133,7 @@ export async function analyzeUploadedDocument(params: {
 
   if (downloadError || !fileBlob) {
     console.error(downloadError);
-    return { error: "Yüklenen dosya depodan okunamadı." };
+    return reddet("Yüklenen dosya depodan okunamadı.");
   }
 
   const arrayBuffer = await fileBlob.arrayBuffer();

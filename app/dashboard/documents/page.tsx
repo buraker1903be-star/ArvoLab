@@ -10,6 +10,7 @@ import { runOriginalityCheck, getOriginalityChecksForDocument } from "@/app/acti
 // 60 saniyeye çıkarıyoruz.
 export const maxDuration = 60;
 import { getLatestFeedback } from "@/app/actions/ai-feedback";
+import { aiFeedbackConfigured } from "@/lib/ai-feedback";
 import DocumentUploadForm from "./document-upload-form";
 import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
@@ -18,6 +19,7 @@ import { similarityTone, statusTone } from "@/lib/status-tone";
 import { trTarihSaat } from "@/lib/tr-time";
 
 export default async function DocumentsPage() {
+  const aiAcik = aiFeedbackConfigured();
   const [projects, uploads] = await Promise.all([
     getMyProjects(),
     getMyDocumentUploads(),
@@ -153,6 +155,7 @@ export default async function DocumentsPage() {
                       <AiFeedbackButton
                         documentId={u.id}
                         initialFeedback={feedbackMap.get(u.id)?.feedback_text ?? null}
+                        configured={aiAcik}
                       />
                     </div>
                   ) : null}
