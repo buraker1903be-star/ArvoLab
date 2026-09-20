@@ -1,4 +1,5 @@
 import { fetchOfficialSource, metniOku } from "@/lib/safe-official-fetch";
+import { belgeAdresiMi, belgeBaglantisiSec } from "@/lib/belge-baglantisi";
 
 export type OfficialGuidelineCandidate = { url: string; title: string };
 
@@ -62,6 +63,27 @@ async function readText(url: string) {
   return metniOku(response);
 }
 
+/**
+ * Aday HTML sayfasıysa içindeki gerçek kılavuz belgesine iner.
+ *
+ * Site haritaları çoğu zaman bir HTML sayfası veriyor; kılavuzun kendisi o
+ * sayfadan bağlantılı (canlıda doğrulandı: fbe.gazi.edu.tr'nin kılavuz
+ * sayfası webupload.gazi.edu.tr'deki .docx dosyasına bağlanıyor). Sayfanın
+ * kendisi taranınca menü ve altbilgi metni çıkıyor, kural çıkarımı boş
+ * dönüyordu.
+ *
+ * Belge bulunamazsa sayfanın kendisi kalır: bazı kurumlar kuralları
+ * doğrudan HTML olarak yayımlıyor.
+ */
+async function belgeyeIn(aday: OfficialGuidelineCandidate): Promise<OfficialGuidelineCandidate> {
+  if (belgeAdresiMi(aday.url)) return aday;
+  const html = await readText(aday.url).catch(() => null);
+  if (!html) return aday;
+  const belge = belgeBaglantisiSec(html, aday.url);
+  if (!belge) return aday;
+  return { url: belge, title: aday.title };
+}
+
 /*
   Enstitülerin kendi alt alan adları.
 
@@ -104,7 +126,17 @@ export async function crawlUniversityAndInstitutes(domain: string) {
     await bekle(400);
     ekle(await crawlOfficialGuidelineCandidates(`${onek}.${kok}`).catch(() => []));
   }
-  return hepsi;
+
+  // HTML sayfaları gerçek belgeye indirilir; aynı belgeye çıkan sayfalar tekilleşir.
+  const belgeler: OfficialGuidelineCandidate[] = [];
+  const gorulenBelge = new Set<string>();
+  for (const aday of hepsi) {
+    const cozulen = await belgeyeIn(aday);
+    if (gorulenBelge.has(cozulen.url)) continue;
+    gorulenBelge.add(cozulen.url);
+    belgeler.push(cozulen);
+  }
+  return belgeler;
 }
 
 export async function crawlOfficialGuidelineCandidates(domain: string) {
