@@ -13,7 +13,44 @@ export async function GET(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  /*
+    ZAMAN BÜTÇESİ
+
+    Uç noktanın sınırı 300 saniye. Enstitü alt alan adları taranmaya ve HTML
+    sayfalardan gerçek belgeye inilmeye başlayınca üniversite başına süre
+    belirgin şekilde arttı; sabit bir "günde 2 üniversite" sayısı artık
+    hem yetersiz hem riskli. Süre aşılırsa istek ortada kesilir: o turda
+    yapılan iş yazılmış olsa bile kalan kayıtlar hiç işlenmez ve yanıt
+    kaybolur.
+
+    Bu yüzden sayı değil SÜRE sınırlanıyor: yeni bir işe ancak bütçe
+    yetiyorsa başlanır. Her üniversite kendi kaydını bitirince güncellediği
+    için yarıda kesilme veri kaybı yaratmaz, yalnızca sıradakiler ertesi
+    güne kalır.
+  */
+  const basladi = Date.now();
+  const TOPLAM_BUTCE_MS = 270_000;
+  const gecen = () => Date.now() - basladi;
+  const kalan = () => TOPLAM_BUTCE_MS - gecen();
+
+  /*
+    Keşif bütçenin yarısını alır. Hepsini alsaydı, yeni üniversiteler
+    bulunurken KAYITLI kılavuzların yeniden taranması hiç sıra alamaz ve
+    kaynaktaki sürüm değişiklikleri fark edilmezdi.
+  */
+  const KESIF_BUTCE_MS = Math.floor(TOPLAM_BUTCE_MS * 0.55);
+  /*
+    Bir üniversitenin keşfi için ayrılan kaba üst süre. Alt alan adları
+    üçerli paralel tarandığından ve site haritası isteklerinin zaman aşımı
+    12 saniyeye indiğinden bu süre 70 saniyeden düştü.
+  */
+  const UNIVERSITE_MALIYETI_MS = 40_000;
+  /** Bir kılavuzun yeniden taranması için ayrılan kaba üst süre. */
+  const TARAMA_MALIYETI_MS = 25_000;
+
   const supabase = createAdminClient();
+  let kesifDurduruldu = false;
+  let taramaDurduruldu = false;
   const discoveryResults: Array<{
     university: string | null;
     status: "discovered" | "already_known" | "not_found" | "failed";
@@ -23,8 +60,14 @@ export async function GET(request: Request) {
     error?: string;
   }> = [];
   try {
-    const universities = await getUniversitiesDueForGuidelineDiscovery(2);
+    // Sayı cömert; gerçek sınırı bütçe koyuyor.
+    const universities = await getUniversitiesDueForGuidelineDiscovery(12);
     for (const university of universities) {
+      // Bitiremeyeceğimiz bir işe başlamak, yarıda kesilmek demektir.
+      if (gecen() + UNIVERSITE_MALIYETI_MS > KESIF_BUTCE_MS) {
+        kesifDurduruldu = true;
+        break;
+      }
       discoveryResults.push({
         university: university.name,
         ...await discoverGuidelinesForUniversity(university),
@@ -44,12 +87,16 @@ export async function GET(request: Request) {
     .not("source_url", "is", null)
     .eq("is_active", true)
     .order("last_checked_at", { ascending: true })
-    .limit(6);
+    .limit(12);
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   const results: Array<{ id: string; status: string; error?: string }> = [];
   for (const guideline of guidelines ?? []) {
+    if (kalan() < TARAMA_MALIYETI_MS) {
+      taramaDurduruldu = true;
+      break;
+    }
     try {
       const scan = await scanGuidelineUrl(guideline.source_url!);
       const previousChecksum = guideline.source_checksum;
@@ -148,5 +195,12 @@ export async function GET(request: Request) {
     discoveryResults,
     checked: results.length,
     results,
+    /*
+      Bütçe yüzünden durulduysa görünür olsun: kuyruk ilerlemiyorsa sebebi
+      sessiz kalmamalı. Kalan işler ertesi gün sıradan devam eder.
+    */
+    sureSaniye: Math.round(gecen() / 1000),
+    kesifDurduruldu,
+    taramaDurduruldu,
   });
 }

@@ -58,7 +58,8 @@ export async function resolveOfficialUniversityDomain(universityName: string) {
 }
 
 async function readText(url: string) {
-  const response = await fetchOfficialSource(url);
+  // Site haritası ve HTML sayfası: kısa sabır yeter.
+  const response = await fetchOfficialSource(url, { zamanAsimiMs: 12_000 });
   if (!response.ok) return null;
   return metniOku(response);
 }
@@ -120,16 +121,28 @@ export async function crawlUniversityAndInstitutes(domain: string) {
 
   ekle(await crawlOfficialGuidelineCandidates(domain).catch(() => []));
 
-  // Ana alan adı "www." taşıyorsa alt alan onun değil, kök alanın altındadır.
+  /*
+    Alt alan adları SIRAYLA taranınca üniversite başına süre gece turunun
+    bütçesini yiyordu (8 önek × birkaç istek × zaman aşımı). Üçerli
+    gruplar hâlinde paralel taranıyor: farklı ana bilgisayarlar oldukları
+    için aynı sunucuya yüklenilmiyor, gruplar arasında yine bekleniyor.
+  */
   const kok = domain.replace(/^www\./, "");
-  for (const onek of ENSTITU_ONEKLERI) {
-    await bekle(400);
-    ekle(await crawlOfficialGuidelineCandidates(`${onek}.${kok}`).catch(() => []));
+  const ESZAMANLI = 3;
+  for (let i = 0; i < ENSTITU_ONEKLERI.length; i += ESZAMANLI) {
+    const grup = ENSTITU_ONEKLERI.slice(i, i + ESZAMANLI);
+    const sonuclar = await Promise.all(
+      grup.map((onek) => crawlOfficialGuidelineCandidates(`${onek}.${kok}`).catch(() => [])),
+    );
+    for (const sonuc of sonuclar) ekle(sonuc);
+    if (i + ESZAMANLI < ENSTITU_ONEKLERI.length) await bekle(400);
   }
 
   // HTML sayfaları gerçek belgeye indirilir; aynı belgeye çıkan sayfalar tekilleşir.
   const belgeler: OfficialGuidelineCandidate[] = [];
   const gorulenBelge = new Set<string>();
+  // Aynı kuruma arka arkaya yüklenmemek için sayfalar sırayla açılıyor;
+  // aday sayısı zaten sınırlı (MAX_CANDIDATES_PER_UNIVERSITY).
   for (const aday of hepsi) {
     const cozulen = await belgeyeIn(aday);
     if (gorulenBelge.has(cozulen.url)) continue;
