@@ -132,3 +132,33 @@ test("her uyuşmazlık skoru düşürür", () => {
   const eksik = computeComplianceScore(refs, { citationsWithoutReference: [], referencesWithoutCitation: refs });
   assert.ok(eksik < temiz, `${eksik} < ${temiz} olmalı`);
 });
+
+const yazarSorunu = (ham: string) =>
+  parseReferenceEntry(ham).issues.filter((sorun) => sorun.field === "author_format");
+
+test("doğru yazılmış künye yazar biçimi uyarısı almaz", () => {
+  /*
+    20.09.2026: ayrıştırıcı yazar bölümünün sonundaki noktayı siliyor,
+    doğrulama ise o noktanın bulunmasını şart koşuyordu. Sonuç: listedeki
+    HER kayıt "yazar formatı APA7'ye uymuyor" uyarısı alıyordu — kusursuz
+    yazılmış Bandura ve Deci & Ryan künyeleri dahil. Böyle bir uyarı
+    kullanıcıya bütün uyarıları görmezden gelmeyi öğretir.
+  */
+  assert.deepEqual(yazarSorunu("Bandura, A. (1977). Self-efficacy. Psychological Review, 84(2), 191-215."), []);
+  assert.deepEqual(
+    yazarSorunu("Deci, E. L., & Ryan, R. M. (2000). Goal pursuits. Psychological Inquiry, 11(4), 227-268."),
+    [],
+  );
+});
+
+test("Türkçe kaynakçada ayırıcı 've' yazarları ayırır", () => {
+  // Eskiden "Kaya, M. ve Öz, S." tek yazar sanılıp biçim hatası sayılıyordu.
+  const ref = parseReferenceEntry("Kaya, M. ve Öz, S. (2018). Uzaktan eğitim. Dergi, 7(1), 88-101.");
+  assert.deepEqual(ref.authors, ["Kaya, M.", "Öz, S."]);
+  assert.deepEqual(ref.issues.filter((sorun) => sorun.field === "author_format"), []);
+});
+
+test("baş harften sonra nokta eksikse uyarı verilir", () => {
+  // Kural işlevsiz kalmamalı: gerçek hata hâlâ yakalanıyor.
+  assert.equal(yazarSorunu("Demir, B (2021). Özyeterlik [Doktora tezi]. Ankara Üniversitesi.").length, 1);
+});

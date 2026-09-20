@@ -62,21 +62,30 @@ export function parseReferenceEntry(raw: string): ParsedReference {
   }
   const year = yearMatch ? yearMatch[1] : null;
 
-  // Yazar kısmı: yıl parantezinden önceki bölüm
-  const authorSegment = yearMatch
-    ? trimmed.slice(0, yearMatch.index).trim().replace(/\.$/, "")
-    : null;
+  /*
+    Yazar kısmı: yıl parantezinden önceki bölüm. Sondaki NOKTA SİLİNMEZ.
+    Eskiden siliniyordu, ama doğrulama regex'i o noktanın bulunmasını şart
+    koşuyordu: "Bandura, A. (1977)" gibi kusursuz künyeler dahil listedeki
+    HER kayıt "yazar formatı APA7'ye uymuyor" uyarısı alıyordu (20.09.2026).
+    Böyle bir uyarı kullanıcıya hiçbir şey öğretmez, yalnızca bütün
+    uyarıları görmezden gelmeyi öğretir.
+  */
+  const authorSegment = yearMatch ? trimmed.slice(0, yearMatch.index).trim() : null;
 
   let authors: string[] | null = null;
   if (authorSegment) {
     // "Soyad, A. B., & Soyad, C." biçimini kaba şekilde ayrıştır
+    // Türkçe kaynakçada ayırıcı "&" değil "ve"dir; eskiden ayrılmadığı için
+    // "Kaya, M. ve Öz, S." tek yazar sanılıp biçim hatası sayılıyordu.
     authors = authorSegment
-      .split(/,\s*&\s*|,\s*(?=[A-ZÇĞİÖŞÜ][a-zçğıöşü]+,)/)
+      .split(/,\s*&\s*|\s+ve\s+(?=[A-ZÇĞİÖŞÜ])|,\s*(?=[A-ZÇĞİÖŞÜ][a-zçğıöşü]+,)/)
       .map((a) => a.trim())
       .filter(Boolean);
 
     authors.forEach((a) => {
-      if (!/^[A-ZÇĞİÖŞÜ][\p{L}'\-]+,\s*[A-ZÇĞİÖŞÜ]\.(\s?[A-ZÇĞİÖŞÜ]\.)?$/u.test(a)) {
+      // Üç baş harf de olabilir (ör. "Deci, E. L. M."); her birinin ardından
+      // nokta aranır — eksik nokta gerçek bir APA hatasıdır.
+      if (!/^[A-ZÇĞİÖŞÜ][\p{L}'\-]+,(\s*[A-ZÇĞİÖŞÜ]\.){1,3}$/u.test(a)) {
         issues.push({
           field: "author_format",
           message: `Yazar formatı APA7'ye uymuyor olabilir: "${a}" (beklenen: "Soyad, A.")`,
