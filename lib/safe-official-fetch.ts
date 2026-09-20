@@ -98,7 +98,7 @@ export type Dogrulayicilar = { etag?: string | null; lastModified?: string | nul
 
 export async function fetchOfficialSource(
   rawUrl: string,
-  secenek?: { zamanAsimiMs?: number; dogrulayicilar?: Dogrulayicilar },
+  secenek?: { zamanAsimiMs?: number; dogrulayicilar?: Dogrulayicilar; yonlendirmeyiIzleme?: boolean },
 ): Promise<Response> {
   /*
     Koşullu istek başlıkları. Sunucudan geldiği gibi geri gönderilir:
@@ -117,6 +117,8 @@ export async function fetchOfficialSource(
       headers: { "User-Agent": "ArvoLab-Guideline-Monitor/1.0", ...kosulBasliklari },
     });
     if (![301, 302, 303, 307, 308].includes(response.status)) return response;
+    // Çağıran yönlendirmenin KENDİSİYLE ilgileniyorsa ham yanıt döner.
+    if (secenek?.yonlendirmeyiIzleme) return response;
     const location = response.headers.get("location");
     if (!location) throw new Error("Kaynak geçersiz bir yönlendirme döndürdü.");
     current = await assertOfficialUrl(new URL(location, current).toString());

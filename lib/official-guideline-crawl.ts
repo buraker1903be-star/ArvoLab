@@ -97,7 +97,32 @@ async function belgeyeIn(aday: OfficialGuidelineCandidate): Promise<OfficialGuid
   Liste bilerek kısa: her ek önek, her üniversite için fazladan bir istek
   demek. Yaygın kısaltmalar kapsanıyor.
 */
-const ENSTITU_ONEKLERI = ["sbe", "fbe", "sagbil", "ebe", "lee", "gse", "sosyalbilimler", "fenbilimleri"];
+const ENSTITU_ONEKLERI = [
+  "sbe", "fbe", "sabe", "sagbe", "sagbil", "ebe", "lee", "gse",
+  "enstitu", "lisansustu", "sosyalbilimler", "fenbilimleri", "saglikbilimleri", "egitimbilimleri",
+];
+
+/**
+ * Bu alt alan adı gerçekten ayrı bir site mi?
+ *
+ * Çoğu üniversitede joker DNS var: tanımsız her alt alan ana siteye
+ * yönleniyor. Önek listesi büyüdükçe bu, ana sitenin her önek için
+ * yeniden taranması demek olurdu — kuruma 14 kat gereksiz yük.
+ *
+ * Tek istekle ayırt edilir: yanıt başka bir ana bilgisayara yönlendirme
+ * ise bu alt alan kendi sitesi değildir.
+ */
+async function altAlanKendiSitesiMi(host: string): Promise<boolean> {
+  try {
+    const yanit = await fetchOfficialSource(`https://${host}/`, { zamanAsimiMs: 8_000, yonlendirmeyiIzleme: true });
+    const hedef = yanit.headers.get("location");
+    if (!hedef) return yanit.ok;
+    return new URL(hedef, `https://${host}/`).hostname.toLowerCase() === host.toLowerCase();
+  } catch {
+    // Çözümlenemeyen ad: alt alan yok.
+    return false;
+  }
+}
 
 /** İsteklerin arasına konan nezaket gecikmesi (aynı kuruma arka arkaya yüklenmemek için). */
 const bekle = (ms: number) => new Promise((coz) => setTimeout(coz, ms));
@@ -130,13 +155,25 @@ export async function crawlUniversityAndInstitutes(domain: string) {
   */
   const kok = domain.replace(/^www\./, "");
   const ESZAMANLI = 3;
+
+  /*
+    Önce hangi alt alanların gerçekten var olduğu belirlenir (önek başına
+    TEK istek), sonra yalnızca onlar taranır. Joker DNS'li kurumlarda bu,
+    ana sitenin on dört kez yeniden taranmasını önlüyor.
+  */
+  const varOlanlar: string[] = [];
   for (let i = 0; i < ENSTITU_ONEKLERI.length; i += ESZAMANLI) {
     const grup = ENSTITU_ONEKLERI.slice(i, i + ESZAMANLI);
-    const sonuclar = await Promise.all(
-      grup.map((onek) => crawlOfficialGuidelineCandidates(`${onek}.${kok}`).catch(() => [])),
-    );
+    const sonuclar = await Promise.all(grup.map(async (onek) => ((await altAlanKendiSitesiMi(`${onek}.${kok}`)) ? `${onek}.${kok}` : null)));
+    for (const host of sonuclar) if (host) varOlanlar.push(host);
+    if (i + ESZAMANLI < ENSTITU_ONEKLERI.length) await bekle(300);
+  }
+
+  for (let i = 0; i < varOlanlar.length; i += ESZAMANLI) {
+    const grup = varOlanlar.slice(i, i + ESZAMANLI);
+    const sonuclar = await Promise.all(grup.map((host) => crawlOfficialGuidelineCandidates(host).catch(() => [])));
     for (const sonuc of sonuclar) ekle(sonuc);
-    if (i + ESZAMANLI < ENSTITU_ONEKLERI.length) await bekle(400);
+    if (i + ESZAMANLI < varOlanlar.length) await bekle(400);
   }
 
   // HTML sayfaları gerçek belgeye indirilir; aynı belgeye çıkan sayfalar tekilleşir.
@@ -151,6 +188,26 @@ export async function crawlUniversityAndInstitutes(domain: string) {
     belgeler.push(cozulen);
   }
   return belgeler;
+}
+
+/*
+  Adresten okunabilir bir başlık. Ham dosya adı panelde kılavuzun adı
+  olarak görünüyor; "AGU_Social_Sciences_Institute_Gr%20-%202025.docx"
+  gibi bir metin kullanıcıya hiçbir şey anlatmıyor.
+*/
+function adresBasligi(url: string): string {
+  try {
+    const dosya = decodeURIComponent(new URL(url).pathname.split("/").filter(Boolean).pop() ?? "");
+    const temiz = dosya
+      .replace(/\.(pdf|docx?|html?)$/i, "")
+      .replace(/[_+]+/g, " ")
+      .replace(/-+/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    return temiz || "Tez Yazım Kılavuzu";
+  } catch {
+    return "Tez Yazım Kılavuzu";
+  }
 }
 
 export async function crawlOfficialGuidelineCandidates(domain: string) {
@@ -205,7 +262,5 @@ export async function crawlOfficialGuidelineCandidates(domain: string) {
     if (url && isGuidelineUrl(url) && izinli(url)) discovered.add(url);
   }
 
-  return [...discovered].slice(0, 6).map((url): OfficialGuidelineCandidate => ({
-    url, title: decodeURIComponent(new URL(url).pathname.split("/").pop() || "Tez Yazım Kılavuzu"),
-  }));
+  return [...discovered].slice(0, 6).map((url): OfficialGuidelineCandidate => ({ url, title: adresBasligi(url) }));
 }
