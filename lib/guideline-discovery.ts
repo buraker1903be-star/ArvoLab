@@ -2,7 +2,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { enstituTespitEt, fakulteVeyaBolumBelgesi } from "@/lib/enstitu-tespiti";
 import { crawlUniversityAndInstitutes, resolveOfficialUniversityDomain } from "@/lib/official-guideline-crawl";
-import { metniOku } from "@/lib/safe-official-fetch";
 
 type University = { id: string; name: string };
 
@@ -18,21 +17,7 @@ type Candidate = {
   kayıt oluşuyordu.
 */
 const MAX_CANDIDATES_PER_UNIVERSITY = 8;
-const SEARCH_PROVIDERS = [
-  (query: string) => `https://www.bing.com/search?q=${encodeURIComponent(query)}`,
-  (query: string) => `https://www.google.com/search?hl=tr&num=10&q=${encodeURIComponent(query)}`,
-  (query: string) => `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
-];
 
-function decodeHtml(value: string) {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 function normalizeTurkish(value: string) {
   return value
@@ -60,63 +45,33 @@ function belongsToUniversity(scan: GuidelineScanResult, universityName: string) 
   return matched.length >= Math.min(2, tokens.length);
 }
 
-function extractTargetUrl(rawHref: string) {
-  const href = decodeHtml(rawHref);
-  const redirect = new URL(href, "https://duckduckgo.com");
-  const target = redirect.searchParams.get("uddg") ?? redirect.searchParams.get("q") ?? redirect.toString();
-  const url = new URL(target);
-  const hostname = url.hostname.toLowerCase();
-  if (url.protocol !== "https:" || !(hostname === "edu.tr" || hostname.endsWith(".edu.tr"))) return null;
-  return url.toString();
-}
 
+/*
+  ARAMA MOTORU YEDEĞİ KALDIRILDI
+
+  Keşif, resmî sitede aday bulunamazsa Bing/Google/DuckDuckGo sonuç
+  sayfalarını kazıyordu. Üç gerekçeyle kaldırıldı:
+
+  1. Çalışmıyordu. Ölçüldü: Bing 118 KB'lık bir sayfa döndürüyor ama
+     içinde tek bir .edu.tr bağlantısı yok (bot koruması), DuckDuckGo hiç
+     yanıt vermiyor. Sıfır aday.
+  2. Pahalıydı. Üç sağlayıcı × 20 saniye zaman aşımı, üniversite başına 60
+     saniyeye kadar boşa harcanan süre — gece turunun zaman bütçesinden
+     doğrudan çalıyordu.
+  3. Sürdürülebilir değildi. Üçünün de kullanım koşullarına aykırı ve
+     tarayıcı taklidi bir User-Agent kullanıyordu.
+
+  Resmî tarama (site haritaları + ana sayfa + enstitü alt alan adları +
+  HTML sayfadan belgeye inme) canlıda çalıştığı doğrulandı; gerçek kaynak
+  budur. Bulunamayan üniversiteler için doğru çözüm, kılavuzun elle
+  eklenmesidir — panelde "Yeni kılavuz" ile.
+*/
 async function discoverCandidates(universityName: string): Promise<Candidate[]> {
   const officialDomain = await resolveOfficialUniversityDomain(universityName).catch(() => null);
-  if (officialDomain) {
-    // Ana alan adı + enstitü alt alan adları (sbe., fbe., …)
-    const officialCandidates = await crawlUniversityAndInstitutes(officialDomain).catch(() => []);
-    if (officialCandidates.length > 0) return officialCandidates.slice(0, MAX_CANDIDATES_PER_UNIVERSITY);
-  }
-  const query = `"${universityName}" "tez yazım kılavuzu" filetype:pdf`;
-  const providerErrors: string[] = [];
-
-  for (const providerUrl of SEARCH_PROVIDERS) {
-    try {
-      const response = await fetch(providerUrl(query), {
-        cache: "no-store",
-        signal: AbortSignal.timeout(20_000),
-        headers: { "user-agent": "Mozilla/5.0 (compatible; ArvoLabGuidelineDiscovery/1.1)" },
-      });
-      if (!response.ok) {
-        providerErrors.push(`HTTP ${response.status}`);
-        continue;
-      }
-
-      const html = await metniOku(response);
-      const candidates = new Map<string, Candidate>();
-      const resultPattern = /<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
-      for (const match of html.matchAll(resultPattern)) {
-        try {
-          const url = extractTargetUrl(match[1]);
-          if (!url || candidates.has(url)) continue;
-          const title = decodeHtml(match[2]);
-          if (!/tez|thesis/i.test(`${title} ${url}`) || !/k[ıi]lavuz|guide|yaz[ıi]m/i.test(`${title} ${url}`)) continue;
-          candidates.set(url, { url, title });
-          if (candidates.size >= MAX_CANDIDATES_PER_UNIVERSITY) break;
-        } catch {
-          // Ignore malformed or non-official search results.
-        }
-      }
-      if (candidates.size > 0) return [...candidates.values()];
-    } catch (error) {
-      providerErrors.push(error instanceof Error ? error.message : "arama hatası");
-    }
-  }
-
-  if (providerErrors.length === SEARCH_PROVIDERS.length) {
-    throw new Error(`Tüm kılavuz arama sağlayıcıları başarısız: ${providerErrors.join(", ")}`);
-  }
-  return [];
+  if (!officialDomain) return [];
+  // Ana alan adı + enstitü alt alan adları (sbe., fbe., …)
+  const officialCandidates = await crawlUniversityAndInstitutes(officialDomain).catch(() => []);
+  return officialCandidates.slice(0, MAX_CANDIDATES_PER_UNIVERSITY);
 }
 
 /**

@@ -40,11 +40,12 @@ export async function GET(request: Request) {
   */
   const KESIF_BUTCE_MS = Math.floor(TOPLAM_BUTCE_MS * 0.55);
   /*
-    Bir üniversitenin keşfi için ayrılan kaba üst süre. Alt alan adları
-    üçerli paralel tarandığından ve site haritası isteklerinin zaman aşımı
-    12 saniyeye indiğinden bu süre 70 saniyeden düştü.
+    Bir üniversitenin keşfi için ayrılan kaba üst süre. Üç düşüş oldu:
+    alt alan adları üçerli paralel taranıyor, site haritası isteklerinin
+    zaman aşımı 12 saniye, ve hiçbir şey bulamayan arama motoru yedeği
+    (üniversite başına 60 saniyeye kadar) tamamen kaldırıldı.
   */
-  const UNIVERSITE_MALIYETI_MS = 40_000;
+  const UNIVERSITE_MALIYETI_MS = 30_000;
   /** Bir kılavuzun yeniden taranması için ayrılan kaba üst süre. */
   const TARAMA_MALIYETI_MS = 25_000;
 

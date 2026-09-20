@@ -1,5 +1,6 @@
 import { fetchOfficialSource, metniOku } from "@/lib/safe-official-fetch";
 import { belgeAdresiMi, belgeBaglantisiSec } from "@/lib/belge-baglantisi";
+import { robotsCozumle, robotsIzinVeriyor } from "@/lib/robots";
 
 export type OfficialGuidelineCandidate = { url: string; title: string };
 
@@ -162,14 +163,30 @@ export async function crawlOfficialGuidelineCandidates(domain: string) {
     const url = officialUrl(match[1]); if (url) sitemapUrls.add(url);
   }
 
+  /*
+    robots.txt yalnızca "Sitemap:" satırları için okunuyordu; kurumun
+    "Disallow" dediği yollara yine de giriliyordu. Bu dosya kurumun
+    taleplerini bildirdiği standart yol ve ArvoLab onlarca üniversitenin
+    sunucusuna her gece istek atıyor — uyulur.
+  */
+  const kurallar = robotsCozumle(robots ?? "");
+  const izinli = (url: string) => {
+    try {
+      return robotsIzinVeriyor(kurallar, new URL(url).pathname);
+    } catch {
+      return false;
+    }
+  };
+
   const discovered = new Set<string>();
   const childSitemaps = new Set<string>();
-  for (const sitemap of [...sitemapUrls].slice(0, 4)) {
+  for (const sitemap of [...sitemapUrls].filter(izinli).slice(0, 4)) {
     const xml = await readText(sitemap).catch(() => null);
     if (!xml) continue;
     for (const match of xml.matchAll(/<loc>([\s\S]*?)<\/loc>/gi)) {
       const url = officialUrl(match[1]);
       if (!url) continue;
+      if (!izinli(url)) continue;
       if (/sitemap/i.test(url) && !isGuidelineUrl(url)) childSitemaps.add(url);
       else if (isGuidelineUrl(url)) discovered.add(url);
     }
@@ -178,13 +195,14 @@ export async function crawlOfficialGuidelineCandidates(domain: string) {
     const xml = await readText(sitemap).catch(() => null);
     if (!xml) continue;
     for (const match of xml.matchAll(/<loc>([\s\S]*?)<\/loc>/gi)) {
-      const url = officialUrl(match[1]); if (url && isGuidelineUrl(url)) discovered.add(url);
+      const url = officialUrl(match[1]); if (url && isGuidelineUrl(url) && izinli(url)) discovered.add(url);
     }
   }
 
-  const home = await readText(`https://${domain}/`).catch(() => null);
+  const home = izinli(`https://${domain}/`) ? await readText(`https://${domain}/`).catch(() => null) : null;
   for (const match of (home ?? "").matchAll(/href=["']([^"']+)["']/gi)) {
-    const url = officialUrl(match[1], `https://${domain}/`); if (url && isGuidelineUrl(url)) discovered.add(url);
+    const url = officialUrl(match[1], `https://${domain}/`);
+    if (url && isGuidelineUrl(url) && izinli(url)) discovered.add(url);
   }
 
   return [...discovered].slice(0, 6).map((url): OfficialGuidelineCandidate => ({
