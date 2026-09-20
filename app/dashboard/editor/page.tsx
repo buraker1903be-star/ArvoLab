@@ -97,7 +97,13 @@ export default async function ProjectsPage({
 
       {projects.length === 0 ? (
         <section className="empty-state">
-          <p>Henüz kayıtlı bir çalışma yok.</p>
+          <span className="empty-state-icon" aria-hidden="true">
+            <FileText size={26} strokeWidth={1.6} />
+          </span>
+          <p>
+            Henüz kayıtlı bir çalışma yok. Üniversitenizi seçerek başlayın; tez yazım kılavuzunuz editöre
+            otomatik uygulanır, kaynakça sistemi ve sayfa düzeni sizin için hazırlanır.
+          </p>
           <Link href="/dashboard/editor/new" className="projects-primary-button">
             <Plus size={18} aria-hidden="true" />
             İlk çalışmayı oluştur
@@ -146,7 +152,7 @@ export default async function ProjectsPage({
                   })
                 : null;
             return (
-              <article className="project-card" key={project.id}>
+              <article className="project-card" data-tone={statusTone(project.status)} key={project.id}>
                 <div className="project-card-main">
                   <div>
                     <span className="status-pill" data-tone={statusTone(project.status)}>
@@ -161,7 +167,7 @@ export default async function ProjectsPage({
                   <div className="project-progress" aria-label={`İlerleme yüzde ${project.progress}`}>
                     <strong>%{project.progress}</strong>
                     <div className="project-progress-track">
-                      <span style={{ width: `${project.progress}%` }} />
+                      <span style={{ "--w": `${project.progress}%` } as React.CSSProperties} />
                     </div>
                   </div>
                 </div>
