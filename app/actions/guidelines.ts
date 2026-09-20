@@ -46,6 +46,8 @@ export interface GuidelineCikarimi {
   detectedAt?: string;
   /** Onaylı kılavuzun kaynağında yeni sürüm algılandı. */
   pendingReview?: boolean;
+  /** Kayıt, çıkarım kuralları düzelmeden önceki bir sürümle onaylandı. */
+  scannerOutdated?: boolean;
 }
 
 export interface GuidelineMatch {
@@ -438,6 +440,57 @@ export async function approveGuideline(guidelineId: string) {
   }
 
   // Aynı kurumdaki tezler en özel onaylı kılavuza yeniden bağlanır (veritabanı eşleştirir).
+  const { error: resyncError } = await supabase.rpc("resync_project_guidelines", { p_guideline_id: guidelineId });
+  if (resyncError) console.error(resyncError);
+
+  revalidatePath("/dashboard/guidelines");
+  revalidatePath("/dashboard/editor");
+  return { success: true };
+}
+
+/**
+ * Kılavuzun onayını geri alır; kurallar müşteri tarafında uygulanmaz olur.
+ *
+ * Neden gerekli: onaylı bir kılavuzun kuralları hiçbir zaman otomatik
+ * değişmiyor (doğru bir değişmez — müşterinin editörü ayağının altından
+ * kaymasın). Ama çıkarımın YANLIŞ olduğu sonradan anlaşılırsa geri dönüş
+ * yolu yoktu. Canlıda tam olarak bu oldu: atıf sistemi algılamasındaki
+ * hata yüzünden Gazi kılavuzu "Chicago" olarak onaylanmıştı; belgede APA
+ * 5, Chicago 1 kez geçiyor.
+ *
+ * Yeniden tarama da onaylı kayda dokunmuyor ve "önce onayı kaldırın"
+ * diyordu — kaldırmanın bir yolu olmadığı için çıkmaz sokaktı.
+ *
+ * approved_snapshot silinir: uygulanan sürüm odur (lib/guideline-rules.ts).
+ * Çalışmalar yeniden eşleştirilir, varsa daha üst kurumun onaylı kılavuzuna
+ * düşerler.
+ */
+export async function kilavuzOnayiniGeriAl(guidelineId: string): Promise<ActionResult> {
+  const auth = await requireRole(MANAGER_ROLES, "Kılavuz onayını yalnızca Akademik Yönetici ve üzeri roller geri alabilir.");
+  if ("error" in auth) return auth;
+  const { supabase } = auth;
+
+  const { data: geriAlinan, error } = await supabase
+    .from("thesis_guidelines")
+    .update({
+      analysis_status: "needs_review",
+      approved_snapshot: null,
+      reviewed_by: null,
+      reviewed_at: null,
+      review_notes: "Onay geri alındı; kurallar yeniden inceleniyor.",
+    })
+    .eq("id", guidelineId)
+    .eq("analysis_status", "approved")
+    // Satır dönmezse RLS engellemiş ya da kayıt zaten onaysız demektir.
+    .select("id");
+
+  if (error) {
+    console.error(error);
+    return { error: "Onay geri alınamadı." };
+  }
+  if (!geriAlinan?.length) return { error: "Kılavuz zaten onaysız ya da bulunamadı." };
+
+  // Bu kılavuza bağlı çalışmalar yeniden eşleştirilir.
   const { error: resyncError } = await supabase.rpc("resync_project_guidelines", { p_guideline_id: guidelineId });
   if (resyncError) console.error(resyncError);
 

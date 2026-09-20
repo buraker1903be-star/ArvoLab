@@ -134,17 +134,29 @@ export async function GET(request: Request) {
       let update: Record<string, unknown>;
       let status: string;
       if (isApproved) {
-        // Onaylı kurallar hiçbir zaman otomatik değişmez; müşterilerin editörü bozulmaz.
+        /*
+          Onaylı kurallar hiçbir zaman otomatik değişmez; müşterilerin
+          editörü bozulmaz. Ama çıkarım kuralları düzeldiyse bu kayıt ESKİ
+          ve muhtemelen yanlış bir çıkarımla onaylanmış demektir; sessizce
+          bırakmak, bilinen bir hatayı saklamak olurdu. Değiştirmeden
+          İŞARETLENİR, kararı yönetici verir.
+
+          Canlıda gerçekleşti: atıf sistemi algılamasındaki hata yüzünden
+          Gazi kılavuzu "Chicago" olarak onaylanmıştı (belgede APA 5,
+          Chicago 1 kez geçiyor).
+        */
         update = {
           ...checksumPatch,
           source_content_type: scan.sourceContentType,
           last_checked_at: detectedAt,
-          ai_analysis: analysis,
+          ai_analysis: { ...analysis, scannerOutdated: surumEskimis },
           ...(changed
             ? { review_notes: "Resmî kaynakta yeni sürüm algılandı; onaylı kurallar korunuyor, yönetici incelemesi bekliyor." }
-            : {}),
+            : surumEskimis
+              ? { review_notes: `Bu kılavuz eski bir çıkarım sürümüyle onaylandı (v${eskiSurum || 1} → v${TARAYICI_SURUMU}). Onaylı kurallar korunuyor; onayı geri alıp yeniden tarayın.` }
+              : {}),
         };
-        status = changed ? "new_version_pending" : "unchanged";
+        status = changed ? "new_version_pending" : surumEskimis ? "approved_with_old_scanner" : "unchanged";
       } else if (changed || !hasRules || surumEskimis) {
         // Onay bekleyen kayıt: yalnızca dosya değiştiyse ya da henüz kural yoksa öneriler yazılır.
         update = {

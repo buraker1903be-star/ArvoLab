@@ -1,9 +1,10 @@
-import { BookMarked, ExternalLink, FilePenLine, Plus, RefreshCw, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { BookMarked, ExternalLink, FilePenLine, Plus, RefreshCw, RotateCcw, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import {
   getGuidelines,
   createGuideline,
   deleteGuideline,
   approveGuideline,
+  kilavuzOnayiniGeriAl,
   updateGuidelineRules,
   updateGuidelineDetails,
 } from "@/app/actions/guidelines";
@@ -61,6 +62,7 @@ export default async function GuidelinesPage() {
   const bekleyenler = guidelines.filter((g) => g.analysis_status !== "approved");
   const hazirSayisi = bekleyenler.filter((g) => g.ready_for_approval).length;
   const yeniSurumlu = guidelines.filter((g) => g.ai_analysis?.pendingReview).length;
+  const eskiCikarimli = guidelines.filter((g) => g.ai_analysis?.scannerOutdated).length;
   const siraliKilavuzlar = canManage
     ? [...guidelines].sort((a, b) => {
         const oncelik = (g: (typeof guidelines)[number]) =>
@@ -82,6 +84,11 @@ export default async function GuidelinesPage() {
   async function handleRescan(guidelineId: string) {
     "use server";
     return kilavuzuYenidenTara(guidelineId);
+  }
+
+  async function handleRevoke(guidelineId: string) {
+    "use server";
+    return kilavuzOnayiniGeriAl(guidelineId);
   }
 
   async function handleApprove(guidelineId: string) {
@@ -198,6 +205,16 @@ export default async function GuidelinesPage() {
         approved_snapshot boş kalır ve kural hiçbir çalışmada uygulanmaz —
         bekleyen kayıt, sessizce çalışmayan bir özellik demektir.
       */}
+      {canManage && eskiCikarimli > 0 ? (
+        <section className="alert" data-tone="danger" role="alert">
+          <strong>{eskiCikarimli} onaylı kılavuz eski bir çıkarım sürümüyle onaylandı.</strong>
+          <p>
+            Kuralları korunuyor ama yanlış olabilir. Onayı geri alıp &ldquo;Şimdi yeniden tara&rdquo; ile
+            güncelleyin, sonra yeniden onaylayın.
+          </p>
+        </section>
+      ) : null}
+
       {canManage && bekleyenler.length > 0 ? (
         <section className="onay-kuyrugu" role="status">
           <div>
@@ -295,6 +312,10 @@ export default async function GuidelinesPage() {
                       {g.ai_analysis?.pendingReview ? (
                         <span className="status-pill" data-tone="warning">Kaynakta yeni sürüm</span>
                       ) : null}
+                      {/* Bilinen bir çıkarım hatasıyla onaylanmış olabilir. */}
+                      {g.ai_analysis?.scannerOutdated ? (
+                        <span className="status-pill" data-tone="danger">Eski çıkarımla onaylandı</span>
+                      ) : null}
                     </div>
                     <h2>{guidelineName}</h2>
                     <p>
@@ -328,6 +349,21 @@ export default async function GuidelinesPage() {
                     {g.analysis_status !== "approved" ? (
                       <ActionForm action={handleApprove.bind(null, g.id)} successMessage="Kılavuz onaylandı ve uygulandı.">
                         <button type="submit" className="projects-primary-button">Onayla ve uygula</button>
+                      </ActionForm>
+                    ) : null}
+
+                    {/* Çıkarımın yanlış olduğu sonradan anlaşılabiliyor; onaylı
+                        kayda dokunulmadığı için geri dönüş yolu gerekiyor. */}
+                    {g.analysis_status === "approved" ? (
+                      <ActionForm
+                        action={handleRevoke.bind(null, g.id)}
+                        confirmMessage={`"${guidelineName}" kılavuzunun onayını geri almak istediğinize emin misiniz?\n\nKurallar bu kurumdaki çalışmalarda UYGULANMAYI DURDURUR: zorunlu bölümler, sayfa sınırı, atıf sistemi ve editör sayfa ayarları öğrencilerin ekranından kalkar. Yeniden onaylayana kadar böyle kalır.`}
+                        successMessage="Onay geri alındı; kılavuz yeniden incelemeye düştü."
+                      >
+                        <button type="submit" className="projects-filter-button">
+                          <RotateCcw size={14} aria-hidden="true" />
+                          Onayı geri al
+                        </button>
                       </ActionForm>
                     ) : null}
 
