@@ -142,7 +142,6 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 /* ---------- Kartlar ve listeler ---------- */
 .project-form-card,
 .project-card,
-.dashboard-module-card,
 .dashboard-stat-card {
   border: 1px solid var(--line-soft);
   background: var(--surface);
@@ -169,11 +168,38 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .project-filter-search input:focus { outline: none; }
 .project-filter-search:focus-within { border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-soft); }
 .project-filter-count { margin-left: auto; }
+/* Durum, kartın sol kenarında da okunur: renkli şerit listeyi taranabilir
+   yapıyor. Renk tek başına ayırt edici sayılmaz — durum etiketi (status-pill)
+   kartın içinde metin olarak zaten duruyor. */
 .project-card {
-  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px 18px 24px;
   border-radius: var(--r-lg);
   transition: transform .45s var(--ease-spring), box-shadow .3s ease, border-color .2s ease;
 }
+.project-card::before {
+  content: "";
+  position: absolute; top: 0; bottom: 0; left: 0;
+  width: 4px;
+  background: var(--tone, var(--line));
+}
+.project-card[data-tone="success"] { --tone: var(--success); }
+.project-card[data-tone="info"] { --tone: var(--info); }
+.project-card[data-tone="warning"] { --tone: var(--warning); }
+.project-card[data-tone="danger"] { --tone: var(--danger); }
+.project-card[data-tone="accent"] { --tone: var(--accent-bright); }
+.project-card[data-tone="neutral"] { --tone: var(--line); }
+
+/* Eylem satırı: asıl iki eylem solda, ikincil olanlar sağda ve kompakt.
+   Eskiden beş düğme aynı ağırlıkta yan yanaydı. */
+.project-card-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px 16px;
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.project-card-ikincil { margin-left: auto; }
 @media (hover: hover) and (pointer: fine) {
   .project-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--line); }
 }
@@ -203,8 +229,10 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .project-card-meta a { color: var(--accent); font-weight: 700; }
 
 /* Ana sayfa: kaldığınız yer + yaklaşan teslimler */
-.dashboard-focus { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; }
+.dashboard-focus { display: grid; align-items: start; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; }
 @media (max-width: 900px) { .dashboard-focus { grid-template-columns: minmax(0, 1fr); } }
+/* Sağ sütun: kısa, taranabilir kartlar alt alta. */
+.dashboard-yan { display: grid; align-content: start; gap: 12px; }
 .resume-card,
 .upcoming-card {
   display: grid;
@@ -697,8 +725,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
    .dashboard-stats başka sayfalarda da kullanıldığından yalnızca ana sayfadaki
    komşuluklarda boşluk alır. */
 .dashboard-focus,
-.license-card,
+.license-card { margin-top: 22px; }
+/* Dikkat isteyenler artık sağ sütunun içinde; boşluğu ızgaranın gap'i verir.
+   Sayfa gövdesinde tek başına durduğu yerlerde üst boşluğunu korur. */
 .attention-card { margin-top: 22px; }
+.dashboard-yan > .attention-card { margin-top: 0; }
 .dashboard-focus + .dashboard-stats,
 .license-card + .dashboard-stats,
 .attention-card + .dashboard-stats { margin-top: 22px; }
@@ -725,8 +756,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 @media (hover: hover) and (pointer: fine) {
   .dashboard-stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 }
-.dashboard-stat-icon,
-.dashboard-module-icon {
+.dashboard-stat-icon {
   display: grid;
   place-items: center;
   flex: none;
@@ -745,31 +775,23 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 }
 .dashboard-stat-card span { margin-top: 3px; color: var(--muted); font-size: var(--fs-sm); }
 
-.dashboard-grid { margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
-.dashboard-module-card {
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-  border-radius: var(--r-lg);
-  transition: transform .45s var(--ease-spring), box-shadow .3s ease, border-color .2s ease;
+/* Kısayol şeridi: kenar çubuğundaki menünün kompakt tekrarı. Eskiden
+   açıklamalı büyük kartlardı ve ana sayfanın en çok yer kaplayan
+   bölümüydü — her gün görülen bir menüyü ikinci kez anlatmaya gerek yok. */
+.dashboard-kisayollar { margin-top: 22px; }
+.dashboard-kisayol-liste { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.dashboard-kisayol {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-pill);
+  background: var(--surface); color: var(--ink-soft);
+  font-size: var(--fs-base); font-weight: 600; text-decoration: none;
+  transition: border-color .2s ease, color .2s ease, background .2s ease;
 }
+.dashboard-kisayol svg { color: var(--accent); }
 @media (hover: hover) and (pointer: fine) {
-  .dashboard-module-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--line); }
+  .dashboard-kisayol:hover { border-color: var(--accent-500); background: var(--surface-2); color: var(--ink); }
 }
-.dashboard-module-card:active { transform: scale(.985); transition-duration: .08s; }
-.dashboard-module-icon { width: 44px; height: 44px; border-radius: 13px; }
-.dashboard-module-card h2 { margin: 16px 0 6px; font-size: var(--fs-lg); font-weight: 650; letter-spacing: -.015em; }
-.dashboard-module-card p { flex: 1; margin: 0; color: var(--muted); font-size: var(--fs-base); line-height: 1.55; }
-.dashboard-module-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 16px;
-  color: var(--accent);
-  font-size: var(--fs-base);
-  font-weight: 700;
-}
-
 /* ---------- Ayarlar: gruplu bilgi hücreleri ---------- */
 .settings-facts {
   display: grid;
@@ -1156,3 +1178,93 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   .calisma-serit-birimler { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
   .calisma-serit-birim { white-space: nowrap; }
 }
+
+/* ---- Literatür: kompakt kaynak satırı ----
+   Kaynak taranmak içindir, okunmak için değil. Eskiden her kaynak tam boy
+   bir .project-card idi; 40 kaynaklı bir çalışmada sayfa metrelerce
+   uzuyor, kullanıcı aradığı künyeyi bulamıyordu. */
+.kaynak-listesi {
+  display: grid;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.kaynak-satiri {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px 16px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line-soft);
+}
+.kaynak-satiri:first-child { border-top: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .kaynak-satiri:hover { background: var(--surface-2); }
+}
+.kaynak-govde { min-width: 0; flex: 1 1 340px; }
+.kaynak-baslik { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.kaynak-baslik h3 {
+  margin: 0; color: var(--ink); font-size: var(--fs-body); font-weight: 600;
+  line-height: 1.35; overflow-wrap: anywhere;
+}
+.kaynak-kunye { margin: 3px 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.5; }
+.kaynak-kunye a { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
+/* Not uzun olabilir; satırı şişirmemesi için iki satırda kesilir. */
+.kaynak-not {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 4px 0 0; color: var(--ink-soft); font-size: var(--fs-sm); line-height: 1.5;
+}
+.kaynak-eylemler { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+@media (max-width: 640px) {
+  .kaynak-satiri { flex-direction: column; }
+  .kaynak-eylemler { width: 100%; }
+}
+
+/* ---- Kaynakça: denetim geçmişi satırı ----
+   Burada okunacak bir metin yok, karşılaştırılacak bir puan var; kart
+   yığını yerine tek çizgide taranabilir satırlar. */
+.denetim-listesi {
+  display: grid;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.denetim-satiri {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px 16px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line-soft);
+}
+.denetim-satiri:first-child { border-top: 0; }
+.denetim-govde { display: grid; gap: 2px; min-width: 0; }
+.denetim-govde strong { color: var(--ink); font-size: var(--fs-body); font-weight: 600; overflow-wrap: anywhere; }
+.denetim-govde span { color: var(--muted); font-size: var(--fs-sm); }
+/* Puan rengi tek başına anlam taşımaz; yanındaki "/100 APA uyumu" metni
+   her zaman görünür. */
+.denetim-skor { display: flex; align-items: baseline; gap: 6px; flex: none; color: var(--tone, var(--ink)); }
+.denetim-skor[data-tone="success"] { --tone: var(--success); }
+.denetim-skor[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.denetim-skor[data-tone="danger"] { --tone: var(--danger); }
+.denetim-skor[data-tone="neutral"] { --tone: var(--muted); }
+.denetim-skor-deger { font-size: var(--fs-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+.denetim-skor-birim { color: var(--muted); font-size: var(--fs-sm); }
+
+/* ---- Katlanır sayfa açıklaması ----
+   Bazı sayfaların giriş paragrafı 500-800 karaktere ulaşıyor ve sayfanın
+   asıl işini (formu, listeyi) ekranın altına itiyordu. Bilgi kaybolmasın
+   diye silinmedi, katlandı. */
+.sayfa-detay { margin-top: 6px; }
+.sayfa-detay > summary {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--accent); font-size: var(--fs-base); font-weight: 600; cursor: pointer;
+  list-style: none;
+}
+.sayfa-detay > summary::-webkit-details-marker { display: none; }
+/* Ok yönü açık/kapalı durumu renk dışında da gösterir. */
+.sayfa-detay > summary::before { content: "▸"; font-size: var(--fs-sm); }
+.sayfa-detay[open] > summary::before { content: "▾"; }
+.sayfa-detay > p { margin: 8px 0 0; color: var(--muted); font-size: var(--fs-base); line-height: 1.55; }

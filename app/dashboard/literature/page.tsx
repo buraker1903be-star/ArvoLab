@@ -204,56 +204,63 @@ export default async function LiteraturePage({
                söyleniyor. */
             <BosDurum kompakt aciklama={BOS_METIN[statusKey]} />
           ) : (
-            <div className="projects-list">
+            /*
+              Kaynaklar KART değil, kompakt satır. Eskiden her kaynak tam
+              boy bir project-card idi: 40 kaynaklı bir çalışmada sayfa
+              metrelerce uzuyor, kullanıcı aradığı künyeyi bulamıyordu.
+              Kaynak taranmak içindir, okunmak için değil.
+            */
+            <div className="kaynak-listesi">
               {grouped[statusKey].map((s) => (
-                <article className="project-card" key={s.id}>
-                  <div className="project-card-main">
-                    <div>
-                      <span className="status-pill">{SOURCE_TYPE_LABELS[s.source_type]}</span>
-                      <h2>{s.title}</h2>
-                      <p>
-                        {s.authors || "Yazar belirtilmedi"}
-                        {s.year ? ` · ${s.year}` : ""}
-                      </p>
+                <article className="kaynak-satiri" key={s.id}>
+                  <div className="kaynak-govde">
+                    <div className="kaynak-baslik">
+                      <span className="chip">{SOURCE_TYPE_LABELS[s.source_type]}</span>
+                      <h3>{s.title}</h3>
                     </div>
+                    <p className="kaynak-kunye">
+                      {s.authors || "Yazar belirtilmedi"}
+                      {s.year ? ` · ${s.year}` : ""}
+                      {s.container_title ? ` · ${s.container_title}` : ""}
+                      {s.doi_or_url ? (
+                        <>
+                          {" · "}
+                          <a href={s.doi_or_url} target="_blank" rel="noreferrer">
+                            <ExternalLink size={13} aria-hidden="true" />
+                            Kaynağa git
+                          </a>
+                        </>
+                      ) : null}
+                    </p>
+                    {s.notes ? <p className="kaynak-not">{s.notes}</p> : null}
                   </div>
 
-                  <div className="project-card-meta">
-                    {s.doi_or_url ? (
-                      <a href={s.doi_or_url} target="_blank" rel="noreferrer">
-                        <ExternalLink size={14} aria-hidden="true" />
-                        Kaynağa git
-                      </a>
-                    ) : null}
-                    {s.notes ? <span>{s.notes}</span> : null}
-                  </div>
-
-                  <div className="cluster cluster-spaced">
+                  <div className="kaynak-eylemler">
                     {statusKey !== "to_review" && (
                       <ActionForm action={handleAdvanceStatus.bind(null, s.id, "to_review")} successMessage="İncelenecek olarak işaretlendi.">
-                        <button type="submit" className="projects-filter-button">
-                          İncelenecek yap
+                        <button type="submit" className="projects-filter-button button-compact">
+                          İncelenecek
                         </button>
                       </ActionForm>
                     )}
                     {statusKey !== "read" && (
                       <ActionForm action={handleAdvanceStatus.bind(null, s.id, "read")} successMessage="Okundu olarak işaretlendi.">
-                        <button type="submit" className="projects-filter-button">
-                          Okundu yap
+                        <button type="submit" className="projects-filter-button button-compact">
+                          Okundu
                         </button>
                       </ActionForm>
                     )}
                     {statusKey !== "used" && (
                       <ActionForm action={handleAdvanceStatus.bind(null, s.id, "used")} successMessage="Kullanıldı olarak işaretlendi.">
-                        <button type="submit" className="projects-primary-button">
-                          Kullanıldı yap
+                        <button type="submit" className="projects-filter-button button-compact">
+                          Kullanıldı
                         </button>
                       </ActionForm>
                     )}
                     <PanelDrawer
                       triggerLabel="Düzenle"
                       triggerIcon={<Pencil size={14} aria-hidden="true" />}
-                      triggerClassName="projects-filter-button"
+                      triggerClassName="projects-filter-button button-compact"
                       kicker="Kaynağı düzenle"
                       title={s.title}
                     >
@@ -320,7 +327,7 @@ export default async function LiteraturePage({
                       confirmMessage={`"${s.title}" kaynağını silmek istediğinize emin misiniz?`}
                       successMessage="Kaynak silindi."
                     >
-                      <button type="submit" className="projects-filter-button" aria-label="Kaynağı sil">
+                      <button type="submit" className="projects-filter-button button-compact" aria-label="Kaynağı sil">
                         <Trash2 size={14} aria-hidden="true" />
                       </button>
                     </ActionForm>

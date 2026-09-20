@@ -29,16 +29,20 @@ export default async function CitationsPage({
           <span className="dashboard-kicker">Kaynakça</span>
           <h1>Kaynakça ve Atıf Doğrulama</h1>
           <p>
-            Kaynakçanızı APA 7 biçimi, metin içi atıf tutarlılığı ve gerçek
-            akademik kayıt eşleşmesi açısından denetleyin. Crossref ve OpenAlex
-            sonuçları DOI bilgisiyle karşılaştırılır; her kaynak için Google
-            Scholar araması da sunulur. Tam bir belgeyi (.docx/.pdf) incelemek
-            için{" "}
-            <a href="/dashboard/documents" className="link-accent">
-              Belge Kontrol
-            </a>{" "}
-            sayfasını kullanın.
+            Kaynakçanızı APA 7 biçimi, metin içi atıf tutarlılığı ve gerçek akademik
+            kayıt eşleşmesi açısından denetleyin.
           </p>
+          <details className="sayfa-detay">
+            <summary>Denetim neye bakar?</summary>
+            <p>
+              Crossref ve OpenAlex sonuçları DOI bilgisiyle karşılaştırılır; her kaynak için
+              Google Scholar araması da sunulur. Tam bir belgeyi (.docx/.pdf) incelemek için{" "}
+              <a href="/dashboard/documents" className="link-accent">
+                Belge Kontrol
+              </a>{" "}
+              sayfasını kullanın.
+            </p>
+          </details>
         </div>
       </section>
 
@@ -56,20 +60,26 @@ export default async function CitationsPage({
             aciklama="Henüz kaynakça denetimi yapmadınız. Her denetimin APA uyum puanı ve tarihi burada birikir; ilerlemenizi karşılaştırabilirsiniz."
           />
         ) : (
-          <div className="projects-list">
-            {history.map((historyItem) => (
-              <article className="project-card" key={historyItem.id}>
-                <div className="project-card-main">
-                  <div>
-                    <h2>{historyItem.project_title || "İsimsiz kontrol"}</h2>
-                    <p>{trTarihSaat(historyItem.created_at)}</p>
+          /* Geçmiş, kart yığını değil kompakt satır: burada okunacak bir
+             şey yok, karşılaştırılacak bir puan var. */
+          <div className="denetim-listesi">
+            {history.map((historyItem) => {
+              const skor = historyItem.compliance_score;
+              // Eşikler kullanıcıya renkle DEĞİL, metinle de söylenir.
+              const ton = skor === null ? "neutral" : skor >= 85 ? "success" : skor >= 60 ? "warning" : "danger";
+              return (
+                <article className="denetim-satiri" key={historyItem.id}>
+                  <div className="denetim-govde">
+                    <strong>{historyItem.project_title || "İsimsiz kontrol"}</strong>
+                    <span>{trTarihSaat(historyItem.created_at)}</span>
                   </div>
-                  <div className="project-progress">
-                    <strong>{historyItem.compliance_score ?? "-"}/100</strong>
+                  <div className="denetim-skor" data-tone={ton}>
+                    <span className="denetim-skor-deger">{skor ?? "—"}</span>
+                    <span className="denetim-skor-birim">/100 APA uyumu</span>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

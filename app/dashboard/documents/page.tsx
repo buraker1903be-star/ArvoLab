@@ -71,20 +71,26 @@ export default async function DocumentsPage({
           <span className="dashboard-kicker">Belge kontrol</span>
           <h1>Belge Kontrol</h1>
           <p>
-            Tam bir tez/makale dosyası (.docx/.pdf) yükleyin; sistem içerik
-            üretmez, yalnızca metni okuyup kaynakça formatını, kılavuz
-            uygunluğunu ve ArvoLab belge havuzuyla örtüşmeyi (orijinallik
-            ön-kontrolü) denetler. Ayrıca isteğe bağlı olarak, belgenizin
-            yapısı ve akıcılığı hakkında yapay zeka destekli (ChatGPT) bir
-            geri bildirim alabilirsiniz — bu geri bildirim yalnızca
-            öğreticidir, tezinize/makalenize doğrudan kopyalanacak bir metin
-            içermez. Yalnızca kaynakça listenizi kontrol etmek
-            isterseniz{" "}
-            <a href="/dashboard/citations" className="link-accent">
-              Kaynakça Doğrulama
-            </a>{" "}
-            sayfasını kullanın.
+            Tam bir tez/makale dosyası (.docx/.pdf) yükleyin; sistem metni okuyup
+            kaynakça formatını, kılavuz uygunluğunu ve ArvoLab belge havuzuyla
+            örtüşmeyi denetler.
           </p>
+          {/* Uzun açıklama katlandı: 770 karakterlik bir paragraf, asıl işi
+              (yükleme formunu) ekranın altına itiyordu. Bilgi kaybolmuyor,
+              isteyen açıyor. */}
+          <details className="sayfa-detay">
+            <summary>Bu sayfa ne yapar, ne yapmaz?</summary>
+            <p>
+              Sistem içerik <strong>üretmez</strong>. İsteğe bağlı olarak belgenizin yapısı ve
+              akıcılığı hakkında yapay zeka destekli bir geri bildirim alabilirsiniz; bu geri
+              bildirim yalnızca öğreticidir, tezinize doğrudan kopyalanacak bir metin içermez.
+              Yalnızca kaynakça listenizi kontrol etmek isterseniz{" "}
+              <a href="/dashboard/citations" className="link-accent">
+                Kaynakça Doğrulama
+              </a>{" "}
+              sayfasını kullanın.
+            </p>
+          </details>
         </div>
       </section>
 

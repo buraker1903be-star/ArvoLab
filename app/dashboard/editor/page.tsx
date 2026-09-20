@@ -310,30 +310,41 @@ export default async function ProjectsPage({
                   </ActionForm>
                 ) : null}
 
-                <div className="cluster cluster-lg cluster-spaced">
-                  {/* Çalışma merkezi: bu çalışmanın literatürü, kaynakçası ve
-                      belgeleri tek sayfada (app/dashboard/editor/[id]). */}
-                  <Link href={`/dashboard/editor/${project.id}`} className="projects-primary-button">
-                    <LayoutDashboard size={15} aria-hidden="true" />
-                    Çalışma Merkezi
-                  </Link>
-                  <Link href={`/dashboard/editor/${project.id}/write`} className="projects-filter-button">
-                    <PenLine size={15} aria-hidden="true" />
-                    Panelde Yaz
-                  </Link>
-                  {canEdit ? (
-                    <Link href={`/dashboard/editor/${project.id}/edit`} className="projects-filter-button">
-                      <Pencil size={15} aria-hidden="true" />
-                      Düzenle
+                {/*
+                  Eylemler ikiye ayrıldı. Eskiden beş düğme aynı ağırlıkta yan
+                  yana duruyordu; her kart bir düğme duvarıydı ve asıl iki
+                  eylem (merkez, yazım) arada kayboluyordu. İkincil olanlar
+                  kompakt ve sağa yaslı.
+                */}
+                <div className="project-card-actions">
+                  <div className="cluster cluster-lg">
+                    {/* Çalışma merkezi: bu çalışmanın literatürü, kaynakçası ve
+                        belgeleri tek sayfada (app/dashboard/editor/[id]). */}
+                    <Link href={`/dashboard/editor/${project.id}`} className="projects-primary-button">
+                      <LayoutDashboard size={15} aria-hidden="true" />
+                      Çalışma Merkezi
                     </Link>
-                  ) : null}
-                  <Link href="/dashboard/documents" className="projects-filter-button">
-                    <Upload size={15} aria-hidden="true" />
-                    Hazır Belge Yükle
-                  </Link>
-                  {(profile?.id === project.owner_id || canDeleteAnyProject) && (
-                    <DeleteProjectButton projectId={project.id} projectTitle={project.title} />
-                  )}
+                    <Link href={`/dashboard/editor/${project.id}/write`} className="projects-filter-button">
+                      <PenLine size={15} aria-hidden="true" />
+                      Panelde Yaz
+                    </Link>
+                  </div>
+                  <div className="cluster project-card-ikincil">
+                    {canEdit ? (
+                      <Link href={`/dashboard/editor/${project.id}/edit`} className="projects-filter-button button-compact">
+                        <Pencil size={14} aria-hidden="true" />
+                        Düzenle
+                      </Link>
+                    ) : null}
+                    {/* Bağlam taşınır: belge sayfası çalışmayı hazır seçer. */}
+                    <Link href={`/dashboard/documents?calisma=${project.id}`} className="projects-filter-button button-compact">
+                      <Upload size={14} aria-hidden="true" />
+                      Belge yükle
+                    </Link>
+                    {(profile?.id === project.owner_id || canDeleteAnyProject) && (
+                      <DeleteProjectButton projectId={project.id} projectTitle={project.title} />
+                    )}
+                  </div>
                 </div>
               </article>
             );

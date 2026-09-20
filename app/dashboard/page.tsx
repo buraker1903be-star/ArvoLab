@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowRight,
   BookOpenCheck,
   CalendarClock,
   ChartNoAxesCombined,
@@ -219,6 +218,21 @@ export default async function DashboardPage() {
 
       <LicenseCard access={access} />
 
+      <section className="dashboard-stats" aria-label="Günlük özet">
+        {stats.map(({ label, value, icon: Icon, tone, note }) => (
+          <article className="dashboard-stat-card" data-tone={tone} key={label}>
+            <div className="dashboard-stat-icon" aria-hidden="true">
+              <Icon size={20} strokeWidth={1.8} />
+            </div>
+            <div>
+              <strong>{value}</strong>
+              <span>{label}</span>
+              <em>{note}</em>
+            </div>
+          </article>
+        ))}
+      </section>
+
       <section className="dashboard-focus" aria-label="Bugün">
         {resume ? (
           <article className="resume-card">
@@ -349,6 +363,10 @@ export default async function DashboardPage() {
           </article>
         )}
 
+        {/* Sağ sütun: kısa ve tarama amaçlı kartlar. Dikkat isteyenler
+            eskiden tam genişlikte ayrı bir banttı; sağ sütun boş kalıyor,
+            sayfa gereksiz uzuyordu. */}
+        <div className="dashboard-yan">
         <article className="upcoming-card">
           <span className="dashboard-kicker">Yaklaşan teslimler</span>
           {upcoming.length === 0 ? (
@@ -368,18 +386,17 @@ export default async function DashboardPage() {
             </ul>
           )}
         </article>
-      </section>
 
-      {attention ? (
-        <section className="attention-card" aria-label="Dikkat isteyenler">
+        {attention ? (
+          <section className="attention-card" aria-label="Dikkat isteyenler">
           <span className="dashboard-kicker">Dikkat isteyenler</span>
-          {attention.length === 0 ? (
+            {attention.length === 0 ? (
             <p className="tone-text text-sm" data-tone="success">
               ✓ Gecikmiş, sorumlusuz, onay ya da yanıt bekleyen çalışma yok.
             </p>
           ) : (
             <ul className="attention-list">
-              {attention.map((item) => (
+                {attention.map((item) => (
                 <li key={item.id}>
                   <Link href={item.href} className="attention-item" data-tone={item.tone}>
                     <strong>{item.count}</strong>
@@ -390,37 +407,26 @@ export default async function DashboardPage() {
             </ul>
           )}
         </section>
-      ) : null}
-
-      <section className="dashboard-stats" aria-label="Günlük özet">
-        {stats.map(({ label, value, icon: Icon, tone, note }) => (
-          <article className="dashboard-stat-card" data-tone={tone} key={label}>
-            <div className="dashboard-stat-icon" aria-hidden="true">
-              <Icon size={20} strokeWidth={1.8} />
-            </div>
-            <div>
-              <strong>{value}</strong>
-              <span>{label}</span>
-              <em>{note}</em>
-            </div>
-          </article>
-        ))}
+        ) : null}
+        </div>
       </section>
 
-      <section className="dashboard-grid" aria-label="ArvoLab modülleri">
-        {workstreams.map(({ title, description, icon: Icon, href }) => (
-          <Link className="dashboard-module-card" href={href} key={title}>
-            <div className="dashboard-module-icon" aria-hidden="true">
-              <Icon size={22} strokeWidth={1.8} />
-            </div>
-            <h2>{title}</h2>
-            <p>{description}</p>
-            <span className="dashboard-module-link">
-              Modülü aç
-              <ArrowRight size={15} aria-hidden="true" />
-            </span>
-          </Link>
-        ))}
+      {/*
+        Modüller kenar çubuğunun aynısını tekrarlıyor. Eskiden açıklamalı
+        büyük kartlardı ve ana sayfanın en çok yer kaplayan bölümüydü;
+        kullanıcının her gün gördüğü bir menüyü ikinci kez anlatmaya gerek
+        yok. Kompakt kısayol şeridine indirildi.
+      */}
+      <section className="dashboard-kisayollar" aria-label="Modüller">
+        <span className="dashboard-kicker">Hızlı erişim</span>
+        <div className="dashboard-kisayol-liste">
+          {workstreams.map(({ title, icon: Icon, href }) => (
+            <Link className="dashboard-kisayol" href={href} key={title}>
+              <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+              {title}
+            </Link>
+          ))}
+        </div>
       </section>
     </main>
   );
