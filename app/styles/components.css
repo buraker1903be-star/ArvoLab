@@ -1030,3 +1030,54 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 @media (max-width: 640px) {
   .asistan-bulgu { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* ------------------------------------------------------------------
+   Çalışma merkezi: bir çalışmanın bütün birimleri tek sayfada.
+   ------------------------------------------------------------------ */
+.merkez-ust-eylemler { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.merkez-ozet { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 18px; }
+.merkez-kutu {
+  display: grid; gap: 4px; padding: 14px 16px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-raised);
+}
+.merkez-kutu small { color: var(--muted); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; }
+.merkez-kutu strong { color: var(--ink); font-size: var(--fs-xl); font-variant-numeric: tabular-nums; }
+.merkez-kutu span { color: var(--ink-soft); font-size: var(--fs-sm); }
+
+.merkez-adimlar { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: adim; }
+.merkez-adim {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center;
+  padding: 14px 16px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-raised);
+}
+.merkez-adim-simge {
+  display: grid; place-items: center; width: 34px; height: 34px;
+  border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-soft);
+}
+.merkez-adim[data-tamam="true"] .merkez-adim-simge { background: var(--success-soft); color: var(--success); }
+.merkez-adim[data-tamam="true"] { border-color: color-mix(in srgb, var(--success) 30%, var(--line-soft)); }
+.merkez-adim-metin { color: var(--ink-soft); font-size: var(--fs-body); line-height: 1.5; }
+.merkez-adim-metin b { display: block; color: var(--ink); }
+.merkez-adim-baglanti {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  color: var(--accent-600); font-size: var(--fs-body); text-decoration: none;
+}
+
+.merkez-baglantilar { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.merkez-baglanti {
+  display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-raised);
+  color: var(--ink-soft); font-size: var(--fs-sm); text-decoration: none;
+}
+.merkez-baglanti svg { color: var(--accent-600); flex: none; }
+.merkez-baglanti b { display: block; margin-bottom: 2px; color: var(--ink); font-size: var(--fs-body); font-weight: 500; }
+
+@media (hover: hover) and (pointer: fine) {
+  .merkez-adim-baglanti:hover { text-decoration: underline; }
+  .merkez-baglanti:hover { border-color: var(--accent-500); }
+}
+
+@media (max-width: 640px) {
+  .merkez-adim { grid-template-columns: auto 1fr; }
+  .merkez-adim-baglanti { grid-column: 2; justify-self: start; }
+}

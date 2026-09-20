@@ -1,17 +1,5 @@
 import Link from "next/link";
-import {
-  CalendarDays,
-  CheckCircle2,
-  FileText,
-  MessageSquare,
-  PenLine,
-  Pencil,
-  Plus,
-  RotateCcw,
-  ShieldCheck,
-  Upload,
-  UserRound,
-} from "lucide-react";
+import { CalendarDays, CheckCircle2, FileText, LayoutDashboard, MessageSquare, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
 import { loadAppliedGuidelines } from "@/lib/guideline-rules";
@@ -263,7 +251,13 @@ export default async function ProjectsPage({
                 ) : null}
 
                 <div className="cluster cluster-lg cluster-spaced">
-                  <Link href={`/dashboard/editor/${project.id}/write`} className="projects-primary-button">
+                  {/* Çalışma merkezi: bu çalışmanın literatürü, kaynakçası ve
+                      belgeleri tek sayfada (app/dashboard/editor/[id]). */}
+                  <Link href={`/dashboard/editor/${project.id}`} className="projects-primary-button">
+                    <LayoutDashboard size={15} aria-hidden="true" />
+                    Çalışma Merkezi
+                  </Link>
+                  <Link href={`/dashboard/editor/${project.id}/write`} className="projects-filter-button">
                     <PenLine size={15} aria-hidden="true" />
                     Panelde Yaz
                   </Link>
