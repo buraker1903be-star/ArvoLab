@@ -30,6 +30,18 @@ describe("literatür istemi", () => {
     // istemde hem kodda (kunyeIzi) duruyor.
     assert.match(sistem, /KAYNAK ÖNERME/);
     assert.match(sistem, /DOI uydurma/);
+    /*
+      Arama dizesinin biçimi açıkça şart koşulur. Önce yalnızca "Boole
+      operatörleriyle birleştir" deniyordu; güçlü model boşluğu kendi
+      dolduruyor, küçük model doldurmuyordu — altı dizenin üçü tırnaksız,
+      operatörsüz anahtar kelime listesi geliyordu (canlıda 20.09.2026,
+      claude-haiku). Veri tabanı öyle bir diziyi tam ifade araması olarak
+      okumaz.
+    */
+    assert.match(sistem, /TIRNAK içinde/);
+    assert.match(sistem, /En az bir Boole operatörü/);
+    assert.match(sistem, /kök operatörü/);
+    assert.match(sistem, /gri literatüre ayır/);
     assert.ok(kaynak.includes("Harmanlanmış öğrenmenin matematik"));
   });
 
