@@ -110,6 +110,9 @@ export type IstekBayraklari = { json: boolean; sicaklik: boolean };
   - Açık ağırlıklı model sunucularının bir kısmı response_format'ı bilmiyor.
   - claude-sonnet-5 "temperature is deprecated for this model" diyor (canlıda
     20.09.2026'da HTTP 400; asistan hiçbir yetenekte çalışmadı).
+  - Aynı model prefill de kabul etmiyor: "conversation must end with a user
+    message". Prefill JSON'u garantilemek içindi; olmayınca istemdeki biçim
+    talimatı ve toleranslı çözümleyici yetiyor.
   İkisi de isteğin vazgeçilebilir parçası: biçimi istemde zaten anlatıyoruz
   ve çözümleyici toleranslı. Bu yüzden hatayı kullanıcıya göstermeden önce
   suçlu parametreyi düşürüp bir kez daha deniyoruz.
@@ -125,12 +128,22 @@ export function parametreDusur(
   if (durum !== 400) return null;
   if (bayraklar.sicaklik && /temperature/i.test(govde) && /deprecat|unsupport|not supported|invalid|unrecognized/i.test(govde))
     return { ...bayraklar, sicaklik: false };
-  // Anthropic'te JSON response_format ile değil prefill ile isteniyor;
-  // orada düşürülecek bir şey yok.
+  // Anthropic'te JSON prefill ile isteniyor; desteklenmiyorsa prefill düşer.
+  if (bayraklar.json && bicimi === "anthropic" && /prefill|end with a user message/i.test(govde))
+    return { ...bayraklar, json: false };
   if (bayraklar.json && bicimi === "openai" && /response_format|json_object|not supported|unrecognized/i.test(govde))
     return { ...bayraklar, json: false };
   return null;
 }
+
+/*
+  Öğrenilen ayarlar sunucu+model başına hatırlanır. Aksi halde her istek aynı
+  reddi baştan yaşar: üç tur ağ gidiş dönüşü ve kullanıcı beklerken boşa
+  geçen saniyeler. Bellek içi ve süreç ömrüyle sınırlı; yanlış öğrenilse bile
+  en fazla bir istek kaybedilir.
+*/
+const ogrenilen = new Map<string, IstekBayraklari>();
+const ogrenmeAnahtari = (model: string) => `${tabanUrl()}|${model}`;
 
 type Istek = { model: string; mesajlar: Mesaj[]; secenek: SorSecenek } & IstekBayraklari;
 
@@ -206,7 +219,15 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
 
   const model = secenek.model ?? process.env.AI_MODEL ?? process.env.OPENAI_MODEL ?? VARSAYILAN_MODEL;
   const bicimi = bicim();
-  let istek: Istek = { model, mesajlar, secenek, json: Boolean(secenek.jsonBekle), sicaklik: true };
+  const bilinen = ogrenilen.get(ogrenmeAnahtari(model));
+  let istek: Istek = {
+    model,
+    mesajlar,
+    secenek,
+    // Çağıran JSON istemiyorsa önbellek onu açamaz.
+    json: Boolean(secenek.jsonBekle) && (bilinen?.json ?? true),
+    sicaklik: bilinen?.sicaklik ?? true,
+  };
 
   async function calis(denenen: Istek) {
     let cevap: Response;
@@ -225,7 +246,9 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
   for (let deneme = 0; deneme < 2 && !yanit.ok; deneme += 1) {
     const sonraki = parametreDusur(yanit.status, govde, istek, bicimi);
     if (!sonraki) break;
-    console.warn("[ai] sunucu parametreyi reddetti, düşürülüp tekrar deneniyor", { ...aiKurulumu(), sonraki });
+    // Yalnızca bayraklar basılır: istek gövdesi kullanıcının akademik
+    // metnini taşıyor, günlüğe düşmemeli.
+    console.warn("[ai] sunucu parametreyi reddetti, düşürülüp tekrar deneniyor", { ...aiKurulumu(), ...sonraki });
     istek = { ...istek, ...sonraki };
     ({ cevap: yanit, govde } = await calis(istek));
   }
@@ -234,6 +257,12 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
     console.error("[ai] sunucu hatası", { ...aiKurulumu(), durum: yanit.status, govde: govde.slice(0, 500) });
     throw new Error(saglayiciHatasi(yanit.status, govde));
   }
+
+  ogrenilen.set(ogrenmeAnahtari(model), {
+    sicaklik: istek.sicaklik,
+    // Bu istekte JSON istenmediyse desteklenmediğine dair bilgi yok.
+    json: secenek.jsonBekle ? istek.json : (bilinen?.json ?? true),
+  });
 
   const veri = await yanit.json().catch(() => null);
   const metin = yanitMetni(veri, bicimi, istek.json);

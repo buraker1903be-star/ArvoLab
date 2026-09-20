@@ -62,11 +62,18 @@ describe("reddedilen parametreyi düşürme", () => {
     assert.deepEqual(parametreDusur(400, govde, tam, "anthropic"), { json: true, sicaklik: false });
   });
 
-  test("response_format bilinmiyorsa JSON biçimi düşer (yalnızca openai)", () => {
+  test("response_format bilinmiyorsa JSON biçimi düşer (openai)", () => {
     const govde = '{"error":{"message":"response_format is not supported"}}';
     assert.deepEqual(parametreDusur(400, govde, tam, "openai"), { json: false, sicaklik: true });
-    // Anthropic'te JSON prefill ile isteniyor; düşürülecek parametre yok.
-    assert.equal(parametreDusur(400, govde, { json: true, sicaklik: false }, "anthropic"), null);
+  });
+
+  test("prefill desteklenmiyorsa JSON biçimi düşer (anthropic)", () => {
+    // claude-sonnet-5: "conversation must end with a user message".
+    const govde = '{"error":{"message":"This model does not support assistant message prefill. The conversation must end with a user message."}}';
+    assert.deepEqual(parametreDusur(400, govde, { json: true, sicaklik: false }, "anthropic"), {
+      json: false,
+      sicaklik: false,
+    });
   });
 
   test("zaten düşürülmüş parametre ikinci kez düşürülmez", () => {
