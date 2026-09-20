@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-kaynakca";
 import { runCitationCheck } from "@/app/actions/citation-check";
 import type { Tone } from "@/lib/status-tone";
 
@@ -35,9 +36,14 @@ interface AcademicVerification {
   matches: AcademicMatch[];
 }
 
+interface InTextCitation {
+  raw: string;
+}
+
 interface CheckResult {
   complianceScore: number;
   references: CheckResultRef[];
+  citations: InTextCitation[];
   crossCheck: {
     citationsWithoutReference: { raw: string }[];
     referencesWithoutCitation: { raw: string }[];
@@ -58,7 +64,10 @@ const STATUS_META: Record<AcademicVerification["status"], { label: string; tone:
   insufficient_data: { label: "Yetersiz veri", tone: "neutral" },
 };
 
-export default function CitationCheckForm({ projects }: { projects: Project[] }) {
+const BULGU_TONU = { uyari: "danger", oneri: "warning", bilgi: "info" } as const;
+const BULGU_ETIKETI = { uyari: "Sorun", oneri: "Öneri", bilgi: "Not" } as const;
+
+export default function CitationCheckForm({ projects, asistanAcik }: { projects: Project[]; asistanAcik: boolean }) {
   const [projectId, setProjectId] = useState<string>("");
   const [projectTitle, setProjectTitle] = useState("");
   const [referenceList, setReferenceList] = useState("");
@@ -66,6 +75,8 @@ export default function CitationCheckForm({ projects }: { projects: Project[] })
   const [result, setResult] = useState<CheckResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [denetim, setDenetim] = useState<KaynakcaDenetimYaniti | null>(null);
+  const [bekleniyor, basla] = useTransition();
 
   async function handleCheck() {
     setLoading(true);
@@ -288,6 +299,85 @@ export default function CitationCheckForm({ projects }: { projects: Project[] })
                 <li className="result-ok">Yok</li>
               )}
             </ul>
+          </div>
+
+          <div className="ai-denetim">
+            <div className="project-form-heading">
+              <h3>Asistan yorumlasın</h3>
+              <p>
+                Yukarıdaki sonuçlar mekanik: dizinde bulunmayan her kayıt hata
+                değildir — Türkçe tezler ve kurum raporları Crossref&apos;te
+                çoğu zaman yer almaz. Asistan beklenen yoklukla gerçek şüpheyi
+                ayırır, biçim sorunlarını önceliklendirir ve{" "}
+                <strong>atıf–kaynakça uyumunu</strong> denetler: metinde
+                &ldquo;Demir (2020)&rdquo;, kaynakçada &ldquo;Demir, A.
+                (2021)&rdquo; yazıyorsa yukarıda iki ayrı sorun görünür; oysa
+                tek bir yıl uyuşmazlığıdır. Düzeltilmiş künye yazmaz; DOI, yıl
+                ya da cilt numarası üretmesine izin verilmez.
+              </p>
+            </div>
+
+            <div className="project-form-actions mt-sm">
+              <button
+                type="button"
+                className="projects-primary-button"
+                disabled={!asistanAcik || bekleniyor}
+                onClick={() =>
+                  basla(async () => {
+                    setDenetim(null);
+                    setDenetim(
+                      await kaynakcaDenetle({
+                        kaynaklar: result.academicVerification.map((item, index) => ({
+                          sira: index + 1,
+                          ham: item.reference,
+                          durum: item.status,
+                          bicimSorunlari: (result.references[index]?.issues ?? []).map(
+                            (sorun) => `${sorun.field}: ${sorun.message}`,
+                          ),
+                          eslesmeBasligi: item.bestMatch?.title ?? null,
+                        })),
+                        eksikKaynaklar: result.crossCheck.citationsWithoutReference.map((c) => c.raw),
+                        kullanilmayanKaynaklar: result.crossCheck.referencesWithoutCitation.map((r) => r.raw),
+                        atiflar: (result.citations ?? []).map((c) => c.raw),
+                      }),
+                    );
+                  })
+                }
+              >
+                {bekleniyor ? "Denetleniyor…" : "Kaynakçayı Yorumlat"}
+              </button>
+            </div>
+
+            {!asistanAcik && (
+              <p className="muted text-base mt-sm">
+                Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
+              </p>
+            )}
+
+            {denetim?.hata && (
+              <p className="tone-text mt-sm text-base" data-tone="danger" role="alert">{denetim.hata}</p>
+            )}
+
+            {denetim?.kirpilanlar && denetim.kirpilanlar.length > 0 && (
+              <p className="muted text-base mt-sm">
+                Uzunluk sınırı nedeniyle asistana gönderilemeyen bölümler: {denetim.kirpilanlar.join(", ")}.
+              </p>
+            )}
+
+            {denetim?.bulgular && denetim.bulgular.length > 0 && (
+              <ul className="ai-bulgu-listesi mt-sm">
+                {denetim.bulgular.map((bulgu, index) => (
+                  <li className="attention-item" data-tone={BULGU_TONU[bulgu.tur]} key={index}>
+                    <strong>{BULGU_ETIKETI[bulgu.tur]}</strong>
+                    <span>
+                      <b>{bulgu.baslik}</b>
+                      <br />
+                      {bulgu.aciklama}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       )}

@@ -1,9 +1,16 @@
 import { getMyProjects, getMyCitationChecks } from "@/app/actions/citation-check";
 import CitationCheckForm from "./citation-check-form";
 import { trTarihSaat } from "@/lib/tr-time";
+import { kaynakcaAsistaniAcik } from "@/app/actions/ai-kaynakca";
 
 export default async function CitationsPage() {
-  const [projects, history] = await Promise.all([getMyProjects(), getMyCitationChecks()]);
+  // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
+  // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
+  const [projects, history, asistanAcik] = await Promise.all([
+    getMyProjects(),
+    getMyCitationChecks(),
+    kaynakcaAsistaniAcik(),
+  ]);
 
   return (
     <main className="dashboard-page">
@@ -25,7 +32,7 @@ export default async function CitationsPage() {
         </div>
       </section>
 
-      <CitationCheckForm projects={projects} />
+      <CitationCheckForm projects={projects} asistanAcik={asistanAcik} />
 
       {history.length > 0 && (
         <section className="section mt-lg">

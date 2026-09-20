@@ -15,8 +15,20 @@
 
 /** Metindeki sayısal değerler; "χ²(1, N = 120) = 6.14" → 1, 120, 6.14 */
 export function sayilar(metin: string): string[] {
+  /*
+    İki rakamın arasındaki tire eksi işareti değil, aralıktır: "45-72" iki
+    sayıdır (45 ve 72), "-72" değil. Kaynakçada sayfa aralıkları böyle
+    yazılıyor ve APA kısa çizgi yerine kısa tire (–) tercih ediyor; ikisini
+    ayrı okusaydık, asistan aralığı "45–72" diye yazdığında girdideki
+    "45-72" ile eşleşmiyor, doğru cevap uydurma sanılıp atılıyordu.
+  */
+  const duz = metin.replace(/[\u2010-\u2015]/g, "-");
   // ".05" gibi baştaki sıfırı yazılmayan değerler de yakalanır (APA'da yaygın).
-  return (metin.match(/-?(?:\d+(?:[.,]\d+)?|[.,]\d+)/g) ?? []).map(normalize);
+  return [...duz.matchAll(/-?(?:\d+(?:[.,]\d+)?|[.,]\d+)/g)].map((eslesme) => {
+    const ham = eslesme[0];
+    const oncekiRakam = eslesme.index > 0 && /\d/.test(duz[eslesme.index - 1]);
+    return normalize(ham.startsWith("-") && oncekiRakam ? ham.slice(1) : ham);
+  });
 }
 
 /** "0,05" ve ".05" aynı sayıdır; baştaki sıfır ve virgül farkı silinir. */
