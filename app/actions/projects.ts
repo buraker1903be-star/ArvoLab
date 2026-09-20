@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { calismaOzeti } from "@/app/actions/calisma-merkezi";
+import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
@@ -323,6 +325,23 @@ export async function approveProject(projectId: string): Promise<ActionResult> {
 
   revalidatePath("/dashboard/editor");
   revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/editor/${projectId}`);
+
+  /*
+    Onay verildi; şimdi kontrolöre ekosistemin bulduklarını söylüyoruz.
+    Denetimler zaten yapılmış durumda ama çalışma merkezinde duruyor ve onay
+    listeden veriliyor — merkeze girmediyse hiçbirini görmemiş oluyor.
+    Uyarı ENGELLEMEZ: kuralın dışına çıkmayı bilerek seçmiş olabilir.
+    Okunamazsa sessiz geçilir, onay zaten verildi.
+  */
+  try {
+    const ozet = await calismaOzeti(projectId);
+    const uyari = ozet ? onayUyarisi({ tutarsizliklar: ozet.tutarsizliklar, hazirlik: ozet.hazirlik }) : null;
+    if (uyari) return { success: true, warning: uyari };
+  } catch (hata) {
+    console.error("[onay] uyarı hesaplanamadı:", hata instanceof Error ? hata.message : hata);
+  }
+
   return { success: true };
 }
 

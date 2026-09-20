@@ -7,6 +7,13 @@ import type { UserRole } from "@/lib/project-labels";
 export interface ActionResult {
   error?: string;
   success?: boolean;
+  /**
+   * İşlem BAŞARILI ama kullanıcının bilmesi gereken bir durum var.
+   * Hatadan farkı: işlem geri alınmadı. Onay gibi kararlarda kullanılır —
+   * kontrolörü engellemeden uyarmak için (o, kuralın dışına çıkmayı
+   * bilerek seçebilir).
+   */
+  warning?: string;
 }
 
 export interface AuthContext {

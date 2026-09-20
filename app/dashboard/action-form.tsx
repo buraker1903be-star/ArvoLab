@@ -27,7 +27,10 @@ export default function ActionForm({ action, children, className, style, confirm
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(async (_previous, formData) => {
     const result = (await action(formData)) ?? null;
     if (result?.success) {
-      showToast("success", successMessage ?? "İşlem tamamlandı.");
+      // Uyarı varsa onu gösteriyoruz: işlem tamamlandı ama kullanıcının
+      // görmesi gereken bir şey var, başarı bildirimi onu gizlemesin.
+      if (result.warning) showToast("error", result.warning);
+      else showToast("success", successMessage ?? "İşlem tamamlandı.");
       /*
         Alanlar yeniden kurulur (fieldset'in anahtarı değişir), sunucunun
         yeni gönderdiği defaultValue'larla. Eskiden form.reset() çağrılıyordu:
