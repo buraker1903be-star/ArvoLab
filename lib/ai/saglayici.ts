@@ -157,7 +157,7 @@ function anthropicGovde({ model, mesajlar, secenek, json, sicaklik }: Istek) {
   const sistem = mesajlar.filter((m) => m.rol === "sistem").map((m) => m.metin).join("\n\n");
   const govde: Record<string, unknown> = {
     model,
-    max_tokens: secenek.enFazlaJeton ?? 900,
+    max_tokens: secenek.enFazlaJeton ?? 2200,
     ...(sicaklik ? { temperature: secenek.sicaklik ?? 0.2 } : {}),
     messages: [
       ...mesajlar.filter((m) => m.rol !== "sistem").map((m) => ({ role: "user", content: m.metin })),
@@ -193,7 +193,7 @@ async function gonder(istek: Istek) {
             model,
             messages: mesajlar.map((m) => ({ role: m.rol === "sistem" ? "system" : "user", content: m.metin })),
             ...(sicaklik ? { temperature: secenek.sicaklik ?? 0.2 } : {}),
-            max_tokens: secenek.enFazlaJeton ?? 900,
+            max_tokens: secenek.enFazlaJeton ?? 2200,
             ...(json ? { response_format: { type: "json_object" } } : {}),
           },
     ),

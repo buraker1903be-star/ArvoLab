@@ -24,28 +24,46 @@ export const YANIT_BICIMI = `YANIT BİÇİMİ: Yalnızca şu JSON nesnesini dön
 - "aciklama": en fazla 400 karakter, Türkçe, hazır cümle içermez.
 - En fazla 8 bulgu. Denetlenecek bir şey bulamazsan boş dizi döndür.`;
 
+/*
+  Yanıttaki JSON'u okur. İki gerçek sorunu çözüyor:
+
+  1. Model JSON'u kod çitiyle ya da açıklama cümlesiyle sarabiliyor; sıkı bir
+     JSON.parse tek fazladan kelimede bütün cevabı çöpe atıyordu.
+  2. Yanıt jeton sınırında KESİLEBİLİYOR. Canlıda (20.09.2026) claude-sonnet-5
+     üç bulgunun ikisini eksiksiz yazdı, üçüncüsünün ortasında kesildi; JSON
+     kapanmadığı için üçü birden atıldı ve kullanıcı "denetlenebilir bir yapı
+     bulamadı" gördü. Tamamlanmış bulguları atmanın anlamı yok: son tam
+     nesneye kadar kırpılıp dizi kapatılıyor.
+*/
+export function jsonOku(ham: string): unknown {
+  const bas = ham.indexOf("{");
+  const son = ham.lastIndexOf("}");
+  if (bas === -1 || son <= bas) return null;
+
+  const golge = ham.slice(bas, son + 1);
+  try {
+    return JSON.parse(golge);
+  } catch {
+    // Kesik yanıt: golge son TAM nesnede bitiyor, geriye diziyi ve kök
+    // nesneyi kapatmak kalıyor.
+    for (const kapanis of ["]}", "}]}"]) {
+      try {
+        return JSON.parse(golge + kapanis);
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  }
+}
+
 function kirp(deger: unknown, sinir: number) {
   return String(deger ?? "").replace(/\s+/g, " ").trim().slice(0, sinir);
 }
 
-/**
- * Modelin yanıtını bulgulara çevirir. Model bazen JSON'u kod çitiyle ya da
- * açıklama cümlesiyle sarıyor; sıkı bir JSON.parse tek bir fazladan kelimede
- * bütün cevabı çöpe atıyordu.
- */
+/** Modelin yanıtını bulgulara çevirir (kesik yanıt dahil, bkz. jsonOku). */
 export function bulgulariCozumle(ham: string): Bulgu[] {
-  const bas = ham.indexOf("{");
-  const son = ham.lastIndexOf("}");
-  if (bas === -1 || son <= bas) return [];
-
-  let veri: unknown;
-  try {
-    veri = JSON.parse(ham.slice(bas, son + 1));
-  } catch {
-    return [];
-  }
-
-  const liste = (veri as { bulgular?: unknown })?.bulgular;
+  const liste = (jsonOku(ham) as { bulgular?: unknown } | null)?.bulgular;
   if (!Array.isArray(liste)) return [];
 
   return liste

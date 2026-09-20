@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { analizIstemi, bulgulariCozumle, bulgulariDogrula } from "../../lib/ai/analiz-yorumu";
+import { jsonOku } from "../../lib/ai/bulgu";
 import { saglayiciHatasi } from "../../lib/ai/saglayici";
 
 describe("analiz istemi", () => {
@@ -88,5 +89,30 @@ describe("sunucu hata metni", () => {
   test("hata metinlerinde marka adı geçmez", () => {
     for (const durum of [401, 404, 429, 500, 418])
       assert.doesNotMatch(saglayiciHatasi(durum, ""), /openai|gpt|claude|gemini/i);
+  });
+});
+
+describe("kesik yanıt kurtarma", () => {
+  // Canlıda (20.09.2026) claude-sonnet-5 üç bulgunun ikisini eksiksiz yazdı,
+  // üçüncüsünün ortasında jeton sınırına takıldı. JSON kapanmadığı için üçü
+  // birden atılıyor ve kullanıcı "denetlenebilir bir yapı bulamadı" görüyordu.
+  const kesik =
+    '{"bulgular":[' +
+    '{"tur":"uyari","baslik":"Etki büyüklüğü yok","aciklama":"Raporlanmamış."},' +
+    '{"tur":"uyari","baslik":"Tasarım belirsiz","aciklama":"Grup sayısı anlaşılmıyor."},' +
+    '{"tur":"uyari","baslik":"Test türü","aciklama":"t testinin bağımsız mı eşleş';
+
+  test("tamamlanmış bulgular kurtarılır, yarım kalan atılır", () => {
+    const bulgular = bulgulariCozumle(kesik);
+    assert.equal(bulgular.length, 2);
+    assert.deepEqual(bulgular.map((b) => b.baslik), ["Etki büyüklüğü yok", "Tasarım belirsiz"]);
+  });
+
+  test("sağlam yanıt aynen okunur", () => {
+    assert.deepEqual(jsonOku('{"bulgular":[]}'), { bulgular: [] });
+  });
+
+  test("hiç tam nesne yoksa boş döner", () => {
+    assert.deepEqual(bulgulariCozumle('{"bulgular":[{"tur":"uyari","baslik":"Yarım'), []);
   });
 });

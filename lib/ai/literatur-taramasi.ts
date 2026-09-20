@@ -22,7 +22,7 @@
 */
 
 import { baglamKur, type BaglamParca } from "./baglam";
-import { bulgulariCozumle, type Bulgu } from "./bulgu";
+import { bulgulariCozumle, jsonOku, type Bulgu } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 
 export type KayitOzeti = {
@@ -93,21 +93,13 @@ export function literaturIstemi(girdi: LiteraturGirdisi, butce = BAGLAM_BUTCESI)
 export function taramaCozumle(ham: string): LiteraturSonucu {
   const bulgular = bulgulariCozumle(ham);
 
-  const bas = ham.indexOf("{");
-  const son = ham.lastIndexOf("}");
-  let aramalar: string[] = [];
-  if (bas !== -1 && son > bas) {
-    try {
-      const veri = JSON.parse(ham.slice(bas, son + 1)) as { aramalar?: unknown };
-      if (Array.isArray(veri.aramalar))
-        aramalar = veri.aramalar
-          .map((satir) => String(satir ?? "").replace(/\s+/g, " ").trim().slice(0, EN_UZUN_ARAMA))
-          .filter(Boolean)
-          .slice(0, EN_FAZLA_ARAMA);
-    } catch {
-      aramalar = [];
-    }
-  }
+  const veri = jsonOku(ham) as { aramalar?: unknown } | null;
+  const aramalar = Array.isArray(veri?.aramalar)
+    ? veri.aramalar
+        .map((satir) => String(satir ?? "").replace(/\s+/g, " ").trim().slice(0, EN_UZUN_ARAMA))
+        .filter(Boolean)
+        .slice(0, EN_FAZLA_ARAMA)
+    : [];
 
   return { bulgular, aramalar };
 }
