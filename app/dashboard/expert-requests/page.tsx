@@ -114,12 +114,17 @@ export default async function ExpertRequestsPage() {
         </PanelDrawer>
       </section>
 
-      {canActAsExpert && openRequests.length > 0 && (
+      {canActAsExpert && (
         <section className="section">
           <h2 className="section-title">
             <HandHelping size={16} aria-hidden="true" />
             Açık Talepler
           </h2>
+          {/* Eskiden bölüm boşken tamamen gizleniyordu: uzman rolündeki
+              kullanıcı böyle bir bölümün var olduğunu bile bilmiyordu. */}
+          {openRequests.length === 0 ? (
+            <BosDurum kompakt ikon={HandHelping} aciklama="Şu an üstlenebileceğiniz açık talep yok. Yeni bir talep açıldığında burada görünür." />
+          ) : (
           <div className="projects-list">
             {openRequests.map((r) => (
               <article className="project-card" key={r.id}>
@@ -139,12 +144,16 @@ export default async function ExpertRequestsPage() {
               </article>
             ))}
           </div>
+          )}
         </section>
       )}
 
-      {canActAsExpert && assignedToMe.length > 0 && (
+      {canActAsExpert && (
         <section className="section">
           <h2 className="section-title">Bana Atananlar</h2>
+          {assignedToMe.length === 0 ? (
+            <BosDurum kompakt aciklama="Üzerinize atanmış talep yok. Açık taleplerden birini üstlendiğinizde burada listelenir." />
+          ) : (
           <div className="projects-list">
             {assignedToMe.map((r) => (
               <article className="project-card" key={r.id}>
@@ -168,6 +177,7 @@ export default async function ExpertRequestsPage() {
               </article>
             ))}
           </div>
+          )}
         </section>
       )}
 

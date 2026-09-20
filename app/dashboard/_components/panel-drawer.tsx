@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useOdakTuzagi } from "./odak-tuzagi";
 import { ACTION_SUCCESS_EVENT } from "./toast-events";
 
 const subscribeNothing = () => () => undefined;
@@ -40,6 +41,9 @@ export default function PanelDrawer({
   const dialogRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
+
+  // aria-modal tek başına odağı hapsetmez; Tab arka plana kaçıyordu.
+  useOdakTuzagi(dialogRef, open);
 
   useEffect(() => {
     if (!open) {

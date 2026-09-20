@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useOdakTuzagi } from "./odak-tuzagi";
 
 const subscribeNothing = () => () => undefined;
 
@@ -26,6 +27,9 @@ export default function Dialog({
   const titleId = useId();
   const dialogRef = useRef<HTMLElement>(null);
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
+
+  // aria-modal tek başına odağı hapsetmez; Tab arka plana kaçıyordu.
+  useOdakTuzagi(dialogRef, open);
 
   useEffect(() => {
     if (!open) return;

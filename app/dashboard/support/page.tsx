@@ -111,12 +111,17 @@ export default async function SupportPage() {
         </PanelDrawer>
       </section>
 
-      {isAdmin && allRequests.length > 0 && (
+      {isAdmin && (
         <section className="section">
           <h2 className="section-title">
             <LifeBuoy size={16} aria-hidden="true" />
             Tüm Açık Talepler (Sistem Yöneticisi görünümü)
           </h2>
+          {/* Eskiden bölüm boşken tamamen gizleniyordu; yönetici böyle bir
+              görünümün var olduğunu bilmiyordu. */}
+          {allRequests.length === 0 ? (
+            <BosDurum kompakt ikon={LifeBuoy} aciklama="Sistemde açık destek talebi yok. Bir kullanıcı talep açtığında burada listelenir." />
+          ) : (
           <div className="projects-list">
             {allRequests.map((r) => (
               <article className="project-card" key={r.id}>
@@ -153,6 +158,7 @@ export default async function SupportPage() {
               </article>
             ))}
           </div>
+          )}
         </section>
       )}
 

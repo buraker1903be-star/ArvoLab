@@ -12,6 +12,7 @@ import {
 import { ROLE_LABELS, type UserRole } from "@/lib/project-labels";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
+import BosDurum from "../_components/bos-durum";
 
 const ROLE_ORDER: UserRole[] = [
   "client",
@@ -167,6 +168,14 @@ export default async function TeamPage() {
           <UserCog size={16} aria-hidden="true" />
           Kullanıcılar ({members.length})
         </h2>
+        {/* Eskiden liste boşken başlığın altı tamamen boş bir <div> kalıyordu. */}
+        {members.length === 0 ? (
+          <BosDurum
+            kompakt
+            ikon={UserCog}
+            aciklama="Listelenecek kullanıcı yok. Yeni kullanıcılar davet edildiğinde ya da kayıt olduğunda burada görünür."
+          />
+        ) : (
         <div className="projects-list">
           {members.map((m) => {
             const isSelf = m.id === profile?.id;
@@ -257,6 +266,7 @@ export default async function TeamPage() {
             );
           })}
         </div>
+        )}
       </section>
     </main>
   );

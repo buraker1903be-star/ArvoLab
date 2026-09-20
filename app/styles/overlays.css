@@ -4,20 +4,34 @@
    ============================================================ */
 
 /* ---------- Bildirim ---------- */
-@keyframes toast-in { from { opacity: 0; transform: translate(-50%, -20px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
-@keyframes toast-up { from { opacity: 0; transform: translate(-50%, 18px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-20px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes toast-up { from { opacity: 0; transform: translateY(18px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes check-pop { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes check-draw { to { stroke-dashoffset: 0; } }
 
-.toast {
+/* Bildirimler yığında durur. Eskiden tek bir bildirim vardı ve yenisi
+   öncekini ezerdi: art arda iki kaynağı "Okundu" yapan kullanıcı yalnızca
+   ikinci onayı görüyordu. Yığın konumlandırmayı üstlenir, bildirimin
+   kendisi akışta durur. */
+.toast-yigini {
   position: fixed;
   top: max(16px, env(safe-area-inset-top));
   left: 50%;
   z-index: var(--z-toast);
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(440px, calc(100vw - 28px));
+  transform: translateX(-50%);
+  /* Yığının kendisi tıklamaları geçirir; yalnızca bildirimler yakalar. */
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  width: 100%;
+  pointer-events: auto;
   align-items: flex-start;
   gap: 12px;
-  width: min(440px, calc(100vw - 28px));
   padding: 14px 12px 14px 14px;
   border: 1px solid color-mix(in srgb, var(--danger) 22%, var(--line));
   border-radius: var(--r-lg);
@@ -28,7 +42,6 @@
   color: var(--ink);
   font-size: var(--fs-body);
   line-height: 1.5;
-  transform: translateX(-50%);
   animation: toast-in .55s var(--ease-spring) both;
 }
 .toast-icon {
@@ -74,12 +87,14 @@
 
 /* Mobilde iOS gibi altta: sekme çubuğunun ve ev çubuğu payının üstünde */
 @media (max-width: 900px) {
-  .toast {
+  .toast-yigini {
     top: auto;
     bottom: calc(var(--tabbar-height) + 14px + env(safe-area-inset-bottom));
     width: min(440px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
-    animation-name: toast-up;
+    /* En yeni bildirim altta, parmağın yakınında kalsın. */
+    flex-direction: column-reverse;
   }
+  .toast { animation-name: toast-up; }
 }
 
 /* ---------- Pencere (masaüstü) / alttan açılan sayfa (telefon) ---------- */
