@@ -11,6 +11,8 @@ import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import LiteraturAsistani from "./literatur-asistani";
 import { literaturAsistaniAcik } from "@/app/actions/ai-literatur";
+import CalismaSerit from "../_components/calisma-serit";
+import BosDurum from "../_components/bos-durum";
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
   article: "Makale",
@@ -27,6 +29,13 @@ const STATUS_LABELS: Record<string, string> = {
   read: "Okundu",
   used: "Kullanıldı",
 };
+
+/* Akışın hangi aşaması olduğunu söyleyen boş durum metinleri. */
+const BOS_METIN = {
+  to_review: "İncelenecek kaynak yok. Yeni bulduğunuz kaynakları buraya ekleyin; okuduktan sonra durumunu değiştirirsiniz.",
+  read: "Okunmuş kaynak yok. İncelediğiniz kaynağın durumunu “Okundu” yapın; böylece hangilerini bitirdiğinizi izleyebilirsiniz.",
+  used: "Metinde kullanılan kaynak yok. Bir kaynağa atıf yaptığınızda durumunu “Kullanıldı” yapın; kaynakça denetimi bu işareti kullanır.",
+} as const;
 
 export default async function LiteraturePage({
   searchParams,
@@ -67,6 +76,7 @@ export default async function LiteraturePage({
 
   return (
     <main className="dashboard-page">
+      <CalismaSerit calismaId={secilenCalisma} aktif="literatur" />
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Literatür</span>
@@ -189,7 +199,10 @@ export default async function LiteraturePage({
             {STATUS_LABELS[statusKey]} ({grouped[statusKey].length})
           </h2>
           {grouped[statusKey].length === 0 ? (
-            <p className="muted text-base">Bu durumda kaynak yok.</p>
+            /* Her grup için ayrı cümle: "kaynak yok" üç yerde aynı görünüp
+               kullanıcıya bir şey anlatmıyordu; akışın hangi aşaması olduğu
+               söyleniyor. */
+            <BosDurum kompakt aciklama={BOS_METIN[statusKey]} />
           ) : (
             <div className="projects-list">
               {grouped[statusKey].map((s) => (

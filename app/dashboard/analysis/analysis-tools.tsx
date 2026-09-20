@@ -11,9 +11,14 @@ type Calisma = { id: string; title: string };
 export default function AnalysisTools({
   asistanAcik,
   calismalar = [],
+  secilenCalisma = "",
 }: {
   asistanAcik: boolean;
   calismalar?: Calisma[];
+  /* Çalışma merkezinden gelindiyse o çalışma hazır seçili gelir; kullanıcı
+     aynı seçimi her sayfada yeniden yapmasın (lib/calisma-ozeti.ts adım
+     bağlantıları ?calisma=<id> taşıyor). */
+  secilenCalisma?: string;
 }) {
   const [statsInput, setStatsInput] = useState("");
   const [statsResult, setStatsResult] = useState<DetectedStatistic[] | null>(null);
@@ -21,7 +26,7 @@ export default function AnalysisTools({
   // Asistan denetimi: tespit edilen istatistikler + çalışmanın kısa bağlamı.
   const [arastirmaSorusu, setArastirmaSorusu] = useState("");
   const [orneklem, setOrneklem] = useState("");
-  const [calismaId, setCalismaId] = useState("");
+  const [calismaId, setCalismaId] = useState(secilenCalisma);
   const [denetim, setDenetim] = useState<AnalizDenetimYaniti | null>(null);
   const [bekleniyor, basla] = useTransition();
 

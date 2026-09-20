@@ -14,6 +14,7 @@ export const maxDuration = 60;
 import { getCurrentProfile } from "@/app/actions/profile";
 import GuidelineScanner from "./guideline-scanner";
 import ActionForm from "../action-form";
+import BosDurum from "../_components/bos-durum";
 import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
 
@@ -166,10 +167,15 @@ export default async function GuidelinesPage() {
       ) : null}
 
       {guidelines.length === 0 ? (
-        <section className="empty-state">
-          <BookMarked size={28} aria-hidden="true" />
-          <p>Henüz kayıtlı bir üniversite kılavuzu yok.</p>
-        </section>
+        <BosDurum
+          ikon={BookMarked}
+          baslik="Kılavuz kaydı yok"
+          aciklama={
+            canManage
+              ? "Henüz kayıtlı bir üniversite kılavuzu yok. Yukarıdaki “Yeni kılavuz” ile ekleyin; kurallar editöre, belge kontrolüne ve Word çıktısına otomatik uygulanır."
+              : "Henüz kayıtlı bir üniversite kılavuzu yok. Kurumunuzun kılavuzunun eklenmesi için Akademik Yönetici'nize başvurun."
+          }
+        />
       ) : (
         <section className="projects-list" aria-label="Kılavuz listesi">
           {guidelines.map((g) => {

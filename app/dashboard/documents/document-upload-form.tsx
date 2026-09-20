@@ -29,8 +29,16 @@ interface AnalysisResult {
   guidelineCompliance?: GuidelineComplianceView | null;
 }
 
-export default function DocumentUploadForm({ projects }: { projects: Project[] }) {
-  const [projectId, setProjectId] = useState("");
+export default function DocumentUploadForm({
+  projects,
+  secilenCalisma = "",
+}: {
+  projects: Project[];
+  /* Çalışma merkezinden gelindiyse o çalışma hazır seçili gelir; kullanıcı
+     aynı seçimi her sayfada yeniden yapmasın. */
+  secilenCalisma?: string;
+}) {
+  const [projectId, setProjectId] = useState(secilenCalisma);
   const [projectTitle, setProjectTitle] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

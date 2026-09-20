@@ -33,7 +33,11 @@ export default async function ProjectsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [projects, profile, params] = await Promise.all([getProjects(), getCurrentProfile(), searchParams]);
+  const [{ satirlar: projects, okunamadi }, profile, params] = await Promise.all([
+    getProjects(),
+    getCurrentProfile(),
+    searchParams,
+  ]);
   const [{ stats, openComments }, guidelines] = await Promise.all([
     getWritingStats(
       projects.map((project) => project.id),
@@ -106,7 +110,19 @@ export default async function ProjectsPage({
         </Link>
       </section>
 
-      {projects.length === 0 ? (
+      {okunamadi ? (
+        /*
+          Liste okunamadı. Eskiden burada da "henüz çalışmanız yok" yazıyordu;
+          geçici bir arıza kullanıcıya tezini kaybettiğini düşündürüyordu.
+        */
+        <section className="alert" data-tone="danger" role="alert">
+          <strong>Çalışmalarınız yüklenemedi.</strong>
+          <p>
+            Bu bir bağlantı ya da yetki arızası; kayıtlarınız yerinde duruyor. Sayfayı yenileyin, sorun
+            sürerse Uygulama Destek&apos;ten bildirin.
+          </p>
+        </section>
+      ) : projects.length === 0 ? (
         <section className="empty-state">
           <span className="empty-state-icon" aria-hidden="true">
             <FileText size={26} strokeWidth={1.6} />

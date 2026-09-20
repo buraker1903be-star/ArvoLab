@@ -14,6 +14,8 @@ import { isExpertEligible, requestTypeLabel } from "@/lib/project-labels";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
+import BosDurum from "../_components/bos-durum";
+import { Inbox } from "lucide-react";
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Açık",
@@ -172,7 +174,7 @@ export default async function ExpertRequestsPage() {
       <section className="section">
         <h2 className="section-title">Taleplerim</h2>
         {myRequests.length === 0 ? (
-          <p className="muted text-base">Henüz bir destek talebiniz yok.</p>
+          <BosDurum kompakt ikon={Inbox} aciklama="Henüz uzman desteği talebiniz yok. Yöntem, analiz ya da yazım konusunda takıldığınız bir noktada yukarıdaki “Yeni talep” ile uzmana ulaşabilirsiniz." />
         ) : (
           <div className="projects-list">
             {myRequests.map((r) => (

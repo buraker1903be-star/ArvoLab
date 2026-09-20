@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
@@ -133,12 +134,19 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
   redirect(`/dashboard/editor/${created.id}/write`);
 }
 
-export async function getProjects(): Promise<AcademicProject[]> {
+/**
+ * Kullanıcının görebildiği çalışmalar.
+ *
+ * Dönüş tipi bilerek dizi DEĞİL: okuma başarısızken de boş dizi dönmek,
+ * arayüzde "hiç çalışmanız yok" yalanına dönüşüyordu (lib/liste-sonucu.ts).
+ */
+export async function getProjects(): Promise<ListeSonucu<AcademicProject>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  // Oturum yoksa gerçekten kayıt yoktur; bu bir okuma arızası değil.
+  if (!user) return listeBasarili([]);
 
   const { data, error } = await supabase
     .from("academic_projects")
@@ -148,10 +156,10 @@ export async function getProjects(): Promise<AcademicProject[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error(error);
-    return [];
+    console.error("[projeler] liste okunamadı:", error.message);
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
 export interface ProjectEditData {

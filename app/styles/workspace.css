@@ -349,7 +349,9 @@
 }
 .stats-result-table tbody tr:last-child td { border-bottom: 0; }
 @media (hover: hover) and (pointer: fine) {
-  .stats-result-table tbody tr:hover { background: color-mix(in srgb, var(--accent-100) 40%, var(--surface)); }
+  /* --accent-bright tema ile döner; --accent-100 her iki temada aynı kalıp
+     koyu tabloda açık yeşil leke bırakıyordu. */
+  .stats-result-table tbody tr:hover { background: color-mix(in srgb, var(--accent-bright) 10%, var(--surface)); }
 }
 .stats-significant { color: var(--success); font-weight: 700; }
 

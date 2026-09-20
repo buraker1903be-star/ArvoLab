@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { LogOut } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
+import { ROLE_LABELS } from "@/lib/project-labels";
 import { getAccessState } from "@/lib/access";
 import SubscriptionNotice from "./_components/subscription-notice";
 import ThemeToggle from "@/app/_components/theme-toggle";
@@ -28,7 +28,6 @@ function initialsOf(name: string) {
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [profile, cookieStore] = await Promise.all([getCurrentProfile(), cookies()]);
-  const isAdmin = !!profile && ADMIN_ROLES.includes(profile.role);
   const userName = profile?.full_name?.trim() || "Kullanıcı";
   const roleLabel = profile ? ROLE_LABELS[profile.role] : "";
   const initials = initialsOf(userName);
@@ -49,7 +48,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
             <span lang="en">Research OS</span>
           </div>
         </div>
-        <SidebarNav isAdmin={isAdmin} collapsed={navCollapsed} />
+        <SidebarNav rol={profile?.role} collapsed={navCollapsed} />
       </aside>
 
       <div className="dashboard-content-shell">
@@ -85,7 +84,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         </div>
       </div>
 
-      <MobileNav isAdmin={isAdmin} userName={userName} roleLabel={roleLabel} initials={initials} />
+      <MobileNav rol={profile?.role} userName={userName} roleLabel={roleLabel} initials={initials} />
       <Toaster />
     </div>
   );

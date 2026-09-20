@@ -6,17 +6,17 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronRight, LogOut, Menu, X } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import ThemeToggle from "@/app/_components/theme-toggle";
-import { ACCOUNT_ITEMS, NAV_GROUPS, TAB_ITEMS, isActive } from "./navigation";
+import { ACCOUNT_ITEMS, NAV_GROUPS, TAB_ITEMS, isActive, menudeGorunur } from "./navigation";
 
 // Mobil (≤900px): alt sekme çubuğu + sağdan açılan menü çekmecesi.
 // Masaüstünde CSS ile gizlidir (app/styles/shell.css).
 export default function MobileNav({
-  isAdmin,
+  rol,
   userName,
   roleLabel,
   initials,
 }: {
-  isAdmin: boolean;
+  rol: string | undefined;
   userName: string;
   roleLabel: string;
   initials: string;
@@ -121,7 +121,7 @@ export default function MobileNav({
 
         <p className="mobile-drawer-title">Hesap</p>
         <div className="mobile-drawer-list">
-          {ACCOUNT_ITEMS.filter((item) => !item.adminOnly || isAdmin).map(({ label, href, icon: Icon }) => (
+          {ACCOUNT_ITEMS.filter((item) => menudeGorunur(item, rol)).map(({ label, href, icon: Icon }) => (
             <Link key={href} href={href} onClick={close} aria-current={isActive(pathname, href) ? "page" : undefined}>
               <span className="nav-icon" aria-hidden="true">
                 <Icon size={17} strokeWidth={1.9} />

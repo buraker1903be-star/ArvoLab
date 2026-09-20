@@ -1,4 +1,5 @@
-import { Download, ShieldAlert } from "lucide-react";
+import { Download, ShieldAlert, Sparkles } from "lucide-react";
+import BosDurum from "../_components/bos-durum";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { asistanKayitlari, modelOzetleri } from "@/app/actions/ai-kayitlar";
 import { KAYIT_ROLLERI, RED_ETIKETI, YETENEK_ETIKETI } from "@/lib/ai/kayit-gorunum";
@@ -59,7 +60,11 @@ export default async function AsistanKayitlariSayfasi() {
       <section className="section">
         <h2 className="section-title">Model karşılaştırması</h2>
         {modeller.length === 0 ? (
-          <p className="dash-empty">Henüz kayıt yok.</p>
+          <BosDurum
+            kompakt
+            ikon={Sparkles}
+            aciklama="Henüz asistan çalışması kaydedilmedi. Abonelerin her sorgusu burada modele göre toplanır; Sonnet ile Haiku'yu karşılaştırmak için kullanılır."
+          />
         ) : (
           <div className="table-scroll">
             <table className="stats-result-table">
@@ -104,7 +109,11 @@ export default async function AsistanKayitlariSayfasi() {
       <section className="section mt-lg">
         <h2 className="section-title">Son çalışmalar</h2>
         {kayitlar.length === 0 ? (
-          <p className="dash-empty">Henüz kayıt yok.</p>
+          <BosDurum
+            kompakt
+            ikon={Sparkles}
+            aciklama="Henüz asistan çalışması yok. Bir abone analiz, kaynakça ya da literatür asistanını çalıştırdığında girdi ve çıktısı burada görünür."
+          />
         ) : (
           <div className="projects-list">
             {kayitlar.map((kayit) => (

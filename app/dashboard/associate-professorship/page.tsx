@@ -1,4 +1,4 @@
-import { GraduationCap, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
+import { ClipboardList, GraduationCap, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
 import {
   getCriteria,
   createCriterion,
@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/scoring";
 import { getCurrentProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
+import BosDurum from "../_components/bos-durum";
 import PanelDrawer from "../_components/panel-drawer";
 
 export default async function ScoringPage() {
@@ -144,9 +145,17 @@ export default async function ScoringPage() {
         </section>
       ) : null}
 
-      {entries.length > 0 && (
-        <section className="section">
-          <h2 className="section-title">Kayıtlı Faaliyetleriniz</h2>
+      <section className="section">
+        <h2 className="section-title">Kayıtlı Faaliyetleriniz</h2>
+        {entries.length === 0 ? (
+          /* Eskiden bölüm tamamen gizleniyordu; kullanıcı kaydın nereye
+             gideceğini göremiyordu. */
+          <BosDurum
+            kompakt
+            ikon={ClipboardList}
+            aciklama="Henüz faaliyet eklemediniz. Yayın, atıf, proje ve tez danışmanlıklarınızı ekledikçe doçentlik puanınız burada toplanır."
+          />
+        ) : (
           <div className="projects-list">
             {entries.map((e) => (
               <article className="project-card" key={e.id}>
@@ -179,8 +188,8 @@ export default async function ScoringPage() {
               </article>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {canManageCriteria ? (
         <section className="section">

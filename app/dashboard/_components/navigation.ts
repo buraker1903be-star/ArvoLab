@@ -1,3 +1,4 @@
+import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
 import {
   BookMarked,
   BookOpenCheck,
@@ -24,7 +25,13 @@ export interface NavItem {
   short?: string;
   href: string;
   icon: LucideIcon;
-  adminOnly?: boolean;
+  /**
+   * Menüde görünmesi için gereken roller. Sayfanın KENDİ yetki kontrolüyle
+   * aynı listeyi taşımalı: eskiden asistan sayfası kontrolöre açıktı ama
+   * menüde yalnızca yöneticiye görünüyordu, yani kontrolör yetkisi olan
+   * sayfayı adresini bilmeden bulamıyordu.
+   */
+  roller?: readonly string[];
 }
 
 export interface NavGroup {
@@ -62,12 +69,17 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 export const ACCOUNT_ITEMS: NavItem[] = [
-  // İç ekip görünümü; sayfa kontrolör ve akademik yöneticiye de açık ama
-  // menüde yalnızca yöneticiye gösteriliyor (adminOnly'nin anlamı bu).
-  { label: "Asistan Kayıtları", href: "/dashboard/asistan", icon: Sparkles, adminOnly: true },
-  { label: "Ekip Yönetimi", href: "/dashboard/team", icon: UserCog, adminOnly: true },
+  // Asistan kayıtları sayfasının kendi kapısı: lib/ai/kayit-gorunum.ts KAYIT_ROLLERI.
+  { label: "Asistan Kayıtları", href: "/dashboard/asistan", icon: Sparkles, roller: KAYIT_ROLLERI },
+  // Ekip yönetimi yalnızca sistem yöneticisi ve kurucuya açık (team/page.tsx).
+  { label: "Ekip Yönetimi", href: "/dashboard/team", icon: UserCog, roller: ["system_admin", "founder"] },
   { label: "Ayarlar", href: "/dashboard/settings", icon: Settings },
 ];
+
+/** Menü öğesi bu role görünür mü? Rolü olmayan (giriş yapmamış) kullanıcıda kısıtlı öğeler gizlenir. */
+export function menudeGorunur(item: NavItem, rol: string | undefined): boolean {
+  return !item.roller || (!!rol && item.roller.includes(rol));
+}
 
 // Mobil alt sekme çubuğu: en sık kullanılan dört bölüm + "Menü".
 export const TAB_HREFS = ["/dashboard", "/dashboard/editor", "/dashboard/documents", "/dashboard/analysis"];

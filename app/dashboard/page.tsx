@@ -80,7 +80,10 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const [projects, profile] = await Promise.all([getProjects(), getCurrentProfile()]);
+  const [{ satirlar: projects, okunamadi: projelerOkunamadi }, profile] = await Promise.all([
+    getProjects(),
+    getCurrentProfile(),
+  ]);
   // Ad profilden: Ayarlar'dan değiştirilen ad yalnızca profiles'a yazılıyor,
   // karşılama satırı kayıttaki eski adı (user_metadata) gösteriyordu.
   const displayName = profile?.full_name || user.email || "Kullanıcı";
@@ -310,6 +313,24 @@ export default async function DashboardPage() {
                   Tüm çalışmalar ({activeProjects.length})
                 </Link>
               ) : null}
+            </div>
+          </article>
+        ) : projelerOkunamadi ? (
+          /*
+            Liste okunamadı. Eskiden burada da "ilk çalışmanızı oluşturun"
+            yazıyordu; geçici bir arıza kullanıcıya tezini kaybettiğini
+            düşündürüyordu (lib/liste-sonucu.ts).
+          */
+          <article className="resume-card" role="alert">
+            <span className="dashboard-kicker">Bağlantı sorunu</span>
+            <div className="resume-heading">
+              <h2>Çalışmalarınız yüklenemedi</h2>
+              <p>Kayıtlarınız yerinde duruyor. Sayfayı yenileyin; sorun sürerse destekten bildirin.</p>
+            </div>
+            <div className="cluster">
+              <Link href="/dashboard/support" className="projects-filter-button">
+                Uygulama Destek
+              </Link>
             </div>
           </article>
         ) : (

@@ -60,9 +60,12 @@
 }
 .toast-close::after { content: ""; position: absolute; inset: -8px; }
 .toast.is-success { border-color: color-mix(in srgb, var(--success) 28%, var(--line)); }
+/* İkon rengi karışımla: karanlık temada --success açık nane yeşiline
+   dönüyor, üstündeki saf beyaz tik görünmez oluyordu. --ink ile karışan
+   koyu ton her iki temada da okunur kalır. */
 .toast.is-success .toast-icon {
   background: var(--success);
-  color: var(--n-0);
+  color: color-mix(in srgb, var(--success) 12%, var(--surface));
   box-shadow: 0 6px 16px color-mix(in srgb, var(--success) 35%, transparent);
   animation: check-pop .55s var(--ease-spring) both;
 }

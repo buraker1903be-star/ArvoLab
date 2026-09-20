@@ -10,6 +10,8 @@ import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
 import { trTarihSaat } from "@/lib/tr-time";
+import BosDurum from "../_components/bos-durum";
+import { Inbox } from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
   bug: "Hata bildirimi",
@@ -157,7 +159,7 @@ export default async function SupportPage() {
       <section className="section">
         <h2 className="section-title">Taleplerim</h2>
         {myRequests.length === 0 ? (
-          <p className="muted text-base">Henüz bir destek talebiniz yok.</p>
+          <BosDurum kompakt ikon={Inbox} aciklama="Henüz destek talebiniz yok. Uygulamada bir sorun yaşarsanız ya da bir özellik isterseniz yukarıdaki “Yeni talep” ile bize yazın." />
         ) : (
           <div className="projects-list">
             {myRequests.map((r) => (

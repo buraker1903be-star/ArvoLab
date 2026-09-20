@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
-import { ACCOUNT_ITEMS, NAV_GROUPS, isActive } from "./navigation";
+import { ACCOUNT_ITEMS, NAV_GROUPS, isActive, menudeGorunur } from "./navigation";
 import SidebarToggle from "./sidebar-toggle";
 
-export default function SidebarNav({ isAdmin, collapsed }: { isAdmin: boolean; collapsed: boolean }) {
+export default function SidebarNav({ rol, collapsed }: { rol: string | undefined; collapsed: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -33,7 +33,7 @@ export default function SidebarNav({ isAdmin, collapsed }: { isAdmin: boolean; c
 
       <div className="dashboard-sidebar-footer">
         <SidebarToggle initialCollapsed={collapsed} />
-        {ACCOUNT_ITEMS.filter((item) => !item.adminOnly || isAdmin).map(({ label, href, icon: Icon }) => (
+        {ACCOUNT_ITEMS.filter((item) => menudeGorunur(item, rol)).map(({ label, href, icon: Icon }) => (
           <Link
             key={href}
             href={href}

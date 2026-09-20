@@ -14,16 +14,29 @@ import { aiFeedbackConfigured } from "@/lib/ai-feedback";
 import DocumentUploadForm from "./document-upload-form";
 import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
-import { ShieldQuestion, Trash2 } from "lucide-react";
+import { FolderOpen, ShieldQuestion, Trash2 } from "lucide-react";
+import BosDurum from "../_components/bos-durum";
 import { similarityTone, statusTone } from "@/lib/status-tone";
 import { trTarihSaat } from "@/lib/tr-time";
+import CalismaSerit from "../_components/calisma-serit";
 
-export default async function DocumentsPage() {
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  // Çalışma merkezinden "Belge" adımıyla gelindiğinde çalışma hazır seçili gelsin.
+  searchParams: Promise<{ calisma?: string }>;
+}) {
   const aiAcik = aiFeedbackConfigured();
-  const [projects, uploads] = await Promise.all([
+  const [projects, uploads, { calisma: secilenCalisma }] = await Promise.all([
     getMyProjects(),
     getMyDocumentUploads(),
+    searchParams,
   ]);
+  /*
+    Gelen kimlik listede yoksa yok sayılır: seçili görünmeyen bir değerle
+    açılan <select> kullanıcıya "seçim yaptım" izlenimi verirdi.
+  */
+  const hazirCalisma = projects.some((p) => p.id === secilenCalisma) ? secilenCalisma! : "";
 
   const originalityResults = await Promise.all(
     uploads
@@ -52,6 +65,7 @@ export default async function DocumentsPage() {
 
   return (
     <main className="dashboard-page">
+      <CalismaSerit calismaId={hazirCalisma || undefined} aktif="belge" />
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Belge kontrol</span>
@@ -74,11 +88,19 @@ export default async function DocumentsPage() {
         </div>
       </section>
 
-      <DocumentUploadForm projects={projects} />
+      <DocumentUploadForm key={hazirCalisma} projects={projects} secilenCalisma={hazirCalisma} />
 
-      {uploads.length > 0 && (
-        <section className="section mt-lg">
-          <h2 className="section-title">Yüklenen Belgeler</h2>
+      <section className="section mt-lg">
+        <h2 className="section-title">Yüklenen Belgeler</h2>
+        {uploads.length === 0 ? (
+          /* Eskiden bölüm tamamen gizleniyordu: yeni kullanıcı yükleme
+             formundan başka bir şey görmüyordu. */
+          <BosDurum
+            kompakt
+            ikon={FolderOpen}
+            aciklama="Henüz belge yüklemediniz. Yüklediğiniz her belgenin kaynakça, kılavuz uygunluğu ve orijinallik sonuçları burada saklanır."
+          />
+        ) : (
           <div className="projects-list">
             {uploads.map((u) => {
               const originality = originalityMap.get(u.id);
@@ -174,8 +196,8 @@ export default async function DocumentsPage() {
               );
             })}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </main>
   );
 }

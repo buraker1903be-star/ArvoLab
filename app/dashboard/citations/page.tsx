@@ -2,6 +2,9 @@ import { getMyProjects, getMyCitationChecks } from "@/app/actions/citation-check
 import CitationCheckForm from "./citation-check-form";
 import { trTarihSaat } from "@/lib/tr-time";
 import { kaynakcaAsistaniAcik } from "@/app/actions/ai-kaynakca";
+import CalismaSerit from "../_components/calisma-serit";
+import BosDurum from "../_components/bos-durum";
+import { History } from "lucide-react";
 
 export default async function CitationsPage({
   searchParams,
@@ -20,6 +23,7 @@ export default async function CitationsPage({
 
   return (
     <main className="dashboard-page">
+      <CalismaSerit calismaId={secilenCalisma} aktif="kaynakca" />
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Kaynakça</span>
@@ -40,9 +44,18 @@ export default async function CitationsPage({
 
       <CitationCheckForm projects={projects} asistanAcik={asistanAcik} secilenCalisma={secilenCalisma ?? null} />
 
-      {history.length > 0 && (
-        <section className="section mt-lg">
-          <h2 className="section-title">Son Kontroller</h2>
+      <section className="section mt-lg">
+        <h2 className="section-title">Son Kontroller</h2>
+        {history.length === 0 ? (
+          /* Eskiden bölüm tamamen gizleniyordu: yeni kullanıcı sayfada
+             formdan başka bir şey görmüyor, geçmişin birikeceğini
+             bilmiyordu. */
+          <BosDurum
+            kompakt
+            ikon={History}
+            aciklama="Henüz kaynakça denetimi yapmadınız. Her denetimin APA uyum puanı ve tarihi burada birikir; ilerlemenizi karşılaştırabilirsiniz."
+          />
+        ) : (
           <div className="projects-list">
             {history.map((historyItem) => (
               <article className="project-card" key={historyItem.id}>
@@ -58,8 +71,8 @@ export default async function CitationsPage({
               </article>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </main>
   );
 }
