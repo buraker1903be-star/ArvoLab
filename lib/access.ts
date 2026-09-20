@@ -104,7 +104,9 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  * loadCurrentProfile ve accessFor istek başına önbellekli; ek maliyeti yok.
  *
  * Kapı KİMDE var: dış maliyet üreten (OpenAI, depolama, ağır çözümleme) ya da
- * yeni içerik yazan işlemler — requestAiFeedback, runOriginalityCheck,
+ * yeni içerik yazan işlemler — requestAiFeedback, asistan yetenekleri
+ * (analizDenetle, kaynakcaDenetle, literaturTara — ortak kapı
+ * lib/ai/erisim.ts), runOriginalityCheck,
  * runCitationCheck, analyzeUploadedDocument, importWordDocument,
  * saveManuscript, saveNamedVersion, restoreManuscriptVersion,
  * createLiteratureSource, createCitationSource, addManuscriptComment,

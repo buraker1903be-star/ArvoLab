@@ -41,6 +41,20 @@ davranış da yazılır ("Eskiden … oluyordu"). Yeni kod bu üsluba uyar.
   verir; RLS'in yerini tutmaz.
 - **Paylaşım belirteci veritabanında ham tutulmaz.** Yalnızca SHA-256 özeti
   yazılır, belirtecin kendisi bir kez gösterilir (`lib/share-token.ts`).
+- **Asistan denetler, yazmaz.** Yapay zeka yetenekleri (`lib/ai/`)
+  kullanıcının çalışmasına yapıştırabileceği metin üretmez: neyin eksik
+  olduğunu ve neden önemli olduğunu söyler, cümlesini kurmaz. Kural hem
+  sistem isteminde hem de kodda durur.
+- **Asistanın ürettiği her sayı girdide geçmek zorunda.** `lib/ai/bulgu.ts`
+  çıktıyı tarar; bağlamda geçmeyen tek bir değer varsa cevabın tamamı düşer
+  ve kullanıcıya hiç gösterilmez. Bir kısmı doğru olan listeye güvenmek en
+  tehlikelisidir — hangi değerin uydurulduğunu kullanıcı ayıklayamaz.
+- **Asistan kaynak önermez.** Literatür yeteneği arama stratejisi üretir;
+  yazar, başlık, dergi ya da DOI yazması yasaktır (`kunyeIzi` kodda da
+  denetler). Uydurma künye akademik çalışmada en ağır hatadır.
+- **Yeni yetenek `lib/ai/erisim.ts` kapısından geçer.** Oturum, abonelik,
+  kurulum ve KULLANICI başına saatlik hak orada; yetenek başına ayrı sayaç
+  tutulmaz, yoksa aynı kullanıcı her yetenekten ayrı hak kazanır.
 - **E-posta gönderimi akışı düşürmez.** `RESEND_API_KEY` yoksa gönderim
   sessizce atlanır; davet ve şifre sıfırlama istekleri çalışmaya devam eder
   (hesabın varlığını sızdırmamak için de gerekli).
