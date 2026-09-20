@@ -20,7 +20,14 @@ const GUVEN_ETIKETI = (oran: number) =>
 
 const GUVEN_TONU = (oran: number) => (oran >= 0.9 ? "success" : oran >= 0.6 ? "warning" : "danger");
 
-export default function CikarimOzeti({ cikarim }: { cikarim: GuidelineCikarimi | null }) {
+export default function CikarimOzeti({
+  cikarim,
+  kayitliStil,
+}: {
+  cikarim: GuidelineCikarimi | null;
+  /** Kayıtta duran atıf sistemi; çıkarımla karşılaştırılır. */
+  kayitliStil?: string;
+}) {
   // Hiç taranmamış kayıtta boş bir kutu göstermek yer kaplamaktan ibaret olurdu.
   if (!cikarim || typeof cikarim.confidence !== "number") return null;
 
@@ -36,9 +43,17 @@ export default function CikarimOzeti({ cikarim }: { cikarim: GuidelineCikarimi |
         {cikarim.detectedCitationHint ? (
           <span className="chip">Algılanan sistem: {cikarim.detectedCitationHint}</span>
         ) : (
-          /* Atıf sistemi algılanmadıysa yönetici elle seçmeli; bu bir eksiktir,
-             sessizce geçilmemeli. */
-          <span className="chip" data-tone="warning">Atıf sistemi algılanamadı</span>
+          /*
+            Atıf sistemi algılanmadıysa yönetici elle seçmeli. Kayıtta bir
+            değer DURUYOR olabilir (varsayılan ya da eski, hatalı çıkarımdan
+            kalma) ve yeniden tarama onu bozmuyor — doğru davranış ama
+            sessiz kalırsa yönetici aynı yanlışı tekrar onaylar. Canlıda
+            oldu: Başkent "vancouver", Çukurova "chicago" olarak onaylıydı,
+            oysa belgeler hiçbir sistemi benimsemiyor.
+          */
+          <span className="chip" data-tone="danger">
+            Atıf sistemi belgede bulunamadı{kayitliStil ? ` — kayıttaki "${kayitliStil}" DOĞRULANMADI` : ""}
+          </span>
         )}
         {typeof cikarim.fullTextLength === "number" ? (
           <span className="chip">{cikarim.fullTextLength.toLocaleString("tr-TR")} karakter okundu</span>

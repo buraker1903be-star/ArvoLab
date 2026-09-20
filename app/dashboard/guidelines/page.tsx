@@ -346,7 +346,7 @@ export default async function GuidelinesPage() {
                 </div>
 
                 {/* Yönetici neye dayanarak onayladığını görsün. */}
-                {canManage ? <CikarimOzeti cikarim={g.ai_analysis} /> : null}
+                {canManage ? <CikarimOzeti cikarim={g.ai_analysis} kayitliStil={CITATION_LABELS[g.citation_style] ?? g.citation_style} /> : null}
 
                 {canManage ? (
                   <div className="cluster cluster-spaced">
