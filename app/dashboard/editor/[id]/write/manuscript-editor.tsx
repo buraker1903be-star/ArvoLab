@@ -772,6 +772,18 @@ export default function ManuscriptEditor({
         showToast("error", govde?.error ?? "Word dosyası oluşturulamadı. Metin çok büyükse resimleri küçültüp tekrar deneyin.");
         return;
       }
+      /*
+        Büyük dosyalar Vercel'in yanıt sınırına takıldığı için depoya yazılıp
+        imzalı bağlantıyla dönüyor; küçük dosyalar doğrudan geliyor.
+      */
+      if (response.headers.get("Content-Type")?.includes("application/json")) {
+        const { downloadUrl, fileName } = (await response.json()) as { downloadUrl: string; fileName?: string };
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = fileName ?? "calisma.docx";
+        link.click();
+        return;
+      }
       const blob = await response.blob();
       const adBasligi = response.headers.get("Content-Disposition") ?? "";
       const eslesme = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(adBasligi);

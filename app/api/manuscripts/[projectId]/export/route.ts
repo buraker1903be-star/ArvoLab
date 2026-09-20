@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Packer } from "docx";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { buildDocxFromTiptap, type DocxImage } from "@/lib/tiptap-docx";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
@@ -12,6 +13,9 @@ import type { TiptapDoc } from "@/lib/tiptap-text";
 export const maxDuration = 60;
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const WORD_TURU = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+/** Bu boyutun üstündeki dosya doğrudan yanıtla dönmez (Vercel ~4,5 MB sınırı). */
+const DIREKT_YANIT_SINIRI = 3.5 * 1024 * 1024;
 
 function toDocxImage(buffer: Buffer): DocxImage | null {
   if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES) return null;
@@ -20,6 +24,12 @@ function toDocxImage(buffer: Buffer): DocxImage | null {
 }
 
 // Word dosya adı: Türkçe karakterler korunur (RFC 5987), eski tarayıcılar için ASCII yedek.
+/** "Tezimin adı.docx" — Türkçe karakterler korunur. */
+function wordDosyaAdi(title: string) {
+  const clean = title.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) || "arvolab-calisma";
+  return `${clean}.docx`;
+}
+
 function contentDisposition(title: string) {
   const clean = title.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) || "arvolab-calisma";
   const ascii = clean
@@ -126,10 +136,39 @@ export async function GET(
   });
 
   const buffer = await Packer.toBuffer(doc);
+  const dosyaAdi = wordDosyaAdi(project.title ?? "arvolab-calisma");
+
+  /*
+    Vercel yanıt gövdesini ~4,5 MB ile sınırlıyor: resimli tezlerde Word
+    dosyası bu sınırı aşınca indirme sessizce boş kalıyordu. Büyük dosya
+    kullanıcının kendi klasörüne yazılır ve kısa ömürlü imzalı bağlantısı
+    döner; tarayıcı doğrudan depodan indirir (app/dashboard/editor/[id]/write
+    içindeki handleExport bu iki biçimi de anlar).
+  */
+  if (buffer.length > DIREKT_YANIT_SINIRI) {
+    const admin = createAdminClient();
+    const yol = `${user.id}/exports/${projectId}.docx`;
+    const { error: yuklemeHatasi } = await admin.storage.from("project-files").upload(yol, new Uint8Array(buffer), {
+      contentType: WORD_TURU,
+      upsert: true,
+    });
+    if (yuklemeHatasi) {
+      console.error("Word çıktısı depoya yazılamadı:", yuklemeHatasi.message);
+      return NextResponse.json({ error: "Word dosyası çok büyük ve hazırlanamadı. Resimleri küçültüp tekrar deneyin." }, { status: 507 });
+    }
+    const { data: imzali, error: baglantiHatasi } = await admin.storage
+      .from("project-files")
+      .createSignedUrl(yol, 300, { download: dosyaAdi });
+    if (baglantiHatasi || !imzali?.signedUrl) {
+      console.error("Word çıktısı bağlantısı üretilemedi:", baglantiHatasi?.message);
+      return NextResponse.json({ error: "Word dosyası hazırlandı ama indirme bağlantısı üretilemedi. Tekrar deneyin." }, { status: 500 });
+    }
+    return NextResponse.json({ downloadUrl: imzali.signedUrl, fileName: dosyaAdi }, { headers: { "Cache-Control": "no-store" } });
+  }
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Type": WORD_TURU,
       "Content-Disposition": contentDisposition(project.title ?? "arvolab-calisma"),
       "Cache-Control": "no-store",
     },
