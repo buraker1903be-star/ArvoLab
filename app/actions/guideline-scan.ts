@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
 import type { ActionResult } from "@/lib/auth-guards";
+import { discoverGuidelinesForUniversity } from "@/lib/guideline-discovery";
 
 export interface ScanResponse {
   error?: string;
@@ -121,4 +122,56 @@ export async function kilavuzuYenidenTara(guidelineId: string): Promise<ActionRe
   if (error) return { error: "Kılavuz güncellenemedi." };
   revalidatePath("/dashboard/guidelines");
   return { success: true };
+}
+
+/**
+ * Bir üniversite için kılavuz keşfini şimdi çalıştırır.
+ *
+ * Eskiden elle tetikleme yolu yoktu: keşif yalnızca gece çalışan cron'da,
+ * günde 2 üniversite hızıyla ilerliyordu (204 üniversite ≈ 100 gün) ve
+ * keşfin çalışıp çalışmadığını görmenin tek yolu ertesi sabah veritabanına
+ * bakmaktı. Bir düzeltmenin işe yarayıp yaramadığı günlerce belirsiz
+ * kalıyordu.
+ *
+ * İş uzun sürebilir (enstitü alt alan adları taranıyor, HTML sayfalardan
+ * gerçek belgeye iniliyor); sayfanın maxDuration değeri buna göre.
+ */
+export async function universiteKilavuzuKesfet(universityId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (!profile || !["academic_manager", "system_admin", "founder"].includes(profile.role)) {
+    return { error: "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir." };
+  }
+
+  if (!universityId) return { error: "Önce bir üniversite seçin." };
+  const { data: universite } = await supabase
+    .from("universities")
+    .select("id, name")
+    .eq("id", universityId)
+    .maybeSingle();
+  if (!universite) return { error: "Üniversite bulunamadı." };
+
+  const sonuc = await discoverGuidelinesForUniversity(universite);
+  revalidatePath("/dashboard/guidelines");
+
+  /*
+    Sonuç dürüstçe bildirilir. "Bulunamadı" bir hata değil: kurumun sitesinde
+    kılavuz olmayabilir ya da taranamayan bir biçimde olabilir. Hata gibi
+    göstermek, yöneticiyi olmayan bir arızayı aramaya iterdi.
+  */
+  if (sonuc.status === "discovered") {
+    return { success: true, message: `${universite.name}: ${sonuc.count} kılavuz bulundu (${(sonuc.institutes ?? []).join(", ")}).` };
+  }
+  if (sonuc.status === "already_known") {
+    return { success: true, message: `${universite.name}: bulunan ${sonuc.count} aday zaten kayıtlı.` };
+  }
+  if (sonuc.status === "failed") {
+    return { error: `Keşif başarısız: ${sonuc.error}` };
+  }
+  return { success: true, message: `${universite.name}: resmî sitesinde taranabilir bir kılavuz bulunamadı.` };
 }

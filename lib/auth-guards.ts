@@ -14,6 +14,13 @@ export interface ActionResult {
    * bilerek seçebilir).
    */
   warning?: string;
+  /**
+   * İşlemin KENDİ başarı metni; ActionForm'a verilen sabit successMessage'ın
+   * yerine geçer. Sonucu ancak eylem bilebiliyorsa gerekir — "3 kılavuz
+   * bulundu" ile "kılavuz bulunamadı" ikisi de başarılı bir çalışmadır ama
+   * sabit bir metinle anlatılamaz.
+   */
+  message?: string;
 }
 
 export interface AuthContext {

@@ -1,4 +1,4 @@
-import { BookMarked, ExternalLink, FilePenLine, Plus, RefreshCw, SlidersHorizontal, Trash2 } from "lucide-react";
+import { BookMarked, ExternalLink, FilePenLine, Plus, RefreshCw, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import {
   getGuidelines,
   createGuideline,
@@ -9,8 +9,6 @@ import {
 } from "@/app/actions/guidelines";
 import { getUniversities } from "@/app/actions/universities";
 
-// Kılavuz tarama aracı dış URL çekip PDF ayrıştırabilir, zaman alabilir.
-export const maxDuration = 60;
 import { getCurrentProfile } from "@/app/actions/profile";
 import GuidelineScanner from "./guideline-scanner";
 import ActionForm from "../action-form";
@@ -18,7 +16,7 @@ import BosDurum from "../_components/bos-durum";
 import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
 import CikarimOzeti from "./cikarim-ozeti";
-import { kilavuzuYenidenTara } from "@/app/actions/guideline-scan";
+import { kilavuzuYenidenTara, universiteKilavuzuKesfet } from "@/app/actions/guideline-scan";
 
 const CITATION_LABELS: Record<string, string> = {
   apa7: "APA 7",
@@ -28,6 +26,14 @@ const CITATION_LABELS: Record<string, string> = {
 };
 
 const REVIEW_FONTS = ["Times New Roman", "Arial", "Calibri", "Cambria", "Garamond", "Georgia", "Verdana", "Book Antiqua"];
+
+/*
+  Keşif ve yeniden tarama ağ üzerinde çalışıyor: enstitü alt alan adları
+  taranıyor, HTML sayfalardan gerçek belgeye iniliyor. Varsayılan 10
+  saniyelik süre, kullanıcıya uygulama içi hata bile göstermeden ham bir
+  tarayıcı hatasına yol açardı.
+*/
+export const maxDuration = 300;
 
 export default async function GuidelinesPage() {
   const [guidelines, profile, universities] = await Promise.all([
@@ -66,6 +72,11 @@ export default async function GuidelinesPage() {
   async function handleDelete(guidelineId: string) {
     "use server";
     return deleteGuideline(guidelineId);
+  }
+
+  async function handleDiscover(formData: FormData) {
+    "use server";
+    return universiteKilavuzuKesfet(String(formData.get("universityId") ?? ""));
   }
 
   async function handleRescan(guidelineId: string) {
@@ -202,6 +213,38 @@ export default async function GuidelinesPage() {
                 : ""}
             </p>
           </div>
+        </section>
+      ) : null}
+
+      {/*
+        Elle keşif. Eskiden keşif yalnızca gece çalışan cron'daydı (günde 2
+        üniversite; 204 üniversite ≈ 100 gün) ve çalışıp çalışmadığını
+        görmenin tek yolu ertesi sabah veritabanına bakmaktı.
+      */}
+      {canManage ? (
+        <section className="section">
+          <h2 className="section-title">
+            <Search size={16} aria-hidden="true" />
+            Üniversite kılavuzu keşfet
+          </h2>
+          <p className="muted text-base">
+            Kurumun resmî .edu.tr sitesi ve enstitü alt alan adları taranır; bulunan kılavuzlar
+            onay kuyruğuna düşer. İşlem birkaç dakika sürebilir.
+          </p>
+          <ActionForm action={handleDiscover} className="cluster mt-sm">
+            <select name="universityId" aria-label="Üniversite" className="compact-select grow-select" defaultValue="">
+              <option value="">Üniversite seçin</option>
+              {universities.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="projects-primary-button">
+              <Search size={15} aria-hidden="true" />
+              Şimdi keşfet
+            </button>
+          </ActionForm>
         </section>
       ) : null}
 

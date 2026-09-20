@@ -30,7 +30,8 @@ export default function ActionForm({ action, children, className, style, confirm
       // Uyarı varsa onu gösteriyoruz: işlem tamamlandı ama kullanıcının
       // görmesi gereken bir şey var, başarı bildirimi onu gizlemesin.
       if (result.warning) showToast("error", result.warning);
-      else showToast("success", successMessage ?? "İşlem tamamlandı.");
+      // Eylemin kendi metni, sayfanın sabit metninin önüne geçer.
+      else showToast("success", result.message ?? successMessage ?? "İşlem tamamlandı.");
       /*
         Alanlar yeniden kurulur (fieldset'in anahtarı değişir), sunucunun
         yeni gönderdiği defaultValue'larla. Eskiden form.reset() çağrılıyordu:
