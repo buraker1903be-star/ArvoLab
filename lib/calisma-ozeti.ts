@@ -37,8 +37,19 @@ export type CalismaOzeti = {
   belgeSayisi: number;
   danismanlikSayisi: number;
   /** Bu çalışmaya bağlı asistan denetimleri (migration 20260924100006). */
-  asistan: { toplam: number; sonTarih: string | null };
+  asistan: { toplam: number; sonTarih: string | null; sonBulgular: AsistanBulgusu[] };
+  /** Kurum adıyla eşleşen tez yazım kılavuzu; yoksa null. */
+  kilavuz: {
+    id: string;
+    baslik: string | null;
+    surum: string | null;
+    kurum: string | null;
+    enstitu: string | null;
+    atifStili: string | null;
+  } | null;
 };
+
+export type AsistanBulgusu = { tur: string; baslik: string; aciklama: string };
 
 export type Adim = {
   anahtar: string;
@@ -63,7 +74,7 @@ export function siradakiAdimlar(ozet: CalismaOzeti): Adim[] {
       aciklama: literatur.toplam
         ? `${literatur.toplam} kaynak kayıtlı, ${literatur.okunan} okundu, ${literatur.kullanilan} kullanıldı.`
         : "Bu çalışmaya bağlı kaynak yok. Tarama asistanı arama stratejisi kurabilir.",
-      href: "/dashboard/literature",
+      href: `/dashboard/literature?calisma=${calisma.id}`,
       tamam: literatur.toplam > 0,
     },
     {
@@ -83,7 +94,7 @@ export function siradakiAdimlar(ozet: CalismaOzeti): Adim[] {
         : literatur.kullanilan > 0 || yazimVar
           ? "Kaynakça ve atıf tutarlılığı henüz denetlenmedi."
           : "Metin ve kaynaklar hazır olunca denetleyin.",
-      href: "/dashboard/citations",
+      href: `/dashboard/citations?calisma=${calisma.id}`,
       tamam: Boolean(kaynakca),
     },
     {
@@ -92,7 +103,7 @@ export function siradakiAdimlar(ozet: CalismaOzeti): Adim[] {
       aciklama: belgeSayisi
         ? `${belgeSayisi} belge yüklendi.`
         : "Tamamlanan bölümleri yükleyip biçim ve yapı kontrolü yaptırın.",
-      href: "/dashboard/documents",
+      href: `/dashboard/documents?calisma=${calisma.id}`,
       tamam: belgeSayisi > 0,
     },
   ];
@@ -102,4 +113,14 @@ export function siradakiAdimlar(ozet: CalismaOzeti): Adim[] {
 export function birimIlerlemesi(adimlar: Adim[]): number {
   if (!adimlar.length) return 0;
   return Math.round((adimlar.filter((adim) => adim.tamam).length / adimlar.length) * 100);
+}
+
+/**
+ * Çalışmanın atıf stili ile kılavuzun istediği stil çelişiyor mu?
+ * Ekosistemin asıl işi bu: iki birim ayrı ayrı doğru ama birlikte yanlışsa
+ * bunu kimse fark etmiyordu.
+ */
+export function atifStiliCelisiyorMu(ozet: CalismaOzeti): boolean {
+  const kilavuzStili = ozet.kilavuz?.atifStili;
+  return Boolean(kilavuzStili && kilavuzStili !== ozet.calisma.citation_style);
 }

@@ -1081,3 +1081,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   .merkez-adim { grid-template-columns: auto 1fr; }
   .merkez-adim-baglanti { grid-column: 2; justify-self: start; }
 }
+
+/* Atıf seçicide kapsam: yazarken aranan kaynak neredeyse hep o çalışmanındır. */
+.picker-kapsam { display: flex; gap: 6px; margin: 8px 0; }
+.picker-kapsam button {
+  padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--r-pill);
+  background: var(--surface); color: var(--ink-soft); font-size: var(--fs-sm); cursor: pointer;
+}
+.picker-kapsam button.is-active { border-color: var(--accent-500); background: var(--accent-soft); color: var(--accent-700); }
+.picker-kapsam button:disabled { opacity: .5; cursor: default; }
+.picker-rozet { display: block; margin-top: 2px; color: var(--muted); font-size: var(--fs-sm); font-style: normal; }

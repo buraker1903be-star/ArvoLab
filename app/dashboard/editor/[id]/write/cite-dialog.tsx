@@ -73,14 +73,31 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
     };
   }, [open]);
 
+  const buCalismaSayisi = useMemo(
+    () => (sources ?? []).filter((source) => source.project_id === projectId).length,
+    [sources, projectId],
+  );
+
+  /*
+    Çalışmaya bağlı kaynak varsa liste ön tanımlı olarak ona daralır: yazarken
+    aranan kaynak neredeyse her zaman o çalışmanın kaynağıdır. Diğerleri tek
+    tıkla açılıyor, kaybolmuyor.
+  */
+  const [kapsamSecimi, setKapsamSecimi] = useState<boolean | null>(null);
+  // Kullanıcı seçmediyse varsayılan veriden türer; efektle state yazmaya
+  // gerek yok (React 19: efekt içinde setState zincirleme render tetikler).
+  const yalnizBuCalisma = kapsamSecimi ?? buCalismaSayisi > 0;
+  const setYalnizBuCalisma = setKapsamSecimi;
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("tr-TR");
     return (sources ?? [])
+      .filter((source) => !yalnizBuCalisma || source.project_id === projectId)
       .filter((source) =>
         !needle || [source.title, source.authors, source.year].some((value) => value?.toLocaleLowerCase("tr-TR").includes(needle))
       )
       .sort((a, b) => Number(b.project_id === projectId) - Number(a.project_id === projectId));
-  }, [sources, query, projectId]);
+  }, [sources, query, projectId, yalnizBuCalisma]);
 
   const preview = useMemo(() => {
     if (!form.title.trim()) return "";
@@ -106,6 +123,7 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
 
   const close = () => {
     setQuery("");
+    setKapsamSecimi(null);
     setForm(EMPTY_FORM);
     setTab("list");
     onClose();
@@ -190,6 +208,27 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
               placeholder="Başlık, yazar ya da yıl ile ara"
               aria-label="Kaynak ara"
             />
+            {sources && sources.length > 0 && (
+              <div className="picker-kapsam">
+                <button
+                  type="button"
+                  aria-pressed={yalnizBuCalisma}
+                  className={yalnizBuCalisma ? "is-active" : undefined}
+                  onClick={() => setYalnizBuCalisma(true)}
+                  disabled={buCalismaSayisi === 0}
+                >
+                  Bu çalışma ({buCalismaSayisi})
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!yalnizBuCalisma}
+                  className={!yalnizBuCalisma ? "is-active" : undefined}
+                  onClick={() => setYalnizBuCalisma(false)}
+                >
+                  Tüm kaynaklarım ({sources.length})
+                </button>
+              </div>
+            )}
             {sources === null ? (
               <p className="muted text-sm" aria-busy="true">Kaynaklar yükleniyor…</p>
             ) : sources.length === 0 ? (
@@ -199,7 +238,11 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
                 <button type="button" className="projects-filter-button" onClick={() => setTab("new")}>Yeni kaynak ekle</button>
               </div>
             ) : filtered.length === 0 ? (
-              <p className="muted text-sm">Aramanızla eşleşen kaynak yok.</p>
+              <p className="muted text-sm">
+                {yalnizBuCalisma && !query.trim()
+                  ? "Bu çalışmaya bağlı kaynak yok. “Tüm kaynaklarım” ile diğerlerine bakabilirsiniz."
+                  : "Aramanızla eşleşen kaynak yok."}
+              </p>
             ) : (
               <ul className="picker-list">
                 {filtered.map((source) => (
@@ -218,8 +261,8 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
                           {[source.authors, source.year, source.container_title, TYPE_LABEL[source.source_type] ?? source.source_type]
                             .filter(Boolean)
                             .join(" · ")}
-                          {source.project_id === projectId ? " · bu çalışma" : ""}
                         </small>
+                        {source.project_id !== projectId && <em className="picker-rozet">başka çalışma</em>}
                       </button>
                       <span className="chip">{formatInTextCitation(source, style, 1)}</span>
                     </div>

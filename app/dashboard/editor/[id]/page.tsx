@@ -9,10 +9,11 @@ import {
   Quote,
   Settings2,
   Sparkles,
+  TriangleAlert,
   Users,
 } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
-import { birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
+import { atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
 import { trTarih, trTarihSaat } from "@/lib/tr-time";
 
@@ -27,6 +28,16 @@ import { trTarih, trTarihSaat } from "@/lib/tr-time";
   aklında tutuyordu. Burası o bağı görünür kılar.
 */
 
+const ATIF_ETIKETI: Record<string, string> = {
+  apa7: "APA 7",
+  vancouver: "Vancouver",
+  chicago: "Chicago",
+  ieee: "IEEE",
+};
+
+const BULGU_TONU: Record<string, string> = { uyari: "danger", oneri: "warning", bilgi: "info" };
+const BULGU_ETIKETI: Record<string, string> = { uyari: "Eksik", oneri: "Öneri", bilgi: "Not" };
+
 const ADIM_SIMGESI: Record<string, typeof PenLine> = {
   literatur: BookOpenCheck,
   yazim: PenLine,
@@ -39,7 +50,8 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
   const ozet = await calismaOzeti(id);
   if (!ozet) notFound();
 
-  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan } = ozet;
+  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan, kilavuz } = ozet;
+  const stilCelisiyor = atifStiliCelisiyorMu(ozet);
   const adimlar = siradakiAdimlar(ozet);
   const ilerleme = birimIlerlemesi(adimlar);
 
@@ -97,6 +109,16 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
         </article>
       </section>
 
+      {stilCelisiyor && (
+        <p className="asistan-uyari" data-tone="danger" role="alert">
+          <TriangleAlert size={16} aria-hidden="true" /> Çalışmanız{" "}
+          <b>{ATIF_ETIKETI[calisma.citation_style] ?? calisma.citation_style}</b> olarak ayarlı, ancak{" "}
+          {kilavuz?.kurum} kılavuzu{" "}
+          <b>{ATIF_ETIKETI[kilavuz?.atifStili ?? ""] ?? kilavuz?.atifStili}</b> istiyor. Çalışma ayarlarından
+          düzeltin ya da kılavuzun bu çalışma için geçerli olmadığını doğrulayın.
+        </p>
+      )}
+
       <section className="section mt-lg">
         <h2 className="section-title">Bu çalışmanın birimleri</h2>
         <p className="muted text-base">
@@ -124,10 +146,27 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
         </ol>
       </section>
 
+      {asistan.sonBulgular.length > 0 && (
+        <section className="section mt-lg">
+          <h2 className="section-title">Asistanın son bulguları</h2>
+          <ul className="asistan-bulgular mt-sm">
+            {asistan.sonBulgular.map((bulgu, index) => (
+              <li className="asistan-bulgu" data-tone={BULGU_TONU[bulgu.tur] ?? "info"} key={index}>
+                <span className="asistan-bulgu-etiket">{BULGU_ETIKETI[bulgu.tur] ?? "Not"}</span>
+                <span className="asistan-bulgu-metin">
+                  <b>{bulgu.baslik}</b>
+                  {bulgu.aciklama}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="section mt-lg">
         <h2 className="section-title">Bağlı kayıtlar</h2>
         <div className="merkez-baglantilar">
-          <Link href="/dashboard/documents" className="merkez-baglanti">
+          <Link href={`/dashboard/documents?calisma=${calisma.id}`} className="merkez-baglanti">
             <FileCheck2 size={18} aria-hidden="true" />
             <span>
               <b>Belge kontrolü</b>
@@ -141,7 +180,7 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
               {danismanlikSayisi ? `${danismanlikSayisi} talep açıldı` : "Talep yok"}
             </span>
           </Link>
-          <Link href="/dashboard/analysis" className="merkez-baglanti">
+          <Link href={`/dashboard/analysis?calisma=${calisma.id}`} className="merkez-baglanti">
             <Sparkles size={18} aria-hidden="true" />
             <span>
               <b>Asistan denetimi</b>
@@ -152,7 +191,11 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
             <BookOpenCheck size={18} aria-hidden="true" />
             <span>
               <b>Kılavuzlar</b>
-              {calisma.university ? `${calisma.university} kurallarını kontrol edin` : "Kurum kılavuzunu seçin"}
+              {kilavuz
+                ? `${kilavuz.baslik ?? "Tez yazım kılavuzu"}${kilavuz.surum ? ` · ${kilavuz.surum}` : ""}`
+                : calisma.university
+                  ? `${calisma.university} için onaylı kılavuz bulunamadı`
+                  : "Çalışma ayarlarından kurumu girin"}
             </span>
           </Link>
         </div>

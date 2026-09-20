@@ -28,7 +28,14 @@ const STATUS_LABELS: Record<string, string> = {
   used: "Kullanıldı",
 };
 
-export default async function LiteraturePage() {
+export default async function LiteraturePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ calisma?: string }>;
+}) {
+  // Çalışma merkezinden gelindiğinde hangi çalışma için çalışıldığı belli;
+  // kullanıcı her seferinde listeden seçmek zorunda kalmasın.
+  const { calisma: secilenCalisma } = await searchParams;
   // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
   // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
   const [sources, projects, asistanAcik] = await Promise.all([
@@ -172,6 +179,7 @@ export default async function LiteraturePage() {
       <LiteraturAsistani
         projeler={projects.map((proje) => ({ id: proje.id, title: proje.title }))}
         asistanAcik={asistanAcik}
+        secilenCalisma={secilenCalisma ?? null}
       />
 
       {(["to_review", "read", "used"] as const).map((statusKey) => (

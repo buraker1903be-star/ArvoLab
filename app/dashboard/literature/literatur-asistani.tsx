@@ -6,9 +6,18 @@ import AsistanSonuc from "../_components/asistan-sonuc";
 
 type Proje = { id: string; title: string };
 
-export default function LiteraturAsistani({ projeler, asistanAcik }: { projeler: Proje[]; asistanAcik: boolean }) {
+export default function LiteraturAsistani({
+  projeler,
+  asistanAcik,
+  secilenCalisma = null,
+}: {
+  projeler: Proje[];
+  asistanAcik: boolean;
+  secilenCalisma?: string | null;
+}) {
   const [soru, setSoru] = useState("");
-  const [projeId, setProjeId] = useState("");
+  // Merkezden gelindiyse çalışma hazır seçili gelir.
+  const [projeId, setProjeId] = useState(secilenCalisma ?? "");
   const [sonuc, setSonuc] = useState<LiteraturDenetimYaniti | null>(null);
   const [bekleniyor, basla] = useTransition();
 

@@ -65,8 +65,17 @@ const STATUS_META: Record<AcademicVerification["status"], { label: string; tone:
   insufficient_data: { label: "Yetersiz veri", tone: "neutral" },
 };
 
-export default function CitationCheckForm({ projects, asistanAcik }: { projects: Project[]; asistanAcik: boolean }) {
-  const [projectId, setProjectId] = useState<string>("");
+export default function CitationCheckForm({
+  projects,
+  asistanAcik,
+  secilenCalisma = null,
+}: {
+  projects: Project[];
+  asistanAcik: boolean;
+  secilenCalisma?: string | null;
+}) {
+  // Merkezden gelindiyse çalışma hazır seçili gelir.
+  const [projectId, setProjectId] = useState<string>(secilenCalisma ?? "");
   const [projectTitle, setProjectTitle] = useState("");
   const [referenceList, setReferenceList] = useState("");
   const [bodyText, setBodyText] = useState("");

@@ -442,3 +442,50 @@ export async function deleteGuideline(guidelineId: string): Promise<ActionResult
   revalidatePath("/dashboard/guidelines");
   return { success: true };
 }
+
+/*
+  Çalışmanın kurum ADIYLA eşleşen kılavuz. findMatchingGuideline üniversite
+  KİMLİĞİ istiyor; academic_projects'te ise kurum serbest metin olarak
+  tutuluyor (kullanıcı elle yazıyor). Çalışma merkezinin kılavuzu
+  gösterebilmesi için ad üzerinden eşleştirme gerekti.
+
+  Eşleşme kaba bilerek: kullanıcı "Ankara Üniv." ya da "ANKARA ÜNİVERSİTESİ"
+  yazmış olabilir. Yanlış kılavuzu göstermemek için yalnızca onaylı ve etkin
+  kayıtlara bakılır; bulunamazsa sessizce null döner.
+*/
+export async function calismaKilavuzu(
+  universite: string | null,
+  enstitu: string | null,
+): Promise<(GuidelineMatch & { institute_name: string | null }) | null> {
+  const ad = (universite ?? "").trim();
+  if (ad.length < 3) return null;
+
+  const supabase = await createClient();
+  const select =
+    "id, university_name, institute_name, document_title, version_label, citation_style, academic_unit_id";
+
+  const { data, error } = await supabase
+    .from("thesis_guidelines")
+    .select(select)
+    .ilike("university_name", `%${ad}%`)
+    .eq("is_active", true)
+    .not("approved_snapshot", "is", null)
+    .order("effective_from", { ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false })
+    .limit(5);
+
+  if (error) {
+    console.error("[merkez] kılavuz aranamadı:", error.message);
+    return null;
+  }
+  if (!data?.length) return null;
+
+  // Enstitü de yazılmışsa ona uyan kayıt öncelikli.
+  const enstituAdi = (enstitu ?? "").trim().toLocaleLowerCase("tr-TR");
+  const secilen =
+    (enstituAdi &&
+      data.find((satir) => (satir.institute_name ?? "").toLocaleLowerCase("tr-TR").includes(enstituAdi))) ||
+    data[0];
+
+  return { ...secilen, match_level: "university" as const };
+}

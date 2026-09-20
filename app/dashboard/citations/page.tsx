@@ -3,7 +3,13 @@ import CitationCheckForm from "./citation-check-form";
 import { trTarihSaat } from "@/lib/tr-time";
 import { kaynakcaAsistaniAcik } from "@/app/actions/ai-kaynakca";
 
-export default async function CitationsPage() {
+export default async function CitationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ calisma?: string }>;
+}) {
+  // Çalışma merkezinden gelindiğinde çalışma hazır seçili gelsin.
+  const { calisma: secilenCalisma } = await searchParams;
   // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
   // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
   const [projects, history, asistanAcik] = await Promise.all([
@@ -32,7 +38,7 @@ export default async function CitationsPage() {
         </div>
       </section>
 
-      <CitationCheckForm projects={projects} asistanAcik={asistanAcik} />
+      <CitationCheckForm projects={projects} asistanAcik={asistanAcik} secilenCalisma={secilenCalisma ?? null} />
 
       {history.length > 0 && (
         <section className="section mt-lg">
