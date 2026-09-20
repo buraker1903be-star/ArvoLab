@@ -94,13 +94,27 @@ export async function metniOku(response: Response, enFazla = 8 * 1024 * 1024): P
   üniversite başına onlarca istek yapıyor; her birine 30 saniye vermek,
   tek yavaş sunucunun gece turunu yemesi demek.
 */
-export async function fetchOfficialSource(rawUrl: string, secenek?: { zamanAsimiMs?: number }): Promise<Response> {
+export type Dogrulayicilar = { etag?: string | null; lastModified?: string | null };
+
+export async function fetchOfficialSource(
+  rawUrl: string,
+  secenek?: { zamanAsimiMs?: number; dogrulayicilar?: Dogrulayicilar },
+): Promise<Response> {
+  /*
+    Koşullu istek başlıkları. Sunucudan geldiği gibi geri gönderilir:
+    ETag tırnaklı ve W/ önekli olabiliyor, Last-Modified HTTP tarih
+    biçiminde — ikisi de yorumlanmadan taşınmalı.
+  */
+  const kosulBasliklari: Record<string, string> = {};
+  if (secenek?.dogrulayicilar?.etag) kosulBasliklari["If-None-Match"] = secenek.dogrulayicilar.etag;
+  if (secenek?.dogrulayicilar?.lastModified) kosulBasliklari["If-Modified-Since"] = secenek.dogrulayicilar.lastModified;
+
   let current = await assertOfficialUrl(rawUrl);
   for (let redirects = 0; redirects <= 4; redirects += 1) {
     const response = await fetch(current, {
       redirect: "manual",
       signal: AbortSignal.timeout(secenek?.zamanAsimiMs ?? 30_000),
-      headers: { "User-Agent": "ArvoLab-Guideline-Monitor/1.0" },
+      headers: { "User-Agent": "ArvoLab-Guideline-Monitor/1.0", ...kosulBasliklari },
     });
     if (![301, 302, 303, 307, 308].includes(response.status)) return response;
     const location = response.headers.get("location");

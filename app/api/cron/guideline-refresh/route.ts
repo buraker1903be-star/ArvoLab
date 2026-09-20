@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { scanGuidelineUrl, TARAYICI_SURUMU } from "@/lib/guideline-scan";
+import { kosulluTara, TARAYICI_SURUMU } from "@/lib/guideline-scan";
 import {
   discoverGuidelinesForUniversity,
   getUniversitiesDueForGuidelineDiscovery,
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
 
   const { data: guidelines, error } = await supabase
     .from("thesis_guidelines")
-    .select("id, source_url, source_checksum, analysis_status, university_name, institute_name, extracted_rules, ai_analysis")
+    .select("id, source_url, source_checksum, analysis_status, university_name, institute_name, extracted_rules, ai_analysis, source_etag, source_last_modified")
     .not("source_url", "is", null)
     .eq("is_active", true)
     .order("last_checked_at", { ascending: true })
@@ -99,7 +99,31 @@ export async function GET(request: Request) {
       break;
     }
     try {
-      const scan = await scanGuidelineUrl(guideline.source_url!);
+      /*
+        Çıkarım sürümü eskiyse dosya değişmemiş olsa bile YENİDEN
+        çıkarılması gerekir; koşullu istek 304 dönerse elimizde metin
+        olmaz. O yüzden doğrulayıcılar yalnızca sürüm güncelken gönderilir.
+      */
+      const eskiSurumKontrol = Number((guideline.ai_analysis as { scannerVersion?: unknown } | null)?.scannerVersion ?? 0) < TARAYICI_SURUMU;
+      const tarama = await kosulluTara(
+        guideline.source_url!,
+        eskiSurumKontrol ? undefined : { etag: guideline.source_etag, lastModified: guideline.source_last_modified },
+      );
+
+      if (tarama.degismedi) {
+        /*
+          Sunucu "değişmedi" dedi: hiçbir şey indirilmedi. Yalnızca bakım
+          zamanı ilerletilir ki kuyrukta sıradakine geçilsin.
+        */
+        await supabase
+          .from("thesis_guidelines")
+          .update({ last_checked_at: new Date().toISOString() })
+          .eq("id", guideline.id);
+        results.push({ id: guideline.id, status: "not_modified" });
+        continue;
+      }
+
+      const scan = tarama.sonuc;
       const previousChecksum = guideline.source_checksum;
       const changed = Boolean(previousChecksum && previousChecksum !== scan.sourceChecksum);
       const isApproved = guideline.analysis_status === "approved";
@@ -131,6 +155,15 @@ export async function GET(request: Request) {
       };
       // İlk taramada imzası olmayan kayıtlara imza yazılır.
       const checksumPatch = previousChecksum ? {} : { source_checksum: scan.sourceChecksum };
+      /*
+        Doğrulayıcılar her turda tazelenir: sunucu dosyayı yeniden
+        yayımladığında ETag değişir ve eski değeri saklamak, sonraki
+        koşullu isteği işe yaramaz hâle getirirdi.
+      */
+      const dogrulayiciPatch = {
+        source_etag: scan.sourceEtag,
+        source_last_modified: scan.sourceLastModified,
+      };
 
       let update: Record<string, unknown>;
       let status: string;
@@ -148,6 +181,7 @@ export async function GET(request: Request) {
         */
         update = {
           ...checksumPatch,
+          ...dogrulayiciPatch,
           source_content_type: scan.sourceContentType,
           last_checked_at: detectedAt,
           ai_analysis: { ...analysis, scannerOutdated: surumEskimis },
@@ -162,6 +196,7 @@ export async function GET(request: Request) {
         // Onay bekleyen kayıt: yalnızca dosya değiştiyse ya da henüz kural yoksa öneriler yazılır.
         update = {
           source_checksum: scan.sourceChecksum,
+          ...dogrulayiciPatch,
           source_content_type: scan.sourceContentType,
           last_checked_at: detectedAt,
           ai_analysis: analysis,
@@ -182,7 +217,7 @@ export async function GET(request: Request) {
             : "needs_review";
       } else {
         // Onay bekleyen, dosyası değişmemiş: yöneticinin yaptığı düzenlemeler ezilmez.
-        update = { ...checksumPatch, source_content_type: scan.sourceContentType, last_checked_at: detectedAt, ai_analysis: analysis };
+        update = { ...checksumPatch, ...dogrulayiciPatch, source_content_type: scan.sourceContentType, last_checked_at: detectedAt, ai_analysis: analysis };
         status = "awaiting_review";
       }
 

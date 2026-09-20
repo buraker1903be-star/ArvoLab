@@ -99,6 +99,8 @@ function scanUpdate(scan: GuidelineScanResult, detectedAt: string) {
   return {
     source_checksum: scan.sourceChecksum,
     source_content_type: scan.sourceContentType,
+    source_etag: scan.sourceEtag,
+    source_last_modified: scan.sourceLastModified,
     last_checked_at: detectedAt,
     analysis_status: "needs_review",
     extracted_rules: scan.suggestedRules,

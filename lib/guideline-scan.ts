@@ -1,5 +1,5 @@
 import { DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
-import { fetchOfficialSource, kaynagiOku } from "@/lib/safe-official-fetch";
+import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
 import { atifSistemiSec } from "@/lib/atif-sistemi";
 
 /**
@@ -58,6 +58,9 @@ export interface GuidelineScanResult {
   detectedCitationHint: string | null;
   sourceChecksum: string;
   sourceContentType: string;
+  /* Koşullu istek için saklanır; sunucudan geldiği gibi geri gönderilir. */
+  sourceEtag: string | null;
+  sourceLastModified: string | null;
   suggestedRules: Record<string, unknown>;
   confidence: number;
   warnings: string[];
@@ -216,9 +219,30 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult> {
-  const res = await fetchOfficialSource(url);
+/**
+ * Kaynağı koşullu olarak tarar.
+ *
+ * Doğrulayıcılar verilirse sunucuya If-None-Match / If-Modified-Since
+ * gönderilir; dosya değişmemişse sunucu gövdesiz 304 döner ve hiçbir şey
+ * indirilmez. Eskiden her gece her dosya BAŞTAN iniyor, sonra SHA-256
+ * özeti karşılaştırılıp "değişmemiş" deniyordu — Gazi'nin kılavuzu 8 MB.
+ *
+ * 304 bir hata değil, en iyi sonuçtur: iş yapılmadan doğru cevap alındı.
+ */
+export async function kosulluTara(
+  url: string,
+  dogrulayicilar?: Dogrulayicilar,
+): Promise<{ degismedi: true } | { degismedi: false; sonuc: GuidelineScanResult }> {
+  const res = await fetchOfficialSource(url, { dogrulayicilar });
+  if (res.status === 304) return { degismedi: true };
+  return { degismedi: false, sonuc: await taramayiTamamla(url, res) };
+}
 
+export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult> {
+  return taramayiTamamla(url, await fetchOfficialSource(url));
+}
+
+async function taramayiTamamla(url: string, res: Response): Promise<GuidelineScanResult> {
   if (!res.ok) {
     throw new Error(`Kaynak alınamadı (HTTP ${res.status}).`);
   }
@@ -276,6 +300,8 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
     detectedCitationHint: citationHint,
     sourceChecksum: await sha256(sourceBytes),
     sourceContentType: contentType || "application/octet-stream",
+    sourceEtag: res.headers.get("etag"),
+    sourceLastModified: res.headers.get("last-modified"),
     ...formatting,
     /*
       formatting'den SONRA gelmeli: yayma onu ezerdi. Atıf seçiminin ne

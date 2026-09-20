@@ -94,6 +94,10 @@ export async function kilavuzuYenidenTara(guidelineId: string): Promise<ActionRe
     .update({
       source_checksum: scan.sourceChecksum,
       source_content_type: scan.sourceContentType,
+      // Koşullu istek doğrulayıcıları: bir sonraki gece turunda dosya
+      // değişmemişse hiç indirilmeyecek.
+      source_etag: scan.sourceEtag,
+      source_last_modified: scan.sourceLastModified,
       last_checked_at: new Date().toISOString(),
       analysis_status: "needs_review",
       extracted_rules: scan.suggestedRules,
