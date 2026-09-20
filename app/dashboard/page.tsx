@@ -9,12 +9,14 @@ import {
   FileCheck2,
   FileText,
   FolderKanban,
+  LayoutDashboard,
   MessageSquare,
   PenLine,
   Plus,
   Quote,
   ShieldCheck,
   ClipboardCheck,
+  TriangleAlert,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getProjects } from "@/app/actions/projects";
@@ -24,6 +26,7 @@ import { getAccessState } from "@/lib/access";
 import LicenseCard from "./_components/license-card";
 import { computeAttention } from "@/lib/attention";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
+import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
@@ -129,6 +132,23 @@ export default async function DashboardPage() {
           citationStyle: resume.citation_style ?? "apa7",
         })
       : null;
+  /*
+    Metin ile literatür listesi arasındaki tutarsızlıklar. Çalışma merkezinde
+    ayrıntısıyla duruyor; burada yalnızca sayısı görünüyor ki kullanıcı
+    ana sayfadan haberdar olsun. Müsvedde zaten okunmuş durumda, ek maliyet
+    yalnızca kaynak listesi.
+  */
+  const { data: resumeKaynaklar } = resume
+    ? await supabase
+        .from("literature_sources")
+        .select("id, title, authors, year, status")
+        .eq("project_id", resume.id)
+        .limit(500)
+    : { data: null };
+  const resumeTutarsizliklari = resume
+    ? metinListeTutarsizliklari(resumeManuscript?.plain_text ?? null, resumeKaynaklar ?? [])
+    : [];
+
   // Eksikler önce, bakılması gerekenler sonra
   const readinessGaps = (resumeReadiness?.items ?? [])
     .filter((item) => item.status !== "ok")
@@ -266,10 +286,24 @@ export default async function DashboardPage() {
                 </span>
               </p>
             ) : null}
+            {resumeTutarsizliklari.length > 0 ? (
+              <p className="text-sm resume-readiness resume-tutarsizlik">
+                <TriangleAlert size={15} aria-hidden="true" />
+                <span>
+                  {resumeTutarsizliklari[0].baslik}
+                  {resumeTutarsizliklari.length > 1 ? ` (+${resumeTutarsizliklari.length - 1})` : ""} ·{" "}
+                  <Link href={`/dashboard/editor/${resume.id}`}>çalışma merkezinde incele</Link>
+                </span>
+              </p>
+            ) : null}
             <div className="cluster">
               <Link href={`/dashboard/editor/${resume.id}/write`} className="projects-primary-button">
                 <PenLine size={16} aria-hidden="true" />
                 {resumeStats ? "Yazmaya devam et" : "Yazmaya başla"}
+              </Link>
+              <Link href={`/dashboard/editor/${resume.id}`} className="projects-filter-button">
+                <LayoutDashboard size={16} aria-hidden="true" />
+                Çalışma merkezi
               </Link>
               {activeProjects.length > 1 ? (
                 <Link href="/dashboard/editor" className="projects-filter-button">
