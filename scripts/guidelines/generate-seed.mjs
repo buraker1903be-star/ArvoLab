@@ -1,3 +1,17 @@
+/*
+  Doğrulanmış kaynaklardan (sources.tr.json) insan onayıyla uygulanacak SQL
+  üretir. Çıktı stdout'a yazılır.
+
+  DİKKAT: "npm run guidelines:seed-sql | pbcopy" KULLANMAYIN — npm kendi
+  başlığını ("> arvolab@0.1.0 …") stdout'a yazdığı için SQL'in başına
+  karışır ve sorgu sözdizimi hatası verir. Doğrusu:
+
+    node scripts/guidelines/generate-seed.mjs | pbcopy
+
+  Kayıtlar analysis_status='needs_review' ile girer: kurallar taranmadan ve
+  akademik yönetici onaylamadan hiçbir çalışmada uygulanmaz.
+*/
+
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
