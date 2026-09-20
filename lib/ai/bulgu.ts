@@ -82,13 +82,31 @@ export function bulgulariCozumle(ham: string): Bulgu[] {
 
 export type Dogrulama = { gecti: true } | { gecti: false; uydurulan: string[] };
 
+export type DogrulamaSecenegi = {
+  /** Doğrulanmış ek kaynaklar (ör. tespit edilen istatistiklerin APA karşılığı). */
+  ekKaynaklar?: string[];
+  /**
+   * Yıl benzeri değerleri serbest bırakır. Yalnızca literatür yeteneğinde
+   * açılır: orada "harmanlanmış öğrenme 2000'ler başından beri" gibi ifadeler
+   * kullanıcının verisine dair bir iddia değil, alan bilgisidir ve canlıda
+   * (20.09.2026) kusursuz bir tarama stratejisini tümden düşürdü. Analiz ve
+   * kaynakça yeteneklerinde KAPALI kalır: orada uydurulan bir yıl doğrudan
+   * yanıltır.
+   */
+  yillarSerbest?: boolean;
+};
+
+const YIL = /^(1[89]|20)\d{2}$/;
+
 /**
  * Bulgularda gönderilen bağlamda geçmeyen sayı var mı? Varsa cevap
  * gösterilmez: hangi sayının uydurulduğunu kullanıcı ayıklayamaz, bir
  * kısmı doğru olan bir listeye güvenmek en tehlikelisidir.
  */
-export function bulgulariDogrula(bulgular: Bulgu[], kaynak: string, ...ekKaynaklar: string[]): Dogrulama {
+export function bulgulariDogrula(bulgular: Bulgu[], kaynak: string, secenek: DogrulamaSecenegi = {}): Dogrulama {
   const cikti = bulgular.map((b) => `${b.baslik} ${b.aciklama}`).join("\n");
-  const uydurulan = uydurmaSayilar(cikti, kaynak, ...ekKaynaklar);
+  const uydurulan = uydurmaSayilar(cikti, kaynak, ...(secenek.ekKaynaklar ?? [])).filter(
+    (deger) => !(secenek.yillarSerbest && YIL.test(deger)),
+  );
   return uydurulan.length ? { gecti: false, uydurulan } : { gecti: true };
 }

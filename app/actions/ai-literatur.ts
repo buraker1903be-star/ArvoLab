@@ -86,7 +86,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
         kirpilanlar,
       };
     }
-    const dogrulama = bulgulariDogrula(bulgular, kaynak);
+    const dogrulama = bulgulariDogrula(bulgular, kaynak, { yillarSerbest: true });
     if (!dogrulama.gecti) {
       console.error("[ai] literatür bulguları uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "literatur", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });

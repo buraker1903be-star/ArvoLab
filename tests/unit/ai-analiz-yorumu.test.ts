@@ -70,7 +70,7 @@ describe("uydurma sayı denetimi", () => {
     const bulgular = bulgulariCozumle(
       '{"bulgular":[{"tur":"bilgi","baslik":"Serbestlik derecesi","aciklama":"F(2, 57) = 4.31 satırında df eksiksiz."}]}',
     );
-    assert.deepEqual(bulgulariDogrula(bulgular, kaynak, "F(2, 57) = 4.31, p = .018"), { gecti: true });
+    assert.deepEqual(bulgulariDogrula(bulgular, kaynak, { ekKaynaklar: ["F(2, 57) = 4.31, p = .018"] }), { gecti: true });
   });
 });
 

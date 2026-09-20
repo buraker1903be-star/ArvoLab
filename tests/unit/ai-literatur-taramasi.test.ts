@@ -77,7 +77,35 @@ describe("künye izi", () => {
 });
 
 describe("sayı denetimi yalnızca bulgulara uygulanır", () => {
-  test("bağlamda geçmeyen yıl bulguda yakalanır", () => {
+  test("literatürde yıl serbesttir, diğer uydurma sayı yakalanır", () => {
+    /*
+      Canlıda (20.09.2026) asistan kusursuz bir tarama stratejisi üretti ve
+      "harmanlanmış öğrenme 2000'ler başından beri literatürde" cümlesindeki
+      2000 yüzünden cevabın tamamı düşürüldü. Yıl, kullanıcının verisine dair
+      bir iddia değil alan bilgisidir; literatürde serbest bırakıldı.
+      Analiz ve kaynakçada kapalı kalır — orada uydurulan yıl yanıltır.
+    */
+    const { kaynak } = literaturIstemi(girdi);
+    assert.deepEqual(
+      bulgulariDogrula(
+        [{ tur: "oneri", baslik: "Yıl aralığı", aciklama: "Kavram 2000'ler başından beri literatürde." }],
+        kaynak,
+        { yillarSerbest: true },
+      ),
+      { gecti: true },
+    );
+    // Yıl olmayan uydurma değer serbest bırakılmaz.
+    assert.equal(
+      bulgulariDogrula(
+        [{ tur: "uyari", baslik: "Oran", aciklama: "Kaynakların %73'ü eski." }],
+        kaynak,
+        { yillarSerbest: true },
+      ).gecti,
+      false,
+    );
+  });
+
+  test("yıl serbestisi kapalıyken yakalanır (analiz ve kaynakça)", () => {
     const { kaynak } = literaturIstemi(girdi);
     const sonuc = bulgulariDogrula(
       [{ tur: "uyari", baslik: "Güncellik", aciklama: "2023 sonrası kaynak yok." }],

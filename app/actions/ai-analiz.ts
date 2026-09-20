@@ -71,7 +71,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
       listeye güvenmek en tehlikelisi: hangi değerin uydurulduğunu kullanıcı
       ayıklayamaz. Bu yüzden tek bir uydurma sayıda cevabın tamamı düşer.
     */
-    const dogrulama = bulgulariDogrula(bulgular, kaynak, ...apaSatirlari);
+    const dogrulama = bulgulariDogrula(bulgular, kaynak, { ekKaynaklar: apaSatirlari });
     if (!dogrulama.gecti) {
       console.error("[ai] analiz denetimi uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "analiz", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
