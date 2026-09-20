@@ -13,6 +13,23 @@
   numaraları (1., 2.) gibi tek haneli sıra sayıları.
 */
 
+/*
+  APA'da "F(2,57)" İKİ serbestlik derecesidir, "2,57" ondalığı değil. Türkçe
+  ondalık ayırıcısı virgül olduğu için ayrıştırıcı bunu 2.57 diye okuyordu:
+  girdide "F(2, 57)" boşluklu yazıldığından 2 ve 57 çıkıyor, asistan aynı
+  şeyi boşluksuz yazınca uydurma sayı sanılıp cevabın tamamı atılıyordu
+  (canlıda 20.09.2026). Yalnızca test adından hemen sonra gelen parantez
+  içinde uygulanır; "(p = 0,021)" gibi gerçek ondalıklara dokunmaz.
+*/
+const SERBESTLIK_DERECESI = /([FtχΧ]\s*²?\s*\(\s*\d+)\s*,\s*(?=\d)/g;
+
+/*
+  Standart ve sürüm adları sayısal iddia değildir: "APA 7" kuralın adıdır.
+  Canlıda (20.09.2026) doğru çalışan bir denetim yalnızca bu yüzden tümden
+  atıldı.
+*/
+const STANDART_ADI = /\b(APA|MLA|IEEE|Vancouver|Chicago|Tip|Tür)\s*\d+/gi;
+
 /** Metindeki sayısal değerler; "χ²(1, N = 120) = 6.14" → 1, 120, 6.14 */
 export function sayilar(metin: string): string[] {
   /*
@@ -22,7 +39,7 @@ export function sayilar(metin: string): string[] {
     ayrı okusaydık, asistan aralığı "45–72" diye yazdığında girdideki
     "45-72" ile eşleşmiyor, doğru cevap uydurma sanılıp atılıyordu.
   */
-  const duz = metin.replace(/[\u2010-\u2015]/g, "-");
+  const duz = metin.replace(/[\u2010-\u2015]/g, "-").replace(SERBESTLIK_DERECESI, "$1; ");
   // ".05" gibi baştaki sıfırı yazılmayan değerler de yakalanır (APA'da yaygın).
   return [...duz.matchAll(/-?(?:\d+(?:[.,]\d+)?|[.,]\d+)/g)].map((eslesme) => {
     const ham = eslesme[0];
@@ -49,5 +66,7 @@ const SERBEST = new Set(["0", "1", "2", "3", "4", "5", ".05", ".01", ".001", "10
  */
 export function uydurmaSayilar(cikti: string, girdi: string, ...ekGirdiler: string[]): string[] {
   const bilinen = new Set([...sayilar(girdi), ...ekGirdiler.flatMap(sayilar)]);
-  return [...new Set(sayilar(cikti))].filter((deger) => !bilinen.has(deger) && !SERBEST.has(deger));
+  // Standart adları yalnızca çıktıda ayıklanır; girdide geçmesi zararsız.
+  const temiz = cikti.replace(STANDART_ADI, " ");
+  return [...new Set(sayilar(temiz))].filter((deger) => !bilinen.has(deger) && !SERBEST.has(deger));
 }

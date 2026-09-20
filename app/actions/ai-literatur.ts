@@ -65,7 +65,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
   const basladi = Date.now();
 
   try {
-    const yanit = await sor(mesajlar, { jsonBekle: true, sicaklik: 0.3, enFazlaJeton: 2600 });
+    const yanit = await sor(mesajlar, { jsonBekle: true, sicaklik: 0.3, enFazlaJeton: 3200 });
     const { bulgular, aramalar } = taramaCozumle(yanit.metin);
     if (!bulgular.length && !aramalar.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "literatur", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
