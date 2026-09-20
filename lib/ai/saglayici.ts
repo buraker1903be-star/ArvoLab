@@ -244,7 +244,10 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
 
   let { cevap: yanit, govde } = await calis(istek);
   for (let deneme = 0; deneme < 2 && !yanit.ok; deneme += 1) {
-    const sonraki = parametreDusur(yanit.status, govde, istek, bicimi);
+    // Yalnızca bayraklar geçilir: istek nesnesinin tamamını verince dönen
+    // nesne mesajları da taşıyor ve aşağıdaki günlüğe kullanıcının akademik
+    // metni düşüyordu (canlıda 20.09.2026).
+    const sonraki = parametreDusur(yanit.status, govde, { json: istek.json, sicaklik: istek.sicaklik }, bicimi);
     if (!sonraki) break;
     // Yalnızca bayraklar basılır: istek gövdesi kullanıcının akademik
     // metnini taşıyor, günlüğe düşmemeli.

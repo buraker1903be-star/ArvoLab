@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
 import { asistanKapisi } from "@/lib/ai/erisim";
-import { bulgulariDogrula, type Bulgu } from "@/lib/ai/bulgu";
+import type { Bulgu } from "@/lib/ai/bulgu";
 import { kunyeIzi, literaturIstemi, taramaCozumle, type KayitOzeti } from "@/lib/ai/literatur-taramasi";
 import { asistanKaydet } from "@/lib/ai/kayit";
 
@@ -83,15 +83,6 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "literatur", durum: "rejected", redNedeni: "kunye", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
       return {
         hata: "Asistan kaynak künyesi ürettiği için cevap gösterilmedi. Kaynakları dizinden kendiniz doğrulamalısınız; tekrar deneyebilirsiniz.",
-        kirpilanlar,
-      };
-    }
-    const dogrulama = bulgulariDogrula(bulgular, kaynak, { yillarSerbest: true });
-    if (!dogrulama.gecti) {
-      console.error("[ai] literatür bulguları uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
-      await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "literatur", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
-      return {
-        hata: "Asistan verilmeyen sayılar ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
         kirpilanlar,
       };
     }

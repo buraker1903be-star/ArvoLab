@@ -2,6 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { kayitOzeti, kunyeIzi, literaturIstemi, taramaCozumle } from "../../lib/ai/literatur-taramasi";
 import { bulgulariDogrula } from "../../lib/ai/bulgu";
+import { readFile } from "node:fs/promises";
 
 const girdi = {
   arastirmaSorusu: "Harmanlanmış öğrenmenin matematik özyeterliğine etkisi nedir?",
@@ -76,49 +77,27 @@ describe("künye izi", () => {
   });
 });
 
-describe("sayı denetimi yalnızca bulgulara uygulanır", () => {
-  test("literatürde yıl serbesttir, diğer uydurma sayı yakalanır", () => {
-    /*
-      Canlıda (20.09.2026) asistan kusursuz bir tarama stratejisi üretti ve
-      "harmanlanmış öğrenme 2000'ler başından beri literatürde" cümlesindeki
-      2000 yüzünden cevabın tamamı düşürüldü. Yıl, kullanıcının verisine dair
-      bir iddia değil alan bilgisidir; literatürde serbest bırakıldı.
-      Analiz ve kaynakçada kapalı kalır — orada uydurulan yıl yanıltır.
-    */
-    const { kaynak } = literaturIstemi(girdi);
-    assert.deepEqual(
-      bulgulariDogrula(
-        [{ tur: "oneri", baslik: "Yıl aralığı", aciklama: "Kavram 2000'ler başından beri literatürde." }],
-        kaynak,
-        { yillarSerbest: true },
-      ),
-      { gecti: true },
-    );
-    // Yıl olmayan uydurma değer serbest bırakılmaz.
-    assert.equal(
-      bulgulariDogrula(
-        [{ tur: "uyari", baslik: "Oran", aciklama: "Kaynakların %73'ü eski." }],
-        kaynak,
-        { yillarSerbest: true },
-      ).gecti,
-      false,
-    );
-  });
-
-  test("yıl serbestisi kapalıyken yakalanır (analiz ve kaynakça)", () => {
+describe("sayı denetimi literatürde uygulanmaz", () => {
+  /*
+    Canlıda (20.09.2026) iki kusursuz tarama stratejisi üst üste düşürüldü:
+    biri "2000'ler başından beri", diğeri "COVID-19" ve "son 15-20 yıl"
+    ifadeleri yüzünden. Bunlar kullanıcının verisine dair sayısal iddia
+    değil, alan bilgisidir. Denetim sayısal bir VERİ değeri taşıyan
+    yeteneklerde kalır (analiz, kaynakça); literatürün riski uydurma
+    KAYNAK ve onu kunyeIzi yakalar.
+  */
+  test("alan bilgisi sayıları analiz/kaynakça ölçütüyle uydurma sayılırdı", () => {
     const { kaynak } = literaturIstemi(girdi);
     const sonuc = bulgulariDogrula(
-      [{ tur: "uyari", baslik: "Güncellik", aciklama: "2023 sonrası kaynak yok." }],
+      [{ tur: "oneri", baslik: "Salgın dönemi", aciklama: "COVID-19 sonrası son 15-20 yıl ayrı taranmalı." }],
       kaynak,
     );
-    assert.equal(sonuc.gecti, false);
+    assert.equal(sonuc.gecti, false, "denetim uygulansaydı bu cevap düşerdi");
   });
 
-  test("listedeki yıllar serbesttir", () => {
-    const { kaynak } = literaturIstemi(girdi);
-    assert.deepEqual(
-      bulgulariDogrula([{ tur: "bilgi", baslik: "Yıl aralığı", aciklama: "Kaynaklar 2018 ve 2019 yıllarından." }], kaynak),
-      { gecti: true },
-    );
+  test("literatür yeteneği bu denetimi çağırmaz", async () => {
+    const kod = await readFile(new URL("../../app/actions/ai-literatur.ts", import.meta.url), "utf8");
+    assert.ok(!kod.includes("bulgulariDogrula"), "literatür eyleminde sayı denetimi olmamalı");
+    assert.ok(kod.includes("kunyeIzi"), "künye denetimi yerinde kalmalı");
   });
 });

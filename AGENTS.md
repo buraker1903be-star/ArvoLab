@@ -49,6 +49,11 @@ davranış da yazılır ("Eskiden … oluyordu"). Yeni kod bu üsluba uyar.
   çıktıyı tarar; bağlamda geçmeyen tek bir değer varsa cevabın tamamı düşer
   ve kullanıcıya hiç gösterilmez. Bir kısmı doğru olan listeye güvenmek en
   tehlikelisidir — hangi değerin uydurulduğunu kullanıcı ayıklayamaz.
+  Denetim **sayısal bir VERİ değeri** taşıyan yeteneklerde uygulanır: analizde
+  p değeri ve etki büyüklüğü, kaynakçada yıl, cilt, sayfa. Literatür
+  tavsiyesinde böyle bir değer yoktur ("COVID-19", "2000'ler", "son 15-20
+  yıl"); orada denetim yerine `kunyeIzi` çalışır. Yanlış alarm, kaçırılan
+  uydurmadan sinsidir: kullanıcı doğru çalışan aracı kullanmayı bırakır.
 - **Asistan kaynak önermez.** Literatür yeteneği arama stratejisi üretir;
   yazar, başlık, dergi ya da DOI yazması yasaktır (`kunyeIzi` kodda da
   denetler). Uydurma künye akademik çalışmada en ağır hatadır.
