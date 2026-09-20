@@ -350,6 +350,17 @@
   letter-spacing: .08em;
   text-transform: uppercase;
 }
+/* İlk sütun yatay kaydırmada yerinde kalır: 9 sütunlu model karşılaştırma
+   tablosunda kaydırınca "Model" adı kayboluyor, kullanıcı hangi satıra
+   baktığını kaybediyordu. Zemin şart — saydam kalırsa altından kayan
+   hücreler görünür. */
+.stats-result-table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  box-shadow: 1px 0 0 var(--line-soft);
+}
+.stats-result-table th:first-child { z-index: 1; background: var(--surface-2); }
 .stats-result-table tbody tr:last-child td { border-bottom: 0; }
 @media (hover: hover) and (pointer: fine) {
   /* --accent-bright tema ile döner; --accent-100 her iki temada aynı kalıp

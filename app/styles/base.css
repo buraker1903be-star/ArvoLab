@@ -48,7 +48,6 @@ code, pre, kbd { font-family: var(--font-mono); }
 ::selection { background: color-mix(in srgb, var(--accent-bright) 26%, transparent); }
 
 /* Eski başlık sınıfı: artık tek yazı ailesi; marka yazısı için .brand-wordmark */
-.brand-type { font-family: var(--font-body); }
 .brand-wordmark { font-family: var(--font-brand); letter-spacing: -.02em; }
 
 /* Klavye odağı: yalnızca klavyede görünür */

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { requestPasswordReset } from "@/app/actions/auth";
+import ThemeToggle from "@/app/_components/theme-toggle";
 
 const errorMessages: Record<string, string> = {
   "missing-email": "E-posta adresi zorunludur.",
@@ -18,6 +19,12 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
 
   return (
     <main className="auth-simple-page">
+      {/* Giriş sayfasında tema düğmesi vardı, kardeş sayfalarında yoktu:
+          koyu temadaki kullanıcı buraya gelince değiştiremiyordu. Stil
+          (auth.css .auth-theme-toggle) zaten yazılmıştı, bağlanmamıştı. */}
+      <div className="auth-theme-toggle">
+        <ThemeToggle />
+      </div>
       <div className="login-card">
         <div className="login-heading">
           <span className="login-kicker">Şifre sıfırlama</span>

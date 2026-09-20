@@ -303,19 +303,26 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .project-progress { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 96px; }
 .project-progress strong { font-size: var(--fs-md); font-weight: 650; font-variant-numeric: tabular-nums; }
 .project-progress-track { width: 96px; height: 6px; overflow: hidden; border-radius: var(--r-pill); background: var(--surface-sunken); }
+/* Genişlik YALNIZCA animasyonla sürülür; width satır içinde --w ile verilir.
+   Eskiden burada bir transition, 600 satır aşağıda da bir animation vardı:
+   animasyon çalışırken transition bastırılıyor, bittikten sonra devreye
+   giriyordu — ilk dolum 0,8 sn, sonraki güncellemeler 0,6 sn. Üstelik
+   prefers-reduced-motion yalnızca animation'ı kapattığı için hareket
+   azaltma tercihi kısmen ihlal ediliyordu. */
 .project-progress-track span {
   display: block;
+  width: var(--w, 0%);
   height: 100%;
   border-radius: var(--r-pill);
   background: linear-gradient(90deg, var(--accent-500), var(--accent-400));
-  transition: width .6s var(--ease-spring);
+  animation: progress-fill .8s var(--ease-spring) both;
 }
+@keyframes progress-fill { from { width: 0; } }
 
 /* ---------- Durum etiketi (noktalı hap) ----------
    <span class="status-pill" data-tone="success|info|warning|danger|neutral|accent">
-   .project-status eski adıdır, aynı görünümü kullanır (varsayılan ton: accent). */
-.status-pill,
-.project-status {
+   (Varsayılan ton: accent.) */
+.status-pill {
   --tone: var(--accent-strong);
   --tone-soft: var(--accent-soft);
   display: inline-flex;
@@ -332,8 +339,7 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   line-height: 1.2;
   white-space: nowrap;
 }
-.status-pill::before,
-.project-status::before {
+.status-pill::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -341,11 +347,11 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   border-radius: 50%;
   background: currentColor;
 }
-:is(.status-pill, .project-status)[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
-:is(.status-pill, .project-status)[data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
-:is(.status-pill, .project-status)[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
-:is(.status-pill, .project-status)[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
-:is(.status-pill, .project-status)[data-tone="neutral"] { --tone: var(--neutral); --tone-soft: var(--neutral-soft); }
+.status-pill[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
+.status-pill[data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
+.status-pill[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
+.status-pill[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
+.status-pill[data-tone="neutral"] { --tone: var(--neutral); --tone-soft: var(--neutral-soft); }
 .pill-row { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 
 /* ---------- Formlar ---------- */
@@ -381,9 +387,8 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .project-form-full { grid-column: 1 / -1; }
 .project-form-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 /* ActionForm çocukları display:contents bir fieldset içinde durur; o yüzden iki seçici */
-.project-form-grid > :is(.project-form-actions, .form-span),
-.project-form-grid > .action-form-fieldset > :is(.project-form-actions, .form-span, .project-form-full) { grid-column: 1 / -1; }
-.align-end { align-self: end; }
+.project-form-grid > .project-form-actions,
+.project-form-grid > .action-form-fieldset > :is(.project-form-actions, .project-form-full) { grid-column: 1 / -1; }
 
 .project-form-grid :is(input:not([type="checkbox"], [type="radio"], [type="hidden"]), select, textarea),
 .guideline-review-form :is(input:not([type="checkbox"], [type="radio"]), select, textarea),
@@ -477,9 +482,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 
 /* ---------- Uyarılar ----------
    <p class="alert" data-tone="danger|success|warning|info" role="alert|status"> */
-.alert,
-.login-error,
-.login-notice {
+.alert {
   --tone: var(--danger);
   --tone-soft: var(--danger-soft);
   display: flex;
@@ -495,7 +498,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   font-weight: 600;
   line-height: 1.55;
 }
-.login-notice,
 .alert[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
 .alert[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
 .alert[data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
@@ -809,7 +811,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .mt-lg { margin-top: 24px; }
 .mb-md { margin-bottom: 16px; }
 .mb-lg { margin-bottom: 24px; }
-.text-right { text-align: right; }
 
 /* ---------- Duyarlı ---------- */
 @media (max-width: 1100px) {
@@ -824,7 +825,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   .compact-select { font-size: 16px; }
   :is(.projects-primary-button, .projects-filter-button, .button-danger) { min-height: 44px; }
 }
-@media (max-width: 720px) {
+/* 760px: çekmece alt sayfaya (overlays.css) ve yazım araç çubuğu sarmaya
+   (workspace.css) bu noktada geçiyor. Form ızgarası eskiden 720'de tek
+   sütuna iniyordu; 720-760 aralığında çekmece mobil modda ama içindeki
+   form iki sütun kalıyordu. */
+@media (max-width: 760px) {
   .project-form-grid { grid-template-columns: 1fr; }
   .project-form-card { padding: 18px; }
   .project-card { padding: 16px; }
@@ -833,7 +838,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   .projects-header { align-items: flex-start; }
   .projects-header > :is(a, button) { width: 100%; }
 }
-@media (max-width: 620px) {
+/* 640px: panelin telefon sınırı. Bu blok 620'deydi — 20px'lik fark
+   kopyala-yapıştır kaymasıydı, 620-640 arasında karma düzen veriyordu. */
+@media (max-width: 640px) {
   .guideline-review-form { grid-template-columns: 1fr; }
   .dashboard-stat-card { padding: 14px; gap: 10px; }
   .dashboard-stat-card strong { font-size: 22px; }
@@ -929,10 +936,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .projects-list > :nth-child(4) { animation-delay: .12s; }
 .projects-list > :nth-child(5) { animation-delay: .16s; }
 .projects-list > :nth-child(n+6) { animation-delay: .2s; }
-
-/* İlerleme çubuğu açılışta dolar; width satır içinde --w ile verilir. */
-.project-progress-track span { width: var(--w, 0%); animation: progress-fill .8s var(--ease-spring) both; }
-@keyframes progress-fill { from { width: 0; } }
 
 .empty-state-icon {
   display: grid;
