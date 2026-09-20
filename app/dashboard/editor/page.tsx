@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, FileText, LayoutDashboard, MessageSquare, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, FileText, LayoutDashboard, MessageSquare, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
 import { loadAppliedGuidelines } from "@/lib/guideline-rules";
@@ -13,6 +13,9 @@ import { getCurrentProfile } from "@/app/actions/profile";
 import DeleteProjectButton from "./delete-project-button";
 import ActionForm from "../action-form";
 import { statusTone } from "@/lib/status-tone";
+import { topluTutarsizliklar } from "@/app/actions/calisma-merkezi";
+import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
+import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { trTarihSaat, trUzunTarih } from "@/lib/tr-time";
 
 function formatDate(dateStr: string | null) {
@@ -48,6 +51,26 @@ export default async function ProjectsPage({
     canFilterAssignee: canApprove,
   });
   const staff = canApprove ? await getAssignableStaff() : [];
+
+  /*
+    Kontrolör onayı verirken metinle literatürün çelişip çelişmediğini
+    ONAYDAN SONRA öğreniyordu (lib/onay-uyarisi.ts). Burada onaylamadan önce
+    görsün. Tarama tam metin istediği için yalnızca onaysız ve yazılmış
+    çalışmalarda, sınırlı sayıda yapılır (lib/toplu-tutarsizlik.ts); rozet
+    çıkmaması "temiz" demek değil, kesin yargı çalışma merkezinde.
+  */
+  const tutarsizliklar: Map<string, Tutarsizlik[]> = canApprove
+    ? await topluTutarsizliklar(
+        taranacakCalismalar(
+          visible.map((project) => ({
+            id: project.id,
+            onayli: !!project.controller_approved_at,
+            kelime: stats.get(project.id)?.words ?? 0,
+            guncellendi: stats.get(project.id)?.updatedAt ?? null,
+          })),
+        ),
+      )
+    : new Map();
   // Silme yetkisi RLS ile aynı: sahibi ya da Akademik Yönetici/Sistem
   // Yöneticisi/Kurucu (Kontrolör silme yetkisine sahip DEĞİL).
   const canDeleteAnyProject =
@@ -193,6 +216,20 @@ export default async function ProjectsPage({
                     <Link href={`/dashboard/editor/${project.id}/write`} className="tone-text" data-tone="warning">
                       <MessageSquare size={15} aria-hidden="true" />
                       {openComments.get(project.id)} açık yorum
+                    </Link>
+                  ) : null}
+
+                  {tutarsizliklar.get(project.id)?.length ? (
+                    <Link
+                      href={`/dashboard/editor/${project.id}`}
+                      className="tone-text"
+                      data-tone="warning"
+                      title={tutarsizliklar.get(project.id)!.map((t) => t.baslik).join(" · ")}
+                    >
+                      <AlertTriangle size={15} aria-hidden="true" />
+                      {tutarsizliklar.get(project.id)!.length === 1
+                        ? tutarsizliklar.get(project.id)![0].baslik
+                        : `${tutarsizliklar.get(project.id)!.length} tutarsızlık`}
                     </Link>
                   ) : null}
 

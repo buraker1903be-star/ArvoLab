@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { AsistanBulgusu, CalismaOzeti } from "@/lib/calisma-ozeti";
 import { calismaKilavuzu } from "@/app/actions/guidelines";
-import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
+import { metinListeTutarsizliklari, type KaynakSatiri, type Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { loadAppliedGuidelines } from "@/lib/guideline-rules";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 
@@ -149,4 +149,49 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
         }
       : null,
   };
+}
+
+/**
+ * Birden çok çalışma için metin–literatür tutarsızlıkları, iki sorguda.
+ *
+ * Çalışma listesinde kontrolörün onaylamadan ÖNCE durumu görmesi için.
+ * Tek tek `calismaOzeti` çağırmak çalışma başına on sorgu ederdi; burada
+ * yalnızca denetimin gerçekten ihtiyaç duyduğu iki tablo okunur.
+ *
+ * Hangi çalışmaların geleceğine `taranacakCalismalar` karar verir
+ * (lib/toplu-tutarsizlik.ts) — tam metin çekmek pahalıdır.
+ */
+export async function topluTutarsizliklar(projectIds: string[]): Promise<Map<string, Tutarsizlik[]>> {
+  const sonuc = new Map<string, Tutarsizlik[]>();
+  if (!projectIds.length) return sonuc;
+
+  const supabase = await createClient();
+  const [musveddeler, kaynaklar] = await Promise.all([
+    supabase.from("project_manuscripts").select("project_id, plain_text").in("project_id", projectIds),
+    supabase
+      .from("literature_sources")
+      .select("project_id, id, title, authors, year, status")
+      .in("project_id", projectIds)
+      .limit(2000),
+  ]);
+
+  // Okuma düşerse liste yine açılır; yalnızca rozet çıkmaz.
+  for (const okuma of [musveddeler, kaynaklar])
+    if (okuma.error) console.error("[merkez] toplu tutarsızlık okunamadı:", okuma.error.message);
+
+  const kaynakHaritasi = new Map<string, KaynakSatiri[]>();
+  for (const satir of kaynaklar.data ?? []) {
+    const liste = kaynakHaritasi.get(satir.project_id) ?? [];
+    liste.push(satir);
+    kaynakHaritasi.set(satir.project_id, liste);
+  }
+
+  for (const musvedde of musveddeler.data ?? []) {
+    const tutarsizliklar = metinListeTutarsizliklari(
+      musvedde.plain_text ?? null,
+      kaynakHaritasi.get(musvedde.project_id) ?? [],
+    );
+    if (tutarsizliklar.length) sonuc.set(musvedde.project_id, tutarsizliklar);
+  }
+  return sonuc;
 }
