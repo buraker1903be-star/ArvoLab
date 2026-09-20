@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { kosulluTara, TARAYICI_SURUMU } from "@/lib/guideline-scan";
+import { kosulluTara, kunyeYamasi, TARAYICI_SURUMU } from "@/lib/guideline-scan";
 import {
   discoverGuidelinesForUniversity,
   getUniversitiesDueForGuidelineDiscovery,
@@ -199,6 +199,8 @@ export async function GET(request: Request) {
         update = {
           source_checksum: scan.sourceChecksum,
           ...dogrulayiciPatch,
+          // Sürüm, yürürlük tarihi, sayfa sınırı: yalnızca bulunanlar yazılır.
+          ...kunyeYamasi(scan),
           source_content_type: scan.sourceContentType,
           last_checked_at: detectedAt,
           ai_analysis: analysis,

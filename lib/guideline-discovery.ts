@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { kunyeYamasi, scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { enstituTespitEt, fakulteVeyaBolumBelgesi } from "@/lib/enstitu-tespiti";
 import { crawlUniversityAndInstitutes, resolveOfficialUniversityDomain } from "@/lib/official-guideline-crawl";
 
@@ -101,6 +101,7 @@ function scanUpdate(scan: GuidelineScanResult, detectedAt: string) {
     source_content_type: scan.sourceContentType,
     source_etag: scan.sourceEtag,
     source_last_modified: scan.sourceLastModified,
+    ...kunyeYamasi(scan),
     last_checked_at: detectedAt,
     analysis_status: "needs_review",
     extracted_rules: scan.suggestedRules,

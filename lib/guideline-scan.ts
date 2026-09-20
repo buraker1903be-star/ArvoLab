@@ -2,6 +2,7 @@ import { DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
 import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
 import { atifSistemiSec } from "@/lib/atif-sistemi";
 import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
+import { sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 
 /**
  * Kılavuz Tarama Yardımcısı
@@ -49,8 +50,26 @@ const CANDIDATE_SECTIONS = [
   Sürüm geçmişi:
     1 — ilk çıkarım kümesi
     2 — atıf sistemi sayım/baskınlık ile seçiliyor (lib/atif-sistemi.ts)
+    3 — taranmış PDF'ler OCR ile okunuyor (lib/ocr.ts); sürüm, yürürlük
+        tarihi ve sayfa sınırı çıkarılıyor (lib/kilavuz-kunyesi.ts)
 */
-export const TARAYICI_SURUMU = 2;
+export const TARAYICI_SURUMU = 3;
+
+/**
+ * Künye alanlarından YALNIZCA bulunanları içeren güncelleme yaması.
+ *
+ * Bulunamayan alan yazılmaz: yönetici sayfa sınırını elle girmişse,
+ * kılavuzda sınır yazmadığı için null dönen bir çıkarım onun girdisini
+ * silmemeli. Çıkarım bildiğini ekler, bilmediğini bozmaz.
+ */
+export function kunyeYamasi(scan: GuidelineScanResult): Record<string, unknown> {
+  return {
+    ...(scan.versionLabel ? { version_label: scan.versionLabel } : {}),
+    ...(scan.effectiveFrom ? { effective_from: scan.effectiveFrom } : {}),
+    ...(scan.minPages !== null ? { min_pages: scan.minPages } : {}),
+    ...(scan.maxPages !== null ? { max_pages: scan.maxPages } : {}),
+  };
+}
 
 export interface GuidelineScanResult {
   textPreview: string;
@@ -64,6 +83,11 @@ export interface GuidelineScanResult {
   sourceLastModified: string | null;
   /* Metin OCR ile okundu: gürültülü olabilir, tek adım onaya girmez. */
   ocrKullanildi: boolean;
+  /* Künye alanları; bulunamazsa null (lib/kilavuz-kunyesi.ts). */
+  versionLabel: string | null;
+  effectiveFrom: string | null;
+  minPages: number | null;
+  maxPages: number | null;
   suggestedRules: Record<string, unknown>;
   confidence: number;
   warnings: string[];
@@ -316,6 +340,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   const atifSecimi = atifSistemiSec(text);
   const citationHint = atifSecimi?.etiket ?? null;
   const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint));
+  const sayfaSiniri = sayfaSiniriCikar(text);
 
   return {
     textPreview: text.slice(0, 4000),
@@ -327,6 +352,10 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     sourceEtag: res.headers.get("etag"),
     sourceLastModified: res.headers.get("last-modified"),
     ocrKullanildi,
+    versionLabel: surumEtiketiCikar(text),
+    effectiveFrom: yururlukTarihiCikar(text),
+    minPages: sayfaSiniri.enAz,
+    maxPages: sayfaSiniri.enFazla,
     ...formatting,
     /*
       formatting'den SONRA gelmeli: yayma onu ezerdi. Atıf seçiminin ne

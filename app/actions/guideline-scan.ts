@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { kunyeYamasi, scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
 import type { ActionResult } from "@/lib/auth-guards";
 import { discoverGuidelinesForUniversity } from "@/lib/guideline-discovery";
 
@@ -98,6 +98,7 @@ export async function kilavuzuYenidenTara(guidelineId: string): Promise<ActionRe
       // değişmemişse hiç indirilmeyecek.
       source_etag: scan.sourceEtag,
       source_last_modified: scan.sourceLastModified,
+      ...kunyeYamasi(scan),
       last_checked_at: new Date().toISOString(),
       analysis_status: "needs_review",
       extracted_rules: scan.suggestedRules,
