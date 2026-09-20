@@ -14,6 +14,7 @@ import Toaster from "./_components/toaster";
 import NotificationBell from "./_components/notification-bell";
 import { NAV_COOKIE } from "./_components/navigation";
 import ActionErrorToast from "./_components/action-error-toast";
+import NavProgress from "./_components/nav-progress";
 
 function initialsOf(name: string) {
   const letters = name
@@ -78,6 +79,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         <div className="dashboard-main-content">
           <Suspense>
             <ActionErrorToast />
+            <NavProgress />
           </Suspense>
           {access.blocked ? <SubscriptionNotice access={access} /> : children}
         </div>

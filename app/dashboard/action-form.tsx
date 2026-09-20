@@ -57,6 +57,17 @@ export default function ActionForm({ action, children, className, style, confirm
       <fieldset key={surum} disabled={pending} className="action-form-fieldset">
         {children}
       </fieldset>
+      {/*
+        İşlem kapsülü: gönderim sürerken ekranın altında "İşleniyor…" görünür.
+        Alanlar devre dışı kalıyordu ama uzun süren kayıtlarda (dosya çözümleme,
+        AI) ekranda hiçbir hareket olmuyordu; kullanıcı düğmeye tekrar basıyordu.
+      */}
+      {pending ? (
+        <span className="action-capsule" role="status">
+          <i aria-hidden="true" />
+          İşleniyor…
+        </span>
+      ) : null}
       {state?.error ? (
         <p role="alert" className="action-form-message action-form-error">
           {state.error}

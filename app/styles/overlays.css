@@ -222,3 +222,60 @@ html.drawer-open { overflow: hidden; }
   .drawer-header,
   .drawer-body .project-form-actions { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* ---------- Gezinme çizgisi ve işlem kapsülü ---------- */
+/* Panel içi gezinmede üstte ilerleyen çizgi (app/dashboard/_components/nav-progress.tsx). */
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 90;
+  height: 2px;
+  pointer-events: none;
+}
+.nav-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(90deg, var(--accent-500), var(--accent-300));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-500) 55%, transparent);
+  transition: width .18s ease-out;
+}
+.nav-progress.is-done > i { transition: width .14s ease-out, opacity .22s ease .1s; opacity: 0; }
+
+/* Form gönderilirken alttaki "İşleniyor…" kapsülü (app/dashboard/action-form.tsx). */
+.action-capsule {
+  position: fixed;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 85;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  color: var(--on-brand);
+  background: color-mix(in srgb, var(--brand-900) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-500) 30%, transparent);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(16px) saturate(170%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  font-size: 13px;
+  font-weight: 650;
+  animation: capsule-in .45s var(--ease-spring) both;
+  transform: translateX(-50%);
+}
+.action-capsule > i {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-300);
+  border-right-color: transparent;
+  animation: capsule-spin .8s linear infinite;
+}
+@keyframes capsule-in { from { opacity: 0; transform: translate(-50%, 14px) scale(.96); } }
+@keyframes capsule-spin { to { transform: rotate(360deg); } }
+@media (max-width: 900px) { .action-capsule { bottom: calc(84px + env(safe-area-inset-bottom)); } }
+@media (prefers-reduced-motion: reduce) {
+  .action-capsule, .action-capsule > i { animation: none; }
+  .nav-progress > i { transition: none; }
+}
