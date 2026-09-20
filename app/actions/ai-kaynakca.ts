@@ -68,7 +68,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
   const basladi = Date.now();
 
   try {
-    const yanit = await sor(mesajlar, { jsonBekle: true, sicaklik: 0.1, enFazlaJeton: 3000 });
+    const yanit = await sor(mesajlar, { yetenek: "kaynakca", jsonBekle: true, sicaklik: 0.1, enFazlaJeton: 3000 });
     const bulgular = bulgulariCozumle(yanit.metin);
     if (!bulgular.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, yetenek: "kaynakca", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });

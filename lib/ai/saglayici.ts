@@ -16,7 +16,11 @@
                  http://sunucu:8000/v1 (vLLM), https://api.anthropic.com/v1.
                  Verilmezse OPENAI_TABAN_URL, o da yoksa OpenAI'nin adresi
                  kullanılır (geçiş dönemi).
-  AI_MODEL       Model adı. Örn. "qwen2.5:14b-instruct", "claude-sonnet-5".
+  AI_MODEL       Varsayılan model. Örn. "qwen2.5:14b-instruct", "claude-sonnet-5".
+  AI_MODEL_*     Yeteneğe özel model (ANALIZ, KAYNAKCA, LITERATUR, BELGE).
+                 Riskler eşit değil: analiz ve kaynakça ince çıkarım ister,
+                 literatür arama dizesi üretmek gibi daha kalıplı bir iş ve
+                 en çok jetonu o harcıyor. Boş bırakılırsa AI_MODEL kullanılır.
   AI_ANAHTAR     Varsa gönderilir. Kendi sunucunuzda genellikle gerekmez;
                  eski kurulumlar için OPENAI_API_KEY de okunur.
   AI_BICIM       "openai" | "anthropic". Verilmezse adresten çıkarılır.
@@ -27,11 +31,15 @@
   olabildiği için sınır AI_ZAMAN_ASIMI_MS ile uzatılabilir.
 */
 
+import type { YetenekAdi } from "./kayit-gorunum";
+
 export type Rol = "sistem" | "kullanici";
 export type Mesaj = { rol: Rol; metin: string };
 
 export type SorSecenek = {
   model?: string;
+  /** Yeteneğe özel model seçimi için; model açıkça verilmediğinde bakılır. */
+  yetenek?: YetenekAdi;
   enFazlaJeton?: number;
   /** 0 = en kararlı. Denetim işi yaratıcılık istemez; varsayılan düşük. */
   sicaklik?: number;
@@ -50,6 +58,19 @@ const tabanUrl = () =>
   (process.env.AI_TABAN_URL || process.env.OPENAI_TABAN_URL || VARSAYILAN_TABAN_URL).replace(/\/+$/, "");
 
 const anahtar = () => process.env.AI_ANAHTAR || process.env.OPENAI_API_KEY || "";
+
+const YETENEK_DEGISKENI: Record<YetenekAdi, string> = {
+  analiz: "AI_MODEL_ANALIZ",
+  kaynakca: "AI_MODEL_KAYNAKCA",
+  literatur: "AI_MODEL_LITERATUR",
+  belge: "AI_MODEL_BELGE",
+};
+
+/** Yeteneğe özel model; tanımlı değilse undefined (varsayılana düşer). */
+export function yetenekModeli(yetenek?: YetenekAdi): string | undefined {
+  if (!yetenek) return undefined;
+  return process.env[YETENEK_DEGISKENI[yetenek]]?.trim() || undefined;
+}
 
 export type Bicim = "openai" | "anthropic";
 
@@ -217,7 +238,8 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
   if (!aiYapilandirildi())
     throw new Error("Yapay zeka sunucusu tanımlı değil (AI_TABAN_URL ya da AI_ANAHTAR). Yönetici ortam değişkenlerini eklemeli.");
 
-  const model = secenek.model ?? process.env.AI_MODEL ?? process.env.OPENAI_MODEL ?? VARSAYILAN_MODEL;
+  const model =
+    secenek.model ?? yetenekModeli(secenek.yetenek) ?? process.env.AI_MODEL ?? process.env.OPENAI_MODEL ?? VARSAYILAN_MODEL;
   const bicimi = bicim();
   const bilinen = ogrenilen.get(ogrenmeAnahtari(model));
   let istek: Istek = {
@@ -251,13 +273,13 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
     if (!sonraki) break;
     // Yalnızca bayraklar basılır: istek gövdesi kullanıcının akademik
     // metnini taşıyor, günlüğe düşmemeli.
-    console.warn("[ai] sunucu parametreyi reddetti, düşürülüp tekrar deneniyor", { ...aiKurulumu(), ...sonraki });
+    console.warn("[ai] sunucu parametreyi reddetti, düşürülüp tekrar deneniyor", { ...aiKurulumu(), model, ...sonraki });
     istek = { ...istek, ...sonraki };
     ({ cevap: yanit, govde } = await calis(istek));
   }
 
   if (!yanit.ok) {
-    console.error("[ai] sunucu hatası", { ...aiKurulumu(), durum: yanit.status, govde: govde.slice(0, 500) });
+    console.error("[ai] sunucu hatası", { ...aiKurulumu(), model, durum: yanit.status, govde: govde.slice(0, 500) });
     throw new Error(saglayiciHatasi(yanit.status, govde));
   }
 

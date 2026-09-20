@@ -530,7 +530,12 @@ ve TGI aynı arayüzü konuştuğu için kodda hiçbir değişiklik gerekmez.
 - `AI_TABAN_URL` — model sunucusunun adresi. Kendi sunucunuz için
   `http://10.0.0.5:11434/v1` (Ollama) ya da `http://sunucu:8000/v1` (vLLM).
   Verilmezse OpenAI adresi kullanılır (geçiş dönemi).
-- `AI_MODEL` — model adı, örn. `qwen2.5:14b-instruct`.
+- `AI_MODEL` — varsayılan model adı, örn. `qwen2.5:14b-instruct`.
+- `AI_MODEL_ANALIZ` / `AI_MODEL_KAYNAKCA` / `AI_MODEL_LITERATUR` /
+  `AI_MODEL_BELGE` (opsiyonel) — yeteneğe özel model. Riskler eşit değil:
+  analiz ve kaynakça ince çıkarım ister, literatür arama dizesi üretmek gibi
+  daha kalıplı bir iş ve en çok jetonu o harcar. Boş bırakılırsa `AI_MODEL`
+  kullanılır.
 - `AI_ANAHTAR` — varsa gönderilir. Kendi sunucunuzda genellikle gerekmez;
   eski kurulumlar için `OPENAI_API_KEY` de okunur.
 - `AI_BICIM` (opsiyonel) — `openai` ya da `anthropic`. Verilmezse adresten

@@ -62,7 +62,7 @@ export async function getDocumentFeedback(text: string): Promise<AiFeedbackResul
       { rol: "sistem", metin: SYSTEM_PROMPT },
       { rol: "kullanici", metin: `İncelenecek metin:\n\n${inputText}` },
     ],
-    { sicaklik: 0.4, enFazlaJeton: 700 },
+    { yetenek: "belge", sicaklik: 0.4, enFazlaJeton: 700 },
   );
 
   return { feedback: yanit.metin, model: yanit.model, truncated };

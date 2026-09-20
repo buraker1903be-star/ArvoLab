@@ -1,10 +1,11 @@
 import { describe, test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { bicim, parametreDusur, yanitMetni } from "../../lib/ai/saglayici";
+import { bicim, parametreDusur, yanitMetni, yetenekModeli } from "../../lib/ai/saglayici";
 
 const KAYITLI = { ...process.env };
 afterEach(() => {
-  for (const ad of ["AI_TABAN_URL", "AI_BICIM", "OPENAI_TABAN_URL"]) delete process.env[ad];
+  for (const ad of ["AI_TABAN_URL", "AI_BICIM", "OPENAI_TABAN_URL", "AI_MODEL_LITERATUR", "AI_MODEL_ANALIZ"])
+    delete process.env[ad];
   Object.assign(process.env, KAYITLI);
 });
 
@@ -84,5 +85,25 @@ describe("reddedilen parametreyi düşürme", () => {
   test("400 dışındaki hatalarda ve ilgisiz gövdede dokunulmaz", () => {
     assert.equal(parametreDusur(401, "`temperature` is deprecated", tam, "anthropic"), null);
     assert.equal(parametreDusur(400, "credit balance is too low", tam, "anthropic"), null);
+  });
+});
+
+describe("yeteneğe göre model", () => {
+  test("tanımlıysa o yetenekte kullanılır", () => {
+    // Riskler eşit değil: literatür arama dizesi üretmek daha kalıplı bir iş
+    // ve en çok jetonu o harcıyor; analiz ve kaynakça ince çıkarım ister.
+    process.env.AI_MODEL_LITERATUR = "claude-haiku-4-5-20251001";
+    assert.equal(yetenekModeli("literatur"), "claude-haiku-4-5-20251001");
+    assert.equal(yetenekModeli("analiz"), undefined, "tanımsız yetenek varsayılana düşer");
+  });
+
+  test("boş değer varsayılanı ezmez", () => {
+    // Vercel'de değişkeni boş bırakmak silmekle aynı olmalı.
+    process.env.AI_MODEL_ANALIZ = "   ";
+    assert.equal(yetenekModeli("analiz"), undefined);
+  });
+
+  test("yetenek verilmezse seçim yapılmaz", () => {
+    assert.equal(yetenekModeli(), undefined);
   });
 });
