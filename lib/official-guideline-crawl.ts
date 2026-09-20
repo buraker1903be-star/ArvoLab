@@ -40,8 +40,23 @@ function officialUrl(raw: string, base?: string) {
   } catch { return null; }
 }
 
+/*
+  YÖK dizini süreç boyunca bir kez indirilir. Ama önbellek REDDEDİLEN
+  promise'i de saklıyordu: ilk istek zaman aşımına uğrarsa sonraki bütün
+  çağrılar anında aynı hatayla düşüyor ve keşif o süreç boyunca tamamen
+  ölüyordu.
+
+  Canlıda ölçüldü: 72 üniversitelik bir tarama turunda ilki 50 saniyede
+  zaman aşımına uğradı, kalan 71'i 0,0 saniyede "alan adı yok" dedi. Gece
+  cron'unda aynı şey olsa o turda hiçbir üniversite keşfedilmezdi ve
+  sebebi de görünmezdi.
+
+  Artık başarısızlıkta önbellek boşaltılıyor; sonraki çağrı yeniden
+  deniyor.
+*/
 async function yokDirectoryHtml() {
-  yokDirectoryPromise ??= Promise.all([1, 2].map(async (type) => {
+  if (yokDirectoryPromise) return yokDirectoryPromise;
+  yokDirectoryPromise = Promise.all([1, 2].map(async (type) => {
     const response = await fetch(`https://www.yok.gov.tr/tr/university?type=${type}`, {
       cache: "no-store", signal: AbortSignal.timeout(30_000),
       headers: { "user-agent": "ArvoLabGuidelineDirectory/1.0" },
@@ -49,6 +64,10 @@ async function yokDirectoryHtml() {
     if (!response.ok) throw new Error(`YÖK üniversite dizini alınamadı: HTTP ${response.status}`);
     return metniOku(response);
   })).then((pages) => pages.join("\n"));
+  // Hata kalıcı önbelleğe yazılmaz; bir sonraki çağrı baştan dener.
+  yokDirectoryPromise.catch(() => {
+    yokDirectoryPromise = null;
+  });
   return yokDirectoryPromise;
 }
 
