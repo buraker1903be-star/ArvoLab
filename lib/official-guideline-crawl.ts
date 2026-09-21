@@ -162,7 +162,23 @@ const bekle = (ms: number) => new Promise((coz) => setTimeout(coz, ms));
  * Alt alanlar yalnızca var olanlar için maliyet üretir: çözümlenemeyen ad
  * fetch aşamasında hata verir ve atlanır.
  */
+/*
+  Bir üniversitenin taraması için üst süre sınırı.
+
+  Alt alan yoklaması yönlendirme yapan joker DNS'i eliyor ama yönlendirme
+  YAPMADAN 200 dönen jokerleri elemiyor: o durumda on dört alt alanın her
+  biri ayrı ayrı taranıyor (robots + site haritaları + ana sayfa) ve
+  üniversite başına süre patlıyor. Ölçüldü: 1019 ve 608 saniye.
+
+  Sebebi tek tek kovalamak yerine işin kendisine sınır konuyor — tarama
+  ne kadar sürerse sürsün, bulduklarıyla döner. Eksik kalan alt alanlar
+  bir sonraki turda sıra alır.
+*/
+const TARAMA_SURE_SINIRI_MS = 60_000;
+
 export async function crawlUniversityAndInstitutes(domain: string) {
+  const basladi = Date.now();
+  const sureDoldu = () => Date.now() - basladi > TARAMA_SURE_SINIRI_MS;
   const hepsi: OfficialGuidelineCandidate[] = [];
   const gorulen = new Set<string>();
 
@@ -192,6 +208,7 @@ export async function crawlUniversityAndInstitutes(domain: string) {
   */
   const varOlanlar: string[] = [];
   for (let i = 0; i < ENSTITU_ONEKLERI.length; i += ESZAMANLI) {
+    if (sureDoldu()) break;
     const grup = ENSTITU_ONEKLERI.slice(i, i + ESZAMANLI);
     const sonuclar = await Promise.all(grup.map(async (onek) => ((await altAlanKendiSitesiMi(`${onek}.${kok}`)) ? `${onek}.${kok}` : null)));
     for (const host of sonuclar) if (host) varOlanlar.push(host);
@@ -199,6 +216,7 @@ export async function crawlUniversityAndInstitutes(domain: string) {
   }
 
   for (let i = 0; i < varOlanlar.length; i += ESZAMANLI) {
+    if (sureDoldu()) break;
     const grup = varOlanlar.slice(i, i + ESZAMANLI);
     const sonuclar = await Promise.all(grup.map((host) => crawlOfficialGuidelineCandidates(host).catch(() => [])));
     for (const sonuc of sonuclar) ekle(sonuc);
@@ -211,6 +229,7 @@ export async function crawlUniversityAndInstitutes(domain: string) {
   // Aynı kuruma arka arkaya yüklenmemek için sayfalar sırayla açılıyor;
   // aday sayısı zaten sınırlı (MAX_CANDIDATES_PER_UNIVERSITY).
   for (const aday of hepsi) {
+    if (sureDoldu()) break;
     const cozulen = await belgeyeIn(aday);
     if (gorulenBelge.has(cozulen.url)) continue;
     gorulenBelge.add(cozulen.url);
