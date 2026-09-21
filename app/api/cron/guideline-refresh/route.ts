@@ -69,10 +69,25 @@ export async function GET(request: Request) {
         kesifDurduruldu = true;
         break;
       }
-      discoveryResults.push({
-        university: university.name,
-        ...await discoverGuidelinesForUniversity(university),
-      });
+      /*
+        Bütçe kontrolü işe BAŞLAMADAN önce yapılıyor ama bir üniversitenin
+        ne kadar süreceğini önceden bilemiyoruz: canlıda tek bir
+        üniversitenin taraması 964 saniye sürdü (turun toplam bütçesi 300).
+        O tur tamamen kaybedilirdi — kalan kayıtlar işlenmez, yanıt hiç
+        dönmezdi.
+
+        Bu yüzden her üniversiteye ayrı bir süre sınırı konuyor. Zaman
+        aşımına uğrayan üniversitenin o ana kadar EKLEDİĞİ kılavuzlar
+        yerinde kalır (keşif her kaydı bulduğunda yazıyor); yalnızca
+        "bakıldı" damgası atılmadığı için sıradaki turda yeniden denenir.
+      */
+      const sonuc = await Promise.race([
+        discoverGuidelinesForUniversity(university),
+        new Promise<{ status: "failed"; error: string }>((coz) =>
+          setTimeout(() => coz({ status: "failed", error: "Süre sınırı aşıldı; sonraki turda yeniden denenecek." }), UNIVERSITE_MALIYETI_MS),
+        ),
+      ]);
+      discoveryResults.push({ university: university.name, ...sonuc });
     }
   } catch (discoveryError) {
     discoveryResults.push({

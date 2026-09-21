@@ -23,7 +23,24 @@ async function assertOfficialUrl(rawUrl: string): Promise<URL> {
     throw new Error("Otomatik tarama yalnızca resmî .edu.tr kaynaklarında çalışır.");
   }
 
-  const addresses = [...await resolve4(hostname).catch(() => []), ...await resolve6(hostname).catch(() => [])];
+  /*
+    DNS çözümlemesinin zaman aşımı YOKTU ve iki sorgu ardışık çalışıyordu.
+    Node'un çözümleyicisi yanıtsız bir ad sunucusunda uzun süre yeniden
+    deniyor; tek bir tanımsız alt alan adı dakikalarca bekletebiliyor.
+
+    Canlıda ölçüldü: bir üniversitenin taraması 964 saniye sürdü (gece
+    cron'unun TOPLAM bütçesi 300 saniye). Alt alan adı yoklaması yapan
+    keşif, tanımsız adlarla dolu olduğu için bu tuzağa tam oturuyor.
+
+    İki sorgu paralel çalışır ve süre sınırlıdır; cevap gelmezse ad
+    çözümlenememiş sayılır.
+  */
+  const addresses = await Promise.race([
+    Promise.all([resolve4(hostname).catch(() => []), resolve6(hostname).catch(() => [])]).then(
+      ([dort, alti]) => [...dort, ...alti],
+    ),
+    new Promise<string[]>((coz) => setTimeout(() => coz([]), 5_000)),
+  ]);
   if (!addresses.length || addresses.some(isPrivateAddress)) {
     throw new Error("Kaynak adresi güvenli bir genel ağ adresine çözümlenemedi.");
   }
