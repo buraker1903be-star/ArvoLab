@@ -170,17 +170,23 @@ const bekle = (ms: number) => new Promise((coz) => setTimeout(coz, ms));
   biri ayrı ayrı taranıyor (robots + site haritaları + ana sayfa) ve
   üniversite başına süre patlıyor. Ölçüldü: 1019 ve 608 saniye.
 
-  Sebebi tek tek kovalamak yerine işin kendisine sınır konuyor — tarama
-  ne kadar sürerse sürsün, bulduklarıyla döner. Eksik kalan alt alanlar
-  bir sonraki turda sıra alır.
+  İlk denemede sınır yalnızca adımlar ARASINDA kontrol ediliyordu; bu
+  yetmedi, çünkü tek bir adım (üç alt alanın paralel taranması, her biri
+  on bir istek) tek başına dakikalarca sürebiliyor. Kırklareli 414 saniye
+  sürdü ve üstelik daha önce bulduğu iki kılavuzu da kaçırdı.
+
+  Artık sınır işin TAMAMINI yarıştırıyor: süre dolunca o ana kadar
+  toplananlarla dönülür. Eksik kalan alt alanlar bir sonraki turda sıra
+  alır.
 */
 const TARAMA_SURE_SINIRI_MS = 60_000;
 
 export async function crawlUniversityAndInstitutes(domain: string) {
-  const basladi = Date.now();
-  const sureDoldu = () => Date.now() - basladi > TARAMA_SURE_SINIRI_MS;
   const hepsi: OfficialGuidelineCandidate[] = [];
   const gorulen = new Set<string>();
+  /* Süre dolunca bunlarla dönülür; iş yarıda kesilse de bulunanlar kaybolmaz. */
+  const belgeler: OfficialGuidelineCandidate[] = [];
+  const gorulenBelge = new Set<string>();
 
   const ekle = (adaylar: OfficialGuidelineCandidate[]) => {
     for (const aday of adaylar) {
@@ -190,52 +196,57 @@ export async function crawlUniversityAndInstitutes(domain: string) {
     }
   };
 
-  ekle(await crawlOfficialGuidelineCandidates(domain).catch(() => []));
-
-  /*
-    Alt alan adları SIRAYLA taranınca üniversite başına süre gece turunun
-    bütçesini yiyordu (8 önek × birkaç istek × zaman aşımı). Üçerli
-    gruplar hâlinde paralel taranıyor: farklı ana bilgisayarlar oldukları
-    için aynı sunucuya yüklenilmiyor, gruplar arasında yine bekleniyor.
-  */
   const kok = domain.replace(/^www\./, "");
   const ESZAMANLI = 3;
 
+  const tara = async () => {
+    ekle(await crawlOfficialGuidelineCandidates(domain).catch(() => []));
+
+    /*
+      Önce hangi alt alanların gerçekten var olduğu belirlenir (önek başına
+      TEK istek), sonra yalnızca onlar taranır. Joker DNS'li kurumlarda bu,
+      ana sitenin on dört kez yeniden taranmasını önlüyor.
+
+      Üçerli gruplar hâlinde paralel: farklı ana bilgisayarlar oldukları
+      için aynı sunucuya yüklenilmiyor, gruplar arasında yine bekleniyor.
+    */
+    const varOlanlar: string[] = [];
+    for (let i = 0; i < ENSTITU_ONEKLERI.length; i += ESZAMANLI) {
+      const grup = ENSTITU_ONEKLERI.slice(i, i + ESZAMANLI);
+      const sonuclar = await Promise.all(
+        grup.map(async (onek) => ((await altAlanKendiSitesiMi(`${onek}.${kok}`)) ? `${onek}.${kok}` : null)),
+      );
+      for (const host of sonuclar) if (host) varOlanlar.push(host);
+      if (i + ESZAMANLI < ENSTITU_ONEKLERI.length) await bekle(300);
+    }
+
+    for (let i = 0; i < varOlanlar.length; i += ESZAMANLI) {
+      const grup = varOlanlar.slice(i, i + ESZAMANLI);
+      const sonuclar = await Promise.all(grup.map((host) => crawlOfficialGuidelineCandidates(host).catch(() => [])));
+      for (const sonuc of sonuclar) ekle(sonuc);
+      if (i + ESZAMANLI < varOlanlar.length) await bekle(400);
+    }
+
+    /*
+      HTML sayfaları gerçek belgeye indirilir; aynı belgeye çıkan sayfalar
+      tekilleşir. Sonuç dizisine TEK TEK eklenir ki süre dolduğunda o ana
+      kadar çözülenler elde kalsın.
+    */
+    for (const aday of hepsi) {
+      const cozulen = await belgeyeIn(aday);
+      if (gorulenBelge.has(cozulen.url)) continue;
+      gorulenBelge.add(cozulen.url);
+      belgeler.push(cozulen);
+    }
+  };
+
+  // Süre dolarsa iş yarıda kalır; toplananlar döner.
+  await Promise.race([tara(), bekle(TARAMA_SURE_SINIRI_MS)]);
   /*
-    Önce hangi alt alanların gerçekten var olduğu belirlenir (önek başına
-    TEK istek), sonra yalnızca onlar taranır. Joker DNS'li kurumlarda bu,
-    ana sitenin on dört kez yeniden taranmasını önlüyor.
+    Belgeye inme aşamasına hiç gelinemediyse ham adaylar döner: HTML
+    sayfasından kural çıkarmak, hiç aday olmamasından iyidir.
   */
-  const varOlanlar: string[] = [];
-  for (let i = 0; i < ENSTITU_ONEKLERI.length; i += ESZAMANLI) {
-    if (sureDoldu()) break;
-    const grup = ENSTITU_ONEKLERI.slice(i, i + ESZAMANLI);
-    const sonuclar = await Promise.all(grup.map(async (onek) => ((await altAlanKendiSitesiMi(`${onek}.${kok}`)) ? `${onek}.${kok}` : null)));
-    for (const host of sonuclar) if (host) varOlanlar.push(host);
-    if (i + ESZAMANLI < ENSTITU_ONEKLERI.length) await bekle(300);
-  }
-
-  for (let i = 0; i < varOlanlar.length; i += ESZAMANLI) {
-    if (sureDoldu()) break;
-    const grup = varOlanlar.slice(i, i + ESZAMANLI);
-    const sonuclar = await Promise.all(grup.map((host) => crawlOfficialGuidelineCandidates(host).catch(() => [])));
-    for (const sonuc of sonuclar) ekle(sonuc);
-    if (i + ESZAMANLI < varOlanlar.length) await bekle(400);
-  }
-
-  // HTML sayfaları gerçek belgeye indirilir; aynı belgeye çıkan sayfalar tekilleşir.
-  const belgeler: OfficialGuidelineCandidate[] = [];
-  const gorulenBelge = new Set<string>();
-  // Aynı kuruma arka arkaya yüklenmemek için sayfalar sırayla açılıyor;
-  // aday sayısı zaten sınırlı (MAX_CANDIDATES_PER_UNIVERSITY).
-  for (const aday of hepsi) {
-    if (sureDoldu()) break;
-    const cozulen = await belgeyeIn(aday);
-    if (gorulenBelge.has(cozulen.url)) continue;
-    gorulenBelge.add(cozulen.url);
-    belgeler.push(cozulen);
-  }
-  return belgeler;
+  return belgeler.length ? belgeler : hepsi;
 }
 
 /*
