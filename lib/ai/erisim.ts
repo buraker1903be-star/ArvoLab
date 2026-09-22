@@ -38,10 +38,15 @@ async function krediDurumu(): Promise<KrediKarari> {
     if (error) console.error("[ai] kredi durumu okunamadı:", error.message);
     return bos;
   }
-  const satir = data as { kullanilan_karakter: number; limit_kredi: number | null; bildirildi: boolean; ic_ekip: boolean };
+  const satir = data as {
+    kullanilan_karakter: number; limit_kredi: number | null;
+    aylik_kalan: number; ek_bakiye: number; bildirildi: boolean; ic_ekip: boolean;
+  };
   return krediKarari({
     kullanilanKarakter: Number(satir.kullanilan_karakter ?? 0),
     limitKredi: satir.limit_kredi === null ? null : Number(satir.limit_kredi),
+    aylikKalan: Number(satir.aylik_kalan ?? 0),
+    ekBakiye: Number(satir.ek_bakiye ?? 0),
     bildirildi: Boolean(satir.bildirildi),
     icEkip: Boolean(satir.ic_ekip),
   });

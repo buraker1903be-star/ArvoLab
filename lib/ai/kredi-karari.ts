@@ -25,8 +25,12 @@ export const UYARI_ORANI = 80;
 export interface KrediDurumu {
   /** Bu ay tüketilen karakter. */
   kullanilanKarakter: number;
-  /** ArvoOS'un bildirdiği kredi hakkı; null ise hiç bildirilmemiş. */
+  /** ArvoOS'un bildirdiği aylık kredi hakkı; null ise hiç bildirilmemiş. */
   limitKredi: number | null;
+  /** Aylık haktan kalan. */
+  aylikKalan: number;
+  /** Satın alınmış, yanmayan kredi. */
+  ekBakiye: number;
   /** ArvoOS bu kurumu bir kez bile yansıttı mı. */
   bildirildi: boolean;
   /** İç ekip hiçbir koşulda engellenmez. */
@@ -34,6 +38,8 @@ export interface KrediDurumu {
 }
 
 export interface KrediKarari {
+  /** Aylık kalan + satın alınmış bakiye. */
+  kalanKredi?: number;
   /** Doluysa asistan çalışmaz ve bu metin kullanıcıya gösterilir. */
   engel: string | null;
   /** Doluysa çalışma sürer ama kullanıcıya uyarı gösterilir. */
@@ -68,22 +74,33 @@ export function krediKarari(durum: KrediDurumu): KrediKarari {
   }
 
   const oran = Math.min(100, Math.round((kullanilanKredi / limit) * 100));
+  const kalan = Math.max(0, durum.aylikKalan) + Math.max(0, durum.ekBakiye);
 
-  if (kullanilanKredi >= limit) {
+  /*
+    Karar KALANA bakıyor, tüketime değil. Satın alınan kredi aylık hakkın
+    üstüne biniyor: yalnızca "tüketim > limit" deseydik, ek kredi almış
+    müşteri parasını ödediği halde kapıda durdurulurdu.
+  */
+  if (kalan <= 0) {
     return {
       ...bos,
       oran,
-      engel: `Kurumunuzun bu ayki AI kredisi doldu (${sayi(kullanilanKredi)}/${sayi(limit)}). `
-        + "Hak her ayın başında yenilenir; daha fazlası için kurum yöneticinizden ek kredi isteyin.",
+      engel: "Kurumunuzun AI kredisi bitti. Aylık hak ayın başında yenilenir; "
+        + "beklemek istemiyorsanız kurum yöneticiniz ArvoOS panelinden ek kredi yükleyebilir.",
     };
   }
 
-  if (oran >= UYARI_ORANI) {
+  /*
+    Uyarı yalnızca AYLIK hakkın oranına bakıyor: satın alınmış bakiyesi
+    olan müşteriye "krediniz bitmek üzere" demek yanlış olurdu, çünkü
+    bitmiyor — parayla aldığı kısma geçiyor.
+  */
+  if (durum.ekBakiye <= 0 && oran >= UYARI_ORANI) {
     return {
       ...bos,
       oran,
       uyari: `Kurumunuzun AI kredisinin %${oran}'i kullanıldı (${sayi(kullanilanKredi)}/${sayi(limit)}). `
-        + "Hak dolduğunda asistan ay sonuna kadar durur.",
+        + "Hak dolduğunda asistan durur; ek kredi yükleyerek devam edebilirsiniz.",
     };
   }
 
