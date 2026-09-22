@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { krediKarari, krediye, UYARI_ORANI } from "@/lib/ai/kredi-karari";
+import { krediKarari, krediye, KREDI_SATIN_ALMA_ADRESI, UYARI_ORANI } from "@/lib/ai/kredi-karari";
 
 const durum = (ekle: Partial<Parameters<typeof krediKarari>[0]> = {}) =>
   krediKarari({ kullanilanKarakter: 0, limitKredi: 100, aylikKalan: 100, ekBakiye: 0, bildirildi: true, icEkip: false, ...ekle });
@@ -67,5 +67,17 @@ describe("kredi kararı", () => {
     const karar = durum({ kullanilanKarakter: 9_999_999, aylikKalan: 0, icEkip: true });
     assert.equal(karar.engel, null);
     assert.equal(karar.uyari, null);
+  });
+
+  /*
+    Kullanıcı ArvoLab'da durduruluyor ama krediyi ArvoOS'tan alıyor.
+    Adres mesajdan düşerse kullanıcı nereye gideceğini bilemez; iki
+    mesajda da bulunduğu sabitleniyor.
+  */
+  test("engel ve uyarı satın alma adresini taşır", () => {
+    const engel = durum({ limitKredi: 10, aylikKalan: 0, ekBakiye: 0, kullanilanKarakter: 10_000 });
+    assert.ok(engel.engel?.includes(KREDI_SATIN_ALMA_ADRESI));
+    const uyari = durum({ limitKredi: 10, aylikKalan: 2, ekBakiye: 0, kullanilanKarakter: 8_000 });
+    assert.ok(uyari.uyari?.includes(KREDI_SATIN_ALMA_ADRESI));
   });
 });

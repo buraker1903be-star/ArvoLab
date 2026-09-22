@@ -148,3 +148,64 @@ describe("AI kredi bakiyesi", () => {
       assert.equal(Number((await hesap()).aylik_kalan), once);
     }));
 });
+
+/*
+  ArvoOS'un okuduğu bakiye (migration 20260924100016). Kiracı bu sayıya
+  bakıp kredi satın alacak; yanlış gösterilirse ya gereksiz para harcar
+  ya da hakkı varken almaz.
+*/
+describe("ArvoOS bakiyeyi okur", () => {
+  const durum = () => tek(`select * from public.arvoos_ai_kredi_durumu($1)`, [KURUM]);
+
+  test("hesap hiç açılmamışken aylık hak tam görünür", () =>
+    islem(db, async () => {
+      await tohum(10);
+      const d = await durum();
+      assert.deepEqual(
+        [Number(d.aylik_limit), Number(d.aylik_kalan), Number(d.ek_bakiye)],
+        [10, 10, 0],
+      );
+    }));
+
+  test("tüketim ve satın alma okunan sayıya yansır", () =>
+    islem(db, async () => {
+      await tohum(10);
+      await db.exec(`select public.ai_kredi_yukle('${KURUM}', 5, 'odeme-1');`);
+      await db.exec(calisma(3000)); // 3 kredi
+      const d = await durum();
+      assert.deepEqual([Number(d.aylik_kalan), Number(d.ek_bakiye)], [7, 5]);
+    }));
+
+  test("ay değişince aylık hak tam görünür, satın alınan bakiye yanmaz", () =>
+    islem(db, async () => {
+      await tohum(10);
+      await db.exec(`select public.ai_kredi_yukle('${KURUM}', 5, 'odeme-1');`);
+      await db.exec(calisma(8000)); // 8 kredi: aylıktan
+      // Dönem geriye alınıyor: yenileme ilk gerçek kullanımda yapılıyor,
+      // bu ekran ise ondan önce açılabilir.
+      await db.query(`update public.ai_kredi_hesabi set donem = donem - interval '1 month' where organization_id = $1`, [KURUM]);
+      const d = await durum();
+      assert.deepEqual([Number(d.aylik_kalan), Number(d.ek_bakiye)], [10, 5]);
+    }));
+
+  test("okumak defteri kirletmez: 'yenileme' satırı yazılmaz", () =>
+    islem(db, async () => {
+      await tohum(10);
+      await db.exec(calisma(1000));
+      await db.query(`update public.ai_kredi_hesabi set donem = donem - interval '1 month' where organization_id = $1`, [KURUM]);
+      const once = await tek(`select count(*)::int as n from public.ai_kredi_hareketleri where organization_id = $1`, [KURUM]);
+      await durum();
+      const sonra = await tek(`select count(*)::int as n from public.ai_kredi_hareketleri where organization_id = $1`, [KURUM]);
+      assert.equal(sonra.n, once.n);
+      // Bakiye de yenilenmemiş olmalı: yenileme ilk kullanımda.
+      const h = await hesap();
+      assert.equal(Number(h.aylik_kalan), 9);
+    }));
+
+  test("kurumun kendi kullanıcısı bile çağıramaz (başkasının kimliğini yazabilirdi)", () =>
+    islem(db, async () => {
+      await tohum(10);
+      await rol(db, "authenticated", UYE);
+      await reddedilir(db, `select * from public.arvoos_ai_kredi_durumu($1)`, [KURUM], /permission denied/);
+    }));
+});

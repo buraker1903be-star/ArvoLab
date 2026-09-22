@@ -22,6 +22,18 @@ export const KREDI_KARAKTERI = 1000;
 /** Bu oranın üstü "bitmek üzere"; limite değmeden haber verilir. */
 export const UYARI_ORANI = 80;
 
+/*
+  Kredi ArvoLab'da harcanıyor ama ArvoOS'ta satılıyor. Mesajlar önce
+  yalnızca "ArvoOS panelinden yükleyebilirsiniz" diyordu: doğru ama
+  eksik — kullanıcı asistanın ortasında durdurulduğunda nereye
+  gideceğini aramak zorunda kalıyordu. Adres, gidilecek SAYFANIN kendisi.
+
+  Bağlantı değil düz metin, çünkü bu metinler hata kutusunda ve bildirim
+  şeridinde düz metin olarak gösteriliyor; bağlantıya çevirmek üç ayrı
+  yanıt tipini ve onları çizen bileşenleri değiştirmeyi gerektirirdi.
+*/
+export const KREDI_SATIN_ALMA_ADRESI = "https://app.arvo-os.com/panel/billing";
+
 export interface KrediDurumu {
   /** Bu ay tüketilen karakter. */
   kullanilanKarakter: number;
@@ -86,7 +98,8 @@ export function krediKarari(durum: KrediDurumu): KrediKarari {
       ...bos,
       oran,
       engel: "Kurumunuzun AI kredisi bitti. Aylık hak ayın başında yenilenir; "
-        + "beklemek istemiyorsanız kurum yöneticiniz ArvoOS panelinden ek kredi yükleyebilir.",
+        + "beklemek istemiyorsanız kurum yöneticiniz ArvoOS panelinden ek kredi satın alabilir: "
+        + KREDI_SATIN_ALMA_ADRESI,
     };
   }
 
@@ -100,7 +113,8 @@ export function krediKarari(durum: KrediDurumu): KrediKarari {
       ...bos,
       oran,
       uyari: `Kurumunuzun AI kredisinin %${oran}'i kullanıldı (${sayi(kullanilanKredi)}/${sayi(limit)}). `
-        + "Hak dolduğunda asistan durur; ek kredi yükleyerek devam edebilirsiniz.",
+        + "Hak dolduğunda asistan durur; kurum yöneticiniz ek kredi satın alarak sürdürebilir: "
+        + KREDI_SATIN_ALMA_ADRESI,
     };
   }
 
