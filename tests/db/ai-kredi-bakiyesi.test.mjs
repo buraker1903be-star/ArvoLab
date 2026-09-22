@@ -208,4 +208,37 @@ describe("ArvoOS bakiyeyi okur", () => {
       await rol(db, "authenticated", UYE);
       await reddedilir(db, `select * from public.arvoos_ai_kredi_durumu($1)`, [KURUM], /permission denied/);
     }));
+
+  /*
+    "Hak bildirilmedi" ile "hak yok" ayrı şeyler (migration …100017).
+    AkademikMerkez'de tam bu yaşandı: ArvoOS'ta 10.000 hak varken
+    ArvoLab'daki kopya null'dı ve okuma 0 döndürüyordu; Ödeme sayfası
+    müşteriye "hiç AI hakkınız yok" diyecekti.
+  */
+  test("limit bildirilmemişse null döner, 0 değil", () =>
+    islem(db, async () => {
+      await tohum(10);
+      await db.query(`update public.organizations set ai_credit_limit = null where id = $1`, [KURUM]);
+      const d = await durum();
+      assert.equal(d.aylik_limit, null);
+      assert.equal(d.aylik_kalan, null);
+      assert.equal(Number(d.ek_bakiye), 0);
+    }));
+
+  test("limit 0 ise 0 döner: bu net bir 'hak yok' cevabı", () =>
+    islem(db, async () => {
+      await tohum(0);
+      const d = await durum();
+      assert.deepEqual([Number(d.aylik_limit), Number(d.aylik_kalan)], [0, 0]);
+    }));
+
+  test("bildirilmemiş limitte satın alınan bakiye yine görünür", () =>
+    islem(db, async () => {
+      await tohum(10);
+      await db.exec(`select public.ai_kredi_yukle('${KURUM}', 7, 'odeme-1');`);
+      await db.query(`update public.organizations set ai_credit_limit = null where id = $1`, [KURUM]);
+      const d = await durum();
+      assert.equal(d.aylik_limit, null);
+      assert.equal(Number(d.ek_bakiye), 7);
+    }));
 });
