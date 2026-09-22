@@ -85,7 +85,14 @@ export default async function DashboardPage() {
   ]);
   // Ad profilden: Ayarlar'dan değiştirilen ad yalnızca profiles'a yazılıyor,
   // karşılama satırı kayıttaki eski adı (user_metadata) gösteriyordu.
-  const displayName = profile?.full_name || user.email || "Kullanıcı";
+  /*
+    Ad yoksa E-POSTA YAZILMIYOR. Panel "Hoş geldiniz,
+    uzman@akademikmerkez.com" diyordu: bir selamlama değil, kişinin
+    kendi adresini okuması. Ad ArvoOS'tan geliyor (arvoos_members);
+    gelmediyse selamlama adsız kalıyor — adsız bir "Hoş geldiniz",
+    e-postalı olandan iyi.
+  */
+  const displayName = profile?.full_name?.trim() || null;
   // Panel düzeniyle aynı istekte paylaşılır (lib/access.ts cache'li).
   const access = await getAccessState(profile);
   const activeProjects = projects.filter((p) => isActive(p.status));
@@ -207,7 +214,7 @@ export default async function DashboardPage() {
       <section className="dashboard-hero">
         <div>
           <span className="dashboard-kicker">ArvoLab çalışma alanı</span>
-          <h1>Hoş geldiniz, {displayName}</h1>
+          <h1>{displayName ? `Hoş geldiniz, ${displayName}` : "Hoş geldiniz"}</h1>
           <p>Kaldığınız yerden devam edin; teslim tarihleriniz ve gelen yorumlar burada.</p>
         </div>
         <div className="dashboard-security">
