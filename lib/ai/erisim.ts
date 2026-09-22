@@ -15,10 +15,37 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { aiYapilandirildi } from "./saglayici";
+import { krediKarari, type KrediKarari } from "./kredi-karari";
 
 export const SAATLIK_HAK = 20;
 
-export type KapiSonucu = { ok: false; hata: string } | { ok: true; kullaniciId: string };
+export type KapiSonucu =
+  | { ok: false; hata: string }
+  /** uyari doluysa çalışma sürer, kullanıcıya not gösterilir. */
+  | { ok: true; kullaniciId: string; uyari: string | null };
+
+/**
+ * Kurumun bu ayki AI kredisi. Karar saf modülde (kredi-karari.ts).
+ *
+ * Okunamazsa engel YOK: geçici bir veritabanı arızası bütün kullanıcıları
+ * asistandan mahrum bırakmamalı — hız sınırındaki kuralın aynısı.
+ */
+async function krediDurumu(): Promise<KrediKarari> {
+  const bos: KrediKarari = { engel: null, uyari: null, oran: null, kullanilanKredi: 0 };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("ai_kredi_durumum").maybeSingle();
+  if (error || !data) {
+    if (error) console.error("[ai] kredi durumu okunamadı:", error.message);
+    return bos;
+  }
+  const satir = data as { kullanilan_karakter: number; limit_kredi: number | null; bildirildi: boolean; ic_ekip: boolean };
+  return krediKarari({
+    kullanilanKarakter: Number(satir.kullanilan_karakter ?? 0),
+    limitKredi: satir.limit_kredi === null ? null : Number(satir.limit_kredi),
+    bildirildi: Boolean(satir.bildirildi),
+    icEkip: Boolean(satir.ic_ekip),
+  });
+}
 
 /**
  * Saatlik hak ayrı tutuluyor: kayıtlı bir cevap gösterilirken model
@@ -52,5 +79,13 @@ export async function asistanKapisi(): Promise<KapiSonucu> {
   if (!aiYapilandirildi())
     return { ok: false, hata: "Asistan bu kurulumda kapalı. Yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor." };
 
-  return { ok: true, kullaniciId: user.id };
+  /*
+    Kredi kapısı EN SONDA: önce oturum, abonelik ve kurulum. Kredi
+    mesajı ("hakkınız doldu") kuruluma hiç bakmamış bir kullanıcıya
+    gösterilirse yanlış yere bakmasına yol açar.
+  */
+  const kredi = await krediDurumu();
+  if (kredi.engel) return { ok: false, hata: kredi.engel };
+
+  return { ok: true, kullaniciId: user.id, uyari: kredi.uyari };
 }

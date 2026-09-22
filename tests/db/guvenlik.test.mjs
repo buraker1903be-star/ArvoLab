@@ -173,10 +173,14 @@ describe("fonksiyon yetkileri", () => {
       arvoos_uyeligimi_bagla   — PARAMETRE ALMIYOR; yalnızca çağıranın
         kendi profilini, yalnızca kurumsuzsa ve yalnızca ArvoOS'un ittiği
         listede e-postası varsa bağlar. Başkasının profiline dokunulamaz.
+      ai_kredi_durumum         — PARAMETRE ALMIYOR; yalnızca çağıranın
+        kendi kurumunun tüketimini döndürür. Kurum kimliğini parametre
+        alsaydı herkes başka bir kurumun tüketimini okuyabilirdi
+        (arvoos_ai_kullanimi bu yüzden yalnızca service_role'a açık).
   */
-  test("authenticated ek olarak yalnızca kendi kapsamındaki iki fonksiyon", async () => {
+  test("authenticated ek olarak yalnızca kendi kapsamındaki üç fonksiyon", async () => {
     assert.deepEqual(await acik("authenticated"),
-      [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla"].sort());
+      [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "ai_kredi_durumum"].sort());
   });
 
   test("notify anonim ve oturumlu kullanıcıya kapalı (sahte bildirim)", () =>
