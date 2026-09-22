@@ -167,8 +167,16 @@ describe("fonksiyon yetkileri", () => {
     assert.deepEqual(await acik("anon"), POLITIKA);
   });
 
-  test("authenticated ek olarak yalnızca resync_project_guidelines (kendi içinde rol denetler)", async () => {
-    assert.deepEqual(await acik("authenticated"), [...POLITIKA, "resync_project_guidelines"].sort());
+  /*
+    authenticated'a açık olanlar tek tek gerekçeli:
+      resync_project_guidelines — kendi içinde rol denetler.
+      arvoos_uyeligimi_bagla   — PARAMETRE ALMIYOR; yalnızca çağıranın
+        kendi profilini, yalnızca kurumsuzsa ve yalnızca ArvoOS'un ittiği
+        listede e-postası varsa bağlar. Başkasının profiline dokunulamaz.
+  */
+  test("authenticated ek olarak yalnızca kendi kapsamındaki iki fonksiyon", async () => {
+    assert.deepEqual(await acik("authenticated"),
+      [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla"].sort());
   });
 
   test("notify anonim ve oturumlu kullanıcıya kapalı (sahte bildirim)", () =>

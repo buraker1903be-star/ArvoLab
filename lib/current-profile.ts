@@ -32,5 +32,35 @@ export const loadCurrentProfile = cache(async function loadCurrentProfile(): Pro
     console.error(error);
     return null;
   }
-  return data as CurrentProfile;
+
+  /*
+    Kurumsuz profil: ArvoOS'un ittiği üye listesinde bu e-posta varsa
+    kendiliğinden o kuruma bağlanıyor (arvoos_uyeligimi_bagla).
+
+    Neden burada: bağlama tetikleyicisi yalnızca YENİ kayıtta çalışıyor,
+    oysa bugün ArvoLab'da olan herkes listeden önce kaydoldu. Profil
+    okumanın olduğu tek yer burası ve cache() sayesinde istek başına bir
+    kez dönüyor.
+
+    Kurumu olan profilde hiç çağrılmıyor: her istekte bir RPC, kurumsuz
+    olmayan herkes için boşa gidip gelen bir çağrı olurdu.
+
+    Bağlanamazsa akış düşmüyor — kişi kurumsuz da olsa ArvoLab'a girebilmeli
+    (AGENTS.md: "Kapıyı yalnızca net bir hayır kapatır").
+  */
+  const profil = data as CurrentProfile;
+  if (profil.organization_id) return profil;
+
+  const { error: baglamaHatasi } = await supabase.rpc("arvoos_uyeligimi_bagla");
+  if (baglamaHatasi) {
+    console.error("[arvoos] üyelik bağlanamadı", baglamaHatasi.message);
+    return profil;
+  }
+
+  const { data: yeni } = await supabase
+    .from("profiles")
+    .select("id, full_name, role, organization_id")
+    .eq("id", user.id)
+    .single();
+  return (yeni as CurrentProfile | null) ?? profil;
 });
