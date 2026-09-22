@@ -1,6 +1,10 @@
 /**
- * AI Geri Bildirimi (ChatGPT/OpenAI)
+ * Belge geri bildirimi (ArvoLab Asistanı)
  * ------------------------------------------------------------
+ * Başlıkta bir zamanlar "ChatGPT/OpenAI" yazıyordu; çağrı ortak
+ * katmana taşındıktan sonra da kalmıştı ve hem dosya hem düğme
+ * yanlış sağlayıcıyı söylüyordu. Model ortam değişkeniyle seçilir
+ * (lib/ai/saglayici.ts); arayüzde ve burada marka adı geçmez.
  * KRİTİK SINIR: Bu modül İÇERİK ÜRETMEZ. Yapay zeka yalnızca
  * yüklenen belgenin YAPISI ve RETORİĞİ hakkında öğretici geri
  * bildirim verir. Aşağıdaki sistem prompt'u özellikle:

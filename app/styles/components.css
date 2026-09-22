@@ -1309,3 +1309,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5;
   white-space: pre-wrap;
 }
+
+/* Asistan sunucusu kartı (Ayarlar, yalnızca iç ekip). Ortam değişkenleri
+   girildiği halde hangisinin kullanıldığı hiçbir yerde görünmüyordu;
+   anlamanın tek yolu ai_assistant_runs tablosuna SQL atmaktı. */
+.ai-kurulum { display: grid; gap: 10px; margin: 0 }
+.ai-kurulum > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px }
+.ai-kurulum dt { color: var(--muted); font-size: 13px; font-weight: 600 }
+.ai-kurulum dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere }

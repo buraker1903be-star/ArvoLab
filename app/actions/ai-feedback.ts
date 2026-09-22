@@ -17,7 +17,7 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Oturum bulunamadı." };
-  /* Abonelik kapısı: her çağrı OpenAI'ye gidiyor. Aboneliği bitmiş kullanıcı
+  /* Abonelik kapısı: her çağrı dış modele gidiyor. Aboneliği bitmiş kullanıcı
      bu işlemi doğrudan çağırıp fatura üretebilirdi. */
   if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 

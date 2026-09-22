@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { KeyRound, Save, UserRound } from "lucide-react";
+import { Cpu, KeyRound, Save, UserRound } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
-import { ROLE_LABELS } from "@/lib/project-labels";
+import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
+import { aiKurulumu, aiYapilandirildi } from "@/lib/ai/saglayici";
 import { changePassword } from "@/app/actions/auth";
 import { updateMyProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
@@ -26,6 +27,21 @@ export default async function SettingsPage() {
       .maybeSingle();
     organizationName = organization?.name ?? null;
   }
+
+  /*
+    Etkin asistan sunucusu. Ortam değişkenleri girildiği halde hangisinin
+    kullanıldığı hiçbir yerde görünmüyordu: "Claude'a geçtim" denip
+    isteklerin OpenAI'ye gitmeye devam ettiği bir gün yaşandı ve anlamanın
+    tek yolu ai_assistant_runs tablosuna SQL atmaktı. Yeni bir değişken
+    dağıtım olmadan etkili olmuyor; burası onu da görünür kılıyor.
+
+    Yalnızca iç ekibe: müşteriye hangi modeli kullandığımız bilgisi
+    verilmiyor (AGENTS.md: "Ürün arayüzünde sağlayıcının adı hiç geçmez").
+    ANAHTAR GÖSTERİLMİYOR, yalnızca tanımlı olup olmadığı.
+  */
+  const icEkip = ctx.role !== null && ADMIN_ROLES.includes(ctx.role);
+  const kurulum = icEkip ? aiKurulumu() : null;
+  const sunucu = kurulum ? (() => { try { return new URL(kurulum.tabanUrl).host; } catch { return kurulum.tabanUrl; } })() : null;
 
   return (
     <main className="dashboard-page">
@@ -85,6 +101,26 @@ export default async function SettingsPage() {
         </div>
         <PasswordForm action={changePassword} variant="panel" submitLabel="Şifreyi güncelle" />
       </section>
+
+      {icEkip && kurulum ? (
+        <section className="project-form-card mt-lg">
+          <div className="project-form-heading">
+            <h2>
+              <Cpu size={16} aria-hidden="true" />
+              Asistan sunucusu
+            </h2>
+            <p>Yalnızca iç ekip görür. Değişken eklendikten sonra yeniden dağıtım gerekir; burada eski değer görünüyorsa dağıtım yapılmamıştır.</p>
+          </div>
+          <dl className="ai-kurulum">
+            <div><dt>Sunucu</dt><dd>{sunucu}</dd></div>
+            <div><dt>Model</dt><dd>{kurulum.model}</dd></div>
+            <div>
+              <dt>Anahtar</dt>
+              <dd>{aiYapilandirildi() ? "tanımlı" : "tanımsız — asistan kapalı"}</dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
     </main>
   );
 }

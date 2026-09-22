@@ -43,7 +43,11 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
       {configured ? (
         <button type="button" className="projects-filter-button" onClick={handleClick} disabled={loading}>
           <Sparkles size={14} aria-hidden="true" />
-          {loading ? "AI geri bildirimi hazırlanıyor..." : feedback ? "Yeniden geri bildirim al" : "AI Geri Bildirimi Al (ChatGPT)"}
+          {/* Sağlayıcının adı arayüzde GEÇMEZ (AGENTS.md). "ChatGPT" yazıyordu
+              ve istekler Claude'a gittiği halde kullanıcı ChatGPT kullanıldığını
+              sanıyordu — üstelik model değiştiğinde burası da yalan söylemeye
+              başlıyordu. Kullanıcı "ArvoLab Asistanı" görür. */}
+          {loading ? "AI geri bildirimi hazırlanıyor..." : feedback ? "Yeniden geri bildirim al" : "Asistandan geri bildirim al"}
         </button>
       ) : (
         /* Eskiden düğme görünüyor, her tıklama "Vercel ayarlarına anahtar
