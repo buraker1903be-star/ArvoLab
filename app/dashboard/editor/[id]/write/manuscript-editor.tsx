@@ -65,6 +65,7 @@ import VersionsDialog from "./versions-dialog";
 import SubmissionChecklistDialog from "./submission-checklist";
 import ShareDialog from "./share-dialog";
 import { buildSubmissionChecklist, missingCoverFields, type ChecklistAction } from "@/lib/submission-checklist";
+import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
 import CiteDialog from "./cite-dialog";
 import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
@@ -976,6 +977,9 @@ export default function ManuscriptEditor({
     },
     includeToc,
     headingNumbering: { enabled: headingNumbering, guidelineRule: guideline?.settings.headingNumbering, manualNumbered },
+    /* Kılavuz bağlanınca uygulanan sayfa düzeni sonradan elle
+       değiştirilebiliyor; fark oluştuğunda listede görünür. */
+    pageSetup: sayfaDuzeniFarklari({ margins, showPageNumbers, kilavuz: guideline?.settings }),
     saveState,
   });
   const handleChecklistAction = (action: ChecklistAction) => {
@@ -1001,6 +1005,11 @@ export default function ManuscriptEditor({
         break;
       case "apply-numbering":
         if (guideline?.settings.headingNumbering !== undefined) setHeadingNumbering(guideline.settings.headingNumbering);
+        break;
+      case "apply-page-setup":
+        if (guideline?.settings.margins) setMargins(guideline.settings.margins);
+        if (guideline?.settings.showPageNumbers !== undefined) setShowPageNumbers(guideline.settings.showPageNumbers);
+        showToast("success", "Sayfa düzeni kılavuza göre ayarlandı.");
         break;
       case "strip-manual-numbers":
         editor.chain().focus().stripManualHeadingNumbers().run();
