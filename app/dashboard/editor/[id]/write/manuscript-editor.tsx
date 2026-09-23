@@ -1896,40 +1896,42 @@ export default function ManuscriptEditor({
             </div>
           ) : null}
 
-          {checkResult.citationCheckSupported ? (
-            <div>
-              <strong className="text-base">
-                {checkResult.apa7.referenceSectionFound
-                  ? `APA 7 Uyum Skoru: ${checkResult.apa7.complianceScore}/100`
-                  : "Kaynakça bölümü bulunamadı (\"Kaynakça\" ya da \"Kaynaklar\" başlığı ekleyin)"}
-              </strong>
-              {checkResult.apa7.referenceSectionFound && (
-                <ul className="result-list">
-                  {checkResult.apa7.crossCheck.referencesWithoutCitation.map((r, i) => (
-                    <li key={`rw-${i}`} className="tone-text result-action-row" data-tone="warning">
-                      <span>Kaynakçada var, metinde atıf yok: {r.raw}</span>
-                      <button type="button" className="result-link" onClick={() => handleFindText(r.raw)}>
-                        Göster
-                      </button>
-                    </li>
-                  ))}
-                  {checkResult.apa7.crossCheck.citationsWithoutReference.map((c, i) => (
-                    <li key={`cw-${i}`} className="tone-text result-action-row" data-tone="warning">
-                      <span>Metinde atıf var, kaynakçada yok: {c.raw}</span>
-                      <button type="button" className="result-link" onClick={() => handleFindText(c.raw)}>
-                        Göster
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : (
-            <p className="muted text-sm">
-              Otomatik kaynakça denetimi şimdilik yalnızca APA 7 için yapılıyor
-              (bu çalışmanın atıf stili: {checkResult.citationStyle.toUpperCase()}).
-            </p>
-          )}
+          <div>
+            <strong className="text-base">
+              {checkResult.atif.referenceSectionFound
+                ? `${checkResult.stil.ad} Uyum Skoru: ${checkResult.atif.complianceScore}/100`
+                : "Kaynakça bölümü bulunamadı (\"Kaynakça\" ya da \"Kaynaklar\" başlığı ekleyin)"}
+            </strong>
+            {checkResult.atif.referenceSectionFound && (
+              <ul className="result-list">
+                {checkResult.atif.crossCheck.referencesWithoutCitation.map((r, i) => (
+                  <li key={`rw-${i}`} className="tone-text result-action-row" data-tone="warning">
+                    <span>Kaynakçada var, metinde atıf yok: {r.raw}</span>
+                    <button type="button" className="result-link" onClick={() => handleFindText(r.raw)}>
+                      Göster
+                    </button>
+                  </li>
+                ))}
+                {checkResult.atif.crossCheck.citationsWithoutReference.map((c, i) => (
+                  <li key={`cw-${i}`} className="tone-text result-action-row" data-tone="warning">
+                    <span>Metinde atıf var, kaynakçada yok: {c.raw}</span>
+                    <button type="button" className="result-link" onClick={() => handleFindText(c.raw)}>
+                      Göster
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {/* Numara stillerinde atıf künyeyle adla değil sırayla eşleşir;
+                o eşleşme yukarıdaki "Yapı ve bütünlük" bölümünde denetleniyor.
+                Yazılmazsa boş liste "her şey yerinde" gibi okunuyordu. */}
+            {checkResult.atif.referenceSectionFound && checkResult.stil.tur === "numara" ? (
+              <p className="muted text-sm">
+                {checkResult.stil.ad} numaralı bir stil: metindeki atıf numaraları ile kaynakça sırası
+                &quot;Yapı ve bütünlük&quot; başlığı altında denetlenir.
+              </p>
+            ) : null}
+          </div>
         </div>
       )}
 

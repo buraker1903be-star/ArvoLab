@@ -1,4 +1,4 @@
-import { LifeBuoy, Plus } from "lucide-react";
+import { LifeBuoy, MessageSquareHeart, Plus } from "lucide-react";
 import {
   createSupportRequest,
   getMySupportRequests,
@@ -6,6 +6,8 @@ import {
   updateSupportRequestStatus,
 } from "@/app/actions/support";
 import { getCurrentProfile } from "@/app/actions/profile";
+import { tumGeriBildirimler } from "@/app/actions/geri-bildirim";
+import { bolumEtiketi, BAGLAM_METNI, PUAN_ETIKETLERI } from "@/lib/geri-bildirim";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
@@ -37,11 +39,19 @@ const PRIORITY_LABELS: Record<string, string> = {
 export default async function SupportPage() {
   const profile = await getCurrentProfile();
   const isAdmin = profile?.role === "system_admin" || profile?.role === "founder";
+  // Geri bildirimleri Akademik Yönetici de okur (app/actions/geri-bildirim.ts);
+  // talep kuyruğu ise yalnızca Sistem Yöneticisi ve Kurucu'nun işi.
+  const isYonetim = isAdmin || profile?.role === "academic_manager";
 
-  const [myRequests, allRequests] = await Promise.all([
+  const [myRequests, allRequests, geriBildirimler] = await Promise.all([
     getMySupportRequests(),
     isAdmin ? getAllSupportRequests() : Promise.resolve([]),
+    isYonetim ? tumGeriBildirimler() : Promise.resolve([]),
   ]);
+
+  const puanOrtalamasi = geriBildirimler.length
+    ? geriBildirimler.reduce((toplam, satir) => toplam + (satir.score ?? 0), 0) / geriBildirimler.length
+    : null;
 
   async function handleUpdateStatus(requestId: string, status: string) {
     "use server";
@@ -158,6 +168,42 @@ export default async function SupportPage() {
               </article>
             ))}
           </div>
+          )}
+        </section>
+      )}
+
+      {isYonetim && (
+        <section className="section">
+          <h2 className="section-title">
+            <MessageSquareHeart size={16} aria-hidden="true" />
+            Kullanım geri bildirimleri
+            {puanOrtalamasi ? <span className="status-pill" data-tone="info">Ortalama {puanOrtalamasi.toFixed(1)} / 5</span> : null}
+          </h2>
+          {geriBildirimler.length === 0 ? (
+            <BosDurum
+              kompakt
+              ikon={MessageSquareHeart}
+              aciklama="Henüz geri bildirim gelmedi. Soru, kullanıcı sistemi gerçekten kullandıktan sonra ana sayfasında bir kez sorulur."
+            />
+          ) : (
+            <ul className="geri-bildirim-listesi">
+              {geriBildirimler.map((satir) => (
+                <li className="geri-bildirim-satiri" key={satir.userId}>
+                  <div className="geri-bildirim-satiri-bas">
+                    <strong>{satir.ad}</strong>
+                    <span className="status-pill" data-tone={satir.score && satir.score >= 4 ? "success" : satir.score && satir.score <= 2 ? "danger" : "neutral"}>
+                      {satir.score} / 5 · {satir.score ? PUAN_ETIKETLERI[satir.score] : ""}
+                    </span>
+                  </div>
+                  {satir.comment ? <p>{satir.comment}</p> : <p className="muted text-sm">Yorum yazılmadı.</p>}
+                  <p className="muted text-sm">
+                    En çok: {bolumEtiketi(satir.mostUsed)}
+                    {satir.askedContext && BAGLAM_METNI[satir.askedContext] ? ` · ${BAGLAM_METNI[satir.askedContext]} soruldu` : ""}
+                    {` · ${trTarihSaat(satir.updatedAt)}`}
+                  </p>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
       )}
