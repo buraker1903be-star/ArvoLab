@@ -52,6 +52,15 @@ import {
   AlertTriangle,
   ClipboardCheck,
   Share2,
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  Columns2,
+  Rows2,
+  PanelTop,
+  TableCellsMerge,
+  TableCellsSplit,
 } from "lucide-react";
 import FindReplaceBar from "./find-replace-bar";
 import ImportDialog, { type ImportMode } from "./import-dialog";
@@ -281,6 +290,11 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
     canUndo: editor.can().undo(),
     canRedo: editor.can().redo(),
     caption: (editor.getAttributes("paragraph").caption as string | null | undefined) ?? null,
+    /* Tablo kontrolleri yalnızca imleç tablodayken çiziliyor: araç
+       çubuğu zaten dolu ve tablo dışındayken hepsi tıklanamaz durur. */
+    inTable: editor.isActive("table"),
+    canMergeCells: editor.can().mergeCells(),
+    canSplitCell: editor.can().splitCell(),
   };
 }
 
@@ -1355,6 +1369,55 @@ export default function ManuscriptEditor({
         >
           <TableProperties size={16} />
         </ToolbarButton>
+
+        {/*
+          Tablo kontrolleri: yalnızca imleç tablodayken.
+
+          Eskiden hiç yoktu. Tablo 3×3 olarak ekleniyor, sonrasında
+          SATIR eklenebiliyordu (Tiptap'ta son hücrede Tab yeni satır
+          açar) ama SÜTUN eklemenin, satır ya da sütun silmenin, tabloyu
+          kaldırmanın hiçbir yolu yoktu. Kullanıcı üç sütunla kalıyor,
+          dördüncüyü isteyince tabloyu silip baştan kurmak zorundaydı —
+          silmenin de yolu olmadığı için gerçekte kalıyordu.
+
+          Araç çubuğunda sürekli durmuyor: tablo dışındayken hepsi
+          tıklanamaz sekiz düğme, kalabalıktan başka bir şey değil.
+        */}
+        {ui.inTable ? (
+          <>
+            <span className="toolbar-divider" />
+            <ToolbarButton label="Soluna sütun ekle" onClick={() => editor.chain().focus().addColumnBefore().run()}>
+              <ArrowLeftToLine size={16} />
+            </ToolbarButton>
+            <ToolbarButton label="Sağına sütun ekle" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+              <ArrowRightToLine size={16} />
+            </ToolbarButton>
+            <ToolbarButton label="Sütunu sil" onClick={() => editor.chain().focus().deleteColumn().run()}>
+              <Columns2 size={16} />
+            </ToolbarButton>
+            <ToolbarButton label="Üstüne satır ekle" onClick={() => editor.chain().focus().addRowBefore().run()}>
+              <ArrowUpToLine size={16} />
+            </ToolbarButton>
+            <ToolbarButton label="Altına satır ekle" onClick={() => editor.chain().focus().addRowAfter().run()}>
+              <ArrowDownToLine size={16} />
+            </ToolbarButton>
+            <ToolbarButton label="Satırı sil" onClick={() => editor.chain().focus().deleteRow().run()}>
+              <Rows2 size={16} />
+            </ToolbarButton>
+            <ToolbarButton label="Başlık satırını aç/kapat" onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
+              <PanelTop size={16} />
+            </ToolbarButton>
+            <ToolbarButton label="Hücreleri birleştir" disabled={!ui.canMergeCells} onClick={() => editor.chain().focus().mergeCells().run()}>
+              <TableCellsMerge size={16} />
+            </ToolbarButton>
+            <ToolbarButton label="Hücreyi böl" disabled={!ui.canSplitCell} onClick={() => editor.chain().focus().splitCell().run()}>
+              <TableCellsSplit size={16} />
+            </ToolbarButton>
+            <ToolbarButton label="Tabloyu sil" onClick={() => editor.chain().focus().deleteTable().run()}>
+              <Trash2 size={16} />
+            </ToolbarButton>
+          </>
+        ) : null}
 
         <span className="toolbar-divider" />
 
