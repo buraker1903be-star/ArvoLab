@@ -19,6 +19,9 @@ export interface AppSupportRequest {
   priority: string;
   status: "open" | "in_progress" | "resolved";
   created_at: string;
+  /** Sistem yöneticisinin yanıtı; yalnızca o yazabilir (migration …100022). */
+  admin_note?: string | null;
+  answered_at?: string | null;
 }
 
 export async function createSupportRequest(formData: FormData): Promise<ActionResult> {
@@ -59,7 +62,7 @@ export async function getMySupportRequests(): Promise<ListeSonucu<AppSupportRequ
 
   const { data, error } = await supabase
     .from("app_support_requests")
-    .select("id, subject, message, category, priority, status, created_at")
+    .select("id, subject, message, category, priority, status, created_at, admin_note, answered_at")
     .eq("requested_by", user.id)
     .order("created_at", { ascending: false });
 
@@ -74,7 +77,7 @@ export async function getAllSupportRequests(): Promise<ListeSonucu<AppSupportReq
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("app_support_requests")
-    .select("id, subject, message, category, priority, status, created_at")
+    .select("id, subject, message, category, priority, status, created_at, admin_note, answered_at")
     .neq("status", "resolved")
     .order("created_at", { ascending: true });
 
@@ -83,6 +86,43 @@ export async function getAllSupportRequests(): Promise<ListeSonucu<AppSupportReq
     return listeOkunamadi();
   }
   return listeBasarili(data);
+}
+
+/**
+ * Talebe yanıt yazar (ve istenirse durumu da değiştirir).
+ *
+ * Destek ekranı tek yönlüydü: kullanıcı yazıyor, yönetici yalnızca durumu
+ * değiştiriyordu ve kullanıcı üründe hiçbir cevap görmüyordu. Sorun
+ * yaşayan kişi o ekrana zaten bir şey ters gittiği için geliyor.
+ */
+export async function answerSupportRequest(requestId: string, formData: FormData): Promise<ActionResult> {
+  const auth = await requireRole(ADMIN_ROLES, "Talebe yalnızca Sistem Yöneticisi veya Kurucu yanıt yazabilir.");
+  if ("error" in auth) return { error: auth.error };
+
+  const not = String(formData.get("admin_note") ?? "").trim().slice(0, 4000);
+  if (not.length < 2) return { error: "Yanıt en az iki karakter olmalı." };
+  const durum = String(formData.get("status") ?? "").trim();
+  if (durum && !STATUSES.includes(durum)) return { error: "Geçersiz durum." };
+
+  const { data, error } = await auth.supabase
+    .from("app_support_requests")
+    .update({
+      admin_note: not,
+      answered_at: new Date().toISOString(),
+      ...(durum ? { status: durum } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", requestId)
+    .select("id");
+
+  if (error) {
+    console.error(error);
+    return { error: "Yanıt kaydedilemedi." };
+  }
+  if (!data?.length) return { error: "Talep bulunamadı." };
+
+  revalidatePath(PAGE_PATH);
+  return { success: true };
 }
 
 export async function updateSupportRequestStatus(requestId: string, status: string): Promise<ActionResult> {

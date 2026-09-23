@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { UploadCloud, Play, Table as TableIcon, FileBarChart } from "lucide-react";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check } from "lucide-react";
 import {
   describeNumeric,
   independentTTest,
@@ -71,6 +71,28 @@ export default function DataAnalyzer() {
 
   const [result, setResult] = useState<React.ReactNode>(null);
   const [resultError, setResultError] = useState<string | null>(null);
+
+  /*
+    Hesaplanan sonuç hiçbir yere yazılmıyordu: öğrenci t testini çalıştırıp
+    ekrandan elle not alıyor, sayfayı yenileyince her şeyi kaybediyordu.
+    Saklamak ayrı bir iş (veri de kullanıcının), ama kopyalamak bir
+    düğmelik.
+  */
+  const sonucKutusu = useRef<HTMLDivElement>(null);
+  const [kopyalandi, setKopyalandi] = useState(false);
+
+  const sonucuKopyala = useCallback(async () => {
+    const metin = sonucKutusu.current?.innerText?.trim();
+    if (!metin) return;
+    try {
+      await navigator.clipboard.writeText(metin);
+      setKopyalandi(true);
+      window.setTimeout(() => setKopyalandi(false), 2000);
+    } catch {
+      // Pano izni yoksa sessiz kalınmıyor: kullanıcı neden olmadığını bilsin.
+      setResultError("Panoya kopyalanamadı. Metni seçip elle kopyalayabilirsiniz.");
+    }
+  }, []);
   const [fullReport, setFullReport] = useState<React.ReactNode>(null);
 
   const handleFile = useCallback(async (file: File) => {
@@ -700,7 +722,22 @@ export default function DataAnalyzer() {
 
           {result && (
             <div className="results-divider text-base">
-              {result}
+              {/*
+                Sonuç JSX olarak tutuluyor ve her analiz türü kendi
+                biçimini üretiyor; kopyalanacak metni her dalda ayrıca
+                kurmak yerine kapsayıcının kendi metni okunuyor. Tek
+                dokunuş, bütün türlerde çalışıyor.
+              */}
+              <div ref={sonucKutusu}>{result}</div>
+              <div className="cluster mt-sm">
+                <button type="button" className="projects-filter-button button-compact" onClick={sonucuKopyala}>
+                  {kopyalandi ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+                  {kopyalandi ? "Kopyalandı" : "Sonucu kopyala"}
+                </button>
+                <span className="hint">
+                  Sonuçlar burada saklanmıyor; sayfayı yenilediğinizde kaybolur.
+                </span>
+              </div>
             </div>
           )}
         </div>

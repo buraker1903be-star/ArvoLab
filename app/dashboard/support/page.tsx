@@ -5,6 +5,7 @@ import {
   createSupportRequest,
   getMySupportRequests,
   getAllSupportRequests,
+  answerSupportRequest,
   updateSupportRequestStatus,
 } from "@/app/actions/support";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -62,6 +63,11 @@ export default async function SupportPage() {
   async function handleUpdateStatus(requestId: string, status: string) {
     "use server";
     return updateSupportRequestStatus(requestId, status);
+  }
+
+  async function handleAnswer(requestId: string, formData: FormData) {
+    "use server";
+    return answerSupportRequest(requestId, formData);
   }
 
   return (
@@ -171,6 +177,25 @@ export default async function SupportPage() {
                     </ActionForm>
                   )}
                 </div>
+
+                {/* Yanıt: durum değişikliği kullanıcıya bir şey ANLATMIYOR.
+                    "Çözüldü" etiketini gören kişi neyin nasıl çözüldüğünü
+                    bilmiyordu. */}
+                {r.admin_note ? (
+                  <p className="tone-text mt-sm" data-tone="success">
+                    Yanıtınız: {r.admin_note}
+                  </p>
+                ) : null}
+                <ActionForm action={handleAnswer.bind(null, r.id)} className="mt-sm" successMessage="Yanıt gönderildi.">
+                  <label className="project-form-full">
+                    <span>{r.admin_note ? "Yanıtı güncelle" : "Kullanıcıya yanıt yaz"}</span>
+                    <textarea name="admin_note" rows={2} maxLength={4000} defaultValue={r.admin_note ?? ""} required />
+                  </label>
+                  <input type="hidden" name="status" value="resolved" />
+                  <button type="submit" className="projects-filter-button button-compact">
+                    Yanıtla ve çözüldü işaretle
+                  </button>
+                </ActionForm>
               </article>
             ))}
           </div>
@@ -236,6 +261,20 @@ export default async function SupportPage() {
                     </span>
                     <h2>{r.subject}</h2>
                     <p>{CATEGORY_LABELS[r.category]} · {trTarihSaat(r.created_at)}</p>
+                    {/* Kendi yazdığını da görsün: eskiden yalnızca başlık
+                        vardı, kullanıcı ne bildirdiğini hatırlamıyordu. */}
+                    <p className="muted text-sm">{r.message}</p>
+                    {r.admin_note ? (
+                      <div className="callout mt-sm" data-tone="success">
+                        <strong>Destek yanıtı</strong>
+                        <p>{r.admin_note}</p>
+                        {r.answered_at ? <p className="muted text-sm">{trTarihSaat(r.answered_at)}</p> : null}
+                      </div>
+                    ) : (
+                      <p className="hint mt-sm">
+                        Talebiniz alındı. Yanıtlandığında burada görünecek.
+                      </p>
+                    )}
                   </div>
                 </div>
               </article>
