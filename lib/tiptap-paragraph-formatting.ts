@@ -1,5 +1,5 @@
 import { Extension } from "@tiptap/core";
-import { indentCmOf, parseIndentStyle } from "@/lib/paragraph-format";
+import { hangingIndentCmOf, indentCmOf, parseHangingStyle, parseIndentStyle } from "@/lib/paragraph-format";
 
 /**
  * Paragraf Biçimlendirme Extension'ı — Satır Aralığı ve İlk Satır Girintisi
@@ -20,6 +20,7 @@ declare module "@tiptap/core" {
     paragraphFormatting: {
       setLineSpacing: (value: string | null) => ReturnType;
       setFirstLineIndent: (value: boolean | number) => ReturnType;
+      setHangingIndent: (value: boolean | number) => ReturnType;
     };
   }
 }
@@ -56,6 +57,24 @@ export const ParagraphFormatting = Extension.create<ParagraphFormattingOptions>(
               return { style: `text-indent: ${cm}cm` };
             },
           },
+          /*
+            Asılı girinti: ilk satır kenarda, sonrakiler içeride. APA ve
+            Chicago kaynakçada zorunlu tutar. İlk satır girintisinin
+            tersi olduğu için ayrı öznitelik — bir paragraf ikisini
+            birden taşıyamaz.
+
+            CSS'te negatif text-indent + eşit padding ile kurulur;
+            parseHTML yalnızca NEGATİF değeri asılı girinti sayar.
+          */
+          hangingIndent: {
+            default: false,
+            parseHTML: (element: HTMLElement) => parseHangingStyle(element.style.textIndent),
+            renderHTML: (attributes: { hangingIndent?: boolean | number }) => {
+              const cm = hangingIndentCmOf(attributes as Record<string, unknown>);
+              if (!cm) return {};
+              return { style: `text-indent: -${cm}cm; padding-left: ${cm}cm` };
+            },
+          },
         },
       },
     ];
@@ -77,7 +96,17 @@ export const ParagraphFormatting = Extension.create<ParagraphFormattingOptions>(
         ({ commands }: { commands: { updateAttributes: (type: string, attrs: Record<string, unknown>) => boolean } }) => {
           let ok = true;
           for (const type of this.options.types) {
-            ok = commands.updateAttributes(type, { firstLineIndent: value }) && ok;
+            // Asılı girinti ilk satır girintisinin tersi; biri açılınca öbürü kapanır.
+            ok = commands.updateAttributes(type, { firstLineIndent: value, ...(value ? { hangingIndent: false } : {}) }) && ok;
+          }
+          return ok;
+        },
+      setHangingIndent:
+        (value: boolean | number) =>
+        ({ commands }: { commands: { updateAttributes: (type: string, attrs: Record<string, unknown>) => boolean } }) => {
+          let ok = true;
+          for (const type of this.options.types) {
+            ok = commands.updateAttributes(type, { hangingIndent: value, ...(value ? { firstLineIndent: false } : {}) }) && ok;
           }
           return ok;
         },

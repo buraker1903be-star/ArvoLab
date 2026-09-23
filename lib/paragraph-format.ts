@@ -21,6 +21,46 @@ export interface ParagraphFormatRules {
   justify?: boolean;
 }
 
+/*
+  Asılı girinti (hanging indent): ilk satır kenarda, sonraki satırlar
+  içeride. APA ve Chicago kaynakçada bunu zorunlu tutar, Türk tez
+  kılavuzlarının çoğu da ister. Editörde ve Word çıktısında karşılığı
+  yoktu: öğrenci kaynakçayı doğru yazsa bile biçim yanlış çıkıyordu.
+
+  İlk satır girintisinin tersi olduğu için ayrı bir öznitelik: bir
+  paragraf ikisini birden taşıyamaz.
+*/
+export const DEFAULT_HANGING_CM = 1.27;
+const MIN_HANGING_CM = 0.3;
+const MAX_HANGING_CM = 3;
+
+/** Paragrafın asılı girintisi (cm); yoksa null. */
+export function hangingIndentCmOf(attrs: Record<string, unknown> | null | undefined): number | null {
+  const value = attrs?.hangingIndent;
+  if (value === true) return DEFAULT_HANGING_CM;
+  if (typeof value === "number" && value > 0) return value;
+  return null;
+}
+
+/** Kılavuzdan okunan asılı girinti ölçüsü geçerli mi. */
+export function validHangingCm(value: unknown): number | undefined {
+  const cm = typeof value === "number" ? value : Number(String(value ?? "").replace(",", "."));
+  if (!Number.isFinite(cm) || cm < MIN_HANGING_CM || cm > MAX_HANGING_CM) return undefined;
+  return Math.round(cm * 100) / 100;
+}
+
+/**
+ * style="text-indent: -1.27cm" → 1.27 (ProseMirror parseHTML için).
+ * Asılı girinti NEGATİF ilk satır girintisi olarak yazılır; olumlu
+ * değer normal girintidir ve buraya düşmemeli.
+ */
+export function parseHangingStyle(textIndent: string | null | undefined): number | false {
+  if (!textIndent) return false;
+  const match = /^-(\d+(?:\.\d+)?)\s*cm$/i.exec(textIndent.trim());
+  if (!match) return false;
+  return validHangingCm(Number(match[1])) ?? false;
+}
+
 /** Paragrafın girintisi (cm). Girinti yoksa null. */
 export function indentCmOf(attrs: Record<string, unknown> | null | undefined): number | null {
   const value = attrs?.firstLineIndent;

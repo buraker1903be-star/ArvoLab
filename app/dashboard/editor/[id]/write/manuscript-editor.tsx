@@ -114,6 +114,7 @@ import {
   fixReferencePunctuationInEditor,
   applyParagraphFormat,
   convertReferenceListsToParagraphs,
+  applyHangingIndent,
   type OutlineHeading,
 } from "./editor-navigation";
 
@@ -653,7 +654,7 @@ export default function ManuscriptEditor({
         return;
       }
       setLiveIssues(
-        checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle, abstract: guideline?.settings.abstract, paragraphFormat })
+        checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle, abstract: guideline?.settings.abstract, paragraphFormat, referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm })
       );
     };
     const schedule = (delay: number) => {
@@ -751,6 +752,7 @@ export default function ManuscriptEditor({
           citationStyle,
           abstract: guideline?.settings.abstract,
           paragraphFormat,
+          referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm,
         });
         setStructureIssues(issues);
         setLiveIssues(issues);
@@ -1042,6 +1044,7 @@ export default function ManuscriptEditor({
       citationStyle,
       abstract: guideline?.settings.abstract,
       paragraphFormat,
+      referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm,
     });
     setLiveIssues(issues);
     setStructureIssues((current) => (current ? issues : current));
@@ -1087,6 +1090,23 @@ export default function ManuscriptEditor({
                 }}
               >
                 Paragraflara çevir
+              </button>
+            ) : issue.action === "apply-hanging-indent" ? (
+              <button
+                type="button"
+                className="result-link"
+                onClick={() => {
+                  const cm = guideline?.settings.referenceHangingIndentCm;
+                  const applied = cm ? applyHangingIndent(editor, cm) : 0;
+                  if (applied === 0) {
+                    showToast("error", "Asılı girinti uygulanacak kaynakça girdisi bulunamadı.");
+                    return;
+                  }
+                  showToast("success", `${applied} kaynakça girdisine asılı girinti uygulandı. Geri almak için Ctrl+Z.`);
+                  recheckStructure();
+                }}
+              >
+                Asılı girinti uygula
               </button>
             ) : issue.action === "apply-paragraph-format" ? (
               <button

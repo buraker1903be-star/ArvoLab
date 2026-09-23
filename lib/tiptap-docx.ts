@@ -23,7 +23,7 @@ import {
 import { CAPTION_LABELS, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
 import { headingNumberMap } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
-import { indentCmOf } from "@/lib/paragraph-format";
+import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 
 interface TiptapMark {
   type: string;
@@ -72,10 +72,18 @@ function lineSpacingValue(value: unknown) {
 
 function indentFromAttrs(attrs: Record<string, unknown> | undefined, quoteDepth: number) {
   const indentCm = indentCmOf(attrs); // true (eski kayıt) = 1,25 cm; sayı = kılavuzun ölçüsü
+  /*
+    Asılı girinti Word'de "hanging": sol kenar içeride, ilk satır o
+    kadar dışarıda. Editörde negatif text-indent + padding ile kurulan
+    biçimin Word karşılığı bu; taşınmazsa kaynakça çıktıda düz görünür.
+  */
+  const hangingCm = hangingIndentCmOf(attrs);
+  const hanging = hangingCm ? convertMillimetersToTwip(hangingCm * 10) : undefined;
   const firstLine = indentCm ? convertMillimetersToTwip(indentCm * 10) : undefined;
-  const left = quoteDepth > 0 ? convertInchesToTwip(0.4 * quoteDepth) : undefined;
-  if (firstLine === undefined && left === undefined) return undefined;
-  return { firstLine, left };
+  const quoteLeft = quoteDepth > 0 ? convertInchesToTwip(0.4 * quoteDepth) : undefined;
+  const left = hanging !== undefined ? (quoteLeft ?? 0) + hanging : quoteLeft;
+  if (firstLine === undefined && left === undefined && hanging === undefined) return undefined;
+  return { ...(hanging === undefined ? { firstLine } : {}), left, hanging };
 }
 
 export interface CoverPageData {

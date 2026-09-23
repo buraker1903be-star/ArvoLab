@@ -60,6 +60,7 @@ export function manuscriptReadiness(input: {
       ...(guideline?.settings.paragraphIndentCm ? { indentCm: guideline.settings.paragraphIndentCm } : {}),
       ...(guideline?.settings.justify ? { justify: true } : {}),
     },
+    referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm,
   });
   const margins = {
     top: manuscript.margin_top_cm ?? 2.5,
