@@ -356,3 +356,45 @@ export function applyHangingIndent(editor: Pick<Editor, "state" | "view">, cm: n
   if (changed > 0) editor.view.dispatch(tr);
   return changed;
 }
+
+/**
+ * Metne ELLE verilmiş yazı tipi, punto ve satır aralığını temizler.
+ *
+ * Değer kaldırılınca metin belgenin varsayılanına, yani kılavuzun
+ * değerine döner (editörün gövde stili ve Word çıktısı ikisi de oradan
+ * beslenir). Kılavuzun değerini tek tek paragraflara YAZMAK yerine
+ * temizlemek bilinçli: kılavuz sürümü değişirse yazılmış değerler eski
+ * kılavuzda kalırdı, temizlenmiş metin kendiliğinden yeniye uyar.
+ *
+ * Renk ve vurgu gibi diğer metin biçimlerine dokunulmaz.
+ * Değişen paragraf/metin sayısını döndürür.
+ */
+export function clearManualTextFormat(editor: Pick<Editor, "state" | "view">): number {
+  const { tr } = editor.state;
+  let changed = 0;
+
+  const textStyle = editor.state.schema.marks.textStyle;
+  editor.state.doc.descendants((node, pos) => {
+    if (node.isText && textStyle) {
+      const mark = node.marks.find((item) => item.type === textStyle);
+      const attrs = mark?.attrs as Record<string, unknown> | undefined;
+      if (mark && (attrs?.fontFamily || attrs?.fontSize)) {
+        const kalan = { ...attrs, fontFamily: null, fontSize: null };
+        const doluMu = Object.values(kalan).some((value) => value !== null && value !== undefined);
+        tr.removeMark(pos, pos + node.nodeSize, textStyle);
+        // Renk/vurgu gibi başka bir değer varsa mark geri konur; yoksa hiç konmaz.
+        if (doluMu) tr.addMark(pos, pos + node.nodeSize, textStyle.create(kalan));
+        changed += 1;
+      }
+      return true;
+    }
+    if (node.type.name === "paragraph" && node.attrs?.lineSpacing) {
+      tr.setNodeMarkup(pos, undefined, { ...node.attrs, lineSpacing: null });
+      changed += 1;
+    }
+    return true;
+  });
+
+  if (changed > 0) editor.view.dispatch(tr);
+  return changed;
+}
