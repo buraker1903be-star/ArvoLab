@@ -23,6 +23,8 @@ import { projectTypeLabel, statusLabel, isOversightRole, STAFF_ROLES } from "@/l
 import { getCurrentProfile } from "@/app/actions/profile";
 import { getAccessState } from "@/lib/access";
 import LicenseCard from "./_components/license-card";
+import GeriBildirimKarti from "./_components/geri-bildirim-karti";
+import { geriBildirimSorusu } from "@/app/actions/geri-bildirim";
 import { computeAttention } from "@/lib/attention";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
@@ -47,7 +49,7 @@ const workstreams = [
   },
   {
     title: "Kaynakça Doğrulama",
-    description: "Kaynakça listenizi yapıştırıp APA 7 kurallarına göre denetleyin.",
+    description: "Kaynakça listenizi yapıştırın; APA 7, Chicago, IEEE ve Vancouver kurallarına göre denetlensin.",
     icon: Quote,
     href: "/dashboard/citations",
   },
@@ -96,10 +98,15 @@ export default async function DashboardPage() {
   // Panel düzeniyle aynı istekte paylaşılır (lib/access.ts cache'li).
   const access = await getAccessState(profile);
   const activeProjects = projects.filter((p) => isActive(p.status));
-  const { stats: writing, openComments } = await getWritingStats(
-    activeProjects.map((p) => p.id),
-    user.id
-  );
+  const [{ stats: writing, openComments }, geriBildirim] = await Promise.all([
+    getWritingStats(
+      activeProjects.map((p) => p.id),
+      user.id
+    ),
+    // Kullanım geri bildirimi: yalnızca sistemi gerçekten kullanmış kişiye,
+    // yalnızca bir kez sorulur (lib/geri-bildirim.ts).
+    geriBildirimSorusu(),
+  ]);
 
   // Kaldığınız yer: en son yazılan aktif çalışma; hiç yazılmadıysa en yeni aktif çalışma.
   const resume =
@@ -224,6 +231,8 @@ export default async function DashboardPage() {
       </section>
 
       <LicenseCard access={access} />
+
+      {geriBildirim.sorulsun ? <GeriBildirimKarti baglam={geriBildirim.baglam} /> : null}
 
       <section className="dashboard-stats" aria-label="Günlük özet">
         {stats.map(({ label, value, icon: Icon, tone, note }) => (

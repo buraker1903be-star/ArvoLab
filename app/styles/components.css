@@ -1317,3 +1317,89 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .ai-kurulum > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px }
 .ai-kurulum dt { color: var(--muted); font-size: 13px; font-weight: 600 }
 .ai-kurulum dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere }
+
+/* Kullanım geri bildirimi (ana sayfa).
+   Lisans kartıyla aynı kabı kullanıyor; ayrımı soluk vurgulu kenarı yapıyor.
+   Soru bir kez görüneceği için dikkat çekmeli, ama uyarı gibi durmamalı —
+   bu bir hata değil, bir rica. */
+.geri-bildirim-karti {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent-400) 35%, var(--line-soft));
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-400) 6%, var(--surface)), var(--surface));
+  box-shadow: var(--shadow-sm);
+}
+.geri-bildirim-bas { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.geri-bildirim-karti .dashboard-kicker { display: inline-flex; align-items: center; gap: 6px; }
+.geri-bildirim-karti h2 { margin: 0; font-size: var(--fs-lg); font-weight: 650; line-height: 1.3; }
+.geri-bildirim-karti p { margin: 0; }
+.geri-bildirim-kapat { display: inline-flex; gap: 14px; }
+.geri-bildirim-kapat button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.geri-bildirim-kapat button:disabled { opacity: .5; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .geri-bildirim-kapat button:hover:not(:disabled) { color: var(--ink); text-decoration: underline; }
+}
+
+.geri-bildirim-form { display: grid; gap: 12px; }
+.geri-bildirim-puanlar { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Puanlar eşit genişlikte değil: etiketleri farklı uzunlukta ve sabit
+   genişlik dar ekranda metni kırpıyordu. */
+.geri-bildirim-puan {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.geri-bildirim-puan strong { font-size: var(--fs-md); font-variant-numeric: tabular-nums; }
+.geri-bildirim-puan span { font-size: var(--fs-sm); color: var(--muted); }
+.geri-bildirim-puan[aria-pressed="true"] {
+  border-color: var(--accent-500);
+  background: color-mix(in srgb, var(--accent-400) 14%, var(--surface));
+}
+.geri-bildirim-puan[aria-pressed="true"] span { color: var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  .geri-bildirim-puan:hover { border-color: var(--accent-500); }
+}
+
+/* Puan seçilince iner. prefers-reduced-motion'da hareket yok, alan yine açılır. */
+.geri-bildirim-detay { display: grid; gap: 12px; animation: geri-bildirim-in .18s ease-out; }
+.geri-bildirim-detay label { display: grid; gap: 6px; font-size: var(--fs-sm); }
+.geri-bildirim-detay textarea { resize: vertical; }
+.geri-bildirim-detay button { justify-self: start; }
+@keyframes geri-bildirim-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .geri-bildirim-detay { animation: none; }
+}
+
+/* Yönetim: gelen geri bildirimler (Destek sayfası) */
+.geri-bildirim-listesi { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.geri-bildirim-satiri {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.geri-bildirim-satiri-bas { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.geri-bildirim-satiri strong { font-size: var(--fs-md); font-weight: 650; }
+.geri-bildirim-satiri p { margin: 0; }

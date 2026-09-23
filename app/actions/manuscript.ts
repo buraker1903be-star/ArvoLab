@@ -5,12 +5,9 @@ import { getAuthContext } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { extractPlainText, extractHeadings, countWords, type TiptapDoc } from "@/lib/tiptap-text";
 import { splitBodyAndReferences } from "@/lib/text-split";
-import {
-  parseReferenceList,
-  extractInTextCitations,
-  crossCheck,
-  computeComplianceScore,
-} from "@/lib/apa7";
+import { extractInTextCitations, crossCheck, computeComplianceScore, type ParsedReference } from "@/lib/apa7";
+import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
+import { stilTanimi } from "@/lib/atif/stiller";
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
@@ -306,14 +303,14 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
 export interface ManuscriptCheckResult {
   wordCount: number;
   citationStyle: string;
-  /** Otomatik kaynakça denetimi şimdilik yalnızca APA 7 için yapılır */
-  citationCheckSupported: boolean;
+  /** Denetimin yapıldığı stil; ekran "APA 7" yerine gerçekte bakılanı yazsın. */
+  stil: { id: string; ad: string; tur: "yazar-tarih" | "numara" };
   guidelineCompliance: ReturnType<typeof checkGuidelineCompliance> | null;
   missingSections: string[];
-  apa7: {
+  atif: {
     referenceSectionFound: boolean;
     complianceScore: number | null;
-    references: ReturnType<typeof parseReferenceList>;
+    references: ParsedReference[];
     crossCheck: ReturnType<typeof crossCheck>;
   };
 }
@@ -353,18 +350,35 @@ export async function runManuscriptCheck(projectId: string): Promise<{ error?: s
     ? checkGuidelineCompliance(fullText, guideline.requiredSections, guideline.citationStyle, citationStyle)
     : null;
 
-  const citationCheckSupported = citationStyle === "apa7";
-  let apa7Result: ManuscriptCheckResult["apa7"] = {
+  /*
+    Kaynakça denetimi eskiden YALNIZCA APA 7'de çalışıyordu; başka stil
+    seçen öğrenci burada "otomatik denetim yapılamıyor" yazısı görüyordu.
+    Artık Atıf Kontrolü ekranıyla aynı motor kullanılıyor (lib/atif/kunye.ts):
+    künyeler stilin kendi kurallarına göre okunuyor.
+
+    Numara stillerinde (IEEE, Vancouver) atıf ile künye ADLA değil SIRAYLA
+    eşleşir; çapraz kontrol orada anlamsız olduğu için boş bırakılıyor —
+    numara eşleşmesini "Yapı ve bütünlük" bölümü (lib/structure-check.ts)
+    zaten denetliyor.
+  */
+  const stil = stilTanimi(citationStyle);
+  let atifSonucu: ManuscriptCheckResult["atif"] = {
     referenceSectionFound: false,
     complianceScore: null,
     references: [],
     crossCheck: { citationsWithoutReference: [], referencesWithoutCitation: [] },
   };
-  if (citationCheckSupported && split.referenceText.trim().length > 0) {
-    const references = parseReferenceList(split.referenceText);
-    const citations = extractInTextCitations(split.bodyText);
-    const cross = crossCheck(citations, references);
-    apa7Result = {
+  if (split.referenceText.trim().length > 0) {
+    const references = kunyeleriAyristir(kunyeleriBol(split.referenceText), stil.id);
+    const citations =
+      stil.tur === "yazar-tarih"
+        ? extractInTextCitations(split.bodyText, { style: stil.id === "chicago" ? "chicago" : "apa7" })
+        : [];
+    const cross =
+      stil.tur === "yazar-tarih"
+        ? crossCheck(citations, references)
+        : { citationsWithoutReference: [], referencesWithoutCitation: [] };
+    atifSonucu = {
       referenceSectionFound: true,
       complianceScore: computeComplianceScore(references, cross),
       references,
@@ -376,10 +390,10 @@ export async function runManuscriptCheck(projectId: string): Promise<{ error?: s
     result: {
       wordCount: countWords(content),
       citationStyle,
-      citationCheckSupported,
+      stil: { id: stil.id, ad: stil.ad, tur: stil.tur },
       guidelineCompliance,
       missingSections: guidelineCompliance?.sections.filter((s) => !s.found).map((s) => s.section) ?? [],
-      apa7: apa7Result,
+      atif: atifSonucu,
     },
   };
 }

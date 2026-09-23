@@ -132,3 +132,18 @@ export function kunyeAyristir(ham: string, stilDegeri: string | null | undefined
 export function kunyeleriAyristir(kunyeler: string[], stilDegeri: string | null | undefined): ParsedReference[] {
   return kunyeler.map((ham, indeks) => kunyeAyristir(ham, stilDegeri, indeks + 1));
 }
+
+/**
+ * Kaynakça metnini künyelere böler (apa7.parseReferenceList ile aynı ölçüt:
+ * bir-iki satır sonu ayırır, 10 karakterden kısa satır künye sayılmaz).
+ *
+ * Burada duruyor çünkü iki ekran birden kullanıyor: Atıf Kontrolü ve
+ * editördeki "Kontrol Et". Eylem dosyasında ("use server") kalsaydı
+ * dışarıdan çağrılabilen bir uç noktaya dönüşürdü.
+ */
+export function kunyeleriBol(ham: string): string[] {
+  return ham
+    .split(/\n{1,2}/)
+    .map((satir) => satir.trim())
+    .filter((satir) => satir.length > 10);
+}

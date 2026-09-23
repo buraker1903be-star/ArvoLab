@@ -6,7 +6,7 @@ import {
   crossCheck,
   computeComplianceScore,
 } from "@/lib/apa7";
-import { kunyeleriAyristir } from "@/lib/atif/kunye";
+import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
 import { stilTanimi } from "@/lib/atif/stiller";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
@@ -29,14 +29,6 @@ export async function getMyProjects() {
     return [];
   }
   return data ?? [];
-}
-
-/** Kaynakça metnini girdilere böler (apa7.parseReferenceList ile aynı ölçüt). */
-function kunyeleriBol(ham: string): string[] {
-  return ham
-    .split(/\n{1,2}/)
-    .map((satir) => satir.trim())
-    .filter((satir) => satir.length > 10);
 }
 
 /* Akademik doğrulama ağ üzerinden gidiyor (Crossref + OpenAlex, kaynak
