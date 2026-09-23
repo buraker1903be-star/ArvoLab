@@ -79,6 +79,10 @@ export default function LiteraturBulucu({
 
   const kayitlar = yanit?.kayitlar ?? [];
 
+  /* Şerit için sayımlar; listenin kendisi zaten hesaplanmış durumda. */
+  const acikErisimSayisi = kayitlar.filter((kayit) => kayit.acikErisim).length;
+  const listedekiSayisi = kayitlar.filter((kayit) => kayit.listede || eklenen.has(kayit.kimlik)).length;
+
   return (
     <section className="project-form-card" id="kaynak-bul">
       <div className="asistan-kart-ust">
@@ -159,6 +163,24 @@ export default function LiteraturBulucu({
       )}
 
       {kayitlar.length > 0 && (
+        /*
+          Özet şeridi, Kaynakça Doğrulama ekranındaki chip-row ile aynı:
+          iki ekran aynı işi yapıyor (dizinden kayıt getiriyor) ve aynı
+          dili konuşmalı. Sayıyı yazmak ayrıca bir şey söylüyor — liste
+          20'de kesiliyor, "20 kayıt" görmek bunun sınır olduğunu sezdirir.
+        */
+        <div className="chip-row mt-sm">
+          <strong className="chip">{kayitlar.length} kayıt</strong>
+          {acikErisimSayisi > 0 && (
+            <span className="chip" data-tone="success">{acikErisimSayisi} açık erişim</span>
+          )}
+          {listedekiSayisi > 0 && (
+            <span className="chip" data-tone="info">{listedekiSayisi} listenizde</span>
+          )}
+        </div>
+      )}
+
+      {kayitlar.length > 0 && (
         <ul className="bulgu-listesi">
           {kayitlar.map((kayit) => {
             const listede = kayit.listede || eklenen.has(kayit.kimlik);
@@ -171,7 +193,11 @@ export default function LiteraturBulucu({
                     {kayit.yazarlar.length > 3 ? " vd." : ""}
                     {kayit.yil ? ` · ${kayit.yil}` : ""}
                     {kayit.dergi ? ` · ${kayit.dergi}` : ""}
+                    {` · ${DIZIN_ADI[kayit.saglayici] ?? kayit.saglayici}`}
                   </p>
+                  {/* Rozet satırı yalnızca gösterecek bir şey varken:
+                      boş bir satır da yer kaplıyor. */}
+                  {(kayit.acikErisim || typeof kayit.atifSayisi === "number") && (
                   <div className="pill-row">
                     {kayit.acikErisim && (
                       <span className="status-pill" data-tone="success">
@@ -181,8 +207,8 @@ export default function LiteraturBulucu({
                     {typeof kayit.atifSayisi === "number" && (
                       <span className="status-pill" data-tone="neutral">{kayit.atifSayisi} atıf</span>
                     )}
-                    <span className="status-pill" data-tone="neutral">{DIZIN_ADI[kayit.saglayici] ?? kayit.saglayici}</span>
                   </div>
+                  )}
                 </div>
                 <div className="bulgu-eylemler">
                   <a className="projects-filter-button button-compact" href={kayit.acikErisimUrl ?? kayit.url} target="_blank" rel="noreferrer">
