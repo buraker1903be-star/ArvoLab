@@ -50,8 +50,6 @@ export interface KrediDurumu {
 }
 
 export interface KrediKarari {
-  /** Aylık kalan + satın alınmış bakiye. */
-  kalanKredi?: number;
   /** Doluysa asistan çalışmaz ve bu metin kullanıcıya gösterilir. */
   engel: string | null;
   /** Doluysa çalışma sürer ama kullanıcıya uyarı gösterilir. */
