@@ -16,6 +16,7 @@ import { baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numar
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 import { checkParagraphFormat, describeParagraphFormat, hangingIndentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
 import { metinBiciminiDenetle, type MetinBicimKurali } from "@/lib/metin-bicimi";
+import { baslikYerlesimSorunlari, uzunAlintilar, BLOK_ALINTI_ESIGI } from "@/lib/alinti-ve-baslik";
 
 interface DocNode {
   type?: string;
@@ -422,6 +423,33 @@ export function checkStructure(
   }
 
   // ---------- Paragraf düzeni (kılavuzda girinti/yaslama kuralı varsa) ----------
+  /* ---------- Uzun doğrudan alıntı ----------
+     APA 7 ve Türkçe kılavuzların çoğu 40 kelimeyi aşan alıntının tırnak
+     içinde değil, girintili blok alıntı olarak yazılmasını ister. Jüri
+     bunu her seferinde yakalıyor, denetim hiç yakalamıyordu. */
+  for (const alinti of uzunAlintilar(doc).slice(0, CITATION_ISSUE_LIMIT)) {
+    add({
+      tone: "warning",
+      message: `${alinti.kelime} kelimelik doğrudan alıntı paragrafın içinde tırnakla yazılmış; ${BLOK_ALINTI_ESIGI} kelimeyi aşan alıntılar girintili blok alıntı olarak yazılır (araç çubuğundaki “Alıntı”).`,
+      target: alinti.metin,
+    });
+  }
+
+  /* ---------- Şekil/tablo başlığının tarafı ----------
+     Tablo başlığı tablonun üstünde, şekil başlığı şeklin altında olur.
+     Word çıktısı bunu zaten varsayıyordu; metinde tersi yazılmışsa kimse
+     söylemiyordu. */
+  for (const yerlesim of baslikYerlesimSorunlari(doc)) {
+    add({
+      tone: "warning",
+      message:
+        yerlesim.tur === "table"
+          ? `${quote(yerlesim.baslik)} tablo başlığı tablonun altında; tablo başlığı tablonun ÜSTÜNDE yazılır.`
+          : `${quote(yerlesim.baslik)} şekil başlığı şeklin üstünde; şekil başlığı şeklin ALTINDA yazılır.`,
+      target: yerlesim.baslik,
+    });
+  }
+
   /* ---------- Yazı tipi, punto, satır aralığı ----------
      Kılavuzun ilk maddesi budur ("Times New Roman, 12 punto, 1,5 satır
      aralığı") ve denetlenmiyordu: kılavuz değerleri editörün varsayılanı
