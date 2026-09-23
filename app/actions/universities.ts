@@ -50,10 +50,10 @@ export async function getAcademicUnits(
   universityId: string,
   parentId: string | null,
   unitTypes: string[]
-): Promise<AcademicUnit[]> {
+): Promise<ListeSonucu<AcademicUnit>> {
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
-  if (!authData.user) return [];
+  if (!authData.user) return listeBasarili([]);
 
   if (parentId === null) {
     const { data: university } = await supabase
@@ -87,7 +87,10 @@ export async function getAcademicUnits(
 
   if (error) {
     console.error(error);
-    return [];
+    // Alan serbest metin: liste okunamasa da kullanıcı birimini yazabilir.
+    // Ama bunu BİLMESİ gerekiyor; boş açılır liste "kurumum sistemde yok"
+    // gibi okunuyordu.
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }

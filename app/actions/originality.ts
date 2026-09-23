@@ -1,5 +1,7 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
+
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buildShingles, computeSimilarity } from "@/lib/similarity-check";
@@ -109,7 +111,13 @@ export interface OriginalityCheckRecord {
   created_at: string;
 }
 
-export async function getOriginalityChecksForDocument(documentId: string): Promise<OriginalityCheckRecord[]> {
+/*
+  Eskiden okuma hatasında boş dizi dönüyordu; belgeler ekranı da boş diziyi
+  "hiç taranmamış" sayıp yeniden tarama düğmesini gösteriyordu. Yapılmış bir
+  orijinallik taramasının sonucunu gizlemek, kullanıcının belgesini temiz
+  sanmasına yol açabilirdi — burada "bilinmeyen" en pahalı yanlıştır.
+*/
+export async function getOriginalityChecksForDocument(documentId: string): Promise<ListeSonucu<OriginalityCheckRecord>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("originality_checks")
@@ -120,7 +128,7 @@ export async function getOriginalityChecksForDocument(documentId: string): Promi
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }

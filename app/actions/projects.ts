@@ -312,9 +312,10 @@ export interface StaffMember {
 }
 
 /** Atama listesi için personel (RLS: aynı kurum ya da Sistem Yöneticisi/Kurucu için herkes). */
-export async function getAssignableStaff(): Promise<StaffMember[]> {
+export async function getAssignableStaff(): Promise<ListeSonucu<StaffMember>> {
   const auth = await requireRole(OVERSIGHT_ROLES);
-  if ("error" in auth) return [];
+  // Yetkisizlik okuma hatası değil: sayfa atama bölümünü zaten göstermiyor.
+  if ("error" in auth) return listeBasarili([]);
 
   const { data, error } = await auth.supabase
     .from("profiles")
@@ -324,9 +325,10 @@ export async function getAssignableStaff(): Promise<StaffMember[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    // Eskiden boş liste dönüyordu: yönetici atayacak personel olmadığını sanıyordu.
+    return listeOkunamadi();
   }
-  return (data ?? []) as StaffMember[];
+  return listeBasarili((data ?? []) as StaffMember[]);
 }
 
 // Yalnızca Kontrolör / Akademik Yönetici / Sistem Yöneticisi / Kurucu rolleri

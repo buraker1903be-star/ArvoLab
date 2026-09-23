@@ -39,7 +39,10 @@ export default async function AsistanKayitlariSayfasi() {
     );
   }
 
-  const [kayitlar, modeller] = await Promise.all([asistanKayitlari(50), modelOzetleri()]);
+  const [
+    { satirlar: kayitlar, okunamadi: kayitOkunamadi },
+    { satirlar: modeller, okunamadi: modelOkunamadi },
+  ] = await Promise.all([asistanKayitlari(50), modelOzetleri()]);
   const puanlanan = modeller.reduce((toplam, model) => toplam + model.puanlanan, 0);
   const faydali = modeller.reduce((toplam, model) => toplam + model.faydali + model.kismen, 0);
 
@@ -64,7 +67,12 @@ export default async function AsistanKayitlariSayfasi() {
 
       <section className="section">
         <h2 className="section-title">Model karşılaştırması</h2>
-        {modeller.length === 0 ? (
+        {modelOkunamadi ? (
+          <p className="alert" role="alert">
+            Model karşılaştırması okunamadı. Hiç çalışma kaydedilmediği anlamına
+            gelmez; eksik veriyle model kararı vermeyin — sayfayı yenileyin.
+          </p>
+        ) : modeller.length === 0 ? (
           <BosDurum
             kompakt
             ikon={Sparkles}
@@ -104,16 +112,25 @@ export default async function AsistanKayitlariSayfasi() {
             </table>
           </div>
         )}
+        {/* Okunamayan özetten çıkan 0, "hiç puanlanmadı" cümlesini verirdi:
+            iç ekibe eğitim kümesi hakkında yanlış bir haber. */}
         <p className="muted text-base mt-sm">
-          {puanlanan === 0
-            ? "Henüz hiçbir çalışma puanlanmadı. Puan olmadan eğitim kümesi derlenemez: “model ne dedi” tek başına veri değildir, “iyi miydi” bilgisi gerekir."
-            : `${puanlanan} çalışma puanlandı, ${faydali} tanesi eğitim kümesine uygun. Modeller arasında karar vermek için her birinden yeterli puan biriktirin.`}
+          {modelOkunamadi
+            ? "Puanlama özeti şu an çıkarılamıyor."
+            : puanlanan === 0
+              ? "Henüz hiçbir çalışma puanlanmadı. Puan olmadan eğitim kümesi derlenemez: “model ne dedi” tek başına veri değildir, “iyi miydi” bilgisi gerekir."
+              : `${puanlanan} çalışma puanlandı, ${faydali} tanesi eğitim kümesine uygun. Modeller arasında karar vermek için her birinden yeterli puan biriktirin.`}
         </p>
       </section>
 
       <section className="section mt-lg">
         <h2 className="section-title">Son çalışmalar</h2>
-        {kayitlar.length === 0 ? (
+        {kayitOkunamadi ? (
+          <p className="alert" role="alert">
+            Asistan kayıtları okunamadı. Kayıt olmadığı anlamına gelmez —
+            sayfayı yenileyin.
+          </p>
+        ) : kayitlar.length === 0 ? (
           <BosDurum
             kompakt
             ikon={Sparkles}

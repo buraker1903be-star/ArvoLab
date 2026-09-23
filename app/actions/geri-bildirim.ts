@@ -1,5 +1,7 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
+
 import { revalidatePath } from "next/cache";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES, MANAGER_ROLES } from "@/lib/project-labels";
@@ -130,9 +132,9 @@ export interface GeriBildirimSatiri {
 }
 
 /** Yönetim: gelen bütün cevaplar (yeniden eskiye). */
-export async function tumGeriBildirimler(): Promise<GeriBildirimSatiri[]> {
+export async function tumGeriBildirimler(): Promise<ListeSonucu<GeriBildirimSatiri>> {
   const auth = await requireRole(MANAGER_ROLES);
-  if ("error" in auth) return [];
+  if ("error" in auth) return listeBasarili([]);
 
   const { data, error } = await auth.supabase
     .from("product_feedback")
@@ -141,10 +143,12 @@ export async function tumGeriBildirimler(): Promise<GeriBildirimSatiri[]> {
     .order("updated_at", { ascending: false });
   if (error) {
     console.error(error);
-    return [];
+    // "Hiç geri bildirim gelmemiş" ile "okuyamadım" ayrı: ilki ürün hakkında
+    // bir bilgi, ikincisi arıza. İkisi aynı ekranı veriyordu.
+    return listeOkunamadi();
   }
   const satirlar = data ?? [];
-  if (satirlar.length === 0) return [];
+  if (satirlar.length === 0) return listeBasarili([]);
 
   // Ad ayrı sorguda: product_feedback auth.users'a bağlı, profiles'a değil.
   const { data: profiller } = await auth.supabase
@@ -153,7 +157,7 @@ export async function tumGeriBildirimler(): Promise<GeriBildirimSatiri[]> {
     .in("id", satirlar.map((satir) => satir.user_id));
   const adlar = new Map((profiller ?? []).map((profil) => [profil.id, profil.full_name]));
 
-  return satirlar.map((satir) => ({
+  return listeBasarili(satirlar.map((satir) => ({
     userId: satir.user_id,
     ad: adlar.get(satir.user_id) || "Adı girilmemiş kullanıcı",
     score: satir.score,
@@ -161,5 +165,5 @@ export async function tumGeriBildirimler(): Promise<GeriBildirimSatiri[]> {
     comment: satir.comment,
     askedContext: satir.asked_context,
     updatedAt: satir.updated_at,
-  }));
+  })));
 }

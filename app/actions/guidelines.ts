@@ -63,13 +63,32 @@ export interface GuidelineMatch {
   match_level: "department" | "academic_unit" | "university";
 }
 
-/** En özel onaylı kılavuzu seçer; gerekirse üst kuruma geri düşer. */
+/*
+  En özel onaylı kılavuzu seçer; gerekirse üst kuruma geri düşer.
+
+  Eskiden yalnızca `GuidelineMatch | null` dönüyordu ve üç sorgunun da
+  `error`'u hiç okunmuyordu: geçici bir arızada ekran "Bu birim için henüz
+  onaylı bir kılavuz yok" diyordu. Ürünün en görünür sözü ("kılavuzunuz
+  otomatik uygulanır") tam da burada, kullanıcının kurumunu seçtiği anda
+  yanlış bir kesinlikle bozuluyordu.
+
+  Bulunan eşleşme yine dönüyor: daha dar bir seviye okunamadıysa bile
+  elde olan kılavuz kullanıcıdan saklanmaz, yalnızca "eksik olabilir"
+  bilgisi yanına eklenir.
+*/
+export interface KilavuzEslesmesi {
+  eslesme: GuidelineMatch | null;
+  /** Sorgulardan biri başarısız; "kılavuz yok" DEMEK DEĞİL. */
+  okunamadi: boolean;
+}
+
 export async function findMatchingGuideline(
   universityId: string,
   academicUnitId?: string | null,
   departmentId?: string | null
-): Promise<GuidelineMatch | null> {
-  if (!universityId) return null;
+): Promise<KilavuzEslesmesi> {
+  if (!universityId) return { eslesme: null, okunamadi: false };
+  let okunamadi = false;
 
   const supabase = await createClient();
   const select =
@@ -80,7 +99,7 @@ export async function findMatchingGuideline(
     { id: academicUnitId, level: "academic_unit" as const },
   ]) {
     if (!candidate.id) continue;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("thesis_guidelines")
       .select(select)
       .eq("university_id", universityId)
@@ -92,10 +111,15 @@ export async function findMatchingGuideline(
       .limit(1)
       .maybeSingle();
 
-    if (data) return { ...data, match_level: candidate.level };
+    if (error) {
+      console.error(error);
+      okunamadi = true;
+      continue;
+    }
+    if (data) return { eslesme: { ...data, match_level: candidate.level }, okunamadi };
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("thesis_guidelines")
     .select(select)
     .eq("university_id", universityId)
@@ -107,7 +131,11 @@ export async function findMatchingGuideline(
     .limit(1)
     .maybeSingle();
 
-  return data ? { ...data, match_level: "university" } : null;
+  if (error) {
+    console.error(error);
+    return { eslesme: null, okunamadi: true };
+  }
+  return { eslesme: data ? { ...data, match_level: "university" } : null, okunamadi };
 }
 
 /* Okunamadı ile "kılavuz kaydı yok" ayrı: ikincisi akademik yöneticiye

@@ -9,7 +9,7 @@ import {
   updateSupportRequestStatus,
 } from "@/app/actions/support";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { tumGeriBildirimler } from "@/app/actions/geri-bildirim";
+import { tumGeriBildirimler, type GeriBildirimSatiri } from "@/app/actions/geri-bildirim";
 import { bolumEtiketi, BAGLAM_METNI, PUAN_ETIKETLERI } from "@/lib/geri-bildirim";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
@@ -49,11 +49,11 @@ export default async function SupportPage() {
   const [
     { satirlar: myRequests, okunamadi: taleplerOkunamadi },
     { satirlar: allRequests },
-    geriBildirimler,
+    { satirlar: geriBildirimler, okunamadi: geriBildirimOkunamadi },
   ] = await Promise.all([
     getMySupportRequests(),
     isAdmin ? getAllSupportRequests() : Promise.resolve(listeBasarili<AppSupportRequest>([])),
-    isYonetim ? tumGeriBildirimler() : Promise.resolve([]),
+    isYonetim ? tumGeriBildirimler() : Promise.resolve(listeBasarili<GeriBildirimSatiri>([])),
   ]);
 
   const puanOrtalamasi = geriBildirimler.length
@@ -208,9 +208,18 @@ export default async function SupportPage() {
           <h2 className="section-title">
             <MessageSquareHeart size={16} aria-hidden="true" />
             Kullanım geri bildirimleri
-            {puanOrtalamasi ? <span className="status-pill" data-tone="info">Ortalama {puanOrtalamasi.toFixed(1)} / 5</span> : null}
+              {/* Okunamayan listeden ortalama çıkarmak, yöneticiye gerçek
+                olmayan bir memnuniyet puanı göstermek olurdu. */}
+            {puanOrtalamasi && !geriBildirimOkunamadi ? (
+              <span className="status-pill" data-tone="info">Ortalama {puanOrtalamasi.toFixed(1)} / 5</span>
+            ) : null}
           </h2>
-          {geriBildirimler.length === 0 ? (
+          {geriBildirimOkunamadi ? (
+            <p className="alert" role="alert">
+              Geri bildirimler okunamadı. Hiç cevap gelmediği anlamına gelmez —
+              ortalama puan da eksik hesaplanmış olabilir; sayfayı yenileyin.
+            </p>
+          ) : geriBildirimler.length === 0 ? (
             <BosDurum
               kompakt
               ikon={MessageSquareHeart}

@@ -53,6 +53,14 @@ export default function AcademicUnitFields({ universities, initial, initialGuide
   const [departments, setDepartments] = useState<AcademicUnit[]>([]);
   const [isPending, startTransition] = useTransition();
   const [guideline, setGuideline] = useState<GuidelineMatch | null>(null);
+  /*
+    "Kılavuz yok" ile "bakamadım" ayrı tutuluyor. Eskiden ikisi de aynı
+    cümleyi veriyordu ("Bu birim için henüz onaylı bir kılavuz yok") ve
+    geçici bir arıza, kullanıcıya kurumu hakkında yanlış bir kesinlik
+    olarak dönüyordu.
+  */
+  const [kilavuzOkunamadi, setKilavuzOkunamadi] = useState(false);
+  const [birimOkunamadi, setBirimOkunamadi] = useState(false);
   const [matchState, setMatchState] = useState<"idle" | "checked" | "initial">(initialGuidelineLabel !== undefined ? "initial" : "idle");
 
   const universityByName = useMemo(
@@ -63,21 +71,26 @@ export default function AcademicUnitFields({ universities, initial, initialGuide
 
   function previewGuideline(uId: string, aId: string | null, dId: string | null) {
     startTransition(async () => {
-      const match = await findMatchingGuideline(uId, aId, dId);
-      setGuideline(match);
+      const { eslesme, okunamadi } = await findMatchingGuideline(uId, aId, dId);
+      setGuideline(eslesme);
+      setKilavuzOkunamadi(okunamadi);
       setMatchState("checked");
     });
   }
 
   function loadUnits(uId: string) {
     startTransition(async () => {
-      setUnits(await getAcademicUnits(uId, null, [...ROOT_UNIT_TYPES]));
+      const { satirlar, okunamadi } = await getAcademicUnits(uId, null, [...ROOT_UNIT_TYPES]);
+      setUnits(satirlar);
+      setBirimOkunamadi(okunamadi);
     });
   }
 
   function loadDepartments(uId: string, aId: string) {
     startTransition(async () => {
-      setDepartments(await getAcademicUnits(uId, aId, [...CHILD_UNIT_TYPES]));
+      const { satirlar, okunamadi } = await getAcademicUnits(uId, aId, [...CHILD_UNIT_TYPES]);
+      setDepartments(satirlar);
+      setBirimOkunamadi(okunamadi);
     });
   }
 
@@ -90,6 +103,8 @@ export default function AcademicUnitFields({ universities, initial, initialGuide
     setUnits([]);
     setDepartments([]);
     setGuideline(null);
+    setKilavuzOkunamadi(false);
+    setBirimOkunamadi(false);
     setMatchState("idle");
 
     const selected = universityByName.get(value);
@@ -189,6 +204,15 @@ export default function AcademicUnitFields({ universities, initial, initialGuide
       </label>
       <input type="hidden" name="departmentId" value={unitId ? departmentId : ""} />
 
+      {/* Alanlar serbest metin, o yüzden akış durmuyor; ama boş açılır liste
+          "kurumum sistemde kayıtlı değil" gibi okunuyordu. */}
+      {birimOkunamadi ? (
+        <p className="hint project-form-full" role="alert">
+          Fakülte/bölüm listesi okunamadı; adını elle yazabilirsiniz. Listenin
+          boş görünmesi kurumunuzun kayıtlı olmadığı anlamına gelmez.
+        </p>
+      ) : null}
+
       <div className="project-form-full guideline-match-status" aria-live="polite">
         {isPending ? (
           <span>Kurumunuza ait onaylı tez yazım kılavuzu aranıyor…</span>
@@ -210,6 +234,12 @@ export default function AcademicUnitFields({ universities, initial, initialGuide
               {" · tez çalışmalarında uygulanır"}
             </span>
           </>
+        ) : kilavuzOkunamadi ? (
+          <span role="alert">
+            Kılavuz eşleştirmesi yapılamadı. Kurumunuzun kılavuzu olmadığı
+            anlamına gelmez — çalışmayı oluşturabilirsiniz, kurum bilgisi
+            kayıtlı kaldığı için kılavuz sonradan eşleşir.
+          </span>
         ) : matchState === "checked" ? (
           <span>
             Bu birim için henüz onaylı bir kılavuz yok. Ekibimiz ekleyip onayladığında çalışmanıza kendiliğinden uygulanır.

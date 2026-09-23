@@ -1,5 +1,7 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
+
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { KAYIT_ROLLERI, type AsistanKayitSatiri, type ModelOzeti } from "@/lib/ai/kayit-gorunum";
@@ -20,9 +22,14 @@ async function yetkiliMi() {
   return profile ? KAYIT_ROLLERI.includes(profile.role) : false;
 }
 
-/** Son kayıtlar. Yetkisizse boş liste — sayfa kendi uyarısını gösterir. */
-export async function asistanKayitlari(limit = 50): Promise<AsistanKayitSatiri[]> {
-  if (!(await yetkiliMi())) return [];
+/*
+  Son kayıtlar. Yetkisizse boş liste — sayfa kendi uyarısını gösterir; bu bir
+  okuma hatası değil. Okuma GERÇEKTEN başarısız olduğunda ise eskiden yine boş
+  liste dönüyordu ve ekran "Henüz asistan çalışması yok" diyordu: bu tablo
+  ArvoLab'ın eğitim verisi, "hiç kayıt yok" iç ekip için yanlış bir haber.
+*/
+export async function asistanKayitlari(limit = 50): Promise<ListeSonucu<AsistanKayitSatiri>> {
+  if (!(await yetkiliMi())) return listeBasarili([]);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("ai_assistant_runs")
@@ -32,9 +39,9 @@ export async function asistanKayitlari(limit = 50): Promise<AsistanKayitSatiri[]
 
   if (error) {
     console.error("[ai] kayıtlar okunamadı:", error.message);
-    return [];
+    return listeOkunamadi();
   }
-  return (data ?? []) as AsistanKayitSatiri[];
+  return listeBasarili((data ?? []) as AsistanKayitSatiri[]);
 }
 
 /**
@@ -42,8 +49,8 @@ export async function asistanKayitlari(limit = 50): Promise<AsistanKayitSatiri[]
  * kullanıcı puanıyla karar verilsin diye: pahalı modeli ucuzuyla değiştirmek
  * ancak bu tablo elde varken savunulabilir.
  */
-export async function modelOzetleri(): Promise<ModelOzeti[]> {
-  if (!(await yetkiliMi())) return [];
+export async function modelOzetleri(): Promise<ListeSonucu<ModelOzeti>> {
+  if (!(await yetkiliMi())) return listeBasarili([]);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("ai_assistant_runs")
@@ -52,7 +59,9 @@ export async function modelOzetleri(): Promise<ModelOzeti[]> {
 
   if (error) {
     console.error("[ai] model özeti okunamadı:", error.message);
-    return [];
+    // Eksik satırlardan çıkarılan karşılaştırma, pahalı modeli ucuzuyla
+    // değiştirme kararını yanlış veriye dayandırırdı.
+    return listeOkunamadi();
   }
 
   const kovalar = new Map<string, ModelOzeti & { sureToplam: number; sureAdet: number }>();
@@ -78,7 +87,9 @@ export async function modelOzetleri(): Promise<ModelOzeti[]> {
     kovalar.set(ad, kova);
   }
 
-  return [...kovalar.values()]
-    .map(({ sureToplam, sureAdet, ...ozet }) => ({ ...ozet, ortSure: sureAdet ? Math.round(sureToplam / sureAdet) : 0 }))
-    .sort((a, b) => b.toplam - a.toplam);
+  return listeBasarili(
+    [...kovalar.values()]
+      .map(({ sureToplam, sureAdet, ...ozet }) => ({ ...ozet, ortSure: sureAdet ? Math.round(sureToplam / sureAdet) : 0 }))
+      .sort((a, b) => b.toplam - a.toplam)
+  );
 }

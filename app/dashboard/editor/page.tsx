@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { loadAppliedGuidelines } from "@/lib/guideline-rules";
 import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
-import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff } from "@/app/actions/projects";
+import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff, type StaffMember } from "@/app/actions/projects";
+import { listeBasarili } from "@/lib/liste-sonucu";
 import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS, PROJECT_STATUSES } from "@/lib/project-labels";
 import { applyProjectFilters, isFiltered, parseProjectFilters } from "@/lib/project-filters";
 import ProjectFilters from "./project-filters";
@@ -55,7 +56,9 @@ export default async function ProjectsPage({
     userId: profile?.id,
     canFilterAssignee: canApprove,
   });
-  const staff = canApprove ? await getAssignableStaff() : [];
+  const { satirlar: staff, okunamadi: personelOkunamadi } = canApprove
+    ? await getAssignableStaff()
+    : listeBasarili<StaffMember>([]);
 
   /*
     Kontrolör onayı verirken metinle literatürün çelişip çelişmediğini
@@ -292,7 +295,15 @@ export default async function ProjectsPage({
                       aria-label="Sorumlu personel"
                       className="compact-select grow-select"
                     >
-                      <option value="">{legacyAssignee ? `${project.assignee_name} (listede değil)` : "Sorumlu atanmadı"}</option>
+                      {/* Personel listesi okunamadıysa "kimse yok" denmiyor:
+                          yönetici atayacak kişi kalmadığını sanırdı. */}
+                      <option value="">
+                        {personelOkunamadi
+                          ? "Personel listesi okunamadı"
+                          : legacyAssignee
+                            ? `${project.assignee_name} (listede değil)`
+                            : "Sorumlu atanmadı"}
+                      </option>
                       {staff.map((member) => (
                         <option key={member.id} value={member.id}>
                           {member.full_name || "İsimsiz personel"} · {ROLE_LABELS[member.role]}

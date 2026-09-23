@@ -47,7 +47,17 @@ export default async function DocumentsPage({
       .filter((u) => u.status === "analyzed")
       .map(async (u) => ({ documentId: u.id, checks: await getOriginalityChecksForDocument(u.id) }))
   );
-  const originalityMap = new Map(originalityResults.map((r) => [r.documentId, r.checks[0] ?? null]));
+  /*
+    "Tarama yapılmamış" ile "sonucu okuyamadım" ayrı taşınıyor: ikincisinde
+    ekran taranmamış bir belge gibi görünüp kullanıcıyı temiz sanmaya
+    bırakıyordu (app/actions/originality.ts).
+  */
+  const originalityMap = new Map(
+    originalityResults.map((r) => [
+      r.documentId,
+      { kayit: r.checks.satirlar[0] ?? null, okunamadi: r.checks.okunamadi },
+    ])
+  );
 
   const feedbackResults = await Promise.all(
     uploads
@@ -137,7 +147,8 @@ export default async function DocumentsPage({
         ) : (
           <div className="projects-list">
             {uploads.map((u) => {
-              const originality = originalityMap.get(u.id);
+              const originalityDurum = originalityMap.get(u.id);
+              const originality = originalityDurum?.kayit ?? null;
               return (
                 <article className="project-card" key={u.id}>
                   <div className="project-card-main">
@@ -213,6 +224,12 @@ export default async function DocumentsPage({
                             </button>
                           </ActionForm>
                         </div>
+                      ) : originalityDurum?.okunamadi ? (
+                        <p className="alert" data-tone="warning" role="alert">
+                          Bu belgenin orijinallik sonucu okunamadı. Taranmadığı
+                          ya da temiz çıktığı anlamına gelmez — sayfayı
+                          yenileyin.
+                        </p>
                       ) : (
                         <ActionForm action={handleRunOriginality.bind(null, u.id)} successMessage="Orijinallik taraması tamamlandı; sonuç aşağıda.">
                           <button type="submit" className="projects-filter-button">
