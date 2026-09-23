@@ -47,7 +47,7 @@ function BulguListesi({ bulgular, etiketler }: { bulgular: Bulgu[]; etiketler: E
   );
 }
 
-function AramaListesi({ aramalar }: { aramalar: string[] }) {
+function AramaListesi({ aramalar, onCalistir }: { aramalar: string[]; onCalistir?: (arama: string) => void }) {
   return (
     <div className="asistan-bolum">
       <h4 className="asistan-bolum-baslik">Arama dizeleri</h4>
@@ -55,6 +55,13 @@ function AramaListesi({ aramalar }: { aramalar: string[] }) {
         {aramalar.map((arama, index) => (
           <li key={index}>
             <code>{arama}</code>
+            {/* Dize kurup "şimdi bunu bir yere yapıştırın" demek işi yarıda
+                bırakıyordu; sayfanın kendi bulucusu varken tek tık yeter. */}
+            {onCalistir && (
+              <button type="button" className="asistan-arama-calistir" onClick={() => onCalistir(arama)}>
+                Bu aramayı çalıştır
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -69,6 +76,7 @@ export default function AsistanSonuc({
   bulguBasligi,
   onYenidenSorgula,
   bekleniyor,
+  onAramaCalistir,
 }: {
   sonuc: AsistanSonucVerisi | null;
   yetenek: YetenekAdi;
@@ -77,6 +85,8 @@ export default function AsistanSonuc({
   /** "Yeniden sorgula": kayıtlı cevabı atlayıp modele gider. */
   onYenidenSorgula?: () => void;
   bekleniyor?: boolean;
+  /** Verilirse her arama dizesinin yanında "Bu aramayı çalıştır" çıkar. */
+  onAramaCalistir?: (arama: string) => void;
 }) {
   const [gecmis, setGecmis] = useState<GecmisKaydi[] | null>(null);
   const [yukleniyor, basla] = useTransition();
@@ -113,7 +123,7 @@ export default function AsistanSonuc({
         </p>
       )}
 
-      {aramalar.length > 0 && <AramaListesi aramalar={aramalar} />}
+      {aramalar.length > 0 && <AramaListesi aramalar={aramalar} onCalistir={onAramaCalistir} />}
 
       {bulgular.length > 0 && (
         <div className="asistan-bolum">
@@ -147,7 +157,7 @@ export default function AsistanSonuc({
                     <b>{kayit.ozet}</b>
                     <small>{trTarihSaat(kayit.created_at)}</small>
                   </summary>
-                  {kayit.aramalar && kayit.aramalar.length > 0 && <AramaListesi aramalar={kayit.aramalar} />}
+                  {kayit.aramalar && kayit.aramalar.length > 0 && <AramaListesi aramalar={kayit.aramalar} onCalistir={onAramaCalistir} />}
                   {kayit.bulgular.length > 0 && <BulguListesi bulgular={kayit.bulgular} etiketler={etiketler} />}
                 </details>
               </li>

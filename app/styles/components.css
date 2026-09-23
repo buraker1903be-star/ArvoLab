@@ -1403,3 +1403,44 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .geri-bildirim-satiri-bas { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .geri-bildirim-satiri strong { font-size: var(--fs-md); font-weight: 650; }
 .geri-bildirim-satiri p { margin: 0; }
+
+/* Literatür bulucu: dizin sonuçları.
+   Kart listesi değil satır listesi: sonuçlar taranarak okunuyor, her
+   kaynağa ayrı kart vermek sayfayı üç katına çıkarıyordu. */
+.bulgu-listesi { display: grid; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+.bulgu-satiri {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.bulgu-govde { display: grid; gap: 6px; flex: 1 1 320px; min-width: 0; }
+.bulgu-govde strong { font-size: var(--fs-md); font-weight: 650; line-height: 1.35; }
+.bulgu-govde p { margin: 0; }
+.bulgu-eylemler { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bulgu-eylemler .status-pill { white-space: nowrap; }
+
+/* Onay kutusu ile etiketi aynı satırda; form ızgarasındaki diğer alanlar
+   dikey (etiket üstte) olduğu için ayrı sınıf gerekiyor. */
+.secim-satiri { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); }
+.secim-satiri input { width: auto; }
+
+/* Asistanın kurduğu arama dizesi tek tıkla bulucuya taşınır. */
+.asistan-arama-calistir {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: var(--fs-micro);
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .asistan-arama-calistir:hover { border-color: var(--accent-500); color: var(--ink); }
+}
