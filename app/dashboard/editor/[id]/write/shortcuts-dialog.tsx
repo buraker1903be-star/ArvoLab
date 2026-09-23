@@ -21,6 +21,10 @@ const SHORTCUTS: [string[], string][] = [
   [["1.", "Boşluk"], "Satır başında: numaralı liste"],
   [[">", "Boşluk"], "Satır başında: alıntı"],
   [["Shift", "Enter"], "Aynı paragrafta alt satıra geç"],
+  // Tablo kısayolları hiçbir yerde yazmıyordu; kullanıcı son hücrede Tab'a
+  // basınca satır açıldığını tesadüfen öğreniyordu.
+  [["Tab"], "Tabloda sonraki hücre (son hücrede: yeni satır)"],
+  [["Shift", "Tab"], "Tabloda önceki hücre"],
   [["Mod", "Enter"], "Dipnot penceresinde kaydet"],
   [["Enter"], "Bul kutusunda sonraki eşleşme (Shift+Enter: önceki)"],
   [["Esc"], "Açık pencereyi ya da bul çubuğunu kapat"],

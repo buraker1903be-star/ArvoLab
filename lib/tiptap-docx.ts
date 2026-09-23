@@ -326,6 +326,11 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
         for (const cell of row.content ?? []) {
           if (cell.type !== "tableHeader") isHeaderRow = false;
           const span = Number(cell.attrs?.colspan) || 1;
+          /* Dikey birleştirme de taşınıyor. Eskiden yalnızca colspan
+             okunuyordu: dikey birleştirilmiş bir hücre Word'de tek
+             satıra düşüyor, altındaki satırlar bir hücre kayıyordu.
+             Editörde doğru görünen tablo çıktıda bozuluyordu. */
+          const rowSpan = Number(cell.attrs?.rowspan) || 1;
           const children = (await convertAll(cell.content ?? [], { quoteDepth: 0 })).filter(
             (child): child is Paragraph => child instanceof Paragraph
           );
@@ -333,6 +338,7 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
             new TableCell({
               width: { size: colWidth * span, type: WidthType.DXA },
               columnSpan: span > 1 ? span : undefined,
+              rowSpan: rowSpan > 1 ? rowSpan : undefined,
               children: children.length > 0 ? children : [new Paragraph({ children: [] })],
             })
           );
