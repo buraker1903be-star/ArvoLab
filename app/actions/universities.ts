@@ -1,5 +1,6 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { createClient } from "@/lib/supabase/server";
 import { ensureYokAtlasDirectory } from "@/lib/yok-atlas-directory";
 
@@ -10,7 +11,13 @@ export interface University {
   university_type: "devlet" | "vakif";
 }
 
-export async function getUniversities(): Promise<University[]> {
+/*
+  Okunamadı ile "üniversite kaydı yok" ayrı. Liste boş gelince form yine
+  çalışıyor (alan serbest metin) ama kılavuz eşleşmesi SESSİZCE olmuyor:
+  kullanıcıya "kılavuzunuz otomatik uygulanır" denip hiçbir şey
+  uygulanmıyordu ve sebebini öğrenemiyordu.
+*/
+export async function getUniversities(): Promise<ListeSonucu<University>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("universities")
@@ -19,9 +26,9 @@ export async function getUniversities(): Promise<University[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
 export interface AcademicUnit {

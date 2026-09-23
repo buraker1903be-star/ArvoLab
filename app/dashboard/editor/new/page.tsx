@@ -9,7 +9,7 @@ import AcademicUnitFields from "./academic-unit-fields";
 // Müşteri yalnızca başlığı ve kurumunu seçer; kılavuz otomatik bağlanır ve
 // kayıttan sonra doğrudan editör açılır. Planlama alanları isteğe bağlıdır.
 export default async function NewProjectPage() {
-  const universities = await getUniversities();
+  const { satirlar: universities, okunamadi: universiteOkunamadi } = await getUniversities();
 
   return (
     <main className="dashboard-page">
@@ -60,6 +60,15 @@ export default async function NewProjectPage() {
               <small>Tezlerde onaylı kılavuz varsa ondan belirlenir.</small>
             </label>
 
+            {/* Liste okunamazsa form çalışmaya devam ediyor (alan serbest
+                metin) ama kılavuz eşleşmesi yapılamıyor; kullanıcı sebebini
+                bilmeliydi. */}
+            {universiteOkunamadi ? (
+              <p className="alert" data-tone="warning" role="alert">
+                Üniversite listesi yüklenemedi. Adınızı yazarak devam edebilirsiniz; tez yazım
+                kılavuzu bu turda otomatik eşleşmeyebilir, sonradan çalışma ayarlarından seçebilirsiniz.
+              </p>
+            ) : null}
             <AcademicUnitFields universities={universities} />
           </div>
         </section>

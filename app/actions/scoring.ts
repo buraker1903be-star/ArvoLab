@@ -1,5 +1,6 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
@@ -32,7 +33,7 @@ function parseDecimal(raw: string) {
   return Number(raw.trim().replace(",", "."));
 }
 
-export async function getCriteria(): Promise<ScoringCriterion[]> {
+export async function getCriteria(): Promise<ListeSonucu<ScoringCriterion>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("scoring_criteria")
@@ -42,9 +43,9 @@ export async function getCriteria(): Promise<ScoringCriterion[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
 export async function createCriterion(formData: FormData): Promise<ActionResult> {
@@ -142,12 +143,12 @@ export async function deleteCriterion(criterionId: string): Promise<ActionResult
   return { success: true };
 }
 
-export async function getMyScoreEntries(): Promise<(ScoreEntry & { criteria: ScoringCriterion | null })[]> {
+export async function getMyScoreEntries(): Promise<ListeSonucu<ScoreEntry & { criteria: ScoringCriterion | null }>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return listeBasarili([]);
 
   const { data, error } = await supabase
     .from("academic_score_entries")
@@ -159,16 +160,16 @@ export async function getMyScoreEntries(): Promise<(ScoreEntry & { criteria: Sco
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
 
-  return (data ?? []).map((row) => {
+  return listeBasarili((data ?? []).map((row) => {
     const { scoring_criteria, ...rest } = row as typeof row & {
       scoring_criteria: ScoringCriterion | ScoringCriterion[] | null;
     };
     const criteria = Array.isArray(scoring_criteria) ? scoring_criteria[0] ?? null : scoring_criteria;
     return { ...rest, criteria };
-  });
+  }));
 }
 
 export async function addScoreEntry(formData: FormData): Promise<ActionResult> {

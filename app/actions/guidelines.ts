@@ -1,5 +1,6 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { validIndentCm } from "@/lib/paragraph-format";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -109,7 +110,9 @@ export async function findMatchingGuideline(
   return data ? { ...data, match_level: "university" } : null;
 }
 
-export async function getGuidelines(): Promise<ThesisGuideline[]> {
+/* Okunamadı ile "kılavuz kaydı yok" ayrı: ikincisi akademik yöneticiye
+   "kayıtlar gitti" gibi okunuyordu. */
+export async function getGuidelines(): Promise<ListeSonucu<ThesisGuideline>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("thesis_guidelines")
@@ -120,9 +123,9 @@ export async function getGuidelines(): Promise<ThesisGuideline[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
 const REVIEW_FONTS = ["Times New Roman", "Arial", "Calibri", "Cambria", "Garamond", "Georgia", "Verdana", "Book Antiqua"];

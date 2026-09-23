@@ -44,7 +44,7 @@ export default async function TeamPage() {
     );
   }
 
-  const [{ members, directoryAvailable }, organizations] = await Promise.all([getAllProfiles(), getOrganizations()]);
+  const [{ members, directoryAvailable }, { satirlar: organizations }] = await Promise.all([getAllProfiles(), getOrganizations()]);
   const assignableRoles = profile?.role === "founder" ? ROLE_ORDER : ROLE_ORDER.filter((r) => r !== "founder");
 
   async function handleRoleChange(userId: string, formData: FormData) {

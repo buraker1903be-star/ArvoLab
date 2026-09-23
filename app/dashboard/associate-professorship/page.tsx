@@ -14,7 +14,7 @@ import BosDurum from "../_components/bos-durum";
 import PanelDrawer from "../_components/panel-drawer";
 
 export default async function ScoringPage() {
-  const [criteria, entries, profile] = await Promise.all([
+  const [{ satirlar: criteria }, { satirlar: entries, okunamadi: kayitOkunamadi }, profile] = await Promise.all([
     getCriteria(),
     getMyScoreEntries(),
     getCurrentProfile(),
@@ -118,7 +118,10 @@ export default async function ScoringPage() {
             <GraduationCap size={20} strokeWidth={1.8} aria-hidden="true" />
           </div>
           <div>
-            <strong>{totalPoints.toFixed(1)}</strong>
+            {/* Okunamayan kayıtla hesaplanan toplam SIFIR değil,
+                BİLİNMİYOR. "0.0 Toplam puan" yazmak, faaliyeti olmayan
+                akademisyenle listesi okunamayanı aynı göstermekti. */}
+            <strong>{kayitOkunamadi ? "—" : totalPoints.toFixed(1)}</strong>
             <span>Toplam puan</span>
           </div>
         </article>
@@ -128,7 +131,7 @@ export default async function ScoringPage() {
               <GraduationCap size={20} strokeWidth={1.8} aria-hidden="true" />
             </div>
             <div>
-              <strong>{points.toFixed(1)}</strong>
+              <strong>{kayitOkunamadi ? "—" : points.toFixed(1)}</strong>
               <span>{group}</span>
             </div>
           </article>
@@ -147,7 +150,11 @@ export default async function ScoringPage() {
 
       <section className="section">
         <h2 className="section-title">Kayıtlı Faaliyetleriniz</h2>
-        {entries.length === 0 ? (
+        {kayitOkunamadi ? (
+          <p className="alert" data-tone="danger" role="alert">
+            Faaliyet kayıtlarınız yüklenemedi. Puanınız eksik görünebilir; sayfayı yenileyin.
+          </p>
+        ) : entries.length === 0 ? (
           /* Eskiden bölüm tamamen gizleniyordu; kullanıcı kaydın nereye
              gideceğini göremiyordu. */
           <BosDurum

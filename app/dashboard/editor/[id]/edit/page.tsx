@@ -18,7 +18,7 @@ import AcademicUnitFields from "../../new/academic-unit-fields";
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [project, ctx, universities] = await Promise.all([getProjectForEdit(id), getAuthContext(), getUniversities()]);
+  const [project, ctx, { satirlar: universities }] = await Promise.all([getProjectForEdit(id), getAuthContext(), getUniversities()]);
   if (!project || !ctx) notFound();
   const guideline = await loadAppliedGuideline(ctx.supabase, project.guideline_id);
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
@@ -96,16 +97,16 @@ export async function getAllProfiles(): Promise<TeamDirectory> {
   return { members, directoryAvailable: authUsers !== null };
 }
 
-export async function getOrganizations(): Promise<OrganizationOption[]> {
+export async function getOrganizations(): Promise<ListeSonucu<OrganizationOption>> {
   const auth = await requireRole(ADMIN_ROLES);
-  if ("error" in auth) return [];
+  if ("error" in auth) return listeBasarili([]);
 
   const { data, error } = await auth.supabase.from("organizations").select("id, name").order("name");
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
 export type UpdateResult = ActionResult;

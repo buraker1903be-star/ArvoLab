@@ -31,7 +31,7 @@ const REVIEW_FONTS = ["Times New Roman", "Arial", "Calibri", "Cambria", "Garamon
 export const maxDuration = 300;
 
 export default async function GuidelinesPage() {
-  const [guidelines, profile, universities] = await Promise.all([
+  const [{ satirlar: guidelines, okunamadi: kilavuzOkunamadi }, profile, { satirlar: universities }] = await Promise.all([
     getGuidelines(),
     getCurrentProfile(),
     getUniversities(),
@@ -271,7 +271,13 @@ export default async function GuidelinesPage() {
         </>
       ) : null}
 
-      {guidelines.length === 0 ? (
+      {/* Okunamadı ile "kayıt yok" ayrı: ikincisi akademik yöneticiye
+          "kılavuzlar gitti" gibi okunuyordu. */}
+      {kilavuzOkunamadi ? (
+        <p className="alert" data-tone="danger" role="alert">
+          Kılavuz listesi yüklenemedi. Kayıtlar yerinde duruyor; sayfayı yenileyin.
+        </p>
+      ) : guidelines.length === 0 ? (
         <BosDurum
           ikon={BookMarked}
           baslik="Kılavuz kaydı yok"
