@@ -53,10 +53,25 @@ export default async function LiteraturePage({
     literaturAsistaniAcik(),
   ]);
 
+  /*
+    Şerit "bu çalışmadasınız" diyor ama liste kullanıcının BÜTÜN
+    kaynaklarını gösteriyor ve satırlar hangi çalışmaya ait olduğunu
+    söylemiyordu: ekosistem vaadinin gözle görülür koptuğu yer burasıydı.
+
+    Liste daraltılmıyor — kaynağı çalışmaya bağlamadan ekleyen kullanıcı
+    onları kaybederdi. Bunun yerine her satır kendi çalışmasını yazıyor
+    ve seçili çalışmanınkiler başa alınıyor.
+  */
+  const calismaAdi = new Map(projects.map((proje) => [proje.id, proje.title]));
+  const buCalismaninKaynagi = (kaynak: { project_id?: string | null }) =>
+    Boolean(secilenCalisma) && kaynak.project_id === secilenCalisma;
+  const sirala = <T extends { project_id?: string | null }>(liste: T[]) =>
+    [...liste].sort((a, b) => Number(buCalismaninKaynagi(b)) - Number(buCalismaninKaynagi(a)));
+
   const grouped = {
-    to_review: sources.filter((s) => s.status === "to_review"),
-    read: sources.filter((s) => s.status === "read"),
-    used: sources.filter((s) => s.status === "used"),
+    to_review: sirala(sources.filter((s) => s.status === "to_review")),
+    read: sirala(sources.filter((s) => s.status === "read")),
+    used: sirala(sources.filter((s) => s.status === "used")),
   };
 
   async function handleAdvanceStatus(sourceId: string, nextStatus: string) {
@@ -242,6 +257,14 @@ export default async function LiteraturePage({
                           </a>
                         </>
                       ) : null}
+                    </p>
+                    {/* Hangi çalışmaya ait: belgeler ekranı bunu zaten
+                        yazıyordu, literatür yazmıyordu. */}
+                    <p className="hint">
+                      {s.project_id
+                        ? calismaAdi.get(s.project_id) ?? "Silinmiş çalışma"
+                        : "Çalışmaya bağlı değil"}
+                      {buCalismaninKaynagi(s) ? " · bu çalışma" : ""}
                     </p>
                     {s.notes ? <p className="kaynak-not">{s.notes}</p> : null}
                   </div>

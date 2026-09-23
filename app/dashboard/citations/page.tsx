@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getMyProjects, getMyCitationChecks } from "@/app/actions/citation-check";
 import CitationCheckForm from "./citation-check-form";
 import { trTarihSaat } from "@/lib/tr-time";
@@ -77,7 +78,17 @@ export default async function CitationsPage({
               return (
                 <article className="denetim-satiri" key={historyItem.id}>
                   <div className="denetim-govde">
-                    <strong>{historyItem.project_title || "İsimsiz kontrol"}</strong>
+                    {/* Geçmiş denetim bir ÇIKMAZDI: skor görünüyor ama
+                        kullanıcı o çalışmaya dönemiyordu. Çalışmaya bağlı
+                        olmayan denetimlerde (serbest kaynakça yapıştırma)
+                        gidilecek yer yok, bağlantı da yok. */}
+                    {historyItem.project_id ? (
+                      <Link href={`/dashboard/editor/${historyItem.project_id}`} className="link-accent">
+                        <strong>{historyItem.project_title || "İsimsiz kontrol"}</strong>
+                      </Link>
+                    ) : (
+                      <strong>{historyItem.project_title || "İsimsiz kontrol"}</strong>
+                    )}
                     <span>{trTarihSaat(historyItem.created_at)}</span>
                   </div>
                   <div className="denetim-skor" data-tone={ton}>
