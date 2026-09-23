@@ -12,6 +12,7 @@ import type { AbstractRules } from "@/lib/guideline-editor-settings";
 import { crossCheck, extractInTextCitations } from "@/lib/apa7";
 import { kunyeleriAyristir } from "@/lib/atif/kunye";
 import { stilTanimi } from "@/lib/atif/stiller";
+import { baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 import { checkParagraphFormat, describeParagraphFormat, type ParagraphFormatRules } from "@/lib/paragraph-format";
 
@@ -153,26 +154,39 @@ export function checkStructure(
   for (const kind of ["table", "figure"] as const) {
     const label = CAPTION_LABEL[kind];
     const count = captions[kind].length;
-    const mentioned = new Set<number>();
+
+    /* Numaralandırma başlığın İÇİNDEN okunuyor. Eskiden sıraya göre
+       varsayılıyordu: üçüncü başlık "Tablo 3" sayılıyor, başlıkta ne
+       yazdığına bakılmıyordu. Hem yanlış numaralandırma hiç
+       yakalanmıyordu hem de 1, 3, 4 diye numaralanmış bir belgede
+       "Şekil 2 metinde anılmıyor" deniyordu — var olmayan bir şey. */
+    numaralandirmaSorunlari(label, captions[kind]).forEach((sorun) => add(sorun));
+
+    const mentioned = new Set<string>();
     // \b ASCII dışı harfleri (Ş) tanımaz; Unicode harf/rakam önbakışıyla kelime başı aranır.
-    for (const match of body.matchAll(new RegExp(`(?<![\\p{L}\\d])${label}\\s+(\\d+)`, "gu"))) mentioned.add(Number(match[1]));
-    for (const number of [...mentioned].sort((a, b) => a - b)) {
-      if (number > count) {
+    // Bölüme göre numaralandırma ("Tablo 3.1") da eşleşmeli.
+    for (const match of body.matchAll(new RegExp(`(?<![\\p{L}\\d])${label}\\s+(\\d+(?:\\.\\d+)*)`, "gu"))) mentioned.add(match[1]);
+
+    const numaralar = captions[kind].map((caption) => baslikNumarasi(label, caption));
+    const mevcut = new Set(numaralar.filter((numara): numara is string => Boolean(numara)));
+    for (const number of [...mentioned].sort()) {
+      if (!mevcut.has(number)) {
         add({
           tone: "danger",
-          message: `Metinde “${label} ${number}” geçiyor ama belgede ${count ? `${count} ${label.toLocaleLowerCase("tr-TR")} başlığı` : `hiç ${label.toLocaleLowerCase("tr-TR")} başlığı`} var.`,
+          message: `Metinde “${label} ${number}” geçiyor ama o numarada bir ${label.toLocaleLowerCase("tr-TR")} başlığı yok (belgede ${count ? `${count} ${label.toLocaleLowerCase("tr-TR")} başlığı var` : `hiç ${label.toLocaleLowerCase("tr-TR")} başlığı yok`}).`,
           target: `${label} ${number}`,
         });
       }
     }
     captions[kind].forEach((caption, index) => {
-      if (!mentioned.has(index + 1)) {
-        add({
-          tone: "warning",
-          message: `${label} ${index + 1}${caption ? ` (${quote(caption)})` : ""} metinde anılmıyor; kılavuzlar genellikle her ${kind === "figure" ? "şeklin" : "tablonun"} metinde anılmasını ister.`,
-          target: caption || undefined,
-        });
-      }
+      const numara = numaralar[index];
+      // Numarası okunamayan başlık için ayrı uyarı zaten verildi.
+      if (!numara || mentioned.has(numara)) return;
+      add({
+        tone: "warning",
+        message: `${label} ${numara}${caption ? ` (${quote(caption)})` : ""} metinde anılmıyor; kılavuzlar genellikle her ${kind === "figure" ? "şeklin" : "tablonun"} metinde anılmasını ister.`,
+        target: caption || undefined,
+      });
     });
   }
 
