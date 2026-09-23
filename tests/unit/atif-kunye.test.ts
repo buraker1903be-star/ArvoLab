@@ -42,6 +42,36 @@ describe("Chicago künyesi", () => {
     assert.ok(hatalar(kunye).includes("year"));
   });
 
+  /*
+    Chicago'nun yazar deseni APA'nınkiydi: yalnızca baş harf geçiyordu.
+    Chicago'yu DOĞRU yazan öğrenci hata alıyor ve mesaj ona "beklenen:
+    Soyad, Ad" diyordu — zaten yazdığı şey. Testler yokluğunda görünmedi,
+    çünkü hepsi "Yılmaz, A." kullanıyordu.
+  */
+  /*
+    author_format "error" değil "warning" — bu yüzden hatalar() ile
+    sınamak boşa geçer. alanlar() bütün sorunları veriyor.
+  */
+  test("ad açık yazılmış künye yazar uyarısı almaz (asıl Chicago biçimi)", () => {
+    const kunye = kunyeAyristir("Yılmaz, Ahmet. 2020. Örgütsel bağlılık. Ankara.", "chicago");
+    assert.ok(!alanlar(kunye).includes("author_format"));
+  });
+
+  test("ikinci yazar düz yazılır, uyarı almaz", () => {
+    const kunye = kunyeAyristir("Yılmaz, Ahmet, ve Ayşe Demir. 2020. Örgütsel bağlılık. Ankara.", "chicago");
+    assert.ok(!alanlar(kunye).includes("author_format"));
+  });
+
+  test("baş harfli yazım da kabul edilir (Chicago izin verir)", () => {
+    const kunye = kunyeAyristir("Yılmaz, A., ve B. Demir. 2020. Örgütsel bağlılık. Ankara.", "chicago");
+    assert.ok(!alanlar(kunye).includes("author_format"));
+  });
+
+  test("ters yazılmamış ilk yazar yine uyarı alır", () => {
+    const kunye = kunyeAyristir("ahmet yılmaz. 2020. Örgütsel bağlılık. Ankara.", "chicago");
+    assert.ok(alanlar(kunye).includes("author_format"));
+  });
+
   test("yıl parantez içindeyse Chicago kuralına uymaz", () => {
     // APA alışkanlığıyla yazılmış künye: Chicago'da yıl yazardan sonra, parantezsiz.
     const kunye = kunyeAyristir("Yılmaz, A. (2020). Örgütsel bağlılık. Ankara.", "chicago");

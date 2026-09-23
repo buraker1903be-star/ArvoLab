@@ -83,11 +83,18 @@ const NUMARA_YAZAR = /^(?:[\p{Lu}][\p{L}'\-]+\s+[\p{Lu}]{1,3}\.?|(?:[\p{Lu}]\.\s
 /*
   MLA'da ad KISALTILMAZ: "Yılmaz, Ahmet" doğru, "Yılmaz, A." APA'dır.
   Öğrencilerin MLA'da en sık yaptığı hata bu olduğu için desen adın
-  yazıldığını arıyor (en az iki harf).
+  yazıldığını arıyor (en az iki harf). Chicago'nun ilk yazarı da aynı
+  biçimde yazılır, o yüzden ad MLA'ya özel değil.
 */
-const MLA_ILK_YAZAR = /^[\p{Lu}][\p{L}'’\-]+,\s*[\p{Lu}][\p{L}'’\-]{1,}(?:\s+[\p{Lu}][\p{L}'’\-]*\.?)*$/u;
-/** MLA'da ilkten sonrakiler düz yazılır: "Ahmet Demir". */
-const MLA_SONRAKI_YAZAR = /^[\p{Lu}][\p{L}'’\-]+(?:\s+[\p{Lu}][\p{L}'’\-]*\.?)+$/u;
+const TERS_TAM_AD = /^[\p{Lu}][\p{L}'’\-]+,\s*[\p{Lu}][\p{L}'’\-]{1,}(?:\s+[\p{Lu}][\p{L}'’\-]*\.?)*$/u;
+/** İlkten sonrakiler düz yazılır: "Ahmet Demir" (MLA ve Chicago). */
+const DUZ_TAM_AD = /^[\p{Lu}][\p{L}'’\-]+(?:\s+[\p{Lu}][\p{L}'’\-]*\.?)+$/u;
+/** Baş harfli düz yazım: "A. Demir" — Chicago sonraki yazarlarda kabul eder. */
+const DUZ_BAS_HARF = /^(?:[\p{Lu}]\.\s*){1,3}[\p{Lu}][\p{L}'’\-]+$/u;
+
+/** İki biçimi de kabul eden tek desen; hangi alternatifin tuttuğu önemsiz. */
+const yada = (...desenler: RegExp[]) =>
+  new RegExp(`^(?:${desenler.map((desen) => desen.source.replace(/^\^/, "").replace(/\$$/, "")).join("|")})$`, "u");
 
 export const STILLER: Record<StilKimligi, StilTanimi> = {
   apa7: {
@@ -104,7 +111,26 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
     ad: "Chicago",
     tur: "yazar-tarih",
     yilYeri: "yazardan-sonra",
-    yazarBicimi: { desen: APA_YAZAR, ornek: "Soyad, Ad" },
+    /*
+      Chicago'nun deseni APA'nınkiydi: yalnızca baş harf ("Yılmaz, A.")
+      geçiyordu. Oysa Chicago kaynakçasında ad AÇIK yazılır ("Yılmaz,
+      Ahmet") ve ilkten sonrakiler düz gelir ("Ayşe Demir").
+
+      Sonucu şuydu: Chicago'yu DOĞRU yazan öğrenci hata alıyor ve hata
+      mesajı ona "beklenen: Soyad, Ad" diyordu — yani zaten yazdığı şey.
+      Yanlış alarmın en kötü türü; kullanıcı bir süre sonra bütün
+      uyarıları görmezden gelmeyi öğrenir.
+
+      İkisi de kabul ediliyor: Chicago baş harfe de izin verir ve mevcut
+      kayıtlarda öyle yazılmış künyeler var. Denetim yine iş görüyor —
+      ters yazılmamış ilk yazarı, küçük harfle başlayanı yakalıyor.
+    */
+    yazarBicimi: {
+      desen: yada(TERS_TAM_AD, APA_YAZAR),
+      ornek: "Soyad, Ad",
+      sonrakiDesen: yada(DUZ_TAM_AD, DUZ_BAS_HARF),
+      sonrakiOrnek: "Ad Soyad",
+    },
     kaynakcaSirasi: "alfabetik",
     listeIsaretiSerbest: false,
   },
@@ -135,9 +161,9 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
     tur: "yazar-sayfa",
     yilYeri: "sonda",
     yazarBicimi: {
-      desen: MLA_ILK_YAZAR,
+      desen: TERS_TAM_AD,
       ornek: "Soyad, Ad",
-      sonrakiDesen: MLA_SONRAKI_YAZAR,
+      sonrakiDesen: DUZ_TAM_AD,
       sonrakiOrnek: "Ad Soyad",
     },
     kaynakcaSirasi: "alfabetik",
