@@ -27,7 +27,7 @@ export default async function DocumentsPage({
   searchParams: Promise<{ calisma?: string }>;
 }) {
   const aiAcik = aiFeedbackConfigured();
-  const [projects, uploads, { calisma: secilenCalisma }] = await Promise.all([
+  const [projects, { satirlar: uploads, okunamadi: belgeOkunamadi }, { calisma: secilenCalisma }] = await Promise.all([
     getMyProjects(),
     getMyDocumentUploads(),
     searchParams,
@@ -98,7 +98,14 @@ export default async function DocumentsPage({
 
       <section className="section mt-lg">
         <h2 className="section-title">Yüklenen Belgeler</h2>
-        {uploads.length === 0 ? (
+        {/* Okunamadı ile "belge yüklemediniz" ayrı: ikincisi yeni
+            kullanıcıya doğru, birincisi belgelerini kaybettiğini
+            düşündürürdü. */}
+        {belgeOkunamadi ? (
+          <p className="alert" data-tone="danger" role="alert">
+            Belge listeniz yüklenemedi. Yüklediğiniz belgeler yerinde duruyor; sayfayı yenileyin.
+          </p>
+        ) : uploads.length === 0 ? (
           /* Eskiden bölüm tamamen gizleniyordu: yeni kullanıcı yükleme
              formundan başka bir şey görmüyordu. */
           <BosDurum

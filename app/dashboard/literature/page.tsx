@@ -47,7 +47,7 @@ export default async function LiteraturePage({
   const { calisma: secilenCalisma } = await searchParams;
   // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
   // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
-  const [sources, projects, asistanAcik] = await Promise.all([
+  const [{ satirlar: sources, okunamadi: kaynakOkunamadi }, projects, asistanAcik] = await Promise.all([
     getLiteratureSources(),
     getMyProjects(),
     literaturAsistaniAcik(),
@@ -191,6 +191,17 @@ export default async function LiteraturePage({
         asistanAcik={asistanAcik}
         secilenCalisma={secilenCalisma ?? null}
       />
+
+      {/*
+        Okuma başarısızsa bunu SÖYLÜYORUZ. Eskiden liste boş geliyor ve üç
+        grup da "henüz kaynak yok" diyordu: kullanıcı topladığı literatürü
+        kaybettiğini sanıyordu.
+      */}
+      {kaynakOkunamadi && (
+        <p className="alert" data-tone="danger" role="alert">
+          Kaynak listeniz yüklenemedi. Kayıtlarınız yerinde duruyor; sayfayı yenileyin.
+        </p>
+      )}
 
       {(["to_review", "read", "used"] as const).map((statusKey) => (
         <section key={statusKey} className="section">

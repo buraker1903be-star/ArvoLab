@@ -15,7 +15,7 @@ export default async function CitationsPage({
   const { calisma: secilenCalisma } = await searchParams;
   // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
   // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
-  const [projects, history, asistanAcik] = await Promise.all([
+  const [projects, { satirlar: history, okunamadi: gecmisOkunamadi }, asistanAcik] = await Promise.all([
     getMyProjects(),
     getMyCitationChecks(),
     kaynakcaAsistaniAcik(),
@@ -50,7 +50,14 @@ export default async function CitationsPage({
 
       <section className="section mt-lg">
         <h2 className="section-title">Son Kontroller</h2>
-        {history.length === 0 ? (
+        {/* Okunamadı ile "hiç denetim yapmadınız" ayrı: ikincisi yeni
+            kullanıcıya doğru, birincisi geçmişini kaybettiğini
+            düşündürürdü. */}
+        {gecmisOkunamadi ? (
+          <p className="alert" data-tone="danger" role="alert">
+            Geçmiş denetimleriniz yüklenemedi. Kayıtlarınız yerinde duruyor; sayfayı yenileyin.
+          </p>
+        ) : history.length === 0 ? (
           /* Eskiden bölüm tamamen gizleniyordu: yeni kullanıcı sayfada
              formdan başka bir şey görmüyor, geçmişin birikeceğini
              bilmiyordu. */

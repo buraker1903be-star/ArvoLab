@@ -1,5 +1,6 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
@@ -29,12 +30,17 @@ export interface LiteratureSource {
   publisher?: string | null;
 }
 
-export async function getLiteratureSources(): Promise<LiteratureSource[]> {
+/*
+  Okuma başarısızsa BOŞ LİSTE değil "okunamadı" dönüyor. Eskiden hata
+  konsola gidiyor, kullanıcıya "Henüz kaynak yok" ekranı çıkıyordu —
+  yani topladığı literatürü kaybettiğini sanıyordu (lib/liste-sonucu.ts).
+*/
+export async function getLiteratureSources(): Promise<ListeSonucu<LiteratureSource>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return listeBasarili([]);
 
   // "*": yayın bilgisi kolonları henüz eklenmemiş veritabanlarında da çalışır.
   const { data, error } = await supabase
@@ -45,9 +51,9 @@ export async function getLiteratureSources(): Promise<LiteratureSource[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
 const text = (value: unknown, max: number) => {

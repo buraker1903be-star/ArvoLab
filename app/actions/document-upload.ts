@@ -1,5 +1,6 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { detectDocType, extractTextFromBuffer, splitBodyAndReferences } from "@/lib/document-extract";
@@ -290,12 +291,13 @@ export async function deleteDocumentUpload(documentId: string): Promise<{ error?
   return { success: true };
 }
 
-export async function getMyDocumentUploads(): Promise<DocumentUploadRecord[]> {
+/* Okunamadı ile "belge yüklemediniz" ayrı; lib/liste-sonucu.ts. */
+export async function getMyDocumentUploads(): Promise<ListeSonucu<DocumentUploadRecord>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return listeBasarili([]);
 
   const { data, error } = await supabase
     .from("document_uploads")
@@ -306,7 +308,7 @@ export async function getMyDocumentUploads(): Promise<DocumentUploadRecord[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return (data ?? []) as DocumentUploadRecord[];
+  return listeBasarili((data ?? []) as DocumentUploadRecord[]);
 }

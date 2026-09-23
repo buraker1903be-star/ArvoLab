@@ -1,5 +1,6 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { createClient } from "@/lib/supabase/server";
 import {
   extractInTextCitations,
@@ -160,12 +161,21 @@ export async function runCitationCheck(input: {
   };
 }
 
-export async function getMyCitationChecks() {
+/* Okunamadı ile "hiç denetim yapmadınız" ayrı; lib/liste-sonucu.ts. */
+export type CitationCheckSatiri = {
+  id: string;
+  project_title: string | null;
+  compliance_score: number | null;
+  created_at: string;
+  project_id: string | null;
+};
+
+export async function getMyCitationChecks(): Promise<ListeSonucu<CitationCheckSatiri>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return listeBasarili([]);
 
   const { data, error } = await supabase
     .from("citation_checks")
@@ -176,7 +186,7 @@ export async function getMyCitationChecks() {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }

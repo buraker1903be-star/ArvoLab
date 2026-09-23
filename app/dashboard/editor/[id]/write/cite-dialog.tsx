@@ -66,7 +66,9 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
     let cancelled = false;
     void (async () => {
       const result = await getLiteratureSources();
-      if (!cancelled) setSources(result);
+      /* Okunamadıysa null bırakılıyor: boş dizi "kaynağınız yok" demek,
+         oysa bilinmiyor. Pencere o durumda da "yükleniyor" kalıyor. */
+      if (!cancelled) setSources(result.okunamadi ? null : result.satirlar);
     })();
     return () => {
       cancelled = true;
