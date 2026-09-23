@@ -1,5 +1,6 @@
 "use server";
 
+import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
 import { createClient } from "@/lib/supabase/server";
 import type { AsistanBulgusu, CalismaOzeti } from "@/lib/calisma-ozeti";
 import { calismaKilavuzu } from "@/app/actions/guidelines";
@@ -25,16 +26,6 @@ function sonBulgular(findings: unknown): AsistanBulgusu[] {
   const liste = Array.isArray(findings) ? findings : (findings as { bulgular?: unknown })?.bulgular;
   return Array.isArray(liste) ? (liste as AsistanBulgusu[]).slice(0, 3) : [];
 }
-
-/*
-  "okunamadi": çalışma yok DEĞİL, okunamadı.
-
-  Eskiden ikisi de null dönüyordu ve sayfa notFound() çiziyordu: geçici
-  bir veritabanı arızasında kullanıcıya TEZİNİN OLMADIĞI söyleniyordu.
-  Olabilecek en kötü hata mesajı; panelin geri kalanında (lib/liste-sonucu.ts)
-  bu ayrım zaten yapılıyordu, burada yapılmıyordu.
-*/
-export const CALISMA_OKUNAMADI = "okunamadi" as const;
 
 export async function calismaOzeti(
   projectId: string,

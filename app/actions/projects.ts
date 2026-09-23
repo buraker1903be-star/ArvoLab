@@ -1,9 +1,10 @@
 "use server";
 
+import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
-import { CALISMA_OKUNAMADI, calismaOzeti } from "@/app/actions/calisma-merkezi";
+import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";

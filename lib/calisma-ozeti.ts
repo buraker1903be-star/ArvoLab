@@ -15,6 +15,18 @@
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import type { SubmissionChecklist } from "@/lib/submission-checklist";
 
+/*
+  "Çalışma okunamadı" işareti. BURADA, çünkü app/actions/calisma-merkezi.ts
+  bir "use server" dosyası ve orada yalnızca async fonksiyon export
+  edilebilir (AGENTS.md: "use server dosyasındaki her export dışarıdan
+  çağrılabilir bir uç noktaya dönüşür; yardımcılar ve tipler böyle
+  dosyalarda durmaz"). Sabiti oraya koymak derlemeyi düşürüyordu.
+
+  Ayrımın kendisi şart: okunamayan çalışma için notFound() çizmek
+  kullanıcıya tezinin olmadığını söylemekti.
+*/
+export const CALISMA_OKUNAMADI = "okunamadi" as const;
+
 export type CalismaKaydi = {
   id: string;
   title: string;

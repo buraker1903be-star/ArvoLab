@@ -12,8 +12,8 @@ import {
   TriangleAlert,
   Users,
 } from "lucide-react";
-import { CALISMA_OKUNAMADI, calismaOzeti } from "@/app/actions/calisma-merkezi";
-import { atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
+import { calismaOzeti } from "@/app/actions/calisma-merkezi";
+import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
 import { trTarih, trTarihSaat } from "@/lib/tr-time";
