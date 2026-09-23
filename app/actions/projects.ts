@@ -25,6 +25,19 @@ const RESEARCH_METHODS = ["quantitative", "qualitative", "mixed", "review"];
 // eklendiğinde burası unutuluyor ve seçim sessizce APA'ya düşüyordu.
 const CITATION_STYLES: string[] = Object.keys(STILLER);
 
+/*
+  Veritabanının kabul ettiği stil listesi bir migration'la genişliyor
+  (ör. MLA: 20260924100020). Uygulama önce yayına çıkar, migration SQL
+  Editor'den elle uygulanır; arada kalan pencerede yeni stili seçen
+  kullanıcı "Kaydedilirken bir hata oluştu" görüyordu ve neyin yanlış
+  olduğunu anlamasının yolu yoktu. CHECK ihlali (23514) bu yüzden ayrı
+  yazılıyor.
+*/
+const stilKisiti = (error: { code?: string; message?: string } | null) =>
+  error?.code === "23514" && /citation_style/.test(error.message ?? "")
+    ? "Bu kaynakça sistemi veritabanında henüz tanımlı değil; sistem yöneticinize bildirin. Şimdilik başka bir sistem seçebilirsiniz."
+    : null;
+
 export interface AcademicProject {
   id: string;
   owner_id: string;
@@ -128,7 +141,7 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
 
   if (error || !created) {
     console.error(error);
-    return { error: "Kaydedilirken bir hata oluştu, lütfen tekrar deneyin." };
+    return { error: stilKisiti(error) ?? "Kaydedilirken bir hata oluştu, lütfen tekrar deneyin." };
   }
 
   revalidatePath("/dashboard/editor");
@@ -275,7 +288,12 @@ export async function updateProject(projectId: string, formData: FormData): Prom
 
   if (error) {
     console.error(error);
-    return { error: error.code === "42501" ? "Bu değişiklik için yetkiniz yok." : "Kaydedilirken bir hata oluştu." };
+    return {
+      error:
+        error.code === "42501"
+          ? "Bu değişiklik için yetkiniz yok."
+          : stilKisiti(error) ?? "Kaydedilirken bir hata oluştu.",
+    };
   }
   if (!data?.length) return { error: "Bu çalışmayı düzenleme yetkiniz yok." };
 
