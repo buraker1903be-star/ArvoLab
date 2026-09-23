@@ -1,4 +1,4 @@
-import { DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
+import { DEFAULT_HANGING_CM, DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
 import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
 import { atifSistemiSec } from "@/lib/atif-sistemi";
 import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
@@ -156,6 +156,22 @@ export const PARAGRAPH_INDENT = new RegExp(
 // "Metin iki yana yaslanmalıdır", "iki yana yaslı (justified)"
 export const JUSTIFY = /iki\s+yana\s+(?:yasl|hizal)(?!\p{L}*(?:maz|mamal))/iu;
 
+/*
+  Kaynakça asılı girintisi. Kılavuzlarda üç biçimde geçer: "asılı
+  girinti", "asılı paragraf", "hanging indent". Bazıları ölçü de verir
+  ("1,27 cm asılı girinti"); vermeyenlerde APA'nın standardı olan
+  1,27 cm varsayılır.
+
+  Ölçü, "asılı" sözcüğünün iki yanında da aranıyor: kılavuzlar hem
+  "asılı girinti 1,27 cm" hem "1,27 cm asılı girinti" yazıyor.
+*/
+const HANGING_SUBJECT = "(?:as[\u0131i]l[\u0131i]\\s+(?:girinti|paragraf)\\p{L}*|hanging\\s+indent)";
+export const HANGING_INDENT = new RegExp(HANGING_SUBJECT, "iu");
+export const HANGING_INDENT_CM = new RegExp(
+  `${HANGING_SUBJECT}[^.;]{0,25}?(\\d(?:[,.]\\d+)?)\\s*cm|(\\d(?:[,.]\\d+)?)\\s*cm[^.;]{0,25}?${HANGING_SUBJECT}`,
+  "iu"
+);
+
 export const HEADING_NUMBERING =
   /ondal[ıi]k(?:l[ıi])?\s+(?:sistem|numara)|başl[ıi]k(?:lar[ıi]?n?)?(?:[^.;]|(?<=\d)\.(?=\d)){0,60}numaraland[ıi]r(?![ıi]lmaz|[ıi]lmamal|may)|(?:^|\s)1\.1\.1\.?\s/iu;
 
@@ -223,6 +239,12 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
       ...(CHAPTER_NEW_PAGE.test(compact) ? { chapter_new_page: true } : {}),
       ...paragraphIndentRule,
       ...(JUSTIFY.test(compact) ? { justify: true } : {}),
+      /* Ölçü yazılmamışsa APA'nın standardı (1,27 cm) varsayılıyor;
+         kural hiç geçmiyorsa yazılmıyor — "bilmiyorum" ile "istemiyor"
+         aynı şey değil. */
+      ...(HANGING_INDENT.test(compact)
+        ? { reference_hanging_indent_cm: detectedNumber(compact, HANGING_INDENT_CM) ?? DEFAULT_HANGING_CM }
+        : {}),
       ...detectAbstractRules(compact),
     },
     confidence: Math.round(score * 100) / 100,

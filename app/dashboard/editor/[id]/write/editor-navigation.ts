@@ -3,7 +3,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { headingMatchesSection } from "@/lib/section-match";
 import { formatInTextCitation, formatReferenceParts, type CitableSource, type CitationStyle } from "@/lib/citation-format";
 import { fixReferencePunctuation } from "@/lib/reference-punctuation";
-import { indentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
+import { indentCmOf, type ParagraphFormatRules, hangingIndentCmOf } from "@/lib/paragraph-format";
 
 export interface OutlineHeading {
   pos: number;
@@ -331,4 +331,28 @@ export function selectedText(editor: Editor): string {
 /** Belge boş mu (yalnızca boş paragraflar) */
 export function isDocumentEmpty(doc: ProseMirrorNode): boolean {
   return doc.textContent.trim().length === 0 && doc.childCount <= 1;
+}
+
+/**
+ * Kaynakça girdilerine asılı girinti uygular (tek geri alma adımı).
+ *
+ * APA ve Chicago kaynakçada bunu zorunlu tutar ama editörde uygulamanın
+ * yolu yoktu: öğrenci kaynakçayı doğru yazsa bile biçim yanlış
+ * çıkıyordu. Değişen girdi sayısını döndürür.
+ *
+ * İlk satır girintisi aynı anda kapatılıyor — ikisi birbirinin tersi ve
+ * gövde biçimi kaynakçaya sızmış olabilir.
+ */
+export function applyHangingIndent(editor: Pick<Editor, "state" | "view">, cm: number): number {
+  const section = findReferencesSection(editor.state.doc);
+  if (!section) return 0;
+  const { tr } = editor.state;
+  let changed = 0;
+  for (const { pos, node } of section.paragraphs) {
+    if (!node.textContent.trim() || hangingIndentCmOf(node.attrs) === cm) continue;
+    tr.setNodeMarkup(pos, undefined, { ...node.attrs, hangingIndent: cm, firstLineIndent: false });
+    changed += 1;
+  }
+  if (changed > 0) editor.view.dispatch(tr);
+  return changed;
 }

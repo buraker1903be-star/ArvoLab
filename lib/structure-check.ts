@@ -14,7 +14,7 @@ import { kunyeleriAyristir } from "@/lib/atif/kunye";
 import { stilTanimi } from "@/lib/atif/stiller";
 import { baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
-import { checkParagraphFormat, describeParagraphFormat, type ParagraphFormatRules } from "@/lib/paragraph-format";
+import { checkParagraphFormat, describeParagraphFormat, hangingIndentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
 
 interface DocNode {
   type?: string;
@@ -31,7 +31,7 @@ export interface StructureIssue {
   /** Metinde aranıp seçilecek ifade (başlık, şekil başlığı, atıf) */
   target?: string;
   /** Editörün tek tıkla yapabileceği düzeltme */
-  action?: "sort-references" | "fix-reference-punctuation" | "convert-reference-lists" | "apply-paragraph-format";
+  action?: "sort-references" | "fix-reference-punctuation" | "convert-reference-lists" | "apply-paragraph-format" | "apply-hanging-indent";
 }
 
 const MAX_ISSUES = 60;
@@ -66,7 +66,7 @@ const quote = (text: string) => `“${text.length > 60 ? `${text.slice(0, 57)}�
 
 export function checkStructure(
   doc: { content?: DocNode[] } | null | undefined,
-  options: { citationStyle?: string; abstract?: AbstractRules; paragraphFormat?: ParagraphFormatRules } = {}
+  options: { citationStyle?: string; abstract?: AbstractRules; paragraphFormat?: ParagraphFormatRules; referenceHangingIndentCm?: number } = {}
 ): StructureIssue[] {
   const issues: StructureIssue[] = [];
   const add = (issue: StructureIssue) => {
@@ -195,10 +195,16 @@ export function checkStructure(
   // önceden bunlar "0 kaynak" sayılıyordu. İç içe liste maddeleri ayrı girdidir.
   const referenceEntries: string[] = [];
   let referencesInList = false;
+  /* Asılı girintisi olmayan kaynakça paragrafı sayısı; kılavuz asılı
+     girinti istiyorsa aşağıda raporlanır. */
+  let hangingMissing = 0;
   const collectEntries = (node: DocNode) => {
     if (node.type === "paragraph") {
       const text = textOf(node).trim();
-      if (text) referenceEntries.push(text);
+      if (text) {
+        referenceEntries.push(text);
+        if (!hangingIndentCmOf(node.attrs)) hangingMissing += 1;
+      }
       return;
     }
     if (node.type !== "bulletList" && node.type !== "orderedList") return;
@@ -226,6 +232,19 @@ export function checkStructure(
       message: `Kaynakçada ${punctuationProblems.length} girdide noktalama hatası var (çift nokta ya da noktalama işaretinden önce boşluk).`,
       target: punctuationProblems[0].slice(0, 40),
       action: "fix-reference-punctuation",
+    });
+  }
+
+  /* ---------- Kaynakça asılı girintisi ----------
+     APA ve Chicago kaynakçada asılı girintiyi zorunlu tutar; kılavuzlar
+     da ister. Editörde ve Word çıktısında karşılığı yoktu: öğrenci
+     kaynakçayı doğru yazsa bile biçim yanlış çıkıyordu. Kural yalnızca
+     kılavuz istediğinde uygulanıyor. */
+  if (options.referenceHangingIndentCm && hangingMissing > 0 && !referencesInList) {
+    add({
+      tone: "warning",
+      message: `Kaynakçada ${hangingMissing} girdide asılı girinti yok; kılavuz ${String(options.referenceHangingIndentCm).replace(".", ",")} cm asılı girinti istiyor (ilk satır kenarda, sonraki satırlar içeride).`,
+      action: "apply-hanging-indent",
     });
   }
 
