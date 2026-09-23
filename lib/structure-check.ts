@@ -11,7 +11,7 @@ import { headingMatchesSection } from "@/lib/section-match";
 import type { AbstractRules } from "@/lib/guideline-editor-settings";
 import { crossCheck, extractInTextCitations } from "@/lib/apa7";
 import { kunyeleriAyristir } from "@/lib/atif/kunye";
-import { stilTanimi } from "@/lib/atif/stiller";
+import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 import { baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 import { checkParagraphFormat, describeParagraphFormat, hangingIndentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
@@ -333,15 +333,14 @@ export function checkStructure(
      yazara bakar; yıl şart koşulsaydı MLA yazan öğrenci doğru yazdığı her
      kaynak için "metinde anılmıyor" uyarısı alırdı. (lib/apa7.ts ile aynı
      eşleştirme.) */
-  if (stil.tur !== "numara" && referenceEntries.length > 0) {
-    const yilaBak = stil.tur === "yazar-tarih";
+  if (adlaEslesir(stil) && referenceEntries.length > 0) {
+    const yilaBak = yilaBakilir(stil);
     // Yazarı (ve yıla bakılan stillerde yılı) ayrıştırılamayan girdiler eşleştirilmez;
     // biçim hatası yukarıda zaten raporlandı.
     const references = kunyeler.filter((reference) => reference.authors?.length && (!yilaBak || reference.year));
     if (references.length > 0) {
-      const atifStili = stil.id === "mla" ? "mla" : stil.id === "chicago" ? "chicago" : "apa7";
       const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(
-        extractInTextCitations(body, { style: atifStili }),
+        extractInTextCitations(body, { style: atifCikarmaStili(stil) }),
         references,
         { yilaBak },
       );

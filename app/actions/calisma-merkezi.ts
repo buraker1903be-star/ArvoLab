@@ -137,7 +137,13 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
       sonTarih: asistan.data?.[0]?.created_at ?? null,
       sonBulgular: sonBulgular(asistan.data?.[0]?.findings),
     },
-    tutarsizliklar: metinListeTutarsizliklari(musvedde.data?.plain_text ?? null, kaynakListesi.data ?? []),
+    /* Stil geçmezse çıkarıcı APA'ya düşer ve IEEE/Vancouver/MLA yazan
+       öğrenciye her kaynak "metinde atfı yok" görünürdü. */
+    tutarsizliklar: metinListeTutarsizliklari(
+      musvedde.data?.plain_text ?? null,
+      kaynakListesi.data ?? [],
+      calisma.citation_style,
+    ),
     kilavuz: kilavuz
       ? {
           id: kilavuz.id,
@@ -166,18 +172,23 @@ export async function topluTutarsizliklar(projectIds: string[]): Promise<Map<str
   if (!projectIds.length) return sonuc;
 
   const supabase = await createClient();
-  const [musveddeler, kaynaklar] = await Promise.all([
+  const [musveddeler, kaynaklar, calismalar] = await Promise.all([
     supabase.from("project_manuscripts").select("project_id, plain_text").in("project_id", projectIds),
     supabase
       .from("literature_sources")
       .select("project_id, id, title, authors, year, status")
       .in("project_id", projectIds)
       .limit(2000),
+    /* Atıf stili çalışmanın kendi kaydında; onsuz denetim her kaynakçayı
+       APA sanıyor ve numara stillerinde her kaynağı "atıfsız" sayıyordu. */
+    supabase.from("academic_projects").select("id, citation_style").in("id", projectIds),
   ]);
 
   // Okuma düşerse liste yine açılır; yalnızca rozet çıkmaz.
-  for (const okuma of [musveddeler, kaynaklar])
+  for (const okuma of [musveddeler, kaynaklar, calismalar])
     if (okuma.error) console.error("[merkez] toplu tutarsızlık okunamadı:", okuma.error.message);
+
+  const stilHaritasi = new Map((calismalar.data ?? []).map((satir) => [satir.id, satir.citation_style]));
 
   const kaynakHaritasi = new Map<string, KaynakSatiri[]>();
   for (const satir of kaynaklar.data ?? []) {
@@ -190,6 +201,7 @@ export async function topluTutarsizliklar(projectIds: string[]): Promise<Map<str
     const tutarsizliklar = metinListeTutarsizliklari(
       musvedde.plain_text ?? null,
       kaynakHaritasi.get(musvedde.project_id) ?? [],
+      stilHaritasi.get(musvedde.project_id),
     );
     if (tutarsizliklar.length) sonuc.set(musvedde.project_id, tutarsizliklar);
   }

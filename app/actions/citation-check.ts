@@ -7,7 +7,7 @@ import {
   computeComplianceScore,
 } from "@/lib/apa7";
 import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
-import { stilTanimi } from "@/lib/atif/stiller";
+import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 import { dogrulamaOnbellegi } from "@/lib/dogrulama-onbellegi";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
@@ -86,14 +86,12 @@ export async function runCitationCheck(input: {
     return { error: "Doğrulanabilecek bir kaynakça girdisi bulunamadı." };
   }
 
-  const atifStili = stil.id === "mla" ? "mla" : stil.id === "chicago" ? "chicago" : "apa7";
-  const citations = input.bodyText ? extractInTextCitations(input.bodyText, { style: atifStili }) : [];
+  const citations = input.bodyText ? extractInTextCitations(input.bodyText, { style: atifCikarmaStili(stil) }) : [];
   /* Numara stillerinde atıf künyeyle adla değil sırayla eşleşir; çapraz
      kontrol orada anlamsız. MLA'da eşleşme var ama YIL YOK. */
-  const cross =
-    stil.tur === "numara"
-      ? { citationsWithoutReference: [], referencesWithoutCitation: [] }
-      : crossCheck(citations, references, { yilaBak: stil.tur === "yazar-tarih" });
+  const cross = adlaEslesir(stil)
+    ? crossCheck(citations, references, { yilaBak: yilaBakilir(stil) })
+    : { citationsWithoutReference: [], referencesWithoutCitation: [] };
   const score = computeComplianceScore(references, cross);
   /*
     Sınır artık AĞA GİDEN künye sayısı; önbellekten karşılananlar ondan

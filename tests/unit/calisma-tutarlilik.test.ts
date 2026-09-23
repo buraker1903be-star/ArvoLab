@@ -69,3 +69,44 @@ describe("metin ile literatür listesi", () => {
     assert.deepEqual(sonuc, []);
   });
 });
+
+/*
+  ATIF STİLİ eskiden hiç geçirilmiyordu; çıkarıcı APA'ya düşüyordu.
+  IEEE/Vancouver yazan öğrencinin "[3]" biçimli atıfları hiç görülmüyor,
+  "kullanıldı" işaretli her kaynak panoda "metinde atfı yok" diye
+  listeleniyordu. MLA'da da atıfta yıl olmadığı için hiçbir eşleşme
+  tutmuyordu.
+*/
+describe("atıf stili", () => {
+  const kaynak = {
+    id: "1",
+    title: "Örgütsel bağlılık",
+    authors: "Yılmaz, A.",
+    year: "2020",
+    // "used": yalnızca bu durumdaki kaynak "atıfsız" diye bildirilir.
+    status: "used",
+  };
+  const uzunMetin = (govde: string) => govde + " ".padEnd(220, "x");
+
+  test("numara stilinde susulur: eşleşme adla değil sırayla kurulur", () => {
+    const vancouver = metinListeTutarsizliklari(uzunMetin("Bu çalışmada (1) numaralı kaynak kullanıldı."), [kaynak], "vancouver");
+    assert.deepEqual(vancouver, []);
+    const ieee = metinListeTutarsizliklari(uzunMetin("Bu çalışmada [1] numaralı kaynak kullanıldı."), [kaynak], "ieee");
+    assert.deepEqual(ieee, []);
+  });
+
+  test("MLA'da yıl aranmaz: doğru yazılmış atıf 'atıfsız' sayılmaz", () => {
+    const sonuc = metinListeTutarsizliklari(uzunMetin("Bu konuda (Yılmaz 45) açıklaması yapılmıştır."), [kaynak], "mla");
+    assert.ok(!sonuc.some((t) => t.tur === "atifsiz_kaynak"));
+  });
+
+  test("APA eskisi gibi çalışır", () => {
+    const sonuc = metinListeTutarsizliklari(uzunMetin("Bu konuda (Yılmaz, 2020) belirtilmiştir."), [kaynak], "apa7");
+    assert.ok(!sonuc.some((t) => t.tur === "atifsiz_kaynak"));
+  });
+
+  test("gerçekten atfı olmayan kaynak yine bildirilir", () => {
+    const sonuc = metinListeTutarsizliklari(uzunMetin("Metinde hiçbir atıf yok."), [kaynak], "apa7");
+    assert.ok(sonuc.some((t) => t.tur === "atifsiz_kaynak"));
+  });
+});

@@ -192,6 +192,23 @@ export function stilTanimi(deger: string | null | undefined): StilTanimi {
 
 export const stilAdi = (deger: string | null | undefined) => stilTanimi(deger).ad;
 
+/**
+ * Metin içi atıf çıkarıcısının (lib/apa7.ts) anladığı stil adı.
+ *
+ * Bu eşleme üç ayrı dosyada tek tek yazılmıştı (belge kontrolü, atıf
+ * kontrolü, yapı denetimi) ve dördüncü çağıran eklenirken unutuldu:
+ * belge yükleme ile çalışma tutarlılığı stili hiç geçirmiyor, her
+ * kaynakçayı APA sanıyordu. Tek kaynak, unutulacak bir yer bırakmıyor.
+ */
+export const atifCikarmaStili = (stil: StilTanimi): "apa7" | "chicago" | "mla" =>
+  stil.id === "mla" ? "mla" : stil.id === "chicago" ? "chicago" : "apa7";
+
+/** Metin içi atıf künyeyle ADLA eşleşiyor mu (numara stillerinde eşleşmez). */
+export const adlaEslesir = (stil: StilTanimi) => stil.tur !== "numara";
+
+/** Eşleşmede yıl da aranıyor mu (MLA'nın atfında yıl yoktur). */
+export const yilaBakilir = (stil: StilTanimi) => stil.tur === "yazar-tarih";
+
 /*
   Seçim listeleri ve etiketler TEK kaynaktan.
 

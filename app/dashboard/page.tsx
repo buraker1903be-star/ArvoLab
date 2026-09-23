@@ -162,7 +162,7 @@ export default async function DashboardPage() {
         .limit(500)
     : { data: null };
   const resumeTutarsizliklari = resume
-    ? metinListeTutarsizliklari(resumeManuscript?.plain_text ?? null, resumeKaynaklar ?? [])
+    ? metinListeTutarsizliklari(resumeManuscript?.plain_text ?? null, resumeKaynaklar ?? [], resume.citation_style)
     : [];
 
   // Eksikler önce, bakılması gerekenler sonra

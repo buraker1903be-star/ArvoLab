@@ -16,6 +16,7 @@
 */
 
 import { crossCheck, extractInTextCitations, type ParsedReference } from "@/lib/apa7";
+import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 
 export type KaynakSatiri = {
   id: string;
@@ -51,13 +52,32 @@ const kisalt = (metin: string, sinir = 90) => (metin.length > sinir ? `${metin.s
  * görünürdü ve bu, henüz yazmaya başlamamış kullanıcıya atılmış bir
  * yanlış alarm olurdu. Aynı gerekçeyle, literatür listesi boşken metindeki
  * atıflar "kaynaksız" sayılmaz.
+ *
+ * ATIF STİLİ ŞART. Eskiden hiç geçirilmiyordu ve çıkarıcı APA'ya
+ * düşüyordu: IEEE/Vancouver yazan öğrencinin metnindeki "[3]" biçimli
+ * atıflar hiç görülmüyor, "kullanıldı" işaretli her kaynak panoda
+ * "metinde atfı yok" diye listeleniyordu. MLA'da da atıfta yıl olmadığı
+ * için hiçbir eşleşme tutmuyordu. Yanlış alarmın en pahalısı: kullanıcı
+ * doğru çalışan aracı kullanmayı bırakır.
  */
-export function metinListeTutarsizliklari(duzMetin: string | null, kaynaklar: KaynakSatiri[]): Tutarsizlik[] {
+export function metinListeTutarsizliklari(
+  duzMetin: string | null,
+  kaynaklar: KaynakSatiri[],
+  atifStili?: string | null,
+): Tutarsizlik[] {
   const metin = (duzMetin ?? "").trim();
   if (metin.length < 200) return [];
 
-  const atiflar = extractInTextCitations(metin);
-  const sonuc = crossCheck(atiflar, kaynaklar.map(kaynagaCevir));
+  const stil = stilTanimi(atifStili);
+  /*
+    Numara stillerinde atıf künyeyle adla değil SIRAYLA eşleşir; buradaki
+    liste kaydında sıra numarası yok. Eşleştirmeyi zorlamak her kaynağı
+    "atıfsız" gösterirdi — susmak doğrusu.
+  */
+  if (!adlaEslesir(stil)) return [];
+
+  const atiflar = extractInTextCitations(metin, { style: atifCikarmaStili(stil) });
+  const sonuc = crossCheck(atiflar, kaynaklar.map(kaynagaCevir), { yilaBak: yilaBakilir(stil) });
   const tutarsizliklar: Tutarsizlik[] = [];
 
   /*
