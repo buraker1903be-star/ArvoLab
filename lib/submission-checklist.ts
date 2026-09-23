@@ -2,6 +2,7 @@
 // denetimi, kapak, içindekiler, başlık numaralandırma, kayıt) tek listede toplar. Her eksiğin
 // yanında editörün tek tıkla yapabileceği düzeltme durur. Jüri/danışman kontrolünün yerini tutmaz.
 
+import { sayfaDuzeniOzeti, type SayfaDuzeniFarki } from "@/lib/sayfa-duzeni";
 import type { CoverPage } from "@/app/actions/manuscript";
 
 /** Teslim kontrolünde kapakta dolu olması beklenen alanlar (editör ve ana sayfa ortak) */
@@ -27,6 +28,7 @@ export type ChecklistAction =
   | "open-cover"
   | "enable-toc"
   | "apply-numbering"
+  | "apply-page-setup"
   | "strip-manual-numbers"
   | "save";
 
@@ -56,6 +58,8 @@ export interface ChecklistInput {
   cover: { enabled: boolean; missingFields: string[] };
   includeToc: boolean;
   headingNumbering: { enabled: boolean; guidelineRule?: boolean; manualNumbered: number };
+  /** Kılavuzla çalışma arasındaki sayfa düzeni farkları (lib/sayfa-duzeni.ts) */
+  pageSetup: SayfaDuzeniFarki[];
   saveState: "saved" | "dirty" | "saving" | "error" | "conflict";
 }
 
@@ -174,6 +178,25 @@ export function buildSubmissionChecklist(input: ChecklistInput): SubmissionCheck
     });
   } else if (enabled || guidelineRule !== undefined) {
     items.push({ id: "numbering", label: "Başlık numaralandırma", status: "ok", detail: enabled ? "Başlıklar otomatik numaralanıyor." : "Başlıklar kılavuza uygun biçimde numarasız." });
+  }
+
+  /*
+    Sayfa düzeni: kılavuz bağlanınca kenar boşlukları ve sayfa numarası
+    kendiliğinden uygulanıyor ama öğrenci sonradan değiştirebiliyor ve
+    bunu hiçbir ekran söylemiyordu — jüriden dönen en sık biçim hatası.
+    Kılavuzda tanımlı olmayan alan karşılaştırılmaz: "bilmiyorum" ile
+    "yanlış" aynı şey değil (lib/sayfa-duzeni.ts).
+  */
+  if (input.pageSetup.length) {
+    items.push({
+      id: "page-setup",
+      label: "Sayfa düzeni",
+      status: "warning",
+      detail: sayfaDuzeniOzeti(input.pageSetup),
+      action: { id: "apply-page-setup", label: "Kılavuza uy" },
+    });
+  } else if (input.hasGuideline) {
+    items.push({ id: "page-setup", label: "Sayfa düzeni", status: "ok", detail: "Kenar boşlukları ve sayfa numarası kılavuza uygun." });
   }
 
   items.push(

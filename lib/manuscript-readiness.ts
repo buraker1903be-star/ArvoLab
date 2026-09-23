@@ -1,6 +1,7 @@
 // Teslim hazırlığı (sunucuda, kaydedilmiş metinden): editördeki "Teslim kontrolü" ile aynı
 // kontrol listesi; ana sayfada özet olarak gösterilir. Aynı saf fonksiyonlar kullanılır:
 // kılavuz bölüm eşleştirmesi, sayfa tahmini, yapı/atıf denetimi, kapak ve numaralandırma.
+import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
 import { buildSubmissionChecklist, missingCoverFields, type SubmissionChecklist } from "@/lib/submission-checklist";
 import { checkStructure } from "@/lib/structure-check";
 import { headingMatchesSection } from "@/lib/section-match";
@@ -27,6 +28,7 @@ export interface ReadinessManuscript {
   margin_bottom_cm?: number | null;
   margin_left_cm?: number | null;
   margin_right_cm?: number | null;
+  show_page_numbers?: boolean | null;
 }
 
 const textOf = (node: JsonNode): string => node.text ?? (node.content ?? []).map(textOf).join("");
@@ -59,15 +61,16 @@ export function manuscriptReadiness(input: {
       ...(guideline?.settings.justify ? { justify: true } : {}),
     },
   });
+  const margins = {
+    top: manuscript.margin_top_cm ?? 2.5,
+    bottom: manuscript.margin_bottom_cm ?? 2.5,
+    left: manuscript.margin_left_cm ?? 2.5,
+    right: manuscript.margin_right_cm ?? 2.5,
+  };
   const pages = estimatePages(manuscript.word_count ?? 0, {
     fontSizePt: guideline?.settings.fontSizePt,
     lineSpacing: guideline?.settings.lineSpacing,
-    margins: {
-      top: manuscript.margin_top_cm ?? 2.5,
-      bottom: manuscript.margin_bottom_cm ?? 2.5,
-      left: manuscript.margin_left_cm ?? 2.5,
-      right: manuscript.margin_right_cm ?? 2.5,
-    },
+    margins,
   });
   const headingNumbering = manuscript.heading_numbering ?? false;
 
@@ -92,6 +95,11 @@ export function manuscriptReadiness(input: {
       guidelineRule: guideline?.settings.headingNumbering,
       manualNumbered: headingNumbering ? headings.filter(hasManualNumber).length : 0,
     },
+    pageSetup: sayfaDuzeniFarklari({
+      margins,
+      showPageNumbers: manuscript.show_page_numbers,
+      kilavuz: guideline?.settings,
+    }),
     // Sunucudaki metin kaydedilmiş hâldir
     saveState: "saved",
   });
