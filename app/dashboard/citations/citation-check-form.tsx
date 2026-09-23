@@ -70,6 +70,9 @@ const STATUS_META: Record<AcademicVerification["status"], { label: string; tone:
   insufficient_data: { label: "Yetersiz veri", tone: "neutral" },
 };
 
+/* Bu turda ağ doğrulamasına sıra gelmemiş künye. "Bulunamadı" DEĞİL. */
+const BAKILMADI = { label: "Bu turda bakılmadı", tone: "neutral" as Tone };
+
 export default function CitationCheckForm({
   projects,
   asistanAcik,
@@ -162,6 +165,18 @@ export default function CitationCheckForm({
       setLoading(false);
     }
   }
+
+  /*
+    Doğrulama sonucu künyeye HAM METİNLE bağlanıyor, sırayla değil:
+    önbellek devreye girdiğinden beri sonuç dizisi aradan künye
+    atlayabiliyor (lib/academic-reference-verification.ts).
+  */
+  const dogrulamaHaritasi = new Map((result?.academicVerification ?? []).map((item) => [item.reference, item]));
+  /* Atıf çıkarılamadıysa çapraz kontrol ölçülmemiştir; "Yok" yazmak
+     yapılmamış bir denetimi temiz rapor gibi gösterirdi. */
+  const atifOlculdu = (result?.citations?.length ?? 0) > 0;
+  const atifsizKaynak = result?.crossCheck.referencesWithoutCitation ?? [];
+  const kaynaksizAtif = result?.crossCheck.citationsWithoutReference ?? [];
 
   return (
     <section className="project-form-card mt-md">
@@ -297,112 +312,116 @@ export default function CitationCheckForm({
             </div>
           ) : null}
 
+          {/*
+            KÜNYE BAŞINA TEK KART. Eskiden aynı künye üç ayrı yerde
+            yazılıyordu: doğrulama kartında, "APA 7 Biçim Sorunları"
+            listesinde ve çapraz kontrol listelerinde. Uzun kaynakçada
+            ekran aynı metni tekrar tekrar gösteren bir duvara dönüyordu.
+
+            Liste artık KAYNAKÇAYI izliyor, doğrulama sonucunu değil:
+            ağ sınırı yüzünden bu turda bakılmamış künyeler de kartını
+            alıyor ve durumu kendi satırında yazıyor. Eskiden onların
+            biçim sorunları ayrı bloktaydı, doğrulama durumu ise yalnızca
+            toplamda görünüyordu.
+          */}
           <div className="result-block">
-            <h3 className="result-heading-lg">
-              Akademik Kayıt Doğrulaması
-            </h3>
+            <h3 className="result-heading-lg">Kaynakça ({result.references.length})</h3>
             <div>
-              {result.academicVerification.map((item, index) => {
-                const meta = STATUS_META[item.status];
+              {result.references.map((reference, index) => {
+                const dogrulama = dogrulamaHaritasi.get(reference.raw);
+                const meta = dogrulama ? STATUS_META[dogrulama.status] : BAKILMADI;
+                const eslesme = dogrulama?.bestMatch ?? null;
                 return (
                   <article key={index} className="result-item" data-tone={meta.tone}>
                     <div className="project-card-main">
                       <div>
-                        <div className="muted text-sm">
-                          {item.reference}
-                        </div>
-                        {item.bestMatch ? (
+                        <div className="muted text-sm">{reference.raw}</div>
+
+                        {eslesme ? (
                           <>
-                            <div className="mt-sm">
-                              <strong>{item.bestMatch.title}</strong>
-                            </div>
+                            <div className="mt-sm"><strong>{eslesme.title}</strong></div>
                             <div className="hint">
-                              {item.bestMatch.authors.slice(0, 4).join(", ") || "Yazar bilgisi yok"}
-                              {item.bestMatch.year ? ` · ${item.bestMatch.year}` : ""}
-                              {item.bestMatch.venue ? ` · ${item.bestMatch.venue}` : ""}
+                              {eslesme.authors.slice(0, 4).join(", ") || "Yazar bilgisi yok"}
+                              {eslesme.year ? ` · ${eslesme.year}` : ""}
+                              {eslesme.venue ? ` · ${eslesme.venue}` : ""}
                             </div>
                             <div className="cluster cluster-spaced text-sm">
-                              {item.bestMatch.url && (
-                                <a href={item.bestMatch.url} target="_blank" rel="noreferrer" className="link-accent">
-                                  {item.bestMatch.doi ? `DOI: ${item.bestMatch.doi}` : "Akademik kaydı aç"}
+                              {eslesme.url && (
+                                <a href={eslesme.url} target="_blank" rel="noreferrer" className="link-accent">
+                                  {eslesme.doi ? `DOI: ${eslesme.doi}` : "Akademik kaydı aç"}
                                 </a>
                               )}
                               <span>
-                                {item.bestMatch.provider === "crossref" ? "Crossref" : "OpenAlex"}
-                                {" · "}eşleşme %{Math.round(item.bestMatch.confidence * 100)}
+                                {eslesme.provider === "crossref" ? "Crossref" : "OpenAlex"}
+                                {" · "}eşleşme %{Math.round(eslesme.confidence * 100)}
                               </span>
-                              {item.bestMatch.citedByCount !== null && (
-                                <span>{item.bestMatch.citedByCount} atıf</span>
-                              )}
+                              {eslesme.citedByCount !== null && <span>{eslesme.citedByCount} atıf</span>}
                             </div>
                           </>
+                        ) : dogrulama ? (
+                          <div className="hint mt-sm">Crossref ve OpenAlex üzerinde yeterince güçlü bir eşleşme bulunamadı.</div>
                         ) : (
-                          <div className="text-base mt-sm">
-                            Crossref ve OpenAlex üzerinde yeterince güçlü bir eşleşme bulunamadı.
-                          </div>
+                          <div className="hint mt-sm">Ağ doğrulamasına bu turda sıra gelmedi; tekrar çalıştırın.</div>
+                        )}
+
+                        {/* Biçim sorunları künyenin kendi kartında: ayrı
+                            blokta iken kullanıcı hangi künyeye ait olduğunu
+                            yukarı kaydırıp eşleştiriyordu. Sorun yoksa
+                            hiçbir şey yazılmıyor — "sorun bulunamadı"
+                            satırları listenin yarısını kaplıyordu. */}
+                        {reference.issues.length > 0 && (
+                          <ul className="result-list mt-sm">
+                            {reference.issues.map((issue, issueIndex) => (
+                              <li key={issueIndex} className="tone-text" data-tone={issue.severity === "error" ? "danger" : "warning"}>
+                                {issue.message}
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </div>
-                      <span className="status-pill" data-tone={meta.tone}>
-                        {meta.label}
-                      </span>
+                      <span className="status-pill" data-tone={meta.tone}>{meta.label}</span>
                     </div>
-                    <div className="mt-sm text-sm">
-                      <a
-                        href={item.googleScholarUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="link-accent"
-                      >
-                        Google Scholar’da kontrol et ↗
-                      </a>
-                    </div>
+
+                    {dogrulama && (
+                      <div className="mt-sm text-sm">
+                        <a href={dogrulama.googleScholarUrl} target="_blank" rel="noreferrer" className="link-accent">
+                          Google Scholar’da kontrol et ↗
+                        </a>
+                      </div>
+                    )}
                   </article>
                 );
               })}
             </div>
           </div>
 
-          <div className="result-block">
-            <h3 className="result-heading">APA 7 Biçim Sorunları</h3>
-            <div className="stack-sm text-base">
-              {result.references.map((reference, index) => (
-                <div key={index}>
-                  <div className="muted">{reference.raw}</div>
-                  {reference.issues.length === 0 ? (
-                    <div className="tone-text" data-tone="success">Biçim sorunu bulunamadı.</div>
-                  ) : reference.issues.map((issue, issueIndex) => (
-                    <div key={issueIndex} className="tone-text" data-tone={issue.severity === "error" ? "danger" : "warning"}>
-                      [{issue.severity}] {issue.message}
-                    </div>
+          {/*
+            Çapraz kontrol yalnızca ÖLÇÜLDÜYSE gösteriliyor. Metin
+            girilmediğinde atıf çıkarılamıyor; o durumda iki başlık altına
+            "Yok" yazmak, yapılmamış bir denetimi temiz rapor gibi
+            göstermekti.
+          */}
+          {atifOlculdu && (
+            <div className="result-block">
+              <h3 className="result-heading">Atıf–kaynakça uyumu</h3>
+              {atifsizKaynak.length === 0 && kaynaksizAtif.length === 0 ? (
+                <p className="tone-text" data-tone="success">Metindeki atıflarla kaynakça birbirini tutuyor.</p>
+              ) : (
+                <ul className="result-list">
+                  {atifsizKaynak.map((reference, index) => (
+                    <li key={`k${index}`} className="tone-text" data-tone="warning">
+                      Kaynakçada var, metinde atfı yok: {reference.raw}
+                    </li>
                   ))}
-                </div>
-              ))}
+                  {kaynaksizAtif.map((citation, index) => (
+                    <li key={`a${index}`} className="tone-text" data-tone="danger">
+                      Metinde atıf var, kaynakçada yok: {citation.raw}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-          </div>
-
-          <div className="result-block">
-            <h3 className="result-heading">
-              Kaynakçada olup metinde atıfı bulunmayanlar
-            </h3>
-            <ul className="result-list">
-              {result.crossCheck.referencesWithoutCitation.map((reference, index) => <li key={index}>{reference.raw}</li>)}
-              {result.crossCheck.referencesWithoutCitation.length === 0 && (
-                <li className="result-ok">Yok</li>
-              )}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="result-heading">
-              Metinde atıfı olup kaynakçada bulunmayanlar
-            </h3>
-            <ul className="result-list">
-              {result.crossCheck.citationsWithoutReference.map((citation, index) => <li key={index}>{citation.raw}</li>)}
-              {result.crossCheck.citationsWithoutReference.length === 0 && (
-                <li className="result-ok">Yok</li>
-              )}
-            </ul>
-          </div>
+          )}
 
           <div className="asistan-kart">
             <div className="asistan-kart-ust">
