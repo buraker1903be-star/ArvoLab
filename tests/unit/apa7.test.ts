@@ -201,3 +201,34 @@ test("yazarı ayrıştırılamayan kaynak hiçbir atfa eşleşmez", () => {
   const sonuc = crossCheck(extractInTextCitations("(Yılmaz, 2020) demiştir."), [bozuk]);
   assert.equal(sonuc.referencesWithoutCitation.length, 1);
 });
+
+/*
+  Yazar anahtarı önbelleklendi (Türkçe küçük harf çevirimi pahalıydı).
+  Türkçe eşleme bozulmamalı: "I" → "ı", "İ" → "i". Yanlış eşleme,
+  var olan bir kaynağı "karşılıksız atıf" diye raporlardı.
+*/
+test("Türkçe büyük harfler doğru eşlenir (önbellek sonrası)", () => {
+  const refs = [
+    parseReferenceEntry("Işık, A. (2020). Bir. Dergi."),
+    parseReferenceEntry("İnan, B. (2021). İki. Dergi."),
+  ];
+  const sonuc = crossCheck(extractInTextCitations("(Işık, 2020) ve (İnan, 2021) belirtmiştir."), refs);
+  assert.deepEqual(sonuc.citationsWithoutReference, []);
+  assert.deepEqual(sonuc.referencesWithoutCitation, []);
+});
+
+test("aynı yazar tekrar geçtiğinde sonuç değişmez", () => {
+  // Önbellek ikinci çağrıda devreye giriyor; çıktı birebir aynı olmalı.
+  const refs = [parseReferenceEntry("Yılmaz, A. (2020). Bir. Dergi.")];
+  const bir = crossCheck(extractInTextCitations("(Yılmaz, 2020)"), refs);
+  const iki = crossCheck(extractInTextCitations("(Yılmaz, 2020) ve yine (Yılmaz, 2020)"), refs);
+  assert.deepEqual(bir.referencesWithoutCitation, []);
+  assert.deepEqual(iki.referencesWithoutCitation, []);
+  assert.deepEqual(iki.citationsWithoutReference, []);
+});
+
+test("kurum adı yazar olarak aynen korunur", () => {
+  const refs = [parseReferenceEntry("Türkiye İstatistik Kurumu. (2021). Rapor. TÜİK.")];
+  const sonuc = crossCheck(extractInTextCitations("(Türkiye İstatistik Kurumu, 2021) verilerine göre."), refs);
+  assert.deepEqual(sonuc.citationsWithoutReference, []);
+});
