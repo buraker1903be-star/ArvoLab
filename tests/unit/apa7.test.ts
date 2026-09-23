@@ -162,3 +162,42 @@ test("baş harften sonra nokta eksikse uyarı verilir", () => {
   // Kural işlevsiz kalmamalı: gerçek hata hâlâ yakalanıyor.
   assert.equal(yazarSorunu("Demir, B (2021). Özyeterlik [Doktora tezi]. Ankara Üniversitesi.").length, 1);
 });
+
+/*
+  Çapraz kontrol yıla göre dizinlendi (karesel taramadan çıktı). Aşağıdaki
+  testler çıktının aynı kaldığını sabitler: hız değişti, kural değişmedi.
+*/
+const kaynak = (ham: string) => parseReferenceEntry(ham);
+
+test("anlatı atfı kaynağı anılmış yapar ama karşılıksız diye raporlanmaz", () => {
+  const refs = [kaynak("Yılmaz, A. (2020). Başlık. Dergi.")];
+  const sonuc = crossCheck(extractInTextCitations("Yılmaz (2020) bunu göstermiştir."), refs);
+  assert.deepEqual(sonuc.referencesWithoutCitation, []);
+  assert.deepEqual(sonuc.citationsWithoutReference, []);
+});
+
+test("aynı karşılıksız atıf tekrarlansa da bir kez raporlanır", () => {
+  const metin = "(Demir, 2018) ve yine (Demir, 2018) ve tekrar (Demir, 2018).";
+  const sonuc = crossCheck(extractInTextCitations(metin), [kaynak("Yılmaz, A. (2020). Başlık. Dergi.")]);
+  assert.equal(sonuc.citationsWithoutReference.length, 1);
+});
+
+test("aynı yılda iki yazar birbirine karışmaz", () => {
+  const refs = [kaynak("Yılmaz, A. (2020). Bir. Dergi."), kaynak("Demir, B. (2020). İki. Dergi.")];
+  const sonuc = crossCheck(extractInTextCitations("(Yılmaz, 2020) belirtmiştir."), refs);
+  // Yalnızca Demir anılmamış sayılmalı; yıl aynı diye Yılmaz'a eşleşmemeli.
+  assert.deepEqual(sonuc.referencesWithoutCitation.map((r) => r.authors?.[0]), ["Demir, B."]);
+});
+
+test("aynı yazarın farklı yılı ayrı kaynaktır", () => {
+  const refs = [kaynak("Yılmaz, A. (2019). Bir. Dergi."), kaynak("Yılmaz, A. (2020). İki. Dergi.")];
+  const sonuc = crossCheck(extractInTextCitations("(Yılmaz, 2019) demiştir."), refs);
+  assert.equal(sonuc.referencesWithoutCitation.length, 1);
+  assert.equal(sonuc.referencesWithoutCitation[0].year, "2020");
+});
+
+test("yazarı ayrıştırılamayan kaynak hiçbir atfa eşleşmez", () => {
+  const bozuk = kaynak("(2020). Yazarsız bir künye. Dergi.");
+  const sonuc = crossCheck(extractInTextCitations("(Yılmaz, 2020) demiştir."), [bozuk]);
+  assert.equal(sonuc.referencesWithoutCitation.length, 1);
+});
