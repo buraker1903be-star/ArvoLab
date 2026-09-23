@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-kaynakca";
 import AsistanSonuc from "../_components/asistan-sonuc";
 import { runCitationCheck } from "@/app/actions/citation-check";
+import { literaturAramasiYap } from "@/app/actions/literatur-arama";
+import type { AramaKaydi } from "@/lib/literatur-arama";
 import type { Tone } from "@/lib/status-tone";
 import { STIL_SECENEKLERI, type AtifTuru } from "@/lib/atif/stiller";
 
@@ -16,6 +18,9 @@ interface Project {
 
 interface CheckResultRef {
   raw: string;
+  /* Ayrıştırıcıdan geliyor; alternatif arama sorgusu bundan kuruluyor
+     (ham künye yerine başlıkla aramak çok daha isabetli). */
+  title?: string | null;
   issues: { field: string; message: string; severity: string }[];
 }
 
@@ -92,6 +97,27 @@ export default function CitationCheckForm({
   const [citationStyle, setCitationStyle] = useState("apa7");
   const [bodyText, setBodyText] = useState("");
   const [result, setResult] = useState<CheckResult | null>(null);
+  /*
+    "Kayıt bulunamadı" çıkan künye için AYNI KONUDA dizinde gerçekten
+    bulunan çalışmalar. İki sebepten biri olabilir: künye dizinde
+    olmayan bir kaynak (Türkçe tez, kurum raporu) ya da yanlış yazılmış
+    bir künye. İkincisinde öğrencinin aradığı çalışma bir tık ötede;
+    birincisinde liste boş çıkar ve bu da bir cevaptır.
+
+    İSTEK ÜZERİNE çalışıyor, kendiliğinden değil: her bulunamayan künye
+    için ağa çıkmak, dizinlerin kapısında bizim adımıza gürültü olurdu
+    (saatlik hak da oradan yeniyor).
+  */
+  const [alternatif, setAlternatif] = useState<Record<string, "araniyor" | { kayitlar: AramaKaydi[]; hata?: string }>>({});
+
+  const alternatifAra = async (anahtar: string, sorgu: string) => {
+    setAlternatif((onceki) => ({ ...onceki, [anahtar]: "araniyor" }));
+    const yanit = await literaturAramasiYap({ sorgu: sorgu.slice(0, 300) });
+    setAlternatif((onceki) => ({
+      ...onceki,
+      [anahtar]: { kayitlar: (yanit.kayitlar ?? []).slice(0, 4), hata: yanit.hata },
+    }));
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [denetim, setDenetim] = useState<KaynakcaDenetimYaniti | null>(null);
@@ -383,12 +409,68 @@ export default function CitationCheckForm({
                     </div>
 
                     {dogrulama && (
-                      <div className="mt-sm text-sm">
+                      <div className="cluster cluster-spaced mt-sm text-sm">
                         <a href={dogrulama.googleScholarUrl} target="_blank" rel="noreferrer" className="link-accent">
                           Google Scholar’da kontrol et ↗
                         </a>
+                        {dogrulama.status === "not_found" && !alternatif[reference.raw] && (
+                          <button
+                            type="button"
+                            className="projects-filter-button button-compact"
+                            onClick={() => alternatifAra(reference.raw, reference.title || reference.raw)}
+                          >
+                            Aynı konuda kaynak ara
+                          </button>
+                        )}
                       </div>
                     )}
+
+                    {/*
+                      Bulunanlar KÜNYENİN KARŞILIĞI DEĞİL, aynı konuda
+                      gerçek kayıtlar. Bunu yazmak şart: aksi halde
+                      öğrenci listedeki ilk çalışmayı kendi kaynağının
+                      yerine koyabilir ve okumadığı bir şeye atıf yapmış
+                      olur. Kayıtlar dizinden geliyor, asistandan değil —
+                      uydurma künye riski yok.
+                    */}
+                    {alternatif[reference.raw] === "araniyor" && (
+                      <p className="hint mt-sm">Dizinlerde aranıyor…</p>
+                    )}
+                    {typeof alternatif[reference.raw] === "object" && (() => {
+                      const bulunan = alternatif[reference.raw] as { kayitlar: AramaKaydi[]; hata?: string };
+                      if (bulunan.hata) return <p className="tone-text mt-sm" data-tone="warning">{bulunan.hata}</p>;
+                      if (!bulunan.kayitlar.length) {
+                        return (
+                          <p className="hint mt-sm">
+                            Bu konuda da dizinlerde kayıt çıkmadı. Kaynağınız Türkçe bir tez ya da kurum
+                            raporuysa bu beklenen bir sonuçtur.
+                          </p>
+                        );
+                      }
+                      return (
+                        <div className="mt-sm">
+                          <p className="hint">
+                            Aynı konuda dizinde bulunanlar — <strong>künyenizin karşılığı değil.</strong>{" "}
+                            Kendi kaynağınızı siz doğrulayın; okumadığınız bir çalışmaya atıf yapmayın.
+                          </p>
+                          <ul className="result-list">
+                            {bulunan.kayitlar.map((kayit) => (
+                              <li key={kayit.kimlik}>
+                                <a href={kayit.acikErisimUrl ?? kayit.url} target="_blank" rel="noreferrer" className="link-accent">
+                                  {kayit.baslik}
+                                </a>
+                                <span className="muted text-sm">
+                                  {" · "}
+                                  {kayit.yazarlar.slice(0, 2).join(", ") || "Yazar bilgisi yok"}
+                                  {kayit.yil ? ` · ${kayit.yil}` : ""}
+                                  {kayit.acikErisim ? " · açık erişim" : ""}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })()}
                   </article>
                 );
               })}
