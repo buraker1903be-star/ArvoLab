@@ -86,10 +86,21 @@ export async function runCitationCheck(input: {
     return { error: "Doğrulanabilecek bir kaynakça girdisi bulunamadı." };
   }
 
-  const citations = input.bodyText ? extractInTextCitations(input.bodyText, { style: atifCikarmaStili(stil) }) : [];
-  /* Numara stillerinde atıf künyeyle adla değil sırayla eşleşir; çapraz
-     kontrol orada anlamsız. MLA'da eşleşme var ama YIL YOK. */
-  const cross = adlaEslesir(stil)
+  const govdeVar = Boolean(input.bodyText?.trim());
+  const citations = govdeVar ? extractInTextCitations(input.bodyText!, { style: atifCikarmaStili(stil) }) : [];
+  /*
+    Çapraz kontrol yalnızca GÖVDE METNİ VARKEN yapılıyor.
+
+    Eskiden metin boşken de çalışıyordu ve atıf listesi boş olduğu için
+    kaynakçadaki HER künye "metinde atfı yok" diye listeleniyordu. Oysa
+    kullanıcı yalnızca kaynakçasını denetletmiş olabilir — metni hiç
+    yapıştırmadığı için o liste bir bulgu değil, sorunun kendisinin
+    sorulmamış olmasıdır. (lib/calisma-tutarlilik.ts'te aynı koruma var.)
+
+    Numara stillerinde atıf künyeyle adla değil sırayla eşleşir; çapraz
+    kontrol orada zaten anlamsız. MLA'da eşleşme var ama YIL YOK.
+  */
+  const cross = govdeVar && adlaEslesir(stil)
     ? crossCheck(citations, references, { yilaBak: yilaBakilir(stil) })
     : { citationsWithoutReference: [], referencesWithoutCitation: [] };
   const score = computeComplianceScore(references, cross);

@@ -43,13 +43,52 @@ function normalizeText(value: string): string[] {
     .filter((token) => token.length > 1 && !STOP_WORDS.has(token));
 }
 
+/** Benzerlik "kapsama" sayılsın diye kısa tarafta en az bu kadar ortak kelime aranır. */
+const EN_AZ_ORTAK = 3;
+
 function titleSimilarity(left: string, right: string): number {
   const a = new Set(normalizeText(left));
   const b = new Set(normalizeText(right));
   if (!a.size || !b.size) return 0;
   let intersection = 0;
   for (const token of a) if (b.has(token)) intersection += 1;
-  return intersection / Math.max(a.size, b.size);
+
+  /*
+    Payda KISA tarafa göre: künyede alt başlık yazılmamışsa eşleşme
+    cezalandırılmamalı. Eskiden payda uzun taraftı ve DOĞRU yazılmış
+    künyeler düşüyordu — Deci & Ryan (2000) tam bu yüzden "kayıt
+    bulunamadı" çıkıyordu: dizindeki kayıt "…: Human Needs and the
+    Self-Determination of Behavior" alt başlığını taşıyor, öğrencinin
+    yazdığı kısa başlık 9 kelimeye bölününce 0,44'te kalıyordu.
+
+    Kısa başlıkta tesadüf yüksek olduğu için kapsama yalnızca yeterince
+    ortak kelime varken uygulanıyor; "İş Doyumu" gibi iki kelimelik bir
+    başlık, içinde o kelimeler geçen her yayına tam puan almamalı.
+  */
+  const kucuk = Math.min(a.size, b.size);
+  const payda = intersection >= EN_AZ_ORTAK ? kucuk : Math.max(a.size, b.size);
+  return intersection / payda;
+}
+
+/** "Yılmaz, A." → "yılmaz" · "Ali Taş" → "taş" */
+function soyad(ad: string): string {
+  const temiz = ad.trim();
+  const parca = temiz.includes(",") ? temiz.split(",")[0] : temiz.split(/\s+/).at(-1) ?? "";
+  return parca.toLocaleLowerCase("tr-TR").replace(/[^\p{L}]/gu, "");
+}
+
+/**
+ * Künyedeki ilk yazar, adaydaki yazarların hiçbirinde geçmiyor mu?
+ *
+ * İKİ TARAFTA DA yazar varsa karar verilir; biri boşsa "bilinmiyor"dur
+ * ve uyuşmazlık sayılmaz.
+ */
+function yazarTutmuyor(reference: ParsedReference, adayYazarlar: string[]): boolean {
+  const ilk = reference.authors?.[0];
+  if (!ilk || !adayYazarlar.length) return false;
+  const aranan = soyad(ilk);
+  if (aranan.length < 2) return false;
+  return !adayYazarlar.some((yazar) => soyad(yazar) === aranan);
 }
 
 function scoreCandidate(reference: ParsedReference, title: string, year: number | null): number {
@@ -191,9 +230,24 @@ async function verifyReference(reference: ParsedReference): Promise<ReferenceVer
     )
   );
   const bestMatch = deduplicated[0] ?? null;
+  /*
+    YAZAR BİR KAPI, ağırlık değil.
+
+    Puanlama yalnızca başlık ve yıla bakıyordu; yazarlar hiç okunmuyordu.
+    Sonuç, akademik denetim aracında olabilecek en kötü çıktıydı:
+    "Yılmaz, A. (2020). Örgütsel bağlılık ve iş doyumu" künyesi, Ali Taş'ın
+    2017 tarihli "İş doyumu ve örgütsel bağlılık" çalışmasıyla %82
+    eşleşiyor (aynı kelimeler, ters sırada) ve ekranda DOĞRULANDI yazıyordu.
+    Öğrenciye yanlış künyesinin teyit edildiği söyleniyordu.
+
+    Ağırlık olarak eklemek eşiği oynatır ve doğru eşleşmeleri de düşürürdü.
+    Kapı olarak: yazar tutmuyorsa "doğrulandı" denmiyor, "olası eşleşme"
+    deniyor — bulduğumuz şey duruyor, kesinlik iddiası kalkıyor.
+  */
+  const yazarSupheli = bestMatch ? yazarTutmuyor(reference, bestMatch.authors) : false;
   const status = !bestMatch
     ? "not_found"
-    : bestMatch.confidence >= 0.78
+    : bestMatch.confidence >= 0.78 && !yazarSupheli
     ? "verified"
     : bestMatch.confidence >= 0.55
     ? "possible_match"
