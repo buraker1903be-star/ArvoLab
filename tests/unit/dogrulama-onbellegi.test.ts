@@ -163,4 +163,23 @@ describe("doğrulama önbelleği", () => {
     assert.equal(sonuc.length, 1);
     assert.equal(istekSayisi, 2);
   });
+
+  /*
+    ÖNBELLEK SONUÇ DİZİSİNDE ORTADAN BOŞLUK BIRAKABİLİR: bu turda
+    bakılmamış bir künyenin yerine bir sonraki gelir. Ekran eskiden sonucu
+    kaynakçayla SIRAYLA eşliyordu (sonuç hep ilk N künyeydi); önbellekle
+    bu, bir künyenin biçim sorunlarını başka künyeye yapıştırmaya
+    dönüşüyordu. Eşleme artık ham metinle yapılıyor
+    (citation-check-form.tsx) ve boşluğun gerçekliği burada sabitleniyor.
+  */
+  test("bakılmamış künye aradan atlanır; sıra indeksle eşlenemez", async () => {
+    const kunyeler = [kunye("Birinci calisma"), kunye("Ikinci calisma"), kunye("Ucuncu calisma")];
+    const { onbellek } = sahteOnbellek([kunyeler[2]]);
+
+    const sonuc = await verifyAcademicReferences(kunyeler, 1, onbellek);
+
+    assert.deepEqual(sonuc.map((satir) => satir.reference), [kunyeler[0].raw, kunyeler[2].raw]);
+    // İkinci künye dizide yok: sonuc[1] onun sonucu DEĞİL.
+    assert.notEqual(sonuc[1].reference, kunyeler[1].raw);
+  });
 });

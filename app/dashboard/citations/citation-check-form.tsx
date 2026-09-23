@@ -99,15 +99,35 @@ export default function CitationCheckForm({
     if (!result) return;
     basla(async () => {
       setDenetim(null);
+      /*
+        Künye ile doğrulama sonucu HAM METİNLE eşleniyor, sırayla değil.
+
+        Eskiden sonuç dizisi her zaman kaynakçanın ilk N künyesiydi, o
+        yüzden sıra numarası tutuyordu. Doğrulama önbelleğe alınınca
+        (lib/academic-reference-verification.ts) dizi aradan künye
+        atlayabiliyor: bu turda bakılmamış bir künyenin yerine bir
+        sonraki geliyor. Sıraya güvenmek, bir künyenin biçim
+        sorunlarını BAŞKA bir künyeye yapıştırmak olurdu — asistana da
+        o yanlış eşleştirme giderdi.
+
+        Aynı künye kaynakçada iki kez yazılmışsa ikisi de ilk sıradaki
+        numarayı alır; yanlış künyeye sorun yapıştırmaktan iyidir.
+      */
+      const kunyeBilgisi = new Map(
+        result.references.map((kunye, index) => [kunye.raw, { sira: index + 1, issues: kunye.issues }]),
+      );
       setDenetim(
         await kaynakcaDenetle({
-          kaynaklar: result.academicVerification.map((item, index) => ({
-            sira: index + 1,
-            ham: item.reference,
-            durum: item.status,
-            bicimSorunlari: (result.references[index]?.issues ?? []).map((sorun) => `${sorun.field}: ${sorun.message}`),
-            eslesmeBasligi: item.bestMatch?.title ?? null,
-          })),
+          kaynaklar: result.academicVerification.map((item) => {
+            const kunye = kunyeBilgisi.get(item.reference);
+            return {
+              sira: kunye?.sira ?? 0,
+              ham: item.reference,
+              durum: item.status,
+              bicimSorunlari: (kunye?.issues ?? []).map((sorun) => `${sorun.field}: ${sorun.message}`),
+              eslesmeBasligi: item.bestMatch?.title ?? null,
+            };
+          }),
           eksikKaynaklar: result.crossCheck.citationsWithoutReference.map((c) => c.raw),
           kullanilmayanKaynaklar: result.crossCheck.referencesWithoutCitation.map((r) => r.raw),
           atiflar: (result.citations ?? []).map((c) => c.raw),

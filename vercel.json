@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/academic-directory-refresh",
       "schedule": "47 2 * * *"
+    },
+    {
+      "path": "/api/cron/kaynak-onbellegi-temizle",
+      "schedule": "23 3 * * 0"
     }
   ]
 }
