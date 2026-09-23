@@ -1,5 +1,5 @@
 import { getMyProjects } from "@/app/actions/citation-check";
-import { deleteDocumentUpload, getMyDocumentUploads } from "@/app/actions/document-upload";
+import { deleteDocumentUpload, getMyDocumentUploads, reanalyzeDocument } from "@/app/actions/document-upload";
 import { runOriginalityCheck, getOriginalityChecksForDocument } from "@/app/actions/originality";
 
 // Belge yükleme + analiz (mammoth/pdf-parse) büyük dosyalarda Vercel'in
@@ -14,7 +14,7 @@ import { aiFeedbackConfigured } from "@/lib/ai-feedback";
 import DocumentUploadForm from "./document-upload-form";
 import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
-import { FolderOpen, ShieldQuestion, Trash2 } from "lucide-react";
+import { FolderOpen, RotateCcw, ShieldQuestion, Trash2 } from "lucide-react";
 import BosDurum from "../_components/bos-durum";
 import { similarityTone, statusTone } from "@/lib/status-tone";
 import { trTarihSaat } from "@/lib/tr-time";
@@ -61,6 +61,12 @@ export default async function DocumentsPage({
   async function handleDelete(documentId: string) {
     "use server";
     return deleteDocumentUpload(documentId);
+  }
+
+  async function handleReanalyze(documentId: string) {
+    "use server";
+    const sonuc = await reanalyzeDocument(documentId);
+    return sonuc.error ? { error: sonuc.error } : { success: true };
   }
 
   return (
@@ -146,6 +152,24 @@ export default async function DocumentsPage({
                     <p className="tone-text text-base mt-sm" data-tone="danger">
                       {u.error_message}
                     </p>
+                  ) : null}
+                  {/*
+                    Başarısız satırın tek eylemi "sil"di: kullanıcı ilk
+                    denediği şeyde hata alıyor ve ürün ona çıkış yolu
+                    sunmuyordu. Dosya depoda duruyor; çözümleme geçici bir
+                    sebepten düşmüş olabilir.
+                  */}
+                  {u.status === "failed" ? (
+                    <ActionForm
+                      action={handleReanalyze.bind(null, u.id)}
+                      className="mt-sm"
+                      successMessage="Belge yeniden çözümlendi."
+                    >
+                      <button type="submit" className="projects-filter-button">
+                        <RotateCcw size={14} aria-hidden="true" />
+                        Yeniden çözümle
+                      </button>
+                    </ActionForm>
                   ) : null}
                   {u.status === "analyzed" && u.analysis && !u.analysis.referenceSectionFound ? (
                     <p className="tone-text text-base mt-sm" data-tone="warning">

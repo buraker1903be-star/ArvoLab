@@ -258,6 +258,65 @@ export interface DocumentUploadRecord {
 
 // Kaydı ve depodaki dosyayı siler. Orijinallik taramaları ve AI geri
 // bildirimleri veritabanında ON DELETE CASCADE ile birlikte silinir.
+/**
+ * Başarısız bir çözümlemeyi yeniden dener.
+ *
+ * Eskiden başarısız satırın TEK eylemi "Belgeyi sil"di: kullanıcı ilk
+ * denediği şeyde hata alıyor ve ürün ona çıkış yolu sunmuyordu. Dosya
+ * depoda duruyor, çözümleme geçici bir sebepten düşmüş olabiliyor
+ * (ağ, boyut, o anki yük) — yeniden yüklemeye zorlamak gereksiz.
+ *
+ * Yalnızca "failed" satırlarda: başarılı bir çözümlemeyi tekrarlamak
+ * listede ikinci bir kayıt üretirdi.
+ *
+ * Sıra önemli: önce yeni çözümleme, SONRA eski satırın silinmesi. Tersi
+ * olsaydı yeniden deneme de düştüğünde kullanıcı kaydını tamamen
+ * kaybederdi.
+ */
+export async function reanalyzeDocument(documentId: string): Promise<UploadResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+
+  const { data: belge, error: okumaHatasi } = await supabase
+    .from("document_uploads")
+    .select("id, storage_path, file_name, mime_type, file_size, project_id, project_title, status")
+    .eq("id", documentId)
+    .eq("uploaded_by", user.id)
+    .maybeSingle();
+  if (okumaHatasi) {
+    console.error(okumaHatasi);
+    return { error: "Belge okunamadı. Sayfayı yenileyip tekrar deneyin." };
+  }
+  if (!belge) return { error: "Belge bulunamadı ya da size ait değil." };
+  if (belge.status !== "failed") {
+    return { error: "Yalnızca çözümlenemeyen belgeler yeniden denenebilir." };
+  }
+
+  const sonuc = await analyzeUploadedDocument({
+    storagePath: belge.storage_path,
+    fileName: belge.file_name,
+    mimeType: belge.mime_type ?? "",
+    fileSize: Number(belge.file_size ?? 0),
+    projectId: belge.project_id ?? null,
+    projectTitle: belge.project_title ?? null,
+  });
+  if (sonuc.error) return sonuc;
+
+  // Yeni kayıt oluştu; eski başarısız satır listede kalmasın.
+  const { error: silmeHatasi } = await supabase
+    .from("document_uploads")
+    .delete()
+    .eq("id", documentId)
+    .eq("uploaded_by", user.id);
+  if (silmeHatasi) console.error(silmeHatasi);
+
+  revalidatePath("/dashboard/documents");
+  return sonuc;
+}
+
 export async function deleteDocumentUpload(documentId: string): Promise<{ error?: string; success?: boolean }> {
   const supabase = await createClient();
   const {
