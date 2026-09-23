@@ -1,13 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Editördeki resimler depoda (project-files/<yazar>/editor-images/...) durur ve metne
+// Editördeki resimler depoda (project-files/<klasör>/editor-images/...) durur ve metne
 // imzalı bağlantıyla eklenir. İmzanın süresi dolsa da resim kaybolmasın diye editör,
 // yazdırma sayfası ve Word çıktısı dosyayı depo yolundan yeniden imzalar/indirir.
 //
-// Güvenlik: metin kullanıcı tarafından yazılabildiği için yalnızca O METNİN YAZARLARININ
-// (çalışma sahibi ve atanan uzman) editor-images klasöründeki dosyalar işlenir; başka
-// birinin dosya yolunu metne yazmak o dosyaya erişim sağlamaz. Sunucu dış adreslere istek atmaz.
+// Klasör ÇALIŞMANIN kimliğidir. Eskiden yükleyenin kimliğiydi ve yalnızca çalışma
+// sahibi ile atanan uzmanın klasörü tazeleniyordu: denetim rolündeki biri (Kontrolör,
+// Kurucu…) tezine resim eklediğinde resim 2 saat sonra herkesin ekranında kırık
+// görünüyordu. Yükleyenin klasörü de kabul edilmeye devam eder — eski resimler yerinde.
+//
+// Güvenlik: metin kullanıcı tarafından yazılabildiği için yalnızca BU ÇALIŞMAYA ait
+// klasörler (çalışmanın kendisi, sahibi, atanan uzman) işlenir; başka bir çalışmanın ya
+// da başka birinin dosya yolunu metne yazmak o dosyaya erişim sağlamaz. Sunucu dış
+// adreslere istek atmaz.
 
 export const IMAGE_BUCKET = "project-files";
 
@@ -49,6 +55,7 @@ export function storagePathFromUrl(src: string): string | null {
   }
 }
 
+/** writerIds: bu çalışmanın kabul edilen klasörleri — çalışma kimliği, sahibi, atanan uzman */
 export function isWriterImagePath(path: string, writerIds: (string | null | undefined)[]): boolean {
   const match = path.match(EDITOR_IMAGE_PATH);
   if (!match) return false;

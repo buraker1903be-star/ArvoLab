@@ -116,9 +116,11 @@ export interface SaveManuscriptInput {
 
 export type SaveManuscriptResult =
   | { success: true; updatedAt: string; wordCount: number }
-  | { success?: false; error: string; conflict?: boolean; sessionExpired?: boolean };
+  | { success?: false; error: string; conflict?: boolean; sessionExpired?: boolean; forbidden?: boolean };
 
 const isMissingColumn = (error: { code?: string } | null) => error?.code === "PGRST204" || error?.code === "42703";
+// RLS reddi: satır yazılamıyor. Yeniden denemek asla başarmaz.
+const isForbidden = (error: { code?: string } | null) => error?.code === "42501";
 
 // İyimser eşzamanlılık: kayıt yalnızca veritabanındaki sürüm editörün
 // açtığı sürümle aynıysa yapılır. Başka sekme/kişi arada kaydettiyse
@@ -183,6 +185,40 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     error: "Bu belge başka bir sekmede ya da başka biri tarafından değiştirildi.",
     conflict: true,
   } as const;
+  const forbidden = {
+    error: "Bu çalışmada değişiklik kaydetme yetkiniz yok. Yazdıklarınız bu tarayıcıda saklanıyor.",
+    forbidden: true,
+  } as const;
+  /*
+    Abonelik tetikleyicisi de 42501 ile reddediyor (20260924100003) ve kendi
+    açıklamasını taşıyor; "yetkiniz yok" demek yanlış yönlendirirdi. Buraya
+    normalde gelinmez (kapı yukarıda da var), ama uygulama ile veritabanı
+    ayrı ayrı karar verdiği için ikisi ayrışabilir.
+  */
+  const rlsReddi = (error: { code?: string; message?: string } | null) => {
+    if (!isForbidden(error)) return null;
+    const mesaj = error?.message ?? "";
+    return /abonelik/i.test(mesaj) ? ({ error: mesaj, forbidden: true } as const) : forbidden;
+  };
+
+  /*
+    Güncelleme hiçbir satıra değmediğinde iki ayrı sebep var ve ikisi de
+    PostgREST'ten aynı şekilde dönüyor: satır ARADA DEĞİŞTİ (çakışma) ya da
+    RLS satırı yazmaya kapalı (yetki). Ayırt etmeden "başka biri değiştirdi"
+    demek bir hatayı haftalarca gizledi: denetim rolleri başkasının tezini
+    okuyup yazabiliyor ama kaydedemiyordu, kullanıcı çakışma sanıyordu
+    (23.09.2026). Okuma açık olduğu için satırı yeniden okumak ayrımı kesin
+    yapıyor: zaman damgası hâlâ aynıysa kimse değiştirmemiş, demek ki yetki.
+  */
+  const cakismaMi = async (expectedUpdatedAt: string) => {
+    const { data } = await ctx.supabase
+      .from("project_manuscripts")
+      .select("updated_at")
+      .eq("project_id", projectId)
+      .maybeSingle();
+    if (!data) return conflict; // satır silinmiş ya da okunamıyor
+    return data.updated_at === expectedUpdatedAt ? forbidden : conflict;
+  };
 
   const write = async (row: Record<string, unknown>): Promise<SaveManuscriptResult | "missing-column"> => {
     if (input.force) {
@@ -192,6 +228,8 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
         .select("updated_at")
         .single();
       if (isMissingColumn(error)) return "missing-column";
+      const reddedildi = rlsReddi(error);
+      if (reddedildi) return reddedildi;
       if (error || !data) {
         console.error(error);
         return failed;
@@ -207,11 +245,13 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
         .eq("updated_at", input.expectedUpdatedAt)
         .select("updated_at");
       if (isMissingColumn(error)) return "missing-column";
+      const reddedildi = rlsReddi(error);
+      if (reddedildi) return reddedildi;
       if (error) {
         console.error(error);
         return failed;
       }
-      if (!data?.length) return conflict;
+      if (!data?.length) return cakismaMi(input.expectedUpdatedAt);
       return { success: true, updatedAt: data[0].updated_at, wordCount };
     }
 
@@ -221,6 +261,8 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
       .select("updated_at")
       .single();
     if (isMissingColumn(error)) return "missing-column";
+    const reddedildi = rlsReddi(error);
+    if (reddedildi) return reddedildi;
     if (error?.code === "23505") return conflict;
     if (error || !data) {
       console.error(error);
