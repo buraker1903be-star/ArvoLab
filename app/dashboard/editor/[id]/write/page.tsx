@@ -55,9 +55,17 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
             &quot;Kontrol Et&quot; ile kılavuz uygunluğu ve kaynakça denetimi yapar.
           </p>
         </div>
-        <Link href="/dashboard/editor" className="projects-filter-button">
+        {/*
+          Çıkış, çalışmanın KENDİ merkezine gidiyor — düz listeye değil.
+          Literatür, kaynakça, belge ve analiz adımlarına oradan
+          geçiliyor (calisma-serit.tsx); listeye dönmek kullanıcıyı
+          bağlamdan çıkarıp aynı çalışmayı yeniden bulmaya zorluyordu.
+          Tezin en uzun sürdüğü ekran, akışın geri kalanına en uzak
+          ekran olmamalı.
+        */}
+        <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
           <ArrowLeft size={17} />
-          Çalışmalara dön
+          Çalışma merkezi
         </Link>
       </section>
 

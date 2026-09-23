@@ -46,9 +46,12 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
           <h1>Çalışmayı düzenle</h1>
           <p>Çalışmanın planlama bilgilerini, durumunu ve ilerlemesini güncelleyin.</p>
         </div>
-        <Link href="/dashboard/editor" className="projects-filter-button">
+        {/* Yazım ekranıyla aynı: çıkış çalışmanın kendi merkezine.
+            Düzenlemeyi bitiren kullanıcı listeye değil, çalıştığı teze
+            dönmek istiyor. */}
+        <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
           <ArrowLeft size={17} aria-hidden="true" />
-          Çalışmalara dön
+          Çalışma merkezi
         </Link>
       </section>
 
