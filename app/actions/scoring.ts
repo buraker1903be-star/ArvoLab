@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { MANAGER_ROLES } from "@/lib/project-labels";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { korunanBirimPuan } from "@/lib/docentlik-puan";
 
 const PAGE_PATH = "/dashboard/associate-professorship";
 
@@ -212,6 +213,83 @@ export async function addScoreEntry(formData: FormData): Promise<ActionResult> {
     console.error(error);
     return { error: "Kayıt eklenirken bir hata oluştu." };
   }
+
+  revalidatePath(PAGE_PATH);
+  return { success: true };
+}
+
+/*
+  Kayıt düzenleme. Eskiden yoktu: yanlış girilen adet ya da başlık için tek
+  yol kaydı silip yeniden girmekti — tabloda UPDATE ne grant'lenmişti ne de
+  politikası vardı (20260924100023).
+
+  Birim puanın nereden geldiği lib/docentlik-puan.ts'te anlatılıyor: kriter
+  aynı kaldığı sürece kaydın kendi puanı korunur, yoksa başlıktaki bir yazım
+  hatasını düzelten kullanıcının toplam puanı sessizce değişirdi.
+*/
+export async function updateScoreEntry(entryId: string, formData: FormData): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+  /* Abonelik kapısı: ücretli özelliğin ürettiği kaydı değiştirmek de o
+     özelliği kullanmaktır. Silme bilerek kapının dışında. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  const { supabase, user } = ctx;
+
+  const criteriaId = String(formData.get("criteriaId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  if (!criteriaId || !title) return { error: "Kriter ve başlık alanları zorunludur." };
+
+  const unitCount = parseDecimal(String(formData.get("unitCount") ?? "1").trim() || "1");
+  if (!Number.isFinite(unitCount) || unitCount <= 0) {
+    return { error: "Adet / birim sayısı 0'dan büyük bir sayı olmalıdır." };
+  }
+
+  const { data: mevcut, error: okumaHatasi } = await supabase
+    .from("academic_score_entries")
+    .select("criteria_id, unit_count, computed_points")
+    .eq("id", entryId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  if (okumaHatasi) {
+    console.error(okumaHatasi);
+    // Okunamayan kaydın üzerine yazmak, birim puanı kritere göre yeniden
+    // fiyatlandırırdı: hata "kaydedildi" görünürken puan değişirdi.
+    return { error: "Kayıt okunamadı; değişiklik kaydedilmedi, tekrar deneyin." };
+  }
+  if (!mevcut) return { error: "Kayıt bulunamadı ya da size ait değil." };
+
+  let birimPuan = korunanBirimPuan(mevcut, criteriaId);
+  if (birimPuan === null) {
+    // Kriter değişti (ya da kaydın puanı türetilemedi): yeni kriterin güncel puanı.
+    const { data: criterion, error: kriterHatasi } = await supabase
+      .from("scoring_criteria")
+      .select("points_per_unit")
+      .eq("id", criteriaId)
+      .eq("is_active", true)
+      .single();
+    if (kriterHatasi || !criterion) return { error: "Seçilen kriter bulunamadı." };
+    birimPuan = Number(criterion.points_per_unit);
+  }
+
+  const { data, error } = await supabase
+    .from("academic_score_entries")
+    .update({
+      criteria_id: criteriaId,
+      title,
+      unit_count: unitCount,
+      computed_points: unitCount * birimPuan,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+    })
+    .eq("id", entryId)
+    .eq("owner_id", user.id)
+    .select("id");
+
+  if (error) {
+    console.error(error);
+    return { error: "Kayıt güncellenirken bir hata oluştu." };
+  }
+  if (!data?.length) return { error: "Kayıt bulunamadı ya da size ait değil." };
 
   revalidatePath(PAGE_PATH);
   return { success: true };

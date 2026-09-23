@@ -549,6 +549,15 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .callout[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
 .callout-body { margin-top: 6px; white-space: pre-wrap; color: var(--ink); }
 
+/* Kaydedilen analiz sonucu: metin tablo çıktısı olarak da gelebildiği için
+   satır sonları korunur, yükseklik sınırlanır. */
+.analiz-kayit-metni {
+  margin: 8px 0 0; padding: 10px 12px; border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--ink);
+  font-size: var(--fs-sm); white-space: pre-wrap; word-break: break-word;
+  max-height: 220px; overflow: auto;
+}
+
 /* ---------- Boş durum ---------- */
 .empty-state {
   display: grid;

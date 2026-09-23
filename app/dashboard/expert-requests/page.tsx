@@ -27,7 +27,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function ExpertRequestsPage() {
-  const [projects, { satirlar: myRequests, okunamadi: taleplerOkunamadi }, profile] = await Promise.all([
+  const [
+    { satirlar: projects, okunamadi: calismaOkunamadi },
+    { satirlar: myRequests, okunamadi: taleplerOkunamadi },
+    profile,
+  ] = await Promise.all([
     getMyProjects(),
     getMyRequests(),
     getCurrentProfile(),
@@ -115,6 +119,17 @@ export default async function ExpertRequestsPage() {
           </ActionForm>
         </PanelDrawer>
       </section>
+      {/*
+        Çalışma listesi okunamadı. Sessiz kalınsaydı seçiciler boş görünür,
+        kullanıcı çalışmalarının silindiğini sanırdı (lib/liste-sonucu.ts).
+      */}
+      {calismaOkunamadi ? (
+        <p className="alert mb-md" role="alert">
+          Çalışma listeniz okunamadı; aşağıdaki çalışma seçimleri eksik
+          görünebilir. Çalışmalarınızın silindiği anlamına gelmez — sayfayı
+          yenileyin.
+        </p>
+      ) : null}
 
       {canActAsExpert && (
         <section className="section">

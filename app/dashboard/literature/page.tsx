@@ -47,7 +47,11 @@ export default async function LiteraturePage({
   const { calisma: secilenCalisma } = await searchParams;
   // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
   // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
-  const [{ satirlar: sources, okunamadi: kaynakOkunamadi }, projects, asistanAcik] = await Promise.all([
+  const [
+    { satirlar: sources, okunamadi: kaynakOkunamadi },
+    { satirlar: projects, okunamadi: calismaOkunamadi },
+    asistanAcik,
+  ] = await Promise.all([
     getLiteratureSources(),
     getMyProjects(),
     literaturAsistaniAcik(),
@@ -200,6 +204,17 @@ export default async function LiteraturePage({
           </ActionForm>
         </PanelDrawer>
       </section>
+      {/*
+        Çalışma listesi okunamadı. Sessiz kalınsaydı seçiciler boş görünür,
+        kullanıcı çalışmalarının silindiğini sanırdı (lib/liste-sonucu.ts).
+      */}
+      {calismaOkunamadi ? (
+        <p className="alert mb-md" role="alert">
+          Çalışma listeniz okunamadı; aşağıdaki çalışma seçimleri eksik
+          görünebilir. Çalışmalarınızın silindiği anlamına gelmez — sayfayı
+          yenileyin.
+        </p>
+      ) : null}
 
       <LiteraturCalismaAlani
         projeler={projects.map((proje) => ({ id: proje.id, title: proje.title }))}

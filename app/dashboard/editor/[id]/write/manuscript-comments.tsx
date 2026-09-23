@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, MessageSquare } from "lucide-react";
 import { showToast } from "@/app/dashboard/_components/toast-events";
+import BosDurum from "@/app/dashboard/_components/bos-durum";
 import {
   addManuscriptComment,
   deleteManuscriptComment,
@@ -224,7 +225,15 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
           {yuklemeHatasi} Yorumlarınız yerinde duruyor; sayfayı yenileyin.
         </p>
       ) : comments !== null ? (
-        <p className="muted text-sm">{open.length === 0 && resolvedCount > 0 ? "Açık yorum yok." : "Henüz yorum yok."}</p>
+        <BosDurum
+          kompakt
+          ikon={MessageSquare}
+          aciklama={
+            open.length === 0 && resolvedCount > 0
+              ? "Açık yorum kalmadı. Çözülenleri aşağıdan yeniden görebilirsiniz."
+              : "Henüz yorum yok. Metinde bir yeri seçip yorum bırakırsanız, danışmanınız tam o cümleyi görür."
+          }
+        />
       ) : (
         /* Yükleniyor: eskiden hiçbir şey çizilmiyordu, bölüm boş görünüyordu. */
         <p className="muted text-sm" aria-busy="true">Yorumlar yükleniyor…</p>

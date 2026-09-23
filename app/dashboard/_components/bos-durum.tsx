@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 
 /*
@@ -15,6 +16,11 @@ import type { LucideIcon } from "lucide-react";
 
   Bölüm içi boşluklarda `kompakt` kullanılır: sayfa genelinde kullanılan
   büyük kutu, bir listenin altında orantısız durur.
+
+  Sonraki adım her zaman bir bağlantı değil: yazım ekranındaki pencerelerde
+  aynı pencerede sekme değiştiren bir düğme oluyor. Böyle durumlarda `eylem`
+  yerine `children` verilir — pencereler bu yüzden kendi boş durumlarını
+  yazıyordu ve dördü dört türlü görünüyordu.
 */
 
 export default function BosDurum({
@@ -23,6 +29,7 @@ export default function BosDurum({
   aciklama,
   eylem,
   kompakt = false,
+  children,
 }: {
   ikon?: LucideIcon;
   /** Tek cümlelik durum; yoksa yalnızca açıklama çıkar. */
@@ -31,6 +38,8 @@ export default function BosDurum({
   /** Bir sonraki adım. Boş ekranda kullanıcıyı yalnız bırakmamak için. */
   eylem?: { etiket: string; href: string };
   kompakt?: boolean;
+  /** `eylem` bir bağlantı değilse (ör. pencere içi düğme) buraya konur. */
+  children?: ReactNode;
 }) {
   return (
     <section className={kompakt ? "empty-state is-kompakt" : "empty-state"}>
@@ -46,6 +55,7 @@ export default function BosDurum({
           {eylem.etiket}
         </Link>
       ) : null}
+      {children}
     </section>
   );
 }

@@ -13,12 +13,25 @@ import { verifyAcademicReferences } from "@/lib/academic-reference-verification"
 import { dogrulamaOnbellegi } from "@/lib/dogrulama-onbellegi";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
-export async function getMyProjects() {
+export interface MyProject {
+  id: string;
+  title: string;
+  university: string | null;
+  citation_style: string | null;
+}
+
+/*
+  Eskiden okuma başarısızken de BOŞ LİSTE dönüyordu. Bu liste panelin dört
+  ekranındaki "Bağlı çalışma" seçicisini besliyor; geçici bir arızada
+  kullanıcı kendi tezini seçenekler arasında bulamıyor ve çalışmasının
+  silindiğini sanıyordu.
+*/
+export async function getMyProjects(): Promise<ListeSonucu<MyProject>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return listeBasarili([]);
 
   const { data, error } = await supabase
     .from("academic_projects")
@@ -28,9 +41,9 @@ export async function getMyProjects() {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
 /* Akademik doğrulama ağ üzerinden gidiyor (Crossref + OpenAlex, kaynak

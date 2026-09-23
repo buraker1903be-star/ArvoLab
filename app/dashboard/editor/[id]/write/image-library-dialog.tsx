@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ImageOff } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
+import BosDurum from "@/app/dashboard/_components/bos-durum";
 import { createClient } from "@/lib/supabase/client";
 
 const THUMB_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -103,10 +104,11 @@ export default function ImageLibraryDialog({ open, projectId, onClose, onPick }:
       {images === null ? (
         <p className="muted text-sm" aria-busy="true">Resimler yükleniyor…</p>
       ) : images.length === 0 ? (
-        <div className="empty-state">
-          <ImageOff size={22} aria-hidden="true" />
-          <p>Bu çalışmanın editörüne henüz resim yüklenmedi.</p>
-        </div>
+        <BosDurum
+          kompakt
+          ikon={ImageOff}
+          aciklama="Bu çalışmanın editörüne henüz resim yüklenmedi. Editördeki resim düğmesiyle yüklediğiniz görseller burada toplanır."
+        />
       ) : (
         <ul className="image-library">
           {images.map((image) => (

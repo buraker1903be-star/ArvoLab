@@ -16,7 +16,11 @@ export default async function CitationsPage({
   const { calisma: secilenCalisma } = await searchParams;
   // Anahtar yoksa düğme boşuna tıklanmasın; karar sunucuda verilir çünkü
   // ortam değişkeni istemciye taşınmaz (AGENTS.md: sırlar NEXT_PUBLIC_ değil).
-  const [projects, { satirlar: history, okunamadi: gecmisOkunamadi }, asistanAcik] = await Promise.all([
+  const [
+    { satirlar: projects, okunamadi: calismaOkunamadi },
+    { satirlar: history, okunamadi: gecmisOkunamadi },
+    asistanAcik,
+  ] = await Promise.all([
     getMyProjects(),
     getMyCitationChecks(),
     kaynakcaAsistaniAcik(),
@@ -46,6 +50,17 @@ export default async function CitationsPage({
           </details>
         </div>
       </section>
+      {/*
+        Çalışma listesi okunamadı. Sessiz kalınsaydı seçiciler boş görünür,
+        kullanıcı çalışmalarının silindiğini sanırdı (lib/liste-sonucu.ts).
+      */}
+      {calismaOkunamadi ? (
+        <p className="alert mb-md" role="alert">
+          Çalışma listeniz okunamadı; aşağıdaki çalışma seçimleri eksik
+          görünebilir. Çalışmalarınızın silindiği anlamına gelmez — sayfayı
+          yenileyin.
+        </p>
+      ) : null}
 
       <CitationCheckForm projects={projects} asistanAcik={asistanAcik} secilenCalisma={secilenCalisma ?? null} />
 

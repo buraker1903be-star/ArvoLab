@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { History, RotateCcw, Save } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
+import BosDurum from "@/app/dashboard/_components/bos-durum";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import {
   getVersionPreview,
@@ -175,10 +176,11 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
         {versions === null ? (
           <p className="muted text-sm" aria-busy="true">Sürümler yükleniyor…</p>
         ) : versions.length === 0 ? (
-          <div className="empty-state">
-            <History size={22} aria-hidden="true" />
-            <p>Henüz sürüm yok. Yazmaya devam ettikçe otomatik sürümler burada birikir.</p>
-          </div>
+          <BosDurum
+            kompakt
+            ikon={History}
+            aciklama="Henüz sürüm yok. Yazmaya devam ettikçe otomatik sürümler burada birikir; yukarıdan istediğiniz an adlı bir sürüm de kaydedebilirsiniz."
+          />
         ) : (
           <ul className="picker-list">
             {versions.map((version) => (

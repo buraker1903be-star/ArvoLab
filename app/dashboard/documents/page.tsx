@@ -27,7 +27,11 @@ export default async function DocumentsPage({
   searchParams: Promise<{ calisma?: string }>;
 }) {
   const aiAcik = aiFeedbackConfigured();
-  const [projects, { satirlar: uploads, okunamadi: belgeOkunamadi }, { calisma: secilenCalisma }] = await Promise.all([
+  const [
+    { satirlar: projects, okunamadi: calismaOkunamadi },
+    { satirlar: uploads, okunamadi: belgeOkunamadi },
+    { calisma: secilenCalisma },
+  ] = await Promise.all([
     getMyProjects(),
     getMyDocumentUploads(),
     searchParams,
@@ -99,6 +103,17 @@ export default async function DocumentsPage({
           </details>
         </div>
       </section>
+      {/*
+        Çalışma listesi okunamadı. Sessiz kalınsaydı seçiciler boş görünür,
+        kullanıcı çalışmalarının silindiğini sanırdı (lib/liste-sonucu.ts).
+      */}
+      {calismaOkunamadi ? (
+        <p className="alert mb-md" role="alert">
+          Çalışma listeniz okunamadı; aşağıdaki çalışma seçimleri eksik
+          görünebilir. Çalışmalarınızın silindiği anlamına gelmez — sayfayı
+          yenileyin.
+        </p>
+      ) : null}
 
       <DocumentUploadForm key={hazirCalisma} projects={projects} secilenCalisma={hazirCalisma} />
 

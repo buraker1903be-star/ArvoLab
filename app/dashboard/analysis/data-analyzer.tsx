@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
-import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check } from "lucide-react";
+import { useState, useCallback, useMemo, useRef, useTransition } from "react";
+import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save } from "lucide-react";
 import {
   describeNumeric,
   independentTTest,
@@ -14,6 +14,9 @@ import {
   type DescriptiveStats,
 } from "@/lib/stats-tests-core";
 import { formatP, isSignificant, formatNumber } from "@/lib/apa-format";
+import { ANALIZ_ETIKETLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
+import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
+import { showToast } from "@/app/dashboard/_components/toast-events";
 
 type CellValue = string | number | null;
 type DataRow = Record<string, CellValue>;
@@ -25,16 +28,9 @@ interface ParsedDataset {
   categoricalColumns: string[];
 }
 
-type AnalysisType = "descriptives" | "ttest" | "anova" | "correlation" | "chisquare" | "reliability";
-
-const ANALYSIS_LABELS: Record<AnalysisType, string> = {
-  descriptives: "Betimsel İstatistikler",
-  ttest: "Bağımsız Örneklem t-Testi",
-  anova: "Tek Yönlü ANOVA",
-  correlation: "Pearson Korelasyonu",
-  chisquare: "Ki-Kare Bağımsızlık Testi",
-  reliability: "Güvenilirlik Analizi (Cronbach Alpha)",
-};
+/* Etiketler geçmiş listesinde de kullanılıyor; tek yerde (lib/analiz-turleri.ts). */
+type AnalysisType = AnalizTuru;
+const ANALYSIS_LABELS = ANALIZ_ETIKETLERI;
 
 function isNumericValue(v: CellValue): boolean {
   if (v === null || v === "") return false;
@@ -57,7 +53,14 @@ function detectColumnTypes(columns: string[], rows: DataRow[]) {
   return { numericColumns, categoricalColumns };
 }
 
-export default function DataAnalyzer() {
+export default function DataAnalyzer({
+  calismalar = [],
+  secilenCalisma = "",
+}: {
+  calismalar?: { id: string; title: string }[];
+  /* Çalışma merkezinden gelindiyse sonuç o çalışmaya kaydedilsin. */
+  secilenCalisma?: string;
+}) {
   const [dataset, setDataset] = useState<ParsedDataset | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -93,6 +96,37 @@ export default function DataAnalyzer() {
       setResultError("Panoya kopyalanamadı. Metni seçip elle kopyalayabilirsiniz.");
     }
   }, []);
+  /*
+    Kaydedilen sonucun künyesi ÇALIŞTIRMA ANINDA donduruluyor. Kullanıcı
+    sonucu gördükten sonra değişken seçimini değiştirip kaydete basarsa,
+    o anki seçimden üretilen başlık ekrandaki sayıyla uyuşmazdı — kayıt
+    yanlış analizin adıyla saklanırdı.
+  */
+  const [calisanAnaliz, setCalisanAnaliz] = useState<{ tur: AnalysisType; baslik: string } | null>(null);
+  const [kayitCalismasi, setKayitCalismasi] = useState(secilenCalisma);
+  const [kaydedildi, setKaydedildi] = useState(false);
+  const [kaydediliyor, kaydetmeyiBaslat] = useTransition();
+
+  const sonucuKaydet = useCallback(() => {
+    const metin = sonucKutusu.current?.innerText?.trim();
+    if (!metin || !calisanAnaliz) return;
+    kaydetmeyiBaslat(async () => {
+      const sonuc = await analizSonucuKaydet({
+        analizTuru: calisanAnaliz.tur,
+        baslik: calisanAnaliz.baslik,
+        apaMetni: metin,
+        projectId: kayitCalismasi || null,
+      });
+      if ("error" in sonuc && sonuc.error) {
+        // Sessiz düşmüyor: kullanıcı kaydettiğini sanıp sekmeyi kapatmasın.
+        setResultError(sonuc.error);
+        return;
+      }
+      setKaydedildi(true);
+      showToast("success", "Sonuç kaydedildi; aşağıdaki geçmişte duruyor.");
+    });
+  }, [calisanAnaliz, kayitCalismasi]);
+
   const [fullReport, setFullReport] = useState<React.ReactNode>(null);
 
   const handleFile = useCallback(async (file: File) => {
@@ -310,6 +344,16 @@ export default function DataAnalyzer() {
     if (!dataset) return;
     setResultError(null);
     setResult(null);
+    setKaydedildi(false);
+    setCalisanAnaliz({
+      tur: analysisType,
+      baslik: analizBasligi(analysisType, {
+        varA,
+        varB,
+        groupVar,
+        maddeSayisi: reliabilityItems.length,
+      }),
+    });
 
     try {
       if (analysisType === "descriptives") {
@@ -527,6 +571,7 @@ export default function DataAnalyzer() {
       }
     } catch (err) {
       console.error(err);
+      setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
   }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems, getNumericColumn, getGroupedNumeric]);
@@ -585,6 +630,8 @@ export default function DataAnalyzer() {
                 setResult(null);
                 setFileName(null);
                 setFullReport(null);
+                setCalisanAnaliz(null);
+                setKaydedildi(false);
               }}
             >
               Yeni dosya yükle
@@ -734,10 +781,49 @@ export default function DataAnalyzer() {
                   {kopyalandi ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                   {kopyalandi ? "Kopyalandı" : "Sonucu kopyala"}
                 </button>
-                <span className="hint">
-                  Sonuçlar burada saklanmıyor; sayfayı yenilediğinizde kaybolur.
-                </span>
+                {calisanAnaliz && !kaydedildi ? (
+                  <>
+                    {calismalar.length > 0 ? (
+                      <select
+                        className="compact-select"
+                        aria-label="Sonucun kaydedileceği çalışma"
+                        value={kayitCalismasi}
+                        onChange={(e) => setKayitCalismasi(e.target.value)}
+                      >
+                        <option value="">Çalışmaya bağlamadan</option>
+                        {calismalar.map((calisma) => (
+                          <option key={calisma.id} value={calisma.id}>{calisma.title}</option>
+                        ))}
+                      </select>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="projects-filter-button button-compact"
+                      onClick={sonucuKaydet}
+                      disabled={kaydediliyor}
+                    >
+                      <Save size={14} aria-hidden="true" />
+                      {kaydediliyor ? "Kaydediliyor…" : "Sonucu kaydet"}
+                    </button>
+                  </>
+                ) : null}
+                {kaydedildi ? (
+                  <span className="hint">
+                    <Check size={14} className="inline-icon" aria-hidden="true" />
+                    Kaydedildi — sayfanın altındaki geçmişte.
+                  </span>
+                ) : null}
               </div>
+              {/*
+                Kaydetmenin ne kaydettiği açıkça yazılıyor: yukarıda
+                "dosyanız sunucuya yüklenmez" sözü verildi, kullanıcı
+                düğmeye basarken bunun hâlâ geçerli olduğunu bilmeli.
+              */}
+              <p className="hint">
+                Kaydedilen yalnızca yukarıdaki sonuç metnidir; yüklediğiniz veri
+                dosyası sunucuya gitmez. Kaydetmezseniz sonuç sayfayı
+                yenilediğinizde kaybolur.
+              </p>
             </div>
           )}
         </div>

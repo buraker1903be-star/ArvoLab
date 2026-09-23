@@ -6,7 +6,9 @@ import {
   deleteCriterion,
   getMyScoreEntries,
   addScoreEntry,
+  updateScoreEntry,
   deleteScoreEntry,
+  type ScoringCriterion,
 } from "@/app/actions/scoring";
 import { getCurrentProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
@@ -14,7 +16,11 @@ import BosDurum from "../_components/bos-durum";
 import PanelDrawer from "../_components/panel-drawer";
 
 export default async function ScoringPage() {
-  const [{ satirlar: criteria }, { satirlar: entries, okunamadi: kayitOkunamadi }, profile] = await Promise.all([
+  const [
+    { satirlar: criteria, okunamadi: kriterOkunamadi },
+    { satirlar: entries, okunamadi: kayitOkunamadi },
+    profile,
+  ] = await Promise.all([
     getCriteria(),
     getMyScoreEntries(),
     getCurrentProfile(),
@@ -38,6 +44,11 @@ export default async function ScoringPage() {
     return deleteScoreEntry(entryId);
   }
 
+  async function handleUpdateEntry(entryId: string, formData: FormData) {
+    "use server";
+    return updateScoreEntry(entryId, formData);
+  }
+
   async function handleDeleteCriterion(criterionId: string) {
     "use server";
     return deleteCriterion(criterionId);
@@ -47,6 +58,15 @@ export default async function ScoringPage() {
     "use server";
     return updateCriterion(criterionId, formData);
   }
+
+  /*
+    Kaydın kriteri pasife alınmış olabilir — getCriteria yalnızca aktifleri
+    döndürüyor. Listede yoksa kaydın kendi kriteri başa ekleniyor; yoksa
+    kullanıcı düzenleme penceresinde kendi kriterini bulamaz ve yalnızca
+    başlığı düzeltmek için başka bir kritere geçmek zorunda kalırdı.
+  */
+  const kriterSecenekleri = (kendi: ScoringCriterion | null) =>
+    kendi && !criteria.some((c) => c.id === kendi.id) ? [kendi, ...criteria] : criteria;
 
   return (
     <main className="dashboard-page">
@@ -62,7 +82,23 @@ export default async function ScoringPage() {
             güncel tutmak Akademik Yönetici&apos;nin sorumluluğundadır.
           </p>
         </div>
-        {criteria.length > 0 ? (
+        {/*
+          Eskiden kriter yokken burası BOŞTU: yeni kullanıcı ekranda tek bir
+          eylem göremiyor, sebebini ancak sayfanın aşağısındaki kutuya inince
+          öğreniyordu. Düğmenin yeri boş bırakılmıyor.
+        */}
+        {kriterOkunamadi ? (
+          <p className="alert" role="alert">
+            Puanlama kriterleri okunamadı; faaliyet ekleme şu an kapalı.
+            Kriterlerin tanımsız olduğu anlamına gelmez — sayfayı yenileyin.
+          </p>
+        ) : criteria.length === 0 ? (
+          <p className="alert" data-tone="info">
+            {canManageCriteria
+              ? "Faaliyet eklenebilmesi için önce puanlama kriterleri tanımlanmalı. Sayfanın altındaki “Kriter ekle” ile başlayın."
+              : "Faaliyet eklenebilmesi için önce kurumunuzun puanlama kriterleri tanımlanmalı. Akademik Yönetici'nizden güncel ÜAK puanlarını girmesini isteyin."}
+          </p>
+        ) : (
           <PanelDrawer
             triggerLabel="Faaliyet ekle"
             triggerIcon={<Plus size={16} aria-hidden="true" />}
@@ -109,7 +145,7 @@ export default async function ScoringPage() {
               </div>
             </ActionForm>
           </PanelDrawer>
-        ) : null}
+        )}
       </section>
 
       <section className="dashboard-stats mb-lg" aria-label="Puan özeti">
@@ -138,16 +174,6 @@ export default async function ScoringPage() {
         ))}
       </section>
 
-      {criteria.length === 0 ? (
-        <section className="empty-state mb-lg">
-          <p>
-            {canManageCriteria
-              ? "Henüz puanlama kriteri tanımlanmadı. Aşağıdaki “Kriter ekle” düğmesiyle ilk kriteri ekleyin."
-              : "Henüz puanlama kriteri tanımlanmadı. Akademik Yönetici'nizden kriterleri girmesini isteyin."}
-          </p>
-        </section>
-      ) : null}
-
       <section className="section">
         <h2 className="section-title">Kayıtlı Faaliyetleriniz</h2>
         {kayitOkunamadi ? (
@@ -164,7 +190,13 @@ export default async function ScoringPage() {
           />
         ) : (
           <div className="projects-list">
-            {entries.map((e) => (
+            {entries.map((e) => {
+              /* Kriter değişmediği sürece uygulanacak birim puan kaydın
+                 kendisinden gelir (lib/docentlik-puan.ts); kullanıcı hangi
+                 puanla hesaplanacağını düzenlemeden önce görsün. */
+              const korunanPuan =
+                e.unit_count > 0 ? Math.round((e.computed_points / e.unit_count) * 1e6) / 1e6 : null;
+              return (
               <article className="project-card" key={e.id}>
                 <div className="project-card-main">
                   <div>
@@ -181,19 +213,84 @@ export default async function ScoringPage() {
                     <strong>{e.computed_points.toFixed(1)}</strong>
                   </div>
                 </div>
-                <ActionForm
-                  action={handleDeleteEntry.bind(null, e.id)}
-                  className="mt-sm"
-                  confirmMessage={`"${e.title}" kaydını silmek istediğinize emin misiniz?`}
-                  successMessage="Kayıt silindi."
-                >
-                  <button type="submit" className="projects-filter-button">
-                    <Trash2 size={14} aria-hidden="true" />
-                    Kaydı sil
-                  </button>
-                </ActionForm>
+                <div className="cluster mt-sm">
+                  {/* Eskiden yalnızca silme vardı: yanlış girilen bir adet
+                      için kaydı silip baştan girmek gerekiyordu. */}
+                  <PanelDrawer
+                    triggerLabel="Düzenle"
+                    triggerIcon={<Pencil size={14} aria-hidden="true" />}
+                    triggerClassName="projects-filter-button"
+                    kicker="Faaliyet kaydı"
+                    title={e.title}
+                    description={
+                      korunanPuan === null
+                        ? "Kriteri değiştirirseniz yeni kriterin güncel puanı uygulanır."
+                        : `Kriteri değiştirmezseniz bu kaydın birim puanı (${korunanPuan} puan/birim) korunur — kriterin puanı sonradan değişmiş olsa bile. Kriteri değiştirirseniz yeni kriterin güncel puanı uygulanır.`
+                    }
+                  >
+                    <ActionForm
+                      className="project-form-grid"
+                      action={handleUpdateEntry.bind(null, e.id)}
+                      successMessage="Kayıt güncellendi."
+                    >
+                      {kriterOkunamadi ? (
+                        <p className="alert project-form-full" data-tone="warning">
+                          Kriter listesi okunamadı; yalnızca bu kaydın kriteri gösteriliyor.
+                          Başka bir kritere geçmek için sayfayı yenileyin.
+                        </p>
+                      ) : null}
+                      <label className="project-form-full">
+                        <span>Kriter</span>
+                        <select name="criteriaId" defaultValue={e.criteria_id} required>
+                          {kriterSecenekleri(e.criteria).map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.category_group ? `${c.category_group} · ` : ""}
+                              {c.code} — {c.label} ({c.points_per_unit} puan/birim)
+                              {c.is_active ? "" : " · pasife alındı"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>Başlık / açıklama</span>
+                        <input name="title" type="text" defaultValue={e.title} required />
+                      </label>
+                      <label>
+                        <span>Adet / birim sayısı</span>
+                        <input
+                          name="unitCount"
+                          type="number"
+                          min={0.1}
+                          step={0.1}
+                          defaultValue={e.unit_count}
+                          inputMode="decimal"
+                        />
+                      </label>
+                      <label className="project-form-full">
+                        <span>Notlar</span>
+                        <input name="notes" type="text" defaultValue={e.notes ?? ""} />
+                      </label>
+                      <div className="project-form-actions">
+                        <button type="submit" className="projects-primary-button">
+                          Kaydet
+                        </button>
+                      </div>
+                    </ActionForm>
+                  </PanelDrawer>
+                  <ActionForm
+                    action={handleDeleteEntry.bind(null, e.id)}
+                    confirmMessage={`"${e.title}" kaydını silmek istediğinize emin misiniz?`}
+                    successMessage="Kayıt silindi."
+                  >
+                    <button type="submit" className="projects-filter-button">
+                      <Trash2 size={14} aria-hidden="true" />
+                      Kaydı sil
+                    </button>
+                  </ActionForm>
+                </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

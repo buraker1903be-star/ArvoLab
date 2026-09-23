@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Link2 } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
+import BosDurum from "@/app/dashboard/_components/bos-durum";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { createShareLink, listShareLinks, revokeShareLink, type ShareLink } from "@/app/actions/share-links";
 
@@ -142,7 +143,14 @@ export default function ShareDialog({ open, onClose, projectId }: { open: boolea
         {links === null ? (
           <p className="muted text-sm" aria-busy="true">Bağlantılar yükleniyor…</p>
         ) : links.length === 0 ? (
-          <p className="muted text-sm">Henüz paylaşım bağlantısı yok.</p>
+          /* Eskiden yalnızca "Henüz paylaşım bağlantısı yok." yazan düz bir
+             satırdı: aynı pencerenin diğer boş durumlarıyla hiç benzemiyor,
+             kullanıcıya bağlantının ne işe yaradığını da söylemiyordu. */
+          <BosDurum
+            kompakt
+            ikon={Link2}
+            aciklama="Henüz paylaşım bağlantısı yok. Yukarıdan süre seçip oluşturduğunuz bağlantıyla danışmanınız çalışmanızı hesap açmadan okuyabilir."
+          />
         ) : (
           <ul className="picker-list">
             {links.map((link) => {

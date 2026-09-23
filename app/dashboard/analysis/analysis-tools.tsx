@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { detectStatistics, type DetectedStatistic } from "@/lib/stats-interpreter";
 import { parseCodebook, type CodebookCheckResult } from "@/lib/codebook-check";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
@@ -145,9 +146,12 @@ export default function AnalysisTools({
                   onChange={(e) => setOrneklem(e.target.value)}
                 />
               </label>
-              {calismalar.length > 0 && (
+              {/* Alan adı panelin geri kalanıyla aynı ("Bağlı çalışma
+                  (opsiyonel)"); burada "Çalışma (isteğe bağlı)" yazıyordu ve
+                  aynı seçici sayfadan sayfaya başka adla çıkıyordu. */}
+              {calismalar.length > 0 ? (
                 <label>
-                  <span>Çalışma (isteğe bağlı)</span>
+                  <span>Bağlı çalışma (opsiyonel)</span>
                   <select value={calismaId} onChange={(e) => setCalismaId(e.target.value)}>
                     <option value="">Bağlı değil</option>
                     {calismalar.map((calisma) => (
@@ -155,6 +159,16 @@ export default function AnalysisTools({
                     ))}
                   </select>
                 </label>
+              ) : (
+                /* Eskiden alan sessizce yok oluyordu: kullanıcı denetimin bir
+                   çalışmaya bağlanabildiğini hiç öğrenmiyordu. */
+                <p className="hint project-form-full">
+                  Kayıtlı çalışmanız yok. Bir çalışma açarsanız denetim, o
+                  çalışmanın başlığını ve alanını da bağlam olarak kullanır.{" "}
+                  <Link href="/dashboard/editor/new" className="result-link">
+                    Çalışma oluştur →
+                  </Link>
+                </p>
               )}
             </div>
 

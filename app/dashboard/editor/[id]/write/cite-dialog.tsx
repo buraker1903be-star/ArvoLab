@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BookMarked, Search } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
+import BosDurum from "@/app/dashboard/_components/bos-durum";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { createCitationSource, getLiteratureSources, lookupDoi, type LiteratureSource } from "@/app/actions/literature";
 import { formatInTextCitation, formatReferenceParts, NUMERIC_STYLES, type CitationStyle } from "@/lib/citation-format";
@@ -234,11 +235,15 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
             {sources === null ? (
               <p className="muted text-sm" aria-busy="true">Kaynaklar yükleniyor…</p>
             ) : sources.length === 0 ? (
-              <div className="empty-state">
-                <BookMarked size={22} aria-hidden="true" />
-                <p>Literatür listenizde henüz kaynak yok. “Yeni kaynak” ile DOI&apos;den hemen ekleyebilirsiniz.</p>
-                <button type="button" className="projects-filter-button" onClick={() => setTab("new")}>Yeni kaynak ekle</button>
-              </div>
+              <BosDurum
+                kompakt
+                ikon={BookMarked}
+                aciklama="Literatür listenizde henüz kaynak yok. “Yeni kaynak” ile DOI’den hemen ekleyebilirsiniz."
+              >
+                <button type="button" className="projects-filter-button" onClick={() => setTab("new")}>
+                  Yeni kaynak ekle
+                </button>
+              </BosDurum>
             ) : filtered.length === 0 ? (
               <p className="muted text-sm">
                 {yalnizBuCalisma && !query.trim()
