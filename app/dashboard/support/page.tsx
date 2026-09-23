@@ -1,3 +1,5 @@
+import { listeBasarili } from "@/lib/liste-sonucu";
+import type { AppSupportRequest } from "@/app/actions/support";
 import { LifeBuoy, MessageSquareHeart, Plus } from "lucide-react";
 import {
   createSupportRequest,
@@ -43,9 +45,13 @@ export default async function SupportPage() {
   // talep kuyruğu ise yalnızca Sistem Yöneticisi ve Kurucu'nun işi.
   const isYonetim = isAdmin || profile?.role === "academic_manager";
 
-  const [myRequests, allRequests, geriBildirimler] = await Promise.all([
+  const [
+    { satirlar: myRequests, okunamadi: taleplerOkunamadi },
+    { satirlar: allRequests },
+    geriBildirimler,
+  ] = await Promise.all([
     getMySupportRequests(),
-    isAdmin ? getAllSupportRequests() : Promise.resolve([]),
+    isAdmin ? getAllSupportRequests() : Promise.resolve(listeBasarili<AppSupportRequest>([])),
     isYonetim ? tumGeriBildirimler() : Promise.resolve([]),
   ]);
 
@@ -210,7 +216,14 @@ export default async function SupportPage() {
 
       <section className="section">
         <h2 className="section-title">Taleplerim</h2>
-        {myRequests.length === 0 ? (
+        {/* Okunamadı ile "talebiniz yok" ayrı; ikincisi doğruysa sorun
+            yok, birincisi kullanıcıya aynı sorunu ikinci kez
+            bildirtirdi. */}
+        {taleplerOkunamadi ? (
+          <p className="alert" data-tone="danger" role="alert">
+            Talepleriniz yüklenemedi. Açık bir talebiniz olabilir; yeni talep açmadan önce sayfayı yenileyin.
+          </p>
+        ) : myRequests.length === 0 ? (
           <BosDurum kompakt ikon={Inbox} aciklama="Henüz destek talebiniz yok. Uygulamada bir sorun yaşarsanız ya da bir özellik isterseniz yukarıdaki “Yeni talep” ile bize yazın." />
         ) : (
           <div className="projects-list">

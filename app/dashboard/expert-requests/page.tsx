@@ -1,3 +1,5 @@
+import { listeBasarili } from "@/lib/liste-sonucu";
+import type { ConsultancyRequest } from "@/app/actions/consultancy";
 import { CheckCircle2, HandHelping, Plus, XCircle } from "lucide-react";
 import {
   createConsultancyRequest,
@@ -25,16 +27,16 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function ExpertRequestsPage() {
-  const [projects, myRequests, profile] = await Promise.all([
+  const [projects, { satirlar: myRequests, okunamadi: taleplerOkunamadi }, profile] = await Promise.all([
     getMyProjects(),
     getMyRequests(),
     getCurrentProfile(),
   ]);
 
   const canActAsExpert = isExpertEligible(profile?.role);
-  const [openRequests, assignedToMe] = canActAsExpert
+  const [{ satirlar: openRequests }, { satirlar: assignedToMe }] = canActAsExpert
     ? await Promise.all([getOpenRequests(), getAssignedToMe()])
-    : [[], []];
+    : [listeBasarili<ConsultancyRequest>([]), listeBasarili<ConsultancyRequest>([])];
 
   async function handleAccept(requestId: string) {
     "use server";
@@ -183,7 +185,14 @@ export default async function ExpertRequestsPage() {
 
       <section className="section">
         <h2 className="section-title">Taleplerim</h2>
-        {myRequests.length === 0 ? (
+        {/* Okunamadı ile "talebiniz yok" ayrı. Burada özellikle önemli:
+            listesi boş görünen öğrenci, zaten açık olan bir talebi
+            yeniden açabilirdi. */}
+        {taleplerOkunamadi ? (
+          <p className="alert" data-tone="danger" role="alert">
+            Talepleriniz yüklenemedi. Açık bir talebiniz olabilir; yeni talep açmadan önce sayfayı yenileyin.
+          </p>
+        ) : myRequests.length === 0 ? (
           <BosDurum kompakt ikon={Inbox} aciklama="Henüz uzman desteği talebiniz yok. Yöntem, analiz ya da yazım konusunda takıldığınız bir noktada yukarıdaki “Yeni talep” ile uzmana ulaşabilirsiniz." />
         ) : (
           <div className="projects-list">

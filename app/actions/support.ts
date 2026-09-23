@@ -1,5 +1,6 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
@@ -49,12 +50,12 @@ export async function createSupportRequest(formData: FormData): Promise<ActionRe
   return { success: true };
 }
 
-export async function getMySupportRequests(): Promise<AppSupportRequest[]> {
+export async function getMySupportRequests(): Promise<ListeSonucu<AppSupportRequest>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return listeBasarili([]);
 
   const { data, error } = await supabase
     .from("app_support_requests")
@@ -64,12 +65,12 @@ export async function getMySupportRequests(): Promise<AppSupportRequest[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
-export async function getAllSupportRequests(): Promise<AppSupportRequest[]> {
+export async function getAllSupportRequests(): Promise<ListeSonucu<AppSupportRequest>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("app_support_requests")
@@ -79,9 +80,9 @@ export async function getAllSupportRequests(): Promise<AppSupportRequest[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
 export async function updateSupportRequestStatus(requestId: string, status: string): Promise<ActionResult> {

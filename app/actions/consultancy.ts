@@ -1,5 +1,6 @@
 "use server";
 
+import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
@@ -64,12 +65,12 @@ export async function createConsultancyRequest(formData: FormData): Promise<Acti
   return { success: true };
 }
 
-export async function getMyRequests(): Promise<ConsultancyRequest[]> {
+export async function getMyRequests(): Promise<ListeSonucu<ConsultancyRequest>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return listeBasarili([]);
 
   const { data, error } = await supabase
     .from("consultancy_requests")
@@ -79,12 +80,12 @@ export async function getMyRequests(): Promise<ConsultancyRequest[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
-export async function getOpenRequests(): Promise<ConsultancyRequest[]> {
+export async function getOpenRequests(): Promise<ListeSonucu<ConsultancyRequest>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("consultancy_requests")
@@ -94,17 +95,17 @@ export async function getOpenRequests(): Promise<ConsultancyRequest[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
-export async function getAssignedToMe(): Promise<ConsultancyRequest[]> {
+export async function getAssignedToMe(): Promise<ListeSonucu<ConsultancyRequest>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return listeBasarili([]);
 
   const { data, error } = await supabase
     .from("consultancy_requests")
@@ -115,9 +116,9 @@ export async function getAssignedToMe(): Promise<ConsultancyRequest[]> {
 
   if (error) {
     console.error(error);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data);
 }
 
 export async function acceptRequest(requestId: string): Promise<ActionResult> {
