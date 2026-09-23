@@ -642,6 +642,10 @@ export default function ManuscriptEditor({
 
   // Canlı yapı denetimi: yazma durunca atıf–kaynakça, şekil/tablo, başlık ve boş bölüm
   // sorunları kendiliğinden bulunur ve alt çubukta gösterilir ("Kontrol Et"e gerek kalmaz).
+  //
+  // getJSON() zaten her çağrıda yeni bir düz nesne kuruyor; üstüne
+  // JSON.parse(JSON.stringify(...)) eklemek 200 sayfalık bir tezde 18 ms
+  // ve belgenin ikinci bir kopyası demekti. Denetim nesneyi değiştirmiyor.
   useEffect(() => {
     if (!editor) return;
     let timer: number | null = null;
@@ -654,7 +658,7 @@ export default function ManuscriptEditor({
         return;
       }
       setLiveIssues(
-        checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), { citationStyle, abstract: guideline?.settings.abstract, paragraphFormat, referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm })
+        checkStructure(editor.getJSON(), { citationStyle, abstract: guideline?.settings.abstract, paragraphFormat, referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm })
       );
     };
     const schedule = (delay: number) => {
@@ -748,7 +752,7 @@ export default function ManuscriptEditor({
       // Yapı ve bütünlük kontrolü ekrandaki içerik üzerinde tarayıcıda anında çalışır.
       const current = editorRef.current;
       if (current) {
-        const issues = checkStructure(JSON.parse(JSON.stringify(current.getJSON())), {
+        const issues = checkStructure(current.getJSON(), {
           citationStyle,
           abstract: guideline?.settings.abstract,
           paragraphFormat,
@@ -1040,7 +1044,7 @@ export default function ManuscriptEditor({
 
   // Yapı denetimi listesi: canlı gösterge penceresi ve "Kontrol Et" sonucu aynı listeyi kullanır.
   const recheckStructure = () => {
-    const issues = checkStructure(JSON.parse(JSON.stringify(editor.getJSON())), {
+    const issues = checkStructure(editor.getJSON(), {
       citationStyle,
       abstract: guideline?.settings.abstract,
       paragraphFormat,
@@ -1952,7 +1956,7 @@ export default function ManuscriptEditor({
         projectId={projectId}
         flush={() => saveNow()}
         onRestored={handleRestored}
-        getCurrentText={() => extractPlainText(JSON.parse(JSON.stringify(editor.getJSON())) as TiptapDoc)}
+        getCurrentText={() => extractPlainText(editor.getJSON() as TiptapDoc)}
       />
       <CiteDialog open={citeOpen} onClose={() => setCiteOpen(false)} projectId={projectId} style={style} onPick={handleCite} />
       <ImportDialog
