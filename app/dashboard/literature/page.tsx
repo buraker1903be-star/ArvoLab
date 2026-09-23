@@ -9,7 +9,7 @@ import {
 import { getMyProjects } from "@/app/actions/citation-check";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
-import LiteraturAsistani from "./literatur-asistani";
+import LiteraturCalismaAlani from "./literatur-calisma-alani";
 import { literaturAsistaniAcik } from "@/app/actions/ai-literatur";
 import CalismaSerit from "../_components/calisma-serit";
 import BosDurum from "../_components/bos-durum";
@@ -186,7 +186,7 @@ export default async function LiteraturePage({
         </PanelDrawer>
       </section>
 
-      <LiteraturAsistani
+      <LiteraturCalismaAlani
         projeler={projects.map((proje) => ({ id: proje.id, title: proje.title }))}
         asistanAcik={asistanAcik}
         secilenCalisma={secilenCalisma ?? null}

@@ -10,10 +10,13 @@ export default function LiteraturAsistani({
   projeler,
   asistanAcik,
   secilenCalisma = null,
+  onAramaCalistir,
 }: {
   projeler: Proje[];
   asistanAcik: boolean;
   secilenCalisma?: string | null;
+  /** Arama dizesini sayfadaki bulucuya taşır. */
+  onAramaCalistir?: (arama: string) => void;
 }) {
   const [soru, setSoru] = useState("");
   // Merkezden gelindiyse çalışma hazır seçili gelir.
@@ -90,6 +93,7 @@ export default function LiteraturAsistani({
         bulguBasligi="Listedeki boşluklar"
         bekleniyor={bekleniyor}
         onYenidenSorgula={() => tara(true)}
+        onAramaCalistir={onAramaCalistir}
       />
     </section>
   );
