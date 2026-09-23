@@ -2,11 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import {
-  parseReferenceList,
   extractInTextCitations,
   crossCheck,
   computeComplianceScore,
 } from "@/lib/apa7";
+import { kunyeleriAyristir } from "@/lib/atif/kunye";
+import { stilTanimi } from "@/lib/atif/stiller";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
@@ -19,7 +20,7 @@ export async function getMyProjects() {
 
   const { data, error } = await supabase
     .from("academic_projects")
-    .select("id, title, university")
+    .select("id, title, university, citation_style")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -30,11 +31,28 @@ export async function getMyProjects() {
   return data ?? [];
 }
 
+/** Kaynakça metnini girdilere böler (apa7.parseReferenceList ile aynı ölçüt). */
+function kunyeleriBol(ham: string): string[] {
+  return ham
+    .split(/\n{1,2}/)
+    .map((satir) => satir.trim())
+    .filter((satir) => satir.length > 10);
+}
+
+/* Akademik doğrulama ağ üzerinden gidiyor (Crossref + OpenAlex, kaynak
+   başına iki istek). Biçim ve çapraz kontrol ise yerelde ve anında.
+   İkisini aynı sınıra bağlamak, 120 kaynaklı bir tezde HİÇBİR denetim
+   yapılamaması demekti — eskiden 25'i aşan liste doğrudan hata
+   veriyordu. Artık hepsi denetleniyor, ağ doğrulaması ilk N kaynakla
+   sınırlı ve bu kullanıcıya yazılıyor. */
+const DOGRULAMA_SINIRI = 25;
+
 export async function runCitationCheck(input: {
   projectId: string | null;
   projectTitle: string | null;
   referenceList: string;
   bodyText: string;
+  citationStyle?: string | null;
 }) {
   const supabase = await createClient();
   const {
@@ -65,18 +83,22 @@ export async function runCitationCheck(input: {
     if (!ownProject) return { error: "Bu çalışmaya atıf denetimi ekleyemezsiniz." };
   }
 
-  const references = parseReferenceList(input.referenceList);
+  /* Stil çalışmadan geliyor; seçilmemişse APA (kayıtların varsayılanı).
+     Eskiden her kaynakça APA sanılarak ayrıştırılıyordu: Vancouver ya da
+     Chicago kullanan biri, doğru yazdığı künyeler için biçim hatası
+     alıyordu. */
+  const stil = stilTanimi(input.citationStyle);
+  const references = kunyeleriAyristir(kunyeleriBol(input.referenceList), stil.id);
   if (references.length === 0) {
     return { error: "Doğrulanabilecek bir kaynakça girdisi bulunamadı." };
   }
-  if (references.length > 25) {
-    return { error: "Tek kontrolde en fazla 25 kaynak doğrulanabilir." };
-  }
 
-  const citations = input.bodyText ? extractInTextCitations(input.bodyText) : [];
-  const cross = crossCheck(citations, references);
+  const citations = input.bodyText
+    ? extractInTextCitations(input.bodyText, { style: stil.id === "chicago" ? "chicago" : "apa7" })
+    : [];
+  const cross = stil.tur === "yazar-tarih" ? crossCheck(citations, references) : { citationsWithoutReference: [], referencesWithoutCitation: [] };
   const score = computeComplianceScore(references, cross);
-  const academicVerification = await verifyAcademicReferences(references);
+  const academicVerification = await verifyAcademicReferences(references, DOGRULAMA_SINIRI);
   const verificationSummary = {
     verified: academicVerification.filter((item) => item.status === "verified").length,
     possible: academicVerification.filter((item) => item.status === "possible_match").length,
@@ -108,6 +130,12 @@ export async function runCitationCheck(input: {
     complianceScore: score,
     academicVerification,
     verificationSummary,
+    /* Ekran hangi stile göre denetlendiğini ve kaç kaynağın ağ üzerinden
+       doğrulanabildiğini yazsın: "doğrulanamadı" ile "bakılmadı" aynı
+       şey değil. */
+    stil: { id: stil.id, ad: stil.ad, tur: stil.tur },
+    dogrulananSayisi: academicVerification.length,
+    toplamKaynak: references.length,
   };
 }
 

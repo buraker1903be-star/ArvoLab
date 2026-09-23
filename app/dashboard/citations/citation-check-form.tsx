@@ -10,6 +10,7 @@ interface Project {
   id: string;
   title: string;
   university: string | null;
+  citation_style?: string | null;
 }
 
 interface CheckResultRef {
@@ -56,7 +57,17 @@ interface CheckResult {
     notFound: number;
     insufficientData: number;
   };
+  stil: { id: string; ad: string; tur: "yazar-tarih" | "numara" };
+  dogrulananSayisi: number;
+  toplamKaynak: number;
 }
+
+const STILLER: { id: string; ad: string }[] = [
+  { id: "apa7", ad: "APA 7" },
+  { id: "chicago", ad: "Chicago" },
+  { id: "ieee", ad: "IEEE" },
+  { id: "vancouver", ad: "Vancouver" },
+];
 
 const STATUS_META: Record<AcademicVerification["status"], { label: string; tone: Tone }> = {
   verified: { label: "Doğrulandı", tone: "success" },
@@ -78,6 +89,10 @@ export default function CitationCheckForm({
   const [projectId, setProjectId] = useState<string>(secilenCalisma ?? "");
   const [projectTitle, setProjectTitle] = useState("");
   const [referenceList, setReferenceList] = useState("");
+  /* Stil sorulmuyordu ve her kaynakça APA sanılıyordu: Vancouver ya da
+     Chicago kullanan biri, doğru yazdığı künyeler için biçim hatası
+     alıyordu. */
+  const [citationStyle, setCitationStyle] = useState("apa7");
   const [bodyText, setBodyText] = useState("");
   const [result, setResult] = useState<CheckResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -120,6 +135,7 @@ export default function CitationCheckForm({
         projectTitle: selectedProject ? selectedProject.title : projectTitle || null,
         referenceList,
         bodyText,
+        citationStyle,
       });
       if ("error" in res) {
         setError(res.error as string);
@@ -138,22 +154,33 @@ export default function CitationCheckForm({
       <div className="project-form-heading">
         <h2>Kaynakça ve Atıf Doğrulama</h2>
         <p>
-          Kaynakları APA 7 kuralları, metin içi atıf eşleşmesi ve akademik kayıt
-          varlığı açısından birlikte kontrol edin.
+          Kaynakları seçtiğiniz atıf stilinin kuralları, metin içi atıf eşleşmesi ve
+          akademik kayıt varlığı açısından birlikte kontrol edin.
         </p>
       </div>
 
       <div className="callout mb-md" data-tone="info">
         Bibliyografik bilgiler Crossref ve OpenAlex üzerinden doğrulanır. Her sonuçta
         ayrıca Google Scholar’da aynı kaynağı açan bağımsız arama bağlantısı verilir.
-        Tek seferde en fazla 25 kaynak kontrol edilir.
+        Biçim ve atıf eşleşmesi kaynakçanın tamamında çalışır; akademik veritabanı
+        doğrulaması ilk 25 kaynakla sınırlıdır.
       </div>
 
       <div className="project-form-grid">
         {projects.length > 0 ? (
           <label>
             <span>Bağlı çalışma (opsiyonel)</span>
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            <select
+              value={projectId}
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                /* Stil çalışmanın kaydında zaten var; kullanıcıya iki
+                   kez sormak, ikisinin ayrışmasına davetiye. Seçim yine
+                   de elle değiştirilebiliyor. */
+                const secilen = projects.find((p) => p.id === e.target.value);
+                if (secilen?.citation_style) setCitationStyle(secilen.citation_style);
+              }}
+            >
               <option value="">Seçili çalışma yok</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.title}</option>
@@ -171,6 +198,15 @@ export default function CitationCheckForm({
             />
           </label>
         )}
+
+        <label>
+          <span>Atıf stili</span>
+          <select value={citationStyle} onChange={(e) => setCitationStyle(e.target.value)}>
+            {STILLER.map((stil) => (
+              <option key={stil.id} value={stil.id}>{stil.ad}</option>
+            ))}
+          </select>
+        </label>
 
         <label className="project-form-full">
           <span>Kaynakça listesi</span>
@@ -212,7 +248,7 @@ export default function CitationCheckForm({
         <div className="results-divider">
           <div className="chip-row">
             <strong className="chip">
-              APA 7 Uyum: {result.complianceScore}/100
+              {result.stil.ad} uyumu: {result.complianceScore}/100
             </strong>
             <span className="chip" data-tone="success">
               {result.verificationSummary.verified} doğrulandı
@@ -224,6 +260,19 @@ export default function CitationCheckForm({
               {result.verificationSummary.notFound} bulunamadı
             </span>
           </div>
+
+          {/* Kaç kaynağın ağ üzerinden doğrulandığı yazılıyor: "bulunamadı"
+              ile "bakılmadı" aynı şey değil. Eskiden 25'i aşan liste
+              hiç denetlenmiyordu, şimdi biçim ve atıf eşleşmesi hepsinde
+              çalışıyor ama ağ doğrulaması ilk 25'te kalıyor. */}
+          {result.dogrulananSayisi < result.toplamKaynak ? (
+            <div className="callout mt-md" data-tone="info">
+              Biçim ve atıf eşleşmesi {result.toplamKaynak} kaynağın hepsinde çalıştı.
+              Akademik veritabanı doğrulaması ilk {result.dogrulananSayisi} kaynak için
+              yapıldı; kalan {result.toplamKaynak - result.dogrulananSayisi} kaynağa
+              bakılmadı (bulunamadı demek değil).
+            </div>
+          ) : null}
 
           <div className="result-block">
             <h3 className="result-heading-lg">
