@@ -71,6 +71,27 @@ export async function literaturAramasiYap(girdi: {
   }
 
   /*
+    AÇIK ERİŞİMİ YALNIZCA OPENALEX BİLİYOR (Crossref güvenilir biçimde
+    söylemiyor, bu yüzden oradan gelen kayıtlar "açık erişim değil"
+    sayılmıyor, "bilinmiyor" sayılıyor).
+
+    OpenAlex'e ulaşılamadığında "yalnızca açık erişim" araması hiçbir
+    zaman sonuç veremez. Eskiden bu durumda ekran "Bu aramada sonuç
+    çıkmadı. Daha genel bir ifade deneyin ya da yıl aralığını
+    genişletin." diyordu: cümle YANLIŞ ve önerdiği çare işe yaramaz —
+    sorgu ne kadar genişletilse de sonuç çıkmayacaktı.
+
+    Bilinmeyeni "yok" diye sunmak bu projede yasak; doğrusunu söylüyoruz
+    ve işe yarayan çareyi veriyoruz.
+  */
+  if (kayitlar.length === 0 && girdi.yalnizcaAcikErisim && ulasilamayan.includes("openalex")) {
+    return {
+      hata: "Açık erişim bilgisini yalnızca OpenAlex veriyor ve şu anda ulaşılamıyor. "
+        + "Açık erişim süzgecini kaldırıp arayabilir ya da birazdan tekrar deneyebilirsiniz.",
+    };
+  }
+
+  /*
     "Zaten listemde" bilgisi olmadan öğrenci aynı kaynağı defalarca ekliyor
     ve sonra listesinde tekrarları temizlemekle uğraşıyordu. DOI kesin
     ölçüt; DOI'si olmayan kayıtlar için başlık karşılaştırılıyor.

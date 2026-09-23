@@ -64,8 +64,14 @@ const TURLER: Record<string, string> = {
   dataset: "other",
 };
 
+/*
+  Object.hasOwn ile: düz nesne araması "constructor" gibi bir tür adında
+  prototipten FONKSİYON döndürür. Böyle bir tür bugün hiçbir dizinde yok
+  ama kayıt doğrudan istemciye gidiyor; serileştirilemeyen bir değer
+  yanıtın tamamını düşürür, "other"a düşmek ise zararsız.
+*/
 export const turEslestir = (deger: unknown): string =>
-  (typeof deger === "string" && TURLER[deger.toLowerCase()]) || "other";
+  (typeof deger === "string" && Object.hasOwn(TURLER, deger.toLowerCase()) && TURLER[deger.toLowerCase()]) || "other";
 
 const doiDuzelt = (deger: unknown): string | null => {
   if (typeof deger !== "string" || !deger.trim()) return null;
@@ -179,7 +185,15 @@ export function crossrefKayitlari(govde: unknown): AramaKaydi[] {
     const yazarlar = Array.isArray(kayit.author)
       ? kayit.author.flatMap((yazar) => {
           const deger = (yazar ?? {}) as Record<string, unknown>;
-          const ad = [deger.given, deger.family].filter((parca) => typeof parca === "string").join(" ").trim();
+          /*
+            Kurumsal yazarı Crossref {"name": "..."} olarak veriyor;
+            given/family yok. Yalnızca ikisine bakmak WHO, OECD, TÜİK gibi
+            kaynakları "Yazar bilgisi yok" yapıyor ve kullanıcının
+            kaynakçasına yazarsız kaydediyordu.
+          */
+          const ad =
+            [deger.given, deger.family].filter((parca) => typeof parca === "string").join(" ").trim()
+            || (typeof deger.name === "string" ? deger.name.trim() : "");
           return ad ? [ad] : [];
         })
       : [];
@@ -215,6 +229,22 @@ export function crossrefKayitlari(govde: unknown): AramaKaydi[] {
 const basligiSadelestir = (baslik: string) =>
   baslik.toLocaleLowerCase("tr-TR").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
+/*
+  Başlık+yıl anahtarı yalnızca AYIRT EDİCİ başlıklarda kullanılıyor.
+  "Editöryal", "Önsöz", "Giriş" gibi tek kelimelik başlıklar her sayıda
+  tekrar eder; onları anahtar saymak iki AYRI yayını tek satırda
+  birleştirir ve birinin başlığı diğerinin dergisiyle eşleşirdi.
+
+  Eşik dar tutuldu (iki kelime ve sekiz harf): "Örgütsel Bağlılık" gibi
+  kısa ama ayırt edici başlıklar elenmemeli — eleme, aynı yayının iki kez
+  listelenmesi demek.
+*/
+function baslikAnahtar(kayit: { baslik: string; yil: number | null }): string | null {
+  const sade = basligiSadelestir(kayit.baslik);
+  if (sade.split(" ").filter(Boolean).length < 2 || sade.length < 8) return null;
+  return `${sade}|${kayit.yil ?? ""}`;
+}
+
 /**
  * İki dizinin sonuçlarını sırayla harmanlar ve tekilleştirir.
  *
@@ -231,11 +261,24 @@ export function kayitlariBirlestir(listeler: AramaKaydi[][], sinir = EN_FAZLA_SO
   const enUzun = Math.max(0, ...listeler.map((liste) => liste.length));
   for (let i = 0; i < enUzun; i++) for (const liste of listeler) if (liste[i]) sirali.push(liste[i]);
 
-  const gorulen = new Map<string, AramaKaydi>();
+  const doiIle = new Map<string, AramaKaydi>();
+  const baslikIle = new Map<string, AramaKaydi>();
   const sonuc: AramaKaydi[] = [];
+
   for (const kayit of sirali) {
-    const anahtar = kayit.doi ?? `${basligiSadelestir(kayit.baslik)}|${kayit.yil ?? ""}`;
-    const onceki = gorulen.get(anahtar);
+    const baslikAnahtari = baslikAnahtar(kayit);
+    /*
+      Eşleşme ÖNCE DOI, sonra başlık+yıl. Eskiden anahtar "DOI varsa DOI,
+      yoksa başlık" idi: aynı yayının DOI'li ve DOI'siz kopyası hiç
+      karşılaşmıyordu. OpenAlex tez ve rapor kayıtlarında DOI'yi sık sık
+      boş bırakıyor, Crossref aynı yayını DOI'yle veriyordu — sonuç
+      listede AYNI KAYNAK İKİ KEZ, ve "Listenizde" işareti yalnızca
+      birine düştüğü için kullanıcı ikisini de ekleyebiliyordu.
+    */
+    const onceki =
+      (kayit.doi ? doiIle.get(kayit.doi) : undefined)
+      ?? (baslikAnahtari ? baslikIle.get(baslikAnahtari) : undefined);
+
     if (onceki) {
       onceki.dergi = onceki.dergi ?? kayit.dergi;
       onceki.doi = onceki.doi ?? kayit.doi;
@@ -245,10 +288,28 @@ export function kayitlariBirlestir(listeler: AramaKaydi[][], sinir = EN_FAZLA_SO
         onceki.acikErisimUrl = kayit.acikErisimUrl;
       }
       if (onceki.yazarlar.length === 0) onceki.yazarlar = kayit.yazarlar;
+      /*
+        YIL UZLAŞTIRILIYOR. Eskiden birleştirmede yıla hiç dokunulmuyordu
+        ve hangi kopya önce geldiyse onun yılı kalıyordu. Crossref'in
+        `issued` alanı çevrim içi ilk yayım tarihini verir, OpenAlex'in
+        `publication_year` alanı ise sayının yılını: aynı yayın için
+        2019 ve 2020 görülebiliyor. Kullanıcı "2020 ve sonrası" süzüp
+        listede "2019" görüyor, üstüne o yılı kaynakçasına kaydediyordu.
+
+        Künyede kullanılan yıl sayının yılıdır; OpenAlex'inki tercih
+        ediliyor. Boşsa diğerinden dolduruluyor.
+      */
+      if (kayit.saglayici === "openalex" && kayit.yil) onceki.yil = kayit.yil;
+      else onceki.yil = onceki.yil ?? kayit.yil;
+      // Yeni anahtarlar da aynı kayda bağlanıyor: sonraki kopya bulunsun.
+      if (onceki.doi) doiIle.set(onceki.doi, onceki);
+      if (baslikAnahtari) baslikIle.set(baslikAnahtari, onceki);
       continue;
     }
+
     const kopya = { ...kayit, yazarlar: [...kayit.yazarlar] };
-    gorulen.set(anahtar, kopya);
+    if (kopya.doi) doiIle.set(kopya.doi, kopya);
+    if (baslikAnahtari) baslikIle.set(baslikAnahtari, kopya);
     sonuc.push(kopya);
     if (sonuc.length >= sinir) break;
   }
@@ -303,10 +364,35 @@ export async function literaturAra(filtre: AramaFiltresi, getir: Getirici = vars
     }
   });
 
-  let kayitlar = kayitlariBirlestir(listeler);
-  /* Açık erişim süzgeci yalnızca OpenAlex'te var; Crossref sonuçları
-     süzülmeden gelirse kullanıcı "açık erişim" dediği halde kapalı
-     kaynak görür. */
-  if (filtre.yalnizcaAcikErisim) kayitlar = kayitlar.filter((kayit) => kayit.acikErisim);
+  /*
+    Açık erişim süzgeci BİRLEŞTİRMEDEN ÖNCE uygulanıyor.
+
+    Eskiden sonradan süzülüyordu ve bu sessizce sonuç kaybettiriyordu:
+    birleştirme iki dizini harmanlayıp 20'de kesiyor, Crossref kayıtları
+    ise açık erişimi bilmediği için hep `false`. Yani 20 satırın yarısı
+    süzgeçte silinecek kayıtlarla doluyor, kullanıcı elde 15 açık erişim
+    sonucu varken 10 tanesini görüyordu. Tuhaf sonucu şuydu: Crossref
+    ÇALIŞMADIĞINDA aynı arama daha çok sonuç veriyordu.
+  */
+  const suzulmus = filtre.yalnizcaAcikErisim
+    ? listeler.map((liste) => liste.filter((kayit) => kayit.acikErisim))
+    : listeler;
+
+  let kayitlar = kayitlariBirlestir(suzulmus);
+
+  /*
+    Yıl süzgeci de sonuçta doğrulanıyor. Dizinler tarih alanlarını farklı
+    dolduruyor ve birleştirmeden sonra gösterilen yıl kullanıcının
+    istediği aralığın dışına düşebiliyordu — üstüne o yıl kaynakçaya
+    kaydediliyordu. Aralığın dışındaki satırı göstermek, süzgeci
+    anlamsızlaştırır.
+  */
+  // Dizinlere gönderilen sınırların aynısı (yilSinirla) kullanılıyor;
+  // ham değeri süzmek, dizinin uygulamadığı bir kuralı uygulamak olurdu.
+  const danSinir = yilSinirla(filtre.yilDan);
+  const kadarSinir = yilSinirla(filtre.yilaKadar);
+  if (danSinir != null) kayitlar = kayitlar.filter((kayit) => kayit.yil == null || kayit.yil >= danSinir);
+  if (kadarSinir != null) kayitlar = kayitlar.filter((kayit) => kayit.yil == null || kayit.yil <= kadarSinir);
+
   return { kayitlar, ulasilamayan };
 }

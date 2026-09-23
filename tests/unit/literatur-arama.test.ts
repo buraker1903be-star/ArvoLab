@@ -156,6 +156,54 @@ describe("arama akışı", () => {
     assert.deepEqual(sonuc.ulasilamayan, ["crossref"]);
   });
 
+  /*
+    Süzgeç eskiden BİRLEŞTİRMEDEN SONRA uygulanıyordu. Birleştirme iki
+    dizini harmanlayıp 20'de kesiyor, Crossref ise açık erişimi
+    bilmediği için hep `false` — yani 20 satırın yarısı silinecek
+    kayıtlarla doluyor, elde 15 açık erişim sonucu varken kullanıcı 10
+    tanesini görüyordu. Tuhaf sonucu: Crossref ÇALIŞMADIĞINDA aynı arama
+    daha çok sonuç veriyordu.
+  */
+  test("açık erişim süzgeci sonuç kaybettirmez", async () => {
+    const oa = (i: number) => ({
+      id: `https://openalex.org/W${i}`,
+      title: `Açık erişim çalışması ${i}`,
+      doi: `https://doi.org/10.1/oa${i}`,
+      publication_year: 2021,
+      type: "article",
+      open_access: { is_oa: true, oa_url: `https://oa.example/${i}.pdf` },
+    });
+    const kapali = (i: number) => ({
+      DOI: `10.2/cr${i}`,
+      title: [`Crossref çalışması ${i}`],
+      type: "journal-article",
+      issued: { "date-parts": [[2021]] },
+    });
+
+    const sonuc = await literaturAra({ sorgu: "x", yalnizcaAcikErisim: true }, async (adres) =>
+      adres.includes("crossref")
+        ? { message: { items: Array.from({ length: 15 }, (_, i) => kapali(i)) } }
+        : { results: Array.from({ length: 15 }, (_, i) => oa(i)) },
+    );
+
+    assert.equal(sonuc.kayitlar.length, 15);
+    assert.ok(sonuc.kayitlar.every((kayit) => kayit.acikErisim));
+  });
+
+  /*
+    Yıl süzgeci sonuçta da doğrulanıyor: dizinler tarih alanlarını farklı
+    dolduruyor ve aralık dışına düşen bir satır kullanıcının kaynakçasına
+    yanlış yıl yazdırıyordu.
+  */
+  test("aralığın dışındaki yıl listelenmez", async () => {
+    const sonuc = await literaturAra({ sorgu: "x", yilDan: 2020 }, async (adres) =>
+      adres.includes("crossref")
+        ? { message: { items: [{ DOI: "10.3/eski", title: ["Eski çalışma"], issued: { "date-parts": [[2019]] } }] } }
+        : { results: [] },
+    );
+    assert.deepEqual(sonuc.kayitlar, []);
+  });
+
   test("açık erişim istendiğinde Crossref sonuçları da süzülür", async () => {
     // Süzgeç yalnızca OpenAlex'te var; süzülmezse kullanıcı "açık erişim"
     // dediği halde kapalı kaynak görürdü.
@@ -163,5 +211,76 @@ describe("arama akışı", () => {
       adres.includes("crossref") ? crossrefGovde : { results: [] },
     );
     assert.deepEqual(sonuc.kayitlar, []);
+  });
+
+  /*
+    DOI'li ve DOI'siz kopya eskiden hiç karşılaşmıyordu: anahtar "DOI
+    varsa DOI, yoksa başlık" idi. OpenAlex tez ve raporlarda DOI'yi sık
+    sık boş bırakıyor, Crossref aynı yayını DOI'yle veriyordu — sonuç,
+    listede aynı kaynağın iki kez görünmesi ve kullanıcının ikisini de
+    kaynakçasına eklemesiydi.
+  */
+  test("aynı yayının DOI'li ve DOI'siz kopyası birleşir", () => {
+    const temel = (ek: Partial<AramaKaydi>): AramaKaydi => ({
+      kimlik: "k", baslik: "Örgütsel Bağlılık Üzerine", yazarlar: [], yil: 2021, tur: "article",
+      dergi: null, doi: null, url: "https://a.example/1", atifSayisi: null,
+      acikErisim: false, acikErisimUrl: null, saglayici: "openalex", ...ek,
+    });
+    const birlesik = kayitlariBirlestir([
+      [temel({ doi: null, saglayici: "openalex" })],
+      [temel({ doi: "10.5555/xyz", dergi: "Dergi", saglayici: "crossref" })],
+    ]);
+    assert.equal(birlesik.length, 1);
+    // Birleşen kayıt DOI'yi ve dergiyi kazanmalı.
+    assert.equal(birlesik[0].doi, "10.5555/xyz");
+    assert.equal(birlesik[0].dergi, "Dergi");
+  });
+
+  /*
+    Tek kelimelik başlıklar her sayıda tekrar eder ("Editöryal", "Önsöz");
+    onları anahtar saymak iki AYRI yayını tek satırda birleştirir ve
+    birinin başlığı diğerinin dergisiyle eşleşirdi.
+  */
+  test("tek kelimelik başlıklar yanlışlıkla birleştirilmez", () => {
+    const yap = (dergi: string, saglayici: AramaKaydi["saglayici"]): AramaKaydi => ({
+      kimlik: dergi, baslik: "Editöryal", yazarlar: [], yil: 2020, tur: "article", dergi,
+      doi: null, url: `https://x.example/${dergi}`, atifSayisi: null,
+      acikErisim: false, acikErisimUrl: null, saglayici,
+    });
+    const birlesik = kayitlariBirlestir([[yap("A Dergisi", "openalex")], [yap("B Dergisi", "crossref")]]);
+    assert.equal(birlesik.length, 2);
+  });
+
+  /*
+    Crossref'in `issued` alanı çevrim içi ilk yayım tarihini verir,
+    OpenAlex'in `publication_year` alanı sayının yılını. Eskiden
+    birleştirmede yıla hiç dokunulmuyor, hangi kopya önce geldiyse onun
+    yılı kalıyordu: kullanıcı "2020 ve sonrası" süzüp listede 2019
+    görebiliyor ve o yılı kaynakçasına kaydediyordu.
+  */
+  test("yıl uzlaştırılır: sayının yılı (OpenAlex) tercih edilir", () => {
+    const yap = (yil: number, saglayici: AramaKaydi["saglayici"]): AramaKaydi => ({
+      kimlik: "10.7777/abc", baslik: "Çevrim İçi Önce Yayım", yazarlar: [], yil, tur: "article",
+      dergi: null, doi: "10.7777/abc", url: "https://doi.org/10.7777/abc", atifSayisi: null,
+      acikErisim: false, acikErisimUrl: null, saglayici,
+    });
+    // Crossref önce geliyor (listede ilk sırada) ama yıl OpenAlex'ten alınmalı.
+    const birlesik = kayitlariBirlestir([[yap(2019, "crossref")], [yap(2020, "openalex")]]);
+    assert.equal(birlesik.length, 1);
+    assert.equal(birlesik[0].yil, 2020);
+  });
+
+  test("kurumsal yazar düşmez (Crossref {name})", () => {
+    const kayitlar = crossrefKayitlari({
+      message: {
+        items: [{
+          title: ["Küresel Sağlık Raporu"],
+          author: [{ name: "World Health Organization" }],
+          DOI: "10.9999/who",
+          issued: { "date-parts": [[2021]] },
+        }],
+      },
+    });
+    assert.deepEqual(kayitlar[0].yazarlar, ["World Health Organization"]);
   });
 });
