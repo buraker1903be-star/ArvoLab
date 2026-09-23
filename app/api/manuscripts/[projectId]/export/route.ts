@@ -102,7 +102,8 @@ export async function GET(
         chapterNewPage: guideline.settings.chapterNewPage,
       }
     : {};
-  const writerIds = [project.owner_id, project.assignee_id];
+  // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
+  const writerIds = [projectId, project.owner_id, project.assignee_id];
 
   const doc = await buildDocxFromTiptap({
     title: project.title ?? "ArvoLab Çalışması",

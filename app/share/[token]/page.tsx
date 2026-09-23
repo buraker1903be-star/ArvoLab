@@ -96,8 +96,8 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
         headingNumbering: row.heading_numbering ?? false,
       }
     : null;
-  // Resimler yalnızca metnin yazarlarının depo klasöründen imzalanır.
-  const doc = row ? await refreshImageUrls(row.content as TiptapDoc, [project.owner_id, project.assignee_id], admin) : null;
+  // Resimler yalnızca bu çalışmaya ait depo klasörlerinden imzalanır (çalışma, sahibi, atanan uzman).
+  const doc = row ? await refreshImageUrls(row.content as TiptapDoc, [link.project_id, project.owner_id, project.assignee_id], admin) : null;
 
   // Görüntülenme sayısı; ilk açılışta bağlantıyı oluşturana panel içi bildirim (en iyi çaba)
   await recordShareView(admin, link, project.title ?? "Çalışma");

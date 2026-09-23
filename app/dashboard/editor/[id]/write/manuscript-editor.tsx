@@ -488,6 +488,10 @@ export default function ManuscriptEditor({
             if (res.sessionExpired) {
               blockedRef.current = true;
               setSessionExpired(true);
+            } else if (res.forbidden) {
+              // Yetki (ya da abonelik) reddi: yeniden denemek asla başarmaz,
+              // 10 saniyede bir sonsuza kadar denenmesin.
+              blockedRef.current = true;
             } else {
               scheduleSave(RETRY_DELAY_MS);
             }
@@ -846,7 +850,8 @@ export default function ManuscriptEditor({
         // (~4.5 MB, aşılamaz) atlamak için doğrudan tarayıcıdan
         // Supabase Storage'a yüklenir (belge yüklemeyle aynı mimari).
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `${user.id}/editor-images/${Date.now()}-${safeName}`;
+        // Klasör çalışmanın kimliği: resmi kim eklerse eklesin çalışmaya bakan herkes görür.
+        const path = `${projectId}/editor-images/${Date.now()}-${safeName}`;
 
         const { error: uploadError } = await supabase.storage
           .from("project-files")
@@ -873,7 +878,7 @@ export default function ManuscriptEditor({
         setImageUploading(false);
       }
     },
-    [editor]
+    [editor, projectId]
   );
 
   const openFootnoteEditor = useCallback((pos: number, text: string) => {
@@ -1969,6 +1974,7 @@ export default function ManuscriptEditor({
       />
       <ImageLibraryDialog
         open={libraryOpen}
+        projectId={projectId}
         onClose={() => setLibraryOpen(false)}
         onPick={(src, name) => editor.chain().focus().setImage({ src, alt: name }).run()}
       />

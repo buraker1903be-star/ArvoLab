@@ -15,13 +15,18 @@ interface LibraryImage {
 
 interface ImageLibraryDialogProps {
   open: boolean;
+  projectId: string;
   onClose: () => void;
   onPick: (src: string, name: string) => void;
 }
 
-// Kullanıcının editöre daha önce yüklediği resimler (depodaki kendi editor-images klasörü).
-// Resimler depoda durduğu için metinden düşmüş bir resim buradan tek tıkla yeniden eklenebilir.
-export default function ImageLibraryDialog({ open, onClose, onPick }: ImageLibraryDialogProps) {
+// Bu çalışmaya yüklenmiş resimler. Resimler depoda durduğu için metinden düşmüş bir
+// resim buradan tek tıkla yeniden eklenebilir.
+//
+// İki klasör birden okunur: çalışmanın klasörü (yeni yol, kim yüklerse yüklesin
+// çalışmaya bakan herkes görür) ve kullanıcının kendi klasörü (eski yol; oradaki
+// resimler yerinde kaldı).
+export default function ImageLibraryDialog({ open, projectId, onClose, onPick }: ImageLibraryDialogProps) {
   const [images, setImages] = useState<LibraryImage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,20 +40,27 @@ export default function ImageLibraryDialog({ open, onClose, onPick }: ImageLibra
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) throw new Error("session");
-        const folder = `${user.id}/editor-images`;
         const bucket = supabase.storage.from("project-files");
-        const { data: files, error: listError } = await bucket.list(folder, {
-          limit: 200,
-          sortBy: { column: "created_at", order: "desc" },
-        });
-        if (listError) throw listError;
-        const entries = (files ?? []).filter((file) => file.name && !file.name.startsWith("."));
+        const klasorler = [`${projectId}/editor-images`, `${user.id}/editor-images`];
+        const listeler = await Promise.all(
+          klasorler.map(async (folder) => {
+            // Bir klasör okunamazsa (ör. hiç kullanılmamış eski yol) diğeri yine gösterilir.
+            const { data: files } = await bucket.list(folder, { limit: 200, sortBy: { column: "created_at", order: "desc" } });
+            return (files ?? [])
+              .filter((file) => file.name && !file.name.startsWith("."))
+              .map((file) => ({ path: `${folder}/${file.name}`, name: file.name, createdAt: file.created_at ?? null }));
+          })
+        );
+        const entries = listeler
+          .flat()
+          .filter((entry, index, hepsi) => hepsi.findIndex((other) => other.path === entry.path) === index)
+          .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
         if (entries.length === 0) {
           if (!cancelled) setImages([]);
           return;
         }
         const { data: signed, error: signError } = await bucket.createSignedUrls(
-          entries.map((file) => `${folder}/${file.name}`),
+          entries.map((entry) => entry.path),
           THUMB_TTL_SECONDS
         );
         if (signError) throw signError;
@@ -56,7 +68,7 @@ export default function ImageLibraryDialog({ open, onClose, onPick }: ImageLibra
         if (!cancelled) {
           setImages(
             entries
-              .map((file) => ({ name: file.name, url: byPath.get(`${folder}/${file.name}`) ?? "", createdAt: file.created_at ?? null }))
+              .map((entry) => ({ name: entry.name, url: byPath.get(entry.path) ?? "", createdAt: entry.createdAt }))
               .filter((image) => image.url)
           );
           setError(null);
@@ -72,7 +84,7 @@ export default function ImageLibraryDialog({ open, onClose, onPick }: ImageLibra
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, projectId]);
 
   const close = () => {
     setImages(null);
@@ -83,9 +95,9 @@ export default function ImageLibraryDialog({ open, onClose, onPick }: ImageLibra
     <Dialog
       open={open}
       onClose={close}
-      kicker="Resimlerim"
-      title="Yüklediğiniz resimler"
-      description="Editöre daha önce yüklediğiniz resimler burada. Birine tıklayınca imlecin olduğu yere eklenir."
+      kicker="Resimler"
+      title="Bu çalışmaya yüklenen resimler"
+      description="Bu çalışmanın editörüne yüklenmiş resimler burada. Birine tıklayınca imlecin olduğu yere eklenir."
     >
       {error ? <p className="alert" data-tone="danger" role="alert">{error}</p> : null}
       {images === null ? (
@@ -93,12 +105,12 @@ export default function ImageLibraryDialog({ open, onClose, onPick }: ImageLibra
       ) : images.length === 0 ? (
         <div className="empty-state">
           <ImageOff size={22} aria-hidden="true" />
-          <p>Henüz editöre resim yüklemediniz.</p>
+          <p>Bu çalışmanın editörüne henüz resim yüklenmedi.</p>
         </div>
       ) : (
         <ul className="image-library">
           {images.map((image) => (
-            <li key={image.name}>
+            <li key={image.url}>
               <button
                 type="button"
                 onClick={() => {

@@ -161,7 +161,18 @@ describe("fonksiyon yetkileri", () => {
   // Politikalarda geçen yardımcılar açık kalır (kendi bilgini döndürür; ör.
   // subscription_open depolama yükleme politikasında). notify, bump_share_view,
   // rate_limit_hit gibi iç fonksiyonlar kapalı.
-  const POLITIKA = ["can_view_project", "can_write_project", "get_my_organization_id", "has_role", "subscription_open"];
+  //
+  // calisma_klasoru — veriye hiç bakmaz: depo yolunun ilk klasörünü uuid ise
+  // uuid olarak döndürür, değilse null. Depo politikalarında "bu dosya hangi
+  // çalışmanın klasöründe" sorusunu yanıtlıyor.
+  const POLITIKA = [
+    "calisma_klasoru",
+    "can_view_project",
+    "can_write_project",
+    "get_my_organization_id",
+    "has_role",
+    "subscription_open",
+  ];
 
   test("anon yalnızca politika yardımcılarını çağırabilir", async () => {
     assert.deepEqual(await acik("anon"), POLITIKA);

@@ -32,7 +32,8 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
   ]);
   const sync = resolveGuidelineSync(guideline, manuscript);
   // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
-  const content = manuscript ? await refreshImageUrls(manuscript.content, [project.owner_id, project.assignee_id]) : null;
+  // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
+  const content = manuscript ? await refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : null;
   // Eski kayıt hatasından etkilenen belge: kullanıcıya neyin kaybolduğu gösterilir.
   const formatLoss = manuscript ? detectFormatLoss(manuscript.content) : null;
 
