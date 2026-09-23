@@ -257,14 +257,23 @@ export default function CitationCheckForm({
 
           {/* Kaç kaynağın ağ üzerinden doğrulandığı yazılıyor: "bulunamadı"
               ile "bakılmadı" aynı şey değil. Eskiden 25'i aşan liste
-              hiç denetlenmiyordu, şimdi biçim ve atıf eşleşmesi hepsinde
-              çalışıyor ama ağ doğrulaması ilk 25'te kalıyor. */}
+              hiç denetlenmiyordu; sonra biçim ve atıf eşleşmesi hepsinde
+              çalışmaya başladı ama ağ doğrulaması ilk 25'te kalıyordu ve
+              orada KALICI olarak kalıyordu — tekrar çalıştırmak aynı 25'i
+              yeniden soruyordu.
+
+              Artık bakılan künyeler önbelleğe giriyor ve sınır yalnızca
+              bakılmamışlara harcanıyor; tekrar çalıştırmak sıradakileri
+              kapatıyor. Bunu YAZMAK gerekiyor: kullanıcı bilmediği bir
+              çözümü kendiliğinden denemez. */}
           {result.dogrulananSayisi < result.toplamKaynak ? (
             <div className="callout mt-md" data-tone="info">
               Biçim ve atıf eşleşmesi {result.toplamKaynak} kaynağın hepsinde çalıştı.
-              Akademik veritabanı doğrulaması ilk {result.dogrulananSayisi} kaynak için
+              Akademik veritabanı doğrulaması {result.dogrulananSayisi} kaynak için
               yapıldı; kalan {result.toplamKaynak - result.dogrulananSayisi} kaynağa
-              bakılmadı (bulunamadı demek değil).
+              bu turda bakılmadı (bulunamadı demek değil).{" "}
+              <strong>Denetimi tekrar çalıştırdığınızda kalanlara bakılır</strong> —
+              bakılmış kaynaklar yeniden sorulmuyor.
             </div>
           ) : null}
 

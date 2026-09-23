@@ -9,6 +9,7 @@ import {
 import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
 import { stilTanimi } from "@/lib/atif/stiller";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
+import { dogrulamaOnbellegi } from "@/lib/dogrulama-onbellegi";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 export async function getMyProjects() {
@@ -94,7 +95,22 @@ export async function runCitationCheck(input: {
       ? { citationsWithoutReference: [], referencesWithoutCitation: [] }
       : crossCheck(citations, references, { yilaBak: stil.tur === "yazar-tarih" });
   const score = computeComplianceScore(references, cross);
-  const academicVerification = await verifyAcademicReferences(references, DOGRULAMA_SINIRI);
+  /*
+    Sınır artık AĞA GİDEN künye sayısı; önbellekten karşılananlar ondan
+    düşmüyor. Eskiden ilk 25'in ötesine hiç bakılamıyordu — 120 kaynaklı
+    bir tezde 95 künye kalıcı olarak "bakılmadı" kalıyordu. Artık her
+    çalıştırma bakılmamış 25 künye daha kapatıyor.
+
+    Önbellek kurulamazsa (sunucu anahtarı yok) doğrulama eskisi gibi
+    çalışsın: hızlandırma yokluğu denetimi durdurmamalı.
+  */
+  let onbellek;
+  try {
+    onbellek = dogrulamaOnbellegi();
+  } catch (sorun) {
+    console.error("[atıf] doğrulama önbelleği kurulamadı", sorun instanceof Error ? sorun.message : sorun);
+  }
+  const academicVerification = await verifyAcademicReferences(references, DOGRULAMA_SINIRI, onbellek);
   const verificationSummary = {
     verified: academicVerification.filter((item) => item.status === "verified").length,
     possible: academicVerification.filter((item) => item.status === "possible_match").length,

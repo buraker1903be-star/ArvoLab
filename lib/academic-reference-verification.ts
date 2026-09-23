@@ -1,4 +1,5 @@
 import type { ParsedReference } from "@/lib/apa7";
+import { dogrulamaAnahtari } from "@/lib/kaynak-anahtari";
 
 export type AcademicProvider = "crossref" | "openalex";
 
@@ -207,14 +208,103 @@ async function verifyReference(reference: ParsedReference): Promise<ReferenceVer
   };
 }
 
+/** Önbelleğe konan/oradan okunan kısım; ham künye ve Scholar bağlantısı yerelde üretiliyor. */
+export type OnbellekKaydi = Pick<ReferenceVerification, "status" | "bestMatch" | "matches">;
+
+export interface DogrulamaOnbellegi {
+  oku(anahtarlar: string[]): Promise<Map<string, OnbellekKaydi>>;
+  yaz(girisler: { anahtar: string; kayit: OnbellekKaydi }[]): Promise<void>;
+}
+
+/** Künyeden, ağa gitmeden üretilebilen alanlar. */
+function yerelAlanlar(reference: ParsedReference) {
+  const scholarQuery = [reference.title, reference.authors?.[0], reference.year].filter(Boolean).join(" ");
+  return {
+    reference: reference.raw,
+    googleScholarUrl: `https://scholar.google.com/scholar?q=${encodeURIComponent(scholarQuery || reference.raw)}`,
+  };
+}
+
+/**
+ * Kaynakçayı doğrular.
+ *
+ * `limit` AĞA GİDEN künye sayısını sınırlıyor, kaynakça uzunluğunu değil.
+ * Önbellekten karşılanan künyeler sınırdan düşmüyor: eskiden ilk 25'in
+ * ötesine hiç bakılamıyordu, artık her çalıştırma bakılmamış 25 künye
+ * daha kapatıyor ve uzun kaynakça birkaç turda tamamlanıyor.
+ *
+ * Dönen dizi kaynakça SIRASINDA ve yalnızca bakılabilenleri içeriyor;
+ * ekran "kalan N kaynağa bakılmadı" diye yazabilsin diye sayı çağıranda
+ * hesaplanıyor (references.length ile farkı).
+ */
 export async function verifyAcademicReferences(
   references: ParsedReference[],
-  limit = 25
+  limit = 25,
+  onbellek?: DogrulamaOnbellegi,
 ): Promise<ReferenceVerification[]> {
-  const selected = references.slice(0, limit);
-  const results: ReferenceVerification[] = [];
-  for (let index = 0; index < selected.length; index += 4) {
-    results.push(...await Promise.all(selected.slice(index, index + 4).map(verifyReference)));
+  /*
+    Yetersiz veri AĞA GİTMEDEN belli oluyor ve önbelleğe de girmiyor:
+    yerel bir karar, saklamanın getirisi yok.
+  */
+  const yetersiz = (reference: ParsedReference) => !reference.title && reference.raw.length < 20;
+
+  const anahtarlar = new Map<ParsedReference, string | null>(
+    references.map((reference) => [reference, yetersiz(reference) ? null : dogrulamaAnahtari(reference)]),
+  );
+
+  let bilinen = new Map<string, OnbellekKaydi>();
+  if (onbellek) {
+    const aranacak = [...new Set([...anahtarlar.values()].filter((anahtar): anahtar is string => Boolean(anahtar)))];
+    if (aranacak.length) {
+      try {
+        bilinen = await onbellek.oku(aranacak);
+      } catch (sorun) {
+        // Önbellek bir hızlandırma; okunamaması denetimi durdurmamalı.
+        console.error("[dogrulama] önbellek okunamadı", sorun instanceof Error ? sorun.message : sorun);
+      }
+    }
   }
-  return results;
+
+  const sonuclar: ReferenceVerification[] = [];
+  const bakilacak: ParsedReference[] = [];
+
+  for (const reference of references) {
+    if (yetersiz(reference)) {
+      sonuclar.push({ ...yerelAlanlar(reference), status: "insufficient_data", bestMatch: null, matches: [] });
+      continue;
+    }
+    const anahtar = anahtarlar.get(reference) ?? null;
+    const kayit = anahtar ? bilinen.get(anahtar) : undefined;
+    if (kayit) {
+      sonuclar.push({ ...yerelAlanlar(reference), ...kayit });
+      continue;
+    }
+    // Sınır YALNIZCA bakılmamışlara harcanıyor.
+    if (bakilacak.length < limit) bakilacak.push(reference);
+  }
+
+  const yeni: { anahtar: string; kayit: OnbellekKaydi }[] = [];
+  for (let index = 0; index < bakilacak.length; index += 4) {
+    const parti = await Promise.all(bakilacak.slice(index, index + 4).map(verifyReference));
+    for (const sonuc of parti) {
+      sonuclar.push(sonuc);
+      const reference = bakilacak.find((aday) => aday.raw === sonuc.reference);
+      const anahtar = reference ? anahtarlar.get(reference) ?? null : null;
+      if (anahtar && sonuc.status !== "insufficient_data") {
+        yeni.push({ anahtar, kayit: { status: sonuc.status, bestMatch: sonuc.bestMatch, matches: sonuc.matches } });
+      }
+    }
+  }
+
+  if (onbellek && yeni.length) {
+    try {
+      await onbellek.yaz(yeni);
+    } catch (sorun) {
+      console.error("[dogrulama] önbellek yazılamadı", sorun instanceof Error ? sorun.message : sorun);
+    }
+  }
+
+  // Kaynakça sırası korunuyor: ekran künyeleri sırayla listeliyor.
+  const sira = new Map(references.map((reference, index) => [reference.raw, index]));
+  return sonuclar.sort((a, b) => (sira.get(a.reference) ?? 0) - (sira.get(b.reference) ?? 0));
 }
