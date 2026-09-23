@@ -18,13 +18,7 @@ import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
 import CikarimOzeti from "./cikarim-ozeti";
 import { kilavuzuYenidenTara, universiteKilavuzuKesfet } from "@/app/actions/guideline-scan";
-
-const CITATION_LABELS: Record<string, string> = {
-  apa7: "APA 7",
-  vancouver: "Vancouver",
-  chicago: "Chicago",
-  ieee: "IEEE",
-};
+import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 
 const REVIEW_FONTS = ["Times New Roman", "Arial", "Calibri", "Cambria", "Garamond", "Georgia", "Verdana", "Book Antiqua"];
 
@@ -157,7 +151,7 @@ export default async function GuidelinesPage() {
               <label>
                 <span>Kaynakça sistemi</span>
                 <select name="citationStyle" defaultValue="apa7">
-                  {Object.entries(CITATION_LABELS).map(([value, label]) => (
+                  {Object.entries(STIL_ETIKETLERI).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
@@ -297,7 +291,7 @@ export default async function GuidelinesPage() {
                 <div className="project-card-main">
                   <div>
                     <div className="pill-row">
-                      <span className="status-pill">{CITATION_LABELS[g.citation_style] ?? g.citation_style}</span>
+                      <span className="status-pill">{STIL_ETIKETLERI[g.citation_style] ?? g.citation_style}</span>
                       <span className="status-pill" data-tone={statusTone(g.analysis_status)}>
                         {g.analysis_status === "approved"
                           ? "Onaylı"
@@ -346,7 +340,7 @@ export default async function GuidelinesPage() {
                 </div>
 
                 {/* Yönetici neye dayanarak onayladığını görsün. */}
-                {canManage ? <CikarimOzeti cikarim={g.ai_analysis} kayitliStil={CITATION_LABELS[g.citation_style] ?? g.citation_style} /> : null}
+                {canManage ? <CikarimOzeti cikarim={g.ai_analysis} kayitliStil={STIL_ETIKETLERI[g.citation_style] ?? g.citation_style} /> : null}
 
                 {canManage ? (
                   <div className="cluster cluster-spaced">
@@ -401,7 +395,7 @@ export default async function GuidelinesPage() {
                         <label>
                           <span>Kaynakça sistemi</span>
                           <select name="citationStyle" defaultValue={g.citation_style}>
-                            {Object.entries(CITATION_LABELS).map(([value, label]) => (
+                            {Object.entries(STIL_ETIKETLERI).map(([value, label]) => (
                               <option key={value} value={value}>
                                 {label}
                               </option>

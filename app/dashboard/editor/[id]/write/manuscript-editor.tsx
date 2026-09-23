@@ -79,6 +79,7 @@ import CiteDialog from "./cite-dialog";
 import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import type { CitationStyle } from "@/lib/citation-format";
+import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
@@ -118,7 +119,10 @@ import {
   type OutlineHeading,
 } from "./editor-navigation";
 
-const CITATION_STYLES: CitationStyle[] = ["apa7", "chicago", "ieee", "vancouver"];
+// Liste tek kaynaktan (lib/atif/stiller.ts): eskiden burada elle yazılıydı
+// ve yeni stil eklendiğinde "Kaynak ekle" penceresi sessizce APA biçiminde
+// künye üretiyordu.
+const CITATION_STYLES = STIL_SECENEKLERI.map((secenek) => secenek.deger) as CitationStyle[];
 
 interface ProjectDefaults {
   title: string;
