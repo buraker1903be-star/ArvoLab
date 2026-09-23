@@ -9,9 +9,15 @@ interface AiFeedbackButtonProps {
   initialFeedback: string | null;
   /** Yapay zeka sunucusu tanımlı değilse düğme yerine açıklama gösterilir. */
   configured: boolean;
+  /**
+   * Önceki değerlendirme OKUNAMADI. "Hiç değerlendirilmemiş" ile aynı
+   * gösterilirse kullanıcı asistanı boşuna yeniden çalıştırır — ve her
+   * çalıştırma gerçek bir istek demek.
+   */
+  okunamadi?: boolean;
 }
 
-export default function AiFeedbackButton({ documentId, initialFeedback, configured }: AiFeedbackButtonProps) {
+export default function AiFeedbackButton({ documentId, initialFeedback, configured, okunamadi = false }: AiFeedbackButtonProps) {
   const [feedback, setFeedback] = useState<string | null>(initialFeedback);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +59,13 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
         /* Eskiden düğme görünüyor, her tıklama "Vercel ayarlarına anahtar
            ekleyin" diyen bir hata ve başarısız bir kayıt üretiyordu. */
         <p className="alert" data-tone="info">AI geri bildirimi şu an kapalı.</p>
+      )}
+
+      {okunamadi && !feedback && (
+        <p className="alert mt-sm" data-tone="warning" role="alert">
+          Bu belgenin önceki değerlendirmesi okunamadı. Hiç değerlendirilmemiş
+          olduğu anlamına gelmez; yeniden çalıştırmadan önce sayfayı yenileyin.
+        </p>
       )}
 
       {error && (

@@ -560,14 +560,18 @@ export async function deleteGuideline(guidelineId: string): Promise<ActionResult
 
   Eşleşme kaba bilerek: kullanıcı "Ankara Üniv." ya da "ANKARA ÜNİVERSİTESİ"
   yazmış olabilir. Yanlış kılavuzu göstermemek için yalnızca onaylı ve etkin
-  kayıtlara bakılır; bulunamazsa sessizce null döner.
+  kayıtlara bakılır.
+
+  "Bulunamadı" ile "bakamadım" ayrı dönüyor: çalışma merkezi eskiden ikisine
+  de "<üniversite> için onaylı kılavuz bulunamadı" yazıyordu — kullanıcının
+  kurumu hakkında, geçici bir arızadan üretilmiş bir kesinlik.
 */
 export async function calismaKilavuzu(
   universite: string | null,
   enstitu: string | null,
-): Promise<(GuidelineMatch & { institute_name: string | null }) | null> {
+): Promise<{ kilavuz: (GuidelineMatch & { institute_name: string | null }) | null; okunamadi: boolean }> {
   const ad = (universite ?? "").trim();
-  if (ad.length < 3) return null;
+  if (ad.length < 3) return { kilavuz: null, okunamadi: false };
 
   const supabase = await createClient();
   const select =
@@ -585,9 +589,9 @@ export async function calismaKilavuzu(
 
   if (error) {
     console.error("[merkez] kılavuz aranamadı:", error.message);
-    return null;
+    return { kilavuz: null, okunamadi: true };
   }
-  if (!data?.length) return null;
+  if (!data?.length) return { kilavuz: null, okunamadi: false };
 
   // Enstitü de yazılmışsa ona uyan kayıt öncelikli.
   const enstituAdi = (enstitu ?? "").trim().toLocaleLowerCase("tr-TR");
@@ -596,5 +600,5 @@ export async function calismaKilavuzu(
       data.find((satir) => (satir.institute_name ?? "").toLocaleLowerCase("tr-TR").includes(enstituAdi))) ||
     data[0];
 
-  return { ...secilen, match_level: "university" as const };
+  return { kilavuz: { ...secilen, match_level: "university" as const }, okunamadi: false };
 }

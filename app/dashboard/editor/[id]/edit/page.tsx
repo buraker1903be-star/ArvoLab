@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Save } from "lucide-react";
 import { getProjectForEdit, updateProject } from "@/app/actions/projects";
 import { getAuthContext } from "@/lib/auth-guards";
+import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
 import {
   OVERSIGHT_ONLY_STATUSES,
   PROJECT_STATUSES,
@@ -19,6 +20,26 @@ import AcademicUnitFields from "../../new/academic-unit-fields";
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [project, ctx, { satirlar: universities }] = await Promise.all([getProjectForEdit(id), getAuthContext(), getUniversities()]);
+  /* Okunamadı ile bulunamadı AYRI: çalışma merkezindeki (../page.tsx) ile
+     aynı ayrım. Geçici bir arızada 404 çizmek, kullanıcıya tezinin
+     olmadığını söylemekti. */
+  if (project === CALISMA_OKUNAMADI) {
+    return (
+      <main className="dashboard-page">
+        <article className="resume-card" role="alert">
+          <span className="dashboard-kicker">Bağlantı sorunu</span>
+          <div className="resume-heading">
+            <h2>Çalışma yüklenemedi</h2>
+            <p>Kaydınız yerinde duruyor. Sayfayı yenileyin; sorun sürerse destekten bildirin.</p>
+          </div>
+          <div className="cluster">
+            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">Çalışma merkezi</Link>
+            <Link href="/dashboard/support" className="projects-filter-button">Uygulama Destek</Link>
+          </div>
+        </article>
+      </main>
+    );
+  }
   if (!project || !ctx) notFound();
   const guideline = await loadAppliedGuideline(ctx.supabase, project.guideline_id);
 

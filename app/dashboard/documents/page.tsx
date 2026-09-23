@@ -65,6 +65,8 @@ export default async function DocumentsPage({
       .map(async (u) => ({ documentId: u.id, feedback: await getLatestFeedback(u.id) }))
   );
   const feedbackMap = new Map(feedbackResults.map((r) => [r.documentId, r.feedback]));
+  /* Değerlendirme okunamadıysa düğme "hiç değerlendirilmemiş" gibi
+     görünüyordu; kullanıcı yapay zekayı boşuna yeniden çalıştırıyordu. */
 
   async function handleRunOriginality(documentId: string) {
     "use server";
@@ -245,7 +247,8 @@ export default async function DocumentsPage({
 
                       <AiFeedbackButton
                         documentId={u.id}
-                        initialFeedback={feedbackMap.get(u.id)?.feedback_text ?? null}
+                        initialFeedback={feedbackMap.get(u.id)?.kayit?.feedback_text ?? null}
+                        okunamadi={feedbackMap.get(u.id)?.okunamadi ?? false}
                         configured={aiAcik}
                       />
                     </div>

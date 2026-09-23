@@ -99,7 +99,12 @@ export async function calismaOzeti(
           .select("id, university_name, institute_name, document_title, version_label, citation_style, academic_unit_id")
           .eq("id", calisma.guideline_id)
           .maybeSingle()
-          .then((sonuc) => (sonuc.data ? { ...sonuc.data, match_level: "university" as const } : null))
+          /* Bu dalda da hata yutuluyordu: bağlı kılavuz okunamayınca ekran
+             "onaylı kılavuz bulunamadı" diyordu. */
+          .then((sonuc) => ({
+            kilavuz: sonuc.data ? { ...sonuc.data, match_level: "university" as const } : null,
+            okunamadi: Boolean(sonuc.error),
+          }))
       : calismaKilavuzu(calisma.university, calisma.institute),
     // Tutarsızlık denetimi için kaynakların kendisi gerekiyor, sayısı değil.
     supabase
@@ -154,16 +159,17 @@ export async function calismaOzeti(
       kaynakListesi.data ?? [],
       calisma.citation_style,
     ),
-    kilavuz: kilavuz
+    kilavuz: kilavuz.kilavuz
       ? {
-          id: kilavuz.id,
-          baslik: kilavuz.document_title,
-          surum: kilavuz.version_label,
-          kurum: kilavuz.university_name,
-          enstitu: kilavuz.institute_name,
-          atifStili: kilavuz.citation_style,
+          id: kilavuz.kilavuz.id,
+          baslik: kilavuz.kilavuz.document_title,
+          surum: kilavuz.kilavuz.version_label,
+          kurum: kilavuz.kilavuz.university_name,
+          enstitu: kilavuz.kilavuz.institute_name,
+          atifStili: kilavuz.kilavuz.citation_style,
         }
       : null,
+    kilavuzOkunamadi: kilavuz.okunamadi,
   };
 }
 

@@ -201,7 +201,15 @@ export interface ProjectEditData {
   progress: number;
 }
 
-export async function getProjectForEdit(projectId: string): Promise<ProjectEditData | null> {
+/*
+  Eskiden okuma hatasında da null dönüyordu ve düzenleme sayfası notFound()
+  çiziyordu: geçici bir arızada kullanıcıya tezinin olmadığı söyleniyordu.
+  Aynı ayrım çalışma merkezinde zaten var (lib/calisma-ozeti.ts); sabit
+  oradan geliyor ki panelde tek bir "okunamadı" kavramı olsun.
+*/
+export async function getProjectForEdit(
+  projectId: string
+): Promise<ProjectEditData | null | typeof CALISMA_OKUNAMADI> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("academic_projects")
@@ -213,7 +221,7 @@ export async function getProjectForEdit(projectId: string): Promise<ProjectEditD
 
   if (error) {
     console.error(error);
-    return null;
+    return CALISMA_OKUNAMADI;
   }
   return data;
 }
@@ -226,6 +234,10 @@ export async function updateProject(projectId: string, formData: FormData): Prom
   if (!ctx) return SESSION_MISSING;
 
   const current = await getProjectForEdit(projectId);
+  // Okunamayan kaydın üzerine yazmak, yetki denetimini de atlatırdı.
+  if (current === CALISMA_OKUNAMADI) {
+    return { error: "Çalışma okunamadı; değişiklik kaydedilmedi. Tekrar deneyin." };
+  }
   if (!current) return { error: "Çalışma bulunamadı." };
 
   const canOversee = isOversightRole(ctx.role);

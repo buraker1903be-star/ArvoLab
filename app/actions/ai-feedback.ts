@@ -75,7 +75,15 @@ export interface AiFeedbackRecord {
   created_at: string;
 }
 
-export async function getLatestFeedback(documentId: string): Promise<AiFeedbackRecord | null> {
+/*
+  Eskiden okuma hatasında da null dönüyordu: belgeler ekranı önceki
+  değerlendirmeyi hiç göstermiyor, kullanıcı da yapay zekayı YENİDEN
+  çalıştırıyordu. Yanlış bilginin faturası burada doğrudan para: her
+  çalıştırma yeni bir asistan isteği.
+*/
+export async function getLatestFeedback(
+  documentId: string
+): Promise<{ kayit: AiFeedbackRecord | null; okunamadi: boolean }> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("ai_feedback_requests")
@@ -87,7 +95,7 @@ export async function getLatestFeedback(documentId: string): Promise<AiFeedbackR
 
   if (error) {
     console.error(error);
-    return null;
+    return { kayit: null, okunamadi: true };
   }
-  return data;
+  return { kayit: data, okunamadi: false };
 }

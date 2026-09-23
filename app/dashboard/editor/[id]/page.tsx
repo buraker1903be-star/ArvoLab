@@ -66,7 +66,7 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
   }
   if (!ozet) notFound();
 
-  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan, kilavuz, tutarsizliklar, hazirlik } = ozet;
+  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan, kilavuz, kilavuzOkunamadi, tutarsizliklar, hazirlik } = ozet;
   const stilCelisiyor = atifStiliCelisiyorMu(ozet);
   // Eksikler önce, bakılması gerekenler sonra (ana sayfadaki sıralamanın aynısı).
   const eksikMaddeler = (hazirlik?.items ?? [])
@@ -259,9 +259,11 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
               <b>Kılavuzlar</b>
               {kilavuz
                 ? `${kilavuz.baslik ?? "Tez yazım kılavuzu"}${kilavuz.surum ? ` · ${kilavuz.surum}` : ""}`
-                : calisma.university
-                  ? `${calisma.university} için onaylı kılavuz bulunamadı`
-                  : "Çalışma ayarlarından kurumu girin"}
+                : kilavuzOkunamadi
+                  ? "Kılavuz aranamadı; sayfayı yenileyin"
+                  : calisma.university
+                    ? `${calisma.university} için onaylı kılavuz bulunamadı`
+                    : "Çalışma ayarlarından kurumu girin"}
             </span>
           </Link>
         </div>

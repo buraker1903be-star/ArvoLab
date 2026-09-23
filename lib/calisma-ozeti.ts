@@ -67,6 +67,8 @@ export type CalismaOzeti = {
     enstitu: string | null;
     atifStili: string | null;
   } | null;
+  /** Kılavuz araması başarısız; "kılavuz yok" DEMEK DEĞİL. */
+  kilavuzOkunamadi: boolean;
 };
 
 export type AsistanBulgusu = { tur: string; baslik: string; aciklama: string };

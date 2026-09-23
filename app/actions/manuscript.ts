@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
-import { extractPlainText, extractHeadings, countWords, type TiptapDoc } from "@/lib/tiptap-text";
+import { extractPlainText, countWords, type TiptapDoc } from "@/lib/tiptap-text";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import { extractInTextCitations, crossCheck, computeComplianceScore, type ParsedReference } from "@/lib/apa7";
 import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
@@ -396,14 +396,3 @@ export async function runManuscriptCheck(projectId: string): Promise<{ error?: s
   };
 }
 
-export async function getManuscriptHeadings(projectId: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("project_manuscripts")
-    .select("content")
-    .eq("project_id", projectId)
-    .maybeSingle();
-
-  if (!data) return [];
-  return extractHeadings(data.content as TiptapDoc);
-}

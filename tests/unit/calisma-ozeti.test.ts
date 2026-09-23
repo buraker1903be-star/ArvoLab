@@ -31,6 +31,7 @@ const ozet = (parca: Partial<CalismaOzeti> = {}): CalismaOzeti => ({
   asistan: { toplam: 0, sonTarih: null, sonBulgular: [] },
   tutarsizliklar: [],
   kilavuz: null,
+  kilavuzOkunamadi: false,
   ...parca,
 });
 
