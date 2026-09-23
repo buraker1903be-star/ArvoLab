@@ -9,7 +9,9 @@
 
 import { headingMatchesSection } from "@/lib/section-match";
 import type { AbstractRules } from "@/lib/guideline-editor-settings";
-import { crossCheck, extractInTextCitations, parseChicagoReference, parseReferenceEntry } from "@/lib/apa7";
+import { crossCheck, extractInTextCitations } from "@/lib/apa7";
+import { kunyeleriAyristir } from "@/lib/atif/kunye";
+import { stilTanimi } from "@/lib/atif/stiller";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 import { checkParagraphFormat, describeParagraphFormat, type ParagraphFormatRules } from "@/lib/paragraph-format";
 
@@ -215,7 +217,11 @@ export function checkStructure(
 
   // ---------- Yazar-tarih stilleri: kaynakça alfabetik mi ----------
   const style = options.citationStyle;
-  if ((style === "apa7" || style === "chicago") && referenceEntries.length > 1) {
+  const stil = stilTanimi(style);
+  /* Kaynakçanın sırası stilin işi: numara stillerinde kaynaklar ATIF
+     SIRASINDA dizilir, alfabetik değildir. Eskiden bu ayrım koda
+     gömülüydü ve yalnızca APA/Chicago adı yazılıydı. */
+  if (stil.kaynakcaSirasi === "alfabetik" && referenceEntries.length > 1) {
     const unsorted = referenceEntries.some(
       (entry, index) => index > 0 && referenceEntries[index - 1].localeCompare(entry, "tr", { sensitivity: "base" }) > 0
     );
@@ -232,22 +238,37 @@ export function checkStructure(
     }
   }
 
-  // APA/Chicago'da kaynakça girdileri madde işareti ya da numara taşımaz: tek tıkla paragraflara çevrilir.
-  if ((style === "apa7" || style === "chicago") && referencesInList) {
+  // Yazar-tarih stillerinde kaynakça girdileri madde işareti ya da numara taşımaz: tek tıkla paragraflara çevrilir.
+  if (!stil.listeIsaretiSerbest && stil.tur === "yazar-tarih" && referencesInList) {
     add({
       tone: "warning",
-      message: "Kaynakça liste biçiminde (madde işareti/numara); APA ve Chicago'da kaynaklar liste işareti olmadan, ayrı paragraflar olarak yazılır.",
+      message: `Kaynakça liste biçiminde (madde işareti/numara); ${stil.ad} kaynakçasında kaynaklar liste işareti olmadan, ayrı paragraflar olarak yazılır.`,
       action: "convert-reference-lists",
     });
   }
 
+  /* ---------- Künye biçimi: HER stilde ----------
+     Eskiden künyeler yalnızca APA'da denetleniyordu. Chicago ayrıştırıcısı
+     hiç sorun üretmiyor, IEEE ve Vancouver künyeleri hiç okunmuyordu:
+     öğrenci Vancouver seçtiğinde belge kontrolü "sorun yok" diyordu, çünkü
+     bakmamıştı. Sessiz bir "temiz" raporu, hiç rapor vermemekten kötü. */
+  const kunyeler = kunyeleriAyristir(referenceEntries, style);
+  const bicimSorunlari = kunyeler.flatMap((kunye) =>
+    kunye.issues.filter((konu) => konu.severity === "error").map((konu) => ({ kunye, konu })),
+  );
+  bicimSorunlari.slice(0, CITATION_ISSUE_LIMIT).forEach(({ kunye, konu }) =>
+    add({ tone: "danger", message: `${quote(kunye.raw)} — ${konu.message}`, target: kunye.raw.slice(0, 40) }),
+  );
+  if (bicimSorunlari.length > CITATION_ISSUE_LIMIT) {
+    add({ tone: "danger", message: `…ve künye biçiminde ${bicimSorunlari.length - CITATION_ISSUE_LIMIT} sorun daha.` });
+  }
+
   // ---------- Yazar-tarih (APA 7, Chicago): metin içi atıf ↔ kaynakça (lib/apa7.ts ile aynı eşleştirme) ----------
-  if ((style === "apa7" || style === "chicago") && referenceEntries.length > 0) {
-    // Yazarı ve yılı ayrıştırılamayan girdiler eşleştirilmez (biçim hatası "Kontrol Et"te raporlanır)
-    const parse = style === "chicago" ? parseChicagoReference : parseReferenceEntry;
-    const references = referenceEntries.map(parse).filter((reference) => reference.year && reference.authors?.length);
+  if (stil.tur === "yazar-tarih" && referenceEntries.length > 0) {
+    // Yazarı ve yılı ayrıştırılamayan girdiler eşleştirilmez (biçim hatası yukarıda raporlandı)
+    const references = kunyeler.filter((reference) => reference.year && reference.authors?.length);
     if (references.length > 0) {
-      const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(extractInTextCitations(body, { style }), references);
+      const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(extractInTextCitations(body, { style: stil.id === "chicago" ? "chicago" : "apa7" }), references);
       citationsWithoutReference.slice(0, CITATION_ISSUE_LIMIT).forEach((citation) =>
         add({ tone: "danger", message: `Metindeki ${quote(citation.raw)} atfının kaynakçada karşılığı yok.`, target: citation.raw })
       );
@@ -264,12 +285,12 @@ export function checkStructure(
   }
 
   // ---------- Numaralı atıf stilleri: metin ↔ kaynakça ----------
-  if (style === "ieee" || style === "vancouver") {
+  if (stil.tur === "numara" && stil.numara) {
     const references = referenceEntries.length;
-    const pattern = style === "ieee" ? /\[(\d+(?:\s*[,–-]\s*\d+)*)\]/g : /\((\d+(?:\s*[,–-]\s*\d+)*)\)/g;
+    const pattern = new RegExp(stil.numara.metinKalibi.source, "g");
     const cited = new Set<number>();
     for (const match of body.matchAll(pattern)) for (const number of expandNumbers(match[1])) cited.add(number);
-    const citeLabel = (n: number) => (style === "ieee" ? `[${n}]` : `(${n})`);
+    const citeLabel = stil.numara.etiket;
     for (const number of [...cited].sort((a, b) => a - b)) {
       if (number > references) {
         add({
