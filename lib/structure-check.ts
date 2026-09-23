@@ -84,8 +84,24 @@ export function checkStructure(
   } = {}
 ): StructureIssue[] {
   const issues: StructureIssue[] = [];
+  /*
+    Sınıra takılıp ATILAN sorunlar sayılıyor.
+
+    Eskiden sessizce düşüyorlardı: 200 sorunu olan bir tezde öğrenci 60
+    tanesini görüyor ve "hepsi bu" sanıyordu. Daha kötüsü, denetimler
+    sırayla çalıştığı için üst sıradakiler (başlıklar) sınırı doldurunca
+    ALT SIRADAKİLER hiç görünmüyordu — atıf ve biçim denetimi çalışmış
+    ama tek bir satır bile yazamamış oluyordu. Öğrenci o denetimlerin
+    "temiz" olduğunu sanıyordu; oysa hiç raporlanmamışlardı.
+
+    Sayı, listenin sonunda söyleniyor (aşağıda). Eksiksiz göstermek
+    istemiyoruz — 200 satırlık bir liste de okunmaz — ama eksik olduğunu
+    söylemek zorundayız.
+  */
+  let atlananSorun = 0;
   const add = (issue: StructureIssue) => {
     if (issues.length < MAX_ISSUES) issues.push(issue);
+    else atlananSorun += 1;
   };
   const blocks = doc?.content ?? [];
 
@@ -500,6 +516,19 @@ export function checkStructure(
   // ---------- Dipnotlar ----------
   for (const number of footnoteProblems) {
     add({ tone: "warning", message: `${number}. dipnotun metni boş; dipnot işaretine tıklayıp metnini yazın.` });
+  }
+
+  /*
+    Kırpma her zaman SÖYLENİYOR. "Liste bitti" ile "liste doldu" aynı şey
+    değil; ikincisini birincisi gibi göstermek, öğrenciye düzeltecek bir
+    şeyi kalmadığını söylemek olur.
+  */
+  if (atlananSorun > 0) {
+    issues.push({
+      tone: "warning",
+      message: `…ve ${atlananSorun} sorun daha. Liste ilk ${MAX_ISSUES} sorunda kesiliyor; `
+        + "bazı denetimlerin sonucu hiç yazılamamış olabilir. Üsttekileri düzeltince kalanlar görünür.",
+    });
   }
 
   return issues;
