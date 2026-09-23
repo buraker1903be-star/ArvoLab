@@ -49,7 +49,7 @@ const workstreams = [
   },
   {
     title: "Kaynakça Doğrulama",
-    description: "Kaynakça listenizi yapıştırın; APA 7, Chicago, IEEE ve Vancouver kurallarına göre denetlensin.",
+    description: "Kaynakça listenizi yapıştırın; APA 7, MLA, Chicago, IEEE ve Vancouver kurallarına göre denetlensin.",
     icon: Quote,
     href: "/dashboard/citations",
   },

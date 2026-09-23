@@ -16,7 +16,7 @@ export interface CitableSource {
   publisher?: string | null;
 }
 
-export type CitationStyle = "apa7" | "chicago" | "ieee" | "vancouver";
+export type CitationStyle = "apa7" | "chicago" | "ieee" | "vancouver" | "mla";
 
 export const NUMERIC_STYLES: CitationStyle[] = ["ieee", "vancouver"];
 
@@ -60,6 +60,14 @@ export function formatInTextCitation(source: CitableSource, style: CitationStyle
       return `(${number})`;
     case "chicago":
       return `(${authorLabel(source)} ${yearOf(source)})`;
+    /*
+      MLA'da metin içi atıf YAZAR + SAYFA'dır: "(Yılmaz 45)". Sayfa
+      numarasını yalnızca yazan kişi bilir (kaynağın kendisinde değil,
+      alıntının yerinde), bu yüzden eser bütününe atıf biçimi
+      ekleniyor: "(Yılmaz)". Sayfa uydurmak, yanlış sayfa yazmaktır.
+    */
+    case "mla":
+      return `(${authorLabel(source)})`;
     default:
       return `(${authorLabel(source)}, ${yearOf(source)})`;
   }
@@ -139,6 +147,27 @@ export function formatReferenceParts(source: CitableSource, style: CitationStyle
         push(".");
       }
       if (publisher && (isChapter || !container)) push(` ${publisher}.`);
+      if (url) push(` ${url}`);
+      break;
+    }
+    case "mla": {
+      // MLA 9: Yazar. "Başlık." *Kapsayıcı*, cilt, sayı, yıl, ss. sayfalar. URL
+      push(`${authors ? `${authors.replace(/\.$/, "")}. ` : ""}`);
+      if (container) push(`“${title}.” `);
+      else push(title, italic);
+      if (container) {
+        push(container, true);
+        if (volume) push(`, c. ${volume}`);
+        if (issue) push(`, sy. ${issue}`);
+        if (publisher && isChapter) push(`, ${publisher}`);
+        push(`, ${yearText(source)}`);
+        if (pages) push(`, ss. ${pages}`);
+        push(".");
+      } else {
+        push(".");
+        if (publisher) push(` ${publisher},`);
+        push(` ${yearText(source)}.`);
+      }
       if (url) push(` ${url}`);
       break;
     }

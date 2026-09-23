@@ -13,6 +13,7 @@ import {
 import ActionForm from "../../../action-form";
 import { getUniversities } from "@/app/actions/universities";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import AcademicUnitFields from "../../new/academic-unit-fields";
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -83,10 +84,11 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
             <label>
               <span>Kaynakça sistemi</span>
               <select name="citationStyle" defaultValue={project.citation_style} disabled={!!project.guideline_id}>
-                <option value="apa7">APA 7</option>
-                <option value="vancouver">Vancouver</option>
-                <option value="chicago">Chicago</option>
-                <option value="ieee">IEEE</option>
+                {STIL_SECENEKLERI.map((secenek) => (
+                  <option key={secenek.deger} value={secenek.deger}>
+                    {secenek.etiket}
+                  </option>
+                ))}
               </select>
               {project.guideline_id ? (
                 <small>Onaylı kılavuza göre belirlenir.</small>

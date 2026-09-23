@@ -21,20 +21,28 @@
 */
 
 /** Veritabanının kabul ettiği değerler (thesis_projects.citation_style). */
-export type StilKimligi = "apa7" | "chicago" | "ieee" | "vancouver";
+export type StilKimligi = "apa7" | "chicago" | "ieee" | "vancouver" | "mla";
 
 /**
  * Atfın metinde nasıl göründüğü. Denetimin tamamı buna dayanır:
  * yazar-tarih stilinde atıf ile künye ADLA eşleşir, numara stilinde
  * SIRAYLA.
  */
-export type AtifTuru = "yazar-tarih" | "numara";
+export type AtifTuru = "yazar-tarih" | "yazar-sayfa" | "numara";
 
 export type YazarBicimi = {
   /** Tek bir yazar alanının beklenen biçimi. */
   desen: RegExp;
   /** Kullanıcıya gösterilen örnek; hata mesajı bunu yazar. */
   ornek: string;
+  /*
+    MLA'da YALNIZCA ilk yazar ters yazılır ("Yılmaz, Ahmet"), sonrakiler
+    düz ("Ahmet Demir"). Tek desenle denetlemek, kusursuz künyenin ikinci
+    yazarına hata basmak demekti. Verilmezse bütün yazarlar `desen` ile
+    denetlenir (APA, Chicago, IEEE, Vancouver böyle).
+  */
+  sonrakiDesen?: RegExp;
+  sonrakiOrnek?: string;
 };
 
 export type StilTanimi = {
@@ -72,6 +80,14 @@ export type StilTanimi = {
 const APA_YAZAR = /^[\p{Lu}][\p{L}'\-]+,(\s*[\p{Lu}]\.){1,3}$/u;
 /** Vancouver/IEEE: "Yılmaz A" ya da "A. Yılmaz" — virgül yok, nokta isteğe bağlı. */
 const NUMARA_YAZAR = /^(?:[\p{Lu}][\p{L}'\-]+\s+[\p{Lu}]{1,3}\.?|(?:[\p{Lu}]\.\s*){1,3}[\p{Lu}][\p{L}'\-]+)$/u;
+/*
+  MLA'da ad KISALTILMAZ: "Yılmaz, Ahmet" doğru, "Yılmaz, A." APA'dır.
+  Öğrencilerin MLA'da en sık yaptığı hata bu olduğu için desen adın
+  yazıldığını arıyor (en az iki harf).
+*/
+const MLA_ILK_YAZAR = /^[\p{Lu}][\p{L}'’\-]+,\s*[\p{Lu}][\p{L}'’\-]{1,}(?:\s+[\p{Lu}][\p{L}'’\-]*\.?)*$/u;
+/** MLA'da ilkten sonrakiler düz yazılır: "Ahmet Demir". */
+const MLA_SONRAKI_YAZAR = /^[\p{Lu}][\p{L}'’\-]+(?:\s+[\p{Lu}][\p{L}'’\-]*\.?)+$/u;
 
 export const STILLER: Record<StilKimligi, StilTanimi> = {
   apa7: {
@@ -106,6 +122,27 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
     kaynakcaSirasi: "atif-sirasi",
     listeIsaretiSerbest: false,
   },
+  mla: {
+    id: "mla",
+    ad: "MLA 9",
+    /*
+      MLA'nın metin içi atfında YIL YOKTUR: "(Yılmaz 45)" — yazar ve
+      SAYFA. Bu yüzden ne yazar-tarih ne numara; üçüncü bir tür.
+      Yazar-tarih sanılsaydı çapraz kontrol yılı arar ve hiçbir atıf
+      künyesiyle eşleşmezdi: öğrenci bütün kaynakları için "metinde atıf
+      yok" uyarısı alırdı.
+    */
+    tur: "yazar-sayfa",
+    yilYeri: "sonda",
+    yazarBicimi: {
+      desen: MLA_ILK_YAZAR,
+      ornek: "Soyad, Ad",
+      sonrakiDesen: MLA_SONRAKI_YAZAR,
+      sonrakiOrnek: "Ad Soyad",
+    },
+    kaynakcaSirasi: "alfabetik",
+    listeIsaretiSerbest: false,
+  },
   vancouver: {
     id: "vancouver",
     ad: "Vancouver",
@@ -128,3 +165,20 @@ export function stilTanimi(deger: string | null | undefined): StilTanimi {
 }
 
 export const stilAdi = (deger: string | null | undefined) => stilTanimi(deger).ad;
+
+/*
+  Seçim listeleri ve etiketler TEK kaynaktan.
+
+  Aynı liste dört yerde elle yazılmıştı (çalışma formu, çalışma düzenleme,
+  kılavuz ekranı, asistan bağlamı) ve yeni stil eklenince hepsi ayrı ayrı
+  unutuluyordu: MLA eklenirken kılavuz ekranında hâlâ dört seçenek
+  görünecekti. Sunucudaki doğrulama listesi de (app/actions/projects.ts)
+  buradan okunuyor.
+*/
+export const STIL_SECENEKLERI: { deger: StilKimligi; etiket: string }[] = (
+  Object.keys(STILLER) as StilKimligi[]
+).map((id) => ({ deger: id, etiket: STILLER[id].ad }));
+
+export const STIL_ETIKETLERI: Record<string, string> = Object.fromEntries(
+  STIL_SECENEKLERI.map((secenek) => [secenek.deger, secenek.etiket]),
+);

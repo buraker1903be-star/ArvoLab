@@ -8,6 +8,7 @@ import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { STILLER } from "@/lib/atif/stiller";
 import {
   OVERSIGHT_ONLY_STATUSES,
   OVERSIGHT_ROLES,
@@ -20,7 +21,9 @@ import {
 const OVERSIGHT_ONLY = "Bu işlem için Kontrolör veya üzeri bir role sahip olmalısınız.";
 const PRIORITIES = ["low", "normal", "high", "urgent"];
 const RESEARCH_METHODS = ["quantitative", "qualitative", "mixed", "review"];
-const CITATION_STYLES = ["apa7", "vancouver", "chicago", "ieee"];
+// Stil listesi tek yerde: lib/atif/stiller.ts. Kopyalanınca yeni stil
+// eklendiğinde burası unutuluyor ve seçim sessizce APA'ya düşüyordu.
+const CITATION_STYLES: string[] = Object.keys(STILLER);
 
 export interface AcademicProject {
   id: string;

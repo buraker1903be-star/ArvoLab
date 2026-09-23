@@ -5,6 +5,7 @@ import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-ka
 import AsistanSonuc from "../_components/asistan-sonuc";
 import { runCitationCheck } from "@/app/actions/citation-check";
 import type { Tone } from "@/lib/status-tone";
+import { STIL_SECENEKLERI, type AtifTuru } from "@/lib/atif/stiller";
 
 interface Project {
   id: string;
@@ -57,17 +58,10 @@ interface CheckResult {
     notFound: number;
     insufficientData: number;
   };
-  stil: { id: string; ad: string; tur: "yazar-tarih" | "numara" };
+  stil: { id: string; ad: string; tur: AtifTuru };
   dogrulananSayisi: number;
   toplamKaynak: number;
 }
-
-const STILLER: { id: string; ad: string }[] = [
-  { id: "apa7", ad: "APA 7" },
-  { id: "chicago", ad: "Chicago" },
-  { id: "ieee", ad: "IEEE" },
-  { id: "vancouver", ad: "Vancouver" },
-];
 
 const STATUS_META: Record<AcademicVerification["status"], { label: string; tone: Tone }> = {
   verified: { label: "Doğrulandı", tone: "success" },
@@ -202,8 +196,8 @@ export default function CitationCheckForm({
         <label>
           <span>Atıf stili</span>
           <select value={citationStyle} onChange={(e) => setCitationStyle(e.target.value)}>
-            {STILLER.map((stil) => (
-              <option key={stil.id} value={stil.id}>{stil.ad}</option>
+            {STIL_SECENEKLERI.map((secenek) => (
+              <option key={secenek.deger} value={secenek.deger}>{secenek.etiket}</option>
             ))}
           </select>
         </label>

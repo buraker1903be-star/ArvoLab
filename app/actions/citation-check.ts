@@ -85,10 +85,14 @@ export async function runCitationCheck(input: {
     return { error: "Doğrulanabilecek bir kaynakça girdisi bulunamadı." };
   }
 
-  const citations = input.bodyText
-    ? extractInTextCitations(input.bodyText, { style: stil.id === "chicago" ? "chicago" : "apa7" })
-    : [];
-  const cross = stil.tur === "yazar-tarih" ? crossCheck(citations, references) : { citationsWithoutReference: [], referencesWithoutCitation: [] };
+  const atifStili = stil.id === "mla" ? "mla" : stil.id === "chicago" ? "chicago" : "apa7";
+  const citations = input.bodyText ? extractInTextCitations(input.bodyText, { style: atifStili }) : [];
+  /* Numara stillerinde atıf künyeyle adla değil sırayla eşleşir; çapraz
+     kontrol orada anlamsız. MLA'da eşleşme var ama YIL YOK. */
+  const cross =
+    stil.tur === "numara"
+      ? { citationsWithoutReference: [], referencesWithoutCitation: [] }
+      : crossCheck(citations, references, { yilaBak: stil.tur === "yazar-tarih" });
   const score = computeComplianceScore(references, cross);
   const academicVerification = await verifyAcademicReferences(references, DOGRULAMA_SINIRI);
   const verificationSummary = {

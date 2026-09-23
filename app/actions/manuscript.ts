@@ -7,7 +7,7 @@ import { extractPlainText, extractHeadings, countWords, type TiptapDoc } from "@
 import { splitBodyAndReferences } from "@/lib/text-split";
 import { extractInTextCitations, crossCheck, computeComplianceScore, type ParsedReference } from "@/lib/apa7";
 import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
-import { stilTanimi } from "@/lib/atif/stiller";
+import { stilTanimi, type AtifTuru } from "@/lib/atif/stiller";
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
@@ -304,7 +304,7 @@ export interface ManuscriptCheckResult {
   wordCount: number;
   citationStyle: string;
   /** Denetimin yapıldığı stil; ekran "APA 7" yerine gerçekte bakılanı yazsın. */
-  stil: { id: string; ad: string; tur: "yazar-tarih" | "numara" };
+  stil: { id: string; ad: string; tur: AtifTuru };
   guidelineCompliance: ReturnType<typeof checkGuidelineCompliance> | null;
   missingSections: string[];
   atif: {
@@ -370,14 +370,12 @@ export async function runManuscriptCheck(projectId: string): Promise<{ error?: s
   };
   if (split.referenceText.trim().length > 0) {
     const references = kunyeleriAyristir(kunyeleriBol(split.referenceText), stil.id);
-    const citations =
-      stil.tur === "yazar-tarih"
-        ? extractInTextCitations(split.bodyText, { style: stil.id === "chicago" ? "chicago" : "apa7" })
-        : [];
+    const atifStili = stil.id === "mla" ? "mla" : stil.id === "chicago" ? "chicago" : "apa7";
+    const citations = stil.tur === "numara" ? [] : extractInTextCitations(split.bodyText, { style: atifStili });
     const cross =
-      stil.tur === "yazar-tarih"
-        ? crossCheck(citations, references)
-        : { citationsWithoutReference: [], referencesWithoutCitation: [] };
+      stil.tur === "numara"
+        ? { citationsWithoutReference: [], referencesWithoutCitation: [] }
+        : crossCheck(citations, references, { yilaBak: stil.tur === "yazar-tarih" });
     atifSonucu = {
       referenceSectionFound: true,
       complianceScore: computeComplianceScore(references, cross),

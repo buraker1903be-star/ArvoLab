@@ -232,3 +232,41 @@ test("kurum adı yazar olarak aynen korunur", () => {
   const sonuc = crossCheck(extractInTextCitations("(Türkiye İstatistik Kurumu, 2021) verilerine göre."), refs);
   assert.deepEqual(sonuc.citationsWithoutReference, []);
 });
+
+// --- MLA: yazar-sayfa atıfları ---------------------------------------------
+
+test("MLA: '(Yılmaz 45)' atıf sayılır; sayfa yıl yerine geçmez", () => {
+  const [atif] = extractInTextCitations("Bu görüş yaygındır (Yılmaz 45).", { style: "mla" });
+  assert.equal(atif.authorKey, "yılmaz");
+  // Sayfayı yıl gibi kaydetmek çapraz kontrolü bozardı.
+  assert.equal(atif.year, null);
+});
+
+test("MLA: iki yazar ve sayfa aralığı", () => {
+  const [atif] = extractInTextCitations("Tartışma sürüyor (Yılmaz ve Demir 45-47).", { style: "mla" });
+  assert.equal(atif.authorKey, "yılmaz");
+});
+
+test("MLA: anlatı biçimi 'Yılmaz (45)'", () => {
+  const atiflar = extractInTextCitations("Yılmaz (45) bunu tartışır.", { style: "mla" });
+  assert.equal(atiflar[0]?.authorKey, "yılmaz");
+});
+
+test("MLA: '(Tablo 3)' ve '(Şekil 2)' atıf sayılmaz", () => {
+  // MLA'da yıl olmadığı için "ad + sayı" kalıbı çok şeye uyuyor; liste
+  // olmasaydı öğrenci her tablo göndermesi için "kaynakçada yok" uyarısı alırdı.
+  assert.deepEqual(extractInTextCitations("Sonuçlar (Tablo 3) ve (Şekil 2) verilmiştir.", { style: "mla" }), []);
+});
+
+test("MLA çapraz kontrolü yıla bakmaz: doğru yazılmış kaynak 'anılmıyor' demez", () => {
+  const citations = extractInTextCitations("Bu görüş yaygındır (Yılmaz 45).", { style: "mla" });
+  const references = [
+    { raw: "Yılmaz, Ahmet. Kitap. Yayınevi, 2020.", authors: ["Yılmaz, Ahmet"], year: "2020", title: "Kitap", issues: [] },
+  ];
+  // Yıl şart koşulunca eşleşme düşüyor: MLA'yı yazar-tarih saymanın sonucu buydu.
+  assert.equal(crossCheck(citations, references).referencesWithoutCitation.length, 1);
+
+  const mlaSonuc = crossCheck(citations, references, { yilaBak: false });
+  assert.deepEqual(mlaSonuc.referencesWithoutCitation, []);
+  assert.deepEqual(mlaSonuc.citationsWithoutReference, []);
+});

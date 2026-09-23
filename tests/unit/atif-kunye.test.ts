@@ -8,17 +8,20 @@ const hatalar = (kunye: { issues: { severity: string; field: string }[] }) =>
 const alanlar = (kunye: { issues: { field: string }[] }) => kunye.issues.map((s) => s.field);
 
 describe("stil tanımları", () => {
-  test("dört stil de tanımlı ve türü belli", () => {
+  test("beş stil de tanımlı ve türü belli", () => {
     assert.equal(STILLER.apa7.tur, "yazar-tarih");
     assert.equal(STILLER.chicago.tur, "yazar-tarih");
     assert.equal(STILLER.ieee.tur, "numara");
     assert.equal(STILLER.vancouver.tur, "numara");
+    // MLA üçüncü tür: metin içi atıfta yıl değil SAYFA var.
+    assert.equal(STILLER.mla.tur, "yazar-sayfa");
   });
 
   test("bilinmeyen değer APA'ya düşer; kayıtların varsayılanı da odur", () => {
-    assert.equal(stilTanimi("mla").id, "apa7");
+    assert.equal(stilTanimi("turabian").id, "apa7");
     assert.equal(stilTanimi(null).id, "apa7");
     assert.equal(stilAdi("ieee"), "IEEE");
+    assert.equal(stilAdi("mla"), "MLA 9");
   });
 
   test("numara stillerinde kaynakça atıf sırasında; alfabe uyarısı verilmemeli", () => {
@@ -111,5 +114,39 @@ describe("kaynakça listesi", () => {
       "chicago",
     );
     assert.deepEqual(liste.flatMap(alanlar).filter((alan) => alan === "number"), []);
+  });
+});
+
+describe("MLA künyesi", () => {
+  const mla = (ham: string) => kunyeAyristir(ham, "mla");
+
+  test("kusursuz künye sorunsuz geçer", () => {
+    const kunye = mla("Yılmaz, Ahmet. Osmanlı'da Şehir Kültürü. İletişim Yayınları, 2020.");
+    assert.deepEqual(hatalar(kunye), []);
+    assert.equal(kunye.year, "2020");
+    assert.equal(kunye.title, "Osmanlı'da Şehir Kültürü");
+    assert.deepEqual(kunye.authors, ["Yılmaz, Ahmet"]);
+  });
+
+  test("yıl sonda okunur; cilt ve sayfa yılla karıştırılmaz", () => {
+    const kunye = mla('Demir, Ayşe. "Metinlerarasılık." Edebiyat Dergisi, c. 12, sy. 3, 2019, ss. 45-60.');
+    assert.equal(kunye.year, "2019");
+    assert.deepEqual(hatalar(kunye), []);
+  });
+
+  test("yıl hiç yoksa hata verir", () => {
+    const kunye = mla("Yılmaz, Ahmet. Osmanlı'da Şehir Kültürü. İletişim Yayınları.");
+    assert.ok(hatalar(kunye).includes("year"));
+  });
+
+  test("MLA'da ad kısaltılmaz: 'Yılmaz, A.' uyarı alır", () => {
+    const kunye = mla("Yılmaz, A. Osmanlı'da Şehir Kültürü. İletişim Yayınları, 2020.");
+    assert.ok(alanlar(kunye).includes("author_format"));
+  });
+
+  test("ikinci yazar düz yazılır ve uyarı almaz", () => {
+    // Tek desenle denetlenseydi kusursuz künyenin ikinci yazarına hata basılırdı.
+    const kunye = mla("Yılmaz, Ahmet, ve Ayşe Demir. Ortak Kitap. İletişim Yayınları, 2021.");
+    assert.deepEqual(alanlar(kunye).filter((alan) => alan === "author_format"), []);
   });
 });

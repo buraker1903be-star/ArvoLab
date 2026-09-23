@@ -28,7 +28,11 @@ const sorun = (field: string, message: string, severity: ReferenceIssue["severit
 /** Künyedeki yazar alanlarını biçim desenine göre denetler. */
 function yazarlariDenetle(yazarlar: string[], stil: StilTanimi, sorunlar: ReferenceIssue[]) {
   if (!stil.yazarBicimi) return;
-  for (const yazar of yazarlar) {
+  for (const [sira, yazar] of yazarlar.entries()) {
+    // MLA'da yalnızca ilk yazar ters yazılır; sonrakilerin deseni ayrı.
+    const ilkDegil = sira > 0 && stil.yazarBicimi.sonrakiDesen;
+    const desen = ilkDegil ? stil.yazarBicimi.sonrakiDesen! : stil.yazarBicimi.desen;
+    const ornek = ilkDegil ? stil.yazarBicimi.sonrakiOrnek ?? stil.yazarBicimi.ornek : stil.yazarBicimi.ornek;
     /*
       Kurum adı yazar olabilir ("Türkiye İstatistik Kurumu") ve hiçbir
       stilin yazar desenine uymaz. İçinde baş harf yoksa kurum sayılıp
@@ -36,8 +40,8 @@ function yazarlariDenetle(yazarlar: string[], stil: StilTanimi, sorunlar: Refere
       uyarıları görmezden gelmeyi öğretir.
     */
     if (!/[\p{Lu}]\./u.test(yazar) && yazar.split(/\s+/).length > 2) continue;
-    if (!stil.yazarBicimi.desen.test(yazar)) {
-      sorunlar.push(sorun("author_format", `Yazar biçimi ${stil.ad} kuralına uymuyor olabilir: "${yazar}" (beklenen: "${stil.yazarBicimi.ornek}")`));
+    if (!desen.test(yazar)) {
+      sorunlar.push(sorun("author_format", `Yazar biçimi ${stil.ad} kuralına uymuyor olabilir: "${yazar}" (beklenen: "${ornek}")`));
     }
   }
 }
@@ -114,6 +118,37 @@ function numaraAyristir(ham: string, stil: StilTanimi, sira: number): ParsedRefe
 }
 
 /**
+ * Yazar-sayfa stili (MLA).
+ *
+ * Künye yazar-tarih stillerine benzer ama yıl SONDA durur:
+ *   "Yılmaz, Ahmet. Tezin Adı. Yayınevi, 2020."
+ * Yıl orada olmadığı için yazar-tarih ayrıştırıcısı bu künyeleri hiç
+ * okuyamazdı; numara ayrıştırıcısı da yazarları virgülden bölerek
+ * "Yılmaz" ile "Ahmet"i iki ayrı yazar sanırdı.
+ */
+function yazarSayfaAyristir(ham: string, stil: StilTanimi): ParsedReference {
+  const metin = ham.trim();
+  const sorunlar: ReferenceIssue[] = [];
+
+  const yazarBolumu = metin.split(/\.\s/)[0] ?? "";
+  const yazarlar = splitAuthors(yazarBolumu);
+  if (!yazarlar.length) sorunlar.push(sorun("author", "Yazar adı ayrıştırılamadı.", "error"));
+  else yazarlariDenetle(yazarlar, stil, sorunlar);
+
+  /* Yıl künyenin sonlarında; cilt/sayı/sayfa da dört haneli olabildiği
+     için sonuncusu yıl sayılıyor (numara stilleriyle aynı ölçüt). */
+  const yillar = [...metin.matchAll(SONDA_YIL)].map((e) => e[1]);
+  const yil = yillar.at(-1) ?? null;
+  if (!yil) sorunlar.push(sorun("year", `Künyede yayın yılı bulunamadı; ${stil.ad} künyesinde yıl sonda yer alır.`, "error"));
+
+  // Başlık: yazarlardan sonraki ilk cümle. Tırnak içinde de olabilir.
+  const baslik = metin.split(/\.\s/)[1]?.trim().replace(/^[“"']|[”"']$/g, "") ?? null;
+  if (!baslik) sorunlar.push(sorun("title", "Başlık bulunamadı; künyede yazarlardan sonra eser adı gelmeli."));
+
+  return { raw: metin, authors: yazarlar.length ? yazarlar : null, year: yil, title: baslik, issues: sorunlar };
+}
+
+/**
  * Bir künyeyi stiline göre ayrıştırır ve denetler.
  *
  * APA yolu bilerek eski motora bırakıldı (`lib/apa7.ts`): orada yıllar
@@ -125,6 +160,7 @@ export function kunyeAyristir(ham: string, stilDegeri: string | null | undefined
   const stil = stilTanimi(stilDegeri);
   if (stil.id === "apa7") return parseReferenceEntry(ham);
   if (stil.tur === "numara") return numaraAyristir(ham, stil, sira);
+  if (stil.tur === "yazar-sayfa") return yazarSayfaAyristir(ham, stil);
   return yazarTarihAyristir(ham, stil);
 }
 

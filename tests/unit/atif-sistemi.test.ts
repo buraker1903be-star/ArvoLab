@@ -34,9 +34,12 @@ describe("atıf sistemi seçimi", () => {
     assert.equal(atifSistemiSec(`${govde("APA", 5)} ${govde("Vancouver", 4)}`), null);
   });
 
-  test("baskın MLA saklanamaz, karar yöneticiye bırakılır", () => {
-    // Veritabanı yalnızca apa7/vancouver/chicago/ieee kabul ediyor.
-    assert.equal(atifSistemiSec(govde("MLA", 10)), null);
+  test("baskın MLA de seçilir", () => {
+    // Eskiden MLA saklanamadığı için baskın MLA kılavuzları null'a
+    // düşüyor, yönetici stili elle seçmek zorunda kalıyordu.
+    const secim = atifSistemiSec(govde("MLA", 10));
+    assert.equal(secim?.sistem, "mla");
+    assert.equal(secim?.etiket, "MLA 9");
   });
 
   test("düz APA de eşleşir", () => {

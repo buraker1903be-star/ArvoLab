@@ -271,8 +271,9 @@ export function checkStructure(
     }
   }
 
-  // Yazar-tarih stillerinde kaynakça girdileri madde işareti ya da numara taşımaz: tek tıkla paragraflara çevrilir.
-  if (!stil.listeIsaretiSerbest && stil.tur === "yazar-tarih" && referencesInList) {
+  // Numara dışı stillerde (APA, Chicago, MLA) kaynakça girdileri madde
+  // işareti ya da numara taşımaz: tek tıkla paragraflara çevrilir.
+  if (!stil.listeIsaretiSerbest && stil.tur !== "numara" && referencesInList) {
     add({
       tone: "warning",
       message: `Kaynakça liste biçiminde (madde işareti/numara); ${stil.ad} kaynakçasında kaynaklar liste işareti olmadan, ayrı paragraflar olarak yazılır.`,
@@ -296,12 +297,23 @@ export function checkStructure(
     add({ tone: "danger", message: `…ve künye biçiminde ${bicimSorunlari.length - CITATION_ISSUE_LIMIT} sorun daha.` });
   }
 
-  // ---------- Yazar-tarih (APA 7, Chicago): metin içi atıf ↔ kaynakça (lib/apa7.ts ile aynı eşleştirme) ----------
-  if (stil.tur === "yazar-tarih" && referenceEntries.length > 0) {
-    // Yazarı ve yılı ayrıştırılamayan girdiler eşleştirilmez (biçim hatası yukarıda raporlandı)
-    const references = kunyeler.filter((reference) => reference.year && reference.authors?.length);
+  /* ---------- Adla eşleşen stiller (APA 7, Chicago, MLA): metin içi atıf ↔ kaynakça ----------
+     MLA'da atıfta yıl yoktur ("Yılmaz 45"), o yüzden eşleştirme yalnızca
+     yazara bakar; yıl şart koşulsaydı MLA yazan öğrenci doğru yazdığı her
+     kaynak için "metinde anılmıyor" uyarısı alırdı. (lib/apa7.ts ile aynı
+     eşleştirme.) */
+  if (stil.tur !== "numara" && referenceEntries.length > 0) {
+    const yilaBak = stil.tur === "yazar-tarih";
+    // Yazarı (ve yıla bakılan stillerde yılı) ayrıştırılamayan girdiler eşleştirilmez;
+    // biçim hatası yukarıda zaten raporlandı.
+    const references = kunyeler.filter((reference) => reference.authors?.length && (!yilaBak || reference.year));
     if (references.length > 0) {
-      const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(extractInTextCitations(body, { style: stil.id === "chicago" ? "chicago" : "apa7" }), references);
+      const atifStili = stil.id === "mla" ? "mla" : stil.id === "chicago" ? "chicago" : "apa7";
+      const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(
+        extractInTextCitations(body, { style: atifStili }),
+        references,
+        { yilaBak },
+      );
       citationsWithoutReference.slice(0, CITATION_ISSUE_LIMIT).forEach((citation) =>
         add({ tone: "danger", message: `Metindeki ${quote(citation.raw)} atfının kaynakçada karşılığı yok.`, target: citation.raw })
       );

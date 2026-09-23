@@ -27,7 +27,7 @@
 */
 
 /** Veritabanının kabul ettiği değerler (thesis_guidelines.citation_style). */
-export type AtifSistemi = "apa7" | "vancouver" | "chicago" | "ieee";
+export type AtifSistemi = "apa7" | "vancouver" | "chicago" | "ieee" | "mla";
 
 export type AtifSecimi = {
   sistem: AtifSistemi;
@@ -39,16 +39,14 @@ export type AtifSecimi = {
   uyarilar: string[];
 };
 
-/*
-  MLA veritabanında saklanamıyor ama YARIŞMAYA katılır: kılavuz ağırlıklı
-  olarak MLA anlatıyorsa, ikinci sıradaki APA'yı "baskın" ilan etmemeliyiz.
-*/
-const DESENLER: { sistem: AtifSistemi | "mla"; etiket: string; desen: RegExp }[] = [
+// MLA 23.09.2026'dan beri saklanabiliyor (migration: mla stili); eskiden
+// yalnızca yarışmaya katılıp kazandığında null'a düşüyordu.
+const DESENLER: { sistem: AtifSistemi; etiket: string; desen: RegExp }[] = [
   { sistem: "apa7", etiket: "APA 7", desen: /\bapa\b/gi },
   { sistem: "vancouver", etiket: "Vancouver", desen: /\bvancouver\b/gi },
   { sistem: "chicago", etiket: "Chicago", desen: /\bchicago\b/gi },
   { sistem: "ieee", etiket: "IEEE", desen: /\bieee\b/gi },
-  { sistem: "mla", etiket: "MLA", desen: /\bmla\b/gi },
+  { sistem: "mla", etiket: "MLA 9", desen: /\bmla\b/gi },
 ];
 
 /** En az bu kadar geçmeyen bir ad, kılavuzun sistemi sayılmaz. */
@@ -74,9 +72,6 @@ export function atifSistemiSec(metin: string): AtifSecimi | null {
 
   const ikinciSayim = sayimlar[1]?.sayim ?? 0;
   if (ikinciSayim > 0 && kazanan.sayim < ikinciSayim * BASKINLIK) return null;
-
-  // MLA kazandıysa saklanabilir bir karşılığı yok; yönetici karar vermeli.
-  if (kazanan.sistem === "mla") return null;
 
   const uyarilar: string[] = [];
   if (ikinciSayim > 0) {

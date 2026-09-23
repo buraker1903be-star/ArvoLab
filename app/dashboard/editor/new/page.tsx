@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, PenLine } from "lucide-react";
 import { createProject } from "@/app/actions/projects";
+import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import { getUniversities } from "@/app/actions/universities";
 import ActionForm from "../../action-form";
 import AcademicUnitFields from "./academic-unit-fields";
@@ -50,10 +51,11 @@ export default async function NewProjectPage() {
             <label>
               <span>Kaynakça sistemi</span>
               <select name="citationStyle" defaultValue="apa7">
-                <option value="apa7">APA 7</option>
-                <option value="vancouver">Vancouver</option>
-                <option value="chicago">Chicago</option>
-                <option value="ieee">IEEE</option>
+                {STIL_SECENEKLERI.map((secenek) => (
+                  <option key={secenek.deger} value={secenek.deger}>
+                    {secenek.etiket}
+                  </option>
+                ))}
               </select>
               <small>Tezlerde onaylı kılavuz varsa ondan belirlenir.</small>
             </label>

@@ -172,11 +172,36 @@ const CHICAGO_PART_RE = new RegExp(
   `^${PREFIX}(\\p{Lu}.*?),?\\s+(${YEARS})(?:\\s*,\\s*(?:(?:s|ss|sf|p|pp)\\.?\\s*)?[\\d–-]+)?$`,
   "u"
 );
+/*
+  MLA: "(Yılmaz 45)", "(Yılmaz ve Demir 45-47)" — YIL YOK, sayfa var.
+  Yazar bölümü serbest bırakılmadı (`.*?` değil, ad deseni): MLA'da her
+  parantezin sonunda sayı olabilir ("(Şekil 3)", "(Grup 2)") ve serbest
+  desen bunların hepsini atıf sayardı. Ad deseni + aşağıdaki liste,
+  yanlış alarmı makul düzeyde tutuyor.
+*/
+const MLA_PART_RE = new RegExp(
+  `^${PREFIX}(${NAME}(?:\\s+${NAME}){0,3}?(?:\\s+(?:ve|&|and)\\s+${NAME}|\\s+${ET_AL})?),?\\s+(\\d{1,4}(?:\\s*[–-]\\s*\\d{1,4})?)$`,
+  "u"
+);
+const MLA_NARRATIVE_RE = new RegExp(
+  `(${NAME}(?:\\s+${NAME}){0,4}?(?:\\s+(?:ve|&|and)\\s+${NAME}|\\s+${ET_AL})?)\\s*\\((\\d{1,4}(?:\\s*[–-]\\s*\\d{1,4})?)\\)`,
+  "gu"
+);
 // "(Haziran 2020)", "(Bahar, 2021)" gibi tarih ifadeleri atıf değildir.
 const NOT_AUTHORS = new Set([
   "ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül", "ekim", "kasım", "aralık",
   "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
   "ilkbahar", "bahar", "yaz", "sonbahar", "güz", "kış", "spring", "summer", "fall", "autumn", "winter",
+]);
+/*
+  MLA'da atıfta yıl olmadığı için "ad + sayı" kalıbı çok yaygın başka
+  ifadelere de uyuyor. Bunlar atıf değildir; yazılmazsa öğrenci her
+  "(Tablo 3)" için "kaynakçada yok" uyarısı alır ve uyarılara güvenmeyi
+  bırakır.
+*/
+const MLA_NOT_AUTHORS = new Set([
+  "tablo", "şekil", "şema", "grafik", "resim", "ek", "bölüm", "madde", "sayfa", "satır", "adım", "grup", "soru",
+  "table", "figure", "fig", "chart", "chapter", "section", "page", "line", "step", "group", "item", "no", "vol", "cilt", "sayı",
 ]);
 const NARRATIVE_RE = new RegExp(
   `(${NAME}(?:\\s+${NAME}){0,4}?(?:\\s+(?:ve|&|and)\\s+${NAME}|\\s+${ET_AL})?)\\s*\\((${YEARS})${PAGE}\\)`,
@@ -218,10 +243,19 @@ function authorKey(author: string): string {
 
 export function extractInTextCitations(
   bodyText: string,
-  options: { style?: "apa7" | "chicago" } = {}
+  options: { style?: "apa7" | "chicago" | "mla" } = {}
 ): InTextCitation[] {
   const results: InTextCitation[] = [];
-  const partRe = options.style === "chicago" ? CHICAGO_PART_RE : CITATION_PART_RE;
+  /*
+    MLA'da ikinci grup YIL değil SAYFA'dır. Sayfayı yıl gibi kaydetmek
+    çapraz kontrolü bozardı (kaynağın yılı 2020, atıfta 45 yazar, hiçbiri
+    eşleşmez); bu yüzden MLA'da yıl null bırakılıyor ve eşleştirme yalnızca
+    yazara bakıyor — crossCheck({ yilaBak: false }).
+  */
+  const mla = options.style === "mla";
+  const partRe = mla ? MLA_PART_RE : options.style === "chicago" ? CHICAGO_PART_RE : CITATION_PART_RE;
+  const narrativeRe = mla ? MLA_NARRATIVE_RE : NARRATIVE_RE;
+  const atifDisi = (key: string) => NOT_AUTHORS.has(key) || (mla && MLA_NOT_AUTHORS.has(key));
 
   for (const group of bodyText.matchAll(PAREN_GROUP_RE)) {
     for (const part of group[1].split(";")) {
@@ -229,16 +263,24 @@ export function extractInTextCitations(
       // İçinde rakam geçen "yazar" (Tablo 3, COVID-19) atıf sayılmaz
       if (!match || /\d/.test(match[1])) continue;
       const key = authorKey(match[1]);
-      if (!key || NOT_AUTHORS.has(key)) continue;
+      if (!key || atifDisi(key)) continue;
+      if (mla) {
+        results.push({ raw: group[0], authorKey: key, year: null, position: group.index ?? 0, kind: "parenthetical" });
+        continue;
+      }
       for (const year of match[2].split(",")) {
         results.push({ raw: group[0], authorKey: key, year: year.trim(), position: group.index ?? 0, kind: "parenthetical" });
       }
     }
   }
 
-  for (const match of bodyText.matchAll(NARRATIVE_RE)) {
+  for (const match of bodyText.matchAll(narrativeRe)) {
     const key = authorKey(match[1]);
-    if (!key || NOT_AUTHORS.has(key)) continue;
+    if (!key || atifDisi(key)) continue;
+    if (mla) {
+      results.push({ raw: match[0], authorKey: key, year: null, position: match.index ?? 0, kind: "narrative" });
+      continue;
+    }
     for (const year of match[2].split(",")) {
       results.push({ raw: match[0], authorKey: key, year: year.trim(), position: match.index ?? 0, kind: "narrative" });
     }
@@ -264,8 +306,16 @@ const keysMatch = (citation: string, reference: string) =>
 
 export function crossCheck(
   citations: InTextCitation[],
-  references: ParsedReference[]
+  references: ParsedReference[],
+  /*
+    MLA'da atıfta yıl yoktur ("Yılmaz 45"), künyede vardır. Yılı şart
+    koşmak bütün eşleşmeleri düşürür ve öğrenci doğru yazdığı her kaynak
+    için "metinde atıf yok" uyarısı alırdı. yilaBak=false, eşleştirmeyi
+    yalnızca yazara bırakır.
+  */
+  options: { yilaBak?: boolean } = {}
 ): CrossCheckResult {
+  const yilaBak = options.yilaBak !== false;
   const refKeys = references.map((ref) => ({ ref, key: referenceKey(ref), year: normalizeYear(ref.year) }));
 
   /*
@@ -282,13 +332,13 @@ export function crossCheck(
   */
   const yilaGore = new Map<string, typeof refKeys>();
   for (const rk of refKeys) {
-    const anahtar = rk.year ?? "";
+    const anahtar = yilaBak ? rk.year ?? "" : "";
     const liste = yilaGore.get(anahtar);
     if (liste) liste.push(rk);
     else yilaGore.set(anahtar, [rk]);
   }
   const eslesenler = (citation: InTextCitation, yil: string | null) =>
-    (yilaGore.get(yil ?? "") ?? []).filter((rk) => Boolean(rk.key) && keysMatch(citation.authorKey, rk.key));
+    (yilaGore.get(yilaBak ? yil ?? "" : "") ?? []).filter((rk) => Boolean(rk.key) && keysMatch(citation.authorKey, rk.key));
 
   // Karşılıksız atıf yalnızca parantez içi atıflarda raporlanır: "Türkiye (2020)" gibi
   // anlatı biçimine benzeyen her ifade atıf değildir (yanlış alarm olmasın).
@@ -301,7 +351,7 @@ export function crossCheck(
     // Anlatı atfı da kaynağı "anılmış" yapar; yalnızca raporlanmaz.
     for (const rk of eslesen) anilanKaynaklar.add(rk.ref);
     if (citation.kind !== "parenthetical" || eslesen.length > 0) continue;
-    const id = `${citation.authorKey}|${yil}`;
+    const id = `${citation.authorKey}|${yilaBak ? yil : ""}`;
     if (seen.has(id)) continue;
     seen.add(id);
     citationsWithoutReference.push(citation);

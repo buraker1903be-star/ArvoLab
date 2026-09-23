@@ -13,17 +13,11 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { projectTypeLabel } from "@/lib/project-labels";
+import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 
 export type CalismaBaglami = {
   id: string;
   metin: string;
-};
-
-const ATIF_STILI: Record<string, string> = {
-  apa7: "APA 7",
-  vancouver: "Vancouver",
-  chicago: "Chicago",
-  ieee: "IEEE",
 };
 
 const YONTEM: Record<string, string> = {
@@ -48,7 +42,7 @@ export function calismaMetni(calisma: CalismaSatiri): string {
   const satirlar = [
     `Başlık: ${calisma.title}`,
     `Tür: ${projectTypeLabel(calisma.project_type)}`,
-    `Atıf stili: ${ATIF_STILI[calisma.citation_style] ?? calisma.citation_style}`,
+    `Atıf stili: ${STIL_ETIKETLERI[calisma.citation_style] ?? calisma.citation_style}`,
   ];
   if (calisma.research_method)
     satirlar.push(`Araştırma yöntemi: ${YONTEM[calisma.research_method] ?? calisma.research_method}`);

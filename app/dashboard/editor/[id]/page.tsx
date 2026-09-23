@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
+import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
 import { trTarih, trTarihSaat } from "@/lib/tr-time";
 
@@ -27,13 +28,6 @@ import { trTarih, trTarihSaat } from "@/lib/tr-time";
   sayfada denetliyor, ikisinin aynı çalışmaya ait olduğunu yalnızca kendi
   aklında tutuyordu. Burası o bağı görünür kılar.
 */
-
-const ATIF_ETIKETI: Record<string, string> = {
-  apa7: "APA 7",
-  vancouver: "Vancouver",
-  chicago: "Chicago",
-  ieee: "IEEE",
-};
 
 const BULGU_TONU: Record<string, string> = { uyari: "danger", oneri: "warning", bilgi: "info" };
 const BULGU_ETIKETI: Record<string, string> = { uyari: "Eksik", oneri: "Öneri", bilgi: "Not" };
@@ -121,9 +115,9 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
       {stilCelisiyor && (
         <p className="asistan-uyari" data-tone="danger" role="alert">
           <TriangleAlert size={16} aria-hidden="true" /> Çalışmanız{" "}
-          <b>{ATIF_ETIKETI[calisma.citation_style] ?? calisma.citation_style}</b> olarak ayarlı, ancak{" "}
+          <b>{STIL_ETIKETLERI[calisma.citation_style] ?? calisma.citation_style}</b> olarak ayarlı, ancak{" "}
           {kilavuz?.kurum} kılavuzu{" "}
-          <b>{ATIF_ETIKETI[kilavuz?.atifStili ?? ""] ?? kilavuz?.atifStili}</b> istiyor. Çalışma ayarlarından
+          <b>{STIL_ETIKETLERI[kilavuz?.atifStili ?? ""] ?? kilavuz?.atifStili}</b> istiyor. Çalışma ayarlarından
           düzeltin ya da kılavuzun bu çalışma için geçerli olmadığını doğrulayın.
         </p>
       )}
