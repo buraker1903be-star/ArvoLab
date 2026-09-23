@@ -31,10 +31,15 @@ export default async function TeamPage() {
   if (!isAdmin) {
     return (
       <main className="dashboard-page">
-        <section className="empty-state">
-          <ShieldAlert size={28} aria-hidden="true" />
-          <p>Bu sayfaya yalnızca Sistem Yöneticisi ve Kurucu rolleri erişebilir.</p>
-        </section>
+        {/* Yetki reddi de ortak kalıpta: iki sayfada iki ayrı elle
+            yazılmış blok vardı ve ikisinde de geri dönüş yolu yoktu —
+            kullanıcı menüden başka bir yere tıklamak zorunda kalıyordu. */}
+        <BosDurum
+          ikon={ShieldAlert}
+          baslik="Bu sayfa size kapalı"
+          aciklama="Bu sayfaya yalnızca Sistem Yöneticisi ve Kurucu rolleri erişebilir."
+          eylem={{ etiket: "Ana sayfaya dön", href: "/dashboard" }}
+        />
       </main>
     );
   }

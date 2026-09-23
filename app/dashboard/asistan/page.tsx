@@ -26,10 +26,15 @@ export default async function AsistanKayitlariSayfasi() {
   if (!profile || !KAYIT_ROLLERI.includes(profile.role)) {
     return (
       <main className="dashboard-page">
-        <section className="empty-state">
-          <ShieldAlert size={28} aria-hidden="true" />
-          <p>Bu sayfaya yalnızca Kontrolör, Akademik Yönetici, Sistem Yöneticisi ve Kurucu erişebilir.</p>
-        </section>
+        {/* Yetki reddi de ortak kalıpta: iki sayfada iki ayrı elle
+            yazılmış blok vardı ve ikisinde de geri dönüş yolu yoktu —
+            kullanıcı menüden başka bir yere tıklamak zorunda kalıyordu. */}
+        <BosDurum
+          ikon={ShieldAlert}
+          baslik="Bu sayfa size kapalı"
+          aciklama="Bu sayfaya yalnızca Kontrolör, Akademik Yönetici, Sistem Yöneticisi ve Kurucu erişebilir."
+          eylem={{ etiket: "Ana sayfaya dön", href: "/dashboard" }}
+        />
       </main>
     );
   }

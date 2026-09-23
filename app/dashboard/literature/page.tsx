@@ -1,4 +1,4 @@
-import { BookOpenCheck, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
+import { BookMarked, BookOpenCheck, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   getLiteratureSources,
   createLiteratureSource,
@@ -202,7 +202,7 @@ export default async function LiteraturePage({
             /* Her grup için ayrı cümle: "kaynak yok" üç yerde aynı görünüp
                kullanıcıya bir şey anlatmıyordu; akışın hangi aşaması olduğu
                söyleniyor. */
-            <BosDurum kompakt aciklama={BOS_METIN[statusKey]} />
+            <BosDurum kompakt ikon={BookMarked} aciklama={BOS_METIN[statusKey]} />
           ) : (
             /*
               Kaynaklar KART değil, kompakt satır. Eskiden her kaynak tam

@@ -12,7 +12,7 @@ import {
   TriangleAlert,
   Users,
 } from "lucide-react";
-import { calismaOzeti } from "@/app/actions/calisma-merkezi";
+import { CALISMA_OKUNAMADI, calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
@@ -42,6 +42,28 @@ const ADIM_SIMGESI: Record<string, typeof PenLine> = {
 export default async function CalismaMerkezi({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ozet = await calismaOzeti(id);
+  /*
+    Okunamadı ile bulunamadı AYRI. Eskiden ikisi de notFound() çiziyordu:
+    geçici bir arızada kullanıcıya tezinin olmadığı söyleniyordu. Kayıt
+    yerinde; söylenmesi gereken tek şey okumanın başarısız olduğu.
+  */
+  if (ozet === CALISMA_OKUNAMADI) {
+    return (
+      <main className="dashboard-page">
+        <article className="resume-card" role="alert">
+          <span className="dashboard-kicker">Bağlantı sorunu</span>
+          <div className="resume-heading">
+            <h2>Çalışma yüklenemedi</h2>
+            <p>Kaydınız yerinde duruyor. Sayfayı yenileyin; sorun sürerse destekten bildirin.</p>
+          </div>
+          <div className="cluster">
+            <Link href="/dashboard/editor" className="projects-filter-button">Çalışmalarım</Link>
+            <Link href="/dashboard/support" className="projects-filter-button">Uygulama Destek</Link>
+          </div>
+        </article>
+      </main>
+    );
+  }
   if (!ozet) notFound();
 
   const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan, kilavuz, tutarsizliklar, hazirlik } = ozet;

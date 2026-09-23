@@ -26,7 +26,19 @@ function sonBulgular(findings: unknown): AsistanBulgusu[] {
   return Array.isArray(liste) ? (liste as AsistanBulgusu[]).slice(0, 3) : [];
 }
 
-export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | null> {
+/*
+  "okunamadi": çalışma yok DEĞİL, okunamadı.
+
+  Eskiden ikisi de null dönüyordu ve sayfa notFound() çiziyordu: geçici
+  bir veritabanı arızasında kullanıcıya TEZİNİN OLMADIĞI söyleniyordu.
+  Olabilecek en kötü hata mesajı; panelin geri kalanında (lib/liste-sonucu.ts)
+  bu ayrım zaten yapılıyordu, burada yapılmıyordu.
+*/
+export const CALISMA_OKUNAMADI = "okunamadi" as const;
+
+export async function calismaOzeti(
+  projectId: string,
+): Promise<CalismaOzeti | null | typeof CALISMA_OKUNAMADI> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -41,8 +53,15 @@ export async function calismaOzeti(projectId: string): Promise<CalismaOzeti | nu
     .eq("id", projectId)
     .maybeSingle();
 
-  // Erişimi olmayan kullanıcıya RLS satırı hiç göstermiyor: hata değil, boş.
-  if (error) console.error("[merkez] çalışma okunamadı:", error.message);
+  /*
+    RLS erişimi olmayana satırı hiç göstermiyor — o durumda hata YOK, veri
+    boş gelir ve "bulunamadı" doğru cevaptır. Gerçek bir hata ise ayrı:
+    kullanıcıya tezinin yok olduğunu söylememeli.
+  */
+  if (error) {
+    console.error("[merkez] çalışma okunamadı:", error.message);
+    return CALISMA_OKUNAMADI;
+  }
   if (!calisma) return null;
 
   const sayim = (tablo: string) =>

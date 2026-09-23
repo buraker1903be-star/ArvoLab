@@ -152,7 +152,7 @@ export default async function ExpertRequestsPage() {
         <section className="section">
           <h2 className="section-title">Bana Atananlar</h2>
           {assignedToMe.length === 0 ? (
-            <BosDurum kompakt aciklama="Üzerinize atanmış talep yok. Açık taleplerden birini üstlendiğinizde burada listelenir." />
+            <BosDurum kompakt ikon={Inbox} aciklama="Üzerinize atanmış talep yok. Açık taleplerden birini üstlendiğinizde burada listelenir." />
           ) : (
           <div className="projects-list">
             {assignedToMe.map((r) => (

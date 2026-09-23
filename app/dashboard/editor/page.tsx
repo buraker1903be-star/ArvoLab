@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarDays, CheckCircle2, FileText, LayoutDashboard, MessageSquare, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Search, LayoutDashboard, MessageSquare, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
 import { loadAppliedGuidelines } from "@/lib/guideline-rules";
@@ -9,6 +9,7 @@ import { getProjects, approveProject, revokeApproval, assignProject, getAssignab
 import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS, PROJECT_STATUSES } from "@/lib/project-labels";
 import { applyProjectFilters, isFiltered, parseProjectFilters } from "@/lib/project-filters";
 import ProjectFilters from "./project-filters";
+import BosDurum from "../_components/bos-durum";
 import { getCurrentProfile } from "@/app/actions/profile";
 import DeleteProjectButton from "./delete-project-button";
 import ActionForm from "../action-form";
@@ -123,19 +124,14 @@ export default async function ProjectsPage({
           </p>
         </section>
       ) : projects.length === 0 ? (
-        <section className="empty-state">
-          <span className="empty-state-icon" aria-hidden="true">
-            <FileText size={26} strokeWidth={1.6} />
-          </span>
-          <p>
-            Henüz kayıtlı bir çalışma yok. Üniversitenizi seçerek başlayın; tez yazım kılavuzunuz editöre
-            otomatik uygulanır, kaynakça sistemi ve sayfa düzeni sizin için hazırlanır.
-          </p>
-          <Link href="/dashboard/editor/new" className="projects-primary-button">
-            <Plus size={18} aria-hidden="true" />
-            İlk çalışmayı oluştur
-          </Link>
-        </section>
+        /* Elle yazılmış kopya yerine ortak kalıp: aynı durum sayfadan
+           sayfaya başka görünüyordu (bos-durum.tsx). */
+        <BosDurum
+          ikon={FileText}
+          baslik="Henüz kayıtlı çalışmanız yok"
+          aciklama="Üniversitenizi seçerek başlayın; tez yazım kılavuzunuz editöre otomatik uygulanır, kaynakça sistemi ve sayfa düzeni sizin için hazırlanır."
+          eylem={{ etiket: "İlk çalışmayı oluştur", href: "/dashboard/editor/new" }}
+        />
       ) : (
         <>
         <ProjectFilters
@@ -148,12 +144,12 @@ export default async function ProjectsPage({
           filtered={isFiltered(filters)}
         />
         {visible.length === 0 ? (
-          <section className="empty-state">
-            <p>Filtreye uyan çalışma yok.</p>
-            <Link href="/dashboard/editor" className="projects-filter-button">
-              Filtreyi temizle
-            </Link>
-          </section>
+          <BosDurum
+            kompakt
+            ikon={Search}
+            aciklama="Filtreye uyan çalışma yok. Ölçütleri gevşetin ya da filtreyi temizleyin."
+            eylem={{ etiket: "Filtreyi temizle", href: "/dashboard/editor" }}
+          />
         ) : (
         <section className="projects-list" aria-label="Akademik çalışma listesi">
           {visible.map((project) => {

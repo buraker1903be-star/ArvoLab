@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
-import { calismaOzeti } from "@/app/actions/calisma-merkezi";
+import { CALISMA_OKUNAMADI, calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
@@ -365,7 +365,10 @@ export async function approveProject(projectId: string): Promise<ActionResult> {
   */
   try {
     const ozet = await calismaOzeti(projectId);
-    const uyari = ozet ? onayUyarisi({ tutarsizliklar: ozet.tutarsizliklar, hazirlik: ozet.hazirlik }) : null;
+    // Okunamadıysa uyarı hesaplanmaz; onay zaten verildi, sessiz geçiliyor.
+    const uyari = ozet && ozet !== CALISMA_OKUNAMADI
+      ? onayUyarisi({ tutarsizliklar: ozet.tutarsizliklar, hazirlik: ozet.hazirlik })
+      : null;
     if (uyari) return { success: true, warning: uyari };
   } catch (hata) {
     console.error("[onay] uyarı hesaplanamadı:", hata instanceof Error ? hata.message : hata);
