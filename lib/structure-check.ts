@@ -15,6 +15,7 @@ import { stilTanimi } from "@/lib/atif/stiller";
 import { baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 import { checkParagraphFormat, describeParagraphFormat, hangingIndentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
+import { metinBiciminiDenetle, type MetinBicimKurali } from "@/lib/metin-bicimi";
 
 interface DocNode {
   type?: string;
@@ -31,7 +32,13 @@ export interface StructureIssue {
   /** Metinde aranıp seçilecek ifade (başlık, şekil başlığı, atıf) */
   target?: string;
   /** Editörün tek tıkla yapabileceği düzeltme */
-  action?: "sort-references" | "fix-reference-punctuation" | "convert-reference-lists" | "apply-paragraph-format" | "apply-hanging-indent";
+  action?:
+    | "sort-references"
+    | "fix-reference-punctuation"
+    | "convert-reference-lists"
+    | "apply-paragraph-format"
+    | "apply-hanging-indent"
+    | "clear-manual-text-format";
 }
 
 const MAX_ISSUES = 60;
@@ -66,7 +73,14 @@ const quote = (text: string) => `“${text.length > 60 ? `${text.slice(0, 57)}�
 
 export function checkStructure(
   doc: { content?: DocNode[] } | null | undefined,
-  options: { citationStyle?: string; abstract?: AbstractRules; paragraphFormat?: ParagraphFormatRules; referenceHangingIndentCm?: number } = {}
+  options: {
+    citationStyle?: string;
+    abstract?: AbstractRules;
+    paragraphFormat?: ParagraphFormatRules;
+    referenceHangingIndentCm?: number;
+    /** Kılavuzun yazı tipi, punto ve satır aralığı */
+    textFormat?: MetinBicimKurali;
+  } = {}
 ): StructureIssue[] {
   const issues: StructureIssue[] = [];
   const add = (issue: StructureIssue) => {
@@ -408,6 +422,36 @@ export function checkStructure(
   }
 
   // ---------- Paragraf düzeni (kılavuzda girinti/yaslama kuralı varsa) ----------
+  /* ---------- Yazı tipi, punto, satır aralığı ----------
+     Kılavuzun ilk maddesi budur ("Times New Roman, 12 punto, 1,5 satır
+     aralığı") ve denetlenmiyordu: kılavuz değerleri editörün varsayılanı
+     olarak uygulanıyordu ama metne elle verilmiş biçim varsayılanı
+     eziyordu. Öğrenci ekranda tek tip bir belge görüyor, jüriye giden
+     dosyada üç ayrı yazı tipi oluyordu. */
+  if (options.textFormat) {
+    const rapor = metinBiciminiDenetle(doc, options.textFormat);
+    const yaz = (baslik: string, sapmalar: { deger: string; sayi: number; ornek: string }[], beklenen: string) => {
+      if (sapmalar.length === 0) return;
+      const ilk = sapmalar[0];
+      const digerleri = sapmalar.length > 1 ? ` (ve ${sapmalar.length - 1} farklı değer daha)` : "";
+      add({
+        tone: "warning",
+        message: `${baslik}: ${sapmalar.reduce((toplam, sapma) => toplam + sapma.sayi, 0)} yerde ${ilk.deger}${digerleri} kullanılmış; kılavuz ${beklenen} istiyor.`,
+        target: ilk.ornek,
+        action: "clear-manual-text-format",
+      });
+    };
+    if (rapor) {
+      yaz("Yazı tipi", rapor.yaziTipi, options.textFormat.fontFamily ?? "");
+      yaz("Punto", rapor.punto, options.textFormat.fontSizePt ? `${options.textFormat.fontSizePt} pt` : "");
+      yaz(
+        "Satır aralığı",
+        rapor.satirAraligi,
+        options.textFormat.lineSpacing ? String(options.textFormat.lineSpacing).replace(".", ",") : "",
+      );
+    }
+  }
+
   if (options.paragraphFormat) {
     const report = checkParagraphFormat(doc, options.paragraphFormat);
     const off = report ? Math.max(report.wrongIndent, report.notJustified) : 0;

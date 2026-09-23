@@ -116,6 +116,7 @@ import {
   applyParagraphFormat,
   convertReferenceListsToParagraphs,
   applyHangingIndent,
+  clearManualTextFormat,
   type OutlineHeading,
 } from "./editor-navigation";
 
@@ -347,6 +348,23 @@ export default function ManuscriptEditor({
       ...(guideline?.settings.justify ? { justify: true } : {}),
     }),
     [guideline]
+  );
+  /* Üç yerde birden kullanılıyordu (canlı denetim, "Kontrol Et", yeniden
+     denetim) ve her eklenen kural üçünü birden değiştirmeyi gerektiriyordu;
+     biri unutulunca canlı denetim ile sonuç ekranı farklı şey söylerdi. */
+  const structureOptions = useMemo(
+    () => ({
+      citationStyle,
+      abstract: guideline?.settings.abstract,
+      paragraphFormat,
+      referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm,
+      textFormat: {
+        fontFamily: guideline?.settings.fontFamily,
+        fontSizePt: guideline?.settings.fontSizePt,
+        lineSpacing: guideline?.settings.lineSpacing,
+      },
+    }),
+    [citationStyle, guideline, paragraphFormat]
   );
   const [includeToc, setIncludeToc] = useState(initialIncludeToc);
   const [headingNumbering, setHeadingNumbering] = useState(initialHeadingNumbering);
@@ -665,9 +683,7 @@ export default function ManuscriptEditor({
         schedule(1000);
         return;
       }
-      setLiveIssues(
-        checkStructure(editor.getJSON(), { citationStyle, abstract: guideline?.settings.abstract, paragraphFormat, referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm })
-      );
+      setLiveIssues(checkStructure(editor.getJSON(), structureOptions));
     };
     const schedule = (delay: number) => {
       if (timer) window.clearTimeout(timer);
@@ -680,7 +696,7 @@ export default function ManuscriptEditor({
       if (timer) window.clearTimeout(timer);
       editor.off("update", onUpdate);
     };
-  }, [editor, citationStyle, guideline, paragraphFormat]);
+  }, [editor, structureOptions]);
 
   const closeIssues = useCallback(() => setIssuesOpen(false), []);
   const closeChecklist = useCallback(() => setChecklistOpen(false), []);
@@ -760,12 +776,7 @@ export default function ManuscriptEditor({
       // Yapı ve bütünlük kontrolü ekrandaki içerik üzerinde tarayıcıda anında çalışır.
       const current = editorRef.current;
       if (current) {
-        const issues = checkStructure(current.getJSON(), {
-          citationStyle,
-          abstract: guideline?.settings.abstract,
-          paragraphFormat,
-          referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm,
-        });
+        const issues = checkStructure(current.getJSON(), structureOptions);
         setStructureIssues(issues);
         setLiveIssues(issues);
       }
@@ -780,7 +791,7 @@ export default function ManuscriptEditor({
     } finally {
       setChecking(false);
     }
-  }, [projectId, saveNow, citationStyle, guideline, paragraphFormat]);
+  }, [projectId, saveNow, structureOptions]);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
@@ -1053,12 +1064,7 @@ export default function ManuscriptEditor({
 
   // Yapı denetimi listesi: canlı gösterge penceresi ve "Kontrol Et" sonucu aynı listeyi kullanır.
   const recheckStructure = () => {
-    const issues = checkStructure(editor.getJSON(), {
-      citationStyle,
-      abstract: guideline?.settings.abstract,
-      paragraphFormat,
-      referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm,
-    });
+    const issues = checkStructure(editor.getJSON(), structureOptions);
     setLiveIssues(issues);
     setStructureIssues((current) => (current ? issues : current));
   };
@@ -1136,6 +1142,22 @@ export default function ManuscriptEditor({
                 }}
               >
                 Kılavuza göre düzenle
+              </button>
+            ) : issue.action === "clear-manual-text-format" ? (
+              <button
+                type="button"
+                className="result-link"
+                onClick={() => {
+                  const temizlenen = clearManualTextFormat(editor);
+                  if (temizlenen === 0) {
+                    showToast("error", "Temizlenecek elle verilmiş biçim bulunamadı.");
+                    return;
+                  }
+                  showToast("success", `${temizlenen} yerde elle verilmiş biçim kaldırıldı; metin kılavuzun düzenine döndü. Geri almak için Ctrl+Z.`);
+                  recheckStructure();
+                }}
+              >
+                Kılavuzun biçimine döndür
               </button>
             ) : issue.action === "fix-reference-punctuation" ? (
               <button
