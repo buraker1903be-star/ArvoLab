@@ -328,6 +328,18 @@ export default function ManuscriptEditor({
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(initialUpdatedAt ? new Date(initialUpdatedAt) : null);
   const [draftOffer, setDraftOffer] = useState<LocalDraft | null>(null);
   const [checkResult, setCheckResult] = useState<ManuscriptCheckResult | null>(null);
+  /*
+    "Kontrol Sonucu" kartının ATIF yarısı sunucudan geliyor ve metin
+    değişince kendiliğinden tazelenmiyordu; yapı yarısı ise tazeleniyor
+    (recheckStructure). Sonuç, aynı kartın iki yarısının birbiriyle
+    çelişmesiydi: üstte "yapı temiz", altta düzeltilmiş üç atıf sorunu ve
+    eski skor — üstelik "Göster" düğmeleri artık metinde olmayan ifadeyi
+    arıyordu.
+
+    Sonucu silmiyoruz (kullanıcı düzeltirken ona bakıyor), ESKİ olduğunu
+    söylüyoruz.
+  */
+  const [checkResultEski, setCheckResultEski] = useState(false);
   const [checking, setChecking] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
@@ -689,7 +701,18 @@ export default function ManuscriptEditor({
       if (timer) window.clearTimeout(timer);
       timer = window.setTimeout(run, delay);
     };
-    const onUpdate = () => schedule(LIVE_CHECK_DELAY_MS);
+    const onUpdate = () => {
+      /*
+        Bayrak BURADA kuruluyor, denetimin kendisinde değil: denetim
+        açılışta ve bekleyen zamanlayıcıyla da çalışıyor. Orada kursaydık,
+        kullanıcı yazıp hemen "Kontrol Et"e bastığında bekleyen denetim
+        kontrolden sonra ateşlenir ve taze sonucu "eski" diye damgalardı —
+        düzeltmeye çalıştığımız yanlış alarmın aynısı. onUpdate ise tam
+        olarak belge değiştiğinde çalışır.
+      */
+      setCheckResultEski(true);
+      schedule(LIVE_CHECK_DELAY_MS);
+    };
     schedule(600);
     editor.on("update", onUpdate);
     return () => {
@@ -785,6 +808,7 @@ export default function ManuscriptEditor({
         setCheckError(res.error);
       } else if (res.result) {
         setCheckResult(res.result);
+        setCheckResultEski(false);
       }
     } catch {
       setCheckError("Kontrol şu anda yapılamadı. Bağlantınızı kontrol edip yeniden deneyin.");
@@ -1067,6 +1091,7 @@ export default function ManuscriptEditor({
     const issues = checkStructure(editor.getJSON(), structureOptions);
     setLiveIssues(issues);
     setStructureIssues((current) => (current ? issues : current));
+    setCheckResultEski(true);
   };
   const renderIssueList = (issues: StructureIssue[], onNavigate?: () => void) =>
     issues.length === 0 ? (
@@ -1875,7 +1900,14 @@ export default function ManuscriptEditor({
         title="Yapı ve bütünlük"
         description="Yazarken kendiliğinden denetlenir: boş bölümler, başlık atlamaları, şekil/tablo numaraları, atıf–kaynakça uyumu ve boş dipnotlar."
       >
-        {renderIssueList(liveIssues ?? [], closeIssues)}
+        {liveIssues === null ? (
+                /* null "ilk denetim henüz çalışmadı" demek; boş dizi
+                   "sorun bulunmadı". İkisini aynı göstermek, bilinmeyeni
+                   temiz rapor gibi sunmaktı. */
+                <p className="tone-text" data-tone="warning">Canlı denetim birkaç saniye içinde tamamlanır.</p>
+              ) : (
+                renderIssueList(liveIssues, closeIssues)
+              )}
       </Dialog>
 
       {checkError && (
@@ -1887,6 +1919,12 @@ export default function ManuscriptEditor({
       {checkResult && (
         <div className="project-form-card mt-md">
           <h3 className="result-heading-lg">Kontrol Sonucu</h3>
+          {checkResultEski && (
+            <p className="tone-text" data-tone="warning">
+              Bu sonuç metnin önceki hâline ait; sonrasında değişiklik yaptınız.
+              Güncel durum için “Kontrol Et” düğmesine yeniden basın.
+            </p>
+          )}
 
           {checkResult.guidelineCompliance && (
             <div className="result-block">
