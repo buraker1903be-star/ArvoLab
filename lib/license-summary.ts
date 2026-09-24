@@ -22,16 +22,26 @@ export interface LicenseSummary {
   detail: string;
   /** Ödemenin alınmadığını anlatan ek satır (yoksa boş) */
   paymentNote: string;
+  /** Bireysel abonede yenileme/iptal kuralı; kurumda boş */
+  yenilemeNotu: string;
   /** Bireysel abone için ödeme düğmesi gösterilsin mi */
   showPayment: boolean;
 }
 
+/*
+  Metinler KARTTAN SÖZ ETMİYOR. Eskiden "Kartınızı kontrol edip yeniden
+  deneyin" yazıyordu; oysa bu üründe saklı kart ve otomatik çekim YOK.
+  Dönem, ödeme bağlantısı tamamlandıkça bir ay uzuyor (ArvoOS:
+  arvo_activate_subscriber_period). Olmayan bir otomatik ödemeyi ima etmek
+  iki yönden yanlış: kullanıcı kartını kontrol etmeye gidiyor ve bir
+  yandan da "demek ki kendiliğinden çekilecek" sanıyor.
+*/
 const STATUS: Record<string, { label: string; tone: LicenseTone; note?: string }> = {
   active: { label: "Aktif", tone: "success" },
   trialing: { label: "Deneme süresi", tone: "info" },
-  past_due: { label: "Ödeme alınamadı", tone: "warning", note: "Son ödeme alınamadı. Kartınızı kontrol edip yeniden deneyin." },
+  past_due: { label: "Ödeme bekleniyor", tone: "warning", note: "Bu dönemin ödemesi tamamlanmadı." },
   inactive: { label: "Başlatılmadı", tone: "warning", note: "Abonelik için henüz ödeme alınmadı." },
-  suspended: { label: "Askıya alındı", tone: "danger", note: "Ödeme alınamadığı için abonelik askıya alındı." },
+  suspended: { label: "Askıya alındı", tone: "danger", note: "Ödeme alınmadığı için abonelik askıya alındı." },
   canceled: { label: "İptal edildi", tone: "danger", note: "Abonelik iptal edildi; yeniden başlatabilirsiniz." },
   unsynced: { label: "Bilgi bekleniyor", tone: "info", note: "" },
 };
@@ -102,6 +112,15 @@ export function licenseSummary(access: LicenseSummaryInput, now: Date = new Date
     tone,
     detail,
     paymentNote: known?.note ?? "",
+    /*
+      Yenileme kuralı bireysel abonede AÇIKÇA yazılıyor. Kimse "bir şey
+      otomatik çekilecek mi, nasıl iptal ederim" sorusuyla baş başa
+      kalmasın: çekilecek bir şey yok, iptal için yapılacak bir şey yok.
+      Kurum aboneliğinde muhatap kurum olduğu için gösterilmiyor.
+    */
+    yenilemeNotu: individual
+      ? "Otomatik ödeme yok: kartınız saklanmıyor ve kendiliğinden çekim yapılmıyor. Dönem bittiğinde yeni yazma ve denetim durur, çalışmalarınız silinmez; devam etmek için ödemeyi kendiniz yenilersiniz."
+      : "",
     // Kurum aboneliğini kurumu öder; kişisel ödeme yalnızca bireysel kullanıcıda.
     showPayment: individual && access.status !== "active" && access.status !== "unsynced",
   };
