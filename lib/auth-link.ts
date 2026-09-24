@@ -10,7 +10,11 @@
   hashed_token ile gider; /auth/confirm verifyOtp ile oturum açar.
 */
 
-export type AuthLinkType = "recovery" | "invite";
+/*
+  "signup": kendi kaydolan kullanıcının doğrulama bağlantısı. Supabase'in
+  verifyOtp'si bu türü de tanıyor; /auth/confirm aynı yolu kullanıyor.
+*/
+export type AuthLinkType = "recovery" | "invite" | "signup";
 
 export function authConfirmLink(origin: string, hashedToken: string, type: AuthLinkType, next = "/reset-password") {
   const url = new URL("/auth/confirm", origin);

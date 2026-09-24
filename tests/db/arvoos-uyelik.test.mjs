@@ -137,4 +137,22 @@ describe("ArvoOS üyeliği ilk girişte bağlanır", () => {
       await rol(db, "authenticated", YENI);
       await reddedilir(db, `select * from public.arvoos_members`, [], /permission denied/);
     }));
+
+  /*
+    KVKK onayı ile kurum bağlama AYNI tetikleyicide. 20260924100026'yı ilk
+    yazdığımda gövdeyi schema.sql'deki eski sürümden kopyaladım ve kurum
+    bağlama sessizce kayboldu; iki testi birden düşürdü. Bu test ikisinin
+    bir arada çalıştığını sabitliyor.
+  */
+  test("KVKK onayı yazılırken kurum bağlama da çalışıyor", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "postgres");
+      await db.exec(`insert into auth.users (id, email, raw_user_meta_data) values
+        ('${YENI}', 'uzman@akademikmerkez.com', '{"full_name":"Yeni Kişi","kvkk_onay_at":"2026-09-24T08:00:00.000Z"}'::jsonb)`);
+      const { rows } = await db.query(
+        `select organization_id, kvkk_onay_at, full_name from public.profiles where id = $1`, [YENI]);
+      assert.equal(rows[0].organization_id, KURUM, "kurum bağlanmadı");
+      assert.ok(rows[0].kvkk_onay_at, "onay damgası yazılmadı");
+    }));
 });

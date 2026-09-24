@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
-import { resetPasswordEmail } from "@/lib/email/auth-emails";
+import { accountExistsEmail, resetPasswordEmail, signUpConfirmEmail } from "@/lib/email/auth-emails";
+import { kayitGirdisiniDenetle } from "@/lib/kayit";
 import type { ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
@@ -38,6 +39,94 @@ export async function login(formData: FormData) {
   }
 
   redirect(next);
+}
+
+/*
+  Kendi kaydolan kullanıcı.
+
+  Bugüne kadar ArvoLab'a yalnızca ArvoOS panelinden (kurum üyeliğiyle)
+  girilebiliyordu; bireysel abone hesabını kendisi açamıyordu. Kapının
+  arkasındaki her şey hazırdı — deneme süresi ilk girişte ArvoOS
+  köprüsünde başlıyor (lib/access.ts → ensureSubscription) — eksik olan
+  tek parça bu formdu.
+
+  Hesap DOĞRULANANA KADAR açılmıyor: generateLink("signup") kullanıcıyı
+  onaysız oluşturuyor, bağlantıya tıklanınca doğrulanıyor. Böylece
+  başkasının e-postasıyla kayıt denemesi kimseye hesap açmıyor.
+
+  Şifre sıfırlamadaki iki ilke burada da geçerli:
+   - E-postayı biz gönderiyoruz (Supabase'in gönderim sınırı üretim için
+     yetersiz, şablon da bizim kimliğimizde değil).
+   - Ekranda hiçbir durumda "bu adres kayıtlı" denmiyor; adresin kayıtlı
+     olup olmadığı sızmamalı. Adresin SAHİBİNE e-postayla söylemek
+     sızıntı değil, yardım (accountExistsEmail).
+*/
+export async function signUp(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const denetim = kayitGirdisiniDenetle({
+    email: formData.get("email"),
+    sifre: formData.get("password"),
+    adSoyad: formData.get("fullName"),
+    kvkk: formData.get("kvkk") === "on",
+  });
+  if ("hata" in denetim) return { error: denetim.hata };
+  const { email, sifre, adSoyad } = denetim.deger;
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (adminError) {
+    console.error("Kayıt: sunucu anahtarı yok", adminError);
+    return { error: "Kayıt şu anda yapılamıyor. Birazdan tekrar deneyin." };
+  }
+
+  /*
+    Hız sınırı şifre sıfırlamadakinden DAR: kayıt, var olmayan adreslere de
+    posta gönderdiği için kötüye kullanıldığında bizim alan adımızı spam
+    listesine düşürür. Saatte adres başına 3, IP başına 10.
+  */
+  const istek = await headers();
+  const ip = (istek.get("x-forwarded-for") ?? "").split(",")[0].trim() || "bilinmiyor";
+  const izin = await Promise.all([
+    admin.rpc("rate_limit_hit", { p_key: `kayit:${email}`, p_limit: 3, p_window: "1 hour" }),
+    admin.rpc("rate_limit_hit", { p_key: `kayit-ip:${ip}`, p_limit: 10, p_window: "1 hour" }),
+  ]);
+  if (izin.some((sonuc) => sonuc.error)) {
+    console.error("Kayıt hız sınırı okunamadı:", izin.find((sonuc) => sonuc.error)?.error?.message);
+  } else if (izin.some((sonuc) => sonuc.data === false)) {
+    console.warn("Kayıt hız sınırı:", ip);
+    return { error: "Çok fazla deneme yapıldı. Bir saat sonra tekrar deneyin." };
+  }
+
+  const origin = await siteOrigin();
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "signup",
+    email,
+    password: sifre,
+    options: { data: { full_name: adSoyad, kvkk_onay_at: new Date().toISOString() } },
+  });
+
+  if (error) {
+    // Zaten kayıtlı adres: ekranda ayırt edilmiyor, sahibine e-posta gidiyor.
+    if (/already|registered|exists/i.test(error.message)) {
+      await sendEmail({ to: email, ...accountExistsEmail(origin, `${origin}/forgot-password`) });
+      return { success: true };
+    }
+    console.error("Kayıt bağlantısı üretilemedi:", error.message);
+    return { error: "Kayıt şu anda yapılamıyor. Birazdan tekrar deneyin." };
+  }
+
+  const token = data.properties?.hashed_token;
+  if (!token) {
+    console.error("Kayıt: doğrulama belirteci boş");
+    return { error: "Kayıt şu anda yapılamıyor. Birazdan tekrar deneyin." };
+  }
+  /*
+    Deneme süresinin kaç gün olduğunu ArvoLab bilmiyor: değer ArvoOS'ta
+    product_plans tablosunda ve okumak için bir uç nokta yok. Uydurmak
+    yerine genel cümle kuruluyor.
+  */
+  await sendEmail({ to: email, ...signUpConfirmEmail(authConfirmLink(origin, token, "signup", "/dashboard"), null) });
+  return { success: true };
 }
 
 export async function logout() {

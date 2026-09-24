@@ -75,3 +75,52 @@ export function inviteEmail(link: string, inviterName?: string | null) {
     ),
   };
 }
+
+/** Kendi kaydolan kullanıcının e-posta doğrulaması. */
+export function signUpConfirmEmail(link: string, denemeGunu: number | null) {
+  const deneme = denemeGunu && denemeGunu > 0
+    ? `Doğrulamadan sonra ${denemeGunu} günlük deneme süreniz başlar.`
+    : "Doğrulamadan sonra çalışma alanınız açılır.";
+  return {
+    subject: "ArvoLab hesabınızı doğrulayın",
+    html: shell(
+      "Hesabınızı doğrulayın",
+      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
+         ArvoLab'a hoş geldiniz. Hesabınızı kullanmaya başlamak için e-posta
+         adresinizi doğrulayın. ${escape(deneme)}
+       </p>
+       ${button(link, "E-postamı doğrula")}
+       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
+         Bağlantı 24 saat geçerlidir. Bu kaydı siz yapmadıysanız bu e-postayı
+         yok sayın; doğrulanmayan hesap açılmaz.
+       </p>`,
+    ),
+  };
+}
+
+/*
+  Kayıt denemesi ZATEN KAYITLI bir adrese yapıldığında gönderilir.
+
+  Ekranda "hesabınız zaten var" demek, bir adresin kayıtlı olup olmadığını
+  yabancıya söylerdi (şifre sıfırlamada da aynı sebeple ayırmıyoruz). Ama
+  adresin SAHİBİNE söylemek sızıntı değil, yardım: kişi büyük ihtimalle
+  kaydolmayı deniyor çünkü hesabı olduğunu unutmuş.
+*/
+export function accountExistsEmail(girisAdresi: string, sifreAdresi: string) {
+  return {
+    subject: "ArvoLab hesabınız zaten var",
+    html: shell(
+      "Zaten bir hesabınız var",
+      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
+         Bu adresle ArvoLab'a kaydolma denemesi yapıldı; oysa hesabınız zaten
+         açık. Doğrudan giriş yapabilirsiniz.
+       </p>
+       ${button(girisAdresi, "Giriş yap")}
+       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
+         Şifrenizi hatırlamıyorsanız
+         <a href="${escape(sifreAdresi)}" style="color:#5b625e;">şifrenizi sıfırlayın</a>.
+         Bu denemeyi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.
+       </p>`,
+    ),
+  };
+}
