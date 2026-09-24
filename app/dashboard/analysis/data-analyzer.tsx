@@ -13,7 +13,7 @@ import {
   correlationMatrix,
   type DescriptiveStats,
 } from "@/lib/stats-tests-core";
-import { formatP, isSignificant, formatNumber } from "@/lib/apa-format";
+import { formatP, hesaplanabilir, isSignificant, formatNumber } from "@/lib/apa-format";
 import { ANALIZ_ETIKETLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { showToast } from "@/app/dashboard/_components/toast-events";
@@ -52,6 +52,24 @@ function detectColumnTypes(columns: string[], rows: DataRow[]) {
   }
   return { numericColumns, categoricalColumns };
 }
+
+/*
+  Tanımsız sonuç bozuk veri DEĞİL, gerçek veride sık karşılaşılan bir
+  durum: bir grubun bütün değerleri aynıysa varyans sıfır ve t = 0/0 = NaN.
+  Eskiden bu değer olduğu gibi biçimlendiriliyor, ekranda tezе
+  yapıştırılabilir görünümde bir satır çıkıyordu:
+
+      t(4) = NaN, p = NaN — istatistiksel olarak anlamlı değil
+
+  İkinci yarısı daha sinsiydi: isSignificant(NaN) false döndüğü için ürün
+  HESAPLANAMAMIŞ bir testi "anlamlı değil" diye raporluyordu. Artık neden
+  hesaplanamadığı söyleniyor; kullanıcı verisine bakabilsin.
+*/
+const DEGISKENLIK_YOK =
+  "Test hesaplanamadı: seçilen veride değişkenlik yok. Bir grubun (ya da maddenin) bütün değerleri aynıysa varyans sıfır olur ve test tanımsız kalır. Veriyi ve grup seçimini kontrol edin.";
+
+const BEKLENEN_SIFIR =
+  "Test hesaplanamadı: çapraz tabloda tamamen boş bir satır ya da sütun var (beklenen değer sıfır). Kullanılmayan kategorileri çıkarıp tekrar deneyin.";
 
 export default function DataAnalyzer({
   calismalar = [],
@@ -409,6 +427,7 @@ export default function DataAnalyzer({
           return;
         }
         const r = independentTTest(g1, g2);
+        if (!hesaplanabilir(r.t, r.p)) return setResultError(DEGISKENLIK_YOK);
         const sig = isSignificant(r.p);
         setResult(
           <div>
@@ -439,6 +458,7 @@ export default function DataAnalyzer({
           return;
         }
         const r = oneWayAnova(groups);
+        if (!hesaplanabilir(r.f, r.p)) return setResultError(DEGISKENLIK_YOK);
         const sig = isSignificant(r.p);
         setResult(
           <div>
@@ -479,6 +499,7 @@ export default function DataAnalyzer({
           return;
         }
         const r = pearsonCorrelation(x.slice(0, n), y.slice(0, n));
+        if (!hesaplanabilir(r.r, r.p)) return setResultError(DEGISKENLIK_YOK);
         const sig = isSignificant(r.p);
         setResult(
           <p className="tone-text" data-tone={sig ? "success" : "warning"}>
@@ -502,6 +523,7 @@ export default function DataAnalyzer({
           )
         );
         const r = chiSquareIndependence(table);
+        if (!hesaplanabilir(r.chi2, r.p)) return setResultError(BEKLENEN_SIFIR);
         const sig = isSignificant(r.p);
         setResult(
           <div>
@@ -550,6 +572,7 @@ export default function DataAnalyzer({
         }
         const trimmed = items.map((i) => i.slice(0, minLen));
         const r = cronbachAlpha(trimmed);
+        if (!hesaplanabilir(r.alpha)) return setResultError(DEGISKENLIK_YOK);
         const level =
           r.alpha >= 0.9
             ? "mükemmel"
