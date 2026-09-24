@@ -75,17 +75,54 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function resolveYokUniversityId(universityName: string) {
-  const universities = await fetchJson<YokUniversity[]>(`${YOK_ATLAS_BASE_URL}/universiteler`);
+/*
+  Her üniversite adında geçen, ayırt etmeyen sözcükler. "T.C." öneki
+  normalleştirmede "T C" olarak ayrıldığı için harfleri de burada.
+*/
+const AYIRT_ETMEYEN = new Set(["UNIVERSITESI", "UNIVERSITE", "T", "C"]);
+
+/** Adın ayırt edici sözcükleri; karşılaştırma bunlar üzerinden yapılır. */
+const ayirtEdiciAd = (ad: string) =>
+  normalizeTurkish(ad).split(" ").filter((sozcuk) => sozcuk && !AYIRT_ETMEYEN.has(sozcuk)).join(" ");
+
+/**
+ * Adı YÖK dizinindeki üniversiteyle eşler; emin olunamıyorsa null.
+ *
+ * Eskiden tam eşleşme tutmazsa İKİ YÖNLÜ ÖNEK eşleşmesine düşülüyordu
+ * (`normalized.startsWith(target) || target.startsWith(normalized)`) ve tek
+ * aday kalırsa kabul ediliyordu. Türkiye'de bunu ısıran gerçek bir çift
+ * var: dizinde "İstanbul Üniversitesi" bulunamazsa "İstanbul
+ * Üniversitesi-Cerrahpaşa" tek aday olarak kalıyor ve KABUL EDİLİYORDU —
+ * 2018'de ayrılmış, ayrı bir üniversite. Sonuç, bir kurumun bütün
+ * fakülte ve program dizininin yanlış üniversiteye aktarılması.
+ *
+ * Artık ölçüt önek değil, AYIRT EDİCİ SÖZCÜKLERİN aynılığı: fark yalnızca
+ * "Üniversitesi" / "T.C." gibi her adda geçen sözcüklerse eşleşme kabul
+ * edilir, "Cerrahpaşa" gibi ayırt eden bir sözcükse edilmez.
+ *
+ * Bu kural eskisinden yalnızca dar değil, bir yerde daha GENİŞ: "T.C. Gazi
+ * Üniversitesi" ile "Gazi Üniversitesi" önek kuralıyla eşleşmiyordu, şimdi
+ * eşleşiyor.
+ *
+ * Saf fonksiyon; testi tests/unit/yok-universite-eslestirme.test.ts.
+ */
+export function yokUniversitesiSec(
+  universityName: string,
+  dizin: { universiteAdi: string; universiteId: number }[],
+): number | null {
   const target = normalizeTurkish(universityName);
-  const exact = universities.find((item) => normalizeTurkish(item.universiteAdi) === target);
+  const exact = dizin.find((item) => normalizeTurkish(item.universiteAdi) === target);
   if (exact) return exact.universiteId;
 
-  const candidates = universities.filter((item) => {
-    const normalized = normalizeTurkish(item.universiteAdi);
-    return normalized.startsWith(target) || target.startsWith(normalized);
-  });
+  const hedef = ayirtEdiciAd(universityName);
+  if (!hedef) return null;
+  const candidates = dizin.filter((item) => ayirtEdiciAd(item.universiteAdi) === hedef);
   return candidates.length === 1 ? candidates[0].universiteId : null;
+}
+
+async function resolveYokUniversityId(universityName: string) {
+  const universities = await fetchJson<YokUniversity[]>(`${YOK_ATLAS_BASE_URL}/universiteler`);
+  return yokUniversitesiSec(universityName, universities);
 }
 
 async function fetchUniversityPrograms(universityId: number) {
