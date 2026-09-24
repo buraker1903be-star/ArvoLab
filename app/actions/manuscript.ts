@@ -113,7 +113,15 @@ export interface SaveManuscriptInput {
 
 export type SaveManuscriptResult =
   | { success: true; updatedAt: string; wordCount: number }
-  | { success?: false; error: string; conflict?: boolean; sessionExpired?: boolean; forbidden?: boolean };
+  | {
+      success?: false;
+      error: string;
+      conflict?: boolean;
+      sessionExpired?: boolean;
+      forbidden?: boolean;
+      /** Engel abonelikten: kullanıcıya yenileme yolu gösterilmeli, "tekrar dene" değil. */
+      abonelik?: boolean;
+    };
 
 const isMissingColumn = (error: { code?: string } | null) => error?.code === "PGRST204" || error?.code === "42703";
 // RLS reddi: satır yazılamıyor. Yeniden denemek asla başarmaz.
@@ -135,7 +143,16 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     engelliyor. Deneme süresi biterken editör sekmesi açık kalan kullanıcının
     otomatik kaydı kesintisiz sürüyordu.
   */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  /*
+    forbidden + abonelik: bu engel yeniden denemeyle geçmez. İşaretsiz
+    dönüyordu ve editör bunu geçici bir arıza sanıp 10 saniyede bir
+    sonsuza kadar yeniden deniyordu — üstelik ekranda "Şimdi dene"
+    düğmesi vardı, yani kullanıcı asla başaramayacak bir düğmeye
+    basıyordu. Aboneliği biten kişinin görmesi gereken şey yenileme yolu.
+  */
+  if (await isSubscriptionBlocked()) {
+    return { error: SUBSCRIPTION_BLOCKED_MESSAGE, forbidden: true, abonelik: true };
+  }
 
   const { content, margins, showPageNumbers, coverPage, settingsSource, includeToc, headingNumbering } = input;
   // Biçim bilgisi (başlık düzeyi, resim adresi, dipnot metni…) sunucuya eksik ulaştıysa
@@ -195,7 +212,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   const rlsReddi = (error: { code?: string; message?: string } | null) => {
     if (!isForbidden(error)) return null;
     const mesaj = error?.message ?? "";
-    return /abonelik/i.test(mesaj) ? ({ error: mesaj, forbidden: true } as const) : forbidden;
+    return /abonelik/i.test(mesaj) ? ({ error: mesaj, forbidden: true, abonelik: true } as const) : forbidden;
   };
 
   /*
