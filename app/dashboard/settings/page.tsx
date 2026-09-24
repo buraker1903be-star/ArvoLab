@@ -5,6 +5,9 @@ import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
 import { aiKurulumu, aiYapilandirildi } from "@/lib/ai/saglayici";
 import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
 import { KREDI_SATIN_ALMA_ADRESI } from "@/lib/ai/kredi-karari";
+import { getAccessState } from "@/lib/access";
+import { getCurrentProfile } from "@/app/actions/profile";
+import LicenseCard from "../_components/license-card";
 import { changePassword } from "@/app/actions/auth";
 import { updateMyProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
@@ -58,6 +61,15 @@ export default async function SettingsPage() {
   if (krediHatasi) console.error("[ayarlar] kredi durumu okunamadı:", krediHatasi.message);
   const kredi = krediOzeti((krediSatiri as KrediSatiri | null) ?? null);
 
+  /*
+    Abonelik durumu bugüne kadar YALNIZCA ana sayfada duruyordu. Bireysel
+    abone "planım ne, ne zaman bitiyor, nereden ödeyeceğim" sorusuyla
+    Ayarlar'a geliyor ve orada aboneliğine dair tek satır bulamıyordu.
+    Kart aynı kart (tek kaynak); ana sayfadan kaldırılmadı, çünkü orada
+    süresi dolan kişiye ilk uyarıyı o veriyor.
+  */
+  const access = await getAccessState(await getCurrentProfile());
+
   const icEkip = ctx.role !== null && ADMIN_ROLES.includes(ctx.role);
   const kurulum = icEkip ? aiKurulumu() : null;
   const sunucu = kurulum ? (() => { try { return new URL(kurulum.tabanUrl).host; } catch { return kurulum.tabanUrl; } })() : null;
@@ -71,6 +83,8 @@ export default async function SettingsPage() {
           <p>Profil bilgilerinizi ve şifrenizi buradan yönetin. Rol ve kurum değişiklikleri Sistem Yöneticisi tarafından yapılır.</p>
         </div>
       </section>
+
+      <LicenseCard access={access} />
 
       <section className="project-form-card mb-lg">
         <div className="project-form-heading">

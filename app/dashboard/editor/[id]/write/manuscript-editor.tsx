@@ -325,6 +325,12 @@ export default function ManuscriptEditor({
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  /*
+    Abonelik engeli: yeniden denemeyle geçmez. Ayrı tutuluyor çünkü
+    kullanıcıya gösterilecek çıkış yolu farklı — "Şimdi dene" değil,
+    planı yenileme.
+  */
+  const [abonelikBitti, setAbonelikBitti] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(initialUpdatedAt ? new Date(initialUpdatedAt) : null);
   const [draftOffer, setDraftOffer] = useState<LocalDraft | null>(null);
   const [checkResult, setCheckResult] = useState<ManuscriptCheckResult | null>(null);
@@ -501,6 +507,7 @@ export default function ManuscriptEditor({
             savedRevisionRef.current = revision;
             blockedRef.current = false;
             setSessionExpired(false);
+            setAbonelikBitti(false);
             setSaveError(null);
             setLastSavedAt(new Date(res.updatedAt));
             if (revisionRef.current === revision) {
@@ -523,9 +530,10 @@ export default function ManuscriptEditor({
               blockedRef.current = true;
               setSessionExpired(true);
             } else if (res.forbidden) {
-              // Yetki (ya da abonelik) reddi: yeniden denemek asla başarmaz,
+              // Yetki ya da abonelik reddi: yeniden denemek asla başarmaz,
               // 10 saniyede bir sonsuza kadar denenmesin.
               blockedRef.current = true;
+              if (res.abonelik) setAbonelikBitti(true);
             } else {
               scheduleSave(RETRY_DELAY_MS);
             }
@@ -1620,12 +1628,24 @@ export default function ManuscriptEditor({
         </div>
       ) : saveState === "error" && saveError ? (
         <div className="callout editor-notice cluster" data-tone="danger" role="alert">
-          <span>{saveError}</span>
+          <span>
+            {saveError}
+            {abonelikBitti ? " Yazdıklarınız bu tarayıcıda duruyor; plan yenilenince kaydedilir." : ""}
+          </span>
           <span className="cluster">
             {sessionExpired ? (
               <button type="button" className="projects-primary-button" onClick={() => window.location.reload()}>
                 Yeniden giriş yap
               </button>
+            ) : abonelikBitti ? (
+              /*
+                Abonelik engelinde "Şimdi dene" yanlış yola sokuyordu:
+                basılan düğme asla başaramaz. Yazdıkları tarayıcıda
+                duruyor; söylenmesi gereken bu ve yenileme yolu.
+              */
+              <Link href="/dashboard" className="projects-primary-button">
+                Planı yenile
+              </Link>
             ) : (
               <button type="button" className="projects-filter-button" onClick={() => void saveNow()}>
                 Şimdi dene
