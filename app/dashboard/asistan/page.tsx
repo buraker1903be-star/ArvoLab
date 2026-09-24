@@ -3,6 +3,7 @@ import BosDurum from "../_components/bos-durum";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { asistanKayitlari, modelOzetleri } from "@/app/actions/ai-kayitlar";
 import { KAYIT_ROLLERI, RED_ETIKETI, YETENEK_ETIKETI } from "@/lib/ai/kayit-gorunum";
+import { ADMIN_ROLES } from "@/lib/project-labels";
 import { trTarihSaat } from "@/lib/tr-time";
 
 /*
@@ -60,9 +61,15 @@ export default async function AsistanKayitlariSayfasi() {
             doğru yanıtları kadar öğreticidir.
           </p>
         </div>
-        <a className="projects-primary-button" href="/api/asistan/egitim-kumesi" download>
-          <Download size={16} aria-hidden="true" /> Eğitim kümesini indir
-        </a>
+        {/* Kayıtları görmek ile eğitim kümesini indirmek ayrı yetkiler:
+            sayfa Kontrolör'e de açık, dosya yalnızca iç ekibe. Rota da aynı
+            kuralı uyguluyor; buradaki gizleme yalnızca çalışmayacak bir
+            düğme göstermemek için. */}
+        {ADMIN_ROLES.includes(profile.role) ? (
+          <a className="projects-primary-button" href="/api/asistan/egitim-kumesi" download>
+            <Download size={16} aria-hidden="true" /> Eğitim kümesini indir
+          </a>
+        ) : null}
       </section>
 
       <section className="section">
