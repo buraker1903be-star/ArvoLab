@@ -99,3 +99,28 @@ describe("yürürlük tarihi", () => {
     assert.equal(yururlukTarihiCikar("Erişim: 12.05.2020"), null);
   });
 });
+
+/*
+  \b ASCII tabanlı olduğu için Türkçe harfle başlayan sözcükleri
+  kaçırıyordu (lib/sozcuk-siniri.ts). İkisi de canlı etkiliydi:
+  Şubat'ta yayımlanmış kılavuzun tarihi hiç okunmuyor, "çalışma" diye
+  başlayan kural cümleleri tezle ilgisiz sayılıp atlanıyordu.
+*/
+describe("Türkçe harfle başlayan sözcükler", () => {
+  test("Şubat'ta yayımlanmış kılavuzun tarihi okunur", () => {
+    const kapak = "T.C. ÖRNEK ÜNİVERSİTESİ\nTez Yazım Kılavuzu\nAnkara, Şubat 2024";
+    assert.equal(surumEtiketiCikar(kapak), "Şubat 2024");
+  });
+
+  test("on iki ayın hepsi okunur", () => {
+    const aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+    for (const ay of aylar) {
+      assert.equal(surumEtiketiCikar(`Tez Yazım Kılavuzu\nAnkara, ${ay} 2024`), `${ay} 2024`, ay);
+    }
+  });
+
+  test("kural cümlesi 'çalışma' ile kurulmuşsa da sayfa sınırı okunur", () => {
+    assert.deepEqual(sayfaSiniriCikar("Çalışma en fazla 120 sayfa olmalıdır."), { enAz: null, enFazla: 120 });
+  });
+});

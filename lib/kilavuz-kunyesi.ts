@@ -20,6 +20,8 @@
   Saf modül; testi tests/unit/kilavuz-kunyesi.test.ts.
 */
 
+import { SOZCUK_BASI, SOZCUK_SONU } from "@/lib/sozcuk-siniri";
+
 export type SayfaSiniri = { enAz: number | null; enFazla: number | null };
 
 /*
@@ -40,7 +42,11 @@ const gecerliSayfa = (deger: string | undefined) => {
 };
 
 /** Cümlenin tezin bütününden söz edip etmediği. */
-const tezdenSozEdiyor = (cumle: string) => /\b(tez|çalışma|metin)\p{L}*/iu.test(cumle);
+// \b yerine SOZCUK_BASI: "çalışma" Türkçe harfle başladığı için \b onu hiç
+// yakalamıyordu, yani "bu çalışma…" diye başlayan kılavuz cümleleri tezle
+// ilgisiz sayılıp atlanıyordu (lib/sozcuk-siniri.ts).
+const TEZDEN_SOZ = new RegExp(`${SOZCUK_BASI}(?:tez|çalışma|metin)\\p{L}*`, "iu");
+const tezdenSozEdiyor = (cumle: string) => TEZDEN_SOZ.test(cumle);
 
 /**
  * Tez sayfa sınırı; bulunamazsa null.
@@ -120,7 +126,12 @@ export function surumEtiketiCikar(metin: string): string | null {
   const kisaSurum = /(?:^|[^\p{L}\d])v\.?\s?(\d+(?:\.\d+)*)(?![\p{L}\d])/iu.exec(kapak);
   if (kisaSurum) return `Sürüm ${kisaSurum[1]}`;
 
-  const ayYil = new RegExp(`\\b(${AYLAR.join("|")})[,\\s]+((?:19|20)\\d{2})\\b`, "iu").exec(kapak);
+  // On iki aydan yalnızca "şubat" Türkçe harfle başlıyor ve \b tam onu
+  // kaçırıyordu: Şubat'ta yayımlanmış bir kılavuzun tarihi hiç okunmuyordu.
+  const ayYil = new RegExp(
+    `${SOZCUK_BASI}(${AYLAR.join("|")})[,\\s]+((?:19|20)\\d{2})${SOZCUK_SONU}`,
+    "iu",
+  ).exec(kapak);
   if (ayYil) {
     const ay = ayYil[1].toLocaleLowerCase("tr-TR");
     return `${ay.charAt(0).toLocaleUpperCase("tr-TR")}${ay.slice(1)} ${ayYil[2]}`;

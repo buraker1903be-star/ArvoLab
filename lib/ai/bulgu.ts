@@ -10,6 +10,7 @@
 */
 
 import { uydurmaSayilar } from "./sayi-denetimi";
+import { SOZCUK_BASI } from "@/lib/sozcuk-siniri";
 
 export type BulguTuru = "uyari" | "oneri" | "bilgi";
 export type Bulgu = { tur: BulguTuru; baslik: string; aciklama: string };
@@ -101,7 +102,7 @@ export function bulgulariCozumle(ham: string): Bulgu[] {
   sayılan bir alfabe hep eksik kalır. Sınır da \b yerine "önünde harf
   yok" olarak yazıldı.
 */
-const KUNYE = /(?<!\p{L})\p{Lu}\p{Ll}+,\s*\p{Lu}\.\s*\(\d{4}\)/u;
+const KUNYE = new RegExp(`${SOZCUK_BASI}\\p{Lu}\\p{Ll}+,\\s*\\p{Lu}\\.\\s*\\(\\d{4}\\)`, "u");
 
 export function kunyeIziMetinde(metin: string): boolean {
   return KUNYE.test(metin);

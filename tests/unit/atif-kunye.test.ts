@@ -180,3 +180,30 @@ describe("MLA künyesi", () => {
     assert.deepEqual(alanlar(kunye).filter((alan) => alan === "author_format"), []);
   });
 });
+
+/*
+  "vd." Türkçedeki en yaygın "ve diğerleri" kısaltması ve ayıklaması HİÇ
+  çalışmıyordu: desen `\bvd\.\b` idi, sondaki \b noktadan sonra bir sözcük
+  karakteri istiyor, oysa "vd." her zaman boşlukla devam ediyor. Sonuç,
+  "vd"nin bir YAZAR sayılması ve olmayan bir biçim hatası bildirilmesiydi.
+*/
+describe("ve diğerleri ayıklaması", () => {
+  test("vd. yazar listesine girmez", () => {
+    assert.deepEqual(kunyeAyristir("1. Yılmaz A, vd. Örnek başlık. Yayınevi; 2020.", "vancouver").authors, ["Yılmaz A"]);
+  });
+
+  test("ve diğerleri de girmez", () => {
+    assert.deepEqual(
+      kunyeAyristir("1. Yılmaz A, ve diğerleri. Örnek başlık. Yayınevi; 2020.", "vancouver").authors,
+      ["Yılmaz A"],
+    );
+  });
+
+  test("gerçek yazar adı 'vd' ile başlıyorsa silinmez", () => {
+    // Sınır olmasaydı "Vdovin" içindeki "vd" ayıklanırdı.
+    assert.deepEqual(
+      kunyeAyristir("1. Vdovin A, Demir B. Gerçek bir yazar. Yayınevi; 2020.", "vancouver").authors,
+      ["Vdovin A", "Demir B"],
+    );
+  });
+});
