@@ -1,13 +1,61 @@
 import { isIP } from "node:net";
 import { resolve4, resolve6 } from "node:dns/promises";
 
-function isPrivateAddress(address: string): boolean {
-  if (isIP(address) === 4) {
-    const [a, b] = address.split(".").map(Number);
-    return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224;
+/*
+  IPv4 eşlemeli IPv6 adresini ("::ffff:127.0.0.1", "::ffff:7f00:1",
+  "0:0:0:0:0:ffff:10.0.0.1") IPv4 karşılığına çevirir; değilse null.
+
+  Neden gerekli: IPv6 dalı metin önekine bakıyordu ve bu biçimler "fc/fd/
+  fe8…" öneklerinin hiçbiriyle başlamadığı için DENETİMDEN TÜMDEN
+  GEÇİYORDU. ::ffff:127.0.0.1 doğrudan loopback demek; süzgecin varlık
+  sebebi olan adresi süzemiyordu.
+*/
+function ipv4Eslemeli(deger: string): string | null {
+  const parcalar = deger.toLowerCase().split(":").filter((parca) => parca !== "");
+  const ffff = parcalar.indexOf("ffff");
+  if (ffff === -1) return null;
+  // "ffff"ten önce yalnızca sıfır grupları olmalı; "2001:ffff::1" eşlemeli değildir.
+  if (parcalar.slice(0, ffff).some((parca) => parseInt(parca, 16) !== 0)) return null;
+  const kalan = parcalar.slice(ffff + 1);
+  if (kalan.length === 1 && isIP(kalan[0]) === 4) return kalan[0];
+  if (kalan.length === 2) {
+    const [ust, alt] = kalan.map((parca) => parseInt(parca, 16));
+    if ([ust, alt].every((sayi) => Number.isInteger(sayi) && sayi >= 0 && sayi <= 0xffff)) {
+      return [ust >> 8, ust & 0xff, alt >> 8, alt & 0xff].join(".");
+    }
   }
-  const value = address.toLowerCase();
+  return null;
+}
+
+/**
+ * Adres iç ağa mı çıkıyor? SSRF süzgecinin çekirdeği.
+ *
+ * Dışa aktarılıyor çünkü sınanabilmeli: bir güvenlik sınırının testsiz
+ * durması, süzgecin açık olduğunu ancak kötüye kullanıldığında öğrenmek
+ * demek. Testi tests/unit/safe-official-fetch.test.ts.
+ */
+export function isPrivateAddress(address: string): boolean {
+  const eslemeli = isIP(address) === 6 ? ipv4Eslemeli(address) : null;
+  const hedef = eslemeli ?? address;
+
+  if (isIP(hedef) === 4) {
+    const [a, b] = hedef.split(".").map(Number);
+    return (
+      a === 10 || a === 127 || a === 0 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      // RFC 6598 (100.64/10): operatör düzeyi NAT. Bulut sağlayıcıları iç
+      // servisleri burada tutabiliyor; süzgeçte yoktu.
+      (a === 100 && b >= 64 && b <= 127) ||
+      // IETF ayrılmış (192.0.0/24) ve kıyaslama (198.18/15) blokları.
+      (a === 192 && b === 0) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      a >= 224
+    );
+  }
+
+  const value = hedef.toLowerCase();
   return value === "::1" || value === "::" || value.startsWith("fc") ||
     value.startsWith("fd") || value.startsWith("fe8") || value.startsWith("fe9") ||
     value.startsWith("fea") || value.startsWith("feb") || value.startsWith("ff");
