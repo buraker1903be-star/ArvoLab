@@ -6,6 +6,11 @@ import OdemeButonu from "./odeme-butonu";
 // Erişimi kapalı kullanıcıya gösterilen ekran. Kurum üyesi ödeme yapamaz
 // (kurumu öder); bireysel kullanıcı buradan aylık ya da yıllık planı seçip
 // kartla ödeyerek hemen devam eder. Planları ve tutarları ArvoOS bildirir.
+//
+// "Verilerimi indir" bilerek BURADA da duruyor: bu ekran paneli tamamen
+// kaplıyor (dashboard/layout.tsx), yani Ayarlar sayfasındaki indirme bağlantısı
+// aboneliği bitmiş kullanıcıya hiç görünmüyordu. Verisini alabilmek için
+// önce ödeme yapması gereken bir ürün, veriyi rehin tutuyor demektir.
 
 function reason(access: AccessState) {
   if (access.status === "suspended") return "askıya alındı";

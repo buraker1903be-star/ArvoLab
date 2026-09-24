@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
+import { ADMIN_ROLES } from "@/lib/project-labels";
 import { SISTEM_ISTEMI as ANALIZ_ISTEMI } from "@/lib/ai/analiz-yorumu";
 import { SISTEM_ISTEMI as KAYNAKCA_ISTEMI } from "@/lib/ai/kaynakca-denetimi";
 import { SISTEM_ISTEMI as LITERATUR_ISTEMI } from "@/lib/ai/literatur-taramasi";
@@ -17,7 +17,11 @@ import { SISTEM_ISTEMI as LITERATUR_ISTEMI } from "@/lib/ai/literatur-taramasi";
   Sistem istemi kayıtta tutulmuyor, yetenekten türetiliyor: istem zamanla
   değişiyor ve eğitimde güncel olanı kullanmak doğrusu.
 
-  Erişim iç ekiple sınırlı; dosya kullanıcıların akademik metnini içerir.
+  Erişim iç ekiple (ADMIN_ROLES: system_admin, founder) sınırlı; dosya
+  kullanıcıların akademik metnini içerir. Eskiden KAYIT_ROLLERI yetiyordu,
+  yani bir MÜŞTERİ kurumun Kontrolörü de kendi kurumunun bütün asistan
+  girdilerini ince ayar dosyası olarak indirebiliyordu — kayıtları sayfada
+  görmek ile eğitim kümesini dışarı taşımak aynı şey değil.
 */
 
 export const runtime = "nodejs";
@@ -31,7 +35,7 @@ const ISTEMLER: Record<string, string> = {
 
 export async function GET(request: Request) {
   const profile = await getCurrentProfile();
-  if (!profile || !KAYIT_ROLLERI.includes(profile.role))
+  if (!profile || !ADMIN_ROLES.includes(profile.role))
     return new Response("Bu dışa aktarım yalnızca iç ekibe açıktır.", { status: 403 });
 
   const adres = new URL(request.url);
