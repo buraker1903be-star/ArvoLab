@@ -165,12 +165,20 @@ describe("fonksiyon yetkileri", () => {
   // calisma_klasoru — veriye hiç bakmaz: depo yolunun ilk klasörünü uuid ise
   // uuid olarak döndürür, değilse null. Depo politikalarında "bu dosya hangi
   // çalışmanın klasöründe" sorusunu yanıtlıyor.
+  //
+  // gozetim_kapsami / kullanici_kurumu (20260924100028) — kurum sınırını
+  // tarif eden okuma yardımcıları; ikisi de yalnızca "evet/hayır" ya da bir
+  // kurum kimliği döndürür, satır içeriği sızdırmaz. kullanici_kurumu bir
+  // kullanıcının kurumunu söyler: aynı bilgi zaten profiles politikasından
+  // okunabiliyor.
   const POLITIKA = [
     "calisma_klasoru",
     "can_view_project",
     "can_write_project",
     "get_my_organization_id",
+    "gozetim_kapsami",
     "has_role",
+    "kullanici_kurumu",
     "subscription_open",
   ];
 
