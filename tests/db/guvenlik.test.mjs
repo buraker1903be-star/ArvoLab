@@ -196,10 +196,14 @@ describe("fonksiyon yetkileri", () => {
         kendi kurumunun tüketimini döndürür. Kurum kimliğini parametre
         alsaydı herkes başka bir kurumun tüketimini okuyabilirdi
         (arvoos_ai_kullanimi bu yüzden yalnızca service_role'a açık).
+      olcum_ozeti              — PARAMETRE ALMIYOR; security definer olduğu
+        için kapıyı kendi içinde tutuyor ve iç ekip dışındakine 42501
+        fırlatıyor (aşağıdaki ölçüm testi bunu sabitler). authenticated'a
+        açık olması şart: sayfa kullanıcının kendi oturumuyla çağırıyor.
   */
-  test("authenticated ek olarak yalnızca kendi kapsamındaki üç fonksiyon", async () => {
+  test("authenticated ek olarak yalnızca kendi kapsamındaki dört fonksiyon", async () => {
     assert.deepEqual(await acik("authenticated"),
-      [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "ai_kredi_durumum"].sort());
+      [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "ai_kredi_durumum", "olcum_ozeti"].sort());
   });
 
   test("notify anonim ve oturumlu kullanıcıya kapalı (sahte bildirim)", () =>
