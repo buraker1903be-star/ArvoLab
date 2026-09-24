@@ -13,3 +13,24 @@ export function createAdminClient() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/**
+ * Yönetim istemcisi; kurulu değilse hata yerine null.
+ *
+ * createAdminClient() anahtar yoksa HATA FIRLATIR ve çoğu yerde doğrusu
+ * budur: köprü ve cron, anahtarsız çalışmamalı. Ama hız sayacı gibi
+ * YARDIMCI yollarda niyet tersidir — sayaç kurulamıyorsa kullanıcı
+ * engellenmemeli, kapı sert kapanmamalı.
+ *
+ * O niyet iki yerde `if (!admin) …` diye yazılmıştı ve o satırlar hiç
+ * çalışmıyordu (fonksiyon null dönmüyor, fırlatıyor): anahtar eksik
+ * olsaydı asistan ve literatür araması, sessizce sayacı atlamak yerine
+ * tamamen düşerdi. Niyet artık burada karşılığını buluyor.
+ */
+export function adminIstemcisiVarsa() {
+  try {
+    return createAdminClient();
+  } catch {
+    return null;
+  }
+}
