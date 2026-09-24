@@ -33,7 +33,7 @@ export default async function OlcumPage() {
     );
   }
 
-  const { huni, aktivasyon, kayip, geriBildirim } = ozet;
+  const { sayilar, donusum, aktivasyon } = ozet;
 
   return (
     <main className="dashboard-page">
@@ -59,11 +59,11 @@ export default async function OlcumPage() {
 
       <section className="dashboard-stats" aria-label="Bireysel abonelik hunisi">
         {[
-          { label: "Kayıt", value: String(huni.kayit), note: "Kurumu olmayan üye/öğrenci hesapları" },
-          { label: "Deneme başlattı", value: String(huni.denemeBaslatan), note: "ArvoOS'ta abone kaydı açılmış" },
-          { label: "Ödemeye geçti", value: String(huni.odemeyeGecen), note: "Dönemi deneme bitişinin ötesine uzamış" },
-          { label: "Dönüşüm", value: yuzde(huni.donusumYuzdesi), note: "Denemeyi başlatanların ödeyen oranı" },
-          { label: "Şu an erişimi açık", value: String(huni.suAnErisimi), note: "Deneme ya da ödenmiş dönem sürüyor" },
+          { label: "Kayıt", value: String(sayilar.kayit), note: "Kurumu olmayan üye/öğrenci hesapları" },
+          { label: "Deneme başlattı", value: String(sayilar.denemeBaslatan), note: "ArvoOS'ta abone kaydı açılmış" },
+          { label: "Ödemeye geçti", value: String(sayilar.odemeyeGecen), note: "Dönemi deneme bitişinin ötesine uzamış" },
+          { label: "Dönüşüm", value: yuzde(donusum), note: "Denemeyi başlatanların ödeyen oranı" },
+          { label: "Şu an erişimi açık", value: String(sayilar.suAnErisimi), note: "Deneme ya da ödenmiş dönem sürüyor" },
         ].map((kart) => (
           <article className="dashboard-stat-card" key={kart.label}>
             <div>
@@ -82,7 +82,7 @@ export default async function OlcumPage() {
           daralmıyor: &ldquo;çalışma açanların kaçı yazdı&rdquo; biçiminde bir zincir,
           insanların nerede bıraktığını gizler.
         </p>
-        {huni.kayit === 0 ? (
+        {sayilar.kayit === 0 ? (
           <BosDurum
             kompakt
             ikon={ChartNoAxesCombined}
@@ -117,14 +117,14 @@ export default async function OlcumPage() {
         <div className="dashboard-stats" aria-label="Kayıp">
           <article className="dashboard-stat-card" data-tone="warning">
             <div>
-              <strong>{kayip.denemedeBirakan}</strong>
+              <strong>{sayilar.denemedeBirakan}</strong>
               <span>Denemede bıraktı</span>
               <em>Deneme süresi doldu, hiç ödeme yapmadı</em>
             </div>
           </article>
           <article className="dashboard-stat-card" data-tone="warning">
             <div>
-              <strong>{kayip.yenilemeyen}</strong>
+              <strong>{sayilar.yenilemeyen}</strong>
               <span>Yenilemedi</span>
               <em>Ödemişti, dönemi bitti, uzatmadı</em>
             </div>
@@ -140,9 +140,9 @@ export default async function OlcumPage() {
       <section className="section mt-lg">
         <h2 className="section-title">Ürün geri bildirimi</h2>
         <p className="text-base">
-          {geriBildirim.cevaplayan === 0
+          {sayilar.geriBildirimSayisi === 0
             ? "Henüz kimse geri bildirim sorusunu cevaplamadı."
-            : `${geriBildirim.cevaplayan} kişi cevapladı, ortalama puan ${geriBildirim.ortalama ?? "—"}/5.`}
+            : `${sayilar.geriBildirimSayisi} kişi cevapladı, ortalama puan ${sayilar.geriBildirimOrtalamasi ?? "—"}/5.`}
         </p>
       </section>
     </main>

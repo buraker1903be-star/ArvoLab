@@ -6,7 +6,7 @@
 // kuruma ait değil, müşteri kurumların gözetim rolleri onu görmemeli.
 import { before, describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { islem, rol, veritabani } from "./ortam.mjs";
+import { islem, reddedilir, rol, veritabani } from "./ortam.mjs";
 
 const KURUCU = "00000000-0000-4000-8000-0000000000c1";
 const YONETICI = "00000000-0000-4000-8000-0000000000c2";
@@ -67,12 +67,72 @@ describe("ölçüm erişimi", () => {
       await tohum();
       await rol(db, "authenticated", KURUCU);
       // grant yalnızca select: yazma denemesi yetki hatasına düşmeli.
-      let hata = null;
-      try {
-        await db.query(`update public.individual_subscriptions set status = 'active' where user_id = $1`, [BIREYSEL]);
-      } catch (e) {
-        hata = e.message;
+      await reddedilir(
+        db,
+        `update public.individual_subscriptions set status = 'active' where user_id = $1`,
+        [BIREYSEL],
+        /permission denied/,
+      );
+    }));
+
+  test("olcum_ozeti yalnızca iç ekibe cevap verir", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", KURUCU);
+      const { rows } = await db.query(`select public.olcum_ozeti() as o`);
+      assert.equal(Number(rows[0].o.denemeBaslatan), 2);
+
+      for (const kullanici of [YONETICI, KONTROLOR, BIREYSEL]) {
+        await rol(db, "authenticated", kullanici);
+        await reddedilir(db, `select public.olcum_ozeti()`, [], /yalnızca iç ekibe/);
       }
-      assert.match(hata ?? "", /permission denied/);
+    }));
+
+  /*
+    Sayımın iki inceliği burada sabitleniyor. İkisi de sessizce yanlış sayı
+    üretir, yani testle tutulmazsa kimse fark etmez.
+  */
+  test("ödeme ölçütü durum alanına değil tarihe bakar", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "postgres");
+      // ArvoOS denemeyi başlatırken iki tarihi de aynı yazıyor ve durumu
+      // 'active' yapabiliyor; durum ölçüt olsaydı bu abone "ödedi" sayılırdı.
+      await db.exec(`
+        update public.individual_subscriptions
+        set status = 'active', current_period_end = trial_ends_at
+        where user_id = '${BIREYSEL}';
+      `);
+      await rol(db, "authenticated", KURUCU);
+      const { rows } = await db.query(`select public.olcum_ozeti() as o`);
+      assert.equal(Number(rows[0].o.odemeyeGecen), 1, "Yalnızca dönemi denemenin ötesine uzayan abone ödemiş sayılır");
+    }));
+
+  test("aktivasyon kişi sayar, satır değil", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "postgres");
+      // Tek kişinin üç çalışması: satır sayılsaydı oran %100'ü aşardı.
+      await db.exec(`
+        insert into public.academic_projects (owner_id, title, project_type) values
+          ('${BIREYSEL}', 'Birinci çalışma', 'thesis'),
+          ('${BIREYSEL}', 'İkinci çalışma', 'article'),
+          ('${BIREYSEL}', 'Üçüncü çalışma', 'project');
+      `);
+      await rol(db, "authenticated", KURUCU);
+      const { rows } = await db.query(`select public.olcum_ozeti() as o`);
+      assert.equal(Number(rows[0].o.calismaAcan), 1);
+      // Kayıt paydası: kurumsuz ve 'client' rollü profiller (iki bireysel).
+      assert.equal(Number(rows[0].o.kayit), 2);
+    }));
+
+  test("iç ekibin kendi kurumsuz hesabı abone adayı sayılmaz", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", KURUCU);
+      const { rows } = await db.query(`select public.olcum_ozeti() as o`);
+      // KURUCU kurumsuz ama rolü 'founder'; paydaya girseydi dönüşüm
+      // olduğundan kötü görünürdü.
+      assert.equal(Number(rows[0].o.kayit), 2);
     }));
 });

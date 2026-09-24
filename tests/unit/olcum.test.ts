@@ -1,143 +1,85 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  aktivasyonHesapla,
-  erisimiAcik,
-  huniHesapla,
-  kayipHesapla,
-  odemeYapmis,
-  ortalamaPuan,
-  type OlcumAbonelik,
+  aktivasyonAdimlari,
+  BOS_SAYILAR,
+  donusumYuzdesi,
+  oran,
+  sayilariOku,
+  type OlcumSayilari,
 } from "@/lib/olcum";
 
-const SIMDI = new Date("2026-09-24T12:00:00Z");
-const gun = (n: number) => new Date(SIMDI.getTime() + n * 86_400_000).toISOString();
+const sayilar = (ek: Partial<OlcumSayilari> = {}): OlcumSayilari => ({ ...BOS_SAYILAR, ...ek });
 
-const abonelik = (parca: Partial<OlcumAbonelik> & { user_id: string }): OlcumAbonelik => ({
-  status: "trialing",
-  trial_ends_at: null,
-  current_period_end: null,
-  ...parca,
-});
-
-describe("ölçüm: ödeme yapmış mı", () => {
-  test("dönem sonu deneme bitişinden ileriyse ödeme yapılmıştır", () => {
-    assert.equal(
-      odemeYapmis(abonelik({ user_id: "a", trial_ends_at: gun(-20), current_period_end: gun(10) })),
-      true,
-    );
+describe("ölçüm: oran", () => {
+  test("normal oran yuvarlanır", () => {
+    assert.equal(oran(1, 3), 33);
+    assert.equal(oran(2, 3), 67);
   });
 
-  test("dönem sonu deneme bitişiyle aynıysa ödeme yoktur", () => {
-    // ArvoOS denemeyi başlatırken iki alanı da aynı tarihe yazıyor; burada
-    // "active" durumuna bakılsaydı ödemesiz abone ödemiş sayılırdı.
-    const t = gun(5);
-    assert.equal(odemeYapmis(abonelik({ user_id: "a", status: "active", trial_ends_at: t, current_period_end: t })), false);
+  test("payda sıfırken oran %0 değil, yok", () => {
+    // "%0 dönüşüm" ile "ölçülecek kimse yok" aynı şey değil; ikisini
+    // karıştırmak var olmayan bir sorunu var gösterir.
+    assert.equal(oran(0, 0), null);
+    assert.equal(oran(5, 0), null);
   });
 
-  test("hiç dönem sonu yoksa ödeme yoktur", () => {
-    assert.equal(odemeYapmis(abonelik({ user_id: "a", trial_ends_at: gun(5) })), false);
-  });
-
-  test("deneme hiç başlamamış ama dönem sonu varsa ödeme sayılır", () => {
-    assert.equal(odemeYapmis(abonelik({ user_id: "a", current_period_end: gun(30) })), true);
+  test("bozuk payda oran üretmez", () => {
+    assert.equal(oran(1, Number.NaN), null);
+    assert.equal(oran(1, -3), null);
   });
 });
 
-describe("ölçüm: erişim açık mı", () => {
-  test("dönem sonu geçmişte ise kapalı, gelecekte ise açık", () => {
-    assert.equal(erisimiAcik(abonelik({ user_id: "a", current_period_end: gun(-1) }), SIMDI), false);
-    assert.equal(erisimiAcik(abonelik({ user_id: "a", current_period_end: gun(1) }), SIMDI), true);
-  });
-
-  test("dönem sonu yoksa deneme bitişine bakılır", () => {
-    assert.equal(erisimiAcik(abonelik({ user_id: "a", trial_ends_at: gun(3) }), SIMDI), true);
-  });
-
-  test("iki tarih de yoksa kapalı", () => {
-    assert.equal(erisimiAcik(abonelik({ user_id: "a" }), SIMDI), false);
-  });
-});
-
-describe("ölçüm: huni", () => {
-  const kullanicilar = ["a", "b", "c", "d"].map((id) => ({ id, created_at: gun(-40) }));
-
-  test("dönüşüm yalnızca denemeyi başlatanlar üzerinden hesaplanır", () => {
-    // Paydaya kayıt sayısı konsaydı (4) oran %25 çıkardı; denemeyi hiç
+describe("ölçüm: dönüşüm", () => {
+  test("payda denemeyi başlatanlar, kayıt değil", () => {
+    // Kayıt paydaya konsaydı (10) oran %10 çıkardı; denemeyi hiç
     // başlatmamış kişi dönüşüm hunisinin o adımında yoktur.
-    const huni = huniHesapla(
-      kullanicilar,
-      [
-        abonelik({ user_id: "a", trial_ends_at: gun(-20), current_period_end: gun(10) }),
-        abonelik({ user_id: "b", trial_ends_at: gun(-20), current_period_end: gun(-20) }),
-      ],
-      SIMDI,
-    );
-    assert.equal(huni.kayit, 4);
-    assert.equal(huni.denemeBaslatan, 2);
-    assert.equal(huni.odemeyeGecen, 1);
-    assert.equal(huni.suAnErisimi, 1);
-    assert.equal(huni.donusumYuzdesi, 50);
+    assert.equal(donusumYuzdesi(sayilar({ kayit: 10, denemeBaslatan: 4, odemeyeGecen: 1 })), 25);
   });
 
-  test("hiç deneme yoksa oran %0 değil, yok", () => {
-    // "%0 dönüşüm" ile "ölçülecek kimse yok" aynı şey değil.
-    assert.equal(huniHesapla(kullanicilar, [], SIMDI).donusumYuzdesi, null);
+  test("hiç deneme başlamamışsa dönüşüm yok", () => {
+    assert.equal(donusumYuzdesi(sayilar({ kayit: 10 })), null);
   });
 });
 
 describe("ölçüm: aktivasyon", () => {
-  const kullanicilar = ["a", "b", "c", "d"].map((id) => ({ id, created_at: gun(-10) }));
-
-  test("payda her kayıtlı kullanıcı; kurum üyesi sayıma girmez", () => {
-    const adimlar = aktivasyonHesapla(kullanicilar, [
-      // "z" bireysel listede yok (kurum üyesi): kesişim onu eliyor.
-      { etiket: "Çalışma açtı", kimlikler: ["a", "b", "z"] },
-      { etiket: "Asistanı kullandı", kimlikler: ["a"] },
+  test("her adımın paydası kayıt sayısı; adımlar birbirine daralmaz", () => {
+    // Zincir kurulsaydı "yazan / çalışma açan" = %50 çıkardı ve çalışma
+    // açmadan bırakanlar görünmezdi. Bırakma noktası gizlenmemeli.
+    const adimlar = aktivasyonAdimlari(sayilar({ kayit: 8, calismaAcan: 4, yazan: 2, asistanKullanan: 1 }));
+    assert.deepEqual(adimlar, [
+      { etiket: "Çalışma açtı", kisi: 4, yuzde: 50 },
+      { etiket: "En az 500 kelime yazdı", kisi: 2, yuzde: 25 },
+      { etiket: "Asistanı kullandı", kisi: 1, yuzde: 13 },
     ]);
-    assert.deepEqual(adimlar[0], { etiket: "Çalışma açtı", kisi: 2, yuzde: 50 });
-    assert.deepEqual(adimlar[1], { etiket: "Asistanı kullandı", kisi: 1, yuzde: 25 });
   });
 
-  test("aynı kullanıcının birden çok satırı kişiyi bir kez sayar", () => {
-    // Kaynak tablolar satır bazlı: bir kullanıcının üç çalışması varsa
-    // ham liste üç kez onu içerir. Tekilleştirme olmasaydı yüzde 100'ü aşardı.
-    const adimlar = aktivasyonHesapla(kullanicilar, [
-      { etiket: "Çalışma açtı", kimlikler: ["a", "a", "a", "b"] },
-    ]);
-    assert.deepEqual(adimlar[0], { etiket: "Çalışma açtı", kisi: 2, yuzde: 50 });
-  });
-
-  test("hiç kayıt yoksa yüzde yok", () => {
-    assert.equal(aktivasyonHesapla([], [{ etiket: "Çalışma açtı", kimlikler: ["a"] }])[0].yuzde, null);
+  test("hiç kayıt yoksa yüzdeler yok, sayılar sıfır", () => {
+    const adimlar = aktivasyonAdimlari(BOS_SAYILAR);
+    assert.deepEqual(adimlar.map((a) => a.yuzde), [null, null, null]);
   });
 });
 
-describe("ölçüm: kayıp", () => {
-  test("denemede bırakan ile yenilemeyen ayrı sayılır", () => {
-    const ozet = kayipHesapla(
-      [
-        // Erişimi açık: hiçbir kayıp kovasına girmez.
-        abonelik({ user_id: "a", trial_ends_at: gun(-2), current_period_end: gun(20) }),
-        // Ödemiş, dönemi bitmiş: yenilemeyen.
-        abonelik({ user_id: "b", trial_ends_at: gun(-60), current_period_end: gun(-5) }),
-        // Denemesi bitmiş, hiç ödememiş.
-        abonelik({ user_id: "c", trial_ends_at: gun(-3) }),
-        // Deneme hiç başlamamış: ölçülecek bir bırakma yok.
-        abonelik({ user_id: "d" }),
-      ],
-      SIMDI,
-    );
-    assert.deepEqual(ozet, { denemedeBirakan: 1, yenilemeyen: 1 });
-  });
-});
-
-describe("ölçüm: ortalama puan", () => {
-  test("puansız cevaplar paydaya girmez", () => {
-    assert.equal(ortalamaPuan([5, 4, null, 3]), 4);
+describe("ölçüm: ham sayıların okunması", () => {
+  test("bigint metin olarak gelse de sayıya çevrilir", () => {
+    // Postgres count() bigint döndürür; PostgREST bunu metin olarak taşıyabilir.
+    // Çevirmeseydik "12" + 0 = "120" gibi sonuçlar ya da NaN oranlar çıkardı.
+    const okunan = sayilariOku({ kayit: "12", denemeBaslatan: "5", odemeyeGecen: "2" });
+    assert.equal(okunan.kayit, 12);
+    assert.equal(donusumYuzdesi(okunan), 40);
   });
 
-  test("hiç puan yoksa ortalama yok", () => {
-    assert.equal(ortalamaPuan([null, null]), null);
+  test("ortalama puanda null ile sıfır ayrı tutulur", () => {
+    // "Hiç puan yok" ile "ortalama sıfır" aynı şey değil; 0 gösterilirse
+    // ürün berbat sanılır.
+    assert.equal(sayilariOku({ geriBildirimOrtalamasi: null }).geriBildirimOrtalamasi, null);
+    assert.equal(sayilariOku({}).geriBildirimOrtalamasi, null);
+    assert.equal(sayilariOku({ geriBildirimOrtalamasi: "4.5" }).geriBildirimOrtalamasi, 4.5);
+  });
+
+  test("eksik ya da bozuk alan sıfır sayılır, çökmez", () => {
+    assert.deepEqual(sayilariOku(null), BOS_SAYILAR);
+    assert.deepEqual(sayilariOku("bozuk"), BOS_SAYILAR);
+    assert.equal(sayilariOku({ kayit: "abc" }).kayit, 0);
   });
 });
