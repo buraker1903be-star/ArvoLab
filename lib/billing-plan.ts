@@ -32,13 +32,48 @@ export function normalizeInterval(value: unknown): BillingInterval | null {
   return null;
 }
 
-const priceOf = (...values: unknown[]) => {
-  const value = values.find((item) => typeof item === "number" && Number.isFinite(item) && item > 0);
-  return typeof value === "number" ? Math.round(value) : null;
+/*
+  Tutar METİN olarak da gelebilir.
+
+  ArvoOS'ta ücret bir `numeric` sütunda duruyor ve PostgREST numeric'i çoğu
+  sürümde METİN döndürüyor; ArvoOS'un kendi kodu tam bu yüzden
+  `Number(plan.individual_monthly_fee)` yazıyor. Bu çevrim bir gün atlanırsa
+  ArvoLab sessizce fiyatsız bir "Abone ol" düğmesi gösterirdi: müşteriden
+  ne ödeyeceğini söylemeden abone olması istenirdi.
+
+  Yalnızca SAYIDAN İBARET metin kabul ediliyor; "149 TL" gibi bir değer
+  hâlâ reddedilir, yoksa birimi bilinmeyen bir sayı fiyat diye gösterilirdi.
+
+  Sıfır ve altı fiyat sayılmıyor: ArvoOS da öyle yapıyor (checkout
+  "fee_not_set" ile 409 döndürüyor), iki taraf aynı kuralda kalsın.
+*/
+const SADECE_SAYI = /^\d+(?:[.,]\d+)?$/;
+
+const sayiya = (item: unknown): number | null => {
+  if (typeof item === "number") return Number.isFinite(item) ? item : null;
+  if (typeof item === "string" && SADECE_SAYI.test(item.trim())) {
+    const cevrilen = Number(item.trim().replace(",", "."));
+    return Number.isFinite(cevrilen) ? cevrilen : null;
+  }
+  return null;
 };
 
+const priceOf = (...values: unknown[]) => {
+  for (const item of values) {
+    const deger = sayiya(item);
+    if (deger !== null && deger > 0) return Math.round(deger);
+  }
+  return null;
+};
+
+/* Boş ya da yalnızca boşluktan ibaret kod YOK sayılır. Eskiden `planCode`
+   kırpılmıyordu: `planCode: ""` taşıyan bir nesne geçerli plan sayılıyor ve
+   müşteriye fiyatsız, dönemsiz, hiçbir şey söylemeyen bir "Abone ol" düğmesi
+   çıkıyordu. */
+const kod = (deger: unknown) => (typeof deger === "string" && deger.trim() ? deger.trim() : null);
+
 const planFrom = (raw: Record<string, unknown>): BillingPlan => ({
-  code: typeof raw.code === "string" && raw.code.trim() ? raw.code.trim() : typeof raw.planCode === "string" ? raw.planCode : null,
+  code: kod(raw.code) ?? kod(raw.planCode),
   // Eski yanıtlarda dönem yazmaz, tutar "monthlyFee" adıyla gelir: aylık sayılır.
   interval: normalizeInterval(raw.interval ?? raw.period ?? raw.billingInterval) ?? (raw.monthlyFee != null ? "month" : null),
   price: priceOf(raw.price, raw.amount, raw.monthlyFee),
