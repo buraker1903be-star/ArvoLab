@@ -64,6 +64,17 @@ export type StilTanimi = {
     kunyeKalibi: RegExp;
   };
   yazarBicimi: YazarBicimi | null;
+  /**
+   * Yazar listesi virgülle biter mi, noktayla mı?
+   *
+   * Numara stillerinin ortak kuralı "yazar bölümü ilk noktaya kadar"dı ve
+   * Vancouver'da doğru ("Yılmaz A, Demir B. Başlık."). IEEE'de ad BAŞ
+   * HARFLE başlar ("A. Yılmaz"), yani ilk nokta yazarın İÇİNDE: her IEEE
+   * künyesinde yazar "A" diye okunuyordu. Bu stilde liste virgülle ilerler
+   * ve yazar biçimine uymayan ilk parçada (tırnaklı başlık, kitap adı)
+   * biter; nokta hiç ölçüt değildir.
+   */
+  yazarlarVirgulle?: boolean;
   /** Kaynakçanın sırası; alfabetik olmayan stilde alfabe uyarısı verilmez. */
   kaynakcaSirasi: "alfabetik" | "atif-sirasi";
   /** Kaynaklar madde işaretli liste olarak yazılabilir mi. */
@@ -145,6 +156,8 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
       kunyeKalibi: /^\[(\d+)\]\s*/,
     },
     yazarBicimi: { desen: NUMARA_YAZAR, ornek: "A. Yılmaz" },
+    // Ad baş harfle başlıyor; yazar listesi noktayla değil virgülle ilerler.
+    yazarlarVirgulle: true,
     kaynakcaSirasi: "atif-sirasi",
     listeIsaretiSerbest: false,
   },

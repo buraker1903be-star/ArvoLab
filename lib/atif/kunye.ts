@@ -82,6 +82,57 @@ function yazarTarihAyristir(ham: string, stil: StilTanimi): ParsedReference {
  * numaralandırma atlamamalıdır. Atlanan numara sessiz bir hatadır —
  * metindeki [7] başka bir kaynağa denk gelir ve kimse fark etmez.
  */
+const parcalaraAyir = (metin: string) =>
+  metin
+    .split(/,\s*|\s+(?:ve|and)\s+/u)
+    .map((parca) => parca.trim().replace(VE_DIGERLERI, "").trim());
+
+/** Vancouver: "Yılmaz A, Demir B. Başlık." — yazarlar ilk noktaya kadar. */
+function noktayaKadarYazarlar(govde: string) {
+  return {
+    yazarlar: parcalaraAyir(govde.split(/\.\s/)[0] ?? "").filter(Boolean),
+    baslikAdayi: govde.split(/\.\s/)[1]?.trim() ?? null,
+  };
+}
+
+/**
+ * IEEE: "[1] A. Yılmaz, B. Demir, “Başlık,” Dergi, 2020."
+ *
+ * Ad baş harfle başladığı için ilk nokta yazarın İÇİNDE; noktaya göre
+ * kesmek her künyede yazarı "A" diye okuyordu, yani IEEE'yi doğru yazan
+ * öğrenci kusursuz kaynakçasında "yazar biçimi hatalı" uyarısı alıyordu.
+ * Liste, yazar biçimine uymayan ilk parçada biter.
+ */
+function virgulluYazarlar(govde: string, stil: StilTanimi) {
+  const parcalar = parcalaraAyir(govde);
+  const yazarlar: string[] = [];
+  let kalanDan = parcalar.length;
+  for (const [sira, parca] of parcalar.entries()) {
+    // "vd." gibi işaretler ayıklanınca boşalır; listeyi BİTİRMEZLER.
+    if (!parca) continue;
+    if (!stil.yazarBicimi?.desen.test(parca)) {
+      kalanDan = sira;
+      break;
+    }
+    yazarlar.push(parca);
+  }
+  const kalan = parcalar.slice(kalanDan).filter(Boolean);
+  /*
+    Başlık tırnak içindeyse onu al: kalan ilk parça "“Başlık" gibi yarım
+    kalıyor, çünkü başlığın kendi virgülü de ayırıcı sayılıyor.
+  */
+  // IEEE'de başlığı izleyen virgül TIRNAĞIN İÇİNDE durur; başlığın parçası değil.
+  const tirnakli = /[“"]([^”"]+)[”"]/u.exec(govde);
+  const baslikAdayi = tirnakli?.[1]?.replace(/,\s*$/, "").trim() || kalan[0] || null;
+  /*
+    Hiçbir parça yazar biçimine uymadıysa (kurum adı: "Türkiye İstatistik
+    Kurumu") liste boş dönerdi ve kullanıcı "yazar ayrıştırılamadı" görürdü.
+    İlk parçayı yazar saymak denetimin ona bakmasını sağlar; asıl bilgi
+    biçim uyarısında.
+  */
+  return { yazarlar: yazarlar.length ? yazarlar : parcalar.filter(Boolean).slice(0, 1), baslikAdayi };
+}
+
 function numaraAyristir(ham: string, stil: StilTanimi, sira: number): ParsedReference {
   const metin = ham.trim();
   const sorunlar: ReferenceIssue[] = [];
@@ -102,17 +153,15 @@ function numaraAyristir(ham: string, stil: StilTanimi, sira: number): ParsedRefe
   const yil = yillar.at(-1) ?? null;
   if (!yil) sorunlar.push(sorun("year", "Künyede yayın yılı bulunamadı.", "error"));
 
-  /* Yazar bölümü ilk noktaya kadar; Vancouver'da yazarlar virgülle,
-     IEEE'de "and" ile ayrılır. */
-  const yazarBolumu = govde.split(/\.\s/)[0] ?? "";
-  const yazarlar = yazarBolumu
-    .split(/,\s*|\s+(?:ve|and)\s+/u)
-    .map((parca) => parca.trim().replace(VE_DIGERLERI, "").trim())
-    .filter(Boolean);
+  /* Yazar bölümü: Vancouver'da ilk noktaya kadar, IEEE'de yazar biçimine
+     uyan parçalar bitene kadar (bkz. StilTanimi.yazarlarVirgulle). */
+  const { yazarlar, baslikAdayi } = stil.yazarlarVirgulle
+    ? virgulluYazarlar(govde, stil)
+    : noktayaKadarYazarlar(govde);
   if (!yazarlar.length) sorunlar.push(sorun("author", "Yazar adı ayrıştırılamadı.", "error"));
   else yazarlariDenetle(yazarlar, stil, sorunlar);
 
-  const baslik = govde.split(/\.\s/)[1]?.trim() ?? null;
+  const baslik = baslikAdayi;
   if (!baslik) sorunlar.push(sorun("title", "Başlık bulunamadı; künyede yazarlardan sonra eser adı gelmeli."));
 
   return { raw: metin, authors: yazarlar.length ? yazarlar : null, year: yil, title: baslik, issues: sorunlar };

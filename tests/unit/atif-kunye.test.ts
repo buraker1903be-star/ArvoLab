@@ -207,3 +207,43 @@ describe("ve diğerleri ayıklaması", () => {
     );
   });
 });
+
+/*
+  IEEE'de ad BAŞ HARFLE başlar ("A. Yılmaz"), yani künyedeki ilk nokta
+  yazarın İÇİNDEDİR. Numara stillerinin ortak kuralı "yazar bölümü ilk
+  noktaya kadar" olduğu için her IEEE künyesinde yazar "A" diye okunuyordu:
+  IEEE'yi doğru yazan öğrenci, kusursuz kaynakçasında "yazar biçimi hatalı"
+  uyarısı alıyordu. Yazar listesi artık virgülle ilerliyor ve yazar
+  biçimine uymayan ilk parçada bitiyor.
+*/
+describe("IEEE yazar sırası", () => {
+  const ieee = (ham: string, sira = 1) => kunyeAyristir(ham, "ieee", sira);
+
+  test("baş harfle başlayan yazarlar tek tek okunur", () => {
+    const k = ieee('[1] A. Yılmaz, B. Demir, "Derin öğrenmede yeni bir yaklaşım," IEEE Trans. Educ., vol. 63, no. 2, pp. 101-110, 2020.');
+    assert.deepEqual(k.authors, ["A. Yılmaz", "B. Demir"]);
+    assert.equal(k.title, "Derin öğrenmede yeni bir yaklaşım");
+    assert.equal(k.year, "2020");
+    assert.deepEqual(hatalar(k), [], "Kusursuz IEEE künyesi hata üretmemeli");
+  });
+
+  test("tırnaksız kitap künyesinde de yazar doğru okunur", () => {
+    assert.deepEqual(ieee("[1] A. Yılmaz, Yapay Zeka Temelleri. Ankara: Örnek Yayınevi, 2021.").authors, ["A. Yılmaz"]);
+  });
+
+  test("vd. işareti listeyi bitirmez, yazar da sayılmaz", () => {
+    assert.deepEqual(ieee('[1] A. Yılmaz, vd., "Bir başlık," Dergi, 2022.').authors, ["A. Yılmaz"]);
+  });
+
+  test("kurum yazarı biçime uymasa da kaybolmaz", () => {
+    // Liste boş dönseydi kullanıcı "yazar ayrıştırılamadı" görürdü; asıl
+    // bilgi biçim uyarısında olmalı, yazarın kendisi görünmeli.
+    assert.deepEqual(ieee('[1] Türkiye İstatistik Kurumu, "Yıllık rapor," TÜİK, 2023.').authors, ["Türkiye İstatistik Kurumu"]);
+  });
+
+  test("Vancouver eski davranışını korur (nokta ile biten yazar listesi)", () => {
+    const k = kunyeAyristir("1. Yılmaz A, Demir B. Örnek bir başlık. Türk Tıp Dergisi. 2020;12(3):45-52.", "vancouver");
+    assert.deepEqual(k.authors, ["Yılmaz A", "Demir B"]);
+    assert.equal(k.title, "Örnek bir başlık");
+  });
+});
