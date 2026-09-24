@@ -53,8 +53,28 @@ export default async function GuidelinesPage() {
     Bekleyenler öne alınır, içlerinde tek adım onaylanabilecekler en üste.
     Onaylı kayıtlar eski sırasını (üniversite adı) korur.
   */
+  const icEkip = profile?.role === "system_admin" || profile?.role === "founder";
+
+  /*
+    Kılavuzlar 20260924100033'ten beri kapsamlı: organization_id NULL olan
+    kayıtlar ortak katalog (yalnızca iç ekip düzenler), dolu olanlar kurumun
+    kendi eklediği kılavuzlar. OKUMA değişmedi — herkes hepsini görüyor.
+
+    Yazamayacağı satıra düğme ÇİZİLMİYOR: düğmeyi gösterip "yetkiniz yok"
+    demek, kullanıcıyı bir hata mesajına tıklatmaktır (doçentlik ekranında
+    aynısı düzeltildi).
+  */
+  const yazabilir = (g: (typeof guidelines)[number]) =>
+    icEkip ||
+    (profile?.role === "academic_manager" &&
+      Boolean(g.organization_id) &&
+      g.organization_id === profile?.organization_id);
+
   const bekleyenler = guidelines.filter((g) => g.analysis_status !== "approved");
-  const hazirSayisi = bekleyenler.filter((g) => g.ready_for_approval).length;
+  /* Kuyruk yalnızca ELİNDEN GELENİ sayıyor; gerisi gizlenmiyor, ayrıca yazılıyor. */
+  const benimBekleyenlerim = bekleyenler.filter(yazabilir);
+  const kapsamDisiBekleyen = bekleyenler.length - benimBekleyenlerim.length;
+  const hazirSayisi = benimBekleyenlerim.filter((g) => g.ready_for_approval).length;
   const yeniSurumlu = guidelines.filter((g) => g.ai_analysis?.pendingReview).length;
   const eskiCikarimli = guidelines.filter((g) => g.ai_analysis?.scannerOutdated).length;
   const siraliKilavuzlar = canManage
@@ -213,7 +233,9 @@ export default async function GuidelinesPage() {
         <section className="onay-kuyrugu" role="status">
           <div>
             <strong>
-              {bekleyenler.length} kılavuz onay bekliyor
+              {benimBekleyenlerim.length > 0
+                ? `${benimBekleyenlerim.length} kılavuz onayınızı bekliyor`
+                : "Onayınızı bekleyen kılavuz yok"}
               {hazirSayisi > 0 ? ` · ${hazirSayisi} tanesi tek adım` : ""}
             </strong>
             <p>
@@ -221,6 +243,9 @@ export default async function GuidelinesPage() {
               sistemi ve editör sayfa ayarları öğrencinin ekranına ancak onaydan sonra iner.
               {yeniSurumlu > 0
                 ? ` ${yeniSurumlu} onaylı kılavuzun resmî kaynağında yeni sürüm algılandı; eski kurallar korunuyor.`
+                : ""}
+              {kapsamDisiBekleyen > 0
+                ? ` Ayrıca ortak katalogda ${kapsamDisiBekleyen} kılavuz onay bekliyor; onları Sistem Yöneticisi onaylar.`
                 : ""}
             </p>
           </div>
@@ -298,6 +323,17 @@ export default async function GuidelinesPage() {
                   <div>
                     <div className="pill-row">
                       <span className="status-pill">{STIL_ETIKETLERI[g.citation_style] ?? g.citation_style}</span>
+                      {/* Kaydın kimin sorumluluğunda olduğu görünsün: ortak
+                          katalog mu, kurumun kendi eklediği kılavuz mu. */}
+                      {canManage ? (
+                        <span className="status-pill">
+                          {g.organization_id === null
+                            ? "Ortak katalog"
+                            : g.organization_id === profile?.organization_id
+                              ? "Kurumunuz"
+                              : "Başka kurum"}
+                        </span>
+                      ) : null}
                       <span className="status-pill" data-tone={statusTone(g.analysis_status)}>
                         {g.analysis_status === "approved"
                           ? "Onaylı"
@@ -348,7 +384,13 @@ export default async function GuidelinesPage() {
                 {/* Yönetici neye dayanarak onayladığını görsün. */}
                 {canManage ? <CikarimOzeti cikarim={g.ai_analysis} kayitliStil={STIL_ETIKETLERI[g.citation_style] ?? g.citation_style} /> : null}
 
-                {canManage ? (
+                {canManage && !yazabilir(g) ? (
+                  <p className="muted text-sm">
+                    Ortak katalog kaydı — kuralları ve onayı Sistem Yöneticisi yönetir.
+                  </p>
+                ) : null}
+
+                {yazabilir(g) ? (
                   <div className="cluster cluster-spaced">
                     {g.analysis_status !== "approved" ? (
                       <ActionForm action={handleApprove.bind(null, g.id)} successMessage="Kılavuz onaylandı ve uygulandı.">

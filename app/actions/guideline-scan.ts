@@ -149,9 +149,19 @@ export async function universiteKilavuzuKesfet(universityId: string): Promise<Ac
   } = await supabase.auth.getUser();
   if (!user) return { error: "Oturum bulunamadı." };
 
+  /*
+    Keşif İÇ EKİBE AİT bir işlem. Ürettiği kayıtları service_role yazıyor
+    (lib/guideline-discovery.ts) ve organization_id NULL kalıyor, yani genel
+    kataloğa girer. 20260924100033'ten sonra genel kayıtları yalnızca iç ekip
+    düzenleyebiliyor; bir kurum yöneticisinin keşfi tetiklemesi, sonra
+    onaylayamadığı kayıtlar üretmesi demekti.
+
+    Zaten doğru yeri burası: bir üniversitenin resmî sitesini taramak ortak
+    kataloğu büyüten bir platform işi, tek bir müşterinin işi değil.
+  */
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (!profile || !["academic_manager", "system_admin", "founder"].includes(profile.role)) {
-    return { error: "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir." };
+  if (!profile || !["system_admin", "founder"].includes(profile.role)) {
+    return { error: "Kılavuz keşfi ortak kataloğu değiştirir; bu işlem Sistem Yöneticisi'ne açıktır." };
   }
 
   if (!universityId) return { error: "Önce bir üniversite seçin." };
