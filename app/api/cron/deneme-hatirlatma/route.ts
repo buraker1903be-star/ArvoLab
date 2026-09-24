@@ -1,7 +1,7 @@
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
 import { denemeBitiyorEmail } from "@/lib/email/auth-emails";
-import { hatirlatilacaklar, HATIRLATMA_GUNU, TEK_SEFERDE } from "@/lib/deneme-hatirlatma";
+import { hatirlatilacaklar, hatirlatmaPenceresi, TEK_SEFERDE } from "@/lib/deneme-hatirlatma";
 import { ensureSubscription } from "@/lib/subscription";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -29,13 +29,15 @@ export async function GET(request: Request) {
   const admin = adminIstemcisiVarsa();
   if (!admin) return Response.json({ error: "Sunucu anahtarı yok." }, { status: 503 });
 
-  const sinir = new Date(Date.now() + HATIRLATMA_GUNU * 24 * 60 * 60 * 1000).toISOString();
+  // Pencerenin ALT sınırı da var; gerekçesi lib/deneme-hatirlatma.ts'te.
+  const { altSinir, ustSinir } = hatirlatmaPenceresi();
   const { data, error } = await admin
     .from("individual_subscriptions")
     .select("user_id,status,trial_ends_at,deneme_hatirlatildi_at")
     .eq("status", "trialing")
     .is("deneme_hatirlatildi_at", null)
-    .lte("trial_ends_at", sinir)
+    .gt("trial_ends_at", altSinir)
+    .lte("trial_ends_at", ustSinir)
     .order("trial_ends_at", { ascending: true })
     .limit(TEK_SEFERDE);
   if (error) return Response.json({ error: error.message }, { status: 500 });

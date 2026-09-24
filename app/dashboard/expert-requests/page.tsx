@@ -61,9 +61,13 @@ export default async function ExpertRequestsPage() {
         <div>
           <span className="dashboard-kicker">Danışmanlık</span>
           <h1>Uzmandan Destek İste</h1>
+          {/* "Kurum uzmanları" denmiyor artık: bireysel abonenin kurumu yok
+              ve 20260924100028'den beri talebi kendi kurumunun uzmanına
+              (yoksa iç ekibe) düşüyor. Eskiden metin bireysel aboneye
+              olmayan bir kurumu vaat ediyordu. */}
           <p>
             Çalışmanızı kendiniz yürütebilir ya da ihtiyaç duyduğunuzda
-            kurum uzmanlarından profesyonel danışmanlık talep edebilirsiniz.
+            uzmanlardan profesyonel danışmanlık talep edebilirsiniz.
           </p>
         </div>
         <PanelDrawer
