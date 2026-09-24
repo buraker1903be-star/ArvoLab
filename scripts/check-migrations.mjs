@@ -80,6 +80,36 @@ for (const name of entries) {
   if (!roundTrips && !isShipped(name)) problems.push(`${name}: ${version} geçerli bir tarih/saat değil`);
 }
 
+/*
+  İÇERİK BÜTÜNLÜĞÜ.
+
+  Uygulanmış bir migration dosyası iki kez, bir SQL editörü çıktısıyla
+  ("set_config / off") üzerine yazıldı; ikincisinde "git add -A" bozuk hâli
+  commit'e aldı. Veritabanı etkilenmedi ama depodaki kayıt yalan oldu:
+  dosya artık uygulanan şeyi anlatmıyordu.
+
+  Ölçüt kaba bilerek — biçimlendirmeye karışmıyor, yalnızca "bu dosya SQL
+  değil" diyebildiği durumu yakalıyor: yorumlar ve boş satırlar atıldığında
+  geriye bir şey kalıyorsa, içinde en az bir noktalı virgül olmalı.
+  "npm run db:new" ile açılan taslak yalnızca yorum içerir ve elenmez.
+*/
+for (const name of entries) {
+  const icerik = fs.readFileSync(path.join(DIR, name), "utf8");
+  const govde = icerik
+    .split("\n")
+    .map((satir) => satir.trim())
+    .filter((satir) => satir && !satir.startsWith("--"))
+    .join("\n");
+  if (govde && !govde.includes(";")) {
+    problems.push(
+      `${name}: SQL gibi görünmüyor (hiç noktalı virgül yok). ` +
+      `Dosya bir sorgu çıktısıyla üzerine yazılmış olabilir; "git checkout -- <dosya>" ile geri alın.`,
+    );
+  } else if (!govde && isShipped(name)) {
+    problems.push(`${name}: gönderilmiş bir migration boşalmış; "git checkout -- <dosya>" ile geri alın.`);
+  }
+}
+
 // Asıl kural: yeni bir migration, gönderilmiş olanların en büyüğünden büyük
 // bir sürüm taşımalı; yoksa uygulanmışların önüne sıralanır.
 if (tracked && tracked.size) {
