@@ -54,6 +54,9 @@ export interface GuidelineCikarimi {
   scannerOutdated?: boolean;
   /** Metin taranmış görüntüden OCR ile okundu; gürültülü olabilir. */
   ocrUsed?: boolean;
+  /* Atıf sistemi seçilemediğinde bile hangi adın kaç kez geçtiği
+     (lib/atif-sistemi.ts). Yönetici kararını buna dayandırıyor. */
+  citationMentions?: { sistem: string; etiket: string; sayim: number }[];
 }
 
 export interface GuidelineMatch {

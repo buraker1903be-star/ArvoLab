@@ -51,9 +51,26 @@ export default function CikarimOzeti({
             oldu: Başkent "vancouver", Çukurova "chicago" olarak onaylıydı,
             oysa belgeler hiçbir sistemi benimsemiyor.
           */
-          <span className="chip" data-tone="danger">
-            Atıf sistemi belgede bulunamadı{kayitliStil ? ` — kayıttaki "${kayitliStil}" DOĞRULANMADI` : ""}
-          </span>
+          <>
+            <span className="chip" data-tone="danger">
+              Atıf sistemi belgede bulunamadı{kayitliStil ? ` — kayıttaki "${kayitliStil}" DOĞRULANMADI` : ""}
+            </span>
+            {/*
+              Kararı yönetici verecek; verebilmesi için KANITI görmeli.
+              Eskiden sayımlar hesaplanıp atılıyordu ve ekranda yalnızca
+              "bulunamadı" kalıyordu: "APA iki kez geçiyor, başka ad yok"
+              ile "hiçbir ad geçmiyor" aynı görünüyordu. Birincisi bir
+              bakışlık karar, ikincisi belgeyi açmayı gerektiriyor.
+            */}
+            {cikarim.citationMentions?.length ? (
+              <span className="chip" data-tone="warning">
+                Metinde geçenler:{" "}
+                {cikarim.citationMentions.map((g) => `${g.etiket} ×${g.sayim}`).join(" · ")} — net kazanan yok
+              </span>
+            ) : cikarim.citationMentions ? (
+              <span className="chip" data-tone="warning">Belgede hiçbir sistem adı geçmiyor</span>
+            ) : null}
+          </>
         )}
         {typeof cikarim.fullTextLength === "number" ? (
           <span className="chip">{cikarim.fullTextLength.toLocaleString("tr-TR")} karakter okundu</span>

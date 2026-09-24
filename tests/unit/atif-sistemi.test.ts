@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { atifSistemiSec } from "@/lib/atif-sistemi";
+import { atifGecisleri, atifSistemiSec } from "@/lib/atif-sistemi";
 
 /** Kılavuz metni: adın kaç kez geçtiği belirleyici olduğu için tekrarlı. */
 const govde = (ad: string, kez: number) =>
@@ -66,5 +66,39 @@ describe("atıf sistemi seçimi", () => {
 
   test("kelime sınırı: apart, chicagoland gibi sözcükler sayılmaz", () => {
     assert.equal(atifSistemiSec("apart apart apart chicagoland chicagoland chicagoland"), null);
+  });
+});
+
+/*
+  Sayımlar KARAR VERİLEMESE DE üretilmeli: canlıda onay bekleyen 32
+  kılavuzun 30'unda sistem seçilemiyor ve yönetici kararını tam bu veriye
+  dayandırıyor. Eskiden sayımlar hesaplanıp atılıyor, ekranda yalnızca
+  "bulunamadı" kalıyordu.
+*/
+describe("atıf adlarının geçiş sayıları", () => {
+  test("karar verilemeyen metinde de sayımlar çıkıyor", () => {
+    const metin = `${govde("APA", 5)} ${govde("Vancouver", 4)}`;
+    assert.equal(atifSistemiSec(metin), null, "karar verilememeli");
+    assert.deepEqual(
+      atifGecisleri(metin).map((g) => [g.etiket, g.sayim]),
+      [["APA 7", 5], ["Vancouver", 4]],
+    );
+  });
+
+  test("eşikten az geçen ad da sayılıyor", () => {
+    // Tek geçiş sistem saymaz ama "APA ×1" bilgisi yöneticinin kararını hızlandırır.
+    const gecisler = atifGecisleri("Kaynakça APA biçiminde hazırlanır.");
+    assert.equal(atifSistemiSec("Kaynakça APA biçiminde hazırlanır."), null);
+    assert.deepEqual(gecisler, [{ sistem: "apa7", etiket: "APA 7", sayim: 1 }]);
+  });
+
+  test("hiç ad geçmeyen metinde liste boş", () => {
+    assert.deepEqual(atifGecisleri("Kaynaklar yazar soyadına göre sıralanır."), []);
+  });
+
+  test("sıralama çoktan aza", () => {
+    const gecisler = atifGecisleri(`${govde("Chicago", 2)} ${govde("APA", 7)}`);
+    assert.equal(gecisler[0].etiket, "APA 7");
+    assert.equal(gecisler[1].etiket, "Chicago");
   });
 });

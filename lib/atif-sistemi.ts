@@ -29,6 +29,9 @@
 /** Veritabanının kabul ettiği değerler (thesis_guidelines.citation_style). */
 export type AtifSistemi = "apa7" | "vancouver" | "chicago" | "ieee" | "mla";
 
+/** Metinde hangi sistemin kaç kez geçtiği; karar verilemediğinde de üretilir. */
+export type AtifGecisi = { sistem: AtifSistemi; etiket: string; sayim: number };
+
 export type AtifSecimi = {
   sistem: AtifSistemi;
   /** Panelde gösterilen ad. */
@@ -62,10 +65,23 @@ const say = (metin: string, desen: RegExp) => metin.match(desen)?.length ?? 0;
  * null dönmesi bir başarısızlık değil, dürüst bir cevaptır: yönetici
  * sistemi elle seçer ve kılavuz "tek adım onay" kuyruğuna girmez.
  */
-export function atifSistemiSec(metin: string): AtifSecimi | null {
-  const sayimlar = DESENLER.map((kayit) => ({ ...kayit, sayim: say(metin, kayit.desen) }))
+/*
+  Hangi sistemin kaç kez geçtiği — KARAR VERİLEMESE DE.
+
+  Seçim null döndüğünde ekran yalnızca "atıf sistemi bulunamadı" diyordu ve
+  sayımlar atılıyordu. Oysa yöneticinin vereceği karar tam olarak bu veriye
+  dayanıyor: metinde APA iki kez geçip başka hiçbir ad geçmiyorsa karar bir
+  bakışlık; hiçbiri geçmiyorsa belgeyi açması gerekir. İkisi aynı ekranda
+  aynı görünüyordu.
+*/
+export function atifGecisleri(metin: string): AtifGecisi[] {
+  return DESENLER.map(({ sistem, etiket, desen }) => ({ sistem, etiket, sayim: say(metin, desen) }))
     .filter((kayit) => kayit.sayim > 0)
     .sort((a, b) => b.sayim - a.sayim);
+}
+
+export function atifSistemiSec(metin: string): AtifSecimi | null {
+  const sayimlar = atifGecisleri(metin);
 
   const kazanan = sayimlar[0];
   if (!kazanan || kazanan.sayim < EN_AZ_GECIS) return null;
