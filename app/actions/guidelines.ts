@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { ayniKurum } from "@/lib/turkce-ad";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
-import { MANAGER_ROLES } from "@/lib/project-labels";
+import { ADMIN_ROLES, MANAGER_ROLES } from "@/lib/project-labels";
 
 export interface ThesisGuideline {
   id: string;
@@ -322,7 +322,25 @@ export async function createGuideline(formData: FormData): Promise<ActionResult>
   const universite = await universiteBul(supabase, universityName);
   const birim = universite && instituteName ? await birimBul(supabase, universite.id, instituteName) : null;
 
+  /*
+    Kılavuzun KAPSAMI (migration 20260924100033): tablo eskiden tekti ve
+    herhangi bir kurumun Akademik Yöneticisi başka bir üniversitenin
+    kılavuzunu değiştirebiliyor, silebiliyordu.
+
+    Kurum yöneticisi kendi kurumuna ekler; iç ekip genel (kürasyonlu) kayıt
+    açar. OKUMA değişmedi: kılavuzlar üniversiteye göre düzenlenmiş referans
+    kayıtları, herkes görmeye devam ediyor.
+  */
+  const icEkip = auth.role !== null && ADMIN_ROLES.includes(auth.role);
+  const { data: profil } = await supabase
+    .from("profiles").select("organization_id").eq("id", user.id).maybeSingle();
+  const kurum = icEkip ? null : profil?.organization_id ?? null;
+  if (!icEkip && !kurum) {
+    return { error: "Kurumunuz tanımlı değil. Kılavuz ekleyebilmek için Sistem Yöneticisi'nden kurum ataması isteyin." };
+  }
+
   const { error } = await supabase.from("thesis_guidelines").insert({
+    organization_id: kurum,
     // Kanonik ad saklanıyor; yazım kayması kılavuzu kurumundan koparmasın.
     university_name: universite?.ad ?? universityName,
     institute_name: birim?.ad ?? (instituteName || null),
