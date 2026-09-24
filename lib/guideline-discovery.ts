@@ -109,6 +109,7 @@ function scanUpdate(scan: GuidelineScanResult, detectedAt: string) {
     ...(citationStyle ? { citation_style: citationStyle } : {}),
     ai_analysis: {
       detectedCitationHint: scan.detectedCitationHint,
+      citationMentions: scan.citationMentions,
       suggestedSections: scan.suggestedSections,
       suggestedRules: scan.suggestedRules,
       confidence: scan.confidence,

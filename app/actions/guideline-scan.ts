@@ -74,6 +74,26 @@ export async function kilavuzuYenidenTara(guidelineId: string): Promise<ActionRe
     return { error: "Onaylı kılavuzun kuralları otomatik değiştirilmez. Önce onayı kaldırın." };
   }
 
+  const sonuc = await taraVeYaz(supabase, { id: kilavuz.id, source_url: kilavuz.source_url });
+  revalidatePath("/dashboard/guidelines");
+  if (!sonuc.ok) return { error: sonuc.mesaj };
+  return { success: true };
+}
+
+/*
+  Bir kılavuzu tarayıp kaydı güncelleyen tek yol.
+
+  Tekil ("Şimdi yeniden tara") ve toplu tarama aynı gövdeyi kullanıyor:
+  ikisi ayrı yazılsaydı ai_analysis alanları zamanla ayrışırdı — nitekim
+  citationMentions eklendiğinde üç ayrı yazma noktasının üçüne de elle
+  eklemek gerekti.
+*/
+type Tarayici = Awaited<ReturnType<typeof createClient>>;
+
+async function taraVeYaz(
+  supabase: Tarayici,
+  kilavuz: { id: string; source_url: string },
+): Promise<{ ok: true } | { ok: false; mesaj: string }> {
   let scan: GuidelineScanResult;
   try {
     scan = await scanGuidelineUrl(kilavuz.source_url);
@@ -83,9 +103,8 @@ export async function kilavuzuYenidenTara(guidelineId: string): Promise<ActionRe
     await supabase
       .from("thesis_guidelines")
       .update({ review_notes: `Elle yeniden tarama başarısız: ${mesaj}`.slice(0, 1000), last_checked_at: new Date().toISOString() })
-      .eq("id", guidelineId);
-    revalidatePath("/dashboard/guidelines");
-    return { error: mesaj };
+      .eq("id", kilavuz.id);
+    return { ok: false, mesaj };
   }
 
   const stil = scan.detectedCitationHint?.toLowerCase().replace(" ", "") ?? null;
@@ -108,6 +127,7 @@ export async function kilavuzuYenidenTara(guidelineId: string): Promise<ActionRe
         scannerVersion: TARAYICI_SURUMU,
         ocrUsed: scan.ocrKullanildi,
         detectedCitationHint: scan.detectedCitationHint,
+        citationMentions: scan.citationMentions,
         suggestedSections: scan.suggestedSections,
         suggestedRules: scan.suggestedRules,
         confidence: scan.confidence,
@@ -122,12 +142,97 @@ export async function kilavuzuYenidenTara(guidelineId: string): Promise<ActionRe
       reviewed_at: null,
       review_notes: `Yönetici isteğiyle yeniden tarandı (güven: %${Math.round(scan.confidence * 100)}).`,
     })
-    .eq("id", guidelineId)
+    .eq("id", kilavuz.id)
     .select("id");
 
-  if (error) return { error: "Kılavuz güncellenemedi." };
+  if (error) return { ok: false, mesaj: "Kayıt güncellenemedi." };
+  return { ok: true };
+}
+
+/*
+  Toplu yeniden tarama.
+
+  Katalogdaki 47 kaydın çoğu, tarayıcıya sonradan eklenen alanları (en son
+  citationMentions) taşımıyor: kayıt en son tarandığı sürümün çıktısını
+  saklıyor. Tek tek "Şimdi yeniden tara" ile ilerlemek 47 tıklamaydı.
+
+  PARTİ PARTİ çalışıyor. Her tarama bir ağ isteği ve çoğu zaman bir PDF
+  ayrıştırması; hepsini tek istekte denemek zaman aşımına girer ve yarıda
+  kalan iş kullanıcıya "bitti" diye görünürdü. Kalan sayısı geri
+  döndürülüyor, düğmeye yeniden basılabiliyor.
+
+  KAPSAM: yalnızca çağıranın YAZABİLDİĞİ kayıtlar. Ortak katalog artık iç
+  ekibe ait (20260924100033); kurum yöneticisi için aday listesi kendi
+  kurumunun kılavuzlarıyla sınırlı, yoksa her parti boşa ağ isteği olurdu.
+
+  Onaylı kayıtlara dokunulmuyor — tekil taramanın kuralıyla aynı: onaylı
+  kılavuzun kuralları arkadan değişmemeli.
+*/
+const TOPLU_PARTI = 8;
+
+export async function kilavuzlariTopluTara(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  const { data: profile } = await supabase
+    .from("profiles").select("role, organization_id").eq("id", user.id).single();
+  if (!profile || !["academic_manager", "system_admin", "founder"].includes(profile.role)) {
+    return { error: "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir." };
+  }
+  const icEkip = ["system_admin", "founder"].includes(profile.role);
+
+  let sorgu = supabase
+    .from("thesis_guidelines")
+    .select("id, source_url, ai_analysis")
+    .neq("analysis_status", "approved")
+    .not("source_url", "is", null);
+  if (!icEkip) {
+    if (!profile.organization_id) {
+      return { error: "Ortak katalogdaki kılavuzları yalnızca Sistem Yöneticisi tarayabilir." };
+    }
+    sorgu = sorgu.eq("organization_id", profile.organization_id);
+  }
+
+  const { data: adaylar, error: okumaHatasi } = await sorgu;
+  if (okumaHatasi) {
+    console.error(okumaHatasi);
+    return { error: "Kılavuz listesi okunamadı; tarama başlatılmadı." };
+  }
+
+  /* Kanıtı eksik olanlar önce: sıradaki kararı asıl onlar bekletiyor. */
+  const sirali = (adaylar ?? []).sort((a, b) => {
+    const eksik = (k: typeof a) =>
+      (k.ai_analysis as { citationMentions?: unknown } | null)?.citationMentions === undefined ? 0 : 1;
+    return eksik(a) - eksik(b);
+  });
+  if (sirali.length === 0) return { success: true, message: "Taranacak kılavuz kalmadı." };
+
+  const parti = sirali.slice(0, TOPLU_PARTI);
+  let basarili = 0;
+  const hatalar: string[] = [];
+  for (const kilavuz of parti) {
+    const sonuc = await taraVeYaz(supabase, { id: kilavuz.id, source_url: kilavuz.source_url! });
+    if (sonuc.ok) basarili += 1;
+    else hatalar.push(sonuc.mesaj);
+  }
+
   revalidatePath("/dashboard/guidelines");
-  return { success: true };
+  const kalan = sirali.length - parti.length;
+  const kuyruk = kalan > 0 ? ` ${kalan} kılavuz kaldı; düğmeye yeniden basın.` : " Sıra bitti.";
+
+  /*
+    Başarısızlar SAYIYLA söyleniyor ve kayda da yazıldı (taraVeYaz
+    review_notes'a not düşüyor). "8 tarandı" deyip 3'ünün düştüğünü
+    gizlemek, bitmiş bir iş izlenimi verirdi.
+  */
+  if (hatalar.length) {
+    return {
+      success: true,
+      warning: `${basarili} kılavuz tarandı, ${hatalar.length} tanesi başarısız (sebebi kayıtların notunda).${kuyruk}`,
+    };
+  }
+  return { success: true, message: `${basarili} kılavuz tarandı.${kuyruk}` };
 }
 
 /**

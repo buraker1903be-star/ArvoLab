@@ -195,6 +195,7 @@ export async function GET(request: Request) {
         // OCR'lı metinden çıkarılan kurallar tek adım onaya girmez.
         ocrUsed: scan.ocrKullanildi,
         detectedCitationHint: scan.detectedCitationHint,
+        citationMentions: scan.citationMentions,
         suggestedSections: scan.suggestedSections,
         suggestedRules: scan.suggestedRules,
         confidence: scan.confidence,

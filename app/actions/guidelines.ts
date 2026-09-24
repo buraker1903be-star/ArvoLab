@@ -7,6 +7,7 @@ import { ayniKurum } from "@/lib/turkce-ad";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES, MANAGER_ROLES } from "@/lib/project-labels";
+import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 
 export interface ThesisGuideline {
   id: string;
@@ -194,7 +195,10 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
   const requiredSections = String(formData.get("requiredSections") ?? "")
     .split(",").map((value) => value.trim()).filter(Boolean);
   const citationStyle = String(formData.get("citationStyle") ?? "apa7");
-  if (!requiredSections.length || !["apa7", "vancouver", "chicago", "ieee"].includes(citationStyle)) {
+  /* Liste tek yerde (lib/atif/stiller.ts). Elle yazılan dizi MLA eklendiğinde
+     güncellenmemişti: ekran MLA'yı seçenek olarak sunuyor, sunucu
+     "Geçersiz kaynakça sistemi" diyordu. */
+  if (!requiredSections.length || !(citationStyle in STIL_ETIKETLERI)) {
     return { error: "Kaynakça sistemi ve en az bir zorunlu bölüm gereklidir." };
   }
 
@@ -315,7 +319,7 @@ export async function createGuideline(formData: FormData): Promise<ActionResult>
   if (!universityName) return { error: "Üniversite adı zorunludur." };
 
   const citationStyle = String(formData.get("citationStyle") ?? "apa7");
-  if (!["apa7", "vancouver", "chicago", "ieee"].includes(citationStyle)) return { error: "Geçersiz kaynakça sistemi." };
+  if (!(citationStyle in STIL_ETIKETLERI)) return { error: "Geçersiz kaynakça sistemi." };
 
   const requiredSectionsRaw = String(formData.get("requiredSections") ?? "");
   const requiredSections = requiredSectionsRaw
@@ -453,6 +457,50 @@ export async function updateGuidelineDetails(guidelineId: string, formData: Form
 
   revalidatePath("/dashboard/guidelines");
   return universite ? { success: true } : { success: true, warning: DIZINDE_YOK };
+}
+
+/*
+  Yalnızca atıf sistemini belirler.
+
+  Onay bekleyen 32 kılavuzun 30'unda sistem belgeden seçilemiyor
+  (lib/atif-sistemi.ts bilerek katı) ve karar bir insana kalıyor. Tek bir
+  seçim için "Kuralları düzenle" penceresini açmak gerekiyordu: o form
+  kenar boşluklarını, yazı tipini, puntoyu, satır aralığını ve zorunlu
+  bölümleri BİRLİKTE doğruluyor, biri geçersizse kaydetmiyor. Bir alanlık
+  karar, on alanlık forma bağlıydı.
+
+  Diğer alanlara dokunulmuyor; kayıt yeniden onaya düşüyor çünkü atıf
+  sistemi öğrencinin editörüne, belge kontrolüne ve Word çıktısına iniyor.
+*/
+export async function kilavuzAtifStiliniAyarla(guidelineId: string, formData: FormData): Promise<ActionResult> {
+  const auth = await requireRole(MANAGER_ROLES, "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir.");
+  if ("error" in auth) return { error: auth.error };
+
+  const citationStyle = String(formData.get("citationStyle") ?? "").trim();
+  if (!(citationStyle in STIL_ETIKETLERI)) return { error: "Geçersiz kaynakça sistemi." };
+
+  const { data, error } = await auth.supabase
+    .from("thesis_guidelines")
+    .update({
+      citation_style: citationStyle,
+      analysis_status: "needs_review",
+      reviewed_by: null,
+      reviewed_at: null,
+      review_notes: `Atıf sistemi yönetici tarafından "${STIL_ETIKETLERI[citationStyle]}" olarak seçildi; onay bekliyor.`,
+    })
+    .eq("id", guidelineId)
+    .select("id");
+
+  if (error) {
+    console.error(error);
+    return { error: "Atıf sistemi kaydedilemedi." };
+  }
+  if (!data?.length) {
+    return { error: "Atıf sistemi kaydedilemedi. Ortak katalogdaki kılavuzları yalnızca Sistem Yöneticisi düzenleyebilir." };
+  }
+
+  revalidatePath("/dashboard/guidelines");
+  return { success: true, message: `Atıf sistemi "${STIL_ETIKETLERI[citationStyle]}" olarak kaydedildi; şimdi onaylayabilirsiniz.` };
 }
 
 export async function approveGuideline(guidelineId: string) {

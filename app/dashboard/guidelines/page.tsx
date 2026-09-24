@@ -3,6 +3,7 @@ import {
   getGuidelines,
   createGuideline,
   deleteGuideline,
+  kilavuzAtifStiliniAyarla,
   approveGuideline,
   kilavuzOnayiniGeriAl,
   updateGuidelineRules,
@@ -19,6 +20,7 @@ import { statusTone } from "@/lib/status-tone";
 import CikarimOzeti from "./cikarim-ozeti";
 import { kilavuzuYenidenTara, universiteKilavuzuKesfet } from "@/app/actions/guideline-scan";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
+import { kilavuzlariTopluTara } from "@/app/actions/guideline-scan";
 
 const REVIEW_FONTS = ["Times New Roman", "Arial", "Calibri", "Cambria", "Garamond", "Georgia", "Verdana", "Book Antiqua"];
 
@@ -75,6 +77,18 @@ export default async function GuidelinesPage() {
   const benimBekleyenlerim = bekleyenler.filter(yazabilir);
   const kapsamDisiBekleyen = bekleyenler.length - benimBekleyenlerim.length;
   const hazirSayisi = benimBekleyenlerim.filter((g) => g.ready_for_approval).length;
+  /*
+    Kanıtı eksik kayıtlar: en son tarandıkları sürüm citationMentions
+    üretmiyordu, o yüzden "metinde hangi ad kaç kez geçiyor" bilgisi yok.
+    Kararı bekleten asıl veri bu.
+  */
+  const kanitiEksik = guidelines.filter(
+    (g) =>
+      yazabilir(g) &&
+      g.analysis_status !== "approved" &&
+      Boolean(g.source_url) &&
+      g.ai_analysis?.citationMentions === undefined,
+  ).length;
   const yeniSurumlu = guidelines.filter((g) => g.ai_analysis?.pendingReview).length;
   const eskiCikarimli = guidelines.filter((g) => g.ai_analysis?.scannerOutdated).length;
   const siraliKilavuzlar = canManage
@@ -84,6 +98,16 @@ export default async function GuidelinesPage() {
         return oncelik(a) - oncelik(b) || a.university_name.localeCompare(b.university_name, "tr");
       })
     : guidelines;
+
+  async function handleAtifStili(guidelineId: string, formData: FormData) {
+    "use server";
+    return kilavuzAtifStiliniAyarla(guidelineId, formData);
+  }
+
+  async function handleTopluTara() {
+    "use server";
+    return kilavuzlariTopluTara();
+  }
 
   async function handleDelete(guidelineId: string) {
     "use server";
@@ -248,6 +272,20 @@ export default async function GuidelinesPage() {
                 ? ` Ayrıca ortak katalogda ${kapsamDisiBekleyen} kılavuz onay bekliyor; onları Sistem Yöneticisi onaylar.`
                 : ""}
             </p>
+            {/*
+              Kanıt alanı sonradan eklendi; eski kayıtlar onu taşımıyor.
+              Tek tek "Şimdi yeniden tara" ile ilerlemek onlarca tıklamaydı.
+              Parti parti çalışıyor: her tarama bir ağ isteği ve çoğu zaman
+              bir PDF ayrıştırması, hepsi tek istekte zaman aşımına girer.
+            */}
+            {kanitiEksik > 0 ? (
+              <ActionForm action={handleTopluTara} className="mt-sm">
+                <button type="submit" className="projects-filter-button">
+                  <RefreshCw size={14} aria-hidden="true" />
+                  {kanitiEksik} kılavuzda atıf kanıtı eksik — sıradakileri tara
+                </button>
+              </ActionForm>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -423,6 +461,36 @@ export default async function GuidelinesPage() {
                         <button type="submit" className="projects-filter-button">
                           <RefreshCw size={14} aria-hidden="true" />
                           Şimdi yeniden tara
+                        </button>
+                      </ActionForm>
+                    ) : null}
+
+                    {/*
+                      Tek alanlık karar, on alanlık forma bağlıydı: atıf
+                      sistemi belgeden seçilemediğinde (32 bekleyenin
+                      30'unda böyle) yöneticinin "Kuralları düzenle"
+                      penceresini açıp kenar boşluğundan satır aralığına
+                      kadar her alanı geçerli hâle getirmesi gerekiyordu.
+                      Burada yalnızca sistem yazılıyor.
+                    */}
+                    {!g.ai_analysis?.detectedCitationHint ? (
+                      <ActionForm
+                        action={handleAtifStili.bind(null, g.id)}
+                        className="cluster"
+                        successMessage="Atıf sistemi kaydedildi."
+                      >
+                        <select
+                          name="citationStyle"
+                          className="compact-select"
+                          defaultValue={g.citation_style}
+                          aria-label={`${guidelineName} için atıf sistemi`}
+                        >
+                          {Object.entries(STIL_ETIKETLERI).map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </select>
+                        <button type="submit" className="projects-filter-button button-compact">
+                          Atıf sistemini kaydet
                         </button>
                       </ActionForm>
                     ) : null}
