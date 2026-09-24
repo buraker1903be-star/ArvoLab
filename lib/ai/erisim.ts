@@ -12,7 +12,7 @@
 */
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { aiYapilandirildi } from "./saglayici";
 import { krediKarari, type KrediKarari } from "./kredi-karari";
@@ -58,7 +58,8 @@ async function krediDurumu(): Promise<KrediKarari> {
  * geçmişine bakarken hakkını tüketirdi.
  */
 export async function asistanHakkiVar(kullaniciId: string): Promise<string | null> {
-  const admin = createAdminClient();
+  // Sayaç kurulamıyorsa kullanıcı engellenmiyor (bkz. adminIstemcisiVarsa).
+  const admin = adminIstemcisiVarsa();
   if (!admin) return null;
   const { data: izin, error } = await admin.rpc("rate_limit_hit", {
     p_key: `ai-asistan:${kullaniciId}`,

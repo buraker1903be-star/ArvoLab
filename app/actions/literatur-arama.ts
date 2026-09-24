@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { literaturAra, type AramaKaydi } from "@/lib/literatur-arama";
 
@@ -47,7 +47,8 @@ export async function literaturAramasiYap(girdi: {
   const sorgu = String(girdi.sorgu ?? "").trim().slice(0, EN_UZUN_SORGU);
   if (sorgu.length < EN_KISA_SORGU) return { hata: "Aramak için en az birkaç harf yazın." };
 
-  const admin = createAdminClient();
+  // Sayaç kurulamıyorsa arama engellenmiyor (bkz. adminIstemcisiVarsa).
+  const admin = adminIstemcisiVarsa();
   if (admin) {
     const { data: izin, error } = await admin.rpc("rate_limit_hit", {
       p_key: `literatur-arama:${ctx.user.id}`,
