@@ -11,6 +11,8 @@ const SAHIP = "00000000-0000-4000-8000-0000000000f1";
 const BASKASI = "00000000-0000-4000-8000-0000000000f2";
 const KURUM = "00000000-0000-4000-8000-0000000000f3";
 const SONUC = "00000000-0000-4000-8000-0000000000f9";
+const YABANCI_CALISMA = "00000000-0000-4000-8000-0000000000fa";
+const KENDI_CALISMASI = "00000000-0000-4000-8000-0000000000fb";
 
 let db;
 before(async () => {
@@ -28,6 +30,9 @@ async function tohum({ lisans = null } = {}) {
       ('${BASKASI}', 'baskasi@example.com');
     insert into public.analiz_sonuclari (id, owner_id, analiz_turu, baslik, apa_metni)
       values ('${SONUC}', '${SAHIP}', 'ttest', 'puan ~ cinsiyet', 't(28) = 2.45, p = .021');
+    insert into public.academic_projects (id, owner_id, title, project_type) values
+      ('${YABANCI_CALISMA}', '${BASKASI}', 'Başkasının tezi', 'thesis'),
+      ('${KENDI_CALISMASI}', '${SAHIP}', 'Kendi tezim', 'thesis');
   `);
   if (lisans) {
     await db.exec(`
@@ -100,5 +105,52 @@ describe("analiz sonuçları", () => {
         [SAHIP], /Aboneliğiniz sona erdi/);
       const { rows } = await db.query(`delete from public.analiz_sonuclari where id = $1 returning id`, [SONUC]);
       assert.equal(rows.length, 1);
+    }));
+
+  test("sonuç başkasının çalışmasına bağlanamıyor", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", SAHIP);
+      /*
+        project_id istemciden geliyor. RLS engellemiyor — insert politikası
+        yalnızca owner_id'ye bakar — bu yüzden bağ tetikleyiciyle korunuyor
+        (document_uploads ve citation_checks ile aynı tetikleyici).
+      */
+      await reddedilir(
+        db,
+        `insert into public.analiz_sonuclari (owner_id, project_id, analiz_turu, baslik, apa_metni)
+         values ($1, $2, 'ttest', 'başlık', 'metin')`,
+        [SAHIP, YABANCI_CALISMA],
+        /Bu çalışmaya kayıt ekleyemezsiniz/,
+      );
+    }));
+
+  test("sonradan başkasının çalışmasına taşınamıyor", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", SAHIP);
+      /*
+        Burada tetikleyici hiç çalışmıyor: tabloda UPDATE politikası yok,
+        satır RLS'te görünmüyor ve güncelleme hiçbir satıra değmiyor.
+        Tetikleyici yine de UPDATE OF project_id'ye bağlı — ilerde bir
+        düzenleme ihtiyacı doğup politika eklenirse bağ korunsun diye.
+      */
+      const { rows } = await db.query(
+        `update public.analiz_sonuclari set project_id = $2 where id = $1 returning id`,
+        [SONUC, YABANCI_CALISMA],
+      );
+      assert.equal(rows.length, 0, "Kayıt başka çalışmaya taşınabiliyor");
+    }));
+
+  test("meşru: kendi çalışmasına bağlanabiliyor", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", SAHIP);
+      const { rows } = await db.query(
+        `insert into public.analiz_sonuclari (owner_id, project_id, analiz_turu, baslik, apa_metni)
+         values ($1, $2, 'ttest', 'başlık', 'metin') returning project_id`,
+        [SAHIP, KENDI_CALISMASI],
+      );
+      assert.equal(rows[0].project_id, KENDI_CALISMASI);
     }));
 });

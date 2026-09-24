@@ -211,3 +211,45 @@ describe("fonksiyon yetkileri", () => {
       assert.deepEqual(rows.map((r) => r.id), [PROJE]);
     }));
 });
+
+describe("tablo yetkileri", () => {
+  const yetkiler = async (rolAdi) =>
+    (await db.query(
+      `select table_name, string_agg(distinct privilege_type, ',' order by privilege_type) as yetki
+         from information_schema.role_table_grants
+        where table_schema = 'public' and grantee = $1
+        group by table_name order by table_name`, [rolAdi])).rows;
+
+  /*
+    Supabase yeni tabloları kendiliğinden anon ve authenticated'a açıyor
+    (alter default privileges … grant all on tables). anon bu uygulamada
+    hiçbir tabloya erişmiyor — hiçbir RLS politikası onu hedeflemiyor —
+    ama yetki durdukça koruma yalnızca RLS'e kalıyor ve TRUNCATE RLS'e
+    tabi değil. 20260924100025 hepsini geri aldı; bu test geri gelmesini
+    engelliyor.
+  */
+  test("anon hiçbir tabloda yetki taşımıyor", async () => {
+    assert.deepEqual(await yetkiler("anon"), []);
+  });
+
+  /*
+    authenticated'ın okuma/yazma yetkileri duruyor (erişimi RLS yönetiyor),
+    ama PostgREST'in hiç kullanmadığı üçü kapalı. Açık kalmaları, bir
+    politika atlandığında RLS'siz bir yol bırakırdı: TRUNCATE satır
+    politikalarına bakmaz.
+  */
+  test("authenticated'da TRUNCATE, TRIGGER ve REFERENCES yok", async () => {
+    const acik = (await yetkiler("authenticated")).filter((satir) =>
+      /TRUNCATE|TRIGGER|REFERENCES/.test(satir.yetki));
+    assert.deepEqual(acik, []);
+  });
+
+  test("meşru: authenticated kendi verisini okuyup yazabiliyor", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", MUSTERI);
+      const { rows } = await db.query(
+        `insert into public.literature_sources (owner_id, title) values ($1, 'Kaynak') returning id`, [MUSTERI]);
+      assert.equal(rows.length, 1);
+    }));
+});

@@ -49,6 +49,26 @@ export async function analizSonucuKaydet(girdi: {
     return { error: "Sonuç metni kaydedilemeyecek kadar uzun; daha dar bir analiz seçin." };
   }
 
+  /*
+    project_id istemciden geliyor ve RLS onu denetlemiyor (insert politikası
+    yalnızca owner_id'ye bakar): doğrulanmazsa kayıt BAŞKASININ çalışmasına
+    bağlanabilirdi. Aynı açık document_uploads ve citation_checks'te
+    yaşanmıştı; denetim oradakinin eşi. Veritabanı tarafında da tetikleyici
+    var (20260924100025) — burası kullanıcıya anlaşılır cevap versin diye.
+  */
+  if (girdi.projectId) {
+    const { data: calisma, error: calismaHatasi } = await ctx.supabase
+      .from("academic_projects")
+      .select("id")
+      .eq("id", girdi.projectId)
+      .maybeSingle();
+    if (calismaHatasi) {
+      console.error(calismaHatasi);
+      return { error: "Çalışma doğrulanamadı." };
+    }
+    if (!calisma) return { error: "Bu çalışmaya analiz sonucu ekleyemezsiniz." };
+  }
+
   const { error } = await ctx.supabase.from("analiz_sonuclari").insert({
     owner_id: ctx.user.id,
     project_id: girdi.projectId || null,
@@ -59,7 +79,16 @@ export async function analizSonucuKaydet(girdi: {
 
   if (error) {
     console.error(error);
-    if (error.code === "42501") return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+    /*
+      42501'i iki ayrı koruma üretiyor: abonelik kapısı ve çalışma bağı
+      tetikleyicisi. İkisini aynı mesajla karşılamak, yanlış çalışmayı
+      seçmiş kullanıcıya "aboneliğiniz bitti" dedirtirdi.
+    */
+    if (error.code === "42501") {
+      return /çalışmaya kayıt/i.test(error.message ?? "")
+        ? { error: "Bu çalışmaya analiz sonucu ekleyemezsiniz." }
+        : { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+    }
     return { error: "Sonuç kaydedilemedi; metni kopyalayıp saklayabilirsiniz." };
   }
 
