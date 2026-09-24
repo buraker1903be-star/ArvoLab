@@ -182,4 +182,39 @@ describe("doğrulama önbelleği", () => {
     // İkinci künye dizide yok: sonuc[1] onun sonucu DEĞİL.
     assert.notEqual(sonuc[1].reference, kunyeler[1].raw);
   });
+
+  /*
+    Aynı anahtara düşen iki künye önbelleğe İKİ KEZ yazılamaz: yazma tek
+    bir "insert … on conflict" ifadesi ve Postgres aynı satıra ikinci kez
+    dokunulmasına 21000 ile itiraz eder. Hata yutulduğu için o
+    çalıştırmanın TÜM yazımı sessizce kaybolurdu — hem de önbelleğin en
+    çok işe yarayacağı yerde, yinelenen künyesi olan kaynakçada.
+  */
+  test("aynı anahtara düşen iki künye önbelleğe bir kez yazılır", async () => {
+    const bir: ParsedReference = {
+      raw: "Yazar, A. (2020). Örgütsel bağlılık ve iş doyumu. Dergi, 12(3), 1-20.",
+      authors: ["Yazar, A."], year: "2020", title: "Örgütsel bağlılık ve iş doyumu", issues: [],
+    };
+    const iki: ParsedReference = { ...bir, raw: "Yazar, A. (2020). Örgütsel bağlılık ve iş doyumu. Dergi, 12(3), 21-40." };
+    assert.equal(dogrulamaAnahtari(bir), dogrulamaAnahtari(iki), "kurgu bozulmuş: anahtarlar ayrışıyor");
+
+    const { onbellek, yazilanlar } = sahteOnbellek([]);
+    await verifyAcademicReferences([bir, iki], 25, onbellek);
+
+    const anahtarlar = yazilanlar.map((giris) => giris.anahtar);
+    assert.deepEqual(anahtarlar, [...new Set(anahtarlar)], "aynı anahtar birden çok kez yazılıyor");
+    assert.equal(yazilanlar.length, 1);
+  });
+
+  /*
+    Yinelenen künyede sonuç-künye eşleşmesi ham metinle yapılıyordu
+    (`find(aday => aday.raw === sonuc.reference)`); aynı raw iki kayıtta
+    olunca hangisine denk geldiği belirsizdi. İkisi de sonuçta görünmeli.
+  */
+  test("birebir aynı künye iki kez yazılmışsa ikisi de sonuçta yer alır", async () => {
+    const tekrar = kunye("Aynı çalışma iki kez");
+    const sonuclar = await verifyAcademicReferences([tekrar, { ...tekrar }], 25, sahteOnbellek([]).onbellek);
+    assert.equal(sonuclar.length, 2);
+    assert.deepEqual(sonuclar.map((s) => s.reference), [tekrar.raw, tekrar.raw]);
+  });
 });

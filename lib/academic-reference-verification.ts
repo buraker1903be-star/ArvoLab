@@ -337,22 +337,40 @@ export async function verifyAcademicReferences(
     if (bakilacak.length < limit) bakilacak.push(reference);
   }
 
-  const yeni: { anahtar: string; kayit: OnbellekKaydi }[] = [];
+  /*
+    ANAHTAR BAŞINA TEK KAYIT. İki künye aynı anahtara düşebiliyor: anahtar
+    normalleştirilmiş "başlık kelimeleri|yıl" olduğu için aynı yazının iki
+    kez yazılması ya da aynı sayıda ardışık sayfalara oturan iki yazı
+    ("…12(3), 1-20." ve "…12(3), 21-40.") aynı kutuya girer.
+
+    Önbellek yazımı tek bir "insert … on conflict" ifadesi; aynı anahtarın
+    iki kez gelmesi Postgres'te 21000 (ON CONFLICT DO UPDATE command cannot
+    affect row a second time) hatası verir. Hata yutuluyordu (yazma bir
+    hızlandırma, akışı durdurmamalı), yani O ÇALIŞTIRMANIN TÜM önbellek
+    yazımı sessizce kayboluyordu — hem de önbelleğin en çok işe yarayacağı
+    durumda, yinelenen künyesi olan kaynakçada.
+
+    Map ile son sonuç kazanıyor; ikisi de aynı dizinden geldiği için
+    hangisinin kaldığı sonucu değiştirmiyor.
+  */
+  const yeni = new Map<string, OnbellekKaydi>();
   for (let index = 0; index < bakilacak.length; index += 4) {
-    const parti = await Promise.all(bakilacak.slice(index, index + 4).map(verifyReference));
-    for (const sonuc of parti) {
+    // Dilim elde tutuluyor: sonuç ile künyeyi ham metinden eşleştirmek
+    // yinelenen künyede yanlış eşleşme demekti (aynı raw, iki ayrı kayıt).
+    const dilim = bakilacak.slice(index, index + 4);
+    const parti = await Promise.all(dilim.map(verifyReference));
+    parti.forEach((sonuc, sira) => {
       sonuclar.push(sonuc);
-      const reference = bakilacak.find((aday) => aday.raw === sonuc.reference);
-      const anahtar = reference ? anahtarlar.get(reference) ?? null : null;
+      const anahtar = anahtarlar.get(dilim[sira]) ?? null;
       if (anahtar && sonuc.status !== "insufficient_data") {
-        yeni.push({ anahtar, kayit: { status: sonuc.status, bestMatch: sonuc.bestMatch, matches: sonuc.matches } });
+        yeni.set(anahtar, { status: sonuc.status, bestMatch: sonuc.bestMatch, matches: sonuc.matches });
       }
-    }
+    });
   }
 
-  if (onbellek && yeni.length) {
+  if (onbellek && yeni.size) {
     try {
-      await onbellek.yaz(yeni);
+      await onbellek.yaz([...yeni].map(([anahtar, kayit]) => ({ anahtar, kayit })));
     } catch (sorun) {
       console.error("[dogrulama] önbellek yazılamadı", sorun instanceof Error ? sorun.message : sorun);
     }
