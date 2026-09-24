@@ -50,8 +50,20 @@ type Aday = { url: string; puan: number };
  * Puanlama: uzantı tercihi + adres ve bağlantı metnindeki ipuçları.
  * Hiçbir aday yoksa null döner ve çağıran sayfanın kendisini kullanır.
  */
+/**
+ * ".edu.tr" altında kurumu tanımlayan alan adı: alt alan adları atılır.
+ * "webupload.gazi.edu.tr" ve "fbe.gazi.edu.tr" → "gazi.edu.tr".
+ */
+const kurumAlanAdi = (konak: string) => konak.toLowerCase().replace(/\.$/, "").split(".").slice(-3).join(".");
+
 export function belgeBaglantisiSec(html: string, tabanUrl: string): string | null {
   const adaylar = new Map<string, Aday>();
+  let taban: URL;
+  try {
+    taban = new URL(tabanUrl);
+  } catch {
+    return null;
+  }
 
   // Bağlantı metni de sinyal: "Tez Yazım Kılavuzu (PDF)" gibi.
   const desen = /<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
@@ -66,6 +78,20 @@ export function belgeBaglantisiSec(html: string, tabanUrl: string): string | nul
     const konak = hedef.hostname.toLowerCase();
     // Taramanın tamamı yalnızca resmî .edu.tr kaynaklarında çalışır.
     if (hedef.protocol !== "https:" || !(konak === "edu.tr" || konak.endsWith(".edu.tr"))) continue;
+    /*
+      Belge AYNI kurumun alan adında olmalı.
+
+      Eskiden herhangi bir .edu.tr adresi kabul ediliyordu. Üniversiteler
+      birbirinin kılavuzunu örnek olarak bağlıyor; o bağlantıya inildiğinde
+      B üniversitesinin kılavuzu A'nınki olarak kaydediliyordu. Sonuç,
+      öğrencinin tezine BAŞKA bir kurumun biçim kurallarının dayatılması —
+      kılavuzun hiç bulunamamasından kötü.
+
+      Alt alan adı serbest: kılavuz çoğu kez ayrı bir sunucuda duruyor
+      (fbe.gazi.edu.tr sayfası webupload.gazi.edu.tr'deki .docx'e bağlanıyor),
+      ikisi de gazi.edu.tr kurumudur.
+    */
+    if (kurumAlanAdi(konak) !== kurumAlanAdi(taban.hostname)) continue;
 
     const yol = hedef.pathname.toLowerCase();
     const uzantiSirasi = UZANTILAR.findIndex((uzanti) => yol.endsWith(uzanti));
