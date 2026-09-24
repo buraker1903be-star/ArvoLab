@@ -6,115 +6,168 @@
  * biçimine çevirir. Yeni bir analiz YAPMAZ, yorum/sonuç ÜRETMEZ;
  * yalnızca sayısal değerleri standart akademik biçime dönüştürür
  * ve anlamlılık eşiğini (p < .05) mekanik olarak işaretler.
+ *
+ * Dört ağır hata düzeltildi (testi tests/unit/stats-interpreter.test.ts):
+ *
+ * 1. "p < .05" GİRDİSİ "p = .050 (istatistiksel olarak anlamlı değil)"
+ *    olarak çıkıyordu. Karşılaştırma işareti atılıp sayı eşitlik sanılıyordu;
+ *    öğrencinin ANLAMLI bulgusu anlamsıza çevriliyordu. Türkçe tezlerde
+ *    anlamlılığın en yaygın yazımı budur.
+ * 2. Modülün kendi yorumunda desteklendiği yazan "t = 2.45, df = 28"
+ *    biçimi hiç tanınmıyordu; kullanıcı sessizce boş sonuç alıyordu.
+ * 3. Harf sınırı yoktu: "Ortalama değer = .42, p = .003" cümlesindeki
+ *    "değer" sözcüğünün son harfi korelasyon sanılıyor ve GİRDİDE OLMAYAN
+ *    bir istatistik üretiliyordu (AGENTS.md: üretilen her sayı girdide
+ *    geçmek zorunda).
+ * 4. r sıfırla yazılıyordu ("r = 0.42"). APA'da ±1 ile sınırlı değerler
+ *    baştaki sıfır olmadan yazılır.
  */
 
 export interface DetectedStatistic {
   raw: string;
   type: "t-test" | "anova" | "correlation" | "chi-square" | "regression" | "unknown";
   apaSentenceFragment: string;
-  significant: boolean | null; // p değeri bulunamadıysa null
+  /**
+   * true = anlamlı, false = anlamlı değil.
+   * null = BU İFADEDEN BELİRLENEMEZ. "p < .10" gibi bir sınır anlamlılığı
+   * ne kanıtlar ne çürütür; "anlamlı değil" demek olmayan bir bilgiyi
+   * uydurmak olurdu.
+   */
+  significant: boolean | null;
 }
 
-function formatP(pValue: number): string {
-  if (pValue < 0.001) return "p < .001";
-  const trimmed = pValue.toFixed(3).replace(/^0\./, ".");
-  return `p = ${trimmed}`;
+/** p değerinin yazılışı: eşitlik mi, üst sınır mı. */
+type PDegeri = { islec: "=" | "<"; deger: number };
+
+const sayi = (ham: string): number => parseFloat(ham.replace(",", "."));
+
+/** APA: ±1 ile sınırlı değerlerde (p, r) baştaki sıfır yazılmaz. */
+const sifirsiz = (metin: string) => metin.replace(/^(-?)0\./, "$1.");
+
+/*
+  Yazılan p ifadesi KORUNUR. "p < .05" yazan kullanıcıya "p = .050"
+  döndürmek, kaynağında olmayan bir kesinlik uydurmaktır.
+*/
+function apaP({ islec, deger }: PDegeri): string {
+  if (islec === "<") return `p < ${sifirsiz(String(deger))}`;
+  if (deger < 0.001) return "p < .001";
+  return `p = ${sifirsiz(deger.toFixed(3))}`;
 }
 
-function isSignificant(pValue: number): boolean {
-  return pValue < 0.05;
+/*
+  "p < X" bir ÜST SINIR: X 0.05'ten küçük ya da eşitse p kesinlikle
+  eşiğin altındadır (anlamlı). X daha büyükse p değeri 0.05'in altında da
+  üstünde de olabilir — cevap "bilmiyorum".
+*/
+export function anlamlilik({ islec, deger }: PDegeri): boolean | null {
+  if (islec === "<") return deger <= 0.05 ? true : null;
+  return deger < 0.05;
 }
 
-// t(28) = 2.45, p = .021  |  t = 2.45, df = 28, p = .021
-const T_TEST_RE =
-  /t\s*\(?\s*(\d+(?:[.,]\d+)?)\s*\)?\s*=\s*(-?\d+[.,]\d+)[,;]?\s*p\s*[=<]\s*([.,]?\d+[.,]?\d*)/gi;
+const anlamlilikNotu = (sonuc: boolean | null) =>
+  sonuc === true ? "" : sonuc === false ? " (istatistiksel olarak anlamlı değil)" : " (anlamlılık bu ifadeden belirlenemiyor)";
 
-// F(2, 57) = 4.31, p = .018
-const ANOVA_RE =
-  /F\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*=\s*(\d+[.,]\d+)[,;]?\s*p\s*[=<]\s*([.,]?\d+[.,]?\d*)/gi;
+/*
+  Harf sınırı: istatistik harfinden önce başka bir harf gelmemeli. Yoksa
+  Türkçede "r" ile biten her sözcük ("değer", "faktör") korelasyon
+  sanılıyordu.
+*/
+const HARF_ONCESI_YOK = "(?<![\\p{L}\\p{N}])";
+const P_PARCASI = "p\\s*([=<])\\s*([.,]?\\d+[.,]?\\d*)";
 
-// r = .42, p = .003   |   r(48) = .42, p = .003
-const CORRELATION_RE =
-  /r\s*\(?\s*(\d*)\s*\)?\s*=\s*(-?[.,]\d+)[,;]?\s*p\s*[=<]\s*([.,]?\d+[.,]?\d*)/gi;
+// t(28) = 2.45, p = .021   |   t = 2.45, df = 28, p = .021
+const T_TEST_RE = new RegExp(
+  `${HARF_ONCESI_YOK}t\\s*(?:\\(\\s*(\\d+(?:[.,]\\d+)?)\\s*\\)\\s*=\\s*(-?\\d+[.,]\\d+)` +
+    `|=\\s*(-?\\d+[.,]\\d+)[,;]?\\s*df\\s*=\\s*(\\d+(?:[.,]\\d+)?))[,;]?\\s*${P_PARCASI}`,
+  "giu",
+);
 
-// χ2(1, N=120) = 6.14, p = .013  |  chi-square(1) = 6.14, p = .013
-const CHI_SQUARE_RE =
-  /(?:χ2|χ²|chi-square)\s*\(\s*(\d+)\s*(?:,\s*N\s*=\s*(\d+))?\s*\)\s*=\s*(\d+[.,]\d+)[,;]?\s*p\s*[=<]\s*([.,]?\d+[.,]?\d*)/gi;
+const ANOVA_RE = new RegExp(
+  `${HARF_ONCESI_YOK}F\\s*\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\)\\s*=\\s*(\\d+[.,]\\d+)[,;]?\\s*${P_PARCASI}`,
+  "giu",
+);
 
-function parseNumber(raw: string): number {
-  return parseFloat(raw.replace(",", "."));
-}
+const CORRELATION_RE = new RegExp(
+  `${HARF_ONCESI_YOK}r\\s*\\(?\\s*(\\d*)\\s*\\)?\\s*=\\s*(-?[.,]\\d+)[,;]?\\s*${P_PARCASI}`,
+  "giu",
+);
+
+const CHI_SQUARE_RE = new RegExp(
+  `${HARF_ONCESI_YOK}(?:χ2|χ²|chi-square)\\s*\\(\\s*(\\d+)\\s*(?:,\\s*N\\s*=\\s*(\\d+))?\\s*\\)\\s*=\\s*(\\d+[.,]\\d+)[,;]?\\s*${P_PARCASI}`,
+  "giu",
+);
+
+type Cozumleyici = {
+  desen: RegExp;
+  tur: DetectedStatistic["type"];
+  /** Eşleşmeden APA gövdesini ve p değerini üretir. */
+  oku: (m: RegExpExecArray) => { govde: string; p: PDegeri };
+};
+
+const COZUMLEYICILER: Cozumleyici[] = [
+  {
+    desen: T_TEST_RE,
+    tur: "t-test",
+    oku: (m) => {
+      // İki yazım: t(df) = değer  ya da  t = değer, df = ...
+      const df = m[1] ?? m[4];
+      const t = sayi(m[2] ?? m[3]);
+      return { govde: `t(${df}) = ${t.toFixed(2)}`, p: { islec: m[5] as "=" | "<", deger: sayi(m[6]) } };
+    },
+  },
+  {
+    desen: ANOVA_RE,
+    tur: "anova",
+    oku: (m) => ({
+      govde: `F(${m[1]}, ${m[2]}) = ${sayi(m[3]).toFixed(2)}`,
+      p: { islec: m[4] as "=" | "<", deger: sayi(m[5]) },
+    }),
+  },
+  {
+    desen: CORRELATION_RE,
+    tur: "correlation",
+    oku: (m) => ({
+      govde: `r${m[1] ? `(${m[1]})` : ""} = ${sifirsiz(sayi(m[2]).toFixed(2))}`,
+      p: { islec: m[3] as "=" | "<", deger: sayi(m[4]) },
+    }),
+  },
+  {
+    desen: CHI_SQUARE_RE,
+    tur: "chi-square",
+    oku: (m) => ({
+      govde: `χ²(${m[1]}${m[2] ? `, N = ${m[2]}` : ""}) = ${sayi(m[3]).toFixed(2)}`,
+      p: { islec: m[4] as "=" | "<", deger: sayi(m[5]) },
+    }),
+  },
+];
 
 export function detectStatistics(rawText: string): DetectedStatistic[] {
-  const results: DetectedStatistic[] = [];
+  const bulunanlar: (DetectedStatistic & { konum: number })[] = [];
 
-  let m: RegExpExecArray | null;
-
-  const tRe = new RegExp(T_TEST_RE);
-  while ((m = tRe.exec(rawText)) !== null) {
-    const df = m[1];
-    const tValue = parseNumber(m[2]);
-    const pValue = parseNumber(m[3]);
-    const sig = isSignificant(pValue);
-    results.push({
-      raw: m[0],
-      type: "t-test",
-      significant: sig,
-      apaSentenceFragment: `t(${df}) = ${tValue.toFixed(2)}, ${formatP(pValue)}${
-        sig ? "" : " (istatistiksel olarak anlamlı değil)"
-      }`,
-    });
+  for (const { desen, tur, oku } of COZUMLEYICILER) {
+    const re = new RegExp(desen.source, desen.flags);
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(rawText)) !== null) {
+      const { govde, p } = oku(m);
+      const sonuc = anlamlilik(p);
+      bulunanlar.push({
+        konum: m.index,
+        raw: m[0],
+        type: tur,
+        significant: sonuc,
+        apaSentenceFragment: `${govde}, ${apaP(p)}${anlamlilikNotu(sonuc)}`,
+      });
+    }
   }
 
-  const fRe = new RegExp(ANOVA_RE);
-  while ((m = fRe.exec(rawText)) !== null) {
-    const df1 = m[1];
-    const df2 = m[2];
-    const fValue = parseNumber(m[3]);
-    const pValue = parseNumber(m[4]);
-    const sig = isSignificant(pValue);
-    results.push({
-      raw: m[0],
-      type: "anova",
-      significant: sig,
-      apaSentenceFragment: `F(${df1}, ${df2}) = ${fValue.toFixed(2)}, ${formatP(pValue)}${
-        sig ? "" : " (istatistiksel olarak anlamlı değil)"
-      }`,
-    });
-  }
-
-  const rRe = new RegExp(CORRELATION_RE);
-  while ((m = rRe.exec(rawText)) !== null) {
-    const df = m[1];
-    const rValue = parseNumber(m[2]);
-    const pValue = parseNumber(m[3]);
-    const sig = isSignificant(pValue);
-    results.push({
-      raw: m[0],
-      type: "correlation",
-      significant: sig,
-      apaSentenceFragment: `r${df ? `(${df})` : ""} = ${rValue.toFixed(2)}, ${formatP(pValue)}${
-        sig ? "" : " (istatistiksel olarak anlamlı değil)"
-      }`,
-    });
-  }
-
-  const chiRe = new RegExp(CHI_SQUARE_RE);
-  while ((m = chiRe.exec(rawText)) !== null) {
-    const df = m[1];
-    const n = m[2];
-    const chiValue = parseNumber(m[3]);
-    const pValue = parseNumber(m[4]);
-    const sig = isSignificant(pValue);
-    results.push({
-      raw: m[0],
-      type: "chi-square",
-      significant: sig,
-      apaSentenceFragment: `χ²(${df}${n ? `, N = ${n}` : ""}) = ${chiValue.toFixed(2)}, ${formatP(pValue)}${
-        sig ? "" : " (istatistiksel olarak anlamlı değil)"
-      }`,
-    });
-  }
-
-  return results;
+  /* Metindeki sırasına göre: eskiden türe göre kümeleniyordu ve kullanıcı
+     yapıştırdığı sırayı listede bulamıyordu. */
+  return bulunanlar
+    .sort((a, b) => a.konum - b.konum)
+    .map((kayit) => ({
+      raw: kayit.raw,
+      type: kayit.type,
+      apaSentenceFragment: kayit.apaSentenceFragment,
+      significant: kayit.significant,
+    }));
 }

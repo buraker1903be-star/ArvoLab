@@ -103,7 +103,16 @@ export default function AnalysisTools({
                   <li key={i}>
                     <span className="muted">{s.raw}</span>
                     <br />
-                    <strong className="tone-text" data-tone={s.significant ? "success" : "warning"}>
+                    {/*
+                      Üç durum var, iki değil: null = "bu ifadeden
+                      belirlenemiyor" ("p < .10" gibi bir üst sınır).
+                      Onu "warning" ile göstermek, anlamsız çıkmış bir
+                      sonuçla karıştırmak olurdu.
+                    */}
+                    <strong
+                      className="tone-text"
+                      data-tone={s.significant === true ? "success" : s.significant === false ? "warning" : "neutral"}
+                    >
                       {s.apaSentenceFragment}
                     </strong>
                   </li>
