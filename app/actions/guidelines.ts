@@ -3,6 +3,7 @@
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { validIndentCm } from "@/lib/paragraph-format";
 import { revalidatePath } from "next/cache";
+import { ayniKurum } from "@/lib/turkce-ad";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
 import { MANAGER_ROLES } from "@/lib/project-labels";
@@ -252,6 +253,51 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
   return { success: true };
 }
 
+/*
+  Üniversiteyi dizinde bulur ve KANONİK adını döndürür.
+
+  Eskiden yalnızca `.ilike("name", ad)` vardı ve tutmazsa university_id
+  sessizce NULL kalıyordu. Oysa kılavuzu tezlere bağlayan asıl eşleştirici
+  (resync_project_guidelines) university_id'ye bakıyor: id yoksa kılavuz
+  HİÇBİR teze bağlanmıyor, ama ekranda "kaydedildi" yazıyordu.
+
+  ilike'ın kendisi de Türkçede tökezliyor: 'IŞIK ÜNİVERSİTESİ' ile 'Işık
+  Üniversitesi' eşleşmez (ölçüldü). Bu yüzden arama tümden katlanmış ada
+  taşındı (lib/turkce-ad.ts) — dizin birkaç yüz satır, tek geçiş yeter ve
+  tek yol tutmak ilike'ın "%" joker sürprizini de ortadan kaldırıyor.
+
+  Kanonik adın saklanması ayrıca yazım kaymasını tümden bitiriyor: fazladan
+  boşluk, farklı büyük/küçük yazım ya da "Üniv." kısaltması artık kılavuzu
+  kurumundan koparamaz.
+*/
+async function universiteBul(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  ad: string,
+): Promise<{ id: string; ad: string } | null> {
+  const { data } = await supabase.from("universities").select("id, name");
+  const eslesen = (data ?? []).find((satir) => ayniKurum(satir.name, ad));
+  return eslesen ? { id: eslesen.id, ad: eslesen.name } : null;
+}
+
+/** Enstitü/fakülte için aynısı; kurum bulunduysa onun altında aranır. */
+async function birimBul(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  universiteId: string,
+  ad: string,
+): Promise<{ id: string; ad: string } | null> {
+  const { data } = await supabase
+    .from("academic_units")
+    .select("id, name")
+    .eq("university_id", universiteId);
+  const eslesen = (data ?? []).find((satir) => ayniKurum(satir.name, ad));
+  return eslesen ? { id: eslesen.id, ad: eslesen.name } : null;
+}
+
+/** Dizinde bulunamayan kurum: kılavuz kaydedilir ama kendiliğinden bağlanmaz. */
+const DIZINDE_YOK =
+  "Kılavuz kaydedildi ama bu üniversite dizinde bulunamadı: tezlere kendiliğinden bağlanmayacak. Üniversite adını dizindeki yazımıyla girin ya da önce dizine ekleyin.";
+
+
 export async function createGuideline(formData: FormData): Promise<ActionResult> {
   const auth = await requireRole(MANAGER_ROLES, "Kılavuz eklemek için Akademik Yönetici veya üzeri bir rol gerekir.");
   if ("error" in auth) return { error: auth.error };
@@ -273,30 +319,15 @@ export async function createGuideline(formData: FormData): Promise<ActionResult>
   const maxPagesRaw = String(formData.get("maxPages") ?? "").trim();
   const instituteName = String(formData.get("instituteName") ?? "").trim();
 
-  const { data: university } = await supabase
-    .from("universities")
-    .select("id")
-    .ilike("name", universityName)
-    .limit(1)
-    .maybeSingle();
-
-  let academicUnitId: string | null = null;
-  if (university?.id && instituteName) {
-    const { data: unit } = await supabase
-      .from("academic_units")
-      .select("id")
-      .eq("university_id", university.id)
-      .ilike("name", instituteName)
-      .limit(1)
-      .maybeSingle();
-    academicUnitId = unit?.id ?? null;
-  }
+  const universite = await universiteBul(supabase, universityName);
+  const birim = universite && instituteName ? await birimBul(supabase, universite.id, instituteName) : null;
 
   const { error } = await supabase.from("thesis_guidelines").insert({
-    university_name: universityName,
-    institute_name: instituteName || null,
-    university_id: university?.id ?? null,
-    academic_unit_id: academicUnitId,
+    // Kanonik ad saklanıyor; yazım kayması kılavuzu kurumundan koparmasın.
+    university_name: universite?.ad ?? universityName,
+    institute_name: birim?.ad ?? (instituteName || null),
+    university_id: universite?.id ?? null,
+    academic_unit_id: birim?.id ?? null,
     version_label: String(formData.get("versionLabel") ?? "").trim() || null,
     source_url: String(formData.get("sourceUrl") ?? "").trim() || null,
     citation_style: citationStyle,
@@ -315,7 +346,8 @@ export async function createGuideline(formData: FormData): Promise<ActionResult>
   }
 
   revalidatePath("/dashboard/guidelines");
-  return { success: true };
+  // Bağlanamayacak bir kılavuzu "kaydedildi" deyip geçmek, sessiz kalmaktır.
+  return universite ? { success: true } : { success: true, warning: DIZINDE_YOK };
 }
 
 // Kılavuzun kimlik bilgileri (üniversite, enstitü, sürüm, kaynak, sayfa aralığı).
@@ -352,31 +384,17 @@ export async function updateGuidelineDetails(guidelineId: string, formData: Form
   const institutionChanged =
     current.university_name !== universityName || (current.institute_name ?? "") !== instituteName;
 
-  const { data: university } = await auth.supabase
-    .from("universities")
-    .select("id")
-    .ilike("name", universityName)
-    .limit(1)
-    .maybeSingle();
-
-  let academicUnitId: string | null = null;
-  if (university?.id && instituteName) {
-    const { data: unit } = await auth.supabase
-      .from("academic_units")
-      .select("id")
-      .eq("university_id", university.id)
-      .ilike("name", instituteName)
-      .limit(1)
-      .maybeSingle();
-    academicUnitId = unit?.id ?? null;
-  }
+  const universite = await universiteBul(auth.supabase, universityName);
+  const birim = universite && instituteName ? await birimBul(auth.supabase, universite.id, instituteName) : null;
+  const academicUnitId = birim?.id ?? null;
 
   const { error } = await auth.supabase
     .from("thesis_guidelines")
     .update({
-      university_name: universityName,
-      institute_name: instituteName || null,
-      university_id: university?.id ?? null,
+      // Kanonik ad saklanıyor (bkz. universiteBul).
+      university_name: universite?.ad ?? universityName,
+      institute_name: birim?.ad ?? (instituteName || null),
+      university_id: universite?.id ?? null,
       academic_unit_id: academicUnitId,
       version_label: String(formData.get("versionLabel") ?? "").trim() || null,
       source_url: String(formData.get("sourceUrl") ?? "").trim() || null,
@@ -408,7 +426,7 @@ export async function updateGuidelineDetails(guidelineId: string, formData: Form
   }
 
   revalidatePath("/dashboard/guidelines");
-  return { success: true };
+  return universite ? { success: true } : { success: true, warning: DIZINDE_YOK };
 }
 
 export async function approveGuideline(guidelineId: string) {
