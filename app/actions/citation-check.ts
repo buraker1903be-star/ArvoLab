@@ -46,6 +46,36 @@ export async function getMyProjects(): Promise<ListeSonucu<MyProject>> {
   return listeBasarili(data);
 }
 
+/*
+  Seçilen çalışmanın müsveddesinde kaç kelime var.
+
+  Metin alanı İSTEĞE BAĞLI olduğu için çoğu denetim metinsiz çalışıyordu ve
+  çapraz kontrol (metin içi atıf ↔ kaynakça) sessizce devre dışı kalıyordu —
+  denetimin elle yapılması en zor, en değerli yarısı. Oysa metin zaten
+  ArvoLab'da duruyor. Sayı, kullanıcı "çalışmamın metnini kullan" demeden
+  önce boş bir müsveddeyi görebilsin diye.
+*/
+export async function calismaMetniOzeti(
+  projectId: string
+): Promise<{ kelime: number; okunamadi: boolean }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { kelime: 0, okunamadi: false };
+
+  // RLS erişimi belirler; burada ayrıca sahiplik aranmıyor çünkü danışman da görebilir.
+  const { data, error } = await supabase
+    .from("project_manuscripts")
+    .select("word_count")
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return { kelime: 0, okunamadi: true };
+  }
+  return { kelime: data?.word_count ?? 0, okunamadi: false };
+}
+
 /* Akademik doğrulama ağ üzerinden gidiyor (Crossref + OpenAlex, kaynak
    başına iki istek). Biçim ve çapraz kontrol ise yerelde ve anında.
    İkisini aynı sınıra bağlamak, 120 kaynaklı bir tezde HİÇBİR denetim
@@ -60,6 +90,13 @@ export async function runCitationCheck(input: {
   referenceList: string;
   bodyText: string;
   citationStyle?: string | null;
+  /**
+   * Metni kullanıcıdan değil, seçilen çalışmanın müsveddesinden al.
+   * Tez gövdesi istemciye indirilip geri gönderilmiyor: yüz binlerce
+   * karakteri iki kez taşımanın anlamı yok, üstelik kullanıcı metni
+   * kendi editöründe zaten görüyor.
+   */
+  useProjectBody?: boolean;
 }) {
   const supabase = await createClient();
   const {
@@ -100,8 +137,31 @@ export async function runCitationCheck(input: {
     return { error: "Doğrulanabilecek bir kaynakça girdisi bulunamadı." };
   }
 
-  const govdeVar = Boolean(input.bodyText?.trim());
-  const citations = govdeVar ? extractInTextCitations(input.bodyText!, { style: atifCikarmaStili(stil) }) : [];
+  /*
+    Çalışmanın metni isteniyorsa sunucuda okunuyor. Sessizce metinsiz devam
+    edilseydi sonuç "çapraz kontrol yapıldı, sorun yok" gibi görünürdü:
+    kullanıcı metni kullanmayı AÇIKÇA istedi, olmadıysa bunu bilmeli.
+  */
+  let govde = input.bodyText ?? "";
+  if (input.useProjectBody) {
+    if (!input.projectId) return { error: "Metni almak için önce bir çalışma seçin." };
+    const { data: musvedde, error: musveddeHatasi } = await supabase
+      .from("project_manuscripts")
+      .select("plain_text")
+      .eq("project_id", input.projectId)
+      .maybeSingle();
+    if (musveddeHatasi) {
+      console.error(musveddeHatasi);
+      return { error: "Çalışmanın metni okunamadı; denetim çalıştırılmadı. Tekrar deneyin." };
+    }
+    govde = musvedde?.plain_text ?? "";
+    if (!govde.trim()) {
+      return { error: "Seçtiğiniz çalışmada henüz yazılmış metin yok. Metni yazım ekranından girin ya da buraya yapıştırın." };
+    }
+  }
+
+  const govdeVar = Boolean(govde.trim());
+  const citations = govdeVar ? extractInTextCitations(govde, { style: atifCikarmaStili(stil) }) : [];
   /*
     Çapraz kontrol yalnızca GÖVDE METNİ VARKEN yapılıyor.
 
@@ -145,7 +205,15 @@ export async function runCitationCheck(input: {
     project_id: input.projectId,
     project_title: input.projectTitle,
     raw_reference_list: input.referenceList,
-    body_text: input.bodyText || null,
+    /*
+      Çalışmanın müsveddesi buraya KOPYALANMIYOR. body_text'i okuyan hiçbir
+      yer yok (yalnızca yazılıyor); bir tezin tamamını her denetimde ikinci
+      bir tabloya yazmak saf maliyet olurdu — üstelik müsvedde değiştikçe
+      buradaki kopya eskiyeceği için yanıltıcı da olurdu. Kayıt zaten
+      project_id ile çalışmaya bağlı. Kullanıcının yapıştırdığı metin
+      eskisi gibi saklanıyor: onun başka bir kaynağı yok.
+    */
+    body_text: input.useProjectBody ? null : (input.bodyText || null),
     parsed_references: references,
     in_text_citations: citations,
     cross_check: { ...cross, academicVerification, verificationSummary },

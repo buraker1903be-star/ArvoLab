@@ -412,6 +412,14 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .project-form-grid label > span,
 .guideline-review-form label > span { color: var(--muted); font-weight: 600; }
 .project-form-grid label > small { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }
+
+/* Tek bir <label>'a sığmayan alan: başlık + açıklama + seçenek + giriş.
+   Bir etiket iki farklı girişi birden işaret edemez, o yüzden sarmalayıcı
+   label değil; görünüşü aynı kalsın diye biçim burada tekrarlanıyor.
+   Seçim kutusu satır yönünde durur (label kuralı sütun yapıyordu). */
+.field-group { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
+.field-group > .field-title { color: var(--muted); font-weight: 600; }
+.field-group label { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; color: var(--ink-soft); }
 .project-form-full { grid-column: 1 / -1; }
 .project-form-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 /* ActionForm çocukları display:contents bir fieldset içinde durur; o yüzden iki seçici */

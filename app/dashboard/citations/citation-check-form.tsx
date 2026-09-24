@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-kaynakca";
 import AsistanSonuc from "../_components/asistan-sonuc";
-import { runCitationCheck } from "@/app/actions/citation-check";
+import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-check";
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
 import type { Tone } from "@/lib/status-tone";
@@ -96,6 +96,30 @@ export default function CitationCheckForm({
      alıyordu. */
   const [citationStyle, setCitationStyle] = useState("apa7");
   const [bodyText, setBodyText] = useState("");
+  /*
+    Metin alanı isteğe bağlı olduğu için çoğu denetim metinsiz çalışıyordu:
+    çapraz kontrol (metin içi atıf ↔ kaynakça) sessizce devre dışı kalıyor,
+    denetimin elle yapılması en zor yarısı hiç yapılmıyordu. Oysa metin
+    ArvoLab'ın kendi editöründe duruyor.
+
+    Tez gövdesi istemciye indirilmiyor: yüz binlerce karakteri iki kez
+    taşımak yerine sunucu kendi okuyor (useProjectBody). Kullanıcı ne
+    denetleneceğini kelime sayısından görüyor.
+  */
+  const [calismaMetniniKullan, setCalismaMetniniKullan] = useState(false);
+  const [metinOzeti, setMetinOzeti] = useState<{ kelime: number; okunamadi: boolean } | null>(null);
+  const [ozetBekleniyor, setOzetBekleniyor] = useState(false);
+
+  async function metniKullan(acik: boolean) {
+    setCalismaMetniniKullan(acik);
+    if (!acik || !projectId) return;
+    setOzetBekleniyor(true);
+    try {
+      setMetinOzeti(await calismaMetniOzeti(projectId));
+    } finally {
+      setOzetBekleniyor(false);
+    }
+  }
   const [result, setResult] = useState<CheckResult | null>(null);
   /*
     "Kayıt bulunamadı" çıkan künye için AYNI KONUDA dizinde gerçekten
@@ -179,6 +203,7 @@ export default function CitationCheckForm({
         referenceList,
         bodyText,
         citationStyle,
+        useProjectBody: calismaMetniniKullan && Boolean(projectId),
       });
       if ("error" in res) {
         setError(res.error as string);
@@ -229,6 +254,10 @@ export default function CitationCheckForm({
               value={projectId}
               onChange={(e) => {
                 setProjectId(e.target.value);
+                /* Çalışma değişti: önceki müsveddenin kelime sayısı artık
+                   başka bir çalışmayı anlatıyor olurdu. */
+                setCalismaMetniniKullan(false);
+                setMetinOzeti(null);
                 /* Stil çalışmanın kaydında zaten var; kullanıcıya iki
                    kez sormak, ikisinin ayrışmasına davetiye. Seçim yine
                    de elle değiştirilebiliyor. */
@@ -273,15 +302,56 @@ export default function CitationCheckForm({
           />
         </label>
 
-        <label className="project-form-full">
-          <span>Metin (metin içi atıf kontrolü için, opsiyonel)</span>
-          <textarea
-            rows={6}
-            placeholder="...önceki çalışmalarda (Yılmaz, 2020) belirtildiği gibi..."
-            value={bodyText}
-            onChange={(e) => setBodyText(e.target.value)}
-          />
-        </label>
+        <div className="project-form-full field-group">
+          <span className="field-title">Metin (metin içi atıf kontrolü için, opsiyonel)</span>
+          <p className="hint">
+            Metin verilmezse çapraz kontrol YAPILMAZ: hangi kaynağa metinde
+            atıf yapılmadığı ve hangi atfın kaynakçada karşılığı olmadığı
+            ölçülemez. Denetimin elle yapılması en zor yarısı budur.
+          </p>
+
+          {projectId ? (
+            <label className="cluster mt-sm">
+              <input
+                type="checkbox"
+                checked={calismaMetniniKullan}
+                onChange={(e) => void metniKullan(e.target.checked)}
+              />
+              <span>Bu çalışmanın metnini kullan</span>
+            </label>
+          ) : null}
+
+          {calismaMetniniKullan ? (
+            ozetBekleniyor ? (
+              <p className="hint" aria-busy="true">Çalışmanın metni ölçülüyor…</p>
+            ) : metinOzeti?.okunamadi ? (
+              <p className="alert mt-sm" data-tone="warning" role="alert">
+                Çalışmanın metni ölçülemedi. Metin olmadığı anlamına gelmez;
+                denetimi çalıştırabilirsiniz ama metin yine okunamazsa denetim
+                yapılmadan durur.
+              </p>
+            ) : metinOzeti && metinOzeti.kelime === 0 ? (
+              <p className="alert mt-sm" data-tone="warning">
+                Bu çalışmada henüz yazılmış metin yok. Yazım ekranından metni
+                girin ya da aşağıya yapıştırın.
+              </p>
+            ) : metinOzeti ? (
+              <p className="hint">
+                {metinOzeti.kelime.toLocaleString("tr-TR")} kelimelik müsvedde
+                denetlenecek. Metin sunucuda okunur; buraya kopyalamanız
+                gerekmez.
+              </p>
+            ) : null
+          ) : (
+            <textarea
+              className="mt-sm"
+              rows={6}
+              placeholder="...önceki çalışmalarda (Yılmaz, 2020) belirtildiği gibi..."
+              value={bodyText}
+              onChange={(e) => setBodyText(e.target.value)}
+            />
+          )}
+        </div>
       </div>
 
       <div className="project-form-actions">
