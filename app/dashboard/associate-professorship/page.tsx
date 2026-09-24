@@ -30,6 +30,25 @@ export default async function ScoringPage() {
     profile?.role === "academic_manager" ||
     profile?.role === "system_admin" ||
     profile?.role === "founder";
+  const icEkip = profile?.role === "system_admin" || profile?.role === "founder";
+
+  /*
+    Kriterler kuruma ait olabiliyor (migration 20260924100032). Genel listeyi
+    yalnızca iç ekip düzenler; kurum yöneticisi kendi kurumununkini düzenler.
+    Yetkisi olmayan satıra düğme ÇİZİLMİYOR: düğmeyi gösterip "yetkiniz yok"
+    demek, kullanıcıyı bir hata mesajına tıklatmaktır.
+  */
+  const kriterKapsami = (c: ScoringCriterion) =>
+    c.organization_id === null
+      ? "Genel"
+      : c.organization_id === profile?.organization_id
+        ? "Kurumunuz"
+        : "Başka kurum";
+  const kriterDuzenlenebilir = (c: ScoringCriterion) =>
+    icEkip ||
+    (profile?.role === "academic_manager" &&
+      Boolean(c.organization_id) &&
+      c.organization_id === profile?.organization_id);
 
   const totalPoints = entries.reduce((sum, e) => sum + e.computed_points, 0);
 
@@ -311,6 +330,23 @@ export default async function ScoringPage() {
               description="Güncel resmi ÜAK duyurusundaki puan değerlerini girin. Bu bölüm yalnızca Akademik Yönetici ve üzeri rollere açıktır."
             >
               <ActionForm className="project-form-grid" action={createCriterion} successMessage="Kriter eklendi.">
+                {icEkip ? (
+                  /* Varsayılan GENEL: genel satır herkese görünür, yanlışlıkla
+                     kuruma yazılmış bir kriter diğer kullanıcılardan sessizce
+                     gizlenirdi. Kurum yöneticisine sorulmuyor — başka seçeneği yok. */
+                  <label className="project-form-full">
+                    <span>Kapsam</span>
+                    <select name="kapsam" defaultValue="genel">
+                      <option value="genel">Genel — tüm kurumlar ve bireysel aboneler görür</option>
+                      <option value="kurum">Yalnızca kendi kurumum</option>
+                    </select>
+                  </label>
+                ) : (
+                  <p className="hint project-form-full">
+                    Bu kriter yalnızca kurumunuzun kullanıcılarına görünür ve
+                    yalnızca sizin kurumunuzun puanlamasını etkiler.
+                  </p>
+                )}
                 <label>
                   <span>Kriter kodu</span>
                   <input name="code" type="text" placeholder="Örn. A1" required />
@@ -349,8 +385,11 @@ export default async function ScoringPage() {
                     <span>
                       <strong>{c.code}</strong> — {c.label} ({c.points_per_unit} puan)
                       {c.category_group ? <span className="muted"> · {c.category_group}</span> : null}
+                      <span className="muted"> · {kriterKapsami(c)}</span>
                     </span>
                     <div className="cluster">
+                      {kriterDuzenlenebilir(c) ? (
+                      <>
                       <PanelDrawer
                         triggerLabel="Düzenle"
                         triggerIcon={<Pencil size={13} aria-hidden="true" />}
@@ -396,6 +435,10 @@ export default async function ScoringPage() {
                           <Trash2 size={13} aria-hidden="true" />
                         </button>
                       </ActionForm>
+                      </>
+                      ) : (
+                        <span className="muted text-sm">Genel listeyi yalnızca Sistem Yöneticisi düzenler</span>
+                      )}
                     </div>
                   </div>
                 </div>

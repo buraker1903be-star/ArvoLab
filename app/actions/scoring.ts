@@ -4,7 +4,7 @@ import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-son
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { MANAGER_ROLES } from "@/lib/project-labels";
+import { ADMIN_ROLES, MANAGER_ROLES } from "@/lib/project-labels";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { korunanBirimPuan } from "@/lib/docentlik-puan";
 
@@ -18,6 +18,8 @@ export interface ScoringCriterion {
   points_per_unit: number;
   notes: string | null;
   is_active: boolean;
+  /** NULL = genel liste (herkes okur, yalnızca iç ekip düzenler). */
+  organization_id: string | null;
 }
 
 export interface ScoreEntry {
@@ -38,7 +40,7 @@ export async function getCriteria(): Promise<ListeSonucu<ScoringCriterion>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("scoring_criteria")
-    .select("id, code, label, category_group, points_per_unit, notes, is_active")
+    .select("id, code, label, category_group, points_per_unit, notes, is_active, organization_id")
     .eq("is_active", true)
     .order("category_group", { ascending: true });
 
@@ -49,6 +51,17 @@ export async function getCriteria(): Promise<ListeSonucu<ScoringCriterion>> {
   return listeBasarili(data);
 }
 
+/*
+  Kriterin KAPSAMI (migration 20260924100032): tablo eskiden tekti ve
+  herhangi bir kurumun Akademik Yöneticisi herkesin puanlarını
+  değiştirebiliyordu.
+
+  Kurum yöneticisi yalnızca kendi kurumuna ekler — seçenek sunulmuyor,
+  çünkü başka bir seçenek yok. İç ekip genel listeyi de yönetebildiği için
+  açıkça soruluyor: varsayılan GENEL, çünkü genel satır herkese görünür;
+  yanlışlıkla kuruma yazılmış bir kriter diğer kullanıcılardan sessizce
+  gizlenirdi.
+*/
 export async function createCriterion(formData: FormData): Promise<ActionResult> {
   const auth = await requireRole(MANAGER_ROLES, "Kriter eklemek için Akademik Yönetici veya üzeri bir rol gerekir.");
   if ("error" in auth) return { error: auth.error };
@@ -64,12 +77,27 @@ export async function createCriterion(formData: FormData): Promise<ActionResult>
     return { error: "Birim başına puan 0 veya daha büyük bir sayı olmalıdır." };
   }
 
+  const icEkip = auth.role !== null && ADMIN_ROLES.includes(auth.role);
+  const kurumaYaz = icEkip ? String(formData.get("kapsam") ?? "genel") === "kurum" : true;
+  const { data: profil } = await auth.supabase
+    .from("profiles").select("organization_id").eq("id", auth.user.id).maybeSingle();
+  const kurum = kurumaYaz ? profil?.organization_id ?? null : null;
+
+  if (kurumaYaz && !kurum) {
+    return {
+      error: icEkip
+        ? "Kuruma özel kriter için önce bir kuruma bağlı olmalısınız; genel listeye eklemek için kapsamı “Genel” seçin."
+        : "Kurumunuz tanımlı değil. Kriter ekleyebilmek için Sistem Yöneticisi'nden kurum ataması isteyin.",
+    };
+  }
+
   const { error } = await auth.supabase.from("scoring_criteria").insert({
     code,
     label,
     category_group: String(formData.get("categoryGroup") ?? "").trim() || null,
     points_per_unit: points,
     notes: String(formData.get("notes") ?? "").trim() || null,
+    organization_id: kurum,
     updated_by: auth.user.id,
   });
 
@@ -112,7 +140,13 @@ export async function updateCriterion(criterionId: string, formData: FormData): 
     console.error(error);
     return { error: "Kriter güncellenirken bir hata oluştu." };
   }
-  if (!data?.length) return { error: "Kriter bulunamadı." };
+  /* Sıfır satır iki şey olabilir: kriter yok ya da GENEL listeye ait ve
+     kullanıcı bir kurumun yöneticisi. İkisini ayırt edemediğimiz için
+     ikisini de söylüyoruz — "bulunamadı" demek, duran bir kriteri
+     silinmiş göstermekti. */
+  if (!data?.length) {
+    return { error: "Kriter bulunamadı ya da düzenleme yetkiniz yok (genel listeyi yalnızca Sistem Yöneticisi düzenler)." };
+  }
 
   revalidatePath(PAGE_PATH);
   return { success: true };
@@ -154,7 +188,7 @@ export async function getMyScoreEntries(): Promise<ListeSonucu<ScoreEntry & { cr
   const { data, error } = await supabase
     .from("academic_score_entries")
     .select(
-      "id, criteria_id, title, unit_count, computed_points, notes, created_at, scoring_criteria(id, code, label, category_group, points_per_unit, notes, is_active)"
+      "id, criteria_id, title, unit_count, computed_points, notes, created_at, scoring_criteria(id, code, label, category_group, points_per_unit, notes, is_active, organization_id)"
     )
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
