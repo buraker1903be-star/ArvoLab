@@ -124,3 +124,43 @@ export function accountExistsEmail(girisAdresi: string, sifreAdresi: string) {
     ),
   };
 }
+
+/** Deneme süresi bitmeden önceki tek hatırlatma. */
+export function denemeBitiyorEmail(kalanGun: number, panelAdresi: string) {
+  const sure = kalanGun === 1 ? "yarın" : `${kalanGun} gün sonra`;
+  return {
+    subject: `ArvoLab deneme süreniz ${sure} bitiyor`,
+    html: shell(
+      `Deneme süreniz ${escape(sure)} bitiyor`,
+      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
+         Çalışmalarınız yerinde duruyor ve silinmiyor. Deneme bittiğinde
+         yalnızca yeni yazma ve denetim durur; planınızı yenilediğinizde
+         kaldığınız yerden devam edersiniz.
+       </p>
+       ${button(panelAdresi, "Planımı görüntüle")}
+       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
+         Bu tek hatırlatmadır; aynı uyarıyı tekrar göndermiyoruz.
+       </p>`,
+    ),
+  };
+}
+
+/** Hesabını doğrulayan kullanıcıya ilk selam. */
+export function hosgeldinizEmail(panelAdresi: string) {
+  return {
+    subject: "ArvoLab'a hoş geldiniz",
+    html: shell(
+      "Hesabınız hazır",
+      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
+         Çalışma alanınız açıldı. En hızlı başlangıç: bir çalışma oluşturun,
+         üniversitenizin kılavuzunu seçin ve yazmaya başlayın — kılavuz
+         denetimi siz yazarken çalışır.
+       </p>
+       ${button(panelAdresi, "Çalışma alanıma git")}
+       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
+         ArvoLab metninizi sizin yerinize yazmaz; yazdığınızı kılavuza ve
+         kaynakça kurallarına göre denetler, kaynakları gerçek dizinlerde arar.
+       </p>`,
+    ),
+  };
+}
