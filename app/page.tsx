@@ -126,8 +126,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </button>
           </form>
 
+          {/*
+            Eskiden burada yalnızca "kurum yöneticinizden davet talep edin"
+            yazıyordu: kurumu olmayan kişinin ArvoLab'a girmesinin hiçbir
+            yolu yoktu, tanıtım sayfasındaki çağrı da bir iletişim formuydu.
+          */}
           <div className="login-footer">
-            <p>Hesabınız yoksa kurum yöneticinizden davet talep edin.</p>
+            <p>
+              Hesabınız yok mu? <Link href="/kayit">Kayıt olun</Link> — kurumsal kullanıcıysanız kurum yöneticinizden
+              davet isteyin.
+            </p>
           </div>
         </div>
       </section>
