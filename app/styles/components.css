@@ -231,6 +231,18 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 /* Ana sayfa: kaldığınız yer + yaklaşan teslimler */
 .dashboard-focus { display: grid; align-items: start; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; }
 @media (max-width: 900px) { .dashboard-focus { grid-template-columns: minmax(0, 1fr); } }
+/* İlk kez giren kullanıcıda sağ sütun (yaklaşan teslimler) hiç çizilmiyor;
+   iki sütunlu ızgara kalsaydı kartın yanında boş bir üçte bir dururdu. */
+.dashboard-focus.tek-sutun { grid-template-columns: minmax(0, 1fr); }
+
+/* Başlangıç adımları: sayılar listenin kendi numaralandırmasından gelir,
+   elle yazılırsa araya adım eklenince kayar. */
+.baslangic-adimlari {
+  margin: 14px 0 0; padding-left: 20px;
+  display: grid; gap: 8px;
+  color: var(--ink-soft); font-size: var(--fs-sm); line-height: 1.6;
+}
+.baslangic-adimlari strong { color: var(--ink); }
 /* Sağ sütun: kısa, taranabilir kartlar alt alta. */
 .dashboard-yan { display: grid; align-content: start; gap: 12px; }
 .resume-card,

@@ -26,6 +26,7 @@ import LicenseCard from "./_components/license-card";
 import GeriBildirimKarti from "./_components/geri-bildirim-karti";
 import { geriBildirimSorusu } from "@/app/actions/geri-bildirim";
 import { computeAttention } from "@/lib/attention";
+import { ilkKullanim } from "@/lib/ilk-kullanim";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 import { statusTone } from "@/lib/status-tone";
@@ -178,9 +179,16 @@ export default async function DashboardPage() {
     .sort((a, b) => a.due.days - b.due.days)
     .slice(0, UPCOMING_LIMIT);
 
-  // Personel için "dikkat isteyenler" (öğrencinin ana sayfası değişmez); sorumlu ataması yalnızca denetim rollerinde
   const isStaff = profile?.role ? STAFF_ROLES.includes(profile.role) : false;
+  // Personel için "dikkat isteyenler" (öğrencinin ana sayfası değişmez); sorumlu ataması yalnızca denetim rollerinde
   const attention = isStaff ? computeAttention(projects, openComments, { includeUnassigned: isOversightRole(profile?.role) }) : null;
+
+  // Karar ve gerekçesi lib/ilk-kullanim.ts'te (sınanabilsin diye orada).
+  const yeniKullanici = ilkKullanim({
+    calismaSayisi: projects.length,
+    okunamadi: projelerOkunamadi,
+    personel: isStaff,
+  });
 
   const revisionCount = projects.filter((p) => p.status === "revision").length;
   const analysisCount = projects.filter((p) => p.status === "analysis").length;
@@ -222,7 +230,11 @@ export default async function DashboardPage() {
         <div>
           <span className="dashboard-kicker">ArvoLab çalışma alanı</span>
           <h1>{displayName ? `Hoş geldiniz, ${displayName}` : "Hoş geldiniz"}</h1>
-          <p>Kaldığınız yerden devam edin; teslim tarihleriniz ve gelen yorumlar burada.</p>
+          <p>
+            {yeniKullanici
+              ? "Çalışma alanınız hazır. İlk çalışmanızı oluşturduğunuzda kılavuzunuz, kaynaklarınız ve denetimleriniz burada toplanır."
+              : "Kaldığınız yerden devam edin; teslim tarihleriniz ve gelen yorumlar burada."}
+          </p>
         </div>
         <div className="dashboard-security">
           <ShieldCheck size={16} aria-hidden="true" />
@@ -234,6 +246,7 @@ export default async function DashboardPage() {
 
       {geriBildirim.sorulsun ? <GeriBildirimKarti baglam={geriBildirim.baglam} /> : null}
 
+      {yeniKullanici ? null : (
       <section className="dashboard-stats" aria-label="Günlük özet">
         {stats.map(({ label, value, icon: Icon, tone, note }) => (
           <article className="dashboard-stat-card" data-tone={tone} key={label}>
@@ -248,8 +261,9 @@ export default async function DashboardPage() {
           </article>
         ))}
       </section>
+      )}
 
-      <section className="dashboard-focus" aria-label="Bugün">
+      <section className={yeniKullanici ? "dashboard-focus tek-sutun" : "dashboard-focus"} aria-label="Bugün">
         {resume ? (
           <article className="resume-card">
             <span className="dashboard-kicker">Kaldığınız yerden devam edin</span>
@@ -370,6 +384,28 @@ export default async function DashboardPage() {
               <h2>İlk çalışmanızı oluşturun</h2>
               <p>Üniversitenizi seçin; tez yazım kılavuzunuz editöre otomatik uygulanır.</p>
             </div>
+            {/*
+              Adımlar BAĞLANTI DEĞİL, bilerek. Hiç çalışması olmayan birini
+              literatür ya da denetim ekranına göndermek, onu bir boş ekrana
+              daha götürmek olurdu; tek yol ileri gidiyor.
+            */}
+            <ol className="baslangic-adimlari">
+              <li>
+                <strong>Çalışmanızı açın.</strong> Üniversite ve bölümünüzü seçtiğinizde
+                kurumunuzun onaylı tez kılavuzu çalışmaya bağlanır; biçim kuralları
+                editörde kendiliğinden uygulanır.
+              </li>
+              <li>
+                <strong>Kaynaklarınızı toplayın.</strong> DOI yapıştırın, künye Crossref ve
+                OpenAlex kayıtlarından dolsun. Atıf stiliniz kılavuzdan gelir; elle
+                seçmeniz gerekmez.
+              </li>
+              <li>
+                <strong>Yazın ve denetleyin.</strong> Metin içi atıflarınız kaynakçanızla
+                karşılaştırılır, künye biçimi denetlenir ve teslim kontrol listesi aynı
+                ekranda durur.
+              </li>
+            </ol>
             <div className="cluster">
               <Link href="/dashboard/editor/new" className="projects-primary-button">
                 <Plus size={16} aria-hidden="true" />
@@ -382,6 +418,7 @@ export default async function DashboardPage() {
         {/* Sağ sütun: kısa ve tarama amaçlı kartlar. Dikkat isteyenler
             eskiden tam genişlikte ayrı bir banttı; sağ sütun boş kalıyor,
             sayfa gereksiz uzuyordu. */}
+        {yeniKullanici ? null : (
         <div className="dashboard-yan">
         <article className="upcoming-card">
           <span className="dashboard-kicker">Yaklaşan teslimler</span>
@@ -425,6 +462,7 @@ export default async function DashboardPage() {
         </section>
         ) : null}
         </div>
+        )}
       </section>
 
       {/*
