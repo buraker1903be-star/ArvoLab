@@ -13,6 +13,7 @@ import { crossCheck, extractInTextCitations } from "@/lib/apa7";
 import { kunyeleriAyristir } from "@/lib/atif/kunye";
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 import { baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
+import { kisaltmaMesaji, kisaltmaSorunlari } from "@/lib/kisaltmalar";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 import { checkParagraphFormat, describeParagraphFormat, hangingIndentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
 import { metinBiciminiDenetle, type MetinBicimKurali } from "@/lib/metin-bicimi";
@@ -48,6 +49,8 @@ const CITATION_ISSUE_LIMIT = 10;
 const REFERENCE_SECTIONS = ["Kaynakça", "Kaynaklar", "References", "Bibliography", "Bibliyografya"];
 const CAPTION_LABEL = { figure: "Şekil", table: "Tablo" } as const;
 const ABSTRACT_SECTIONS = ["Özet", "Öz", "Abstract"];
+// "EK 1. …", "Ek-2 …", "EK 3 – …" — numarasız "EKLER" ve harfli "Ek A" dışarıda.
+const EK_BASLIGI = /^ek\s*[-–.]?\s*\d/iu;
 // "Anahtar Kelimeler: a, b, c" / "Keywords: a; b"
 const KEYWORDS_LINE = /^(?:anahtar\s+(?:kelime|sözcük)\p{L}*|keywords?|key\s+words)\s*[:：]\s*(.*)$/iu;
 const countWords = (text: string) => text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
@@ -108,10 +111,17 @@ export function checkStructure(
   // ---------- Başlıklar: boş bölüm ve düzey atlama ----------
   let previousLevel = 0;
   let referencesIndex = -1;
+  /*
+    Numaralı ek başlıkları ("EK 1. Görüşme Formu"). Yalnızca numaralı
+    olanlar: "EKLER" bölüm başlığıdır, "Ek A" harfli düzendir ve ikisini
+    de numaralandırma denetimine sokmak kusursuz bir teze uyarı basardı.
+  */
+  const ekBasliklari: string[] = [];
   blocks.forEach((block, index) => {
     if (block.type !== "heading") return;
     const level = Number(block.attrs?.level) || 1;
     const text = textOf(block).trim();
+    if (EK_BASLIGI.test(text)) ekBasliklari.push(text);
     if (referencesIndex < 0 && REFERENCE_SECTIONS.some((name) => headingMatchesSection(text, name))) referencesIndex = index;
 
     if (!text) {
@@ -438,6 +448,52 @@ export function checkStructure(
   }
 
   // ---------- Paragraf düzeni (kılavuzda girinti/yaslama kuralı varsa) ----------
+  /* ---------- Ekler: numaralandırma ve metinde anılma ----------
+     Kılavuzlar ekleri sırayla numaralandırmayı ve her ekin metinde
+     anılmasını ister ("… görüşme formu Ek 1'de verilmiştir"). Şekil ve
+     tablo için yapılan denetimin aynısı; ekler dışarıda kalmıştı. */
+  if (ekBasliklari.length > 0) {
+    numaralandirmaSorunlari("Ek", ekBasliklari).forEach((sorun) => add(sorun));
+
+    /*
+      Ekin KENDİ başlığı gövde metninin içinde: onu "anılmış" saymak
+      her eki anılmış gösterirdi. Başlık metni gövdeden bir kez
+      çıkarılıyor; metinde ayrıca geçiyorsa geriye o kalıyor.
+    */
+    const ekGovdesi = ekBasliklari.reduce((metin, baslik) => metin.replace(baslik, " "), body);
+    const ekNumaralari = ekBasliklari.map((baslik) => baslikNumarasi("Ek", baslik));
+    const mevcut = new Set(ekNumaralari.filter((numara): numara is string => Boolean(numara)));
+
+    ekBasliklari.forEach((baslik, sira) => {
+      const numara = ekNumaralari[sira];
+      if (!numara) return;
+      if (!new RegExp(`\\bEk\\s*[-–.]?\\s*${numara.replace(".", "\\.")}\\b`, "iu").test(ekGovdesi)) {
+        add({
+          tone: "warning",
+          message: `Ek ${numara}${baslik ? ` (${quote(baslik.slice(0, 40))})` : ""} metinde anılmıyor; kılavuzlar her ekin metinde gönderme almasını ister.`,
+          target: baslik.slice(0, 40),
+        });
+      }
+    });
+
+    for (const eslesme of ekGovdesi.matchAll(/\bEk\s*[-–.]?\s*(\d+(?:\.\d+)*)\b/giu)) {
+      if (!mevcut.has(eslesme[1])) {
+        add({
+          tone: "danger",
+          message: `Metinde “Ek ${eslesme[1]}” geçiyor ama o numarada bir ek başlığı yok (belgede ${mevcut.size} numaralı ek var).`,
+          target: eslesme[0],
+        });
+      }
+    }
+  }
+
+  /* ---------- Kısaltmalar ----------
+     Denetim yalnızca yazarın KENDİ tanımlarına dayanıyor; gerekçesi
+     lib/kisaltmalar.ts'te. */
+  for (const sorun of kisaltmaSorunlari(body).slice(0, CITATION_ISSUE_LIMIT)) {
+    add({ tone: "warning", message: kisaltmaMesaji(sorun), target: sorun.hedef });
+  }
+
   /* ---------- Uzun doğrudan alıntı ----------
      APA 7 ve Türkçe kılavuzların çoğu 40 kelimeyi aşan alıntının tırnak
      içinde değil, girintili blok alıntı olarak yazılmasını ister. Jüri

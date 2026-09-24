@@ -64,3 +64,82 @@ describe("yapı denetimi", () => {
     assert.deepEqual(checkStructure({ content: [] }), []);
   });
 });
+
+describe("ekler", () => {
+  const govde = (cumle: string) => [baslik(1, "GİRİŞ"), paragraf(cumle)];
+
+  test("metinde anılan ve sırayla numaralanan ekler uyarı üretmez", () => {
+    const doc = {
+      content: [
+        ...govde("Görüşme formu Ek 1'de, ölçek Ek 2'de verilmiştir."),
+        baslik(1, "EK 1. Görüşme Formu"),
+        paragraf("Form metni."),
+        baslik(1, "EK 2. Ölçek"),
+        paragraf("Ölçek metni."),
+      ],
+    };
+    assert.deepEqual(mesajlar(doc).filter((m) => /Ek /.test(m)), []);
+  });
+
+  test("metinde anılmayan ek yakalanır", () => {
+    /*
+      Ekin kendi başlığı gövde metninin içinde geçiyor; onu "anılmış"
+      saymak her eki anılmış gösterirdi.
+    */
+    const doc = {
+      content: [...govde("Bulgular tabloda özetlenmiştir."), baslik(1, "EK 1. Görüşme Formu"), paragraf("Form.")],
+    };
+    assert.ok(mesajlar(doc).some((m) => /Ek 1.*metinde anılmıyor/.test(m)));
+  });
+
+  test("metinde olmayan eke gönderme yakalanır", () => {
+    const doc = {
+      content: [...govde("Ayrıntılar Ek 5'te yer almaktadır."), baslik(1, "EK 1. Görüşme Formu"), paragraf("Form.")],
+    };
+    assert.ok(mesajlar(doc).some((m) => /“Ek 5” geçiyor ama o numarada bir ek başlığı yok/.test(m)));
+  });
+
+  test("atlanan ek numarası yakalanır", () => {
+    const doc = {
+      content: [
+        ...govde("Ek 1 ve Ek 3 incelenmiştir."),
+        baslik(1, "EK 1. Form"),
+        paragraf("a"),
+        baslik(1, "EK 3. Ölçek"),
+        paragraf("b"),
+      ],
+    };
+    assert.ok(mesajlar(doc).some((m) => /Ek numaralandırmasında atlama var: 1 sonrası 3/.test(m)));
+  });
+
+  test("“EKLER” bölüm başlığı ve harfli ek numaralandırmaya sokulmaz", () => {
+    // Numarasız başlığı denetime almak kusursuz bir teze uyarı basardı.
+    const doc = { content: [...govde("Metin."), baslik(1, "EKLER"), baslik(2, "Ek A. Form"), paragraf("a")] };
+    assert.deepEqual(mesajlar(doc).filter((m) => /ek/i.test(m) && /numara|anılmıyor/i.test(m)), []);
+  });
+});
+
+describe("kısaltmalar", () => {
+  test("tanımdan önce kullanılan kısaltma yapı denetiminde görünüyor", () => {
+    const doc = {
+      content: [
+        baslik(1, "GİRİŞ"),
+        paragraf("TÜİK verileri incelendi."),
+        paragraf("Türkiye İstatistik Kurumu (TÜİK) raporuna göre oran arttı."),
+        paragraf("TÜİK ayrıca bunu doğruluyor."),
+      ],
+    };
+    assert.ok(mesajlar(doc).some((m) => /TÜİK.*ilk geçtiği yerde açık yazılır/.test(m)));
+  });
+
+  test("kusursuz kısaltma kullanımı uyarı üretmiyor", () => {
+    const doc = {
+      content: [
+        baslik(1, "GİRİŞ"),
+        paragraf("Türkiye İstatistik Kurumu (TÜİK) verileri incelendi."),
+        paragraf("TÜİK raporuna göre oran arttı."),
+      ],
+    };
+    assert.deepEqual(mesajlar(doc).filter((m) => /kısaltma/i.test(m)), []);
+  });
+});
