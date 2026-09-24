@@ -22,7 +22,7 @@
 */
 
 import { baglamKur, type BaglamParca } from "./baglam";
-import { bulgulariCozumle, jsonOku, type Bulgu } from "./bulgu";
+import { bulgulariCozumle, jsonOku, kunyeIziMetinde, type Bulgu } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 
 export type KayitOzeti = {
@@ -116,7 +116,10 @@ export function taramaCozumle(ham: string): LiteraturSonucu {
  * (Yazar, A. (2020). ya da "…" başlık) bulguda geçmemeli. Sayı denetimi
  * uydurma yılı yakalar ama uydurma yazar adını yakalayamaz; bu kontrol
  * istemin en kritik kuralını kodda da tutar.
+ *
+ * Regex lib/ai/bulgu.ts'te: belge geri bildirimi de aynı kontrolü düz metin
+ * üzerinde yapıyor, iki kopya ilk düzeltmede ayrışırdı.
  */
 export function kunyeIzi(bulgular: Bulgu[]): boolean {
-  return bulgular.some((bulgu) => /\b[A-ZÇĞİÖŞÜ][a-zçğıöşü]+,\s*[A-ZÇĞİÖŞÜ]\.\s*\(\d{4}\)/.test(bulgu.aciklama));
+  return bulgular.some((bulgu) => kunyeIziMetinde(bulgu.aciklama));
 }

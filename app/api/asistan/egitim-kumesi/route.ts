@@ -4,6 +4,7 @@ import { ADMIN_ROLES } from "@/lib/project-labels";
 import { SISTEM_ISTEMI as ANALIZ_ISTEMI } from "@/lib/ai/analiz-yorumu";
 import { SISTEM_ISTEMI as KAYNAKCA_ISTEMI } from "@/lib/ai/kaynakca-denetimi";
 import { SISTEM_ISTEMI as LITERATUR_ISTEMI } from "@/lib/ai/literatur-taramasi";
+import { SYSTEM_PROMPT as BELGE_ISTEMI } from "@/lib/ai-feedback";
 
 /*
   İnce ayar kümesinin dışa aktarımı (JSONL).
@@ -27,10 +28,16 @@ import { SISTEM_ISTEMI as LITERATUR_ISTEMI } from "@/lib/ai/literatur-taramasi";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/*
+  Yeteneği burada olmayan kayıt eğitim kümesine hiç girmez (aşağıdaki
+  filtre eler). "belge" baştan beri eksikti; ai_assistant_runs'a yazmaya
+  başladığı anda sessizce elenirdi.
+*/
 const ISTEMLER: Record<string, string> = {
   analiz: ANALIZ_ISTEMI,
   kaynakca: KAYNAKCA_ISTEMI,
   literatur: LITERATUR_ISTEMI,
+  belge: BELGE_ISTEMI,
 };
 
 export async function GET(request: Request) {

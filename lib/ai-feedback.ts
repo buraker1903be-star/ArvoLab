@@ -24,7 +24,7 @@ import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
 
 const MAX_INPUT_CHARS = 12000; // ~3000 token civarı, maliyet/limit kontrolü için
 
-const SYSTEM_PROMPT = `Sen bir akademik yazım koçusun. Sana bir öğrencinin tez/makale taslağından bir alıntı verilecek.
+export const SYSTEM_PROMPT = `Sen bir akademik yazım koçusun. Sana bir öğrencinin tez/makale taslağından bir alıntı verilecek.
 
 GÖREVİN: Metnin YAPISI ve RETORİĞİ hakkında öğretici geri bildirim vermek. Örnek geri bildirim türleri:
 - Giriş bölümünde araştırmanın amacı/sorusu net ifade edilmemiş
@@ -46,6 +46,13 @@ export interface AiFeedbackResult {
   feedback: string;
   model: string;
   truncated: boolean;
+  /*
+    Modele GERÇEKTEN gönderilen metin. Asistan kaydına belgenin tamamı
+    yazılırsa kayıt yalan söyler: model 12000 karakterden fazlasını hiç
+    görmedi. Bu kayıt ArvoLab'ın eğitim verisi — girdisi yanlış yazılmış
+    bir örnek, modele görmediği bir metinden sonuç çıkarmayı öğretir.
+  */
+  girdi: string;
 }
 
 /** Sunucu tanımlı değilse özellik kapalı gösterilir; düğme boşuna tıklanmasın. */
@@ -69,5 +76,5 @@ export async function getDocumentFeedback(text: string): Promise<AiFeedbackResul
     { yetenek: "belge", sicaklik: 0.4, enFazlaJeton: 700 },
   );
 
-  return { feedback: yanit.metin, model: yanit.model, truncated };
+  return { feedback: yanit.metin, model: yanit.model, truncated, girdi: inputText };
 }

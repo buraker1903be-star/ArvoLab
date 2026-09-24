@@ -80,6 +80,33 @@ export function bulgulariCozumle(ham: string): Bulgu[] {
     .slice(0, EN_FAZLA_BULGU);
 }
 
+/*
+  Künye izi: modelin ürettiği metinde kaynak künyesi (Yazar, A. (2020))
+  geçiyor mu? Asistanın en zararlı hatası uydurma kaynak önermektir; istemde
+  yasak ama kodda da bakılır (AGENTS.md: "Asistan kaynak önermez").
+
+  Burada duruyor çünkü artık iki yetenek kullanıyor: literatür taraması
+  (bulgu listesi üzerinde) ve belge geri bildirimi (düz metin üzerinde).
+  Regex tek yerde kalsın; kopyası ilk düzeltmede ayrışırdı.
+*/
+/*
+  Sözcük başı \b ile aranıyordu ve JavaScript'te \b ASCII tabanlıdır: "Ş"
+  sözcük karakteri sayılmadığı için ÖNÜNDE sınır oluşmuyor — ne satır
+  başında ne boşluktan sonra. Sonuç, Türkçe bir üründe en pahalı türden
+  sessiz açıktı: Şahin, Özdemir, Çelik, Ünal, İnce gibi Türkiye'nin en
+  yaygın soyadlarıyla uydurulmuş künyeler denetimden hiç geçmiyordu.
+  Yılmaz ve Demir yakalanıyordu, Şahin yakalanmıyordu.
+
+  Harf kümesi artık Unicode özelliğiyle (\p{Lu}, \p{Ll}) tanımlı; elle
+  sayılan bir alfabe hep eksik kalır. Sınır da \b yerine "önünde harf
+  yok" olarak yazıldı.
+*/
+const KUNYE = /(?<!\p{L})\p{Lu}\p{Ll}+,\s*\p{Lu}\.\s*\(\d{4}\)/u;
+
+export function kunyeIziMetinde(metin: string): boolean {
+  return KUNYE.test(metin);
+}
+
 export type Dogrulama = { gecti: true } | { gecti: false; uydurulan: string[] };
 
 export type DogrulamaSecenegi = {
