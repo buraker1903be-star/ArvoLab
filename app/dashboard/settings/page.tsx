@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Cpu, KeyRound, Save, Sparkles, UserRound } from "lucide-react";
+import { Cpu, Download, KeyRound, Save, Sparkles, UserRound } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
 import { aiKurulumu, aiYapilandirildi } from "@/lib/ai/saglayici";
@@ -122,6 +122,29 @@ export default async function SettingsPage() {
             </button>
           </div>
         </ActionForm>
+      </section>
+
+      {/*
+        Verinin taşınabilir olması hem KVKK'nın istediği bir hak hem güven
+        meselesi: veriyi rehin tutmayan ürün, bırakmak isteyeni de tutar.
+        İndirme bir ROTA (sunucu eylemi değil): tez metinleri megabaytlarca
+        olabiliyor ve sunucu eyleminin yanıt sınırı aşılamaz.
+      */}
+      <section className="project-form-card mb-lg">
+        <div className="project-form-heading">
+          <h2>
+            <Download size={16} aria-hidden="true" />
+            Verilerim
+          </h2>
+          <p>
+            Çalışmalarınız, metinleriniz, kaynaklarınız ve denetim kayıtlarınız tek bir dosyada. Tez metni belge
+            biçiminde (JSON) iner; Word çıktısı için editördeki dışa aktarmayı kullanın.
+          </p>
+        </div>
+        <a className="projects-filter-button" href="/api/hesabim/verilerim" download>
+          <Download size={16} aria-hidden="true" />
+          Verilerimi indir
+        </a>
       </section>
 
       <section className="project-form-card">

@@ -29,6 +29,7 @@ export default function LicenseCard({ access }: { access: AccessState }) {
         </p>
       ) : null}
       {summary.paymentNote ? <p className="tone-text text-sm" data-tone={summary.tone}>{summary.paymentNote}</p> : null}
+      {summary.yenilemeNotu ? <p className="muted text-sm">{summary.yenilemeNotu}</p> : null}
       {summary.showPayment ? (
         access.plans.length > 0 ? (
           <div className="cluster">
