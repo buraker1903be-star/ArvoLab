@@ -249,7 +249,10 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
   // yöneticinin düzenlemesi sessizce kaybolur.
   if (error || !updated?.length) {
     console.error(error);
-    return { error: "Kurallar kaydedilemedi. Kılavuz silinmiş olabilir; sayfayı yenileyip tekrar deneyin." };
+    /* Sıfır satır artık iki şey olabilir: kayıt yok ya da ORTAK KATALOĞA ait
+       (20260924100033). "Silinmiş olabilir" demek, duran bir kılavuzu yok
+       gibi göstermekti. */
+    return { error: "Kurallar kaydedilemedi. Ortak katalogdaki kılavuzları yalnızca Sistem Yöneticisi düzenleyebilir; kendi kurumunuzun eklediği kılavuzları düzenleyebilirsiniz." };
   }
   revalidatePath("/dashboard/guidelines");
   return { success: true };
@@ -507,7 +510,7 @@ export async function approveGuideline(guidelineId: string) {
 
   if (error || !approved?.length) {
     console.error(error);
-    return { error: "Kılavuz onaylanamadı. Kılavuz silinmiş olabilir; sayfayı yenileyip tekrar deneyin." };
+    return { error: "Kılavuz onaylanamadı. Ortak katalogdaki kılavuzları yalnızca Sistem Yöneticisi düzenleyebilir; kendi kurumunuzun eklediği kılavuzları düzenleyebilirsiniz." };
   }
 
   // Aynı kurumdaki tezler en özel onaylı kılavuza yeniden bağlanır (veritabanı eşleştirir).
@@ -557,7 +560,7 @@ export async function kilavuzOnayiniGeriAl(guidelineId: string): Promise<ActionR
 
   if (error) {
     console.error(error);
-    return { error: "Onay geri alınamadı." };
+    return { error: "Onay geri alınamadı. Ortak katalogdaki kılavuzları yalnızca Sistem Yöneticisi düzenleyebilir; kendi kurumunuzun eklediği kılavuzları düzenleyebilirsiniz." };
   }
   if (!geriAlinan?.length) return { error: "Kılavuz zaten onaysız ya da bulunamadı." };
 
@@ -584,7 +587,7 @@ export async function deleteGuideline(guidelineId: string): Promise<ActionResult
     console.error(error);
     return { error: "Silinirken bir hata oluştu." };
   }
-  if (!data?.length) return { error: "Kılavuz bulunamadı." };
+  if (!data?.length) return { error: "Kılavuz silinemedi. Ortak katalogdaki kılavuzları yalnızca Sistem Yöneticisi düzenleyebilir; kendi kurumunuzun eklediği kılavuzları düzenleyebilirsiniz." };
 
   revalidatePath("/dashboard/guidelines");
   return { success: true };
