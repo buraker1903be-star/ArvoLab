@@ -215,7 +215,7 @@ export default function AnalysisTools({
         <div className="project-form-heading">
           <h2>MAXQDA Kod Kitabı Kalite Kontrolü</h2>
           <p>
-            Kod listenizi (her satıra bir kod, opsiyonel olarak frekansıyla
+            Kod listenizi (her satıra bir kod, isteğe bağlı olarak frekansıyla
             birlikte) yapıştırın. Sistem tekrar eden kod adlarını, tek
             kullanımlık kodları ve frekans dağılımını gösterir. Yeni tema
             veya kod önermez — yalnızca liste kalitesini denetler.
@@ -247,10 +247,36 @@ export default function AnalysisTools({
 
         {codebookResult && (
           <div className="mt-md text-base">
+            {/*
+              "Toplam kodlama" yalnızca frekansı BİLİNEN kodları topluyor.
+              Eskiden bu söylenmiyordu: dört kodun frekansı verilmemişken de
+              sayı "toplam" diye sunuluyor, kullanıcı kısmi bir toplamı
+              bütün sanıyordu.
+            */}
             <p>
-              <strong>{codebookResult.totalCodes}</strong> kod ·{" "}
-              <strong>{codebookResult.totalFrequency}</strong> toplam kodlama
+              <strong>{codebookResult.totalCodes}</strong> kod
+              {codebookResult.emptyFrequencyCodes.length === 0 ? (
+                <>
+                  {" · "}
+                  <strong>{codebookResult.totalFrequency}</strong> toplam kodlama
+                </>
+              ) : codebookResult.emptyFrequencyCodes.length < codebookResult.totalCodes ? (
+                <>
+                  {" · "}
+                  <strong>{codebookResult.totalFrequency}</strong> kodlama (
+                  {codebookResult.emptyFrequencyCodes.length} kodun frekansı verilmemiş, toplama girmedi)
+                </>
+              ) : (
+                <> · hiçbir kodun frekansı verilmemiş</>
+              )}
             </p>
+            {codebookResult.emptyFrequencyCodes.length > 0 ? (
+              <p className="hint">
+                Frekans, kod adından bir ayraçla ayrılmış olmalı: <code>Kod adı: 12</code>,{" "}
+                <code>Kod adı (12)</code> ya da sekme. Boşlukla ayrılmış sayı kod adının parçası
+                sayılır — yoksa &ldquo;COVID-19&rdquo; kodu &ldquo;COVID&rdquo; adlı, frekansı 19 bir koda dönüşürdü.
+              </p>
+            ) : null}
 
             {codebookResult.duplicates.length > 0 && (
               <div className="mt-sm">

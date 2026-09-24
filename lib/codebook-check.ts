@@ -27,30 +27,58 @@ export interface CodebookCheckResult {
   emptyFrequencyCodes: string[]; // frekans bilgisi verilmemiş kodlar
 }
 
+/*
+  Frekans yalnızca AÇIK BİR AYRAÇTAN sonra okunur.
+
+  Eskiden satır sonundaki her sayı frekans sayılıyordu ve ayraç isteğe
+  bağlıydı. Sonuç, kod adının içindeki sayının frekansa dönüşmesiydi:
+
+    "COVID-19"    → ad "COVID", frekans 19   (en sık kod olarak listelenirdi)
+    "Tema 1"      → ad "Tema",  frekans 1    ("tek kullanımlık, birleştirme adayı")
+    "Sanayi 4.0"  → ad "Sanayi 4.", frekans 0
+
+  Altı kodluk bir örnekte bildirilen 43'lük toplamın 20'si uydurmaydı.
+  Sayı girdide geçiyordu ama BAŞKA BİR ANLAMDA; bu, sayıyı hiç yoktan
+  üretmekten daha sinsidir (AGENTS.md: üretilen her sayı girdide geçmek
+  zorunda).
+
+  Boşlukla ayrılmış sayı ("Kod adı 15") bilerek frekans SAYILMIYOR:
+  "COVID-19"dan ayırt edilemez. Bu satırlar "frekansı verilmemiş"
+  listesine düşer — eksik bilgiyi söylemek, uydurmaktan iyidir.
+*/
+const AYRACLI = /^(.*\S)[ \t]*(?::|;|,|\t|[ ][-–][ ])[ \t]*(\d+)[ \t]*$/;
+const PARANTEZLI = /^(.*\S)[ \t]*\(\s*(\d+)\s*\)[ \t]*$/;
+
+const adiTemizle = (ad: string) => ad.trim().replace(/[:;,\-–]+$/, "").trim();
+
+function ayristir(line: string): CodeEntry {
+  const eslesme = PARANTEZLI.exec(line) ?? AYRACLI.exec(line);
+  if (eslesme) return { name: adiTemizle(eslesme[1]), frequency: parseInt(eslesme[2], 10) };
+  return { name: adiTemizle(line), frequency: null };
+}
+
 export function parseCodebook(rawText: string): CodebookCheckResult {
   const lines = rawText
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
 
-  const codes: CodeEntry[] = lines.map((line) => {
-    // "Kod adı: 12" veya "Kod adı - 12" veya "Kod adı (12)" biçimlerini tolere et
-    const match = line.match(/^(.+?)[\s:\-–]*\(?(\d+)\)?\s*$/);
-    if (match && match[2]) {
-      return { name: match[1].trim().replace(/[:\-–]+$/, "").trim(), frequency: parseInt(match[2], 10) };
-    }
-    return { name: line.replace(/[:\-–]+$/, "").trim(), frequency: null };
-  });
+  const codes: CodeEntry[] = lines.map(ayristir);
 
-  const nameCounts = new Map<string, number>();
+  /* Yinelenenler KULLANICININ YAZDIĞI gibi gösterilir. Eskiden karşılaştırma
+     anahtarı (küçük harfe indirilmiş hâli) gösteriliyordu ve kullanıcı kendi
+     listesinde o satırı aradığında bulamıyordu. */
+  const nameCounts = new Map<string, { count: number; original: string }>();
   codes.forEach((c) => {
     const key = c.name.toLocaleLowerCase("tr-TR");
-    nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
+    const kayit = nameCounts.get(key);
+    if (kayit) kayit.count += 1;
+    else nameCounts.set(key, { count: 1, original: c.name });
   });
 
-  const duplicates = [...nameCounts.entries()]
-    .filter(([, count]) => count > 1)
-    .map(([name]) => name);
+  const duplicates = [...nameCounts.values()]
+    .filter(({ count }) => count > 1)
+    .map(({ original }) => original);
 
   const singleUseCodes = codes.filter((c) => c.frequency === 1).map((c) => c.name);
   const emptyFrequencyCodes = codes.filter((c) => c.frequency === null).map((c) => c.name);
