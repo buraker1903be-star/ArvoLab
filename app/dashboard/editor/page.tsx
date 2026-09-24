@@ -52,6 +52,7 @@ export default async function ProjectsPage({
   // Arama, filtre ve sıralama (adres satırındaki ?q=…&durum=…&sirala=…&atanan=…)
   const filters = parseProjectFilters(params, PROJECT_STATUSES);
   const visible = applyProjectFilters(projects, filters, {
+    openComments: (id) => openComments.get(id) ?? 0,
     lastEdited: (projectId) => stats.get(projectId)?.updatedAt,
     userId: profile?.id,
     canFilterAssignee: canApprove,

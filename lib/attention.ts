@@ -60,14 +60,18 @@ export function computeAttention(
       label: "Kontrolör onayı bekliyor",
       count: projects.filter((project) => project.status === "ready" && !project.controller_approved_at).length,
       tone: "info",
-      href: "/dashboard/editor?durum=ready",
+      /* Adres sayaçla AYNI kümeyi açar: "durum=ready" tek başına onaylanmış
+         çalışmaları da getiriyordu ve kullanıcı sayıyla listeyi
+         eşleştiremiyordu (lib/project-filters.ts: onay=bekliyor). */
+      href: "/dashboard/editor?durum=ready&onay=bekliyor",
     },
     {
       id: "comments",
       label: "Yanıt bekleyen yorumu var",
       count: active.filter((project) => (openComments.get(project.id) ?? 0) > 0).length,
       tone: "info",
-      href: "/dashboard/editor?durum=aktif&sirala=duzenleme",
+      // Eskiden bütün aktif çalışmaları açıyordu; şimdi yalnızca yorumu olanları.
+      href: "/dashboard/editor?durum=aktif&yorum=acik&sirala=duzenleme",
     },
   ];
   return items.filter((item) => item.count > 0);

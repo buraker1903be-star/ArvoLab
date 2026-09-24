@@ -24,6 +24,28 @@ export default function ProjectFilters({
   filtered: boolean;
 }) {
   const submit = (event: ChangeEvent<HTMLSelectElement>) => event.currentTarget.form?.requestSubmit();
+
+  /*
+    "Onay bekleyenler" ve "yorumu olanlar" filtreleri ana sayfadaki dikkat
+    kartlarından geliyor; çubukta kendi seçicileri yok. İkisi de GİZLİ ALANLA
+    taşınıyor, yoksa kullanıcı sıralamayı değiştirdiği anda form adresi
+    sıfırdan kurar ve filtre sessizce düşerdi — liste büyür, sebebi
+    görünmezdi. Yanlarındaki çip hem filtrenin açık olduğunu söylüyor hem de
+    kaldırma yolunu veriyor.
+  */
+  const adres = (degisiklik: Partial<Filters>) => {
+    const sonuc = { ...filters, ...degisiklik };
+    const p = new URLSearchParams();
+    if (sonuc.q) p.set("q", sonuc.q);
+    if (sonuc.status !== "tumu") p.set("durum", sonuc.status);
+    if (sonuc.sort !== "yeni") p.set("sirala", sonuc.sort);
+    if (sonuc.assignee !== "tumu") p.set("atanan", sonuc.assignee);
+    if (sonuc.approval !== "tumu") p.set("onay", sonuc.approval);
+    if (sonuc.comments !== "tumu") p.set("yorum", sonuc.comments);
+    const sorgu = p.toString();
+    return sorgu ? `/dashboard/editor?${sorgu}` : "/dashboard/editor";
+  };
+
   return (
     <Form action="/dashboard/editor" className="project-filters" role="search" aria-label="Çalışmaları filtrele">
       <label className="project-filter-search">
@@ -54,6 +76,18 @@ export default function ProjectFilters({
         <option value="teslim">Teslim tarihi yakın</option>
         <option value="baslik">Başlığa göre (A–Z)</option>
       </select>
+      {filters.approval !== "tumu" ? <input type="hidden" name="onay" value={filters.approval} /> : null}
+      {filters.comments !== "tumu" ? <input type="hidden" name="yorum" value={filters.comments} /> : null}
+      {filters.approval === "bekliyor" ? (
+        <Link href={adres({ approval: "tumu" })} className="chip" data-tone="info">
+          Yalnızca onay bekleyenler ✕
+        </Link>
+      ) : null}
+      {filters.comments === "acik" ? (
+        <Link href={adres({ comments: "tumu" })} className="chip" data-tone="info">
+          Yalnızca yorumu olanlar ✕
+        </Link>
+      ) : null}
       <span className="muted text-sm project-filter-count" role="status">
         {shown === total ? `${total} çalışma` : `${total} çalışmadan ${shown} gösteriliyor`}
       </span>

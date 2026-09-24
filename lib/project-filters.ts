@@ -5,6 +5,15 @@ import { dueInfo, DUE_SOON_DAYS } from "@/lib/due-date";
 
 export type ProjectSort = "yeni" | "duzenleme" | "teslim" | "baslik";
 export type AssigneeFilter = "tumu" | "benim" | "atanmamis";
+/*
+  Ana sayfadaki "dikkat isteyenler" sayaçları bu iki filtreyi kullanıyor.
+  Eskiden yokturdu ve sayaçlar DAHA GENİŞ bir listeye bağlanıyordu:
+  "3 kontrolör onayı bekliyor" tıklanınca onaylanmışlar dahil bütün "ready"
+  çalışmalar, "2 yanıt bekleyen yorumu var" tıklanınca bütün aktif çalışmalar
+  açılıyordu. Kullanıcı sayıyla listeyi eşleştiremiyordu.
+*/
+export type ApprovalFilter = "tumu" | "bekliyor";
+export type CommentFilter = "tumu" | "acik";
 
 export interface ProjectFilters {
   q: string;
@@ -15,6 +24,10 @@ export interface ProjectFilters {
   status: string;
   sort: ProjectSort;
   assignee: AssigneeFilter;
+  /** "bekliyor": teslime hazır ama kontrolör onayı yok */
+  approval: ApprovalFilter;
+  /** "acik": yanıt bekleyen yorumu var */
+  comments: CommentFilter;
 }
 
 export interface ProjectFilterInput {
@@ -26,13 +39,18 @@ export interface ProjectFilterInput {
   created_at: string;
   assignee_id: string | null;
   assignee_name: string | null;
+  controller_approved_at?: string | null;
 }
 
-export const DEFAULT_PROJECT_FILTERS: ProjectFilters = { q: "", status: "tumu", sort: "yeni", assignee: "tumu" };
+export const DEFAULT_PROJECT_FILTERS: ProjectFilters = {
+  q: "", status: "tumu", sort: "yeni", assignee: "tumu", approval: "tumu", comments: "tumu",
+};
 
 const SORTS: ProjectSort[] = ["yeni", "duzenleme", "teslim", "baslik"];
 const SPECIAL_STATUSES = ["aktif", "gecikmis", "yaklasan"];
 const ASSIGNEE_FILTERS: AssigneeFilter[] = ["tumu", "benim", "atanmamis"];
+const APPROVAL_FILTERS: ApprovalFilter[] = ["tumu", "bekliyor"];
+const COMMENT_FILTERS: CommentFilter[] = ["tumu", "acik"];
 const CLOSED_STATUSES = new Set(["delivered", "archived"]);
 
 const firstValue = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? "";
@@ -41,11 +59,15 @@ export function parseProjectFilters(params: Record<string, string | string[] | u
   const status = firstValue(params.durum);
   const sort = firstValue(params.sirala) as ProjectSort;
   const assignee = firstValue(params.atanan) as AssigneeFilter;
+  const approval = firstValue(params.onay) as ApprovalFilter;
+  const comments = firstValue(params.yorum) as CommentFilter;
   return {
     q: firstValue(params.q).trim().slice(0, 100),
     status: SPECIAL_STATUSES.includes(status) || statuses.includes(status) ? status : "tumu",
     sort: SORTS.includes(sort) ? sort : "yeni",
     assignee: ASSIGNEE_FILTERS.includes(assignee) ? assignee : "tumu",
+    approval: APPROVAL_FILTERS.includes(approval) ? approval : "tumu",
+    comments: COMMENT_FILTERS.includes(comments) ? comments : "tumu",
   };
 }
 
@@ -58,7 +80,14 @@ const fold = (text: string) => text.toLocaleLowerCase("tr-TR").normalize("NFC");
 export function applyProjectFilters<T extends ProjectFilterInput>(
   projects: T[],
   filters: ProjectFilters,
-  context: { lastEdited: (projectId: string) => string | undefined; userId?: string; canFilterAssignee: boolean; now?: Date }
+  context: {
+    lastEdited: (projectId: string) => string | undefined;
+    /** Yanıt bekleyen yorum sayısı; "yorum=acik" filtresi bunu kullanır. */
+    openComments?: (projectId: string) => number;
+    userId?: string;
+    canFilterAssignee: boolean;
+    now?: Date;
+  }
 ): T[] {
   const needle = fold(filters.q);
   // Teslim tarihine kalan gün: rozetlerle aynı hesap (Türkiye saati; teslim edilmiş/arşivde null)
@@ -89,6 +118,9 @@ export function applyProjectFilters<T extends ProjectFilterInput>(
       if (filters.assignee === "benim" && project.assignee_id !== context.userId) return false;
       if (filters.assignee === "atanmamis" && (project.assignee_id || project.assignee_name)) return false;
     }
+    /* Sayaçla aynı kural: "ready" ama henüz onaylanmamış (lib/attention.ts). */
+    if (filters.approval === "bekliyor" && !(project.status === "ready" && !project.controller_approved_at)) return false;
+    if (filters.comments === "acik" && (context.openComments?.(project.id) ?? 0) === 0) return false;
     return true;
   });
 
