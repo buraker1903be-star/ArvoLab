@@ -35,7 +35,9 @@ async function tohum({ metinVar = true } = {}) {
       ('${KURUCU}', 'k@x.co'), ('${KONTROLOR}', 'c@x.co'), ('${SAHIP}', 's@x.co'),
       ('${UZMAN}', 'u@x.co'), ('${YABANCI}', 'y@x.co');
     update public.profiles set role = 'founder' where id = '${KURUCU}';
-    update public.profiles set role = 'controller' where id = '${KONTROLOR}';
+    -- Kontrolör çalışmanın kurumunda: 20260924100028'den beri denetim rolü
+    -- yalnızca KENDİ kurumunun metnine dokunabiliyor.
+    update public.profiles set role = 'controller', organization_id = '${KURUM}' where id = '${KONTROLOR}';
     update public.profiles set role = 'expert' where id = '${UZMAN}';
     update public.profiles set organization_id = '${KURUM}' where id in ('${SAHIP}', '${UZMAN}', '${YABANCI}');
     insert into public.academic_projects (id, owner_id, assignee_id, organization_id, title, project_type)

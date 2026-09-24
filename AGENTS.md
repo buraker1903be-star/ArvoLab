@@ -30,6 +30,15 @@ davranış da yazılır ("Eskiden … oluyordu"). Yeni kod bu üsluba uyar.
   ArvoOS'a ulaşılamazsa ya da lisans hiç bildirilmemişse kimse engellenmez
   (`lib/license-decision.ts`). Geçici bir arıza kullanıcıları dışarıda
   bırakmamalı. İç ekip (`system_admin`, `founder`) hiçbir koşulda engellenmez.
+- **Okuma kurumla sınırlıdır.** Gözetim rolleri (`controller`,
+  `academic_manager`, `expert`) yalnızca KENDİ kurumunun verisini görür;
+  kurumlar arası görüş yalnızca iç ekipte (`system_admin`, `founder`).
+  Kural tek yerde: `public.gozetim_kapsami(kurum, roller)`. Yeni bir okuma
+  politikasında çıplak `has_role(...)` yazmayın — 20260924100028'e kadar
+  öyleydi ve A kurumunun Kontrolörü B kurumunun tezini, dosyasını ve asistan
+  kaydını okuyabiliyordu. **NULL kurum asla eşleşmez:** bireysel abonenin
+  `organization_id`'si NULL, iki NULL'ı eşit saymak bütün bireysel aboneleri
+  birbirine açar.
 - **`ADMIN_ROLES` yalnızca `system_admin` ve `founder`.** `academic_manager`,
   `controller`, `expert` ve `employee` abonelik kapısından geçer; personel
   akışlarına kapı eklerken bunu hesaba katın.

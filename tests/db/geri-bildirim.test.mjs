@@ -1,8 +1,10 @@
 // Kullanım geri bildirimi tablosu (migration 20260924100019).
 //
 // Geri bildirim kişiseldir: kullanıcı yalnızca kendi satırını yazar ve
-// görür. Yönetim (Akademik Yönetici, Sistem Yöneticisi, Kurucu) hepsini
-// okur — ürün kararını onlar verecek. Kontrolör bilerek dışarıda.
+// görür. Akademik Yönetici KENDİ KURUMUNUN cevaplarını, iç ekip (Sistem
+// Yöneticisi, Kurucu) hepsini okur — ürün kararını onlar verecek. Kontrolör
+// bilerek dışarıda. Kurum sınırı 20260924100028 ile geldi: eskiden herhangi
+// bir müşterinin yöneticisi bütün müşterilerin cevabını okuyordu.
 import { before, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { islem, reddedilir, rol, veritabani } from "./ortam.mjs";
@@ -12,7 +14,9 @@ const YONETICI = "00000000-0000-4000-8000-000000000002";
 const KONTROLOR = "00000000-0000-4000-8000-000000000003";
 const PERSONEL = "00000000-0000-4000-8000-000000000004";
 const BASKA = "00000000-0000-4000-8000-000000000005";
+const YABANCI_YONETICI = "00000000-0000-4000-8000-000000000006";
 const KURUM = "00000000-0000-4000-8000-0000000000a1";
+const BASKA_KURUM = "00000000-0000-4000-8000-0000000000a2";
 
 let db;
 before(async () => {
@@ -22,13 +26,15 @@ before(async () => {
 async function tohum() {
   await rol(db, "postgres");
   await db.exec(`
-    insert into public.organizations (id, name) values ('${KURUM}', 'AkademikMerkez');
+    insert into public.organizations (id, name) values
+      ('${KURUM}', 'AkademikMerkez'), ('${BASKA_KURUM}', 'Başka Merkez');
     insert into auth.users (id, email) values
       ('${KURUCU}', 'k@x.co'), ('${YONETICI}', 'y@x.co'), ('${KONTROLOR}', 'c@x.co'),
-      ('${PERSONEL}', 'p@x.co'), ('${BASKA}', 'b@x.co');
+      ('${PERSONEL}', 'p@x.co'), ('${BASKA}', 'b@x.co'), ('${YABANCI_YONETICI}', 'yy@x.co');
     update public.profiles set role = 'founder' where id = '${KURUCU}';
-    update public.profiles set role = 'academic_manager' where id = '${YONETICI}';
-    update public.profiles set role = 'controller' where id = '${KONTROLOR}';
+    update public.profiles set role = 'academic_manager', organization_id = '${KURUM}' where id = '${YONETICI}';
+    update public.profiles set role = 'academic_manager', organization_id = '${BASKA_KURUM}' where id = '${YABANCI_YONETICI}';
+    update public.profiles set role = 'controller', organization_id = '${KURUM}' where id = '${KONTROLOR}';
     update public.profiles set organization_id = '${KURUM}' where id in ('${PERSONEL}', '${BASKA}');
   `);
 }
@@ -75,7 +81,7 @@ describe("kullanım geri bildirimi", () => {
       assert.equal(guncel.rows.length, 0, "Başkasının cevabı değiştirilebiliyor");
     }));
 
-  test("personel yalnızca kendi cevabını görür; yönetim hepsini görür", () =>
+  test("personel yalnızca kendi cevabını görür; yönetim kendi kurumunun hepsini görür", () =>
     islem(db, async () => {
       await tohum();
       await cevapla(PERSONEL, 4);
@@ -85,6 +91,8 @@ describe("kullanım geri bildirimi", () => {
       assert.equal((await gorulen(KURUCU)).length, 2);
       // Kontrolör akademik denetim yapar; ürün geri bildirimi onun işi değil.
       assert.deepEqual(await gorulen(KONTROLOR), []);
+      // Başka kurumun yöneticisi bu kurumun cevaplarını göremez.
+      assert.deepEqual(await gorulen(YABANCI_YONETICI), []);
     }));
 
   test("cevap puansız olamaz; erteleme puansız olabilir", () =>

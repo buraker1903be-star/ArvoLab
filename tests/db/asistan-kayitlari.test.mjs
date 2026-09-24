@@ -9,6 +9,7 @@ import { islem, reddedilir, rol, veritabani } from "./ortam.mjs";
 const SAHIP = "00000000-0000-4000-8000-000000000001";
 const YABANCI = "00000000-0000-4000-8000-000000000002";
 const KONTROLOR = "00000000-0000-4000-8000-000000000003";
+const KURUCU = "00000000-0000-4000-8000-000000000004";
 const KAYIT = "00000000-0000-4000-8000-0000000000c1";
 
 let db;
@@ -20,8 +21,10 @@ async function tohum() {
   await rol(db, "postgres");
   await db.exec(`
     insert into auth.users (id, email) values
-      ('${SAHIP}', 's@x.co'), ('${YABANCI}', 'y@x.co'), ('${KONTROLOR}', 'k@x.co');
+      ('${SAHIP}', 's@x.co'), ('${YABANCI}', 'y@x.co'), ('${KONTROLOR}', 'k@x.co'),
+      ('${KURUCU}', 'f@x.co');
     update public.profiles set role = 'controller' where id = '${KONTROLOR}';
+    update public.profiles set role = 'founder' where id = '${KURUCU}';
     insert into public.ai_assistant_runs (id, user_id, capability, status, model, context, output)
       values ('${KAYIT}', '${SAHIP}', 'analiz', 'completed', 'test-model',
               '### Analiz çıktısı\nt(28) = 2.45, p = .021', '{"bulgular":[]}');
@@ -43,12 +46,18 @@ describe("asistan kayıtları", () => {
     });
   });
 
-  test("kontrolör eğitim verisi için hepsini görür", async () => {
+  test("eğitim verisini iç ekip derler; müşteri kurumun kontrolörü değil", async () => {
     // İnce ayar kümesini iç ekip derleyecek; göremezse küme derlenemez.
+    // Müşteri kurumun kontrolörü ise yalnızca kendi kurumunun kaydını görür
+    // (20260924100028): eskiden kurumdan bağımsız hepsini görüyordu, yani
+    // bir müşterinin kontrolörü diğer müşterinin asistan girdisini okuyordu.
     await islem(db, async () => {
       await tohum();
-      await rol(db, "authenticated", KONTROLOR);
+      await rol(db, "authenticated", KURUCU);
       assert.equal((await say("select id from public.ai_assistant_runs")).length, 1);
+
+      await rol(db, "authenticated", KONTROLOR);
+      assert.equal((await say("select id from public.ai_assistant_runs")).length, 0);
     });
   });
 
