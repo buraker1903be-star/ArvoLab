@@ -130,11 +130,16 @@ const isForbidden = (error: { code?: string } | null) => error?.code === "42501"
 // İyimser eşzamanlılık: kayıt yalnızca veritabanındaki sürüm editörün
 // açtığı sürümle aynıysa yapılır. Başka sekme/kişi arada kaydettiyse
 // sessizce üzerine yazmak yerine "conflict" döner.
+//
+// Hata metinleri "yazdıklarınız bu tarayıcıda saklanıyor" DEMEZ: sunucu
+// taslağın tarayıcıya yazılıp yazılmadığını göremez ve depolama dolu ya da
+// kapalıyken bu söz yalan oluyordu. Cümleyi editör ekliyor, gerçek duruma
+// bakarak (manuscript-editor.tsx, hataYaz).
 export async function saveManuscript(projectId: string, input: SaveManuscriptInput): Promise<SaveManuscriptResult> {
   const ctx = await getAuthContext();
   if (!ctx) {
     return {
-      error: "Oturumunuz sona erdi. Yeniden giriş yapın; yazdıklarınız bu tarayıcıda saklanıyor.",
+      error: "Oturumunuz sona erdi. Yeniden giriş yapın.",
       sessionExpired: true,
     };
   }
@@ -159,7 +164,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   // kaydetme: eksik metni üzerine yazmak yerine hata göster, taslak tarayıcıda kalır.
   if (!content || content.type !== "doc" || hasNonPlainAttributes(content)) {
     console.error("saveManuscript: içerik biçim bilgisi eksik ulaştı, kayıt durduruldu");
-    return { error: "Metnin biçim bilgisi sunucuya eksik ulaştı; üzerine yazmamak için kaydı durdurduk. Sayfayı yenileyin — yazdıklarınız bu tarayıcıda saklanıyor." };
+    return { error: "Metnin biçim bilgisi sunucuya eksik ulaştı; üzerine yazmamak için kaydı durdurduk. Sayfayı yenileyin." };
   }
   const wordCount = countWords(content);
   const baseRow = {
@@ -200,7 +205,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     conflict: true,
   } as const;
   const forbidden = {
-    error: "Bu çalışmada değişiklik kaydetme yetkiniz yok. Yazdıklarınız bu tarayıcıda saklanıyor.",
+    error: "Bu çalışmada değişiklik kaydetme yetkiniz yok.",
     forbidden: true,
   } as const;
   /*

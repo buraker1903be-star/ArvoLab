@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { kayitHatasiMetni, TASLAK_GUVENDE, TASLAK_YAZILAMADI } from "@/lib/taslak-durumu";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
@@ -223,11 +224,20 @@ function readDraft(projectId: string): LocalDraft | null {
   }
 }
 
-function writeDraft(projectId: string, draft: LocalDraft) {
+/*
+  Yazma BAŞARISINI döndürür. Eskiden hata sessizce yutuluyordu ve arayüz yine
+  "yazdıklarınız bu tarayıcıda saklanıyor" diyordu — üstelik tam da sunucu
+  kaydının başarısız olduğu anlarda. Depolama dolu (büyük tezde localStorage
+  ~5 MB sınırına dayanıyor), gizli sekmede kapalı ya da site verisi engelli
+  olduğunda kullanıcıya metninin güvende olduğu söyleniyor, o da sekmeyi
+  kapatıyordu. Bir tez bölümünün kaybolması için bu yeterli.
+*/
+function writeDraft(projectId: string, draft: LocalDraft): boolean {
   try {
     window.localStorage.setItem(draftKey(projectId), JSON.stringify(draft));
+    return true;
   } catch {
-    // Depolama kapalı/dolu: otomatik kayıt yine çalışır
+    return false;
   }
 }
 
@@ -324,6 +334,9 @@ export default function ManuscriptEditor({
 }: ManuscriptEditorProps) {
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
+  /* Taslak bu tarayıcıya yazılamadı mı (depolama dolu/kapalı) — bkz. writeDraft. */
+  const [taslakYazilamadi, setTaslakYazilamadi] = useState(false);
+  const taslakYazilamadiRef = useRef(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   /*
     Abonelik engeli: yeniden denemeyle geçmez. Ayrı tutuluyor çünkü
@@ -439,15 +452,28 @@ export default function ManuscriptEditor({
   const markDirtyRef = useRef<() => void>(() => undefined);
   const openFootnoteRef = useRef<(pos: number, text: string) => void>(() => undefined);
 
+  /*
+    Taslağın nereye yazıldığını YALNIZCA istemci bilir; sunucu göremez. Bu
+    yüzden "bu tarayıcıda saklanıyor" sözü buradan veriliyor ve yazma
+    başarısızsa VERİLMİYOR (bkz. writeDraft).
+  */
   const persistDraft = useCallback(() => {
     const editor = editorRef.current;
-    if (!editor || revisionRef.current === savedRevisionRef.current) return;
-    writeDraft(projectId, {
+    if (!editor || revisionRef.current === savedRevisionRef.current) return true;
+    const yazildi = writeDraft(projectId, {
       content: editor.getJSON() as unknown as TiptapDoc,
       baseUpdatedAt: updatedAtRef.current,
       writtenAt: new Date().toISOString(),
     });
+    taslakYazilamadiRef.current = !yazildi;
+    setTaslakYazilamadi(!yazildi);
+    return yazildi;
   }, [projectId]);
+
+  /* Hata metnine taslağın GERÇEK durumunu ekler (lib/taslak-durumu.ts). */
+  const hataYaz = useCallback((mesaj: string) => {
+    setSaveError(kayitHatasiMetni(mesaj, !taslakYazilamadiRef.current));
+  }, []);
 
   const scheduleSave = useCallback((delay: number) => {
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
@@ -520,7 +546,7 @@ export default function ManuscriptEditor({
             return true;
           }
           persistDraft();
-          setSaveError(res.error);
+          hataYaz(res.error);
           if (res.conflict) {
             blockedRef.current = true;
             setSaveState("conflict");
@@ -552,11 +578,11 @@ export default function ManuscriptEditor({
           );
           if (eskiSurum) {
             blockedRef.current = true;
-            setSaveError("Yeni bir sürüm yayınlandı. Yazdıklarınız bu tarayıcıda saklandı; sayfayı yenileyin, kaldığınız yerden devam edin.");
+            hataYaz("Yeni bir sürüm yayınlandı; sayfayı yenileyin, kaldığınız yerden devam edin.");
             setSaveState("error");
             return false;
           }
-          setSaveError("Bağlantı sorunu nedeniyle kaydedilemedi. Yazdıklarınız bu tarayıcıda saklanıyor; birazdan yeniden denenecek.");
+          hataYaz("Bağlantı sorunu nedeniyle kaydedilemedi; birazdan yeniden denenecek.");
           setSaveState("error");
           scheduleSave(RETRY_DELAY_MS);
           return false;
@@ -569,7 +595,7 @@ export default function ManuscriptEditor({
         inFlightRef.current = null;
       }
     },
-    [projectId, guideline, persistDraft, scheduleSave]
+    [projectId, guideline, persistDraft, scheduleSave, hataYaz]
   );
 
   const markDirty = useCallback(() => {
@@ -1608,7 +1634,10 @@ export default function ManuscriptEditor({
         <div className="callout editor-notice cluster" data-tone="danger" role="alert">
           <span>
             Bu belge başka bir sekmede ya da başka biri tarafından değiştirildi. Üzerine yazmamak için
-            otomatik kayıt durduruldu; yazdıklarınız bu tarayıcıda saklanıyor.
+            otomatik kayıt durduruldu;{" "}
+            {taslakYazilamadi
+              ? TASLAK_YAZILAMADI
+              : TASLAK_GUVENDE}
           </span>
           <span className="cluster">
             <button
