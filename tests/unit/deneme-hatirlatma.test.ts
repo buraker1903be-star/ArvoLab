@@ -1,6 +1,12 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { hatirlatilacaklar, HATIRLATMA_GUNU, TEK_SEFERDE, type AbonelikSatiri } from "@/lib/deneme-hatirlatma";
+import {
+  hatirlatilacaklar,
+  hatirlatmaPenceresi,
+  HATIRLATMA_GUNU,
+  TEK_SEFERDE,
+  type AbonelikSatiri,
+} from "@/lib/deneme-hatirlatma";
 
 const SIMDI = Date.UTC(2026, 8, 24, 9, 0, 0);
 const GUN = 24 * 60 * 60 * 1000;
@@ -51,5 +57,31 @@ describe("deneme hatırlatması", () => {
     const sonuc = hatirlatilacaklar([...cok].reverse(), SIMDI);
     assert.equal(sonuc.length, TEK_SEFERDE);
     assert.equal(sonuc[0].userId, "k0");
+  });
+});
+
+describe("hatırlatma penceresi", () => {
+  test("alt sınır şimdi, üst sınır bitişe HATIRLATMA_GUNU kalan an", () => {
+    const { altSinir, ustSinir } = hatirlatmaPenceresi(SIMDI);
+    assert.equal(altSinir, new Date(SIMDI).toISOString());
+    assert.equal(ustSinir, new Date(SIMDI + HATIRLATMA_GUNU * GUN).toISOString());
+  });
+
+  /*
+    Asıl korunan şey: sorgu "bitişe en yakın TEK_SEFERDE satır" alıyor ve
+    süresi dolmuş satırlar ('trialing' kalıp bir daha uğramayanlar) hep en
+    yakındır. Alt sınır olmasaydı pencere onlarla dolar, hatırlatma hiç
+    kimseye gitmez ve uç nokta "aday: 0" diyerek sorunu gizlerdi.
+  */
+  test("süresi dolmuş satırlar pencerenin altında kalır", () => {
+    const bitmis = new Date(SIMDI - 30 * GUN).toISOString();
+    const { altSinir } = hatirlatmaPenceresi(SIMDI);
+    assert.ok(bitmis < altSinir, "Bitmiş deneme alt sınırın altında olmalı");
+  });
+
+  test("bitişi tam pencerede olan içeride kalır", () => {
+    const yarin = new Date(SIMDI + 1 * GUN).toISOString();
+    const { altSinir, ustSinir } = hatirlatmaPenceresi(SIMDI);
+    assert.ok(yarin > altSinir && yarin <= ustSinir);
   });
 });

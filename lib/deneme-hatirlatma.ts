@@ -28,6 +28,30 @@ export interface Hatirlatilacak {
 const GUN = 24 * 60 * 60 * 1000;
 
 /**
+ * Sorgunun bakacağı zaman aralığı: ŞİMDİ ile bitişe HATIRLATMA_GUNU kalan an
+ * arasında biten denemeler.
+ *
+ * Alt sınır hayati. Eskiden yalnızca üst sınır vardı ("bitişi 3 günden yakın")
+ * ve sorgu bitişe en yakından başlayarak TEK_SEFERDE satır alıyordu. En yakın
+ * bitişler ise süresi ÇOKTAN DOLMUŞ olanlar: denemesini kullanmayıp bir daha
+ * uğramamış kişiler. Onların satırı 'trialing' olarak ve hatırlatma işareti
+ * boş olarak sonsuza kadar duruyor — ayna ancak kullanıcı ürüne girince
+ * tazeleniyor.
+ *
+ * Yani bu küme her bırakan kişiyle büyüyor ve TEK_SEFERDE'yi aştığı gün
+ * pencere tamamen onlarla doluyor: hatırlatma yazılımı hiç kimseye posta
+ * göndermemeye başlıyor. Üstelik sessizce — uç nokta "aday: 0" diyor, yani
+ * "bugün hatırlatılacak kimse yoktu" gibi görünüyor. Dönüşümü koruyan tek
+ * mekanizma böyle ölürdü.
+ */
+export function hatirlatmaPenceresi(simdi = Date.now()) {
+  return {
+    altSinir: new Date(simdi).toISOString(),
+    ustSinir: new Date(simdi + HATIRLATMA_GUNU * GUN).toISOString(),
+  };
+}
+
+/**
  * Hatırlatılacak aboneler. Sıra bitişe en yakın olandan başlar: sınıra
  * takılan varsa en acil olanlar elenmemiş olur.
  */
