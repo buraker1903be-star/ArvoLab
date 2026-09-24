@@ -11,6 +11,7 @@ import {
   Quote,
   Settings,
   Sparkles,
+  TrendingUp,
   UserCog,
   Users,
   type LucideIcon,
@@ -73,6 +74,8 @@ export const ACCOUNT_ITEMS: NavItem[] = [
   { label: "Asistan Kayıtları", href: "/dashboard/asistan", icon: Sparkles, roller: KAYIT_ROLLERI },
   // Ekip yönetimi yalnızca sistem yöneticisi ve kurucuya açık (team/page.tsx).
   { label: "Ekip Yönetimi", href: "/dashboard/team", icon: UserCog, roller: ["system_admin", "founder"] },
+  // Ürün ölçümü de öyle: bireysel abonelerin hunisi iç ekip kararıdır (olcum/page.tsx).
+  { label: "Ürün Ölçümü", href: "/dashboard/olcum", icon: TrendingUp, roller: ["system_admin", "founder"] },
   { label: "Ayarlar", href: "/dashboard/settings", icon: Settings },
 ];
 
