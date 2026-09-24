@@ -1,4 +1,5 @@
 import { DEFAULT_HANGING_CM, DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
+import { SOZCUK_SONU } from "@/lib/sozcuk-siniri";
 import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
 import { atifSistemiSec } from "@/lib/atif-sistemi";
 import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
@@ -349,8 +350,8 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
 
   const suggestedSections = CANDIDATE_SECTIONS.filter((section) => {
     // \b, Türkçe karakterlerde (ş, ı, ğ vb.) güvenilir çalışmadığı için
-    // Unicode harf/rakam olmayan bir karakterle sınır kontrolü yapılır.
-    const re = new RegExp(`(^|\\n)\\s*\\d*[.)]?\\s*${section}(?![\\p{L}\\p{N}])`, "iu");
+    // sınır lib/sozcuk-siniri.ts'ten gelir (tek tanım).
+    const re = new RegExp(`(^|\\n)\\s*\\d*[.)]?\\s*${section}${SOZCUK_SONU}`, "iu");
     return re.test(text);
   });
 

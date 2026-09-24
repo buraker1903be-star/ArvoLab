@@ -12,6 +12,7 @@
 
 import { splitAuthors } from "@/lib/citation-format";
 import { parseReferenceEntry, type ParsedReference, type ReferenceIssue } from "@/lib/apa7";
+import { SOZCUK_BASI, SOZCUK_SONU, sozcuk } from "@/lib/sozcuk-siniri";
 import { stilTanimi, type StilTanimi } from "./stiller";
 
 /** Yıl ya da tarihsiz kaynak ("n.d." APA, "t.y." Türkçe). */
@@ -106,7 +107,7 @@ function numaraAyristir(ham: string, stil: StilTanimi, sira: number): ParsedRefe
   const yazarBolumu = govde.split(/\.\s/)[0] ?? "";
   const yazarlar = yazarBolumu
     .split(/,\s*|\s+(?:ve|and)\s+/u)
-    .map((parca) => parca.trim().replace(/\bve\s+diğerleri\b|\bvd\.\b|\bet al\.?\b/giu, "").trim())
+    .map((parca) => parca.trim().replace(VE_DIGERLERI, "").trim())
     .filter(Boolean);
   if (!yazarlar.length) sorunlar.push(sorun("author", "Yazar adı ayrıştırılamadı.", "error"));
   else yazarlariDenetle(yazarlar, stil, sorunlar);
@@ -156,6 +157,28 @@ function yazarSayfaAyristir(ham: string, stil: StilTanimi): ParsedReference {
  * DOI beklentisi) ve hepsi testlerle sabitlenmiş. Yeniden yazmak
  * kazanılmış davranışı kaybetme riskiydi.
  */
+/*
+  "ve diğerleri" / "vd." / "et al." ayıklaması.
+
+  "vd." Türkçedeki en yaygın biçim ve eskiden HİÇ ayıklanmıyordu: desen
+  `\\bvd\\.\\b` idi, sondaki \\b noktadan SONRA bir sözcük karakteri istiyor,
+  oysa "vd." her zaman boşluk ya da parantezle devam ediyor. Sonuç:
+  "Yılmaz, A., vd. (2020)" künyesinde "vd." bir YAZAR sayılıyor ve yazar
+  biçimi denetimi olmayan bir hata bildiriyordu.
+*/
+const VE_DIGERLERI = new RegExp(
+  [
+    sozcuk("ve\\s+diğerleri"),
+    // Nokta İSTEĞE BAĞLI: yazar bölümü ilk ". " ile kesildiği için token
+    // çoğu künyede noktasız ("vd") geliyor; zorunlu tutulsa hiç eşleşmezdi.
+    `${SOZCUK_BASI}vd\\.?${SOZCUK_SONU}`,
+    `${SOZCUK_BASI}et\\s+al\\.?${SOZCUK_SONU}`,
+    // "ve diğerleri" ayırıcıda bölününce geriye yalnız bu sözcük kalıyor.
+    sozcuk("diğerleri"),
+  ].join("|"),
+  "giu",
+);
+
 export function kunyeAyristir(ham: string, stilDegeri: string | null | undefined, sira = 1): ParsedReference {
   const stil = stilTanimi(stilDegeri);
   if (stil.id === "apa7") return parseReferenceEntry(ham);

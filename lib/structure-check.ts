@@ -8,6 +8,7 @@
 // Her sorun, metinde bulunup seçilebilecek bir "hedef" metin taşır.
 
 import { headingMatchesSection } from "@/lib/section-match";
+import { SOZCUK_BASI } from "@/lib/sozcuk-siniri";
 import type { AbstractRules } from "@/lib/guideline-editor-settings";
 import { crossCheck, extractInTextCitations } from "@/lib/apa7";
 import { kunyeleriAyristir } from "@/lib/atif/kunye";
@@ -204,9 +205,9 @@ export function checkStructure(
     numaralandirmaSorunlari(label, captions[kind]).forEach((sorun) => add(sorun));
 
     const mentioned = new Set<string>();
-    // \b ASCII dışı harfleri (Ş) tanımaz; Unicode harf/rakam önbakışıyla kelime başı aranır.
+    // \b ASCII dışı harfleri (Ş) tanımaz; sınır lib/sozcuk-siniri.ts'te tek tanım.
     // Bölüme göre numaralandırma ("Tablo 3.1") da eşleşmeli.
-    for (const match of body.matchAll(new RegExp(`(?<![\\p{L}\\d])${label}\\s+(\\d+(?:\\.\\d+)*)`, "gu"))) mentioned.add(match[1]);
+    for (const match of body.matchAll(new RegExp(`${SOZCUK_BASI}${label}\\s+(\\d+(?:\\.\\d+)*)`, "gu"))) mentioned.add(match[1]);
 
     const numaralar = captions[kind].map((caption) => baslikNumarasi(label, caption));
     const mevcut = new Set(numaralar.filter((numara): numara is string => Boolean(numara)));
