@@ -127,6 +127,19 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  */
 export async function isSubscriptionBlocked(): Promise<boolean> {
   const profile = await loadCurrentProfile();
+  /*
+    Silme talebi veren kullanıcı da bu kapıdan geçemiyor.
+
+    Talep anında oturum kapatılıyor (app/actions/hesap.ts) ama BAŞKA bir
+    cihazda açık kalmış oturum kapanmıyor: orada 30 gün boyunca yazmaya
+    devam edilebilirdi. Silinmek üzere olan bir hesaba yeni tez yazdırmak,
+    silmenin ne kadarının gerçekten silineceğini belirsizleştirir.
+
+    Mesaj yine SUBSCRIPTION_BLOCKED_MESSAGE: bu yol yalnızca bayat bir
+    sekmede görülüyor, kullanıcının gördüğü asıl ekran panelin kendisinde
+    (dashboard/layout.tsx → SilmeBekliyor) ve orada durum açıkça yazıyor.
+  */
+  if (profile?.silme_talebi_at) return true;
   const access = await getAccessState(profile);
   return access.blocked;
 }

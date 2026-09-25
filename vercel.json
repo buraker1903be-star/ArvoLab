@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/deneme-hatirlatma",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/hesap-silme",
+      "schedule": "40 3 * * *"
     }
   ]
 }

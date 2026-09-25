@@ -88,7 +88,7 @@ function endpoint() {
 export const bridgeConfigured = () => endpoint() !== null;
 
 async function call(
-  action: "ensure" | "checkout",
+  action: "ensure" | "checkout" | "close",
   user: { id: string; email: string; fullName?: string | null },
   planCode?: string | null
 ) {
@@ -131,7 +131,12 @@ async function call(
     const payload = (await response.json()) as Record<string, unknown>;
     await recordHealth(true);
     const state = { ...(payload as unknown as SubscriptionState), plans: normalizePlans(payload) };
-    await mirrorSubscription(user.id, state);
+    /*
+      close bir abonelik DURUMU döndürmez ({closed: true}); aynayı onunla
+      yazmak "status: unknown" taşıyan uydurma bir satır bırakırdı. Zaten
+      satır birazdan kullanıcıyla birlikte siliniyor.
+    */
+    if (action !== "close") await mirrorSubscription(user.id, state);
     return state;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -148,6 +153,22 @@ async function call(
  * bırakmamalı.
  */
 export const ensureSubscription = (user: { id: string; email: string; fullName?: string | null }) => call("ensure", user);
+
+/**
+ * Hesabı kalıcı silinen abonenin ArvoOS kaydını kapatır.
+ *
+ * Kayıt SİLİNMEZ: subscriber_payments ve payment_links ona cascade ile bağlı
+ * ve VUK ödeme kayıtlarının beş yıl saklanmasını zorunlu tutuyor. ArvoOS
+ * durumu 'canceled' yapıp kişisel alanları anonimleştiriyor.
+ *
+ * Yalnızca kalıcı silme anında çağrılıyor, silme TALEBİNDE değil: 30 günlük
+ * bekleme içinde geri dönen kullanıcının anonimleştirilmiş kaydını geri
+ * getirmek gerekirdi ve o yol hatanın kolayca saklanacağı bir yol.
+ *
+ * null dönerse kapatma doğrulanamamıştır; çağıran hesabı SİLMEMELİ, yoksa
+ * ArvoOS'ta sahibi olmayan bir abone kaydı kalır.
+ */
+export const closeSubscription = (user: { id: string; email: string }) => call("close", user);
 
 /** Ödeme bağlantısı üretir; kullanıcı PayTR'nin güvenli sayfasına gider. */
 export const startSubscriptionCheckout = (

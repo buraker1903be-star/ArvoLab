@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Cpu, Download, KeyRound, Save, Sparkles, UserRound } from "lucide-react";
+import { Cpu, Download, KeyRound, Save, Sparkles, Trash2, UserRound } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
 import { aiKurulumu, aiYapilandirildi } from "@/lib/ai/saglayici";
@@ -12,6 +12,8 @@ import { changePassword } from "@/app/actions/auth";
 import { updateMyProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
 import PasswordForm from "./password-form";
+import HesapSilmeFormu from "./hesap-silme-formu";
+import { hesapSilmeTalebi } from "@/app/actions/hesap";
 
 const sayi = (deger: number) => new Intl.NumberFormat("tr-TR").format(deger);
 
@@ -157,6 +159,32 @@ export default async function SettingsPage() {
         </div>
         <PasswordForm action={changePassword} variant="panel" submitLabel="Şifreyi güncelle" />
       </section>
+
+      {/*
+        Hesap silme en altta ve iç ekibe hiç gösterilmiyor: founder ya da
+        system_admin hesabı yalnızca kendi verisini değil kurulumu da
+        yöneten hesap (gerekçe app/actions/hesap.ts'te, sunucu tarafı da
+        reddediyor).
+      */}
+      {!icEkip ? (
+        <section className="project-form-card mt-lg">
+          <div className="project-form-heading">
+            <h2>
+              <Trash2 size={16} aria-hidden="true" />
+              Hesabımı sil
+            </h2>
+            <p>
+              Hesabınızı ve ArvoLab&apos;daki bütün verilerinizi kalıcı olarak silmek istiyorsanız
+              buradan başlatabilirsiniz. Silme hemen olmaz; vazgeçmek için süreniz olur.
+            </p>
+          </div>
+          <HesapSilmeFormu
+            action={hesapSilmeTalebi}
+            eposta={ctx.user.email ?? ""}
+            bireysel={access.kind === "individual"}
+          />
+        </section>
+      ) : null}
 
       {kredi.goster ? (
         <section className="project-form-card mt-lg">

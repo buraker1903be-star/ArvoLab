@@ -13,6 +13,8 @@ export interface CurrentProfile {
   full_name: string | null;
   role: UserRole;
   organization_id: string | null;
+  /** Doluysa kullanıcı hesabını silmek istedi; erişim kapalı (lib/hesap-silme.ts). */
+  silme_talebi_at: string | null;
 }
 
 export const loadCurrentProfile = cache(async function loadCurrentProfile(): Promise<CurrentProfile | null> {
@@ -24,7 +26,7 @@ export const loadCurrentProfile = cache(async function loadCurrentProfile(): Pro
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, role, organization_id")
+    .select("id, full_name, role, organization_id, silme_talebi_at")
     .eq("id", user.id)
     .single();
 
@@ -59,7 +61,7 @@ export const loadCurrentProfile = cache(async function loadCurrentProfile(): Pro
 
   const { data: yeni } = await supabase
     .from("profiles")
-    .select("id, full_name, role, organization_id")
+    .select("id, full_name, role, organization_id, silme_talebi_at")
     .eq("id", user.id)
     .single();
   return (yeni as CurrentProfile | null) ?? profil;
