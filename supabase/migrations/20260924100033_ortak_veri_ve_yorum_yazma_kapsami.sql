@@ -54,6 +54,7 @@ create policy "Authors or managers delete comments"
 
 -- ---------- 2) YÖK dizini ----------
 drop policy if exists "Academic managers can insert academic units" on public.academic_units;
+drop policy if exists "Akademik birimleri yalnizca ic ekip ekler" on public.academic_units;
 create policy "Akademik birimleri yalnizca ic ekip ekler"
   on public.academic_units
   for insert
@@ -61,6 +62,7 @@ create policy "Akademik birimleri yalnizca ic ekip ekler"
   with check (public.has_role(array['system_admin','founder']::public.user_role[]));
 
 drop policy if exists "Academic managers can update academic units" on public.academic_units;
+drop policy if exists "Akademik birimleri yalnizca ic ekip duzenler" on public.academic_units;
 create policy "Akademik birimleri yalnizca ic ekip duzenler"
   on public.academic_units
   for update
@@ -69,6 +71,7 @@ create policy "Akademik birimleri yalnizca ic ekip duzenler"
   with check (public.has_role(array['system_admin','founder']::public.user_role[]));
 
 drop policy if exists "Academic managers can delete academic units" on public.academic_units;
+drop policy if exists "Akademik birimleri yalnizca ic ekip siler" on public.academic_units;
 create policy "Akademik birimleri yalnizca ic ekip siler"
   on public.academic_units
   for delete
@@ -76,6 +79,7 @@ create policy "Akademik birimleri yalnizca ic ekip siler"
   using (public.has_role(array['system_admin','founder']::public.user_role[]));
 
 drop policy if exists "Academic managers and above can add universities" on public.universities;
+drop policy if exists "Universiteleri yalnizca ic ekip ekler" on public.universities;
 create policy "Universiteleri yalnizca ic ekip ekler"
   on public.universities
   for insert
@@ -93,6 +97,7 @@ create index if not exists thesis_guidelines_organization_idx
   on public.thesis_guidelines(organization_id);
 
 drop policy if exists "Academic managers and above can create guidelines" on public.thesis_guidelines;
+drop policy if exists "Kilavuzu kurumun yoneticisi ekler" on public.thesis_guidelines;
 create policy "Kilavuzu kurumun yoneticisi ekler"
   on public.thesis_guidelines
   for insert
@@ -100,6 +105,7 @@ create policy "Kilavuzu kurumun yoneticisi ekler"
   with check (public.gozetim_kapsami(organization_id, array['academic_manager']::public.user_role[]));
 
 drop policy if exists "Academic managers and above can update guidelines" on public.thesis_guidelines;
+drop policy if exists "Kilavuzu kurumun yoneticisi duzenler" on public.thesis_guidelines;
 create policy "Kilavuzu kurumun yoneticisi duzenler"
   on public.thesis_guidelines
   for update
@@ -108,6 +114,7 @@ create policy "Kilavuzu kurumun yoneticisi duzenler"
   with check (public.gozetim_kapsami(organization_id, array['academic_manager']::public.user_role[]));
 
 drop policy if exists "Academic managers and above can delete guidelines" on public.thesis_guidelines;
+drop policy if exists "Kilavuzu kurumun yoneticisi siler" on public.thesis_guidelines;
 create policy "Kilavuzu kurumun yoneticisi siler"
   on public.thesis_guidelines
   for delete
