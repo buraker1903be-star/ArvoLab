@@ -36,8 +36,15 @@ export interface DetectedStatistic {
   significant: boolean | null;
 }
 
-/** p değerinin yazılışı: eşitlik mi, üst sınır mı. */
-type PDegeri = { islec: "=" | "<"; deger: number };
+/**
+ * p değerinin yazılışı: eşitlik mi, üst sınır mı.
+ *
+ * `ham` kullanıcının YAZDIĞI rakamları taşır. Yalnızca sayıya çevirmek
+ * sondaki sıfırı yutuyordu: "p < .10" → "p < .1", "p < .050" → "p < .05".
+ * APA'da p en az iki ondalıkla yazılır ve zaten bu modülün kendi kuralı
+ * yazılanı korumak.
+ */
+type PDegeri = { islec: "=" | "<"; deger: number; ham: string };
 
 const sayi = (ham: string): number => parseFloat(ham.replace(",", "."));
 
@@ -48,8 +55,10 @@ const sifirsiz = (metin: string) => metin.replace(/^(-?)0\./, "$1.");
   Yazılan p ifadesi KORUNUR. "p < .05" yazan kullanıcıya "p = .050"
   döndürmek, kaynağında olmayan bir kesinlik uydurmaktır.
 */
-function apaP({ islec, deger }: PDegeri): string {
-  if (islec === "<") return `p < ${sifirsiz(String(deger))}`;
+function apaP({ islec, deger, ham }: PDegeri): string {
+  // Üst sınırda yazılan rakamlar korunur; yalnızca APA'nın baştaki sıfır
+  // kuralı uygulanır ("0.05" → ".05", ama ".050" olduğu gibi kalır).
+  if (islec === "<") return `p < ${sifirsiz(ham.replace(",", "."))}`;
   if (deger < 0.001) return "p < .001";
   return `p = ${sifirsiz(deger.toFixed(3))}`;
 }
@@ -59,7 +68,13 @@ function apaP({ islec, deger }: PDegeri): string {
   eşiğin altındadır (anlamlı). X daha büyükse p değeri 0.05'in altında da
   üstünde de olabilir — cevap "bilmiyorum".
 */
-export function anlamlilik({ islec, deger }: PDegeri): boolean | null {
+/*
+  Yalnızca işleç ve değer yeter; `ham` (yazılan rakamlar) burada
+  kullanılmıyor. İmza daraltıldı ki `ham` PDegeri'nde ZORUNLU kalabilsin:
+  isteğe bağlı olsaydı yeni bir çözümleyici onu sessizce atlayabilirdi ve
+  sondaki sıfır yine kaybolurdu.
+*/
+export function anlamlilik({ islec, deger }: Pick<PDegeri, "islec" | "deger">): boolean | null {
   if (islec === "<") return deger <= 0.05 ? true : null;
   return deger < 0.05;
 }
@@ -112,7 +127,7 @@ const COZUMLEYICILER: Cozumleyici[] = [
       // İki yazım: t(df) = değer  ya da  t = değer, df = ...
       const df = m[1] ?? m[4];
       const t = sayi(m[2] ?? m[3]);
-      return { govde: `t(${df}) = ${t.toFixed(2)}`, p: { islec: m[5] as "=" | "<", deger: sayi(m[6]) } };
+      return { govde: `t(${df}) = ${t.toFixed(2)}`, p: { islec: m[5] as "=" | "<", deger: sayi(m[6]), ham: m[6] } };
     },
   },
   {
@@ -120,7 +135,7 @@ const COZUMLEYICILER: Cozumleyici[] = [
     tur: "anova",
     oku: (m) => ({
       govde: `F(${m[1]}, ${m[2]}) = ${sayi(m[3]).toFixed(2)}`,
-      p: { islec: m[4] as "=" | "<", deger: sayi(m[5]) },
+      p: { islec: m[4] as "=" | "<", deger: sayi(m[5]), ham: m[5] },
     }),
   },
   {
@@ -128,7 +143,7 @@ const COZUMLEYICILER: Cozumleyici[] = [
     tur: "correlation",
     oku: (m) => ({
       govde: `r${m[1] ? `(${m[1]})` : ""} = ${sifirsiz(sayi(m[2]).toFixed(2))}`,
-      p: { islec: m[3] as "=" | "<", deger: sayi(m[4]) },
+      p: { islec: m[3] as "=" | "<", deger: sayi(m[4]), ham: m[4] },
     }),
   },
   {
@@ -136,7 +151,7 @@ const COZUMLEYICILER: Cozumleyici[] = [
     tur: "chi-square",
     oku: (m) => ({
       govde: `χ²(${m[1]}${m[2] ? `, N = ${m[2]}` : ""}) = ${sayi(m[3]).toFixed(2)}`,
-      p: { islec: m[4] as "=" | "<", deger: sayi(m[5]) },
+      p: { islec: m[4] as "=" | "<", deger: sayi(m[5]), ham: m[5] },
     }),
   },
 ];

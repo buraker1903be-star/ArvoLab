@@ -127,4 +127,29 @@ describe("anlamlılık kuralı", () => {
     assert.equal(anlamlilik({ islec: "<", deger: 0.001 }), true);
     assert.equal(anlamlilik({ islec: "<", deger: 0.06 }), null);
   });
+
+  /*
+    Üst sınırda YAZILAN rakamlar korunur. Eskiden p sayıya çevrilip geri
+    yazılıyordu ve sondaki sıfır yutuluyordu:
+
+        yazılan "p < .10"   →  çıkan "p < .1"
+        yazılan "p < .050"  →  çıkan "p < .05"
+
+    APA'da p en az iki ondalıkla yazılır; ve modülün kendi kuralı zaten
+    "yazılan p ifadesi korunur". Öğrencinin yazdığını yeniden yazmak, bu
+    dosyanın düzelttiği hatanın küçük kardeşiydi.
+  */
+  test("üst sınırda sondaki sıfır korunur", () => {
+    assert.match(detectStatistics("F(2, 57) = 3.10, p < .10")[0].apaSentenceFragment, /p < \.10\b/);
+    assert.match(detectStatistics("t(28) = 2.45, p < .050")[0].apaSentenceFragment, /p < \.050$/);
+  });
+
+  test("baştaki sıfır yine APA'ya göre atılır", () => {
+    // Yazılanı korumak, APA düzeltmesinden vazgeçmek demek değil.
+    assert.match(detectStatistics("t(28) = 2.45, p < 0.05")[0].apaSentenceFragment, /p < \.05$/);
+  });
+
+  test("Türkçe ondalık virgülü üst sınırda da okunur", () => {
+    assert.match(detectStatistics("t(28) = 2.45, p < 0,05")[0].apaSentenceFragment, /p < \.05$/);
+  });
 });
