@@ -108,6 +108,28 @@ for (const name of entries) {
   } else if (!govde && isShipped(name)) {
     problems.push(`${name}: gönderilmiş bir migration boşalmış; "git checkout -- <dosya>" ile geri alın.`);
   }
+
+  /*
+    Her "create policy" kendi "drop policy if exists"ini taşımalı.
+
+    Migration'lar elle, SQL Editor'den uygulanıyor; bir çalıştırma ortasında
+    hata verirse ya da aynı dosya ikinci kez çalıştırılırsa korumasız bir
+    create policy 42710 ("already exists") ile düşer ve dosyanın GERİ KALANI
+    hiç çalışmaz. 20260924100032 canlıda tam bunu yaptı (25.09.2026):
+    politikaların üçü de korumasızdı, ilkinde takıldı, diğer ikisi ve
+    sonraki migration'lar uygulanmadan kaldı.
+
+    Ölçüt ada göre: aynı dosyada aynı ADI düşüren bir satır aranıyor.
+  */
+  const dusurulen = new Set([...icerik.matchAll(/drop\s+policy\s+if\s+exists\s+"([^"]+)"/gi)].map((m) => m[1]));
+  for (const [, politika] of icerik.matchAll(/create\s+policy\s+"([^"]+)"/gi)) {
+    if (!dusurulen.has(politika)) {
+      problems.push(
+        `${name}: "${politika}" politikası kendi 'drop policy if exists' satırını taşımıyor. ` +
+        `Dosya ikinci kez çalıştırılınca 42710 verir ve gerisi uygulanmaz.`,
+      );
+    }
+  }
 }
 
 // Asıl kural: yeni bir migration, gönderilmiş olanların en büyüğünden büyük

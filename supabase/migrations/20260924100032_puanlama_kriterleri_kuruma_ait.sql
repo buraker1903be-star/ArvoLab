@@ -65,12 +65,14 @@ create policy "All authenticated users can view scoring criteria"
 -- okuma herkese açık kalsın, yazma kuruma bağlansın.
 drop policy if exists "Academic managers and above can manage scoring criteria" on public.scoring_criteria;
 
+drop policy if exists "Kurumun kriterlerini yoneticisi ekler" on public.scoring_criteria;
 create policy "Kurumun kriterlerini yoneticisi ekler"
   on public.scoring_criteria
   for insert
   to authenticated
   with check (public.gozetim_kapsami(organization_id, array['academic_manager']::public.user_role[]));
 
+drop policy if exists "Kurumun kriterlerini yoneticisi duzenler" on public.scoring_criteria;
 create policy "Kurumun kriterlerini yoneticisi duzenler"
   on public.scoring_criteria
   for update
@@ -79,6 +81,7 @@ create policy "Kurumun kriterlerini yoneticisi duzenler"
   -- Satırın YENİ hali de sınanıyor: kriter başka bir kuruma taşınamasın.
   with check (public.gozetim_kapsami(organization_id, array['academic_manager']::public.user_role[]));
 
+drop policy if exists "Kurumun kriterlerini yoneticisi siler" on public.scoring_criteria;
 create policy "Kurumun kriterlerini yoneticisi siler"
   on public.scoring_criteria
   for delete
