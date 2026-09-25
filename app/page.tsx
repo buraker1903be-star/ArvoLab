@@ -23,7 +23,7 @@ const highlights = [
 ];
 
 type HomePageProps = {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; bilgi?: string }>;
 };
 
 const errorMessages: Record<string, string> = {
@@ -33,9 +33,21 @@ const errorMessages: Record<string, string> = {
   "session-missing": "Oturumunuz sona ermiş. Lütfen tekrar giriş yapın.",
 };
 
+/*
+  Hata değil, bilgi. Silme talebi oturumu kapatıp buraya döndürüyor
+  (app/actions/hesap.ts): kullanıcı ne olduğunu ve geri dönüş yolunun hâlâ
+  açık olduğunu aynı ekranda görmeli, yoksa "bir şey mi bozuldu" diye
+  düşünür.
+*/
+const bilgiMesajlari: Record<string, string> = {
+  "hesap-silme-talebi":
+    "Hesabınızın silinmesi başlatıldı ve oturumunuz kapatıldı. 30 gün içinde giriş yaparsanız silmeden vazgeçebilirsiniz.",
+};
+
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const errorMessage = params.error ? errorMessages[params.error] : null;
+  const bilgiMesaji = params.bilgi ? bilgiMesajlari[params.bilgi] : null;
   const next = params.next?.startsWith("/dashboard") ? params.next : "";
 
   return (
@@ -99,6 +111,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           {errorMessage ? (
             <p className="alert" role="alert">
               {errorMessage}
+            </p>
+          ) : null}
+
+          {bilgiMesaji ? (
+            <p className="tone-text" data-tone="warning" role="status">
+              {bilgiMesaji}
             </p>
           ) : null}
 

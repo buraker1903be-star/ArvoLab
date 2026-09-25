@@ -6,6 +6,7 @@ import { getCurrentProfile } from "@/app/actions/profile";
 import { ROLE_LABELS } from "@/lib/project-labels";
 import { getAccessState } from "@/lib/access";
 import SubscriptionNotice from "./_components/subscription-notice";
+import SilmeBekliyor from "./_components/silme-bekliyor";
 import ThemeToggle from "@/app/_components/theme-toggle";
 import SidebarNav from "./_components/sidebar-nav";
 import HeaderTitle from "./_components/header-title";
@@ -85,7 +86,18 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
             <ActionErrorToast />
             <NavProgress />
           </Suspense>
-          {access.blocked ? <SubscriptionNotice access={access} /> : children}
+          {/*
+            Sıra önemli: silme talebi aboneliğin ÖNÜNDE geliyor. Aboneliği de
+            bitmiş bir kullanıcıya önce ödeme ekranını göstermek, "geri dön"
+            düğmesini parasını ödemeden ulaşılamaz bir yere koyardı.
+          */}
+          {profile?.silme_talebi_at ? (
+            <SilmeBekliyor talep={profile.silme_talebi_at} />
+          ) : access.blocked ? (
+            <SubscriptionNotice access={access} />
+          ) : (
+            children
+          )}
         </div>
       </div>
 
