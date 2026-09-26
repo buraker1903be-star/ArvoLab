@@ -53,8 +53,12 @@ const CANDIDATE_SECTIONS = [
     2 — atıf sistemi sayım/baskınlık ile seçiliyor (lib/atif-sistemi.ts)
     3 — taranmış PDF'ler OCR ile okunuyor (lib/ocr.ts); sürüm, yürürlük
         tarihi ve sayfa sınırı çıkarılıyor (lib/kilavuz-kunyesi.ts)
+    4 — saçma kenar boşlukları yok sayılıyor. Canlıda Burdur Fen Bilimleri
+        kılavuzu "üst 29,7 cm" ile onaylandı: A4'ün tam yüksekliği, sayfa
+        ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
+        iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 3;
+export const TARAYICI_SURUMU = 4;
 
 /**
  * Künye alanlarından YALNIZCA bulunanları içeren güncelleme yaması.
