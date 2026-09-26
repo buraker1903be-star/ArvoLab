@@ -48,14 +48,21 @@ export async function asistanKayitlari(limit = 50): Promise<ListeSonucu<AsistanK
  * Model karşılaştırması. Hangi modelin daha iyi denetlediğine tahminle değil
  * kullanıcı puanıyla karar verilsin diye: pahalı modeli ucuzuyla değiştirmek
  * ancak bu tablo elde varken savunulabilir.
+ *
+ * Sayım VERİTABANINDA (asistan_model_ozetleri, migration 20260926150217).
+ * Eskiden .limit(5000) ile satır çekilip toplamlar burada tutuluyordu ve
+ * sorgunun sıralaması yoktu: tablo sınırı aştığı gün özet rastgele bir alt
+ * kümenin özeti olurdu ve ekran aynı görünürdü. Kararın ağırlığı düşünülürse
+ * en kötü hata biçimi bu — yanlış sayı, eksik sayıdan sinsi.
+ *
+ * Fonksiyon security invoker: hangi satırların sayıldığına RLS karar veriyor.
+ * Aşağıdaki rol denetimi onun yerini tutmaz, yetkisiz isteğin sessizce boş
+ * liste dönmesini engeller (AGENTS.md).
  */
 export async function modelOzetleri(): Promise<ListeSonucu<ModelOzeti>> {
   if (!(await yetkiliMi())) return listeBasarili([]);
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("ai_assistant_runs")
-    .select("model, status, rating, duration_ms, prompt_chars, output_chars")
-    .limit(5000);
+  const { data, error } = await supabase.rpc("asistan_model_ozetleri");
 
   if (error) {
     console.error("[ai] model özeti okunamadı:", error.message);
@@ -64,32 +71,21 @@ export async function modelOzetleri(): Promise<ListeSonucu<ModelOzeti>> {
     return listeOkunamadi();
   }
 
-  const kovalar = new Map<string, ModelOzeti & { sureToplam: number; sureAdet: number }>();
-  for (const satir of data ?? []) {
-    const ad = satir.model ?? "bilinmiyor";
-    const kova =
-      kovalar.get(ad) ??
-      { model: ad, toplam: 0, tamamlanan: 0, reddedilen: 0, basarisiz: 0, faydali: 0, kismen: 0, faydasiz: 0, puanlanan: 0, ortSure: 0, toplamKarakter: 0, sureToplam: 0, sureAdet: 0 };
-
-    kova.toplam += 1;
-    if (satir.status === "completed") kova.tamamlanan += 1;
-    if (satir.status === "rejected") kova.reddedilen += 1;
-    if (satir.status === "failed") kova.basarisiz += 1;
-    if (satir.rating === "faydali") kova.faydali += 1;
-    if (satir.rating === "kismen") kova.kismen += 1;
-    if (satir.rating === "faydasiz") kova.faydasiz += 1;
-    if (satir.rating) kova.puanlanan += 1;
-    if (satir.duration_ms) {
-      kova.sureToplam += Number(satir.duration_ms);
-      kova.sureAdet += 1;
-    }
-    kova.toplamKarakter += Number(satir.prompt_chars ?? 0) + Number(satir.output_chars ?? 0);
-    kovalar.set(ad, kova);
-  }
-
-  return listeBasarili(
-    [...kovalar.values()]
-      .map(({ sureToplam, sureAdet, ...ozet }) => ({ ...ozet, ortSure: sureAdet ? Math.round(sureToplam / sureAdet) : 0 }))
-      .sort((a, b) => b.toplam - a.toplam)
-  );
+  /* PostgREST bigint'i DİZGİ olarak döndürür; Number'a çevrilmezse sıralama
+     sözlük sırasına döner ("9" > "10") ve toplamlar birleştirilir. */
+  const sayi = (deger: unknown) => Number(deger ?? 0) || 0;
+  const ozetler: ModelOzeti[] = ((data ?? []) as Record<string, unknown>[]).map((satir) => ({
+    model: String(satir.model ?? "bilinmiyor"),
+    toplam: sayi(satir.toplam),
+    tamamlanan: sayi(satir.tamamlanan),
+    reddedilen: sayi(satir.reddedilen),
+    basarisiz: sayi(satir.basarisiz),
+    faydali: sayi(satir.faydali),
+    kismen: sayi(satir.kismen),
+    faydasiz: sayi(satir.faydasiz),
+    puanlanan: sayi(satir.puanlanan),
+    ortSure: sayi(satir.ort_sure),
+    toplamKarakter: sayi(satir.toplam_karakter),
+  }));
+  return listeBasarili(ozetler.sort((a, b) => b.toplam - a.toplam));
 }
