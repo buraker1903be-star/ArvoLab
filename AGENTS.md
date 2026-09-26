@@ -104,6 +104,16 @@ kısayol davranışı kapsam dışı. Eklenti listesi editör bileşeninden ayr�
 test ile üretim AYNI listeyi kullanmalı, yoksa test kendi kopyasını
 doğrular.
 
+**Üç çıktı yolu birbirine karşı sınanır** (`tests/editor/cikti-yollari.test.ts`).
+Aynı belge üç yerde çiziliyor ve her biri öznitelikleri kendi başına
+yorumluyor: editör (`lib/tiptap-paragraph-formatting.ts`), yazdırma/PDF ve
+danışman paylaşımı (`lib/tiptap-html.ts`), Word (`lib/tiptap-docx.ts`).
+26.09.2026'da kaynakçanın asılı girintisi editörde ve Word'de vardı,
+yazdırma çıktısında HİÇ yoktu. Yeni bir biçim kuralı eklerken listeye bir
+satır ekleyin: belge öznitelikli ve özniteliksiz çizilir, üç çıktının da
+DEĞİŞMESİ ve beklenen biçimi taşıması istenir. Tek yola bakan bir test bu
+sınıfı yakalamıyor.
+
 `tests/db/` (`npm run test:db`) `supabase/schema.sql` ve migration'ları
 PGlite'a kurar; kuralları Supabase rolleriyle (anon, authenticated) doğrudan
 veritabanına gelen isteklerle sınar. Bir tabloya koruma (tetikleyici, RLS)
