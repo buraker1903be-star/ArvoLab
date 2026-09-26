@@ -70,6 +70,13 @@ export function hasNonPlainAttributes(doc: unknown): boolean {
     }
     return false;
   };
-  if (!doc || typeof doc !== "object") return true;
+  /*
+    Arızaya kapalı: belge biçiminde OLMAYAN her şey reddedilir. Dizi de
+    reddedilir — `[].content` tanımsız olduğu için tarama boş geçip "kuşku
+    yok" diyordu. Şu anki tek çağıran (saveManuscript) zaten `type === "doc"`
+    denetliyor, yani bu canlı bir açık değildi; ama koruma kendi başına
+    doğru olmalı, yoksa ikinci çağıranla birlikte sessizce açığa dönüşür.
+  */
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) return true;
   return walk((doc as DocNode).content);
 }
