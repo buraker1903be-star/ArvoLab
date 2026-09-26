@@ -54,6 +54,9 @@ const CANDIDATE_SECTIONS = [
     2 — atıf sistemi sayım/baskınlık ile seçiliyor (lib/atif-sistemi.ts)
     3 — taranmış PDF'ler OCR ile okunuyor (lib/ocr.ts); sürüm, yürürlük
         tarihi ve sayfa sınırı çıkarılıyor (lib/kilavuz-kunyesi.ts)
+    7 — adres bir kılavuza işaret etmiyorsa yöneticiye söyleniyor
+        (web sayfası, yönetmelik, form, örnek sayfa). Bekleyen 45 kaydın
+        8'i böyleydi ve panelde "kötü yazılmış kılavuz" gibi görünüyordu.
     6 — gövde ayrımı olumsuzlamayı okuyor ("kapak sayfaları HARİÇ tüm
         yazılarda 12 punto") ve gövdeden açıkça söz eden eşleşmeyi
         işaretsize yeğliyor. Sürüm 5 bu ikisi olmadan onaylı üç kılavuzda
@@ -67,7 +70,7 @@ const CANDIDATE_SECTIONS = [
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 6;
+export const TARAYICI_SURUMU = 7;
 
 /*
   Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
@@ -84,21 +87,33 @@ export const TARAYICI_SURUMU = 6;
   kuralları elle girmek değil, doğru belgeyi bulmak. OCR uyarısı da tam bu
   yanılgı için eklenmişti.
 
-  Ölçüt bilerek dar: hiçbir biçim kuralı VE hiçbir zorunlu bölüm
-  çıkmamışsa. Gerçekten HTML olarak yayımlanmış bir kılavuzda ikisi de
-  çıkar; yanlış alarm yöneticiyi doğru belgeden şüphe ettirirdi.
+  Asıl ölçüt GÜVENİN SIFIR olması: tek bir biçim kuralı bile bulunamamış
+  demektir (yazı tipi, punto, satır aralığı, kenar boşluğu, atıf sistemi —
+  hiçbiri). Gerçek bir kılavuzda bunlardan en az biri geçer.
+
+  Bölüm sayısı ikincil: ilk ölçüt "hiç bölüm yok"tu ve iki yanlış belgeyi
+  kıl payı kaçırıyordu — Bursa Teknik'in "sıklıkla yapılan hatalar"
+  sunumu 3, İstanbul Yeni Yüzyıl'ın danışman kontrol formu 2 başlık
+  üretiyor. Sınır, sistemin zaten kullandığı ölçüye bağlandı: onay
+  kuyruğu da en az 4 zorunlu bölüm istiyor (20260924100007).
+
+  OCR'lı belgede hiç uyarı verilmez. Orada çıkarımın boş olmasının sebebi
+  belli ve kendi uyarısı var; "bu kılavuz değil" demek, okunamamış GERÇEK
+  bir kılavuzdan yöneticiyi boş yere şüphe ettirirdi.
 */
 export function kilavuzDegilUyarisi(
   confidence: number,
   bolumSayisi: number,
   contentType: string,
+  ocrKullanildi = false,
 ): string | null {
-  if (confidence > 0 || bolumSayisi > 0) return null;
+  if (ocrKullanildi) return null;
+  if (confidence > 0 || bolumSayisi >= 4) return null;
   return contentType.toLowerCase().includes("html")
-    ? "Bu adres bir web sayfası ve içinden hiçbir biçim kuralı ya da zorunlu bölüm çıkarılamadı; "
-      + "büyük olasılıkla kılavuzun kendisi değil, ona bağlanan sayfa. Sayfadaki PDF/DOCX bağlantısını kaydedin."
-    : "Bu belgeden hiçbir biçim kuralı ya da zorunlu bölüm çıkarılamadı; adres bir tez yazım kılavuzuna "
-      + "işaret etmiyor olabilir (yönetmelik, form ya da örnek sayfa olabilir).";
+    ? "Bu adres bir web sayfası ve içinden hiçbir biçim kuralı çıkarılamadı; büyük olasılıkla "
+      + "kılavuzun kendisi değil, ona bağlanan sayfa. Sayfadaki PDF/DOCX bağlantısını kaydedin."
+    : "Bu belgeden hiçbir biçim kuralı çıkarılamadı; adres bir tez yazım kılavuzuna işaret etmiyor "
+      + "olabilir (yönetmelik, form ya da örnek sayfa olabilir).";
 }
 
 /*
@@ -471,7 +486,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   const citationMentions = atifGecisleri(text);
   const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint));
   const sayfaSiniri = sayfaSiniriCikar(text);
-  const kilavuzDegil = kilavuzDegilUyarisi(formatting.confidence, suggestedSections.length, contentType);
+  const kilavuzDegil = kilavuzDegilUyarisi(formatting.confidence, suggestedSections.length, contentType, ocrKullanildi);
 
   return {
     textPreview: text.slice(0, 4000),

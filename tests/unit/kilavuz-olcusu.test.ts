@@ -146,10 +146,25 @@ test("kılavuz olmayan belge uyarısı", async (t) => {
     assert.match(uyari ?? "", /yönetmelik, form ya da örnek/);
   });
 
-  await t.test("tek bir kural ya da bölüm çıktıysa uyarı yok", () => {
-    // Dar ölçüt: yanlış alarm yöneticiyi DOĞRU belgeden şüphe ettirirdi.
+  await t.test("tek bir biçim kuralı çıktıysa uyarı yok", () => {
+    // Yanlış alarm yöneticiyi DOĞRU belgeden şüphe ettirirdi.
     assert.equal(kilavuzDegilUyarisi(0.15, 0, "text/html"), null);
-    assert.equal(kilavuzDegilUyarisi(0, 3, "text/html"), null);
+  });
+
+  await t.test("birkaç başlık uyarıyı susturmuyor, dört bölüm susturuyor", () => {
+    /*
+      İlk ölçüt "hiç bölüm yok"tu ve iki yanlış belgeyi kıl payı
+      kaçırıyordu: "sıklıkla yapılan hatalar" sunumu 3, danışman kontrol
+      formu 2 başlık üretiyor. Sınır onay kuyruğununkiyle aynı: 4 bölüm.
+    */
+    assert.notEqual(kilavuzDegilUyarisi(0, 3, "application/pdf"), null);
+    assert.equal(kilavuzDegilUyarisi(0, 4, "application/pdf"), null);
+  });
+
+  await t.test("OCR'lı belgede uyarı verilmiyor", () => {
+    // Boş çıkarımın sebebi belli ve kendi uyarısı var; okunamamış GERÇEK
+    // bir kılavuzdan yöneticiyi şüphe ettirmemeli.
+    assert.equal(kilavuzDegilUyarisi(0, 0, "application/pdf", true), null);
   });
 
   await t.test("uyarı tek parça metindir, dizi içinde harflere ayrılmaz", () => {
