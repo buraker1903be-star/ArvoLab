@@ -4,7 +4,7 @@
 // numaralanır ve belgenin sonunda listelenir.
 import { headingNumberMap } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
-import { indentCmOf } from "@/lib/paragraph-format";
+import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 
 interface Mark {
   type: string;
@@ -48,8 +48,27 @@ function blockStyle(attrs: Record<string, unknown> = {}) {
   if (typeof attrs.textAlign === "string" && ALIGNMENTS.has(attrs.textAlign)) styles.push(`text-align:${attrs.textAlign}`);
   const spacing = Number(attrs.lineSpacing);
   if (Number.isFinite(spacing) && spacing >= 1 && spacing <= 3) styles.push(`line-height:${spacing}`);
+  /*
+    Asılı girinti yazdırma çıktısında HİÇ uygulanmıyordu.
+
+    Editör (lib/tiptap-paragraph-formatting.ts) negatif text-indent + eşit
+    padding ile kuruyor, Word çıktısı (lib/tiptap-docx.ts) "hanging" olarak
+    taşıyor — yalnızca burası atlanmıştı. Sonuç: öğrenci kaynakçayı
+    editörde ve Word dosyasında girintili görüyor, YAZDIRDIĞINDA ve
+    danışman paylaşım bağlantısını açtığında düz görüyordu. APA ve Chicago
+    kaynakçada asılı girintiyi zorunlu tutuyor, yani bu jüriden dönen bir
+    biçim hatası.
+
+    İlk satır girintisiyle aynı CSS alanını (text-indent) kullandıkları
+    için ikisi birlikte yazılamaz: bir paragraf ikisini birden taşımıyor
+    (komutlar birini açarken öbürünü kapatıyor), yine de asılı girinti
+    önce sınanıyor — çelişkili bir eski kayıtta kaynakça biçimi
+    korunmalı, çünkü yanlış olan taraf girintisiz görünen kaynakçadır.
+  */
+  const hangingCm = hangingIndentCmOf(attrs);
   const indentCm = indentCmOf(attrs);
-  if (indentCm) styles.push(`text-indent:${indentCm}cm`);
+  if (hangingCm) styles.push(`text-indent:-${hangingCm}cm`, `padding-left:${hangingCm}cm`);
+  else if (indentCm) styles.push(`text-indent:${indentCm}cm`);
   return styles.length ? ` style="${styles.join(";")}"` : "";
 }
 

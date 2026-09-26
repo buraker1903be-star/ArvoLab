@@ -110,6 +110,52 @@ test("yazdırma HTML'i", async (t) => {
     assert.ok(acik.indexOf("print-new-page") > acik.indexOf("Giriş"), acik);
   });
 
+  await t.test("asılı girinti yazdırma çıktısına iniyor", () => {
+    /*
+      Gerileme: asılı girinti yazdırma HTML'inde HİÇ uygulanmıyordu.
+      Editör negatif text-indent + eşit padding ile kuruyor, Word çıktısı
+      "hanging" olarak taşıyor, yalnızca burası atlanmıştı. Öğrenci
+      kaynakçayı editörde ve Word'de girintili, YAZDIRDIĞINDA düz
+      görüyordu — APA ve Chicago bunu zorunlu tutuyor.
+    */
+    const { html } = ciz(belge({
+      type: "paragraph",
+      attrs: { hangingIndent: 1.25 },
+      content: [{ type: "text", text: "Yılmaz, A. (2023). Kitap. Yayınevi." }],
+    }));
+    assert.match(html, /text-indent:-1\.25cm/, html);
+    assert.match(html, /padding-left:1\.25cm/, html);
+  });
+
+  await t.test("asılı girinti true ise varsayılan ölçü uygulanıyor", () => {
+    // Eski kayıtlarda değer boolean; ölçü paragraph-format'ın varsayılanı.
+    const { html } = ciz(belge({ type: "paragraph", attrs: { hangingIndent: true }, content: [{ type: "text", text: "K" }] }));
+    assert.match(html, /text-indent:-\d/, html);
+    assert.match(html, /padding-left:\d/, html);
+  });
+
+  await t.test("ilk satır girintisi ile asılı girinti birbirini ezmiyor", () => {
+    /*
+      İkisi aynı CSS alanını kullanıyor. Komutlar birini açarken öbürünü
+      kapatıyor, yani sağlıklı bir belgede ikisi birden bulunmaz; çelişkili
+      ESKİ bir kayıtta kaynakça biçimi korunmalı, çünkü yanlış olan taraf
+      girintisiz görünen kaynakçadır.
+    */
+    const { html } = ciz(belge({
+      type: "paragraph",
+      attrs: { firstLineIndent: 1.25, hangingIndent: 1.25 },
+      content: [{ type: "text", text: "K" }],
+    }));
+    assert.match(html, /text-indent:-1\.25cm/, html);
+    assert.equal((html.match(/text-indent/g) ?? []).length, 1, "tek bir text-indent yazılmalı");
+  });
+
+  await t.test("girintisiz paragrafa stil yazılmıyor", () => {
+    const { html } = ciz(belge(paragraf("Düz paragraf.")));
+    assert.ok(!html.includes("text-indent"), html);
+    assert.ok(!html.includes("padding-left"), html);
+  });
+
   await t.test("boş belge boş çıktı veriyor", () => {
     assert.deepEqual(renderTiptapHtml(null), { html: "", footnotes: [] });
     assert.deepEqual(renderTiptapHtml({ content: [] }), { html: "", footnotes: [] });
