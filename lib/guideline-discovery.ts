@@ -2,6 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { kunyeYamasi, scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { enstituTespitEt, fakulteVeyaBolumBelgesi } from "@/lib/enstitu-tespiti";
 import { crawlUniversityAndInstitutes, resolveOfficialUniversityDomain } from "@/lib/official-guideline-crawl";
+/* Ad anahtarı tek yerde (lib/universite-adi.ts); üç kopyası vardı. */
+import { universiteAnahtari as normalizeTurkish } from "@/lib/universite-adi";
 
 type University = { id: string; name: string };
 
@@ -18,17 +20,6 @@ type Candidate = {
 */
 const MAX_CANDIDATES_PER_UNIVERSITY = 8;
 
-
-function normalizeTurkish(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ı/g, "i")
-    .replace(/İ/g, "I")
-    .replace(/[^a-zA-Z0-9]+/g, " ")
-    .trim()
-    .toUpperCase();
-}
 
 function universityTokens(name: string) {
   const ignored = new Set(["UNIVERSITESI", "UNIVERSITE", "T C", "VE"]);

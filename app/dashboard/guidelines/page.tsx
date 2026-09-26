@@ -20,7 +20,7 @@ import { statusTone } from "@/lib/status-tone";
 import CikarimOzeti from "./cikarim-ozeti";
 import { kilavuzuYenidenTara, universiteKilavuzuKesfet } from "@/app/actions/guideline-scan";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
-import { kilavuzlariTopluTara } from "@/app/actions/guideline-scan";
+import { kilavuzlariTopluEkle, kilavuzlariTopluTara } from "@/app/actions/guideline-scan";
 
 const REVIEW_FONTS = ["Times New Roman", "Arial", "Calibri", "Cambria", "Garamond", "Georgia", "Verdana", "Book Antiqua"];
 
@@ -107,6 +107,11 @@ export default async function GuidelinesPage() {
   async function handleTopluTara() {
     "use server";
     return kilavuzlariTopluTara();
+  }
+
+  async function handleTopluEkle(formData: FormData) {
+    "use server";
+    return kilavuzlariTopluEkle(formData);
   }
 
   async function handleDelete(guidelineId: string) {
@@ -295,6 +300,56 @@ export default async function GuidelinesPage() {
         üniversite; 204 üniversite ≈ 100 gün) ve çalışıp çalışmadığını
         görmenin tek yolu ertesi sabah veritabanına bakmaktı.
       */}
+      {/*
+        Otomatik keşfin yapısal tavanı var: kılavuz enstitü sitesinde iki üç
+        seviye derinde, üniversitelerin çoğunda site haritası yok ya da HTML
+        dönüyor ve ana sayfa kılavuza bağlanmıyor. Denenen üniversitelerin
+        büyük kısmı bu yüzden hiç aday üretmiyor; kalanı elle eklenecek ve
+        tek tek form 160+ üniversite için ağır.
+      */}
+      {icEkip ? (
+        <section className="section">
+          <div className="section-head">
+            <h2 className="section-title">
+              <Plus size={16} aria-hidden="true" />
+              Toplu kılavuz ekle
+            </h2>
+          </div>
+          <PanelDrawer
+            triggerLabel="Listeden ekle"
+            triggerIcon={<Plus size={16} aria-hidden="true" />}
+            triggerClassName="projects-filter-button"
+            kicker="Ortak katalog"
+            title="Listeden toplu kılavuz ekle"
+            description="Her satıra bir üniversite adı ve kılavuzun resmî adresi. Adres indirilip taranır, kurallar çıkarılır; kayıt onaylanana kadar hiçbir çalışmaya uygulanmaz."
+          >
+            <ActionForm className="project-form-grid" action={handleTopluEkle} successMessage="Liste işlendi.">
+              <label className="project-form-full">
+                <span>Üniversite adı ve kılavuz adresi (satır başına bir tane)</span>
+                <textarea
+                  name="liste"
+                  rows={8}
+                  placeholder={"Akdeniz Üniversitesi https://sbe.akdeniz.edu.tr/.../tez-yazim-kilavuzu.pdf\nAnadolu Üniversitesi https://sbe.anadolu.edu.tr/.../kilavuz.pdf"}
+                  required
+                />
+              </label>
+              <p className="hint project-form-full">
+                Üniversite adı listedekiyle <strong>aynı</strong> olmalı; eşleşmeyen satır atlanır ve sebebi
+                bildirilir — en yakın ad tahmin edilmez, yanlış kuruma kılavuz bağlamak öğrencinin editörüne
+                başka kurumun kurallarını indirir. Adres yalnızca <code>edu.tr</code> alan adlarından kabul
+                edilir. Her satır bir belge indirip çözümlediği için tek seferde en fazla 10 satır işlenir.
+              </p>
+              <div className="project-form-actions">
+                <button type="submit" className="projects-primary-button">
+                  <Plus size={16} aria-hidden="true" />
+                  Listeyi ekle ve tara
+                </button>
+              </div>
+            </ActionForm>
+          </PanelDrawer>
+        </section>
+      ) : null}
+
       {canManage ? (
         <section className="section">
           <h2 className="section-title">

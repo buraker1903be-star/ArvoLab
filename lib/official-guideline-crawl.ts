@@ -1,16 +1,12 @@
 import { fetchOfficialSource, metniOku } from "@/lib/safe-official-fetch";
 import { belgeAdresiMi, belgeBaglantisiSec } from "@/lib/belge-baglantisi";
 import { robotsCozumle, robotsIzinVeriyor } from "@/lib/robots";
+/* Ad anahtarı tek yerde (lib/universite-adi.ts). */
+import { universiteAnahtari as normalize } from "@/lib/universite-adi";
 
 export type OfficialGuidelineCandidate = { url: string; title: string };
 
 let yokDirectoryPromise: Promise<string> | null = null;
-
-function normalize(value: string) {
-  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/ı/g, "i").replace(/İ/g, "I").replace(/[^a-zA-Z0-9]+/g, " ")
-    .trim().toUpperCase();
-}
 
 function decodeXml(value: string) {
   return value.replace(/&amp;/g, "&").replace(/&#x2F;/gi, "/").trim();

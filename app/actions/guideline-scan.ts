@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { kunyeYamasi, scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
 import type { ActionResult } from "@/lib/auth-guards";
 import { discoverGuidelinesForUniversity } from "@/lib/guideline-discovery";
+import { universiteBul } from "@/lib/universite-adi";
 
 export interface ScanResponse {
   error?: string;
@@ -147,6 +148,135 @@ async function taraVeYaz(
 
   if (error) return { ok: false, mesaj: "Kayıt güncellenemedi." };
   return { ok: true };
+}
+
+/*
+  TOPLU KILAVUZ EKLEME.
+
+  Otomatik keşfin yapısal bir tavanı var: kılavuz enstitünün sitesinde iki
+  üç seviye derinde duruyor, üniversitenin site haritası çoğu kurumda ya
+  yok ya HTML döndürüyor ve ana sayfa kılavuza bağlanmıyor. Canlıda
+  denenen 125 üniversitenin 100'ü bu yüzden hiç aday üretmedi. Kalanı elle
+  eklemek gerekiyor ve tek tek "Yeni kılavuz" formu 160+ üniversite için
+  ağır.
+
+  Girdi satır satır: üniversite adı, ardından adres.
+    Akdeniz Üniversitesi https://sbe.akdeniz.edu.tr/.../kilavuz.pdf
+
+  Ad EŞLEŞMEZSE satır atlanır ve sebebi yazılır; en yakın adı tahmin
+  etmiyoruz — yanlış üniversiteye kılavuz bağlamak, hiç bağlamamaktan
+  kötü (öğrencinin editörüne başka kurumun kuralları iner).
+
+  Adres denetimini safe-official-fetch yapıyor: .edu.tr dışına çıkılmıyor.
+  Kayıt eklendikten sonra AYNI tarama yolundan geçiyor (taraVeYaz), yani
+  kurallar ve ai_analysis tekil taramayla birebir aynı biçimde yazılıyor.
+*/
+const TOPLU_EKLEME_SINIRI = 10;
+
+type EklemeSatiri = { ad: string; adres: string };
+
+/** "Üniversite adı  https://..." → parçalar. Adres yoksa null. */
+function eklemeSatiriCozumle(satir: string): EklemeSatiri | null {
+  const yer = satir.search(/https:\/\//);
+  if (yer < 0) return null;
+  const ad = satir.slice(0, yer).replace(/[\s|,;–—-]+$/, "").trim();
+  const adres = satir.slice(yer).trim().split(/\s+/)[0];
+  return ad && adres ? { ad, adres } : null;
+}
+
+export async function kilavuzlariTopluEkle(formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Oturum bulunamadı." };
+
+  /*
+    İç ekip: eklenen kayıtlar ORTAK KATALOĞA giriyor (organization_id null)
+    ve 20260924100033'ten beri onları yalnızca iç ekip yönetebiliyor. Kurum
+    yöneticisine açmak, sonra düzenleyemeyeceği kayıtlar üretmesi demekti.
+  */
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (!profile || !["system_admin", "founder"].includes(profile.role)) {
+    return { error: "Toplu ekleme ortak kataloğu değiştirir; bu işlem Sistem Yöneticisi'ne açıktır." };
+  }
+
+  const satirlar = String(formData.get("liste") ?? "")
+    .split("\n")
+    .map((satir) => satir.trim())
+    .filter(Boolean);
+  if (!satirlar.length) return { error: "Liste boş. Her satıra bir üniversite adı ve kılavuz adresi yazın." };
+  if (satirlar.length > TOPLU_EKLEME_SINIRI) {
+    return {
+      error: `Tek seferde en fazla ${TOPLU_EKLEME_SINIRI} satır işlenir (her satır bir belge indirip çözümlüyor). ` +
+        `Listeyi bölüp tekrar gönderin.`,
+    };
+  }
+
+  const { data: universiteler, error: universiteHatasi } = await supabase.from("universities").select("id, name");
+  if (universiteHatasi) {
+    console.error(universiteHatasi);
+    return { error: "Üniversite listesi okunamadı; ekleme yapılmadı." };
+  }
+
+  let eklenen = 0;
+  const sorunlular: string[] = [];
+
+  for (const ham of satirlar) {
+    const satir = eklemeSatiriCozumle(ham);
+    if (!satir) {
+      sorunlular.push(`"${ham.slice(0, 40)}": adres bulunamadı`);
+      continue;
+    }
+    const universite = universiteBul(universiteler ?? [], satir.ad);
+    if (!universite) {
+      sorunlular.push(`"${satir.ad}": bu adla üniversite yok`);
+      continue;
+    }
+
+    /* Aynı adres iki kez eklenmesin: keşif de aynı belgeyi bulmuş olabilir. */
+    const { data: mevcut } = await supabase
+      .from("thesis_guidelines").select("id").eq("source_url", satir.adres).maybeSingle();
+    if (mevcut) {
+      sorunlular.push(`${universite.name}: bu adres zaten kayıtlı`);
+      continue;
+    }
+
+    const { data: yeni, error: eklemeHatasi } = await supabase
+      .from("thesis_guidelines")
+      .insert({
+        university_id: universite.id,
+        university_name: universite.name,
+        source_url: satir.adres,
+        citation_style: "apa7",
+        required_sections: [],
+        analysis_status: "needs_review",
+        review_notes: "Toplu eklendi; taranıp onaylanmadan hiçbir çalışmaya uygulanmaz.",
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+    if (eklemeHatasi || !yeni) {
+      sorunlular.push(`${universite.name}: kaydedilemedi`);
+      continue;
+    }
+
+    /* Aynı tarama yolu: kurallar ve ai_analysis tekil taramayla birebir aynı. */
+    const sonuc = await taraVeYaz(supabase, { id: yeni.id, source_url: satir.adres });
+    if (!sonuc.ok) {
+      // Kayıt DURUYOR: adres doğru olabilir, tarama geçici olarak düşmüş
+      // olabilir. Satırdaki nota sebep yazıldı, "Şimdi yeniden tara" var.
+      sorunlular.push(`${universite.name}: eklendi ama taranamadı (${sonuc.mesaj})`);
+      eklenen += 1;
+      continue;
+    }
+    eklenen += 1;
+  }
+
+  revalidatePath("/dashboard/guidelines");
+  const ozet = `${eklenen}/${satirlar.length} kılavuz eklendi.`;
+  if (sorunlular.length) {
+    return { success: true, warning: `${ozet} Atlanan: ${sorunlular.slice(0, 4).join(" · ")}` };
+  }
+  return { success: true, message: ozet };
 }
 
 /*
