@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { kunyeYamasi, scanGuidelineUrl, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { kunyeYamasi, scanGuidelineUrl, taramaOnceligi, TARAYICI_SURUMU, type GuidelineScanResult } from "@/lib/guideline-scan";
 import type { ActionResult } from "@/lib/auth-guards";
 import { discoverGuidelinesForUniversity } from "@/lib/guideline-discovery";
 import { universiteBul } from "@/lib/universite-adi";
@@ -330,12 +330,10 @@ export async function kilavuzlariTopluTara(): Promise<ActionResult> {
     return { error: "Kılavuz listesi okunamadı; tarama başlatılmadı." };
   }
 
-  /* Kanıtı eksik olanlar önce: sıradaki kararı asıl onlar bekletiyor. */
-  const sirali = (adaylar ?? []).sort((a, b) => {
-    const eksik = (k: typeof a) =>
-      (k.ai_analysis as { citationMentions?: unknown } | null)?.citationMentions === undefined ? 0 : 1;
-    return eksik(a) - eksik(b);
-  });
+  /* Kanıtı eksik olanlar, sonra çıkarımı eskimiş olanlar (lib/guideline-scan.ts). */
+  const sirali = (adaylar ?? []).sort(
+    (a, b) => taramaOnceligi(a.ai_analysis) - taramaOnceligi(b.ai_analysis),
+  );
   if (sirali.length === 0) return { success: true, message: "Taranacak kılavuz kalmadı." };
 
   const parti = sirali.slice(0, TOPLU_PARTI);

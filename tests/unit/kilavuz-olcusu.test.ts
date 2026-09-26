@@ -100,3 +100,29 @@ test("gövde ölçüsü ilk eşleşme değildir", async (t) => {
     assert.equal(govdeOlcusu("Dipnotlarda 10 punto kullanılır.", PUNTO), undefined);
   });
 });
+
+test("toplu taramada sıra", async (t) => {
+  const { TARAYICI_SURUMU, taramaOnceligi } = await import("@/lib/guideline-scan");
+
+  await t.test("kanıtı hiç olmayan en önde", () => {
+    assert.equal(taramaOnceligi({ scannerVersion: TARAYICI_SURUMU }), 0);
+    assert.equal(taramaOnceligi(null), 0);
+  });
+
+  await t.test("çıkarımı eskiyen, güncel olanın önünde", () => {
+    /*
+      Gerileme: tek ölçüt kanıtın varlığıydı; sürümü eskiyen kayıt kanıtı
+      olduğu için kuyruğun SONUNA düşüyordu. Oysa ölçüsü bilinen bir
+      hatayla çıkarılmış demektir ve kararı o da bekletir.
+    */
+    const eski = taramaOnceligi({ citationMentions: [], scannerVersion: TARAYICI_SURUMU - 1 });
+    const guncel = taramaOnceligi({ citationMentions: [], scannerVersion: TARAYICI_SURUMU });
+    assert.equal(eski, 1);
+    assert.equal(guncel, 2);
+    assert.ok(eski < guncel);
+  });
+
+  await t.test("sürümü hiç yazılmamış kayıt eski sayılır", () => {
+    assert.equal(taramaOnceligi({ citationMentions: [], scannerVersion: undefined }), 1);
+  });
+});

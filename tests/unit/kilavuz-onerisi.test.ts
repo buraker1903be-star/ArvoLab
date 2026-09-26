@@ -29,7 +29,8 @@ test("eksik ölçü önerileri", async (t) => {
 
   await t.test("kılavuzun söylemediği tek ölçü önerilir", () => {
     // Amasya: belge gövdenin satır aralığını hiç yazmıyor.
-    const { line_spacing: _atilan, ...eksik } = TAM;
+    const eksik: Record<string, unknown> = { ...TAM };
+    delete eksik.line_spacing;
     const oneriler = eksikOlcuOnerileri(eksik);
     assert.equal(oneriler.length, 1);
     assert.equal(oneriler[0].anahtar, "line_spacing");

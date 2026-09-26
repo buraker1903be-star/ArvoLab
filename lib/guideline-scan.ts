@@ -69,6 +69,22 @@ const CANDIDATE_SECTIONS = [
 */
 export const TARAYICI_SURUMU = 6;
 
+/*
+  Toplu taramada sıra.
+
+  Eskiden tek ölçüt "kanıtı (citationMentions) hiç olmayanlar önce"ydi:
+  sıradaki kararı asıl onlar bekletiyordu. Çıkarım sürümü eskiyen kayıt da
+  aynı şeyi bekletir — ölçüsü bilinen bir hatayla çıkarılmıştır — ama
+  kanıtı olduğu için kuyruğun SONUNA düşüyordu. İki günde üç sürüm
+  artışından sonra bu, düzeltmeyi en çok gereken kayıtları en geriye
+  koymak demekti.
+*/
+export function taramaOnceligi(aiAnalysis: unknown): number {
+  const analiz = (aiAnalysis ?? {}) as { citationMentions?: unknown; scannerVersion?: unknown };
+  if (analiz.citationMentions === undefined) return 0;
+  return Number(analiz.scannerVersion ?? 0) < TARAYICI_SURUMU ? 1 : 2;
+}
+
 /**
  * Künye alanlarından YALNIZCA bulunanları içeren güncelleme yaması.
  *
