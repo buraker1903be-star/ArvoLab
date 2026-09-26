@@ -94,6 +94,16 @@ modülleri içindir. Bir mantık parçası test edilemiyorsa nedeni genellikle
 böyle bir dosyanın içinde durmasıdır — ayırın. Bir hata düzeltince onu
 sabitleyen testi de ekleyin.
 
+`tests/editor/` (`npm run test:editor`) editörün eklenti listesinden
+(`lib/tiptap-extensions.ts`) belge şemasını **tarayıcı olmadan** kurar
+(`getSchema`) ve gerçek ProseMirror belgeleri üzerinde çalışır: şema
+sözleşmesi, bul-değiştir, başlık numaraları, yazdırma HTML'i. DOM taklit
+edilmiyor — taklidin davranışı tarayıcıyla birebir olmadığı için yeşil bir
+test yanlış güven verir; bu yüzden `renderHTML`, `parseHTML`, seçim ve
+kısayol davranışı kapsam dışı. Eklenti listesi editör bileşeninden ayrıldı:
+test ile üretim AYNI listeyi kullanmalı, yoksa test kendi kopyasını
+doğrular.
+
 `tests/db/` (`npm run test:db`) `supabase/schema.sql` ve migration'ları
 PGlite'a kurar; kuralları Supabase rolleriyle (anon, authenticated) doğrudan
 veritabanına gelen isteklerle sınar. Bir tabloya koruma (tetikleyici, RLS)
@@ -110,7 +120,7 @@ olduğunu sabitler; RLS politikasında kullanılan yardımcılar açık kalır.
 
 `npx tsc --noEmit`, `npm run lint`, `npm run check:css`,
 `npm run check:migrations`, `npm run check:rakamlar`, `npm run test:unit`,
-`npm run test:db` — yedisi de CI'da (`.github/workflows/ci.yml`) çalışır.
+`npm run test:editor`, `npm run test:db` — sekizi de CI'da (`.github/workflows/ci.yml`) çalışır.
 Derleme CI'da yapılmaz, Vercel tarafında.
 
 **Rakam denetimi** (`npm run check:rakamlar`): ekrandaki sayıların iki

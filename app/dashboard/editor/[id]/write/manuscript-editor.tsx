@@ -3,19 +3,9 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { kayitHatasiMetni, TASLAK_GUVENDE, TASLAK_YAZILAMADI } from "@/lib/taslak-durumu";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import TextAlign from "@tiptap/extension-text-align";
-import Placeholder from "@tiptap/extension-placeholder";
-import CharacterCount from "@tiptap/extension-character-count";
-import TiptapImage from "@tiptap/extension-image";
-import { Superscript } from "@tiptap/extension-superscript";
-import { Caption } from "@/lib/tiptap-caption";
-import { SearchHighlight } from "@/lib/tiptap-search";
-import { HeadingNumbers } from "@/lib/tiptap-heading-numbers";
+import { editorExtensions } from "@/lib/tiptap-extensions";
 import { hasManualNumber } from "@/lib/heading-numbering";
 import { describeAbstractRules } from "@/lib/guideline-editor-settings";
-import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
-import { TextStyleKit } from "@tiptap/extension-text-style";
 import {
   Bold as BoldIcon,
   Italic as ItalicIcon,
@@ -81,8 +71,6 @@ import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import type { CitationStyle } from "@/lib/citation-format";
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
-import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
-import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
   saveManuscript,
@@ -613,26 +601,8 @@ export default function ManuscriptEditor({
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [
-      StarterKit.configure({
-        link: { openOnClick: false, protocols: ["http", "https", "mailto"] },
-      }),
-      TextStyleKit,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      ParagraphFormatting,
-      Placeholder.configure({ placeholder: "Çalışmanızı buraya yazmaya başlayın..." }),
-      CharacterCount,
-      Superscript,
-      TiptapImage,
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      FootnoteReference,
-      Caption,
-      SearchHighlight,
-      HeadingNumbers.configure({ enabled: initialHeadingNumbering }),
-    ],
+    /* Liste lib/tiptap-extensions.ts'te: şemayı testler de aynı yerden kurar. */
+    extensions: editorExtensions({ headingNumbering: initialHeadingNumbering }),
     content: initialContent ?? "",
     onCreate: ({ editor: created }) => {
       editorRef.current = created;
