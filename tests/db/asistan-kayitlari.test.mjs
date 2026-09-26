@@ -101,6 +101,76 @@ describe("asistan kayıtları", () => {
     });
   });
 
+  /*
+    ÖRNEK DEĞİL SÜPÜRME.
+
+    Yukarıdaki test korumayı üç sütunla deniyordu (output, context, status);
+    koruma ise on beş sütunu sayıyor. Kapsanmayanlar arasında prompt_chars
+    ve output_chars vardı — kredi muhasebesi (ai_kredi_durumum) bu ikisini
+    TOPLUYOR, yani sıfırlanabilirse bedava kullanım demek.
+
+    Sütun listesi şemadan okunuyor, elle yazılmıyor: tabloya yeni bir sütun
+    eklenip koruma güncellenmezse bu test düşer. Elle yazılmış bir liste
+    tam o durumda sessiz kalırdı.
+  */
+  test("korumanın kapsamı şemayla birlikte büyüyor: sayılmayan sütun yok", async () => {
+    await islem(db, async () => {
+      await tohum();
+
+      // Kullanıcının yazmasına İZİN VERİLEN alanlar (değerlendirme).
+      const serbest = new Set(["rating", "rating_note", "rated_at"]);
+      await rol(db, "postgres");
+      const sutunlar = await say(
+        `select column_name, data_type, is_nullable from information_schema.columns
+          where table_schema = 'public' and table_name = 'ai_assistant_runs' order by column_name`,
+      );
+      assert.ok(sutunlar.length >= 18, `sütun listesi okunamadı: ${sutunlar.length}`);
+
+      /* Her sütun için MEVCUTTAN FARKLI bir değer: "is distinct from" ancak
+         gerçekten değişen bir değerle tetiklenir. */
+      const farkliDeger = ({ data_type }) => {
+        if (data_type === "uuid") return `'00000000-0000-4000-8000-0000000000ff'`;
+        if (data_type === "integer") return "999";
+        if (data_type === "jsonb") return `'{"x":1}'::jsonb`;
+        if (data_type.startsWith("timestamp")) return `'2000-01-01T00:00:00Z'`;
+        return `'degistirildi'`;
+      };
+
+      await rol(db, "authenticated", SAHIP);
+      const denenen = [];
+      for (const sutun of sutunlar) {
+        if (serbest.has(sutun.column_name)) continue;
+        denenen.push(sutun.column_name);
+        await reddedilir(
+          db,
+          `update public.ai_assistant_runs set ${sutun.column_name} = ${farkliDeger(sutun)} where id = '${KAYIT}'`,
+          [],
+          // Yardımcı hata mesajına SQL'i koyuyor, yani düşen sütun görünür.
+          /değiştirilemez/,
+        );
+      }
+      // Muhasebeye giren sütunların gerçekten denendiğini de doğrula.
+      for (const kritik of ["prompt_chars", "output_chars", "findings", "capability", "created_at"]) {
+        assert.ok(denenen.includes(kritik), `${kritik} süpürmeye girmedi`);
+      }
+    });
+  });
+
+  test("serbest alanlar yazılabilir kalıyor: koruma meşru akışı kırmıyor", async () => {
+    // Koruma eklerken meşru yolun yeşil kalması şart (AGENTS.md).
+    await islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", SAHIP);
+      await db.query(
+        `update public.ai_assistant_runs set rating = 'faydali', rating_note = 'işe yaradı' where id = '${KAYIT}'`,
+      );
+      const [satir] = await say(`select rating, rating_note, rated_at from public.ai_assistant_runs where id = '${KAYIT}'`);
+      assert.equal(satir.rating, "faydali");
+      assert.equal(satir.rating_note, "işe yaradı");
+      assert.ok(satir.rated_at, "rated_at sunucuda yazılmalı");
+    });
+  });
+
   test("yabancı kaydı puanlayamaz", async () => {
     await islem(db, async () => {
       await tohum();
