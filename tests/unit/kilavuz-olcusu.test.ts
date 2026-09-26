@@ -69,6 +69,32 @@ test("gövde ölçüsü ilk eşleşme değildir", async (t) => {
     assert.equal(govdeOlcusu(metin, PUNTO, (deger) => deger >= 8 && deger <= 24), 12);
   });
 
+  await t.test("gövde dışı işareti OLUMSUZLANMIŞSA eleme yapılmıyor", () => {
+    /*
+      Gerileme: Ankara Yıldırım Beyazıt'ın gövde kuralı "Kapak sayfaları
+      HARİÇ tüm yazılarda …". "kapak" işaretine bakıp elemek, cümlenin tam
+      tersini söylemesine rağmen doğru kuralı attırıyor ve ardından kapak
+      sayfasının 14 puntosu gövdenin kuralı oluyordu.
+    */
+    const metin = "Kapak sayfaları hariç tüm yazılarda harf boyutu 12 punto olmalıdır. "
+      + "Tez başlığı 16 punto, bu sayfadaki diğer tüm yazılar 14 punto olmalıdır.";
+    assert.equal(govdeOlcusu(metin, PUNTO), 12);
+  });
+
+  await t.test("gövdeden açıkça söz eden eşleşme, işaretsize yeğleniyor", () => {
+    /*
+      Gerileme: işaretsiz eşleşmeye hemen atlamak, konusu birkaç cümle önce
+      geçen kapak kurallarını gövdenin kuralı sandırıyordu.
+    */
+    assert.equal(govdeOlcusu("Tezin adı 16 punto yazılır. Metin kısmı 12 punto olmalıdır.", PUNTO), 12);
+    assert.equal(govdeOlcusu("Tezde ana başlıklar 14 punto, metin içeriği 11 punto olmalıdır.", PUNTO), 11);
+  });
+
+  await t.test("'ek' işareti kelime içinde aranmıyor", () => {
+    // "yüksEK lisans" gövde dışı sayılıyordu; desende baştaki sözcük sınırı yoktu.
+    assert.equal(govdeOlcusu("Yüksek lisans tezi yazısı 14 punto olmalıdır.", PUNTO), 14);
+  });
+
   await t.test("yalnızca gövde dışı kural varsa ölçü hiç yazılmıyor", () => {
     // Eksik ölçü yöneticiye sorulur; yanlış ölçü sessizce belgeye iner.
     assert.equal(govdeOlcusu("Dipnotlarda 10 punto kullanılır.", PUNTO), undefined);

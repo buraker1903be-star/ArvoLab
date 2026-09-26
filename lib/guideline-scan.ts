@@ -54,6 +54,10 @@ const CANDIDATE_SECTIONS = [
     2 — atıf sistemi sayım/baskınlık ile seçiliyor (lib/atif-sistemi.ts)
     3 — taranmış PDF'ler OCR ile okunuyor (lib/ocr.ts); sürüm, yürürlük
         tarihi ve sayfa sınırı çıkarılıyor (lib/kilavuz-kunyesi.ts)
+    6 — gövde ayrımı olumsuzlamayı okuyor ("kapak sayfaları HARİÇ tüm
+        yazılarda 12 punto") ve gövdeden açıkça söz eden eşleşmeyi
+        işaretsize yeğliyor. Sürüm 5 bu ikisi olmadan onaylı üç kılavuzda
+        gövdenin ölçüsünü başlığınkiyle değiştiriyordu.
     5 — yazı boyutu, satır aralığı ve paragraf girintisi gövde metninden
         alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
         14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
@@ -63,7 +67,7 @@ const CANDIDATE_SECTIONS = [
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 5;
+export const TARAYICI_SURUMU = 6;
 
 /**
  * Künye alanlarından YALNIZCA bulunanları içeren güncelleme yaması.
