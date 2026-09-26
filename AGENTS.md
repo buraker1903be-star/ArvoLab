@@ -52,8 +52,14 @@ davranış da yazılır ("Eskiden … oluyordu"). Yeni kod bu üsluba uyar.
   yazılır, belirtecin kendisi bir kez gösterilir (`lib/share-token.ts`).
 - **Asistan denetler, yazmaz.** Yapay zeka yetenekleri (`lib/ai/`)
   kullanıcının çalışmasına yapıştırabileceği metin üretmez: neyin eksik
-  olduğunu ve neden önemli olduğunu söyler, cümlesini kurmaz. Kural hem
-  sistem isteminde hem de kodda durur.
+  olduğunu ve neden önemli olduğunu söyler, cümlesini kurmaz. Kural sistem
+  isteminde yazılı; koddaki karşılığı YAPISALDIR, ayrı bir denetim değil:
+  çıktı kanalı bulgu listesidir (`bulgulariCozumle` başka biçimi hiç
+  okumaz, yani model düz yazı döndüremez), başlık 60 ve açıklama 400
+  karakterle sınırlıdır, künye üretimi `kunyeIzi` ile reddedilir. "Hazır
+  cümle" arayan bir denetim bilerek YOK: asistanın öğrencinin kendi
+  cümlesini alıntılaması meşru ve gerekli, ikisini ayırt edecek güvenilir
+  bir desen yok — yanlış alarm aracı kullanılamaz hâle getirir.
 - **Asistanın ürettiği her sayı girdide geçmek zorunda.** `lib/ai/bulgu.ts`
   çıktıyı tarar; bağlamda geçmeyen tek bir değer varsa cevabın tamamı düşer
   ve kullanıcıya hiç gösterilmez. Bir kısmı doğru olan listeye güvenmek en

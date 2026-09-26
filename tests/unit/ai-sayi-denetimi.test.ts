@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { sayilar, uydurmaSayilar } from "../../lib/ai/sayi-denetimi";
+import { bulgulariCozumle } from "@/lib/ai/bulgu";
 
 describe("sayı çıkarma", () => {
   test("virgül, nokta ve baştaki sıfır aynı sayıya çıkar", () => {
@@ -59,5 +60,60 @@ describe("yanlış alarmlar (canlı, 20.09.2026)", () => {
   test("gerçek uydurma hâlâ yakalanır", () => {
     assert.deepEqual(uydurmaSayilar("Etki büyüklüğü d = 0.83 çıkar.", girdi), [".83"]);
     assert.deepEqual(uydurmaSayilar("Katılımcıların %68'i kadındır.", girdi), ["68"]);
+  });
+});
+
+describe("serbest liste · bilinçli dengenin bedeli", () => {
+  /*
+    Bu testler bir DOĞRULUĞU değil, kabul edilmiş bir SINIRI sabitliyor.
+    Serbest listenin gerekçesi lib/ai/sayi-denetimi.ts'te yazılı; burada
+    bedeli görünür tutuluyor ki bir sonraki okuyan "denetim uydurmayı
+    yakalıyor" diye fazla güvenmesin.
+  */
+  const girdi = "t(28) = 2.45, p = .021";
+
+  test("95 ve 100 serbest: güven aralığı cümlesi cevabı düşürmüyor", () => {
+    // Asıl kazanç bu: kullanıcı yalnızca t ve p yapıştırdığında standart
+    // bir güven aralığı cümlesi yanlış alarm üretmiyor.
+    assert.deepEqual(uydurmaSayilar("Etki %95 güven aralığında raporlanmalı.", girdi), []);
+  });
+
+  test("aynı değerlerle kurulmuş uydurma KAÇIYOR (kabul edilmiş sınır)", () => {
+    /*
+      Bu satırlar "geçmesi gereken" değil, "bugün geçtiği bilinen"
+      durumlar. Daraltma yolu bağlama bakmak olurdu ama "%95 güven
+      aralığı" ile "%95'i kadındır" ayırt edilemiyor.
+    */
+    assert.deepEqual(uydurmaSayilar("Katılımcıların %95'i kadındır.", girdi), []);
+    assert.deepEqual(uydurmaSayilar("Çalışma 100 katılımcıyla yapılmıştır.", girdi), []);
+  });
+
+  test("sınırın DIŞINDAKİ uydurmalar yakalanmaya devam ediyor", () => {
+    // Serbest liste dar tutulmalı: 68, 83, 42 gibi değerler yakalanıyor.
+    assert.deepEqual(uydurmaSayilar("Katılımcıların %68'i kadındır.", girdi), ["68"]);
+    assert.deepEqual(uydurmaSayilar("Ortalama yaş 42 idi.", girdi), ["42"]);
+    assert.deepEqual(uydurmaSayilar("Örneklem 96 kişiydi.", girdi), ["96"]);
+  });
+});
+
+describe("çıktı kanalı düz yazı taşıyamaz", () => {
+  /*
+    "Asistan denetler, yazmaz" kuralının koddaki karşılığı YAPISAL: model
+    ne yazarsa yazsın, bulgu listesi biçiminde olmayan hiçbir şey okunmuyor.
+    Ayrı bir "hazır cümle" denetimi bilerek yok — asistanın öğrencinin kendi
+    cümlesini alıntılaması meşru ve ikisi ayırt edilemiyor.
+  */
+  test("düz yazı yanıt hiç bulguya dönüşmüyor", () => {
+    const duzYazi = "Şöyle yazabilirsiniz: Bulgular hipotezi desteklemektedir. Ayrıca tartışmayı genişletin.";
+    assert.deepEqual(bulgulariCozumle(duzYazi), []);
+  });
+
+  test("başlık ve açıklama kırpılıyor: paragraf sığmaz", () => {
+    const uzun = JSON.stringify({
+      bulgular: [{ tur: "oneri", baslik: "x".repeat(200), aciklama: "y".repeat(2000) }],
+    });
+    const [bulgu] = bulgulariCozumle(uzun);
+    assert.equal(bulgu.baslik.length, 60);
+    assert.equal(bulgu.aciklama.length, 400);
   });
 });

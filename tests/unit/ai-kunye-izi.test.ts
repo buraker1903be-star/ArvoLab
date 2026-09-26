@@ -71,15 +71,59 @@ describe("künye izi · düz metin", () => {
   });
 });
 
-describe("künye izi · bulgu listesi", () => {
-  test("literatür tarafı aynı kuralı kullanmaya devam ediyor", () => {
+describe("künye izi · literatür sonucu", () => {
+  const sonuc = (bulgular: Parameters<typeof kunyeIzi>[0]["bulgular"], aramalar: string[] = []) => ({ bulgular, aramalar });
+
+  test("açıklamadaki künye yakalanır", () => {
     assert.equal(
-      kunyeIzi([{ tur: "oneri", baslik: "Kaynak", aciklama: "Şu çalışmaya bakın: Yıldırım, S. (2020). Öğrenme ortamları." }]),
+      kunyeIzi(sonuc([{ tur: "oneri", baslik: "Kaynak", aciklama: "Şu çalışmaya bakın: Yıldırım, S. (2020). Öğrenme ortamları." }])),
       true,
     );
+  });
+
+  test("BAŞLIKTAKİ künye de yakalanır", () => {
+    /*
+      Gerileme: denetim yalnızca `aciklama`ya bakıyordu. Başlık 60 karaktere
+      kadar serbest metin ve "Şahin, A. (2021)" 16 karakter — yani künye
+      başlığa sığıyor ve kullanıcıya İLK görünen alan başlıktır. Sayı
+      denetimi (bulgulariDogrula) başlığı ve açıklamayı birleştirip
+      tarıyordu; iki denetim aynı çıktının farklı kısmına bakıyordu.
+    */
     assert.equal(
-      kunyeIzi([{ tur: "oneri", baslik: "Strateji", aciklama: "Anahtar kelimeleri İngilizce de deneyin." }]),
+      kunyeIzi(sonuc([{ tur: "oneri", baslik: "Şahin, A. (2021) taraması", aciklama: "Anahtar kelimeleri genişletin." }])),
+      true,
+    );
+  });
+
+  test("ARAMA DİZESİNDEKİ künye de yakalanır", () => {
+    /*
+      Gerileme: arama dizeleri hiç taranmıyordu. Kullanıcı bunları veri
+      tabanına yapıştırıyor; künye biçiminde bir dize, olmayan bir çalışmayı
+      varmış gibi gösterir. Sayı denetiminin buraya uygulanmama gerekçesi
+      ("2015..2025" meşru bir yıl filtresi) künyeye geçmiyor.
+    */
+    assert.equal(
+      kunyeIzi(sonuc([{ tur: "oneri", baslik: "Strateji", aciklama: "Genişletin." }], ['"Yıldırım, S. (2020)"'])),
+      true,
+    );
+  });
+
+  test("meşru strateji ve arama dizeleri yanlış alarm üretmiyor", () => {
+    // Yanlış alarm burada özellikle pahalı: kusursuz bir tarama stratejisi
+    // düşerse kullanıcı aracı kullanmayı bırakır.
+    assert.equal(
+      kunyeIzi(
+        sonuc([{ tur: "oneri", baslik: "Strateji", aciklama: "Anahtar kelimeleri İngilizce de deneyin." }], [
+          '("öğrenme ortamı" OR "learning environment") AND 2015..2025',
+          'TI=(motivasyon) AND AU=(Yılmaz)',
+          '"blended learning" AND TR',
+        ]),
+      ),
       false,
     );
+  });
+
+  test("bulgu ve arama yoksa alarm yok", () => {
+    assert.equal(kunyeIzi(sonuc([], [])), false);
   });
 });

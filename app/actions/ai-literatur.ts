@@ -104,11 +104,14 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
 
     /*
       İki ayrı koruma. Künye izi: modelin en zararlı hatası uydurma kaynak
-      önermek; istemde yasak ama kodda da bakılır. Sayı denetimi yalnızca
-      bulgulara uygulanır — arama dizesindeki "2015..2025" meşru bir yıl
-      filtresidir, bağlamda geçmez ve kullanıcı çalıştırmadan önce görür.
+      önermek; istemde yasak ama kodda da bakılır. Bulgunun BAŞLIĞI ve
+      açıklaması ile arama dizelerinin hepsi taranır. Sayı denetimi ise
+      yalnızca bulgulara uygulanır — arama dizesindeki "2015..2025" meşru
+      bir yıl filtresidir, bağlamda geçmez ve kullanıcı çalıştırmadan önce
+      görür. Künyede bu gerekçe yok: arama dizesinde APA künye biçimi,
+      olmayan bir çalışmayı varmış gibi göstermektir.
     */
-    if (kunyeIzi(bulgular)) {
+    if (kunyeIzi({ bulgular, aramalar })) {
       console.error("[ai] literatür yanıtı künye içeriyor", { model: yanit.model });
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "rejected", redNedeni: "kunye", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
       return {

@@ -120,6 +120,26 @@ export function taramaCozumle(ham: string): LiteraturSonucu {
  * Regex lib/ai/bulgu.ts'te: belge geri bildirimi de aynı kontrolü düz metin
  * üzerinde yapıyor, iki kopya ilk düzeltmede ayrışırdı.
  */
-export function kunyeIzi(bulgular: Bulgu[]): boolean {
-  return bulgular.some((bulgu) => kunyeIziMetinde(bulgu.aciklama));
+export function kunyeIzi(sonuc: LiteraturSonucu): boolean {
+  /*
+    Yalnızca `aciklama` taranıyordu. İki alan açıkta kalmıştı:
+
+    BAŞLIK — 60 karaktere kadar serbest metin ve "Şahin, A. (2021)" 16
+    karakter. Başlığa yazılmış bir künye denetimden hiç geçmiyordu, oysa
+    kullanıcıya ilk görünen alan başlıktır. Sayı denetimi (bulgulariDogrula)
+    başlığı ve açıklamayı birleştirip tarıyor; iki denetim aynı çıktının
+    farklı kısmına bakıyordu.
+
+    ARAMA DİZELERİ — kullanıcı bunları veri tabanına yapıştırıyor. Sayı
+    denetimi buraya bilerek uygulanmıyor ("2015..2025" meşru bir yıl
+    filtresi) ama o gerekçe künyeye geçmez: arama dizesinde APA künye
+    biçimi, olmayan bir çalışmayı varmış gibi göstermektir.
+
+    Yanlış alarm riski düşük: desen "Soyad, A. (2020)" biçimini istiyor,
+    hiçbir arama sözdizimi böyle yazılmıyor.
+  */
+  return (
+    sonuc.bulgular.some((bulgu) => kunyeIziMetinde(`${bulgu.baslik} ${bulgu.aciklama}`)) ||
+    sonuc.aramalar.some(kunyeIziMetinde)
+  );
 }

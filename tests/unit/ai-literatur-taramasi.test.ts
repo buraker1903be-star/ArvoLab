@@ -79,14 +79,20 @@ describe("yanıt çözümleme", () => {
 describe("künye izi", () => {
   test("APA künyesi biçimindeki metin yakalanır", () => {
     assert.equal(
-      kunyeIzi([{ tur: "oneri", baslik: "Kaynak", aciklama: "Şu çalışmaya bakın: Yıldırım, S. (2020). Öğrenme ortamları." }]),
+      kunyeIzi({
+        bulgular: [{ tur: "oneri", baslik: "Kaynak", aciklama: "Şu çalışmaya bakın: Yıldırım, S. (2020). Öğrenme ortamları." }],
+        aramalar: [],
+      }),
       true,
     );
   });
 
   test("alan adıyla konuşan bulgu temizdir", () => {
     assert.equal(
-      kunyeIzi([{ tur: "oneri", baslik: "Ölçek kaynağı", aciklama: "Özyeterlik ölçeğinin özgün kaynağı listede görünmüyor." }]),
+      kunyeIzi({
+        bulgular: [{ tur: "oneri", baslik: "Ölçek kaynağı", aciklama: "Özyeterlik ölçeğinin özgün kaynağı listede görünmüyor." }],
+        aramalar: [],
+      }),
       false,
     );
   });

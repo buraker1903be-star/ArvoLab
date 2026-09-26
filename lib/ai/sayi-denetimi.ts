@@ -8,9 +8,9 @@
   geçen her sayı, kullanıcının verdiği girdide de geçmek zorunda; geçmiyorsa
   cevap kullanıcıya gösterilmez.
 
-  Serbest bırakılanlar: yıl benzeri büyük tam sayılar değil, yalnızca
-  akademik metinde kaçınılmaz olan eşikler (.05, .01, .001) ve madde
-  numaraları (1., 2.) gibi tek haneli sıra sayıları.
+  Serbest bırakılan değerler ve BEDELİ aşağıda (SERBEST): yalnızca eşikler
+  ve madde numaraları değil, "95" ile "100" de listede. Bu bilinçli bir
+  denge ve bedeli var — aşağıda tek tek yazılı.
 */
 
 /*
@@ -56,7 +56,30 @@ function normalize(ham: string): string {
   return (eksi ? "-" : "") + (kisa === "" ? "0" : kisa);
 }
 
-/** Her metinde geçebilecek, girdide aranmayan değerler. */
+/*
+  Girdide aranmayan değerler ve her birinin gerekçesi:
+
+    .05 .01 .001  anlamlılık eşikleri. Her istatistik yorumunda geçer ve
+                  kullanıcının çıktısında yazılı olmak zorunda değil.
+    0 1 2 3 4 5   madde numarası ("1. …"), grup/koşul sayısı, tek haneli
+                  sıra sayıları. -1 ise korelasyon alt sınırı.
+    95            "%95 güven aralığı". Kullanıcı yalnızca "t(28) = 2.45,
+                  p = .021" yapıştırdığında girdide 95 GEÇMEZ; serbest
+                  olmasaydı standart bir güven aralığı cümlesi cevabın
+                  tamamını düşürürdü.
+    100           yüzde tabanı ("katılımcıların %100'ü", "100 üzerinden").
+
+  BEDELİ açıkça: bu değerlerle kurulmuş bir UYDURMA kaçar. "Katılımcıların
+  %95'i kadındır" ya da "100 katılımcıyla yapıldı" cümlesi, girdide 95/100
+  geçmese bile denetimden geçer. Daraltmanın yolu bağlama bakmak olurdu
+  ("%95 güven aralığı" serbest, "%95'i kadındır" değil) ama iki cümle de
+  yüzde işareti taşıyor; ayırt edecek güvenilir bir desen yok ve yanlış
+  alarm kaçırılan uydurmadan sinsidir (AGENTS.md) — kullanıcı doğru çalışan
+  aracı kullanmayı bırakır.
+
+  Bu yüzden denge burada duruyor; değiştirilecekse gerekçesi bu paragrafın
+  yerine yazılmalı. tests/unit/ai-sayi-denetimi.test.ts bedeli de sabitliyor.
+*/
 const SERBEST = new Set(["0", "1", "2", "3", "4", "5", ".05", ".01", ".001", "100", "95", "-1"]);
 
 /**
