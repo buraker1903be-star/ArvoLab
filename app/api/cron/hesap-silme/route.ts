@@ -61,6 +61,12 @@ export async function GET(request: Request) {
   let silinen = 0;
   let ertelenen = 0;
 
+  /*
+    tuzak-tamam: silinen/ertelenen bir NÜFUS ölçmüyor, BU TURDA ne
+    yapıldığını raporluyor. TEK_SEFERDE bilinçli parti büyüklüğü; sıraya
+    girmeyen talep kaybolmuyor, silme_talebi_at durduğu için bir sonraki
+    turda yeniden aday oluyor.
+  */
   for (const aday of adaylar) {
     /*
       Süre sorguda da elenmişti; burada bir kez daha bakılıyor. Sunucu saati

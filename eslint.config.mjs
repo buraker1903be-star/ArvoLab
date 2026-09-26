@@ -5,5 +5,6 @@ import nextTs from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  // tests/fixtures: check-rakamlar'ın örnek ağacı — bilerek hatalı kod içerir.
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "tests/fixtures/**"]),
 ]);

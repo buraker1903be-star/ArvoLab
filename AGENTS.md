@@ -109,8 +109,23 @@ olduğunu sabitler; RLS politikasında kullanılan yardımcılar açık kalır.
 ## Kontroller
 
 `npx tsc --noEmit`, `npm run lint`, `npm run check:css`,
-`npm run check:migrations`, `npm run test:unit`, `npm run test:db` — altısı da CI'da
-(`.github/workflows/ci.yml`) çalışır. Derleme CI'da yapılmaz, Vercel tarafında.
+`npm run check:migrations`, `npm run check:rakamlar`, `npm run test:unit`,
+`npm run test:db` — yedisi de CI'da (`.github/workflows/ci.yml`) çalışır.
+Derleme CI'da yapılmaz, Vercel tarafında.
+
+**Rakam denetimi** (`npm run check:rakamlar`): ekrandaki sayıların iki
+bilinen yanlış kaynağını arar. Birincisi `.limit()` ile sınırlı bir
+sorgudan sayı çıkarmak — `.reduce()` ile toplamak, döngüde `+=` ile
+biriktirmek ya da `.filter(…).length` ile saymak. Sınıra ulaşılana kadar
+hiçbir belirti vermez; 26.09.2026'da `ai_assistant_runs` üzerinde iki kez
+çıktı (ince ayar dışa aktarımı ve model karşılaştırması, ikisi de
+`.limit(5000)` ve sıralamasız). İkincisi tuzak sütun: `extracted_rules`
+kılavuzun ÇALIŞMA HÂLİNDEKİ kuralları, öğrencinin editörüne inen sürüm
+`approved_snapshot` içindedir (`lib/guideline-rules.ts`). Bilerek
+kullanıyorsanız satıra ya da üstündeki yorum bloğuna `tuzak-tamam: <sebep>`
+yazın — sebebi yazmak, denetimi susturmanın bedeli. Denetimin kendisi
+`tests/unit/check-rakamlar.test.ts` ile sınanır: kör kalan bir denetim,
+denetlediği hatadan farksızdır.
 
 ## Stil
 

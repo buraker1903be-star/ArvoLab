@@ -49,6 +49,12 @@ export async function GET(request: Request) {
   let gonderilen = 0;
   let vazgecilen = 0;
 
+  /*
+    tuzak-tamam: gonderilen/vazgecilen bir NÜFUS ölçmüyor, BU TURDA ne
+    yapıldığını raporluyor. TEK_SEFERDE bilinçli parti büyüklüğü; sıraya
+    girmeyen aday kaybolmuyor, deneme_hatirlatildi_at hâlâ boş olduğu için
+    bir sonraki turda yeniden aday oluyor.
+  */
   for (const aday of adaylar) {
     const { data: kullanici } = await admin.auth.admin.getUserById(aday.userId);
     const eposta = kullanici?.user?.email;

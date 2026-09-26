@@ -33,6 +33,8 @@ jobs:
         run: npm run check:css
       - name: Migration denetimi
         run: npm run check:migrations
+      - name: Rakam denetimi
+        run: npm run check:rakamlar
       - name: Birim testleri
         run: npm run test:unit
       - name: Veritabanı testleri
