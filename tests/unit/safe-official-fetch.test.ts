@@ -14,7 +14,7 @@
 */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { isPrivateAddress } from "@/lib/safe-official-fetch";
+import { isPrivateAddress, resmiAdresBicimi } from "@/lib/safe-official-fetch";
 
 const engellenmeli = (adres: string, not: string) =>
   assert.equal(isPrivateAddress(adres), true, `Engellenmeliydi (${not}): ${adres}`);
@@ -84,5 +84,66 @@ describe("SSRF adres süzgeci · IPv6", () => {
     // "2001:ffff::1" eşlemeli DEĞİL; ffff'ten önce sıfır olmayan grup var.
     gecmeli("2001:ffff::1", "genel IPv6");
     gecmeli("2a00:1450:4001:80e::200e", "genel IPv6");
+  });
+});
+
+/*
+  Süzgecin İLK hattı: adresin biçimi. Ad çözümlemesinden önce çalışıyor ve
+  testsizdi — oysa kapattığı yollar klasik SSRF/oltalama biçimleri.
+*/
+describe("resmî adres biçimi", () => {
+  const gecerli = (adres: string, not: string) =>
+    assert.doesNotThrow(() => resmiAdresBicimi(adres), `Geçmeliydi (${not}): ${adres}`);
+  const reddedilmeli = (adres: string, desen: RegExp, not: string) =>
+    assert.throws(() => resmiAdresBicimi(adres), desen, `Reddedilmeliydi (${not}): ${adres}`);
+
+  test("resmî .edu.tr adresleri geçiyor", () => {
+    gecerli("https://fbe.erciyes.edu.tr/Dosya/kilavuz.pdf", "alt alan adı");
+    gecerli("https://edu.tr/x.pdf", "kök alan adı");
+    gecerli("https://FBE.ERCIYES.EDU.TR/x.pdf", "büyük harf");
+    gecerli("https://x.edu.tr:443/a.pdf", "açık 443");
+    gecerli("https://x.edu.tr/a%20b.pdf?v=1#k", "kaçışlı yol, sorgu, çapa");
+  });
+
+  test("sondaki nokta süzgeci atlatmıyor", () => {
+    // "x.edu.tr." geçerli bir FQDN ve aynı adı çözer; kırpılmazsa
+    // endsWith(".edu.tr") eşleşmez ve denetim boşa çıkardı.
+    gecerli("https://x.edu.tr./a.pdf", "FQDN biçimi");
+    reddedilmeli("https://baskasi.com./a.pdf", /\.edu\.tr/, "nokta kırpılınca da .edu.tr değil");
+  });
+
+  test("kimlik bilgisiyle gizlenen makine adı reddediliyor", () => {
+    /*
+      Klasik oltalama biçimi: ham metinde ".edu.tr" GEÇİYOR ama gerçek
+      makine adı başkası. url.hostname doğruyu söylüyor, ayrıca kimlik
+      bilgisi zaten reddediliyor — iki kat kapalı.
+    */
+    reddedilmeli("https://x.edu.tr@baskasi.com/a.pdf", /HTTPS/, "kullanıcı adı olarak .edu.tr");
+    reddedilmeli("https://kullanici:sifre@x.edu.tr/a.pdf", /HTTPS/, "kimlik bilgisi");
+    reddedilmeli("https://x.edu.tr:sifre@baskasi.com/a.pdf", /HTTPS/, "kullanıcı+şifre");
+  });
+
+  test("şema ve port kısıtı", () => {
+    reddedilmeli("http://x.edu.tr/a.pdf", /HTTPS/, "şifrelenmemiş");
+    reddedilmeli("file:///etc/passwd", /HTTPS/, "yerel dosya");
+    reddedilmeli("ftp://x.edu.tr/a.pdf", /HTTPS/, "ftp");
+    reddedilmeli("https://x.edu.tr:8080/a.pdf", /HTTPS/, "standart olmayan port");
+    // İç servisler sık sık yüksek portlarda duruyor; 443 dışı kapalı.
+    reddedilmeli("https://x.edu.tr:9200/a.pdf", /HTTPS/, "Elasticsearch portu");
+  });
+
+  test("benzeyen alan adları reddediliyor", () => {
+    reddedilmeli("https://baskasi.com/a.pdf", /\.edu\.tr/, "ilgisiz");
+    reddedilmeli("https://x.edu.tr.baskasi.com/a.pdf", /\.edu\.tr/, "sonek gibi görünen ön ek");
+    reddedilmeli("https://xedu.tr/a.pdf", /\.edu\.tr/, "nokta yok");
+    reddedilmeli("https://edu.tr.com/a.pdf", /\.edu\.tr/, "başka TLD");
+    reddedilmeli("https://notedu.tr/a.pdf", /\.edu\.tr/, "bitişik ad");
+  });
+
+  test("IP ile doğrudan erişim reddediliyor", () => {
+    // Ad çözümlemesine hiç gelmeden düşer: makine adı .edu.tr değil.
+    reddedilmeli("https://127.0.0.1/a.pdf", /\.edu\.tr/, "loopback");
+    reddedilmeli("https://169.254.169.254/latest/meta-data/", /\.edu\.tr/, "bulut metadata");
+    reddedilmeli("https://[::1]/a.pdf", /\.edu\.tr/, "IPv6 loopback");
   });
 });

@@ -61,8 +61,23 @@ export function isPrivateAddress(address: string): boolean {
     value.startsWith("fea") || value.startsWith("feb") || value.startsWith("ff");
 }
 
-async function assertOfficialUrl(rawUrl: string): Promise<URL> {
+/**
+ * Adresin BİÇİM denetimi: şema, kimlik bilgisi, port ve .edu.tr soneki.
+ * Ad çözümlemesi yapmaz, ağa hiç çıkmaz.
+ *
+ * Dışa aktarılıyor çünkü sınanabilmeli. Süzgecin ilk hattı burası ve
+ * testsizdi: sondaki noktayı kırpma (bir atlatma yolu: "x.edu.tr.") ve
+ * kimlik bilgisi reddi ("https://x.edu.tr@baskasi.com" — klasik oltalama
+ * biçimi; ham metinde .edu.tr GEÇİYOR ama makine adı başkası) gibi
+ * kararların gerileme testi yoktu.
+ */
+export function resmiAdresBicimi(rawUrl: string): URL {
   const url = new URL(rawUrl);
+  /*
+    Sondaki nokta kırpılır: "x.edu.tr." geçerli bir FQDN ve DNS'te aynı adı
+    çözer ama endsWith(".edu.tr") ile eşleşmez — kırpılmazsa süzgeci
+    atlatırdı.
+  */
   const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
   if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) {
     throw new Error("Kılavuz kaynağı standart HTTPS kullanmalıdır.");
@@ -70,6 +85,28 @@ async function assertOfficialUrl(rawUrl: string): Promise<URL> {
   if (!(hostname === "edu.tr" || hostname.endsWith(".edu.tr"))) {
     throw new Error("Otomatik tarama yalnızca resmî .edu.tr kaynaklarında çalışır.");
   }
+  return url;
+}
+
+/*
+  BİLİNEN SINIR — ad çözümlemesi iki kez yapılıyor.
+
+  Burada adres çözülüp IP'leri denetleniyor, ardından fetch adı KENDİSİ
+  yeniden çözüyor. Aradaki pencerede DNS farklı bir yanıt verirse (DNS
+  rebinding) denetim genel bir IP görür, istek iç ağa gidebilir.
+
+  Kapatmanın yolu çözülmüş IP'yi isteğe sabitlemek (undici Agent'ının
+  connect.lookup'ı); Node undici'yi dışa açmadığı için bu ayrı bir bağımlılık
+  ve kendi riskleri olan bir değişiklik demek. Şimdilik kabul edilen sebep:
+  saldırganın bir .edu.tr adının DNS'ini yönetmesi gerekiyor ve .edu.tr
+  nic.tr tarafından yalnızca yükseköğretim kurumlarına veriliyor — eşik "bir
+  üniversitenin ad sunucusunu ele geçirmek".
+
+  Değiştirilecekse gerekçesi bu paragrafın yerine yazılmalı.
+*/
+async function assertOfficialUrl(rawUrl: string): Promise<URL> {
+  const url = resmiAdresBicimi(rawUrl);
+  const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
 
   /*
     DNS çözümlemesinin zaman aşımı YOKTU ve iki sorgu ardışık çalışıyordu.
