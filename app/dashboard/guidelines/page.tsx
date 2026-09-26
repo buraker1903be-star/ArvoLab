@@ -72,6 +72,35 @@ export default async function GuidelinesPage() {
       Boolean(g.organization_id) &&
       g.organization_id === profile?.organization_id);
 
+  /*
+    AYNI DÜZEYDE birden çok onaylı kılavuz.
+
+    26.09.2026 toplu onayında iki üniversitede ikişer üniversite geneli
+    kayıt çıktı (Adıyaman, Burdur). Biri sessizce kazanıyor ve öğrencinin
+    editörüne onun kuralları iniyor — Burdur'da bunlar iki AYRI enstitünün
+    (Fen ve Eğitim Bilimleri) kılavuzuydu, yani biri bütün üniversiteye
+    yanlış kural dayatıyordu.
+
+    Seçim 20260926131150'den beri kararlı ama bu yalnızca "hep aynısı"
+    demek, "doğrusu" demek değil. Karar insanın: satırda görünsün.
+
+    Ölçüt BİRİM DÜZEYİ: bölüm ya da enstitüye bağlı kayıtlar birbiriyle
+    çakışmaz, doğru olan onlardır. Kapsam da ayrı tutuluyor (ortak katalog
+    ile kurumun kendi kılavuzu bilerek yan yana durabilir).
+  */
+  const ayniDuzeyAnahtari = (g: (typeof guidelines)[number]) =>
+    `${g.university_id ?? ""}|${g.organization_id ?? ""}`;
+  const cakisanDuzeyler = new Map<string, number>();
+  for (const g of guidelines) {
+    if (g.analysis_status !== "approved" || g.academic_unit_id || !g.university_id) continue;
+    const anahtar = ayniDuzeyAnahtari(g);
+    cakisanDuzeyler.set(anahtar, (cakisanDuzeyler.get(anahtar) ?? 0) + 1);
+  }
+  const cakisanSayisi = (g: (typeof guidelines)[number]) =>
+    g.analysis_status === "approved" && !g.academic_unit_id && g.university_id
+      ? cakisanDuzeyler.get(ayniDuzeyAnahtari(g)) ?? 0
+      : 0;
+
   const bekleyenler = guidelines.filter((g) => g.analysis_status !== "approved");
   /* Kuyruk yalnızca ELİNDEN GELENİ sayıyor; gerisi gizlenmiyor, ayrıca yazılıyor. */
   const benimBekleyenlerim = bekleyenler.filter(yazabilir);
@@ -442,6 +471,11 @@ export default async function GuidelinesPage() {
                         <span className="status-pill" data-tone="warning">Kaynakta yeni sürüm</span>
                       ) : null}
                       {/* Gürültülü metin: kurallar belgeyle karşılaştırılmalı. */}
+                      {cakisanSayisi(g) > 1 ? (
+                        <span className="status-pill" data-tone="warning">
+                          Aynı üniversitede {cakisanSayisi(g)} onaylı genel kılavuz
+                        </span>
+                      ) : null}
                       {g.ai_analysis?.ocrUsed ? (
                         <span className="status-pill" data-tone="warning">OCR ile okundu</span>
                       ) : null}

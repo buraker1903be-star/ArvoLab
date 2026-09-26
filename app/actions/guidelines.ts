@@ -30,6 +30,9 @@ export interface ThesisGuideline {
   ready_for_approval: boolean;
   /* NULL = genel/kürasyonlu kayıt; yalnızca iç ekip düzenler (20260924100033). */
   organization_id: string | null;
+  /* Aynı düzeyde birden çok onaylı kayıt uyarısı için (bkz. kılavuz ekranı). */
+  university_id: string | null;
+  academic_unit_id: string | null;
   /*
     Otomatik çıkarımın kendisi. Eskiden bu alan hiç okunmuyordu: yönetici
     güven puanını, uyarıları ve metin önizlemesini göremeden "Onayla"ya
@@ -152,7 +155,7 @@ export async function getGuidelines(): Promise<ListeSonucu<ThesisGuideline>> {
   const { data, error } = await supabase
     .from("thesis_guidelines")
     .select(
-      "id, university_name, institute_name, version_label, source_url, citation_style, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at, analysis_status, review_notes, extracted_rules, ready_for_approval, ai_analysis, organization_id"
+      "id, university_name, institute_name, version_label, source_url, citation_style, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at, analysis_status, review_notes, extracted_rules, ready_for_approval, ai_analysis, organization_id, university_id, academic_unit_id"
     )
     .order("university_name", { ascending: true });
 
