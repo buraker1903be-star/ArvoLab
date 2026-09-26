@@ -188,7 +188,18 @@ export async function GET(request: Request) {
       const eskiSurum = Number((guideline.ai_analysis as { scannerVersion?: unknown } | null)?.scannerVersion ?? 0);
       const surumEskimis = eskiSurum < TARAYICI_SURUMU;
       const citationStyle = scan.detectedCitationHint?.toLowerCase().replace(" ", "") ?? null;
-      const readyForApproval = scan.confidence >= 0.9 && scan.suggestedSections.length >= 4 && Boolean(citationStyle);
+      /*
+        Ölçüt veritabanındaki tetikleyiciyle (set_thesis_guideline_ready)
+        AYNI olmalı: buradaki değer yöneticinin gördüğü nota ve cron'un
+        raporuna giriyor, rozeti ise tetikleyici veriyor. OCR koşulu
+        20260926135648'de tetikleyiciye eklendi; burada eksik kalsaydı not
+        "tek adım onay bekliyor" derken listede rozet çıkmazdı.
+      */
+      const readyForApproval =
+        scan.confidence >= 0.9
+        && scan.suggestedSections.length >= 4
+        && Boolean(citationStyle)
+        && !scan.ocrKullanildi;
       const detectedAt = new Date().toISOString();
       const analysis = {
         scannerVersion: TARAYICI_SURUMU,
