@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Cpu, Download, KeyRound, Save, Sparkles, Trash2, UserRound } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
-import { aiKurulumu, aiYapilandirildi } from "@/lib/ai/saglayici";
+import { aiKurulumu, aiKurulumSorunu } from "@/lib/ai/saglayici";
 import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
 import { KREDI_SATIN_ALMA_ADRESI } from "@/lib/ai/kredi-karari";
 import { getAccessState } from "@/lib/access";
@@ -236,9 +236,16 @@ export default async function SettingsPage() {
           <dl className="ai-kurulum">
             <div><dt>Sunucu</dt><dd>{sunucu}</dd></div>
             <div><dt>Model</dt><dd>{kurulum.model}</dd></div>
+            {/*
+              Durum yerine SEBEP yazılıyor: "tanımsız — asistan kapalı"
+              yöneticiyi anahtara baktırıyordu, oysa sorun adresin
+              okunamaması da olabiliyor (şemasız adres, kaçak boşluk).
+              Yöneticinin baktığı yer burası; düzeltmesi gereken değişkenin
+              adı da burada geçmeli.
+            */}
             <div>
-              <dt>Anahtar</dt>
-              <dd>{aiYapilandirildi() ? "tanımlı" : "tanımsız — asistan kapalı"}</dd>
+              <dt>Durum</dt>
+              <dd>{aiKurulumSorunu() ?? "asistan açık"}</dd>
             </div>
           </dl>
         </section>

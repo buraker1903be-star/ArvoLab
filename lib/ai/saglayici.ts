@@ -57,6 +57,32 @@ const VARSAYILAN_ZAMAN_ASIMI = 45_000;
 const tabanUrl = () =>
   (process.env.AI_TABAN_URL || process.env.OPENAI_TABAN_URL || VARSAYILAN_TABAN_URL).replace(/\/+$/, "");
 
+/*
+  Adres GÜVENLİ ayrıştırılır: new URL bozuk değerde fırlatıyor ve bu,
+  asistanın kapısını da (aiYapilandirildi) tel biçimi seçimini de (bicim)
+  çökertiyordu — yani "özellik kapalı, sebebi şu" mesajı hiç görünmüyor,
+  kullanıcıya anlamsız bir sunucu hatası çıkıyordu.
+
+  Gerçekten olan değerler: ortam değişkenine kaçan tek bir boşluk (" ") ve
+  ŞEMASIZ adres ("10.0.0.5:11434/v1", "api.openai.com/v1") — ikincisi kendi
+  sunucusunu tanımlayan yöneticinin en olası hatası.
+
+  Şema kendiliğinden EKLENMİYOR. http mu https mi olduğunu tahmin etmek,
+  anahtarı şifrelenmemiş bağlantıya gönderme riski taşır; doğrusu yöneticiye
+  neyin eksik olduğunu söylemek (aiKurulumSorunu).
+
+  Makine adı boş olan adres de bozuk sayılır: "localhost:11434" ayrıştırılıyor
+  ama "localhost:" protokol olarak okunuyor ve ortada makine kalmıyor.
+*/
+function aiAdresi(): URL | null {
+  try {
+    const adres = new URL(tabanUrl());
+    return adres.hostname ? adres : null;
+  } catch {
+    return null;
+  }
+}
+
 const anahtar = () => process.env.AI_ANAHTAR || process.env.OPENAI_API_KEY || "";
 
 const YETENEK_DEGISKENI: Record<YetenekAdi, string> = {
@@ -80,7 +106,8 @@ export function bicim(): Bicim {
   if (secilen === "anthropic" || secilen === "openai") return secilen;
   // Son çapa şart: "anthropic.com.baskasi.net" Anthropic değildir ve
   // anahtarı onun başlık biçiminde göndermek yanlış sunucuya güven demekti.
-  return /(^|\.)anthropic\.com$/.test(new URL(tabanUrl()).hostname) ? "anthropic" : "openai";
+  // Adres bozuksa varsayılan biçim; istek zaten kapıdan geçemiyor.
+  return /(^|\.)anthropic\.com$/.test(aiAdresi()?.hostname ?? "") ? "anthropic" : "openai";
 }
 
 /*
@@ -89,8 +116,8 @@ export function bicim(): Bicim {
   sayılır.
 */
 const kendiSunucu = () => {
-  const makine = new URL(tabanUrl()).hostname;
-  return !/(^|\.)(openai\.com|anthropic\.com)$/.test(makine);
+  const makine = aiAdresi()?.hostname;
+  return Boolean(makine) && !/(^|\.)(openai\.com|anthropic\.com)$/.test(makine!);
 };
 
 /**
@@ -98,7 +125,25 @@ const kendiSunucu = () => {
  * aranmaz: yerel modeller genellikle anahtarsız çalışır ve anahtar şartı
  * koşmak özelliği sebepsiz kapatırdı.
  */
-export const aiYapilandirildi = () => kendiSunucu() || Boolean(anahtar());
+export const aiYapilandirildi = () => aiKurulumSorunu() === null;
+
+/**
+ * Kurulumun neden çalışmadığı, yöneticinin düzeltebileceği biçimde. Sorun
+ * yoksa null.
+ *
+ * Tek bir "asistan kapalı" mesajı yetmiyordu: adres bozukken kullanıcıya
+ * "anahtar tanımlanmalı" deniyordu ve yönetici yanlış değişkene bakıyordu.
+ */
+export function aiKurulumSorunu(): string | null {
+  if (!aiAdresi()) {
+    return "Yapay zeka sunucusunun adresi okunamadı (AI_TABAN_URL). Adres şemayla yazılmalı: "
+      + "örn. http://10.0.0.5:11434/v1 ya da https://api.anthropic.com/v1.";
+  }
+  if (!kendiSunucu() && !anahtar()) {
+    return "Asistan bu kurulumda kapalı. Yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor (AI_ANAHTAR).";
+  }
+  return null;
+}
 
 /** Günlüklerde hangi kuruluma gittiğini görmek için; sır içermez. */
 export const aiKurulumu = () => ({ tabanUrl: tabanUrl(), model: process.env.AI_MODEL || process.env.OPENAI_MODEL || VARSAYILAN_MODEL });

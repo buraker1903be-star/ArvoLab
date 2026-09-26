@@ -1,10 +1,10 @@
 import { describe, test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { bicim, parametreDusur, yanitMetni, yetenekModeli } from "../../lib/ai/saglayici";
+import { aiKurulumSorunu, aiYapilandirildi, bicim, parametreDusur, yanitMetni, yetenekModeli } from "../../lib/ai/saglayici";
 
 const KAYITLI = { ...process.env };
 afterEach(() => {
-  for (const ad of ["AI_TABAN_URL", "AI_BICIM", "OPENAI_TABAN_URL", "AI_MODEL_LITERATUR", "AI_MODEL_ANALIZ"])
+  for (const ad of ["AI_TABAN_URL", "AI_BICIM", "OPENAI_TABAN_URL", "AI_MODEL_LITERATUR", "AI_MODEL_ANALIZ", "AI_ANAHTAR", "OPENAI_API_KEY"])
     delete process.env[ad];
   Object.assign(process.env, KAYITLI);
 });
@@ -105,5 +105,64 @@ describe("yeteneğe göre model", () => {
 
   test("yetenek verilmezse seçim yapılmaz", () => {
     assert.equal(yetenekModeli(), undefined);
+  });
+});
+
+describe("kurulum durumu", () => {
+  const kurulum = (tabanUrl?: string, anahtar?: string) => {
+    for (const ad of ["AI_TABAN_URL", "OPENAI_TABAN_URL", "AI_ANAHTAR", "OPENAI_API_KEY"]) delete process.env[ad];
+    if (tabanUrl !== undefined) process.env.AI_TABAN_URL = tabanUrl;
+    if (anahtar !== undefined) process.env.AI_ANAHTAR = anahtar;
+  };
+
+  test("kendi sunucusu anahtarsız çalışır", () => {
+    // Yerel modeller genellikle anahtarsız; şart koşmak özelliği sebepsiz kapatırdı.
+    kurulum("http://10.0.0.5:11434/v1");
+    assert.equal(aiKurulumSorunu(), null);
+    assert.equal(aiYapilandirildi(), true);
+  });
+
+  test("bulut sağlayıcı anahtar ister", () => {
+    kurulum("https://api.anthropic.com/v1");
+    assert.match(aiKurulumSorunu() ?? "", /AI_ANAHTAR/);
+    assert.equal(aiYapilandirildi(), false);
+    kurulum("https://api.anthropic.com/v1", "sk-test");
+    assert.equal(aiKurulumSorunu(), null);
+  });
+
+  test("BOZUK adres çökertmiyor, sebebini söylüyor", () => {
+    /*
+      Gerileme: adres new URL ile ayrıştırılıyordu ve bozuk değerde
+      FIRLATIYORDU. Kapı (aiYapilandirildi) ve tel biçimi seçimi (bicim)
+      birlikte çöküyor, yani "özellik kapalı, sebebi şu" mesajı hiç
+      görünmüyor ve kullanıcıya anlamsız bir sunucu hatası çıkıyordu.
+
+      Gerçekten olan değerler: ortam değişkenine kaçan tek bir boşluk ve
+      şemasız adres — ikincisi kendi sunucusunu tanımlayan yöneticinin en
+      olası hatası.
+    */
+    for (const bozuk of [" ", "http://", "10.0.0.5:11434/v1", "api.openai.com/v1", "localhost:11434"]) {
+      kurulum(bozuk, "sk-test");
+      const sorun = aiKurulumSorunu();
+      assert.match(sorun ?? "", /AI_TABAN_URL/, `${JSON.stringify(bozuk)} için sebep yazılmalı`);
+      assert.match(sorun ?? "", /şema/i, `${JSON.stringify(bozuk)}: nasıl düzeltileceği yazılmalı`);
+      assert.equal(aiYapilandirildi(), false, `${JSON.stringify(bozuk)} açık sayılmamalı`);
+      // Biçim seçimi de çökmemeli: varsayılana düşer.
+      assert.equal(bicim(), "openai", `${JSON.stringify(bozuk)}: bicim() çökmemeli`);
+    }
+  });
+
+  test("adresin başındaki ve sonundaki boşluk sorun değil", () => {
+    // new URL kırpıyor; bunu kaybetmek gereksiz bir arıza olurdu.
+    kurulum("  https://api.anthropic.com/v1  ", "sk-test");
+    assert.equal(aiKurulumSorunu(), null);
+    assert.equal(bicim(), "anthropic");
+  });
+
+  test("adres hiç verilmezse bulut varsayılanı ve anahtar şartı", () => {
+    kurulum();
+    assert.match(aiKurulumSorunu() ?? "", /AI_ANAHTAR/);
+    kurulum(undefined, "sk-test");
+    assert.equal(aiKurulumSorunu(), null);
   });
 });

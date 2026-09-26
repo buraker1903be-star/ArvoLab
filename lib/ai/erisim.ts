@@ -14,7 +14,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
-import { aiYapilandirildi } from "./saglayici";
+import { aiKurulumSorunu } from "./saglayici";
 import { krediKarari, type KrediKarari } from "./kredi-karari";
 
 export const SAATLIK_HAK = 20;
@@ -82,8 +82,10 @@ export async function asistanKapisi(): Promise<KapiSonucu> {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, hata: "Oturum bulunamadı." };
   if (await isSubscriptionBlocked()) return { ok: false, hata: SUBSCRIPTION_BLOCKED_MESSAGE };
-  if (!aiYapilandirildi())
-    return { ok: false, hata: "Asistan bu kurulumda kapalı. Yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor." };
+  /* Sebep kurulumdan geliyor: bozuk adresle "anahtar tanımlayın" demek
+     yöneticiyi yanlış değişkene bakmaya gönderiyordu. */
+  const kurulumSorunu = aiKurulumSorunu();
+  if (kurulumSorunu) return { ok: false, hata: kurulumSorunu };
 
   /*
     Kredi kapısı EN SONDA: önce oturum, abonelik ve kurulum. Kredi
