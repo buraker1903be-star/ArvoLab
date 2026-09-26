@@ -188,10 +188,38 @@ function detectedNumber(text: string, pattern: RegExp): number | undefined {
 
 function extractFormattingRules(text: string, sectionCount: number, hasCitation: boolean) {
   const compact = text.replace(/\s+/g, " ");
-  const margin = (label: string) => detectedNumber(
-    compact,
-    new RegExp(`(?:${label})(?:\\s+kenar(?:ından|ı)?|\\s+boşlu(?:ğu|k))?[^.;]{0,55}?(\\d{1,2}(?:[,.]\\d+)?)\\s*(?:cm|santimetre)`, "iu")
-  );
+  /*
+    Kenar boşluğu MAKUL ARALIKTA olmalı.
+
+    Canlıda Burdur Fen Bilimleri kılavuzundan "üst boşluk: 29,7 cm" çıktı ve
+    ONAYLANDI: A4'ün tam yüksekliği. Tarif metninde sayfa boyutu geçiyor
+    ("A4 · 21 × 29,7 cm") ve desen, etiketle sayı arasına 55 karaktere izin
+    verdiği için oraya uzanabiliyor. Uygulansaydı öğrencinin sayfasında
+    yazılacak alan kalmaz, teslim kontrolü de "Üst boşluk 29,7 cm olmalı"
+    derdi.
+
+    Aralık geniş tutuldu: Türkçe tez kılavuzlarında üst/sol 3–4 cm,
+    alt/sağ 2–2,5 cm tipik. 8 cm bol bir tavan; asıl iş sayfa ölçüsünü ve
+    başka birimden kaçak değerleri elemek.
+
+    Eleme SESSİZ DEĞİL: değer bulunup reddedildiyse uyarı yazılıyor, yoksa
+    yönetici "boşluk bulunamadı" ile "saçma boşluk bulundu"yu ayırt edemez.
+  */
+  const EN_AZ_BOSLUK = 0.5;
+  const EN_COK_BOSLUK = 8;
+  const elenenBoslular: string[] = [];
+  const margin = (label: string) => {
+    const deger = detectedNumber(
+      compact,
+      new RegExp(`(?:${label})(?:\\s+kenar(?:ından|ı)?|\\s+boşlu(?:ğu|k))?[^.;]{0,55}?(\\d{1,2}(?:[,.]\\d+)?)\\s*(?:cm|santimetre)`, "iu")
+    );
+    if (deger === undefined) return undefined;
+    if (deger < EN_AZ_BOSLUK || deger > EN_COK_BOSLUK) {
+      elenenBoslular.push(`${label.split("|")[0]}: ${deger} cm`);
+      return undefined;
+    }
+    return deger;
+  };
   const margins = {
     top: margin("üst|üstten"), bottom: margin("alt|alttan"),
     left: margin("sol|soldan"), right: margin("sağ|sağdan"),
@@ -216,6 +244,9 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
 
   const warnings: string[] = [];
   if (!indentCm && wantsIndent) warnings.push("Paragraf girintisi ölçüsü bulunamadı; 1,25 cm varsayıldı.");
+  if (elenenBoslular.length) {
+    warnings.push(`Makul olmayan kenar boşluğu değeri yok sayıldı (${elenenBoslular.join(", ")}); sayfa ölçüsüyle karışmış olabilir.`);
+  }
   if (Object.values(margins).some((value) => value === undefined)) warnings.push("Tüm kenar boşlukları açıkça bulunamadı.");
   if (!fontFamily) warnings.push("Yazı tipi açıkça bulunamadı.");
   if (!validFontSize) warnings.push("Geçerli yazı boyutu açıkça bulunamadı.");

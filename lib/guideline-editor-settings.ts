@@ -87,8 +87,21 @@ export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorS
     ? rules.font_family
     : undefined;
 
+  /*
+    Son savunma: ONAYLANMIŞ anlık görüntülerde de saçma boşluk olabilir.
+    Canlıda oldu — Burdur Fen Bilimleri kılavuzu "üst 29,7 cm" ile onaylandı
+    (A4'ün tam yüksekliği, sayfa ölçüsünden kaçmış). Tarayıcı artık böyle
+    bir değeri almıyor ama eski kayıtlar yeniden taranana kadar duruyor ve
+    onlar öğrencinin editörüne İNİYOR.
+
+    Aralık dışı tek bir değer bütün kümeyi düşürüyor: üçü doğru biri saçma
+    bir sayfa düzeni, hiç düzen olmamasından kötüdür.
+  */
+  const makulBosluk = (deger?: number) => deger !== undefined && deger >= 0.5 && deger <= 8;
+  const bosluklarMakul = [top, bottom, left, right].every(makulBosluk);
+
   return {
-    ...(top && bottom && left && right ? { margins: { top, bottom, left, right } } : {}),
+    ...(bosluklarMakul ? { margins: { top: top!, bottom: bottom!, left: left!, right: right! } } : {}),
     ...(typeof rules.show_page_numbers === "boolean"
       ? { showPageNumbers: rules.show_page_numbers }
       : typeof rules.page_numbers === "boolean"

@@ -164,3 +164,45 @@ describe("uygulanan kılavuz", () => {
     assert.equal(uygulanan?.settings.margins, undefined);
   });
 });
+
+describe("makul olmayan sayfa düzeni", () => {
+  /*
+    CANLIDA OLDU. Burdur Fen Bilimleri kılavuzu "üst boşluk: 29,7 cm" ile
+    onaylandı — A4'ün tam yüksekliği; tarayıcı sayfa ölçüsü tarifinden
+    ("A4 · 21 × 29,7 cm") üst boşluk sanmış. Uygulansaydı öğrencinin
+    sayfasında yazılacak alan kalmaz, teslim kontrolü de "Üst boşluk 29,7 cm
+    olmalı" derdi.
+
+    Tarayıcı artık böyle bir değeri almıyor ama ONAYLANMIŞ eski kayıtlar
+    yeniden taranana kadar duruyor; bu yüzden son savunma burada.
+  */
+  test("sayfa yüksekliği kadar boşluk editöre inmiyor", () => {
+    const uygulanan = appliedGuidelineFromRow(
+      satir({
+        approved_snapshot: {
+          ...ONAY,
+          extracted_rules: { ...TARAYICI_KURALLARI, margins_cm: { top: 29.7, left: 1, right: 2, bottom: 0.5 } },
+        },
+      }),
+    );
+    assert.equal(uygulanan?.settings.margins, undefined, "saçma boşluk kümesi uygulanmamalı");
+    // Diğer kurallar ayakta kalmalı: bir alan bozuk diye kılavuzun tamamı düşmez.
+    assert.equal(uygulanan?.settings.fontSizePt, 12);
+    assert.equal(uygulanan?.settings.lineSpacing, 1.5);
+  });
+
+  test("aralık dışı tek değer bütün kümeyi düşürüyor", () => {
+    /* Üçü doğru biri saçma bir sayfa düzeni, hiç düzen olmamasından kötü. */
+    const uygulanan = appliedGuidelineFromRow(
+      satir({
+        approved_snapshot: { ...ONAY, extracted_rules: { margins_cm: { top: 3, bottom: 2.5, left: 3.5, right: 0.1 } } },
+      }),
+    );
+    assert.equal(uygulanan?.settings.margins, undefined);
+  });
+
+  test("makul boşluklar geçmeye devam ediyor", () => {
+    const uygulanan = appliedGuidelineFromRow(satir());
+    assert.deepEqual(uygulanan?.settings.margins, { top: 3, bottom: 2.5, left: 3.5, right: 2 });
+  });
+});
