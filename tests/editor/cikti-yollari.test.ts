@@ -146,6 +146,102 @@ test("üç çıktı yolu aynı biçim kurallarını taşıyor", async (t) => {
   });
 });
 
+/* Metin işaretleri: blok öznitelikleriyle aynı hata sınıfı, ayrı yüzey. */
+const ISARETLER: { ad: string; marks: JsonNode["marks"]; editor: RegExp; yazdirma: RegExp; word: RegExp }[] = [
+  { ad: "bold", marks: [{ type: "bold" }], editor: /"strong"/, yazdirma: /<strong>/, word: /<w:b\/>/ },
+  { ad: "italic", marks: [{ type: "italic" }], editor: /"em"/, yazdirma: /<em>/, word: /<w:i\/>/ },
+  { ad: "underline", marks: [{ type: "underline" }], editor: /"u"/, yazdirma: /<u>/, word: /<w:u w:val="single"\/>/ },
+  { ad: "strike", marks: [{ type: "strike" }], editor: /"s"/, yazdirma: /<s>/, word: /<w:strike\/>/ },
+  {
+    // Dipnot işaretlerinin biçimi; kaybolursa dipnot numarası satır içinde kalır.
+    ad: "superscript",
+    marks: [{ type: "superscript" }],
+    editor: /"sup"/,
+    yazdirma: /<sup>/,
+    word: /w:vertAlign w:val="superscript"/,
+  },
+  { ad: "code", marks: [{ type: "code" }], editor: /"code"/, yazdirma: /<code>/, word: /Courier New/ },
+  {
+    ad: "link",
+    marks: [{ type: "link", attrs: { href: "https://x.edu.tr/a" } }],
+    editor: /"href":"https:\/\/x\.edu\.tr\/a"/,
+    yazdirma: /<a href="https:\/\/x\.edu\.tr\/a">/,
+    word: /w:rStyle w:val="Hyperlink"/,
+  },
+  {
+    ad: "fontFamily",
+    marks: [{ type: "textStyle", attrs: { fontFamily: "Arial" } }],
+    editor: /font-family:\s*Arial/,
+    yazdirma: /font-family:'Arial'/,
+    word: /w:rFonts w:ascii="Arial"/,
+  },
+  {
+    ad: "fontSize",
+    marks: [{ type: "textStyle", attrs: { fontSize: "14pt" } }],
+    editor: /font-size:\s*14pt/,
+    yazdirma: /font-size:14pt/,
+    // Word yarım punto sayıyor: 14pt = 28.
+    word: /<w:sz w:val="28"\/>/,
+  },
+  {
+    ad: "color",
+    marks: [{ type: "textStyle", attrs: { color: "#ff0000" } }],
+    editor: /color:\s*#ff0000/,
+    yazdirma: /color:#ff0000/,
+    word: /w:color w:val="ff0000"/,
+  },
+];
+
+const isaretliBelge = (marks: JsonNode["marks"]) => ({
+  type: "doc",
+  content: [{ type: "paragraph", content: [{ type: "text", text: "ornek", marks }] }] as JsonNode[],
+});
+
+/** Metin düğümünün işaretlerinin editörde çizilecek hâli. */
+function isaretCizimi(json: ReturnType<typeof isaretliBelge>): string {
+  const metin = editorSchema.nodeFromJSON(json).firstChild!.firstChild!;
+  return JSON.stringify(metin.marks.map((m) => editorSchema.marks[m.type.name].spec.toDOM?.(m, true) ?? null));
+}
+
+test("üç çıktı yolu aynı metin işaretlerini taşıyor", async (t) => {
+  const temiz = isaretliBelge([]);
+  const temizCikti = {
+    editör: isaretCizimi(temiz),
+    yazdırma: yazdirma(temiz as never),
+    Word: await wordParagrafi(temiz as never),
+  };
+
+  for (const olcu of ISARETLER) {
+    await t.test(olcu.ad, async () => {
+      const json = isaretliBelge(olcu.marks);
+      const cikti = {
+        editör: isaretCizimi(json),
+        yazdırma: yazdirma(json as never),
+        Word: await wordParagrafi(json as never),
+      };
+      for (const yol of ["editör", "yazdırma", "Word"] as const) {
+        assert.notEqual(
+          cikti[yol],
+          temizCikti[yol],
+          `${olcu.ad}: "${yol}" çıktısı değişmedi — bu yol işareti yok sayıyor`,
+        );
+      }
+      assert.match(cikti.editör, olcu.editor, `${olcu.ad}: editör çizimi`);
+      assert.match(cikti.yazdırma, olcu.yazdirma, `${olcu.ad}: yazdırma çıktısı`);
+      assert.match(cikti.Word, olcu.word, `${olcu.ad}: Word çıktısı`);
+    });
+  }
+
+  await t.test("iç içe işaretler birlikte taşınıyor", async () => {
+    // Kaynakçada dergi adı italik + cilt numarası düz gibi birleşimler sık.
+    const json = isaretliBelge([{ type: "bold" }, { type: "italic" }]);
+    assert.match(yazdirma(json as never), /<strong><em>|<em><strong>/);
+    const word = await wordParagrafi(json as never);
+    assert.match(word, /<w:b\/>/);
+    assert.match(word, /<w:i\/>/);
+  });
+});
+
 test("belge düzeyi seçenekler yazdırma ile Word arasında tutuyor", async (t) => {
   /*
     Bu iki seçenek editörde süsleme olarak gösteriliyor (belgeye yazılmıyor),
