@@ -4,6 +4,7 @@ import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe
 import { atifGecisleri, atifSistemiSec } from "@/lib/atif-sistemi";
 import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
 import { sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
+import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
 
 /**
  * Kılavuz Tarama Yardımcısı
@@ -53,12 +54,16 @@ const CANDIDATE_SECTIONS = [
     2 — atıf sistemi sayım/baskınlık ile seçiliyor (lib/atif-sistemi.ts)
     3 — taranmış PDF'ler OCR ile okunuyor (lib/ocr.ts); sürüm, yürürlük
         tarihi ve sayfa sınırı çıkarılıyor (lib/kilavuz-kunyesi.ts)
+    5 — yazı boyutu, satır aralığı ve paragraf girintisi gövde metninden
+        alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
+        14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
+        girinti 2 cm çıkmıştı (blok alıntının kuralı; gövdeninki 1 cm).
     4 — saçma kenar boşlukları yok sayılıyor. Canlıda Burdur Fen Bilimleri
         kılavuzu "üst 29,7 cm" ile onaylandı: A4'ün tam yüksekliği, sayfa
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 4;
+export const TARAYICI_SURUMU = 5;
 
 /**
  * Künye alanlarından YALNIZCA bulunanları içeren güncelleme yaması.
@@ -232,13 +237,24 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
     : /\barial\b/i.test(compact) ? "Arial"
     : /\bcalibri\b/i.test(compact) ? "Calibri"
     : /\bcambria\b/i.test(compact) ? "Cambria" : undefined;
-  const fontSizePt = detectedNumber(compact, /(\d{1,2}(?:[,.]\d+)?)\s*(?:punto|pt)\b/iu);
-  const lineSpacing = detectedNumber(compact, /(\d(?:[,.]\d+)?)\s*(?:satır\s+aralığı|satır\s+aralıklı)/iu);
-  const validFontSize = fontSizePt && fontSizePt >= 8 && fontSizePt <= 24 ? fontSizePt : undefined;
-  const validLineSpacing = lineSpacing && lineSpacing >= 1 && lineSpacing <= 3 ? lineSpacing : undefined;
-  // Paragraf girintisi: önce ölçü aranır, yoksa kural varlığına bakılır.
-  const indentMatch = PARAGRAPH_INDENT_CM.exec(compact);
-  const indentCm = validIndentCm(indentMatch?.[1] ?? indentMatch?.[2]);
+  /*
+    İlk eşleşme değil, GÖVDEDEN söz eden ilk eşleşme (lib/kilavuz-olcusu.ts).
+    Eskiden ilk eşleşme alınıyordu ve Adıyaman kılavuzunun "Ana bölüm
+    başlıkları … 14 punto, … metin kısmı 12 punto" cümlesinden gövde boyutu
+    14 çıkıyordu.
+  */
+  const gecerliPunto = (deger: number) => deger >= 8 && deger <= 24;
+  const gecerliAralik = (deger: number) => deger >= 1 && deger <= 3;
+  const validFontSize = govdeOlcusu(compact, /(\d{1,2}(?:[,.]\d+)?)\s*(?:punto|pt)\b/iu, gecerliPunto);
+  const validLineSpacing = govdeOlcusu(compact, /(\d(?:[,.]\d+)?)\s*(?:satır\s+aralığı|satır\s+aralıklı)/iu, gecerliAralik);
+  /*
+    Paragraf girintisi: önce gövdenin ölçüsü aranır, yoksa kural varlığına
+    bakılır. Eskiden ilk eşleşme alınıyordu ve Adıyaman kılavuzunda BLOK
+    ALINTI kuralı ("doğrudan alıntılar … soldan 2 cm içeriden") gövdenin
+    girintisi sanılıyordu; gerçek kural iki cümle sonra: "Her paragraf,
+    soldan 1 cm içeriden başlar".
+  */
+  const indentCm = validIndentCm(govdeOlcusu(compact, PARAGRAPH_INDENT_CM, (deger) => validIndentCm(deger) !== undefined));
   const wantsIndent = PARAGRAPH_INDENT.test(compact);
   const paragraphIndentRule = indentCm
     ? { paragraph_indent_cm: indentCm }
@@ -253,8 +269,8 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
   }
   if (Object.values(margins).some((value) => value === undefined)) warnings.push("Tüm kenar boşlukları açıkça bulunamadı.");
   if (!fontFamily) warnings.push("Yazı tipi açıkça bulunamadı.");
-  if (!validFontSize) warnings.push("Geçerli yazı boyutu açıkça bulunamadı.");
-  if (!validLineSpacing) warnings.push("Geçerli satır aralığı açıkça bulunamadı.");
+  if (!validFontSize) warnings.push("Gövde metninin yazı boyutu açıkça bulunamadı.");
+  if (!validLineSpacing) warnings.push("Gövde metninin satır aralığı açıkça bulunamadı.");
   if (sectionCount < 4) warnings.push("Yeterli sayıda zorunlu bölüm tespit edilemedi.");
   if (!hasCitation) warnings.push("Kaynakça sistemi açıkça bulunamadı.");
 
