@@ -66,12 +66,50 @@ function belongsToUniversity(scan: GuidelineScanResult, universityName: string) 
   budur. Bulunamayan üniversiteler için doğru çözüm, kılavuzun elle
   eklenmesidir — panelde "Yeni kılavuz" ile.
 */
-async function discoverCandidates(universityName: string): Promise<Candidate[]> {
-  const officialDomain = await resolveOfficialUniversityDomain(universityName).catch(() => null);
-  if (!officialDomain) return [];
+/*
+  Aday araması ve NEDEN sonuç vermediği.
+
+  İki adım da `.catch(() => [])` ile yutuluyordu ve başarısızlık kaydına tek
+  bir cümle düşüyordu: "0 resmî aday incelendi". Canlıda denenen 125
+  üniversitenin 100'ü tam bu notu taşıyor — yani hepsi aynı görünüyor ama
+  sebepleri farklı:
+
+    * YÖK dizininde ad eşleşmiyor (alan adı hiç çözülmedi),
+    * alan adı çözüldü ama tarama hata verdi (403, zaman aşımı, DNS),
+    * tarama çalıştı ve kılavuz bağlantısı bulamadı (yapısal sınır:
+      site haritası yok ya da HTML dönüyor, ana sayfa kılavuza bağlanmıyor).
+
+  Üçünün çaresi bambaşka. Ayırt edilmeden hangisinin üzerine gidileceğine
+  karar verilemiyordu; bu yüzden sebep artık kaydediliyor.
+*/
+type AdayAramasi = { adaylar: Candidate[]; sebep: string };
+
+async function discoverCandidates(universityName: string): Promise<AdayAramasi> {
+  let officialDomain: string | null = null;
+  try {
+    officialDomain = await resolveOfficialUniversityDomain(universityName);
+  } catch (sorun) {
+    const mesaj = sorun instanceof Error ? sorun.message : "bilinmeyen hata";
+    return { adaylar: [], sebep: `YÖK dizini okunamadı: ${mesaj}` };
+  }
+  if (!officialDomain) {
+    return { adaylar: [], sebep: "YÖK dizininde bu adla üniversite bulunamadı (alan adı çözülemedi)" };
+  }
+
   // Ana alan adı + enstitü alt alan adları (sbe., fbe., …)
-  const officialCandidates = await crawlUniversityAndInstitutes(officialDomain).catch(() => []);
-  return officialCandidates.slice(0, MAX_CANDIDATES_PER_UNIVERSITY);
+  try {
+    const officialCandidates = await crawlUniversityAndInstitutes(officialDomain);
+    const adaylar = officialCandidates.slice(0, MAX_CANDIDATES_PER_UNIVERSITY);
+    return {
+      adaylar,
+      sebep: adaylar.length
+        ? officialDomain
+        : `${officialDomain}: site haritası ve ana sayfalarda kılavuz bağlantısı bulunamadı`,
+    };
+  } catch (sorun) {
+    const mesaj = sorun instanceof Error ? sorun.message : "bilinmeyen hata";
+    return { adaylar: [], sebep: `${officialDomain} taranamadı: ${mesaj}` };
+  }
 }
 
 /**
@@ -129,7 +167,7 @@ export async function discoverGuidelinesForUniversity(university: University) {
   const admin = createAdminClient();
   const checkedAt = new Date().toISOString();
   try {
-    const candidates = await discoverCandidates(university.name);
+    const { adaylar: candidates, sebep: aramaSebebi } = await discoverCandidates(university.name);
 
     /*
       Eskiden ilk uygun adayda return ediliyordu: üniversite başına en fazla
@@ -254,7 +292,9 @@ export async function discoverGuidelinesForUniversity(university: University) {
     await admin.from("universities").update({
       guideline_discovery_checked_at: checkedAt,
       guideline_discovery_status: "not_found",
-      guideline_discovery_note: `${candidates.length} resmî aday incelendi${atlananlar.length ? `; atlananlar: ${atlananlar.slice(0, 3).join(", ")}` : ""}.`.slice(0, 500),
+      /* Sebep önce yazılıyor: 100 üniversitenin aynı cümleyi taşıması,
+         hangisinin üzerine gidileceğini görünmez kılıyordu. */
+      guideline_discovery_note: `${aramaSebebi}. ${candidates.length} resmî aday incelendi${atlananlar.length ? `; atlananlar: ${atlananlar.slice(0, 3).join(", ")}` : ""}.`.slice(0, 500),
     }).eq("id", university.id);
     return { status: "not_found" as const };
   } catch (error) {
