@@ -8,6 +8,14 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES, MANAGER_ROLES } from "@/lib/project-labels";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
+import {
+  olcuEtiketleri,
+  onerilebilirOlcu,
+  onerilenDeger,
+  yoneticiVarsayilanlari,
+  YONETICI_VARSAYILANI,
+  type OnerilenOlcu,
+} from "@/lib/kilavuz-onerisi";
 
 export interface ThesisGuideline {
   id: string;
@@ -504,6 +512,78 @@ export async function kilavuzAtifStiliniAyarla(guidelineId: string, formData: Fo
 
   revalidatePath("/dashboard/guidelines");
   return { success: true, message: `Atıf sistemi "${STIL_ETIKETLERI[citationStyle]}" olarak kaydedildi; şimdi onaylayabilirsiniz.` };
+}
+
+/*
+  Kılavuzun SÖYLEMEDİĞİ ölçüleri yöneticinin seçimiyle doldurur.
+
+  Tarayıcı bulamadığı ölçüyü artık yazmıyor (lib/kilavuz-olcusu.ts) ve
+  bu doğru: Amasya kılavuzu gövdenin satır aralığını hiç söylemiyor,
+  eskiden başlık aralığı oraya yazılıyordu. Ama boş alan da onaylanamaz
+  hâle geliyordu — yöneticinin tek satır aralığı için on alanlık
+  "Kuralları düzenle" penceresini geçerli hâle getirmesi gerekiyordu.
+
+  Değerler koda gömülü ama KURAL DEĞİL: yönetici tek tek seçmeden hiçbiri
+  yazılmaz ve yazılanlar kılavuzdan çıkarılmış gibi görünmez —
+  hangilerinin elle doldurulduğu kuralların içinde kalır ve panelde ayrı
+  gösterilir. Yeniden tarama kuralların tamamını değiştirdiği için iz de
+  kendiliğinden silinir; değer ve kaynağı hiç ayrışmaz.
+*/
+export async function kilavuzOlculeriniTamamla(guidelineId: string, formData: FormData): Promise<ActionResult> {
+  const auth = await requireRole(MANAGER_ROLES, "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir.");
+  if ("error" in auth) return { error: auth.error };
+  const { supabase } = auth;
+
+  const secilenler = formData.getAll("olcu").filter(onerilebilirOlcu);
+  if (!secilenler.length) return { error: "Hiçbir ölçü seçilmedi." };
+
+  const { data: kilavuz, error: okumaHatasi } = await supabase
+    .from("thesis_guidelines")
+    .select("id, analysis_status, extracted_rules")
+    .eq("id", guidelineId)
+    .single();
+  if (okumaHatasi || !kilavuz) return { error: "Kılavuz bulunamadı." };
+  /*
+    Onaylı kayda dokunulmaz: kurallar o anda öğrencinin editöründe.
+    Değişiklik önce onayın geri alınmasını gerektirir (approved_snapshot
+    orada temizleniyor), yoksa panelde görünen kuralla uygulanan kural
+    ayrışırdı.
+  */
+  if (kilavuz.analysis_status === "approved") {
+    return { error: "Onaylı kılavuzun ölçüleri değiştirilmez. Önce onayı geri alın." };
+  }
+
+  const mevcut = (kilavuz.extracted_rules ?? {}) as Record<string, unknown>;
+  const yeniKurallar: Record<string, unknown> = { ...mevcut };
+  for (const anahtar of secilenler) yeniKurallar[anahtar] = onerilenDeger(anahtar);
+  // Aynı alan ikinci kez seçilirse iz tekrarlanmasın.
+  const iz: OnerilenOlcu[] = [...new Set([...yoneticiVarsayilanlari(mevcut), ...secilenler])];
+  yeniKurallar[YONETICI_VARSAYILANI] = iz;
+
+  const etiketler = olcuEtiketleri(secilenler);
+  const { data, error } = await supabase
+    .from("thesis_guidelines")
+    .update({
+      extracted_rules: yeniKurallar,
+      analysis_status: "needs_review",
+      reviewed_by: null,
+      reviewed_at: null,
+      review_notes: `Kılavuzda bulunmayan ölçüler yönetici seçimiyle dolduruldu: ${etiketler}.`.slice(0, 1000),
+    })
+    .eq("id", guidelineId)
+    .neq("analysis_status", "approved")
+    .select("id");
+
+  if (error) {
+    console.error(error);
+    return { error: "Ölçüler kaydedilemedi." };
+  }
+  if (!data?.length) {
+    return { error: "Ölçüler kaydedilemedi. Ortak katalogdaki kılavuzları yalnızca Sistem Yöneticisi düzenleyebilir." };
+  }
+
+  revalidatePath("/dashboard/guidelines");
+  return { success: true, message: `${etiketler} yazıldı; şimdi onaylayabilirsiniz.` };
 }
 
 export async function approveGuideline(guidelineId: string) {

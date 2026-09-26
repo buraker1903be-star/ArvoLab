@@ -4,6 +4,7 @@ import {
   createGuideline,
   deleteGuideline,
   kilavuzAtifStiliniAyarla,
+  kilavuzOlculeriniTamamla,
   approveGuideline,
   kilavuzOnayiniGeriAl,
   updateGuidelineRules,
@@ -18,6 +19,7 @@ import BosDurum from "../_components/bos-durum";
 import PanelDrawer from "../_components/panel-drawer";
 import { statusTone } from "@/lib/status-tone";
 import CikarimOzeti from "./cikarim-ozeti";
+import OlcuOnerisi from "./olcu-onerisi";
 import { kilavuzuYenidenTara, universiteKilavuzuKesfet } from "@/app/actions/guideline-scan";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import { kilavuzlariTopluEkle, kilavuzlariTopluTara } from "@/app/actions/guideline-scan";
@@ -131,6 +133,11 @@ export default async function GuidelinesPage() {
   async function handleAtifStili(guidelineId: string, formData: FormData) {
     "use server";
     return kilavuzAtifStiliniAyarla(guidelineId, formData);
+  }
+
+  async function handleOlcuTamamla(guidelineId: string, formData: FormData) {
+    "use server";
+    return kilavuzOlculeriniTamamla(guidelineId, formData);
   }
 
   async function handleTopluTara() {
@@ -510,6 +517,20 @@ export default async function GuidelinesPage() {
 
                 {/* Yönetici neye dayanarak onayladığını görsün. */}
                 {canManage ? <CikarimOzeti cikarim={g.ai_analysis} kayitliStil={STIL_ETIKETLERI[g.citation_style] ?? g.citation_style} /> : null}
+
+                {/*
+                  Kılavuzun yazmadığı ölçüler. Onaylı kayıtta gösterilmez:
+                  kurallar o anda öğrencinin editöründe, değişiklik önce
+                  onayın geri alınmasını gerektiriyor.
+                */}
+                {canManage && g.analysis_status !== "approved" ? (
+                  <OlcuOnerisi
+                    kurallar={g.extracted_rules}
+                    kilavuzAdi={guidelineName}
+                    islem={handleOlcuTamamla.bind(null, g.id)}
+                    duzenlenebilir={yazabilir(g)}
+                  />
+                ) : null}
 
                 {canManage && !yazabilir(g) ? (
                   <p className="muted text-sm">

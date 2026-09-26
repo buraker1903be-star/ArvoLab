@@ -1339,6 +1339,31 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   white-space: pre-wrap;
 }
 
+/*
+  Kılavuzun söylemediği ölçüler için öneri kutusu. Uyarı tonunda DEĞİL:
+  burada bir hata yok, eksik bilgi var; kırmızı/sarı şerit yöneticiyi
+  belgeye şüpheyle baktırıyordu.
+*/
+.olcu-onerisi {
+  display: grid; gap: 8px;
+  margin-top: 8px; padding: 12px 14px;
+  border: 1px dashed var(--line); border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.olcu-onerisi-baslik {
+  display: flex; align-items: flex-start; gap: 6px;
+  margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); line-height: 1.5;
+}
+.olcu-onerisi-baslik svg { flex: none; margin-top: 2px; }
+.olcu-onerisi-iz { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); line-height: 1.5; }
+.olcu-onerisi-form { display: grid; gap: 10px; justify-items: start; }
+.olcu-onerisi-form fieldset { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+/* Onay kutusu metnin İLK satırıyla hizalı: gerekçe iki satıra düştüğünde ortalanıyordu. */
+.olcu-onerisi-secim { align-items: flex-start; }
+.olcu-onerisi-secim input { margin-top: 3px; }
+.olcu-onerisi-secim > span { display: grid; gap: 2px; }
+.olcu-onerisi-liste { display: grid; gap: 4px; margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: var(--fs-sm); }
+
 /* Asistan sunucusu kartı (Ayarlar, yalnızca iç ekip). Ortam değişkenleri
    girildiği halde hangisinin kullanıldığı hiçbir yerde görünmüyordu;
    anlamanın tek yolu ai_assistant_runs tablosuna SQL atmaktı. */
