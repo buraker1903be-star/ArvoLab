@@ -470,6 +470,17 @@ export default async function GuidelinesPage() {
                             ? "İnceleme gerekli"
                             : g.analysis_status}
                       </span>
+                      {/*
+                        Pasif kayıt panelde etkin olandan ayırt edilemiyordu:
+                        getGuidelines is_active'e bakmıyor, liste onu diğerleri
+                        gibi "İnceleme gerekli" diye gösteriyordu. Oysa gece
+                        taraması ve kılavuz eşleştirmesi (best_guideline_for)
+                        pasif kaydı atlıyor — yönetici bekleyen bir iş sanıp
+                        bekliyor, kayıt ise hiçbir zaman ilerlemiyor.
+                      */}
+                      {!g.is_active ? (
+                        <span className="status-pill" data-tone="danger">Pasif — taranmıyor, eşleştirilmiyor</span>
+                      ) : null}
                       {/* Kuyruktaki sıra: tek adım onaylanabilecekler ayrılır. */}
                       {g.ready_for_approval ? (
                         <span className="status-pill" data-tone="success">Tek adım onaya hazır</span>
