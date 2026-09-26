@@ -70,6 +70,38 @@ const CANDIDATE_SECTIONS = [
 export const TARAYICI_SURUMU = 6;
 
 /*
+  Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
+
+  Canlıda bekleyen 45 kaydın 8'i böyleydi: iki üniversitede enstitünün ANA
+  SAYFASI, birinde bir haber duyurusu, birinde form listesi sayfası,
+  birinde İngilizce yönetmelik, birinde "tez yazımında sıklıkla yapılan
+  hatalar" sunumu, birinde bir öğrencinin kapak ÖRNEĞİ, birinde danışman
+  kontrol formu. Hiçbirinde tarayıcı hatası yok — belge yanlış.
+
+  Panelde bunlar %0 güvenle ve "Yazı tipi açıkça bulunamadı", "Kaynakça
+  sistemi açıkça bulunamadı" uyarılarıyla görünüyordu. Yönetici kılavuzun
+  kötü yazıldığını sanıyor, oysa sorun adreste ve yapılacak iş bambaşka:
+  kuralları elle girmek değil, doğru belgeyi bulmak. OCR uyarısı da tam bu
+  yanılgı için eklenmişti.
+
+  Ölçüt bilerek dar: hiçbir biçim kuralı VE hiçbir zorunlu bölüm
+  çıkmamışsa. Gerçekten HTML olarak yayımlanmış bir kılavuzda ikisi de
+  çıkar; yanlış alarm yöneticiyi doğru belgeden şüphe ettirirdi.
+*/
+export function kilavuzDegilUyarisi(
+  confidence: number,
+  bolumSayisi: number,
+  contentType: string,
+): string | null {
+  if (confidence > 0 || bolumSayisi > 0) return null;
+  return contentType.toLowerCase().includes("html")
+    ? "Bu adres bir web sayfası ve içinden hiçbir biçim kuralı ya da zorunlu bölüm çıkarılamadı; "
+      + "büyük olasılıkla kılavuzun kendisi değil, ona bağlanan sayfa. Sayfadaki PDF/DOCX bağlantısını kaydedin."
+    : "Bu belgeden hiçbir biçim kuralı ya da zorunlu bölüm çıkarılamadı; adres bir tez yazım kılavuzuna "
+      + "işaret etmiyor olabilir (yönetmelik, form ya da örnek sayfa olabilir).";
+}
+
+/*
   Toplu taramada sıra.
 
   Eskiden tek ölçüt "kanıtı (citationMentions) hiç olmayanlar önce"ydi:
@@ -439,6 +471,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   const citationMentions = atifGecisleri(text);
   const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint));
   const sayfaSiniri = sayfaSiniriCikar(text);
+  const kilavuzDegil = kilavuzDegilUyarisi(formatting.confidence, suggestedSections.length, contentType);
 
   return {
     textPreview: text.slice(0, 4000),
@@ -461,6 +494,12 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
       kadar net olduğu yöneticiye söylenir; sessiz bir tahmin bırakılmaz.
     */
     warnings: [
+      /*
+        En başta: diğer bütün uyarıların SEBEBİ bu. "Yazı tipi
+        bulunamadı"yı okuyan yönetici belgeyi düzeltmeye çalışır, oysa
+        yapılacak iş doğru belgeyi bulmak.
+      */
+      ...(kilavuzDegil ? [kilavuzDegil] : []),
       ...formatting.warnings,
       ...(atifSecimi?.uyarilar ?? []),
       /*

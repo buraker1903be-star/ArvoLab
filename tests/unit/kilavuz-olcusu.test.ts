@@ -126,3 +126,36 @@ test("toplu taramada sıra", async (t) => {
     assert.equal(taramaOnceligi({ citationMentions: [], scannerVersion: undefined }), 1);
   });
 });
+
+test("kılavuz olmayan belge uyarısı", async (t) => {
+  const { kilavuzDegilUyarisi } = await import("@/lib/guideline-scan");
+
+  await t.test("hiçbir kural ve bölüm çıkmayan HTML, web sayfası olarak bildiriliyor", () => {
+    /*
+      Canlıda bekleyen 45 kaydın 8'i yanlış belgeydi: enstitü ana sayfası,
+      haber duyurusu, form listesi, yönetmelik, danışman formu. Panelde
+      %0 güvenle ve "Yazı tipi bulunamadı" uyarısıyla görünüyorlardı;
+      yönetici kılavuzun kötü yazıldığını sanıyordu.
+    */
+    const uyari = kilavuzDegilUyarisi(0, 0, "text/html; charset=UTF-8");
+    assert.match(uyari ?? "", /web sayfası/);
+  });
+
+  await t.test("HTML olmayan boş belgede başka metin veriliyor", () => {
+    const uyari = kilavuzDegilUyarisi(0, 0, "application/pdf");
+    assert.match(uyari ?? "", /yönetmelik, form ya da örnek/);
+  });
+
+  await t.test("tek bir kural ya da bölüm çıktıysa uyarı yok", () => {
+    // Dar ölçüt: yanlış alarm yöneticiyi DOĞRU belgeden şüphe ettirirdi.
+    assert.equal(kilavuzDegilUyarisi(0.15, 0, "text/html"), null);
+    assert.equal(kilavuzDegilUyarisi(0, 3, "text/html"), null);
+  });
+
+  await t.test("uyarı tek parça metindir, dizi içinde harflere ayrılmaz", () => {
+    // ...(metin ?? []) yayması dizgeyi harflerine ayırıyordu.
+    const liste = [...(kilavuzDegilUyarisi(0, 0, "application/pdf") ? [kilavuzDegilUyarisi(0, 0, "application/pdf")!] : [])];
+    assert.equal(liste.length, 1);
+    assert.ok(liste[0].length > 40);
+  });
+});
