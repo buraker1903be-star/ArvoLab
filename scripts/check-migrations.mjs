@@ -49,6 +49,13 @@ try {
 }
 const isShipped = (name) => Boolean(tracked && tracked.has(name));
 
+// Politika adı deseni — üç depoda birebir aynı (gerekçe aşağıdaki blokta).
+const yorumsuz = (sql) => sql.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, " ");
+const POLITIKA_AD = String.raw`(?:"([^"]+)"|([a-z_][a-z0-9_]*))`;
+const OLUSTURULAN = new RegExp(String.raw`create\s+policy\s+${POLITIKA_AD}`, "gi");
+const DUSURULEN = new RegExp(String.raw`drop\s+policy\s+if\s+exists\s+${POLITIKA_AD}`, "gi");
+const politikaAdi = (m) => m[1] ?? m[2];
+
 const problems = [];
 const entries = fs.readdirSync(DIR).filter((name) => name.endsWith(".sql")).sort();
 const versions = new Map();
@@ -120,9 +127,19 @@ for (const name of entries) {
     sonraki migration'lar uygulanmadan kaldı.
 
     Ölçüt ada göre: aynı dosyada aynı ADI düşüren bir satır aranıyor.
+
+    Ad TIRNAKLI da TIRNAKSIZ da olabilir. Bu depoda bugün 114 politikanın
+    114'ü tırnaklı, ama desen yalnızca tırnaklıyı arasaydı ilk tırnaksız
+    politika yazıldığı gün sessizce kaçardı — ArvoARC'ta tam bu oldu
+    (28.09.2026): oradaki politikalar tırnaksız ve bu dosyanın eski hâli
+    olduğu gibi taşınsaydı hiçbir şey yakalamazdı. Üç depoda aynı desen.
+
+    Yorumlar önce soyuluyor: "create policy if not exists yok" diye yazan
+    bir açıklama satırı denetime "if" adlı bir politika gibi görünüyordu.
   */
-  const dusurulen = new Set([...icerik.matchAll(/drop\s+policy\s+if\s+exists\s+"([^"]+)"/gi)].map((m) => m[1]));
-  for (const [, politika] of icerik.matchAll(/create\s+policy\s+"([^"]+)"/gi)) {
+  const dusurulen = new Set([...yorumsuz(icerik).matchAll(DUSURULEN)].map(politikaAdi));
+  for (const m of yorumsuz(icerik).matchAll(OLUSTURULAN)) {
+    const politika = politikaAdi(m);
     if (!dusurulen.has(politika)) {
       problems.push(
         `${name}: "${politika}" politikası kendi 'drop policy if exists' satırını taşımıyor. ` +
