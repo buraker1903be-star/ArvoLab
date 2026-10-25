@@ -369,76 +369,6 @@ export default async function GuidelinesPage() {
         büyük kısmı bu yüzden hiç aday üretmiyor; kalanı elle eklenecek ve
         tek tek form 160+ üniversite için ağır.
       */}
-      {icEkip ? (
-        <section className="section">
-          <div className="section-head">
-            <h2 className="section-title">
-              <Plus size={16} aria-hidden="true" />
-              Toplu kılavuz ekle
-            </h2>
-          </div>
-          <PanelDrawer
-            triggerLabel="Listeden ekle"
-            triggerIcon={<Plus size={16} aria-hidden="true" />}
-            triggerClassName="projects-filter-button"
-            kicker="Ortak katalog"
-            title="Listeden toplu kılavuz ekle"
-            description="Her satıra bir üniversite adı ve kılavuzun resmî adresi. Adres indirilip taranır, kurallar çıkarılır; kayıt onaylanana kadar hiçbir çalışmaya uygulanmaz."
-          >
-            <ActionForm className="project-form-grid" action={handleTopluEkle} successMessage="Liste işlendi.">
-              <label className="project-form-full">
-                <span>Üniversite adı ve kılavuz adresi (satır başına bir tane)</span>
-                <textarea
-                  name="liste"
-                  rows={8}
-                  placeholder={"Akdeniz Üniversitesi https://sbe.akdeniz.edu.tr/.../tez-yazim-kilavuzu.pdf\nAnadolu Üniversitesi https://sbe.anadolu.edu.tr/.../kilavuz.pdf"}
-                  required
-                />
-              </label>
-              <p className="hint project-form-full">
-                Üniversite adı listedekiyle <strong>aynı</strong> olmalı; eşleşmeyen satır atlanır ve sebebi
-                bildirilir — en yakın ad tahmin edilmez, yanlış kuruma kılavuz bağlamak öğrencinin editörüne
-                başka kurumun kurallarını indirir. Adres yalnızca <code>edu.tr</code> alan adlarından kabul
-                edilir. Her satır bir belge indirip çözümlediği için tek seferde en fazla 10 satır işlenir.
-              </p>
-              <div className="project-form-actions">
-                <button type="submit" className="projects-primary-button">
-                  <Plus size={16} aria-hidden="true" />
-                  Listeyi ekle ve tara
-                </button>
-              </div>
-            </ActionForm>
-          </PanelDrawer>
-        </section>
-      ) : null}
-
-      {canManage ? (
-        <section className="section">
-          <h2 className="section-title">
-            <Search size={16} aria-hidden="true" />
-            Üniversite kılavuzu keşfet
-          </h2>
-          <p className="muted text-base">
-            Kurumun resmî .edu.tr sitesi ve enstitü alt alan adları taranır; bulunan kılavuzlar
-            onay kuyruğuna düşer. İşlem birkaç dakika sürebilir.
-          </p>
-          <ActionForm action={handleDiscover} className="cluster mt-sm">
-            <select name="universityId" aria-label="Üniversite" className="compact-select grow-select" defaultValue="">
-              <option value="">Üniversite seçin</option>
-              {universities.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="projects-primary-button">
-              <Search size={15} aria-hidden="true" />
-              Şimdi keşfet
-            </button>
-          </ActionForm>
-        </section>
-      ) : null}
-
       {canManage ? (
         <>
           {/* Yeni ve düzenleme pencerelerindeki üniversite alanlarının önerileri */}
@@ -844,6 +774,87 @@ export default async function GuidelinesPage() {
           })}
         </section>
       )}
+
+      {/*
+        YÖNETİM ARAÇLARI LİSTENİN ALTINDA.
+
+        Toplu ekleme ve keşif, kılavuz yöneticisinin ayda bir
+        kullandığı araçlar; listenin ÜSTÜNDE duruyorlardı ve
+        yöneticinin her gelişinde aradığı şeyi (kılavuz listesini)
+        ekranın aşağısına itiyorlardı. Doçentlik sayfası aynı türden
+        aracı (Puanlama Kriterleri) zaten listenin altına koyuyor;
+        iki sayfa aynı şeyi iki ayrı yerde yapıyordu.
+      */}
+      {icEkip ? (
+        <section className="section">
+          <div className="section-head">
+            <h2 className="section-title">
+              <Plus size={16} aria-hidden="true" />
+              Toplu kılavuz ekle
+            </h2>
+          </div>
+          <PanelDrawer
+            triggerLabel="Listeden ekle"
+            triggerIcon={<Plus size={16} aria-hidden="true" />}
+            triggerClassName="projects-filter-button"
+            kicker="Ortak katalog"
+            title="Listeden toplu kılavuz ekle"
+            description="Her satıra bir üniversite adı ve kılavuzun resmî adresi. Adres indirilip taranır, kurallar çıkarılır; kayıt onaylanana kadar hiçbir çalışmaya uygulanmaz."
+          >
+            <ActionForm className="project-form-grid" action={handleTopluEkle} successMessage="Liste işlendi.">
+              <label className="project-form-full">
+                <span>Üniversite adı ve kılavuz adresi (satır başına bir tane)</span>
+                <textarea
+                  name="liste"
+                  rows={8}
+                  placeholder={"Akdeniz Üniversitesi https://sbe.akdeniz.edu.tr/.../tez-yazim-kilavuzu.pdf\nAnadolu Üniversitesi https://sbe.anadolu.edu.tr/.../kilavuz.pdf"}
+                  required
+                />
+              </label>
+              <p className="hint project-form-full">
+                Üniversite adı listedekiyle <strong>aynı</strong> olmalı; eşleşmeyen satır atlanır ve sebebi
+                bildirilir — en yakın ad tahmin edilmez, yanlış kuruma kılavuz bağlamak öğrencinin editörüne
+                başka kurumun kurallarını indirir. Adres yalnızca <code>edu.tr</code> alan adlarından kabul
+                edilir. Her satır bir belge indirip çözümlediği için tek seferde en fazla 10 satır işlenir.
+              </p>
+              <div className="project-form-actions">
+                <button type="submit" className="projects-primary-button">
+                  <Plus size={16} aria-hidden="true" />
+                  Listeyi ekle ve tara
+                </button>
+              </div>
+            </ActionForm>
+          </PanelDrawer>
+        </section>
+      ) : null}
+
+      {canManage ? (
+        <section className="section">
+          <h2 className="section-title">
+            <Search size={16} aria-hidden="true" />
+            Üniversite kılavuzu keşfet
+          </h2>
+          <p className="muted text-base">
+            Kurumun resmî .edu.tr sitesi ve enstitü alt alan adları taranır; bulunan kılavuzlar
+            onay kuyruğuna düşer. İşlem birkaç dakika sürebilir.
+          </p>
+          <ActionForm action={handleDiscover} className="cluster mt-sm">
+            <select name="universityId" aria-label="Üniversite" className="compact-select grow-select" defaultValue="">
+              <option value="">Üniversite seçin</option>
+              {universities.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="projects-primary-button">
+              <Search size={15} aria-hidden="true" />
+              Şimdi keşfet
+            </button>
+          </ActionForm>
+        </section>
+      ) : null}
+
     </main>
   );
 }

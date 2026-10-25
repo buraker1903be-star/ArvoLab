@@ -166,26 +166,6 @@ export default async function SettingsPage() {
         yöneten hesap (gerekçe app/actions/hesap.ts'te, sunucu tarafı da
         reddediyor).
       */}
-      {!icEkip ? (
-        <section className="project-form-card mt-lg">
-          <div className="project-form-heading">
-            <h2>
-              <Trash2 size={16} aria-hidden="true" />
-              Hesabımı sil
-            </h2>
-            <p>
-              Hesabınızı ve ArvoLab&apos;daki bütün verilerinizi kalıcı olarak silmek istiyorsanız
-              buradan başlatabilirsiniz. Silme hemen olmaz; vazgeçmek için süreniz olur.
-            </p>
-          </div>
-          <HesapSilmeFormu
-            action={hesapSilmeTalebi}
-            eposta={ctx.user.email ?? ""}
-            bireysel={access.kind === "individual"}
-          />
-        </section>
-      ) : null}
-
       {kredi.goster ? (
         <section className="project-form-card mt-lg">
           <div className="project-form-heading">
@@ -250,6 +230,37 @@ export default async function SettingsPage() {
           </dl>
         </section>
       ) : null}
+
+      {/*
+        HESAP SİLME EN SONDA.
+
+        Sayfanın ORTASINDA duruyordu: kredisine ya da asistan
+        sunucusuna bakmaya gelen kullanıcı, yolunun üstünde hesabını
+        kalıcı silen bir bölümle karşılaşıyordu. Geri dönüşü olmayan
+        eylem, rutin bilgilerin arasına değil sonuna konur —
+        Doçentlik ve Kılavuzlar sayfalarında yönetim araçlarının
+        sonda durması da aynı kural.
+      */}
+      {!icEkip ? (
+        <section className="project-form-card mt-lg">
+          <div className="project-form-heading">
+            <h2>
+              <Trash2 size={16} aria-hidden="true" />
+              Hesabımı sil
+            </h2>
+            <p>
+              Hesabınızı ve ArvoLab&apos;daki bütün verilerinizi kalıcı olarak silmek istiyorsanız
+              buradan başlatabilirsiniz. Silme hemen olmaz; vazgeçmek için süreniz olur.
+            </p>
+          </div>
+          <HesapSilmeFormu
+            action={hesapSilmeTalebi}
+            eposta={ctx.user.email ?? ""}
+            bireysel={access.kind === "individual"}
+          />
+        </section>
+      ) : null}
+
     </main>
   );
 }
