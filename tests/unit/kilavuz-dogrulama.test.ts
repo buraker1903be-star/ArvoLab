@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   DOGRULAMA_MESAJI,
   EN_COK_SAYFA,
+  bicimOzeti,
   formaDoldur,
   formuDogrula,
   kurallariKur,
@@ -82,5 +83,36 @@ test("kılavuz doğrulama", async (t) => {
     assert.equal(kurallar.source_url, "https://ornek.edu.tr/kilavuz.pdf");
     // Ham çıkarım saklanıyor: onay kuyruğunda yönetici neyin okunduğunu görmeli.
     assert.deepEqual(kurallar.extracted_rules, { a: 1 });
+  });
+});
+
+test("biçim özeti", async (t) => {
+  await t.test("bulunan kurallar okunur cümlelere dönüyor", () => {
+    const satirlar = bicimOzeti({
+      margins: { top: 3, right: 2.5, bottom: 3, left: 3.5 },
+      fontFamily: "Times New Roman",
+      fontSizePt: 12,
+      lineSpacing: 1.5,
+      headingNumbering: true,
+      chapterNewPage: true,
+    });
+    // Ondalık VİRGÜLLE: "2.5 cm" kılavuzun kendi yazımına yabancı duruyor.
+    assert.ok(satirlar[0].includes("sağ 2,5"), satirlar[0]);
+    assert.ok(satirlar.some((s) => s.includes("Times New Roman") && s.includes("12 punto")));
+    assert.ok(satirlar.some((s) => s.includes("1,5")));
+    assert.equal(satirlar.length, 5);
+  });
+
+  await t.test("hiçbir kural bulunamazsa BOŞ dönüyor", () => {
+    /*
+      Boş liste göstermek "bulundu ama yok" gibi durur; çağıran bunu
+      görüp "biçim kuralı bulamadım" demeli.
+    */
+    assert.deepEqual(bicimOzeti({}), []);
+  });
+
+  await t.test("yarım kenar boşluğu yazılmıyor", () => {
+    // Dört kenarın biri eksikse cümle yanlış olurdu.
+    assert.deepEqual(bicimOzeti({ margins: { top: 3, right: 2.5 } }), []);
   });
 });

@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { scanGuidelineBytes, scanGuidelineUrl, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
 import {
+  bicimOzeti,
   DOGRULAMA_MESAJI,
   formaDoldur,
   formuDogrula,
@@ -56,6 +58,13 @@ export interface TaramaSonucu {
   /* Çıkarımın kendi uyarıları (OCR gürültüsü, düşük güven). Öğrenciye
      gösteriliyor: "bunu ben çıkardım, siz bakın" demenin yolu. */
   uyarilar?: string[];
+  /*
+    Onaylatılmayan ama UYGULANACAK biçim kuralları, okunur cümleler
+    hâlinde. Düzenlenmiyor, söyleniyor: on alanlık bir form okunmadan
+    "tamam"lanır ve doğrulama tiyatroya döner — ama sessizce uygulamak
+    da öğrenciye metninin neden başkalaştığını açıklamaz.
+  */
+  bicim?: string[];
 }
 
 /**
@@ -97,6 +106,7 @@ export async function kilavuzuTara(
       belgeBasligi: sonuc.versionLabel,
       ham: sonuc,
       uyarilar: sonuc.warnings,
+      bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules)),
     };
   } catch (err) {
     console.error("[calisma-kilavuzu] tarama başarısız:", err);

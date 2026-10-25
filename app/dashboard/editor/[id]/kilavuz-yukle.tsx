@@ -235,6 +235,27 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
           <p className="muted text-sm">Kılavuzunuz sayfa sınırı vermiyorsa ikisini de boş bırakın.</p>
         </div>
 
+        {/*
+          Onaylatılmayan ama uygulanacak biçim kuralları. Düzenlenmiyor,
+          SÖYLENİYOR: on alanlık bir form okunmadan onaylanır, sessizce
+          uygulamak da öğrenciye metninin neden başkalaştığını
+          açıklamaz.
+        */}
+        <div className="kilavuz-bicim">
+          <span className="kilavuz-alan-basligi">Ayrıca şu biçim kuralları uygulanacak</span>
+          {sonuc?.bicim?.length ? (
+            <ul className="muted text-sm">
+              {sonuc.bicim.map((satir) => (
+                <li key={satir}>{satir}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted text-sm">
+              Kılavuzda biçim kuralı bulamadım; editörün varsayılanları kullanılacak.
+            </p>
+          )}
+        </div>
+
         <div className="cluster">
           <button type="button" className="projects-primary-button" onClick={kaydet} disabled={kaydediliyor}>
             {kaydediliyor ? "Uygulanıyor…" : "Kurallarımı uygula"}

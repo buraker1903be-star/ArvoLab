@@ -1692,3 +1692,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .kilavuz-etiketler .chip button:hover { opacity: 1; }
 .kilavuz-sayfa { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
 .kilavuz-sayfa p { grid-column: 1 / -1; margin: 0; }
+/* Uygulanacak ama onaylatılmayan biçim kuralları: form değil, bilgi.
+   Çukur zemin "burası doldurulacak bir alan değil" diyor. */
+.kilavuz-bicim {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.kilavuz-bicim ul { margin: 0; padding-left: 18px; line-height: var(--lh-metin); }
+.kilavuz-bicim p { margin: 0; }

@@ -137,3 +137,46 @@ export function kurallariKur(
     source_url: ek.kaynakAdres ?? null,
   };
 }
+
+/*
+  UYGULANACAK BİÇİM KURALLARININ ÖZETİ.
+
+  Doğrulama ekranı üç şeyi onaylatıyor (atıf stili, zorunlu bölümler,
+  sayfa aralığı) ama çıkarım bundan fazlasını buluyor: kenar
+  boşlukları, yazı tipi, punto, satır aralığı, başlık numaralandırma.
+  Bunlar belgenin GÖRÜNÜMÜNÜ değiştiriyor ve sessizce uygulanırsa
+  öğrenci metninin neden birden başkalaştığını anlamaz.
+
+  Hepsini ayrı ayrı onaylatmak doğru çözüm değil: on alanlık bir form
+  okunmadan "tamam"lanır ve doğrulama tiyatroya döner. Bu yüzden
+  düzenlenmiyor, SÖYLENİYOR — "şunları uygulayacağım" cümlesi.
+
+  Hiçbir biçim kuralı bulunamadıysa dizi boş döner; çağıran o zaman
+  "biçim kuralı bulamadım" demeli. Boş bir liste göstermek, bulunmuş
+  gibi durur.
+*/
+export function bicimOzeti(ayarlar: {
+  margins?: { top?: number; right?: number; bottom?: number; left?: number } | null;
+  fontFamily?: string;
+  fontSizePt?: number;
+  lineSpacing?: number;
+  headingNumbering?: boolean;
+  chapterNewPage?: boolean;
+}): string[] {
+  const satirlar: string[] = [];
+  const m = ayarlar.margins;
+  if (m && [m.top, m.right, m.bottom, m.left].every((d) => typeof d === "number")) {
+    /* Türkçe ondalık virgülle; "3.5 cm" yazmak kılavuzun kendi
+       yazımına yabancı duruyor. */
+    const yaz = (d: number) => String(d).replace(".", ",");
+    satirlar.push(`Kenar boşlukları: üst ${yaz(m.top!)} · sağ ${yaz(m.right!)} · alt ${yaz(m.bottom!)} · sol ${yaz(m.left!)} cm`);
+  }
+  const yazi = [ayarlar.fontFamily, ayarlar.fontSizePt ? `${String(ayarlar.fontSizePt).replace(".", ",")} punto` : null]
+    .filter(Boolean)
+    .join(" · ");
+  if (yazi) satirlar.push(`Yazı: ${yazi}`);
+  if (ayarlar.lineSpacing) satirlar.push(`Satır aralığı: ${String(ayarlar.lineSpacing).replace(".", ",")}`);
+  if (ayarlar.headingNumbering) satirlar.push("Başlıklar ondalık numaralanır (1., 1.1.)");
+  if (ayarlar.chapterNewPage) satirlar.push("Her ana bölüm yeni sayfadan başlar");
+  return satirlar;
+}
