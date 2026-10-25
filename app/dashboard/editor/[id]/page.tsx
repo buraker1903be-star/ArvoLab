@@ -132,9 +132,13 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
         UYARI ARTIK DÜZELTİLEBİLİR. Eskiden "çalışma ayarlarından
         düzeltin" diyordu ama o alan kılavuz bağlıyken devre dışı ve
         sunucu da gönderilen değeri yok sayıyor — yani uygulama,
-        düzeltmesini istediği şeyi düzeltmeyi engelliyordu. IEEE
-        isteyen bir kurumda tez yazan öğrenci APA 7'de kilitli
-        kalıyordu.
+        düzeltmesini istediği şeyi düzeltmeyi engelliyordu.
+
+        Uyuşmazlık kuruluşta değil SONRADAN doğuyor: stil, kılavuz
+        bağlanırken tetikleyiciyle yazılıyor; kılavuzun yeni sürümü
+        başka bir stille onaylandığında çalışmanın satırı değişmediği
+        için tetikleyici yeniden koşmuyor ve çalışma eski stilde
+        kalıyor.
 
         Düğme serbest seçim sunmuyor, yalnızca kılavuzun istediğine
         çeviriyor; kılavuzun geçerli olmadığını düşünenin yolu ayrı

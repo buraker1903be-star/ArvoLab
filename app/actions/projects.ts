@@ -233,15 +233,22 @@ export async function getProjectForEdit(
 /*
   ATIF STİLİNİ KILAVUZA UYDUR.
 
-  Bir TUZAK vardı. Çalışma kurulurken atıf stili formdaki değerle
-  (varsayılanı APA 7) yazılıyor; kılavuzu ise veritabanı tetikleyicisi
-  sonradan bağlıyor. Kılavuz başka bir stil istiyorsa Çalışma Merkezi
-  uyarıyor ve "çalışma ayarlarından düzeltin" diyordu — ama ayarlardaki
-  alan kılavuz bağlıyken DEVRE DIŞI ve sunucu da gönderilen değeri yok
-  sayıyor (aşağıda, bilerek: kılavuzun kuralı öğrencinin elle seçimiyle
-  bozulmasın). Yani uygulama düzeltmesini istediği şeyi düzeltmeyi
-  engelliyordu. IEEE isteyen bir kurumda tez yazan öğrenci APA 7'de
-  kilitli kalıyordu.
+  UYUŞMAZLIK NEREDEN ÇIKIYOR. Çalışma kurulurken (ve kurum alanları
+  değişince) veritabanı tetikleyicisi hem kılavuzu bağlıyor hem atıf
+  stilini kılavuzun onaylı sürümünden yazıyor
+  (20260924100034_kilavuz_eslestirme_kurumu_gozetir.sql). Yani yeni
+  çalışmada uyuşmazlık OLMUYOR.
+
+  Sonradan oluşuyor: kılavuzun yeni bir sürümü farklı bir atıf stiliyle
+  onaylandığında, o kılavuza bağlı çalışmaların satırı DEĞİŞMEDİĞİ için
+  tetikleyici yeniden koşmuyor ve çalışma eski stilde kalıyor.
+
+  Önceki davranış bir TUZAKTI: Çalışma Merkezi uyarıyor ve "çalışma
+  ayarlarından düzeltin" diyordu, ama ayarlardaki alan kılavuz bağlıyken
+  DEVRE DIŞI ve sunucu da gönderilen değeri yok sayıyor (aşağıda,
+  bilerek: kılavuzun kuralı elle seçimle bozulmasın). Uygulama,
+  düzeltmesini istediği şeyi düzeltmeyi engelliyordu; kaynakça denetimi
+  de bu arada eski stile göre çalışıyordu.
 
   Bu işlem tek bir şey yapıyor: stili KILAVUZUN istediğine çeviriyor.
   Serbest seçim değil — "ayarlardan elle seç" kapısı bilerek kapalı

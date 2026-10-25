@@ -116,11 +116,12 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
               </select>
               {project.guideline_id ? (
                 /*
-                  Metin DÜZELTİLDİ: "kılavuza göre belirlenir" demek
-                  doğru değildi — değer çalışma kurulurken formdaki
-                  varsayılandan yazılıyor, kılavuz sonradan bağlanıyor.
-                  Uyuşmazlık varsa Çalışma Merkezi'ndeki "Kılavuza göre
-                  düzelt" düğmesi onu kılavuzun istediğine çeviriyor.
+                  Metin, kılavuzun sürümü değişince yanıltıcı oluyordu:
+                  stil kılavuz BAĞLANIRKEN yazılıyor, sonradan yeni bir
+                  sürüm başka bir stille onaylanırsa çalışma eski
+                  stilde kalıyor ve alan yine "kılavuza göre belirlenir"
+                  diyordu. Düzeltme yolu Çalışma Merkezi'ndeki
+                  "Kılavuza göre düzelt" düğmesi.
                 */
                 <small>Kılavuz bağlı olduğu için burada değiştirilmez; uyuşmazlık varsa Çalışma Merkezi&apos;nden düzeltin.</small>
               ) : null}
