@@ -292,7 +292,17 @@ html.drawer-open { overflow: hidden; }
 }
 @keyframes capsule-in { from { opacity: 0; transform: translate(-50%, 14px) scale(.96); } }
 @keyframes capsule-spin { to { transform: rotate(360deg); } }
-@media (max-width: 900px) { .action-capsule { bottom: calc(84px + env(safe-area-inset-bottom)); } }
+/*
+  DOCK'UN ÜSTÜNDE. Kapsül de dock da ekranın altında ORTADA duruyor ve
+  dock'un katmanı daha yüksek: kapsül tam arkasında kalıyordu, yani her
+  form gönderiminde "İşleniyor…" geri bildirimi hiç görünmüyordu.
+  Kabuk dışındaki sayfalarda (giriş, şifre sıfırlama) dock yok, oradaki
+  24px yerinde kalıyor.
+
+  Eski mobil kuralı (84px) kaldırıldı: o da kalkan sekme çubuğunun
+  yüksekliğine göre elle yazılmıştı; ölçü artık tek yerde.
+*/
+.os-root .action-capsule { bottom: calc(var(--dock-alani) + 12px); }
 @media (prefers-reduced-motion: reduce) {
   .action-capsule, .action-capsule > i { animation: none; }
   .nav-progress > i { transition: none; }

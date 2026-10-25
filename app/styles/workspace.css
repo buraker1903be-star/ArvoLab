@@ -516,7 +516,9 @@
   top: calc(var(--topbar-height) + 16px);
   display: grid;
   gap: 12px;
-  max-height: calc(100vh - var(--topbar-height) - 32px);
+  /* Dock ekranın altını kaplıyor; yan panelin son başlıkları onun
+     arkasında kalıyordu. */
+  max-height: calc(100vh - var(--topbar-height) - var(--dock-alani) - 24px);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -824,7 +826,9 @@
 .olcum-paneli {
   position: fixed;
   right: 12px;
-  bottom: 12px;
+  /* Dock'un üstünde: panel sabit 12px'teyken dock onu örtüyordu ve
+     tam da okunması istenen sayılar görünmüyordu. */
+  bottom: calc(var(--dock-alani) + 12px);
   z-index: 60;
   min-width: 320px;
   padding: 10px 12px;

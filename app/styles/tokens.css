@@ -157,12 +157,17 @@
   /* ---- Yerleşim ---- */
   --sidebar-width: 264px;
   --topbar-height: 64px;
-  /* Dock'un ekranın altında kapladığı yer (os-shell.css): içerik ve
-     bildirimler bunun üstünde durur. 44px simge + 8px'lik iki iç boşluk
-     + çerçeve, artı ev çubuğu payı. Eskiden burada sekme çubuğunun
-     yüksekliği vardı; dock onun yerini alınca bildirimler dock'un
-     altında kalıyordu. */
-  --dock-alani: calc(62px + max(16px, env(safe-area-inset-bottom)));
+  /* Dock'un ekranın altında kapladığı yer (os-shell.css): içerik,
+     bildirimler, "İşleniyor…" kapsülü ve editörün yan paneli bunun
+     üstünde durur.
+
+     66px = 48px simge + 8px'lik iki iç boşluk + çerçeve. Telefonda
+     simge 44px'e düşüyor (dock 62px) ama BÜYÜK olan yazılı: küçük
+     olanı yazmak masaüstünde 4px'lik bir çakışma bırakıyordu.
+
+     Eskiden burada sekme çubuğunun yüksekliği vardı; dock onun yerini
+     alınca bildirimler dock'un altında kalıyordu. */
+  --dock-alani: calc(66px + max(16px, env(safe-area-inset-bottom)));
   /* Kenar çubuğu (264px) dock'a geçişle kalktı; içerik o genişliği
      geri alıyor. Sınırsız bırakılmıyor: sayfa başlığındaki açıklama
      metni zaten 720px'te kesiliyor, asıl kazanan liste ve kartlar. */
