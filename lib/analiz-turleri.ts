@@ -25,6 +25,10 @@ export const ANALIZ_ETIKETLERI = {
   mannwhitney: "Mann-Whitney U Testi",
   kruskalwallis: "Kruskal-Wallis H Testi",
   spearman: "Spearman Sıra Korelasyonu",
+  /* Makalelerin ve tezlerin belkemiği olan analiz programda hiç
+     yoktu; korelasyon ilişkinin gücünü söyler, "X bir birim artınca
+     Y ne kadar artar" sorusunu yanıtlamaz. */
+  regression: "Doğrusal Regresyon",
 } as const;
 
 export type AnalizTuru = keyof typeof ANALIZ_ETIKETLERI;
@@ -75,6 +79,8 @@ export function analizBasligi(tur: string, secim: AnalizSecimi): string {
           ? [a, b].filter(Boolean).join(" — ")
           : tur === "chisquare"
             ? [a, b].filter(Boolean).join(" × ")
+            : tur === "regression"
+              ? [a, secim.maddeSayisi ? `${secim.maddeSayisi} yordayıcı` : ""].filter(Boolean).join(" ~ ")
             : tur === "reliability" && secim.maddeSayisi
               ? `${secim.maddeSayisi} madde`
               : "";

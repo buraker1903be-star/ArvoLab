@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useRef, useTransition } from "react";
 import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save } from "lucide-react";
 import { leveneTesti, normallikOlcutu } from "@/lib/stats-varsayim";
 import { kruskalWallis, mannWhitneyU, spearmanKorelasyonu, YAKLASIKLIK_EN_AZ } from "@/lib/stats-parametrik-olmayan";
+import { dogrusalRegresyon } from "@/lib/stats-regresyon";
 import {
   describeNumeric,
   independentTTest,
@@ -93,6 +94,8 @@ export default function DataAnalyzer({
   const [varB, setVarB] = useState("");
   const [groupVar, setGroupVar] = useState("");
   const [reliabilityItems, setReliabilityItems] = useState<string[]>([]);
+  /* Regresyonun yordayıcıları; bağımlı değişken varA. */
+  const [yordayicilar, setYordayicilar] = useState<string[]>([]);
 
   const [result, setResult] = useState<React.ReactNode>(null);
   const [resultError, setResultError] = useState<string | null>(null);
@@ -373,7 +376,12 @@ export default function DataAnalyzer({
         varA,
         varB,
         groupVar,
-        maddeSayisi: reliabilityItems.length,
+        /* Regresyonda "madde sayısı" yordayıcı sayısıdır; başlık
+           tek kaynaktan üretiliyor (lib/analiz-turleri). */
+        maddeSayisi:
+          analysisType === "regression"
+            ? yordayicilar.filter((c) => c !== varA).length
+            : reliabilityItems.length,
       }),
     });
 
@@ -632,6 +640,83 @@ export default function DataAnalyzer({
         );
       }
 
+      if (analysisType === "regression") {
+        const secilen = yordayicilar.filter((c) => c !== varA);
+        if (secilen.length === 0) {
+          setResultError("En az bir yordayıcı değişken seçin (bağımlı değişkenden farklı olmalı).");
+          return;
+        }
+        const y = getNumericColumn(varA);
+        const sutunlar = secilen.map((c) => getNumericColumn(c));
+        const n = Math.min(y.length, ...sutunlar.map((c) => c.length));
+        if (n < secilen.length + 2) {
+          setResultError(
+            `Yordayıcı başına yeterli gözlem yok: ${secilen.length} yordayıcı için en az ${secilen.length + 2} eşleşen gözlem gerekiyor.`,
+          );
+          return;
+        }
+        const r = dogrusalRegresyon(
+          y.slice(0, n),
+          sutunlar.map((c) => c.slice(0, n)),
+          secilen,
+        );
+        /*
+          TEKİLLİK SESSİZ GEÇİLMİYOR: yordayıcılar birbirinin
+          neredeyse aynısıysa katsayılar anlamsızdır ve sayı üretmek
+          onları güvenilir göstermek olurdu.
+        */
+        if (r.tekil) {
+          setResultError(
+            "Model kurulamadı: yordayıcılar birbirine çok benziyor (çoklu doğrusallık) ya da gözlem sayısı yetersiz.",
+          );
+          return;
+        }
+        const sig = isSignificant(r.p);
+        setResult(
+          <div>
+            <p className="tone-text" data-tone={sig ? "success" : "warning"}>
+              F({r.dfb}, {r.dfw}) = {formatNumber(r.f)}, {formatP(r.p)}
+              {sig ? " — model anlamlı" : " — model anlamlı değil"}
+            </p>
+            <p className="muted text-sm">
+              R² = {formatNumber(r.rKare)} · düzeltilmiş R² = {formatNumber(r.duzeltilmisRKare)} · N = {r.n}
+            </p>
+            <div className="table-scroll" role="region" aria-label="Regresyon katsayıları" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    <th>Değişken</th>
+                    <th>B</th>
+                    <th>SH</th>
+                    <th>β</th>
+                    <th>t</th>
+                    <th>p</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.katsayilar.map((k) => (
+                    <tr key={k.ad}>
+                      <td>{k.ad}</td>
+                      <td>{formatNumber(k.b)}</td>
+                      <td>{formatNumber(k.standartHata)}</td>
+                      <td>{Number.isNaN(k.beta) ? "—" : formatNumber(k.beta)}</td>
+                      <td>{formatNumber(k.t)}</td>
+                      <td>{formatP(k.p)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Ham B'ler farklı birimlerde; "hangisi daha etkili"
+                sorusu ancak β ile yanıtlanır. */}
+            <p className="hint">
+              B ham katsayı (birim başına değişim), β standartlaştırılmış katsayı —
+              yordayıcıları birbiriyle karşılaştırmak için β kullanın.
+            </p>
+          </div>,
+        );
+      }
+
       if (analysisType === "mannwhitney") {
         if (groupLevels.length !== 2) {
           setResultError(
@@ -823,7 +908,7 @@ export default function DataAnalyzer({
       setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems, getNumericColumn, getGroupedNumeric]);
+  }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric]);
 
   return (
     <section className="project-form-card">
@@ -943,9 +1028,9 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "pairedttest" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman") && (
+            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "pairedttest" || analysisType === "regression" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman") && (
               <label>
-                <span>{analysisType === "correlation" || analysisType === "spearman" ? "Değişken 1" : analysisType === "pairedttest" ? "Önceki ölçüm" : "Sayısal değişken"}</span>
+                <span>{analysisType === "correlation" || analysisType === "spearman" ? "Değişken 1" : analysisType === "pairedttest" ? "Önceki ölçüm" : analysisType === "regression" ? "Bağımlı değişken (Y)" : "Sayısal değişken"}</span>
                 <select value={varA} onChange={(e) => setVarA(e.target.value)}>
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
@@ -978,6 +1063,28 @@ export default function DataAnalyzer({
                       {c}
                     </option>
                   ))}
+                </select>
+              </label>
+            )}
+
+            {analysisType === "regression" && (
+              <label className="project-form-full">
+                <span>Yordayıcı değişkenler (Ctrl/Cmd ile birden çok seçin)</span>
+                <select
+                  multiple
+                  value={yordayicilar}
+                  onChange={(e) => setYordayicilar(Array.from(e.target.selectedOptions, (o) => o.value))}
+                  size={6}
+                >
+                  {dataset.numericColumns
+                    /* Bağımlı değişken yordayıcı olarak seçilemez:
+                       kendisiyle açıklanan model anlamsızdır. */
+                    .filter((c) => c !== varA)
+                    .map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
                 </select>
               </label>
             )}
