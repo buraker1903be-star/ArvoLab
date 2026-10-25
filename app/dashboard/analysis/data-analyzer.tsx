@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useRef, useTransition } from "react";
 import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save } from "lucide-react";
 import { leveneTesti, normallikOlcutu } from "@/lib/stats-varsayim";
+import { kruskalWallis, mannWhitneyU, spearmanKorelasyonu, YAKLASIKLIK_EN_AZ } from "@/lib/stats-parametrik-olmayan";
 import {
   describeNumeric,
   independentTTest,
@@ -565,6 +566,118 @@ export default function DataAnalyzer({
         );
       }
 
+      /*
+        PARAMETRİK OLMAYAN KARŞILIKLAR (25.10.2026).
+
+        Sıralara dayandıkları için uç değerden ve çarpıklıktan
+        etkilenmiyorlar; varsayım şeridi bunları önerdiğinde artık
+        karşılığı var. Normallik şeridi burada ÇİZİLMİYOR: bu
+        testler normallik varsaymıyor, varsaymayan bir testin
+        altına normallik raporlamak kullanıcıyı yanıltırdı.
+      */
+      if (analysisType === "mannwhitney") {
+        if (groupLevels.length !== 2) {
+          setResultError(
+            `Mann-Whitney U tam olarak 2 grup gerektirir. Seçili grup değişkeninde ${groupLevels.length} farklı değer bulundu.`,
+          );
+          return;
+        }
+        const grouped = getGroupedNumeric(varA, groupVar);
+        const [g1name, g2name] = groupLevels;
+        const g1 = grouped.get(g1name) ?? [];
+        const g2 = grouped.get(g2name) ?? [];
+        if (g1.length < 2 || g2.length < 2) {
+          setResultError("Her grupta en az 2 gözlem olmalıdır.");
+          return;
+        }
+        const r = mannWhitneyU(g1, g2);
+        if (!hesaplanabilir(r.z, r.p)) return setResultError(DEGISKENLIK_YOK);
+        const sig = isSignificant(r.p);
+        setResult(
+          <div>
+            <p>
+              <strong>{g1name}</strong>: N={r.n1}, sıra ort.={formatNumber(r.siraOrtalamasi1)}
+              <br />
+              <strong>{g2name}</strong>: N={r.n2}, sıra ort.={formatNumber(r.siraOrtalamasi2)}
+            </p>
+            <p className="tone-text" data-tone={sig ? "success" : "warning"}>
+              U = {formatNumber(r.u)}, z = {formatNumber(r.z)}, {formatP(r.p)}
+              {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
+            </p>
+            <p className="muted text-sm">r = {formatNumber(r.etki)} (sıralara dayalı etki büyüklüğü)</p>
+            {/* Yaklaşıklık küçük örneklemde sapıyor; sessizce
+                yaklaşık bir p vermek kesin sanılan bir sayı
+                üretmek olurdu. */}
+            {(r.n1 < YAKLASIKLIK_EN_AZ || r.n2 < YAKLASIKLIK_EN_AZ) && (
+              <p className="tone-text text-sm" data-tone="warning">
+                Gruplardan biri {YAKLASIKLIK_EN_AZ} gözlemden küçük; p değeri büyük örneklem
+                yaklaşıklığıyla hesaplandı ve kesin değildir.
+              </p>
+            )}
+          </div>,
+        );
+      }
+
+      if (analysisType === "kruskalwallis") {
+        if (groupLevels.length < 3) {
+          setResultError(
+            `Kruskal-Wallis en az 3 grup gerektirir (2 grup için Mann-Whitney U kullanın). Seçili değişkende ${groupLevels.length} grup bulundu.`,
+          );
+          return;
+        }
+        const grouped = getGroupedNumeric(varA, groupVar);
+        const groups = groupLevels.map((g) => grouped.get(g) ?? []);
+        if (groups.some((g) => g.length < 2)) {
+          setResultError("Her grupta en az 2 gözlem olmalıdır.");
+          return;
+        }
+        const r = kruskalWallis(groups);
+        if (!hesaplanabilir(r.h, r.p)) return setResultError(DEGISKENLIK_YOK);
+        const sig = isSignificant(r.p);
+        setResult(
+          <div>
+            <p>
+              {groupLevels.map((ad, i) => (
+                <span key={ad}>
+                  <strong>{ad}</strong>: N={groups[i].length}, sıra ort.=
+                  {formatNumber(r.siraOrtalamalari[i])}
+                  <br />
+                </span>
+              ))}
+            </p>
+            <p className="tone-text" data-tone={sig ? "success" : "warning"}>
+              H({r.df}) = {formatNumber(r.h)}, {formatP(r.p)}
+              {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
+            </p>
+            <p className="muted text-sm">ε² = {formatNumber(r.epsilonKare)} (sıralara dayalı etki büyüklüğü)</p>
+          </div>,
+        );
+      }
+
+      if (analysisType === "spearman") {
+        const x = getNumericColumn(varA);
+        const y = getNumericColumn(varB);
+        const n = Math.min(x.length, y.length);
+        if (n < 3) {
+          setResultError("Korelasyon için en az 3 eşleşen gözlem gereklidir.");
+          return;
+        }
+        const r = spearmanKorelasyonu(x.slice(0, n), y.slice(0, n));
+        if (!hesaplanabilir(r.r, r.p)) return setResultError(DEGISKENLIK_YOK);
+        const sig = isSignificant(r.p);
+        setResult(
+          <div>
+            <p className="tone-text" data-tone={sig ? "success" : "warning"}>
+              r<sub>s</sub>({r.df}) = {formatNumber(r.r)}, {formatP(r.p)}
+              {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
+            </p>
+            <p className="muted text-sm">
+              Açıklanan varyans {formatNumber(r.rKare * 100)}% · ilişki {r.rYorum}
+            </p>
+          </div>,
+        );
+      }
+
       if (analysisType === "chisquare") {
         if (!dataset) return;
         const rowLevels = [...new Set(dataset.rows.map((r) => String(r[groupVar])).filter(Boolean))];
@@ -760,7 +873,7 @@ export default function DataAnalyzer({
               </select>
             </label>
 
-            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "chisquare") && (
+            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "chisquare" || analysisType === "mannwhitney" || analysisType === "kruskalwallis") && (
               <label>
                 <span>Grup değişkeni (kategorik)</span>
                 <select value={groupVar} onChange={(e) => setGroupVar(e.target.value)}>
@@ -773,9 +886,9 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation") && (
+            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman") && (
               <label>
-                <span>{analysisType === "correlation" ? "Değişken 1" : "Sayısal değişken"}</span>
+                <span>{analysisType === "correlation" || analysisType === "spearman" ? "Değişken 1" : "Sayısal değişken"}</span>
                 <select value={varA} onChange={(e) => setVarA(e.target.value)}>
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
@@ -786,7 +899,7 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {analysisType === "correlation" && (
+            {(analysisType === "correlation" || analysisType === "spearman") && (
               <label>
                 <span>Değişken 2</span>
                 <select value={varB} onChange={(e) => setVarB(e.target.value)}>

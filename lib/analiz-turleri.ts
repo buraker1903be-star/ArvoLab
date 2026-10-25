@@ -14,6 +14,14 @@ export const ANALIZ_ETIKETLERI = {
   correlation: "Pearson Korelasyonu",
   chisquare: "Ki-Kare Bağımsızlık Testi",
   reliability: "Güvenilirlik Analizi (Cronbach Alpha)",
+  /*
+    Parametrik olmayan karşılıklar (25.10.2026). Varsayım şeridi
+    bunları öneriyordu ama program yapamıyordu; öneri, karşılığı
+    sunulmadığında kullanıcıyı çıkmaza sokuyordu.
+  */
+  mannwhitney: "Mann-Whitney U Testi",
+  kruskalwallis: "Kruskal-Wallis H Testi",
+  spearman: "Spearman Sıra Korelasyonu",
 } as const;
 
 export type AnalizTuru = keyof typeof ANALIZ_ETIKETLERI;
@@ -58,9 +66,9 @@ export function analizBasligi(tur: string, secim: AnalizSecimi): string {
   const govde =
     tur === "descriptives"
       ? "tüm sayısal değişkenler"
-      : tur === "ttest" || tur === "anova"
+      : tur === "ttest" || tur === "anova" || tur === "mannwhitney" || tur === "kruskalwallis"
         ? [a, grup].filter(Boolean).join(" ~ ")
-        : tur === "correlation"
+        : tur === "correlation" || tur === "spearman"
           ? [a, b].filter(Boolean).join(" — ")
           : tur === "chisquare"
             ? [a, b].filter(Boolean).join(" × ")
