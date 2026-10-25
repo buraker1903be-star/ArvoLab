@@ -77,6 +77,12 @@ export type Adim = {
   anahtar: string;
   baslik: string;
   aciklama: string;
+  /*
+    Adımın son hareket zamanı (ISO). BİÇİMLENDİRİLMEDEN dönüyor: bu
+    modül saf kalmalı ve testleri yerel ayardan etkilenmemeli; tarihi
+    ekran biçimlendiriyor.
+  */
+  zaman?: string | null;
   href: string;
   tamam: boolean;
 };
@@ -105,17 +111,25 @@ export function siradakiAdimlar(ozet: CalismaOzeti): Adim[] {
       aciklama: yazimVar
         ? `${musvedde?.kelime.toLocaleString("tr-TR")} kelime yazıldı.`
         : "Müsvedde henüz boş. Editörde yazmaya başlayın.",
+      zaman: yazimVar ? musvedde?.guncellendi : null,
       href: `/dashboard/editor/${calisma.id}/write`,
       tamam: yazimVar,
     },
     {
       anahtar: "kaynakca",
       baslik: "Kaynakçayı denetle",
+      /*
+        "APA uyum" YAZMIYOR: puan çalışmanın KENDİ atıf stiline göre
+        hesaplanıyor ve o stil üniversiteden üniversiteye değişiyor
+        (IEEE, Vancouver, Chicago…). Sabit bir stil adı yazmak, IEEE
+        kullanan bir tezde yanlış bilgi vermekti.
+      */
       aciklama: kaynakca
-        ? `Son denetim: APA uyum ${kaynakca.skor ?? "—"}/100.`
+        ? `Son denetim: kaynakça uyumu ${kaynakca.skor ?? "—"}/100.`
         : literatur.kullanilan > 0 || yazimVar
           ? "Kaynakça ve atıf tutarlılığı henüz denetlenmedi."
           : "Metin ve kaynaklar hazır olunca denetleyin.",
+      zaman: kaynakca?.tarih ?? null,
       href: `/dashboard/citations?calisma=${calisma.id}`,
       tamam: Boolean(kaynakca),
     },

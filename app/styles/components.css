@@ -1142,6 +1142,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .merkez-adim[data-tamam="true"] { border-color: color-mix(in srgb, var(--success) 30%, var(--line-soft)); }
 .merkez-adim-metin { color: var(--ink-soft); font-size: var(--fs-body); line-height: 1.5; }
 .merkez-adim-metin b { display: block; color: var(--ink); }
+/* Son hareket zamanı: özet kutuları kalkınca buraya taşındı, ama
+   adımın kendi cümlesinin önüne geçmesin diye küçük ve soluk. */
+.merkez-adim-metin small { display: block; margin-top: 2px; color: var(--muted); font-size: var(--fs-sm); }
 .merkez-adim-baglanti {
   display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
   color: var(--accent); font-size: var(--fs-body); text-decoration: none;
@@ -1296,8 +1299,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .denetim-govde { display: grid; gap: 2px; min-width: 0; }
 .denetim-govde strong { color: var(--ink); font-size: var(--fs-body); font-weight: 600; overflow-wrap: anywhere; }
 .denetim-govde span { color: var(--muted); font-size: var(--fs-sm); }
-/* Puan rengi tek başına anlam taşımaz; yanındaki "/100 APA uyumu" metni
-   her zaman görünür. */
+/* Puan rengi tek başına anlam taşımaz; yanındaki "/100 kaynakça uyumu"
+   metni her zaman görünür. */
 .denetim-skor { display: flex; align-items: baseline; gap: 6px; flex: none; color: var(--tone, var(--ink)); }
 .denetim-skor[data-tone="success"] { --tone: var(--success); }
 .denetim-skor[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); }

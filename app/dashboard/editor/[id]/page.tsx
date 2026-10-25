@@ -8,7 +8,6 @@ import {
   PenLine,
   Quote,
   Settings2,
-  Sparkles,
   TriangleAlert,
   Users,
 } from "lucide-react";
@@ -66,7 +65,7 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
   }
   if (!ozet) notFound();
 
-  const { calisma, musvedde, literatur, kaynakca, belgeSayisi, danismanlikSayisi, asistan, kilavuz, kilavuzOkunamadi, tutarsizliklar, hazirlik } = ozet;
+  const { calisma, danismanlikSayisi, asistan, kilavuz, kilavuzOkunamadi, tutarsizliklar, hazirlik } = ozet;
   const stilCelisiyor = atifStiliCelisiyorMu(ozet);
   // Eksikler önce, bakılması gerekenler sonra (ana sayfadaki sıralamanın aynısı).
   const eksikMaddeler = (hazirlik?.items ?? [])
@@ -99,23 +98,21 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
         </div>
       </section>
 
+      {/*
+        ÖZET ŞERİDİ ALTI KUTUDAN ÜÇE İNDİ.
+
+        Müsvedde, Literatür ve Kaynakça kutuları "Bu çalışmanın
+        birimleri" listesindeki adımlarla AYNI sayıları yazıyordu;
+        sayfa aynı dört bilgiyi üç ayrı yerde tekrarlıyordu. Kutuların
+        fazladan taşıdığı tek şey son hareket zamanıydı, o da artık
+        adımın kendisinde (lib/calisma-ozeti.ts, Adim.zaman). Kalan üç
+        kutu adımların söylemediği şeyler.
+      */}
       <section className="merkez-ozet">
         <article className="merkez-kutu">
           <small>Durum</small>
           <strong>{statusLabel(calisma.status)}</strong>
           <span>Birim ilerlemesi %{ilerleme}</span>
-        </article>
-        <article className="merkez-kutu">
-          <small>Müsvedde</small>
-          <strong>{(musvedde?.kelime ?? 0).toLocaleString("tr-TR")} kelime</strong>
-          <span>{musvedde ? `Son kayıt ${trTarihSaat(musvedde.guncellendi)}` : "Henüz yazılmadı"}</span>
-        </article>
-        <article className="merkez-kutu">
-          <small>Literatür</small>
-          <strong>{literatur.toplam} kaynak</strong>
-          <span>
-            {literatur.okunan} okundu · {literatur.kullanilan} kullanıldı
-          </span>
         </article>
         <article className="merkez-kutu">
           <small>Teslim hazırlığı</small>
@@ -126,11 +123,6 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
           <small>Asistan denetimi</small>
           <strong>{asistan.toplam}</strong>
           <span>{asistan.sonTarih ? `Son: ${trTarihSaat(asistan.sonTarih)}` : "Henüz denetim yok"}</span>
-        </article>
-        <article className="merkez-kutu">
-          <small>Kaynakça uyumu</small>
-          <strong>{kaynakca?.skor != null ? `${kaynakca.skor}/100` : "—"}</strong>
-          <span>{kaynakca ? trTarihSaat(kaynakca.tarih) : "Henüz denetlenmedi"}</span>
         </article>
       </section>
 
@@ -182,6 +174,7 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
                 <span className="merkez-adim-metin">
                   <b>{adim.baslik}</b>
                   {adim.aciklama}
+                  {adim.zaman ? <small>Son hareket: {trTarihSaat(adim.zaman)}</small> : null}
                 </span>
                 <Link href={adim.href} className="merkez-adim-baglanti">
                   {adim.tamam ? "Görüntüle" : "Başla"} <ArrowRight size={14} aria-hidden="true" />
@@ -229,28 +222,23 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
         </section>
       )}
 
+      {/*
+        BAĞLI KAYITLAR DÖRTTEN İKİYE İNDİ.
+
+        "Belge kontrolü" kartı yukarıdaki "Belgeyi kontrol ettir"
+        adımıyla AYNI cümleyi yazıyordu ("N belge yüklendi"), "Asistan
+        denetimi" kartı da özet kutusundaki sayının aynısını. Burada
+        yalnızca adım OLMAYAN, yani çalışmanın kendi iş akışının
+        dışındaki kayıtlar kalıyor.
+      */}
       <section className="section mt-lg">
         <h2 className="section-title">Bağlı kayıtlar</h2>
         <div className="merkez-baglantilar">
-          <Link href={`/dashboard/documents?calisma=${calisma.id}`} className="merkez-baglanti">
-            <FileCheck2 size={18} aria-hidden="true" />
-            <span>
-              <b>Belge kontrolü</b>
-              {belgeSayisi ? `${belgeSayisi} belge yüklendi` : "Henüz belge yok"}
-            </span>
-          </Link>
           <Link href="/dashboard/expert-requests" className="merkez-baglanti">
             <Users size={18} aria-hidden="true" />
             <span>
               <b>Uzman desteği</b>
               {danismanlikSayisi ? `${danismanlikSayisi} talep açıldı` : "Talep yok"}
-            </span>
-          </Link>
-          <Link href={`/dashboard/analysis?calisma=${calisma.id}`} className="merkez-baglanti">
-            <Sparkles size={18} aria-hidden="true" />
-            <span>
-              <b>Asistan denetimi</b>
-              {asistan.toplam ? `${asistan.toplam} denetim bu çalışmaya bağlı` : "Analiz ve kaynakça denetlenmedi"}
             </span>
           </Link>
           <Link href="/dashboard/guidelines" className="merkez-baglanti">

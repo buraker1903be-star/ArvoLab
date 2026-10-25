@@ -79,7 +79,7 @@ export default async function CitationsPage({
           <BosDurum
             kompakt
             ikon={History}
-            aciklama="Henüz kaynakça denetimi yapmadınız. Her denetimin APA uyum puanı ve tarihi burada birikir; ilerlemenizi karşılaştırabilirsiniz."
+            aciklama="Henüz kaynakça denetimi yapmadınız. Her denetimin uyum puanı ve tarihi burada birikir; ilerlemenizi karşılaştırabilirsiniz."
           />
         ) : (
           /* Geçmiş, kart yığını değil kompakt satır: burada okunacak bir
@@ -107,7 +107,10 @@ export default async function CitationsPage({
                   </div>
                   <div className="denetim-skor" data-tone={ton}>
                     <span className="denetim-skor-deger">{skor ?? "—"}</span>
-                    <span className="denetim-skor-birim">/100 APA uyumu</span>
+                    {/* Stil adı YAZILMIYOR: puan çalışmanın kendi atıf stiline göre
+                        hesaplanıyor ve o stil üniversiteden üniversiteye
+                        değişiyor (IEEE, Vancouver, Chicago…). */}
+                    <span className="denetim-skor-birim">/100 kaynakça uyumu</span>
                   </div>
                 </article>
               );

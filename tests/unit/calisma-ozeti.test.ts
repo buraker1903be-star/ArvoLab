@@ -80,9 +80,12 @@ describe("çalışmanın birimleri", () => {
       adim(ozet({ musvedde: { kelime: 900, guncellendi: "x" } }), "kaynakca").aciklama,
       /henüz denetlenmedi/,
     );
+    /* Eskiden burada /APA uyum 88\/100/ aranıyordu; yani test, kuralın
+       ihlalini SABİTLİYORDU. Puan çalışmanın kendi atıf stiline göre
+       hesaplanıyor, stil de üniversiteden üniversiteye değişiyor. */
     assert.match(
       adim(ozet({ kaynakca: { id: "k1", skor: 88, tarih: "2026-09-20T09:00:00Z" } }), "kaynakca").aciklama,
-      /APA uyum 88\/100/,
+      /kaynakça uyumu 88\/100/,
     );
   });
 
@@ -119,4 +122,45 @@ describe("birimler arası tutarlılık", () => {
     assert.equal(atifStiliCelisiyorMu(ozet()), false);
     assert.equal(atifStiliCelisiyorMu(ozet({ kilavuz: kilavuz(null) })), false);
   });
+});
+
+test("adımlar son hareket zamanını taşıyor", () => {
+  /*
+    Özet kutuları adımlarla aynı sayıları yazdığı için kaldırıldı;
+    kutuların fazladan taşıdığı TEK şey son hareket zamanıydı. Adım
+    onu taşımazsa sadeleştirme bilgi kaybına dönüşürdü.
+
+    Zaman BİÇİMLENDİRİLMEDEN dönüyor: bu modül saf ve testi yerel
+    ayardan etkilenmemeli.
+  */
+  const adimlar = siradakiAdimlar(
+    ozet({
+      musvedde: { kelime: 1200, guncellendi: "2026-10-20T08:30:00.000Z" },
+      kaynakca: { id: "k1", skor: 88, tarih: "2026-10-21T09:00:00.000Z" },
+    }),
+  );
+  const yazim = adimlar.find((a) => a.anahtar === "yazim");
+  const kaynakca = adimlar.find((a) => a.anahtar === "kaynakca");
+  assert.equal(yazim?.zaman, "2026-10-20T08:30:00.000Z");
+  assert.equal(kaynakca?.zaman, "2026-10-21T09:00:00.000Z");
+});
+
+test("hareket yoksa zaman null", () => {
+  const adimlar = siradakiAdimlar(ozet({}));
+  assert.equal(adimlar.find((a) => a.anahtar === "yazim")?.zaman, null);
+  assert.equal(adimlar.find((a) => a.anahtar === "kaynakca")?.zaman, null);
+});
+
+test("kaynakça adımı sabit bir atıf stili adı yazmıyor", () => {
+  /*
+    Eskiden "APA uyum 88/100" yazıyordu. Puan çalışmanın KENDİ atıf
+    stiline göre hesaplanıyor ve o stil üniversiteden üniversiteye
+    değişiyor; IEEE kullanan bir tezde bu düpedüz yanlış bilgiydi.
+  */
+  const adimlar = siradakiAdimlar(
+    ozet({ kaynakca: { id: "k1", skor: 88, tarih: "2026-10-21T09:00:00.000Z" } }),
+  );
+  const aciklama = adimlar.find((a) => a.anahtar === "kaynakca")?.aciklama ?? "";
+  assert.ok(aciklama.includes("88/100"), aciklama);
+  assert.ok(!/APA|IEEE|Vancouver|Chicago/i.test(aciklama), aciklama);
 });
