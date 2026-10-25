@@ -169,3 +169,21 @@ export function tKritik(df: number, guven = 0.95): number {
   }
   return (alt + ust) / 2;
 }
+
+/*
+  NORMAL DAĞILIMIN İKİ KUYRUKLU p DEĞERİ.
+
+  Ayrı bir normal CDF yazmak yerine ki-kare kullanılıyor: standart
+  normalin KARESİ, bir serbestlik dereceli ki-karedir (z² ~ χ²₁).
+  Yani p = P(χ²₁ > z²) ve bu, zaten doğrulanmış `chiSquareP`'ye
+  düşüyor. İkinci bir yaklaşıklık yazmak, ikinci bir hata kaynağı
+  açmak olurdu — ve iki fonksiyonun kuyruklarda ayrışması
+  fark edilmezdi.
+
+  Mann-Whitney ve Wilcoxon'un büyük örneklem yaklaşıklığı bunu
+  kullanıyor.
+*/
+export function normalIkiKuyrukP(z: number): number {
+  if (!Number.isFinite(z)) return NaN;
+  return chiSquareP(z * z, 1);
+}
