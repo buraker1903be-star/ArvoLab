@@ -85,11 +85,11 @@
 .toast.is-success .toast-icon path { stroke-dasharray: 24; stroke-dashoffset: 24; animation: check-draw .4s .18s ease-out forwards; }
 .toast.is-success .toast-body strong { color: var(--ink); }
 
-/* Mobilde iOS gibi altta: sekme çubuğunun ve ev çubuğu payının üstünde */
+/* Mobilde iOS gibi altta: dock'un ve ev çubuğu payının üstünde */
 @media (max-width: 900px) {
   .toast-yigini {
     top: auto;
-    bottom: calc(var(--tabbar-height) + 14px + env(safe-area-inset-bottom));
+    bottom: calc(var(--dock-alani) + 14px);
     width: min(440px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
     /* En yeni bildirim altta, parmağın yakınında kalsın. */
     flex-direction: column-reverse;

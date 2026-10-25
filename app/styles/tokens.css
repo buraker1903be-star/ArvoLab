@@ -144,9 +144,7 @@
   /* ---- Katmanlar ---- */
   --z-sticky: 20;
   --z-topbar: 40;
-  --z-tabbar: 210;
-  --z-drawer-backdrop: 240;
-  --z-drawer: 250;
+  --z-dock: 210;
   --z-toast: 1100;
 
   /* ---- Hareket ve malzeme ---- */
@@ -159,7 +157,12 @@
   /* ---- Yerleşim ---- */
   --sidebar-width: 264px;
   --topbar-height: 64px;
-  --tabbar-height: 58px;
+  /* Dock'un ekranın altında kapladığı yer (os-shell.css): içerik ve
+     bildirimler bunun üstünde durur. 44px simge + 8px'lik iki iç boşluk
+     + çerçeve, artı ev çubuğu payı. Eskiden burada sekme çubuğunun
+     yüksekliği vardı; dock onun yerini alınca bildirimler dock'un
+     altında kalıyordu. */
+  --dock-alani: calc(62px + max(16px, env(safe-area-inset-bottom)));
   --content-max: 1320px;
 
   color-scheme: light;
