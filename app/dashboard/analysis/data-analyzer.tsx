@@ -28,7 +28,7 @@ import { ANALIZ_ETIKETLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { elemeNotu, eslesenSatirlar, sayisalSutun } from "@/lib/veri-eslestirme";
-import { ikiYonluAnova, type IkiYonluHata } from "@/lib/stats-iki-yonlu-anova";
+import { basitEtkiler, ikiYonluAnova, type IkiYonluHata } from "@/lib/stats-iki-yonlu-anova";
 
 type CellValue = string | number | null;
 type DataRow = Record<string, CellValue>;
@@ -1147,12 +1147,42 @@ export default function DataAnalyzer({
                 </tbody>
               </table>
             </div>
+            {/*
+              BASİT ETKİLER yalnızca etkileşim anlamlıyken. Anlamsız bir
+              etkileşimin ardından alt grupları tek tek sınamak,
+              düzeltmenin koruduğu şeyi baştan delmek olurdu — ANOVA'nın
+              ikili karşılaştırmalarındaki kuralın aynısı.
+            */}
+            {isSignificant(r.etkilesim.p) && (
+              <div className="mt-sm">
+                <strong>Basit etkiler (Bonferroni düzeltmeli)</strong>
+                <ul className="muted text-sm">
+                  {[
+                    ...basitEtkiler(gozlemler, r, "a", groupVar, groupVar2),
+                    ...basitEtkiler(gozlemler, r, "b", groupVar, groupVar2),
+                  ].map((etki) => (
+                    <li key={`${etki.faktor}-${etki.duzey}`}>
+                      <b>{etki.duzey}</b> içinde {etki.faktor}: F({etki.df}, {r.hata.df}) ={" "}
+                      {yazSayi(etki.f)}, {yazP(etki.p)}
+                      {etki.anlamli ? " — anlamlı" : " — anlamlı değil"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <p className="muted text-sm">
               Kareler toplamı model karşılaştırmasıyla (III. tip) hesaplanır; hücreler eşit
               büyüklükte olmadığında ders kitabının kapalı formülleri geçerli değildir.
               {r.dengeli ? " Bu veride hücreler eşit büyüklükte." : " Bu veride hücreler eşit büyüklükte DEĞİL."}
               {dusen > 0 ? ` ${dusen} satır eksik veri yüzünden analiz dışı bırakıldı.` : ""}
             </p>
+            {/* Varsayımlar HÜCRE düzeyinde: iki yönlü modelde normallik ve
+                varyans homojenliği her kesişim için ayrı ayrı geçerli
+                olmalı, faktörlerin kenar toplamları için değil. */}
+            {varsayimSeridi(
+              r.hucreler.map((h) => gozlemler.filter((g) => g.a === h.a && g.b === h.b).map((g) => g.deger)),
+              r.hucreler.map((h) => `${h.a} · ${h.b}`),
+            )}
           </div>
         );
       }

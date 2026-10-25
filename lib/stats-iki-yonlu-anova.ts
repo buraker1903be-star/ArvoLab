@@ -141,3 +141,73 @@ export function ikiYonluAnova(
     dengeli: hucreler.every((h) => h.n === ilkN),
   };
 }
+
+/*
+  BASİT ETKİLER (etkileşim anlamlı olduğunda).
+
+  Etkileşim anlamlıysa ana etki tek başına yanıltıcıdır: "sınıf düzeyi
+  fark yaratıyor" cümlesi, farkın kadınlarda ve erkeklerde AYNI
+  olduğunu varsayar — oysa etkileşimin anlamlı olması tam da bunun
+  doğru OLMADIĞINI söylüyor. Doğru okuma, bir faktörün etkisine
+  ötekinin HER DÜZEYİNDE ayrı ayrı bakmaktır.
+
+  Her basit etki ayrı bir F testi, yani çoklu karşılaştırma: p değerleri
+  Bonferroni ile düzeltiliyor (düzey sayısı kadar). Düzeltmesiz
+  bırakmak, etkileşim anlamlı çıktığında art arda test yapıp
+  "bir yerde anlamlı bir şey" bulmayı kolaylaştırırdı.
+
+  PAYDA ORTAK HATA KARESİ: iki yönlü modelin MSw'si kullanılıyor, her
+  alt grubun kendi hata karesi değil. Alt grubun kendi varyansını
+  kullanmak modelin topladığı bilgiyi atmak ve serbestlik derecesini
+  gereksiz düşürmek olurdu.
+*/
+export interface BasitEtki {
+  /** Hangi faktörün hangi düzeyinde bakıldığı ("Kadın"). */
+  duzey: string;
+  /** Bu düzey içinde karşılaştırılan faktör. */
+  faktor: string;
+  ss: number;
+  df: number;
+  f: number;
+  /** Düzeltilmemiş p; şeffaflık için duruyor. */
+  pHam: number;
+  /** Bonferroni ile düzeltilmiş p — karar bununla verilir. */
+  p: number;
+  anlamli: boolean;
+}
+
+export function basitEtkiler(
+  gozlemler: IkiYonluGozlem[],
+  sonuc: IkiYonluAnovaSonucu,
+  /** "a": A'nın her düzeyinde B'ye bak; "b": tersi. */
+  hangisi: "a" | "b",
+  adA: string,
+  adB: string,
+): BasitEtki[] {
+  const duzeyler = hangisi === "a" ? sonuc.duzeyA : sonuc.duzeyB;
+  const bakilanFaktor = hangisi === "a" ? adB : adA;
+  const sayi = duzeyler.length;
+
+  return duzeyler.map((duzey) => {
+    const icerisi = gozlemler.filter((g) => (hangisi === "a" ? g.a : g.b) === duzey);
+    const altDuzeyler = [...new Set(icerisi.map((g) => (hangisi === "a" ? g.b : g.a)))];
+    const gruplar = altDuzeyler.map((d) =>
+      icerisi.filter((g) => (hangisi === "a" ? g.b : g.a) === d).map((g) => g.deger),
+    );
+    const genel = mean(icerisi.map((g) => g.deger));
+    const ss = gruplar.reduce((toplam, grup) => toplam + grup.length * (mean(grup) - genel) ** 2, 0);
+    const df = altDuzeyler.length - 1;
+    const f = df > 0 ? ss / df / sonuc.hata.ms : NaN;
+    const pHam = Number.isFinite(f) ? fTestP(f, df, sonuc.hata.df) : NaN;
+    return {
+      duzey,
+      faktor: bakilanFaktor,
+      ss,
+      df,
+      f,
+      pHam,
+      p: Number.isFinite(pHam) ? Math.min(1, pHam * sayi) : NaN,
+      anlamli: Number.isFinite(pHam) ? Math.min(1, pHam * sayi) < 0.05 : false,
+    };
+  });
+}

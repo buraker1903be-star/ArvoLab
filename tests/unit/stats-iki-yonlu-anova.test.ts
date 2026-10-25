@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ikiYonluAnova, type IkiYonluAnovaSonucu, type IkiYonluGozlem } from "@/lib/stats-iki-yonlu-anova";
+import { basitEtkiler, ikiYonluAnova, type IkiYonluAnovaSonucu, type IkiYonluGozlem } from "@/lib/stats-iki-yonlu-anova";
 
 const VERI: Record<string, Record<string, number[]>> = {
   Kadın: { "1. sınıf": [12, 14, 13, 15], "2. sınıf": [18, 17, 19, 20], "3. sınıf": [22, 24, 23, 21] },
@@ -121,5 +121,61 @@ test("iki yönlü ANOVA", async (t) => {
     const kadin3 = r.hucreler.find((h) => h.a === "Kadın" && h.b === "3. sınıf");
     assert.equal(kadin3?.n, 4);
     assert.equal(kadin3?.ortalama, 22.5);
+  });
+});
+
+test("basit etkiler", async (t) => {
+  await t.test("elde hesaplananla birebir", () => {
+    /*
+      Beklenen değerler elle hesaplandı: her cinsiyetin İÇİNDE sınıf
+      düzeyinin kareler toplamı, payda iki yönlü modelin ORTAK hata
+      kare ortalaması (30/18). Alt grubun kendi varyansını kullanmak
+      modelin topladığı bilgiyi atmak olurdu.
+    */
+    const g = gozlemler();
+    const r = sonuc(g);
+    const etkiler = basitEtkiler(g, r, "a", "Cinsiyet", "Sınıf");
+    const kadin = etkiler.find((e) => e.duzey === "Kadın");
+    const erkek = etkiler.find((e) => e.duzey === "Erkek");
+    assert.ok(Math.abs(kadin!.ss - 162.6667) < 1e-3, String(kadin!.ss));
+    assert.ok(Math.abs(kadin!.f - 48.8) < 1e-6, String(kadin!.f));
+    assert.ok(Math.abs(erkek!.ss - 416) < 1e-6, String(erkek!.ss));
+    assert.ok(Math.abs(erkek!.f - 124.8) < 1e-6, String(erkek!.f));
+    assert.equal(kadin!.df, 2);
+  });
+
+  await t.test("p değerleri Bonferroni ile düzeltiliyor", () => {
+    const g = gozlemler();
+    const etkiler = basitEtkiler(g, sonuc(g), "a", "Cinsiyet", "Sınıf");
+    // İki düzey → iki karşılaştırma; düzeltilmiş p, ham p'nin iki katı (1'de kırpılır).
+    for (const etki of etkiler) {
+      assert.ok(etki.p >= etki.pHam, `${etki.p} < ${etki.pHam}`);
+      assert.ok(etki.p <= 1);
+      assert.ok(Math.abs(etki.p - Math.min(1, etki.pHam * 2)) < 1e-12);
+    }
+  });
+
+  await t.test("etkisi olmayan düzeyde kareler toplamı sıfıra gidiyor", () => {
+    /*
+      Kadınlarda sınıf düzeyi hiç fark yaratmıyor, erkeklerde yaratıyor:
+      basit etki tam da bunu ayırt edebilmeli. Ana etki bu veride
+      ortalamayı aldığı için "sınıf fark yaratıyor" der ve kadınlar
+      için YANLIŞ olur — etkileşimin okunma sebebi budur.
+    */
+    const liste: IkiYonluGozlem[] = [];
+    for (const b of ["1. sınıf", "2. sınıf"]) {
+      for (let i = 0; i < 6; i += 1) {
+        liste.push({ a: "Kadın", b, deger: 10 + (i - 2.5) });
+        liste.push({ a: "Erkek", b, deger: (b === "1. sınıf" ? 5 : 25) + (i - 2.5) });
+      }
+    }
+    const r = sonuc(liste);
+    const etkiler = basitEtkiler(liste, r, "a", "Cinsiyet", "Sınıf");
+    const kadin = etkiler.find((e) => e.duzey === "Kadın");
+    const erkek = etkiler.find((e) => e.duzey === "Erkek");
+    assert.ok(kadin!.ss < 1e-9, String(kadin!.ss));
+    assert.equal(kadin!.anlamli, false);
+    assert.ok(erkek!.ss > 100, String(erkek!.ss));
+    assert.equal(erkek!.anlamli, true);
   });
 });
