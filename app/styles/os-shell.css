@@ -42,16 +42,31 @@
 .os-dock-item.is-active::after {
   content: ""; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
 }
-/* Ad yalnızca fareyle üstüne gelince ipucu olarak; ekran okuyucu aria-label'ı okur. */
-.os-dock-label {
-  position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(4px);
-  padding: 4px 8px; border-radius: var(--r-xs); background: var(--ink); color: var(--surface);
-  font-size: var(--fs-micro); font-weight: 500; white-space: nowrap; pointer-events: none; opacity: 0;
-  transition: opacity .12s var(--ease-spring), transform .12s var(--ease-spring);
+/*
+  Üstüne gelinen simgenin adı. Dock'un DIŞINDA, sabit konumda duruyor.
+
+  Eskiden ikonun içinde, ikonun üstünde konumlanan bir <span>'di ve
+  GÖRÜNMÜYORDU: dock'ta `overflow-x: auto` var (dar ekranda on bir
+  simge sığmıyor) ve bir eksende görünür olmayan taşma ÖTEKİ ekseni de
+  kırpıyor. Ölçüldü (26.10.2026, 1200px): etiket kutusu 696–721, dock
+  kutusu 718–784 — etiket çiziliyor ama dock'un kaydırma kutusu onu
+  kesiyordu.
+
+  Ekran okuyucu bunu okumaz (aria-hidden); adı bağlantının
+  aria-label'ından alıyor.
+*/
+.os-dock-ipucu {
+  position: fixed; z-index: calc(var(--z-dock) + 2); transform: translateX(-50%);
+  padding: 4px 10px; border-radius: var(--r-xs);
+  background: var(--ink); color: var(--surface);
+  font-size: var(--fs-micro); font-weight: 500; white-space: nowrap; pointer-events: none;
+  animation: os-ipucu .12s var(--ease-spring);
 }
-@media (hover: hover) {
-  .os-dock-item:hover .os-dock-label { opacity: 1; transform: translateX(-50%); }
+@keyframes os-ipucu {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to { opacity: 1; transform: translateX(-50%); }
 }
+@media (prefers-reduced-motion: reduce) { .os-dock-ipucu { animation: none; } }
 
 /* ---------- İkinci dock: açık uygulamanın bölümleri ---------- */
 .os-subdock {
@@ -82,8 +97,8 @@
 }
 .os-subdock a:hover { background: var(--surface-2); color: var(--ink); }
 .os-subdock a.is-active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
-/* İkinci dock açıkken o ikonun ad ipucu gizli (üst üste binmesin) */
-.os-dock-item.is-sub-open .os-dock-label { display: none; }
+/* İkinci dock açıkken ipucu hiç çizilmiyor (os-dock.tsx): o şerit
+   uygulamanın adını kendisi yazıyor, ikisi üst üste binerdi. */
 .os-dock-item.is-sub-open { background: var(--surface-2); color: var(--ink); }
 .os-dock-item.is-sub-open.is-active { background: var(--accent-soft); color: var(--accent-strong); }
 @media (prefers-reduced-motion: reduce) { .os-subdock { animation: none; } }

@@ -45,6 +45,20 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
   /* Açıldığı sayfa da tutuluyor: sayfa değişince ikinci dock kendiliğinden
      gizlenir (efektte state yazmadan). */
   const [altDurum, setAlt] = useState<{ key: string; x: number; alt: number; yol: string } | null>(null);
+  /*
+    İKONUN ADI DOCK'UN DIŞINDA ÇİZİLİYOR.
+
+    Eskiden ad, ikonun içindeki bir <span>'di ve ikonun üstünde
+    konumlanıyordu. Görünmüyordu: dock'ta `overflow-x: auto` var (dar
+    ekranda on bir simge sığmıyor) ve bir eksende görünür olmayan taşma
+    ÖTEKİ ekseni de kırpıyor. Ölçüldü (26.10.2026, 1200px): etiket
+    kutusu 696–721, dock kutusu 718–784 — yani etiket çiziliyor ama
+    dock'un kendi kaydırma kutusu onu kesiyordu.
+
+    Şimdi kaydırıcının dışında, ikinci dock'la aynı yöntemle (sabit
+    konum, ikonun ortasına hizalı) çiziliyor.
+  */
+  const [ipucu, setIpucu] = useState<{ ad: string; x: number; alt: number } | null>(null);
   const alt = altDurum && altDurum.yol === yol ? altDurum : null;
 
   const konum = (oge: HTMLElement) => {
@@ -117,10 +131,15 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
         aria-haspopup={bolumVar ? "true" : undefined}
         aria-expanded={bolumVar ? alt?.key === uygulama.key : undefined}
         onPointerEnter={(olay) => {
-          if (fareMi(olay)) ac(uygulama, olay.currentTarget);
+          if (!fareMi(olay)) return;
+          const yer = konum(olay.currentTarget);
+          setIpucu({ ad: uygulama.label, x: yer.x, alt: yer.alt });
+          ac(uygulama, olay.currentTarget);
         }}
         onPointerLeave={(olay) => {
-          if (fareMi(olay)) kapat();
+          if (!fareMi(olay)) return;
+          setIpucu(null);
+          kapat();
         }}
         onKeyDown={ikonKlavye(uygulama)}
         onPointerDown={(olay) => zaman.isaretciKaydet(olay.pointerType)}
@@ -135,7 +154,6 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
         }}
       >
         <OsSimge ad={uygulama.ikon} />
-        <span className="os-dock-label">{uygulama.kisa ?? uygulama.label}</span>
       </Link>
     );
   };
@@ -177,11 +195,26 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
         </nav>
       ) : null}
 
+      {ipucu && !alt ? (
+        <span
+          className="os-dock-ipucu"
+          aria-hidden="true"
+          style={{
+            left: Math.min(Math.max(ipucu.x, 80), (typeof window === "undefined" ? 1280 : window.innerWidth) - 80),
+            bottom: ipucu.alt,
+          }}
+        >
+          {ipucu.ad}
+        </span>
+      ) : null}
+
       <nav
         className="os-dock"
         aria-label="Uygulamalar"
         onPointerLeave={(olay) => {
-          if (fareMi(olay)) kapat();
+          if (!fareMi(olay)) return;
+          setIpucu(null);
+          kapat();
         }}
       >
         {home ? simge(home) : null}
@@ -193,10 +226,17 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
           className="os-dock-item"
           aria-haspopup="dialog"
           aria-label="Tüm uygulamalar"
+          onPointerEnter={(olay) => {
+            if (!fareMi(olay)) return;
+            const yer = konum(olay.currentTarget);
+            setIpucu({ ad: "Tüm uygulamalar", x: yer.x, alt: yer.alt });
+          }}
+          onPointerLeave={(olay) => {
+            if (fareMi(olay)) setIpucu(null);
+          }}
           onClick={() => pencere.current?.showModal()}
         >
           <OsSimge ad="apps" />
-          <span className="os-dock-label">Uygulamalar</span>
         </button>
       </nav>
 
