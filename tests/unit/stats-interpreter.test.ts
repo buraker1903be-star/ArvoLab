@@ -153,3 +153,75 @@ describe("anlamlılık kuralı", () => {
     assert.match(detectStatistics("t(28) = 2.45, p < 0,05")[0].apaSentenceFragment, /p < \.05$/);
   });
 });
+
+/*
+  SAYININ YAZILIŞI KILAVUZDAN GELİR (25.10.2026).
+
+  Baştaki sıfır ve ondalık ayırıcı koda sabitlenmişti; ikisi de APA
+  kuralıydı. Bu kurallar üniversiteden üniversiteye değişiyor —
+  kılavuzu "0,021" diyen öğrenci araçtan ".021" alıyor ve araç bunu
+  doğru biçim diye sunuyordu.
+*/
+describe("biçim kılavuzdan geliyor", () => {
+  const turkKilavuzu = { ayirici: "comma" as const, bastakiSifir: true };
+  const apa = { ayirici: "period" as const, bastakiSifir: false };
+
+  test("Türkçe kılavuz: virgül ve baştaki sıfır", () => {
+    const [bulgu] = detectStatistics("t(28) = 2.45, p = 0.021", turkKilavuzu);
+    assert.equal(bulgu.apaSentenceFragment, "t(28) = 2,45, p = 0,021");
+  });
+
+  test("aynı girdi APA biçiminde", () => {
+    const [bulgu] = detectStatistics("t(28) = 2.45, p = 0.021", apa);
+    assert.equal(bulgu.apaSentenceFragment, "t(28) = 2.45, p = .021");
+  });
+
+  test("BİÇİM VERİLMEZSE eski davranış korunur", () => {
+    /* Varsayılan APA geleneği: bu değişiklik mevcut çağıranları
+       bozmuyor. Ama çağıran biçimi vermeli ve varsayılana
+       düşüldüğünü kullanıcıya söylemeli. */
+    const [bulgu] = detectStatistics("t(28) = 2.45, p = 0.021");
+    assert.match(bulgu.apaSentenceFragment, /p = \.021/);
+  });
+
+  test("ÜST SINIR yazımında da kılavuz uygulanır, basamak korunur", () => {
+    const [bulgu] = detectStatistics("F(2, 57) = 4.31, p < .050", turkKilavuzu);
+    /* ".050" → "0,050": sıfır eklendi, ayırıcı değişti, basamak duruyor. */
+    assert.match(bulgu.apaSentenceFragment, /p < 0,050/);
+    assert.match(bulgu.apaSentenceFragment, /F\(2, 57\) = 4,31/);
+  });
+
+  test("çok küçük p de kılavuza uyar", () => {
+    const [bulgu] = detectStatistics("χ²(1, N = 120) = 16.4, p = 0.0004", turkKilavuzu);
+    assert.match(bulgu.apaSentenceFragment, /p < 0,001/);
+    assert.match(bulgu.apaSentenceFragment, /χ²\(1, N = 120\) = 16,40/);
+  });
+
+  test("r BAŞTAKİ SIFIRLA yazılmış olsa da TANINIYOR", () => {
+    /*
+      Desen `-?[.,]\\d+` diyordu, yani r'nin APA'daki gibi sıfırsız
+      yazıldığını varsayıyordu: "r(48) = 0,42" hiç eşleşmiyor ve araç
+      "istatistik bulunamadı" diyordu. Biçimlendirme değil TANIMA
+      kusuruydu — kılavuzu sıfır yazdıran öğrencinin değeri hiç
+      görünmüyordu.
+    */
+    assert.equal(detectStatistics("r(48) = 0.42, p = 0.003", apa).length, 1);
+    assert.equal(detectStatistics("r(48) = 0,42, p = 0,003", turkKilavuzu).length, 1);
+    assert.equal(detectStatistics("r(48) = .42, p = .003", apa).length, 1);
+  });
+
+  test("korelasyonda SINIRLI DEĞER kuralı r'ye de uygulanır", () => {
+    const turk = detectStatistics("r(48) = .42, p = 0.003", turkKilavuzu);
+    assert.match(turk[0].apaSentenceFragment, /r\(48\) = 0,42/);
+    const apaSonuc = detectStatistics("r(48) = 0.42, p = 0.003", apa);
+    assert.match(apaSonuc[0].apaSentenceFragment, /r\(48\) = \.42/);
+  });
+
+  test("SERBESTLİK DERECESİ sayı değil: biçimlenmiyor", () => {
+    /* t(28) içindeki 28 bir ondalık değil, serbestlik derecesi.
+       Ayırıcı kuralı ona uygulansaydı "t(2,8)" gibi saçma bir
+       çıktı olurdu. */
+    const [bulgu] = detectStatistics("t(28) = 2.45, p = 0.021", turkKilavuzu);
+    assert.match(bulgu.apaSentenceFragment, /t\(28\)/);
+  });
+});
