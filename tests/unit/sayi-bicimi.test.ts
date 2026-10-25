@@ -8,7 +8,7 @@
 */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { sayiBicimi, sayiMetniBicimle, sayiYaz, VARSAYILAN_BICIM } from "@/lib/sayi-bicimi";
+import { formdanSayiKurali, sayiBicimi, sayiMetniBicimle, sayiYaz, VARSAYILAN_BICIM } from "@/lib/sayi-bicimi";
 
 describe("biçim kararı üç kademeli", () => {
   test("kılavuz söylüyorsa kılavuz kazanır", () => {
@@ -107,5 +107,31 @@ describe("yazılan sayı biçimleniyor", () => {
        sanardı; tire açıkça "hesaplanamadı" diyor. */
     assert.equal(sayiYaz(NaN, 2, virgulluSifirli), "—");
     assert.equal(sayiYaz(Infinity, 2, noktaliSifirsiz), "—");
+  });
+});
+
+describe("form alanları üç durumlu", () => {
+  test("boş alan KURAL DEĞİL, bilgi yokluğu", () => {
+    /*
+      İki durumlu onay kutusu kullanılsaydı "kılavuz sıfırı
+      yazdırmıyor" ile "kılavuz bu konuda bir şey demiyor" aynı şeye
+      inerdi — ilki bir kural, ikincisi bilgi yokluğu. Fark biçim
+      kararında görünüyor: kural varsa kılavuz kazanır, yoksa atıf
+      sisteminin geleneği uygulanır.
+    */
+    const bos = formdanSayiKurali("", "");
+    assert.deepEqual(bos, { ayirici: null, bastakiSifir: null });
+    assert.equal(sayiBicimi(bos, "chicago").kaynak, "atif-sistemi");
+  });
+
+  test("açıkça 'yazılmaz' bir KURALDIR", () => {
+    const kural = formdanSayiKurali("period", "yazilmaz");
+    assert.deepEqual(kural, { ayirici: "period", bastakiSifir: false });
+    assert.equal(sayiBicimi(kural, "chicago").bastakiSifir, false, "kılavuz geleneği ezer");
+  });
+
+  test("tanınmayan değer uydurulmaz", () => {
+    assert.deepEqual(formdanSayiKurali("nokta", "evet"), { ayirici: null, bastakiSifir: null });
+    assert.deepEqual(formdanSayiKurali(undefined, null), { ayirici: null, bastakiSifir: null });
   });
 });

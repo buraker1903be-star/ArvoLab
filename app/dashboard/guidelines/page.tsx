@@ -244,6 +244,32 @@ export default async function GuidelinesPage() {
                 </select>
               </label>
 
+              {/*
+                SAYININ YAZILIŞI — üç durumlu ve BOŞ BIRAKILABİLİR.
+                "Kılavuzda belirtilmemiş" ayrı bir seçenek, varsayılan
+                değil: kılavuz susuyorsa atıf sisteminin geleneği
+                uygulanır (lib/sayi-bicimi). İki durumlu bir kutu
+                kullanılsaydı "sıfır yazdırmıyor" ile "bu konuda bir
+                şey demiyor" aynı şeye inerdi.
+              */}
+              <label>
+                <span>Ondalık ayırıcı</span>
+                <select name="numberDecimalSeparator" defaultValue="">
+                  <option value="">Kılavuzda belirtilmemiş</option>
+                  <option value="comma">Virgül (0,021)</option>
+                  <option value="period">Nokta (0.021)</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Baştaki sıfır</span>
+                <select name="numberLeadingZero" defaultValue="">
+                  <option value="">Kılavuzda belirtilmemiş</option>
+                  <option value="yazilir">Yazılır (0,021)</option>
+                  <option value="yazilmaz">Yazılmaz (,021)</option>
+                </select>
+              </label>
+
               <label>
                 <span>Min. sayfa</span>
                 <input name="minPages" type="number" min={0} placeholder="60" />
@@ -637,6 +663,26 @@ export default async function GuidelinesPage() {
                                 {label}
                               </option>
                             ))}
+                          </select>
+                        </label>
+                        {/* Üç durumlu; boş = kılavuz söylemiyor (lib/sayi-bicimi). */}
+                        <label>
+                          <span>Ondalık ayırıcı</span>
+                          <select name="numberDecimalSeparator" defaultValue={g.number_decimal_separator ?? ""}>
+                            <option value="">Kılavuzda belirtilmemiş</option>
+                            <option value="comma">Virgül (0,021)</option>
+                            <option value="period">Nokta (0.021)</option>
+                          </select>
+                        </label>
+                        <label>
+                          <span>Baştaki sıfır</span>
+                          <select
+                            name="numberLeadingZero"
+                            defaultValue={g.number_leading_zero === true ? "yazilir" : g.number_leading_zero === false ? "yazilmaz" : ""}
+                          >
+                            <option value="">Kılavuzda belirtilmemiş</option>
+                            <option value="yazilir">Yazılır (0,021)</option>
+                            <option value="yazilmaz">Yazılmaz (,021)</option>
                           </select>
                         </label>
                         <label>

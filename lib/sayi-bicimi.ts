@@ -129,3 +129,22 @@ export function sayiYaz(deger: number, basamak: number, bicim: SayiBicimi, sinir
   if (!Number.isFinite(deger)) return "—";
   return sayiMetniBicimle(deger.toFixed(basamak), bicim, sinirliDeger);
 }
+
+/*
+  FORM ALANLARINDAN KILAVUZ KURALI.
+
+  İki alan da ÜÇ DURUMLU: "söylenmedi" ayrı bir değer, varsayılan
+  değil. Boş bırakılan alan `null` olur ve kod atıf sisteminin
+  geleneğine düşer. İki durumlu bir onay kutusu kullanılsaydı
+  (işaretli/işaretsiz) "kılavuz sıfırı yazdırmıyor" ile "kılavuz bu
+  konuda bir şey demiyor" aynı şeye inerdi — ilki bir kural, ikincisi
+  bilgi yokluğu.
+
+  Tanınmayan değer de `null`: formdan beklenmeyen bir şey gelirse
+  uydurma kural yazmaktansa "bilinmiyor" demek doğru.
+*/
+export function formdanSayiKurali(ayiriciHam: unknown, sifirHam: unknown): KilavuzSayiKurali {
+  const ayirici = ayiriciHam === "comma" || ayiriciHam === "period" ? ayiriciHam : null;
+  const bastakiSifir = sifirHam === "yazilir" ? true : sifirHam === "yazilmaz" ? false : null;
+  return { ayirici, bastakiSifir };
+}

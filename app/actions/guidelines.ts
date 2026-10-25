@@ -1,5 +1,7 @@
 "use server";
 
+import { formdanSayiKurali } from "@/lib/sayi-bicimi";
+
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { validIndentCm } from "@/lib/paragraph-format";
 import { revalidatePath } from "next/cache";
@@ -24,6 +26,10 @@ export interface ThesisGuideline {
   version_label: string | null;
   source_url: string | null;
   citation_style: string;
+  /* Sayının yazılışı; ikisi de NULL olabilir — kılavuz bu kuralı
+     söylemiyorsa uydurmuyoruz (lib/sayi-bicimi). */
+  number_decimal_separator: string | null;
+  number_leading_zero: boolean | null;
   required_sections: string[];
   min_pages: number | null;
   max_pages: number | null;
@@ -163,7 +169,7 @@ export async function getGuidelines(): Promise<ListeSonucu<ThesisGuideline>> {
   const { data, error } = await supabase
     .from("thesis_guidelines")
     .select(
-      "id, university_name, institute_name, version_label, source_url, citation_style, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at, analysis_status, review_notes, extracted_rules, ready_for_approval, ai_analysis, organization_id, university_id, academic_unit_id"
+      "id, university_name, institute_name, version_label, source_url, citation_style, number_decimal_separator, number_leading_zero, required_sections, min_pages, max_pages, notes, is_active, last_checked_at, created_at, analysis_status, review_notes, extracted_rules, ready_for_approval, ai_analysis, organization_id, university_id, academic_unit_id"
     )
     .order("university_name", { ascending: true });
 
@@ -240,6 +246,10 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
 
   const { data: updated, error } = await supabase.from("thesis_guidelines").update({
     citation_style: citationStyle,
+    /* Üç durumlu: boş alan "kılavuz söylemiyor" demek, varsayılan
+       değil (lib/sayi-bicimi → formdanSayiKurali). */
+    number_decimal_separator: formdanSayiKurali(formData.get("numberDecimalSeparator"), null).ayirici,
+    number_leading_zero: formdanSayiKurali(null, formData.get("numberLeadingZero")).bastakiSifir,
     required_sections: requiredSections,
     extracted_rules: {
       margins_cm: margins,
@@ -372,6 +382,10 @@ export async function createGuideline(formData: FormData): Promise<ActionResult>
     version_label: String(formData.get("versionLabel") ?? "").trim() || null,
     source_url: String(formData.get("sourceUrl") ?? "").trim() || null,
     citation_style: citationStyle,
+    /* Üç durumlu: boş alan "kılavuz söylemiyor" demek, varsayılan
+       değil (lib/sayi-bicimi → formdanSayiKurali). */
+    number_decimal_separator: formdanSayiKurali(formData.get("numberDecimalSeparator"), null).ayirici,
+    number_leading_zero: formdanSayiKurali(null, formData.get("numberLeadingZero")).bastakiSifir,
     required_sections: requiredSections,
     min_pages: minPagesRaw ? Number(minPagesRaw) : null,
     max_pages: maxPagesRaw ? Number(maxPagesRaw) : null,
@@ -494,6 +508,13 @@ export async function kilavuzAtifStiliniAyarla(guidelineId: string, formData: Fo
     .from("thesis_guidelines")
     .update({
       citation_style: citationStyle,
+      /*
+        SAYI BİÇİMİ ALANLARI BURAYA YAZILMIYOR. Bu işlem yalnızca
+        atıf stilini ayarlıyor ve formunda sayı alanları yok;
+        yazsaydık `formdanSayiKurali` boş girdiden null üretir ve
+        daha önce girilmiş bir kuralı SESSİZCE SİLERDİ. Alan
+        yalnızca onu taşıyan formdan güncellenir.
+      */
       analysis_status: "needs_review",
       reviewed_by: null,
       reviewed_at: null,
@@ -599,7 +620,7 @@ export async function approveGuideline(guidelineId: string) {
   const { data: guideline, error: guidelineError } = await supabase
     .from("thesis_guidelines")
     .select(
-      "citation_style, required_sections, extracted_rules, min_pages, max_pages, version_label, document_title, source_url, source_checksum, ai_analysis"
+      "citation_style, number_decimal_separator, number_leading_zero, required_sections, extracted_rules, min_pages, max_pages, version_label, document_title, source_url, source_checksum, ai_analysis"
     )
     .eq("id", guidelineId)
     .single();
@@ -623,6 +644,11 @@ export async function approveGuideline(guidelineId: string) {
       // Müşteri editörleri bu sürümü kullanır; yeni onayda kendiliğinden güncellenir.
       approved_snapshot: {
         citation_style: guideline.citation_style,
+        /* Sayı biçimi de dondurulur: onaydan sonra değiştirilen bir
+           kural öğrencinin çalışmasına sızmamalı (anlık görüntünün
+           varlık sebebi). */
+        number_decimal_separator: guideline.number_decimal_separator,
+        number_leading_zero: guideline.number_leading_zero,
         required_sections: guideline.required_sections,
         extracted_rules: guideline.extracted_rules,
         min_pages: guideline.min_pages,
