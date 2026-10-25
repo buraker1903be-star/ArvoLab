@@ -145,6 +145,20 @@
      aynı ekranda farklı yoğunlukta görünüyorlardı. */
   --kart-araligi: 12px;
 
+  /* ---- Kart ölçeği: İKİ kademe ----
+     "Kart" rolündeki öğeler beş ayrı dolgu ve üç ayrı yarıçap
+     kullanıyordu (22/24, 18/20/18/24, 18, 14/16, 14 — ve 18, 15, 14px
+     yarıçap). En görünür sonucu: ana sayfadaki istatistik şeridi ile
+     Çalışma Merkezi'nin özet şeridi aynı işi yapıp farklı yoğunlukta
+     duruyordu.
+
+     Büyük kademe içerik kabı (form kartı, çalışma kartı), küçük kademe
+     sayı/bağlantı karosu. */
+  --kart-dolgu: 20px 24px;
+  --kart-r: var(--r-lg);
+  --karo-dolgu: 14px 16px;
+  --karo-r: var(--r-md);
+
   /* ---- Tipografi ----
      Apple cihazlarda sistemin SF Pro'su, diğerlerinde Inter (app/layout.tsx). */
   --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter, "Inter"),
@@ -159,6 +173,17 @@
   --fs-lg: 17px;
   --fs-xl: 20px;
   --fs-title: clamp(26px, 2.3vw, 32px);
+
+  /* ---- Satır ritmi ----
+     Gövde metni ÜÇ ayrı değerle yazılıyordu (1,5 / 1,55 / 1,6): aynı
+     rolde duran iki paragraf farklı ritimde okunuyordu. Kart ve bölüm
+     başlıkları da iki değerdeydi (1,3 / 1,35).
+
+     Daha sıkı değerler (1,45 ve altı) BİLEREK ölçeğin dışında: onlar
+     yoğun arayüz satırları ve büyük gösterim başlıkları için, gövde
+     metni için değil. */
+  --lh-metin: 1.55;
+  --lh-baslik: 1.3;
 
   /* ---- Katmanlar ---- */
   --z-sticky: 20;

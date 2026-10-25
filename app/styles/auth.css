@@ -71,7 +71,7 @@
   color: var(--accent-300);
 }
 .highlight-card h2 { margin: 0 0 3px; color: var(--sidebar-ink); font-size: var(--fs-body); font-weight: 650; }
-.highlight-card p { margin: 0; color: var(--sidebar-muted); font-size: var(--fs-base); line-height: 1.5; }
+.highlight-card p { margin: 0; color: var(--sidebar-muted); font-size: var(--fs-base); line-height: var(--lh-metin); }
 .security-note { position: relative; display: flex; align-items: center; gap: 9px; color: var(--sidebar-muted); font-size: var(--fs-sm); }
 
 /* ---------- Giriş formu ---------- */
@@ -100,7 +100,7 @@
   line-height: 1.15;
   letter-spacing: -.025em;
 }
-.login-heading p { margin: 0; color: var(--muted); line-height: 1.6; }
+.login-heading p { margin: 0; color: var(--muted); line-height: var(--lh-metin); }
 
 .login-form { display: grid; gap: 10px; }
 .login-form label { color: var(--ink-soft); font-size: var(--fs-base); font-weight: 650; }

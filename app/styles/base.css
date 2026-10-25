@@ -24,7 +24,9 @@ body {
   color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--fs-body);
-  line-height: 1.5;
+  /* Gövdenin varsayılanı da aynı ritimden: aksi hâlde token'a
+     bağlanmamış her öğe sessizce ikinci bir ritme düşüyordu. */
+  line-height: var(--lh-metin);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

@@ -525,9 +525,11 @@
 .outline-card {
   display: grid;
   gap: 10px;
-  padding: 14px;
+  padding: var(--karo-dolgu);
   border: 1px solid var(--line-soft);
-  border-radius: var(--r-lg);
+  /* Küçük kademe: yan paneldeki karo, sayfa gövdesindeki büyük kart
+     değil. Eskiden büyük kartın yarıçapını (18px) taşıyordu. */
+  border-radius: var(--karo-r);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
@@ -662,7 +664,7 @@
   overflow-y: auto;
   list-style: none;
   font-size: var(--fs-sm);
-  line-height: 1.6;
+  line-height: var(--lh-metin);
 }
 .diff-list li { padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface-2); overflow-wrap: anywhere; }
 .diff-list .diff-same { padding: 2px; background: none; color: var(--muted); font-size: var(--fs-micro); text-align: center; }
