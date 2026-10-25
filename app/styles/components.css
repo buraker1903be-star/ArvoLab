@@ -1560,11 +1560,23 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   margin: 10px 0 0; padding: 0; list-style: none;
 }
 .readiness-list li {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 9px 0 9px 12px;
   border-left: 2px solid var(--line);
   font-size: var(--fs-base);
 }
+/* Tıklanabilir alan maddenin TAMAMI: yalnızca başlığı bağlantı yapmak
+   küçük bir hedef bırakıyor ve "buraya tıklanır" demiyordu. */
+.readiness-list a {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 12px;
+  color: inherit; text-decoration: none;
+  border-radius: 0 var(--r-xs) var(--r-xs) 0;
+  transition: background-color .15s ease;
+}
+.readiness-list a:hover { background: var(--surface-2); }
+.readiness-list a small {
+  margin-top: 2px; color: var(--accent); font-size: var(--fs-sm); font-weight: 650;
+}
+.readiness-list a:hover small { text-decoration: underline; }
 /* Eksik madde ile "bakılacak" madde aynı görünmemeli: ilki bir iş,
    ikincisi bir uyarı. */
 .readiness-list li[data-tone="warning"] { border-left-color: var(--warning); }

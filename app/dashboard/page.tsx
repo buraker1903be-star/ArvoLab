@@ -341,12 +341,27 @@ export default async function DashboardPage() {
               çıkıp envantere dönüyor. Kalanın sayısı yazılıyor ki
               kullanıcı listenin kırpıldığını bilsin.
             */}
+            {/*
+              HER EKSİK BİR BAĞLANTI. Eskiden düz metindi: öğrenci
+              "Eksik: Bulgular, Sonuç, Ekler" yazısını okuyor ve nereye
+              gideceğini kendi bulmak zorunda kalıyordu. Artık tıklayınca
+              editör açılıyor ve teslim kontrolü tam o maddede duruyor.
+
+              Düzeltme kendiliğinden ÇALIŞMIYOR, yalnızca gösteriliyor:
+              "Eksik bölümleri ekle" belgeyi değiştiren bir işlem ve onu
+              bir bağlantıya gömmek, öğrencinin istemediği bir
+              düzenlemeyi geri alınacak işe çevirirdi. Düğme karşısında,
+              basması bir tık daha.
+            */}
             {readinessGaps.length > 0 ? (
               <ul className="readiness-list">
                 {readinessGaps.slice(0, 3).map((madde) => (
                   <li key={madde.id} data-tone={madde.status === "todo" ? "warning" : "info"}>
-                    <b>{madde.label}</b>
-                    {madde.detail ? <span>{madde.detail}</span> : null}
+                    <Link href={`/dashboard/editor/${resume.id}/write?teslim=${madde.id}`}>
+                      <b>{madde.label}</b>
+                      {madde.detail ? <span>{madde.detail}</span> : null}
+                      <small>{madde.action?.label ?? "Editörde aç"}</small>
+                    </Link>
                   </li>
                 ))}
                 {readinessGaps.length > 3 ? (

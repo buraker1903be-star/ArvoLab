@@ -134,6 +134,14 @@ const DEGREE_TYPE_BY_PROJECT_TYPE: Record<string, string> = {
 
 interface ManuscriptEditorProps {
   projectId: string;
+  /*
+    Ana sayfadaki eksik maddesine tıklanarak gelindiyse açılacak madde.
+    Pencere açılıyor, eylem kendiliğinden ÇALIŞMIYOR: "Eksik bölümleri
+    ekle" belgeyi değiştiren bir işlem ve adres çubuğundan tetiklenen
+    bir metin değişikliği, öğrencinin istemediği bir düzenlemeyi geri
+    alınacak işe çevirirdi.
+  */
+  acilacakMadde?: string | null;
   initialContent: object | null;
   /** Veritabanındaki sürümün zamanı (çakışma denetimi için); null = hiç kaydedilmemiş */
   initialUpdatedAt: string | null;
@@ -306,6 +314,7 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
 
 export default function ManuscriptEditor({
   projectId,
+  acilacakMadde = null,
   initialContent,
   initialUpdatedAt,
   initialMargins,
@@ -355,7 +364,19 @@ export default function ManuscriptEditor({
   const [structureIssues, setStructureIssues] = useState<StructureIssue[] | null>(null);
   const [liveIssues, setLiveIssues] = useState<StructureIssue[] | null>(null);
   const [issuesOpen, setIssuesOpen] = useState(false);
-  const [checklistOpen, setChecklistOpen] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(Boolean(acilacakMadde));
+  /*
+    ANA SAYFADAN GELEN MADDE. Ana sayfa eksikleri yazıyordu ama onlar
+    düz metindi: öğrenci "Eksik: Bulgular, Sonuç" okuyup nereye
+    gideceğini kendi bulmak zorundaydı. Artık her eksik bir bağlantı ve
+    buraya "?teslim=<madde>" ile geliyor.
+
+    Pencere AÇILIYOR, eylem kendiliğinden ÇALIŞMIYOR: "Eksik bölümleri
+    ekle" belgeyi değiştiren bir işlem ve adres çubuğundan tetiklenen
+    bir metin değişikliği, öğrencinin istemediği bir düzenlemeyi geri
+    alınacak iş hâline getirirdi.
+  */
+  const [vurguluMadde, setVurguluMadde] = useState<string | null>(acilacakMadde);
   const [shareOpen, setShareOpen] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [footnoteDialog, setFootnoteDialog] = useState<FootnoteDialogState>(null);
@@ -730,7 +751,20 @@ export default function ManuscriptEditor({
   }, [editor, structureOptions]);
 
   const closeIssues = useCallback(() => setIssuesOpen(false), []);
-  const closeChecklist = useCallback(() => setChecklistOpen(false), []);
+  const closeChecklist = useCallback(() => {
+    setChecklistOpen(false);
+    setVurguluMadde(null);
+    /*
+      Adres de temizleniyor: parametre kalsaydı sayfa yenilendiğinde
+      pencere kendiliğinden yeniden açılırdı. Olay işleyicisinde,
+      çizim sırasında değil.
+    */
+    const temiz = new URL(window.location.href);
+    if (temiz.searchParams.has("teslim")) {
+      temiz.searchParams.delete("teslim");
+      window.history.replaceState(null, "", temiz.toString());
+    }
+  }, []);
   const closeShare = useCallback(() => setShareOpen(false), []);
 
   // Kılavuzun yeni sürümü kendiliğinden uygulandıysa kalıcı olsun (bir kez).
@@ -1929,7 +1963,13 @@ export default function ManuscriptEditor({
 
       <ShareDialog open={shareOpen} onClose={closeShare} projectId={projectId} />
 
-      <SubmissionChecklistDialog open={checklistOpen} onClose={closeChecklist} checklist={checklist} onAction={handleChecklistAction} />
+      <SubmissionChecklistDialog
+        open={checklistOpen}
+        onClose={closeChecklist}
+        checklist={checklist}
+        onAction={handleChecklistAction}
+        vurgu={vurguluMadde}
+      />
 
       <Dialog
         open={issuesOpen}

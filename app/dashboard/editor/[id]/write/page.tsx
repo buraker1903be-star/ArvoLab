@@ -12,8 +12,22 @@ import ManuscriptEditor from "./manuscript-editor";
 // Bu sayfanın sunucu eylemleri (Word'den aktarma, resimli dönüştürme) büyük dosyalarda zaman alabilir.
 export const maxDuration = 60;
 
-export default async function WriteManuscriptPage({ params }: { params: Promise<{ id: string }> }) {
+/*
+  "?teslim=<madde>" ile gelinirse editör teslim kontrolünü o maddede
+  açıyor. Parametre SUNUCUDA okunuyor: istemcide okumak ya effect
+  içinde state yazmayı (lint buna izin vermiyor, haklı olarak) ya da
+  sayfayı bir Suspense sınırına sokan useSearchParams'ı gerektirirdi;
+  ikincisi editörün ilk çizimini geciktiriyor.
+*/
+export default async function WriteManuscriptPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ teslim?: string }>;
+}) {
   const { id } = await params;
+  const { teslim } = await searchParams;
   const supabase = await createClient();
 
   const { data: project } = await supabase
@@ -71,6 +85,7 @@ export default async function WriteManuscriptPage({ params }: { params: Promise<
 
       <ManuscriptEditor
         projectId={id}
+        acilacakMadde={teslim ?? null}
         initialContent={content}
         formatLoss={formatLoss?.affected ? formatLoss : null}
         initialUpdatedAt={manuscript?.updatedAt ?? null}

@@ -153,6 +153,14 @@
   background: var(--surface);
 }
 .checklist-icon { flex: none; }
+/* Ana sayfadaki eksikten tıklanarak gelinen madde işaretli: sekiz
+   maddelik listede aranan satırı yeniden aramak, tıklamanın
+   kazandırdığı kolaylığı geri alırdı. */
+.checklist-item[data-vurgulu] {
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-500) 35%, transparent);
+}
 .checklist-item[data-status="ok"] .checklist-icon { color: var(--success); }
 .checklist-item[data-status="warning"] .checklist-icon { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
 .checklist-item[data-status="todo"] .checklist-icon { color: var(--danger); }

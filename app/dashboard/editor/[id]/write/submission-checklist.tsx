@@ -13,11 +13,19 @@ export default function SubmissionChecklistDialog({
   onClose,
   checklist,
   onAction,
+  vurgu,
 }: {
   open: boolean;
   onClose: () => void;
   checklist: SubmissionChecklist;
   onAction: (action: ChecklistAction) => void;
+  /*
+    Ana sayfadan gelindiğinde hangi maddeye bakılacağı. Liste sekiz
+    maddeli; "Eksik: Bulgular, Sonuç" yazısına tıklayıp açılan pencerede
+    o maddeyi yeniden aramak, tıklamanın kazandırdığı kolaylığı geri
+    alırdı.
+  */
+  vurgu?: string | null;
 }) {
   const ready = checklist.done === checklist.total;
   return (
@@ -32,7 +40,12 @@ export default function SubmissionChecklistDialog({
         {checklist.items.map((item) => {
           const Icon = ICONS[item.status];
           return (
-            <li key={item.id} className="checklist-item" data-status={item.status}>
+            <li
+              key={item.id}
+              className="checklist-item"
+              data-status={item.status}
+              data-vurgulu={item.id === vurgu ? "true" : undefined}
+            >
               <Icon size={18} className="checklist-icon" aria-label={STATUS_LABEL[item.status]} />
               <span className="checklist-text">
                 <strong>{item.label}</strong>
