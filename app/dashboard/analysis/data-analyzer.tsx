@@ -15,6 +15,7 @@ import {
   pearsonCorrelation,
   chiSquareIndependence,
   cronbachAlpha,
+  fisherKesinTesti,
   welchTTest,
   welchAnova,
   welchBonferroniKarsilastirmalari,
@@ -937,6 +938,19 @@ export default function DataAnalyzer({
         const r = chiSquareIndependence(table);
         if (!hesaplanabilir(r.chi2, r.p)) return setResultError(BEKLENEN_SIFIR);
         const sig = isSignificant(r.p);
+        /*
+          Varsayım düştüğünde 2×2 tabloda Fisher kesin testi de
+          yazılıyor. Uyarıyı tek başına vermek kullanıcıyı çıkmazda
+          bırakırdı: "testin geçersiz" deyip yerine bir şey
+          vermemek, Welch'ten önceki durumun aynısı. Fisher
+          yaklaşım DEĞİL, küçük örneklemde doğru olan test o.
+
+          İkiden büyük tablolarda kesin testin karşılığı yok:
+          kategorileri birleştirmek ya da örneklemi büyütmek gerekiyor
+          ve bu kullanıcının kararı.
+        */
+        const ikiyeIki = table.length === 2 && table[0].length === 2;
+        const fisherP = !r.varsayimSaglandi && ikiyeIki ? fisherKesinTesti(table) : null;
         setResult(
           <div>
             <div className="table-scroll" role="region" aria-label="Analiz sonuç tablosu" tabIndex={0}>
@@ -967,6 +981,46 @@ export default function DataAnalyzer({
               χ²({r.df}, N = {r.n}) = {yazSayi(r.chi2)}, {yazP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
+            {/* Etki büyüklüğü hesaplanıyordu ama ekranda hiç
+                yazılmıyordu: p "ilişki var mı"yı, V "ne kadar
+                güçlü"yü söyler. Öteki testlerde zaten yazılıyor. */}
+            <p className="muted text-sm">
+              Cramér&apos;s V = {yazSayi(r.cramersV)} ({r.vYorum} etki)
+            </p>
+            <div className="mt-sm">
+              <strong>Varsayım</strong>
+              <ul className="muted text-sm">
+                <li>
+                  En küçük beklenen frekans {yazSayi(r.enKucukBeklenen, 2)}; hücrelerin{" "}
+                  {yazSayi(r.dusukHucreOrani * 100, 0)}&#37;&apos;inde beklenen 5&apos;in altında —{" "}
+                  {r.varsayimSaglandi ? "ölçüt sağlanıyor" : "ölçüt sağlanmıyor"}
+                </li>
+              </ul>
+              {!r.varsayimSaglandi && (
+                <p className="tone-text text-sm" data-tone="warning">
+                  Beklenen frekanslar küçük: χ² sürekli bir dağılıma yaklaşımdır ve bu durumda
+                  p değeri olduğundan küçük çıkar.
+                  {fisherP === null
+                    ? " İkiden çok kategorili tabloda kesin testin karşılığı yok; kategorileri birleştirmek ya da örneklemi büyütmek gerekir."
+                    : ""}
+                </p>
+              )}
+              {fisherP !== null && Number.isFinite(fisherP) ? (
+                <div className="stats-welch">
+                  <p className="tone-text" data-tone={isSignificant(fisherP) ? "success" : "warning"}>
+                    Fisher kesin testi (iki kuyruklu): {yazP(fisherP)}
+                    {isSignificant(fisherP)
+                      ? " — istatistiksel olarak anlamlı"
+                      : " — istatistiksel olarak anlamlı değil"}
+                  </p>
+                  <p className="muted text-sm">
+                    Yaklaşım değil, kesin hesap: kenar toplamları sabitken bütün tabloların
+                    olasılığı toplanıyor. Beklenen frekanslar küçükken raporlanması gereken
+                    satır budur.
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </div>
         );
       }

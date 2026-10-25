@@ -27,6 +27,17 @@ function lgamma(x: number): number {
   return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
 }
 
+/**
+ * ln(n!) — Fisher kesin testi faktöriyelleri doğrudan çarpamıyor.
+ *
+ * 20! bile çift duyarlıkta tam tutulamıyor; 170!'ten sonra Infinity
+ * oluyor. Logaritmada toplayıp sonunda üs almak hem taşmayı hem de
+ * duyarlık kaybını engelliyor.
+ */
+export function logFaktoriyel(n: number): number {
+  return lgamma(n + 1);
+}
+
 function gammaSeries(a: number, x: number): number {
   if (x <= 0) return 0;
   const gln = lgamma(a);

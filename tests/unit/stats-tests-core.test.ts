@@ -13,6 +13,7 @@ import {
   chiSquareIndependence,
   eslestirilmisTTest,
   cronbachAlpha,
+  fisherKesinTesti,
   welchTTest,
   welchAnova,
   welchBonferroniKarsilastirmalari,
@@ -511,5 +512,59 @@ describe("Welch ANOVA", () => {
       assert.ok(cift.p >= cift.pHam, `${cift.p} < ${cift.pHam}`);
       assert.ok(cift.p <= 1);
     }
+  });
+});
+
+describe("ki-kare varsayımı ve Fisher kesin testi", () => {
+  test("beklenen frekanslar hesaplanıyor ve küçük tabloda varsayım düşüyor", () => {
+    /*
+      ESKİDEN: beklenen frekans hiç bakılmıyordu. χ² sürekli bir
+      dağılıma YAKLAŞIM; beklenenler küçülünce p gerçeğinden küçük
+      çıkıyor, yani olmayan bir ilişki "anlamlı" görünüyor. 20
+      kişilik veriden çıkan p, 2000 kişilikle aynı güvenle yazılıyordu.
+    */
+    const r = chiSquareIndependence([[3, 1], [1, 3]]);
+    assert.deepEqual(r.beklenen, [[2, 2], [2, 2]]);
+    assert.equal(r.enKucukBeklenen, 2);
+    assert.equal(r.dusukHucreOrani, 1);
+    assert.equal(r.varsayimSaglandi, false);
+  });
+
+  test("yeterince büyük tabloda varsayım sağlanıyor", () => {
+    const r = chiSquareIndependence([[30, 20], [25, 25]]);
+    assert.ok(r.enKucukBeklenen >= 5, String(r.enKucukBeklenen));
+    assert.equal(r.dusukHucreOrani, 0);
+    assert.equal(r.varsayimSaglandi, true);
+  });
+
+  test("Fisher: Fisher'ın kendi çay örneğiyle birebir", () => {
+    // Yayımlanmış değer: iki kuyruklu p = 0,485714…
+    assert.ok(Math.abs(fisherKesinTesti([[3, 1], [1, 3]]) - 0.48571429) < 1e-7);
+  });
+
+  test("Fisher: dengesiz kenarlarda da doğru kuyruk", () => {
+    /*
+      Ortalamadan uzaklığa göre simetrik bölen bir "iki kuyruk" tanımı
+      kenarlar dengesizken yanlış sonuç verir. Burada olasılığı
+      gözlenenden büyük OLMAYAN her tablo toplanıyor.
+    */
+    assert.ok(Math.abs(fisherKesinTesti([[1, 9], [11, 3]]) - 0.00275946) < 1e-7);
+    assert.ok(Math.abs(fisherKesinTesti([[10, 2], [3, 15]]) - 0.00053672) < 1e-7);
+  });
+
+  test("Fisher: hiç ilişki yoksa p 1'e yakın, 1'i aşmıyor", () => {
+    const p = fisherKesinTesti([[5, 5], [5, 5]]);
+    assert.ok(p <= 1, String(p));
+    assert.ok(p > 0.9, String(p));
+  });
+
+  test("Fisher yalnızca 2×2 kabul ediyor", () => {
+    assert.throws(() => fisherKesinTesti([[1, 2, 3], [4, 5, 6]]), /2×2/);
+  });
+
+  test("Fisher büyük sayılarda taşmıyor", () => {
+    // Faktöriyeller doğrudan çarpılsaydı 170!'ten sonra Infinity olurdu.
+    const p = fisherKesinTesti([[200, 150], [180, 170]]);
+    assert.ok(Number.isFinite(p) && p > 0 && p <= 1, String(p));
   });
 });

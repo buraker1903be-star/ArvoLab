@@ -11,7 +11,7 @@
  */
 
 import { ciftEslestir } from "@/lib/veri-eslestirme";
-import { tTestTwoTailedP, fTestP, chiSquareP, tKritik } from "./stats-math";
+import { tTestTwoTailedP, fTestP, chiSquareP, tKritik, logFaktoriyel } from "./stats-math";
 
 export function mean(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -268,19 +268,47 @@ export interface ChiSquareResult {
   df: number;
   p: number;
   n: number;
+  /** Beklenen frekanslar — varsayım denetimi ve raporlama için. */
+  beklenen: number[][];
+  enKucukBeklenen: number;
+  /** Beklenen frekansı 5'in altında olan hücrelerin oranı (0–1). */
+  dusukHucreOrani: number;
+  /** Cochran ölçütü sağlanıyor mu (aşağıdaki nota bakın). */
+  varsayimSaglandi: boolean;
 }
+
+/*
+  Kİ-KARENİN BEKLENEN FREKANS VARSAYIMI (Cochran ölçütü).
+
+  χ² sürekli bir dağılıma YAKLAŞIM; beklenen frekanslar küçüldükçe
+  yaklaşım bozuluyor ve p değeri gerçeğinden küçük çıkıyor, yani test
+  olmayan bir ilişkiyi "anlamlı" gösteriyor. Program bunu hiç
+  söylemiyordu: 20 kişilik bir veriden çıkan p, 2000 kişilikle aynı
+  güvenle yazılıyordu.
+
+  Ölçüt: hiçbir hücrenin beklenen frekansı 1'in altında olmayacak VE
+  5'in altındaki hücreler tablonun en çok beşte birini tutacak. 2×2'de
+  bu, dört hücrenin de 5 ve üzeri olması demek.
+*/
+const EN_AZ_BEKLENEN = 1;
+const DUSUK_BEKLENEN = 5;
+const DUSUK_HUCRE_TAVANI = 0.2;
 
 export function chiSquareIndependence(table: number[][]): ChiSquareResult {
   const rowTotals = table.map((row) => row.reduce((a, b) => a + b, 0));
   const colTotals = table[0].map((_, c) => table.reduce((s, row) => s + row[c], 0));
   const grandTotal = rowTotals.reduce((a, b) => a + b, 0);
+  const beklenen = table.map((_, r) => table[0].map((__, c) => (rowTotals[r] * colTotals[c]) / grandTotal));
   let chi2 = 0;
   for (let r = 0; r < table.length; r++) {
     for (let c = 0; c < table[0].length; c++) {
-      const expected = (rowTotals[r] * colTotals[c]) / grandTotal;
-      chi2 += (table[r][c] - expected) ** 2 / expected;
+      chi2 += (table[r][c] - beklenen[r][c]) ** 2 / beklenen[r][c];
     }
   }
+  const hucreler = beklenen.flat();
+  const enKucukBeklenen = Math.min(...hucreler);
+  const dusukHucreOrani = hucreler.filter((e) => e < DUSUK_BEKLENEN).length / hucreler.length;
+  const varsayimSaglandi = enKucukBeklenen >= EN_AZ_BEKLENEN && dusukHucreOrani <= DUSUK_HUCRE_TAVANI;
   const df = (table.length - 1) * (table[0].length - 1);
   const p = chiSquareP(chi2, df);
   /* Cramér's V: χ² örneklem büyüklüğüyle doğrudan büyüyor, yani
@@ -290,7 +318,64 @@ export function chiSquareIndependence(table: number[][]): ChiSquareResult {
      etkiyi olduğundan küçük gösterirdi. */
   const kisaKenar = Math.min(table.length, table[0].length) - 1;
   const cramersV = grandTotal === 0 || kisaKenar <= 0 ? 0 : Math.sqrt(chi2 / (grandTotal * kisaKenar));
-  return { chi2, df, p, n: grandTotal, cramersV, vYorum: oranYorumu(cramersV) };
+  return {
+    chi2, df, p, n: grandTotal, cramersV, vYorum: oranYorumu(cramersV),
+    beklenen, enKucukBeklenen, dusukHucreOrani, varsayimSaglandi,
+  };
+}
+
+/*
+  FISHER KESİN TESTİ (2×2).
+
+  Beklenen frekanslar küçükken χ² yaklaşımı bozuluyor ve varsayım
+  uyarısı tek başına kullanıcıyı çıkmazda bırakıyordu: "testin geçersiz"
+  deyip yerine bir şey vermemek, Welch'ten önceki durumun aynısı.
+  Fisher YAKLAŞIM DEĞİL — kenar toplamları sabitken bütün tabloların
+  olasılığı hipergeometrik dağılımla tek tek toplanıyor, yani küçük
+  örneklemde doğru olan test bu.
+
+  İki kuyruk, gözlenenden daha "aşırı" olmanın standart tanımıyla:
+  olasılığı gözlenen tablonunkinden büyük OLMAYAN her tablo toplanıyor
+  (R'ın fisher.test'inin varsayılanı). Ortalamadan uzaklığa göre
+  simetrik bölmek, kenarlar dengesizken yanlış kuyruk üretirdi.
+
+  Faktöriyeller logaritmada: 170!'ten sonra çift duyarlık taşıyor.
+
+  Doğrulama: Fisher'ın çay örneği [[3,1],[1,3]] → p = 0,485714.
+*/
+export function fisherKesinTesti(tablo: number[][]): number {
+  if (tablo.length !== 2 || tablo[0].length !== 2 || tablo[1].length !== 2) {
+    throw new Error("Fisher kesin testi yalnızca 2×2 tablolarda uygulanır.");
+  }
+  const [[a, b], [c, d]] = tablo as [[number, number], [number, number]];
+  const satir1 = a + b;
+  const satir2 = c + d;
+  const sutun1 = a + c;
+  const sutun2 = b + d;
+  const n = satir1 + satir2;
+  if (n === 0) return NaN;
+
+  const sabit = logFaktoriyel(satir1) + logFaktoriyel(satir2) + logFaktoriyel(sutun1) + logFaktoriyel(sutun2) - logFaktoriyel(n);
+  const olasilik = (x: number) => {
+    const y = sutun1 - x;
+    const z = satir1 - x;
+    const w = satir2 - y;
+    if (x < 0 || y < 0 || z < 0 || w < 0) return 0;
+    return Math.exp(sabit - logFaktoriyel(x) - logFaktoriyel(z) - logFaktoriyel(y) - logFaktoriyel(w));
+  };
+
+  const gozlenen = olasilik(a);
+  let toplam = 0;
+  const altSinir = Math.max(0, sutun1 - satir2);
+  const ustSinir = Math.min(satir1, sutun1);
+  for (let x = altSinir; x <= ustSinir; x++) {
+    const p = olasilik(x);
+    /* Kayan nokta toleransı: gözlenenle AYNI olasılıktaki simetrik
+       tablo, yuvarlama yüzünden "daha büyük" sayılıp toplamdan
+       düşerse iki kuyruklu p sistematik olarak küçük çıkar. */
+    if (p <= gozlenen * (1 + 1e-7)) toplam += p;
+  }
+  return Math.min(1, toplam);
 }
 
 export interface FrequencyRow {
