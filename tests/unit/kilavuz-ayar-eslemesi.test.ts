@@ -23,6 +23,8 @@ const kilavuz = (uzerine: Partial<AppliedGuideline> = {}): AppliedGuideline => (
   versionLabel: null,
   sourceUrl: null,
   citationStyle: "apa7",
+  /* Kılavuz sayı biçimi için incelenmemiş: iki alan da boş. */
+  numberFormat: {},
   requiredSections: ["Giriş", "Yöntem", "Bulgular", "Sonuç"],
   minPages: null,
   maxPages: null,

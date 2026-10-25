@@ -1,5 +1,7 @@
 "use server";
 
+import { sayiBicimi, type BicimKarari, type KilavuzSayiKurali } from "@/lib/sayi-bicimi";
+import { appliedGuidelineFromRow, type GuidelineRow } from "@/lib/guideline-rules";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -18,6 +20,17 @@ export interface MyProject {
   title: string;
   university: string | null;
   citation_style: string | null;
+  /*
+    SAYININ YAZILIŞI (lib/sayi-bicimi). Analiz Merkezi istatistik
+    çıktısını bu biçimle yazıyor; eskiden APA'ya sabitti ve kılavuzu
+    "0,021" diyen öğrenci ".021" alıyordu.
+
+    Kaynak alanı ekrana taşınıyor: biçim kılavuzdan mı geldi, atıf
+    sisteminin geleneğinden mi, yoksa varsayılandan mı — kullanıcı
+    "neden böyle yazıldı" sorusunu sorabilmeli. Sessizce varsayılana
+    düşmek, kodun eski hâlinin yaptığı şeyin aynısı olurdu.
+  */
+  sayiBicimi: BicimKarari;
 }
 
 /*
@@ -35,7 +48,7 @@ export async function getMyProjects(): Promise<ListeSonucu<MyProject>> {
 
   const { data, error } = await supabase
     .from("academic_projects")
-    .select("id, title, university, citation_style")
+    .select("id, title, university, citation_style, guideline_id")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -43,7 +56,40 @@ export async function getMyProjects(): Promise<ListeSonucu<MyProject>> {
     console.error(error);
     return listeOkunamadi();
   }
-  return listeBasarili(data);
+
+  /*
+    Kılavuzlar TEK SORGUDA okunuyor: çalışma başına bir sorgu, on
+    çalışması olan kullanıcıda on gidiş dönüş demekti. Aynı kılavuzu
+    paylaşan çalışmalar da zaten tek satır okur.
+
+    Kılavuz okunamazsa biçim ATIF SİSTEMİNDEN türetiliyor; okuma
+    hatası yüzünden kullanıcıyı biçimsiz bırakmak, geçici bir arızayı
+    kalıcı bir yanlışa çevirmek olurdu (AGENTS.md: kapıyı yalnızca
+    net bir "hayır" kapatır).
+  */
+  const kilavuzIdleri = [...new Set(data.map((p) => p.guideline_id).filter(Boolean))] as string[];
+  const kurallar = new Map<string, { kural: KilavuzSayiKurali; stil: string }>();
+  if (kilavuzIdleri.length) {
+    const { data: kilavuzlar, error: kilavuzHatasi } = await supabase
+      .from("thesis_guidelines")
+      .select("*")
+      .in("id", kilavuzIdleri);
+    if (kilavuzHatasi) console.error(kilavuzHatasi);
+    for (const satir of kilavuzlar ?? []) {
+      const uygulanan = appliedGuidelineFromRow(satir as GuidelineRow);
+      if (uygulanan) kurallar.set(uygulanan.id, { kural: uygulanan.numberFormat, stil: uygulanan.citationStyle });
+    }
+  }
+
+  return listeBasarili(
+    data.map(({ guideline_id, ...proje }) => {
+      const kilavuz = guideline_id ? kurallar.get(guideline_id) : undefined;
+      /* Öğrencinin ÇALIŞMASINDA seçtiği stil önce gelir: yazdığı
+         metin ona göre. Çalışmada seçilmemişse kılavuzunki. */
+      const stil = proje.citation_style ?? kilavuz?.stil ?? null;
+      return { ...proje, sayiBicimi: sayiBicimi(kilavuz?.kural ?? null, stil) };
+    }),
+  );
 }
 
 /*

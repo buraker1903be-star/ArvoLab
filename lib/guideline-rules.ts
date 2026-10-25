@@ -1,3 +1,4 @@
+import type { KilavuzSayiKurali, OndalikAyirici } from "@/lib/sayi-bicimi";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeGuidelineEditorSettings, type GuidelineEditorSettings } from "@/lib/guideline-editor-settings";
 
@@ -15,6 +16,13 @@ export interface AppliedGuideline {
   versionLabel: string | null;
   sourceUrl: string | null;
   citationStyle: string;
+  /*
+    Sayının yazılışı (lib/sayi-bicimi). İki alan da NULL olabilir:
+    kılavuz bu kuralı söylemiyorsa uydurmuyoruz, atıf sisteminin
+    geleneğine düşülüyor. Varsayılan yazmak, hiç incelenmemiş bir
+    kılavuzu "incelendi" gibi gösterirdi.
+  */
+  numberFormat: KilavuzSayiKurali;
   requiredSections: string[];
   minPages: number | null;
   maxPages: number | null;
@@ -26,6 +34,8 @@ export interface AppliedGuideline {
 
 interface Snapshot {
   citation_style?: string;
+  number_decimal_separator?: string | null;
+  number_leading_zero?: boolean | null;
   required_sections?: string[];
   extracted_rules?: unknown;
   min_pages?: number | null;
@@ -37,11 +47,23 @@ interface Snapshot {
 }
 
 /** thesis_guidelines satırının kullanılan alanları */
+/*
+  Veritabanı metin tutuyor; tip daraltması burada yapılıyor. Kısıt
+  yalnızca 'comma'/'period'a izin veriyor ama okuma tarafı buna
+  GÜVENMEZ: eski bir satır ya da elle yazılmış bir değer tanınmazsa
+  "bilinmiyor" sayılır, uydurma bir biçim uygulanmaz.
+*/
+function ondalikAyirici(deger: string | null | undefined): OndalikAyirici | null {
+  return deger === "comma" || deger === "period" ? deger : null;
+}
+
 export interface GuidelineRow {
   id: string;
   university_name: string;
   institute_name?: string | null;
   citation_style?: string | null;
+  number_decimal_separator?: string | null;
+  number_leading_zero?: boolean | null;
   required_sections?: string[] | null;
   extracted_rules?: unknown;
   min_pages?: number | null;
@@ -66,6 +88,8 @@ export function appliedGuidelineFromRow(g: GuidelineRow): AppliedGuideline | nul
     (g.analysis_status === "approved"
       ? {
           citation_style: g.citation_style ?? undefined,
+          number_decimal_separator: g.number_decimal_separator,
+          number_leading_zero: g.number_leading_zero,
           required_sections: g.required_sections ?? undefined,
           extracted_rules: g.extracted_rules,
           min_pages: g.min_pages,
@@ -93,6 +117,13 @@ export function appliedGuidelineFromRow(g: GuidelineRow): AppliedGuideline | nul
     versionLabel,
     sourceUrl: snapshot.source_url ?? g.source_url ?? null,
     citationStyle: snapshot.citation_style ?? g.citation_style ?? "apa7",
+    /* Anlık görüntü kazanır: kılavuz onaylandıktan sonra değiştirilen
+       bir kural öğrencinin çalışmasına sızmamalı (migration
+       20261025131500'ün gerekçesi). */
+    numberFormat: {
+      ayirici: ondalikAyirici(snapshot.number_decimal_separator ?? g.number_decimal_separator),
+      bastakiSifir: snapshot.number_leading_zero ?? g.number_leading_zero ?? null,
+    },
     requiredSections: snapshot.required_sections ?? [],
     minPages: snapshot.min_pages ?? null,
     maxPages: snapshot.max_pages ?? null,

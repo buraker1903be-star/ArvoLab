@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { detectStatistics, type DetectedStatistic } from "@/lib/stats-interpreter";
+import { VARSAYILAN_BICIM, type BicimKarari } from "@/lib/sayi-bicimi";
 import { parseCodebook, type CodebookCheckResult } from "@/lib/codebook-check";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
 import AsistanSonuc from "../_components/asistan-sonuc";
 
-type Calisma = { id: string; title: string };
+type Calisma = { id: string; title: string; sayiBicimi?: BicimKarari };
 
 export default function AnalysisTools({
   asistanAcik,
@@ -28,6 +29,23 @@ export default function AnalysisTools({
   const [arastirmaSorusu, setArastirmaSorusu] = useState("");
   const [orneklem, setOrneklem] = useState("");
   const [calismaId, setCalismaId] = useState(secilenCalisma);
+
+  /*
+    Çalışma seçilmemişse varsayılan biçim uygulanır (APA geleneği) ve
+    bu AÇIKÇA SÖYLENİR; kullanıcı istatistiği yapıştırmadan önce
+    kendi kılavuzunun başka bir şey isteyebileceğini bilmeli.
+  */
+  const seciliCalisma = calismalar.find((c) => c.id === calismaId);
+  const bicim: BicimKarari = seciliCalisma?.sayiBicimi ?? { ...VARSAYILAN_BICIM, kaynak: "varsayilan" };
+  const ornek = `${bicim.bastakiSifir ? "0" : ""}${bicim.ayirici === "comma" ? "," : "."}021`;
+  const bicimNotu =
+    !seciliCalisma
+      ? `Çalışma seçilmedi; sayılar varsayılan biçimle yazılacak (örnek p = ${ornek}). Kendi kılavuzunuzun biçimi için aşağıdan çalışmanızı seçin.`
+      : bicim.kaynak === "kilavuz"
+        ? `Sayılar “${seciliCalisma.title}” kılavuzuna göre yazılacak (örnek p = ${ornek}).`
+        : bicim.kaynak === "atif-sistemi"
+          ? `Kılavuz sayı biçimini belirtmiyor; atıf sisteminin geleneği uygulanacak (örnek p = ${ornek}).`
+          : `Kılavuz ve atıf sistemi bilinmiyor; varsayılan biçim uygulanacak (örnek p = ${ornek}).`;
   const [denetim, setDenetim] = useState<AnalizDenetimYaniti | null>(null);
   const [bekleniyor, basla] = useTransition();
 
@@ -78,11 +96,22 @@ export default function AnalysisTools({
           </label>
         </div>
 
+        {/*
+          SAYININ YAZILIŞI SEÇİLİ ÇALIŞMANIN KILAVUZUNDAN gelir ve
+          hangi kaynaktan geldiği EKRANDA YAZAR. Eskiden biçim APA'ya
+          sabitti; kılavuzu "0,021" diyen öğrenci ".021" alıyor ve
+          bunun neden böyle olduğunu hiçbir yerde göremiyordu.
+          Varsayılana sessizce düşmek, o hatanın aynısı olurdu.
+        */}
+        <p className="muted text-sm mt-sm">
+          {bicimNotu}
+        </p>
+
         <div className="project-form-actions mt-sm">
           <button
             type="button"
             className="projects-primary-button"
-            onClick={() => setStatsResult(detectStatistics(statsInput))}
+            onClick={() => setStatsResult(detectStatistics(statsInput, bicim))}
             disabled={!statsInput.trim()}
           >
             İstatistikleri Tespit Et
@@ -181,7 +210,18 @@ export default function AnalysisTools({
               )}
             </div>
 
-            <div className="project-form-actions mt-sm">
+            {/*
+          SAYININ YAZILIŞI SEÇİLİ ÇALIŞMANIN KILAVUZUNDAN gelir ve
+          hangi kaynaktan geldiği EKRANDA YAZAR. Eskiden biçim APA'ya
+          sabitti; kılavuzu "0,021" diyen öğrenci ".021" alıyor ve
+          bunun neden böyle olduğunu hiçbir yerde göremiyordu.
+          Varsayılana sessizce düşmek, o hatanın aynısı olurdu.
+        */}
+        <p className="muted text-sm mt-sm">
+          {bicimNotu}
+        </p>
+
+        <div className="project-form-actions mt-sm">
               <button
                 type="button"
                 className="projects-primary-button"
@@ -233,6 +273,17 @@ export default function AnalysisTools({
             />
           </label>
         </div>
+
+        {/*
+          SAYININ YAZILIŞI SEÇİLİ ÇALIŞMANIN KILAVUZUNDAN gelir ve
+          hangi kaynaktan geldiği EKRANDA YAZAR. Eskiden biçim APA'ya
+          sabitti; kılavuzu "0,021" diyen öğrenci ".021" alıyor ve
+          bunun neden böyle olduğunu hiçbir yerde göremiyordu.
+          Varsayılana sessizce düşmek, o hatanın aynısı olurdu.
+        */}
+        <p className="muted text-sm mt-sm">
+          {bicimNotu}
+        </p>
 
         <div className="project-form-actions mt-sm">
           <button
