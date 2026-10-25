@@ -3,6 +3,8 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { kayitHatasiMetni, TASLAK_GUVENDE, TASLAK_YAZILAMADI } from "@/lib/taslak-durumu";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
+import { olc } from "@/lib/editor-olcum";
+import OlcumPaneli from "./olcum-paneli";
 import { editorExtensions } from "@/lib/tiptap-extensions";
 import { hasManualNumber } from "@/lib/heading-numbering";
 import { describeAbstractRules } from "@/lib/guideline-editor-settings";
@@ -448,11 +450,13 @@ export default function ManuscriptEditor({
   const persistDraft = useCallback(() => {
     const editor = editorRef.current;
     if (!editor || revisionRef.current === savedRevisionRef.current) return true;
-    const yazildi = writeDraft(projectId, {
-      content: editor.getJSON() as unknown as TiptapDoc,
-      baseUpdatedAt: updatedAtRef.current,
-      writtenAt: new Date().toISOString(),
-    });
+    const yazildi = olc("taslak yazımı", () =>
+      writeDraft(projectId, {
+        content: editor.getJSON() as unknown as TiptapDoc,
+        baseUpdatedAt: updatedAtRef.current,
+        writtenAt: new Date().toISOString(),
+      })
+    );
     taslakYazilamadiRef.current = !yazildi;
     setTaslakYazilamadi(!yazildi);
     return yazildi;
@@ -492,7 +496,7 @@ export default function ManuscriptEditor({
           // eylemi kodlayıcısı bunları düz nesne saymayıp "$T" (geçici referans) olarak gönderir ve
           // sunucuya hiçbir şey ulaşmaz: başlık düzeyi, resim adresi, dipnot metni vb. kaybolurdu.
           // Düz JSON'a çevirerek gönderiyoruz; boyutu otomatik kayıt aralığını belirler.
-          const serialized = JSON.stringify(editor.getJSON());
+          const serialized = olc("kayıt: JSON üretimi", () => JSON.stringify(editor.getJSON()));
           payloadBytesRef.current = serialized.length;
           // Kartlardaki ilerleme çubuğu: kılavuzun bölümleri ve sayfa alt sınırına göre.
           const progress = guideline
@@ -510,7 +514,7 @@ export default function ManuscriptEditor({
               })
             : null;
           const res = await saveManuscript(projectId, {
-            content: JSON.parse(serialized) as TiptapDoc,
+            content: olc("kayıt: JSON çözme", () => JSON.parse(serialized)) as TiptapDoc,
             ...settingsRef.current,
             expectedUpdatedAt: updatedAtRef.current,
             force,
@@ -650,7 +654,7 @@ export default function ManuscriptEditor({
       if (timer) window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         timer = null;
-        if (!editor.isDestroyed) setDocStats(computeDocStats(editor));
+        if (!editor.isDestroyed) setDocStats(olc("belge istatistiği", () => computeDocStats(editor)));
       }, 250);
     };
     const initial = window.setTimeout(() => {
@@ -699,7 +703,7 @@ export default function ManuscriptEditor({
         schedule(1000);
         return;
       }
-      setLiveIssues(checkStructure(editor.getJSON(), structureOptions));
+      setLiveIssues(olc("yapı denetimi", () => checkStructure(editor.getJSON(), structureOptions)));
     };
     const schedule = (delay: number) => {
       if (timer) window.clearTimeout(timer);
@@ -1823,6 +1827,7 @@ export default function ManuscriptEditor({
       )}
 
       <EditorContent editor={editor} />
+      <OlcumPaneli editor={editor} />
 
       {stats.footnotes.length > 0 ? (
         <ol className="footnote-list" aria-label="Dipnotlar">

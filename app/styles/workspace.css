@@ -817,3 +817,27 @@
   35% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-500) 18%, transparent); }
 }
 @media (prefers-reduced-motion: reduce) { .comment-item, .comment-item[data-new="true"] { animation: none; } }
+
+/* ---------- Ölçüm paneli (?olcum=1) ---------- */
+/* Yazma alanının üstünde durur: ölçülen şey yazarken olup bitiyor, panele
+   bakmak için kaydırmak gerekmemeli. */
+.olcum-paneli {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 60;
+  min-width: 320px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-md);
+  font-variant-numeric: tabular-nums;
+}
+.olcum-baslik { margin: 0 0 6px; font-size: var(--fs-sm); font-weight: 650; color: var(--ink); }
+.olcum-tablo { width: 100%; border-collapse: collapse; font-size: var(--fs-micro); }
+.olcum-tablo :is(th, td) { padding: 2px 6px; text-align: right; color: var(--muted); }
+.olcum-tablo :is(th, td):first-child { text-align: left; color: var(--ink); }
+.olcum-tablo th { font-weight: 600; }
+.olcum-tablo tbody tr:first-child td { color: var(--ink); font-weight: 650; }
+.olcum-not { margin: 6px 0 0; font-size: var(--fs-micro); color: var(--muted); }
