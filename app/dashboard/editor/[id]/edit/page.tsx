@@ -115,7 +115,14 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
                 ))}
               </select>
               {project.guideline_id ? (
-                <small>Onaylı kılavuza göre belirlenir.</small>
+                /*
+                  Metin DÜZELTİLDİ: "kılavuza göre belirlenir" demek
+                  doğru değildi — değer çalışma kurulurken formdaki
+                  varsayılandan yazılıyor, kılavuz sonradan bağlanıyor.
+                  Uyuşmazlık varsa Çalışma Merkezi'ndeki "Kılavuza göre
+                  düzelt" düğmesi onu kılavuzun istediğine çeviriyor.
+                */
+                <small>Kılavuz bağlı olduğu için burada değiştirilmez; uyuşmazlık varsa Çalışma Merkezi&apos;nden düzeltin.</small>
               ) : null}
             </label>
 

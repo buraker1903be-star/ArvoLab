@@ -8,6 +8,7 @@ import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { STILLER } from "@/lib/atif/stiller";
 import {
@@ -229,6 +230,60 @@ export async function getProjectForEdit(
 // Çalışmanın sahibi, atanan personel ve Kontrolör+ roller düzenleyebilir.
 // "Teslime hazır / Teslim edildi" durumlarına geçiş (ve bu durumlardan çıkış)
 // Kontrolör onayı gerektirir; veritabanı tetikleyicisi de bunu zorunlu kılar.
+/*
+  ATIF STİLİNİ KILAVUZA UYDUR.
+
+  Bir TUZAK vardı. Çalışma kurulurken atıf stili formdaki değerle
+  (varsayılanı APA 7) yazılıyor; kılavuzu ise veritabanı tetikleyicisi
+  sonradan bağlıyor. Kılavuz başka bir stil istiyorsa Çalışma Merkezi
+  uyarıyor ve "çalışma ayarlarından düzeltin" diyordu — ama ayarlardaki
+  alan kılavuz bağlıyken DEVRE DIŞI ve sunucu da gönderilen değeri yok
+  sayıyor (aşağıda, bilerek: kılavuzun kuralı öğrencinin elle seçimiyle
+  bozulmasın). Yani uygulama düzeltmesini istediği şeyi düzeltmeyi
+  engelliyordu. IEEE isteyen bir kurumda tez yazan öğrenci APA 7'de
+  kilitli kalıyordu.
+
+  Bu işlem tek bir şey yapıyor: stili KILAVUZUN istediğine çeviriyor.
+  Serbest seçim değil — "ayarlardan elle seç" kapısı bilerek kapalı
+  kalıyor, çünkü uyuşmazlığın doğru çözümü kılavuza uymaktır.
+  Kılavuzun bu çalışma için geçerli olmadığını düşünen kullanıcının
+  yolu ayrı: kurumu düzeltmek.
+*/
+export async function atifStiliniKilavuzaUydur(projectId: string): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+
+  const current = await getProjectForEdit(projectId);
+  if (current === CALISMA_OKUNAMADI) {
+    return { error: "Çalışma okunamadı; değişiklik kaydedilmedi. Tekrar deneyin." };
+  }
+  if (!current) return { error: "Çalışma bulunamadı." };
+
+  const canOversee = isOversightRole(ctx.role);
+  if (!canOversee && current.owner_id !== ctx.user.id && current.assignee_id !== ctx.user.id) {
+    return { error: "Bu çalışmayı düzenleme yetkiniz yok." };
+  }
+  if (!current.guideline_id) return { error: "Bu çalışmaya bağlı onaylı bir kılavuz yok." };
+
+  const kilavuz = await loadAppliedGuideline(ctx.supabase, current.guideline_id);
+  const stil = kilavuz?.citationStyle;
+  if (!stil) return { error: "Kılavuzun atıf stili okunamadı; sayfayı yenileyip tekrar deneyin." };
+  if (!CITATION_STYLES.includes(stil)) return { error: "Kılavuzun atıf stili tanınmıyor." };
+  if (stil === current.citation_style) return { success: true };
+
+  const { error } = await ctx.supabase
+    .from("academic_projects")
+    .update({ citation_style: stil })
+    .eq("id", projectId);
+  if (error) {
+    console.error("[calisma] atıf stili kılavuza uydurulamadı:", error.message);
+    return { error: "Atıf stili güncellenemedi. Tekrar deneyin." };
+  }
+
+  revalidatePath("/dashboard/editor");
+  return { success: true };
+}
+
 export async function updateProject(projectId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;

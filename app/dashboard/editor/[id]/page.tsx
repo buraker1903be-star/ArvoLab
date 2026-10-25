@@ -12,6 +12,8 @@ import {
   Users,
 } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
+import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
+import ActionForm from "@/app/dashboard/action-form";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
@@ -126,14 +128,36 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
         </article>
       </section>
 
+      {/*
+        UYARI ARTIK DÜZELTİLEBİLİR. Eskiden "çalışma ayarlarından
+        düzeltin" diyordu ama o alan kılavuz bağlıyken devre dışı ve
+        sunucu da gönderilen değeri yok sayıyor — yani uygulama,
+        düzeltmesini istediği şeyi düzeltmeyi engelliyordu. IEEE
+        isteyen bir kurumda tez yazan öğrenci APA 7'de kilitli
+        kalıyordu.
+
+        Düğme serbest seçim sunmuyor, yalnızca kılavuzun istediğine
+        çeviriyor; kılavuzun geçerli olmadığını düşünenin yolu ayrı
+        (kurumu düzeltmek), o da cümlede duruyor.
+      */}
       {stilCelisiyor && (
-        <p className="asistan-uyari" data-tone="danger" role="alert">
-          <TriangleAlert size={16} aria-hidden="true" /> Çalışmanız{" "}
-          <b>{STIL_ETIKETLERI[calisma.citation_style] ?? calisma.citation_style}</b> olarak ayarlı, ancak{" "}
-          {kilavuz?.kurum} kılavuzu{" "}
-          <b>{STIL_ETIKETLERI[kilavuz?.atifStili ?? ""] ?? kilavuz?.atifStili}</b> istiyor. Çalışma ayarlarından
-          düzeltin ya da kılavuzun bu çalışma için geçerli olmadığını doğrulayın.
-        </p>
+        <div className="asistan-uyari asistan-uyari-eylemli" data-tone="danger" role="alert">
+          <span>
+            <TriangleAlert size={16} aria-hidden="true" />{" "}
+            Çalışmanız <b>{STIL_ETIKETLERI[calisma.citation_style] ?? calisma.citation_style}</b> olarak ayarlı,
+            ancak {kilavuz?.kurum} kılavuzu{" "}
+            <b>{STIL_ETIKETLERI[kilavuz?.atifStili ?? ""] ?? kilavuz?.atifStili}</b> istiyor. Kılavuz bu çalışma
+            için geçerli değilse çalışma ayarlarından kurumu düzeltin.
+          </span>
+          <ActionForm
+            action={atifStiliniKilavuzaUydur.bind(null, calisma.id)}
+            successMessage="Atıf stili kılavuza göre güncellendi."
+          >
+            <button type="submit" className="projects-filter-button button-compact">
+              Kılavuza göre düzelt
+            </button>
+          </ActionForm>
+        </div>
       )}
 
       {tutarsizliklar.length > 0 && (
