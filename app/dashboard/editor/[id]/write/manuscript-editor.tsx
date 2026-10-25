@@ -142,6 +142,9 @@ interface ManuscriptEditorProps {
     alınacak işe çevirirdi.
   */
   acilacakMadde?: string | null;
+  /* Çalışmada kurum girili mi: teslim kontrolünde "kılavuz yok"un iki
+     hâli farklı çözüm istiyor (lib/submission-checklist.ts). */
+  kurumGirili?: boolean;
   initialContent: object | null;
   /** Veritabanındaki sürümün zamanı (çakışma denetimi için); null = hiç kaydedilmemiş */
   initialUpdatedAt: string | null;
@@ -315,6 +318,7 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
 export default function ManuscriptEditor({
   projectId,
   acilacakMadde = null,
+  kurumGirili = false,
   initialContent,
   initialUpdatedAt,
   initialMargins,
@@ -1067,6 +1071,8 @@ export default function ManuscriptEditor({
   const checklist = buildSubmissionChecklist({
     isThesis,
     hasGuideline: Boolean(guideline),
+    hasInstitution: kurumGirili,
+    guidelineVerified: guideline?.dogrulandi,
     sections: { total: sections.length, missing: missingSections },
     pages,
     minPages: guideline?.minPages ?? null,
@@ -1092,6 +1098,12 @@ export default function ManuscriptEditor({
     switch (action) {
       case "link-guideline":
         window.open(editHref, "_self");
+        break;
+      /* Kurum girili ama katalogda karşılığı yok: yükleme teklifi
+         Çalışma Merkezi'nde duruyor. Ayarlara göndermek, hiçbir şeyi
+         değiştirmeyen bir ekrana göndermekti. */
+      case "upload-guideline":
+        window.open(`/dashboard/editor/${projectId}`, "_self");
         break;
       /*
         ÖNCE PENCERE KAPANIYOR, SONRA EKLENİYOR.

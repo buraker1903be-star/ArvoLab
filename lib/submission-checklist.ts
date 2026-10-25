@@ -23,6 +23,9 @@ export type ChecklistStatus = "ok" | "warning" | "todo";
 
 export type ChecklistAction =
   | "link-guideline"
+  /* Kurum seçili ama katalogda karşılığı yok: öğrenci kendi kılavuzunu
+     yükleyebiliyor (app/actions/calisma-kilavuzu.ts). */
+  | "upload-guideline"
   | "insert-sections"
   | "open-issues"
   | "open-cover"
@@ -49,6 +52,17 @@ export interface SubmissionChecklist {
 export interface ChecklistInput {
   isThesis: boolean;
   hasGuideline: boolean;
+  /*
+    Çalışmada kurum bilgisi girili mi. "Kılavuz yok" iki ayrı durum ve
+    çözümleri FARKLI: kurum girilmemişse kurumu seçmek yeter, kurum
+    girilmiş ama katalogda karşılığı yoksa seçmek hiçbir şey
+    değiştirmez — orada tek yol kendi kılavuzunu yüklemek. İkisine
+    aynı şeyi söylemek, öğrenciyi işe yaramayan bir ekrana
+    göndermekti.
+  */
+  hasInstitution?: boolean;
+  /** Uygulanan kurallar insan onayından geçti mi (lib/guideline-rules.ts). */
+  guidelineVerified?: boolean;
   sections: { total: number; missing: string[] };
   pages: number;
   minPages: number | null;
@@ -69,14 +83,30 @@ export function buildSubmissionChecklist(input: ChecklistInput): SubmissionCheck
   if (input.isThesis) {
     items.push(
       input.hasGuideline
-        ? { id: "guideline", label: "Tez yazım kılavuzu", status: "ok", detail: "Kılavuz bağlı; biçim kuralları kendiliğinden uygulanıyor." }
-        : {
+        ? {
             id: "guideline",
             label: "Tez yazım kılavuzu",
-            status: "todo",
-            detail: "Çalışmaya kılavuz bağlı değil; kurumunuzu seçince kurallar kendiliğinden uygulanır.",
-            action: { id: "link-guideline", label: "Kurum seç" },
+            status: "ok",
+            detail:
+              input.guidelineVerified === false
+                ? "Kendi yüklediğiniz kılavuz uygulanıyor; kurumunuzun onayından geçmedi."
+                : "Kılavuz bağlı; biçim kuralları kendiliğinden uygulanıyor.",
           }
+        : input.hasInstitution
+          ? {
+              id: "guideline",
+              label: "Tez yazım kılavuzu",
+              status: "todo",
+              detail: "Kurumunuzun kılavuzu katalogda yok. Kendi kılavuzunuzu yükleyin; kuralları okuyup size onaylatalım.",
+              action: { id: "upload-guideline", label: "Kılavuzumu yükle" },
+            }
+          : {
+              id: "guideline",
+              label: "Tez yazım kılavuzu",
+              status: "todo",
+              detail: "Çalışmaya kılavuz bağlı değil; kurumunuzu seçince kurallar kendiliğinden uygulanır.",
+              action: { id: "link-guideline", label: "Kurum seç" },
+            }
     );
   }
 

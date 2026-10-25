@@ -46,6 +46,9 @@ export function manuscriptReadiness(input: {
   manuscript: ReadinessManuscript;
   guideline: AppliedGuideline | null;
   projectType: string;
+  /* Çalışmada kurum girili mi: "kılavuz yok"un iki hâlini ayırıyor
+     (lib/submission-checklist.ts). */
+  hasInstitution?: boolean;
   citationStyle: string;
 }): SubmissionChecklist {
   const { manuscript, guideline } = input;
@@ -78,6 +81,8 @@ export function manuscriptReadiness(input: {
   return buildSubmissionChecklist({
     isThesis: input.projectType === "thesis",
     hasGuideline: Boolean(guideline),
+    hasInstitution: input.hasInstitution,
+    guidelineVerified: guideline?.dogrulandi,
     sections: { total: required.length, missing },
     pages,
     minPages: guideline?.minPages ?? null,

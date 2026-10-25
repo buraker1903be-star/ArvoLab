@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { manuscriptReadiness, type ReadinessManuscript } from "@/lib/manuscript-readiness";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
+import { buildSubmissionChecklist, type ChecklistInput } from "@/lib/submission-checklist";
 
 /*
   Teslim hazırlığı: ana sayfadaki özet ile editördeki "Teslim kontrolü"
@@ -188,4 +189,64 @@ test("teslim hazırlığı", async (t) => {
     assert.equal(liste.total, liste.items.length);
     assert.ok(liste.done >= 0 && liste.done <= liste.total);
   });
+});
+
+test("kılavuz maddesi iki ayrı çıkmazı ayırıyor", () => {
+  /*
+    "Kılavuz yok" iki durum ve çözümleri FARKLI:
+    - kurum girilmemişse kurumu seçmek yeter,
+    - kurum girilmiş ama katalogda karşılığı yoksa seçmek hiçbir şeyi
+      değiştirmez; tek yol kendi kılavuzunu yüklemek.
+    İkisine aynı şeyi söylemek öğrenciyi işe yaramayan bir ekrana
+    göndermekti.
+  */
+  const madde = (girdi: ChecklistInput) =>
+    buildSubmissionChecklist(girdi).items.find((i) => i.id === "guideline");
+
+  const ortak: Omit<ChecklistInput, "hasGuideline"> = {
+    isThesis: true,
+    sections: { total: 0, missing: [] },
+    pages: 10,
+    minPages: null,
+    maxPages: null,
+    issues: null,
+    cover: { enabled: false, missingFields: [] },
+    includeToc: true,
+    headingNumbering: { enabled: true, manualNumbered: 0 },
+    pageSetup: [],
+    saveState: "saved",
+  };
+
+  const kurumsuz = madde({ ...ortak, hasGuideline: false, hasInstitution: false });
+  assert.equal(kurumsuz?.action?.id, "link-guideline");
+  assert.match(kurumsuz?.detail ?? "", /kurumunuzu seçince/i);
+
+  const kurumlu = madde({ ...ortak, hasGuideline: false, hasInstitution: true });
+  assert.equal(kurumlu?.action?.id, "upload-guideline");
+  assert.match(kurumlu?.detail ?? "", /kendi kılavuzunuzu yükleyin/i);
+});
+
+test("doğrulanmamış kılavuz hazır maddesinde de söyleniyor", () => {
+  // "Hazır" damgası, kuralın kurumun onayından geçmediğini gizlememeli.
+  const ortak: ChecklistInput = {
+    isThesis: true,
+    hasGuideline: true,
+    sections: { total: 0, missing: [] },
+    pages: 10,
+    minPages: null,
+    maxPages: null,
+    issues: null,
+    cover: { enabled: false, missingFields: [] },
+    includeToc: true,
+    headingNumbering: { enabled: true, manualNumbered: 0 },
+    pageSetup: [],
+    saveState: "saved",
+  };
+
+  const onayli = buildSubmissionChecklist({ ...ortak, guidelineVerified: true }).items.find((i) => i.id === "guideline");
+  const kendi = buildSubmissionChecklist({ ...ortak, guidelineVerified: false }).items.find((i) => i.id === "guideline");
+  assert.equal(onayli?.status, "ok");
+  assert.equal(kendi?.status, "ok");
+  assert.match(kendi?.detail ?? "", /onayından geçmedi/i);
+  assert.ok(!/onayından geçmedi/i.test(onayli?.detail ?? ""));
 });

@@ -88,6 +88,7 @@ export default async function WriteManuscriptPage({
       <ManuscriptEditor
         projectId={id}
         acilacakMadde={teslim ?? null}
+        kurumGirili={Boolean(project.university)}
         initialContent={content}
         formatLoss={formatLoss?.affected ? formatLoss : null}
         initialUpdatedAt={manuscript?.updatedAt ?? null}
