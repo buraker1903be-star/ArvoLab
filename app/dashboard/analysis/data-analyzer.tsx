@@ -7,6 +7,8 @@ import { kruskalWallis, mannWhitneyU, spearmanKorelasyonu, YAKLASIKLIK_EN_AZ } f
 import {
   describeNumeric,
   independentTTest,
+  eslestirilmisTTest,
+  bonferroniKarsilastirmalari,
   oneWayAnova,
   pearsonCorrelation,
   chiSquareIndependence,
@@ -542,6 +544,26 @@ export default function DataAnalyzer({
                       <p className="muted text-sm">
               η² = {formatNumber(r.etaKare)} ({r.etaYorum} etki)
             </p>
+            {/*
+              ANOVA "en az biri farklı" diyor, hangisi olduğunu
+              söylemiyordu. İkili karşılaştırma yalnızca F ANLAMLIYSA
+              gösteriliyor: anlamsız bir ANOVA'nın ardından ikili
+              karşılaştırma okumak, düzeltmenin koruduğu şeyi
+              baştan delmek olur.
+            */}
+            {sig && (
+              <div className="mt-sm">
+                <strong>İkili karşılaştırmalar (Bonferroni)</strong>
+                <ul className="muted text-sm">
+                  {bonferroniKarsilastirmalari(groups, groupLevels).map((c) => (
+                    <li key={`${c.a}-${c.b}`}>
+                      {c.a} — {c.b}: fark {formatNumber(c.ortalamaFarki)}, {formatP(c.p)}
+                      {c.anlamli ? " — anlamlı" : " — anlamlı değil"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {varsayimSeridi(groups, groupLevels)}
           </div>
         );
@@ -575,6 +597,41 @@ export default function DataAnalyzer({
         testler normallik varsaymıyor, varsaymayan bir testin
         altına normallik raporlamak kullanıcıyı yanıltırdı.
       */
+      if (analysisType === "pairedttest") {
+        const once = getNumericColumn(varA);
+        const sonra = getNumericColumn(varB);
+        const n = Math.min(once.length, sonra.length);
+        if (n < 3) {
+          setResultError("Eşleştirilmiş t-testi için en az 3 eşleşen gözlem gereklidir.");
+          return;
+        }
+        const r = eslestirilmisTTest(once, sonra);
+        if (!hesaplanabilir(r.t, r.p)) return setResultError(DEGISKENLIK_YOK);
+        const sig = isSignificant(r.p);
+        setResult(
+          <div>
+            <p>
+              <strong>{varA}</strong> − <strong>{varB}</strong>: N={r.n}, fark ort.=
+              {formatNumber(r.farkOrtalamasi)}, fark SS={formatNumber(r.farkSS)}
+            </p>
+            <p className="tone-text" data-tone={sig ? "success" : "warning"}>
+              t({r.df}) = {formatNumber(r.t)}, {formatP(r.p)}
+              {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
+            </p>
+            <p className="muted text-sm">
+              Cohen&apos;s d<sub>z</sub> = {formatNumber(r.dz)} ({r.dzYorum} etki) · %95 GA [
+              {formatNumber(r.altSinir)}, {formatNumber(r.ustSinir)}]
+            </p>
+            {/* Eşleştirilmiş testte normallik FARKLARIN dağılımına
+                bakar, ölçümlerin kendisine değil. */}
+            {varsayimSeridi(
+              [Array.from({ length: r.n }, (_, i) => once[i] - sonra[i])],
+              ["Farklar"],
+            )}
+          </div>,
+        );
+      }
+
       if (analysisType === "mannwhitney") {
         if (groupLevels.length !== 2) {
           setResultError(
@@ -886,9 +943,9 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman") && (
+            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "pairedttest" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman") && (
               <label>
-                <span>{analysisType === "correlation" || analysisType === "spearman" ? "Değişken 1" : "Sayısal değişken"}</span>
+                <span>{analysisType === "correlation" || analysisType === "spearman" ? "Değişken 1" : analysisType === "pairedttest" ? "Önceki ölçüm" : "Sayısal değişken"}</span>
                 <select value={varA} onChange={(e) => setVarA(e.target.value)}>
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
@@ -899,9 +956,9 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "correlation" || analysisType === "spearman") && (
+            {(analysisType === "correlation" || analysisType === "spearman" || analysisType === "pairedttest") && (
               <label>
-                <span>Değişken 2</span>
+                <span>{analysisType === "pairedttest" ? "Sonraki ölçüm" : "Değişken 2"}</span>
                 <select value={varB} onChange={(e) => setVarB(e.target.value)}>
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>

@@ -19,6 +19,9 @@ export const ANALIZ_ETIKETLERI = {
     bunları öneriyordu ama program yapamıyordu; öneri, karşılığı
     sunulmadığında kullanıcıyı çıkmaza sokuyordu.
   */
+  /* Ön test–son test deseni tezlerde en yaygın kurgulardan biri ve
+     program bunu hiç yapamıyordu. */
+  pairedttest: "Eşleştirilmiş Örneklem t-Testi",
   mannwhitney: "Mann-Whitney U Testi",
   kruskalwallis: "Kruskal-Wallis H Testi",
   spearman: "Spearman Sıra Korelasyonu",
@@ -68,7 +71,7 @@ export function analizBasligi(tur: string, secim: AnalizSecimi): string {
       ? "tüm sayısal değişkenler"
       : tur === "ttest" || tur === "anova" || tur === "mannwhitney" || tur === "kruskalwallis"
         ? [a, grup].filter(Boolean).join(" ~ ")
-        : tur === "correlation" || tur === "spearman"
+        : tur === "correlation" || tur === "spearman" || tur === "pairedttest"
           ? [a, b].filter(Boolean).join(" — ")
           : tur === "chisquare"
             ? [a, b].filter(Boolean).join(" × ")

@@ -307,3 +307,129 @@ export function cronbachAlpha(items: number[][]): CronbachAlphaResult {
   const alpha = (k / (k - 1)) * (1 - itemVariances.reduce((a, b) => a + b, 0) / totalVar);
   return { alpha, k, n };
 }
+
+/*
+  EŞLEŞTİRİLMİŞ ÖRNEKLEM t-TESTİ (25.10.2026).
+
+  Ön test–son test deseni tezlerde en yaygın kurgulardan biri ve
+  program bunu HİÇ yapamıyordu. Kullanıcının elindeki tek seçenek
+  bağımsız örneklem t-testiydi; aynı kişilerin iki ölçümünü BAĞIMSIZ
+  iki grup saymak, eşleşmeden gelen bilgiyi atmak demek: fark gerçek
+  olsa bile test onu bulamıyor (güç kaybı) ve "anlamlı fark yok"
+  sonucu yanlış yere yazılıyor.
+
+  Hesap farkların kendi üzerinde: d = x − y dizisinin tek örneklem
+  t-testi.
+*/
+export interface EslestirilmisSonuc {
+  t: number;
+  df: number;
+  p: number;
+  n: number;
+  /** Fark ortalaması (birinci ölçüm − ikinci ölçüm). */
+  farkOrtalamasi: number;
+  farkSS: number;
+  altSinir: number;
+  ustSinir: number;
+  /** Cohen's dz: fark ortalaması / farkların SS'i. */
+  dz: number;
+  dzYorum: EtkiYorumu;
+}
+
+export function eslestirilmisTTest(oncesi: number[], sonrasi: number[]): EslestirilmisSonuc {
+  /*
+    EŞLEŞMEYEN GÖZLEM ATILIR, SIFIR SAYILMAZ. Dizilerin boyu
+    farklıysa fazlalık ölçümün eşi yok; onu sıfır farkla dahil etmek
+    gerçekte olmayan "değişim yok" gözlemleri uydurmak olurdu.
+  */
+  const n = Math.min(oncesi.length, sonrasi.length);
+  const farklar = Array.from({ length: n }, (_, i) => oncesi[i] - sonrasi[i]);
+
+  const farkOrtalamasi = mean(farklar);
+  const farkVaryans = variance(farklar);
+  const farkSS = Math.sqrt(farkVaryans);
+  const se = farkSS / Math.sqrt(n);
+  const t = se === 0 ? NaN : farkOrtalamasi / se;
+  const df = n - 1;
+  const p = Number.isFinite(t) ? tTestTwoTailedP(Math.abs(t), df) : NaN;
+  const pay = Number.isFinite(t) ? tKritik(df) * se : NaN;
+  const dz = farkSS === 0 ? NaN : farkOrtalamasi / farkSS;
+
+  return {
+    t, df, p, n,
+    farkOrtalamasi,
+    farkSS,
+    altSinir: farkOrtalamasi - pay,
+    ustSinir: farkOrtalamasi + pay,
+    dz,
+    dzYorum: cohenYorumu(dz),
+  };
+}
+
+/*
+  ANOVA SONRASI İKİLİ KARŞILAŞTIRMA — BONFERRONI (25.10.2026).
+
+  ANOVA "gruplardan en az biri farklı" diyor, hangisi olduğunu
+  söylemiyordu; kullanıcı anlamlı bir F görüp cevapsız kalıyordu.
+
+  TUKEY HSD BİLEREK YOK. Studentized range (q) dağılımı kapalı bir
+  formülle hesaplanmıyor; sayısal integral ya da katsayı tablosu
+  gerekiyor ve elle yazılan bir kopyadaki hata GÖRÜNMEZ olurdu —
+  makul bir p çıkar, kimse fark etmez (Shapiro-Wilk için de aynı
+  gerekçeyle yazılmadı). Bonferroni düzeltmesi KAPALI formüllü ve
+  elle doğrulanabilir; SPSS de standart seçeneklerinden biri olarak
+  sunuyor.
+
+  Bonferroni TEMKİNLİ taraftadır: gerçek farkı kaçırabilir ama
+  olmayan farkı bulmaz. Bir tez bulgusunda yanlış pozitif, yanlış
+  negatiften pahalıdır.
+*/
+export interface IkiliKarsilastirma {
+  a: string;
+  b: string;
+  ortalamaFarki: number;
+  t: number;
+  /** Düzeltilmemiş p; şeffaflık için duruyor. */
+  pHam: number;
+  /** Bonferroni ile düzeltilmiş p — karar bununla verilir. */
+  p: number;
+  anlamli: boolean;
+}
+
+export function bonferroniKarsilastirmalari(
+  gruplar: number[][],
+  adlar: string[],
+): IkiliKarsilastirma[] {
+  const { msw, dfw } = (() => {
+    const { msw: m, dfw: d } = oneWayAnova(gruplar);
+    return { msw: m, dfw: d };
+  })();
+
+  const ciftler: IkiliKarsilastirma[] = [];
+  const karsilastirmaSayisi = (gruplar.length * (gruplar.length - 1)) / 2;
+
+  for (let i = 0; i < gruplar.length; i += 1) {
+    for (let j = i + 1; j < gruplar.length; j += 1) {
+      const ni = gruplar[i].length;
+      const nj = gruplar[j].length;
+      const fark = mean(gruplar[i]) - mean(gruplar[j]);
+      /* Ortak hata karesi (MSw) kullanılıyor: ikili t-testlerin
+         kendi varyansını kullanmak ANOVA'nın bilgisini atmak olurdu
+         ve serbestlik derecesi gereksiz düşerdi. */
+      const se = Math.sqrt(msw * (1 / ni + 1 / nj));
+      const t = se === 0 ? NaN : fark / se;
+      const pHam = Number.isFinite(t) ? tTestTwoTailedP(Math.abs(t), dfw) : NaN;
+      const p = Number.isFinite(pHam) ? Math.min(1, pHam * karsilastirmaSayisi) : NaN;
+      ciftler.push({
+        a: adlar[i] ?? `Grup ${i + 1}`,
+        b: adlar[j] ?? `Grup ${j + 1}`,
+        ortalamaFarki: fark,
+        t,
+        pHam,
+        p,
+        anlamli: Number.isFinite(p) ? p < 0.05 : false,
+      });
+    }
+  }
+  return ciftler;
+}

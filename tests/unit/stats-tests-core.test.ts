@@ -9,7 +9,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  bonferroniKarsilastirmalari,
   chiSquareIndependence,
+  eslestirilmisTTest,
   cronbachAlpha,
   independentTTest,
   oneWayAnova,
@@ -218,5 +220,106 @@ describe("etki büyüklüğü", () => {
     assert.equal(Number.isFinite(r.t), false);
     assert.equal(r.d, 0, "birleşik SS sıfır: d sıfıra sabitleniyor");
     /* Çağıran t'nin tanımsızlığına bakıp sonucu hiç göstermemeli. */
+  });
+});
+
+/*
+  EŞLEŞTİRİLMİŞ ÖRNEKLEM t-TESTİ.
+
+  Ön test–son test deseni tezlerde en yaygın kurgulardan biri ve
+  program bunu hiç yapamıyordu. Aynı kişilerin iki ölçümünü BAĞIMSIZ
+  iki grup saymak eşleşmeden gelen bilgiyi atıyor: fark gerçek olsa
+  bile test onu bulamıyor ve "anlamlı fark yok" yanlış yere yazılıyor.
+*/
+describe("eşleştirilmiş örneklem t-testi", () => {
+  test("ders kitabı örneği", () => {
+    /*
+      önce  [5,7,6,8,9]
+      sonra [3,4,5,5,6]
+      farklar [2,3,1,3,3] → ortalama 2.4
+      sapmalar −0.4, 0.6, −1.4, 0.6, 0.6
+      kareler 0.16+0.36+1.96+0.36+0.36 = 3.2 → varyans 3.2/4 = 0.8
+      SS = 0.8944 ; SH = 0.8944/√5 = 0.4
+      t = 2.4/0.4 = 6.0 ; sd = 4
+      dz = 2.4/0.8944 = 2.6833
+      kritik t(4) = 2.7764 → GA = 2.4 ± 1.1106
+    */
+    const r = eslestirilmisTTest([5, 7, 6, 8, 9], [3, 4, 5, 5, 6]);
+    yakin(r.t, 6);
+    assert.equal(r.df, 4);
+    assert.equal(r.n, 5);
+    yakin(r.farkOrtalamasi, 2.4);
+    yakin(r.farkSS, 0.8944, 1e-3);
+    yakin(r.dz, 2.6833, 1e-3);
+    assert.equal(r.dzYorum, "büyük");
+    yakin(r.altSinir, 1.2894, 1e-3);
+    yakin(r.ustSinir, 3.5106, 1e-3);
+    yakin(r.p, 0.00388, 1e-4);
+  });
+
+  test("EŞLEŞMEYEN GÖZLEM atılıyor, sıfır sayılmıyor", () => {
+    /* Fazlalık ölçümü sıfır farkla dahil etmek, gerçekte olmayan
+       "değişim yok" gözlemleri uydurmak olurdu ve etkiyi küçültürdü. */
+    const r = eslestirilmisTTest([5, 7, 6, 8, 9, 10], [3, 4, 5, 5, 6]);
+    assert.equal(r.n, 5, "altıncı ölçümün eşi yok");
+    yakin(r.farkOrtalamasi, 2.4);
+  });
+
+  test("FARK HİÇ DEĞİŞMİYORSA sonuç tanımsız", () => {
+    /* Bütün farklar aynıysa SS sıfır ve t = 0/0. Sonsuz bir t
+       yazmak yerine çağıran bunu yakalamalı. */
+    const r = eslestirilmisTTest([5, 6, 7], [1, 2, 3]);
+    assert.equal(Number.isFinite(r.t), false);
+    assert.equal(Number.isNaN(r.dz), true);
+  });
+});
+
+/*
+  ANOVA SONRASI İKİLİ KARŞILAŞTIRMA.
+
+  ANOVA "gruplardan en az biri farklı" diyor, hangisi olduğunu
+  söylemiyordu; kullanıcı anlamlı bir F görüp cevapsız kalıyordu.
+*/
+describe("Bonferroni ikili karşılaştırmaları", () => {
+  test("üç grupta üç çift üretiliyor ve p düzeltiliyor", () => {
+    /*
+      [1,2,3] [4,5,6] [7,8,9]: MSw = 1, sdw = 6
+      1–2 farkı −3 ; SH = √(1×(1/3+1/3)) = 0.8165 → t = −3.674
+      düzeltmesiz p ≈ .0104 → ×3 = .0312
+    */
+    const ciftler = bonferroniKarsilastirmalari(
+      [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+      ["A", "B", "C"],
+    );
+    assert.equal(ciftler.length, 3);
+    const ab = ciftler.find((c) => c.a === "A" && c.b === "B")!;
+    yakin(ab.ortalamaFarki, -3);
+    yakin(ab.t, -3.6742, 1e-3);
+    yakin(ab.pHam, 0.0104, 1e-3);
+    yakin(ab.p, ab.pHam * 3, 1e-6);
+  });
+
+  test("düzeltilmiş p 1'i AŞMIYOR", () => {
+    /* p × karşılaştırma sayısı 1'i geçebilir; olasılık olarak
+       okunan bir sayının 1'den büyük yazılması anlamsız olurdu. */
+    const ciftler = bonferroniKarsilastirmalari(
+      [[1, 2, 3], [1, 2, 3], [1, 2, 3]],
+      ["A", "B", "C"],
+    );
+    for (const c of ciftler) assert.ok(c.p <= 1, `p = ${c.p}`);
+  });
+
+  test("DÜZELTME TEMKİNLİ tarafta: ham p anlamlıyken düzeltilmiş olmayabilir", () => {
+    /*
+      Bonferroni gerçek farkı kaçırabilir ama olmayan farkı bulmaz.
+      Bir tez bulgusunda yanlış pozitif, yanlış negatiften pahalıdır.
+      Ham p şeffaflık için duruyor; karar düzeltilmişle veriliyor.
+    */
+    const ciftler = bonferroniKarsilastirmalari(
+      [[1, 2, 3], [2, 3, 4], [3, 4, 5]],
+      ["A", "B", "C"],
+    );
+    const ac = ciftler.find((c) => c.a === "A" && c.b === "C")!;
+    assert.ok(ac.p > ac.pHam, "düzeltilmiş p ham p'den büyük olmalı");
   });
 });
