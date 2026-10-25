@@ -90,7 +90,6 @@ export default async function DocumentsPage({
       <CalismaSerit calismaId={hazirCalisma || undefined} aktif="belge" />
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Belge kontrol</span>
           <h1>Belge Kontrol</h1>
           <p>
             Tam bir tez/makale dosyası (.docx/.pdf) yükleyin; sistem metni okuyup

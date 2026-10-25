@@ -98,7 +98,6 @@ export default async function LiteraturePage({
       <CalismaSerit calismaId={secilenCalisma} aktif="literatur" />
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Literatür</span>
           <h1>Literatür Taraması</h1>
           <p>
             Bulduğunuz kaynakları buraya kaydedin, okuma durumunu takip edin.

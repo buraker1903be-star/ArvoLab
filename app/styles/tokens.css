@@ -163,7 +163,10 @@
      yüksekliği vardı; dock onun yerini alınca bildirimler dock'un
      altında kalıyordu. */
   --dock-alani: calc(62px + max(16px, env(safe-area-inset-bottom)));
-  --content-max: 1320px;
+  /* Kenar çubuğu (264px) dock'a geçişle kalktı; içerik o genişliği
+     geri alıyor. Sınırsız bırakılmıyor: sayfa başlığındaki açıklama
+     metni zaten 720px'te kesiliyor, asıl kazanan liste ve kartlar. */
+  --content-max: 1480px;
 
   color-scheme: light;
 

@@ -174,3 +174,17 @@ test("kılavuz olmayan belge uyarısı", async (t) => {
     assert.ok(liste[0].length > 40);
   });
 });
+
+test("OCR çalıştırılamayan belge", async (t) => {
+  const { kilavuzDegilUyarisi } = await import("@/lib/guideline-scan");
+
+  await t.test("okunamayan taranmış belge 'kılavuz değil' sayılmıyor", () => {
+    /*
+      OCR'ın koştuğu durumla aynı: metin boş, güven %0. Ölçüt "OCR
+      kullanıldı" olduğu sürece bu kayıt "adres bir kılavuza işaret
+      etmiyor" uyarısı alıyordu — oysa belge gerçek bir kılavuz, yapılacak
+      iş sunucuyu düzeltmek (lib/ocr.ts, next.config.ts).
+    */
+    assert.equal(kilavuzDegilUyarisi(0, 0, "application/pdf", true), null);
+  });
+});

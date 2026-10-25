@@ -78,7 +78,6 @@ export default async function TeamPage() {
     <main className="dashboard-page">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Yönetim</span>
           <h1>Ekip Yönetimi</h1>
           <p>
             Yeni kullanıcıları e-postayla davet edin, rollerini ve kurumlarını belirleyin. Davetsiz kayıt olan

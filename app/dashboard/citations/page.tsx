@@ -31,7 +31,6 @@ export default async function CitationsPage({
       <CalismaSerit calismaId={secilenCalisma} aktif="kaynakca" />
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Kaynakça</span>
           <h1>Kaynakça ve Atıf Doğrulama</h1>
           <p>
             Kaynakçanızı APA 7 biçimi, metin içi atıf tutarlılığı ve gerçek akademik

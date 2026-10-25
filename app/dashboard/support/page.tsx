@@ -74,7 +74,6 @@ export default async function SupportPage() {
     <main className="dashboard-page">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Destek</span>
           <h1>Uygulama Destek Talebi</h1>
           <p>
             ArvoLab uygulamasıyla ilgili bir hata, erişim sorunu ya da

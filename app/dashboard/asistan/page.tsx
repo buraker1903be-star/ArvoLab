@@ -51,7 +51,6 @@ export default async function AsistanKayitlariSayfasi() {
     <main className="dashboard-page">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Asistan</span>
           <h1>Asistan Kayıtları</h1>
           <p>
             Her asistan çalışması burada saklanıyor: modele gönderilen bağlam,

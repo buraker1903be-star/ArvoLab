@@ -98,17 +98,21 @@ export const TARAYICI_SURUMU = 7;
   üretiyor. Sınır, sistemin zaten kullandığı ölçüye bağlandı: onay
   kuyruğu da en az 4 zorunlu bölüm istiyor (20260924100007).
 
-  OCR'lı belgede hiç uyarı verilmez. Orada çıkarımın boş olmasının sebebi
-  belli ve kendi uyarısı var; "bu kılavuz değil" demek, okunamamış GERÇEK
-  bir kılavuzdan yöneticiyi boş yere şüphe ettirirdi.
+  OCR YOLUNA GİREN belgede hiç uyarı verilmez. Orada çıkarımın boş
+  olmasının sebebi belli ve kendi uyarısı var; "bu kılavuz değil" demek,
+  okunamamış GERÇEK bir kılavuzdan yöneticiyi boş yere şüphe ettirirdi.
+  Ölçüt "OCR kullanıldı" değil "OCR yoluna girdi": OCR hiç
+  ÇALIŞTIRILAMADIĞINDA da metin boş kalıyor ve kayıt aynı yanlış uyarıyı
+  alıyordu — oysa orada yapılacak iş belgeyi değil sunucuyu düzeltmek
+  (lib/ocr.ts).
 */
 export function kilavuzDegilUyarisi(
   confidence: number,
   bolumSayisi: number,
   contentType: string,
-  ocrKullanildi = false,
+  ocrYolu = false,
 ): string | null {
-  if (ocrKullanildi) return null;
+  if (ocrYolu) return null;
   if (confidence > 0 || bolumSayisi >= 4) return null;
   return contentType.toLowerCase().includes("html")
     ? "Bu adres bir web sayfası ve içinden hiçbir biçim kuralı çıkarılamadı; büyük olasılıkla "
@@ -431,6 +435,8 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   let ocrKullanildi = false;
   let ocrSayfa = 0;
   let ocrGuven = 0;
+  /** OCR hiç koşamadıysa sebebi; uyarı olarak kayda yazılır (lib/ocr.ts). */
+  let ocrHatasi: string | null = null;
   // Sınırsız okuma yok: bkz. lib/safe-official-fetch.ts
   const sourceBytes = await kaynagiOku(res);
   let text: string;
@@ -462,6 +468,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     */
     if (taranmisBelgeMi(text, sayfaSayisi)) {
       const ocr = await pdfMetniniOcrIleOku(buffer, sayfaSayisi);
+      ocrHatasi = ocr.hata ?? null;
       if (ocr.metin.trim().length > text.trim().length) {
         text = ocr.metin;
         ocrKullanildi = true;
@@ -496,7 +503,12 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   const sayiBicimiOnerisi = sayiKuraliOner(text);
   const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint));
   const sayfaSiniri = sayfaSiniriCikar(text);
-  const kilavuzDegil = kilavuzDegilUyarisi(formatting.confidence, suggestedSections.length, contentType, ocrKullanildi);
+  const kilavuzDegil = kilavuzDegilUyarisi(
+    formatting.confidence,
+    suggestedSections.length,
+    contentType,
+    ocrKullanildi || ocrHatasi !== null,
+  );
 
   return {
     textPreview: text.slice(0, 4000),
@@ -538,6 +550,13 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
             `Belge taranmış görüntüden oluşuyor; metin OCR ile okundu (${ocrSayfa} sayfa, tanıma güveni %${Math.round(ocrGuven * 100)}). Kurallar eksik ya da hatalı çıkmış olabilir.`,
           ]
         : []),
+      /*
+        OCR'ın hiç KOŞMADIĞI durum ayrı: kayıt eskiden "%0 güven, kural
+        çıkmadı" diye duruyor, belgenin okunamadığı yalnızca sunucu
+        günlüğünde kalıyordu. 05.10–25.10.2026 arasında gece turu bu yüzden
+        her gece düştü ve kimse 20 gün fark etmedi.
+      */
+      ...(ocrHatasi ? [ocrHatasi] : []),
     ],
   };
 }

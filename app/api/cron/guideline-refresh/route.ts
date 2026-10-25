@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { cronRotasi } from "@/lib/cron-gunlugu";
 import { kosulluTara, kunyeYamasi, TARAYICI_SURUMU } from "@/lib/guideline-scan";
 import {
   discoverGuidelinesForUniversity,
@@ -8,7 +9,16 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+/*
+  Gövde ayrı bir işlevde: sarmalayıcı turun düştüğünü işin ADIYLA günlüğe
+  yazıyor (lib/cron-gunlugu.ts). Eskiden fırlatan bir tur yalnızca Vercel'in
+  yığın izi olarak görünüyordu ve 20 gün kimse fark etmedi.
+*/
 export async function GET(request: Request) {
+  return cronRotasi("/api/cron/guideline-refresh", () => turuKosu(request));
+}
+
+async function turuKosu(request: Request): Promise<Response> {
   if (!process.env.CRON_SECRET || request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }

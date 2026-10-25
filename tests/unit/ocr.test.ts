@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { taranmisBelgeMi } from "@/lib/ocr";
+import { ocrCalismadiUyarisi, ocrEksikDosyaUyarisi, taranmisBelgeMi } from "@/lib/ocr";
 
 describe("taranmış belge tespiti", () => {
   test("metin PDF'i OCR'a girmez", () => {
@@ -27,5 +27,31 @@ describe("taranmış belge tespiti", () => {
   test("sayfa sayısı bilinmiyorsa karar verilmez", () => {
     // Bölme tanımsız olurdu; OCR'ı boşuna çalıştırmak pahalıdır.
     assert.equal(taranmisBelgeMi("", 0), false);
+  });
+});
+
+describe("OCR okuyamadığında yöneticiye söylenen", () => {
+  test("eksik dosya uyarısı sorunun sunucuda olduğunu söylüyor", () => {
+    /*
+      05.10–25.10.2026: işçi betiği dağıtım paketinde olmadığı için gece
+      turu her gece düştü. Kayıt "%0 güven, kural çıkmadı" diye duruyordu;
+      yönetici kılavuzu ya da adresi düzeltmeye uğraşırdı, oysa yapılacak iş
+      dosyayı pakete eklemekti.
+    */
+    const uyari = ocrEksikDosyaUyarisi("tesseract.js/src/worker-script/node/index.js");
+    assert.match(uyari, /worker-script/);
+    assert.match(uyari, /kılavuzun değil sunucunun/);
+  });
+
+  test("belgeden gelen hata sunucuyu suçlamıyor", () => {
+    // Bozuk PDF de buraya düşüyor; "sunucunun sorunu" demek yanlış iz verirdi.
+    const uyari = ocrCalismadiUyarisi("Invalid PDF structure.");
+    assert.match(uyari, /OCR ile okunamadı/);
+    assert.doesNotMatch(uyari, /sunucunun sorunu/);
+  });
+
+  test("uyarı tek parça metindir", () => {
+    // Uyarılar diziye yayılıyor; dizge harflerine ayrılırsa panel okunmaz olur.
+    assert.equal(typeof ocrCalismadiUyarisi("bellek yetmedi"), "string");
   });
 });

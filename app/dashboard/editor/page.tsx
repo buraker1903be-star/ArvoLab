@@ -105,7 +105,6 @@ export default async function ProjectsPage({
     <main className="dashboard-page">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Belge editörü</span>
           <h1>Çalışmalarım</h1>
           <p>Tez, makale, proje ve analiz çalışmalarınızı buradan oluşturun, panelde yazın ve yönetin.</p>
         </div>
@@ -257,8 +256,21 @@ export default async function ProjectsPage({
                   ) : null}
                 </div>
 
+                {/*
+                  DENETİM EYLEMLERİ AYRI BİR ŞERİTTE.
+
+                  Onay ve sorumlu atama, çalışmanın SAHİBİNİN değil
+                  gözetim rolünün eylemleri; kartın gövdesinde serbestçe
+                  dururken öğrencinin kendi eylemleriyle aynı ağırlıkta
+                  görünüyorlardı. Üstelik "Kontrolör olarak onayla" da
+                  "Çalışma Merkezi" de koyu birincil düğmeydi: tek kartta
+                  iki birincil eylem, hangisinin asıl olduğunu
+                  söylemiyordu. Şerit kendi çerçevesinde ve kendi
+                  başlığıyla duruyor, düğmeleri ikincil.
+                */}
                 {canApprove ? (
-                  <div className="cluster cluster-lg cluster-spaced">
+                  <div className="project-denetim">
+                    <span className="project-denetim-baslik">Denetim</span>
                     {isApproved ? (
                       <ActionForm
                         action={handleRevoke.bind(null, project.id)}
@@ -268,28 +280,24 @@ export default async function ProjectsPage({
                         confirmMessage={`"${project.title}" çalışmasının kontrolör onayını geri almak istediğinize emin misiniz? Çalışma yeniden inceleme bekler duruma döner.`}
                         successMessage="Kontrolör onayı geri alındı."
                       >
-                        <button type="submit" className="projects-filter-button">
-                          <RotateCcw size={15} aria-hidden="true" />
+                        <button type="submit" className="projects-filter-button button-compact">
+                          <RotateCcw size={14} aria-hidden="true" />
                           Onayı geri al
                         </button>
                       </ActionForm>
                     ) : (
                       <ActionForm action={handleApprove.bind(null, project.id)} successMessage="Çalışma kontrolör onayı aldı.">
-                        <button type="submit" className="projects-primary-button">
-                          <CheckCircle2 size={15} aria-hidden="true" />
+                        <button type="submit" className="projects-filter-button button-compact">
+                          <CheckCircle2 size={14} aria-hidden="true" />
                           Kontrolör olarak onayla
                         </button>
                       </ActionForm>
                     )}
-                  </div>
-                ) : null}
-
-                {canApprove ? (
-                  <ActionForm
-                    action={handleAssign.bind(null, project.id)}
-                    className="cluster mt-sm"
-                    successMessage="Sorumlu kaydedildi."
-                  >
+                    <ActionForm
+                      action={handleAssign.bind(null, project.id)}
+                      className="cluster"
+                      successMessage="Sorumlu kaydedildi."
+                    >
                     <select
                       name="assigneeId"
                       defaultValue={project.assignee_id ?? ""}
@@ -311,11 +319,12 @@ export default async function ProjectsPage({
                         </option>
                       ))}
                     </select>
-                    <button type="submit" className="projects-filter-button button-compact">
-                      <UserRound size={14} aria-hidden="true" />
-                      Ata
-                    </button>
-                  </ActionForm>
+                      <button type="submit" className="projects-filter-button button-compact">
+                        <UserRound size={14} aria-hidden="true" />
+                        Ata
+                      </button>
+                    </ActionForm>
+                  </div>
                 ) : null}
 
                 {/*
@@ -339,9 +348,13 @@ export default async function ProjectsPage({
                   </div>
                   <div className="cluster project-card-ikincil">
                     {canEdit ? (
+                      /* "Düzenle" tek başına "Panelde Yaz" ile aynı şeyi
+                         çağrıştırıyordu; biri çalışmanın METNİNİ, bu ise
+                         künyesini (başlık, tür, üniversite, teslim tarihi)
+                         açıyor. */
                       <Link href={`/dashboard/editor/${project.id}/edit`} className="projects-filter-button button-compact">
                         <Pencil size={14} aria-hidden="true" />
-                        Düzenle
+                        Bilgileri düzenle
                       </Link>
                     ) : null}
                     {/* Bağlam taşınır: belge sayfası çalışmayı hazır seçer. */}

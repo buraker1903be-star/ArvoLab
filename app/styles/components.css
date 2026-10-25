@@ -200,6 +200,24 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   border-top: 1px solid var(--line-soft);
 }
 .project-card-ikincil { margin-left: auto; }
+
+/* Denetim şeridi: gözetim rolünün eylemleri (onay, sorumlu atama).
+   Kendi çerçevesinde ve çukur zemininde duruyor — kartın gövdesinde
+   serbest dururken öğrencinin kendi eylemleriyle aynı ağırlıkta
+   görünüyorlardı. */
+.project-denetim {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
+  margin-top: 14px; padding: 10px 12px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.project-denetim-baslik {
+  flex: none; color: var(--muted);
+  font-size: var(--fs-micro); font-weight: 650; letter-spacing: .08em; text-transform: uppercase;
+}
+/* Atama formu kalan yeri alıyor: dar ekranda seçim kutusu alt satıra
+   inmek yerine kısalıyor. */
+.project-denetim form.cluster { flex: 1 1 260px; min-width: 0; }
 @media (hover: hover) and (pointer: fine) {
   .project-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--line); }
 }

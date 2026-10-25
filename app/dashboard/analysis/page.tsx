@@ -50,7 +50,6 @@ export default async function AnalysisPage({
       <CalismaSerit calismaId={hazirCalisma || undefined} aktif="analiz" />
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Analiz merkezi</span>
           <h1>Veri Analizi ve İstatistik Asistanı</h1>
           <p>
             Excel/CSV verinizi yükleyip gerçek istatistiksel testler
