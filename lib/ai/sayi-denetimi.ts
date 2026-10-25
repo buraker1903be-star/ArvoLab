@@ -93,3 +93,101 @@ export function uydurmaSayilar(cikti: string, girdi: string, ...ekGirdiler: stri
   const temiz = cikti.replace(STANDART_ADI, " ");
   return [...new Set(sayilar(temiz))].filter((deger) => !bilinen.has(deger) && !SERBEST.has(deger));
 }
+
+/*
+  YAZIYLA YAZILAN SAYI (25.10.2026).
+
+  Denetim rakamı yakalıyordu, yazıyı yakalamıyordu: asistan
+  "yaklaşık yirmi kişi" ya da "üç yüz katılımcı" yazdığında girdide
+  böyle bir sayı olmasa bile cevap geçiyordu. Uydurma sayı akademik
+  bir metinde yanlış cümleden ağır bir hata ve rakamla yazılanı
+  elemek, yazıyla yazılana kapıyı açık bırakmak anlamına geliyordu.
+
+  KURAL DAR TUTULDU, çünkü bu dosyanın kendi ilkesi: yanlış alarm
+  kaçırılan uydurmadan SİNSİDİR — kullanıcı doğru çalışan aracı
+  kullanmayı bırakır. Daraltmanın iki ayağı var:
+
+  1. TETİKLEYİCİ SÖZCÜK ONDAN BÜYÜK OLMALI (on, yirmi, …, yüz, bin).
+     "bir" ve "iki" Türkçede sayı değil BELİRTEÇ olarak da geçiyor
+     ("bir analiz", "iki yönlü test"); onları tek başına saymak
+     neredeyse her cevabı reddederdi. Küçük sözcükler yalnızca
+     büyük bir sözcüğe BİTİŞİKKEN okunuyor ("iki yüz" = 200).
+
+  2. "YÜZDE" AYIKLANIYOR. "yüzde 40" içindeki "yüz" bir miktar
+     değil; sözcük sınırı tek başına yetmiyor çünkü "yüzde" ayrı
+     bir sözcük olarak geçiyor.
+
+  BEDELİ açıkça: ondan küçük yazıyla uydurma ("üç katılımcı")
+  hâlâ kaçıyor. Daraltmanın alternatifi, her cevabı "bir" yüzünden
+  reddeden bir denetimdi.
+*/
+const BIRLER: Record<string, number> = {
+  bir: 1, iki: 2, üç: 3, dört: 4, beş: 5, altı: 6, yedi: 7, sekiz: 8, dokuz: 9,
+};
+const ONLAR: Record<string, number> = {
+  on: 10, yirmi: 20, otuz: 30, kırk: 40, elli: 50,
+  altmış: 60, yetmiş: 70, seksen: 80, doksan: 90,
+};
+const KATLAR: Record<string, number> = { yüz: 100, bin: 1000, milyon: 1_000_000 };
+
+/** Tek başına bir miktar başlatabilen sözcükler (ondan büyük). */
+const TETIKLEYICI = new Set([...Object.keys(ONLAR), ...Object.keys(KATLAR)]);
+
+const SAYI_SOZCUGU = new Set([
+  ...Object.keys(BIRLER), ...Object.keys(ONLAR), ...Object.keys(KATLAR),
+]);
+
+/** Ardışık sayı sözcüklerinin değeri: "iki yüz otuz beş" → 235 */
+function dizininDegeri(sozcukler: string[]): number {
+  let toplam = 0;
+  let parca = 0;
+  for (const s of sozcukler) {
+    if (s in BIRLER) parca += BIRLER[s];
+    else if (s in ONLAR) parca += ONLAR[s];
+    else if (s === "yüz") parca = (parca || 1) * 100;
+    else if (s === "bin") { toplam += (parca || 1) * 1000; parca = 0; }
+    else if (s === "milyon") { toplam += (parca || 1) * 1_000_000; parca = 0; }
+  }
+  return toplam + parca;
+}
+
+/** Metindeki yazıyla yazılmış miktarlar (yalnızca tetikleyici içerenler). */
+export function yaziylaSayilar(metin: string): { metin: string; deger: number }[] {
+  /* "yüzde" bir miktar değil; ayıklanmazsa her yüzde ifadesi 100
+     sayılırdı. */
+  const temiz = metin.toLocaleLowerCase("tr").replace(/\byüzde\b/g, " ");
+  const sozcukler = temiz.match(/\p{L}+/gu) ?? [];
+
+  const bulunanlar: { metin: string; deger: number }[] = [];
+  let i = 0;
+  while (i < sozcukler.length) {
+    if (!SAYI_SOZCUGU.has(sozcukler[i])) { i += 1; continue; }
+    let son = i;
+    while (son + 1 < sozcukler.length && SAYI_SOZCUGU.has(sozcukler[son + 1])) son += 1;
+    const dizi = sozcukler.slice(i, son + 1);
+    /* Tek başına "bir"/"iki" gibi küçük sözcükler sayılmıyor:
+       Türkçede belirteç olarak da geçiyorlar. */
+    if (dizi.some((s) => TETIKLEYICI.has(s))) {
+      bulunanlar.push({ metin: dizi.join(" "), deger: dizininDegeri(dizi) });
+    }
+    i = son + 1;
+  }
+  return bulunanlar;
+}
+
+/**
+ * Çıktıda yazıyla geçip girdide HİÇ geçmeyen miktarlar.
+ *
+ * Girdide ister rakamla ("20") ister aynı yazımla ("yirmi") geçsin,
+ * uydurma sayılmıyor: kullanıcı sayıyı nasıl yazdıysa öyle arıyoruz.
+ */
+export function uydurmaYaziylaSayilar(cikti: string, girdi: string, ...ekGirdiler: string[]): string[] {
+  const tumGirdi = [girdi, ...ekGirdiler].join(" ");
+  const girdiRakamlari = new Set([girdi, ...ekGirdiler].flatMap(sayilar));
+  const girdiYazilari = new Set(yaziylaSayilar(tumGirdi).map((x) => x.deger));
+
+  const bulunanlar = yaziylaSayilar(cikti).filter(
+    (x) => !girdiYazilari.has(x.deger) && !girdiRakamlari.has(String(x.deger)),
+  );
+  return [...new Set(bulunanlar.map((x) => x.metin))];
+}

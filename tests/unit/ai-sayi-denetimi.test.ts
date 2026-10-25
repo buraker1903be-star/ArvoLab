@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { sayilar, uydurmaSayilar } from "../../lib/ai/sayi-denetimi";
-import { bulgulariCozumle } from "@/lib/ai/bulgu";
+import { sayilar, uydurmaSayilar, uydurmaYaziylaSayilar } from "../../lib/ai/sayi-denetimi";
+import { bulgulariCozumle, bulgulariDogrula } from "@/lib/ai/bulgu";
 
 describe("sayı çıkarma", () => {
   test("virgül, nokta ve baştaki sıfır aynı sayıya çıkar", () => {
@@ -116,4 +116,94 @@ describe("çıktı kanalı düz yazı taşıyamaz", () => {
     assert.equal(bulgu.baslik.length, 60);
     assert.equal(bulgu.aciklama.length, 400);
   });
+});
+
+/*
+  YAZIYLA YAZILAN SAYI.
+
+  Denetim rakamı yakalıyordu, yazıyı yakalamıyordu: asistan
+  "yaklaşık yirmi kişi" yazdığında girdide böyle bir sayı olmasa
+  bile cevap geçiyordu.
+
+  Kural DAR tutuldu çünkü bu dosyanın kendi ilkesi: yanlış alarm,
+  kaçırılan uydurmadan sinsidir — kullanıcı doğru çalışan aracı
+  kullanmayı bırakır.
+*/
+describe("yazıyla yazılan sayı", () => {
+  test("ondan büyük miktar yakalanıyor", () => {
+    assert.deepEqual(
+      uydurmaYaziylaSayilar("Yaklaşık yirmi kişiyle görüşülmüş.", "Katılımcı sayısı belirtilmemiş."),
+      ["yirmi"],
+    );
+  });
+
+  test("bileşik miktar tek parça okunuyor", () => {
+    /* "iki yüz otuz beş" = 235; parçalar ayrı ayrı sayılsaydı
+       anlamsız üç ayrı uydurma raporlanırdı. */
+    const bulgular = uydurmaYaziylaSayilar("İki yüz otuz beş katılımcı", "N belirtilmemiş");
+    assert.deepEqual(bulgular, ["iki yüz otuz beş"]);
+  });
+
+  test("GİRDİDE RAKAMLA geçiyorsa uydurma değil", () => {
+    /* Kullanıcı "20 kişi" yazmış, asistan "yirmi kişi" demiş:
+       aynı sayı, farklı yazım. Reddetmek doğru cevabı atmak olurdu. */
+    assert.deepEqual(uydurmaYaziylaSayilar("yirmi kişi", "Örneklem 20 kişiden oluşuyor."), []);
+  });
+
+  test("GİRDİDE YAZIYLA geçiyorsa uydurma değil", () => {
+    assert.deepEqual(uydurmaYaziylaSayilar("yirmi kişi", "Yirmi kişiyle görüşüldü."), []);
+  });
+
+  test('"BİR" VE "İKİ" TEK BAŞINA SAYILMIYOR', () => {
+    /*
+      Türkçede belirteç olarak da geçiyorlar ("bir analiz", "iki
+      yönlü test"); saysaydık neredeyse her cevap reddedilirdi.
+      Bedeli açık: ondan küçük yazıyla uydurma hâlâ kaçıyor.
+    */
+    assert.deepEqual(uydurmaYaziylaSayilar("Bir analiz yapılmış, iki yönlü test uygulanmış.", ""), []);
+  });
+
+  test('"YÜZDE" bir miktar değil', () => {
+    /* "yüzde 40" içindeki "yüz" ayıklanmazsa her yüzde ifadesi
+       100 sayılır ve uydurma diye raporlanırdı. */
+    assert.deepEqual(uydurmaYaziylaSayilar("Katılımcıların yüzde 40'ı kadın.", "%40 kadın"), []);
+  });
+
+  test("küçük sözcük BÜYÜĞE BİTİŞİKSE okunuyor", () => {
+    const bulgular = uydurmaYaziylaSayilar("üç yüz kayıt incelendi", "kayıt sayısı yok");
+    assert.deepEqual(bulgular, ["üç yüz"]);
+  });
+
+  test("EK GİRDİ de kaynak sayılıyor", () => {
+    /* Doğrulanmış istatistikler ek girdi olarak geliyor; orada
+       geçen sayı uydurma değildir. */
+    assert.deepEqual(uydurmaYaziylaSayilar("otuz katılımcı", "", "N = 30"), []);
+  });
+
+  test("aynı miktar iki kez geçerse bir kez raporlanıyor", () => {
+    const bulgular = uydurmaYaziylaSayilar("yirmi kişi ve yine yirmi gözlem", "");
+    assert.deepEqual(bulgular, ["yirmi"]);
+  });
+});
+
+test("DOĞRULAMA YOLUNDA da yazıyla uydurma eleniyor", () => {
+  /*
+    Denetim yalnızca rakamı yakalıyordu; asistan "yaklaşık yirmi
+    kişi" yazdığında cevap kullanıcıya gidiyordu. İki yazım da aynı
+    kapıdan geçmeli, yoksa rakamı elemek yazıya kapıyı açık
+    bırakmak olur.
+  */
+  const bulgular = [
+    { tur: "uyari" as const, baslik: "Örneklem belirsiz", aciklama: "Yaklaşık yirmi katılımcıdan söz ediliyor." },
+  ];
+  const sonuc = bulgulariDogrula(bulgular, "Örneklem bölümünde sayı verilmemiş.");
+  assert.equal(sonuc.gecti, false);
+  assert.ok(sonuc.gecti === false && sonuc.uydurulan.includes("yirmi"));
+});
+
+test("doğrulanmış kaynakta geçen miktar GEÇİYOR", () => {
+  const bulgular = [
+    { tur: "bilgi" as const, baslik: "Örneklem", aciklama: "Otuz katılımcıyla çalışılmış." },
+  ];
+  assert.equal(bulgulariDogrula(bulgular, "Çalışmaya 30 kişi katıldı.").gecti, true);
 });

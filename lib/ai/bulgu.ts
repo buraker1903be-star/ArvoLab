@@ -9,7 +9,7 @@
   Saf modül; testi tests/unit/ai-analiz-yorumu.test.ts.
 */
 
-import { uydurmaSayilar } from "./sayi-denetimi";
+import { uydurmaSayilar, uydurmaYaziylaSayilar } from "./sayi-denetimi";
 import { SOZCUK_BASI } from "@/lib/sozcuk-siniri";
 
 export type BulguTuru = "uyari" | "oneri" | "bilgi";
@@ -130,6 +130,20 @@ export type DogrulamaSecenegi = {
  */
 export function bulgulariDogrula(bulgular: Bulgu[], kaynak: string, secenek: DogrulamaSecenegi = {}): Dogrulama {
   const cikti = bulgular.map((b) => `${b.baslik} ${b.aciklama}`).join("\n");
-  const uydurulan = uydurmaSayilar(cikti, kaynak, ...(secenek.ekKaynaklar ?? []));
+  /*
+    İKİ YAZIM DA DENETLENİYOR (25.10.2026). Denetim yalnızca RAKAMI
+    yakalıyordu: asistan "yaklaşık yirmi kişi" ya da "üç yüz
+    katılımcı" yazdığında girdide böyle bir sayı olmasa bile cevap
+    geçiyordu. Rakamla yazılanı elemek, yazıyla yazılana kapıyı
+    açık bırakmak anlamına geliyordu.
+
+    Yazı denetimi DAR: tetikleyici sözcük ondan büyük olmalı, çünkü
+    "bir" ve "iki" Türkçede belirteç olarak da geçiyor (gerekçe
+    sayi-denetimi.ts'te). Bedeli orada açıkça yazılı.
+  */
+  const uydurulan = [
+    ...uydurmaSayilar(cikti, kaynak, ...(secenek.ekKaynaklar ?? [])),
+    ...uydurmaYaziylaSayilar(cikti, kaynak, ...(secenek.ekKaynaklar ?? [])),
+  ];
   return uydurulan.length ? { gecti: false, uydurulan } : { gecti: true };
 }
