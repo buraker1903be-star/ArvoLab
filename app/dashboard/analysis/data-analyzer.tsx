@@ -23,6 +23,7 @@ import { formatP, hesaplanabilir, isSignificant, formatNumber } from "@/lib/apa-
 import { ANALIZ_ETIKETLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { showToast } from "@/app/dashboard/_components/toast-events";
+import { elemeNotu, eslesenSatirlar } from "@/lib/veri-eslestirme";
 
 type CellValue = string | number | null;
 type DataRow = Record<string, CellValue>;
@@ -236,6 +237,18 @@ export default function DataAnalyzer({
       .filter((v) => v !== null && v !== "" && !isNaN(Number(v)))
       .map(Number);
   }, [dataset]);
+
+  /*
+    EŞLEŞTİRİLMİŞ analizler satır hizasını korumak ZORUNDA.
+    getNumericColumn her sütunu ayrı okuyup boşları attığı için sütunlar
+    kısalıyor ve kalanlar başa kayıyordu; iki sütunu en kısa olanın
+    boyuna kesmek 2. kişinin ön testini 1. kişinin son testiyle
+    eşleştiriyordu (bkz. lib/veri-eslestirme.ts).
+  */
+  const eslesenSutunlar = useCallback(
+    (...sutunAdlari: string[]) => eslesenSatirlar(dataset?.rows ?? [], sutunAdlari),
+    [dataset],
+  );
 
   const getGroupedNumeric = useCallback((numericCol: string, groupCol: string): Map<string, number[]> => {
     const map = new Map<string, number[]>();
@@ -606,21 +619,23 @@ export default function DataAnalyzer({
       }
 
       if (analysisType === "correlation") {
-        const x = getNumericColumn(varA);
-        const y = getNumericColumn(varB);
-        const n = Math.min(x.length, y.length);
-        if (n < 3) {
+        const veri = eslesenSutunlar(varA, varB);
+        const [x, y] = veri.sutunlar;
+        if (veri.n < 3) {
           setResultError("Korelasyon için en az 3 eşleşen gözlem gereklidir.");
           return;
         }
-        const r = pearsonCorrelation(x.slice(0, n), y.slice(0, n));
+        const r = pearsonCorrelation(x, y);
         if (!hesaplanabilir(r.r, r.p)) return setResultError(DEGISKENLIK_YOK);
         const sig = isSignificant(r.p);
         setResult(
-          <p className="tone-text" data-tone={sig ? "success" : "warning"}>
-            r({r.df}) = {yazSayi(r.r)}, {yazP(r.p)}
-            {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
-          </p>
+          <div>
+            <p className="tone-text" data-tone={sig ? "success" : "warning"}>
+              r({r.df}) = {yazSayi(r.r)}, {yazP(r.p)}
+              {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
+            </p>
+            {elemeNotu(veri) ? <p className="muted text-sm">{elemeNotu(veri)}</p> : null}
+          </div>
         );
       }
 
@@ -634,10 +649,9 @@ export default function DataAnalyzer({
         altına normallik raporlamak kullanıcıyı yanıltırdı.
       */
       if (analysisType === "pairedttest") {
-        const once = getNumericColumn(varA);
-        const sonra = getNumericColumn(varB);
-        const n = Math.min(once.length, sonra.length);
-        if (n < 3) {
+        const veri = eslesenSutunlar(varA, varB);
+        const [once, sonra] = veri.sutunlar;
+        if (veri.n < 3) {
           setResultError("Eşleştirilmiş t-testi için en az 3 eşleşen gözlem gereklidir.");
           return;
         }
@@ -660,6 +674,7 @@ export default function DataAnalyzer({
             </p>
             {/* Eşleştirilmiş testte normallik FARKLARIN dağılımına
                 bakar, ölçümlerin kendisine değil. */}
+            {elemeNotu(veri) ? <p className="muted text-sm">{elemeNotu(veri)}</p> : null}
             {varsayimSeridi(
               [Array.from({ length: r.n }, (_, i) => once[i] - sonra[i])],
               ["Farklar"],
@@ -674,20 +689,15 @@ export default function DataAnalyzer({
           setResultError("En az bir yordayıcı değişken seçin (bağımlı değişkenden farklı olmalı).");
           return;
         }
-        const y = getNumericColumn(varA);
-        const sutunlar = secilen.map((c) => getNumericColumn(c));
-        const n = Math.min(y.length, ...sutunlar.map((c) => c.length));
-        if (n < secilen.length + 2) {
+        const veri = eslesenSutunlar(varA, ...secilen);
+        const [y, ...sutunlar] = veri.sutunlar;
+        if (veri.n < secilen.length + 2) {
           setResultError(
             `Yordayıcı başına yeterli gözlem yok: ${secilen.length} yordayıcı için en az ${secilen.length + 2} eşleşen gözlem gerekiyor.`,
           );
           return;
         }
-        const r = dogrusalRegresyon(
-          y.slice(0, n),
-          sutunlar.map((c) => c.slice(0, n)),
-          secilen,
-        );
+        const r = dogrusalRegresyon(y, sutunlar, secilen);
         /*
           TEKİLLİK SESSİZ GEÇİLMİYOR: yordayıcılar birbirinin
           neredeyse aynısıysa katsayılar anlamsızdır ve sayı üretmek
@@ -709,6 +719,7 @@ export default function DataAnalyzer({
             <p className="muted text-sm">
               R² = {yazSayi(r.rKare)} · düzeltilmiş R² = {yazSayi(r.duzeltilmisRKare)} · N = {r.n}
             </p>
+            {elemeNotu(veri) ? <p className="muted text-sm">{elemeNotu(veri)}</p> : null}
             <div className="table-scroll" role="region" aria-label="Regresyon katsayıları" tabIndex={0}>
               <table className="stats-result-table">
                 <thead>
@@ -825,14 +836,13 @@ export default function DataAnalyzer({
       }
 
       if (analysisType === "spearman") {
-        const x = getNumericColumn(varA);
-        const y = getNumericColumn(varB);
-        const n = Math.min(x.length, y.length);
-        if (n < 3) {
+        const veri = eslesenSutunlar(varA, varB);
+        const [x, y] = veri.sutunlar;
+        if (veri.n < 3) {
           setResultError("Korelasyon için en az 3 eşleşen gözlem gereklidir.");
           return;
         }
-        const r = spearmanKorelasyonu(x.slice(0, n), y.slice(0, n));
+        const r = spearmanKorelasyonu(x, y);
         if (!hesaplanabilir(r.r, r.p)) return setResultError(DEGISKENLIK_YOK);
         const sig = isSignificant(r.p);
         setResult(
@@ -903,14 +913,12 @@ export default function DataAnalyzer({
           setResultError("Güvenilirlik analizi için en az 2 madde seçmelisiniz.");
           return;
         }
-        const items = reliabilityItems.map((col) => getNumericColumn(col));
-        const minLen = Math.min(...items.map((i) => i.length));
-        if (minLen < 3) {
-          setResultError("Yetersiz veri: her maddede en az 3 gözlem olmalıdır.");
+        const veri = eslesenSutunlar(...reliabilityItems);
+        if (veri.n < 3) {
+          setResultError("Yetersiz veri: bütün maddeleri dolu olan en az 3 satır gerekiyor.");
           return;
         }
-        const trimmed = items.map((i) => i.slice(0, minLen));
-        const r = cronbachAlpha(trimmed);
+        const r = cronbachAlpha(veri.sutunlar);
         if (!hesaplanabilir(r.alpha)) return setResultError(DEGISKENLIK_YOK);
         const level =
           r.alpha >= 0.9
@@ -928,6 +936,7 @@ export default function DataAnalyzer({
               Cronbach&apos;s α = {yazSayi(r.alpha, 3)} ({r.k} madde, N = {r.n}) — güvenilirlik düzeyi:{" "}
               {level}
             </strong>
+            {elemeNotu(veri) ? <span className="muted text-sm"> · {elemeNotu(veri)}</span> : null}
           </p>
         );
       }
@@ -936,7 +945,7 @@ export default function DataAnalyzer({
       setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, yazP, yazSayi]);
+  }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi]);
 
   return (
     <section className="project-form-card">
