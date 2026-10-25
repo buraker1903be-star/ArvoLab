@@ -45,23 +45,34 @@ export default function OlcumPaneli({ editor }: { editor: Editor | null }) {
     const el = editor.view.dom;
 
     /*
-      Başlangıç tuşun KENDİSİNDE alınıyor, `input` olayında değil: araya
-      giren iş tam da ikisinin arasında çalışıyor olabilir ve o durumda
-      `input`'tan ölçmek gecikmeyi görünmez yapardı.
+      ÖLÇÜM TEK BİR OLAYIN İKİ EVRESİNDEN: yakalama evresinde (capture)
+      kronometre başlıyor — bu, ProseMirror'ın kendi işleyicisinden ÖNCE
+      çalışır — kabarma evresinde (bubble) duruyor; yani tuşun bütün işi
+      ikisinin arasında kalıyor. İlk sürüm `input` olayında bitiriyordu;
+      ProseMirror bazı girdileri (IME, kendi komutları) native `input`
+      üretmeden işlediği için o olaya dayanmak ölçümü boşluklu bırakırdı.
+
+      OTOMASYONLA DOĞRULANAMAZ: tarayıcı aracının "yaz" eylemi metni tek
+      seferde yerleştiriyor (ölçüldü: 10 karakter → 0 keydown, 1
+      beforeinput, 1 input), yani tuş olayı hiç doğmuyor ve panel boş
+      kalıyor. Panelin boş olması "gecikme yok" DEĞİL, "tuş olayı yok"
+      demek olabilir; gerçek sayılar ancak insan yazarken birikir.
     */
     let basla = 0;
-    const onKey = () => {
-      if (basla === 0) basla = performance.now();
+    const yoksay = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "Tab"]);
+    const basladi = (olay: KeyboardEvent) => {
+      if (yoksay.has(olay.key)) return;
+      basla = performance.now();
     };
-    const onInput = () => {
+    const bitti = (olay: KeyboardEvent) => {
+      if (yoksay.has(olay.key) || basla === 0) return;
       const t0 = basla;
       basla = 0;
-      if (t0 === 0) return;
       olcumKaydet("tuş → işlem", performance.now() - t0);
       requestAnimationFrame(() => olcumKaydet("tuş → kare", performance.now() - t0));
     };
-    el.addEventListener("keydown", onKey);
-    el.addEventListener("input", onInput);
+    el.addEventListener("keydown", basladi, true);
+    el.addEventListener("keydown", bitti);
 
     // 50 ms'den uzun her ana iş parçacığı bloğu: gecikmenin kaynağı buradaysa görünür.
     let gozlemci: PerformanceObserver | null = null;
@@ -76,8 +87,8 @@ export default function OlcumPaneli({ editor }: { editor: Editor | null }) {
 
     const sayac = window.setInterval(() => tazele((n) => n + 1), 1000);
     return () => {
-      el.removeEventListener("keydown", onKey);
-      el.removeEventListener("input", onInput);
+      el.removeEventListener("keydown", basladi, true);
+      el.removeEventListener("keydown", bitti);
       gozlemci?.disconnect();
       window.clearInterval(sayac);
     };
