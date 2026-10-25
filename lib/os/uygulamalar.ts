@@ -1,0 +1,145 @@
+/*
+  ArvoLab İŞLETİM SİSTEMİ KABUĞU: her iş alanı bir "uygulama"
+  (25.10.2026, kurum sahibinin isteği: "docklu sistemi ArvoLab için
+  de yap").
+
+  Sözleşme ArvoOS ve ArvoARC'taki os-apps'in kopyası: dock, bölüm
+  şeridi, başlatıcı, üst çubuktaki uygulama adı ve Ctrl+K AYNI
+  listeden besleniyor. ArvoLab'da bugün menü (navigation.ts), mobil
+  sekme çubuğu ve üst çubuk başlığı aynı listeden okuyor; dock da
+  oraya eklenmiyor çünkü uygulama/bölüm ayrımı menüde yok: menü düz
+  bir bağlantı listesi, dock ise "hangi uygulamadayım, onun
+  bölümleri neler" sorusunu da yanıtlıyor.
+
+  Fark: ArvoLab'ın kökü "/dashboard" (ArvoARC'ta "/", ArvoOS'ta
+  "/panel").
+
+  Saf modül: Next/React/Supabase'e dokunmaz; testi
+  tests/unit/os-uygulamalar.test.ts.
+*/
+
+export type OsIkon =
+  | "home" | "tez" | "literatur" | "kaynakca" | "analiz" | "belge"
+  | "kilavuz" | "docentlik" | "destek" | "settings" | "apps";
+
+/** altYollar: bölümün kendi yolu dışında onu etkin sayan yollar. */
+export type Bolum = { key: string; href: string; label: string; altYollar?: string[] };
+
+export type OsUygulama = {
+  key: string;
+  label: string;
+  /** Telefonda ve dock etiketinde kullanılan kısa ad. */
+  kisa?: string;
+  href: string;
+  ikon: OsIkon;
+  /** Bu yollarla başlayan her sayfa bu uygulamanın içinde sayılır. */
+  yollar: string[];
+  /** Uygulamanın bölümleri: bölüm şeridi ve Ctrl+K. */
+  bolumler?: Bolum[];
+  /** Yalnızca "Tüm uygulamalar"da; dock'ta yer kaplamaz. */
+  yalnizBaslatici?: boolean;
+  /** Menüde görünmesi için gereken roller (navigation.ts ile aynı kural). */
+  roller?: readonly string[];
+};
+
+export const ANA_SAYFA = "/dashboard";
+
+/*
+  DOCK DİZİLİMİ. Sıra günlük işin sırası: önce yazdığın şey, sonra
+  onu denetleyen araçlar, sonra destek. Ayarlar ve "Tüm uygulamalar"
+  sonda — ArvoOS ve ArvoARC'taki dizilimin aynısı.
+
+  Yol öneklerinde UZUNLUK önemli: "/dashboard" her şeyin öneki
+  olduğu için Ana Sayfa'nın `yollar` listesi BOŞ; etkinUygulama onu
+  yalnızca tam eşleşmede seçiyor. Aksi hâlde bütün sayfalar Ana
+  Sayfa'ya düşerdi.
+*/
+export function labUygulamalari(): OsUygulama[] {
+  return [
+    { key: "home", label: "Ana Sayfa", href: ANA_SAYFA, ikon: "home", yollar: [] },
+    {
+      key: "tez",
+      label: "Belge Editörü",
+      kisa: "Tezim",
+      href: "/dashboard/editor",
+      ikon: "tez",
+      yollar: ["/dashboard/editor"],
+    },
+    { key: "literatur", label: "Literatür Taraması", kisa: "Literatür", href: "/dashboard/literature", ikon: "literatur", yollar: ["/dashboard/literature"] },
+    { key: "kaynakca", label: "Kaynakça Doğrulama", kisa: "Kaynakça", href: "/dashboard/citations", ikon: "kaynakca", yollar: ["/dashboard/citations"] },
+    { key: "analiz", label: "Analiz Merkezi", kisa: "Analiz", href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"] },
+    { key: "belge", label: "Belge Kontrol", kisa: "Belge", href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"] },
+    { key: "kilavuz", label: "Kılavuzlar", href: "/dashboard/guidelines", ikon: "kilavuz", yollar: ["/dashboard/guidelines"] },
+    { key: "docentlik", label: "Doçentlik Puanı", kisa: "Doçentlik", href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"] },
+    /*
+      İKİ DESTEK YOLU TEK UYGULAMADA. Dock'ta iki ayrı simge
+      olsalardı günlük işin simgelerini sıkıştırırlardı; ikisi de
+      "yardım isteme" eylemi ve bölüm olarak ayrılıyorlar.
+    */
+    {
+      key: "destek",
+      label: "Destek",
+      href: "/dashboard/expert-requests",
+      ikon: "destek",
+      yollar: ["/dashboard/expert-requests", "/dashboard/support"],
+      bolumler: [
+        { key: "uzman", href: "/dashboard/expert-requests", label: "Uzman Desteği" },
+        { key: "uygulama", href: "/dashboard/support", label: "Uygulama Desteği" },
+      ],
+    },
+    { key: "ayarlar", label: "Ayarlar", href: "/dashboard/settings", ikon: "settings", yollar: ["/dashboard/settings"] },
+    /*
+      ROLE BAĞLI UYGULAMALAR dock'ta yer kaplamıyor: iç ekibin günde
+      bir kez açtığı sayfalar, öğrencinin her gün gördüğü simgelerin
+      arasına girmemeli. Başlatıcıda ve Ctrl+K'da duruyorlar.
+    */
+    { key: "asistan", label: "Asistan Kayıtları", href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: ["academic_manager", "system_admin", "founder"] },
+    { key: "ekip", label: "Ekip Yönetimi", href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ["system_admin", "founder"] },
+    { key: "olcum", label: "Ürün Ölçümü", href: "/dashboard/olcum", ikon: "apps", yollar: ["/dashboard/olcum"], yalnizBaslatici: true, roller: ["system_admin", "founder"] },
+  ];
+}
+
+/** Rolü olmayan (ya da yetkisi yetmeyen) kullanıcıdan gizlenen uygulamalar düşer. */
+export function gorunenUygulamalar(uygulamalar: OsUygulama[], rol: string | undefined): OsUygulama[] {
+  return uygulamalar.filter((u) => !u.roller || (!!rol && u.roller.includes(rol)));
+}
+
+/**
+ * Açık uygulama: yolu en UZUN eşleşen.
+ *
+ * Ana Sayfa yalnızca TAM eşleşmede seçiliyor; "/dashboard" her
+ * sayfanın öneki olduğu için önek eşleşmesine bırakılsaydı bütün
+ * panel Ana Sayfa'da görünürdü.
+ */
+export function etkinUygulama(uygulamalar: OsUygulama[], yol: string): OsUygulama | null {
+  if (yol === ANA_SAYFA) return uygulamalar.find((u) => u.key === "home") ?? null;
+  let enIyi: OsUygulama | null = null;
+  let enUzun = 0;
+  for (const uygulama of uygulamalar) {
+    for (const onek of uygulama.yollar) {
+      if ((yol === onek || yol.startsWith(`${onek}/`)) && onek.length > enUzun) {
+        enIyi = uygulama;
+        enUzun = onek.length;
+      }
+    }
+  }
+  return enIyi;
+}
+
+/** Açık bölüm: yolu en UZUN eşleşen. */
+export function etkinBolum(bolumler: Bolum[], yol: string): Bolum | null {
+  let enIyi: Bolum | null = null;
+  let enUzun = 0;
+  for (const bolum of bolumler) {
+    for (const onek of [bolum.href, ...(bolum.altYollar ?? [])]) {
+      if ((yol === onek || yol.startsWith(`${onek}/`)) && onek.length > enUzun) {
+        enIyi = bolum;
+        enUzun = onek.length;
+      }
+    }
+  }
+  return enIyi;
+}
+
+/** Dock'ta görünenler (başlatıcıya ayrılanlar hariç). */
+export const docktakiler = (uygulamalar: OsUygulama[]) => uygulamalar.filter((u) => !u.yalnizBaslatici);
