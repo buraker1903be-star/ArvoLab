@@ -1,12 +1,23 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { findNavItem } from "./navigation";
+import { etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar";
 
-// Masaüstünde "ArvoLab / Sayfa adı", mobilde iOS gezinme çubuğu gibi logo + sayfa adı.
+/*
+  Üst çubuktaki sayfa adı. Dock'la AYNI listeden okuyor: başlık bir
+  listeden, dock'taki işaretli simge başkasından gelseydi ikisi
+  kaçınılmaz olarak ayrışırdı (menü ve komut paletinin ArvoARC'ta
+  ayrışması böyle oldu).
+
+  Bölümü olan uygulamada bölümün adı yazılıyor: "Destek" değil
+  "Uzman Desteği" — kullanıcının baktığı sayfa odur.
+*/
 export default function HeaderTitle() {
   const pathname = usePathname();
-  const label = findNavItem(pathname)?.label ?? "ArvoLab";
+  const uygulamalar = labUygulamalari();
+  const uygulama = etkinUygulama(uygulamalar, pathname);
+  const bolum = uygulama?.bolumler ? etkinBolum(uygulama.bolumler, pathname) : null;
+  const label = bolum?.label ?? uygulama?.label ?? "ArvoLab";
 
   return (
     <>

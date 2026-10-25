@@ -8,6 +8,7 @@
 */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
 import {
   ANA_SAYFA,
   docktakiler,
@@ -101,4 +102,15 @@ describe("liste tutarlılığı", () => {
       assert.ok(u.yollar.length > 0, `${u.key} yolsuz: dock'ta hiç etkin olmaz`);
     }
   });
+});
+
+test("başlatıcıdaki rol kapıları sayfanın kendi kapısıyla aynı", () => {
+  const asistan = labUygulamalari().find((u) => u.key === "asistan");
+  /*
+    Liste bir dönem rolleri ELLE taşıyordu ve "controller" düşmüştü:
+    Kontrolör, yetkisi olduğu sayfayı başlatıcıda hiç görmüyordu.
+    Kapı sayfanın kendi sabitinden gelmeli.
+  */
+  assert.deepEqual(asistan?.roller, KAYIT_ROLLERI);
+  assert.ok(asistan?.roller?.includes("controller"));
 });

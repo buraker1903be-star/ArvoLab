@@ -18,6 +18,8 @@
   tests/unit/os-uygulamalar.test.ts.
 */
 
+import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
+
 export type OsIkon =
   | "home" | "tez" | "literatur" | "kaynakca" | "analiz" | "belge"
   | "kilavuz" | "docentlik" | "destek" | "settings" | "apps";
@@ -93,7 +95,12 @@ export function labUygulamalari(): OsUygulama[] {
       bir kez açtığı sayfalar, öğrencinin her gün gördüğü simgelerin
       arasına girmemeli. Başlatıcıda ve Ctrl+K'da duruyorlar.
     */
-    { key: "asistan", label: "Asistan Kayıtları", href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: ["academic_manager", "system_admin", "founder"] },
+    /*
+      Roller SAYFANIN kendi kapısından geliyor, elle yazılmıyor:
+      liste "controller"ı atlamıştı, yani Kontrolör yetkisi olduğu
+      sayfayı başlatıcıda göremiyordu (AGENTS.md'deki kural).
+    */
+    { key: "asistan", label: "Asistan Kayıtları", href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: KAYIT_ROLLERI },
     { key: "ekip", label: "Ekip Yönetimi", href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ["system_admin", "founder"] },
     { key: "olcum", label: "Ürün Ölçümü", href: "/dashboard/olcum", ikon: "apps", yollar: ["/dashboard/olcum"], yalnizBaslatici: true, roller: ["system_admin", "founder"] },
   ];

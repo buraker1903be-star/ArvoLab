@@ -1,0 +1,156 @@
+/* ============================================================
+   DOCK KABUĞU (25.10.2026)
+   Kenar çubuğunun yerini alan alt dock, bölümlerin açıldığı ikinci
+   dock, başlatıcı penceresi ve telefondaki bölüm şeridi.
+
+   Düzen ArvoOS/ArvoARC'tan taşındı; token adları ArvoLab'ınkine
+   çevrildi: orada boşluk ve süre için ayrı token'lar var, burada
+   marka tonu --accent-soft ve boşluklar sabit.
+   ============================================================ */
+
+.os-root {
+  /* Dock yüzüyor: içeriğin son satırı altında kalmasın diye taban boşluk. */
+  --os-dock-space: 104px;
+  min-height: 100dvh;
+}
+/* Kenar çubuğu yok: kabuk tek sütun. */
+.dashboard-shell.os-root { grid-template-columns: minmax(0, 1fr); }
+.os-root .dashboard-main-content { padding-bottom: var(--os-dock-space); }
+
+/* ---------- Dock ---------- */
+.os-dock {
+  position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: var(--z-tabbar);
+  display: flex; align-items: center; gap: 4px;
+  max-width: calc(100vw - 24px); padding: 8px; box-sizing: border-box;
+  overflow-x: auto; scrollbar-width: none;
+  border: 1px solid var(--line); border-radius: var(--r-xl);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-lg);
+}
+.os-dock::-webkit-scrollbar { display: none; }
+.os-dock-sep { flex: none; width: 1px; height: 28px; margin: 0 4px; background: var(--line); }
+.os-dock-item {
+  position: relative; flex: none; display: grid; place-items: center; width: 48px; height: 48px;
+  border: 0; border-radius: var(--r-md); background: transparent; color: var(--ink-soft);
+  cursor: pointer; text-decoration: none;
+  transition: transform .18s var(--ease-spring), background-color .18s var(--ease-spring), color .18s var(--ease-spring);
+}
+.os-dock-item:hover { background: var(--surface-2); color: var(--ink); transform: translateY(-3px); }
+.os-dock-item.is-active { background: var(--accent-soft); color: var(--accent-strong); }
+.os-dock-item.is-active::after {
+  content: ""; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+}
+/* Ad yalnızca fareyle üstüne gelince ipucu olarak; ekran okuyucu aria-label'ı okur. */
+.os-dock-label {
+  position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(4px);
+  padding: 4px 8px; border-radius: var(--r-xs); background: var(--ink); color: var(--surface);
+  font-size: var(--fs-micro); font-weight: 500; white-space: nowrap; pointer-events: none; opacity: 0;
+  transition: opacity .12s var(--ease-spring), transform .12s var(--ease-spring);
+}
+@media (hover: hover) {
+  .os-dock-item:hover .os-dock-label { opacity: 1; transform: translateX(-50%); }
+}
+
+/* ---------- İkinci dock: açık uygulamanın bölümleri ---------- */
+.os-subdock {
+  position: fixed; z-index: calc(var(--z-tabbar) + 1); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 2px; max-width: calc(100vw - 24px);
+  padding: 4px; box-sizing: border-box; overflow-x: auto; scrollbar-width: none;
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-lg);
+  animation: os-alt-ac .16s var(--ease-spring);
+}
+.os-subdock::-webkit-scrollbar { display: none; }
+/* İkon ile şerit arasındaki boşlukta imleç düşmesin diye görünmez köprü */
+.os-subdock::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 12px; }
+@keyframes os-alt-ac {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
+.os-subdock-title {
+  flex: none; padding: 0 12px 0 8px; margin-right: 4px; border-right: 1px solid var(--line);
+  font-size: var(--fs-micro); font-weight: 600; color: var(--muted); white-space: nowrap;
+}
+.os-subdock a {
+  flex: none; display: flex; align-items: center; min-height: 36px; padding: 0 12px;
+  border-radius: var(--r-md); color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 500;
+  text-decoration: none; white-space: nowrap;
+}
+.os-subdock a:hover { background: var(--surface-2); color: var(--ink); }
+.os-subdock a.is-active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+/* İkinci dock açıkken o ikonun ad ipucu gizli (üst üste binmesin) */
+.os-dock-item.is-sub-open .os-dock-label { display: none; }
+.os-dock-item.is-sub-open { background: var(--surface-2); color: var(--ink); }
+.os-dock-item.is-sub-open.is-active { background: var(--accent-soft); color: var(--accent-strong); }
+@media (prefers-reduced-motion: reduce) { .os-subdock { animation: none; } }
+
+/* ---------- Başlatıcı ---------- */
+.os-launcher {
+  /* margin:auto AÇIKÇA: genel sıfırlama tarayıcının modal pencereyi ortalayan
+     margin:auto değerini 0 yapıyor ve pencere sol üst köşede açılıyordu. */
+  margin: auto; padding: 0; border: 1px solid var(--line); border-radius: var(--r-xl);
+  width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 64px); overflow: auto;
+  background: var(--surface-raised); color: var(--ink); box-shadow: var(--shadow-lg);
+}
+.os-launcher::backdrop {
+  background: var(--overlay);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.os-launcher[open] { animation: os-ac .22s var(--ease-spring); }
+@keyframes os-ac {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+.os-launcher-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 24px 24px 8px; }
+.os-launcher-head h2 { margin: 0; font-size: var(--fs-lg); font-weight: 600; }
+.os-launcher-head p { margin: 4px 0 0; color: var(--muted); font-size: var(--fs-sm); }
+.os-launcher-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 24px 12px; padding: 16px 24px 24px; }
+.os-launcher-app {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--ink); text-decoration: none; font-size: var(--fs-sm); font-weight: 500; text-align: center;
+}
+.os-app-tile {
+  display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); box-shadow: var(--shadow-sm);
+  transition: transform .18s var(--ease-spring), box-shadow .18s var(--ease-spring);
+}
+.os-launcher-app:hover .os-app-tile { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.os-app-tile.is-active { background: var(--primary); border-color: var(--primary); color: var(--on-brand); }
+.os-icon-btn {
+  display: grid; place-items: center; flex: none; width: 40px; height: 40px;
+  border: 0; border-radius: var(--r-md); background: transparent; color: var(--muted); cursor: pointer;
+}
+.os-icon-btn:hover { background: var(--surface-2); color: var(--ink); }
+
+/* ---------- Telefon ---------- */
+/* Bölüm şeridi yalnızca telefonda: masaüstünde bölümlere ikinci dock'tan gidiliyor. */
+.os-bolum-serit { display: none; }
+@media (max-width: 760px) {
+  .os-root .os-bolum-serit {
+    position: sticky; top: var(--topbar-height); z-index: var(--z-sticky);
+    display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+    padding: 6px 12px; border-bottom: 1px solid var(--line);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  }
+  .os-root .os-bolum-serit::-webkit-scrollbar { display: none; }
+  .os-root .os-bolum-serit a {
+    flex: none; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px;
+    border-radius: var(--r-pill); color: var(--muted); font-size: var(--fs-body); font-weight: 500;
+    text-decoration: none; white-space: nowrap;
+  }
+  .os-root .os-bolum-serit a.is-active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+  /* Ara menü telefonda hiç açılmaz; ekran döndürülüp açık kalmışsa görünmesin. */
+  .os-root .os-subdock { display: none; }
+  .os-root .os-dock-item.is-sub-open { background: none; }
+  .os-icon-btn { width: 44px; height: 44px; }
+}
+/* Telefonda dock ekranın tamamına yayılır: ortalanmış ada 375px'te sığmıyor. */
+@media (max-width: 560px) {
+  .os-dock { left: 8px; right: 8px; transform: none; max-width: none; border-radius: var(--r-lg); }
+  .os-dock-sep { display: none; }
+}

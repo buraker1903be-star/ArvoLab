@@ -1,21 +1,20 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import { LogOut } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ROLE_LABELS } from "@/lib/project-labels";
 import { getAccessState } from "@/lib/access";
+import { gorunenUygulamalar, labUygulamalari } from "@/lib/os/uygulamalar";
 import SubscriptionNotice from "./_components/subscription-notice";
 import SilmeBekliyor from "./_components/silme-bekliyor";
 import ThemeToggle from "@/app/_components/theme-toggle";
-import SidebarNav from "./_components/sidebar-nav";
 import HeaderTitle from "./_components/header-title";
-import MobileNav from "./_components/mobile-nav";
 import Toaster from "./_components/toaster";
 import NotificationBell from "./_components/notification-bell";
-import { NAV_COOKIE } from "./_components/navigation";
 import ActionErrorToast from "./_components/action-error-toast";
 import NavProgress from "./_components/nav-progress";
+import { OsDock } from "./_components/os-dock";
+import { OsBolumSeridi } from "./_components/os-bolum-seridi";
 
 function initialsOf(name: string) {
   const letters = name
@@ -27,35 +26,32 @@ function initialsOf(name: string) {
   return letters.toLocaleUpperCase("tr") || "A";
 }
 
+/*
+  DOCK KABUĞU (25.10.2026, kurum sahibinin isteği). Kenar çubuğu ve
+  mobil sekme çubuğu kalktı; her iş alanı artık bir "uygulama" ve
+  hepsi tek listeden besleniyor (lib/os/uygulamalar.ts) — ArvoOS ile
+  ArvoARC'taki düzenin aynısı.
+
+  Daraltma tercihi (NAV_COOKIE) da gitti: dock'un daraltılacak bir
+  hâli yok. Çerez okunmuyor, yazan bileşen de kaldırıldı.
+*/
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const [profile, cookieStore] = await Promise.all([getCurrentProfile(), cookies()]);
+  const profile = await getCurrentProfile();
   const userName = profile?.full_name?.trim() || "Kullanıcı";
   const roleLabel = profile ? ROLE_LABELS[profile.role] : "";
   const initials = initialsOf(userName);
-  // Daraltma tercihi ilk çizimde uygulanır: sayfa açılırken menü genişleyip daralmaz
-  const navCollapsed = cookieStore.get(NAV_COOKIE)?.value === "collapsed";
   // Kim girebilir: kurum lisansı ya da bireysel abonelik (lib/access.ts).
   const access = await getAccessState(profile);
+  // Rolü yetmeyen uygulamalar dock'tan da başlatıcıdan da düşer.
+  const uygulamalar = gorunenUygulamalar(labUygulamalari(), profile?.role);
 
   return (
-    <div className={navCollapsed ? "dashboard-shell is-nav-collapsed" : "dashboard-shell"}>
-      {/* Klavye kullanıcısı her sayfada menüdeki ~15 bağlantıyı geçmek
-          zorunda kalıyordu. Bağlantı yalnızca odaklanınca görünür. */}
+    <div className="dashboard-shell os-root">
+      {/* Klavye kullanıcısı her sayfada dock'taki bağlantıları geçmek
+          zorunda kalmasın; bağlantı yalnızca odaklanınca görünür. */}
       <a href="#panel-icerik" className="skip-link">
         İçeriğe atla
       </a>
-      <aside className="dashboard-sidebar">
-        <div className="dashboard-brand">
-          <div className="brand-mark" aria-hidden="true">
-            A
-          </div>
-          <div>
-            <strong>ArvoLab</strong>
-            <span lang="en">Research OS</span>
-          </div>
-        </div>
-        <SidebarNav rol={profile?.role} collapsed={navCollapsed} />
-      </aside>
 
       <div className="dashboard-content-shell">
         <header className="dashboard-header">
@@ -81,6 +77,10 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           </div>
         </header>
 
+        <Suspense>
+          <OsBolumSeridi uygulamalar={uygulamalar} />
+        </Suspense>
+
         <div className="dashboard-main-content" id="panel-icerik" tabIndex={-1}>
           <Suspense>
             <ActionErrorToast />
@@ -101,7 +101,9 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         </div>
       </div>
 
-      <MobileNav rol={profile?.role} userName={userName} roleLabel={roleLabel} initials={initials} />
+      <Suspense>
+        <OsDock uygulamalar={uygulamalar} />
+      </Suspense>
       <Toaster />
     </div>
   );

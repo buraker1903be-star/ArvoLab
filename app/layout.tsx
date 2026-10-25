@@ -5,6 +5,7 @@ import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/components.css";
 import "./styles/shell.css";
+import "./styles/os-shell.css";
 import "./styles/auth.css";
 import "./styles/workspace.css";
 import "./styles/overlays.css";
