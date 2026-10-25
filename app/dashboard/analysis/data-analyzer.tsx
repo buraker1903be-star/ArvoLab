@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useTransition } from "react";
 import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save } from "lucide-react";
+import { leveneTesti, normallikOlcutu } from "@/lib/stats-varsayim";
 import {
   describeNumeric,
   independentTTest,
@@ -411,6 +412,50 @@ export default function DataAnalyzer({
         );
       }
 
+      /*
+        VARSAYIM ŞERİDİ (25.10.2026).
+
+        Parametrik testin sonucu, varsayımlar sağlanmadığında
+        YANILTICI olur ama ekranda hiçbir farkı yoktu: p değeri aynı
+        güvenle yazılıyordu. Şerit sonucun YANINDA duruyor — yerine
+        değil. Kararı kullanıcı veriyor; asistanın "denetler, yazmaz"
+        ilkesinin istatistik karşılığı.
+      */
+      const varsayimSeridi = (gruplar: number[][], adlar: string[]) => {
+        const normallik = gruplar.map((g, i) => ({ ad: adlar[i], olcut: normallikOlcutu(g) }));
+        const levene = leveneTesti(gruplar);
+        const sorunlu = normallik.filter((x) => x.olcut.n >= 4 && !x.olcut.normaleYakin);
+        const olculemeyen = normallik.filter((x) => x.olcut.n < 4);
+        return (
+          <div className="mt-sm">
+            <strong>Varsayımlar</strong>
+            <ul className="muted text-sm">
+              {normallik.map(({ ad, olcut }) => (
+                <li key={ad}>
+                  {ad}: {olcut.n < 4
+                    ? "normallik ölçülemedi (dörtten az gözlem)"
+                    : `çarpıklık ${formatNumber(olcut.carpiklik)}, basıklık ${formatNumber(olcut.basiklik)}` +
+                      (olcut.normaleYakin ? " — normale yakın" : " — normalden uzak")}
+                </li>
+              ))}
+              <li>
+                Levene (medyan): F({levene.df1}, {levene.df2}) = {formatNumber(levene.f)},{" "}
+                {formatP(levene.p)} — {levene.homojen ? "varyanslar homojen" : "varyanslar homojen değil"}
+              </li>
+            </ul>
+            {(sorunlu.length > 0 || !levene.homojen || olculemeyen.length > 0) && (
+              <p className="tone-text text-sm" data-tone="warning">
+                {olculemeyen.length > 0
+                  ? "Normallik ölçülemediği için sonucu temkinli okuyun."
+                  : sorunlu.length > 0
+                    ? "Dağılım normalden uzak; parametrik olmayan karşılığı daha uygun olabilir."
+                    : "Varyanslar homojen değil; eşit varyans varsaymayan bir test düşünün."}
+              </p>
+            )}
+          </div>
+        );
+      };
+
       if (analysisType === "ttest") {
         if (groupLevels.length !== 2) {
           setResultError(
@@ -440,6 +485,13 @@ export default function DataAnalyzer({
               t({r.df}) = {formatNumber(r.t)}, {formatP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
+            {/* Etki büyüklüğü p'nin yanında: p "fark var mı"yı, d
+                "fark ne kadar"ı söyler. */}
+            <p className="muted text-sm">
+              Cohen&apos;s d = {formatNumber(r.d)} ({r.dYorum} etki) · ortalama farkı{" "}
+              {formatNumber(r.fark)}, %95 GA [{formatNumber(r.altSinir)}, {formatNumber(r.ustSinir)}]
+            </p>
+            {varsayimSeridi([g1, g2], [g1name, g2name])}
           </div>
         );
       }
@@ -486,6 +538,10 @@ export default function DataAnalyzer({
               F({r.dfb}, {r.dfw}) = {formatNumber(r.f)}, {formatP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
+                      <p className="muted text-sm">
+              η² = {formatNumber(r.etaKare)} ({r.etaYorum} etki)
+            </p>
+            {varsayimSeridi(groups, groupLevels)}
           </div>
         );
       }
