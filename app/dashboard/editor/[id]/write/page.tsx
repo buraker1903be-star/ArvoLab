@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
-import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { resolveGuidelineSync } from "@/lib/guideline-sync";
 import { refreshImageUrls } from "@/lib/manuscript-images";
 import { detectFormatLoss } from "@/lib/format-loss";
@@ -40,7 +40,9 @@ export default async function WriteManuscriptPage({
   if (!project) notFound();
 
   const [guideline, manuscript, userResult] = await Promise.all([
-    loadAppliedGuideline(supabase, project.guideline_id),
+    /* Katalogda eşleşme yoksa öğrencinin kendi yüklediği kılavuz
+       uygulanıyor (lib/guideline-rules.ts: calismaKilavuzu). */
+    calismaKilavuzu(supabase, id, project.guideline_id),
     getManuscript(id),
     supabase.auth.getUser(),
   ]);

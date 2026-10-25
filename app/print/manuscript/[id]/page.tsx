@@ -3,7 +3,7 @@ import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/acces
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
-import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { refreshImageUrls } from "@/lib/manuscript-images";
 import { buildPrintSheet } from "@/lib/print-sheet";
 import ManuscriptSheet from "../manuscript-sheet";
@@ -43,7 +43,7 @@ export default async function PrintManuscriptPage({
     .maybeSingle();
   if (!project) notFound();
 
-  const [manuscript, guideline] = await Promise.all([getManuscript(id), loadAppliedGuideline(supabase, project.guideline_id)]);
+  const [manuscript, guideline] = await Promise.all([getManuscript(id), calismaKilavuzu(supabase, id, project.guideline_id)]);
   // Resim bağlantıları depo yolundan tazelenir (süresi dolmuş imzalı bağlantılar çıktıda kaybolmasın).
   const doc = manuscript ? await refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : null;
   const sheet = buildPrintSheet(manuscript, guideline, doc);

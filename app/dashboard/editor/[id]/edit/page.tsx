@@ -13,7 +13,7 @@ import {
 } from "@/lib/project-labels";
 import ActionForm from "../../../action-form";
 import { getUniversities } from "@/app/actions/universities";
-import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import AcademicUnitFields from "../../new/academic-unit-fields";
 
@@ -41,7 +41,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
     );
   }
   if (!project || !ctx) notFound();
-  const guideline = await loadAppliedGuideline(ctx.supabase, project.guideline_id);
+  const guideline = await calismaKilavuzu(ctx.supabase, project.id, project.guideline_id);
 
   const canOversee = isOversightRole(ctx.role);
   const canEdit = canOversee || project.owner_id === ctx.user.id || project.assignee_id === ctx.user.id;

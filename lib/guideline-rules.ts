@@ -30,6 +30,16 @@ export interface AppliedGuideline {
   lastCheckedAt: string | null;
   /** Kaynakta yeni bir sürüm algılandı ya da kurallar yeniden inceleniyor */
   updatePending: boolean;
+  /*
+    Kurallar İNSAN ONAYINDAN geçti mi.
+
+    Katalogdaki kılavuzlar Akademik Yönetici onayıyla yayımlanıyor;
+    öğrencinin kendi yüklediği PDF'ten çıkarılanlar geçmiyor. Ayrım
+    ekranda görünmek ZORUNDA: yanlış bir kural sessizdir ve program
+    "teslime hazır görünüyor" derken hangi kurala dayandığını
+    söylemelidir.
+  */
+  dogrulandi: boolean;
 }
 
 interface Snapshot {
@@ -130,7 +140,90 @@ export function appliedGuidelineFromRow(g: GuidelineRow): AppliedGuideline | nul
     settings: normalizeGuidelineEditorSettings(snapshot.extracted_rules),
     lastCheckedAt: g.last_checked_at ?? null,
     updatePending: g.analysis_status !== "approved" || Boolean(analysis.pendingReview),
+    // Katalogdan gelen her şey onay akışından geçmiştir.
+    dogrulandi: true,
   };
+}
+
+/*
+  ÖĞRENCİNİN KENDİ YÜKLEDİĞİ KILAVUZ (calisma_kilavuzu).
+
+  Katalogda eşleşme yoksa devreye giriyor. Aynı AppliedGuideline
+  biçimini döndürüyor, çünkü editör, teslim kontrolü ve yapı denetimi
+  kuralları TEK yerden okuyor; ikinci bir biçim, kuralların okunduğu
+  yeri ikiye ayırırdı.
+
+  Tek fark `dogrulandi: false` — ve bu fark ekranda görünüyor.
+*/
+export interface CalismaKilavuzuRow {
+  project_id: string;
+  kaynak_adres: string | null;
+  belge_basligi: string | null;
+  kurallar: unknown;
+  olusturuldu?: string | null;
+}
+
+export function appliedGuidelineFromCalisma(row: CalismaKilavuzuRow): AppliedGuideline | null {
+  const kurallar = (row.kurallar ?? {}) as Snapshot;
+  /*
+    Atıf stili olmayan bir kayıt uygulanmıyor: doğrulama ekranı onu
+    zorunlu tutuyor, yani stilsiz bir satır ancak elle ya da eski bir
+    yoldan gelmiş olabilir. Yarım kuralı uygulamak, olmayan bir kurala
+    uyuyormuş gibi göstermekten kötü.
+  */
+  if (!kurallar.citation_style) return null;
+
+  return {
+    id: `calisma:${row.project_id}`,
+    version: String(row.olusturuldu ?? ""),
+    label: row.belge_basligi ?? "Yüklediğiniz kılavuz",
+    universityName: "",
+    instituteName: null,
+    versionLabel: null,
+    sourceUrl: kurallar.source_url ?? row.kaynak_adres ?? null,
+    citationStyle: kurallar.citation_style,
+    numberFormat: {
+      ayirici: ondalikAyirici(kurallar.number_decimal_separator),
+      bastakiSifir: kurallar.number_leading_zero ?? null,
+    },
+    requiredSections: kurallar.required_sections ?? [],
+    minPages: kurallar.min_pages ?? null,
+    maxPages: kurallar.max_pages ?? null,
+    settings: normalizeGuidelineEditorSettings(kurallar.extracted_rules),
+    lastCheckedAt: row.olusturuldu ?? null,
+    updatePending: false,
+    dogrulandi: false,
+  };
+}
+
+/*
+  Çalışmaya UYGULANAN kılavuz: önce katalog, yoksa öğrencinin kendi
+  yüklediği. Sıra tartışmalı değil — onaydan geçmiş kural, geçmemiş
+  olanı her zaman yener.
+*/
+export async function calismaKilavuzu(
+  supabase: SupabaseClient,
+  projectId: string,
+  guidelineId: string | null | undefined,
+): Promise<AppliedGuideline | null> {
+  const katalog = await loadAppliedGuideline(supabase, guidelineId);
+  if (katalog) return katalog;
+
+  const { data, error } = await supabase
+    .from("calisma_kilavuzu")
+    .select("project_id, kaynak_adres, belge_basligi, kurallar, olusturuldu")
+    .eq("project_id", projectId)
+    .maybeSingle();
+  /*
+    Okuma hatası "kılavuz yok" DEĞİL. Geçici bir arızada öğrencinin
+    kuralları sessizce kaybolur ve editör kılavuzsuz çalışmaya başlar;
+    yazdığı tez biçim denetiminden geçmemiş olur.
+  */
+  if (error) {
+    console.error("[kilavuz] çalışma kılavuzu okunamadı:", error.message);
+    return null;
+  }
+  return data ? appliedGuidelineFromCalisma(data as CalismaKilavuzuRow) : null;
 }
 
 export async function loadAppliedGuideline(

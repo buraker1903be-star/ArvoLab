@@ -30,6 +30,7 @@ const kilavuz = (uzerine: Partial<AppliedGuideline> = {}): AppliedGuideline => (
   settings: {},
   lastCheckedAt: null,
   updatePending: false,
+  dogrulandi: true,
   ...uzerine,
 });
 

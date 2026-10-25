@@ -31,6 +31,7 @@ const kilavuz = (uzerine: Partial<AppliedGuideline> = {}): AppliedGuideline => (
   settings: { margins: BOSLUK(3), showPageNumbers: true, headingNumbering: true },
   lastCheckedAt: null,
   updatePending: false,
+  dogrulandi: true,
   ...uzerine,
 });
 

@@ -426,6 +426,27 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
   return taramayiTamamla(url, await fetchOfficialSource(url));
 }
 
+/*
+  YÜKLENEN DOSYADAN TARAMA (26.10.2026).
+
+  Öğrenci kendi kılavuz PDF'ini yükleyebiliyor. Dosya depoda duruyor ve
+  sunucu onu doğrudan okuyor; imzalı bir adres üretip kendimize HTTP
+  isteği atmıyoruz. Ağ turu bir yana, fetchOfficialSource'un adres
+  denetimleri (genel ağ adresi, yönlendirme sınırı) kendi depomuz için
+  anlamsız ve o yolu kendi adreslerimize açmak, SSRF korumasını
+  gereksiz yere gevşetmek olurdu.
+
+  `etiketAdres` yalnızca kayda yazılan ad; istek atılmıyor.
+*/
+export async function scanGuidelineBytes(
+  bytes: ArrayBuffer | Uint8Array | Blob,
+  contentType: string,
+  etiketAdres: string,
+): Promise<GuidelineScanResult> {
+  const yanit = new Response(bytes as BodyInit, { status: 200, headers: { "content-type": contentType } });
+  return taramayiTamamla(etiketAdres, yanit);
+}
+
 async function taramayiTamamla(url: string, res: Response): Promise<GuidelineScanResult> {
   if (!res.ok) {
     throw new Error(`Kaynak alınamadı (HTTP ${res.status}).`);
