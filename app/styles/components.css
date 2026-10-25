@@ -1586,3 +1586,40 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .readiness-list-more { border-left-color: transparent !important; padding-left: 12px }
 .readiness-list-more a { color: var(--primary); font-weight: 600; text-decoration: none }
 .readiness-list-more a:hover { text-decoration: underline }
+
+/* ---------- Birim şeridi (ana sayfa, öğrenci) ---------- */
+/*
+  "Tezimde ne yarım kaldı" sorusunun yarısı metinde değil bağlı
+  birimlerde: literatür toplandı mı, kaynakça denetlendi mi, belge
+  yüklendi mi. Bu bilgi yalnızca Çalışma Merkezi'nde duruyordu.
+
+  Öğrencide sayı kartlarının yerini alıyor; onlar ("aktif çalışma 1,
+  incelemede 0") tek tezi olan birine neredeyse hiçbir şey söylemeden
+  ekranın en değerli yerini kaplıyordu.
+*/
+.birim-serit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--kart-araligi);
+  margin-bottom: 24px;
+}
+.birim-karo {
+  display: grid;
+  gap: 2px;
+  padding: var(--karo-dolgu);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--karo-r);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: transform .18s var(--ease-spring), border-color .2s ease, box-shadow .2s ease;
+}
+.birim-karo:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent-bright) 45%, var(--line)); box-shadow: var(--shadow-md); }
+.birim-karo b { color: var(--ink); font-size: var(--fs-body); font-weight: 650; }
+.birim-karo > span:last-child { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+/* Durum simgesi: tamamlanan birim marka renginde, bekleyen soluk.
+   Renk tek başına anlam taşımıyor — simge de değişiyor (tik / boş halka). */
+.birim-karo-durum { display: inline-flex; margin-bottom: 4px; color: var(--dim); }
+.birim-karo[data-tamam="true"] .birim-karo-durum { color: var(--accent); }
+.birim-karo[data-tamam="true"] { border-color: color-mix(in srgb, var(--accent-bright) 30%, var(--line-soft)); }

@@ -3,6 +3,8 @@ import Link from "next/link";
 import {
   BookOpenCheck,
   CalendarClock,
+  Check,
+  Circle,
   ChartNoAxesCombined,
   Clock3,
   FileCheck2,
@@ -18,6 +20,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { getProjects } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole, STAFF_ROLES } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -162,6 +165,66 @@ export default async function DashboardPage() {
         .eq("project_id", resume.id)
         .limit(500)
     : { data: null };
+  /*
+    BİRİM İLERLEMESİ. "Tezimde ne yarım kaldı" sorusunun yarısı metinde
+    değil, bağlı birimlerde: literatür toplandı mı, kaynakça denetlendi
+    mi, belge yüklendi mi. Bu bilgi yalnızca Çalışma Merkezi'nde
+    duruyordu; öğrenci ana sayfada göremiyordu.
+
+    Çalışma merkezinin tamamı (calismaOzeti) çağrılmıyor: o on sorgu
+    yapıyor ve çoğu burada zaten okunmuş durumda. Eksik olan iki şey
+    ayrıca soruluyor; literatür sayıları elde olan listeden türetiliyor.
+  */
+  const birimSayimi = (tablo: string, durum?: string) => {
+    const sorgu = supabase.from(tablo).select("id", { count: "exact", head: true }).eq("project_id", resume!.id);
+    return durum ? sorgu.eq("status", durum) : sorgu;
+  };
+  const [
+    { data: resumeDenetim },
+    { count: resumeBelgeSayisi },
+    { count: resumeKaynakSayisi },
+    { count: resumeOkunan },
+    { count: resumeKullanilan },
+  ] = resume
+    ? await Promise.all([
+        supabase
+          .from("citation_checks")
+          .select("id, compliance_score, created_at")
+          .eq("project_id", resume.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        birimSayimi("document_uploads"),
+        /*
+          Kaynak sayıları ELDEKİ LİSTEDEN sayılmıyor. O liste
+          `.limit(500)` ile çekiliyor (tutarsızlık denetimi için) ve
+          ondan `filter().length` ile saymak, 500'den çok kaynağı olan
+          bir tezde sessizce eksik sayı verirdi — `npm run
+          check:rakamlar`ın aradığı hata sınıfı tam olarak bu.
+        */
+        birimSayimi("literature_sources"),
+        birimSayimi("literature_sources", "read"),
+        birimSayimi("literature_sources", "used"),
+      ])
+    : [{ data: null }, { count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }];
+
+  const resumeAdimlar =
+    resume && !projelerOkunamadi
+      ? siradakiAdimlar({
+          calisma: { id: resume.id } as Parameters<typeof siradakiAdimlar>[0]["calisma"],
+          musvedde: resumeStats ? { kelime: resumeStats.words, guncellendi: resumeStats.updatedAt } : null,
+          literatur: {
+            toplam: resumeKaynakSayisi ?? 0,
+            okunan: resumeOkunan ?? 0,
+            kullanilan: resumeKullanilan ?? 0,
+          },
+          kaynakca: resumeDenetim
+            ? { id: resumeDenetim.id, skor: resumeDenetim.compliance_score, tarih: resumeDenetim.created_at }
+            : null,
+          belgeSayisi: resumeBelgeSayisi ?? 0,
+        })
+      : [];
+
   const resumeTutarsizliklari = resume
     ? metinListeTutarsizliklari(resumeManuscript?.plain_text ?? null, resumeKaynaklar ?? [], resume.citation_style)
     : [];
@@ -246,7 +309,14 @@ export default async function DashboardPage() {
 
       {geriBildirim.sorulsun ? <GeriBildirimKarti baglam={geriBildirim.baglam} /> : null}
 
-      {yeniKullanici ? null : (
+      {/*
+        SAYI KARTLARI YALNIZCA PERSONELDE. "Aktif çalışmalar 1, revizyon
+        bekleyen 1, incelemede 0, analizde 0" bir yöneticinin görünümü;
+        tek tezi olan öğrenciye neredeyse hiçbir şey söylemiyor ama
+        ekranın en değerli yerini kaplıyordu. Öğrencide o alanı tezin
+        birim ilerlemesi alıyor (aşağıda).
+      */}
+      {yeniKullanici || !isStaff ? null : (
       <section className="dashboard-stats" aria-label="Günlük özet">
         {stats.map(({ label, value, icon: Icon, tone, note }) => (
           <article className="dashboard-stat-card" data-tone={tone} key={label}>
@@ -262,6 +332,20 @@ export default async function DashboardPage() {
         ))}
       </section>
       )}
+
+      {!isStaff && resumeAdimlar.length > 0 ? (
+        <section className="birim-serit" aria-label="Çalışmanın birimleri">
+          {resumeAdimlar.map((adim) => (
+            <Link key={adim.anahtar} href={adim.href} className="birim-karo" data-tamam={adim.tamam}>
+              <span className="birim-karo-durum" aria-hidden="true">
+                {adim.tamam ? <Check size={14} /> : <Circle size={14} />}
+              </span>
+              <b>{adim.baslik}</b>
+              <span>{adim.aciklama}</span>
+            </Link>
+          ))}
+        </section>
+      ) : null}
 
       <section className={yeniKullanici ? "dashboard-focus tek-sutun" : "dashboard-focus"} aria-label="Bugün">
         {resume ? (

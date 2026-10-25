@@ -145,7 +145,19 @@ export function birimYolu(anahtar: BirimAnahtari, calismaId: string): string {
  * Çalışmanın bağlı birimlerine bakarak sıradaki adımları çıkarır.
  * Tamamlananlar da listede kalır: kullanıcı neyi yaptığını da görsün.
  */
-export function siradakiAdimlar(ozet: CalismaOzeti): Adim[] {
+/*
+  Adımların GERÇEKTEN ihtiyaç duyduğu alanlar. Tam CalismaOzeti
+  istenseydi ana sayfa adımları çizebilmek için çalışma merkezinin
+  bütün sorgularını (danışmanlık, asistan, kılavuz, tutarsızlık)
+  tekrarlamak zorunda kalırdı — ya da ikinci bir adım listesi yazılırdı,
+  ki bu dosyanın başındaki notun anlattığı hata tam olarak odur.
+
+  CalismaOzeti bu daraltmayı zaten karşılıyor; merkez tarafında hiçbir
+  şey değişmiyor.
+*/
+export type AdimGirdisi = Pick<CalismaOzeti, "calisma" | "musvedde" | "literatur" | "kaynakca" | "belgeSayisi">;
+
+export function siradakiAdimlar(ozet: AdimGirdisi): Adim[] {
   const { calisma, musvedde, literatur, kaynakca, belgeSayisi } = ozet;
   const yazimVar = (musvedde?.kelime ?? 0) > 0;
 
