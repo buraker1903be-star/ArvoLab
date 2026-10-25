@@ -11,6 +11,8 @@ import assert from "node:assert/strict";
 import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
 import {
   ANA_SAYFA,
+  aramaAnahtari,
+  osSayfalari,
   docktakiler,
   etkinBolum,
   etkinUygulama,
@@ -113,4 +115,23 @@ test("başlatıcıdaki rol kapıları sayfanın kendi kapısıyla aynı", () => 
   */
   assert.deepEqual(asistan?.roller, KAYIT_ROLLERI);
   assert.ok(asistan?.roller?.includes("controller"));
+});
+
+describe("Ctrl+K araması", () => {
+  test("Türkçe büyük harf aramayı bozmuyor", () => {
+    // "İ" ve "I" düz toLowerCase ile "i̇" ve "I" kalıyor; kullanıcı kendi
+    // yazdığı başlığı bulamıyordu.
+    assert.equal(aramaAnahtari("LİTERATÜR"), aramaAnahtari("literatür"));
+    assert.equal(aramaAnahtari("KAYNAKÇA"), aramaAnahtari("kaynakça"));
+    assert.equal(aramaAnahtari("Analiz"), "analiz");
+    assert.ok(aramaAnahtari("Doçentlik Puanı").includes(aramaAnahtari("docentlik")));
+  });
+
+  test("başlatıcıya ayrılmış uygulamalar da aranabiliyor", () => {
+    const sayfalar = osSayfalari(uygulamalar);
+    assert.ok(sayfalar.some((s) => s.href === "/dashboard/team"));
+    // Destek uygulamasının iki bölümü ayrı ayrı bulunmalı.
+    assert.ok(sayfalar.some((s) => s.href === "/dashboard/expert-requests"));
+    assert.ok(sayfalar.some((s) => s.href === "/dashboard/support"));
+  });
 });

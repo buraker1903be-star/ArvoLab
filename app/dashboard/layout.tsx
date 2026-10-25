@@ -15,6 +15,7 @@ import ActionErrorToast from "./_components/action-error-toast";
 import NavProgress from "./_components/nav-progress";
 import { OsDock } from "./_components/os-dock";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
+import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
 
 function initialsOf(name: string) {
   const letters = name
@@ -56,6 +57,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       <div className="dashboard-content-shell">
         <header className="dashboard-header">
           <HeaderTitle />
+          <OsAramaDugmesi />
           <div className="dashboard-header-actions">
             <NotificationBell />
             <ThemeToggle />
@@ -104,6 +106,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       <Suspense>
         <OsDock uygulamalar={uygulamalar} />
       </Suspense>
+      {/* Çıkış bir sunucu eylemi: istemci bileşenine referans olarak geçilebiliyor. */}
+      <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />
       <Toaster />
     </div>
   );

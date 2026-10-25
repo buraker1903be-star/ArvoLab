@@ -150,3 +150,35 @@ export function etkinBolum(bolumler: Bolum[], yol: string): Bolum | null {
 
 /** Dock'ta görünenler (başlatıcıya ayrılanlar hariç). */
 export const docktakiler = (uygulamalar: OsUygulama[]) => uygulamalar.filter((u) => !u.yalnizBaslatici);
+
+/*
+  Arama anahtarı: Türkçe harf farkları aramayı bozmasın.
+
+  Sıra ÖNEMLİ. `toLocaleLowerCase("tr")` "I"yı "ı" yapıyor ve "İ"yi
+  "i" + birleşen nokta olarak bırakıyor; "ı" elle "i"ye çevriliyor,
+  birleşen noktayı da NFD ayrıştırması siliyor. Düz `toLowerCase()`
+  ile "İLERİ" yazan kullanıcı "ileri"yi bulamazdı.
+*/
+export function aramaAnahtari(metin: string): string {
+  return metin
+    .toLocaleLowerCase("tr")
+    .replace(/ı/g, "i")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+export type OsSayfa = { label: string; href: string; uygulama: string };
+
+/** Ctrl+K'da aranabilen sayfalar: uygulamaların bölümleri + yalnızca başlatıcıdakiler. */
+export function osSayfalari(uygulamalar: OsUygulama[]): OsSayfa[] {
+  const sayfalar: OsSayfa[] = uygulamalar.flatMap((u) =>
+    (u.bolumler ?? []).map((b) => ({ label: b.label, href: b.href, uygulama: u.key }))
+  );
+  /*
+    Dock'ta yer kaplamayan uygulamalar (asistan kayıtları, ekip, ölçüm)
+    burada bulunabilmeli: başlatıcıyı açıp aramak yerine adını yazmak
+    bu sayfaların tek hızlı yolu.
+  */
+  for (const u of uygulamalar) if (u.yalnizBaslatici) sayfalar.push({ label: u.label, href: u.href, uygulama: u.key });
+  return sayfalar;
+}
