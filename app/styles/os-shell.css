@@ -149,6 +149,40 @@
   .os-root .os-dock-item.is-sub-open { background: none; }
   .os-icon-btn { width: 44px; height: 44px; }
 }
+/*
+  KLAVYE AÇIKKEN DOCK AŞAĞI ÇEKİLİR.
+
+  Telefonda yazarken ekranın altı zaten klavyeye gidiyor; dock da
+  metnin üstünde duruyordu. Kural kalkan mobil sekme çubuğunda VARDI
+  (shell.css, acc04c0'da ölü CSS temizliğiyle birlikte gitti) ama
+  dock'a taşınmadı — davranış sessizce geriledi.
+
+  Dönüşüm iki kırılımda farklı: 560px altında dock kenarlara yaslı
+  (yatay ötelemesi yok), üstünde ortalanmış (translateX(-50%)). İkisi
+  ayrı yazılmazsa dock yana fırlar.
+*/
+@media (max-width: 760px) {
+  .os-dock { transition: transform .4s var(--ease-sheet); }
+  html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-dock {
+    transform: translateX(-50%) translateY(130%);
+  }
+  /* Ara menü de kapansın: açık kalırsa klavyenin üstünde asılı durur. */
+  html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-subdock { display: none; }
+}
+@media (max-width: 560px) {
+  html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-dock {
+    transform: translateY(130%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .os-dock { transition: none; }
+}
+
+/* Yazdırmada dock basılmaz: sabit konumlu olduğu için HER sayfada çıkardı. */
+@media print {
+  .os-dock, .os-subdock, .os-launcher, .os-palette, .os-search { display: none !important; }
+}
+
 /* Telefonda dock ekranın tamamına yayılır: ortalanmış sıra 375px'te sığmıyor.
    On bir uygulama hiçbir telefona sığmadığı için sıra yana KAYIYOR; kaydığı
    belli olsun diye kenarlar soluyor — maskesiz hâlinde son simge kesik
