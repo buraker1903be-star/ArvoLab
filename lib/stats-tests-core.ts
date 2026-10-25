@@ -546,3 +546,95 @@ export function bonferroniKarsilastirmalari(
   }
   return ciftler;
 }
+
+/*
+  WELCH ANOVA (eşit varyans varsaymayan tek yönlü ANOVA).
+
+  Varsayım şeridi üç ve daha çok grupta da "eşit varyans varsaymayan
+  bir test düşünün" diyordu ama karşılığı YOKTU: iki grupta Welch
+  t-testi var, üç grupta hiçbir şey. Klasik F, grup varyansları
+  ayrıştığında ve gruplar eşit büyüklükte olmadığında sapıyor —
+  büyük grubun varyansı küçükse olduğundan cömert.
+
+  Ağırlıklar w = n / s²; serbestlik dereceleri Welch'in yaklaşımıyla
+  ondalıklı çıkıyor ve öyle raporlanıyor.
+
+  ETKİ BÜYÜKLÜĞÜ YOK. η² kareler toplamından geliyor ve o hesap eşit
+  varyans varsayıyor; Welch F'in yanına koymak, varsaymadığı şeyi
+  varsayan bir sayı yazmak olurdu. Uydurmak yerine boş bırakılıyor.
+
+  Doğrulama k = 2'de matematiksel bir ÖZDEŞLİKLE yapılıyor: Welch
+  ANOVA iki grupta Welch t-testine indirgenir (F = t², df2 aynı).
+  Kendi formülümü kendi formülümle sınamamış oluyorum.
+*/
+export interface WelchAnovaSonucu {
+  f: number;
+  df1: number;
+  /** Ondalıklı: Welch yaklaşımı. */
+  df2: number;
+  p: number;
+  grupOrtalamalari: number[];
+  grupNleri: number[];
+}
+
+export function welchAnova(gruplar: number[][]): WelchAnovaSonucu {
+  const k = gruplar.length;
+  const nler = gruplar.map((g) => g.length);
+  const ortalamalar = gruplar.map((g) => mean(g));
+  const varyanslar = gruplar.map((g) => variance(g));
+  const agirliklar = gruplar.map((_, i) => nler[i] / varyanslar[i]);
+  const agirlikToplami = agirliklar.reduce((a, b) => a + b, 0);
+  const agirlikliOrtalama =
+    agirliklar.reduce((s, w, i) => s + w * ortalamalar[i], 0) / agirlikToplami;
+
+  const lambda = agirliklar.reduce(
+    (s, w, i) => s + (1 - w / agirlikToplami) ** 2 / (nler[i] - 1),
+    0,
+  );
+  const pay =
+    agirliklar.reduce((s, w, i) => s + w * (ortalamalar[i] - agirlikliOrtalama) ** 2, 0) / (k - 1);
+  const payda = 1 + ((2 * (k - 2)) / (k * k - 1)) * lambda;
+  const f = pay / payda;
+  const df1 = k - 1;
+  const df2 = (k * k - 1) / (3 * lambda);
+  const p = Number.isFinite(f) ? fTestP(f, df1, df2) : NaN;
+  return { f, df1, df2, p, grupOrtalamalari: ortalamalar, grupNleri: nler };
+}
+
+/*
+  WELCH ANOVA'nın ardından ikili karşılaştırma.
+
+  bonferroniKarsilastirmalari ORTAK hata karesini (MSw) kullanıyor ve
+  o da eşit varyans varsayıyor; varyanslar ayrıştığında kullanılamaz.
+  Burada her çift kendi Welch t-testiyle karşılaştırılıyor, p'ler
+  Bonferroni ile düzeltiliyor.
+
+  GAMES-HOWELL DEĞİL, bilerek: o da studentized range (q) dağılımını
+  istiyor ve elle yazılan bir q tablosundaki hata GÖRÜNMEZ olurdu —
+  makul bir p çıkar, kimse fark etmez (Tukey HSD ve Shapiro-Wilk de
+  aynı gerekçeyle yazılmadı). Welch + Bonferroni kapalı formüllü ve
+  elle doğrulanabilir; temkinli taraftadır.
+*/
+export function welchBonferroniKarsilastirmalari(
+  gruplar: number[][],
+  adlar: string[],
+): IkiliKarsilastirma[] {
+  const ciftler: IkiliKarsilastirma[] = [];
+  const karsilastirmaSayisi = (gruplar.length * (gruplar.length - 1)) / 2;
+  for (let i = 0; i < gruplar.length; i += 1) {
+    for (let j = i + 1; j < gruplar.length; j += 1) {
+      const r = welchTTest(gruplar[i], gruplar[j]);
+      const p = Number.isFinite(r.p) ? Math.min(1, r.p * karsilastirmaSayisi) : NaN;
+      ciftler.push({
+        a: adlar[i] ?? `Grup ${i + 1}`,
+        b: adlar[j] ?? `Grup ${j + 1}`,
+        ortalamaFarki: r.fark,
+        t: r.t,
+        pHam: r.p,
+        p,
+        anlamli: Number.isFinite(p) ? p < 0.05 : false,
+      });
+    }
+  }
+  return ciftler;
+}

@@ -14,6 +14,8 @@ import {
   eslestirilmisTTest,
   cronbachAlpha,
   welchTTest,
+  welchAnova,
+  welchBonferroniKarsilastirmalari,
   independentTTest,
   oneWayAnova,
   pearsonCorrelation,
@@ -445,5 +447,69 @@ describe("Welch t-testi", () => {
   test("hiç değişkenlik yoksa sayı uydurmuyor", () => {
     const r = welchTTest([5, 5, 5], [5, 5, 5]);
     assert.equal(Number.isFinite(r.p), false);
+  });
+});
+
+describe("Welch ANOVA", () => {
+  test("iki grupta Welch t-testine indirgeniyor (F = t², df2 aynı)", () => {
+    /*
+      KENDİ FORMÜLÜMÜ KENDİ FORMÜLÜMLE SINAMAMAK için matematiksel bir
+      özdeşlik kullanılıyor: Welch ANOVA k = 2'de Welch t-testidir.
+      İki ayrı yoldan hesaplanan iki sayının buluşması, tek bir
+      uygulamayı tekrar okumaktan güçlü bir kanıt.
+    */
+    const A = [27.5, 21.0, 19.0, 23.6, 17.0, 17.9, 16.9, 20.1, 21.9, 22.6, 23.1, 19.6, 19.0, 21.7, 21.4];
+    const B = [27.1, 22.0, 20.8, 23.4, 23.4, 23.5, 25.8, 22.0, 24.8, 20.2, 21.9, 22.1, 22.9, 20.5, 24.4];
+    const t = welchTTest(A, B);
+    const f = welchAnova([A, B]);
+    assert.ok(Math.abs(f.f - t.t ** 2) < 1e-9, `${f.f} ≠ ${t.t ** 2}`);
+    assert.ok(Math.abs(f.df2 - t.df) < 1e-9, `${f.df2} ≠ ${t.df}`);
+    assert.ok(Math.abs(f.p - t.p) < 1e-9, `${f.p} ≠ ${t.p}`);
+  });
+
+  test("varyanslar eşitken örneklem büyüdükçe klasik ANOVA'ya yakınsıyor", () => {
+    /*
+      Welch F, eşit varyansta bile klasik F'e EŞİT ÇIKMAZ: düzeltme
+      çarpanı (B) onu küçültür ve küçük örneklemde fark gözle görülür.
+      Sınanan şey yakınsama: n büyüdükçe çarpan 1'e gider.
+      Ölçüldü — n = 5'te oran 0,923, n = 30'da 0,989.
+    */
+    const uret = (taban: number, n: number) => Array.from({ length: n }, (_, i) => taban + (i % 5));
+    const kucuk = [uret(10, 5), uret(11, 5), uret(12, 5)];
+    const buyuk = [uret(10, 30), uret(11, 30), uret(12, 30)];
+    const oran = (g: number[][]) => welchAnova(g).f / oneWayAnova(g).f;
+    assert.ok(oran(kucuk) < 0.95, String(oran(kucuk)));
+    assert.ok(oran(buyuk) > 0.98, String(oran(buyuk)));
+  });
+
+  test("varyanslar çok farklıyken klasik ANOVA'dan AYRILIYOR", () => {
+    /*
+      Ortadaki grubun dağılımı çok geniş: klasik F onun varyansını
+      ortak hata karesine karıştırıp gerçek farkı SULANDIRIYOR
+      (F = 1,83, anlamsız). Welch o grubu ağırlıkla aşağı çekiyor
+      (F = 12,11). Ayrıştıkları yer tam da varsayımın çiğnendiği yer.
+    */
+    const g = [
+      [50, 50.1, 49.9, 50.2, 49.8, 50, 50.1, 49.9, 50, 50.1],
+      [40, 60, 45, 55, 38, 62],
+      [53, 57, 52, 58, 54, 56],
+    ];
+    const klasik = oneWayAnova(g);
+    const welch = welchAnova(g);
+    assert.ok(Math.abs(klasik.f - 1.826) < 0.01, String(klasik.f));
+    assert.ok(Math.abs(welch.f - 12.1099) < 0.001, String(welch.f));
+    assert.ok(Math.abs(welch.df2 - 6.6774) < 0.001, String(welch.df2));
+    assert.ok(welch.df2 < klasik.dfw, `${welch.df2} < ${klasik.dfw} olmalı`);
+  });
+
+  test("ikili karşılaştırmalar Bonferroni ile düzeltiliyor", () => {
+    const g = [[1, 2, 3, 4, 5], [10, 11, 12, 13, 14], [20, 22, 21, 23, 19]];
+    const ciftler = welchBonferroniKarsilastirmalari(g, ["A", "B", "C"]);
+    assert.equal(ciftler.length, 3);
+    for (const cift of ciftler) {
+      // Düzeltilmiş p, ham p'nin karşılaştırma sayısı katı (1'de kırpılır).
+      assert.ok(cift.p >= cift.pHam, `${cift.p} < ${cift.pHam}`);
+      assert.ok(cift.p <= 1);
+    }
   });
 });

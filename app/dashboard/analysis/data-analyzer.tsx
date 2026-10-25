@@ -16,6 +16,8 @@ import {
   chiSquareIndependence,
   cronbachAlpha,
   welchTTest,
+  welchAnova,
+  welchBonferroniKarsilastirmalari,
   frequencyTable,
   correlationMatrix,
   type DescriptiveStats,
@@ -594,6 +596,14 @@ export default function DataAnalyzer({
         const r = oneWayAnova(groups);
         if (!hesaplanabilir(r.f, r.p)) return setResultError(DEGISKENLIK_YOK);
         const sig = isSignificant(r.p);
+        /*
+          Üç ve daha çok grupta da varsayım şeridi "eşit varyans
+          varsaymayan bir test düşünün" diyordu ve karşılığı yoktu.
+          İki gruptaki gibi: yalnızca Levene düştüğünde yazılıyor.
+        */
+        const anovaVaryans = leveneTesti(groups);
+        const welchF = anovaVaryans.homojen ? null : welchAnova(groups);
+        const welchFSig = welchF ? isSignificant(welchF.p) : false;
         setResult(
           <div>
             <div className="table-scroll" role="region" aria-label="Analiz sonuç tablosu" tabIndex={0}>
@@ -623,18 +633,41 @@ export default function DataAnalyzer({
                       <p className="muted text-sm">
               η² = {yazSayi(r.etaKare)} ({r.etaYorum} etki)
             </p>
+            {welchF && hesaplanabilir(welchF.f, welchF.p) ? (
+              <div className="stats-welch">
+                <p className="tone-text" data-tone={welchFSig ? "success" : "warning"}>
+                  Eşit varyans varsayılmadan (Welch): F({welchF.df1}, {yazSayi(welchF.df2, 2)}) ={" "}
+                  {yazSayi(welchF.f)}, {yazP(welchF.p)}
+                  {welchFSig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
+                </p>
+                <p className="muted text-sm">
+                  Levene testi varyansların homojen olmadığını gösteriyor; bu satır raporlanmalıdır.
+                  η² burada YAZILMIYOR: kareler toplamından geliyor ve o hesap eşit varyans varsayıyor.
+                </p>
+              </div>
+            ) : null}
             {/*
               ANOVA "en az biri farklı" diyor, hangisi olduğunu
               söylemiyordu. İkili karşılaştırma yalnızca F ANLAMLIYSA
               gösteriliyor: anlamsız bir ANOVA'nın ardından ikili
               karşılaştırma okumak, düzeltmenin koruduğu şeyi
               baştan delmek olur.
+
+              Hangi F'e bakılacağı varyansa bağlı: varyanslar
+              homojense klasik F ve ortak hata kareli Bonferroni,
+              değilse Welch F ve çift başına Welch'li Bonferroni —
+              ortak hata karesi zaten eşit varyans varsayıyor.
             */}
-            {sig && (
+            {(welchF ? welchFSig : sig) && (
               <div className="mt-sm">
-                <strong>İkili karşılaştırmalar (Bonferroni)</strong>
+                <strong>
+                  İkili karşılaştırmalar (Bonferroni{welchF ? ", eşit varyans varsayılmadan" : ""})
+                </strong>
                 <ul className="muted text-sm">
-                  {bonferroniKarsilastirmalari(groups, groupLevels).map((c) => (
+                  {(welchF
+                    ? welchBonferroniKarsilastirmalari(groups, groupLevels)
+                    : bonferroniKarsilastirmalari(groups, groupLevels)
+                  ).map((c) => (
                     <li key={`${c.a}-${c.b}`}>
                       {c.a} — {c.b}: fark {yazSayi(c.ortalamaFarki)}, {yazP(c.p)}
                       {c.anlamli ? " — anlamlı" : " — anlamlı değil"}
