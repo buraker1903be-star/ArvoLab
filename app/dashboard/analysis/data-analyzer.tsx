@@ -5,6 +5,7 @@ import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save 
 import { leveneTesti, normallikOlcutu } from "@/lib/stats-varsayim";
 import { kruskalWallis, mannWhitneyU, spearmanKorelasyonu, YAKLASIKLIK_EN_AZ } from "@/lib/stats-parametrik-olmayan";
 import { dogrusalRegresyon } from "@/lib/stats-regresyon";
+import { VARSAYILAN_BICIM, type BicimKarari } from "@/lib/sayi-bicimi";
 import {
   describeNumeric,
   independentTTest,
@@ -80,7 +81,7 @@ export default function DataAnalyzer({
   calismalar = [],
   secilenCalisma = "",
 }: {
-  calismalar?: { id: string; title: string }[];
+  calismalar?: { id: string; title: string; sayiBicimi?: BicimKarari }[];
   /* Çalışma merkezinden gelindiyse sonuç o çalışmaya kaydedilsin. */
   secilenCalisma?: string;
 }) {
@@ -89,6 +90,11 @@ export default function DataAnalyzer({
   const [parseError, setParseError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  /*
+    SAYININ YAZILIŞI SEÇİLİ ÇALIŞMANIN KILAVUZUNDAN gelir. Önce
+    yalnızca SPSS yapıştırma aracı kılavuza uyuyordu ve bu motor
+    APA'ya sabitti: aynı ekranda iki farklı biçim üretiliyordu.
+  */
   const [analysisType, setAnalysisType] = useState<AnalysisType>("descriptives");
   const [varA, setVarA] = useState("");
   const [varB, setVarB] = useState("");
@@ -129,6 +135,28 @@ export default function DataAnalyzer({
   */
   const [calisanAnaliz, setCalisanAnaliz] = useState<{ tur: AnalysisType; baslik: string } | null>(null);
   const [kayitCalismasi, setKayitCalismasi] = useState(secilenCalisma);
+
+  /*
+    Biçim, sonucun KAYDEDİLECEĞİ çalışmadan alınıyor: kullanıcı
+    sonucu hangi tezine yazacaksa onun kılavuzu geçerli. Çalışma
+    seçilmemişse varsayılan uygulanıyor ve bu ekranda söyleniyor.
+  */
+  /* useMemo şart: nesne her render'da yeniden kurulsaydı aşağıdaki
+     geri çağırmaların bağımlılıkları da her render'da değişir ve
+     ağır analiz hesabı boşuna yeniden kurulurdu (lint uyarısı). */
+  const bicim: BicimKarari = useMemo(
+    () =>
+      calismalar.find((c) => c.id === kayitCalismasi)?.sayiBicimi ?? {
+        ...VARSAYILAN_BICIM,
+        kaynak: "varsayilan",
+      },
+    [calismalar, kayitCalismasi],
+  );
+  const yazP = useCallback((p: number) => formatP(p, bicim), [bicim]);
+  const yazSayi = useCallback(
+    (n: number, basamak = 2, sinirli = false) => formatNumber(n, basamak, bicim, sinirli),
+    [bicim],
+  );
   const [kaydedildi, setKaydedildi] = useState(false);
   const [kaydediliyor, kaydetmeyiBaslat] = useTransition();
 
@@ -270,11 +298,11 @@ export default function DataAnalyzer({
                   <tr key={col}>
                     <td>{col}</td>
                     <td>{stats.n}</td>
-                    <td>{formatNumber(stats.mean)}</td>
-                    <td>{formatNumber(stats.sd)}</td>
-                    <td>{formatNumber(stats.min)}</td>
-                    <td>{formatNumber(stats.max)}</td>
-                    <td>{formatNumber(stats.median)}</td>
+                    <td>{yazSayi(stats.mean)}</td>
+                    <td>{yazSayi(stats.sd)}</td>
+                    <td>{yazSayi(stats.min)}</td>
+                    <td>{yazSayi(stats.max)}</td>
+                    <td>{yazSayi(stats.median)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -305,7 +333,7 @@ export default function DataAnalyzer({
                       <tr key={f.value}>
                         <td>{f.value}</td>
                         <td>{f.count}</td>
-                        <td>%{formatNumber(f.percent, 1)}</td>
+                        <td>%{yazSayi(f.percent, 1)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -340,9 +368,9 @@ export default function DataAnalyzer({
                       <td>{c.varA}</td>
                       <td>{c.varB}</td>
                       <td className={sig ? "stats-significant" : undefined}>
-                        {formatNumber(c.r)}
+                        {yazSayi(c.r)}
                       </td>
-                      <td>{formatP(c.p)}</td>
+                      <td>{yazP(c.p)}</td>
                       <td>{c.n}</td>
                     </tr>
                   );
@@ -363,7 +391,7 @@ export default function DataAnalyzer({
         )}
       </div>
     );
-  }, [dataset, getNumericColumn]);
+  }, [dataset, getNumericColumn, yazSayi, yazP]);
 
   const handleRunAnalysis = useCallback(() => {
     if (!dataset) return;
@@ -410,11 +438,11 @@ export default function DataAnalyzer({
                 <tr key={col}>
                   <td>{col}</td>
                   <td>{stats.n}</td>
-                  <td>{formatNumber(stats.mean)}</td>
-                  <td>{formatNumber(stats.sd)}</td>
-                  <td>{formatNumber(stats.min)}</td>
-                  <td>{formatNumber(stats.max)}</td>
-                  <td>{formatNumber(stats.median)}</td>
+                  <td>{yazSayi(stats.mean)}</td>
+                  <td>{yazSayi(stats.sd)}</td>
+                  <td>{yazSayi(stats.min)}</td>
+                  <td>{yazSayi(stats.max)}</td>
+                  <td>{yazSayi(stats.median)}</td>
                 </tr>
               ))}
             </tbody>
@@ -445,13 +473,13 @@ export default function DataAnalyzer({
                 <li key={ad}>
                   {ad}: {olcut.n < 4
                     ? "normallik ölçülemedi (dörtten az gözlem)"
-                    : `çarpıklık ${formatNumber(olcut.carpiklik)}, basıklık ${formatNumber(olcut.basiklik)}` +
+                    : `çarpıklık ${yazSayi(olcut.carpiklik)}, basıklık ${yazSayi(olcut.basiklik)}` +
                       (olcut.normaleYakin ? " — normale yakın" : " — normalden uzak")}
                 </li>
               ))}
               <li>
-                Levene (medyan): F({levene.df1}, {levene.df2}) = {formatNumber(levene.f)},{" "}
-                {formatP(levene.p)} — {levene.homojen ? "varyanslar homojen" : "varyanslar homojen değil"}
+                Levene (medyan): F({levene.df1}, {levene.df2}) = {yazSayi(levene.f)},{" "}
+                {yazP(levene.p)} — {levene.homojen ? "varyanslar homojen" : "varyanslar homojen değil"}
               </li>
             </ul>
             {(sorunlu.length > 0 || !levene.homojen || olculemeyen.length > 0) && (
@@ -488,19 +516,19 @@ export default function DataAnalyzer({
         setResult(
           <div>
             <p>
-              <strong>{g1name}</strong>: N={r.n1}, Ort={formatNumber(r.m1)}, SS={formatNumber(r.sd1)}
+              <strong>{g1name}</strong>: N={r.n1}, Ort={yazSayi(r.m1)}, SS={yazSayi(r.sd1)}
               <br />
-              <strong>{g2name}</strong>: N={r.n2}, Ort={formatNumber(r.m2)}, SS={formatNumber(r.sd2)}
+              <strong>{g2name}</strong>: N={r.n2}, Ort={yazSayi(r.m2)}, SS={yazSayi(r.sd2)}
             </p>
             <p className="tone-text" data-tone={sig ? "success" : "warning"}>
-              t({r.df}) = {formatNumber(r.t)}, {formatP(r.p)}
+              t({r.df}) = {yazSayi(r.t)}, {yazP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
             {/* Etki büyüklüğü p'nin yanında: p "fark var mı"yı, d
                 "fark ne kadar"ı söyler. */}
             <p className="muted text-sm">
-              Cohen&apos;s d = {formatNumber(r.d)} ({r.dYorum} etki) · ortalama farkı{" "}
-              {formatNumber(r.fark)}, %95 GA [{formatNumber(r.altSinir)}, {formatNumber(r.ustSinir)}]
+              Cohen&apos;s d = {yazSayi(r.d)} ({r.dYorum} etki) · ortalama farkı{" "}
+              {yazSayi(r.fark)}, %95 GA [{yazSayi(r.altSinir)}, {yazSayi(r.ustSinir)}]
             </p>
             {varsayimSeridi([g1, g2], [g1name, g2name])}
           </div>
@@ -539,18 +567,18 @@ export default function DataAnalyzer({
                   <tr key={g}>
                     <td>{g}</td>
                     <td>{r.groupNs[i]}</td>
-                    <td>{formatNumber(r.groupMeans[i])}</td>
+                    <td>{yazSayi(r.groupMeans[i])}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             </div>
             <p className="tone-text mt-sm" data-tone={sig ? "success" : "warning"}>
-              F({r.dfb}, {r.dfw}) = {formatNumber(r.f)}, {formatP(r.p)}
+              F({r.dfb}, {r.dfw}) = {yazSayi(r.f)}, {yazP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
                       <p className="muted text-sm">
-              η² = {formatNumber(r.etaKare)} ({r.etaYorum} etki)
+              η² = {yazSayi(r.etaKare)} ({r.etaYorum} etki)
             </p>
             {/*
               ANOVA "en az biri farklı" diyor, hangisi olduğunu
@@ -565,7 +593,7 @@ export default function DataAnalyzer({
                 <ul className="muted text-sm">
                   {bonferroniKarsilastirmalari(groups, groupLevels).map((c) => (
                     <li key={`${c.a}-${c.b}`}>
-                      {c.a} — {c.b}: fark {formatNumber(c.ortalamaFarki)}, {formatP(c.p)}
+                      {c.a} — {c.b}: fark {yazSayi(c.ortalamaFarki)}, {yazP(c.p)}
                       {c.anlamli ? " — anlamlı" : " — anlamlı değil"}
                     </li>
                   ))}
@@ -590,7 +618,7 @@ export default function DataAnalyzer({
         const sig = isSignificant(r.p);
         setResult(
           <p className="tone-text" data-tone={sig ? "success" : "warning"}>
-            r({r.df}) = {formatNumber(r.r)}, {formatP(r.p)}
+            r({r.df}) = {yazSayi(r.r)}, {yazP(r.p)}
             {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
           </p>
         );
@@ -620,15 +648,15 @@ export default function DataAnalyzer({
           <div>
             <p>
               <strong>{varA}</strong> − <strong>{varB}</strong>: N={r.n}, fark ort.=
-              {formatNumber(r.farkOrtalamasi)}, fark SS={formatNumber(r.farkSS)}
+              {yazSayi(r.farkOrtalamasi)}, fark SS={yazSayi(r.farkSS)}
             </p>
             <p className="tone-text" data-tone={sig ? "success" : "warning"}>
-              t({r.df}) = {formatNumber(r.t)}, {formatP(r.p)}
+              t({r.df}) = {yazSayi(r.t)}, {yazP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
             <p className="muted text-sm">
-              Cohen&apos;s d<sub>z</sub> = {formatNumber(r.dz)} ({r.dzYorum} etki) · %95 GA [
-              {formatNumber(r.altSinir)}, {formatNumber(r.ustSinir)}]
+              Cohen&apos;s d<sub>z</sub> = {yazSayi(r.dz)} ({r.dzYorum} etki) · %95 GA [
+              {yazSayi(r.altSinir)}, {yazSayi(r.ustSinir)}]
             </p>
             {/* Eşleştirilmiş testte normallik FARKLARIN dağılımına
                 bakar, ölçümlerin kendisine değil. */}
@@ -675,11 +703,11 @@ export default function DataAnalyzer({
         setResult(
           <div>
             <p className="tone-text" data-tone={sig ? "success" : "warning"}>
-              F({r.dfb}, {r.dfw}) = {formatNumber(r.f)}, {formatP(r.p)}
+              F({r.dfb}, {r.dfw}) = {yazSayi(r.f)}, {yazP(r.p)}
               {sig ? " — model anlamlı" : " — model anlamlı değil"}
             </p>
             <p className="muted text-sm">
-              R² = {formatNumber(r.rKare)} · düzeltilmiş R² = {formatNumber(r.duzeltilmisRKare)} · N = {r.n}
+              R² = {yazSayi(r.rKare)} · düzeltilmiş R² = {yazSayi(r.duzeltilmisRKare)} · N = {r.n}
             </p>
             <div className="table-scroll" role="region" aria-label="Regresyon katsayıları" tabIndex={0}>
               <table className="stats-result-table">
@@ -697,11 +725,11 @@ export default function DataAnalyzer({
                   {r.katsayilar.map((k) => (
                     <tr key={k.ad}>
                       <td>{k.ad}</td>
-                      <td>{formatNumber(k.b)}</td>
-                      <td>{formatNumber(k.standartHata)}</td>
-                      <td>{Number.isNaN(k.beta) ? "—" : formatNumber(k.beta)}</td>
-                      <td>{formatNumber(k.t)}</td>
-                      <td>{formatP(k.p)}</td>
+                      <td>{yazSayi(k.b)}</td>
+                      <td>{yazSayi(k.standartHata)}</td>
+                      <td>{Number.isNaN(k.beta) ? "—" : yazSayi(k.beta)}</td>
+                      <td>{yazSayi(k.t)}</td>
+                      <td>{yazP(k.p)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -738,15 +766,15 @@ export default function DataAnalyzer({
         setResult(
           <div>
             <p>
-              <strong>{g1name}</strong>: N={r.n1}, sıra ort.={formatNumber(r.siraOrtalamasi1)}
+              <strong>{g1name}</strong>: N={r.n1}, sıra ort.={yazSayi(r.siraOrtalamasi1)}
               <br />
-              <strong>{g2name}</strong>: N={r.n2}, sıra ort.={formatNumber(r.siraOrtalamasi2)}
+              <strong>{g2name}</strong>: N={r.n2}, sıra ort.={yazSayi(r.siraOrtalamasi2)}
             </p>
             <p className="tone-text" data-tone={sig ? "success" : "warning"}>
-              U = {formatNumber(r.u)}, z = {formatNumber(r.z)}, {formatP(r.p)}
+              U = {yazSayi(r.u)}, z = {yazSayi(r.z)}, {yazP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
-            <p className="muted text-sm">r = {formatNumber(r.etki)} (sıralara dayalı etki büyüklüğü)</p>
+            <p className="muted text-sm">r = {yazSayi(r.etki)} (sıralara dayalı etki büyüklüğü)</p>
             {/* Yaklaşıklık küçük örneklemde sapıyor; sessizce
                 yaklaşık bir p vermek kesin sanılan bir sayı
                 üretmek olurdu. */}
@@ -782,16 +810,16 @@ export default function DataAnalyzer({
               {groupLevels.map((ad, i) => (
                 <span key={ad}>
                   <strong>{ad}</strong>: N={groups[i].length}, sıra ort.=
-                  {formatNumber(r.siraOrtalamalari[i])}
+                  {yazSayi(r.siraOrtalamalari[i])}
                   <br />
                 </span>
               ))}
             </p>
             <p className="tone-text" data-tone={sig ? "success" : "warning"}>
-              H({r.df}) = {formatNumber(r.h)}, {formatP(r.p)}
+              H({r.df}) = {yazSayi(r.h)}, {yazP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
-            <p className="muted text-sm">ε² = {formatNumber(r.epsilonKare)} (sıralara dayalı etki büyüklüğü)</p>
+            <p className="muted text-sm">ε² = {yazSayi(r.epsilonKare)} (sıralara dayalı etki büyüklüğü)</p>
           </div>,
         );
       }
@@ -810,11 +838,11 @@ export default function DataAnalyzer({
         setResult(
           <div>
             <p className="tone-text" data-tone={sig ? "success" : "warning"}>
-              r<sub>s</sub>({r.df}) = {formatNumber(r.r)}, {formatP(r.p)}
+              r<sub>s</sub>({r.df}) = {yazSayi(r.r)}, {yazP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
             <p className="muted text-sm">
-              Açıklanan varyans {formatNumber(r.rKare * 100)}% · ilişki {r.rYorum}
+              Açıklanan varyans {yazSayi(r.rKare * 100)}% · ilişki {r.rYorum}
             </p>
           </div>,
         );
@@ -863,7 +891,7 @@ export default function DataAnalyzer({
             </table>
             </div>
             <p className="tone-text mt-sm" data-tone={sig ? "success" : "warning"}>
-              χ²({r.df}, N = {r.n}) = {formatNumber(r.chi2)}, {formatP(r.p)}
+              χ²({r.df}, N = {r.n}) = {yazSayi(r.chi2)}, {yazP(r.p)}
               {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
             </p>
           </div>
@@ -897,7 +925,7 @@ export default function DataAnalyzer({
         setResult(
           <p>
             <strong>
-              Cronbach&apos;s α = {formatNumber(r.alpha, 3)} ({r.k} madde, N = {r.n}) — güvenilirlik düzeyi:{" "}
+              Cronbach&apos;s α = {yazSayi(r.alpha, 3)} ({r.k} madde, N = {r.n}) — güvenilirlik düzeyi:{" "}
               {level}
             </strong>
           </p>
@@ -908,7 +936,7 @@ export default function DataAnalyzer({
       setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric]);
+  }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, yazP, yazSayi]);
 
   return (
     <section className="project-form-card">

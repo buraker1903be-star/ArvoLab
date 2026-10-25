@@ -70,3 +70,37 @@ describe("hesaplanabilir", () => {
     assert.equal(hesaplanabilir(Number.POSITIVE_INFINITY, 2), false);
   });
 });
+
+/*
+  SAYININ YAZILIŞI KILAVUZDAN GELİR (25.10.2026).
+
+  Baştaki sıfır ve ondalık ayırıcı burada da APA'ya sabitti. Daha
+  kötüsü: SPSS yapıştırma aracı kılavuza uyarken bu motor APA'ya
+  sabitti, yani AYNI EKRANDA iki farklı biçim üretiliyordu.
+*/
+describe("biçim kılavuzdan geliyor", () => {
+  const turk = { ayirici: "comma" as const, bastakiSifir: true };
+
+  test("p değeri kılavuza uyuyor", () => {
+    assert.equal(formatP(0.021, turk), "p = 0,021");
+    assert.equal(formatP(0.0004, turk), "p < 0,001");
+  });
+
+  test("BİÇİM VERİLMEZSE eski davranış korunuyor", () => {
+    assert.equal(formatP(0.021), "p = .021");
+    assert.equal(formatP(0.0004), "p < .001");
+  });
+
+  test("SINIRLI DEĞER kuralı yalnızca istendiğinde uygulanıyor", () => {
+    /* r ve β ±1 ile sınırlı; "0.5 kg" gibi bir ölçümden sıfırı
+       atmak yanlış olurdu. */
+    assert.equal(formatNumber(0.42, 2, turk, true), "0,42");
+    assert.equal(formatNumber(0.42, 2, { ayirici: "period", bastakiSifir: false }, true), ".42");
+    assert.equal(formatNumber(0.5, 2, { ayirici: "period", bastakiSifir: false }), "0.50");
+  });
+
+  test("hesaplanamayan değer biçimden ETKİLENMİYOR", () => {
+    assert.equal(formatP(NaN, turk), HESAPLANAMADI);
+    assert.equal(formatNumber(Infinity, 2, turk), HESAPLANAMADI);
+  });
+});
