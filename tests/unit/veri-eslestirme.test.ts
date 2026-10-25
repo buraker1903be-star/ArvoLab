@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { elemeNotu, eslesenSatirlar, sayisalMi, type VeriSatiri } from "@/lib/veri-eslestirme";
+import { ciftEslestir, elemeNotu, eslesenSatirlar, sayisalMi, sayisalSutun, type VeriSatiri } from "@/lib/veri-eslestirme";
 
 test("satır eşleştirme", async (t) => {
   await t.test("boş hücre satırı düşürüyor, kalanların hizası bozulmuyor", () => {
@@ -58,5 +58,29 @@ test("satır eşleştirme", async (t) => {
     const veri = eslesenSatirlar([{ a: null, b: 1 }], ["a", "b"]);
     assert.deepEqual(veri.sutunlar, [[], []]);
     assert.equal(veri.n, 0);
+  });
+});
+
+test("çift bazlı eşleştirme", async (t) => {
+  await t.test("sütun tam boyda okunuyor, eksikler null kalıyor", () => {
+    const satirlar = [{ a: 1 }, { a: null }, { a: "" }, { a: "3" }, { a: "metin" }];
+    assert.deepEqual(sayisalSutun(satirlar, "a"), [1, null, null, 3, null]);
+  });
+
+  await t.test("yalnızca ikisi de dolu olan satırlar alınıyor", () => {
+    const a = [1, null, 3, 4];
+    const b = [10, 20, null, 40];
+    assert.deepEqual(ciftEslestir(a, b), { x: [1, 4], y: [10, 40] });
+  });
+
+  await t.test("eşleşme sırası koruyor, kaydırmıyor", () => {
+    /*
+      ESKİDEN: boşları atılmış diziler en kısa olanın boyuna kesiliyordu.
+      Burada a=[2,3], b=[10,20] olup 2. satırın a'sı 1. satırın b'siyle
+      eşleşirdi. Çift bazlı eleme 3. satırı alıyor, çünkü ikisi de dolu.
+    */
+    const a = [null, 2, 3];
+    const b = [10, 20, 30];
+    assert.deepEqual(ciftEslestir(a, b), { x: [2, 3], y: [20, 30] });
   });
 });

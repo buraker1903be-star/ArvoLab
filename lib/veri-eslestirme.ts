@@ -59,3 +59,26 @@ export function elemeNotu(veri: EslesenVeri): string | null {
   if (veri.dusen === 0) return null;
   return `${veri.dusen} satır eksik veri yüzünden analiz dışı bırakıldı (N = ${veri.n}).`;
 }
+
+/**
+ * Sütunu TAM boyda okur; sayısal olmayan hücre `null` kalır.
+ *
+ * Satır sırası korunduğu için çiftler sonradan eşleştirilebiliyor —
+ * boşları atıp kısalan bir dizide bu bilgi geri getirilemez.
+ */
+export function sayisalSutun(satirlar: VeriSatiri[], sutunAdi: string): (number | null)[] {
+  return satirlar.map((satir) => (sayisalMi(satir[sutunAdi]) ? Number(satir[sutunAdi]) : null));
+}
+
+/** İki sütunun ikisinde de değer taşıyan satırlar (çift bazlı eleme). */
+export function ciftEslestir(a: (number | null)[], b: (number | null)[]): { x: number[]; y: number[] } {
+  const x: number[] = [];
+  const y: number[] = [];
+  const uzunluk = Math.min(a.length, b.length);
+  for (let i = 0; i < uzunluk; i++) {
+    if (a[i] === null || b[i] === null) continue;
+    x.push(a[i] as number);
+    y.push(b[i] as number);
+  }
+  return { x, y };
+}

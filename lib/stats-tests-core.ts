@@ -9,6 +9,8 @@
  * ve anlamlılık işaretlemesi ayrı bir katmanda (stats-interpreter.ts
  * ile aynı ilkede) yapılır.
  */
+
+import { ciftEslestir } from "@/lib/veri-eslestirme";
 import { tTestTwoTailedP, fTestP, chiSquareP, tKritik } from "./stats-math";
 
 export function mean(arr: number[]): number {
@@ -130,6 +132,51 @@ export function independentTTest(group1: number[], group2: number[]): TTestResul
     sd1: Math.sqrt(v1), sd2: Math.sqrt(v2),
     d, dYorum: cohenYorumu(d),
     fark, altSinir: fark - pay, ustSinir: fark + pay,
+  };
+}
+
+/*
+  WELCH t-TESTİ (eşit varyans varsaymayan).
+
+  Varsayım şeridi Levene p < .05 olduğunda "Welch kullanılmalı" diyordu
+  ama programda Welch YOKTU: kullanıcıya uygulayamayacağı bir öneri
+  veriliyordu. Varyanslar ayrıştığında birleşik varyanslı t-testi
+  standart hatayı yanlış tahmin ediyor — gruplar eşit büyüklükte
+  değilse p sistematik olarak sapıyor; büyük grubun varyansı küçükse
+  test olduğundan cömert, tersinde olduğundan katı oluyor.
+
+  Serbestlik derecesi Welch-Satterthwaite yaklaşımı: ondalıklı çıkıyor
+  ve öyle de raporlanıyor (SPSS de böyle basar), yuvarlanmıyor.
+
+  Etki büyüklüğü birleşik SS ile hesaplanamaz — birleştirme zaten eşit
+  varyans varsayıyor. İki varyansın ORTALAMASININ karekökü kullanılıyor
+  (eşit varyansta birleşik SS ile aynı sonucu verir).
+
+  Beklenen değerler: Wikipedia'nın Welch örneğiyle doğrulandı
+  (t = −2,455356, df = 24,988529, p = 0,021378).
+*/
+export function welchTTest(group1: number[], group2: number[]): TTestResult {
+  const n1 = group1.length;
+  const n2 = group2.length;
+  const m1 = mean(group1);
+  const m2 = mean(group2);
+  const v1 = variance(group1);
+  const v2 = variance(group2);
+  const se = Math.sqrt(v1 / n1 + v2 / n2);
+  const t = (m1 - m2) / se;
+  const pay = (v1 / n1 + v2 / n2) ** 2;
+  const payda = (v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1);
+  const df = payda === 0 ? NaN : pay / payda;
+  const p = tTestTwoTailedP(Math.abs(t), df);
+  const ortalamaSS = Math.sqrt((v1 + v2) / 2);
+  const d = ortalamaSS === 0 ? 0 : (m1 - m2) / ortalamaSS;
+  const fark = m1 - m2;
+  const genislik = tKritik(df) * se;
+  return {
+    t, df, p, m1, m2, n1, n2,
+    sd1: Math.sqrt(v1), sd2: Math.sqrt(v2),
+    d, dYorum: cohenYorumu(d),
+    fark, altSinir: fark - genislik, ustSinir: fark + genislik,
   };
 }
 
@@ -272,17 +319,31 @@ export interface CorrelationMatrixCell {
   n: number;
 }
 
+/*
+  KORELASYON MATRİSİ — eleme ÇİFT BAZLI.
+
+  Sütunlar tam boyda geliyor, eksik hücreler `null`; her çift kendi
+  içinde eşleştiriliyor. Eskiden sütunlar boşları atılmış hâlde
+  (kısalmış ve kaymış) geliyor, en kısa olanın boyuna kesiliyordu:
+  tek bir eksik hücre o sütunun girdiği BÜTÜN çiftleri kaydırıyordu
+  ve matris baştan sona yanlış çıkıyordu.
+
+  Çift bazlı eleme bilerek seçildi (SPSS'in korelasyon varsayılanı):
+  liste bazlı eleme, on sütunlu bir veride tek bir eksik hücre
+  yüzünden o satırı bütün çiftlerden düşürürdü. Bedeli N'in çiftten
+  çifte değişmesi; bu yüzden n her satırda ayrıca yazılıyor.
+*/
 export function correlationMatrix(
-  columns: { name: string; values: number[] }[]
+  columns: { name: string; values: (number | null)[] }[]
 ): CorrelationMatrixCell[] {
   const results: CorrelationMatrixCell[] = [];
   for (let i = 0; i < columns.length; i++) {
     for (let j = i + 1; j < columns.length; j++) {
-      const a = columns[i],
-        b = columns[j];
-      const n = Math.min(a.values.length, b.values.length);
-      if (n < 3) continue;
-      const r = pearsonCorrelation(a.values.slice(0, n), b.values.slice(0, n));
+      const a = columns[i];
+      const b = columns[j];
+      const { x, y } = ciftEslestir(a.values, b.values);
+      if (x.length < 3) continue;
+      const r = pearsonCorrelation(x, y);
       results.push({ varA: a.name, varB: b.name, r: r.r, p: r.p, n: r.n });
     }
   }

@@ -13,6 +13,7 @@ import {
   chiSquareIndependence,
   eslestirilmisTTest,
   cronbachAlpha,
+  welchTTest,
   independentTTest,
   oneWayAnova,
   pearsonCorrelation,
@@ -398,5 +399,51 @@ describe("Bonferroni ikili karşılaştırmaları", () => {
     );
     const ac = ciftler.find((c) => c.a === "A" && c.b === "C")!;
     assert.ok(ac.p > ac.pHam, "düzeltilmiş p ham p'den büyük olmalı");
+  });
+});
+
+describe("Welch t-testi", () => {
+  /*
+    Varsayım şeridi Levene p < .05 olduğunda Welch öneriyordu ama
+    program Welch'i YAPAMIYORDU: kullanıcıya uygulayamayacağı bir
+    öneri veriliyordu.
+  */
+  const A = [27.5, 21.0, 19.0, 23.6, 17.0, 17.9, 16.9, 20.1, 21.9, 22.6, 23.1, 19.6, 19.0, 21.7, 21.4];
+  const B = [27.1, 22.0, 20.8, 23.4, 23.4, 23.5, 25.8, 22.0, 24.8, 20.2, 21.9, 22.1, 22.9, 20.5, 24.4];
+
+  test("yayımlanmış örnekle birebir", () => {
+    const r = welchTTest(A, B);
+    assert.ok(Math.abs(r.t - -2.455356) < 1e-6, String(r.t));
+    // Serbestlik derecesi ONDALIKLI kalıyor: yuvarlamak p'yi kaydırır.
+    assert.ok(Math.abs(r.df - 24.988529) < 1e-6, String(r.df));
+    assert.ok(Math.abs(r.p - 0.021378) < 1e-6, String(r.p));
+  });
+
+  test("varyanslar eşitken birleşik varyanslı testle örtüşüyor", () => {
+    /*
+      Eşit varyansta iki testin ayrışmaması gerekiyor; ayrışıyorsa
+      Welch'in formülünde hata vardır.
+    */
+    const x = [10, 12, 14, 16, 18];
+    const y = [11, 13, 15, 17, 19];
+    const welch = welchTTest(x, y);
+    const birlesik = independentTTest(x, y);
+    assert.ok(Math.abs(welch.t - birlesik.t) < 1e-9, `${welch.t} ≠ ${birlesik.t}`);
+    assert.ok(Math.abs(welch.d - birlesik.d) < 1e-9, `${welch.d} ≠ ${birlesik.d}`);
+  });
+
+  test("varyanslar çok farklıyken birleşik varyanslı testten AYRILIYOR", () => {
+    // Küçük grubun varyansı büyükse birleşik test p'yi olduğundan küçük verir.
+    const dar = [50, 50.1, 49.9, 50.2, 49.8, 50, 50.1, 49.9, 50, 50.1];
+    const genis = [40, 60, 45, 55, 38, 62];
+    const welch = welchTTest(dar, genis);
+    const birlesik = independentTTest(dar, genis);
+    assert.ok(welch.df < birlesik.df, `${welch.df} < ${birlesik.df} olmalı`);
+    assert.ok(welch.p > birlesik.p, `Welch daha temkinli olmalı: ${welch.p} > ${birlesik.p}`);
+  });
+
+  test("hiç değişkenlik yoksa sayı uydurmuyor", () => {
+    const r = welchTTest([5, 5, 5], [5, 5, 5]);
+    assert.equal(Number.isFinite(r.p), false);
   });
 });

@@ -841,3 +841,7 @@
 .olcum-tablo th { font-weight: 600; }
 .olcum-tablo tbody tr:first-child td { color: var(--ink); font-weight: 650; }
 .olcum-not { margin: 6px 0 0; font-size: var(--fs-micro); color: var(--muted); }
+
+/* Welch satırı: aynı testin ikinci okunuşu olduğu belli olsun diye
+   ana sonuçtan çizgiyle ayrılıyor (data-analyzer.tsx). */
+.stats-welch { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft); }

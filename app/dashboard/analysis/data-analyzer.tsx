@@ -15,6 +15,7 @@ import {
   pearsonCorrelation,
   chiSquareIndependence,
   cronbachAlpha,
+  welchTTest,
   frequencyTable,
   correlationMatrix,
   type DescriptiveStats,
@@ -23,7 +24,7 @@ import { formatP, hesaplanabilir, isSignificant, formatNumber } from "@/lib/apa-
 import { ANALIZ_ETIKETLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { showToast } from "@/app/dashboard/_components/toast-events";
-import { elemeNotu, eslesenSatirlar } from "@/lib/veri-eslestirme";
+import { elemeNotu, eslesenSatirlar, sayisalSutun } from "@/lib/veri-eslestirme";
 
 type CellValue = string | number | null;
 type DataRow = Record<string, CellValue>;
@@ -280,9 +281,12 @@ export default function DataAnalyzer({
       return { col, freq: frequencyTable(values) };
     });
 
+    /* Sütunlar TAM boyda (eksik hücre null): matris her çifti kendi
+       içinde eşleştiriyor. Boşları atılmış sütunlarda tek bir eksik
+       hücre o sütunun girdiği bütün çiftleri kaydırıyordu. */
     const numericForMatrix = dataset.numericColumns.map((col) => ({
       name: col,
-      values: getNumericColumn(col),
+      values: sayisalSutun(dataset.rows, col),
     }));
     const matrix = numericForMatrix.length >= 2 ? correlationMatrix(numericForMatrix) : [];
 
@@ -526,6 +530,18 @@ export default function DataAnalyzer({
         const r = independentTTest(g1, g2);
         if (!hesaplanabilir(r.t, r.p)) return setResultError(DEGISKENLIK_YOK);
         const sig = isSignificant(r.p);
+        /*
+          VARYANSLAR AYRIŞIYORSA WELCH DE YAZILIYOR. Varsayım şeridi
+          "Welch kullanılmalı" diyordu ama program Welch'i yapamıyordu:
+          kullanıcıya uygulayamayacağı bir öneri veriliyordu.
+
+          Sadece Levene düştüğünde gösteriliyor, her zaman değil: iki
+          p değerini yan yana koymak "hangisi anlamlıysa onu yaz"maya
+          davet eder. Varsayım sağlanıyorsa gösterilecek bir seçim yok.
+        */
+        const varyans = leveneTesti([g1, g2]);
+        const welch = varyans.homojen ? null : welchTTest(g1, g2);
+        const welchSig = welch ? isSignificant(welch.p) : false;
         setResult(
           <div>
             <p>
@@ -543,6 +559,20 @@ export default function DataAnalyzer({
               Cohen&apos;s d = {yazSayi(r.d)} ({r.dYorum} etki) · ortalama farkı{" "}
               {yazSayi(r.fark)}, %95 GA [{yazSayi(r.altSinir)}, {yazSayi(r.ustSinir)}]
             </p>
+            {welch && hesaplanabilir(welch.t, welch.p) ? (
+              <div className="stats-welch">
+                <p className="tone-text" data-tone={welchSig ? "success" : "warning"}>
+                  Eşit varyans varsayılmadan (Welch): t({yazSayi(welch.df, 2)}) = {yazSayi(welch.t)}, {yazP(welch.p)}
+                  {welchSig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
+                </p>
+                <p className="muted text-sm">
+                  Levene testi varyansların homojen olmadığını gösteriyor; bu satır raporlanmalıdır.
+                  Serbestlik derecesi ondalıklıdır (Welch-Satterthwaite). Cohen&apos;s d ={" "}
+                  {yazSayi(welch.d)} ({welch.dYorum} etki) · %95 GA [{yazSayi(welch.altSinir)},{" "}
+                  {yazSayi(welch.ustSinir)}]
+                </p>
+              </div>
+            ) : null}
             {varsayimSeridi([g1, g2], [g1name, g2name])}
           </div>
         );
