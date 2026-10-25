@@ -62,7 +62,7 @@ const workstreams = [
   },
   {
     title: "Analiz Merkezi",
-    description: "SPSS çıktısını APA biçimine çevirin, MAXQDA kod kitabınızı kontrol edin.",
+    description: "SPSS çıktısını kılavuzunuzun sayı biçimine çevirin, MAXQDA kod kitabınızı kontrol edin.",
     icon: ChartNoAxesCombined,
     href: "/dashboard/analysis",
   },

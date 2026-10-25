@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpenCheck, ChartNoAxesCombined, FileCheck2, PenLine, Quote } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, ChartNoAxesCombined, FileCheck2, PenLine, Quote, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { BIRIMLER, birimYolu, type BirimAnahtari } from "@/lib/calisma-ozeti";
 
 /*
   Birim sayfalarının üstünde duran çalışma bağlamı.
@@ -14,13 +15,22 @@ import { createClient } from "@/lib/supabase/server";
   boş bir çubuk göstermek yer kaplamaktan başka işe yaramaz.
 */
 
-const BIRIMLER = [
-  { anahtar: "literatur", etiket: "Literatür", ikon: BookOpenCheck, yol: "/dashboard/literature" },
-  { anahtar: "yazim", etiket: "Yazım", ikon: PenLine, yol: null },
-  { anahtar: "kaynakca", etiket: "Kaynakça", ikon: Quote, yol: "/dashboard/citations" },
-  { anahtar: "belge", etiket: "Belge", ikon: FileCheck2, yol: "/dashboard/documents" },
-  { anahtar: "analiz", etiket: "Analiz", ikon: ChartNoAxesCombined, yol: "/dashboard/analysis" },
-] as const;
+/*
+  Birimlerin KENDİSİ artık burada tanımlı değil: liste, adres kuralı ve
+  sıra lib/calisma-ozeti.ts'te. Burada yalnızca ikon eşlemesi var, çünkü
+  o modül React'e dokunmuyor (saf ve testleri tarayıcısız koşuyor).
+
+  Eskiden liste burada da, merkezin adımlarında da ayrı yazılıydı ve
+  ayrışmıştı: şeritte beş birim, merkezde dört. Merkezdeki adımları
+  takip eden kullanıcı analizden hiç haberdar olmuyordu.
+*/
+const IKONLAR: Record<BirimAnahtari, LucideIcon> = {
+  literatur: BookOpenCheck,
+  yazim: PenLine,
+  kaynakca: Quote,
+  belge: FileCheck2,
+  analiz: ChartNoAxesCombined,
+};
 
 export default async function CalismaSerit({
   calismaId,
@@ -28,7 +38,7 @@ export default async function CalismaSerit({
 }: {
   calismaId: string | undefined;
   /** Bulunulan birim; o sekme bağlantı değil, işaretli durum olur. */
-  aktif: (typeof BIRIMLER)[number]["anahtar"];
+  aktif: BirimAnahtari;
 }) {
   if (!calismaId) return null;
 
@@ -52,9 +62,8 @@ export default async function CalismaSerit({
       </Link>
       <ul className="calisma-serit-birimler">
         {BIRIMLER.map((birim) => {
-          const Ikon = birim.ikon;
-          // Yazım birimi çalışmanın kendi adresinde; diğerleri bağlamı sorguyla taşır.
-          const href = birim.yol ? `${birim.yol}?calisma=${calisma.id}` : `/dashboard/editor/${calisma.id}/write`;
+          const Ikon = IKONLAR[birim.anahtar];
+          const href = birimYolu(birim.anahtar, calisma.id);
           const buradayiz = birim.anahtar === aktif;
           return (
             <li key={birim.anahtar}>

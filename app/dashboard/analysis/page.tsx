@@ -54,7 +54,9 @@ export default async function AnalysisPage({
           <p>
             Excel/CSV verinizi yükleyip gerçek istatistiksel testler
             çalıştırabilir, ya da SPSS&apos;ten kopyaladığınız hazır çıktıyı
-            APA 7 biçimine çevirebilirsiniz. Sistem sayısal sonucu hesaplar
+            raporlanabilir biçime çevirebilirsiniz. Ondalık ayracı, basamak
+            sayısı ve p değerinin yazımı seçtiğiniz çalışmanın kılavuzundan
+            gelir. Sistem sayısal sonucu hesaplar
             ve anlamlılığı işaretler; bulguların araştırma bağlamındaki
             yorumu her zaman size/uzmanınıza aittir.
           </p>

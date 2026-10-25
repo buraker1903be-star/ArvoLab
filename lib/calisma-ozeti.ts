@@ -87,6 +87,60 @@ export type Adim = {
   tamam: boolean;
 };
 
+/*
+  ÇALIŞMANIN BİRİMLERİ — TEK LİSTE.
+
+  Bu liste iki yerde ayrı ayrı yazılıydı ve ÇOKTAN AYRIŞMIŞTI: merkezin
+  adım listesi dört birim sayıyordu (literatür, yazım, kaynakça, belge),
+  birim sayfalarının üstündeki bağlam şeridi ise beş (artı analiz).
+  Merkezdeki adımları takip eden kullanıcıya analizden hiç söz
+  edilmiyordu. ArvoLab'ın kendi kabuk listesinde (lib/os/uygulamalar.ts)
+  yazdığımız gerekçenin aynısı: liste ikiye ayrılırsa biri güncellenir,
+  öteki unutulur.
+
+  `adimMi`: merkezin "Bu çalışmanın birimleri" listesinde TAMAMLANMA
+  işaretiyle çıkıyor mu. Analiz çıkmıyor, çünkü bu çalışmaya bağlı bir
+  analizin yapılıp yapılmadığını söyleyen bir veri bugün yok — asistan
+  sayacı bütün yetenekleri (kaynakça, literatür, belge) birlikte
+  topluyor. Hiç dolmayacak bir onay kutusu koymak ya da başka bir şeyin
+  sayısıyla doldurmak, kullanıcının yapmadığı işi yapılmış göstermek
+  olurdu. Birim şeritte duruyor: gidilebiliyor, "tamamlandı"
+  denmiyor.
+*/
+export type BirimAnahtari = "literatur" | "yazim" | "kaynakca" | "belge" | "analiz";
+
+export type Birim = {
+  anahtar: BirimAnahtari;
+  /** Bağlam şeridindeki kısa ad. */
+  etiket: string;
+  /** Merkezdeki adım başlığı; yalnızca adım olan birimlerde. */
+  adimBasligi?: string;
+  adimMi: boolean;
+};
+
+export const BIRIMLER: Birim[] = [
+  { anahtar: "literatur", etiket: "Literatür", adimBasligi: "Literatür topla", adimMi: true },
+  { anahtar: "yazim", etiket: "Yazım", adimBasligi: "Metni yaz", adimMi: true },
+  { anahtar: "kaynakca", etiket: "Kaynakça", adimBasligi: "Kaynakçayı denetle", adimMi: true },
+  { anahtar: "belge", etiket: "Belge", adimBasligi: "Belgeyi kontrol ettir", adimMi: true },
+  { anahtar: "analiz", etiket: "Analiz", adimMi: false },
+];
+
+/*
+  Birimin adresi. Yazım çalışmanın KENDİ adresinde, ötekiler bağlamı
+  sorgu değişkeniyle taşıyor; bu fark da tek yerde dursun.
+*/
+export function birimYolu(anahtar: BirimAnahtari, calismaId: string): string {
+  if (anahtar === "yazim") return `/dashboard/editor/${calismaId}/write`;
+  const yollar: Record<Exclude<BirimAnahtari, "yazim">, string> = {
+    literatur: "/dashboard/literature",
+    kaynakca: "/dashboard/citations",
+    belge: "/dashboard/documents",
+    analiz: "/dashboard/analysis",
+  };
+  return `${yollar[anahtar]}?calisma=${calismaId}`;
+}
+
 /**
  * Çalışmanın bağlı birimlerine bakarak sıradaki adımları çıkarır.
  * Tamamlananlar da listede kalır: kullanıcı neyi yaptığını da görsün.
@@ -95,29 +149,27 @@ export function siradakiAdimlar(ozet: CalismaOzeti): Adim[] {
   const { calisma, musvedde, literatur, kaynakca, belgeSayisi } = ozet;
   const yazimVar = (musvedde?.kelime ?? 0) > 0;
 
-  return [
-    {
-      anahtar: "literatur",
-      baslik: "Literatür topla",
+  /*
+    Her adımın yalnızca DEĞİŞEN yanı burada; başlık ve sıra BIRIMLER'den
+    geliyor. Eskiden adımlar burada dizi olarak elle yazılıyordu ve
+    bağlam şeridindeki liste ayrı bir dosyadaydı — ikisi ayrışmıştı.
+  */
+  const durum: Record<string, Pick<Adim, "aciklama" | "tamam" | "zaman">> = {
+    literatur: {
       aciklama: literatur.toplam
         ? `${literatur.toplam} kaynak kayıtlı, ${literatur.okunan} okundu, ${literatur.kullanilan} kullanıldı.`
         : "Bu çalışmaya bağlı kaynak yok. Tarama asistanı arama stratejisi kurabilir.",
-      href: `/dashboard/literature?calisma=${calisma.id}`,
       tamam: literatur.toplam > 0,
+      zaman: null,
     },
-    {
-      anahtar: "yazim",
-      baslik: "Metni yaz",
+    yazim: {
       aciklama: yazimVar
         ? `${musvedde?.kelime.toLocaleString("tr-TR")} kelime yazıldı.`
         : "Müsvedde henüz boş. Editörde yazmaya başlayın.",
-      zaman: yazimVar ? musvedde?.guncellendi : null,
-      href: `/dashboard/editor/${calisma.id}/write`,
       tamam: yazimVar,
+      zaman: yazimVar ? musvedde?.guncellendi : null,
     },
-    {
-      anahtar: "kaynakca",
-      baslik: "Kaynakçayı denetle",
+    kaynakca: {
       /*
         "APA uyum" YAZMIYOR: puan çalışmanın KENDİ atıf stiline göre
         hesaplanıyor ve o stil üniversiteden üniversiteye değişiyor
@@ -129,20 +181,24 @@ export function siradakiAdimlar(ozet: CalismaOzeti): Adim[] {
         : literatur.kullanilan > 0 || yazimVar
           ? "Kaynakça ve atıf tutarlılığı henüz denetlenmedi."
           : "Metin ve kaynaklar hazır olunca denetleyin.",
-      zaman: kaynakca?.tarih ?? null,
-      href: `/dashboard/citations?calisma=${calisma.id}`,
       tamam: Boolean(kaynakca),
+      zaman: kaynakca?.tarih ?? null,
     },
-    {
-      anahtar: "belge",
-      baslik: "Belgeyi kontrol ettir",
+    belge: {
       aciklama: belgeSayisi
         ? `${belgeSayisi} belge yüklendi.`
         : "Tamamlanan bölümleri yükleyip biçim ve yapı kontrolü yaptırın.",
-      href: `/dashboard/documents?calisma=${calisma.id}`,
       tamam: belgeSayisi > 0,
+      zaman: null,
     },
-  ];
+  };
+
+  return BIRIMLER.filter((birim) => birim.adimMi).map((birim) => ({
+    anahtar: birim.anahtar,
+    baslik: birim.adimBasligi ?? birim.etiket,
+    href: birimYolu(birim.anahtar, calisma.id),
+    ...durum[birim.anahtar],
+  }));
 }
 
 /** Bağlı birimlere göre kaba bir ilerleme yüzdesi (kullanıcının girdiği progress'ten ayrı). */

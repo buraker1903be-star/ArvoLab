@@ -33,8 +33,9 @@ export default async function CitationsPage({
         <div>
           <h1>Kaynakça ve Atıf Doğrulama</h1>
           <p>
-            Kaynakçanızı APA 7 biçimi, metin içi atıf tutarlılığı ve gerçek akademik
-            kayıt eşleşmesi açısından denetleyin.
+            Kaynakçanızı çalışmanızın atıf stiline göre (APA 7, MLA, Chicago, IEEE,
+            Vancouver), metin içi atıf tutarlılığı ve gerçek akademik kayıt eşleşmesi
+            açısından denetleyin.
           </p>
           <details className="sayfa-detay">
             <summary>Denetim neye bakar?</summary>

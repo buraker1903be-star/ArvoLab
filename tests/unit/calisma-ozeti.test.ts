@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar, type CalismaOzeti } from "@/lib/calisma-ozeti";
+import { atifStiliCelisiyorMu, BIRIMLER, birimIlerlemesi, birimYolu, siradakiAdimlar, type CalismaOzeti } from "@/lib/calisma-ozeti";
 
 const CALISMA = {
   id: "c1",
@@ -163,4 +163,45 @@ test("kaynakça adımı sabit bir atıf stili adı yazmıyor", () => {
   const aciklama = adimlar.find((a) => a.anahtar === "kaynakca")?.aciklama ?? "";
   assert.ok(aciklama.includes("88/100"), aciklama);
   assert.ok(!/APA|IEEE|Vancouver|Chicago/i.test(aciklama), aciklama);
+});
+
+describe("birim listesi tek kaynaktan", () => {
+  test("adımlar BIRIMLER'in adım olanlarıyla aynı sırada", () => {
+    /*
+      Liste İKİ YERDE ayrı yazılıydı ve ayrışmıştı: bağlam şeridinde beş
+      birim, merkezin adımlarında dört (analiz yok). Merkezdeki adımları
+      takip eden kullanıcı analizden hiç haberdar olmuyordu.
+    */
+    const adimlar = siradakiAdimlar(ozet({}));
+    const beklenen = BIRIMLER.filter((b) => b.adimMi).map((b) => b.anahtar);
+    assert.deepEqual(adimlar.map((a) => a.anahtar), beklenen);
+  });
+
+  test("analiz birimi var ama adım değil", () => {
+    /*
+      Bu çalışmaya bağlı bir analizin yapılıp yapılmadığını söyleyen veri
+      bugün yok; asistan sayacı bütün yetenekleri birlikte topluyor. Hiç
+      dolmayacak bir onay kutusu koymak ya da başka bir şeyin sayısıyla
+      doldurmak, yapılmamış işi yapılmış göstermek olurdu.
+    */
+    const analiz = BIRIMLER.find((b) => b.anahtar === "analiz");
+    assert.ok(analiz, "analiz birimi listede olmalı");
+    assert.equal(analiz?.adimMi, false);
+    assert.equal(siradakiAdimlar(ozet({})).some((a) => a.anahtar === "analiz"), false);
+  });
+
+  test("adres kuralı tek yerde: yazım çalışmanın kendi adresinde", () => {
+    assert.equal(birimYolu("yazim", "c1"), "/dashboard/editor/c1/write");
+    assert.equal(birimYolu("literatur", "c1"), "/dashboard/literature?calisma=c1");
+    assert.equal(birimYolu("analiz", "c1"), "/dashboard/analysis?calisma=c1");
+  });
+
+  test("her adımın başlığı ve adresi BIRIMLER'den geliyor", () => {
+    const adimlar = siradakiAdimlar(ozet({}));
+    for (const adim of adimlar) {
+      const birim = BIRIMLER.find((b) => b.anahtar === adim.anahtar);
+      assert.equal(adim.baslik, birim?.adimBasligi);
+      assert.equal(adim.href, birimYolu(adim.anahtar as never, "c1"));
+    }
+  });
 });
