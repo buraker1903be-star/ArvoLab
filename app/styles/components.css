@@ -71,9 +71,11 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
-  padding: 9px 14px;
-  border-radius: 11px;
+  /* Yükseklik YALNIZCA min-height'tan: dikey dolgu yazmak ikinci bir
+     kaynak demek ve yazı tipi büyüyünce (mobilde 16px) ikisi ayrışıyor. */
+  min-height: var(--kontrol-h);
+  padding: 0 var(--kontrol-dolgu);
+  border-radius: var(--kontrol-r);
   font-size: var(--fs-base);
   font-weight: 700;
   line-height: 1.1;
@@ -137,7 +139,7 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   transform: none;
 }
 [aria-busy="true"] :is(.projects-primary-button, .projects-filter-button, .button-danger) { opacity: .72; }
-.button-compact { min-height: 36px; padding: 7px 12px; font-size: var(--fs-sm); }
+.button-compact { min-height: var(--kontrol-h-sik); padding: 0 var(--kontrol-dolgu-sik); font-size: var(--fs-sm); }
 
 /* ---------- Kartlar ve listeler ---------- */
 .project-form-card,
@@ -148,7 +150,7 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   box-shadow: var(--shadow-sm);
 }
 .project-form-card { padding: 22px 24px; border-radius: var(--r-lg); }
-.projects-list { display: grid; gap: 12px; }
+.projects-list { display: grid; gap: var(--kart-araligi); }
 /* Çalışma listesi: arama, filtre, sıralama */
 .project-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .project-filter-search {
@@ -456,14 +458,24 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .project-form-grid > .project-form-actions,
 .project-form-grid > .action-form-fieldset > :is(.project-form-actions, .project-form-full) { grid-column: 1 / -1; }
 
-.project-form-grid :is(input:not([type="checkbox"], [type="radio"], [type="hidden"]), select, textarea),
-.guideline-review-form :is(input:not([type="checkbox"], [type="radio"]), select, textarea),
+/*
+  Ortak denetim görünümü. `textarea` BİLEREK `:is()` listesinin DIŞINDA,
+  ayrı bir seçici olarak duruyor: `:is()` en özgül argümanının
+  özgüllüğünü aldığı için liste içindeyken ".project-form-grid textarea"
+  kuralını eziyordu ve çok satırlı alanın min-height'ı HİÇ
+  uygulanmıyordu (ölçüldü: 96px yerine 63px). Aynı zeminde olunca
+  aşağıdaki kural sırayla kazanıyor.
+*/
+.project-form-grid :is(input:not([type="checkbox"], [type="radio"], [type="hidden"]), select),
+.project-form-grid textarea,
+.guideline-review-form :is(input:not([type="checkbox"], [type="radio"]), select),
+.guideline-review-form textarea,
 .field-control {
   width: 100%;
-  min-height: 42px;
-  padding: 9px 12px;
+  min-height: var(--kontrol-h);
+  padding: 0 12px;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: var(--kontrol-r);
   outline: none;
   background: var(--surface-raised);
   color: var(--ink);
@@ -471,13 +483,20 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   font-size: var(--fs-body);
   transition: border-color .15s ease, box-shadow .15s ease, background-color .2s ease;
 }
+/* Yükseklik dolgudan gelir; yukarıda sıfırlanan dikey dolgu geri
+   veriliyor, yoksa yazı üst kenara yapışır. */
 .project-form-grid textarea,
-.guideline-review-form textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
+.guideline-review-form textarea {
+  min-height: 96px;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.55;
+}
 .project-form-grid :is(input, select, textarea):focus,
 .guideline-review-form :is(input, select, textarea):focus,
 .field-control:focus {
   border-color: var(--accent-500);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-500) 15%, transparent);
+  box-shadow: var(--odak-halkasi);
 }
 .project-form-grid :is(input, textarea)::placeholder,
 .guideline-review-form :is(input, textarea)::placeholder,
@@ -489,28 +508,28 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 42px;
+  min-height: var(--kontrol-h);
   padding: 0 12px;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: var(--kontrol-r);
   background: var(--surface-raised);
   color: var(--muted);
 }
-.project-date-field:focus-within { border-color: var(--accent-500); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-500) 15%, transparent); }
+.project-date-field:focus-within { border-color: var(--accent-500); box-shadow: var(--odak-halkasi); }
 .project-form-grid .project-date-field input[type="date"] { min-height: 0; flex: 1; padding: 0; border: 0; background: transparent; box-shadow: none; }
 
 /* Sıkı seçim kutusu (liste içi atama/rol seçimleri) */
 .compact-select {
-  min-height: 38px;
-  padding: 0 10px;
+  min-height: var(--kontrol-h-sik);
+  padding: 0 var(--kontrol-dolgu-sik);
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
+  border-radius: var(--kontrol-r);
   background: var(--surface-raised);
   color: var(--ink);
   font-size: var(--fs-sm);
   max-width: 100%;
 }
-.compact-select:focus { outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-500) 15%, transparent); }
+.compact-select:focus { outline: none; border-color: var(--accent-500); box-shadow: var(--odak-halkasi); }
 
 /* Server action sonuç mesajları (bkz. app/dashboard/action-form.tsx) */
 .action-form-fieldset { display: contents; min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -764,7 +783,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   font-size: var(--fs-sm);
   font-weight: 700;
 }
-.dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--kart-araligi); }
 /* Ana sayfada bölümler arası dikey ritim. Bu bölümlerin kendi üst boşluğu yoktu;
    kartlar birbirine yapışıp özet kartlarının üst çizgisi bir üstteki kartın
    içine girmiş gibi görünüyordu. Modül ızgarasıyla aynı 22px. Komşu kenar
@@ -892,7 +911,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   .guideline-review-form :is(input, select, textarea),
   .field-control,
   .compact-select { font-size: 16px; }
-  :is(.projects-primary-button, .projects-filter-button, .button-danger) { min-height: 44px; }
+  /* Dokunma hedefi HER denetimde aynı: eskiden yalnızca düğmeler 44'e
+     çıkıyor, yanlarındaki giriş ve seçiciler 42'de kalıyordu. */
+  :is(.projects-primary-button, .projects-filter-button, .button-danger, .button-success) { min-height: var(--kontrol-h-dokunma); }
+  .project-form-grid :is(input:not([type="checkbox"], [type="radio"], [type="hidden"]), select),
+  .guideline-review-form :is(input:not([type="checkbox"], [type="radio"]), select),
+  .field-control,
+  .project-date-field { min-height: var(--kontrol-h-dokunma); }
 }
 /* 760px: çekmece alt sayfaya (overlays.css) ve yazım araç çubuğu sarmaya
    (workspace.css) bu noktada geçiyor. Form ızgarası eskiden 720'de tek
@@ -1120,7 +1145,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
    ------------------------------------------------------------------ */
 .merkez-ust-eylemler { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.merkez-ozet { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 18px; }
+.merkez-ozet { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--kart-araligi); margin-top: 18px; }
 .merkez-kutu {
   display: grid; gap: 4px; padding: 14px 16px;
   border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-raised);
@@ -1150,7 +1175,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   color: var(--accent); font-size: var(--fs-body); text-decoration: none;
 }
 
-.merkez-baglantilar { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.merkez-baglantilar { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--kart-araligi); }
 .merkez-baglanti {
   display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px;
   border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-raised);

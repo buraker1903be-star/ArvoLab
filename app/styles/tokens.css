@@ -126,6 +126,25 @@
   --r-xl: 24px;
   --r-pill: 999px;
 
+  /* ---- Denetim ölçeği: düğme, giriş, seçici, tarih alanı ----
+     Hepsi TEK yükseklik ailesinden gelir. Ölçüldü (26.10.2026): aynı
+     satırda duran öğeler 36 / 38 / 40 / 42px'ti — yan yana gelen düğme
+     ile seçim kutusu her zaman 2px kaçıktı, kenarlıklar hizalanmıyordu.
+     Dokunmada 44px: iOS'un en küçük dokunma hedefi.
+     Odak halkası da üç ayrı değerdeydi (3px, 4px ve base.css'in kendi
+     anahattı); tek token oldu. */
+  --kontrol-h: 40px;
+  --kontrol-h-sik: 36px;
+  --kontrol-h-dokunma: 44px;
+  --kontrol-r: var(--r-sm);
+  --kontrol-dolgu: 14px;
+  --kontrol-dolgu-sik: 10px;
+  --odak-halkasi: 0 0 0 3px color-mix(in srgb, var(--accent-500) 20%, transparent);
+
+  /* Kart ızgaralarının arası dört ayrı değerdeydi (10 / 12 / 14px);
+     aynı ekranda farklı yoğunlukta görünüyorlardı. */
+  --kart-araligi: 12px;
+
   /* ---- Tipografi ----
      Apple cihazlarda sistemin SF Pro'su, diğerlerinde Inter (app/layout.tsx). */
   --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter, "Inter"),
