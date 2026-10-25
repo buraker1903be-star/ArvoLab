@@ -931,13 +931,53 @@ export default function DataAnalyzer({
             ? "şüpheli"
             : "düşük";
         setResult(
-          <p>
-            <strong>
-              Cronbach&apos;s α = {yazSayi(r.alpha, 3)} ({r.k} madde, N = {r.n}) — güvenilirlik düzeyi:{" "}
-              {level}
-            </strong>
-            {elemeNotu(veri) ? <span className="muted text-sm"> · {elemeNotu(veri)}</span> : null}
-          </p>
+          <div>
+            <p>
+              <strong>
+                Cronbach&apos;s α = {yazSayi(r.alpha, 3)} ({r.k} madde, N = {r.n}) — güvenilirlik düzeyi:{" "}
+                {level}
+              </strong>
+              {elemeNotu(veri) ? <span className="muted text-sm"> · {elemeNotu(veri)}</span> : null}
+            </p>
+            {/*
+              MADDE İSTATİSTİKLERİ. Tek bir alfa sayısı "ölçek güvenilir mi"
+              sorusunu yanıtlıyor ama "hangi madde bozuyor" sorusunu değil;
+              alfa düşük çıktığında öğrencinin elinde atılacak maddeyi
+              gösteren hiçbir şey yoktu.
+            */}
+            <div className="table-scroll" role="region" aria-label="Madde istatistikleri" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    <th>Madde</th>
+                    <th>Düzeltilmiş madde-toplam r</th>
+                    <th>Madde silinirse α</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.maddeler.map((madde) => {
+                    /* Eşik 0,30: bu değerin altındaki madde ölçeğin ölçtüğü
+                       şeyi ölçmüyor sayılır. Negatifse madde büyük olasılıkla
+                       ters kodlanmış ve çevrilmemiştir. */
+                    const zayif = Number.isFinite(madde.duzeltilmisKorelasyon) && madde.duzeltilmisKorelasyon < 0.3;
+                    return (
+                      <tr key={madde.sira}>
+                        <td>{reliabilityItems[madde.sira]}</td>
+                        <td className={zayif ? "tone-text" : undefined} data-tone={zayif ? "warning" : undefined}>
+                          {Number.isFinite(madde.duzeltilmisKorelasyon) ? yazSayi(madde.duzeltilmisKorelasyon, 3) : "—"}
+                        </td>
+                        <td>{Number.isFinite(madde.alphaSilinirse) ? yazSayi(madde.alphaSilinirse, 3) : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="muted text-sm">
+              Düzeltilmiş madde-toplam korelasyonu maddeyi DİĞER maddelerin toplamıyla karşılaştırır.
+              0,30&apos;un altı maddenin ölçekle örtüşmediğine, negatif değer ters kodlanmış olabileceğine işaret eder.
+            </p>
+          </div>
         );
       }
     } catch (err) {

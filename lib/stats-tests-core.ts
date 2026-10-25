@@ -289,23 +289,75 @@ export function correlationMatrix(
   return results;
 }
 
+export interface MaddeIstatistigi {
+  /** Maddenin sıra numarası (0 tabanlı); adı çağıran tarafta. */
+  sira: number;
+  /** Düzeltilmiş madde-toplam korelasyonu: madde ile DİĞER maddelerin toplamı. */
+  duzeltilmisKorelasyon: number;
+  /** Bu madde atılırsa alfa ne olur (k < 3 ise NaN: iki maddeden biri atılınca alfa tanımsız). */
+  alphaSilinirse: number;
+}
+
 export interface CronbachAlphaResult {
   alpha: number;
   k: number;
   n: number;
+  maddeler: MaddeIstatistigi[];
 }
 
+/** Alfanın çekirdeği: ham değer, madde istatistikleri olmadan (kendini çağırmak için). */
+function alfaDegeri(items: number[][]): number {
+  const k = items.length;
+  if (k < 2) return NaN;
+  const n = items[0].length;
+  const toplamlar: number[] = [];
+  for (let i = 0; i < n; i++) toplamlar.push(items.reduce((s, item) => s + item[i], 0));
+  const toplamVaryans = variance(toplamlar);
+  if (toplamVaryans === 0) return NaN;
+  const maddeVaryanslari = items.reduce((a, item) => a + variance(item), 0);
+  return (k / (k - 1)) * (1 - maddeVaryanslari / toplamVaryans);
+}
+
+/*
+  CRONBACH ALFA + MADDE İSTATİSTİKLERİ.
+
+  Tek bir alfa sayısı tezde yetmiyor: jüri "hangi madde ölçeği bozuyor"
+  diye soruyor ve SPSS'in bastığı iki sütun isteniyor — düzeltilmiş
+  madde-toplam korelasyonu ve "madde silinirse alfa". Düşük alfanın
+  sebebini ancak bunlar gösteriyor; alfa 0,62 çıktığında öğrencinin
+  elinde atılacak maddeyi gösteren hiçbir şey yoktu.
+
+  Korelasyon DÜZELTİLMİŞ: madde kendi toplamıyla değil, DİĞER
+  maddelerin toplamıyla karşılaştırılıyor. Düzeltilmemiş hâli maddeyi
+  kendisiyle de ilişkilendirdiği için her maddeyi olduğundan tutarlı
+  gösterir ve bozuk maddeyi gizler.
+
+  Maddelerin uzunlukları EŞİT olmalı; çağıran satırları eşleştirerek
+  veriyor (lib/veri-eslestirme.ts). Eşit değilse hesap sessizce NaN
+  üretirdi, bu yüzden burada açıkça reddediliyor.
+*/
 export function cronbachAlpha(items: number[][]): CronbachAlphaResult {
   const k = items.length;
-  const itemVariances = items.map((item) => variance(item));
-  const n = items[0].length;
-  const totalScores: number[] = [];
-  for (let i = 0; i < n; i++) {
-    totalScores.push(items.reduce((s, item) => s + item[i], 0));
+  const n = items[0]?.length ?? 0;
+  if (items.some((item) => item.length !== n)) {
+    throw new Error("Cronbach alfa: bütün maddeler aynı sayıda gözlem taşımalı.");
   }
-  const totalVar = variance(totalScores);
-  const alpha = (k / (k - 1)) * (1 - itemVariances.reduce((a, b) => a + b, 0) / totalVar);
-  return { alpha, k, n };
+  const alpha = alfaDegeri(items);
+
+  const maddeler: MaddeIstatistigi[] = items.map((madde, sira) => {
+    const digerleri = items.filter((_, i) => i !== sira);
+    const digerToplam = Array.from({ length: n }, (_, satir) =>
+      digerleri.reduce((s, item) => s + item[satir], 0)
+    );
+    return {
+      sira,
+      duzeltilmisKorelasyon: pearsonCorrelation(madde, digerToplam).r,
+      // İki maddeli ölçekte bir madde atılınca geriye tek madde kalıyor: alfa tanımsız.
+      alphaSilinirse: k >= 3 ? alfaDegeri(digerleri) : NaN,
+    };
+  });
+
+  return { alpha, k, n, maddeler };
 }
 
 /*

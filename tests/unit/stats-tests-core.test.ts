@@ -126,6 +126,83 @@ describe("Cronbach alfa", () => {
     ]);
     assert.equal(r.k, 3);
     assert.ok(r.alpha <= 1, `alfa 1'i aştı: ${r.alpha}`);
+    // Elde hesaplandı ve ikinci bir yoldan (ortalama madde-içi kovaryans
+    // formülü) doğrulandı: iki yol da 0,809524 veriyor.
+    assert.ok(Math.abs(r.alpha - 0.809524) < 1e-6, String(r.alpha));
+  });
+
+  test("madde istatistikleri elde hesaplananla birebir", () => {
+    /*
+      SPSS'in bastığı iki sütun. Tek bir alfa sayısı tezde yetmiyor:
+      alfa düşük çıktığında hangi maddenin ölçeği bozduğunu ancak
+      bunlar gösteriyor.
+    */
+    const r = cronbachAlpha([
+      [4, 5, 3, 4, 5],
+      [4, 4, 3, 5, 5],
+      [5, 5, 2, 4, 4],
+    ]);
+    const beklenen = [
+      { duzeltilmisKorelasyon: 0.801784, alphaSilinirse: 0.625 },
+      { duzeltilmisKorelasyon: 0.590301, alphaSilinirse: 0.810811 },
+      { duzeltilmisKorelasyon: 0.672977, alphaSilinirse: 0.782609 },
+    ];
+    r.maddeler.forEach((madde, i) => {
+      assert.equal(madde.sira, i);
+      assert.ok(Math.abs(madde.duzeltilmisKorelasyon - beklenen[i].duzeltilmisKorelasyon) < 1e-6, String(madde.duzeltilmisKorelasyon));
+      assert.ok(Math.abs(madde.alphaSilinirse - beklenen[i].alphaSilinirse) < 1e-6, String(madde.alphaSilinirse));
+    });
+    // 2. madde atılınca alfa YÜKSELİYOR (0,810 > 0,809): ölçeğe en az katan madde o.
+    assert.ok(r.maddeler[1].alphaSilinirse > r.alpha);
+  });
+
+  test("korelasyon DÜZELTİLMİŞ: madde kendi toplamına katılmıyor", () => {
+    /*
+      Düzeltilmemiş hâlinde madde kendisiyle de ilişkilendirilir ve her
+      madde olduğundan tutarlı görünür — tam da gizlenmemesi gereken
+      bozuk madde gizlenir. Burada 4. madde ters yönlü (ters kodlanmış
+      ve çevrilmemiş bir madde): düzeltilmiş korelasyonu NEGATİF çıkmalı.
+
+      Üç maddeyle yazmak işe yaramıyor: ters madde diğer ikisini tam
+      dengelediğinde "diğerlerinin toplamı" SABİT oluyor ve korelasyon
+      tanımsız kalıyor. Dördüncü madde bu dejenere durumu kaldırıyor.
+    */
+    const r = cronbachAlpha([
+      [1, 2, 3, 4, 5],
+      [2, 2, 3, 4, 5],
+      [1, 3, 3, 4, 5],
+      [5, 4, 3, 2, 1],
+    ]);
+    assert.ok(Math.abs(r.maddeler[3].duzeltilmisKorelasyon - -0.9979) < 1e-3, String(r.maddeler[3].duzeltilmisKorelasyon));
+    assert.ok(Math.abs(r.maddeler[0].duzeltilmisKorelasyon - 0.9707) < 1e-3, String(r.maddeler[0].duzeltilmisKorelasyon));
+  });
+
+  test("diğer maddelerin toplamı sabitse korelasyon sayı uydurmuyor", () => {
+    // Ters madde diğerini tam dengeliyor: toplam her satırda 6. Bölen sıfır.
+    const r = cronbachAlpha([
+      [1, 2, 3, 4, 5],
+      [1, 2, 3, 4, 5],
+      [5, 4, 3, 2, 1],
+    ]);
+    assert.equal(Number.isFinite(r.maddeler[0].duzeltilmisKorelasyon), false);
+  });
+
+  test("iki maddede \"silinirse\" hesaplanamıyor", () => {
+    // Geriye tek madde kalıyor, alfa tanımsız. Sayı üretmek uydurma olurdu.
+    const r = cronbachAlpha([[1, 2, 3, 4], [2, 3, 4, 6]]);
+    assert.equal(Number.isNaN(r.maddeler[0].alphaSilinirse), true);
+    assert.equal(Number.isFinite(r.alpha), true);
+  });
+
+  test("tek madde ve eşit olmayan uzunluk reddediliyor", () => {
+    assert.equal(Number.isFinite(cronbachAlpha([[1, 2, 3]]).alpha), false);
+    /*
+      Eskiden farklı uzunluktaki maddeler sessizce NaN üretiyordu:
+      items[0].length kadar dönülüyor, kısa maddede item[i] undefined
+      geliyordu. Eksik veri artık çağıranda eleniyor
+      (lib/veri-eslestirme.ts); yine de burada açıkça reddediliyor.
+    */
+    assert.throws(() => cronbachAlpha([[1, 2, 3], [1, 2]]), /aynı sayıda gözlem/);
   });
 });
 
