@@ -28,6 +28,7 @@
   Saf modül; testi tests/unit/ai-kaynakca-denetimi.test.ts.
 */
 
+import { stilTanimi } from "@/lib/atif/stiller";
 import { baglamKur, type BaglamParca } from "./baglam";
 import { YANIT_BICIMI } from "./bulgu";
 import type { Mesaj } from "./saglayici";
@@ -54,6 +55,9 @@ export type KaynakcaGirdisi = {
   kullanilmayanKaynaklar?: string[];
   /** Metindeki bütün atıflar; eşleştirme bunlarsız yapılamaz. */
   atiflar?: string[];
+  /* Çalışmanın atıf sistemi (thesis_guidelines.citation_style).
+     Bilinmiyorsa model belirli bir sistemin kuralını varsaymıyor. */
+  atifStili?: string | null;
 };
 
 export const BAGLAM_BUTCESI = 9000;
@@ -65,12 +69,42 @@ const DURUM_ETIKETI: Record<KaynakDurumu, string> = {
   insufficient_data: "ayrıştırılamadı (veri yetersiz)",
 };
 
-export const SISTEM_ISTEMI = `Sen APA 7 kaynakça denetçisisin. Sana bir araştırmacının kaynakça listesi, her kaydın dizin (Crossref/OpenAlex) sonucu ve metin içi atıf tutarsızlıkları verilecek.
+/*
+  SİSTEM İSTEMİ ATIF SİSTEMİNİ ADIYLA SÖYLER (25.10.2026).
+
+  Önceden sabitti: "Sen APA 7 kaynakça denetçisisin" ve "APA 7 biçim
+  hatalarını grupla". Oysa atıf sistemi kılavuzdan geliyor ve beş
+  seçenek var (lib/atif/stiller). Kılavuzu IEEE diyen öğrencinin
+  kaynakçası APA kurallarına göre denetleniyor, üstelik asistan
+  "APA 7 biçim hatası" diye bulgu yazıyordu — onun kılavuzunda
+  hata olmayan bir şey için.
+
+  Çalışma bağlamında stil zaten yazılıydı ama sistem istemi modelin
+  KİMLİĞİNİ belirliyor ve bağlamdaki bir not onu ezmiyor.
+
+  STİL BİLİNMİYORSA ADI HİÇ GEÇMİYOR ve modele açıkça "bir sistem
+  varsayma" deniyor: yanlış sistemle denetlemek, denetlememekten
+  kötüdür.
+*/
+export function sistemIstemi(stil?: string | null): string {
+  const tanim = stil ? stilTanimi(stil) : null;
+  const kimlik = tanim
+    ? `Sen ${tanim.ad} kaynakça denetçisisin.`
+    : "Sen akademik kaynakça denetçisisin. Çalışmanın atıf sistemi BİLİNMİYOR: " +
+      "belirli bir sistemin kuralını varsayma, yalnızca sistemden bağımsız " +
+      "tutarsızlıkları (eksik alan, çelişen yıl, karşılıksız atıf) bildir.";
+  const bicimKurali = tanim
+    ? `- ${tanim.ad} biçim hatalarını grupla:`
+    : "- Biçim hatalarını grupla:";
+  return KAYNAKCA_ISTEMI_GOVDESI.replace("{{KIMLIK}}", kimlik).replace("{{BICIM_KURALI}}", bicimKurali);
+}
+
+const KAYNAKCA_ISTEMI_GOVDESI = `{{KIMLIK}} Sana bir araştırmacının kaynakça listesi, her kaydın dizin (Crossref/OpenAlex) sonucu ve metin içi atıf tutarsızlıkları verilecek.
 
 GÖREVİN: Listeyi denetlemek ve gerçekten sorun olanları önceliklendirmek.
 - "dizinde bulunamadı" tek başına hata değildir: Türkçe tezler, kurum raporları, kitap bölümleri ve yerel dergiler bu dizinlerde çoğu zaman yer almaz. Böyle kayıtlar için beklenen bir durum olduğunu söyle, şüpheyi gerçekten tuhaf olanlara sakla (ör. uluslararası bir dergi makalesi gibi görünüp bulunamayan kayıt).
 - "olası eşleşme" kayıtlarında kullanıcıyı neyin kontrol etmesi gerektiğini söyle (yıl, cilt, yazar sırası gibi ALANIN ADINI söyle, değerini yazma).
-- APA 7 biçim hatalarını grupla: aynı hata 10 kayıtta varsa tek bir bulgu yaz, kaç kayıtta olduğunu sayı olarak değil "birden çok kayıtta" diye belirt.
+{{BICIM_KURALI}} aynı hata 10 kayıtta varsa tek bir bulgu yaz, kaç kayıtta olduğunu sayı olarak değil "birden çok kayıtta" diye belirt.
 - Metinde geçip kaynakçada olmayan atıflar en ciddi sorundur; varsa ilk bulgu o olsun.
 
 ATIF–KAYNAKÇA UYUMU (bu denetimi mutlaka yap):
@@ -123,7 +157,7 @@ export function kaynakcaIstemi(girdi: KaynakcaGirdisi, butce = BAGLAM_BUTCESI) {
   ];
   const baglam = baglamKur(parcalar, butce);
   const mesajlar: Mesaj[] = [
-    { rol: "sistem", metin: SISTEM_ISTEMI },
+    { rol: "sistem", metin: sistemIstemi(girdi.atifStili) },
     { rol: "kullanici", metin: baglam.metin },
   ];
   return { mesajlar, kaynak: baglam.metin, kirpilanlar: baglam.kirpilanlar };

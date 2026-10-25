@@ -74,6 +74,9 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
 
   const { mesajlar, kaynak, kirpilanlar } = kaynakcaIstemi({
     calisma: calisma?.metin,
+    /* Sistem istemi stili ADIYLA söylüyor; bağlam metnindeki satır
+       modelin kimliğini ezmiyordu (lib/ai/kaynakca-denetimi). */
+    atifStili: calisma?.atifStili ?? null,
     kaynaklar,
     eksikKaynaklar: liste(girdi.eksikKaynaklar, EN_FAZLA_LISTE, 300),
     kullanilmayanKaynaklar: liste(girdi.kullanilmayanKaynaklar, EN_FAZLA_LISTE, EN_UZUN_KAYNAK),

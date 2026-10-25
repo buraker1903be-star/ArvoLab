@@ -18,6 +18,8 @@ import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 export type CalismaBaglami = {
   id: string;
   metin: string;
+  /** Çalışmanın atıf sistemi; sistem istemine giriyor. */
+  atifStili: string | null;
 };
 
 const YONTEM: Record<string, string> = {
@@ -71,5 +73,12 @@ export async function calismaBaglami(projectId?: string | null): Promise<Calisma
     return null;
   }
   if (!data) return null;
-  return { id: data.id, metin: calismaMetni(data as CalismaSatiri) };
+  /* Atıf stili AYRICA dönüyor: sistem istemi modelin kimliğini
+     belirliyor ve bağlam metnindeki bir satır onu ezmiyor
+     (lib/ai/kaynakca-denetimi'deki gerekçe). */
+  return {
+    id: data.id,
+    metin: calismaMetni(data as CalismaSatiri),
+    atifStili: (data as CalismaSatiri).citation_style ?? null,
+  };
 }

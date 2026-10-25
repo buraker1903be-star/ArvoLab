@@ -3,7 +3,9 @@
 
   Sınır (kullanıcının koyduğu kural): asistan yazmaz, denetler ve düzeltme
   önerir. Yani "Tartışma bölümünüz şöyle olmalı" diye paragraf üretmez;
-  "etki büyüklüğü raporlanmamış, APA 7 bunu zorunlu tutar" der. Yorum,
+  "etki büyüklüğü raporlanmamış" der ve bunu istatistiksel gerekçesiyle
+  açıklar — hangi kılavuzun zorunlu tuttuğunu VARSAYMADAN, çünkü
+  raporlama biçimi üniversiteden üniversiteye değişiyor. Yorum,
   bulgunun ne anlama geldiği değil, nasıl raporlandığı ve neyin eksik
   olduğu üzerinedir.
 
@@ -29,7 +31,7 @@ export type YorumGirdisi = {
   calisma?: string;
   /** Kullanıcının yapıştırdığı ham çıktı (SPSS, R, Jamovi…). */
   istatistikMetni: string;
-  /** detectStatistics'in ürettiği APA satırları: doğrulanmış sayı kaynağı. */
+  /** detectStatistics'in ürettiği satırlar: doğrulanmış sayı kaynağı. */
   apaSatirlari?: string[];
   arastirmaSorusu?: string;
   orneklem?: string;
@@ -41,7 +43,7 @@ export const BAGLAM_BUTCESI = 9000;
 export const SISTEM_ISTEMI = `Sen akademik bir istatistik denetçisisin. Sana bir araştırmacının analiz çıktısı ve çalışmasının kısa bağlamı verilecek.
 
 GÖREVİN: Raporlamayı denetlemek ve eksikleri göstermek. Bakacağın tipik noktalar:
-- Etki büyüklüğü raporlanmış mı (Cohen's d, η², r); APA 7 bunu zorunlu tutar.
+- Etki büyüklüğü raporlanmış mı (Cohen's d, η², r)? p "fark var mı"yı söyler, "fark ne kadar"ı söylemez; büyük örneklemde önemsiz bir fark bile anlamlı çıkar. Hangi kılavuzun istediğini VARSAYMA, eksikliği istatistiksel gerekçesiyle söyle.
 - Serbestlik derecesi, örneklem büyüklüğü ve test adı eksiksiz mi.
 - p değeri biçimi doğru mu (p < .001, baştaki sıfır yok).
 - Anlamlılık eşiğe çok yakınsa ya da örneklem küçükse bulgunun kırılganlığı.
@@ -62,7 +64,7 @@ export function analizIstemi(girdi: YorumGirdisi, butce = BAGLAM_BUTCESI) {
   const parcalar: BaglamParca[] = [
     { baslik: "Çalışma", metin: girdi.calisma ?? "", oncelik: 1 },
     { baslik: "Analiz çıktısı", metin: girdi.istatistikMetni, oncelik: 1 },
-    { baslik: "Tespit edilen istatistikler (APA 7)", metin: (girdi.apaSatirlari ?? []).join("\n"), oncelik: 1 },
+    { baslik: "Tespit edilen istatistikler", metin: (girdi.apaSatirlari ?? []).join("\n"), oncelik: 1 },
     { baslik: "Araştırma sorusu", metin: girdi.arastirmaSorusu ?? "", oncelik: 2 },
     { baslik: "Örneklem", metin: girdi.orneklem ?? "", oncelik: 2 },
     { baslik: "Yöntem notu", metin: girdi.yontem ?? "", oncelik: 3 },

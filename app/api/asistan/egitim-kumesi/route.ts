@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 import { SISTEM_ISTEMI as ANALIZ_ISTEMI } from "@/lib/ai/analiz-yorumu";
-import { SISTEM_ISTEMI as KAYNAKCA_ISTEMI } from "@/lib/ai/kaynakca-denetimi";
+import { sistemIstemi as kaynakcaIstemiMetni } from "@/lib/ai/kaynakca-denetimi";
 import { SISTEM_ISTEMI as LITERATUR_ISTEMI } from "@/lib/ai/literatur-taramasi";
 import { SYSTEM_PROMPT as BELGE_ISTEMI } from "@/lib/ai-feedback";
 
@@ -54,7 +54,7 @@ const GUN = /^\d{4}-\d{2}-\d{2}$/;
 */
 const ISTEMLER: Record<string, string> = {
   analiz: ANALIZ_ISTEMI,
-  kaynakca: KAYNAKCA_ISTEMI,
+  kaynakca: kaynakcaIstemiMetni(null),
   literatur: LITERATUR_ISTEMI,
   belge: BELGE_ISTEMI,
 };

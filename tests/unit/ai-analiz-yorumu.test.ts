@@ -1,5 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { sistemIstemi } from "@/lib/ai/kaynakca-denetimi";
+import { SISTEM_ISTEMI as ANALIZ_ISTEMI } from "@/lib/ai/analiz-yorumu";
 import { analizIstemi, bulgulariCozumle, bulgulariDogrula } from "../../lib/ai/analiz-yorumu";
 import { jsonOku } from "../../lib/ai/bulgu";
 import { saglayiciHatasi } from "../../lib/ai/saglayici";
@@ -114,5 +116,59 @@ describe("kesik yanıt kurtarma", () => {
 
   test("hiç tam nesne yoksa boş döner", () => {
     assert.deepEqual(bulgulariCozumle('{"bulgular":[{"tur":"uyari","baslik":"Yarım'), []);
+  });
+});
+
+/*
+  SİSTEM İSTEMİ ATIF SİSTEMİNİ ADIYLA SÖYLER (25.10.2026).
+
+  Önceden sabitti: "Sen APA 7 kaynakça denetçisisin". Atıf sistemi
+  kılavuzdan geliyor ve beş seçenek var; kılavuzu IEEE diyen
+  öğrencinin kaynakçası APA kurallarına göre denetleniyor ve
+  asistan onun kılavuzunda hata olmayan bir şey için "APA 7 biçim
+  hatası" yazıyordu.
+
+  Çalışma bağlamında stil zaten yazılıydı ama sistem istemi modelin
+  KİMLİĞİNİ belirliyor; bağlamdaki bir not onu ezmiyor.
+*/
+describe("kaynakça denetçisinin kimliği", () => {
+  test("stil verilince adıyla geçiyor", () => {
+    assert.match(sistemIstemi("ieee"), /Sen IEEE kaynakça denetçisisin/);
+    assert.match(sistemIstemi("ieee"), /IEEE biçim hatalarını grupla/);
+    assert.doesNotMatch(sistemIstemi("ieee"), /APA/);
+  });
+
+  test("her stil kendi adını alıyor", () => {
+    for (const [stil, ad] of [["apa7", "APA 7"], ["mla", "MLA 9"], ["vancouver", "Vancouver"]] as const) {
+      assert.ok(sistemIstemi(stil).includes(`Sen ${ad} kaynakça denetçisisin`), stil);
+    }
+  });
+
+  test("STİL BİLİNMİYORSA sistem adı HİÇ geçmiyor", () => {
+    /* Yanlış sistemle denetlemek, denetlememekten kötüdür: modele
+       açıkça "bir sistem varsayma" deniyor. */
+    const istem = sistemIstemi(null);
+    assert.doesNotMatch(istem, /APA 7 kaynakça denetçisisin/);
+    assert.match(istem, /atıf sistemi BİLİNMİYOR/);
+    assert.match(istem, /varsayma/);
+  });
+
+  test("ortak kurallar her stilde duruyor", () => {
+    /* Kimlik değişiyor, denetimin kendisi değişmiyor: düzeltilmiş
+       künye yazmama ve sayı uydurmama kuralları her stilde geçerli. */
+    for (const stil of ["apa7", "ieee", null]) {
+      const istem = sistemIstemi(stil);
+      assert.match(istem, /Düzeltilmiş kaynakça satırı YAZMA/);
+      assert.match(istem, /UYDURMA/);
+    }
+  });
+});
+
+describe("analiz yorumu kılavuz varsaymıyor", () => {
+  test('istem "APA zorunlu tutar" DEMİYOR', () => {
+    /* Raporlama biçimi üniversiteden üniversiteye değişiyor;
+       eksiklik istatistiksel gerekçesiyle söylenmeli. */
+    assert.doesNotMatch(ANALIZ_ISTEMI, /APA 7 bunu zorunlu tutar/);
+    assert.match(ANALIZ_ISTEMI, /Hangi kılavuzun istediğini VARSAYMA/);
   });
 });
