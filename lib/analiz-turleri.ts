@@ -29,6 +29,12 @@ export const ANALIZ_ETIKETLERI = {
      yoktu; korelasyon ilişkinin gücünü söyler, "X bir birim artınca
      Y ne kadar artar" sorusunu yanıtlamaz. */
   regression: "Doğrusal Regresyon",
+  /*
+    İki yönlü ANOVA (26.10.2026): "cinsiyet VE sınıf düzeyine göre fark
+    var mı" sorusu iki ayrı tek yönlü ANOVA'yla yanıtlanamıyor — iki
+    ayrı test ETKİLEŞİMİ göremez ve asıl bulgu çoğu zaman odur.
+  */
+  ikiyonluanova: "İki Yönlü ANOVA",
 } as const;
 
 export type AnalizTuru = keyof typeof ANALIZ_ETIKETLERI;

@@ -28,6 +28,7 @@ import { ANALIZ_ETIKETLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { elemeNotu, eslesenSatirlar, sayisalSutun } from "@/lib/veri-eslestirme";
+import { ikiYonluAnova, type IkiYonluHata } from "@/lib/stats-iki-yonlu-anova";
 
 type CellValue = string | number | null;
 type DataRow = Record<string, CellValue>;
@@ -42,6 +43,15 @@ interface ParsedDataset {
 /* Etiketler geçmiş listesinde de kullanılıyor; tek yerde (lib/analiz-turleri.ts). */
 type AnalysisType = AnalizTuru;
 const ANALYSIS_LABELS = ANALIZ_ETIKETLERI;
+
+/* Hesaplanamama sebepleri kullanıcı diline çevriliyor; sayı uydurulmuyor. */
+const IKI_YONLU_HATA: Record<IkiYonluHata, string> = {
+  "az-duzey": "İki yönlü ANOVA için her iki faktörde de en az 2 kategori olmalıdır.",
+  "bos-hucre":
+    "Faktörlerin bazı kesişimlerinde hiç gözlem yok. Etkileşim o hücrede tanımsız olduğu için analiz yapılamaz; kategorileri birleştirin ya da veriyi tamamlayın.",
+  "az-gozlem": "Hücre başına yeterli gözlem yok: hata serbestlik derecesi kalmıyor.",
+  tekil: "Model çözülemedi; faktör düzeyleri birbirini tam olarak belirliyor olabilir.",
+};
 
 function isNumericValue(v: CellValue): boolean {
   if (v === null || v === "") return false;
@@ -104,6 +114,8 @@ export default function DataAnalyzer({
   const [varA, setVarA] = useState("");
   const [varB, setVarB] = useState("");
   const [groupVar, setGroupVar] = useState("");
+  /* İki yönlü ANOVAnun ikinci faktörü. */
+  const [groupVar2, setGroupVar2] = useState("");
   const [reliabilityItems, setReliabilityItems] = useState<string[]>([]);
   /* Regresyonun yordayıcıları; bağımlı değişken varA. */
   const [yordayicilar, setYordayicilar] = useState<string[]>([]);
@@ -1025,6 +1037,126 @@ export default function DataAnalyzer({
         );
       }
 
+      if (analysisType === "ikiyonluanova") {
+        if (!dataset) return;
+        if (!groupVar2 || groupVar2 === groupVar) {
+          setResultError("İki yönlü ANOVA için birbirinden farklı iki kategorik faktör seçin.");
+          return;
+        }
+        /*
+          Satır hizası burada da şart: üç sütunun (iki faktör + ölçüm)
+          HEPSİ dolu olan satırlar alınıyor. Faktörler kategorik olduğu
+          için eslesenSutunlar kullanılamıyor (o sayısal sütunlar için).
+        */
+        const gozlemler: { a: string; b: string; deger: number }[] = [];
+        let dusen = 0;
+        for (const satir of dataset.rows) {
+          const fa = satir[groupVar];
+          const fb = satir[groupVar2];
+          const deger = satir[varA];
+          if (fa === null || fa === "" || fb === null || fb === "" || !isNumericValue(deger)) {
+            dusen += 1;
+            continue;
+          }
+          gozlemler.push({ a: String(fa), b: String(fb), deger: Number(deger) });
+        }
+
+        const r = ikiYonluAnova(gozlemler, groupVar, groupVar2);
+        if (typeof r === "string") {
+          setResultError(IKI_YONLU_HATA[r]);
+          return;
+        }
+        if (!hesaplanabilir(r.faktorA.f, r.faktorA.p)) return setResultError(DEGISKENLIK_YOK);
+
+        const satirlar = [r.faktorA, r.faktorB, r.etkilesim];
+        setResult(
+          <div>
+            <div className="table-scroll" role="region" aria-label="İki yönlü ANOVA tablosu" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    <th>Kaynak</th>
+                    <th>KT</th>
+                    <th>sd</th>
+                    <th>KO</th>
+                    <th>F</th>
+                    <th>p</th>
+                    <th>kısmi η²</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {satirlar.map((etki) => (
+                    <tr key={etki.ad}>
+                      <td>{etki.ad}</td>
+                      <td>{yazSayi(etki.ss)}</td>
+                      <td>{etki.df}</td>
+                      <td>{yazSayi(etki.ms)}</td>
+                      <td className={isSignificant(etki.p) ? "tone-text" : undefined} data-tone={isSignificant(etki.p) ? "success" : undefined}>
+                        {yazSayi(etki.f)}
+                      </td>
+                      <td>{yazP(etki.p)}</td>
+                      <td>{yazSayi(etki.kismiEtaKare)}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td>Hata</td>
+                    <td>{yazSayi(r.hata.ss)}</td>
+                    <td>{r.hata.df}</td>
+                    <td>{yazSayi(r.hata.ms)}</td>
+                    <td colSpan={3} />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            {/*
+              ETKİLEŞİM ÖNCE OKUNUR. Etkileşim anlamlıysa ana etkiler tek
+              başına yanıltıcıdır: "sınıf düzeyi fark yaratıyor" demek,
+              farkın kadınlarda ve erkeklerde AYNI olduğunu varsayar.
+            */}
+            <p className="tone-text" data-tone={isSignificant(r.etkilesim.p) ? "warning" : "success"}>
+              {isSignificant(r.etkilesim.p)
+                ? "Etkileşim anlamlı: bir faktörün etkisi, öteki faktörün düzeyine göre değişiyor. Ana etkileri tek başına yorumlamayın; aşağıdaki hücre ortalamalarına bakın."
+                : "Etkileşim anlamlı değil: ana etkiler tek başına yorumlanabilir."}
+            </p>
+            <div className="table-scroll mt-sm" role="region" aria-label="Hücre ortalamaları" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    <th>{groupVar} \ {groupVar2}</th>
+                    {r.duzeyB.map((b) => (
+                      <th key={b}>{b}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.duzeyA.map((a) => (
+                    <tr key={a}>
+                      <td>
+                        <strong>{a}</strong>
+                      </td>
+                      {r.duzeyB.map((b) => {
+                        const hucre = r.hucreler.find((h) => h.a === a && h.b === b);
+                        return (
+                          <td key={b}>
+                            {hucre ? `${yazSayi(hucre.ortalama)} (n=${hucre.n})` : "—"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="muted text-sm">
+              Kareler toplamı model karşılaştırmasıyla (III. tip) hesaplanır; hücreler eşit
+              büyüklükte olmadığında ders kitabının kapalı formülleri geçerli değildir.
+              {r.dengeli ? " Bu veride hücreler eşit büyüklükte." : " Bu veride hücreler eşit büyüklükte DEĞİL."}
+              {dusen > 0 ? ` ${dusen} satır eksik veri yüzünden analiz dışı bırakıldı.` : ""}
+            </p>
+          </div>
+        );
+      }
+
       if (analysisType === "reliability") {
         if (reliabilityItems.length < 2) {
           setResultError("Güvenilirlik analizi için en az 2 madde seçmelisiniz.");
@@ -1102,7 +1234,7 @@ export default function DataAnalyzer({
       setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, analysisType, varA, varB, groupVar, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi]);
+  }, [dataset, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi]);
 
   return (
     <section className="project-form-card">
@@ -1209,9 +1341,9 @@ export default function DataAnalyzer({
               </select>
             </label>
 
-            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "chisquare" || analysisType === "mannwhitney" || analysisType === "kruskalwallis") && (
+            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "chisquare" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "ikiyonluanova") && (
               <label>
-                <span>Grup değişkeni (kategorik)</span>
+                <span>{analysisType === "ikiyonluanova" ? "1. faktör (kategorik)" : "Grup değişkeni (kategorik)"}</span>
                 <select value={groupVar} onChange={(e) => setGroupVar(e.target.value)}>
                   {dataset.categoricalColumns.map((c) => (
                     <option key={c} value={c}>
@@ -1222,7 +1354,21 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "pairedttest" || analysisType === "regression" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman") && (
+            {analysisType === "ikiyonluanova" && (
+              <label>
+                <span>2. faktör (kategorik)</span>
+                <select value={groupVar2} onChange={(e) => setGroupVar2(e.target.value)}>
+                  <option value="">Seçin</option>
+                  {dataset.categoricalColumns.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "pairedttest" || analysisType === "regression" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman" || analysisType === "ikiyonluanova") && (
               <label>
                 <span>{analysisType === "correlation" || analysisType === "spearman" ? "Değişken 1" : analysisType === "pairedttest" ? "Önceki ölçüm" : analysisType === "regression" ? "Bağımlı değişken (Y)" : "Sayısal değişken"}</span>
                 <select value={varA} onChange={(e) => setVarA(e.target.value)}>

@@ -50,7 +50,7 @@ export interface RegresyonSonucu {
 }
 
 /** Gauss eliminasyonu + kısmi pivotlama ile matris tersi; tekilse null. */
-function tersAl(m: number[][]): number[][] | null {
+export function tersAl(m: number[][]): number[][] | null {
   const n = m.length;
   /* Genişletilmiş matris: [A | I] */
   const a = m.map((satir, i) => [...satir, ...Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))]);
@@ -171,4 +171,44 @@ export function dogrusalRegresyon(
     p: Number.isFinite(f) ? fTestP(f, k, dfw) : NaN,
     tekil: false,
   };
+}
+
+/*
+  Bir TASARIM MATRİSİ için artık kareler toplamı (SSE).
+
+  İki yönlü ANOVA, her etkinin kareler toplamını MODEL KARŞILAŞTIRMASIYLA
+  buluyor: terim modelden çıkarılınca SSE ne kadar büyüyor. O yüzden
+  "katsayılar" değil doğrudan SSE gerekiyor.
+
+  Matris tersi burada da tersAl ile alınıyor; ikinci bir Gauss
+  eliminasyonu yazmak, aynı hatayı iki yerde düzeltmek demekti.
+
+  `X` sabit terim sütununu KENDİSİ taşır (ilk sütun hep 1). Tekil
+  matriste null döner — çağıran "hesaplanamadı" demeli, sayı
+  uydurmamalı.
+*/
+export function artikKareToplami(y: number[], X: number[][]): number | null {
+  const n = y.length;
+  const p = X[0]?.length ?? 0;
+  if (n === 0 || p === 0) return null;
+
+  const xtx: number[][] = Array.from({ length: p }, () => Array(p).fill(0));
+  const xty: number[] = Array(p).fill(0);
+  for (let i = 0; i < n; i += 1) {
+    for (let j = 0; j < p; j += 1) {
+      xty[j] += X[i][j] * y[i];
+      for (let k = 0; k < p; k += 1) xtx[j][k] += X[i][j] * X[i][k];
+    }
+  }
+  const ters = tersAl(xtx);
+  if (!ters) return null;
+
+  const b = ters.map((satir) => satir.reduce((toplam, deger, j) => toplam + deger * xty[j], 0));
+  let sse = 0;
+  for (let i = 0; i < n; i += 1) {
+    let tahmin = 0;
+    for (let j = 0; j < p; j += 1) tahmin += X[i][j] * b[j];
+    sse += (y[i] - tahmin) ** 2;
+  }
+  return sse;
 }
