@@ -370,7 +370,7 @@ export default function ManuscriptEditor({
     }),
     [guideline]
   );
-  /* Üç yerde birden kullanılıyordu (canlı denetim, "Kontrol Et", yeniden
+  /* Üç yerde birden kullanılıyordu (canlı denetim, kılavuz ve kaynakça kontrolü, yeniden
      denetim) ve her eklenen kural üçünü birden değiştirmeyi gerektiriyordu;
      biri unutulunca canlı denetim ile sonuç ekranı farklı şey söylerdi. */
   const structureOptions = useMemo(
@@ -687,7 +687,7 @@ export default function ManuscriptEditor({
   }, [editor, headingNumbering]);
 
   // Canlı yapı denetimi: yazma durunca atıf–kaynakça, şekil/tablo, başlık ve boş bölüm
-  // sorunları kendiliğinden bulunur ve alt çubukta gösterilir ("Kontrol Et"e gerek kalmaz).
+  // sorunları kendiliğinden bulunur ve alt çubukta gösterilir (düğmeye basmaya gerek kalmaz).
   //
   // getJSON() zaten her çağrıda yeni bir düz nesne kuruyor; üstüne
   // JSON.parse(JSON.stringify(...)) eklemek 200 sayfalık bir tezde 18 ms
@@ -713,7 +713,7 @@ export default function ManuscriptEditor({
       /*
         Bayrak BURADA kuruluyor, denetimin kendisinde değil: denetim
         açılışta ve bekleyen zamanlayıcıyla da çalışıyor. Orada kursaydık,
-        kullanıcı yazıp hemen "Kontrol Et"e bastığında bekleyen denetim
+        kullanıcı yazıp hemen kontrol düğmesine bastığında bekleyen denetim
         kontrolden sonra ateşlenir ve taze sonucu "eski" diye damgalardı —
         düzeltmeye çalıştığımız yanlış alarmın aynısı. onUpdate ise tam
         olarak belge değiştiğinde çalışır.
@@ -1094,7 +1094,7 @@ export default function ManuscriptEditor({
 
   const handleJump = (heading: OutlineHeading) => jumpToHeading(editor, heading);
 
-  // Yapı denetimi listesi: canlı gösterge penceresi ve "Kontrol Et" sonucu aynı listeyi kullanır.
+  // Yapı denetimi listesi: canlı gösterge penceresi ve kontrol sonucu aynı listeyi kullanır.
   const recheckStructure = () => {
     const issues = checkStructure(editor.getJSON(), structureOptions);
     setLiveIssues(issues);
@@ -1849,7 +1849,7 @@ export default function ManuscriptEditor({
           </span>
           {/*
             Sayfa hedefi: kılavuzun alt/üst sınırına ne kadar kaldığı yalnızca
-            "Kontrol Et" sonrasında görünüyordu; yazarken hedefin neresinde
+            kontrol sonrasında görünüyordu; yazarken hedefin neresinde
             olduğu belli değildi. Çubuk alt sınıra göre dolar, sınır aşılınca
             uyarı tonuna geçer.
           */}
@@ -1896,9 +1896,23 @@ export default function ManuscriptEditor({
             <ClipboardCheck size={15} aria-hidden="true" />
             Teslim kontrolü {checklist.done}/{checklist.total}
           </button>
-          <button type="button" className="projects-primary-button" onClick={handleCheck} disabled={checking}>
+          {/*
+            Adı NE DENETLEDİĞİNİ söylüyor. Alt çubukta üç ayrı "kontrol"
+            vardı ve en kapsamlısının adı en belirsiziydi: soldaki rozet
+            yalnızca YAPIYI denetliyor (canlı), "Teslim kontrolü" bir
+            kontrol listesi, bu düğme ise kılavuz uyumunu ve kaynakça
+            çapraz denetimini çalıştırıyor. Üçü de "kontrol" deyince
+            öğrenci hangisinin neye baktığını ayırt edemiyordu.
+          */}
+          <button
+            type="button"
+            className="projects-primary-button"
+            onClick={handleCheck}
+            disabled={checking}
+            title="Kılavuzun zorunlu bölümleri, atıf stili ve kaynakça–atıf eşleşmesi"
+          >
             <ShieldCheck size={15} />
-            {checking ? "Kontrol ediliyor..." : "Kontrol Et"}
+            {checking ? "Kontrol ediliyor..." : "Kılavuz ve kaynakça kontrolü"}
           </button>
           <button type="button" className="projects-filter-button" onClick={handleExport} disabled={exporting}>
             <FileDown size={15} />
@@ -1942,11 +1956,11 @@ export default function ManuscriptEditor({
 
       {checkResult && (
         <div className="project-form-card mt-md">
-          <h3 className="result-heading-lg">Kontrol Sonucu</h3>
+          <h3 className="result-heading-lg">Kılavuz ve kaynakça kontrolü</h3>
           {checkResultEski && (
             <p className="tone-text" data-tone="warning">
               Bu sonuç metnin önceki hâline ait; sonrasında değişiklik yaptınız.
-              Güncel durum için “Kontrol Et” düğmesine yeniden basın.
+              Güncel durum için “Kılavuz ve kaynakça kontrolü” düğmesine yeniden basın.
             </p>
           )}
 

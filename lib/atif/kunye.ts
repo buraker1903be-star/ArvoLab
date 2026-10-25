@@ -246,7 +246,7 @@ export function kunyeleriAyristir(kunyeler: string[], stilDegeri: string | null 
  * bir-iki satır sonu ayırır, 10 karakterden kısa satır künye sayılmaz).
  *
  * Burada duruyor çünkü iki ekran birden kullanıyor: Atıf Kontrolü ve
- * editördeki "Kontrol Et". Eylem dosyasında ("use server") kalsaydı
+ * editördeki kılavuz ve kaynakça kontrolü. Eylem dosyasında ("use server") kalsaydı
  * dışarıdan çağrılabilen bir uç noktaya dönüşürdü.
  */
 export function kunyeleriBol(ham: string): string[] {
