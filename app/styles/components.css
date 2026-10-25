@@ -1623,3 +1623,36 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .birim-karo-durum { display: inline-flex; margin-bottom: 4px; color: var(--dim); }
 .birim-karo[data-tamam="true"] .birim-karo-durum { color: var(--accent); }
 .birim-karo[data-tamam="true"] { border-color: color-mix(in srgb, var(--accent-bright) 30%, var(--line-soft)); }
+
+/* ---------- Sıradaki tek iş (ana sayfa, öğrenci) ---------- */
+/*
+  Şerit "neredesin"i söylüyordu, bu satır "şimdi ne"yi söylüyor.
+  Öğrenci dört birim ve üç eksik görüyordu; hepsi doğru ama hiçbiri
+  "önce hangisi" demiyordu — yeni başlayan biri için yedi doğru
+  seçenek, sıfır seçenekten daha iyi değil.
+*/
+.sirada {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px;
+  padding: var(--kart-dolgu);
+  margin-bottom: var(--kart-araligi);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--kart-r);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.sirada-etiket {
+  flex: none; color: var(--accent);
+  font-size: var(--fs-micro); font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+}
+.sirada-govde { flex: 1 1 280px; min-width: 0; display: grid; gap: 2px; }
+.sirada-govde b { color: var(--ink); font-size: var(--fs-md); font-weight: 650; }
+.sirada-govde span { color: var(--muted); font-size: var(--fs-base); line-height: var(--lh-metin); }
+/* Aciliyet yalnızca RENKLE söylenmiyor: tarih rozeti zaten metinle
+   ("3 gün kaldı") yanında duruyor. */
+.sirada[data-aciliyet="yaklasiyor"] { border-left-color: var(--warning); }
+.sirada[data-aciliyet="yaklasiyor"] .sirada-etiket { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.sirada[data-aciliyet="acil"] { border-left-color: var(--danger); }
+.sirada[data-aciliyet="acil"] .sirada-etiket { color: var(--danger); }
+.sirada[data-bitti] { border-left-color: var(--success); }
+.sirada[data-bitti] .sirada-etiket { color: var(--success); }

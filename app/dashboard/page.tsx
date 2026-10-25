@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { siradakiAdimlar } from "@/lib/calisma-ozeti";
+import { siradakiIs } from "@/lib/siradaki-is";
 import { getProjects } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole, STAFF_ROLES } from "@/lib/project-labels";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -230,9 +231,29 @@ export default async function DashboardPage() {
     : [];
 
   // Eksikler önce, bakılması gerekenler sonra
-  const readinessGaps = (resumeReadiness?.items ?? [])
+  const readinessGapsSirali = (resumeReadiness?.items ?? [])
     .filter((item) => item.status !== "ok")
     .sort((a, b) => (a.status === "todo" ? 0 : 1) - (b.status === "todo" ? 0 : 1));
+
+
+  /*
+    SIRADAKİ TEK İŞ. Öğrenci dört birim ve üç eksik görüyor; hepsi
+    doğru ama hiçbiri "önce hangisi" demiyordu. Kararın kendisi saf bir
+    modülde (lib/siradaki-is.ts) ve sınanıyor.
+  */
+  const sirada =
+    resume && !projelerOkunamadi
+      ? siradakiIs({
+          calismaId: resume.id,
+          adimlar: resumeAdimlar,
+          eksikler: readinessGapsSirali,
+          kalanGun: resumeDue?.days ?? null,
+        })
+      : null;
+
+  /* "Şimdi" satırındaki madde listede TEKRAR edilmiyor; altındaki
+     liste "başka ne var"ı gösteriyor. */
+  const readinessGaps = readinessGapsSirali.filter((madde) => madde.id !== sirada?.kaynakMadde);
 
   const upcoming = activeProjects
     .map((project) => ({ project, due: dueInfo(project.due_date, project.status) }))
@@ -332,6 +353,28 @@ export default async function DashboardPage() {
         ))}
       </section>
       )}
+
+      {/*
+        Sıradaki iş, birim şeridinin ÜSTÜNDE: şerit "neredesin"i,
+        bu satır "şimdi ne"yi söylüyor ve ikincisi önce okunmalı.
+      */}
+      {!isStaff && sirada ? (
+        <section className="sirada" data-aciliyet={sirada.aciliyet} data-bitti={sirada.bitti ? "true" : undefined}>
+          <span className="sirada-etiket">{sirada.bitti ? "Durum" : "Şimdi"}</span>
+          <div className="sirada-govde">
+            <b>{sirada.baslik}</b>
+            <span>{sirada.aciklama}</span>
+          </div>
+          {resumeDue && !sirada.bitti ? (
+            <span className="chip" data-tone={resumeDue.tone}>
+              {resumeDue.label}
+            </span>
+          ) : null}
+          <Link href={sirada.href} className="projects-primary-button">
+            {sirada.eylem}
+          </Link>
+        </section>
+      ) : null}
 
       {!isStaff && resumeAdimlar.length > 0 ? (
         <section className="birim-serit" aria-label="Çalışmanın birimleri">
