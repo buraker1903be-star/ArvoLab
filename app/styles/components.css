@@ -1656,3 +1656,39 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .sirada[data-aciliyet="acil"] .sirada-etiket { color: var(--danger); }
 .sirada[data-bitti] { border-left-color: var(--success); }
 .sirada[data-bitti] .sirada-etiket { color: var(--success); }
+
+/* ---------- Kılavuz yükleme (öğrenci) ---------- */
+/*
+  Öğrencinin kurumunun kılavuzu katalogda yoksa kendi PDF'ini
+  yüklediği akış. Bekleme ekranı ayrı bir durum: taranmış bir belgede
+  OCR yarım dakikayı buluyor ve donmuş bir düğmeye bakan öğrenci
+  bozuldu sanıyor.
+*/
+.kilavuz-bekleme {
+  display: grid; justify-items: center; gap: 8px;
+  padding: 32px 16px; text-align: center;
+}
+.kilavuz-bekleme strong { color: var(--ink); font-size: var(--fs-md); font-weight: 650; }
+.kilavuz-bekleme p { margin: 0; }
+.kilavuz-bekleme-nokta {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+  animation: kilavuz-nabiz 1.4s ease-in-out infinite;
+}
+@keyframes kilavuz-nabiz {
+  0%, 100% { opacity: .35; transform: scale(.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .kilavuz-bekleme-nokta { animation: none; opacity: 1; } }
+
+.kilavuz-alan-basligi { display: block; margin-bottom: 6px; font-size: var(--fs-sm); font-weight: 650; color: var(--ink); }
+/* Bölümler etiket olarak: çıkarımın bulduğu on beş bölümü elle
+   yeniden yazmak kimsenin işi değil, silmek bir tık. */
+.kilavuz-etiketler { display: flex; flex-wrap: wrap; gap: 6px; }
+.kilavuz-etiketler .chip { display: inline-flex; align-items: center; gap: 4px; }
+.kilavuz-etiketler .chip button {
+  display: inline-flex; padding: 0; border: 0; background: none;
+  color: inherit; cursor: pointer; opacity: .7;
+}
+.kilavuz-etiketler .chip button:hover { opacity: 1; }
+.kilavuz-sayfa { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.kilavuz-sayfa p { grid-column: 1 / -1; margin: 0; }

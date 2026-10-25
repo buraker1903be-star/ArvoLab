@@ -13,6 +13,10 @@ import {
 } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
+import { calismaKilavuzu } from "@/lib/guideline-rules";
+import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
+import KilavuzYukle from "./kilavuz-yukle";
+import { createClient } from "@/lib/supabase/server";
 import ActionForm from "@/app/dashboard/action-form";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
@@ -73,6 +77,13 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
   const eksikMaddeler = (hazirlik?.items ?? [])
     .filter((madde) => madde.status !== "ok")
     .sort((a, b) => (a.status === "todo" ? 0 : 1) - (b.status === "todo" ? 0 : 1));
+  /*
+    EKRANDA GÖRÜNEN KILAVUZ, UYGULANAN kılavuzdur. ozet.kilavuz
+    yalnızca kataloğa bakıyor; öğrenci kendi kılavuzunu yüklediyse
+    editörde kurallar işliyor ama bu kart "bulunamadı" diyordu.
+  */
+  const uygulanan = await calismaKilavuzu(await createClient(), calisma.id, calisma.guideline_id);
+
   const adimlar = siradakiAdimlar(ozet);
   const ilerleme = birimIlerlemesi(adimlar);
 
@@ -273,8 +284,8 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
             <BookOpenCheck size={18} aria-hidden="true" />
             <span>
               <b>Kılavuzlar</b>
-              {kilavuz
-                ? `${kilavuz.baslik ?? "Tez yazım kılavuzu"}${kilavuz.surum ? ` · ${kilavuz.surum}` : ""}`
+              {uygulanan
+                ? `${uygulanan.label}${uygulanan.dogrulandi ? "" : " · doğrulanmadı"}`
                 : kilavuzOkunamadi
                   ? "Kılavuz aranamadı; sayfayı yenileyin"
                   : calisma.university
@@ -284,6 +295,36 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
           </Link>
         </div>
       </section>
+
+      {/*
+        ÖĞRENCİ ÇIKMAZDA KALMASIN. Kurumunun kılavuzu katalogda yoksa
+        eskiden yalnızca "bulunamadı" yazıyordu; öğrencinin elinde o
+        PDF duruyor ama yapabileceği bir şey yoktu. Teklif tam olarak
+        çıkmazın yanında duruyor.
+
+        Kılavuz okunamadıysa teklif ÇIKMIYOR: geçici bir arıza,
+        kurumunun kılavuzu olan öğrenciye kendi dosyasını
+        yükletmemeli.
+      */}
+      {!uygulanan && !kilavuzOkunamadi ? (
+        <section className="section mt-lg">
+          <h2 className="section-title">Kılavuzunuz sistemde yok</h2>
+          <p className="muted text-base">
+            Kurumunuzun onaylı kılavuzu henüz eklenmemiş. Kendi kılavuzunuzu yükleyin; kuralları
+            okuyup size onaylatayım, sonra editörde kendiliğinden uygulansın.
+          </p>
+          <div className="mt-sm">
+            <PanelDrawer
+              triggerLabel="Kılavuzumu yükle"
+              kicker="Tez yazım kılavuzu"
+              title="Kendi kılavuzunuzu yükleyin"
+              description="PDF'inizi okuyup bulduğum kuralları size onaylatacağım. Bu, kurumunuzun resmî onayı yerine geçmez."
+            >
+              <KilavuzYukle projectId={calisma.id} />
+            </PanelDrawer>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

@@ -161,6 +161,28 @@ export async function kilavuzuKaydet(
     return { error: "Kılavuz kaydedilemedi. Tekrar deneyin." };
   }
 
+  /*
+    ÇALIŞMANIN ATIF STİLİ DE AYNI OLUYOR.
+
+    Kurallar IEEE derken çalışmanın kendi alanı APA 7'de kalsaydı
+    sessiz bir uyuşmazlık doğardı: kaynakça denetimi ve atıf ekleme
+    çalışmanın alanını okuyor, teslim kontrolü ise kılavuzun kuralını.
+    Öğrenci zaten az önce bu stili ONAYLADI; iki yerde iki ayrı
+    cevap olmasının savunulur bir gerekçesi yok.
+
+    Katalog kılavuzu bağlıyken bu yol zaten kapalı (yukarıda
+    reddediliyor), yani kılavuzun kuralını elle seçimle bozma riski
+    doğmuyor.
+  */
+  const { error: stilHatasi } = await ctx.supabase
+    .from("academic_projects")
+    .update({ citation_style: girdi.form.atifStili })
+    .eq("id", projectId);
+  if (stilHatasi) {
+    console.error("[calisma-kilavuzu] çalışmanın atıf stili güncellenemedi:", stilHatasi.message);
+    return { error: "Kurallar kaydedildi ama çalışmanın atıf stili güncellenemedi; sayfayı yenileyip tekrar deneyin." };
+  }
+
   revalidatePath(`/dashboard/editor/${projectId}`);
   revalidatePath(`/dashboard/editor/${projectId}/write`);
   return { success: true };
