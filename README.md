@@ -241,6 +241,58 @@ akademik operasyon paneli.
   `#002045` (`--primary`) ve yeşil `#6F9548` (`--accent`). Gerçek logo
   `public/arvolab-logo.png` altında ve giriş sayfasında kullanılıyor.
 
+## Analiz Merkezi — Yetenekler
+
+25.10.2026'da motor bir tez/makale analizinin tamamını karşılayacak
+biçimde genişletildi. Hepsi tarayıcıda hesaplanıyor; veri sunucuya
+yüklenmiyor.
+
+| Soru | Test |
+|---|---|
+| Dağılım nasıl? | Betimsel istatistik, frekans tablosu, korelasyon matrisi |
+| İki grup farklı mı? | Bağımsız örneklem t-testi · Mann-Whitney U |
+| Aynı kişinin iki ölçümü farklı mı? | Eşleştirilmiş örneklem t-testi |
+| Üç+ grup farklı mı? | Tek yönlü ANOVA (+ Bonferroni ikili karşılaştırma) · Kruskal-Wallis H |
+| İki değişken ilişkili mi? | Pearson · Spearman sıra korelasyonu |
+| Kategoriler bağımsız mı? | Ki-kare |
+| Ölçek güvenilir mi? | Cronbach alfa |
+| X, Y'yi yorduyor mu? | Doğrusal regresyon (basit ve çoklu) |
+
+**Etki büyüklüğü her testte var** (Cohen's d, dz, η², ε², r, r²,
+Cramér's V) ve yorumuyla birlikte yazılıyor. p "fark VAR MI"yı
+söyler, "fark NE KADAR"ı söylemez: büyük örneklemde önemsiz bir fark
+bile anlamlı çıkar.
+
+**Varsayımlar sonucun yanında duruyor.** t-testi ve ANOVA altında
+grup başına çarpıklık/basıklık ve Levene (medyan sürümü) raporlanıyor;
+varsayım sağlanmıyorsa parametrik olmayan karşılığı öneriliyor ve o
+test aynı ekranda yapılabiliyor. Şerit sonucun YERİNE geçmiyor,
+kararı kullanıcı veriyor.
+
+**İki test bilerek yazılmadı:** Shapiro-Wilk ve Tukey HSD. İkisi de
+uzun katsayı tablolarına dayanıyor ve elle yazılan bir kopyadaki tek
+rakam hatası GÖRÜNMEZ olurdu — makul bir p çıkar, kimse fark etmez.
+Yerlerine kapalı formüllü, elle doğrulanabilir karşılıkları kullanıldı
+(çarpıklık/basıklık, Bonferroni).
+
+## Sayının Yazılışı Kılavuzdan Gelir
+
+Ondalık ayırıcı ve baştaki sıfır APA'ya SABİT DEĞİLDİR; bu kurallar
+üniversiteden üniversiteye değişiyor ve Türkiye'deki tez
+kılavuzlarının çoğu virgül ile baştaki sıfırı zorunlu tutuyor.
+
+Karar üç kademeli (`lib/sayi-bicimi`): kılavuzun kendi kuralı → atıf
+sisteminin geleneği → varsayılan. Kılavuz kuralı akademik yönetici
+tarafından giriliyor (üç durumlu: "kılavuzda belirtilmemiş" ayrı bir
+seçenek) ve kılavuz tarama aracı onu metindeki istatistik
+örneklerinden ÖNERİYOR. Hangi kademeden geldiği ekranda yazıyor;
+sessizce varsayılana düşmek, kullanıcının neden ".021" gördüğünü
+anlayamaması demekti.
+
+Aynı ilke asistanda da geçerli: kaynakça denetçisinin sistem istemi
+atıf sistemini ADIYLA söylüyor, bilinmiyorsa hiçbir sistem adı
+geçmiyor ve modele "bir sistem varsayma" deniyor.
+
 ## Kapsam Notu
 
 Bu panel bir **editöryal/danışmanlık destek aracıdır**:
@@ -429,7 +481,7 @@ yöneticiye sunulur, onaylanan sürüm etkinleşir) birebir uyumludur.
 | Belge Editörü | `/dashboard/editor` | Çalışma listesi + yeni çalışma + panelde yazma (eski "Çalışmalar") |
 | Literatür Taraması | `/dashboard/literature` | Kaynak havuzu takibi (yeni) |
 | Kaynakça Doğrulama | `/dashboard/citations` | Manuel APA7 kaynakça kontrolü (Belge Kontrol'den ayrıldı) |
-| Analiz Merkezi | `/dashboard/analysis` | SPSS→APA7, MAXQDA kod kontrolü |
+| Analiz Merkezi | `/dashboard/analysis` | Veri yükleyip test çalıştırma, SPSS çıktısı biçimlendirme, MAXQDA kod kontrolü |
 | Belge Kontrol | `/dashboard/documents` | DOCX/PDF yükleme + analiz + kılavuz uyumu + orijinallik |
 | Kılavuzlar | `/dashboard/guidelines` | Üniversite tez yazım kılavuzları |
 | Doçentlik Puan Sorgulama | `/dashboard/associate-professorship` | Puan hesaplayıcı |
