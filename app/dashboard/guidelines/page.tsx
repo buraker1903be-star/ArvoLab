@@ -23,6 +23,7 @@ import OlcuOnerisi from "./olcu-onerisi";
 import { kilavuzuYenidenTara, universiteKilavuzuKesfet } from "@/app/actions/guideline-scan";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import { kilavuzlariTopluEkle, kilavuzlariTopluTara } from "@/app/actions/guideline-scan";
+import { createClient } from "@/lib/supabase/server";
 
 const REVIEW_FONTS = ["Times New Roman", "Arial", "Calibri", "Cambria", "Garamond", "Georgia", "Verdana", "Book Antiqua"];
 
@@ -102,6 +103,27 @@ export default async function GuidelinesPage() {
     g.analysis_status === "approved" && !g.academic_unit_id && g.university_id
       ? cakisanDuzeyler.get(ayniDuzeyAnahtari(g)) ?? 0
       : 0;
+
+  /*
+    ÖĞRENCİ YÜKLEMELERİ BİR SİNYAL.
+
+    Kurumunun kılavuzu katalogda olmayan öğrenci kendi PDF'ini
+    yüklüyor (app/actions/calisma-kilavuzu.ts). Aynı kurumdan gelen
+    yüklemeler bir araya gelince "bu kılavuzu bir kez onayla, oradaki
+    herkes doğrulanmış sürüme geçsin" demek oluyor. Keşif cron'unun
+    .edu.tr sitelerini taramasından daha güçlü: kılavuzu getiren, onu
+    elinde tutan kişi.
+
+    Görünüm security_invoker; yönetici yalnızca görebildiği
+    çalışmaların yüklemelerini sayar.
+  */
+  const { data: yuklemeSinyali } = canManage
+    ? await (await createClient())
+        .from("calisma_kilavuzu_sinyali")
+        .select("universite_adi, kaynak_adres, yukleme_sayisi, son_yukleme")
+        .order("yukleme_sayisi", { ascending: false })
+        .limit(10)
+    : { data: null };
 
   const bekleyenler = guidelines.filter((g) => g.analysis_status !== "approved");
   /* Kuyruk yalnızca ELİNDEN GELENİ sayıyor; gerisi gizlenmiyor, ayrıca yazılıyor. */
@@ -317,6 +339,37 @@ export default async function GuidelinesPage() {
             Kuralları korunuyor ama yanlış olabilir. Onayı geri alıp &ldquo;Şimdi yeniden tara&rdquo; ile
             güncelleyin, sonra yeniden onaylayın.
           </p>
+        </section>
+      ) : null}
+
+      {/*
+        ÖĞRENCİ YÜKLEMELERİ. Her satır "bu kurumdan N öğrenci bu
+        kılavuzu kendi yükledi" demek; onaylanınca hepsi doğrulanmış
+        sürüme geçer. Kuyruğun hemen üstünde duruyor çünkü onay
+        kararını bu sayı besliyor.
+      */}
+      {canManage && yuklemeSinyali && yuklemeSinyali.length > 0 ? (
+        <section className="section">
+          <h2 className="section-title">Öğrencilerin yüklediği kılavuzlar</h2>
+          <p className="muted text-base">
+            Katalogda karşılığı olmadığı için öğrenciler kendi kılavuzlarını yükledi. Onaylarsanız
+            o kurumdaki herkes doğrulanmış sürüme geçer.
+          </p>
+          <ul className="result-list mt-sm">
+            {yuklemeSinyali.map((satir) => (
+              <li key={`${satir.universite_adi}-${satir.kaynak_adres}`}>
+                <b>{satir.universite_adi ?? "Kurum belirtilmemiş"}</b> · {satir.yukleme_sayisi} yükleme
+                {satir.kaynak_adres ? (
+                  <>
+                    {" · "}
+                    <a href={satir.kaynak_adres} target="_blank" rel="noreferrer">
+                      kaynağı aç
+                    </a>
+                  </>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 

@@ -36,7 +36,7 @@ import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
-import { loadAppliedGuidelines } from "@/lib/guideline-rules";
+import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { writingPace } from "@/lib/writing-pace";
 
 const workstreams = [
@@ -121,9 +121,18 @@ export default async function DashboardPage() {
   const resumeStats = resume ? writing.get(resume.id) : undefined;
   const resumeDue = resume ? dueInfo(resume.due_date, resume.status) : null;
   const resumeComments = resume ? openComments.get(resume.id) ?? 0 : 0;
-  // Yazım temposu (editördekiyle aynı hesap): kılavuzun sayfa hedefi ve teslim tarihine göre
-  const guidelines = await loadAppliedGuidelines(supabase, resume ? [resume.guideline_id] : []);
-  const resumeGuideline = resume?.guideline_id ? guidelines.get(resume.guideline_id) : undefined;
+  /*
+    Yazım temposu ve teslim hazırlığı (editördekiyle aynı hesap).
+
+    calismaKilavuzu kullanılıyor, loadAppliedGuidelines DEĞİL: ikincisi
+    yalnızca kataloğa bakıyor ve öğrencinin kendi yüklediği kılavuzu
+    görmüyordu. Sonucu, editör kurallara göre çalışırken ana sayfanın
+    sayfa hedefini ve hazırlık listesini KILAVUZSUZ hesaplamasıydı —
+    aynı çalışma iki ekranda iki ayrı cevap veriyordu.
+  */
+  const resumeGuideline = resume
+    ? (await calismaKilavuzu(supabase, resume.id, resume.guideline_id)) ?? undefined
+    : undefined;
   const resumePace =
     resume && resumeGuideline
       ? writingPace({

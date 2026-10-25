@@ -859,3 +859,12 @@
 /* Welch satırı: aynı testin ikinci okunuşu olduğu belli olsun diye
    ana sonuçtan çizgiyle ayrılıyor (data-analyzer.tsx). */
 .stats-welch { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+
+/* Alt çubukta kuralların kaynağı: pencereyi açmadan "neye göre hazır"
+   sorusunun cevabı görünmeli. Doğrulanmamış kurallar sessiz kalmamalı. */
+.kural-kaynagi {
+  margin-left: 6px; padding: 1px 6px; border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  color: color-mix(in srgb, var(--warning) 85%, var(--ink));
+  font-size: var(--fs-micro); font-weight: 650;
+}

@@ -14,6 +14,7 @@ export default function SubmissionChecklistDialog({
   checklist,
   onAction,
   vurgu,
+  dogrulanmamis,
 }: {
   open: boolean;
   onClose: () => void;
@@ -26,6 +27,14 @@ export default function SubmissionChecklistDialog({
     alırdı.
   */
   vurgu?: string | null;
+  /*
+    Kurallar insan onayından geçti mi. Geçmediyse SÖYLENİYOR: liste
+    "teslime hazır görünüyor" derken hangi kurala dayandığını
+    söylemek zorunda. Öğrencinin kendi yüklediği PDF'ten çıkarılan ve
+    yine kendisinin onayladığı kurallar, kurumun onayladığı kurallarla
+    aynı güveni taşımaz.
+  */
+  dogrulanmamis?: boolean;
 }) {
   const ready = checklist.done === checklist.total;
   return (
@@ -34,7 +43,11 @@ export default function SubmissionChecklistDialog({
       onClose={onClose}
       kicker="Teslim kontrolü"
       title={ready ? "Teslime hazır görünüyor" : `${checklist.done}/${checklist.total} madde hazır`}
-      description="Kılavuza göre teslimden önce bakılması gerekenler. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz."
+      description={
+        dogrulanmamis
+          ? "Kendi yüklediğiniz kılavuzdan çıkarılan ve sizin onayladığınız kurallara göre denetlenir — kurumunuzun onayından GEÇMEMİŞTİR. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz."
+          : "Kılavuza göre teslimden önce bakılması gerekenler. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz."
+      }
     >
       <ul className="checklist">
         {checklist.items.map((item) => {

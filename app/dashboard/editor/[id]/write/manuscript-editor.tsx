@@ -1951,6 +1951,9 @@ export default function ManuscriptEditor({
           >
             <ClipboardCheck size={15} aria-hidden="true" />
             Teslim kontrolü {checklist.done}/{checklist.total}
+            {/* Kuralların kaynağı alt çubukta da görünüyor: pencereyi
+                açmadan "neye göre hazır" sorusunun cevabı bilinmeli. */}
+            {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi">kendi kılavuzunuz</small> : null}
           </button>
           {/*
             Adı NE DENETLEDİĞİNİ söylüyor. Alt çubukta üç ayrı "kontrol"
@@ -1991,6 +1994,7 @@ export default function ManuscriptEditor({
         checklist={checklist}
         onAction={handleChecklistAction}
         vurgu={vurguluMadde}
+        dogrulanmamis={guideline ? !guideline.dogrulandi : false}
       />
 
       <Dialog
