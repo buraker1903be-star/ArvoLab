@@ -198,11 +198,28 @@ export async function kilavuzuKaydet(
   return { success: true };
 }
 
-/** Öğrenci yüklediği kılavuzu kaldırır; çalışma kılavuzsuz kalır. */
-export async function kilavuzuKaldir(projectId: string): Promise<ActionResult> {
+/*
+  Öğrenci yüklediği kılavuzu kaldırır; çalışma kılavuzsuz kalır.
+
+  FormData alıyor çünkü çağıran ActionForm: geri alınamaz işlemde onay
+  penceresini (confirmMessage) ve hata/başarı bildirimini o yürütüyor.
+  Eskiden imza (projectId: string) idi ve HİÇBİR YERDEN çağrılmıyordu —
+  yani kuralları yanlış çıkarılmış bir kılavuzu yükleyen öğrencinin onu
+  geri alma yolu yoktu.
+*/
+export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> {
+  const projectId = String(formData.get("projectId") ?? "");
+  if (!projectId) return { error: "Çalışma bulunamadı." };
+
   const izin = await calismayaYazabilir(projectId);
   if ("hata" in izin) return { error: izin.hata };
 
+  /*
+    Çalışmanın citation_style'ı BİLEREK geri alınmıyor. Kılavuz onu
+    bir kez değiştirdi; metindeki atıflar ve kaynakça o sisteme göre
+    yazılmış olabilir. Kılavuz kalkınca stili eski değerine döndürmek,
+    öğrencinin yazdığı künyeleri sessizce "hatalı" gösterirdi.
+  */
   const { error } = await izin.ctx.supabase.from("calisma_kilavuzu").delete().eq("project_id", projectId);
   if (error) {
     console.error("[calisma-kilavuzu] silinemedi:", error.message);

@@ -14,6 +14,8 @@ import {
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
+import { bicimOzeti } from "@/lib/kilavuz-dogrulama";
+import { kilavuzuKaldir } from "@/app/actions/calisma-kilavuzu";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import KilavuzYukle from "./kilavuz-yukle";
 import { createClient } from "@/lib/supabase/server";
@@ -83,6 +85,13 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
     editörde kurallar işliyor ama bu kart "bulunamadı" diyordu.
   */
   const uygulanan = await calismaKilavuzu(await createClient(), calisma.id, calisma.guideline_id);
+
+  /*
+    Biçim kuralları doğrulama ekranındakiyle AYNI cümlelerle yazılıyor
+    (lib/kilavuz-dogrulama). Öğrenci onayladığı satırı burada tanıyor;
+    iki ayrı yazım, aynı kuralı iki ayrı kural gibi gösterirdi.
+  */
+  const bicimSatirlari = uygulanan ? bicimOzeti(uygulanan.settings) : [];
 
   const adimlar = siradakiAdimlar(ozet);
   const ilerleme = birimIlerlemesi(adimlar);
@@ -284,8 +293,18 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
             <BookOpenCheck size={18} aria-hidden="true" />
             <span>
               <b>Kılavuzlar</b>
+              {/*
+                KENDİ YÜKLEMESİ KATALOGDA ARANMAZ. Bu bağlantı kataloğa
+                (thesis_guidelines) gidiyor; öğrencinin yüklediği kılavuz
+                orada DEĞİL, çalışmaya bağlı ayrı tabloda. Eskiden alt
+                satırda yüklenen kılavuzun adı yazıyordu: öğrenci adını
+                görüp tıklıyor ve kılavuzunun bulunmadığı bir liste
+                açılıyordu. Yüklenen kılavuz aşağıdaki kartta yönetiliyor.
+              */}
               {uygulanan
-                ? `${uygulanan.label}${uygulanan.dogrulandi ? "" : " · doğrulanmadı"}`
+                ? uygulanan.dogrulandi
+                  ? uygulanan.label
+                  : "Kendi yüklediğiniz kılavuz kullanılıyor"
                 : kilavuzOkunamadi
                   ? "Kılavuz aranamadı; sayfayı yenileyin"
                   : calisma.university
@@ -306,6 +325,75 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
         kurumunun kılavuzu olan öğrenciye kendi dosyasını
         yükletmemeli.
       */}
+      {/*
+        YÜKLEDİĞİ KILAVUZ GÖRÜNÜR VE GERİ ALINABİLİR OLMALI.
+
+        Yükleme bitince teklif kartı kayboluyordu ve öğrencinin elinde
+        hiçbir şey kalmıyordu: hangi kuralların uygulandığını göremiyor,
+        yanlış okunmuş bir PDF'i (OCR'li taramalarda olağan) kaldıramıyordu.
+        Belgesinin kenar boşlukları birden değişmiş, sebebini gösteren bir
+        ekran yok.
+
+        Katalogdan geleni burada göstermiyoruz: o kurum onayından geçmiş,
+        öğrencinin kaldıracağı bir şey değil ve kataloğun kendi sayfası var.
+      */}
+      {uygulanan && !uygulanan.dogrulandi ? (
+        <section className="section mt-lg">
+          <h2 className="section-title">Yüklediğiniz kılavuz</h2>
+          <p className="muted text-base">
+            Kurallar bu dosyadan çıkarıldı ve sizin onayınızla uygulanıyor; kurumunuzun resmî
+            onayından geçmedi. Yanlış bir kural görürseniz başka bir dosya yükleyin ya da kaldırın.
+          </p>
+          <div className="kilavuz-bicim mt-sm">
+            <p>
+              <strong>{uygulanan.label}</strong>
+            </p>
+            <ul>
+              <li>Kaynakça sistemi: {STIL_ETIKETLERI[uygulanan.citationStyle] ?? uygulanan.citationStyle}</li>
+              {uygulanan.requiredSections.length > 0 ? (
+                <li>Zorunlu bölümler: {uygulanan.requiredSections.join(", ")}</li>
+              ) : null}
+              {uygulanan.minPages || uygulanan.maxPages ? (
+                <li>
+                  Uzunluk: {uygulanan.minPages ?? "?"}–{uygulanan.maxPages ?? "?"} sayfa
+                </li>
+              ) : null}
+              {bicimSatirlari.map((satir) => (
+                <li key={satir}>{satir}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="project-form-actions mt-sm">
+            <PanelDrawer
+              triggerLabel="Başka dosya yükle"
+              triggerClassName="projects-filter-button"
+              kicker="Tez yazım kılavuzu"
+              title="Kılavuzu değiştirin"
+              description="Yeni PDF'i okuyup bulduğum kuralları size onaylatacağım; onayladığınızda eskisinin yerini alır."
+            >
+              <KilavuzYukle projectId={calisma.id} />
+            </PanelDrawer>
+            {/*
+              Onay metni ÖLÇÜLEREK yazıldı: kılavuz kalkınca sayfa düzeni
+              geri dönmüyor (lib/guideline-sync, mode:"none" belgenin kendi
+              ayarlarını koruyor). "Biçiminiz bozulacak" demek öğrenciyi
+              olmayan bir şeyden korkuturdu; gerçekte yalnızca denetimin
+              dayanağı kalkıyor.
+            */}
+            <ActionForm
+              action={kilavuzuKaldir}
+              confirmMessage="Kılavuz kaldırılsın mı? Belgenizin sayfa düzeni olduğu gibi kalır; yalnızca belge kontrolü ve teslim listesi kurallara göre denetlenemez olur."
+              successMessage="Kılavuz kaldırıldı."
+            >
+              <input type="hidden" name="projectId" value={calisma.id} />
+              <button type="submit" className="button-danger">
+                Kaldır
+              </button>
+            </ActionForm>
+          </div>
+        </section>
+      ) : null}
+
       {!uygulanan && !kilavuzOkunamadi ? (
         <section className="section mt-lg">
           <h2 className="section-title">Kılavuzunuz sistemde yok</h2>
