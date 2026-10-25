@@ -1093,9 +1093,28 @@ export default function ManuscriptEditor({
       case "link-guideline":
         window.open(editHref, "_self");
         break;
-      case "insert-sections":
-        if (missingSections.length) handleInsertSections(missingSections);
+      /*
+        ÖNCE PENCERE KAPANIYOR, SONRA EKLENİYOR.
+
+        insertSections eklenen ilk bölüme kaydırıp imleci oraya
+        koyuyor — yani öğrenciyi yazacağı yere bırakıyor. Pencere açık
+        kalırken bunun hiçbiri görünmüyordu: kipli pencere belgenin
+        üstünü örtüyor ve odak tuzağı imleci geri çekiyor. Öğrenci
+        "ekle"ye basıyor, iş gerçekten yapılıyor ama ekranda bir şey
+        değişmiyordu.
+
+        setTimeout, React pencereyi söküp odak tuzağının temizliğini
+        çalıştırsın diye: aynı olayda çağırsaydık odak son olarak
+        tuzağın geri yüklediği yere giderdi.
+      */
+      case "insert-sections": {
+        if (!missingSections.length) break;
+        const eklenecek = missingSections;
+        setChecklistOpen(false);
+        setVurguluMadde(null);
+        window.setTimeout(() => handleInsertSections(eklenecek), 0);
         break;
+      }
       case "open-issues":
         setChecklistOpen(false);
         setIssuesOpen(true);
@@ -1117,8 +1136,11 @@ export default function ManuscriptEditor({
         if (guideline?.settings.showPageNumbers !== undefined) setShowPageNumbers(guideline.settings.showPageNumbers);
         showToast("success", "Sayfa düzeni kılavuza göre ayarlandı.");
         break;
+      /* Bu da imleci belgeye taşıyor: aynı gerekçeyle önce pencere kapanıyor. */
       case "strip-manual-numbers":
-        editor.chain().focus().stripManualHeadingNumbers().run();
+        setChecklistOpen(false);
+        setVurguluMadde(null);
+        window.setTimeout(() => editor.chain().focus().stripManualHeadingNumbers().run(), 0);
         break;
       case "save":
         void saveNow();
