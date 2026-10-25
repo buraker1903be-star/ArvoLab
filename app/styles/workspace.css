@@ -262,7 +262,7 @@
   font: inherit;
   resize: vertical;
 }
-.dialog-field textarea:focus { outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dialog-field textarea:focus { outline: none; border-color: var(--accent-500); box-shadow: var(--odak-halkasi); }
 
 /* Editör yüklenirken yer tutucu (sayfa zıplamasın) */
 .manuscript-editor-loading { min-height: 70vh; background: var(--surface-2); }
@@ -687,7 +687,7 @@
   color: var(--ink);
   font: inherit;
 }
-.picker-search:focus { outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-soft); }
+.picker-search:focus { outline: none; border-color: var(--accent-500); box-shadow: var(--odak-halkasi); }
 .picker-list { display: grid; gap: 6px; max-height: 52vh; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
 .picker-item {
   display: flex;

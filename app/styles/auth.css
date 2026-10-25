@@ -120,7 +120,7 @@
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 .login-form input::placeholder { color: var(--dim); }
-.login-form input:focus { border-color: var(--accent-500); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-500) 15%, transparent); }
+.login-form input:focus { border-color: var(--accent-500); box-shadow: var(--odak-halkasi); }
 
 .login-button {
   display: flex;
