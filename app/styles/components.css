@@ -1498,3 +1498,28 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 @media (hover: hover) and (pointer: fine) {
   .asistan-arama-calistir:hover { border-color: var(--accent-500); color: var(--ink); }
 }
+
+/* ---------- Sıradaki işler (ana sayfa, 25.10.2026) ----------
+   Teslim hazırlığının eksik maddeleri tek bir cümleye
+   sıkıştırılıyordu ("Bakılacak: Kapak sayfası, Kaynakça ve 3 madde
+   daha"): öğrenci ne yapacağını değil kaç şey kaldığını görüyordu
+   ve maddenin açıklaması hiç görünmüyordu. */
+.readiness-list {
+  display: flex; flex-direction: column; gap: 2px;
+  margin: 10px 0 0; padding: 0; list-style: none;
+}
+.readiness-list li {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 9px 0 9px 12px;
+  border-left: 2px solid var(--line);
+  font-size: var(--fs-base);
+}
+/* Eksik madde ile "bakılacak" madde aynı görünmemeli: ilki bir iş,
+   ikincisi bir uyarı. */
+.readiness-list li[data-tone="warning"] { border-left-color: var(--warning); }
+.readiness-list li[data-tone="info"] { border-left-color: var(--info); }
+.readiness-list b { color: var(--ink); font-weight: 600; }
+.readiness-list span { color: var(--muted); line-height: 1.5; }
+.readiness-list-more { border-left-color: transparent !important; padding-left: 12px }
+.readiness-list-more a { color: var(--primary); font-weight: 600; text-decoration: none }
+.readiness-list-more a:hover { text-decoration: underline }

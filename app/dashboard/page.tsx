@@ -324,14 +324,39 @@ export default async function DashboardPage() {
                     {resumeReadiness.done}/{resumeReadiness.total}
                   </strong>{" "}
                   madde hazır
-                  {readinessGaps.length === 0
-                    ? " · teslime hazır görünüyor"
-                    : ` · Bakılacak: ${readinessGaps
-                        .slice(0, 2)
-                        .map((item) => item.label)
-                        .join(", ")}${readinessGaps.length > 2 ? ` ve ${readinessGaps.length - 2} madde daha` : ""}`}
+                  {readinessGaps.length === 0 ? " · teslime hazır görünüyor" : ""}
                 </span>
               </p>
+            ) : null}
+            {/*
+              SIRADAKİ İŞLER (25.10.2026).
+
+              Eksik maddeler tek bir cümleye sıkıştırılıyordu:
+              "Bakılacak: Kapak sayfası, Kaynakça ve 3 madde daha".
+              Öğrenci ne yapacağını değil kaç şey kaldığını görüyordu;
+              maddenin AÇIKLAMASI (neyin neden eksik olduğu) hiç
+              görünmüyordu, oysa veri zaten elimizde.
+
+              Üçle sınırlı: liste uzadıkça "sıradaki iş" olmaktan
+              çıkıp envantere dönüyor. Kalanın sayısı yazılıyor ki
+              kullanıcı listenin kırpıldığını bilsin.
+            */}
+            {readinessGaps.length > 0 ? (
+              <ul className="readiness-list">
+                {readinessGaps.slice(0, 3).map((madde) => (
+                  <li key={madde.id} data-tone={madde.status === "todo" ? "warning" : "info"}>
+                    <b>{madde.label}</b>
+                    {madde.detail ? <span>{madde.detail}</span> : null}
+                  </li>
+                ))}
+                {readinessGaps.length > 3 ? (
+                  <li className="readiness-list-more">
+                    <Link href={`/dashboard/editor/${resume.id}`}>
+                      {readinessGaps.length - 3} madde daha · teslim kontrolünde gör
+                    </Link>
+                  </li>
+                ) : null}
+              </ul>
             ) : null}
             {resumeTutarsizliklari.length > 0 ? (
               <p className="text-sm resume-readiness resume-tutarsizlik">
