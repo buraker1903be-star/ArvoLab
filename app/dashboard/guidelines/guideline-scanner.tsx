@@ -88,6 +88,44 @@ export default function GuidelineScanner() {
             </p>
           )}
 
+          {/*
+            SAYININ YAZILIŞI — ÖNERİ, UYGULAMA DEĞİL. Yönetici bu
+            bilgiyi aşağıdaki formdaki iki alana kendisi işler;
+            kılavuz tarama aracının bütününde olduğu gibi hiçbir şey
+            kendiliğinden uygulanmaz (README: "Önemli Sınırlama").
+
+            Karar verilemediğinde de sayımlar yazılıyor: "bulunamadı"
+            ile "ikisi de geçiyor" aynı görünmemeli — yöneticinin
+            kararı tam olarak bu veriye dayanıyor.
+          */}
+          {result.sayiBicimiOnerisi && (
+            <div className="mt-sm">
+              <strong>Sayının yazılışı:</strong>
+              <p className="muted">
+                {result.sayiBicimiOnerisi.ayirici
+                  ? `Ondalık ayırıcı ${result.sayiBicimiOnerisi.ayirici === "comma" ? "virgül" : "nokta"} görünüyor`
+                  : "Ondalık ayırıcı için net bir kanıt yok"}
+                {result.sayiBicimiOnerisi.bastakiSifir === null
+                  ? "; baştaki sıfır kuralı çıkarılamadı."
+                  : result.sayiBicimiOnerisi.bastakiSifir
+                    ? "; baştaki sıfır yazılıyor (0,021)."
+                    : "; baştaki sıfır yazılmıyor (,021)."}
+              </p>
+              {result.sayiBicimiOnerisi.ayiriciGecisleri.length > 0 && (
+                <p className="hint">
+                  Örnek sayımı:{" "}
+                  {result.sayiBicimiOnerisi.ayiriciGecisleri
+                    .map((g) => `${g.etiket === "comma" ? "virgül" : "nokta"} ${g.sayim}`)
+                    .join(", ")}
+                  .
+                </p>
+              )}
+              {result.sayiBicimiOnerisi.uyarilar.map((uyari) => (
+                <p key={uyari} className="hint">{uyari}</p>
+              ))}
+            </div>
+          )}
+
           {result.suggestedSections.length > 0 ? (
             <div className="mt-sm">
               <strong>Tespit edilen olası bölüm başlıkları:</strong>

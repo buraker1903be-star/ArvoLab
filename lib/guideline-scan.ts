@@ -2,6 +2,7 @@ import { DEFAULT_HANGING_CM, DEFAULT_INDENT_CM, validIndentCm } from "@/lib/para
 import { SOZCUK_SONU } from "@/lib/sozcuk-siniri";
 import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
 import { atifGecisleri, atifSistemiSec } from "@/lib/atif-sistemi";
+import { sayiKuraliOner, type SayiOnerisi } from "@/lib/kilavuz-sayi-onerisi";
 import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
 import { sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
@@ -156,6 +157,14 @@ export interface GuidelineScanResult {
   /* Karar verilemese de hangi adın kaç kez geçtiği; yönetici seçerken
      belgeyi açmak zorunda kalmasın. */
   citationMentions?: { sistem: string; etiket: string; sayim: number }[];
+  /*
+    SAYININ YAZILIŞI (lib/kilavuz-sayi-onerisi). Kılavuzun istatistik
+    örneklerinden çıkarılan ÖNERİ; hiçbir şey kendiliğinden
+    uygulanmaz. Net kazanan yoksa alanlar null döner ve sayımlar
+    yöneticiye gösterilir — "bulunamadı" ile "ikisi de var" aynı
+    görünmemeli.
+  */
+  sayiBicimiOnerisi?: SayiOnerisi;
   sourceChecksum: string;
   sourceContentType: string;
   /* Koşullu istek için saklanır; sunucudan geldiği gibi geri gönderilir. */
@@ -484,6 +493,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   const atifSecimi = atifSistemiSec(text);
   const citationHint = atifSecimi?.etiket ?? null;
   const citationMentions = atifGecisleri(text);
+  const sayiBicimiOnerisi = sayiKuraliOner(text);
   const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint));
   const sayfaSiniri = sayfaSiniriCikar(text);
   const kilavuzDegil = kilavuzDegilUyarisi(formatting.confidence, suggestedSections.length, contentType, ocrKullanildi);
@@ -494,6 +504,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     suggestedSections,
     detectedCitationHint: citationHint,
     citationMentions,
+    sayiBicimiOnerisi,
     sourceChecksum: await sha256(sourceBytes),
     sourceContentType: contentType || "application/octet-stream",
     sourceEtag: res.headers.get("etag"),
