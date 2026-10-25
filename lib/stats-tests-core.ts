@@ -9,7 +9,7 @@
  * ve anlamlılık işaretlemesi ayrı bir katmanda (stats-interpreter.ts
  * ile aynı ilkede) yapılır.
  */
-import { tTestTwoTailedP, fTestP, chiSquareP } from "./stats-math";
+import { tTestTwoTailedP, fTestP, chiSquareP, tKritik } from "./stats-math";
 
 export function mean(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -60,6 +60,51 @@ export interface TTestResult {
   n2: number;
   sd1: number;
   sd2: number;
+  /** Cohen's d — standartlaştırılmış ortalama farkı. */
+  d: number;
+  dYorum: EtkiYorumu;
+  /** Ortalama farkı ve %95 güven aralığı. */
+  fark: number;
+  altSinir: number;
+  ustSinir: number;
+}
+
+/*
+  ETKİ BÜYÜKLÜĞÜ (25.10.2026).
+
+  Modül p değeri üretiyordu ama etki büyüklüğü üretmiyordu. p
+  "fark var mı" sorusunu yanıtlar, "fark NE KADAR" sorusunu değil:
+  büyük örneklemde önemsiz bir fark bile p < .05 çıkar ve etki
+  büyüklüğü olmadan okuyucu bunu ayırt edemez. Bu istatistiğin
+  kendi gereği; bir yazım kılavuzunun dayatması değil.
+
+  KILAVUZ KURALI DİYE YAZILMADI ve bu bilinçli: raporlama biçimi
+  üniversiteden üniversiteye değişiyor (kurum sahibinin uyarısı,
+  25.10.2026). Hangi değerin yazılacağına kullanıcının seçtiği
+  kılavuz karar verir; bu modülün işi değeri DOĞRU HESAPLAMAK.
+  Hesaplanmayan bir değer hiçbir kılavuzda raporlanamaz, o yüzden
+  hesap her zaman yapılır; gösterim kılavuza bırakılır.
+
+  Eşikler Cohen (1988). Sınırlar KESİN DEĞİL, yorum kolaylığı için:
+  bir araştırmacı .49'u "orta"ya yakın okumalı, ".5'in altı küçük"
+  diye değil. O yüzden etiket ayrı bir alan; sayı her zaman yanında.
+*/
+export type EtkiYorumu = "önemsiz" | "küçük" | "orta" | "büyük";
+
+function cohenYorumu(d: number): EtkiYorumu {
+  const mutlak = Math.abs(d);
+  if (mutlak < 0.2) return "önemsiz";
+  if (mutlak < 0.5) return "küçük";
+  if (mutlak < 0.8) return "orta";
+  return "büyük";
+}
+
+/** η² ve Cramér's V için ortak eşikler (Cohen 1988: .01/.06/.14). */
+function oranYorumu(deger: number): EtkiYorumu {
+  if (deger < 0.01) return "önemsiz";
+  if (deger < 0.06) return "küçük";
+  if (deger < 0.14) return "orta";
+  return "büyük";
 }
 
 export function independentTTest(group1: number[], group2: number[]): TTestResult {
@@ -74,7 +119,18 @@ export function independentTTest(group1: number[], group2: number[]): TTestResul
   const t = (m1 - m2) / se;
   const df = n1 + n2 - 2;
   const p = tTestTwoTailedP(Math.abs(t), df);
-  return { t, df, p, m1, m2, n1, n2, sd1: Math.sqrt(v1), sd2: Math.sqrt(v2) };
+  /* Cohen's d birleştirilmiş SS ile: iki grubun büyüklüğü farklı
+     olduğunda tek bir grubun SS'ini kullanmak etkiyi şişiriyor. */
+  const birlesikSS = Math.sqrt(pooledVar);
+  const d = birlesikSS === 0 ? 0 : (m1 - m2) / birlesikSS;
+  const fark = m1 - m2;
+  const pay = tKritik(df) * se;
+  return {
+    t, df, p, m1, m2, n1, n2,
+    sd1: Math.sqrt(v1), sd2: Math.sqrt(v2),
+    d, dYorum: cohenYorumu(d),
+    fark, altSinir: fark - pay, ustSinir: fark + pay,
+  };
 }
 
 export interface AnovaResult {
@@ -88,6 +144,9 @@ export interface AnovaResult {
   msw: number;
   groupMeans: number[];
   groupNs: number[];
+  /** η² = SSb / SSt — ANOVA'nın etki büyüklüğü. */
+  etaKare: number;
+  etaYorum: EtkiYorumu;
 }
 
 export function oneWayAnova(groups: number[][]): AnovaResult {
@@ -110,7 +169,13 @@ export function oneWayAnova(groups: number[][]): AnovaResult {
     msw = ssw / dfw;
   const f = msb / msw;
   const p = fTestP(f, dfb, dfw);
-  return { f, dfb, dfw, p, ssb, ssw, msb, msw, groupMeans, groupNs: groups.map((g) => g.length) };
+  const sst = ssb + ssw;
+  const etaKare = sst === 0 ? 0 : ssb / sst;
+  return {
+    f, dfb, dfw, p, ssb, ssw, msb, msw,
+    groupMeans, groupNs: groups.map((g) => g.length),
+    etaKare, etaYorum: oranYorumu(etaKare),
+  };
 }
 
 export interface CorrelationResult {
@@ -118,6 +183,11 @@ export interface CorrelationResult {
   df: number;
   p: number;
   n: number;
+  /* r'nin kendisi etki büyüklüğü; r² "açıklanan varyans" olarak
+     raporlanıyor ve okuyucuya yüzde olarak çok daha anlaşılır
+     geliyor ("varyansın %18'i"). */
+  rKare: number;
+  rYorum: EtkiYorumu;
 }
 
 export function pearsonCorrelation(x: number[], y: number[]): CorrelationResult {
@@ -136,10 +206,17 @@ export function pearsonCorrelation(x: number[], y: number[]): CorrelationResult 
   const df = n - 2;
   const t = (r * Math.sqrt(df)) / Math.sqrt(1 - r * r);
   const p = tTestTwoTailedP(Math.abs(t), df);
-  return { r, df, p, n };
+  /* Cohen (1988) korelasyonda ayrı eşikler veriyor (.10/.30/.50);
+     η²'nin eşikleriyle karıştırmamak için r doğrudan yorumlanıyor. */
+  const mutlak = Math.abs(r);
+  const rYorum: EtkiYorumu = mutlak < 0.1 ? "önemsiz" : mutlak < 0.3 ? "küçük" : mutlak < 0.5 ? "orta" : "büyük";
+  return { r, df, p, n, rKare: r * r, rYorum };
 }
 
 export interface ChiSquareResult {
+  /** Cramér's V — ki-karenin etki büyüklüğü (0–1). */
+  cramersV: number;
+  vYorum: EtkiYorumu;
   chi2: number;
   df: number;
   p: number;
@@ -159,7 +236,14 @@ export function chiSquareIndependence(table: number[][]): ChiSquareResult {
   }
   const df = (table.length - 1) * (table[0].length - 1);
   const p = chiSquareP(chi2, df);
-  return { chi2, df, p, n: grandTotal };
+  /* Cramér's V: χ² örneklem büyüklüğüyle doğrudan büyüyor, yani
+     tek başına ilişkinin GÜCÜNÜ söylemiyor. V tabloyu normalleştirip
+     0–1 aralığına indiriyor. Payda tablonun KISA kenarına bakar
+     (min(satır,sütun)−1); uzun kenara bakmak 2×5 gibi tablolarda
+     etkiyi olduğundan küçük gösterirdi. */
+  const kisaKenar = Math.min(table.length, table[0].length) - 1;
+  const cramersV = grandTotal === 0 || kisaKenar <= 0 ? 0 : Math.sqrt(chi2 / (grandTotal * kisaKenar));
+  return { chi2, df, p, n: grandTotal, cramersV, vYorum: oranYorumu(cramersV) };
 }
 
 export interface FrequencyRow {

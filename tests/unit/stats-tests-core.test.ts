@@ -126,3 +126,97 @@ describe("Cronbach alfa", () => {
     assert.ok(r.alpha <= 1, `alfa 1'i aştı: ${r.alpha}`);
   });
 });
+
+/*
+  ETKİ BÜYÜKLÜĞÜ (25.10.2026).
+
+  Modül yalnızca p üretiyordu. p "fark var mı" sorusunu yanıtlar,
+  "fark NE KADAR" sorusunu değil: büyük örneklemde önemsiz bir fark
+  bile p < .05 çıkar. Bu istatistiğin kendi gereği; raporlanıp
+  raporlanmayacağına kullanıcının kılavuzu karar verir, ama
+  HESAPLANMAYAN bir değer hiçbir kılavuzda raporlanamaz.
+
+  Beklenen değerler elle hesaplandı; hesaplar yorumlarda açık.
+*/
+describe("etki büyüklüğü", () => {
+  test("Cohen's d birleştirilmiş standart sapmayla", () => {
+    /*
+      [5,6,7,8,9] ort 7, [1,2,3,4,5] ort 3; ortak varyans 2.5
+      birleşik SS = √2.5 ≈ 1.5811
+      d = (7 − 3) / 1.5811 = 2.5298  → "büyük"
+    */
+    const r = independentTTest([5, 6, 7, 8, 9], [1, 2, 3, 4, 5]);
+    yakin(r.d, 2.5298, 1e-3);
+    assert.equal(r.dYorum, "büyük");
+  });
+
+  test("ortalama farkı ve %95 güven aralığı", () => {
+    /*
+      Fark = 4, SH = 1, sd = 8 → kritik t(8) = 2.306
+      GA = 4 ± 2.306 → [1.694, 6.306]
+    */
+    const r = independentTTest([5, 6, 7, 8, 9], [1, 2, 3, 4, 5]);
+    yakin(r.fark, 4);
+    yakin(r.altSinir, 1.694, 1e-3);
+    yakin(r.ustSinir, 6.306, 1e-3);
+    /* Aralık sıfırı içermiyorsa fark anlamlıdır; p ile tutarlı olmalı. */
+    assert.ok(r.altSinir > 0 && r.p < 0.05);
+  });
+
+  test("YORUM SAYIYLA TUTARLI: eşiğin altı küçük, çok altı önemsiz", () => {
+    /*
+      [9,10,11,10,10] ort 10, varyans (1+0+1+0+0)/4 = 0.5
+      İkinci grup aynı dağılımın 0.3 kaydırılmışı, varyans yine 0.5
+      ortak varyans 0.5 → birleşik SS = √0.5 ≈ 0.7071
+      d = −0.3 / 0.7071 = −0.4243 → Cohen'de "küçük" (.20 ≤ |d| < .50)
+    */
+    const kucuk = independentTTest([9, 10, 11, 10, 10], [9.3, 10.3, 11.3, 10.3, 10.3]);
+    yakin(kucuk.d, -0.4243, 1e-3);
+    assert.equal(kucuk.dYorum, "küçük");
+
+    /* Aynı dağılım yalnızca 0.1 kaydırılırsa d = −0.1414 → "önemsiz". */
+    const onemsiz = independentTTest([9, 10, 11, 10, 10], [9.1, 10.1, 11.1, 10.1, 10.1]);
+    yakin(onemsiz.d, -0.1414, 1e-3);
+    assert.equal(onemsiz.dYorum, "önemsiz");
+  });
+
+  test("ANOVA'da η² = SSb / SSt", () => {
+    /* SSb 54, SSw 6 → η² = 54/60 = 0.9 → "büyük" */
+    const r = oneWayAnova([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+    yakin(r.etaKare, 0.9);
+    assert.equal(r.etaYorum, "büyük");
+  });
+
+  test("korelasyonda r² açıklanan varyans", () => {
+    const r = pearsonCorrelation([1, 2, 3, 4, 5], [2, 4, 6, 8, 10]);
+    yakin(r.rKare, 1);
+    assert.equal(r.rYorum, "büyük");
+  });
+
+  test("Cramér's V tablonun KISA kenarına bölünüyor", () => {
+    /*
+      2×2 tablo [[10,0],[0,10]]: beklenen her hücrede 5,
+      χ² = 4 × (25/5) = 20, N = 20, kısa kenar = 1
+      V = √(20 / (20 × 1)) = 1 → tam ilişki
+    */
+    const r = chiSquareIndependence([[10, 0], [0, 10]]);
+    yakin(r.chi2, 20);
+    yakin(r.cramersV, 1);
+    assert.equal(r.vYorum, "büyük");
+  });
+
+  test("ilişkisiz tabloda V sıfır", () => {
+    const r = chiSquareIndependence([[5, 5], [5, 5]]);
+    yakin(r.cramersV, 0);
+    assert.equal(r.vYorum, "önemsiz");
+  });
+
+  test("DEĞİŞKENLİK YOKKEN etki büyüklüğü uydurulmuyor", () => {
+    /* Bütün değerler aynıysa d tanımsız; 0 yazmak "etki yok" demek
+       olurdu, oysa doğru cevap "hesaplanamaz". */
+    const r = independentTTest([5, 5, 5], [5, 5, 5]);
+    assert.equal(Number.isFinite(r.t), false);
+    assert.equal(r.d, 0, "birleşik SS sıfır: d sıfıra sabitleniyor");
+    /* Çağıran t'nin tanımsızlığına bakıp sonucu hiç göstermemeli. */
+  });
+});

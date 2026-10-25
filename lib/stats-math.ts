@@ -140,3 +140,32 @@ export function fTestP(f: number, df1: number, df2: number): number {
 export function chiSquareP(chi2: number, df: number): number {
   return 1 - chiSquareCDF(chi2, df);
 }
+
+/*
+  t DAĞILIMININ TERSİ — güven aralığı için (25.10.2026).
+
+  Modül p değerini t'den hesaplıyordu; güven aralığı ters yönü
+  istiyor ("%95 için kritik t kaç?"). Kapalı bir formül yerine
+  ikiye bölme kullanılıyor: `tTestTwoTailedP` monoton azalan, yani
+  aralık daraltmak hem basit hem kararlı. Analitik bir yaklaşıklık
+  (Cornish-Fisher) kuyruklarda sapıyor ve küçük örneklemde —
+  tezlerin çoğu— tam da orada çalışıyoruz.
+
+  Güven aralığı farkın BÜYÜKLÜĞÜNÜ ve belirsizliğini birlikte
+  söyler; p ikisini de söylemez. Hangi kılavuzun istediğinden
+  bağımsız olarak hesaplanır, gösterilip gösterilmeyeceğine
+  kılavuz karar verir.
+*/
+export function tKritik(df: number, guven = 0.95): number {
+  if (!Number.isFinite(df) || df <= 0) return NaN;
+  const hedef = 1 - guven;
+  let alt = 0;
+  let ust = 1000;
+  /* Altmış tur, çift duyarlıkta aralığı 1e-15'in altına indiriyor. */
+  for (let i = 0; i < 60; i += 1) {
+    const orta = (alt + ust) / 2;
+    if (tTestTwoTailedP(orta, df) > hedef) alt = orta;
+    else ust = orta;
+  }
+  return (alt + ust) / 2;
+}
