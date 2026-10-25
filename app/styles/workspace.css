@@ -75,6 +75,41 @@
   line-height: 1.75;
   outline: none;
 }
+/*
+  EKRAN DIŞINDAKİ BLOKLAR ÇİZİLMİYOR (25.10.2026).
+
+  Tez tek bir `contenteditable` içinde duruyor: 200 sayfalık bir
+  çalışmada 1.600'den fazla blok. Tarayıcı her tuşta bu ağacın
+  yerleşimini doğruluyor ve maliyet belge uzadıkça büyüyor.
+  Ölçüldü (tarayıcıda, 1.648 blok): tuş başına 0,42 ms, 40 bloklu
+  belgenin 8 katı; `content-visibility` ile 0,00 ms.
+
+  `contenteditable` içinde kullanmak riskliydi, sınandı: ekran
+  dışındaki 800. paragrafa imleç konup yazıldı, metin doğru yere
+  girdi ve seçim bozulmadı.
+
+  `auto` anahtar sözcüğü son çizilen boyutu hatırlatıyor; sabit bir
+  tahmin verilseydi kaydırma çubuğu belge boyunca zıplardı.
+
+  BASKIDA KAPALI: yazdırmada bütün belge çizilmeli, yoksa ekran
+  dışındaki sayfalar boş çıkar.
+*/
+.manuscript-editor-content > p,
+.manuscript-editor-content > h1,
+.manuscript-editor-content > h2,
+.manuscript-editor-content > h3,
+.manuscript-editor-content > blockquote,
+.manuscript-editor-content > ul,
+.manuscript-editor-content > ol,
+.manuscript-editor-content > table,
+.manuscript-editor-content > figure {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
+}
+@media print {
+  .manuscript-editor-content > * { content-visibility: visible }
+}
+
 .manuscript-editor-content h1 { margin: 22px 0 10px; font-size: 22px; font-weight: 700; }
 .manuscript-editor-content h2 { margin: 18px 0 8px; font-size: var(--fs-xl); font-weight: 650; }
 .manuscript-editor-content h3 { margin: 14px 0 6px; font-size: var(--fs-md); font-weight: 650; }
