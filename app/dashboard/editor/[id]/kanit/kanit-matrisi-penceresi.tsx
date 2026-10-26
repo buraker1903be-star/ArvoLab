@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ChevronRight, Grid3x3, Plus } from "lucide-react";
+import { Grid3x3, Plus } from "lucide-react";
 import { kanitMatrisiOku } from "@/app/actions/kanit";
 import { kanitAsistaniAcik } from "@/app/actions/ai-kanit";
 import { DESTEK_ETIKETI, DESTEK_TONU, gecerliDestek, matrisOzeti, sonrakiAdim } from "@/lib/kanit/durum";
@@ -19,8 +18,9 @@ import { IddiaEkleFormu, KanitAyrintisi } from "./kanit-parcalari";
   Pencere içinde ikinci bir pencere açılmıyor: odak ve geri tuşu
   karışıyordu (kanit-parcalari.tsx, KanitPenceresi).
 
-  Tablo kalkmadı: danışmana göstermek ya da hepsini yan yana görmek için
-  "Tam tablo" bağlantısı.
+  Üstteki üç sayı kutusu tek cümleye indi (pencerenin açıklaması), "Tam
+  tablo" bağlantısı kaldırıldı: Literatür ve Kaynakça pencereleriyle aynı
+  sadelik. Tablo sayfası adresinde duruyor (personel ve eski bağlantılar).
 */
 export default async function KanitMatrisiPenceresi({
   projectId,
@@ -41,7 +41,11 @@ export default async function KanitMatrisiPenceresi({
       triggerClassName={triggerClassName}
       kicker="Kanıt matrisi"
       title="İddialarınız ve kanıtları"
-      description="Destek düzeyleri otomatik sistemin ya da sizin değerlendirmenizdir; nihai akademik hüküm değildir."
+      description={
+        ozet.toplam
+          ? `${ozet.toplam} iddia · ${ozet.dogrudan} doğrudan destekleniyor · ${bakilacak} bakılacak · ${ozet.incelemeBekleyen} insan incelemesi bekliyor. Destek düzeyleri nihai akademik hüküm değildir.`
+          : "Kaynak gerektiren temel iddialarınızı ekleyin; her biri için künye, kaynaktan metin ve destek düzeyi ayrı ayrı izlenir."
+      }
       boy="tam"
       basaridaKapan={false}
     >
@@ -51,25 +55,6 @@ export default async function KanitMatrisiPenceresi({
         </p>
       ) : null}
 
-      <dl className="kanit-ozet">
-        <div>
-          <dt>İddia</dt>
-          <dd>{ozet.toplam}</dd>
-          <span>{ozet.dogrudan} doğrudan destekleniyor</span>
-        </div>
-        <div data-tone={bakilacak ? "warning" : undefined}>
-          <dt>Bakılacak</dt>
-          <dd>{bakilacak}</dd>
-          <span>
-            {ozet.celisen} çelişen · {ozet.zayif} kısmi/dolaylı · {ozet.degerlendirilmemis} değerlendirilmedi
-          </span>
-        </div>
-        <div>
-          <dt>İnsan incelemesi</dt>
-          <dd>{ozet.incelemeBekleyen}</dd>
-          <span>{ozet.kunyeSorunlu} kaynakta künye sorunu</span>
-        </div>
-      </dl>
 
       {/*
         YAN YANA İKİ KART: solda iddialar (ve "İddia ekle"), sağda seçili
@@ -79,17 +64,21 @@ export default async function KanitMatrisiPenceresi({
       <IkiKartSecim
         solBaslik={kayitlar.length ? `İddialar · ${kayitlar.length}` : "İddialar"}
         solUst={
-          /* Hiç iddia yoksa form açık gelir: yapılacak tek iş o. */
-          <details className="form-details pencere-is" open={kayitlar.length === 0}>
-            <summary>
-              <Plus size={15} aria-hidden="true" /> İddia ekle
-            </summary>
-            <p className="muted text-sm">
-              Çalışmanızda kaynakla desteklenmesi gereken bir iddia. Kaynak listenizden bağlayın; künye ve kanıt
-              kontrolleri ayrı ayrı yapılır.
-            </p>
+          /*
+            İddia ekleme PENCERE İÇİNDE PENCERE (Literatür'deki "Manuel
+            kaynak ekle" gibi): eskiden form sol kartın içinde açılıyor,
+            listeyi aşağı itiyordu. Kaydedince iç pencere kapanır.
+          */
+          <PanelDrawer
+            triggerLabel="İddia ekle"
+            triggerIcon={<Plus size={16} aria-hidden="true" />}
+            triggerClassName={kayitlar.length ? "projects-filter-button" : "projects-primary-button"}
+            kicker="Kanıt matrisi"
+            title="Yeni iddia"
+            description="Çalışmanızda kaynakla desteklenmesi gereken bir iddia. Kaynak listenizden bağlayın; künye ve kanıt kontrolleri ayrı ayrı yapılır."
+          >
             <IddiaEkleFormu projectId={projectId} kaynaklar={kaynaklar} />
-          </details>
+          </PanelDrawer>
         }
         secenekler={kayitlar.map((k) => {
           const destek = gecerliDestek(k);
@@ -121,12 +110,21 @@ export default async function KanitMatrisiPenceresi({
             ),
           };
         })}
-        bos="Soldan bir iddia ekleyin; zinciri ve kontrolleri burada görünür."
+        bos={
+          <ol className="kanit-adimlari">
+            <li>
+              <b>İddiayı ekleyin.</b> Tezinizde kaynakla desteklenmesi gereken cümle.
+            </li>
+            <li>
+              <b>Kaynağını bağlayın.</b> Literatür listenizden; künyesi Crossref/OpenAlex&apos;te doğrulanır.
+            </li>
+            <li>
+              <b>Kaynaktan metni ekleyin.</b> İddiayı destekleyen bölüm; destek düzeyini siz ya da asistan değerlendirir.
+            </li>
+          </ol>
+        }
       />
 
-      <Link href={`/dashboard/editor/${projectId}/kanit`} className="link-accent mt-md kanit-tam-tablo">
-        Tam tabloyu aç <ChevronRight size={14} aria-hidden="true" />
-      </Link>
     </PanelDrawer>
   );
 }

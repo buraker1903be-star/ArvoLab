@@ -390,3 +390,10 @@
 .ornek-atif { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
 .ornek-atif > .projects-filter-button { align-self: flex-start; }
 .ornek-atif-kurallar { display: grid; gap: 2px; margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: var(--fs-sm); }
+/* Kanıt matrisi boş durumu: ne yapılacağı üç adımda (kanit-matrisi-penceresi.tsx) */
+.gb-bos:has(.kanit-adimlari) { place-items: center start; text-align: left; }
+.kanit-adimlari { display: grid; gap: 12px; max-width: 520px; margin: 0; padding-left: 22px; color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.kanit-adimlari b { color: var(--ink); }
+/* Kartın doğrudan içindeki tek düğme tam genişliğe yayılmasın */
+.pencere-kart > .projects-primary-button,
+.pencere-kart > .projects-filter-button { align-self: flex-start; }
