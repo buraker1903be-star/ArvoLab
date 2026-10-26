@@ -425,3 +425,12 @@
 .analiz-betik { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-2); }
 .analiz-betik summary { cursor: pointer; font-size: var(--fs-sm); font-weight: 600; }
 .analiz-betik pre { max-height: 280px; margin: 10px 0; overflow: auto; font-family: var(--font-mono); font-size: var(--fs-micro); white-space: pre; }
+/* Yeni çalışma penceresi (editor/yeni-calisma-penceresi.tsx) */
+.yeni-calisma-tur { margin: 0; padding: 0; border: 0; min-width: 0; }
+.yeni-calisma-tur legend { margin-bottom: 6px; padding: 0; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 600; }
+.yeni-calisma-tur .analiz-kartlari { margin: 0; }
+.yeni-calisma-tamam { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; color: var(--success); font-size: var(--fs-base); }
+.yeni-calisma-tamam b { color: var(--ink); }
+/* İkinci adım, çalışma oluşturulana kadar sönük: önce soldaki doldurulur. */
+.pencere-kart[data-pasif="true"] { opacity: .7; }
+@media (max-width: 560px) { .pencere-kart .project-form-grid { grid-template-columns: minmax(0, 1fr); } }

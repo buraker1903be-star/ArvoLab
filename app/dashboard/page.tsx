@@ -257,6 +257,9 @@ export default async function DashboardPage() {
     sayısı. Personelde istenmiyor; onun ana sayfası çok çalışmalı liste.
   */
   const ogrenciGorunumu = !isStaff && Boolean(resume) && !yeniKullanici;
+  /* Öğrenci yeni çalışmayı Çalışmalarım'daki pencerede başlatır (kendi
+     kılavuzunu orada ekler); personelin tam formu ayrı sayfada. */
+  const yeniCalismaHref = isStaff ? "/dashboard/editor/new" : "/dashboard/editor?yeni=1";
   const [ritimYaniti, { count: iddiaSayisi }, { count: dogrudanSayisi }] = ogrenciGorunumu
     ? await Promise.all([
         supabase.rpc("yazim_ritmi", { p_project: resume!.id, p_gun: 14 }),
@@ -427,7 +430,7 @@ export default async function DashboardPage() {
             </Link>
           ) : null}
           {ogrenciGorunumu ? null : (
-            <Link href="/dashboard/editor/new" className={resume ? "projects-filter-button" : "projects-primary-button"}>
+            <Link href={yeniCalismaHref} className={resume ? "projects-filter-button" : "projects-primary-button"}>
               <Plus size={16} aria-hidden="true" />
               Yeni çalışma
             </Link>
@@ -472,7 +475,7 @@ export default async function DashboardPage() {
               kanıt matrisinde kaynaklarına bağlanır ve teslim kontrol listesi aynı ekranda durur.
             </li>
           </ol>
-          <Link href="/dashboard/editor/new" className="projects-primary-button">
+          <Link href={yeniCalismaHref} className="projects-primary-button">
             <Plus size={16} aria-hidden="true" />
             İlk çalışmayı oluştur
           </Link>

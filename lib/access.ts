@@ -110,7 +110,7 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  * runCitationCheck, analyzeUploadedDocument, importWordDocument,
  * saveManuscript, saveNamedVersion, restoreManuscriptVersion,
  * createLiteratureSource, createCitationSource, addManuscriptComment,
- * addScoreEntry, createProject, createShareLink, kanitEkle, kunyeyiDogrula
+ * addScoreEntry, createProject, yeniCalisma, createShareLink, kanitEkle, kunyeyiDogrula
  * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
  * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi.
  * (yapilacakTamamla, analizSirasi ve analizTezeEklendi kapısız: mevcut

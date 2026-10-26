@@ -89,14 +89,21 @@ function readInstitution(formData: FormData) {
   };
 }
 
-// Hatalar formun içinde gösterilir (yazılanlar kaybolmaz); başarıda editör açılır.
-export async function createProject(formData: FormData): Promise<ActionResult> {
+/*
+  Kaydın kendisi; iki giriş noktası paylaşıyor. createProject (personelin
+  tam formu, /dashboard/editor/new) kayıttan sonra yönlendiriyor;
+  yeniCalisma (öğrencinin "Yeni çalışma" penceresi) kimliği geri veriyor,
+  pencere açık kalıp kılavuz yükleme adımına geçiyor.
+*/
+async function calismaKaydet(
+  formData: FormData,
+): Promise<{ error: string } | { id: string; tur: string; kilavuzVar: boolean }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return SESSION_MISSING;
+  if (!user) return { error: SESSION_MISSING.error! };
   /* Paneldeki kapı yalnızca ekranı kapatıyor; sunucu işlemi doğrudan
      çağrılabildiği için abonelik burada da denetlenmeli. */
   if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
@@ -149,9 +156,27 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
 
   revalidatePath("/dashboard/editor");
   revalidatePath("/dashboard");
+  return { id: created.id, tur: type, kilavuzVar: Boolean(created.guideline_id) };
+}
+
+// Hatalar formun içinde gösterilir (yazılanlar kaybolmaz); başarıda editör açılır.
+export async function createProject(formData: FormData): Promise<ActionResult> {
+  const sonuc = await calismaKaydet(formData);
+  if ("error" in sonuc) return sonuc;
   /* Kılavuzu eşleşen tez doğrudan editöre; eşleşmeyen tez kılavuz
      penceresine, makale dergi bilgilerine (lib/calisma-karti.ts). */
-  redirect(yeniCalismaAdresi({ id: created.id, tur: type, kilavuzVar: Boolean(created.guideline_id) }));
+  redirect(yeniCalismaAdresi(sonuc));
+}
+
+/*
+  Öğrencinin "Yeni çalışma" penceresi (editor/yeni-calisma-penceresi.tsx).
+  Yönlendirmiyor: pencere açık kalıyor ve ikinci adımda öğrenci kendi tez
+  yazım kılavuzunu bu çalışmaya yüklüyor (kılavuz yükleme çalışmanın
+  kimliğini istiyor; depo yolu ve yetki ona bağlı).
+*/
+export async function yeniCalisma(formData: FormData): Promise<{ error?: string; id?: string }> {
+  const sonuc = await calismaKaydet(formData);
+  return "error" in sonuc ? { error: sonuc.error } : { id: sonuc.id };
 }
 
 /**

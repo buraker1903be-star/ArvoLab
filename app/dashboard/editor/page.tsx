@@ -21,6 +21,7 @@ import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { trTarihSaat, trUzunTarih } from "@/lib/tr-time";
 import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
+import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
 import CalismaDurumKarti from "./calisma-durum-karti";
 
 function formatDate(dateStr: string | null) {
@@ -174,10 +175,15 @@ export default async function ProjectsPage({
               : "Tezinizi ve diğer çalışmalarınızı buradan açın; yazmaya kaldığınız yerden devam edin."}
           </p>
         </div>
-        <Link href="/dashboard/editor/new" className="projects-primary-button">
-          <Plus size={18} aria-hidden="true" />
-          Yeni çalışma
-        </Link>
+        {/* Öğrenci pencerede başlatır ve kendi kılavuzunu ekler; personelin tam formu ayrı sayfada. */}
+        {ogrenciDuzeni ? (
+          <YeniCalismaPenceresi acikBasla={params.yeni === "1"} />
+        ) : (
+          <Link href="/dashboard/editor/new" className="projects-primary-button">
+            <Plus size={18} aria-hidden="true" />
+            Yeni çalışma
+          </Link>
+        )}
       </section>
 
       {okunamadi ? (
@@ -199,7 +205,7 @@ export default async function ProjectsPage({
           ikon={FileText}
           baslik="Henüz kayıtlı çalışmanız yok"
           aciklama="Üniversitenizi seçerek başlayın; tez yazım kılavuzunuz editöre otomatik uygulanır, kaynakça sistemi ve sayfa düzeni sizin için hazırlanır."
-          eylem={{ etiket: "İlk çalışmayı oluştur", href: "/dashboard/editor/new" }}
+          eylem={{ etiket: "İlk çalışmayı oluştur", href: ogrenciDuzeni ? "/dashboard/editor?yeni=1" : "/dashboard/editor/new" }}
         />
       ) : (
         <>
