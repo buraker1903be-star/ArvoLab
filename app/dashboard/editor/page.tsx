@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Search, LayoutDashboard, MessageSquare, MoreHorizontal, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
+import { AlertTriangle, FileText, Search, MessageSquare, Plus, ShieldCheck } from "lucide-react";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
 import { loadAppliedGuidelines } from "@/lib/guideline-rules";
@@ -7,32 +7,21 @@ import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
 import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff, type StaffMember } from "@/app/actions/projects";
 import { listeBasarili } from "@/lib/liste-sonucu";
-import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS, PROJECT_STATUSES, STAFF_ROLES } from "@/lib/project-labels";
+import { projectTypeLabel, statusLabel, isOversightRole, PROJECT_STATUSES, STAFF_ROLES } from "@/lib/project-labels";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { applyProjectFilters, isFiltered, parseProjectFilters } from "@/lib/project-filters";
 import ProjectFilters from "./project-filters";
 import BosDurum from "../_components/bos-durum";
 import { getCurrentProfile } from "@/app/actions/profile";
-import DeleteProjectButton from "./delete-project-button";
-import ActionForm from "../action-form";
+import PersonelCalismaKarti from "./personel-calisma-karti";
+import { personelSayaclari } from "@/lib/personel-sayaclari";
 import { statusTone } from "@/lib/status-tone";
 import { topluTutarsizliklar } from "@/app/actions/calisma-merkezi";
 import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
-import { trTarihSaat, trUzunTarih } from "@/lib/tr-time";
 import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
 import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
 import CalismaDurumKarti from "./calisma-durum-karti";
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "Teslim tarihi belirtilmedi";
-  return trUzunTarih(dateStr);
-}
-
-function formatDateTime(dateStr: string | null) {
-  if (!dateStr) return "";
-  return trTarihSaat(dateStr);
-}
 
 
 /* Kaynak PDF'lerini bulan sunucu işlemi dış arşivlerden indirme yapıyor
@@ -68,14 +57,33 @@ export default async function ProjectsPage({
     kurumVar: Boolean(profile?.organization_id),
   });
   const canApprove = isOversightRole(profile?.role) && gorunum.personel;
+  /*
+    Personel listesinde ÖĞRENCİNİN ADI. Eskiden kartlarda yalnızca başlık
+    vardı; "Ekonometri" başlıklı üç tezden hangisinin kimin olduğu
+    çalışmayı açmadan anlaşılmıyordu. Profil okuması RLS'e tabi (aynı
+    kurum); okunamazsa ad boş kalır, liste düşmez.
+  */
+  const sahipAdlari = new Map<string, string>();
+  if (canApprove && projects.length) {
+    const supabase = await createClient();
+    const { data: sahipler, error: sahipHatasi } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", [...new Set(projects.map((project) => project.owner_id))]);
+    if (sahipHatasi) console.error("[calismalar] öğrenci adları okunamadı:", sahipHatasi.message);
+    for (const sahip of sahipler ?? []) if (sahip.full_name) sahipAdlari.set(sahip.id, sahip.full_name);
+  }
+  const calismalar = projects.map((project) => ({ ...project, sahip_adi: sahipAdlari.get(project.owner_id) ?? null }));
   // Arama, filtre ve sıralama (adres satırındaki ?q=…&durum=…&sirala=…&atanan=…)
   const filters = parseProjectFilters(params, PROJECT_STATUSES);
-  const visible = applyProjectFilters(projects, filters, {
-    openComments: (id) => openComments.get(id) ?? 0,
-    lastEdited: (projectId) => stats.get(projectId)?.updatedAt,
+  const filtreBaglami = {
+    openComments: (id: string) => openComments.get(id) ?? 0,
+    lastEdited: (projectId: string) => stats.get(projectId)?.updatedAt,
     userId: profile?.id,
     canFilterAssignee: canApprove,
-  });
+  };
+  const visible = applyProjectFilters(calismalar, filters, filtreBaglami);
+  const sayaclar = canApprove ? personelSayaclari(calismalar, filters, filtreBaglami) : [];
   const { satirlar: staff, okunamadi: personelOkunamadi } = canApprove
     ? await getAssignableStaff()
     : listeBasarili<StaffMember>([]);
@@ -139,13 +147,12 @@ export default async function ProjectsPage({
     kartları gerekiyor.
   */
   const ogrenciDuzeni = !canApprove;
-  const seciliId = ogrenciDuzeni
-    ? seciliCalismaId(
-        visible.map((project) => project.id),
-        typeof params.sec === "string" ? params.sec : null,
-        (id) => stats.get(id)?.updatedAt,
-      )
-    : null;
+  /* Personel düzeni de iki kart (26.10.2026): seçim ikisinde de aynı kuralla. */
+  const seciliId = seciliCalismaId(
+    visible.map((project) => project.id),
+    typeof params.sec === "string" ? params.sec : null,
+    (id) => stats.get(id)?.updatedAt,
+  );
   const secili = seciliId ? visible.find((project) => project.id === seciliId) ?? null : null;
 
   async function handleApprove(projectId: string) {
@@ -165,13 +172,13 @@ export default async function ProjectsPage({
   }
 
   return (
-    <main className={ogrenciDuzeni ? "dashboard-page gb gb-tek-ekran" : "dashboard-page"}>
+    <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
           <h1>Çalışmalarım</h1>
           <p>
             {canApprove
-              ? "Ekibinizin tez, makale ve proje çalışmaları; onay ve sorumlu ataması kartların üzerinde."
+              ? "Kurumunuzdaki tez, makale ve proje çalışmaları. Bir çalışma seçin; onay ve sorumlu ataması sağdaki kartta."
               : "Tezinizi ve diğer çalışmalarınızı buradan açın; yazmaya kaldığınız yerden devam edin."}
           </p>
         </div>
@@ -209,6 +216,26 @@ export default async function ProjectsPage({
         />
       ) : (
         <>
+        {/*
+          Sayaçlar filtredir: sayı, basınca açılan listenin uzunluğu
+          (lib/personel-sayaclari.ts). Seçili olana yeniden basmak kaldırır.
+        */}
+        {sayaclar.length ? (
+          <nav className="personel-sayaclar" aria-label="Çalışma durumları">
+            {sayaclar.map((sayac) => (
+              <Link
+                key={sayac.anahtar}
+                href={sayac.href}
+                className="personel-sayac"
+                data-tone={sayac.sayi ? sayac.ton : undefined}
+                aria-current={sayac.secili ? "true" : undefined}
+              >
+                <b>{sayac.sayi}</b>
+                <span>{sayac.etiket}</span>
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         {filtrelerGorunsun(projects.length, canApprove) ? (
         <ProjectFilters
           key={JSON.stringify(filters)}
@@ -283,223 +310,96 @@ export default async function ProjectsPage({
             ) : null}
           </section>
         ) : (
-        <section className="projects-list" aria-label="Akademik çalışma listesi">
-          {visible.map((project) => {
-            const isApproved = !!project.controller_approved_at;
-            const canEdit = canApprove || profile?.id === project.owner_id || profile?.id === project.assignee_id;
-            // Eski kayıtlarda sorumlu yalnızca serbest metin olarak tutuluyordu (assignee_id boş).
-            const legacyAssignee = !project.assignee_id && project.assignee_name;
-            const due = dueInfo(project.due_date, project.status);
-            const { pace, ilerleme } = yazimDurumu(project);
-            return (
-              <article className="project-card" data-tone={statusTone(project.status)} key={project.id}>
-                <div className="project-card-main">
-                  <div>
-                    <span className="status-pill" data-tone={statusTone(project.status)}>
-                      {statusLabel(project.status)}
-                    </span>
-                    <h2>{project.title}</h2>
-                    <p>
-                      {projectTypeLabel(project.project_type)}
-                      {project.university ? ` · ${project.university}` : ""}
-                    </p>
-                  </div>
-                  {ilerleme ? (
-                    <div className="project-progress" title={ilerleme.ipucu} aria-label={ilerleme.ipucu}>
-                      <strong>
-                        %{ilerleme.yuzde} <small>{ilerleme.etiket}</small>
-                      </strong>
-                      <div className="project-progress-track">
-                        <span style={{ "--w": `${ilerleme.yuzde}%` } as React.CSSProperties} />
-                      </div>
-                    </div>
-                  ) : null}
+          /*
+            PERSONEL DÜZENİ: İKİ KART (26.10.2026, kurum sahibinin isteği).
+            Eskiden her çalışma uzun bir karttı (onay, atama, beş düğme,
+            menü) ve onlarca çalışmada sayfa kilometrelerce kayıyordu.
+            Solda öğrenci adıyla liste ve küçük işaretler (yorum, tutarsızlık,
+            onay), sağda seçili çalışmanın ayrıntısı ve denetim eylemleri.
+          */
+          <section className="gb-sutunlar calismalar-ikili" aria-label="Çalışmalar">
+            <article className="gb-kart gb-sutun">
+              <header className="gb-kart-bas">
+                <div>
+                  <h2>Çalışmalar</h2>
+                  <p>{visible.length === projects.length ? `${projects.length} çalışma` : `${visible.length}/${projects.length} çalışma`}</p>
                 </div>
-
-                <div className="project-card-meta">
-                  {/* Sorumlu personelin bilgisi: öğrenciye yalnızca bir uzman atandıysa görünür. */}
-                  {canApprove || project.assignee_name ? (
-                    <span>
-                      <UserRound size={15} aria-hidden="true" />
-                      {project.assignee_name || "Sorumlu atanmadı"}
-                    </span>
-                  ) : null}
-                  <span>
-                    <CalendarDays size={15} aria-hidden="true" />
-                    {!project.due_date && canEdit ? (
-                      /* Teslim tarihi yoksa kart ne kadar vakit kaldığını söyleyemiyor; eklemek tek tık. */
-                      <Link href={`/dashboard/editor/${project.id}/edit`} className="link-accent">
-                        Teslim tarihi ekle
-                      </Link>
-                    ) : (
-                      formatDate(project.due_date)
-                    )}
-                    {due ? (
-                      <span className="chip" data-tone={due.tone}>
-                        {due.label}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span>
-                    <FileText size={15} aria-hidden="true" />
-                    {stats.has(project.id)
-                      ? `${stats.get(project.id)!.words.toLocaleString("tr-TR")} kelime · ${editedAgo(stats.get(project.id)!.updatedAt)} düzenlendi`
-                      : "Henüz yazılmadı"}
-                    {pace?.perDay ? (
-                      <span className="chip" data-tone={pace.tone} title={pace.detail}>
-                        günde ~{pace.perDay.toLocaleString("tr-TR")} kelime
-                      </span>
-                    ) : pace && pace.remainingWords === 0 ? (
-                      <span className="chip" data-tone="success">
-                        Sayfa hedefine ulaşıldı
-                      </span>
-                    ) : null}
-                  </span>
-                  {openComments.get(project.id) ? (
-                    <Link href={`/dashboard/editor/${project.id}/write`} className="tone-text" data-tone="warning">
-                      <MessageSquare size={15} aria-hidden="true" />
-                      {openComments.get(project.id)} açık yorum
-                    </Link>
-                  ) : null}
-
-                  {tutarsizliklar.get(project.id)?.length ? (
-                    <Link
-                      href={`/dashboard/editor/${project.id}`}
-                      className="tone-text"
-                      data-tone="warning"
-                      title={tutarsizliklar.get(project.id)!.map((t) => t.baslik).join(" · ")}
-                    >
-                      <AlertTriangle size={15} aria-hidden="true" />
-                      {tutarsizliklar.get(project.id)!.length === 1
-                        ? tutarsizliklar.get(project.id)![0].baslik
-                        : `${tutarsizliklar.get(project.id)!.length} tutarsızlık`}
-                    </Link>
-                  ) : null}
-
-                  {isApproved ? (
-                    <span className="tone-text" data-tone="success">
-                      <ShieldCheck size={15} aria-hidden="true" />
-                      Kontrolör onayı verildi{project.controller_approved_at ? ` · ${formatDateTime(project.controller_approved_at)}` : ""}
-                    </span>
-                  ) : null}
-                </div>
-
-                {/*
-                  DENETİM EYLEMLERİ AYRI BİR ŞERİTTE.
-
-                  Onay ve sorumlu atama, çalışmanın SAHİBİNİN değil
-                  gözetim rolünün eylemleri; kartın gövdesinde serbestçe
-                  dururken öğrencinin kendi eylemleriyle aynı ağırlıkta
-                  görünüyorlardı. Üstelik "Kontrolör olarak onayla" da
-                  "Çalışma Merkezi" de koyu birincil düğmeydi: tek kartta
-                  iki birincil eylem, hangisinin asıl olduğunu
-                  söylemiyordu. Şerit kendi çerçevesinde ve kendi
-                  başlığıyla duruyor, düğmeleri ikincil.
-                */}
-                {canApprove ? (
-                  <div className="project-denetim">
-                    <span className="project-denetim-baslik">Denetim</span>
-                    {isApproved ? (
-                      <ActionForm
-                        action={handleRevoke.bind(null, project.id)}
-                        /* Onayı iptal eden düğme, "onayla" ile aynı yerde
-                           dönüşümlü çiziliyor: yanlış tıklama kolay, sonucu
-                           ağır. */
-                        confirmMessage={`"${project.title}" çalışmasının kontrolör onayını geri almak istediğinize emin misiniz? Çalışma yeniden inceleme bekler duruma döner.`}
-                        successMessage="Kontrolör onayı geri alındı."
+              </header>
+              <ul className="gb-liste calisma-secim">
+                {visible.map((project) => {
+                  const yazim = stats.get(project.id);
+                  const due = dueInfo(project.due_date, project.status);
+                  const yorum = openComments.get(project.id) ?? 0;
+                  const tutarsiz = tutarsizliklar.get(project.id)?.length ?? 0;
+                  return (
+                    <li key={project.id}>
+                      <Link
+                        href={secimAdresi(params, project.id)}
+                        className="gb-satir"
+                        aria-current={project.id === seciliId ? "true" : undefined}
+                        scroll={false}
                       >
-                        <button type="submit" className="projects-filter-button button-compact">
-                          <RotateCcw size={14} aria-hidden="true" />
-                          Onayı geri al
-                        </button>
-                      </ActionForm>
-                    ) : (
-                      <ActionForm action={handleApprove.bind(null, project.id)} successMessage="Çalışma kontrolör onayı aldı.">
-                        <button type="submit" className="projects-filter-button button-compact">
-                          <CheckCircle2 size={14} aria-hidden="true" />
-                          Kontrolör olarak onayla
-                        </button>
-                      </ActionForm>
-                    )}
-                    <ActionForm
-                      action={handleAssign.bind(null, project.id)}
-                      className="cluster"
-                      successMessage="Sorumlu kaydedildi."
-                    >
-                    <select
-                      name="assigneeId"
-                      defaultValue={project.assignee_id ?? ""}
-                      aria-label="Sorumlu personel"
-                      className="compact-select grow-select"
-                    >
-                      {/* Personel listesi okunamadıysa "kimse yok" denmiyor:
-                          yönetici atayacak kişi kalmadığını sanırdı. */}
-                      <option value="">
-                        {personelOkunamadi
-                          ? "Personel listesi okunamadı"
-                          : legacyAssignee
-                            ? `${project.assignee_name} (listede değil)`
-                            : "Sorumlu atanmadı"}
-                      </option>
-                      {staff.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {member.full_name || "İsimsiz personel"} · {ROLE_LABELS[member.role]}
-                        </option>
-                      ))}
-                    </select>
-                      <button type="submit" className="projects-filter-button button-compact">
-                        <UserRound size={14} aria-hidden="true" />
-                        Ata
-                      </button>
-                    </ActionForm>
-                  </div>
-                ) : null}
-
-                {/*
-                  ÖĞRENCİNİN İKİ EYLEMİ (26.10.2026). Kartta beş düğme vardı
-                  ve öğrencinin en sık yaptığı iş — yazmaya dönmek — ikinci
-                  sıradaydı; "Sil" ana düğmelerle aynı satırda duruyordu.
-                  Şimdi birincil eylem yazmak, ikincisi çalışma merkezi;
-                  ayda bir yapılan işler (bilgileri düzenle, belge yükle,
-                  sil) "⋯" menüsünde. Silme menüde ve yine onay soruyor.
-                */}
-                <div className="project-card-actions">
-                  <div className="cluster cluster-lg">
-                    <Link href={`/dashboard/editor/${project.id}/write`} className="projects-primary-button">
-                      <PenLine size={15} aria-hidden="true" />
-                      {stats.has(project.id) ? "Yazmaya devam et" : "Yazmaya başla"}
-                    </Link>
-                    <Link href={`/dashboard/editor/${project.id}`} className="projects-filter-button">
-                      <LayoutDashboard size={15} aria-hidden="true" />
-                      Çalışma özeti
-                    </Link>
-                  </div>
-                  <details className="kart-menu">
-                    <summary aria-label={`${project.title}: diğer işlemler`}>
-                      <MoreHorizontal size={18} aria-hidden="true" />
-                    </summary>
-                    <div className="kart-menu-liste">
-                      {canEdit ? (
-                        <Link href={`/dashboard/editor/${project.id}/edit`}>
-                          <Pencil size={15} aria-hidden="true" />
-                          Bilgileri düzenle
-                        </Link>
-                      ) : null}
-                      {/* Bağlam taşınır: belge sayfası çalışmayı hazır seçer. */}
-                      <Link href={`/dashboard/documents?calisma=${project.id}`}>
-                        <Upload size={15} aria-hidden="true" />
-                        Belge yükle
+                        <span className="gb-satir-govde">
+                          <b>{project.title}</b>
+                          <small>
+                            {[
+                              project.sahip_adi,
+                              projectTypeLabel(project.project_type),
+                              yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime · ${editedAgo(yazim.updatedAt)}` : "henüz yazılmadı",
+                              due?.label,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </small>
+                        </span>
+                        <span className="personel-isaretler">
+                          {yorum ? (
+                            <span className="personel-isaret" data-tone="warning" title={`${yorum} açık yorum`}>
+                              <MessageSquare size={13} aria-hidden="true" />
+                              {yorum}
+                            </span>
+                          ) : null}
+                          {tutarsiz ? (
+                            <span className="personel-isaret" data-tone="warning" title={`${tutarsiz} tutarsızlık`}>
+                              <AlertTriangle size={13} aria-hidden="true" />
+                              {tutarsiz}
+                            </span>
+                          ) : null}
+                          {project.controller_approved_at ? (
+                            <span className="personel-isaret" data-tone="success" title="Kontrolör onayı verildi">
+                              <ShieldCheck size={13} aria-label="Onaylı" />
+                            </span>
+                          ) : null}
+                          <span className="status-pill" data-tone={statusTone(project.status)}>
+                            {statusLabel(project.status)}
+                          </span>
+                        </span>
                       </Link>
-                      {(profile?.id === project.owner_id || canDeleteAnyProject) && (
-                        <DeleteProjectButton projectId={project.id} projectTitle={project.title} />
-                      )}
-                    </div>
-                  </details>
-                </div>
-              </article>
-            );
-          })}
-        </section>
+                    </li>
+                  );
+                })}
+              </ul>
+            </article>
+            {secili ? (
+              <PersonelCalismaKarti
+                key={secili.id}
+                calisma={secili}
+                sahipAdi={secili.sahip_adi}
+                yazim={stats.get(secili.id)}
+                ilerleme={yazimDurumu(secili).ilerleme}
+                tempo={yazimDurumu(secili).pace}
+                due={dueInfo(secili.due_date, secili.status)}
+                acikYorum={openComments.get(secili.id) ?? 0}
+                tutarsizliklar={tutarsizliklar.get(secili.id) ?? []}
+                personel={staff}
+                personelOkunamadi={personelOkunamadi}
+                silebilir={profile?.id === secili.owner_id || canDeleteAnyProject}
+                onayla={handleApprove.bind(null, secili.id)}
+                onayiGeriAl={handleRevoke.bind(null, secili.id)}
+                ata={handleAssign.bind(null, secili.id)}
+              />
+            ) : null}
+          </section>
         )}
         </>
       )}

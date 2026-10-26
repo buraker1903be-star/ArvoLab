@@ -34,6 +34,8 @@ export interface ProjectFilterInput {
   id: string;
   title: string;
   university: string | null;
+  /** Çalışmanın sahibinin adı (personel düzeni): arama öğrenci adıyla da bulur. */
+  sahip_adi?: string | null;
   status: string;
   due_date: string | null;
   created_at: string;
@@ -69,6 +71,19 @@ export function parseProjectFilters(params: Record<string, string | string[] | u
     approval: APPROVAL_FILTERS.includes(approval) ? approval : "tumu",
     comments: COMMENT_FILTERS.includes(comments) ? comments : "tumu",
   };
+}
+
+/** Filtrenin adresi (/dashboard/editor?…): filtre çubuğu ve personel sayaçları aynı adresi kurar. */
+export function filtreAdresi(filters: ProjectFilters): string {
+  const p = new URLSearchParams();
+  if (filters.q) p.set("q", filters.q);
+  if (filters.status !== "tumu") p.set("durum", filters.status);
+  if (filters.sort !== "yeni") p.set("sirala", filters.sort);
+  if (filters.assignee !== "tumu") p.set("atanan", filters.assignee);
+  if (filters.approval !== "tumu") p.set("onay", filters.approval);
+  if (filters.comments !== "tumu") p.set("yorum", filters.comments);
+  const sorgu = p.toString();
+  return sorgu ? `/dashboard/editor?${sorgu}` : "/dashboard/editor";
 }
 
 export function isFiltered(filters: ProjectFilters): boolean {
@@ -111,7 +126,7 @@ export function applyProjectFilters<T extends ProjectFilterInput>(
     }
   };
   const result = projects.filter((project) => {
-    if (needle && !fold(`${project.title} ${project.university ?? ""}`).includes(needle)) return false;
+    if (needle && !fold(`${project.title} ${project.university ?? ""} ${project.sahip_adi ?? ""}`).includes(needle)) return false;
     if (!matchesStatus(project)) return false;
     // Sorumlu filtresi yalnızca tüm çalışmaları gören denetim rollerinde anlamlıdır
     if (context.canFilterAssignee) {

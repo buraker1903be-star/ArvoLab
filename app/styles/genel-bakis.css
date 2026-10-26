@@ -530,3 +530,45 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .fatura-belgeler:empty { display: none; }
 .fatura-belgeler a { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); text-decoration: none; }
 .fatura-belgeler a:hover { text-decoration: underline; }
+
+/* ============================================================
+   ÇALIŞMALARIM (personel): üstte sayaç-filtreler, solda öğrenci adlı
+   liste, sağda seçili çalışmanın ayrıntısı ve denetimi
+   (personel-calisma-karti.tsx, lib/personel-sayaclari.ts).
+   ============================================================ */
+.personel-sayaclar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.personel-sayac {
+  --tone: var(--ink);
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--karo-r);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color .15s ease, transform .2s var(--ease-spring);
+}
+.personel-sayac b { color: var(--tone); font-size: 24px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.personel-sayac span { overflow: hidden; color: var(--muted); font-size: var(--fs-micro); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) { .personel-sayac:hover { border-color: var(--line); } }
+.personel-sayac:active { transform: scale(.97); }
+.personel-sayac:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+.personel-sayac[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.personel-sayac[data-tone="danger"] { --tone: var(--danger); }
+.personel-sayac[data-tone="info"] { --tone: var(--info); }
+.personel-sayac[aria-current="true"] { border-color: var(--accent-500); background: var(--accent-soft); }
+.personel-isaretler { display: inline-flex; flex: none; align-items: center; gap: 6px; }
+.personel-isaret { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); font-size: var(--fs-micro); font-weight: 650; font-variant-numeric: tabular-nums; }
+.personel-isaret[data-tone="warning"] { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.personel-isaret[data-tone="success"] { color: var(--success); }
+.personel-ogrenci { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 600; }
+.personel-denetim { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface-2); }
+.personel-denetim .calisma-durum-alt { margin: 0; }
+.personel-denetim-satir { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.personel-denetim-satir .tone-text { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); font-weight: 600; }
+.personel-ata { display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; }
+.personel-ata select { flex: 1; min-width: 0; }
+@media (max-width: 1100px) { .personel-sayaclar { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .personel-sayaclar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

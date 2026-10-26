@@ -4,7 +4,7 @@ import type { ChangeEvent } from "react";
 import Form from "next/form";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import type { ProjectFilters as Filters } from "@/lib/project-filters";
+import { filtreAdresi, type ProjectFilters as Filters } from "@/lib/project-filters";
 
 // Çalışmalarım: arama, durum/sorumlu filtresi ve sıralama. Değerler adres satırında tutulur
 // (yenileyince ve paylaşınca korunur); seçim değişince liste sayfa yenilenmeden güncellenir.
@@ -33,24 +33,13 @@ export default function ProjectFilters({
     görünmezdi. Yanlarındaki çip hem filtrenin açık olduğunu söylüyor hem de
     kaldırma yolunu veriyor.
   */
-  const adres = (degisiklik: Partial<Filters>) => {
-    const sonuc = { ...filters, ...degisiklik };
-    const p = new URLSearchParams();
-    if (sonuc.q) p.set("q", sonuc.q);
-    if (sonuc.status !== "tumu") p.set("durum", sonuc.status);
-    if (sonuc.sort !== "yeni") p.set("sirala", sonuc.sort);
-    if (sonuc.assignee !== "tumu") p.set("atanan", sonuc.assignee);
-    if (sonuc.approval !== "tumu") p.set("onay", sonuc.approval);
-    if (sonuc.comments !== "tumu") p.set("yorum", sonuc.comments);
-    const sorgu = p.toString();
-    return sorgu ? `/dashboard/editor?${sorgu}` : "/dashboard/editor";
-  };
+  const adres = (degisiklik: Partial<Filters>) => filtreAdresi({ ...filters, ...degisiklik });
 
   return (
     <Form action="/dashboard/editor" className="project-filters" role="search" aria-label="Çalışmaları filtrele">
       <label className="project-filter-search">
         <Search size={15} aria-hidden="true" />
-        <input type="search" name="q" defaultValue={filters.q} placeholder="Başlık ya da üniversite ara" aria-label="Çalışma ara" maxLength={100} />
+        <input type="search" name="q" defaultValue={filters.q} placeholder={showAssignee ? "Başlık, öğrenci ya da üniversite ara" : "Başlık ya da üniversite ara"} aria-label="Çalışma ara" maxLength={100} />
       </label>
       <select name="durum" defaultValue={filters.status} onChange={submit} className="compact-select" aria-label="Durum">
         <option value="tumu">Tüm durumlar</option>
