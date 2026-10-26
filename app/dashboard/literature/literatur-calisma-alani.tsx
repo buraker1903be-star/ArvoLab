@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import LiteraturBulucu from "./literatur-bulucu";
 import LiteraturAsistani from "./literatur-asistani";
 
@@ -19,6 +19,7 @@ export default function LiteraturCalismaAlani({
   asistanAcik,
   secilenCalisma = null,
   yalnizArama = false,
+  solEk,
 }: {
   projeler: Proje[];
   asistanAcik: boolean;
@@ -29,6 +30,8 @@ export default function LiteraturCalismaAlani({
     araç alt alta bir pencerede öğrencinin kafasını karıştırıyordu.
   */
   yalnizArama?: boolean;
+  /** Penceredeki arama kartının altına (LiteraturBulucu, solEk). */
+  solEk?: ReactNode;
 }) {
   const [sorgu, setSorgu] = useState("");
 
@@ -40,6 +43,7 @@ export default function LiteraturCalismaAlani({
         sorgu={sorgu}
         onSorguDegis={setSorgu}
         gomulu={yalnizArama}
+        solEk={solEk}
       />
       {yalnizArama ? null : <LiteraturAsistani
         projeler={projeler}

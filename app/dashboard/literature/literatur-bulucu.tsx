@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { BookOpenCheck, Check, ExternalLink, Plus, Search, Unlock } from "lucide-react";
 import { aramaKaydiniEkle, literaturAramasiYap, type AramaYaniti } from "@/app/actions/literatur-arama";
 import { showToast } from "../_components/toast-events";
@@ -25,6 +25,7 @@ export default function LiteraturBulucu({
   sorgu,
   onSorguDegis,
   gomulu = false,
+  solEk,
 }: {
   projeler: Proje[];
   secilenCalisma?: string | null;
@@ -33,6 +34,8 @@ export default function LiteraturBulucu({
   onSorguDegis: (sorgu: string) => void;
   /** Çalışmalarım kartının Literatür penceresinde: başlık çizilmez, çalışma sabit. */
   gomulu?: boolean;
+  /** Penceredeki sol kartın altına eklenen içerik ("Elimdeki kaynağı ekle"). */
+  solEk?: ReactNode;
 }) {
   const [yilDan, setYilDan] = useState("");
   const [yilaKadar, setYilaKadar] = useState("");
@@ -88,19 +91,8 @@ export default function LiteraturBulucu({
   const acikErisimSayisi = kayitlar.filter((kayit) => kayit.acikErisim).length;
   const listedekiSayisi = kayitlar.filter((kayit) => kayit.listede || eklenen.has(kayit.kimlik)).length;
 
-  return (
-    <section className={gomulu ? undefined : "project-form-card"} id="kaynak-bul">
-      {gomulu ? null : (
-        <div className="asistan-kart-ust">
-          <h2>Kaynak bul</h2>
-          <p>
-            Araması OpenAlex ve Crossref dizinlerinde yapılır; her sonuç gerçek
-            bir yayına ve mümkün olduğunda DOI&apos;ye dayanır. Beğendiğinizi tek
-            tıkla listenize ekleyin.
-          </p>
-        </div>
-      )}
-
+  const formBlok = (
+    <>
       <div className="project-form-grid">
         <label className="project-form-full">
           <span>Arama</span>
@@ -149,7 +141,10 @@ export default function LiteraturBulucu({
           {aranıyor ? "Aranıyor…" : "Dizinlerde ara"}
         </button>
       </div>
-
+    </>
+  );
+  const sonucBlok = (
+    <>
       {yanit?.hata && (
         <p className="asistan-uyari" data-tone="danger" role="alert">
           {yanit.hata}
@@ -242,7 +237,48 @@ export default function LiteraturBulucu({
           })}
         </ul>
       )}
+    </>
+  );
 
+  /*
+    PENCEREDE İKİ KART YAN YANA (26.10.2026, kurum sahibinin isteği):
+    solda arama, sağda sonuçlar. Alt alta dururken sonuçlar formun altında
+    kayboluyor, öğrenci her eklemede yukarı aşağı gidiyordu; formun
+    kaydet çubuğu da sonuçların üstüne biniyordu.
+  */
+  if (gomulu) {
+    return (
+      <div className="pencere-iki-kart" id="kaynak-bul">
+        <section className="pencere-kart">
+          <h3 className="pencere-kart-baslik">Arama</h3>
+          <p className="hint">Gerçek dizinlerde (OpenAlex, Crossref) aranır; beğendiğinizi tek tıkla bu çalışmaya eklersiniz.</p>
+          {formBlok}
+          {solEk}
+        </section>
+        <section className="pencere-kart pencere-sonuc" aria-live="polite">
+          <h3 className="pencere-kart-baslik">Sonuçlar</h3>
+          {yanit ? (
+            sonucBlok
+          ) : (
+            <p className="gb-bos">{aranıyor ? "Dizinlerde aranıyor…" : "Soldan bir arama yapın; sonuçlar burada listelenir."}</p>
+          )}
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <section className="project-form-card" id="kaynak-bul">
+      <div className="asistan-kart-ust">
+        <h2>Kaynak bul</h2>
+        <p>
+          Araması OpenAlex ve Crossref dizinlerinde yapılır; her sonuç gerçek
+          bir yayına ve mümkün olduğunda DOI&apos;ye dayanır. Beğendiğinizi tek
+          tıkla listenize ekleyin.
+        </p>
+      </div>
+      {formBlok}
+      {sonucBlok}
       {!yanit && (
         <p className="muted text-sm mt-sm">
           <BookOpenCheck size={14} aria-hidden="true" /> Tarama asistanının kurduğu arama dizelerini de buraya tek tıkla getirebilirsiniz.

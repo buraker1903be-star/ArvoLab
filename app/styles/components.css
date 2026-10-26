@@ -1538,6 +1538,9 @@ button.merkez-baglanti { width: 100%; font: inherit; text-align: left; cursor: p
    dikey (etiket üstte) olduğu için ayrı sınıf gerekiyor. */
 .secim-satiri { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); }
 .secim-satiri input { width: auto; }
+/* Form ızgarasındaki etiket kuralı (sütun yönü, kalın) seçim satırını
+   eziyordu: onay kutusu üstte, yazısı altta ortalanmış duruyordu. */
+.project-form-grid label.secim-satiri { flex-direction: row; align-items: center; color: var(--ink-soft); font-weight: 500; }
 
 /* Asistanın kurduğu arama dizesi tek tıkla bulucuya taşınır. */
 .asistan-arama-calistir {

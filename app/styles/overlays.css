@@ -144,6 +144,10 @@ html.drawer-open { overflow: hidden; }
 .drawer-root.open .drawer { opacity: 1; transform: none; }
 /* Geniş pencere: kanıt zinciri, tarama günlüğü tablosu, bölüm denetimi. */
 .drawer-root[data-boy="genis"] .drawer { width: min(1040px, 100%); }
+/* Tam pencere: yan yana iki kart (arama + sonuçlar, denetim + sonuç).
+   Bin piksellik pencerede iki kart da sıkışıyor, sonuç başlıkları üç
+   satıra kırılıyordu. */
+.drawer-root[data-boy="tam"] .drawer { width: min(1360px, 100%); max-height: min(92dvh, 1100px); }
 
 .drawer-header {
   position: relative;

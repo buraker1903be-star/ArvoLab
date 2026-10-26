@@ -20,8 +20,11 @@ type PanelDrawerProps = {
   kicker?: string;
   /** Düğmenin ikinci satırı (karo görünümü: "3 madde eksik"). */
   triggerNote?: string;
-  /** Pencere genişliği: form için "orta", tablo ve zincir için "genis". */
-  boy?: "orta" | "genis";
+  /**
+   * Pencere genişliği: form için "orta", tablo ve zincir için "genis",
+   * yan yana iki kartlı çalışma pencereleri (arama + sonuçlar) için "tam".
+   */
+  boy?: "orta" | "genis" | "tam";
   /**
    * Bir işlem başarıyla bitince pencere kapansın mı?
    *

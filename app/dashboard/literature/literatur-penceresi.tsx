@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpenCheck, ChevronRight, ExternalLink, Plus, Search, Trash2 } from "lucide-react";
+import { BookOpenCheck, ChevronRight, ExternalLink, Plus, Trash2 } from "lucide-react";
 import {
   createLiteratureSource,
   deleteLiteratureSource,
@@ -22,10 +22,10 @@ import { KunyeAlanlari, NotAlani } from "./kaynak-parcalari";
   vardı. Öğrencinin bu pencerede yaptığı üç iş var; pencere yalnızca
   onları gösteriyor:
 
-  1. Yeni kaynak aramak → "Kaynak ara" (yalnızca dizin araması; tarama
-     asistanı Literatür sayfasında).
-  2. Elindeki kaynağı eklemek → dört alan (başlık, yazar, yıl, DOI);
-     gerisi "Yayın bilgileri" altında.
+  1. Yeni kaynak aramak → solda arama, sağda sonuçlar, yan yana iki kart
+     (yalnızca dizin araması; tarama asistanı Literatür sayfasında).
+  2. Elindeki kaynağı eklemek → arama kartının altında; dört alan
+     (başlık, yazar, yıl, DOI), gerisi "Yayın bilgileri" altında.
   3. Okuduğunu işaretlemek → kaynağa tıklayınca TEK düğme: sıradaki
      adım ("Okudum", "Metinde kullandım"). Geri almak ikincil.
 
@@ -71,7 +71,7 @@ export default async function LiteraturPenceresi({ projectId, projeAdi }: { proj
           ? `${kaynaklar.length} kaynak · ${say("to_review")} okunacak · ${say("read")} okundu · ${say("used")} metinde kullanıldı`
           : "Henüz bu çalışmaya bağlı kaynak yok. Aşağıdan arayın ya da elinizdekini ekleyin."
       }
-      boy="genis"
+      boy="tam"
       basaridaKapan={false}
     >
       {okunamadi ? (
@@ -80,34 +80,40 @@ export default async function LiteraturPenceresi({ projectId, projeAdi }: { proj
         </p>
       ) : null}
 
-      <div className="pencere-bolumleri">
-        {/* Hiç kaynak yoksa ilk iş kaynak bulmak; o bölüm açık gelir. */}
-        <details className="form-details" open={kaynaklar.length === 0}>
-          <summary>
-            <Search size={15} aria-hidden="true" /> Kaynak ara
-          </summary>
-          <p className="hint">Gerçek dizinlerde (OpenAlex, Crossref) aranır; beğendiğinizi tek tıkla bu çalışmaya eklersiniz.</p>
-          <LiteraturCalismaAlani projeler={[{ id: projectId, title: projeAdi }]} asistanAcik={false} secilenCalisma={projectId} yalnizArama />
-        </details>
-        <details className="form-details">
-          <summary>
-            <Plus size={15} aria-hidden="true" /> Elimdeki kaynağı ekle
-          </summary>
-          <ActionForm className="project-form-grid mt-sm" action={createLiteratureSource} successMessage="Kaynak eklendi.">
-            <input type="hidden" name="projectId" value={projectId} />
-            <input type="hidden" name="status" value="to_review" />
-            <KunyeAlanlari kisa />
-            <div className="project-form-actions project-form-full">
-              <button type="submit" className="projects-primary-button">
-                <Plus size={16} aria-hidden="true" /> Ekle
-              </button>
-            </div>
-          </ActionForm>
-        </details>
-      </div>
+      {/*
+        İKİ KART YAN YANA: solda arama (ve altında elle ekleme), sağda
+        sonuçlar. Bu çalışmanın kaynakları altta, tam genişlikte.
+      */}
+      <LiteraturCalismaAlani
+        projeler={[{ id: projectId, title: projeAdi }]}
+        asistanAcik={false}
+        secilenCalisma={projectId}
+        yalnizArama
+        solEk={
+          <details className="form-details pencere-is mt-md">
+            <summary>
+              <Plus size={15} aria-hidden="true" /> Elimdeki kaynağı ekle
+            </summary>
+            <ActionForm className="project-form-grid mt-sm" action={createLiteratureSource} successMessage="Kaynak eklendi.">
+              <input type="hidden" name="projectId" value={projectId} />
+              <input type="hidden" name="status" value="to_review" />
+              <KunyeAlanlari kisa />
+              <div className="project-form-actions project-form-full">
+                <button type="submit" className="projects-primary-button">
+                  <Plus size={16} aria-hidden="true" /> Ekle
+                </button>
+              </div>
+            </ActionForm>
+          </details>
+        }
+      />
 
+      <h3 className="pencere-grup-baslik mt-lg">
+        {kaynaklar.length ? `Bu çalışmanın kaynakları · ${kaynaklar.length}` : "Bu çalışmanın kaynakları"}
+      </h3>
+      {kaynaklar.length === 0 ? <p className="muted text-sm">Henüz kaynak yok. Arama sonuçlarından “Listeme ekle” dediğiniz kaynaklar burada birikir.</p> : null}
       {kaynaklar.length ? (
-        <ul className="kanit-kayitlari mt-md">
+        <ul className="kanit-kayitlari">
           {kaynaklar.map((kaynak) => {
             const durum = (SIRA.includes(kaynak.status as Durum) ? kaynak.status : "to_review") as Durum;
             const ileri = ILERI[durum];

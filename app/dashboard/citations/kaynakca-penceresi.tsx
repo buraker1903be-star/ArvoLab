@@ -33,7 +33,7 @@ export default async function KaynakcaPenceresi({
       kicker="Kaynakça ve atıf doğrulama"
       title="Kaynakçanızı denetleyin"
       description="Künyelerin biçimi, metindeki atıflarla eşleşmesi ve kaynakların gerçekten var olup olmadığı (Crossref, OpenAlex) birlikte kontrol edilir."
-      boy="genis"
+      boy="tam"
       basaridaKapan={false}
     >
       <p className="kaynakca-son" data-tone={ton}>
