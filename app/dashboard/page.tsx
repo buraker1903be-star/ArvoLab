@@ -514,7 +514,7 @@ export default async function DashboardPage() {
                   {resumeStats ? "Yazmaya devam et" : "Yazmaya başla"}
                 </Link>
                 <Link href={`/dashboard/editor/${resume.id}`} className="projects-filter-button">
-                  Çalışma merkezi
+                  Çalışma özeti
                 </Link>
               </div>
             </div>
@@ -826,7 +826,7 @@ export default async function DashboardPage() {
                 bos={sirada?.bitti ? "Teslim listesinde eksik görünmüyor." : "Şu an bekleyen bir adım yok."}
                 sayi={siradakiler.length}
                 href={resume ? `/dashboard/editor/${resume.id}` : undefined}
-                hrefEtiket="Çalışma merkezi"
+                hrefEtiket="Çalışma özeti"
               >
                 {siradakiler.map((madde) => (
                   <ListeSatiri key={madde.anahtar} href={madde.href} baslik={madde.baslik} alt={madde.alt} />

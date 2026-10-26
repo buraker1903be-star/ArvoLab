@@ -103,7 +103,7 @@ export function siradakiIs(girdi: {
        yerini tutmuyor; öyle demek öğrenciyi yanlış güvene sokardı. */
     aciklama: "Otomatik denetimler temiz. Danışmanınızın kontrolü bunun yerini tutmaz.",
     href: `/dashboard/editor/${girdi.calismaId}`,
-    eylem: "Çalışma merkezini aç",
+    eylem: "Çalışma özetini aç",
     aciliyet,
     bitti: true,
   };

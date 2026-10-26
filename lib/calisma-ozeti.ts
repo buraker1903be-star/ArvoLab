@@ -14,6 +14,7 @@
 
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import type { SubmissionChecklist } from "@/lib/submission-checklist";
+import type { AppliedGuideline } from "@/lib/guideline-rules";
 
 /*
   "Çalışma okunamadı" işareti. BURADA, çünkü app/actions/calisma-merkezi.ts
@@ -49,6 +50,8 @@ export type CalismaOzeti = {
   calisma: CalismaKaydi;
   /** Teslim hazırlığı; müsvedde yoksa null (lib/manuscript-readiness.ts). */
   hazirlik: SubmissionChecklist | null;
+  /** Editörde UYGULANAN kılavuz (katalog ya da öğrencinin yüklediği); yoksa null. */
+  uygulanan: AppliedGuideline | null;
   musvedde: { kelime: number; guncellendi: string } | null;
   literatur: { toplam: number; okunan: number; kullanilan: number };
   kaynakca: { id: string; skor: number | null; tarih: string } | null;

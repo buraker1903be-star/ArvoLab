@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 /*
-  ÇALIŞMANIN SEKMELERİ: Merkez · Yazım · Kanıt · Makale.
+  ÇALIŞMANIN SEKMELERİ: Özet · Yazım · Kanıt · Makale.
 
   Eskiden merkez, kanıt matrisi ve makale alanı birbirine üst çubuktaki
   düğmelerle ve sayfa içindeki karolarla bağlanıyordu; her sayfada
@@ -22,7 +22,7 @@ export default function CalismaSekmeleri({
   aktif: CalismaSekmesi;
 }) {
   const sekmeler: { anahtar: CalismaSekmesi; etiket: string; href: string }[] = [
-    { anahtar: "merkez", etiket: "Merkez", href: `/dashboard/editor/${calisma.id}` },
+    { anahtar: "merkez", etiket: "Özet", href: `/dashboard/editor/${calisma.id}` },
     { anahtar: "yazim", etiket: "Yazım", href: `/dashboard/editor/${calisma.id}/write` },
     { anahtar: "kanit", etiket: "Kanıt matrisi", href: `/dashboard/editor/${calisma.id}/kanit` },
     ...(calisma.project_type === "article"

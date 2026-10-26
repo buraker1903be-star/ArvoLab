@@ -194,6 +194,7 @@ export async function kilavuzuKaydet(
   }
 
   revalidatePath(`/dashboard/editor/${projectId}`);
+  revalidatePath("/dashboard/editor");
   revalidatePath(`/dashboard/editor/${projectId}/write`);
   return { success: true };
 }
@@ -226,6 +227,7 @@ export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> 
     return { error: "Kılavuz kaldırılamadı. Tekrar deneyin." };
   }
   revalidatePath(`/dashboard/editor/${projectId}`);
+  revalidatePath("/dashboard/editor");
   revalidatePath(`/dashboard/editor/${projectId}/write`);
   return { success: true };
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { yeniCalismaAdresi } from "@/lib/calisma-karti";
 import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -138,7 +139,7 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
       notes: String(formData.get("notes") ?? "").trim() || null,
       status: "new",
     })
-    .select("id")
+    .select("id, guideline_id")
     .single();
 
   if (error || !created) {
@@ -148,8 +149,9 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
 
   revalidatePath("/dashboard/editor");
   revalidatePath("/dashboard");
-  // Müşteri doğrudan yazmaya başlasın.
-  redirect(`/dashboard/editor/${created.id}/write`);
+  /* Kılavuzu eşleşen tez doğrudan editöre; eşleşmeyen tez kılavuz
+     penceresine, makale dergi bilgilerine (lib/calisma-karti.ts). */
+  redirect(yeniCalismaAdresi({ id: created.id, tur: type, kilavuzVar: Boolean(created.guideline_id) }));
 }
 
 /**

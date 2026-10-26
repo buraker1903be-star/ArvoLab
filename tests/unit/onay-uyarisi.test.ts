@@ -55,6 +55,6 @@ describe("onay uyarısı", () => {
       hazirlik: liste(["todo", "todo"]),
     });
     assert.match(uyari ?? "", /2 tutarsızlık ve teslim listesinde 2 eksik madde/);
-    assert.match(uyari ?? "", /Çalışma merkezinden inceleyin/);
+    assert.match(uyari ?? "", /Çalışma özetinden inceleyin/);
   });
 });

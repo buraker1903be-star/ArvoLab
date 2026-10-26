@@ -69,8 +69,14 @@ const KAPAK_MEKTUBU = [
   "Derginin istediği ek bilgiler (ör. önerilen hakemler, veri paylaşım beyanı)",
 ];
 
-export default async function MakaleCalismaAlani({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function MakaleCalismaAlani({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [{ id }, sorgu] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
   const { data: calisma, error } = await supabase
     .from("academic_projects")
@@ -96,7 +102,7 @@ export default async function MakaleCalismaAlani({ params }: { params: Promise<{
             <p>Makale çalışma alanı makale türündeki çalışmalar içindir. Türü çalışma ayarlarından değiştirebilirsiniz.</p>
           </div>
           <div className="cluster">
-            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">Çalışma merkezi</Link>
+            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">Çalışma özeti</Link>
             <Link href={`/dashboard/editor/${id}/edit`} className="projects-filter-button">Çalışma ayarları</Link>
           </div>
         </article>
@@ -139,6 +145,9 @@ export default async function MakaleCalismaAlani({ params }: { params: Promise<{
             kicker="Makale"
             title="Makale bilgileri"
             description="Tür, araştırma sorusu ve hedef derginin sınırları. Dergi bilgilerini derginin kendi sayfasından kontrol edin; ArvoLab bunları doğrulamıyor."
+            /* Yeni makale buraya ?dergi=1 ile geliyor (createProject): kılavuzun
+               makaledeki karşılığı derginin kuralları, ilk iş onları girmek. */
+            acikBasla={sorgu.dergi === "1" && !kayitliProfil}
           >
             <ActionForm className="project-form-grid" action={makaleProfiliKaydet} successMessage="Makale bilgileri kaydedildi.">
               <input type="hidden" name="project_id" value={id} />

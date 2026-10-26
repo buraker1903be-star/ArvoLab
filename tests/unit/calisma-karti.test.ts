@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { eksikSatirlari, filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
+import { calismaAdresi, eksikSatirlari, filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId, yeniCalismaAdresi } from "@/lib/calisma-karti";
 
 test("filtreler personelde hep, öğrencide yalnızca uzun listede", () => {
   assert.equal(filtrelerGorunsun(1, false), false);
@@ -34,6 +34,8 @@ test("seçim: adresteki geçerliyse o, değilse en son düzenlenen, o da yoksa i
 test("seçim adresi filtreleri korur, eski seçimi değiştirir", () => {
   assert.equal(secimAdresi({ q: "tez", durum: "aktif", sec: "eski" }, "yeni"), "/dashboard/editor?q=tez&durum=aktif&sec=yeni");
   assert.equal(secimAdresi({}, "a"), "/dashboard/editor?sec=a");
+  // Yeni çalışmanın kılavuz penceresi başka satıra taşınmaz.
+  assert.equal(secimAdresi({ sec: "a", kilavuz: "1" }, "b"), "/dashboard/editor?sec=b");
 });
 
 test("eksikler ağırlık sırasıyla; 'şimdi' satırındaki iş tekrar edilmez", () => {
@@ -53,6 +55,7 @@ test("eksikler ağırlık sırasıyla; 'şimdi' satırındaki iş tekrar edilmez
     stilUyarisi: "APA ayarlı, kılavuz IEEE istiyor",
     maddeler,
     tutarsizliklar: [{ tur: "atifsiz_kaynak", baslik: "2 kaynak metinde yok", aciklama: "" }],
+    asistanBulgulari: [{ baslik: "Örneklem gerekçesi yok", aciklama: "" }],
     adimlar,
     sirada: { kaynakMadde: "bolum", href: "/x", bitti: false },
   });
@@ -63,13 +66,27 @@ test("eksikler ağırlık sırasıyla; 'şimdi' satırındaki iş tekrar edilmez
       "eksik:Kapak eksik",
       "tutarsizlik:2 kaynak metinde yok",
       "bakilacak:Bakılacak",
+      "asistan:Örneklem gerekçesi yok",
       "yapilmadi:Kaynakçayı denetle",
       "yapilmadi:Belgeyi kontrol ettir",
     ],
   );
   assert.equal(liste[1].href, "/dashboard/editor/c1/write?teslim=kapak");
+  assert.equal(liste[2].href, "/dashboard/literature?calisma=c1");
 
   // "Şimdi" bir birimden geldiyse o birim listeden çıkar.
   const birimden = eksikSatirlari({ calismaId: "c1", stilUyarisi: null, maddeler: [], tutarsizliklar: [], adimlar, sirada: { href: "/k", bitti: false } });
   assert.deepEqual(birimden.map((s) => s.baslik), ["Belgeyi kontrol ettir"]);
+});
+
+test("yeni çalışmanın ilk adımı: kılavuzsuz tez kılavuz penceresine, makale dergi bilgilerine", () => {
+  assert.equal(yeniCalismaAdresi({ id: "t", tur: "thesis", kilavuzVar: false }), "/dashboard/editor/t?kilavuz=1");
+  assert.equal(yeniCalismaAdresi({ id: "t", tur: "thesis", kilavuzVar: true }), "/dashboard/editor/t/write");
+  assert.equal(yeniCalismaAdresi({ id: "m", tur: "article", kilavuzVar: false }), "/dashboard/editor/m/makale?dergi=1");
+  assert.equal(yeniCalismaAdresi({ id: "p", tur: "project", kilavuzVar: false }), "/dashboard/editor/p/write");
+});
+
+test("öğrencinin çalışma adresi Çalışmalarım, çalışma seçili", () => {
+  assert.equal(calismaAdresi("a"), "/dashboard/editor?sec=a");
+  assert.equal(calismaAdresi("a", { kilavuz: true }), "/dashboard/editor?sec=a&kilavuz=1");
 });

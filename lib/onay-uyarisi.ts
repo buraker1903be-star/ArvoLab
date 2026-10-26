@@ -47,5 +47,5 @@ export function onayUyarisi(input: {
     );
 
   if (!parcalar.length) return null;
-  return `Çalışma onaylandı, ancak ${parcalar.join(" ve ")} var. Çalışma merkezinden inceleyin.`;
+  return `Çalışma onaylandı, ancak ${parcalar.join(" ve ")} var. Çalışma özetinden inceleyin.`;
 }

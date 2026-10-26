@@ -33,7 +33,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
             <p>Kaydınız yerinde duruyor. Sayfayı yenileyin; sorun sürerse destekten bildirin.</p>
           </div>
           <div className="cluster">
-            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">Çalışma merkezi</Link>
+            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">Çalışma özeti</Link>
             <Link href="/dashboard/support" className="projects-filter-button">Uygulama Destek</Link>
           </div>
         </article>
@@ -72,7 +72,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
             dönmek istiyor. */}
         <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
           <ArrowLeft size={17} aria-hidden="true" />
-          Çalışma merkezi
+          Çalışma özeti
         </Link>
       </section>
 

@@ -32,6 +32,12 @@ type PanelDrawerProps = {
    * açmaya zorluyordu. ArvoOS'taki PanelModal'ın basaridaKapan'ı.
    */
   basaridaKapan?: boolean;
+  /*
+    Sayfa açılırken pencere de açık gelsin mi? Bir akışın sıradaki adımı
+    bu pencereyse (yeni tezde kılavuz yükleme) öğrenciyi düğme aratmadan
+    oraya bırakmak için. Kapatılabilir; zorlamaz.
+  */
+  acikBasla?: boolean;
   children: ReactNode;
 };
 
@@ -50,9 +56,10 @@ export default function PanelDrawer({
   triggerNote,
   boy = "orta",
   basaridaKapan = true,
+  acikBasla = false,
   children,
 }: PanelDrawerProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(acikBasla);
   const titleId = useId();
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
   const dialogRef = useRef<HTMLElement>(null);
