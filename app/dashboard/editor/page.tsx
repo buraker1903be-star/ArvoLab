@@ -7,7 +7,8 @@ import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
 import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff, type StaffMember } from "@/app/actions/projects";
 import { listeBasarili } from "@/lib/liste-sonucu";
-import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS, PROJECT_STATUSES } from "@/lib/project-labels";
+import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS, PROJECT_STATUSES, STAFF_ROLES } from "@/lib/project-labels";
+import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { applyProjectFilters, isFiltered, parseProjectFilters } from "@/lib/project-filters";
 import ProjectFilters from "./project-filters";
 import BosDurum from "../_components/bos-durum";
@@ -49,7 +50,17 @@ export default async function ProjectsPage({
     // Kartlardaki yazım temposu için kılavuzlar tek sorguda
     createClient().then((supabase) => loadAppliedGuidelines(supabase, projects.map((project) => project.guideline_id))),
   ]);
-  const canApprove = isOversightRole(profile?.role);
+  /*
+    Denetim şeridi, filtreler ve personel metni gözetim rolünde; iç ekip
+    öğrenci düzenini önizlerken bunlar gizlenir (lib/onizleme.ts).
+    Yetkiler değişmiyor: düğmeler gizlense de RLS gerçek rolle çalışıyor.
+  */
+  const gorunum = await sayfaGorunumu({
+    rol: profile?.role,
+    personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
+    kurumVar: Boolean(profile?.organization_id),
+  });
+  const canApprove = isOversightRole(profile?.role) && gorunum.personel;
   // Arama, filtre ve sıralama (adres satırındaki ?q=…&durum=…&sirala=…&atanan=…)
   const filters = parseProjectFilters(params, PROJECT_STATUSES);
   const visible = applyProjectFilters(projects, filters, {

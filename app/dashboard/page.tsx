@@ -21,6 +21,7 @@ import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { hareketSerisi, ilkAd, selamlama, simdi } from "@/lib/genel-bakis";
 import { yazimRitmi } from "@/lib/yazim-ritmi";
+import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { writingPace } from "@/lib/writing-pace";
 import { makaleBolumleri } from "@/lib/makale/bolumler";
 import { headingMatchesSection } from "@/lib/section-match";
@@ -203,7 +204,17 @@ export default async function DashboardPage() {
   const readinessGaps = readinessGapsSirali.filter((madde) => madde.id !== sirada?.kaynakMadde);
 
 
-  const isStaff = profile?.role ? STAFF_ROLES.includes(profile.role) : false;
+  /*
+    Düzen rol ve kurumdan; iç ekip öğrenci düzenini önizleyebilir
+    (lib/onizleme.ts). Önizlemede yalnızca DÜZEN değişir: veriler
+    yöneticinin kendi çalışmaları, yetkiler aynı.
+  */
+  const gorunum = await sayfaGorunumu({
+    rol: profile?.role,
+    personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
+    kurumVar: Boolean(profile?.organization_id),
+  });
+  const isStaff = gorunum.personel;
   // Personel için "dikkat isteyenler" (öğrencinin ana sayfası değişmez); sorumlu ataması yalnızca denetim rollerinde
   const attention = isStaff ? computeAttention(projects, openComments, { includeUnassigned: isOversightRole(profile?.role) }) : null;
 
@@ -260,7 +271,7 @@ export default async function DashboardPage() {
     duruyor ve son gönderilen bağlantının durumu (açıldı mı, kaç kez)
     gösteriliyor — öğrencinin "hocam baktı mı?" sorusu.
   */
-  const bireysel = ogrenciGorunumu && !profile?.organization_id;
+  const bireysel = ogrenciGorunumu && gorunum.bireysel;
   const { data: sonBaglanti } = bireysel
     ? await supabase
         .from("manuscript_share_links")

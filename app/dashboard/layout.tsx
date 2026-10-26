@@ -1,7 +1,11 @@
 import { Suspense } from "react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { ROLE_LABELS } from "@/lib/project-labels";
+import { ROLE_LABELS, STAFF_ROLES } from "@/lib/project-labels";
+import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
+import { GORUNUM_ETIKETI, onizleyebilir } from "@/lib/onizleme";
+import { gorunumSec } from "@/app/actions/onizleme";
+import ActionForm from "./action-form";
 import { getAccessState } from "@/lib/access";
 import { gorunenUygulamalar, labUygulamalari } from "@/lib/os/uygulamalar";
 import SubscriptionNotice from "./_components/subscription-notice";
@@ -46,6 +50,12 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const access = await getAccessState(profile);
   // Rolü yetmeyen uygulamalar dock'tan da başlatıcıdan da düşer.
   const uygulamalar = gorunenUygulamalar(labUygulamalari(), profile?.role);
+  // Görünüm önizlemesi yalnızca iç ekipte (lib/onizleme.ts).
+  const gorunum = await sayfaGorunumu({
+    rol: profile?.role,
+    personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
+    kurumVar: Boolean(profile?.organization_id),
+  });
 
   return (
     <div className="dashboard-shell os-root">
@@ -63,13 +73,38 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
             <OsSaat />
             <NotificationBell />
             <ThemeToggle />
-            <KullaniciMenusu ad={userName} rol={roleLabel} basHarf={initials} cikis={logout} />
+            <KullaniciMenusu
+              ad={userName}
+              rol={roleLabel}
+              basHarf={initials}
+              cikis={logout}
+              gorunum={onizleyebilir(profile?.role) ? (gorunum.onizleme ?? "personel") : undefined}
+            />
           </div>
         </header>
 
         <Suspense>
           <OsBolumSeridi uygulamalar={uygulamalar} />
         </Suspense>
+
+        {/*
+          Önizleme açıkken her sayfada görünür: unutulan bir önizleme
+          yöneticiye kendi işlerinin (onay, atama) kaybolduğunu düşündürürdü.
+        */}
+        {gorunum.onizleme ? (
+          <div className="onizleme-serit" role="status">
+            <span>
+              <b>{GORUNUM_ETIKETI[gorunum.onizleme]}</b> görünümünü önizliyorsunuz. Veriler sizin; rolünüz ve
+              yetkileriniz değişmedi.
+            </span>
+            <ActionForm action={gorunumSec}>
+              <input type="hidden" name="gorunum" value="personel" />
+              <button type="submit" className="projects-filter-button button-compact">
+                Personel görünümüne dön
+              </button>
+            </ActionForm>
+          </div>
+        ) : null}
 
         <div className="dashboard-main-content" id="panel-icerik" tabIndex={-1}>
           <Suspense>
