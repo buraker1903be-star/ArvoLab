@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import type { HareketSerisi } from "@/lib/genel-bakis";
+import type { YazimRitmi } from "@/lib/yazim-ritmi";
 
 /*
   GENEL BAKIŞ PARÇALARI — ArvoOS'un ana ekran şablonunun
@@ -171,5 +172,61 @@ export function ListeSatiri({
         {!sag && !zaman ? <ChevronRight className="gb-ok" size={14} aria-hidden="true" /> : null}
       </Link>
     </li>
+  );
+}
+
+/*
+  YAZIM RİTMİ KARTI (öğrencinin ana sayfası). Gün gün NET yazılan
+  kelime; eksi gün (silme, taşıma) çubuğun altında kendi rengiyle.
+  Üstte öğrencinin asıl sorusunun cevabı: "bu hafta ne kadar yazdım".
+*/
+export function RitimKarti({ ritim, href }: { ritim: YazimRitmi; href: string }) {
+  const yazildi = ritim.gunler.some((g) => g.net !== 0);
+  const isaret = (n: number) => `${n > 0 ? "+" : ""}${n.toLocaleString("tr-TR")}`;
+  return (
+    <article className="gb-kart gb-sutun">
+      <header className="gb-kart-bas">
+        <div>
+          <h2>Yazım ritmi</h2>
+          <p>Son 14 gün, net kelime</p>
+        </div>
+      </header>
+      <dl className="gb-ritim-ozet">
+        <div>
+          <dt>Bu hafta</dt>
+          <dd data-tone={ritim.buHafta > 0 ? "success" : ritim.buHafta < 0 ? "danger" : undefined}>{isaret(ritim.buHafta)}</dd>
+        </div>
+        <div>
+          <dt>Seri</dt>
+          <dd>{ritim.seri ? `${ritim.seri} gün` : "—"}</dd>
+        </div>
+        <div>
+          <dt>Yazılan gün</dt>
+          <dd>{ritim.aktifGun}/14</dd>
+        </div>
+      </dl>
+      {yazildi ? (
+        <div className="gb-cubuklar gb-ritim" role="img" aria-label={`Bu hafta net ${isaret(ritim.buHafta)} kelime`}>
+          {ritim.gunler.map((gun) => (
+            <div
+              key={gun.anahtar}
+              className={`gb-cubuk${gun.bugun ? " is-bugun" : ""}${gun.net > 0 ? "" : " is-bos"}${gun.net < 0 ? " is-eksi" : ""}`}
+              title={`${gun.baslik}: ${isaret(gun.net)} kelime`}
+            >
+              <span
+                className="gb-cubuk-dolgu"
+                style={{ "--h": `${gun.net ? Math.max(10, (Math.abs(gun.net) / ritim.enBuyuk) * 100) : 4}%` } as CSSProperties}
+              />
+              <small>{gun.gun}</small>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="gb-bos">Son iki haftada kaydedilmiş yazım yok. Editörde yazdıkça günlük ilerlemeniz burada birikir.</p>
+      )}
+      <Link className="gb-kart-baglanti" href={href}>
+        Yazmaya devam et <ChevronRight size={14} aria-hidden="true" />
+      </Link>
+    </article>
   );
 }
