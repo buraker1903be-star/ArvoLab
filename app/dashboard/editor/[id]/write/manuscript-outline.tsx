@@ -1,7 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Check, Circle, FileUp, Plus, Wand2 } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Check, Circle, FileUp, ListChecks, Plus, Wand2 } from "lucide-react";
+import Dialog from "@/app/dashboard/_components/dialog";
+import YanKutu from "./yan-kutu";
 import type { OutlineHeading, SectionStatus } from "./editor-navigation";
 
 interface ManuscriptOutlineProps {
@@ -14,7 +16,7 @@ interface ManuscriptOutlineProps {
   onTemplate: () => void;
   /** Word dosyasından aktarma penceresini açar */
   onImport: () => void;
-  /** Kılavuz bölümlerinden sonra gösterilen kartlar (içindekiler, bekleyen kaynaklar, yorumlar) */
+  /** Kılavuz bölümleri kutusunun yanındaki küçük kutular (içindekiler, kaynaklar, yorumlar) */
   children?: ReactNode;
 }
 
@@ -36,22 +38,40 @@ export default function ManuscriptOutline({
   children,
 }: ManuscriptOutlineProps) {
   const missing = sections.filter((item) => !item.heading).map((item) => item.section);
+  const [acik, setAcik] = useState(false);
 
   return (
     <aside className="manuscript-outline" aria-label="Belge planı">
       {ust}
 
-      {sections.length > 0 ? (
-        <section className="outline-card">
-          <header className="outline-head">
-            <strong>Kılavuz bölümleri</strong>
-            <span className="muted text-sm">
-              {sections.length - missing.length}/{sections.length}
-            </span>
-          </header>
+      <div className="yan-kutular">
+        {sections.length > 0 ? (
+          <YanKutu
+            ikon={ListChecks}
+            baslik="Bölümler"
+            deger={`${sections.length - missing.length}/${sections.length}`}
+            alt={missing.length ? `${missing.length} bölüm eksik` : "kılavuzun bölümleri tamam"}
+            ton={missing.length ? "warning" : "success"}
+            onClick={() => setAcik(true)}
+          />
+        ) : null}
+        {children}
+      </div>
 
+      {sections.length > 0 ? (
+        <Dialog
+          open={acik}
+          onClose={() => setAcik(false)}
+          kicker="Kılavuz"
+          title="Kılavuz bölümleri"
+          description="Kılavuzun zorunlu bölümleri. Var olana basınca o bölüme gidilir; eksik olan kılavuzdaki sırasına göre eklenir."
+        >
+          <div className="stack">
           {documentEmpty ? (
-            <button type="button" className="projects-primary-button outline-action" onClick={onTemplate}>
+            <button type="button" className="projects-primary-button outline-action" onClick={() => {
+                setAcik(false);
+                onTemplate();
+              }}>
               <Wand2 size={15} aria-hidden="true" />
               Kılavuza göre taslak oluştur
             </button>
@@ -61,12 +81,18 @@ export default function ManuscriptOutline({
             {sections.map((item) => (
               <li key={item.section} data-found={item.heading ? "true" : "false"}>
                 {item.heading ? (
-                  <button type="button" onClick={() => onJump(item.heading!)} title="Bölüme git">
+                  <button type="button" onClick={() => {
+                      setAcik(false);
+                      onJump(item.heading!);
+                    }} title="Bölüme git">
                     <Check size={14} aria-hidden="true" />
                     <span>{item.section}</span>
                   </button>
                 ) : (
-                  <button type="button" onClick={() => onInsert([item.section])} title="Bu bölümü ekle">
+                  <button type="button" onClick={() => {
+                      setAcik(false);
+                      onInsert([item.section]);
+                    }} title="Bu bölümü ekle">
                     <Circle size={14} aria-hidden="true" />
                     <span>{item.section}</span>
                     <Plus size={14} aria-hidden="true" className="outline-add" />
@@ -77,12 +103,16 @@ export default function ManuscriptOutline({
           </ul>
 
           {!documentEmpty && missing.length > 1 ? (
-            <button type="button" className="projects-filter-button outline-action" onClick={() => onInsert(missing)}>
+            <button type="button" className="projects-filter-button outline-action" onClick={() => {
+                setAcik(false);
+                onInsert(missing);
+              }}>
               <Plus size={15} aria-hidden="true" />
               Eksik {missing.length} bölümü ekle
             </button>
           ) : null}
-        </section>
+          </div>
+        </Dialog>
       ) : null}
 
       {documentEmpty ? (
@@ -91,8 +121,6 @@ export default function ManuscriptOutline({
           Word dosyasından aktar
         </button>
       ) : null}
-
-      {children}
     </aside>
   );
 }

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Check, MessageSquare } from "lucide-react";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import BosDurum from "@/app/dashboard/_components/bos-durum";
+import Dialog from "@/app/dashboard/_components/dialog";
+import YanKutu from "./yan-kutu";
 import {
   addManuscriptComment,
   deleteManuscriptComment,
@@ -33,6 +35,7 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [showResolved, setShowResolved] = useState(false);
+  const [acik, setAcik] = useState(false);
   /*
     Okuma hatası ayrı tutulur. Eskiden result.error hiç okunmuyordu:
     yorumlar yüklenemediğinde "Henüz yorum yok." yazıyordu ve danışmanın
@@ -44,10 +47,16 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const result = await listManuscriptComments(projectId);
-      if (cancelled) return;
-      setYuklemeHatasi(result.error ?? null);
-      setComments(result.comments);
+      /* Ağ hatasında sunucu eylemi fırlatıyor; yakalanmazsa kutu sonsuza
+         dek "yükleniyor" diyordu. */
+      try {
+        const result = await listManuscriptComments(projectId);
+        if (cancelled) return;
+        setYuklemeHatasi(result.error ?? null);
+        setComments(result.comments);
+      } catch {
+        if (!cancelled) setYuklemeHatasi("Yorumlar şu an okunamadı.");
+      }
     })();
     return () => {
       cancelled = true;
@@ -130,14 +139,30 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
     }
   };
 
+  /*
+    Sağ panelde küçük kutu, yorumlar pencerede (26.10.2026). Pencere
+    kapalıyken de bileşen yaşıyor (Dialog içeriği kaldırmıyor): dakikalık
+    yenileme sürüyor, yeni yorum gelince kutu vurgulanıyor.
+  */
   return (
-    <section className="outline-card">
-      <header className="outline-head">
-        <strong>
-          <MessageSquare size={15} aria-hidden="true" /> Yorumlar
-        </strong>
-        <span className="muted text-sm">{comments === null ? "…" : `${open.length} açık`}</span>
-      </header>
+    <>
+    <YanKutu
+      ikon={MessageSquare}
+      baslik="Yorumlar"
+      deger={comments === null ? (yuklemeHatasi ? "—" : "…") : open.length}
+      alt={comments === null ? (yuklemeHatasi ? "okunamadı" : "yükleniyor") : open.length ? "açık yorum" : "açık yorum yok"}
+      ton={open.length ? "warning" : undefined}
+      vurgu={yeniler.size > 0}
+      onClick={() => setAcik(true)}
+    />
+    <Dialog
+      open={acik}
+      onClose={() => setAcik(false)}
+      kicker="Danışmanla yazışma"
+      title="Yorumlar"
+      description="Metinde bir yeri seçip yorum yazarsanız yorum o cümleye bağlanır; alıntıya basınca metinde o yer açılır."
+    >
+    <div className="yorum-penceresi">
 
       <form
         className="comment-form"
@@ -181,7 +206,15 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
                 <span>{formatTime(comment.createdAt)}</span>
               </div>
               {comment.quote ? (
-                <button type="button" className="comment-quote" onClick={() => onFind(comment.quote!)} title="Metinde göster">
+                <button
+                  type="button"
+                  className="comment-quote"
+                  onClick={() => {
+                    setAcik(false);
+                    onFind(comment.quote!);
+                  }}
+                  title="Metinde göster"
+                >
                   “{comment.quote}”
                 </button>
               ) : null}
@@ -244,6 +277,8 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
           {showResolved ? "Çözülenleri gizle" : `Çözülenleri göster (${resolvedCount})`}
         </button>
       ) : null}
-    </section>
+    </div>
+    </Dialog>
+    </>
   );
 }

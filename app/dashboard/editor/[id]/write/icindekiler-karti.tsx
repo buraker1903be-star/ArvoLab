@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ListTree } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
+import YanKutu from "./yan-kutu";
 import { icindekiler } from "@/lib/icindekiler";
 import type { OutlineHeading } from "./editor-navigation";
 
@@ -28,20 +29,14 @@ export default function IcindekilerKarti({
   const satirlar = acik ? icindekiler(headings, numaralama, sayfaBasiKelime) : [];
 
   return (
-    <section className="outline-card">
-      <header className="outline-head">
-        <strong>
-          <ListTree size={15} aria-hidden="true" /> İçindekiler
-        </strong>
-        <span className="muted text-sm">{headings.length} başlık</span>
-      </header>
-      {headings.length ? (
-        <button type="button" className="projects-filter-button outline-action" onClick={() => setAcik(true)}>
-          İçindekileri aç
-        </button>
-      ) : (
-        <p className="muted text-sm">Başlık ekledikçe (H1–H3) içindekiler burada oluşur.</p>
-      )}
+    <>
+      <YanKutu
+        ikon={ListTree}
+        baslik="İçindekiler"
+        deger={headings.length}
+        alt={headings.length ? "başlık · sayfalarıyla" : "henüz başlık yok"}
+        onClick={() => setAcik(true)}
+      />
 
       <Dialog
         open={acik}
@@ -70,7 +65,10 @@ export default function IcindekilerKarti({
             </li>
           ))}
         </ol>
+        {satirlar.length === 0 ? (
+          <p className="muted text-sm">Başlık ekledikçe (Metin / H1–H3 düğmeleri) içindekiler burada oluşur.</p>
+        ) : null}
       </Dialog>
-    </section>
+    </>
   );
 }

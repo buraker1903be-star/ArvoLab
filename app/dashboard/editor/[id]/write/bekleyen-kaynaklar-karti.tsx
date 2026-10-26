@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BookOpenCheck } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
+import YanKutu from "./yan-kutu";
 import { getLiteratureSources, type LiteratureSource } from "@/app/actions/literature";
 import { authorLabel } from "@/lib/citation-format";
 import { bekleyenKaynaklar } from "@/lib/bekleyen-kaynaklar";
@@ -58,34 +59,28 @@ export default function BekleyenKaynaklarKarti({
   );
 
   return (
-    <section className="outline-card">
-      <header className="outline-head">
-        <strong>
-          <BookOpenCheck size={15} aria-hidden="true" /> Bekleyen kaynaklar
-        </strong>
-        {bekleyen ? <span className="muted text-sm">{bekleyen.length}</span> : null}
-      </header>
-      {bekleyen === null ? (
-        <p className="muted text-sm">{okunamadi ? "Kaynaklar şu an okunamadı." : "Yükleniyor…"}</p>
-      ) : bekleyen.length ? (
-        <>
-          <p className="muted text-sm">Çalışmaya eklediğiniz {bekleyen.length} kaynağa metinde henüz atıf yok.</p>
-          <button
-            type="button"
-            className="projects-filter-button outline-action"
-            onClick={() => {
-              setSurum((s) => s + 1);
-              setAcik(true);
-            }}
-          >
-            Listeyi aç
-          </button>
-        </>
-      ) : (
-        <p className="muted text-sm">
-          {kaynaklar?.length ? "Eklediğiniz bütün kaynaklara atıf yapılmış." : "Bu çalışmaya henüz kaynak eklenmedi."}
-        </p>
-      )}
+    <>
+      <YanKutu
+        ikon={BookOpenCheck}
+        baslik="Kaynaklar"
+        deger={bekleyen ? bekleyen.length : okunamadi ? "—" : "…"}
+        alt={
+          bekleyen === null
+            ? okunamadi
+              ? "okunamadı"
+              : "yükleniyor"
+            : bekleyen.length
+              ? "atıf bekliyor"
+              : kaynaklar?.length
+                ? "hepsine atıf var"
+                : "kaynak eklenmedi"
+        }
+        ton={bekleyen && bekleyen.length ? "warning" : undefined}
+        onClick={() => {
+          setSurum((s) => s + 1);
+          setAcik(true);
+        }}
+      />
 
       <Dialog
         open={acik}
@@ -119,12 +114,20 @@ export default function BekleyenKaynaklarKarti({
             ))}
           </ul>
         ) : (
-          <p className="muted text-sm">Bekleyen kaynak yok.</p>
+          <p className="muted text-sm">
+            {bekleyen === null
+              ? okunamadi
+                ? "Kaynaklar şu an okunamadı; biraz sonra tekrar deneyin."
+                : "Yükleniyor…"
+              : kaynaklar?.length
+                ? "Eklediğiniz bütün kaynaklara atıf yapılmış."
+                : "Bu çalışmaya henüz kaynak eklenmedi."}
+          </p>
         )}
         <Link href="/dashboard/literature" className="muted text-sm">
           Kaynakları yönet →
         </Link>
       </Dialog>
-    </section>
+    </>
   );
 }
