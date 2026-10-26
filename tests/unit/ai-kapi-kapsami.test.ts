@@ -29,12 +29,13 @@ const YETENEK_DOSYALARI = readdirSync("app/actions").filter((ad) => /^ai-.*\.ts$
   Ölçüt model çağrısının ADI değil — yeni bir yetenek yeni bir yardımcı
   kullanıp öyle bir listeden kaçardı. Ölçüt yetenek KİMLİĞİ: veritabanı
   capability değerini dörtle sınırlıyor (20260924100005) ve her yetenek
-  kendi kimliğini koda yazmak zorunda. Bir beşinci yetenek de yazacak.
+  kendi kimliğini koda yazmak zorunda. Beşinci ve altıncı yetenek (kanıt
+  uyumu ve makale bölüm denetimi, migration 20261026065320) da yazıyor.
 
   Okuma yapan dosyalar (ai-gecmis, ai-kayitlar, ai-puan) kimlik yazmıyor ve
   kapıdan geçmiyor — doğru: kayıtlı cevabı göstermek hak yakmamalı.
 */
-const YETENEK_KIMLIKLERI = ["analiz", "kaynakca", "literatur", "belge"];
+const YETENEK_KIMLIKLERI = ["analiz", "kaynakca", "literatur", "belge", "kanit", "makale"];
 const yetenekKimligi = (kaynak: string) =>
   YETENEK_KIMLIKLERI.find((kimlik) => new RegExp(`yetenek:\\s*"${kimlik}"`).test(kaynak));
 
@@ -43,12 +44,12 @@ test("asistan kapısının kapsamı", async (t) => {
 
   await t.test("yetenek dosyaları bulundu", () => {
     // Dizin adı değişirse test sessizce boşalmasın.
-    assert.ok(dosyalar.length >= 4, `ai-*.ts bulunamadı: ${dosyalar.length}`);
+    assert.ok(dosyalar.length >= YETENEK_KIMLIKLERI.length, `ai-*.ts bulunamadı: ${dosyalar.length}`);
   });
 
   await t.test("her yetenek kapıdan, haktan ve kayıttan geçiyor", () => {
     const yetenekli = dosyalar.filter((d) => yetenekKimligi(d.kaynak));
-    // Dördü de bulunmalı: biri kaybolursa denetim sessizce daralır.
+    // Hepsi bulunmalı: biri kaybolursa denetim sessizce daralır.
     assert.deepEqual(
       yetenekli.map((d) => yetenekKimligi(d.kaynak)).sort(),
       [...YETENEK_KIMLIKLERI].sort(),
@@ -84,7 +85,7 @@ test("asistan kapısının kapsamı", async (t) => {
     const erisim = readFileSync("lib/ai/erisim.ts", "utf8");
     const anahtar = erisim.match(/p_key:\s*(.+),/)?.[1] ?? "";
     assert.ok(anahtar.includes("${kullaniciId}"), `anahtar kullanıcıyı taşımıyor: ${anahtar}`);
-    for (const yetenek of ["analiz", "kaynakca", "literatur", "belge", "yetenek"]) {
+    for (const yetenek of [...YETENEK_KIMLIKLERI, "yetenek"]) {
       assert.ok(!anahtar.includes(yetenek), `anahtarda yetenek ayrımı var: ${anahtar}`);
     }
     // Sınır tek yerde tanımlı olmalı; elle yazılmış bir sayı ayrışır.

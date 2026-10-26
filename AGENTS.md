@@ -80,6 +80,21 @@ davranış da yazılır ("Eskiden … oluyordu"). Yeni kod bu üsluba uyar.
 - **Yeni yetenek `lib/ai/erisim.ts` kapısından geçer.** Oturum, abonelik,
   kurulum ve KULLANICI başına saatlik hak orada; yetenek başına ayrı sayaç
   tutulmaz, yoksa aynı kullanıcı her yetenekten ayrı hak kazanır.
+- **Kanıt durumları birbirinin yerine geçmez** (`lib/kanit/durum.ts`,
+  `kanit_kayitlari`). Künye doğrulandı ≠ iddia destekleniyor ≠ bulgu
+  doğru; her biri ayrı sütun, tek bir "doğrulandı" ya da yüzde yok.
+  Veritabanı üç kuralı kendisi uygular: alıntı incelenen metinde geçmeli
+  (`kanit_metni_normallestir`, TS karşılığı `lib/kanit/alinti.ts` — ikisi
+  birbirine karşı sınanır), metin ve alıntı olmadan destek hükmü
+  verilemez, metin/iddia değişince eski hüküm düşer. Asistan hükmü
+  tamamlanmış bir `kanit` asistan kaydına bağlanır; asistanın alıntısı
+  metinde birebir geçmiyorsa cevabın tamamı düşer. Sayfa numarası
+  yalnızca kullanıcının yazdığıdır, tahmin edilmez. Dizine
+  ulaşılamadığında künye sonucu YAZILMAZ ("doğrulanamadı" kalıcı bir
+  hükümdür, geçici arızaya verilmez).
+- **Makale çalışma alanı kabul olasılığı ve "dergiye uygun" hükmü
+  vermez.** Dergi kuralları doğrulanmıyor; yalnızca kullanıcının kontrol
+  tarihi tutulur ve eskidikçe hatırlatılır (`lib/makale/`).
 - **E-posta gönderimi akışı düşürmez.** `RESEND_API_KEY` yoksa gönderim
   sessizce atlanır; davet ve şifre sıfırlama istekleri çalışmaya devam eder
   (hesabın varlığını sızdırmamak için de gerekli).

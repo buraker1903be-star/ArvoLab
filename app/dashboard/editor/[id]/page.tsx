@@ -5,6 +5,8 @@ import {
   BookOpenCheck,
   Check,
   FileCheck2,
+  FileText,
+  Microscope,
   PenLine,
   Quote,
   Settings2,
@@ -114,6 +116,12 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
           <Link href={`/dashboard/editor/${calisma.id}/write`} className="projects-primary-button">
             <PenLine size={16} aria-hidden="true" /> Yazmaya devam et
           </Link>
+          {/* Makale çalışma alanı aynı çalışma satırını kullanıyor; tez için anlamı yok. */}
+          {calisma.project_type === "article" && (
+            <Link href={`/dashboard/editor/${calisma.id}/makale`} className="projects-filter-button">
+              <FileText size={16} aria-hidden="true" /> Makale çalışma alanı
+            </Link>
+          )}
           <Link href={`/dashboard/editor/${calisma.id}/edit`} className="projects-filter-button">
             <Settings2 size={16} aria-hidden="true" /> Çalışma ayarları
           </Link>
@@ -282,6 +290,13 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
       <section className="section mt-lg">
         <h2 className="section-title">Bağlı kayıtlar</h2>
         <div className="merkez-baglantilar">
+          <Link href={`/dashboard/editor/${calisma.id}/kanit`} className="merkez-baglanti">
+            <Microscope size={18} aria-hidden="true" />
+            <span>
+              <b>Kanıt matrisi</b>
+              İddialarınızı kaynak, künye doğrulaması ve kanıtla eşleştirin
+            </span>
+          </Link>
           <Link href="/dashboard/expert-requests" className="merkez-baglanti">
             <Users size={18} aria-hidden="true" />
             <span>

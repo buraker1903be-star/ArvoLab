@@ -49,6 +49,8 @@ export default function LiteraturBulucu({
           yilDan: yilDan ? Number(yilDan) : null,
           yilaKadar: yilaKadar ? Number(yilaKadar) : null,
           yalnizcaAcikErisim: acikErisim,
+          // Tarama günlüğü seçili çalışmaya bağlanır; danışman da görür.
+          projectId: projeId || null,
         })
       );
     });

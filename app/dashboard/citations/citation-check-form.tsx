@@ -136,7 +136,7 @@ export default function CitationCheckForm({
 
   const alternatifAra = async (anahtar: string, sorgu: string) => {
     setAlternatif((onceki) => ({ ...onceki, [anahtar]: "araniyor" }));
-    const yanit = await literaturAramasiYap({ sorgu: sorgu.slice(0, 300) });
+    const yanit = await literaturAramasiYap({ sorgu: sorgu.slice(0, 300), gunlukDisi: true });
     setAlternatif((onceki) => ({
       ...onceki,
       [anahtar]: { kayitlar: (yanit.kayitlar ?? []).slice(0, 4), hata: yanit.hata },

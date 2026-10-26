@@ -28,6 +28,8 @@ export type GecmisKaydi = {
   ozet: string;
   bulgular: Bulgu[];
   aramalar?: string[];
+  /** Kayıtlı bulguların ham hâli: yeteneğe özel alanlar (ör. kanıt düzeyi ve alıntı). */
+  ham?: unknown;
 };
 
 /**
@@ -87,7 +89,7 @@ export async function oncekiCevap(
 
   const { bulgular, aramalar } = bulgulariAyikla(data.findings);
   if (!bulgular.length && !aramalar?.length) return null;
-  return { id: data.id, created_at: data.created_at, ozet: baglamOzeti(data.context), bulgular, aramalar };
+  return { id: data.id, created_at: data.created_at, ozet: baglamOzeti(data.context), bulgular, aramalar, ham: data.findings };
 }
 
 /** Kullanıcının bu yetenekteki son sorguları. */

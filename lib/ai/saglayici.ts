@@ -17,7 +17,7 @@
                  Verilmezse OPENAI_TABAN_URL, o da yoksa OpenAI'nin adresi
                  kullanılır (geçiş dönemi).
   AI_MODEL       Varsayılan model. Örn. "qwen2.5:14b-instruct", "claude-sonnet-5".
-  AI_MODEL_*     Yeteneğe özel model (ANALIZ, KAYNAKCA, LITERATUR, BELGE).
+  AI_MODEL_*     Yeteneğe özel model (ANALIZ, KAYNAKCA, LITERATUR, BELGE, KANIT, MAKALE).
                  Riskler eşit değil: analiz ve kaynakça ince çıkarım ister,
                  literatür arama dizesi üretmek gibi daha kalıplı bir iş ve
                  en çok jetonu o harcıyor. Boş bırakılırsa AI_MODEL kullanılır.
@@ -90,6 +90,8 @@ const YETENEK_DEGISKENI: Record<YetenekAdi, string> = {
   kaynakca: "AI_MODEL_KAYNAKCA",
   literatur: "AI_MODEL_LITERATUR",
   belge: "AI_MODEL_BELGE",
+  kanit: "AI_MODEL_KANIT",
+  makale: "AI_MODEL_MAKALE",
 };
 
 /** Yeteneğe özel model; tanımlı değilse undefined (varsayılana düşer). */

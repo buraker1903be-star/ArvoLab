@@ -5,6 +5,8 @@ import { SISTEM_ISTEMI as ANALIZ_ISTEMI } from "@/lib/ai/analiz-yorumu";
 import { sistemIstemi as kaynakcaIstemiMetni } from "@/lib/ai/kaynakca-denetimi";
 import { SISTEM_ISTEMI as LITERATUR_ISTEMI } from "@/lib/ai/literatur-taramasi";
 import { SYSTEM_PROMPT as BELGE_ISTEMI } from "@/lib/ai-feedback";
+import { SISTEM_ISTEMI as KANIT_ISTEMI } from "@/lib/ai/kanit-degerlendirme";
+import { sistemIstemi as makaleIstemiMetni } from "@/lib/ai/makale-denetimi";
 
 /*
   İnce ayar kümesinin dışa aktarımı (JSONL).
@@ -57,6 +59,11 @@ const ISTEMLER: Record<string, string> = {
   kaynakca: kaynakcaIstemiMetni(null),
   literatur: LITERATUR_ISTEMI,
   belge: BELGE_ISTEMI,
+  kanit: KANIT_ISTEMI,
+  /* Makale istemi türe ve bölüme göre değişiyor; kaynakçadaki stil gibi
+     burada da temsilî biçim (özgün makale, genel denetim) veriliyor. Asıl
+     tür ve bölüm bağlamın kendisinde yazılı (lib/ai/makale-denetimi.ts). */
+  makale: makaleIstemiMetni("ozgun", null, null),
 };
 
 export async function GET(request: Request) {
