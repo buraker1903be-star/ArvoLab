@@ -24,6 +24,15 @@ const ODAKLANABILIR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
+/** Açık pencerelerden en üstteki (en büyük katman, panel-drawer.tsx yazar). */
+export function enUstPencere(): HTMLElement | null {
+  let ust: HTMLElement | null = null;
+  for (const kok of document.querySelectorAll<HTMLElement>(".drawer-root.open")) {
+    if (!ust || Number(kok.dataset.katman ?? 0) >= Number(ust.dataset.katman ?? 0)) ust = kok;
+  }
+  return ust;
+}
+
 export function useOdakTuzagi(kapsayici: RefObject<HTMLElement | null>, acik: boolean) {
   useEffect(() => {
     if (!acik) return;
@@ -37,9 +46,9 @@ export function useOdakTuzagi(kapsayici: RefObject<HTMLElement | null>, acik: bo
         Eskiden alttaki pencere, üstteki pencereye geçen odağı "dışarı
         kaçtı" sanıp geri çekiyordu (Literatür → Manuel kaynak ekle).
       */
-      const acikPencereler = document.querySelectorAll(".drawer-root.open");
-      const enUstteki = acikPencereler[acikPencereler.length - 1];
-      if (enUstteki && !enUstteki.contains(kok)) return;
+      const benimPencerem = kok.closest(".drawer-root");
+      const enUstteki = enUstPencere();
+      if (benimPencerem && enUstteki && enUstteki !== benimPencerem) return;
 
       const adaylar = [...kok.querySelectorAll<HTMLElement>(ODAKLANABILIR)].filter(
         // Gizli öğeler sırada görünmemeli; offsetParent yoksa çizilmiyordur.

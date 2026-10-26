@@ -3,10 +3,11 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { useOdakTuzagi } from "./odak-tuzagi";
+import { enUstPencere, useOdakTuzagi } from "./odak-tuzagi";
 import { ACTION_SUCCESS_EVENT } from "./toast-events";
 
 const subscribeNothing = () => () => undefined;
+
 
 type PanelDrawerProps = {
   triggerLabel: string;
@@ -86,10 +87,19 @@ export default function PanelDrawer({
       üstteki pencereyi kapatır. Eskiden her açık pencere kendi dinleyicisiyle
       kapanıyordu ve tek tuş ikisini birden kapatıyordu.
     */
-    const enUsttekiMi = () => {
-      const acik = document.querySelectorAll(".drawer-root.open");
-      return acik[acik.length - 1] === kokRef.current;
-    };
+    /*
+      KATMAN: açılan pencere, o an açık olanların ÜSTÜNE çizilir. Belge
+      sırasına güvenilemiyor: iç pencerenin kökü (portal) dıştakinden
+      önce ekleniyor ve iç pencere arkada kalıyordu. Sıra açılış anında
+      sayılıp köke yazılıyor; en üstteki = en büyük katman.
+    */
+    const kok = kokRef.current;
+    if (kok) {
+      const katman = String(document.querySelectorAll(".drawer-root.open").length);
+      kok.dataset.katman = katman;
+      kok.style.setProperty("--katman", katman);
+    }
+    const enUsttekiMi = () => enUstPencere() === kokRef.current;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && enUsttekiMi()) setOpen(false);
     };
