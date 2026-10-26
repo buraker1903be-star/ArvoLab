@@ -148,3 +148,58 @@ export function baslikPdfteGeciyor(kunye: string, pdfMetni: string): boolean {
   const gecen = kelimeler.filter((k) => metin.includes(k)).length;
   return gecen / kelimeler.length >= 0.6;
 }
+
+/*
+  TESLİM PAKETİ (ZIP) İÇERİĞİ: kaynak PDF'lerinin ZIP'teki adları ve
+  "Kaynak raporu.txt". Rapor danışmana/jüriye hangi kaynağın PDF'inin
+  pakette olduğunu, hangisinin eksik olduğunu ve neden eksik olduğunu
+  söylüyor — eksik PDF sessizce kaybolmasın.
+*/
+export const DURUM_ACIKLAMASI: Record<PdfDurumu, string> = {
+  indirildi: "PDF pakette (açık erişim sürümü indirildi)",
+  yuklendi: "PDF pakette (öğrenci yükledi)",
+  bulunamadi: "PDF yok: açık erişimli sürüm bulunamadı",
+  erisilemedi: "PDF yok: adres var ama indirilemedi",
+  kayit_yok: "PDF yok: kaynak Crossref/OpenAlex'te bulunamadı, künye kontrol edilmeli",
+};
+
+export type PaketDosyasi = { satir: KaynakPdfSatiri; ad: string | null };
+
+/** PDF'i olan satırlara ZIP'teki benzersiz adı verir; olmayanlarda ad null. */
+export function paketDosyalari(satirlar: KaynakPdfSatiri[]): PaketDosyasi[] {
+  const sirali = [...satirlar].sort((a, b) => a.kunye.localeCompare(b.kunye, "tr"));
+  const dosyali = sirali.filter((s) => s.depo_yolu);
+  const adlar = tekilAdlar(dosyali.map((s) => pdfDosyaAdi(s.kunye)));
+  const adHaritasi = new Map(dosyali.map((s, i) => [s.id, adlar[i]]));
+  return sirali.map((satir) => ({ satir, ad: adHaritasi.get(satir.id) ?? null }));
+}
+
+export function kaynakRaporu(baslik: string, dosyalar: PaketDosyasi[], tarih: string): string {
+  const hazir = dosyalar.filter((d) => d.ad).length;
+  const satirlar = [
+    `KAYNAK RAPORU — ${baslik}`,
+    `Oluşturulma: ${tarih}`,
+    `${dosyalar.length} kaynak · ${hazir} kaynağın PDF'i pakette · ${dosyalar.length - hazir} eksik`,
+    "",
+    "PDF'ler 'Kaynaklar' klasöründe. Durumlar ArvoLab'ın otomatik kontrolüdür;",
+    "kaynağın içeriğinin metindeki iddiayı desteklediği anlamına gelmez.",
+    "",
+  ];
+  dosyalar.forEach(({ satir, ad }, i) => {
+    satirlar.push(`${i + 1}. ${satir.kunye}`);
+    satirlar.push(`   Durum: ${DURUM_ACIKLAMASI[satir.durum]}`);
+    if (ad) satirlar.push(`   Dosya: Kaynaklar/${ad}`);
+    if (satir.durum === "yuklendi" && satir.baslik_eslesti === false) satirlar.push("   Uyarı: künyenin başlığı PDF'te bulunamadı; doğru dosya olduğu kontrol edilmeli.");
+    if (satir.doi) satirlar.push(`   DOI: ${satir.doi}`);
+    satirlar.push("");
+  });
+  // Windows'un Not Defteri de doğru göstersin.
+  return satirlar.join("\r\n");
+}
+
+/** ZIP'in adı: çalışmanın başlığından, dosya sistemine uygun. */
+export function paketAdi(baslik: string): string {
+  const sade = baslik.replace(/[çğıöşüÇĞİÖŞÜ]/g, (h) => ASCII[h] ?? h).normalize("NFKD").replace(/[̀-ͯ]/g, "");
+  const kok = sade.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "calisma";
+  return `${kok}-teslim-paketi.zip`;
+}

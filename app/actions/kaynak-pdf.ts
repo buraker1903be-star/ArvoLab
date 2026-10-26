@@ -11,7 +11,9 @@ import {
   PDF_EN_FAZLA_BAYT,
   aranacakMi,
   baslikPdfteGeciyor,
+  kaynakRaporu,
   kunyeAnahtari,
+  paketDosyalari,
   pdfAdaylari,
   pdfMi,
   type DogrulamaDurumu,
@@ -250,4 +252,53 @@ export async function kaynakPdfiYuklendi(
 
   yenile();
   return { satir: data as KaynakPdfSatiri };
+}
+
+/**
+ * Teslim paketinin (ZIP) içeriği: kaynak PDF'lerinin ZIP'teki adları ve
+ * kısa ömürlü indirme bağlantıları, kaynak raporu. ZIP tarayıcıda
+ * kuruluyor: PDF'ler sunucunun tek yanıt sınırını (~4,5 MB) hızla aşar.
+ *
+ * Veriyi dışarı çıkardığı için abonelik kapısı var (Word dışa aktarımıyla
+ * aynı). Çalışmayı görebilen (öğrenci, atanan uzman, kurumun gözetim
+ * rolleri) paketi indirebiliyor: okuma RLS'te, PDF'ler çalışmanın
+ * klasöründe (depolama politikası calisma_klasoru).
+ */
+export async function teslimPaketi(
+  projectId: string,
+): Promise<{ error?: string; baslik?: string; dosyalar?: { ad: string; url: string }[]; rapor?: string }> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };
+  const { supabase } = ctx;
+
+  const [{ data: calisma, error: calismaHatasi }, { data: satirlar, error: satirHatasi }] = await Promise.all([
+    supabase.from("academic_projects").select("title").eq("id", projectId).maybeSingle(),
+    supabase.from("kaynak_pdfleri").select(SECIM).eq("project_id", projectId),
+  ]);
+  if (calismaHatasi || satirHatasi) {
+    console.error("[teslim-paketi] okunamadı:", calismaHatasi?.message ?? satirHatasi?.message);
+    return { error: "Paket hazırlanamadı; tekrar deneyin." };
+  }
+  if (!calisma) return { error: "Çalışma bulunamadı." };
+
+  const paket = paketDosyalari((satirlar ?? []) as KaynakPdfSatiri[]);
+  const dosyali = paket.filter((d) => d.ad && d.satir.depo_yolu);
+  let dosyalar: { ad: string; url: string }[] = [];
+  if (dosyali.length) {
+    const { data: imzali, error } = await supabase.storage
+      .from(KOVA)
+      .createSignedUrls(dosyali.map((d) => d.satir.depo_yolu!), 600);
+    if (error) {
+      console.error("[teslim-paketi] bağlantılar alınamadı:", error.message);
+      return { error: "Kaynak PDF'lerine ulaşılamadı; tekrar deneyin." };
+    }
+    dosyalar = dosyali
+      .map((d, i) => ({ ad: d.ad!, url: imzali?.[i]?.signedUrl ?? "" }))
+      .filter((d) => d.url);
+  }
+
+  const tarih = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", dateStyle: "long", timeStyle: "short" }).format(new Date());
+  return { baslik: calisma.title, dosyalar, rapor: kaynakRaporu(calisma.title, paket, tarih) };
 }

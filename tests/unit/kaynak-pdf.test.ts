@@ -44,3 +44,19 @@ test("yüklenen PDF künyenin başlığını taşıyor mu", () => {
   assert.equal(baslikPdfteGeciyor(PESARAN, "Journal ... BOUNDS TESTING APPROACHES TO THE ANALYSIS OF LEVEL RELATIONSHIPS ..."), true);
   assert.equal(baslikPdfteGeciyor(PESARAN, "Introductory Econometrics: A Modern Approach"), false);
 });
+
+test("teslim paketi: PDF'i olana benzersiz ad, rapor eksikleri nedeniyle yazar", async () => {
+  const { paketDosyalari, kaynakRaporu, paketAdi } = await import("@/lib/kaynak-pdf");
+  const satir = (id: string, kunye: string, durum: string, yol: string | null) =>
+    ({ id, kunye_anahtari: id, kunye, doi: null, durum, depo_yolu: yol, kaynak_adres: null, baslik_eslesti: null, bakildi: "" }) as never;
+  const dosyalar = paketDosyalari([
+    satir("1", "Yilmaz, A. (2020). Enflasyon.", "indirildi", "p/kaynak-pdf/a.pdf"),
+    satir("2", "Yilmaz, A. (2020). Enflasyon.", "yuklendi", "p/kaynak-pdf/b.pdf"),
+    satir("3", "Demir, B. (2018). Kur.", "kayit_yok", null),
+  ]);
+  assert.deepEqual(dosyalar.map((d) => d.ad), [null, "Yilmaz_2020_Enflasyon.pdf", "Yilmaz_2020_Enflasyon-2.pdf"]);
+  const rapor = kaynakRaporu("Tez", dosyalar, "26.10.2026");
+  assert.match(rapor, /3 kaynak · 2 kaynağın PDF'i pakette · 1 eksik/);
+  assert.match(rapor, /Crossref\/OpenAlex'te bulunamadı/);
+  assert.equal(paketAdi("Türkiye'de Enflasyon ve İşsizlik"), "Turkiye-de-Enflasyon-ve-Issizlik-teslim-paketi.zip");
+});

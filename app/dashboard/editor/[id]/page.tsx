@@ -17,6 +17,7 @@ import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import KilavuzPenceresi from "./kilavuz-penceresi";
+import TeslimPaketi from "@/app/dashboard/_components/teslim-paketi";
 import CalismaSekmeleri from "./calisma-sekmeleri";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
@@ -146,6 +147,8 @@ export default async function CalismaMerkezi({
           <Link href={`/dashboard/editor/${calisma.id}/edit`} className="projects-filter-button">
             <Settings2 size={16} aria-hidden="true" /> Çalışma ayarları
           </Link>
+          {/* Kurum çalışanı da teslim paketini buradan indirir (kurum sahibinin isteği). */}
+          <TeslimPaketi projectId={calisma.id} className="projects-filter-button" />
         </div>
       </section>
 

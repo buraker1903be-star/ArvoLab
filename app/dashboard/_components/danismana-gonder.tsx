@@ -6,6 +6,7 @@ import { createShareLink } from "@/app/actions/share-links";
 import { danismanMesaji, epostaAdresi, whatsappAdresi } from "@/lib/danismana-gonder";
 import { showToast } from "./toast-events";
 import { wordDosyasiniIndir } from "./word-indir";
+import TeslimPaketi from "./teslim-paketi";
 
 /*
   DANIŞMANIMA GÖNDER (bireysel abonenin ana sayfası, 26.10.2026).
@@ -129,6 +130,7 @@ export default function DanismanaGonder({
         <a className="projects-filter-button button-compact" href={`/print/manuscript/${projectId}?auto=1`} target="_blank" rel="noopener noreferrer">
           <FileText size={14} aria-hidden="true" /> PDF
         </a>
+        <TeslimPaketi projectId={projectId} etiket="ZIP + kaynaklar" />
       </div>
 
       <p className="danisman-not">Danışmanın metninize yorum yazması için kurumunuzun ArvoLab kullanması gerekir.</p>

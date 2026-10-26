@@ -46,6 +46,7 @@
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
     "docx": "^9.7.1",
+    "fflate": "^0.8.2",
     "lucide-react": "^0.468.0",
     "mammoth": "^1.12.0",
     "next": "^16.0.0",

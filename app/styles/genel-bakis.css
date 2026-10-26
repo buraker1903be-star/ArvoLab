@@ -385,3 +385,4 @@
 .pdf-kontrol > .projects-filter-button { align-self: flex-start; }
 .kaynak-pdf-satiri { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
 .kaynak-pdf-eylemler { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
+.calisma-durum-eylemler { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }

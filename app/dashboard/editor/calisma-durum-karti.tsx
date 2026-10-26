@@ -18,6 +18,7 @@ import type { DueInfo } from "@/lib/due-date";
 import { trTarih } from "@/lib/tr-time";
 import { ListeSatiri } from "../_components/genel-bakis";
 import DeleteProjectButton from "./delete-project-button";
+import TeslimPaketi from "../_components/teslim-paketi";
 
 /*
   ÇALIŞMALARIM — SAĞ KART: seçili çalışmanın durumu ve eksikleri.
@@ -126,10 +127,14 @@ export default async function CalismaDurumKarti({
           </span>
           <h2>{calisma.title}</h2>
         </div>
-        <Link href={`${merkez}/write`} className="projects-primary-button button-compact">
-          <PenLine size={15} aria-hidden="true" />
-          {kelime ? "Yazmaya devam et" : "Yazmaya başla"}
-        </Link>
+        <div className="calisma-durum-eylemler">
+          {/* Bitince tek tık: tez Word + kaynak PDF'leri + rapor (teslim-paketi.tsx). */}
+          {kelime ? <TeslimPaketi projectId={calisma.id} /> : null}
+          <Link href={`${merkez}/write`} className="projects-primary-button button-compact">
+            <PenLine size={15} aria-hidden="true" />
+            {kelime ? "Yazmaya devam et" : "Yazmaya başla"}
+          </Link>
+        </div>
       </header>
 
       <dl className="tez-olcumler calisma-olcumler">
