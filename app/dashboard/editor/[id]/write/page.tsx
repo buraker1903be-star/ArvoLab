@@ -61,7 +61,10 @@ export default async function WriteManuscriptPage({
   }
 
   return (
-    <main className="dashboard-page">
+    /* "gb": diğer modül sayfaları gibi tam genişlik. Üç sütunlu düzende
+       (araçlar, belge, kontroller) --content-max sınırı belgeyi daraltıyor,
+       sayfa öbür ekranlardan dar görünüyordu. */
+    <main className="dashboard-page gb">
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">Panelde yazma</span>
