@@ -11,10 +11,11 @@ import { KAYIT_ROLLERI, type AsistanKayitSatiri, type ModelOzeti } from "@/lib/a
   göremiyordu: ne harcamanın nereye gittiği, ne hangi modelin daha iyi
   denetlediği, ne de ince ayar için hangi örneklerin kullanılabileceği.
 
-  Okuma RLS'e tabi (migration 20260924100005): kontrolör, akademik yönetici,
-  sistem yöneticisi ve kurucu bütün kayıtları görür. Buradaki rol denetimi
-  RLS'in yerini tutmaz; yetkisiz isteğin sessizce boş liste dönmesini
-  engeller ve kullanıcıya anlaşılır mesaj verir (AGENTS.md).
+  Bu işlemler YALNIZCA İÇ EKİBE açık (KAYIT_ROLLERI, 26.10.2026). Okuma
+  ayrıca RLS'e tabi (20260924100028): gözetim rolleri yalnızca kendi
+  kurumlarını görür, iç ekip hepsini. Rol denetimi RLS'in yerini tutmaz;
+  yetkisiz isteğin sessizce boş liste dönmesini engeller ve kullanıcıya
+  anlaşılır mesaj verir (AGENTS.md).
 */
 
 async function yetkiliMi() {

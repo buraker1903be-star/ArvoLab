@@ -113,7 +113,14 @@ test("başlatıcıdaki rol kapıları sayfanın kendi kapısıyla aynı", () => 
     Kapı sayfanın kendi sabitinden gelmeli.
   */
   assert.deepEqual(asistan?.roller, KAYIT_ROLLERI);
-  assert.ok(asistan?.roller?.includes("controller"));
+  /* 26.10.2026'dan beri yalnızca iç ekip (lib/ai/kayit-gorunum.ts): kurum
+     personeli Asistan Kayıtları'nı başlatıcıda da görmemeli. */
+  for (const rol of ["controller", "academic_manager", "expert", "employee", "client"]) {
+    assert.equal(gorunenUygulamalar(labUygulamalari(), rol).some((u) => u.key === "asistan"), false, rol);
+  }
+  for (const rol of ["system_admin", "founder"]) {
+    assert.ok(gorunenUygulamalar(labUygulamalari(), rol).some((u) => u.key === "asistan"), rol);
+  }
 });
 
 describe("Ctrl+K araması", () => {

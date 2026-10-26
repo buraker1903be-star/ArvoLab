@@ -33,7 +33,7 @@ export default async function AsistanKayitlariSayfasi() {
         <BosDurum
           ikon={ShieldAlert}
           baslik="Bu sayfa size kapalı"
-          aciklama="Bu sayfaya yalnızca Kontrolör, Akademik Yönetici, Sistem Yöneticisi ve Kurucu erişebilir."
+          aciklama="Bu sayfaya yalnızca iç ekip (Sistem Yöneticisi ve Kurucu) erişebilir."
           eylem={{ etiket: "Ana sayfaya dön", href: "/dashboard" }}
         />
       </main>

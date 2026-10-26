@@ -7,8 +7,19 @@
 
 import type { UserRole } from "@/lib/project-labels";
 
-/** Kayıtları görebilen roller; RLS politikasıyla aynı küme (20260924100005). */
-export const KAYIT_ROLLERI: UserRole[] = ["controller", "academic_manager", "system_admin", "founder"];
+/*
+  Asistan Kayıtları sayfasını görebilen roller: YALNIZCA İÇ EKİP
+  (26.10.2026, kurum sahibinin kararı). Eskiden Kontrolör ve Akademik
+  Yönetici de görüyordu; sayfanın işi model karşılaştırması ve ince ayar
+  verisi — kurum personelinin bu ekranda yapacağı bir iş yok, ekranda ise
+  öğrencilerin modele giden ham metni duruyor.
+
+  RLS bilerek DARALTILMADI (20260924100028): gözetim rolleri kendi
+  kurumlarının kayıtlarını okumaya devam ediyor, çünkü personelin Çalışma
+  özeti son asistan çalışmasını oradan gösteriyor (calisma-merkezi.ts).
+  Bu küme sayfanın, menünün ve sayfanın sunucu işlemlerinin kapısı.
+*/
+export const KAYIT_ROLLERI: UserRole[] = ["system_admin", "founder"];
 
 export type YetenekAdi = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale";
 
