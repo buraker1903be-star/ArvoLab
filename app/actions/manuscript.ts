@@ -12,6 +12,8 @@ import { checkGuidelineCompliance } from "@/lib/guideline-check";
 import { loadAppliedGuideline } from "@/lib/guideline-rules";
 import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
 import { hasNonPlainAttributes } from "@/lib/format-loss";
+import { kontrolSayilari, ozetOku, yapiSorunlariniTemizle, type KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
+import type { StructureIssue } from "@/lib/structure-check";
 
 export interface PageMargins {
   top: number;
@@ -337,7 +339,16 @@ export interface ManuscriptCheckResult {
   };
 }
 
-export async function runManuscriptCheck(projectId: string): Promise<{ error?: string; result?: ManuscriptCheckResult }> {
+/**
+ * Kontrolü çalıştırır ve sonucu geçmişe yazar (yazim_kontrolleri).
+ * `yapi`: tarayıcıda o an hesaplanan yapı sorunları; kayda birlikte girer.
+ * Kayıt yazılamazsa kontrol yine döner — geçmiş, sonucun kendisinden
+ * önemli değil; yalnızca log'a gider.
+ */
+export async function runManuscriptCheck(
+  projectId: string,
+  yapi: unknown = [],
+): Promise<{ error?: string; result?: ManuscriptCheckResult; kayit?: KontrolKaydiOzeti }> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: "Oturumunuz sona erdi. Yeniden giriş yapın." };
   const { supabase } = ctx;
@@ -406,15 +417,59 @@ export async function runManuscriptCheck(projectId: string): Promise<{ error?: s
     };
   }
 
-  return {
-    result: {
-      wordCount: countWords(content),
-      citationStyle,
-      stil: { id: stil.id, ad: stil.ad, tur: stil.tur },
-      guidelineCompliance,
-      missingSections: guidelineCompliance?.sections.filter((s) => !s.found).map((s) => s.section) ?? [],
-      atif: atifSonucu,
-    },
+  const result: ManuscriptCheckResult = {
+    wordCount: countWords(content),
+    citationStyle,
+    stil: { id: stil.id, ad: stil.ad, tur: stil.tur },
+    guidelineCompliance,
+    missingSections: guidelineCompliance?.sections.filter((s) => !s.found).map((s) => s.section) ?? [],
+    atif: atifSonucu,
   };
+
+  /*
+    Geçmişe yazma yeni kayıt üretiyor: abonelik kapısından geçiyor
+    (lib/access.ts). Kontrolün kendisi kapısız kalıyor; engellenen
+    kullanıcı sonucunu görür, yalnızca geçmişe yazılmaz.
+  */
+  let kayit: KontrolKaydiOzeti | undefined;
+  if (!(await isSubscriptionBlocked())) {
+    const temizYapi = yapiSorunlariniTemizle(yapi);
+    const { data: satir, error: kayitHatasi } = await supabase
+      .from("yazim_kontrolleri")
+      .insert({
+        project_id: projectId,
+        owner_id: ctx.user.id,
+        ...kontrolSayilari(temizYapi, result.missingSections.length, result.wordCount),
+        sonuc: result,
+        yapi: temizYapi,
+      })
+      .select("id, created_at, hata, uyari, eksik_bolum, kelime")
+      .single();
+    if (kayitHatasi) console.error("[kontrol] geçmişe yazılamadı", kayitHatasi.message);
+    else if (satir) kayit = ozetOku(satir);
+  }
+
+  return { result, kayit };
+}
+
+/** Geçmişteki bir kontrolün tamamı (pencerede önceki bir kayda geçmek için). RLS okumayı sınırlar. */
+export async function kontrolKaydiniOku(
+  projectId: string,
+  id: string,
+): Promise<{ error?: string; sonuc?: ManuscriptCheckResult; yapi?: StructureIssue[] }> {
+  const ctx = await getAuthContext();
+  if (!ctx) return { error: "Oturumunuz sona erdi. Yeniden giriş yapın." };
+  const { data, error } = await ctx.supabase
+    .from("yazim_kontrolleri")
+    .select("sonuc, yapi")
+    .eq("project_id", projectId)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    console.error("[kontrol] kayıt okunamadı", error.message);
+    return { error: "Kontrol kaydı okunamadı; biraz sonra tekrar deneyin." };
+  }
+  if (!data) return { error: "Kontrol kaydı bulunamadı." };
+  return { sonuc: data.sonuc as ManuscriptCheckResult, yapi: yapiSorunlariniTemizle(data.yapi) };
 }
 

@@ -572,7 +572,6 @@
 .kontrol-yapi[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
 .kontrol-yapi[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
 .kontrol-yapi[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
-.kontrol-sonuc-ac { justify-self: start; }
 /* Sayfa başlığındaki eylemler: Çalışma özeti + teslim, çıktı ve kontrol düğmeleri */
 .yazma-eylemleri { justify-content: flex-end; }
 @media (max-width: 760px) { .yazma-eylemleri > * { flex: 1 1 auto; justify-content: center; } }
@@ -959,3 +958,60 @@
 .sorun-metin { overflow-wrap: anywhere; }
 .sorun-eylem, .sorun-goster { flex: none; align-self: center; white-space: nowrap; }
 .sorun-temiz { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--success); font-weight: 600; }
+.sorun-satir[data-tone="success"] > svg { color: var(--success); }
+.sorun-grubu > p.sorun-satir { margin: 0; }
+.sorun-metin small { font-size: var(--fs-micro); }
+.kontrol-bolumu { display: grid; gap: 8px; }
+.kontrol-bolumu > strong { font-size: var(--fs-base); }
+.sorun-paneli > .alert { margin: 0; }
+
+/* Kontrol geçmişi (pencerenin başında): son 10 çalıştırma */
+.kontrol-gecmisi { display: grid; gap: 6px; }
+.kontrol-gecmisi ol { display: grid; gap: 4px; max-height: 196px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.kontrol-gecmisi button {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.kontrol-gecmisi button:hover { border-color: var(--line); }
+.kontrol-gecmisi button[aria-pressed="true"] { border-color: var(--accent-500); background: var(--accent-soft); }
+.kontrol-gecmisi button:disabled { cursor: progress; }
+.kontrol-gecmisi-tarih { display: grid; gap: 1px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kontrol-gecmisi-tarih small { color: var(--accent); font-size: var(--fs-micro); font-weight: 650; }
+.kontrol-gecmisi-sayilar { display: flex; flex-wrap: wrap; gap: 4px; }
+@media (max-width: 640px) {
+  .kontrol-gecmisi button { grid-template-columns: minmax(0, 1fr) auto; }
+  .kontrol-gecmisi-sayilar { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* Kontrol kartında son kontrol satırı */
+.kontrol-son {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.kontrol-son:hover { border-color: var(--line); }
+.kontrol-son:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+.kontrol-son > span { display: grid; gap: 1px; min-width: 0; }
+.kontrol-son b { font-size: var(--fs-sm); }
+.kontrol-son small { overflow: hidden; color: var(--muted); font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
+.kontrol-son > svg { color: var(--muted); }

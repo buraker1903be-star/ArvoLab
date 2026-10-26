@@ -7,6 +7,8 @@ import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { resolveGuidelineSync } from "@/lib/guideline-sync";
 import { refreshImageUrls } from "@/lib/manuscript-images";
 import { detectFormatLoss } from "@/lib/format-loss";
+import { ozetOku, yapiSorunlariniTemizle } from "@/lib/kontrol-gecmisi";
+import type { ManuscriptCheckResult } from "@/app/actions/manuscript";
 import ManuscriptEditor from "./manuscript-editor";
 
 // Bu sayfanın sunucu eylemleri (Word'den aktarma, resimli dönüştürme) büyük dosyalarda zaman alabilir.
@@ -39,13 +41,32 @@ export default async function WriteManuscriptPage({
   // Çalışma yoksa ya da kullanıcının erişimi yoksa (RLS) boş editör yerine 404.
   if (!project) notFound();
 
-  const [guideline, manuscript, userResult] = await Promise.all([
+  const [guideline, manuscript, userResult, gecmisYaniti] = await Promise.all([
     /* Katalogda eşleşme yoksa öğrencinin kendi yüklediği kılavuz
        uygulanıyor (lib/guideline-rules.ts: calismaKilavuzu). */
     calismaKilavuzu(supabase, id, project.guideline_id),
     getManuscript(id),
     supabase.auth.getUser(),
+    /* Kılavuz ve kaynakça kontrolü geçmişi: son 10 çalıştırma; en
+       yenisinin tamamı açılışta gösteriliyor (migration 20261026202222).
+       Okunamazsa editör geçmişsiz açılır, akış düşmez. */
+    supabase
+      .from("yazim_kontrolleri")
+      .select("id, created_at, hata, uyari, eksik_bolum, kelime")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
+  if (gecmisYaniti.error) console.error("[kontrol] geçmiş okunamadı", gecmisYaniti.error.message);
+  const gecmisSatirlari = gecmisYaniti.data ?? [];
+  const kontrolGecmisi = gecmisSatirlari.map(ozetOku);
+  // Tam sonuç (künye listesi büyük olabilir) yalnızca en yenisi için okunuyor.
+  const { data: sonSatir } = gecmisSatirlari[0]
+    ? await supabase.from("yazim_kontrolleri").select("sonuc, yapi").eq("id", gecmisSatirlari[0].id).maybeSingle()
+    : { data: null };
+  const sonKontrol = sonSatir
+    ? { sonuc: sonSatir.sonuc as ManuscriptCheckResult, yapi: yapiSorunlariniTemizle(sonSatir.yapi) }
+    : null;
   const sync = resolveGuidelineSync(guideline, manuscript);
   // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
   // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
@@ -105,6 +126,8 @@ export default async function WriteManuscriptPage({
         guidelineSync={{ mode: sync.mode, source: sync.source, changes: sync.changes }}
         editHref={`/dashboard/editor/${id}/edit`}
         initialIncludeToc={manuscript?.includeToc ?? false}
+        kontrolGecmisi={kontrolGecmisi}
+        sonKontrol={sonKontrol}
         initialHeadingNumbering={sync.headingNumbering}
         dueDate={project.due_date ?? null}
         projectStatus={project.status ?? null}

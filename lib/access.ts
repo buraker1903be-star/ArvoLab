@@ -117,7 +117,9 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  * createLiteratureSource, createCitationSource, addManuscriptComment,
  * addScoreEntry, createProject, yeniCalisma, createShareLink, kanitEkle, kunyeyiDogrula
  * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
- * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi.
+ * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi,
+ * runManuscriptCheck (yalnızca geçmişe yazma: kontrolün kendisi kapısız,
+ * engellenen kullanıcı sonucunu görür ama yazim_kontrolleri'ne yazılmaz).
  * (yapilacakTamamla, analizSirasi ve analizTezeEklendi kapısız: mevcut
  * kaydın güncellenmesi, aşağıda. analizSonucuKaydet kapılı.)
  *

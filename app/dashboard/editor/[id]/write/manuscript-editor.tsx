@@ -86,6 +86,7 @@ import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
   saveManuscript,
   runManuscriptCheck,
+  kontrolKaydiniOku,
   type ManuscriptCheckResult,
   type PageMargins,
   type CoverPage,
@@ -99,6 +100,8 @@ import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
 import { splitBodyAndReferences } from "@/lib/text-split";
+import type { KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
+import { trTarihSaat } from "@/lib/tr-time";
 import IcindekilerKarti from "./icindekiler-karti";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
@@ -172,6 +175,10 @@ interface ManuscriptEditorProps {
   editHref: string;
   /** Word çıktısına içindekiler tablosu */
   initialIncludeToc: boolean;
+  /** Kılavuz ve kaynakça kontrolü geçmişi, en yenisi başta (yazim_kontrolleri) */
+  kontrolGecmisi?: KontrolKaydiOzeti[];
+  /** En yeni kontrolün tamamı: açılışta pencerede gösterilir */
+  sonKontrol?: { sonuc: ManuscriptCheckResult; yapi: StructureIssue[] } | null;
   /** Başlıklar otomatik numaralanır ("1.", "1.1.") */
   initialHeadingNumbering?: boolean;
   /** Çalışmanın teslim tarihi ve durumu (yazım temposu için) */
@@ -343,6 +350,8 @@ export default function ManuscriptEditor({
   guidelineSync,
   editHref,
   initialIncludeToc,
+  kontrolGecmisi = [],
+  sonKontrol = null,
   initialHeadingNumbering = false,
   dueDate = null,
   projectStatus = null,
@@ -364,7 +373,14 @@ export default function ManuscriptEditor({
   const [abonelikBitti, setAbonelikBitti] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(initialUpdatedAt ? new Date(initialUpdatedAt) : null);
   const [draftOffer, setDraftOffer] = useState<LocalDraft | null>(null);
-  const [checkResult, setCheckResult] = useState<ManuscriptCheckResult | null>(null);
+  /*
+    Son kontrol açılışta veritabanından geliyor (yazim_kontrolleri).
+    Eskiden yalnızca bellekteydi: sayfa yenilenince sonuç kayboluyordu.
+  */
+  const [checkResult, setCheckResult] = useState<ManuscriptCheckResult | null>(sonKontrol?.sonuc ?? null);
+  const [gecmis, setGecmis] = useState<KontrolKaydiOzeti[]>(kontrolGecmisi);
+  const [seciliKontrol, setSeciliKontrol] = useState<string | null>(kontrolGecmisi[0]?.id ?? null);
+  const [kayitAciliyor, setKayitAciliyor] = useState<string | null>(null);
   /*
     "Kontrol Sonucu" kartının ATIF yarısı sunucudan geliyor ve metin
     değişince kendiliğinden tazelenmiyordu; yapı yarısı ise tazeleniyor
@@ -376,12 +392,18 @@ export default function ManuscriptEditor({
     Sonucu silmiyoruz (kullanıcı düzeltirken ona bakıyor), ESKİ olduğunu
     söylüyoruz.
   */
-  const [checkResultEski, setCheckResultEski] = useState(false);
+  // Metin son kontrolden sonra kaydedildiyse açılışta da "eski" sayılır.
+  const [checkResultEski, setCheckResultEski] = useState(
+    () =>
+      Boolean(
+        kontrolGecmisi[0] && initialUpdatedAt && new Date(initialUpdatedAt).getTime() > new Date(kontrolGecmisi[0].createdAt).getTime(),
+      ),
+  );
   const [checking, setChecking] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [sonucAcik, setSonucAcik] = useState(false);
-  const [structureIssues, setStructureIssues] = useState<StructureIssue[] | null>(null);
+  const [structureIssues, setStructureIssues] = useState<StructureIssue[] | null>(sonKontrol?.yapi ?? null);
   const [liveIssues, setLiveIssues] = useState<StructureIssue[] | null>(null);
   const [issuesOpen, setIssuesOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(Boolean(acilacakMadde));
@@ -861,17 +883,24 @@ export default function ManuscriptEditor({
       }
       // Yapı ve bütünlük kontrolü ekrandaki içerik üzerinde tarayıcıda anında çalışır.
       const current = editorRef.current;
+      let issues: StructureIssue[] = [];
       if (current) {
-        const issues = checkStructure(current.getJSON(), structureOptions);
+        issues = checkStructure(current.getJSON(), structureOptions);
         setStructureIssues(issues);
         setLiveIssues(issues);
       }
-      const res = await runManuscriptCheck(projectId);
+      // Yapı sorunları da geçmişe birlikte yazılır (lib/kontrol-gecmisi.ts).
+      const res = await runManuscriptCheck(projectId, issues);
       if (res.error) {
         setCheckError(res.error);
       } else if (res.result) {
         setCheckResult(res.result);
         setCheckResultEski(false);
+        const kayit = res.kayit;
+        if (kayit) {
+          setGecmis((onceki) => [kayit, ...onceki.filter((k) => k.id !== kayit.id)].slice(0, 10));
+          setSeciliKontrol(kayit.id);
+        } else setSeciliKontrol(null);
         setSonucAcik(true);
       }
     } catch {
@@ -880,6 +909,26 @@ export default function ManuscriptEditor({
       setChecking(false);
     }
   }, [projectId, saveNow, structureOptions]);
+
+  /* Geçmişten bir kontrole geç: sonucu ve o anki yapı sorunlarını getirir. */
+  const kontrolSec = async (id: string) => {
+    if (id === seciliKontrol || kayitAciliyor) return;
+    setKayitAciliyor(id);
+    try {
+      const res = await kontrolKaydiniOku(projectId, id);
+      if (res.error || !res.sonuc) {
+        showToast("error", res.error ?? "Kontrol kaydı okunamadı.");
+        return;
+      }
+      setCheckResult(res.sonuc);
+      setStructureIssues(res.yapi ?? []);
+      setSeciliKontrol(id);
+    } catch {
+      showToast("error", "Kontrol kaydı okunamadı; bağlantınızı kontrol edin.");
+    } finally {
+      setKayitAciliyor(null);
+    }
+  };
 
   const handleExport = useCallback(async () => {
     setExporting(true);
@@ -2186,9 +2235,19 @@ export default function ManuscriptEditor({
                 {checkError}
               </p>
             ) : null}
+            {/* Son kontrol kaydı: kart her açılışta gösterir, pencerede geçmiş listelenir. */}
             {checkResult ? (
-              <button type="button" className="result-link kontrol-sonuc-ac" onClick={() => setSonucAcik(true)}>
-                Son kılavuz kontrolünün sonucu{checkResultEski ? " (metin sonradan değişti)" : ""}
+              <button type="button" className="kontrol-son" onClick={() => setSonucAcik(true)}>
+                <History size={16} aria-hidden="true" />
+                <span>
+                  <b>Son kılavuz kontrolü</b>
+                  <small>
+                    {gecmis[0] ? trTarihSaat(gecmis[0].createdAt) : "Bu oturumda"}
+                    {checkResultEski ? " · metin sonradan değişti" : ""}
+                    {gecmis.length > 1 ? ` · ${gecmis.length} kayıt` : ""}
+                  </small>
+                </span>
+                <ChevronRight size={16} aria-hidden="true" />
               </button>
             ) : null}
           </section>
@@ -2222,90 +2281,169 @@ export default function ManuscriptEditor({
         kipli pencere açıkken belgede gidilen yer görünmez.
       */}
       {checkResult && (
-        <Dialog open={sonucAcik} onClose={() => setSonucAcik(false)} kicker="Kontrol" title="Kılavuz ve kaynakça kontrolü">
+        <Dialog
+          open={sonucAcik}
+          onClose={() => setSonucAcik(false)}
+          kicker="Kontrol"
+          title="Kılavuz ve kaynakça kontrolü"
+          description="Kılavuzun zorunlu bölümleri, yapı ve bütünlük, atıf–kaynakça eşleşmesi. Her çalıştırma kaydedilir; öncekiler aşağıda."
+        >
         <div
-          className="stack"
+          className="sorun-paneli"
           onClickCapture={(event) => {
-            if ((event.target as HTMLElement).closest(".result-link")) setSonucAcik(false);
+            if ((event.target as HTMLElement).closest(".result-link, .kontrol-git")) setSonucAcik(false);
           }}
         >
-          {checkResultEski && (
-            <p className="tone-text" data-tone="warning">
-              Bu sonuç metnin önceki hâline ait; sonrasında değişiklik yaptınız.
-              Güncel durum için “Kılavuz ve kaynakça kontrolü” düğmesine yeniden basın.
-            </p>
-          )}
+          {/*
+            KONTROL GEÇMİŞİ (26.10.2026, kurum sahibinin isteği: "son kontrol
+            sonucunu kaldırma, geçmiş işlem gözüksün"). Son 10 çalıştırma;
+            birine basınca o anki sonuç açılır. Hata ve uyarı sayısı
+            çalıştırmalar arasında düzelip düzelmediğini gösteriyor.
+          */}
+          {gecmis.length ? (
+            <section className="kontrol-gecmisi" aria-label="Kontrol geçmişi">
+              <strong className="text-sm">Kontrol geçmişi</strong>
+              <ol>
+                {gecmis.map((k, i) => (
+                  <li key={k.id}>
+                    <button
+                      type="button"
+                      aria-pressed={k.id === seciliKontrol}
+                      disabled={kayitAciliyor !== null}
+                      onClick={() => void kontrolSec(k.id)}
+                    >
+                      <span className="kontrol-gecmisi-tarih">
+                        {trTarihSaat(k.createdAt)}
+                        {i === 0 ? <small>en son</small> : null}
+                      </span>
+                      <span className="kontrol-gecmisi-sayilar">
+                        {k.hata ? <span className="status-pill" data-tone="danger">{k.hata} hata</span> : null}
+                        {k.uyari ? <span className="status-pill" data-tone="warning">{k.uyari} uyarı</span> : null}
+                        {k.eksikBolum ? <span className="status-pill" data-tone="neutral">{k.eksikBolum} eksik bölüm</span> : null}
+                        {!k.hata && !k.uyari && !k.eksikBolum ? <span className="status-pill" data-tone="success">Sorunsuz</span> : null}
+                      </span>
+                      <span className="muted text-sm">{k.kelime.toLocaleString("tr-TR")} kelime</span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
 
-          {checkResult.guidelineCompliance && (
-            <div className="result-block">
-              <strong className="text-base">Kılavuz Uygunluğu</strong>
-              <ul className="result-list">
-                {checkResult.guidelineCompliance.sections.map((s, i) => {
-                  const heading = sections.find((item) => item.section === s.section)?.heading ?? null;
+          {seciliKontrol && gecmis[0] && seciliKontrol !== gecmis[0].id ? (
+            <p className="alert" data-tone="info">
+              Önceki bir kontrolü görüntülüyorsunuz ({trTarihSaat(gecmis.find((k) => k.id === seciliKontrol)?.createdAt ?? "")}).
+              Bağlantılar metnin bugünkü hâlinde arar.
+            </p>
+          ) : checkResultEski ? (
+            <p className="alert" data-tone="warning">
+              Bu sonuç metnin önceki hâline ait; sonrasında değişiklik yaptınız. Güncel durum için
+              “Kılavuz ve kaynakça kontrolü” düğmesine yeniden basın.
+            </p>
+          ) : null}
+
+          {checkResult.guidelineCompliance ? (
+            <section className="sorun-grubu" aria-label="Kılavuz uygunluğu">
+              <header>
+                <strong>Kılavuz uygunluğu</strong>
+                <span className="muted text-sm">
+                  {checkResult.guidelineCompliance.sections.filter((b) => b.found).length}/
+                  {checkResult.guidelineCompliance.sections.length}
+                </span>
+              </header>
+              <p className="muted text-sm">Kılavuzun zorunlu bölümleri metinde başlık olarak bulunmalı.</p>
+              <ul>
+                {checkResult.guidelineCompliance.sections.map((b, i) => {
+                  const heading = sections.find((item) => item.section === b.section)?.heading ?? null;
                   return (
-                    <li key={i} className="tone-text result-action-row" data-tone={s.found ? "success" : "danger"}>
-                      <span>
-                        {s.found ? "✓" : "✗"} {s.section}
+                    <li key={i} className="sorun-satir" data-tone={b.found ? "success" : "danger"}>
+                      {b.found ? <CheckCircle2 size={16} aria-label="Var" /> : <AlertCircle size={16} aria-label="Eksik" />}
+                      <span className="sorun-metin">
+                        {b.section}
+                        {b.found ? null : <small className="muted"> — bulunamadı</small>}
                       </span>
                       {heading ? (
-                        <button type="button" className="result-link" onClick={() => handleJump(heading)}>
+                        <button type="button" className="result-link sorun-goster" onClick={() => handleJump(heading)}>
                           Git
                         </button>
-                      ) : !s.found ? (
-                        <button type="button" className="result-link" onClick={() => handleInsertSections([s.section])}>
-                          Ekle
+                      ) : !b.found ? (
+                        <button
+                          type="button"
+                          className="projects-filter-button button-compact sorun-eylem kontrol-git"
+                          onClick={() => handleInsertSections([b.section])}
+                        >
+                          Bölümü ekle
                         </button>
                       ) : null}
                     </li>
                   );
                 })}
               </ul>
-            </div>
-          )}
-
-          {structureIssues ? (
-            <div className="result-block">
-              <strong className="text-base">Yapı ve bütünlük</strong>
-              {renderIssueList(structureIssues)}
-            </div>
+            </section>
           ) : null}
 
-          <div>
-            <strong className="text-base">
-              {checkResult.atif.referenceSectionFound
-                ? `${checkResult.stil.ad} Uyum Skoru: ${checkResult.atif.complianceScore}/100`
-                : "Kaynakça bölümü bulunamadı (\"Kaynakça\" ya da \"Kaynaklar\" başlığı ekleyin)"}
-            </strong>
-            {checkResult.atif.referenceSectionFound && (
-              <ul className="result-list">
-                {checkResult.atif.crossCheck.referencesWithoutCitation.map((r, i) => (
-                  <li key={`rw-${i}`} className="tone-text result-action-row" data-tone="warning">
-                    <span>Kaynakçada var, metinde atıf yok: {r.raw}</span>
-                    <button type="button" className="result-link" onClick={() => handleFindText(r.raw)}>
+          {structureIssues ? (
+            <section className="kontrol-bolumu" aria-label="Yapı ve bütünlük">
+              <strong>Yapı ve bütünlük</strong>
+              {renderIssueList(structureIssues)}
+            </section>
+          ) : null}
+
+          <section className="sorun-grubu" aria-label="Atıf ve kaynakça eşleşmesi">
+            <header>
+              <strong>Atıf ve kaynakça eşleşmesi</strong>
+              {checkResult.atif.referenceSectionFound && checkResult.atif.complianceScore !== null ? (
+                <span
+                  className="status-pill"
+                  data-tone={
+                    checkResult.atif.complianceScore >= 85 ? "success" : checkResult.atif.complianceScore >= 60 ? "warning" : "danger"
+                  }
+                >
+                  {checkResult.stil.ad} uyum {checkResult.atif.complianceScore}/100
+                </span>
+              ) : null}
+            </header>
+            {!checkResult.atif.referenceSectionFound ? (
+              <p className="sorun-satir" data-tone="danger">
+                <AlertCircle size={16} aria-label="Hata" />
+                <span className="sorun-metin">
+                  Kaynakça bölümü bulunamadı: &quot;Kaynakça&quot; ya da &quot;Kaynaklar&quot; başlığı ekleyin.
+                </span>
+              </p>
+            ) : checkResult.atif.crossCheck.referencesWithoutCitation.length +
+                checkResult.atif.crossCheck.citationsWithoutReference.length ===
+              0 ? (
+              <p className="sorun-satir" data-tone="success">
+                <CheckCircle2 size={16} aria-label="Sorunsuz" />
+                <span className="sorun-metin">
+                  {checkResult.stil.tur === "numara"
+                    ? `${checkResult.stil.ad} numaralı bir stil: atıf numaraları ile kaynakça sırası "Yapı ve bütünlük" altında denetlenir.`
+                    : "Her atıfın kaynakçada, her kaynağın metinde karşılığı var."}
+                </span>
+              </p>
+            ) : (
+              <ul>
+                {checkResult.atif.crossCheck.citationsWithoutReference.map((c, i) => (
+                  <li key={`cw-${i}`} className="sorun-satir" data-tone="danger">
+                    <AlertCircle size={16} aria-label="Hata" />
+                    <span className="sorun-metin">Metinde atıf var, kaynakçada yok: {c.raw}</span>
+                    <button type="button" className="result-link sorun-goster" onClick={() => handleFindText(c.raw)}>
                       Göster
                     </button>
                   </li>
                 ))}
-                {checkResult.atif.crossCheck.citationsWithoutReference.map((c, i) => (
-                  <li key={`cw-${i}`} className="tone-text result-action-row" data-tone="warning">
-                    <span>Metinde atıf var, kaynakçada yok: {c.raw}</span>
-                    <button type="button" className="result-link" onClick={() => handleFindText(c.raw)}>
+                {checkResult.atif.crossCheck.referencesWithoutCitation.map((r, i) => (
+                  <li key={`rw-${i}`} className="sorun-satir" data-tone="warning">
+                    <AlertTriangle size={16} aria-label="Uyarı" />
+                    <span className="sorun-metin">Kaynakçada var, metinde atıf yok: {r.raw}</span>
+                    <button type="button" className="result-link sorun-goster" onClick={() => handleFindText(r.raw)}>
                       Göster
                     </button>
                   </li>
                 ))}
               </ul>
             )}
-            {/* Numara stillerinde atıf künyeyle adla değil sırayla eşleşir;
-                o eşleşme yukarıdaki "Yapı ve bütünlük" bölümünde denetleniyor.
-                Yazılmazsa boş liste "her şey yerinde" gibi okunuyordu. */}
-            {checkResult.atif.referenceSectionFound && checkResult.stil.tur === "numara" ? (
-              <p className="muted text-sm">
-                {checkResult.stil.ad} numaralı bir stil: metindeki atıf numaraları ile kaynakça sırası
-                &quot;Yapı ve bütünlük&quot; başlığı altında denetlenir.
-              </p>
-            ) : null}
-          </div>
+          </section>
         </div>
         </Dialog>
       )}
