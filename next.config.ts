@@ -74,7 +74,16 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/cron/guideline-refresh": [PDF_WORKER, ...OCR_ISCISI],
     "/dashboard/documents": [PDF_WORKER],
-    "/dashboard/guidelines": [PDF_WORKER, ...OCR_ISCISI],
+    /*
+      Öğrencinin kendi kılavuzunu yüklemesi (app/actions/calisma-kilavuzu.ts →
+      lib/guideline-scan.ts) aynı tarayıcıyı ve OCR'ı kullanıyor; işlem
+      Çalışmalarım ve çalışma sayfalarından çağrılıyor. Katalog sayfası
+      (26.10.2026'da kaldırıldı) listede olduğu için yöneticinin taraması
+      çalışıyordu, öğrencinin taranmış PDF'i ise işçi dosyası pakette
+      olmadığından düşebilirdi.
+    */
+    "/dashboard/editor": [PDF_WORKER, ...OCR_ISCISI],
+    "/dashboard/editor/**": [PDF_WORKER, ...OCR_ISCISI],
   },
   experimental: {
     serverActions: {

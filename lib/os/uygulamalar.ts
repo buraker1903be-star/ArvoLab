@@ -103,14 +103,10 @@ export function labUygulamalari(): OsUygulama[] {
       İkisi de "Tüm uygulamalar"da ve Ctrl+K'da.
     */
     /*
-      KILAVUZ KATALOĞU YALNIZCA PERSONELDE (26.10.2026, kurum sahibinin
-      isteği). Öğrenci kılavuzunu kendi çalışmasına yüklüyor ve kurallar
-      ona onaylatılıp uygulanıyor (Yeni çalışma penceresi, Kılavuz
-      penceresi); katalog, kılavuzları tarayıp onaylayan ekibin sayfası.
-      Öğrencinin başlatıcısında durması "kılavuzumu buradan mı seçeceğim"
-      sorusunu doğuruyordu.
+      Kılavuz Kataloğu KALDIRILDI (26.10.2026, kurum sahibinin kararı):
+      kılavuz her çalışmaya öğrencinin kendisi tarafından yükleniyor.
+      Eski adres ana sayfaya yönleniyor (app/dashboard/guidelines/page.tsx).
     */
-    { key: "kilavuz", label: "Kılavuz Kataloğu", href: "/dashboard/guidelines", ikon: "kilavuz", yollar: ["/dashboard/guidelines"], yalnizBaslatici: true, roller: STAFF_ROLES },
     /*
       DOÇENTLİK PUANI YALNIZCA PERSONELDE (26.10.2026, kurum sahibinin
       isteği: "öğrencilerin görmesine gerek yok"). Doçent adayı akademisyen

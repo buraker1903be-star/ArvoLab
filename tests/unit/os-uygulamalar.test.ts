@@ -152,10 +152,11 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
     assert.equal(kaynaklar.bolumler, undefined);
   });
 
-  test("kılavuz kataloğu ve doçentlik yalnızca personelin başlatıcısında", () => {
-    // Öğrenci kılavuzunu kendi çalışmasına yüklüyor; katalog onaylayan ekibin
-    // sayfası. Doçentlik puanı öğrencinin işi değil.
-    const personelSayfalari = ["/dashboard/guidelines", "/dashboard/associate-professorship"];
+  test("doçentlik yalnızca personelin başlatıcısında; kılavuz kataloğu kaldırıldı", () => {
+    // Doçentlik puanı öğrencinin işi değil. Kılavuz kataloğu 26.10.2026'da
+    // kaldırıldı: kılavuz her çalışmaya öğrencinin kendisi tarafından yükleniyor.
+    assert.equal(uygulamalar.some((u) => u.href === "/dashboard/guidelines"), false);
+    const personelSayfalari = ["/dashboard/associate-professorship"];
     const ogrenci = osSayfalari(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
     // Önizlemede rol yok sayılır (layout): rolsüz kullanıcı da görmez.
     const rolsuz = osSayfalari(gorunenUygulamalar(uygulamalar, undefined)).map((s) => s.href);
@@ -166,7 +167,6 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
         assert.ok(osSayfalari(gorunenUygulamalar(uygulamalar, rol)).some((s) => s.href === href), `${rol} ${href}`);
       }
     }
-    assert.equal(etkinUygulama(uygulamalar, "/dashboard/guidelines")?.key, "kilavuz");
   });
 
   test("çalışmanın sekmeleri (kanıt, makale) Çalışmalarım'da kalıyor", () => {
