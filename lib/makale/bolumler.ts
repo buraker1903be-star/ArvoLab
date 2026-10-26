@@ -4,7 +4,8 @@
   Makale çalışma alanı bölüm uzunluklarını, şablondaki bölümlerin metinde
   olup olmadığını ve asistanın hangi bölümü denetleyeceğini buradan
   okur. Bölüm sınırı EN ÜST düzey başlıktır: "2.1 Örneklem" yöntemin
-  parçasıdır, ayrı bir bölüm değil. Belgede başlık yoksa tek bir
+  parçasıdır, ayrı bir bölüm değil. Tezin adı gibi kapsayıcı bir üst
+  başlık bölüm sayılmaz (aşağıda, duzle). Belgede başlık yoksa tek bir
   "başlıksız" bölüm döner — müsveddenin henüz yapılandırılmadığını
   göstermenin dürüst yolu.
 
@@ -43,36 +44,66 @@ function duzlestir(dugumler: Dugum[] | undefined, cikti: Dugum[] = []): Dugum[] 
   return cikti;
 }
 
+type Dal = { baslik: string; duzey: number; satirlar: string[]; cocuklar: Dal[] };
+
+/** Bölümün kendi metni ve alt başlıklarıyla birlikte bütün metni. */
+const tumSatirlar = (dal: Dal): string[] => [...dal.satirlar, ...dal.cocuklar.flatMap((c) => [c.baslik, ...tumSatirlar(c)])];
+
+/*
+  BELGE BAŞLIĞI BÖLÜM DEĞİLDİR (26.10.2026). Öğrenciler tezin adını
+  çoğu zaman en üst düzey başlık yapıp bölümleri onun altına yazıyor.
+  Eskiden en üst düzey her başlık bir bölüm sayılıyordu: ana sayfada
+  "Bölümlerim"in ilk satırı tezin adıydı ve bütün metni o topluyordu
+  (2.531 kelime), gerçek bölümler görünmüyordu.
+
+  Kural: tanınan bir bölüm adı OLMAYAN (lib/makale/sablonlar.ts,
+  bolumTuru), altında alt başlıklar bulunan ve kendi metni kısa olan bir
+  üst başlık bir kapsayıcıdır — yerine çocukları bölüm olarak listelenir.
+  "BİRİNCİ BÖLÜM: GİRİŞ" gibi tanınan bir başlık bölüm olarak kalır.
+  Bedeli: tanınmayan adla yazılmış bir bölüm (ör. "Türkiye
+  Ekonomisinde Enflasyon") alt başlıklarıyla listelenir; kelime
+  sayıları yine doğru, yalnızca daha ayrıntılı.
+*/
+const KAPSAYICI_EN_COK_SOZCUK = 60;
+
+function duzle(dal: Dal): Dal[] {
+  if (dal.baslik && dal.cocuklar.length && !bolumTuru(dal.baslik) && sozcukSayisi(dal.satirlar.join(" ")) <= KAPSAYICI_EN_COK_SOZCUK)
+    return dal.cocuklar;
+  return [dal];
+}
+
 export function makaleBolumleri(icerik: unknown): MakaleBolumu[] {
   const kok = (icerik ?? null) as { content?: Dugum[] } | null;
   const dugumler = duzlestir(kok?.content);
-  const duzeyler = dugumler
-    .filter((d) => d.type === "heading")
-    .map((d) => Number(d.attrs?.level ?? 1))
-    .filter((d) => Number.isFinite(d));
-  const ustDuzey = duzeyler.length ? Math.min(...duzeyler) : null;
 
-  const bolumler: { baslik: string; satirlar: string[] }[] = [];
-  let aktif: { baslik: string; satirlar: string[] } | null = null;
-
+  // Başlıklardan ağaç: her başlık kendinden derin olanları kapsar.
+  const kokler: Dal[] = [];
+  const yigin: Dal[] = [];
+  let baslikOncesi: Dal | null = null;
   for (const dugum of dugumler) {
     const metin = metniOf(dugum).trim();
-    if (dugum.type === "heading" && Number(dugum.attrs?.level ?? 1) === ustDuzey) {
-      aktif = { baslik: metin || "Adsız bölüm", satirlar: [] };
-      bolumler.push(aktif);
+    if (dugum.type === "heading") {
+      const duzey = Number(dugum.attrs?.level ?? 1) || 1;
+      const dal: Dal = { baslik: metin || "Adsız bölüm", duzey, satirlar: [], cocuklar: [] };
+      while (yigin.length && yigin[yigin.length - 1].duzey >= duzey) yigin.pop();
+      (yigin.length ? yigin[yigin.length - 1].cocuklar : kokler).push(dal);
+      yigin.push(dal);
       continue;
     }
     if (!metin) continue;
-    if (!aktif) {
-      aktif = { baslik: "", satirlar: [] };
-      bolumler.push(aktif);
+    if (yigin.length) yigin[yigin.length - 1].satirlar.push(metin);
+    else {
+      if (!baslikOncesi) {
+        baslikOncesi = { baslik: "", duzey: 0, satirlar: [], cocuklar: [] };
+        kokler.unshift(baslikOncesi);
+      }
+      baslikOncesi.satirlar.push(metin);
     }
-    aktif.satirlar.push(metin);
   }
 
-  return bolumler.map(({ baslik, satirlar }) => {
-    const metin = satirlar.join("\n");
-    return { baslik, tur: baslik ? bolumTuru(baslik) : null, metin, sozcuk: sozcukSayisi(metin) };
+  return kokler.flatMap(duzle).map((dal) => {
+    const metin = tumSatirlar(dal).join("\n");
+    return { baslik: dal.baslik, tur: dal.baslik ? bolumTuru(dal.baslik) : null, metin, sozcuk: sozcukSayisi(metin) };
   });
 }
 
