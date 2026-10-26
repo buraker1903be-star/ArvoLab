@@ -301,3 +301,11 @@
 .kanit-tam-tablo { display: inline-flex; align-items: center; gap: 2px; }
 @media (max-width: 760px) { .kanit-ozet { grid-template-columns: minmax(0, 1fr); } }
 @media (hover: hover) and (pointer: fine) { .kanit-kayit > summary:hover { background: var(--surface-2); } }
+/* Literatür ve Kaynakça pencereleri (literatur-penceresi.tsx, kaynakca-penceresi.tsx) */
+.pencere-bolumleri { display: flex; flex-direction: column; gap: 6px; }
+.pencere-grup-baslik { margin: 0 0 4px; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 650; }
+.kaynakca-son { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--r-lg); background: var(--surface-2); color: var(--ink-soft); font-size: var(--fs-sm); }
+.kaynakca-son[data-tone="success"] { color: var(--success); }
+.kaynakca-son[data-tone="danger"] { color: var(--danger); }
+.kaynakca-son[data-tone="warning"] { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.kaynakca-gomulu { display: block; }

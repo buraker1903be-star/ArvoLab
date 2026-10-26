@@ -8,6 +8,12 @@ import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork, 
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 
 const PAGE_PATH = "/dashboard/literature";
+/* Literatür, Çalışmalarım'daki durum kartından da pencere olarak açılıyor;
+   kart sayıları ve pencere içeriği eskimesin. */
+const yenile = () => {
+  revalidatePath(PAGE_PATH);
+  revalidatePath("/dashboard/editor");
+};
 const STATUSES = ["to_review", "read", "used"];
 const SOURCE_TYPES = ["article", "book", "chapter", "thesis", "report", "website", "other"];
 
@@ -107,7 +113,7 @@ export async function createLiteratureSource(formData: FormData): Promise<Action
     return { error: "Kaydedilirken bir hata oluştu." };
   }
 
-  revalidatePath(PAGE_PATH);
+  yenile();
   return { success: true };
 }
 
@@ -129,7 +135,7 @@ export async function updateLiteratureStatus(sourceId: string, status: string): 
   }
   if (!data?.length) return { error: "Kaynak bulunamadı ya da size ait değil." };
 
-  revalidatePath(PAGE_PATH);
+  yenile();
   return { success: true };
 }
 
@@ -161,7 +167,7 @@ export async function updateLiteratureSource(sourceId: string, formData: FormDat
   }
   if (!data?.length) return { error: "Kaynak bulunamadı ya da size ait değil." };
 
-  revalidatePath(PAGE_PATH);
+  yenile();
   return { success: true };
 }
 
@@ -182,7 +188,7 @@ export async function deleteLiteratureSource(sourceId: string): Promise<ActionRe
   }
   if (!data?.length) return { error: "Kaynak bulunamadı ya da size ait değil." };
 
-  revalidatePath(PAGE_PATH);
+  yenile();
   return { success: true };
 }
 
@@ -262,6 +268,6 @@ export async function createCitationSource(input: CitationSourceInput): Promise<
     console.error(error);
     return { error: "Kaynak kaydedilemedi." };
   }
-  revalidatePath(PAGE_PATH);
+  yenile();
   return { source: data as LiteratureSource };
 }

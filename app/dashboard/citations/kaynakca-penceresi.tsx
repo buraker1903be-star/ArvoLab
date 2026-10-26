@@ -1,0 +1,50 @@
+import Link from "next/link";
+import { ChevronRight, Quote } from "lucide-react";
+import { kaynakcaAsistaniAcik } from "@/app/actions/ai-kaynakca";
+import PanelDrawer from "../_components/panel-drawer";
+import CitationCheckForm from "./citation-check-form";
+import { trTarihSaat } from "@/lib/tr-time";
+
+/*
+  KAYNAKÇA PENCERESİ (26.10.2026): Çalışmalarım'daki durum kartından,
+  kartın çalışması için. Denetim formu Kaynakça sayfasındakinin aynısı
+  (CitationCheckForm); burada çalışma ve onun atıf stili hazır seçili,
+  seçici çizilmiyor. Son denetimin puanı düğmede ve pencerenin başında:
+  öğrenci yeniden denetlemeye gerek olup olmadığını açmadan görüyor.
+
+  Puan çalışmanın KENDİ atıf stiline göre; stil adı yazılmıyor (ayrıntı
+  lib/calisma-ozeti.ts, kaynakça adımı).
+*/
+export default async function KaynakcaPenceresi({
+  calisma,
+  sonDenetim,
+}: {
+  calisma: { id: string; title: string; university: string | null; citation_style: string };
+  sonDenetim: { skor: number | null; tarih: string } | null;
+}) {
+  const asistanAcik = await kaynakcaAsistaniAcik();
+  const ton = sonDenetim?.skor == null ? "neutral" : sonDenetim.skor >= 85 ? "success" : sonDenetim.skor >= 60 ? "warning" : "danger";
+
+  return (
+    <PanelDrawer
+      triggerLabel={sonDenetim?.skor != null ? `Kaynakça · ${sonDenetim.skor}` : "Kaynakça"}
+      triggerIcon={<Quote size={15} aria-hidden="true" />}
+      triggerClassName="projects-filter-button button-compact"
+      kicker="Kaynakça ve atıf doğrulama"
+      title="Kaynakçanızı denetleyin"
+      description="Atıf stilinin kuralları, metin içi atıf eşleşmesi ve Crossref/OpenAlex kayıtları birlikte kontrol edilir."
+      boy="genis"
+      basaridaKapan={false}
+    >
+      <p className="kaynakca-son" data-tone={ton}>
+        {sonDenetim
+          ? `Son denetim: ${sonDenetim.skor ?? "—"}/100 kaynakça uyumu · ${trTarihSaat(sonDenetim.tarih)}`
+          : "Bu çalışma için henüz kaynakça denetimi yapılmadı."}
+      </p>
+      <CitationCheckForm projects={[calisma]} asistanAcik={asistanAcik} secilenCalisma={calisma.id} gomulu />
+      <Link href={`/dashboard/citations?calisma=${calisma.id}`} className="link-accent mt-md kanit-tam-tablo">
+        Denetim geçmişi <ChevronRight size={14} aria-hidden="true" />
+      </Link>
+    </PanelDrawer>
+  );
+}

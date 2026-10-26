@@ -7,6 +7,12 @@ import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/acces
 import { literaturAra, type AramaKaydi } from "@/lib/literatur-arama";
 
 const PAGE_PATH = "/dashboard/literature";
+/* Literatür, Çalışmalarım'daki durum kartından da pencere olarak açılıyor;
+   kart sayıları ve pencere içeriği eskimesin. */
+const yenile = () => {
+  revalidatePath(PAGE_PATH);
+  revalidatePath("/dashboard/editor");
+};
 const EN_KISA_SORGU = 3;
 const EN_UZUN_SORGU = 300;
 /*
@@ -242,6 +248,6 @@ export async function aramaKaydiniEkle(kayit: {
     return { error: "Kaynak listenize eklenemedi." };
   }
 
-  revalidatePath(PAGE_PATH);
+  yenile();
   return { success: true };
 }

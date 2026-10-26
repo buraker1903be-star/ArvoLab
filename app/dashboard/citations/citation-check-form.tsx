@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-kaynakca";
 import AsistanSonuc from "../_components/asistan-sonuc";
 import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-check";
@@ -82,19 +83,33 @@ export default function CitationCheckForm({
   projects,
   asistanAcik,
   secilenCalisma = null,
+  gomulu = false,
 }: {
   projects: Project[];
   asistanAcik: boolean;
   secilenCalisma?: string | null;
+  /*
+    Çalışmalarım kartının Kaynakça penceresinde: çalışma sabit, başlık
+    ve çalışma seçici çizilmiyor (pencerenin kendi başlığı var).
+  */
+  gomulu?: boolean;
 }) {
-  // Merkezden gelindiyse çalışma hazır seçili gelir.
+  const router = useRouter();
+  // Bir çalışmadan gelindiyse çalışma hazır seçili gelir.
   const [projectId, setProjectId] = useState<string>(secilenCalisma ?? "");
   const [projectTitle, setProjectTitle] = useState("");
   const [referenceList, setReferenceList] = useState("");
   /* Stil sorulmuyordu ve her kaynakça APA sanılıyordu: Vancouver ya da
      Chicago kullanan biri, doğru yazdığı künyeler için biçim hatası
      alıyordu. */
-  const [citationStyle, setCitationStyle] = useState("apa7");
+  /*
+    Çalışma hazır seçili geldiyse stil de onun kaydından. Eskiden yalnızca
+    seçici DEĞİŞİNCE okunuyordu; çalışmadan gelen öğrenci IEEE yazdığı
+    tezini APA sanılarak denetletiyordu.
+  */
+  const [citationStyle, setCitationStyle] = useState(
+    () => projects.find((p) => p.id === secilenCalisma)?.citation_style ?? "apa7",
+  );
   const [bodyText, setBodyText] = useState("");
   /*
     Metin alanı isteğe bağlı olduğu için çoğu denetim metinsiz çalışıyordu:
@@ -209,6 +224,8 @@ export default function CitationCheckForm({
         setError(res.error as string);
       } else {
         setResult(res as CheckResult);
+        // Son denetim puanı Çalışmalarım kartında ve geçmiş listesinde görünsün.
+        router.refresh();
       }
     } catch {
       setError("Akademik veri kaynaklarına erişilirken bir hata oluştu. Lütfen yeniden deneyin.");
@@ -230,14 +247,16 @@ export default function CitationCheckForm({
   const kaynaksizAtif = result?.crossCheck.citationsWithoutReference ?? [];
 
   return (
-    <section className="project-form-card mt-md">
-      <div className="project-form-heading">
-        <h2>Kaynakça ve Atıf Doğrulama</h2>
-        <p>
-          Kaynakları seçtiğiniz atıf stilinin kuralları, metin içi atıf eşleşmesi ve
-          akademik kayıt varlığı açısından birlikte kontrol edin.
-        </p>
-      </div>
+    <section className={gomulu ? "kaynakca-gomulu" : "project-form-card mt-md"}>
+      {gomulu ? null : (
+        <div className="project-form-heading">
+          <h2>Kaynakça ve Atıf Doğrulama</h2>
+          <p>
+            Kaynakları seçtiğiniz atıf stilinin kuralları, metin içi atıf eşleşmesi ve
+            akademik kayıt varlığı açısından birlikte kontrol edin.
+          </p>
+        </div>
+      )}
 
       <div className="callout mb-md" data-tone="info">
         Bibliyografik bilgiler Crossref ve OpenAlex üzerinden doğrulanır. Her sonuçta
@@ -247,7 +266,7 @@ export default function CitationCheckForm({
       </div>
 
       <div className="project-form-grid">
-        {projects.length > 0 ? (
+        {gomulu ? null : projects.length > 0 ? (
           <label>
             <span>Bağlı çalışma (opsiyonel)</span>
             <select

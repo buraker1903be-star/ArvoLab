@@ -13,22 +13,7 @@ import LiteraturCalismaAlani from "./literatur-calisma-alani";
 import { literaturAsistaniAcik } from "@/app/actions/ai-literatur";
 import CalismaSerit from "../_components/calisma-serit";
 import BosDurum from "../_components/bos-durum";
-
-const SOURCE_TYPE_LABELS: Record<string, string> = {
-  article: "Makale",
-  book: "Kitap",
-  chapter: "Kitap bölümü",
-  thesis: "Tez",
-  report: "Rapor",
-  website: "İnternet kaynağı",
-  other: "Diğer",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  to_review: "İncelenecek",
-  read: "Okundu",
-  used: "Kullanıldı",
-};
+import { KunyeAlanlari, NotAlani, SOURCE_TYPE_LABELS, STATUS_LABELS } from "./kaynak-parcalari";
 
 /* Akışın hangi aşaması olduğunu söyleyen boş durum metinleri. */
 const BOS_METIN = {
@@ -113,58 +98,7 @@ export default async function LiteraturePage({
           description="Taramada bulduğunuz bir kaynağı kaydedin."
         >
           <ActionForm className="project-form-grid" action={createLiteratureSource} successMessage="Kaynak eklendi.">
-            <label className="project-form-full">
-              <span>Başlık</span>
-              <input name="title" type="text" placeholder="Kaynağın başlığı" required />
-            </label>
-
-            <label>
-              <span>Yazar(lar)</span>
-              <input name="authors" type="text" placeholder="Yılmaz, A. ve Demir, B." />
-            </label>
-
-            <label>
-              <span>Yıl</span>
-              <input name="year" type="text" inputMode="numeric" placeholder="2023" />
-            </label>
-
-            <label>
-              <span>Kaynak türü</span>
-              <select name="sourceType" defaultValue="article">
-                {Object.entries(SOURCE_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span>DOI / URL</span>
-              <input name="doiOrUrl" type="text" placeholder="https://doi.org/..." />
-            </label>
-
-            {/* Yayın bilgileri: kaynakça girdisi eksiksiz olsun (editörde DOI ile otomatik de dolar) */}
-            <label className="project-form-full">
-              <span>Dergi / kitap adı (opsiyonel)</span>
-              <input name="containerTitle" type="text" placeholder="Makale için dergi, bölüm için kitap adı" />
-            </label>
-            <label>
-              <span>Cilt</span>
-              <input name="volume" type="text" />
-            </label>
-            <label>
-              <span>Sayı</span>
-              <input name="issue" type="text" />
-            </label>
-            <label>
-              <span>Sayfalar</span>
-              <input name="pages" type="text" placeholder="45–67" />
-            </label>
-            <label>
-              <span>Yayınevi</span>
-              <input name="publisher" type="text" />
-            </label>
+            <KunyeAlanlari />
 
             {projects.length > 0 && (
               <label>
@@ -189,10 +123,7 @@ export default async function LiteraturePage({
               </select>
             </label>
 
-            <label className="project-form-full">
-              <span>Notlar</span>
-              <textarea name="notes" rows={3} placeholder="Kaynakla ilgili kendi notlarınız" />
-            </label>
+            <NotAlani />
 
             <div className="project-form-actions">
               <button type="submit" className="projects-primary-button">
@@ -313,56 +244,8 @@ export default async function LiteraturePage({
                       title={s.title}
                     >
                       <ActionForm className="project-form-grid" action={handleEdit.bind(null, s.id)} successMessage="Kaynak güncellendi.">
-                        <label className="project-form-full">
-                          <span>Başlık</span>
-                          <input name="title" type="text" defaultValue={s.title} required />
-                        </label>
-                        <label>
-                          <span>Yazar(lar)</span>
-                          <input name="authors" type="text" defaultValue={s.authors ?? ""} />
-                        </label>
-                        <label>
-                          <span>Yıl</span>
-                          <input name="year" type="text" inputMode="numeric" defaultValue={s.year ?? ""} />
-                        </label>
-                        <label>
-                          <span>Kaynak türü</span>
-                          <select name="sourceType" defaultValue={s.source_type}>
-                            {Object.entries(SOURCE_TYPE_LABELS).map(([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          <span>DOI / URL</span>
-                          <input name="doiOrUrl" type="text" defaultValue={s.doi_or_url ?? ""} />
-                        </label>
-                        <label className="project-form-full">
-                          <span>Dergi / kitap adı</span>
-                          <input name="containerTitle" type="text" defaultValue={s.container_title ?? ""} />
-                        </label>
-                        <label>
-                          <span>Cilt</span>
-                          <input name="volume" type="text" defaultValue={s.volume ?? ""} />
-                        </label>
-                        <label>
-                          <span>Sayı</span>
-                          <input name="issue" type="text" defaultValue={s.issue ?? ""} />
-                        </label>
-                        <label>
-                          <span>Sayfalar</span>
-                          <input name="pages" type="text" defaultValue={s.pages ?? ""} />
-                        </label>
-                        <label>
-                          <span>Yayınevi</span>
-                          <input name="publisher" type="text" defaultValue={s.publisher ?? ""} />
-                        </label>
-                        <label className="project-form-full">
-                          <span>Notlar</span>
-                          <textarea name="notes" rows={3} defaultValue={s.notes ?? ""} />
-                        </label>
+                        <KunyeAlanlari kaynak={s} />
+                        <NotAlani kaynak={s} />
                         <div className="project-form-actions">
                           <button type="submit" className="projects-primary-button">
                             Kaydet

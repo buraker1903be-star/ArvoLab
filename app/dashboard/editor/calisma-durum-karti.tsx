@@ -5,6 +5,8 @@ import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
 import ActionForm from "../action-form";
 import KilavuzPenceresi from "./[id]/kilavuz-penceresi";
 import KanitMatrisiPenceresi from "./[id]/kanit/kanit-matrisi-penceresi";
+import LiteraturPenceresi from "../literature/literatur-penceresi";
+import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
 import { eksikSatirlari, type EksikTuru, type KartIlerlemesi } from "@/lib/calisma-karti";
@@ -21,8 +23,8 @@ import DeleteProjectButton from "./delete-project-button";
 
   Eskiden ayrı bir "Çalışma merkezi" sayfası vardı; öğrenci için
   kaldırıldı ve geri kalan işleri buraya taşındı: kılavuz penceresi,
-  "Kılavuza göre düzelt", asistanın son bulguları, Kanıt matrisi
-  penceresi ve Makale bağlantısı. Personelin çalışma özeti ([id]/page.tsx) aynı
+  "Kılavuza göre düzelt", asistanın son bulguları, Literatür, Kaynakça
+  ve Kanıt matrisi pencereleri ve Makale bağlantısı. Personelin çalışma özeti ([id]/page.tsx) aynı
   veriyi okuyor; veri aynı kaynaktan (calismaOzeti), sıradaki
   iş aynı kuraldan (lib/siradaki-is.ts), eksik listesi tek bir saf
   fonksiyondan (lib/calisma-karti.ts, eksikSatirlari). Burada ikinci bir
@@ -239,6 +241,9 @@ export default async function CalismaDurumKarti({
             acikBasla={kilavuzAc && !uygulanan}
           />
         )}
+        {/* Çalışmanın birimleri iş akışı sırasıyla: literatür → kaynakça → kanıt. */}
+        <LiteraturPenceresi projectId={calisma.id} projeAdi={calisma.title} />
+        <KaynakcaPenceresi calisma={calisma} sonDenetim={ozet.kaynakca} />
         <KanitMatrisiPenceresi projectId={calisma.id} />
         {/* Ayda bir yapılan işler menüde; menü yukarı açılıyor, kartın içinde kalıyor. */}
         <details className="kart-menu">
