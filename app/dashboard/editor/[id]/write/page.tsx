@@ -69,10 +69,9 @@ export default async function WriteManuscriptPage({
         <div>
           <span className="dashboard-kicker">Panelde yazma</span>
           <h1>{project.title ?? "Çalışma"}</h1>
-          <p>
-            Yazdıklarınız otomatik kaydedilir. ArvoLab içerik üretmez;
-            &quot;Kontrol Et&quot; ile kılavuz uygunluğu ve kaynakça denetimi yapar.
-          </p>
+          {/* Açıklama satırı kaldırıldı: otomatik kaydı belgenin üstündeki
+              kayıt durumu zaten gösteriyor, andığı "Kontrol Et" düğmesinin
+              adı ise artık "Kılavuz ve kaynakça kontrolü". */}
         </div>
         {/*
           Çıkış, çalışmanın KENDİ merkezine gidiyor — düz listeye değil.
