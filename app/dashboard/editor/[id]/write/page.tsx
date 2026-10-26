@@ -88,7 +88,6 @@ export default async function WriteManuscriptPage({
     <main className="dashboard-page gb">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Panelde yazma</span>
           <h1>{project.title ?? "Çalışma"}</h1>
           {/* Açıklama satırı kaldırıldı: otomatik kaydı belgenin üstündeki
               kayıt durumu zaten gösteriyor, andığı "Kontrol Et" düğmesinin
