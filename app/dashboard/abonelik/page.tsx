@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Coins, ExternalLink, History, Sparkles } from "lucide-react";
+import { ExternalLink, History } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { getAccessState } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -8,8 +8,11 @@ import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
 import { KREDI_SATIN_ALMA_ADRESI } from "@/lib/ai/kredi-karari";
 import { binKrediFiyati, paketFiyati } from "@/lib/kredi-paketleri";
 import { trTarihSaat } from "@/lib/tr-time";
+import { faturalamaKapsami } from "@/lib/faturalama";
+import { faturalamaYukle } from "@/lib/subscription";
 import LicenseCard from "../_components/license-card";
 import OdemeButonu from "../_components/odeme-butonu";
+import FaturalarBolumu from "./faturalar-bolumu";
 
 /*
   ABONELİK VE KREDİ (26.10.2026, kurum sahibinin isteği: "bireysel
@@ -64,6 +67,10 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
     : { data: null };
   const sonHareketler = (hareketler ?? []) as { tur: string; kredi: number; created_at: string }[];
 
+  /* Faturalar: bireysel abone kendi ödemelerini, kurumda yalnızca kurum yöneticisi kurumunkileri görür. */
+  const kapsam = faturalamaKapsami(access.kind, ctx.role, ctx.organizationId);
+  const faturalama = kapsam && ctx.user.email ? await faturalamaYukle(kapsam, { id: ctx.user.id, email: ctx.user.email }) : null;
+
   const paketler = access.kind === "individual" ? access.krediPaketleri : [];
   const enUcuzBirim = paketler.length ? Math.max(...paketler.map(binKrediFiyati)) : 0;
 
@@ -100,29 +107,13 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
           <LicenseCard access={access} />
 
           {access.kind === "individual" ? (
-            <ul className="ayar-listesi">
-              <li className="ayar-satir">
-                <Sparkles size={18} aria-hidden="true" />
-                <span className="ayar-govde">
-                  <b>Aboneliğe dahil</b>
-                  <small>
-                    Her ay 1.000 asistan kredisi (1 kredi = 1.000 karakter). Kullanılmayan aylık hak ay sonunda
-                    yenilenir, devretmez. Saatte en çok 20 asistan sorgusu.
-                  </small>
-                </span>
-              </li>
-              <li className="ayar-satir">
-                <Coins size={18} aria-hidden="true" />
-                <span className="ayar-govde">
-                  <b>Ek kredi</b>
-                  <small>
-                    Aylık hak yetmezse sağdaki paketlerden alırsınız. Satın alınan kredi yanmaz; önce aylık hak, o
-                    bitince satın alınan bakiye kullanılır.
-                  </small>
-                </span>
-              </li>
-            </ul>
+            <p className="hint">
+              Aboneliğe her ay 1.000 asistan kredisi dahil (1 kredi = 1.000 karakter); kullanılmayan aylık hak devretmez.
+              Satın alınan kredi yanmaz, aylık hak bitince kullanılır.
+            </p>
           ) : null}
+
+          {kapsam ? <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} /> : null}
         </article>
 
         <article className="gb-kart gb-sutun kayan-kart">

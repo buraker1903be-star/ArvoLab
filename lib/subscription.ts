@@ -10,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 import { normalizePlans, type BillingPlan } from "@/lib/billing-plan";
 import { krediPaketleriniOku, type KrediPaketi } from "@/lib/kredi-paketleri";
+import { faturalamaOku, type Faturalama } from "@/lib/faturalama";
 
 const PRODUCT = "arvolab";
 
@@ -194,3 +195,51 @@ export const startCreditCheckout = (
   user: { id: string; email: string; fullName?: string | null },
   paketKodu: string
 ) => call("credit_checkout", user, null, paketKodu);
+
+/*
+  Faturalar ve ödemeler (Abonelik ve kredi sayfası). Abonelik durumu
+  değil, okunacak bir liste: aynaya ve köprü sağlık kaydına yazılmıyor.
+  Ulaşılamazsa null — sayfa "okunamadı" der, boş liste göstermez (boş
+  liste "hiç ödemeniz yok" demek olurdu).
+*/
+async function faturalamaIstegi(govde: Record<string, unknown>): Promise<Faturalama | null> {
+  const target = endpoint();
+  if (!target) return null;
+  try {
+    const response = await fetch(target.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-arvo-bridge-secret": target.secret },
+      body: JSON.stringify({ product: PRODUCT, ...govde }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) {
+      console.error("[faturalama] ArvoOS yanıtı", govde.action, response.status);
+      return null;
+    }
+    return faturalamaOku(await response.json());
+  } catch (error) {
+    console.error("[faturalama] ArvoOS'a ulaşılamadı", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+/** Bireysel abonenin kendi ödemeleri ve faturaları. */
+export const faturalarim = (user: { id: string; email: string }) =>
+  faturalamaIstegi({ action: "billing", userId: user.id, email: user.email });
+
+/**
+ * Kurumun ArvoLab ödemeleri ve faturaları. YETKİ ÇAĞIRANDA: kurum
+ * yöneticisi olduğu doğrulanmadan çağrılmamalı — köprü kurumu kimliğiyle
+ * okuyor, kişiyi tanımıyor.
+ */
+export const kurumFaturalari = (organizationId: string) =>
+  faturalamaIstegi({ action: "org_billing", organizationId });
+
+/** Kapsama göre liste: bireysel abonenin kendi ödemeleri ya da kurum yöneticisinin kurumunkiler. */
+export function faturalamaYukle(
+  kapsam: { tur: "bireysel" } | { tur: "kurum"; kurumId: string },
+  user: { id: string; email: string },
+) {
+  return kapsam.tur === "bireysel" ? faturalarim(user) : kurumFaturalari(kapsam.kurumId);
+}

@@ -518,3 +518,15 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .abonelik-ozet .kaynakca-puan { padding: 8px 12px; }
 .abonelik-ozet .kaynakca-puan b { font-size: 24px; }
 .abonelik-ozet-eylem { align-self: flex-start; margin-top: auto; }
+/* Abonelik sayfası: faturalar ve ödemeler (cari özet + ödeme satırları) */
+.cari-ozet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.cari-ozet > div { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); }
+.cari-ozet dt { color: var(--muted); font-size: var(--fs-micro); }
+.cari-ozet dd { margin: 2px 0 0; color: var(--ink); font-size: var(--fs-base); font-weight: 650; }
+.fatura-satir { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 4px 10px; padding: 8px; border-bottom: 1px solid var(--line); }
+.fatura-satir:last-child { border-bottom: 0; }
+.fatura-tutar { color: var(--ink); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+.fatura-belgeler { display: flex; flex-wrap: wrap; grid-column: 1 / -1; gap: 4px 14px; font-size: var(--fs-micro); }
+.fatura-belgeler:empty { display: none; }
+.fatura-belgeler a { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); text-decoration: none; }
+.fatura-belgeler a:hover { text-decoration: underline; }
