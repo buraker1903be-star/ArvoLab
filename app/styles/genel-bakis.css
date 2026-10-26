@@ -592,3 +592,23 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .ekip-kimlik > div { min-width: 0; }
 .ekip-olcu-metin { overflow: hidden; font-size: var(--fs-md) !important; text-overflow: ellipsis; white-space: nowrap; }
 .ekip-erisim[data-tone="danger"] { border-color: color-mix(in srgb, var(--danger) 25%, var(--line-soft)); background: color-mix(in srgb, var(--danger-soft) 45%, var(--surface)); }
+
+/* Destek (expert-requests): personelde Kuyruklar / Kendi taleplerim seçicisi ve kuyruk ayrıntısı */
+.segment-secici { display: inline-flex; flex: none; gap: 2px; padding: 3px; border: 1px solid var(--line-soft); border-radius: var(--r-pill); background: var(--surface-2); }
+.segment-secici a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  text-decoration: none;
+}
+.segment-secici a:hover { color: var(--ink); }
+.segment-secici a[aria-current="page"] { background: var(--surface); box-shadow: var(--shadow-sm); color: var(--ink); }
+.segment-secici a:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+.destek-sayaclar { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.destek-mesaj-kutu { margin: 0; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-2); color: var(--ink); line-height: var(--lh-metin); }
+@media (max-width: 760px) { .destek-sayaclar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

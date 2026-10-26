@@ -1,7 +1,8 @@
 import { listeBasarili } from "@/lib/liste-sonucu";
 import type { ConsultancyRequest } from "@/app/actions/consultancy";
 import type { AppSupportRequest } from "@/app/actions/support";
-import { CheckCircle2, GraduationCap, HandHelping, LifeBuoy, MessageSquareHeart, Send, XCircle } from "lucide-react";
+import Link from "next/link";
+import { GraduationCap, Inbox, LifeBuoy, Send, XCircle } from "lucide-react";
 import {
   createConsultancyRequest,
   getMyRequests,
@@ -21,8 +22,10 @@ import {
 import { tumGeriBildirimler, type GeriBildirimSatiri } from "@/app/actions/geri-bildirim";
 import { getMyProjects } from "@/app/actions/citation-check";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { bolumEtiketi, BAGLAM_METNI, PUAN_ETIKETLERI } from "@/lib/geri-bildirim";
 import { isExpertEligible, requestTypeLabel, STAFF_ROLES } from "@/lib/project-labels";
+import { createClient } from "@/lib/supabase/server";
+import { kuyrukAdresi, TALEPLERIM_ADRESI, type KuyrukTuru } from "@/lib/destek-kuyrugu";
+import DestekKuyruklari from "./destek-kuyruklari";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { statusTone } from "@/lib/status-tone";
 import { trTarihSaat } from "@/lib/tr-time";
@@ -42,8 +45,10 @@ import PartnerSeridi from "../_components/partner-seridi";
   (bize); her kartta kendi talepleri ve yanıtları.
 
   Personelin kuyrukları (açık uzman talepleri, bana atananlar, bütün
-  destek talepleri, kullanım geri bildirimleri) başlıktaki pencerelerde:
-  öğrencinin gördüğü iki kartı kalabalıklaştırmasınlar.
+  destek talepleri, kullanım geri bildirimleri) ayrı bir sekmede, tek
+  ekranda (destek-kuyruklari.tsx, 26.10.2026). Eskiden başlıktaki üç
+  açılır penceredeydiler; personel kendi taleplerini "Kendi taleplerim"
+  sekmesinde, öğrencinin gördüğü iki kartla görüyor.
 
   /dashboard/support buraya yönleniyor.
 */
@@ -76,8 +81,12 @@ const ONCELIK: Record<string, string> = {
   urgent: "Acil",
 };
 
-export default async function DestekPage() {
-  const profile = await getCurrentProfile();
+export default async function DestekPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [profile, params] = await Promise.all([getCurrentProfile(), searchParams]);
   /*
     Kuyruklar yalnızca PERSONEL GÖRÜNÜMÜNDE: iç ekip öğrenci düzenini
     önizlerken (lib/onizleme.ts) başlıkta "Uzman kuyruğu", "Destek
@@ -101,7 +110,7 @@ export default async function DestekPage() {
     { satirlar: destekTaleplerim, okunamadi: destekOkunamadi },
     { satirlar: acikTalepler },
     { satirlar: banaAtananlar },
-    { satirlar: tumDestek },
+    { satirlar: tumDestek, okunamadi: tumDestekOkunamadi },
     { satirlar: geriBildirimler, okunamadi: geriBildirimOkunamadi },
   ] = await Promise.all([
     getMyProjects(),
@@ -113,9 +122,27 @@ export default async function DestekPage() {
     yonetim ? tumGeriBildirimler() : Promise.resolve(listeBasarili<GeriBildirimSatiri>([])),
   ]);
 
-  const puanOrtalamasi = geriBildirimler.length
-    ? geriBildirimler.reduce((toplam, satir) => toplam + (satir.score ?? 0), 0) / geriBildirimler.length
-    : null;
+  const personel = uzman || yonetici || yonetim;
+  const taleplerim = !personel || params.sekme === "taleplerim";
+  const erisilebilir: KuyrukTuru[] = [
+    ...(uzman ? (["uzman-acik", "uzman-bana"] as const) : []),
+    ...(yonetici ? (["destek"] as const) : []),
+    ...(yonetim ? (["geri-bildirim"] as const) : []),
+  ];
+
+  /*
+    Talebi kimin açtığı: kuyrukta yalnızca konu yazıyordu. Profil okuması
+    RLS'e tabi (uzman kendi kurumunu, iç ekip herkesi görür); okunamazsa
+    ad boş kalır, kuyruk düşmez.
+  */
+  const kisiler = new Map<string, string>();
+  const kisiIdleri = [...new Set([...acikTalepler, ...banaAtananlar, ...tumDestek].map((r) => r.requested_by).filter(Boolean))] as string[];
+  if (!taleplerim && kisiIdleri.length) {
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("profiles").select("id, full_name").in("id", kisiIdleri);
+    if (error) console.error("[destek] talep sahipleri okunamadı:", error.message);
+    for (const k of data ?? []) if (k.full_name) kisiler.set(k.id, k.full_name);
+  }
 
   async function ustlen(id: string) {
     "use server";
@@ -129,9 +156,9 @@ export default async function DestekPage() {
     "use server";
     return cancelRequest(id);
   }
-  async function durumDegistir(id: string, durum: string) {
+  async function isleAl(id: string) {
     "use server";
-    return updateSupportRequestStatus(id, durum);
+    return updateSupportRequestStatus(id, "in_progress");
   }
   async function yanitla(id: string, formData: FormData) {
     "use server";
@@ -145,187 +172,36 @@ export default async function DestekPage() {
           <h1>Destek</h1>
           <p>Akademik bir konuda takıldıysanız uzmana, uygulamayla ilgili bir sorununuz varsa bize yazın.</p>
         </div>
-        {uzman || yonetici || yonetim ? (
-          <div className="pencere-dugmeler">
-            {uzman ? (
-              <PanelDrawer
-                triggerLabel={acikTalepler.length + banaAtananlar.length ? `Uzman kuyruğu · ${acikTalepler.length + banaAtananlar.length}` : "Uzman kuyruğu"}
-                triggerIcon={<HandHelping size={15} aria-hidden="true" />}
-                triggerClassName="projects-filter-button button-compact"
-                kicker="Uzman"
-                title="Uzman talepleri"
-                description="Açık talepleri üstlenin; size atananları tamamlayınca işaretleyin."
-                boy="tam"
-                basaridaKapan={false}
-              >
-                <div className="pencere-iki-kart destek-kuyruk">
-                  <section className="pencere-kart">
-                    <h3 className="pencere-kart-baslik">Açık talepler · {acikTalepler.length}</h3>
-                    {acikTalepler.length ? (
-                      <ul className="kanit-kayitlari">
-                        {acikTalepler.map((r) => (
-                          <li key={r.id} className="yapilacak-satir">
-                            <span className="kanit-kayit-govde">
-                              <b>{r.project_title || "Bağımsız talep"}</b>
-                              <small>
-                                {requestTypeLabel(r.request_type)} · {r.message || "Ek mesaj yok"}
-                              </small>
-                            </span>
-                            <ActionForm action={ustlen.bind(null, r.id)} successMessage="Talebi üstlendiniz.">
-                              <button type="submit" className="projects-primary-button button-compact">
-                                <CheckCircle2 size={14} aria-hidden="true" /> Üstlen
-                              </button>
-                            </ActionForm>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="gb-bos">Şu an üstlenebileceğiniz açık talep yok.</p>
-                    )}
-                  </section>
-                  <section className="pencere-kart">
-                    <h3 className="pencere-kart-baslik">Bana atananlar · {banaAtananlar.length}</h3>
-                    {banaAtananlar.length ? (
-                      <ul className="kanit-kayitlari">
-                        {banaAtananlar.map((r) => (
-                          <li key={r.id} className="yapilacak-satir">
-                            <span className="kanit-kayit-govde">
-                              <b>{r.project_title || "Bağımsız talep"}</b>
-                              <small>
-                                {requestTypeLabel(r.request_type)} · {r.message || "Ek mesaj yok"}
-                              </small>
-                            </span>
-                            <span className="status-pill" data-tone={statusTone(r.status)}>
-                              {UZMAN_DURUMU[r.status]}
-                            </span>
-                            {r.status === "accepted" ? (
-                              <ActionForm action={tamamla.bind(null, r.id)} successMessage="Talep tamamlandı.">
-                                <button type="submit" className="projects-filter-button button-compact">
-                                  Tamamlandı
-                                </button>
-                              </ActionForm>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="gb-bos">Üzerinize atanmış talep yok.</p>
-                    )}
-                  </section>
-                </div>
-              </PanelDrawer>
-            ) : null}
-
-            {yonetici ? (
-              <PanelDrawer
-                triggerLabel={tumDestek.length ? `Destek kuyruğu · ${tumDestek.length}` : "Destek kuyruğu"}
-                triggerIcon={<LifeBuoy size={15} aria-hidden="true" />}
-                triggerClassName="projects-filter-button button-compact"
-                kicker="Sistem yöneticisi"
-                title="Uygulama destek talepleri"
-                description="Durum değişikliği kullanıcıya bir şey anlatmaz; çözdüğünüzde ne yaptığınızı yanıt olarak yazın."
-                boy="genis"
-                basaridaKapan={false}
-              >
-                {tumDestek.length ? (
-                  <ul className="kanit-kayitlari">
-                    {tumDestek.map((r) => (
-                      <li key={r.id}>
-                        <details className="kanit-kayit">
-                          <summary>
-                            <span className="kanit-kayit-govde">
-                              <b>{r.subject}</b>
-                              <small>
-                                {KATEGORI[r.category]} · {ONCELIK[r.priority] ?? r.priority} öncelik · {trTarihSaat(r.created_at)}
-                              </small>
-                            </span>
-                            <span className="status-pill" data-tone={statusTone(r.status)}>
-                              {DESTEK_DURUMU[r.status]}
-                            </span>
-                          </summary>
-                          <div className="kanit-kayit-ic">
-                            <p className="destek-mesaj">{r.message}</p>
-                            {r.status === "open" ? (
-                              <ActionForm action={durumDegistir.bind(null, r.id, "in_progress")} successMessage="Talep işleme alındı.">
-                                <button type="submit" className="projects-filter-button button-compact">
-                                  İşleme al
-                                </button>
-                              </ActionForm>
-                            ) : null}
-                            <ActionForm className="project-form-grid mt-sm" action={yanitla.bind(null, r.id)} successMessage="Yanıt gönderildi.">
-                              <label className="project-form-full">
-                                <span>{r.admin_note ? "Yanıtı güncelle" : "Kullanıcıya yanıt"}</span>
-                                <textarea name="admin_note" rows={2} maxLength={4000} defaultValue={r.admin_note ?? ""} required />
-                              </label>
-                              <input type="hidden" name="status" value="resolved" />
-                              <div className="project-form-actions project-form-full">
-                                <button type="submit" className="projects-primary-button button-compact">
-                                  Yanıtla ve çözüldü işaretle
-                                </button>
-                              </div>
-                            </ActionForm>
-                          </div>
-                        </details>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="gb-bos">Sistemde açık destek talebi yok.</p>
-                )}
-              </PanelDrawer>
-            ) : null}
-
-            {yonetim ? (
-              <PanelDrawer
-                triggerLabel="Geri bildirimler"
-                triggerIcon={<MessageSquareHeart size={15} aria-hidden="true" />}
-                triggerClassName="projects-filter-button button-compact"
-                kicker="Yönetim"
-                title="Kullanım geri bildirimleri"
-                description={
-                  /* Okunamayan listeden ortalama çıkarmak, gerçek olmayan bir memnuniyet puanı göstermek olurdu. */
-                  puanOrtalamasi && !geriBildirimOkunamadi
-                    ? `Ortalama ${puanOrtalamasi.toFixed(1)} / 5. Soru, kullanıcı sistemi gerçekten kullandıktan sonra ana sayfasında bir kez sorulur.`
-                    : "Soru, kullanıcı sistemi gerçekten kullandıktan sonra ana sayfasında bir kez sorulur."
-                }
-                boy="genis"
-                basaridaKapan={false}
-              >
-                {geriBildirimOkunamadi ? (
-                  <p className="alert" role="alert">
-                    Geri bildirimler okunamadı. Hiç cevap gelmediği anlamına gelmez — sayfayı yenileyin.
-                  </p>
-                ) : geriBildirimler.length === 0 ? (
-                  <p className="gb-bos">Henüz geri bildirim gelmedi.</p>
-                ) : (
-                  <ul className="geri-bildirim-listesi">
-                    {geriBildirimler.map((satir) => (
-                      <li className="geri-bildirim-satiri" key={satir.userId}>
-                        <div className="geri-bildirim-satiri-bas">
-                          <strong>{satir.ad}</strong>
-                          <span
-                            className="status-pill"
-                            data-tone={satir.score && satir.score >= 4 ? "success" : satir.score && satir.score <= 2 ? "danger" : "neutral"}
-                          >
-                            {satir.score} / 5 · {satir.score ? PUAN_ETIKETLERI[satir.score] : ""}
-                          </span>
-                        </div>
-                        {satir.comment ? <p>{satir.comment}</p> : <p className="muted text-sm">Yorum yazılmadı.</p>}
-                        <p className="muted text-sm">
-                          En çok: {bolumEtiketi(satir.mostUsed)}
-                          {satir.askedContext && BAGLAM_METNI[satir.askedContext] ? ` · ${BAGLAM_METNI[satir.askedContext]} soruldu` : ""}
-                          {` · ${trTarihSaat(satir.updatedAt)}`}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </PanelDrawer>
-            ) : null}
-          </div>
+        {personel ? (
+          <nav className="segment-secici" aria-label="Destek görünümü">
+            <Link href={kuyrukAdresi(erisilebilir[0])} aria-current={!taleplerim ? "page" : undefined}>
+              <Inbox size={15} aria-hidden="true" /> Kuyruklar
+            </Link>
+            <Link href={TALEPLERIM_ADRESI} aria-current={taleplerim ? "page" : undefined}>
+              <LifeBuoy size={15} aria-hidden="true" /> Kendi taleplerim
+            </Link>
+          </nav>
         ) : null}
       </section>
 
+      {!taleplerim ? (
+        <DestekKuyruklari
+          erisilebilir={erisilebilir}
+          istenenKuyruk={typeof params.kuyruk === "string" ? params.kuyruk : null}
+          istenenKayit={typeof params.sec === "string" ? params.sec : null}
+          acikTalepler={acikTalepler}
+          banaAtananlar={banaAtananlar}
+          destek={tumDestek}
+          destekOkunamadi={tumDestekOkunamadi}
+          geriBildirimler={geriBildirimler}
+          geriBildirimOkunamadi={geriBildirimOkunamadi}
+          kisiAdi={(id) => (id ? kisiler.get(id) ?? null : null)}
+          ustlen={ustlen}
+          tamamla={tamamla}
+          isleAl={isleAl}
+          yanitla={yanitla}
+        />
+      ) : (
       <section className="gb-sutunlar kaynaklar-ikili" aria-label="Destek">
         <article className="gb-kart gb-sutun kayan-kart">
           <header className="gb-kart-bas">
@@ -531,6 +407,7 @@ export default async function DestekPage() {
           )}
         </article>
       </section>
+      )}
     </main>
   );
 }

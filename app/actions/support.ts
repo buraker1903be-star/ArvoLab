@@ -20,6 +20,8 @@ export interface AppSupportRequest {
   priority: string;
   status: "open" | "in_progress" | "resolved";
   created_at: string;
+  /** Talebi açan; yalnızca yönetici kuyruğunda okunuyor (kimden geldiği görünsün). */
+  requested_by?: string;
   /** Sistem yöneticisinin yanıtı; yalnızca o yazabilir (migration …100022). */
   admin_note?: string | null;
   answered_at?: string | null;
@@ -78,7 +80,7 @@ export async function getAllSupportRequests(): Promise<ListeSonucu<AppSupportReq
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("app_support_requests")
-    .select("id, subject, message, category, priority, status, created_at, admin_note, answered_at")
+    .select("id, requested_by, subject, message, category, priority, status, created_at, admin_note, answered_at")
     .neq("status", "resolved")
     .order("created_at", { ascending: true });
 
