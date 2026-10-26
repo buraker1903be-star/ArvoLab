@@ -9,6 +9,7 @@ import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
 import type { Tone } from "@/lib/status-tone";
 import { STIL_SECENEKLERI, type AtifTuru } from "@/lib/atif/stiller";
+import { trTarihSaat } from "@/lib/tr-time";
 
 interface Project {
   id: string;
@@ -49,7 +50,7 @@ interface InTextCitation {
   raw: string;
 }
 
-interface CheckResult {
+export interface CheckResult {
   complianceScore: number;
   references: CheckResultRef[];
   citations: InTextCitation[];
@@ -84,6 +85,7 @@ export default function CitationCheckForm({
   asistanAcik,
   secilenCalisma = null,
   gomulu = false,
+  oncekiSonuc = null,
 }: {
   projects: Project[];
   asistanAcik: boolean;
@@ -93,6 +95,13 @@ export default function CitationCheckForm({
     ve çalışma seçici çizilmiyor (pencerenin kendi başlığı var).
   */
   gomulu?: boolean;
+  /*
+    Bu çalışmanın son kaydedilmiş denetimi (sonKaynakcaDenetimi). Pencere
+    açılınca sonuç kartı onunla dolu gelir; eskiden boş geliyordu ve
+    öğrenci gördüğü sonucu tekrar görmek için denetimi yeniden
+    çalıştırıyordu.
+  */
+  oncekiSonuc?: (CheckResult & { tarih: string }) | null;
 }) {
   const router = useRouter();
   // Bir çalışmadan gelindiyse çalışma hazır seçili gelir.
@@ -135,7 +144,9 @@ export default function CitationCheckForm({
       setOzetBekleniyor(false);
     }
   }
-  const [result, setResult] = useState<CheckResult | null>(null);
+  const [result, setResult] = useState<CheckResult | null>(oncekiSonuc);
+  /* Gösterilen sonuç kayıtlı denetimden mi geliyor? Yeni çalıştırmada düşer. */
+  const [kayitliTarih, setKayitliTarih] = useState<string | null>(oncekiSonuc?.tarih ?? null);
   /*
     "Kayıt bulunamadı" çıkan künye için AYNI KONUDA dizinde gerçekten
     bulunan çalışmalar. İki sebepten biri olabilir: künye dizinde
@@ -225,6 +236,7 @@ export default function CitationCheckForm({
         setError(res.error as string);
       } else {
         setResult(res as CheckResult);
+        setKayitliTarih(null);
         // Son denetim puanı Çalışmalarım kartında ve geçmiş listesinde görünsün.
         router.refresh();
       }
@@ -692,6 +704,12 @@ export default function CitationCheckForm({
       {gomulu ? (
         <div className="pencere-kart pencere-sonuc" aria-live="polite">
           <h3 className="pencere-kart-baslik">Sonuç</h3>
+          {kayitliTarih && result && !loading ? (
+            <p className="hint">
+              {trTarihSaat(kayitliTarih)} tarihli son denetiminiz. Metninizi ya da kaynakçanızı değiştirdiyseniz yeniden
+              denetleyin.
+            </p>
+          ) : null}
           {!error && !result ? (
             <p className="gb-bos">
               {loading ? "Kaynaklar dizinlerde aranıyor…" : "Soldan denetimi başlatın; her kaynağın durumu burada görünür."}

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ChevronRight, Quote } from "lucide-react";
 import { kaynakcaAsistaniAcik } from "@/app/actions/ai-kaynakca";
 import PanelDrawer from "../_components/panel-drawer";
-import CitationCheckForm from "./citation-check-form";
+import CitationCheckForm, { type CheckResult } from "./citation-check-form";
+import { sonKaynakcaDenetimi } from "@/app/actions/citation-check";
 import { trTarihSaat } from "@/lib/tr-time";
 
 /*
@@ -22,7 +23,7 @@ export default async function KaynakcaPenceresi({
   calisma: { id: string; title: string; university: string | null; citation_style: string };
   sonDenetim: { skor: number | null; tarih: string } | null;
 }) {
-  const asistanAcik = await kaynakcaAsistaniAcik();
+  const [asistanAcik, onceki] = await Promise.all([kaynakcaAsistaniAcik(), sonKaynakcaDenetimi(calisma.id)]);
   const ton = sonDenetim?.skor == null ? "neutral" : sonDenetim.skor >= 85 ? "success" : sonDenetim.skor >= 60 ? "warning" : "danger";
 
   return (
@@ -41,7 +42,13 @@ export default async function KaynakcaPenceresi({
           ? `Son denetim: ${sonDenetim.skor ?? "—"}/100 kaynakça uyumu · ${trTarihSaat(sonDenetim.tarih)}`
           : "Bu çalışma için henüz kaynakça denetimi yapılmadı."}
       </p>
-      <CitationCheckForm projects={[calisma]} asistanAcik={asistanAcik} secilenCalisma={calisma.id} gomulu />
+      <CitationCheckForm
+        projects={[calisma]}
+        asistanAcik={asistanAcik}
+        secilenCalisma={calisma.id}
+        gomulu
+        oncekiSonuc={onceki as (CheckResult & { tarih: string }) | null}
+      />
       <Link href={`/dashboard/citations?calisma=${calisma.id}`} className="link-accent mt-md kanit-tam-tablo">
         Denetim geçmişi <ChevronRight size={14} aria-hidden="true" />
       </Link>

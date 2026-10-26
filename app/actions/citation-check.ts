@@ -350,3 +350,59 @@ export async function getMyCitationChecks(): Promise<ListeSonucu<CitationCheckSa
   }
   return listeBasarili(data);
 }
+
+/**
+ * Bir çalışmanın SON kaynakça denetiminin tam sonucu, denetim ekranının
+ * beklediği biçimde.
+ *
+ * Sonuç her denetimde zaten kaydediliyordu (citation_checks: künyeler,
+ * atıflar, çapraz kontrol, dizin doğrulaması) ama hiçbir ekran geri
+ * okumuyordu: pencereyi kapatıp açan öğrenci boş bir sonuç kartı görüyor,
+ * gördüğü şeyi tekrar görmek için denetimi yeniden çalıştırıyordu — her
+ * seferinde dizinlere yeniden sorarak.
+ *
+ * Okunamazsa ya da kayıt yoksa null: pencere "henüz denetim yok" der,
+ * yeniden çalıştırmak her zaman mümkün.
+ */
+export async function sonKaynakcaDenetimi(projectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("citation_checks")
+    .select("parsed_references, in_text_citations, cross_check, compliance_score, created_at, academic_projects(citation_style)")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("[atıf] son denetim okunamadı:", error.message);
+    return null;
+  }
+  if (!data) return null;
+
+  const capraz = (data.cross_check ?? {}) as {
+    citationsWithoutReference?: { raw: string }[];
+    referencesWithoutCitation?: { raw: string }[];
+    academicVerification?: unknown[];
+    verificationSummary?: { verified: number; possible: number; notFound: number; insufficientData: number };
+  };
+  const proje = data.academic_projects as { citation_style?: string | null } | { citation_style?: string | null }[] | null;
+  const stil = stilTanimi((Array.isArray(proje) ? proje[0] : proje)?.citation_style);
+  const references = (data.parsed_references ?? []) as ReturnType<typeof kunyeleriAyristir>;
+  const academicVerification = (capraz.academicVerification ?? []) as Awaited<ReturnType<typeof verifyAcademicReferences>>;
+
+  return {
+    references,
+    citations: (data.in_text_citations ?? []) as { raw: string }[],
+    crossCheck: {
+      citationsWithoutReference: capraz.citationsWithoutReference ?? [],
+      referencesWithoutCitation: capraz.referencesWithoutCitation ?? [],
+    },
+    complianceScore: Number(data.compliance_score ?? 0),
+    academicVerification,
+    verificationSummary: capraz.verificationSummary ?? { verified: 0, possible: 0, notFound: 0, insufficientData: 0 },
+    stil: { id: stil.id, ad: stil.ad, tur: stil.tur },
+    dogrulananSayisi: academicVerification.length,
+    toplamKaynak: references.length,
+    tarih: data.created_at as string,
+  };
+}
