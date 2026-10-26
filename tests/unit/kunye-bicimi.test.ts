@@ -4,7 +4,7 @@
 // çalışmaya APA biçiminde künye yazar, öğrenci de doğru sanır.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { formatInTextCitation, formatReferenceParts, type CitableSource, type CitationStyle } from "@/lib/citation-format";
+import { eksikAlanlar, formatInTextCitation, formatReferenceParts, sayfaEtiketi, type CitableSource, type CitationStyle } from "@/lib/citation-format";
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 
 const kitap: CitableSource = {
@@ -48,14 +48,38 @@ describe("MLA künye üretimi", () => {
     );
   });
 
-  test("metin içi atıf sayfa uydurmaz: '(Yılmaz)'", () => {
-    // Sayfa numarasını yalnızca alıntıyı yapan bilir; uydurmak yanlış
-    // sayfa yazmaktır.
-    assert.equal(formatInTextCitation(kitap, "mla", 1), "(Yılmaz)");
+  test("metin içi atıfta yıl her zaman var, sayfa uydurulmaz: '(Yılmaz 2020)'", () => {
+    // Eskiden "(Yılmaz)"; kurum sahibinin geri bildirimi: yıl hepsinde
+    // olsun, isteyen siler. Sayfayı yalnızca alıntıyı yapan bilir.
+    assert.equal(formatInTextCitation(kitap, "mla", 1), "(Yılmaz 2020)");
   });
 
   test("her stilin kendi biçimi var: hiçbiri APA çıktısına düşmüyor", () => {
     const ciktilar = STIL_SECENEKLERI.map((secenek) => metin(makale, secenek.deger as CitationStyle));
     assert.equal(new Set(ciktilar).size, STIL_SECENEKLERI.length);
+  });
+});
+
+describe("atıfta sayfa, erişim tarihi ve eksik bilgi", () => {
+  test("sayfa yazılırsa her stilde atıfa girer; aralık 'ss.'", () => {
+    assert.equal(formatInTextCitation(kitap, "apa7", 1, { sayfa: "14" }), "(Yılmaz, 2020, s. 14)");
+    assert.equal(formatInTextCitation(kitap, "apa7", 1, { sayfa: "14-16" }), "(Yılmaz, 2020, ss. 14-16)");
+    assert.equal(formatInTextCitation(kitap, "chicago", 1, { sayfa: "s. 14" }), "(Yılmaz 2020, s. 14)");
+    assert.equal(formatInTextCitation(kitap, "ieee", 3, { sayfa: "7" }), "[3, s. 7]");
+    assert.equal(formatInTextCitation(kitap, "vancouver", 3), "(3)");
+    assert.equal(sayfaEtiketi("  "), null);
+  });
+
+  test("internet kaynağına erişim tarihi eklenir, diğerlerine eklenmez", () => {
+    const site: CitableSource = { ...kitap, source_type: "website", doi_or_url: "https://tuik.gov.tr/x", publisher: null };
+    const yaz = (k: CitableSource) => formatReferenceParts(k, "apa7", 1, { erisimTarihi: "26.10.2026" }).map((p) => p.text).join("");
+    assert.match(yaz(site), /\(Erişim tarihi: 26\.10\.2026\)$/);
+    assert.doesNotMatch(yaz(kitap), /Erişim tarihi/);
+  });
+
+  test("eksik alanlar türe göre söylenir", () => {
+    assert.deepEqual(eksikAlanlar(kitap), []);
+    assert.deepEqual(eksikAlanlar({ ...makale, issue: null, doi_or_url: null }), ["sayı", "DOI"]);
+    assert.deepEqual(eksikAlanlar({ ...kitap, authors: null, year: "" }), ["yazar", "yıl"]);
   });
 });

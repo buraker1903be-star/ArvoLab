@@ -7,7 +7,7 @@ import Dialog from "@/app/dashboard/_components/dialog";
 import BosDurum from "@/app/dashboard/_components/bos-durum";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { createCitationSource, getLiteratureSources, lookupDoi, type LiteratureSource } from "@/app/actions/literature";
-import { formatInTextCitation, formatReferenceParts, NUMERIC_STYLES, type CitationStyle } from "@/lib/citation-format";
+import { eksikAlanlar, formatInTextCitation, formatReferenceParts, NUMERIC_STYLES, type CitationStyle } from "@/lib/citation-format";
 
 const TYPE_LABEL: Record<string, string> = {
   article: "Makale",
@@ -24,7 +24,8 @@ interface CiteDialogProps {
   onClose: () => void;
   projectId: string;
   style: CitationStyle;
-  onPick: (source: LiteratureSource) => void;
+  /* Sayfa: doğrudan alıntıda öğrencinin yazdığı; atıfa "s. 14" olarak girer. */
+  onPick: (source: LiteratureSource, secenek: { sayfa?: string | null }) => void;
 }
 
 interface NewSourceForm {
@@ -61,6 +62,7 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
   const [form, setForm] = useState<NewSourceForm>(EMPTY_FORM);
   const [looking, setLooking] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sayfa, setSayfa] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -102,32 +104,35 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
       .sort((a, b) => Number(b.project_id === projectId) - Number(a.project_id === projectId));
   }, [sources, query, projectId, yalnizBuCalisma]);
 
+  const formKaynagi = useMemo(
+    () => ({
+      title: form.title,
+      authors: form.authors || null,
+      year: form.year || null,
+      source_type: form.sourceType,
+      doi_or_url: form.doi || null,
+      container_title: form.containerTitle || null,
+      volume: form.volume || null,
+      issue: form.issue || null,
+      pages: form.pages || null,
+      publisher: form.publisher || null,
+    }),
+    [form],
+  );
+  const formEksik = useMemo(() => eksikAlanlar(formKaynagi), [formKaynagi]);
+
   const preview = useMemo(() => {
     if (!form.title.trim()) return "";
-    return formatReferenceParts(
-      {
-        title: form.title,
-        authors: form.authors || null,
-        year: form.year || null,
-        source_type: form.sourceType,
-        doi_or_url: form.doi || null,
-        container_title: form.containerTitle || null,
-        volume: form.volume || null,
-        issue: form.issue || null,
-        pages: form.pages || null,
-        publisher: form.publisher || null,
-      },
-      style,
-      (sources?.length ?? 0) + 1
-    )
+    return formatReferenceParts(formKaynagi, style, (sources?.length ?? 0) + 1)
       .map((part) => part.text)
       .join("");
-  }, [form, style, sources]);
+  }, [form.title, formKaynagi, style, sources]);
 
   const close = () => {
     setQuery("");
     setKapsamSecimi(null);
     setForm(EMPTY_FORM);
+    setSayfa("");
     setTab("list");
     onClose();
   };
@@ -172,7 +177,7 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
         showToast("error", result.error ?? "Kaynak kaydedilemedi.");
         return;
       }
-      onPick(result.source);
+      onPick(result.source, { sayfa });
       close();
     } finally {
       setSaving(false);
@@ -200,6 +205,23 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
             Yeni kaynak
           </button>
         </div>
+
+        {/*
+          SAYFA (isteğe bağlı): doğrudan alıntıda danışmanlar ve kılavuzlar
+          sayfa istiyor; eskiden öğrenci her atıfa elle ekliyordu. Sistem
+          sayfa tahmin etmez — yalnızca burada yazılanı kullanır.
+        */}
+        <label className="dialog-field cite-sayfa">
+          <span>Sayfa (isteğe bağlı, doğrudan alıntıda)</span>
+          <input
+            className="picker-search"
+            value={sayfa}
+            onChange={(event) => setSayfa(event.target.value)}
+            placeholder="ör. 14 ya da 14-16"
+            inputMode="numeric"
+            maxLength={20}
+          />
+        </label>
 
         {tab === "list" ? (
           <>
@@ -259,7 +281,7 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
                         type="button"
                         className="picker-main"
                         onClick={() => {
-                          onPick(source);
+                          onPick(source, { sayfa });
                           close();
                         }}
                       >
@@ -270,8 +292,13 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
                             .join(" · ")}
                         </small>
                         {source.project_id !== projectId && <em className="picker-rozet">başka çalışma</em>}
+                        {eksikAlanlar(source).length ? (
+                          <small className="tone-text" data-tone="warning">
+                            Künyede eksik: {eksikAlanlar(source).join(", ")}
+                          </small>
+                        ) : null}
                       </button>
-                      <span className="chip">{formatInTextCitation(source, style, 1)}</span>
+                      <span className="chip">{formatInTextCitation(source, style, 1, { sayfa })}</span>
                     </div>
                   </li>
                 ))}
@@ -352,6 +379,13 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
               </label>
             </div>
 
+            {form.title.trim() && formEksik.length ? (
+              <p className="tone-text text-sm" data-tone="warning">
+                Künyede eksik:{" "}
+                {formEksik.join(", ")}
+                . Biliyorsanız şimdi doldurun; danışmanlar eksik künyeyi düzeltme olarak geri gönderiyor.
+              </p>
+            ) : null}
             {preview ? (
               <p className="cite-preview">
                 <span className="muted text-sm">Kaynakçada şöyle görünecek:</span>

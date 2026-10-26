@@ -52,25 +52,87 @@ export function authorLabel(source: CitableSource): string {
   return `${names[0]} vd.`;
 }
 
-export function formatInTextCitation(source: CitableSource, style: CitationStyle, number: number): string {
+/*
+  Sayfa: öğrencinin atıf penceresine yazdığı. "14" → "s. 14", "14-16" →
+  "ss. 14-16"; öğrenci "s." yazdıysa ikinci kez eklenmez. Sayfa
+  numarasını yalnızca alıntıyı yapan bilir; boşsa atıfa hiç girmez —
+  sayfa uydurmak, yanlış sayfa yazmaktır.
+*/
+export function sayfaEtiketi(sayfa: string | null | undefined): string | null {
+  const temiz = (sayfa ?? "").trim().replace(/^s{1,2}\.\s*/i, "").replace(/^pp?\.\s*/i, "");
+  if (!temiz) return null;
+  return `${/[-–]/.test(temiz) ? "ss." : "s."} ${temiz}`;
+}
+
+export type AtifSecenegi = { sayfa?: string | null };
+
+/*
+  METİN İÇİ ATIF — "HEPSİ OLSUN, GEREKSİZİ SİLİNSİN" (26.10.2026, kurum
+  sahibinin geri bildirimi: "bazı danışmanlar atıfları virgülüne kadar
+  önemsiyor; yıl hepsinde olması daha sağlıklı, eklemektense çıkarmak
+  daha basit").
+
+  Eskiden MLA atıfı yalnızca yazarı yazıyordu: "(Yılmaz)". MLA'nın kendi
+  kuralı bu, ama Türk tez kılavuzlarının çoğu yazar–yıl istiyor ve
+  öğrenci eksik yılı her atıfta elle ekliyordu. Artık yazar–tarih
+  atıflarının hepsinde yıl var: "(Yılmaz 2020)"; kılavuzu istemiyorsa
+  öğrenci siler.
+*/
+export function formatInTextCitation(
+  source: CitableSource,
+  style: CitationStyle,
+  number: number,
+  secenek: AtifSecenegi = {},
+): string {
+  const sayfa = sayfaEtiketi(secenek.sayfa);
   switch (style) {
     case "ieee":
-      return `[${number}]`;
+      return sayfa ? `[${number}, ${sayfa}]` : `[${number}]`;
     case "vancouver":
-      return `(${number})`;
+      return sayfa ? `(${number}, ${sayfa})` : `(${number})`;
     case "chicago":
-      return `(${authorLabel(source)} ${yearOf(source)})`;
-    /*
-      MLA'da metin içi atıf YAZAR + SAYFA'dır: "(Yılmaz 45)". Sayfa
-      numarasını yalnızca yazan kişi bilir (kaynağın kendisinde değil,
-      alıntının yerinde), bu yüzden eser bütününe atıf biçimi
-      ekleniyor: "(Yılmaz)". Sayfa uydurmak, yanlış sayfa yazmaktır.
-    */
+      return `(${authorLabel(source)} ${yearOf(source)}${sayfa ? `, ${sayfa}` : ""})`;
     case "mla":
-      return `(${authorLabel(source)})`;
+      return `(${authorLabel(source)} ${yearOf(source)}${sayfa ? `, ${sayfa}` : ""})`;
     default:
-      return `(${authorLabel(source)}, ${yearOf(source)})`;
+      return `(${authorLabel(source)}, ${yearOf(source)}${sayfa ? `, ${sayfa}` : ""})`;
   }
+}
+
+/*
+  KÜNYEDE EKSİK BİLGİ: türüne göre beklenen alanlardan boş olanlar.
+  Atıf penceresi bunları söylüyor ve kaynağı düzenlemeye götürüyor;
+  eksik bilgiyi sistem uydurmaz. Eskiden boş alan künyeden sessizce
+  düşüyordu ve öğrenci eksikliği ancak danışmanından öğreniyordu.
+*/
+export function eksikAlanlar(source: CitableSource): string[] {
+  const bos = (deger: string | null | undefined) => !deger?.trim();
+  const eksik: string[] = [];
+  if (bos(source.authors)) eksik.push("yazar");
+  if (bos(source.year)) eksik.push("yıl");
+  switch (source.source_type) {
+    case "article":
+      if (bos(source.container_title)) eksik.push("dergi adı");
+      if (bos(source.volume)) eksik.push("cilt");
+      if (bos(source.issue)) eksik.push("sayı");
+      if (bos(source.pages)) eksik.push("sayfa aralığı");
+      if (bos(source.doi_or_url)) eksik.push("DOI");
+      break;
+    case "chapter":
+      if (bos(source.container_title)) eksik.push("kitap adı");
+      if (bos(source.pages)) eksik.push("sayfa aralığı");
+      if (bos(source.publisher)) eksik.push("yayınevi");
+      break;
+    case "book":
+    case "thesis":
+    case "report":
+      if (bos(source.publisher)) eksik.push(source.source_type === "thesis" ? "üniversite" : "yayınevi");
+      break;
+    case "website":
+      if (bos(source.doi_or_url)) eksik.push("adres (URL)");
+      break;
+  }
+  return eksik;
 }
 
 function link(source: CitableSource): string | null {
@@ -90,7 +152,20 @@ interface TextPart {
 const field = (value: string | null | undefined) => value?.trim() || null;
 
 /** Kaynakça girdisi (italik ayrımıyla, Tiptap metin düğümlerine çevrilebilir) */
-export function formatReferenceParts(source: CitableSource, style: CitationStyle, number: number): TextPart[] {
+/*
+  ERİŞİM TARİHİ: internet kaynağında künyenin sonuna. APA 7 yalnızca
+  değişen sayfalarda istiyor, Türk tez kılavuzlarının çoğu her internet
+  kaynağında istiyor; eklemek, sonradan aramaktan kolay (kurum sahibinin
+  geri bildirimi). Tarih dışarıdan verilir: modül saf kalsın.
+*/
+export type KunyeSecenegi = { erisimTarihi?: string | null };
+
+export function formatReferenceParts(
+  source: CitableSource,
+  style: CitationStyle,
+  number: number,
+  secenek: KunyeSecenegi = {},
+): TextPart[] {
   const authors = (source.authors ?? "").trim();
   const title = source.title.trim().replace(/\.$/, "");
   const url = link(source);
@@ -197,5 +272,6 @@ export function formatReferenceParts(source: CitableSource, style: CitationStyle
       if (url) push(` ${url}`);
     }
   }
+  if (source.source_type === "website" && url && secenek.erisimTarihi) push(` (Erişim tarihi: ${secenek.erisimTarihi})`);
   return parts;
 }

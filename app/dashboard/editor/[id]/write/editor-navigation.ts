@@ -1,7 +1,7 @@
 import type { Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { headingMatchesSection } from "@/lib/section-match";
-import { formatInTextCitation, formatReferenceParts, type CitableSource, type CitationStyle } from "@/lib/citation-format";
+import { formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
 import { fixReferencePunctuation } from "@/lib/reference-punctuation";
 import { indentCmOf, type ParagraphFormatRules, hangingIndentCmOf } from "@/lib/paragraph-format";
 
@@ -160,7 +160,9 @@ function findReferencesSection(doc: ProseMirrorNode): ReferencesSection | null {
 export function insertCitation(
   editor: Editor,
   source: CitableSource,
-  style: CitationStyle
+  style: CitationStyle,
+  /* Sayfa (atıf penceresinde öğrencinin yazdığı) ve erişim tarihi (bugün). */
+  secenek: AtifSecenegi & KunyeSecenegi = {}
 ): { citation: string; addedReference: boolean } {
   const section = findReferencesSection(editor.state.doc);
   const entries = section?.paragraphs.filter((item) => item.node.textContent.trim()) ?? [];
@@ -169,7 +171,7 @@ export function insertCitation(
     ? entries.findIndex((item) => item.node.textContent.toLocaleLowerCase("tr-TR").includes(titleKey))
     : -1;
   const number = existingIndex >= 0 ? existingIndex + 1 : entries.length + 1;
-  const citation = formatInTextCitation(source, style, number);
+  const citation = formatInTextCitation(source, style, number, { sayfa: secenek.sayfa });
 
   const { from, to } = editor.state.selection;
   const before = editor.state.doc.textBetween(Math.max(0, from - 1), from);
@@ -178,7 +180,7 @@ export function insertCitation(
 
   if (existingIndex >= 0) return { citation, addedReference: false };
 
-  const parts = formatReferenceParts(source, style, number);
+  const parts = formatReferenceParts(source, style, number, { erisimTarihi: secenek.erisimTarihi });
   const paragraph = editor.schema.nodeFromJSON({
     type: "paragraph",
     content: parts

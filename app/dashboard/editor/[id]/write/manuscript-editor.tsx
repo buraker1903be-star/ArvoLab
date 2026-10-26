@@ -1,5 +1,6 @@
 "use client";
 
+import { eksikAlanlar } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { kayitHatasiMetni, TASLAK_GUVENDE, TASLAK_YAZILAMADI } from "@/lib/taslak-durumu";
@@ -1276,9 +1277,19 @@ export default function ManuscriptEditor({
     if (!selectText(editor, text)) showToast("error", "Bu ifade metinde bulunamadı; değiştirilmiş olabilir.");
   };
   const style: CitationStyle = CITATION_STYLES.includes(citationStyle as CitationStyle) ? (citationStyle as CitationStyle) : "apa7";
-  const handleCite = (source: LiteratureSource) => {
-    const { citation, addedReference } = insertCitation(editor, source, style);
-    showToast("success", addedReference ? `${citation} eklendi; kaynak Kaynakça'ya yazıldı.` : `${citation} eklendi.`);
+  const handleCite = (source: LiteratureSource, secenek: { sayfa?: string | null } = {}) => {
+    const bugun = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul" }).format(new Date());
+    const { citation, addedReference } = insertCitation(editor, source, style, { sayfa: secenek.sayfa, erisimTarihi: bugun });
+    /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor. */
+    const eksik = addedReference ? eksikAlanlar(source) : [];
+    showToast(
+      eksik.length ? "error" : "success",
+      eksik.length
+        ? `${citation} eklendi; künyede eksik: ${eksik.join(", ")}. Literatür'den kaynağı tamamlayın.`
+        : addedReference
+          ? `${citation} eklendi; kaynak Kaynakça'ya yazıldı.`
+          : `${citation} eklendi.`,
+    );
     void updateLiteratureStatus(source.id, "used");
   };
   // Yazdırma sekmesi tıklamayla hemen açılır (açılır pencere engelleyicisine takılmasın), metin kaydedilince yüklenir.
