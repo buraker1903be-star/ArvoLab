@@ -257,3 +257,26 @@
   .gb-tek-ekran .tez-kart-rozetler { display: none; }
   .gb-tek-ekran .tez-tempo { display: none; }
 }
+
+/* ============================================================
+   ÇALIŞMALARIM (öğrenci): solda çalışmalar, sağda seçili çalışmanın
+   durumu ve eksikleri. Tek ekran kuralı yukarıdaki blokla aynı
+   (.gb-tek-ekran); burada yalnızca iki kartın kendi düzeni.
+   ============================================================ */
+.calismalar-ikili { grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr); }
+.calisma-secim .gb-satir { border-left: 3px solid transparent; }
+.calisma-secim .gb-satir[aria-current="true"] { border-left-color: var(--accent); background: var(--accent-soft); }
+.calisma-durum-bas { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.calisma-durum-bas > div { min-width: 0; }
+.calisma-durum-bas h2 { margin: 6px 0 0; color: var(--ink); font-size: var(--fs-lg); font-weight: 700; letter-spacing: -.015em; line-height: 1.25; }
+.calisma-durum-bas .projects-primary-button { flex: none; }
+.calisma-durum-ust { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); font-size: var(--fs-sm); }
+.calisma-olcumler .tez-olcu dd { font-size: 22px; }
+.calisma-durum-alt { margin: 2px 0 0; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 650; }
+.calisma-durum-alt-serit { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line-soft); }
+.calisma-durum-alt-serit .gb-kart-baglanti { margin-top: 0; }
+.calisma-durum .gb-liste .status-pill { flex: none; }
+@media (max-width: 900px) {
+  .calismalar-ikili { grid-template-columns: minmax(0, 1fr); }
+  .calisma-durum-bas { flex-wrap: wrap; }
+}
