@@ -1588,6 +1588,7 @@ export default function ManuscriptEditor({
             ))}
           </select>
 
+          <div className="arac-segment" role="group" aria-label="Yazı biçimi">
           <ToolbarButton label="Kalın (Ctrl+B)" active={ui.bold} onClick={() => editor.chain().focus().toggleBold().run()}>
             <BoldIcon size={16} />
           </ToolbarButton>
@@ -1600,9 +1601,16 @@ export default function ManuscriptEditor({
           <ToolbarButton label="Üst simge" active={ui.superscript} onClick={() => editor.chain().focus().toggleSuperscript().run()}>
             <SuperscriptIcon size={16} />
           </ToolbarButton>
+          </div>
 
         </AracKarti>
         <AracKarti baslik="Başlık ve liste">
+          <div className="arac-segment" role="group" aria-label="Paragraf türü">
+          {/* "Metin": başlıktan normal paragrafa dönüş. Eskiden yalnızca aynı
+              başlık düğmesine yeniden basarak dönülüyordu; bu belli değildi. */}
+          <ToolbarButton label="Normal metin" active={!ui.heading} onClick={() => editor.chain().focus().setParagraph().run()}>
+            Metin
+          </ToolbarButton>
           {([1, 2, 3] as const).map((level) => (
             <ToolbarButton
               key={level}
@@ -1613,6 +1621,8 @@ export default function ManuscriptEditor({
               H{level}
             </ToolbarButton>
           ))}
+          </div>
+          <div className="arac-segment" role="group" aria-label="Liste ve alıntı">
 
           <ToolbarButton label="Madde işaretli liste" active={ui.bulletList} onClick={() => editor.chain().focus().toggleBulletList().run()}>
             <List size={16} />
@@ -1623,9 +1633,11 @@ export default function ManuscriptEditor({
           <ToolbarButton label="Alıntı" active={ui.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
             <Quote size={16} />
           </ToolbarButton>
+          </div>
 
         </AracKarti>
         <AracKarti baslik="Paragraf">
+          <div className="arac-segment" role="group" aria-label="Hizalama">
           <ToolbarButton label="Sola hizala" active={ui.align === "left"} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
             <AlignLeft size={16} />
           </ToolbarButton>
@@ -1638,6 +1650,7 @@ export default function ManuscriptEditor({
           <ToolbarButton label="İki yana yasla" active={ui.align === "justify"} onClick={() => editor.chain().focus().setTextAlign("justify").run()}>
             <AlignJustify size={16} />
           </ToolbarButton>
+          </div>
 
           <select
             className="toolbar-select"
@@ -1654,7 +1667,7 @@ export default function ManuscriptEditor({
           </select>
 
           <ToolbarButton
-            label="İlk satır girintisi (1.25 cm)"
+            label="İlk satır girintisi (1.25 cm)" metin="İlk satır girintisi"
             active={ui.firstLineIndent}
             onClick={() => editor.chain().focus().setFirstLineIndent(!ui.firstLineIndent).run()}
           >
@@ -1662,12 +1675,13 @@ export default function ManuscriptEditor({
           </ToolbarButton>
 
         </AracKarti>
-        <AracKarti baslik="Ekle">
-          <ToolbarButton label="Tablo ekle" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+        <AracKarti baslik="Ekle" izgara>
+          <ToolbarButton label="Tablo ekle" metin="Tablo" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
             <TableIcon size={16} />
           </ToolbarButton>
           <ToolbarButton
             label={imageUploading ? "Resim yükleniyor…" : "Resim ekle (PNG, JPG, GIF)"}
+            metin="Resim"
             disabled={imageUploading}
             onClick={() => imageInputRef.current?.click()}
           >
@@ -1684,34 +1698,34 @@ export default function ManuscriptEditor({
               e.target.value = "";
             }}
           />
-          <ToolbarButton label="Dipnot ekle" onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
+          <ToolbarButton label="Dipnot ekle" metin="Dipnot" onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
             <StickyNote size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Kaynaktan atıf ekle" onClick={() => setCiteOpen(true)}>
+          <ToolbarButton label="Kaynaktan atıf ekle" metin="Atıf" onClick={() => setCiteOpen(true)}>
             <BookMarked size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Analiz sonucu ekle" onClick={() => setAnalizOpen(true)}>
+          <ToolbarButton label="Analiz sonucu ekle" metin="Analiz" onClick={() => setAnalizOpen(true)}>
             <BarChart3 size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Word dosyasından aktar" onClick={() => setImportOpen(true)}>
-            <FileUp size={16} />
-          </ToolbarButton>
-          <ToolbarButton label="Resimlerim (daha önce yüklenenler)" onClick={() => setLibraryOpen(true)}>
+          <ToolbarButton label="Resimlerim (daha önce yüklenenler)" metin="Resimlerim" onClick={() => setLibraryOpen(true)}>
             <Images size={16} />
           </ToolbarButton>
           <ToolbarButton
-            label="Şekil başlığı (otomatik numaralı)"
+            label="Şekil başlığı (otomatik numaralı)" metin="Şekil başlığı" genis
             active={ui.caption === "figure"}
             onClick={() => editor.chain().focus().toggleCaption("figure").run()}
           >
             <Captions size={16} />
           </ToolbarButton>
           <ToolbarButton
-            label="Tablo başlığı (otomatik numaralı)"
+            label="Tablo başlığı (otomatik numaralı)" metin="Tablo başlığı" genis
             active={ui.caption === "table"}
             onClick={() => editor.chain().focus().toggleCaption("table").run()}
           >
             <TableProperties size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Word dosyasından aktar" metin="Word'den aktar" genis onClick={() => setImportOpen(true)}>
+            <FileUp size={16} />
           </ToolbarButton>
 
         </AracKarti>
@@ -1729,65 +1743,67 @@ export default function ManuscriptEditor({
           tıklanamaz sekiz düğme, kalabalıktan başka bir şey değil.
         */}
         {ui.inTable ? (
-          <AracKarti baslik="Tablo">
-            <ToolbarButton label="Soluna sütun ekle" onClick={() => editor.chain().focus().addColumnBefore().run()}>
+          <AracKarti baslik="Tablo" izgara>
+            <ToolbarButton label="Soluna sütun ekle" metin="Sola sütun" onClick={() => editor.chain().focus().addColumnBefore().run()}>
               <ArrowLeftToLine size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Sağına sütun ekle" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+            <ToolbarButton label="Sağına sütun ekle" metin="Sağa sütun" onClick={() => editor.chain().focus().addColumnAfter().run()}>
               <ArrowRightToLine size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Sütunu sil" onClick={() => editor.chain().focus().deleteColumn().run()}>
+            <ToolbarButton label="Sütunu sil" metin="Sütunu sil" onClick={() => editor.chain().focus().deleteColumn().run()}>
               <Columns2 size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Üstüne satır ekle" onClick={() => editor.chain().focus().addRowBefore().run()}>
+            <ToolbarButton label="Üstüne satır ekle" metin="Üste satır" onClick={() => editor.chain().focus().addRowBefore().run()}>
               <ArrowUpToLine size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Altına satır ekle" onClick={() => editor.chain().focus().addRowAfter().run()}>
+            <ToolbarButton label="Altına satır ekle" metin="Alta satır" onClick={() => editor.chain().focus().addRowAfter().run()}>
               <ArrowDownToLine size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Satırı sil" onClick={() => editor.chain().focus().deleteRow().run()}>
+            <ToolbarButton label="Satırı sil" metin="Satırı sil" onClick={() => editor.chain().focus().deleteRow().run()}>
               <Rows2 size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Başlık satırını aç/kapat" onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
+            <ToolbarButton label="Başlık satırını aç/kapat" metin="Başlık satırı" genis onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
               <PanelTop size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Hücreleri birleştir" disabled={!ui.canMergeCells} onClick={() => editor.chain().focus().mergeCells().run()}>
+            <ToolbarButton label="Hücreleri birleştir" metin="Birleştir" disabled={!ui.canMergeCells} onClick={() => editor.chain().focus().mergeCells().run()}>
               <TableCellsMerge size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Hücreyi böl" disabled={!ui.canSplitCell} onClick={() => editor.chain().focus().splitCell().run()}>
+            <ToolbarButton label="Hücreyi böl" metin="Böl" disabled={!ui.canSplitCell} onClick={() => editor.chain().focus().splitCell().run()}>
               <TableCellsSplit size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Tabloyu sil" onClick={() => editor.chain().focus().deleteTable().run()}>
+            <ToolbarButton label="Tabloyu sil" metin="Tabloyu sil" genis onClick={() => editor.chain().focus().deleteTable().run()}>
               <Trash2 size={16} />
             </ToolbarButton>
           </AracKarti>
         ) : null}
 
-        <AracKarti baslik="Belge">
+        <AracKarti baslik="Belge" izgara>
+          <div className="arac-segment" role="group" aria-label="Geri al ve yinele">
           <ToolbarButton label="Geri al (Ctrl+Z)" disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
             <Undo2 size={16} />
           </ToolbarButton>
           <ToolbarButton label="Yinele (Ctrl+Shift+Z)" disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
             <Redo2 size={16} />
           </ToolbarButton>
+          </div>
 
-          <ToolbarButton label="Sayfa ayarları" active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
+          <ToolbarButton label="Sayfa ayarları" metin="Sayfa ayarı" active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
             <Settings2 size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Kapak sayfası" active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
+          <ToolbarButton label="Kapak sayfası" metin="Kapak" active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
             <FileBadge size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Danışmana paylaş (salt okunur bağlantı)" onClick={() => setShareOpen(true)}>
+          <ToolbarButton label="Danışmana paylaş (salt okunur bağlantı)" metin="Paylaş" onClick={() => setShareOpen(true)}>
             <Share2 size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Sürüm geçmişi" onClick={() => setVersionsOpen(true)}>
+          <ToolbarButton label="Sürüm geçmişi" metin="Sürümler" onClick={() => setVersionsOpen(true)}>
             <History size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Bul ve değiştir (Ctrl+F)" active={findOpen} onClick={() => setFindOpen((open) => !open)}>
+          <ToolbarButton label="Bul ve değiştir (Ctrl+F)" metin="Bul" active={findOpen} onClick={() => setFindOpen((open) => !open)}>
             <Search size={16} />
           </ToolbarButton>
 
-          <ToolbarButton label="Klavye kısayolları" onClick={() => setShortcutsOpen(true)}>
+          <ToolbarButton label="Klavye kısayolları" metin="Kısayollar" onClick={() => setShortcutsOpen(true)}>
             <Keyboard size={16} />
           </ToolbarButton>
         </AracKarti>
@@ -2656,23 +2672,34 @@ export default function ManuscriptEditor({
   );
 }
 
-function AracKarti({ baslik, children }: { baslik: string; children: React.ReactNode }) {
+/* Sol paneldeki araç kartı. `izgara`: etiketli düğmeler iki sütunda
+   (Ekle, Tablo, Belge); yalnız simgeli düğmeyi öğrenci üzerine gelmeden
+   tanımıyordu. */
+function AracKarti({ baslik, izgara = false, children }: { baslik: string; izgara?: boolean; children: React.ReactNode }) {
   return (
     <section className="arac-karti" aria-label={baslik}>
       <span className="arac-karti-baslik">{baslik}</span>
-      <div className="arac-karti-govde">{children}</div>
+      <div className="arac-karti-govde" data-izgara={izgara ? "" : undefined}>
+        {children}
+      </div>
     </section>
   );
 }
 
 function ToolbarButton({
   label,
+  metin,
+  genis = false,
   active = false,
   disabled = false,
   onClick,
   children,
 }: {
   label: string;
+  /** Simgenin yanında görünen kısa ad (sol paneldeki etiketli düğmeler) */
+  metin?: string;
+  /** Izgarada iki sütunu kaplar (uzun ad) */
+  genis?: boolean;
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -2689,8 +2716,11 @@ function ToolbarButton({
       // Düğmeye basınca editör seçimini kaybetmesin
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
+      data-etiketli={metin ? "" : undefined}
+      data-genis={genis ? "" : undefined}
     >
       {children}
+      {metin ? <span className="arac-metin">{metin}</span> : null}
     </button>
   );
 }

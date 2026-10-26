@@ -472,7 +472,7 @@
 }
 
 /* ---------- Editör yerleşimi: belge + yol gösteren yan panel ---------- */
-.manuscript-layout { display: grid; grid-template-columns: 212px minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+.manuscript-layout { display: grid; grid-template-columns: 236px minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
 
 /* Sol araç paneli: işe göre gruplu dikey kartlar (manuscript-editor.tsx, AracKarti) */
 .manuscript-araclar {
@@ -497,6 +497,37 @@
 .arac-karti-baslik { color: var(--muted); font-size: var(--fs-micro); font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
 .arac-karti-govde { display: flex; flex-wrap: wrap; gap: 2px; }
 .arac-karti-govde .toolbar-select { flex: 1 1 100%; min-width: 0; }
+/* Bitişik düğme grubu (B/İ/A, Metin/H1–H3, hizalama, geri al/yinele) */
+.arac-segment {
+  display: flex;
+  flex: 1 1 100%;
+  padding: 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-xs);
+  background: var(--surface-2);
+}
+.manuscript-araclar .arac-segment button { flex: 1 1 0; min-width: 0; height: 30px; padding: 0 4px; }
+.manuscript-araclar .arac-segment button.is-active { background: var(--surface); box-shadow: var(--shadow-sm); }
+/* Etiketli düğmeler: simge + kısa ad; Ekle, Tablo, Belge kartlarında iki sütun */
+.arac-karti-govde[data-izgara] { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.arac-karti-govde[data-izgara] > [data-genis] { grid-column: 1 / -1; }
+.manuscript-araclar button[data-etiketli] {
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 8px;
+  border-color: var(--line-soft);
+  background: var(--surface);
+  font-weight: 600;
+}
+.manuscript-araclar .arac-karti-govde:not([data-izgara]) > button[data-etiketli] { flex: 1 1 100%; }
+.manuscript-araclar button[data-etiketli] svg { flex: none; color: var(--muted); }
+.manuscript-araclar button[data-etiketli].is-active svg { color: var(--accent-strong); }
+.arac-metin { overflow: hidden; font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) {
+  .manuscript-araclar button[data-etiketli]:hover { border-color: var(--line); background: var(--surface-2); }
+}
 .manuscript-araclar button {
   display: inline-flex;
   align-items: center;
@@ -830,6 +861,11 @@
   }
   .arac-karti { flex: none; }
   .arac-karti-govde { flex-wrap: nowrap; }
+  /* Dar ekranda yatay şerit: etiketler gizlenir, düğmeler tek satır */
+  .arac-karti-govde[data-izgara] { display: flex; }
+  .arac-metin { display: none; }
+  .manuscript-araclar button[data-etiketli] { justify-content: center; padding: 0 7px; }
+  .arac-segment { flex: none; }
   .arac-karti-govde .toolbar-select { flex: none; width: auto; }
   /* Araç şeridi yapışık; kayıt şeridi onunla üst üste binmesin */
   .manuscript-ust { position: static; }
