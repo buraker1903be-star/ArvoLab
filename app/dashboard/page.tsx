@@ -9,6 +9,8 @@ import { projectTypeLabel, statusLabel, isOversightRole, STAFF_ROLES } from "@/l
 import { getCurrentProfile } from "@/app/actions/profile";
 import { getAccessState } from "@/lib/access";
 import LicenseCard from "./_components/license-card";
+import AbonelikOzetKarti from "./_components/abonelik-ozet-karti";
+import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
 import GeriBildirimKarti from "./_components/geri-bildirim-karti";
 import { geriBildirimSorusu } from "@/app/actions/geri-bildirim";
 import { computeAttention } from "@/lib/attention";
@@ -281,6 +283,16 @@ export default async function DashboardPage() {
     gösteriliyor — öğrencinin "hocam baktı mı?" sorusu.
   */
   const bireysel = ogrenciGorunumu && gorunum.bireysel;
+
+  /*
+    Asistan kredisi (tez kartının yanındaki Abonelik ve kredi kartı).
+    Okunamazsa kart sayı göstermiyor; ana sayfa düşmüyor.
+  */
+  const { data: krediSatiri, error: krediHatasi } = ogrenciGorunumu
+    ? await supabase.rpc("ai_kredi_durumum").maybeSingle()
+    : { data: null, error: null };
+  if (krediHatasi) console.error("[ana sayfa] kredi durumu okunamadı:", krediHatasi.message);
+  const kredi = krediOzeti((krediSatiri as KrediSatiri | null) ?? null);
   const { data: sonBaglanti } = bireysel
     ? await supabase
         .from("manuscript_share_links")
@@ -444,7 +456,8 @@ export default async function DashboardPage() {
         </p>
       ) : null}
 
-      <LicenseCard access={access} />
+      {/* Öğrencide abonelik tez kartının yanındaki kartta; ayrıca üstte tekrar edilmiyor. */}
+      {ogrenciGorunumu && resume ? null : <LicenseCard access={access} />}
 
       {geriBildirim.sorulsun ? <GeriBildirimKarti baglam={geriBildirim.baglam} /> : null}
 
@@ -496,6 +509,12 @@ export default async function DashboardPage() {
             "Teslim tarihleri" tek satıra inen bilgiyi altı satırlık
             kartlara yayıyordu.
           */}
+          {/*
+            Tez kartı ve yanında Abonelik ve kredi kartı tek sırada (kurum
+            sahibinin isteği): tez kartı daralıyor, öğrenci asistan hakkını
+            ve abonelik durumunu ana sayfada görüyor.
+          */}
+          <div className="tez-ust-sira">
           <article className="gb-kart tez-kart">
             <div className="tez-kart-ust">
               <div>
@@ -591,6 +610,8 @@ export default async function DashboardPage() {
               </div>
             ) : null}
           </article>
+          <AbonelikOzetKarti access={access} kredi={kredi} bireysel={Boolean((krediSatiri as KrediSatiri | null)?.bireysel)} />
+          </div>
 
           <ListeIzgarasi etiket="Tezim">
             <ListeKarti

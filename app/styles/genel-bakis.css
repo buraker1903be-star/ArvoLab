@@ -508,3 +508,13 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .kredi-paketi-fiyat { color: var(--ink); font-size: 22px; font-weight: 700; }
 .kredi-paketi small { margin-bottom: 6px; color: var(--muted); font-size: var(--fs-micro); }
 .kredi-paketi button { align-self: stretch; justify-content: center; }
+/* Ana sayfa: tez kartı ve yanında Abonelik ve kredi kartı tek sırada */
+.tez-ust-sira { display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 1fr); gap: 16px; align-items: stretch; }
+.tez-ust-sira .tez-olcumler { gap: 10px; }
+@media (max-width: 1100px) { .tez-ust-sira { grid-template-columns: minmax(0, 1fr); } }
+.abonelik-ozet { gap: 10px; }
+.abonelik-ozet-satir { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.abonelik-ozet-satir small, .abonelik-ozet-not { color: var(--muted); font-size: var(--fs-micro); }
+.abonelik-ozet .kaynakca-puan { padding: 8px 12px; }
+.abonelik-ozet .kaynakca-puan b { font-size: 24px; }
+.abonelik-ozet-eylem { align-self: flex-start; margin-top: auto; }
