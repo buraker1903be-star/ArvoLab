@@ -1,3 +1,4 @@
+import AcilirKapatici from "./_components/acilir-kapatici";
 import { Suspense } from "react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -136,6 +137,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       </Suspense>
       {/* Çıkış bir sunucu eylemi: istemci bileşenine referans olarak geçilebiliyor. */}
       <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />
+      {/* Kullanıcı menüsü ve kart menüleri dışarı tıklayınca kapansın. */}
+      <AcilirKapatici />
       <Toaster />
     </div>
   );
