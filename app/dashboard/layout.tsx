@@ -48,14 +48,19 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const initials = initialsOf(userName);
   // Kim girebilir: kurum lisansı ya da bireysel abonelik (lib/access.ts).
   const access = await getAccessState(profile);
-  // Rolü yetmeyen uygulamalar dock'tan da başlatıcıdan da düşer.
-  const uygulamalar = gorunenUygulamalar(labUygulamalari(), profile?.role);
   // Görünüm önizlemesi yalnızca iç ekipte (lib/onizleme.ts).
   const gorunum = await sayfaGorunumu({
     rol: profile?.role,
     personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
     kurumVar: Boolean(profile?.organization_id),
   });
+  /*
+    Rolü yetmeyen uygulamalar dock'tan da başlatıcıdan da düşer. Öğrenci
+    önizlemesinde ROL YOK sayılır: eskiden önizlemede de Ekip Yönetimi,
+    Ürün Ölçümü ve Kılavuz Kataloğu başlatıcıda görünüyordu, öğrencinin
+    göremeyeceği şeyler. Yetki değişmiyor; sayfaların kendi kapısı gerçek rolle.
+  */
+  const uygulamalar = gorunenUygulamalar(labUygulamalari(), gorunum.onizleme ? undefined : profile?.role);
 
   return (
     <div className="dashboard-shell os-root">

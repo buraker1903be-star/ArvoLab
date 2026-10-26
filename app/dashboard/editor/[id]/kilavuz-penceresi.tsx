@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BookOpenCheck } from "lucide-react";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import ActionForm from "@/app/dashboard/action-form";
@@ -109,16 +108,12 @@ export default function KilavuzPenceresi({
 
         <section className="pencere-kart">
           <h3 className="pencere-kart-baslik">{uygulanan ? "Kılavuzu değiştir" : "Kılavuzunuzu yükleyin"}</h3>
+          {/* Katalog bağlantısı yok: katalog personelin sayfası (lib/os/uygulamalar.ts). */}
           {uygulanan?.dogrulandi ? (
-            <>
-              <p className="muted text-sm">
-                Kurumunuzun onaylı kılavuzu kullanılıyor; değiştirmeniz gerekmiyor. Kurumunuz yanlışsa çalışma
-                ayarlarından düzeltin.
-              </p>
-              <Link href="/dashboard/guidelines" className="projects-filter-button button-compact">
-                Kılavuz kataloğunu aç
-              </Link>
-            </>
+            <p className="muted text-sm">
+              Kurumunuzun onaylı kılavuzu kullanılıyor; değiştirmeniz gerekmiyor. Kurumunuz yanlışsa çalışma
+              ayarlarından düzeltin.
+            </p>
           ) : null}
 
           {uygulanan && !uygulanan.dogrulandi ? (

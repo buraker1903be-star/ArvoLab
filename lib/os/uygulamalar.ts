@@ -19,6 +19,7 @@
 */
 
 import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
+import { STAFF_ROLES } from "@/lib/project-labels";
 
 export type OsIkon =
   | "home" | "tez" | "literatur" | "kaynakca" | "analiz" | "belge"
@@ -101,7 +102,15 @@ export function labUygulamalari(): OsUygulama[] {
       sayfası; doçentlik puanı ayrı bir kullanıcı kitlesinin aracı.
       İkisi de "Tüm uygulamalar"da ve Ctrl+K'da.
     */
-    { key: "kilavuz", label: "Kılavuz Kataloğu", href: "/dashboard/guidelines", ikon: "kilavuz", yollar: ["/dashboard/guidelines"], yalnizBaslatici: true },
+    /*
+      KILAVUZ KATALOĞU YALNIZCA PERSONELDE (26.10.2026, kurum sahibinin
+      isteği). Öğrenci kılavuzunu kendi çalışmasına yüklüyor ve kurallar
+      ona onaylatılıp uygulanıyor (Yeni çalışma penceresi, Kılavuz
+      penceresi); katalog, kılavuzları tarayıp onaylayan ekibin sayfası.
+      Öğrencinin başlatıcısında durması "kılavuzumu buradan mı seçeceğim"
+      sorusunu doğuruyordu.
+    */
+    { key: "kilavuz", label: "Kılavuz Kataloğu", href: "/dashboard/guidelines", ikon: "kilavuz", yollar: ["/dashboard/guidelines"], yalnizBaslatici: true, roller: STAFF_ROLES },
     { key: "docentlik", label: "Doçentlik Puanı", kisa: "Doçentlik", href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"], yalnizBaslatici: true },
     /*
       İKİ DESTEK YOLU TEK UYGULAMADA. Dock'ta iki ayrı simge

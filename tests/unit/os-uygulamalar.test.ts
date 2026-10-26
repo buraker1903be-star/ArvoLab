@@ -152,10 +152,16 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
     assert.equal(kaynaklar.bolumler, undefined);
   });
 
-  test("kılavuz kataloğu ve doçentlik başlatıcıda ve Ctrl+K'da bulunuyor", () => {
-    const sayfalar = osSayfalari(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
-    assert.ok(sayfalar.includes("/dashboard/guidelines"));
-    assert.ok(sayfalar.includes("/dashboard/associate-professorship"));
+  test("doçentlik herkesin başlatıcısında; kılavuz kataloğu yalnızca personelde", () => {
+    // Öğrenci kılavuzunu kendi çalışmasına yüklüyor; katalog onaylayan ekibin sayfası.
+    const ogrenci = osSayfalari(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
+    assert.ok(ogrenci.includes("/dashboard/associate-professorship"));
+    assert.ok(!ogrenci.includes("/dashboard/guidelines"));
+    // Önizlemede rol yok sayılır (layout): rolsüz kullanıcı da görmez.
+    assert.ok(!osSayfalari(gorunenUygulamalar(uygulamalar, undefined)).some((s) => s.href === "/dashboard/guidelines"));
+    for (const rol of ["academic_manager", "controller", "expert", "system_admin", "founder"]) {
+      assert.ok(osSayfalari(gorunenUygulamalar(uygulamalar, rol)).some((s) => s.href === "/dashboard/guidelines"), rol);
+    }
     assert.equal(etkinUygulama(uygulamalar, "/dashboard/guidelines")?.key, "kilavuz");
   });
 
