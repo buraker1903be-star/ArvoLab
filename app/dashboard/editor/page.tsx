@@ -20,7 +20,8 @@ import { topluTutarsizliklar } from "@/app/actions/calisma-merkezi";
 import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { trTarihSaat, trUzunTarih } from "@/lib/tr-time";
-import { filtrelerGorunsun, kartIlerlemesi } from "@/lib/calisma-karti";
+import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
+import CalismaDurumKarti from "./calisma-durum-karti";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "Teslim tarihi belirtilmedi";
@@ -97,6 +98,50 @@ export default async function ProjectsPage({
   const canDeleteAnyProject =
     profile?.role === "academic_manager" || profile?.role === "system_admin" || profile?.role === "founder";
 
+  type Calisma = (typeof projects)[number];
+  // Kartlardaki yazım temposu ve ilerleme: iki düzen de aynı hesabı kullanıyor.
+  function yazimDurumu(project: Calisma) {
+    const guideline = project.guideline_id ? guidelines.get(project.guideline_id) : undefined;
+    const pace =
+      guideline && stats.has(project.id)
+        ? writingPace({
+            words: stats.get(project.id)!.words,
+            minPages: guideline.minPages,
+            maxPages: guideline.maxPages,
+            dueDate: project.due_date,
+            status: project.status,
+            settings: {
+              fontSizePt: guideline.settings.fontSizePt,
+              lineSpacing: guideline.settings.lineSpacing,
+              margins: guideline.settings.margins,
+            },
+          })
+        : null;
+    const ilerleme = kartIlerlemesi({
+      kelime: stats.get(project.id)?.words ?? null,
+      hedefKelime: pace?.targetWords ?? null,
+      elleIlerleme: project.progress,
+    });
+    return { pace, ilerleme };
+  }
+
+  /*
+    ÖĞRENCİ DÜZENİ: İKİ KART (26.10.2026, kurum sahibinin isteği). Solda
+    çalışmalar, sağda seçili çalışmanın durumu ve eksikleri; sayfa tek
+    ekran, kaymasız (lib/calisma-karti.ts). Personel düzeni değişmedi:
+    onlarca çalışmayı onay ve atama şeridiyle tarıyorlar, orada liste
+    kartları gerekiyor.
+  */
+  const ogrenciDuzeni = !canApprove;
+  const seciliId = ogrenciDuzeni
+    ? seciliCalismaId(
+        visible.map((project) => project.id),
+        typeof params.sec === "string" ? params.sec : null,
+        (id) => stats.get(id)?.updatedAt,
+      )
+    : null;
+  const secili = seciliId ? visible.find((project) => project.id === seciliId) ?? null : null;
+
   async function handleApprove(projectId: string) {
     "use server";
     return approveProject(projectId);
@@ -114,7 +159,7 @@ export default async function ProjectsPage({
   }
 
   return (
-    <main className="dashboard-page">
+    <main className={ogrenciDuzeni ? "dashboard-page gb gb-tek-ekran" : "dashboard-page"}>
       <section className="projects-header">
         <div>
           <h1>Çalışmalarım</h1>
@@ -171,6 +216,60 @@ export default async function ProjectsPage({
             aciklama="Filtreye uyan çalışma yok. Ölçütleri gevşetin ya da filtreyi temizleyin."
             eylem={{ etiket: "Filtreyi temizle", href: "/dashboard/editor" }}
           />
+        ) : ogrenciDuzeni ? (
+          <section className="gb-sutunlar calismalar-ikili" aria-label="Çalışmalarım">
+            <article className="gb-kart gb-sutun">
+              <header className="gb-kart-bas">
+                <div>
+                  <h2>Tüm çalışmalar</h2>
+                  <p>{visible.length === projects.length ? `${projects.length} çalışma` : `${visible.length}/${projects.length} çalışma`}</p>
+                </div>
+              </header>
+              <ul className="gb-liste calisma-secim">
+                {visible.map((project) => {
+                  const yazim = stats.get(project.id);
+                  const due = dueInfo(project.due_date, project.status);
+                  return (
+                    <li key={project.id}>
+                      <Link
+                        href={secimAdresi(params, project.id)}
+                        className="gb-satir"
+                        aria-current={project.id === seciliId ? "true" : undefined}
+                        scroll={false}
+                      >
+                        <span className="gb-satir-govde">
+                          <b>{project.title}</b>
+                          <small>
+                            {[
+                              projectTypeLabel(project.project_type),
+                              yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime · ${editedAgo(yazim.updatedAt)}` : "henüz yazılmadı",
+                              due?.label,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </small>
+                        </span>
+                        <span className="status-pill" data-tone={statusTone(project.status)}>
+                          {statusLabel(project.status)}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </article>
+            {secili ? (
+              <CalismaDurumKarti
+                key={secili.id}
+                projectId={secili.id}
+                kelime={stats.get(secili.id)?.words ?? null}
+                ilerleme={yazimDurumu(secili).ilerleme}
+                due={dueInfo(secili.due_date, secili.status)}
+                duzenleyebilir={profile?.id === secili.owner_id || profile?.id === secili.assignee_id}
+                silebilir={profile?.id === secili.owner_id || canDeleteAnyProject}
+              />
+            ) : null}
+          </section>
         ) : (
         <section className="projects-list" aria-label="Akademik çalışma listesi">
           {visible.map((project) => {
@@ -179,27 +278,7 @@ export default async function ProjectsPage({
             // Eski kayıtlarda sorumlu yalnızca serbest metin olarak tutuluyordu (assignee_id boş).
             const legacyAssignee = !project.assignee_id && project.assignee_name;
             const due = dueInfo(project.due_date, project.status);
-            const guideline = project.guideline_id ? guidelines.get(project.guideline_id) : undefined;
-            const pace =
-              guideline && stats.has(project.id)
-                ? writingPace({
-                    words: stats.get(project.id)!.words,
-                    minPages: guideline.minPages,
-                    maxPages: guideline.maxPages,
-                    dueDate: project.due_date,
-                    status: project.status,
-                    settings: {
-                      fontSizePt: guideline.settings.fontSizePt,
-                      lineSpacing: guideline.settings.lineSpacing,
-                      margins: guideline.settings.margins,
-                    },
-                  })
-                : null;
-            const ilerleme = kartIlerlemesi({
-              kelime: stats.get(project.id)?.words ?? null,
-              hedefKelime: pace?.targetWords ?? null,
-              elleIlerleme: project.progress,
-            });
+            const { pace, ilerleme } = yazimDurumu(project);
             return (
               <article className="project-card" data-tone={statusTone(project.status)} key={project.id}>
                 <div className="project-card-main">
