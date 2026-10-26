@@ -539,12 +539,12 @@
 .kontrol-kilavuz small { font-size: var(--fs-micro); }
 .kontrol-ozet { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .kontrol-dugmeleri { display: grid; gap: 6px; }
-.kontrol-dugmeleri > button { justify-content: center; width: 100%; }
 .kontrol-dugmeleri .alert { margin: 0; }
 .kontrol-sonuc-ac { justify-self: start; }
-.kontrol-cikti { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.kontrol-cikti > button { justify-content: center; padding-inline: 8px; font-size: var(--fs-sm); }
-.kontrol-karti .projects-filter-button[data-tone="success"] {
+/* Sayfa başlığındaki eylemler: Çalışma özeti + teslim, çıktı ve kontrol düğmeleri */
+.yazma-eylemleri { justify-content: flex-end; }
+@media (max-width: 760px) { .yazma-eylemleri > * { flex: 1 1 auto; justify-content: center; } }
+.yazma-eylemleri .projects-filter-button[data-tone="success"] {
   border-color: color-mix(in srgb, var(--success) 45%, var(--line));
   color: var(--success);
   background: var(--success-soft);

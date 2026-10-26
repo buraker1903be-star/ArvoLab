@@ -4,6 +4,7 @@ import { ornekKalibi } from "@/lib/atif/tyk";
 import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { kayitHatasiMetni, TASLAK_GUVENDE, TASLAK_YAZILAMADI } from "@/lib/taslak-durumu";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
 import { olc } from "@/lib/editor-olcum";
@@ -1033,6 +1034,7 @@ export default function ManuscriptEditor({
   );
 
   if (!editor) return <div className="manuscript-editor-shell manuscript-editor-loading" aria-busy="true" />;
+  const eylemHedefi = document.getElementById("yazma-eylemleri");
   // Editör oluştuğu ilk çizimde abonelik henüz anlık görüntü üretmemiş olabilir;
   // o an için durum doğrudan okunur (ilk işlemden sonra abonelik devralır).
   const ui = toolbarState ?? selectToolbarState({ editor })!;
@@ -1431,6 +1433,61 @@ export default function ManuscriptEditor({
               : "Otomatik kayıt açık";
 
   return (
+    <>
+      {/*
+        EYLEM DÜĞMELERİ SAYFA BAŞLIĞINDA (26.10.2026, kurum sahibinin
+        isteği: "butonları çalışma özeti butonunun yanına almalı, yer
+        kazanmak için"). Başlık sunucu bileşeninde (page.tsx) çiziliyor,
+        düğmeler editörün durumuna bağlı; başlıktaki #yazma-eylemleri
+        kutusuna portal ile yerleşiyorlar. Editör yalnızca tarayıcıda
+        kurulduğu için bu satıra gelindiğinde document hep var.
+      */}
+      {eylemHedefi
+        ? createPortal(
+            <>
+              <button
+                type="button"
+                className="projects-filter-button"
+                data-tone={checklist.done === checklist.total ? "success" : undefined}
+                onClick={() => setChecklistOpen(true)}
+                title="Teslimden önce bakılacaklar"
+              >
+                <ClipboardCheck size={15} aria-hidden="true" />
+                Teslim kontrolü {checklist.done}/{checklist.total}
+                {/* Kuralların kaynağı alt çubukta da görünüyor: pencereyi
+                    açmadan "neye göre hazır" sorusunun cevabı bilinmeli. */}
+                {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi">kendi kılavuzunuz</small> : null}
+              </button>
+              <button type="button" className="projects-filter-button" onClick={handleExport} disabled={exporting}>
+                <FileDown size={15} />
+                {exporting ? "Hazırlanıyor..." : "Word olarak indir"}
+              </button>
+              <button type="button" className="projects-filter-button" onClick={() => void handlePrint()}>
+                <Printer size={15} />
+                PDF / Yazdır
+              </button>
+              {/*
+                Adı NE DENETLEDİĞİNİ söylüyor. Alt çubukta üç ayrı "kontrol"
+                vardı ve en kapsamlısının adı en belirsiziydi: soldaki rozet
+                yalnızca YAPIYI denetliyor (canlı), "Teslim kontrolü" bir
+                kontrol listesi, bu düğme ise kılavuz uyumunu ve kaynakça
+                çapraz denetimini çalıştırıyor. Üçü de "kontrol" deyince
+                öğrenci hangisinin neye baktığını ayırt edemiyordu.
+              */}
+              <button
+                type="button"
+                className="projects-primary-button"
+                onClick={handleCheck}
+                disabled={checking}
+                title="Kılavuzun zorunlu bölümleri, atıf stili ve kaynakça–atıf eşleşmesi"
+              >
+                <ShieldCheck size={15} />
+                {checking ? "Kontrol ediliyor..." : "Kılavuz ve kaynakça kontrolü"}
+              </button>
+            </>,
+            eylemHedefi,
+          )
+        : null}
     <div className="manuscript-layout">
       {/*
         ARAÇLAR SOLDA, DİKEY KARTLARDA (26.10.2026, kurum sahibinin isteği).
@@ -2097,37 +2154,6 @@ export default function ManuscriptEditor({
         </div>
 
         <div className="kontrol-dugmeleri">
-          <button
-            type="button"
-            className="projects-filter-button"
-            data-tone={checklist.done === checklist.total ? "success" : undefined}
-            onClick={() => setChecklistOpen(true)}
-            title="Teslimden önce bakılacaklar"
-          >
-            <ClipboardCheck size={15} aria-hidden="true" />
-            Teslim kontrolü {checklist.done}/{checklist.total}
-            {/* Kuralların kaynağı alt çubukta da görünüyor: pencereyi
-                açmadan "neye göre hazır" sorusunun cevabı bilinmeli. */}
-            {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi">kendi kılavuzunuz</small> : null}
-          </button>
-          {/*
-            Adı NE DENETLEDİĞİNİ söylüyor. Alt çubukta üç ayrı "kontrol"
-            vardı ve en kapsamlısının adı en belirsiziydi: soldaki rozet
-            yalnızca YAPIYI denetliyor (canlı), "Teslim kontrolü" bir
-            kontrol listesi, bu düğme ise kılavuz uyumunu ve kaynakça
-            çapraz denetimini çalıştırıyor. Üçü de "kontrol" deyince
-            öğrenci hangisinin neye baktığını ayırt edemiyordu.
-          */}
-          <button
-            type="button"
-            className="projects-primary-button"
-            onClick={handleCheck}
-            disabled={checking}
-            title="Kılavuzun zorunlu bölümleri, atıf stili ve kaynakça–atıf eşleşmesi"
-          >
-            <ShieldCheck size={15} />
-            {checking ? "Kontrol ediliyor..." : "Kılavuz ve kaynakça kontrolü"}
-          </button>
           {checkError ? (
             <p className="alert" data-tone="danger" role="alert">
               {checkError}
@@ -2138,16 +2164,6 @@ export default function ManuscriptEditor({
               Son kontrol sonucunu gör{checkResultEski ? " (eski)" : ""}
             </button>
           ) : null}
-          <span className="kontrol-cikti">
-          <button type="button" className="projects-filter-button" onClick={handleExport} disabled={exporting}>
-            <FileDown size={15} />
-            {exporting ? "Hazırlanıyor..." : "Word olarak indir"}
-          </button>
-          <button type="button" className="projects-filter-button" onClick={() => void handlePrint()}>
-            <Printer size={15} />
-            PDF / Yazdır
-          </button>
-          </span>
         </div>
           </section>
         }
@@ -2472,6 +2488,7 @@ export default function ManuscriptEditor({
         </form>
       </Dialog>
     </div>
+    </>
   );
 }
 

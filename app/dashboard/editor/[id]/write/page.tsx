@@ -81,10 +81,14 @@ export default async function WriteManuscriptPage({
           Tezin en uzun sürdüğü ekran, akışın geri kalanına en uzak
           ekran olmamalı.
         */}
-        <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
-          <ArrowLeft size={17} />
-          Çalışma özeti
-        </Link>
+        {/* Teslim kontrolü, Word, PDF ve kılavuz kontrolü düğmeleri editörden
+            buraya, "Çalışma özeti"nin sağına yerleşir (manuscript-editor.tsx). */}
+        <div className="cluster yazma-eylemleri" id="yazma-eylemleri">
+          <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
+            <ArrowLeft size={17} />
+            Çalışma özeti
+          </Link>
+        </div>
       </section>
 
       <ManuscriptEditor
