@@ -1,5 +1,6 @@
 "use client";
 
+import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { kayitHatasiMetni, TASLAK_GUVENDE, TASLAK_YAZILAMADI } from "@/lib/taslak-durumu";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
@@ -871,38 +872,9 @@ export default function ManuscriptEditor({
         showToast("error", "Metin kaydedilemediği için Word dosyası oluşturulmadı.");
         return;
       }
-      /*
-        Eskiden <a download> tıklanıyordu: 402 (abonelik), 404 ve 500
-        yanıtlarındaki Türkçe açıklama hiçbir yerde görünmüyor, indirme
-        sessizce boş kalıyordu. Artık yanıt okunup hata bildirimle gösterilir.
-      */
-      const response = await fetch(`/api/manuscripts/${projectId}/export`, { cache: "no-store" });
-      if (!response.ok) {
-        const govde = (await response.json().catch(() => null)) as { error?: string } | null;
-        showToast("error", govde?.error ?? "Word dosyası oluşturulamadı. Metin çok büyükse resimleri küçültüp tekrar deneyin.");
-        return;
-      }
-      /*
-        Büyük dosyalar Vercel'in yanıt sınırına takıldığı için depoya yazılıp
-        imzalı bağlantıyla dönüyor; küçük dosyalar doğrudan geliyor.
-      */
-      if (response.headers.get("Content-Type")?.includes("application/json")) {
-        const { downloadUrl, fileName } = (await response.json()) as { downloadUrl: string; fileName?: string };
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = fileName ?? "calisma.docx";
-        link.click();
-        return;
-      }
-      const blob = await response.blob();
-      const adBasligi = response.headers.get("Content-Disposition") ?? "";
-      const eslesme = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(adBasligi);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = eslesme ? decodeURIComponent(eslesme[1]) : "calisma.docx";
-      link.click();
-      URL.revokeObjectURL(url);
+      // İndirme ve hata okuma ortak yardımcıda (ana sayfadaki "Danışmanıma gönder" de kullanıyor).
+      const hata = await wordDosyasiniIndir(projectId);
+      if (hata) showToast("error", hata);
     } finally {
       window.setTimeout(() => setExporting(false), 1500);
     }

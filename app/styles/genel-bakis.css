@@ -136,3 +136,62 @@
   .gb-bos { display: block; padding: 4px 0 8px; text-align: start; }
 }
 @media (prefers-reduced-motion: reduce) { .gb-cubuk-dolgu { animation: none; } }
+
+/* ============================================================
+   ÖĞRENCİNİN ANA SAYFASI (26.10.2026): tek tez, tek bakış.
+   ============================================================ */
+.tez-kart { gap: 16px; padding: 20px 24px; }
+.tez-kart-ust { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.tez-kart-ust small { display: block; color: var(--muted); font-size: var(--fs-sm); }
+.tez-kart-ust h2 { margin: 4px 0 0; color: var(--ink); font-size: clamp(20px, 1.6vw, 24px); font-weight: 650; letter-spacing: -.015em; line-height: 1.25; overflow-wrap: anywhere; }
+.tez-kart-rozetler { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tez-kart-eylemler { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.tez-olcumler { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.tez-olcu { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 14px 16px; border-radius: var(--r-lg); background: var(--surface-2); }
+.tez-olcu dt { color: var(--muted); font-size: var(--fs-sm); }
+.tez-olcu dd { margin: 0; color: var(--ink); font-size: 26px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.tez-olcu dd small { margin-left: 4px; color: var(--muted); font-size: var(--fs-base); font-weight: 500; letter-spacing: 0; }
+.tez-olcu span { color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.tez-olcu[data-tone="danger"] dd { color: var(--danger); }
+.tez-olcu[data-tone="warning"] dd { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.tez-olcu[data-tone="success"] dd { color: var(--success); }
+.tez-cubuk { height: 8px; overflow: hidden; border-radius: var(--r-pill); background: var(--surface-2); }
+.tez-cubuk i { display: block; width: var(--w, 0%); height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--brand-500), var(--accent-bright)); transform-origin: left; animation: gb-dol .9s var(--ease-spring) both; }
+@keyframes gb-dol { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.tez-tempo { margin: -6px 0 0; color: var(--ink-soft); font-size: var(--fs-sm); }
+
+.gb-ritim-ozet { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.gb-ritim-ozet dt { color: var(--muted); font-size: var(--fs-micro); }
+.gb-ritim-ozet dd { margin: 0; color: var(--ink); font-size: var(--fs-lg); font-weight: 650; font-variant-numeric: tabular-nums; }
+.gb-ritim-ozet dd[data-tone="success"] { color: var(--success); }
+.gb-ritim-ozet dd[data-tone="danger"] { color: var(--danger); }
+.gb-ritim { height: 72px; gap: 4px; }
+.gb-cubuk.is-eksi .gb-cubuk-dolgu { background: color-mix(in srgb, var(--danger) 55%, var(--surface)); }
+
+/* Bölüm satırında sözcük sayısı ya da "yok" rozeti sağda */
+.gb-sayi { flex: none; color: var(--ink-soft); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+
+.diger-calismalar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-sm); }
+
+@media (max-width: 900px) {
+  .tez-olcumler { grid-template-columns: minmax(0, 1fr); }
+  .tez-olcu { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+  .tez-olcu dt { flex-basis: 100%; }
+  .tez-olcu dd { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .tez-cubuk i { animation: none; } }
+
+/* Danışmanıma gönder (bireysel abone): bağlantı, gönderme düğmeleri, dosyalar */
+.danisman-gonder { display: flex; flex-direction: column; gap: 8px; }
+.danisman-gonder > .projects-primary-button { align-self: flex-start; }
+.danisman-baglanti {
+  display: flex; align-items: center; gap: 6px; margin: 0; padding: 8px 10px;
+  overflow: hidden; border-radius: var(--r-sm); background: var(--surface-2);
+  color: var(--ink-soft); font-family: var(--font-mono); font-size: var(--fs-sm);
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.danisman-baglanti svg { flex: none; color: var(--accent); }
+.danisman-dugmeler { display: flex; flex-wrap: wrap; gap: 6px; }
+.danisman-dosyalar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line-soft); }
+.danisman-not { margin: 0; color: var(--muted); font-size: var(--fs-micro); line-height: var(--lh-metin); }

@@ -209,11 +209,14 @@ describe("fonksiyon yetkileri", () => {
         auth.uid() süzgeci: yalnızca çağıranın KENDİ hareketini gün ve tür
         başına sayı olarak döndürür (ana sayfa grafiği). Parametresi yalnızca
         pencerenin uzunluğu (1–60 güne kırpılıyor).
+      yazim_ritmi              — security INVOKER: çalışma kimliği alıyor ama
+        sürüm tablosunun RLS'i geçerli; görülemeyen çalışmada satır dönmez.
+        Yalnızca gün başına kelime sayısı döndürür, metin döndürmez.
   */
-  test("authenticated ek olarak yalnızca kendi kapsamındaki altı fonksiyon", async () => {
+  test("authenticated ek olarak yalnızca kendi kapsamındaki yedi fonksiyon", async () => {
     assert.deepEqual(await acik("authenticated"),
       [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "ai_kredi_durumum", "olcum_ozeti",
-       "asistan_model_ozetleri", "calisma_hareketlerim"].sort());
+       "asistan_model_ozetleri", "calisma_hareketlerim", "yazim_ritmi"].sort());
   });
 
   test("notify anonim ve oturumlu kullanıcıya kapalı (sahte bildirim)", () =>
