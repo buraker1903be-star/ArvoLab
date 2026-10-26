@@ -446,3 +446,12 @@
 .kaynakca-puan[data-tone="success"] { --tone-fg: var(--success); }
 .kaynakca-puan[data-tone="warning"] { --tone-fg: var(--warning); }
 .kaynakca-puan[data-tone="danger"] { --tone-fg: var(--danger); }
+/* Analiz Merkezi sayfası: solda analiz (geniş), sağda teze eklenecekler;
+   iki kart da kendi içinde kayar, sayfa kaymaz (gb-tek-ekran). */
+.analiz-ikili { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+@media (max-width: 900px) { .analiz-ikili { grid-template-columns: minmax(0, 1fr); } }
+.analiz-sayfa-kart { overflow-y: auto; scrollbar-width: thin; }
+@media (min-width: 901px) and (min-height: 640px) {
+  .gb-tek-ekran > .analiz-ikili { flex: 1 1 auto; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+  .gb-tek-ekran .analiz-sayfa-kart { overflow-y: auto; }
+}

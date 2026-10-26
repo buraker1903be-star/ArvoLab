@@ -8,7 +8,7 @@ import BosDurum from "../_components/bos-durum";
 import LiteraturPenceresi from "./literatur-penceresi";
 import LiteraturAsistani from "./literatur-asistani";
 import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
-import CalismaSecici from "./calisma-secici";
+import CalismaSecici from "../_components/calisma-secici";
 
 /* Kaynak PDF'lerini bulan sunucu işlemi kaynakça penceresinden çağrılıyor
    ve dış arşivlerden indiriyor (app/actions/kaynak-pdf.ts, bütçe 40 sn). */
@@ -94,7 +94,7 @@ export default async function KaynaklarPage({
               : "Çalışmalarınızın literatürü ve kaynakçası tek yerde."}
           </p>
         </div>
-        {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} /> : null}
+        {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/literature" /> : null}
       </section>
 
       {calismaOkunamadi || kaynakOkunamadi ? (

@@ -1410,6 +1410,23 @@ export default function DataAnalyzer({
             </button>
           </div>
 
+          {/*
+            Pencerede kapsamlı rapor tek düğme: bütün değişkenlerin betimsel
+            istatistiği, frekansları ve korelasyon matrisi. Eskiden pencerede
+            hiç yoktu; sayfa da pencereye geçince özellik kaybolacaktı.
+          */}
+          {pencere ? (
+            <details className="analiz-betik mb-md">
+              <summary>
+                <FileBarChart size={14} className="inline-icon" aria-hidden="true" />
+                Bütün değişkenlerin özet raporu (betimsel, frekans, korelasyon)
+              </summary>
+              <button type="button" className="projects-filter-button button-compact mt-sm" onClick={handleGenerateFullReport}>
+                Raporu oluştur
+              </button>
+              {fullReport ? <div className="results-divider text-base">{fullReport}</div> : null}
+            </details>
+          ) : null}
           {pencere ? null : (
           <div className="sub-card mb-lg">
             <div className="project-form-heading">

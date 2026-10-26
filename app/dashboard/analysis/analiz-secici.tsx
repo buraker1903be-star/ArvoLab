@@ -24,23 +24,29 @@ export default function AnalizSecici({
   calisma,
   asistanAcik,
   analizler,
+  sayfa = false,
 }: {
   projectId: string;
   calisma: { id: string; title: string; sayiBicimi?: BicimKarari };
   asistanAcik: boolean;
   analizler: CalismaAnalizi[];
+  /*
+    Analiz Merkezi sayfasında: aynı iki kart, pencere yerine sayfanın
+    kaymayan tek ekranında (gb-tek-ekran); uzun içerik kartın içinde kayar.
+  */
+  sayfa?: boolean;
 }) {
   const sirada = analizler.filter((a) => a.teze_eklenecek && !a.teze_eklendi);
   const eklenen = analizler.filter((a) => a.teze_eklendi);
   const digerleri = analizler.filter((a) => !a.teze_eklenecek && !a.teze_eklendi);
 
   return (
-    <div className="pencere-iki-kart">
-      <section className="pencere-kart">
+    <div className={sayfa ? "gb-sutunlar analiz-ikili" : "pencere-iki-kart"}>
+      <section className={sayfa ? "gb-kart gb-sutun analiz-sayfa-kart" : "pencere-kart"}>
         <DataAnalyzer calismalar={[calisma]} secilenCalisma={projectId} pencere={{ asistanAcik }} />
       </section>
 
-      <section className="pencere-kart pencere-sonuc" aria-live="polite">
+      <section className={sayfa ? "gb-kart gb-sutun analiz-sayfa-kart" : "pencere-kart pencere-sonuc"} aria-live="polite">
         <h3 className="pencere-kart-baslik">{sirada.length ? `Teze eklenecekler · ${sirada.length}` : "Teze eklenecekler"}</h3>
         {sirada.length ? (
           <ul className="secim-listesi">
