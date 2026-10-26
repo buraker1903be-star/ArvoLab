@@ -145,12 +145,12 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
     ]);
   });
 
-  test("literatür ve kaynakça tek uygulamanın iki bölümü", () => {
+  test("literatür ve kaynakça tek uygulama, tek sayfa: bölüm (sekme) yok", () => {
     assert.equal(etkinUygulama(uygulamalar, "/dashboard/literature")?.key, "kaynaklar");
     assert.equal(etkinUygulama(uygulamalar, "/dashboard/citations")?.key, "kaynaklar");
     const kaynaklar = uygulamalar.find((u) => u.key === "kaynaklar")!;
-    assert.equal(etkinBolum(kaynaklar.bolumler!, "/dashboard/citations")?.key, "kaynakca");
-    assert.equal(etkinBolum(kaynaklar.bolumler!, "/dashboard/literature")?.key, "literatur");
+    // Bölüm listesi dock'ta sekme şeridi çiziyordu; iki kart tek sayfada.
+    assert.equal(kaynaklar.bolumler, undefined);
   });
 
   test("kılavuz kataloğu ve doçentlik başlatıcıda ve Ctrl+K'da bulunuyor", () => {

@@ -22,9 +22,14 @@ import { trTarihSaat } from "@/lib/tr-time";
 export default async function KaynakcaPenceresi({
   calisma,
   sonDenetim,
+  triggerLabel,
+  triggerClassName = "projects-filter-button button-compact",
 }: {
   calisma: { id: string; title: string; university: string | null; citation_style: string };
   sonDenetim: { skor: number | null; tarih: string } | null;
+  /** Kaynaklar sayfasında düğme eylemi söylüyor ("Kaynakçamı denetle"). */
+  triggerLabel?: string;
+  triggerClassName?: string;
 }) {
   const [asistanAcik, onceki, gecmis, pdfler] = await Promise.all([
     kaynakcaAsistaniAcik(),
@@ -36,9 +41,9 @@ export default async function KaynakcaPenceresi({
 
   return (
     <PanelDrawer
-      triggerLabel={sonDenetim?.skor != null ? `Kaynakça · ${sonDenetim.skor}` : "Kaynakça"}
+      triggerLabel={triggerLabel ?? (sonDenetim?.skor != null ? `Kaynakça · ${sonDenetim.skor}` : "Kaynakça")}
       triggerIcon={<Quote size={15} aria-hidden="true" />}
-      triggerClassName="projects-filter-button button-compact"
+      triggerClassName={triggerClassName}
       kicker="Kaynakça ve atıf doğrulama"
       title="Kaynakçanızı denetleyin"
       description="Künyelerin biçimi, metindeki atıflarla eşleşmesi ve kaynakların gerçekten var olup olmadığı (Crossref, OpenAlex) birlikte kontrol edilir."

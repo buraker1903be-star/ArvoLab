@@ -55,7 +55,18 @@ const GERI: Record<Durum, { durum: Durum; etiket: string } | null> = {
   used: { durum: "read", etiket: "Kullanmadım, geri al" },
 };
 
-export default async function LiteraturPenceresi({ projectId, projeAdi }: { projectId: string; projeAdi: string }) {
+export default async function LiteraturPenceresi({
+  projectId,
+  projeAdi,
+  triggerLabel,
+  triggerClassName = "projects-filter-button button-compact",
+}: {
+  projectId: string;
+  projeAdi: string;
+  /** Kaynaklar sayfasında düğme "Kaynak bul" diyor; kartta sayıyı taşıyor. */
+  triggerLabel?: string;
+  triggerClassName?: string;
+}) {
   const { satirlar, okunamadi } = await getLiteratureSources();
   const kaynaklar = satirlar
     .filter((kaynak) => kaynak.project_id === projectId)
@@ -64,9 +75,9 @@ export default async function LiteraturPenceresi({ projectId, projeAdi }: { proj
 
   return (
     <PanelDrawer
-      triggerLabel={kaynaklar.length ? `Literatür · ${kaynaklar.length}` : "Literatür"}
+      triggerLabel={triggerLabel ?? (kaynaklar.length ? `Literatür · ${kaynaklar.length}` : "Literatür")}
       triggerIcon={<BookOpenCheck size={15} aria-hidden="true" />}
-      triggerClassName="projects-filter-button button-compact"
+      triggerClassName={triggerClassName}
       kicker="Literatür"
       title="Bu çalışmanın kaynakları"
       description={

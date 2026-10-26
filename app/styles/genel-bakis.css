@@ -434,3 +434,15 @@
 /* İkinci adım, çalışma oluşturulana kadar sönük: önce soldaki doldurulur. */
 .pencere-kart[data-pasif="true"] { opacity: .7; }
 @media (max-width: 560px) { .pencere-kart .project-form-grid { grid-template-columns: minmax(0, 1fr); } }
+/* Kaynaklar sayfası: solda literatür, sağda kaynakça — iki eşit kart */
+.kaynaklar-ikili { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 900px) { .kaynaklar-ikili { grid-template-columns: minmax(0, 1fr); } }
+.kaynaklar-ikili .gb-kart-bas { flex-wrap: wrap; }
+.kaynaklar-secici { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.kaynaklar-secici select { max-width: 320px; }
+.kaynakca-puan { display: flex; align-items: baseline; gap: 6px; padding: 10px 14px; border-radius: var(--r-lg); background: var(--surface-2); }
+.kaynakca-puan b { color: var(--tone-fg, var(--ink)); font-size: 28px; font-weight: 700; line-height: 1; }
+.kaynakca-puan span { color: var(--muted); font-size: var(--fs-sm); }
+.kaynakca-puan[data-tone="success"] { --tone-fg: var(--success); }
+.kaynakca-puan[data-tone="warning"] { --tone-fg: var(--warning); }
+.kaynakca-puan[data-tone="danger"] { --tone-fg: var(--danger); }

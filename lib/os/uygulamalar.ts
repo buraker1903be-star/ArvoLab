@@ -87,10 +87,11 @@ export function labUygulamalari(): OsUygulama[] {
       href: "/dashboard/literature",
       ikon: "literatur",
       yollar: ["/dashboard/literature", "/dashboard/citations"],
-      bolumler: [
-        { key: "literatur", href: "/dashboard/literature", label: "Literatür" },
-        { key: "kaynakca", href: "/dashboard/citations", label: "Kaynakça doğrulama" },
-      ],
+      /*
+        Bölüm YOK: literatür ve kaynakça aynı sayfanın iki kartı. Eskiden
+        iki bölümdü ve dock'tan girince üstte iki sekme çıkıyordu; kurum
+        sahibi "iki sekme çıkmasın, tek sayfa" dedi.
+      */
     },
     { key: "analiz", label: "Analiz Merkezi", kisa: "Analiz", href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"] },
     { key: "belge", label: "Belge Kontrol", kisa: "Belge", href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"] },
