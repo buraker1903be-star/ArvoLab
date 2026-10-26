@@ -480,4 +480,4 @@
 html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--r-md); background: var(--n-0); }
 .partner-serit p { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
 .partner-alt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.partner-alt small { color: var(--muted); font-size: var(--fs-micro); }
+.partner-serit .partner-not { padding-top: 8px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: var(--fs-micro); }

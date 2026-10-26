@@ -11,9 +11,9 @@ import { ExternalLink } from "lucide-react";
   karıştırılırsa öğrenci ücretli bir hizmeti ürünün parçası sanar.
 
   Tanıtım cümlesi sitenin kendi sözlerinden (akademikmerkez.com: ana
-  sayfa ve etik ilkeler): danışmanlık esaslı, kişi adına tez yazmıyor.
-  ArvoLab'ın "asistan denetler, yazmaz" ilkesiyle aynı çizgi; aksini
-  vaat eden bir partner metni burada durmamalı.
+  sayfa ve etik ilkeler): "danışmanlık esaslı hizmet modeli". İlk
+  sürümde "çalışmanızı sizin yerinize yazmaz" yazıyordu; kurum sahibi
+  olumsuz cümle yerine hizmet modelinin adını istedi.
 
   Bağlantı yeni sekmede, rel="sponsored": arama motorlarına ücretli
   bağlantı olarak bildirilir. utm etiketi partnerin, gelen ziyaretin
@@ -35,15 +35,22 @@ export default function PartnerSeridi() {
       </a>
       <p>
         Tez, makale ve doçentlik süreçlerinde yöntem, istatistik ve analiz (SPSS, Python, MAXQDA), literatür, dil ve
-        biçim danışmanlığı. Çalışmanızı sizin yerinize yazmaz; her adımı gerekçesiyle açıklayarak kendi çalışmanızı
-        tamamlamanıza destek olur.
+        biçim danışmanlığı. Danışmanlık esaslı çalışır: her adım gerekçesiyle açıklanır ve sizinle birlikte yürütülür.
       </p>
       <div className="partner-alt">
         <a href={ADRES} target="_blank" rel="sponsored noopener noreferrer" className="projects-filter-button button-compact">
           Akademik Merkez&apos;i ziyaret et <ExternalLink size={14} aria-hidden="true" />
         </a>
-        <small>ArvoLab&apos;dan bağımsız, ücretli bir danışmanlık hizmetidir.</small>
       </div>
+      {/*
+        Fiyat ve sorumluluk notu (kurum sahibinin isteği): öğrenci partnerin
+        ücretini aboneliğinin parçası sanmamalı, bir sorun yaşarsa kime
+        başvuracağını bilmeli. Kısa ve kesin: dahil değil, sorumlu partner.
+      */}
+      <p className="partner-not">
+        Akademik Merkez&apos;in danışmanlık hizmetleri ArvoLab aboneliğine dahil değildir. Fiyatlandırma, hizmetin kapsamı
+        ve yürütülmesi tamamen Akademik Merkez&apos;in sorumluluğundadır; ArvoLab bu hizmetin satıcısı ya da tarafı değildir.
+      </p>
     </aside>
   );
 }
