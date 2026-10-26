@@ -205,11 +205,15 @@ describe("fonksiyon yetkileri", () => {
         için kapıyı kendi içinde tutuyor ve iç ekip dışındakine 42501
         fırlatıyor (aşağıdaki ölçüm testi bunu sabitler). authenticated'a
         açık olması şart: sayfa kullanıcının kendi oturumuyla çağırıyor.
+      calisma_hareketlerim     — security INVOKER ve her kaynakta açıkça
+        auth.uid() süzgeci: yalnızca çağıranın KENDİ hareketini gün ve tür
+        başına sayı olarak döndürür (ana sayfa grafiği). Parametresi yalnızca
+        pencerenin uzunluğu (1–60 güne kırpılıyor).
   */
-  test("authenticated ek olarak yalnızca kendi kapsamındaki beş fonksiyon", async () => {
+  test("authenticated ek olarak yalnızca kendi kapsamındaki altı fonksiyon", async () => {
     assert.deepEqual(await acik("authenticated"),
       [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "ai_kredi_durumum", "olcum_ozeti",
-       "asistan_model_ozetleri"].sort());
+       "asistan_model_ozetleri", "calisma_hareketlerim"].sort());
   });
 
   test("notify anonim ve oturumlu kullanıcıya kapalı (sahte bildirim)", () =>

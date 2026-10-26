@@ -1,24 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  BookOpenCheck,
-  CalendarClock,
-  Check,
-  Circle,
-  ChartNoAxesCombined,
-  Clock3,
-  FileCheck2,
-  FileText,
-  FolderKanban,
-  LayoutDashboard,
-  MessageSquare,
-  PenLine,
-  Plus,
-  Quote,
-  ShieldCheck,
-  ClipboardCheck,
-  TriangleAlert,
-} from "lucide-react";
+import { PenLine, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
@@ -37,43 +19,10 @@ import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
-import { writingPace } from "@/lib/writing-pace";
+import { hareketSerisi, ilkAd, selamlama, simdi } from "@/lib/genel-bakis";
+import { trTarih } from "@/lib/tr-time";
+import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, SeriKarti } from "./_components/genel-bakis";
 
-const workstreams = [
-  {
-    title: "Belge Editörü",
-    description: "Tez, makale ve proje çalışmalarınızı panelde oluşturun ve yazın.",
-    icon: PenLine,
-    href: "/dashboard/editor",
-  },
-  {
-    title: "Literatür Taraması",
-    description: "Bulduğunuz kaynakları kaydedin, okuma durumunu izleyin.",
-    icon: BookOpenCheck,
-    href: "/dashboard/literature",
-  },
-  {
-    title: "Kaynakça Doğrulama",
-    description: "Kaynakça listenizi yapıştırın; APA 7, MLA, Chicago, IEEE ve Vancouver kurallarına göre denetlensin.",
-    icon: Quote,
-    href: "/dashboard/citations",
-  },
-  {
-    title: "Belge Kontrol",
-    description: "Tam belgenizi yükleyin; kılavuz uyumu ve orijinallik ön-kontrolü çalıştırın.",
-    icon: FileCheck2,
-    href: "/dashboard/documents",
-  },
-  {
-    title: "Analiz Merkezi",
-    description: "SPSS çıktısını kılavuzunuzun sayı biçimine çevirin, MAXQDA kod kitabınızı kontrol edin.",
-    icon: ChartNoAxesCombined,
-    href: "/dashboard/analysis",
-  },
-];
-
-const UPCOMING_WINDOW_DAYS = 30;
-const UPCOMING_LIMIT = 5;
 const isActive = (status: string) => status !== "delivered" && status !== "archived";
 
 export default async function DashboardPage() {
@@ -120,7 +69,6 @@ export default async function DashboardPage() {
       .sort((a, b) => writing.get(b.id)!.updatedAt.localeCompare(writing.get(a.id)!.updatedAt))[0] ?? activeProjects[0];
   const resumeStats = resume ? writing.get(resume.id) : undefined;
   const resumeDue = resume ? dueInfo(resume.due_date, resume.status) : null;
-  const resumeComments = resume ? openComments.get(resume.id) ?? 0 : 0;
   /*
     Yazım temposu ve teslim hazırlığı (editördekiyle aynı hesap).
 
@@ -133,21 +81,6 @@ export default async function DashboardPage() {
   const resumeGuideline = resume
     ? (await calismaKilavuzu(supabase, resume.id, resume.guideline_id)) ?? undefined
     : undefined;
-  const resumePace =
-    resume && resumeGuideline
-      ? writingPace({
-          words: resumeStats?.words ?? 0,
-          minPages: resumeGuideline.minPages,
-          maxPages: resumeGuideline.maxPages,
-          dueDate: resume.due_date,
-          status: resume.status,
-          settings: {
-            fontSizePt: resumeGuideline.settings.fontSizePt,
-            lineSpacing: resumeGuideline.settings.lineSpacing,
-            margins: resumeGuideline.settings.margins,
-          },
-        })
-      : null;
   // Teslim hazırlığı: editördeki "Teslim kontrolü" ile aynı hesap, kaydedilmiş metinden (yalnızca bu çalışma)
   const { data: resumeManuscript } =
     resume && resumeStats
@@ -264,13 +197,6 @@ export default async function DashboardPage() {
      liste "başka ne var"ı gösteriyor. */
   const readinessGaps = readinessGapsSirali.filter((madde) => madde.id !== sirada?.kaynakMadde);
 
-  const upcoming = activeProjects
-    .map((project) => ({ project, due: dueInfo(project.due_date, project.status) }))
-    .filter((item): item is { project: (typeof activeProjects)[number]; due: NonNullable<ReturnType<typeof dueInfo>> } =>
-      Boolean(item.due && item.due.days <= UPCOMING_WINDOW_DAYS)
-    )
-    .sort((a, b) => a.due.days - b.due.days)
-    .slice(0, UPCOMING_LIMIT);
 
   const isStaff = profile?.role ? STAFF_ROLES.includes(profile.role) : false;
   // Personel için "dikkat isteyenler" (öğrencinin ana sayfası değişmez); sorumlu ataması yalnızca denetim rollerinde
@@ -283,381 +209,283 @@ export default async function DashboardPage() {
     personel: isStaff,
   });
 
-  const revisionCount = projects.filter((p) => p.status === "revision").length;
-  const analysisCount = projects.filter((p) => p.status === "analysis").length;
-  const referenceCount = projects.filter((p) => p.status === "review" || p.status === "turnitin").length;
-
-  const teslimEdilen = projects.filter((p) => p.status === "delivered").length;
-  const yaklasan = upcoming.length;
   /*
-    Özet kartları: sayının yanında bir alt satır ve duruma göre ton. Kartlar
-    aynı görünüp yalnızca sayı değiştiği için ekran ölüydü; sayının anlamı
-    (yaklaşan teslim var mı, revizyon bekliyor mu) görünmüyordu.
+    Çalışma hareketi (grafik) ve son yorumlar. Sayım veritabanında
+    (public.calisma_hareketlerim): satırları çekip burada saymak, satır
+    tavanına çarpılan gün grafiği sessizce eksiltirdi. Okunamazsa sayfa
+    düşmüyor; uyarı satırı neyin eksik olduğunu söylüyor.
   */
-  const stats: { label: string; value: number; icon: typeof FolderKanban; tone: string; note: string }[] = [
-    {
-      label: "Aktif çalışmalar", value: activeProjects.length, icon: FolderKanban,
-      tone: activeProjects.length ? "info" : "neutral",
-      note: yaklasan ? `${yaklasan} tanesinin teslimi yaklaştı` : teslimEdilen ? `${teslimEdilen} çalışma teslim edildi` : "teslim tarihi yaklaşan yok",
-    },
-    {
-      label: "Revizyon bekleyen", value: revisionCount, icon: Clock3,
-      tone: revisionCount ? "warning" : "success",
-      note: revisionCount ? "düzeltme bekliyor" : "revizyon bekleyen yok",
-    },
-    {
-      label: "Kaynak/biçim incelemesinde", value: referenceCount, icon: BookOpenCheck,
-      tone: referenceCount ? "info" : "neutral",
-      note: referenceCount ? "kontrol sürüyor" : "incelemede çalışma yok",
-    },
-    {
-      label: "Analiz süreci", value: analysisCount, icon: ChartNoAxesCombined,
-      tone: analysisCount ? "info" : "neutral",
-      note: analysisCount ? "veri analizi aşamasında" : "analizde çalışma yok",
-    },
-  ];
+  const [hareketYaniti, yorumYaniti] = await Promise.all([
+    supabase.rpc("calisma_hareketlerim", { p_gun: 14 }),
+    activeProjects.length
+      ? supabase
+          .from("manuscript_comments")
+          .select("id, project_id, body, created_at, author_id, yazar:profiles!manuscript_comments_author_id_fkey(full_name)")
+          .in("project_id", activeProjects.map((p) => p.id))
+          .is("resolved_at", null)
+          .neq("author_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(GENEL_BAKIS_SATIR)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (hareketYaniti.error) console.error("[ana sayfa] hareketler okunamadı:", hareketYaniti.error.message);
+  if (yorumYaniti.error) console.error("[ana sayfa] yorumlar okunamadı:", yorumYaniti.error.message);
+  const simdiAn = simdi();
+  const seri = hareketSerisi((hareketYaniti.data ?? []) as { gun: string; tur: string; adet: number }[], simdiAn);
+  const okunamayanlar = [
+    projelerOkunamadi ? "çalışmalar" : "",
+    hareketYaniti.error ? "çalışma hareketi" : "",
+    yorumYaniti.error ? "yorumlar" : "",
+  ].filter(Boolean);
+
+  const calismaAdi = new Map(projects.map((p) => [p.id, p.title]));
+  const yorumlar = (yorumYaniti.data ?? []) as unknown as {
+    id: string;
+    project_id: string;
+    body: string;
+    created_at: string;
+    yazar: { full_name: string | null } | null;
+  }[];
+
+  /* Son düzenlenen önce; hiç yazılmamış çalışmalar sonda. */
+  const calismalarim = [...activeProjects]
+    .sort((a, b) => (writing.get(b.id)?.updatedAt ?? "").localeCompare(writing.get(a.id)?.updatedAt ?? ""))
+    .slice(0, GENEL_BAKIS_SATIR);
+
+  const teslimler = activeProjects
+    .map((project) => ({ project, due: dueInfo(project.due_date, project.status) }))
+    .filter((item): item is { project: (typeof activeProjects)[number]; due: NonNullable<ReturnType<typeof dueInfo>> } => Boolean(item.due))
+    .sort((a, b) => a.due.days - b.due.days)
+    .slice(0, GENEL_BAKIS_SATIR);
+
+  /* Öğrencinin dördüncü kartı: önce "şimdi" (lib/siradaki-is), sonra teslim eksikleri. */
+  const siradakiler = [
+    ...(sirada && !sirada.bitti ? [{ anahtar: "sirada", baslik: sirada.baslik, alt: sirada.aciklama, href: sirada.href }] : []),
+    ...readinessGaps.map((madde) => ({
+      anahtar: madde.id,
+      baslik: madde.label,
+      alt: madde.detail ?? "",
+      href: `/dashboard/editor/${resume?.id}/write?teslim=${madde.id}`
+    })),
+    /* Metin ile literatür listesi arasındaki tutarsızlık: ayrıntısı çalışma merkezinde. */
+    ...resumeTutarsizliklari.map((sorun) => ({
+      anahtar: `tutarsizlik-${sorun.tur}`,
+      baslik: sorun.baslik,
+      alt: sorun.aciklama,
+      href: `/dashboard/editor/${resume?.id}`
+    })),
+  ].slice(0, GENEL_BAKIS_SATIR);
+
+  const ad = ilkAd(displayName);
 
   return (
-    <main className="dashboard-page">
-      <section className="dashboard-hero">
+    <main className="dashboard-page gb">
+      {/*
+        ANA SAYFA ArvoOS'UN GENEL BAKIŞ DÜZENİNDE (26.10.2026, kurum
+        sahibinin isteği: "ArvoOS gibi, bir ürün gibi").
+
+        Eskiden dört sayı kartı, "kaldığınız yer" kartı, birim şeridi,
+        yan sütun ve kısayol şeridi alt alta diziliyordu; kısayollar
+        dock'un kopyasıydı ve kaldırılmış modülleri bile gösteriyordu.
+        Şimdi: selamlama · son 14 günün çalışma hareketi · dört liste
+        (çalışmalarım, teslimler, yorumlar, sıradakiler). Her kart en
+        fazla altı satır ve kendi sayfasına bağlantı; tek ekrana sığar.
+      */}
+      <header className="gb-selam">
         <div>
-          <span className="dashboard-kicker">ArvoLab çalışma alanı</span>
-          <h1>{displayName ? `Hoş geldiniz, ${displayName}` : "Hoş geldiniz"}</h1>
+          <h1>{ad ? `${selamlama(simdiAn)}, ${ad}` : selamlama(simdiAn)}</h1>
           <p>
             {yeniKullanici
               ? "Çalışma alanınız hazır. İlk çalışmanızı oluşturduğunuzda kılavuzunuz, kaynaklarınız ve denetimleriniz burada toplanır."
-              : "Kaldığınız yerden devam edin; teslim tarihleriniz ve gelen yorumlar burada."}
+              : resume
+                ? `Kaldığınız yer: ${resume.title}${resumeStats ? ` · ${resumeStats.words.toLocaleString("tr-TR")} kelime, ${editedAgo(resumeStats.updatedAt)} düzenlendi` : ""}`
+                : "Çalışmalarınız, teslim tarihleriniz ve gelen yorumlar burada."}
           </p>
         </div>
-        <div className="dashboard-security">
-          <ShieldCheck size={16} aria-hidden="true" />
-          <span>Güvenli oturum aktif</span>
+        <div className="gb-selam-eylemler">
+          {resume ? (
+            <Link href={`/dashboard/editor/${resume.id}/write`} className="projects-primary-button">
+              <PenLine size={16} aria-hidden="true" />
+              {resumeStats ? "Yazmaya devam et" : "Yazmaya başla"}
+            </Link>
+          ) : null}
+          <Link href="/dashboard/editor/new" className={resume ? "projects-filter-button" : "projects-primary-button"}>
+            <Plus size={16} aria-hidden="true" />
+            Yeni çalışma
+          </Link>
         </div>
-      </section>
+      </header>
+
+      {okunamayanlar.length ? (
+        <p className="alert" role="alert">
+          {okunamayanlar.join(", ")} okunamadı; aşağıdaki listeler eksik olabilir. Kayıtlarınız yerinde duruyor — sayfayı yenileyin.
+        </p>
+      ) : null}
 
       <LicenseCard access={access} />
 
       {geriBildirim.sorulsun ? <GeriBildirimKarti baglam={geriBildirim.baglam} /> : null}
 
-      {/*
-        SAYI KARTLARI YALNIZCA PERSONELDE. "Aktif çalışmalar 1, revizyon
-        bekleyen 1, incelemede 0, analizde 0" bir yöneticinin görünümü;
-        tek tezi olan öğrenciye neredeyse hiçbir şey söylemiyor ama
-        ekranın en değerli yerini kaplıyordu. Öğrencide o alanı tezin
-        birim ilerlemesi alıyor (aşağıda).
-      */}
-      {yeniKullanici || !isStaff ? null : (
-      <section className="dashboard-stats" aria-label="Günlük özet">
-        {stats.map(({ label, value, icon: Icon, tone, note }) => (
-          <article className="dashboard-stat-card" data-tone={tone} key={label}>
-            <div className="dashboard-stat-icon" aria-hidden="true">
-              <Icon size={20} strokeWidth={1.8} />
-            </div>
+      {yeniKullanici ? (
+        <article className="gb-kart gb-baslangic">
+          <header className="gb-kart-bas">
             <div>
-              <strong>{value}</strong>
-              <span>{label}</span>
-              <em>{note}</em>
+              <h2>Üç adımda başlayın</h2>
+              <p>Üniversitenizi seçin; tez yazım kılavuzunuz editöre kendiliğinden uygulanır.</p>
             </div>
-          </article>
-        ))}
-      </section>
-      )}
-
-      {/*
-        Sıradaki iş, birim şeridinin ÜSTÜNDE: şerit "neredesin"i,
-        bu satır "şimdi ne"yi söylüyor ve ikincisi önce okunmalı.
-      */}
-      {!isStaff && sirada ? (
-        <section className="sirada" data-aciliyet={sirada.aciliyet} data-bitti={sirada.bitti ? "true" : undefined}>
-          <span className="sirada-etiket">{sirada.bitti ? "Durum" : "Şimdi"}</span>
-          <div className="sirada-govde">
-            <b>{sirada.baslik}</b>
-            <span>{sirada.aciklama}</span>
-          </div>
-          {resumeDue && !sirada.bitti ? (
-            <span className="chip" data-tone={resumeDue.tone}>
-              {resumeDue.label}
-            </span>
-          ) : null}
-          <Link href={sirada.href} className="projects-primary-button">
-            {sirada.eylem}
+          </header>
+          {/*
+            Adımlar BAĞLANTI DEĞİL, bilerek. Hiç çalışması olmayan birini
+            literatür ya da denetim ekranına göndermek, onu bir boş ekrana
+            daha götürmek olurdu; tek yol ileri gidiyor.
+          */}
+          <ol className="baslangic-adimlari">
+            <li>
+              <strong>Çalışmanızı açın.</strong> Üniversite ve bölümünüzü seçtiğinizde kurumunuzun onaylı tez
+              kılavuzu çalışmaya bağlanır; biçim kuralları editörde kendiliğinden uygulanır.
+            </li>
+            <li>
+              <strong>Kaynaklarınızı toplayın.</strong> DOI yapıştırın, künye Crossref ve OpenAlex kayıtlarından
+              dolsun. Atıf stiliniz kılavuzdan gelir; elle seçmeniz gerekmez.
+            </li>
+            <li>
+              <strong>Yazın ve denetleyin.</strong> Metin içi atıflarınız kaynakçanızla karşılaştırılır, iddialarınız
+              kanıt matrisinde kaynaklarına bağlanır ve teslim kontrol listesi aynı ekranda durur.
+            </li>
+          </ol>
+          <Link href="/dashboard/editor/new" className="projects-primary-button">
+            <Plus size={16} aria-hidden="true" />
+            İlk çalışmayı oluştur
           </Link>
-        </section>
-      ) : null}
+        </article>
+      ) : (
+        <>
+          <SeriKarti
+            baslik="Çalışma hareketiniz"
+            alt="Son 14 gün"
+            seri={seri}
+            adet="hareket"
+            ozet={[
+              { ad: "Kayıtlı sürüm", deger: seri.turler.surum },
+              { ad: "Eklenen kaynak", deger: seri.turler.kaynak },
+              { ad: "Denetim", deger: seri.turler.denetim },
+              { ad: "Asistan", deger: seri.turler.asistan },
+              { ad: "Kanıt", deger: seri.turler.kanit },
+            ]}
+            bos="Son 14 günde kayıtlı hareket yok. Yazdıkça, kaynak ekledikçe ve denetim çalıştırdıkça burada görünür."
+          />
 
-      {!isStaff && resumeAdimlar.length > 0 ? (
-        <section className="birim-serit" aria-label="Çalışmanın birimleri">
-          {resumeAdimlar.map((adim) => (
-            <Link key={adim.anahtar} href={adim.href} className="birim-karo" data-tamam={adim.tamam}>
-              <span className="birim-karo-durum" aria-hidden="true">
-                {adim.tamam ? <Check size={14} /> : <Circle size={14} />}
-              </span>
-              <b>{adim.baslik}</b>
-              <span>{adim.aciklama}</span>
-            </Link>
-          ))}
-        </section>
-      ) : null}
+          <ListeIzgarasi etiket="Güncel işler">
+            <ListeKarti
+              baslik="Çalışmalarım"
+              alt={`Aktif ${activeProjects.length} çalışma`}
+              bos="Aktif çalışma yok."
+              sayi={calismalarim.length}
+              href="/dashboard/editor"
+              hrefEtiket="Tüm çalışmalar"
+            >
+              {calismalarim.map((p) => {
+                const yazim = writing.get(p.id);
+                return (
+                  <ListeSatiri
+                    key={p.id}
+                    href={`/dashboard/editor/${p.id}`}
+                    baslik={p.title}
+                    alt={`${projectTypeLabel(p.project_type)} · ${yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime, ${editedAgo(yazim.updatedAt)}` : "yazılmadı"}`}
+                    sag={
+                      <span className="status-pill" data-tone={statusTone(p.status)}>
+                        {statusLabel(p.status)}
+                      </span>
+                    }
+                  />
+                );
+              })}
+            </ListeKarti>
 
-      <section className={yeniKullanici ? "dashboard-focus tek-sutun" : "dashboard-focus"} aria-label="Bugün">
-        {resume ? (
-          <article className="resume-card">
-            <span className="dashboard-kicker">Kaldığınız yerden devam edin</span>
-            <div className="resume-heading">
-              <span className="status-pill" data-tone={statusTone(resume.status)}>
-                {statusLabel(resume.status)}
-              </span>
-              <h2>{resume.title}</h2>
-              <p>
-                {projectTypeLabel(resume.project_type)}
-                {resume.university ? ` · ${resume.university}` : ""}
-              </p>
-            </div>
-            <div className="resume-meta">
-              <span>
-                <FileText size={15} aria-hidden="true" />
-                {resumeStats
-                  ? `${resumeStats.words.toLocaleString("tr-TR")} kelime · ${editedAgo(resumeStats.updatedAt)} düzenlendi`
-                  : "Henüz yazmaya başlanmadı"}
-              </span>
-              {resumeDue ? (
-                <span className="chip" data-tone={resumeDue.tone}>
-                  <CalendarClock size={13} aria-hidden="true" />
-                  {resumeDue.label}
-                </span>
-              ) : null}
-              {resumeComments ? (
-                <span className="tone-text" data-tone="warning">
-                  <MessageSquare size={15} aria-hidden="true" />
-                  {resumeComments} açık yorum
-                </span>
-              ) : null}
-            </div>
-            {resumePace && resumeStats ? (
-              <p className="tone-text text-sm resume-pace" data-tone={resumePace.tone}>
-                {resumePace.detail}
-              </p>
-            ) : null}
-            {resumeReadiness ? (
-              <div
-                className="readiness-bar"
-                data-ready={readinessGaps.length === 0 ? "true" : undefined}
-                role="progressbar"
-                aria-valuenow={resumeReadiness.done}
-                aria-valuemin={0}
-                aria-valuemax={resumeReadiness.total}
-                aria-label="Teslim hazırlığı"
-              >
-                <i style={{ "--w": `${Math.round((resumeReadiness.done / Math.max(1, resumeReadiness.total)) * 100)}%` } as React.CSSProperties} />
-              </div>
-            ) : null}
-            {resumeReadiness ? (
-              <p className="text-sm resume-readiness" data-ready={readinessGaps.length === 0 ? "true" : undefined}>
-                <ClipboardCheck size={15} aria-hidden="true" />
-                <span>
-                  Teslim hazırlığı:{" "}
-                  <strong>
-                    {resumeReadiness.done}/{resumeReadiness.total}
-                  </strong>{" "}
-                  madde hazır
-                  {readinessGaps.length === 0 ? " · teslime hazır görünüyor" : ""}
-                </span>
-              </p>
-            ) : null}
-            {/*
-              SIRADAKİ İŞLER (25.10.2026).
-
-              Eksik maddeler tek bir cümleye sıkıştırılıyordu:
-              "Bakılacak: Kapak sayfası, Kaynakça ve 3 madde daha".
-              Öğrenci ne yapacağını değil kaç şey kaldığını görüyordu;
-              maddenin AÇIKLAMASI (neyin neden eksik olduğu) hiç
-              görünmüyordu, oysa veri zaten elimizde.
-
-              Üçle sınırlı: liste uzadıkça "sıradaki iş" olmaktan
-              çıkıp envantere dönüyor. Kalanın sayısı yazılıyor ki
-              kullanıcı listenin kırpıldığını bilsin.
-            */}
-            {/*
-              HER EKSİK BİR BAĞLANTI. Eskiden düz metindi: öğrenci
-              "Eksik: Bulgular, Sonuç, Ekler" yazısını okuyor ve nereye
-              gideceğini kendi bulmak zorunda kalıyordu. Artık tıklayınca
-              editör açılıyor ve teslim kontrolü tam o maddede duruyor.
-
-              Düzeltme kendiliğinden ÇALIŞMIYOR, yalnızca gösteriliyor:
-              "Eksik bölümleri ekle" belgeyi değiştiren bir işlem ve onu
-              bir bağlantıya gömmek, öğrencinin istemediği bir
-              düzenlemeyi geri alınacak işe çevirirdi. Düğme karşısında,
-              basması bir tık daha.
-            */}
-            {readinessGaps.length > 0 ? (
-              <ul className="readiness-list">
-                {readinessGaps.slice(0, 3).map((madde) => (
-                  <li key={madde.id} data-tone={madde.status === "todo" ? "warning" : "info"}>
-                    <Link href={`/dashboard/editor/${resume.id}/write?teslim=${madde.id}`}>
-                      <b>{madde.label}</b>
-                      {madde.detail ? <span>{madde.detail}</span> : null}
-                      <small>{madde.action?.label ?? "Editörde aç"}</small>
-                    </Link>
-                  </li>
-                ))}
-                {readinessGaps.length > 3 ? (
-                  <li className="readiness-list-more">
-                    <Link href={`/dashboard/editor/${resume.id}`}>
-                      {readinessGaps.length - 3} madde daha · teslim kontrolünde gör
-                    </Link>
-                  </li>
-                ) : null}
-              </ul>
-            ) : null}
-            {resumeTutarsizliklari.length > 0 ? (
-              <p className="text-sm resume-readiness resume-tutarsizlik">
-                <TriangleAlert size={15} aria-hidden="true" />
-                <span>
-                  {resumeTutarsizliklari[0].baslik}
-                  {resumeTutarsizliklari.length > 1 ? ` (+${resumeTutarsizliklari.length - 1})` : ""} ·{" "}
-                  <Link href={`/dashboard/editor/${resume.id}`}>çalışma merkezinde incele</Link>
-                </span>
-              </p>
-            ) : null}
-            <div className="cluster">
-              <Link href={`/dashboard/editor/${resume.id}/write`} className="projects-primary-button">
-                <PenLine size={16} aria-hidden="true" />
-                {resumeStats ? "Yazmaya devam et" : "Yazmaya başla"}
-              </Link>
-              <Link href={`/dashboard/editor/${resume.id}`} className="projects-filter-button">
-                <LayoutDashboard size={16} aria-hidden="true" />
-                Çalışma merkezi
-              </Link>
-              {activeProjects.length > 1 ? (
-                <Link href="/dashboard/editor" className="projects-filter-button">
-                  Tüm çalışmalar ({activeProjects.length})
-                </Link>
-              ) : null}
-            </div>
-          </article>
-        ) : projelerOkunamadi ? (
-          /*
-            Liste okunamadı. Eskiden burada da "ilk çalışmanızı oluşturun"
-            yazıyordu; geçici bir arıza kullanıcıya tezini kaybettiğini
-            düşündürüyordu (lib/liste-sonucu.ts).
-          */
-          <article className="resume-card" role="alert">
-            <span className="dashboard-kicker">Bağlantı sorunu</span>
-            <div className="resume-heading">
-              <h2>Çalışmalarınız yüklenemedi</h2>
-              <p>Kayıtlarınız yerinde duruyor. Sayfayı yenileyin; sorun sürerse destekten bildirin.</p>
-            </div>
-            <div className="cluster">
-              <Link href="/dashboard/support" className="projects-filter-button">
-                Uygulama Destek
-              </Link>
-            </div>
-          </article>
-        ) : (
-          <article className="resume-card">
-            <span className="dashboard-kicker">Başlayalım</span>
-            <div className="resume-heading">
-              <h2>İlk çalışmanızı oluşturun</h2>
-              <p>Üniversitenizi seçin; tez yazım kılavuzunuz editöre otomatik uygulanır.</p>
-            </div>
-            {/*
-              Adımlar BAĞLANTI DEĞİL, bilerek. Hiç çalışması olmayan birini
-              literatür ya da denetim ekranına göndermek, onu bir boş ekrana
-              daha götürmek olurdu; tek yol ileri gidiyor.
-            */}
-            <ol className="baslangic-adimlari">
-              <li>
-                <strong>Çalışmanızı açın.</strong> Üniversite ve bölümünüzü seçtiğinizde
-                kurumunuzun onaylı tez kılavuzu çalışmaya bağlanır; biçim kuralları
-                editörde kendiliğinden uygulanır.
-              </li>
-              <li>
-                <strong>Kaynaklarınızı toplayın.</strong> DOI yapıştırın, künye Crossref ve
-                OpenAlex kayıtlarından dolsun. Atıf stiliniz kılavuzdan gelir; elle
-                seçmeniz gerekmez.
-              </li>
-              <li>
-                <strong>Yazın ve denetleyin.</strong> Metin içi atıflarınız kaynakçanızla
-                karşılaştırılır, künye biçimi denetlenir ve teslim kontrol listesi aynı
-                ekranda durur.
-              </li>
-            </ol>
-            <div className="cluster">
-              <Link href="/dashboard/editor/new" className="projects-primary-button">
-                <Plus size={16} aria-hidden="true" />
-                Yeni çalışma
-              </Link>
-            </div>
-          </article>
-        )}
-
-        {/* Sağ sütun: kısa ve tarama amaçlı kartlar. Dikkat isteyenler
-            eskiden tam genişlikte ayrı bir banttı; sağ sütun boş kalıyor,
-            sayfa gereksiz uzuyordu. */}
-        {yeniKullanici ? null : (
-        <div className="dashboard-yan">
-        <article className="upcoming-card">
-          <span className="dashboard-kicker">Yaklaşan teslimler</span>
-          {upcoming.length === 0 ? (
-            <p className="muted text-sm">Önümüzdeki {UPCOMING_WINDOW_DAYS} günde teslim tarihi olan çalışma yok.</p>
-          ) : (
-            <ul className="upcoming-list">
-              {upcoming.map(({ project, due }) => (
-                <li key={project.id}>
-                  <Link href={`/dashboard/editor/${project.id}/write`}>
-                    <span className="upcoming-title">{project.title}</span>
-                    <span className="chip" data-tone={due.tone}>
+            <ListeKarti
+              baslik="Teslim tarihleri"
+              alt="En yakın teslimler"
+              bos="Teslim tarihi girilmiş çalışma yok. Çalışma ayarlarından ekleyebilirsiniz."
+              sayi={teslimler.length}
+              href="/dashboard/editor"
+              hrefEtiket="Çalışmalara git"
+            >
+              {teslimler.map(({ project, due }) => (
+                <ListeSatiri
+                  key={project.id}
+                  href={`/dashboard/editor/${project.id}`}
+                  baslik={project.title}
+                  alt={project.due_date ? trTarih(project.due_date) : undefined}
+                  sag={
+                    <span className="status-pill" data-tone={due.tone}>
                       {due.label}
                     </span>
-                  </Link>
-                </li>
+                  }
+                />
               ))}
-            </ul>
-          )}
-        </article>
+            </ListeKarti>
 
-        {attention ? (
-          <section className="attention-card" aria-label="Dikkat isteyenler">
-          <span className="dashboard-kicker">Dikkat isteyenler</span>
-            {attention.length === 0 ? (
-            <p className="tone-text text-sm" data-tone="success">
-              ✓ Gecikmiş, sorumlusuz, onay ya da yanıt bekleyen çalışma yok.
-            </p>
-          ) : (
-            <ul className="attention-list">
-                {attention.map((item) => (
-                <li key={item.id}>
-                  <Link href={item.href} className="attention-item" data-tone={item.tone}>
-                    <strong>{item.count}</strong>
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
+            <ListeKarti
+              baslik="Gelen yorumlar"
+              alt="Çözülmemiş, son 6"
+              bos="Danışmanınızdan ya da ekipten bekleyen yorum yok."
+              sayi={yorumlar.length}
+            >
+              {yorumlar.map((yorum) => (
+                <ListeSatiri
+                  key={yorum.id}
+                  href={`/dashboard/editor/${yorum.project_id}/write`}
+                  baslik={yorum.yazar?.full_name?.trim() || calismaAdi.get(yorum.project_id) || "Yorum"}
+                  alt={yorum.body}
+                  onizleme
+                  zaman={editedAgo(yorum.created_at, simdiAn)}
+                />
               ))}
-            </ul>
-          )}
-        </section>
-        ) : null}
-        </div>
-        )}
-      </section>
+            </ListeKarti>
 
-      {/*
-        Modüller kenar çubuğunun aynısını tekrarlıyor. Eskiden açıklamalı
-        büyük kartlardı ve ana sayfanın en çok yer kaplayan bölümüydü;
-        kullanıcının her gün gördüğü bir menüyü ikinci kez anlatmaya gerek
-        yok. Kompakt kısayol şeridine indirildi.
-      */}
-      <section className="dashboard-kisayollar" aria-label="Modüller">
-        <span className="dashboard-kicker">Hızlı erişim</span>
-        <div className="dashboard-kisayol-liste">
-          {workstreams.map(({ title, icon: Icon, href }) => (
-            <Link className="dashboard-kisayol" href={href} key={title}>
-              <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
-              {title}
-            </Link>
-          ))}
-        </div>
-      </section>
+            {/*
+              Dördüncü kart role göre: öğrenciye "şimdi ne yapmalıyım",
+              personele "ne dikkat istiyor". Sayı kartları (aktif,
+              revizyonda, incelemede, analizde) kalktı: yöneticinin bakışı
+              bu listede, tek tezi olan öğrenciye bir şey söylemiyorlardı.
+            */}
+            {attention ? (
+              <ListeKarti
+                baslik="Dikkat isteyenler"
+                alt="Gecikmiş, sorumlusuz ya da yanıt bekleyen"
+                bos="Gecikmiş, sorumlusuz, onay ya da yanıt bekleyen çalışma yok."
+                sayi={attention.length}
+              >
+                {attention.slice(0, GENEL_BAKIS_SATIR).map((item) => (
+                  <ListeSatiri
+                    key={item.id}
+                    href={item.href}
+                    baslik={item.label}
+                    sag={
+                      <span className="status-pill" data-tone={item.tone}>
+                        {item.count}
+                      </span>
+                    }
+                  />
+                ))}
+              </ListeKarti>
+            ) : (
+              <ListeKarti
+                baslik="Sıradaki işler"
+                alt={resume ? resume.title : "Kaldığınız çalışma"}
+                bos={sirada?.bitti ? "Teslim listesinde eksik görünmüyor." : "Şu an bekleyen bir adım yok."}
+                sayi={siradakiler.length}
+                href={resume ? `/dashboard/editor/${resume.id}` : undefined}
+                hrefEtiket="Çalışma merkezi"
+              >
+                {siradakiler.map((madde) => (
+                  <ListeSatiri key={madde.anahtar} href={madde.href} baslik={madde.baslik} alt={madde.alt} />
+                ))}
+              </ListeKarti>
+            )}
+          </ListeIzgarasi>
+        </>
+      )}
     </main>
   );
 }
