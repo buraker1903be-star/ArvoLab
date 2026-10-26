@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef, useTransition } from "react";
-import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save } from "lucide-react";
+import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save, ListPlus, Sparkles, Code2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { leveneTesti, normallikOlcutu } from "@/lib/stats-varsayim";
 import { kruskalWallis, mannWhitneyU, spearmanKorelasyonu, YAKLASIKLIK_EN_AZ } from "@/lib/stats-parametrik-olmayan";
 import { dogrusalRegresyon } from "@/lib/stats-regresyon";
@@ -26,6 +27,9 @@ import {
 import { formatP, hesaplanabilir, isSignificant, formatNumber } from "@/lib/apa-format";
 import { ANALIZ_ETIKETLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
+import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
+import { analizBetigi, ARAC_ADI, type AnalizAraci, type BetikSecimi } from "@/lib/analiz-betik";
+import AsistanSonuc from "@/app/dashboard/_components/asistan-sonuc";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { elemeNotu, eslesenSatirlar, sayisalSutun } from "@/lib/veri-eslestirme";
 import { basitEtkiler, ikiYonluAnova, type IkiYonluHata } from "@/lib/stats-iki-yonlu-anova";
@@ -95,11 +99,20 @@ const BEKLENEN_SIFIR =
 export default function DataAnalyzer({
   calismalar = [],
   secilenCalisma = "",
+  pencere,
 }: {
   calismalar?: { id: string; title: string; sayiBicimi?: BicimKarari }[];
   /* Çalışma merkezinden gelindiyse sonuç o çalışmaya kaydedilsin. */
   secilenCalisma?: string;
+  /*
+    Çalışmalarım kartının Analiz penceresi (analiz-penceresi.tsx): yöntem
+    ve program kartla seçilmiş, çalışma sabit. Sonuçta seçilen programın
+    betiği, asistan yorumu ve "Teze ekleme sırasına koy" çıkar; sayfadaki
+    kapsamlı rapor ve çalışma seçici gizlenir (pencere tek işe odaklı).
+  */
+  pencere?: { arac: AnalizAraci | null; tur: AnalizTuru; asistanAcik: boolean };
 }) {
+  const router = useRouter();
   const [dataset, setDataset] = useState<ParsedDataset | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -110,7 +123,7 @@ export default function DataAnalyzer({
     yalnızca SPSS yapıştırma aracı kılavuza uyuyordu ve bu motor
     APA'ya sabitti: aynı ekranda iki farklı biçim üretiliyordu.
   */
-  const [analysisType, setAnalysisType] = useState<AnalysisType>("descriptives");
+  const [analysisType, setAnalysisType] = useState<AnalysisType>(pencere?.tur ?? "descriptives");
   const [varA, setVarA] = useState("");
   const [varB, setVarB] = useState("");
   const [groupVar, setGroupVar] = useState("");
@@ -150,7 +163,8 @@ export default function DataAnalyzer({
     o anki seçimden üretilen başlık ekrandaki sayıyla uyuşmazdı — kayıt
     yanlış analizin adıyla saklanırdı.
   */
-  const [calisanAnaliz, setCalisanAnaliz] = useState<{ tur: AnalysisType; baslik: string } | null>(null);
+  /* Seçim de donduruluyor: betik, ekrandaki sonucu üreten değişkenlerle yazılmalı. */
+  const [calisanAnaliz, setCalisanAnaliz] = useState<{ tur: AnalysisType; baslik: string; secim: BetikSecimi } | null>(null);
   const [kayitCalismasi, setKayitCalismasi] = useState(secilenCalisma);
 
   /*
@@ -177,7 +191,7 @@ export default function DataAnalyzer({
   const [kaydedildi, setKaydedildi] = useState(false);
   const [kaydediliyor, kaydetmeyiBaslat] = useTransition();
 
-  const sonucuKaydet = useCallback(() => {
+  const sonucuKaydet = useCallback((tezeEklenecek = false) => {
     const metin = sonucKutusu.current?.innerText?.trim();
     if (!metin || !calisanAnaliz) return;
     kaydetmeyiBaslat(async () => {
@@ -186,6 +200,7 @@ export default function DataAnalyzer({
         baslik: calisanAnaliz.baslik,
         apaMetni: metin,
         projectId: kayitCalismasi || null,
+        tezeEklenecek,
       });
       if ("error" in sonuc && sonuc.error) {
         // Sessiz düşmüyor: kullanıcı kaydettiğini sanıp sekmeyi kapatmasın.
@@ -193,9 +208,45 @@ export default function DataAnalyzer({
         return;
       }
       setKaydedildi(true);
-      showToast("success", "Sonuç kaydedildi; aşağıdaki geçmişte duruyor.");
+      if (pencere) {
+        showToast("success", tezeEklenecek ? "Teze ekleme sırasına kondu; editörde \"Analiz ekle\" ile ekleyin." : "Sonuç kaydedildi.");
+        // Penceredeki sıra listesi ve karttaki sayı sunucudan geliyor.
+        router.refresh();
+      } else {
+        showToast("success", "Sonuç kaydedildi; aşağıdaki geçmişte duruyor.");
+      }
     });
-  }, [calisanAnaliz, kayitCalismasi]);
+  }, [calisanAnaliz, kayitCalismasi, pencere, router]);
+
+  /*
+    ASİSTAN YORUMU: hesap tarayıcıda yapıldı, asistan yalnızca çıktıyı
+    denetler (eksik etki büyüklüğü, varsayım, raporlama biçimi). Yeni
+    sayı üretemez; ürettiği anda cevap düşer (lib/ai/bulgu.ts). Sonuç
+    her değişince eski yorum silinir — başka analizin yorumu yanlış
+    sonucun altında kalmasın.
+  */
+  const [yorum, setYorum] = useState<AnalizDenetimYaniti | null>(null);
+  const [yorumBekleniyor, yorumuBaslat] = useTransition();
+  const yorumlat = useCallback(
+    (zorla: boolean) => {
+      const metin = sonucKutusu.current?.innerText?.trim();
+      if (!metin || !calisanAnaliz) return;
+      yorumuBaslat(async () => {
+        setYorum(null);
+        setYorum(
+          await analizDenetle({
+            istatistikMetni: metin,
+            projectId: kayitCalismasi || null,
+            yontem: calisanAnaliz.baslik,
+            zorla,
+          }),
+        );
+      });
+    },
+    [calisanAnaliz, kayitCalismasi],
+  );
+  const [betikKopyalandi, setBetikKopyalandi] = useState(false);
+  const betik = pencere?.arac && calisanAnaliz ? analizBetigi(pencere.arac, calisanAnaliz.tur, calisanAnaliz.secim) : null;
 
   const [fullReport, setFullReport] = useState<React.ReactNode>(null);
 
@@ -430,7 +481,9 @@ export default function DataAnalyzer({
     setResultError(null);
     setResult(null);
     setKaydedildi(false);
+    setYorum(null);
     setCalisanAnaliz({
+      secim: { varA, varB, groupVar, groupVar2, maddeler: reliabilityItems, yordayicilar: yordayicilar.filter((c) => c !== varA), dosyaAdi: fileName, gruplar: groupLevels },
       tur: analysisType,
       baslik: analizBasligi(analysisType, {
         varA,
@@ -1264,10 +1317,16 @@ export default function DataAnalyzer({
       setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi]);
+  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi]);
 
   return (
-    <section className="project-form-card">
+    <section className={pencere ? "analiz-pencere-govde" : "project-form-card"}>
+      {pencere ? (
+        <p className="muted text-sm mb-md">
+          Excel (.xlsx/.xls) ya da CSV dosyanızı yükleyin. Hesap tarayıcınızda yapılır,
+          dosyanız sunucuya gitmez; kaydedilen yalnızca sonuç metnidir.
+        </p>
+      ) : (
       <div className="project-form-heading">
         <h2>Veri Yükle ve Analiz Et</h2>
         <p>
@@ -1278,6 +1337,7 @@ export default function DataAnalyzer({
           metni üretilmez, yalnızca sayısal sonuç ve anlamlılık işaretlenir.
         </p>
       </div>
+      )}
 
       {!dataset && (
         <label className="dropzone">
@@ -1322,12 +1382,14 @@ export default function DataAnalyzer({
                 setFullReport(null);
                 setCalisanAnaliz(null);
                 setKaydedildi(false);
+                setYorum(null);
               }}
             >
               Yeni dosya yükle
             </button>
           </div>
 
+          {pencere ? null : (
           <div className="sub-card mb-lg">
             <div className="project-form-heading">
               <h2>
@@ -1355,10 +1417,13 @@ export default function DataAnalyzer({
               </div>
             )}
           </div>
+          )}
 
+          {pencere ? null : (
           <h3 className="result-heading">
             Veya Belirli Bir Test Seçin
           </h3>
+          )}
           <div className="project-form-grid">
             <label>
               <span>Analiz türü</span>
@@ -1507,7 +1572,29 @@ export default function DataAnalyzer({
                   {kopyalandi ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
                   {kopyalandi ? "Kopyalandı" : "Sonucu kopyala"}
                 </button>
-                {calisanAnaliz && !kaydedildi ? (
+                {pencere && calisanAnaliz && !kaydedildi ? (
+                  <>
+                    <button
+                      type="button"
+                      className="projects-primary-button button-compact"
+                      onClick={() => sonucuKaydet(true)}
+                      disabled={kaydediliyor}
+                    >
+                      <ListPlus size={14} aria-hidden="true" />
+                      {kaydediliyor ? "Kaydediliyor…" : "Teze ekleme sırasına koy"}
+                    </button>
+                    <button
+                      type="button"
+                      className="projects-filter-button button-compact"
+                      onClick={() => sonucuKaydet(false)}
+                      disabled={kaydediliyor}
+                    >
+                      <Save size={14} aria-hidden="true" />
+                      Yalnızca kaydet
+                    </button>
+                  </>
+                ) : null}
+                {!pencere && calisanAnaliz && !kaydedildi ? (
                   <>
                     {calismalar.length > 0 ? (
                       <select
@@ -1525,7 +1612,7 @@ export default function DataAnalyzer({
                     <button
                       type="button"
                       className="projects-filter-button button-compact"
-                      onClick={sonucuKaydet}
+                      onClick={() => sonucuKaydet(false)}
                       disabled={kaydediliyor}
                     >
                       <Save size={14} aria-hidden="true" />
@@ -1536,20 +1623,86 @@ export default function DataAnalyzer({
                 {kaydedildi ? (
                   <span className="hint">
                     <Check size={14} className="inline-icon" aria-hidden="true" />
-                    Kaydedildi — sayfanın altındaki geçmişte.
+                    {pencere ? "Kaydedildi — sağdaki listede." : "Kaydedildi — sayfanın altındaki geçmişte."}
                   </span>
                 ) : null}
               </div>
+
+              {/*
+                PROGRAMIN BETİĞİ: aynı analizi seçilen programda yeniden
+                üreten komutlar. ArvoLab o programı çalıştırmıyor; betik
+                öğrencinin kendi bilgisayarında doğrulaması için
+                (lib/analiz-betik.ts).
+              */}
+              {betik && pencere?.arac ? (
+                <details className="analiz-betik mt-sm">
+                  <summary>
+                    <Code2 size={14} className="inline-icon" aria-hidden="true" />
+                    {ARAC_ADI[pencere.arac]} — aynı analizi programda yeniden üretmek için
+                  </summary>
+                  <pre>{betik}</pre>
+                  <button
+                    type="button"
+                    className="projects-filter-button button-compact"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(betik);
+                        setBetikKopyalandi(true);
+                        window.setTimeout(() => setBetikKopyalandi(false), 2000);
+                      } catch {
+                        setResultError("Panoya kopyalanamadı. Betiği seçip elle kopyalayabilirsiniz.");
+                      }
+                    }}
+                  >
+                    {betikKopyalandi ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+                    {betikKopyalandi ? "Kopyalandı" : "Betiği kopyala"}
+                  </button>
+                </details>
+              ) : null}
+
+              {pencere?.asistanAcik && calisanAnaliz ? (
+                <div className="asistan-kart mt-md">
+                  <div className="asistan-kart-ust">
+                    <h3>Asistan yorumu</h3>
+                    <p>
+                      Asistan sonucu okur; eksik etki büyüklüğünü, varsayımları ve
+                      raporlamada dikkat edilecekleri söyler. Bulgunuzu yorumlayan
+                      cümle yazmaz, size verilmeyen sayı üretemez.
+                    </p>
+                  </div>
+                  {yorumBekleniyor ? <p className="hint" role="status">Asistan sonucu okuyor…</p> : null}
+                  {yorum && !yorum.hata && !yorum.bulgular?.length ? (
+                    <p className="hint">Asistanın bu sonuç için ekleyeceği bir not yok.</p>
+                  ) : null}
+                  {yorum || yorumBekleniyor ? null : (
+                    <button type="button" className="projects-filter-button button-compact" onClick={() => yorumlat(false)}>
+                      <Sparkles size={14} aria-hidden="true" />
+                      Asistana yorumlat
+                    </button>
+                  )}
+                  <AsistanSonuc
+                    sonuc={yorum}
+                    yetenek="analiz"
+                    etiketler={{ uyari: "Eksik", oneri: "Öneri", bilgi: "Not" }}
+                    bulguBasligi="Asistanın notları"
+                    bekleniyor={yorumBekleniyor}
+                    onYenidenSorgula={() => yorumlat(true)}
+                    gecmisGizli
+                  />
+                </div>
+              ) : null}
               {/*
                 Kaydetmenin ne kaydettiği açıkça yazılıyor: yukarıda
                 "dosyanız sunucuya yüklenmez" sözü verildi, kullanıcı
                 düğmeye basarken bunun hâlâ geçerli olduğunu bilmeli.
               */}
+              {pencere ? null : (
               <p className="hint">
                 Kaydedilen yalnızca yukarıdaki sonuç metnidir; yüklediğiniz veri
                 dosyası sunucuya gitmez. Kaydetmezseniz sonuç sayfayı
                 yenilediğinizde kaybolur.
               </p>
+              )}
             </div>
           )}
         </div>

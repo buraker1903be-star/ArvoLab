@@ -37,6 +37,7 @@ import {
   Trash2,
   History,
   BookMarked,
+  BarChart3,
   Printer,
   Captions,
   TableProperties,
@@ -72,6 +73,7 @@ import ShareDialog from "./share-dialog";
 import { buildSubmissionChecklist, missingCoverFields, type ChecklistAction } from "@/lib/submission-checklist";
 import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
 import CiteDialog from "./cite-dialog";
+import AnalizEkleDialog from "./analiz-ekle-dialog";
 import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import type { CitationStyle } from "@/lib/citation-format";
@@ -422,6 +424,7 @@ export default function ManuscriptEditor({
   const [headingNumbering, setHeadingNumbering] = useState(initialHeadingNumbering);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
+  const [analizOpen, setAnalizOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -1281,6 +1284,20 @@ export default function ManuscriptEditor({
     if (!selectText(editor, text)) showToast("error", "Bu ifade metinde bulunamadı; değiştirilmiş olabilir.");
   };
   const style: CitationStyle = CITATION_STYLES.includes(citationStyle as CitationStyle) ? (citationStyle as CitationStyle) : "apa7";
+  /*
+    Analiz sonucu satır satır paragraf olarak eklenir: sonuç metni tablo
+    satırlarını da taşıyor, tek paragrafa sığdırmak satırları birbirine
+    yapıştırırdı. Boş satırlar atlanır.
+  */
+  const handleAnaliz = (metin: string) => {
+    const satirlar = metin.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    if (!satirlar.length) return false;
+    return editor
+      .chain()
+      .focus()
+      .insertContent(satirlar.map((text) => ({ type: "paragraph", content: [{ type: "text", text }] })))
+      .run();
+  };
   const handleCite = (source: LiteratureSource, secenek: { sayfa?: string | null } = {}) => {
     const bugun = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul" }).format(new Date());
     const { citation, addedReference } = insertCitation(editor, source, style, {
@@ -1495,6 +1512,9 @@ export default function ManuscriptEditor({
         </ToolbarButton>
         <ToolbarButton label="Kaynaktan atıf ekle" onClick={() => setCiteOpen(true)}>
           <BookMarked size={16} />
+        </ToolbarButton>
+        <ToolbarButton label="Analiz sonucu ekle" onClick={() => setAnalizOpen(true)}>
+          <BarChart3 size={16} />
         </ToolbarButton>
         <ToolbarButton label="Word dosyasından aktar" onClick={() => setImportOpen(true)}>
           <FileUp size={16} />
@@ -2137,6 +2157,7 @@ export default function ManuscriptEditor({
         getCurrentText={() => extractPlainText(editor.getJSON() as TiptapDoc)}
       />
       <CiteDialog open={citeOpen} onClose={() => setCiteOpen(false)} projectId={projectId} style={style} onPick={handleCite} />
+      <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
       <ImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

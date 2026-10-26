@@ -1,0 +1,47 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { analizBetigi, PROGRAM_KARTLARI, YONTEM_KARTLARI } from "@/lib/analiz-betik";
+import { ANALIZ_TURLERI } from "@/lib/analiz-turleri";
+
+test("her analiz türünün kartı ve açıklaması var; ANSYS kapalı ve nedenini söylüyor", () => {
+  assert.equal(YONTEM_KARTLARI.length, ANALIZ_TURLERI.length);
+  assert.ok(YONTEM_KARTLARI.every((k) => k.aciklama));
+  const ansys = PROGRAM_KARTLARI.find((k) => k.anahtar === "ansys")!;
+  assert.equal(ansys.desteklenmiyor, true);
+  assert.match(ansys.aciklama, /çalıştıramaz/);
+});
+
+test("her araç her türde betik üretir; seçilen değişkenler betikte geçer", () => {
+  const secim = { varA: "puan", varB: "kaygi", groupVar: "grup", groupVar2: "cinsiyet", maddeler: ["m1", "m2"], yordayicilar: ["yas", "gelir"], dosyaAdi: "veri.xlsx" };
+  for (const arac of ["spss", "r", "python"] as const) {
+    for (const tur of ANALIZ_TURLERI) {
+      const betik = analizBetigi(arac, tur, secim);
+      assert.ok(betik.length > 40, `${arac}/${tur}`);
+      if (tur !== "descriptives") assert.ok(betik.includes("puan") || betik.includes("m1"), `${arac}/${tur} değişkeni taşımıyor`);
+    }
+  }
+});
+
+test("komutlar doğru: SPSS ONEWAY, R aov + TukeyHSD, Python f_oneway", () => {
+  const s = { varA: "puan", groupVar: "grup" };
+  assert.match(analizBetigi("spss", "anova", s), /ONEWAY puan BY grup/);
+  assert.match(analizBetigi("r", "anova", s), /aov\(puan ~ factor\(grup\)[\s\S]*TukeyHSD/);
+  assert.match(analizBetigi("python", "anova", s), /f_oneway/);
+  assert.match(analizBetigi("r", "regression", { varA: "y", yordayicilar: ["x1", "x2"] }), /lm\(y ~ x1 \+ x2/);
+});
+
+test("boşluklu ve Türkçe değişken adları her dilde güvenle yazılır", () => {
+  const s = { varA: "sınav puanı", groupVar: "öğrenci grubu" };
+  assert.match(analizBetigi("r", "ttest", s), /`sınav puanı` ~ `öğrenci grubu`/);
+  assert.match(analizBetigi("python", "regression", { varA: "sınav puanı", yordayicilar: ["yaş"] }), /Q\(/);
+  assert.match(analizBetigi("spss", "anova", s), /sınav_puanı BY öğrenci_grubu/);
+  assert.match(analizBetigi("r", "descriptives", { dosyaAdi: "a.csv" }), /read\.csv\("a\.csv"\)/);
+});
+
+test("SPSS iki gruplu testte verideki grup değerleri yazılır; bilinmiyorsa (1 2) ve not", () => {
+  assert.match(analizBetigi("spss", "ttest", { varA: "puan", groupVar: "grup", gruplar: ["A", "B"] }), /GROUPS=grup\('A' 'B'\)/);
+  assert.match(analizBetigi("spss", "mannwhitney", { varA: "puan", groupVar: "grup", gruplar: ["1", "2"] }), /BY grup\(1 2\)/);
+  const bilinmiyor = analizBetigi("spss", "ttest", { varA: "puan", groupVar: "grup" });
+  assert.match(bilinmiyor, /GROUPS=grup\(1 2\)/);
+  assert.match(bilinmiyor, /değiştirin/);
+});

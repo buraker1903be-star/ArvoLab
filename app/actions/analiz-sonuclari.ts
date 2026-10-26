@@ -19,6 +19,19 @@ export interface AnalizSonucu {
   created_at: string;
 }
 
+/** Çalışmanın analizleri; teze ekleme sırası alanlarıyla (migration 20261026131044). */
+export interface CalismaAnalizi extends AnalizSonucu {
+  teze_eklenecek: boolean;
+  teze_eklendi: string | null;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const yenile = () => {
+  revalidatePath(PAGE_PATH);
+  revalidatePath("/dashboard/editor");
+};
+
 /*
   Analiz merkezi bugüne kadar hiçbir şey biriktirmiyordu: hesap tarayıcıda
   yapılıyor, sekme kapanınca sonuç kayboluyordu.
@@ -34,6 +47,8 @@ export async function analizSonucuKaydet(girdi: {
   baslik: string;
   apaMetni: string;
   projectId: string | null;
+  /** Çalışmalarım'daki Analiz penceresi: kaydederken teze ekleme sırasına da koyar. */
+  tezeEklenecek?: boolean;
 }): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return SESSION_MISSING;
@@ -75,6 +90,8 @@ export async function analizSonucuKaydet(girdi: {
     analiz_turu: girdi.analizTuru,
     baslik,
     apa_metni: apaMetni,
+    // Sıraya koymak çalışmaya bağlı bir kayıtta anlamlı: editör sırayı çalışmadan okuyor.
+    teze_eklenecek: Boolean(girdi.tezeEklenecek && girdi.projectId),
   });
 
   if (error) {
@@ -92,8 +109,65 @@ export async function analizSonucuKaydet(girdi: {
     return { error: "Sonuç kaydedilemedi; metni kopyalayıp saklayabilirsiniz." };
   }
 
-  revalidatePath(PAGE_PATH);
+  yenile();
   return { success: true };
+}
+
+/*
+  Bir çalışmanın analizleri (Analiz penceresi ve editörün "Analiz ekle"
+  penceresi). Sınırsız: pencere düğmesindeki sayı bu listeden geliyor;
+  .limit() ile kesilen listeden sayı çıkarmak sessizce eksik sayardı.
+  Okunamazsa boş liste ve log — pencere açılmaya devam eder.
+*/
+export async function calismaAnalizleri(projectId: string): Promise<CalismaAnalizi[]> {
+  if (!UUID.test(projectId)) return [];
+  const ctx = await getAuthContext();
+  if (!ctx) return [];
+  const { data, error } = await ctx.supabase
+    .from("analiz_sonuclari")
+    .select("id, project_id, analiz_turu, baslik, apa_metni, created_at, teze_eklenecek, teze_eklendi")
+    .eq("project_id", projectId)
+    .eq("owner_id", ctx.user.id)
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[analiz] çalışma analizleri okunamadı:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+/*
+  Teze ekleme sırası: yalnızca iki durum sütunu güncellenir (sütun
+  düzeyinde grant, migration 20261026131044); başlık ve APA metni hâlâ
+  değiştirilemez. Mevcut kaydın güncellenmesi — abonelik kapısı bilerek
+  yok (lib/access.ts): engellenen kullanıcı da sırasını yönetebilmeli.
+*/
+async function siraDurumu(id: string, alanlar: { teze_eklenecek?: boolean; teze_eklendi?: string | null }): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+  if (!UUID.test(id)) return { error: "Kayıt bulunamadı." };
+  const { data, error } = await ctx.supabase
+    .from("analiz_sonuclari")
+    .update(alanlar)
+    .eq("id", id)
+    .eq("owner_id", ctx.user.id)
+    .select("id");
+  if (error) {
+    console.error("[analiz] sıra güncellenemedi:", error.message);
+    return { error: "Güncellenemedi; tekrar deneyin." };
+  }
+  if (!data?.length) return { error: "Kayıt bulunamadı ya da size ait değil." };
+  yenile();
+  return { success: true };
+}
+
+export async function analizSirasi(id: string, sirada: boolean): Promise<ActionResult> {
+  // Sıradan çıkarılan "eklendi" damgasını da bırakır: geri alınca yeniden sıraya girebilsin.
+  return siraDurumu(id, sirada ? { teze_eklenecek: true, teze_eklendi: null } : { teze_eklenecek: false });
+}
+
+export async function analizTezeEklendi(id: string): Promise<ActionResult> {
+  return siraDurumu(id, { teze_eklendi: new Date().toISOString() });
 }
 
 export async function getAnalizSonuclari(): Promise<ListeSonucu<AnalizSonucu>> {
@@ -115,7 +189,8 @@ export async function getAnalizSonuclari(): Promise<ListeSonucu<AnalizSonucu>> {
 }
 
 /*
-  Kayıt düzenlenemiyor (tabloda UPDATE yok): yapılmış bir hesabın tutanağı,
+  Kayıt düzenlenemiyor (UPDATE yalnızca teze ekleme sırası sütunlarında):
+  yapılmış bir hesabın tutanağı,
   sonradan değiştirilebilseydi iddiaya dönerdi. Yanlışsa silinir ve analiz
   yeniden çalıştırılır — silme de bu yüzden abonelik kapısının dışında.
 */
@@ -136,6 +211,6 @@ export async function analizSonucuSil(id: string): Promise<ActionResult> {
   }
   if (!data?.length) return { error: "Kayıt bulunamadı ya da size ait değil." };
 
-  revalidatePath(PAGE_PATH);
+  yenile();
   return { success: true };
 }

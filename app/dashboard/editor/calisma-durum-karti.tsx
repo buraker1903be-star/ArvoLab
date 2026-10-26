@@ -2,12 +2,14 @@ import Link from "next/link";
 import { Check, FileText, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { acikYapilacaklar, yapilacakTamamla } from "@/app/actions/yapilacaklar";
+import { calismaAnalizleri } from "@/app/actions/analiz-sonuclari";
 import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
 import ActionForm from "../action-form";
 import KilavuzPenceresi from "./[id]/kilavuz-penceresi";
 import KanitMatrisiPenceresi from "./[id]/kanit/kanit-matrisi-penceresi";
 import LiteraturPenceresi from "../literature/literatur-penceresi";
 import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
+import AnalizPenceresi from "../analysis/analiz-penceresi";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
 import { eksikSatirlari, type EksikTuru, type KartIlerlemesi } from "@/lib/calisma-karti";
@@ -64,7 +66,13 @@ export default async function CalismaDurumKarti({
   /** Yeni tezde kılavuz eşleşmediyse pencere açık gelir (createProject). */
   kilavuzAc: boolean;
 }) {
-  const [ozet, yapilacaklar] = await Promise.all([calismaOzeti(projectId), acikYapilacaklar(projectId)]);
+  const [ozet, yapilacaklar, analizler] = await Promise.all([
+    calismaOzeti(projectId),
+    acikYapilacaklar(projectId),
+    calismaAnalizleri(projectId),
+  ]);
+  /* Teze eklenmeyi bekleyen analizler de "Başka neler var"da: sıraya koyan öğrenci unutmasın. */
+  const siradakiAnalizler = analizler.filter((a) => a.teze_eklenecek && !a.teze_eklendi);
   const merkez = `/dashboard/editor/${projectId}`;
 
   if (!ozet || ozet === CALISMA_OKUNAMADI) {
@@ -207,11 +215,11 @@ export default async function CalismaDurumKarti({
       </div>
 
       <h3 className="calisma-durum-alt">
-        {eksikler.length + yapilacaklar.length
-          ? `Başka neler var · ${eksikler.length + yapilacaklar.length}`
+        {eksikler.length + yapilacaklar.length + siradakiAnalizler.length
+          ? `Başka neler var · ${eksikler.length + yapilacaklar.length + siradakiAnalizler.length}`
           : "Başka eksik görünmüyor"}
       </h3>
-      {eksikler.length + yapilacaklar.length ? (
+      {eksikler.length + yapilacaklar.length + siradakiAnalizler.length ? (
         <ul className="gb-liste">
           {/*
             Öğrencinin kendi eklediği maddeler (kaynakça asistanının
@@ -233,6 +241,20 @@ export default async function CalismaDurumKarti({
                 </button>
               </ActionForm>
             </li>
+          ))}
+          {siradakiAnalizler.map((analiz) => (
+            <ListeSatiri
+              key={analiz.id}
+              href={`${merkez}/write`}
+              baslik={analiz.baslik}
+              alt="Editörde araç çubuğundaki “Analiz sonucu ekle” ile imlecin olduğu yere ekleyin."
+              onizleme
+              sag={
+                <span className="status-pill" data-tone="info">
+                  Teze eklenecek
+                </span>
+              }
+            />
           ))}
           {eksikler.map((satir) => (
             <ListeSatiri
@@ -276,10 +298,11 @@ export default async function CalismaDurumKarti({
             acikBasla={kilavuzAc && !uygulanan}
           />
         )}
-        {/* Çalışmanın birimleri iş akışı sırasıyla: literatür → kaynakça → kanıt. */}
+        {/* Çalışmanın birimleri iş akışı sırasıyla: literatür → kaynakça → kanıt → analiz. */}
         <LiteraturPenceresi projectId={calisma.id} projeAdi={calisma.title} />
         <KaynakcaPenceresi calisma={calisma} sonDenetim={ozet.kaynakca} />
         <KanitMatrisiPenceresi projectId={calisma.id} />
+        <AnalizPenceresi projectId={calisma.id} projeAdi={calisma.title} />
         {/* Ayda bir yapılan işler menüde; menü yukarı açılıyor, kartın içinde kalıyor. */}
         <details className="kart-menu">
           <summary aria-label={`${calisma.title}: diğer işlemler`}>

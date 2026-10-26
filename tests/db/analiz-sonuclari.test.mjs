@@ -77,20 +77,16 @@ describe("analiz sonuçları", () => {
     }));
 
   /*
-    UPDATE tabloda hiç yok: ne grant ne politika. Test ortamı Supabase'in
-    "yeni tabloyu herkese aç" davranışını taklit ettiği için grant burada
-    engellemiyor; satırı koruyan POLİTİKANIN YOKLUĞU. Gerçek veritabanında
-    grant de yok, istek daha erken düşüyor. İki durumda da tutanak duruyor.
+    İçerik sütunlarında UPDATE yetkisi YOK (migration 20261026131044):
+    tablo düzeyindeki UPDATE alındı, yalnızca teze ekleme sırası
+    sütunlarına verildi. Eskiden koruma yalnızca update politikasının
+    yokluğuydu; sıra için politika eklenince APA metni de açılırdı.
   */
   test("kaydedilen sonuç sonradan değiştirilemiyor", () =>
     islem(db, async () => {
       await tohum();
       await rol(db, "authenticated", SAHIP);
-      const { rows } = await db.query(
-        `update public.analiz_sonuclari set apa_metni = 'p < .001' where id = $1 returning id`,
-        [SONUC],
-      );
-      assert.equal(rows.length, 0);
+      await reddedilir(db, `update public.analiz_sonuclari set apa_metni = 'p < .001' where id = $1`, [SONUC], /permission denied/);
       const satir = (await db.query(`select apa_metni from public.analiz_sonuclari where id = $1`, [SONUC])).rows[0];
       assert.match(satir.apa_metni, /2\.45/);
     }));
@@ -130,16 +126,17 @@ describe("analiz sonuçları", () => {
       await tohum();
       await rol(db, "authenticated", SAHIP);
       /*
-        Burada tetikleyici hiç çalışmıyor: tabloda UPDATE politikası yok,
-        satır RLS'te görünmüyor ve güncelleme hiçbir satıra değmiyor.
-        Tetikleyici yine de UPDATE OF project_id'ye bağlı — ilerde bir
-        düzenleme ihtiyacı doğup politika eklenirse bağ korunsun diye.
+        project_id sütununda UPDATE yetkisi yok (yalnızca teze ekleme
+        sırası sütunları güncellenebilir); istek yetkiden düşüyor.
+        Tetikleyici yine UPDATE OF project_id'ye bağlı: yetki bir gün
+        açılırsa bağ yine korunsun.
       */
-      const { rows } = await db.query(
-        `update public.analiz_sonuclari set project_id = $2 where id = $1 returning id`,
+      await reddedilir(
+        db,
+        `update public.analiz_sonuclari set project_id = $2 where id = $1`,
         [SONUC, YABANCI_CALISMA],
+        /permission denied/,
       );
-      assert.equal(rows.length, 0, "Kayıt başka çalışmaya taşınabiliyor");
     }));
 
   test("meşru: kendi çalışmasına bağlanabiliyor", () =>
