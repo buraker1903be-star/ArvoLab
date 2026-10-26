@@ -32,7 +32,7 @@ export default async function WriteManuscriptPage({
 
   const { data: project } = await supabase
     .from("academic_projects")
-    .select("id, title, guideline_id, university, institute, department, project_type, citation_style, owner_id, assignee_id, due_date, status")
+    .select("id, title, guideline_id, university, institute, department, project_type, citation_style, owner_id, assignee_id, due_date, status, ornek_atif")
     .eq("id", id)
     .maybeSingle();
 
@@ -103,6 +103,7 @@ export default async function WriteManuscriptPage({
         dueDate={project.due_date ?? null}
         projectStatus={project.status ?? null}
         citationStyle={project.citation_style ?? "apa7"}
+        ornekAtif={project.ornek_atif ?? null}
         projectDefaults={{
           title: project.title ?? "",
           university: project.university ?? "",

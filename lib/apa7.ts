@@ -364,6 +364,29 @@ export function crossCheck(
   return { citationsWithoutReference, referencesWithoutCitation };
 }
 
+/*
+  YIL UYUŞMAZLIĞI: karşılıksız kalan atıfın yazarı kaynakçada VAR ama yılı
+  farklı ("(Yılmaz, 2020)" ↔ "Yılmaz, A. (2021)"). Çapraz kontrol bunu iki
+  ayrı sorun olarak gösteriyordu (metinde atıf var/kaynakçada yok ve
+  tersi); oysa tek bir yıl hatası. Ayrı söylenince öğrenci neyi
+  düzelteceğini hemen görüyor (kurum sahibinin geri bildirimi: "virgülüne
+  kadar").
+*/
+export function yilUyusmazliklari(
+  citationsWithoutReference: InTextCitation[],
+  references: ParsedReference[],
+): { atif: string; atifYili: string; kunye: string; kunyeYili: string }[] {
+  const sonuc: { atif: string; atifYili: string; kunye: string; kunyeYili: string }[] = [];
+  for (const atif of citationsWithoutReference) {
+    if (!atif.year) continue;
+    const kunye = references.find(
+      (ref) => referenceKey(ref) && keysMatch(atif.authorKey, referenceKey(ref)) && normalizeYear(ref.year) !== normalizeYear(atif.year),
+    );
+    if (kunye?.year) sonuc.push({ atif: atif.raw, atifYili: atif.year, kunye: kunye.raw, kunyeYili: kunye.year });
+  }
+  return sonuc;
+}
+
 // --- Genel uyum skoru --------------------------------------------------------
 
 export function computeComplianceScore(

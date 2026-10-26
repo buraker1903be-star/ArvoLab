@@ -76,6 +76,9 @@ export interface CheckResult {
   stil: { id: string; ad: string; tur: AtifTuru };
   dogrulananSayisi: number;
   toplamKaynak: number;
+  /* Kılavuz atıf kuralları (lib/atif/tyk.ts); metin yoksa ya da eski kayıtta null. */
+  tyk?: { tur: "yilsiz" | "kalip" | "yil_uyusmazligi"; atif: string; aciklama: string }[] | null;
+  ornekAtif?: string | null;
 }
 
 const STATUS_META: Record<AcademicVerification["status"], { label: string; tone: Tone }> = {
@@ -467,6 +470,35 @@ export default function CitationCheckForm({
               )}
             </div>
           )}
+
+          {/*
+            KILAVUZ (TYK) ATIF KURALLARI: yılı olmayan atıf, yıl
+            uyuşmazlığı, kılavuz örneğinin noktalaması. Örnek girilmemişse
+            noktalama denetlenmediği SÖYLENİYOR: "sorun yok" sanılmasın.
+          */}
+          {result.tyk ? (
+            <div className="result-block">
+              <h3 className="result-heading">Kılavuz atıf kuralları</h3>
+              <p className="hint">
+                {result.ornekAtif
+                  ? `Kılavuz örneği: ${result.ornekAtif} — atıflar bu noktalamaya göre denetlendi.`
+                  : "Kılavuzunuzun örnek atıfını Kılavuz penceresine girerseniz noktalama (virgül, iki nokta, “s.”) da denetlenir."}
+              </p>
+              {result.tyk.length === 0 ? (
+                <p className="tone-text" data-tone="success">
+                  Yılı olmayan atıf ve yıl uyuşmazlığı yok{result.ornekAtif ? "; atıflar kılavuz örneğine uyuyor" : ""}.
+                </p>
+              ) : (
+                <ul className="result-list">
+                  {result.tyk.map((bulgu, index) => (
+                    <li key={`${bulgu.tur}-${index}`} className="tone-text" data-tone={bulgu.tur === "kalip" ? "warning" : "danger"}>
+                      <b>{bulgu.atif}</b> — {bulgu.aciklama}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
 
           {/*
             KÜNYE BAŞINA TEK KART. Eskiden aynı künye üç ayrı yerde

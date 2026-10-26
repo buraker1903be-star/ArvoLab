@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { ornekKalibi } from "@/lib/atif/tyk";
 import { scanGuidelineBytes, scanGuidelineUrl, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
 import {
@@ -230,4 +231,33 @@ export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> 
   revalidatePath("/dashboard/editor");
   revalidatePath(`/dashboard/editor/${projectId}/write`);
   return { success: true };
+}
+
+/**
+ * Kılavuzun örnek atıfı (academic_projects.ornek_atif). Kaynakça denetimi
+ * atıfları bunun noktalamasına göre denetliyor, editör atıfı buna göre
+ * yazıyor. Boş gönderilirse silinir. Yetki RLS'te (çalışmayı güncelleyebilen).
+ */
+export async function ornekAtifKaydet(projectId: string, ornek: string): Promise<ActionResult> {
+  const ctx = await getAuthContext();
+  if (!ctx) return SESSION_MISSING;
+  const temiz = ornek.replace(/\s+/g, " ").trim().slice(0, 300);
+  if (temiz && !ornekKalibi(temiz)) {
+    return { error: "Örnekte parantez içinde yazar ve yıl olan bir atıf bulunamadı. Örn. (Yılmaz, 2020: 14)" };
+  }
+  const { data, error } = await ctx.supabase
+    .from("academic_projects")
+    .update({ ornek_atif: temiz || null })
+    .eq("id", projectId)
+    .select("id");
+  if (error) {
+    console.error("[örnek atıf] kaydedilemedi:", error.message);
+    return { error: "Kaydedilemedi; tekrar deneyin." };
+  }
+  // RLS yetkisiz güncellemeyi sessizce sıfır satıra çeviriyor; başarı sanılmasın.
+  if (!data?.length) return { error: "Bu çalışmayı güncelleme yetkiniz yok." };
+  revalidatePath("/dashboard/editor");
+  revalidatePath(`/dashboard/editor/${projectId}`);
+  revalidatePath(`/dashboard/editor/${projectId}/write`);
+  return {};
 }

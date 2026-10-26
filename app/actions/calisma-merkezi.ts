@@ -39,7 +39,7 @@ export async function calismaOzeti(
   const { data: calisma, error } = await supabase
     .from("academic_projects")
     .select(
-      "id, title, project_type, status, progress, university, institute, department, citation_style, research_method, due_date, priority, assignee_name, updated_at, guideline_id",
+      "id, title, project_type, status, progress, university, institute, department, citation_style, research_method, due_date, priority, assignee_name, updated_at, guideline_id, ornek_atif",
     )
     .eq("id", projectId)
     .maybeSingle();

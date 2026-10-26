@@ -18,6 +18,7 @@ const CALISMA = {
   assignee_name: null,
   updated_at: "2026-09-20T10:00:00Z",
   guideline_id: null,
+  ornek_atif: null,
 };
 
 const ozet = (parca: Partial<CalismaOzeti> = {}): CalismaOzeti => ({

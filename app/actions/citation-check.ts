@@ -8,9 +8,11 @@ import {
   extractInTextCitations,
   crossCheck,
   computeComplianceScore,
+  yilUyusmazliklari,
 } from "@/lib/apa7";
 import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
 import { splitBodyAndReferences } from "@/lib/text-split";
+import { kalibaUymayanlar, ornekKalibi, yilsizAtiflar, type TykBulgusu } from "@/lib/atif/tyk";
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 import { dogrulamaOnbellegi } from "@/lib/dogrulama-onbellegi";
@@ -168,10 +170,11 @@ export async function runCitationCheck(input: {
     atıf denetimi görüyordu. document-upload.ts'teki denetimin eşi; okuma
     RLS'e tabi olduğu için göremediği çalışmanın kimliğini veren burada durur.
   */
+  let ornekAtif: string | null = null;
   if (input.projectId) {
     const { data: ownProject, error: projectError } = await supabase
       .from("academic_projects")
-      .select("id")
+      .select("id, ornek_atif")
       .eq("id", input.projectId)
       .maybeSingle();
     if (projectError) {
@@ -179,6 +182,7 @@ export async function runCitationCheck(input: {
       return { error: "Çalışma doğrulanamadı." };
     }
     if (!ownProject) return { error: "Bu çalışmaya atıf denetimi ekleyemezsiniz." };
+    ornekAtif = (ownProject as { ornek_atif?: string | null }).ornek_atif ?? null;
   }
 
   /* Stil çalışmadan geliyor; seçilmemişse APA (kayıtların varsayılanı).
@@ -256,6 +260,27 @@ export async function runCitationCheck(input: {
   const cross = govdeVar && adlaEslesir(stil)
     ? crossCheck(citations, references, { yilaBak: yilaBakilir(stil) })
     : { citationsWithoutReference: [], referencesWithoutCitation: [] };
+  /*
+    KILAVUZ (TYK) ATIF KURALLARI — "virgülüne kadar" (lib/atif/tyk.ts).
+    Yalnızca yazar–tarih stillerinde ve metin varken: yılı olmayan atıflar,
+    atıf ile künye arasındaki yıl uyuşmazlığı ve kılavuz örneğinin
+    noktalamasına uymayan atıflar. Örnek girilmemişse noktalama
+    denetlenmez (bilinmeyen kuralı uydurmak doğru atıfa hata demek olurdu).
+  */
+  const kalip = ornekKalibi(ornekAtif);
+  const tyk: TykBulgusu[] =
+    govdeVar && stil.tur === "yazar-tarih"
+      ? [
+          ...yilsizAtiflar(govde),
+          ...yilUyusmazliklari(cross.citationsWithoutReference, references).map((u) => ({
+            tur: "yil_uyusmazligi" as const,
+            atif: u.atif,
+            aciklama: `Metinde ${u.atifYili}, kaynakçada ${u.kunyeYili}: ${u.kunye.slice(0, 160)}`,
+          })),
+          ...(kalip ? kalibaUymayanlar(govde, kalip) : []),
+        ]
+      : [];
+
   const score = computeComplianceScore(references, cross);
   /*
     Sınır artık AĞA GİDEN künye sayısı; önbellekten karşılananlar ondan
@@ -295,7 +320,7 @@ export async function runCitationCheck(input: {
     body_text: input.useProjectBody ? null : (input.bodyText || null),
     parsed_references: references,
     in_text_citations: citations,
-    cross_check: { ...cross, academicVerification, verificationSummary },
+    cross_check: { ...cross, academicVerification, verificationSummary, tyk, ornekAtif: kalip ? kalip.ornek : null },
     compliance_score: score,
     created_by: user.id,
   });
@@ -318,6 +343,8 @@ export async function runCitationCheck(input: {
     stil: { id: stil.id, ad: stil.ad, tur: stil.tur },
     dogrulananSayisi: academicVerification.length,
     toplamKaynak: references.length,
+    tyk,
+    ornekAtif: kalip ? kalip.ornek : null,
   };
 }
 
@@ -384,6 +411,8 @@ export async function sonKaynakcaDenetimi(projectId: string) {
     referencesWithoutCitation?: { raw: string }[];
     academicVerification?: unknown[];
     verificationSummary?: { verified: number; possible: number; notFound: number; insufficientData: number };
+    tyk?: TykBulgusu[];
+    ornekAtif?: string | null;
   };
   const proje = data.academic_projects as { citation_style?: string | null } | { citation_style?: string | null }[] | null;
   const stil = stilTanimi((Array.isArray(proje) ? proje[0] : proje)?.citation_style);
@@ -403,6 +432,9 @@ export async function sonKaynakcaDenetimi(projectId: string) {
     stil: { id: stil.id, ad: stil.ad, tur: stil.tur },
     dogrulananSayisi: academicVerification.length,
     toplamKaynak: references.length,
+    // Bu özellikten önceki kayıtlarda yok: boş liste "sorun yok" demek değil, ölçülmemiş.
+    tyk: capraz.tyk ?? null,
+    ornekAtif: capraz.ornekAtif ?? null,
     tarih: data.created_at as string,
   };
 }

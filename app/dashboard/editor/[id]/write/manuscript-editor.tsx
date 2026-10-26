@@ -1,5 +1,6 @@
 "use client";
 
+import { ornekKalibi } from "@/lib/atif/tyk";
 import { eksikAlanlar } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
@@ -169,6 +170,8 @@ interface ManuscriptEditorProps {
   projectStatus?: string | null;
   /** Çalışmanın kaynakça sistemi (atıf biçimi) */
   citationStyle: string;
+  /** Kılavuzun örnek atıfı: eklenen atıf bu noktalamayla yazılır (lib/atif/tyk.ts). */
+  ornekAtif?: string | null;
   /** Eski kayıt hatasından etkilenmişse neyin kaybolduğu (etkilenmediyse null) */
   formatLoss: FormatLossReport | null;
 }
@@ -335,6 +338,7 @@ export default function ManuscriptEditor({
   dueDate = null,
   projectStatus = null,
   citationStyle,
+  ornekAtif = null,
   formatLoss,
 }: ManuscriptEditorProps) {
   const [saveState, setSaveState] = useState<SaveState>("saved");
@@ -1279,7 +1283,11 @@ export default function ManuscriptEditor({
   const style: CitationStyle = CITATION_STYLES.includes(citationStyle as CitationStyle) ? (citationStyle as CitationStyle) : "apa7";
   const handleCite = (source: LiteratureSource, secenek: { sayfa?: string | null } = {}) => {
     const bugun = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul" }).format(new Date());
-    const { citation, addedReference } = insertCitation(editor, source, style, { sayfa: secenek.sayfa, erisimTarihi: bugun });
+    const { citation, addedReference } = insertCitation(editor, source, style, {
+      sayfa: secenek.sayfa,
+      erisimTarihi: bugun,
+      kalip: ornekKalibi(ornekAtif),
+    });
     /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor. */
     const eksik = addedReference ? eksikAlanlar(source) : [];
     showToast(

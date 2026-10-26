@@ -7,6 +7,7 @@ import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import { bicimOzeti } from "@/lib/kilavuz-dogrulama";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import KilavuzYukle from "./kilavuz-yukle";
+import OrnekAtifFormu from "./ornek-atif-formu";
 
 /*
   KILAVUZ TEK PENCEREDE. Çalışmalarım'daki durum kartı ve personelin
@@ -29,7 +30,7 @@ export default function KilavuzPenceresi({
   acikBasla = false,
   kisa = false,
 }: {
-  calisma: { id: string; university: string | null };
+  calisma: { id: string; university: string | null; ornek_atif?: string | null };
   uygulanan: AppliedGuideline | null;
   kilavuzOkunamadi: boolean;
   triggerClassName?: string;
@@ -102,6 +103,8 @@ export default function KilavuzPenceresi({
               </div>
             </>
           )}
+          {/* TYK'nın atıf örneği: stil adının söylemediği noktalama (lib/atif/tyk.ts). */}
+          <OrnekAtifFormu projectId={calisma.id} mevcut={calisma.ornek_atif ?? null} />
         </section>
 
         <section className="pencere-kart">

@@ -1,7 +1,8 @@
 import type { Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { headingMatchesSection } from "@/lib/section-match";
-import { formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
+import { authorLabel, formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
+import { kalibaGoreAtif, type AtifKalibi } from "@/lib/atif/tyk";
 import { fixReferencePunctuation } from "@/lib/reference-punctuation";
 import { indentCmOf, type ParagraphFormatRules, hangingIndentCmOf } from "@/lib/paragraph-format";
 
@@ -162,7 +163,7 @@ export function insertCitation(
   source: CitableSource,
   style: CitationStyle,
   /* Sayfa (atıf penceresinde öğrencinin yazdığı) ve erişim tarihi (bugün). */
-  secenek: AtifSecenegi & KunyeSecenegi = {}
+  secenek: AtifSecenegi & KunyeSecenegi & { kalip?: AtifKalibi | null } = {}
 ): { citation: string; addedReference: boolean } {
   const section = findReferencesSection(editor.state.doc);
   const entries = section?.paragraphs.filter((item) => item.node.textContent.trim()) ?? [];
@@ -171,7 +172,15 @@ export function insertCitation(
     ? entries.findIndex((item) => item.node.textContent.toLocaleLowerCase("tr-TR").includes(titleKey))
     : -1;
   const number = existingIndex >= 0 ? existingIndex + 1 : entries.length + 1;
-  const citation = formatInTextCitation(source, style, number, { sayfa: secenek.sayfa });
+  /*
+    Kılavuzun örnek atıfı girildiyse yazar–tarih atıfı ONUN noktalamasıyla
+    yazılır ("(Yılmaz, 2020: 14)"); öğrenci her atıfı elle düzeltmesin.
+    Numaralı stillerde (IEEE, Vancouver) örnek uygulanmaz.
+  */
+  const citation =
+    secenek.kalip && (style === "apa7" || style === "chicago")
+      ? kalibaGoreAtif(authorLabel(source), source.year?.trim() || "t.y.", secenek.sayfa?.trim() || null, secenek.kalip)
+      : formatInTextCitation(source, style, number, { sayfa: secenek.sayfa });
 
   const { from, to } = editor.state.selection;
   const before = editor.state.doc.textBetween(Math.max(0, from - 1), from);

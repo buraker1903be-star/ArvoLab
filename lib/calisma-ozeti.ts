@@ -44,6 +44,8 @@ export type CalismaKaydi = {
   assignee_name: string | null;
   updated_at: string;
   guideline_id: string | null;
+  /** Kılavuzun örnek atıfı (lib/atif/tyk.ts); girilmemişse null. */
+  ornek_atif: string | null;
 };
 
 export type CalismaOzeti = {
