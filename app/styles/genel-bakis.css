@@ -497,3 +497,14 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 /* Doçentlik: grup başına puanlar toplamın altında tek satır çip */
 .docentlik-gruplar { display: flex; flex-wrap: wrap; gap: 6px; }
 .analiz-kartlari[data-boy="tur"] { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+/* Abonelik ve kredi: aylık hak çubuğu ve paket kartları */
+.kredi-cubugu { width: 100%; height: 8px; border: 0; border-radius: 999px; overflow: hidden; background: var(--surface-2); appearance: none; }
+.kredi-cubugu::-webkit-progress-bar { background: var(--surface-2); border-radius: 999px; }
+.kredi-cubugu::-webkit-progress-value { background: var(--accent); border-radius: 999px; }
+.kredi-cubugu::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
+.kredi-paketleri { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.kredi-paketi { display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.kredi-paketi b { color: var(--ink); font-size: var(--fs-base); font-weight: 650; }
+.kredi-paketi-fiyat { color: var(--ink); font-size: 22px; font-weight: 700; }
+.kredi-paketi small { margin-bottom: 6px; color: var(--muted); font-size: var(--fs-micro); }
+.kredi-paketi button { align-self: stretch; justify-content: center; }

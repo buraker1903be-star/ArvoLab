@@ -23,7 +23,7 @@ import { STAFF_ROLES } from "@/lib/project-labels";
 
 export type OsIkon =
   | "home" | "tez" | "literatur" | "kaynakca" | "analiz" | "belge"
-  | "kilavuz" | "docentlik" | "destek" | "settings" | "apps";
+  | "kilavuz" | "docentlik" | "destek" | "settings" | "apps" | "abonelik";
 
 /** altYollar: bölümün kendi yolu dışında onu etkin sayan yollar. */
 export type Bolum = { key: string; href: string; label: string; altYollar?: string[] };
@@ -132,6 +132,12 @@ export function labUygulamalari(): OsUygulama[] {
          (Kaynaklar'la aynı karar, 26.10.2026). */
     },
     { key: "ayarlar", label: "Ayarlar", href: "/dashboard/settings", ikon: "settings", yollar: ["/dashboard/settings"] },
+    /*
+      Abonelik ve kredi (26.10.2026): bireysel abone aboneliğini ve asistan
+      kredisini buradan yönetiyor. Dock'ta yer kaplamıyor (ayda bir açılan
+      sayfa); başlatıcıda, Ctrl+K'da, Ayarlar'da ve kullanıcı menüsünde.
+    */
+    { key: "abonelik", label: "Abonelik ve Kredi", href: "/dashboard/abonelik", ikon: "abonelik", yollar: ["/dashboard/abonelik"], yalnizBaslatici: true },
     /*
       ROLE BAĞLI UYGULAMALAR dock'ta yer kaplamıyor: iç ekibin günde
       bir kez açtığı sayfalar, öğrencinin her gün gördüğü simgelerin

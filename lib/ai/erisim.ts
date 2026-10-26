@@ -40,7 +40,7 @@ async function krediDurumu(): Promise<KrediKarari> {
   }
   const satir = data as {
     kullanilan_karakter: number; limit_kredi: number | null;
-    aylik_kalan: number; ek_bakiye: number; bildirildi: boolean; ic_ekip: boolean;
+    aylik_kalan: number; ek_bakiye: number; bildirildi: boolean; ic_ekip: boolean; bireysel?: boolean | null;
   };
   return krediKarari({
     kullanilanKarakter: Number(satir.kullanilan_karakter ?? 0),
@@ -49,6 +49,7 @@ async function krediDurumu(): Promise<KrediKarari> {
     ekBakiye: Number(satir.ek_bakiye ?? 0),
     bildirildi: Boolean(satir.bildirildi),
     icEkip: Boolean(satir.ic_ekip),
+    bireysel: Boolean(satir.bireysel),
   });
 }
 

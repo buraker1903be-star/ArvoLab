@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Eye, LifeBuoy, LogOut, Settings, ShieldCheck } from "lucide-react";
+import { Check, Eye, LifeBuoy, LogOut, Settings, ShieldCheck, CreditCard } from "lucide-react";
 import ActionForm from "../action-form";
 import { gorunumSec } from "@/app/actions/onizleme";
 import { GORUNUMLER, GORUNUM_ETIKETI, type Gorunum } from "@/lib/onizleme";
@@ -67,6 +67,10 @@ export default function KullaniciMenusu({
           <Link href="/dashboard/settings">
             <Settings size={16} aria-hidden="true" />
             Ayarlar
+          </Link>
+          <Link href="/dashboard/abonelik">
+            <CreditCard size={16} aria-hidden="true" />
+            Abonelik ve kredi
           </Link>
           <Link href="/dashboard/expert-requests">
             <LifeBuoy size={16} aria-hidden="true" />

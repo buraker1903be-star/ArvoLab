@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // organizations tablosuna yansıtılır (lib/license.ts).
 
 import { normalizePlans, type BillingPlan } from "@/lib/billing-plan";
+import { krediPaketleriniOku, type KrediPaketi } from "@/lib/kredi-paketleri";
 
 const PRODUCT = "arvolab";
 
@@ -75,6 +76,8 @@ export interface SubscriptionState {
   currentPeriodEnd: string | null;
   /** ArvoOS'un sunduğu abonelik planları (aylık, yıllık) */
   plans: BillingPlan[];
+  /** Bireysel abonenin alabileceği AI kredi paketleri (ArvoOS'un listesi). */
+  krediPaketleri: KrediPaketi[];
   checkoutUrl?: string;
 }
 
@@ -88,9 +91,10 @@ function endpoint() {
 export const bridgeConfigured = () => endpoint() !== null;
 
 async function call(
-  action: "ensure" | "checkout" | "close",
+  action: "ensure" | "checkout" | "close" | "credit_checkout",
   user: { id: string; email: string; fullName?: string | null },
-  planCode?: string | null
+  planCode?: string | null,
+  paketKodu?: string | null
 ) {
   const target = endpoint();
   if (!target) {
@@ -110,6 +114,8 @@ async function call(
         fullName: user.fullName ?? null,
         // Dönem seçimi kullanıcınındır; tutarı ArvoOS belirler.
         ...(planCode ? { plan: planCode } : {}),
+        // Kredi paketi: tutarı ve kredi miktarını ArvoOS koddan belirler.
+        ...(paketKodu ? { paket: paketKodu } : {}),
       }),
       cache: "no-store",
       // Zaman aşımı olmadan ArvoOS asılı kalırsa panel de fonksiyon zaman
@@ -130,13 +136,17 @@ async function call(
     }
     const payload = (await response.json()) as Record<string, unknown>;
     await recordHealth(true);
-    const state = { ...(payload as unknown as SubscriptionState), plans: normalizePlans(payload) };
+    const state = {
+      ...(payload as unknown as SubscriptionState),
+      plans: normalizePlans(payload),
+      krediPaketleri: krediPaketleriniOku(payload),
+    };
     /*
       close bir abonelik DURUMU döndürmez ({closed: true}); aynayı onunla
       yazmak "status: unknown" taşıyan uydurma bir satır bırakırdı. Zaten
       satır birazdan kullanıcıyla birlikte siliniyor.
     */
-    if (action !== "close") await mirrorSubscription(user.id, state);
+    if (action !== "close" && action !== "credit_checkout") await mirrorSubscription(user.id, state);
     return state;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -175,3 +185,12 @@ export const startSubscriptionCheckout = (
   user: { id: string; email: string; fullName?: string | null },
   planCode?: string | null
 ) => call("checkout", user, planCode);
+
+/**
+ * AI kredi paketi için ödeme bağlantısı üretir (bireysel abone).
+ * Kurum üyesine ArvoOS 409 döndürür: kurumun kredisini kurum yöneticisi alır.
+ */
+export const startCreditCheckout = (
+  user: { id: string; email: string; fullName?: string | null },
+  paketKodu: string
+) => call("credit_checkout", user, null, paketKodu);

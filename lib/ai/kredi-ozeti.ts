@@ -22,6 +22,8 @@ export interface KrediSatiri {
   ek_bakiye: number;
   bildirildi: boolean;
   ic_ekip: boolean;
+  /** Kurumsuz müşteri (migration 20261026181929); eski kayıtta yok. */
+  bireysel?: boolean | null;
 }
 
 export type KrediOzeti =

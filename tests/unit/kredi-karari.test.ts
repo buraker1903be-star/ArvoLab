@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { krediKarari, krediye, KREDI_SATIN_ALMA_ADRESI, UYARI_ORANI } from "@/lib/ai/kredi-karari";
+import { BIREYSEL_KREDI_SAYFASI, krediKarari, krediye, KREDI_SATIN_ALMA_ADRESI, UYARI_ORANI } from "@/lib/ai/kredi-karari";
 
 const durum = (ekle: Partial<Parameters<typeof krediKarari>[0]> = {}) =>
   krediKarari({ kullanilanKarakter: 0, limitKredi: 100, aylikKalan: 100, ekBakiye: 0, bildirildi: true, icEkip: false, ...ekle });
@@ -79,5 +79,28 @@ describe("kredi kararı", () => {
     assert.ok(engel.engel?.includes(KREDI_SATIN_ALMA_ADRESI));
     const uyari = durum({ limitKredi: 10, aylikKalan: 2, ekBakiye: 0, kullanilanKarakter: 8_000 });
     assert.ok(uyari.uyari?.includes(KREDI_SATIN_ALMA_ADRESI));
+  });
+});
+
+describe("bireysel abone", () => {
+  test("kredisi bitince kendi sayfasına yönlendirilir, kurum paneline değil", () => {
+    // Bireysel abonenin girebileceği bir ArvoOS paneli yok.
+    const karar = durum({ bireysel: true, limitKredi: 1000, kullanilanKarakter: 1_000_000, aylikKalan: 0 });
+    assert.match(karar.engel ?? "", /AI krediniz bitti/);
+    assert.ok(karar.engel?.includes(BIREYSEL_KREDI_SAYFASI));
+    assert.ok(!karar.engel?.includes(KREDI_SATIN_ALMA_ADRESI));
+    assert.ok(!/[Kk]urum/.test(karar.engel ?? ""));
+  });
+
+  test("%80 uyarısı da kendi sayfasını söyler", () => {
+    const karar = durum({ bireysel: true, limitKredi: 1000, kullanilanKarakter: 850_000, aylikKalan: 150 });
+    assert.equal(karar.engel, null);
+    assert.match(karar.uyari ?? "", /Aylık AI kredinizin %85/);
+    assert.ok(karar.uyari?.includes(BIREYSEL_KREDI_SAYFASI));
+  });
+
+  test("satın aldığı bakiye varken durdurulmaz", () => {
+    const karar = durum({ bireysel: true, limitKredi: 1000, kullanilanKarakter: 1_000_000, aylikKalan: 0, ekBakiye: 200 });
+    assert.equal(karar.engel, null);
   });
 });

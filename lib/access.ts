@@ -5,6 +5,7 @@ import { ensureSubscription } from "@/lib/subscription";
 import { ADMIN_ROLES, type UserRole } from "@/lib/project-labels";
 import { loadCurrentProfile } from "@/lib/current-profile";
 import type { BillingPlan } from "@/lib/billing-plan";
+import type { KrediPaketi } from "@/lib/kredi-paketleri";
 
 // ArvoLab'a kimin gireceği tek yerde karara bağlanır. İki yol var:
 //  - Kurum üyesi: lisansı kurumu öder, durum ArvoOS'tan organizations
@@ -27,10 +28,12 @@ export interface AccessState {
   organizationName: string | null;
   /** Bireysel abone için ArvoOS'un sunduğu planlar (aylık, yıllık) */
   plans: BillingPlan[];
+  /** Bireysel abonenin AI kredi paketleri; kurumda ve bilinmeyende boş. */
+  krediPaketleri: KrediPaketi[];
 }
 
 const open = (kind: AccessKind, status: string): AccessState => ({
-  blocked: false, kind, status, trialEndsAt: null, periodEnd: null, organizationName: null, plans: [],
+  blocked: false, kind, status, trialEndsAt: null, periodEnd: null, organizationName: null, plans: [], krediPaketleri: [],
 });
 
 /*
@@ -58,6 +61,7 @@ const accessFor = cache(async function accessFor(
       organizationName: license.organizationName,
       // Kurumun aboneliğini kurumu öder; burada ödeme planı gösterilmez.
       plans: [],
+      krediPaketleri: [],
     };
   }
 
@@ -78,6 +82,7 @@ const accessFor = cache(async function accessFor(
     periodEnd: subscription.currentPeriodEnd,
     organizationName: null,
     plans: subscription.plans,
+    krediPaketleri: subscription.krediPaketleri,
   };
 });
 

@@ -212,11 +212,14 @@ describe("fonksiyon yetkileri", () => {
       yazim_ritmi              — security INVOKER: çalışma kimliği alıyor ama
         sürüm tablosunun RLS'i geçerli; görülemeyen çalışmada satır dönmez.
         Yalnızca gün başına kelime sayısı döndürür, metin döndürmez.
+      ai_bireysel_kredi_hareketlerim — PARAMETRE ALMIYOR; yalnızca çağıranın
+        KENDİ kredi defteri (Abonelik sayfası). Kullanıcı kimliği alsaydı
+        başkasının satın almaları okunabilirdi.
   */
-  test("authenticated ek olarak yalnızca kendi kapsamındaki yedi fonksiyon", async () => {
+  test("authenticated ek olarak yalnızca kendi kapsamındaki sekiz fonksiyon", async () => {
     assert.deepEqual(await acik("authenticated"),
       [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "ai_kredi_durumum", "olcum_ozeti",
-       "asistan_model_ozetleri", "calisma_hareketlerim", "yazim_ritmi"].sort());
+       "asistan_model_ozetleri", "calisma_hareketlerim", "yazim_ritmi", "ai_bireysel_kredi_hareketlerim"].sort());
   });
 
   test("notify anonim ve oturumlu kullanıcıya kapalı (sahte bildirim)", () =>

@@ -34,6 +34,13 @@ export const UYARI_ORANI = 80;
 */
 export const KREDI_SATIN_ALMA_ADRESI = "https://app.arvo-os.com/panel/billing";
 
+/*
+  Bireysel abone krediyi ArvoLab'ın içinden alıyor (Abonelik ve kredi
+  sayfası; ödeme ArvoOS'ta). Kurum yöneticisinin ArvoOS paneli onun için
+  anlamsız: girebileceği bir panel yok.
+*/
+export const BIREYSEL_KREDI_SAYFASI = "/dashboard/abonelik";
+
 export interface KrediDurumu {
   /** Bu ay tüketilen karakter. */
   kullanilanKarakter: number;
@@ -47,6 +54,8 @@ export interface KrediDurumu {
   bildirildi: boolean;
   /** İç ekip hiçbir koşulda engellenmez. */
   icEkip: boolean;
+  /** Kurumsuz müşteri: hak ve bakiye kişinin kendisinin (migration 20261026181929). */
+  bireysel?: boolean;
 }
 
 export interface KrediKarari {
@@ -80,7 +89,13 @@ export function krediKarari(durum: KrediDurumu): KrediKarari {
     hakkı olmayanı çalıştırır ya da hiç bildirilmemiş kurumu durdurur.
   */
   if (limit === 0) {
-    return { ...bos, oran: 100, engel: "Bu kurumun AI kredisi tanımlı değil. Kurum yöneticinizden paket yükseltmesi isteyin." };
+    return {
+      ...bos,
+      oran: 100,
+      engel: durum.bireysel
+        ? "Aboneliğinizde AI kredisi tanımlı değil. Abonelik ve kredi sayfasından kredi alabilirsiniz: " + BIREYSEL_KREDI_SAYFASI
+        : "Bu kurumun AI kredisi tanımlı değil. Kurum yöneticinizden paket yükseltmesi isteyin.",
+    };
   }
 
   const oran = Math.min(100, Math.round((kullanilanKredi / limit) * 100));
@@ -92,6 +107,15 @@ export function krediKarari(durum: KrediDurumu): KrediKarari {
     müşteri parasını ödediği halde kapıda durdurulurdu.
   */
   if (kalan <= 0) {
+    if (durum.bireysel) {
+      return {
+        ...bos,
+        oran,
+        engel: "AI krediniz bitti. Aylık hakkınız ayın başında yenilenir; "
+          + "beklemek istemiyorsanız Abonelik ve kredi sayfasından ek kredi alabilirsiniz: "
+          + BIREYSEL_KREDI_SAYFASI,
+      };
+    }
     return {
       ...bos,
       oran,
@@ -107,6 +131,15 @@ export function krediKarari(durum: KrediDurumu): KrediKarari {
     bitmiyor — parayla aldığı kısma geçiyor.
   */
   if (durum.ekBakiye <= 0 && oran >= UYARI_ORANI) {
+    if (durum.bireysel) {
+      return {
+        ...bos,
+        oran,
+        uyari: `Aylık AI kredinizin %${oran}'i kullanıldı (${sayi(kullanilanKredi)}/${sayi(limit)}). `
+          + "Hak dolduğunda asistan durur; Abonelik ve kredi sayfasından ek kredi alabilirsiniz: "
+          + BIREYSEL_KREDI_SAYFASI,
+      };
+    }
     return {
       ...bos,
       oran,

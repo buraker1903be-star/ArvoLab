@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Cpu, Download, KeyRound, Save, Sparkles, Trash2 } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
@@ -64,6 +65,7 @@ export default async function SettingsPage() {
   const { data: krediSatiri, error: krediHatasi } = await ctx.supabase.rpc("ai_kredi_durumum").maybeSingle();
   if (krediHatasi) console.error("[ayarlar] kredi durumu okunamadı:", krediHatasi.message);
   const kredi = krediOzeti((krediSatiri as KrediSatiri | null) ?? null);
+  const bireyselKredi = Boolean((krediSatiri as KrediSatiri | null)?.bireysel);
 
   /*
     Abonelik durumu bugüne kadar YALNIZCA ana sayfada duruyordu. Bireysel
@@ -203,20 +205,26 @@ export default async function SettingsPage() {
                     kullanılabilir {sayi(kredi.toplam)}. 1 kredi = 1.000 karakter; aylık hak ayın başında yenilenir, satın
                     alınan bakiye yanmaz.
                   </small>
-                  {kredi.tukendi ? (
-                    <small className="tone-text" data-tone="danger">
-                      Krediniz bitti; asistan yeni çalışma yapmıyor. Kurum yöneticiniz{" "}
-                      <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">ArvoOS panelinden</a> ek
-                      kredi satın alabilir.
-                    </small>
-                  ) : kredi.ekBakiye === 0 && kredi.oran >= 80 ? (
-                    <small className="tone-text" data-tone="warning">
-                      Aylık hakkınızın %{kredi.oran}&apos;i kullanıldı. Kurum yöneticiniz{" "}
-                      <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">ArvoOS panelinden</a> ek
-                      kredi satın alabilir.
+                  {/* Bireysel abone krediyi Abonelik ve kredi sayfasından alır; kurum üyesi için yönetici ArvoOS'tan. */}
+                  {kredi.tukendi || (kredi.ekBakiye === 0 && kredi.oran >= 80) ? (
+                    <small className="tone-text" data-tone={kredi.tukendi ? "danger" : "warning"}>
+                      {kredi.tukendi ? "Krediniz bitti; asistan yeni çalışma yapmıyor. " : `Aylık hakkınızın %${kredi.oran}'i kullanıldı. `}
+                      {bireyselKredi ? (
+                        <>Ek kredi için “Ayrıntı”ya gidin.</>
+                      ) : (
+                        <>
+                          Kurum yöneticiniz{" "}
+                          <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">ArvoOS panelinden</a> ek
+                          kredi satın alabilir.
+                        </>
+                      )}
                     </small>
                   ) : null}
                 </span>
+                {/* Ayrıntı, paketler ve son hareketler Abonelik ve kredi sayfasında. */}
+                <Link className="projects-filter-button button-compact" href="/dashboard/abonelik">
+                  Ayrıntı
+                </Link>
               </li>
             ) : null}
 
