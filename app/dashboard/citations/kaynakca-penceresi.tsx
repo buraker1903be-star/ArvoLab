@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ChevronRight, Quote } from "lucide-react";
+import { Quote } from "lucide-react";
 import { kaynakcaAsistaniAcik } from "@/app/actions/ai-kaynakca";
 import PanelDrawer from "../_components/panel-drawer";
 import CitationCheckForm, { type CheckResult } from "./citation-check-form";
@@ -13,6 +12,8 @@ import { trTarihSaat } from "@/lib/tr-time";
   (CitationCheckForm); burada çalışma ve onun atıf stili hazır seçili,
   seçici çizilmiyor. Son denetimin puanı düğmede ve pencerenin başında:
   öğrenci yeniden denetlemeye gerek olup olmadığını açmadan görüyor.
+  "Denetim geçmişi" bağlantısı kaldırıldı: son denetim sonuç kartında,
+  asistan yorumlarının geçmişi sol kartta; sayfaya gitmeye gerek yok.
 
   Puan çalışmanın KENDİ atıf stiline göre; stil adı yazılmıyor (ayrıntı
   lib/calisma-ozeti.ts, kaynakça adımı).
@@ -55,9 +56,6 @@ export default async function KaynakcaPenceresi({
         oncekiSonuc={onceki as (CheckResult & { tarih: string }) | null}
         asistanGecmisi={gecmis}
       />
-      <Link href={`/dashboard/citations?calisma=${calisma.id}`} className="link-accent mt-md kanit-tam-tablo">
-        Denetim geçmişi <ChevronRight size={14} aria-hidden="true" />
-      </Link>
     </PanelDrawer>
   );
 }
