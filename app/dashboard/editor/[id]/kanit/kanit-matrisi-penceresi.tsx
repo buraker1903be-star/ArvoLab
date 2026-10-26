@@ -71,7 +71,7 @@ export default async function KanitMatrisiPenceresi({
       </dl>
 
       {/* Hiç iddia yoksa form açık gelir: yapılacak tek iş o. */}
-      <details className="form-details mt-md" open={kayitlar.length === 0}>
+      <details className="form-details pencere-is mt-md" open={kayitlar.length === 0}>
         <summary>
           <Plus size={15} aria-hidden="true" /> İddia ekle
         </summary>

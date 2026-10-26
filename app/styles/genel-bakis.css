@@ -309,3 +309,24 @@
 .kaynakca-son[data-tone="danger"] { color: var(--danger); }
 .kaynakca-son[data-tone="warning"] { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
 .kaynakca-gomulu { display: block; }
+/* Metin gibi duran ikincil düğme ("geri al"): asıl eylemin yanında göze batmasın. */
+.link-button { padding: 0 4px; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.link-button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); border-radius: var(--r-sm); }
+/* Pencerelerdeki ana işler ("Kaynak ara", "Elimdeki kaynağı ekle", "İddia ekle"):
+   düz yazı gibi duruyor, tıklanabilir oldukları anlaşılmıyordu; çerçeveli satır. */
+.pencere-bolumleri > .form-details,
+.drawer-body > .form-details.pencere-is { padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.pencere-bolumleri > .form-details > summary,
+.drawer-body > .form-details.pencere-is > summary {
+  display: flex; align-items: center; gap: 8px; min-height: 44px;
+  color: var(--accent); font-size: var(--fs-base); font-weight: 650;
+}
+.pencere-bolumleri > .form-details > summary::after,
+.drawer-body > .form-details.pencere-is > summary::after { content: "▾"; margin-left: auto; color: var(--muted); }
+.pencere-bolumleri > .form-details[open] > summary::after,
+.drawer-body > .form-details.pencere-is[open] > summary::after { content: "▴"; }
+.pencere-bolumleri > .form-details[open],
+.drawer-body > .form-details.pencere-is[open] { padding-bottom: 14px; }
+.pencere-bolumleri > .form-details[open] > summary,
+.drawer-body > .form-details.pencere-is[open] > summary { margin-bottom: 4px; }
+.kanit-kayit-ic > .form-details > summary { color: var(--muted); font-size: var(--fs-sm); text-decoration: underline; text-underline-offset: 2px; }

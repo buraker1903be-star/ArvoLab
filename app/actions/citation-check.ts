@@ -10,6 +10,7 @@ import {
   computeComplianceScore,
 } from "@/lib/apa7";
 import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
+import { splitBodyAndReferences } from "@/lib/text-split";
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 import { dogrulamaOnbellegi } from "@/lib/dogrulama-onbellegi";
@@ -143,6 +144,13 @@ export async function runCitationCheck(input: {
    * kendi editöründe zaten görüyor.
    */
   useProjectBody?: boolean;
+  /*
+    Kaynakçayı da müsveddeden al: "Kaynakça" başlığının altı kaynakça,
+    üstü gövde metni. Çalışmalarım kartının Kaynakça penceresi bunu
+    kullanıyor — öğrenci editörde zaten yazdığı kaynakçayı bir de
+    buraya kopyalamak zorunda kalmıyordu ki çoğu bu adımda vazgeçiyordu.
+  */
+  kaynakcayiMetindenAl?: boolean;
 }) {
   const supabase = await createClient();
   const {
@@ -178,7 +186,32 @@ export async function runCitationCheck(input: {
      Chicago kullanan biri, doğru yazdığı künyeler için biçim hatası
      alıyordu. */
   const stil = stilTanimi(input.citationStyle);
-  const references = kunyeleriAyristir(kunyeleriBol(input.referenceList), stil.id);
+
+  let kaynakcaMetni = input.referenceList;
+  let metindenGovde: string | null = null;
+  if (input.kaynakcayiMetindenAl) {
+    if (!input.projectId) return { error: "Kaynakçayı almak için önce bir çalışma seçin." };
+    const { data: musvedde, error: musveddeHatasi } = await supabase
+      .from("project_manuscripts")
+      .select("plain_text")
+      .eq("project_id", input.projectId)
+      .maybeSingle();
+    if (musveddeHatasi) {
+      console.error(musveddeHatasi);
+      return { error: "Çalışmanın metni okunamadı; denetim çalıştırılmadı. Tekrar deneyin." };
+    }
+    const bolum = splitBodyAndReferences(musvedde?.plain_text ?? "");
+    if (!bolum.referenceText.trim()) {
+      return {
+        error:
+          "Metninizde «Kaynakça» (ya da «Kaynaklar») başlığı bulunamadı. Editörde kaynakçanızı bu başlığın altına yazın ya da aşağıdan yapıştırarak denetleyin.",
+      };
+    }
+    kaynakcaMetni = bolum.referenceText;
+    metindenGovde = bolum.bodyText;
+  }
+
+  const references = kunyeleriAyristir(kunyeleriBol(kaynakcaMetni), stil.id);
   if (references.length === 0) {
     return { error: "Doğrulanabilecek bir kaynakça girdisi bulunamadı." };
   }
@@ -188,8 +221,8 @@ export async function runCitationCheck(input: {
     edilseydi sonuç "çapraz kontrol yapıldı, sorun yok" gibi görünürdü:
     kullanıcı metni kullanmayı AÇIKÇA istedi, olmadıysa bunu bilmeli.
   */
-  let govde = input.bodyText ?? "";
-  if (input.useProjectBody) {
+  let govde = metindenGovde ?? input.bodyText ?? "";
+  if (input.useProjectBody && metindenGovde === null) {
     if (!input.projectId) return { error: "Metni almak için önce bir çalışma seçin." };
     const { data: musvedde, error: musveddeHatasi } = await supabase
       .from("project_manuscripts")
@@ -250,7 +283,7 @@ export async function runCitationCheck(input: {
   const { error } = await supabase.from("citation_checks").insert({
     project_id: input.projectId,
     project_title: input.projectTitle,
-    raw_reference_list: input.referenceList,
+    raw_reference_list: kaynakcaMetni,
     /*
       Çalışmanın müsveddesi buraya KOPYALANMIYOR. body_text'i okuyan hiçbir
       yer yok (yalnızca yazılıyor); bir tezin tamamını her denetimde ikinci

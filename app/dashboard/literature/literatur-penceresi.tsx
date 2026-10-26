@@ -7,42 +7,57 @@ import {
   updateLiteratureSource,
   updateLiteratureStatus,
 } from "@/app/actions/literature";
-import { literaturAsistaniAcik } from "@/app/actions/ai-literatur";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import LiteraturCalismaAlani from "./literatur-calisma-alani";
-import { KunyeAlanlari, NotAlani, SOURCE_TYPE_LABELS, STATUS_LABELS } from "./kaynak-parcalari";
+import { KunyeAlanlari, NotAlani } from "./kaynak-parcalari";
 
 /*
-  LİTERATÜR PENCERESİ (26.10.2026, kurum sahibinin isteği: "Kanıt matrisi
-  ve Kılavuz olduğu yere aynı şekilde, aynı çalışmaya ait Literatür ve
-  Kaynakça açılır pencereleri").
+  LİTERATÜR PENCERESİ: Çalışmalarım'daki durum kartından, kartın
+  çalışmasının kaynakları.
 
-  Yalnızca BU çalışmanın kaynakları. Literatür sayfası kullanıcının bütün
-  kaynaklarını gösteriyor (çalışmaya bağlamadan ekleyenler kaybetmesin
-  diye); kartın penceresi ise kartın çalışmasını anlatıyor. Yeni kaynak
-  ve dizinden eklenen kayıt bu çalışmaya bağlı geliyor.
+  ÖĞRENCİ GÖZÜYLE SADE (26.10.2026, kurum sahibinin isteği: "daha basit,
+  kafa karıştırıcı olmasın"). İlk sürümde üç sayı kutusu, iki büyük araç
+  (dizin araması ve tarama asistanı) ve her kaynakta üç durum düğmesi
+  vardı. Öğrencinin bu pencerede yaptığı üç iş var; pencere yalnızca
+  onları gösteriyor:
 
-  Satırın işlemleri satırın içinde açılır bölümde; pencere içinde ikinci
-  bir pencere açılmıyor (kanıt matrisindeki gerekçe: odak ve geri tuşu
-  karışıyordu).
+  1. Yeni kaynak aramak → "Kaynak ara" (yalnızca dizin araması; tarama
+     asistanı Literatür sayfasında).
+  2. Elindeki kaynağı eklemek → dört alan (başlık, yazar, yıl, DOI);
+     gerisi "Yayın bilgileri" altında.
+  3. Okuduğunu işaretlemek → kaynağa tıklayınca TEK düğme: sıradaki
+     adım ("Okudum", "Metinde kullandım"). Geri almak ikincil.
+
+  Liste tek sıra: önce okunacaklar, sonra okunanlar, en son metinde
+  kullanılanlar. Satırın işlemleri satırın içinde; pencere içinde ikinci
+  pencere açılmıyor (odak ve geri tuşu karışıyordu).
 */
 
-const SIRA = ["to_review", "read", "used"] as const;
-/* Satırdaki tek tık: akışın bir sonraki adımı. Geri almak düzenle bölümünde. */
-const SONRAKI: Record<string, { durum: string; etiket: string } | null> = {
+type Durum = "to_review" | "read" | "used";
+const SIRA: Durum[] = ["to_review", "read", "used"];
+const ETIKET: Record<Durum, { ad: string; ton: string }> = {
+  to_review: { ad: "Okunacak", ton: "neutral" },
+  read: { ad: "Okundu", ton: "info" },
+  used: { ad: "Metinde", ton: "success" },
+};
+const ILERI: Record<Durum, { durum: Durum; etiket: string } | null> = {
   to_review: { durum: "read", etiket: "Okudum" },
-  read: { durum: "used", etiket: "Kullandım" },
+  read: { durum: "used", etiket: "Metinde kullandım" },
   used: null,
+};
+const GERI: Record<Durum, { durum: Durum; etiket: string } | null> = {
+  to_review: null,
+  read: { durum: "to_review", etiket: "Okunacaklara geri al" },
+  used: { durum: "read", etiket: "Kullanmadım, geri al" },
 };
 
 export default async function LiteraturPenceresi({ projectId, projeAdi }: { projectId: string; projeAdi: string }) {
-  const [{ satirlar, okunamadi }, asistanAcik] = await Promise.all([getLiteratureSources(), literaturAsistaniAcik()]);
-  const kaynaklar = satirlar.filter((kaynak) => kaynak.project_id === projectId);
-  const gruplar = Object.fromEntries(SIRA.map((durum) => [durum, kaynaklar.filter((k) => k.status === durum)])) as Record<
-    (typeof SIRA)[number],
-    typeof kaynaklar
-  >;
+  const { satirlar, okunamadi } = await getLiteratureSources();
+  const kaynaklar = satirlar
+    .filter((kaynak) => kaynak.project_id === projectId)
+    .sort((a, b) => SIRA.indexOf(a.status as Durum) - SIRA.indexOf(b.status as Durum));
+  const say = (durum: Durum) => kaynaklar.filter((kaynak) => kaynak.status === durum).length;
 
   return (
     <PanelDrawer
@@ -51,7 +66,11 @@ export default async function LiteraturPenceresi({ projectId, projeAdi }: { proj
       triggerClassName="projects-filter-button button-compact"
       kicker="Literatür"
       title="Bu çalışmanın kaynakları"
-      description="Bulduğunuz kaynakları kaydedin ve okuma durumunu izleyin. Bu araç kaynak özeti ya da yorum üretmez."
+      description={
+        kaynaklar.length
+          ? `${kaynaklar.length} kaynak · ${say("to_review")} okunacak · ${say("read")} okundu · ${say("used")} metinde kullanıldı`
+          : "Henüz bu çalışmaya bağlı kaynak yok. Aşağıdan arayın ya da elinizdekini ekleyin."
+      }
       boy="genis"
       basaridaKapan={false}
     >
@@ -61,126 +80,105 @@ export default async function LiteraturPenceresi({ projectId, projeAdi }: { proj
         </p>
       ) : null}
 
-      <dl className="kanit-ozet">
-        {SIRA.map((durum) => (
-          <div key={durum}>
-            <dt>{STATUS_LABELS[durum]}</dt>
-            <dd>{gruplar[durum].length}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="pencere-bolumleri mt-md">
+      <div className="pencere-bolumleri">
         {/* Hiç kaynak yoksa ilk iş kaynak bulmak; o bölüm açık gelir. */}
         <details className="form-details" open={kaynaklar.length === 0}>
           <summary>
-            <Search size={15} aria-hidden="true" /> Kaynak bul
+            <Search size={15} aria-hidden="true" /> Kaynak ara
           </summary>
-          <LiteraturCalismaAlani projeler={[{ id: projectId, title: projeAdi }]} asistanAcik={asistanAcik} secilenCalisma={projectId} />
+          <p className="hint">Gerçek dizinlerde (OpenAlex, Crossref) aranır; beğendiğinizi tek tıkla bu çalışmaya eklersiniz.</p>
+          <LiteraturCalismaAlani projeler={[{ id: projectId, title: projeAdi }]} asistanAcik={false} secilenCalisma={projectId} yalnizArama />
         </details>
         <details className="form-details">
           <summary>
-            <Plus size={15} aria-hidden="true" /> Elle kaynak ekle
+            <Plus size={15} aria-hidden="true" /> Elimdeki kaynağı ekle
           </summary>
-          <ActionForm className="project-form-grid" action={createLiteratureSource} successMessage="Kaynak eklendi.">
+          <ActionForm className="project-form-grid mt-sm" action={createLiteratureSource} successMessage="Kaynak eklendi.">
             <input type="hidden" name="projectId" value={projectId} />
-            <KunyeAlanlari />
-            <label>
-              <span>Durum</span>
-              <select name="status" defaultValue="to_review">
-                {SIRA.map((durum) => (
-                  <option key={durum} value={durum}>
-                    {STATUS_LABELS[durum]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <NotAlani />
-            <div className="project-form-actions">
+            <input type="hidden" name="status" value="to_review" />
+            <KunyeAlanlari kisa />
+            <div className="project-form-actions project-form-full">
               <button type="submit" className="projects-primary-button">
-                <Plus size={16} aria-hidden="true" /> Kaynağı ekle
+                <Plus size={16} aria-hidden="true" /> Ekle
               </button>
             </div>
           </ActionForm>
         </details>
       </div>
 
-      {SIRA.map((durum) =>
-        gruplar[durum].length ? (
-          <section key={durum} className="mt-md">
-            <h3 className="pencere-grup-baslik">
-              {STATUS_LABELS[durum]} · {gruplar[durum].length}
-            </h3>
-            <ul className="kanit-kayitlari">
-              {gruplar[durum].map((kaynak) => {
-                const sonraki = SONRAKI[durum];
-                return (
-                  <li key={kaynak.id}>
-                    <details className="kanit-kayit">
-                      <summary>
-                        <span className="kanit-kayit-govde">
-                          <b>{kaynak.title}</b>
-                          <small>
-                            {[SOURCE_TYPE_LABELS[kaynak.source_type], kaynak.authors || "Yazar belirtilmedi", kaynak.year, kaynak.container_title]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </small>
-                        </span>
-                      </summary>
-                      <div className="kanit-kayit-ic">
-                        {kaynak.notes ? <p className="kaynak-not">{kaynak.notes}</p> : null}
-                        <div className="kanit-eylemler">
-                          {SIRA.filter((d) => d !== durum).map((d) => (
-                            <ActionForm
-                              key={d}
-                              action={updateLiteratureStatus.bind(null, kaynak.id, d)}
-                              successMessage={`${STATUS_LABELS[d]} olarak işaretlendi.`}
-                            >
-                              <button type="submit" className={d === sonraki?.durum ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}>
-                                {d === sonraki?.durum ? sonraki.etiket : STATUS_LABELS[d]}
-                              </button>
-                            </ActionForm>
-                          ))}
-                          {kaynak.doi_or_url ? (
-                            <a className="projects-filter-button button-compact" href={kaynak.doi_or_url} target="_blank" rel="noreferrer">
-                              <ExternalLink size={14} aria-hidden="true" /> Kaynağa git
-                            </a>
-                          ) : null}
-                        </div>
-                        <details className="form-details mt-sm">
-                          <summary>Künyeyi düzenle</summary>
-                          <ActionForm className="project-form-grid" action={updateLiteratureSource.bind(null, kaynak.id)} successMessage="Kaynak güncellendi.">
-                            <KunyeAlanlari kaynak={kaynak} />
-                            <NotAlani kaynak={kaynak} />
-                            <div className="project-form-actions">
-                              <button type="submit" className="projects-primary-button">
-                                Kaydet
-                              </button>
-                            </div>
-                          </ActionForm>
-                        </details>
-                        <ActionForm
-                          className="mt-sm"
-                          action={deleteLiteratureSource.bind(null, kaynak.id)}
-                          confirmMessage={`"${kaynak.title}" kaynağını silmek istediğinize emin misiniz?`}
-                          successMessage="Kaynak silindi."
-                        >
-                          <button type="submit" className="projects-filter-button button-compact button-danger">
-                            <Trash2 size={14} aria-hidden="true" /> Kaynağı sil
+      {kaynaklar.length ? (
+        <ul className="kanit-kayitlari mt-md">
+          {kaynaklar.map((kaynak) => {
+            const durum = (SIRA.includes(kaynak.status as Durum) ? kaynak.status : "to_review") as Durum;
+            const ileri = ILERI[durum];
+            const geri = GERI[durum];
+            return (
+              <li key={kaynak.id}>
+                <details className="kanit-kayit">
+                  <summary>
+                    <span className="kanit-kayit-govde">
+                      <b>{kaynak.title}</b>
+                      <small>{[kaynak.authors || "Yazar belirtilmedi", kaynak.year].filter(Boolean).join(" · ")}</small>
+                    </span>
+                    <span className="status-pill" data-tone={ETIKET[durum].ton}>
+                      {ETIKET[durum].ad}
+                    </span>
+                  </summary>
+                  <div className="kanit-kayit-ic">
+                    {kaynak.notes ? <p className="kaynak-not">{kaynak.notes}</p> : null}
+                    <div className="kanit-eylemler">
+                      {ileri ? (
+                        <ActionForm action={updateLiteratureStatus.bind(null, kaynak.id, ileri.durum)} successMessage="Kaydedildi.">
+                          <button type="submit" className="projects-primary-button button-compact">
+                            {ileri.etiket}
                           </button>
                         </ActionForm>
-                      </div>
+                      ) : null}
+                      {kaynak.doi_or_url ? (
+                        <a className="projects-filter-button button-compact" href={kaynak.doi_or_url} target="_blank" rel="noreferrer">
+                          <ExternalLink size={14} aria-hidden="true" /> Kaynağı aç
+                        </a>
+                      ) : null}
+                      {geri ? (
+                        <ActionForm action={updateLiteratureStatus.bind(null, kaynak.id, geri.durum)} successMessage="Geri alındı.">
+                          <button type="submit" className="link-button">
+                            {geri.etiket}
+                          </button>
+                        </ActionForm>
+                      ) : null}
+                    </div>
+                    <details className="form-details mt-sm">
+                      <summary>Düzenle ya da sil</summary>
+                      <ActionForm className="project-form-grid mt-sm" action={updateLiteratureSource.bind(null, kaynak.id)} successMessage="Kaynak güncellendi.">
+                        <KunyeAlanlari kaynak={kaynak} kisa />
+                        <NotAlani kaynak={kaynak} />
+                        <div className="project-form-actions project-form-full">
+                          <button type="submit" className="projects-primary-button button-compact">
+                            Kaydet
+                          </button>
+                        </div>
+                      </ActionForm>
+                      <ActionForm
+                        className="mt-sm"
+                        action={deleteLiteratureSource.bind(null, kaynak.id)}
+                        confirmMessage={`"${kaynak.title}" kaynağını silmek istediğinize emin misiniz?`}
+                        successMessage="Kaynak silindi."
+                      >
+                        <button type="submit" className="projects-filter-button button-compact button-danger">
+                          <Trash2 size={14} aria-hidden="true" /> Kaynağı sil
+                        </button>
+                      </ActionForm>
                     </details>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ) : null,
-      )}
+                  </div>
+                </details>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
 
       <Link href={`/dashboard/literature?calisma=${projectId}`} className="link-accent mt-md kanit-tam-tablo">
-        Bütün kaynaklarım <ChevronRight size={14} aria-hidden="true" />
+        Literatür sayfası: tarama asistanı ve bütün kaynaklarım <ChevronRight size={14} aria-hidden="true" />
       </Link>
     </PanelDrawer>
   );

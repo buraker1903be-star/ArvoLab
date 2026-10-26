@@ -24,12 +24,15 @@ export default function LiteraturBulucu({
   secilenCalisma = null,
   sorgu,
   onSorguDegis,
+  gomulu = false,
 }: {
   projeler: Proje[];
   secilenCalisma?: string | null;
   /** Dışarıdan sürülüyor: asistanın kurduğu dize buraya iniyor. */
   sorgu: string;
   onSorguDegis: (sorgu: string) => void;
+  /** Çalışmalarım kartının Literatür penceresinde: başlık çizilmez, çalışma sabit. */
+  gomulu?: boolean;
 }) {
   const [yilDan, setYilDan] = useState("");
   const [yilaKadar, setYilaKadar] = useState("");
@@ -86,15 +89,17 @@ export default function LiteraturBulucu({
   const listedekiSayisi = kayitlar.filter((kayit) => kayit.listede || eklenen.has(kayit.kimlik)).length;
 
   return (
-    <section className="project-form-card" id="kaynak-bul">
-      <div className="asistan-kart-ust">
-        <h2>Kaynak bul</h2>
-        <p>
-          Araması OpenAlex ve Crossref dizinlerinde yapılır; her sonuç gerçek
-          bir yayına ve mümkün olduğunda DOI&apos;ye dayanır. Beğendiğinizi tek
-          tıkla listenize ekleyin.
-        </p>
-      </div>
+    <section className={gomulu ? undefined : "project-form-card"} id="kaynak-bul">
+      {gomulu ? null : (
+        <div className="asistan-kart-ust">
+          <h2>Kaynak bul</h2>
+          <p>
+            Araması OpenAlex ve Crossref dizinlerinde yapılır; her sonuç gerçek
+            bir yayına ve mümkün olduğunda DOI&apos;ye dayanır. Beğendiğinizi tek
+            tıkla listenize ekleyin.
+          </p>
+        </div>
+      )}
 
       <div className="project-form-grid">
         <label className="project-form-full">

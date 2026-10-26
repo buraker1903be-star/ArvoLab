@@ -35,10 +35,17 @@ export type KaynakDegerleri = {
   notes?: string | null;
 };
 
-/** Künye alanları (başlıktan yayınevine). Notlar ayrı: formun sonunda durur. */
-export function KunyeAlanlari({ kaynak }: { kaynak?: KaynakDegerleri }) {
+/**
+ * Künye alanları (başlıktan yayınevine). Notlar ayrı: formun sonunda durur.
+ *
+ * `kisa`: öğrencinin bildiği dört alan (başlık, yazar, yıl, DOI/adres)
+ * açıkta, gerisi "Yayın bilgileri" altında. On alanlık form "elimdeki
+ * kaynağı ekleyeyim" diyen öğrenciyi korkutuyordu; DOI varsa editör eksik
+ * bilgileri zaten kendisi dolduruyor.
+ */
+export function KunyeAlanlari({ kaynak, kisa = false }: { kaynak?: KaynakDegerleri; kisa?: boolean }) {
   const yeni = !kaynak;
-  return (
+  const temel = (
     <>
       <label className="project-form-full">
         <span>Başlık</span>
@@ -53,6 +60,14 @@ export function KunyeAlanlari({ kaynak }: { kaynak?: KaynakDegerleri }) {
         <input name="year" type="text" inputMode="numeric" placeholder={yeni ? "2023" : undefined} defaultValue={kaynak?.year ?? undefined} />
       </label>
       <label>
+        <span>DOI / URL</span>
+        <input name="doiOrUrl" type="text" placeholder={yeni ? "https://doi.org/..." : undefined} defaultValue={kaynak?.doi_or_url ?? undefined} />
+      </label>
+    </>
+  );
+  const ayrinti = (
+    <>
+      <label>
         <span>Kaynak türü</span>
         <select name="sourceType" defaultValue={kaynak?.source_type ?? "article"}>
           {Object.entries(SOURCE_TYPE_LABELS).map(([value, label]) => (
@@ -61,10 +76,6 @@ export function KunyeAlanlari({ kaynak }: { kaynak?: KaynakDegerleri }) {
             </option>
           ))}
         </select>
-      </label>
-      <label>
-        <span>DOI / URL</span>
-        <input name="doiOrUrl" type="text" placeholder={yeni ? "https://doi.org/..." : undefined} defaultValue={kaynak?.doi_or_url ?? undefined} />
       </label>
       {/* Yayın bilgileri: kaynakça girdisi eksiksiz olsun (editörde DOI ile otomatik de dolar) */}
       <label className="project-form-full">
@@ -87,6 +98,21 @@ export function KunyeAlanlari({ kaynak }: { kaynak?: KaynakDegerleri }) {
         <span>Yayınevi</span>
         <input name="publisher" type="text" defaultValue={kaynak?.publisher ?? undefined} />
       </label>
+    </>
+  );
+  if (!kisa) return (
+    <>
+      {temel}
+      {ayrinti}
+    </>
+  );
+  return (
+    <>
+      {temel}
+      <details className="form-details project-form-full">
+        <summary>Yayın bilgileri (isteğe bağlı)</summary>
+        <div className="project-form-grid mt-sm">{ayrinti}</div>
+      </details>
     </>
   );
 }

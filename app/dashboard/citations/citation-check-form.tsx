@@ -206,7 +206,7 @@ export default function CitationCheckForm({
     });
   }
 
-  async function handleCheck() {
+  async function handleCheck(kaynakcayiMetindenAl = false) {
     setLoading(true);
     setError(null);
     setResult(null);
@@ -218,7 +218,8 @@ export default function CitationCheckForm({
         referenceList,
         bodyText,
         citationStyle,
-        useProjectBody: calismaMetniniKullan && Boolean(projectId),
+        useProjectBody: (calismaMetniniKullan || gomulu) && Boolean(projectId),
+        kaynakcayiMetindenAl,
       });
       if ("error" in res) {
         setError(res.error as string);
@@ -258,131 +259,171 @@ export default function CitationCheckForm({
         </div>
       )}
 
-      <div className="callout mb-md" data-tone="info">
-        Bibliyografik bilgiler Crossref ve OpenAlex üzerinden doğrulanır. Her sonuçta
-        ayrıca Google Scholar’da aynı kaynağı açan bağımsız arama bağlantısı verilir.
-        Biçim ve atıf eşleşmesi kaynakçanın tamamında çalışır; akademik veritabanı
-        doğrulaması ilk 25 kaynakla sınırlıdır.
-      </div>
-
-      <div className="project-form-grid">
-        {gomulu ? null : projects.length > 0 ? (
-          <label>
-            <span>Bağlı çalışma (opsiyonel)</span>
-            <select
-              value={projectId}
-              onChange={(e) => {
-                setProjectId(e.target.value);
-                /* Çalışma değişti: önceki müsveddenin kelime sayısı artık
-                   başka bir çalışmayı anlatıyor olurdu. */
-                setCalismaMetniniKullan(false);
-                setMetinOzeti(null);
-                /* Stil çalışmanın kaydında zaten var; kullanıcıya iki
-                   kez sormak, ikisinin ayrışmasına davetiye. Seçim yine
-                   de elle değiştirilebiliyor. */
-                const secilen = projects.find((p) => p.id === e.target.value);
-                if (secilen?.citation_style) setCitationStyle(secilen.citation_style);
-              }}
-            >
-              <option value="">Seçili çalışma yok</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.title}</option>
-              ))}
-            </select>
-          </label>
-        ) : (
-          <label>
-            <span>Çalışma başlığı (opsiyonel etiket)</span>
-            <input
-              type="text"
-              placeholder="Örn. Eğitim Bilimleri Yüksek Lisans Tezi"
-              value={projectTitle}
-              onChange={(e) => setProjectTitle(e.target.value)}
-            />
-          </label>
-        )}
-
-        <label>
-          <span>Atıf stili</span>
-          <select value={citationStyle} onChange={(e) => setCitationStyle(e.target.value)}>
-            {STIL_SECENEKLERI.map((secenek) => (
-              <option key={secenek.deger} value={secenek.deger}>{secenek.etiket}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="project-form-full">
-          <span>Kaynakça listesi</span>
-          <textarea
-            rows={8}
-            placeholder={"Yılmaz, A. (2020). Örnek makale başlığı. Dergi Adı, 12(3), 45-60. https://doi.org/..."}
-            value={referenceList}
-            onChange={(e) => setReferenceList(e.target.value)}
-          />
-        </label>
-
-        <div className="project-form-full field-group">
-          <span className="field-title">Metin (metin içi atıf kontrolü için, opsiyonel)</span>
+      {gomulu ? (
+        /*
+          ÖĞRENCİ GÖZÜYLE TEK DÜĞME. Penceredeki öğrencinin sorusu "kaynakçam
+          doğru mu?"; stil, metin ve kaynakça zaten çalışmasında duruyor.
+          Eskiden aynı form burada da stil seçtiriyor, kaynakçayı
+          yapıştırtıyor ve metin için ayrı bir onay kutusu soruyordu.
+          Yapıştırma yolu kaynakçası editörde olmayan için duruyor.
+        */
+        <div className="kaynakca-basit">
           <p className="hint">
-            Metin verilmezse çapraz kontrol YAPILMAZ: hangi kaynağa metinde
-            atıf yapılmadığı ve hangi atfın kaynakçada karşılığı olmadığı
-            ölçülemez. Denetimin elle yapılması en zor yarısı budur.
+            Kaynakçanız ve metniniz editördeki son kaydedilmiş hâlinden alınır. Atıf stili:{" "}
+            <b>{STIL_SECENEKLERI.find((secenek) => secenek.deger === citationStyle)?.etiket ?? citationStyle}</b> (çalışma ayarlarından).
           </p>
-
-          {projectId ? (
-            <label className="cluster mt-sm">
-              <input
-                type="checkbox"
-                checked={calismaMetniniKullan}
-                onChange={(e) => void metniKullan(e.target.checked)}
-              />
-              <span>Bu çalışmanın metnini kullan</span>
-            </label>
-          ) : null}
-
-          {calismaMetniniKullan ? (
-            ozetBekleniyor ? (
-              <p className="hint" aria-busy="true">Çalışmanın metni ölçülüyor…</p>
-            ) : metinOzeti?.okunamadi ? (
-              <p className="alert mt-sm" data-tone="warning" role="alert">
-                Çalışmanın metni ölçülemedi. Metin olmadığı anlamına gelmez;
-                denetimi çalıştırabilirsiniz ama metin yine okunamazsa denetim
-                yapılmadan durur.
-              </p>
-            ) : metinOzeti && metinOzeti.kelime === 0 ? (
-              <p className="alert mt-sm" data-tone="warning">
-                Bu çalışmada henüz yazılmış metin yok. Yazım ekranından metni
-                girin ya da aşağıya yapıştırın.
-              </p>
-            ) : metinOzeti ? (
-              <p className="hint">
-                {metinOzeti.kelime.toLocaleString("tr-TR")} kelimelik müsvedde
-                denetlenecek. Metin sunucuda okunur; buraya kopyalamanız
-                gerekmez.
-              </p>
-            ) : null
-          ) : (
+          <button type="button" className="projects-primary-button" onClick={() => void handleCheck(true)} disabled={loading}>
+            {loading ? "Kaynaklar dizinlerde aranıyor…" : "Kaynakçamı denetle"}
+          </button>
+          <details className="form-details mt-sm">
+            <summary>Kaynakçam editörde değil, yapıştırmak istiyorum</summary>
             <textarea
               className="mt-sm"
               rows={6}
-              placeholder="...önceki çalışmalarda (Yılmaz, 2020) belirtildiği gibi..."
-              value={bodyText}
-              onChange={(e) => setBodyText(e.target.value)}
+              placeholder={"Yılmaz, A. (2020). Örnek makale başlığı. Dergi Adı, 12(3), 45-60. https://doi.org/..."}
+              value={referenceList}
+              onChange={(e) => setReferenceList(e.target.value)}
             />
-          )}
+            <button
+              type="button"
+              className="projects-filter-button mt-sm"
+              onClick={() => void handleCheck(false)}
+              disabled={loading || !referenceList.trim()}
+            >
+              Yapıştırdığımı denetle
+            </button>
+          </details>
         </div>
-      </div>
+      ) : (
+        <>
+        <div className="callout mb-md" data-tone="info">
+          Bibliyografik bilgiler Crossref ve OpenAlex üzerinden doğrulanır. Her sonuçta
+          ayrıca Google Scholar’da aynı kaynağı açan bağımsız arama bağlantısı verilir.
+          Biçim ve atıf eşleşmesi kaynakçanın tamamında çalışır; akademik veritabanı
+          doğrulaması ilk 25 kaynakla sınırlıdır.
+        </div>
 
-      <div className="project-form-actions">
-        <button
-          type="button"
-          className="projects-primary-button"
-          onClick={handleCheck}
-          disabled={loading || !referenceList.trim()}
-        >
-          {loading ? "Crossref, OpenAlex ve Scholar kontrol ediliyor..." : "Kaynakları Doğrula ve Kaydet"}
-        </button>
-      </div>
+        <div className="project-form-grid">
+          {projects.length > 0 ? (
+            <label>
+              <span>Bağlı çalışma (opsiyonel)</span>
+              <select
+                value={projectId}
+                onChange={(e) => {
+                  setProjectId(e.target.value);
+                  /* Çalışma değişti: önceki müsveddenin kelime sayısı artık
+                     başka bir çalışmayı anlatıyor olurdu. */
+                  setCalismaMetniniKullan(false);
+                  setMetinOzeti(null);
+                  /* Stil çalışmanın kaydında zaten var; kullanıcıya iki
+                     kez sormak, ikisinin ayrışmasına davetiye. Seçim yine
+                     de elle değiştirilebiliyor. */
+                  const secilen = projects.find((p) => p.id === e.target.value);
+                  if (secilen?.citation_style) setCitationStyle(secilen.citation_style);
+                }}
+              >
+                <option value="">Seçili çalışma yok</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label>
+              <span>Çalışma başlığı (opsiyonel etiket)</span>
+              <input
+                type="text"
+                placeholder="Örn. Eğitim Bilimleri Yüksek Lisans Tezi"
+                value={projectTitle}
+                onChange={(e) => setProjectTitle(e.target.value)}
+              />
+            </label>
+          )}
+
+          <label>
+            <span>Atıf stili</span>
+            <select value={citationStyle} onChange={(e) => setCitationStyle(e.target.value)}>
+              {STIL_SECENEKLERI.map((secenek) => (
+                <option key={secenek.deger} value={secenek.deger}>{secenek.etiket}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="project-form-full">
+            <span>Kaynakça listesi</span>
+            <textarea
+              rows={8}
+              placeholder={"Yılmaz, A. (2020). Örnek makale başlığı. Dergi Adı, 12(3), 45-60. https://doi.org/..."}
+              value={referenceList}
+              onChange={(e) => setReferenceList(e.target.value)}
+            />
+          </label>
+
+          <div className="project-form-full field-group">
+            <span className="field-title">Metin (metin içi atıf kontrolü için, opsiyonel)</span>
+            <p className="hint">
+              Metin verilmezse çapraz kontrol YAPILMAZ: hangi kaynağa metinde
+              atıf yapılmadığı ve hangi atfın kaynakçada karşılığı olmadığı
+              ölçülemez. Denetimin elle yapılması en zor yarısı budur.
+            </p>
+
+            {projectId ? (
+              <label className="cluster mt-sm">
+                <input
+                  type="checkbox"
+                  checked={calismaMetniniKullan}
+                  onChange={(e) => void metniKullan(e.target.checked)}
+                />
+                <span>Bu çalışmanın metnini kullan</span>
+              </label>
+            ) : null}
+
+            {calismaMetniniKullan ? (
+              ozetBekleniyor ? (
+                <p className="hint" aria-busy="true">Çalışmanın metni ölçülüyor…</p>
+              ) : metinOzeti?.okunamadi ? (
+                <p className="alert mt-sm" data-tone="warning" role="alert">
+                  Çalışmanın metni ölçülemedi. Metin olmadığı anlamına gelmez;
+                  denetimi çalıştırabilirsiniz ama metin yine okunamazsa denetim
+                  yapılmadan durur.
+                </p>
+              ) : metinOzeti && metinOzeti.kelime === 0 ? (
+                <p className="alert mt-sm" data-tone="warning">
+                  Bu çalışmada henüz yazılmış metin yok. Yazım ekranından metni
+                  girin ya da aşağıya yapıştırın.
+                </p>
+              ) : metinOzeti ? (
+                <p className="hint">
+                  {metinOzeti.kelime.toLocaleString("tr-TR")} kelimelik müsvedde
+                  denetlenecek. Metin sunucuda okunur; buraya kopyalamanız
+                  gerekmez.
+                </p>
+              ) : null
+            ) : (
+              <textarea
+                className="mt-sm"
+                rows={6}
+                placeholder="...önceki çalışmalarda (Yılmaz, 2020) belirtildiği gibi..."
+                value={bodyText}
+                onChange={(e) => setBodyText(e.target.value)}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="project-form-actions">
+          <button
+            type="button"
+            className="projects-primary-button"
+            onClick={() => void handleCheck()}
+            disabled={loading || !referenceList.trim()}
+          >
+            {loading ? "Crossref, OpenAlex ve Scholar kontrol ediliyor..." : "Kaynakları Doğrula ve Kaydet"}
+          </button>
+        </div>
+
+        </>
+      )}
 
       {error && (
         <p className="alert mt-sm" data-tone="danger" role="alert">{error}</p>

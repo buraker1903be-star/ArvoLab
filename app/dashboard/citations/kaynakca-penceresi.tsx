@@ -32,7 +32,7 @@ export default async function KaynakcaPenceresi({
       triggerClassName="projects-filter-button button-compact"
       kicker="Kaynakça ve atıf doğrulama"
       title="Kaynakçanızı denetleyin"
-      description="Atıf stilinin kuralları, metin içi atıf eşleşmesi ve Crossref/OpenAlex kayıtları birlikte kontrol edilir."
+      description="Künyelerin biçimi, metindeki atıflarla eşleşmesi ve kaynakların gerçekten var olup olmadığı (Crossref, OpenAlex) birlikte kontrol edilir."
       boy="genis"
       basaridaKapan={false}
     >

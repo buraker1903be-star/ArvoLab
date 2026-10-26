@@ -18,22 +18,30 @@ export default function LiteraturCalismaAlani({
   projeler,
   asistanAcik,
   secilenCalisma = null,
+  yalnizArama = false,
 }: {
   projeler: Proje[];
   asistanAcik: boolean;
   secilenCalisma?: string | null;
+  /*
+    Çalışmalarım kartının penceresinde yalnızca arama: çalışma sabit
+    (seçici çizilmez), tarama asistanı Literatür sayfasında. İki büyük
+    araç alt alta bir pencerede öğrencinin kafasını karıştırıyordu.
+  */
+  yalnizArama?: boolean;
 }) {
   const [sorgu, setSorgu] = useState("");
 
   return (
     <>
       <LiteraturBulucu
-        projeler={projeler}
+        projeler={yalnizArama ? [] : projeler}
         secilenCalisma={secilenCalisma}
         sorgu={sorgu}
         onSorguDegis={setSorgu}
+        gomulu={yalnizArama}
       />
-      <LiteraturAsistani
+      {yalnizArama ? null : <LiteraturAsistani
         projeler={projeler}
         asistanAcik={asistanAcik}
         secilenCalisma={secilenCalisma}
@@ -42,7 +50,7 @@ export default function LiteraturCalismaAlani({
           // Bulucu sayfanın üstünde; dize oraya gidince kullanıcı da gitmeli.
           document.querySelector("#kaynak-bul")?.scrollIntoView({ behavior: "smooth", block: "start" });
         }}
-      />
+      />}
     </>
   );
 }
