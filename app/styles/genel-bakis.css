@@ -353,3 +353,18 @@
   .pencere-sonuc { max-height: none; overflow: visible; }
 }
 .kaynakca-basit > .projects-primary-button { align-self: flex-start; }
+/* Solda seçim listesi (iki-kart-secim.tsx): seçili satır sağ kartta açık olan */
+.secim-listesi { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line-soft); }
+.secim-listesi > li { border-bottom: 1px solid var(--line-soft); }
+.secim-satir {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 8px;
+  border: 0; border-left: 3px solid transparent; background: none;
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.secim-satir[aria-pressed="true"] { border-left-color: var(--accent); background: var(--accent-soft); }
+.secim-satir:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+.secim-satir .status-pill { flex: none; }
+@media (hover: hover) and (pointer: fine) { .secim-satir:not([aria-pressed="true"]):hover { background: var(--surface-2); } }
+/* Seçim listesi uzunsa sol kart da kendi içinde kayar. */
+.pencere-iki-kart:has(.secim-listesi) > .pencere-kart:first-child { max-height: min(64dvh, 760px); overflow-y: auto; scrollbar-width: thin; }
+@media (max-width: 900px) { .pencere-iki-kart:has(.secim-listesi) > .pencere-kart:first-child { max-height: none; overflow: visible; } }
