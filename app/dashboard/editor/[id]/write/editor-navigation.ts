@@ -10,6 +10,8 @@ export interface OutlineHeading {
   pos: number;
   level: number;
   text: string;
+  /** Başlıktan önceki kelime sayısı: içindekilerde sayfa tahmini için (lib/icindekiler.ts). */
+  kelimeOncesi: number;
 }
 
 export interface SectionStatus {
@@ -19,11 +21,16 @@ export interface SectionStatus {
 
 export function collectHeadings(doc: ProseMirrorNode): OutlineHeading[] {
   const headings: OutlineHeading[] = [];
+  let kelime = 0;
+  const say = (metin: string) => metin.split(/\s+/).filter(Boolean).length;
   doc.descendants((node, pos) => {
     if (node.type.name === "heading") {
-      headings.push({ pos, level: Number(node.attrs.level) || 1, text: node.textContent.trim() });
+      const text = node.textContent.trim();
+      headings.push({ pos, level: Number(node.attrs.level) || 1, text, kelimeOncesi: kelime });
+      kelime += say(text);
       return false;
     }
+    if (node.isText && node.text) kelime += say(node.text);
     return true;
   });
   return headings;

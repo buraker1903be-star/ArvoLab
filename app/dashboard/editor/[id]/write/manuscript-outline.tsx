@@ -1,54 +1,34 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Check, Circle, FileUp, ListTree, Plus, Wand2 } from "lucide-react";
+import { Check, Circle, FileUp, Plus, Wand2 } from "lucide-react";
 import type { OutlineHeading, SectionStatus } from "./editor-navigation";
-import type { PageRangeTone } from "@/lib/page-estimate";
-import type { WritingPace } from "@/lib/writing-pace";
 
 interface ManuscriptOutlineProps {
-  headings: OutlineHeading[];
+  /** En üstteki kart: kontrol düğmeleri, ilerleme ve çıktı (manuscript-editor.tsx) */
+  ust?: ReactNode;
   sections: SectionStatus[];
-  words: number;
-  pages: number;
-  minPages: number | null;
-  maxPages: number | null;
-  pageTone: PageRangeTone;
-  /** Sayfa hedefine kalan kelime ve teslim tarihine göre günlük hedef (hedef yoksa null) */
-  pace?: WritingPace | null;
   documentEmpty: boolean;
-  figures: number;
-  tables: number;
   onJump: (heading: OutlineHeading) => void;
   onInsert: (sections: string[]) => void;
   onTemplate: () => void;
   /** Word dosyasından aktarma penceresini açar */
   onImport: () => void;
-  /** İlerleme kartından sonra gösterilen ek kartlar (ör. yorumlar) */
+  /** Kılavuz bölümlerinden sonra gösterilen kartlar (içindekiler, bekleyen kaynaklar, yorumlar) */
   children?: ReactNode;
 }
 
-const PAGE_HINT: Record<PageRangeTone, string> = {
-  neutral: "",
-  warning: "Kılavuzun alt sınırına henüz ulaşılmadı",
-  success: "Kılavuzun sayfa aralığında",
-  danger: "Kılavuzun üst sınırını aşıyor",
-};
-
-// Yazarken yol gösteren yan panel: belge planı, kılavuzun zorunlu bölümleri
-// (eksikler tek tıkla doğru yere eklenir) ve sayfa hedefi.
+/*
+  Yazarken yol gösteren sağ panel. Sıra (26.10.2026, kurum sahibinin
+  isteği): kontrol kartı, kılavuz bölümleri, içindekiler, bekleyen
+  kaynaklar, yorumlar. Eskiden "İlerleme" ayrı karttı ve "Belge planı"
+  panelin altında her zaman açık uzun bir listeydi; ilerleme kontrol
+  kartına, belge planı İçindekiler penceresine taşındı.
+*/
 export default function ManuscriptOutline({
-  headings,
+  ust,
   sections,
-  words,
-  pages,
-  minPages,
-  maxPages,
-  pageTone,
-  pace = null,
   documentEmpty,
-  figures,
-  tables,
   onJump,
   onInsert,
   onTemplate,
@@ -56,11 +36,11 @@ export default function ManuscriptOutline({
   children,
 }: ManuscriptOutlineProps) {
   const missing = sections.filter((item) => !item.heading).map((item) => item.section);
-  const target = maxPages ?? minPages;
-  const progress = target ? Math.min(100, Math.round((pages / target) * 100)) : 0;
 
   return (
     <aside className="manuscript-outline" aria-label="Belge planı">
+      {ust}
+
       {sections.length > 0 ? (
         <section className="outline-card">
           <header className="outline-head">
@@ -105,68 +85,14 @@ export default function ManuscriptOutline({
         </section>
       ) : null}
 
-      <section className="outline-card">
-        <header className="outline-head">
-          <strong>İlerleme</strong>
-        </header>
-        {documentEmpty ? (
-          <button type="button" className="projects-filter-button outline-action" onClick={onImport}>
-            <FileUp size={15} aria-hidden="true" />
-            Word dosyasından aktar
-          </button>
-        ) : null}
-        <p className="outline-stat">
-          <span>{words.toLocaleString("tr-TR")} kelime</span>
-          <span>≈ {pages} sayfa</span>
-        </p>
-        {target ? (
-          <>
-            <div className="outline-progress" data-tone={pageTone} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-              <span style={{ width: `${progress}%` }} />
-            </div>
-            <p className="muted text-sm">
-              Kılavuz: {minPages ? `en az ${minPages}` : ""}
-              {minPages && maxPages ? ", " : ""}
-              {maxPages ? `en fazla ${maxPages}` : ""} sayfa
-              {PAGE_HINT[pageTone] ? ` · ${PAGE_HINT[pageTone]}` : ""}
-            </p>
-            {pace && !documentEmpty ? (
-              <p className="tone-text text-sm outline-pace" data-tone={pace.tone}>
-                {pace.detail}
-              </p>
-            ) : null}
-          </>
-        ) : null}
-        {figures || tables ? (
-          <p className="muted text-sm">
-            {[tables ? `${tables} tablo` : null, figures ? `${figures} şekil` : null].filter(Boolean).join(" · ")}
-          </p>
-        ) : null}
-        <p className="muted text-micro">Tahmin; şekil, tablo ve kapak dahil değildir.</p>
-      </section>
+      {documentEmpty ? (
+        <button type="button" className="projects-filter-button outline-action" onClick={onImport}>
+          <FileUp size={15} aria-hidden="true" />
+          Word dosyasından aktar
+        </button>
+      ) : null}
 
       {children}
-
-      <section className="outline-card">
-        <header className="outline-head">
-          <strong>
-            <ListTree size={15} aria-hidden="true" /> Belge planı
-          </strong>
-        </header>
-        {headings.length > 0 ? (
-          <ol className="outline-headings">
-            {headings.map((heading) => (
-              <li key={heading.pos} data-level={heading.level}>
-                <button type="button" onClick={() => onJump(heading)}>
-                  {heading.text || "(başlıksız)"}
-                </button>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="muted text-sm">Başlık ekledikçe (H1–H3) plan burada oluşur; tıklayarak bölümler arasında gezinebilirsiniz.</p>
-        )}
-      </section>
     </aside>
   );
 }

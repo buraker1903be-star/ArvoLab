@@ -27,7 +27,7 @@
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
 }
-.manuscript-toolbar button {
+:is(.manuscript-toolbar, .manuscript-araclar) button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -43,16 +43,15 @@
   transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .3s var(--ease-spring);
 }
 @media (hover: hover) and (pointer: fine) {
-  .manuscript-toolbar button:hover { border-color: var(--line); background: var(--surface); }
+  :is(.manuscript-toolbar, .manuscript-araclar) button:hover { border-color: var(--line); background: var(--surface); }
 }
-.manuscript-toolbar button:active { transform: scale(.92); transition-duration: .08s; }
-.manuscript-toolbar button.is-active {
+:is(.manuscript-toolbar, .manuscript-araclar) button:active { transform: scale(.92); transition-duration: .08s; }
+:is(.manuscript-toolbar, .manuscript-araclar) button.is-active {
   border-color: color-mix(in srgb, var(--accent-500) 40%, transparent);
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
-.manuscript-toolbar .toolbar-divider { width: 1px; height: 22px; margin: 0 4px; background: var(--line); }
-.manuscript-toolbar .toolbar-select {
+:is(.manuscript-toolbar, .manuscript-araclar) .toolbar-select {
   height: 32px;
   padding: 0 8px;
   border: 1px solid var(--line);
@@ -62,7 +61,7 @@
   font-size: var(--fs-sm);
   cursor: pointer;
 }
-.manuscript-toolbar .toolbar-select:focus { outline: none; border-color: var(--accent-500); }
+:is(.manuscript-toolbar, .manuscript-araclar) .toolbar-select:focus { outline: none; border-color: var(--accent-500); }
 
 /* ---------- Belge alanı ---------- */
 /* Belge sayfayla birlikte uzar (iç kaydırma çubuğu yok); araç çubuğu üstte yapışık kalır */
@@ -221,8 +220,7 @@
 .find-count { min-width: 44px; color: var(--muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; text-align: center; }
 .manuscript-toolbar .find-icon-button { min-width: 30px; height: 30px; padding: 0; }
 
-/* Kaydetme durumu (araç çubuğunun sağında, her zaman görünür) */
-.manuscript-toolbar .toolbar-spacer { flex: 1; }
+/* Kaydetme durumu (belgenin üstündeki şeridin sağında, her zaman görünür) */
 .save-status {
   --tone: var(--muted);
   display: inline-flex;
@@ -280,17 +278,6 @@
   height: 0;
   color: var(--dim);
   pointer-events: none;
-}
-
-.manuscript-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--line-soft);
-  background: var(--surface-2);
 }
 
 /* ---------- Sayfa ayarları ve kapak sayfası ---------- */
@@ -460,27 +447,11 @@
   .manuscript-toolbar { top: calc(56px + env(safe-area-inset-top)); }
 }
 
-/* Araç çubuğu düğme grubu: masaüstünde görünmez sarmalayıcı (bugünkü satır düzeni) */
-.manuscript-toolbar .toolbar-tools { display: contents; }
+
 
 /* Telefonda: düğmeler tek satırda yatay kayar, kayıt durumu sağda sabit kalır */
 @media (max-width: 760px) {
   .manuscript-toolbar { flex-wrap: wrap; gap: 6px; padding: 6px 8px; }
-  .manuscript-toolbar .toolbar-tools {
-    display: flex;
-    flex: 1 1 0;
-    min-width: 0;
-    align-items: center;
-    gap: 4px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .manuscript-toolbar .toolbar-tools::-webkit-scrollbar { display: none; }
-  .manuscript-toolbar .toolbar-tools > * { flex-shrink: 0; }
-  .manuscript-toolbar .toolbar-spacer { display: none; }
-  .manuscript-toolbar .toolbar-tools button { min-width: 36px; height: 36px; }
   .save-status { flex-shrink: 0; padding: 0 8px; font-size: var(--fs-micro); }
 }
 
@@ -520,7 +491,95 @@
 }
 
 /* ---------- Editör yerleşimi: belge + yol gösteren yan panel ---------- */
-.manuscript-layout { display: grid; grid-template-columns: minmax(0, 1fr) 272px; gap: 18px; align-items: start; }
+.manuscript-layout { display: grid; grid-template-columns: 212px minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+
+/* Sol araç paneli: işe göre gruplu dikey kartlar (manuscript-editor.tsx, AracKarti) */
+.manuscript-araclar {
+  position: sticky;
+  top: calc(var(--topbar-height) + 16px);
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - var(--topbar-height) - var(--dock-alani) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.arac-karti {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--karo-r);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.arac-karti-baslik { color: var(--muted); font-size: var(--fs-micro); font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.arac-karti-govde { display: flex; flex-wrap: wrap; gap: 2px; }
+.arac-karti-govde .toolbar-select { flex: 1 1 100%; min-width: 0; }
+.manuscript-araclar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: var(--r-xs);
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+/* Belgenin üstündeki ince şerit: kayıt durumu ve bul-değiştir */
+.manuscript-ust { justify-content: flex-end; min-height: 40px; padding: 4px 12px; }
+
+/* Sağ paneldeki kontrol kartı (eskiden belgenin altındaki çubuk) */
+.kontrol-kilavuz { display: grid; gap: 2px; min-width: 0; }
+.kontrol-kilavuz strong { overflow: hidden; font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+.kontrol-kilavuz small { font-size: var(--fs-micro); }
+.kontrol-ozet { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.kontrol-dugmeleri { display: grid; gap: 6px; }
+.kontrol-dugmeleri > button { justify-content: center; width: 100%; }
+.kontrol-dugmeleri .alert { margin: 0; }
+.kontrol-sonuc-ac { justify-self: start; }
+.kontrol-cikti { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.kontrol-cikti > button { justify-content: center; padding-inline: 8px; font-size: var(--fs-sm); }
+.kontrol-karti .projects-filter-button[data-tone="success"] {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--line));
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+/* İçindekiler penceresi: numara, başlık, noktalı çizgi, sayfa */
+.icindekiler-listesi { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.icindekiler-listesi button {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--r-xs);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.icindekiler-listesi button:hover { background: var(--surface-2); }
+.icindekiler-listesi [data-level="1"] button { font-weight: 650; }
+.icindekiler-listesi [data-level="2"] button { padding-left: 24px; }
+.icindekiler-listesi [data-level="3"] button { padding-left: 40px; color: var(--ink-soft); }
+.icindekiler-baslik { display: inline-flex; gap: 6px; min-width: 0; }
+.icindekiler-baslik b { flex: none; font-variant-numeric: tabular-nums; }
+.icindekiler-nokta { flex: 1; min-width: 16px; border-bottom: 1px dotted var(--line); transform: translateY(-3px); }
+.icindekiler-sayfa { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Bekleyen kaynaklar penceresi */
+.bekleyen-kaynaklar { display: grid; gap: 2px; margin: 0 0 10px; padding: 0; list-style: none; }
+.bekleyen-kaynaklar li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.bekleyen-kaynaklar li > span { display: grid; gap: 2px; min-width: 0; }
+.bekleyen-kaynaklar b { font-size: var(--fs-sm); }
+.bekleyen-kaynaklar small { overflow: hidden; color: var(--muted); font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
+.bekleyen-kaynaklar button { flex: none; }
 .manuscript-main { min-width: 0; }
 .manuscript-outline {
   position: sticky;
@@ -548,10 +607,8 @@
 .outline-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .outline-head strong { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-base); }
 .outline-action { width: 100%; justify-content: center; }
-.outline-sections,
-.outline-headings { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
-.outline-sections button,
-.outline-headings button {
+.outline-sections { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.outline-sections button {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -564,23 +621,12 @@
   text-align: left;
   cursor: pointer;
 }
-.outline-sections button:hover,
-.outline-headings button:hover { background: var(--surface-2); color: var(--ink); }
+.outline-sections button:hover { background: var(--surface-2); color: var(--ink); }
 .outline-sections [data-found="true"] svg { flex-shrink: 0; color: var(--success); }
 .outline-sections [data-found="false"] button { color: var(--muted); }
 .outline-sections [data-found="false"] svg { flex-shrink: 0; color: var(--dim); }
 .outline-sections .outline-add { margin-left: auto; color: var(--accent); }
-.outline-headings [data-level="2"] button { padding-left: 20px; }
-.outline-headings [data-level="3"] button { padding-left: 32px; color: var(--muted); }
-.outline-stat { display: flex; justify-content: space-between; gap: 8px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.outline-progress { --tone: var(--accent); height: 6px; overflow: hidden; border-radius: var(--r-pill); background: var(--surface-2); }
-.outline-progress span { display: block; height: 100%; border-radius: inherit; background: var(--tone); }
-.outline-progress[data-tone="warning"] { --tone: var(--warning); }
-.outline-progress[data-tone="success"] { --tone: var(--success); }
-.outline-progress[data-tone="danger"] { --tone: var(--danger); }
 /* Yazım temposu satırı (tonu .tone-text verir; nötrde normal metin rengi) */
-.outline-pace { margin: 0; line-height: 1.45; }
-.outline-pace[data-tone="neutral"] { color: var(--ink-soft); font-weight: 500; }
 
 /* Yorumlar (yan panel) */
 .outline-textarea {
@@ -738,6 +784,24 @@
 
 @media (max-width: 1180px) {
   .manuscript-layout { grid-template-columns: minmax(0, 1fr); }
+  /* Dar ekranda araç kartları belgenin üstünde yan yana, yatay kayar */
+  .manuscript-araclar {
+    top: var(--topbar-height);
+    z-index: var(--z-sticky);
+    display: flex;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 4px;
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  .arac-karti { flex: none; }
+  .arac-karti-govde { flex-wrap: nowrap; }
+  .arac-karti-govde .toolbar-select { flex: none; width: auto; }
+  /* Araç şeridi yapışık; kayıt şeridi onunla üst üste binmesin */
+  .manuscript-ust { position: static; }
   .manuscript-outline {
     position: static;
     order: -1;
@@ -745,15 +809,13 @@
     max-height: none;
     overflow: visible;
   }
-  .outline-headings { max-height: 200px; overflow-y: auto; }
+}
+@media (max-width: 900px) {
+  .manuscript-araclar { top: calc(56px + env(safe-area-inset-top)); }
 }
 @media (max-width: 760px) {
   /* Telefonda önce yazma alanı: kılavuz listesi, ilerleme ve yorumlar editörün altında */
   .manuscript-outline { order: 1; }
-}
-@media (max-width: 640px) {
-  /* Telefonda belge planı yer kaplamasın; kılavuz listesi ve ilerleme kalır */
-  .manuscript-outline > .outline-card:last-child { display: none; }
 }
 
 /* ---------- Editör alt çubuğu: sayfa hedefi ve kayıt onayı ---------- */
@@ -791,12 +853,6 @@
 .save-status[data-state="saved"]::before { animation: save-tick .5s var(--ease-spring); }
 @keyframes save-tick { 0% { transform: scale(.4); opacity: .3; } 55% { transform: scale(1.5); opacity: 1; } 100% { transform: scale(1); } }
 
-/* Teslim kontrolü tamamlandıysa düğme yeşile döner. */
-.manuscript-footer .projects-filter-button[data-tone="success"] {
-  border-color: color-mix(in srgb, var(--success) 45%, var(--line));
-  color: var(--success);
-  background: var(--success-soft);
-}
 @media (prefers-reduced-motion: reduce) {
   .page-goal > i, .save-status[data-state="saved"]::before { animation: none; }
 }

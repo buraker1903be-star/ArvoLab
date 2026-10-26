@@ -1,7 +1,7 @@
 "use client";
 
 import { ornekKalibi } from "@/lib/atif/tyk";
-import { eksikAlanlar } from "@/lib/citation-format";
+import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { kayitHatasiMetni, TASLAK_GUVENDE, TASLAK_YAZILAMADI } from "@/lib/taslak-durumu";
@@ -93,7 +93,10 @@ import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-syn
 import Link from "next/link";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
-import { estimatePages, pageRangeTone } from "@/lib/page-estimate";
+import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
+import { splitBodyAndReferences } from "@/lib/text-split";
+import IcindekilerKarti from "./icindekiler-karti";
+import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
 import ManuscriptOutline from "./manuscript-outline";
@@ -373,6 +376,7 @@ export default function ManuscriptEditor({
   const [checking, setChecking] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
+  const [sonucAcik, setSonucAcik] = useState(false);
   const [structureIssues, setStructureIssues] = useState<StructureIssue[] | null>(null);
   const [liveIssues, setLiveIssues] = useState<StructureIssue[] | null>(null);
   const [issuesOpen, setIssuesOpen] = useState(false);
@@ -864,6 +868,7 @@ export default function ManuscriptEditor({
       } else if (res.result) {
         setCheckResult(res.result);
         setCheckResultEski(false);
+        setSonucAcik(true);
       }
     } catch {
       setCheckError("Kontrol şu anda yapılamadı. Bağlantınızı kontrol edip yeniden deneyin.");
@@ -1019,6 +1024,13 @@ export default function ManuscriptEditor({
     setFootnoteDialog(null);
   }, [editor, footnoteDialog]);
 
+  /* Bekleyen kaynaklar için kaynakça HARİÇ metin; istatistikle birlikte
+     (250 ms beklemeyle) yenilenir, her tuşta değil. */
+  const govdeMetni = useMemo(
+    () => (editor && docStats ? splitBodyAndReferences(`\n${editor.getText({ blockSeparator: "\n" })}\n`).bodyText : ""),
+    [editor, docStats],
+  );
+
   if (!editor) return <div className="manuscript-editor-shell manuscript-editor-loading" aria-busy="true" />;
   // Editör oluştuğu ilk çizimde abonelik henüz anlık görüntü üretmemiş olabilir;
   // o an için durum doğrudan okunur (ilk işlemden sonra abonelik devralır).
@@ -1030,6 +1042,11 @@ export default function ManuscriptEditor({
   // Otomatik numara açıkken elle "1.2. Amaç" yazılmış başlıklar çift numaralı görünür.
   const manualNumbered = headingNumbering ? stats.headings.filter((heading) => hasManualNumber(heading.text)).length : 0;
   const pages = estimatePages(stats.words, {
+    fontSizePt: guideline?.settings.fontSizePt,
+    lineSpacing: guideline?.settings.lineSpacing,
+    margins,
+  });
+  const sayfaBasiKelime = wordsPerPage({
     fontSizePt: guideline?.settings.fontSizePt,
     lineSpacing: guideline?.settings.lineSpacing,
     margins,
@@ -1362,181 +1379,181 @@ export default function ManuscriptEditor({
 
   return (
     <div className="manuscript-layout">
-    <div className="manuscript-main">
-    <div className="manuscript-editor-shell">
-      <div className="manuscript-toolbar" role="toolbar" aria-label="Biçimlendirme">
-        {/* Masaüstünde düğmeler satırlara sarılır; telefonda tek satırda yatay kayar (workspace.css) */}
-        <div className="toolbar-tools">
-        <select
-          className="toolbar-select"
-          title="Yazı tipi"
-          aria-label="Yazı tipi"
-          value={ui.fontFamily}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (value) editor.chain().focus().setFontFamily(value).run();
-            else editor.chain().focus().unsetFontFamily().run();
-          }}
-        >
-          <option value="">{guideline?.settings.fontFamily ? `Kılavuz (${guideline.settings.fontFamily})` : "Varsayılan yazı tipi"}</option>
-          {FONT_FAMILIES.map((font) => (
-            <option key={font} value={font} style={{ fontFamily: font }}>
-              {font}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="toolbar-select"
-          title="Yazı boyutu"
-          aria-label="Yazı boyutu"
-          value={ui.fontSize}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (value) editor.chain().focus().setFontSize(value).run();
-            else editor.chain().focus().unsetFontSize().run();
-          }}
-        >
-          <option value="">{guideline?.settings.fontSizePt ? `Kılavuz (${guideline.settings.fontSizePt} pt)` : "Varsayılan boyut"}</option>
-          {FONT_SIZES.map((s) => (
-            <option key={s} value={`${s}pt`}>
-              {s} pt
-            </option>
-          ))}
-        </select>
-
-        <span className="toolbar-divider" />
-
-        <ToolbarButton label="Kalın (Ctrl+B)" active={ui.bold} onClick={() => editor.chain().focus().toggleBold().run()}>
-          <BoldIcon size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="İtalik (Ctrl+I)" active={ui.italic} onClick={() => editor.chain().focus().toggleItalic().run()}>
-          <ItalicIcon size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Altı çizili (Ctrl+U)" active={ui.underline} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-          <UnderlineIcon size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Üst simge" active={ui.superscript} onClick={() => editor.chain().focus().toggleSuperscript().run()}>
-          <SuperscriptIcon size={16} />
-        </ToolbarButton>
-
-        <span className="toolbar-divider" />
-
-        {([1, 2, 3] as const).map((level) => (
-          <ToolbarButton
-            key={level}
-            label={`Başlık ${level}`}
-            active={ui.heading === level}
-            onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
+      {/*
+        ARAÇLAR SOLDA, DİKEY KARTLARDA (26.10.2026, kurum sahibinin isteği).
+        Eskiden belgenin üstünde iki satıra sarılan tek bir çubuktu: geniş
+        ekranda bile kırk düğme yan yana, hangisinin ne işe yaradığı ancak
+        üzerine gelince anlaşılıyordu. Kartlar işe göre gruplu (yazı,
+        başlık ve liste, paragraf, ekle, belge); tablo kartı yalnızca imleç
+        tablodayken görünür. Telefonda panel belgenin üstünde yatay kayar.
+      */}
+      <aside className="manuscript-araclar" role="toolbar" aria-label="Biçimlendirme" aria-orientation="vertical">
+        <AracKarti baslik="Yazı">
+          <select
+            className="toolbar-select"
+            title="Yazı tipi"
+            aria-label="Yazı tipi"
+            value={ui.fontFamily}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value) editor.chain().focus().setFontFamily(value).run();
+              else editor.chain().focus().unsetFontFamily().run();
+            }}
           >
-            H{level}
+            <option value="">{guideline?.settings.fontFamily ? `Kılavuz (${guideline.settings.fontFamily})` : "Varsayılan yazı tipi"}</option>
+            {FONT_FAMILIES.map((font) => (
+              <option key={font} value={font} style={{ fontFamily: font }}>
+                {font}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="toolbar-select"
+            title="Yazı boyutu"
+            aria-label="Yazı boyutu"
+            value={ui.fontSize}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value) editor.chain().focus().setFontSize(value).run();
+              else editor.chain().focus().unsetFontSize().run();
+            }}
+          >
+            <option value="">{guideline?.settings.fontSizePt ? `Kılavuz (${guideline.settings.fontSizePt} pt)` : "Varsayılan boyut"}</option>
+            {FONT_SIZES.map((s) => (
+              <option key={s} value={`${s}pt`}>
+                {s} pt
+              </option>
+            ))}
+          </select>
+
+          <ToolbarButton label="Kalın (Ctrl+B)" active={ui.bold} onClick={() => editor.chain().focus().toggleBold().run()}>
+            <BoldIcon size={16} />
           </ToolbarButton>
-        ))}
+          <ToolbarButton label="İtalik (Ctrl+I)" active={ui.italic} onClick={() => editor.chain().focus().toggleItalic().run()}>
+            <ItalicIcon size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Altı çizili (Ctrl+U)" active={ui.underline} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+            <UnderlineIcon size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Üst simge" active={ui.superscript} onClick={() => editor.chain().focus().toggleSuperscript().run()}>
+            <SuperscriptIcon size={16} />
+          </ToolbarButton>
 
-        <span className="toolbar-divider" />
+        </AracKarti>
+        <AracKarti baslik="Başlık ve liste">
+          {([1, 2, 3] as const).map((level) => (
+            <ToolbarButton
+              key={level}
+              label={`Başlık ${level}`}
+              active={ui.heading === level}
+              onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
+            >
+              H{level}
+            </ToolbarButton>
+          ))}
 
-        <ToolbarButton label="Madde işaretli liste" active={ui.bulletList} onClick={() => editor.chain().focus().toggleBulletList().run()}>
-          <List size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Numaralı liste" active={ui.orderedList} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-          <ListOrdered size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Alıntı" active={ui.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-          <Quote size={16} />
-        </ToolbarButton>
+          <ToolbarButton label="Madde işaretli liste" active={ui.bulletList} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+            <List size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Numaralı liste" active={ui.orderedList} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+            <ListOrdered size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Alıntı" active={ui.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+            <Quote size={16} />
+          </ToolbarButton>
 
-        <span className="toolbar-divider" />
+        </AracKarti>
+        <AracKarti baslik="Paragraf">
+          <ToolbarButton label="Sola hizala" active={ui.align === "left"} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
+            <AlignLeft size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Ortala" active={ui.align === "center"} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
+            <AlignCenter size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Sağa hizala" active={ui.align === "right"} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
+            <AlignRight size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="İki yana yasla" active={ui.align === "justify"} onClick={() => editor.chain().focus().setTextAlign("justify").run()}>
+            <AlignJustify size={16} />
+          </ToolbarButton>
 
-        <ToolbarButton label="Sola hizala" active={ui.align === "left"} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
-          <AlignLeft size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Ortala" active={ui.align === "center"} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
-          <AlignCenter size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Sağa hizala" active={ui.align === "right"} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
-          <AlignRight size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="İki yana yasla" active={ui.align === "justify"} onClick={() => editor.chain().focus().setTextAlign("justify").run()}>
-          <AlignJustify size={16} />
-        </ToolbarButton>
+          <select
+            className="toolbar-select"
+            title="Satır aralığı"
+            aria-label="Satır aralığı"
+            value={ui.lineSpacing}
+            onChange={(e) => editor.chain().focus().setLineSpacing(e.target.value || null).run()}
+          >
+            <option value="">{guideline?.settings.lineSpacing ? `Aralık: kılavuz (${guideline.settings.lineSpacing})` : "Satır aralığı"}</option>
+            <option value="1">Tek (1.0)</option>
+            <option value="1.15">1.15</option>
+            <option value="1.5">1.5</option>
+            <option value="2">Çift (2.0)</option>
+          </select>
 
-        <span className="toolbar-divider" />
+          <ToolbarButton
+            label="İlk satır girintisi (1.25 cm)"
+            active={ui.firstLineIndent}
+            onClick={() => editor.chain().focus().setFirstLineIndent(!ui.firstLineIndent).run()}
+          >
+            <IndentIncrease size={16} />
+          </ToolbarButton>
 
-        <select
-          className="toolbar-select"
-          title="Satır aralığı"
-          aria-label="Satır aralığı"
-          value={ui.lineSpacing}
-          onChange={(e) => editor.chain().focus().setLineSpacing(e.target.value || null).run()}
-        >
-          <option value="">{guideline?.settings.lineSpacing ? `Aralık: kılavuz (${guideline.settings.lineSpacing})` : "Satır aralığı"}</option>
-          <option value="1">Tek (1.0)</option>
-          <option value="1.15">1.15</option>
-          <option value="1.5">1.5</option>
-          <option value="2">Çift (2.0)</option>
-        </select>
+        </AracKarti>
+        <AracKarti baslik="Ekle">
+          <ToolbarButton label="Tablo ekle" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+            <TableIcon size={16} />
+          </ToolbarButton>
+          <ToolbarButton
+            label={imageUploading ? "Resim yükleniyor…" : "Resim ekle (PNG, JPG, GIF)"}
+            disabled={imageUploading}
+            onClick={() => imageInputRef.current?.click()}
+          >
+            <ImagePlus size={16} />
+          </ToolbarButton>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept={IMAGE_TYPES.join(",")}
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleImageUpload(file);
+              e.target.value = "";
+            }}
+          />
+          <ToolbarButton label="Dipnot ekle" onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
+            <StickyNote size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Kaynaktan atıf ekle" onClick={() => setCiteOpen(true)}>
+            <BookMarked size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Analiz sonucu ekle" onClick={() => setAnalizOpen(true)}>
+            <BarChart3 size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Word dosyasından aktar" onClick={() => setImportOpen(true)}>
+            <FileUp size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Resimlerim (daha önce yüklenenler)" onClick={() => setLibraryOpen(true)}>
+            <Images size={16} />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Şekil başlığı (otomatik numaralı)"
+            active={ui.caption === "figure"}
+            onClick={() => editor.chain().focus().toggleCaption("figure").run()}
+          >
+            <Captions size={16} />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Tablo başlığı (otomatik numaralı)"
+            active={ui.caption === "table"}
+            onClick={() => editor.chain().focus().toggleCaption("table").run()}
+          >
+            <TableProperties size={16} />
+          </ToolbarButton>
 
-        <ToolbarButton
-          label="İlk satır girintisi (1.25 cm)"
-          active={ui.firstLineIndent}
-          onClick={() => editor.chain().focus().setFirstLineIndent(!ui.firstLineIndent).run()}
-        >
-          <IndentIncrease size={16} />
-        </ToolbarButton>
-
-        <span className="toolbar-divider" />
-
-        <ToolbarButton label="Tablo ekle" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
-          <TableIcon size={16} />
-        </ToolbarButton>
-        <ToolbarButton
-          label={imageUploading ? "Resim yükleniyor…" : "Resim ekle (PNG, JPG, GIF)"}
-          disabled={imageUploading}
-          onClick={() => imageInputRef.current?.click()}
-        >
-          <ImagePlus size={16} />
-        </ToolbarButton>
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept={IMAGE_TYPES.join(",")}
-          hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void handleImageUpload(file);
-            e.target.value = "";
-          }}
-        />
-        <ToolbarButton label="Dipnot ekle" onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
-          <StickyNote size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Kaynaktan atıf ekle" onClick={() => setCiteOpen(true)}>
-          <BookMarked size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Analiz sonucu ekle" onClick={() => setAnalizOpen(true)}>
-          <BarChart3 size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Word dosyasından aktar" onClick={() => setImportOpen(true)}>
-          <FileUp size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Resimlerim (daha önce yüklenenler)" onClick={() => setLibraryOpen(true)}>
-          <Images size={16} />
-        </ToolbarButton>
-        <ToolbarButton
-          label="Şekil başlığı (otomatik numaralı)"
-          active={ui.caption === "figure"}
-          onClick={() => editor.chain().focus().toggleCaption("figure").run()}
-        >
-          <Captions size={16} />
-        </ToolbarButton>
-        <ToolbarButton
-          label="Tablo başlığı (otomatik numaralı)"
-          active={ui.caption === "table"}
-          onClick={() => editor.chain().focus().toggleCaption("table").run()}
-        >
-          <TableProperties size={16} />
-        </ToolbarButton>
-
+        </AracKarti>
         {/*
           Tablo kontrolleri: yalnızca imleç tablodayken.
 
@@ -1551,8 +1568,7 @@ export default function ManuscriptEditor({
           tıklanamaz sekiz düğme, kalabalıktan başka bir şey değil.
         */}
         {ui.inTable ? (
-          <>
-            <span className="toolbar-divider" />
+          <AracKarti baslik="Tablo">
             <ToolbarButton label="Soluna sütun ekle" onClick={() => editor.chain().focus().addColumnBefore().run()}>
               <ArrowLeftToLine size={16} />
             </ToolbarButton>
@@ -1583,42 +1599,43 @@ export default function ManuscriptEditor({
             <ToolbarButton label="Tabloyu sil" onClick={() => editor.chain().focus().deleteTable().run()}>
               <Trash2 size={16} />
             </ToolbarButton>
-          </>
+          </AracKarti>
         ) : null}
 
-        <span className="toolbar-divider" />
+        <AracKarti baslik="Belge">
+          <ToolbarButton label="Geri al (Ctrl+Z)" disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
+            <Undo2 size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Yinele (Ctrl+Shift+Z)" disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
+            <Redo2 size={16} />
+          </ToolbarButton>
 
-        <ToolbarButton label="Geri al (Ctrl+Z)" disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
-          <Undo2 size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Yinele (Ctrl+Shift+Z)" disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
-          <Redo2 size={16} />
-        </ToolbarButton>
+          <ToolbarButton label="Sayfa ayarları" active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
+            <Settings2 size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Kapak sayfası" active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
+            <FileBadge size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Danışmana paylaş (salt okunur bağlantı)" onClick={() => setShareOpen(true)}>
+            <Share2 size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Sürüm geçmişi" onClick={() => setVersionsOpen(true)}>
+            <History size={16} />
+          </ToolbarButton>
+          <ToolbarButton label="Bul ve değiştir (Ctrl+F)" active={findOpen} onClick={() => setFindOpen((open) => !open)}>
+            <Search size={16} />
+          </ToolbarButton>
 
-        <span className="toolbar-divider" />
+          <ToolbarButton label="Klavye kısayolları" onClick={() => setShortcutsOpen(true)}>
+            <Keyboard size={16} />
+          </ToolbarButton>
+        </AracKarti>
+      </aside>
 
-        <ToolbarButton label="Sayfa ayarları" active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
-          <Settings2 size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Kapak sayfası" active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
-          <FileBadge size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Danışmana paylaş (salt okunur bağlantı)" onClick={() => setShareOpen(true)}>
-          <Share2 size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Sürüm geçmişi" onClick={() => setVersionsOpen(true)}>
-          <History size={16} />
-        </ToolbarButton>
-        <ToolbarButton label="Bul ve değiştir (Ctrl+F)" active={findOpen} onClick={() => setFindOpen((open) => !open)}>
-          <Search size={16} />
-        </ToolbarButton>
-
-        <ToolbarButton label="Klavye kısayolları" onClick={() => setShortcutsOpen(true)}>
-          <Keyboard size={16} />
-        </ToolbarButton>
-        </div>
-
-        <span className="toolbar-spacer" />
+    <div className="manuscript-main">
+    <div className="manuscript-editor-shell">
+      {/* Kayıt durumu ve bul-değiştir belgenin üstünde, yapışık */}
+      <div className="manuscript-toolbar manuscript-ust">
         <button
           type="button"
           className="save-status"
@@ -1778,10 +1795,12 @@ export default function ManuscriptEditor({
         </div>
       )}
 
-      {guideline ? (
+      {/* Kılavuzun adı ve "Kuralları gör" sağdaki kontrol kartında; belgenin
+          üstünde yalnızca yeni sürümün UYGULANDIĞI haberi kalıyor. */}
+      {guideline && syncMode === "auto-applied" ? (
         <div className="guideline-applied-banner" role="status">
           <div>
-            <strong>{syncMode === "auto-applied" ? "Kılavuzun yeni sürümü uygulandı" : "Tez kılavuzu otomatik uygulanıyor"}</strong>
+            <strong>Kılavuzun yeni sürümü uygulandı</strong>
             <span>{guideline.label}</span>
             <span className="guideline-meta text-sm">
               {guideline.citationStyle.toUpperCase()}
@@ -1799,7 +1818,7 @@ export default function ManuscriptEditor({
             </button>
           </div>
         </div>
-      ) : isThesis ? (
+      ) : !guideline && isThesis ? (
         <div className="guideline-applied-banner" data-tone="muted" role="status">
           <div>
             <strong>Bu çalışmaya bağlı onaylı kılavuz yok</strong>
@@ -1920,8 +1939,63 @@ export default function ManuscriptEditor({
         </ol>
       ) : null}
 
-      <div className="manuscript-footer">
-        <div className="cluster">
+    </div>{/* .manuscript-editor-shell */}
+
+      <ShareDialog open={shareOpen} onClose={closeShare} projectId={projectId} />
+
+      <SubmissionChecklistDialog
+        open={checklistOpen}
+        onClose={closeChecklist}
+        checklist={checklist}
+        onAction={handleChecklistAction}
+        vurgu={vurguluMadde}
+        dogrulanmamis={guideline ? !guideline.dogrulandi : false}
+      />
+
+      <Dialog
+        open={issuesOpen}
+        onClose={closeIssues}
+        kicker="Canlı kontrol"
+        title="Yapı ve bütünlük"
+        description="Yazarken kendiliğinden denetlenir: boş bölümler, başlık atlamaları, şekil/tablo numaraları, atıf–kaynakça uyumu ve boş dipnotlar."
+      >
+        {liveIssues === null ? (
+                /* null "ilk denetim henüz çalışmadı" demek; boş dizi
+                   "sorun bulunmadı". İkisini aynı göstermek, bilinmeyeni
+                   temiz rapor gibi sunmaktı. */
+                <p className="tone-text" data-tone="warning">Canlı denetim birkaç saniye içinde tamamlanır.</p>
+              ) : (
+                renderIssueList(liveIssues, closeIssues)
+              )}
+      </Dialog>
+
+    </div>{/* .manuscript-main */}
+
+      {/*
+        KONTROL KARTI (26.10.2026): eskiden belgenin altındaki çubuktu —
+        kelime sayısı, sayfa hedefi, canlı yapı uyarısı, teslim kontrolü,
+        kılavuz denetimi ve çıktı düğmeleri. Uzun belgede ancak sona
+        inince görünüyordu; artık sağ panelin başında, her zaman görünür.
+      */}
+      <ManuscriptOutline
+        ust={
+          <section className="outline-card kontrol-karti" aria-label="Kontrol ve çıktı">
+            {guideline ? (
+              <header className="outline-head">
+                <span className="kontrol-kilavuz">
+                  <strong>{guideline.label}</strong>
+                  <small className="muted">
+                    {guideline.citationStyle.toUpperCase()}
+                    {formatDate(guideline.version) ? ` · Onay: ${formatDate(guideline.version)}` : ""}
+                    {guideline.updatePending ? " · Yeni sürüm inceleniyor" : ""}
+                  </small>
+                </span>
+                <button type="button" className="result-link" onClick={() => setGuidelineOpen(true)}>
+                  Kurallar
+                </button>
+              </header>
+            ) : null}
+        <div className="kontrol-ozet">
           <span className="muted text-sm">
             {stats.words.toLocaleString("tr-TR")} kelime · ≈ {pages} sayfa
             {stats.footnotes.length > 0 ? ` · ${stats.footnotes.length} dipnot` : ""}
@@ -1962,9 +2036,14 @@ export default function ManuscriptEditor({
               {liveIssues.length === 0 ? "Yapı sorunsuz" : `${liveIssues.length} yapı uyarısı`}
             </button>
           ) : null}
+          {pace && !stats.empty ? (
+            <small className="tone-text" data-tone={pace.tone}>
+              {pace.detail}
+            </small>
+          ) : null}
         </div>
 
-        <div className="cluster cluster-lg">
+        <div className="kontrol-dugmeleri">
           <button
             type="button"
             className="projects-filter-button"
@@ -1996,6 +2075,17 @@ export default function ManuscriptEditor({
             <ShieldCheck size={15} />
             {checking ? "Kontrol ediliyor..." : "Kılavuz ve kaynakça kontrolü"}
           </button>
+          {checkError ? (
+            <p className="alert" data-tone="danger" role="alert">
+              {checkError}
+            </p>
+          ) : null}
+          {checkResult ? (
+            <button type="button" className="result-link kontrol-sonuc-ac" onClick={() => setSonucAcik(true)}>
+              Son kontrol sonucunu gör{checkResultEski ? " (eski)" : ""}
+            </button>
+          ) : null}
+          <span className="kontrol-cikti">
           <button type="button" className="projects-filter-button" onClick={handleExport} disabled={exporting}>
             <FileDown size={15} />
             {exporting ? "Hazırlanıyor..." : "Word olarak indir"}
@@ -2004,48 +2094,46 @@ export default function ManuscriptEditor({
             <Printer size={15} />
             PDF / Yazdır
           </button>
+          </span>
         </div>
-      </div>
-
-    </div>{/* .manuscript-editor-shell */}
-
-      <ShareDialog open={shareOpen} onClose={closeShare} projectId={projectId} />
-
-      <SubmissionChecklistDialog
-        open={checklistOpen}
-        onClose={closeChecklist}
-        checklist={checklist}
-        onAction={handleChecklistAction}
-        vurgu={vurguluMadde}
-        dogrulanmamis={guideline ? !guideline.dogrulandi : false}
-      />
-
-      <Dialog
-        open={issuesOpen}
-        onClose={closeIssues}
-        kicker="Canlı kontrol"
-        title="Yapı ve bütünlük"
-        description="Yazarken kendiliğinden denetlenir: boş bölümler, başlık atlamaları, şekil/tablo numaraları, atıf–kaynakça uyumu ve boş dipnotlar."
+          </section>
+        }
+        sections={sections}
+        documentEmpty={stats.empty}
+        onJump={handleJump}
+        onInsert={handleInsertSections}
+        onTemplate={handleTemplate}
+        onImport={() => setImportOpen(true)}
       >
-        {liveIssues === null ? (
-                /* null "ilk denetim henüz çalışmadı" demek; boş dizi
-                   "sorun bulunmadı". İkisini aynı göstermek, bilinmeyeni
-                   temiz rapor gibi sunmaktı. */
-                <p className="tone-text" data-tone="warning">Canlı denetim birkaç saniye içinde tamamlanır.</p>
-              ) : (
-                renderIssueList(liveIssues, closeIssues)
-              )}
-      </Dialog>
+        <IcindekilerKarti
+          headings={stats.headings}
+          numaralama={headingNumbering}
+          sayfaBasiKelime={sayfaBasiKelime}
+          onJump={handleJump}
+        />
+        <BekleyenKaynaklarKarti
+          projectId={projectId}
+          govdeMetni={govdeMetni}
+          numarali={NUMERIC_STYLES.includes(style)}
+          onCite={(source) => handleCite(source)}
+        />
+        <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
+      </ManuscriptOutline>
 
-      {checkError && (
-        <p className="alert mt-md" data-tone="danger" role="alert">
-          {checkError}
-        </p>
-      )}
-
+      {/*
+        Sonuç pencerede. Eskiden belgenin ALTINDA açılıyordu: 150 sayfalık
+        tezde öğrenci düğmeye basıyor, hiçbir şey olmamış sanıyordu.
+        Sonuçtaki "Göster/Ekle" bağlantıları önce pencereyi kapatıyor —
+        kipli pencere açıkken belgede gidilen yer görünmez.
+      */}
       {checkResult && (
-        <div className="project-form-card mt-md">
-          <h3 className="result-heading-lg">Kılavuz ve kaynakça kontrolü</h3>
+        <Dialog open={sonucAcik} onClose={() => setSonucAcik(false)} kicker="Kontrol" title="Kılavuz ve kaynakça kontrolü">
+        <div
+          className="stack"
+          onClickCapture={(event) => {
+            if ((event.target as HTMLElement).closest(".result-link")) setSonucAcik(false);
+          }}
+        >
           {checkResultEski && (
             <p className="tone-text" data-tone="warning">
               Bu sonuç metnin önceki hâline ait; sonrasında değişiklik yaptınız.
@@ -2124,29 +2212,8 @@ export default function ManuscriptEditor({
             ) : null}
           </div>
         </div>
+        </Dialog>
       )}
-
-    </div>{/* .manuscript-main */}
-
-      <ManuscriptOutline
-        headings={stats.headings}
-        sections={sections}
-        words={stats.words}
-        pages={pages}
-        minPages={guideline?.minPages ?? null}
-        maxPages={guideline?.maxPages ?? null}
-        pageTone={pageTone}
-        pace={pace}
-        documentEmpty={stats.empty}
-        figures={stats.figures}
-        tables={stats.tables}
-        onJump={handleJump}
-        onInsert={handleInsertSections}
-        onTemplate={handleTemplate}
-        onImport={() => setImportOpen(true)}
-      >
-        <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
-      </ManuscriptOutline>
 
       <VersionsDialog
         open={versionsOpen}
@@ -2352,6 +2419,15 @@ export default function ManuscriptEditor({
         </form>
       </Dialog>
     </div>
+  );
+}
+
+function AracKarti({ baslik, children }: { baslik: string; children: React.ReactNode }) {
+  return (
+    <section className="arac-karti" aria-label={baslik}>
+      <span className="arac-karti-baslik">{baslik}</span>
+      <div className="arac-karti-govde">{children}</div>
+    </section>
   );
 }
 
