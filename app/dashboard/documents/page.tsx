@@ -1,275 +1,373 @@
+import { FileText, RotateCcw, ShieldQuestion, Trash2, UploadCloud } from "lucide-react";
 import { getMyProjects } from "@/app/actions/citation-check";
-import { deleteDocumentUpload, getMyDocumentUploads, reanalyzeDocument } from "@/app/actions/document-upload";
+import {
+  calismaBelgeleri,
+  deleteDocumentUpload,
+  getMyDocumentUploads,
+  reanalyzeDocument,
+  type DocumentUploadRecord,
+} from "@/app/actions/document-upload";
 import { runOriginalityCheck, getOriginalityChecksForDocument } from "@/app/actions/originality";
-
-// Belge yükleme + analiz (mammoth/pdf-parse) büyük dosyalarda Vercel'in
-// varsayılan 10 saniyelik zaman aşımını aşabilir; bu da kullanıcıya
-// uygulama içi hata göstermeden ham bir tarayıcı hatasına ("This page
-// couldn't load") yol açar. Bu sayfadaki server action'lar (dosya
-// yükleme, AI geri bildirimi, orijinallik taraması) için süreyi
-// 60 saniyeye çıkarıyoruz.
-export const maxDuration = 60;
 import { getLatestFeedback } from "@/app/actions/ai-feedback";
 import { aiFeedbackConfigured } from "@/lib/ai-feedback";
+import { similarityTone } from "@/lib/status-tone";
+import { trTarih, trTarihSaat } from "@/lib/tr-time";
 import DocumentUploadForm from "./document-upload-form";
 import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
-import { FolderOpen, RotateCcw, ShieldQuestion, Trash2 } from "lucide-react";
+import PanelDrawer from "../_components/panel-drawer";
 import BosDurum from "../_components/bos-durum";
-import { similarityTone, statusTone } from "@/lib/status-tone";
-import { trTarihSaat } from "@/lib/tr-time";
-import CalismaSerit from "../_components/calisma-serit";
+import IkiKartSecim from "../_components/iki-kart-secim";
+import CalismaSecici from "../_components/calisma-secici";
+
+// Belge yükleme + çözümleme (mammoth/pdf-parse), asistan geri bildirimi ve
+// orijinallik taraması büyük dosyalarda varsayılan 10 saniyeyi aşabiliyor;
+// aşınca kullanıcı uygulama içi hata yerine ham bir tarayıcı hatası görüyordu.
+export const maxDuration = 60;
+
+/*
+  BELGE KONTROL — TEK EKRAN, İKİ KART (26.10.2026, Kaynaklar ve Analiz
+  Merkezi'yle aynı düzen).
+
+  Eskiden yükleme formu ve altında her belge için tam boy bir kart vardı;
+  her kartta puan, orijinallik, asistan geri bildirimi ve silme alt alta
+  duruyordu. Üç belgeli bir öğrencide sayfa metrelerce uzuyor, hangi
+  sonucun hangi belgeye ait olduğu kayboluyordu.
+
+  Şimdi solda seçili çalışmanın belgeleri (ve "Belge yükle"), sağda
+  seçili belgenin sonuçları: kılavuz uygunluğu, kaynakça, orijinallik ön
+  kontrolü, asistan geri bildirimi. Çalışmaya bağlanmadan yüklenmiş eski
+  belgeler başlıktaki ayrı pencerede, kaybolmasınlar diye.
+*/
+
+const DURUM: Record<DocumentUploadRecord["status"], { ad: string; ton: string }> = {
+  analyzed: { ad: "Denetlendi", ton: "success" },
+  failed: { ad: "Hata", ton: "danger" },
+  processing: { ad: "İşleniyor", ton: "neutral" },
+};
+
+const puanTonu = (puan: number | null | undefined) =>
+  puan == null ? "neutral" : puan >= 85 ? "success" : puan >= 60 ? "warning" : "danger";
 
 export default async function DocumentsPage({
   searchParams,
 }: {
-  // Çalışma merkezinden "Belge" adımıyla gelindiğinde çalışma hazır seçili gelsin.
   searchParams: Promise<{ calisma?: string }>;
 }) {
+  const { calisma: istenen } = await searchParams;
   const aiAcik = aiFeedbackConfigured();
-  const [
-    { satirlar: projects, okunamadi: calismaOkunamadi },
-    { satirlar: uploads, okunamadi: belgeOkunamadi },
-    { calisma: secilenCalisma },
-  ] = await Promise.all([
+  const [{ satirlar: calismalar, okunamadi: calismaOkunamadi }, { satirlar: sonYuklemeler }] = await Promise.all([
     getMyProjects(),
     getMyDocumentUploads(),
-    searchParams,
   ]);
-  /*
-    Gelen kimlik listede yoksa yok sayılır: seçili görünmeyen bir değerle
-    açılan <select> kullanıcıya "seçim yaptım" izlenimi verirdi.
-  */
-  const hazirCalisma = projects.some((p) => p.id === secilenCalisma) ? secilenCalisma! : "";
 
-  const originalityResults = await Promise.all(
-    uploads
-      .filter((u) => u.status === "analyzed")
-      .map(async (u) => ({ documentId: u.id, checks: await getOriginalityChecksForDocument(u.id) }))
-  );
+  /* Adresteki çalışma listede yoksa yok sayılır; yoksa en son açılan. */
+  const calisma = calismalar.find((c) => c.id === istenen) ?? calismalar[0] ?? null;
+  const { satirlar: belgeler, okunamadi: belgeOkunamadi } = calisma
+    ? await calismaBelgeleri(calisma.id)
+    : { satirlar: [] as DocumentUploadRecord[], okunamadi: false };
+  const bagsizlar = sonYuklemeler.filter((b) => !b.project_id);
+
+  /* Orijinallik ve geri bildirim yalnızca bu çalışmanın denetlenmiş belgeleri için. */
+  const denetlenen = belgeler.filter((b) => b.status === "analyzed");
+  const [orijinallikler, geriBildirimler] = await Promise.all([
+    Promise.all(denetlenen.map(async (b) => [b.id, await getOriginalityChecksForDocument(b.id)] as const)),
+    Promise.all(denetlenen.map(async (b) => [b.id, await getLatestFeedback(b.id)] as const)),
+  ]);
   /*
     "Tarama yapılmamış" ile "sonucu okuyamadım" ayrı taşınıyor: ikincisinde
     ekran taranmamış bir belge gibi görünüp kullanıcıyı temiz sanmaya
     bırakıyordu (app/actions/originality.ts).
   */
-  const originalityMap = new Map(
-    originalityResults.map((r) => [
-      r.documentId,
-      { kayit: r.checks.satirlar[0] ?? null, okunamadi: r.checks.okunamadi },
-    ])
-  );
+  const orijinallik = new Map(orijinallikler.map(([id, s]) => [id, { kayit: s.satirlar[0] ?? null, okunamadi: s.okunamadi }]));
+  const geriBildirim = new Map(geriBildirimler);
 
-  const feedbackResults = await Promise.all(
-    uploads
-      .filter((u) => u.status === "analyzed")
-      .map(async (u) => ({ documentId: u.id, feedback: await getLatestFeedback(u.id) }))
-  );
-  const feedbackMap = new Map(feedbackResults.map((r) => [r.documentId, r.feedback]));
-  /* Değerlendirme okunamadıysa düğme "hiç değerlendirilmemiş" gibi
-     görünüyordu; kullanıcı yapay zekayı boşuna yeniden çalıştırıyordu. */
-
-  async function handleRunOriginality(documentId: string) {
+  async function orijinallikTara(documentId: string) {
     "use server";
     const result = await runOriginalityCheck(documentId);
     return result.error ? { error: result.error } : { success: true };
   }
 
-  async function handleDelete(documentId: string) {
+  async function sil(documentId: string) {
     "use server";
     return deleteDocumentUpload(documentId);
   }
 
-  async function handleReanalyze(documentId: string) {
+  async function yenidenCozumle(documentId: string) {
     "use server";
     const sonuc = await reanalyzeDocument(documentId);
     return sonuc.error ? { error: sonuc.error } : { success: true };
   }
 
+  const ayrinti = (b: DocumentUploadRecord) => {
+    const a = b.analysis;
+    const o = orijinallik.get(b.id);
+    const g = geriBildirim.get(b.id);
+    const sorunluKunyeler = a?.references.filter((r) => r.issues.length > 0) ?? [];
+    return (
+      <>
+        <span className="dashboard-kicker">{trTarihSaat(b.created_at)}</span>
+        <h3 className="pencere-kart-baslik">{b.file_name}</h3>
+
+        {b.status === "failed" ? (
+          <>
+            {b.error_message ? (
+              <p className="tone-text text-base" data-tone="danger">
+                {b.error_message}
+              </p>
+            ) : null}
+            {/* Dosya depoda duruyor; çözümleme geçici bir sebepten düşmüş olabilir. */}
+            <ActionForm action={yenidenCozumle.bind(null, b.id)} successMessage="Belge yeniden çözümlendi.">
+              <button type="submit" className="projects-primary-button button-compact">
+                <RotateCcw size={14} aria-hidden="true" /> Yeniden çözümle
+              </button>
+            </ActionForm>
+          </>
+        ) : null}
+
+        {b.status === "analyzed" && a ? (
+          <>
+            {a.referenceSectionFound ? (
+              <div className="kaynakca-puan" data-tone={puanTonu(a.complianceScore)}>
+                <b>{a.complianceScore ?? "—"}</b>
+                <span>/100 kaynakça uyumu</span>
+              </div>
+            ) : (
+              <p className="tone-text text-sm" data-tone="warning">
+                Kaynakça bölümü otomatik bulunamadı; başlığın &quot;Kaynakça&quot; ya da &quot;Kaynaklar&quot; olduğundan
+                emin olun.
+              </p>
+            )}
+
+            {/* Kılavuz uygunluğu: her zorunlu bölüm ayrı satır, var ya da eksik. */}
+            {a.guidelineCompliance ? (
+              <>
+                <h4 className="calisma-durum-alt">Kılavuzdaki zorunlu bölümler</h4>
+                {a.guidelineCompliance.sections.length ? (
+                  <ul className="gb-liste">
+                    {a.guidelineCompliance.sections.map((s, i) => (
+                      <li key={i} className="gb-satir">
+                        <span className="gb-satir-govde">
+                          <b>{s.section}</b>
+                        </span>
+                        <span className="status-pill" data-tone={s.found ? "success" : "danger"}>
+                          {s.found ? "Var" : "Eksik"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted text-sm">Kılavuz zorunlu bölüm tanımlamıyor.</p>
+                )}
+                {a.guidelineCompliance.citationStyleMatches === false ? (
+                  <p className="tone-text text-sm" data-tone="warning">
+                    Kılavuz {a.guidelineCompliance.citationStyleExpected.toUpperCase()} kaynakça sistemi bekliyor; çalışmanızda
+                    farklı bir sistem seçili.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+
+            {a.referenceSectionFound ? (
+              <>
+                <h4 className="calisma-durum-alt">Kaynakça</h4>
+                <ul className="gb-liste">
+                  {[
+                    { ad: "Biçim sorunu olan künye", sayi: sorunluKunyeler.length },
+                    { ad: "Metinde atfı olmayan kaynak", sayi: a.crossCheck.referencesWithoutCitation.length },
+                    { ad: "Kaynakçada karşılığı olmayan atıf", sayi: a.crossCheck.citationsWithoutReference.length },
+                  ].map((satir) => (
+                    <li key={satir.ad} className="gb-satir">
+                      <span className="gb-satir-govde">
+                        <b>{satir.ad}</b>
+                      </span>
+                      <span className="status-pill" data-tone={satir.sayi ? "warning" : "success"}>
+                        {satir.sayi || "Yok"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {sorunluKunyeler.length ? (
+                  <details className="analiz-betik">
+                    <summary>Sorunlu künyeleri göster</summary>
+                    <ul className="belge-kunye-listesi">
+                      {sorunluKunyeler.map((r, i) => (
+                        <li key={i}>
+                          <span className="muted">{r.raw}</span>
+                          {r.issues.map((sorun, j) => (
+                            <small key={j} className="tone-text" data-tone={sorun.severity === "error" ? "danger" : "warning"}>
+                              {sorun.message}
+                            </small>
+                          ))}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </>
+            ) : null}
+
+            <h4 className="calisma-durum-alt">ArvoLab ön kontrolü (orijinallik)</h4>
+            {o?.kayit ? (
+              <>
+                <p className="tone-text text-sm" data-tone={similarityTone(o.kayit.overall_similarity)}>
+                  En yüksek örtüşme %{o.kayit.overall_similarity} ({o.kayit.compared_document_count} belgeyle karşılaştırıldı)
+                </p>
+                {o.kayit.matches.slice(0, 3).map((m, i) => (
+                  <p key={i} className="muted text-sm">
+                    %{m.similarity} — {m.fileName}
+                    {m.sampleOverlap ? ` · örnek: "${m.sampleOverlap}"` : ""}
+                  </p>
+                ))}
+              </>
+            ) : o?.okunamadi ? (
+              <p className="alert" data-tone="warning" role="alert">
+                Orijinallik sonucu okunamadı. Taranmadığı ya da temiz çıktığı anlamına gelmez — sayfayı yenileyin.
+              </p>
+            ) : null}
+            <ActionForm action={orijinallikTara.bind(null, b.id)} successMessage="Orijinallik taraması tamamlandı.">
+              <button type="submit" className="projects-filter-button button-compact">
+                <ShieldQuestion size={14} aria-hidden="true" /> {o?.kayit ? "Yeniden tara" : "Ön kontrolü çalıştır"}
+              </button>
+            </ActionForm>
+            <p className="hint">
+              Yalnızca erişiminiz olan ArvoLab belge havuzuyla karşılaştırır; Turnitin&apos;in yerini tutmaz.
+            </p>
+
+            <AiFeedbackButton
+              documentId={b.id}
+              initialFeedback={g?.kayit?.feedback_text ?? null}
+              okunamadi={g?.okunamadi ?? false}
+              configured={aiAcik}
+            />
+          </>
+        ) : null}
+
+        <ActionForm
+          action={sil.bind(null, b.id)}
+          className="mt-sm"
+          confirmMessage={`"${b.file_name}" belgesini silmek istediğinize emin misiniz? Dosya, denetim sonuçları, orijinallik taramaları ve asistan geri bildirimleri kalıcı olarak silinir.`}
+          successMessage="Belge silindi."
+        >
+          <button type="submit" className="link-button">
+            <Trash2 size={14} aria-hidden="true" /> Belgeyi sil
+          </button>
+        </ActionForm>
+      </>
+    );
+  };
+
   return (
-    <main className="dashboard-page">
-      <CalismaSerit calismaId={hazirCalisma || undefined} aktif="belge" />
+    <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
           <h1>Belge Kontrol</h1>
           <p>
-            Tam bir tez/makale dosyası (.docx/.pdf) yükleyin; sistem metni okuyup
-            kaynakça formatını, kılavuz uygunluğunu ve ArvoLab belge havuzuyla
-            örtüşmeyi denetler.
+            {calisma
+              ? `“${calisma.title}” çalışmasının belgeleri. Word ya da PDF dosyanızı yükleyin; kılavuz uygunluğu, kaynakça ve örtüşme denetlenir. İçerik üretilmez.`
+              : "Tez ya da makale dosyanızı (.docx/.pdf) yükleyin; kılavuz uygunluğu, kaynakça ve örtüşme denetlenir."}
           </p>
-          {/* Uzun açıklama katlandı: 770 karakterlik bir paragraf, asıl işi
-              (yükleme formunu) ekranın altına itiyordu. Bilgi kaybolmuyor,
-              isteyen açıyor. */}
-          <details className="sayfa-detay">
-            <summary>Bu sayfa ne yapar, ne yapmaz?</summary>
-            <p>
-              Sistem içerik <strong>üretmez</strong>. İsteğe bağlı olarak belgenizin yapısı ve
-              akıcılığı hakkında yapay zeka destekli bir geri bildirim alabilirsiniz; bu geri
-              bildirim yalnızca öğreticidir, tezinize doğrudan kopyalanacak bir metin içermez.
-              Yalnızca kaynakça listenizi kontrol etmek isterseniz{" "}
-              <a href="/dashboard/citations" className="link-accent">
-                Kaynakça Doğrulama
-              </a>{" "}
-              sayfasını kullanın.
-            </p>
-          </details>
+        </div>
+        <div className="pencere-dugmeler">
+          {bagsizlar.length ? (
+            <PanelDrawer
+              triggerLabel="Bağlı olmayan belgeler"
+              triggerClassName="projects-filter-button button-compact"
+              kicker="Belge Kontrol"
+              title="Çalışmaya bağlı olmayan belgeler"
+              description="Eski Belge Kontrol sayfasında çalışma seçilmeden yüklenmiş belgeler. Gerekmiyorsa silin; yeni belgeyi çalışmanıza yükleyin."
+              boy="genis"
+              basaridaKapan={false}
+            >
+              <ul className="gb-liste">
+                {bagsizlar.map((b) => (
+                  <li key={b.id} className="gb-satir">
+                    <span className="gb-satir-govde">
+                      <b>{b.file_name}</b>
+                      <small>
+                        {[b.project_title, trTarih(b.created_at), b.analysis?.referenceSectionFound ? `${b.analysis.complianceScore}/100` : null]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </small>
+                    </span>
+                    <ActionForm
+                      action={sil.bind(null, b.id)}
+                      confirmMessage={`"${b.file_name}" belgesi kalıcı olarak silinsin mi?`}
+                      successMessage="Belge silindi."
+                    >
+                      <button type="submit" className="projects-filter-button button-compact" aria-label={`${b.file_name}: sil`}>
+                        <Trash2 size={14} aria-hidden="true" />
+                      </button>
+                    </ActionForm>
+                  </li>
+                ))}
+              </ul>
+            </PanelDrawer>
+          ) : null}
+          {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/documents" /> : null}
         </div>
       </section>
-      {/*
-        Çalışma listesi okunamadı. Sessiz kalınsaydı seçiciler boş görünür,
-        kullanıcı çalışmalarının silindiğini sanırdı (lib/liste-sonucu.ts).
-      */}
-      {calismaOkunamadi ? (
-        <p className="alert mb-md" role="alert">
-          Çalışma listeniz okunamadı; aşağıdaki çalışma seçimleri eksik
-          görünebilir. Çalışmalarınızın silindiği anlamına gelmez — sayfayı
-          yenileyin.
+
+      {calismaOkunamadi || belgeOkunamadi ? (
+        <p className="alert" role="alert">
+          {calismaOkunamadi ? "Çalışma listeniz" : "Belge listeniz"} okunamadı; aşağısı eksik görünebilir. Kayıtlarınız
+          yerinde duruyor — sayfayı yenileyin.
         </p>
       ) : null}
 
-      <DocumentUploadForm key={hazirCalisma} projects={projects} secilenCalisma={hazirCalisma} />
-
-      <section className="section mt-lg">
-        <h2 className="section-title">Yüklenen Belgeler</h2>
-        {/* Okunamadı ile "belge yüklemediniz" ayrı: ikincisi yeni
-            kullanıcıya doğru, birincisi belgelerini kaybettiğini
-            düşündürürdü. */}
-        {belgeOkunamadi ? (
-          <p className="alert" data-tone="danger" role="alert">
-            Belge listeniz yüklenemedi. Yüklediğiniz belgeler yerinde duruyor; sayfayı yenileyin.
-          </p>
-        ) : uploads.length === 0 ? (
-          /* Eskiden bölüm tamamen gizleniyordu: yeni kullanıcı yükleme
-             formundan başka bir şey görmüyordu. */
-          <BosDurum
-            kompakt
-            ikon={FolderOpen}
-            aciklama="Henüz belge yüklemediniz. Yüklediğiniz her belgenin kaynakça, kılavuz uygunluğu ve orijinallik sonuçları burada saklanır."
-          />
-        ) : (
-          <div className="projects-list">
-            {uploads.map((u) => {
-              const originalityDurum = originalityMap.get(u.id);
-              const originality = originalityDurum?.kayit ?? null;
-              return (
-                <article className="project-card" key={u.id}>
-                  <div className="project-card-main">
-                    <div>
-                      <span className="status-pill" data-tone={statusTone(u.status)}>
-                        {u.status === "analyzed"
-                          ? "Analiz edildi"
-                          : u.status === "failed"
-                          ? "Hata"
-                          : "İşleniyor"}
-                      </span>
-                      <h2>{u.file_name}</h2>
-                      <p>
-                        {u.project_title || "Bağımsız yükleme"} ·{" "}
-                        {trTarihSaat(u.created_at)}
-                      </p>
-                    </div>
-                    <div className="project-progress">
-                      <strong>
-                        {u.analysis?.referenceSectionFound
-                          ? `${u.analysis.complianceScore}/100`
-                          : "—"}
-                      </strong>
-                    </div>
-                  </div>
-                  {u.status === "failed" && u.error_message ? (
-                    <p className="tone-text text-base mt-sm" data-tone="danger">
-                      {u.error_message}
-                    </p>
-                  ) : null}
-                  {/*
-                    Başarısız satırın tek eylemi "sil"di: kullanıcı ilk
-                    denediği şeyde hata alıyor ve ürün ona çıkış yolu
-                    sunmuyordu. Dosya depoda duruyor; çözümleme geçici bir
-                    sebepten düşmüş olabilir.
-                  */}
-                  {u.status === "failed" ? (
-                    <ActionForm
-                      action={handleReanalyze.bind(null, u.id)}
-                      className="mt-sm"
-                      successMessage="Belge yeniden çözümlendi."
-                    >
-                      <button type="submit" className="projects-filter-button">
-                        <RotateCcw size={14} aria-hidden="true" />
-                        Yeniden çözümle
-                      </button>
-                    </ActionForm>
-                  ) : null}
-                  {u.status === "analyzed" && u.analysis && !u.analysis.referenceSectionFound ? (
-                    <p className="tone-text text-base mt-sm" data-tone="warning">
-                      Kaynakça bölümü otomatik tespit edilemedi.
-                    </p>
-                  ) : null}
-
-                  {u.status === "analyzed" ? (
-                    <div className="results-divider">
-                      {originality ? (
-                        <div className="text-base">
-                          <div className="tone-text" data-tone={similarityTone(originality.overall_similarity)}>
-                            ArvoLab Ön-Kontrol: en yüksek örtüşme %{originality.overall_similarity}
-                            {" "}({originality.compared_document_count} belgeyle karşılaştırıldı)
-                          </div>
-                          {originality.matches.slice(0, 3).map((m, i) => (
-                            <div key={i} className="muted">
-                              %{m.similarity} — {m.fileName}
-                              {m.sampleOverlap ? ` · örnek: "${m.sampleOverlap}"` : ""}
-                            </div>
-                          ))}
-                          <ActionForm action={handleRunOriginality.bind(null, u.id)} className="mt-sm" successMessage="Orijinallik taraması tamamlandı; sonuç aşağıda.">
-                            <button type="submit" className="projects-filter-button">
-                              <ShieldQuestion size={14} aria-hidden="true" />
-                              Yeniden tara
-                            </button>
-                          </ActionForm>
-                        </div>
-                      ) : originalityDurum?.okunamadi ? (
-                        <p className="alert" data-tone="warning" role="alert">
-                          Bu belgenin orijinallik sonucu okunamadı. Taranmadığı
-                          ya da temiz çıktığı anlamına gelmez — sayfayı
-                          yenileyin.
-                        </p>
-                      ) : (
-                        <ActionForm action={handleRunOriginality.bind(null, u.id)} successMessage="Orijinallik taraması tamamlandı; sonuç aşağıda.">
-                          <button type="submit" className="projects-filter-button">
-                            <ShieldQuestion size={14} aria-hidden="true" />
-                            ArvoLab Ön-Kontrolü Çalıştır (orijinallik taraması)
-                          </button>
-                        </ActionForm>
-                      )}
-                      <p className="hint">
-                        Bu tarama yalnızca erişim yetkiniz olan ArvoLab belge
-                        havuzuyla karşılaştırır; Turnitin&apos;in yerini tutmaz.
-                      </p>
-
-                      <AiFeedbackButton
-                        documentId={u.id}
-                        initialFeedback={feedbackMap.get(u.id)?.kayit?.feedback_text ?? null}
-                        okunamadi={feedbackMap.get(u.id)?.okunamadi ?? false}
-                        configured={aiAcik}
-                      />
-                    </div>
-                  ) : null}
-
-                  <ActionForm
-                    action={handleDelete.bind(null, u.id)}
-                    className="mt-sm"
-                    confirmMessage={`"${u.file_name}" belgesini silmek istediğinize emin misiniz? Dosya, analiz sonuçları, orijinallik taramaları ve AI geri bildirimleri kalıcı olarak silinir.`}
-                    successMessage="Belge silindi."
-                  >
-                    <button type="submit" className="button-danger">
-                      <Trash2 size={14} aria-hidden="true" />
-                      Belgeyi sil
-                    </button>
-                  </ActionForm>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      {calisma ? (
+        <IkiKartSecim
+          /* Yeni yüklenen belge listenin başına gelir; anahtar değişince o seçili açılır. */
+          key={`${calisma.id}-${belgeler[0]?.id ?? ""}`}
+          sayfa
+          solBaslik={belgeler.length ? `Belgeler · ${belgeler.length}` : "Belgeler"}
+          solUst={
+            <PanelDrawer
+              triggerLabel="Belge yükle"
+              triggerIcon={<UploadCloud size={16} aria-hidden="true" />}
+              triggerClassName={belgeler.length ? "projects-filter-button button-compact" : "projects-primary-button button-compact"}
+              kicker="Belge Kontrol"
+              title="Belge yükleyin"
+              description="Tezinizin ya da makalenizin Word (.docx) veya PDF dosyası, en fazla 20 MB. Dosya yalnızca sizin ve yetkili rollerin görebileceği şekilde saklanır."
+            >
+              <DocumentUploadForm projects={[calisma]} secilenCalisma={calisma.id} gomulu />
+            </PanelDrawer>
+          }
+          secenekler={belgeler.map((b) => ({
+            id: b.id,
+            satir: (
+              <>
+                <span className="kanit-kayit-govde">
+                  <b>{b.file_name}</b>
+                  <small>
+                    {trTarih(b.created_at)}
+                    {b.status === "analyzed" && b.analysis?.referenceSectionFound ? ` · ${b.analysis.complianceScore}/100` : ""}
+                  </small>
+                </span>
+                <span className="status-pill" data-tone={DURUM[b.status].ton}>
+                  {DURUM[b.status].ad}
+                </span>
+              </>
+            ),
+            ayrinti: ayrinti(b),
+          }))}
+          bos={
+            <span>
+              <FileText size={20} aria-hidden="true" />
+              <br />
+              Henüz belge yüklemediniz. &quot;Belge yükle&quot; ile tezinizin Word ya da PDF dosyasını ekleyin; kılavuz
+              uygunluğu, kaynakça ve örtüşme sonuçları burada görünür.
+            </span>
+          }
+        />
+      ) : (
+        <BosDurum
+          ikon={FileText}
+          baslik="Önce bir çalışma başlatın"
+          aciklama="Belgeler bir çalışmaya bağlı denetlenir: kılavuzun zorunlu bölümleri ve kaynakça sistemi o çalışmadan gelir."
+          eylem={{ etiket: "Yeni çalışma", href: "/dashboard/editor?yeni=1" }}
+        />
+      )}
     </main>
   );
 }

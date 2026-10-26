@@ -19,6 +19,7 @@ export default function IkiKartSecim({
   solUst,
   secenekler,
   bos,
+  sayfa = false,
 }: {
   solBaslik: string;
   /** Listenin üstünde (ör. "İddia ekle"). */
@@ -26,13 +27,15 @@ export default function IkiKartSecim({
   secenekler: Secenek[];
   /** Hiç seçenek yokken sağ kartta yazan. */
   bos: ReactNode;
+  /** Modül sayfasında (Belge Kontrol): kaymayan tek ekranın iki kartı. */
+  sayfa?: boolean;
 }) {
   const [secili, setSecili] = useState(secenekler[0]?.id ?? null);
   const gosterilen = secenekler.find((s) => s.id === secili) ?? secenekler[0] ?? null;
 
   return (
-    <div className="pencere-iki-kart">
-      <section className="pencere-kart">
+    <div className={sayfa ? "gb-sutunlar kaynaklar-ikili" : "pencere-iki-kart"}>
+      <section className={sayfa ? "gb-kart gb-sutun kayan-kart" : "pencere-kart"}>
         <h3 className="pencere-kart-baslik">{solBaslik}</h3>
         {solUst}
         {secenekler.length ? (
@@ -52,7 +55,7 @@ export default function IkiKartSecim({
           </ul>
         ) : null}
       </section>
-      <section className="pencere-kart pencere-sonuc" aria-live="polite">
+      <section className={sayfa ? "gb-kart gb-sutun kayan-kart" : "pencere-kart pencere-sonuc"} aria-live="polite">
         {gosterilen ? gosterilen.ayrinti : <div className="gb-bos">{bos}</div>}
       </section>
     </div>

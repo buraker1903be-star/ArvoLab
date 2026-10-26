@@ -42,11 +42,11 @@ export default function AnalizSecici({
 
   return (
     <div className={sayfa ? "gb-sutunlar analiz-ikili" : "pencere-iki-kart"}>
-      <section className={sayfa ? "gb-kart gb-sutun analiz-sayfa-kart" : "pencere-kart"}>
+      <section className={sayfa ? "gb-kart gb-sutun kayan-kart" : "pencere-kart"}>
         <DataAnalyzer calismalar={[calisma]} secilenCalisma={projectId} pencere={{ asistanAcik }} />
       </section>
 
-      <section className={sayfa ? "gb-kart gb-sutun analiz-sayfa-kart" : "pencere-kart pencere-sonuc"} aria-live="polite">
+      <section className={sayfa ? "gb-kart gb-sutun kayan-kart" : "pencere-kart pencere-sonuc"} aria-live="polite">
         <h3 className="pencere-kart-baslik">{sirada.length ? `Teze eklenecekler · ${sirada.length}` : "Teze eklenecekler"}</h3>
         {sirada.length ? (
           <ul className="secim-listesi">

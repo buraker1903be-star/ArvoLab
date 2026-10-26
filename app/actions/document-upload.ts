@@ -239,6 +239,7 @@ export async function analyzeUploadedDocument(params: {
 
 export interface DocumentUploadRecord {
   id: string;
+  project_id: string | null;
   project_title: string | null;
   file_name: string;
   status: "processing" | "analyzed" | "failed";
@@ -360,13 +361,40 @@ export async function getMyDocumentUploads(): Promise<ListeSonucu<DocumentUpload
 
   const { data, error } = await supabase
     .from("document_uploads")
-    .select("id, project_title, file_name, status, error_message, analysis, created_at")
+    .select("id, project_id, project_title, file_name, status, error_message, analysis, created_at")
     .eq("uploaded_by", user.id)
     .order("created_at", { ascending: false })
     .limit(20);
 
   if (error) {
     console.error(error);
+    return listeOkunamadi();
+  }
+  return listeBasarili((data ?? []) as DocumentUploadRecord[]);
+}
+
+/*
+  Bir çalışmanın belgeleri (Belge Kontrol sayfasının sol kartı). Kullanıcının
+  son 20 yüklemesinden süzmek yetmiyordu: başka çalışmalara çok belge
+  yükleyen kullanıcıda bu çalışmanınkiler sınırın dışında kalırdı.
+  Sınırsız: çalışma başına belge sayısı küçük, sayı da bu listeden.
+*/
+export async function calismaBelgeleri(projectId: string): Promise<ListeSonucu<DocumentUploadRecord>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return listeBasarili([]);
+
+  const { data, error } = await supabase
+    .from("document_uploads")
+    .select("id, project_id, project_title, file_name, status, error_message, analysis, created_at")
+    .eq("project_id", projectId)
+    .eq("uploaded_by", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[belge] çalışmanın belgeleri okunamadı:", error.message);
     return listeOkunamadi();
   }
   return listeBasarili((data ?? []) as DocumentUploadRecord[]);

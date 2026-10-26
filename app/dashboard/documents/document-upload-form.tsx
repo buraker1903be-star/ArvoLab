@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { announceActionSuccess, showToast } from "@/app/dashboard/_components/toast-events";
 import { UploadCloud } from "lucide-react";
 import { analyzeUploadedDocument } from "@/app/actions/document-upload";
 import { createClient } from "@/lib/supabase/client";
@@ -32,12 +34,21 @@ interface AnalysisResult {
 export default function DocumentUploadForm({
   projects,
   secilenCalisma = "",
+  gomulu = false,
 }: {
   projects: Project[];
   /* Çalışma merkezinden gelindiyse o çalışma hazır seçili gelir; kullanıcı
      aynı seçimi her sayfada yeniden yapmasın. */
   secilenCalisma?: string;
+  /*
+    Belge Kontrol sayfasının "Belge yükle" penceresinde: çalışma sabit
+    (seçici çizilmez), sonuç pencerede gösterilmez — belge sol karttaki
+    listeye düşer ve sonuçları sağ kartta okunur. Sonucu iki yerde çizmek
+    biri güncellenip öteki unutulan iki ekran demekti.
+  */
+  gomulu?: boolean;
 }) {
+  const router = useRouter();
   const [projectId, setProjectId] = useState(secilenCalisma);
   const [projectTitle, setProjectTitle] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -108,7 +119,12 @@ export default function DocumentUploadForm({
         setError(res.error);
         return;
       }
-      if (res.analysis) {
+      if (gomulu) {
+        showToast("success", "Belge yüklendi ve denetlendi.");
+        // Yükleme penceresi kapanır; yeni belge listede seçili açılır (page.tsx anahtarı).
+        announceActionSuccess();
+        router.refresh();
+      } else if (res.analysis) {
         setResult(res.analysis as AnalysisResult);
       }
       formRef.current?.reset();
@@ -119,7 +135,8 @@ export default function DocumentUploadForm({
   }
 
   return (
-    <section className="project-form-card mt-md">
+    <section className={gomulu ? undefined : "project-form-card mt-md"}>
+      {gomulu ? null : (
       <div className="project-form-heading">
         <h2>Doküman Yükle (DOCX / PDF)</h2>
         <p>
@@ -129,13 +146,14 @@ export default function DocumentUploadForm({
           saklanır; ArvoLab içerik üretmez, sadece denetler.
         </p>
       </div>
+      )}
 
       <form
         ref={formRef}
         className="project-form-grid"
         action={handleSubmit}
       >
-        {projects.length > 0 ? (
+        {gomulu ? null : projects.length > 0 ? (
           <label>
             <span>Bağlı çalışma (opsiyonel)</span>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
