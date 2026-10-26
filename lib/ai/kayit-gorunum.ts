@@ -10,19 +10,22 @@ import type { UserRole } from "@/lib/project-labels";
 /** Kayıtları görebilen roller; RLS politikasıyla aynı küme (20260924100005). */
 export const KAYIT_ROLLERI: UserRole[] = ["controller", "academic_manager", "system_admin", "founder"];
 
-export type YetenekAdi = "analiz" | "kaynakca" | "literatur" | "belge";
+export type YetenekAdi = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale";
 
 export const YETENEK_ETIKETI: Record<YetenekAdi, string> = {
   analiz: "Analiz denetimi",
   kaynakca: "Kaynakça",
   literatur: "Literatür",
   belge: "Belge geri bildirimi",
+  kanit: "İddia–kanıt uyumu",
+  makale: "Makale bölüm denetimi",
 };
 
 export const RED_ETIKETI: Record<string, string> = {
   uydurma_sayi: "uydurma sayı",
   kunye: "künye izi",
   bos: "boş/çözümlenemedi",
+  alinti: "metinde olmayan alıntı",
 };
 
 export type AsistanKayitSatiri = {

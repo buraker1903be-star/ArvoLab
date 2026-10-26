@@ -108,6 +108,20 @@ export function kunyeIziMetinde(metin: string): boolean {
   return KUNYE.test(metin);
 }
 
+/*
+  Girdide ZATEN geçen künye uydurma değildir. Kanıt değerlendirmesinde
+  incelenen kaynak metni kendi atıflarını taşıyor ("… (Yılmaz, A. (2020))")
+  ve asistanın bulgusunda o atfa değinmesi meşru; düz kunyeIziMetinde
+  bunu da reddederdi. Burada yalnızca bağlamda GEÇMEYEN künye yakalanır.
+  Literatür ve belge yetenekleri bilerek düz denetimi kullanıyor: onlara
+  verilen bağlamda alıntılanacak bir kaynak metni yok.
+*/
+const KUNYE_HEPSI = new RegExp(KUNYE.source, "gu");
+
+export function baglamDisiKunye(metin: string, kaynak: string): string[] {
+  return [...metin.matchAll(KUNYE_HEPSI)].map((m) => m[0]).filter((kunye) => !kaynak.includes(kunye));
+}
+
 export type Dogrulama = { gecti: true } | { gecti: false; uydurulan: string[] };
 
 export type DogrulamaSecenegi = {

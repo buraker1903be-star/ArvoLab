@@ -39,6 +39,14 @@ export async function literaturAramasiYap(girdi: {
   yilDan?: number | null;
   yilaKadar?: number | null;
   yalnizcaAcikErisim?: boolean;
+  /** Tarama günlüğünün bağlanacağı çalışma (isteğe bağlı). */
+  projectId?: string | null;
+  /*
+    Kaynakça denetimindeki "bu künyeyi dizinde ara" düğmesi de bu
+    aramayı kullanıyor; o bir literatür TARAMASI değil, tek bir künyenin
+    teyidi. Günlüğe girerse tarama kaydı künye aramalarıyla dolar.
+  */
+  gunlukDisi?: boolean;
 }): Promise<AramaYaniti> {
   const ctx = await getAuthContext();
   if (!ctx) return { hata: SESSION_MISSING.error };
@@ -60,11 +68,19 @@ export async function literaturAramasiYap(girdi: {
     else if (izin === false) return { hata: `Saatlik arama hakkınız doldu (${SAATLIK_HAK}). Bir süre sonra tekrar deneyin.` };
   }
 
-  const { kayitlar, ulasilamayan } = await literaturAra({
-    sorgu,
+  const filtreler = {
     yilDan: sayi(girdi.yilDan),
     yilaKadar: sayi(girdi.yilaKadar),
     yalnizcaAcikErisim: Boolean(girdi.yalnizcaAcikErisim),
+  };
+  const { kayitlar, ulasilamayan } = await literaturAra({ sorgu, ...filtreler });
+
+  if (!girdi.gunlukDisi) await taramayiGunlugeYaz(ctx, {
+    sorgu,
+    filtreler,
+    projectId: girdi.projectId,
+    ulasilamayan,
+    gosterilen: kayitlar.length,
   });
 
   if (kayitlar.length === 0 && ulasilamayan.length === 2) {
@@ -115,6 +131,68 @@ export async function literaturAramasiYap(girdi: {
     })),
     ulasilamayan,
   };
+}
+
+/*
+  TARAMA GÜNLÜĞÜ (migration 20261026065320). Hangi dizinde, hangi
+  sorguyla, ne zaman, hangi filtrelerle arandığı ve kaç sonuç gösterildiği
+  kaydediliyor: literatür bölümü "kapsamlı tarama yapıldı" demek yerine
+  gerçekten yapılanı gösterebilsin. Cevap vermeyen dizin "tarandı"
+  sayılmıyor (yanit_veren ayrı sütun).
+
+  Günlük akışı DÜŞÜRMEZ: yazılamazsa kullanıcı sonuçlarını yine alır,
+  hata yalnızca log'a gider (asistan kaydıyla aynı ilke).
+*/
+const SORGULANAN_DIZINLER = ["openalex", "crossref"];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function taramayiGunlugeYaz(
+  ctx: NonNullable<Awaited<ReturnType<typeof getAuthContext>>>,
+  kayit: { sorgu: string; filtreler: Record<string, unknown>; projectId?: string | null; ulasilamayan: string[]; gosterilen: number },
+) {
+  const projectId = kayit.projectId && UUID.test(kayit.projectId) ? kayit.projectId : null;
+  const { error } = await ctx.supabase.from("literatur_tarama_gunlugu").insert({
+    kullanici: ctx.user.id,
+    project_id: projectId,
+    sorgu: kayit.sorgu,
+    filtreler: kayit.filtreler,
+    sorgulanan: SORGULANAN_DIZINLER,
+    yanit_veren: SORGULANAN_DIZINLER.filter((d) => !kayit.ulasilamayan.includes(d)),
+    ulasilamayan: kayit.ulasilamayan,
+    gosterilen_sonuc: kayit.gosterilen,
+  });
+  if (error) console.error("[literatur-arama] tarama günlüğü yazılamadı:", error.message);
+}
+
+export type TaramaGunluguSatiri = {
+  id: string;
+  sorgu: string;
+  filtreler: { yilDan?: number | null; yilaKadar?: number | null; yalnizcaAcikErisim?: boolean };
+  yanit_veren: string[];
+  ulasilamayan: string[];
+  gosterilen_sonuc: number;
+  olusturuldu: string;
+};
+
+/**
+ * Çalışmanın (verilmezse kullanıcının) son taramaları. Okuma: RLS sahibini
+ * ve çalışmayı görebilenleri sınırlıyor.
+ */
+export async function taramaGunlugu(projectId?: string | null, sinir = 50): Promise<{ satirlar: TaramaGunluguSatiri[]; okunamadi: boolean }> {
+  const ctx = await getAuthContext();
+  if (!ctx) return { satirlar: [], okunamadi: false };
+  let sorgu = ctx.supabase
+    .from("literatur_tarama_gunlugu")
+    .select("id, sorgu, filtreler, yanit_veren, ulasilamayan, gosterilen_sonuc, olusturuldu")
+    .order("olusturuldu", { ascending: false })
+    .limit(Math.min(Math.max(sinir, 1), 200));
+  sorgu = projectId && UUID.test(projectId) ? sorgu.eq("project_id", projectId) : sorgu.eq("kullanici", ctx.user.id);
+  const { data, error } = await sorgu;
+  if (error) {
+    console.error("[literatur-arama] tarama günlüğü okunamadı:", error.message);
+    return { satirlar: [], okunamadi: true };
+  }
+  return { satirlar: (data ?? []) as TaramaGunluguSatiri[], okunamadi: false };
 }
 
 /**

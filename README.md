@@ -1,5 +1,37 @@
 # ArvoLab
 
+## Kanıt Zinciri, Kaynak Doğrulama ve Makale Çalışma Alanı (26.10.2026)
+
+Migration `20261026065320_kanit_zinciri_ve_makale_calisma_alani.sql`.
+Aşağıda her modül için **uygulanan**, **sınayan test** ve **dış bağımlılık**
+ayrı yazılı. "Uygulandı" yalnızca kodu ve testi olan işlev için kullanıldı;
+canlı Supabase'de ve gerçek dizinlere karşı uçtan uca çalıştırılmadı (bkz.
+"Doğrulanmamış olanlar").
+
+| Modül | Uygulanan | Test | Dış bağımlılık |
+|---|---|---|---|
+| Kanıt kaydı ve zincir (`kanit_kayitlari`, `lib/kanit/durum.ts`, `/dashboard/editor/[id]/kanit`) | İddia → atıf → kaynak kaydı → özgün yayın → kanıt → sonuç zinciri; eksik halka eksik yazılır. Künye, erişim, incelenen metin ve destek düzeyi ayrı sütunlar. Kanıt matrisi (iddia, bölüm, kaynak, doğrulama, konum, destek, çelişen, eksik kanıt, önerilen düzeltme). İnsan incelemesi işareti. | `tests/unit/kanit-durum.test.ts`, `tests/db/kanit-zinciri.test.mjs` | Yok (Supabase) |
+| Alıntı doğrulama (`lib/kanit/alinti.ts`, `kanit_metni_normallestir`) | Alıntı incelenen metinde birebir (tırnak/tire/boşluk farkı gözetilmeden) geçmeli; veritabanı tetikleyicisi de uygular. Metin/iddia değişince eski hüküm düşer. | `tests/unit/kanit-alinti.test.ts`; TS ↔ SQL uyumu `tests/db/kanit-zinciri.test.mjs` | Yok |
+| Bibliyografik doğrulama (`lib/kanit/kunye-karsilastirma.ts`, `lib/kanit/dizin.ts`) | DOI ile Crossref, yoksa OpenAlex; DOI yoksa Crossref başlık araması. Alan alan karşılaştırma (başlık, yıl, ilk yazar, dergi, cilt, sayı, sayfa, DOI) → doğrulandı / kısmen / uyuşmuyor / doğrulanamadı. Dizine ulaşılamazsa sonuç yazılmaz. OpenAlex'ten açık erişim durumu (içerik getirilmez). | `tests/unit/kanit-kunye.test.ts`, `tests/unit/kanit-dizin.test.ts` (sahte ağ) | Crossref REST API, OpenAlex API (anahtarsız, saatlik 60 doğrulama/kullanıcı) |
+| İddia–kanıt uyumu, asistan (`lib/ai/kanit-degerlendirme.ts`, `app/actions/ai-kanit.ts`) | Beş düzey; "doğrulanamadı" dışındaki her hüküm metinden birebir alıntı ister, yoksa cevap düşer (`reject_reason = 'alinti'`). Kaynak metni veri bloğunda (istem enjeksiyonu). Bağlam dışı künye ve uydurma sayı reddi. Hüküm tamamlanmış bir asistan kaydına bağlanır. | `tests/unit/ai-kanit-degerlendirme.test.ts`, `tests/unit/ai-kapi-kapsami.test.ts` | Yapılandırılmış dil modeli (`AI_MODEL_KANIT` ya da `AI_MODEL`) |
+| Makale çalışma alanı (`makale_profili`, `lib/makale/`, `/dashboard/editor/[id]/makale`) | Tür (8 tür), araştırma sorusu/problemi, tasarım, hedef dergi, dil, sınırlar, özet, anahtar kelimeler, veri durumu. Türe göre bölüm planı ve raporlama standardı hatırlatması (adıyla; EQUATOR bağlantısı). Yönteme göre denetim listesi (nicel, nitel, karma, derleme, mühendislik). Deterministik gönderim kontrolü: kelime/özet/anahtar kelime sınırı, plandaki bölümler, dergi kurallarının kontrol tarihi, veri durumu, kanıt matrisi. Kapak mektubu kontrol listesi. | `tests/unit/makale.test.ts`, `tests/db/kanit-zinciri.test.mjs` | Yok |
+| Makale bölüm denetimi, asistan (`lib/ai/makale-denetimi.ts`, `app/actions/ai-makale.ts`) | Seçilen bölümü tür, soru ve yönteme göre denetler; bulgu listesi döner. | `tests/unit/makale.test.ts`, `tests/unit/ai-kapi-kapsami.test.ts` | Dil modeli (`AI_MODEL_MAKALE`) |
+| Literatür tarama günlüğü (`literatur_tarama_gunlugu`) | Her aramada sorgu, filtreler, sorgulanan ve cevap veren dizinler, gösterilen sonuç sayısı, tarih. Değiştirilemez. Makale alanında listelenir. | `tests/db/kanit-zinciri.test.mjs` | OpenAlex, Crossref (mevcut arama) |
+
+**Bilerek uygulanmayanlar** (AGENTS.md değişmezleriyle çelişiyor): asistanın
+alternatif ifade, literatür bölümü taslağı, başlık/özet ya da kapak mektubu
+**metni** yazması ve kaynak **önermesi**. Gerçek kaynak bulma dizin aramasıyla
+yapılıyor (Literatür sayfası). Kabul olasılığı ve "dergiye uygun" hükmü yok.
+
+**Doğrulanmamış olanlar / sınırlar:** tam metin otomatik getirilmiyor ve
+ayrıştırılmıyor (kullanıcı ilgili bölümü yapıştırır; "tam metin" bir
+beyandır). Sayfa/konum yalnızca kullanıcı girişi. Künye ve hüküm sütunları
+kullanıcının kendi oturumuyla yazılıyor: kişi kendi kaydını doğrudan API ile
+"doğrulandı" yapabilir; asistan hükmü değiştirilemez bir asistan kaydına
+bağlı olsa da bu kriptografik bir güvence değildir. Vektör arama, belge
+ayrıştırma hattı, SPSS/R/Python, MAXQDA ve ANSYS entegrasyonu bu adımda
+eklenmedi.
+
 ## Tasarım Sistemi (ArvoOS tabanlı, iOS benzeri)
 
 ArvoOS panelinin görsel dili ArvoLab'ın lacivert/yeşil marka renkleriyle tek

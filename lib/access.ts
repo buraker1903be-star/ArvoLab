@@ -105,12 +105,13 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  *
  * Kapı KİMDE var: dış maliyet üreten (OpenAI, depolama, ağır çözümleme) ya da
  * yeni içerik yazan işlemler — requestAiFeedback, asistan yetenekleri
- * (analizDenetle, kaynakcaDenetle, literaturTara — ortak kapı
- * lib/ai/erisim.ts), runOriginalityCheck,
+ * (analizDenetle, kaynakcaDenetle, literaturTara, kanitDegerlendir,
+ * makaleBolumDenetle — ortak kapı lib/ai/erisim.ts), runOriginalityCheck,
  * runCitationCheck, analyzeUploadedDocument, importWordDocument,
  * saveManuscript, saveNamedVersion, restoreManuscriptVersion,
  * createLiteratureSource, createCitationSource, addManuscriptComment,
- * addScoreEntry, createProject, createShareLink.
+ * addScoreEntry, createProject, createShareLink, kanitEkle, kunyeyiDogrula
+ * (Crossref/OpenAlex), makaleProfiliKaydet.
  *
  * Kapı KİMDE YOK, bilerek:
  *  - auth.ts ve subscription.ts: engellenen kullanıcı giriş yapabilmeli ve
