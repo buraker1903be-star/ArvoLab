@@ -22,7 +22,8 @@ import { tumGeriBildirimler, type GeriBildirimSatiri } from "@/app/actions/geri-
 import { getMyProjects } from "@/app/actions/citation-check";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { bolumEtiketi, BAGLAM_METNI, PUAN_ETIKETLERI } from "@/lib/geri-bildirim";
-import { isExpertEligible, requestTypeLabel } from "@/lib/project-labels";
+import { isExpertEligible, requestTypeLabel, STAFF_ROLES } from "@/lib/project-labels";
+import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { statusTone } from "@/lib/status-tone";
 import { trTarihSaat } from "@/lib/tr-time";
 import ActionForm from "../action-form";
@@ -77,11 +78,22 @@ const ONCELIK: Record<string, string> = {
 
 export default async function DestekPage() {
   const profile = await getCurrentProfile();
-  const uzman = isExpertEligible(profile?.role);
-  const yonetici = profile?.role === "system_admin" || profile?.role === "founder";
+  /*
+    Kuyruklar yalnızca PERSONEL GÖRÜNÜMÜNDE: iç ekip öğrenci düzenini
+    önizlerken (lib/onizleme.ts) başlıkta "Uzman kuyruğu", "Destek
+    kuyruğu" ve içlerinde "Üstlen" çıkıyordu — öğrenci bunları hiç
+    görmez, önizleme de göstermemeli. Yetki değişmiyor: RLS gerçek rolle.
+  */
+  const gorunum = await sayfaGorunumu({
+    rol: profile?.role,
+    personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
+    kurumVar: Boolean(profile?.organization_id),
+  });
+  const uzman = gorunum.personel && isExpertEligible(profile?.role);
+  const yonetici = gorunum.personel && (profile?.role === "system_admin" || profile?.role === "founder");
   // Geri bildirimleri Akademik Yönetici de okur (app/actions/geri-bildirim.ts);
   // destek kuyruğu yalnızca Sistem Yöneticisi ve Kurucu'nun işi.
-  const yonetim = yonetici || profile?.role === "academic_manager";
+  const yonetim = yonetici || (gorunum.personel && profile?.role === "academic_manager");
 
   const [
     { satirlar: calismalar },
