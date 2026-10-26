@@ -5,11 +5,11 @@ import {
   BookOpenCheck,
   Check,
   FileCheck2,
-  FileText,
-  Microscope,
+  ListChecks,
   PenLine,
   Quote,
   Settings2,
+  Sparkles,
   TriangleAlert,
   Users,
 } from "lucide-react";
@@ -20,6 +20,7 @@ import { bicimOzeti } from "@/lib/kilavuz-dogrulama";
 import { kilavuzuKaldir } from "@/app/actions/calisma-kilavuzu";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import KilavuzYukle from "./kilavuz-yukle";
+import CalismaSekmeleri from "./calisma-sekmeleri";
 import { createClient } from "@/lib/supabase/server";
 import ActionForm from "@/app/dashboard/action-form";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
@@ -98,13 +99,39 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
   const adimlar = siradakiAdimlar(ozet);
   const ilerleme = birimIlerlemesi(adimlar);
 
+  const eksikSayisi = eksikMaddeler.filter((madde) => madde.status === "todo").length;
+  const teslimNotu =
+    [eksikSayisi ? `${eksikSayisi} eksik` : "", eksikMaddeler.length - eksikSayisi ? `${eksikMaddeler.length - eksikSayisi} bakılacak` : ""]
+      .filter(Boolean)
+      .join(" · ") || "Bütün maddeler hazır";
+  const kilavuzNotu = uygulanan
+    ? uygulanan.dogrulandi
+      ? uygulanan.label
+      : "Kendi yüklediğiniz kılavuz kullanılıyor"
+    : kilavuzOkunamadi
+      ? "Kılavuz aranamadı; sayfayı yenileyin"
+      : calisma.university
+        ? "Onaylı kılavuz yok — kendi kılavuzunuzu yükleyin"
+        : "Çalışma ayarlarından kurumu girin";
+
+  /*
+    SADE MERKEZ (26.10.2026, kurum sahibinin isteği: "kalabalık
+    karmaşık yapıdan kurtulalım, ArvoOS gibi açılır pencereler").
+
+    Sayfa eskiden yedi bölümü alt alta diziyordu: tutarsızlıklar,
+    birimler, asistan bulguları, teslim listesi, bağlı kayıtlar ve iki
+    ayrı kılavuz kartı. Öğrencinin her gün baktığı iki şey — özet ve
+    sıradaki adımlar — sayfanın ortasında kayboluyordu. Şimdi sayfada
+    yalnızca onlar duruyor; geri kalanı ArvoOS'taki gibi karolar ve
+    tıklayınca açılan pencereler. Karo, içinde ne olduğunu ikinci
+    satırda SÖYLÜYOR ("3 madde eksik"): pencereyi açmadan bakılması
+    gerekip gerekmediği anlaşılsın.
+  */
   return (
     <main className="dashboard-page">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">
-            {projectTypeLabel(calisma.project_type)}
-          </span>
+          <span className="dashboard-kicker">{projectTypeLabel(calisma.project_type)}</span>
           <h1>{calisma.title}</h1>
           <p>
             {[calisma.university, calisma.institute, calisma.department].filter(Boolean).join(" · ") ||
@@ -116,28 +143,14 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
           <Link href={`/dashboard/editor/${calisma.id}/write`} className="projects-primary-button">
             <PenLine size={16} aria-hidden="true" /> Yazmaya devam et
           </Link>
-          {/* Makale çalışma alanı aynı çalışma satırını kullanıyor; tez için anlamı yok. */}
-          {calisma.project_type === "article" && (
-            <Link href={`/dashboard/editor/${calisma.id}/makale`} className="projects-filter-button">
-              <FileText size={16} aria-hidden="true" /> Makale çalışma alanı
-            </Link>
-          )}
           <Link href={`/dashboard/editor/${calisma.id}/edit`} className="projects-filter-button">
             <Settings2 size={16} aria-hidden="true" /> Çalışma ayarları
           </Link>
         </div>
       </section>
 
-      {/*
-        ÖZET ŞERİDİ ALTI KUTUDAN ÜÇE İNDİ.
+      <CalismaSekmeleri calisma={calisma} aktif="merkez" />
 
-        Müsvedde, Literatür ve Kaynakça kutuları "Bu çalışmanın
-        birimleri" listesindeki adımlarla AYNI sayıları yazıyordu;
-        sayfa aynı dört bilgiyi üç ayrı yerde tekrarlıyordu. Kutuların
-        fazladan taşıdığı tek şey son hareket zamanıydı, o da artık
-        adımın kendisinde (lib/calisma-ozeti.ts, Adim.zaman). Kalan üç
-        kutu adımların söylemediği şeyler.
-      */}
       <section className="merkez-ozet">
         <article className="merkez-kutu">
           <small>Durum</small>
@@ -157,23 +170,14 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
       </section>
 
       {/*
-        UYARI ARTIK DÜZELTİLEBİLİR. Eskiden "çalışma ayarlarından
-        düzeltin" diyordu ama o alan kılavuz bağlıyken devre dışı ve
-        sunucu da gönderilen değeri yok sayıyor — yani uygulama,
-        düzeltmesini istediği şeyi düzeltmeyi engelliyordu.
-
-        Uyuşmazlık kuruluşta değil SONRADAN doğuyor: stil, kılavuz
-        bağlanırken tetikleyiciyle yazılıyor; kılavuzun yeni sürümü
-        başka bir stille onaylandığında çalışmanın satırı değişmediği
-        için tetikleyici yeniden koşmuyor ve çalışma eski stilde
-        kalıyor.
-
-        Düğme serbest seçim sunmuyor, yalnızca kılavuzun istediğine
-        çeviriyor; kılavuzun geçerli olmadığını düşünenin yolu ayrı
-        (kurumu düzeltmek), o da cümlede duruyor.
+        UYARI DÜZELTİLEBİLİR: stil, kılavuz bağlanırken tetikleyiciyle
+        yazılıyor; kılavuzun yeni sürümü başka bir stille onaylanınca
+        çalışma eski stilde kalıyor. Düğme serbest seçim sunmuyor,
+        yalnızca kılavuzun istediğine çeviriyor. Karoya taşınmadı: yanlış
+        stille yazmaya devam etmek her gün büyüyen bir hata.
       */}
       {stilCelisiyor && (
-        <div className="asistan-uyari asistan-uyari-eylemli" data-tone="danger" role="alert">
+        <div className="asistan-uyari asistan-uyari-eylemli mt-md" data-tone="danger" role="alert">
           <span>
             <TriangleAlert size={16} aria-hidden="true" />{" "}
             Çalışmanız <b>{STIL_ETIKETLERI[calisma.citation_style] ?? calisma.citation_style}</b> olarak ayarlı,
@@ -192,33 +196,8 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
         </div>
       )}
 
-      {tutarsizliklar.length > 0 && (
-        <section className="section mt-lg">
-          <h2 className="section-title">Birimler arası tutarsızlıklar</h2>
-          <p className="muted text-base">
-            Metniniz ile literatür listeniz karşılaştırıldı. Bu denetim kendiliğinden çalışır;
-            hiçbir şey yapıştırmanız gerekmez.
-          </p>
-          <ul className="asistan-bulgular mt-sm">
-            {tutarsizliklar.map((sorun) => (
-              <li className="asistan-bulgu" data-tone="warning" key={sorun.tur}>
-                <span className="asistan-bulgu-etiket">Tutarsızlık</span>
-                <span className="asistan-bulgu-metin">
-                  <b>{sorun.baslik}</b>
-                  {sorun.aciklama}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section className="section mt-lg">
-        <h2 className="section-title">Bu çalışmanın birimleri</h2>
-        <p className="muted text-base">
-          Her adım ilgili bölüme götürür. Literatür, kaynakça ve belgeler bu çalışmaya bağlı kaydedilir;
-          asistan da aynı bağlamı kullanır.
-        </p>
+        <h2 className="section-title">Sıradaki adımlar</h2>
         <ol className="merkez-adimlar mt-md">
           {adimlar.map((adim) => {
             const Simge = ADIM_SIMGESI[adim.anahtar] ?? PenLine;
@@ -241,62 +220,173 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
         </ol>
       </section>
 
-      {asistan.sonBulgular.length > 0 && (
-        <section className="section mt-lg">
-          <h2 className="section-title">Asistanın son bulguları</h2>
-          <ul className="asistan-bulgular mt-sm">
-            {asistan.sonBulgular.map((bulgu, index) => (
-              <li className="asistan-bulgu" data-tone={BULGU_TONU[bulgu.tur] ?? "info"} key={index}>
-                <span className="asistan-bulgu-etiket">{BULGU_ETIKETI[bulgu.tur] ?? "Not"}</span>
-                <span className="asistan-bulgu-metin">
-                  <b>{bulgu.baslik}</b>
-                  {bulgu.aciklama}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section className="section">
+        <h2 className="section-title">Kontroller ve kayıtlar</h2>
+        <div className="calisma-karolari">
+          {hazirlik ? (
+            <PanelDrawer
+              triggerLabel="Teslim öncesi bakılacaklar"
+              triggerNote={teslimNotu}
+              triggerIcon={<ListChecks size={18} aria-hidden="true" />}
+              triggerClassName="merkez-baglanti"
+              kicker="Teslim hazırlığı"
+              title="Teslim öncesi bakılacaklar"
+              description="Editördeki “Teslim kontrolü” ile aynı liste; kaydedilmiş metinden hesaplanır."
+              basaridaKapan={false}
+            >
+              {eksikMaddeler.length ? (
+                <ul className="asistan-bulgular">
+                  {eksikMaddeler.map((madde) => (
+                    <li className="asistan-bulgu" data-tone={madde.status === "todo" ? "danger" : "warning"} key={madde.id}>
+                      <span className="asistan-bulgu-etiket">{madde.status === "todo" ? "Eksik" : "Bakılacak"}</span>
+                      <span className="asistan-bulgu-metin">
+                        <b>{madde.label}</b>
+                        {madde.detail}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">Kaydedilmiş metinde eksik bir madde görünmüyor.</p>
+              )}
+            </PanelDrawer>
+          ) : null}
 
-      {eksikMaddeler.length > 0 && (
-        <section className="section mt-lg">
-          <h2 className="section-title">Teslim öncesi bakılacaklar</h2>
-          <p className="muted text-base">
-            Editördeki &ldquo;Teslim kontrolü&rdquo; ile aynı liste; kaydedilmiş metinden hesaplanır.
-          </p>
-          <ul className="asistan-bulgular mt-sm">
-            {eksikMaddeler.map((madde) => (
-              <li className="asistan-bulgu" data-tone={madde.status === "todo" ? "danger" : "warning"} key={madde.id}>
-                <span className="asistan-bulgu-etiket">{madde.status === "todo" ? "Eksik" : "Bakılacak"}</span>
-                <span className="asistan-bulgu-metin">
-                  <b>{madde.label}</b>
-                  {madde.detail}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+          {/* Metin ile literatür listesinin karşılaştırması kendiliğinden çalışır; boşsa karo çizilmez. */}
+          {tutarsizliklar.length > 0 && (
+            <PanelDrawer
+              triggerLabel="Birimler arası tutarsızlıklar"
+              triggerNote={`${tutarsizliklar.length} tutarsızlık`}
+              triggerIcon={<TriangleAlert size={18} aria-hidden="true" />}
+              triggerClassName="merkez-baglanti"
+              kicker="Otomatik karşılaştırma"
+              title="Birimler arası tutarsızlıklar"
+              description="Metniniz ile literatür listeniz karşılaştırıldı; hiçbir şey yapıştırmanız gerekmez."
+              basaridaKapan={false}
+            >
+              <ul className="asistan-bulgular">
+                {tutarsizliklar.map((sorun) => (
+                  <li className="asistan-bulgu" data-tone="warning" key={sorun.tur}>
+                    <span className="asistan-bulgu-etiket">Tutarsızlık</span>
+                    <span className="asistan-bulgu-metin">
+                      <b>{sorun.baslik}</b>
+                      {sorun.aciklama}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </PanelDrawer>
+          )}
 
-      {/*
-        BAĞLI KAYITLAR DÖRTTEN İKİYE İNDİ.
+          {asistan.sonBulgular.length > 0 && (
+            <PanelDrawer
+              triggerLabel="Asistanın son bulguları"
+              triggerNote={`${asistan.sonBulgular.length} bulgu`}
+              triggerIcon={<Sparkles size={18} aria-hidden="true" />}
+              triggerClassName="merkez-baglanti"
+              kicker="Asistan"
+              title="Asistanın son bulguları"
+              basaridaKapan={false}
+            >
+              <ul className="asistan-bulgular">
+                {asistan.sonBulgular.map((bulgu, index) => (
+                  <li className="asistan-bulgu" data-tone={BULGU_TONU[bulgu.tur] ?? "info"} key={index}>
+                    <span className="asistan-bulgu-etiket">{BULGU_ETIKETI[bulgu.tur] ?? "Not"}</span>
+                    <span className="asistan-bulgu-metin">
+                      <b>{bulgu.baslik}</b>
+                      {bulgu.aciklama}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </PanelDrawer>
+          )}
 
-        "Belge kontrolü" kartı yukarıdaki "Belgeyi kontrol ettir"
-        adımıyla AYNI cümleyi yazıyordu ("N belge yüklendi"), "Asistan
-        denetimi" kartı da özet kutusundaki sayının aynısını. Burada
-        yalnızca adım OLMAYAN, yani çalışmanın kendi iş akışının
-        dışındaki kayıtlar kalıyor.
-      */}
-      <section className="section mt-lg">
-        <h2 className="section-title">Bağlı kayıtlar</h2>
-        <div className="merkez-baglantilar">
-          <Link href={`/dashboard/editor/${calisma.id}/kanit`} className="merkez-baglanti">
-            <Microscope size={18} aria-hidden="true" />
-            <span>
-              <b>Kanıt matrisi</b>
-              İddialarınızı kaynak, künye doğrulaması ve kanıtla eşleştirin
-            </span>
-          </Link>
+          {/*
+            KILAVUZ TEK PENCEREDE. Eskiden "bağlı kayıtlar"daki karo
+            kataloğa gidiyordu, yüklenen kılavuz ve yükleme teklifi ise iki
+            ayrı bölümdü. Öğrencinin yüklediği kılavuz katalogda DEĞİL
+            (çalışmaya bağlı ayrı tablo); karo onu kataloğa göndermemeli.
+            Kılavuz okunamadıysa yükleme teklif edilmiyor: geçici bir
+            arıza, kurumunun kılavuzu olan öğrenciye kendi dosyasını
+            yükletmemeli.
+          */}
+          <PanelDrawer
+            triggerLabel="Yazım kılavuzu"
+            triggerNote={kilavuzNotu}
+            triggerIcon={<BookOpenCheck size={18} aria-hidden="true" />}
+            triggerClassName="merkez-baglanti"
+            kicker="Tez yazım kılavuzu"
+            title={uygulanan ? uygulanan.label : "Kılavuz"}
+            description={
+              uygulanan
+                ? uygulanan.dogrulandi
+                  ? "Kurumunuzun onaylı kılavuzu; kurallar editörde kendiliğinden uygulanıyor."
+                  : "Kurallar yüklediğiniz dosyadan çıkarıldı ve sizin onayınızla uygulanıyor; kurumunuzun resmî onayından geçmedi."
+                : "Kurumunuzun onaylı kılavuzu henüz eklenmemiş."
+            }
+            boy="genis"
+            basaridaKapan={false}
+          >
+            {uygulanan ? (
+              <div className="kilavuz-bicim">
+                <ul>
+                  <li>Kaynakça sistemi: {STIL_ETIKETLERI[uygulanan.citationStyle] ?? uygulanan.citationStyle}</li>
+                  {uygulanan.requiredSections.length > 0 ? <li>Zorunlu bölümler: {uygulanan.requiredSections.join(", ")}</li> : null}
+                  {uygulanan.minPages || uygulanan.maxPages ? (
+                    <li>
+                      Uzunluk: {uygulanan.minPages ?? "?"}–{uygulanan.maxPages ?? "?"} sayfa
+                    </li>
+                  ) : null}
+                  {bicimSatirlari.map((satir) => (
+                    <li key={satir}>{satir}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {uygulanan?.dogrulandi ? (
+              <Link href="/dashboard/guidelines" className="projects-filter-button mt-sm">
+                Kılavuz kataloğunu aç
+              </Link>
+            ) : null}
+
+            {uygulanan && !uygulanan.dogrulandi ? (
+              <>
+                {/*
+                  Onay metni ÖLÇÜLEREK yazıldı: kılavuz kalkınca sayfa düzeni
+                  geri dönmüyor (lib/guideline-sync, mode:"none"). "Biçiminiz
+                  bozulacak" demek olmayan bir şeyden korkuturdu.
+                */}
+                <ActionForm
+                  className="mt-sm"
+                  action={kilavuzuKaldir}
+                  confirmMessage="Kılavuz kaldırılsın mı? Belgenizin sayfa düzeni olduğu gibi kalır; yalnızca belge kontrolü ve teslim listesi kurallara göre denetlenemez olur."
+                  successMessage="Kılavuz kaldırıldı."
+                >
+                  <input type="hidden" name="projectId" value={calisma.id} />
+                  <button type="submit" className="button-danger">
+                    Kılavuzu kaldır
+                  </button>
+                </ActionForm>
+                <details className="form-details mt-md">
+                  <summary>Başka dosya yükle</summary>
+                  <KilavuzYukle projectId={calisma.id} />
+                </details>
+              </>
+            ) : null}
+
+            {!uygulanan && !kilavuzOkunamadi ? (
+              <>
+                <p className="muted">
+                  Kendi kılavuzunuzu yükleyin; kuralları okuyup size onaylatayım, sonra editörde kendiliğinden
+                  uygulansın. Bu, kurumunuzun resmî onayı yerine geçmez.
+                </p>
+                <KilavuzYukle projectId={calisma.id} />
+              </>
+            ) : null}
+          </PanelDrawer>
+
           <Link href="/dashboard/expert-requests" className="merkez-baglanti">
             <Users size={18} aria-hidden="true" />
             <span>
@@ -304,130 +394,8 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
               {danismanlikSayisi ? `${danismanlikSayisi} talep açıldı` : "Talep yok"}
             </span>
           </Link>
-          <Link href="/dashboard/guidelines" className="merkez-baglanti">
-            <BookOpenCheck size={18} aria-hidden="true" />
-            <span>
-              <b>Kılavuzlar</b>
-              {/*
-                KENDİ YÜKLEMESİ KATALOGDA ARANMAZ. Bu bağlantı kataloğa
-                (thesis_guidelines) gidiyor; öğrencinin yüklediği kılavuz
-                orada DEĞİL, çalışmaya bağlı ayrı tabloda. Eskiden alt
-                satırda yüklenen kılavuzun adı yazıyordu: öğrenci adını
-                görüp tıklıyor ve kılavuzunun bulunmadığı bir liste
-                açılıyordu. Yüklenen kılavuz aşağıdaki kartta yönetiliyor.
-              */}
-              {uygulanan
-                ? uygulanan.dogrulandi
-                  ? uygulanan.label
-                  : "Kendi yüklediğiniz kılavuz kullanılıyor"
-                : kilavuzOkunamadi
-                  ? "Kılavuz aranamadı; sayfayı yenileyin"
-                  : calisma.university
-                    ? `${calisma.university} için onaylı kılavuz bulunamadı`
-                    : "Çalışma ayarlarından kurumu girin"}
-            </span>
-          </Link>
         </div>
       </section>
-
-      {/*
-        ÖĞRENCİ ÇIKMAZDA KALMASIN. Kurumunun kılavuzu katalogda yoksa
-        eskiden yalnızca "bulunamadı" yazıyordu; öğrencinin elinde o
-        PDF duruyor ama yapabileceği bir şey yoktu. Teklif tam olarak
-        çıkmazın yanında duruyor.
-
-        Kılavuz okunamadıysa teklif ÇIKMIYOR: geçici bir arıza,
-        kurumunun kılavuzu olan öğrenciye kendi dosyasını
-        yükletmemeli.
-      */}
-      {/*
-        YÜKLEDİĞİ KILAVUZ GÖRÜNÜR VE GERİ ALINABİLİR OLMALI.
-
-        Yükleme bitince teklif kartı kayboluyordu ve öğrencinin elinde
-        hiçbir şey kalmıyordu: hangi kuralların uygulandığını göremiyor,
-        yanlış okunmuş bir PDF'i (OCR'li taramalarda olağan) kaldıramıyordu.
-        Belgesinin kenar boşlukları birden değişmiş, sebebini gösteren bir
-        ekran yok.
-
-        Katalogdan geleni burada göstermiyoruz: o kurum onayından geçmiş,
-        öğrencinin kaldıracağı bir şey değil ve kataloğun kendi sayfası var.
-      */}
-      {uygulanan && !uygulanan.dogrulandi ? (
-        <section className="section mt-lg">
-          <h2 className="section-title">Yüklediğiniz kılavuz</h2>
-          <p className="muted text-base">
-            Kurallar bu dosyadan çıkarıldı ve sizin onayınızla uygulanıyor; kurumunuzun resmî
-            onayından geçmedi. Yanlış bir kural görürseniz başka bir dosya yükleyin ya da kaldırın.
-          </p>
-          <div className="kilavuz-bicim mt-sm">
-            <p>
-              <strong>{uygulanan.label}</strong>
-            </p>
-            <ul>
-              <li>Kaynakça sistemi: {STIL_ETIKETLERI[uygulanan.citationStyle] ?? uygulanan.citationStyle}</li>
-              {uygulanan.requiredSections.length > 0 ? (
-                <li>Zorunlu bölümler: {uygulanan.requiredSections.join(", ")}</li>
-              ) : null}
-              {uygulanan.minPages || uygulanan.maxPages ? (
-                <li>
-                  Uzunluk: {uygulanan.minPages ?? "?"}–{uygulanan.maxPages ?? "?"} sayfa
-                </li>
-              ) : null}
-              {bicimSatirlari.map((satir) => (
-                <li key={satir}>{satir}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="project-form-actions mt-sm">
-            <PanelDrawer
-              triggerLabel="Başka dosya yükle"
-              triggerClassName="projects-filter-button"
-              kicker="Tez yazım kılavuzu"
-              title="Kılavuzu değiştirin"
-              description="Yeni PDF'i okuyup bulduğum kuralları size onaylatacağım; onayladığınızda eskisinin yerini alır."
-            >
-              <KilavuzYukle projectId={calisma.id} />
-            </PanelDrawer>
-            {/*
-              Onay metni ÖLÇÜLEREK yazıldı: kılavuz kalkınca sayfa düzeni
-              geri dönmüyor (lib/guideline-sync, mode:"none" belgenin kendi
-              ayarlarını koruyor). "Biçiminiz bozulacak" demek öğrenciyi
-              olmayan bir şeyden korkuturdu; gerçekte yalnızca denetimin
-              dayanağı kalkıyor.
-            */}
-            <ActionForm
-              action={kilavuzuKaldir}
-              confirmMessage="Kılavuz kaldırılsın mı? Belgenizin sayfa düzeni olduğu gibi kalır; yalnızca belge kontrolü ve teslim listesi kurallara göre denetlenemez olur."
-              successMessage="Kılavuz kaldırıldı."
-            >
-              <input type="hidden" name="projectId" value={calisma.id} />
-              <button type="submit" className="button-danger">
-                Kaldır
-              </button>
-            </ActionForm>
-          </div>
-        </section>
-      ) : null}
-
-      {!uygulanan && !kilavuzOkunamadi ? (
-        <section className="section mt-lg">
-          <h2 className="section-title">Kılavuzunuz sistemde yok</h2>
-          <p className="muted text-base">
-            Kurumunuzun onaylı kılavuzu henüz eklenmemiş. Kendi kılavuzunuzu yükleyin; kuralları
-            okuyup size onaylatayım, sonra editörde kendiliğinden uygulansın.
-          </p>
-          <div className="mt-sm">
-            <PanelDrawer
-              triggerLabel="Kılavuzumu yükle"
-              kicker="Tez yazım kılavuzu"
-              title="Kendi kılavuzunuzu yükleyin"
-              description="PDF'inizi okuyup bulduğum kuralları size onaylatacağım. Bu, kurumunuzun resmî onayı yerine geçmez."
-            >
-              <KilavuzYukle projectId={calisma.id} />
-            </PanelDrawer>
-          </div>
-        </section>
-      ) : null}
     </main>
   );
 }

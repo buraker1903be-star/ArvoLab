@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, FileText, ListChecks, PenLine, Settings2 } from "lucide-react";
+import { ExternalLink, FileText, ListChecks, Mail, Microscope, Search, Settings2, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { makaleProfiliKaydet, makaleProfiliOku } from "@/app/actions/makale";
 import { makaleAsistaniAcik } from "@/app/actions/ai-makale";
@@ -23,6 +23,7 @@ import ActionForm from "@/app/dashboard/action-form";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import { trTarihSaat } from "@/lib/tr-time";
 import MakaleAsistani from "./makale-asistani";
+import CalismaSekmeleri from "../calisma-sekmeleri";
 
 /*
   MAKALE ÇALIŞMA ALANI.
@@ -131,16 +132,10 @@ export default async function MakaleCalismaAlani({ params }: { params: Promise<{
           </p>
         </div>
         <div className="merkez-ust-eylemler">
-          <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
-            <ArrowLeft size={16} aria-hidden="true" /> Çalışma merkezi
-          </Link>
-          <Link href={`/dashboard/editor/${id}/write`} className="projects-primary-button">
-            <PenLine size={16} aria-hidden="true" /> Yazmaya devam et
-          </Link>
           <PanelDrawer
             triggerLabel={kayitliProfil ? "Makale bilgileri" : "Makale bilgilerini girin"}
             triggerIcon={<Settings2 size={16} aria-hidden="true" />}
-            triggerClassName="projects-filter-button"
+            triggerClassName={kayitliProfil ? "projects-filter-button" : "projects-primary-button"}
             kicker="Makale"
             title="Makale bilgileri"
             description="Tür, araştırma sorusu ve hedef derginin sınırları. Dergi bilgilerini derginin kendi sayfasından kontrol edin; ArvoLab bunları doğrulamıyor."
@@ -241,6 +236,8 @@ export default async function MakaleCalismaAlani({ params }: { params: Promise<{
         </div>
       </section>
 
+      <CalismaSekmeleri calisma={calisma} aktif="makale" />
+
       {profilOkunamadi && (
         <p className="alert mb-md" role="alert">Makale bilgileri okunamadı; aşağıdaki kontroller varsayılanlarla hesaplandı. Sayfayı yenileyin.</p>
       )}
@@ -272,159 +269,199 @@ export default async function MakaleCalismaAlani({ params }: { params: Promise<{
         </ul>
       </section>
 
+      {/*
+        ARAÇLAR KAROLARDA (26.10.2026, kurum sahibinin isteği: ArvoOS
+        gibi açılır pencereler). Sayfa eskiden yedi bölümü alt alta
+        diziyordu; gönderim kontrolü — makalenin asıl sorusu, "gönderebilir
+        miyim" — o uzunluğun içinde kayboluyordu. Şimdi sayfada yalnızca o
+        duruyor, şablon, yöntem listesi, bölüm denetimi, tarama günlüğü ve
+        kapak mektubu ikinci satırında ne içerdiğini söyleyen karolar.
+        Dışa aktarma karosu kalktı: "Yazım" sekmesinin kendisi.
+      */}
       <section className="section">
-        <h2 className="section-title">
-          <FileText size={18} aria-hidden="true" /> Şablon ve bölüm planı
-        </h2>
-        <p className="muted text-base">
-          {tur.aciklama} Bu bir başlangıç planıdır; hedef derginin talimatı farklı bir düzen istiyorsa dergi geçerlidir.
-        </p>
-        <ul className="makale-plan mt-sm">
-          {tur.bolumler.map((b) => {
-            const metinde = bolumler.find((x) => x.tur === b);
-            return (
-              <li key={b}>
-                <span>{bolumAdi(b, profil.dil)}</span>
-                <span className="status-pill" data-tone={b === "ozet" ? (profil.ozet ? "success" : "neutral") : metinde ? "success" : "neutral"}>
-                  {b === "ozet" ? (profil.ozet ? "Makale bilgilerinde" : "Girilmedi") : metinde ? `Metinde · yaklaşık ${metinde.sozcuk} sözcük` : "Metinde başlık yok"}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-        {tur.notlar.length > 0 && (
-          <ul className="kanit-alanlar mt-sm">
-            {tur.notlar.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
-        )}
-        {tur.standartlar.length > 0 && (
-          <div className="callout mt-md" data-tone="accent">
-            <strong>İlgili olabilecek raporlama standartları</strong>
-            <ul className="kanit-alanlar">
-              {tur.standartlar.map((s) => (
-                <li key={s.ad}>
-                  <b>{s.ad}</b> — {s.kapsam}
-                </li>
+        <h2 className="section-title">Araçlar</h2>
+        <div className="calisma-karolari">
+          <PanelDrawer
+            triggerLabel="Bölüm denetimi"
+            triggerNote={bolumler.length ? `${bolumler.length} bölüm · asistan` : "Müsveddede başlıklı bölüm yok"}
+            triggerIcon={<Sparkles size={18} aria-hidden="true" />}
+            triggerClassName="merkez-baglanti"
+            kicker="Asistan"
+            title="Bölüm denetimi"
+            boy="genis"
+            basaridaKapan={false}
+          >
+            <MakaleAsistani
+              projectId={id}
+              asistanAcik={asistanAcik}
+              bolumler={bolumler.map((b, sira) => ({ sira, baslik: b.baslik, sozcuk: b.sozcuk, denetim: denetimListesi(b.tur, aile) }))}
+            />
+          </PanelDrawer>
+
+          <PanelDrawer
+            triggerLabel="Şablon ve bölüm planı"
+            triggerNote={`${tur.etiket}${tur.standartlar.length ? ` · ${tur.standartlar.map((st) => st.ad).join(", ")}` : ""}`}
+            triggerIcon={<FileText size={18} aria-hidden="true" />}
+            triggerClassName="merkez-baglanti"
+            kicker="Makale"
+            title="Şablon ve bölüm planı"
+            boy="genis"
+            basaridaKapan={false}
+          >
+            <p className="muted text-base">
+              {tur.aciklama} Bu bir başlangıç planıdır; hedef derginin talimatı farklı bir düzen istiyorsa dergi geçerlidir.
+            </p>
+            <ul className="makale-plan mt-sm">
+              {tur.bolumler.map((b) => {
+                const metinde = bolumler.find((x) => x.tur === b);
+                return (
+                  <li key={b}>
+                    <span>{bolumAdi(b, profil.dil)}</span>
+                    <span className="status-pill" data-tone={b === "ozet" ? (profil.ozet ? "success" : "neutral") : metinde ? "success" : "neutral"}>
+                      {b === "ozet" ? (profil.ozet ? "Makale bilgilerinde" : "Girilmedi") : metinde ? `Metinde · yaklaşık ${metinde.sozcuk} sözcük` : "Metinde başlık yok"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            {tur.notlar.length > 0 && (
+              <ul className="kanit-alanlar mt-sm">
+                {tur.notlar.map((n) => (
+                  <li key={n}>{n}</li>
+                ))}
+              </ul>
+            )}
+            {tur.standartlar.length > 0 && (
+              <div className="callout mt-md" data-tone="accent">
+                <strong>İlgili olabilecek raporlama standartları</strong>
+                <ul className="kanit-alanlar">
+                  {tur.standartlar.map((s) => (
+                    <li key={s.ad}>
+                      <b>{s.ad}</b> — {s.kapsam}
+                    </li>
+                  ))}
+                </ul>
+                <p className="callout-body text-sm">
+                  {STANDART_UYARISI}{" "}
+                  <a className="link-accent" href={EQUATOR_ADRESI} target="_blank" rel="noopener noreferrer">
+                    EQUATOR Network <ExternalLink size={12} aria-hidden="true" />
+                  </a>
+                </p>
+              </div>
+            )}
+          </PanelDrawer>
+
+          {aile && (
+            <PanelDrawer
+              triggerLabel="Yönteme göre kontrol listesi"
+              triggerNote={`${YONTEM_DENETIMLERI[aile].etiket} · ${YONTEM_DENETIMLERI[aile].maddeler.length} madde`}
+              triggerIcon={<ListChecks size={18} aria-hidden="true" />}
+              triggerClassName="merkez-baglanti"
+              kicker="Yöntem"
+              title={`${YONTEM_DENETIMLERI[aile].etiket}: kontrol listesi`}
+              basaridaKapan={false}
+            >
+              <p className="muted text-base">
+                Asistan yöntem ve bulgular bölümlerini denetlerken bu maddelere bakar. Gerçek analiz sonuçlarının yerine
+                tahmin koymaz; analiz çıktısını Analiz modülünde denetletebilirsiniz.
+              </p>
+              <ul className="kanit-alanlar mt-sm">
+                {YONTEM_DENETIMLERI[aile].maddeler.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            </PanelDrawer>
+          )}
+
+          <PanelDrawer
+            triggerLabel="Literatür tarama günlüğü"
+            triggerNote={gunluk.okunamadi ? "Okunamadı" : gunluk.satirlar.length ? `Son ${gunluk.satirlar.length} arama` : "Bu çalışmaya bağlı arama yok"}
+            triggerIcon={<Search size={18} aria-hidden="true" />}
+            triggerClassName="merkez-baglanti"
+            kicker="Literatür"
+            title="Literatür tarama günlüğü"
+            boy="genis"
+            basaridaKapan={false}
+          >
+            <p className="muted text-base">
+              Bu çalışma için yapılan aramalar: sorgu, tarih, filtreler ve cevap veren dizinler. Yalnızca OpenAlex ve
+              Crossref taranır; bu günlük taramanın kapsamını gösterir, literatürün tamamının tarandığını değil.
+            </p>
+            {gunluk.okunamadi ? (
+              <p className="alert mt-sm" role="alert">Tarama günlüğü okunamadı.</p>
+            ) : gunluk.satirlar.length === 0 ? (
+              <p className="muted mt-sm">Bu çalışmaya bağlı arama yok.</p>
+            ) : (
+              <div className="kanit-matris-sarici mt-sm">
+                <table className="kanit-matris">
+                  <thead>
+                    <tr>
+                      <th>Tarih</th>
+                      <th>Sorgu</th>
+                      <th>Filtreler</th>
+                      <th>Cevap veren dizin</th>
+                      <th>Gösterilen sonuç</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gunluk.satirlar.map((s) => (
+                      <tr key={s.id}>
+                        <td>{trTarihSaat(s.olusturuldu)}</td>
+                        <td className="mono">{s.sorgu}</td>
+                        <td>
+                          {[
+                            s.filtreler.yilDan ? `${s.filtreler.yilDan}’den` : "",
+                            s.filtreler.yilaKadar ? `${s.filtreler.yilaKadar}’e kadar` : "",
+                            s.filtreler.yalnizcaAcikErisim ? "yalnızca açık erişim" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(", ") || "—"}
+                        </td>
+                        <td>
+                          {s.yanit_veren.join(", ") || "Hiçbiri"}
+                          {s.ulasilamayan.length ? <small>ulaşılamadı: {s.ulasilamayan.join(", ")}</small> : null}
+                        </td>
+                        <td>{s.gosterilen_sonuc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <Link href={`/dashboard/literature?calisma=${id}`} className="projects-filter-button mt-sm">
+              Literatürde ara
+            </Link>
+          </PanelDrawer>
+
+          <Link href={`/dashboard/editor/${id}/kanit`} className="merkez-baglanti">
+            <Microscope size={18} aria-hidden="true" />
+            <span>
+              <b>Kanıt matrisi</b>
+              {kanitOzeti.toplam
+                ? `${kanitOzeti.toplam} iddia · ${kanitOzeti.dogrudan} doğrudan · ${kanitOzeti.celisen} çelişen`
+                : "Henüz iddia yok"}
+            </span>
+          </Link>
+
+          <PanelDrawer
+            triggerLabel="Kapak mektubu"
+            triggerNote="Kontrol listesi"
+            triggerIcon={<Mail size={18} aria-hidden="true" />}
+            triggerClassName="merkez-baglanti"
+            kicker="Gönderim"
+            title="Kapak mektubu kontrol listesi"
+            basaridaKapan={false}
+          >
+            <p className="muted text-base">
+              Asistan kapak mektubu yazmaz. Derginin talimatına göre mektubunuzda bulunması gerekebilecekler:
+            </p>
+            <ul className="kanit-alanlar mt-sm">
+              {KAPAK_MEKTUBU.map((m) => (
+                <li key={m}>{m}</li>
               ))}
             </ul>
-            <p className="callout-body text-sm">
-              {STANDART_UYARISI}{" "}
-              <a className="link-accent" href={EQUATOR_ADRESI} target="_blank" rel="noopener noreferrer">
-                EQUATOR Network <ExternalLink size={12} aria-hidden="true" />
-              </a>
-            </p>
-          </div>
-        )}
-      </section>
-
-      {aile && (
-        <section className="section">
-          <h2 className="section-title">{YONTEM_DENETIMLERI[aile].etiket}: yönteme göre kontrol listesi</h2>
-          <p className="muted text-base">
-            Asistan yöntem ve bulgular bölümlerini denetlerken bu maddelere bakar. Gerçek analiz sonuçlarının yerine
-            tahmin koymaz; analiz çıktısını Analiz modülünde denetletebilirsiniz.
-          </p>
-          <ul className="kanit-alanlar mt-sm">
-            {YONTEM_DENETIMLERI[aile].maddeler.map((m) => (
-              <li key={m}>{m}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <MakaleAsistani
-        projectId={id}
-        asistanAcik={asistanAcik}
-        bolumler={bolumler.map((b, sira) => ({ sira, baslik: b.baslik, sozcuk: b.sozcuk, denetim: denetimListesi(b.tur, aile) }))}
-      />
-
-      <section className="section mt-lg">
-        <h2 className="section-title">Kanıt matrisi</h2>
-        <p className="muted text-base">
-          {kanitOzeti.toplam
-            ? `${kanitOzeti.toplam} iddia · ${kanitOzeti.dogrudan} doğrudan destekleniyor · ${kanitOzeti.celisen} çelişen · ${kanitOzeti.degerlendirilmemis} değerlendirilmedi ya da doğrulanamadı.`
-            : "Matriste henüz iddia yok. Makalenin temel iddialarını kaynaklarıyla eşleştirin."}
-        </p>
-        <Link href={`/dashboard/editor/${id}/kanit`} className="projects-filter-button mt-sm">
-          Kanıt matrisini aç
-        </Link>
-      </section>
-
-      <section className="section">
-        <h2 className="section-title">Literatür tarama günlüğü</h2>
-        <p className="muted text-base">
-          Bu çalışma için yapılan aramalar: sorgu, tarih, filtreler ve cevap veren dizinler. Yalnızca OpenAlex ve
-          Crossref taranır; bu günlük taramanın kapsamını gösterir, literatürün tamamının tarandığını değil.
-        </p>
-        {gunluk.okunamadi ? (
-          <p className="alert mt-sm" role="alert">Tarama günlüğü okunamadı.</p>
-        ) : gunluk.satirlar.length === 0 ? (
-          <p className="muted mt-sm">Bu çalışmaya bağlı arama yok.</p>
-        ) : (
-          <div className="kanit-matris-sarici mt-sm">
-            <table className="kanit-matris">
-              <thead>
-                <tr>
-                  <th>Tarih</th>
-                  <th>Sorgu</th>
-                  <th>Filtreler</th>
-                  <th>Cevap veren dizin</th>
-                  <th>Gösterilen sonuç</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gunluk.satirlar.map((s) => (
-                  <tr key={s.id}>
-                    <td>{trTarihSaat(s.olusturuldu)}</td>
-                    <td className="mono">{s.sorgu}</td>
-                    <td>
-                      {[
-                        s.filtreler.yilDan ? `${s.filtreler.yilDan}’den` : "",
-                        s.filtreler.yilaKadar ? `${s.filtreler.yilaKadar}’e kadar` : "",
-                        s.filtreler.yalnizcaAcikErisim ? "yalnızca açık erişim" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(", ") || "—"}
-                    </td>
-                    <td>
-                      {s.yanit_veren.join(", ") || "Hiçbiri"}
-                      {s.ulasilamayan.length ? <small>ulaşılamadı: {s.ulasilamayan.join(", ")}</small> : null}
-                    </td>
-                    <td>{s.gosterilen_sonuc}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <Link href={`/dashboard/literature?calisma=${id}`} className="projects-filter-button mt-sm">
-          Literatürde ara
-        </Link>
-      </section>
-
-      <section className="section">
-        <h2 className="section-title">Kapak mektubu kontrol listesi</h2>
-        <p className="muted text-base">
-          Asistan kapak mektubu yazmaz. Derginin talimatına göre mektubunuzda bulunması gerekebilecekler:
-        </p>
-        <ul className="kanit-alanlar mt-sm">
-          {KAPAK_MEKTUBU.map((m) => (
-            <li key={m}>{m}</li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="section">
-        <h2 className="section-title">Dışa aktarma</h2>
-        <p className="muted text-base">
-          Word ve PDF çıktısı editördeki dışa aktarma ile alınır; biçim kuralları üç çıktı yolunda aynı uygulanır.
-          {musvedde.data?.updated_at ? ` Müsvedde son kayıt: ${trTarihSaat(musvedde.data.updated_at)}.` : ""}
-        </p>
-        <Link href={`/dashboard/editor/${id}/write`} className="projects-filter-button mt-sm">
-          Editörü aç
-        </Link>
+          </PanelDrawer>
+        </div>
       </section>
     </main>
   );

@@ -59,20 +59,49 @@ export const ANA_SAYFA = "/dashboard";
 export function labUygulamalari(): OsUygulama[] {
   return [
     { key: "home", label: "Ana Sayfa", href: ANA_SAYFA, ikon: "home", yollar: [] },
+    /*
+      ÇALIŞMANIN KENDİ SEKMELERİ (merkez, yazım, kanıt, makale) burada
+      bölüm olarak DURMUYOR: adresleri çalışmanın kimliğini taşıyor ve
+      "Makale" yalnızca makale türünde anlamlı. Sabit bir bölüm listesi
+      tezde de boş bir Makale sekmesi gösterirdi; sekmeler çalışma
+      sayfalarının içinde, türü bilen sunucu bileşeninde
+      (calisma-sekmeleri.tsx).
+    */
     {
       key: "tez",
-      label: "Belge Editörü",
-      kisa: "Tezim",
+      label: "Çalışmalarım",
+      kisa: "Çalışmalar",
       href: "/dashboard/editor",
       ikon: "tez",
       yollar: ["/dashboard/editor"],
     },
-    { key: "literatur", label: "Literatür Taraması", kisa: "Literatür", href: "/dashboard/literature", ikon: "literatur", yollar: ["/dashboard/literature"] },
-    { key: "kaynakca", label: "Kaynakça Doğrulama", kisa: "Kaynakça", href: "/dashboard/citations", ikon: "kaynakca", yollar: ["/dashboard/citations"] },
+    /*
+      KAYNAKLAR TEK UYGULAMA (26.10.2026, kurum sahibinin isteği: "gereksiz
+      modülleri birleştirelim"). Literatür ve kaynakça doğrulama aynı
+      nesneyle — kaynakla — çalışıyor; dock'ta iki simge olmaları
+      öğrenciye iki ayrı iş varmış gibi görünüyordu.
+    */
+    {
+      key: "kaynaklar",
+      label: "Kaynaklar",
+      href: "/dashboard/literature",
+      ikon: "literatur",
+      yollar: ["/dashboard/literature", "/dashboard/citations"],
+      bolumler: [
+        { key: "literatur", href: "/dashboard/literature", label: "Literatür" },
+        { key: "kaynakca", href: "/dashboard/citations", label: "Kaynakça doğrulama" },
+      ],
+    },
     { key: "analiz", label: "Analiz Merkezi", kisa: "Analiz", href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"] },
     { key: "belge", label: "Belge Kontrol", kisa: "Belge", href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"] },
-    { key: "kilavuz", label: "Kılavuzlar", href: "/dashboard/guidelines", ikon: "kilavuz", yollar: ["/dashboard/guidelines"] },
-    { key: "docentlik", label: "Doçentlik Puanı", kisa: "Doçentlik", href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"] },
+    /*
+      Kılavuz kataloğu ve doçentlik dock'tan çıktı: öğrencinin kılavuzu
+      çalışma merkezinde zaten görünüyor, katalog çoğunlukla personelin
+      sayfası; doçentlik puanı ayrı bir kullanıcı kitlesinin aracı.
+      İkisi de "Tüm uygulamalar"da ve Ctrl+K'da.
+    */
+    { key: "kilavuz", label: "Kılavuz Kataloğu", href: "/dashboard/guidelines", ikon: "kilavuz", yollar: ["/dashboard/guidelines"], yalnizBaslatici: true },
+    { key: "docentlik", label: "Doçentlik Puanı", kisa: "Doçentlik", href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"], yalnizBaslatici: true },
     /*
       İKİ DESTEK YOLU TEK UYGULAMADA. Dock'ta iki ayrı simge
       olsalardı günlük işin simgelerini sıkıştırırlardı; ikisi de

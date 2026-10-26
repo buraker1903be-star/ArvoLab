@@ -18,6 +18,20 @@ type PanelDrawerProps = {
   description?: string;
   /** Başlığın üstündeki küçük etiket */
   kicker?: string;
+  /** Düğmenin ikinci satırı (karo görünümü: "3 madde eksik"). */
+  triggerNote?: string;
+  /** Pencere genişliği: form için "orta", tablo ve zincir için "genis". */
+  boy?: "orta" | "genis";
+  /**
+   * Bir işlem başarıyla bitince pencere kapansın mı?
+   *
+   * Varsayılan EVET: tek seferlik formlarda (yeni kaynak, iddia ekle)
+   * kaydedip kapanmak bekleniyor. İçinde birden çok işlem yapılan
+   * pencerelerde (kanıt kaydı: metin ekle, değerlendir, not yaz) HAYIR —
+   * her kayıttan sonra kapanan pencere kullanıcıyı aynı kaydı yeniden
+   * açmaya zorluyordu. ArvoOS'taki PanelModal'ın basaridaKapan'ı.
+   */
+  basaridaKapan?: boolean;
   children: ReactNode;
 };
 
@@ -33,6 +47,9 @@ export default function PanelDrawer({
   title,
   description,
   kicker,
+  triggerNote,
+  boy = "orta",
+  basaridaKapan = true,
   children,
 }: PanelDrawerProps) {
   const [open, setOpen] = useState(false);
@@ -58,7 +75,7 @@ export default function PanelDrawer({
     };
     const onSuccess = () => setOpen(false);
     document.addEventListener("keydown", onKeyDown);
-    window.addEventListener(ACTION_SUCCESS_EVENT, onSuccess);
+    if (basaridaKapan) window.addEventListener(ACTION_SUCCESS_EVENT, onSuccess);
     document.documentElement.classList.add("drawer-open");
     window.requestAnimationFrame(() => dialogRef.current?.focus());
     return () => {
@@ -66,10 +83,10 @@ export default function PanelDrawer({
       window.removeEventListener(ACTION_SUCCESS_EVENT, onSuccess);
       document.documentElement.classList.remove("drawer-open");
     };
-  }, [open]);
+  }, [open, basaridaKapan]);
 
   const drawer = (
-    <div className={open ? "drawer-root open" : "drawer-root"}>
+    <div className={open ? "drawer-root open" : "drawer-root"} data-boy={boy}>
       <button
         className="drawer-backdrop"
         type="button"
@@ -112,7 +129,14 @@ export default function PanelDrawer({
         aria-expanded={open}
       >
         {triggerIcon}
-        {triggerLabel}
+        {triggerNote ? (
+          <span className="drawer-tetik-metin">
+            <b>{triggerLabel}</b>
+            {triggerNote}
+          </span>
+        ) : (
+          triggerLabel
+        )}
       </button>
       {isClient ? createPortal(drawer, document.body) : null}
     </>
