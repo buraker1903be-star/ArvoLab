@@ -57,7 +57,7 @@ export default async function CalismaSerit({
     <nav className="calisma-serit" aria-label="Çalışma bağlamı">
       <Link href={`/dashboard/editor/${calisma.id}`} className="calisma-serit-baslik">
         <ArrowLeft size={15} aria-hidden="true" />
-        <span className="calisma-serit-etiket">Çalışma merkezi</span>
+        <span className="calisma-serit-etiket">Çalışma özeti</span>
         <strong>{calisma.title}</strong>
       </Link>
       <ul className="calisma-serit-birimler">

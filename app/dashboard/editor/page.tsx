@@ -267,6 +267,7 @@ export default async function ProjectsPage({
                 due={dueInfo(secili.due_date, secili.status)}
                 duzenleyebilir={profile?.id === secili.owner_id || profile?.id === secili.assignee_id}
                 silebilir={profile?.id === secili.owner_id || canDeleteAnyProject}
+                kilavuzAc={params.kilavuz === "1" && params.sec === secili.id}
               />
             ) : null}
           </section>
@@ -459,7 +460,7 @@ export default async function ProjectsPage({
                     </Link>
                     <Link href={`/dashboard/editor/${project.id}`} className="projects-filter-button">
                       <LayoutDashboard size={15} aria-hidden="true" />
-                      Çalışma merkezi
+                      Çalışma özeti
                     </Link>
                   </div>
                   <details className="kart-menu">

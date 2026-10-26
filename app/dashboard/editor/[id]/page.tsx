@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   ArrowRight,
   BookOpenCheck,
@@ -15,21 +15,30 @@ import {
 } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
-import { calismaKilavuzu } from "@/lib/guideline-rules";
-import { bicimOzeti } from "@/lib/kilavuz-dogrulama";
-import { kilavuzuKaldir } from "@/app/actions/calisma-kilavuzu";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
-import KilavuzYukle from "./kilavuz-yukle";
+import KilavuzPenceresi from "./kilavuz-penceresi";
 import CalismaSekmeleri from "./calisma-sekmeleri";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/app/actions/profile";
+import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
+import { calismaAdresi } from "@/lib/calisma-karti";
 import ActionForm from "@/app/dashboard/action-form";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
-import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
+import { isOversightRole, projectTypeLabel, statusLabel, STAFF_ROLES } from "@/lib/project-labels";
 import { trTarih, trTarihSaat } from "@/lib/tr-time";
 
 /*
-  Çalışma merkezi: bir tezin/makalenin bütün birimleri tek sayfada.
+  ÇALIŞMA ÖZETİ (personel): bir tezin/makalenin bütün birimleri tek sayfada.
+
+  ÖĞRENCİ BU SAYFAYI GÖRMÜYOR (26.10.2026, kurum sahibinin kararı:
+  "Çalışma merkezi gereksiz bir sayfa değil mi, zaten karta
+  yerleştirdik"). Özet, eksikler ve kılavuz Çalışmalarım'daki durum
+  kartında (calisma-durum-karti.tsx); öğrenci bu adrese gelirse oraya,
+  çalışması seçili olarak yönleniyor. Adres kalkmadı: editörden,
+  birimlerin şeridinden ve eski bağlantılardan gelen yollar kırılmasın.
+
+  Onay ve atama yetkisi olan personel burada kalıyor: Çalışmalarım'da
+  onların düzeni liste kartları, sağda durum kartı yok.
 
   ArvoLab'ın birimleri veritabanında zaten bu çalışmaya bağlıydı
   (literature_sources, citation_checks, document_uploads,
@@ -49,8 +58,23 @@ const ADIM_SIMGESI: Record<string, typeof PenLine> = {
   belge: FileCheck2,
 };
 
-export default async function CalismaMerkezi({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function CalismaMerkezi({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [{ id }, sorgu, profil] = await Promise.all([params, searchParams, getCurrentProfile()]);
+  // Yeni tezde kılavuz eşleşmediyse kayıt buraya ?kilavuz=1 ile geliyor (createProject).
+  const kilavuzAc = sorgu.kilavuz === "1";
+  const gorunum = await sayfaGorunumu({
+    rol: profil?.role,
+    personelRolu: profil?.role ? STAFF_ROLES.includes(profil.role) : false,
+    kurumVar: Boolean(profil?.organization_id),
+  });
+  if (!(isOversightRole(profil?.role) && gorunum.personel)) redirect(calismaAdresi(id, { kilavuz: kilavuzAc }));
+
   const ozet = await calismaOzeti(id);
   /*
     Okunamadı ile bulunamadı AYRI. Eskiden ikisi de notFound() çiziyordu:
@@ -76,26 +100,12 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
   }
   if (!ozet) notFound();
 
-  const { calisma, danismanlikSayisi, asistan, kilavuz, kilavuzOkunamadi, tutarsizliklar, hazirlik } = ozet;
+  const { calisma, danismanlikSayisi, asistan, kilavuz, kilavuzOkunamadi, tutarsizliklar, hazirlik, uygulanan } = ozet;
   const stilCelisiyor = atifStiliCelisiyorMu(ozet);
   // Eksikler önce, bakılması gerekenler sonra (ana sayfadaki sıralamanın aynısı).
   const eksikMaddeler = (hazirlik?.items ?? [])
     .filter((madde) => madde.status !== "ok")
     .sort((a, b) => (a.status === "todo" ? 0 : 1) - (b.status === "todo" ? 0 : 1));
-  /*
-    EKRANDA GÖRÜNEN KILAVUZ, UYGULANAN kılavuzdur. ozet.kilavuz
-    yalnızca kataloğa bakıyor; öğrenci kendi kılavuzunu yüklediyse
-    editörde kurallar işliyor ama bu kart "bulunamadı" diyordu.
-  */
-  const uygulanan = await calismaKilavuzu(await createClient(), calisma.id, calisma.guideline_id);
-
-  /*
-    Biçim kuralları doğrulama ekranındakiyle AYNI cümlelerle yazılıyor
-    (lib/kilavuz-dogrulama). Öğrenci onayladığı satırı burada tanıyor;
-    iki ayrı yazım, aynı kuralı iki ayrı kural gibi gösterirdi.
-  */
-  const bicimSatirlari = uygulanan ? bicimOzeti(uygulanan.settings) : [];
-
   const adimlar = siradakiAdimlar(ozet);
   const ilerleme = birimIlerlemesi(adimlar);
 
@@ -104,16 +114,6 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
     [eksikSayisi ? `${eksikSayisi} eksik` : "", eksikMaddeler.length - eksikSayisi ? `${eksikMaddeler.length - eksikSayisi} bakılacak` : ""]
       .filter(Boolean)
       .join(" · ") || "Bütün maddeler hazır";
-  const kilavuzNotu = uygulanan
-    ? uygulanan.dogrulandi
-      ? uygulanan.label
-      : "Kendi yüklediğiniz kılavuz kullanılıyor"
-    : kilavuzOkunamadi
-      ? "Kılavuz aranamadı; sayfayı yenileyin"
-      : calisma.university
-        ? "Onaylı kılavuz yok — kendi kılavuzunuzu yükleyin"
-        : "Çalışma ayarlarından kurumu girin";
-
   /*
     SADE MERKEZ (26.10.2026, kurum sahibinin isteği: "kalabalık
     karmaşık yapıdan kurtulalım, ArvoOS gibi açılır pencereler").
@@ -302,90 +302,12 @@ export default async function CalismaMerkezi({ params }: { params: Promise<{ id:
             </PanelDrawer>
           )}
 
-          {/*
-            KILAVUZ TEK PENCEREDE. Eskiden "bağlı kayıtlar"daki karo
-            kataloğa gidiyordu, yüklenen kılavuz ve yükleme teklifi ise iki
-            ayrı bölümdü. Öğrencinin yüklediği kılavuz katalogda DEĞİL
-            (çalışmaya bağlı ayrı tablo); karo onu kataloğa göndermemeli.
-            Kılavuz okunamadıysa yükleme teklif edilmiyor: geçici bir
-            arıza, kurumunun kılavuzu olan öğrenciye kendi dosyasını
-            yükletmemeli.
-          */}
-          <PanelDrawer
-            triggerLabel="Yazım kılavuzu"
-            triggerNote={kilavuzNotu}
-            triggerIcon={<BookOpenCheck size={18} aria-hidden="true" />}
-            triggerClassName="merkez-baglanti"
-            kicker="Tez yazım kılavuzu"
-            title={uygulanan ? uygulanan.label : "Kılavuz"}
-            description={
-              uygulanan
-                ? uygulanan.dogrulandi
-                  ? "Kurumunuzun onaylı kılavuzu; kurallar editörde kendiliğinden uygulanıyor."
-                  : "Kurallar yüklediğiniz dosyadan çıkarıldı ve sizin onayınızla uygulanıyor; kurumunuzun resmî onayından geçmedi."
-                : "Kurumunuzun onaylı kılavuzu henüz eklenmemiş."
-            }
-            boy="genis"
-            basaridaKapan={false}
-          >
-            {uygulanan ? (
-              <div className="kilavuz-bicim">
-                <ul>
-                  <li>Kaynakça sistemi: {STIL_ETIKETLERI[uygulanan.citationStyle] ?? uygulanan.citationStyle}</li>
-                  {uygulanan.requiredSections.length > 0 ? <li>Zorunlu bölümler: {uygulanan.requiredSections.join(", ")}</li> : null}
-                  {uygulanan.minPages || uygulanan.maxPages ? (
-                    <li>
-                      Uzunluk: {uygulanan.minPages ?? "?"}–{uygulanan.maxPages ?? "?"} sayfa
-                    </li>
-                  ) : null}
-                  {bicimSatirlari.map((satir) => (
-                    <li key={satir}>{satir}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {uygulanan?.dogrulandi ? (
-              <Link href="/dashboard/guidelines" className="projects-filter-button mt-sm">
-                Kılavuz kataloğunu aç
-              </Link>
-            ) : null}
-
-            {uygulanan && !uygulanan.dogrulandi ? (
-              <>
-                {/*
-                  Onay metni ÖLÇÜLEREK yazıldı: kılavuz kalkınca sayfa düzeni
-                  geri dönmüyor (lib/guideline-sync, mode:"none"). "Biçiminiz
-                  bozulacak" demek olmayan bir şeyden korkuturdu.
-                */}
-                <ActionForm
-                  className="mt-sm"
-                  action={kilavuzuKaldir}
-                  confirmMessage="Kılavuz kaldırılsın mı? Belgenizin sayfa düzeni olduğu gibi kalır; yalnızca belge kontrolü ve teslim listesi kurallara göre denetlenemez olur."
-                  successMessage="Kılavuz kaldırıldı."
-                >
-                  <input type="hidden" name="projectId" value={calisma.id} />
-                  <button type="submit" className="button-danger">
-                    Kılavuzu kaldır
-                  </button>
-                </ActionForm>
-                <details className="form-details mt-md">
-                  <summary>Başka dosya yükle</summary>
-                  <KilavuzYukle projectId={calisma.id} />
-                </details>
-              </>
-            ) : null}
-
-            {!uygulanan && !kilavuzOkunamadi ? (
-              <>
-                <p className="muted">
-                  Kendi kılavuzunuzu yükleyin; kuralları okuyup size onaylatayım, sonra editörde kendiliğinden
-                  uygulansın. Bu, kurumunuzun resmî onayı yerine geçmez.
-                </p>
-                <KilavuzYukle projectId={calisma.id} />
-              </>
-            ) : null}
-          </PanelDrawer>
+          <KilavuzPenceresi
+            calisma={calisma}
+            uygulanan={uygulanan}
+            kilavuzOkunamadi={kilavuzOkunamadi}
+            acikBasla={kilavuzAc}
+          />
 
           <Link href="/dashboard/expert-requests" className="merkez-baglanti">
             <Users size={18} aria-hidden="true" />

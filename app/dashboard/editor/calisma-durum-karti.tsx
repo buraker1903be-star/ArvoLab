@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { ChevronRight, MoreHorizontal, PenLine, Pencil, Upload } from "lucide-react";
+import { FileText, Grid3x3, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
+import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
+import ActionForm from "../action-form";
+import KilavuzPenceresi from "./[id]/kilavuz-penceresi";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
 import { eksikSatirlari, type EksikTuru, type KartIlerlemesi } from "@/lib/calisma-karti";
@@ -15,7 +18,11 @@ import DeleteProjectButton from "./delete-project-button";
 /*
   ÇALIŞMALARIM — SAĞ KART: seçili çalışmanın durumu ve eksikleri.
 
-  Çalışma merkezinin özeti; veri aynı kaynaktan (calismaOzeti), sıradaki
+  Eskiden ayrı bir "Çalışma merkezi" sayfası vardı; öğrenci için
+  kaldırıldı ve geri kalan işleri buraya taşındı: kılavuz penceresi,
+  "Kılavuza göre düzelt", asistanın son bulguları, Kanıt matrisi ve
+  Makale bağlantıları. Personelin çalışma özeti ([id]/page.tsx) aynı
+  veriyi okuyor; veri aynı kaynaktan (calismaOzeti), sıradaki
   iş aynı kuraldan (lib/siradaki-is.ts), eksik listesi tek bir saf
   fonksiyondan (lib/calisma-karti.ts, eksikSatirlari). Burada ikinci bir
   "ne eksik" hesabı yazılmıyor: merkez ile bu kart aynı çalışma için
@@ -30,6 +37,7 @@ const TUR: Record<EksikTuru, { etiket: string; ton: string }> = {
   eksik: { etiket: "Eksik", ton: "danger" },
   tutarsizlik: { etiket: "Tutarsızlık", ton: "warning" },
   bakilacak: { etiket: "Bakılacak", ton: "warning" },
+  asistan: { etiket: "Asistan", ton: "info" },
   yapilmadi: { etiket: "Yapılmadı", ton: "neutral" },
 };
 
@@ -40,6 +48,7 @@ export default async function CalismaDurumKarti({
   due,
   duzenleyebilir,
   silebilir,
+  kilavuzAc,
 }: {
   projectId: string;
   kelime: number | null;
@@ -47,6 +56,8 @@ export default async function CalismaDurumKarti({
   due: DueInfo | null;
   duzenleyebilir: boolean;
   silebilir: boolean;
+  /** Yeni tezde kılavuz eşleşmediyse pencere açık gelir (createProject). */
+  kilavuzAc: boolean;
 }) {
   const ozet = await calismaOzeti(projectId);
   const merkez = `/dashboard/editor/${projectId}`;
@@ -67,20 +78,28 @@ export default async function CalismaDurumKarti({
     );
   }
 
-  const { calisma, hazirlik, tutarsizliklar, kilavuz } = ozet;
+  const { calisma, hazirlik, tutarsizliklar, kilavuz, uygulanan, kilavuzOkunamadi, asistan } = ozet;
+  const makale = calisma.project_type === "article";
   const adimlar = siradakiAdimlar(ozet);
   const maddeler = (hazirlik?.items ?? [])
     .filter((madde) => madde.status !== "ok")
     .sort((a, b) => (a.status === "todo" ? 0 : 1) - (b.status === "todo" ? 0 : 1));
   const sirada = siradakiIs({ calismaId: calisma.id, adimlar, eksikler: maddeler, kalanGun: due?.days ?? null });
   const stil = (anahtar: string | null | undefined) => STIL_ETIKETLERI[anahtar ?? ""] ?? anahtar ?? "";
+  /*
+    Stil çelişkisi listede değil, düğmesiyle birlikte üstte: düzeltmesi
+    tek tık ve yanlış stille yazmaya devam etmek her gün büyüyen bir hata.
+    Düğme serbest seçim sunmuyor, yalnızca kılavuzun istediğine çeviriyor.
+  */
+  const stilUyarisi = atifStiliCelisiyorMu(ozet)
+    ? `Çalışmanız ${stil(calisma.citation_style)} olarak ayarlı, ${kilavuz?.kurum ?? "kurumunuzun"} kılavuzu ${stil(kilavuz?.atifStili)} istiyor.`
+    : null;
   const eksikler = eksikSatirlari({
     calismaId: calisma.id,
-    stilUyarisi: atifStiliCelisiyorMu(ozet)
-      ? `Çalışmanız ${stil(calisma.citation_style)} olarak ayarlı, ${kilavuz?.kurum ?? "kurumunuzun"} kılavuzu ${stil(kilavuz?.atifStili)} istiyor.`
-      : null,
+    stilUyarisi: null,
     maddeler,
     tutarsizliklar,
+    asistanBulgulari: asistan.sonBulgular,
     adimlar,
     sirada,
   });
@@ -145,15 +164,31 @@ export default async function CalismaDurumKarti({
         </div>
       </dl>
 
+      {stilUyarisi ? (
+        <div className="asistan-uyari asistan-uyari-eylemli" data-tone="danger" role="alert">
+          <span>
+            <TriangleAlert size={16} aria-hidden="true" /> {stilUyarisi}
+          </span>
+          <ActionForm action={atifStiliniKilavuzaUydur.bind(null, calisma.id)} successMessage="Atıf stili kılavuza göre güncellendi.">
+            <button type="submit" className="projects-filter-button button-compact">
+              Kılavuza göre düzelt
+            </button>
+          </ActionForm>
+        </div>
+      ) : null}
+
       <div className="tez-simdi" data-aciliyet={sirada.aciliyet} data-bitti={sirada.bitti ? "true" : undefined}>
         <span className="sirada-etiket">{sirada.bitti ? "Durum" : "Şimdi"}</span>
         <div className="sirada-govde">
           <b>{sirada.baslik}</b>
           <span>{sirada.aciklama}</span>
         </div>
-        <Link href={sirada.href} className="projects-primary-button button-compact">
-          {sirada.eylem}
-        </Link>
+        {/* İş bittiyse düğme bu kartın kendisine gidiyordu; çizilmiyor. */}
+        {sirada.bitti ? null : (
+          <Link href={sirada.href} className="projects-primary-button button-compact">
+            {sirada.eylem}
+          </Link>
+        )}
       </div>
 
       <h3 className="calisma-durum-alt">
@@ -184,8 +219,27 @@ export default async function CalismaDurumKarti({
       )}
 
       <footer className="calisma-durum-alt-serit">
-        <Link className="gb-kart-baglanti" href={merkez}>
-          Çalışma merkezini aç <ChevronRight size={14} aria-hidden="true" />
+        {/*
+          Tezde kılavuz penceresi; makalede kılavuzun karşılığı derginin
+          kuralları ve onların yeri makale çalışma alanı (orada doğrulama
+          değil, kontrol tarihi tutuluyor — lib/makale/).
+        */}
+        {makale ? (
+          <Link href={`${merkez}/makale`} className="projects-filter-button button-compact">
+            <FileText size={15} aria-hidden="true" /> Makale ve dergi
+          </Link>
+        ) : (
+          <KilavuzPenceresi
+            calisma={calisma}
+            uygulanan={uygulanan}
+            kilavuzOkunamadi={kilavuzOkunamadi}
+            triggerClassName={uygulanan ? "projects-filter-button button-compact" : "projects-primary-button button-compact"}
+            kisa
+            acikBasla={kilavuzAc && !uygulanan}
+          />
+        )}
+        <Link href={`${merkez}/kanit`} className="projects-filter-button button-compact">
+          <Grid3x3 size={15} aria-hidden="true" /> Kanıt matrisi
         </Link>
         {/* Ayda bir yapılan işler menüde; menü yukarı açılıyor, kartın içinde kalıyor. */}
         <details className="kart-menu">

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { AsistanBulgusu, CalismaOzeti } from "@/lib/calisma-ozeti";
 import { calismaKilavuzu } from "@/app/actions/guidelines";
 import { metinListeTutarsizliklari, type KaynakSatiri, type Tutarsizlik } from "@/lib/calisma-tutarlilik";
-import { loadAppliedGuidelines } from "@/lib/guideline-rules";
+import { calismaKilavuzu as uygulananKilavuz } from "@/lib/guideline-rules";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 
 /*
@@ -122,12 +122,18 @@ export async function calismaOzeti(
     aynı hesap (lib/manuscript-readiness.ts). Asıl yeri burası — çalışmanın
     bütün birimlerinin toplandığı sayfa.
   */
-  const uygulananlar = await loadAppliedGuidelines(supabase, calisma.guideline_id ? [calisma.guideline_id] : []);
+  /*
+    UYGULANAN kılavuz: katalogdaki ya da öğrencinin kendi yüklediği.
+    Eskiden yalnızca katalog okunuyordu; kendi kılavuzunu yükleyen
+    öğrencinin teslim listesi "Kılavuz yok — Kılavuzumu yükle" demeye
+    devam ediyordu, editör ise kuralları uyguluyordu.
+  */
+  const uygulanan = await uygulananKilavuz(supabase, calisma.id, calisma.guideline_id);
   const hazirlik =
     musvedde.data
       ? manuscriptReadiness({
           manuscript: musvedde.data,
-          guideline: (calisma.guideline_id ? uygulananlar.get(calisma.guideline_id) : null) ?? null,
+          guideline: uygulanan,
           projectType: calisma.project_type,
           citationStyle: calisma.citation_style ?? "apa7",
         })
@@ -136,6 +142,7 @@ export async function calismaOzeti(
   return {
     calisma,
     hazirlik,
+    uygulanan,
     musvedde: musvedde.data ? { kelime: musvedde.data.word_count ?? 0, guncellendi: musvedde.data.updated_at } : null,
     literatur: {
       toplam: literatur.count ?? 0,

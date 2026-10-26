@@ -81,7 +81,7 @@ export default async function WriteManuscriptPage({
         */}
         <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
           <ArrowLeft size={17} />
-          Çalışma merkezi
+          Çalışma özeti
         </Link>
       </section>
 

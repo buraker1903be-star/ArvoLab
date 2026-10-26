@@ -23,6 +23,7 @@ const CALISMA = {
 const ozet = (parca: Partial<CalismaOzeti> = {}): CalismaOzeti => ({
   calisma: CALISMA,
   hazirlik: null,
+  uygulanan: null,
   musvedde: null,
   literatur: { toplam: 0, okunan: 0, kullanilan: 0 },
   kaynakca: null,

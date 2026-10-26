@@ -78,18 +78,30 @@ export function seciliCalismaId(
   return enYeni?.id ?? idler[0] ?? null;
 }
 
+/*
+  Bir çalışmanın öğrenci için adresi: Çalışmalarım, o çalışma seçili.
+  Eski merkez adresi (/dashboard/editor/<id>) öğrenciyi buraya yönlendiriyor
+  (personel orada kalıyor). Personelle ORTAK sayfalardaki bağlantılar bu
+  yüzden eski adreste kaldı; karar o sayfada veriliyor.
+*/
+export function calismaAdresi(id: string, secenek: { kilavuz?: boolean } = {}): string {
+  return `/dashboard/editor?sec=${encodeURIComponent(id)}${secenek.kilavuz ? "&kilavuz=1" : ""}`;
+}
+
 /** Satırın adresi: filtreler (q, durum, sirala…) korunur, yalnızca seçim değişir. */
 export function secimAdresi(params: Record<string, string | string[] | undefined>, id: string): string {
   const arama = new URLSearchParams();
   for (const [anahtar, deger] of Object.entries(params)) {
-    if (anahtar === "sec" || deger === undefined) continue;
+    /* kilavuz=1 yalnızca yeni açılan çalışmanın penceresini açar;
+       başka satıra geçince taşınırsa her çalışmada pencere açılırdı. */
+    if (anahtar === "sec" || anahtar === "kilavuz" || deger === undefined) continue;
     for (const tek of Array.isArray(deger) ? deger : [deger]) arama.append(anahtar, tek);
   }
   arama.set("sec", id);
   return `/dashboard/editor?${arama.toString()}`;
 }
 
-export type EksikTuru = "stil" | "eksik" | "tutarsizlik" | "bakilacak" | "yapilmadi";
+export type EksikTuru = "stil" | "eksik" | "tutarsizlik" | "bakilacak" | "asistan" | "yapilmadi";
 export type EksikSatiri = { anahtar: string; tur: EksikTuru; baslik: string; aciklama: string; href: string };
 
 type MaddeGirdisi = { id: string; label: string; detail: string; status: string };
@@ -105,7 +117,8 @@ type AdimGirdisi = { anahtar: string; baslik: string; aciklama: string; href: st
   2. Teslim kontrolünün EKSİK maddeleri (kılavuzun istediği).
   3. Metin ile literatür listesinin tutarsızlıkları.
   4. Teslim kontrolünün BAKILACAK maddeleri.
-  5. Yapılmamış birimler (literatür, kaynakça denetimi, belge).
+  5. Asistanın son denetiminin bulguları (merkezde ayrı penceredeydi).
+  6. Yapılmamış birimler (literatür, kaynakça denetimi, belge).
 
   "Şimdi" satırında gösterilen iş listede TEKRAR edilmiyor (ana
   sayfadaki kuralın aynısı): madde kimliğiyle ya da adımın adresiyle
@@ -116,11 +129,14 @@ export function eksikSatirlari(girdi: {
   stilUyarisi: string | null;
   maddeler: MaddeGirdisi[];
   tutarsizliklar: { tur: string; baslik: string; aciklama: string }[];
+  asistanBulgulari?: { baslik: string; aciklama: string }[];
   adimlar: AdimGirdisi[];
   sirada?: { kaynakMadde?: string; href: string; bitti: boolean } | null;
 }): EksikSatiri[] {
   const { calismaId, sirada } = girdi;
-  const merkez = `/dashboard/editor/${calismaId}`;
+  const merkez = calismaAdresi(calismaId);
+  // Tutarsızlık metin ile literatür listesi arasında; düzeltileceği yer liste.
+  const literatur = `/dashboard/literature?calisma=${calismaId}`;
   const madde = (m: MaddeGirdisi, tur: EksikTuru): EksikSatiri => ({
     anahtar: `madde-${m.id}`,
     tur,
@@ -136,10 +152,37 @@ export function eksikSatirlari(girdi: {
       ? [{ anahtar: "stil", tur: "stil" as const, baslik: "Atıf stili kılavuzla çelişiyor", aciklama: girdi.stilUyarisi, href: merkez }]
       : []),
     ...kalan.filter((m) => m.status === "todo").map((m) => madde(m, "eksik")),
-    ...girdi.tutarsizliklar.map((t) => ({ anahtar: `tutarsizlik-${t.tur}`, tur: "tutarsizlik" as const, baslik: t.baslik, aciklama: t.aciklama, href: merkez })),
+    ...girdi.tutarsizliklar.map((t) => ({ anahtar: `tutarsizlik-${t.tur}`, tur: "tutarsizlik" as const, baslik: t.baslik, aciklama: t.aciklama, href: literatur })),
     ...kalan.filter((m) => m.status !== "todo").map((m) => madde(m, "bakilacak")),
+    ...(girdi.asistanBulgulari ?? []).map((b, sira) => ({ anahtar: `asistan-${sira}`, tur: "asistan" as const, baslik: b.baslik, aciklama: b.aciklama, href: "/dashboard/asistan" })),
     ...girdi.adimlar
       .filter((a) => !a.tamam && a.href !== siradakiAdim)
       .map((a) => ({ anahtar: `adim-${a.anahtar}`, tur: "yapilmadi" as const, baslik: a.baslik, aciklama: a.aciklama, href: a.href })),
   ];
+}
+
+/*
+  YENİ ÇALIŞMADAN SONRAKİ İLK ADIM (26.10.2026, kurum sahibinin kararı:
+  "kılavuzsuz bir çalışma olmayacak").
+
+  - Tez ve katalogda kılavuzu eşleşti: doğrudan editör, kurallar zaten
+    uygulanıyor.
+  - Tez ama kılavuz eşleşmedi: kılavuz yükleme penceresi açık gelir.
+    Eskiden öğrenci doğrudan editöre düşüyordu; kılavuzsuz yazılan tez
+    biçim denetiminden geçmiyordu ve bunu teslim listesine bakınca
+    öğreniyordu. Pencere kapatılabilir — kılavuz PDF'i o an elinde
+    olmayabilir; eksik teslim listesinde "Kılavuz" olarak kalıyor.
+  - Makale: makale çalışma alanında dergi bilgileri penceresi açık
+    gelir. Derginin kuralları kılavuz gibi çıkarılıp uygulanmıyor
+    (AGENTS.md: dergiye uygunluk hükmü verilmez); hedef dergi, kuralların
+    adresi ve kontrol tarihi isteniyor.
+  - Diğer türler (proje, doçentlik): editör.
+
+  Adres eski merkez adresi: öğrenciyi Çalışmalarım'daki karta,
+  personeli çalışma özetine o sayfa yönlendiriyor.
+*/
+export function yeniCalismaAdresi(girdi: { id: string; tur: string; kilavuzVar: boolean }): string {
+  if (girdi.tur === "thesis" && !girdi.kilavuzVar) return `/dashboard/editor/${girdi.id}?kilavuz=1`;
+  if (girdi.tur === "article") return `/dashboard/editor/${girdi.id}/makale?dergi=1`;
+  return `/dashboard/editor/${girdi.id}/write`;
 }

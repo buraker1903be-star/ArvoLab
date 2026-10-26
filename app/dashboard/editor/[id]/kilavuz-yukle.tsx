@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { UploadCloud, Link2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { showToast } from "@/app/dashboard/_components/toast-events";
@@ -40,6 +41,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
   const [depoYolu, setDepoYolu] = useState<string | null>(null);
   const [yeniBolum, setYeniBolum] = useState("");
   const [kaydediliyor, setKaydediliyor] = useState(false);
+  const router = useRouter();
 
   const taramayiBitir = (cevap: TaramaSonucu) => {
     if (cevap.error || !cevap.form) {
@@ -125,6 +127,9 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
       return;
     }
     showToast("success", "Kılavuzunuz çalışmaya uygulandı.");
+    /* Pencerenin bulunduğu sayfa (Çalışmalarım kartı) yeni kuralları ve
+       teslim listesini göstersin; eskiden pencere eski hâliyle kalıyordu. */
+    router.refresh();
     onKapat?.();
   };
 
