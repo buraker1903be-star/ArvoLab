@@ -927,3 +927,31 @@
   color: color-mix(in srgb, var(--warning) 85%, var(--ink));
   font-size: var(--fs-micro); font-weight: 650;
 }
+
+/* ---------- Yapı ve bütünlük penceresi: türe göre gruplu sorunlar ---------- */
+.sorun-paneli { display: grid; gap: 14px; }
+.sorun-ozet { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0; }
+.sorun-ozet small { flex-basis: 100%; color: var(--muted); font-size: var(--fs-micro); }
+.sorun-grubu { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--karo-r); background: var(--surface-2); }
+.sorun-grubu > header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sorun-grubu > header strong { font-size: var(--fs-sm); }
+.sorun-grubu > p { margin: 0; font-size: var(--fs-micro); }
+.sorun-grubu ul { display: grid; gap: 4px; margin: 2px 0 0; padding: 0; list-style: none; }
+.sorun-satir {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.sorun-satir > svg { margin-top: 2px; }
+.sorun-satir[data-tone="danger"] > svg { color: var(--danger); }
+.sorun-satir[data-tone="warning"] > svg { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.sorun-metin { overflow-wrap: anywhere; }
+.sorun-eylem, .sorun-goster { flex: none; align-self: center; white-space: nowrap; }
+.sorun-temiz { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--success); font-weight: 600; }

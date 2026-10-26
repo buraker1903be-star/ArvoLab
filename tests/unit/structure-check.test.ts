@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { checkStructure } from "@/lib/structure-check";
+import { checkStructure, sorunlariGrupla } from "@/lib/structure-check";
 
 /*
   checkStructure canlı denetimi sürüyor ve tek bir birim testi yoktu.
@@ -141,5 +141,24 @@ describe("kısaltmalar", () => {
       ],
     };
     assert.deepEqual(mesajlar(doc).filter((m) => /kısaltma/i.test(m)), []);
+  });
+
+  test("sorun türü denetim bloğundan gelir; pencere türe göre gruplar", () => {
+    const sorunlar = checkStructure({
+      content: [
+        baslik(1, "Giriş"),
+        baslik(1, "Yöntem"),
+        paragraf("Metin (Yılmaz, 2020) burada."),
+        baslik(1, "Kaynakça"),
+        paragraf("Kaya, A. (2019). Kitap. Yayınevi."),
+      ],
+    });
+    const bos = sorunlar.find((s) => s.message.includes("Giriş"));
+    const atif = sorunlar.find((s) => s.message.includes("Yılmaz"));
+    assert.equal(bos?.kategori, "bolum");
+    assert.equal(atif?.kategori, "kaynakca");
+    const gruplar = sorunlariGrupla(sorunlar);
+    assert.deepEqual(gruplar.map((g) => g.tur), ["bolum", "kaynakca"]);
+    assert.equal(gruplar.reduce((t, g) => t + g.sorunlar.length, 0), sorunlar.length);
   });
 });

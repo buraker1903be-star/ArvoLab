@@ -46,6 +46,7 @@ import {
   Images,
   Keyboard,
   CheckCircle2,
+  AlertCircle,
   AlertTriangle,
   ClipboardCheck,
   Share2,
@@ -65,7 +66,7 @@ import type { DocxImportStats } from "@/lib/docx-import";
 import ImageLibraryDialog from "./image-library-dialog";
 import ShortcutsDialog from "./shortcuts-dialog";
 import type { FormatLossReport } from "@/lib/format-loss";
-import { checkStructure, type StructureIssue } from "@/lib/structure-check";
+import { checkStructure, sorunlariGrupla, type StructureIssue } from "@/lib/structure-check";
 import { describeParagraphFormat, type ParagraphFormatRules } from "@/lib/paragraph-format";
 import VersionsDialog from "./versions-dialog";
 import SubmissionChecklistDialog from "./submission-checklist";
@@ -1166,129 +1167,181 @@ export default function ManuscriptEditor({
     setStructureIssues((current) => (current ? issues : current));
     setCheckResultEski(true);
   };
-  const renderIssueList = (issues: StructureIssue[], onNavigate?: () => void) =>
-    issues.length === 0 ? (
-      <p className="tone-text" data-tone="success">
-        ✓ Boş bölüm, başlık atlaması, şekil/tablo ya da atıf tutarsızlığı bulunmadı.
-      </p>
-    ) : (
-      <ul className="result-list">
-        {issues.map((issue, i) => (
-          <li key={i} className="tone-text result-action-row" data-tone={issue.tone}>
-            <span>{issue.message}</span>
-            {issue.action === "sort-references" ? (
-              <button
-                type="button"
-                className="result-link"
-                onClick={() => {
-                  const sorted = sortReferences(editor);
-                  if (sorted < 0) {
-                    showToast("error", "Kaynakça liste ya da tablo içinde olduğu için otomatik sıralanamadı.");
-                    return;
-                  }
-                  showToast("success", `${sorted} kaynak alfabetik sıralandı. Geri almak için Ctrl+Z.`);
-                  recheckStructure();
-                }}
-              >
-                Alfabetik sırala
-              </button>
-            ) : issue.action === "convert-reference-lists" ? (
-              <button
-                type="button"
-                className="result-link"
-                onClick={() => {
-                  const converted = convertReferenceListsToParagraphs(editor);
-                  if (converted === 0) {
-                    showToast("error", "Kaynakçada paragrafa çevrilecek liste bulunamadı.");
-                    return;
-                  }
-                  showToast("success", `${converted} kaynak ayrı paragraflara çevrildi. Geri almak için Ctrl+Z.`);
-                  recheckStructure();
-                }}
-              >
-                Paragraflara çevir
-              </button>
-            ) : issue.action === "apply-hanging-indent" ? (
-              <button
-                type="button"
-                className="result-link"
-                onClick={() => {
-                  const cm = guideline?.settings.referenceHangingIndentCm;
-                  const applied = cm ? applyHangingIndent(editor, cm) : 0;
-                  if (applied === 0) {
-                    showToast("error", "Asılı girinti uygulanacak kaynakça girdisi bulunamadı.");
-                    return;
-                  }
-                  showToast("success", `${applied} kaynakça girdisine asılı girinti uygulandı. Geri almak için Ctrl+Z.`);
-                  recheckStructure();
-                }}
-              >
-                Asılı girinti uygula
-              </button>
-            ) : issue.action === "apply-paragraph-format" ? (
-              <button
-                type="button"
-                className="result-link"
-                onClick={() => {
-                  const applied = applyParagraphFormat(editor, paragraphFormat);
-                  if (applied === 0) {
-                    showToast("error", "Kılavuz düzenine çevrilecek gövde paragrafı bulunamadı.");
-                    return;
-                  }
-                  showToast("success", `${applied} paragraf kılavuzun düzenine getirildi. Geri almak için Ctrl+Z.`);
-                  recheckStructure();
-                }}
-              >
-                Kılavuza göre düzenle
-              </button>
-            ) : issue.action === "clear-manual-text-format" ? (
-              <button
-                type="button"
-                className="result-link"
-                onClick={() => {
-                  const temizlenen = clearManualTextFormat(editor);
-                  if (temizlenen === 0) {
-                    showToast("error", "Temizlenecek elle verilmiş biçim bulunamadı.");
-                    return;
-                  }
-                  showToast("success", `${temizlenen} yerde elle verilmiş biçim kaldırıldı; metin kılavuzun düzenine döndü. Geri almak için Ctrl+Z.`);
-                  recheckStructure();
-                }}
-              >
-                Kılavuzun biçimine döndür
-              </button>
-            ) : issue.action === "fix-reference-punctuation" ? (
-              <button
-                type="button"
-                className="result-link"
-                onClick={() => {
-                  const fixed = fixReferencePunctuationInEditor(editor);
-                  if (fixed === 0) {
-                    showToast("error", "Otomatik düzeltilemedi (hata farklı biçimlendirilmiş parçalar arasında); lütfen elle düzeltin.");
-                    return;
-                  }
-                  showToast("success", `${fixed} kaynak girdisinde noktalama düzeltildi. Geri almak için Ctrl+Z.`);
-                  recheckStructure();
-                }}
-              >
-                Düzelt
-              </button>
-            ) : issue.target ? (
-              <button
-                type="button"
-                className="result-link"
-                onClick={() => {
-                  onNavigate?.();
-                  handleFindText(issue.target!);
-                }}
-              >
-                Göster
-              </button>
-            ) : null}
-          </li>
+  /* Bir sorunun eylemi: tek tıkla düzeltme varsa o, yoksa metinde göster. */
+  const sorunEylemi = (issue: StructureIssue, onNavigate?: () => void) => (
+    <>
+      {issue.action === "sort-references" ? (
+        <button
+          type="button"
+          className="projects-filter-button button-compact sorun-eylem"
+          onClick={() => {
+            const sorted = sortReferences(editor);
+            if (sorted < 0) {
+              showToast("error", "Kaynakça liste ya da tablo içinde olduğu için otomatik sıralanamadı.");
+              return;
+            }
+            showToast("success", `${sorted} kaynak alfabetik sıralandı. Geri almak için Ctrl+Z.`);
+            recheckStructure();
+          }}
+        >
+          Alfabetik sırala
+        </button>
+      ) : issue.action === "convert-reference-lists" ? (
+        <button
+          type="button"
+          className="projects-filter-button button-compact sorun-eylem"
+          onClick={() => {
+            const converted = convertReferenceListsToParagraphs(editor);
+            if (converted === 0) {
+              showToast("error", "Kaynakçada paragrafa çevrilecek liste bulunamadı.");
+              return;
+            }
+            showToast("success", `${converted} kaynak ayrı paragraflara çevrildi. Geri almak için Ctrl+Z.`);
+            recheckStructure();
+          }}
+        >
+          Paragraflara çevir
+        </button>
+      ) : issue.action === "apply-hanging-indent" ? (
+        <button
+          type="button"
+          className="projects-filter-button button-compact sorun-eylem"
+          onClick={() => {
+            const cm = guideline?.settings.referenceHangingIndentCm;
+            const applied = cm ? applyHangingIndent(editor, cm) : 0;
+            if (applied === 0) {
+              showToast("error", "Asılı girinti uygulanacak kaynakça girdisi bulunamadı.");
+              return;
+            }
+            showToast("success", `${applied} kaynakça girdisine asılı girinti uygulandı. Geri almak için Ctrl+Z.`);
+            recheckStructure();
+          }}
+        >
+          Asılı girinti uygula
+        </button>
+      ) : issue.action === "apply-paragraph-format" ? (
+        <button
+          type="button"
+          className="projects-filter-button button-compact sorun-eylem"
+          onClick={() => {
+            const applied = applyParagraphFormat(editor, paragraphFormat);
+            if (applied === 0) {
+              showToast("error", "Kılavuz düzenine çevrilecek gövde paragrafı bulunamadı.");
+              return;
+            }
+            showToast("success", `${applied} paragraf kılavuzun düzenine getirildi. Geri almak için Ctrl+Z.`);
+            recheckStructure();
+          }}
+        >
+          Kılavuza göre düzenle
+        </button>
+      ) : issue.action === "clear-manual-text-format" ? (
+        <button
+          type="button"
+          className="projects-filter-button button-compact sorun-eylem"
+          onClick={() => {
+            const temizlenen = clearManualTextFormat(editor);
+            if (temizlenen === 0) {
+              showToast("error", "Temizlenecek elle verilmiş biçim bulunamadı.");
+              return;
+            }
+            showToast("success", `${temizlenen} yerde elle verilmiş biçim kaldırıldı; metin kılavuzun düzenine döndü. Geri almak için Ctrl+Z.`);
+            recheckStructure();
+          }}
+        >
+          Kılavuzun biçimine döndür
+        </button>
+      ) : issue.action === "fix-reference-punctuation" ? (
+        <button
+          type="button"
+          className="projects-filter-button button-compact sorun-eylem"
+          onClick={() => {
+            const fixed = fixReferencePunctuationInEditor(editor);
+            if (fixed === 0) {
+              showToast("error", "Otomatik düzeltilemedi (hata farklı biçimlendirilmiş parçalar arasında); lütfen elle düzeltin.");
+              return;
+            }
+            showToast("success", `${fixed} kaynak girdisinde noktalama düzeltildi. Geri almak için Ctrl+Z.`);
+            recheckStructure();
+          }}
+        >
+          Düzelt
+        </button>
+      ) : issue.target ? (
+        <button
+          type="button"
+          className="result-link sorun-goster"
+          onClick={() => {
+            onNavigate?.();
+            handleFindText(issue.target!);
+          }}
+        >
+          Göster
+        </button>
+      ) : null}
+    </>
+  );
+  /*
+    YAPI SORUNLARI LİSTESİ (26.10.2026, kurum sahibinin isteği: "bu
+    pencereyi de geliştirmeliyiz"). Eskiden renkli cümlelerden oluşan düz
+    bir listeydi: boş bölüm, eksik künye ve kısaltma uyarısı alt alta,
+    hangisinin hata hangisinin uyarı olduğu yalnızca yazının renginden
+    anlaşılıyordu. Artık üstte hata/uyarı sayısı, sorunlar türüne göre
+    gruplu (lib/structure-check.ts, SORUN_TURLERI) ve her grubun neden
+    önemli olduğu tek satırda; renk tek başına ayırt edici değil, simge
+    ve etiket de var.
+  */
+  const renderIssueList = (issues: StructureIssue[], onNavigate?: () => void) => {
+    if (issues.length === 0) {
+      return (
+        <p className="sorun-temiz" data-tone="success">
+          <CheckCircle2 size={18} aria-hidden="true" />
+          Boş bölüm, başlık atlaması, şekil/tablo ya da atıf tutarsızlığı bulunmadı.
+        </p>
+      );
+    }
+    const hata = issues.filter((issue) => issue.tone === "danger").length;
+    const uyari = issues.length - hata;
+    return (
+      <div className="sorun-paneli">
+        <p className="sorun-ozet">
+          {hata ? (
+            <span className="status-pill" data-tone="danger">
+              {hata} hata
+            </span>
+          ) : null}
+          {uyari ? (
+            <span className="status-pill" data-tone="warning">
+              {uyari} uyarı
+            </span>
+          ) : null}
+          <small>Hatalar teslimden önce düzeltilmeli; uyarılar kılavuza göre gözden geçirilmeli.</small>
+        </p>
+        {sorunlariGrupla(issues).map((grup) => (
+          <section key={grup.tur} className="sorun-grubu" aria-label={grup.baslik}>
+            <header>
+              <strong>{grup.baslik}</strong>
+              <span className="muted text-sm">{grup.sorunlar.length}</span>
+            </header>
+            {grup.neden ? <p className="muted text-sm">{grup.neden}</p> : null}
+            <ul>
+              {grup.sorunlar.map((issue, i) => (
+                <li key={i} className="sorun-satir" data-tone={issue.tone}>
+                  {issue.tone === "danger" ? (
+                    <AlertCircle size={16} aria-label="Hata" />
+                  ) : (
+                    <AlertTriangle size={16} aria-label="Uyarı" />
+                  )}
+                  <span className="sorun-metin">{issue.message}</span>
+                  {sorunEylemi(issue, onNavigate)}
+                </li>
+              ))}
+            </ul>
+          </section>
         ))}
-      </ul>
+      </div>
     );
+  };
   const handleInsertSections = (list: string[]) => {
     insertSections(editor, requiredSections, list);
     showToast("success", list.length > 1 ? `${list.length} bölüm kılavuz sırasına göre eklendi.` : `"${list[0]}" bölümü eklendi.`);

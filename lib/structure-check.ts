@@ -29,11 +29,41 @@ interface DocNode {
 
 export type StructureIssueTone = "warning" | "danger";
 
+/*
+  Sorunun türü (26.10.2026). Pencere sorunları düz bir liste olarak
+  gösteriyordu: boş bölüm, eksik künye ve kısaltma uyarısı alt alta,
+  öğrenci hangisinin nereyle ilgili olduğunu satırı okuyarak
+  çıkarıyordu. Tür, denetimin hangi bloğundan çıktığından gelir
+  (aşağıda her bloğun başında atanıyor); mesaj metninden tahmin edilmez.
+*/
+export type SorunTuru = "bolum" | "sekil" | "kaynakca" | "ozet" | "ek" | "yazim" | "bicim" | "dipnot" | "genel";
+
+export const SORUN_TURLERI: { tur: SorunTuru; baslik: string; neden: string }[] = [
+  { tur: "bolum", baslik: "Bölümler ve başlıklar", neden: "Kılavuzun istediği bölümler dolu ve başlık düzeyleri sıralı olmalı." },
+  { tur: "kaynakca", baslik: "Atıf ve kaynakça", neden: "Her atıfın kaynakçada, her kaynağın metinde karşılığı olmalı." },
+  { tur: "sekil", baslik: "Şekil ve tablolar", neden: "Numaralar sıralı olmalı ve her şekil/tablo metinde anılmalı." },
+  { tur: "ozet", baslik: "Özet ve anahtar kelimeler", neden: "Kılavuzun kelime ve anahtar kelime sınırları." },
+  { tur: "ek", baslik: "Ekler", neden: "Ekler sıralı numaralanmalı ve metinde anılmalı." },
+  { tur: "yazim", baslik: "Kısaltma ve alıntı", neden: "Kısaltma ilk geçtiği yerde açılır; uzun alıntı blok olarak verilir." },
+  { tur: "bicim", baslik: "Sayfa ve yazı biçimi", neden: "Yazı tipi, punto, satır aralığı ve paragraf düzeni kılavuza uymalı." },
+  { tur: "dipnot", baslik: "Dipnotlar", neden: "Boş dipnot çıktıda yalnızca numara olarak görünür." },
+  { tur: "genel", baslik: "Diğer", neden: "" },
+];
+
+/** Sorunları SORUN_TURLERI sırasıyla gruplar; boş grup dönmez. */
+export function sorunlariGrupla<T extends { kategori?: SorunTuru }>(sorunlar: T[]) {
+  return SORUN_TURLERI.map((t) => ({ ...t, sorunlar: sorunlar.filter((s) => (s.kategori ?? "genel") === t.tur) })).filter(
+    (g) => g.sorunlar.length > 0,
+  );
+}
+
 export interface StructureIssue {
   tone: StructureIssueTone;
   message: string;
   /** Metinde aranıp seçilecek ifade (başlık, şekil başlığı, atıf) */
   target?: string;
+  /** Pencerede hangi grupta gösterileceği (SORUN_TURLERI) */
+  kategori?: SorunTuru;
   /** Editörün tek tıkla yapabileceği düzeltme */
   action?:
     | "sort-references"
@@ -103,8 +133,9 @@ export function checkStructure(
     söylemek zorundayız.
   */
   let atlananSorun = 0;
+  let kategori: SorunTuru = "bolum";
   const add = (issue: StructureIssue) => {
-    if (issues.length < MAX_ISSUES) issues.push(issue);
+    if (issues.length < MAX_ISSUES) issues.push({ kategori, ...issue });
     else atlananSorun += 1;
   };
   const blocks = doc?.content ?? [];
@@ -166,6 +197,7 @@ export function checkStructure(
   }
   const inReferences = (index: number) => referencesIndex >= 0 && index > referencesIndex && index < referencesEnd;
 
+  kategori = "sekil";
   // ---------- Şekil/tablo başlıkları ve metindeki anılmaları ----------
   const captions = { figure: [] as string[], table: [] as string[] };
   const bodyTexts: string[] = [];
@@ -232,6 +264,7 @@ export function checkStructure(
     });
   }
 
+  kategori = "kaynakca";
   // Kaynakça girdileri: Kaynakça bölümündeki (gövde metniyle aynı sınır) dolu paragraflar ve
   // liste maddeleri. Word'de kaynakça sık sık numaralı/madde işaretli liste olarak yazılır;
   // önceden bunlar "0 kaynak" sayılıyordu. İç içe liste maddeleri ayrı girdidir.
@@ -391,6 +424,7 @@ export function checkStructure(
     }
   }
 
+  kategori = "ozet";
   // ---------- Özet / Abstract: kılavuzun kelime ve anahtar kelime sınırları ----------
   const abstract = options.abstract;
   if (abstract && (abstract.minWords || abstract.maxWords || abstract.keywordsMin || abstract.keywordsMax)) {
@@ -449,6 +483,7 @@ export function checkStructure(
   }
 
   // ---------- Paragraf düzeni (kılavuzda girinti/yaslama kuralı varsa) ----------
+  kategori = "ek";
   /* ---------- Ekler: numaralandırma ve metinde anılma ----------
      Kılavuzlar ekleri sırayla numaralandırmayı ve her ekin metinde
      anılmasını ister ("… görüşme formu Ek 1'de verilmiştir"). Şekil ve
@@ -488,6 +523,7 @@ export function checkStructure(
     }
   }
 
+  kategori = "yazim";
   /* ---------- Kısaltmalar ----------
      Denetim yalnızca yazarın KENDİ tanımlarına dayanıyor; gerekçesi
      lib/kisaltmalar.ts'te. */
@@ -507,6 +543,7 @@ export function checkStructure(
     });
   }
 
+  kategori = "sekil";
   /* ---------- Şekil/tablo başlığının tarafı ----------
      Tablo başlığı tablonun üstünde, şekil başlığı şeklin altında olur.
      Word çıktısı bunu zaten varsayıyordu; metinde tersi yazılmışsa kimse
@@ -522,6 +559,7 @@ export function checkStructure(
     });
   }
 
+  kategori = "bicim";
   /* ---------- Yazı tipi, punto, satır aralığı ----------
      Kılavuzun ilk maddesi budur ("Times New Roman, 12 punto, 1,5 satır
      aralığı") ve denetlenmiyordu: kılavuz değerleri editörün varsayılanı
@@ -569,6 +607,7 @@ export function checkStructure(
     }
   }
 
+  kategori = "dipnot";
   // ---------- Dipnotlar ----------
   for (const number of footnoteProblems) {
     add({ tone: "warning", message: `${number}. dipnotun metni boş; dipnot işaretine tıklayıp metnini yazın.` });
