@@ -192,3 +192,24 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .dashboard-header { background: var(--surface); }
 }
+
+/* Kullanıcı menüsünde görünüm önizlemesi (yalnızca iç ekip) */
+.os-kullanici-gorunum { display: flex; flex-direction: column; padding: 6px 0; border-top: 1px solid var(--line-soft); }
+.os-kullanici-gorunum > small { display: flex; align-items: center; gap: 6px; padding: 4px 12px; color: var(--muted); font-size: var(--fs-micro); font-weight: 650; }
+.os-kullanici-gorunum form,
+.os-kullanici-gorunum .action-form-fieldset { display: block; margin: 0; padding: 0; border: 0; }
+.os-kullanici-gorunum button {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 36px; padding: 0 12px;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink); font: inherit; font-size: var(--fs-base); text-align: left; cursor: pointer;
+}
+.os-kullanici-gorunum button[aria-pressed="true"] { color: var(--accent-strong); font-weight: 600; }
+@media (hover: hover) and (pointer: fine) { .os-kullanici-gorunum button:hover { background: var(--surface-2); } }
+
+/* Önizleme şeridi: her sayfada, üst çubuğun altında */
+.onizleme-serit {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+  padding: 8px 32px; border-bottom: 1px solid color-mix(in srgb, var(--accent-500) 35%, var(--line));
+  background: var(--accent-soft); color: var(--ink); font-size: var(--fs-sm);
+}
+.onizleme-serit b { color: var(--accent-strong); }
+@media (max-width: 900px) { .onizleme-serit { padding: 8px 16px; } }

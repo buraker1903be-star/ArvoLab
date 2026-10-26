@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { LifeBuoy, LogOut, Settings, ShieldCheck } from "lucide-react";
+import { Check, Eye, LifeBuoy, LogOut, Settings, ShieldCheck } from "lucide-react";
+import ActionForm from "../action-form";
+import { gorunumSec } from "@/app/actions/onizleme";
+import { GORUNUMLER, GORUNUM_ETIKETI, type Gorunum } from "@/lib/onizleme";
 
 /*
   KULLANICI MENÜSÜ (ArvoOS'taki OsKullaniciMenusu).
@@ -15,11 +18,17 @@ export default function KullaniciMenusu({
   rol,
   basHarf,
   cikis,
+  gorunum,
 }: {
   ad: string;
   rol: string;
   basHarf: string;
   cikis: () => Promise<void>;
+  /*
+    Yalnızca iç ekipte verilir (lib/onizleme.ts): seçili görünüm.
+    Verilmezse menüde görünüm bölümü yok.
+  */
+  gorunum?: Gorunum;
 }) {
   return (
     <details className="os-kullanici">
@@ -34,6 +43,26 @@ export default function KullaniciMenusu({
             <small>{rol}</small>
           </div>
         </div>
+        {gorunum ? (
+          /*
+            GÖRÜNÜM ÖNİZLEMESİ: ana sayfa ve Çalışmalarım'ı öğrencinin
+            düzeninde gösterir. Yalnızca düzen; veriler ve yetkiler aynı.
+          */
+          <div className="os-kullanici-gorunum">
+            <small>
+              <Eye size={13} aria-hidden="true" /> Görünüm
+            </small>
+            {GORUNUMLER.map((secenek) => (
+              <ActionForm key={secenek} action={gorunumSec}>
+                <input type="hidden" name="gorunum" value={secenek} />
+                <button type="submit" aria-pressed={gorunum === secenek}>
+                  {GORUNUM_ETIKETI[secenek]}
+                  {gorunum === secenek ? <Check size={15} aria-hidden="true" /> : null}
+                </button>
+              </ActionForm>
+            ))}
+          </div>
+        ) : null}
         <nav className="os-kullanici-baglantilar" aria-label="Hesap">
           <Link href="/dashboard/settings">
             <Settings size={16} aria-hidden="true" />

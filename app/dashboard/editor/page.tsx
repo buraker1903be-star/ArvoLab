@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Search, LayoutDashboard, MessageSquare, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Search, LayoutDashboard, MessageSquare, MoreHorizontal, PenLine, Pencil, Plus, RotateCcw, ShieldCheck, Upload, UserRound } from "lucide-react";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
 import { loadAppliedGuidelines } from "@/lib/guideline-rules";
@@ -7,7 +7,8 @@ import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
 import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff, type StaffMember } from "@/app/actions/projects";
 import { listeBasarili } from "@/lib/liste-sonucu";
-import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS, PROJECT_STATUSES } from "@/lib/project-labels";
+import { projectTypeLabel, statusLabel, isOversightRole, ROLE_LABELS, PROJECT_STATUSES, STAFF_ROLES } from "@/lib/project-labels";
+import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { applyProjectFilters, isFiltered, parseProjectFilters } from "@/lib/project-filters";
 import ProjectFilters from "./project-filters";
 import BosDurum from "../_components/bos-durum";
@@ -19,6 +20,7 @@ import { topluTutarsizliklar } from "@/app/actions/calisma-merkezi";
 import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { trTarihSaat, trUzunTarih } from "@/lib/tr-time";
+import { filtrelerGorunsun, kartIlerlemesi } from "@/lib/calisma-karti";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "Teslim tarihi belirtilmedi";
@@ -48,7 +50,17 @@ export default async function ProjectsPage({
     // Kartlardaki yazım temposu için kılavuzlar tek sorguda
     createClient().then((supabase) => loadAppliedGuidelines(supabase, projects.map((project) => project.guideline_id))),
   ]);
-  const canApprove = isOversightRole(profile?.role);
+  /*
+    Denetim şeridi, filtreler ve personel metni gözetim rolünde; iç ekip
+    öğrenci düzenini önizlerken bunlar gizlenir (lib/onizleme.ts).
+    Yetkiler değişmiyor: düğmeler gizlense de RLS gerçek rolle çalışıyor.
+  */
+  const gorunum = await sayfaGorunumu({
+    rol: profile?.role,
+    personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
+    kurumVar: Boolean(profile?.organization_id),
+  });
+  const canApprove = isOversightRole(profile?.role) && gorunum.personel;
   // Arama, filtre ve sıralama (adres satırındaki ?q=…&durum=…&sirala=…&atanan=…)
   const filters = parseProjectFilters(params, PROJECT_STATUSES);
   const visible = applyProjectFilters(projects, filters, {
@@ -106,7 +118,11 @@ export default async function ProjectsPage({
       <section className="projects-header">
         <div>
           <h1>Çalışmalarım</h1>
-          <p>Tez, makale, proje ve analiz çalışmalarınızı buradan oluşturun, panelde yazın ve yönetin.</p>
+          <p>
+            {canApprove
+              ? "Ekibinizin tez, makale ve proje çalışmaları; onay ve sorumlu ataması kartların üzerinde."
+              : "Tezinizi ve diğer çalışmalarınızı buradan açın; yazmaya kaldığınız yerden devam edin."}
+          </p>
         </div>
         <Link href="/dashboard/editor/new" className="projects-primary-button">
           <Plus size={18} aria-hidden="true" />
@@ -137,6 +153,7 @@ export default async function ProjectsPage({
         />
       ) : (
         <>
+        {filtrelerGorunsun(projects.length, canApprove) ? (
         <ProjectFilters
           key={JSON.stringify(filters)}
           filters={filters}
@@ -146,6 +163,7 @@ export default async function ProjectsPage({
           shown={visible.length}
           filtered={isFiltered(filters)}
         />
+        ) : null}
         {visible.length === 0 ? (
           <BosDurum
             kompakt
@@ -177,6 +195,11 @@ export default async function ProjectsPage({
                     },
                   })
                 : null;
+            const ilerleme = kartIlerlemesi({
+              kelime: stats.get(project.id)?.words ?? null,
+              hedefKelime: pace?.targetWords ?? null,
+              elleIlerleme: project.progress,
+            });
             return (
               <article className="project-card" data-tone={statusTone(project.status)} key={project.id}>
                 <div className="project-card-main">
@@ -190,22 +213,36 @@ export default async function ProjectsPage({
                       {project.university ? ` · ${project.university}` : ""}
                     </p>
                   </div>
-                  <div className="project-progress" aria-label={`İlerleme yüzde ${project.progress}`}>
-                    <strong>%{project.progress}</strong>
-                    <div className="project-progress-track">
-                      <span style={{ "--w": `${project.progress}%` } as React.CSSProperties} />
+                  {ilerleme ? (
+                    <div className="project-progress" title={ilerleme.ipucu} aria-label={ilerleme.ipucu}>
+                      <strong>
+                        %{ilerleme.yuzde} <small>{ilerleme.etiket}</small>
+                      </strong>
+                      <div className="project-progress-track">
+                        <span style={{ "--w": `${ilerleme.yuzde}%` } as React.CSSProperties} />
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                 </div>
 
                 <div className="project-card-meta">
-                  <span>
-                    <UserRound size={15} aria-hidden="true" />
-                    {project.assignee_name || "Sorumlu atanmadı"}
-                  </span>
+                  {/* Sorumlu personelin bilgisi: öğrenciye yalnızca bir uzman atandıysa görünür. */}
+                  {canApprove || project.assignee_name ? (
+                    <span>
+                      <UserRound size={15} aria-hidden="true" />
+                      {project.assignee_name || "Sorumlu atanmadı"}
+                    </span>
+                  ) : null}
                   <span>
                     <CalendarDays size={15} aria-hidden="true" />
-                    {formatDate(project.due_date)}
+                    {!project.due_date && canEdit ? (
+                      /* Teslim tarihi yoksa kart ne kadar vakit kaldığını söyleyemiyor; eklemek tek tık. */
+                      <Link href={`/dashboard/editor/${project.id}/edit`} className="link-accent">
+                        Teslim tarihi ekle
+                      </Link>
+                    ) : (
+                      formatDate(project.due_date)
+                    )}
                     {due ? (
                       <span className="chip" data-tone={due.tone}>
                         {due.label}
@@ -328,44 +365,45 @@ export default async function ProjectsPage({
                 ) : null}
 
                 {/*
-                  Eylemler ikiye ayrıldı. Eskiden beş düğme aynı ağırlıkta yan
-                  yana duruyordu; her kart bir düğme duvarıydı ve asıl iki
-                  eylem (merkez, yazım) arada kayboluyordu. İkincil olanlar
-                  kompakt ve sağa yaslı.
+                  ÖĞRENCİNİN İKİ EYLEMİ (26.10.2026). Kartta beş düğme vardı
+                  ve öğrencinin en sık yaptığı iş — yazmaya dönmek — ikinci
+                  sıradaydı; "Sil" ana düğmelerle aynı satırda duruyordu.
+                  Şimdi birincil eylem yazmak, ikincisi çalışma merkezi;
+                  ayda bir yapılan işler (bilgileri düzenle, belge yükle,
+                  sil) "⋯" menüsünde. Silme menüde ve yine onay soruyor.
                 */}
                 <div className="project-card-actions">
                   <div className="cluster cluster-lg">
-                    {/* Çalışma merkezi: bu çalışmanın literatürü, kaynakçası ve
-                        belgeleri tek sayfada (app/dashboard/editor/[id]). */}
-                    <Link href={`/dashboard/editor/${project.id}`} className="projects-primary-button">
-                      <LayoutDashboard size={15} aria-hidden="true" />
-                      Çalışma Merkezi
-                    </Link>
-                    <Link href={`/dashboard/editor/${project.id}/write`} className="projects-filter-button">
+                    <Link href={`/dashboard/editor/${project.id}/write`} className="projects-primary-button">
                       <PenLine size={15} aria-hidden="true" />
-                      Panelde Yaz
+                      {stats.has(project.id) ? "Yazmaya devam et" : "Yazmaya başla"}
+                    </Link>
+                    <Link href={`/dashboard/editor/${project.id}`} className="projects-filter-button">
+                      <LayoutDashboard size={15} aria-hidden="true" />
+                      Çalışma merkezi
                     </Link>
                   </div>
-                  <div className="cluster project-card-ikincil">
-                    {canEdit ? (
-                      /* "Düzenle" tek başına "Panelde Yaz" ile aynı şeyi
-                         çağrıştırıyordu; biri çalışmanın METNİNİ, bu ise
-                         künyesini (başlık, tür, üniversite, teslim tarihi)
-                         açıyor. */
-                      <Link href={`/dashboard/editor/${project.id}/edit`} className="projects-filter-button button-compact">
-                        <Pencil size={14} aria-hidden="true" />
-                        Bilgileri düzenle
+                  <details className="kart-menu">
+                    <summary aria-label={`${project.title}: diğer işlemler`}>
+                      <MoreHorizontal size={18} aria-hidden="true" />
+                    </summary>
+                    <div className="kart-menu-liste">
+                      {canEdit ? (
+                        <Link href={`/dashboard/editor/${project.id}/edit`}>
+                          <Pencil size={15} aria-hidden="true" />
+                          Bilgileri düzenle
+                        </Link>
+                      ) : null}
+                      {/* Bağlam taşınır: belge sayfası çalışmayı hazır seçer. */}
+                      <Link href={`/dashboard/documents?calisma=${project.id}`}>
+                        <Upload size={15} aria-hidden="true" />
+                        Belge yükle
                       </Link>
-                    ) : null}
-                    {/* Bağlam taşınır: belge sayfası çalışmayı hazır seçer. */}
-                    <Link href={`/dashboard/documents?calisma=${project.id}`} className="projects-filter-button button-compact">
-                      <Upload size={14} aria-hidden="true" />
-                      Belge yükle
-                    </Link>
-                    {(profile?.id === project.owner_id || canDeleteAnyProject) && (
-                      <DeleteProjectButton projectId={project.id} projectTitle={project.title} />
-                    )}
-                  </div>
+                      {(profile?.id === project.owner_id || canDeleteAnyProject) && (
+                        <DeleteProjectButton projectId={project.id} projectTitle={project.title} />
+                      )}
+                    </div>
+                  </details>
                 </div>
               </article>
             );

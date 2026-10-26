@@ -12,8 +12,8 @@ export default function DeleteProjectButton({ projectId, projectTitle }: { proje
       successMessage={`"${projectTitle}" silindi.`}
     >
       <button type="submit" className="button-danger button-compact">
-        <Trash2 size={14} aria-hidden="true" />
-        Sil
+        <Trash2 size={15} aria-hidden="true" />
+        Çalışmayı sil
       </button>
     </ActionForm>
   );
