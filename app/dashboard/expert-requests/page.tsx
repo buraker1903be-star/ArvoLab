@@ -28,6 +28,7 @@ import { trTarihSaat } from "@/lib/tr-time";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import BosDurum from "../_components/bos-durum";
+import PartnerSeridi from "../_components/partner-seridi";
 
 /*
   DESTEK — TEK SAYFA, İKİ EŞİT KART (26.10.2026, Kaynaklar'la aynı karar:
@@ -417,6 +418,7 @@ export default async function DestekPage() {
               aciklama="Henüz uzman talebiniz yok. Yöntem, analiz ya da yazımda takıldığınızda “Uzmana sor” ile yazın."
             />
           )}
+          <PartnerSeridi />
         </article>
 
         <article className="gb-kart gb-sutun kayan-kart">

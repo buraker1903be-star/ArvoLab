@@ -438,6 +438,8 @@
 .kaynaklar-ikili { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 900px) { .kaynaklar-ikili { grid-template-columns: minmax(0, 1fr); } }
 .kaynaklar-ikili .gb-kart-bas { flex-wrap: wrap; }
+/* Başlık metni yer kaplar, düğmeler sağa yaslanır (sarınca alta iner). */
+.kaynaklar-ikili .gb-kart-bas > div:first-child { flex: 1 1 240px; min-width: 0; }
 .kaynaklar-secici { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
 .kaynaklar-secici select { max-width: 320px; }
 .kaynakca-puan { display: flex; align-items: baseline; gap: 6px; padding: 10px 14px; border-radius: var(--r-lg); background: var(--surface-2); }
@@ -455,7 +457,7 @@
 .kayan-kart { overflow-y: auto; scrollbar-width: thin; align-items: flex-start; }
 /* Düğmeler ve formlar sola yaslı kalır (sütun esnek kutusu onları tam
    genişliğe geriyordu); listeler, metin ve bloklar kartı doldurur. */
-.kayan-kart > :is(ul, ol, p, h3, h4, details, section, div, .dashboard-kicker) { align-self: stretch; }
+.kayan-kart > :is(header, ul, ol, p, h3, h4, details, section, div, aside, .dashboard-kicker) { align-self: stretch; }
 @media (min-width: 901px) and (min-height: 640px) {
   .gb-tek-ekran .kayan-kart { overflow-y: auto; }
   /* Tek ekranda .gb-liste kalan yüksekliği doldurup kendi içinde kayıyor
@@ -468,3 +470,14 @@
 .belge-kunye-listesi li { display: flex; flex-direction: column; gap: 2px; }
 /* Destek: talebin kendi metni satır sonlarını korur */
 .destek-mesaj { margin: 0 0 8px; color: var(--ink-soft); font-size: var(--fs-sm); white-space: pre-wrap; }
+/* Partner şeridi (Destek → Uzman desteği): kartın dibinde, reklam olduğu
+   etiketle belli. */
+.partner-serit { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-2); }
+.partner-etiket { align-self: flex-start; color: var(--muted); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.partner-logo { display: block; width: min(240px, 100%); }
+.partner-logo img { display: block; width: 100%; height: auto; }
+/* Logo lacivert yazılı: koyu temada beyaz zeminde kalır, yoksa okunmaz. */
+html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--r-md); background: var(--n-0); }
+.partner-serit p { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.partner-alt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.partner-alt small { color: var(--muted); font-size: var(--fs-micro); }
