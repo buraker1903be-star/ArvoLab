@@ -93,7 +93,7 @@ export default async function CalismaMerkezi({
           </div>
           <div className="cluster">
             <Link href="/dashboard/editor" className="projects-filter-button">Çalışmalarım</Link>
-            <Link href="/dashboard/support" className="projects-filter-button">Uygulama Destek</Link>
+            <Link href="/dashboard/expert-requests" className="projects-filter-button">Uygulama Destek</Link>
           </div>
         </article>
       </main>

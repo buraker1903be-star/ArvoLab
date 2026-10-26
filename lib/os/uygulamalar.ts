@@ -114,10 +114,8 @@ export function labUygulamalari(): OsUygulama[] {
       href: "/dashboard/expert-requests",
       ikon: "destek",
       yollar: ["/dashboard/expert-requests", "/dashboard/support"],
-      bolumler: [
-        { key: "uzman", href: "/dashboard/expert-requests", label: "Uzman Desteği" },
-        { key: "uygulama", href: "/dashboard/support", label: "Uygulama Desteği" },
-      ],
+      /* Bölüm yok: uzman ve uygulama desteği aynı sayfanın iki kartı
+         (Kaynaklar'la aynı karar, 26.10.2026). */
     },
     { key: "ayarlar", label: "Ayarlar", href: "/dashboard/settings", ikon: "settings", yollar: ["/dashboard/settings"] },
     /*

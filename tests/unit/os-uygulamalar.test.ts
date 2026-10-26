@@ -52,11 +52,10 @@ describe("açık uygulama yoldan bulunuyor", () => {
 });
 
 describe("bölümler", () => {
-  test("destek iki bölüme ayrılıyor", () => {
-    const destek = uygulamalar.find((u) => u.key === "destek")!;
-    assert.equal(destek.bolumler?.length, 2);
-    assert.equal(etkinBolum(destek.bolumler!, "/dashboard/support")?.key, "uygulama");
-    assert.equal(etkinBolum(destek.bolumler!, "/dashboard/expert-requests")?.key, "uzman");
+  test("hiçbir dock uygulaması sekme şeridi çizmiyor: modüller tek sayfa", () => {
+    // Kaynaklar ve Destek iki bölümlüydü; ikisi de iki kartlı tek sayfa oldu.
+    for (const u of uygulamalar) assert.equal(u.bolumler, undefined, u.key);
+    assert.equal(etkinBolum([], "/dashboard/support"), null);
   });
 });
 
@@ -130,9 +129,9 @@ describe("Ctrl+K araması", () => {
   test("başlatıcıya ayrılmış uygulamalar da aranabiliyor", () => {
     const sayfalar = osSayfalari(uygulamalar);
     assert.ok(sayfalar.some((s) => s.href === "/dashboard/team"));
-    // Destek uygulamasının iki bölümü ayrı ayrı bulunmalı.
-    assert.ok(sayfalar.some((s) => s.href === "/dashboard/expert-requests"));
-    assert.ok(sayfalar.some((s) => s.href === "/dashboard/support"));
+    // Yönlenen eski adresler (sekmeli dönemin bölümleri) aramada çıkmıyor:
+    // Destek ve Kaynaklar uygulamanın kendisiyle aranıyor.
+    assert.ok(!sayfalar.some((s) => s.href === "/dashboard/support" || s.href === "/dashboard/citations"));
   });
 });
 

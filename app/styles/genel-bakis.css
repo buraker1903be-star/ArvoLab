@@ -466,3 +466,5 @@
 /* Belge Kontrol: sorunlu künyeler (açılır), her künyenin altında sorunları */
 .belge-kunye-listesi { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 0; padding: 0; list-style: none; font-size: var(--fs-sm); }
 .belge-kunye-listesi li { display: flex; flex-direction: column; gap: 2px; }
+/* Destek: talebin kendi metni satır sonlarını korur */
+.destek-mesaj { margin: 0 0 8px; color: var(--ink-soft); font-size: var(--fs-sm); white-space: pre-wrap; }

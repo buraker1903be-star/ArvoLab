@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 
-const PAGE_PATH = "/dashboard/support";
+// Destek tek sayfa (expert-requests); /dashboard/support oraya yönleniyor.
+const PAGE_PATH = "/dashboard/expert-requests";
 const CATEGORIES = ["bug", "access", "feature_request", "billing", "other"];
 const PRIORITIES = ["low", "normal", "high", "urgent"];
 const STATUSES = ["open", "in_progress", "resolved"];

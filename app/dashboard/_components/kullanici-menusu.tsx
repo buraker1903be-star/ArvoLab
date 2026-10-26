@@ -68,7 +68,7 @@ export default function KullaniciMenusu({
             <Settings size={16} aria-hidden="true" />
             Ayarlar
           </Link>
-          <Link href="/dashboard/support">
+          <Link href="/dashboard/expert-requests">
             <LifeBuoy size={16} aria-hidden="true" />
             Destek
           </Link>

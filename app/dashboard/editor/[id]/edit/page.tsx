@@ -34,7 +34,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
           </div>
           <div className="cluster">
             <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">Çalışma özeti</Link>
-            <Link href="/dashboard/support" className="projects-filter-button">Uygulama Destek</Link>
+            <Link href="/dashboard/expert-requests" className="projects-filter-button">Uygulama Destek</Link>
           </div>
         </article>
       </main>
