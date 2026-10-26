@@ -24,7 +24,7 @@ import DeleteProjectButton from "./delete-project-button";
 
   Eskiden ayrı bir "Çalışma merkezi" sayfası vardı; öğrenci için
   kaldırıldı ve geri kalan işleri buraya taşındı: kılavuz penceresi,
-  "Kılavuza göre düzelt", asistanın son bulguları, Literatür, Kaynakça
+  "Kılavuza göre düzelt", öğrencinin seçtiği yapılacaklar, Literatür, Kaynakça
   ve Kanıt matrisi pencereleri ve Makale bağlantısı. Personelin çalışma özeti ([id]/page.tsx) aynı
   veriyi okuyor; veri aynı kaynaktan (calismaOzeti), sıradaki
   iş aynı kuraldan (lib/siradaki-is.ts), eksik listesi tek bir saf
@@ -82,7 +82,7 @@ export default async function CalismaDurumKarti({
     );
   }
 
-  const { calisma, hazirlik, tutarsizliklar, kilavuz, uygulanan, kilavuzOkunamadi, asistan } = ozet;
+  const { calisma, hazirlik, tutarsizliklar, kilavuz, uygulanan, kilavuzOkunamadi } = ozet;
   const makale = calisma.project_type === "article";
   const adimlar = siradakiAdimlar(ozet);
   const maddeler = (hazirlik?.items ?? [])
@@ -103,7 +103,13 @@ export default async function CalismaDurumKarti({
     stilUyarisi: null,
     maddeler,
     tutarsizliklar,
-    asistanBulgulari: asistan.sonBulgular,
+    /*
+      Asistanın bulguları listeye KENDİLİĞİNDEN girmiyor (26.10.2026).
+      Eskiden son kaynakça yorumunun her bulgusu "Asistan" rozetiyle
+      burada çıkıyordu; öğrenci "Yapılacaklara ekle"ye basmadığı halde
+      eklenmiş sanıyordu. Artık yalnızca kendi seçtiği bulgular, yapılacak
+      olarak (calisma_yapilacaklari) görünüyor.
+    */
     adimlar,
     sirada,
   });
