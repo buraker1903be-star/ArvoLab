@@ -368,3 +368,15 @@
 /* Seçim listesi uzunsa sol kart da kendi içinde kayar. */
 .pencere-iki-kart:has(.secim-listesi) > .pencere-kart:first-child { max-height: min(64dvh, 760px); overflow-y: auto; scrollbar-width: thin; }
 @media (max-width: 900px) { .pencere-iki-kart:has(.secim-listesi) > .pencere-kart:first-child { max-height: none; overflow: visible; } }
+/* Kartta öğrencinin kendi yapılacakları: bağlantı değil, "Yaptım" düğmeli satır */
+.yapilacak-satir { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 8px; }
+.yapilacak-satir .status-pill { flex: none; }
+.gb-tek-ekran .yapilacak-satir { min-height: 40px; padding: 4px 8px; }
+/* Kaynakça penceresi: sol sütunda iki kart (Denetim, Asistan yorumu) */
+.pencere-sol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.pencere-dugmeler { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pencere-alt-baslik { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 650; }
+/* Bulgunun sağındaki eylem ("Yapılacaklara ekle") */
+.asistan-bulgu:has(.asistan-bulgu-eylem) { grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; }
+.asistan-bulgu-eylem { justify-self: end; }
+@media (max-width: 760px) { .asistan-bulgu:has(.asistan-bulgu-eylem) { grid-template-columns: 1fr; } .asistan-bulgu-eylem { justify-self: start; } }

@@ -97,14 +97,18 @@ export async function gecmisSorgular(
   kullaniciId: string,
   yetenek: YetenekAdi,
   limit = 5,
+  /** Verilirse yalnızca bu çalışmaya bağlı sorgular (Kaynakça penceresi). */
+  projectId?: string | null,
 ): Promise<GecmisKaydi[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let sorgu = supabase
     .from("ai_assistant_runs")
     .select("id, created_at, context, findings")
     .eq("user_id", kullaniciId)
     .eq("capability", yetenek)
-    .eq("status", "completed")
+    .eq("status", "completed");
+  if (projectId) sorgu = sorgu.eq("project_id", projectId);
+  const { data, error } = await sorgu
     .order("created_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 20));
 

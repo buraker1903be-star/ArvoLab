@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { enUstPencere, useOdakTuzagi } from "./odak-tuzagi";
@@ -42,6 +42,15 @@ type PanelDrawerProps = {
     oraya bırakmak için. Kapatılabilir; zorlamaz.
   */
   acikBasla?: boolean;
+  /*
+    DIŞARIDAN YÖNETİLEN PENCERE: açılması bir işe bağlıysa ("Kaynakçayı
+    yorumlat" önce asistanı çağırıp sonra pencereyi açıyor) ya da birden
+    çok düğme aynı pencereyi açıyorsa (geçmiş sorgular). `acik` verilirse
+    durum dışarıda; `tetiksiz` ile kendi düğmesi çizilmez.
+  */
+  acik?: boolean;
+  onAcikDegis?: (acik: boolean) => void;
+  tetiksiz?: boolean;
   children: ReactNode;
 };
 
@@ -61,9 +70,24 @@ export default function PanelDrawer({
   boy = "orta",
   basaridaKapan = true,
   acikBasla = false,
+  acik,
+  onAcikDegis,
+  tetiksiz = false,
   children,
 }: PanelDrawerProps) {
-  const [open, setOpen] = useState(acikBasla);
+  const [icAcik, setIcAcik] = useState(acikBasla);
+  const open = acik ?? icAcik;
+  /* Geri çağırım ref'te: satır içi bir fonksiyon her çizimde değişir ve
+     açık pencerenin etkisini (odak, dinleyiciler) yeniden kurdururdu —
+     odak her çizimde pencereye geri çekilirdi. */
+  const degisRef = useRef(onAcikDegis);
+  useEffect(() => {
+    degisRef.current = onAcikDegis;
+  });
+  const setOpen = useCallback((deger: boolean) => {
+    degisRef.current?.(deger);
+    setIcAcik(deger);
+  }, []);
   const titleId = useId();
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
   const dialogRef = useRef<HTMLElement>(null);
@@ -114,7 +138,7 @@ export default function PanelDrawer({
       // Altta açık bir pencere kaldıysa sayfa kilidi sürmeli.
       if (!document.querySelector(".drawer-root.open")) document.documentElement.classList.remove("drawer-open");
     };
-  }, [open, basaridaKapan]);
+  }, [open, basaridaKapan, setOpen]);
 
   const drawer = (
     <div ref={kokRef} className={open ? "drawer-root open" : "drawer-root"} data-boy={boy}>
@@ -151,6 +175,7 @@ export default function PanelDrawer({
 
   return (
     <>
+      {tetiksiz ? null : (
       <button
         ref={triggerRef}
         type="button"
@@ -169,6 +194,7 @@ export default function PanelDrawer({
           triggerLabel
         )}
       </button>
+      )}
       {isClient ? createPortal(drawer, document.body) : null}
     </>
   );

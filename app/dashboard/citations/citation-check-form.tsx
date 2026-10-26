@@ -4,6 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-kaynakca";
 import AsistanSonuc from "../_components/asistan-sonuc";
+import PanelDrawer from "../_components/panel-drawer";
+import YapilacagaEkle from "../_components/yapilacaga-ekle";
+import type { GecmisKaydi } from "@/lib/ai/gecmis";
+import { ClipboardPaste, History, Sparkles } from "lucide-react";
 import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-check";
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
@@ -86,6 +90,7 @@ export default function CitationCheckForm({
   secilenCalisma = null,
   gomulu = false,
   oncekiSonuc = null,
+  asistanGecmisi = [],
 }: {
   projects: Project[];
   asistanAcik: boolean;
@@ -102,6 +107,8 @@ export default function CitationCheckForm({
     çalıştırıyordu.
   */
   oncekiSonuc?: (CheckResult & { tarih: string }) | null;
+  /** Bu çalışmanın kayıtlı asistan yorumları (penceredeki "Geçmiş sorgular"). */
+  asistanGecmisi?: GecmisKaydi[];
 }) {
   const router = useRouter();
   // Bir çalışmadan gelindiyse çalışma hazır seçili gelir.
@@ -172,6 +179,11 @@ export default function CitationCheckForm({
   const [error, setError] = useState<string | null>(null);
   const [denetim, setDenetim] = useState<KaynakcaDenetimYaniti | null>(null);
   const [bekleniyor, basla] = useTransition();
+  /* Pencere içi pencereler (yalnızca gomulu): yapıştırma ve asistan yorumu. */
+  const [yapistirAcik, setYapistirAcik] = useState(false);
+  const [yorumAcik, setYorumAcik] = useState(false);
+  /* Asistan penceresinde gösterilen: yeni yorum (null) ya da geçmiş bir sorgu. */
+  const [gecmisGoster, setGecmisGoster] = useState<GecmisKaydi | null>(null);
 
   // zorla=true: kayıtlı cevap atlanır, modele yeniden sorulur.
   function yorumlat(zorla: boolean) {
@@ -214,6 +226,8 @@ export default function CitationCheckForm({
           zorla,
         }),
       );
+      // Yeni yorum soldaki "Geçmiş sorgular"a düşsün.
+      if (gomulu) router.refresh();
     });
   }
 
@@ -258,6 +272,52 @@ export default function CitationCheckForm({
   const atifOlculdu = (result?.citations?.length ?? 0) > 0;
   const atifsizKaynak = result?.crossCheck.referencesWithoutCitation ?? [];
   const kaynaksizAtif = result?.crossCheck.citationsWithoutReference ?? [];
+
+  /* Sayfada sonuçların altında; pencerede sol sütunun ikinci kartı. */
+  const asistanBolumu = result ? (
+    <div className="asistan-kart">
+      <div className="asistan-kart-ust">
+        <h3>Asistan yorumlasın</h3>
+        <p>
+          Yukarıdaki sonuçlar mekanik: dizinde bulunmayan her kayıt hata
+          değildir — Türkçe tezler ve kurum raporları Crossref&apos;te
+          çoğu zaman yer almaz. Asistan beklenen yoklukla gerçek şüpheyi
+          ayırır, biçim sorunlarını önceliklendirir ve{" "}
+          <strong>atıf–kaynakça uyumunu</strong> denetler: metinde
+          &ldquo;Demir (2020)&rdquo;, kaynakçada &ldquo;Demir, A.
+          (2021)&rdquo; yazıyorsa yukarıda iki ayrı sorun görünür; oysa
+          tek bir yıl uyuşmazlığıdır. Düzeltilmiş künye yazmaz; DOI, yıl
+          ya da cilt numarası üretmesine izin verilmez.
+        </p>
+      </div>
+
+      <div className="project-form-actions mt-sm">
+        <button
+          type="button"
+          className="projects-primary-button"
+          disabled={!asistanAcik || bekleniyor}
+          onClick={() => yorumlat(false)}
+        >
+          {bekleniyor ? "Denetleniyor…" : "Kaynakçayı Yorumlat"}
+        </button>
+      </div>
+
+      {!asistanAcik && (
+        <p className="asistan-uyari" data-tone="neutral">
+          Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
+        </p>
+      )}
+
+      <AsistanSonuc
+        sonuc={denetim}
+        yetenek="kaynakca"
+        etiketler={{ uyari: "Sorun", oneri: "Öneri", bilgi: "Not" }}
+        bulguBasligi="Asistan bulguları"
+        bekleniyor={bekleniyor}
+        onYenidenSorgula={() => yorumlat(true)}
+      />
+    </div>
+  ) : null;
 
   /*
     Sonuç bloğu iki yerde çiziliyor: sayfada formun altında, Çalışmalarım
@@ -307,6 +367,38 @@ export default function CitationCheckForm({
               bakılmış kaynaklar yeniden sorulmuyor.
             </div>
           ) : null}
+
+          {/*
+            ATIF–KAYNAKÇA UYUMU ÖNCE (26.10.2026): öğrencinin düzeltmesi en
+            kolay ve en sık sorun bu; eskiden uzun künye listesinin
+            altında kalıyor, görülmüyordu.
+
+            Çapraz kontrol yalnızca ÖLÇÜLDÜYSE gösteriliyor. Metin
+            girilmediğinde atıf çıkarılamıyor; o durumda iki başlık altına
+            "Yok" yazmak, yapılmamış bir denetimi temiz rapor gibi
+            göstermekti.
+          */}
+          {atifOlculdu && (
+            <div className="result-block">
+              <h3 className="result-heading">Atıf–kaynakça uyumu</h3>
+              {atifsizKaynak.length === 0 && kaynaksizAtif.length === 0 ? (
+                <p className="tone-text" data-tone="success">Metindeki atıflarla kaynakça birbirini tutuyor.</p>
+              ) : (
+                <ul className="result-list">
+                  {atifsizKaynak.map((reference, index) => (
+                    <li key={`k${index}`} className="tone-text" data-tone="warning">
+                      Kaynakçada var, metinde atfı yok: {reference.raw}
+                    </li>
+                  ))}
+                  {kaynaksizAtif.map((citation, index) => (
+                    <li key={`a${index}`} className="tone-text" data-tone="danger">
+                      Metinde atıf var, kaynakçada yok: {citation.raw}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/*
             KÜNYE BAŞINA TEK KART. Eskiden aynı künye üç ayrı yerde
@@ -447,76 +539,7 @@ export default function CitationCheckForm({
             </div>
           </div>
 
-          {/*
-            Çapraz kontrol yalnızca ÖLÇÜLDÜYSE gösteriliyor. Metin
-            girilmediğinde atıf çıkarılamıyor; o durumda iki başlık altına
-            "Yok" yazmak, yapılmamış bir denetimi temiz rapor gibi
-            göstermekti.
-          */}
-          {atifOlculdu && (
-            <div className="result-block">
-              <h3 className="result-heading">Atıf–kaynakça uyumu</h3>
-              {atifsizKaynak.length === 0 && kaynaksizAtif.length === 0 ? (
-                <p className="tone-text" data-tone="success">Metindeki atıflarla kaynakça birbirini tutuyor.</p>
-              ) : (
-                <ul className="result-list">
-                  {atifsizKaynak.map((reference, index) => (
-                    <li key={`k${index}`} className="tone-text" data-tone="warning">
-                      Kaynakçada var, metinde atfı yok: {reference.raw}
-                    </li>
-                  ))}
-                  {kaynaksizAtif.map((citation, index) => (
-                    <li key={`a${index}`} className="tone-text" data-tone="danger">
-                      Metinde atıf var, kaynakçada yok: {citation.raw}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-
-          <div className="asistan-kart">
-            <div className="asistan-kart-ust">
-              <h3>Asistan yorumlasın</h3>
-              <p>
-                Yukarıdaki sonuçlar mekanik: dizinde bulunmayan her kayıt hata
-                değildir — Türkçe tezler ve kurum raporları Crossref&apos;te
-                çoğu zaman yer almaz. Asistan beklenen yoklukla gerçek şüpheyi
-                ayırır, biçim sorunlarını önceliklendirir ve{" "}
-                <strong>atıf–kaynakça uyumunu</strong> denetler: metinde
-                &ldquo;Demir (2020)&rdquo;, kaynakçada &ldquo;Demir, A.
-                (2021)&rdquo; yazıyorsa yukarıda iki ayrı sorun görünür; oysa
-                tek bir yıl uyuşmazlığıdır. Düzeltilmiş künye yazmaz; DOI, yıl
-                ya da cilt numarası üretmesine izin verilmez.
-              </p>
-            </div>
-
-            <div className="project-form-actions mt-sm">
-              <button
-                type="button"
-                className="projects-primary-button"
-                disabled={!asistanAcik || bekleniyor}
-                onClick={() => yorumlat(false)}
-              >
-                {bekleniyor ? "Denetleniyor…" : "Kaynakçayı Yorumlat"}
-              </button>
-            </div>
-
-            {!asistanAcik && (
-              <p className="asistan-uyari" data-tone="neutral">
-                Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
-              </p>
-            )}
-
-            <AsistanSonuc
-              sonuc={denetim}
-              yetenek="kaynakca"
-              etiketler={{ uyari: "Sorun", oneri: "Öneri", bilgi: "Not" }}
-              bulguBasligi="Asistan bulguları"
-              bekleniyor={bekleniyor}
-              onYenidenSorgula={() => yorumlat(true)}
-            />
-          </div>
+          {gomulu ? null : asistanBolumu}
         </div>
       )}
     </>
@@ -542,33 +565,158 @@ export default function CitationCheckForm({
           yapıştırtıyor ve metin için ayrı bir onay kutusu soruyordu.
           Yapıştırma yolu kaynakçası editörde olmayan için duruyor.
         */
-        <div className="pencere-kart kaynakca-basit">
-          <h3 className="pencere-kart-baslik">Denetim</h3>
-          <p className="hint">
-            Kaynakçanız ve metniniz editördeki son kaydedilmiş hâlinden alınır. Atıf stili:{" "}
-            <b>{STIL_SECENEKLERI.find((secenek) => secenek.deger === citationStyle)?.etiket ?? citationStyle}</b> (çalışma ayarlarından).
-          </p>
-          <button type="button" className="projects-primary-button" onClick={() => void handleCheck(true)} disabled={loading}>
-            {loading ? "Kaynaklar dizinlerde aranıyor…" : "Kaynakçamı denetle"}
-          </button>
-          <details className="form-details mt-sm">
-            <summary>Kaynakçam editörde değil, yapıştırmak istiyorum</summary>
-            <textarea
-              className="mt-sm"
-              rows={6}
-              placeholder={"Yılmaz, A. (2020). Örnek makale başlığı. Dergi Adı, 12(3), 45-60. https://doi.org/..."}
-              value={referenceList}
-              onChange={(e) => setReferenceList(e.target.value)}
+        <div className="pencere-sol">
+          <div className="pencere-kart kaynakca-basit">
+            <h3 className="pencere-kart-baslik">Denetim</h3>
+            <p className="hint">
+              Kaynakçanız ve metniniz editördeki son kaydedilmiş hâlinden alınır. Atıf stili:{" "}
+              <b>{STIL_SECENEKLERI.find((secenek) => secenek.deger === citationStyle)?.etiket ?? citationStyle}</b> (çalışma ayarlarından).
+            </p>
+            <div className="pencere-dugmeler">
+              <button type="button" className="projects-primary-button" onClick={() => void handleCheck(true)} disabled={loading}>
+                {loading ? "Kaynaklar dizinlerde aranıyor…" : "Kaynakçamı denetle"}
+              </button>
+              {/* Literatür'deki "Manuel kaynak ekle" ile aynı: pencere içinde pencere. */}
+              <PanelDrawer
+                triggerLabel="Manuel ekle"
+                triggerIcon={<ClipboardPaste size={16} aria-hidden="true" />}
+                triggerClassName="projects-filter-button"
+                kicker="Kaynakça"
+                title="Kaynakçanızı yapıştırın"
+                description="Kaynakçanız editörde değilse buraya yapıştırın; her künye ayrı satırda olsun."
+                acik={yapistirAcik}
+                onAcikDegis={setYapistirAcik}
+                basaridaKapan={false}
+              >
+                <div className="project-form-grid">
+                  <label className="project-form-full">
+                    <span>Kaynakça listesi</span>
+                    <textarea
+                      rows={10}
+                      placeholder={"Yılmaz, A. (2020). Örnek makale başlığı. Dergi Adı, 12(3), 45-60. https://doi.org/..."}
+                      value={referenceList}
+                      onChange={(e) => setReferenceList(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <div className="project-form-actions">
+                  <button
+                    type="button"
+                    className="projects-primary-button"
+                    disabled={loading || !referenceList.trim()}
+                    onClick={() => {
+                      setYapistirAcik(false);
+                      void handleCheck(false);
+                    }}
+                  >
+                    Yapıştırdığımı denetle
+                  </button>
+                </div>
+              </PanelDrawer>
+            </div>
+          </div>
+
+          {/*
+            ASİSTAN YORUMU İKİNCİ KART (26.10.2026): eskiden sonuçların en
+            altındaydı, uzun listede görünmüyordu. Yorum pencerede açılıyor;
+            her bulgunun yanında "Yapılacaklara ekle". Bu çalışmanın kayıtlı
+            yorumları altında: aynı soruyu ikinci kez sordurmamak için.
+          */}
+          <div className="pencere-kart">
+            <h3 className="pencere-kart-baslik">Asistan yorumu</h3>
+            <p className="hint">
+              Dizinde bulunmayan her kayıt hata değildir; asistan gerçek şüpheyi ayırır, sorunları önceliklendirir ve
+              atıf–kaynakça uyuşmazlıklarını birleştirir. Düzeltilmiş künye yazmaz.
+            </p>
+            <div className="pencere-dugmeler">
+              <button
+                type="button"
+                className="projects-primary-button"
+                disabled={!result || !asistanAcik || bekleniyor}
+                onClick={() => {
+                  setGecmisGoster(null);
+                  setYorumAcik(true);
+                  yorumlat(false);
+                }}
+              >
+                <Sparkles size={16} aria-hidden="true" /> {bekleniyor ? "Yorumlanıyor…" : "Kaynakçayı yorumlat"}
+              </button>
+            </div>
+            {!result ? <p className="muted text-sm">Önce kaynakçanızı denetleyin; asistan denetim sonucunu yorumlar.</p> : null}
+            {!asistanAcik ? (
+              <p className="asistan-uyari" data-tone="neutral">
+                Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
+              </p>
+            ) : null}
+
+            {asistanGecmisi.length ? (
+              <>
+                <h4 className="pencere-alt-baslik">
+                  <History size={14} aria-hidden="true" /> Geçmiş sorgular
+                </h4>
+                <ul className="secim-listesi">
+                  {asistanGecmisi.map((kayit) => (
+                    <li key={kayit.id}>
+                      <button
+                        type="button"
+                        className="secim-satir"
+                        onClick={() => {
+                          setGecmisGoster(kayit);
+                          setYorumAcik(true);
+                        }}
+                      >
+                        <span className="kanit-kayit-govde">
+                          <b>{trTarihSaat(kayit.created_at)}</b>
+                          <small>{kayit.bulgular.length} bulgu</small>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </div>
+
+          <PanelDrawer
+            tetiksiz
+            triggerLabel="Kaynakça yorumu"
+            acik={yorumAcik}
+            onAcikDegis={setYorumAcik}
+            boy="genis"
+            kicker="Asistan"
+            title={gecmisGoster ? `Kaynakça yorumu · ${trTarihSaat(gecmisGoster.created_at)}` : "Kaynakça yorumu"}
+            description="Bulgular denetim sonucunun yorumudur, nihai hüküm değildir. Düzeltmek istediğinizi yapılacaklarınıza ekleyin."
+            basaridaKapan={false}
+          >
+            {!gecmisGoster && bekleniyor && !denetim ? (
+              <p className="gb-bos">Asistan denetim sonucunuzu okuyor…</p>
+            ) : null}
+            <AsistanSonuc
+              sonuc={
+                gecmisGoster
+                  ? { bulgular: gecmisGoster.bulgular, kayitId: gecmisGoster.id }
+                  : denetim
+              }
+              yetenek="kaynakca"
+              etiketler={{ uyari: "Sorun", oneri: "Öneri", bilgi: "Not" }}
+              bulguBasligi="Asistan bulguları"
+              bekleniyor={bekleniyor}
+              onYenidenSorgula={gecmisGoster ? undefined : () => yorumlat(true)}
+              gecmisGizli
+              bulguEylemi={
+                projectId
+                  ? (bulgu) => (
+                      <YapilacagaEkle
+                        projectId={projectId}
+                        baslik={bulgu.baslik}
+                        aciklama={bulgu.aciklama}
+                        asistanKaydi={gecmisGoster ? gecmisGoster.id : (denetim?.kayitId ?? null)}
+                      />
+                    )
+                  : undefined
+              }
             />
-            <button
-              type="button"
-              className="projects-filter-button mt-sm"
-              onClick={() => void handleCheck(false)}
-              disabled={loading || !referenceList.trim()}
-            >
-              Yapıştırdığımı denetle
-            </button>
-          </details>
+          </PanelDrawer>
         </div>
       ) : (
         <>

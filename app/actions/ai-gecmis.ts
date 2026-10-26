@@ -14,11 +14,11 @@ import type { YetenekAdi } from "@/lib/ai/kayit-gorunum";
   üretmiyor ve kullanıcı kendi verisini her zaman görebilmeli.
 */
 
-export async function asistanGecmisim(yetenek: YetenekAdi, limit = 5): Promise<GecmisKaydi[]> {
+export async function asistanGecmisim(yetenek: YetenekAdi, limit = 5, projectId?: string | null): Promise<GecmisKaydi[]> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return [];
-  return gecmisSorgular(user.id, yetenek, limit);
+  return gecmisSorgular(user.id, yetenek, limit, projectId);
 }

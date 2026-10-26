@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { History, RotateCcw } from "lucide-react";
 import { asistanGecmisim } from "@/app/actions/ai-gecmis";
 import type { GecmisKaydi } from "@/lib/ai/gecmis";
@@ -31,7 +31,15 @@ export type AsistanSonucVerisi = {
   kayitliCevap?: { tarih: string } | null;
 };
 
-function BulguListesi({ bulgular, etiketler }: { bulgular: Bulgu[]; etiketler: Etiketler }) {
+function BulguListesi({
+  bulgular,
+  etiketler,
+  eylem,
+}: {
+  bulgular: Bulgu[];
+  etiketler: Etiketler;
+  eylem?: (bulgu: Bulgu, sira: number) => ReactNode;
+}) {
   return (
     <ul className="asistan-bulgular">
       {bulgular.map((bulgu, index) => (
@@ -41,6 +49,7 @@ function BulguListesi({ bulgular, etiketler }: { bulgular: Bulgu[]; etiketler: E
             <b>{bulgu.baslik}</b>
             {bulgu.aciklama}
           </span>
+          {eylem ? <span className="asistan-bulgu-eylem">{eylem(bulgu, index)}</span> : null}
         </li>
       ))}
     </ul>
@@ -77,6 +86,8 @@ export default function AsistanSonuc({
   onYenidenSorgula,
   bekleniyor,
   onAramaCalistir,
+  bulguEylemi,
+  gecmisGizli = false,
 }: {
   sonuc: AsistanSonucVerisi | null;
   yetenek: YetenekAdi;
@@ -87,6 +98,10 @@ export default function AsistanSonuc({
   bekleniyor?: boolean;
   /** Verilirse her arama dizesinin yanında "Bu aramayı çalıştır" çıkar. */
   onAramaCalistir?: (arama: string) => void;
+  /** Her bulgunun sağında çizilen düğme (Kaynakça: "Yapılacaklara ekle"). */
+  bulguEylemi?: (bulgu: Bulgu, sira: number) => ReactNode;
+  /** Geçmiş başka yerde gösteriliyorsa (Kaynakça penceresinin sol kartı). */
+  gecmisGizli?: boolean;
 }) {
   const [gecmis, setGecmis] = useState<GecmisKaydi[] | null>(null);
   const [yukleniyor, basla] = useTransition();
@@ -128,12 +143,13 @@ export default function AsistanSonuc({
       {bulgular.length > 0 && (
         <div className="asistan-bolum">
           <h4 className="asistan-bolum-baslik">{bulguBasligi}</h4>
-          <BulguListesi bulgular={bulgular} etiketler={etiketler} />
+          <BulguListesi bulgular={bulgular} etiketler={etiketler} eylem={bulguEylemi} />
         </div>
       )}
 
       {doluSonuc && !sonuc?.kayitliCevap && <AsistanPuan kayitId={sonuc?.kayitId} />}
 
+      {gecmisGizli ? null : (
       <details
         className="asistan-gecmis"
         onToggle={(event) => {
@@ -165,6 +181,7 @@ export default function AsistanSonuc({
           </ul>
         )}
       </details>
+      )}
     </>
   );
 }

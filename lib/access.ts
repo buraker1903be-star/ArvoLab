@@ -111,7 +111,8 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  * saveManuscript, saveNamedVersion, restoreManuscriptVersion,
  * createLiteratureSource, createCitationSource, addManuscriptComment,
  * addScoreEntry, createProject, createShareLink, kanitEkle, kunyeyiDogrula
- * (Crossref/OpenAlex), makaleProfiliKaydet.
+ * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle.
+ * (yapilacakTamamla kapısız: mevcut kaydın güncellenmesi, aşağıda.)
  *
  * Kapı KİMDE YOK, bilerek:
  *  - auth.ts ve subscription.ts: engellenen kullanıcı giriş yapabilmeli ve

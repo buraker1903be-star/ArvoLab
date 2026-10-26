@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { FileText, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
+import { Check, FileText, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
+import { acikYapilacaklar, yapilacakTamamla } from "@/app/actions/yapilacaklar";
 import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
 import ActionForm from "../action-form";
 import KilavuzPenceresi from "./[id]/kilavuz-penceresi";
@@ -62,7 +63,7 @@ export default async function CalismaDurumKarti({
   /** Yeni tezde kılavuz eşleşmediyse pencere açık gelir (createProject). */
   kilavuzAc: boolean;
 }) {
-  const ozet = await calismaOzeti(projectId);
+  const [ozet, yapilacaklar] = await Promise.all([calismaOzeti(projectId), acikYapilacaklar(projectId)]);
   const merkez = `/dashboard/editor/${projectId}`;
 
   if (!ozet || ozet === CALISMA_OKUNAMADI) {
@@ -195,10 +196,33 @@ export default async function CalismaDurumKarti({
       </div>
 
       <h3 className="calisma-durum-alt">
-        {eksikler.length ? `Başka neler var · ${eksikler.length}` : "Başka eksik görünmüyor"}
+        {eksikler.length + yapilacaklar.length
+          ? `Başka neler var · ${eksikler.length + yapilacaklar.length}`
+          : "Başka eksik görünmüyor"}
       </h3>
-      {eksikler.length ? (
+      {eksikler.length + yapilacaklar.length ? (
         <ul className="gb-liste">
+          {/*
+            Öğrencinin kendi eklediği maddeler (kaynakça asistanının
+            bulgularından "Yapılacaklara ekle") başta: kendisi seçti, en
+            önce onları görmeli. Satır bağlantı değil; "Yaptım" düğmesi var.
+          */}
+          {yapilacaklar.map((madde) => (
+            <li key={madde.id} className="yapilacak-satir">
+              <span className="gb-satir-govde">
+                <b>{madde.baslik}</b>
+                {madde.aciklama ? <small className="gb-onizleme">{madde.aciklama}</small> : null}
+              </span>
+              <span className="status-pill" data-tone="info">
+                Yapılacak
+              </span>
+              <ActionForm action={yapilacakTamamla.bind(null, madde.id)} successMessage="Tamamlandı olarak işaretlendi.">
+                <button type="submit" className="projects-filter-button button-compact" aria-label={`${madde.baslik}: yaptım`}>
+                  <Check size={14} aria-hidden="true" /> Yaptım
+                </button>
+              </ActionForm>
+            </li>
+          ))}
           {eksikler.map((satir) => (
             <ListeSatiri
               key={satir.anahtar}
