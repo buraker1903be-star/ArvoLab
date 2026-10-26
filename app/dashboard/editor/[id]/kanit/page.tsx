@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Check, CircleDashed, ExternalLink, Plus, SearchCheck, TriangleAlert } from "lucide-react";
+import { Check, CircleDashed, ExternalLink, Plus, SearchCheck, TriangleAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
   insanIncelemesiYapildi,
@@ -33,6 +32,7 @@ import ActionForm from "@/app/dashboard/action-form";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import { trTarihSaat } from "@/lib/tr-time";
 import KanitAsistani from "./kanit-asistani";
+import CalismaSekmeleri from "../calisma-sekmeleri";
 
 /*
   KANIT MATRİSİ: çalışmanın önemli iddiaları, kaynakları ve kanıt durumları.
@@ -73,7 +73,19 @@ function KaynakSecimi({ kaynaklar, secili }: { kaynaklar: KaynakOzeti[]; secili?
   );
 }
 
-function KanitKarti({
+/*
+  İDDİANIN PENCERESİ. Eskiden her iddia sayfanın altında ayrı bir kart
+  olarak açılıyor ve içinde dört ayrı açılır pencere düğmesi daha
+  taşıyordu: matris ile kartlar aynı bilgiyi iki kez gösteriyor, sayfa
+  iddia sayısıyla uzuyordu. Şimdi matris tek liste; satırdaki iddiaya
+  tıklayınca zincir ve bütün işlemler TEK pencerede (ArvoOS'taki satır →
+  pencere düzeni). Formlar pencerenin içinde açılır bölümler: pencere
+  içinde pencere açmak odağı ve geri tuşunu karıştırıyordu.
+
+  Pencere kayıttan sonra KAPANMIYOR (basaridaKapan=false): metni ekleyip
+  hemen değerlendirmek tek bir oturumun işi.
+*/
+function KanitPenceresi({
   kayit,
   kaynak,
   projectId,
@@ -92,18 +104,22 @@ function KanitKarti({
   const destek = gecerliDestek(kayit);
 
   return (
-    <details className="kanit-kart" id={`iddia-${kayit.id}`}>
-      <summary>
-        <h3 className="kanit-kart-baslik">{kayit.iddia}</h3>
-        <div className="kanit-rozetler">
-          {rozetler.map((r) => (
-            <span key={r.anahtar} className="status-pill" data-tone={r.ton} title={r.aciklama}>
-              {r.etiket}
-            </span>
-          ))}
-          {rozetler.length === 0 && <span className="status-pill" data-tone="neutral">Henüz kontrol yapılmadı</span>}
-        </div>
-      </summary>
+    <PanelDrawer
+      triggerLabel={kayit.iddia.length > 160 ? `${kayit.iddia.slice(0, 160)}…` : kayit.iddia}
+      triggerClassName="kanit-iddia-dugmesi"
+      kicker={kayit.bolum ? `Kanıt zinciri · ${kayit.bolum}` : "Kanıt zinciri"}
+      title={kayit.iddia}
+      boy="genis"
+      basaridaKapan={false}
+    >
+      <div className="kanit-rozetler">
+        {rozetler.map((r) => (
+          <span key={r.anahtar} className="status-pill" data-tone={r.ton} title={r.aciklama}>
+            {r.etiket}
+          </span>
+        ))}
+        {rozetler.length === 0 && <span className="status-pill" data-tone="neutral">Henüz kontrol yapılmadı</span>}
+      </div>
 
       <ol className="kanit-zinciri" aria-label="Kanıt zinciri">
         {zincir.map((halka) => (
@@ -189,76 +205,6 @@ function KanitKarti({
             <SearchCheck size={14} aria-hidden="true" /> Künyeyi dizinde doğrula
           </button>
         </ActionForm>
-
-        <PanelDrawer
-          triggerLabel={kayit.incelenen_metin ? "Kanıt metnini düzenle" : "Kaynaktan metin ekle"}
-          triggerClassName="projects-filter-button button-compact"
-          kicker="Kanıt"
-          title="Kaynaktan incelenen metin"
-          description="Kaynağın iddiayla ilgili bölümünü yapıştırın. Sistem yalnızca buraya eklenen metne bakar; sayfa numarasını siz yazarsınız, tahmin edilmez."
-        >
-          <ActionForm className="project-form-grid" action={kanitMetniKaydet}>
-            <input type="hidden" name="id" value={kayit.id} />
-            <input type="hidden" name="project_id" value={projectId} />
-            <label className="project-form-full">
-              <span>İncelenen metin</span>
-              <textarea name="incelenen_metin" rows={8} maxLength={20000} defaultValue={kayit.incelenen_metin ?? ""} placeholder="Kaynaktan iddiayla ilgili paragraf ya da bölüm" />
-            </label>
-            <label>
-              <span>Metnin kapsamı</span>
-              <select name="incelenen_kapsam" defaultValue={kayit.incelenen_kapsam ?? "bolum"}>
-                <option value="bolum">Kaynağın bir bölümü</option>
-                <option value="tam_metin">Kaynağın tamamı</option>
-              </select>
-            </label>
-            <label>
-              <span>Konum (sayfa, bölüm, tablo)</span>
-              <input name="konum" type="text" maxLength={200} defaultValue={kayit.konum ?? ""} placeholder="s. 14, Tablo 3" />
-            </label>
-            <label className="project-form-full">
-              <span>Metin sürümü</span>
-              <input name="incelenen_surum" type="text" maxLength={300} defaultValue={kayit.incelenen_surum ?? ""} placeholder="Yayıncı PDF'i, kabul edilmiş taslak, ön baskı…" />
-            </label>
-            <label className="project-form-full">
-              <span>Kanıt alıntısı (metinden birebir)</span>
-              <textarea name="alinti" rows={3} maxLength={1000} defaultValue={kayit.alinti ?? ""} placeholder="İddiayı destekleyen ya da çürüten cümle; yukarıdaki metinde birebir geçmeli" />
-            </label>
-            <div className="project-form-actions project-form-full">
-              <button type="submit" className="projects-primary-button">Kaydet</button>
-            </div>
-          </ActionForm>
-        </PanelDrawer>
-
-        <PanelDrawer
-          triggerLabel="Kendim değerlendireyim"
-          triggerClassName="projects-filter-button button-compact"
-          kicker="Kanıt"
-          title="İddia–kanıt uyumu"
-          description="Doğrudan, kısmen, dolaylı ya da çelişiyor diyebilmek için önce metni ve alıntıyı eklemelisiniz; kanıt yoksa söylenebilecek tek şey “doğrulanamadı”dır."
-        >
-          <ActionForm className="project-form-grid" action={kanitDegerlendirmesiKaydet}>
-            <input type="hidden" name="id" value={kayit.id} />
-            <input type="hidden" name="project_id" value={projectId} />
-            <label className="project-form-full">
-              <span>Destek düzeyi</span>
-              <select name="destek_duzeyi" defaultValue={destek === "degerlendirilmedi" ? "dogrulanamadi" : destek}>
-                {HUKUMLER.map((h) => (
-                  <option key={h} value={h} disabled={h !== "dogrulanamadi" && !kayit.alinti}>
-                    {DESTEK_ETIKETI[h]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="project-form-full">
-              <span>Gerekçe</span>
-              <textarea name="gerekce" rows={3} maxLength={2000} defaultValue={kayit.degerlendiren === "kullanici" ? kayit.gerekce ?? "" : ""} />
-            </label>
-            <div className="project-form-actions project-form-full">
-              <button type="submit" className="projects-primary-button">Kaydet</button>
-            </div>
-          </ActionForm>
-        </PanelDrawer>
-
         {kayit.degerlendiren === "asistan" && kayit.insan_incelemesi !== "yapildi" && (
           <ActionForm action={insanIncelemesiYapildi} successMessage="İnceleme kaydedildi.">
             <input type="hidden" name="id" value={kayit.id} />
@@ -268,64 +214,131 @@ function KanitKarti({
             </button>
           </ActionForm>
         )}
+      </div>
 
-        <PanelDrawer
-          triggerLabel="Matris notları"
-          triggerClassName="projects-filter-button button-compact"
-          kicker="Kanıt matrisi"
-          title="Çelişen çalışmalar, eksik kanıt, düzeltme"
-        >
-          <ActionForm className="project-form-grid" action={kanitNotlariKaydet}>
-            <input type="hidden" name="id" value={kayit.id} />
-            <input type="hidden" name="project_id" value={projectId} />
-            <label className="project-form-full">
-              <span>Çelişen çalışmalar</span>
-              <textarea name="celisen" rows={2} maxLength={1000} defaultValue={kayit.celisen ?? ""} />
-            </label>
-            <label className="project-form-full">
-              <span>Eksik kanıt</span>
-              <textarea name="eksik_kanit" rows={2} maxLength={1000} defaultValue={kayit.eksik_kanit ?? ""} />
-            </label>
-            <label className="project-form-full">
-              <span>Önerilen düzeltme</span>
-              <textarea name="duzeltme" rows={2} maxLength={1000} defaultValue={kayit.duzeltme ?? ""} />
-            </label>
-            <div className="project-form-actions project-form-full">
-              <button type="submit" className="projects-primary-button">Kaydet</button>
-            </div>
-          </ActionForm>
-        </PanelDrawer>
+      <details className="form-details mt-md" open={!kayit.incelenen_metin}>
+        <summary>{kayit.incelenen_metin ? "Kanıt metnini düzenle" : "Kaynaktan metin ekle"}</summary>
+        <p className="muted text-sm">
+        Kaynağın iddiayla ilgili bölümünü yapıştırın. Sistem yalnızca buraya eklenen metne bakar; sayfa numarasını
+        siz yazarsınız, tahmin edilmez.
+        </p>
+        <ActionForm className="project-form-grid" action={kanitMetniKaydet}>
+          <input type="hidden" name="id" value={kayit.id} />
+          <input type="hidden" name="project_id" value={projectId} />
+          <label className="project-form-full">
+            <span>İncelenen metin</span>
+            <textarea name="incelenen_metin" rows={8} maxLength={20000} defaultValue={kayit.incelenen_metin ?? ""} placeholder="Kaynaktan iddiayla ilgili paragraf ya da bölüm" />
+          </label>
+          <label>
+            <span>Metnin kapsamı</span>
+            <select name="incelenen_kapsam" defaultValue={kayit.incelenen_kapsam ?? "bolum"}>
+              <option value="bolum">Kaynağın bir bölümü</option>
+              <option value="tam_metin">Kaynağın tamamı</option>
+            </select>
+          </label>
+          <label>
+            <span>Konum (sayfa, bölüm, tablo)</span>
+            <input name="konum" type="text" maxLength={200} defaultValue={kayit.konum ?? ""} placeholder="s. 14, Tablo 3" />
+          </label>
+          <label className="project-form-full">
+            <span>Metin sürümü</span>
+            <input name="incelenen_surum" type="text" maxLength={300} defaultValue={kayit.incelenen_surum ?? ""} placeholder="Yayıncı PDF'i, kabul edilmiş taslak, ön baskı…" />
+          </label>
+          <label className="project-form-full">
+            <span>Kanıt alıntısı (metinden birebir)</span>
+            <textarea name="alinti" rows={3} maxLength={1000} defaultValue={kayit.alinti ?? ""} placeholder="İddiayı destekleyen ya da çürüten cümle; yukarıdaki metinde birebir geçmeli" />
+          </label>
+          <div className="project-form-actions project-form-full">
+            <button type="submit" className="projects-primary-button">Kaydet</button>
+          </div>
+        </ActionForm>
+      </details>
 
-        <PanelDrawer triggerLabel="Düzenle" triggerClassName="projects-filter-button button-compact" kicker="Kanıt matrisi" title="İddiayı düzenle" description="İddia ya da kaynak değişirse önceki doğrulama sonuçları sıfırlanır.">
-          <ActionForm className="project-form-grid" action={kanitGuncelle}>
-            <input type="hidden" name="id" value={kayit.id} />
-            <input type="hidden" name="project_id" value={projectId} />
-            <label className="project-form-full">
-              <span>İddia</span>
-              <textarea name="iddia" rows={3} maxLength={2000} required defaultValue={kayit.iddia} />
-            </label>
-            <label>
-              <span>Bölüm</span>
-              <input name="bolum" type="text" maxLength={200} defaultValue={kayit.bolum ?? ""} />
-            </label>
-            <label>
-              <span>Metin içi atıf</span>
-              <input name="atif" type="text" maxLength={300} defaultValue={kayit.atif ?? ""} />
-            </label>
-            <KaynakSecimi kaynaklar={kaynaklar} secili={kayit.kaynak_id} />
-            <div className="project-form-actions project-form-full">
-              <button type="submit" className="projects-primary-button">Kaydet</button>
-            </div>
-          </ActionForm>
-        </PanelDrawer>
+      <details className="form-details mt-sm">
+        <summary>Kendim değerlendireyim</summary>
+        <p className="muted text-sm">
+        Doğrudan, kısmen, dolaylı ya da çelişiyor diyebilmek için önce metni ve alıntıyı eklemelisiniz; kanıt yoksa
+        söylenebilecek tek şey “doğrulanamadı”dır.
+        </p>
+        <ActionForm className="project-form-grid" action={kanitDegerlendirmesiKaydet}>
+          <input type="hidden" name="id" value={kayit.id} />
+          <input type="hidden" name="project_id" value={projectId} />
+          <label className="project-form-full">
+            <span>Destek düzeyi</span>
+            <select name="destek_duzeyi" defaultValue={destek === "degerlendirilmedi" ? "dogrulanamadi" : destek}>
+              {HUKUMLER.map((h) => (
+                <option key={h} value={h} disabled={h !== "dogrulanamadi" && !kayit.alinti}>
+                  {DESTEK_ETIKETI[h]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="project-form-full">
+            <span>Gerekçe</span>
+            <textarea name="gerekce" rows={3} maxLength={2000} defaultValue={kayit.degerlendiren === "kullanici" ? kayit.gerekce ?? "" : ""} />
+          </label>
+          <div className="project-form-actions project-form-full">
+            <button type="submit" className="projects-primary-button">Kaydet</button>
+          </div>
+        </ActionForm>
+      </details>
 
+      <details className="form-details mt-sm">
+        <summary>Matris notları: çelişen çalışmalar, eksik kanıt, düzeltme</summary>
+        <ActionForm className="project-form-grid" action={kanitNotlariKaydet}>
+          <input type="hidden" name="id" value={kayit.id} />
+          <input type="hidden" name="project_id" value={projectId} />
+          <label className="project-form-full">
+            <span>Çelişen çalışmalar</span>
+            <textarea name="celisen" rows={2} maxLength={1000} defaultValue={kayit.celisen ?? ""} />
+          </label>
+          <label className="project-form-full">
+            <span>Eksik kanıt</span>
+            <textarea name="eksik_kanit" rows={2} maxLength={1000} defaultValue={kayit.eksik_kanit ?? ""} />
+          </label>
+          <label className="project-form-full">
+            <span>Önerilen düzeltme</span>
+            <textarea name="duzeltme" rows={2} maxLength={1000} defaultValue={kayit.duzeltme ?? ""} />
+          </label>
+          <div className="project-form-actions project-form-full">
+            <button type="submit" className="projects-primary-button">Kaydet</button>
+          </div>
+        </ActionForm>
+      </details>
+
+      <details className="form-details mt-sm">
+        <summary>İddiayı düzenle</summary>
+        <p className="muted text-sm">İddia ya da kaynak değişirse önceki doğrulama sonuçları sıfırlanır.</p>
+        <ActionForm className="project-form-grid" action={kanitGuncelle}>
+          <input type="hidden" name="id" value={kayit.id} />
+          <input type="hidden" name="project_id" value={projectId} />
+          <label className="project-form-full">
+            <span>İddia</span>
+            <textarea name="iddia" rows={3} maxLength={2000} required defaultValue={kayit.iddia} />
+          </label>
+          <label>
+            <span>Bölüm</span>
+            <input name="bolum" type="text" maxLength={200} defaultValue={kayit.bolum ?? ""} />
+          </label>
+          <label>
+            <span>Metin içi atıf</span>
+            <input name="atif" type="text" maxLength={300} defaultValue={kayit.atif ?? ""} />
+          </label>
+          <KaynakSecimi kaynaklar={kaynaklar} secili={kayit.kaynak_id} />
+          <div className="project-form-actions project-form-full">
+            <button type="submit" className="projects-primary-button">Kaydet</button>
+          </div>
+        </ActionForm>
+      </details>
+
+      <div className="kanit-eylemler">
         <ActionForm action={kanitSil} confirmMessage="Bu iddia ve kanıt kaydı silinsin mi?">
           <input type="hidden" name="id" value={kayit.id} />
           <input type="hidden" name="project_id" value={projectId} />
-          <button type="submit" className="projects-filter-button button-compact button-danger">Sil</button>
+          <button type="submit" className="projects-filter-button button-compact button-danger">İddiayı sil</button>
         </ActionForm>
       </div>
-    </details>
+    </PanelDrawer>
   );
 }
 
@@ -358,9 +371,6 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
           </p>
         </div>
         <div className="merkez-ust-eylemler">
-          <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
-            <ArrowLeft size={16} aria-hidden="true" /> Çalışma merkezi
-          </Link>
           <PanelDrawer
             triggerLabel="İddia ekle"
             triggerIcon={<Plus size={16} aria-hidden="true" />}
@@ -391,6 +401,8 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
           </PanelDrawer>
         </div>
       </section>
+
+      <CalismaSekmeleri calisma={calisma} aktif="kanit" />
 
       {okunamadi && (
         <p className="alert mb-md" role="alert">
@@ -430,6 +442,10 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
         <>
           <section className="section mt-lg">
             <h2 className="section-title">Matris</h2>
+            <p className="muted text-base">
+              Bir iddiaya tıklayın: zinciri (iddia → atıf → kaynak kaydı → özgün yayın → kanıt → sonuç) ve bütün
+              işlemler tek pencerede açılır. Eksik halkalar kesik çizgiyle gösterilir.
+            </p>
             <div className="kanit-matris-sarici">
               <table className="kanit-matris">
                 <thead>
@@ -451,7 +467,13 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
                     return (
                       <tr key={k.id}>
                         <td>
-                          <a href={`#iddia-${k.id}`}>{k.iddia.length > 160 ? `${k.iddia.slice(0, 160)}…` : k.iddia}</a>
+                          <KanitPenceresi
+                            kayit={k}
+                            kaynak={kaynakHaritasi.get(k.kaynak_id ?? "") ?? null}
+                            projectId={id}
+                            asistanAcik={asistanAcik}
+                            kaynaklar={kaynaklar}
+                          />
                         </td>
                         <td>{k.bolum ?? "—"}</td>
                         <td>{kunyeMetni(kaynakHaritasi.get(k.kaynak_id ?? "")) ?? (k.kaynak_id ? "Erişilemiyor" : "Bağlanmadı")}</td>
@@ -472,25 +494,6 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
             </div>
           </section>
 
-          <section className="section">
-            <h2 className="section-title">Kanıt zincirleri</h2>
-            <p className="muted text-base">
-              Bir iddiayı açın: akademik iddia → metin içi atıf → kaynak kaydı → özgün yayın → ilgili kanıt → doğrulama
-              sonucu. Eksik halkalar kesik çizgiyle gösterilir.
-            </p>
-            <div className="mt-md">
-              {kayitlar.map((k) => (
-                <KanitKarti
-                  key={k.id}
-                  kayit={k}
-                  kaynak={kaynakHaritasi.get(k.kaynak_id ?? "") ?? null}
-                  projectId={id}
-                  asistanAcik={asistanAcik}
-                  kaynaklar={kaynaklar}
-                />
-              ))}
-            </div>
-          </section>
         </>
       )}
     </main>

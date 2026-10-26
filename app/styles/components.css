@@ -1187,6 +1187,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
   color: var(--ink-soft); font-size: var(--fs-sm); text-decoration: none;
 }
 .merkez-baglanti svg { color: var(--accent); flex: none; }
+/* Karo bir düğme de olabiliyor (açılır pencere tetikleyicisi). */
+button.merkez-baglanti { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+.merkez-baglanti .drawer-tetik-metin { display: block; min-width: 0; }
+.merkez-baglanti .drawer-tetik-metin b { display: block; margin-bottom: 2px; color: var(--ink); font-size: var(--fs-body); font-weight: 500; }
 .merkez-baglanti b { display: block; margin-bottom: 2px; color: var(--ink); font-size: var(--fs-body); font-weight: 500; }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1727,17 +1731,14 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .kanit-matris td small { display: block; color: var(--muted); }
 .kanit-matris a { color: var(--accent); }
 
-.kanit-kart {
-  border: 1px solid var(--line-soft);
-  border-radius: var(--kart-r);
-  background: var(--surface);
-  padding: var(--kart-dolgu);
-  box-shadow: var(--shadow-sm);
+/* Matristeki iddia: satırın penceresini açan düğme, bağlantı gibi görünür. */
+.kanit-iddia-dugmesi {
+  padding: 0; border: 0; background: none;
+  color: var(--accent); font: inherit; text-align: left; cursor: pointer;
 }
-.kanit-kart + .kanit-kart { margin-top: var(--kart-araligi); }
-.kanit-kart > summary { cursor: pointer; list-style: none; }
-.kanit-kart > summary::-webkit-details-marker { display: none; }
-.kanit-kart-baslik { margin: 0; color: var(--ink); font-size: var(--fs-body); font-weight: 600; line-height: var(--lh-baslik); overflow-wrap: anywhere; }
+@media (hover: hover) and (pointer: fine) {
+  .kanit-iddia-dugmesi:hover { text-decoration: underline; }
+}
 .kanit-rozetler { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
 .kanit-zinciri { display: grid; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
@@ -1772,3 +1773,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .makale-kontrol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .makale-plan { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .makale-plan li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; padding: 8px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); font-size: var(--fs-sm); }
+/* Çalışma sayfalarının sekme sırası: başlığın hemen altında, her sayfada aynı yerde. */
+.calisma-sekmeleri { margin: 4px 0 18px; }
+.calisma-karolari { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--kart-araligi); }

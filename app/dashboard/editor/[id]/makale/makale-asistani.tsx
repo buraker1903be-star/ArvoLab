@@ -26,9 +26,10 @@ export default function MakaleAsistani({ projectId, bolumler, asistanAcik }: { p
   }
 
   return (
-    <section className="project-form-card asistan-kart">
+    /* Pencerenin içinde çiziliyor (makale/page.tsx): başlığı pencerenin
+       kendisi taşıyor, kart çerçevesi pencere içinde ikinci bir kutu olurdu. */
+    <div className="asistan-kart">
       <div className="asistan-kart-ust">
-        <h2>Bölüm denetimi</h2>
         <p>
           Asistan seçtiğiniz bölümü makale türü, araştırma sorusu ve yöntemle karşılaştırır; eksikleri ve nedenini
           söyler. <strong>Cümle, başlık, özet ya da kapak mektubu yazmaz</strong>, kaynak önermez ve kabul olasılığı
@@ -86,6 +87,6 @@ export default function MakaleAsistani({ projectId, bolumler, asistanAcik }: { p
         bekleniyor={bekleniyor}
         onYenidenSorgula={() => denetle(true)}
       />
-    </section>
+    </div>
   );
 }

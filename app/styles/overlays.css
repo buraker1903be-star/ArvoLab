@@ -142,6 +142,8 @@ html.drawer-open { overflow: hidden; }
   transition: opacity .22s ease, transform .5s var(--ease-spring);
 }
 .drawer-root.open .drawer { opacity: 1; transform: none; }
+/* Geniş pencere: kanıt zinciri, tarama günlüğü tablosu, bölüm denetimi. */
+.drawer-root[data-boy="genis"] .drawer { width: min(1040px, 100%); }
 
 .drawer-header {
   position: relative;

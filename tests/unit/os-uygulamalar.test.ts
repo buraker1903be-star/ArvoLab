@@ -135,3 +135,33 @@ describe("Ctrl+K araması", () => {
     assert.ok(sayfalar.some((s) => s.href === "/dashboard/support"));
   });
 });
+
+describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
+  test("dock yedi uygulama, sırası günlük işin sırası", () => {
+    /* Kılavuz kataloğu ve doçentlik dock'a geri girerse yer kaplayan
+       ama öğrencinin her gün kullanmadığı simgeler geri gelir. */
+    assert.deepEqual(docktakiler(gorunenUygulamalar(uygulamalar, "client")).map((u) => u.key), [
+      "home", "tez", "kaynaklar", "analiz", "belge", "destek", "ayarlar",
+    ]);
+  });
+
+  test("literatür ve kaynakça tek uygulamanın iki bölümü", () => {
+    assert.equal(etkinUygulama(uygulamalar, "/dashboard/literature")?.key, "kaynaklar");
+    assert.equal(etkinUygulama(uygulamalar, "/dashboard/citations")?.key, "kaynaklar");
+    const kaynaklar = uygulamalar.find((u) => u.key === "kaynaklar")!;
+    assert.equal(etkinBolum(kaynaklar.bolumler!, "/dashboard/citations")?.key, "kaynakca");
+    assert.equal(etkinBolum(kaynaklar.bolumler!, "/dashboard/literature")?.key, "literatur");
+  });
+
+  test("kılavuz kataloğu ve doçentlik başlatıcıda ve Ctrl+K'da bulunuyor", () => {
+    const sayfalar = osSayfalari(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
+    assert.ok(sayfalar.includes("/dashboard/guidelines"));
+    assert.ok(sayfalar.includes("/dashboard/associate-professorship"));
+    assert.equal(etkinUygulama(uygulamalar, "/dashboard/guidelines")?.key, "kilavuz");
+  });
+
+  test("çalışmanın sekmeleri (kanıt, makale) Çalışmalarım'da kalıyor", () => {
+    assert.equal(etkinUygulama(uygulamalar, "/dashboard/editor/abc/kanit")?.key, "tez");
+    assert.equal(etkinUygulama(uygulamalar, "/dashboard/editor/abc/makale")?.key, "tez");
+  });
+});
