@@ -33,6 +33,11 @@ function formatDateTime(dateStr: string | null) {
   return trTarihSaat(dateStr);
 }
 
+
+/* Kaynak PDF'lerini bulan sunucu işlemi dış arşivlerden indirme yapıyor
+   (app/actions/kaynak-pdf.ts, süre bütçesi 40 sn). */
+export const maxDuration = 60;
+
 export default async function ProjectsPage({
   searchParams,
 }: {

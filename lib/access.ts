@@ -111,7 +111,8 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  * saveManuscript, saveNamedVersion, restoreManuscriptVersion,
  * createLiteratureSource, createCitationSource, addManuscriptComment,
  * addScoreEntry, createProject, createShareLink, kanitEkle, kunyeyiDogrula
- * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle.
+ * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
+ * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi.
  * (yapilacakTamamla kapısız: mevcut kaydın güncellenmesi, aşağıda.)
  *
  * Kapı KİMDE YOK, bilerek:

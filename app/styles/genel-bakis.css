@@ -380,3 +380,8 @@
 .asistan-bulgu:has(.asistan-bulgu-eylem) { grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; }
 .asistan-bulgu-eylem { justify-self: end; }
 @media (max-width: 760px) { .asistan-bulgu:has(.asistan-bulgu-eylem) { grid-template-columns: 1fr; } .asistan-bulgu-eylem { justify-self: start; } }
+/* Kaynak PDF'leri: sol karttaki kontrol ve her künyenin PDF satırı */
+.pdf-kontrol { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.pdf-kontrol > .projects-filter-button { align-self: flex-start; }
+.kaynak-pdf-satiri { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.kaynak-pdf-eylemler { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }

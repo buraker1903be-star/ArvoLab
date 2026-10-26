@@ -7,7 +7,11 @@ import AsistanSonuc from "../_components/asistan-sonuc";
 import PanelDrawer from "../_components/panel-drawer";
 import YapilacagaEkle from "../_components/yapilacaga-ekle";
 import type { GecmisKaydi } from "@/lib/ai/gecmis";
-import { ClipboardPaste, History, Sparkles } from "lucide-react";
+import { ClipboardPaste, FileSearch, History, Sparkles } from "lucide-react";
+import KaynakPdfSatiri from "./kaynak-pdf-satiri";
+import { showToast } from "../_components/toast-events";
+import { kaynakPdfleriniBul } from "@/app/actions/kaynak-pdf";
+import { kunyeAnahtari, type KaynakPdfSatiri as PdfSatiri } from "@/lib/kaynak-pdf";
 import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-check";
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
@@ -91,6 +95,7 @@ export default function CitationCheckForm({
   gomulu = false,
   oncekiSonuc = null,
   asistanGecmisi = [],
+  kaynakPdfleri = [],
 }: {
   projects: Project[];
   asistanAcik: boolean;
@@ -109,6 +114,8 @@ export default function CitationCheckForm({
   oncekiSonuc?: (CheckResult & { tarih: string }) | null;
   /** Bu çalışmanın kayıtlı asistan yorumları (penceredeki "Geçmiş sorgular"). */
   asistanGecmisi?: GecmisKaydi[];
+  /** Bu çalışmanın kaynak PDF kayıtları (kaynak_pdfleri). */
+  kaynakPdfleri?: PdfSatiri[];
 }) {
   const router = useRouter();
   // Bir çalışmadan gelindiyse çalışma hazır seçili gelir.
@@ -184,6 +191,15 @@ export default function CitationCheckForm({
   const [yorumAcik, setYorumAcik] = useState(false);
   /* Asistan penceresinde gösterilen: yeni yorum (null) ya da geçmiş bir sorgu. */
   const [gecmisGoster, setGecmisGoster] = useState<GecmisKaydi | null>(null);
+  /* Künye anahtarı → PDF kaydı. Sunucudan gelenle başlar, işlemlerle anında güncellenir. */
+  const [pdfler, setPdfler] = useState<Map<string, PdfSatiri>>(() => new Map(kaynakPdfleri.map((p) => [p.kunye_anahtari, p])));
+  const [pdfIlerleme, setPdfIlerleme] = useState<{ bitti: number; toplam: number } | null>(null);
+  const pdfGuncelle = (satirlar: PdfSatiri[]) =>
+    setPdfler((onceki) => {
+      const yeni = new Map(onceki);
+      for (const satir of satirlar) yeni.set(satir.kunye_anahtari, satir);
+      return yeni;
+    });
 
   // zorla=true: kayıtlı cevap atlanır, modele yeniden sorulur.
   function yorumlat(zorla: boolean) {
@@ -231,6 +247,45 @@ export default function CitationCheckForm({
     });
   }
 
+  /*
+    KAYNAK PDF'LERİNİ BUL: denetlenmiş her künye için açık erişim PDF'i
+    aranır ve indirilir (sunucuda, parça parça). Zaten dosyası olanlar
+    atlanır; bu turda dizine bakılmamış künyeler de atlanır — DOI'si
+    bilinmeden "PDF yok" demek yanlış olurdu.
+  */
+  async function pdfleriBul() {
+    if (!result || !projectId) return;
+    const kuyruk = result.references
+      .map((kunye) => {
+        const dogrulama = dogrulamaHaritasi.get(kunye.raw);
+        return { kunye: kunye.raw, doi: dogrulama?.bestMatch?.doi ?? null, dogrulama: dogrulama?.status ?? null };
+      })
+      .filter((k) => k.dogrulama !== null)
+      .filter((k) => {
+        const mevcut = pdfler.get(kunyeAnahtari(k.kunye));
+        return mevcut?.durum !== "indirildi" && mevcut?.durum !== "yuklendi";
+      });
+    if (!kuyruk.length) {
+      showToast("success", "Bakılacak yeni kaynak yok; PDF'i olanlar hazır.");
+      return;
+    }
+    setPdfIlerleme({ bitti: 0, toplam: kuyruk.length });
+    try {
+      for (let i = 0; i < kuyruk.length; i += 3) {
+        const sonuc = await kaynakPdfleriniBul(projectId, kuyruk.slice(i, i + 3));
+        if (sonuc.error) {
+          showToast("error", sonuc.error);
+          return;
+        }
+        pdfGuncelle(sonuc.satirlar ?? []);
+        setPdfIlerleme({ bitti: Math.min(i + 3, kuyruk.length), toplam: kuyruk.length });
+      }
+      router.refresh();
+    } finally {
+      setPdfIlerleme(null);
+    }
+  }
+
   async function handleCheck(kaynakcayiMetindenAl = false) {
     setLoading(true);
     setError(null);
@@ -272,6 +327,19 @@ export default function CitationCheckForm({
   const atifOlculdu = (result?.citations?.length ?? 0) > 0;
   const atifsizKaynak = result?.crossCheck.referencesWithoutCitation ?? [];
   const kaynaksizAtif = result?.crossCheck.citationsWithoutReference ?? [];
+
+  /* Sol karttaki PDF özeti: kaynakçadaki künyelerin PDF durumları. */
+  const pdfDurumlari = (result?.references ?? []).map((kunye) => pdfler.get(kunyeAnahtari(kunye.raw))?.durum ?? null);
+  const pdfSay = (...durumlar: (string | null)[]) => pdfDurumlari.filter((d) => durumlar.includes(d)).length;
+  const pdfOzeti = pdfDurumlari.some(Boolean)
+    ? [
+        `${pdfSay("indirildi", "yuklendi")}/${pdfDurumlari.length} kaynağın PDF'i hazır`,
+        pdfSay("bulunamadi", "erisilemedi") ? `${pdfSay("bulunamadi", "erisilemedi")} kaynağın PDF'ini siz yükleyin` : "",
+        pdfSay("kayit_yok") ? `${pdfSay("kayit_yok")} künye dizinde yok` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "Açık erişimli PDF'ler bulunup indirilir; ücretli kaynakların PDF'ini kendiniz yüklersiniz.";
 
   /* Sayfada sonuçların altında; pencerede sol sütunun ikinci kartı. */
   const asistanBolumu = result ? (
@@ -533,6 +601,15 @@ export default function CitationCheckForm({
                         </div>
                       );
                     })()}
+                    {projectId ? (
+                      <KaynakPdfSatiri
+                        projectId={projectId}
+                        kunye={reference.raw}
+                        doi={eslesme?.doi ?? null}
+                        satir={pdfler.get(kunyeAnahtari(reference.raw)) ?? null}
+                        onGuncelle={(satir) => pdfGuncelle([satir])}
+                      />
+                    ) : null}
                   </article>
                 );
               })}
@@ -614,6 +691,26 @@ export default function CitationCheckForm({
                 </div>
               </PanelDrawer>
             </div>
+
+            {/*
+              PDF KONTROLÜ: kaynakların uydurma olmadığını ve ulaşılabildiğini
+              göstermek için her künyenin PDF'i. Özet satırı öğrencinin ne
+              yapması gerektiğini sayıyla söylüyor.
+            */}
+            {result && projectId ? (
+              <div className="pdf-kontrol">
+                <button
+                  type="button"
+                  className="projects-filter-button"
+                  disabled={pdfIlerleme !== null || loading}
+                  onClick={() => void pdfleriBul()}
+                >
+                  <FileSearch size={16} aria-hidden="true" />
+                  {pdfIlerleme ? `PDF'ler aranıyor… ${pdfIlerleme.bitti}/${pdfIlerleme.toplam}` : "Kaynak PDF'lerini bul"}
+                </button>
+                <p className="hint">{pdfOzeti}</p>
+              </div>
+            ) : null}
           </div>
 
           {/*
