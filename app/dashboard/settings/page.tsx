@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
-import { Cpu, Download, KeyRound, Save, Sparkles, Trash2, UserRound } from "lucide-react";
+import { Cpu, Download, KeyRound, Save, Sparkles, Trash2 } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
-import { ADMIN_ROLES, ROLE_LABELS } from "@/lib/project-labels";
+import { ADMIN_ROLES, ROLE_LABELS, STAFF_ROLES } from "@/lib/project-labels";
+import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
+import PanelDrawer from "../_components/panel-drawer";
 import { aiKurulumu, aiKurulumSorunu } from "@/lib/ai/saglayici";
 import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
 import { KREDI_SATIN_ALMA_ADRESI } from "@/lib/ai/kredi-karari";
@@ -76,191 +78,192 @@ export default async function SettingsPage() {
   const kurulum = icEkip ? aiKurulumu() : null;
   const sunucu = kurulum ? (() => { try { return new URL(kurulum.tabanUrl).host; } catch { return kurulum.tabanUrl; } })() : null;
 
+  /*
+    TEK EKRAN, İKİ KART (26.10.2026, diğer modüllerle aynı düzen). Eskiden
+    altı kart alt alta duruyordu; kredisine bakmaya gelen kullanıcı şifre
+    ve hesap silme bölümlerinin arasından kaydırıyordu. Solda kim olduğu
+    ve aboneliği, sağda hesabıyla yapabildikleri: her biri tek satır,
+    işlemi pencerede. Geri dönüşü olmayan hesap silme yine en sonda.
+
+    Asistan sunucusu bilgisi PERSONEL GÖRÜNÜMÜNDE: iç ekip öğrenci
+    düzenini önizlerken görmemeli (lib/onizleme.ts).
+  */
+  const gorunum = await sayfaGorunumu({
+    rol: ctx.role ?? undefined,
+    personelRolu: ctx.role ? STAFF_ROLES.includes(ctx.role) : false,
+    kurumVar: Boolean(ctx.organizationId),
+  });
+
   return (
-    <main className="dashboard-page">
+    <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Hesap</span>
           <h1>Ayarlar</h1>
-          <p>Profil bilgilerinizi ve şifrenizi buradan yönetin. Rol ve kurum değişiklikleri Sistem Yöneticisi tarafından yapılır.</p>
+          <p>Hesabınız, aboneliğiniz ve verileriniz. Rol ve kurum değişiklikleri Sistem Yöneticisi tarafından yapılır.</p>
         </div>
       </section>
 
-      <LicenseCard access={access} />
+      <section className="gb-sutunlar kaynaklar-ikili" aria-label="Ayarlar">
+        <article className="gb-kart gb-sutun kayan-kart">
+          <header className="gb-kart-bas">
+            <div>
+              <h2>Hesabım</h2>
+              <p>Ad soyadınız kapak sayfasında ve ekip listesinde kullanılır.</p>
+            </div>
+          </header>
 
-      <section className="project-form-card mb-lg">
-        <div className="project-form-heading">
-          <h2>
-            <UserRound size={16} aria-hidden="true" />
-            Profil
-          </h2>
-          <p>Ad soyadınız kapak sayfası ve ekip listesinde kullanılır.</p>
-        </div>
+          <dl className="settings-facts">
+            <div>
+              <dt>E-posta</dt>
+              <dd>{ctx.user.email ?? "—"}</dd>
+            </div>
+            <div>
+              <dt>Rol</dt>
+              <dd>{ctx.role ? ROLE_LABELS[ctx.role] : "—"}</dd>
+            </div>
+            <div>
+              <dt>Kurum</dt>
+              <dd>{organizationName ?? "Kuruma bağlı değil"}</dd>
+            </div>
+          </dl>
 
-        <dl className="settings-facts">
-          <div>
-            <dt>E-posta</dt>
-            <dd>{ctx.user.email ?? "—"}</dd>
-          </div>
-          <div>
-            <dt>Rol</dt>
-            <dd>{ctx.role ? ROLE_LABELS[ctx.role] : "—"}</dd>
-          </div>
-          <div>
-            <dt>Kurum</dt>
-            <dd>{organizationName ?? "Kuruma bağlı değil"}</dd>
-          </div>
-        </dl>
-
-        <ActionForm action={updateMyProfile} className="project-form-grid" successMessage="Profiliniz güncellendi.">
-          <label>
-            <span>Ad soyad</span>
-            <input name="fullName" type="text" defaultValue={profile?.full_name ?? ""} minLength={2} maxLength={120} required />
-          </label>
-          <div className="project-form-actions">
-            <button type="submit" className="projects-primary-button">
-              <Save size={16} aria-hidden="true" />
+          <ActionForm action={updateMyProfile} className="ayar-ad-formu" successMessage="Profiliniz güncellendi.">
+            <label>
+              <span>Ad soyad</span>
+              <input name="fullName" type="text" className="field-control" defaultValue={profile?.full_name ?? ""} minLength={2} maxLength={120} required />
+            </label>
+            <button type="submit" className="projects-primary-button button-compact">
+              <Save size={15} aria-hidden="true" />
               Kaydet
             </button>
-          </div>
-        </ActionForm>
-      </section>
+          </ActionForm>
 
-      {/*
-        Verinin taşınabilir olması hem KVKK'nın istediği bir hak hem güven
-        meselesi: veriyi rehin tutmayan ürün, bırakmak isteyeni de tutar.
-        İndirme bir ROTA (sunucu eylemi değil): tez metinleri megabaytlarca
-        olabiliyor ve sunucu eyleminin yanıt sınırı aşılamaz.
-      */}
-      <section className="project-form-card mb-lg">
-        <div className="project-form-heading">
-          <h2>
-            <Download size={16} aria-hidden="true" />
-            Verilerim
-          </h2>
-          <p>
-            Çalışmalarınız, metinleriniz, kaynaklarınız ve denetim kayıtlarınız tek bir dosyada. Tez metni belge
-            biçiminde (JSON) iner; Word çıktısı için editördeki dışa aktarmayı kullanın.
-          </p>
-        </div>
-        <a className="projects-filter-button" href="/api/hesabim/verilerim" download>
-          <Download size={16} aria-hidden="true" />
-          Verilerimi indir
-        </a>
-      </section>
+          {/*
+            Abonelik kartı ana sayfadakiyle aynı (tek kaynak). Bireysel abone
+            "planım ne, ne zaman bitiyor, nereden ödeyeceğim" sorusuyla buraya
+            geliyor.
+          */}
+          <LicenseCard access={access} />
+        </article>
 
-      <section className="project-form-card">
-        <div className="project-form-heading">
-          <h2>
-            <KeyRound size={16} aria-hidden="true" />
-            Şifre değiştir
-          </h2>
-          <p>En az 8 karakter. Şifrenizi değiştirdikten sonra diğer cihazlardaki oturumlarınız açık kalabilir.</p>
-        </div>
-        <PasswordForm action={changePassword} variant="panel" submitLabel="Şifreyi güncelle" />
-      </section>
-
-      {/*
-        Hesap silme en altta ve iç ekibe hiç gösterilmiyor: founder ya da
-        system_admin hesabı yalnızca kendi verisini değil kurulumu da
-        yöneten hesap (gerekçe app/actions/hesap.ts'te, sunucu tarafı da
-        reddediyor).
-      */}
-      {kredi.goster ? (
-        <section className="project-form-card mt-lg">
-          <div className="project-form-heading">
-            <h2>
-              <Sparkles size={16} aria-hidden="true" />
-              Asistan krediniz
-            </h2>
-            <p>
-              1 kredi = 1.000 karakter (sorduğunuz ve asistanın yanıtladığı metin birlikte).
-              Aylık hak her ayın başında yenilenir ve devretmez; satın alınan bakiye yanmaz.
-            </p>
-          </div>
-          <dl className="ai-kurulum">
+        <article className="gb-kart gb-sutun kayan-kart">
+          <header className="gb-kart-bas">
             <div>
-              <dt>Bu ay kalan</dt>
-              <dd>{sayi(kredi.aylikKalan)} / {sayi(kredi.aylikLimit)} kredi</dd>
+              <h2>Güvenlik ve veriler</h2>
+              <p>Şifreniz, verilerinizin bir kopyası ve asistan kullanımınız.</p>
             </div>
-            <div><dt>Satın alınan bakiye</dt><dd>{sayi(kredi.ekBakiye)} kredi</dd></div>
-            <div><dt>Kullanılabilir</dt><dd>{sayi(kredi.toplam)} kredi</dd></div>
-          </dl>
-          {kredi.tukendi ? (
-            <p className="tone-text" data-tone="danger">
-              Krediniz bitti; asistan yeni çalışma yapmıyor. Aylık hak ayın başında yenilenir.
-              Beklemek istemiyorsanız kurum yöneticiniz{" "}
-              <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">ArvoOS panelinden</a>{" "}
-              ek kredi satın alabilir.
-            </p>
-          ) : kredi.ekBakiye === 0 && kredi.oran >= 80 ? (
-            <p className="tone-text" data-tone="warning">
-              Aylık hakkınızın %{kredi.oran}&apos;i kullanıldı. Hak dolduğunda asistan durur; kurum
-              yöneticiniz{" "}
-              <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">ArvoOS panelinden</a>{" "}
-              ek kredi satın alarak sürdürebilir.
-            </p>
-          ) : null}
-        </section>
-      ) : null}
+          </header>
 
-      {icEkip && kurulum ? (
-        <section className="project-form-card mt-lg">
-          <div className="project-form-heading">
-            <h2>
-              <Cpu size={16} aria-hidden="true" />
-              Asistan sunucusu
-            </h2>
-            <p>Yalnızca iç ekip görür. Değişken eklendikten sonra yeniden dağıtım gerekir; burada eski değer görünüyorsa dağıtım yapılmamıştır.</p>
-          </div>
-          <dl className="ai-kurulum">
-            <div><dt>Sunucu</dt><dd>{sunucu}</dd></div>
-            <div><dt>Model</dt><dd>{kurulum.model}</dd></div>
+          <ul className="ayar-listesi">
+            <li className="ayar-satir">
+              <KeyRound size={18} aria-hidden="true" />
+              <span className="ayar-govde">
+                <b>Şifre</b>
+                <small>En az 8 karakter. Değiştirdikten sonra diğer cihazlardaki oturumlarınız açık kalabilir.</small>
+              </span>
+              <PanelDrawer
+                triggerLabel="Değiştir"
+                triggerClassName="projects-filter-button button-compact"
+                kicker="Güvenlik"
+                title="Şifrenizi değiştirin"
+                description="Yeni şifreniz en az 8 karakter olmalı."
+              >
+                <PasswordForm action={changePassword} variant="panel" submitLabel="Şifreyi güncelle" />
+              </PanelDrawer>
+            </li>
+
             {/*
-              Durum yerine SEBEP yazılıyor: "tanımsız — asistan kapalı"
-              yöneticiyi anahtara baktırıyordu, oysa sorun adresin
-              okunamaması da olabiliyor (şemasız adres, kaçak boşluk).
-              Yöneticinin baktığı yer burası; düzeltmesi gereken değişkenin
-              adı da burada geçmeli.
+              Verinin taşınabilir olması hem KVKK'nın istediği bir hak hem güven
+              meselesi. İndirme bir ROTA (sunucu eylemi değil): tez metinleri
+              megabaytlarca olabiliyor ve sunucu eyleminin yanıt sınırı aşılamaz.
             */}
-            <div>
-              <dt>Durum</dt>
-              <dd>{aiKurulumSorunu() ?? "asistan açık"}</dd>
-            </div>
-          </dl>
-        </section>
-      ) : null}
+            <li className="ayar-satir">
+              <Download size={18} aria-hidden="true" />
+              <span className="ayar-govde">
+                <b>Verilerim</b>
+                <small>Çalışmalarınız, metinleriniz, kaynaklarınız ve denetim kayıtlarınız tek dosyada (JSON). Word çıktısı için editördeki dışa aktarmayı kullanın.</small>
+              </span>
+              <a className="projects-filter-button button-compact" href="/api/hesabim/verilerim" download>
+                İndir
+              </a>
+            </li>
 
-      {/*
-        HESAP SİLME EN SONDA.
+            {/*
+              AI kredisi: kullanıcı durumu yalnızca %80 uyarısında ya da hak
+              bitince öğreniyordu. Okunamazsa satır hiç çizilmiyor: "0 kredi"
+              yazmak, hakkı olmayanla ölçümü kopmuş olanı aynı göstermek olurdu.
+            */}
+            {kredi.goster ? (
+              <li className="ayar-satir">
+                <Sparkles size={18} aria-hidden="true" />
+                <span className="ayar-govde">
+                  <b>Asistan krediniz</b>
+                  <small>
+                    Bu ay {sayi(kredi.aylikKalan)} / {sayi(kredi.aylikLimit)} kredi kaldı · satın alınan bakiye {sayi(kredi.ekBakiye)} ·
+                    kullanılabilir {sayi(kredi.toplam)}. 1 kredi = 1.000 karakter; aylık hak ayın başında yenilenir, satın
+                    alınan bakiye yanmaz.
+                  </small>
+                  {kredi.tukendi ? (
+                    <small className="tone-text" data-tone="danger">
+                      Krediniz bitti; asistan yeni çalışma yapmıyor. Kurum yöneticiniz{" "}
+                      <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">ArvoOS panelinden</a> ek
+                      kredi satın alabilir.
+                    </small>
+                  ) : kredi.ekBakiye === 0 && kredi.oran >= 80 ? (
+                    <small className="tone-text" data-tone="warning">
+                      Aylık hakkınızın %{kredi.oran}&apos;i kullanıldı. Kurum yöneticiniz{" "}
+                      <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">ArvoOS panelinden</a> ek
+                      kredi satın alabilir.
+                    </small>
+                  ) : null}
+                </span>
+              </li>
+            ) : null}
 
-        Sayfanın ORTASINDA duruyordu: kredisine ya da asistan
-        sunucusuna bakmaya gelen kullanıcı, yolunun üstünde hesabını
-        kalıcı silen bir bölümle karşılaşıyordu. Geri dönüşü olmayan
-        eylem, rutin bilgilerin arasına değil sonuna konur —
-        Doçentlik ve Kılavuzlar sayfalarında yönetim araçlarının
-        sonda durması da aynı kural.
-      */}
-      {!icEkip ? (
-        <section className="project-form-card mt-lg">
-          <div className="project-form-heading">
-            <h2>
-              <Trash2 size={16} aria-hidden="true" />
-              Hesabımı sil
-            </h2>
-            <p>
-              Hesabınızı ve ArvoLab&apos;daki bütün verilerinizi kalıcı olarak silmek istiyorsanız
-              buradan başlatabilirsiniz. Silme hemen olmaz; vazgeçmek için süreniz olur.
-            </p>
-          </div>
-          <HesapSilmeFormu
-            action={hesapSilmeTalebi}
-            eposta={ctx.user.email ?? ""}
-            bireysel={access.kind === "individual"}
-          />
-        </section>
-      ) : null}
+            {/*
+              Etkin asistan sunucusu: yalnızca iç ekip, personel görünümünde.
+              Müşteriye hangi modeli kullandığımız söylenmez; ANAHTAR
+              GÖSTERİLMİYOR, yalnızca durum. Durum yerine SEBEP yazılıyor:
+              sorun anahtar değil adres de olabiliyor.
+            */}
+            {icEkip && gorunum.personel && kurulum ? (
+              <li className="ayar-satir">
+                <Cpu size={18} aria-hidden="true" />
+                <span className="ayar-govde">
+                  <b>Asistan sunucusu</b>
+                  <small>
+                    {sunucu} · {kurulum.model} · {aiKurulumSorunu() ?? "asistan açık"}. Değişken eklendikten sonra yeniden
+                    dağıtım gerekir.
+                  </small>
+                </span>
+              </li>
+            ) : null}
 
+            {/*
+              HESAP SİLME EN SONDA ve iç ekibe gösterilmiyor (founder ya da
+              system_admin hesabı kurulumu da yönetiyor; sunucu da reddediyor).
+            */}
+            {!icEkip ? (
+              <li className="ayar-satir" data-tone="danger">
+                <Trash2 size={18} aria-hidden="true" />
+                <span className="ayar-govde">
+                  <b>Hesabımı sil</b>
+                  <small>Hesabınız ve bütün verileriniz kalıcı silinir. Silme hemen olmaz; vazgeçmek için süreniz olur.</small>
+                </span>
+                <PanelDrawer
+                  triggerLabel="Sil"
+                  triggerClassName="projects-filter-button button-compact button-danger"
+                  kicker="Hesap"
+                  title="Hesabımı sil"
+                  description="Hesabınızı ve ArvoLab'daki bütün verilerinizi kalıcı olarak silme talebi. Silme hemen olmaz; vazgeçmek için süreniz olur."
+                >
+                  <HesapSilmeFormu action={hesapSilmeTalebi} eposta={ctx.user.email ?? ""} bireysel={access.kind === "individual"} />
+                </PanelDrawer>
+              </li>
+            ) : null}
+          </ul>
+        </article>
+      </section>
     </main>
   );
 }

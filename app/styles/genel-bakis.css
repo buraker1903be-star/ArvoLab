@@ -457,7 +457,7 @@
 .kayan-kart { overflow-y: auto; scrollbar-width: thin; align-items: flex-start; }
 /* Düğmeler ve formlar sola yaslı kalır (sütun esnek kutusu onları tam
    genişliğe geriyordu); listeler, metin ve bloklar kartı doldurur. */
-.kayan-kart > :is(header, ul, ol, p, h3, h4, details, section, div, aside, .dashboard-kicker) { align-self: stretch; }
+.kayan-kart > :is(header, ul, ol, dl, form, p, h3, h4, details, section, div, aside, .dashboard-kicker) { align-self: stretch; }
 @media (min-width: 901px) and (min-height: 640px) {
   .gb-tek-ekran .kayan-kart { overflow-y: auto; }
   /* Tek ekranda .gb-liste kalan yüksekliği doldurup kendi içinde kayıyor
@@ -481,3 +481,16 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .partner-serit p { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
 .partner-alt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .partner-serit .partner-not { padding-top: 8px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: var(--fs-micro); }
+/* Ayarlar: ad formu tek satır, sağ kartta ayar satırları (başlık, açıklama, eylem) */
+.ayar-ad-formu { display: flex; align-items: flex-end; gap: 10px; }
+.ayar-ad-formu label { flex: 1; display: grid; gap: 6px; }
+.ayar-ad-formu label > span { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.ayar-listesi { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.ayar-satir { display: flex; align-items: flex-start; gap: 12px; padding: 14px 4px; border-bottom: 1px solid var(--line-soft); }
+.ayar-satir:last-child { border-bottom: 0; }
+.ayar-satir > svg { flex: none; margin-top: 2px; color: var(--muted); }
+.ayar-satir[data-tone="danger"] > svg, .ayar-satir[data-tone="danger"] b { color: var(--danger); }
+.ayar-govde { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ayar-govde b { color: var(--ink); font-size: var(--fs-base); font-weight: 600; }
+.ayar-govde small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.ayar-satir > :is(a, button, .drawer-trigger) { flex: none; }
