@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { LogOut } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ROLE_LABELS } from "@/lib/project-labels";
@@ -13,6 +12,8 @@ import Toaster from "./_components/toaster";
 import NotificationBell from "./_components/notification-bell";
 import ActionErrorToast from "./_components/action-error-toast";
 import NavProgress from "./_components/nav-progress";
+import OsSaat from "./_components/os-saat";
+import KullaniciMenusu from "./_components/kullanici-menusu";
 import { OsDock } from "./_components/os-dock";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
 import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
@@ -59,23 +60,10 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           <HeaderTitle />
           <OsAramaDugmesi />
           <div className="dashboard-header-actions">
+            <OsSaat />
             <NotificationBell />
             <ThemeToggle />
-            <div className="dashboard-user">
-              <span className="dashboard-user-avatar" aria-hidden="true">
-                {initials}
-              </span>
-              <span className="dashboard-user-text">
-                <strong>{userName}</strong>
-                <span>{roleLabel}</span>
-              </span>
-            </div>
-            <form action={logout} className="dashboard-logout-form">
-              <button type="submit" className="dashboard-logout-button">
-                <LogOut size={16} aria-hidden="true" />
-                Çıkış yap
-              </button>
-            </form>
+            <KullaniciMenusu ad={userName} rol={roleLabel} basHarf={initials} cikis={logout} />
           </div>
         </header>
 

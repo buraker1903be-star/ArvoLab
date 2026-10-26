@@ -9,6 +9,7 @@ import "./styles/os-shell.css";
 import "./styles/auth.css";
 import "./styles/workspace.css";
 import "./styles/overlays.css";
+import "./styles/genel-bakis.css";
 import "./styles/print.css";
 
 // Tek yazı ailesi: Apple cihazlarında sistemin SF Pro'su (-apple-system),
