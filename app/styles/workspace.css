@@ -390,9 +390,12 @@
   color: var(--muted);
   font-size: var(--fs-micro);
   font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
 }
+/* Başlıklar BÜYÜK HARFE ÇEVRİLMİYOR: istatistik simgelerinde harfin
+   büyüklüğü anlam taşıyor (t ≠ T, p ≠ P, sd ≠ SD). Eskiden uppercase
+   vardı ve regresyon tablosunda β, Yunan büyük Β'ya dönüp "B" gibi
+   görünüyordu: ham katsayı B ile standart katsayı β aynı başlığı
+   taşıyordu (kurum sahibinin ekonometri denemesinde görüldü). */
 /* İlk sütun yatay kaydırmada yerinde kalır: 9 sütunlu model karşılaştırma
    tablosunda kaydırınca "Model" adı kayboluyor, kullanıcı hangi satıra
    baktığını kaybediyordu. Zemin şart — saydam kalırsa altından kayan
