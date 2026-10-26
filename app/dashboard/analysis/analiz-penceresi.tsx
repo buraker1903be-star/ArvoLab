@@ -12,9 +12,9 @@ import AnalizSecici from "./analiz-secici";
   öğrenciyi bilgilendirmeli … sonucu teze ekleme sırasına koymalı").
 
   Çalışmalarım kartından açılıyor; Kılavuz, Literatür, Kaynakça ve Kanıt
-  matrisi pencereleriyle aynı düzen: solda seçim (program ve yöntem
-  kartları), sağda bu çalışmanın analizleri ve teze ekleme sırası.
-  Yönteme basınca veri yükleme ve hesap İÇ PENCEREDE açılıyor.
+  matrisi pencereleriyle aynı düzen: solda veri, yöntem kartları ve
+  sonuç; sağda bu çalışmanın analizleri ve teze ekleme sırası. Öğrenci
+  başka bir pencereye ya da programa gönderilmiyor.
 
   Hesabı yapay zeka YAPMIYOR: testler ArvoLab'ın istatistik motorunda
   (lib/stats-*.ts) tarayıcıda hesaplanıyor. Asistan sonucu okuyup
@@ -50,7 +50,7 @@ export default async function AnalizPenceresi({
       description={
         sirada
           ? `${sirada} sonuç teze eklenmeyi bekliyor; editörde "Analiz ekle" ile imlecin olduğu yere eklenir.`
-          : "Programı ve yöntemi seçin, Excel ya da CSV dosyanızı yükleyin. Sonucu teze ekleme sırasına koyabilirsiniz."
+          : "Excel ya da CSV dosyanızı yükleyin, analizi seçin; ArvoLab hesaplar, asistan sonucu okur. Sonucu teze ekleme sırasına koyun."
       }
       boy="tam"
       basaridaKapan={false}

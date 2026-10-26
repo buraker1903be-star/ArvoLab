@@ -1,23 +1,23 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ListMinus, ListPlus, Trash2 } from "lucide-react";
 import { analizSirasi, analizSonucuSil, type CalismaAnalizi } from "@/app/actions/analiz-sonuclari";
-import { PROGRAM_KARTLARI, YONTEM_KARTLARI, type AnalizAraci } from "@/lib/analiz-betik";
-import { analizEtiketi, type AnalizTuru } from "@/lib/analiz-turleri";
+import { analizEtiketi } from "@/lib/analiz-turleri";
 import type { BicimKarari } from "@/lib/sayi-bicimi";
 import { trTarih } from "@/lib/tr-time";
-import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import DataAnalyzer from "./data-analyzer";
 
 /*
-  Analiz penceresinin içi (analiz-penceresi.tsx). Solda iki adım:
-  program kartı, yöntem kartı. Yönteme basınca veri yükleme ve hesap iç
-  pencerede açılır; seçilen program yalnızca sonucun yanında verilen
-  betiğin dilini belirler. Sağda bu çalışmanın analizleri: teze
-  eklenecekler başta.
+  Analiz penceresinin içi (analiz-penceresi.tsx). İki kart, tek yer:
+  solda dosya, yöntem kartları, sonuç ve asistanın notları (DataAnalyzer
+  pencere kipi); sağda bu çalışmanın analizleri, teze eklenecekler başta.
+
+  Eskiden solda program ve yöntem kartları vardı, yöntem iç pencerede
+  açılıyor ve her yöntemde dosya yeniden yükleniyordu (aynı gün, ilk
+  sürüm). Öğrenci iki pencere arasında gidip geliyordu.
 */
 export default function AnalizSecici({
   projectId,
@@ -30,10 +30,6 @@ export default function AnalizSecici({
   asistanAcik: boolean;
   analizler: CalismaAnalizi[];
 }) {
-  const [arac, setArac] = useState<AnalizAraci>("spss");
-  const [tur, setTur] = useState<AnalizTuru | null>(null);
-  const program = PROGRAM_KARTLARI.find((k) => k.anahtar === arac)!;
-
   const sirada = analizler.filter((a) => a.teze_eklenecek && !a.teze_eklendi);
   const eklenen = analizler.filter((a) => a.teze_eklendi);
   const digerleri = analizler.filter((a) => !a.teze_eklenecek && !a.teze_eklendi);
@@ -41,63 +37,7 @@ export default function AnalizSecici({
   return (
     <div className="pencere-iki-kart">
       <section className="pencere-kart">
-        <h3 className="pencere-kart-baslik">1. Program</h3>
-        <div className="analiz-kartlari" data-boy="program">
-          {PROGRAM_KARTLARI.map((k) => (
-            <button
-              key={k.anahtar}
-              type="button"
-              className="analiz-karti"
-              aria-pressed={k.anahtar === arac}
-              disabled={k.desteklenmiyor}
-              title={k.desteklenmiyor ? k.aciklama : undefined}
-              onClick={() => k.anahtar !== "ansys" && setArac(k.anahtar)}
-            >
-              <b>{k.ad}</b>
-              {k.desteklenmiyor ? <small>Desteklenmiyor</small> : null}
-            </button>
-          ))}
-        </div>
-        {/* Seçili programın ne verdiği tek satırda; ANSYS'in neden kapalı olduğu da burada okunur. */}
-        <p className="hint">{program.aciklama} ANSYS mühendislik simülasyonudur, ArvoLab çalıştıramaz.</p>
-
-        <h3 className="pencere-kart-baslik">2. Yöntem</h3>
-        <div className="analiz-kartlari">
-          {YONTEM_KARTLARI.map((k) => (
-            <button key={k.tur} type="button" className="analiz-karti" onClick={() => setTur(k.tur)}>
-              <b>{k.ad}</b>
-              <small>{k.aciklama}</small>
-            </button>
-          ))}
-        </div>
-
-        {/*
-          Tek iç pencere, seçilen yöntemle açılır. key= ile her seçimde
-          yeniden kurulur: önceki yöntemin değişken seçimi ve sonucu yeni
-          yöntemin altında kalmasın (React 19: etkide setState yok).
-        */}
-        <PanelDrawer
-          tetiksiz
-          triggerLabel="Analiz"
-          acik={tur !== null}
-          onAcikDegis={(acik) => {
-            if (!acik) setTur(null);
-          }}
-          boy="tam"
-          kicker={`${program.ad} · ${calisma.title}`}
-          title={tur ? analizEtiketi(tur) : "Analiz"}
-          description="Dosyanızı yükleyin, değişkenleri seçin, analizi çalıştırın. Asistan sonucu okuyup eksikleri söyler; sonucu teze ekleme sırasına koyabilirsiniz."
-          basaridaKapan={false}
-        >
-          {tur ? (
-            <DataAnalyzer
-              key={`${arac}-${tur}`}
-              calismalar={[calisma]}
-              secilenCalisma={projectId}
-              pencere={{ arac, tur, asistanAcik }}
-            />
-          ) : null}
-        </PanelDrawer>
+        <DataAnalyzer calismalar={[calisma]} secilenCalisma={projectId} pencere={{ asistanAcik }} />
       </section>
 
       <section className="pencere-kart pencere-sonuc" aria-live="polite">

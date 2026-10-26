@@ -28,7 +28,7 @@ import { formatP, hesaplanabilir, isSignificant, formatNumber } from "@/lib/apa-
 import { ANALIZ_ETIKETLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
-import { analizBetigi, ARAC_ADI, type AnalizAraci, type BetikSecimi } from "@/lib/analiz-betik";
+import { analizBetigi, ARAC_ADI, PROGRAM_KARTLARI, YONTEM_KARTLARI, type AnalizAraci, type BetikSecimi } from "@/lib/analiz-betik";
 import AsistanSonuc from "@/app/dashboard/_components/asistan-sonuc";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { elemeNotu, eslesenSatirlar, sayisalSutun } from "@/lib/veri-eslestirme";
@@ -105,12 +105,20 @@ export default function DataAnalyzer({
   /* Çalışma merkezinden gelindiyse sonuç o çalışmaya kaydedilsin. */
   secilenCalisma?: string;
   /*
-    Çalışmalarım kartının Analiz penceresi (analiz-penceresi.tsx): yöntem
-    ve program kartla seçilmiş, çalışma sabit. Sonuçta seçilen programın
-    betiği, asistan yorumu ve "Teze ekleme sırasına koy" çıkar; sayfadaki
-    kapsamlı rapor ve çalışma seçici gizlenir (pencere tek işe odaklı).
+    Çalışmalarım kartının Analiz penceresi (analiz-penceresi.tsx). Her şey
+    TEK YERDE: dosya bir kez yüklenir, yöntem kartla seçilir, sonuç
+    hesaplanınca asistan kendiliğinden okur, "Teze ekleme sırasına koy"
+    ile sıraya girer. Çalışma sabit; sayfadaki kapsamlı rapor ve çalışma
+    seçici gizlenir.
+
+    Eskiden (ilk sürüm, aynı gün) önce program (SPSS/R/Python) sonra yöntem
+    seçiliyor, yöntem iç pencerede açılıyor ve her yöntemde dosya yeniden
+    yükleniyordu. Kurum sahibi: "öğrencileri oraya buraya yönlendirmek
+    istemiyorum". Program seçimi öğrenciye "analizi o programda yapacaksın"
+    izlenimi veriyordu; oysa hesap burada yapılıyor. Betik artık sonucun
+    altında isteğe bağlı, kapalı bir bölüm.
   */
-  pencere?: { arac: AnalizAraci | null; tur: AnalizTuru; asistanAcik: boolean };
+  pencere?: { asistanAcik: boolean };
 }) {
   const router = useRouter();
   const [dataset, setDataset] = useState<ParsedDataset | null>(null);
@@ -123,7 +131,7 @@ export default function DataAnalyzer({
     yalnızca SPSS yapıştırma aracı kılavuza uyuyordu ve bu motor
     APA'ya sabitti: aynı ekranda iki farklı biçim üretiliyordu.
   */
-  const [analysisType, setAnalysisType] = useState<AnalysisType>(pencere?.tur ?? "descriptives");
+  const [analysisType, setAnalysisType] = useState<AnalysisType>("descriptives");
   const [varA, setVarA] = useState("");
   const [varB, setVarB] = useState("");
   const [groupVar, setGroupVar] = useState("");
@@ -227,26 +235,27 @@ export default function DataAnalyzer({
   */
   const [yorum, setYorum] = useState<AnalizDenetimYaniti | null>(null);
   const [yorumBekleniyor, yorumuBaslat] = useTransition();
-  const yorumlat = useCallback(
-    (zorla: boolean) => {
+  const yorumIste = useCallback(
+    (baslik: string, zorla: boolean) => {
       const metin = sonucKutusu.current?.innerText?.trim();
-      if (!metin || !calisanAnaliz) return;
+      if (!metin) return;
       yorumuBaslat(async () => {
         setYorum(null);
         setYorum(
           await analizDenetle({
             istatistikMetni: metin,
             projectId: kayitCalismasi || null,
-            yontem: calisanAnaliz.baslik,
+            yontem: baslik,
             zorla,
           }),
         );
       });
     },
-    [calisanAnaliz, kayitCalismasi],
+    [kayitCalismasi],
   );
   const [betikKopyalandi, setBetikKopyalandi] = useState(false);
-  const betik = pencere?.arac && calisanAnaliz ? analizBetigi(pencere.arac, calisanAnaliz.tur, calisanAnaliz.secim) : null;
+  const [betikAraci, setBetikAraci] = useState<AnalizAraci>("spss");
+  const betik = pencere && calisanAnaliz ? analizBetigi(betikAraci, calisanAnaliz.tur, calisanAnaliz.secim) : null;
 
   const [fullReport, setFullReport] = useState<React.ReactNode>(null);
 
@@ -482,20 +491,29 @@ export default function DataAnalyzer({
     setResult(null);
     setKaydedildi(false);
     setYorum(null);
+    const baslik = analizBasligi(analysisType, {
+      varA,
+      varB,
+      groupVar,
+      /* Regresyonda "madde sayısı" yordayıcı sayısıdır; başlık
+         tek kaynaktan üretiliyor (lib/analiz-turleri). */
+      maddeSayisi:
+        analysisType === "regression"
+          ? yordayicilar.filter((c) => c !== varA).length
+          : reliabilityItems.length,
+    });
+    /*
+      ASİSTAN KENDİLİĞİNDEN OKUR (yalnızca pencerede): öğrenci ayrıca
+      düğme aramasın. Sonuç bu olay bittikten sonra çiziliyor; zamanlayıcı
+      çizilmiş metni okusun diye. Hesap hatayla bittiyse sonuç kutusu
+      yoktur ve asistana hiçbir şey gitmez. Aynı sonuç ikinci kez
+      sorulursa kayıtlı cevap gelir, saatlik hak yanmaz.
+    */
+    if (pencere?.asistanAcik) window.setTimeout(() => yorumIste(baslik, false), 0);
     setCalisanAnaliz({
       secim: { varA, varB, groupVar, groupVar2, maddeler: reliabilityItems, yordayicilar: yordayicilar.filter((c) => c !== varA), dosyaAdi: fileName, gruplar: groupLevels },
       tur: analysisType,
-      baslik: analizBasligi(analysisType, {
-        varA,
-        varB,
-        groupVar,
-        /* Regresyonda "madde sayısı" yordayıcı sayısıdır; başlık
-           tek kaynaktan üretiliyor (lib/analiz-turleri). */
-        maddeSayisi:
-          analysisType === "regression"
-            ? yordayicilar.filter((c) => c !== varA).length
-            : reliabilityItems.length,
-      }),
+      baslik,
     });
 
     try {
@@ -1317,15 +1335,18 @@ export default function DataAnalyzer({
       setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi]);
+  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, pencere, yorumIste]);
 
   return (
     <section className={pencere ? "analiz-pencere-govde" : "project-form-card"}>
       {pencere ? (
-        <p className="muted text-sm mb-md">
-          Excel (.xlsx/.xls) ya da CSV dosyanızı yükleyin. Hesap tarayıcınızda yapılır,
-          dosyanız sunucuya gitmez; kaydedilen yalnızca sonuç metnidir.
-        </p>
+        <>
+          <h3 className="pencere-kart-baslik">Veriniz</h3>
+          <p className="muted text-sm mb-md">
+            Excel (.xlsx/.xls) ya da CSV dosyanızı yükleyin; analizi ArvoLab yapar. Hesap tarayıcınızda
+            yapılır, dosyanız sunucuya gitmez; kaydedilen yalnızca sonuç metnidir.
+          </p>
+        </>
       ) : (
       <div className="project-form-heading">
         <h2>Veri Yükle ve Analiz Et</h2>
@@ -1424,7 +1445,35 @@ export default function DataAnalyzer({
             Veya Belirli Bir Test Seçin
           </h3>
           )}
+          {/* Pencerede yöntem kartla seçilir; dosya yüklü kalır, yöntem değiştirmek tek dokunuş. */}
+          {pencere ? (
+            <>
+              <h3 className="pencere-kart-baslik">Hangi analiz?</h3>
+              <div className="analiz-kartlari">
+                {YONTEM_KARTLARI.map((k) => (
+                  <button
+                    key={k.tur}
+                    type="button"
+                    className="analiz-karti"
+                    aria-pressed={k.tur === analysisType}
+                    onClick={() => {
+                      setAnalysisType(k.tur);
+                      setResult(null);
+                      setResultError(null);
+                      setCalisanAnaliz(null);
+                      setKaydedildi(false);
+                      setYorum(null);
+                    }}
+                  >
+                    <b>{k.ad}</b>
+                    <small>{k.aciklama}</small>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
           <div className="project-form-grid">
+            {pencere ? null : (
             <label>
               <span>Analiz türü</span>
               <select value={analysisType} onChange={(e) => setAnalysisType(e.target.value as AnalysisType)}>
@@ -1435,6 +1484,7 @@ export default function DataAnalyzer({
                 ))}
               </select>
             </label>
+            )}
 
             {(analysisType === "ttest" || analysisType === "anova" || analysisType === "chisquare" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "ikiyonluanova") && (
               <label>
@@ -1583,15 +1633,6 @@ export default function DataAnalyzer({
                       <ListPlus size={14} aria-hidden="true" />
                       {kaydediliyor ? "Kaydediliyor…" : "Teze ekleme sırasına koy"}
                     </button>
-                    <button
-                      type="button"
-                      className="projects-filter-button button-compact"
-                      onClick={() => sonucuKaydet(false)}
-                      disabled={kaydediliyor}
-                    >
-                      <Save size={14} aria-hidden="true" />
-                      Yalnızca kaydet
-                    </button>
                   </>
                 ) : null}
                 {!pencere && calisanAnaliz && !kaydedildi ? (
@@ -1623,23 +1664,73 @@ export default function DataAnalyzer({
                 {kaydedildi ? (
                   <span className="hint">
                     <Check size={14} className="inline-icon" aria-hidden="true" />
-                    {pencere ? "Kaydedildi — sağdaki listede." : "Kaydedildi — sayfanın altındaki geçmişte."}
+                    {pencere ? "Sırada — editörde “Analiz sonucu ekle” ile tezinize ekleyin." : "Kaydedildi — sayfanın altındaki geçmişte."}
                   </span>
                 ) : null}
               </div>
 
+              {pencere?.asistanAcik && calisanAnaliz ? (
+                <div className="asistan-kart mt-md">
+                  <div className="asistan-kart-ust">
+                    <h3>Asistan ne diyor?</h3>
+                    <p>
+                      Asistan sonucu kendiliğinden okur; eksik etki büyüklüğünü, varsayımları ve
+                      raporlamada dikkat edilecekleri söyler. Bulgunuzu yorumlayan cümle yazmaz,
+                      size verilmeyen sayı üretemez.
+                    </p>
+                  </div>
+                  {yorumBekleniyor ? <p className="hint" role="status">Asistan sonucu okuyor…</p> : null}
+                  {yorum && !yorum.hata && !yorum.bulgular?.length ? (
+                    <p className="hint">Asistanın bu sonuç için ekleyeceği bir not yok.</p>
+                  ) : null}
+                  {/* Kendiliğinden okuma bir sebeple başlamadıysa elle başlatılabilir. */}
+                  {yorum || yorumBekleniyor ? null : (
+                    <button type="button" className="projects-filter-button button-compact" onClick={() => yorumIste(calisanAnaliz.baslik, false)}>
+                      <Sparkles size={14} aria-hidden="true" />
+                      Asistana okut
+                    </button>
+                  )}
+                  <AsistanSonuc
+                    sonuc={yorum}
+                    yetenek="analiz"
+                    etiketler={{ uyari: "Eksik", oneri: "Öneri", bilgi: "Not" }}
+                    bulguBasligi="Asistanın notları"
+                    bekleniyor={yorumBekleniyor}
+                    onYenidenSorgula={() => yorumIste(calisanAnaliz.baslik, true)}
+                    gecmisGizli
+                  />
+                </div>
+              ) : null}
               {/*
-                PROGRAMIN BETİĞİ: aynı analizi seçilen programda yeniden
-                üreten komutlar. ArvoLab o programı çalıştırmıyor; betik
-                öğrencinin kendi bilgisayarında doğrulaması için
-                (lib/analiz-betik.ts).
+                PROGRAMIN BETİĞİ (isteğe bağlı, kapalı): hesap burada
+                yapıldı; bu bölüm yalnızca danışmanı "SPSS çıktısı" isteyen
+                öğrenci için — aynı analizi o programda yeniden üreten
+                komutlar (lib/analiz-betik.ts). Kendisi hesap yapmaz.
               */}
-              {betik && pencere?.arac ? (
-                <details className="analiz-betik mt-sm">
+              {betik ? (
+                <details className="analiz-betik mt-md">
                   <summary>
                     <Code2 size={14} className="inline-icon" aria-hidden="true" />
-                    {ARAC_ADI[pencere.arac]} — aynı analizi programda yeniden üretmek için
+                    Danışmanınız SPSS, R ya da Python çıktısı isterse
                   </summary>
+                  <div className="pencere-dugmeler mt-sm" role="group" aria-label="Program">
+                    {PROGRAM_KARTLARI.filter((k) => !k.desteklenmiyor).map((k) => (
+                      <button
+                        key={k.anahtar}
+                        type="button"
+                        className="projects-filter-button button-compact"
+                        aria-pressed={k.anahtar === betikAraci}
+                        onClick={() => k.anahtar !== "ansys" && setBetikAraci(k.anahtar)}
+                      >
+                        {k.ad}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="hint">
+                    Analiz yukarıda ArvoLab&apos;da yapıldı. Aşağıdaki {ARAC_ADI[betikAraci]} aynı analizi o programda
+                    tekrarlar; sonuçlar aynı çıkar. ANSYS gibi mühendislik simülasyonları veri tablosu analizi değildir,
+                    ArvoLab çalıştıramaz.
+                  </p>
                   <pre>{betik}</pre>
                   <button
                     type="button"
@@ -1655,41 +1746,9 @@ export default function DataAnalyzer({
                     }}
                   >
                     {betikKopyalandi ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-                    {betikKopyalandi ? "Kopyalandı" : "Betiği kopyala"}
+                    {betikKopyalandi ? "Kopyalandı" : "Kopyala"}
                   </button>
                 </details>
-              ) : null}
-
-              {pencere?.asistanAcik && calisanAnaliz ? (
-                <div className="asistan-kart mt-md">
-                  <div className="asistan-kart-ust">
-                    <h3>Asistan yorumu</h3>
-                    <p>
-                      Asistan sonucu okur; eksik etki büyüklüğünü, varsayımları ve
-                      raporlamada dikkat edilecekleri söyler. Bulgunuzu yorumlayan
-                      cümle yazmaz, size verilmeyen sayı üretemez.
-                    </p>
-                  </div>
-                  {yorumBekleniyor ? <p className="hint" role="status">Asistan sonucu okuyor…</p> : null}
-                  {yorum && !yorum.hata && !yorum.bulgular?.length ? (
-                    <p className="hint">Asistanın bu sonuç için ekleyeceği bir not yok.</p>
-                  ) : null}
-                  {yorum || yorumBekleniyor ? null : (
-                    <button type="button" className="projects-filter-button button-compact" onClick={() => yorumlat(false)}>
-                      <Sparkles size={14} aria-hidden="true" />
-                      Asistana yorumlat
-                    </button>
-                  )}
-                  <AsistanSonuc
-                    sonuc={yorum}
-                    yetenek="analiz"
-                    etiketler={{ uyari: "Eksik", oneri: "Öneri", bilgi: "Not" }}
-                    bulguBasligi="Asistanın notları"
-                    bekleniyor={yorumBekleniyor}
-                    onYenidenSorgula={() => yorumlat(true)}
-                    gecmisGizli
-                  />
-                </div>
               ) : null}
               {/*
                 Kaydetmenin ne kaydettiği açıkça yazılıyor: yukarıda
