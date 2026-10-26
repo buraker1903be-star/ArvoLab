@@ -1,4 +1,5 @@
-import { Ban, Building2, MailPlus, Plus, ShieldAlert, ShieldCheck, UserCog } from "lucide-react";
+import Link from "next/link";
+import { Ban, Building2, MailPlus, Plus, Search, ShieldAlert, ShieldCheck, UserCog } from "lucide-react";
 import { getCurrentProfile } from "@/app/actions/profile";
 import {
   createOrganization,
@@ -13,6 +14,9 @@ import { ROLE_LABELS, type UserRole } from "@/lib/project-labels";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import BosDurum from "../_components/bos-durum";
+import EkipFiltreleri from "./ekip-filtreleri";
+import { basHarfler, ekipAdresi, ekipFiltresiOku, ekipSayaclari, ekipSuz } from "@/lib/ekip-listesi";
+import { trTarih, trTarihSaat } from "@/lib/tr-time";
 
 const ROLE_ORDER: UserRole[] = [
   "client",
@@ -24,8 +28,12 @@ const ROLE_ORDER: UserRole[] = [
   "founder",
 ];
 
-export default async function TeamPage() {
-  const profile = await getCurrentProfile();
+export default async function TeamPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [profile, params] = await Promise.all([getCurrentProfile(), searchParams]);
   const isAdmin = profile?.role === "system_admin" || profile?.role === "founder";
 
   if (!isAdmin) {
@@ -44,8 +52,16 @@ export default async function TeamPage() {
     );
   }
 
-  const [{ members, directoryAvailable }, { satirlar: organizations }] = await Promise.all([getAllProfiles(), getOrganizations()]);
+  const [{ members, directoryAvailable, okunamadi }, { satirlar: organizations }] = await Promise.all([getAllProfiles(), getOrganizations()]);
   const assignableRoles = profile?.role === "founder" ? ROLE_ORDER : ROLE_ORDER.filter((r) => r !== "founder");
+  const kurumAdi = new Map(organizations.map((o) => [o.id, o.name]));
+
+  // Arama, süzgeç, sayaçlar ve seçim adres satırında (lib/ekip-listesi.ts).
+  const filtre = ekipFiltresiOku(params, ROLE_ORDER);
+  const gorunen = ekipSuz(members, filtre);
+  const sayaclar = ekipSayaclari(members, filtre);
+  const istenen = typeof params.sec === "string" ? params.sec : null;
+  const secili = gorunen.find((m) => m.id === istenen) ?? gorunen[0] ?? null;
 
   async function handleRoleChange(userId: string, formData: FormData) {
     "use server";
@@ -75,13 +91,13 @@ export default async function TeamPage() {
   }
 
   return (
-    <main className="dashboard-page">
+    <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
           <h1>Ekip Yönetimi</h1>
           <p>
-            Yeni kullanıcıları e-postayla davet edin, rollerini ve kurumlarını belirleyin. Davetsiz kayıt olan
-            kullanıcılar <strong>Üye / Öğrenci</strong> rolüyle başlar ve yalnızca kendi çalışmasını görür.
+            Kullanıcıları davet edin, rollerini ve kurumlarını belirleyin. Davetsiz kayıt olanlar{" "}
+            <strong>Üye / Öğrenci</strong> rolüyle başlar ve yalnızca kendi çalışmasını görür.
           </p>
         </div>
         <div className="cluster">
@@ -167,111 +183,217 @@ export default async function TeamPage() {
         </p>
       ) : null}
 
-      <section className="section">
-        <h2 className="section-title">
-          <UserCog size={16} aria-hidden="true" />
-          Kullanıcılar ({members.length})
-        </h2>
-        {/* Eskiden liste boşken başlığın altı tamamen boş bir <div> kalıyordu. */}
-        {members.length === 0 ? (
-          <BosDurum
-            kompakt
-            ikon={UserCog}
-            aciklama="Listelenecek kullanıcı yok. Yeni kullanıcılar davet edildiğinde ya da kayıt olduğunda burada görünür."
+      {okunamadi ? (
+        <section className="alert" data-tone="danger" role="alert">
+          <strong>Kullanıcı listesi okunamadı.</strong>
+          <p>Bu bir bağlantı ya da yetki arızası; kullanıcılar yerinde duruyor. Sayfayı yenileyin.</p>
+        </section>
+      ) : members.length === 0 ? (
+        /* Eskiden liste boşken başlığın altı tamamen boş bir <div> kalıyordu. */
+        <BosDurum
+          ikon={UserCog}
+          aciklama="Listelenecek kullanıcı yok. Yeni kullanıcılar davet edildiğinde ya da kayıt olduğunda burada görünür."
+        />
+      ) : (
+        <>
+          {/* Sayaçlar filtredir: sayı, basınca açılan listenin uzunluğu. */}
+          <nav className="personel-sayaclar" aria-label="Kullanıcı durumları">
+            {sayaclar.map((sayac) => (
+              <Link
+                key={sayac.durum}
+                href={sayac.href}
+                className="personel-sayac"
+                data-tone={sayac.sayi ? sayac.ton : undefined}
+                aria-current={sayac.secili ? "true" : undefined}
+              >
+                <b>{sayac.sayi}</b>
+                <span>{sayac.etiket}</span>
+              </Link>
+            ))}
+          </nav>
+
+          <EkipFiltreleri
+            key={JSON.stringify(filtre)}
+            filtre={filtre}
+            roller={ROLE_ORDER.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+            kurumlar={organizations}
           />
-        ) : (
-        <div className="projects-list">
-          {members.map((m) => {
-            const isSelf = m.id === profile?.id;
-            return (
-              <article className="project-card" key={m.id}>
-                <div className="project-card-main">
-                  <div>
-                    <div className="pill-row">
-                      <span className="status-pill" data-tone="neutral">{ROLE_LABELS[m.role]}</span>
-                      {m.pendingInvite ? (
-                        <span className="status-pill" data-tone="warning">
-                          Davet bekliyor
-                        </span>
-                      ) : null}
-                      {m.disabled ? (
-                        <span className="status-pill" data-tone="danger">
-                          Erişim durduruldu
-                        </span>
-                      ) : null}
-                    </div>
-                    <h2>
-                      {m.full_name || "İsimsiz kullanıcı"}
-                      {isSelf ? " (siz)" : ""}
-                    </h2>
-                    <p>{m.email ?? <span className="mono">{m.id}</span>}</p>
-                  </div>
+
+          {/*
+            İKİ KART (26.10.2026): solda kullanıcılar, sağda seçili
+            kullanıcının rolü, kurumu ve erişimi. Eskiden her kullanıcı
+            üç formlu uzun bir karttı ve sayfa yüz kullanıcıda
+            kilometrelerce kayıyordu.
+          */}
+          <section className="gb-sutunlar calismalar-ikili" aria-label="Kullanıcılar">
+            <article className="gb-kart gb-sutun">
+              <header className="gb-kart-bas">
+                <div>
+                  <h2>Kullanıcılar</h2>
+                  <p>{gorunen.length === members.length ? `${members.length} kullanıcı` : `${gorunen.length}/${members.length} kullanıcı`}</p>
                 </div>
+              </header>
+              {gorunen.length === 0 ? (
+                <BosDurum
+                  kompakt
+                  ikon={Search}
+                  aciklama="Süzgece uyan kullanıcı yok."
+                  eylem={{ etiket: "Süzgeci temizle", href: "/dashboard/team" }}
+                />
+              ) : (
+                <ul className="gb-liste calisma-secim">
+                  {gorunen.map((m) => (
+                    <li key={m.id}>
+                      <Link
+                        href={ekipAdresi(filtre, m.id)}
+                        className="gb-satir"
+                        aria-current={m.id === secili?.id ? "true" : undefined}
+                        scroll={false}
+                      >
+                        <span className="ekip-avatar" aria-hidden="true">
+                          {basHarfler(m.full_name, m.email)}
+                        </span>
+                        <span className="gb-satir-govde">
+                          <b>
+                            {m.full_name || m.email || "İsimsiz kullanıcı"}
+                            {m.id === profile?.id ? " (siz)" : ""}
+                          </b>
+                          <small>
+                            {[ROLE_LABELS[m.role], m.organization_id ? kurumAdi.get(m.organization_id) : "Kurum yok", m.full_name ? m.email : null]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </small>
+                        </span>
+                        {m.disabled ? (
+                          <span className="status-pill" data-tone="danger">Durduruldu</span>
+                        ) : m.pendingInvite ? (
+                          <span className="status-pill" data-tone="warning">Davet</span>
+                        ) : null}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
 
-                <div className="cluster cluster-lg cluster-spaced">
-                  <ActionForm
-                    action={handleRoleChange.bind(null, m.id)}
-                    className="cluster"
-                    successMessage="Rol kaydedildi."
-                  >
-                    <select name="role" defaultValue={m.role} className="compact-select" disabled={isSelf} aria-label="Rol">
-                      {ROLE_ORDER.map((r) => (
-                        <option key={r} value={r}>
-                          {ROLE_LABELS[r]}
-                        </option>
-                      ))}
-                    </select>
-                    <button type="submit" className="projects-filter-button button-compact" disabled={isSelf}>
-                      Rolü kaydet
-                    </button>
-                  </ActionForm>
+            {secili ? (
+              <article className="gb-kart gb-sutun calisma-durum kayan-kart" aria-label={`${secili.full_name || secili.email || "Kullanıcı"}: ayrıntı`}>
+                <header className="calisma-durum-bas">
+                  <div className="ekip-kimlik">
+                    <span className="ekip-avatar ekip-avatar-buyuk" aria-hidden="true">
+                      {basHarfler(secili.full_name, secili.email)}
+                    </span>
+                    <div>
+                      <span className="calisma-durum-ust">
+                        <span className="status-pill" data-tone="neutral">{ROLE_LABELS[secili.role]}</span>
+                        {secili.pendingInvite ? <span className="status-pill" data-tone="warning">Davet bekliyor</span> : null}
+                        {secili.disabled ? <span className="status-pill" data-tone="danger">Erişim durduruldu</span> : null}
+                      </span>
+                      <h2>
+                        {secili.full_name || "İsimsiz kullanıcı"}
+                        {secili.id === profile?.id ? " (siz)" : ""}
+                      </h2>
+                      <span className="personel-ogrenci">{secili.email ?? <span className="mono">{secili.id}</span>}</span>
+                    </div>
+                  </div>
+                </header>
 
-                  {organizations.length > 0 && (
-                    <ActionForm
-                      action={handleOrgChange.bind(null, m.id)}
-                      className="cluster"
-                      successMessage="Kurum kaydedildi."
-                    >
-                      <select name="organizationId" defaultValue={m.organization_id ?? ""} className="compact-select" aria-label="Kurum">
-                        <option value="">Kurum yok</option>
-                        {organizations.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.name}
+                <dl className="tez-olcumler calisma-olcumler">
+                  <div className="tez-olcu">
+                    <dt>Kurum</dt>
+                    <dd className="ekip-olcu-metin">{secili.organization_id ? kurumAdi.get(secili.organization_id) ?? "Bilinmeyen kurum" : "—"}</dd>
+                    <span>{secili.organization_id ? "Bağlı" : "Kuruma bağlı değil"}</span>
+                  </div>
+                  <div className="tez-olcu">
+                    <dt>Kayıt</dt>
+                    <dd className="ekip-olcu-metin">{trTarih(secili.created_at)}</dd>
+                    <span>{secili.pendingInvite ? "Davetle eklendi" : "Hesap açıldı"}</span>
+                  </div>
+                  <div className="tez-olcu">
+                    <dt>Son giriş</dt>
+                    <dd className="ekip-olcu-metin">{secili.lastSignInAt ? trTarih(secili.lastSignInAt) : "—"}</dd>
+                    <span>
+                      {secili.lastSignInAt
+                        ? trTarihSaat(secili.lastSignInAt)
+                        : directoryAvailable
+                          ? "Hiç giriş yapmadı"
+                          : "Dizin kapalı (sunucu anahtarı yok)"}
+                    </span>
+                  </div>
+                </dl>
+
+                <section className="personel-denetim" aria-label="Rol ve kurum">
+                  <h3 className="calisma-durum-alt">Rol ve kurum</h3>
+                  {secili.id === profile?.id ? (
+                    <p className="muted text-sm">Kendi rolünüzü değiştiremezsiniz; başka bir yöneticiden isteyin.</p>
+                  ) : null}
+                  <ActionForm action={handleRoleChange.bind(null, secili.id)} className="personel-denetim-satir" successMessage="Rol kaydedildi.">
+                    <label className="personel-ata">
+                      <span className="muted text-sm">Rol</span>
+                      <select name="role" defaultValue={secili.role} className="compact-select" disabled={secili.id === profile?.id} aria-label="Rol">
+                        {/* Kurucu rolünü yalnızca kurucu atayabilir; mevcut rol listede kalmalı ki seçim bozulmasın. */}
+                        {(assignableRoles.includes(secili.role) ? assignableRoles : [...assignableRoles, secili.role]).map((r) => (
+                          <option key={r} value={r}>
+                            {ROLE_LABELS[r]}
                           </option>
                         ))}
                       </select>
+                    </label>
+                    <button type="submit" className="projects-filter-button button-compact" disabled={secili.id === profile?.id}>
+                      Rolü kaydet
+                    </button>
+                  </ActionForm>
+                  {organizations.length > 0 ? (
+                    <ActionForm action={handleOrgChange.bind(null, secili.id)} className="personel-denetim-satir" successMessage="Kurum kaydedildi.">
+                      <label className="personel-ata">
+                        <span className="muted text-sm">Kurum</span>
+                        <select name="organizationId" defaultValue={secili.organization_id ?? ""} className="compact-select" aria-label="Kurum">
+                          <option value="">Kurum yok</option>
+                          {organizations.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <button type="submit" className="projects-filter-button button-compact">
                         Kurumu kaydet
                       </button>
                     </ActionForm>
-                  )}
-
-                  {directoryAvailable && !isSelf ? (
-                    <ActionForm
-                      action={handleAccess.bind(null, m.id, m.disabled)}
-                      confirmMessage={
-                        m.disabled
-                          ? `${m.full_name || m.email || "Bu kullanıcı"} için erişim yeniden açılsın mı?`
-                          : `${m.full_name || m.email || "Bu kullanıcı"} için erişim durdurulsun mu? Kullanıcı giriş yapamaz; açık oturumu en geç 1 saat içinde kapanır.`
-                      }
-                      successMessage={m.disabled ? "Erişim yeniden açıldı." : "Erişim durduruldu."}
-                    >
-                      <button
-                        type="submit"
-                        className={m.disabled ? "button-success button-compact" : "button-danger button-compact"}
-                      >
-                        {m.disabled ? <ShieldCheck size={14} aria-hidden="true" /> : <Ban size={14} aria-hidden="true" />}
-                        {m.disabled ? "Erişimi aç" : "Erişimi durdur"}
-                      </button>
-                    </ActionForm>
                   ) : null}
-                </div>
+                </section>
+
+                {directoryAvailable && secili.id !== profile?.id ? (
+                  <section className="personel-denetim ekip-erisim" data-tone={secili.disabled ? undefined : "danger"} aria-label="Erişim">
+                    <h3 className="calisma-durum-alt">Erişim</h3>
+                    <div className="personel-denetim-satir">
+                      <span className="muted text-sm">
+                        {secili.disabled
+                          ? "Kullanıcı giriş yapamıyor. Erişimi açınca kaldığı yerden devam eder; verileri silinmedi."
+                          : "Durdurulursa kullanıcı giriş yapamaz; açık oturumu en geç 1 saat içinde kapanır. Verileri silinmez."}
+                      </span>
+                      <ActionForm
+                        action={handleAccess.bind(null, secili.id, secili.disabled)}
+                        confirmMessage={
+                          secili.disabled
+                            ? `${secili.full_name || secili.email || "Bu kullanıcı"} için erişim yeniden açılsın mı?`
+                            : `${secili.full_name || secili.email || "Bu kullanıcı"} için erişim durdurulsun mu? Kullanıcı giriş yapamaz; açık oturumu en geç 1 saat içinde kapanır.`
+                        }
+                        successMessage={secili.disabled ? "Erişim yeniden açıldı." : "Erişim durduruldu."}
+                      >
+                        <button type="submit" className={secili.disabled ? "button-success button-compact" : "button-danger button-compact"}>
+                          {secili.disabled ? <ShieldCheck size={14} aria-hidden="true" /> : <Ban size={14} aria-hidden="true" />}
+                          {secili.disabled ? "Erişimi aç" : "Erişimi durdur"}
+                        </button>
+                      </ActionForm>
+                    </div>
+                  </section>
+                ) : null}
               </article>
-            );
-          })}
-        </div>
-        )}
-      </section>
+            ) : null}
+          </section>
+        </>
+      )}
     </main>
   );
 }

@@ -26,12 +26,20 @@ export interface TeamMember {
   disabled: boolean;
   /** Davet edildi ama henüz hiç giriş yapmadı. */
   pendingInvite: boolean;
+  /** Son giriş (auth.users); dizin okunamazsa ya da hiç girmediyse null. */
+  lastSignInAt: string | null;
 }
 
 export interface TeamDirectory {
   members: TeamMember[];
   /** false ise e-posta, davet ve erişim durdurma kullanılamaz (sunucu anahtarı yok). */
   directoryAvailable: boolean;
+  /*
+    Profil listesi OKUNAMADI. Eskiden okuma hatası boş liste döndürüyordu
+    ve sayfa "Listelenecek kullanıcı yok" diyordu: yönetici bütün
+    kullanıcıların silindiğini sanabilirdi.
+  */
+  okunamadi?: boolean;
 }
 
 export interface OrganizationOption {
@@ -39,7 +47,7 @@ export interface OrganizationOption {
   name: string;
 }
 
-type AuthUserInfo = { email: string | null; disabled: boolean; pendingInvite: boolean };
+type AuthUserInfo = { email: string | null; disabled: boolean; pendingInvite: boolean; lastSignInAt: string | null };
 
 // E-posta ve erişim durumu auth.users'ta tutulur; yalnızca service role anahtarıyla okunabilir.
 async function loadAuthUsers(): Promise<Map<string, AuthUserInfo> | null> {
@@ -55,6 +63,7 @@ async function loadAuthUsers(): Promise<Map<string, AuthUserInfo> | null> {
           email: user.email ?? null,
           disabled: !!user.banned_until && new Date(user.banned_until).getTime() > now,
           pendingInvite: !!user.invited_at && !user.last_sign_in_at,
+          lastSignInAt: user.last_sign_in_at ?? null,
         });
       }
       if (data.users.length < 200) break;
@@ -82,16 +91,17 @@ export async function getAllProfiles(): Promise<TeamDirectory> {
 
   if (error) {
     console.error(error);
-    return { members: [], directoryAvailable: false };
+    return { members: [], directoryAvailable: false, okunamadi: true };
   }
 
   const members = (data ?? []).map((row) => {
     const info = authUsers?.get(row.id);
     return {
-      ...(row as Omit<TeamMember, "email" | "disabled" | "pendingInvite">),
+      ...(row as Omit<TeamMember, "email" | "disabled" | "pendingInvite" | "lastSignInAt">),
       email: info?.email ?? null,
       disabled: info?.disabled ?? false,
       pendingInvite: info?.pendingInvite ?? false,
+      lastSignInAt: info?.lastSignInAt ?? null,
     };
   });
   return { members, directoryAvailable: authUsers !== null };
