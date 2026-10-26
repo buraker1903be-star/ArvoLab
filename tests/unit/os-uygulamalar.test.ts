@@ -64,7 +64,7 @@ describe("görünürlük", () => {
     /* İç ekibin günde bir kez açtığı sayfalar, öğrencinin her gün
        gördüğü simgelerin arasına girmemeli. */
     const dock = docktakiler(uygulamalar).map((u) => u.key);
-    for (const gizli of ["asistan", "ekip", "olcum"]) {
+    for (const gizli of ["asistan", "ekip"]) {
       assert.ok(!dock.includes(gizli), gizli);
     }
     assert.ok(dock.includes("analiz"));

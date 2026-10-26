@@ -146,7 +146,7 @@ export function labUygulamalari(): OsUygulama[] {
     */
     { key: "asistan", label: "Asistan Kayıtları", href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: KAYIT_ROLLERI },
     { key: "ekip", label: "Ekip Yönetimi", href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ["system_admin", "founder"] },
-    { key: "olcum", label: "Ürün Ölçümü", href: "/dashboard/olcum", ikon: "apps", yollar: ["/dashboard/olcum"], yalnizBaslatici: true, roller: ["system_admin", "founder"] },
+    /* Ürün Ölçümü 26.10.2026'da kaldırıldı (app/dashboard/olcum/page.tsx). */
   ];
 }
 
