@@ -29,6 +29,12 @@ import { trTarih } from "@/lib/tr-time";
 import DanismanaGonder from "./_components/danismana-gonder";
 import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
 
+/*
+  TEK EKRAN KURALI (kurum sahibinin altın kuralı: her modülün ana sayfası
+  tek sayfa, yatay ve dikey kayma yok). Bölümlerim kartı en fazla bu kadar
+  satır çizer; fazlası alt başlıkta söylenir, tam liste editörde.
+*/
+const BOLUM_SATIRI = 5;
 const isActive = (status: string) => status !== "delivered" && status !== "archived";
 
 export default async function DashboardPage() {
@@ -378,12 +384,12 @@ export default async function DashboardPage() {
     : null;
   const sonGonderimMetni = sonGonderim
     ? sonGonderim.acilmaSayisi
-      ? `Son bağlantıyı danışmanınız ${sonGonderim.acilmaSayisi} kez açtı · son ${editedAgo(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu, simdiAn)}`
-      : `Son bağlantı ${editedAgo(sonGonderim.olusturuldu, simdiAn)} oluşturuldu · henüz açılmadı`
+      ? `Danışmanınız ${sonGonderim.acilmaSayisi} kez açtı · son ${editedAgo(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu, simdiAn)}`
+      : `Bağlantı ${editedAgo(sonGonderim.olusturuldu, simdiAn)} gönderildi · henüz açılmadı`
     : null;
 
   return (
-    <main className="dashboard-page gb">
+    <main className="dashboard-page gb gb-tek-ekran">
       {/*
         ANA SAYFA ArvoOS'UN GENEL BAKIŞ DÜZENİNDE (26.10.2026, kurum
         sahibinin isteği: "ArvoOS gibi, bir ürün gibi").
@@ -563,32 +569,41 @@ export default async function DashboardPage() {
                 {tempo.detail}
               </p>
             ) : null}
-          </article>
-
-          {/* Sıradaki TEK iş: kararın kendisi lib/siradaki-is.ts'te ve sınanıyor. */}
-          {sirada ? (
-            <section className="sirada" data-aciliyet={sirada.aciliyet} data-bitti={sirada.bitti ? "true" : undefined}>
-              <span className="sirada-etiket">{sirada.bitti ? "Durum" : "Şimdi"}</span>
-              <div className="sirada-govde">
-                <b>{sirada.baslik}</b>
-                <span>{sirada.aciklama}</span>
+            {/*
+              Sıradaki TEK iş, tez kartının içinde: ayrı bir şerit olarak
+              tek ekran kuralında 70 piksel yiyordu ve "tezim" ile "şimdi
+              ne yapmalıyım" zaten aynı sorunun iki yarısı. Kararın kendisi
+              lib/siradaki-is.ts'te ve sınanıyor.
+            */}
+            {sirada ? (
+              <div className="tez-simdi" data-aciliyet={sirada.aciliyet} data-bitti={sirada.bitti ? "true" : undefined}>
+                <span className="sirada-etiket">{sirada.bitti ? "Durum" : "Şimdi"}</span>
+                <div className="sirada-govde">
+                  <b>{sirada.baslik}</b>
+                  <span>{sirada.aciklama}</span>
+                </div>
+                <Link href={sirada.href} className="projects-primary-button button-compact">
+                  {sirada.eylem}
+                </Link>
               </div>
-              <Link href={sirada.href} className="projects-primary-button">
-                {sirada.eylem}
-              </Link>
-            </section>
-          ) : null}
+            ) : null}
+          </article>
 
           <ListeIzgarasi etiket="Tezim">
             <ListeKarti
               baslik="Bölümlerim"
-              alt={eksikZorunlu.length ? `${eksikZorunlu.length} zorunlu bölümün başlığı yok` : "Müsveddenin bölümleri"}
+              alt={[
+                eksikZorunlu.length ? `${eksikZorunlu.length} zorunlu bölümün başlığı yok` : "Müsveddenin bölümleri",
+                metinBolumleri.length + eksikZorunlu.length > BOLUM_SATIRI ? `ilk ${BOLUM_SATIRI} gösteriliyor` : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
               bos="Henüz bölüm başlığı yok. Editörde başlıklarla bölüm açın; kılavuzunuzun istediği bölümler burada izlenir."
               sayi={metinBolumleri.length + eksikZorunlu.length}
               href={`/dashboard/editor/${resume.id}/write`}
               hrefEtiket="Editörde aç"
             >
-              {metinBolumleri.slice(0, GENEL_BAKIS_SATIR).map((bolum, sira) => (
+              {metinBolumleri.slice(0, BOLUM_SATIRI).map((bolum, sira) => (
                 <ListeSatiri
                   key={`${sira}-${bolum.baslik}`}
                   href={`/dashboard/editor/${resume.id}/write`}
@@ -596,7 +611,7 @@ export default async function DashboardPage() {
                   sag={<span className="gb-sayi">{bolum.sozcuk.toLocaleString("tr-TR")} kelime</span>}
                 />
               ))}
-              {eksikZorunlu.slice(0, Math.max(0, GENEL_BAKIS_SATIR - metinBolumleri.length)).map((bolum) => (
+              {eksikZorunlu.slice(0, Math.max(0, BOLUM_SATIRI - metinBolumleri.length)).map((bolum) => (
                 <ListeSatiri
                   key={`eksik-${bolum}`}
                   href={`/dashboard/editor/${resume.id}/write?teslim=sections`}

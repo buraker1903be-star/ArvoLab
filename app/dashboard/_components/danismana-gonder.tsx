@@ -99,35 +99,30 @@ export default function DanismanaGonder({
             <Link2 size={14} aria-hidden="true" /> {baglanti}
           </p>
           <div className="danisman-dugmeler">
-            <a className="projects-primary-button" href={whatsappAdresi(mesaj)} target="_blank" rel="noopener noreferrer">
-              <MessageCircle size={16} aria-hidden="true" /> WhatsApp
+            <a className="projects-primary-button button-compact" href={whatsappAdresi(mesaj)} target="_blank" rel="noopener noreferrer">
+              <MessageCircle size={15} aria-hidden="true" /> WhatsApp
             </a>
-            <a className="projects-filter-button" href={epostaAdresi(`Tez taslağı: ${baslik}`, mesaj)}>
-              <Mail size={16} aria-hidden="true" /> E-posta
+            <a className="projects-filter-button button-compact" href={epostaAdresi(`Tez taslağı: ${baslik}`, mesaj)}>
+              <Mail size={15} aria-hidden="true" /> E-posta
             </a>
-            <button type="button" className="projects-filter-button" onClick={kopyala}>
-              <Copy size={16} aria-hidden="true" /> Kopyala
+            <button type="button" className="projects-filter-button button-compact" onClick={kopyala}>
+              <Copy size={15} aria-hidden="true" /> Kopyala
             </button>
           </div>
-          <p className="muted text-sm">
-            Bağlantıyı alan herkes metni okuyabilir, düzenleyemez; {GUN} gün sonra kendiliğinden kapanır.
-          </p>
+          <p className="muted text-sm">Alan herkes okuyabilir, düzenleyemez · {GUN} gün geçerli</p>
         </div>
       ) : (
         <div className="danisman-gonder">
-          <button type="button" className="projects-primary-button" onClick={olustur} disabled={bekleniyor}>
-            <Link2 size={16} aria-hidden="true" />
+          <button type="button" className="projects-primary-button button-compact" onClick={olustur} disabled={bekleniyor}>
+            <Link2 size={15} aria-hidden="true" />
             {bekleniyor ? "Hazırlanıyor…" : "Okuma bağlantısı oluştur"}
           </button>
-          <p className="muted text-sm">
-            Danışmanınız giriş yapmadan okur; açtığında size bildirim gelir. WhatsApp ya da e-postayla göndermeniz
-            için mesaj hazırlanır.
-          </p>
+          <p className="muted text-sm">Danışmanınız giriş yapmadan okur; açınca size bildirim gelir.</p>
         </div>
       )}
 
       <div className="danisman-dosyalar">
-        <span className="muted text-sm">ya da dosya olarak:</span>
+        <span className="muted text-sm">Dosya olarak:</span>
         <button type="button" className="projects-filter-button button-compact" onClick={wordIndir} disabled={wordHazirlaniyor}>
           <FileDown size={14} aria-hidden="true" /> {wordHazirlaniyor ? "Hazırlanıyor…" : "Word"}
         </button>
@@ -136,9 +131,7 @@ export default function DanismanaGonder({
         </a>
       </div>
 
-      <p className="danisman-not">
-        Danışmanınızın yorumlarını doğrudan metninize yazması için kurumunuzun ArvoLab kullanması gerekir.
-      </p>
+      <p className="danisman-not">Danışmanın metninize yorum yazması için kurumunuzun ArvoLab kullanması gerekir.</p>
     </article>
   );
 }

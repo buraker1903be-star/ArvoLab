@@ -101,3 +101,24 @@ test("bölüm denetimi istemi: yöntem bölümünde aile maddeleri, yasaklar ve 
   const { kaynak } = makaleIstemi({ tur: "vaka", bolumTuru: "vaka", aile: null, bolumBasligi: "Olgu", bolumMetni: "Metin" });
   assert.match(kaynak, new RegExp(MAKALE_TURLERI.vaka.etiket));
 });
+
+test("tezin adı bölüm sayılmaz: tanınmayan, alt başlıklı üst başlığın yerine çocukları listelenir", () => {
+  const belge = {
+    type: "doc",
+    content: [
+      baslik("TÜRKİYE'DE ENFLASYON VE İŞSİZLİK İLİŞKİSİNİN EKONOMETRİK ANALİZİ"),
+      baslik("Giriş", 2),
+      paragraf("Problem ve amaç burada anlatılıyor."),
+      baslik("Kuramsal Çerçeve", 2),
+      paragraf("Phillips eğrisi literatürü."),
+      baslik("Bulgular"),
+      baslik("BİRİNCİ BÖLÜM: GİRİŞ"),
+      baslik("Alt başlık", 2),
+      paragraf("Tanınan bölüm alt başlığıyla birlikte kalır."),
+    ],
+  };
+  const bolumler = makaleBolumleri(belge);
+  assert.deepEqual(bolumler.map((b) => b.baslik), ["Giriş", "Kuramsal Çerçeve", "Bulgular", "BİRİNCİ BÖLÜM: GİRİŞ"]);
+  assert.equal(bolumler[0].sozcuk, sozcukSayisi("Problem ve amaç burada anlatılıyor."));
+  assert.match(bolumler[3].metin, /Alt başlık\nTanınan bölüm/);
+});
