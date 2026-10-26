@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { FileText, Grid3x3, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
+import { FileText, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
 import ActionForm from "../action-form";
 import KilavuzPenceresi from "./[id]/kilavuz-penceresi";
+import KanitMatrisiPenceresi from "./[id]/kanit/kanit-matrisi-penceresi";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
 import { eksikSatirlari, type EksikTuru, type KartIlerlemesi } from "@/lib/calisma-karti";
@@ -20,8 +21,8 @@ import DeleteProjectButton from "./delete-project-button";
 
   Eskiden ayrı bir "Çalışma merkezi" sayfası vardı; öğrenci için
   kaldırıldı ve geri kalan işleri buraya taşındı: kılavuz penceresi,
-  "Kılavuza göre düzelt", asistanın son bulguları, Kanıt matrisi ve
-  Makale bağlantıları. Personelin çalışma özeti ([id]/page.tsx) aynı
+  "Kılavuza göre düzelt", asistanın son bulguları, Kanıt matrisi
+  penceresi ve Makale bağlantısı. Personelin çalışma özeti ([id]/page.tsx) aynı
   veriyi okuyor; veri aynı kaynaktan (calismaOzeti), sıradaki
   iş aynı kuraldan (lib/siradaki-is.ts), eksik listesi tek bir saf
   fonksiyondan (lib/calisma-karti.ts, eksikSatirlari). Burada ikinci bir
@@ -238,9 +239,7 @@ export default async function CalismaDurumKarti({
             acikBasla={kilavuzAc && !uygulanan}
           />
         )}
-        <Link href={`${merkez}/kanit`} className="projects-filter-button button-compact">
-          <Grid3x3 size={15} aria-hidden="true" /> Kanıt matrisi
-        </Link>
+        <KanitMatrisiPenceresi projectId={calisma.id} />
         {/* Ayda bir yapılan işler menüde; menü yukarı açılıyor, kartın içinde kalıyor. */}
         <details className="kart-menu">
           <summary aria-label={`${calisma.title}: diğer işlemler`}>

@@ -186,5 +186,6 @@ async function hukmuIsle(
   }
   revalidatePath(`/dashboard/editor/${projectId}/kanit`);
   revalidatePath(`/dashboard/editor/${projectId}/makale`);
+  revalidatePath("/dashboard/editor");
   return null;
 }

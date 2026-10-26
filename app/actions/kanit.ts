@@ -42,6 +42,8 @@ const yollar = (projectId: string) => {
   revalidatePath(`/dashboard/editor/${projectId}/kanit`);
   revalidatePath(`/dashboard/editor/${projectId}/makale`);
   revalidatePath(`/dashboard/editor/${projectId}`);
+  // Kanıt matrisi Çalışmalarım'daki karttan da pencere olarak açılıyor.
+  revalidatePath("/dashboard/editor");
 };
 
 /** Veritabanı hatasını kullanıcının anlayacağı cümleye çevirir. */
