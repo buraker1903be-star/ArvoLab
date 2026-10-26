@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { BookOpenCheck, ChevronRight, ExternalLink, Plus, Trash2 } from "lucide-react";
+import { BookOpenCheck, ExternalLink, Plus, Trash2 } from "lucide-react";
 import {
   createLiteratureSource,
   deleteLiteratureSource,
@@ -24,10 +23,14 @@ import { KunyeAlanlari, NotAlani } from "./kaynak-parcalari";
 
   1. Yeni kaynak aramak → solda arama, sağda sonuçlar, yan yana iki kart
      (yalnızca dizin araması; tarama asistanı Literatür sayfasında).
-  2. Elindeki kaynağı eklemek → arama kartının altında; dört alan
-     (başlık, yazar, yıl, DOI), gerisi "Yayın bilgileri" altında.
+  2. Elindeki kaynağı eklemek → "Dizinlerde ara"nın yanında "Manuel
+     kaynak ekle", pencere içinde pencere; dört alan (başlık, yazar,
+     yıl, DOI), gerisi "Yayın bilgileri" altında.
   3. Okuduğunu işaretlemek → kaynağa tıklayınca TEK düğme: sıradaki
      adım ("Okudum", "Metinde kullandım"). Geri almak ikincil.
+
+  Literatür sayfasına bağlantı ve boş liste açıklaması kaldırıldı:
+  arama bu pencerede yapılıyor, boş liste kendini anlatıyor.
 
   Liste tek sıra: önce okunacaklar, sonra okunanlar, en son metinde
   kullanılanlar. Satırın işlemleri satırın içinde; pencere içinde ikinci
@@ -81,39 +84,46 @@ export default async function LiteraturPenceresi({ projectId, projeAdi }: { proj
       ) : null}
 
       {/*
-        İKİ KART YAN YANA: solda arama (ve altında elle ekleme), sağda
-        sonuçlar. Bu çalışmanın kaynakları altta, tam genişlikte.
+        İKİ KART YAN YANA: solda arama (yanında "Manuel kaynak ekle"),
+        sağda sonuçlar. Bu çalışmanın kaynakları altta, tam genişlikte.
       */}
       <LiteraturCalismaAlani
         projeler={[{ id: projectId, title: projeAdi }]}
         asistanAcik={false}
         secilenCalisma={projectId}
         yalnizArama
-        solEk={
-          <details className="form-details pencere-is mt-md">
-            <summary>
-              <Plus size={15} aria-hidden="true" /> Elimdeki kaynağı ekle
-            </summary>
-            <ActionForm className="project-form-grid mt-sm" action={createLiteratureSource} successMessage="Kaynak eklendi.">
+        aramaYaninda={
+          /*
+            Manuel ekleme PENCERE İÇİNDE PENCERE (kurum sahibinin isteği):
+            arama düğmesinin yanında; form arama kartını uzatmıyor ve
+            kaydedince kendiliğinden kapanıyor, Literatür penceresi açık kalıyor.
+          */
+          <PanelDrawer
+            triggerLabel="Manuel kaynak ekle"
+            triggerIcon={<Plus size={16} aria-hidden="true" />}
+            triggerClassName="projects-filter-button"
+            kicker="Literatür"
+            title="Manuel kaynak ekle"
+            description="Elinizdeki kaynağın bilgilerini girin; bu çalışmaya bağlanır."
+          >
+            <ActionForm className="project-form-grid" action={createLiteratureSource} successMessage="Kaynak eklendi.">
               <input type="hidden" name="projectId" value={projectId} />
               <input type="hidden" name="status" value="to_review" />
               <KunyeAlanlari kisa />
-              <div className="project-form-actions project-form-full">
+              <div className="project-form-actions">
                 <button type="submit" className="projects-primary-button">
                   <Plus size={16} aria-hidden="true" /> Ekle
                 </button>
               </div>
             </ActionForm>
-          </details>
+          </PanelDrawer>
         }
       />
 
-      <h3 className="pencere-grup-baslik mt-lg">
-        {kaynaklar.length ? `Bu çalışmanın kaynakları · ${kaynaklar.length}` : "Bu çalışmanın kaynakları"}
-      </h3>
-      {kaynaklar.length === 0 ? <p className="muted text-sm">Henüz kaynak yok. Arama sonuçlarından “Listeme ekle” dediğiniz kaynaklar burada birikir.</p> : null}
       {kaynaklar.length ? (
-        <ul className="kanit-kayitlari">
+        <>
+          <h3 className="pencere-grup-baslik mt-lg">Bu çalışmanın kaynakları · {kaynaklar.length}</h3>
+          <ul className="kanit-kayitlari">
           {kaynaklar.map((kaynak) => {
             const durum = (SIRA.includes(kaynak.status as Durum) ? kaynak.status : "to_review") as Durum;
             const ileri = ILERI[durum];
@@ -181,11 +191,9 @@ export default async function LiteraturPenceresi({ projectId, projeAdi }: { proj
             );
           })}
         </ul>
+        </>
       ) : null}
 
-      <Link href={`/dashboard/literature?calisma=${projectId}`} className="link-accent mt-md kanit-tam-tablo">
-        Literatür sayfası: tarama asistanı ve bütün kaynaklarım <ChevronRight size={14} aria-hidden="true" />
-      </Link>
     </PanelDrawer>
   );
 }

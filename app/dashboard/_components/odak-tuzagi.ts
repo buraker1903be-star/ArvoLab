@@ -32,6 +32,14 @@ export function useOdakTuzagi(kapsayici: RefObject<HTMLElement | null>, acik: bo
       if (event.key !== "Tab") return;
       const kok = kapsayici.current;
       if (!kok) return;
+      /*
+        İÇ İÇE PENCERE: yalnızca EN ÜSTTEKİ açık pencere odağı tutar.
+        Eskiden alttaki pencere, üstteki pencereye geçen odağı "dışarı
+        kaçtı" sanıp geri çekiyordu (Literatür → Manuel kaynak ekle).
+      */
+      const acikPencereler = document.querySelectorAll(".drawer-root.open");
+      const enUstteki = acikPencereler[acikPencereler.length - 1];
+      if (enUstteki && !enUstteki.contains(kok)) return;
 
       const adaylar = [...kok.querySelectorAll<HTMLElement>(ODAKLANABILIR)].filter(
         // Gizli öğeler sırada görünmemeli; offsetParent yoksa çizilmiyordur.

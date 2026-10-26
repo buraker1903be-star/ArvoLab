@@ -66,6 +66,7 @@ export default function PanelDrawer({
   const titleId = useId();
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
   const dialogRef = useRef<HTMLElement>(null);
+  const kokRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
 
@@ -80,8 +81,17 @@ export default function PanelDrawer({
       return;
     }
     wasOpen.current = true;
+    /*
+      İÇ İÇE PENCERE (Literatür → Manuel kaynak ekle): Escape yalnızca en
+      üstteki pencereyi kapatır. Eskiden her açık pencere kendi dinleyicisiyle
+      kapanıyordu ve tek tuş ikisini birden kapatıyordu.
+    */
+    const enUsttekiMi = () => {
+      const acik = document.querySelectorAll(".drawer-root.open");
+      return acik[acik.length - 1] === kokRef.current;
+    };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape" && enUsttekiMi()) setOpen(false);
     };
     const onSuccess = () => setOpen(false);
     document.addEventListener("keydown", onKeyDown);
@@ -91,12 +101,13 @@ export default function PanelDrawer({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener(ACTION_SUCCESS_EVENT, onSuccess);
-      document.documentElement.classList.remove("drawer-open");
+      // Altta açık bir pencere kaldıysa sayfa kilidi sürmeli.
+      if (!document.querySelector(".drawer-root.open")) document.documentElement.classList.remove("drawer-open");
     };
   }, [open, basaridaKapan]);
 
   const drawer = (
-    <div className={open ? "drawer-root open" : "drawer-root"} data-boy={boy}>
+    <div ref={kokRef} className={open ? "drawer-root open" : "drawer-root"} data-boy={boy}>
       <button
         className="drawer-backdrop"
         type="button"

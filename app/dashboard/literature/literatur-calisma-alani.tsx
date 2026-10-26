@@ -19,7 +19,7 @@ export default function LiteraturCalismaAlani({
   asistanAcik,
   secilenCalisma = null,
   yalnizArama = false,
-  solEk,
+  aramaYaninda,
 }: {
   projeler: Proje[];
   asistanAcik: boolean;
@@ -30,8 +30,8 @@ export default function LiteraturCalismaAlani({
     araç alt alta bir pencerede öğrencinin kafasını karıştırıyordu.
   */
   yalnizArama?: boolean;
-  /** Penceredeki arama kartının altına (LiteraturBulucu, solEk). */
-  solEk?: ReactNode;
+  /** "Dizinlerde ara" düğmesinin yanına (LiteraturBulucu, aramaYaninda). */
+  aramaYaninda?: ReactNode;
 }) {
   const [sorgu, setSorgu] = useState("");
 
@@ -43,7 +43,7 @@ export default function LiteraturCalismaAlani({
         sorgu={sorgu}
         onSorguDegis={setSorgu}
         gomulu={yalnizArama}
-        solEk={solEk}
+        aramaYaninda={aramaYaninda}
       />
       {yalnizArama ? null : <LiteraturAsistani
         projeler={projeler}

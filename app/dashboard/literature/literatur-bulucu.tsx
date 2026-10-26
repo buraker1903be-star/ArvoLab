@@ -25,7 +25,7 @@ export default function LiteraturBulucu({
   sorgu,
   onSorguDegis,
   gomulu = false,
-  solEk,
+  aramaYaninda,
 }: {
   projeler: Proje[];
   secilenCalisma?: string | null;
@@ -34,8 +34,8 @@ export default function LiteraturBulucu({
   onSorguDegis: (sorgu: string) => void;
   /** Çalışmalarım kartının Literatür penceresinde: başlık çizilmez, çalışma sabit. */
   gomulu?: boolean;
-  /** Penceredeki sol kartın altına eklenen içerik ("Elimdeki kaynağı ekle"). */
-  solEk?: ReactNode;
+  /** Penceredeki "Dizinlerde ara" düğmesinin yanına ("Manuel kaynak ekle"). */
+  aramaYaninda?: ReactNode;
 }) {
   const [yilDan, setYilDan] = useState("");
   const [yilaKadar, setYilaKadar] = useState("");
@@ -140,6 +140,7 @@ export default function LiteraturBulucu({
           <Search size={16} aria-hidden="true" />
           {aranıyor ? "Aranıyor…" : "Dizinlerde ara"}
         </button>
+        {aramaYaninda}
       </div>
     </>
   );
@@ -253,7 +254,6 @@ export default function LiteraturBulucu({
           <h3 className="pencere-kart-baslik">Arama</h3>
           <p className="hint">Gerçek dizinlerde (OpenAlex, Crossref) aranır; beğendiğinizi tek tıkla bu çalışmaya eklersiniz.</p>
           {formBlok}
-          {solEk}
         </section>
         <section className="pencere-kart pencere-sonuc" aria-live="polite">
           <h3 className="pencere-kart-baslik">Sonuçlar</h3>
