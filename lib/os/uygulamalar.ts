@@ -111,7 +111,12 @@ export function labUygulamalari(): OsUygulama[] {
       sorusunu doğuruyordu.
     */
     { key: "kilavuz", label: "Kılavuz Kataloğu", href: "/dashboard/guidelines", ikon: "kilavuz", yollar: ["/dashboard/guidelines"], yalnizBaslatici: true, roller: STAFF_ROLES },
-    { key: "docentlik", label: "Doçentlik Puanı", kisa: "Doçentlik", href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"], yalnizBaslatici: true },
+    /*
+      DOÇENTLİK PUANI YALNIZCA PERSONELDE (26.10.2026, kurum sahibinin
+      isteği: "öğrencilerin görmesine gerek yok"). Doçent adayı akademisyen
+      ayrı bir kitle; öğrencinin başlatıcısında yer kaplamamalı.
+    */
+    { key: "docentlik", label: "Doçentlik Puanı", kisa: "Doçentlik", href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"], yalnizBaslatici: true, roller: STAFF_ROLES },
     /*
       İKİ DESTEK YOLU TEK UYGULAMADA. Dock'ta iki ayrı simge
       olsalardı günlük işin simgelerini sıkıştırırlardı; ikisi de

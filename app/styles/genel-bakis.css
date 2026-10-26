@@ -494,3 +494,6 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .ayar-govde b { color: var(--ink); font-size: var(--fs-base); font-weight: 600; }
 .ayar-govde small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
 .ayar-satir > :is(a, button, .drawer-trigger) { flex: none; }
+/* Doçentlik: grup başına puanlar toplamın altında tek satır çip */
+.docentlik-gruplar { display: flex; flex-wrap: wrap; gap: 6px; }
+.analiz-kartlari[data-boy="tur"] { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }

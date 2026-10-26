@@ -152,15 +152,19 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
     assert.equal(kaynaklar.bolumler, undefined);
   });
 
-  test("doçentlik herkesin başlatıcısında; kılavuz kataloğu yalnızca personelde", () => {
-    // Öğrenci kılavuzunu kendi çalışmasına yüklüyor; katalog onaylayan ekibin sayfası.
+  test("kılavuz kataloğu ve doçentlik yalnızca personelin başlatıcısında", () => {
+    // Öğrenci kılavuzunu kendi çalışmasına yüklüyor; katalog onaylayan ekibin
+    // sayfası. Doçentlik puanı öğrencinin işi değil.
+    const personelSayfalari = ["/dashboard/guidelines", "/dashboard/associate-professorship"];
     const ogrenci = osSayfalari(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
-    assert.ok(ogrenci.includes("/dashboard/associate-professorship"));
-    assert.ok(!ogrenci.includes("/dashboard/guidelines"));
     // Önizlemede rol yok sayılır (layout): rolsüz kullanıcı da görmez.
-    assert.ok(!osSayfalari(gorunenUygulamalar(uygulamalar, undefined)).some((s) => s.href === "/dashboard/guidelines"));
-    for (const rol of ["academic_manager", "controller", "expert", "system_admin", "founder"]) {
-      assert.ok(osSayfalari(gorunenUygulamalar(uygulamalar, rol)).some((s) => s.href === "/dashboard/guidelines"), rol);
+    const rolsuz = osSayfalari(gorunenUygulamalar(uygulamalar, undefined)).map((s) => s.href);
+    for (const href of personelSayfalari) {
+      assert.ok(!ogrenci.includes(href), href);
+      assert.ok(!rolsuz.includes(href), href);
+      for (const rol of ["employee", "academic_manager", "controller", "expert", "system_admin", "founder"]) {
+        assert.ok(osSayfalari(gorunenUygulamalar(uygulamalar, rol)).some((s) => s.href === href), `${rol} ${href}`);
+      }
     }
     assert.equal(etkinUygulama(uygulamalar, "/dashboard/guidelines")?.key, "kilavuz");
   });

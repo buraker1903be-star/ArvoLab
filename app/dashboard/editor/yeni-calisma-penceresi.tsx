@@ -34,8 +34,10 @@ const TURLER = [
   { deger: "thesis", ad: "Tez", aciklama: "Yüksek lisans ya da doktora" },
   { deger: "article", ad: "Makale", aciklama: "Dergiye gönderilecek" },
   { deger: "project", ad: "Proje", aciklama: "Ödev, rapor, proje" },
-  { deger: "associate-professorship", ad: "Doçentlik", aciklama: "Doçentlik dosyası" },
 ] as const;
+/* Doçentlik dosyası türü öğrencinin penceresinde yok: doçentlik modülü
+   personelin (kurum sahibinin kararı, 26.10.2026). Personelin tam formu
+   (/dashboard/editor/new) bu türü sunmaya devam ediyor. */
 
 type Tur = (typeof TURLER)[number]["deger"];
 
@@ -124,7 +126,7 @@ export default function YeniCalismaPenceresi({
               <fieldset className="yeni-calisma-tur project-form-full">
                 <legend>Türü</legend>
                 <input type="hidden" name="type" value={tur} />
-                <div className="analiz-kartlari" data-boy="program">
+                <div className="analiz-kartlari" data-boy="tur">
                   {TURLER.map((t) => (
                     <button
                       key={t.deger}
