@@ -25,6 +25,7 @@ import { writingPace } from "@/lib/writing-pace";
 import { makaleBolumleri } from "@/lib/makale/bolumler";
 import { headingMatchesSection } from "@/lib/section-match";
 import { trTarih } from "@/lib/tr-time";
+import DanismanaGonder from "./_components/danismana-gonder";
 import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
 
 const isActive = (status: string) => status !== "delivered" && status !== "archived";
@@ -252,6 +253,26 @@ export default async function DashboardPage() {
     : [{ data: null, error: null }, { count: 0 }, { count: 0 }];
   if (ritimYaniti.error) console.error("[ana sayfa] yazım ritmi okunamadı:", ritimYaniti.error.message);
 
+  /*
+    BİREYSEL ABONENİN DANIŞMANI SİSTEMDE DEĞİL. Danışmanın ArvoLab'da yorum
+    yazabilmesi kurumun abone olmasına bağlı; kurumu olmayan öğrencide
+    "Danışman yorumları" kartı hep boş kalırdı. Orada "Danışmanıma gönder"
+    duruyor ve son gönderilen bağlantının durumu (açıldı mı, kaç kez)
+    gösteriliyor — öğrencinin "hocam baktı mı?" sorusu.
+  */
+  const bireysel = ogrenciGorunumu && !profile?.organization_id;
+  const { data: sonBaglanti } = bireysel
+    ? await supabase
+        .from("manuscript_share_links")
+        .select("created_at, last_viewed_at, view_count, expires_at")
+        .eq("project_id", resume!.id)
+        .is("revoked_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
   if (hareketYaniti.error) console.error("[ana sayfa] hareketler okunamadı:", hareketYaniti.error.message);
   if (yorumYaniti.error) console.error("[ana sayfa] yorumlar okunamadı:", yorumYaniti.error.message);
   const simdiAn = simdi();
@@ -335,6 +356,20 @@ export default async function DashboardPage() {
   ].slice(0, GENEL_BAKIS_SATIR);
 
   const ad = ilkAd(displayName);
+
+  const sonGonderim = sonBaglanti
+    ? {
+        olusturuldu: sonBaglanti.created_at as string,
+        sonAcilis: (sonBaglanti.last_viewed_at as string | null) ?? null,
+        acilmaSayisi: Number(sonBaglanti.view_count ?? 0),
+        bitis: sonBaglanti.expires_at as string,
+      }
+    : null;
+  const sonGonderimMetni = sonGonderim
+    ? sonGonderim.acilmaSayisi
+      ? `Son bağlantıyı danışmanınız ${sonGonderim.acilmaSayisi} kez açtı · son ${editedAgo(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu, simdiAn)}`
+      : `Son bağlantı ${editedAgo(sonGonderim.olusturuldu, simdiAn)} oluşturuldu · henüz açılmadı`
+    : null;
 
   return (
     <main className="dashboard-page gb">
@@ -567,6 +602,14 @@ export default async function DashboardPage() {
 
             <RitimKarti ritim={ritim} href={`/dashboard/editor/${resume.id}/write`} />
 
+            {bireysel ? (
+              <DanismanaGonder
+                projectId={resume.id}
+                baslik={resume.title}
+                sonGonderim={sonGonderim}
+                sonGonderimMetni={sonGonderimMetni}
+              />
+            ) : (
             <ListeKarti
               baslik="Danışman yorumları"
               alt="Çözülmemiş yorumlar"
@@ -584,6 +627,7 @@ export default async function DashboardPage() {
                 />
               ))}
             </ListeKarti>
+            )}
 
             <ListeKarti baslik="Kaynaklar ve kanıt" alt="Tezinizin dayanakları" bos="" sayi={4}>
               <ListeSatiri
