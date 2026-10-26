@@ -495,7 +495,6 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .ayar-govde small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
 .ayar-satir > :is(a, button, .drawer-trigger) { flex: none; }
 /* Doçentlik: grup başına puanlar toplamın altında tek satır çip */
-.docentlik-gruplar { display: flex; flex-wrap: wrap; gap: 6px; }
 .analiz-kartlari[data-boy="tur"] { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
 /* Abonelik ve kredi: aylık hak çubuğu ve paket kartları */
 .kredi-cubugu { width: 100%; height: 8px; border: 0; border-radius: 999px; overflow: hidden; background: var(--surface-2); appearance: none; }
@@ -612,3 +611,16 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .destek-sayaclar { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .destek-mesaj-kutu { margin: 0; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-2); color: var(--ink); line-height: var(--lh-metin); }
 @media (max-width: 760px) { .destek-sayaclar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Doçentlik Puanı: gruplara göre dağılım, grup başlıkları (associate-professorship) */
+.docentlik-dagilim { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.docentlik-dagilim li { display: grid; grid-template-columns: minmax(90px, 140px) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: var(--fs-sm); }
+.docentlik-dagilim span { overflow: hidden; color: var(--ink-soft); text-overflow: ellipsis; white-space: nowrap; }
+.docentlik-dagilim b { min-width: 40px; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.docentlik-dagilim progress { width: 100%; height: 8px; border: 0; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-2); appearance: none; }
+.docentlik-dagilim progress::-webkit-progress-bar { background: var(--surface-2); border-radius: var(--r-pill); }
+.docentlik-dagilim progress::-webkit-progress-value { background: var(--accent); border-radius: var(--r-pill); }
+.docentlik-dagilim progress::-moz-progress-bar { background: var(--accent); border-radius: var(--r-pill); }
+.docentlik-grup { display: grid; gap: 4px; }
+.docentlik-grup-baslik { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.docentlik-grup-baslik .muted { font-size: var(--fs-micro); font-weight: 600; }

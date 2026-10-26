@@ -1,4 +1,6 @@
-import { ClipboardList, Pencil, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ClipboardList, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { kriterGruplari, puanGruplari, puanYazisi } from "@/lib/docentlik-ozeti";
 import {
   getCriteria,
   createCriterion,
@@ -50,13 +52,8 @@ export default async function ScoringPage() {
       Boolean(c.organization_id) &&
       c.organization_id === profile?.organization_id);
 
-  const totalPoints = entries.reduce((sum, e) => sum + e.computed_points, 0);
-
-  const groupedTotals = entries.reduce<Record<string, number>>((acc, e) => {
-    const group = e.criteria?.category_group || "Diğer";
-    acc[group] = (acc[group] ?? 0) + e.computed_points;
-    return acc;
-  }, {});
+  // Toplam ve grup toplamları yazdırılabilir dökümle AYNI fonksiyondan (lib/docentlik-ozeti.ts).
+  const { toplam: totalPoints, gruplar } = puanGruplari(entries);
 
   async function handleDeleteEntry(entryId: string) {
     "use server";
@@ -127,6 +124,14 @@ export default async function ScoringPage() {
             {/*
               Kriter yokken düğmenin yeri boş bırakılmıyor: sebebi söyleniyor.
             */}
+            <span className="cluster">
+            {!kayitOkunamadi && entries.length ? (
+              /* Başvuru dosyasını hazırlarken elde tutulacak döküm: grup grup
+                 faaliyetler ve toplamlar (app/print/docentlik). */
+              <Link href="/print/docentlik" target="_blank" className="projects-filter-button button-compact">
+                <Printer size={15} aria-hidden="true" /> Döküm
+              </Link>
+            ) : null}
             {!kriterOkunamadi && criteria.length > 0 ? (
               <PanelDrawer
                 triggerLabel="Faaliyet ekle"
@@ -159,7 +164,7 @@ export default async function ScoringPage() {
     
                   <label>
                     <span>Adet / birim sayısı</span>
-                    <input name="unitCount" type="number" min={0.1} step={0.1} defaultValue={1} inputMode="decimal" />
+                    <input name="unitCount" type="text" inputMode="decimal" defaultValue="1" placeholder="Örn. 1 ya da 0,5" required />
                   </label>
     
                   <label className="project-form-full">
@@ -176,21 +181,25 @@ export default async function ScoringPage() {
                 </ActionForm>
               </PanelDrawer>
             ) : null}
+            </span>
           </header>
 
           {/* Okunamayan kayıtla hesaplanan toplam SIFIR değil, BİLİNMİYOR. */}
           <div className="kaynakca-puan" data-tone="neutral">
-            <b>{kayitOkunamadi ? "—" : totalPoints.toFixed(1)}</b>
+            <b>{kayitOkunamadi ? "—" : puanYazisi(totalPoints)}</b>
             <span>toplam puan</span>
           </div>
-          {!kayitOkunamadi && Object.keys(groupedTotals).length ? (
-            <div className="docentlik-gruplar">
-              {Object.entries(groupedTotals).map(([group, points]) => (
-                <span key={group} className="chip">
-                  {group}: {points.toFixed(1)}
-                </span>
+          {/* Grup başına puan ve toplamdaki payı: hangi alanın ağır bastığı tek bakışta. */}
+          {!kayitOkunamadi && gruplar.length ? (
+            <ul className="docentlik-dagilim" aria-label="Gruplara göre puan">
+              {gruplar.map((g) => (
+                <li key={g.grup}>
+                  <span>{g.grup}</span>
+                  <progress max={Math.max(totalPoints, 1)} value={g.toplam} aria-label={`${g.grup}: ${puanYazisi(g.toplam)} puan`} />
+                  <b>{puanYazisi(g.toplam)}</b>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : null}
 
           {!kriterOkunamadi && criteria.length === 0 ? (
@@ -212,8 +221,14 @@ export default async function ScoringPage() {
               aciklama="Henüz faaliyet eklemediniz. Yayın, atıf, proje ve tez danışmanlıklarınızı ekledikçe puanınız burada toplanır."
             />
           ) : (
+            gruplar.map((g) => (
+            <section key={g.grup} className="docentlik-grup" aria-label={g.grup}>
+            <h3 className="calisma-durum-alt docentlik-grup-baslik">
+              <span>{g.grup}</span>
+              <span className="muted">{g.kayitlar.length} kayıt · {puanYazisi(g.toplam)} puan</span>
+            </h3>
             <ul className="kanit-kayitlari">
-              {entries.map((e) => {
+              {g.kayitlar.map((e) => {
                 /* Kriter değişmediği sürece uygulanacak birim puan kaydın
                    kendisinden gelir (lib/docentlik-puan.ts); kullanıcı hangi
                    puanla hesaplanacağını düzenlemeden önce görsün. */
@@ -226,13 +241,13 @@ export default async function ScoringPage() {
                         <span className="kanit-kayit-govde">
                           <b>{e.title}</b>
                           <small>
-                            {[e.criteria?.code, e.criteria?.category_group, `${e.unit_count} birim × ${e.criteria?.points_per_unit ?? "?"} puan`]
+                            {[e.criteria?.code, `${puanYazisi(e.unit_count)} birim × ${e.criteria ? puanYazisi(e.criteria.points_per_unit) : "?"} puan`]
                               .filter(Boolean)
                               .join(" · ")}
                           </small>
                         </span>
                         <span className="status-pill" data-tone="info">
-                          {e.computed_points.toFixed(1)}
+                          {puanYazisi(e.computed_points)}
                         </span>
                       </summary>
                       <div className="kanit-kayit-ic">
@@ -281,11 +296,10 @@ export default async function ScoringPage() {
                                 <span>Adet / birim sayısı</span>
                                 <input
                                   name="unitCount"
-                                  type="number"
-                                  min={0.1}
-                                  step={0.1}
-                                  defaultValue={e.unit_count}
+                                  type="text"
                                   inputMode="decimal"
+                                  defaultValue={puanYazisi(e.unit_count)}
+                                  required
                                 />
                               </label>
                               <label className="project-form-full">
@@ -315,6 +329,8 @@ export default async function ScoringPage() {
                 );
               })}
             </ul>
+            </section>
+            ))
           )}
         </article>
 
@@ -357,7 +373,7 @@ export default async function ScoringPage() {
                   </label>
                   <label>
                     <span>Birim başına puan</span>
-                    <input name="pointsPerUnit" type="number" step={0.1} min={0} inputMode="decimal" required />
+                    <input name="pointsPerUnit" type="text" inputMode="decimal" placeholder="Örn. 20 ya da 2,5" required />
                   </label>
                   <label className="project-form-full">
                     <span>Etiket</span>
@@ -383,17 +399,23 @@ export default async function ScoringPage() {
           </header>
 
           {criteria.length ? (
+            kriterGruplari(criteria).map((kg) => (
+            <section key={kg.grup} className="docentlik-grup" aria-label={kg.grup}>
+            <h3 className="calisma-durum-alt docentlik-grup-baslik">
+              <span>{kg.grup}</span>
+              <span className="muted">{kg.kriterler.length} kriter</span>
+            </h3>
             <ul className="gb-liste">
-              {criteria.map((c) => (
+              {kg.kriterler.map((c) => (
                 <li key={c.id} className="gb-satir">
                   <span className="gb-satir-govde">
                     <b>
                       {c.code} — {c.label}
                     </b>
-                    <small>{[c.category_group, kriterKapsami(c)].filter(Boolean).join(" · ")}</small>
+                    <small>{kriterKapsami(c)}</small>
                   </span>
                   <span className="status-pill" data-tone="neutral">
-                    {c.points_per_unit} puan
+                    {puanYazisi(c.points_per_unit)} puan
                   </span>
                   {/* Yetkisi olmayan satıra düğme ÇİZİLMİYOR. */}
                   {canManageCriteria && kriterDuzenlenebilir(c) ? (
@@ -421,7 +443,7 @@ export default async function ScoringPage() {
                           </label>
                           <label>
                             <span>Birim başına puan</span>
-                            <input name="pointsPerUnit" type="number" step={0.1} min={0} inputMode="decimal" defaultValue={c.points_per_unit} required />
+                            <input name="pointsPerUnit" type="text" inputMode="decimal" defaultValue={puanYazisi(c.points_per_unit)} required />
                           </label>
                           <label className="project-form-full">
                             <span>Notlar</span>
@@ -448,6 +470,8 @@ export default async function ScoringPage() {
                 </li>
               ))}
             </ul>
+            </section>
+            ))
           ) : (
             <p className="gb-bos">Henüz puanlama kriteri tanımlanmadı.</p>
           )}

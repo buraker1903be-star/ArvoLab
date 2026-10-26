@@ -108,3 +108,15 @@
 .makbuz-tutar { font-size: 14pt; font-weight: 700; }
 .makbuz-uyari { margin: 2em 0 0; font-size: 10pt; font-style: italic; }
 .print-page > .makbuz-uyari { max-width: 560px; margin: 12vh auto; padding: 0 20px; color: var(--ink); text-align: center; }
+
+/* Doçentlik puan dökümü (app/print/docentlik) */
+.docentlik-dokum h2 { margin: 1.4em 0 .4em; font-size: 12pt; }
+.docentlik-dokum table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.docentlik-dokum th, .docentlik-dokum td { padding: .35em .5em; border-bottom: 1px solid var(--print-ink); text-align: left; vertical-align: top; }
+.docentlik-dokum th:nth-child(n+3), .docentlik-dokum td:nth-child(n+3) { width: 4.5em; text-align: right; }
+.docentlik-dokum td small { display: block; font-size: 9pt; font-style: italic; }
+.docentlik-dokum-ozet { display: grid; grid-template-columns: 1fr; gap: .2em; margin: 0; }
+.docentlik-dokum-ozet > div, .docentlik-dokum-ozet { display: grid; grid-template-columns: 12em minmax(0, 1fr); gap: .2em 1em; }
+.docentlik-dokum-ozet > div { grid-column: 1 / -1; }
+.docentlik-dokum-ozet dt { font-weight: 600; }
+.docentlik-dokum-ozet dd { margin: 0; }
