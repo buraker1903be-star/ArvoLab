@@ -46,7 +46,9 @@ import {
   FileUp,
   Images,
   Keyboard,
+  BookOpen,
   CheckCircle2,
+  ChevronRight,
   AlertCircle,
   AlertTriangle,
   ClipboardCheck,
@@ -2089,82 +2091,106 @@ export default function ManuscriptEditor({
       */}
       <ManuscriptOutline
         ust={
-          <section className="outline-card kontrol-karti" aria-label="Kontrol ve çıktı">
+          /*
+            KONTROL KARTI (26.10.2026, ikinci elden geçiriş: "bu kartı daha
+            kaliteli hale getir"). Kılavuzun adı kesilmiyor, iki satıra
+            iniyor; kelime ve sayfa ayrı ölçü kutularında; sayfa hedefi
+            yerleşik <progress> ile (satır içi stil yok); yapı denetimi
+            satırın tamamı tıklanan bir durum satırı — eskiden küçük bir
+            rozetti ve tıklanabildiği belli değildi.
+          */
+          <section className="outline-card kontrol-karti" aria-label="Kılavuz ve ilerleme">
             {guideline ? (
-              <header className="outline-head">
-                <span className="kontrol-kilavuz">
-                  <strong>{guideline.label}</strong>
-                  <small className="muted">
-                    {guideline.citationStyle.toUpperCase()}
-                    {formatDate(guideline.version) ? ` · Onay: ${formatDate(guideline.version)}` : ""}
-                    {guideline.updatePending ? " · Yeni sürüm inceleniyor" : ""}
-                  </small>
+              <header className="kontrol-kilavuz">
+                <span className="kontrol-kilavuz-ust">
+                  <span className="dashboard-kicker">Uygulanan kılavuz</span>
+                  <button type="button" className="projects-filter-button button-compact" onClick={() => setGuidelineOpen(true)}>
+                    <BookOpen size={14} aria-hidden="true" /> Kurallar
+                  </button>
                 </span>
-                <button type="button" className="result-link" onClick={() => setGuidelineOpen(true)}>
-                  Kurallar
-                </button>
+                <strong title={guideline.label}>{guideline.label}</strong>
+                <span className="kontrol-etiketler">
+                  <span className="kontrol-etiket">{guideline.citationStyle.toUpperCase()}</span>
+                  {formatDate(guideline.version) ? <span className="kontrol-etiket">Onay {formatDate(guideline.version)}</span> : null}
+                  {guideline.updatePending ? <span className="kontrol-etiket">Yeni sürüm inceleniyor</span> : null}
+                </span>
               </header>
             ) : null}
-        <div className="kontrol-ozet">
-          <span className="muted text-sm">
-            {stats.words.toLocaleString("tr-TR")} kelime · ≈ {pages} sayfa
-            {stats.footnotes.length > 0 ? ` · ${stats.footnotes.length} dipnot` : ""}
-          </span>
-          {/*
-            Sayfa hedefi: kılavuzun alt/üst sınırına ne kadar kaldığı yalnızca
-            kontrol sonrasında görünüyordu; yazarken hedefin neresinde
-            olduğu belli değildi. Çubuk alt sınıra göre dolar, sınır aşılınca
-            uyarı tonuna geçer.
-          */}
-          {guideline?.minPages ? (
-            <span
-              className="page-goal"
-              data-tone={pageTone}
-              title={`Kılavuz hedefi: ${guideline.minPages}${guideline.maxPages ? `–${guideline.maxPages}` : "+"} sayfa`}
-              role="progressbar"
-              aria-valuenow={pages}
-              aria-valuemin={0}
-              aria-valuemax={guideline.maxPages ?? guideline.minPages}
-              aria-label="Sayfa hedefi"
-            >
-              <i style={{ "--w": `${Math.min(100, Math.round((pages / guideline.minPages) * 100))}%` } as React.CSSProperties} />
-              {pages}/{guideline.minPages}
-              {guideline.maxPages ? `–${guideline.maxPages}` : ""} sayfa
-            </span>
-          ) : null}
-          {liveIssues ? (
-            <button
-              type="button"
-              className="live-check"
-              data-tone={
-                liveIssues.length === 0 ? "success" : liveIssues.some((issue) => issue.tone === "danger") ? "danger" : "warning"
-              }
-              onClick={() => setIssuesOpen(true)}
-              title="Yazarken kendiliğinden denetlenir"
-            >
-              {liveIssues.length === 0 ? <CheckCircle2 size={14} aria-hidden="true" /> : <AlertTriangle size={14} aria-hidden="true" />}
-              {liveIssues.length === 0 ? "Yapı sorunsuz" : `${liveIssues.length} yapı uyarısı`}
-            </button>
-          ) : null}
-          {pace && !stats.empty ? (
-            <small className="tone-text" data-tone={pace.tone}>
-              {pace.detail}
-            </small>
-          ) : null}
-        </div>
 
-        <div className="kontrol-dugmeleri">
-          {checkError ? (
-            <p className="alert" data-tone="danger" role="alert">
-              {checkError}
-            </p>
-          ) : null}
-          {checkResult ? (
-            <button type="button" className="result-link kontrol-sonuc-ac" onClick={() => setSonucAcik(true)}>
-              Son kontrol sonucunu gör{checkResultEski ? " (eski)" : ""}
-            </button>
-          ) : null}
-        </div>
+            <dl className="kontrol-olculer">
+              <div>
+                <dt>Kelime</dt>
+                <dd>{stats.words.toLocaleString("tr-TR")}</dd>
+              </div>
+              <div>
+                <dt>Sayfa</dt>
+                <dd>
+                  ≈ {pages}
+                  {guideline?.minPages ? (
+                    <small>
+                      {" "}
+                      / {guideline.minPages}
+                      {guideline.maxPages ? `–${guideline.maxPages}` : "+"}
+                    </small>
+                  ) : null}
+                </dd>
+              </div>
+              {stats.footnotes.length > 0 ? (
+                <div>
+                  <dt>Dipnot</dt>
+                  <dd>{stats.footnotes.length}</dd>
+                </div>
+              ) : null}
+            </dl>
+
+            {/*
+              Sayfa hedefi: kılavuzun alt sınırına göre dolar, sınır dışına
+              çıkınca tonu değişir. Yazarken hedefin neresinde olunduğu
+              görünsün diye; eskiden yalnızca kontrol sonrasında görünüyordu.
+            */}
+            {guideline?.minPages ? (
+              <div className="kontrol-hedef" data-tone={pageTone}>
+                <progress
+                  className="sayfa-cubugu"
+                  max={guideline.minPages}
+                  value={Math.min(pages, guideline.minPages)}
+                  aria-label={`Sayfa hedefi: ${pages} / ${guideline.minPages} sayfa`}
+                />
+                {pace && !stats.empty ? <small>{pace.detail}</small> : null}
+              </div>
+            ) : pace && !stats.empty ? (
+              <small className="kontrol-tempo">{pace.detail}</small>
+            ) : null}
+
+            {liveIssues ? (
+              <button
+                type="button"
+                className="kontrol-yapi"
+                data-tone={
+                  liveIssues.length === 0 ? "success" : liveIssues.some((issue) => issue.tone === "danger") ? "danger" : "warning"
+                }
+                onClick={() => setIssuesOpen(true)}
+                title="Yazarken kendiliğinden denetlenir"
+              >
+                {liveIssues.length === 0 ? <CheckCircle2 size={18} aria-hidden="true" /> : <AlertTriangle size={18} aria-hidden="true" />}
+                <span>
+                  <b>{liveIssues.length === 0 ? "Yapı sorunsuz" : `${liveIssues.length} yapı uyarısı`}</b>
+                  <small>{liveIssues.length === 0 ? "Yazarken kendiliğinden denetlenir" : "Ayrıntıları gör"}</small>
+                </span>
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            ) : null}
+
+            {checkError ? (
+              <p className="alert" data-tone="danger" role="alert">
+                {checkError}
+              </p>
+            ) : null}
+            {checkResult ? (
+              <button type="button" className="result-link kontrol-sonuc-ac" onClick={() => setSonucAcik(true)}>
+                Son kılavuz kontrolünün sonucu{checkResultEski ? " (metin sonradan değişti)" : ""}
+              </button>
+            ) : null}
           </section>
         }
         sections={sections}

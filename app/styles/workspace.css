@@ -116,25 +116,6 @@
 .manuscript-editor-content [data-heading-number]::before { content: attr(data-heading-number) "\00a0"; font-variant-numeric: tabular-nums; }
 
 /* Canlı yapı denetimi göstergesi (alt çubuk) */
-.live-check {
-  --tone: var(--ink-soft);
-  --tone-soft: var(--surface-sunken);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border: 1px solid color-mix(in srgb, var(--tone) 30%, var(--line-soft));
-  border-radius: var(--r-pill);
-  background: var(--tone-soft);
-  color: var(--tone);
-  font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 650;
-  cursor: pointer;
-}
-.live-check[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
-.live-check[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
-.live-check[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
 
 /* Kılavuzun ana bölüm kuralları (metin değişmez; Word ve baskı da aynı kuralı uygular) */
 .manuscript-editor-content[data-chapter-case="upper"] h1 { text-transform: uppercase; }
@@ -534,12 +515,63 @@
 .manuscript-ust { justify-content: flex-end; min-height: 40px; padding: 4px 12px; }
 
 /* Sağ paneldeki kontrol kartı (eskiden belgenin altındaki çubuk) */
-.kontrol-kilavuz { display: grid; gap: 2px; min-width: 0; }
-.kontrol-kilavuz strong { overflow: hidden; font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
-.kontrol-kilavuz small { font-size: var(--fs-micro); }
-.kontrol-ozet { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-.kontrol-dugmeleri { display: grid; gap: 6px; }
-.kontrol-dugmeleri .alert { margin: 0; }
+.kontrol-karti { gap: 12px; }
+.kontrol-karti .alert { margin: 0; }
+.kontrol-kilavuz { display: grid; gap: 6px; min-width: 0; padding-bottom: 12px; border-bottom: 1px solid var(--line-soft); }
+.kontrol-kilavuz-ust { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kontrol-kilavuz-ust .dashboard-kicker { margin: 0; }
+.kontrol-kilavuz strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.kontrol-etiketler { display: flex; flex-wrap: wrap; gap: 4px; }
+.kontrol-etiket { padding: 2px 8px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 600; }
+.kontrol-olculer { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; margin: 0; }
+.kontrol-olculer > div { padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: var(--r-sm); background: var(--surface-2); }
+.kontrol-olculer dt { color: var(--muted); font-size: var(--fs-micro); }
+.kontrol-olculer dd { margin: 2px 0 0; color: var(--ink); font-size: var(--fs-md); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kontrol-olculer dd small { color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
+.kontrol-hedef { --tone: var(--accent); display: grid; gap: 4px; }
+.kontrol-hedef[data-tone="success"] { --tone: var(--success); }
+.kontrol-hedef[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.kontrol-hedef[data-tone="danger"] { --tone: var(--danger); }
+.kontrol-hedef small, .kontrol-tempo { color: var(--muted); font-size: var(--fs-micro); line-height: 1.4; }
+.sayfa-cubugu { width: 100%; height: 6px; border: 0; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-2); appearance: none; }
+.sayfa-cubugu::-webkit-progress-bar { background: var(--surface-2); border-radius: var(--r-pill); }
+.sayfa-cubugu::-webkit-progress-value { background: var(--tone); border-radius: var(--r-pill); }
+.sayfa-cubugu::-moz-progress-bar { background: var(--tone); border-radius: var(--r-pill); }
+.kontrol-yapi {
+  --tone: var(--ink-soft);
+  --tone-soft: var(--surface-2);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--tone) 28%, var(--line-soft));
+  border-radius: var(--r-sm);
+  background: var(--tone-soft);
+  color: var(--tone);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, transform .2s var(--ease-spring);
+}
+.kontrol-yapi:hover { border-color: var(--tone); }
+.kontrol-yapi:active { transform: scale(.98); }
+.kontrol-yapi:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+.kontrol-yapi > span { display: grid; gap: 1px; min-width: 0; }
+.kontrol-yapi b { font-size: var(--fs-sm); }
+.kontrol-yapi small { color: var(--ink-soft); font-size: var(--fs-micro); }
+.kontrol-yapi[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
+.kontrol-yapi[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
+.kontrol-yapi[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
 .kontrol-sonuc-ac { justify-self: start; }
 /* Sayfa başlığındaki eylemler: Çalışma özeti + teslim, çıktı ve kontrol düğmeleri */
 .yazma-eylemleri { justify-content: flex-end; }
@@ -819,34 +851,6 @@
 }
 
 /* ---------- Editör alt çubuğu: sayfa hedefi ve kayıt onayı ---------- */
-/* Kılavuzun sayfa hedefine göre dolan çubuk (manuscript-editor.tsx). */
-.page-goal {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px 5px;
-  border-radius: var(--r-pill);
-  border: 1px solid color-mix(in srgb, var(--tone, var(--accent-500)) 30%, var(--line-soft));
-  background: var(--surface);
-  color: var(--muted);
-  font-size: var(--fs-sm);
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  overflow: hidden;
-}
-.page-goal[data-tone="success"] { --tone: var(--success); color: var(--success); }
-.page-goal[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); color: var(--tone); }
-.page-goal[data-tone="danger"] { --tone: var(--danger); color: var(--danger); }
-.page-goal > i {
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 3px;
-  width: var(--w, 0%);
-  background: var(--tone, var(--accent-500));
-  animation: page-goal-fill .8s var(--ease-spring) both;
-}
-@keyframes page-goal-fill { from { width: 0; } }
 
 /* Kaydedildi: nokta bir kez büyüyüp yerine oturur; otomatik kaydın
    gerçekten çalıştığı görünmüyordu (durum sessizce metinle değişiyordu). */
@@ -854,7 +858,7 @@
 @keyframes save-tick { 0% { transform: scale(.4); opacity: .3; } 55% { transform: scale(1.5); opacity: 1; } 100% { transform: scale(1); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-goal > i, .save-status[data-state="saved"]::before { animation: none; }
+  .save-status[data-state="saved"]::before { animation: none; }
 }
 
 /* ---------- Yorumlar: kim yazdı, yeni gelen, çözülen ---------- */
