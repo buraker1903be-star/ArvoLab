@@ -108,3 +108,22 @@ describe("tavan ve doktora sonrası hedef (20261027122336)", () => {
       assert.equal(rows[0].esit_bolusum, true);
     }));
 });
+
+describe("alt alan (20261027142035)", () => {
+  test("kriter, hedef ve akademisyen profili alt alan taşır", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", YONETICI_A);
+      await db.query(
+        `insert into public.scoring_criteria (code, label, points_per_unit, organization_id, temel_alan, alt_alan)
+         values ('Müzik-a', 'Solo konser', 10, $1, 'Güzel Sanatlar', 'Müzik · Yorumculuk')`, [KURUM_A]);
+      await db.query(
+        `insert into public.docentlik_hedefleri (organization_id, temel_alan, alt_alan, grup, asgari_puan)
+         values ($1, 'Güzel Sanatlar', 'Müzik · Yorumculuk', 'Özel · Müzik · Yorumculuk', 30)`, [KURUM_A]);
+      await rol(db, "authenticated", AKADEMISYEN_A);
+      await db.query(`insert into public.docentlik_profili (temel_alan, alt_alan) values ('Güzel Sanatlar', 'Müzik · Yorumculuk')`);
+      const { rows } = await db.query(`select alt_alan from public.docentlik_profili`);
+      assert.equal(rows[0].alt_alan, "Müzik · Yorumculuk");
+      await reddedilir(db, `update public.docentlik_profili set alt_alan = '   '`, [], /check constraint/);
+    }));
+});

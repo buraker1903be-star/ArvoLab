@@ -35,7 +35,7 @@ describe("doçentlik özeti", () => {
   });
 });
 
-import { etkinHedefler, faaliyetDonemi, hedefDurumlari, tavanUygula } from "@/lib/docentlik-ozeti";
+import { etkinHedefler, faaliyetDonemi, hedefDurumlari, kriterUygun, tavanUygula } from "@/lib/docentlik-ozeti";
 
 describe("doçentlik hedefleri ve dönem", () => {
   const KURUM = "k1";
@@ -121,5 +121,26 @@ describe("temel alan", () => {
     // Alan seçilmemiş: alana özel hedefler sayılmaz.
     assert.equal(etkinHedefler(h, "k", null).find((x) => !x.grup)?.asgari_puan, 100);
     assert.equal(etkinHedefler(h, "k", "Hukuk").find((x) => x.grup === "Atıf")?.asgari_puan, 5);
+  });
+});
+
+describe("alt alan", () => {
+  const h = [
+    { organization_id: "k", temel_alan: "Güzel Sanatlar", alt_alan: null, grup: null, asgari_puan: 100 },
+    { organization_id: "k", temel_alan: "Güzel Sanatlar", alt_alan: "Müzik · Kompozisyon", grup: "Özel", asgari_puan: 60 },
+    { organization_id: "k", temel_alan: "Güzel Sanatlar", alt_alan: "Müzik · Yorumculuk", grup: "Özel", asgari_puan: 30 },
+  ];
+  test("başka alt alanın hedefi sayılmaz; alt alan seçilmemişse alt alana özel hedef hiç sayılmaz", () => {
+    assert.deepEqual(etkinHedefler(h, "k", "Güzel Sanatlar", "Müzik · Yorumculuk").map((x) => x.asgari_puan).sort(), [100, 30]);
+    assert.deepEqual(etkinHedefler(h, "k", "Güzel Sanatlar", null).map((x) => x.asgari_puan), [100]);
+  });
+  test("kriter: genel şartlar herkese, alt alan kriteri yalnızca o alt alana; seçim yoksa hepsi", () => {
+    const genel = { temel_alan: "Güzel Sanatlar", alt_alan: null };
+    const muzik = { temel_alan: "Güzel Sanatlar", alt_alan: "Müzik · Yorumculuk" };
+    assert.equal(kriterUygun(genel, "Güzel Sanatlar", "Plastik"), true);
+    assert.equal(kriterUygun(muzik, "Güzel Sanatlar", "Plastik"), false);
+    assert.equal(kriterUygun(muzik, "Güzel Sanatlar", "Müzik · Yorumculuk"), true);
+    assert.equal(kriterUygun(muzik, "Güzel Sanatlar", null), true);
+    assert.equal(kriterUygun(muzik, "Hukuk", null), false);
   });
 });

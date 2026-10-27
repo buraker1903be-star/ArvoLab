@@ -29,6 +29,8 @@ export interface ScoringCriterion {
   temel_alan: string | null;
   /** Çok yazarlıda puan yazar sayısına eşit bölünür (20261027122336). */
   esit_bolusum: boolean;
+  /** Temel alanın alt alanı; NULL = temel alanın tamamı (20261027142035). */
+  alt_alan: string | null;
 }
 
 export interface ScoreEntry {
@@ -47,7 +49,7 @@ export interface ScoreEntry {
 }
 
 const KRITER_SUTUNLARI =
-  "id, code, label, category_group, points_per_unit, notes, is_active, organization_id, baslica_yazar_katsayisi, diger_yazar_katsayisi, temel_alan, esit_bolusum";
+  "id, code, label, category_group, points_per_unit, notes, is_active, organization_id, baslica_yazar_katsayisi, diger_yazar_katsayisi, temel_alan, esit_bolusum, alt_alan";
 const KOVA = "project-files";
 
 function parseDecimal(raw: string) {
@@ -141,6 +143,7 @@ export async function createCriterion(formData: FormData): Promise<ActionResult>
     notes: String(formData.get("notes") ?? "").trim() || null,
     organization_id: kurum,
     temel_alan: String(formData.get("temelAlan") ?? "").trim().slice(0, 120) || null,
+    alt_alan: String(formData.get("altAlan") ?? "").trim().slice(0, 160) || null,
     esit_bolusum: formData.get("esitBolusum") === "1",
     baslica_yazar_katsayisi: baslicaK.deger,
     diger_yazar_katsayisi: digerK.deger,
@@ -439,7 +442,7 @@ export async function getHedefler(): Promise<ListeSonucu<Hedef & { id: string; n
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("docentlik_hedefleri")
-    .select("id, organization_id, temel_alan, grup, asgari_puan, azami_puan, doktora_sonrasi, notlar");
+    .select("id, organization_id, temel_alan, alt_alan, grup, asgari_puan, azami_puan, doktora_sonrasi, notlar");
   if (error) {
     console.error("[doçentlik] hedefler okunamadı", error.message);
     return listeOkunamadi();
@@ -465,6 +468,7 @@ export async function hedefKaydet(formData: FormData): Promise<ActionResult> {
 
   const grup = String(formData.get("grup") ?? "").trim() || null;
   const temelAlan = String(formData.get("temelAlan") ?? "").trim().slice(0, 120) || null;
+  const altAlan = temelAlan ? String(formData.get("altAlan") ?? "").trim().slice(0, 160) || null : null;
   /* Asgari, azami ya da ikisi. Tavan dönemden bağımsız: doktora sonrası satırına yazılmaz. */
   const doktoraSonrasi = formData.get("doktoraSonrasi") === "1";
   const oku = (ad: string) => {
@@ -491,6 +495,7 @@ export async function hedefKaydet(formData: FormData): Promise<ActionResult> {
   sorgu = kurum ? sorgu.eq("organization_id", kurum) : sorgu.is("organization_id", null);
   sorgu = grup ? sorgu.eq("grup", grup) : sorgu.is("grup", null);
   sorgu = temelAlan ? sorgu.eq("temel_alan", temelAlan) : sorgu.is("temel_alan", null);
+  sorgu = altAlan ? sorgu.eq("alt_alan", altAlan) : sorgu.is("alt_alan", null);
   sorgu = sorgu.eq("doktora_sonrasi", doktoraSonrasi);
   const { data: mevcut, error: aramaHatasi } = await sorgu.maybeSingle();
   if (aramaHatasi) {
@@ -502,6 +507,7 @@ export async function hedefKaydet(formData: FormData): Promise<ActionResult> {
     organization_id: kurum,
     grup,
     temel_alan: temelAlan,
+    alt_alan: altAlan,
     asgari_puan: asgari.deger,
     azami_puan: azami.deger,
     doktora_sonrasi: doktoraSonrasi,
@@ -534,16 +540,16 @@ export async function hedefSil(hedefId: string): Promise<ActionResult> {
 }
 
 /** Okunamazsa okunamadi: "tarih girilmemiş" demek, girilmiş tarihi silinmiş göstermek olurdu. */
-export async function getDoktoraTarihi(): Promise<{ tarih: string | null; temelAlan: string | null; okunamadi: boolean }> {
+export async function getDoktoraTarihi(): Promise<{ tarih: string | null; temelAlan: string | null; altAlan: string | null; okunamadi: boolean }> {
   const ctx = await getAuthContext();
-  if (!ctx) return { tarih: null, temelAlan: null, okunamadi: false };
+  if (!ctx) return { tarih: null, temelAlan: null, altAlan: null, okunamadi: false };
   const { data, error } = await ctx.supabase
-    .from("docentlik_profili").select("doktora_tarihi, temel_alan").eq("owner_id", ctx.user.id).maybeSingle();
+    .from("docentlik_profili").select("doktora_tarihi, temel_alan, alt_alan").eq("owner_id", ctx.user.id).maybeSingle();
   if (error) {
     console.error("[doçentlik] doktora bilgileri okunamadı", error.message);
-    return { tarih: null, temelAlan: null, okunamadi: true };
+    return { tarih: null, temelAlan: null, altAlan: null, okunamadi: true };
   }
-  return { tarih: data?.doktora_tarihi ?? null, temelAlan: data?.temel_alan ?? null, okunamadi: false };
+  return { tarih: data?.doktora_tarihi ?? null, temelAlan: data?.temel_alan ?? null, altAlan: data?.alt_alan ?? null, okunamadi: false };
 }
 
 export async function doktoraTarihiKaydet(formData: FormData): Promise<ActionResult> {
@@ -559,6 +565,8 @@ export async function doktoraTarihiKaydet(formData: FormData): Promise<ActionRes
         owner_id: ctx.user.id,
         doktora_tarihi: tarih,
         temel_alan: String(formData.get("temelAlan") ?? "").trim().slice(0, 120) || null,
+        // Alt alan temel alansız anlamsız: temel alan boşsa alt alan da boşalır.
+        alt_alan: String(formData.get("temelAlan") ?? "").trim() ? String(formData.get("altAlan") ?? "").trim().slice(0, 160) || null : null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "owner_id" },

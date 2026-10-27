@@ -3,6 +3,7 @@ import { CalendarDays, CheckCircle2, ClipboardList, FileUp, Pencil, Plus, Printe
 import {
   etkinHedefler,
   faaliyetDonemi,
+  kriterUygun,
   tavanUygula,
   hedefDurumlari,
   kriterGruplari,
@@ -129,7 +130,22 @@ export default async function ScoringPage({
     bilinmeden eksik puan söylenmez.
   */
   const alan = (typeof params.alan === "string" && params.alan.trim()) || doktora.temelAlan || null;
-  const criteria = alan ? tumKriterler.filter((c) => !c.temel_alan || c.temel_alan === alan) : tumKriterler;
+  /*
+    ALT ALAN (20261027142035): Güzel Sanatlar gibi tablolarda aday genel
+    şartlarla birlikte YALNIZCA kendi alt alanının özel şartlarını sağlar.
+    ?altalan= ile bakılan alt alan değiştirilebilir; yoksa kişinin kayıtlı
+    alt alanı — o da temel alan seçimiyle eşleşiyorsa.
+  */
+  const altAlan =
+    (typeof params.altalan === "string" && params.altalan.trim()) ||
+    (alan && alan === doktora.temelAlan ? doktora.altAlan : null) ||
+    null;
+  const criteria = tumKriterler.filter((c) => kriterUygun(c, alan, altAlan));
+  const altAlanlar = alan
+    ? [...new Set(tumKriterler.filter((c) => c.temel_alan === alan && c.alt_alan).map((c) => c.alt_alan!))].sort((a, b) => a.localeCompare(b, "tr"))
+    : [];
+  const altAlanAdresi = (a: string | null) =>
+    `/dashboard/associate-professorship?${new URLSearchParams({ ...(sonrasiParam(params) ? { donem: "sonra" } : {}), ...(alan ? { alan } : {}), ...(a ? { altalan: a } : {}) })}`;
   const bilinenAlanlar = [
     ...new Set([
       ...tumKriterler.map((c) => c.temel_alan),
@@ -183,7 +199,7 @@ export default async function ScoringPage({
     doktora sonrası şartlar ("100'ün en az 90'ı") görünümden bağımsız olarak
     doktora sonrası faaliyetlerle ölçülür. Doktora tarihi yoksa ölçülmez.
   */
-  const etkin = etkinHedefler(hedefler, profile?.organization_id ?? null, alan);
+  const etkin = etkinHedefler(hedefler, profile?.organization_id ?? null, alan, altAlan);
   const tumOzet = tavanUygula(puanGruplari(tumKayitlar), etkin);
   const sonraOzet = doktora.tarih
     ? tavanUygula(puanGruplari(tumKayitlar.filter((e) => faaliyetDonemi(e.faaliyet_tarihi, doktora.tarih) === "sonra")), etkin)
@@ -283,7 +299,13 @@ export default async function ScoringPage({
             </Link>
           </nav>
           <PanelDrawer
-            triggerLabel={[doktora.temelAlan ?? "Temel alan seçin", doktora.tarih ? `Doktora: ${trTarih(doktora.tarih)}` : null].filter(Boolean).join(" · ")}
+            triggerLabel={[
+              doktora.temelAlan ?? "Temel alan seçin",
+              doktora.altAlan,
+              doktora.tarih ? `Doktora: ${trTarih(doktora.tarih)}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
             triggerIcon={<CalendarDays size={15} aria-hidden="true" />}
             triggerClassName="projects-filter-button button-compact"
             kicker="Doçentlik"
@@ -300,6 +322,19 @@ export default async function ScoringPage({
                   ))}
                 </datalist>
               </label>
+              <label className="project-form-full">
+                <span>Alt alan (varsa)</span>
+                <input name="altAlan" type="text" list="docentlik-alt-alanlar" defaultValue={doktora.altAlan ?? ""} placeholder="Örn. Müzik · Yorumculuk" />
+                <datalist id="docentlik-alt-alanlar">
+                  {[...new Set(tumKriterler.map((c) => c.alt_alan).filter((a): a is string => Boolean(a)))].map((a) => (
+                    <option key={a} value={a} />
+                  ))}
+                </datalist>
+              </label>
+              <p className="hint project-form-full">
+                Güzel Sanatlar gibi bazı temel alanlarda genel şartlara ek olarak alt alanın özel şartları da sağlanır. Alt alanınızı
+                seçince yalnızca kendi alt alanınızın kriterlerini ve hedeflerini görürsünüz.
+              </p>
               <label className="project-form-full">
                 <span>Doktora tarihi</span>
                 <input name="doktoraTarihi" type="date" defaultValue={doktora.tarih ?? ""} />
@@ -325,6 +360,11 @@ export default async function ScoringPage({
       ) : !alan && alanaOzelVar ? (
         <p className="alert" data-tone="info">
           Kurumunuzda temel alana göre kriterler ve hedefler var. Doğru eşiklerin uygulanması için sağ üstten temel alanınızı seçin.
+        </p>
+      ) : alan && !altAlan && altAlanlar.length ? (
+        <p className="alert" data-tone="info">
+          {alan} temel alanında alt alanlara göre özel şartlar var ({altAlanlar.join(", ")}). Bütün alt alanların kriterleri
+          listeleniyor; yalnızca kendi alt alanınızınkileri görmek ve özel şart hedeflerini ölçmek için sağ üstten alt alanınızı seçin.
         </p>
       ) : null}
 
@@ -355,7 +395,7 @@ export default async function ScoringPage({
               /* Başvuru dosyasını hazırlarken elde tutulacak döküm: grup grup
                  faaliyetler ve toplamlar (app/print/docentlik). */
               <Link
-                href={`/print/docentlik?${new URLSearchParams({ ...(sonrasi ? { donem: "sonra" } : {}), ...(alan ? { alan } : {}) })}`}
+                href={`/print/docentlik?${new URLSearchParams({ ...(sonrasi ? { donem: "sonra" } : {}), ...(alan ? { alan } : {}), ...(altAlan ? { altalan: altAlan } : {}) })}`}
                 target="_blank"
                 className="projects-filter-button button-compact"
               >
@@ -656,9 +696,13 @@ export default async function ScoringPage({
                       yalnızca sizin kurumunuzun puanlamasını etkiler.
                     </p>
                   )}
-                  <label className="project-form-full">
+                  <label>
                     <span>Temel alan</span>
                     <input name="temelAlan" type="text" list="docentlik-alanlar" defaultValue={alan ?? ""} placeholder="Boş = bütün alanlar" />
+                  </label>
+                  <label>
+                    <span>Alt alan</span>
+                    <input name="altAlan" type="text" list="docentlik-alt-alanlar" defaultValue={altAlan ?? ""} placeholder="Boş = temel alanın tamamı" />
                   </label>
                   <label>
                     <span>Kriter kodu</span>
@@ -796,7 +840,7 @@ export default async function ScoringPage({
                                       {k.kod} — {k.etiket}
                                     </b>
                                     <small>
-                                      {[k.grup, katsayiYazisi({ esit_bolusum: k.esit_bolusum, baslica_yazar_katsayisi: k.baslica_katsayi, diger_yazar_katsayisi: k.diger_katsayi })]
+                                      {[k.grup, k.alt_alan, katsayiYazisi({ esit_bolusum: k.esit_bolusum, baslica_yazar_katsayisi: k.baslica_katsayi, diger_yazar_katsayisi: k.diger_katsayi })]
                                         .filter(Boolean)
                                         .join(" · ")}
                                     </small>
@@ -861,6 +905,18 @@ export default async function ScoringPage({
               ))}
             </nav>
           ) : null}
+          {altAlanlar.length ? (
+            <nav className="uak-alanlar" aria-label="Alt alan">
+              <Link href={altAlanAdresi(null)} className="chip" aria-current={!altAlan ? "true" : undefined}>
+                Bütün alt alanlar
+              </Link>
+              {altAlanlar.map((a) => (
+                <Link key={a} href={altAlanAdresi(a)} className="chip" aria-current={a === altAlan ? "true" : undefined}>
+                  {a}
+                </Link>
+              ))}
+            </nav>
+          ) : null}
 
           {/*
             HEDEFLER: kriterlerin yanında, çünkü ikisi aynı duyurudan ve aynı
@@ -889,9 +945,13 @@ export default async function ScoringPage({
                         </select>
                       </label>
                     ) : null}
-                    <label className="project-form-full">
+                    <label>
                       <span>Temel alan</span>
                       <input name="temelAlan" type="text" list="docentlik-alanlar" defaultValue={alan ?? ""} placeholder="Boş = bütün alanlar" />
+                    </label>
+                    <label>
+                      <span>Alt alan</span>
+                      <input name="altAlan" type="text" list="docentlik-alt-alanlar" defaultValue={altAlan ?? ""} placeholder="Boş = temel alanın tamamı" />
                     </label>
                     <label>
                       <span>Grup</span>
@@ -942,14 +1002,15 @@ export default async function ScoringPage({
                         x.organization_id === h.organization_id &&
                         (x.grup ?? null) === (h.grup ?? null) &&
                         (x.temel_alan ?? null) === (h.temel_alan ?? null) &&
+                        (x.alt_alan ?? null) === (h.alt_alan ?? null) &&
                         Boolean(x.doktora_sonrasi) === Boolean(h.doktora_sonrasi),
                     );
                     return (
-                      <li key={`${h.organization_id ?? "genel"}-${h.grup ?? "toplam"}-${h.doktora_sonrasi ? 1 : 0}`} className="gb-satir">
+                      <li key={`${h.organization_id ?? "genel"}-${h.alt_alan ?? ""}-${h.grup ?? "toplam"}-${h.doktora_sonrasi ? 1 : 0}`} className="gb-satir">
                         <span className="gb-satir-govde">
                           <b>{h.grup ?? "Toplam puan"}</b>
                           <small>
-                            {[h.doktora_sonrasi ? "Doktora sonrası" : null, h.organization_id ? "Kurumunuz" : "Genel", h.temel_alan ?? null, satir?.notlar]
+                            {[h.doktora_sonrasi ? "Doktora sonrası" : null, h.organization_id ? "Kurumunuz" : "Genel", h.temel_alan ?? null, h.alt_alan ?? null, satir?.notlar]
                               .filter(Boolean)
                               .join(" · ")}
                           </small>
@@ -995,7 +1056,9 @@ export default async function ScoringPage({
                     <b>
                       {c.code} — {c.label}
                     </b>
-                    <small>{[kriterKapsami(c), c.temel_alan ?? (alanaOzelVar ? "Bütün alanlar" : null), katsayiYazisi(c)].filter(Boolean).join(" · ")}</small>
+                    <small>
+                      {[kriterKapsami(c), c.temel_alan ?? (alanaOzelVar ? "Bütün alanlar" : null), c.alt_alan, katsayiYazisi(c)].filter(Boolean).join(" · ")}
+                    </small>
                   </span>
                   <span className="status-pill" data-tone="neutral">
                     {puanYazisi(c.points_per_unit)} puan

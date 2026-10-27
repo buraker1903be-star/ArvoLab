@@ -56,7 +56,9 @@ export default async function DocentlikDokumu({
   }
   // Ekranla aynı kurallar: alan, tavan ve doktora sonrası şartlar (app/dashboard/associate-professorship/page.tsx).
   const alan = (typeof params.alan === "string" && params.alan.trim()) || doktora.temelAlan || null;
-  const etkin = etkinHedefler(hedefler, profile?.organization_id ?? null, alan);
+  const altAlan =
+    (typeof params.altalan === "string" && params.altalan.trim()) || (alan && alan === doktora.temelAlan ? doktora.altAlan : null) || null;
+  const etkin = etkinHedefler(hedefler, profile?.organization_id ?? null, alan, altAlan);
   const sonraSatirlari = doktora.tarih ? tumu.filter((e) => faaliyetDonemi(e.faaliyet_tarihi, doktora.tarih) === "sonra") : null;
   const tumOzet = tavanUygula(puanGruplari(tumu), etkin);
   const sonraOzet = sonraSatirlari ? tavanUygula(puanGruplari(sonraSatirlari), etkin) : null;
@@ -76,6 +78,7 @@ export default async function DocentlikDokumu({
             {profile?.full_name ?? ctx.user.email} · {trTarih(new Date())}
             {sonrasi ? ` · Doktora sonrası (${doktora.tarih ? trTarih(doktora.tarih) : "tarih girilmemiş"})` : ""}
             {alan ? ` · ${alan}` : ""}
+            {altAlan ? ` · ${altAlan}` : ""}
           </p>
         </header>
 

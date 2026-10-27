@@ -25,7 +25,7 @@ describe("ÜAK tablosu", () => {
         { grup: null, asgari_puan: 50 },
         { grup: null, asgari_puan: 90, doktora_sonrasi: true },
         { grup: "Makale", azami_puan: 20 },
-        { grup: "Makale", asgari_puan: 5, azami_puan: 10, doktora_sonrasi: true },
+        { grup: "Makale", alt_alan: null, asgari_puan: 5, azami_puan: 10, doktora_sonrasi: true },
         { grup: "Boş", asgari_puan: null, azami_puan: null },
       ],
       notlar: ["Puanların en az 90'ı doktora sonrası."],
@@ -36,12 +36,12 @@ describe("ÜAK tablosu", () => {
       ["1.b", 20, null, null],
     ]);
     assert.deepEqual(o.hedefler, [
-      { grup: null, asgari_puan: 100, azami_puan: null, doktora_sonrasi: false },
-      { grup: null, asgari_puan: 90, azami_puan: null, doktora_sonrasi: true },
+      { grup: null, alt_alan: null, asgari_puan: 100, azami_puan: null, doktora_sonrasi: false },
+      { grup: null, alt_alan: null, asgari_puan: 90, azami_puan: null, doktora_sonrasi: true },
       // Var olan tavan (20) ezilmez; tek satırdaki 10 boş alanı doldurmaz.
-      { grup: "Makale", asgari_puan: null, azami_puan: 20, doktora_sonrasi: false },
+      { grup: "Makale", alt_alan: null, asgari_puan: null, azami_puan: 20, doktora_sonrasi: false },
       // "Doktora sonrası en az 5, en fazla 10" ikiye bölünür: tavan bütün faaliyetler satırına gider.
-      { grup: "Makale", asgari_puan: 5, azami_puan: null, doktora_sonrasi: true },
+      { grup: "Makale", alt_alan: null, asgari_puan: 5, azami_puan: null, doktora_sonrasi: true },
     ]);
   });
 
@@ -60,18 +60,18 @@ describe("ÜAK tablosu", () => {
 
     const uydurma = { ...dogru, kriterler: [{ ...dogru.kriterler[0], puan: 25 }] };
     assert.deepEqual(metindeOlmayanSayilar(uydurma, PDF), ["25"]);
-    const uydurmaHedef = { ...dogru, hedefler: [{ grup: null, asgari_puan: 100, azami_puan: null, doktora_sonrasi: false }] };
+    const uydurmaHedef = { ...dogru, hedefler: [{ grup: null, alt_alan: null, asgari_puan: 100, azami_puan: null, doktora_sonrasi: false }] };
     assert.deepEqual(metindeOlmayanSayilar(uydurmaHedef, PDF.replace("100", "120")), ["100"]);
   });
 
   test("tek satırdaki doktora sonrası asgari ve tavan ayrılır (Atıf: en az 5 doktora sonrası, en fazla 10)", () => {
     const o = uakOnerisiniCozumle(yanit({
       kriterler: [{ kod: "5.a", etiket: "Atıf", grup: "Atıf", puan: 3 }],
-      hedefler: [{ grup: "Atıf", asgari_puan: 5, azami_puan: 10, doktora_sonrasi: true }],
+      hedefler: [{ grup: "Atıf", alt_alan: null, asgari_puan: 5, azami_puan: 10, doktora_sonrasi: true }],
     }))!;
     assert.deepEqual(o.hedefler, [
-      { grup: "Atıf", asgari_puan: 5, azami_puan: null, doktora_sonrasi: true },
-      { grup: "Atıf", asgari_puan: null, azami_puan: 10, doktora_sonrasi: false },
+      { grup: "Atıf", alt_alan: null, asgari_puan: 5, azami_puan: null, doktora_sonrasi: true },
+      { grup: "Atıf", alt_alan: null, asgari_puan: null, azami_puan: 10, doktora_sonrasi: false },
     ]);
   });
 
@@ -135,17 +135,31 @@ describe("parçalı okuma", () => {
   });
 
   test("parça önerileri birleşir: kod tekrarı atılır, hedefler tamamlanır, kriteri olmayan parça kabul", () => {
-    const k = (kod: string) => ({ kod, etiket: kod, grup: "G", puan: 5, esit_bolusum: false, baslica_katsayi: null, diger_katsayi: null });
+    const k = (kod: string) => ({ kod, etiket: kod, grup: "G", alt_alan: null, puan: 5, esit_bolusum: false, baslica_katsayi: null, diger_katsayi: null });
     const bos = uakOnerisiniCozumle(JSON.stringify({ kriterler: [], hedefler: [], notlar: ["Kısaltmalar"] }), true);
     assert.ok(bos);
     const birlesik = onerileriBirlestir([
-      { kriterler: [k("1.a"), k("2.a")], hedefler: [{ grup: "Atıf", asgari_puan: null, azami_puan: 10, doktora_sonrasi: false }], notlar: ["n1"] },
-      { kriterler: [k("2.a"), k("Müzik-a")], hedefler: [{ grup: "Atıf", asgari_puan: 2, azami_puan: null, doktora_sonrasi: false }], notlar: ["n1", "n2"] },
+      { kriterler: [k("1.a"), k("2.a")], hedefler: [{ grup: "Atıf", alt_alan: null, asgari_puan: null, azami_puan: 10, doktora_sonrasi: false }], notlar: ["n1"] },
+      { kriterler: [k("2.a"), k("Müzik-a")], hedefler: [{ grup: "Atıf", alt_alan: null, asgari_puan: 2, azami_puan: null, doktora_sonrasi: false }], notlar: ["n1", "n2"] },
       bos!,
     ])!;
     assert.deepEqual(birlesik.kriterler.map((x) => x.kod), ["1.a", "2.a", "Müzik-a"]);
-    assert.deepEqual(birlesik.hedefler, [{ grup: "Atıf", asgari_puan: 2, azami_puan: 10, doktora_sonrasi: false }]);
+    assert.deepEqual(birlesik.hedefler, [{ grup: "Atıf", alt_alan: null, asgari_puan: 2, azami_puan: 10, doktora_sonrasi: false }]);
     assert.deepEqual(birlesik.notlar, ["n1", "n2", "Kısaltmalar"]);
     assert.equal(onerileriBirlestir([bos!]), null);
+  });
+});
+
+describe("alt alan", () => {
+  test("kriter ve hedef alt alanı ayrıştırılır; aynı grup farklı alt alanda ayrı hedef", () => {
+    const o = uakOnerisiniCozumle(JSON.stringify({
+      kriterler: [{ kod: "Müzik/KBM-Yorum-a", etiket: "Solo konser", grup: "Özel · Müzik", alt_alan: "Müzik · Yorumculuk", puan: 10 }],
+      hedefler: [
+        { grup: "Özel", alt_alan: "Müzik · Yorumculuk", asgari_puan: 30 },
+        { grup: "Özel", alt_alan: "Müzik · Kompozisyon", asgari_puan: 60 },
+      ],
+    }))!;
+    assert.equal(o.kriterler[0].alt_alan, "Müzik · Yorumculuk");
+    assert.deepEqual(o.hedefler.map((h) => [h.alt_alan, h.asgari_puan]), [["Müzik · Yorumculuk", 30], ["Müzik · Kompozisyon", 60]]);
   });
 });

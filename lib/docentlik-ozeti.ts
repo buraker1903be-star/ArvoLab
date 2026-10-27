@@ -58,6 +58,8 @@ export const puanYazisi = (n: number) => n.toLocaleString("tr-TR", { maximumFrac
 export type Hedef = {
   organization_id: string | null;
   temel_alan?: string | null;
+  /** Temel alanın alt alanı (20261027142035); null = temel alanın tamamı. */
+  alt_alan?: string | null;
   grup: string | null;
   asgari_puan: number | null;
   azami_puan?: number | null;
@@ -79,12 +81,19 @@ export type HedefDurumu = {
   alanlar"dan önce gelir. Alan seçilmemişse yalnızca bütün alanlara ait
   hedefler sayılır.
 */
-export function etkinHedefler(hedefler: Hedef[], kurum: string | null, temelAlan: string | null = null): Hedef[] {
-  const ozgulluk = (h: Hedef) => (h.organization_id ? 2 : 0) + (h.temel_alan ? 1 : 0);
+/*
+  Alt alan da aynı kuralla süzülür: başka bir alt alanın hedefi elenir,
+  alt alan seçilmemişse yalnızca alt alansız hedefler sayılır. Eskiden
+  alt alan yoktu ve Plastik sanatlardan başvuran aday Müzik/Kompozisyon'un
+  "en az 60 puan" şartını kendi eksiği gibi görürdü.
+*/
+export function etkinHedefler(hedefler: Hedef[], kurum: string | null, temelAlan: string | null = null, altAlan: string | null = null): Hedef[] {
+  const ozgulluk = (h: Hedef) => (h.organization_id ? 4 : 0) + (h.temel_alan ? 2 : 0) + (h.alt_alan ? 1 : 0);
   const harita = new Map<string, Hedef>();
   for (const h of hedefler) {
     if (h.organization_id !== null && h.organization_id !== kurum) continue;
     if (h.temel_alan && h.temel_alan !== temelAlan) continue;
+    if (h.alt_alan && h.alt_alan !== altAlan) continue;
     const anahtar = `${h.grup?.trim() || ""}|${h.doktora_sonrasi ? 1 : 0}`;
     const onceki = harita.get(anahtar);
     if (!onceki || ozgulluk(h) > ozgulluk(onceki)) harita.set(anahtar, h);
@@ -178,3 +187,15 @@ export const TEMEL_ALAN_ONERILERI = [
   "Spor Bilimleri",
   "Ziraat, Orman ve Su Ürünleri",
 ];
+
+/** Kriter görünür mü: temel alanı ve alt alanı kişininkiyle uyuşmalı (boş = hepsi). */
+export function kriterUygun(
+  c: { temel_alan?: string | null; alt_alan?: string | null },
+  temelAlan: string | null,
+  altAlan: string | null,
+): boolean {
+  if (!temelAlan) return true;
+  if (c.temel_alan && c.temel_alan !== temelAlan) return false;
+  // Alt alan seçilmemişse bütün alt alanlar görünür (aday seçene kadar ne aradığını görsün).
+  return !c.alt_alan || !altAlan || c.alt_alan === altAlan;
+}

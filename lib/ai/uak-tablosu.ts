@@ -29,6 +29,8 @@ export type UakKriteri = {
   kod: string;
   etiket: string;
   grup: string | null;
+  /** Özel şartlarda alt alan (20261027142035); genel şartlarda null. */
+  alt_alan: string | null;
   puan: number;
   /** "Puan yazarlar arasında eşit bölünür" (20261027122336). */
   esit_bolusum: boolean;
@@ -36,7 +38,7 @@ export type UakKriteri = {
   diger_katsayi: number | null;
 };
 /** Bir grubun (null = toplam) sınırları; doktora_sonrasi asgarinin yalnızca doktora sonrası faaliyetlerle sağlanacağını söyler. */
-export type UakHedefi = { grup: string | null; asgari_puan: number | null; azami_puan: number | null; doktora_sonrasi: boolean };
+export type UakHedefi = { grup: string | null; alt_alan: string | null; asgari_puan: number | null; azami_puan: number | null; doktora_sonrasi: boolean };
 export type UakOnerisi = { kriterler: UakKriteri[]; hedefler: UakHedefi[]; notlar: string[] };
 
 const SISTEM = `Sen bir veri çıkarma aracısın. Sana ÜAK (Üniversitelerarası Kurul) doçentlik başvuru şartları tablosunun PDF'ten çıkarılmış metni verilecek. Görevin bu tabloyu yapılandırılmış bir listeye çevirmek.
@@ -44,7 +46,7 @@ const SISTEM = `Sen bir veri çıkarma aracısın. Sana ÜAK (Üniversiteleraras
 KURALLAR:
 - Yalnızca metinde YAZAN değerleri kullan. Metinde olmayan hiçbir sayı, kod ya da kural yazma; emin olmadığın satırı atla.
 - kriterler: puan getiren her bent satırı. kod "madde.bent" biçiminde (örn. "1.a", "7.b"); aynı bentte birden çok puan varsa (örn. Q1, Q2 ya da Koordinatör, Araştırmacı) her biri ayrı kriter ve kod sonuna ayırt edici ek koy (örn. "1.a-Q1", "7.a-Yürütücü"). etiket kısa açıklama (en fazla 100 karakter; uzun açıklamaları kısalt). grup maddenin başlığı (örn. "Uluslararası Makale", "Atıf"); aynı maddenin bütün bentlerinde ve hedeflerde AYNI grup adını kullan. puan satırın birim puanı.
-- Tablo alt alanlara ayrılmış ÖZEL şartlar içeriyorsa (örn. "ÖZEL BAŞVURU ŞARTLARI" altında "MÜZİK BİLİM/SANAT ALANI", "Klasik Batı Müziği/Yorumculuk"), bu bölümlerin kriterlerinde grup adı alt alanı taşısın (örn. "Özel · Müzik · Klasik Batı Müziği/Yorumculuk") ve kodun başına bölümün kısa adını koy (örn. "Müzik/KBM-Yorum-a"): genel şartlardaki "1.a" ile karışmasın. Bu bölümlerin bent düzeyindeki asgari şartlarını notlara yaz.
+- Tablo alt alanlara ayrılmış ÖZEL şartlar içeriyorsa (örn. "ÖZEL BAŞVURU ŞARTLARI" altında "MÜZİK BİLİM/SANAT ALANI", "Klasik Batı Müziği/Yorumculuk"), bu bölümlerin kriterlerinde grup adı alt alanı taşısın (örn. "Özel · Müzik · Klasik Batı Müziği/Yorumculuk") ve kodun başına bölümün kısa adını koy (örn. "Müzik/KBM-Yorum-a"): genel şartlardaki "1.a" ile karışmasın. Bu bölümlerin kriterlerinde ve hedeflerinde alt_alan alanına alt alanın adını yaz (örn. "Müzik · Klasik Batı Müziği/Yorumculuk", "Plastik Sanatlar, Tasarım, Sinema"); aynı alt alanın bütün satırlarında AYNI adı kullan. Genel şartlarda alt_alan null. Bu bölümlerin bent düzeyindeki asgari şartlarını notlara yaz.
 - esit_bolusum: metin o kriter türü için puanın yazarlar/kişiler arasında eşit bölündüğünü söylüyorsa true (örn. "Çok yazarlı yayınlarda puan yazarlar arasında eşit olarak bölünür" bütün yayın kriterleri için, "Patentlerde puan kişi sayısına bölünür" patentler için). Yoksa false.
 - baslica_katsayi ve diger_katsayi: yalnızca metin başlıca yazar ve diğer yazarlar için ayrı SAYISAL katsayı veriyorsa (örn. 0,8 ve 0,5) yaz; aksi hâlde null.
 - hedefler: maddelerin puan sınırları. grup null ise toplam, değilse o maddenin grubu.
@@ -55,7 +57,7 @@ KURALLAR:
 - notlar: puana ya da madde sınırına çevrilemeyen şartlar: bent düzeyinde sınırlar ("g veya h bentlerinden toplamda en fazla 5 puan"), sayı şartları ("biri a bendinden olmak üzere en az iki yayın"), bent düzeyinde doktora sonrası şartlar, ikinci danışmanın yarı puanı gibi kurallar. Her biri tek cümle, en fazla 15 madde, metne yakın yaz.
 
 YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür, başka hiçbir şey yazma:
-{"kriterler":[{"kod":"","etiket":"","grup":"","puan":0,"esit_bolusum":false,"baslica_katsayi":null,"diger_katsayi":null}],"hedefler":[{"grup":null,"asgari_puan":null,"azami_puan":null,"doktora_sonrasi":false}],"notlar":[""]}`;
+{"kriterler":[{"kod":"","etiket":"","grup":"","alt_alan":null,"puan":0,"esit_bolusum":false,"baslica_katsayi":null,"diger_katsayi":null}],"hedefler":[{"grup":null,"alt_alan":null,"asgari_puan":null,"azami_puan":null,"doktora_sonrasi":false}],"notlar":[""]}`;
 
 /** PDF metnini bütçeye sığdırır; kırpıldıysa söyler (yönetici eksik okuma riskini bilsin). */
 /*
@@ -165,7 +167,7 @@ export function onerileriBirlestir(oneriler: UakOnerisi[]): UakOnerisi | null {
   for (const o of oneriler) {
     for (const k of o.kriterler) if (!kriterler.some((x) => x.kod === k.kod)) kriterler.push(k);
     for (const h of o.hedefler) {
-      const var_ = hedefler.find((x) => x.grup === h.grup && x.doktora_sonrasi === h.doktora_sonrasi);
+      const var_ = hedefler.find((x) => x.grup === h.grup && x.alt_alan === h.alt_alan && x.doktora_sonrasi === h.doktora_sonrasi);
       if (!var_) hedefler.push({ ...h });
       else {
         var_.asgari_puan ??= h.asgari_puan;
@@ -223,6 +225,7 @@ export function uakOnerisiniCozumle(ham: string, bosKabul = false): UakOnerisi |
       kod,
       etiket,
       grup: metinAl(k?.grup, 120) || null,
+      alt_alan: metinAl(k?.alt_alan, 160) || null,
       puan,
       esit_bolusum: k?.esit_bolusum === true,
       baslica_katsayi: katsayiAl(k?.baslica_katsayi),
@@ -246,26 +249,27 @@ export function uakOnerisiniCozumle(ham: string, bosKabul = false): UakOnerisi |
     Bilimsel Toplantı ve Eğitim-Öğretim maddelerinin tavanı öneriden
     düştü (27.10.2026).
   */
-  const ekle = (grup: string | null, doktoraSonrasi: boolean, asgari: number | null, azami: number | null) => {
+  const ekle = (grup: string | null, altAlan: string | null, doktoraSonrasi: boolean, asgari: number | null, azami: number | null) => {
     if (asgari === null && azami === null) return;
-    const var_ = hedefler.find((x) => x.grup === grup && x.doktora_sonrasi === doktoraSonrasi);
+    const var_ = hedefler.find((x) => x.grup === grup && x.alt_alan === altAlan && x.doktora_sonrasi === doktoraSonrasi);
     if (var_) {
       // Aynı satır iki kez geldiyse boş alanlar tamamlanır, dolu olan ezilmez.
       var_.asgari_puan ??= asgari;
       var_.azami_puan ??= azami;
       return;
     }
-    hedefler.push({ grup, asgari_puan: asgari, azami_puan: azami, doktora_sonrasi: doktoraSonrasi });
+    hedefler.push({ grup, alt_alan: altAlan, asgari_puan: asgari, azami_puan: azami, doktora_sonrasi: doktoraSonrasi });
   };
   for (const h of (Array.isArray(veri.hedefler) ? veri.hedefler : []) as Record<string, unknown>[]) {
     const grup = metinAl(h?.grup, 120) || null;
+    const altAlan = metinAl(h?.alt_alan, 160) || null;
     const asgari = sinir(h?.asgari_puan);
     const azami = sinir(h?.azami_puan);
     if (h?.doktora_sonrasi === true) {
-      ekle(grup, true, asgari, null);
-      ekle(grup, false, null, azami);
+      ekle(grup, altAlan, true, asgari, null);
+      ekle(grup, altAlan, false, null, azami);
     } else {
-      ekle(grup, false, asgari, azami);
+      ekle(grup, altAlan, false, asgari, azami);
     }
   }
 
@@ -285,8 +289,8 @@ export function uakOnerisiniCozumle(ham: string, bosKabul = false): UakOnerisi |
 export function metindeOlmayanSayilar(oneri: UakOnerisi, metin: string): string[] {
   const bilinen = new Set(sayilar(metin));
   const yazi = [
-    ...oneri.kriterler.flatMap((k) => [k.kod, k.etiket, k.grup ?? "", String(k.puan), k.baslica_katsayi ?? "", k.diger_katsayi ?? ""].map(String)),
-    ...oneri.hedefler.flatMap((h) => [h.grup ?? "", h.asgari_puan ?? "", h.azami_puan ?? ""].map(String)),
+    ...oneri.kriterler.flatMap((k) => [k.kod, k.etiket, k.grup ?? "", k.alt_alan ?? "", String(k.puan), k.baslica_katsayi ?? "", k.diger_katsayi ?? ""].map(String)),
+    ...oneri.hedefler.flatMap((h) => [h.grup ?? "", h.alt_alan ?? "", h.asgari_puan ?? "", h.azami_puan ?? ""].map(String)),
     ...oneri.notlar,
   ].join(" \n ");
   return [...new Set(sayilar(yazi))].filter((s) => !bilinen.has(s));
