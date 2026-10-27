@@ -254,68 +254,68 @@ export default async function PersonelCalismaKarti({
 
       <section className="personel-denetim" aria-label="Denetim">
         <h3 className="calisma-durum-alt">Denetim</h3>
+        {/* Durum satırı üstte; altında atama ve onay düğmeleri YAN YANA (27.10.2026). */}
+        {onayli ? (
+          <span className="tone-text personel-denetim-durum" data-tone="success">
+            <ShieldCheck size={15} aria-hidden="true" />
+            Kontrolör onayı · {trTarihSaat(calisma.controller_approved_at!)}
+          </span>
+        ) : (
+          <span className="muted text-sm">
+            {calisma.status === "ready" ? "Teslime hazır; onayınızı bekliyor." : "Henüz kontrolör onayı yok."}
+          </span>
+        )}
         <div className="personel-denetim-satir">
+          <ActionForm action={ata} className="personel-ata" successMessage="Sorumlu kaydedildi.">
+            <label className="personel-ata">
+              <span className="muted text-sm">Sorumlu</span>
+              <select name="assigneeId" defaultValue={calisma.assignee_id ?? ""} aria-label="Sorumlu personel" className="compact-select grow-select">
+                {/* Personel listesi okunamadıysa "kimse yok" denmiyor:
+                    yönetici atayacak kişi kalmadığını sanırdı. */}
+                <option value="">
+                  {personelOkunamadi
+                    ? "Personel listesi okunamadı"
+                    : eskiSorumlu
+                      ? `${calisma.assignee_name} (listede değil)`
+                      : "Sorumlu atanmadı"}
+                </option>
+                {personel.map((uye) => (
+                  <option key={uye.id} value={uye.id}>
+                    {uye.full_name || "İsimsiz personel"} · {ROLE_LABELS[uye.role]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="projects-filter-button button-compact">
+              <UserRound size={14} aria-hidden="true" />
+              Ata
+            </button>
+          </ActionForm>
           {onayli ? (
-            <>
-              <span className="tone-text" data-tone="success">
-                <ShieldCheck size={15} aria-hidden="true" />
-                Kontrolör onayı · {trTarihSaat(calisma.controller_approved_at!)}
-              </span>
-              <ActionForm
-                action={onayiGeriAl}
-                /* Onayı iptal eden düğme, "onayla" ile aynı yerde dönüşümlü
-                   çiziliyor: yanlış tıklama kolay, sonucu ağır. */
-                confirmMessage={`"${calisma.title}" çalışmasının kontrolör onayını geri almak istediğinize emin misiniz? Çalışma yeniden inceleme bekler duruma döner.`}
-                successMessage="Kontrolör onayı geri alındı."
-              >
-                <button type="submit" className="projects-filter-button button-compact">
-                  <RotateCcw size={14} aria-hidden="true" />
-                  Onayı geri al
-                </button>
-              </ActionForm>
-            </>
+            <ActionForm
+              action={onayiGeriAl}
+              /* Onayı iptal eden düğme, "onayla" ile aynı yerde dönüşümlü
+                 çiziliyor: yanlış tıklama kolay, sonucu ağır. */
+              confirmMessage={`"${calisma.title}" çalışmasının kontrolör onayını geri almak istediğinize emin misiniz? Çalışma yeniden inceleme bekler duruma döner.`}
+              successMessage="Kontrolör onayı geri alındı."
+            >
+              <button type="submit" className="projects-filter-button button-compact">
+                <RotateCcw size={14} aria-hidden="true" />
+                Onayı geri al
+              </button>
+            </ActionForm>
           ) : (
-            <>
-              <span className="muted text-sm">
-                {calisma.status === "ready" ? "Teslime hazır; onayınızı bekliyor." : "Henüz kontrolör onayı yok."}
-              </span>
-              <ActionForm action={onayla} successMessage="Çalışma kontrolör onayı aldı.">
-                <button
-                  type="submit"
-                  className={calisma.status === "ready" ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}
-                >
-                  <CheckCircle2 size={14} aria-hidden="true" />
-                  Kontrolör olarak onayla
-                </button>
-              </ActionForm>
-            </>
+            <ActionForm action={onayla} successMessage="Çalışma kontrolör onayı aldı.">
+              <button
+                type="submit"
+                className={calisma.status === "ready" ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}
+              >
+                <CheckCircle2 size={14} aria-hidden="true" />
+                Kontrolör olarak onayla
+              </button>
+            </ActionForm>
           )}
         </div>
-        <ActionForm action={ata} className="personel-denetim-satir" successMessage="Sorumlu kaydedildi.">
-          <label className="personel-ata">
-            <span className="muted text-sm">Sorumlu</span>
-            <select name="assigneeId" defaultValue={calisma.assignee_id ?? ""} aria-label="Sorumlu personel" className="compact-select grow-select">
-              {/* Personel listesi okunamadıysa "kimse yok" denmiyor:
-                  yönetici atayacak kişi kalmadığını sanırdı. */}
-              <option value="">
-                {personelOkunamadi
-                  ? "Personel listesi okunamadı"
-                  : eskiSorumlu
-                    ? `${calisma.assignee_name} (listede değil)`
-                    : "Sorumlu atanmadı"}
-              </option>
-              {personel.map((uye) => (
-                <option key={uye.id} value={uye.id}>
-                  {uye.full_name || "İsimsiz personel"} · {ROLE_LABELS[uye.role]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="projects-filter-button button-compact">
-            <UserRound size={14} aria-hidden="true" />
-            Ata
-          </button>
-        </ActionForm>
       </section>
     </article>
   );
