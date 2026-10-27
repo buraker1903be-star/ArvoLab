@@ -166,3 +166,17 @@ describe("kurulum durumu", () => {
     assert.equal(aiKurulumSorunu(), null);
   });
 });
+
+import { bitisSebebi, butceyeTakildi } from "../../lib/ai/saglayici";
+
+describe("boş yanıtın sebebi", () => {
+  test("iki biçimde sonlanma sebebi okunur; bütçeye takılma ayırt edilir", () => {
+    assert.equal(bitisSebebi({ choices: [{ message: { content: "" }, finish_reason: "length" }] }, "openai"), "length");
+    assert.equal(bitisSebebi({ content: [], stop_reason: "max_tokens" }, "anthropic"), "max_tokens");
+    assert.equal(bitisSebebi(null, "openai"), null);
+    assert.equal(butceyeTakildi("length"), true);
+    assert.equal(butceyeTakildi("max_tokens"), true);
+    assert.equal(butceyeTakildi("stop"), false);
+    assert.equal(butceyeTakildi(null), false);
+  });
+});

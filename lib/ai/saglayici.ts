@@ -48,7 +48,8 @@ export type SorSecenek = {
   jsonBekle?: boolean;
 };
 
-export type Yanit = { metin: string; model: string };
+/** bitis: sağlayıcının sonlanma sebebi ("stop", "length"…); yanıtın yarıda kesilip kesilmediğini çağıran bilsin. */
+export type Yanit = { metin: string; model: string; bitis?: string | null };
 
 const VARSAYILAN_TABAN_URL = "https://api.openai.com/v1";
 export const VARSAYILAN_MODEL = "gpt-4o-mini";
@@ -281,6 +282,24 @@ export function yanitMetni(veri: unknown, bicimi: Bicim, prefill: boolean): stri
   return bicimi === "anthropic" && prefill ? `{${ham}` : ham;
 }
 
+/*
+  Boş yanıtın SEBEBİ. Eskiden boş yanıt yalnızca "boş yanıt verdi" diye
+  düşüyordu ve günlüğe hiçbir şey yazılmıyordu: 27.10.2026'da ÜAK tablosu
+  okumada canlıda böyle düştü ve sebebi hiçbir yerden okunamadı. Düşünme
+  payı olan modeller (OpenAI uyumlu ağ geçitlerinde sık) yanıt bütçesini
+  düşünmeye harcayıp İÇERİKSİZ dönebiliyor; sonlanma sebebi "length" /
+  "max_tokens" olur. Bu durumda bütçe genişletilip bir kez daha deneniyor.
+*/
+export function bitisSebebi(veri: unknown, bicimi: Bicim): string | null {
+  const kok = veri as { choices?: { finish_reason?: unknown }[]; stop_reason?: unknown };
+  const ham = bicimi === "anthropic" ? kok?.stop_reason : kok?.choices?.[0]?.finish_reason;
+  return typeof ham === "string" ? ham : null;
+}
+
+export const butceyeTakildi = (sebep: string | null) => sebep === "length" || sebep === "max_tokens";
+
+const EN_GENIS_BUTCE = 32_000;
+
 /** Modele sorar. Hata durumunda Türkçe mesajla Error fırlatır. */
 export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<Yanit> {
   if (!aiYapilandirildi())
@@ -337,9 +356,31 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
     json: secenek.jsonBekle ? istek.json : (bilinen?.json ?? true),
   });
 
-  const veri = await yanit.json().catch(() => null);
-  const metin = yanitMetni(veri, bicimi, istek.json);
-  if (!metin) throw new Error("Yapay zeka boş yanıt verdi. Tekrar deneyin.");
+  let veri = await yanit.json().catch(() => null);
+  let metin = yanitMetni(veri, bicimi, istek.json);
+  let sebep = bitisSebebi(veri, bicimi);
 
-  return { metin, model };
+  const butce = secenek.enFazlaJeton ?? 2200;
+  if (!metin && butceyeTakildi(sebep) && butce < EN_GENIS_BUTCE) {
+    const genis = Math.min(butce * 3, EN_GENIS_BUTCE);
+    console.warn("[ai] yanıt bütçeye takılıp boş döndü, genişletilip tekrar deneniyor", { ...aiKurulumu(), model, butce, genis });
+    const ikinci = await calis({ ...istek, secenek: { ...secenek, enFazlaJeton: genis } });
+    if (ikinci.cevap.ok) {
+      veri = await ikinci.cevap.json().catch(() => null);
+      metin = yanitMetni(veri, bicimi, istek.json);
+      sebep = bitisSebebi(veri, bicimi);
+    }
+  }
+
+  if (!metin) {
+    // İçerik günlüğe yazılmaz (kullanıcının metni); yalnızca sebep ve kullanım.
+    console.error("[ai] boş yanıt", { ...aiKurulumu(), model, sebep, kullanim: (veri as { usage?: unknown } | null)?.usage ?? null });
+    throw new Error(
+      butceyeTakildi(sebep)
+        ? "Yapay zeka yanıtı bütçe sınırına takıldı ve boş döndü. Model düşünmeye fazla pay ayırıyor olabilir; tekrar deneyin ya da bu yetenek için daha hızlı bir model tanımlayın."
+        : `Yapay zeka boş yanıt verdi${sebep ? ` (${sebep})` : ""}. Tekrar deneyin.`,
+    );
+  }
+
+  return { metin, model, bitis: sebep };
 }

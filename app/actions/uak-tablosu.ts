@@ -6,7 +6,7 @@ import { MANAGER_ROLES } from "@/lib/project-labels";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { pdfMi } from "@/lib/kaynak-pdf";
 import { extractTextFromBuffer } from "@/lib/document-extract";
-import { sor } from "@/lib/ai/saglayici";
+import { butceyeTakildi, sor } from "@/lib/ai/saglayici";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { metindeOlmayanSayilar, uakIstemi, uakOnerisiniCozumle, type UakOnerisi } from "@/lib/ai/uak-tablosu";
@@ -157,7 +157,17 @@ export async function uakTablosunuYorumla(tabloId: string): Promise<ActionResult
   const ortak = { kullaniciId: kapi.kullaniciId, yetenek: "uak" as const, baglam: kaynak, basladi };
 
   try {
-    const yanit = await sor(mesajlar, { yetenek: "uak", jsonBekle: true, sicaklik: 0, enFazlaJeton: 8000, zamanAsimiMs: 150_000 });
+    const yanit = await sor(mesajlar, { yetenek: "uak", jsonBekle: true, sicaklik: 0, enFazlaJeton: 16_000, zamanAsimiMs: 150_000 });
+    /*
+      Yarıda kesilmiş yanıt REDDEDİLİR. Diğer yeteneklerde kesik yanıtın
+      tamamlanmış kısmı işe yarıyor (lib/ai/bulgu.ts → jsonOku); burada
+      yaramıyor: son maddeleri eksik bir puan tablosunu onaylamak, o
+      maddelerin kriterlerini kurumdan SİLMEK demek.
+    */
+    if (butceyeTakildi(yanit.bitis ?? null)) {
+      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
+      return { error: "Asistanın yanıtı tablonun sonuna gelmeden kesildi; eksik bir öneri gösterilmedi. Tekrar deneyin." };
+    }
     const oneri = uakOnerisiniCozumle(yanit.metin);
     if (!oneri) {
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
