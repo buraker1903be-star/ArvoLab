@@ -155,6 +155,22 @@ export default async function ScoringPage({
   ].sort((a, b) => a.localeCompare(b, "tr"));
   const alanOnerileri = [...new Set([...bilinenAlanlar, ...TEMEL_ALAN_ONERILERI])];
   const alanaOzelVar = bilinenAlanlar.length > 0;
+  /*
+    FAALİYET FORMUNUN KRİTERLERİ kişinin KENDİ temel alanından (ve alt
+    alanından) gelir, sayfada bakılan alandan değil: kayıt kişinin kendi
+    başvurusu. Temel alan seçilmeden form kriter listesi göstermez; önce
+    seçim ister. Eskiden alan seçilmemişse bütün alanların kriterleri
+    (Eğitim Bilimleri, Güzel Sanatlar ve alt alanları…) tek açılır
+    listede yüzlerce satır olarak çıkıyordu (27.10.2026).
+  */
+  const formKriterleri = tumKriterler.filter((c) => kriterUygun(c, doktora.temelAlan, doktora.altAlan));
+  const profilAltAlanlar = doktora.temelAlan
+    ? [...new Set(tumKriterler.filter((c) => c.temel_alan === doktora.temelAlan && c.alt_alan).map((c) => c.alt_alan!))].sort((a, b) =>
+        a.localeCompare(b, "tr"),
+      )
+    : [];
+  const temelAlanGerekli = alanaOzelVar && !doktora.temelAlan;
+  const altAlanGerekli = !temelAlanGerekli && profilAltAlanlar.length > 0 && !doktora.altAlan;
   const alanAdresi = (a: string) => `/dashboard/associate-professorship?${new URLSearchParams({ ...(sonrasiParam(params) ? { donem: "sonra" } : {}), alan: a })}`;
 
   /*
@@ -266,7 +282,7 @@ export default async function ScoringPage({
     başlığı düzeltmek için başka bir kritere geçmek zorunda kalırdı.
   */
   const kriterSecenekleri = (kendi: ScoringCriterion | null) =>
-    kendi && !criteria.some((c) => c.id === kendi.id) ? [kendi, ...criteria] : criteria;
+    kendi && !formKriterleri.some((c) => c.id === kendi.id) ? [kendi, ...formKriterleri] : formKriterleri;
 
   /*
     TEK EKRAN, İKİ KART (26.10.2026, diğer modüllerle aynı düzen). Eskiden
@@ -402,7 +418,7 @@ export default async function ScoringPage({
                 <Printer size={15} aria-hidden="true" /> Döküm
               </Link>
             ) : null}
-            {!kriterOkunamadi && criteria.length > 0 ? (
+            {!kriterOkunamadi && (tumKriterler.length > 0 || alanaOzelVar) ? (
               <PanelDrawer
                 triggerLabel="Faaliyet ekle"
                 triggerIcon={<Plus size={15} aria-hidden="true" />}
@@ -411,18 +427,88 @@ export default async function ScoringPage({
                 title="Yeni faaliyet ekle"
                 description="Yayınınızı veya faaliyetinizi ilgili kritere göre kaydedin."
               >
+                {temelAlanGerekli || altAlanGerekli ? (
+                  /*
+                    Kriterler temel alana (ve alt alana) göre değişiyor: seçim
+                    yapılmadan liste gösterilmez. Doktora tarihi gizli alanla
+                    korunuyor — aynı kayıt işlemi onu da yazıyor.
+                  */
+                  <ActionForm
+                    className="project-form-grid"
+                    action={doktoraTarihiKaydet}
+                    successMessage={temelAlanGerekli ? "Temel alanınız kaydedildi." : "Alt alanınız kaydedildi."}
+                  >
+                    <p className="hint project-form-full">
+                      {temelAlanGerekli
+                        ? "Kriterler başvurduğunuz temel alana göre değişir. Önce temel alanınızı seçin; ardından yalnızca o alanın kriterleri listelenir."
+                        : `${doktora.temelAlan} temel alanında genel şartlara ek olarak alt alanın özel şartları da var. Alt alanınızı seçin; yalnızca genel şartlar ve kendi alt alanınızın kriterleri listelenir.`}
+                    </p>
+                    <input type="hidden" name="doktoraTarihi" value={doktora.tarih ?? ""} />
+                    {temelAlanGerekli ? (
+                      <label className="project-form-full">
+                        <span>Temel alan</span>
+                        <select name="temelAlan" defaultValue="" required>
+                          <option value="" disabled>
+                            Seçiniz
+                          </option>
+                          {bilinenAlanlar.map((a) => (
+                            <option key={a} value={a}>
+                              {a}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : (
+                      <>
+                        <input type="hidden" name="temelAlan" value={doktora.temelAlan ?? ""} />
+                        <label className="project-form-full">
+                          <span>Alt alan</span>
+                          <select name="altAlan" defaultValue="" required>
+                            <option value="" disabled>
+                              Seçiniz
+                            </option>
+                            {profilAltAlanlar.map((a) => (
+                              <option key={a} value={a}>
+                                {a}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </>
+                    )}
+                    <div className="project-form-actions">
+                      <button type="submit" className="projects-primary-button">
+                        Kaydet ve devam et
+                      </button>
+                    </div>
+                  </ActionForm>
+                ) : formKriterleri.length === 0 ? (
+                  <p className="alert" data-tone="info">
+                    {doktora.temelAlan} temel alanı için henüz kriter tanımlanmadı. Temel alanınızı “Doçentlik bilgilerim”den
+                    değiştirebilir ya da yöneticinizden kriterlerin eklenmesini isteyebilirsiniz.
+                  </p>
+                ) : (
                 <ActionForm className="project-form-grid" action={addScoreEntry} successMessage="Faaliyet eklendi.">
+                  {doktora.temelAlan ? (
+                    <p className="hint project-form-full">
+                      {[doktora.temelAlan, doktora.altAlan].filter(Boolean).join(" · ")} kriterleri listeleniyor. Değiştirmek için
+                      sağ üstteki “Doçentlik bilgilerim”i kullanın.
+                    </p>
+                  ) : null}
                   <label className="project-form-full">
                     <span>Kriter</span>
                     <select name="criteriaId" defaultValue="" required>
                       <option value="" disabled>
                         Seçiniz
                       </option>
-                      {criteria.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.category_group ? `${c.category_group} · ` : ""}
-                          {c.code} — {c.label} ({c.points_per_unit} puan/birim)
-                        </option>
+                      {kriterGruplari(formKriterleri).map((kg) => (
+                        <optgroup key={kg.grup} label={kg.grup}>
+                          {kg.kriterler.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.code} — {c.label} ({puanYazisi(c.points_per_unit)} puan)
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </label>
@@ -451,6 +537,7 @@ export default async function ScoringPage({
                     </button>
                   </div>
                 </ActionForm>
+                )}
               </PanelDrawer>
             ) : null}
             </span>
@@ -607,12 +694,15 @@ export default async function ScoringPage({
                               <label className="project-form-full">
                                 <span>Kriter</span>
                                 <select name="criteriaId" defaultValue={e.criteria_id} required>
-                                  {kriterSecenekleri(e.criteria).map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                      {c.category_group ? `${c.category_group} · ` : ""}
-                                      {c.code} — {c.label} ({c.points_per_unit} puan/birim)
-                                      {c.is_active ? "" : " · pasife alındı"}
-                                    </option>
+                                  {kriterGruplari(kriterSecenekleri(e.criteria)).map((kg) => (
+                                    <optgroup key={kg.grup} label={kg.grup}>
+                                      {kg.kriterler.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                          {c.code} — {c.label} ({puanYazisi(c.points_per_unit)} puan)
+                                          {c.is_active ? "" : " · pasife alındı"}
+                                        </option>
+                                      ))}
+                                    </optgroup>
                                   ))}
                                 </select>
                               </label>
