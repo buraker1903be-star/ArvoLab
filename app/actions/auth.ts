@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
 import { accountExistsEmail, resetPasswordEmail, signUpConfirmEmail } from "@/lib/email/auth-emails";
 import { kayitGirdisiniDenetle } from "@/lib/kayit";
-import type { ActionResult } from "@/lib/auth-guards";
+import { SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
 
@@ -251,4 +251,28 @@ export async function resetPassword(_previous: ActionResult | null, formData: Fo
 /** Ayarlar sayfasından, oturumu açık kullanıcı için. */
 export async function changePassword(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
   return applyNewPassword(formData);
+}
+
+/*
+  Diğer cihazlardaki oturumları kapatır; bu cihazdaki açık kalır.
+
+  Ayarlar'daki şifre satırı "diğer cihazlardaki oturumlarınız açık
+  kalabilir" diyordu ama bunun bir çaresi yoktu: ortak bilgisayarda
+  (kütüphane, laboratuvar) açık unutulan oturumu kapatmanın tek yolu
+  şifre değiştirmek bile değildi. Kapı yok (lib/access.ts): engellenen
+  kullanıcı da kendi hesabını koruyabilmeli.
+*/
+export async function digerOturumlariKapat(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return SESSION_MISSING;
+
+  const { error } = await supabase.auth.signOut({ scope: "others" });
+  if (error) {
+    console.error("[oturum] diğer oturumlar kapatılamadı", error.message);
+    return { error: "Oturumlar kapatılamadı. Lütfen tekrar deneyin." };
+  }
+  return { success: true };
 }

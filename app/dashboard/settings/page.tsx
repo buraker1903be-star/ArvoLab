@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Cpu, Download, KeyRound, Save, Sparkles, Trash2 } from "lucide-react";
+import { Cpu, Download, Keyboard, KeyRound, LogOut, Save, Sparkles, Trash2 } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { ADMIN_ROLES, ROLE_LABELS, STAFF_ROLES } from "@/lib/project-labels";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
@@ -11,7 +11,8 @@ import { KREDI_SATIN_ALMA_ADRESI } from "@/lib/ai/kredi-karari";
 import { getAccessState } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
 import LicenseCard from "../_components/license-card";
-import { changePassword } from "@/app/actions/auth";
+import { changePassword, digerOturumlariKapat } from "@/app/actions/auth";
+import { KisayolListesi } from "../editor/[id]/write/shortcuts-dialog";
 import { updateMyProfile } from "@/app/actions/profile";
 import ActionForm from "../action-form";
 import PasswordForm from "./password-form";
@@ -96,12 +97,23 @@ export default async function SettingsPage() {
     kurumVar: Boolean(ctx.organizationId),
   });
 
+  /*
+    Açıklama role göre. Eskiden herkese "Rol ve kurum değişiklikleri
+    Sistem Yöneticisi tarafından yapılır" yazıyordu: bireysel öğrencinin
+    ne rolü ne kurumu değişir, iç ekibe kendi işini anlatıyordu.
+  */
+  const aciklama = icEkip
+    ? "Hesabınız ve kurulum bilgileri."
+    : ctx.organizationId
+      ? `Hesabınız ve güvenliğiniz. Rolünüz ve kurum bağınız ${organizationName ?? "kurumunuz"} tarafından belirlenir; değişiklik için kurum yöneticinize başvurun.`
+      : "Hesabınız, aboneliğiniz ve verileriniz.";
+
   return (
     <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
           <h1>Ayarlar</h1>
-          <p>Hesabınız, aboneliğiniz ve verileriniz. Rol ve kurum değişiklikleri Sistem Yöneticisi tarafından yapılır.</p>
+          <p>{aciklama}</p>
         </div>
       </section>
 
@@ -161,7 +173,7 @@ export default async function SettingsPage() {
               <KeyRound size={18} aria-hidden="true" />
               <span className="ayar-govde">
                 <b>Şifre</b>
-                <small>En az 8 karakter. Değiştirdikten sonra diğer cihazlardaki oturumlarınız açık kalabilir.</small>
+                <small>En az 8 karakter. Değiştirdikten sonra diğer cihazlardaki oturumları aşağıdan kapatabilirsiniz.</small>
               </span>
               <PanelDrawer
                 triggerLabel="Değiştir"
@@ -172,6 +184,17 @@ export default async function SettingsPage() {
               >
                 <PasswordForm action={changePassword} variant="panel" submitLabel="Şifreyi güncelle" />
               </PanelDrawer>
+            </li>
+
+            <li className="ayar-satir">
+              <LogOut size={18} aria-hidden="true" />
+              <span className="ayar-govde">
+                <b>Diğer cihazlar</b>
+                <small>Bu cihaz dışındaki bütün oturumları kapatır. Ortak bir bilgisayarda açık unuttuysanız ya da şifrenizi değiştirdiyseniz kullanın.</small>
+              </span>
+              <ActionForm action={digerOturumlariKapat} confirmMessage="Bu cihaz dışındaki bütün oturumlar kapatılsın mı?" successMessage="Diğer cihazlardaki oturumlar kapatıldı.">
+                <button type="submit" className="projects-filter-button button-compact">Kapat</button>
+              </ActionForm>
             </li>
 
             {/*
@@ -227,6 +250,28 @@ export default async function SettingsPage() {
                 </Link>
               </li>
             ) : null}
+
+            {/*
+              Kısayollar editörde Yardım menüsünde de var; burada da, çünkü
+              kullanıcı "Word'deki tuş burada ne" sorusuyla Ayarlar'a
+              geliyor. Liste editördekinin AYNISI (KisayolListesi).
+            */}
+            <li className="ayar-satir">
+              <Keyboard size={18} aria-hidden="true" />
+              <span className="ayar-govde">
+                <b>Klavye kısayolları</b>
+                <small>Editörde Word&apos;deki tuşlar aynı işi yapar: hizalama, punto, başlık, dipnot, girinti.</small>
+              </span>
+              <PanelDrawer
+                triggerLabel="Göster"
+                triggerClassName="projects-filter-button button-compact"
+                kicker="Yardım"
+                title="Klavye kısayolları"
+                description="Word'deki tuşlar burada da aynı işi yapar. Fareye uzanmadan daha hızlı yazın."
+              >
+                <KisayolListesi />
+              </PanelDrawer>
+            </li>
 
             {/*
               Etkin asistan sunucusu: yalnızca iç ekip, personel görünümünde.

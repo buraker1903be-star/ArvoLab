@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Dialog from "@/app/dashboard/_components/dialog";
 
 /*
@@ -17,7 +18,7 @@ const GRUPLAR: { baslik: string; satirlar: Kisayol[] }[] = [
       [["Mod", "P"], "Yazdır / PDF (kılavuz düzeninde, sayfalı)"],
       [["Mod", "F"], "Bul ve değiştir"],
       [["Mod", "Z"], "Geri al"],
-      [["Mod", "Y"], "Yinele (Mod+Shift+Z de olur)"],
+      [["Mod", "Y"], "Yinele (Ctrl+Shift+Z de olur)"],
     ],
   },
   {
@@ -26,9 +27,9 @@ const GRUPLAR: { baslik: string; satirlar: Kisayol[] }[] = [
       [["Mod", "B"], "Kalın"],
       [["Mod", "I"], "İtalik"],
       [["Mod", "U"], "Altı çizili"],
-      [["Mod", "Shift", "="], "Üst simge (Mod+. de olur)"],
-      [["Mod", ">"], "Yazıyı bir punto büyüt (Türkçe klavyede Mod+Shift+<; Mod+] de olur)"],
-      [["Mod", "<"], "Yazıyı bir punto küçült (Mod+[ de olur)"],
+      [["Mod", "Shift", "="], "Üst simge (Ctrl+. de olur)"],
+      [["Mod", ">"], "Yazıyı bir punto büyüt (Türkçe klavyede Ctrl+Shift+<; Ctrl+] de olur)"],
+      [["Mod", "<"], "Yazıyı bir punto küçült (Ctrl+[ de olur)"],
       [["Mod", "Boşluk"], "Karakter biçimini temizle"],
       [["Shift", "F3"], "Seçili metin: küçük harf → BÜYÜK HARF → Başlık Düzeni"],
     ],
@@ -81,8 +82,20 @@ const GRUPLAR: { baslik: string; satirlar: Kisayol[] }[] = [
   },
 ];
 
-export default function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.userAgent);
+const hicDinleme = () => () => {};
+const macMi = () => /Mac|iPhone|iPad/i.test(navigator.userAgent);
+
+/*
+  Liste pencereden ayrı: Ayarlar da aynı listeyi gösteriyor (27.10.2026).
+  İki ayrı liste tutulsaydı biri eskirdi.
+
+  Mac sorusu useSyncExternalStore ile: liste artık sunucuda da çiziliyor
+  ve navigator orada yok. Render içinde navigator okumak sunucuda "Ctrl",
+  Mac'te "⌘" üretip hidrasyon uyuşmazlığı verirdi; sunucu ve ilk çizim
+  "Ctrl" der, tarayıcı hemen ardından düzeltir.
+*/
+export function KisayolListesi() {
+  const isMac = useSyncExternalStore(hicDinleme, macMi, () => false);
   const label = (key: string) => {
     if (key === "Mod") return isMac ? "⌘" : "Ctrl";
     if (key === "Alt") return isMac ? "⌥" : "Alt";
@@ -91,13 +104,7 @@ export default function ShortcutsDialog({ open, onClose }: { open: boolean; onCl
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      kicker="Yardım"
-      title="Klavye kısayolları"
-      description="Word'deki tuşlar burada da aynı işi yapar. Fareye uzanmadan daha hızlı yazın."
-    >
+    <>
       {GRUPLAR.map((grup) => (
         <section key={grup.baslik} className="shortcut-grup" aria-label={grup.baslik}>
           <h3>{grup.baslik}</h3>
@@ -115,6 +122,20 @@ export default function ShortcutsDialog({ open, onClose }: { open: boolean; onCl
           </dl>
         </section>
       ))}
+    </>
+  );
+}
+
+export default function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      kicker="Yardım"
+      title="Klavye kısayolları"
+      description="Word'deki tuşlar burada da aynı işi yapar. Fareye uzanmadan daha hızlı yazın."
+    >
+      <KisayolListesi />
     </Dialog>
   );
 }
