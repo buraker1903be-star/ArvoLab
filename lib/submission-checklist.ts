@@ -178,12 +178,12 @@ export function buildSubmissionChecklist(input: ChecklistInput): SubmissionCheck
     );
     items.push(
       input.includeToc
-        ? { id: "toc", label: "İçindekiler", status: "ok", detail: "Word çıktısında içindekiler, tablolar ve şekiller listesi var." }
+        ? { id: "toc", label: "İçindekiler", status: "ok", detail: "Word ve PDF çıktısında içindekiler var; Word'de tablolar ve şekiller listesi de." }
         : {
             id: "toc",
             label: "İçindekiler",
             status: "warning",
-            detail: "Word çıktısında içindekiler tablosu yok.",
+            detail: "Word ve PDF çıktısında içindekiler yok.",
             action: { id: "enable-toc", label: "Ekle" },
           }
     );

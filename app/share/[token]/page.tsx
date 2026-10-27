@@ -94,6 +94,7 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
         showPageNumbers: row.show_page_numbers ?? true,
         coverPage: (row.cover_page as CoverPage | null) ?? null,
         headingNumbering: row.heading_numbering ?? false,
+        includeToc: row.include_toc ?? false,
       }
     : null;
   // Resimler yalnızca bu çalışmaya ait depo klasörlerinden imzalanır (çalışma, sahibi, atanan uzman).

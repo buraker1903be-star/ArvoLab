@@ -21,7 +21,7 @@ import {
   type ParagraphChild,
 } from "docx";
 import { CAPTION_LABELS, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
-import { headingNumberMap } from "@/lib/heading-numbering";
+import { headingNumberMap, icindekilerSatirlari } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 
@@ -462,7 +462,22 @@ export async function buildDocxFromTiptap({
         spacing: { after: 240 },
         children: [new TextRun({ text: "İÇİNDEKİLER", bold: true })],
       }),
-      new TableOfContents("İçindekiler", { hyperlink: true, headingStyleRange: "1-3" }),
+      /*
+        Alan ÖNCEDEN DOLU (cachedEntries). Eskiden yalnızca boş bir alan
+        yazılıyordu: Word açılışta "alanlar güncellensin mi" diye soruyor,
+        hayır denirse ya da belge Google Docs, LibreOffice veya Mac'te
+        açılırsa içindekiler BOŞ görünüyordu. Şimdi başlıklar (numaralarıyla)
+        alanın içinde hazır; Word güncelleyince sayfa numaralarını ekler.
+        Sayfa numarası önceden yazılmıyor: tahmini numara yanlış olurdu.
+      */
+      new TableOfContents("İçindekiler", {
+        hyperlink: true,
+        headingStyleRange: "1-3",
+        cachedEntries: icindekilerSatirlari(doc as Parameters<typeof icindekilerSatirlari>[0], headingNumbering).map((s) => ({
+          title: s.numara ? `${s.numara} ${s.text}` : s.text,
+          level: s.level,
+        })),
+      }),
       new Paragraph({ children: [new PageBreak()] })
     );
     // Türk tez kılavuzlarındaki sıra: Tablolar Listesi, ardından Şekiller Listesi (varsa).

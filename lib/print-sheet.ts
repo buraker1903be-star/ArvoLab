@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { renderTiptapHtml } from "@/lib/tiptap-html";
+import { icindekilerSatirlari, type IcindekilerSatiri } from "@/lib/heading-numbering";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { CoverPage, PageMargins } from "@/app/actions/manuscript";
 
@@ -10,6 +11,8 @@ export interface PrintSheetManuscript {
   showPageNumbers?: boolean;
   coverPage?: CoverPage | null;
   headingNumbering?: boolean;
+  /** Sayfa ayarlarındaki "İçindekiler tablosu": Word ile AYNI ayar. */
+  includeToc?: boolean;
 }
 
 export interface PrintSheet {
@@ -21,6 +24,13 @@ export interface PrintSheet {
   chapterCase?: "upper";
   cover: CoverPage | null;
   hasText: boolean;
+  /*
+    İçindekiler (kapaktan sonra). Eskiden PDF çıktısında hiç yoktu; Word'de
+    vardı (27.10.2026). Sayfa numarası YOK: tarayıcı baskıda bir başlığın
+    hangi sayfaya düştüğünü sayfaya bildirmiyor, tahmini numara yazmak
+    tezde yanlış numara demek. Ekranda bunun nedeni söyleniyor.
+  */
+  toc: IcindekilerSatiri[] | null;
 }
 
 const clampCm = (value: unknown, fallback: number) => {
@@ -68,5 +78,8 @@ export function buildPrintSheet(
     chapterCase: guideline?.settings.chapterUppercase ? "upper" : undefined,
     cover: manuscript?.coverPage ?? null,
     hasText: Boolean(manuscript),
+    toc: manuscript?.includeToc
+      ? icindekilerSatirlari(doc as Parameters<typeof icindekilerSatirlari>[0], manuscript.headingNumbering ?? false)
+      : null,
   };
 }

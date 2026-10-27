@@ -2066,7 +2066,7 @@ export default function ManuscriptEditor({
           </label>
           <label className="checkbox-label">
             <input type="checkbox" checked={includeToc} onChange={(e) => setIncludeToc(e.target.checked)} />
-            <span>İçindekiler tablosu (Word)</span>
+            <span>İçindekiler tablosu (Word ve PDF)</span>
           </label>
           <label className="checkbox-label">
             <input

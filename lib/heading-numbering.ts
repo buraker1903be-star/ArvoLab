@@ -108,3 +108,33 @@ export function hasManualNumber(text: string): boolean {
 export function stripManualNumber(text: string): string {
   return text.replace(MANUAL_NUMBER, "");
 }
+
+export type IcindekilerSatiri = { level: number; text: string; numara: string | null };
+
+/**
+ * İçindekiler satırları (H1–H3), belgedeki sırayla ve çıktıdaki numarasıyla.
+ *
+ * Word çıktısı (tiptap-docx: içindekiler alanının ÖNCEDEN DOLU içeriği) ve
+ * yazdırma/PDF (print-sheet) aynı listeyi kullanıyor. Eskiden Word'de
+ * içindekiler yalnızca boş bir alandı — Word açılışta güncelleyene kadar,
+ * Google Docs ve LibreOffice'te HİÇ dolmuyordu; PDF'te ise içindekiler
+ * yoktu (27.10.2026).
+ */
+export function icindekilerSatirlari(
+  doc: { content?: JsonNode[] } | null | undefined,
+  numaralama: boolean,
+): IcindekilerSatiri[] {
+  const numaralar = numaralama ? headingNumberMap(doc) : new Map<JsonNode, string>();
+  const satirlar: IcindekilerSatiri[] = [];
+  const walk = (nodes: JsonNode[] | undefined) => {
+    for (const node of nodes ?? []) {
+      if (node.type === "heading") {
+        const level = Number(node.attrs?.level) || 1;
+        const text = jsonText(node).trim();
+        if (level <= 3 && text) satirlar.push({ level, text, numara: numaralar.get(node) ?? null });
+      } else if (node.content && node.type !== "paragraph") walk(node.content);
+    }
+  };
+  walk(doc?.content);
+  return satirlar;
+}

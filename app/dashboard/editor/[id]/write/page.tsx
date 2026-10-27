@@ -124,7 +124,10 @@ export default async function WriteManuscriptPage({
         guideline={guideline}
         guidelineSync={{ mode: sync.mode, source: sync.source, changes: sync.changes }}
         editHref={`/dashboard/editor/${id}/edit`}
-        initialIncludeToc={manuscript?.includeToc ?? false}
+        /* Yeni tezde içindekiler AÇIK başlar (27.10.2026): tez kılavuzlarının
+           hepsi istiyor ve kutu kapalıyken öğrenci Word/PDF çıktısında
+           içindekiler olmadığını teslimde fark ediyordu. Makale ve projede kapalı. */
+        initialIncludeToc={manuscript?.includeToc ?? (project.project_type ?? "thesis") === "thesis"}
         kontrolGecmisi={kontrolGecmisi}
         sonKontrol={sonKontrol}
         initialHeadingNumbering={sync.headingNumbering}

@@ -29,6 +29,20 @@ export default function ManuscriptSheet({ title, sheet }: { title: string; sheet
           </section>
         ) : null}
 
+        {sheet.toc && sheet.toc.length ? (
+          <section className="print-toc" aria-label="İçindekiler">
+            <h2>İÇİNDEKİLER</h2>
+            <ol>
+              {sheet.toc.map((satir, i) => (
+                <li key={i} data-level={satir.level}>
+                  {satir.numara ? <span className="print-toc-no">{satir.numara}</span> : null}
+                  {satir.text}
+                </li>
+              ))}
+            </ol>
+          </section>
+        ) : null}
+
         {sheet.hasText ? (
           <div className="print-body" dangerouslySetInnerHTML={{ __html: sheet.html }} />
         ) : (

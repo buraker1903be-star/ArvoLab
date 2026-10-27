@@ -120,3 +120,13 @@
 .docentlik-dokum-ozet > div { grid-column: 1 / -1; }
 .docentlik-dokum-ozet dt { font-weight: 600; }
 .docentlik-dokum-ozet dd { margin: 0; }
+
+/* İçindekiler (yazdırma/PDF ve danışman paylaşımı; lib/print-sheet.ts). Sayfa numarası yok — bkz. print-sheet. */
+.print-toc { break-after: page; }
+.print-toc h2 { margin: 0 0 1em; font-size: inherit; text-align: center; }
+.print-toc ol { margin: 0; padding: 0; list-style: none; }
+.print-toc li { margin: 0 0 .35em; }
+.print-toc li[data-level="1"] { font-weight: 700; }
+.print-toc li[data-level="2"] { padding-left: 1.5em; }
+.print-toc li[data-level="3"] { padding-left: 3em; }
+.print-toc-no { margin-right: .5em; }
