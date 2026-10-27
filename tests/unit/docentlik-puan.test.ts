@@ -40,3 +40,27 @@ describe("doçentlik düzenlemede birim puan", () => {
     assert.equal(korunanBirimPuan(kayit(4, 0), "k1"), 0);
   });
 });
+
+import { paylasimKatsayisi, puanHesapla } from "@/lib/docentlik-puan";
+
+describe("ortak yazarlık", () => {
+  const kriter = { baslica_yazar_katsayisi: 0.8, diger_yazar_katsayisi: 0.5 };
+
+  test("tek yazar ve katsayısız kriter tam puan alır", () => {
+    assert.equal(paylasimKatsayisi(kriter, 1, false), 1);
+    assert.equal(paylasimKatsayisi({ baslica_yazar_katsayisi: null, diger_yazar_katsayisi: null }, 4, false), 1);
+    assert.equal(paylasimKatsayisi(null, 3, true), 1);
+  });
+
+  test("çok yazarlıda başlıca ve diğer yazar katsayısı", () => {
+    assert.equal(paylasimKatsayisi(kriter, 3, true), 0.8);
+    assert.equal(paylasimKatsayisi(kriter, 3, false), 0.5);
+    assert.equal(puanHesapla(1, 20, 0.5), 10);
+  });
+
+  test("katsayılı kaydın birim puanı düzenlemede korunur", () => {
+    assert.equal(korunanBirimPuan({ criteria_id: "a", unit_count: 2, computed_points: 16, paylasim_katsayisi: 0.8 }, "a"), 10);
+    // Eski satır: katsayı yok, 1 sayılır.
+    assert.equal(korunanBirimPuan({ criteria_id: "a", unit_count: 2, computed_points: 20 }, "a"), 10);
+  });
+});

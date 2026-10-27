@@ -21,6 +21,8 @@ export interface KayitliPuan {
   criteria_id: string;
   unit_count: number;
   computed_points: number;
+  /** Kayıt anındaki ortak yazarlık katsayısı (20261027081037); eski satırlarda 1. */
+  paylasim_katsayisi?: number | null;
 }
 
 /*
@@ -35,8 +37,38 @@ export function korunanBirimPuan(kayit: KayitliPuan, yeniKriterId: string): numb
 
   const birim = Number(kayit.unit_count);
   const puan = Number(kayit.computed_points);
+  /* Katsayı da bölünüyor: computed_points = birim × birim puan × katsayı.
+     Bölünmeseydi ortak yazarlı bir kaydın başlığını düzelten kullanıcının
+     birim puanı katsayı kadar küçülür, puanı her düzenlemede yeniden
+     paylaştırılırdı. */
+  const katsayi = Number(kayit.paylasim_katsayisi ?? 1);
   // Bozuk/eski satır (0 birim, sayı olmayan puan): türetmek yerine kritere sorulur.
   if (!Number.isFinite(birim) || birim <= 0 || !Number.isFinite(puan)) return null;
+  if (!Number.isFinite(katsayi) || katsayi <= 0) return null;
 
-  return Math.round((puan / birim) * YUVARLA) / YUVARLA;
+  return Math.round((puan / (birim * katsayi)) * YUVARLA) / YUVARLA;
 }
+
+/*
+  ORTAK YAZARLIK KATSAYISI. Kural kriterde, Yönetici'nin girdiği iki
+  sayı: başlıca yazar ve diğer yazarlar. Tek yazarlı faaliyet ya da
+  katsayısı girilmemiş kriter TAM puan alır — bilinmeyen bir paylaşım
+  kuralını tahmin etmek, yanlış bir puanı doğru gibi göstermek olurdu.
+*/
+export function paylasimKatsayisi(
+  kriter: { baslica_yazar_katsayisi?: number | null; diger_yazar_katsayisi?: number | null } | null,
+  yazarSayisi: number,
+  baslica: boolean,
+): number {
+  if (!kriter || !Number.isFinite(yazarSayisi) || yazarSayisi <= 1) return 1;
+  const k = baslica ? kriter.baslica_yazar_katsayisi : kriter.diger_yazar_katsayisi;
+  const sayi = Number(k);
+  return k === null || k === undefined || !Number.isFinite(sayi) || sayi <= 0 || sayi > 1 ? 1 : sayi;
+}
+
+/** Kriterde ortak yazarlık kuralı tanımlı mı (formda yazar alanlarını göstermek için). */
+export const paylasimTanimli = (kriter: { baslica_yazar_katsayisi?: number | null; diger_yazar_katsayisi?: number | null } | null) =>
+  Boolean(kriter && (kriter.baslica_yazar_katsayisi != null || kriter.diger_yazar_katsayisi != null));
+
+export const puanHesapla = (birim: number, birimPuan: number, katsayi: number) =>
+  Math.round(birim * birimPuan * katsayi * YUVARLA) / YUVARLA;

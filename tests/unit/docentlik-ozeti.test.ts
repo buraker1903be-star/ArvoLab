@@ -34,3 +34,46 @@ describe("doçentlik özeti", () => {
     assert.equal(puanYazisi(20), "20");
   });
 });
+
+import { etkinHedefler, faaliyetDonemi, hedefDurumlari } from "@/lib/docentlik-ozeti";
+
+describe("doçentlik hedefleri ve dönem", () => {
+  const KURUM = "k1";
+  const hedefler = [
+    { organization_id: null, grup: null, asgari_puan: 100 },
+    { organization_id: null, grup: "Makaleler", asgari_puan: 40 },
+    { organization_id: KURUM, grup: null, asgari_puan: 120 },
+    { organization_id: "baska", grup: "Atıflar", asgari_puan: 99 },
+    { organization_id: null, grup: "Atıflar", asgari_puan: 10 },
+  ];
+
+  test("kurum hedefi aynı gruptaki genel hedefin yerine geçer; başka kurumunki sayılmaz", () => {
+    const etkin = etkinHedefler(hedefler, KURUM);
+    assert.equal(etkin.find((h) => !h.grup)?.asgari_puan, 120);
+    assert.equal(etkin.find((h) => h.grup === "Atıflar")?.asgari_puan, 10);
+    assert.equal(etkin.length, 3);
+    assert.equal(etkinHedefler(hedefler, null).find((h) => !h.grup)?.asgari_puan, 100);
+  });
+
+  test("eksik puan sıfırın altına inmez; en çok eksiği olan grup önce", () => {
+    const { toplamHedef, grupHedefleri } = hedefDurumlari(etkinHedefler(hedefler, null), 72.5, [
+      { grup: "Makaleler", toplam: 25 },
+      { grup: "Atıflar", toplam: 30 },
+    ]);
+    assert.deepEqual([toplamHedef?.hedef, toplamHedef?.eksik], [100, 27.5]);
+    assert.deepEqual(grupHedefleri.map((g) => [g.grup, g.eksik]), [["Makaleler", 15], ["Atıflar", 0]]);
+  });
+
+  test("hiç faaliyeti olmayan grubun hedefi tam eksik", () => {
+    const { grupHedefleri } = hedefDurumlari([{ organization_id: null, grup: "Projeler", asgari_puan: 20 }], 0, []);
+    assert.deepEqual([grupHedefleri[0].mevcut, grupHedefleri[0].eksik], [0, 20]);
+  });
+
+  test("dönem: aynı gün 'sonra' sayılmaz, tarihsiz bilinmiyor", () => {
+    assert.equal(faaliyetDonemi("2024-05-02", "2024-05-01"), "sonra");
+    assert.equal(faaliyetDonemi("2024-05-01", "2024-05-01"), "once");
+    assert.equal(faaliyetDonemi("2019-01-01", "2024-05-01"), "once");
+    assert.equal(faaliyetDonemi(null, "2024-05-01"), "bilinmiyor");
+    assert.equal(faaliyetDonemi("2024-05-02", null), "bilinmiyor");
+  });
+});

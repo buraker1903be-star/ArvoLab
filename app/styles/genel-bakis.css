@@ -651,3 +651,10 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .yazisma-form textarea { width: 100%; resize: vertical; }
 .yazisma-form-alt { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
 .yazisma-coz { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-soft); font-size: var(--fs-sm); }
+/* Doçentlik hedefleri: hedefi olan grupta eksik puan çubuğun altında; çubuk tona göre renklenir. */
+.docentlik-dagilim small { grid-column: 2 / -1; margin-top: -4px; color: var(--warning); font-size: var(--fs-micro); }
+.docentlik-dagilim li[data-tone="warning"] progress::-webkit-progress-value { background: var(--warning); }
+.docentlik-dagilim li[data-tone="warning"] progress::-moz-progress-bar { background: var(--warning); }
+.docentlik-dagilim li[data-tone="success"] progress::-webkit-progress-value { background: var(--success); }
+.docentlik-dagilim li[data-tone="success"] progress::-moz-progress-bar { background: var(--success); }
+.kaynakca-puan b small { color: var(--muted); font-size: 0.55em; font-weight: 600; }
