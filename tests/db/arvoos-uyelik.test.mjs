@@ -127,6 +127,43 @@ describe("ArvoOS üyeliği ilk girişte bağlanır", () => {
       assert.equal(profil.organization_id, null);
     }));
 
+  /*
+    20261027070012: ad yalnızca bağlama anında yazılıyordu; elle bağlanan
+    ya da ArvoOS'ta adı sonradan girilen kişi "İsimsiz personel" kalıyordu.
+  */
+  test("bağlandıktan sonra gelen ad boş profile işlenir, dolu ad ezilmez", () =>
+    islem(db, async () => {
+      await tohum();
+      await db.exec(`
+        insert into auth.users (id, email) values
+          ('${YENI}', 'uzman@akademikmerkez.com'),
+          ('${BAGLI}', 'bagli@akademikmerkez.com');
+        update public.profiles set full_name = 'Kendi Yazdığı' where id = '${BAGLI}';
+        update public.profiles set organization_id = '${KURUM}' where id = '${BAGLI}';
+      `);
+      // ArvoOS'un bir sonraki eşitlemesi: liste adlarla yeniden yazılıyor.
+      await db.exec(`
+        update public.arvoos_members set full_name = 'Meral Aydaç' where email = 'uzman@akademikmerkez.com';
+        update public.arvoos_members set full_name = 'ArvoOS Adı' where email = 'bagli@akademikmerkez.com';
+      `);
+      const yeni = await tek(`select full_name from public.profiles where id = $1`, [YENI]);
+      const bagli = await tek(`select full_name from public.profiles where id = $1`, [BAGLI]);
+      assert.equal(yeni.full_name, "Meral Aydaç");
+      assert.equal(bagli.full_name, "Kendi Yazdığı", "ArvoLab'da düzeltilen ad geri alınmamalı");
+    }));
+
+  test("başka kuruma bağlı aynı e-postanın adı değişmez", () =>
+    islem(db, async () => {
+      await tohum();
+      await db.exec(`
+        insert into auth.users (id, email) values ('${BAGLI}', 'bagli@akademikmerkez.com');
+        update public.profiles set organization_id = '${BASKA_KURUM}', full_name = null where id = '${BAGLI}';
+        update public.arvoos_members set full_name = 'Yabancı Ad' where email = 'bagli@akademikmerkez.com';
+      `);
+      const profil = await tek(`select full_name from public.profiles where id = $1`, [BAGLI]);
+      assert.equal(profil.full_name, null);
+    }));
+
   test("üye listesi ürün içinden okunamaz", () =>
     islem(db, async () => {
       await tohum();
