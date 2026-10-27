@@ -98,5 +98,12 @@ export function faturalamaKapsami(
 ): { tur: "bireysel" } | { tur: "kurum"; kurumId: string } | null {
   if (erisimTuru === "individual") return { tur: "bireysel" };
   if (erisimTuru === "organization" && rol === "academic_manager" && kurumId) return { tur: "kurum", kurumId };
+  /*
+    İç ekip (Kurucu, Sistem Yöneticisi) kurumların sahibi: seçili kurumun
+    (lib/kurum-secimi.ts), seçim yoksa kendi kurumunun faturalarını görür.
+    Eskiden iç ekip hiçbir kapsama girmiyordu ve Abonelik ve kredi
+    sayfasında Faturalar bölümü kurucuya hiç çıkmıyordu (27.10.2026).
+  */
+  if (erisimTuru === "staff" && (rol === "founder" || rol === "system_admin") && kurumId) return { tur: "kurum", kurumId };
   return null;
 }

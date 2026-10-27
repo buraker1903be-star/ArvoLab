@@ -45,5 +45,8 @@ describe("faturalama", () => {
     assert.equal(faturalamaKapsami("organization", "controller", "k1"), null);
     assert.equal(faturalamaKapsami("organization", "academic_manager", null), null);
     assert.equal(faturalamaKapsami("staff", "founder", null), null);
+    // İç ekip seçili (ya da kendi) kurumunun faturalarını görür.
+    assert.deepEqual(faturalamaKapsami("staff", "founder", "k1"), { tur: "kurum", kurumId: "k1" });
+    assert.deepEqual(faturalamaKapsami("staff", "system_admin", "k2"), { tur: "kurum", kurumId: "k2" });
   });
 });

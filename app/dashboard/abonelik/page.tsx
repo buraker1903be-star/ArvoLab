@@ -1,3 +1,4 @@
+import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { redirect } from "next/navigation";
 import { ExternalLink, History } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
@@ -68,7 +69,14 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   const sonHareketler = (hareketler ?? []) as { tur: string; kredi: number; created_at: string }[];
 
   /* Faturalar: bireysel abone kendi ödemelerini, kurumda yalnızca kurum yöneticisi kurumunkileri görür. */
-  const kapsam = faturalamaKapsami(access.kind, ctx.role, ctx.organizationId);
+  /* İç ekip: kurum seçicide seçili kurum, yoksa kendi kurumu (lib/kurum-secimi.ts). */
+  const seciliKurumu = access.kind === "staff" ? await seciliKurum() : null;
+  const kapsam = faturalamaKapsami(access.kind, ctx.role, seciliKurumu?.id ?? ctx.organizationId);
+  let faturaKurumu: string | null = seciliKurumu?.ad ?? null;
+  if (access.kind === "staff" && !faturaKurumu && ctx.organizationId) {
+    const { data: kendi } = await ctx.supabase.from("organizations").select("name").eq("id", ctx.organizationId).maybeSingle();
+    faturaKurumu = kendi?.name ?? null;
+  }
   const faturalama = kapsam && ctx.user.email ? await faturalamaYukle(kapsam, { id: ctx.user.id, email: ctx.user.email }) : null;
 
   const paketler = access.kind === "individual" ? access.krediPaketleri : [];
@@ -113,6 +121,11 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
             </p>
           ) : null}
 
+          {access.kind === "staff" && kapsam && faturaKurumu ? (
+            <p className="hint">
+              <b>{faturaKurumu}</b> faturaları gösteriliyor. Diğer kurumunuzunkiler için profil menüsündeki Kurum seçimini değiştirin.
+            </p>
+          ) : null}
           {kapsam ? <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} /> : null}
         </article>
 
