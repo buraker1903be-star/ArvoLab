@@ -387,6 +387,13 @@
 .kaynak-pdf-satiri { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
 .kaynak-pdf-eylemler { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
 .calisma-durum-eylemler { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+/*
+  Kartın BAŞLIĞINDAKİ "⋯" menüsü aşağı açılır. Ortak kural (components.css)
+  menüyü yukarı açıyor — liste kartlarında menü kartın altında duruyor.
+  Personel kartında menü başlıkta; yukarı açılınca kaydırılan kartın
+  kenarında kesiliyor ve arkada kalıyordu (27.10.2026).
+*/
+.calisma-durum-bas .kart-menu-liste { top: calc(100% + 6px); bottom: auto; }
 /* Kılavuzun örnek atıfı (ornek-atif-formu.tsx) */
 .ornek-atif { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
 .ornek-atif > .projects-filter-button { align-self: flex-start; }
