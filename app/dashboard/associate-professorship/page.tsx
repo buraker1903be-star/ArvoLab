@@ -37,8 +37,12 @@ import BelgeSatiri from "./belge-satiri";
 import UakYukle from "./uak-yukle";
 import UakPdfAc from "./uak-pdf-ac";
 
-/* ÜAK tablosunu yorumlatmak bir dil modeli çağrısı: varsayılan süre dar kalabilir. */
-export const maxDuration = 180;
+/*
+  ÜAK tablosunu yorumlatmak dil modeli çağrısı (uzun tablolarda parçalar
+  aynı anda, her biri en fazla 240 sn). 180 sn, 12 sayfalık Güzel Sanatlar
+  tablosunda yetmedi (27.10.2026).
+*/
+export const maxDuration = 300;
 
 const UAK_DURUMU: Record<string, { ad: string; ton: string }> = {
   yuklendi: { ad: "Yorumlatılmadı", ton: "warning" },

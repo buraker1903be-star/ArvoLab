@@ -43,7 +43,8 @@ const SISTEM = `Sen bir veri çıkarma aracısın. Sana ÜAK (Üniversiteleraras
 
 KURALLAR:
 - Yalnızca metinde YAZAN değerleri kullan. Metinde olmayan hiçbir sayı, kod ya da kural yazma; emin olmadığın satırı atla.
-- kriterler: puan getiren her bent satırı. kod "madde.bent" biçiminde (örn. "1.a", "7.b"); aynı bentte birden çok puan varsa (örn. Q1, Q2 ya da Koordinatör, Araştırmacı) her biri ayrı kriter ve kod sonuna ayırt edici ek koy (örn. "1.a-Q1", "7.a-Yürütücü"). etiket kısa açıklama (en fazla 160 karakter). grup maddenin başlığı (örn. "Uluslararası Makale", "Atıf"); aynı maddenin bütün bentlerinde ve hedeflerde AYNI grup adını kullan. puan satırın birim puanı.
+- kriterler: puan getiren her bent satırı. kod "madde.bent" biçiminde (örn. "1.a", "7.b"); aynı bentte birden çok puan varsa (örn. Q1, Q2 ya da Koordinatör, Araştırmacı) her biri ayrı kriter ve kod sonuna ayırt edici ek koy (örn. "1.a-Q1", "7.a-Yürütücü"). etiket kısa açıklama (en fazla 100 karakter; uzun açıklamaları kısalt). grup maddenin başlığı (örn. "Uluslararası Makale", "Atıf"); aynı maddenin bütün bentlerinde ve hedeflerde AYNI grup adını kullan. puan satırın birim puanı.
+- Tablo alt alanlara ayrılmış ÖZEL şartlar içeriyorsa (örn. "ÖZEL BAŞVURU ŞARTLARI" altında "MÜZİK BİLİM/SANAT ALANI", "Klasik Batı Müziği/Yorumculuk"), bu bölümlerin kriterlerinde grup adı alt alanı taşısın (örn. "Özel · Müzik · Klasik Batı Müziği/Yorumculuk") ve kodun başına bölümün kısa adını koy (örn. "Müzik/KBM-Yorum-a"): genel şartlardaki "1.a" ile karışmasın. Bu bölümlerin bent düzeyindeki asgari şartlarını notlara yaz.
 - esit_bolusum: metin o kriter türü için puanın yazarlar/kişiler arasında eşit bölündüğünü söylüyorsa true (örn. "Çok yazarlı yayınlarda puan yazarlar arasında eşit olarak bölünür" bütün yayın kriterleri için, "Patentlerde puan kişi sayısına bölünür" patentler için). Yoksa false.
 - baslica_katsayi ve diger_katsayi: yalnızca metin başlıca yazar ve diğer yazarlar için ayrı SAYISAL katsayı veriyorsa (örn. 0,8 ve 0,5) yaz; aksi hâlde null.
 - hedefler: maddelerin puan sınırları. grup null ise toplam, değilse o maddenin grubu.
@@ -57,6 +58,125 @@ YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür, başka hiçbir şey yaz
 {"kriterler":[{"kod":"","etiket":"","grup":"","puan":0,"esit_bolusum":false,"baslica_katsayi":null,"diger_katsayi":null}],"hedefler":[{"grup":null,"asgari_puan":null,"azami_puan":null,"doktora_sonrasi":false}],"notlar":[""]}`;
 
 /** PDF metnini bütçeye sığdırır; kırpıldıysa söyler (yönetici eksik okuma riskini bilsin). */
+/*
+  PARÇALAMA (27.10.2026). Güzel Sanatlar tablosu (12 sayfa, 29 bin
+  karakter, genel şartların ardından alt alanlara ayrılmış özel şartlar)
+  tek çağrıda okutulunca model 150 saniyede yanıtı bitiremedi. Tablo
+  bölüm başlıklarından (BÜYÜK HARFLİ satırlar: "ÖZEL BAŞVURU ŞARTLARI",
+  "MÜZİK BİLİM/SANAT ALANI"…) parçalanıyor ve parçalar AYNI ANDA
+  okutuluyor; süre en uzun parça kadar. Her parçaya tablonun genel
+  kuralları (ilk maddeye kadarki giriş) bağlam olarak ekleniyor: "puan
+  yazarlar arasında eşit bölünür" gibi kurallar orada yazıyor.
+  Başlığı olmayan kısa tablolar (Eğitim Bilimleri) tek parça kalır.
+*/
+const BASLIK_SATIRI = /^(?=.*[A-ZÇĞİÖŞÜ]{3})[^a-zçğıöşü\d][^a-zçğıöşü]{6,}$/;
+const MADDE_SATIRI = /^\d{1,2}\.\s+\S/;
+
+export function uakParcalari(metin: string, hedef = 9_000): { giris: string; parcalar: string[] } {
+  const satirlar = metin.split("\n");
+  const ilkMadde = satirlar.findIndex((s) => MADDE_SATIRI.test(s.trim()));
+  const giris = (ilkMadde > 0 ? satirlar.slice(0, ilkMadde).join("\n") : "").slice(0, 3_000);
+
+  // Bölümler: başlık satırlarında bölünür (art arda başlık satırları tek başlık sayılır).
+  const bolumler: string[][] = [[]];
+  let oncekiBaslik = false;
+  for (const satir of satirlar) {
+    const baslik = BASLIK_SATIRI.test(satir.trim()) && !/^Ü n i v e r/.test(satir.trim());
+    if (baslik && !oncekiBaslik && bolumler[bolumler.length - 1].some((x) => x.trim())) bolumler.push([]);
+    bolumler[bolumler.length - 1].push(satir);
+    oncekiBaslik = baslik;
+  }
+
+  // Çok uzun bölüm madde satırlarından bölünür; kısa komşu bölümler birleştirilir.
+  const parcalar: string[] = [];
+  let birikim = "";
+  const bosalt = () => {
+    if (birikim.trim()) parcalar.push(birikim.trim());
+    birikim = "";
+  };
+  for (const bolum of bolumler) {
+    const metni = bolum.join("\n");
+    if (metni.length > hedef * 1.4) {
+      bosalt();
+      const baslikSatirlari = bolum.slice(0, Math.max(0, bolum.findIndex((s) => !BASLIK_SATIRI.test(s.trim()))));
+      let parca: string[] = [];
+      for (const satir of bolum) {
+        if (MADDE_SATIRI.test(satir.trim()) && parca.join("\n").length > hedef) {
+          parcalar.push(parca.join("\n").trim());
+          parca = baslikSatirlari.length ? [...baslikSatirlari, "(bölümün devamı)"] : [];
+        }
+        parca.push(satir);
+      }
+      if (parca.join("\n").trim()) parcalar.push(parca.join("\n").trim());
+    } else if ((birikim + metni).length > hedef) {
+      bosalt();
+      birikim = metni;
+    } else {
+      birikim = birikim ? `${birikim}\n${metni}` : metni;
+    }
+  }
+  bosalt();
+  return { giris, parcalar: parcalar.length ? parcalar : [metin] };
+}
+
+/** Her parça için ayrı istem; tek parçalı tabloda eskisiyle aynı istem. */
+/*
+  Sayfa süsü: ÜAK PDF'lerinin her sayfasındaki aralıklı başlık
+  ("Ü n i v e r s i t e l e r a r a s ı …"), "S a y f a 1 / 12" ve
+  pdf-parse'ın "-- 1 of 12 --" ayracı. Tablonun parçası değiller;
+  bırakılırsa parçalamada boş bir parça açıyor ve bütçeyi yiyorlar.
+*/
+export const sayfaSusunuAyikla = (metin: string) =>
+  metin
+    .split("\n")
+    .filter((s) => !/^\s*(Ü n i v e r s i t e|S a y f a\s|-- \d+ of \d+ --)/.test(s))
+    .join("\n");
+
+export function uakIstemleri(metin: string, temelAlan: string, butce = METIN_BUTCESI): { istemler: Mesaj[][]; kaynak: string; kirpildi: boolean } {
+  const temiz = sayfaSusunuAyikla(metin).replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  const kaynak = temiz.slice(0, butce);
+  const { giris, parcalar } = uakParcalari(kaynak);
+  if (parcalar.length <= 1) {
+    return { istemler: [uakIstemi(kaynak, temelAlan, butce).mesajlar], kaynak, kirpildi: temiz.length > butce };
+  }
+  const istemler = parcalar.map((parca, i): Mesaj[] => [
+    { rol: "sistem", metin: SISTEM },
+    {
+      rol: "kullanici",
+      metin:
+        `Temel alan: ${temelAlan}\n\nTablo uzun olduğu için PARÇA PARÇA okunuyor. Bu, ${parcalar.length} parçanın ${i + 1}. parçası. ` +
+        `Yalnızca BU PARÇADAKİ satırlardan kriter, hedef ve not çıkar. ` +
+        (i === 0 ? "" : "Toplam puan hedeflerini (grup null) yazma; onlar ilk parçada. ") +
+        `\n\nTABLONUN GENEL KURALLARI (yalnızca bağlam):\n${giris || "(yok)"}\n\nBU PARÇA:\n${parca}`,
+    },
+  ]);
+  return { istemler, kaynak, kirpildi: temiz.length > butce };
+}
+
+/*
+  Parça önerilerini birleştirir. Aynı kod iki parçada gelirse ilki kalır
+  (bölüm öneki yüzünden beklenmez); hedefler aynı grup + dönem şartında
+  birleşir, boş alanlar tamamlanır; notlar tekrarsız.
+*/
+export function onerileriBirlestir(oneriler: UakOnerisi[]): UakOnerisi | null {
+  const kriterler: UakKriteri[] = [];
+  const hedefler: UakHedefi[] = [];
+  const notlar: string[] = [];
+  for (const o of oneriler) {
+    for (const k of o.kriterler) if (!kriterler.some((x) => x.kod === k.kod)) kriterler.push(k);
+    for (const h of o.hedefler) {
+      const var_ = hedefler.find((x) => x.grup === h.grup && x.doktora_sonrasi === h.doktora_sonrasi);
+      if (!var_) hedefler.push({ ...h });
+      else {
+        var_.asgari_puan ??= h.asgari_puan;
+        var_.azami_puan ??= h.azami_puan;
+      }
+    }
+    for (const n of o.notlar) if (!notlar.includes(n)) notlar.push(n);
+  }
+  return kriterler.length ? { kriterler, hedefler, notlar: notlar.slice(0, 30) } : null;
+}
+
 export function uakIstemi(metin: string, temelAlan: string, butce = METIN_BUTCESI): { mesajlar: Mesaj[]; kaynak: string; kirpildi: boolean } {
   const temiz = metin.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   const kaynak = temiz.slice(0, butce);
@@ -87,14 +207,14 @@ const katsayiAl = (v: unknown): number | null => {
   reddederdi. Hiç kriter yoksa null: boş bir öneriyi onaylamak, kurumun
   bütün kriterlerini pasife almak olurdu.
 */
-export function uakOnerisiniCozumle(ham: string): UakOnerisi | null {
+export function uakOnerisiniCozumle(ham: string, bosKabul = false): UakOnerisi | null {
   const veri = jsonOku(ham) as { kriterler?: unknown; hedefler?: unknown; notlar?: unknown } | null;
   if (!veri || !Array.isArray(veri.kriterler)) return null;
 
   const gorulen = new Set<string>();
   const kriterler: UakKriteri[] = [];
   for (const k of veri.kriterler as Record<string, unknown>[]) {
-    const kod = metinAl(k?.kod, 30);
+    const kod = metinAl(k?.kod, 60);
     const etiket = metinAl(k?.etiket, 160);
     const puan = sayiAl(k?.puan);
     if (!kod || !etiket || puan === null || puan < 0 || gorulen.has(kod)) continue;
@@ -109,7 +229,8 @@ export function uakOnerisiniCozumle(ham: string): UakOnerisi | null {
       diger_katsayi: katsayiAl(k?.diger_katsayi),
     });
   }
-  if (!kriterler.length) return null;
+  /* Parçalı okumada bir parçada kriter olmayabilir (kısaltmalar, tanımlar); birleşik öneri yine kriter ister. */
+  if (!kriterler.length && !bosKabul) return null;
 
   /* Aynı grup + aynı dönem şartı için tek satır (veritabanındaki benzersiz dizinle aynı). */
   const hedefler: UakHedefi[] = [];

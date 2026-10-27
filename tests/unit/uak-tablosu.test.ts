@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { donemSecenekleri, metindeOlmayanSayilar, uakIstemi, uakOnerisiniCozumle } from "@/lib/ai/uak-tablosu";
+import { donemSecenekleri, metindeOlmayanSayilar, onerileriBirlestir, sayfaSusunuAyikla, uakIstemi, uakIstemleri, uakOnerisiniCozumle, uakParcalari } from "@/lib/ai/uak-tablosu";
 
 const PDF = `SAĞLIK BİLİMLERİ TEMEL ALANI
 1. Uluslararası makale
@@ -95,5 +95,57 @@ describe("ÜAK tablosu", () => {
   test("dönem seçenekleri", () => {
     assert.deepEqual(donemSecenekleri("2026-10-27"), ["2026 Ekim", "2027 Mart"]);
     assert.deepEqual(donemSecenekleri("2026-02-01"), ["2026 Mart", "2026 Ekim"]);
+  });
+});
+
+/*
+  27.10.2026: Güzel Sanatlar tablosu (12 sayfa, 29 bin karakter) tek
+  çağrıda süreyi aştı. Tablo bölüm başlıklarından parçalanıyor.
+*/
+describe("parçalı okuma", () => {
+  const madde = (n: number, uzunluk: number) => `${n}. Madde başlığı\na) ${"x".repeat(uzunluk)} 10\n`;
+  const UZUN =
+    "TABLO 4. GÜZEL SANATLAR TEMEL ALANI\nGenel kural: puan yazarlar arasında eşit bölünür.\n" +
+    madde(1, 4000) + madde(2, 4000) +
+    "MÜZİK BİLİM/SANAT ALANI\nKlasik Batı Müziği\n" + madde(1, 6000) +
+    "SAHNE SANATLARI BİLİM/SANAT ALANI\n" + madde(1, 6000);
+
+  test("bölüm başlıklarından bölünür; giriş genel kuralları taşır", () => {
+    const { giris, parcalar } = uakParcalari(UZUN);
+    assert.match(giris, /eşit bölünür/);
+    assert.equal(parcalar.length, 3);
+    assert.match(parcalar[1], /^MÜZİK BİLİM\/SANAT ALANI/);
+    assert.match(parcalar[2], /^SAHNE SANATLARI/);
+    // Kısa komşu bölümler tek parçada birleşir: gereksiz çağrı açılmasın.
+    assert.equal(uakParcalari("A\n1. x\nMÜZİK BİLİM/SANAT ALANI\n1. y\nSAHNE SANATLARI ALANI\n1. z").parcalar.length, 1);
+  });
+
+  test("kısa tablo tek istem, uzun tablo parça başına istem; ilk parça dışında toplam hedef istenmez", () => {
+    assert.equal(uakIstemleri("1. Makale\na) Q1 30", "Hukuk").istemler.length, 1);
+    const { istemler } = uakIstemleri(UZUN, "Güzel Sanatlar");
+    assert.equal(istemler.length, 3);
+    assert.doesNotMatch(istemler[0][1].metin, /Toplam puan hedeflerini \(grup null\) yazma/);
+    assert.match(istemler[1][1].metin, /Toplam puan hedeflerini \(grup null\) yazma/);
+    assert.match(istemler[2][1].metin, /eşit bölünür/);
+  });
+
+  test("sayfa süsü ayıklanır", () => {
+    const temiz = sayfaSusunuAyikla("Ü n i v e r s i t e l e r a r a s ı\nS a y f a 1 / 12\n1. Makale\n-- 1 of 12 --\na) Q1 30");
+    assert.equal(temiz, "1. Makale\na) Q1 30");
+  });
+
+  test("parça önerileri birleşir: kod tekrarı atılır, hedefler tamamlanır, kriteri olmayan parça kabul", () => {
+    const k = (kod: string) => ({ kod, etiket: kod, grup: "G", puan: 5, esit_bolusum: false, baslica_katsayi: null, diger_katsayi: null });
+    const bos = uakOnerisiniCozumle(JSON.stringify({ kriterler: [], hedefler: [], notlar: ["Kısaltmalar"] }), true);
+    assert.ok(bos);
+    const birlesik = onerileriBirlestir([
+      { kriterler: [k("1.a"), k("2.a")], hedefler: [{ grup: "Atıf", asgari_puan: null, azami_puan: 10, doktora_sonrasi: false }], notlar: ["n1"] },
+      { kriterler: [k("2.a"), k("Müzik-a")], hedefler: [{ grup: "Atıf", asgari_puan: 2, azami_puan: null, doktora_sonrasi: false }], notlar: ["n1", "n2"] },
+      bos!,
+    ])!;
+    assert.deepEqual(birlesik.kriterler.map((x) => x.kod), ["1.a", "2.a", "Müzik-a"]);
+    assert.deepEqual(birlesik.hedefler, [{ grup: "Atıf", asgari_puan: 2, azami_puan: 10, doktora_sonrasi: false }]);
+    assert.deepEqual(birlesik.notlar, ["n1", "n2", "Kısaltmalar"]);
+    assert.equal(onerileriBirlestir([bos!]), null);
   });
 });

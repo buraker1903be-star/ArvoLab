@@ -9,7 +9,7 @@ import { extractTextFromBuffer } from "@/lib/document-extract";
 import { butceyeTakildi, sor } from "@/lib/ai/saglayici";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
-import { metindeOlmayanSayilar, uakIstemi, uakOnerisiniCozumle, type UakOnerisi } from "@/lib/ai/uak-tablosu";
+import { metindeOlmayanSayilar, onerileriBirlestir, uakIstemleri, uakOnerisiniCozumle, type UakOnerisi } from "@/lib/ai/uak-tablosu";
 
 /*
   ÜAK TABLOLARI (migration 20261027083309, saf kısım lib/ai/uak-tablosu.ts).
@@ -152,36 +152,50 @@ export async function uakTablosunuYorumla(tabloId: string): Promise<ActionResult
   const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
   if (hakHatasi) return { error: hakHatasi };
 
-  const { mesajlar, kaynak, kirpildi } = uakIstemi(metin, tablo.temel_alan);
+  const { istemler, kaynak, kirpildi } = uakIstemleri(metin, tablo.temel_alan);
   const basladi = Date.now();
   const ortak = { kullaniciId: kapi.kullaniciId, yetenek: "uak" as const, baglam: kaynak, basladi };
 
   try {
-    const yanit = await sor(mesajlar, { yetenek: "uak", jsonBekle: true, sicaklik: 0, enFazlaJeton: 16_000, zamanAsimiMs: 150_000 });
+    /*
+      Parçalar AYNI ANDA okutuluyor (lib/ai/uak-tablosu.ts → uakParcalari);
+      süre en uzun parça kadar. Bir parça bile düşerse öneri gösterilmez:
+      eksik bir tabloyu onaylamak o bölümün kriterlerini kurumdan siler.
+    */
+    const yanitlar = await Promise.all(
+      istemler.map((m) => sor(m, { yetenek: "uak", jsonBekle: true, sicaklik: 0, enFazlaJeton: 16_000, zamanAsimiMs: 240_000 })),
+    );
+    const model = yanitlar[0].model;
+    const cikti = yanitlar.length === 1 ? yanitlar[0].metin : yanitlar.map((y, i) => `### Parça ${i + 1}\n${y.metin}`).join("\n\n");
     /*
       Yarıda kesilmiş yanıt REDDEDİLİR. Diğer yeteneklerde kesik yanıtın
       tamamlanmış kısmı işe yarıyor (lib/ai/bulgu.ts → jsonOku); burada
       yaramıyor: son maddeleri eksik bir puan tablosunu onaylamak, o
       maddelerin kriterlerini kurumdan SİLMEK demek.
     */
-    if (butceyeTakildi(yanit.bitis ?? null)) {
-      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
+    if (yanitlar.some((y) => butceyeTakildi(y.bitis ?? null))) {
+      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model, cikti });
       return { error: "Asistanın yanıtı tablonun sonuna gelmeden kesildi; eksik bir öneri gösterilmedi. Tekrar deneyin." };
     }
-    const oneri = uakOnerisiniCozumle(yanit.metin);
+    const parcalar = yanitlar.map((y) => uakOnerisiniCozumle(y.metin, yanitlar.length > 1));
+    if (parcalar.some((p) => p === null)) {
+      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model, cikti });
+      return { error: "Asistan tablonun bir bölümünü okuyamadı; eksik bir öneri gösterilmedi. Tekrar deneyin." };
+    }
+    const oneri = onerileriBirlestir(parcalar as UakOnerisi[]);
     if (!oneri) {
-      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
+      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model, cikti });
       return { error: "Asistan tablodan kriter çıkaramadı. PDF'in doğru dosya olduğundan emin olup tekrar deneyin." };
     }
     const uydurulan = metindeOlmayanSayilar(oneri, kaynak);
     if (uydurulan.length) {
-      console.error("[üak] öneride PDF'te olmayan sayı", { model: yanit.model, uydurulan });
-      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, cikti: yanit.metin, bulgular: oneri });
+      console.error("[üak] öneride PDF'te olmayan sayı", { model, uydurulan });
+      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "uydurma_sayi", model, cikti, bulgular: oneri });
       return {
         error: `Öneride PDF'te geçmeyen sayılar vardı (${uydurulan.slice(0, 5).join(", ")}); güvenlik için öneri gösterilmedi. Tekrar deneyin.`,
       };
     }
-    const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular: oneri });
+    const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model, cikti, bulgular: oneri });
     const { error } = await auth.supabase
       .from("uak_tablolari")
       .update({ durum: "oneri_hazir", oneri: { ...oneri, kirpildi }, ai_kaydi: kayitId })
