@@ -43,6 +43,18 @@ export const ANALIZ_ETIKETLERI = {
   */
   wilcoxon: "Wilcoxon İşaretli Sıralar Testi",
   friedman: "Friedman Testi",
+  /*
+    27.10.2026 (kurum sahibinin isteği: "analiz çeşitlerini arttıralım,
+    ANOVA ve yapabileceğimiz diğer analiz türleri"). Her biri bağımsız bir
+    uygulamaya (SciPy, statsmodels, pingouin) karşı test dosyasında sınanıyor.
+  */
+  tekorneklem: "Tek Örneklem t-Testi",
+  tekrarlianova: "Tekrarlı Ölçümler ANOVA",
+  ancova: "Kovaryans Analizi (ANCOVA)",
+  kismikorelasyon: "Kısmi Korelasyon",
+  mcnemar: "McNemar Testi",
+  lojistik: "İkili Lojistik Regresyon",
+  faktor: "Açımlayıcı Faktör Analizi",
 } as const;
 
 export type AnalizTuru = keyof typeof ANALIZ_ETIKETLERI;
@@ -67,6 +79,8 @@ export interface AnalizSecimi {
   varB?: string;
   groupVar?: string;
   maddeSayisi?: number;
+  /** Tek örneklem t-testinin karşılaştırma değeri. */
+  testDegeri?: number;
 }
 
 const EN_UZUN_BASLIK = 300;
@@ -89,7 +103,7 @@ export function analizBasligi(tur: string, secim: AnalizSecimi): string {
       ? "tüm sayısal değişkenler"
       : tur === "ttest" || tur === "anova" || tur === "mannwhitney" || tur === "kruskalwallis"
         ? [a, grup].filter(Boolean).join(" ~ ")
-        : tur === "correlation" || tur === "spearman" || tur === "pairedttest" || tur === "wilcoxon"
+        : tur === "correlation" || tur === "spearman" || tur === "pairedttest" || tur === "wilcoxon" || tur === "kismikorelasyon" || tur === "mcnemar"
           ? [a, b].filter(Boolean).join(" — ")
           : tur === "chisquare"
             ? [a, b].filter(Boolean).join(" × ")
@@ -97,8 +111,16 @@ export function analizBasligi(tur: string, secim: AnalizSecimi): string {
               ? [a, secim.maddeSayisi ? `${secim.maddeSayisi} yordayıcı` : ""].filter(Boolean).join(" ~ ")
             : tur === "reliability" && secim.maddeSayisi
               ? `${secim.maddeSayisi} madde`
-            : tur === "friedman" && secim.maddeSayisi
+            : (tur === "friedman" || tur === "tekrarlianova") && secim.maddeSayisi
               ? `${secim.maddeSayisi} ölçüm`
+            : tur === "faktor" && secim.maddeSayisi
+              ? `${secim.maddeSayisi} madde`
+            : tur === "tekorneklem" && a
+              ? `${a}${secim.testDegeri !== undefined ? ` (test değeri ${secim.testDegeri})` : ""}`
+            : tur === "ancova"
+              ? [a, grup].filter(Boolean).join(" ~ ")
+            : tur === "lojistik"
+              ? [a, secim.maddeSayisi ? `${secim.maddeSayisi} yordayıcı` : ""].filter(Boolean).join(" ~ ")
               : "";
 
   const tam = govde ? `${analizEtiketi(tur)}: ${govde}` : analizEtiketi(tur);

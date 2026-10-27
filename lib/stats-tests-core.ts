@@ -694,6 +694,9 @@ export function welchAnova(gruplar: number[][]): WelchAnovaSonucu {
   Burada her çift kendi Welch t-testiyle karşılaştırılıyor, p'ler
   Bonferroni ile düzeltiliyor.
 
+  (27.10.2026: q dağılımı artık sayısal integralle hesaplanıyor ve SciPy
+  ile sınanıyor — lib/stats-tukey.ts; ekran Games-Howell ile bunu yan
+  yana gösteriyor. Aşağıdaki not o güne kadarki gerekçe.)
   GAMES-HOWELL DEĞİL, bilerek: o da studentized range (q) dağılımını
   istiyor ve elle yazılan bir q tablosundaki hata GÖRÜNMEZ olurdu —
   makul bir p çıkar, kimse fark etmez (Tukey HSD ve Shapiro-Wilk de

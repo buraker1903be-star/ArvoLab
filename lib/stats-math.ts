@@ -10,7 +10,7 @@
  * tests/unit/stats-math.test.ts içinde otomatik çalışır.
  */
 
-function lgamma(x: number): number {
+export function lgamma(x: number): number {
   const g = 7;
   const p = [
     0.99999999999980993, 676.5203681218851, -1259.1392167224028,

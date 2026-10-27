@@ -56,3 +56,12 @@ test("Wilcoxon ve Friedman komutları", () => {
   assert.match(analizBetigi("r", "friedman", { maddeler: ["on", "son", "izleme"] }), /friedman\.test/);
   assert.match(analizBetigi("python", "wilcoxon", { varA: "on", varB: "son" }), /stats\.wilcoxon/);
 });
+
+test("yeni analizlerin komutları (27.10.2026)", () => {
+  assert.match(analizBetigi("spss", "tekorneklem", { varA: "puan", testDegeri: 3 }), /TESTVAL=3/);
+  assert.match(analizBetigi("spss", "tekrarlianova", { maddeler: ["on", "son", "iz"] }), /WSFACTOR=olcum 3/);
+  assert.match(analizBetigi("spss", "ancova", { varA: "son", groupVar: "grup", kovaryatlar: ["on"] }), /UNIANOVA son BY grup WITH on[\s\S]*on=MEAN/);
+  assert.match(analizBetigi("r", "lojistik", { varA: "gecti", yordayicilar: ["yas"] }), /family = binomial/);
+  assert.match(analizBetigi("spss", "faktor", { maddeler: ["m1", "m2", "m3"], faktorSayisi: 2 }), /FACTORS\(2\)[\s\S]*VARIMAX/);
+  assert.match(analizBetigi("python", "mcnemar", { varA: "once", varB: "sonra" }), /exact=True/);
+});

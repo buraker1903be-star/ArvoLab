@@ -188,6 +188,15 @@ export function dogrusalRegresyon(
   uydurmamalı.
 */
 export function artikKareToplami(y: number[], X: number[][]): number | null {
+  return enKucukKareler(y, X)?.sse ?? null;
+}
+
+/*
+  En küçük kareler: katsayılar ve artık kareler toplamı. ANCOVA'nın
+  düzeltilmiş ortalamaları katsayıyı da istiyor (27.10.2026); SSE'yi
+  hesaplayan gövde buraya taşındı, artikKareToplami onu çağırıyor.
+*/
+export function enKucukKareler(y: number[], X: number[][]): { b: number[]; sse: number } | null {
   const n = y.length;
   const p = X[0]?.length ?? 0;
   if (n === 0 || p === 0) return null;
@@ -210,5 +219,5 @@ export function artikKareToplami(y: number[], X: number[][]): number | null {
     for (let j = 0; j < p; j += 1) tahmin += X[i][j] * b[j];
     sse += (y[i] - tahmin) ** 2;
   }
-  return sse;
+  return { b, sse };
 }
