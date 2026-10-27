@@ -1,4 +1,4 @@
-import { BookMarked, Sparkles } from "lucide-react";
+import { BookMarked, Download, FileUp, Sparkles } from "lucide-react";
 import { getLiteratureSources } from "@/app/actions/literature";
 import { getMyCitationChecks, getMyProjects, sonKaynakcaDenetimi } from "@/app/actions/citation-check";
 import { literaturAsistaniAcik } from "@/app/actions/ai-literatur";
@@ -9,6 +9,10 @@ import LiteraturPenceresi from "./literatur-penceresi";
 import LiteraturAsistani from "./literatur-asistani";
 import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
 import CalismaSecici from "../_components/calisma-secici";
+import KaynakListesi from "./kaynak-listesi";
+import { DisaAktarma, IceAktarma } from "./kaynak-aktarim-araclari";
+import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
+import type { CitationStyle } from "@/lib/citation-format";
 
 /* Kaynak PDF'lerini bulan sunucu işlemi kaynakça penceresinden çağrılıyor
    ve dış arşivlerden indiriyor (app/actions/kaynak-pdf.ts, bütçe 40 sn). */
@@ -39,11 +43,6 @@ export const maxDuration = 60;
 
 type Durum = "to_review" | "read" | "used";
 const SIRA: Durum[] = ["to_review", "read", "used"];
-const ETIKET: Record<Durum, { ad: string; ton: string }> = {
-  to_review: { ad: "Okunacak", ton: "neutral" },
-  read: { ad: "Okundu", ton: "info" },
-  used: { ad: "Metinde", ton: "success" },
-};
 
 export default async function KaynaklarPage({
   searchParams,
@@ -142,6 +141,39 @@ export default async function KaynaklarPage({
                     />
                   </PanelDrawer>
                 ) : null}
+                {/* Toplu ekleme ve dışa aktarma (27.10.2026): Zotero/Mendeley dosyası,
+                    DOI listesi; RIS/BibTeX indirme ve stilinde kaynakça kopyalama. */}
+                <PanelDrawer
+                  triggerLabel="İçe aktar"
+                  triggerIcon={<FileUp size={15} aria-hidden="true" />}
+                  triggerClassName="projects-filter-button button-compact"
+                  kicker="Literatür"
+                  title="Kaynakları toplu ekleyin"
+                  description="Zotero, Mendeley ya da EndNote kütüphanenizi dosyayla aktarın ya da DOI'leri yapıştırın. Kaynaklar bu çalışmaya “Okunacak” olarak eklenir."
+                  boy="genis"
+                  basaridaKapan={false}
+                >
+                  <IceAktarma projectId={calisma.id} mevcut={kaynaklar} />
+                </PanelDrawer>
+                {kaynaklar.length ? (
+                  <PanelDrawer
+                    triggerLabel="Dışa aktar"
+                    triggerIcon={<Download size={15} aria-hidden="true" />}
+                    triggerClassName="projects-filter-button button-compact"
+                    kicker="Literatür"
+                    title="Kaynakça ve dışa aktarma"
+                    description="Kaynakçanızı çalışmanızın atıf stilinde kopyalayın ya da kaynaklarınızı başka bir programa aktarın."
+                    boy="genis"
+                    basaridaKapan={false}
+                  >
+                    <DisaAktarma
+                      kaynaklar={kaynaklar}
+                      stil={(calisma.citation_style && calisma.citation_style in STIL_ETIKETLERI ? calisma.citation_style : "apa7") as CitationStyle}
+                      stilAdi={STIL_ETIKETLERI[calisma.citation_style ?? "apa7"] ?? "APA 7"}
+                      calismaAdi={calisma.title}
+                    />
+                  </PanelDrawer>
+                ) : null}
                 <LiteraturPenceresi
                   projectId={calisma.id}
                   projeAdi={calisma.title}
@@ -151,26 +183,11 @@ export default async function KaynaklarPage({
               </div>
             </header>
             {kaynaklar.length ? (
-              <ul className="gb-liste">
-                {kaynaklar.map((k) => {
-                  const durum = (SIRA.includes(k.status as Durum) ? k.status : "to_review") as Durum;
-                  return (
-                    <li key={k.id} className="gb-satir">
-                      <span className="gb-satir-govde">
-                        <b>{k.title}</b>
-                        <small>{[k.authors || "Yazar belirtilmedi", k.year, k.container_title].filter(Boolean).join(" · ")}</small>
-                      </span>
-                      <span className="status-pill" data-tone={ETIKET[durum].ton}>
-                        {ETIKET[durum].ad}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <KaynakListesi kaynaklar={kaynaklar} />
             ) : (
               <p className="gb-bos">
-                &quot;Kaynak bul&quot; ile OpenAlex ve Crossref dizinlerinde arayın ya da elinizdeki kaynağı elle
-                ekleyin. Okuduğunuzu ve metinde kullandığınızı orada işaretlersiniz.
+                &quot;Kaynak bul&quot; ile OpenAlex ve Crossref dizinlerinde arayın, &quot;İçe aktar&quot; ile Zotero/Mendeley
+                kütüphanenizi ya da DOI listenizi ekleyin. Okuduğunuzu ve metinde kullandığınızı burada işaretlersiniz.
               </p>
             )}
             {bagsiz ? <p className="hint">{bagsiz} kaynağınız bir çalışmaya bağlı değil; burada görünmüyor.</p> : null}

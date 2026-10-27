@@ -114,7 +114,8 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  * makaleBolumDenetle — ortak kapı lib/ai/erisim.ts), runOriginalityCheck,
  * runCitationCheck, analyzeUploadedDocument, importWordDocument,
  * saveManuscript, saveNamedVersion, restoreManuscriptVersion,
- * createLiteratureSource, createCitationSource, addManuscriptComment,
+ * createLiteratureSource, createCitationSource, kaynaklariIceAktar ve doiIleEkle
+ * (toplu kaynak ekleme; DOI ayrıca Crossref'e gider), addManuscriptComment,
  * addScoreEntry, createProject, yeniCalisma, createShareLink, kanitEkle, kunyeyiDogrula
  * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
  * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi,

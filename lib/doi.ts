@@ -88,7 +88,7 @@ const clean = (value: string | undefined | null, max: number) => {
   return text ? text.slice(0, max) : null;
 };
 
-const initials = (given: string) =>
+export const initials = (given: string) =>
   given
     .split(/[\s.]+/)
     .filter(Boolean)
@@ -100,7 +100,7 @@ const initials = (given: string) =>
     )
     .join(" ");
 
-function formatAuthors(people: CrossrefAuthor[] | undefined): string | null {
+export function formatAuthors(people: { given?: string; family?: string; name?: string }[] | undefined): string | null {
   const names = (people ?? [])
     .map((person) => {
       if (person.family) return `${person.family.trim()}${person.given ? `, ${initials(person.given)}` : ""}`;
