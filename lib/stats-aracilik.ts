@@ -188,6 +188,172 @@ export function aracilik(
   };
 }
 
+/* ---------- Çoklu aracı: paralel (Model 4) ve seri (Model 6) ---------- */
+
+/*
+  ÇOKLU ARACI (27.10.2026). Tezlerde aracı çoğu zaman tek değil:
+  - PARALEL (PROCESS Model 4, k aracı): X her aracıyı ayrı etkiler,
+    aracılar birbirini etkilemez. Her aracının özgül dolaylı etkisi
+    a_j·b_j; toplam dolaylı etki bunların toplamı. Özgül etkilerin
+    farkı (karşıtlık) "hangi aracı daha güçlü" sorusunu yanıtlar.
+  - SERİ (PROCESS Model 6, 2–4 aracı): X → M1 → M2 → Y zinciri; her
+    aracı kendinden öncekilerle de yordanır. Dolaylı yollar aracıların
+    sıralı her alt kümesi: 2 aracıda 3, 3 aracıda 7, 4 aracıda 15 yol.
+
+  Her yolun ve karşıtlığın anlamlılığı aynı tohumlu yüzdelik bootstrap'la
+  (tek aracılı analizle aynı ilke). Tek aracılı analiz `aracilik`
+  olarak kalıyor; bu fonksiyon iki ve daha çok aracı içindir.
+*/
+
+export interface DolayliYol {
+  /** Yoldaki aracıların indeksleri (sırayla). */
+  araciSirasi: number[];
+  etki: number;
+  bootAlt: number;
+  bootUst: number;
+  bootSE: number;
+}
+
+export interface Karsitlik {
+  a: number;
+  b: number;
+  fark: number;
+  bootAlt: number;
+  bootUst: number;
+}
+
+export interface CokluAracilikSonucu {
+  n: number;
+  tur: "paralel" | "seri";
+  /** a_j: X → M_j. */
+  a: Yol[];
+  /** d[j][i]: M_i → M_j (yalnızca seride, i < j). */
+  d: (Yol | null)[][];
+  /** b_j: M_j → Y (X ve diğer aracılar kontrol). */
+  b: Yol[];
+  c: Yol;
+  cUs: Yol;
+  yollar: DolayliYol[];
+  toplamDolayli: DolayliYol;
+  karsitliklar: Karsitlik[];
+  bootOrnek: number;
+  rKareM: number[];
+  rKareY: number;
+}
+
+export const SERI_EN_COK = 4;
+export const PARALEL_EN_COK = 10;
+
+/* Seride sıralı alt kümeler (boş olmayan), kısa yollar önce; paralelde tekli. */
+function yolKumeleri(k: number, tur: "paralel" | "seri"): number[][] {
+  if (tur === "paralel") return Array.from({ length: k }, (_, j) => [j]);
+  const kumeler: number[][] = [];
+  for (let maske = 1; maske < 1 << k; maske += 1) {
+    kumeler.push(Array.from({ length: k }, (_, j) => j).filter((j) => maske & (1 << j)));
+  }
+  return kumeler.sort((x, y) => x.length - y.length || x.join().localeCompare(y.join()));
+}
+
+/* Tek bir veri kümesinde (asıl ya da bootstrap) bütün katsayılar. */
+function cokluKatsayilar(x: number[], ms: number[][], y: number[], kovaryatlar: number[][], tur: "paralel" | "seri") {
+  const k = ms.length;
+  const modeller: OlsSonucu[] = [];
+  for (let j = 0; j < k; j += 1) {
+    const oncekiler = tur === "seri" ? ms.slice(0, j) : [];
+    const r = ols(ms[j], tasarim([x, ...oncekiler, ...kovaryatlar]));
+    if (!r) return null;
+    modeller.push(r);
+  }
+  const modelY = ols(y, tasarim([x, ...ms, ...kovaryatlar]));
+  if (!modelY) return null;
+  const a = modeller.map((r) => r.b[1]);
+  /* d[j][i] = M_i'nin M_j modelindeki katsayısı (sütun 2 + i). */
+  const d = modeller.map((r, j) => Array.from({ length: k }, (_, i) => (tur === "seri" && i < j ? r.b[2 + i] : 0)));
+  const b = Array.from({ length: k }, (_, j) => modelY.b[2 + j]);
+  return { modeller, modelY, a, d, b };
+}
+
+function yolEtkisi(kume: number[], a: number[], d: number[][], b: number[]) {
+  let etki = a[kume[0]];
+  for (let t = 1; t < kume.length; t += 1) etki *= d[kume[t]][kume[t - 1]];
+  return etki * b[kume[kume.length - 1]];
+}
+
+export function cokluAracilik(
+  x: number[],
+  ms: number[][],
+  y: number[],
+  tur: "paralel" | "seri",
+  kovaryatlar: number[][] = [],
+  ornekSayisi = BOOTSTRAP_ORNEK,
+): CokluAracilikSonucu | null {
+  const n = x.length;
+  const k = ms.length;
+  if (k < 2 || (tur === "seri" && k > SERI_EN_COK) || k > PARALEL_EN_COK) return null;
+  if (n < k + kovaryatlar.length + 5) return null;
+  const asil = cokluKatsayilar(x, ms, y, kovaryatlar, tur);
+  const modelC = ols(y, tasarim([x, ...kovaryatlar]));
+  if (!asil || !modelC) return null;
+  const kumeler = yolKumeleri(k, tur);
+  const etkiler = kumeler.map((km) => yolEtkisi(km, asil.a, asil.d, asil.b));
+  const toplam = etkiler.reduce((t, e) => t + e, 0);
+  const ciftler: [number, number][] = [];
+  for (let i = 0; i < kumeler.length; i += 1) for (let j = i + 1; j < kumeler.length; j += 1) ciftler.push([i, j]);
+
+  /* Bootstrap: her örnekte yollar, toplam ve karşıtlıklar. */
+  const rastgele = tohumluRastgele(BOOTSTRAP_TOHUM);
+  const dagYol: number[][] = kumeler.map(() => []);
+  const dagToplam: number[] = [];
+  const dagKarsit: number[][] = ciftler.map(() => []);
+  const xs = new Array<number>(n);
+  const yss = new Array<number>(n);
+  const mss = ms.map(() => new Array<number>(n));
+  const kss = kovaryatlar.map(() => new Array<number>(n));
+  for (let r = 0; r < ornekSayisi; r += 1) {
+    for (let i = 0; i < n; i += 1) {
+      const s = Math.floor(rastgele() * n);
+      xs[i] = x[s];
+      yss[i] = y[s];
+      for (let j = 0; j < k; j += 1) mss[j][i] = ms[j][s];
+      for (let j = 0; j < kovaryatlar.length; j += 1) kss[j][i] = kovaryatlar[j][s];
+    }
+    const kt = cokluKatsayilar(xs, mss, yss, kss, tur);
+    if (!kt) continue;
+    const e = kumeler.map((km) => yolEtkisi(km, kt.a, kt.d, kt.b));
+    e.forEach((v, i) => dagYol[i].push(v));
+    dagToplam.push(e.reduce((t, v) => t + v, 0));
+    ciftler.forEach(([i, j], c) => dagKarsit[c].push(e[i] - e[j]));
+  }
+  const ozet = (dagilim: number[]) => {
+    const sirali = [...dagilim].sort((p, q) => p - q);
+    const ort = mean(sirali);
+    return {
+      bootAlt: yuzdelik(sirali, 0.025),
+      bootUst: yuzdelik(sirali, 0.975),
+      bootSE: Math.sqrt(sirali.reduce((t, v) => t + (v - ort) ** 2, 0) / (sirali.length - 1)),
+    };
+  };
+
+  return {
+    n,
+    tur,
+    a: asil.modeller.map((r) => yol(r, 1)),
+    d: asil.modeller.map((r, j) => Array.from({ length: k }, (_, i) => (tur === "seri" && i < j ? yol(r, 2 + i) : null))),
+    b: Array.from({ length: k }, (_, j) => yol(asil.modelY, 2 + j)),
+    c: yol(modelC, 1),
+    cUs: yol(asil.modelY, 1),
+    yollar: kumeler.map((km, i) => ({ araciSirasi: km, etki: etkiler[i], ...ozet(dagYol[i]) })),
+    toplamDolayli: { araciSirasi: [], etki: toplam, ...ozet(dagToplam) },
+    karsitliklar: ciftler.map(([i, j], c) => {
+      const o = ozet(dagKarsit[c]);
+      return { a: i, b: j, fark: etkiler[i] - etkiler[j], bootAlt: o.bootAlt, bootUst: o.bootUst };
+    }),
+    bootOrnek: dagToplam.length,
+    rKareM: asil.modeller.map((r) => r.rKare),
+    rKareY: asil.modelY.rKare,
+  };
+}
+
 /* ---------- Düzenleyicilik ---------- */
 
 export interface KosulluEtki {

@@ -10,7 +10,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { aracilik, duzenleyicilik } from "@/lib/stats-aracilik";
+import { aracilik, cokluAracilik, duzenleyicilik } from "@/lib/stats-aracilik";
 
 const yakin = (a: number, b: number, tolerans = 1e-6) => assert.ok(Math.abs(a - b) < tolerans, `${a} ≈ ${b} değil`);
 const V = JSON.parse(readFileSync("tests/fixtures/aracilik-verisi.json", "utf8")) as Record<"x" | "m" | "y" | "w" | "z" | "k", number[]>;
@@ -84,5 +84,66 @@ describe("düzenleyicilik (Model 1, merkezlenmiş)", () => {
     const r = duzenleyicilik(V.x, w, V.z)!;
     assert.deepEqual(r.kosullu.map((k) => k.w), [0, 1]);
     assert.deepEqual(r.jnSinirlari, []);
+  });
+});
+
+describe("çoklu aracı (paralel ve seri)", () => {
+  /*
+    Katsayılar statsmodels OLS'ten; paralelde özgül dolaylı etkiler ve
+    bootstrap aralıkları pingouin.mediation_analysis(m=[m1, m2])'den
+    (aralıklar gevşek toleransla). Doğrusal modelde toplam dolaylı etki
+    c − c′'ye tam eşittir: bu özdeşlik her modelde ayrıca sınanıyor.
+    Veri: tests/fixtures/coklu-aracilik.json (n = 150).
+  */
+  const C = JSON.parse(readFileSync("tests/fixtures/coklu-aracilik.json", "utf8")) as Record<"x" | "m1" | "m2" | "m3" | "y", number[]>;
+
+  test("paralel iki aracı (pingouin)", () => {
+    const r = cokluAracilik(C.x, [C.m1, C.m2], C.y, "paralel")!;
+    yakin(r.a[0].b, 0.5119917663);
+    yakin(r.a[1].b, 0.476856015);
+    yakin(r.b[0].b, 0.393943639913415);
+    yakin(r.b[1].b, 0.29787440171473806);
+    yakin(r.cUs.b, 0.21840493438013914);
+    yakin(r.c.b, 0.5621440345884994);
+    assert.deepEqual(r.yollar.map((y) => y.araciSirasi), [[0], [1]]);
+    yakin(r.yollar[0].etki, 0.2016959);
+    yakin(r.yollar[1].etki, 0.1420432002);
+    yakin(r.yollar[0].bootAlt, 0.1078, 0.03);
+    yakin(r.yollar[0].bootUst, 0.3255, 0.03);
+    yakin(r.yollar[1].bootAlt, 0.0644, 0.03);
+    yakin(r.yollar[1].bootUst, 0.2529, 0.03);
+    yakin(r.toplamDolayli.etki, r.c.b - r.cUs.b, 1e-10);
+    assert.equal(r.karsitliklar.length, 1);
+    yakin(r.karsitliklar[0].fark, 0.2016959 - 0.1420432002);
+  });
+
+  test("seri iki aracı: üç yol, zincir a1·d21·b2", () => {
+    const r = cokluAracilik(C.x, [C.m1, C.m2], C.y, "seri", [], 1000)!;
+    yakin(r.a[1].b, 0.28237495834147786);
+    yakin(r.d[1][0]!.b, 0.3798519223585512);
+    assert.equal(r.d[0][1], null);
+    assert.deepEqual(r.yollar.map((y) => y.araciSirasi), [[0], [1], [0, 1]]);
+    yakin(r.yollar[0].etki, 0.5119917663267414 * 0.393943639913415);
+    yakin(r.yollar[1].etki, 0.28237495834147786 * 0.29787440171473806);
+    yakin(r.yollar[2].etki, 0.5119917663267414 * 0.3798519223585512 * 0.29787440171473806);
+    yakin(r.toplamDolayli.etki, r.c.b - r.cUs.b, 1e-10);
+    assert.equal(r.karsitliklar.length, 3);
+  });
+
+  test("seri üç aracı: yedi yol, toplam = c − c′", () => {
+    const r = cokluAracilik(C.x, [C.m1, C.m2, C.m3], C.y, "seri", [], 500)!;
+    assert.equal(r.yollar.length, 7);
+    yakin(r.cUs.b, 0.18236264145453981);
+    yakin(r.d[2][0]!.b, 0.14999100824890513);
+    yakin(r.d[2][1]!.b, 0.3792000559867202);
+    yakin(r.b[2].b, 0.13101572738975303);
+    yakin(r.toplamDolayli.etki, r.c.b - r.cUs.b, 1e-10);
+    const tekrar = cokluAracilik(C.x, [C.m1, C.m2, C.m3], C.y, "seri", [], 500)!;
+    assert.deepEqual(tekrar.yollar.map((y) => y.bootAlt), r.yollar.map((y) => y.bootAlt), "tohumlu: aynı aralıklar");
+  });
+
+  test("sınırlar: tek aracı ya da seride dörtten çok aracı kabul edilmez", () => {
+    assert.equal(cokluAracilik(C.x, [C.m1], C.y, "paralel"), null);
+    assert.equal(cokluAracilik(C.x, [C.m1, C.m2, C.m3, C.m1, C.m2], C.y, "seri"), null);
   });
 });

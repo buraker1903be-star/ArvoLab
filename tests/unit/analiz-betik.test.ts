@@ -75,7 +75,7 @@ test("karma ANOVA komutları", () => {
 
 test("aracılık, düzenleyicilik ve DFA komutları", () => {
   assert.match(analizBetigi("spss", "aracilik", { varA: "x", varB: "m", varY: "y" }), /PROCESS y=y \/x=x \/m=m[\s\S]*model=4/);
-  assert.match(analizBetigi("r", "aracilik", { varA: "x", varB: "m", varY: "y" }), /dolayli := a\*b/);
+  assert.match(analizBetigi("r", "aracilik", { varA: "x", varB: "m", varY: "y" }), /ind1 := a1\*b1/);
   assert.match(analizBetigi("spss", "duzenleyicilik", { varA: "x", varB: "w", varY: "y" }), /model=1 \/center=1 \/jn=1/);
   const dfa = { dfaFaktorleri: [{ ad: "Kaygı", maddeler: ["m1", "m2", "m3"] }, { ad: "Öz yeterlik", maddeler: ["m4", "m5"] }] };
   assert.match(analizBetigi("r", "dfa", dfa), /Kaygı =~ m1 \+ m2 \+ m3\nÖz_yeterlik =~ m4 \+ m5[\s\S]*std\.lv = TRUE/);
@@ -85,4 +85,17 @@ test("aracılık, düzenleyicilik ve DFA komutları", () => {
 test("DFA betiği serbest bırakılan hata kovaryanslarını taşır", () => {
   const s = { dfaFaktorleri: [{ ad: "F1", maddeler: ["m1", "m2", "m3"] }], dfaHataKovaryanslari: [["m1", "m2"]] as [string, string][] };
   assert.match(analizBetigi("r", "dfa", s), /F1 =~ m1 \+ m2 \+ m3\nm1 ~~ m2/);
+});
+
+test("çoklu aracı betikleri: PROCESS model numarası ve lavaan yolları", () => {
+  const paralel = { varA: "x", varY: "y", aracilar: ["m1", "m2"], araciModeli: "paralel" as const };
+  const seri = { ...paralel, araciModeli: "seri" as const };
+  assert.match(analizBetigi("spss", "aracilik", paralel), /\/m=m1 m2[\s\S]*\/model=4[\s\S]*contrast=1/);
+  assert.match(analizBetigi("spss", "aracilik", seri), /\/model=6/);
+  const r = analizBetigi("r", "aracilik", seri);
+  assert.match(r, /m2 ~ a2\*x \+ d21\*m1/);
+  assert.match(r, /ind3 := a1\*d21\*b2/);
+  assert.match(r, /toplam_dolayli := ind1 \+ ind2 \+ ind3/);
+  assert.match(analizBetigi("python", "aracilik", paralel), /m=\["m1","m2"\]/);
+  assert.match(analizBetigi("r", "aracilik", { varA: "x", varB: "m", varY: "y" }), /ind1 := a1\*b1/);
 });

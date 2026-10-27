@@ -115,9 +115,38 @@ export type BetikSecimi = {
   varY?: string;
   /** DFA modeli: faktör adı ve maddeleri. */
   dfaFaktorleri?: { ad: string; maddeler: string[] }[];
+  /** Aracılıkta aracılar (bir ya da daha çok) ve çoklu aracının modeli. */
+  aracilar?: string[];
+  araciModeli?: "paralel" | "seri";
   /** DFA'da serbest bırakılan hata kovaryansları. */
   dfaHataKovaryanslari?: [string, string][];
 };
+
+/*
+  Aracılık için lavaan modeli: tek, paralel ya da seri aracı. Etiketler
+  a1, d21, b1…; dolaylı yollar ":=" ile tanımlanır, bootstrap lavaan'da.
+*/
+function aracilikLavaan(s: BetikSecimi): string {
+  const x = ad(s.varA, "x");
+  const y = ad(s.varY, "sonuc");
+  const ms = s.aracilar?.length ? s.aracilar : [ad(s.varB, "araci")];
+  const seri = s.araciModeli === "seri" && ms.length > 1;
+  const satirlar = ms.map((m, j) => {
+    const onceki = seri ? ms.slice(0, j).map((o, i) => ` + d${j + 1}${i + 1}*${o}`).join("") : "";
+    return `  ${m} ~ a${j + 1}*${x}${onceki}`;
+  });
+  satirlar.push(`  ${y} ~ ${ms.map((m, j) => `b${j + 1}*${m}`).join(" + ")} + c*${x}`);
+  /* Yollar: paralelde tekli, seride sıralı her alt küme. */
+  const kumeler: number[][] = [];
+  if (seri) {
+    for (let maske = 1; maske < 1 << ms.length; maske += 1) kumeler.push(ms.map((_, j) => j).filter((j) => maske & (1 << j)));
+    kumeler.sort((p, q) => p.length - q.length || p.join().localeCompare(q.join()));
+  } else ms.forEach((_, j) => kumeler.push([j]));
+  const yollar = kumeler.map((km) => [`a${km[0] + 1}`, ...km.slice(1).map((j, t) => `d${j + 1}${km[t] + 1}`), `b${km[km.length - 1] + 1}`].join("*"));
+  yollar.forEach((y2, i) => satirlar.push(`  ind${i + 1} := ${y2}`));
+  satirlar.push(`  toplam_dolayli := ${yollar.map((_, i) => `ind${i + 1}`).join(" + ")}`);
+  return `library(lavaan)\nmodel <- '\n${satirlar.join("\n")}\n'\nfit <- sem(model, data = veri, se = "bootstrap", bootstrap = 5000)\nparameterEstimates(fit, boot.ci.type = "perc")`;
+}
 
 /* lavaan / semopy model metni: "F1 =~ m1 + m2 + m3" satırları. */
 const dfaModelMetni = (s: BetikSecimi) =>
@@ -184,7 +213,7 @@ function spss(tur: AnalizTuru, s: BetikSecimi): string {
     case "tekrarlianova":
       return `GLM ${maddeler}\n  /WSFACTOR=olcum ${s.maddeler?.length || 3} Polynomial\n  /PRINT=DESCRIPTIVE ETASQ\n  /EMMEANS=TABLES(olcum) COMPARE ADJ(BONFERRONI)\n  /WSDESIGN=olcum.`;
     case "aracilik":
-      return `* Hayes PROCESS makrosu gerekir (processmacro.org). Model 4, 5000 bootstrap.\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /m=${b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=4 /boot=5000 /total=1 /effsize=1.`;
+      return `* Hayes PROCESS makrosu gerekir (processmacro.org). Model 4, 5000 bootstrap.\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /m=${s.aracilar?.length ? s.aracilar.map(spssAd).join(" ") : b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=${s.araciModeli === "seri" && (s.aracilar?.length ?? 0) > 1 ? 6 : 4} /boot=5000 /total=1${(s.aracilar?.length ?? 0) > 1 ? " /contrast=1" : " /effsize=1"}.`;
     case "duzenleyicilik":
       return `* Hayes PROCESS makrosu gerekir (processmacro.org). Model 1, merkezlenmiş, Johnson-Neyman.\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /w=${b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=1 /center=1 /jn=1 /plot=1.`;
     case "dfa":
@@ -237,7 +266,7 @@ function r(tur: AnalizTuru, s: BetikSecimi): string {
     friedman: `olcumler <- na.omit(veri[, c(${maddeler})])\nfriedman.test(as.matrix(olcumler))`,
     tekorneklem: `t.test(veri$${a}, mu = ${s.testDegeri ?? 0})`,
     tekrarlianova: `library(rstatix)\nlibrary(tidyr)\nveri$id <- seq_len(nrow(veri))\nuzun <- pivot_longer(veri[, c("id", ${maddeler})], -id, names_to = "olcum", values_to = "puan")\nanova_test(uzun, dv = puan, wid = id, within = olcum)  # Mauchly ve GG/HF düzeltmesi dahil\npairwise_t_test(uzun, puan ~ olcum, paired = TRUE, p.adjust.method = "bonferroni")`,
-    aracilik: `library(lavaan)\nmodel <- '\n  ${ad(s.varB, "araci")} ~ a*${ad(s.varA, "x")}\n  ${ad(s.varY, "sonuc")} ~ b*${ad(s.varB, "araci")} + c*${ad(s.varA, "x")}\n  dolayli := a*b\n  toplam := c + a*b\n'\nfit <- sem(model, data = veri, se = "bootstrap", bootstrap = 5000)\nparameterEstimates(fit, boot.ci.type = "perc")`,
+    aracilik: aracilikLavaan(s),
     duzenleyicilik: `veri$x_m <- veri$${a} - mean(veri$${a}, na.rm = TRUE)\nveri$w_m <- veri$${b} - mean(veri$${b}, na.rm = TRUE)\nmodel <- lm(${rAd(ad(s.varY, "sonuc"))} ~ x_m * w_m, data = veri)\nsummary(model)\nlibrary(interactions)\nsim_slopes(model, pred = x_m, modx = w_m, johnson_neyman = TRUE)`,
     dfa: `library(lavaan)\nmodel <- '\n${dfaModelMetni(s)}\n'\nfit <- cfa(model, data = veri, std.lv = TRUE)\nsummary(fit, fit.measures = TRUE, standardized = TRUE)\n# Not: lavaan χ²'yi N ile, ArvoLab AMOS gibi N − 1 ile hesaplar; fark çok küçüktür.`,
     karmaanova: `library(rstatix)\nlibrary(tidyr)\nveri$id <- seq_len(nrow(veri))\nuzun <- pivot_longer(veri[, c("id", ${JSON.stringify(ad(s.groupVar, "grup"))}, ${maddeler})], -c(id, ${g}), names_to = "olcum", values_to = "puan")\nanova_test(uzun, dv = puan, wid = id, within = olcum, between = ${g})`,
@@ -279,7 +308,9 @@ function python(tur: AnalizTuru, s: BetikSecimi): string {
     friedman: `olcumler = veri[${maddeler}].dropna()\nprint(stats.friedmanchisquare(*[olcumler[m] for m in olcumler.columns]))`,
     tekorneklem: `print(stats.ttest_1samp(${a}.dropna(), ${s.testDegeri ?? 0}))`,
     tekrarlianova: `import pingouin as pg\nuzun = veri[${maddeler}].dropna().reset_index().melt(id_vars="index", var_name="olcum", value_name="puan")\nprint(pg.rm_anova(uzun, dv="puan", within="olcum", subject="index", correction=True))\nprint(pg.pairwise_tests(uzun, dv="puan", within="olcum", subject="index", padjust="bonf"))`,
-    aracilik: `import pingouin as pg\nprint(pg.mediation_analysis(data=veri, x=${JSON.stringify(aAd)}, m=${JSON.stringify(bAd)}, y=${JSON.stringify(ad(s.varY, "sonuc"))}${s.kovaryatlar?.length ? `, covar=${kovaryatlarPy}` : ""}, n_boot=5000))`,
+    aracilik: s.araciModeli === "seri" && (s.aracilar?.length ?? 0) > 1
+      ? `# Seri aracılığın bootstrap'lı çözümü için R betiğini (lavaan) kullanın; pingouin yalnızca paralel modeli destekler.\nimport statsmodels.formula.api as smf\n${s.aracilar!.map((m, j) => `print(smf.ols(${JSON.stringify(`${pyFormul(m)} ~ ${[aAd, ...s.aracilar!.slice(0, j)].map(pyFormul).join(" + ")}`)}, data=veri).fit().params)`).join("\n")}\nprint(smf.ols(${JSON.stringify(`${pyFormul(ad(s.varY, "sonuc"))} ~ ${[aAd, ...s.aracilar!].map(pyFormul).join(" + ")}`)}, data=veri).fit().params)`
+      : `import pingouin as pg\nprint(pg.mediation_analysis(data=veri, x=${JSON.stringify(aAd)}, m=${JSON.stringify(s.aracilar?.length ? (s.aracilar.length > 1 ? s.aracilar : s.aracilar[0]) : bAd)}, y=${JSON.stringify(ad(s.varY, "sonuc"))}${s.kovaryatlar?.length ? `, covar=${kovaryatlarPy}` : ""}, n_boot=5000))`,
     duzenleyicilik: `import statsmodels.formula.api as smf\nveri["x_m"] = ${a} - ${a}.mean()\nveri["w_m"] = ${b} - ${b}.mean()\nmodel = smf.ols(${JSON.stringify(`${pyFormul(ad(s.varY, "sonuc"))} ~ x_m * w_m`)}, data=veri).fit()\nprint(model.summary())`,
     dfa: `import semopy\nmodel = semopy.Model("""\n${dfaModelMetni(s)}\n""")\nmodel.fit(veri)\nprint(model.inspect(std_est=True))\nprint(semopy.calc_stats(model).T)`,
     karmaanova: `import pingouin as pg\nuzun = veri[[${JSON.stringify(gAd)}] + ${maddeler}].dropna().reset_index().melt(id_vars=["index", ${JSON.stringify(gAd)}], var_name="olcum", value_name="puan")\nprint(pg.mixed_anova(uzun, dv="puan", within="olcum", between=${JSON.stringify(gAd)}, subject="index", correction=True))`,
