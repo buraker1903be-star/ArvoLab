@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { PenLine, Plus } from "lucide-react";
+import { LayoutList, PenLine, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
 import { getProjects } from "@/app/actions/projects";
-import { projectTypeLabel, statusLabel, isOversightRole, STAFF_ROLES } from "@/lib/project-labels";
+import { projectTypeLabel, statusLabel, isOversightRole, isExpertEligible, ADMIN_ROLES, STAFF_ROLES } from "@/lib/project-labels";
+import { personelSayaclari } from "@/lib/personel-sayaclari";
+import { DEFAULT_PROJECT_FILTERS } from "@/lib/project-filters";
+import { kuyrukAdresi } from "@/lib/destek-kuyrugu";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { getAccessState } from "@/lib/access";
 import LicenseCard from "./_components/license-card";
@@ -66,9 +69,28 @@ export default async function DashboardPage() {
   // Panel düzeniyle aynı istekte paylaşılır (lib/access.ts cache'li).
   const access = await getAccessState(profile);
   const activeProjects = projects.filter((p) => isActive(p.status));
+  /*
+    Düzen rol ve kurumdan; iç ekip öğrenci düzenini önizleyebilir
+    (lib/onizleme.ts). Önizlemede yalnızca DÜZEN değişir: veriler
+    yöneticinin kendi çalışmaları, yetkiler aynı.
+
+    Karar öne alındı (27.10.2026): personelin ana sayfası "kaldığınız
+    yer" göstermiyor, ama aşağıdaki tez sorguları (müsvedde, kaynaklar,
+    denetim, belge sayıları) personelde de çalışıyordu — kurumun en son
+    düzenlenen öğrenci tezi için, ekranda hiç kullanılmadan.
+  */
+  const gorunum = await sayfaGorunumu({
+    rol: profile?.role,
+    personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
+    kurumVar: Boolean(profile?.organization_id),
+  });
+  const isStaff = gorunum.personel;
   const [{ stats: writing, openComments }, geriBildirim] = await Promise.all([
+    /* Personelde BÜTÜN çalışmalar: sayaçlar Çalışmalarım'daki filtreyle
+       aynı sayıyı vermeli (teslim edilmiş bir çalışmanın açık yorumu da
+       "Açık yorumlu" filtresinde çıkıyor). */
     getWritingStats(
-      activeProjects.map((p) => p.id),
+      (isStaff ? projects : activeProjects).map((p) => p.id),
       user.id
     ),
     // Kullanım geri bildirimi: yalnızca sistemi gerçekten kullanmış kişiye,
@@ -76,9 +98,9 @@ export default async function DashboardPage() {
     geriBildirimSorusu(),
   ]);
 
-  // Kaldığınız yer: en son yazılan aktif çalışma; hiç yazılmadıysa en yeni aktif çalışma.
-  const resume =
-    [...activeProjects]
+
+  // Kaldığınız yer: en son yazılan aktif çalışma; hiç yazılmadıysa en yeni aktif çalışma. Personelde yok.
+  const resume = isStaff ? undefined : [...activeProjects]
       .filter((p) => writing.has(p.id))
       .sort((a, b) => writing.get(b.id)!.updatedAt.localeCompare(writing.get(a.id)!.updatedAt))[0] ?? activeProjects[0];
   const resumeStats = resume ? writing.get(resume.id) : undefined;
@@ -212,19 +234,57 @@ export default async function DashboardPage() {
   const readinessGaps = readinessGapsSirali.filter((madde) => madde.id !== sirada?.kaynakMadde);
 
 
-  /*
-    Düzen rol ve kurumdan; iç ekip öğrenci düzenini önizleyebilir
-    (lib/onizleme.ts). Önizlemede yalnızca DÜZEN değişir: veriler
-    yöneticinin kendi çalışmaları, yetkiler aynı.
-  */
-  const gorunum = await sayfaGorunumu({
-    rol: profile?.role,
-    personelRolu: profile?.role ? STAFF_ROLES.includes(profile.role) : false,
-    kurumVar: Boolean(profile?.organization_id),
-  });
-  const isStaff = gorunum.personel;
   // Personel için "dikkat isteyenler" (öğrencinin ana sayfası değişmez); sorumlu ataması yalnızca denetim rollerinde
   const attention = isStaff ? computeAttention(projects, openComments, { includeUnassigned: isOversightRole(profile?.role) }) : null;
+
+  /*
+    PERSONEL ANA SAYFASI: SAYAÇLAR VE KUYRUKLAR (27.10.2026). Sayaçlar
+    Çalışmalarım'daki sayaçların AYNISI (lib/personel-sayaclari.ts): sayı,
+    basınca açılan filtreli listenin uzunluğu. Yalnızca gözetim rolünde —
+    filtreler (onay, sorumlu) orada anlamlı. Kuyruk sayıları Destek'in
+    kuyruklarına gidiyor; yalnızca o kuyruğa yetkisi olana.
+  */
+  const gozetim = isStaff && isOversightRole(profile?.role);
+  const sayaclar = gozetim
+    ? personelSayaclari(projects, { ...DEFAULT_PROJECT_FILTERS }, {
+        openComments: (id) => openComments.get(id) ?? 0,
+        lastEdited: (id) => writing.get(id)?.updatedAt,
+        userId: user.id,
+        canFilterAssignee: true,
+      })
+    : [];
+  const uzmanKuyrugu = isStaff && isExpertEligible(profile?.role);
+  const destekKuyrugu = isStaff && Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
+  const [{ count: acikUzman, error: uzmanHatasi }, { count: acikDestek, error: destekHatasi }] = await Promise.all([
+    uzmanKuyrugu
+      ? supabase.from("consultancy_requests").select("id", { count: "exact", head: true }).eq("status", "open")
+      : Promise.resolve({ count: null, error: null }),
+    destekKuyrugu
+      ? supabase.from("app_support_requests").select("id", { count: "exact", head: true }).neq("status", "resolved")
+      : Promise.resolve({ count: null, error: null }),
+  ]);
+  if (uzmanHatasi) console.error("[ana sayfa] uzman kuyruğu okunamadı:", uzmanHatasi.message);
+  if (destekHatasi) console.error("[ana sayfa] destek kuyruğu okunamadı:", destekHatasi.message);
+  /* Okunamayan kuyruk "0" demiyor: sayaç çizilmiyor, uyarı satırı söylüyor. */
+  const kuyrukSayaclari = [
+    ...(uzmanKuyrugu && !uzmanHatasi
+      ? [{ anahtar: "uzman", etiket: "Açık uzman talebi", sayi: acikUzman ?? 0, href: kuyrukAdresi("uzman-acik") }]
+      : []),
+    ...(destekKuyrugu && !destekHatasi
+      ? [{ anahtar: "destek", etiket: "Uygulama desteği", sayi: acikDestek ?? 0, href: kuyrukAdresi("destek") }]
+      : []),
+  ];
+
+  /* Personel listelerinde öğrencinin adı (RLS: kendi kurumu). Okunamazsa ad boş kalır. */
+  const sahipAdlari = new Map<string, string>();
+  if (isStaff && projects.length) {
+    const { data: sahipler, error: sahipHatasi } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", [...new Set(projects.map((p) => p.owner_id))]);
+    if (sahipHatasi) console.error("[ana sayfa] öğrenci adları okunamadı:", sahipHatasi.message);
+    for (const sahip of sahipler ?? []) if (sahip.full_name) sahipAdlari.set(sahip.id, sahip.full_name);
+  }
 
   // Karar ve gerekçesi lib/ilk-kullanim.ts'te (sınanabilsin diye orada).
   const yeniKullanici = ilkKullanim({
@@ -346,6 +406,8 @@ export default async function DashboardPage() {
     projelerOkunamadi ? "çalışmalar" : "",
     hareketYaniti.error ? "çalışma hareketi" : "",
     yorumYaniti.error ? "yorumlar" : "",
+    uzmanHatasi ? "uzman kuyruğu" : "",
+    destekHatasi ? "destek kuyruğu" : "",
     ritimYaniti.error ? "yazım ritmi" : "",
   ].filter(Boolean);
 
@@ -422,6 +484,14 @@ export default async function DashboardPage() {
           <p>
             {yeniKullanici
               ? "Çalışma alanınız hazır. İlk çalışmanızı oluşturduğunuzda kılavuzunuz, kaynaklarınız ve denetimleriniz burada toplanır."
+              : isStaff
+                ? /* Personel: kurumun özeti — sayaçların ilk üçü, cümle olarak. */
+                  sayaclar.length
+                  ? sayaclar
+                      .filter((s) => s.anahtar === "aktif" || (s.sayi > 0 && (s.anahtar === "onay" || s.anahtar === "gecikmis")))
+                      .map((s) => `${s.sayi.toLocaleString("tr-TR")} ${s.etiket.toLocaleLowerCase("tr")}`)
+                      .join(" · ")
+                  : "Çalışmalar, teslim tarihleri ve gelen yorumlar burada."
               : ogrenciGorunumu
                 ? [
                     resumeDue ? `Teslim: ${resumeDue.label.toLocaleLowerCase("tr")}` : "",
@@ -435,6 +505,12 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="gb-selam-eylemler">
+          {isStaff ? (
+            <Link href="/dashboard/editor" className="projects-primary-button">
+              <LayoutList size={16} aria-hidden="true" />
+              Çalışmalar
+            </Link>
+          ) : null}
           {resume && !ogrenciGorunumu ? (
             <Link href={`/dashboard/editor/${resume.id}/write`} className="projects-primary-button">
               <PenLine size={16} aria-hidden="true" />
@@ -442,13 +518,34 @@ export default async function DashboardPage() {
             </Link>
           ) : null}
           {ogrenciGorunumu ? null : (
-            <Link href={yeniCalismaHref} className={resume ? "projects-filter-button" : "projects-primary-button"}>
+            <Link href={yeniCalismaHref} className={resume || isStaff ? "projects-filter-button" : "projects-primary-button"}>
               <Plus size={16} aria-hidden="true" />
               Yeni çalışma
             </Link>
           )}
         </div>
       </header>
+
+      {/*
+        Personelin sayaçları: Çalışmalarım filtreleri ve Destek kuyrukları.
+        Sayı = basınca açılan listenin uzunluğu (lib/personel-sayaclari.ts).
+      */}
+      {sayaclar.length || kuyrukSayaclari.length ? (
+        <nav className="personel-sayaclar ana-sayaclar" aria-label="Dikkat isteyenler">
+          {sayaclar.map((sayac) => (
+            <Link key={sayac.anahtar} href={sayac.href} className="personel-sayac" data-tone={sayac.sayi ? sayac.ton : undefined}>
+              <b>{sayac.sayi}</b>
+              <span>{sayac.etiket}</span>
+            </Link>
+          ))}
+          {kuyrukSayaclari.map((k) => (
+            <Link key={k.anahtar} href={k.href} className="personel-sayac" data-tone={k.sayi ? "warning" : undefined}>
+              <b>{k.sayi}</b>
+              <span>{k.etiket}</span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
 
       {okunamayanlar.length ? (
         <p className="alert" role="alert">
@@ -751,7 +848,7 @@ export default async function DashboardPage() {
 
           <ListeIzgarasi etiket="Güncel işler">
             <ListeKarti
-              baslik="Çalışmalarım"
+              baslik={isStaff ? "Son düzenlenenler" : "Çalışmalarım"}
               alt={`Aktif ${activeProjects.length} çalışma`}
               bos="Aktif çalışma yok."
               sayi={calismalarim.length}
@@ -765,7 +862,13 @@ export default async function DashboardPage() {
                     key={p.id}
                     href={`/dashboard/editor/${p.id}`}
                     baslik={p.title}
-                    alt={`${projectTypeLabel(p.project_type)} · ${yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime, ${editedAgo(yazim.updatedAt)}` : "yazılmadı"}`}
+                    alt={[
+                      isStaff ? sahipAdlari.get(p.owner_id) : null,
+                      projectTypeLabel(p.project_type),
+                      yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime, ${editedAgo(yazim.updatedAt)}` : "yazılmadı",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                     sag={
                       <span className="status-pill" data-tone={statusTone(p.status)}>
                         {statusLabel(p.status)}
@@ -789,7 +892,7 @@ export default async function DashboardPage() {
                   key={project.id}
                   href={`/dashboard/editor/${project.id}`}
                   baslik={project.title}
-                  alt={project.due_date ? trTarih(project.due_date) : undefined}
+                  alt={[isStaff ? sahipAdlari.get(project.owner_id) : null, project.due_date ? trTarih(project.due_date) : null].filter(Boolean).join(" · ") || undefined}
                   sag={
                     <span className="status-pill" data-tone={due.tone}>
                       {due.label}

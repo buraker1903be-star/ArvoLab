@@ -624,3 +624,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .docentlik-grup { display: grid; gap: 4px; }
 .docentlik-grup-baslik { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 6px; }
 .docentlik-grup-baslik .muted { font-size: var(--fs-micro); font-weight: 600; }
+/* Ana sayfa (personel): Çalışmalarım sayaçları + kuyruk sayaçları tek satırda (6–8 kutu) */
+.ana-sayaclar { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.ana-sayaclar .personel-sayac { padding: 8px 12px; }
+.ana-sayaclar .personel-sayac b { font-size: 20px; }
