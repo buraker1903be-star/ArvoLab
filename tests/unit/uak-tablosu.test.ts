@@ -38,8 +38,9 @@ describe("ÜAK tablosu", () => {
     assert.deepEqual(o.hedefler, [
       { grup: null, asgari_puan: 100, azami_puan: null, doktora_sonrasi: false },
       { grup: null, asgari_puan: 90, azami_puan: null, doktora_sonrasi: true },
+      // Var olan tavan (20) ezilmez; tek satırdaki 10 boş alanı doldurmaz.
       { grup: "Makale", asgari_puan: null, azami_puan: 20, doktora_sonrasi: false },
-      // Doktora sonrası satırında tavan yazılmaz: tavan dönemden bağımsız.
+      // "Doktora sonrası en az 5, en fazla 10" ikiye bölünür: tavan bütün faaliyetler satırına gider.
       { grup: "Makale", asgari_puan: 5, azami_puan: null, doktora_sonrasi: true },
     ]);
   });
@@ -61,6 +62,17 @@ describe("ÜAK tablosu", () => {
     assert.deepEqual(metindeOlmayanSayilar(uydurma, PDF), ["25"]);
     const uydurmaHedef = { ...dogru, hedefler: [{ grup: null, asgari_puan: 100, azami_puan: null, doktora_sonrasi: false }] };
     assert.deepEqual(metindeOlmayanSayilar(uydurmaHedef, PDF.replace("100", "120")), ["100"]);
+  });
+
+  test("tek satırdaki doktora sonrası asgari ve tavan ayrılır (Atıf: en az 5 doktora sonrası, en fazla 10)", () => {
+    const o = uakOnerisiniCozumle(yanit({
+      kriterler: [{ kod: "5.a", etiket: "Atıf", grup: "Atıf", puan: 3 }],
+      hedefler: [{ grup: "Atıf", asgari_puan: 5, azami_puan: 10, doktora_sonrasi: true }],
+    }))!;
+    assert.deepEqual(o.hedefler, [
+      { grup: "Atıf", asgari_puan: 5, azami_puan: null, doktora_sonrasi: true },
+      { grup: "Atıf", asgari_puan: null, azami_puan: 10, doktora_sonrasi: false },
+    ]);
   });
 
   test("eşit bölüşüm yalnızca açık true ise", () => {

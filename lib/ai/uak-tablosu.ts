@@ -112,22 +112,40 @@ export function uakOnerisiniCozumle(ham: string): UakOnerisi | null {
   if (!kriterler.length) return null;
 
   /* Aynı grup + aynı dönem şartı için tek satır (veritabanındaki benzersiz dizinle aynı). */
-  const hedefAnahtari = new Set<string>();
   const hedefler: UakHedefi[] = [];
   const sinir = (v: unknown) => {
     const n = v === null || v === undefined || v === "" ? null : sayiAl(v);
     return n !== null && n > 0 ? n : null;
   };
+  /*
+    Model "doktora sonrası en az 5, en fazla 10" şartını TEK satırda
+    verebiliyor. Tavan dönemden bağımsız olduğu için böyle bir satır ikiye
+    bölünüyor: asgari doktora sonrası satırına, tavan bütün faaliyetler
+    satırına. Eskiden tavan atılıyordu: Eğitim Bilimleri tablosunda Atıf,
+    Bilimsel Toplantı ve Eğitim-Öğretim maddelerinin tavanı öneriden
+    düştü (27.10.2026).
+  */
+  const ekle = (grup: string | null, doktoraSonrasi: boolean, asgari: number | null, azami: number | null) => {
+    if (asgari === null && azami === null) return;
+    const var_ = hedefler.find((x) => x.grup === grup && x.doktora_sonrasi === doktoraSonrasi);
+    if (var_) {
+      // Aynı satır iki kez geldiyse boş alanlar tamamlanır, dolu olan ezilmez.
+      var_.asgari_puan ??= asgari;
+      var_.azami_puan ??= azami;
+      return;
+    }
+    hedefler.push({ grup, asgari_puan: asgari, azami_puan: azami, doktora_sonrasi: doktoraSonrasi });
+  };
   for (const h of (Array.isArray(veri.hedefler) ? veri.hedefler : []) as Record<string, unknown>[]) {
     const grup = metinAl(h?.grup, 120) || null;
-    const doktoraSonrasi = h?.doktora_sonrasi === true;
     const asgari = sinir(h?.asgari_puan);
-    // Tavan dönemden bağımsız: doktora sonrası satırında tavan yazılmaz.
-    const azami = doktoraSonrasi ? null : sinir(h?.azami_puan);
-    const anahtar = `${grup ?? ""}|${doktoraSonrasi}`;
-    if ((asgari === null && azami === null) || hedefAnahtari.has(anahtar)) continue;
-    hedefAnahtari.add(anahtar);
-    hedefler.push({ grup, asgari_puan: asgari, azami_puan: azami, doktora_sonrasi: doktoraSonrasi });
+    const azami = sinir(h?.azami_puan);
+    if (h?.doktora_sonrasi === true) {
+      ekle(grup, true, asgari, null);
+      ekle(grup, false, null, azami);
+    } else {
+      ekle(grup, false, asgari, azami);
+    }
   }
 
   const notlar = (Array.isArray(veri.notlar) ? veri.notlar : [])
