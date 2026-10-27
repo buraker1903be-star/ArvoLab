@@ -60,10 +60,10 @@ export default async function AsistanKayitlariSayfasi() {
             doğru yanıtları kadar öğreticidir.
           </p>
         </div>
-        {/* Kayıtları görmek ile eğitim kümesini indirmek ayrı yetkiler:
-            sayfa Kontrolör'e de açık, dosya yalnızca iç ekibe. Rota da aynı
-            kuralı uyguluyor; buradaki gizleme yalnızca çalışmayacak bir
-            düğme göstermemek için. */}
+        {/* Sayfa da dosya da yalnızca iç ekibe açık (26.10.2026'ya kadar
+            sayfa Kontrolör'e de açıktı). Koşul ADMIN_ROLES'ta kalıyor:
+            sayfa kümesi yeniden genişlerse dosya genişlemesin — rota da
+            aynı kuralı uyguluyor. */}
         {ADMIN_ROLES.includes(profile.role) ? (
           <a className="projects-primary-button" href="/api/asistan/egitim-kumesi" download>
             <Download size={16} aria-hidden="true" /> Eğitim kümesini indir
