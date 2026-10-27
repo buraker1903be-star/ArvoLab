@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
-import { MANAGER_ROLES } from "@/lib/project-labels";
+import { ADMIN_ROLES } from "@/lib/project-labels";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { pdfMi } from "@/lib/kaynak-pdf";
 import { extractTextFromBuffer } from "@/lib/document-extract";
@@ -18,8 +18,9 @@ import { metindeOlmayanSayilar, onerileriBirlestir, uakIstemleri, uakOnerisiniCo
   hedefleri). Onay olmadan hiçbir kriter değişmez. Kurum + temel alan
   başına tek tablo: yeni dönemin PDF'i eskisinin yerine geçer.
 
-  Personel akışı (Yönetici ve iç ekip); abonelik kapısı yalnızca asistan
-  çağrısında, asistanKapisi içinde (lib/access.ts).
+  Yalnızca iç ekip (27.10.2026): tablolar bir kez yüklenir, onaylanınca
+  GENEL listeye yazılır ve bütün kurumlar kullanır. Abonelik kapısı
+  yalnızca asistan çağrısında, asistanKapisi içinde (lib/access.ts).
 */
 
 const SAYFA = "/dashboard/associate-professorship";
@@ -40,7 +41,7 @@ export type UakTablosu = {
 };
 
 export async function uakTablolari(): Promise<ListeSonucu<UakTablosu>> {
-  const auth = await requireRole(MANAGER_ROLES);
+  const auth = await requireRole(ADMIN_ROLES);
   if ("error" in auth) return listeBasarili([]);
   // Yalnızca kendi kurumunun tabloları: iç ekip RLS'te her kurumu görüyor, ekranda karışmasın.
   const kurum = await kurumum(auth);
@@ -69,7 +70,7 @@ async function kurumum(auth: Extract<Awaited<ReturnType<typeof requireRole>>, { 
   yeni öneri onaylanana kadar yürürlükte kalıyor.
 */
 export async function uakPdfiKaydet(girdi: { temelAlan: string; donem: string; yol: string; dosyaAdi: string }): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "ÜAK tablosunu yalnızca Yönetici ve üzeri roller yükleyebilir.");
+  const auth = await requireRole(ADMIN_ROLES, "ÜAK tablolarını yalnızca Arvo ekibi yükler; kurumunuz yüklenen tabloları otomatik kullanır.");
   if ("error" in auth) return { error: auth.error };
   const temelAlan = girdi.temelAlan.trim().slice(0, 120);
   const donem = girdi.donem.trim().slice(0, 40);
@@ -128,7 +129,7 @@ export async function uakPdfiKaydet(girdi: { temelAlan: string; donem: string; y
 }
 
 export async function uakTablosunuYorumla(tabloId: string): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "ÜAK tablosunu yalnızca Yönetici ve üzeri roller yorumlatabilir.");
+  const auth = await requireRole(ADMIN_ROLES, "ÜAK tablolarını yalnızca Arvo ekibi yorumlatır.");
   if ("error" in auth) return { error: auth.error };
   const kapi = await asistanKapisi();
   if (!kapi.ok) return { error: kapi.hata };
@@ -215,17 +216,44 @@ export async function uakTablosunuYorumla(tabloId: string): Promise<ActionResult
 }
 
 /*
-  ONAY: öneri kurumun o temel alandaki kriter ve hedeflerine yazılır.
+  ONAY: öneri GENEL listeye yazılır (organization_id NULL): bütün kurumlar
+  ve bireysel aboneler kullanır. Kurum sahibinin kararı (27.10.2026):
+  ÜAK tablolarını Arvo ekibi bir kez yükler, kurumlar ayrıca PDF yüklemez.
+  Eskiden onay yükleyenin KURUMUNA yazıyordu ve her kurumun aynı PDF'i
+  ayrı ayrı yüklemesi gerekiyordu.
   - Kriter KODLA eşleşir: aynı kod güncellenir (puanı değişse de eski
     faaliyet kayıtları kendi puanıyla korunur), yeni kod eklenir, tabloda
     artık olmayan kod silinir; ona bağlı faaliyet varsa pasife alınır
     (deleteCriterion'daki kural).
   - Hedefler o alan için baştan yazılır.
-  Tek bir işlem değil; yarıda düşerse satır "öneri hazır" kalır ve onay
-  tekrarlanabilir — kodla eşleştiği için ikinci deneme çift kayıt açmaz.
+  - Yükleyenin kurumunda AYNI temel alan için duran kopyalar (genel
+    listeye geçmeden önce kuruma onaylananlar) kaldırılır; kalsaydı o
+    kurumda her kriter iki kez görünürdü.
+  Tek bir işlem değil; yarıda düşerse tekrar onaylanabilir — kodla
+  eşleştiği için ikinci deneme çift kayıt açmaz.
 */
+type Db = Extract<Awaited<ReturnType<typeof requireRole>>, { supabase: unknown }>["supabase"];
+
+/** Kapsamdaki (kurum ya da genel) o temel alanın kriterlerini siler; faaliyete bağlı olanı pasife alır. */
+async function kriterleriKaldir(db: Db, kurum: string | null, temelAlan: string, tut: Set<string>, kullanici: string): Promise<string | null> {
+  let sorgu = db.from("scoring_criteria").select("id, code, is_active").eq("temel_alan", temelAlan);
+  sorgu = kurum ? sorgu.eq("organization_id", kurum) : sorgu.is("organization_id", null);
+  const { data, error } = await sorgu;
+  if (error) return "Mevcut kriterler okunamadı.";
+  for (const m of (data ?? []).filter((m) => !tut.has(m.code) && m.is_active)) {
+    const { error: silmeHatasi } = await db.from("scoring_criteria").delete().eq("id", m.id);
+    if (silmeHatasi?.code === "23503") {
+      const { error: pasifHatasi } = await db.from("scoring_criteria").update({ is_active: false, updated_by: kullanici }).eq("id", m.id);
+      if (pasifHatasi) return "Eski bir kriter pasife alınamadı.";
+    } else if (silmeHatasi) {
+      return "Eski bir kriter kaldırılamadı.";
+    }
+  }
+  return null;
+}
+
 export async function uakOnerisiniUygula(tabloId: string): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Öneriyi yalnızca Yönetici ve üzeri roller onaylayabilir.");
+  const auth = await requireRole(ADMIN_ROLES, "ÜAK tablolarını yalnızca Arvo ekibi uygular.");
   if ("error" in auth) return { error: auth.error };
   const db = auth.supabase;
 
@@ -236,7 +264,7 @@ export async function uakOnerisiniUygula(tabloId: string): Promise<ActionResult>
   if (!oneri?.kriterler?.length) return { error: "Onaylanacak öneri yok; önce tabloyu yorumlatın." };
 
   const { data: mevcut, error: kriterHatasi } = await db
-    .from("scoring_criteria").select("id, code, is_active").eq("organization_id", tablo.organization_id).eq("temel_alan", tablo.temel_alan);
+    .from("scoring_criteria").select("id, code, is_active").is("organization_id", null).eq("temel_alan", tablo.temel_alan);
   if (kriterHatasi) return { error: "Mevcut kriterler okunamadı; hiçbir şey değiştirilmedi." };
 
   const not = `ÜAK ${tablo.donem}`;
@@ -258,30 +286,23 @@ export async function uakOnerisiniUygula(tabloId: string): Promise<ActionResult>
     const var_ = (mevcut ?? []).find((m) => m.code === k.kod);
     const { error } = var_
       ? await db.from("scoring_criteria").update(satir).eq("id", var_.id)
-      : await db.from("scoring_criteria").insert({ ...satir, code: k.kod, organization_id: tablo.organization_id, temel_alan: tablo.temel_alan });
+      : await db.from("scoring_criteria").insert({ ...satir, code: k.kod, organization_id: null, temel_alan: tablo.temel_alan });
     if (error) {
       console.error("[üak] kriter yazılamadı", k.kod, error.message);
       return { error: `“${k.kod}” kriteri yazılamadı; onay yarıda kaldı. Tekrar onaylayabilirsiniz.` };
     }
   }
 
-  for (const m of (mevcut ?? []).filter((m) => !kodlar.has(m.code) && m.is_active)) {
-    const { error } = await db.from("scoring_criteria").delete().eq("id", m.id);
-    if (error?.code === "23503") {
-      const { error: pasifHatasi } = await db.from("scoring_criteria").update({ is_active: false, updated_by: auth.user.id }).eq("id", m.id);
-      if (pasifHatasi) return { error: "Eski bir kriter pasife alınamadı; onay yarıda kaldı. Tekrar onaylayabilirsiniz." };
-    } else if (error) {
-      return { error: "Eski bir kriter kaldırılamadı; onay yarıda kaldı. Tekrar onaylayabilirsiniz." };
-    }
-  }
+  const genelHata = await kriterleriKaldir(db, null, tablo.temel_alan, kodlar, auth.user.id);
+  if (genelHata) return { error: `${genelHata} Onay yarıda kaldı; tekrar onaylayabilirsiniz.` };
 
   const { error: hedefSilmeHatasi } = await db
-    .from("docentlik_hedefleri").delete().eq("organization_id", tablo.organization_id).eq("temel_alan", tablo.temel_alan);
+    .from("docentlik_hedefleri").delete().is("organization_id", null).eq("temel_alan", tablo.temel_alan);
   if (hedefSilmeHatasi) return { error: "Eski hedefler kaldırılamadı; kriterler güncellendi. Tekrar onaylayabilirsiniz." };
   if (oneri.hedefler.length) {
     const { error } = await db.from("docentlik_hedefleri").insert(
       oneri.hedefler.map((h) => ({
-        organization_id: tablo.organization_id,
+        organization_id: null,
         temel_alan: tablo.temel_alan,
         grup: h.grup,
         alt_alan: h.alt_alan,
@@ -298,18 +319,25 @@ export async function uakOnerisiniUygula(tabloId: string): Promise<ActionResult>
     }
   }
 
+  // Yükleyenin kurumundaki eski kopyalar (genel listeye geçmeden önce kuruma onaylananlar).
+  const kurumHata = await kriterleriKaldir(db, tablo.organization_id, tablo.temel_alan, new Set(), auth.user.id);
+  if (kurumHata) return { error: `Genel liste güncellendi ama kurumdaki eski kopyalar kaldırılamadı: ${kurumHata} Tekrar onaylayabilirsiniz.` };
+  const { error: kurumHedefHatasi } = await db
+    .from("docentlik_hedefleri").delete().eq("organization_id", tablo.organization_id).eq("temel_alan", tablo.temel_alan);
+  if (kurumHedefHatasi) return { error: "Genel liste güncellendi ama kurumdaki eski hedefler kaldırılamadı. Tekrar onaylayabilirsiniz." };
+
   const { error } = await db
     .from("uak_tablolari")
     .update({ durum: "onaylandi", onaylayan: auth.user.id, onaylandi_at: new Date().toISOString() })
     .eq("id", tabloId);
   if (error) console.error("[üak] onay işaretlenemedi", error.message);
   revalidatePath(SAYFA);
-  return { success: true, message: `${tablo.temel_alan} kriterleri ve hedefleri güncellendi.` };
+  return { success: true, message: `${tablo.temel_alan} kriterleri ve hedefleri bütün kurumlar için güncellendi.` };
 }
 
-/* Tablo ve PDF'i silinir; onaylanmış kriterler kurumda kalır (elle düzenlenebilir). */
+/* Tablo ve PDF'i silinir; onaylanmış kriterler genel listede kalır (elle düzenlenebilir). */
 export async function uakTablosunuSil(tabloId: string): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Tabloyu yalnızca Yönetici ve üzeri roller silebilir.");
+  const auth = await requireRole(ADMIN_ROLES, "ÜAK tablolarını yalnızca Arvo ekibi siler.");
   if ("error" in auth) return { error: auth.error };
   const { data, error } = await auth.supabase.from("uak_tablolari").delete().eq("id", tabloId).select("depo_yolu");
   if (error || !data?.length) return { error: "Tablo silinemedi." };

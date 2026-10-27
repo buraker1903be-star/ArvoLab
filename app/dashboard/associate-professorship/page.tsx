@@ -757,7 +757,13 @@ export default async function ScoringPage({
             → PDF'le karşılaştır → onayla. Onaylanınca kriterler ve hedefler
             KURUMA ve o temel alana yazılır (app/actions/uak-tablosu.ts).
           */}
-          {canManageCriteria ? (
+          {/*
+            Yalnızca iç ekip (27.10.2026): ÜAK tablolarını Arvo ekibi bir kez
+            yükler ve onaylar; kriterler GENEL listeye yazılır, bütün kurumlar
+            ve bireysel aboneler kullanır. Kurum yöneticisi PDF yüklemez,
+            kendi kurumuna özel kriteri elle ekleyebilir.
+          */}
+          {icEkip ? (
             <section className="docentlik-grup" aria-label="ÜAK tabloları">
               <h3 className="calisma-durum-alt docentlik-grup-baslik">
                 <span>ÜAK tabloları</span>
@@ -768,7 +774,7 @@ export default async function ScoringPage({
                     triggerClassName="projects-filter-button button-compact"
                     kicker="ÜAK tablosu"
                     title="ÜAK PDF'ini yükleyin"
-                    description="ÜAK'ın yayımladığı doçentlik başvuru şartları tablosu (temel alan başına bir PDF). Yükledikten sonra yorumlatın; öneri onaylanmadan hiçbir kriter değişmez."
+                    description="ÜAK'ın yayımladığı doçentlik başvuru şartları tablosu (temel alan başına bir PDF). Yükledikten sonra yorumlatın; onaylanınca kriterler bütün kurumlar ve bireysel aboneler için geçerli olur. Onaylanmadan hiçbir kriter değişmez."
                   >
                     <UakYukle
                       kullaniciId={profile.id}
@@ -808,7 +814,7 @@ export default async function ScoringPage({
                             triggerClassName={u.durum === "oneri_hazir" ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}
                             kicker={`ÜAK · ${u.donem}`}
                             title={u.temel_alan}
-                            description="Öneriyi PDF'le satır satır karşılaştırın. Onaylayınca bu temel alandaki kurum kriterleri ve hedefleri bu listeyle değiştirilir; mevcut faaliyet kayıtlarının puanı korunur."
+                            description="Öneriyi PDF'le satır satır karşılaştırın. Onaylayınca bu temel alanın GENEL kriterleri ve hedefleri bu listeyle değiştirilir; bütün kurumlar ve bireysel aboneler bunu kullanır. Mevcut faaliyet kayıtlarının puanı korunur."
                           >
                             {u.oneri.kirpildi ? (
                               <p className="alert" data-tone="warning">
@@ -859,18 +865,18 @@ export default async function ScoringPage({
                                 </ul>
                               </>
                             ) : null}
-                            {u.durum === "oneri_hazir" ? (
-                              <ActionForm
-                                action={uakUygula.bind(null, u.id)}
-                                confirmMessage={`${u.temel_alan} için kurum kriterleri ve hedefleri bu öneriyle değiştirilsin mi?`}
-                              >
-                                <div className="project-form-actions">
-                                  <button type="submit" className="projects-primary-button">
-                                    <CheckCircle2 size={16} aria-hidden="true" /> Onayla ve uygula
-                                  </button>
-                                </div>
-                              </ActionForm>
-                            ) : null}
+                            {/* Onaylanmış tablo da yeniden uygulanabilir: genel listeye geçmeden önce kuruma onaylananlar böyle taşınır. */}
+                            <ActionForm
+                              action={uakUygula.bind(null, u.id)}
+                              confirmMessage={`${u.temel_alan} için GENEL kriterler ve hedefler bu öneriyle değiştirilsin mi? Bütün kurumlar bunu kullanacak.`}
+                            >
+                              <div className="project-form-actions">
+                                <button type="submit" className="projects-primary-button">
+                                  <CheckCircle2 size={16} aria-hidden="true" />{" "}
+                                  {u.durum === "oneri_hazir" ? "Onayla ve bütün kurumlara uygula" : "Bütün kurumlara yeniden uygula"}
+                                </button>
+                              </div>
+                            </ActionForm>
                           </PanelDrawer>
                         ) : null}
                         <ActionForm
@@ -889,7 +895,7 @@ export default async function ScoringPage({
               ) : (
                 <p className="gb-bos">
                   Henüz ÜAK tablosu yüklenmedi. Başvuru döneminin (mart, ekim) PDF&apos;ini temel alan başına yükleyin; kriterler
-                  ve hedefler onayınızla kurumunuza yazılır.
+                  ve hedefler onayınızla bütün kurumlar için geçerli olur.
                 </p>
               )}
             </section>
@@ -1134,7 +1140,10 @@ export default async function ScoringPage({
             <p className="gb-bos">Henüz puanlama kriteri tanımlanmadı.</p>
           )}
           {canManageCriteria && !icEkip ? (
-            <p className="hint">Genel listeyi yalnızca Sistem Yöneticisi düzenler; siz kurumunuzun kriterlerini düzenlersiniz.</p>
+            <p className="hint">
+              ÜAK kriterleri ve hedefleri Arvo ekibi tarafından her başvuru döneminde güncellenir ve kurumunuzda otomatik
+              geçerlidir; PDF yüklemeniz gerekmez. Kurumunuza özel bir kriter gerekiyorsa “Kriter ekle” ile ekleyebilirsiniz.
+            </p>
           ) : null}
         </article>
       </section>
