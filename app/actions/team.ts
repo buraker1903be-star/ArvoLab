@@ -1,5 +1,6 @@
 "use server";
 
+import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -81,13 +82,11 @@ export async function getAllProfiles(): Promise<TeamDirectory> {
   const auth = await requireRole(ADMIN_ROLES);
   if ("error" in auth) return { members: [], directoryAvailable: false };
 
-  const [{ data, error }, authUsers] = await Promise.all([
-    auth.supabase
-      .from("profiles")
-      .select("id, full_name, role, organization_id, created_at")
-      .order("created_at", { ascending: false }),
-    loadAuthUsers(),
-  ]);
+  const kurum = await seciliKurum();
+  let sorgu = auth.supabase.from("profiles").select("id, full_name, role, organization_id, created_at");
+  // İç ekibin kurum seçimi (lib/kurum-secimi.ts): yalnızca görünümü süzer.
+  if (kurum) sorgu = sorgu.eq("organization_id", kurum.id);
+  const [{ data, error }, authUsers] = await Promise.all([sorgu.order("created_at", { ascending: false }), loadAuthUsers()]);
 
   if (error) {
     console.error(error);

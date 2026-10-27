@@ -1,5 +1,6 @@
 "use server";
 
+import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 
 import { revalidatePath } from "next/cache";
@@ -136,11 +137,15 @@ export async function tumGeriBildirimler(): Promise<ListeSonucu<GeriBildirimSati
   const auth = await requireRole(MANAGER_ROLES);
   if ("error" in auth) return listeBasarili([]);
 
-  const { data, error } = await auth.supabase
+  const kurum = await seciliKurum();
+  // İç ekibin kurum seçimi: cevaplayanın kurumuna göre (lib/kurum-secimi.ts).
+  if (kurum && !kurum.kullanicilar.length) return listeBasarili([]);
+  let sorgu = auth.supabase
     .from("product_feedback")
     .select("user_id, score, most_used, comment, asked_context, updated_at")
-    .eq("status", "answered")
-    .order("updated_at", { ascending: false });
+    .eq("status", "answered");
+  if (kurum) sorgu = sorgu.in("user_id", kurum.kullanicilar);
+  const { data, error } = await sorgu.order("updated_at", { ascending: false });
   if (error) {
     console.error(error);
     // "Hiç geri bildirim gelmemiş" ile "okuyamadım" ayrı: ilki ürün hakkında

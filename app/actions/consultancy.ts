@@ -1,5 +1,6 @@
 "use server";
 
+import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -87,11 +88,12 @@ export async function getMyRequests(): Promise<ListeSonucu<ConsultancyRequest>> 
 
 export async function getOpenRequests(): Promise<ListeSonucu<ConsultancyRequest>> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("consultancy_requests")
-    .select("*")
-    .eq("status", "open")
-    .order("created_at", { ascending: true });
+  const kurum = await seciliKurum();
+  // İç ekibin kurum seçimi: talebi açanın kurumuna göre (lib/kurum-secimi.ts).
+  if (kurum && !kurum.kullanicilar.length) return listeBasarili([]);
+  let sorgu = supabase.from("consultancy_requests").select("*").eq("status", "open");
+  if (kurum) sorgu = sorgu.in("requested_by", kurum.kullanicilar);
+  const { data, error } = await sorgu.order("created_at", { ascending: true });
 
   if (error) {
     console.error(error);
@@ -107,12 +109,11 @@ export async function getAssignedToMe(): Promise<ListeSonucu<ConsultancyRequest>
   } = await supabase.auth.getUser();
   if (!user) return listeBasarili([]);
 
-  const { data, error } = await supabase
-    .from("consultancy_requests")
-    .select("*")
-    .eq("assigned_expert_id", user.id)
-    .in("status", ["accepted", "completed"])
-    .order("created_at", { ascending: false });
+  const kurum = await seciliKurum();
+  if (kurum && !kurum.kullanicilar.length) return listeBasarili([]);
+  let sorgu = supabase.from("consultancy_requests").select("*").eq("assigned_expert_id", user.id).in("status", ["accepted", "completed"]);
+  if (kurum) sorgu = sorgu.in("requested_by", kurum.kullanicilar);
+  const { data, error } = await sorgu.order("created_at", { ascending: false });
 
   if (error) {
     console.error(error);

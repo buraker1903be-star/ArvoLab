@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Check, Eye, LifeBuoy, LogOut, Settings, ShieldCheck, CreditCard } from "lucide-react";
+import { Building2, Check, Eye, LifeBuoy, LogOut, Settings, ShieldCheck, CreditCard } from "lucide-react";
 import ActionForm from "../action-form";
 import { gorunumSec } from "@/app/actions/onizleme";
+import { kurumSec } from "@/app/actions/kurum-secimi";
 import { GORUNUMLER, GORUNUM_ETIKETI, type Gorunum } from "@/lib/onizleme";
 
 /*
@@ -19,6 +20,8 @@ export default function KullaniciMenusu({
   basHarf,
   cikis,
   gorunum,
+  kurumlar,
+  seciliKurumId = null,
 }: {
   ad: string;
   rol: string;
@@ -29,6 +32,9 @@ export default function KullaniciMenusu({
     Verilmezse menüde görünüm bölümü yok.
   */
   gorunum?: Gorunum;
+  /* Yalnızca iç ekipte ve birden çok kurum varsa verilir (lib/kurum-secimi.ts). */
+  kurumlar?: { id: string; name: string }[];
+  seciliKurumId?: string | null;
 }) {
   return (
     <details className="os-kullanici">
@@ -58,6 +64,26 @@ export default function KullaniciMenusu({
                 <button type="submit" aria-pressed={gorunum === secenek}>
                   {GORUNUM_ETIKETI[secenek]}
                   {gorunum === secenek ? <Check size={15} aria-hidden="true" /> : null}
+                </button>
+              </ActionForm>
+            ))}
+          </div>
+        ) : null}
+        {kurumlar ? (
+          /*
+            KURUM SEÇİMİ: çalışmalar, ekip, destek kuyrukları ve ana sayfa
+            seçilen kuruma göre süzülür. Yalnızca görünüm; yetki aynı.
+          */
+          <div className="os-kullanici-gorunum">
+            <small>
+              <Building2 size={13} aria-hidden="true" /> Kurum
+            </small>
+            {[{ id: "", name: "Bütün kurumlar" }, ...kurumlar].map((k) => (
+              <ActionForm key={k.id || "tumu"} action={kurumSec}>
+                <input type="hidden" name="kurum" value={k.id} />
+                <button type="submit" aria-pressed={(seciliKurumId ?? "") === k.id}>
+                  {k.name}
+                  {(seciliKurumId ?? "") === k.id ? <Check size={15} aria-hidden="true" /> : null}
                 </button>
               </ActionForm>
             ))}

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
 import { getProjects } from "@/app/actions/projects";
+import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { projectTypeLabel, statusLabel, isOversightRole, isExpertEligible, ADMIN_ROLES, STAFF_ROLES } from "@/lib/project-labels";
 import { personelSayaclari } from "@/lib/personel-sayaclari";
 import { DEFAULT_PROJECT_FILTERS } from "@/lib/project-filters";
@@ -255,12 +256,18 @@ export default async function DashboardPage() {
     : [];
   const uzmanKuyrugu = isStaff && isExpertEligible(profile?.role);
   const destekKuyrugu = isStaff && Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
+  /* Sayaçlar kuyruk listeleriyle AYNI kurum süzgecinden geçer (lib/kurum-secimi.ts); yoksa rozet başka, liste başka sayı söylerdi. */
+  const kurum = await seciliKurum();
+  // Kurumda hiç kullanıcı yoksa hiçbir talep eşleşmemeli: boş dizi PostgREST'te geçersiz, eşleşmeyen bir kimlik veriliyor.
+  const talepSahipleri = kurum ? (kurum.kullanicilar.length ? kurum.kullanicilar : ["00000000-0000-0000-0000-000000000000"]) : null;
+  const uzmanSorgusu = supabase.from("consultancy_requests").select("id", { count: "exact", head: true }).eq("status", "open");
+  const destekSorgusu = supabase.from("app_support_requests").select("id", { count: "exact", head: true }).neq("status", "resolved");
   const [{ count: acikUzman, error: uzmanHatasi }, { count: acikDestek, error: destekHatasi }] = await Promise.all([
     uzmanKuyrugu
-      ? supabase.from("consultancy_requests").select("id", { count: "exact", head: true }).eq("status", "open")
+      ? talepSahipleri ? uzmanSorgusu.in("requested_by", talepSahipleri) : uzmanSorgusu
       : Promise.resolve({ count: null, error: null }),
     destekKuyrugu
-      ? supabase.from("app_support_requests").select("id", { count: "exact", head: true }).neq("status", "resolved")
+      ? talepSahipleri ? destekSorgusu.in("requested_by", talepSahipleri) : destekSorgusu
       : Promise.resolve({ count: null, error: null }),
   ]);
   if (uzmanHatasi) console.error("[ana sayfa] uzman kuyruğu okunamadı:", uzmanHatasi.message);

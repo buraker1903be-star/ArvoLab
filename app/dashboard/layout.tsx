@@ -22,6 +22,10 @@ import KullaniciMenusu from "./_components/kullanici-menusu";
 import { OsDock } from "./_components/os-dock";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
 import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
+import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
+import { kurumSec } from "@/app/actions/kurum-secimi";
+import { getOrganizations } from "@/app/actions/team";
+import { ADMIN_ROLES } from "@/lib/project-labels";
 
 function initialsOf(name: string) {
   const letters = name
@@ -62,6 +66,14 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     göremeyeceği şeyler. Yetki değişmiyor; sayfaların kendi kapısı gerçek rolle.
   */
   const uygulamalar = gorunenUygulamalar(labUygulamalari(), gorunum.onizleme ? undefined : profile?.role);
+  /*
+    Kurum seçici yalnızca iç ekipte (lib/kurum-secimi.ts): kurucu birden çok
+    kurumun sahibi ve ekranlar kurumları karışık listeliyordu. Kurum listesi
+    okunamazsa seçici çizilmez; seçim görünümü süzer, yetkiyi değil.
+  */
+  const icEkip = Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
+  const [kurumListesi, kurum] = icEkip ? await Promise.all([getOrganizations(), seciliKurum()]) : [null, null];
+  const kurumlar = kurumListesi && !kurumListesi.okunamadi ? kurumListesi.satirlar : [];
 
   return (
     <div className="dashboard-shell os-root">
@@ -85,6 +97,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
               basHarf={initials}
               cikis={logout}
               gorunum={onizleyebilir(profile?.role) ? (gorunum.onizleme ?? "personel") : undefined}
+              kurumlar={icEkip && kurumlar.length > 1 ? kurumlar : undefined}
+              seciliKurumId={kurum?.id ?? null}
             />
           </div>
         </header>
@@ -97,6 +111,20 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           Önizleme açıkken her sayfada görünür: unutulan bir önizleme
           yöneticiye kendi işlerinin (onay, atama) kaybolduğunu düşündürürdü.
         */}
+        {/* Seçili kurum her sayfada görünür: unutulan bir süzgeç diğer kurumun işlerini "kaybolmuş" gösterirdi. */}
+        {kurum ? (
+          <div className="onizleme-serit" role="status">
+            <span>
+              Yalnızca <b>{kurum.ad}</b> gösteriliyor: çalışmalar, ekip, destek kuyrukları ve ana sayfa bu kuruma göre süzülü.
+            </span>
+            <ActionForm action={kurumSec}>
+              <input type="hidden" name="kurum" value="" />
+              <button type="submit" className="projects-filter-button button-compact">
+                Bütün kurumları göster
+              </button>
+            </ActionForm>
+          </div>
+        ) : null}
         {gorunum.onizleme ? (
           <div className="onizleme-serit" role="status">
             <span>

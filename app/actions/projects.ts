@@ -1,5 +1,6 @@
 "use server";
 
+import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { yeniCalismaAdresi } from "@/lib/calisma-karti";
 import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
 import { redirect } from "next/navigation";
@@ -192,13 +193,20 @@ export async function getProjects(): Promise<ListeSonucu<AcademicProject>> {
   } = await supabase.auth.getUser();
   // Oturum yoksa gerçekten kayıt yoktur; bu bir okuma arızası değil.
   if (!user) return listeBasarili([]);
+  /* İç ekibin kurum seçimi (lib/kurum-secimi.ts): yalnızca görünümü süzer. */
+  const kurum = await seciliKurum();
 
-  const { data, error } = await supabase
+  let sorgu = supabase
     .from("academic_projects")
     .select(
       "id, owner_id, organization_id, assignee_id, guideline_id, title, project_type, university, institute, department, citation_style, research_method, assignee_name, due_date, priority, status, notes, progress, controller_approved_by, controller_approved_at, created_at"
-    )
-    .order("created_at", { ascending: false });
+    );
+  /* organization_id'siz eski satırlar sahibinin kurumuyla eşlenir (RLS'teki kuralın aynısı). */
+  if (kurum)
+    sorgu = kurum.kullanicilar.length
+      ? sorgu.or(`organization_id.eq.${kurum.id},owner_id.in.(${kurum.kullanicilar.join(",")})`)
+      : sorgu.eq("organization_id", kurum.id);
+  const { data, error } = await sorgu.order("created_at", { ascending: false });
 
   if (error) {
     console.error("[projeler] liste okunamadı:", error.message);
