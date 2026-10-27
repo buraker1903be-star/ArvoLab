@@ -825,6 +825,27 @@ export default function ManuscriptEditor({
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         void saveNowRef.current();
+      } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
+        /*
+          Ctrl+P editörde SAYFALI BASKIYI açar (Word'de Ctrl+P gibi kılavuz
+          düzeninde çıktı). Eskiden tarayıcı editör ekranının kendisini
+          yazdırıyordu: araç kartları, yan panel ve dock kâğıda çıkıyordu.
+          Sekme tıklamayla aynı anda açılıyor (açılır pencere engeline
+          takılmasın); metin kaydedilince baskı adresine gidiyor.
+        */
+        const target = event.target as HTMLElement | null;
+        if (target?.closest?.(".manuscript-layout") || document.activeElement === document.body) {
+          event.preventDefault();
+          const pencere = window.open("", "_blank");
+          void saveNowRef.current().then((kaydedildi) => {
+            const adres = `/print/manuscript/${projectId}?auto=1`;
+            if (!kaydedildi) {
+              pencere?.close();
+              showToast("error", "Metin kaydedilemediği için PDF hazırlanamadı.");
+            } else if (pencere) pencere.location.href = adres;
+            else window.open(adres, "_self");
+          });
+        }
       } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
         // Yalnızca editör alanındayken; sayfanın başka yerinde tarayıcının kendi araması çalışır.
         const target = event.target as HTMLElement | null;
@@ -858,7 +879,8 @@ export default function ManuscriptEditor({
         void saveNowRef.current();
       }
     };
-  }, [persistDraft]);
+    // projectId sayfa boyunca değişmez; Ctrl+P'nin baskı adresi için.
+  }, [persistDraft, projectId]);
 
   const restoreDraft = useCallback(() => {
     if (!editor || !draftOffer) return;

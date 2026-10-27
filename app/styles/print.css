@@ -59,6 +59,9 @@
 .print-sheet[data-chapter-case="upper"] .print-body h1 { text-transform: uppercase; }
 .print-body .print-new-page { break-before: page; }
 .print-body p { margin: 0 0 .6em; orphans: 3; widows: 3; }
+/* Editörde Tab ile yazılan sekme baskıda da sekme (Word: 1,25 cm). Yalnızca sekme
+   karakterini korur: pre-wrap metindeki satır sonlarını değiştirmez, metinde \n yok. */
+.print-body :is(p, li, td, th) { white-space: pre-wrap; tab-size: 1.25cm; }
 .print-body :is(ul, ol) { margin: 0 0 .6em; padding-left: 1.2cm; }
 .print-body blockquote { margin: .6em 0 .6em 1.2cm; }
 .print-body img { display: block; max-width: 100%; margin: .6em auto; break-inside: avoid; }

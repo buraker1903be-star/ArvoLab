@@ -11,6 +11,7 @@ import { SearchHighlight } from "@/lib/tiptap-search";
 import { HeadingNumbers } from "@/lib/tiptap-heading-numbers";
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
+import { WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
 
 /*
   Editörün eklenti listesi.
@@ -52,5 +53,8 @@ export function editorExtensions(secenek: { headingNumbering: boolean }) {
     Caption,
     SearchHighlight,
     HeadingNumbers.configure({ enabled: secenek.headingNumbering }),
+    // Tab, hizalama ve punto kısayolları (Word gibi); şemaya düğüm eklemiyor.
+    WordKlavyesi,
+    WordKisayollari,
   ];
 }

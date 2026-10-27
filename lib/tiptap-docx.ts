@@ -15,6 +15,7 @@ import {
   convertMillimetersToTwip,
   Footer,
   PageNumber,
+  Tab,
   PageBreak,
   TableOfContents,
   SequentialIdentifier,
@@ -189,8 +190,19 @@ function textRun(node: TiptapNode, isLink: boolean) {
     ? textStyle.color.slice(1)
     : undefined;
 
+  /*
+    Sekme karakteri Word'de gerçek sekme (w:tab). Düz metin içinde "\t"
+    bırakılırsa Word onu tek bir boşluk gibi çiziyordu (editörde Tab ile
+    yazılan sekmeler, 27.10.2026).
+  */
+  const metin = node.text ?? "";
+  const parcalar = metin.split("\t");
+  const icerik =
+    parcalar.length > 1
+      ? { children: parcalar.flatMap((parca, i) => (i === 0 ? [parca] : [new Tab(), parca])).filter((p) => p !== "") }
+      : { text: metin };
   return new TextRun({
-    text: node.text ?? "",
+    ...icerik,
     bold: has("bold"),
     italics: has("italic"),
     underline: has("underline") ? {} : undefined,

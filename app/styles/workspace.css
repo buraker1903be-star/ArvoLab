@@ -73,6 +73,8 @@
   font-size: var(--fs-md);
   line-height: 1.75;
   outline: none;
+  /* Tab ile yazılan sekme Word'ün varsayılan sekme aralığında (1,25 cm) görünsün. */
+  tab-size: 1.25cm;
 }
 /*
   EKRAN DIŞINDAKİ BLOKLAR ÇİZİLMİYOR (25.10.2026).
