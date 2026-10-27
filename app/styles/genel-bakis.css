@@ -695,3 +695,8 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .profil-seri circle { fill: var(--seri); }
 .profil-lejant { --seri: var(--accent); display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); }
 .profil-lejant::before { width: 14px; height: 3px; border-radius: 2px; background: var(--seri); content: ""; }
+
+/* DFA model tanımı (dfa-modeli.tsx) */
+.dfa-modeli { display: grid; gap: 10px; }
+.dfa-faktor { display: grid; gap: 6px; }
+.dfa-faktor .cluster { align-items: flex-end; }

@@ -37,6 +37,9 @@ import { gamesHowell, tukeyHSD } from "@/lib/stats-tukey";
 import { shapiroWilk } from "@/lib/stats-shapiro";
 import { ancova, karmaAnova, tekOrneklemTTest, tekrarliIkiliKarsilastirmalar, tekrarliOlcumlerAnova } from "@/lib/stats-anova-ek";
 import ProfilGrafigi from "./profil-grafigi";
+import { aracilik, duzenleyicilik } from "@/lib/stats-aracilik";
+import { dogrulayiciFaktorAnalizi, uyumYorumu } from "@/lib/stats-dfa";
+import DfaModeli from "./dfa-modeli";
 import { kismiKorelasyon, mcnemar } from "@/lib/stats-iliski";
 import { lojistikRegresyon, type LojistikHata } from "@/lib/stats-lojistik";
 import { aciklayiciFaktorAnalizi, kmoYorumu, maddeUyarisi } from "@/lib/stats-faktor";
@@ -157,6 +160,12 @@ export default function DataAnalyzer({
   const [kovaryatlar, setKovaryatlar] = useState<string[]>([]);
   const [olayDegeri, setOlayDegeri] = useState("");
   const [faktorSayisi, setFaktorSayisi] = useState("");
+  /* Aracılık/düzenleyicilikte sonuç (Y); DFA'da faktör–madde tanımı. */
+  const [varY, setVarY] = useState("");
+  const [dfaFaktorleri, setDfaFaktorleri] = useState<{ ad: string; maddeler: string[] }[]>([
+    { ad: "F1", maddeler: [] },
+    { ad: "F2", maddeler: [] },
+  ]);
 
   const [result, setResult] = useState<React.ReactNode>(null);
   /*
@@ -546,8 +555,11 @@ export default function DataAnalyzer({
           ? yordayicilar.filter((c) => c !== varA).length
           : analysisType === "friedman" || analysisType === "tekrarlianova" || analysisType === "karmaanova"
             ? olcumler.length
+            : analysisType === "dfa"
+              ? dfaFaktorleri.reduce((t, f) => t + f.maddeler.length, 0)
             : reliabilityItems.length,
       testDegeri: analysisType === "tekorneklem" ? Number(testDegeri.replace(",", ".")) : undefined,
+      varY,
     });
     /*
       ASİSTAN KENDİLİĞİNDEN OKUR (yalnızca pencerede): öğrenci ayrıca
@@ -562,9 +574,11 @@ export default function DataAnalyzer({
         varA, varB, groupVar, groupVar2,
         maddeler: analysisType === "friedman" || analysisType === "tekrarlianova" || analysisType === "karmaanova" ? olcumler : reliabilityItems,
         yordayicilar: yordayicilar.filter((c) => c !== varA),
-        kovaryatlar: kovaryatlar.filter((c) => c !== varA && c !== varB),
+        kovaryatlar: kovaryatlar.filter((c) => c !== varA && c !== varB && c !== varY),
         testDegeri: Number(testDegeri.replace(",", ".")),
         faktorSayisi: Number(faktorSayisi) > 0 ? Number(faktorSayisi) : undefined,
+        varY,
+        dfaFaktorleri: dfaFaktorleri.filter((f) => f.maddeler.length),
         dosyaAdi: fileName, gruplar: groupLevels,
       },
       tur: analysisType,
@@ -1700,6 +1714,233 @@ export default function DataAnalyzer({
         );
       }
 
+      /* ---------- Aracılık, düzenleyicilik, DFA (27.10.2026) ---------- */
+
+      if (analysisType === "aracilik" || analysisType === "duzenleyicilik") {
+        const aracilikMi = analysisType === "aracilik";
+        if (!varY || new Set([varA, varB, varY]).size < 3) {
+          setResultError(
+            aracilikMi
+              ? "Bağımsız (X), aracı (M) ve sonuç (Y) için üç farklı değişken seçin."
+              : "Bağımsız (X), düzenleyici (W) ve sonuç (Y) için üç farklı değişken seçin.",
+          );
+          return;
+        }
+        const kovlar = kovaryatlar.filter((c) => c !== varA && c !== varB && c !== varY);
+        const veri = eslesenSutunlar(varA, varB, varY, ...kovlar);
+        const [x, mw, y, ...k] = veri.sutunlar;
+        if (veri.n < kovlar.length + 10) {
+          setResultError("Bu analiz için yeterli eşleşen gözlem yok (en az 10 ve kovaryat başına bir fazlası).");
+          return;
+        }
+        if (aracilikMi) {
+          const r = aracilik(x, mw, y, k);
+          if (!r || !hesaplanabilir(r.dolayli, r.a.p, r.b.p)) return setResultError(DEGISKENLIK_YOK);
+          const anlamli = r.bootAlt > 0 || r.bootUst < 0;
+          const yolSatiri = (ad: string, yol: { b: number; se: number; t: number; p: number }) => (
+            <tr key={ad} className={isSignificant(yol.p) ? "stats-significant" : undefined}>
+              <td>{ad}</td>
+              <td>{yazSayi(yol.b)}</td>
+              <td>{yazSayi(yol.se)}</td>
+              <td>{yazSayi(yol.t)}</td>
+              <td>{yazP(yol.p)}</td>
+            </tr>
+          );
+          setResult(
+            <div>
+              <div className="table-scroll" role="region" aria-label="Aracılık yolları" tabIndex={0}>
+                <table className="stats-result-table">
+                  <thead>
+                    <tr><th>Yol</th><th>B</th><th>SH</th><th>t</th><th>p</th></tr>
+                  </thead>
+                  <tbody>
+                    {yolSatiri(`a: ${varA} → ${varB}`, r.a)}
+                    {yolSatiri(`b: ${varB} → ${varY} (${varA} kontrol)`, r.b)}
+                    {yolSatiri(`c: ${varA} → ${varY} (toplam etki)`, r.c)}
+                    {yolSatiri(`c′: ${varA} → ${varY} (doğrudan etki)`, r.cUs)}
+                  </tbody>
+                </table>
+              </div>
+              <p className="tone-text mt-sm" data-tone={anlamli ? "success" : "warning"}>
+                Dolaylı etki (a·b) = {yazSayi(r.dolayli)}, %95 bootstrap GA [{yazSayi(r.bootAlt)}, {yazSayi(r.bootUst)}]
+                {anlamli ? " — aralık sıfırı içermiyor: aracılık anlamlı" : " — aralık sıfırı içeriyor: aracılık anlamlı değil"}
+              </p>
+              <p className="muted text-sm">
+                Bootstrap SH = {yazSayi(r.bootSE)} ({r.bootOrnek} örnek, yüzdelik yöntem) · standartlaştırılmış dolaylı etki ={" "}
+                {yazSayi(r.standartDolayli)} · Sobel z = {yazSayi(r.sobelZ)}, {yazP(r.sobelP)} · R²(M) = {yazSayi(r.rKareM)}, R²(Y) ={" "}
+                {yazSayi(r.rKareY)} · N = {r.n}
+                {kovlar.length ? ` · kontrol: ${kovlar.join(", ")}` : ""}
+              </p>
+              <p className="muted text-sm">
+                Karar bootstrap aralığına göre verilir (Hayes, 2018); Sobel testi a·b&apos;nin normal dağıldığını varsaydığı için
+                yalnızca bilgi amaçlı. {anlamli && !isSignificant(r.cUs.p) ? "Doğrudan etki anlamsız: tam aracılık örüntüsü." : ""}
+                {anlamli && isSignificant(r.cUs.p) ? "Doğrudan etki de anlamlı: kısmi aracılık örüntüsü." : ""}
+              </p>
+              {elemeNotu(veri) ? <p className="muted text-sm">{elemeNotu(veri)}</p> : null}
+            </div>,
+          );
+        } else {
+          const r = duzenleyicilik(x, mw, y, k);
+          if (!r || !hesaplanabilir(r.deltaF, r.deltaP)) return setResultError(DEGISKENLIK_YOK);
+          const sig = isSignificant(r.deltaP);
+          const adlar: Record<string, string> = { "(Sabit)": "(Sabit)", X: varA, W: varB, "X × W": `${varA} × ${varB}` };
+          setResult(
+            <div>
+              <div className="table-scroll" role="region" aria-label="Düzenleyicilik modeli" tabIndex={0}>
+                <table className="stats-result-table">
+                  <thead>
+                    <tr><th>Değişken (merkezlenmiş)</th><th>B</th><th>SH</th><th>t</th><th>p</th></tr>
+                  </thead>
+                  <tbody>
+                    {r.katsayilar.map((c) => (
+                      <tr key={c.ad} className={c.ad !== "(Sabit)" && isSignificant(c.p) ? "stats-significant" : undefined}>
+                        <td>{adlar[c.ad]}</td><td>{yazSayi(c.b)}</td><td>{yazSayi(c.se)}</td><td>{yazSayi(c.t)}</td><td>{yazP(c.p)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="tone-text mt-sm" data-tone={sig ? "success" : "warning"}>
+                Etkileşim: ΔR² = {yazSayi(r.deltaRKare, 3)}, F(1, {r.df}) = {yazSayi(r.deltaF)}, {yazP(r.deltaP)}
+                {sig ? ` — ${varA}'in etkisi ${varB}'ye göre değişiyor (düzenleyicilik anlamlı)` : " — düzenleyicilik anlamlı değil"}
+              </p>
+              <p className="muted text-sm">R² = {yazSayi(r.rKare)} · N = {r.n}{kovlar.length ? ` · kontrol: ${kovlar.join(", ")}` : ""}</p>
+              <strong>{varB} düzeylerinde {varA}&apos;in koşullu etkisi</strong>
+              <div className="table-scroll" role="region" aria-label="Koşullu etkiler" tabIndex={0}>
+                <table className="stats-result-table">
+                  <thead>
+                    <tr><th>{varB}</th><th>Etki</th><th>SH</th><th>t</th><th>p</th><th>%95 GA</th></tr>
+                  </thead>
+                  <tbody>
+                    {r.kosullu.map((c) => (
+                      <tr key={c.etiket} className={isSignificant(c.p) ? "stats-significant" : undefined}>
+                        <td>{c.etiket.startsWith("W =") ? yazSayi(c.w) : `${c.etiket} (${yazSayi(c.w)})`}</td>
+                        <td>{yazSayi(c.etki)}</td><td>{yazSayi(c.se)}</td><td>{yazSayi(c.t)}</td><td>{yazP(c.p)}</td>
+                        <td>[{yazSayi(c.alt)}, {yazSayi(c.ust)}]</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {r.jnSinirlari.length ? (
+                <p className="muted text-sm">
+                  Johnson-Neyman: {varA}&apos;in etkisi {varB} = {r.jnSinirlari.map((v) => yazSayi(v)).join(" ve ")} noktasında anlamlılık
+                  sınırını geçiyor (gözlenen aralık {yazSayi(r.wAralik[0])}–{yazSayi(r.wAralik[1])}).
+                </p>
+              ) : null}
+              <p className="muted text-sm">
+                {varA} ve {varB} ortalamadan arındırılarak (merkezlenerek) modellendi; etkileşim katsayısı bundan etkilenmez.
+              </p>
+              {elemeNotu(veri) ? <p className="muted text-sm">{elemeNotu(veri)}</p> : null}
+            </div>,
+          );
+        }
+      }
+
+      if (analysisType === "dfa") {
+        const faktorler = dfaFaktorleri.filter((f) => f.maddeler.length);
+        if (faktorler.length < 1 || faktorler.some((f) => f.maddeler.length < 2) || (faktorler.length === 1 && faktorler[0].maddeler.length < 3)) {
+          setResultError("Her faktöre en az iki madde atayın (tek faktörlü modelde en az üç).");
+          return;
+        }
+        const maddeler = faktorler.flatMap((f) => f.maddeler);
+        const veri = eslesenSutunlar(...maddeler);
+        const r = dogrulayiciFaktorAnalizi(veri.sutunlar, maddeler, {
+          faktorler: faktorler.map((f) => f.ad.trim() || "Faktör"),
+          maddeFaktoru: faktorler.flatMap((f, k) => f.maddeler.map(() => k)),
+        });
+        if (r === "az-madde") return setResultError("DFA için en az üç madde gerekir.");
+        if (r === "az-gozlem") return setResultError(`Gözlem sayısı (${veri.n}) madde sayısından fazla olmalı; DFA için genel öneri en az 200 kişi.`);
+        if (r === "tanimsiz") return setResultError("Model tanımlanamıyor: her faktörde en az iki madde olmalı ve serbest parametre sayısı veriyi aşmamalı.");
+        if (r === "kestirilemedi") return setResultError("Model kestirilemedi: kovaryans matrisi tekil (bir madde diğerinin aynısı ya da değişkenliği yok) ya da başlangıç noktası uygun değil.");
+        const indeks = (ad: "chiKareDf" | "cfi" | "tli" | "rmsea" | "srmr" | "gfi" | "agfi", etiket: string, deger: number) => (
+          <tr key={ad}>
+            <td>{etiket}</td>
+            <td>{yazSayi(deger, 3)}</td>
+            <td>{uyumYorumu(ad, deger)}</td>
+          </tr>
+        );
+        const adlar = faktorler.map((f) => f.ad.trim() || "Faktör");
+        setResult(
+          <div>
+            <p className="tone-text" data-tone={r.cfi >= 0.9 && r.rmsea <= 0.08 ? "success" : "warning"}>
+              χ²({r.df}, N = {r.n}) = {yazSayi(r.chiKare)}, {yazP(r.p)} · CFI = {yazSayi(r.cfi, 3)} · TLI = {yazSayi(r.tli, 3)} · RMSEA ={" "}
+              {yazSayi(r.rmsea, 3)} · SRMR = {yazSayi(r.srmr, 3)}
+            </p>
+            <div className="table-scroll" role="region" aria-label="Uyum indeksleri" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr><th>İndeks</th><th>Değer</th><th>Değerlendirme</th></tr>
+                </thead>
+                <tbody>
+                  {indeks("chiKareDf", "χ²/sd", r.chiKareDf)}
+                  {indeks("cfi", "CFI", r.cfi)}
+                  {indeks("tli", "TLI (NNFI)", r.tli)}
+                  {indeks("rmsea", "RMSEA", r.rmsea)}
+                  {indeks("srmr", "SRMR", r.srmr)}
+                  {indeks("gfi", "GFI", r.gfi)}
+                  {indeks("agfi", "AGFI", r.agfi)}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-scroll" role="region" aria-label="Faktör yükleri" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr><th>Faktör</th><th>Madde</th><th>Standart yük</th><th>B</th><th>SH</th><th>z</th><th>p</th><th>R²</th></tr>
+                </thead>
+                <tbody>
+                  {r.yukler.map((y) => (
+                    <tr key={y.madde} className={y.std < 0.5 ? undefined : "stats-significant"}>
+                      <td>{y.faktor}</td><td>{y.madde}</td><td>{yazSayi(y.std)}</td><td>{yazSayi(y.b)}</td><td>{yazSayi(y.se)}</td>
+                      <td>{yazSayi(y.z)}</td><td>{yazP(y.p)}</td><td>{yazSayi(y.std * y.std)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-scroll" role="region" aria-label="Güvenirlik ve geçerlik" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    <th>Faktör</th><th>CR</th><th>AVE</th><th>√AVE</th>
+                    {adlar.map((a) => (
+                      <th key={a}>r ({a})</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {adlar.map((a, k) => (
+                    <tr key={a}>
+                      <td>{a}</td><td>{yazSayi(r.cr[k])}</td><td>{yazSayi(r.ave[k])}</td><td>{yazSayi(Math.sqrt(r.ave[k]))}</td>
+                      {adlar.map((_, j) => (
+                        <td key={j}>{j === k ? "—" : yazSayi(r.faktorKorelasyonlari[k][j])}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="muted text-sm">
+              Eşikler (Hu ve Bentler, 1999; Kline, 2016): CFI/TLI ≥ .90 kabul edilebilir, ≥ .95 iyi; RMSEA ve SRMR ≤ .08 kabul
+              edilebilir, ≤ .05 iyi. Standart yük ≥ .50, CR ≥ .70 ve AVE ≥ .50 yaygın ölçütler; ayırt edici geçerlik için √AVE,
+              faktörün diğer faktörlerle korelasyonundan büyük olmalı (Fornell-Larcker). Kestirim en çok olabilirlik, χ² = (N − 1)·F
+              (AMOS/LISREL kuralı); faktör varyansları 1&apos;e sabit.
+            </p>
+            {r.heywood.length ? (
+              <p className="tone-text text-sm" data-tone="warning">
+                Negatif hata varyansı (Heywood durumu): {r.heywood.join(", ")}. Model ya da örneklem sorunlu; bu maddelerin yerini ve
+                örneklem büyüklüğünü gözden geçirin, sonucu bu hâliyle raporlamayın.
+              </p>
+            ) : null}
+            {!r.yakinsadi ? (
+              <p className="tone-text text-sm" data-tone="warning">Kestirim tam yakınsamadı; değerleri temkinli okuyun.</p>
+            ) : null}
+            <p className="muted text-sm">Değişiklik (modifikasyon) indeksleri bu sürümde hesaplanmıyor.</p>
+            {elemeNotu(veri) ? <p className="muted text-sm">{elemeNotu(veri)}</p> : null}
+          </div>,
+        );
+      }
+
       if (analysisType === "kruskalwallis") {
         if (groupLevels.length < 3) {
           setResultError(
@@ -2089,7 +2330,7 @@ export default function DataAnalyzer({
       setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, olcumler, testDegeri, kovaryatlar, olayDegeri, faktorSayisi, ikiDegerliSutunlar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, pencere, yorumIste]);
+  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, olcumler, testDegeri, kovaryatlar, olayDegeri, faktorSayisi, varY, dfaFaktorleri, ikiDegerliSutunlar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, pencere, yorumIste]);
 
   return (
     <section className={pencere ? "analiz-pencere-govde" : "project-form-card"}>
@@ -2321,9 +2562,9 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "pairedttest" || analysisType === "wilcoxon" || analysisType === "regression" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman" || analysisType === "ikiyonluanova" || analysisType === "tekorneklem" || analysisType === "ancova" || analysisType === "kismikorelasyon") && (
+            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "pairedttest" || analysisType === "wilcoxon" || analysisType === "regression" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman" || analysisType === "ikiyonluanova" || analysisType === "tekorneklem" || analysisType === "ancova" || analysisType === "kismikorelasyon" || analysisType === "aracilik" || analysisType === "duzenleyicilik") && (
               <label>
-                <span>{analysisType === "correlation" || analysisType === "spearman" || analysisType === "kismikorelasyon" ? "Değişken 1" : analysisType === "pairedttest" || analysisType === "wilcoxon" ? "Önceki ölçüm" : analysisType === "regression" ? "Bağımlı değişken (Y)" : analysisType === "ancova" ? "Bağımlı değişken (ör. son test)" : "Sayısal değişken"}</span>
+                <span>{analysisType === "aracilik" || analysisType === "duzenleyicilik" ? "Bağımsız değişken (X)" : analysisType === "correlation" || analysisType === "spearman" || analysisType === "kismikorelasyon" ? "Değişken 1" : analysisType === "pairedttest" || analysisType === "wilcoxon" ? "Önceki ölçüm" : analysisType === "regression" ? "Bağımlı değişken (Y)" : analysisType === "ancova" ? "Bağımlı değişken (ör. son test)" : "Sayısal değişken"}</span>
                 <select value={varA} onChange={(e) => setVarA(e.target.value)}>
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
@@ -2334,9 +2575,9 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "correlation" || analysisType === "spearman" || analysisType === "pairedttest" || analysisType === "wilcoxon" || analysisType === "kismikorelasyon") && (
+            {(analysisType === "correlation" || analysisType === "spearman" || analysisType === "pairedttest" || analysisType === "wilcoxon" || analysisType === "kismikorelasyon" || analysisType === "aracilik" || analysisType === "duzenleyicilik") && (
               <label>
-                <span>{analysisType === "pairedttest" || analysisType === "wilcoxon" ? "Sonraki ölçüm" : "Değişken 2"}</span>
+                <span>{analysisType === "aracilik" ? "Aracı değişken (M)" : analysisType === "duzenleyicilik" ? "Düzenleyici değişken (W)" : analysisType === "pairedttest" || analysisType === "wilcoxon" ? "Sonraki ölçüm" : "Değişken 2"}</span>
                 <select value={varB} onChange={(e) => setVarB(e.target.value)}>
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
@@ -2358,6 +2599,33 @@ export default function DataAnalyzer({
                   ))}
                 </select>
               </label>
+            )}
+
+            {(analysisType === "aracilik" || analysisType === "duzenleyicilik") && (
+              <label>
+                <span>Sonuç değişkeni (Y)</span>
+                <select value={varY} onChange={(e) => setVarY(e.target.value)}>
+                  <option value="">Seçin</option>
+                  {dataset.numericColumns.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {(analysisType === "aracilik" || analysisType === "duzenleyicilik") && (
+              <SutunSecimi
+                etiket="Kontrol değişkenleri (isteğe bağlı)"
+                sutunlar={dataset.numericColumns.filter((c) => c !== varA && c !== varB && c !== varY)}
+                secili={kovaryatlar.filter((c) => c !== varA && c !== varB && c !== varY)}
+                degistir={setKovaryatlar}
+              />
+            )}
+
+            {analysisType === "dfa" && (
+              <DfaModeli sutunlar={dataset.numericColumns} faktorler={dfaFaktorleri} degistir={setDfaFaktorleri} />
             )}
 
             {analysisType === "tekorneklem" && (

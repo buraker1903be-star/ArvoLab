@@ -67,6 +67,9 @@ export const YONTEM_ACIKLAMASI: Record<AnalizTuru, string> = {
   lojistik: "İki kategorili sonucu yordar (var/yok)",
   faktor: "Ölçeğin yapısı: KMO, Bartlett, faktör yükleri",
   karmaanova: "Deney–kontrol × ön test–son test; grupların değişimi farklı mı",
+  aracilik: "X, Y'yi M üzerinden mi etkiliyor (bootstrap)",
+  duzenleyicilik: "X'in Y'ye etkisi W'ye göre değişiyor mu",
+  dfa: "Önerilen faktör yapısı veride doğrulanıyor mu (CFI, RMSEA…)",
 };
 
 /*
@@ -83,8 +86,8 @@ export const YONTEM_GRUPLARI: { baslik: string; turler: AnalizTuru[] }[] = [
   { baslik: "İki grubu karşılaştır", turler: ["ttest", "mannwhitney"] },
   { baslik: "Üç ve daha çok grubu karşılaştır", turler: ["anova", "kruskalwallis", "ikiyonluanova", "ancova"] },
   { baslik: "Aynı kişilerin ölçümlerini karşılaştır", turler: ["pairedttest", "wilcoxon", "tekrarlianova", "friedman", "karmaanova", "mcnemar"] },
-  { baslik: "İlişki ve yordama", turler: ["correlation", "spearman", "kismikorelasyon", "chisquare", "regression", "lojistik"] },
-  { baslik: "Ölçek", turler: ["reliability", "faktor"] },
+  { baslik: "İlişki ve yordama", turler: ["correlation", "spearman", "kismikorelasyon", "chisquare", "regression", "lojistik", "aracilik", "duzenleyicilik"] },
+  { baslik: "Ölçek", turler: ["reliability", "faktor", "dfa"] },
 ];
 
 export const YONTEM_KARTLARI = (Object.keys(ANALIZ_ETIKETLERI) as AnalizTuru[]).map((tur) => ({
@@ -108,7 +111,17 @@ export type BetikSecimi = {
   testDegeri?: number;
   /** Faktör analizinde istenen faktör sayısı; yoksa öz değer > 1. */
   faktorSayisi?: number;
+  /** Aracılık/düzenleyicilikte sonuç değişkeni. */
+  varY?: string;
+  /** DFA modeli: faktör adı ve maddeleri. */
+  dfaFaktorleri?: { ad: string; maddeler: string[] }[];
 };
+
+/* lavaan / semopy model metni: "F1 =~ m1 + m2 + m3" satırları. */
+const dfaModelMetni = (s: BetikSecimi) =>
+  (s.dfaFaktorleri?.length ? s.dfaFaktorleri : [{ ad: "F1", maddeler: ["m1", "m2", "m3"] }])
+    .map((f) => `${f.ad.replace(/\s+/g, "_")} =~ ${f.maddeler.join(" + ")}`)
+    .join("\n");
 
 /* Değişken adı boşluk ya da Türkçe harf taşıyabilir: her dil kendi biçimiyle tırnaklanır. */
 const rAd = (ad: string) => (/^[A-Za-z.][A-Za-z0-9._]*$/.test(ad) ? ad : `\`${ad.replace(/`/g, "")}\``);
@@ -167,6 +180,12 @@ function spss(tur: AnalizTuru, s: BetikSecimi): string {
       return `T-TEST\n  /TESTVAL=${s.testDegeri ?? 0}\n  /VARIABLES=${a}\n  /CRITERIA=CI(.95).`;
     case "tekrarlianova":
       return `GLM ${maddeler}\n  /WSFACTOR=olcum ${s.maddeler?.length || 3} Polynomial\n  /PRINT=DESCRIPTIVE ETASQ\n  /EMMEANS=TABLES(olcum) COMPARE ADJ(BONFERRONI)\n  /WSDESIGN=olcum.`;
+    case "aracilik":
+      return `* Hayes PROCESS makrosu gerekir (processmacro.org). Model 4, 5000 bootstrap.\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /m=${b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=4 /boot=5000 /total=1 /effsize=1.`;
+    case "duzenleyicilik":
+      return `* Hayes PROCESS makrosu gerekir (processmacro.org). Model 1, merkezlenmiş, Johnson-Neyman.\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /w=${b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=1 /center=1 /jn=1 /plot=1.`;
+    case "dfa":
+      return `* SPSS'in kendisinde DFA yok; AMOS'ta yol şemasıyla kurulur.\n* Model (her satır bir faktör ve maddeleri):\n${dfaModelMetni(s).split("\n").map((l) => `*   ${l}`).join("\n")}\n* AMOS: Analysis Properties > Output > Standardized estimates, Modification indices.`;
     case "karmaanova":
       return `GLM ${maddeler} BY ${g}\n  /WSFACTOR=olcum ${s.maddeler?.length || 3} Polynomial\n  /PRINT=DESCRIPTIVE ETASQ HOMOGENEITY\n  /PLOT=PROFILE(olcum*${g})\n  /EMMEANS=TABLES(${g}*olcum) COMPARE(${g}) ADJ(BONFERRONI)\n  /WSDESIGN=olcum\n  /DESIGN=${g}.`;
     case "ancova":
@@ -215,6 +234,9 @@ function r(tur: AnalizTuru, s: BetikSecimi): string {
     friedman: `olcumler <- na.omit(veri[, c(${maddeler})])\nfriedman.test(as.matrix(olcumler))`,
     tekorneklem: `t.test(veri$${a}, mu = ${s.testDegeri ?? 0})`,
     tekrarlianova: `library(rstatix)\nlibrary(tidyr)\nveri$id <- seq_len(nrow(veri))\nuzun <- pivot_longer(veri[, c("id", ${maddeler})], -id, names_to = "olcum", values_to = "puan")\nanova_test(uzun, dv = puan, wid = id, within = olcum)  # Mauchly ve GG/HF düzeltmesi dahil\npairwise_t_test(uzun, puan ~ olcum, paired = TRUE, p.adjust.method = "bonferroni")`,
+    aracilik: `library(lavaan)\nmodel <- '\n  ${ad(s.varB, "araci")} ~ a*${ad(s.varA, "x")}\n  ${ad(s.varY, "sonuc")} ~ b*${ad(s.varB, "araci")} + c*${ad(s.varA, "x")}\n  dolayli := a*b\n  toplam := c + a*b\n'\nfit <- sem(model, data = veri, se = "bootstrap", bootstrap = 5000)\nparameterEstimates(fit, boot.ci.type = "perc")`,
+    duzenleyicilik: `veri$x_m <- veri$${a} - mean(veri$${a}, na.rm = TRUE)\nveri$w_m <- veri$${b} - mean(veri$${b}, na.rm = TRUE)\nmodel <- lm(${rAd(ad(s.varY, "sonuc"))} ~ x_m * w_m, data = veri)\nsummary(model)\nlibrary(interactions)\nsim_slopes(model, pred = x_m, modx = w_m, johnson_neyman = TRUE)`,
+    dfa: `library(lavaan)\nmodel <- '\n${dfaModelMetni(s)}\n'\nfit <- cfa(model, data = veri, std.lv = TRUE)\nsummary(fit, fit.measures = TRUE, standardized = TRUE)\n# Not: lavaan χ²'yi N ile, ArvoLab AMOS gibi N − 1 ile hesaplar; fark çok küçüktür.`,
     karmaanova: `library(rstatix)\nlibrary(tidyr)\nveri$id <- seq_len(nrow(veri))\nuzun <- pivot_longer(veri[, c("id", ${JSON.stringify(ad(s.groupVar, "grup"))}, ${maddeler})], -c(id, ${g}), names_to = "olcum", values_to = "puan")\nanova_test(uzun, dv = puan, wid = id, within = olcum, between = ${g})`,
     ancova: `model <- lm(${a} ~ ${kovaryatlarR} + factor(${g}), data = veri)\ncar::Anova(model, type = 2)\nemmeans::emmeans(model, ~ ${g})  # düzeltilmiş ortalamalar`,
     kismikorelasyon: `library(ppcor)\ntemiz <- na.omit(veri[, c(${JSON.stringify(ad(s.varA, "degisken1"))}, ${JSON.stringify(ad(s.varB, "degisken2"))}, ${kovaryatlarListe})])\npcor.test(temiz[[1]], temiz[[2]], temiz[, -(1:2)])`,
@@ -254,6 +276,9 @@ function python(tur: AnalizTuru, s: BetikSecimi): string {
     friedman: `olcumler = veri[${maddeler}].dropna()\nprint(stats.friedmanchisquare(*[olcumler[m] for m in olcumler.columns]))`,
     tekorneklem: `print(stats.ttest_1samp(${a}.dropna(), ${s.testDegeri ?? 0}))`,
     tekrarlianova: `import pingouin as pg\nuzun = veri[${maddeler}].dropna().reset_index().melt(id_vars="index", var_name="olcum", value_name="puan")\nprint(pg.rm_anova(uzun, dv="puan", within="olcum", subject="index", correction=True))\nprint(pg.pairwise_tests(uzun, dv="puan", within="olcum", subject="index", padjust="bonf"))`,
+    aracilik: `import pingouin as pg\nprint(pg.mediation_analysis(data=veri, x=${JSON.stringify(aAd)}, m=${JSON.stringify(bAd)}, y=${JSON.stringify(ad(s.varY, "sonuc"))}${s.kovaryatlar?.length ? `, covar=${kovaryatlarPy}` : ""}, n_boot=5000))`,
+    duzenleyicilik: `import statsmodels.formula.api as smf\nveri["x_m"] = ${a} - ${a}.mean()\nveri["w_m"] = ${b} - ${b}.mean()\nmodel = smf.ols(${JSON.stringify(`${pyFormul(ad(s.varY, "sonuc"))} ~ x_m * w_m`)}, data=veri).fit()\nprint(model.summary())`,
+    dfa: `import semopy\nmodel = semopy.Model("""\n${dfaModelMetni(s)}\n""")\nmodel.fit(veri)\nprint(model.inspect(std_est=True))\nprint(semopy.calc_stats(model).T)`,
     karmaanova: `import pingouin as pg\nuzun = veri[[${JSON.stringify(gAd)}] + ${maddeler}].dropna().reset_index().melt(id_vars=["index", ${JSON.stringify(gAd)}], var_name="olcum", value_name="puan")\nprint(pg.mixed_anova(uzun, dv="puan", within="olcum", between=${JSON.stringify(gAd)}, subject="index", correction=True))`,
     ancova: `import pingouin as pg\nprint(pg.ancova(veri, dv=${JSON.stringify(aAd)}, between=${JSON.stringify(gAd)}, covar=${kovaryatlarPy}))`,
     kismikorelasyon: `import pingouin as pg\nprint(pg.partial_corr(veri, x=${JSON.stringify(aAd)}, y=${JSON.stringify(bAd)}, covar=${kovaryatlarPy}))`,

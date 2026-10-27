@@ -57,6 +57,10 @@ export const ANALIZ_ETIKETLERI = {
   faktor: "Açımlayıcı Faktör Analizi",
   /* Deney/kontrol × ön test/son test deseni (27.10.2026): asıl bulgu etkileşim. */
   karmaanova: "Karma ANOVA (Gruplar Arası × Tekrarlı)",
+  /* PROCESS Model 4 / Model 1 ve AMOS'un DFA'sı (27.10.2026). */
+  aracilik: "Aracılık Analizi (Mediation)",
+  duzenleyicilik: "Düzenleyicilik Analizi (Moderation)",
+  dfa: "Doğrulayıcı Faktör Analizi (DFA)",
 } as const;
 
 export type AnalizTuru = keyof typeof ANALIZ_ETIKETLERI;
@@ -79,6 +83,8 @@ export function analizEtiketi(tur: string): string {
 export interface AnalizSecimi {
   varA?: string;
   varB?: string;
+  /** Aracılık ve düzenleyicilikte sonuç değişkeni (Y). */
+  varY?: string;
   groupVar?: string;
   maddeSayisi?: number;
   /** Tek örneklem t-testinin karşılaştırma değeri. */
@@ -123,6 +129,12 @@ export function analizBasligi(tur: string, secim: AnalizSecimi): string {
               ? `${a}${secim.testDegeri !== undefined ? ` (test değeri ${secim.testDegeri})` : ""}`
             : tur === "ancova"
               ? [a, grup].filter(Boolean).join(" ~ ")
+            : tur === "aracilik" && a && b && secim.varY
+              ? `${a} → ${b} → ${secim.varY}`
+            : tur === "duzenleyicilik" && a && b && secim.varY
+              ? `${a} → ${secim.varY}, düzenleyici ${b}`
+            : tur === "dfa" && secim.maddeSayisi
+              ? `${secim.maddeSayisi} madde`
             : tur === "lojistik"
               ? [a, secim.maddeSayisi ? `${secim.maddeSayisi} yordayıcı` : ""].filter(Boolean).join(" ~ ")
               : "";

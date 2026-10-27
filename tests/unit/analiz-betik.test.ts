@@ -72,3 +72,12 @@ test("karma ANOVA komutları", () => {
   assert.match(analizBetigi("r", "karmaanova", s), /between = grup/);
   assert.match(analizBetigi("python", "karmaanova", s), /mixed_anova/);
 });
+
+test("aracılık, düzenleyicilik ve DFA komutları", () => {
+  assert.match(analizBetigi("spss", "aracilik", { varA: "x", varB: "m", varY: "y" }), /PROCESS y=y \/x=x \/m=m[\s\S]*model=4/);
+  assert.match(analizBetigi("r", "aracilik", { varA: "x", varB: "m", varY: "y" }), /dolayli := a\*b/);
+  assert.match(analizBetigi("spss", "duzenleyicilik", { varA: "x", varB: "w", varY: "y" }), /model=1 \/center=1 \/jn=1/);
+  const dfa = { dfaFaktorleri: [{ ad: "Kaygı", maddeler: ["m1", "m2", "m3"] }, { ad: "Öz yeterlik", maddeler: ["m4", "m5"] }] };
+  assert.match(analizBetigi("r", "dfa", dfa), /Kaygı =~ m1 \+ m2 \+ m3\nÖz_yeterlik =~ m4 \+ m5[\s\S]*std\.lv = TRUE/);
+  assert.match(analizBetigi("python", "dfa", dfa), /semopy\.Model/);
+});
