@@ -35,6 +35,14 @@ export const ANALIZ_ETIKETLERI = {
     ayrı test ETKİLEŞİMİ göremez ve asıl bulgu çoğu zaman odur.
   */
   ikiyonluanova: "İki Yönlü ANOVA",
+  /*
+    Bağımlı ölçümlerin parametrik olmayan karşılıkları (27.10.2026):
+    eşleştirilmiş t-testinde varsayım şeridi farkların normalden uzak
+    olduğunu söylüyor ama karşılığını sunamıyordu; üç ve daha çok
+    tekrarlı ölçüm (ön test, son test, izleme) için hiçbir test yoktu.
+  */
+  wilcoxon: "Wilcoxon İşaretli Sıralar Testi",
+  friedman: "Friedman Testi",
 } as const;
 
 export type AnalizTuru = keyof typeof ANALIZ_ETIKETLERI;
@@ -81,7 +89,7 @@ export function analizBasligi(tur: string, secim: AnalizSecimi): string {
       ? "tüm sayısal değişkenler"
       : tur === "ttest" || tur === "anova" || tur === "mannwhitney" || tur === "kruskalwallis"
         ? [a, grup].filter(Boolean).join(" ~ ")
-        : tur === "correlation" || tur === "spearman" || tur === "pairedttest"
+        : tur === "correlation" || tur === "spearman" || tur === "pairedttest" || tur === "wilcoxon"
           ? [a, b].filter(Boolean).join(" — ")
           : tur === "chisquare"
             ? [a, b].filter(Boolean).join(" × ")
@@ -89,6 +97,8 @@ export function analizBasligi(tur: string, secim: AnalizSecimi): string {
               ? [a, secim.maddeSayisi ? `${secim.maddeSayisi} yordayıcı` : ""].filter(Boolean).join(" ~ ")
             : tur === "reliability" && secim.maddeSayisi
               ? `${secim.maddeSayisi} madde`
+            : tur === "friedman" && secim.maddeSayisi
+              ? `${secim.maddeSayisi} ölçüm`
               : "";
 
   const tam = govde ? `${analizEtiketi(tur)}: ${govde}` : analizEtiketi(tur);

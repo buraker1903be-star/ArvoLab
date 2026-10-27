@@ -157,3 +157,125 @@ export function kruskalWallis(gruplar: number[][]): KruskalWallisSonucu {
 export function spearmanKorelasyonu(x: number[], y: number[]): CorrelationResult {
   return pearsonCorrelation(siralandir(x).siralar, siralandir(y).siralar);
 }
+
+export interface WilcoxonSonucu {
+  /** Pozitif farkların (sonra > önce) sıra toplamı. */
+  wArti: number;
+  /** Negatif farkların sıra toplamı. */
+  wEksi: number;
+  /** Raporlanan istatistik: küçük sıra toplamı (SPSS'in T'si). */
+  t: number;
+  /** Eşleşen çift sayısı (sıfır farklar dahil). */
+  n: number;
+  /** Sıfır olmayan fark sayısı: testin gerçekte kullandığı çiftler. */
+  nEtkin: number;
+  artiSayisi: number;
+  eksiSayisi: number;
+  esitSayisi: number;
+  z: number;
+  p: number;
+  /** r = |z| / √n; sıralara dayalı etki büyüklüğü. */
+  etki: number;
+}
+
+/*
+  WILCOXON İŞARETLİ SIRALAR TESTİ (27.10.2026). Eşleştirilmiş t-testinin
+  parametrik olmayan karşılığı: ön test–son test deseninde farklar normal
+  dağılmıyorsa. Program eşleştirilmiş t-testini yapıyor, varsayım şeridi
+  farkların normalden uzak olduğunu söylüyordu ama karşılığı yoktu —
+  Mann-Whitney'nin eklenme gerekçesinin aynısı.
+
+  SIFIR FARKLAR ATILIR (Wilcoxon'un özgün yöntemi, SPSS de böyle):
+  önce = sonra olan çift hiçbir yöne kanıt değil. Sayıları raporda
+  "eşit" olarak ayrıca yazılıyor.
+
+  Fark yönü SPSS'teki gibi SONRA − ÖNCE. Bağ düzeltmeli normal
+  yaklaşıklık; küçük örneklemde (nEtkin < YAKLASIKLIK_EN_AZ) çağıran
+  uyarmalı.
+*/
+export function wilcoxonIsaretliSiralar(once: number[], sonra: number[]): WilcoxonSonucu {
+  const n = Math.min(once.length, sonra.length);
+  const farklar: number[] = [];
+  let esitSayisi = 0;
+  for (let i = 0; i < n; i += 1) {
+    const d = sonra[i] - once[i];
+    if (d === 0) esitSayisi += 1;
+    else farklar.push(d);
+  }
+  const nEtkin = farklar.length;
+  const { siralar, bagDuzeltmesi } = siralandir(farklar.map(Math.abs));
+  let wArti = 0;
+  let wEksi = 0;
+  let artiSayisi = 0;
+  farklar.forEach((d, i) => {
+    if (d > 0) {
+      wArti += siralar[i];
+      artiSayisi += 1;
+    } else wEksi += siralar[i];
+  });
+  const t = Math.min(wArti, wEksi);
+  const ortalama = (nEtkin * (nEtkin + 1)) / 4;
+  const varyans = (nEtkin * (nEtkin + 1) * (2 * nEtkin + 1)) / 24 - bagDuzeltmesi / 48;
+  const z = nEtkin > 0 && varyans > 0 ? (t - ortalama) / Math.sqrt(varyans) : NaN;
+  return {
+    wArti,
+    wEksi,
+    t,
+    n,
+    nEtkin,
+    artiSayisi,
+    eksiSayisi: nEtkin - artiSayisi,
+    esitSayisi,
+    z,
+    p: normalIkiKuyrukP(z),
+    etki: Number.isFinite(z) && n > 0 ? Math.abs(z) / Math.sqrt(n) : NaN,
+  };
+}
+
+export interface FriedmanSonucu {
+  chiKare: number;
+  df: number;
+  p: number;
+  /** Katılımcı (satır) sayısı. */
+  n: number;
+  /** Her ölçümün ortalama sırası (1..k). */
+  siraOrtalamalari: number[];
+  /** Kendall W = χ² / (n(k − 1)); 0–1 arası uyum/etki büyüklüğü. */
+  kendallW: number;
+}
+
+/*
+  FRIEDMAN TESTİ (27.10.2026): üç ve daha çok TEKRARLI ölçüm (ön test,
+  son test, izleme testi) — Kruskal-Wallis'in bağımlı ölçüm karşılığı.
+  Sıralama HER KATILIMCININ KENDİ İÇİNDE yapılır; katılımcılar arası
+  düzey farkı testi etkilemez.
+
+  `olcumler` sütun sütun verilir (her dizi bir ölçüm, satırlar
+  hizalı — çağıran eslesenSatirlar ile hizalar). Bağ düzeltmesi Likert
+  verisinde şart (bkz. dosya başı).
+*/
+export function friedmanTesti(olcumler: number[][]): FriedmanSonucu {
+  const k = olcumler.length;
+  const n = k ? Math.min(...olcumler.map((o) => o.length)) : 0;
+  const siraToplamlari = new Array<number>(k).fill(0);
+  let bagToplami = 0;
+  for (let i = 0; i < n; i += 1) {
+    const { siralar, bagDuzeltmesi } = siralandir(olcumler.map((o) => o[i]));
+    siralar.forEach((s, j) => (siraToplamlari[j] += s));
+    bagToplami += bagDuzeltmesi;
+  }
+  const df = k - 1;
+  const ham = n > 0 && k > 1
+    ? (12 / (n * k * (k + 1))) * siraToplamlari.reduce((t, r) => t + r * r, 0) - 3 * n * (k + 1)
+    : NaN;
+  const bolen = n > 0 && k > 1 ? 1 - bagToplami / (n * (k ** 3 - k)) : 0;
+  const chiKare = bolen > 0 ? ham / bolen : NaN;
+  return {
+    chiKare,
+    df,
+    p: chiSquareP(chiKare, df),
+    n,
+    siraOrtalamalari: siraToplamlari.map((r) => (n ? r / n : NaN)),
+    kendallW: n > 0 && k > 1 && Number.isFinite(chiKare) ? chiKare / (n * (k - 1)) : NaN,
+  };
+}

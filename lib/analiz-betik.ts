@@ -57,7 +57,26 @@ export const YONTEM_ACIKLAMASI: Record<AnalizTuru, string> = {
   spearman: "Sıralı ya da normal dağılmayan iki değişken",
   regression: "Bir değişkeni diğerleriyle yordar",
   ikiyonluanova: "İki faktör ve etkileşimleri",
+  wilcoxon: "Ön test – son test, normal dağılmayan farklar",
+  friedman: "Üç ve daha çok tekrarlı ölçüm (ön, son, izleme)",
 };
+
+/*
+  YÖNTEM KARTLARI ARAŞTIRMA SORUSUNA GÖRE GRUPLU (27.10.2026). On dört
+  kart tek yığındaydı ve öğrenci testi adından seçmek zorundaydı ("Mann-
+  Whitney mi Kruskal-Wallis mi?"). Öğrenci sorusunu biliyor, testin adını
+  bilmiyor: kartlar "ne yapmak istiyorsunuz" başlıkları altında; her
+  grupta önce parametrik test, sonra normal dağılmayan veri için
+  karşılığı.
+*/
+export const YONTEM_GRUPLARI: { baslik: string; turler: AnalizTuru[] }[] = [
+  { baslik: "Veriyi betimle", turler: ["descriptives"] },
+  { baslik: "İki grubu karşılaştır", turler: ["ttest", "mannwhitney"] },
+  { baslik: "Üç ve daha çok grubu karşılaştır", turler: ["anova", "kruskalwallis", "ikiyonluanova"] },
+  { baslik: "Aynı kişilerin ölçümlerini karşılaştır", turler: ["pairedttest", "wilcoxon", "friedman"] },
+  { baslik: "İlişki ve yordama", turler: ["correlation", "spearman", "chisquare", "regression"] },
+  { baslik: "Ölçek", turler: ["reliability"] },
+];
 
 export const YONTEM_KARTLARI = (Object.keys(ANALIZ_ETIKETLERI) as AnalizTuru[]).map((tur) => ({
   tur,
@@ -125,6 +144,10 @@ function spss(tur: AnalizTuru, s: BetikSecimi): string {
       return `* Grup aralığını (1 3) kendi verinizdeki en küçük ve en büyük kodla değiştirin.\nNPAR TESTS\n  /K-W=${a} BY ${g}(1 3).`;
     case "regression":
       return `REGRESSION\n  /STATISTICS COEFF OUTS R ANOVA COLLIN TOL\n  /DEPENDENT ${a}\n  /METHOD=ENTER ${yordayicilar}.`;
+    case "wilcoxon":
+      return `NPAR TESTS\n  /WILCOXON=${a} WITH ${b} (PAIRED).`;
+    case "friedman":
+      return `NPAR TESTS\n  /FRIEDMAN=${maddeler}\n  /KENDALL=${maddeler}.`;
     case "ikiyonluanova":
       return `UNIANOVA ${a} BY ${g} ${g2}\n  /PRINT=ETASQ DESCRIPTIVE HOMOGENEITY\n  /DESIGN=${g} ${g2} ${g}*${g2}.`;
   }
@@ -154,6 +177,8 @@ function r(tur: AnalizTuru, s: BetikSecimi): string {
     kruskalwallis: `kruskal.test(${a} ~ factor(${g}), data = veri)`,
     regression: `model <- lm(${a} ~ ${yordayicilar}, data = veri)\nsummary(model)`,
     ikiyonluanova: `model <- aov(${a} ~ factor(${g}) * factor(${g2}), data = veri)\nsummary(model)`,
+    wilcoxon: `wilcox.test(veri$${a}, veri$${b}, paired = TRUE, exact = FALSE, correct = FALSE)`,
+    friedman: `olcumler <- na.omit(veri[, c(${maddeler})])\nfriedman.test(as.matrix(olcumler))`,
   };
   return `${okuma}\n\n${govde[tur]}`;
 }
@@ -182,6 +207,8 @@ function python(tur: AnalizTuru, s: BetikSecimi): string {
     mannwhitney: `${gruplar}\nprint(stats.mannwhitneyu(gruplar[0], gruplar[1], alternative="two-sided"))`,
     kruskalwallis: `${gruplar}\nprint(stats.kruskal(*gruplar))`,
     regression: `import statsmodels.formula.api as smf\nmodel = smf.ols(${JSON.stringify(`${pyFormul(aAd)} ~ ${yordayicilar}`)}, data=veri).fit()\nprint(model.summary())`,
+    wilcoxon: `temiz = veri[[${JSON.stringify(aAd)}, ${JSON.stringify(bAd)}]].dropna()\nprint(stats.wilcoxon(temiz[${JSON.stringify(bAd)}], temiz[${JSON.stringify(aAd)}], correction=False, method="approx"))`,
+    friedman: `olcumler = veri[${maddeler}].dropna()\nprint(stats.friedmanchisquare(*[olcumler[m] for m in olcumler.columns]))`,
     ikiyonluanova: `import statsmodels.api as sm\nimport statsmodels.formula.api as smf\nmodel = smf.ols(${JSON.stringify(`${pyFormul(aAd)} ~ C(${pyFormul(gAd)}) * C(${pyFormul(g2Ad)})`)}, data=veri).fit()\nprint(sm.stats.anova_lm(model, typ=2))`,
   };
   return `import pandas as pd\nfrom scipy import stats\n\n${okuma}\n\n${govde[tur]}`;

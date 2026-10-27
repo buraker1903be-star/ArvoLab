@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useRef, useTransition } from "react";
 import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save, ListPlus, Sparkles, Code2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { leveneTesti, normallikOlcutu } from "@/lib/stats-varsayim";
-import { kruskalWallis, mannWhitneyU, spearmanKorelasyonu, YAKLASIKLIK_EN_AZ } from "@/lib/stats-parametrik-olmayan";
+import { friedmanTesti, kruskalWallis, mannWhitneyU, spearmanKorelasyonu, wilcoxonIsaretliSiralar, YAKLASIKLIK_EN_AZ } from "@/lib/stats-parametrik-olmayan";
 import { dogrusalRegresyon } from "@/lib/stats-regresyon";
 import { VARSAYILAN_BICIM, type BicimKarari } from "@/lib/sayi-bicimi";
 import {
@@ -28,11 +28,13 @@ import { formatP, hesaplanabilir, isSignificant, formatNumber } from "@/lib/apa-
 import { ANALIZ_ETIKETLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
-import { analizBetigi, ARAC_ADI, PROGRAM_KARTLARI, YONTEM_KARTLARI, type AnalizAraci, type BetikSecimi } from "@/lib/analiz-betik";
+import { analizBetigi, ARAC_ADI, PROGRAM_KARTLARI, YONTEM_GRUPLARI, YONTEM_KARTLARI, type AnalizAraci, type BetikSecimi } from "@/lib/analiz-betik";
 import AsistanSonuc from "@/app/dashboard/_components/asistan-sonuc";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { elemeNotu, eslesenSatirlar, sayisalSutun } from "@/lib/veri-eslestirme";
 import { basitEtkiler, ikiYonluAnova, type IkiYonluHata } from "@/lib/stats-iki-yonlu-anova";
+import SutunSecimi from "./sutun-secimi";
+import VeriHazirlama from "./veri-hazirlama";
 
 type CellValue = string | number | null;
 type DataRow = Record<string, CellValue>;
@@ -140,6 +142,8 @@ export default function DataAnalyzer({
   const [reliabilityItems, setReliabilityItems] = useState<string[]>([]);
   /* Regresyonun yordayıcıları; bağımlı değişken varA. */
   const [yordayicilar, setYordayicilar] = useState<string[]>([]);
+  /* Friedman'ın tekrarlı ölçümleri (sütunlar, seçim sırasıyla). */
+  const [olcumler, setOlcumler] = useState<string[]>([]);
 
   const [result, setResult] = useState<React.ReactNode>(null);
   const [resultError, setResultError] = useState<string | null>(null);
@@ -500,7 +504,9 @@ export default function DataAnalyzer({
       maddeSayisi:
         analysisType === "regression"
           ? yordayicilar.filter((c) => c !== varA).length
-          : reliabilityItems.length,
+          : analysisType === "friedman"
+            ? olcumler.length
+            : reliabilityItems.length,
     });
     /*
       ASİSTAN KENDİLİĞİNDEN OKUR (yalnızca pencerede): öğrenci ayrıca
@@ -511,7 +517,7 @@ export default function DataAnalyzer({
     */
     if (pencere?.asistanAcik) window.setTimeout(() => yorumIste(baslik, false), 0);
     setCalisanAnaliz({
-      secim: { varA, varB, groupVar, groupVar2, maddeler: reliabilityItems, yordayicilar: yordayicilar.filter((c) => c !== varA), dosyaAdi: fileName, gruplar: groupLevels },
+      secim: { varA, varB, groupVar, groupVar2, maddeler: analysisType === "friedman" ? olcumler : reliabilityItems, yordayicilar: yordayicilar.filter((c) => c !== varA), dosyaAdi: fileName, gruplar: groupLevels },
       tur: analysisType,
       baslik,
     });
@@ -826,6 +832,14 @@ export default function DataAnalyzer({
               [Array.from({ length: r.n }, (_, i) => once[i] - sonra[i])],
               ["Farklar"],
             )}
+            {/* Şerit "parametrik olmayan karşılığı" diyordu ama hangisi olduğunu
+                söylemiyordu; karşılık artık programda var (27.10.2026). */}
+            {(() => {
+              const olcut = normallikOlcutu(Array.from({ length: r.n }, (_, i) => once[i] - sonra[i]));
+              return olcut.n >= 4 && !olcut.normaleYakin ? (
+                <p className="muted text-sm">Karşılığı: “Wilcoxon İşaretli Sıralar Testi” kartı, aynı iki ölçümle.</p>
+              ) : null;
+            })()}
           </div>,
         );
       }
@@ -942,6 +956,107 @@ export default function DataAnalyzer({
                 yaklaşıklığıyla hesaplandı ve kesin değildir.
               </p>
             )}
+          </div>,
+        );
+      }
+
+      /*
+        WILCOXON (27.10.2026): eşleştirilmiş t-testinin parametrik olmayan
+        karşılığı. Satırlar eşleştirilmiş t-testiyle AYNI yoldan hizalanır
+        (eslesenSutunlar); fark yönü SPSS'teki gibi sonra − önce.
+      */
+      if (analysisType === "wilcoxon") {
+        const veri = eslesenSutunlar(varA, varB);
+        const [once, sonra] = veri.sutunlar;
+        if (veri.n < 3) {
+          setResultError("Wilcoxon testi için en az 3 eşleşen gözlem gereklidir.");
+          return;
+        }
+        const r = wilcoxonIsaretliSiralar(once, sonra);
+        if (r.nEtkin === 0) {
+          setResultError("Test hesaplanamadı: bütün katılımcılarda iki ölçüm birbirine eşit, karşılaştırılacak fark yok.");
+          return;
+        }
+        if (!hesaplanabilir(r.z, r.p)) return setResultError(DEGISKENLIK_YOK);
+        const sig = isSignificant(r.p);
+        setResult(
+          <div>
+            <p>
+              <strong>{varB}</strong> − <strong>{varA}</strong>: N={r.n} · artan {r.artiSayisi}, azalan{" "}
+              {r.eksiSayisi}, eşit {r.esitSayisi}
+              <br />
+              Pozitif sıralar toplamı = {yazSayi(r.wArti)}, negatif sıralar toplamı = {yazSayi(r.wEksi)}
+            </p>
+            <p className="tone-text" data-tone={sig ? "success" : "warning"}>
+              z = {yazSayi(r.z)}, {yazP(r.p)}
+              {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
+            </p>
+            <p className="muted text-sm">r = {yazSayi(r.etki)} (sıralara dayalı etki büyüklüğü)</p>
+            {elemeNotu(veri) ? <p className="muted text-sm">{elemeNotu(veri)}</p> : null}
+            {r.esitSayisi > 0 ? (
+              <p className="muted text-sm">İki ölçümü eşit olan {r.esitSayisi} kişi teste girmez (Wilcoxon yöntemi).</p>
+            ) : null}
+            {r.nEtkin < YAKLASIKLIK_EN_AZ && (
+              <p className="tone-text text-sm" data-tone="warning">
+                Farkı sıfır olmayan çift sayısı {YAKLASIKLIK_EN_AZ}&apos;den az; p değeri büyük örneklem yaklaşıklığıyla
+                hesaplandı ve kesin değildir.
+              </p>
+            )}
+          </div>,
+        );
+      }
+
+      /*
+        FRIEDMAN (27.10.2026): üç ve daha çok tekrarlı ölçüm. Bir kişinin
+        bir ölçümü boşsa o kişi bütünüyle düşer (liste bazlı); yarım
+        satırı sıralamak kişiler arasında farklı sayıda ölçümü
+        karşılaştırmak olurdu.
+      */
+      if (analysisType === "friedman") {
+        if (olcumler.length < 3) {
+          setResultError("Friedman testi için en az üç ölçüm (sütun) seçin. İki ölçüm için Wilcoxon testini kullanın.");
+          return;
+        }
+        const veri = eslesenSutunlar(...olcumler);
+        if (veri.n < 2) {
+          setResultError("Friedman testi için bütün ölçümleri dolu en az 2 katılımcı gereklidir.");
+          return;
+        }
+        const r = friedmanTesti(veri.sutunlar);
+        if (!hesaplanabilir(r.chiKare, r.p)) return setResultError(DEGISKENLIK_YOK);
+        const sig = isSignificant(r.p);
+        setResult(
+          <div>
+            <div className="table-scroll" role="region" aria-label="Friedman sıra ortalamaları" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    <th>Ölçüm</th>
+                    <th>Sıra ortalaması</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {olcumler.map((o, i) => (
+                    <tr key={o}>
+                      <td>{o}</td>
+                      <td>{yazSayi(r.siraOrtalamalari[i])}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="tone-text" data-tone={sig ? "success" : "warning"}>
+              χ²({r.df}, N = {r.n}) = {yazSayi(r.chiKare)}, {yazP(r.p)}
+              {sig ? " — istatistiksel olarak anlamlı" : " — istatistiksel olarak anlamlı değil"}
+            </p>
+            <p className="muted text-sm">Kendall W = {yazSayi(r.kendallW)} (etki büyüklüğü, 0–1)</p>
+            {elemeNotu(veri) ? <p className="muted text-sm">{elemeNotu(veri)}</p> : null}
+            {sig ? (
+              <p className="muted text-sm">
+                Fark anlamlı: hangi ölçümlerin farklı olduğunu görmek için ölçüm çiftlerini Wilcoxon testiyle
+                karşılaştırın ve çoklu karşılaştırma için anlamlılık düzeyini düzeltin (Bonferroni: .05 / çift sayısı).
+              </p>
+            ) : null}
           </div>,
         );
       }
@@ -1335,7 +1450,7 @@ export default function DataAnalyzer({
       setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, pencere, yorumIste]);
+  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, olcumler, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, pencere, yorumIste]);
 
   return (
     <section className={pencere ? "analiz-pencere-govde" : "project-form-card"}>
@@ -1415,6 +1530,25 @@ export default function DataAnalyzer({
             istatistiği, frekansları ve korelasyon matrisi. Eskiden pencerede
             hiç yoktu; sayfa da pencereye geçince özellik kaybolacaktı.
           */}
+          <VeriHazirlama
+            key={fileName ?? ""}
+            satirlar={dataset.rows}
+            sutunlar={dataset.columns}
+            sayisalSutunlar={dataset.numericColumns}
+            ekle={(satirlar, yeniSutunlar) =>
+              setDataset((d) =>
+                d
+                  ? {
+                      ...d,
+                      rows: satirlar,
+                      columns: [...d.columns, ...yeniSutunlar],
+                      /* Türetilen sütun her zaman sayısal: testlerde hemen seçilebilsin. */
+                      numericColumns: [...d.numericColumns, ...yeniSutunlar],
+                    }
+                  : d,
+              )
+            }
+          />
           {pencere ? (
             <details className="analiz-betik mb-md">
               <summary>
@@ -1466,27 +1600,35 @@ export default function DataAnalyzer({
           {pencere ? (
             <>
               <h3 className="pencere-kart-baslik">Hangi analiz?</h3>
-              <div className="analiz-kartlari">
-                {YONTEM_KARTLARI.map((k) => (
-                  <button
-                    key={k.tur}
-                    type="button"
-                    className="analiz-karti"
-                    aria-pressed={k.tur === analysisType}
-                    onClick={() => {
-                      setAnalysisType(k.tur);
-                      setResult(null);
-                      setResultError(null);
-                      setCalisanAnaliz(null);
-                      setKaydedildi(false);
-                      setYorum(null);
-                    }}
-                  >
-                    <b>{k.ad}</b>
-                    <small>{k.aciklama}</small>
-                  </button>
-                ))}
-              </div>
+              {YONTEM_GRUPLARI.map((g) => (
+                <div key={g.baslik}>
+                  <p className="analiz-grup-baslik">{g.baslik}</p>
+                  <div className="analiz-kartlari">
+                    {g.turler.map((tur) => {
+                      const k = YONTEM_KARTLARI.find((x) => x.tur === tur)!;
+                      return (
+                        <button
+                          key={k.tur}
+                          type="button"
+                          className="analiz-karti"
+                          aria-pressed={k.tur === analysisType}
+                          onClick={() => {
+                            setAnalysisType(k.tur);
+                            setResult(null);
+                            setResultError(null);
+                            setCalisanAnaliz(null);
+                            setKaydedildi(false);
+                            setYorum(null);
+                          }}
+                        >
+                          <b>{k.ad}</b>
+                          <small>{k.aciklama}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </>
           ) : null}
           <div className="project-form-grid">
@@ -1530,9 +1672,9 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "pairedttest" || analysisType === "regression" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman" || analysisType === "ikiyonluanova") && (
+            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "correlation" || analysisType === "pairedttest" || analysisType === "wilcoxon" || analysisType === "regression" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "spearman" || analysisType === "ikiyonluanova") && (
               <label>
-                <span>{analysisType === "correlation" || analysisType === "spearman" ? "Değişken 1" : analysisType === "pairedttest" ? "Önceki ölçüm" : analysisType === "regression" ? "Bağımlı değişken (Y)" : "Sayısal değişken"}</span>
+                <span>{analysisType === "correlation" || analysisType === "spearman" ? "Değişken 1" : analysisType === "pairedttest" || analysisType === "wilcoxon" ? "Önceki ölçüm" : analysisType === "regression" ? "Bağımlı değişken (Y)" : "Sayısal değişken"}</span>
                 <select value={varA} onChange={(e) => setVarA(e.target.value)}>
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
@@ -1543,9 +1685,9 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "correlation" || analysisType === "spearman" || analysisType === "pairedttest") && (
+            {(analysisType === "correlation" || analysisType === "spearman" || analysisType === "pairedttest" || analysisType === "wilcoxon") && (
               <label>
-                <span>{analysisType === "pairedttest" ? "Sonraki ölçüm" : "Değişken 2"}</span>
+                <span>{analysisType === "pairedttest" || analysisType === "wilcoxon" ? "Sonraki ölçüm" : "Değişken 2"}</span>
                 <select value={varB} onChange={(e) => setVarB(e.target.value)}>
                   {dataset.numericColumns.map((c) => (
                     <option key={c} value={c}>
@@ -1570,45 +1712,33 @@ export default function DataAnalyzer({
             )}
 
             {analysisType === "regression" && (
-              <label className="project-form-full">
-                <span>Yordayıcı değişkenler (Ctrl/Cmd ile birden çok seçin)</span>
-                <select
-                  multiple
-                  value={yordayicilar}
-                  onChange={(e) => setYordayicilar(Array.from(e.target.selectedOptions, (o) => o.value))}
-                  size={6}
-                >
-                  {dataset.numericColumns
-                    /* Bağımlı değişken yordayıcı olarak seçilemez:
-                       kendisiyle açıklanan model anlamsızdır. */
-                    .filter((c) => c !== varA)
-                    .map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              <SutunSecimi
+                etiket="Yordayıcı değişkenler"
+                /* Bağımlı değişken yordayıcı olarak seçilemez: kendisiyle açıklanan model anlamsızdır. */
+                sutunlar={dataset.numericColumns.filter((c) => c !== varA)}
+                secili={yordayicilar.filter((c) => c !== varA)}
+                degistir={setYordayicilar}
+              />
             )}
 
             {analysisType === "reliability" && (
-              <label className="project-form-full">
-                <span>Maddeler (Ctrl/Cmd ile birden çok seçin)</span>
-                <select
-                  multiple
-                  value={reliabilityItems}
-                  onChange={(e) =>
-                    setReliabilityItems(Array.from(e.target.selectedOptions, (o) => o.value))
-                  }
-                  size={6}
-                >
-                  {dataset.numericColumns.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <SutunSecimi
+                etiket="Maddeler"
+                sutunlar={dataset.numericColumns}
+                secili={reliabilityItems}
+                degistir={setReliabilityItems}
+                ipucu="Ters maddeleri önce yukarıdaki Veri hazırlama bölümünde çevirin ve buraya çevrilmiş (_ters) sütunu seçin."
+              />
+            )}
+
+            {analysisType === "friedman" && (
+              <SutunSecimi
+                etiket="Tekrarlı ölçümler (en az üç)"
+                sutunlar={dataset.numericColumns}
+                secili={olcumler}
+                degistir={setOlcumler}
+                ipucu="Aynı kişilerin ön test, son test ve izleme ölçümleri gibi; her sütun bir ölçüm."
+              />
             )}
           </div>
 

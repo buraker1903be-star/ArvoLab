@@ -9,10 +9,12 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  friedmanTesti,
   kruskalWallis,
   mannWhitneyU,
   siralandir,
   spearmanKorelasyonu,
+  wilcoxonIsaretliSiralar,
 } from "@/lib/stats-parametrik-olmayan";
 
 const yakin = (a: number, b: number, tolerans = 1e-3) =>
@@ -146,5 +148,55 @@ describe("Spearman", () => {
     */
     const r = spearmanKorelasyonu([1, 2, 2, 3], [5, 7, 7, 9]);
     yakin(r.r, 1);
+  });
+});
+
+describe("Wilcoxon işaretli sıralar", () => {
+  /*
+    Farklar (sonra − önce): 2, 3, −1, 4, 0, 5, 5, 6. Sıfır atılır (n'=7).
+    |d| sıraları: 1→1, 2→2, 3→3, 4→4, 5,5→5,5, 6→7.
+    W− = 1, W+ = 27 (toplam 28 = 7·8/2). T = 1.
+    Ortalama 7·8/4 = 14; varyans 7·8·15/24 − (2³−2)/48 = 35 − 0,125.
+    z = (1 − 14)/√34,875 = −2,2013; r = 2,2013/√8 = 0,7783.
+  */
+  test("sıfır farkı atar, bağları düzeltir", () => {
+    const s = wilcoxonIsaretliSiralar([10, 12, 14, 16, 18, 20, 22, 24], [12, 15, 13, 20, 18, 25, 27, 30]);
+    assert.deepEqual([s.wArti, s.wEksi, s.t, s.n, s.nEtkin], [27, 1, 1, 8, 7]);
+    assert.deepEqual([s.artiSayisi, s.eksiSayisi, s.esitSayisi], [6, 1, 1]);
+    yakin(s.z, -2.2013);
+    yakin(s.etki, 0.7783);
+    assert.ok(s.p < 0.05 && s.p > 0.02);
+  });
+
+  test("bütün farklar sıfırsa test tanımsız (NaN), anlamsız sayılmaz", () => {
+    const s = wilcoxonIsaretliSiralar([3, 4, 5], [3, 4, 5]);
+    assert.equal(s.nEtkin, 0);
+    assert.ok(Number.isNaN(s.z));
+  });
+});
+
+describe("Friedman", () => {
+  /*
+    Dört katılımcı, üç ölçüm; satır içi sıralar 123, 231, 132, 123.
+    R = 5, 10, 9; ΣR² = 206. χ² = 12/(4·3·4)·206 − 3·4·4 = 3,5; df 2.
+    p = e^(−1,75) = 0,1738; W = 3,5/(4·2) = 0,4375.
+  */
+  test("satır içi sıralar, Kendall W", () => {
+    const s = friedmanTesti([[1, 2, 1, 1], [2, 3, 3, 2], [3, 1, 2, 3]]);
+    yakin(s.chiKare, 3.5);
+    assert.equal(s.df, 2);
+    yakin(s.p, 0.1738);
+    yakin(s.kendallW, 0.4375);
+    assert.deepEqual(s.siraOrtalamalari, [1.25, 2.5, 2.25]);
+  });
+
+  /*
+    Bağlı satır [1,1,2] → sıralar 1,5 1,5 3; Σ(t³−t) = 6.
+    R = 2,5; 3,5; 6 → ΣR² = 54,5; ham χ² = 12/24·54,5 − 24 = 3,25.
+    Bölen 1 − 6/(2·24) = 0,875 → χ² = 3,7143.
+  */
+  test("satır içi bağ düzeltmesi χ²'yi büyütür", () => {
+    const s = friedmanTesti([[1, 1], [1, 2], [2, 3]]);
+    yakin(s.chiKare, 3.7143);
   });
 });

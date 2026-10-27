@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analizBetigi, PROGRAM_KARTLARI, YONTEM_KARTLARI } from "@/lib/analiz-betik";
+import { analizBetigi, PROGRAM_KARTLARI, YONTEM_GRUPLARI, YONTEM_KARTLARI } from "@/lib/analiz-betik";
 import { ANALIZ_TURLERI } from "@/lib/analiz-turleri";
 
 test("her analiz türünün kartı ve açıklaması var; ANSYS kapalı ve nedenini söylüyor", () => {
@@ -44,4 +44,15 @@ test("SPSS iki gruplu testte verideki grup değerleri yazılır; bilinmiyorsa (1
   const bilinmiyor = analizBetigi("spss", "ttest", { varA: "puan", groupVar: "grup" });
   assert.match(bilinmiyor, /GROUPS=grup\(1 2\)/);
   assert.match(bilinmiyor, /değiştirin/);
+});
+
+test("her analiz türü yöntem gruplarında tam bir kez geçiyor", () => {
+  const hepsi = YONTEM_GRUPLARI.flatMap((g) => g.turler);
+  assert.deepEqual([...hepsi].sort(), [...ANALIZ_TURLERI].sort());
+});
+
+test("Wilcoxon ve Friedman komutları", () => {
+  assert.match(analizBetigi("spss", "wilcoxon", { varA: "on", varB: "son" }), /WILCOXON=on WITH son \(PAIRED\)/);
+  assert.match(analizBetigi("r", "friedman", { maddeler: ["on", "son", "izleme"] }), /friedman\.test/);
+  assert.match(analizBetigi("python", "wilcoxon", { varA: "on", varB: "son" }), /stats\.wilcoxon/);
 });
