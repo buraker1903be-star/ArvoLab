@@ -56,7 +56,9 @@ export default async function DocentlikDokumu({
   }
   const satirlar = sonrasi ? tumu.filter((e) => faaliyetDonemi(e.faaliyet_tarihi, doktora.tarih) === "sonra") : tumu;
   const { toplam, gruplar } = puanGruplari(satirlar);
-  const { toplamHedef, grupHedefleri } = hedefDurumlari(etkinHedefler(hedefler, profile?.organization_id ?? null), toplam, gruplar);
+  // Ekranla aynı alan kuralı: ?alan= ya da kişinin kayıtlı temel alanı.
+  const alan = (typeof params.alan === "string" && params.alan.trim()) || doktora.temelAlan || null;
+  const { toplamHedef, grupHedefleri } = hedefDurumlari(etkinHedefler(hedefler, profile?.organization_id ?? null, alan), toplam, gruplar);
   const belgesiz = satirlar.filter((e) => !e.belge_yolu).length;
 
   return (
@@ -68,6 +70,7 @@ export default async function DocentlikDokumu({
           <p>
             {profile?.full_name ?? ctx.user.email} · {trTarih(new Date())}
             {sonrasi ? ` · Doktora sonrası (${doktora.tarih ? trTarih(doktora.tarih) : "tarih girilmemiş"})` : ""}
+            {alan ? ` · ${alan}` : ""}
           </p>
         </header>
 

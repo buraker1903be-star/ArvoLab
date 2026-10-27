@@ -18,7 +18,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { aiKurulumu } from "./saglayici";
 
-export type Yetenek = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale";
+export type Yetenek = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale" | "uak";
 export type RedNedeni = "uydurma_sayi" | "kunye" | "bos" | "alinti";
 
 export type AsistanKaydi = {

@@ -25,6 +25,8 @@ export interface ScoringCriterion {
   /** Ortak yazarlık katsayıları; NULL = paylaşım tanımsız, tam puan (20261027081037). */
   baslica_yazar_katsayisi: number | null;
   diger_yazar_katsayisi: number | null;
+  /** ÜAK temel alanı; NULL = bütün alanlar (20261027083309). */
+  temel_alan: string | null;
 }
 
 export interface ScoreEntry {
@@ -43,7 +45,7 @@ export interface ScoreEntry {
 }
 
 const KRITER_SUTUNLARI =
-  "id, code, label, category_group, points_per_unit, notes, is_active, organization_id, baslica_yazar_katsayisi, diger_yazar_katsayisi";
+  "id, code, label, category_group, points_per_unit, notes, is_active, organization_id, baslica_yazar_katsayisi, diger_yazar_katsayisi, temel_alan";
 const KOVA = "project-files";
 
 function parseDecimal(raw: string) {
@@ -136,6 +138,7 @@ export async function createCriterion(formData: FormData): Promise<ActionResult>
     points_per_unit: points,
     notes: String(formData.get("notes") ?? "").trim() || null,
     organization_id: kurum,
+    temel_alan: String(formData.get("temelAlan") ?? "").trim().slice(0, 120) || null,
     baslica_yazar_katsayisi: baslicaK.deger,
     diger_yazar_katsayisi: digerK.deger,
     updated_by: auth.user.id,
@@ -432,7 +435,7 @@ export async function getHedefler(): Promise<ListeSonucu<Hedef & { id: string; n
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("docentlik_hedefleri")
-    .select("id, organization_id, grup, asgari_puan, notlar");
+    .select("id, organization_id, temel_alan, grup, asgari_puan, notlar");
   if (error) {
     console.error("[doçentlik] hedefler okunamadı", error.message);
     return listeOkunamadi();
@@ -451,6 +454,7 @@ export async function hedefKaydet(formData: FormData): Promise<ActionResult> {
   if ("error" in auth) return { error: auth.error };
 
   const grup = String(formData.get("grup") ?? "").trim() || null;
+  const temelAlan = String(formData.get("temelAlan") ?? "").trim().slice(0, 120) || null;
   const puan = parseDecimal(String(formData.get("asgariPuan") ?? ""));
   if (!Number.isFinite(puan) || puan <= 0) return { error: "Asgari puan 0'dan büyük bir sayı olmalı." };
 
@@ -466,6 +470,7 @@ export async function hedefKaydet(formData: FormData): Promise<ActionResult> {
   let sorgu = auth.supabase.from("docentlik_hedefleri").select("id");
   sorgu = kurum ? sorgu.eq("organization_id", kurum) : sorgu.is("organization_id", null);
   sorgu = grup ? sorgu.eq("grup", grup) : sorgu.is("grup", null);
+  sorgu = temelAlan ? sorgu.eq("temel_alan", temelAlan) : sorgu.is("temel_alan", null);
   const { data: mevcut, error: aramaHatasi } = await sorgu.maybeSingle();
   if (aramaHatasi) {
     console.error("[doçentlik] hedef aranamadı", aramaHatasi.message);
@@ -475,6 +480,7 @@ export async function hedefKaydet(formData: FormData): Promise<ActionResult> {
   const satir = {
     organization_id: kurum,
     grup,
+    temel_alan: temelAlan,
     asgari_puan: puan,
     notlar: String(formData.get("notlar") ?? "").trim() || null,
     updated_by: auth.user.id,
@@ -505,15 +511,16 @@ export async function hedefSil(hedefId: string): Promise<ActionResult> {
 }
 
 /** Okunamazsa okunamadi: "tarih girilmemiş" demek, girilmiş tarihi silinmiş göstermek olurdu. */
-export async function getDoktoraTarihi(): Promise<{ tarih: string | null; okunamadi: boolean }> {
+export async function getDoktoraTarihi(): Promise<{ tarih: string | null; temelAlan: string | null; okunamadi: boolean }> {
   const ctx = await getAuthContext();
-  if (!ctx) return { tarih: null, okunamadi: false };
-  const { data, error } = await ctx.supabase.from("docentlik_profili").select("doktora_tarihi").eq("owner_id", ctx.user.id).maybeSingle();
+  if (!ctx) return { tarih: null, temelAlan: null, okunamadi: false };
+  const { data, error } = await ctx.supabase
+    .from("docentlik_profili").select("doktora_tarihi, temel_alan").eq("owner_id", ctx.user.id).maybeSingle();
   if (error) {
-    console.error("[doçentlik] doktora tarihi okunamadı", error.message);
-    return { tarih: null, okunamadi: true };
+    console.error("[doçentlik] doktora bilgileri okunamadı", error.message);
+    return { tarih: null, temelAlan: null, okunamadi: true };
   }
-  return { tarih: data?.doktora_tarihi ?? null, okunamadi: false };
+  return { tarih: data?.doktora_tarihi ?? null, temelAlan: data?.temel_alan ?? null, okunamadi: false };
 }
 
 export async function doktoraTarihiKaydet(formData: FormData): Promise<ActionResult> {
@@ -524,10 +531,18 @@ export async function doktoraTarihiKaydet(formData: FormData): Promise<ActionRes
   if (tarih && !/^\d{4}-\d{2}-\d{2}$/.test(tarih)) return { error: "Tarih geçersiz." };
   const { error } = await ctx.supabase
     .from("docentlik_profili")
-    .upsert({ owner_id: ctx.user.id, doktora_tarihi: tarih, updated_at: new Date().toISOString() }, { onConflict: "owner_id" });
+    .upsert(
+      {
+        owner_id: ctx.user.id,
+        doktora_tarihi: tarih,
+        temel_alan: String(formData.get("temelAlan") ?? "").trim().slice(0, 120) || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "owner_id" },
+    );
   if (error) {
-    console.error("[doçentlik] doktora tarihi yazılamadı", error.message);
-    return { error: "Doktora tarihi kaydedilemedi." };
+    console.error("[doçentlik] doktora bilgileri yazılamadı", error.message);
+    return { error: "Bilgileriniz kaydedilemedi." };
   }
   revalidatePath(PAGE_PATH);
   return { success: true };

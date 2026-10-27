@@ -658,3 +658,9 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .docentlik-dagilim li[data-tone="success"] progress::-webkit-progress-value { background: var(--success); }
 .docentlik-dagilim li[data-tone="success"] progress::-moz-progress-bar { background: var(--success); }
 .kaynakca-puan b small { color: var(--muted); font-size: 0.55em; font-weight: 600; }
+/* ÜAK tabloları (doçentlik): satırın eylemleri alta sarılabilir; temel alan çipleri. */
+.uak-satir { flex-wrap: wrap; }
+.uak-notlar { display: grid; gap: 4px; margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: var(--fs-sm); }
+.uak-alanlar { display: flex; flex-wrap: wrap; gap: 6px; }
+.uak-alanlar .chip { padding: 4px 10px; border-radius: var(--r-pill); text-decoration: none; }
+.uak-alanlar .chip[aria-current="true"] { --tone: var(--ink); --tone-soft: var(--accent-soft); }

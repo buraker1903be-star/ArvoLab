@@ -21,7 +21,7 @@ import type { UserRole } from "@/lib/project-labels";
 */
 export const KAYIT_ROLLERI: UserRole[] = ["system_admin", "founder"];
 
-export type YetenekAdi = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale";
+export type YetenekAdi = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale" | "uak";
 
 export const YETENEK_ETIKETI: Record<YetenekAdi, string> = {
   analiz: "Analiz denetimi",
@@ -30,6 +30,7 @@ export const YETENEK_ETIKETI: Record<YetenekAdi, string> = {
   belge: "Belge geri bildirimi",
   kanit: "İddia–kanıt uyumu",
   makale: "Makale bölüm denetimi",
+  uak: "ÜAK tablosu okuma",
 };
 
 export const RED_ETIKETI: Record<string, string> = {

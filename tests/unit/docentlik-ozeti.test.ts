@@ -77,3 +77,19 @@ describe("doçentlik hedefleri ve dönem", () => {
     assert.equal(faaliyetDonemi("2024-05-02", null), "bilinmiyor");
   });
 });
+
+describe("temel alan", () => {
+  test("alanın kendi hedefi 'bütün alanlar'dan, kurum hedefi genelden önce gelir", () => {
+    const h = [
+      { organization_id: null, temel_alan: null, grup: null, asgari_puan: 100 },
+      { organization_id: "k", temel_alan: "Hukuk", grup: null, asgari_puan: 110 },
+      { organization_id: "k", temel_alan: "Sağlık", grup: null, asgari_puan: 130 },
+      { organization_id: "k", temel_alan: null, grup: "Atıf", asgari_puan: 5 },
+    ];
+    assert.equal(etkinHedefler(h, "k", "Hukuk").find((x) => !x.grup)?.asgari_puan, 110);
+    assert.equal(etkinHedefler(h, "k", "Sağlık").find((x) => !x.grup)?.asgari_puan, 130);
+    // Alan seçilmemiş: alana özel hedefler sayılmaz.
+    assert.equal(etkinHedefler(h, "k", null).find((x) => !x.grup)?.asgari_puan, 100);
+    assert.equal(etkinHedefler(h, "k", "Hukuk").find((x) => x.grup === "Atıf")?.asgari_puan, 5);
+  });
+});

@@ -1,6 +1,16 @@
 import Link from "next/link";
-import { CalendarDays, ClipboardList, Pencil, Plus, Printer, Target, Trash2 } from "lucide-react";
-import { etkinHedefler, faaliyetDonemi, hedefDurumlari, kriterGruplari, puanGruplari, puanYazisi } from "@/lib/docentlik-ozeti";
+import { CalendarDays, CheckCircle2, ClipboardList, FileUp, Pencil, Plus, Printer, Sparkles, Target, Trash2 } from "lucide-react";
+import {
+  etkinHedefler,
+  faaliyetDonemi,
+  hedefDurumlari,
+  kriterGruplari,
+  puanGruplari,
+  puanYazisi,
+  TEMEL_ALAN_ONERILERI,
+} from "@/lib/docentlik-ozeti";
+import { donemSecenekleri } from "@/lib/ai/uak-tablosu";
+import { uakOnerisiniUygula, uakTablolari, uakTablosunuSil, uakTablosunuYorumla } from "@/app/actions/uak-tablosu";
 import { trTarih } from "@/lib/tr-time";
 import {
   getCriteria,
@@ -23,6 +33,17 @@ import ActionForm from "../action-form";
 import BosDurum from "../_components/bos-durum";
 import PanelDrawer from "../_components/panel-drawer";
 import BelgeSatiri from "./belge-satiri";
+import UakYukle from "./uak-yukle";
+import UakPdfAc from "./uak-pdf-ac";
+
+/* ÜAK tablosunu yorumlatmak bir dil modeli çağrısı: varsayılan süre dar kalabilir. */
+export const maxDuration = 180;
+
+const UAK_DURUMU: Record<string, { ad: string; ton: string }> = {
+  yuklendi: { ad: "Yorumlatılmadı", ton: "warning" },
+  oneri_hazir: { ad: "Öneri onay bekliyor", ton: "info" },
+  onaylandi: { ad: "Uygulandı", ton: "success" },
+};
 
 /*
   Faaliyet formunun yazar ve tarih alanları: ekleme ve düzenleme AYNI
@@ -55,6 +76,8 @@ function YazarVeTarihAlanlari({ yazarSayisi = 1, baslica = true, tarih = null }:
   );
 }
 
+const sonrasiParam = (p: Record<string, string | string[] | undefined>) => p.donem === "sonra";
+
 const katsayiYazisi = (c: { baslica_yazar_katsayisi: number | null; diger_yazar_katsayisi: number | null }) =>
   c.baslica_yazar_katsayisi != null || c.diger_yazar_katsayisi != null
     ? `Ortak yazar: başlıca ×${c.baslica_yazar_katsayisi != null ? puanYazisi(c.baslica_yazar_katsayisi) : "1"} · diğer ×${c.diger_yazar_katsayisi != null ? puanYazisi(c.diger_yazar_katsayisi) : "1"}`
@@ -66,12 +89,13 @@ export default async function ScoringPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [
-    { satirlar: criteria, okunamadi: kriterOkunamadi },
+    { satirlar: tumKriterler, okunamadi: kriterOkunamadi },
     { satirlar: tumKayitlar, okunamadi: kayitOkunamadi },
     { satirlar: hedefler, okunamadi: hedefOkunamadi },
     doktora,
     profile,
     params,
+    { satirlar: uakListesi, okunamadi: uakOkunamadi },
   ] = await Promise.all([
     getCriteria(),
     getMyScoreEntries(),
@@ -79,7 +103,30 @@ export default async function ScoringPage({
     getDoktoraTarihi(),
     getCurrentProfile(),
     searchParams,
+    uakTablolari(),
   ]);
+
+  /*
+    TEMEL ALAN (20261027083309). ÜAK şartları alana göre değişiyor;
+    akademisyen kendi alanını bir kez seçer, kriterler ve hedefler ona göre
+    süzülür. ?alan= ile başka bir alana bakılabilir (yönetici her alanın
+    tablosunu yönetiyor). "Bütün alanlar"a ait (alansız) kriterler her
+    görünümde durur. Alan seçilmemişse bütün kriterler görünür ama yalnızca
+    alansız hedefler sayılır — hangi alanın eşiğinin geçerli olduğu
+    bilinmeden eksik puan söylenmez.
+  */
+  const alan = (typeof params.alan === "string" && params.alan.trim()) || doktora.temelAlan || null;
+  const criteria = alan ? tumKriterler.filter((c) => !c.temel_alan || c.temel_alan === alan) : tumKriterler;
+  const bilinenAlanlar = [
+    ...new Set([
+      ...tumKriterler.map((c) => c.temel_alan),
+      ...hedefler.map((h) => h.temel_alan ?? null),
+      ...uakListesi.map((u) => u.temel_alan),
+    ].filter((a): a is string => Boolean(a))),
+  ].sort((a, b) => a.localeCompare(b, "tr"));
+  const alanOnerileri = [...new Set([...bilinenAlanlar, ...TEMEL_ALAN_ONERILERI])];
+  const alanaOzelVar = bilinenAlanlar.length > 0;
+  const alanAdresi = (a: string) => `/dashboard/associate-professorship?${new URLSearchParams({ ...(sonrasiParam(params) ? { donem: "sonra" } : {}), alan: a })}`;
 
   /*
     DÖNEM SÜZGECİ: "Doktora sonrası" seçiliyken toplam, gruplar, hedefler
@@ -119,7 +166,7 @@ export default async function ScoringPage({
 
   // Toplam ve grup toplamları yazdırılabilir dökümle AYNI fonksiyondan (lib/docentlik-ozeti.ts).
   const { toplam: totalPoints, gruplar } = puanGruplari(entries);
-  const etkin = etkinHedefler(hedefler, profile?.organization_id ?? null);
+  const etkin = etkinHedefler(hedefler, profile?.organization_id ?? null, alan);
   const { toplamHedef, grupHedefleri } = hedefDurumlari(etkin, totalPoints, gruplar);
   /* Dağılımda hedefi olan ama hiç faaliyeti olmayan gruplar da görünür: eksik olan tam da onlar. */
   const dagilim = [
@@ -132,6 +179,18 @@ export default async function ScoringPage({
   async function handleDeleteHedef(id: string) {
     "use server";
     return hedefSil(id);
+  }
+  async function uakYorumla(id: string) {
+    "use server";
+    return uakTablosunuYorumla(id);
+  }
+  async function uakUygula(id: string) {
+    "use server";
+    return uakOnerisiniUygula(id);
+  }
+  async function uakSil(id: string) {
+    "use server";
+    return uakTablosunuSil(id);
   }
 
   async function handleDeleteEntry(entryId: string) {
@@ -186,22 +245,31 @@ export default async function ScoringPage({
         </div>
         <span className="cluster">
           <nav className="segment-secici" aria-label="Dönem">
-            <Link href="/dashboard/associate-professorship" aria-current={!sonrasi ? "page" : undefined}>
+            <Link href={`/dashboard/associate-professorship${typeof params.alan === "string" ? `?alan=${encodeURIComponent(params.alan)}` : ""}`} aria-current={!sonrasi ? "page" : undefined}>
               Tüm faaliyetler
             </Link>
-            <Link href="/dashboard/associate-professorship?donem=sonra" aria-current={sonrasi ? "page" : undefined}>
+            <Link href={`/dashboard/associate-professorship?donem=sonra${typeof params.alan === "string" ? `&alan=${encodeURIComponent(params.alan)}` : ""}`} aria-current={sonrasi ? "page" : undefined}>
               Doktora sonrası
             </Link>
           </nav>
           <PanelDrawer
-            triggerLabel={doktora.tarih ? `Doktora: ${trTarih(doktora.tarih)}` : "Doktora tarihi"}
+            triggerLabel={[doktora.temelAlan ?? "Temel alan seçin", doktora.tarih ? `Doktora: ${trTarih(doktora.tarih)}` : null].filter(Boolean).join(" · ")}
             triggerIcon={<CalendarDays size={15} aria-hidden="true" />}
             triggerClassName="projects-filter-button button-compact"
             kicker="Doçentlik"
-            title="Doktora tarihi"
-            description="Doktora unvanını aldığınız gün. Bu tarihten SONRAKİ faaliyetler “Doktora sonrası” görünümünde sayılır; aynı gün sayılmaz."
+            title="Doçentlik bilgilerim"
+            description="Temel alanınız hangi ÜAK kriterlerinin ve hedeflerinin size uygulanacağını belirler. Doktora tarihinden SONRAKİ faaliyetler “Doktora sonrası” görünümünde sayılır; aynı gün sayılmaz."
           >
-            <ActionForm className="project-form-grid" action={doktoraTarihiKaydet} successMessage="Doktora tarihi kaydedildi.">
+            <ActionForm className="project-form-grid" action={doktoraTarihiKaydet} successMessage="Bilgileriniz kaydedildi.">
+              <label className="project-form-full">
+                <span>Temel alan</span>
+                <input name="temelAlan" type="text" list="docentlik-alanlar" defaultValue={doktora.temelAlan ?? ""} placeholder="Örn. Sağlık Bilimleri" />
+                <datalist id="docentlik-alanlar">
+                  {alanOnerileri.map((a) => (
+                    <option key={a} value={a} />
+                  ))}
+                </datalist>
+              </label>
               <label className="project-form-full">
                 <span>Doktora tarihi</span>
                 <input name="doktoraTarihi" type="date" defaultValue={doktora.tarih ?? ""} />
@@ -224,6 +292,10 @@ export default async function ScoringPage({
         <p className="alert" role="alert">Doktora tarihiniz okunamadı; “Doktora sonrası” görünümü eksik olabilir. Sayfayı yenileyin.</p>
       ) : sonrasi && !doktora.tarih ? (
         <p className="alert" data-tone="info">“Doktora sonrası” puanı için önce sağ üstten doktora tarihinizi girin.</p>
+      ) : !alan && alanaOzelVar ? (
+        <p className="alert" data-tone="info">
+          Kurumunuzda temel alana göre kriterler ve hedefler var. Doğru eşiklerin uygulanması için sağ üstten temel alanınızı seçin.
+        </p>
       ) : null}
 
       <section className="gb-sutunlar kaynaklar-ikili" aria-label="Doçentlik puanı">
@@ -252,7 +324,11 @@ export default async function ScoringPage({
             {!kayitOkunamadi && entries.length ? (
               /* Başvuru dosyasını hazırlarken elde tutulacak döküm: grup grup
                  faaliyetler ve toplamlar (app/print/docentlik). */
-              <Link href={sonrasi ? "/print/docentlik?donem=sonra" : "/print/docentlik"} target="_blank" className="projects-filter-button button-compact">
+              <Link
+                href={`/print/docentlik?${new URLSearchParams({ ...(sonrasi ? { donem: "sonra" } : {}), ...(alan ? { alan } : {}) })}`}
+                target="_blank"
+                className="projects-filter-button button-compact"
+              >
                 <Printer size={15} aria-hidden="true" /> Döküm
               </Link>
             ) : null}
@@ -528,6 +604,10 @@ export default async function ScoringPage({
                       yalnızca sizin kurumunuzun puanlamasını etkiler.
                     </p>
                   )}
+                  <label className="project-form-full">
+                    <span>Temel alan</span>
+                    <input name="temelAlan" type="text" list="docentlik-alanlar" defaultValue={alan ?? ""} placeholder="Boş = bütün alanlar" />
+                  </label>
                   <label>
                     <span>Kriter kodu</span>
                     <input name="code" type="text" placeholder="Örn. A1" required />
@@ -572,6 +652,160 @@ export default async function ScoringPage({
           </header>
 
           {/*
+            ÜAK TABLOLARI (yalnızca Yönetici ve iç ekip). Akış: PDF yükle →
+            yorumlat (asistan öneri çıkarır, her sayısı PDF'te geçmek zorunda)
+            → PDF'le karşılaştır → onayla. Onaylanınca kriterler ve hedefler
+            KURUMA ve o temel alana yazılır (app/actions/uak-tablosu.ts).
+          */}
+          {canManageCriteria ? (
+            <section className="docentlik-grup" aria-label="ÜAK tabloları">
+              <h3 className="calisma-durum-alt docentlik-grup-baslik">
+                <span>ÜAK tabloları</span>
+                {profile ? (
+                  <PanelDrawer
+                    triggerLabel="PDF yükle"
+                    triggerIcon={<FileUp size={13} aria-hidden="true" />}
+                    triggerClassName="projects-filter-button button-compact"
+                    kicker="ÜAK tablosu"
+                    title="ÜAK PDF'ini yükleyin"
+                    description="ÜAK'ın yayımladığı doçentlik başvuru şartları tablosu (temel alan başına bir PDF). Yükledikten sonra yorumlatın; öneri onaylanmadan hiçbir kriter değişmez."
+                  >
+                    <UakYukle
+                      kullaniciId={profile.id}
+                      alanlar={alanOnerileri}
+                      donemler={donemSecenekleri(trTarih(new Date()).split(".").reverse().join("-"))}
+                      varsayilanAlan={alan}
+                    />
+                  </PanelDrawer>
+                ) : null}
+              </h3>
+              {uakOkunamadi ? (
+                <p className="alert" role="alert">ÜAK tabloları okunamadı; sayfayı yenileyin.</p>
+              ) : uakListesi.length ? (
+                <ul className="gb-liste">
+                  {uakListesi.map((u) => (
+                    <li key={u.id} className="gb-satir uak-satir">
+                      <span className="gb-satir-govde">
+                        <b>{u.temel_alan}</b>
+                        <small>
+                          {[u.donem, u.dosya_adi, u.onaylandi_at ? `onay ${trTarih(u.onaylandi_at)}` : null].filter(Boolean).join(" · ")}
+                        </small>
+                      </span>
+                      <span className="status-pill" data-tone={UAK_DURUMU[u.durum]?.ton ?? "neutral"}>
+                        {UAK_DURUMU[u.durum]?.ad ?? u.durum}
+                      </span>
+                      <span className="cluster">
+                        <UakPdfAc yol={u.depo_yolu} />
+                        <ActionForm action={uakYorumla.bind(null, u.id)}>
+                          <button type="submit" className="projects-filter-button button-compact">
+                            <Sparkles size={13} aria-hidden="true" /> {u.durum === "yuklendi" ? "Yorumlat" : "Yeniden yorumlat"}
+                          </button>
+                        </ActionForm>
+                        {u.oneri && u.durum !== "yuklendi" ? (
+                          <PanelDrawer
+                            triggerLabel={u.durum === "oneri_hazir" ? "İncele ve onayla" : "Öneriyi gör"}
+                            triggerIcon={<CheckCircle2 size={13} aria-hidden="true" />}
+                            triggerClassName={u.durum === "oneri_hazir" ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}
+                            kicker={`ÜAK · ${u.donem}`}
+                            title={u.temel_alan}
+                            description="Öneriyi PDF'le satır satır karşılaştırın. Onaylayınca bu temel alandaki kurum kriterleri ve hedefleri bu listeyle değiştirilir; mevcut faaliyet kayıtlarının puanı korunur."
+                          >
+                            {u.oneri.kirpildi ? (
+                              <p className="alert" data-tone="warning">
+                                PDF çok uzun olduğu için yalnızca baş kısmı okundu; son sayfalardaki satırlar eksik olabilir.
+                              </p>
+                            ) : null}
+                            <h3 className="calisma-durum-alt">Hedefler</h3>
+                            {u.oneri.hedefler.length ? (
+                              <ul className="gb-liste">
+                                {u.oneri.hedefler.map((h, i) => (
+                                  <li key={i} className="gb-satir">
+                                    <span className="gb-satir-govde">
+                                      <b>{h.grup ?? "Toplam puan"}</b>
+                                    </span>
+                                    <span className="status-pill" data-tone="neutral">en az {puanYazisi(h.asgari_puan)}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="gb-bos">Tabloda asgari puan bulunamadı; hedefleri elle girebilirsiniz.</p>
+                            )}
+                            <h3 className="calisma-durum-alt">Kriterler ({u.oneri.kriterler.length})</h3>
+                            <ul className="gb-liste">
+                              {u.oneri.kriterler.map((k) => (
+                                <li key={k.kod} className="gb-satir">
+                                  <span className="gb-satir-govde">
+                                    <b>
+                                      {k.kod} — {k.etiket}
+                                    </b>
+                                    <small>
+                                      {[k.grup, katsayiYazisi({ baslica_yazar_katsayisi: k.baslica_katsayi, diger_yazar_katsayisi: k.diger_katsayi })]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                    </small>
+                                  </span>
+                                  <span className="status-pill" data-tone="neutral">{puanYazisi(k.puan)} puan</span>
+                                </li>
+                              ))}
+                            </ul>
+                            {u.oneri.notlar.length ? (
+                              <>
+                                <h3 className="calisma-durum-alt">Puana çevrilemeyen şartlar</h3>
+                                <ul className="uak-notlar">
+                                  {u.oneri.notlar.map((n, i) => (
+                                    <li key={i}>{n}</li>
+                                  ))}
+                                </ul>
+                              </>
+                            ) : null}
+                            {u.durum === "oneri_hazir" ? (
+                              <ActionForm
+                                action={uakUygula.bind(null, u.id)}
+                                confirmMessage={`${u.temel_alan} için kurum kriterleri ve hedefleri bu öneriyle değiştirilsin mi?`}
+                              >
+                                <div className="project-form-actions">
+                                  <button type="submit" className="projects-primary-button">
+                                    <CheckCircle2 size={16} aria-hidden="true" /> Onayla ve uygula
+                                  </button>
+                                </div>
+                              </ActionForm>
+                            ) : null}
+                          </PanelDrawer>
+                        ) : null}
+                        <ActionForm
+                          action={uakSil.bind(null, u.id)}
+                          confirmMessage="Tablo ve PDF silinsin mi? Onaylanmış kriterler kurumda kalır."
+                          successMessage="Tablo silindi."
+                        >
+                          <button type="submit" className="projects-filter-button button-compact" aria-label={`${u.temel_alan} tablosunu sil`}>
+                            <Trash2 size={13} aria-hidden="true" />
+                          </button>
+                        </ActionForm>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="gb-bos">
+                  Henüz ÜAK tablosu yüklenmedi. Başvuru döneminin (mart, ekim) PDF&apos;ini temel alan başına yükleyin; kriterler
+                  ve hedefler onayınızla kurumunuza yazılır.
+                </p>
+              )}
+            </section>
+          ) : null}
+
+          {/* Temel alanlar arasında geçiş: yönetici her alanın tablosuna bakar, akademisyen kendininkine. */}
+          {alanaOzelVar ? (
+            <nav className="uak-alanlar" aria-label="Temel alan">
+              {bilinenAlanlar.map((a) => (
+                <Link key={a} href={alanAdresi(a)} className="chip" aria-current={a === alan ? "true" : undefined}>
+                  {a}
+                </Link>
+              ))}
+            </nav>
+          ) : null}
+
+          {/*
             HEDEFLER: kriterlerin yanında, çünkü ikisi aynı duyurudan ve aynı
             kişi tarafından giriliyor. Kurum hedefi genel hedefin yerine geçer
             (lib/docentlik-ozeti.ts); ekranda yalnızca geçerli olan görünür.
@@ -598,6 +832,10 @@ export default async function ScoringPage({
                         </select>
                       </label>
                     ) : null}
+                    <label className="project-form-full">
+                      <span>Temel alan</span>
+                      <input name="temelAlan" type="text" list="docentlik-alanlar" defaultValue={alan ?? ""} placeholder="Boş = bütün alanlar" />
+                    </label>
                     <label>
                       <span>Grup</span>
                       <select name="grup" defaultValue="">
@@ -629,12 +867,14 @@ export default async function ScoringPage({
                 {[...etkin]
                   .sort((a, b) => (a.grup ? 1 : 0) - (b.grup ? 1 : 0) || (a.grup ?? "").localeCompare(b.grup ?? "", "tr"))
                   .map((h) => {
-                    const satir = hedefler.find((x) => x.organization_id === h.organization_id && (x.grup ?? null) === (h.grup ?? null));
+                    const satir = hedefler.find(
+                      (x) => x.organization_id === h.organization_id && (x.grup ?? null) === (h.grup ?? null) && (x.temel_alan ?? null) === (h.temel_alan ?? null),
+                    );
                     return (
                       <li key={`${h.organization_id ?? "genel"}-${h.grup ?? "toplam"}`} className="gb-satir">
                         <span className="gb-satir-govde">
                           <b>{h.grup ?? "Toplam puan"}</b>
-                          <small>{[h.organization_id ? "Kurumunuz" : "Genel", satir?.notlar].filter(Boolean).join(" · ")}</small>
+                          <small>{[h.organization_id ? "Kurumunuz" : "Genel", h.temel_alan ?? null, satir?.notlar].filter(Boolean).join(" · ")}</small>
                         </span>
                         <span className="status-pill" data-tone="neutral">
                           en az {puanYazisi(h.asgari_puan)}
@@ -677,7 +917,7 @@ export default async function ScoringPage({
                     <b>
                       {c.code} — {c.label}
                     </b>
-                    <small>{[kriterKapsami(c), katsayiYazisi(c)].filter(Boolean).join(" · ")}</small>
+                    <small>{[kriterKapsami(c), c.temel_alan ?? (alanaOzelVar ? "Bütün alanlar" : null), katsayiYazisi(c)].filter(Boolean).join(" · ")}</small>
                   </span>
                   <span className="status-pill" data-tone="neutral">
                     {puanYazisi(c.points_per_unit)} puan

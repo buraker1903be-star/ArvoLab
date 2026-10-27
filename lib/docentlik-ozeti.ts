@@ -55,16 +55,24 @@ export const puanYazisi = (n: number) => n.toLocaleString("tr-TR", { maximumFrac
   ÜAK eşiğini yükseltebilir, iki hedefin birden gösterilmesi "hangisi
   geçerli" sorusunu kullanıcıya bırakırdı.
 */
-export type Hedef = { organization_id: string | null; grup: string | null; asgari_puan: number };
+export type Hedef = { organization_id: string | null; temel_alan?: string | null; grup: string | null; asgari_puan: number };
 export type HedefDurumu = { grup: string | null; hedef: number; mevcut: number; eksik: number; kaynak: "genel" | "kurum" };
 
-export function etkinHedefler(hedefler: Hedef[], kurum: string | null): Hedef[] {
+/*
+  Geçerli hedefler: başka kurumun ve başka temel alanın hedefi elenir;
+  aynı grup için birden çok aday kalırsa en ÖZEL olan kazanır — kurum
+  genelden, temel alanın kendi hedefi "bütün alanlar"dan önce gelir.
+  Alan seçilmemişse yalnızca bütün alanlara ait hedefler sayılır.
+*/
+export function etkinHedefler(hedefler: Hedef[], kurum: string | null, temelAlan: string | null = null): Hedef[] {
+  const ozgulluk = (h: Hedef) => (h.organization_id ? 2 : 0) + (h.temel_alan ? 1 : 0);
   const harita = new Map<string, Hedef>();
   for (const h of hedefler) {
     if (h.organization_id !== null && h.organization_id !== kurum) continue;
+    if (h.temel_alan && h.temel_alan !== temelAlan) continue;
     const anahtar = h.grup?.trim() || "";
     const onceki = harita.get(anahtar);
-    if (!onceki || (onceki.organization_id === null && h.organization_id !== null)) harita.set(anahtar, h);
+    if (!onceki || ozgulluk(h) > ozgulluk(onceki)) harita.set(anahtar, h);
   }
   return [...harita.values()];
 }
@@ -104,3 +112,23 @@ export function faaliyetDonemi(faaliyetTarihi: string | null | undefined, doktor
   if (!faaliyetTarihi || !doktoraTarihi) return "bilinmiyor";
   return faaliyetTarihi.slice(0, 10) > doktoraTarihi.slice(0, 10) ? "sonra" : "once";
 }
+
+/*
+  Temel alan adları için ÖNERİ listesi (yazarken tamamlansın diye). Kural
+  değil: ÜAK adları dönemden döneme değişebiliyor; yönetici PDF'teki adı
+  birebir yazabilir. Akademisyen ve kriter aynı adı taşıdığında eşleşir.
+*/
+export const TEMEL_ALAN_ONERILERI = [
+  "Eğitim Bilimleri",
+  "Fen Bilimleri ve Matematik",
+  "Filoloji",
+  "Güzel Sanatlar",
+  "Hukuk",
+  "İlahiyat",
+  "Mimarlık, Planlama ve Tasarım",
+  "Mühendislik",
+  "Sağlık Bilimleri",
+  "Sosyal, Beşeri ve İdari Bilimler",
+  "Spor Bilimleri",
+  "Ziraat, Orman ve Su Ürünleri",
+];
