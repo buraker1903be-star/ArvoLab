@@ -825,6 +825,13 @@ export default function ManuscriptEditor({
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         void saveNowRef.current();
+      } else if ((event.metaKey || event.ctrlKey) && event.altKey && event.code === "KeyF") {
+        // Ctrl+Alt+F: dipnot ekle (Word). code ile: Türkçe klavyede AltGr+F başka bir karakter üretiyor.
+        const target = event.target as HTMLElement | null;
+        if (target?.closest?.(".ProseMirror")) {
+          event.preventDefault();
+          setFootnoteDialog({ mode: "insert", text: "" });
+        }
       } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
         /*
           Ctrl+P editörde SAYFALI BASKIYI açar (Word'de Ctrl+P gibi kılavuz
@@ -1620,7 +1627,7 @@ export default function ManuscriptEditor({
           <ToolbarButton label="Altı çizili (Ctrl+U)" active={ui.underline} onClick={() => editor.chain().focus().toggleUnderline().run()}>
             <UnderlineIcon size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Üst simge" active={ui.superscript} onClick={() => editor.chain().focus().toggleSuperscript().run()}>
+          <ToolbarButton label="Üst simge (Ctrl+Shift+=)" active={ui.superscript} onClick={() => editor.chain().focus().toggleSuperscript().run()}>
             <SuperscriptIcon size={16} />
           </ToolbarButton>
           </div>
@@ -1630,13 +1637,13 @@ export default function ManuscriptEditor({
           <div className="arac-segment" role="group" aria-label="Paragraf türü">
           {/* "Metin": başlıktan normal paragrafa dönüş. Eskiden yalnızca aynı
               başlık düğmesine yeniden basarak dönülüyordu; bu belli değildi. */}
-          <ToolbarButton label="Normal metin" active={!ui.heading} onClick={() => editor.chain().focus().setParagraph().run()}>
+          <ToolbarButton label="Normal metin (Ctrl+Alt+0)" active={!ui.heading} onClick={() => editor.chain().focus().setParagraph().run()}>
             Metin
           </ToolbarButton>
           {([1, 2, 3] as const).map((level) => (
             <ToolbarButton
               key={level}
-              label={`Başlık ${level}`}
+              label={`Başlık ${level} (Ctrl+Alt+${level})`}
               active={ui.heading === level}
               onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
             >
@@ -1646,13 +1653,13 @@ export default function ManuscriptEditor({
           </div>
           <div className="arac-segment" role="group" aria-label="Liste ve alıntı">
 
-          <ToolbarButton label="Madde işaretli liste" active={ui.bulletList} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+          <ToolbarButton label="Madde işaretli liste (Ctrl+Shift+8)" active={ui.bulletList} onClick={() => editor.chain().focus().toggleBulletList().run()}>
             <List size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Numaralı liste" active={ui.orderedList} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+          <ToolbarButton label="Numaralı liste (Ctrl+Shift+7)" active={ui.orderedList} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
             <ListOrdered size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Alıntı" active={ui.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+          <ToolbarButton label="Alıntı (Ctrl+Shift+B)" active={ui.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
             <Quote size={16} />
           </ToolbarButton>
           </div>
@@ -1660,16 +1667,16 @@ export default function ManuscriptEditor({
         </AracKarti>
         <AracKarti baslik="Paragraf">
           <div className="arac-segment" role="group" aria-label="Hizalama">
-          <ToolbarButton label="Sola hizala" active={ui.align === "left"} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
+          <ToolbarButton label="Sola hizala (Ctrl+L)" active={ui.align === "left"} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
             <AlignLeft size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Ortala" active={ui.align === "center"} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
+          <ToolbarButton label="Ortala (Ctrl+E)" active={ui.align === "center"} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
             <AlignCenter size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Sağa hizala" active={ui.align === "right"} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
+          <ToolbarButton label="Sağa hizala (Ctrl+R)" active={ui.align === "right"} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
             <AlignRight size={16} />
           </ToolbarButton>
-          <ToolbarButton label="İki yana yasla" active={ui.align === "justify"} onClick={() => editor.chain().focus().setTextAlign("justify").run()}>
+          <ToolbarButton label="İki yana yasla (Ctrl+J)" active={ui.align === "justify"} onClick={() => editor.chain().focus().setTextAlign("justify").run()}>
             <AlignJustify size={16} />
           </ToolbarButton>
           </div>
@@ -1689,7 +1696,7 @@ export default function ManuscriptEditor({
           </select>
 
           <ToolbarButton
-            label="İlk satır girintisi (1.25 cm)" metin="İlk satır girintisi"
+            label="İlk satır girintisi (1.25 cm) — paragraf başında Tab" metin="İlk satır girintisi"
             active={ui.firstLineIndent}
             onClick={() => editor.chain().focus().setFirstLineIndent(!ui.firstLineIndent).run()}
           >
@@ -1720,7 +1727,7 @@ export default function ManuscriptEditor({
               e.target.value = "";
             }}
           />
-          <ToolbarButton label="Dipnot ekle" metin="Dipnot" onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
+          <ToolbarButton label="Dipnot ekle (Ctrl+Alt+F)" metin="Dipnot" onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
             <StickyNote size={16} />
           </ToolbarButton>
           <ToolbarButton label="Kaynaktan atıf ekle" metin="Atıf" onClick={() => setCiteOpen(true)}>
@@ -1804,7 +1811,7 @@ export default function ManuscriptEditor({
           <ToolbarButton label="Geri al (Ctrl+Z)" disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
             <Undo2 size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Yinele (Ctrl+Shift+Z)" disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
+          <ToolbarButton label="Yinele (Ctrl+Y)" disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
             <Redo2 size={16} />
           </ToolbarButton>
           </div>

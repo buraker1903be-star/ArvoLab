@@ -1088,3 +1088,6 @@
 .yan-kutu[data-vurgu] { border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-soft); }
 .yorum-penceresi { display: grid; gap: 12px; }
 .yorum-penceresi p { margin: 0; }
+/* Kısayollar penceresi: gruplar */
+.shortcut-grup + .shortcut-grup { margin-top: 14px; }
+.shortcut-grup h3 { margin: 0 0 4px; color: var(--muted); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }

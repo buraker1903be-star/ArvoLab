@@ -1,5 +1,6 @@
 import { Extension } from "@tiptap/core";
-import { puntoAdimi, tabKarari } from "@/lib/klavye-karari";
+import { TextSelection } from "@tiptap/pm/state";
+import { harfCevir, puntoAdimi, siradakiHarfDurumu, tabKarari } from "@/lib/klavye-karari";
 
 /*
   WORD KLAVYESİ (27.10.2026, kurum sahibinin isteği: "editörde
@@ -15,7 +16,11 @@ import { puntoAdimi, tabKarari } from "@/lib/klavye-karari";
   - Backspace girintili paragrafın başında: önce girintiyi kaldırır (Word).
   - Ctrl+L / E / R / J: sola, ortaya, sağa, iki yana hizala (Word).
     Tiptap'ın kendi kısayolları (Ctrl+Shift+L…) da çalışmaya devam ediyor.
-  - Ctrl+] / Ctrl+[: yazı boyutunu bir punto büyüt / küçült (Word).
+  - Ctrl+] / Ctrl+[ ve Ctrl+> / Ctrl+<: yazı boyutunu bir punto büyüt /
+    küçült (Word). Köşeli parantez Türkçe Q klavyede AltGr ile yazılıyor;
+    "<" tuşu ise Z'nin solunda, doğrudan basılıyor (Shift ile ">").
+  - Ctrl+Shift+=: üst simge (Word). Ctrl+Boşluk: karakter biçimini temizle.
+  - Shift+F3: seçili metnin harf durumu (küçük → BÜYÜK → Başlık Düzeni).
   Ctrl+P (yazdır) editör bileşeninde: kaydedip sayfalı baskıyı açması
   gerekiyor (manuscript-editor.tsx).
 
@@ -84,6 +89,38 @@ export const WordKisayollari = Extension.create({
       "Mod-j": hizala("justify"),
       "Mod-]": punto(1),
       "Mod-[": punto(-1),
+      "Mod->": punto(1),
+      "Mod-<": punto(-1),
+      "Mod-Shift->": punto(1),
+      "Mod-Shift-<": punto(-1),
+      // Türkçe klavyede "=" Shift+0; ABD klavyesinde Shift+= "+" verir.
+      "Mod-Shift-=": () => this.editor.commands.toggleSuperscript(),
+      "Mod-Shift-+": () => this.editor.commands.toggleSuperscript(),
+      "Mod-Space": () => this.editor.chain().focus().unsetAllMarks().run(),
+      "Shift-F3": () => {
+        const { state, view } = this.editor;
+        const { from, to, empty } = state.selection;
+        // Seçim yoksa tuş yine yutuluyor: tarayıcının "sonrakini bul"u editörde anlamsız.
+        if (empty) return true;
+        const hedef = siradakiHarfDurumu(state.doc.textBetween(from, to, "\n"));
+        const parcalar: { a: number; b: number; metin: string; kelimeBasi: boolean }[] = [];
+        state.doc.nodesBetween(from, to, (node, pos) => {
+          if (!node.isText || !node.text) return;
+          const a = Math.max(from, pos);
+          const b = Math.min(to, pos + node.nodeSize);
+          const once = a > 0 ? state.doc.textBetween(a - 1, a, " ") : "";
+          parcalar.push({ a, b, metin: node.text.slice(a - pos, b - pos), kelimeBasi: !/[\p{L}\p{N}'’]/u.test(once || " ") });
+        });
+        let tr = state.tr;
+        // Sondan başa: öndeki değişiklik arkadaki konumları kaydırmasın. insertText biçimi (kalın vb.) korur.
+        for (const p of parcalar.reverse()) {
+          const yeni = harfCevir(p.metin, hedef, p.kelimeBasi);
+          if (yeni !== p.metin) tr = tr.insertText(yeni, p.a, p.b);
+        }
+        tr = tr.setSelection(TextSelection.create(tr.doc, tr.mapping.map(from, -1), tr.mapping.map(to)));
+        view.dispatch(tr);
+        return true;
+      },
     };
   },
 });
