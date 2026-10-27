@@ -1,16 +1,19 @@
 import Link from "next/link";
-import { CheckCircle2, ExternalLink, Inbox, PlayCircle, Send, UserRound } from "lucide-react";
+import { CheckCircle2, ExternalLink, Inbox, PlayCircle, UserRound } from "lucide-react";
 import type { ConsultancyRequest } from "@/app/actions/consultancy";
 import type { AppSupportRequest } from "@/app/actions/support";
 import type { GeriBildirimSatiri } from "@/app/actions/geri-bildirim";
 import type { ActionResult } from "@/lib/auth-guards";
 import { acikKuyruk, KUYRUK_ETIKETI, KUYRUK_SIRASI, kuyrukAdresi, seciliKayit, type KuyrukTuru } from "@/lib/destek-kuyrugu";
 import { bolumEtiketi, BAGLAM_METNI, PUAN_ETIKETLERI } from "@/lib/geri-bildirim";
+import { uzmanYazismaDurumu, yanitBekliyor, type YazismaMesaji } from "@/lib/destek-yazisma";
+import { destekMesajiGonder } from "@/app/actions/destek-yazisma";
 import { requestTypeLabel } from "@/lib/project-labels";
 import { statusTone } from "@/lib/status-tone";
 import { trTarihSaat } from "@/lib/tr-time";
 import ActionForm from "../action-form";
 import BosDurum from "../_components/bos-durum";
+import Yazisma from "./yazisma";
 
 /*
   PERSONELİN DESTEK KUYRUKLARI — tek ekran, iki kart (lib/destek-kuyrugu.ts).
@@ -42,10 +45,12 @@ export default function DestekKuyruklari({
   geriBildirimler,
   geriBildirimOkunamadi,
   kisiAdi,
+  uzmanYazismasi,
+  destekYazismasi,
+  yazismaOkunamadi,
   ustlen,
   tamamla,
   isleAl,
-  yanitla,
 }: {
   erisilebilir: KuyrukTuru[];
   istenenKuyruk: string | null;
@@ -57,10 +62,12 @@ export default function DestekKuyruklari({
   geriBildirimler: GeriBildirimSatiri[];
   geriBildirimOkunamadi: boolean;
   kisiAdi: (id: string | null | undefined) => string | null;
+  uzmanYazismasi: (id: string) => YazismaMesaji[];
+  destekYazismasi: (r: AppSupportRequest) => YazismaMesaji[];
+  yazismaOkunamadi: boolean;
   ustlen: (id: string) => Promise<ActionResult>;
   tamamla: (id: string) => Promise<ActionResult>;
   isleAl: (id: string) => Promise<ActionResult>;
-  yanitla: (id: string, formData: FormData) => Promise<ActionResult>;
 }) {
   // "Bana atanan" sayacı yalnızca SÜREN işleri sayar; tamamlananlar listede kalır ama iş beklemez.
   const bekleyen: Record<KuyrukTuru, number> = {
@@ -79,7 +86,11 @@ export default function DestekKuyruklari({
     id: r.id,
     baslik: r.project_title || "Bağımsız talep",
     alt: [kisiAdi(r.requested_by), requestTypeLabel(r.request_type), trTarihSaat(r.created_at)].filter(Boolean).join(" · "),
-    pill: { ad: UZMAN_DURUMU[r.status] ?? r.status, ton: statusTone(r.status) },
+    /* Son söz öğrencideyse uzman cevap borçlu; listede ilk bakışta görünsün. */
+    pill:
+      r.status === "accepted" && yanitBekliyor(uzmanYazismasi(r.id))
+        ? { ad: "Yeni mesaj", ton: "warning" }
+        : { ad: UZMAN_DURUMU[r.status] ?? r.status, ton: statusTone(r.status) },
   });
   const satirlar: Satir[] =
     tur === "uzman-acik"
@@ -91,7 +102,12 @@ export default function DestekKuyruklari({
               id: r.id,
               baslik: r.subject,
               alt: [kisiAdi(r.requested_by), KATEGORI[r.category], trTarihSaat(r.created_at)].filter(Boolean).join(" · "),
-              pill: r.priority === "high" || r.priority === "urgent" ? ONCELIK[r.priority] : { ad: DESTEK_DURUMU[r.status], ton: statusTone(r.status) },
+              pill: (() => {
+                const m = destekYazismasi(r);
+                // Yazışma sürüyor ve son söz kullanıcıda: "hâlâ olmuyor" gözden kaçmasın.
+                if (m.some((x) => x.taraf === "destek") && yanitBekliyor(m)) return { ad: "Yeni mesaj", ton: "warning" };
+                return r.priority === "high" || r.priority === "urgent" ? ONCELIK[r.priority] : { ad: DESTEK_DURUMU[r.status], ton: statusTone(r.status) };
+              })(),
             }))
           : geriBildirimler.map((g) => ({
               id: g.userId,
@@ -205,8 +221,25 @@ export default function DestekKuyruklari({
                       <h3 className="calisma-durum-alt">Talep</h3>
                       <p className="destek-mesaj destek-mesaj-kutu">{r.message || "Ek mesaj yazılmadı."}</p>
                       {r.status === "open" ? (
-                        <p className="hint">Üstlenince talep sizin kuyruğunuza (Bana atanan) geçer ve öğrenci uzmanın atandığını görür.</p>
-                      ) : null}
+                        <p className="hint">Üstlenince talep sizin kuyruğunuza (Bana atanan) geçer, öğrenci uzmanın atandığını görür ve yazışma açılır.</p>
+                      ) : (
+                        (() => {
+                          const yazma = uzmanYazismaDurumu(r.status, "uzman");
+                          return (
+                            <>
+                              <h3 className="calisma-durum-alt">Yazışma</h3>
+                              <Yazisma
+                                mesajlar={uzmanYazismasi(r.id)}
+                                benimTarafim="uzman"
+                                okunamadi={yazismaOkunamadi}
+                                gonder={yazma.yazabilir ? destekMesajiGonder.bind(null, "uzman", r.id) : null}
+                                kapaliNedeni={yazma.yazabilir ? undefined : yazma.neden}
+                                yerTutucu="Öğrenciye yazın: yönlendirme, soru ya da sonraki adım"
+                              />
+                            </>
+                          );
+                        })()
+                      )}
                     </>
                   );
                 })()
@@ -244,25 +277,15 @@ export default function DestekKuyruklari({
                         </header>
                         <h3 className="calisma-durum-alt">Kullanıcının mesajı</h3>
                         <p className="destek-mesaj destek-mesaj-kutu">{r.message}</p>
-                        <ActionForm className="project-form-grid" action={yanitla.bind(null, r.id)} successMessage="Yanıt gönderildi.">
-                          <label className="project-form-full">
-                            <span>{r.admin_note ? "Yanıtı güncelle" : "Kullanıcıya yanıt"}</span>
-                            <textarea
-                              name="admin_note"
-                              rows={4}
-                              maxLength={4000}
-                              defaultValue={r.admin_note ?? ""}
-                              placeholder="Ne yaptığınızı yazın; kullanıcı yanıtı Destek sayfasındaki talebinde görür."
-                              required
-                            />
-                          </label>
-                          <input type="hidden" name="status" value="resolved" />
-                          <div className="project-form-actions project-form-full">
-                            <button type="submit" className="projects-primary-button button-compact">
-                              <Send size={14} aria-hidden="true" /> Yanıtla ve çözüldü işaretle
-                            </button>
-                          </div>
-                        </ActionForm>
+                        <h3 className="calisma-durum-alt">Yazışma</h3>
+                        <Yazisma
+                          mesajlar={destekYazismasi(r)}
+                          benimTarafim="destek"
+                          okunamadi={yazismaOkunamadi}
+                          gonder={destekMesajiGonder.bind(null, "destek", r.id)}
+                          yerTutucu="Ne yaptığınızı yazın; kullanıcı yanıtı Destek sayfasındaki talebinde görür."
+                          cozSecenegi
+                        />
                       </>
                     );
                   })()

@@ -637,3 +637,17 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .ana-sayaclar { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .ana-sayaclar .personel-sayac { padding: 8px 12px; }
 .ana-sayaclar .personel-sayac b { font-size: 20px; }
+
+/* Destek yazışması (expert-requests/yazisma.tsx): kendi mesajı sağda, karşı tarafınki solda. */
+.yazisma { display: grid; gap: 10px; }
+.yazisma-liste { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.yazisma-mesaj { justify-self: start; max-width: 88%; padding: 10px 12px; border-radius: var(--r-lg); background: var(--surface-2); }
+.yazisma-mesaj[data-benim="true"] { justify-self: end; background: var(--accent-soft); }
+.yazisma-mesaj p { margin: 4px 0 0; color: var(--ink); font-size: var(--fs-sm); line-height: var(--lh-metin); white-space: pre-wrap; overflow-wrap: anywhere; }
+.yazisma-ust { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.yazisma-ust b { font-size: var(--fs-micro); }
+.yazisma-ust small { color: var(--muted); font-size: var(--fs-micro); }
+.yazisma-form { display: grid; gap: 8px; }
+.yazisma-form textarea { width: 100%; resize: vertical; }
+.yazisma-form-alt { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.yazisma-coz { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-soft); font-size: var(--fs-sm); }

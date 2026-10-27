@@ -16,9 +16,10 @@ import {
   createSupportRequest,
   getMySupportRequests,
   getAllSupportRequests,
-  answerSupportRequest,
   updateSupportRequestStatus,
 } from "@/app/actions/support";
+import { destekMesajiGonder, yazismalariOku } from "@/app/actions/destek-yazisma";
+import { uzmanYazismaDurumu, yanitGeldi, yazismaKur } from "@/lib/destek-yazisma";
 import { tumGeriBildirimler, type GeriBildirimSatiri } from "@/app/actions/geri-bildirim";
 import { getMyProjects } from "@/app/actions/citation-check";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -26,6 +27,7 @@ import { isExpertEligible, requestTypeLabel, STAFF_ROLES } from "@/lib/project-l
 import { createClient } from "@/lib/supabase/server";
 import { kuyrukAdresi, TALEPLERIM_ADRESI, type KuyrukTuru } from "@/lib/destek-kuyrugu";
 import DestekKuyruklari from "./destek-kuyruklari";
+import Yazisma from "./yazisma";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { statusTone } from "@/lib/status-tone";
 import { trTarihSaat } from "@/lib/tr-time";
@@ -144,6 +146,20 @@ export default async function DestekPage({
     for (const k of data ?? []) if (k.full_name) kisiler.set(k.id, k.full_name);
   }
 
+  /*
+    Yazışmalar tek okumada: öğrencinin kendi talepleri, uzmanın üstlendikleri
+    ve iç ekibin destek kuyruğu. Üstlenilmemiş açık talepler okunmuyor —
+    RLS onların yazışmasını uzmana zaten göstermez.
+  */
+  const yazismalar = await yazismalariOku(
+    [...new Set([...uzmanTaleplerim, ...banaAtananlar].map((r) => r.id))],
+    [...new Set([...destekTaleplerim, ...tumDestek].map((r) => r.id))],
+  );
+  const yazismaOkunamadi = yazismalar === null;
+  const uzmanYazismasi = (id: string) => yazismaKur(yazismalar?.get(id) ?? []);
+  const destekYazismasi = (r: AppSupportRequest) =>
+    yazismaKur(yazismalar?.get(r.id) ?? [], { metin: r.admin_note, zaman: r.answered_at });
+
   async function ustlen(id: string) {
     "use server";
     return acceptRequest(id);
@@ -159,10 +175,6 @@ export default async function DestekPage({
   async function isleAl(id: string) {
     "use server";
     return updateSupportRequestStatus(id, "in_progress");
-  }
-  async function yanitla(id: string, formData: FormData) {
-    "use server";
-    return answerSupportRequest(id, formData);
   }
 
   return (
@@ -196,10 +208,12 @@ export default async function DestekPage({
           geriBildirimler={geriBildirimler}
           geriBildirimOkunamadi={geriBildirimOkunamadi}
           kisiAdi={(id) => (id ? kisiler.get(id) ?? null : null)}
+          uzmanYazismasi={uzmanYazismasi}
+          destekYazismasi={destekYazismasi}
+          yazismaOkunamadi={yazismaOkunamadi}
           ustlen={ustlen}
           tamamla={tamamla}
           isleAl={isleAl}
-          yanitla={yanitla}
         />
       ) : (
       <section className="gb-sutunlar kaynaklar-ikili" aria-label="Destek">
@@ -267,9 +281,15 @@ export default async function DestekPage({
             </p>
           ) : uzmanTaleplerim.length ? (
             <ul className="kanit-kayitlari">
-              {uzmanTaleplerim.map((r) => (
+              {uzmanTaleplerim.map((r) => {
+                const mesajlar = uzmanYazismasi(r.id);
+                const yeniYanit = yanitGeldi(mesajlar) && r.status === "accepted";
+                const yazma = uzmanYazismaDurumu(r.status, "talep_sahibi");
+                // Uzmanın adı yazışmadan: bireysel öğrenci iç ekip uzmanının profilini okuyamaz.
+                const uzmanAdi = mesajlar.find((m) => m.taraf === "uzman")?.yazanAdi ?? null;
+                return (
                 <li key={r.id}>
-                  <details className="kanit-kayit">
+                  <details className="kanit-kayit" open={yeniYanit}>
                     <summary>
                       <span className="kanit-kayit-govde">
                         <b>{requestTypeLabel(r.request_type)}</b>
@@ -277,12 +297,25 @@ export default async function DestekPage({
                           {r.project_title || "Çalışmaya bağlı değil"} · {trTarihSaat(r.created_at)}
                         </small>
                       </span>
-                      <span className="status-pill" data-tone={statusTone(r.status)}>
-                        {UZMAN_DURUMU[r.status]}
+                      <span className="status-pill" data-tone={yeniYanit ? "success" : statusTone(r.status)}>
+                        {yeniYanit ? "Yanıt var" : UZMAN_DURUMU[r.status]}
                       </span>
                     </summary>
                     <div className="kanit-kayit-ic">
                       <p className="destek-mesaj">{r.message || "Ek mesaj yazılmadı."}</p>
+                      {r.status === "open" ? (
+                        <p className="hint">Talebiniz bir uzmanın üstlenmesini bekliyor. Bu arada ek bilgi yazabilirsiniz.</p>
+                      ) : r.status === "accepted" ? (
+                        <p className="hint">{uzmanAdi ? `${uzmanAdi} talebinizi üstlendi.` : "Bir uzman talebinizi üstlendi."} Yazışma aşağıda.</p>
+                      ) : null}
+                      <Yazisma
+                        mesajlar={mesajlar}
+                        benimTarafim="talep_sahibi"
+                        okunamadi={yazismaOkunamadi}
+                        gonder={yazma.yazabilir ? destekMesajiGonder.bind(null, "uzman", r.id) : null}
+                        kapaliNedeni={yazma.yazabilir ? undefined : yazma.neden}
+                        yerTutucu="Uzmana yazın: ek bilgi, soru ya da dosyanın neresinde takıldığınız"
+                      />
                       {r.status === "open" ? (
                         <ActionForm
                           action={iptal.bind(null, r.id)}
@@ -297,7 +330,8 @@ export default async function DestekPage({
                     </div>
                   </details>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           ) : (
             <BosDurum
@@ -367,36 +401,42 @@ export default async function DestekPage({
             </p>
           ) : destekTaleplerim.length ? (
             <ul className="kanit-kayitlari">
-              {destekTaleplerim.map((r) => (
-                <li key={r.id}>
-                  <details className="kanit-kayit" open={Boolean(r.admin_note)}>
-                    <summary>
-                      <span className="kanit-kayit-govde">
-                        <b>{r.subject}</b>
-                        <small>
-                          {KATEGORI[r.category]} · {trTarihSaat(r.created_at)}
-                        </small>
-                      </span>
-                      <span className="status-pill" data-tone={r.admin_note ? "success" : statusTone(r.status)}>
-                        {r.admin_note ? "Yanıtlandı" : DESTEK_DURUMU[r.status]}
-                      </span>
-                    </summary>
-                    <div className="kanit-kayit-ic">
-                      {/* Kendi yazdığını da görsün: kullanıcı ne bildirdiğini hatırlamıyordu. */}
-                      <p className="destek-mesaj">{r.message}</p>
-                      {r.admin_note ? (
-                        <div className="callout" data-tone="success">
-                          <strong>Destek yanıtı</strong>
-                          <p>{r.admin_note}</p>
-                          {r.answered_at ? <p className="muted text-sm">{trTarihSaat(r.answered_at)}</p> : null}
-                        </div>
-                      ) : (
-                        <p className="hint">Talebiniz alındı. Yanıtlandığında burada görünecek.</p>
-                      )}
-                    </div>
-                  </details>
-                </li>
-              ))}
+              {destekTaleplerim.map((r) => {
+                const mesajlar = destekYazismasi(r);
+                const yanitlandi = yanitGeldi(mesajlar);
+                return (
+                  <li key={r.id}>
+                    <details className="kanit-kayit" open={yanitlandi && r.status !== "resolved"}>
+                      <summary>
+                        <span className="kanit-kayit-govde">
+                          <b>{r.subject}</b>
+                          <small>
+                            {KATEGORI[r.category]} · {trTarihSaat(r.created_at)}
+                          </small>
+                        </span>
+                        <span className="status-pill" data-tone={yanitlandi ? "success" : statusTone(r.status)}>
+                          {r.status === "resolved" ? DESTEK_DURUMU.resolved : yanitlandi ? "Yanıtlandı" : DESTEK_DURUMU[r.status]}
+                        </span>
+                      </summary>
+                      <div className="kanit-kayit-ic">
+                        {/* Kendi yazdığını da görsün: kullanıcı ne bildirdiğini hatırlamıyordu. */}
+                        <p className="destek-mesaj">{r.message}</p>
+                        {!mesajlar.length ? <p className="hint">Talebiniz alındı. Yanıtlandığında burada görünecek.</p> : null}
+                        {r.status === "resolved" ? (
+                          <p className="hint">Talep çözüldü olarak işaretlendi. Sorun sürüyorsa yazın; talep yeniden açılır.</p>
+                        ) : null}
+                        <Yazisma
+                          mesajlar={mesajlar}
+                          benimTarafim="talep_sahibi"
+                          okunamadi={yazismaOkunamadi}
+                          gonder={destekMesajiGonder.bind(null, "destek", r.id)}
+                          yerTutucu="Ek bilgi yazın ya da yanıta cevap verin"
+                        />
+                      </div>
+                    </details>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <BosDurum

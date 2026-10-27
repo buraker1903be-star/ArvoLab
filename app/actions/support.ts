@@ -91,42 +91,12 @@ export async function getAllSupportRequests(): Promise<ListeSonucu<AppSupportReq
   return listeBasarili(data);
 }
 
-/**
- * Talebe yanıt yazar (ve istenirse durumu da değiştirir).
- *
- * Destek ekranı tek yönlüydü: kullanıcı yazıyor, yönetici yalnızca durumu
- * değiştiriyordu ve kullanıcı üründe hiçbir cevap görmüyordu. Sorun
- * yaşayan kişi o ekrana zaten bir şey ters gittiği için geliyor.
- */
-export async function answerSupportRequest(requestId: string, formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(ADMIN_ROLES, "Talebe yalnızca Sistem Yöneticisi veya Kurucu yanıt yazabilir.");
-  if ("error" in auth) return { error: auth.error };
-
-  const not = String(formData.get("admin_note") ?? "").trim().slice(0, 4000);
-  if (not.length < 2) return { error: "Yanıt en az iki karakter olmalı." };
-  const durum = String(formData.get("status") ?? "").trim();
-  if (durum && !STATUSES.includes(durum)) return { error: "Geçersiz durum." };
-
-  const { data, error } = await auth.supabase
-    .from("app_support_requests")
-    .update({
-      admin_note: not,
-      answered_at: new Date().toISOString(),
-      ...(durum ? { status: durum } : {}),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", requestId)
-    .select("id");
-
-  if (error) {
-    console.error(error);
-    return { error: "Yanıt kaydedilemedi." };
-  }
-  if (!data?.length) return { error: "Talep bulunamadı." };
-
-  revalidatePath(PAGE_PATH);
-  return { success: true };
-}
+/*
+  Yanıt artık yazışmada (app/actions/destek-yazisma.ts, 27.10.2026).
+  Eskiden burada answerSupportRequest vardı ve tek bir yanıt alanına
+  (admin_note) yazıyordu: kullanıcı geri yazamıyor, ikinci yanıt
+  birincinin üzerine yazılıyordu. Eski yanıtlar yazışmada gösteriliyor.
+*/
 
 export async function updateSupportRequestStatus(requestId: string, status: string): Promise<ActionResult> {
   const auth = await requireRole(ADMIN_ROLES, "Talep durumunu yalnızca Sistem Yöneticisi veya Kurucu değiştirebilir.");

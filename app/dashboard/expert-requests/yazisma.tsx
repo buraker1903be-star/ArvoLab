@@ -1,0 +1,74 @@
+import { Send } from "lucide-react";
+import type { ActionResult } from "@/lib/auth-guards";
+import { yazanEtiketi, type Taraf, type YazismaMesaji } from "@/lib/destek-yazisma";
+import { trTarihSaat } from "@/lib/tr-time";
+import ActionForm from "../action-form";
+
+/*
+  Talep altındaki yazışma: öğrencinin iki kartında ve personelin kuyruk
+  detayında AYNI bileşen. Kendi mesajı sağda, karşı tarafınki solda.
+
+  gonder null ise form çizilmez, yerine neden yazılır (talep kapanmış,
+  henüz üstlenilmemiş…): düğmeyi gösterip "gönderilemedi" demek, kuralı
+  kullanıcıya deneme yanılmayla öğretmek olurdu.
+*/
+export default function Yazisma({
+  mesajlar,
+  benimTarafim,
+  okunamadi = false,
+  gonder,
+  kapaliNedeni,
+  yerTutucu,
+  cozSecenegi = false,
+}: {
+  mesajlar: YazismaMesaji[];
+  benimTarafim: Taraf;
+  okunamadi?: boolean;
+  gonder: ((formData: FormData) => Promise<ActionResult>) | null;
+  kapaliNedeni?: string;
+  yerTutucu: string;
+  /** İç ekip: gönderirken talebi çözüldü işaretleme kutusu. */
+  cozSecenegi?: boolean;
+}) {
+  return (
+    <div className="yazisma">
+      {okunamadi ? (
+        <p className="alert" data-tone="danger" role="alert">
+          Yazışma yüklenemedi; yeni mesajlar olabilir. Sayfayı yenileyin.
+        </p>
+      ) : mesajlar.length ? (
+        <ol className="yazisma-liste">
+          {mesajlar.map((m) => (
+            <li key={m.id} className="yazisma-mesaj" data-benim={m.taraf === benimTarafim ? "true" : undefined}>
+              <span className="yazisma-ust">
+                <b>{yazanEtiketi(m, benimTarafim)}</b>
+                {m.zaman ? <small>{trTarihSaat(m.zaman)}</small> : null}
+              </span>
+              <p>{m.metin}</p>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
+      {gonder ? (
+        <ActionForm action={gonder} className="yazisma-form" successMessage="Mesajınız gönderildi.">
+          <textarea name="metin" className="field-control" rows={3} maxLength={4000} placeholder={yerTutucu} required aria-label="Mesajınız" />
+          <div className="yazisma-form-alt">
+            {cozSecenegi ? (
+              <label className="yazisma-coz">
+                <input type="checkbox" name="coz" value="1" defaultChecked /> Gönderince çözüldü işaretle
+              </label>
+            ) : (
+              <span />
+            )}
+            <button type="submit" className="projects-primary-button button-compact">
+              <Send size={14} aria-hidden="true" /> Gönder
+            </button>
+          </div>
+        </ActionForm>
+      ) : kapaliNedeni ? (
+        <p className="hint">{kapaliNedeni}</p>
+      ) : null}
+    </div>
+  );
+}

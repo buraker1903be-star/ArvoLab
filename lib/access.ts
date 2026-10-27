@@ -126,7 +126,8 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  * Kapı KİMDE YOK, bilerek:
  *  - auth.ts ve subscription.ts: engellenen kullanıcı giriş yapabilmeli ve
  *    ödeme yapabilmeli; buraya kapı koymak kendi kilidini açmasını engeller.
- *  - support.ts: yardım isteyebilmeli.
+ *  - support.ts ve destek-yazisma.ts: yardım isteyebilmeli, yanıta
+ *    cevap yazabilmeli.
  *  - Okumalar, silmeler ve mevcut kaydın güncellenmesi: kullanıcı kendi
  *    verisini görebilmeli ve yönetebilmeli. Yeni değer üretmiyorlar.
  *  - guidelines.ts, team.ts, guideline-scan.ts, universities.ts: personel
