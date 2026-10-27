@@ -30,23 +30,31 @@ export type UakKriteri = {
   etiket: string;
   grup: string | null;
   puan: number;
+  /** "Puan yazarlar arasında eşit bölünür" (20261027122336). */
+  esit_bolusum: boolean;
   baslica_katsayi: number | null;
   diger_katsayi: number | null;
 };
-export type UakHedefi = { grup: string | null; asgari_puan: number };
+/** Bir grubun (null = toplam) sınırları; doktora_sonrasi asgarinin yalnızca doktora sonrası faaliyetlerle sağlanacağını söyler. */
+export type UakHedefi = { grup: string | null; asgari_puan: number | null; azami_puan: number | null; doktora_sonrasi: boolean };
 export type UakOnerisi = { kriterler: UakKriteri[]; hedefler: UakHedefi[]; notlar: string[] };
 
 const SISTEM = `Sen bir veri çıkarma aracısın. Sana ÜAK (Üniversitelerarası Kurul) doçentlik başvuru şartları tablosunun PDF'ten çıkarılmış metni verilecek. Görevin bu tabloyu yapılandırılmış bir listeye çevirmek.
 
 KURALLAR:
 - Yalnızca metinde YAZAN değerleri kullan. Metinde olmayan hiçbir sayı, kod ya da kural yazma; emin olmadığın satırı atla.
-- kriterler: puan getiren her faaliyet satırı. kod tablodaki madde numarası/kodu (örn. "1.a", "A1"), etiket kısa açıklama (en fazla 160 karakter), grup tablodaki ana başlık (örn. "Makale", "Atıf", "Eğitim-Öğretim"), puan satırın birim puanı.
-- baslica_katsayi ve diger_katsayi: metin çok yazarlı eserde puanın nasıl paylaşılacağını SAYI olarak açıkça veriyorsa (örn. başlıca yazar 0,8, diğer yazarlar 0,5) yaz; kural kesirle (1/n gibi) ya da yazar sayısına bağlı tabloyla veriliyorsa ya da metinde yoksa null yaz.
-- hedefler: tablodaki asgari puan şartları. grup null ise toplam asgari puan; değilse o grubun asgari puanı.
-- notlar: puana çevrilemeyen ama başvuruyu etkileyen şartlar (örn. "tezden üretilmiş yayın zorunlu", "puanların en az şu kadarı doktora sonrası"), her biri tek cümle, en fazla 8 madde. Metinden alıntıya yakın yaz.
+- kriterler: puan getiren her bent satırı. kod "madde.bent" biçiminde (örn. "1.a", "7.b"); aynı bentte birden çok puan varsa (örn. Q1, Q2 ya da Koordinatör, Araştırmacı) her biri ayrı kriter ve kod sonuna ayırt edici ek koy (örn. "1.a-Q1", "7.a-Yürütücü"). etiket kısa açıklama (en fazla 160 karakter). grup maddenin başlığı (örn. "Uluslararası Makale", "Atıf"); aynı maddenin bütün bentlerinde ve hedeflerde AYNI grup adını kullan. puan satırın birim puanı.
+- esit_bolusum: metin o kriter türü için puanın yazarlar/kişiler arasında eşit bölündüğünü söylüyorsa true (örn. "Çok yazarlı yayınlarda puan yazarlar arasında eşit olarak bölünür" bütün yayın kriterleri için, "Patentlerde puan kişi sayısına bölünür" patentler için). Yoksa false.
+- baslica_katsayi ve diger_katsayi: yalnızca metin başlıca yazar ve diğer yazarlar için ayrı SAYISAL katsayı veriyorsa (örn. 0,8 ve 0,5) yaz; aksi hâlde null.
+- hedefler: maddelerin puan sınırları. grup null ise toplam, değilse o maddenin grubu.
+  * "en az X puan" ya da "asgari X puan" → asgari_puan: X.
+  * "Bu maddeden en fazla X puan alınabilir" → azami_puan: X (doktora_sonrasi false).
+  * Asgari şart doktora unvanından sonraki çalışmalarla sağlanacaksa doktora_sonrasi: true (örn. toplam için "en az 90 puanın doktora unvanının alınmasından sonra" → grup null, asgari_puan 90, doktora_sonrasi true; ayrıca toplam "asgari 100 puan" → grup null, asgari_puan 100, doktora_sonrasi false).
+  * Aynı grup için hem tavan hem bütün faaliyetlere bakan asgari varsa ikisini tek satırda yaz.
+- notlar: puana ya da madde sınırına çevrilemeyen şartlar: bent düzeyinde sınırlar ("g veya h bentlerinden toplamda en fazla 5 puan"), sayı şartları ("biri a bendinden olmak üzere en az iki yayın"), bent düzeyinde doktora sonrası şartlar, ikinci danışmanın yarı puanı gibi kurallar. Her biri tek cümle, en fazla 15 madde, metne yakın yaz.
 
 YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür, başka hiçbir şey yazma:
-{"kriterler":[{"kod":"","etiket":"","grup":"","puan":0,"baslica_katsayi":null,"diger_katsayi":null}],"hedefler":[{"grup":null,"asgari_puan":0}],"notlar":[""]}`;
+{"kriterler":[{"kod":"","etiket":"","grup":"","puan":0,"esit_bolusum":false,"baslica_katsayi":null,"diger_katsayi":null}],"hedefler":[{"grup":null,"asgari_puan":null,"azami_puan":null,"doktora_sonrasi":false}],"notlar":[""]}`;
 
 /** PDF metnini bütçeye sığdırır; kırpıldıysa söyler (yönetici eksik okuma riskini bilsin). */
 export function uakIstemi(metin: string, temelAlan: string, butce = METIN_BUTCESI): { mesajlar: Mesaj[]; kaynak: string; kirpildi: boolean } {
@@ -96,26 +104,36 @@ export function uakOnerisiniCozumle(ham: string): UakOnerisi | null {
       etiket,
       grup: metinAl(k?.grup, 120) || null,
       puan,
+      esit_bolusum: k?.esit_bolusum === true,
       baslica_katsayi: katsayiAl(k?.baslica_katsayi),
       diger_katsayi: katsayiAl(k?.diger_katsayi),
     });
   }
   if (!kriterler.length) return null;
 
-  const hedefGrubu = new Set<string>();
+  /* Aynı grup + aynı dönem şartı için tek satır (veritabanındaki benzersiz dizinle aynı). */
+  const hedefAnahtari = new Set<string>();
   const hedefler: UakHedefi[] = [];
+  const sinir = (v: unknown) => {
+    const n = v === null || v === undefined || v === "" ? null : sayiAl(v);
+    return n !== null && n > 0 ? n : null;
+  };
   for (const h of (Array.isArray(veri.hedefler) ? veri.hedefler : []) as Record<string, unknown>[]) {
     const grup = metinAl(h?.grup, 120) || null;
-    const asgari = sayiAl(h?.asgari_puan);
-    if (asgari === null || asgari <= 0 || hedefGrubu.has(grup ?? "")) continue;
-    hedefGrubu.add(grup ?? "");
-    hedefler.push({ grup, asgari_puan: asgari });
+    const doktoraSonrasi = h?.doktora_sonrasi === true;
+    const asgari = sinir(h?.asgari_puan);
+    // Tavan dönemden bağımsız: doktora sonrası satırında tavan yazılmaz.
+    const azami = doktoraSonrasi ? null : sinir(h?.azami_puan);
+    const anahtar = `${grup ?? ""}|${doktoraSonrasi}`;
+    if ((asgari === null && azami === null) || hedefAnahtari.has(anahtar)) continue;
+    hedefAnahtari.add(anahtar);
+    hedefler.push({ grup, asgari_puan: asgari, azami_puan: azami, doktora_sonrasi: doktoraSonrasi });
   }
 
   const notlar = (Array.isArray(veri.notlar) ? veri.notlar : [])
     .map((n) => metinAl(n, 300))
     .filter(Boolean)
-    .slice(0, 8);
+    .slice(0, 15);
 
   return { kriterler, hedefler, notlar };
 }
@@ -129,7 +147,7 @@ export function metindeOlmayanSayilar(oneri: UakOnerisi, metin: string): string[
   const bilinen = new Set(sayilar(metin));
   const yazi = [
     ...oneri.kriterler.flatMap((k) => [k.kod, k.etiket, k.grup ?? "", String(k.puan), k.baslica_katsayi ?? "", k.diger_katsayi ?? ""].map(String)),
-    ...oneri.hedefler.flatMap((h) => [h.grup ?? "", String(h.asgari_puan)]),
+    ...oneri.hedefler.flatMap((h) => [h.grup ?? "", h.asgari_puan ?? "", h.azami_puan ?? ""].map(String)),
     ...oneri.notlar,
   ].join(" \n ");
   return [...new Set(sayilar(yazi))].filter((s) => !bilinen.has(s));

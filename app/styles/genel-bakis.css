@@ -664,3 +664,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .uak-alanlar { display: flex; flex-wrap: wrap; gap: 6px; }
 .uak-alanlar .chip { padding: 4px 10px; border-radius: var(--r-pill); text-decoration: none; }
 .uak-alanlar .chip[aria-current="true"] { --tone: var(--ink); --tone-soft: var(--accent-soft); }
+/* Doçentlik toplam şartları (toplam / doktora sonrası) ve tavan notu. */
+.docentlik-sartlar { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; color: var(--ink-soft); font-size: var(--fs-sm); }
+.docentlik-sartlar li[data-tone="warning"] { color: var(--warning); }
+.docentlik-sartlar li[data-tone="success"] { color: var(--success); }

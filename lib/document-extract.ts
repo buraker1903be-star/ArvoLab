@@ -32,7 +32,22 @@ export async function extractTextFromBuffer(
     return result.value;
   }
 
-  // pdf
+  /*
+    pdfjs (pdf-parse içinden) yüklenirken tarayıcıya özgü DOMMatrix,
+    ImageData ve Path2D'yi arıyor; Node'da yoklar. Kendisi @napi-rs/canvas'ı
+    çalışma anında bulmaya çalışıyor, ama o istek dosya izleyicisine
+    görünmediği için paket her rotanın dağıtımına girmiyor. Eskiden bu
+    tamamlama yalnızca kılavuz taramasındaydı (lib/guideline-scan.ts):
+    27.10.2026'da Doçentlik sayfasında ÜAK PDF'i "DOMMatrix is not defined"
+    ile okunamadı ve kullanıcı "taranmış PDF olabilir" uyarısı gördü —
+    PDF'in metni sorunsuzdu. Açık import, paketi izleyiciye gösteriyor.
+  */
+  const canvas = await import("@napi-rs/canvas");
+  Object.assign(globalThis, {
+    DOMMatrix: globalThis.DOMMatrix ?? canvas.DOMMatrix,
+    ImageData: globalThis.ImageData ?? canvas.ImageData,
+    Path2D: globalThis.Path2D ?? canvas.Path2D,
+  });
   const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: buffer });
   try {

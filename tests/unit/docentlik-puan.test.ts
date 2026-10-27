@@ -64,3 +64,14 @@ describe("ortak yazarlık", () => {
     assert.equal(korunanBirimPuan({ criteria_id: "a", unit_count: 2, computed_points: 20 }, "a"), 10);
   });
 });
+
+describe("eşit bölüşüm", () => {
+  test("puan yazar sayısına eşit bölünür, katsayılardan önce gelir", () => {
+    assert.equal(paylasimKatsayisi({ esit_bolusum: true, baslica_yazar_katsayisi: 0.8 }, 4, true), 0.25);
+    assert.equal(paylasimKatsayisi({ esit_bolusum: true }, 1, false), 1);
+    const ucte = paylasimKatsayisi({ esit_bolusum: true }, 3, true);
+    assert.equal(puanHesapla(1, 30, ucte), 10);
+    // Düzenlemede birim puan geri türetilebilmeli (kayıtta katsayı tam hâliyle duruyor).
+    assert.equal(korunanBirimPuan({ criteria_id: "a", unit_count: 1, computed_points: 10, paylasim_katsayisi: ucte }, "a"), 30);
+  });
+});

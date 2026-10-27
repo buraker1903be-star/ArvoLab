@@ -3,6 +3,7 @@ import { CalendarDays, CheckCircle2, ClipboardList, FileUp, Pencil, Plus, Printe
 import {
   etkinHedefler,
   faaliyetDonemi,
+  tavanUygula,
   hedefDurumlari,
   kriterGruplari,
   puanGruplari,
@@ -78,8 +79,16 @@ function YazarVeTarihAlanlari({ yazarSayisi = 1, baslica = true, tarih = null }:
 
 const sonrasiParam = (p: Record<string, string | string[] | undefined>) => p.donem === "sonra";
 
-const katsayiYazisi = (c: { baslica_yazar_katsayisi: number | null; diger_yazar_katsayisi: number | null }) =>
-  c.baslica_yazar_katsayisi != null || c.diger_yazar_katsayisi != null
+/* Hedef satırının sınırları tek yazıda: "en az 5 · en fazla 10". */
+const sinirYazisi = (h: { asgari_puan: number | null; azami_puan?: number | null }) =>
+  [h.asgari_puan != null ? `en az ${puanYazisi(h.asgari_puan)}` : null, h.azami_puan != null ? `en fazla ${puanYazisi(h.azami_puan)}` : null]
+    .filter(Boolean)
+    .join(" · ");
+
+const katsayiYazisi = (c: { esit_bolusum?: boolean | null; baslica_yazar_katsayisi: number | null; diger_yazar_katsayisi: number | null }) =>
+  c.esit_bolusum
+    ? "Ortak yazar: puan eşit bölünür"
+    : c.baslica_yazar_katsayisi != null || c.diger_yazar_katsayisi != null
     ? `Ortak yazar: başlıca ×${c.baslica_yazar_katsayisi != null ? puanYazisi(c.baslica_yazar_katsayisi) : "1"} · diğer ×${c.diger_yazar_katsayisi != null ? puanYazisi(c.diger_yazar_katsayisi) : "1"}`
     : null;
 
@@ -164,15 +173,32 @@ export default async function ScoringPage({
       Boolean(c.organization_id) &&
       c.organization_id === profile?.organization_id);
 
-  // Toplam ve grup toplamları yazdırılabilir dökümle AYNI fonksiyondan (lib/docentlik-ozeti.ts).
-  const { toplam: totalPoints, gruplar } = puanGruplari(entries);
+  /*
+    Toplamlar yazdırılabilir dökümle AYNI fonksiyonlardan (lib/docentlik-ozeti.ts).
+    Tavan ("bu maddeden en fazla 10 puan") uygulanmış SAYILAN puan gösterilir;
+    doktora sonrası şartlar ("100'ün en az 90'ı") görünümden bağımsız olarak
+    doktora sonrası faaliyetlerle ölçülür. Doktora tarihi yoksa ölçülmez.
+  */
   const etkin = etkinHedefler(hedefler, profile?.organization_id ?? null, alan);
-  const { toplamHedef, grupHedefleri } = hedefDurumlari(etkin, totalPoints, gruplar);
-  /* Dağılımda hedefi olan ama hiç faaliyeti olmayan gruplar da görünür: eksik olan tam da onlar. */
-  const dagilim = [
-    ...gruplar.map((g) => ({ grup: g.grup, toplam: g.toplam, hedef: grupHedefleri.find((h) => h.grup === g.grup) ?? null })),
-    ...grupHedefleri.filter((h) => !gruplar.some((g) => g.grup === h.grup)).map((h) => ({ grup: h.grup!, toplam: 0, hedef: h })),
-  ];
+  const tumOzet = tavanUygula(puanGruplari(tumKayitlar), etkin);
+  const sonraOzet = doktora.tarih
+    ? tavanUygula(puanGruplari(tumKayitlar.filter((e) => faaliyetDonemi(e.faaliyet_tarihi, doktora.tarih) === "sonra")), etkin)
+    : null;
+  const gorunen = sonrasi ? (sonraOzet ?? tavanUygula(puanGruplari(entries), etkin)) : tumOzet;
+  const totalPoints = gorunen.toplam;
+  const gruplar = gorunen.gruplar;
+  const sayilmayan = Math.round((gorunen.ham - gorunen.toplam) * 1e6) / 1e6;
+  const { toplamHedefleri, grupHedefleri } = hedefDurumlari(etkin, tumOzet, sonraOzet);
+  const anaHedef = toplamHedefleri.find((h) => h.doktoraSonrasi === sonrasi) ?? toplamHedefleri[0] ?? null;
+  const sonraSartiOlculemedi = !doktora.tarih && etkin.some((h) => h.doktora_sonrasi && h.asgari_puan);
+  /* Dağılımda asgari şartı olan ama hiç faaliyeti olmayan gruplar da görünür: eksik olan tam da onlar. */
+  const dagilim = [...new Set([...gruplar.map((g) => g.grup), ...grupHedefleri.map((h) => h.grup!)])].map((grup) => {
+    const g = gruplar.find((x) => x.grup === grup);
+    const sartlar = grupHedefleri.filter((h) => h.grup === grup);
+    const azami = g?.azami ?? etkin.find((h) => !h.doktora_sonrasi && h.grup === grup && h.azami_puan != null)?.azami_puan ?? null;
+    const olcu = sartlar.find((h) => !h.doktoraSonrasi)?.hedef ?? sartlar[0]?.hedef ?? azami ?? null;
+    return { grup, toplam: g?.toplam ?? 0, ham: g?.ham ?? 0, azami, sartlar, olcu };
+  });
   const hedefDuzenlenebilir = (h: { organization_id: string | null }) =>
     icEkip || (profile?.role === "academic_manager" && Boolean(h.organization_id) && h.organization_id === profile?.organization_id);
 
@@ -387,41 +413,63 @@ export default async function ScoringPage({
           </header>
 
           {/* Okunamayan kayıtla hesaplanan toplam SIFIR değil, BİLİNMİYOR. */}
-          <div className="kaynakca-puan" data-tone={kayitOkunamadi || !toplamHedef ? "neutral" : toplamHedef.eksik > 0 ? "warning" : "success"}>
+          <div className="kaynakca-puan" data-tone={kayitOkunamadi || !anaHedef ? "neutral" : toplamHedefleri.some((h) => h.eksik > 0) ? "warning" : "success"}>
             <b>
               {kayitOkunamadi ? "—" : puanYazisi(totalPoints)}
-              {toplamHedef && !kayitOkunamadi ? <small> / {puanYazisi(toplamHedef.hedef)}</small> : null}
+              {anaHedef && !kayitOkunamadi ? <small> / {puanYazisi(anaHedef.hedef)}</small> : null}
             </b>
             <span>
-              {sonrasi ? "doktora sonrası puan" : "toplam puan"}
-              {toplamHedef && !kayitOkunamadi
-                ? toplamHedef.eksik > 0
-                  ? ` · hedefe ${puanYazisi(toplamHedef.eksik)} puan eksik`
+              {sonrasi ? "doktora sonrası sayılan puan" : "sayılan puan"}
+              {anaHedef && !kayitOkunamadi
+                ? anaHedef.eksik > 0
+                  ? ` · hedefe ${puanYazisi(anaHedef.eksik)} puan eksik`
                   : " · hedef tamam"
                 : ""}
             </span>
           </div>
+          {!kayitOkunamadi && (toplamHedefleri.length > 1 || sayilmayan > 0 || sonraSartiOlculemedi) ? (
+            <ul className="docentlik-sartlar">
+              {toplamHedefleri.length > 1
+                ? toplamHedefleri.map((h) => (
+                    <li key={String(h.doktoraSonrasi)} data-tone={h.eksik > 0 ? "warning" : "success"}>
+                      {h.doktoraSonrasi ? "Doktora sonrası" : "Toplam"} en az {puanYazisi(h.hedef)}: {puanYazisi(h.mevcut)} ·{" "}
+                      {h.eksik > 0 ? `${puanYazisi(h.eksik)} eksik` : "tamam"}
+                    </li>
+                  ))
+                : null}
+              {sayilmayan > 0 ? (
+                <li>Madde tavanları nedeniyle {puanYazisi(sayilmayan)} puan sayılmadı (toplam beyan {puanYazisi(gorunen.ham)}).</li>
+              ) : null}
+              {sonraSartiOlculemedi ? <li>Doktora sonrası şartları ölçmek için sağ üstten doktora tarihinizi girin.</li> : null}
+            </ul>
+          ) : null}
           {hedefOkunamadi ? (
             <p className="alert" role="alert">Hedefler okunamadı; eksik puan gösterilemiyor. Sayfayı yenileyin.</p>
           ) : null}
           {/* Grup başına puan; hedefi olan grupta çubuk HEDEFE göre dolar ve eksik yazılır. */}
           {!kayitOkunamadi && dagilim.length ? (
             <ul className="docentlik-dagilim" aria-label="Gruplara göre puan">
-              {dagilim.map((g) => (
-                <li key={g.grup} data-tone={g.hedef ? (g.hedef.eksik > 0 ? "warning" : "success") : undefined}>
-                  <span>{g.grup}</span>
-                  <progress
-                    max={Math.max(g.hedef ? g.hedef.hedef : totalPoints, 1)}
-                    value={Math.min(g.toplam, Math.max(g.hedef ? g.hedef.hedef : totalPoints, 1))}
-                    aria-label={`${g.grup}: ${puanYazisi(g.toplam)} puan`}
-                  />
-                  <b>
-                    {puanYazisi(g.toplam)}
-                    {g.hedef ? ` / ${puanYazisi(g.hedef.hedef)}` : ""}
-                  </b>
-                  {g.hedef && g.hedef.eksik > 0 ? <small>{puanYazisi(g.hedef.eksik)} eksik</small> : null}
-                </li>
-              ))}
+              {dagilim.map((g) => {
+                const olcu = Math.max(g.olcu ?? totalPoints, 1);
+                const ton = g.sartlar.length ? (g.sartlar.some((h) => h.eksik > 0) ? "warning" : "success") : undefined;
+                const notlar = [
+                  ...g.sartlar.map(
+                    (h) => `en az ${puanYazisi(h.hedef)}${h.doktoraSonrasi ? " (doktora sonrası)" : ""}: ${h.eksik > 0 ? `${puanYazisi(h.eksik)} eksik` : "tamam"}`,
+                  ),
+                  g.azami !== null ? `en fazla ${puanYazisi(g.azami)}${g.ham > g.toplam ? ` · ${puanYazisi(g.ham - g.toplam)} puan sayılmadı` : ""}` : null,
+                ].filter(Boolean);
+                return (
+                  <li key={g.grup} data-tone={ton}>
+                    <span>{g.grup}</span>
+                    <progress max={olcu} value={Math.min(g.toplam, olcu)} aria-label={`${g.grup}: ${puanYazisi(g.toplam)} puan`} />
+                    <b>
+                      {puanYazisi(g.toplam)}
+                      {g.olcu !== null ? ` / ${puanYazisi(g.olcu)}` : ""}
+                    </b>
+                    {notlar.length ? <small>{notlar.join(" · ")}</small> : null}
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
 
@@ -628,6 +676,10 @@ export default async function ScoringPage({
                     <span>Notlar</span>
                     <input name="notes" type="text" placeholder="Kaynak, şart, açıklama" />
                   </label>
+                  <label className="project-form-full checkbox-label">
+                    <input name="esitBolusum" type="checkbox" value="1" />
+                    <span>Çok yazarlıda puan yazar sayısına eşit bölünür (katsayılardan önce gelir)</span>
+                  </label>
                   <label>
                     <span>Başlıca yazar katsayısı</span>
                     <input name="baslicaKatsayi" type="text" inputMode="decimal" placeholder="Örn. 0,8 · boş = tam puan" />
@@ -722,8 +774,9 @@ export default async function ScoringPage({
                                   <li key={i} className="gb-satir">
                                     <span className="gb-satir-govde">
                                       <b>{h.grup ?? "Toplam puan"}</b>
+                                      {h.doktora_sonrasi ? <small>doktora sonrası</small> : null}
                                     </span>
-                                    <span className="status-pill" data-tone="neutral">en az {puanYazisi(h.asgari_puan)}</span>
+                                    <span className="status-pill" data-tone="neutral">{sinirYazisi(h)}</span>
                                   </li>
                                 ))}
                               </ul>
@@ -739,7 +792,7 @@ export default async function ScoringPage({
                                       {k.kod} — {k.etiket}
                                     </b>
                                     <small>
-                                      {[k.grup, katsayiYazisi({ baslica_yazar_katsayisi: k.baslica_katsayi, diger_yazar_katsayisi: k.diger_katsayi })]
+                                      {[k.grup, katsayiYazisi({ esit_bolusum: k.esit_bolusum, baslica_yazar_katsayisi: k.baslica_katsayi, diger_yazar_katsayisi: k.diger_katsayi })]
                                         .filter(Boolean)
                                         .join(" · ")}
                                     </small>
@@ -820,7 +873,7 @@ export default async function ScoringPage({
                   triggerClassName="projects-filter-button button-compact"
                   kicker="Doçentlik hedefleri"
                   title="Hedef puan"
-                  description="Toplam ya da bir kriter grubu için asgari puan. Aynı grup için var olan hedef güncellenir."
+                  description="Toplam ya da bir kriter grubu için asgari puan (en az) ve tavan (en fazla). Aynı grup ve aynı dönem şartı için var olan satır güncellenir."
                 >
                   <ActionForm className="project-form-grid" action={hedefKaydet} successMessage="Hedef kaydedildi.">
                     {icEkip ? (
@@ -848,8 +901,16 @@ export default async function ScoringPage({
                       </select>
                     </label>
                     <label>
-                      <span>Asgari puan</span>
-                      <input name="asgariPuan" type="text" inputMode="decimal" placeholder="Örn. 100" required />
+                      <span>Asgari puan (en az)</span>
+                      <input name="asgariPuan" type="text" inputMode="decimal" placeholder="Örn. 100" />
+                    </label>
+                    <label>
+                      <span>Azami puan (en fazla)</span>
+                      <input name="azamiPuan" type="text" inputMode="decimal" placeholder="Örn. 10 · maddenin tavanı" />
+                    </label>
+                    <label className="project-form-full checkbox-label">
+                      <input name="doktoraSonrasi" type="checkbox" value="1" />
+                      <span>Asgari puan yalnızca doktora sonrası faaliyetlerle sağlanır (bu satıra tavan yazılmaz)</span>
                     </label>
                     <label className="project-form-full">
                       <span>Not</span>
@@ -865,19 +926,32 @@ export default async function ScoringPage({
             {etkin.length ? (
               <ul className="gb-liste">
                 {[...etkin]
-                  .sort((a, b) => (a.grup ? 1 : 0) - (b.grup ? 1 : 0) || (a.grup ?? "").localeCompare(b.grup ?? "", "tr"))
+                  .sort(
+                    (a, b) =>
+                      (a.grup ? 1 : 0) - (b.grup ? 1 : 0) ||
+                      (a.grup ?? "").localeCompare(b.grup ?? "", "tr") ||
+                      Number(Boolean(a.doktora_sonrasi)) - Number(Boolean(b.doktora_sonrasi)),
+                  )
                   .map((h) => {
                     const satir = hedefler.find(
-                      (x) => x.organization_id === h.organization_id && (x.grup ?? null) === (h.grup ?? null) && (x.temel_alan ?? null) === (h.temel_alan ?? null),
+                      (x) =>
+                        x.organization_id === h.organization_id &&
+                        (x.grup ?? null) === (h.grup ?? null) &&
+                        (x.temel_alan ?? null) === (h.temel_alan ?? null) &&
+                        Boolean(x.doktora_sonrasi) === Boolean(h.doktora_sonrasi),
                     );
                     return (
-                      <li key={`${h.organization_id ?? "genel"}-${h.grup ?? "toplam"}`} className="gb-satir">
+                      <li key={`${h.organization_id ?? "genel"}-${h.grup ?? "toplam"}-${h.doktora_sonrasi ? 1 : 0}`} className="gb-satir">
                         <span className="gb-satir-govde">
                           <b>{h.grup ?? "Toplam puan"}</b>
-                          <small>{[h.organization_id ? "Kurumunuz" : "Genel", h.temel_alan ?? null, satir?.notlar].filter(Boolean).join(" · ")}</small>
+                          <small>
+                            {[h.doktora_sonrasi ? "Doktora sonrası" : null, h.organization_id ? "Kurumunuz" : "Genel", h.temel_alan ?? null, satir?.notlar]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </small>
                         </span>
                         <span className="status-pill" data-tone="neutral">
-                          en az {puanYazisi(h.asgari_puan)}
+                          {sinirYazisi(h)}
                         </span>
                         {canManageCriteria && satir && hedefDuzenlenebilir(h) ? (
                           <ActionForm
@@ -953,6 +1027,10 @@ export default async function ScoringPage({
                           <label className="project-form-full">
                             <span>Notlar</span>
                             <input name="notes" type="text" defaultValue={c.notes ?? ""} />
+                          </label>
+                          <label className="project-form-full checkbox-label">
+                            <input name="esitBolusum" type="checkbox" value="1" defaultChecked={c.esit_bolusum} />
+                            <span>Çok yazarlıda puan yazar sayısına eşit bölünür</span>
                           </label>
                           <label>
                             <span>Başlıca yazar katsayısı</span>

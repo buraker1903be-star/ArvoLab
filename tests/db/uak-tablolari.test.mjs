@@ -83,3 +83,28 @@ describe("ÜAK tabloları", () => {
       await db.query(`insert into public.ai_assistant_runs (user_id, capability, status) values ($1, 'uak', 'completed')`, [YONETICI_A]);
     }));
 });
+
+describe("tavan ve doktora sonrası hedef (20261027122336)", () => {
+  test("aynı grupta bütün faaliyet ve doktora sonrası iki ayrı satır; sınırsız satır reddedilir", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", YONETICI_A);
+      await db.query(`insert into public.docentlik_hedefleri (organization_id, temel_alan, grup, asgari_puan, azami_puan) values ($1, 'Hukuk', 'Atıf', null, 10)`, [KURUM_A]);
+      await db.query(`insert into public.docentlik_hedefleri (organization_id, temel_alan, grup, asgari_puan, doktora_sonrasi) values ($1, 'Hukuk', 'Atıf', 5, true)`, [KURUM_A]);
+      await reddedilir(db,
+        `insert into public.docentlik_hedefleri (organization_id, temel_alan, grup, asgari_puan, doktora_sonrasi) values ($1, 'Hukuk', 'Atıf', 7, true)`,
+        [KURUM_A], /duplicate key|unique/);
+      await reddedilir(db,
+        `insert into public.docentlik_hedefleri (organization_id, temel_alan, grup) values ($1, 'Hukuk', 'Ödül')`,
+        [KURUM_A], /docentlik_hedefleri_sinir_var|check constraint/);
+    }));
+
+  test("kriter eşit bölüşüm işareti taşır", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", YONETICI_A);
+      await db.query(`insert into public.scoring_criteria (code, label, points_per_unit, organization_id, esit_bolusum) values ('1.a', 'Makale', 30, $1, true)`, [KURUM_A]);
+      const { rows } = await db.query(`select esit_bolusum from public.scoring_criteria where code = '1.a'`);
+      assert.equal(rows[0].esit_bolusum, true);
+    }));
+});

@@ -50,25 +50,30 @@ export function korunanBirimPuan(kayit: KayitliPuan, yeniKriterId: string): numb
 }
 
 /*
-  ORTAK YAZARLIK KATSAYISI. Kural kriterde, Yönetici'nin girdiği iki
-  sayı: başlıca yazar ve diğer yazarlar. Tek yazarlı faaliyet ya da
-  katsayısı girilmemiş kriter TAM puan alır — bilinmeyen bir paylaşım
-  kuralını tahmin etmek, yanlış bir puanı doğru gibi göstermek olurdu.
+  ORTAK YAZARLIK KATSAYISI. Kural kriterde, Yönetici'nin girdiği:
+  - eşit bölüşüm: puan yazar sayısına bölünür (1/n). ÜAK tablolarının
+    çoğu böyle yazıyor ("puan yazarlar arasında eşit olarak bölünür");
+    27.10.2026'ya kadar ifade edilemiyordu ve ortak yazarlı her yayın
+    tam puan sayılıyordu.
+  - ya da iki sayı: başlıca yazar ve diğer yazarlar.
+  Tek yazarlı faaliyet ya da kuralı girilmemiş kriter TAM puan alır —
+  bilinmeyen bir paylaşım kuralını tahmin etmek, yanlış bir puanı doğru
+  gibi göstermek olurdu.
 */
-export function paylasimKatsayisi(
-  kriter: { baslica_yazar_katsayisi?: number | null; diger_yazar_katsayisi?: number | null } | null,
-  yazarSayisi: number,
-  baslica: boolean,
-): number {
+type PaylasimKurali = { baslica_yazar_katsayisi?: number | null; diger_yazar_katsayisi?: number | null; esit_bolusum?: boolean | null };
+
+export function paylasimKatsayisi(kriter: PaylasimKurali | null, yazarSayisi: number, baslica: boolean): number {
   if (!kriter || !Number.isFinite(yazarSayisi) || yazarSayisi <= 1) return 1;
+  /* Yuvarlanmıyor: 1/3'ü 0,333333'e indirmek 30 puanı 9,99999 yapardı. Puan, hesabın sonunda yuvarlanıyor (puanHesapla). */
+  if (kriter.esit_bolusum) return 1 / Math.floor(yazarSayisi);
   const k = baslica ? kriter.baslica_yazar_katsayisi : kriter.diger_yazar_katsayisi;
   const sayi = Number(k);
   return k === null || k === undefined || !Number.isFinite(sayi) || sayi <= 0 || sayi > 1 ? 1 : sayi;
 }
 
-/** Kriterde ortak yazarlık kuralı tanımlı mı (formda yazar alanlarını göstermek için). */
-export const paylasimTanimli = (kriter: { baslica_yazar_katsayisi?: number | null; diger_yazar_katsayisi?: number | null } | null) =>
-  Boolean(kriter && (kriter.baslica_yazar_katsayisi != null || kriter.diger_yazar_katsayisi != null));
+/** Kriterde ortak yazarlık kuralı tanımlı mı. */
+export const paylasimTanimli = (kriter: PaylasimKurali | null) =>
+  Boolean(kriter && (kriter.esit_bolusum || kriter.baslica_yazar_katsayisi != null || kriter.diger_yazar_katsayisi != null));
 
 export const puanHesapla = (birim: number, birimPuan: number, katsayi: number) =>
   Math.round(birim * birimPuan * katsayi * YUVARLA) / YUVARLA;

@@ -27,6 +27,8 @@ export interface ScoringCriterion {
   diger_yazar_katsayisi: number | null;
   /** ÜAK temel alanı; NULL = bütün alanlar (20261027083309). */
   temel_alan: string | null;
+  /** Çok yazarlıda puan yazar sayısına eşit bölünür (20261027122336). */
+  esit_bolusum: boolean;
 }
 
 export interface ScoreEntry {
@@ -45,7 +47,7 @@ export interface ScoreEntry {
 }
 
 const KRITER_SUTUNLARI =
-  "id, code, label, category_group, points_per_unit, notes, is_active, organization_id, baslica_yazar_katsayisi, diger_yazar_katsayisi, temel_alan";
+  "id, code, label, category_group, points_per_unit, notes, is_active, organization_id, baslica_yazar_katsayisi, diger_yazar_katsayisi, temel_alan, esit_bolusum";
 const KOVA = "project-files";
 
 function parseDecimal(raw: string) {
@@ -139,6 +141,7 @@ export async function createCriterion(formData: FormData): Promise<ActionResult>
     notes: String(formData.get("notes") ?? "").trim() || null,
     organization_id: kurum,
     temel_alan: String(formData.get("temelAlan") ?? "").trim().slice(0, 120) || null,
+    esit_bolusum: formData.get("esitBolusum") === "1",
     baslica_yazar_katsayisi: baslicaK.deger,
     diger_yazar_katsayisi: digerK.deger,
     updated_by: auth.user.id,
@@ -177,6 +180,7 @@ export async function updateCriterion(criterionId: string, formData: FormData): 
       category_group: String(formData.get("categoryGroup") ?? "").trim() || null,
       points_per_unit: points,
       // Katsayı değişikliği de puan gibi yalnızca bundan sonraki kayıtlara uygulanır.
+      esit_bolusum: formData.get("esitBolusum") === "1",
       baslica_yazar_katsayisi: baslicaK.deger,
       diger_yazar_katsayisi: digerK.deger,
       notes: String(formData.get("notes") ?? "").trim() || null,
@@ -279,7 +283,7 @@ export async function addScoreEntry(formData: FormData): Promise<ActionResult> {
 
   const { data: criterion, error: criterionError } = await supabase
     .from("scoring_criteria")
-    .select("points_per_unit, baslica_yazar_katsayisi, diger_yazar_katsayisi")
+    .select("points_per_unit, baslica_yazar_katsayisi, diger_yazar_katsayisi, esit_bolusum")
     .eq("id", criteriaId)
     .eq("is_active", true)
     .single();
@@ -365,7 +369,7 @@ export async function updateScoreEntry(entryId: string, formData: FormData): Pro
     // Kriter ya da yazar bilgisi değişti (ya da kaydın puanı türetilemedi): kriterin güncel değerleri.
     const { data: criterion, error: kriterHatasi } = await supabase
       .from("scoring_criteria")
-      .select("points_per_unit, baslica_yazar_katsayisi, diger_yazar_katsayisi")
+      .select("points_per_unit, baslica_yazar_katsayisi, diger_yazar_katsayisi, esit_bolusum")
       .eq("id", criteriaId)
       .single();
     if (kriterHatasi || !criterion) return { error: "Seçilen kriter bulunamadı." };
@@ -435,12 +439,18 @@ export async function getHedefler(): Promise<ListeSonucu<Hedef & { id: string; n
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("docentlik_hedefleri")
-    .select("id, organization_id, temel_alan, grup, asgari_puan, notlar");
+    .select("id, organization_id, temel_alan, grup, asgari_puan, azami_puan, doktora_sonrasi, notlar");
   if (error) {
     console.error("[doçentlik] hedefler okunamadı", error.message);
     return listeOkunamadi();
   }
-  return listeBasarili((data ?? []).map((h) => ({ ...h, asgari_puan: Number(h.asgari_puan) })));
+  return listeBasarili(
+    (data ?? []).map((h) => ({
+      ...h,
+      asgari_puan: h.asgari_puan === null ? null : Number(h.asgari_puan),
+      azami_puan: h.azami_puan === null ? null : Number(h.azami_puan),
+    })),
+  );
 }
 
 /*
@@ -455,8 +465,18 @@ export async function hedefKaydet(formData: FormData): Promise<ActionResult> {
 
   const grup = String(formData.get("grup") ?? "").trim() || null;
   const temelAlan = String(formData.get("temelAlan") ?? "").trim().slice(0, 120) || null;
-  const puan = parseDecimal(String(formData.get("asgariPuan") ?? ""));
-  if (!Number.isFinite(puan) || puan <= 0) return { error: "Asgari puan 0'dan büyük bir sayı olmalı." };
+  /* Asgari, azami ya da ikisi. Tavan dönemden bağımsız: doktora sonrası satırına yazılmaz. */
+  const doktoraSonrasi = formData.get("doktoraSonrasi") === "1";
+  const oku = (ad: string) => {
+    const ham = String(formData.get(ad) ?? "").trim();
+    if (!ham) return { deger: null as number | null };
+    const n = parseDecimal(ham);
+    return Number.isFinite(n) && n > 0 ? { deger: n } : { hata: true as const };
+  };
+  const asgari = oku("asgariPuan");
+  const azami = doktoraSonrasi ? { deger: null } : oku("azamiPuan");
+  if ("hata" in asgari || "hata" in azami) return { error: "Puanlar 0'dan büyük sayı olmalı." };
+  if (asgari.deger === null && azami.deger === null) return { error: "Asgari ya da azami puandan en az birini girin." };
 
   const icEkip = auth.role !== null && ADMIN_ROLES.includes(auth.role);
   const kurumaYaz = icEkip ? String(formData.get("kapsam") ?? "genel") === "kurum" : true;
@@ -471,6 +491,7 @@ export async function hedefKaydet(formData: FormData): Promise<ActionResult> {
   sorgu = kurum ? sorgu.eq("organization_id", kurum) : sorgu.is("organization_id", null);
   sorgu = grup ? sorgu.eq("grup", grup) : sorgu.is("grup", null);
   sorgu = temelAlan ? sorgu.eq("temel_alan", temelAlan) : sorgu.is("temel_alan", null);
+  sorgu = sorgu.eq("doktora_sonrasi", doktoraSonrasi);
   const { data: mevcut, error: aramaHatasi } = await sorgu.maybeSingle();
   if (aramaHatasi) {
     console.error("[doçentlik] hedef aranamadı", aramaHatasi.message);
@@ -481,7 +502,9 @@ export async function hedefKaydet(formData: FormData): Promise<ActionResult> {
     organization_id: kurum,
     grup,
     temel_alan: temelAlan,
-    asgari_puan: puan,
+    asgari_puan: asgari.deger,
+    azami_puan: azami.deger,
+    doktora_sonrasi: doktoraSonrasi,
     notlar: String(formData.get("notlar") ?? "").trim() || null,
     updated_by: auth.user.id,
     updated_at: new Date().toISOString(),

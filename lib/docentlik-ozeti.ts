@@ -50,19 +50,34 @@ export function kriterGruplari<T extends { code: string; category_group: string 
 export const puanYazisi = (n: number) => n.toLocaleString("tr-TR", { maximumFractionDigits: 2 });
 
 /*
-  HEDEFLER (20261027081037). grup null = toplam hedef. Kurum hedefi aynı
-  gruptaki genel hedefin yerine geçer: kurum kendi yönetmeliğiyle genel
-  ÜAK eşiğini yükseltebilir, iki hedefin birden gösterilmesi "hangisi
-  geçerli" sorusunu kullanıcıya bırakırdı.
+  HEDEFLER (20261027081037, 20261027122336). Bir hedef satırı bir grubun
+  SINIRLARI: asgari puan, azami puan (tavan) ya da ikisi; grup null ise
+  toplam. doktora_sonrasi işaretli satırın asgarisi yalnızca doktora
+  sonrası faaliyetlerle sağlanır ("100 puanın en az 90'ı doktora sonrası").
 */
-export type Hedef = { organization_id: string | null; temel_alan?: string | null; grup: string | null; asgari_puan: number };
-export type HedefDurumu = { grup: string | null; hedef: number; mevcut: number; eksik: number; kaynak: "genel" | "kurum" };
+export type Hedef = {
+  organization_id: string | null;
+  temel_alan?: string | null;
+  grup: string | null;
+  asgari_puan: number | null;
+  azami_puan?: number | null;
+  doktora_sonrasi?: boolean | null;
+};
+export type HedefDurumu = {
+  grup: string | null;
+  doktoraSonrasi: boolean;
+  hedef: number;
+  mevcut: number;
+  eksik: number;
+  kaynak: "genel" | "kurum";
+};
 
 /*
   Geçerli hedefler: başka kurumun ve başka temel alanın hedefi elenir;
-  aynı grup için birden çok aday kalırsa en ÖZEL olan kazanır — kurum
-  genelden, temel alanın kendi hedefi "bütün alanlar"dan önce gelir.
-  Alan seçilmemişse yalnızca bütün alanlara ait hedefler sayılır.
+  aynı grup (ve aynı dönem şartı) için birden çok aday kalırsa en ÖZEL
+  olan kazanır — kurum genelden, temel alanın kendi hedefi "bütün
+  alanlar"dan önce gelir. Alan seçilmemişse yalnızca bütün alanlara ait
+  hedefler sayılır.
 */
 export function etkinHedefler(hedefler: Hedef[], kurum: string | null, temelAlan: string | null = null): Hedef[] {
   const ozgulluk = (h: Hedef) => (h.organization_id ? 2 : 0) + (h.temel_alan ? 1 : 0);
@@ -70,32 +85,63 @@ export function etkinHedefler(hedefler: Hedef[], kurum: string | null, temelAlan
   for (const h of hedefler) {
     if (h.organization_id !== null && h.organization_id !== kurum) continue;
     if (h.temel_alan && h.temel_alan !== temelAlan) continue;
-    const anahtar = h.grup?.trim() || "";
+    const anahtar = `${h.grup?.trim() || ""}|${h.doktora_sonrasi ? 1 : 0}`;
     const onceki = harita.get(anahtar);
     if (!onceki || ozgulluk(h) > ozgulluk(onceki)) harita.set(anahtar, h);
   }
   return [...harita.values()];
 }
 
+/*
+  TAVAN. Grubun sayılan puanı tavanı aşamaz; toplam sayılan puanların
+  toplamıdır. Tavan yalnızca "bütün faaliyetler" satırından okunur (ÜAK
+  tavanı dönemden bağımsız yazıyor). Eskiden tavan yoktu: atıftan 30
+  puanı olan aday, tavan 10 iken toplamda 20 puan fazla görüyordu.
+*/
+export type SayilanGrup<T> = PuanGrubu<T> & { ham: number; azami: number | null };
+
+export function tavanUygula<T>(ozet: { toplam: number; gruplar: PuanGrubu<T>[] }, hedefler: Hedef[]): { toplam: number; ham: number; gruplar: SayilanGrup<T>[] } {
+  const yuvarla = (n: number) => Math.round(n * 1e6) / 1e6;
+  const tavan = (grup: string) => {
+    const h = hedefler.find((x) => !x.doktora_sonrasi && x.grup?.trim() === grup && x.azami_puan != null);
+    return h ? Number(h.azami_puan) : null;
+  };
+  const gruplar = ozet.gruplar.map((g) => {
+    const azami = tavan(g.grup);
+    return { ...g, ham: g.toplam, azami, toplam: azami !== null ? Math.min(g.toplam, azami) : g.toplam };
+  });
+  return { toplam: yuvarla(gruplar.reduce((t, g) => t + g.toplam, 0)), ham: ozet.toplam, gruplar };
+}
+
 export function hedefDurumlari(
   hedefler: Hedef[],
-  toplam: number,
-  gruplar: { grup: string; toplam: number }[],
-): { toplamHedef: HedefDurumu | null; grupHedefleri: HedefDurumu[] } {
+  tum: { toplam: number; gruplar: { grup: string; toplam: number }[] },
+  sonra: { toplam: number; gruplar: { grup: string; toplam: number }[] } | null = null,
+): { toplamHedefleri: HedefDurumu[]; grupHedefleri: HedefDurumu[] } {
   const yuvarla = (n: number) => Math.round(n * 1e6) / 1e6;
-  const durum = (h: Hedef, mevcut: number): HedefDurumu => ({
-    grup: h.grup?.trim() || null,
-    hedef: Number(h.asgari_puan),
-    mevcut,
-    eksik: Math.max(0, yuvarla(Number(h.asgari_puan) - mevcut)),
-    kaynak: h.organization_id ? "kurum" : "genel",
-  });
-  const toplamH = hedefler.find((h) => !h.grup?.trim());
-  const grupHedefleri = hedefler
-    .filter((h) => h.grup?.trim())
-    .map((h) => durum(h, gruplar.find((g) => g.grup === h.grup!.trim())?.toplam ?? 0))
-    .sort((a, b) => b.eksik - a.eksik || (a.grup ?? "").localeCompare(b.grup ?? "", "tr"));
-  return { toplamHedef: toplamH ? durum(toplamH, toplam) : null, grupHedefleri };
+  const durumlar = hedefler
+    .filter((h) => h.asgari_puan != null && Number(h.asgari_puan) > 0)
+    // Doktora tarihi bilinmiyorsa doktora sonrası şartı ölçülemez; "0 / 90" diye eksik göstermek yanlış alarm olurdu.
+    .filter((h) => !h.doktora_sonrasi || sonra !== null)
+    .map((h): HedefDurumu => {
+      const kaynak = h.doktora_sonrasi ? sonra! : tum;
+      const grup = h.grup?.trim() || null;
+      const mevcut = grup ? kaynak.gruplar.find((g) => g.grup === grup)?.toplam ?? 0 : kaynak.toplam;
+      return {
+        grup,
+        doktoraSonrasi: Boolean(h.doktora_sonrasi),
+        hedef: Number(h.asgari_puan),
+        mevcut,
+        eksik: Math.max(0, yuvarla(Number(h.asgari_puan) - mevcut)),
+        kaynak: h.organization_id ? "kurum" : "genel",
+      };
+    });
+  return {
+    toplamHedefleri: durumlar.filter((d) => !d.grup).sort((a, b) => Number(a.doktoraSonrasi) - Number(b.doktoraSonrasi)),
+    grupHedefleri: durumlar
+      .filter((d) => d.grup)
+      .sort((a, b) => b.eksik - a.eksik || (a.grup ?? "").localeCompare(b.grup ?? "", "tr") || Number(a.doktoraSonrasi) - Number(b.doktoraSonrasi)),
+  };
 }
 
 /*

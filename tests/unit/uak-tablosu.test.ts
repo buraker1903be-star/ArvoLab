@@ -20,7 +20,14 @@ describe("ÜAK tablosu", () => {
         { kod: "", etiket: "kodsuz", puan: 5 },
         { kod: "1.b", etiket: "Q2 dergide makale", grup: "Makale", puan: "20", baslica_katsayi: 2 },
       ],
-      hedefler: [{ grup: null, asgari_puan: 100 }, { grup: null, asgari_puan: 50 }],
+      hedefler: [
+        { grup: null, asgari_puan: 100 },
+        { grup: null, asgari_puan: 50 },
+        { grup: null, asgari_puan: 90, doktora_sonrasi: true },
+        { grup: "Makale", azami_puan: 20 },
+        { grup: "Makale", asgari_puan: 5, azami_puan: 10, doktora_sonrasi: true },
+        { grup: "Boş", asgari_puan: null, azami_puan: null },
+      ],
       notlar: ["Puanların en az 90'ı doktora sonrası."],
     }));
     assert.ok(o);
@@ -28,7 +35,13 @@ describe("ÜAK tablosu", () => {
       ["1.a", 30, 0.8, 0.5],
       ["1.b", 20, null, null],
     ]);
-    assert.deepEqual(o.hedefler, [{ grup: null, asgari_puan: 100 }]);
+    assert.deepEqual(o.hedefler, [
+      { grup: null, asgari_puan: 100, azami_puan: null, doktora_sonrasi: false },
+      { grup: null, asgari_puan: 90, azami_puan: null, doktora_sonrasi: true },
+      { grup: "Makale", asgari_puan: null, azami_puan: 20, doktora_sonrasi: false },
+      // Doktora sonrası satırında tavan yazılmaz: tavan dönemden bağımsız.
+      { grup: "Makale", asgari_puan: 5, azami_puan: null, doktora_sonrasi: true },
+    ]);
   });
 
   test("hiç kriter yoksa öneri yok: boş öneriyi onaylamak kriterleri silerdi", () => {
@@ -39,15 +52,25 @@ describe("ÜAK tablosu", () => {
   test("PDF'te geçmeyen sayı yakalanır; 100 de serbest DEĞİL", () => {
     const dogru = uakOnerisiniCozumle(yanit({
       kriterler: [{ kod: "1.a", etiket: "Q1 makale", grup: "Makale", puan: 30, baslica_katsayi: 0.8, diger_katsayi: 0.5 }],
-      hedefler: [{ grup: null, asgari_puan: 100 }],
+      hedefler: [{ grup: null, asgari_puan: 100 }, { grup: null, asgari_puan: 90, doktora_sonrasi: true }],
       notlar: ["En az 90 puanı doktora sonrası."],
     }))!;
     assert.deepEqual(metindeOlmayanSayilar(dogru, PDF), []);
 
     const uydurma = { ...dogru, kriterler: [{ ...dogru.kriterler[0], puan: 25 }] };
     assert.deepEqual(metindeOlmayanSayilar(uydurma, PDF), ["25"]);
-    const uydurmaHedef = { ...dogru, hedefler: [{ grup: null, asgari_puan: 100 }] };
+    const uydurmaHedef = { ...dogru, hedefler: [{ grup: null, asgari_puan: 100, azami_puan: null, doktora_sonrasi: false }] };
     assert.deepEqual(metindeOlmayanSayilar(uydurmaHedef, PDF.replace("100", "120")), ["100"]);
+  });
+
+  test("eşit bölüşüm yalnızca açık true ise", () => {
+    const o = uakOnerisiniCozumle(yanit({
+      kriterler: [
+        { kod: "1.a", etiket: "Makale", grup: "Makale", puan: 30, esit_bolusum: true },
+        { kod: "6.a", etiket: "Doktora tezi", grup: "Danışmanlık", puan: 5, esit_bolusum: "evet" },
+      ],
+    }))!;
+    assert.deepEqual(o.kriterler.map((k) => k.esit_bolusum), [true, false]);
   });
 
   test("istem bütçeye sığdırılır ve kırpıldığını söyler", () => {
