@@ -102,6 +102,35 @@ function helmert(k: number): number[][] {
   });
 }
 
+/*
+  KÜRESELLİK (Mauchly) VE ε DÜZELTMELERİ — tekrarlı ölçümler ve karma
+  ANOVA ortak kullanır. `S` ölçümlerin kovaryans matrisi (karma desende
+  gruplar içi birleştirilmiş), N kişi sayısı, a grup sayısı (tekrarlıda 1);
+  kovaryansın serbestlik derecesi N − a.
+*/
+function kuresellik(S: number[][], N: number, a: number) {
+  const k = S.length;
+  const pp = k - 1;
+  const dfS = N - a;
+  const C = helmert(k);
+  const M = carp(carp(C, S), devrik(C));
+  const izM = iz(M);
+  const ggEpsilon = izM ** 2 / (pp * iz(carp(M, M)));
+  const hfHam = (N * pp * ggEpsilon - 2) / (pp * (dfS - pp * ggEpsilon));
+  const hfEpsilon = Math.min(1, Math.max(ggEpsilon, hfHam));
+  let mauchlyW = 1;
+  let mauchlyChi = 0;
+  let mauchlyP = 1;
+  const mauchlyDf = (pp * (pp + 1)) / 2 - 1;
+  if (k > 2) {
+    mauchlyW = determinant(M) / (izM / pp) ** pp;
+    const d = 1 - (2 * pp * pp + pp + 2) / (6 * pp * dfS);
+    mauchlyChi = -dfS * d * Math.log(mauchlyW);
+    mauchlyP = Number.isFinite(mauchlyChi) ? 1 - chiKareCDF(mauchlyChi, mauchlyDf) : NaN;
+  }
+  return { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, ggEpsilon, hfEpsilon };
+}
+
 /* ---------- Tekrarlı ölçümler ANOVA ---------- */
 
 export interface TekrarliAnovaSonucu {
@@ -156,24 +185,7 @@ export function tekrarliOlcumlerAnova(olcumler: number[][]): TekrarliAnovaSonucu
       return t / (n - 1);
     }),
   );
-  const C = helmert(k);
-  const M = carp(carp(C, S), devrik(C));
-  const izM = iz(M);
-  const pp = k - 1;
-  const ggEpsilon = izM ** 2 / (pp * iz(carp(M, M)));
-  const hfHam = (n * pp * ggEpsilon - 2) / (pp * (n - 1 - pp * ggEpsilon));
-  const hfEpsilon = Math.min(1, Math.max(ggEpsilon, hfHam));
-
-  let mauchlyW = 1;
-  let mauchlyChi = 0;
-  let mauchlyP = 1;
-  const mauchlyDf = (pp * (pp + 1)) / 2 - 1;
-  if (k > 2) {
-    mauchlyW = determinant(M) / (izM / pp) ** pp;
-    const d = 1 - (2 * pp * pp + pp + 2) / (6 * pp * (n - 1));
-    mauchlyChi = -(n - 1) * d * Math.log(mauchlyW);
-    mauchlyP = Number.isFinite(mauchlyChi) ? 1 - chiKareCDF(mauchlyChi, mauchlyDf) : NaN;
-  }
+  const { mauchlyW, mauchlyChi, mauchlyDf, mauchlyP, ggEpsilon, hfEpsilon } = kuresellik(S, n, 1);
 
   return {
     n,
@@ -319,5 +331,128 @@ export function ancova(
     egimDf1,
     egimDf2,
     egimP,
+  };
+}
+
+/* ---------- Karma (gruplar arası × tekrarlı ölçüm) ANOVA ---------- */
+
+export interface KarmaEtki {
+  ad: string;
+  ss: number;
+  df1: number;
+  df2: number;
+  f: number;
+  p: number;
+  kismiEtaKare: number;
+  /** Tekrarlı etkilerde düzeltmeli p'ler; gruplar arası etkide p'nin aynısı. */
+  ggP: number;
+  hfP: number;
+}
+
+export interface KarmaAnovaSonucu {
+  n: number;
+  gruplar: string[];
+  grupNleri: number[];
+  /** Hücre ortalamaları: [grup][ölçüm]. */
+  hucreOrtalamalari: number[][];
+  olcumOrtalamalari: number[];
+  grup: KarmaEtki;
+  olcum: KarmaEtki;
+  etkilesim: KarmaEtki;
+  mauchlyW: number;
+  mauchlyChi: number;
+  mauchlyDf: number;
+  mauchlyP: number;
+  ggEpsilon: number;
+  hfEpsilon: number;
+}
+
+export type KarmaHata = "az-grup" | "az-olcum" | "az-gozlem";
+
+/*
+  KARMA ANOVA (27.10.2026): deneysel tezlerin klasik deseni — deney ve
+  kontrol grubu (gruplar arası) × ön test, son test, izleme (tekrarlı).
+  Asıl soru ETKİLEŞİMDİR: "deney grubunun puanı zamanla kontrol grubundan
+  farklı değişti mi". Ayrı ayrı t-testleri ya da tekrarlı ANOVA bunu
+  göremiyordu; öğrenci ön test–son test farkını gruplar arasında t-testiyle
+  karşılaştırıp yaklaşık bir cevap veriyordu.
+
+  Kareler toplamı klasik bölüşümle (Tip III ile dengeli desende aynı;
+  dengesiz gruplarda pingouin.mixed_anova ile aynı yolu izliyor —
+  test dosyasında). Küresellik gruplar içi BİRLEŞTİRİLMİŞ kovaryansla
+  (SPSS de böyle); düzeltmeler tekrarlı etkilere uygulanır.
+
+  `gruplar[j][t]` j. grubun t. ölçümü; her grubun satırları hizalı (aynı
+  kişi) olmalı — çağıran eksik satırı atarak hizalar.
+*/
+export function karmaAnova(gruplar: number[][][], grupAdlari: string[]): KarmaAnovaSonucu | KarmaHata {
+  const a = gruplar.length;
+  const m = gruplar[0]?.length ?? 0;
+  if (a < 2) return "az-grup";
+  if (m < 2) return "az-olcum";
+  const nler = gruplar.map((g) => Math.min(...g.map((o) => o.length)));
+  const N = nler.reduce((t, x) => t + x, 0);
+  if (nler.some((x) => x < 2) || N - a < m) return "az-gozlem";
+
+  let toplam = 0;
+  for (let j = 0; j < a; j += 1) for (const o of gruplar[j]) for (let i = 0; i < nler[j]; i += 1) toplam += o[i];
+  const G = toplam / (N * m);
+
+  const hucre = gruplar.map((g, j) => g.map((o) => mean(o.slice(0, nler[j]))));
+  const grupOrt = hucre.map((h) => mean(h));
+  const olcumOrt = Array.from({ length: m }, (_, t) => hucre.reduce((s, h, j) => s + h[t] * nler[j], 0) / N);
+
+  let ssToplam = 0;
+  let ssKisiler = 0;
+  for (let j = 0; j < a; j += 1) {
+    for (let i = 0; i < nler[j]; i += 1) {
+      let kisiToplam = 0;
+      for (let t = 0; t < m; t += 1) {
+        const y = gruplar[j][t][i];
+        ssToplam += (y - G) ** 2;
+        kisiToplam += y;
+      }
+      ssKisiler += m * (kisiToplam / m - G) ** 2;
+    }
+  }
+  const ssGrup = m * grupOrt.reduce((s, o, j) => s + nler[j] * (o - G) ** 2, 0);
+  const ssHataArasi = ssKisiler - ssGrup;
+  const ssOlcum = N * olcumOrt.reduce((s, o) => s + (o - G) ** 2, 0);
+  const ssHucre = hucre.reduce((s, h, j) => s + h.reduce((u, o) => u + nler[j] * (o - G) ** 2, 0), 0);
+  const ssEtkilesim = ssHucre - ssGrup - ssOlcum;
+  const ssHataIci = ssToplam - ssKisiler - ssOlcum - ssEtkilesim;
+
+  const dfHataArasi = N - a;
+  const dfHataIci = (N - a) * (m - 1);
+
+  /* Gruplar içi birleştirilmiş kovaryans (N − a). */
+  const S = Array.from({ length: m }, (_, p) =>
+    Array.from({ length: m }, (_, q) => {
+      let t = 0;
+      for (let j = 0; j < a; j += 1) {
+        for (let i = 0; i < nler[j]; i += 1) t += (gruplar[j][p][i] - hucre[j][p]) * (gruplar[j][q][i] - hucre[j][q]);
+      }
+      return t / dfHataArasi;
+    }),
+  );
+  const kur = kuresellik(S, N, a);
+
+  const etki = (ad: string, ss: number, df1: number, ssHata: number, df2: number, tekrarli: boolean): KarmaEtki => {
+    const f = ssHata > 0 ? ss / df1 / (ssHata / df2) : NaN;
+    const p = Number.isFinite(f) ? fTestP(f, df1, df2) : NaN;
+    const duzelt = (e: number) => (tekrarli && Number.isFinite(f) ? fTestP(f, df1 * e, df2 * e) : p);
+    return { ad, ss, df1, df2, f, p, kismiEtaKare: ss / (ss + ssHata), ggP: duzelt(kur.ggEpsilon), hfP: duzelt(kur.hfEpsilon) };
+  };
+
+  return {
+    n: N,
+    gruplar: grupAdlari,
+    grupNleri: nler,
+    hucreOrtalamalari: hucre,
+    olcumOrtalamalari: olcumOrt,
+    grup: etki("Grup", ssGrup, a - 1, ssHataArasi, dfHataArasi, false),
+    olcum: etki("Ölçüm", ssOlcum, m - 1, ssHataIci, dfHataIci, true),
+    etkilesim: etki("Ölçüm × Grup", ssEtkilesim, (a - 1) * (m - 1), ssHataIci, dfHataIci, true),
+    ...kur,
   };
 }

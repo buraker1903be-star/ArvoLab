@@ -35,7 +35,8 @@ import { elemeNotu, eslesenSatirlar, sayisalSutun } from "@/lib/veri-eslestirme"
 import { basitEtkiler, ikiYonluAnova, type IkiYonluHata } from "@/lib/stats-iki-yonlu-anova";
 import { gamesHowell, tukeyHSD } from "@/lib/stats-tukey";
 import { shapiroWilk } from "@/lib/stats-shapiro";
-import { ancova, tekOrneklemTTest, tekrarliIkiliKarsilastirmalar, tekrarliOlcumlerAnova } from "@/lib/stats-anova-ek";
+import { ancova, karmaAnova, tekOrneklemTTest, tekrarliIkiliKarsilastirmalar, tekrarliOlcumlerAnova } from "@/lib/stats-anova-ek";
+import ProfilGrafigi from "./profil-grafigi";
 import { kismiKorelasyon, mcnemar } from "@/lib/stats-iliski";
 import { lojistikRegresyon, type LojistikHata } from "@/lib/stats-lojistik";
 import { aciklayiciFaktorAnalizi, kmoYorumu, maddeUyarisi } from "@/lib/stats-faktor";
@@ -158,6 +159,12 @@ export default function DataAnalyzer({
   const [faktorSayisi, setFaktorSayisi] = useState("");
 
   const [result, setResult] = useState<React.ReactNode>(null);
+  /*
+    Sonucun grafiği AYRI tutuluyor: kopyalanan ve teze kaydedilen metin
+    sonuç kutusunun innerText'i; grafik onun içinde dursaydı eksen
+    yazıları ("10.9 14.3 on son…") APA metnine karışıyordu (27.10.2026).
+  */
+  const [sonucGrafigi, setSonucGrafigi] = useState<React.ReactNode>(null);
   const [resultError, setResultError] = useState<string | null>(null);
 
   /*
@@ -525,6 +532,7 @@ export default function DataAnalyzer({
     if (!dataset) return;
     setResultError(null);
     setResult(null);
+    setSonucGrafigi(null);
     setKaydedildi(false);
     setYorum(null);
     const baslik = analizBasligi(analysisType, {
@@ -536,7 +544,7 @@ export default function DataAnalyzer({
       maddeSayisi:
         analysisType === "regression" || analysisType === "lojistik"
           ? yordayicilar.filter((c) => c !== varA).length
-          : analysisType === "friedman" || analysisType === "tekrarlianova"
+          : analysisType === "friedman" || analysisType === "tekrarlianova" || analysisType === "karmaanova"
             ? olcumler.length
             : reliabilityItems.length,
       testDegeri: analysisType === "tekorneklem" ? Number(testDegeri.replace(",", ".")) : undefined,
@@ -552,7 +560,7 @@ export default function DataAnalyzer({
     setCalisanAnaliz({
       secim: {
         varA, varB, groupVar, groupVar2,
-        maddeler: analysisType === "friedman" || analysisType === "tekrarlianova" ? olcumler : reliabilityItems,
+        maddeler: analysisType === "friedman" || analysisType === "tekrarlianova" || analysisType === "karmaanova" ? olcumler : reliabilityItems,
         yordayicilar: yordayicilar.filter((c) => c !== varA),
         kovaryatlar: kovaryatlar.filter((c) => c !== varA && c !== varB),
         testDegeri: Number(testDegeri.replace(",", ".")),
@@ -1525,6 +1533,173 @@ export default function DataAnalyzer({
         );
       }
 
+      /*
+        KARMA ANOVA (27.10.2026): grup (gruplar arası) × ölçüm (tekrarlı).
+        Bir kişinin bir ölçümü boşsa o kişi bütünüyle düşer (liste bazlı).
+      */
+      if (analysisType === "karmaanova") {
+        if (olcumler.length < 2) {
+          setResultError("En az iki ölçüm (sütun) seçin, ör. ön test ve son test.");
+          return;
+        }
+        if (groupLevels.length < 2) {
+          setResultError("Grup değişkeninde en az iki grup olmalıdır (ör. deney ve kontrol).");
+          return;
+        }
+        const tamSatirlar = dataset.rows.filter(
+          (satir) => satir[groupVar] !== null && satir[groupVar] !== "" && olcumler.every((o) => sayisalMi(satir[o])),
+        );
+        const veriGruplari = groupLevels.map((g) => {
+          const kendi = tamSatirlar.filter((satir) => String(satir[groupVar]) === g);
+          return olcumler.map((o) => kendi.map((satir) => Number(satir[o])));
+        });
+        const r = karmaAnova(veriGruplari, groupLevels);
+        if (r === "az-grup") return setResultError("En az iki grup gerekli.");
+        if (r === "az-olcum") return setResultError("En az iki ölçüm gerekli.");
+        if (r === "az-gozlem") return setResultError("Her grupta bütün ölçümleri dolu en az 2 kişi olmalı; toplam kişi sayısı da ölçüm sayısından fazla olmalı.");
+        if (!hesaplanabilir(r.olcum.f, r.etkilesim.f, r.grup.f)) return setResultError(DEGISKENLIK_YOK);
+
+        /* Küresellik bozuksa tekrarlı etkilerde Greenhouse-Geisser (ε > .75 ise Huynh-Feldt). */
+        const kuresellikBozuk = olcumler.length > 2 && isSignificant(r.mauchlyP);
+        const duzeltme = !kuresellikBozuk ? null : r.ggEpsilon > 0.75 ? "hf" : "gg";
+        const eps = duzeltme === "gg" ? r.ggEpsilon : duzeltme === "hf" ? r.hfEpsilon : 1;
+        const raporP = (e: typeof r.olcum) => (duzeltme === "gg" ? e.ggP : duzeltme === "hf" ? e.hfP : e.p);
+        const df = (d: number, tekrarli: boolean) => (tekrarli && eps !== 1 ? yazSayi(d * eps, 2) : String(d));
+        const satirlar = [
+          { e: r.grup, tekrarli: false },
+          { e: r.olcum, tekrarli: true },
+          { e: r.etkilesim, tekrarli: true },
+        ];
+        const etkilesimSig = isSignificant(raporP(r.etkilesim));
+
+        /*
+          BASİT ETKİLER: etkileşim anlamlıysa ana etkiler tek başına
+          yorumlanmaz; her ölçümde grup farkı ve her grupta zaman etkisi
+          ayrı ayrı bakılır. p'ler aile içinde Bonferroni ile düzeltilir.
+        */
+        const olcumdeGrup = etkilesimSig
+          ? olcumler.map((o, t) => {
+              const a = oneWayAnova(veriGruplari.map((g) => g[t]));
+              return { ad: o, f: a.f, df1: a.dfb, df2: a.dfw, p: Math.min(1, a.p * olcumler.length) };
+            })
+          : [];
+        const gruptaZaman = etkilesimSig
+          ? groupLevels.map((g, j) => {
+              const t = tekrarliOlcumlerAnova(veriGruplari[j]);
+              const pp = olcumler.length > 2 && isSignificant(t.mauchlyP) ? t.ggP : t.p;
+              return { ad: g, f: t.f, df1: t.df1, df2: t.df2, p: Math.min(1, pp * groupLevels.length) };
+            })
+          : [];
+        const dusen = dataset.rows.length - tamSatirlar.length;
+
+        setSonucGrafigi(<ProfilGrafigi olcumler={olcumler} gruplar={groupLevels} ortalamalar={r.hucreOrtalamalari} />);
+        setResult(
+          <div>
+            <div className="table-scroll" role="region" aria-label="Hücre ortalamaları" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    <th>Grup</th>
+                    <th>N</th>
+                    {olcumler.map((o) => (
+                      <th key={o}>{o}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupLevels.map((g, j) => (
+                    <tr key={g}>
+                      <td>{g}</td>
+                      <td>{r.grupNleri[j]}</td>
+                      {r.hucreOrtalamalari[j].map((v, t) => (
+                        <td key={t}>{yazSayi(v)}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-scroll" role="region" aria-label="Karma ANOVA tablosu" tabIndex={0}>
+              <table className="stats-result-table">
+                <thead>
+                  <tr>
+                    <th>Kaynak</th>
+                    <th>sd</th>
+                    <th>F</th>
+                    <th>p</th>
+                    <th>Kısmi η²</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {satirlar.map(({ e, tekrarli }) => (
+                    <tr key={e.ad} className={isSignificant(tekrarli ? raporP(e) : e.p) ? "stats-significant" : undefined}>
+                      <td>{e.ad === "Grup" ? groupVar : e.ad === "Ölçüm" ? "Ölçüm (zaman)" : `Ölçüm × ${groupVar}`}</td>
+                      <td>
+                        {df(e.df1, tekrarli)}, {df(e.df2, tekrarli)}
+                      </td>
+                      <td>{yazSayi(e.f)}</td>
+                      <td>{yazP(tekrarli ? raporP(e) : e.p)}</td>
+                      <td>{yazSayi(e.kismiEtaKare)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="tone-text mt-sm" data-tone={etkilesimSig ? "success" : "warning"}>
+              Etkileşim (ölçüm × {groupVar}): F({df(r.etkilesim.df1, true)}, {df(r.etkilesim.df2, true)}) = {yazSayi(r.etkilesim.f)},{" "}
+              {yazP(raporP(r.etkilesim))}
+              {etkilesimSig
+                ? " — grupların zaman içindeki değişimi farklı"
+                : " — grupların zaman içindeki değişimi farklı değil"}
+              {duzeltme === "gg" ? " (Greenhouse-Geisser)" : duzeltme === "hf" ? " (Huynh-Feldt)" : ""}
+            </p>
+            <ul className="muted text-sm">
+              {olcumler.length > 2 ? (
+                <li>
+                  Mauchly W = {yazSayi(r.mauchlyW, 3)}, χ²({r.mauchlyDf}) = {yazSayi(r.mauchlyChi)}, {yazP(r.mauchlyP)} —{" "}
+                  {kuresellikBozuk ? "küresellik sağlanmıyor; tekrarlı etkilerde düzeltilmiş sd ve p yazıldı" : "küresellik sağlanıyor"} ·
+                  GG ε = {yazSayi(r.ggEpsilon, 3)}, HF ε = {yazSayi(r.hfEpsilon, 3)}
+                </li>
+              ) : (
+                <li>İki ölçümde küresellik tanım gereği sağlanır.</li>
+              )}
+              {olcumler.map((o, t) => {
+                const l = leveneTesti(veriGruplari.map((g) => g[t]));
+                return (
+                  <li key={o}>
+                    Levene ({o}): F({l.df1}, {l.df2}) = {yazSayi(l.f)}, {yazP(l.p)} — {l.homojen ? "varyanslar homojen" : "varyanslar homojen değil"}
+                  </li>
+                );
+              })}
+            </ul>
+            {etkilesimSig ? (
+              <div className="mt-sm">
+                <strong>Basit etkiler (Bonferroni düzeltmeli)</strong>
+                <ul className="muted text-sm">
+                  {olcumdeGrup.map((b) => (
+                    <li key={`o-${b.ad}`}>
+                      {b.ad} ölçümünde gruplar: F({b.df1}, {b.df2}) = {yazSayi(b.f)}, {yazP(b.p)}
+                      {isSignificant(b.p) ? " — fark anlamlı" : " — fark anlamlı değil"}
+                    </li>
+                  ))}
+                  {gruptaZaman.map((b) => (
+                    <li key={`g-${b.ad}`}>
+                      {b.ad} grubunda zaman: F({b.df1}, {b.df2}) = {yazSayi(b.f)}, {yazP(b.p)}
+                      {isSignificant(b.p) ? " — değişim anlamlı" : " — değişim anlamlı değil"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="muted text-sm">
+                Etkileşim anlamlı olmadığı için {groupVar} ve ölçüm ana etkileri tablodaki gibi yorumlanır.
+              </p>
+            )}
+            {dusen > 0 ? <p className="muted text-sm">{dusen} satır eksik veri yüzünden analiz dışı bırakıldı.</p> : null}
+          </div>,
+        );
+      }
+
       if (analysisType === "kruskalwallis") {
         if (groupLevels.length < 3) {
           setResultError(
@@ -2119,7 +2294,7 @@ export default function DataAnalyzer({
             </label>
             )}
 
-            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "chisquare" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "ikiyonluanova" || analysisType === "ancova") && (
+            {(analysisType === "ttest" || analysisType === "anova" || analysisType === "chisquare" || analysisType === "mannwhitney" || analysisType === "kruskalwallis" || analysisType === "ikiyonluanova" || analysisType === "ancova" || analysisType === "karmaanova") && (
               <label>
                 <span>{analysisType === "ikiyonluanova" ? "1. faktör (kategorik)" : "Grup değişkeni (kategorik)"}</span>
                 <select value={groupVar} onChange={(e) => setGroupVar(e.target.value)}>
@@ -2271,7 +2446,7 @@ export default function DataAnalyzer({
               </label>
             )}
 
-            {(analysisType === "friedman" || analysisType === "tekrarlianova") && (
+            {(analysisType === "friedman" || analysisType === "tekrarlianova" || analysisType === "karmaanova") && (
               <SutunSecimi
                 etiket={analysisType === "friedman" ? "Tekrarlı ölçümler (en az üç)" : "Tekrarlı ölçümler"}
                 sutunlar={dataset.numericColumns}
@@ -2304,6 +2479,7 @@ export default function DataAnalyzer({
                 dokunuş, bütün türlerde çalışıyor.
               */}
               <div ref={sonucKutusu}>{result}</div>
+              {sonucGrafigi}
               <div className="cluster mt-sm">
                 <button type="button" className="projects-filter-button button-compact" onClick={sonucuKopyala}>
                   {kopyalandi ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}

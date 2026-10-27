@@ -7,7 +7,7 @@
 */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { ancova, tekOrneklemTTest, tekrarliOlcumlerAnova } from "@/lib/stats-anova-ek";
+import { ancova, karmaAnova, tekOrneklemTTest, tekrarliOlcumlerAnova } from "@/lib/stats-anova-ek";
 
 const yakin = (a: number, b: number, tolerans = 1e-4) => assert.ok(Math.abs(a - b) < tolerans, `${a} ≈ ${b} değil`);
 
@@ -85,5 +85,40 @@ describe("ANCOVA (pingouin + statsmodels)", () => {
   test("tek grup ya da az gözlem: hesaplanmaz", () => {
     assert.equal(ancova(gozlemler.filter((g) => g.grup === "a"), ["on"]), "az-grup");
     assert.equal(ancova(gozlemler.slice(5, 9), ["on"]), "az-gozlem");
+  });
+});
+
+describe("karma ANOVA (pingouin.mixed_anova, dengesiz gruplar)", () => {
+  const DENEY = [[10, 12, 11, 14, 13, 9, 12], [15, 17, 15, 18, 17, 13, 16], [16, 18, 17, 18, 19, 14, 17]];
+  const KONTROL = [[11, 10, 13, 12, 14, 10], [12, 11, 13, 13, 15, 10], [11, 12, 14, 13, 14, 11]];
+
+  test("grup, ölçüm, etkileşim, küresellik", () => {
+    const r = karmaAnova([DENEY, KONTROL], ["deney", "kontrol"]);
+    assert.ok(typeof r === "object");
+    yakin(r.grup.ss, 67.6978021978);
+    assert.deepEqual([r.grup.df1, r.grup.df2], [1, 11]);
+    yakin(r.grup.f, 8.9642833521);
+    yakin(r.grup.p, 0.012209181976, 1e-8);
+    yakin(r.grup.kismiEtaKare, 0.449016035);
+    yakin(r.olcum.ss, 79.1282051282);
+    yakin(r.olcum.f, 153.6018099547, 1e-3);
+    yakin(r.olcum.ggP, 3.9706202426e-11, 1e-14);
+    yakin(r.olcum.kismiEtaKare, 0.9331720593);
+    yakin(r.etkilesim.ss, 37.8717948718);
+    assert.deepEqual([r.etkilesim.df1, r.etkilesim.df2], [2, 22]);
+    yakin(r.etkilesim.f, 73.5158371041, 1e-3);
+    yakin(r.etkilesim.p, 1.8155176089e-10, 1e-13);
+    yakin(r.etkilesim.ggP, 1.2581988927e-8, 1e-11);
+    yakin(r.etkilesim.kismiEtaKare, 0.8698468787);
+    yakin(r.mauchlyW, 0.7236777064);
+    yakin(r.mauchlyP, 0.1984842131);
+    yakin(r.ggEpsilon, 0.7835011619);
+    /* Huynh-Feldt (gruplu): (N(m−1)ε − 2) / ((m−1)(N − a − (m−1)ε)) = 18,371 / 18,866. */
+    yakin(r.hfEpsilon, 0.973764);
+  });
+
+  test("tek grup ya da tek ölçüm: hesaplanmaz", () => {
+    assert.equal(karmaAnova([DENEY], ["deney"]), "az-grup");
+    assert.equal(karmaAnova([[DENEY[0]], [KONTROL[0]]], ["a", "b"]), "az-olcum");
   });
 });

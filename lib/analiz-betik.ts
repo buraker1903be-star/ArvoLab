@@ -66,6 +66,7 @@ export const YONTEM_ACIKLAMASI: Record<AnalizTuru, string> = {
   mcnemar: "İki kategorili önce–sonra (Evet/Hayır)",
   lojistik: "İki kategorili sonucu yordar (var/yok)",
   faktor: "Ölçeğin yapısı: KMO, Bartlett, faktör yükleri",
+  karmaanova: "Deney–kontrol × ön test–son test; grupların değişimi farklı mı",
 };
 
 /*
@@ -81,7 +82,7 @@ export const YONTEM_GRUPLARI: { baslik: string; turler: AnalizTuru[] }[] = [
   { baslik: "Bir ortalamayı değerle karşılaştır", turler: ["tekorneklem"] },
   { baslik: "İki grubu karşılaştır", turler: ["ttest", "mannwhitney"] },
   { baslik: "Üç ve daha çok grubu karşılaştır", turler: ["anova", "kruskalwallis", "ikiyonluanova", "ancova"] },
-  { baslik: "Aynı kişilerin ölçümlerini karşılaştır", turler: ["pairedttest", "wilcoxon", "tekrarlianova", "friedman", "mcnemar"] },
+  { baslik: "Aynı kişilerin ölçümlerini karşılaştır", turler: ["pairedttest", "wilcoxon", "tekrarlianova", "friedman", "karmaanova", "mcnemar"] },
   { baslik: "İlişki ve yordama", turler: ["correlation", "spearman", "kismikorelasyon", "chisquare", "regression", "lojistik"] },
   { baslik: "Ölçek", turler: ["reliability", "faktor"] },
 ];
@@ -166,6 +167,8 @@ function spss(tur: AnalizTuru, s: BetikSecimi): string {
       return `T-TEST\n  /TESTVAL=${s.testDegeri ?? 0}\n  /VARIABLES=${a}\n  /CRITERIA=CI(.95).`;
     case "tekrarlianova":
       return `GLM ${maddeler}\n  /WSFACTOR=olcum ${s.maddeler?.length || 3} Polynomial\n  /PRINT=DESCRIPTIVE ETASQ\n  /EMMEANS=TABLES(olcum) COMPARE ADJ(BONFERRONI)\n  /WSDESIGN=olcum.`;
+    case "karmaanova":
+      return `GLM ${maddeler} BY ${g}\n  /WSFACTOR=olcum ${s.maddeler?.length || 3} Polynomial\n  /PRINT=DESCRIPTIVE ETASQ HOMOGENEITY\n  /PLOT=PROFILE(olcum*${g})\n  /EMMEANS=TABLES(${g}*olcum) COMPARE(${g}) ADJ(BONFERRONI)\n  /WSDESIGN=olcum\n  /DESIGN=${g}.`;
     case "ancova":
       return `UNIANOVA ${a} BY ${g} WITH ${kovaryatlar}\n  /PRINT=ETASQ DESCRIPTIVE HOMOGENEITY\n  /EMMEANS=TABLES(${g}) WITH(${kovaryatlar.split(" ").map((k) => `${k}=MEAN`).join(" ")}) COMPARE ADJ(BONFERRONI)\n  /DESIGN=${kovaryatlar} ${g}.`;
     case "kismikorelasyon":
@@ -212,6 +215,7 @@ function r(tur: AnalizTuru, s: BetikSecimi): string {
     friedman: `olcumler <- na.omit(veri[, c(${maddeler})])\nfriedman.test(as.matrix(olcumler))`,
     tekorneklem: `t.test(veri$${a}, mu = ${s.testDegeri ?? 0})`,
     tekrarlianova: `library(rstatix)\nlibrary(tidyr)\nveri$id <- seq_len(nrow(veri))\nuzun <- pivot_longer(veri[, c("id", ${maddeler})], -id, names_to = "olcum", values_to = "puan")\nanova_test(uzun, dv = puan, wid = id, within = olcum)  # Mauchly ve GG/HF düzeltmesi dahil\npairwise_t_test(uzun, puan ~ olcum, paired = TRUE, p.adjust.method = "bonferroni")`,
+    karmaanova: `library(rstatix)\nlibrary(tidyr)\nveri$id <- seq_len(nrow(veri))\nuzun <- pivot_longer(veri[, c("id", ${JSON.stringify(ad(s.groupVar, "grup"))}, ${maddeler})], -c(id, ${g}), names_to = "olcum", values_to = "puan")\nanova_test(uzun, dv = puan, wid = id, within = olcum, between = ${g})`,
     ancova: `model <- lm(${a} ~ ${kovaryatlarR} + factor(${g}), data = veri)\ncar::Anova(model, type = 2)\nemmeans::emmeans(model, ~ ${g})  # düzeltilmiş ortalamalar`,
     kismikorelasyon: `library(ppcor)\ntemiz <- na.omit(veri[, c(${JSON.stringify(ad(s.varA, "degisken1"))}, ${JSON.stringify(ad(s.varB, "degisken2"))}, ${kovaryatlarListe})])\npcor.test(temiz[[1]], temiz[[2]], temiz[, -(1:2)])`,
     mcnemar: `mcnemar.test(table(veri$${a}, veri$${b}))`,
@@ -250,6 +254,7 @@ function python(tur: AnalizTuru, s: BetikSecimi): string {
     friedman: `olcumler = veri[${maddeler}].dropna()\nprint(stats.friedmanchisquare(*[olcumler[m] for m in olcumler.columns]))`,
     tekorneklem: `print(stats.ttest_1samp(${a}.dropna(), ${s.testDegeri ?? 0}))`,
     tekrarlianova: `import pingouin as pg\nuzun = veri[${maddeler}].dropna().reset_index().melt(id_vars="index", var_name="olcum", value_name="puan")\nprint(pg.rm_anova(uzun, dv="puan", within="olcum", subject="index", correction=True))\nprint(pg.pairwise_tests(uzun, dv="puan", within="olcum", subject="index", padjust="bonf"))`,
+    karmaanova: `import pingouin as pg\nuzun = veri[[${JSON.stringify(gAd)}] + ${maddeler}].dropna().reset_index().melt(id_vars=["index", ${JSON.stringify(gAd)}], var_name="olcum", value_name="puan")\nprint(pg.mixed_anova(uzun, dv="puan", within="olcum", between=${JSON.stringify(gAd)}, subject="index", correction=True))`,
     ancova: `import pingouin as pg\nprint(pg.ancova(veri, dv=${JSON.stringify(aAd)}, between=${JSON.stringify(gAd)}, covar=${kovaryatlarPy}))`,
     kismikorelasyon: `import pingouin as pg\nprint(pg.partial_corr(veri, x=${JSON.stringify(aAd)}, y=${JSON.stringify(bAd)}, covar=${kovaryatlarPy}))`,
     mcnemar: `from statsmodels.stats.contingency_tables import mcnemar\nprint(mcnemar(pd.crosstab(${a}, ${b}), exact=True))`,

@@ -55,6 +55,8 @@ export const ANALIZ_ETIKETLERI = {
   mcnemar: "McNemar Testi",
   lojistik: "İkili Lojistik Regresyon",
   faktor: "Açımlayıcı Faktör Analizi",
+  /* Deney/kontrol × ön test/son test deseni (27.10.2026): asıl bulgu etkileşim. */
+  karmaanova: "Karma ANOVA (Gruplar Arası × Tekrarlı)",
 } as const;
 
 export type AnalizTuru = keyof typeof ANALIZ_ETIKETLERI;
@@ -113,6 +115,8 @@ export function analizBasligi(tur: string, secim: AnalizSecimi): string {
               ? `${secim.maddeSayisi} madde`
             : (tur === "friedman" || tur === "tekrarlianova") && secim.maddeSayisi
               ? `${secim.maddeSayisi} ölçüm`
+            : tur === "karmaanova"
+              ? [secim.maddeSayisi ? `${secim.maddeSayisi} ölçüm` : "", grup].filter(Boolean).join(" × ")
             : tur === "faktor" && secim.maddeSayisi
               ? `${secim.maddeSayisi} madde`
             : tur === "tekorneklem" && a

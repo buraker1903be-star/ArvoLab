@@ -680,3 +680,18 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .turetilen-sutunlar { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .turetilen-sutunlar li { display: grid; gap: 2px; }
 .turetilen-sutunlar code { font-size: var(--fs-micro); white-space: pre-wrap; }
+
+/* Karma ANOVA profil grafiği (profil-grafigi.tsx) */
+.profil-grafigi { max-width: 460px; margin: 10px 0; }
+.profil-grafigi svg { display: block; width: 100%; height: auto; }
+.profil-izgara { stroke: var(--line-soft); stroke-width: 1; }
+.profil-eksen { fill: var(--muted); font-size: 11px; }
+.profil-seri { --seri: var(--accent); }
+.profil-seri[data-sira="1"], .profil-lejant[data-sira="1"] { --seri: var(--warning); }
+.profil-seri[data-sira="2"], .profil-lejant[data-sira="2"] { --seri: var(--success); }
+.profil-seri[data-sira="3"], .profil-lejant[data-sira="3"] { --seri: var(--danger); }
+.profil-seri[data-sira="4"], .profil-lejant[data-sira="4"] { --seri: var(--info); }
+.profil-seri polyline { fill: none; stroke: var(--seri); stroke-width: 2; }
+.profil-seri circle { fill: var(--seri); }
+.profil-lejant { --seri: var(--accent); display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); }
+.profil-lejant::before { width: 14px; height: 3px; border-radius: 2px; background: var(--seri); content: ""; }

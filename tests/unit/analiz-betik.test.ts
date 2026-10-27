@@ -65,3 +65,10 @@ test("yeni analizlerin komutları (27.10.2026)", () => {
   assert.match(analizBetigi("spss", "faktor", { maddeler: ["m1", "m2", "m3"], faktorSayisi: 2 }), /FACTORS\(2\)[\s\S]*VARIMAX/);
   assert.match(analizBetigi("python", "mcnemar", { varA: "once", varB: "sonra" }), /exact=True/);
 });
+
+test("karma ANOVA komutları", () => {
+  const s = { groupVar: "grup", maddeler: ["on", "son", "iz"] };
+  assert.match(analizBetigi("spss", "karmaanova", s), /GLM on son iz BY grup[\s\S]*WSFACTOR=olcum 3[\s\S]*DESIGN=grup/);
+  assert.match(analizBetigi("r", "karmaanova", s), /between = grup/);
+  assert.match(analizBetigi("python", "karmaanova", s), /mixed_anova/);
+});
