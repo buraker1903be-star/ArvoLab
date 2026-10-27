@@ -107,7 +107,7 @@ export default async function ProjectsPage({
         ),
       )
     : new Map();
-  // Silme yetkisi RLS ile aynı: sahibi ya da Akademik Yönetici/Sistem
+  // Silme yetkisi RLS ile aynı: sahibi ya da Yönetici/Sistem
   // Yöneticisi/Kurucu (Kontrolör silme yetkisine sahip DEĞİL).
   const canDeleteAnyProject =
     profile?.role === "academic_manager" || profile?.role === "system_admin" || profile?.role === "founder";

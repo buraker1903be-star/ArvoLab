@@ -15,7 +15,7 @@
   da yapma yolu açmıyor.
 
   Yalnızca iç ekip (system_admin, founder) önizleyebilir: Kontrolör ya
-  da Akademik Yönetici için öğrenci düzeni, kendi işlerini (onay,
+  da Yönetici için öğrenci düzeni, kendi işlerini (onay,
   atama) gizleyen bir tuzak olurdu.
 
   Saf modül; testi tests/unit/onizleme.test.ts.

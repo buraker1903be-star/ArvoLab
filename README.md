@@ -159,7 +159,7 @@ yapıda oluşuyor (PGlite üzerinde test edildi, rol/RLS davranış testleri dah
 
 Belge Editörü listesindeki her çalışma kartına **"Çalışmayı Sil"**
 butonu eklendi. Yetki, veritabanı seviyesindeki (RLS) kuralla
-birebir aynı: çalışmanın **sahibi** ya da **Akademik Yönetici/Sistem
+birebir aynı: çalışmanın **sahibi** ya da **Yönetici/Sistem
 Yöneticisi/Kurucu** rolleri silebilir (Kontrolör silme yetkisine
 sahip değildir — bu bilinçli bir tercihtir, Kontrolör onay verir
 ama kayıt silemez). Silmeden önce, çalışmanın adını içeren bir onay
@@ -256,14 +256,14 @@ akademik operasyon paneli.
 - **Kimlik doğrulama** — Supabase Auth (e-posta/şifre), oturum çerezleri SSR ile yönetiliyor.
 - **Roller ve kurum yapısı** — proje dosyası Bölüm 3'e göre 6 rol: `employee`
   (Çalışan), `expert` (Uzman), `controller` (Kontrolör), `academic_manager`
-  (Akademik Yönetici), `system_admin` (Sistem Yöneticisi), `founder`
-  (Kurucu/Yönetim). Rol bilgisi `profiles` tablosunda tutulur — JWT/user
+  (Yönetici), `system_admin` (Sistem Yöneticisi), `founder`
+  (Kurucu). Rol bilgisi `profiles` tablosunda tutulur — JWT/user
   metadata'da DEĞİL (proje dosyası Bölüm 3.1 ile uyumlu). Yeni kullanıcı
   kaydında otomatik `employee` rolüyle profil satırı açılır; rol
   yükseltmeleri yalnızca SQL/servis anahtarıyla yapılmalıdır.
 - **Akademik Çalışmalar** — tez/makale/proje/doçentlik dosyası kayıtları
   (`academic_projects`), kurum/atanan çalışan/Kontrolör onayı alanlarıyla.
-  Kontrolör, Akademik Yönetici, Sistem Yöneticisi ve Kurucu rolleri kurumdaki
+  Kontrolör, Yönetici, Sistem Yöneticisi ve Kurucu rolleri kurumdaki
   tüm çalışmaları görüp yönetebilir; Çalışan/Uzman yalnızca kendi/atandığı
   çalışmayı görür.
 - **Belge Kontrolü → APA 7 Kaynakça Doğrulama** (`/dashboard/documents`) — kural
@@ -430,7 +430,7 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] Roller ve kurum yapısı
 - [x] "Yeni çalışma" formu Supabase'e gerçek kayıt yazıyor
 - [x] Çalışmalar listesi ve dashboard istatistikleri gerçek verilerle çalışıyor
-- [x] Kontrolör onay akışı (Kontrolör/Akademik Yönetici/Sistem Yöneticisi/Kurucu bir çalışmayı onaylayabilir/geri alabilir)
+- [x] Kontrolör onay akışı (Kontrolör/Yönetici/Sistem Yöneticisi/Kurucu bir çalışmayı onaylayabilir/geri alabilir)
 - [x] Doküman yükleme (DOCX/PDF) + otomatik kaynakça/atıf analizi
 - [x] Üniversite tez yazım kılavuzu veritabanı + uyum kontrolü (zorunlu bölüm ve kaynakça sistemi denetimi)
 - [x] Doçentlik puan hesaplayıcı (yönetilebilir kriterler + kullanıcı beyanına göre toplam puan)
@@ -491,7 +491,7 @@ sonuçlar elle hesaplanan değerlerle birebir eşleşti.
 - [x] Müşteri odaklı akış düzeltmesi: "Yeni Çalışma" formundan "Atanan çalışan" alanı kaldırıldı (müşteri kendi çalışmasını oluştururken bir çalışan seçmemeli). Atama artık çalışma oluşturulduktan sonra, yalnızca Kontrolör ve üzeri roller tarafından Belge Editörü listesinden yapılıyor.
 - [x] Rol modeli düzeltmesi: Yeni kayıt olan her kullanıcı artık varsayılan olarak **Üye/Öğrenci (client)** rolüyle başlıyor (önceden yanlışlıkla "Çalışan" idi). AkademikMerkez personeli olmak, yalnızca Sistem Yöneticisi/Kurucu'nun yeni **Ekip Yönetimi** panelinden (`/dashboard/team`) bilinçli rol ataması yapmasıyla mümkün. Ayrıca kullanıcıların kendi rollerini kendilerine yükseltmesini engelleyen bir veritabanı güvenlik önlemi (trigger) eklendi.
 - [x] Türkiye üniversiteleri referans listesi (204 devlet + vakıf üniversite, YÖK listesi baz alınarak) — Yeni Çalışma ve Kılavuz formlarında arama/otomatik tamamlama olarak kullanılıyor.
-- [x] Kılavuz Tarama Aracı (yarı otomatik): Akademik Yönetici bir üniversitenin resmî tez yazım kılavuzu URL'sini (PDF/HTML) girip "Tara" diyebiliyor; sistem metni çıkarıp olası bölüm başlıklarını ve kaynakça sistemini öneriyor. **Hiçbir şeyi otomatik uygulamaz** — insan onayı her zaman gereklidir.
+- [x] Kılavuz Tarama Aracı (yarı otomatik): Yönetici bir üniversitenin resmî tez yazım kılavuzu URL'sini (PDF/HTML) girip "Tara" diyebiliyor; sistem metni çıkarıp olası bölüm başlıklarını ve kaynakça sistemini öneriyor. **Hiçbir şeyi otomatik uygulamaz** — insan onayı her zaman gereklidir.
 
 ## Önemli Sınırlama — Kılavuz Tarama
 
@@ -499,7 +499,7 @@ sonuçlar elle hesaplanan değerlerle birebir eşleşti.
 sistem DEĞİLDİR ve olmamalıdır: 200'den fazla üniversitenin resmî sayfalarını
 hatasız yorumlayıp doğrudan kural olarak uygulayan bir yapay zeka, yanlış
 kural çıkarımıyla öğrencilere zarar verebilir. Bunun yerine kurulan sistem:
-Akademik Yönetici bir URL girer → sistem metni çeker ve olası bölüm
+Yönetici bir URL girer → sistem metni çeker ve olası bölüm
 başlıklarını/kaynakça sistemini **önerir** → yönetici bu önerileri inceleyip
 kendi onayıyla "Yeni Kılavuz Ekle" formuna işler. Bu, proje dosyasının kendi
 "Kılavuz Güncelleme Akışı" ilkesiyle (Bölüm 6.3: değişiklikler akademik

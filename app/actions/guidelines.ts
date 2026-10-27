@@ -189,7 +189,7 @@ export async function updateGuidelineRules(guidelineId: string, formData: FormDa
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (!profile || !["academic_manager", "system_admin", "founder"].includes(profile.role)) {
-    return { error: "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir." };
+    return { error: "Bu işlem için Yönetici veya üzeri bir rol gerekir." };
   }
 
   const numberInRange = (name: string, min: number, max: number) => {
@@ -332,7 +332,7 @@ const DIZINDE_YOK =
 
 
 export async function createGuideline(formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Kılavuz eklemek için Akademik Yönetici veya üzeri bir rol gerekir.");
+  const auth = await requireRole(MANAGER_ROLES, "Kılavuz eklemek için Yönetici veya üzeri bir rol gerekir.");
   if ("error" in auth) return { error: auth.error };
   const { supabase, user } = auth;
 
@@ -357,7 +357,7 @@ export async function createGuideline(formData: FormData): Promise<ActionResult>
 
   /*
     Kılavuzun KAPSAMI (migration 20260924100033): tablo eskiden tekti ve
-    herhangi bir kurumun Akademik Yöneticisi başka bir üniversitenin
+    herhangi bir kurumun Yöneticisi başka bir üniversitenin
     kılavuzunu değiştirebiliyor, silebiliyordu.
 
     Kurum yöneticisi kendi kurumuna ekler; iç ekip genel (kürasyonlu) kayıt
@@ -409,7 +409,7 @@ export async function createGuideline(formData: FormData): Promise<ActionResult>
 // Üniversite ya da enstitü değişirse kılavuz yanlış kuruma uygulanmasın diye
 // yeniden akademik onaya düşer.
 export async function updateGuidelineDetails(guidelineId: string, formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Kılavuzları yalnızca Akademik Yönetici ve üzeri roller düzenleyebilir.");
+  const auth = await requireRole(MANAGER_ROLES, "Kılavuzları yalnızca Yönetici ve üzeri roller düzenleyebilir.");
   if ("error" in auth) return { error: auth.error };
 
   const universityName = String(formData.get("universityName") ?? "").trim();
@@ -498,7 +498,7 @@ export async function updateGuidelineDetails(guidelineId: string, formData: Form
   sistemi öğrencinin editörüne, belge kontrolüne ve Word çıktısına iniyor.
 */
 export async function kilavuzAtifStiliniAyarla(guidelineId: string, formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir.");
+  const auth = await requireRole(MANAGER_ROLES, "Bu işlem için Yönetici veya üzeri bir rol gerekir.");
   if ("error" in auth) return { error: auth.error };
 
   const citationStyle = String(formData.get("citationStyle") ?? "").trim();
@@ -551,7 +551,7 @@ export async function kilavuzAtifStiliniAyarla(guidelineId: string, formData: Fo
   kendiliğinden silinir; değer ve kaynağı hiç ayrışmaz.
 */
 export async function kilavuzOlculeriniTamamla(guidelineId: string, formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir.");
+  const auth = await requireRole(MANAGER_ROLES, "Bu işlem için Yönetici veya üzeri bir rol gerekir.");
   if ("error" in auth) return { error: auth.error };
   const { supabase } = auth;
 
@@ -614,7 +614,7 @@ export async function approveGuideline(guidelineId: string) {
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (!profile || !["academic_manager", "system_admin", "founder"].includes(profile.role)) {
-    return { error: "Bu işlem için Akademik Yönetici veya üzeri bir rol gerekir." };
+    return { error: "Bu işlem için Yönetici veya üzeri bir rol gerekir." };
   }
 
   const { data: guideline, error: guidelineError } = await supabase
@@ -700,7 +700,7 @@ export async function approveGuideline(guidelineId: string) {
  * düşerler.
  */
 export async function kilavuzOnayiniGeriAl(guidelineId: string): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Kılavuz onayını yalnızca Akademik Yönetici ve üzeri roller geri alabilir.");
+  const auth = await requireRole(MANAGER_ROLES, "Kılavuz onayını yalnızca Yönetici ve üzeri roller geri alabilir.");
   if ("error" in auth) return auth;
   const { supabase } = auth;
 
@@ -734,7 +734,7 @@ export async function kilavuzOnayiniGeriAl(guidelineId: string): Promise<ActionR
 }
 
 export async function deleteGuideline(guidelineId: string): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Kılavuzları yalnızca Akademik Yönetici ve üzeri roller silebilir.");
+  const auth = await requireRole(MANAGER_ROLES, "Kılavuzları yalnızca Yönetici ve üzeri roller silebilir.");
   if ("error" in auth) return { error: auth.error };
 
   const { data, error } = await auth.supabase.from("thesis_guidelines").delete().eq("id", guidelineId).select("id");

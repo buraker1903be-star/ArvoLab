@@ -101,7 +101,7 @@ export default async function ScoringPage() {
           <h1>Doçentlik Puanı</h1>
           <p>
             Beyan ettiğiniz yayın ve faaliyetlere güncel puanlama kriterleri uygulanır.{" "}
-            <strong>Resmî ÜAK duyurusunun yerini tutmaz</strong>; kriterleri güncel tutmak Akademik Yönetici&apos;nin
+            <strong>Resmî ÜAK duyurusunun yerini tutmaz</strong>; kriterleri güncel tutmak Yönetici&apos;nin
             sorumluluğundadır.
           </p>
         </div>
@@ -206,7 +206,7 @@ export default async function ScoringPage() {
             <p className="alert" data-tone="info">
               {canManageCriteria
                 ? "Faaliyet eklenebilmesi için önce puanlama kriterleri tanımlanmalı. Sağdaki “Kriter ekle” ile başlayın."
-                : "Faaliyet eklenebilmesi için önce kurumunuzun puanlama kriterleri tanımlanmalı. Akademik Yönetici'nizden güncel ÜAK puanlarını girmesini isteyin."}
+                : "Faaliyet eklenebilmesi için önce kurumunuzun puanlama kriterleri tanımlanmalı. Yöneticinizden güncel ÜAK puanlarını girmesini isteyin."}
             </p>
           ) : null}
 
@@ -347,7 +347,7 @@ export default async function ScoringPage() {
                 triggerClassName="projects-filter-button button-compact"
                 kicker="Puanlama kriterleri"
                 title="Yeni kriter ekle"
-                description="Güncel resmî ÜAK duyurusundaki puan değerlerini girin. Bu bölüm yalnızca Akademik Yönetici ve üzeri rollere açıktır."
+                description="Güncel resmî ÜAK duyurusundaki puan değerlerini girin. Bu bölüm yalnızca Yönetici ve üzeri rollere açıktır."
               >
                 <ActionForm className="project-form-grid" action={createCriterion} successMessage="Kriter eklendi.">
                   {icEkip ? (

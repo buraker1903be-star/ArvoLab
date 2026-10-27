@@ -100,7 +100,7 @@ export default async function DestekPage({
   });
   const uzman = gorunum.personel && isExpertEligible(profile?.role);
   const yonetici = gorunum.personel && (profile?.role === "system_admin" || profile?.role === "founder");
-  // Geri bildirimleri Akademik Yönetici de okur (app/actions/geri-bildirim.ts);
+  // Geri bildirimleri Yönetici de okur (app/actions/geri-bildirim.ts);
   // destek kuyruğu yalnızca Sistem Yöneticisi ve Kurucu'nun işi.
   const yonetim = yonetici || (gorunum.personel && profile?.role === "academic_manager");
 

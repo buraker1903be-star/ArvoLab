@@ -33,7 +33,7 @@ export interface AppliedGuideline {
   /*
     Kurallar İNSAN ONAYINDAN geçti mi.
 
-    Katalogdaki kılavuzlar Akademik Yönetici onayıyla yayımlanıyor;
+    Katalogdaki kılavuzlar Yönetici onayıyla yayımlanıyor;
     öğrencinin kendi yüklediği PDF'ten çıkarılanlar geçmiyor. Ayrım
     ekranda görünmek ZORUNDA: yanlış bir kural sessizdir ve program
     "teslime hazır görünüyor" derken hangi kurala dayandığını

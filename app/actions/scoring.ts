@@ -53,7 +53,7 @@ export async function getCriteria(): Promise<ListeSonucu<ScoringCriterion>> {
 
 /*
   Kriterin KAPSAMI (migration 20260924100032): tablo eskiden tekti ve
-  herhangi bir kurumun Akademik Yöneticisi herkesin puanlarını
+  herhangi bir kurumun Yöneticisi herkesin puanlarını
   değiştirebiliyordu.
 
   Kurum yöneticisi yalnızca kendi kurumuna ekler — seçenek sunulmuyor,
@@ -63,7 +63,7 @@ export async function getCriteria(): Promise<ListeSonucu<ScoringCriterion>> {
   gizlenirdi.
 */
 export async function createCriterion(formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Kriter eklemek için Akademik Yönetici veya üzeri bir rol gerekir.");
+  const auth = await requireRole(MANAGER_ROLES, "Kriter eklemek için Yönetici veya üzeri bir rol gerekir.");
   if ("error" in auth) return { error: auth.error };
 
   const code = String(formData.get("code") ?? "").trim();
@@ -114,7 +114,7 @@ export async function createCriterion(formData: FormData): Promise<ActionResult>
 // bundan sonra eklenen faaliyetlere uygulanır; mevcut kayıtların puanı,
 // eklendiği andaki değerle saklanır.
 export async function updateCriterion(criterionId: string, formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Kriterleri yalnızca Akademik Yönetici ve üzeri roller düzenleyebilir.");
+  const auth = await requireRole(MANAGER_ROLES, "Kriterleri yalnızca Yönetici ve üzeri roller düzenleyebilir.");
   if ("error" in auth) return { error: auth.error };
 
   const label = String(formData.get("label") ?? "").trim();
@@ -153,7 +153,7 @@ export async function updateCriterion(criterionId: string, formData: FormData): 
 }
 
 export async function deleteCriterion(criterionId: string): Promise<ActionResult> {
-  const auth = await requireRole(MANAGER_ROLES, "Kriterleri yalnızca Akademik Yönetici ve üzeri roller silebilir.");
+  const auth = await requireRole(MANAGER_ROLES, "Kriterleri yalnızca Yönetici ve üzeri roller silebilir.");
   if ("error" in auth) return { error: auth.error };
 
   const { error } = await auth.supabase.from("scoring_criteria").delete().eq("id", criterionId);

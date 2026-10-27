@@ -432,7 +432,7 @@ export async function getAssignableStaff(): Promise<ListeSonucu<StaffMember>> {
   return listeBasarili((data ?? []) as StaffMember[]);
 }
 
-// Yalnızca Kontrolör / Akademik Yönetici / Sistem Yöneticisi / Kurucu rolleri
+// Yalnızca Kontrolör / Yönetici / Sistem Yöneticisi / Kurucu rolleri
 // bir çalışmayı onaylayabilir (proje dosyası 6.2 "Biçim" aşaması onayı).
 // Veritabanında guard_academic_project_update tetikleyicisi de bunu zorunlu
 // kılar; buradaki kontrol kullanıcıya erken/anlaşılır bir hata mesajı vermek içindir.
@@ -547,7 +547,7 @@ export async function assignProject(projectId: string, assigneeId: string): Prom
 }
 
 // Silme yetkisi RLS'te zaten tanımlı: çalışmanın sahibi ya da
-// Akademik Yönetici/Sistem Yöneticisi/Kurucu rolleri silebilir
+// Yönetici/Sistem Yöneticisi/Kurucu rolleri silebilir
 // (bkz. "Owner or oversight-role can delete projects" politikası).
 // İlişkili kayıtlar (kaynakça kontrolleri, belge yüklemeleri, panelde
 // yazma metni vb.) veritabanında ON DELETE CASCADE ile otomatik silinir.

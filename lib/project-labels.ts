@@ -41,14 +41,21 @@ export type UserRole =
   | "system_admin"
   | "founder";
 
+/*
+  Adlar ArvoOS'la aynı dilde: kurumun yöneticisi orada "Yönetici",
+  çalışanı "Personel". Eskiden burada "Akademik Yönetici", "Çalışan" ve
+  "Kurucu/Yönetim" yazıyordu; aynı kişi iki üründe iki ayrı unvanla
+  görünüyordu. Yalnızca görünen ad değişti — rol anahtarları
+  (academic_manager, employee, founder) veritabanında ve RLS'te aynı.
+*/
 export const ROLE_LABELS: Record<UserRole, string> = {
   client: "Üye / Öğrenci",
-  employee: "Çalışan",
+  employee: "Personel",
   expert: "Uzman",
   controller: "Kontrolör",
-  academic_manager: "Akademik Yönetici",
+  academic_manager: "Yönetici",
   system_admin: "Sistem Yöneticisi",
-  founder: "Kurucu/Yönetim",
+  founder: "Kurucu",
 };
 
 export const ALL_ROLES = Object.keys(ROLE_LABELS) as UserRole[];
