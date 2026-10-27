@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { faturalamaKapsami, faturalamaOku, odemeAciklamasi, tutarYazisi } from "@/lib/faturalama";
+import { faturalamaKapsami, faturalamaOku, gunYazisi, odemeAciklamasi, odemeninProformasi, proformaDurumu, tutarYazisi } from "@/lib/faturalama";
 
 describe("faturalama", () => {
   test("ArvoOS yanıtı okunur; fatura ve dekont yalnızca https bağlantıyla", () => {
@@ -48,5 +48,42 @@ describe("faturalama", () => {
     // İç ekip seçili (ya da kendi) kurumunun faturalarını görür.
     assert.deepEqual(faturalamaKapsami("staff", "founder", "k1"), { tur: "kurum", kurumId: "k1" });
     assert.deepEqual(faturalamaKapsami("staff", "system_admin", "k2"), { tur: "kurum", kurumId: "k2" });
+  });
+
+  /* Proforma (27.10.2026): ödemeden önce gelen belge; tutarsızsa hiç gösterilmez. */
+  const PROFORMA = {
+    id: "p1", no: "PRF-2026-0001", musteriAdi: "Güzel Kurum",
+    kalemler: [{ aciklama: "Kurum lisansı", miktar: 2, birim_fiyat: 50_000 }],
+    araToplam: 100_000, kdvOrani: 20, kdv: 20_000, toplam: 120_000,
+    duzenlemeTarihi: "2026-10-27", gecerlilikTarihi: "2026-11-11", durum: "odendi", odemeId: "a",
+  };
+
+  test("proforma okunur, ödemeyle eşlenir; eski ArvoOS yanıtında liste boş", () => {
+    const f = faturalamaOku({
+      odemeler: [{ id: "a", tutar: 120_000 }],
+      proformalar: [PROFORMA],
+      satici: { unvan: "Arvo A.Ş.", hesaplar: [{ banka: "Banka", iban: "TR00" }, { banka: "Eksik" }] },
+    })!;
+    assert.equal(f.proformalar.length, 1);
+    assert.deepEqual(f.proformalar[0].kalemler, [{ aciklama: "Kurum lisansı", miktar: 2, birimFiyat: 50_000 }]);
+    assert.equal(odemeninProformasi(f, "a")?.no, "PRF-2026-0001");
+    assert.equal(f.satici?.hesaplar.length, 1, "IBAN'sız hesap gösterilmez");
+    const eski = faturalamaOku({ odemeler: [] })!;
+    assert.deepEqual([eski.proformalar, eski.satici], [[], null]);
+  });
+
+  test("kalemleri ya da KDV'si toplamı tutmayan proforma gösterilmez", () => {
+    const oku = (p: object) => faturalamaOku({ odemeler: [], proformalar: [p] })!.proformalar.length;
+    assert.equal(oku(PROFORMA), 1);
+    assert.equal(oku({ ...PROFORMA, araToplam: 90_000, toplam: 110_000 }), 0, "kalem toplamı ara toplamı tutmuyor");
+    assert.equal(oku({ ...PROFORMA, toplam: 100_000 }), 0, "ara toplam + KDV toplamı tutmuyor");
+    assert.equal(oku({ ...PROFORMA, kalemler: [] }), 0);
+  });
+
+  test("süresi dolan proforma yalnızca görünümde; gün gösterimi saat dilimine düşmez", () => {
+    assert.equal(proformaDurumu({ durum: "bekliyor", gecerlilikTarihi: "2026-10-26" }, "2026-10-27"), "suresi_doldu");
+    assert.equal(proformaDurumu({ durum: "bekliyor", gecerlilikTarihi: "2026-10-27" }, "2026-10-27"), "bekliyor");
+    assert.equal(proformaDurumu({ durum: "odendi", gecerlilikTarihi: "2026-10-01" }, "2026-10-27"), "odendi");
+    assert.equal(gunYazisi("2026-11-01"), "01.11.2026");
   });
 });

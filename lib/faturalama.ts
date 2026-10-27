@@ -31,10 +31,56 @@ export type Odeme = {
   fatura: Fatura | null;
 };
 
-export type Faturalama = { odemeler: Odeme[]; toplamOdenen: number; bekleyenTutar: number };
+/*
+  PROFORMA (27.10.2026, kurum sahibinin isteği: "faturayı yüklemeden önce
+  proforma oluşsun, sonra müşteri ödemeyi yapsın"). Sıra: proforma →
+  ödeme → makbuz → fatura. Proformayı kurucu ArvoOS'ta düzenliyor;
+  burada gösterilip yazdırılıyor. Tutarlar KDV hariç kalemler, KDV ayrı
+  satır.
+*/
+export type ProformaKalemi = { aciklama: string; miktar: number; birimFiyat: number };
+
+export type Proforma = {
+  id: string;
+  no: string;
+  musteriAdi: string;
+  kalemler: ProformaKalemi[];
+  araToplam: number;
+  kdvOrani: number;
+  kdv: number;
+  toplam: number;
+  paraBirimi: string;
+  duzenlemeTarihi: string;
+  gecerlilikTarihi: string;
+  notlar: string | null;
+  durum: "bekliyor" | "odendi";
+  odemeId: string | null;
+};
+
+export type Satici = {
+  unvan: string;
+  adres: string | null;
+  vergiDairesi: string | null;
+  vergiNo: string | null;
+  mersisNo: string | null;
+  hesaplar: { banka: string; hesapSahibi: string | null; iban: string; paraBirimi: string }[];
+};
+
+export type Faturalama = {
+  odemeler: Odeme[];
+  toplamOdenen: number;
+  bekleyenTutar: number;
+  proformalar: Proforma[];
+  satici: Satici | null;
+};
 
 const metin = (d: unknown) => (typeof d === "string" && d.trim() ? d.trim() : null);
 const kurus = (d: unknown) => (typeof d === "number" && Number.isFinite(d) && d >= 0 ? Math.round(d) : null);
+const sayi = (d: unknown) => (typeof d === "number" && Number.isFinite(d) ? d : null);
+const gun = (d: unknown) => {
+  const m = metin(d);
+  return m && /^\d{4}-\d{2}-\d{2}/.test(m) ? m.slice(0, 10) : null;
+};
 const https = (d: unknown) => {
   const m = metin(d);
   return m && /^https:\/\//i.test(m) ? m : null;
@@ -68,8 +114,105 @@ export function faturalamaOku(payload: unknown): Faturalama | null {
       fatura: f && faturaNo ? { no: faturaNo, tarih: metin(f.tarih) ?? "", url: https(f.url) } : null,
     });
   }
-  return { odemeler, toplamOdenen: kurus(p.toplamOdenen) ?? 0, bekleyenTutar: kurus(p.bekleyenTutar) ?? 0 };
+  return {
+    odemeler,
+    toplamOdenen: kurus(p.toplamOdenen) ?? 0,
+    bekleyenTutar: kurus(p.bekleyenTutar) ?? 0,
+    // Eski ArvoOS bu alanları göndermiyor: proforma yok sayılır, liste yine okunur.
+    proformalar: Array.isArray(p.proformalar) ? p.proformalar.flatMap((o) => proformaOku(o) ?? []) : [],
+    satici: saticiOku(p.satici),
+  };
 }
+
+/*
+  Proforma resmî belge gibi okunuyor: kalemlerin toplamı ara toplamı,
+  ara toplam + KDV de toplamı TUTMUYORSA proforma hiç gösterilmez.
+  Kusurlu bir proformayı yazdırıp müşteriye ödetmek, onu hiç
+  göstermemekten kötü; ArvoOS toplamı zaten kalemlerden hesaplıyor, bu
+  yalnızca bozuk yanıta karşı.
+*/
+function proformaOku(oge: unknown): Proforma | null {
+  if (!oge || typeof oge !== "object") return null;
+  const o = oge as Record<string, unknown>;
+  const id = metin(o.id);
+  const no = metin(o.no);
+  const araToplam = kurus(o.araToplam);
+  const kdv = kurus(o.kdv);
+  const toplam = kurus(o.toplam);
+  const kdvOrani = sayi(o.kdvOrani);
+  const duzenlemeTarihi = gun(o.duzenlemeTarihi);
+  const gecerlilikTarihi = gun(o.gecerlilikTarihi);
+  if (!id || !no || araToplam === null || kdv === null || toplam === null || kdvOrani === null || !duzenlemeTarihi || !gecerlilikTarihi) return null;
+  if (!Array.isArray(o.kalemler) || !o.kalemler.length) return null;
+  const kalemler: ProformaKalemi[] = [];
+  for (const k of o.kalemler) {
+    if (!k || typeof k !== "object") return null;
+    const r = k as Record<string, unknown>;
+    const aciklama = metin(r.aciklama);
+    const miktar = sayi(r.miktar);
+    const birimFiyat = kurus(r.birim_fiyat);
+    if (!aciklama || miktar === null || miktar <= 0 || birimFiyat === null) return null;
+    kalemler.push({ aciklama, miktar, birimFiyat });
+  }
+  if (kalemler.reduce((t, k) => t + kalemTutari(k), 0) !== araToplam || araToplam + kdv !== toplam) return null;
+  return {
+    id,
+    no,
+    musteriAdi: metin(o.musteriAdi) ?? "",
+    kalemler,
+    araToplam,
+    kdvOrani,
+    kdv,
+    toplam,
+    paraBirimi: metin(o.paraBirimi) ?? "TRY",
+    duzenlemeTarihi,
+    gecerlilikTarihi,
+    notlar: metin(o.notlar),
+    durum: o.durum === "odendi" ? "odendi" : "bekliyor",
+    odemeId: metin(o.odemeId),
+  };
+}
+
+function saticiOku(oge: unknown): Satici | null {
+  if (!oge || typeof oge !== "object") return null;
+  const o = oge as Record<string, unknown>;
+  const unvan = metin(o.unvan);
+  if (!unvan) return null;
+  return {
+    unvan,
+    adres: metin(o.adres),
+    vergiDairesi: metin(o.vergiDairesi),
+    vergiNo: metin(o.vergiNo),
+    mersisNo: metin(o.mersisNo),
+    hesaplar: (Array.isArray(o.hesaplar) ? o.hesaplar : []).flatMap((h) => {
+      if (!h || typeof h !== "object") return [];
+      const r = h as Record<string, unknown>;
+      const banka = metin(r.banka);
+      const iban = metin(r.iban);
+      return banka && iban ? [{ banka, iban, hesapSahibi: metin(r.hesapSahibi), paraBirimi: metin(r.paraBirimi) ?? "TRY" }] : [];
+    }),
+  };
+}
+
+/** Satır tutarı: miktar × birim fiyat, kuruşa yuvarlanmış (ArvoOS lib/proforma ile aynı kural). */
+export const kalemTutari = (k: ProformaKalemi) => Math.round(k.miktar * k.birimFiyat);
+
+/*
+  Geçerlilik tarihi geçmiş, ödenmemiş proforma "süresi doldu" görünür.
+  ArvoOS kaydı değiştirmiyor (geç gelen ödeme yine eşlenebilsin); karar
+  yalnızca gösterimde, Türkiye günüyle (YYYY-MM-DD).
+*/
+export function proformaDurumu(p: Pick<Proforma, "durum" | "gecerlilikTarihi">, bugun: string): "bekliyor" | "odendi" | "suresi_doldu" {
+  if (p.durum === "odendi") return "odendi";
+  return p.gecerlilikTarihi < bugun ? "suresi_doldu" : "bekliyor";
+}
+
+/** Makbuzda gösterilecek proforma: ödemeyle eşlenen. */
+export const odemeninProformasi = (veri: Faturalama, odemeId: string) =>
+  veri.proformalar.find((p) => p.odemeId === odemeId) ?? null;
+
+/** "15.11.2026" — gün anahtarından; saat dilimine düşmeden. */
+export const gunYazisi = (g: string) => g.slice(0, 10).split("-").reverse().join(".");
 
 /** "499,00 TL" — kuruştan. */
 export const tutarYazisi = (kurusTutar: number, paraBirimi = "TRY") =>

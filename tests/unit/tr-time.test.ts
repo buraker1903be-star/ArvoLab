@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { trGunFarki, trTarih, trTarihSaat, trUzunTarih } from "../../lib/tr-time";
+import { trGunAnahtari, trGunFarki, trTarih, trTarihSaat, trUzunTarih } from "../../lib/tr-time";
 
 test("tarih ve saat Türkiye saatine göre (sunucu UTC olsa da)", () => {
   // 20 Eylül 11:05 UTC = 14:05 TR
@@ -13,4 +13,10 @@ test("tarih ve saat Türkiye saatine göre (sunucu UTC olsa da)", () => {
 test("gün farkı saat farkından etkilenmez", () => {
   assert.equal(trGunFarki("2026-09-20T21:30:00Z", "2026-09-20T05:00:00Z"), 1); // 21:30 UTC = ertesi gün 00:30 TR
   assert.equal(trGunFarki("2026-09-27T08:00:00Z", "2026-09-20T20:00:00Z"), 7);
+});
+
+test("Türkiye günü anahtarı gece 00:00–03:00 arasında dünü vermez", () => {
+  // UTC 22:30 = Türkiye 01:30, ertesi gün.
+  assert.equal(trGunAnahtari("2026-10-26T22:30:00Z"), "2026-10-27");
+  assert.equal(trGunAnahtari("2026-10-27T12:00:00Z"), "2026-10-27");
 });

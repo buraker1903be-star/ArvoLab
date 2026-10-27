@@ -26,3 +26,7 @@ export function trGunFarki(a: string | number | Date, b: string | number | Date)
   const gun = (value: string | number | Date) => bicim({ year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
   return Math.round((Date.parse(gun(a).split(".").reverse().join("-")) - Date.parse(gun(b).split(".").reverse().join("-"))) / 86_400_000);
 }
+
+/** Türkiye günü anahtarı: "2026-10-27". UTC'den alınsa gece 00:00–03:00 arası dünü verirdi. */
+export const trGunAnahtari = (value: string | number | Date = new Date()) =>
+  bicim({ year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value)).split(".").reverse().join("-");

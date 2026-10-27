@@ -169,3 +169,17 @@ html[data-sayfali="hazirlaniyor"] .print-page > .print-sheet { opacity: .35; }
 .print-toc-noktalar { display: none; }
 .pagedjs_pages .print-toc-noktalar { display: block; flex: 1; min-width: 1em; margin: 0 .3em; border-bottom: 1px dotted currentColor; }
 .sayfali-durum { position: sticky; top: 64px; z-index: 5; width: fit-content; margin: 12px auto 0; padding: 8px 14px; border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--shadow-sm); color: var(--ink-soft); font-size: var(--fs-sm); }
+
+/* Proforma fatura (app/print/proforma/[id]): makbuzun düzeni üstüne kalem tablosu ve taraflar */
+.proforma h2 { margin: 0 0 .3em; font-size: 10pt; text-transform: uppercase; letter-spacing: .04em; }
+.proforma p { margin: .15em 0; }
+.proforma-durum { font-weight: 700; }
+.proforma-taraflar { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5em; margin-bottom: 1.2em; }
+.proforma-tablo { width: 100%; border-collapse: collapse; margin-bottom: 1.2em; }
+.proforma-tablo th, .proforma-tablo td { padding: .35em .5em; border-bottom: 1px solid var(--print-ink); text-align: left; }
+.proforma-tablo .sayi { text-align: right; white-space: nowrap; }
+.proforma-tablo tfoot th { text-align: right; font-weight: 600; }
+.proforma-genel th, .proforma-genel td { font-size: 12pt; font-weight: 700; }
+.proforma-hesaplar dl { display: grid; gap: .3em; margin: 0 0 .5em; }
+.proforma-hesaplar dl div { display: grid; grid-template-columns: 9em minmax(0, 1fr); gap: 1em; }
+.proforma-not { margin-top: 1em; white-space: pre-line; }

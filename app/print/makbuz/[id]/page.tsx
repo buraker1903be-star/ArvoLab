@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { getAuthContext } from "@/lib/auth-guards";
-import { getAccessState } from "@/lib/access";
-import { getCurrentProfile } from "@/app/actions/profile";
-import { faturalamaKapsami, odemeAciklamasi, tutarYazisi } from "@/lib/faturalama";
-import { faturalamaYukle } from "@/lib/subscription";
+import { gunYazisi, odemeAciklamasi, odemeninProformasi, tutarYazisi } from "@/lib/faturalama";
+import { yazdirmaFaturalamasi } from "@/lib/faturalama-sunucu";
 import { trTarihSaat } from "@/lib/tr-time";
 import PrintActions from "../../manuscript/[id]/print-actions";
 
@@ -23,13 +20,10 @@ export const metadata: Metadata = { title: "Ödeme makbuzu · ArvoLab", robots: 
 */
 export default async function MakbuzPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const ctx = await getAuthContext();
-  if (!ctx) redirect("/");
-
-  const access = await getAccessState(await getCurrentProfile());
-  const kapsam = faturalamaKapsami(access.kind, ctx.role, ctx.organizationId);
-  if (!kapsam || !ctx.user.email) notFound();
-  const veri = await faturalamaYukle(kapsam, { id: ctx.user.id, email: ctx.user.email });
+  const okuma = await yazdirmaFaturalamasi();
+  if (okuma.durum === "oturum-yok") redirect("/");
+  if (okuma.durum === "yetki-yok") notFound();
+  const { ctx, kapsam, veri } = okuma;
   if (!veri) {
     return (
       <div className="print-page">
@@ -40,6 +34,7 @@ export default async function MakbuzPage({ params }: { params: Promise<{ id: str
   }
   const odeme = veri.odemeler.find((o) => o.id === id && o.durum === "odendi");
   if (!odeme) notFound();
+  const proforma = odemeninProformasi(veri, odeme.id);
 
   return (
     <div className="print-page">
@@ -66,12 +61,20 @@ export default async function MakbuzPage({ params }: { params: Promise<{ id: str
           ) : null}
           <dt>Tutar</dt>
           <dd className="makbuz-tutar">{tutarYazisi(odeme.tutar, odeme.paraBirimi)}</dd>
+          {proforma ? (
+            <>
+              <dt>Proforma</dt>
+              <dd>
+                {proforma.no} · {gunYazisi(proforma.duzenlemeTarihi)}
+              </dd>
+            </>
+          ) : null}
           {odeme.fatura ? (
             <>
               <dt>Fatura</dt>
               <dd>
                 {odeme.fatura.no}
-                {odeme.fatura.tarih ? ` · ${odeme.fatura.tarih.split("-").reverse().join(".")}` : ""}
+                {odeme.fatura.tarih ? ` · ${gunYazisi(odeme.fatura.tarih)}` : ""}
               </dd>
             </>
           ) : null}

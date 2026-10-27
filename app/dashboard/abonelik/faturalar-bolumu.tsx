@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { FileText, Paperclip, Receipt } from "lucide-react";
-import { odemeAciklamasi, tutarYazisi, type Faturalama } from "@/lib/faturalama";
-import { trTarih } from "@/lib/tr-time";
+import { FileText, Paperclip, Receipt, ScrollText } from "lucide-react";
+import { gunYazisi, odemeAciklamasi, odemeninProformasi, proformaDurumu, tutarYazisi, type Faturalama } from "@/lib/faturalama";
+import { trGunAnahtari, trTarih } from "@/lib/tr-time";
 
 /*
   FATURALAR VE ÖDEMELER (26.10.2026, kurum sahibinin isteği: "müşteriye
@@ -25,6 +25,17 @@ const DURUM = {
   reddedildi: { ad: "Reddedildi", ton: "danger" },
 } as const;
 
+/*
+  Proformalar (27.10.2026): ödemeden önce gelen belge. Ödenmemiş olanlar
+  "ödeme bekleniyor"; ödendiğinde ArvoOS proformayı ödemeyle eşliyor ve
+  ödeme satırında proforma numarası görünüyor.
+*/
+const PROFORMA_DURUMU = {
+  bekliyor: { ad: "Ödeme bekleniyor", ton: "info" },
+  odendi: { ad: "Ödendi", ton: "success" },
+  suresi_doldu: { ad: "Süresi doldu", ton: "warning" },
+} as const;
+
 export default function FaturalarBolumu({ veri, kurum }: { veri: Faturalama | null; kurum: boolean }) {
   return (
     <>
@@ -46,6 +57,32 @@ export default function FaturalarBolumu({ veri, kurum }: { veri: Faturalama | nu
             </div>
           </dl>
           {!kurum ? <p className="hint">Ödemeler peşin alınır; otomatik çekim ve borç oluşmaz.</p> : null}
+          {veri.proformalar.length ? (
+            <ul className="gb-liste fatura-listesi" aria-label="Proformalar">
+              {veri.proformalar.map((p) => {
+                const durum = PROFORMA_DURUMU[proformaDurumu(p, trGunAnahtari())];
+                return (
+                  <li key={p.id} className="fatura-satir">
+                    <span className="gb-satir-govde">
+                      <b>Proforma {p.no}</b>
+                      <small>
+                        {p.kalemler.map((k) => k.aciklama).join(", ")} · Geçerlilik {gunYazisi(p.gecerlilikTarihi)}
+                      </small>
+                    </span>
+                    <span className="fatura-tutar">{tutarYazisi(p.toplam, p.paraBirimi)}</span>
+                    <span className="status-pill" data-tone={durum.ton}>
+                      {durum.ad}
+                    </span>
+                    <span className="fatura-belgeler">
+                      <Link href={`/print/proforma/${encodeURIComponent(p.id)}`} target="_blank">
+                        <ScrollText size={13} aria-hidden="true" /> Proforma
+                      </Link>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
           {veri.odemeler.length ? (
             <ul className="gb-liste fatura-listesi">
               {veri.odemeler.map((o) => (
@@ -55,6 +92,7 @@ export default function FaturalarBolumu({ veri, kurum }: { veri: Faturalama | nu
                     <small>
                       {o.tarih ? trTarih(o.tarih) : "Tarih yok"} · {o.kanal === "kart" ? "Kart" : "Havale/EFT"}
                       {o.referans ? ` · ${o.referans}` : ""}
+                      {odemeninProformasi(veri, o.id) ? ` · Proforma ${odemeninProformasi(veri, o.id)!.no}` : ""}
                     </small>
                   </span>
                   <span className="fatura-tutar">{tutarYazisi(o.tutar, o.paraBirimi)}</span>
