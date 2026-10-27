@@ -130,3 +130,39 @@
 .print-toc li[data-level="2"] { padding-left: 1.5em; }
 .print-toc li[data-level="3"] { padding-left: 3em; }
 .print-toc-no { margin-right: .5em; }
+
+/* ---------- Sayfalı baskı (Paged.js; app/print/manuscript/sayfali-baski.tsx) ----------
+   Sayfalama bitince tek parça görünüm gizlenir, yerine A4 sayfalar gelir.
+   Hazırlanırken tek parça görünüm kalıyor: sayfalama düşerse kullanıcı boş ekran görmesin. */
+html[data-sayfali="hazir"] .print-page > .print-sheet { display: none; }
+html[data-sayfali="hazirlaniyor"] .print-page > .print-sheet { opacity: .35; }
+.pagedjs_pages { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px 0; }
+.pagedjs_page { background: var(--print-paper); color: var(--print-ink); box-shadow: var(--shadow-sm); }
+.pagedjs_pages .print-sheet { width: auto; margin: 0; padding: 0; background: none; box-shadow: none; }
+.pagedjs_pages .print-footnotes,
+.pagedjs_pages .print-fn { display: none; }
+/* Word ile aynı ölçüler (tiptap-docx): paragraf arası 6 pt, başlık önü 12 / arkası 6 pt. */
+.pagedjs_pages .print-body p { margin: 0 0 6pt; }
+.pagedjs_pages .print-body :is(h1, h2, h3, h4) { margin: 12pt 0 6pt; }
+.pagedjs_pages .print-body h1 { font-size: calc(var(--print-size) + 2pt); }
+.pagedjs_pages .print-body h2 { font-size: calc(var(--print-size) + 1pt); }
+.pagedjs_pages .print-body :is(h3, h4) { font-size: var(--print-size); }
+.pagedjs_pages .print-toc a { display: block; color: inherit; text-decoration: none; }
+.pagedjs_footnote_area { color: var(--print-ink); }
+@media print {
+  .pagedjs_pages { display: block; gap: 0; padding: 0; }
+  .pagedjs_page { box-shadow: none; }
+}
+.print-dipnot { display: none; }
+.pagedjs_pages .print-dipnot { display: block; }
+/* Son sayfadan sonraki sayfa sonu yazdırmada BOŞ bir sayfa daha açıyordu. */
+@media print { .pagedjs_pages > .pagedjs_page:last-child { break-after: auto; page-break-after: auto; } }
+/* Dipnot alanı Word'deki gibi metnin yazı tipinde, iki punto küçük (Word dipnot stili). */
+.pagedjs_pages .pagedjs_footnote_area { font-family: var(--print-font); font-size: calc(var(--print-size) - 2pt); line-height: 1.2; }
+.print-dipnot-no { font-size: .75em; vertical-align: super; line-height: 0; }
+.pagedjs_pages .pagedjs_margin-content { font-family: var(--print-font); }
+/* İçindekiler satırı: metin · noktalı çizgi · sayfa numarası (Word'ün varsayılan içindekiler biçimi) */
+.pagedjs_pages .print-toc a { display: flex; align-items: baseline; }
+.print-toc-noktalar { display: none; }
+.pagedjs_pages .print-toc-noktalar { display: block; flex: 1; min-width: 1em; margin: 0 .3em; border-bottom: 1px dotted currentColor; }
+.sayfali-durum { position: sticky; top: 64px; z-index: 5; width: fit-content; margin: 12px auto 0; padding: 8px 14px; border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--shadow-sm); color: var(--ink-soft); font-size: var(--fs-sm); }

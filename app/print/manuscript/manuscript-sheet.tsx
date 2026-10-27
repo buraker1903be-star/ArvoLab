@@ -5,7 +5,8 @@ export default function ManuscriptSheet({ title, sheet }: { title: string; sheet
   const { cover } = sheet;
   return (
     <>
-      <style>{sheet.pageRule}</style>
+      {/* Sayfalama çalışınca bu kural kaldırılır; sayfa kuralını Paged.js uygular (sayfali-baski.tsx). */}
+      <style id="sayfa-kurali">{sheet.pageRule}</style>
       <article className="print-sheet" style={sheet.style} aria-label={title} data-chapter-case={sheet.chapterCase}>
         {cover ? (
           <section className="print-cover">
@@ -35,8 +36,13 @@ export default function ManuscriptSheet({ title, sheet }: { title: string; sheet
             <ol>
               {sheet.toc.map((satir, i) => (
                 <li key={i} data-level={satir.level}>
-                  {satir.numara ? <span className="print-toc-no">{satir.numara}</span> : null}
-                  {satir.text}
+                  {/* Bağlantı başlığa gider; sayfalı baskıda sayfa numarası buradan sayılır (target-counter). */}
+                  <a href={`#bas-${i}`} data-toc-index={i} data-baslik={satir.text}>
+                    {satir.numara ? <span className="print-toc-no">{satir.numara}</span> : null}
+                    <span className="print-toc-metin">{satir.text}</span>
+                    {/* Word'ün içindekiler satırındaki noktalı çizgi; numara ondan sonra (target-counter). */}
+                    <span className="print-toc-noktalar" aria-hidden="true" />
+                  </a>
                 </li>
               ))}
             </ol>

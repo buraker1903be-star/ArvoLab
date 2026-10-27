@@ -74,6 +74,8 @@ function blockStyle(attrs: Record<string, unknown> = {}) {
 
 interface RenderContext {
   footnotes: string[];
+  /** Dipnot metni çağrının yanına da yazılsın (sayfalı baskı: dipnot sayfa altına iner) */
+  dipnotSatirIci: boolean;
   captions: { figure: number; table: number };
   /** Otomatik başlık numaraları (kapalıysa boş) */
   headingNumbers: Map<object, string>;
@@ -136,7 +138,15 @@ function renderNode(node: Node, ctx: RenderContext): string {
       return "<br>";
     case "footnoteReference":
       ctx.footnotes.push(String(attrs.text ?? ""));
-      return `<sup class="print-fn">${ctx.footnotes.length}</sup>`;
+      /*
+        Sayfalı baskıda (app/print/manuscript, Paged.js) dipnot Word'deki gibi
+        SAYFA ALTINA iner: metin çağrının yanında bir span olarak duruyor ve
+        CSS'teki float: footnote onu o sayfanın dibine taşıyor. Sayfalama
+        çalışmazsa span gizli kalır, dipnotlar eskisi gibi sonda listelenir.
+      */
+      return ctx.dipnotSatirIci
+        ? `<sup class="print-fn">${ctx.footnotes.length}</sup><span class="print-dipnot"><sup class="print-dipnot-no">${ctx.footnotes.length}</sup> ${escapeHtml(String(attrs.text ?? ""))}</span>`
+        : `<sup class="print-fn">${ctx.footnotes.length}</sup>`;
     case "paragraph": {
       if (attrs.caption === "figure" || attrs.caption === "table") {
         const number = ++ctx.captions[attrs.caption];
@@ -187,10 +197,11 @@ function renderNode(node: Node, ctx: RenderContext): string {
 
 export function renderTiptapHtml(
   doc: { content?: Node[] } | null | undefined,
-  options: { headingNumbering?: boolean; chapterNewPage?: boolean } = {}
+  options: { headingNumbering?: boolean; chapterNewPage?: boolean; dipnotSatirIci?: boolean } = {}
 ): { html: string; footnotes: string[] } {
   const ctx: RenderContext = {
     footnotes: [],
+    dipnotSatirIci: options.dipnotSatirIci ?? false,
     captions: { figure: 0, table: 0 },
     headingNumbers: options.headingNumbering ? headingNumberMap(doc) : new Map(),
     chapterBreaks: options.chapterNewPage ? chapterBreakSet(doc) : new Set(),

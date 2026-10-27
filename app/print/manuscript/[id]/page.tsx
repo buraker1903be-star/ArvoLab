@@ -8,6 +8,7 @@ import { refreshImageUrls } from "@/lib/manuscript-images";
 import { buildPrintSheet } from "@/lib/print-sheet";
 import ManuscriptSheet from "../manuscript-sheet";
 import PrintActions from "./print-actions";
+import SayfaliBaski from "../sayfali-baski";
 
 export const metadata: Metadata = { title: "Yazdır · ArvoLab", robots: { index: false } };
 
@@ -50,8 +51,10 @@ export default async function PrintManuscriptPage({
 
   return (
     <div className="print-page">
-      <PrintActions backHref={`/dashboard/editor/${id}/write`} autoPrint={auto === "1"} />
+      {/* Otomatik yazdırma sayfalama bitince (sayfali-baski.tsx); erken basılırsa yarım sayfalar çıkar. */}
+      <PrintActions backHref={`/dashboard/editor/${id}/write`} autoPrint={false} />
       <ManuscriptSheet title={project.title ?? ""} sheet={sheet} />
+      <SayfaliBaski otomatikYazdir={auto === "1"} />
     </div>
   );
 }

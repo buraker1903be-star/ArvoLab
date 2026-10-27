@@ -46,6 +46,8 @@ export function buildPrintSheet(
   const { html, footnotes } = renderTiptapHtml(doc as Parameters<typeof renderTiptapHtml>[0], {
     headingNumbering: manuscript?.headingNumbering ?? false,
     chapterNewPage: guideline?.settings.chapterNewPage ?? false,
+    // Dipnot sayfa altına inebilsin (sayfalı baskı; app/print/manuscript/sayfali-baski.tsx).
+    dipnotSatirIci: true,
   });
 
   const margins = manuscript?.margins ?? guideline?.settings.margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
@@ -64,7 +66,8 @@ export function buildPrintSheet(
     html,
     footnotes,
     pageRule: `@page { size: A4; margin: ${m.top}cm ${m.right}cm ${m.bottom}cm ${m.left}cm;${
-      showPageNumbers ? " @bottom-center { content: counter(page); font-size: 10pt; }" : ""
+      /* Sayfa numarası Word'deki gibi metnin yazı tipi ve boyutunda (tiptap-docx: Footer). */
+      showPageNumbers ? ` @bottom-center { content: counter(page); font-family: '${fontFamily}', 'Times New Roman', serif; font-size: ${fontSize}pt; }` : ""
     } }`,
     style: {
       "--print-font": `'${fontFamily}', 'Times New Roman', serif`,
