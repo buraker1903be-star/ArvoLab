@@ -81,3 +81,8 @@ test("aracılık, düzenleyicilik ve DFA komutları", () => {
   assert.match(analizBetigi("r", "dfa", dfa), /Kaygı =~ m1 \+ m2 \+ m3\nÖz_yeterlik =~ m4 \+ m5[\s\S]*std\.lv = TRUE/);
   assert.match(analizBetigi("python", "dfa", dfa), /semopy\.Model/);
 });
+
+test("DFA betiği serbest bırakılan hata kovaryanslarını taşır", () => {
+  const s = { dfaFaktorleri: [{ ad: "F1", maddeler: ["m1", "m2", "m3"] }], dfaHataKovaryanslari: [["m1", "m2"]] as [string, string][] };
+  assert.match(analizBetigi("r", "dfa", s), /F1 =~ m1 \+ m2 \+ m3\nm1 ~~ m2/);
+});

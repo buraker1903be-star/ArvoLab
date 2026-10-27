@@ -115,12 +115,15 @@ export type BetikSecimi = {
   varY?: string;
   /** DFA modeli: faktör adı ve maddeleri. */
   dfaFaktorleri?: { ad: string; maddeler: string[] }[];
+  /** DFA'da serbest bırakılan hata kovaryansları. */
+  dfaHataKovaryanslari?: [string, string][];
 };
 
 /* lavaan / semopy model metni: "F1 =~ m1 + m2 + m3" satırları. */
 const dfaModelMetni = (s: BetikSecimi) =>
   (s.dfaFaktorleri?.length ? s.dfaFaktorleri : [{ ad: "F1", maddeler: ["m1", "m2", "m3"] }])
     .map((f) => `${f.ad.replace(/\s+/g, "_")} =~ ${f.maddeler.join(" + ")}`)
+    .concat((s.dfaHataKovaryanslari ?? []).map(([a, b]) => `${a} ~~ ${b}`))
     .join("\n");
 
 /* Değişken adı boşluk ya da Türkçe harf taşıyabilir: her dil kendi biçimiyle tırnaklanır. */
@@ -185,7 +188,7 @@ function spss(tur: AnalizTuru, s: BetikSecimi): string {
     case "duzenleyicilik":
       return `* Hayes PROCESS makrosu gerekir (processmacro.org). Model 1, merkezlenmiş, Johnson-Neyman.\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /w=${b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=1 /center=1 /jn=1 /plot=1.`;
     case "dfa":
-      return `* SPSS'in kendisinde DFA yok; AMOS'ta yol şemasıyla kurulur.\n* Model (her satır bir faktör ve maddeleri):\n${dfaModelMetni(s).split("\n").map((l) => `*   ${l}`).join("\n")}\n* AMOS: Analysis Properties > Output > Standardized estimates, Modification indices.`;
+      return `* SPSS'in kendisinde DFA yok; AMOS'ta yol şemasıyla kurulur.\n* Model (her satır bir faktör ve maddeleri):\n${dfaModelMetni(s).split("\n").map((l) => `*   ${l}`).join("\n")}\n* AMOS: Analysis Properties > Output > Standardized estimates, Modification indices.\n* "~~" satırları iki maddenin hataları arasına çizilen çift yönlü oktur.`;
     case "karmaanova":
       return `GLM ${maddeler} BY ${g}\n  /WSFACTOR=olcum ${s.maddeler?.length || 3} Polynomial\n  /PRINT=DESCRIPTIVE ETASQ HOMOGENEITY\n  /PLOT=PROFILE(olcum*${g})\n  /EMMEANS=TABLES(${g}*olcum) COMPARE(${g}) ADJ(BONFERRONI)\n  /WSDESIGN=olcum\n  /DESIGN=${g}.`;
     case "ancova":

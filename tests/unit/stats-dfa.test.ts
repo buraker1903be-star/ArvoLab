@@ -71,3 +71,40 @@ test("uyum yorum eşikleri", () => {
   assert.equal(uyumYorumu("rmsea", 0.07), "kabul edilebilir");
   assert.equal(uyumYorumu("srmr", 0.11), "zayıf");
 });
+
+describe("değişiklik indeksleri", () => {
+  /*
+    Beklenen MI ve EPC değerleri NumPy'de AYRI bir hesaptan: ∂Σ/∂θ sayısal
+    türevle (analitik formüller kullanılmadan), beklenen bilgi
+    ½ iz(Σ⁻¹ A Σ⁻¹ B), MI = (N − 1)/4 · g²/V.
+  */
+  const r = dogrulayiciFaktorAnalizi(AD.map((k) => V[k]), AD, MODEL);
+  if (typeof r === "string") throw new Error(r);
+
+  test("en büyük altı öneri: tür, konum, MI ve EPC", () => {
+    const beklenen: [string, number, number, number, number][] = [
+      ["capraz-yuk", 2, 2, 8.667023456, 0.245805492],
+      ["hata-kovaryansi", 1, 8, 7.984840026, 0.157030821],
+      ["hata-kovaryansi", 3, 8, 7.255006700, 0.147281611],
+      ["capraz-yuk", 0, 2, 6.751292822, -0.280960654],
+      ["hata-kovaryansi", 2, 7, 6.218402642, 0.135198752],
+      ["hata-kovaryansi", 3, 7, 3.977526461, -0.118730586],
+    ];
+    beklenen.forEach(([tur, i, j, mi, epc], k) => {
+      const d = r.degisiklikIndeksleri[k];
+      assert.deepEqual([d.tur, d.i, d.j], [tur, i, j]);
+      yakin(d.mi, mi, 1e-5);
+      yakin(d.epc, epc, 1e-5);
+    });
+  });
+
+  test("öneri modele eklenince: sd bir azalır, χ² yaklaşık MI kadar düşer, kestirim EPC'ye yakın", () => {
+    const oneri = r.degisiklikIndeksleri.find((d) => d.tur === "hata-kovaryansi")!;
+    const r2 = dogrulayiciFaktorAnalizi(AD.map((k) => V[k]), AD, { ...MODEL, hataKovaryanslari: [[oneri.i, oneri.j]] });
+    if (typeof r2 === "string") throw new Error(r2);
+    assert.equal(r2.df, r.df - 1);
+    yakin(r.chiKare - r2.chiKare, oneri.mi, 0.5);
+    yakin(r2.hataKovaryanslari[0].kov, oneri.epc, 0.01);
+    assert.ok(!r2.degisiklikIndeksleri.some((d) => d.tur === "hata-kovaryansi" && d.i === oneri.i && d.j === oneri.j));
+  });
+});

@@ -38,7 +38,7 @@ import { shapiroWilk } from "@/lib/stats-shapiro";
 import { ancova, karmaAnova, tekOrneklemTTest, tekrarliIkiliKarsilastirmalar, tekrarliOlcumlerAnova } from "@/lib/stats-anova-ek";
 import ProfilGrafigi from "./profil-grafigi";
 import { aracilik, duzenleyicilik } from "@/lib/stats-aracilik";
-import { dogrulayiciFaktorAnalizi, uyumYorumu } from "@/lib/stats-dfa";
+import { dogrulayiciFaktorAnalizi, MI_ESIGI, uyumYorumu } from "@/lib/stats-dfa";
 import DfaModeli from "./dfa-modeli";
 import { kismiKorelasyon, mcnemar } from "@/lib/stats-iliski";
 import { lojistikRegresyon, type LojistikHata } from "@/lib/stats-lojistik";
@@ -166,6 +166,8 @@ export default function DataAnalyzer({
     { ad: "F1", maddeler: [] },
     { ad: "F2", maddeler: [] },
   ]);
+  /* DFA'da serbest bırakılan hata kovaryansları (madde adı çiftleri). */
+  const [dfaHataKovaryanslari, setDfaHataKovaryanslari] = useState<[string, string][]>([]);
 
   const [result, setResult] = useState<React.ReactNode>(null);
   /*
@@ -579,6 +581,7 @@ export default function DataAnalyzer({
         faktorSayisi: Number(faktorSayisi) > 0 ? Number(faktorSayisi) : undefined,
         varY,
         dfaFaktorleri: dfaFaktorleri.filter((f) => f.maddeler.length),
+        dfaHataKovaryanslari,
         dosyaAdi: fileName, gruplar: groupLevels,
       },
       tur: analysisType,
@@ -1845,9 +1848,16 @@ export default function DataAnalyzer({
         }
         const maddeler = faktorler.flatMap((f) => f.maddeler);
         const veri = eslesenSutunlar(...maddeler);
+        /* Hata kovaryansları madde ADIYLA tutuluyor; modelde olmayan maddeye ait çift düşer. */
+        const hataCiftleri = dfaHataKovaryanslari.flatMap(([a, b]): [number, number][] => {
+          const i = maddeler.indexOf(a);
+          const j = maddeler.indexOf(b);
+          return i >= 0 && j >= 0 && i !== j ? [[Math.min(i, j), Math.max(i, j)]] : [];
+        });
         const r = dogrulayiciFaktorAnalizi(veri.sutunlar, maddeler, {
           faktorler: faktorler.map((f) => f.ad.trim() || "Faktör"),
           maddeFaktoru: faktorler.flatMap((f, k) => f.maddeler.map(() => k)),
+          hataKovaryanslari: hataCiftleri,
         });
         if (r === "az-madde") return setResultError("DFA için en az üç madde gerekir.");
         if (r === "az-gozlem") return setResultError(`Gözlem sayısı (${veri.n}) madde sayısından fazla olmalı; DFA için genel öneri en az 200 kişi.`);
@@ -1861,6 +1871,61 @@ export default function DataAnalyzer({
           </tr>
         );
         const adlar = faktorler.map((f) => f.ad.trim() || "Faktör");
+        /*
+          DEĞİŞİKLİK İNDEKSLERİ kopyalanan sonuç metninin DIŞINDA: çalışma
+          önerisi, rapor değil; "Modele ekle" düğmeleri de metne karışmasın.
+        */
+        const oneriler = r.degisiklikIndeksleri.filter((d) => d.mi >= MI_ESIGI).slice(0, 15);
+        setSonucGrafigi(
+          <details className="analiz-betik mt-sm" open={oneriler.length > 0}>
+            <summary>Değişiklik (modifikasyon) indeksleri{oneriler.length ? ` · ${oneriler.length} öneri` : ""}</summary>
+            {oneriler.length ? (
+              <>
+                <div className="table-scroll" role="region" aria-label="Değişiklik indeksleri" tabIndex={0}>
+                  <table className="stats-result-table">
+                    <thead>
+                      <tr><th>Öneri</th><th>MI</th><th>EPC</th><th>Std. EPC</th><th /></tr>
+                    </thead>
+                    <tbody>
+                      {oneriler.map((d) => {
+                        const ciftAdi: [string, string] = [maddeler[d.i], maddeler[d.j]];
+                        const ayniFaktor = d.tur === "hata-kovaryansi" && faktorler.some((f) => f.maddeler.includes(ciftAdi[0]) && f.maddeler.includes(ciftAdi[1]));
+                        return (
+                          <tr key={`${d.tur}-${d.i}-${d.j}`}>
+                            <td>{d.etiket}</td><td>{yazSayi(d.mi)}</td><td>{yazSayi(d.epc)}</td><td>{yazSayi(d.sepc)}</td>
+                            <td>
+                              {d.tur === "hata-kovaryansi" ? (
+                                <button
+                                  type="button"
+                                  className="projects-filter-button button-compact"
+                                  onClick={() => {
+                                    setDfaHataKovaryanslari((h) => [...h, ciftAdi]);
+                                    showToast("success", `${ciftAdi[0]} ↔ ${ciftAdi[1]} modele eklendi; analizi yeniden çalıştırın.`);
+                                  }}
+                                >
+                                  Modele ekle{ayniFaktor ? "" : " (farklı faktör)"}
+                                </button>
+                              ) : null}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="muted text-sm">
+                  MI, o parametre serbest bırakılsa χ²&apos;nin yaklaşık ne kadar düşeceğidir (eşik 3,84). Değişikliği YALNIZCA
+                  kuramsal bir gerekçe varsa yapın: aynı faktördeki benzer ifadeli iki maddenin hatalarını ilişkilendirmek
+                  yaygın ve savunulabilir; farklı faktörlerdeki maddeler ya da çapraz yük yapının sorunlu olduğunu gösterir —
+                  o maddeyi gözden geçirin. Her seferinde tek değişiklik yapıp analizi yeniden çalıştırın ve yaptığınız her
+                  değişikliği tezde raporlayın.
+                </p>
+              </>
+            ) : (
+              <p className="muted text-sm">3,84&apos;ün üzerinde değişiklik indeksi yok; model sabit parametrelerden kaynaklanan belirgin bir uyumsuzluk göstermiyor.</p>
+            )}
+          </details>,
+        );
         setResult(
           <div>
             <p className="tone-text" data-tone={r.cfi >= 0.9 && r.rmsea <= 0.08 ? "success" : "warning"}>
@@ -1935,7 +2000,22 @@ export default function DataAnalyzer({
             {!r.yakinsadi ? (
               <p className="tone-text text-sm" data-tone="warning">Kestirim tam yakınsamadı; değerleri temkinli okuyun.</p>
             ) : null}
-            <p className="muted text-sm">Değişiklik (modifikasyon) indeksleri bu sürümde hesaplanmıyor.</p>
+            {r.hataKovaryanslari.length ? (
+              <div className="table-scroll" role="region" aria-label="Hata kovaryansları" tabIndex={0}>
+                <table className="stats-result-table">
+                  <thead>
+                    <tr><th>Hata kovaryansı</th><th>Kovaryans</th><th>Korelasyon</th><th>SH</th><th>p</th></tr>
+                  </thead>
+                  <tbody>
+                    {r.hataKovaryanslari.map((h) => (
+                      <tr key={`${h.a}-${h.b}`}>
+                        <td>{h.a} ↔ {h.b}</td><td>{yazSayi(h.kov)}</td><td>{yazSayi(h.r)}</td><td>{yazSayi(h.se)}</td><td>{yazP(h.p)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
             {elemeNotu(veri) ? <p className="muted text-sm">{elemeNotu(veri)}</p> : null}
           </div>,
         );
@@ -2330,7 +2410,7 @@ export default function DataAnalyzer({
       setCalisanAnaliz(null);
       setResultError("Analiz çalıştırılırken bir hata oluştu. Seçtiğiniz değişkenlerin uygun türde olduğundan emin olun.");
     }
-  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, olcumler, testDegeri, kovaryatlar, olayDegeri, faktorSayisi, varY, dfaFaktorleri, ikiDegerliSutunlar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, pencere, yorumIste]);
+  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, olcumler, testDegeri, kovaryatlar, olayDegeri, faktorSayisi, varY, dfaFaktorleri, dfaHataKovaryanslari, ikiDegerliSutunlar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, pencere, yorumIste]);
 
   return (
     <section className={pencere ? "analiz-pencere-govde" : "project-form-card"}>
@@ -2625,7 +2705,13 @@ export default function DataAnalyzer({
             )}
 
             {analysisType === "dfa" && (
-              <DfaModeli sutunlar={dataset.numericColumns} faktorler={dfaFaktorleri} degistir={setDfaFaktorleri} />
+              <DfaModeli
+                sutunlar={dataset.numericColumns}
+                faktorler={dfaFaktorleri}
+                degistir={setDfaFaktorleri}
+                hataKovaryanslari={dfaHataKovaryanslari}
+                hataKovaryanslariniDegistir={setDfaHataKovaryanslari}
+              />
             )}
 
             {analysisType === "tekorneklem" && (

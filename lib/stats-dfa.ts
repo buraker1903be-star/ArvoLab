@@ -23,7 +23,15 @@
   tamamlanır ama sonuç bunu açıkça yazar — model tanımı ya da örneklem
   sorunlu demektir; AMOS da uyarır.
 
-  Değişiklik indeksleri (MI) bu sürümde YOK.
+  DEĞİŞİKLİK İNDEKSLERİ (MI, 27.10.2026): modelde sabit (sıfır) duran iki
+  tür parametre için — maddenin başka bir faktöre yüklenmesi ve iki
+  maddenin hatasının ilişkilendirilmesi. MI, o parametre serbest
+  bırakılsa χ²'nin yaklaşık ne kadar düşeceğidir (Sörbom, 1989; skor
+  testi): MI = (N − 1)/4 · g² / V, g = ∂F/∂τ, V beklenen bilgi
+  matrisinde τ'nun diğer parametrelerden arındırılmış payı. Yanında
+  beklenen parametre değişimi (EPC) ve standartlaştırılmışı. Hata
+  kovaryansı modele eklenebilir (hataKovaryanslari); çapraz yük
+  basit yapıyı bozduğu için yalnızca bilgi olarak gösterilir.
 
   Doğrulama semopy'ye (bağımsız SEM uygulaması) karşı: standart yükler,
   faktör korelasyonları ve F_min; indeksler aynı F'ten formülle (test
@@ -69,19 +77,23 @@ export interface DfaModeli {
   faktorler: string[];
   /** Her madde için faktör indeksi (madde sırası veri sütunlarıyla aynı). */
   maddeFaktoru: number[];
+  /** Serbest bırakılmış hata kovaryansları: madde indeks çiftleri (i < j). */
+  hataKovaryanslari?: [number, number][];
 }
 
 interface Parametreler {
   lambda: number[]; // madde başına
   phi: number[]; // faktör çiftleri (i<j)
   theta: number[]; // madde başına
+  psi: number[]; // serbest hata kovaryansları
 }
 
 function coz(model: DfaModeli, v: number[]): Parametreler {
   const p = model.maddeFaktoru.length;
   const m = model.faktorler.length;
   const ciftSayisi = (m * (m - 1)) / 2;
-  return { lambda: v.slice(0, p), phi: v.slice(p, p + ciftSayisi), theta: v.slice(p + ciftSayisi) };
+  const t0 = p + ciftSayisi;
+  return { lambda: v.slice(0, p), phi: v.slice(p, t0), theta: v.slice(t0, t0 + p), psi: v.slice(t0 + p) };
 }
 
 function phiMatrisi(m: number, phi: number[]): Matris {
@@ -99,7 +111,12 @@ function lambdaMatrisi(model: DfaModeli, lambda: number[]): Matris {
 function sigma(model: DfaModeli, par: Parametreler): Matris {
   const L = lambdaMatrisi(model, par.lambda);
   const S = carp(carp(L, phiMatrisi(model.faktorler.length, par.phi)), devrik(L));
-  return S.map((r, i) => r.map((v, j) => (i === j ? v + par.theta[i] : v)));
+  const Sig = S.map((r, i) => r.map((v, j) => (i === j ? v + par.theta[i] : v)));
+  (model.hataKovaryanslari ?? []).forEach(([i, j], k) => {
+    Sig[i][j] += par.psi[k];
+    Sig[j][i] += par.psi[k];
+  });
+  return Sig;
 }
 
 /* F_ML ve gradyanı; Σ pozitif tanımlı değilse null. */
@@ -125,7 +142,8 @@ function amacVeGradyan(model: DfaModeli, S: Matris, logDetS: number, v: number[]
   const gPhi: number[] = [];
   for (let i = 0; i < m; i += 1) for (let j = i + 1; j < m; j += 1) gPhi.push(2 * LtDL[i][j]);
   const gTheta = D.map((r, i) => r[i]);
-  return { f, g: [...gLambda, ...gPhi, ...gTheta] };
+  const gPsi = (model.hataKovaryanslari ?? []).map(([i, j]) => 2 * D[i][j]);
+  return { f, g: [...gLambda, ...gPhi, ...gTheta, ...gPsi] };
 }
 
 /* BFGS (geri izlemeli Armijo adımı). */
@@ -213,7 +231,26 @@ export interface DfaSonucu {
   /** Negatif hata varyansı olan maddeler. */
   heywood: string[];
   yakinsadi: boolean;
+  /** Modelde serbest bırakılmış hata kovaryansları (kestirimleriyle). */
+  hataKovaryanslari: { i: number; j: number; a: string; b: string; kov: number; r: number; se: number; p: number }[];
+  /** Değişiklik indeksleri, büyükten küçüğe. */
+  degisiklikIndeksleri: DegisiklikIndeksi[];
 }
+
+export interface DegisiklikIndeksi {
+  tur: "hata-kovaryansi" | "capraz-yuk";
+  /** Hata kovaryansında madde indeksleri; çapraz yükte [madde, faktör]. */
+  i: number;
+  j: number;
+  etiket: string;
+  mi: number;
+  /** Beklenen parametre değişimi ve standartlaştırılmışı (std.all). */
+  epc: number;
+  sepc: number;
+}
+
+/* MI eşiği: χ²(1) için %5 kritik değer; daha küçük öneriler gösterilmez. */
+export const MI_ESIGI = 3.84;
 
 export type DfaHata = "az-madde" | "az-gozlem" | "tanimsiz" | "kestirilemedi";
 
@@ -238,7 +275,8 @@ export function dogrulayiciFaktorAnalizi(maddeler: number[][], maddeAdlari: stri
   const logDetS = logDet(S);
   if (logDetS === null) return "kestirilemedi";
 
-  const q = p + (m * (m - 1)) / 2 + p;
+  const hk = model.hataKovaryanslari ?? [];
+  const q = p + (m * (m - 1)) / 2 + p + hk.length;
   const df = (p * (p + 1)) / 2 - q;
   if (df < 0) return "tanimsiz";
 
@@ -246,6 +284,7 @@ export function dogrulayiciFaktorAnalizi(maddeler: number[][], maddeAdlari: stri
     ...S.map((r, i) => Math.sqrt(r[i] * 0.5)),
     ...new Array<number>((m * (m - 1)) / 2).fill(0.3),
     ...S.map((r, i) => r[i] * 0.5),
+    ...hk.map(() => 0),
   ];
   const fg = (v: number[]) => amacVeGradyan(model, S, logDetS, v);
   const sonuc = enKucukle(fg, v0);
@@ -354,7 +393,141 @@ export function dogrulayiciFaktorAnalizi(maddeler: number[][], maddeAdlari: stri
     ave,
     heywood: yukler.filter((y) => y.hata < 0).map((y) => y.madde),
     yakinsadi: sonuc.yakinsadi,
+    hataKovaryanslari: hk.map(([i, j], k) => {
+      const kov = par.psi[k];
+      const s2 = se(p + (m * (m - 1)) / 2 + p + k);
+      const z = kov / s2;
+      return {
+        i,
+        j,
+        a: maddeAdlari[i],
+        b: maddeAdlari[j],
+        kov,
+        r: kov / Math.sqrt(par.theta[i] * par.theta[j]),
+        se: s2,
+        p: Number.isFinite(z) ? 2 * (1 - normalCDF(Math.abs(z))) : NaN,
+      };
+    }),
+    degisiklikIndeksleri: degisiklikIndeksleri(model, par, Sig, Si, S, N1, maddeAdlari).map((d) =>
+      d.tur === "capraz-yuk" ? { ...d, epc: d.epc * isaret[d.j], sepc: d.sepc * isaret[d.j] } : d,
+    ),
   };
+}
+
+/*
+  DEĞİŞİKLİK İNDEKSLERİ. Her serbest ve aday parametre için ∂Σ/∂θ
+  matrisleri kurulur; beklenen bilgi I_ab = ½ iz(Σ⁻¹ ∂Σ_a Σ⁻¹ ∂Σ_b).
+  Aday τ için V = I_ττ − I_τθ I_θθ⁻¹ I_θτ, g = iz(D ∂Σ_τ),
+  MI = (N − 1)/4 · g²/V, EPC = −(g/2)/V.
+*/
+function degisiklikIndeksleri(
+  model: DfaModeli,
+  par: Parametreler,
+  Sig: Matris,
+  Si: Matris,
+  S: Matris,
+  N1: number,
+  maddeAdlari: string[],
+): DegisiklikIndeksi[] {
+  const p = Sig.length;
+  const m = model.faktorler.length;
+  const L = lambdaMatrisi(model, par.lambda);
+  const LPhi = carp(L, phiMatrisi(m, par.phi));
+  const SiS = carp(Si, S);
+  const SiSSi = carp(SiS, Si);
+  const D = Si.map((r, i) => r.map((x, j) => x - SiSSi[i][j]));
+
+  const bos = (): Matris => Array.from({ length: p }, () => new Array<number>(p).fill(0));
+  const yukTurevi = (i: number, k: number) => {
+    const A = bos();
+    for (let j = 0; j < p; j += 1) {
+      A[i][j] += LPhi[j][k];
+      A[j][i] += LPhi[j][k];
+    }
+    return A;
+  };
+  const ciftTurevi = (i: number, j: number) => {
+    const A = bos();
+    A[i][j] += 1;
+    A[j][i] += 1;
+    return A;
+  };
+
+  /* Serbest parametrelerin türevleri (kestirimdeki sırayla). */
+  const serbest: Matris[] = [];
+  model.maddeFaktoru.forEach((k, i) => serbest.push(yukTurevi(i, k)));
+  for (let a = 0; a < m; a += 1) {
+    for (let b = a + 1; b < m; b += 1) {
+      const A = bos();
+      for (let i = 0; i < p; i += 1) for (let j = 0; j < p; j += 1) A[i][j] = L[i][a] * L[j][b] + L[i][b] * L[j][a];
+      serbest.push(A);
+    }
+  }
+  for (let i = 0; i < p; i += 1) {
+    const A = bos();
+    A[i][i] = 1;
+    serbest.push(A);
+  }
+  const hk = model.hataKovaryanslari ?? [];
+  hk.forEach(([i, j]) => serbest.push(ciftTurevi(i, j)));
+
+  /* B = Σ⁻¹ ∂Σ; I_ab = ½ iz(B_a B_b) = ½ Σ B_a[i][j] B_b[j][i]. */
+  const B = (A: Matris) => carp(Si, A);
+  const izCarpim = (X: Matris, Y: Matris) => {
+    let t = 0;
+    for (let i = 0; i < p; i += 1) for (let j = 0; j < p; j += 1) t += X[i][j] * Y[j][i];
+    return t;
+  };
+  const Bs = serbest.map(B);
+  const I = Bs.map((x) => Bs.map((y) => 0.5 * izCarpim(x, y)));
+  const Iters = tersAl(I);
+  if (!Iters) return [];
+
+  const adaylar: { tur: DegisiklikIndeksi["tur"]; i: number; j: number; etiket: string; A: Matris; olcek: number }[] = [];
+  const varolan = new Set(hk.map(([i, j]) => `${i}-${j}`));
+  for (let i = 0; i < p; i += 1) {
+    for (let j = i + 1; j < p; j += 1) {
+      if (varolan.has(`${i}-${j}`)) continue;
+      adaylar.push({
+        tur: "hata-kovaryansi",
+        i,
+        j,
+        etiket: `${maddeAdlari[i]} ↔ ${maddeAdlari[j]} (hata)`,
+        A: ciftTurevi(i, j),
+        /* Hata kovaryansının standartlaştırılmışı hataların korelasyonu (lavaan std.all). */
+        olcek: 1 / Math.sqrt(par.theta[i] * par.theta[j]),
+      });
+    }
+  }
+  for (let i = 0; i < p; i += 1) {
+    for (let k = 0; k < m; k += 1) {
+      if (k === model.maddeFaktoru[i]) continue;
+      adaylar.push({
+        tur: "capraz-yuk",
+        i,
+        j: k,
+        etiket: `${model.faktorler[k]} → ${maddeAdlari[i]} (çapraz yük)`,
+        A: yukTurevi(i, k),
+        olcek: 1 / Math.sqrt(Sig[i][i]),
+      });
+    }
+  }
+
+  const sonuc: DegisiklikIndeksi[] = [];
+  for (const a of adaylar) {
+    const Ba = B(a.A);
+    const g = izCarpim(D, a.A);
+    const itt = 0.5 * izCarpim(Ba, Ba);
+    const it = Bs.map((x) => 0.5 * izCarpim(Ba, x));
+    let duzeltme = 0;
+    for (let x = 0; x < it.length; x += 1) for (let y = 0; y < it.length; y += 1) duzeltme += it[x] * Iters[x][y] * it[y];
+    const V = itt - duzeltme;
+    if (!(V > 1e-10)) continue;
+    const mi = (N1 / 4) * (g * g) / V;
+    const epc = -(g / 2) / V;
+    sonuc.push({ tur: a.tur, i: a.i, j: a.j, etiket: a.etiket, mi, epc, sepc: epc * a.olcek });
+  }
+  return sonuc.sort((x, y) => y.mi - x.mi);
 }
 
 /* Yaygın kabul eşikleri (Hu & Bentler, 1999; Kline, 2016) — ekranda değerin yanında. */

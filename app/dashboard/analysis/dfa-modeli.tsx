@@ -17,10 +17,15 @@ export default function DfaModeli({
   sutunlar,
   faktorler,
   degistir,
+  hataKovaryanslari,
+  hataKovaryanslariniDegistir,
 }: {
   sutunlar: string[];
   faktorler: DfaFaktoru[];
   degistir: (yeni: DfaFaktoru[]) => void;
+  /** Değişiklik indekslerinden eklenen hata kovaryansları (madde adı çiftleri). */
+  hataKovaryanslari: [string, string][];
+  hataKovaryanslariniDegistir: (yeni: [string, string][]) => void;
 }) {
   const guncelle = (k: number, yeni: Partial<DfaFaktoru>) =>
     degistir(
@@ -63,6 +68,28 @@ export default function DfaModeli({
           />
         </div>
       ))}
+      {hataKovaryanslari.length ? (
+        <div className="dfa-faktor">
+          <strong className="text-sm">Serbest bırakılan hata kovaryansları</strong>
+          <ul className="turetilen-sutunlar">
+            {hataKovaryanslari.map(([a, b], k) => (
+              <li key={`${a}-${b}`} className="cluster">
+                <span>
+                  {a} ↔ {b}
+                </span>
+                <button
+                  type="button"
+                  className="projects-filter-button button-compact"
+                  aria-label={`${a} ↔ ${b}: kaldır`}
+                  onClick={() => hataKovaryanslariniDegistir(hataKovaryanslari.filter((_, i) => i !== k))}
+                >
+                  <Trash2 size={14} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {faktorler.length < 8 ? (
         <button
           type="button"
