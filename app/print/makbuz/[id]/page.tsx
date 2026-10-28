@@ -2,10 +2,14 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { gunYazisi, odemeAciklamasi, odemeninProformasi, tutarYazisi } from "@/lib/faturalama";
 import { yazdirmaFaturalamasi } from "@/lib/faturalama-sunucu";
-import { trTarihSaat } from "@/lib/tr-time";
+import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import PrintActions from "../../manuscript/[id]/print-actions";
 
-export const metadata: Metadata = { title: "Ödeme makbuzu", robots: { index: false } };
+// Başlık PDF'in dosya adı oluyor; kullanıcının dilinde olsun.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await ceviri();
+  return { title: t({ tr: "Ödeme makbuzu", en: "Payment receipt" }), robots: { index: false } };
+}
 
 /*
   ÖDEME MAKBUZU (26.10.2026). Kart ödemesinin dekontu yok; müşteri
@@ -20,6 +24,10 @@ export const metadata: Metadata = { title: "Ödeme makbuzu", robots: { index: fa
 */
 export default async function MakbuzPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const t = await ceviri();
+  const dil = await aktifDil();
+  const { tarihSaat } = await tarihler();
+  const geriEtiketi = t({ tr: "Aboneliğe dön", en: "Back to subscription" });
   const okuma = await yazdirmaFaturalamasi();
   if (okuma.durum === "oturum-yok") redirect("/");
   if (okuma.durum === "yetki-yok") notFound();
@@ -27,8 +35,10 @@ export default async function MakbuzPage({ params }: { params: Promise<{ id: str
   if (!veri) {
     return (
       <div className="print-page">
-        <PrintActions backHref="/dashboard/abonelik" autoPrint={false} backLabel="Aboneliğe dön" />
-        <p className="makbuz-uyari">Ödeme bilgisi şu an okunamadı; biraz sonra tekrar deneyin.</p>
+        <PrintActions backHref="/dashboard/abonelik" autoPrint={false} backLabel={geriEtiketi} />
+        <p className="makbuz-uyari">
+          {t({ tr: "Ödeme bilgisi şu an okunamadı; biraz sonra tekrar deneyin.", en: "Payment details could not be loaded right now; try again shortly." })}
+        </p>
       </div>
     );
   }
@@ -38,50 +48,54 @@ export default async function MakbuzPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="print-page">
-      <PrintActions backHref="/dashboard/abonelik" autoPrint={false} backLabel="Aboneliğe dön" />
+      <PrintActions backHref="/dashboard/abonelik" autoPrint={false} backLabel={geriEtiketi} />
       <article className="print-sheet makbuz">
         <header>
-          <h1>Ödeme makbuzu</h1>
+          <h1>{t({ tr: "Ödeme makbuzu", en: "Payment receipt" })}</h1>
           <p>ArvoLab · Arvo</p>
         </header>
         <dl>
-          <dt>Ödeyen</dt>
-          <dd>{kapsam.tur === "kurum" ? "Kurum hesabı" : ctx.user.email}</dd>
-          <dt>Tarih</dt>
-          <dd>{odeme.tarih ? trTarihSaat(odeme.tarih) : "—"}</dd>
-          <dt>Açıklama</dt>
-          <dd>{odemeAciklamasi(odeme)}</dd>
-          <dt>Ödeme yolu</dt>
-          <dd>{odeme.kanal === "kart" ? "Kredi/banka kartı (PayTR)" : "Havale/EFT"}</dd>
+          <dt>{t({ tr: "Ödeyen", en: "Paid by" })}</dt>
+          <dd>{kapsam.tur === "kurum" ? t({ tr: "Kurum hesabı", en: "Institution account" }) : ctx.user.email}</dd>
+          <dt>{t({ tr: "Tarih", en: "Date" })}</dt>
+          <dd>{odeme.tarih ? tarihSaat(odeme.tarih) : "—"}</dd>
+          <dt>{t({ tr: "Açıklama", en: "Description" })}</dt>
+          <dd>{odemeAciklamasi(odeme, dil)}</dd>
+          <dt>{t({ tr: "Ödeme yolu", en: "Payment method" })}</dt>
+          <dd>{odeme.kanal === "kart"
+              ? t({ tr: "Kredi/banka kartı (PayTR)", en: "Credit/debit card (PayTR)" })
+              : t({ tr: "Havale/EFT", en: "Bank transfer" })}</dd>
           {odeme.referans ? (
             <>
-              <dt>Referans</dt>
+              <dt>{t({ tr: "Referans", en: "Reference" })}</dt>
               <dd>{odeme.referans}</dd>
             </>
           ) : null}
-          <dt>Tutar</dt>
-          <dd className="makbuz-tutar">{tutarYazisi(odeme.tutar, odeme.paraBirimi)}</dd>
+          <dt>{t({ tr: "Tutar", en: "Amount" })}</dt>
+          <dd className="makbuz-tutar">{tutarYazisi(odeme.tutar, odeme.paraBirimi, dil)}</dd>
           {proforma ? (
             <>
-              <dt>Proforma</dt>
+              <dt>{t({ tr: "Proforma", en: "Pro forma invoice" })}</dt>
               <dd>
-                {proforma.no} · {gunYazisi(proforma.duzenlemeTarihi)}
+                {proforma.no} · {gunYazisi(proforma.duzenlemeTarihi, dil)}
               </dd>
             </>
           ) : null}
           {odeme.fatura ? (
             <>
-              <dt>Fatura</dt>
+              <dt>{t({ tr: "Fatura", en: "Invoice" })}</dt>
               <dd>
                 {odeme.fatura.no}
-                {odeme.fatura.tarih ? ` · ${gunYazisi(odeme.fatura.tarih)}` : ""}
+                {odeme.fatura.tarih ? ` · ${gunYazisi(odeme.fatura.tarih, dil)}` : ""}
               </dd>
             </>
           ) : null}
         </dl>
         <p className="makbuz-uyari">
-          Bu belge fatura değildir; ödemenin alındığını gösterir. Faturanız Abonelik ve kredi sayfasındaki
-          &quot;Faturalar ve ödemeler&quot; bölümünde yer alır.
+          {t({
+            tr: "Bu belge fatura değildir; ödemenin alındığını gösterir. Faturanız Abonelik ve kredi sayfasındaki \"Faturalar ve ödemeler\" bölümünde yer alır.",
+            en: "This document is not an invoice; it confirms that the payment was received. Your invoice is in the \"Invoices and payments\" section of the Subscription and credits page.",
+          })}
         </p>
       </article>
     </div>

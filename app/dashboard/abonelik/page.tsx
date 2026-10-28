@@ -8,14 +8,20 @@ import { krediSatinAl } from "@/app/actions/subscription";
 import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
 import { KREDI_SATIN_ALMA_ADRESI } from "@/lib/ai/kredi-karari";
 import { binKrediFiyati, paketFiyati } from "@/lib/kredi-paketleri";
-import { trTarihSaat } from "@/lib/tr-time";
+import type { Metadata } from "next";
+import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
+import { YEREL, type Metin } from "@/lib/dil";
+import { formatTry } from "@/lib/billing-plan";
 import { faturalamaKapsami } from "@/lib/faturalama";
 import { faturalamaYukle } from "@/lib/subscription";
 import LicenseCard from "../_components/license-card";
 import OdemeButonu from "../_components/odeme-butonu";
 import FaturalarBolumu from "./faturalar-bolumu";
 
-export const metadata = { title: "Abonelik ve Kredi" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await ceviri();
+  return { title: t({ tr: "Abonelik ve Kredi", en: "Subscription and Credits" }) };
+}
 
 /*
   ABONELİK VE KREDİ (26.10.2026, kurum sahibinin isteği: "bireysel
@@ -36,24 +42,37 @@ export const metadata = { title: "Abonelik ve Kredi" };
   kurumun kredisini kurum yöneticisi ArvoOS panelinden alıyor.
 */
 
-const sayi = (deger: number) => new Intl.NumberFormat("tr-TR").format(deger);
-
-const HATA: Record<string, string> = {
-  odeme: "Ödeme başlatılamadı. Ödeme sistemine şu an ulaşılamıyor ya da aboneliğiniz kredi almaya açık değil; biraz sonra tekrar deneyin.",
-  paket: "Seçilen paket tanınmadı; sayfayı yenileyip tekrar deneyin.",
-  kurum: "Kurum üyesi olduğunuz için krediyi kurum yöneticiniz alır.",
+const HATA: Record<string, Metin> = {
+  odeme: {
+    tr: "Ödeme başlatılamadı. Ödeme sistemine şu an ulaşılamıyor ya da aboneliğiniz kredi almaya açık değil; biraz sonra tekrar deneyin.",
+    en: "Payment could not be started. The payment system is unreachable right now, or your subscription is not eligible for credit purchases; try again shortly.",
+  },
+  paket: {
+    tr: "Seçilen paket tanınmadı; sayfayı yenileyip tekrar deneyin.",
+    en: "The selected package was not recognized; refresh the page and try again.",
+  },
+  kurum: {
+    tr: "Kurum üyesi olduğunuz için krediyi kurum yöneticiniz alır.",
+    en: "Because you are an institution member, your institution administrator buys credits.",
+  },
 };
 
-const HAREKET: Record<string, { ad: string; isaret: string }> = {
-  yukleme: { ad: "Satın alındı", isaret: "+" },
-  yenileme: { ad: "Aylık hak yenilendi", isaret: "" },
-  tuketim: { ad: "Asistan çalışması", isaret: "−" },
+const HAREKET: Record<string, { ad: Metin; isaret: string }> = {
+  yukleme: { ad: { tr: "Satın alındı", en: "Purchased" }, isaret: "+" },
+  yenileme: { ad: { tr: "Aylık hak yenilendi", en: "Monthly allowance renewed" }, isaret: "" },
+  tuketim: { ad: { tr: "Asistan çalışması", en: "Assistant run" }, isaret: "−" },
 };
 
 export default async function AbonelikPage({ searchParams }: { searchParams: Promise<{ hata?: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx) redirect("/");
   const { hata } = await searchParams;
+  const t = await ceviri();
+  const dil = await aktifDil();
+  const { tarihSaat } = await tarihler();
+  const sayi = (deger: number) => new Intl.NumberFormat(YEREL[dil]).format(deger);
+  // Türkçede paket fiyatı ArvoOS'la aynı yazımda ("499 TL"); İngilizcede tutar yine TL, yalnızca biçim değişiyor.
+  const fiyat = (kurus: number) => (dil === "tr" ? paketFiyati(kurus) : formatTry(kurus, dil));
 
   const [access, { data: krediSatiri, error: krediHatasi }] = await Promise.all([
     getAccessState(await getCurrentProfile()),
@@ -88,28 +107,28 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
     <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
-          <h1>Abonelik ve kredi</h1>
-          <p>Aboneliğiniz, asistan kullanım hakkınız ve ek kredi paketleri.</p>
+          <h1>{t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}</h1>
+          <p>{t({ tr: "Aboneliğiniz, asistan kullanım hakkınız ve ek kredi paketleri.", en: "Your subscription, assistant allowance and extra credit packages." })}</p>
         </div>
       </section>
 
       {hata && HATA[hata] ? (
         <p className="alert" data-tone="danger" role="alert">
-          {HATA[hata]}
+          {t(HATA[hata])}
         </p>
       ) : null}
 
-      <section className="gb-sutunlar kaynaklar-ikili" aria-label="Abonelik ve kredi">
+      <section className="gb-sutunlar kaynaklar-ikili" aria-label={t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}>
         <article className="gb-kart gb-sutun kayan-kart">
           <header className="gb-kart-bas">
             <div>
-              <h2>Aboneliğim</h2>
+              <h2>{t({ tr: "Aboneliğim", en: "My subscription" })}</h2>
               <p>
                 {access.kind === "organization"
-                  ? "Aboneliğinizi kurumunuz yönetiyor."
+                  ? t({ tr: "Aboneliğinizi kurumunuz yönetiyor.", en: "Your subscription is managed by your institution." })
                   : access.kind === "individual"
-                    ? "Bireysel abonelik; ödeme kartla, otomatik çekim yok."
-                    : "İç ekip hesabı."}
+                    ? t({ tr: "Bireysel abonelik; ödeme kartla, otomatik çekim yok.", en: "Individual subscription; paid by card, no automatic charges." })
+                    : t({ tr: "İç ekip hesabı.", en: "Internal team account." })}
               </p>
             </div>
           </header>
@@ -118,14 +137,21 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
 
           {access.kind === "individual" ? (
             <p className="hint">
-              Aboneliğe her ay 1.000 asistan kredisi dahil (1 kredi = 1.000 karakter); kullanılmayan aylık hak devretmez.
-              Satın alınan kredi yanmaz, aylık hak bitince kullanılır.
+              {t({
+                tr: "Aboneliğe her ay 1.000 asistan kredisi dahil (1 kredi = 1.000 karakter); kullanılmayan aylık hak devretmez. Satın alınan kredi yanmaz, aylık hak bitince kullanılır.",
+                en: "Your subscription includes 1,000 assistant credits each month (1 credit = 1,000 characters); unused monthly credits do not roll over. Purchased credits never expire and are used once the monthly allowance runs out.",
+              })}
             </p>
           ) : null}
 
           {access.kind === "staff" && kapsam && faturaKurumu ? (
             <p className="hint">
-              <b>{faturaKurumu}</b> faturaları gösteriliyor. Diğer kurumunuzunkiler için profil menüsündeki Kurum seçimini değiştirin.
+              {t({ tr: "", en: "Showing invoices for " })}
+              <b>{faturaKurumu}</b>
+              {t({
+                tr: " faturaları gösteriliyor. Diğer kurumunuzunkiler için profil menüsündeki Kurum seçimini değiştirin.",
+                en: ". For another institution's, change the Institution selection in the profile menu.",
+              })}
             </p>
           ) : null}
           {kapsam ? <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} /> : null}
@@ -134,8 +160,12 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
         <article className="gb-kart gb-sutun kayan-kart">
           <header className="gb-kart-bas">
             <div>
-              <h2>Asistan kredisi</h2>
-              <p>{bireysel ? "Bu ayki hakkınız ve satın aldığınız bakiye" : "Kurumunuzun bu ayki kredisi"}</p>
+              <h2>{t({ tr: "Asistan kredisi", en: "Assistant credits" })}</h2>
+              <p>
+                {bireysel
+                  ? t({ tr: "Bu ayki hakkınız ve satın aldığınız bakiye", en: "This month's allowance and your purchased balance" })
+                  : t({ tr: "Kurumunuzun bu ayki kredisi", en: "Your institution's credits this month" })}
+              </p>
             </div>
           </header>
 
@@ -148,20 +178,23 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
             <>
               <div className="kaynakca-puan" data-tone={kredi.tukendi ? "danger" : kredi.ekBakiye === 0 && kredi.oran >= 80 ? "warning" : "success"}>
                 <b>{sayi(kredi.toplam)}</b>
-                <span>kredi kullanılabilir</span>
+                <span>{t({ tr: "kredi kullanılabilir", en: "credits available" })}</span>
               </div>
               {/* Yerleşik <progress>: satır içi genişlik stili yazmadan dolu oranı gösterir. */}
               <progress
                 className="kredi-cubugu"
                 max={Math.max(1, kredi.aylikLimit)}
                 value={kredi.aylikKalan}
-                aria-label={`Aylık hakkın ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} kredisi kaldı`}
+                aria-label={t({
+                  tr: `Aylık hakkın ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} kredisi kaldı`,
+                  en: `${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} monthly credits left`,
+                })}
               />
               <ul className="gb-liste">
                 <li className="gb-satir">
                   <span className="gb-satir-govde">
-                    <b>Bu ay kalan hak</b>
-                    <small>Ayın başında {sayi(kredi.aylikLimit)} krediye yenilenir</small>
+                    <b>{t({ tr: "Bu ay kalan hak", en: "Left this month" })}</b>
+                    <small>{t({ tr: `Ayın başında ${sayi(kredi.aylikLimit)} krediye yenilenir`, en: `Renews to ${sayi(kredi.aylikLimit)} credits at the start of the month` })}</small>
                   </span>
                   <span className="gb-zaman">
                     {sayi(kredi.aylikKalan)} / {sayi(kredi.aylikLimit)}
@@ -169,40 +202,45 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                 </li>
                 <li className="gb-satir">
                   <span className="gb-satir-govde">
-                    <b>Satın alınan bakiye</b>
-                    <small>Yanmaz; aylık hak bitince kullanılır</small>
+                    <b>{t({ tr: "Satın alınan bakiye", en: "Purchased balance" })}</b>
+                    <small>{t({ tr: "Yanmaz; aylık hak bitince kullanılır", en: "Never expires; used once the monthly allowance runs out" })}</small>
                   </span>
                   <span className="gb-zaman">{sayi(kredi.ekBakiye)}</span>
                 </li>
               </ul>
               {kredi.tukendi ? (
                 <p className="tone-text text-sm" data-tone="danger">
-                  Krediniz bitti; asistan yeni çalışma yapmıyor.{" "}
-                  {bireysel ? "Aşağıdan ek kredi alabilir ya da ayın başını bekleyebilirsiniz." : "Kurum yöneticiniz ek kredi alabilir."}
+                  {t({ tr: "Krediniz bitti; asistan yeni çalışma yapmıyor.", en: "You are out of credits; the assistant will not run new checks." })}{" "}
+                  {bireysel
+                    ? t({ tr: "Aşağıdan ek kredi alabilir ya da ayın başını bekleyebilirsiniz.", en: "You can buy more credits below or wait for the start of the month." })
+                    : t({ tr: "Kurum yöneticiniz ek kredi alabilir.", en: "Your institution administrator can buy more credits." })}
                 </p>
               ) : null}
             </>
           ) : (
             <p className="gb-bos">
               {access.kind === "staff"
-                ? "İç ekip hesapları asistan kredisine tabi değil."
-                : "Kredi durumu şu an okunamadı. Asistanı kullanmaya devam edebilirsiniz; sayfayı sonra yenileyin."}
+                ? t({ tr: "İç ekip hesapları asistan kredisine tabi değil.", en: "Internal team accounts are not subject to assistant credits." })
+                : t({
+                    tr: "Kredi durumu şu an okunamadı. Asistanı kullanmaya devam edebilirsiniz; sayfayı sonra yenileyin.",
+                    en: "Your credit status could not be loaded right now. You can keep using the assistant; refresh the page later.",
+                  })}
             </p>
           )}
 
           {access.kind === "organization" ? (
             <p className="hint">
-              Kurumunuzun kredisini kurum yöneticiniz{" "}
+              {t({ tr: "Kurumunuzun kredisini kurum yöneticiniz", en: "Your institution administrator buys your institution's credits from the" })}{" "}
               <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">
-                ArvoOS panelinden <ExternalLink size={12} aria-hidden="true" />
-              </a>{" "}
-              alır.
+                {t({ tr: "ArvoOS panelinden", en: "ArvoOS panel" })} <ExternalLink size={12} aria-hidden="true" />
+              </a>
+              {t({ tr: " alır.", en: "." })}
             </p>
           ) : null}
 
           {access.kind === "individual" ? (
             <>
-              <h3 className="calisma-durum-alt">Ek kredi paketleri</h3>
+              <h3 className="calisma-durum-alt">{t({ tr: "Ek kredi paketleri", en: "Extra credit packages" })}</h3>
               {paketler.length ? (
                 <div className="kredi-paketleri">
                   {paketler.map((paket, i) => {
@@ -212,25 +250,29 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                       <form action={krediSatinAl} key={paket.kod} className="kredi-paketi">
                         <input type="hidden" name="paket" value={paket.kod} />
                         <b>{paket.ad}</b>
-                        <span className="kredi-paketi-fiyat">{paketFiyati(paket.fiyat)}</span>
+                        <span className="kredi-paketi-fiyat">{fiyat(paket.fiyat)}</span>
                         <small>
-                          1.000 kredi {paketFiyati(birim)}
-                          {indirim ? ` · %${indirim} avantajlı` : ""}
+                          {t({ tr: `1.000 kredi ${fiyat(birim)}`, en: `${fiyat(birim)} per 1,000 credits` })}
+                          {indirim ? t({ tr: ` · %${indirim} avantajlı`, en: ` · save ${indirim}%` }) : ""}
                         </small>
-                        <OdemeButonu birincil={i === 0} etiket="Satın al" />
+                        <OdemeButonu birincil={i === 0} etiket={t({ tr: "Satın al", en: "Buy" })} />
                       </form>
                     );
                   })}
                 </div>
               ) : (
                 <p className="muted text-sm">
-                  Kredi paketleri şu an yüklenemedi. Ödeme sistemine ulaşılamıyor olabilir; biraz sonra sayfayı
-                  yenileyin.
+                  {t({
+                    tr: "Kredi paketleri şu an yüklenemedi. Ödeme sistemine ulaşılamıyor olabilir; biraz sonra sayfayı yenileyin.",
+                    en: "Credit packages could not be loaded right now. The payment system may be unreachable; refresh the page shortly.",
+                  })}
                 </p>
               )}
               <p className="hint">
-                Ödeme ArvoOS üzerinden kartla alınır (PayTR). Ödeme onaylanınca kredi birkaç dakika içinde bakiyenize
-                eklenir; aboneliğiniz kapalıyken kredi satılmaz.
+                {t({
+                  tr: "Ödeme ArvoOS üzerinden kartla alınır (PayTR). Ödeme onaylanınca kredi birkaç dakika içinde bakiyenize eklenir; aboneliğiniz kapalıyken kredi satılmaz.",
+                  en: "Payment is taken by card through ArvoOS (PayTR). Once the payment is approved, the credits are added to your balance within a few minutes; credits cannot be bought while your subscription is inactive.",
+                })}
               </p>
             </>
           ) : null}
@@ -238,18 +280,18 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
           {bireysel && sonHareketler.length ? (
             <>
               <h3 className="calisma-durum-alt">
-                <History size={14} aria-hidden="true" /> Son hareketler
+                <History size={14} aria-hidden="true" /> {t({ tr: "Son hareketler", en: "Recent activity" })}
               </h3>
               <ul className="gb-liste">
                 {sonHareketler.map((h, i) => (
                   <li key={i} className="gb-satir">
                     <span className="gb-satir-govde">
-                      <b>{HAREKET[h.tur]?.ad ?? h.tur}</b>
-                      <small>{trTarihSaat(h.created_at)}</small>
+                      <b>{HAREKET[h.tur] ? t(HAREKET[h.tur].ad) : h.tur}</b>
+                      <small>{tarihSaat(h.created_at)}</small>
                     </span>
                     <span className="gb-zaman">
                       {HAREKET[h.tur]?.isaret ?? ""}
-                      {sayi(Number(h.kredi))} kredi
+                      {sayi(Number(h.kredi))} {t({ tr: "kredi", en: "credits" })}
                     </span>
                   </li>
                 ))}

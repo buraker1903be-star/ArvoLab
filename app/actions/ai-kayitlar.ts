@@ -3,6 +3,7 @@
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 
 import { createClient } from "@/lib/supabase/server";
+import { ceviri } from "@/lib/dil-sunucu";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { KAYIT_ROLLERI, type AsistanKayitSatiri, type ModelOzeti } from "@/lib/ai/kayit-gorunum";
 
@@ -75,8 +76,10 @@ export async function modelOzetleri(): Promise<ListeSonucu<ModelOzeti>> {
   /* PostgREST bigint'i DİZGİ olarak döndürür; Number'a çevrilmezse sıralama
      sözlük sırasına döner ("9" > "10") ve toplamlar birleştirilir. */
   const sayi = (deger: unknown) => Number(deger ?? 0) || 0;
+  // Modeli kaydedilmemiş satırların grubu ekranda bu adla görünüyor.
+  const bilinmiyor = (await ceviri())({ tr: "bilinmiyor", en: "unknown" });
   const ozetler: ModelOzeti[] = ((data ?? []) as Record<string, unknown>[]).map((satir) => ({
-    model: String(satir.model ?? "bilinmiyor"),
+    model: String(satir.model ?? bilinmiyor),
     toplam: sayi(satir.toplam),
     tamamlanan: sayi(satir.tamamlanan),
     reddedilen: sayi(satir.reddedilen),

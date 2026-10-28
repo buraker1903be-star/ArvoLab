@@ -7,6 +7,7 @@ import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { loadCurrentProfile } from "@/lib/current-profile";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 import { onayGecerli } from "@/lib/hesap-silme";
+import { ceviri } from "@/lib/dil-sunucu";
 
 /*
   Hesap silme talebi ve geri alma.
@@ -28,6 +29,7 @@ export async function hesapSilmeTalebi(formData: FormData): Promise<ActionResult
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const profile = await loadCurrentProfile();
   /*
@@ -37,12 +39,17 @@ export async function hesapSilmeTalebi(formData: FormData): Promise<ActionResult
     gitmemeli. Gerekirse veritabanından bilerek silinir.
   */
   if (profile?.role && ADMIN_ROLES.includes(profile.role)) {
-    return { error: "İç ekip hesapları bu ekrandan silinemez. Sistem yöneticisiyle görüşün." };
+    return {
+      error: t({
+        tr: "İç ekip hesapları bu ekrandan silinemez. Sistem yöneticisiyle görüşün.",
+        en: "Internal team accounts cannot be deleted from this screen. Contact your system administrator.",
+      }),
+    };
   }
 
   // Onay için kişi KENDİ e-postasını yazıyor; karşılaştırma lib/hesap-silme.ts'te.
   if (!onayGecerli(formData.get("onay"), user.email)) {
-    return { error: "Onaylamak için e-posta adresinizi birebir yazın." };
+    return { error: t({ tr: "Onaylamak için e-posta adresinizi birebir yazın.", en: "To confirm, type your email address exactly." }) };
   }
 
   const { data, error } = await supabase
@@ -53,7 +60,7 @@ export async function hesapSilmeTalebi(formData: FormData): Promise<ActionResult
 
   if (error || !data?.length) {
     console.error("[hesap-silme] talep yazılamadı", error?.message);
-    return { error: "Silme talebi kaydedilemedi. Lütfen tekrar deneyin." };
+    return { error: t({ tr: "Silme talebi kaydedilemedi. Lütfen tekrar deneyin.", en: "The deletion request could not be saved. Please try again." }) };
   }
 
   /*
@@ -77,6 +84,7 @@ export async function hesapSilmeyiIptal(): Promise<ActionResult> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const { data, error } = await supabase
     .from("profiles")
@@ -86,9 +94,12 @@ export async function hesapSilmeyiIptal(): Promise<ActionResult> {
 
   if (error || !data?.length) {
     console.error("[hesap-silme] talep geri alınamadı", error?.message);
-    return { error: "Silme talebi geri alınamadı. Lütfen tekrar deneyin." };
+    return { error: t({ tr: "Silme talebi geri alınamadı. Lütfen tekrar deneyin.", en: "The deletion request could not be withdrawn. Please try again." }) };
   }
 
   revalidatePath("/dashboard", "layout");
-  return { success: true, message: "Hesabınız geri geldi; silme talebi iptal edildi." };
+  return {
+    success: true,
+    message: t({ tr: "Hesabınız geri geldi; silme talebi iptal edildi.", en: "Your account is restored; the deletion request has been canceled." }),
+  };
 }

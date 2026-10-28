@@ -1,5 +1,6 @@
 "use server";
 
+import { ceviri } from "@/lib/dil-sunucu";
 import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES } from "@/lib/project-labels";
@@ -29,9 +30,11 @@ export async function destekMesajiGonder(tur: "uzman" | "destek", talepId: strin
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
 
+  const t = await ceviri();
+
   const metin = String(formData.get("metin") ?? "").trim();
-  if (!metin) return { error: "Boş mesaj gönderilemez." };
-  if (metin.length > 4000) return { error: "Mesaj en fazla 4000 karakter olabilir." };
+  if (!metin) return { error: t({ tr: "Boş mesaj gönderilemez.", en: "You cannot send an empty message." }) };
+  if (metin.length > 4000) return { error: t({ tr: "Mesaj en fazla 4000 karakter olabilir.", en: "Messages can be at most 4,000 characters." }) };
 
   const { error } = await ctx.supabase
     .from("destek_mesajlari")
@@ -39,7 +42,12 @@ export async function destekMesajiGonder(tur: "uzman" | "destek", talepId: strin
   if (error) {
     console.error("[destek] mesaj yazılamadı", error.message);
     // RLS reddi: talep kapanmış ya da kişi taraf değil. Ekran bu durumda formu zaten göstermiyor.
-    return { error: "Mesaj gönderilemedi. Talep kapanmış olabilir; sayfayı yenileyin." };
+    return {
+      error: t({
+        tr: "Mesaj gönderilemedi. Talep kapanmış olabilir; sayfayı yenileyin.",
+        en: "The message could not be sent. The request may have been closed; refresh the page.",
+      }),
+    };
   }
 
   /*
@@ -55,7 +63,13 @@ export async function destekMesajiGonder(tur: "uzman" | "destek", talepId: strin
     if (durumHatasi) {
       console.error("[destek] çözüldü işaretlenemedi", durumHatasi.message);
       revalidatePath(SAYFA);
-      return { success: true, warning: "Mesaj gönderildi ama talep çözüldü olarak işaretlenemedi." };
+      return {
+        success: true,
+        warning: t({
+          tr: "Mesaj gönderildi ama talep çözüldü olarak işaretlenemedi.",
+          en: "The message was sent, but the request could not be marked as resolved.",
+        }),
+      };
     }
   }
 

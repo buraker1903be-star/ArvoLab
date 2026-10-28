@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { ceviri } from "@/lib/dil-sunucu";
 
 export const runtime = "nodejs";
 // Uzun tezlerde toplama biraz sürebilir; tek seferlik bir indirme.
@@ -23,8 +24,9 @@ export const maxDuration = 60;
 */
 export async function GET() {
   const supabase = await createClient();
+  const t = await ceviri();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return Response.json({ error: "Oturum bulunamadı." }, { status: 401 });
+  if (!user) return Response.json({ error: t({ tr: "Oturum bulunamadı.", en: "No active session." }) }, { status: 401 });
 
   const oku = async (tablo: string, sutun = "*", alan = "owner_id") => {
     const { data, error } = await supabase.from(tablo).select(sutun).eq(alan, user.id);
@@ -50,7 +52,7 @@ export async function GET() {
   const kimlikler = Array.isArray(calismalar) ? calismalar.map((satir) => satir.id as string) : [];
 
   let metinler: unknown[] | { hata: string } = [];
-  if (calismaHatasi) metinler = { hata: "Çalışmalar okunamadığı için metinler alınamadı." };
+  if (calismaHatasi) metinler = { hata: t({ tr: "Çalışmalar okunamadığı için metinler alınamadı.", en: "Texts could not be retrieved because the projects could not be read." }) };
   else if (kimlikler.length) {
     const { data, error } = await supabase.from("project_manuscripts").select("*").in("project_id", kimlikler);
     metinler = error ? { hata: error.message } : data ?? [];
@@ -67,9 +69,13 @@ export async function GET() {
   ]);
 
   const govde = {
-    aciklama:
-      "ArvoLab hesabınızdaki kayıtların tamamı. Tez metinleri Tiptap belge biçiminde (JSON) saklanır; "
-      + "Word çıktısı için ürün içindeki dışa aktarmayı kullanın.",
+    // Anahtar adları dilden bağımsız kalıyor (dosyayı okuyan araçlar bozulmasın); yalnızca açıklama çevriliyor.
+    aciklama: t({
+      tr: "ArvoLab hesabınızdaki kayıtların tamamı. Tez metinleri Tiptap belge biçiminde (JSON) saklanır; "
+        + "Word çıktısı için ürün içindeki dışa aktarmayı kullanın.",
+      en: "All records in your ArvoLab account. Thesis texts are stored in Tiptap document format (JSON); "
+        + "use the in-product export for Word output.",
+    }),
     olusturulma: new Date().toISOString(),
     hesap: { id: user.id, eposta: user.email, olusturulma: user.created_at },
     profil: profil ?? null,

@@ -1,5 +1,6 @@
 "use server";
 
+import { ceviri } from "@/lib/dil-sunucu";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
@@ -32,9 +33,11 @@ export async function createSupportRequest(formData: FormData): Promise<ActionRe
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
 
+  const t = await ceviri();
+
   const subject = String(formData.get("subject") ?? "").trim();
   const message = String(formData.get("message") ?? "").trim();
-  if (!subject || !message) return { error: "Konu ve mesaj alanları zorunludur." };
+  if (!subject || !message) return { error: t({ tr: "Konu ve mesaj alanları zorunludur.", en: "Subject and message are required." }) };
 
   const category = String(formData.get("category") ?? "other");
   const priority = String(formData.get("priority") ?? "normal");
@@ -50,7 +53,7 @@ export async function createSupportRequest(formData: FormData): Promise<ActionRe
 
   if (error) {
     console.error(error);
-    return { error: "Talep gönderilirken bir hata oluştu." };
+    return { error: t({ tr: "Talep gönderilirken bir hata oluştu.", en: "Something went wrong while sending the request." }) };
   }
 
   revalidatePath(PAGE_PATH);
@@ -104,9 +107,13 @@ export async function getAllSupportRequests(): Promise<ListeSonucu<AppSupportReq
 */
 
 export async function updateSupportRequestStatus(requestId: string, status: string): Promise<ActionResult> {
-  const auth = await requireRole(ADMIN_ROLES, "Talep durumunu yalnızca Sistem Yöneticisi veya Kurucu değiştirebilir.");
+  const auth = await requireRole(ADMIN_ROLES, {
+    tr: "Talep durumunu yalnızca Sistem Yöneticisi veya Kurucu değiştirebilir.",
+    en: "Only a System Administrator or Founder can change the request status.",
+  });
   if ("error" in auth) return { error: auth.error };
-  if (!STATUSES.includes(status)) return { error: "Geçersiz durum." };
+  const t = await ceviri();
+  if (!STATUSES.includes(status)) return { error: t({ tr: "Geçersiz durum.", en: "Invalid status." }) };
 
   const { data, error } = await auth.supabase
     .from("app_support_requests")
@@ -116,9 +123,9 @@ export async function updateSupportRequestStatus(requestId: string, status: stri
 
   if (error) {
     console.error(error);
-    return { error: "Güncellenirken bir hata oluştu." };
+    return { error: t({ tr: "Güncellenirken bir hata oluştu.", en: "Something went wrong while updating." }) };
   }
-  if (!data?.length) return { error: "Talep bulunamadı." };
+  if (!data?.length) return { error: t({ tr: "Talep bulunamadı.", en: "Request not found." }) };
 
   revalidatePath(PAGE_PATH);
   return { success: true };

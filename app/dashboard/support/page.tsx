@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { ceviri } from "@/lib/dil-sunucu";
 
-export const metadata = { title: "Destek" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await ceviri();
+  return { title: t({ tr: "Destek", en: "Support" }) };
+}
 
 /*
   Uygulama desteği artık Destek sayfasının sağ kartı

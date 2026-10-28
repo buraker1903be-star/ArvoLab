@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { ceviri } from "@/lib/dil-sunucu";
+import type { Metadata } from "next";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import { YEREL } from "@/lib/dil";
 import { redirect } from "next/navigation";
 import { Cpu, Download, Keyboard, KeyRound, LogOut, Save, Sparkles, Trash2 } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
@@ -20,12 +22,15 @@ import PasswordForm from "./password-form";
 import HesapSilmeFormu from "./hesap-silme-formu";
 import { hesapSilmeTalebi } from "@/app/actions/hesap";
 
-export const metadata = { title: "Ayarlar" };
-
-const sayi = (deger: number) => new Intl.NumberFormat("tr-TR").format(deger);
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await ceviri();
+  return { title: t({ tr: "Ayarlar", en: "Settings" }) };
+}
 
 export default async function SettingsPage() {
   const t = await ceviri();
+  const dil = await aktifDil();
+  const sayi = (deger: number) => new Intl.NumberFormat(YEREL[dil]).format(deger);
   const ctx = await getAuthContext();
   if (!ctx) redirect("/");
 
@@ -107,52 +112,55 @@ export default async function SettingsPage() {
     ne rolü ne kurumu değişir, iç ekibe kendi işini anlatıyordu.
   */
   const aciklama = icEkip
-    ? "Hesabınız ve kurulum bilgileri."
+    ? t({ tr: "Hesabınız ve kurulum bilgileri.", en: "Your account and setup information." })
     : ctx.organizationId
-      ? `Hesabınız ve güvenliğiniz. Rolünüz ve kurum bağınız ${organizationName ?? "kurumunuz"} tarafından belirlenir; değişiklik için kurum yöneticinize başvurun.`
-      : "Hesabınız, aboneliğiniz ve verileriniz.";
+      ? t({
+          tr: `Hesabınız ve güvenliğiniz. Rolünüz ve kurum bağınız ${organizationName ?? "kurumunuz"} tarafından belirlenir; değişiklik için kurum yöneticinize başvurun.`,
+          en: `Your account and security. Your role and institution link are set by ${organizationName ?? "your institution"}; contact your institution administrator to change them.`,
+        })
+      : t({ tr: "Hesabınız, aboneliğiniz ve verileriniz.", en: "Your account, subscription and data." });
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
-          <h1>Ayarlar</h1>
+          <h1>{t({ tr: "Ayarlar", en: "Settings" })}</h1>
           <p>{aciklama}</p>
         </div>
       </section>
 
-      <section className="gb-sutunlar kaynaklar-ikili" aria-label="Ayarlar">
+      <section className="gb-sutunlar kaynaklar-ikili" aria-label={t({ tr: "Ayarlar", en: "Settings" })}>
         <article className="gb-kart gb-sutun kayan-kart">
           <header className="gb-kart-bas">
             <div>
-              <h2>Hesabım</h2>
-              <p>Ad soyadınız kapak sayfasında ve ekip listesinde kullanılır.</p>
+              <h2>{t({ tr: "Hesabım", en: "My account" })}</h2>
+              <p>{t({ tr: "Ad soyadınız kapak sayfasında ve ekip listesinde kullanılır.", en: "Your full name is used on the cover page and in the team list." })}</p>
             </div>
           </header>
 
           <dl className="settings-facts">
             <div>
-              <dt>E-posta</dt>
+              <dt>{t({ tr: "E-posta", en: "Email" })}</dt>
               <dd>{ctx.user.email ?? "—"}</dd>
             </div>
             <div>
-              <dt>Rol</dt>
+              <dt>{t({ tr: "Rol", en: "Role" })}</dt>
               <dd>{ctx.role ? t(ROLE_LABELS[ctx.role]) : "—"}</dd>
             </div>
             <div>
-              <dt>Kurum</dt>
-              <dd>{organizationName ?? "Kuruma bağlı değil"}</dd>
+              <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
+              <dd>{organizationName ?? t({ tr: "Kuruma bağlı değil", en: "Not linked to an institution" })}</dd>
             </div>
           </dl>
 
-          <ActionForm action={updateMyProfile} className="ayar-ad-formu" successMessage="Profiliniz güncellendi.">
+          <ActionForm action={updateMyProfile} className="ayar-ad-formu" successMessage={t({ tr: "Profiliniz güncellendi.", en: "Your profile has been updated." })}>
             <label>
-              <span>Ad soyad</span>
+              <span>{t({ tr: "Ad soyad", en: "Full name" })}</span>
               <input name="fullName" type="text" className="field-control" defaultValue={profile?.full_name ?? ""} minLength={2} maxLength={120} required />
             </label>
             <button type="submit" className="projects-primary-button button-compact">
               <Save size={15} aria-hidden="true" />
-              Kaydet
+              {t({ tr: "Kaydet", en: "Save" })}
             </button>
           </ActionForm>
 
@@ -167,8 +175,8 @@ export default async function SettingsPage() {
         <article className="gb-kart gb-sutun kayan-kart">
           <header className="gb-kart-bas">
             <div>
-              <h2>Güvenlik ve veriler</h2>
-              <p>Şifreniz, verilerinizin bir kopyası ve asistan kullanımınız.</p>
+              <h2>{t({ tr: "Güvenlik ve veriler", en: "Security and data" })}</h2>
+              <p>{t({ tr: "Şifreniz, verilerinizin bir kopyası ve asistan kullanımınız.", en: "Your password, a copy of your data, and your assistant usage." })}</p>
             </div>
           </header>
 
@@ -176,28 +184,44 @@ export default async function SettingsPage() {
             <li className="ayar-satir">
               <KeyRound size={18} aria-hidden="true" />
               <span className="ayar-govde">
-                <b>Şifre</b>
-                <small>En az 8 karakter. Değiştirdikten sonra diğer cihazlardaki oturumları aşağıdan kapatabilirsiniz.</small>
+                <b>{t({ tr: "Şifre", en: "Password" })}</b>
+                <small>
+                  {t({
+                    tr: "En az 8 karakter. Değiştirdikten sonra diğer cihazlardaki oturumları aşağıdan kapatabilirsiniz.",
+                    en: "At least 8 characters. After changing it, you can sign out other devices below.",
+                  })}
+                </small>
               </span>
               <PanelDrawer
-                triggerLabel="Değiştir"
+                triggerLabel={t({ tr: "Değiştir", en: "Change" })}
                 triggerClassName="projects-filter-button button-compact"
-                kicker="Güvenlik"
-                title="Şifrenizi değiştirin"
-                description="Yeni şifreniz en az 8 karakter olmalı."
+                kicker={t({ tr: "Güvenlik", en: "Security" })}
+                title={t({ tr: "Şifrenizi değiştirin", en: "Change your password" })}
+                description={t({ tr: "Yeni şifreniz en az 8 karakter olmalı.", en: "Your new password must be at least 8 characters." })}
               >
-                <PasswordForm action={changePassword} variant="panel" submitLabel="Şifreyi güncelle" />
+                <PasswordForm action={changePassword} variant="panel" submitLabel={t({ tr: "Şifreyi güncelle", en: "Update password" })} />
               </PanelDrawer>
             </li>
 
             <li className="ayar-satir">
               <LogOut size={18} aria-hidden="true" />
               <span className="ayar-govde">
-                <b>Diğer cihazlar</b>
-                <small>Bu cihaz dışındaki bütün oturumları kapatır. Ortak bir bilgisayarda açık unuttuysanız ya da şifrenizi değiştirdiyseniz kullanın.</small>
+                <b>{t({ tr: "Diğer cihazlar", en: "Other devices" })}</b>
+                <small>
+                  {t({
+                    tr: "Bu cihaz dışındaki bütün oturumları kapatır. Ortak bir bilgisayarda açık unuttuysanız ya da şifrenizi değiştirdiyseniz kullanın.",
+                    en: "Signs out every session except this device. Use it if you left yourself signed in on a shared computer or changed your password.",
+                  })}
+                </small>
               </span>
-              <ActionForm action={digerOturumlariKapat} confirmMessage="Bu cihaz dışındaki bütün oturumlar kapatılsın mı?" successMessage="Diğer cihazlardaki oturumlar kapatıldı.">
-                <button type="submit" className="projects-filter-button button-compact">Kapat</button>
+              <ActionForm
+                action={digerOturumlariKapat}
+                confirmMessage={t({ tr: "Bu cihaz dışındaki bütün oturumlar kapatılsın mı?", en: "Sign out all sessions except this device?" })}
+                successMessage={t({ tr: "Diğer cihazlardaki oturumlar kapatıldı.", en: "Sessions on other devices have been signed out." })}
+              >
+                <button type="submit" className="projects-filter-button button-compact">
+                  {t({ tr: "Kapat", en: "Sign out" })}
+                </button>
               </ActionForm>
             </li>
 
@@ -209,11 +233,16 @@ export default async function SettingsPage() {
             <li className="ayar-satir">
               <Download size={18} aria-hidden="true" />
               <span className="ayar-govde">
-                <b>Verilerim</b>
-                <small>Çalışmalarınız, metinleriniz, kaynaklarınız ve denetim kayıtlarınız tek dosyada (JSON). Word çıktısı için editördeki dışa aktarmayı kullanın.</small>
+                <b>{t({ tr: "Verilerim", en: "My data" })}</b>
+                <small>
+                  {t({
+                    tr: "Çalışmalarınız, metinleriniz, kaynaklarınız ve denetim kayıtlarınız tek dosyada (JSON). Word çıktısı için editördeki dışa aktarmayı kullanın.",
+                    en: "Your projects, texts, sources and check records in a single file (JSON). For Word output, use the export in the editor.",
+                  })}
+                </small>
               </span>
               <a className="projects-filter-button button-compact" href="/api/hesabim/verilerim" download>
-                İndir
+                {t({ tr: "İndir", en: "Download" })}
               </a>
             </li>
 
@@ -226,23 +255,28 @@ export default async function SettingsPage() {
               <li className="ayar-satir">
                 <Sparkles size={18} aria-hidden="true" />
                 <span className="ayar-govde">
-                  <b>Asistan krediniz</b>
+                  <b>{t({ tr: "Asistan krediniz", en: "Your assistant credits" })}</b>
                   <small>
-                    Bu ay {sayi(kredi.aylikKalan)} / {sayi(kredi.aylikLimit)} kredi kaldı · satın alınan bakiye {sayi(kredi.ekBakiye)} ·
-                    kullanılabilir {sayi(kredi.toplam)}. 1 kredi = 1.000 karakter; aylık hak ayın başında yenilenir, satın
-                    alınan bakiye yanmaz.
+                    {t({
+                      tr: `Bu ay ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} kredi kaldı · satın alınan bakiye ${sayi(kredi.ekBakiye)} · kullanılabilir ${sayi(kredi.toplam)}. 1 kredi = 1.000 karakter; aylık hak ayın başında yenilenir, satın alınan bakiye yanmaz.`,
+                      en: `${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} credits left this month · purchased balance ${sayi(kredi.ekBakiye)} · available ${sayi(kredi.toplam)}. 1 credit = 1,000 characters; the monthly allowance renews at the start of each month, and purchased credits never expire.`,
+                    })}
                   </small>
                   {/* Bireysel abone krediyi Abonelik ve kredi sayfasından alır; kurum üyesi için yönetici ArvoOS'tan. */}
                   {kredi.tukendi || (kredi.ekBakiye === 0 && kredi.oran >= 80) ? (
                     <small className="tone-text" data-tone={kredi.tukendi ? "danger" : "warning"}>
-                      {kredi.tukendi ? "Krediniz bitti; asistan yeni çalışma yapmıyor. " : `Aylık hakkınızın %${kredi.oran}'i kullanıldı. `}
+                      {kredi.tukendi
+                        ? t({ tr: "Krediniz bitti; asistan yeni çalışma yapmıyor. ", en: "You are out of credits; the assistant will not run new checks. " })
+                        : t({ tr: `Aylık hakkınızın %${kredi.oran}'i kullanıldı. `, en: `${kredi.oran}% of your monthly allowance is used. ` })}
                       {bireyselKredi ? (
-                        <>Ek kredi için “Ayrıntı”ya gidin.</>
+                        <>{t({ tr: "Ek kredi için “Ayrıntı”ya gidin.", en: "Go to “Details” for more credits." })}</>
                       ) : (
                         <>
-                          Kurum yöneticiniz{" "}
-                          <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">ArvoOS panelinden</a> ek
-                          kredi satın alabilir.
+                          {t({ tr: "Kurum yöneticiniz", en: "Your institution administrator can buy more credits from the" })}{" "}
+                          <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">
+                            {t({ tr: "ArvoOS panelinden", en: "ArvoOS panel" })}
+                          </a>
+                          {t({ tr: " ek kredi satın alabilir.", en: "." })}
                         </>
                       )}
                     </small>
@@ -250,7 +284,7 @@ export default async function SettingsPage() {
                 </span>
                 {/* Ayrıntı, paketler ve son hareketler Abonelik ve kredi sayfasında. */}
                 <Link className="projects-filter-button button-compact" href="/dashboard/abonelik">
-                  Ayrıntı
+                  {t({ tr: "Ayrıntı", en: "Details" })}
                 </Link>
               </li>
             ) : null}
@@ -263,15 +297,23 @@ export default async function SettingsPage() {
             <li className="ayar-satir">
               <Keyboard size={18} aria-hidden="true" />
               <span className="ayar-govde">
-                <b>Klavye kısayolları</b>
-                <small>Editörde Word&apos;deki tuşlar aynı işi yapar: hizalama, punto, başlık, dipnot, girinti.</small>
+                <b>{t({ tr: "Klavye kısayolları", en: "Keyboard shortcuts" })}</b>
+                <small>
+                  {t({
+                    tr: "Editörde Word'deki tuşlar aynı işi yapar: hizalama, punto, başlık, dipnot, girinti.",
+                    en: "In the editor, Word's shortcuts do the same thing: alignment, font size, headings, footnotes, indentation.",
+                  })}
+                </small>
               </span>
               <PanelDrawer
-                triggerLabel="Göster"
+                triggerLabel={t({ tr: "Göster", en: "Show" })}
                 triggerClassName="projects-filter-button button-compact"
-                kicker="Yardım"
-                title="Klavye kısayolları"
-                description="Word'deki tuşlar burada da aynı işi yapar. Fareye uzanmadan daha hızlı yazın."
+                kicker={t({ tr: "Yardım", en: "Help" })}
+                title={t({ tr: "Klavye kısayolları", en: "Keyboard shortcuts" })}
+                description={t({
+                  tr: "Word'deki tuşlar burada da aynı işi yapar. Fareye uzanmadan daha hızlı yazın.",
+                  en: "Word's shortcuts work the same way here. Write faster without reaching for the mouse.",
+                })}
               >
                 <KisayolListesi />
               </PanelDrawer>
@@ -287,10 +329,10 @@ export default async function SettingsPage() {
               <li className="ayar-satir">
                 <Cpu size={18} aria-hidden="true" />
                 <span className="ayar-govde">
-                  <b>Asistan sunucusu</b>
+                  <b>{t({ tr: "Asistan sunucusu", en: "Assistant server" })}</b>
                   <small>
-                    {sunucu} · {kurulum.model} · {aiKurulumSorunu() ?? "asistan açık"}. Değişken eklendikten sonra yeniden
-                    dağıtım gerekir.
+                    {sunucu} · {kurulum.model} · {aiKurulumSorunu(dil) ?? t({ tr: "asistan açık", en: "assistant enabled" })}.{" "}
+                    {t({ tr: "Değişken eklendikten sonra yeniden dağıtım gerekir.", en: "A redeploy is required after adding a variable." })}
                   </small>
                 </span>
               </li>
@@ -304,15 +346,23 @@ export default async function SettingsPage() {
               <li className="ayar-satir" data-tone="danger">
                 <Trash2 size={18} aria-hidden="true" />
                 <span className="ayar-govde">
-                  <b>Hesabımı sil</b>
-                  <small>Hesabınız ve bütün verileriniz kalıcı silinir. Silme hemen olmaz; vazgeçmek için süreniz olur.</small>
+                  <b>{t({ tr: "Hesabımı sil", en: "Delete my account" })}</b>
+                  <small>
+                    {t({
+                      tr: "Hesabınız ve bütün verileriniz kalıcı silinir. Silme hemen olmaz; vazgeçmek için süreniz olur.",
+                      en: "Your account and all your data are permanently deleted. Deletion is not immediate; you have time to change your mind.",
+                    })}
+                  </small>
                 </span>
                 <PanelDrawer
-                  triggerLabel="Sil"
+                  triggerLabel={t({ tr: "Sil", en: "Delete" })}
                   triggerClassName="projects-filter-button button-compact button-danger"
-                  kicker="Hesap"
-                  title="Hesabımı sil"
-                  description="Hesabınızı ve ArvoLab'daki bütün verilerinizi kalıcı olarak silme talebi. Silme hemen olmaz; vazgeçmek için süreniz olur."
+                  kicker={t({ tr: "Hesap", en: "Account" })}
+                  title={t({ tr: "Hesabımı sil", en: "Delete my account" })}
+                  description={t({
+                    tr: "Hesabınızı ve ArvoLab'daki bütün verilerinizi kalıcı olarak silme talebi. Silme hemen olmaz; vazgeçmek için süreniz olur.",
+                    en: "A request to permanently delete your account and all your data in ArvoLab. Deletion is not immediate; you have time to change your mind.",
+                  })}
                 >
                   <HesapSilmeFormu action={hesapSilmeTalebi} eposta={ctx.user.email ?? ""} bireysel={access.kind === "individual"} />
                 </PanelDrawer>

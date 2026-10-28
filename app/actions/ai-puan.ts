@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { ceviri } from "@/lib/dil-sunucu";
 
 /*
   Kullanıcının asistan çalışmasına verdiği not. İnce ayarda "iyi örnek"
@@ -21,14 +22,15 @@ export type Puan = "faydali" | "kismen" | "faydasiz";
 const PUANLAR = new Set<Puan>(["faydali", "kismen", "faydasiz"]);
 
 export async function asistanPuanla(kayitId: string, puan: Puan, not?: string): Promise<{ hata?: string; tamam?: true }> {
-  if (!PUANLAR.has(puan)) return { hata: "Geçersiz değerlendirme." };
-  if (!kayitId) return { hata: "Değerlendirilecek kayıt bulunamadı." };
+  const t = await ceviri();
+  if (!PUANLAR.has(puan)) return { hata: t({ tr: "Geçersiz değerlendirme.", en: "Invalid rating." }) };
+  if (!kayitId) return { hata: t({ tr: "Değerlendirilecek kayıt bulunamadı.", en: "The record to rate was not found." }) };
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { hata: "Oturum bulunamadı." };
+  if (!user) return { hata: t({ tr: "Oturum bulunamadı.", en: "No active session." }) };
 
   /*
     select("id") şart: RLS engellediğinde güncelleme hata değil SIFIR SATIR
@@ -44,8 +46,8 @@ export async function asistanPuanla(kayitId: string, puan: Puan, not?: string): 
 
   if (error) {
     console.error("[ai] değerlendirme kaydedilemedi:", error.message);
-    return { hata: "Değerlendirmeniz kaydedilemedi." };
+    return { hata: t({ tr: "Değerlendirmeniz kaydedilemedi.", en: "Your rating could not be saved." }) };
   }
-  if (!data?.length) return { hata: "Bu kaydı değerlendiremezsiniz." };
+  if (!data?.length) return { hata: t({ tr: "Bu kaydı değerlendiremezsiniz.", en: "You cannot rate this record." }) };
   return { tamam: true };
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { ceviri } from "@/lib/dil-sunucu";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
@@ -26,6 +27,7 @@ export async function createConsultancyRequest(formData: FormData): Promise<Acti
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   const { supabase, user } = ctx;
+  const t = await ceviri();
 
   let projectId = String(formData.get("projectId") ?? "").trim() || null;
   let projectTitle = String(formData.get("projectTitle") ?? "").trim() || null;
@@ -59,7 +61,7 @@ export async function createConsultancyRequest(formData: FormData): Promise<Acti
 
   if (error) {
     console.error(error);
-    return { error: "Talep oluşturulurken bir hata oluştu." };
+    return { error: t({ tr: "Talep oluşturulurken bir hata oluştu.", en: "Something went wrong while creating the request." }) };
   }
 
   revalidatePath(PAGE_PATH);
@@ -123,8 +125,12 @@ export async function getAssignedToMe(): Promise<ListeSonucu<ConsultancyRequest>
 }
 
 export async function acceptRequest(requestId: string): Promise<ActionResult> {
-  const auth = await requireRole(EXPERT_ROLES, "Talepleri yalnızca Uzman ve üzeri roller üstlenebilir.");
+  const auth = await requireRole(EXPERT_ROLES, {
+    tr: "Talepleri yalnızca Uzman ve üzeri roller üstlenebilir.",
+    en: "Only Experts and higher roles can take on requests.",
+  });
   if ("error" in auth) return { error: auth.error };
+  const t = await ceviri();
 
   const { data, error } = await auth.supabase
     .from("consultancy_requests")
@@ -135,9 +141,16 @@ export async function acceptRequest(requestId: string): Promise<ActionResult> {
 
   if (error) {
     console.error(error);
-    return { error: "Talep üstlenilirken bir hata oluştu." };
+    return { error: t({ tr: "Talep üstlenilirken bir hata oluştu.", en: "Something went wrong while taking on the request." }) };
   }
-  if (!data?.length) return { error: "Bu talep artık açık değil; başka bir uzman üstlenmiş olabilir." };
+  if (!data?.length) {
+    return {
+      error: t({
+        tr: "Bu talep artık açık değil; başka bir uzman üstlenmiş olabilir.",
+        en: "This request is no longer open; another expert may have taken it.",
+      }),
+    };
+  }
 
   revalidatePath(PAGE_PATH);
   return { success: true };
@@ -146,6 +159,7 @@ export async function acceptRequest(requestId: string): Promise<ActionResult> {
 export async function completeRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const { data, error } = await ctx.supabase
     .from("consultancy_requests")
@@ -157,9 +171,11 @@ export async function completeRequest(requestId: string): Promise<ActionResult> 
 
   if (error) {
     console.error(error);
-    return { error: "İşlem sırasında bir hata oluştu." };
+    return { error: t({ tr: "İşlem sırasında bir hata oluştu.", en: "Something went wrong during the operation." }) };
   }
-  if (!data?.length) return { error: "Bu talebi yalnızca üstlenen uzman tamamlayabilir." };
+  if (!data?.length) {
+    return { error: t({ tr: "Bu talebi yalnızca üstlenen uzman tamamlayabilir.", en: "Only the expert who took on this request can complete it." }) };
+  }
 
   revalidatePath(PAGE_PATH);
   return { success: true };
@@ -168,6 +184,7 @@ export async function completeRequest(requestId: string): Promise<ActionResult> 
 export async function cancelRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const { data, error } = await ctx.supabase
     .from("consultancy_requests")
@@ -179,9 +196,11 @@ export async function cancelRequest(requestId: string): Promise<ActionResult> {
 
   if (error) {
     console.error(error);
-    return { error: "İşlem sırasında bir hata oluştu." };
+    return { error: t({ tr: "İşlem sırasında bir hata oluştu.", en: "Something went wrong during the operation." }) };
   }
-  if (!data?.length) return { error: "Yalnızca açık durumdaki kendi talebinizi iptal edebilirsiniz." };
+  if (!data?.length) {
+    return { error: t({ tr: "Yalnızca açık durumdaki kendi talebinizi iptal edebilirsiniz.", en: "You can only cancel your own requests that are still open." }) };
+  }
 
   revalidatePath(PAGE_PATH);
   return { success: true };

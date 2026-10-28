@@ -1,6 +1,7 @@
 "use server";
 
-import { aktifDil } from "@/lib/dil-sunucu";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
@@ -13,8 +14,14 @@ import { authConfirmLink } from "@/lib/auth-link";
 import { ADMIN_ROLES, ALL_ROLES, type UserRole } from "@/lib/project-labels";
 
 const PAGE_PATH = "/dashboard/team";
-const ADMIN_ONLY = "Bu işlem için Sistem Yöneticisi veya Kurucu rolüne sahip olmalısınız.";
-const MISSING_SECRET = "Bu işlem için sunucuda SUPABASE_SECRET_KEY tanımlı olmalı (Vercel ortam değişkenleri).";
+const ADMIN_ONLY: Metin = {
+  tr: "Bu işlem için Sistem Yöneticisi veya Kurucu rolüne sahip olmalısınız.",
+  en: "You need the System Administrator or Founder role for this action.",
+};
+const MISSING_SECRET: Metin = {
+  tr: "Bu işlem için sunucuda SUPABASE_SECRET_KEY tanımlı olmalı (Vercel ortam değişkenleri).",
+  en: "This action requires SUPABASE_SECRET_KEY on the server (Vercel environment variables).",
+};
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface TeamMember {
@@ -127,16 +134,17 @@ export type UpdateResult = ActionResult;
 export async function updateUserRole(userId: string, role: string): Promise<UpdateResult> {
   const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
   if ("error" in auth) return { error: auth.error };
+  const t = await ceviri();
 
-  if (!ALL_ROLES.includes(role as UserRole)) return { error: "Geçersiz rol." };
+  if (!ALL_ROLES.includes(role as UserRole)) return { error: t({ tr: "Geçersiz rol.", en: "Invalid role." }) };
   if (userId === auth.user.id) {
-    return { error: "Kendi rolünüzü değiştiremezsiniz; başka bir yöneticiden isteyin." };
+    return { error: t({ tr: "Kendi rolünüzü değiştiremezsiniz; başka bir yöneticiden isteyin.", en: "You cannot change your own role; ask another administrator." }) };
   }
 
   const { data: target } = await auth.supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
-  if (!target) return { error: "Kullanıcı bulunamadı." };
+  if (!target) return { error: t({ tr: "Kullanıcı bulunamadı.", en: "User not found." }) };
   if ((role === "founder" || target.role === "founder") && auth.role !== "founder") {
-    return { error: "Kurucu rolünü yalnızca bir Kurucu atayabilir veya kaldırabilir." };
+    return { error: t({ tr: "Kurucu rolünü yalnızca bir Kurucu atayabilir veya kaldırabilir.", en: "Only a Founder can assign or remove the Founder role." }) };
   }
 
   const { data, error } = await auth.supabase.from("profiles").update({ role }).eq("id", userId).select("id");
@@ -144,11 +152,11 @@ export async function updateUserRole(userId: string, role: string): Promise<Upda
   if (error) {
     console.error(error);
     if (error.message?.includes("yetkiniz yok") || error.code === "42501") {
-      return { error: ADMIN_ONLY };
+      return { error: t(ADMIN_ONLY) };
     }
-    return { error: "Rol güncellenirken bir hata oluştu." };
+    return { error: t({ tr: "Rol güncellenirken bir hata oluştu.", en: "Something went wrong while updating the role." }) };
   }
-  if (!data?.length) return { error: "Rol güncellenemedi." };
+  if (!data?.length) return { error: t({ tr: "Rol güncellenemedi.", en: "The role could not be updated." }) };
 
   revalidatePath(PAGE_PATH);
   return { success: true };
@@ -157,6 +165,7 @@ export async function updateUserRole(userId: string, role: string): Promise<Upda
 export async function updateUserOrganization(userId: string, organizationId: string): Promise<UpdateResult> {
   const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
   if ("error" in auth) return { error: auth.error };
+  const t = await ceviri();
 
   const { data, error } = await auth.supabase
     .from("profiles")
@@ -166,9 +175,9 @@ export async function updateUserOrganization(userId: string, organizationId: str
 
   if (error) {
     console.error(error);
-    return { error: "Kurum güncellenirken bir hata oluştu." };
+    return { error: t({ tr: "Kurum güncellenirken bir hata oluştu.", en: "Something went wrong while updating the institution." }) };
   }
-  if (!data?.length) return { error: "Kullanıcı bulunamadı." };
+  if (!data?.length) return { error: t({ tr: "Kullanıcı bulunamadı.", en: "User not found." }) };
 
   revalidatePath(PAGE_PATH);
   return { success: true };
@@ -177,14 +186,15 @@ export async function updateUserOrganization(userId: string, organizationId: str
 export async function createOrganization(formData: FormData): Promise<UpdateResult> {
   const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
   if ("error" in auth) return { error: auth.error };
+  const t = await ceviri();
 
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "Kurum adı zorunludur." };
+  if (!name) return { error: t({ tr: "Kurum adı zorunludur.", en: "Institution name is required." }) };
 
   const { error } = await auth.supabase.from("organizations").insert({ name });
   if (error) {
     console.error(error);
-    return { error: "Kurum oluşturulurken bir hata oluştu." };
+    return { error: t({ tr: "Kurum oluşturulurken bir hata oluştu.", en: "Something went wrong while creating the institution." }) };
   }
 
   revalidatePath(PAGE_PATH);
@@ -197,23 +207,24 @@ export async function createOrganization(formData: FormData): Promise<UpdateResu
 export async function inviteUser(formData: FormData): Promise<UpdateResult> {
   const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
   if ("error" in auth) return { error: auth.error };
+  const t = await ceviri();
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const fullName = String(formData.get("fullName") ?? "").trim();
   const role = String(formData.get("role") ?? "client");
   const organizationId = String(formData.get("organizationId") ?? "") || null;
 
-  if (!EMAIL_PATTERN.test(email)) return { error: "Geçerli bir e-posta adresi girin." };
-  if (!ALL_ROLES.includes(role as UserRole)) return { error: "Geçersiz rol." };
+  if (!EMAIL_PATTERN.test(email)) return { error: t({ tr: "Geçerli bir e-posta adresi girin.", en: "Enter a valid email address." }) };
+  if (!ALL_ROLES.includes(role as UserRole)) return { error: t({ tr: "Geçersiz rol.", en: "Invalid role." }) };
   if (role === "founder" && auth.role !== "founder") {
-    return { error: "Kurucu rolünü yalnızca bir Kurucu atayabilir." };
+    return { error: t({ tr: "Kurucu rolünü yalnızca bir Kurucu atayabilir.", en: "Only a Founder can assign the Founder role." }) };
   }
 
   let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
   } catch {
-    return { error: MISSING_SECRET };
+    return { error: t(MISSING_SECRET) };
   }
 
   /*
@@ -233,10 +244,12 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
   if (error) {
     console.error(error);
     if (error.status === 422 || /already/i.test(error.message)) {
-      return { error: "Bu e-posta adresiyle kayıtlı bir kullanıcı zaten var." };
+      return { error: t({ tr: "Bu e-posta adresiyle kayıtlı bir kullanıcı zaten var.", en: "A user with this email address already exists." }) };
     }
-    if (error.status === 429) return { error: "E-posta gönderim sınırına ulaşıldı; biraz sonra tekrar deneyin." };
-    return { error: "Davet gönderilemedi. Supabase e-posta ayarlarını kontrol edin." };
+    if (error.status === 429) {
+      return { error: t({ tr: "E-posta gönderim sınırına ulaşıldı; biraz sonra tekrar deneyin.", en: "The email sending limit was reached; try again shortly." }) };
+    }
+    return { error: t({ tr: "Davet gönderilemedi. Supabase e-posta ayarlarını kontrol edin.", en: "The invitation could not be sent. Check the Supabase email settings." }) };
   }
 
   /*
@@ -274,7 +287,12 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
       .eq("id", invitedId);
     if (profileError) {
       console.error(profileError);
-      return { error: "Davet gönderildi ancak rol/kurum atanamadı; aşağıdaki listeden elle atayın." };
+      return {
+        error: t({
+          tr: "Davet gönderildi ancak rol/kurum atanamadı; aşağıdaki listeden elle atayın.",
+          en: "The invitation was sent, but the role/institution could not be assigned; set it manually in the list below.",
+        }),
+      };
     }
   }
 
@@ -282,7 +300,10 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
   if (davetGitmedi) {
     return {
       success: true,
-      warning: `Hesap oluşturuldu ama davet e-postası ${email} adresine gönderilemedi. Kişiden giriş sayfasındaki "Şifremi unuttum" ile bağlantı istemesini isteyin; o bağlantı hesabı da açar.`,
+      warning: t({
+        tr: `Hesap oluşturuldu ama davet e-postası ${email} adresine gönderilemedi. Kişiden giriş sayfasındaki "Şifremi unuttum" ile bağlantı istemesini isteyin; o bağlantı hesabı da açar.`,
+        en: `The account was created, but the invitation email could not be sent to ${email}. Ask the person to request a link with "Forgot password" on the sign-in page; that link also activates the account.`,
+      }),
     };
   }
   return { success: true };
@@ -293,19 +314,20 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
 export async function setUserAccess(userId: string, enabled: boolean): Promise<UpdateResult> {
   const auth = await requireRole(ADMIN_ROLES, ADMIN_ONLY);
   if ("error" in auth) return { error: auth.error };
-  if (userId === auth.user.id) return { error: "Kendi erişiminizi durduramazsınız." };
+  const t = await ceviri();
+  if (userId === auth.user.id) return { error: t({ tr: "Kendi erişiminizi durduramazsınız.", en: "You cannot suspend your own access." }) };
 
   const { data: target } = await auth.supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
-  if (!target) return { error: "Kullanıcı bulunamadı." };
+  if (!target) return { error: t({ tr: "Kullanıcı bulunamadı.", en: "User not found." }) };
   if (target.role === "founder" && auth.role !== "founder") {
-    return { error: "Bir Kurucunun erişimini yalnızca başka bir Kurucu değiştirebilir." };
+    return { error: t({ tr: "Bir Kurucunun erişimini yalnızca başka bir Kurucu değiştirebilir.", en: "Only another Founder can change a Founder's access." }) };
   }
 
   let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
   } catch {
-    return { error: MISSING_SECRET };
+    return { error: t(MISSING_SECRET) };
   }
 
   const { error } = await admin.auth.admin.updateUserById(userId, {
@@ -313,7 +335,7 @@ export async function setUserAccess(userId: string, enabled: boolean): Promise<U
   });
   if (error) {
     console.error(error);
-    return { error: "Erişim güncellenemedi." };
+    return { error: t({ tr: "Erişim güncellenemedi.", en: "Access could not be updated." }) };
   }
 
   revalidatePath(PAGE_PATH);

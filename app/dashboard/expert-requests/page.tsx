@@ -1,5 +1,7 @@
 import { listeBasarili } from "@/lib/liste-sonucu";
-import { ceviri } from "@/lib/dil-sunucu";
+import type { Metadata } from "next";
+import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
 import type { ConsultancyRequest } from "@/app/actions/consultancy";
 import type { AppSupportRequest } from "@/app/actions/support";
 import Link from "next/link";
@@ -31,13 +33,15 @@ import DestekKuyruklari from "./destek-kuyruklari";
 import Yazisma from "./yazisma";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { statusTone } from "@/lib/status-tone";
-import { trTarihSaat } from "@/lib/tr-time";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import BosDurum from "../_components/bos-durum";
 import PartnerSeridi from "../_components/partner-seridi";
 
-export const metadata = { title: "Destek" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await ceviri();
+  return { title: t({ tr: "Destek", en: "Support" }) };
+}
 
 /*
   DESTEK — TEK SAYFA, İKİ EŞİT KART (26.10.2026, Kaynaklar'la aynı karar:
@@ -58,32 +62,32 @@ export const metadata = { title: "Destek" };
   /dashboard/support buraya yönleniyor.
 */
 
-const UZMAN_DURUMU: Record<string, string> = {
-  open: "Açık",
-  accepted: "Üstlenildi",
-  completed: "Tamamlandı",
-  cancelled: "İptal edildi",
+const UZMAN_DURUMU: Record<string, Metin> = {
+  open: { tr: "Açık", en: "Open" },
+  accepted: { tr: "Üstlenildi", en: "Taken on" },
+  completed: { tr: "Tamamlandı", en: "Completed" },
+  cancelled: { tr: "İptal edildi", en: "Canceled" },
 };
 
-const DESTEK_DURUMU: Record<string, string> = {
-  open: "Açık",
-  in_progress: "İşleme alındı",
-  resolved: "Çözüldü",
+const DESTEK_DURUMU: Record<string, Metin> = {
+  open: { tr: "Açık", en: "Open" },
+  in_progress: { tr: "İşleme alındı", en: "In progress" },
+  resolved: { tr: "Çözüldü", en: "Resolved" },
 };
 
-const KATEGORI: Record<string, string> = {
-  bug: "Hata bildirimi",
-  access: "Erişim sorunu",
-  feature_request: "Özellik talebi",
-  billing: "Fatura/Ödeme",
-  other: "Diğer",
+const KATEGORI: Record<string, Metin> = {
+  bug: { tr: "Hata bildirimi", en: "Bug report" },
+  access: { tr: "Erişim sorunu", en: "Access problem" },
+  feature_request: { tr: "Özellik talebi", en: "Feature request" },
+  billing: { tr: "Fatura/Ödeme", en: "Billing/Payment" },
+  other: { tr: "Diğer", en: "Other" },
 };
 
-const ONCELIK: Record<string, string> = {
-  low: "Düşük",
-  normal: "Normal",
-  high: "Yüksek",
-  urgent: "Acil",
+const ONCELIK: Record<string, Metin> = {
+  low: { tr: "Düşük", en: "Low" },
+  normal: { tr: "Normal", en: "Normal" },
+  high: { tr: "Yüksek", en: "High" },
+  urgent: { tr: "Acil", en: "Urgent" },
 };
 
 export default async function DestekPage({
@@ -92,6 +96,8 @@ export default async function DestekPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const t = await ceviri();
+  const dil = await aktifDil();
+  const { tarihSaat } = await tarihler();
   const [profile, params] = await Promise.all([getCurrentProfile(), searchParams]);
   /*
     Kuyruklar yalnızca PERSONEL GÖRÜNÜMÜNDE: iç ekip öğrenci düzenini
@@ -185,16 +191,21 @@ export default async function DestekPage({
     <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
-          <h1>Destek</h1>
-          <p>Akademik bir konuda takıldıysanız uzmana, uygulamayla ilgili bir sorununuz varsa bize yazın.</p>
+          <h1>{t({ tr: "Destek", en: "Support" })}</h1>
+          <p>
+            {t({
+              tr: "Akademik bir konuda takıldıysanız uzmana, uygulamayla ilgili bir sorununuz varsa bize yazın.",
+              en: "Stuck on something academic? Ask an expert. Having a problem with the app? Write to us.",
+            })}
+          </p>
         </div>
         {personel ? (
-          <nav className="segment-secici" aria-label="Destek görünümü">
+          <nav className="segment-secici" aria-label={t({ tr: "Destek görünümü", en: "Support view" })}>
             <Link href={kuyrukAdresi(erisilebilir[0])} aria-current={!taleplerim ? "page" : undefined}>
-              <Inbox size={15} aria-hidden="true" /> Kuyruklar
+              <Inbox size={15} aria-hidden="true" /> {t({ tr: "Kuyruklar", en: "Queues" })}
             </Link>
             <Link href={TALEPLERIM_ADRESI} aria-current={taleplerim ? "page" : undefined}>
-              <LifeBuoy size={15} aria-hidden="true" /> Kendi taleplerim
+              <LifeBuoy size={15} aria-hidden="true" /> {t({ tr: "Kendi taleplerim", en: "My requests" })}
             </Link>
           </nav>
         ) : null}
@@ -220,27 +231,34 @@ export default async function DestekPage({
           isleAl={isleAl}
         />
       ) : (
-      <section className="gb-sutunlar kaynaklar-ikili" aria-label="Destek">
+      <section className="gb-sutunlar kaynaklar-ikili" aria-label={t({ tr: "Destek", en: "Support" })}>
         <article className="gb-kart gb-sutun kayan-kart">
           <header className="gb-kart-bas">
             <div>
-              <h2>Uzman desteği</h2>
-              <p>Yöntem, analiz, istatistik ya da yazım konusunda akademik danışmanlık.</p>
+              <h2>{t({ tr: "Uzman desteği", en: "Expert support" })}</h2>
+              <p>{t({ tr: "Yöntem, analiz, istatistik ya da yazım konusunda akademik danışmanlık.", en: "Academic guidance on methodology, analysis, statistics or writing." })}</p>
             </div>
             <PanelDrawer
-              triggerLabel="Uzmana sor"
+              triggerLabel={t({ tr: "Uzmana sor", en: "Ask an expert" })}
               triggerIcon={<GraduationCap size={15} aria-hidden="true" />}
               triggerClassName="projects-primary-button button-compact"
-              kicker="Uzman desteği"
-              title="Uzmana sorun"
-              description="Hangi konuda desteğe ihtiyacınız var, kısaca yazın. Talebiniz kurumunuzun uzmanına, kurumunuz yoksa ArvoLab ekibine iletilir."
+              kicker={t({ tr: "Uzman desteği", en: "Expert support" })}
+              title={t({ tr: "Uzmana sorun", en: "Ask an expert" })}
+              description={t({
+                tr: "Hangi konuda desteğe ihtiyacınız var, kısaca yazın. Talebiniz kurumunuzun uzmanına, kurumunuz yoksa ArvoLab ekibine iletilir.",
+                en: "Briefly describe what you need help with. Your request goes to your institution's expert, or to the ArvoLab team if you have no institution.",
+              })}
             >
-              <ActionForm className="project-form-grid" action={createConsultancyRequest} successMessage="Talebiniz uzmanlara iletildi.">
+              <ActionForm
+                className="project-form-grid"
+                action={createConsultancyRequest}
+                successMessage={t({ tr: "Talebiniz uzmanlara iletildi.", en: "Your request has been sent to the experts." })}
+              >
                 {calismalar.length > 0 ? (
                   <label>
-                    <span>Çalışma</span>
+                    <span>{t({ tr: "Çalışma", en: "Project" })}</span>
                     <select name="projectId" defaultValue={calismalar[0].id}>
-                      <option value="">Çalışmaya bağlı değil</option>
+                      <option value="">{t({ tr: "Çalışmaya bağlı değil", en: "Not linked to a project" })}</option>
                       {calismalar.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.title}
@@ -250,28 +268,28 @@ export default async function DestekPage({
                   </label>
                 ) : (
                   <label>
-                    <span>Çalışma başlığı (isteğe bağlı)</span>
-                    <input name="projectTitle" type="text" placeholder="Örn. Eğitim Bilimleri Tezi" />
+                    <span>{t({ tr: "Çalışma başlığı (isteğe bağlı)", en: "Project title (optional)" })}</span>
+                    <input name="projectTitle" type="text" placeholder={t({ tr: "Örn. Eğitim Bilimleri Tezi", en: "E.g. Education Sciences Thesis" })} />
                   </label>
                 )}
                 <label>
-                  <span>Konu</span>
+                  <span>{t({ tr: "Konu", en: "Topic" })}</span>
                   <select name="requestType" defaultValue="analysis">
-                    <option value="analysis">Analiz desteği</option>
-                    <option value="statistics">İstatistik desteği</option>
-                    <option value="methodology">Metodoloji danışmanlığı</option>
-                    <option value="editing">Dil/biçim düzenleme</option>
-                    <option value="full_review">Kapsamlı inceleme</option>
-                    <option value="other">Diğer</option>
+                    <option value="analysis">{t({ tr: "Analiz desteği", en: "Analysis support" })}</option>
+                    <option value="statistics">{t({ tr: "İstatistik desteği", en: "Statistics support" })}</option>
+                    <option value="methodology">{t({ tr: "Metodoloji danışmanlığı", en: "Methodology consulting" })}</option>
+                    <option value="editing">{t({ tr: "Dil/biçim düzenleme", en: "Language/format editing" })}</option>
+                    <option value="full_review">{t({ tr: "Kapsamlı inceleme", en: "Comprehensive review" })}</option>
+                    <option value="other">{t({ tr: "Diğer", en: "Other" })}</option>
                   </select>
                 </label>
                 <label className="project-form-full">
-                  <span>Mesajınız</span>
-                  <textarea name="message" rows={4} placeholder="Nerede takıldığınızı kısaca anlatın" />
+                  <span>{t({ tr: "Mesajınız", en: "Your message" })}</span>
+                  <textarea name="message" rows={4} placeholder={t({ tr: "Nerede takıldığınızı kısaca anlatın", en: "Briefly describe where you are stuck" })} />
                 </label>
                 <div className="project-form-actions">
                   <button type="submit" className="projects-primary-button">
-                    <Send size={16} aria-hidden="true" /> Gönder
+                    <Send size={16} aria-hidden="true" /> {t({ tr: "Gönder", en: "Send" })}
                   </button>
                 </div>
               </ActionForm>
@@ -281,14 +299,17 @@ export default async function DestekPage({
           {/* Okunamadı ile "talebiniz yok" ayrı: boş görünen öğrenci açık bir talebi yeniden açabilirdi. */}
           {uzmanOkunamadi ? (
             <p className="alert" data-tone="danger" role="alert">
-              Talepleriniz yüklenemedi. Açık bir talebiniz olabilir; yeni talep açmadan önce sayfayı yenileyin.
+              {t({
+                tr: "Talepleriniz yüklenemedi. Açık bir talebiniz olabilir; yeni talep açmadan önce sayfayı yenileyin.",
+                en: "Your requests could not be loaded. You may have an open request; refresh the page before opening a new one.",
+              })}
             </p>
           ) : uzmanTaleplerim.length ? (
             <ul className="kanit-kayitlari">
               {uzmanTaleplerim.map((r) => {
                 const mesajlar = uzmanYazismasi(r.id);
                 const yeniYanit = yanitGeldi(mesajlar) && r.status === "accepted";
-                const yazma = uzmanYazismaDurumu(r.status, "talep_sahibi");
+                const yazma = uzmanYazismaDurumu(r.status, "talep_sahibi", dil);
                 // Uzmanın adı yazışmadan: bireysel öğrenci iç ekip uzmanının profilini okuyamaz.
                 const uzmanAdi = mesajlar.find((m) => m.taraf === "uzman")?.yazanAdi ?? null;
                 return (
@@ -298,19 +319,29 @@ export default async function DestekPage({
                       <span className="kanit-kayit-govde">
                         <b>{t(requestTypeLabel(r.request_type))}</b>
                         <small>
-                          {r.project_title || "Çalışmaya bağlı değil"} · {trTarihSaat(r.created_at)}
+                          {r.project_title || t({ tr: "Çalışmaya bağlı değil", en: "Not linked to a project" })} · {tarihSaat(r.created_at)}
                         </small>
                       </span>
                       <span className="status-pill" data-tone={yeniYanit ? "success" : statusTone(r.status)}>
-                        {yeniYanit ? "Yanıt var" : UZMAN_DURUMU[r.status]}
+                        {yeniYanit ? t({ tr: "Yanıt var", en: "New reply" }) : UZMAN_DURUMU[r.status] ? t(UZMAN_DURUMU[r.status]) : r.status}
                       </span>
                     </summary>
                     <div className="kanit-kayit-ic">
-                      <p className="destek-mesaj">{r.message || "Ek mesaj yazılmadı."}</p>
+                      <p className="destek-mesaj">{r.message || t({ tr: "Ek mesaj yazılmadı.", en: "No additional message." })}</p>
                       {r.status === "open" ? (
-                        <p className="hint">Talebiniz bir uzmanın üstlenmesini bekliyor. Bu arada ek bilgi yazabilirsiniz.</p>
+                        <p className="hint">
+                          {t({
+                            tr: "Talebiniz bir uzmanın üstlenmesini bekliyor. Bu arada ek bilgi yazabilirsiniz.",
+                            en: "Your request is waiting for an expert to take it on. Meanwhile, you can add more information.",
+                          })}
+                        </p>
                       ) : r.status === "accepted" ? (
-                        <p className="hint">{uzmanAdi ? `${uzmanAdi} talebinizi üstlendi.` : "Bir uzman talebinizi üstlendi."} Yazışma aşağıda.</p>
+                        <p className="hint">
+                          {uzmanAdi
+                            ? t({ tr: `${uzmanAdi} talebinizi üstlendi.`, en: `${uzmanAdi} has taken on your request.` })
+                            : t({ tr: "Bir uzman talebinizi üstlendi.", en: "An expert has taken on your request." })}{" "}
+                          {t({ tr: "Yazışma aşağıda.", en: "The conversation is below." })}
+                        </p>
                       ) : null}
                       <Yazisma
                         mesajlar={mesajlar}
@@ -318,16 +349,19 @@ export default async function DestekPage({
                         okunamadi={yazismaOkunamadi}
                         gonder={yazma.yazabilir ? destekMesajiGonder.bind(null, "uzman", r.id) : null}
                         kapaliNedeni={yazma.yazabilir ? undefined : yazma.neden}
-                        yerTutucu="Uzmana yazın: ek bilgi, soru ya da dosyanın neresinde takıldığınız"
+                        yerTutucu={t({
+                          tr: "Uzmana yazın: ek bilgi, soru ya da dosyanın neresinde takıldığınız",
+                          en: "Write to the expert: more information, a question, or where in the file you are stuck",
+                        })}
                       />
                       {r.status === "open" ? (
                         <ActionForm
                           action={iptal.bind(null, r.id)}
-                          confirmMessage="Bu destek talebini iptal etmek istediğinize emin misiniz?"
-                          successMessage="Talep iptal edildi."
+                          confirmMessage={t({ tr: "Bu destek talebini iptal etmek istediğinize emin misiniz?", en: "Are you sure you want to cancel this support request?" })}
+                          successMessage={t({ tr: "Talep iptal edildi.", en: "The request was canceled." })}
                         >
                           <button type="submit" className="link-button">
-                            <XCircle size={14} aria-hidden="true" /> Talebi iptal et
+                            <XCircle size={14} aria-hidden="true" /> {t({ tr: "Talebi iptal et", en: "Cancel request" })}
                           </button>
                         </ActionForm>
                       ) : null}
@@ -341,7 +375,10 @@ export default async function DestekPage({
             <BosDurum
               kompakt
               ikon={GraduationCap}
-              aciklama="Henüz uzman talebiniz yok. Yöntem, analiz ya da yazımda takıldığınızda “Uzmana sor” ile yazın."
+              aciklama={t({
+                tr: "Henüz uzman talebiniz yok. Yöntem, analiz ya da yazımda takıldığınızda “Uzmana sor” ile yazın.",
+                en: "You have no expert requests yet. When you get stuck on methodology, analysis or writing, write via “Ask an expert”.",
+              })}
             />
           )}
           <PartnerSeridi />
@@ -350,49 +387,56 @@ export default async function DestekPage({
         <article className="gb-kart gb-sutun kayan-kart">
           <header className="gb-kart-bas">
             <div>
-              <h2>Uygulama desteği</h2>
-              <p>Hata, erişim, ödeme sorunu ya da bir özellik isteği.</p>
+              <h2>{t({ tr: "Uygulama desteği", en: "App support" })}</h2>
+              <p>{t({ tr: "Hata, erişim, ödeme sorunu ya da bir özellik isteği.", en: "A bug, an access or payment problem, or a feature request." })}</p>
             </div>
             <PanelDrawer
-              triggerLabel="Bize yaz"
+              triggerLabel={t({ tr: "Bize yaz", en: "Write to us" })}
               triggerIcon={<LifeBuoy size={15} aria-hidden="true" />}
               triggerClassName="projects-primary-button button-compact"
-              kicker="Uygulama desteği"
-              title="Bize yazın"
-              description="Sorununuzu ya da isteğinizi kısaca anlatın; yanıtımız bu kartta görünür."
+              kicker={t({ tr: "Uygulama desteği", en: "App support" })}
+              title={t({ tr: "Bize yazın", en: "Write to us" })}
+              description={t({
+                tr: "Sorununuzu ya da isteğinizi kısaca anlatın; yanıtımız bu kartta görünür.",
+                en: "Briefly describe your problem or request; our reply will appear on this card.",
+              })}
             >
-              <ActionForm className="project-form-grid" action={createSupportRequest} successMessage="Destek talebiniz iletildi.">
+              <ActionForm
+                className="project-form-grid"
+                action={createSupportRequest}
+                successMessage={t({ tr: "Destek talebiniz iletildi.", en: "Your support request has been sent." })}
+              >
                 <label className="project-form-full">
-                  <span>Konu</span>
-                  <input name="subject" type="text" placeholder="Kısa bir başlık" required />
+                  <span>{t({ tr: "Konu", en: "Subject" })}</span>
+                  <input name="subject" type="text" placeholder={t({ tr: "Kısa bir başlık", en: "A short title" })} required />
                 </label>
                 <label>
-                  <span>Kategori</span>
+                  <span>{t({ tr: "Kategori", en: "Category" })}</span>
                   <select name="category" defaultValue="other">
                     {Object.entries(KATEGORI).map(([deger, ad]) => (
                       <option key={deger} value={deger}>
-                        {ad}
+                        {t(ad)}
                       </option>
                     ))}
                   </select>
                 </label>
                 <label>
-                  <span>Öncelik</span>
+                  <span>{t({ tr: "Öncelik", en: "Priority" })}</span>
                   <select name="priority" defaultValue="normal">
                     {Object.entries(ONCELIK).map(([deger, ad]) => (
                       <option key={deger} value={deger}>
-                        {ad}
+                        {t(ad)}
                       </option>
                     ))}
                   </select>
                 </label>
                 <label className="project-form-full">
-                  <span>Mesajınız</span>
-                  <textarea name="message" rows={5} placeholder="Ne oldu, ne bekliyordunuz?" required />
+                  <span>{t({ tr: "Mesajınız", en: "Your message" })}</span>
+                  <textarea name="message" rows={5} placeholder={t({ tr: "Ne oldu, ne bekliyordunuz?", en: "What happened, and what did you expect?" })} required />
                 </label>
                 <div className="project-form-actions">
                   <button type="submit" className="projects-primary-button">
-                    <Send size={16} aria-hidden="true" /> Gönder
+                    <Send size={16} aria-hidden="true" /> {t({ tr: "Gönder", en: "Send" })}
                   </button>
                 </div>
               </ActionForm>
@@ -401,7 +445,10 @@ export default async function DestekPage({
 
           {destekOkunamadi ? (
             <p className="alert" data-tone="danger" role="alert">
-              Talepleriniz yüklenemedi. Açık bir talebiniz olabilir; yeni talep açmadan önce sayfayı yenileyin.
+              {t({
+                tr: "Talepleriniz yüklenemedi. Açık bir talebiniz olabilir; yeni talep açmadan önce sayfayı yenileyin.",
+                en: "Your requests could not be loaded. You may have an open request; refresh the page before opening a new one.",
+              })}
             </p>
           ) : destekTaleplerim.length ? (
             <ul className="kanit-kayitlari">
@@ -415,26 +462,35 @@ export default async function DestekPage({
                         <span className="kanit-kayit-govde">
                           <b>{r.subject}</b>
                           <small>
-                            {KATEGORI[r.category]} · {trTarihSaat(r.created_at)}
+                            {KATEGORI[r.category] ? t(KATEGORI[r.category]) : r.category} · {tarihSaat(r.created_at)}
                           </small>
                         </span>
                         <span className="status-pill" data-tone={yanitlandi ? "success" : statusTone(r.status)}>
-                          {r.status === "resolved" ? DESTEK_DURUMU.resolved : yanitlandi ? "Yanıtlandı" : DESTEK_DURUMU[r.status]}
+                          {r.status === "resolved"
+                            ? t(DESTEK_DURUMU.resolved)
+                            : yanitlandi
+                              ? t({ tr: "Yanıtlandı", en: "Answered" })
+                              : t(DESTEK_DURUMU[r.status] ?? { tr: r.status, en: r.status })}
                         </span>
                       </summary>
                       <div className="kanit-kayit-ic">
                         {/* Kendi yazdığını da görsün: kullanıcı ne bildirdiğini hatırlamıyordu. */}
                         <p className="destek-mesaj">{r.message}</p>
-                        {!mesajlar.length ? <p className="hint">Talebiniz alındı. Yanıtlandığında burada görünecek.</p> : null}
+                        {!mesajlar.length ? <p className="hint">{t({ tr: "Talebiniz alındı. Yanıtlandığında burada görünecek.", en: "Your request was received. The reply will appear here." })}</p> : null}
                         {r.status === "resolved" ? (
-                          <p className="hint">Talep çözüldü olarak işaretlendi. Sorun sürüyorsa yazın; talep yeniden açılır.</p>
+                          <p className="hint">
+                            {t({
+                              tr: "Talep çözüldü olarak işaretlendi. Sorun sürüyorsa yazın; talep yeniden açılır.",
+                              en: "This request was marked as resolved. If the problem continues, write here; the request will reopen.",
+                            })}
+                          </p>
                         ) : null}
                         <Yazisma
                           mesajlar={mesajlar}
                           benimTarafim="talep_sahibi"
                           okunamadi={yazismaOkunamadi}
                           gonder={destekMesajiGonder.bind(null, "destek", r.id)}
-                          yerTutucu="Ek bilgi yazın ya da yanıta cevap verin"
+                          yerTutucu={t({ tr: "Ek bilgi yazın ya da yanıta cevap verin", en: "Add more information or reply to the answer" })}
                         />
                       </div>
                     </details>
@@ -446,7 +502,10 @@ export default async function DestekPage({
             <BosDurum
               kompakt
               ikon={LifeBuoy}
-              aciklama="Henüz destek talebiniz yok. Uygulamada bir sorun yaşarsanız ya da bir özellik isterseniz “Bize yaz” ile iletin."
+              aciklama={t({
+                tr: "Henüz destek talebiniz yok. Uygulamada bir sorun yaşarsanız ya da bir özellik isterseniz “Bize yaz” ile iletin.",
+                en: "You have no support requests yet. If you run into a problem with the app or want a feature, send it via “Write to us”.",
+              })}
             />
           )}
         </article>
