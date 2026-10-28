@@ -10,6 +10,8 @@ import { detectFormatLoss } from "@/lib/format-loss";
 import { ozetOku, yapiSorunlariniTemizle } from "@/lib/kontrol-gecmisi";
 import type { ManuscriptCheckResult } from "@/app/actions/manuscript";
 import ManuscriptEditor from "./manuscript-editor";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import { belgeDili } from "@/lib/belge-dili";
 
 // Bu sayfanın sunucu eylemleri (Word'den aktarma, resimli dönüştürme) büyük dosyalarda zaman alabilir.
 export const maxDuration = 60;
@@ -31,6 +33,7 @@ export default async function WriteManuscriptPage({
   const { id } = await params;
   const { teslim } = await searchParams;
   const supabase = await createClient();
+  const t = await ceviri();
 
   const { data: project } = await supabase
     .from("academic_projects")
@@ -41,7 +44,7 @@ export default async function WriteManuscriptPage({
   // Çalışma yoksa ya da kullanıcının erişimi yoksa (RLS) boş editör yerine 404.
   if (!project) notFound();
 
-  const [{ kilavuz: guideline, okunamadi: kilavuzOkunamadi }, manuscript, userResult, gecmisYaniti] = await Promise.all([
+  const [{ kilavuz: guideline, okunamadi: kilavuzOkunamadi }, manuscript, userResult, gecmisYaniti, dokumanDili] = await Promise.all([
     /* Katalogda eşleşme yoksa öğrencinin kendi yüklediği kılavuz
        uygulanıyor (lib/guideline-rules.ts: calismaKilavuzu). */
     calismaKilavuzuOku(supabase, id, project.guideline_id),
@@ -56,6 +59,8 @@ export default async function WriteManuscriptPage({
       .eq("project_id", id)
       .order("created_at", { ascending: false })
       .limit(10),
+    /* Şekil/tablo etiketleri, içindekiler ve kapak BELGENİN dilinde (lib/belge-dili.ts). */
+    aktifDil().then((arayuz) => belgeDili(supabase, id, arayuz)),
   ]);
   if (gecmisYaniti.error) console.error("[kontrol] geçmiş okunamadı", gecmisYaniti.error.message);
   const gecmisSatirlari = gecmisYaniti.data ?? [];
@@ -67,7 +72,7 @@ export default async function WriteManuscriptPage({
   const sonKontrol = sonSatir
     ? { sonuc: sonSatir.sonuc as ManuscriptCheckResult, yapi: yapiSorunlariniTemizle(sonSatir.yapi) }
     : null;
-  const sync = resolveGuidelineSync(guideline, manuscript);
+  const sync = resolveGuidelineSync(guideline, manuscript, await aktifDil());
   // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
   // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
   const content = manuscript ? await refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : null;
@@ -88,7 +93,7 @@ export default async function WriteManuscriptPage({
     <main className="dashboard-page gb">
       <section className="projects-header">
         <div>
-          <h1>{project.title ?? "Çalışma"}</h1>
+          <h1>{project.title ?? t({ tr: "Çalışma", en: "Work" })}</h1>
           {/* Açıklama satırı kaldırıldı: otomatik kaydı belgenin üstündeki
               kayıt durumu zaten gösteriyor, andığı "Kontrol Et" düğmesinin
               adı ise artık "Kılavuz ve kaynakça kontrolü". */}
@@ -106,7 +111,7 @@ export default async function WriteManuscriptPage({
         <div className="cluster yazma-eylemleri" id="yazma-eylemleri">
           <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
             <ArrowLeft size={17} />
-            Çalışma özeti
+            {t({ tr: "Çalışma özeti", en: "Work overview" })}
           </Link>
         </div>
       </section>
@@ -115,13 +120,16 @@ export default async function WriteManuscriptPage({
         /* Geçici arıza: editör kılavuzsuz açılıyor. Söylenmezse öğrenci biçimin
            neden değiştiğini anlamaz ya da kılavuzunu silinmiş sanıp yeniden yükler. */
         <p className="alert" data-tone="warning" role="alert">
-          Kılavuzunuz şu anda okunamadı; bu oturumda kılavuzun biçim kuralları uygulanmıyor. Kılavuzunuz silinmedi —
-          sayfayı yenileyin. Kılavuz ve kaynakça kontrolünü yeniledikten sonra çalıştırın.
+          {t({
+            tr: "Kılavuzunuz şu anda okunamadı; bu oturumda kılavuzun biçim kuralları uygulanmıyor. Kılavuzunuz silinmedi — sayfayı yenileyin. Kılavuz ve kaynakça kontrolünü yeniledikten sonra çalıştırın.",
+            en: "Your guideline could not be read right now; its formatting rules are not applied in this session. Your guideline was not deleted — refresh the page. Run the guideline and reference check after refreshing.",
+          })}
         </p>
       ) : null}
 
       <ManuscriptEditor
         projectId={id}
+        belgeDili={dokumanDili}
         acilacakMadde={teslim ?? null}
         kurumGirili={Boolean(project.university)}
         initialContent={content}

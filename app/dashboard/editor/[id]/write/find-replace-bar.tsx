@@ -5,10 +5,12 @@ import { useEditorState, type Editor } from "@tiptap/react";
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import { MAX_MATCHES, getSearchState, replaceAll, replaceCurrent, setSearch } from "@/lib/tiptap-search";
 import { showToast } from "@/app/dashboard/_components/toast-events";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 // Araç çubuğunun altında açılan bul/değiştir satırı (Ctrl/Cmd+F).
 // Enter: sonraki, Shift+Enter: önceki, Esc: kapat.
 export default function FindReplaceBar({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+  const t = useCeviri();
   const [query, setQuery] = useState("");
   const [replacement, setReplacement] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,14 +52,14 @@ export default function FindReplaceBar({ editor, onClose }: { editor: Editor; on
   };
 
   return (
-    <div className="find-bar" role="search" aria-label="Bul ve değiştir">
+    <div className="find-bar" role="search" aria-label={t({ tr: "Bul ve değiştir", en: "Find and replace" })}>
       <Search size={15} aria-hidden="true" className="muted" />
       <input
         ref={inputRef}
         className="find-input"
         value={query}
-        placeholder="Metinde bul"
-        aria-label="Aranacak metin"
+        placeholder={t({ tr: "Metinde bul", en: "Find in text" })}
+        aria-label={t({ tr: "Aranacak metin", en: "Text to find" })}
         onChange={(event) => {
           setQuery(event.target.value);
           setSearch(editor, event.target.value, 0);
@@ -65,19 +67,19 @@ export default function FindReplaceBar({ editor, onClose }: { editor: Editor; on
         onKeyDown={onKeyDown}
       />
       <span className="find-count" aria-live="polite">
-        {query ? (count ? `${current + 1}/${count}${count >= MAX_MATCHES ? "+" : ""}` : "Yok") : ""}
+        {query ? (count ? `${current + 1}/${count}${count >= MAX_MATCHES ? "+" : ""}` : t({ tr: "Yok", en: "None" })) : ""}
       </span>
-      <button type="button" className="find-icon-button" onClick={() => go(-1)} disabled={count === 0} aria-label="Önceki eşleşme">
+      <button type="button" className="find-icon-button" onClick={() => go(-1)} disabled={count === 0} aria-label={t({ tr: "Önceki eşleşme", en: "Previous match" })}>
         <ChevronUp size={15} />
       </button>
-      <button type="button" className="find-icon-button" onClick={() => go(1)} disabled={count === 0} aria-label="Sonraki eşleşme">
+      <button type="button" className="find-icon-button" onClick={() => go(1)} disabled={count === 0} aria-label={t({ tr: "Sonraki eşleşme", en: "Next match" })}>
         <ChevronDown size={15} />
       </button>
       <input
         className="find-input"
         value={replacement}
-        placeholder="Şununla değiştir"
-        aria-label="Yeni metin"
+        placeholder={t({ tr: "Şununla değiştir", en: "Replace with" })}
+        aria-label={t({ tr: "Yeni metin", en: "Replacement text" })}
         onChange={(event) => setReplacement(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
@@ -90,7 +92,7 @@ export default function FindReplaceBar({ editor, onClose }: { editor: Editor; on
         }}
       />
       <button type="button" className="projects-filter-button button-compact" disabled={count === 0} onClick={() => replaceCurrent(editor, replacement)}>
-        Değiştir
+        {t({ tr: "Değiştir", en: "Replace" })}
       </button>
       <button
         type="button"
@@ -98,12 +100,17 @@ export default function FindReplaceBar({ editor, onClose }: { editor: Editor; on
         disabled={count === 0}
         onClick={() => {
           const replaced = replaceAll(editor, replacement);
-          if (replaced) showToast("success", `${replaced} yer değiştirildi. Geri almak için Ctrl+Z.`);
+          if (replaced) {
+            showToast(
+              "success",
+              t({ tr: `${replaced} yer değiştirildi. Geri almak için Ctrl+Z.`, en: `${replaced} replaced. Press Ctrl+Z to undo.` })
+            );
+          }
         }}
       >
-        Tümünü değiştir
+        {t({ tr: "Tümünü değiştir", en: "Replace all" })}
       </button>
-      <button type="button" className="find-icon-button" onClick={close} aria-label="Bul ve değiştiri kapat">
+      <button type="button" className="find-icon-button" onClick={close} aria-label={t({ tr: "Bul ve değiştiri kapat", en: "Close find and replace" })}>
         <X size={15} />
       </button>
     </div>

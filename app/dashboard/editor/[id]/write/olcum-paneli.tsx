@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Editor } from "@tiptap/react";
 import { olc, olcumAcikMi, olcumKaydet, olcumuAc, olcumuKapat } from "@/lib/editor-olcum";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 /*
   Yazarken neyin beklettiğini GÖSTEREN panel (?olcum=1).
@@ -31,6 +32,7 @@ const istemcide = () => olcumAcikMi(window.location.search);
 const sunucuda = () => false;
 
 export default function OlcumPaneli({ editor }: { editor: Editor | null }) {
+  const t = useCeviri();
   const acik = useSyncExternalStore(abone, istemcide, sunucuda);
   const [, tazele] = useState(0);
 
@@ -100,18 +102,21 @@ export default function OlcumPaneli({ editor }: { editor: Editor | null }) {
   const satirlar = olcumuAc().ozet();
 
   return (
-    <aside className="olcum-paneli" aria-label="Başarım ölçümü">
+    <aside className="olcum-paneli" aria-label={t({ tr: "Başarım ölçümü", en: "Performance measurement" })}>
       <p className="olcum-baslik">
-        Ölçüm · {(bayt / 1024).toFixed(0)} KB · {editor.state.doc.childCount} blok
+        {t({
+          tr: `Ölçüm · ${(bayt / 1024).toFixed(0)} KB · ${editor.state.doc.childCount} blok`,
+          en: `Measurement · ${(bayt / 1024).toFixed(0)} KB · ${editor.state.doc.childCount} blocks`,
+        })}
       </p>
       <table className="olcum-tablo">
         <thead>
           <tr>
-            <th scope="col">iş</th>
+            <th scope="col">{t({ tr: "iş", en: "task" })}</th>
             <th scope="col">n</th>
-            <th scope="col">ortanca</th>
+            <th scope="col">{t({ tr: "ortanca", en: "median" })}</th>
             <th scope="col">p95</th>
-            <th scope="col">en kötü</th>
+            <th scope="col">{t({ tr: "en kötü", en: "worst" })}</th>
           </tr>
         </thead>
         <tbody>
@@ -126,7 +131,9 @@ export default function OlcumPaneli({ editor }: { editor: Editor | null }) {
           ))}
         </tbody>
       </table>
-      <p className="olcum-not">Süreler milisaniye. Panel yalnızca ?olcum=1 ile açılır.</p>
+      <p className="olcum-not">
+        {t({ tr: "Süreler milisaniye. Panel yalnızca ?olcum=1 ile açılır.", en: "Times in milliseconds. The panel opens only with ?olcum=1." })}
+      </p>
     </aside>
   );
 }

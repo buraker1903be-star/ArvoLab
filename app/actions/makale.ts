@@ -5,6 +5,7 @@ import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-g
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { makaleTuruMu } from "@/lib/makale/sablonlar";
 import type { MakaleProfili } from "@/lib/makale/gonderim-kontrolu";
+import { ceviri } from "@/lib/dil-sunucu";
 
 /*
   Makale çalışma alanının profili (migration 20261026065320). Tez çalışma
@@ -54,24 +55,25 @@ export async function makaleProfiliKaydet(formData: FormData): Promise<ActionRes
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
+  const t = await ceviri();
 
   const projectId = String(formData.get("project_id") ?? "");
-  if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };
+  if (!UUID.test(projectId)) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
   const tur = String(formData.get("makale_turu") ?? "");
-  if (!makaleTuruMu(tur)) return { error: "Makale türünü seçin." };
+  if (!makaleTuruMu(tur)) return { error: t({ tr: "Makale türünü seçin.", en: "Choose the article type." }) };
 
   const kelime = tamSayi(formData, "kelime_siniri", 100, 100000);
   const ozetSiniri = tamSayi(formData, "ozet_siniri", 30, 2000);
   const anahtarEnAz = tamSayi(formData, "anahtar_en_az", 1, 20);
   const anahtarEnCok = tamSayi(formData, "anahtar_en_cok", 1, 20);
-  if (kelime === "hatali") return { error: "Kelime sınırı 100 ile 100.000 arasında bir tam sayı olmalı." };
-  if (ozetSiniri === "hatali") return { error: "Özet sınırı 30 ile 2.000 arasında bir tam sayı olmalı." };
-  if (anahtarEnAz === "hatali" || anahtarEnCok === "hatali") return { error: "Anahtar kelime sayıları 1 ile 20 arasında olmalı." };
-  if (anahtarEnAz && anahtarEnCok && anahtarEnAz > anahtarEnCok) return { error: "En az anahtar kelime sayısı en çoktan büyük olamaz." };
+  if (kelime === "hatali") return { error: t({ tr: "Kelime sınırı 100 ile 100.000 arasında bir tam sayı olmalı.", en: "The word limit must be a whole number between 100 and 100,000." }) };
+  if (ozetSiniri === "hatali") return { error: t({ tr: "Özet sınırı 30 ile 2.000 arasında bir tam sayı olmalı.", en: "The abstract limit must be a whole number between 30 and 2,000." }) };
+  if (anahtarEnAz === "hatali" || anahtarEnCok === "hatali") return { error: t({ tr: "Anahtar kelime sayıları 1 ile 20 arasında olmalı.", en: "Keyword counts must be between 1 and 20." }) };
+  if (anahtarEnAz && anahtarEnCok && anahtarEnAz > anahtarEnCok) return { error: t({ tr: "En az anahtar kelime sayısı en çoktan büyük olamaz.", en: "The minimum number of keywords cannot exceed the maximum." }) };
 
   const kontrol = String(formData.get("dergi_kurallari_kontrol") ?? "").trim();
-  if (kontrol && !TARIH.test(kontrol)) return { error: "Kontrol tarihi okunamadı." };
+  if (kontrol && !TARIH.test(kontrol)) return { error: t({ tr: "Kontrol tarihi okunamadı.", en: "The check date could not be read." }) };
 
   const anahtarKelimeler = String(formData.get("anahtar_kelimeler") ?? "")
     .split(/[;,\n]/)
@@ -110,12 +112,19 @@ export async function makaleProfiliKaydet(formData: FormData): Promise<ActionRes
   );
   if (error) {
     // Ekleme politikası yalnızca makale türündeki çalışmaya izin veriyor.
-    if (error.code === "42501") return { error: "Makale bilgileri yalnızca makale türündeki ve yazma yetkiniz olan çalışmaya kaydedilebilir." };
+    if (error.code === "42501") {
+      return {
+        error: t({
+          tr: "Makale bilgileri yalnızca makale türündeki ve yazma yetkiniz olan çalışmaya kaydedilebilir.",
+          en: "Article details can only be saved to an article-type work you have permission to edit.",
+        }),
+      };
+    }
     console.error("[makale] profil kaydedilemedi:", error.code, error.message);
-    return { error: "Makale bilgileri kaydedilemedi." };
+    return { error: t({ tr: "Makale bilgileri kaydedilemedi.", en: "Article details could not be saved." }) };
   }
 
   revalidatePath(`/dashboard/editor/${projectId}/makale`);
   revalidatePath(`/dashboard/editor/${projectId}`);
-  return { success: true, message: "Makale bilgileri kaydedildi." };
+  return { success: true, message: t({ tr: "Makale bilgileri kaydedildi.", en: "Article details saved." }) };
 }

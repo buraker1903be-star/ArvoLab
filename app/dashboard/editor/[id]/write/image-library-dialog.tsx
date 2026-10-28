@@ -5,6 +5,7 @@ import { ImageOff } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
 import BosDurum from "@/app/dashboard/_components/bos-durum";
 import { createClient } from "@/lib/supabase/client";
+import { useCeviri, useTarihler } from "@/app/_components/dil-saglayici";
 
 const THUMB_TTL_SECONDS = 30 * 24 * 60 * 60;
 
@@ -28,8 +29,11 @@ interface ImageLibraryDialogProps {
 // çalışmaya bakan herkes görür) ve kullanıcının kendi klasörü (eski yol; oradaki
 // resimler yerinde kaldı).
 export default function ImageLibraryDialog({ open, projectId, onClose, onPick }: ImageLibraryDialogProps) {
+  const t = useCeviri();
+  const { tarihSaat } = useTarihler();
   const [images, setImages] = useState<LibraryImage[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  /* Hata metni yerine bayrak: metin çizimde seçiliyor, effect dile bağımlı olmasın. */
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -72,13 +76,13 @@ export default function ImageLibraryDialog({ open, projectId, onClose, onPick }:
               .map((entry) => ({ name: entry.name, url: byPath.get(entry.path) ?? "", createdAt: entry.createdAt }))
               .filter((image) => image.url)
           );
-          setError(null);
+          setError(false);
         }
       } catch (loadError) {
         console.error(loadError);
         if (!cancelled) {
           setImages([]);
-          setError("Resimleriniz yüklenemedi. Oturumunuzu ve bağlantınızı kontrol edin.");
+          setError(true);
         }
       }
     })();
@@ -96,18 +100,31 @@ export default function ImageLibraryDialog({ open, projectId, onClose, onPick }:
     <Dialog
       open={open}
       onClose={close}
-      kicker="Resimler"
-      title="Bu çalışmaya yüklenen resimler"
-      description="Bu çalışmanın editörüne yüklenmiş resimler burada. Birine tıklayınca imlecin olduğu yere eklenir."
+      kicker={t({ tr: "Resimler", en: "Images" })}
+      title={t({ tr: "Bu çalışmaya yüklenen resimler", en: "Images uploaded to this work" })}
+      description={t({
+        tr: "Bu çalışmanın editörüne yüklenmiş resimler burada. Birine tıklayınca imlecin olduğu yere eklenir.",
+        en: "Images uploaded in this work's editor are here. Click one to insert it at the cursor.",
+      })}
     >
-      {error ? <p className="alert" data-tone="danger" role="alert">{error}</p> : null}
+      {error ? (
+        <p className="alert" data-tone="danger" role="alert">
+          {t({
+            tr: "Resimleriniz yüklenemedi. Oturumunuzu ve bağlantınızı kontrol edin.",
+            en: "Your images could not be loaded. Check your session and connection.",
+          })}
+        </p>
+      ) : null}
       {images === null ? (
-        <p className="muted text-sm" aria-busy="true">Resimler yükleniyor…</p>
+        <p className="muted text-sm" aria-busy="true">{t({ tr: "Resimler yükleniyor…", en: "Loading images…" })}</p>
       ) : images.length === 0 ? (
         <BosDurum
           kompakt
           ikon={ImageOff}
-          aciklama="Bu çalışmanın editörüne henüz resim yüklenmedi. Editördeki resim düğmesiyle yüklediğiniz görseller burada toplanır."
+          aciklama={t({
+            tr: "Bu çalışmanın editörüne henüz resim yüklenmedi. Editördeki resim düğmesiyle yüklediğiniz görseller burada toplanır.",
+            en: "No images have been uploaded in this work's editor yet. Images you upload with the editor's image button are collected here.",
+          })}
         />
       ) : (
         <ul className="image-library">
@@ -119,7 +136,7 @@ export default function ImageLibraryDialog({ open, projectId, onClose, onPick }:
                   onPick(image.url, image.name);
                   close();
                 }}
-                title={image.createdAt ? new Date(image.createdAt).toLocaleString("tr-TR") : image.name}
+                title={image.createdAt ? tarihSaat(image.createdAt) : image.name}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- imzalı depo bağlantısı, Next görsel iyileştirmesi uygulanamaz */}
                 <img src={image.url} alt={image.name} loading="lazy" />

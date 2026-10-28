@@ -8,6 +8,8 @@ import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { readImageInfo } from "@/lib/image-info";
 import { downloadWriterImage, storagePathFromUrl } from "@/lib/manuscript-images";
 import type { TiptapDoc } from "@/lib/tiptap-text";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import { belgeDili } from "@/lib/belge-dili";
 
 // Büyük/resimli belgelerde Word oluşturma zaman alabilir.
 export const maxDuration = 60;
@@ -49,12 +51,13 @@ export async function GET(
 ) {
   const { projectId } = await params;
   const supabase = await createClient();
+  const t = await ceviri();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Oturum bulunamadı." }, { status: 401 });
+    return NextResponse.json({ error: t({ tr: "Oturum bulunamadı.", en: "No active session." }) }, { status: 401 });
   }
 
   /*
@@ -74,7 +77,7 @@ export async function GET(
     .maybeSingle();
 
   if (!project) {
-    return NextResponse.json({ error: "Çalışma bulunamadı." }, { status: 404 });
+    return NextResponse.json({ error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) }, { status: 404 });
   }
 
   const { data: manuscript, error } = await supabase
@@ -85,10 +88,10 @@ export async function GET(
 
   if (error) {
     console.error(error);
-    return NextResponse.json({ error: "Metin okunamadı." }, { status: 500 });
+    return NextResponse.json({ error: t({ tr: "Metin okunamadı.", en: "The text could not be read." }) }, { status: 500 });
   }
   if (!manuscript) {
-    return NextResponse.json({ error: "Bu çalışma için henüz kaydedilmiş bir metin yok." }, { status: 404 });
+    return NextResponse.json({ error: t({ tr: "Bu çalışma için henüz kaydedilmiş bir metin yok.", en: "There is no saved text for this work yet." }) }, { status: 404 });
   }
 
   /*
@@ -110,8 +113,10 @@ export async function GET(
   // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
   const writerIds = [projectId, project.owner_id, project.assignee_id];
 
+  const dil = await belgeDili(supabase, projectId, await aktifDil());
   const doc = await buildDocxFromTiptap({
-    title: project.title ?? "ArvoLab Çalışması",
+    title: project.title ?? (dil === "en" ? "ArvoLab Work" : "ArvoLab Çalışması"),
+    dil,
     doc: manuscript.content as TiptapDoc,
     margins: {
       top: manuscript.margin_top_cm ?? 2.5,
@@ -160,14 +165,30 @@ export async function GET(
     });
     if (yuklemeHatasi) {
       console.error("Word çıktısı depoya yazılamadı:", yuklemeHatasi.message);
-      return NextResponse.json({ error: "Word dosyası çok büyük ve hazırlanamadı. Resimleri küçültüp tekrar deneyin." }, { status: 507 });
+      return NextResponse.json(
+        {
+          error: t({
+            tr: "Word dosyası çok büyük ve hazırlanamadı. Resimleri küçültüp tekrar deneyin.",
+            en: "The Word file is too large and could not be prepared. Reduce the image sizes and try again.",
+          }),
+        },
+        { status: 507 }
+      );
     }
     const { data: imzali, error: baglantiHatasi } = await admin.storage
       .from("project-files")
       .createSignedUrl(yol, 300, { download: dosyaAdi });
     if (baglantiHatasi || !imzali?.signedUrl) {
       console.error("Word çıktısı bağlantısı üretilemedi:", baglantiHatasi?.message);
-      return NextResponse.json({ error: "Word dosyası hazırlandı ama indirme bağlantısı üretilemedi. Tekrar deneyin." }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: t({
+            tr: "Word dosyası hazırlandı ama indirme bağlantısı üretilemedi. Tekrar deneyin.",
+            en: "The Word file was prepared, but a download link could not be created. Try again.",
+          }),
+        },
+        { status: 500 }
+      );
     }
     return NextResponse.json({ downloadUrl: imzali.signedUrl, fileName: dosyaAdi }, { headers: { "Cache-Control": "no-store" } });
   }

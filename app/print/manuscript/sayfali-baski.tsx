@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 /*
   SAYFALI BASKI (27.10.2026, kurum sahibinin isteği: "PDF ile Word aynı
@@ -62,6 +63,7 @@ function basliklaraKimlik(kok: ParentNode) {
 }
 
 export default function SayfaliBaski({ otomatikYazdir }: { otomatikYazdir: boolean }) {
+  const t = useCeviri();
   const [durum, setDurum] = useState<"hazirlaniyor" | "hazir" | "kapali">("hazirlaniyor");
   useEffect(() => {
     let iptal = false;
@@ -115,7 +117,10 @@ export default function SayfaliBaski({ otomatikYazdir }: { otomatikYazdir: boole
       {/* Uzun tezde sayfalama birkaç saniye sürüyor; donmuş sanılmasın. */}
       {durum === "hazirlaniyor" ? (
         <p className="sayfali-durum no-print" role="status">
-          Sayfalar hazırlanıyor… İçindekilerin sayfa numaraları ve dipnotlar yerleştiriliyor.
+          {t({
+            tr: "Sayfalar hazırlanıyor… İçindekilerin sayfa numaraları ve dipnotlar yerleştiriliyor.",
+            en: "Preparing pages… Placing table of contents page numbers and footnotes.",
+          })}
         </p>
       ) : null}
       <div id="sayfali-hedef" />

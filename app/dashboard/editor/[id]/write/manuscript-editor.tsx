@@ -5,7 +5,9 @@ import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { kayitHatasiMetni, TASLAK_GUVENDE, TASLAK_YAZILAMADI } from "@/lib/taslak-durumu";
+import { kayitHatasiMetni, TASLAK_GUVENDE_METIN, TASLAK_YAZILAMADI_METIN } from "@/lib/taslak-durumu";
+import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
+import { YEREL, type Dil, type Metin } from "@/lib/dil";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
 import { olc } from "@/lib/editor-olcum";
 import OlcumPaneli from "./olcum-paneli";
@@ -101,7 +103,6 @@ import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import type { KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
-import { trTarihSaat } from "@/lib/tr-time";
 import IcindekilerKarti from "./icindekiler-karti";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
@@ -140,15 +141,31 @@ interface ProjectDefaults {
   projectType: string;
 }
 
-const DEGREE_TYPE_BY_PROJECT_TYPE: Record<string, string> = {
-  thesis: "Yüksek Lisans Tezi",
-  article: "Makale",
-  project: "Proje Raporu",
-  "associate-professorship": "Doçentlik Eser Dosyası",
+/*
+  Kapaktaki çalışma türü BELGENİN dilinde yazılır (kapak çıktının parçası;
+  lib/belge-dili.ts). Seçilen metin kayda olduğu gibi girer: sonradan dil
+  değişse de öğrencinin seçtiği yazım korunur.
+*/
+const DERECE_TURLERI: Metin[] = [
+  { tr: "Yüksek Lisans Tezi", en: "Master's Thesis" },
+  { tr: "Doktora Tezi", en: "Doctoral Dissertation" },
+  { tr: "Lisans Bitirme Tezi", en: "Undergraduate Thesis" },
+  { tr: "Makale", en: "Article" },
+  { tr: "Proje Raporu", en: "Project Report" },
+  { tr: "Doçentlik Eser Dosyası", en: "Associate Professorship Portfolio" },
+];
+
+const DEGREE_TYPE_BY_PROJECT_TYPE: Record<string, Metin> = {
+  thesis: DERECE_TURLERI[0],
+  article: DERECE_TURLERI[3],
+  project: DERECE_TURLERI[4],
+  "associate-professorship": DERECE_TURLERI[5],
 };
 
 interface ManuscriptEditorProps {
   projectId: string;
+  /** Belgenin dili (lib/belge-dili.ts): şekil/tablo etiketleri, atıf biçimi, kapak, yazım denetimi. */
+  belgeDili?: Dil;
   /*
     Ana sayfadaki eksik maddesine tıklanarak gelindiyse açılacak madde.
     Pencere açılıyor, eylem kendiliğinden ÇALIŞMIYOR: "Eksik bölümleri
@@ -192,10 +209,6 @@ interface ManuscriptEditorProps {
   formatLoss: FormatLossReport | null;
 }
 
-const formatDate = (value: string | null | undefined) => {
-  const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString("tr-TR") : null;
-};
 
 const safeExternalUrl = (value: string | null) => (value && /^https?:\/\//i.test(value) ? value : null);
 
@@ -271,7 +284,7 @@ function clearDraft(projectId: string) {
   }
 }
 
-const timeLabel = (date: Date) => date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+const timeLabel = (date: Date, dil: Dil) => date.toLocaleTimeString(YEREL[dil], { hour: "2-digit", minute: "2-digit" });
 
 type FootnoteDialogState = { mode: "insert"; text: string } | { mode: "edit"; pos: number; text: string } | null;
 
@@ -338,6 +351,7 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
 
 export default function ManuscriptEditor({
   projectId,
+  belgeDili = "tr",
   acilacakMadde = null,
   kurumGirili = false,
   initialContent,
@@ -359,6 +373,13 @@ export default function ManuscriptEditor({
   ornekAtif = null,
   formatLoss,
 }: ManuscriptEditorProps) {
+  const t = useCeviri();
+  const dil = useDil();
+  const { tarih, tarihSaat } = useTarihler();
+  const formatDate = (value: string | null | undefined) => {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime()) ? tarih(date) : null;
+  };
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
   /* Taslak bu tarayıcıya yazılamadı mı (depolama dolu/kapalı) — bkz. writeDraft. */
@@ -473,7 +494,7 @@ export default function ManuscriptEditor({
       institute: projectDefaults?.institute ?? "",
       department: projectDefaults?.department ?? "",
       program: "",
-      degreeType: DEGREE_TYPE_BY_PROJECT_TYPE[projectDefaults?.projectType ?? "thesis"] ?? "Yüksek Lisans Tezi",
+      degreeType: (DEGREE_TYPE_BY_PROJECT_TYPE[projectDefaults?.projectType ?? "thesis"] ?? DERECE_TURLERI[0])[belgeDili],
       title: projectDefaults?.title ?? "",
       authorName: projectDefaults?.authorName ?? "",
       advisorName: "",
@@ -527,9 +548,12 @@ export default function ManuscriptEditor({
   }, [projectId]);
 
   /* Hata metnine taslağın GERÇEK durumunu ekler (lib/taslak-durumu.ts). */
-  const hataYaz = useCallback((mesaj: string) => {
-    setSaveError(kayitHatasiMetni(mesaj, !taslakYazilamadiRef.current));
-  }, []);
+  const hataYaz = useCallback(
+    (mesaj: string) => {
+      setSaveError(kayitHatasiMetni(mesaj, !taslakYazilamadiRef.current, dil));
+    },
+    [dil]
+  );
 
   const scheduleSave = useCallback((delay: number) => {
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
@@ -634,11 +658,21 @@ export default function ManuscriptEditor({
           );
           if (eskiSurum) {
             blockedRef.current = true;
-            hataYaz("Yeni bir sürüm yayınlandı; sayfayı yenileyin, kaldığınız yerden devam edin.");
+            hataYaz(
+              t({
+                tr: "Yeni bir sürüm yayınlandı; sayfayı yenileyin, kaldığınız yerden devam edin.",
+                en: "A new version has been released; refresh the page and continue where you left off.",
+              })
+            );
             setSaveState("error");
             return false;
           }
-          hataYaz("Bağlantı sorunu nedeniyle kaydedilemedi; birazdan yeniden denenecek.");
+          hataYaz(
+            t({
+              tr: "Bağlantı sorunu nedeniyle kaydedilemedi; birazdan yeniden denenecek.",
+              en: "Could not save due to a connection problem; it will be retried shortly.",
+            })
+          );
           setSaveState("error");
           scheduleSave(RETRY_DELAY_MS);
           return false;
@@ -651,7 +685,7 @@ export default function ManuscriptEditor({
         inFlightRef.current = null;
       }
     },
-    [projectId, guideline, persistDraft, scheduleSave, hataYaz]
+    [projectId, guideline, persistDraft, scheduleSave, hataYaz, t]
   );
 
   const markDirty = useCallback(() => {
@@ -670,7 +704,7 @@ export default function ManuscriptEditor({
   const editor = useEditor({
     immediatelyRender: false,
     /* Liste lib/tiptap-extensions.ts'te: şemayı testler de aynı yerden kurar. */
-    extensions: editorExtensions({ headingNumbering: initialHeadingNumbering }),
+    extensions: editorExtensions({ headingNumbering: initialHeadingNumbering, dil: belgeDili }),
     content: initialContent ?? "",
     onCreate: ({ editor: created }) => {
       editorRef.current = created;
@@ -689,10 +723,10 @@ export default function ManuscriptEditor({
         // Kılavuzun ana bölüm kuralları editörde de görünür (metin değişmez; CSS workspace.css)
         ...(guideline?.settings.chapterUppercase ? { "data-chapter-case": "upper" } : {}),
         ...(guideline?.settings.chapterNewPage ? { "data-chapter-new-page": "true" } : {}),
-        "aria-label": "Çalışma metni",
-        // Tarayıcının yazım denetimi Türkçe sözlükle çalışsın
+        "aria-label": t({ tr: "Çalışma metni", en: "Manuscript text" }),
+        // Tarayıcının yazım denetimi belgenin diliyle çalışsın (eskiden hep Türkçe sözlüktü)
         spellcheck: "true",
-        lang: "tr",
+        lang: belgeDili,
         style: [
           guideline?.settings.fontFamily ? `font-family: '${guideline.settings.fontFamily}'` : "",
           guideline?.settings.fontSizePt ? `font-size: ${guideline.settings.fontSizePt}pt` : "",
@@ -767,7 +801,7 @@ export default function ManuscriptEditor({
         schedule(1000);
         return;
       }
-      setLiveIssues(olc("yapı denetimi", () => checkStructure(editor.getJSON(), structureOptions)));
+      setLiveIssues(olc("yapı denetimi", () => checkStructure(editor.getJSON(), structureOptions, dil)));
     };
     const schedule = (delay: number) => {
       if (timer) window.clearTimeout(timer);
@@ -791,7 +825,7 @@ export default function ManuscriptEditor({
       if (timer) window.clearTimeout(timer);
       editor.off("update", onUpdate);
     };
-  }, [editor, structureOptions]);
+  }, [editor, structureOptions, dil]);
 
   const closeIssues = useCallback(() => setIssuesOpen(false), []);
   const closeChecklist = useCallback(() => {
@@ -848,7 +882,7 @@ export default function ManuscriptEditor({
             const adres = `/print/manuscript/${projectId}?auto=1`;
             if (!kaydedildi) {
               pencere?.close();
-              showToast("error", "Metin kaydedilemediği için PDF hazırlanamadı.");
+              showToast("error", t({ tr: "Metin kaydedilemediği için PDF hazırlanamadı.", en: "The PDF could not be prepared because the text could not be saved." }));
             } else if (pencere) pencere.location.href = adres;
             else window.open(adres, "_self");
           });
@@ -887,14 +921,14 @@ export default function ManuscriptEditor({
       }
     };
     // projectId sayfa boyunca değişmez; Ctrl+P'nin baskı adresi için.
-  }, [persistDraft, projectId]);
+  }, [persistDraft, projectId, t]);
 
   const restoreDraft = useCallback(() => {
     if (!editor || !draftOffer) return;
     editor.commands.setContent(draftOffer.content);
     setDraftOffer(null);
-    showToast("success", "Kaydedilmemiş değişiklikleriniz geri yüklendi.");
-  }, [editor, draftOffer]);
+    showToast("success", t({ tr: "Kaydedilmemiş değişiklikleriniz geri yüklendi.", en: "Your unsaved changes were restored." }));
+  }, [editor, draftOffer, t]);
 
   const discardDraft = useCallback(() => {
     clearDraft(projectId);
@@ -907,14 +941,19 @@ export default function ManuscriptEditor({
     try {
       // Kontrol her zaman güncel metin üzerinde yapılır.
       if (!(await saveNow())) {
-        setCheckError("Kontrolden önce metin kaydedilemedi. Kayıt durumunu kontrol edip yeniden deneyin.");
+        setCheckError(
+          t({
+            tr: "Kontrolden önce metin kaydedilemedi. Kayıt durumunu kontrol edip yeniden deneyin.",
+            en: "The text could not be saved before the check. Check the save status and try again.",
+          })
+        );
         return;
       }
       // Yapı ve bütünlük kontrolü ekrandaki içerik üzerinde tarayıcıda anında çalışır.
       const current = editorRef.current;
       let issues: StructureIssue[] = [];
       if (current) {
-        issues = checkStructure(current.getJSON(), structureOptions);
+        issues = checkStructure(current.getJSON(), structureOptions, dil);
         setStructureIssues(issues);
         setLiveIssues(issues);
       }
@@ -933,11 +972,16 @@ export default function ManuscriptEditor({
         setSonucAcik(true);
       }
     } catch {
-      setCheckError("Kontrol şu anda yapılamadı. Bağlantınızı kontrol edip yeniden deneyin.");
+      setCheckError(
+        t({
+          tr: "Kontrol şu anda yapılamadı. Bağlantınızı kontrol edip yeniden deneyin.",
+          en: "The check could not be run right now. Check your connection and try again.",
+        })
+      );
     } finally {
       setChecking(false);
     }
-  }, [projectId, saveNow, structureOptions]);
+  }, [projectId, saveNow, structureOptions, dil, t]);
 
   /* Geçmişten bir kontrole geç: sonucu ve o anki yapı sorunlarını getirir. */
   const kontrolSec = async (id: string) => {
@@ -946,14 +990,14 @@ export default function ManuscriptEditor({
     try {
       const res = await kontrolKaydiniOku(projectId, id);
       if (res.error || !res.sonuc) {
-        showToast("error", res.error ?? "Kontrol kaydı okunamadı.");
+        showToast("error", res.error ?? t({ tr: "Kontrol kaydı okunamadı.", en: "The check record could not be read." }));
         return;
       }
       setCheckResult(res.sonuc);
       setStructureIssues(res.yapi ?? []);
       setSeciliKontrol(id);
     } catch {
-      showToast("error", "Kontrol kaydı okunamadı; bağlantınızı kontrol edin.");
+      showToast("error", t({ tr: "Kontrol kaydı okunamadı; bağlantınızı kontrol edin.", en: "The check record could not be read; check your connection." }));
     } finally {
       setKayitAciliyor(null);
     }
@@ -964,7 +1008,7 @@ export default function ManuscriptEditor({
     try {
       // Word dosyası, ekrandaki son hâlden oluşturulsun.
       if (!(await saveNow())) {
-        showToast("error", "Metin kaydedilemediği için Word dosyası oluşturulmadı.");
+        showToast("error", t({ tr: "Metin kaydedilemediği için Word dosyası oluşturulmadı.", en: "The Word file was not created because the text could not be saved." }));
         return;
       }
       // İndirme ve hata okuma ortak yardımcıda (ana sayfadaki "Danışmanıma gönder" de kullanıyor).
@@ -973,17 +1017,17 @@ export default function ManuscriptEditor({
     } finally {
       window.setTimeout(() => setExporting(false), 1500);
     }
-  }, [projectId, saveNow]);
+  }, [projectId, saveNow, t]);
 
   const handleImageUpload = useCallback(
     async (file: File) => {
       if (!editor) return;
       if (!IMAGE_TYPES.includes(file.type)) {
-        showToast("error", "Word'e aktarılabilmesi için PNG, JPG veya GIF resim seçin.");
+        showToast("error", t({ tr: "Word'e aktarılabilmesi için PNG, JPG veya GIF resim seçin.", en: "Choose a PNG, JPG or GIF image so it can be exported to Word." }));
         return;
       }
       if (file.size > MAX_IMAGE_BYTES) {
-        showToast("error", "Resim boyutu 8 MB sınırını aşıyor.");
+        showToast("error", t({ tr: "Resim boyutu 8 MB sınırını aşıyor.", en: "The image exceeds the 8 MB limit." }));
         return;
       }
 
@@ -994,7 +1038,7 @@ export default function ManuscriptEditor({
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-          showToast("error", "Oturumunuz sona erdi. Resim eklemek için yeniden giriş yapın.");
+          showToast("error", t({ tr: "Oturumunuz sona erdi. Resim eklemek için yeniden giriş yapın.", en: "Your session has expired. Sign in again to add images." }));
           return;
         }
 
@@ -1010,7 +1054,7 @@ export default function ManuscriptEditor({
           .upload(path, file, { contentType: file.type, upsert: false });
         if (uploadError) {
           console.error(uploadError);
-          showToast("error", "Resim yüklenemedi. Yeniden deneyin.");
+          showToast("error", t({ tr: "Resim yüklenemedi. Yeniden deneyin.", en: "The image could not be uploaded. Try again." }));
           return;
         }
 
@@ -1019,18 +1063,18 @@ export default function ManuscriptEditor({
           .createSignedUrl(path, 60 * 60 * 24 * 30); // 30 gün; editör/yazdırma/Word açılışta depo yolundan yeniler
         if (signError || !signed) {
           console.error(signError);
-          showToast("error", "Resim bağlantısı oluşturulamadı.");
+          showToast("error", t({ tr: "Resim bağlantısı oluşturulamadı.", en: "The image link could not be created." }));
           return;
         }
 
         editor.chain().focus().setImage({ src: signed.signedUrl, alt: file.name }).run();
       } catch {
-        showToast("error", "Resim yüklenirken bağlantı sorunu oluştu.");
+        showToast("error", t({ tr: "Resim yüklenirken bağlantı sorunu oluştu.", en: "A connection problem occurred while uploading the image." }));
       } finally {
         setImageUploading(false);
       }
     },
-    [editor, projectId]
+    [editor, projectId, t]
   );
 
   const openFootnoteEditor = useCallback((pos: number, text: string) => {
@@ -1055,8 +1099,8 @@ export default function ManuscriptEditor({
     if (guideline.settings.headingNumbering !== undefined) setHeadingNumbering(guideline.settings.headingNumbering);
     setSettingsSource({ guidelineId: guideline.id, version: guideline.version, customized: false });
     setSyncMode("current");
-    showToast("success", "Sayfa ayarları kılavuzun güncel sürümüne göre güncellendi.");
-  }, [guideline]);
+    showToast("success", t({ tr: "Sayfa ayarları kılavuzun güncel sürümüne göre güncellendi.", en: "Page settings were updated to the guideline's current version." }));
+  }, [guideline, t]);
 
   const keepOwnSettings = useCallback(() => {
     if (!guideline) return;
@@ -1144,7 +1188,7 @@ export default function ManuscriptEditor({
     dueDate,
     status: projectStatus,
     settings: { fontSizePt: guideline?.settings.fontSizePt, lineSpacing: guideline?.settings.lineSpacing, margins },
-  });
+  }, dil);
 
   // Teslim kontrolü: editördeki denetimlerin tek listede özeti (lib/submission-checklist.ts)
   const missingSections = sections.filter((item) => !item.heading).map((item) => item.section);
@@ -1165,15 +1209,15 @@ export default function ManuscriptEditor({
       : null,
     cover: {
       enabled: coverPageEnabled,
-      missingFields: missingCoverFields(coverPage),
+      missingFields: missingCoverFields(coverPage, dil),
     },
     includeToc,
     headingNumbering: { enabled: headingNumbering, guidelineRule: guideline?.settings.headingNumbering, manualNumbered },
     /* Kılavuz bağlanınca uygulanan sayfa düzeni sonradan elle
        değiştirilebiliyor; fark oluştuğunda listede görünür. */
-    pageSetup: sayfaDuzeniFarklari({ margins, showPageNumbers, kilavuz: guideline?.settings }),
+    pageSetup: sayfaDuzeniFarklari({ margins, showPageNumbers, kilavuz: guideline?.settings }, dil),
     saveState,
-  });
+  }, dil);
   const handleChecklistAction = (action: ChecklistAction) => {
     switch (action) {
       case "link-guideline":
@@ -1218,7 +1262,7 @@ export default function ManuscriptEditor({
         break;
       case "enable-toc":
         setIncludeToc(true);
-        showToast("success", "Word çıktısına içindekiler tablosu eklenecek.");
+        showToast("success", t({ tr: "Word çıktısına içindekiler tablosu eklenecek.", en: "A table of contents will be added to the Word export." }));
         break;
       case "apply-numbering":
         if (guideline?.settings.headingNumbering !== undefined) setHeadingNumbering(guideline.settings.headingNumbering);
@@ -1226,7 +1270,7 @@ export default function ManuscriptEditor({
       case "apply-page-setup":
         if (guideline?.settings.margins) setMargins(guideline.settings.margins);
         if (guideline?.settings.showPageNumbers !== undefined) setShowPageNumbers(guideline.settings.showPageNumbers);
-        showToast("success", "Sayfa düzeni kılavuza göre ayarlandı.");
+        showToast("success", t({ tr: "Sayfa düzeni kılavuza göre ayarlandı.", en: "Page layout set according to the guideline." }));
         break;
       /* Bu da imleci belgeye taşıyor: aynı gerekçeyle önce pencere kapanıyor. */
       case "strip-manual-numbers":
@@ -1244,7 +1288,7 @@ export default function ManuscriptEditor({
 
   // Yapı denetimi listesi: canlı gösterge penceresi ve kontrol sonucu aynı listeyi kullanır.
   const recheckStructure = () => {
-    const issues = checkStructure(editor.getJSON(), structureOptions);
+    const issues = checkStructure(editor.getJSON(), structureOptions, dil);
     setLiveIssues(issues);
     setStructureIssues((current) => (current ? issues : current));
     setCheckResultEski(true);
@@ -1259,14 +1303,14 @@ export default function ManuscriptEditor({
           onClick={() => {
             const sorted = sortReferences(editor);
             if (sorted < 0) {
-              showToast("error", "Kaynakça liste ya da tablo içinde olduğu için otomatik sıralanamadı.");
+              showToast("error", t({ tr: "Kaynakça liste ya da tablo içinde olduğu için otomatik sıralanamadı.", en: "The reference list could not be sorted automatically because it is inside a list or table." }));
               return;
             }
-            showToast("success", `${sorted} kaynak alfabetik sıralandı. Geri almak için Ctrl+Z.`);
+            showToast("success", t({ tr: `${sorted} kaynak alfabetik sıralandı. Geri almak için Ctrl+Z.`, en: `${sorted} references sorted alphabetically. Press Ctrl+Z to undo.` }));
             recheckStructure();
           }}
         >
-          Alfabetik sırala
+          {t({ tr: "Alfabetik sırala", en: "Sort alphabetically" })}
         </button>
       ) : issue.action === "convert-reference-lists" ? (
         <button
@@ -1275,14 +1319,14 @@ export default function ManuscriptEditor({
           onClick={() => {
             const converted = convertReferenceListsToParagraphs(editor);
             if (converted === 0) {
-              showToast("error", "Kaynakçada paragrafa çevrilecek liste bulunamadı.");
+              showToast("error", t({ tr: "Kaynakçada paragrafa çevrilecek liste bulunamadı.", en: "No list to convert to paragraphs was found in the reference list." }));
               return;
             }
-            showToast("success", `${converted} kaynak ayrı paragraflara çevrildi. Geri almak için Ctrl+Z.`);
+            showToast("success", t({ tr: `${converted} kaynak ayrı paragraflara çevrildi. Geri almak için Ctrl+Z.`, en: `${converted} references converted to separate paragraphs. Press Ctrl+Z to undo.` }));
             recheckStructure();
           }}
         >
-          Paragraflara çevir
+          {t({ tr: "Paragraflara çevir", en: "Convert to paragraphs" })}
         </button>
       ) : issue.action === "apply-hanging-indent" ? (
         <button
@@ -1292,14 +1336,14 @@ export default function ManuscriptEditor({
             const cm = guideline?.settings.referenceHangingIndentCm;
             const applied = cm ? applyHangingIndent(editor, cm) : 0;
             if (applied === 0) {
-              showToast("error", "Asılı girinti uygulanacak kaynakça girdisi bulunamadı.");
+              showToast("error", t({ tr: "Asılı girinti uygulanacak kaynakça girdisi bulunamadı.", en: "No reference entries to apply a hanging indent to were found." }));
               return;
             }
-            showToast("success", `${applied} kaynakça girdisine asılı girinti uygulandı. Geri almak için Ctrl+Z.`);
+            showToast("success", t({ tr: `${applied} kaynakça girdisine asılı girinti uygulandı. Geri almak için Ctrl+Z.`, en: `Hanging indent applied to ${applied} reference entries. Press Ctrl+Z to undo.` }));
             recheckStructure();
           }}
         >
-          Asılı girinti uygula
+          {t({ tr: "Asılı girinti uygula", en: "Apply hanging indent" })}
         </button>
       ) : issue.action === "apply-paragraph-format" ? (
         <button
@@ -1308,14 +1352,14 @@ export default function ManuscriptEditor({
           onClick={() => {
             const applied = applyParagraphFormat(editor, paragraphFormat);
             if (applied === 0) {
-              showToast("error", "Kılavuz düzenine çevrilecek gövde paragrafı bulunamadı.");
+              showToast("error", t({ tr: "Kılavuz düzenine çevrilecek gövde paragrafı bulunamadı.", en: "No body paragraphs to bring into the guideline layout were found." }));
               return;
             }
-            showToast("success", `${applied} paragraf kılavuzun düzenine getirildi. Geri almak için Ctrl+Z.`);
+            showToast("success", t({ tr: `${applied} paragraf kılavuzun düzenine getirildi. Geri almak için Ctrl+Z.`, en: `${applied} paragraphs brought into the guideline layout. Press Ctrl+Z to undo.` }));
             recheckStructure();
           }}
         >
-          Kılavuza göre düzenle
+          {t({ tr: "Kılavuza göre düzenle", en: "Format per guideline" })}
         </button>
       ) : issue.action === "clear-manual-text-format" ? (
         <button
@@ -1324,14 +1368,20 @@ export default function ManuscriptEditor({
           onClick={() => {
             const temizlenen = clearManualTextFormat(editor);
             if (temizlenen === 0) {
-              showToast("error", "Temizlenecek elle verilmiş biçim bulunamadı.");
+              showToast("error", t({ tr: "Temizlenecek elle verilmiş biçim bulunamadı.", en: "No manual formatting to clear was found." }));
               return;
             }
-            showToast("success", `${temizlenen} yerde elle verilmiş biçim kaldırıldı; metin kılavuzun düzenine döndü. Geri almak için Ctrl+Z.`);
+            showToast(
+              "success",
+              t({
+                tr: `${temizlenen} yerde elle verilmiş biçim kaldırıldı; metin kılavuzun düzenine döndü. Geri almak için Ctrl+Z.`,
+                en: `Manual formatting removed in ${temizlenen} places; the text is back to the guideline layout. Press Ctrl+Z to undo.`,
+              })
+            );
             recheckStructure();
           }}
         >
-          Kılavuzun biçimine döndür
+          {t({ tr: "Kılavuzun biçimine döndür", en: "Revert to guideline format" })}
         </button>
       ) : issue.action === "fix-reference-punctuation" ? (
         <button
@@ -1340,14 +1390,20 @@ export default function ManuscriptEditor({
           onClick={() => {
             const fixed = fixReferencePunctuationInEditor(editor);
             if (fixed === 0) {
-              showToast("error", "Otomatik düzeltilemedi (hata farklı biçimlendirilmiş parçalar arasında); lütfen elle düzeltin.");
+              showToast(
+                "error",
+                t({
+                  tr: "Otomatik düzeltilemedi (hata farklı biçimlendirilmiş parçalar arasında); lütfen elle düzeltin.",
+                  en: "Could not fix automatically (the error spans differently formatted parts); please fix it manually.",
+                })
+              );
               return;
             }
-            showToast("success", `${fixed} kaynak girdisinde noktalama düzeltildi. Geri almak için Ctrl+Z.`);
+            showToast("success", t({ tr: `${fixed} kaynak girdisinde noktalama düzeltildi. Geri almak için Ctrl+Z.`, en: `Punctuation fixed in ${fixed} reference entries. Press Ctrl+Z to undo.` }));
             recheckStructure();
           }}
         >
-          Düzelt
+          {t({ tr: "Düzelt", en: "Fix" })}
         </button>
       ) : issue.target ? (
         <button
@@ -1358,7 +1414,7 @@ export default function ManuscriptEditor({
             handleFindText(issue.target!);
           }}
         >
-          Göster
+          {t({ tr: "Göster", en: "Show" })}
         </button>
       ) : null}
     </>
@@ -1378,7 +1434,10 @@ export default function ManuscriptEditor({
       return (
         <p className="sorun-temiz" data-tone="success">
           <CheckCircle2 size={18} aria-hidden="true" />
-          Boş bölüm, başlık atlaması, şekil/tablo ya da atıf tutarsızlığı bulunmadı.
+          {t({
+            tr: "Boş bölüm, başlık atlaması, şekil/tablo ya da atıf tutarsızlığı bulunmadı.",
+            en: "No empty sections, skipped heading levels, or figure/table or citation inconsistencies were found.",
+          })}
         </p>
       );
     }
@@ -1389,17 +1448,22 @@ export default function ManuscriptEditor({
         <p className="sorun-ozet">
           {hata ? (
             <span className="status-pill" data-tone="danger">
-              {hata} hata
+              {t({ tr: `${hata} hata`, en: `${hata} errors` })}
             </span>
           ) : null}
           {uyari ? (
             <span className="status-pill" data-tone="warning">
-              {uyari} uyarı
+              {t({ tr: `${uyari} uyarı`, en: `${uyari} warnings` })}
             </span>
           ) : null}
-          <small>Hatalar teslimden önce düzeltilmeli; uyarılar kılavuza göre gözden geçirilmeli.</small>
+          <small>
+            {t({
+              tr: "Hatalar teslimden önce düzeltilmeli; uyarılar kılavuza göre gözden geçirilmeli.",
+              en: "Errors should be fixed before submission; warnings should be reviewed against the guideline.",
+            })}
+          </small>
         </p>
-        {sorunlariGrupla(issues).map((grup) => (
+        {sorunlariGrupla(issues, dil).map((grup) => (
           <section key={grup.tur} className="sorun-grubu" aria-label={grup.baslik}>
             <header>
               <strong>{grup.baslik}</strong>
@@ -1410,9 +1474,9 @@ export default function ManuscriptEditor({
               {grup.sorunlar.map((issue, i) => (
                 <li key={i} className="sorun-satir" data-tone={issue.tone}>
                   {issue.tone === "danger" ? (
-                    <AlertCircle size={16} aria-label="Hata" />
+                    <AlertCircle size={16} aria-label={t({ tr: "Hata", en: "Error" })} />
                   ) : (
-                    <AlertTriangle size={16} aria-label="Uyarı" />
+                    <AlertTriangle size={16} aria-label={t({ tr: "Uyarı", en: "Warning" })} />
                   )}
                   <span className="sorun-metin">{issue.message}</span>
                   {sorunEylemi(issue, onNavigate)}
@@ -1426,14 +1490,21 @@ export default function ManuscriptEditor({
   };
   const handleInsertSections = (list: string[]) => {
     insertSections(editor, requiredSections, list);
-    showToast("success", list.length > 1 ? `${list.length} bölüm kılavuz sırasına göre eklendi.` : `"${list[0]}" bölümü eklendi.`);
+    showToast(
+      "success",
+      list.length > 1
+        ? t({ tr: `${list.length} bölüm kılavuz sırasına göre eklendi.`, en: `${list.length} sections added in guideline order.` })
+        : t({ tr: `"${list[0]}" bölümü eklendi.`, en: `Section "${list[0]}" added.` })
+    );
   };
   const handleTemplate = () => {
     applyTemplate(editor, requiredSections);
-    showToast("success", "Kılavuzun bölümleriyle taslak oluşturuldu.");
+    showToast("success", t({ tr: "Kılavuzun bölümleriyle taslak oluşturuldu.", en: "An outline was created from the guideline's sections." }));
   };
   const handleFindText = (text: string) => {
-    if (!selectText(editor, text)) showToast("error", "Bu ifade metinde bulunamadı; değiştirilmiş olabilir.");
+    if (!selectText(editor, text)) {
+      showToast("error", t({ tr: "Bu ifade metinde bulunamadı; değiştirilmiş olabilir.", en: "This phrase was not found in the text; it may have been changed." }));
+    }
   };
   const style: CitationStyle = CITATION_STYLES.includes(citationStyle as CitationStyle) ? (citationStyle as CitationStyle) : "apa7";
   /*
@@ -1451,21 +1522,27 @@ export default function ManuscriptEditor({
       .run();
   };
   const handleCite = (source: LiteratureSource, secenek: { sayfa?: string | null } = {}) => {
-    const bugun = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul" }).format(new Date());
+    /* Erişim tarihi künyeye girer: belgenin dilinde yazılır. */
+    const bugun = new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date());
     const { citation, addedReference } = insertCitation(editor, source, style, {
       sayfa: secenek.sayfa,
       erisimTarihi: bugun,
       kalip: ornekKalibi(ornekAtif),
+      dil: belgeDili,
     });
     /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor. */
-    const eksik = addedReference ? eksikAlanlar(source) : [];
+    const eksik = addedReference ? eksikAlanlar(source, dil) : [];
+    const eksikMetni = eksik.join(", ");
     showToast(
       eksik.length ? "error" : "success",
       eksik.length
-        ? `${citation} eklendi; künyede eksik: ${eksik.join(", ")}. Literatür'den kaynağı tamamlayın.`
+        ? t({
+            tr: `${citation} eklendi; künyede eksik: ${eksikMetni}. Literatür'den kaynağı tamamlayın.`,
+            en: `${citation} inserted; missing from reference: ${eksikMetni}. Complete the source in Literature.`,
+          })
         : addedReference
-          ? `${citation} eklendi; kaynak Kaynakça'ya yazıldı.`
-          : `${citation} eklendi.`,
+          ? t({ tr: `${citation} eklendi; kaynak Kaynakça'ya yazıldı.`, en: `${citation} inserted; the source was added to the reference list.` })
+          : t({ tr: `${citation} eklendi.`, en: `${citation} inserted.` }),
     );
     void updateLiteratureStatus(source.id, "used");
   };
@@ -1475,7 +1552,7 @@ export default function ManuscriptEditor({
     const target = `/print/manuscript/${projectId}?auto=1`;
     if (!(await saveNow())) {
       printWindow?.close();
-      showToast("error", "Metin kaydedilemediği için PDF hazırlanamadı.");
+      showToast("error", t({ tr: "Metin kaydedilemediği için PDF hazırlanamadı.", en: "The PDF could not be prepared because the text could not be saved." }));
       return;
     }
     if (printWindow) printWindow.location.href = target;
@@ -1493,7 +1570,13 @@ export default function ManuscriptEditor({
     // Word belgesinde içindekiler vardı: eskisi kaldırıldı, güncel olanı Word çıktısında oluşsun.
     if (importStats?.tocLines && !includeToc) {
       setIncludeToc(true);
-      showToast("success", "Word çıktısına güncel içindekiler tablosu eklenecek (Sayfa ayarlarından kapatılabilir).");
+      showToast(
+        "success",
+        t({
+          tr: "Word çıktısına güncel içindekiler tablosu eklenecek (Sayfa ayarlarından kapatılabilir).",
+          en: "An up-to-date table of contents will be added to the Word export (you can turn it off in Page settings).",
+        })
+      );
     }
     const first = collectHeadings(editor.state.doc)[0];
     if (first) jumpToHeading(editor, first);
@@ -1501,16 +1584,16 @@ export default function ManuscriptEditor({
 
   const statusLabel =
     saveState === "saving"
-      ? "Kaydediliyor…"
+      ? t({ tr: "Kaydediliyor…", en: "Saving…" })
       : saveState === "dirty"
-        ? "Kaydedilecek…"
+        ? t({ tr: "Kaydedilecek…", en: "Unsaved changes…" })
         : saveState === "error"
-          ? "Kaydedilemedi · tekrar dene"
+          ? t({ tr: "Kaydedilemedi · tekrar dene", en: "Not saved · try again" })
           : saveState === "conflict"
-            ? "Çakışma var"
+            ? t({ tr: "Çakışma var", en: "Conflict" })
             : lastSavedAt
-              ? `Kaydedildi · ${timeLabel(lastSavedAt)}`
-              : "Otomatik kayıt açık";
+              ? t({ tr: `Kaydedildi · ${timeLabel(lastSavedAt, dil)}`, en: `Saved · ${timeLabel(lastSavedAt, dil)}` })
+              : t({ tr: "Otomatik kayıt açık", en: "Autosave on" });
 
   return (
     <>
@@ -1530,21 +1613,21 @@ export default function ManuscriptEditor({
                 className="projects-filter-button"
                 data-tone={checklist.done === checklist.total ? "success" : undefined}
                 onClick={() => setChecklistOpen(true)}
-                title="Teslimden önce bakılacaklar"
+                title={t({ tr: "Teslimden önce bakılacaklar", en: "What to check before submission" })}
               >
                 <ClipboardCheck size={15} aria-hidden="true" />
-                Teslim kontrolü {checklist.done}/{checklist.total}
+                {t({ tr: "Teslim kontrolü", en: "Submission checklist" })} {checklist.done}/{checklist.total}
                 {/* Kuralların kaynağı alt çubukta da görünüyor: pencereyi
                     açmadan "neye göre hazır" sorusunun cevabı bilinmeli. */}
-                {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi">kendi kılavuzunuz</small> : null}
+                {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi">{t({ tr: "kendi kılavuzunuz", en: "your own guideline" })}</small> : null}
               </button>
               <button type="button" className="projects-filter-button" onClick={handleExport} disabled={exporting}>
                 <FileDown size={15} />
-                {exporting ? "Hazırlanıyor..." : "Word olarak indir"}
+                {exporting ? t({ tr: "Hazırlanıyor...", en: "Preparing..." }) : t({ tr: "Word olarak indir", en: "Download as Word" })}
               </button>
               <button type="button" className="projects-filter-button" onClick={() => void handlePrint()}>
                 <Printer size={15} />
-                PDF / Yazdır
+                {t({ tr: "PDF / Yazdır", en: "PDF / Print" })}
               </button>
               {/*
                 Adı NE DENETLEDİĞİNİ söylüyor. Alt çubukta üç ayrı "kontrol"
@@ -1559,10 +1642,13 @@ export default function ManuscriptEditor({
                 className="projects-primary-button"
                 onClick={handleCheck}
                 disabled={checking}
-                title="Kılavuzun zorunlu bölümleri, atıf stili ve kaynakça–atıf eşleşmesi"
+                title={t({
+                  tr: "Kılavuzun zorunlu bölümleri, atıf stili ve kaynakça–atıf eşleşmesi",
+                  en: "Required guideline sections, citation style and reference–citation matching",
+                })}
               >
                 <ShieldCheck size={15} />
-                {checking ? "Kontrol ediliyor..." : "Kılavuz ve kaynakça kontrolü"}
+                {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
               </button>
             </>,
             eylemHedefi,
@@ -1577,12 +1663,12 @@ export default function ManuscriptEditor({
         başlık ve liste, paragraf, ekle, belge); tablo kartı yalnızca imleç
         tablodayken görünür. Telefonda panel belgenin üstünde yatay kayar.
       */}
-      <aside className="manuscript-araclar" role="toolbar" aria-label="Biçimlendirme" aria-orientation="vertical">
-        <AracKarti baslik="Yazı">
+      <aside className="manuscript-araclar" role="toolbar" aria-label={t({ tr: "Biçimlendirme", en: "Formatting" })} aria-orientation="vertical">
+        <AracKarti baslik={t({ tr: "Yazı", en: "Text" })}>
           <select
             className="toolbar-select"
-            title="Yazı tipi"
-            aria-label="Yazı tipi"
+            title={t({ tr: "Yazı tipi", en: "Font" })}
+            aria-label={t({ tr: "Yazı tipi", en: "Font" })}
             value={ui.fontFamily}
             onChange={(e) => {
               const value = e.target.value;
@@ -1590,7 +1676,11 @@ export default function ManuscriptEditor({
               else editor.chain().focus().unsetFontFamily().run();
             }}
           >
-            <option value="">{guideline?.settings.fontFamily ? `Kılavuz (${guideline.settings.fontFamily})` : "Varsayılan yazı tipi"}</option>
+            <option value="">
+              {guideline?.settings.fontFamily
+                ? t({ tr: `Kılavuz (${guideline.settings.fontFamily})`, en: `Guideline (${guideline.settings.fontFamily})` })
+                : t({ tr: "Varsayılan yazı tipi", en: "Default font" })}
+            </option>
             {FONT_FAMILIES.map((font) => (
               <option key={font} value={font} style={{ fontFamily: font }}>
                 {font}
@@ -1600,8 +1690,8 @@ export default function ManuscriptEditor({
 
           <select
             className="toolbar-select"
-            title="Yazı boyutu"
-            aria-label="Yazı boyutu"
+            title={t({ tr: "Yazı boyutu", en: "Font size" })}
+            aria-label={t({ tr: "Yazı boyutu", en: "Font size" })}
             value={ui.fontSize}
             onChange={(e) => {
               const value = e.target.value;
@@ -1609,7 +1699,11 @@ export default function ManuscriptEditor({
               else editor.chain().focus().unsetFontSize().run();
             }}
           >
-            <option value="">{guideline?.settings.fontSizePt ? `Kılavuz (${guideline.settings.fontSizePt} pt)` : "Varsayılan boyut"}</option>
+            <option value="">
+              {guideline?.settings.fontSizePt
+                ? t({ tr: `Kılavuz (${guideline.settings.fontSizePt} pt)`, en: `Guideline (${guideline.settings.fontSizePt} pt)` })
+                : t({ tr: "Varsayılan boyut", en: "Default size" })}
+            </option>
             {FONT_SIZES.map((s) => (
               <option key={s} value={`${s}pt`}>
                 {s} pt
@@ -1617,33 +1711,37 @@ export default function ManuscriptEditor({
             ))}
           </select>
 
-          <div className="arac-segment" role="group" aria-label="Yazı biçimi">
-          <ToolbarButton label="Kalın (Ctrl+B)" active={ui.bold} onClick={() => editor.chain().focus().toggleBold().run()}>
+          <div className="arac-segment" role="group" aria-label={t({ tr: "Yazı biçimi", en: "Text style" })}>
+          <ToolbarButton label={t({ tr: "Kalın (Ctrl+B)", en: "Bold (Ctrl+B)" })} active={ui.bold} onClick={() => editor.chain().focus().toggleBold().run()}>
             <BoldIcon size={16} />
           </ToolbarButton>
-          <ToolbarButton label="İtalik (Ctrl+I)" active={ui.italic} onClick={() => editor.chain().focus().toggleItalic().run()}>
+          <ToolbarButton label={t({ tr: "İtalik (Ctrl+I)", en: "Italic (Ctrl+I)" })} active={ui.italic} onClick={() => editor.chain().focus().toggleItalic().run()}>
             <ItalicIcon size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Altı çizili (Ctrl+U)" active={ui.underline} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+          <ToolbarButton label={t({ tr: "Altı çizili (Ctrl+U)", en: "Underline (Ctrl+U)" })} active={ui.underline} onClick={() => editor.chain().focus().toggleUnderline().run()}>
             <UnderlineIcon size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Üst simge (Ctrl+Shift+=)" active={ui.superscript} onClick={() => editor.chain().focus().toggleSuperscript().run()}>
+          <ToolbarButton label={t({ tr: "Üst simge (Ctrl+Shift+=)", en: "Superscript (Ctrl+Shift+=)" })} active={ui.superscript} onClick={() => editor.chain().focus().toggleSuperscript().run()}>
             <SuperscriptIcon size={16} />
           </ToolbarButton>
           </div>
 
         </AracKarti>
-        <AracKarti baslik="Başlık ve liste">
-          <div className="arac-segment" role="group" aria-label="Paragraf türü">
+        <AracKarti baslik={t({ tr: "Başlık ve liste", en: "Headings and lists" })}>
+          <div className="arac-segment" role="group" aria-label={t({ tr: "Paragraf türü", en: "Paragraph type" })}>
           {/* "Metin": başlıktan normal paragrafa dönüş. Eskiden yalnızca aynı
               başlık düğmesine yeniden basarak dönülüyordu; bu belli değildi. */}
-          <ToolbarButton label="Normal metin (Ctrl+Alt+0)" active={!ui.heading} onClick={() => editor.chain().focus().setParagraph().run()}>
-            Metin
+          <ToolbarButton
+            label={t({ tr: "Normal metin (Ctrl+Alt+0)", en: "Normal text (Ctrl+Alt+0)" })}
+            active={!ui.heading}
+            onClick={() => editor.chain().focus().setParagraph().run()}
+          >
+            {t({ tr: "Metin", en: "Text" })}
           </ToolbarButton>
           {([1, 2, 3] as const).map((level) => (
             <ToolbarButton
               key={level}
-              label={`Başlık ${level} (Ctrl+Alt+${level})`}
+              label={t({ tr: `Başlık ${level} (Ctrl+Alt+${level})`, en: `Heading ${level} (Ctrl+Alt+${level})` })}
               active={ui.heading === level}
               onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
             >
@@ -1651,52 +1749,57 @@ export default function ManuscriptEditor({
             </ToolbarButton>
           ))}
           </div>
-          <div className="arac-segment" role="group" aria-label="Liste ve alıntı">
+          <div className="arac-segment" role="group" aria-label={t({ tr: "Liste ve alıntı", en: "Lists and quotes" })}>
 
-          <ToolbarButton label="Madde işaretli liste (Ctrl+Shift+8)" active={ui.bulletList} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+          <ToolbarButton label={t({ tr: "Madde işaretli liste (Ctrl+Shift+8)", en: "Bulleted list (Ctrl+Shift+8)" })} active={ui.bulletList} onClick={() => editor.chain().focus().toggleBulletList().run()}>
             <List size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Numaralı liste (Ctrl+Shift+7)" active={ui.orderedList} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+          <ToolbarButton label={t({ tr: "Numaralı liste (Ctrl+Shift+7)", en: "Numbered list (Ctrl+Shift+7)" })} active={ui.orderedList} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
             <ListOrdered size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Alıntı (Ctrl+Shift+B)" active={ui.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+          <ToolbarButton label={t({ tr: "Alıntı (Ctrl+Shift+B)", en: "Block quote (Ctrl+Shift+B)" })} active={ui.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
             <Quote size={16} />
           </ToolbarButton>
           </div>
 
         </AracKarti>
-        <AracKarti baslik="Paragraf">
-          <div className="arac-segment" role="group" aria-label="Hizalama">
-          <ToolbarButton label="Sola hizala (Ctrl+L)" active={ui.align === "left"} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
+        <AracKarti baslik={t({ tr: "Paragraf", en: "Paragraph" })}>
+          <div className="arac-segment" role="group" aria-label={t({ tr: "Hizalama", en: "Alignment" })}>
+          <ToolbarButton label={t({ tr: "Sola hizala (Ctrl+L)", en: "Align left (Ctrl+L)" })} active={ui.align === "left"} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
             <AlignLeft size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Ortala (Ctrl+E)" active={ui.align === "center"} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
+          <ToolbarButton label={t({ tr: "Ortala (Ctrl+E)", en: "Center (Ctrl+E)" })} active={ui.align === "center"} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
             <AlignCenter size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Sağa hizala (Ctrl+R)" active={ui.align === "right"} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
+          <ToolbarButton label={t({ tr: "Sağa hizala (Ctrl+R)", en: "Align right (Ctrl+R)" })} active={ui.align === "right"} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
             <AlignRight size={16} />
           </ToolbarButton>
-          <ToolbarButton label="İki yana yasla (Ctrl+J)" active={ui.align === "justify"} onClick={() => editor.chain().focus().setTextAlign("justify").run()}>
+          <ToolbarButton label={t({ tr: "İki yana yasla (Ctrl+J)", en: "Justify (Ctrl+J)" })} active={ui.align === "justify"} onClick={() => editor.chain().focus().setTextAlign("justify").run()}>
             <AlignJustify size={16} />
           </ToolbarButton>
           </div>
 
           <select
             className="toolbar-select"
-            title="Satır aralığı"
-            aria-label="Satır aralığı"
+            title={t({ tr: "Satır aralığı", en: "Line spacing" })}
+            aria-label={t({ tr: "Satır aralığı", en: "Line spacing" })}
             value={ui.lineSpacing}
             onChange={(e) => editor.chain().focus().setLineSpacing(e.target.value || null).run()}
           >
-            <option value="">{guideline?.settings.lineSpacing ? `Aralık: kılavuz (${guideline.settings.lineSpacing})` : "Satır aralığı"}</option>
-            <option value="1">Tek (1.0)</option>
+            <option value="">
+              {guideline?.settings.lineSpacing
+                ? t({ tr: `Aralık: kılavuz (${guideline.settings.lineSpacing})`, en: `Spacing: guideline (${guideline.settings.lineSpacing})` })
+                : t({ tr: "Satır aralığı", en: "Line spacing" })}
+            </option>
+            <option value="1">{t({ tr: "Tek (1.0)", en: "Single (1.0)" })}</option>
             <option value="1.15">1.15</option>
             <option value="1.5">1.5</option>
-            <option value="2">Çift (2.0)</option>
+            <option value="2">{t({ tr: "Çift (2.0)", en: "Double (2.0)" })}</option>
           </select>
 
           <ToolbarButton
-            label="İlk satır girintisi (1.25 cm) — paragraf başında Tab" metin="İlk satır girintisi"
+            label={t({ tr: "İlk satır girintisi (1.25 cm) — paragraf başında Tab", en: "First-line indent (1.25 cm) — Tab at paragraph start" })}
+            metin={t({ tr: "İlk satır girintisi", en: "First-line indent" })}
             active={ui.firstLineIndent}
             onClick={() => editor.chain().focus().setFirstLineIndent(!ui.firstLineIndent).run()}
           >
@@ -1704,13 +1807,13 @@ export default function ManuscriptEditor({
           </ToolbarButton>
 
         </AracKarti>
-        <AracKarti baslik="Ekle" izgara>
-          <ToolbarButton label="Tablo ekle" metin="Tablo" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+        <AracKarti baslik={t({ tr: "Ekle", en: "Insert" })} izgara>
+          <ToolbarButton label={t({ tr: "Tablo ekle", en: "Insert table" })} metin={t({ tr: "Tablo", en: "Table" })} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
             <TableIcon size={16} />
           </ToolbarButton>
           <ToolbarButton
-            label={imageUploading ? "Resim yükleniyor…" : "Resim ekle (PNG, JPG, GIF)"}
-            metin="Resim"
+            label={imageUploading ? t({ tr: "Resim yükleniyor…", en: "Uploading image…" }) : t({ tr: "Resim ekle (PNG, JPG, GIF)", en: "Insert image (PNG, JPG, GIF)" })}
+            metin={t({ tr: "Resim", en: "Image" })}
             disabled={imageUploading}
             onClick={() => imageInputRef.current?.click()}
           >
@@ -1727,33 +1830,37 @@ export default function ManuscriptEditor({
               e.target.value = "";
             }}
           />
-          <ToolbarButton label="Dipnot ekle (Ctrl+Alt+F)" metin="Dipnot" onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
+          <ToolbarButton label={t({ tr: "Dipnot ekle (Ctrl+Alt+F)", en: "Insert footnote (Ctrl+Alt+F)" })} metin={t({ tr: "Dipnot", en: "Footnote" })} onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
             <StickyNote size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Kaynaktan atıf ekle" metin="Atıf" onClick={() => setCiteOpen(true)}>
+          <ToolbarButton label={t({ tr: "Kaynaktan atıf ekle", en: "Cite a source" })} metin={t({ tr: "Atıf", en: "Citation" })} onClick={() => setCiteOpen(true)}>
             <BookMarked size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Analiz sonucu ekle" metin="Analiz" onClick={() => setAnalizOpen(true)}>
+          <ToolbarButton label={t({ tr: "Analiz sonucu ekle", en: "Insert analysis result" })} metin={t({ tr: "Analiz", en: "Analysis" })} onClick={() => setAnalizOpen(true)}>
             <BarChart3 size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Resimlerim (daha önce yüklenenler)" metin="Resimlerim" onClick={() => setLibraryOpen(true)}>
+          <ToolbarButton label={t({ tr: "Resimlerim (daha önce yüklenenler)", en: "My images (previously uploaded)" })} metin={t({ tr: "Resimlerim", en: "My images" })} onClick={() => setLibraryOpen(true)}>
             <Images size={16} />
           </ToolbarButton>
           <ToolbarButton
-            label="Şekil başlığı (otomatik numaralı)" metin="Şekil başlığı" genis
+            label={t({ tr: "Şekil başlığı (otomatik numaralı)", en: "Figure caption (auto-numbered)" })}
+            metin={t({ tr: "Şekil başlığı", en: "Figure caption" })}
+            genis
             active={ui.caption === "figure"}
             onClick={() => editor.chain().focus().toggleCaption("figure").run()}
           >
             <Captions size={16} />
           </ToolbarButton>
           <ToolbarButton
-            label="Tablo başlığı (otomatik numaralı)" metin="Tablo başlığı" genis
+            label={t({ tr: "Tablo başlığı (otomatik numaralı)", en: "Table caption (auto-numbered)" })}
+            metin={t({ tr: "Tablo başlığı", en: "Table caption" })}
+            genis
             active={ui.caption === "table"}
             onClick={() => editor.chain().focus().toggleCaption("table").run()}
           >
             <TableProperties size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Word dosyasından aktar" metin="Word'den aktar" genis onClick={() => setImportOpen(true)}>
+          <ToolbarButton label={t({ tr: "Word dosyasından aktar", en: "Import from Word file" })} metin={t({ tr: "Word'den aktar", en: "Import Word" })} genis onClick={() => setImportOpen(true)}>
             <FileUp size={16} />
           </ToolbarButton>
 
@@ -1772,67 +1879,67 @@ export default function ManuscriptEditor({
           tıklanamaz sekiz düğme, kalabalıktan başka bir şey değil.
         */}
         {ui.inTable ? (
-          <AracKarti baslik="Tablo" izgara>
-            <ToolbarButton label="Soluna sütun ekle" metin="Sola sütun" onClick={() => editor.chain().focus().addColumnBefore().run()}>
+          <AracKarti baslik={t({ tr: "Tablo", en: "Table" })} izgara>
+            <ToolbarButton label={t({ tr: "Soluna sütun ekle", en: "Insert column left" })} metin={t({ tr: "Sola sütun", en: "Column left" })} onClick={() => editor.chain().focus().addColumnBefore().run()}>
               <ArrowLeftToLine size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Sağına sütun ekle" metin="Sağa sütun" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+            <ToolbarButton label={t({ tr: "Sağına sütun ekle", en: "Insert column right" })} metin={t({ tr: "Sağa sütun", en: "Column right" })} onClick={() => editor.chain().focus().addColumnAfter().run()}>
               <ArrowRightToLine size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Sütunu sil" metin="Sütunu sil" onClick={() => editor.chain().focus().deleteColumn().run()}>
+            <ToolbarButton label={t({ tr: "Sütunu sil", en: "Delete column" })} metin={t({ tr: "Sütunu sil", en: "Delete column" })} onClick={() => editor.chain().focus().deleteColumn().run()}>
               <Columns2 size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Üstüne satır ekle" metin="Üste satır" onClick={() => editor.chain().focus().addRowBefore().run()}>
+            <ToolbarButton label={t({ tr: "Üstüne satır ekle", en: "Insert row above" })} metin={t({ tr: "Üste satır", en: "Row above" })} onClick={() => editor.chain().focus().addRowBefore().run()}>
               <ArrowUpToLine size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Altına satır ekle" metin="Alta satır" onClick={() => editor.chain().focus().addRowAfter().run()}>
+            <ToolbarButton label={t({ tr: "Altına satır ekle", en: "Insert row below" })} metin={t({ tr: "Alta satır", en: "Row below" })} onClick={() => editor.chain().focus().addRowAfter().run()}>
               <ArrowDownToLine size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Satırı sil" metin="Satırı sil" onClick={() => editor.chain().focus().deleteRow().run()}>
+            <ToolbarButton label={t({ tr: "Satırı sil", en: "Delete row" })} metin={t({ tr: "Satırı sil", en: "Delete row" })} onClick={() => editor.chain().focus().deleteRow().run()}>
               <Rows2 size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Başlık satırını aç/kapat" metin="Başlık satırı" genis onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
+            <ToolbarButton label={t({ tr: "Başlık satırını aç/kapat", en: "Toggle header row" })} metin={t({ tr: "Başlık satırı", en: "Header row" })} genis onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
               <PanelTop size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Hücreleri birleştir" metin="Birleştir" disabled={!ui.canMergeCells} onClick={() => editor.chain().focus().mergeCells().run()}>
+            <ToolbarButton label={t({ tr: "Hücreleri birleştir", en: "Merge cells" })} metin={t({ tr: "Birleştir", en: "Merge" })} disabled={!ui.canMergeCells} onClick={() => editor.chain().focus().mergeCells().run()}>
               <TableCellsMerge size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Hücreyi böl" metin="Böl" disabled={!ui.canSplitCell} onClick={() => editor.chain().focus().splitCell().run()}>
+            <ToolbarButton label={t({ tr: "Hücreyi böl", en: "Split cell" })} metin={t({ tr: "Böl", en: "Split" })} disabled={!ui.canSplitCell} onClick={() => editor.chain().focus().splitCell().run()}>
               <TableCellsSplit size={16} />
             </ToolbarButton>
-            <ToolbarButton label="Tabloyu sil" metin="Tabloyu sil" genis onClick={() => editor.chain().focus().deleteTable().run()}>
+            <ToolbarButton label={t({ tr: "Tabloyu sil", en: "Delete table" })} metin={t({ tr: "Tabloyu sil", en: "Delete table" })} genis onClick={() => editor.chain().focus().deleteTable().run()}>
               <Trash2 size={16} />
             </ToolbarButton>
           </AracKarti>
         ) : null}
 
-        <AracKarti baslik="Belge" izgara>
-          <div className="arac-segment" role="group" aria-label="Geri al ve yinele">
-          <ToolbarButton label="Geri al (Ctrl+Z)" disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
+        <AracKarti baslik={t({ tr: "Belge", en: "Document" })} izgara>
+          <div className="arac-segment" role="group" aria-label={t({ tr: "Geri al ve yinele", en: "Undo and redo" })}>
+          <ToolbarButton label={t({ tr: "Geri al (Ctrl+Z)", en: "Undo (Ctrl+Z)" })} disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
             <Undo2 size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Yinele (Ctrl+Y)" disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
+          <ToolbarButton label={t({ tr: "Yinele (Ctrl+Y)", en: "Redo (Ctrl+Y)" })} disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
             <Redo2 size={16} />
           </ToolbarButton>
           </div>
 
-          <ToolbarButton label="Sayfa ayarları" metin="Sayfa ayarı" active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
+          <ToolbarButton label={t({ tr: "Sayfa ayarları", en: "Page settings" })} metin={t({ tr: "Sayfa ayarı", en: "Page setup" })} active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
             <Settings2 size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Kapak sayfası" metin="Kapak" active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
+          <ToolbarButton label={t({ tr: "Kapak sayfası", en: "Cover page" })} metin={t({ tr: "Kapak", en: "Cover" })} active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
             <FileBadge size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Danışmana paylaş (salt okunur bağlantı)" metin="Paylaş" onClick={() => setShareOpen(true)}>
+          <ToolbarButton label={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })} metin={t({ tr: "Paylaş", en: "Share" })} onClick={() => setShareOpen(true)}>
             <Share2 size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Sürüm geçmişi" metin="Sürümler" onClick={() => setVersionsOpen(true)}>
+          <ToolbarButton label={t({ tr: "Sürüm geçmişi", en: "Version history" })} metin={t({ tr: "Sürümler", en: "Versions" })} onClick={() => setVersionsOpen(true)}>
             <History size={16} />
           </ToolbarButton>
-          <ToolbarButton label="Bul ve değiştir (Ctrl+F)" metin="Bul" active={findOpen} onClick={() => setFindOpen((open) => !open)}>
+          <ToolbarButton label={t({ tr: "Bul ve değiştir (Ctrl+F)", en: "Find and replace (Ctrl+F)" })} metin={t({ tr: "Bul", en: "Find" })} active={findOpen} onClick={() => setFindOpen((open) => !open)}>
             <Search size={16} />
           </ToolbarButton>
 
-          <ToolbarButton label="Klavye kısayolları" metin="Kısayollar" onClick={() => setShortcutsOpen(true)}>
+          <ToolbarButton label={t({ tr: "Klavye kısayolları", en: "Keyboard shortcuts" })} metin={t({ tr: "Kısayollar", en: "Shortcuts" })} onClick={() => setShortcutsOpen(true)}>
             <Keyboard size={16} />
           </ToolbarButton>
         </AracKarti>
@@ -1846,7 +1953,7 @@ export default function ManuscriptEditor({
           type="button"
           className="save-status"
           data-state={saveState}
-          title="Şimdi kaydet (Ctrl+S)"
+          title={t({ tr: "Şimdi kaydet (Ctrl+S)", en: "Save now (Ctrl+S)" })}
           aria-live="polite"
           onClick={() => void saveNow()}
         >
@@ -1858,49 +1965,71 @@ export default function ManuscriptEditor({
       {draftOffer ? (
         <div className="callout editor-notice cluster" data-tone="warning" role="status">
           <span>
-            Bu tarayıcıda kaydedilmemiş değişiklikleriniz bulundu
-            ({new Date(draftOffer.writtenAt).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}).
+            {t({
+              tr: `Bu tarayıcıda kaydedilmemiş değişiklikleriniz bulundu (${tarihSaat(draftOffer.writtenAt)}).`,
+              en: `Unsaved changes were found in this browser (${tarihSaat(draftOffer.writtenAt)}).`,
+            })}
           </span>
           <span className="cluster">
-            <button type="button" className="projects-primary-button" onClick={restoreDraft}>Geri yükle</button>
-            <button type="button" className="projects-filter-button" onClick={discardDraft}>Yok say</button>
+            <button type="button" className="projects-primary-button" onClick={restoreDraft}>
+              {t({ tr: "Geri yükle", en: "Restore" })}
+            </button>
+            <button type="button" className="projects-filter-button" onClick={discardDraft}>
+              {t({ tr: "Yok say", en: "Discard" })}
+            </button>
           </span>
         </div>
       ) : null}
 
       {formatLoss && !formatLossDismissed ? (
         <div className="callout editor-notice" data-tone="warning" role="status">
-          <strong>Bu belgenin bazı biçim bilgileri eski bir kayıt hatası nedeniyle kaybolmuş.</strong>
+          <strong>
+            {t({
+              tr: "Bu belgenin bazı biçim bilgileri eski bir kayıt hatası nedeniyle kaybolmuş.",
+              en: "Some of this document's formatting was lost due to an old saving bug.",
+            })}
+          </strong>
           <ul className="format-loss-list">
             {formatLoss.nodesWithoutAttrs > 0 ? (
               <li>
-                Başlık düzeylerini (H1–H3), hizalamayı ve şekil/tablo başlıklarını kontrol edin; düzelttiğiniz hâl
-                artık eksiksiz kaydedilir.
+                {t({
+                  tr: "Başlık düzeylerini (H1–H3), hizalamayı ve şekil/tablo başlıklarını kontrol edin; düzelttiğiniz hâl artık eksiksiz kaydedilir.",
+                  en: "Check heading levels (H1–H3), alignment and figure/table captions; your corrected version is now saved in full.",
+                })}
               </li>
             ) : null}
             {formatLoss.missingImages > 0 ? (
               <li>
-                {formatLoss.missingImages} resim görüntülenemiyor: boş resim kutularını silip “Resimlerim”den yeniden
-                ekleyebilirsiniz.
+                {t({
+                  tr: `${formatLoss.missingImages} resim görüntülenemiyor: boş resim kutularını silip “Resimlerim”den yeniden ekleyebilirsiniz.`,
+                  en: `${formatLoss.missingImages} images cannot be displayed: delete the empty image boxes and add them again from “My images”.`,
+                })}
               </li>
             ) : null}
             {formatLoss.emptyFootnotes > 0 ? (
-              <li>{formatLoss.emptyFootnotes} dipnotun metni boş: dipnot işaretine tıklayıp metnini yeniden yazın.</li>
+              <li>
+                {t({
+                  tr: `${formatLoss.emptyFootnotes} dipnotun metni boş: dipnot işaretine tıklayıp metnini yeniden yazın.`,
+                  en: `${formatLoss.emptyFootnotes} footnotes are empty: click the footnote marker and write the text again.`,
+                })}
+              </li>
             ) : null}
             <li>
-              Word dosyanız varsa “Word&apos;den aktar → Yerine koy” ile metni tüm biçimiyle yeniden alabilirsiniz
-              (mevcut hâl önce sürüm olarak saklanır).
+              {t({
+                tr: "Word dosyanız varsa “Word'den aktar → Yerine koy” ile metni tüm biçimiyle yeniden alabilirsiniz (mevcut hâl önce sürüm olarak saklanır).",
+                en: "If you have the Word file, you can re-import the text with all its formatting via “Import Word → Replace” (the current version is saved as a version first).",
+              })}
             </li>
           </ul>
           <span className="cluster mt-sm">
             <button type="button" className="projects-filter-button" onClick={() => setLibraryOpen(true)}>
-              Resimlerim
+              {t({ tr: "Resimlerim", en: "My images" })}
             </button>
             <button type="button" className="projects-filter-button" onClick={() => setImportOpen(true)}>
-              Word&apos;den aktar
+              {t({ tr: "Word'den aktar", en: "Import Word" })}
             </button>
             <button type="button" className="projects-filter-button" onClick={() => setFormatLossDismissed(true)}>
-              Anladım
+              {t({ tr: "Anladım", en: "Got it" })}
             </button>
           </span>
         </div>
@@ -1909,11 +2038,11 @@ export default function ManuscriptEditor({
       {saveState === "conflict" ? (
         <div className="callout editor-notice cluster" data-tone="danger" role="alert">
           <span>
-            Bu belge başka bir sekmede ya da başka biri tarafından değiştirildi. Üzerine yazmamak için
-            otomatik kayıt durduruldu;{" "}
-            {taslakYazilamadi
-              ? TASLAK_YAZILAMADI
-              : TASLAK_GUVENDE}
+            {t({
+              tr: "Bu belge başka bir sekmede ya da başka biri tarafından değiştirildi. Üzerine yazmamak için otomatik kayıt durduruldu;",
+              en: "This document was changed in another tab or by someone else. Autosave was paused so nothing is overwritten;",
+            })}{" "}
+            {t(taslakYazilamadi ? TASLAK_YAZILAMADI_METIN : TASLAK_GUVENDE_METIN)}
           </span>
           <span className="cluster">
             <button
@@ -1924,10 +2053,10 @@ export default function ManuscriptEditor({
                 window.location.reload();
               }}
             >
-              Diğer sürümü aç
+              {t({ tr: "Diğer sürümü aç", en: "Open the other version" })}
             </button>
             <button type="button" className="button-danger" onClick={() => void saveNow(true)}>
-              Benim sürümümü kaydet
+              {t({ tr: "Benim sürümümü kaydet", en: "Save my version" })}
             </button>
           </span>
         </div>
@@ -1935,12 +2064,17 @@ export default function ManuscriptEditor({
         <div className="callout editor-notice cluster" data-tone="danger" role="alert">
           <span>
             {saveError}
-            {abonelikBitti ? " Yazdıklarınız bu tarayıcıda duruyor; plan yenilenince kaydedilir." : ""}
+            {abonelikBitti
+              ? t({
+                  tr: " Yazdıklarınız bu tarayıcıda duruyor; plan yenilenince kaydedilir.",
+                  en: " What you wrote is kept in this browser; it will be saved once your plan is renewed.",
+                })
+              : ""}
           </span>
           <span className="cluster">
             {sessionExpired ? (
               <button type="button" className="projects-primary-button" onClick={() => window.location.reload()}>
-                Yeniden giriş yap
+                {t({ tr: "Yeniden giriş yap", en: "Sign in again" })}
               </button>
             ) : abonelikBitti ? (
               /*
@@ -1949,11 +2083,11 @@ export default function ManuscriptEditor({
                 duruyor; söylenmesi gereken bu ve yenileme yolu.
               */
               <Link href="/dashboard" className="projects-primary-button">
-                Planı yenile
+                {t({ tr: "Planı yenile", en: "Renew plan" })}
               </Link>
             ) : (
               <button type="button" className="projects-filter-button" onClick={() => void saveNow()}>
-                Şimdi dene
+                {t({ tr: "Şimdi dene", en: "Try now" })}
               </button>
             )}
           </span>
@@ -1968,34 +2102,42 @@ export default function ManuscriptEditor({
               checked={coverPageEnabled}
               onChange={(e) => setCoverPageEnabled(e.target.checked)}
             />
-            <strong>Kapak sayfası oluştur (Word&apos;e aktarınca belgenin ilk sayfası olur)</strong>
+            <strong>
+              {t({
+                tr: "Kapak sayfası oluştur (Word'e aktarınca belgenin ilk sayfası olur)",
+                en: "Create a cover page (it becomes the first page when exported to Word)",
+              })}
+            </strong>
           </label>
 
           {coverPageEnabled && (
             <div className="manuscript-cover-page-grid">
-              <CoverField label="Üniversite" value={coverPage.university} onChange={(university) => setCoverPage((p) => ({ ...p, university }))} />
-              <CoverField label="Enstitü / Fakülte" value={coverPage.institute} onChange={(institute) => setCoverPage((p) => ({ ...p, institute }))} />
-              <CoverField label="Anabilim Dalı / Bölüm" value={coverPage.department} onChange={(department) => setCoverPage((p) => ({ ...p, department }))} />
-              <CoverField label="Program (varsa)" value={coverPage.program} onChange={(program) => setCoverPage((p) => ({ ...p, program }))} />
-              <CoverField full label="Tez / Çalışma Başlığı" value={coverPage.title} onChange={(title) => setCoverPage((p) => ({ ...p, title }))} />
-              <CoverField label="Yazar Adı Soyadı" value={coverPage.authorName} onChange={(authorName) => setCoverPage((p) => ({ ...p, authorName }))} />
+              <CoverField label={t({ tr: "Üniversite", en: "University" })} value={coverPage.university} onChange={(university) => setCoverPage((p) => ({ ...p, university }))} />
+              <CoverField label={t({ tr: "Enstitü / Fakülte", en: "Institute / Faculty" })} value={coverPage.institute} onChange={(institute) => setCoverPage((p) => ({ ...p, institute }))} />
+              <CoverField label={t({ tr: "Anabilim Dalı / Bölüm", en: "Department" })} value={coverPage.department} onChange={(department) => setCoverPage((p) => ({ ...p, department }))} />
+              <CoverField label={t({ tr: "Program (varsa)", en: "Program (if any)" })} value={coverPage.program} onChange={(program) => setCoverPage((p) => ({ ...p, program }))} />
+              <CoverField full label={t({ tr: "Tez / Çalışma Başlığı", en: "Thesis / Work Title" })} value={coverPage.title} onChange={(title) => setCoverPage((p) => ({ ...p, title }))} />
+              <CoverField label={t({ tr: "Yazar Adı Soyadı", en: "Author's Full Name" })} value={coverPage.authorName} onChange={(authorName) => setCoverPage((p) => ({ ...p, authorName }))} />
               <label>
-                <span>Çalışma Türü</span>
+                <span>{t({ tr: "Çalışma Türü", en: "Work Type" })}</span>
                 <select
                   value={coverPage.degreeType}
                   onChange={(e) => setCoverPage((p) => ({ ...p, degreeType: e.target.value }))}
                 >
-                  <option value="Yüksek Lisans Tezi">Yüksek Lisans Tezi</option>
-                  <option value="Doktora Tezi">Doktora Tezi</option>
-                  <option value="Lisans Bitirme Tezi">Lisans Bitirme Tezi</option>
-                  <option value="Makale">Makale</option>
-                  <option value="Proje Raporu">Proje Raporu</option>
-                  <option value="Doçentlik Eser Dosyası">Doçentlik Eser Dosyası</option>
+                  {/* Kayıtlı değer belgenin bugünkü dilinde değilse de listede kalsın: yoksa seçim sessizce ilk seçeneğe kayar. */}
+                  {DERECE_TURLERI.some((tur) => tur[belgeDili] === coverPage.degreeType) ? null : (
+                    <option value={coverPage.degreeType}>{coverPage.degreeType}</option>
+                  )}
+                  {DERECE_TURLERI.map((tur) => (
+                    <option key={tur.tr} value={tur[belgeDili]}>
+                      {tur[belgeDili]}
+                    </option>
+                  ))}
                 </select>
               </label>
-              <CoverField label="Danışman (varsa)" placeholder="Unvan Adı Soyadı" value={coverPage.advisorName} onChange={(advisorName) => setCoverPage((p) => ({ ...p, advisorName }))} />
-              <CoverField label="Şehir" value={coverPage.city} onChange={(city) => setCoverPage((p) => ({ ...p, city }))} />
-              <CoverField label="Yıl" value={coverPage.year} onChange={(year) => setCoverPage((p) => ({ ...p, year }))} />
+              <CoverField label={t({ tr: "Danışman (varsa)", en: "Advisor (if any)" })} placeholder={t({ tr: "Unvan Adı Soyadı", en: "Title First Last" })} value={coverPage.advisorName} onChange={(advisorName) => setCoverPage((p) => ({ ...p, advisorName }))} />
+              <CoverField label={t({ tr: "Şehir", en: "City" })} value={coverPage.city} onChange={(city) => setCoverPage((p) => ({ ...p, city }))} />
+              <CoverField label={t({ tr: "Yıl", en: "Year" })} value={coverPage.year} onChange={(year) => setCoverPage((p) => ({ ...p, year }))} />
             </div>
           )}
         </div>
@@ -2006,34 +2148,41 @@ export default function ManuscriptEditor({
       {guideline && syncMode === "auto-applied" ? (
         <div className="guideline-applied-banner" role="status">
           <div>
-            <strong>Kılavuzun yeni sürümü uygulandı</strong>
+            <strong>{t({ tr: "Kılavuzun yeni sürümü uygulandı", en: "The guideline's new version was applied" })}</strong>
             <span>{guideline.label}</span>
             <span className="guideline-meta text-sm">
               {guideline.citationStyle.toUpperCase()}
               {guideline.versionLabel ? ` · ${guideline.versionLabel}` : ""}
-              {formatDate(guideline.version) ? ` · Onay: ${formatDate(guideline.version)}` : ""}
-              {guideline.updatePending ? " · Yeni sürüm ekibimizce inceleniyor" : ""}
+              {formatDate(guideline.version)
+                ? t({ tr: ` · Onay: ${formatDate(guideline.version)}`, en: ` · Approved: ${formatDate(guideline.version)}` })
+                : ""}
+              {guideline.updatePending ? t({ tr: " · Yeni sürüm ekibimizce inceleniyor", en: " · A new version is under review by our team" }) : ""}
             </span>
             {syncMode === "auto-applied" && guidelineSync.changes.length > 0 ? (
-              <SyncChangeList title="Değişen ayarlar:" changes={guidelineSync.changes} />
+              <SyncChangeList title={t({ tr: "Değişen ayarlar:", en: "Changed settings:" })} changes={guidelineSync.changes} />
             ) : null}
           </div>
           <div className="cluster">
             <button type="button" className="projects-filter-button" onClick={() => setGuidelineOpen(true)}>
-              Kuralları gör
+              {t({ tr: "Kuralları gör", en: "View rules" })}
             </button>
           </div>
         </div>
       ) : !guideline && isThesis ? (
         <div className="guideline-applied-banner" data-tone="muted" role="status">
           <div>
-            <strong>Bu çalışmaya bağlı onaylı kılavuz yok</strong>
+            <strong>{t({ tr: "Bu çalışmaya bağlı onaylı kılavuz yok", en: "No approved guideline is linked to this work" })}</strong>
             <span>
-              Üniversite, enstitü ve bölümünüzü seçin; kılavuzunuz onaylandığında editöre kendiliğinden uygulanır.
+              {t({
+                tr: "Üniversite, enstitü ve bölümünüzü seçin; kılavuzunuz onaylandığında editöre kendiliğinden uygulanır.",
+                en: "Select your university, institute and department; once your guideline is approved, it is applied to the editor automatically.",
+              })}
             </span>
           </div>
           <div className="cluster">
-            <Link href={editHref} className="projects-filter-button">Kurumu seç</Link>
+            <Link href={editHref} className="projects-filter-button">
+              {t({ tr: "Kurumu seç", en: "Select institution" })}
+            </Link>
           </div>
         </div>
       ) : null}
@@ -2041,18 +2190,20 @@ export default function ManuscriptEditor({
       {guideline && syncMode === "offer" ? (
         <div className="callout editor-notice cluster" data-tone="accent" role="status">
           <span>
-            Kılavuzun yeni sürümü onaylandı. Kenar boşluklarını ya da sayfa numarasını siz değiştirdiğiniz için
-            sayfa ayarlarınızı kendiliğinden değiştirmedik.
+            {t({
+              tr: "Kılavuzun yeni sürümü onaylandı. Kenar boşluklarını ya da sayfa numarasını siz değiştirdiğiniz için sayfa ayarlarınızı kendiliğinden değiştirmedik.",
+              en: "A new version of the guideline was approved. Because you changed the margins or page numbering yourself, we did not change your page settings automatically.",
+            })}
             {guidelineSync.changes.length > 0 ? (
-              <SyncChangeList title="Güncellerseniz şunlar değişir:" changes={guidelineSync.changes} />
+              <SyncChangeList title={t({ tr: "Güncellerseniz şunlar değişir:", en: "If you update, these change:" })} changes={guidelineSync.changes} />
             ) : null}
           </span>
           <span className="cluster">
             <button type="button" className="projects-primary-button" onClick={acceptGuidelineSettings}>
-              Kılavuza göre güncelle
+              {t({ tr: "Kılavuza göre güncelle", en: "Update to guideline" })}
             </button>
             <button type="button" className="projects-filter-button" onClick={keepOwnSettings}>
-              Ayarlarımı koru
+              {t({ tr: "Ayarlarımı koru", en: "Keep my settings" })}
             </button>
           </span>
         </div>
@@ -2062,12 +2213,18 @@ export default function ManuscriptEditor({
         <div className="manuscript-page-settings">
           <span className="manuscript-page-settings-label">
             <AlignVerticalSpaceAround size={14} />
-            Sayfa kenar boşlukları (cm)
+            {t({ tr: "Sayfa kenar boşlukları (cm)", en: "Page margins (cm)" })}
           </span>
           {(["top", "bottom", "left", "right"] as const).map((side) => (
             <label key={side}>
               <span>
-                {side === "top" ? "Üst" : side === "bottom" ? "Alt" : side === "left" ? "Sol" : "Sağ"}
+                {side === "top"
+                  ? t({ tr: "Üst", en: "Top" })
+                  : side === "bottom"
+                    ? t({ tr: "Alt", en: "Bottom" })
+                    : side === "left"
+                      ? t({ tr: "Sol", en: "Left" })
+                      : t({ tr: "Sağ", en: "Right" })}
               </span>
               <input
                 type="number"
@@ -2091,11 +2248,11 @@ export default function ManuscriptEditor({
                 setShowPageNumbers(e.target.checked);
               }}
             />
-            <span>Sayfa numarası ekle</span>
+            <span>{t({ tr: "Sayfa numarası ekle", en: "Add page numbers" })}</span>
           </label>
           <label className="checkbox-label">
             <input type="checkbox" checked={includeToc} onChange={(e) => setIncludeToc(e.target.checked)} />
-            <span>İçindekiler tablosu (Word ve PDF)</span>
+            <span>{t({ tr: "İçindekiler tablosu (Word ve PDF)", en: "Table of contents (Word and PDF)" })}</span>
           </label>
           <label className="checkbox-label">
             <input
@@ -2106,26 +2263,29 @@ export default function ManuscriptEditor({
                 setHeadingNumbering(e.target.checked);
               }}
             />
-            <span>Başlıkları otomatik numarala (1., 1.1.)</span>
+            <span>{t({ tr: "Başlıkları otomatik numarala (1., 1.1.)", en: "Number headings automatically (1., 1.1.)" })}</span>
           </label>
           {manualNumbered > 0 ? (
             <span className="manuscript-page-settings-hint">
-              {manualNumbered} başlıkta elle yazılmış numara var; çift numara olmaması için{" "}
+              {t({
+                tr: `${manualNumbered} başlıkta elle yazılmış numara var; çift numara olmaması için`,
+                en: `${manualNumbered} headings have manually typed numbers; to avoid double numbering,`,
+              })}{" "}
               <button
                 type="button"
                 className="result-link"
                 onClick={() => {
                   editor.chain().focus().stripManualHeadingNumbers().run();
-                  showToast("success", "Elle yazılmış başlık numaraları kaldırıldı (Geri al ile geri alınabilir).");
+                  showToast("success", t({ tr: "Elle yazılmış başlık numaraları kaldırıldı (Geri al ile geri alınabilir).", en: "Manually typed heading numbers were removed (you can undo this)." }));
                 }}
               >
-                elle yazılanları kaldırın
+                {t({ tr: "elle yazılanları kaldırın", en: "remove the manual ones" })}
               </button>
               .
             </span>
           ) : null}
           <span className="manuscript-page-settings-hint">
-            Otomatik kaydedilir, Word&apos;e aktarırken uygulanır.
+            {t({ tr: "Otomatik kaydedilir, Word'e aktarırken uygulanır.", en: "Saved automatically and applied when exporting to Word." })}
           </span>
         </div>
       )}
@@ -2134,11 +2294,11 @@ export default function ManuscriptEditor({
       <OlcumPaneli editor={editor} />
 
       {stats.footnotes.length > 0 ? (
-        <ol className="footnote-list" aria-label="Dipnotlar">
+        <ol className="footnote-list" aria-label={t({ tr: "Dipnotlar", en: "Footnotes" })}>
           {stats.footnotes.map((footnote) => (
             <li key={footnote.pos}>
               <button type="button" onClick={() => openFootnoteEditor(footnote.pos, footnote.text)}>
-                {footnote.text || "(boş dipnot)"}
+                {footnote.text || t({ tr: "(boş dipnot)", en: "(empty footnote)" })}
               </button>
             </li>
           ))}
@@ -2161,15 +2321,20 @@ export default function ManuscriptEditor({
       <Dialog
         open={issuesOpen}
         onClose={closeIssues}
-        kicker="Canlı kontrol"
-        title="Yapı ve bütünlük"
-        description="Yazarken kendiliğinden denetlenir: boş bölümler, başlık atlamaları, şekil/tablo numaraları, atıf–kaynakça uyumu ve boş dipnotlar."
+        kicker={t({ tr: "Canlı kontrol", en: "Live check" })}
+        title={t({ tr: "Yapı ve bütünlük", en: "Structure and consistency" })}
+        description={t({
+          tr: "Yazarken kendiliğinden denetlenir: boş bölümler, başlık atlamaları, şekil/tablo numaraları, atıf–kaynakça uyumu ve boş dipnotlar.",
+          en: "Checked automatically as you write: empty sections, skipped heading levels, figure/table numbering, citation–reference matching and empty footnotes.",
+        })}
       >
         {liveIssues === null ? (
                 /* null "ilk denetim henüz çalışmadı" demek; boş dizi
                    "sorun bulunmadı". İkisini aynı göstermek, bilinmeyeni
                    temiz rapor gibi sunmaktı. */
-                <p className="tone-text" data-tone="warning">Canlı denetim birkaç saniye içinde tamamlanır.</p>
+                <p className="tone-text" data-tone="warning">
+                  {t({ tr: "Canlı denetim birkaç saniye içinde tamamlanır.", en: "The live check completes within a few seconds." })}
+                </p>
               ) : (
                 renderIssueList(liveIssues, closeIssues)
               )}
@@ -2193,31 +2358,37 @@ export default function ManuscriptEditor({
             satırın tamamı tıklanan bir durum satırı — eskiden küçük bir
             rozetti ve tıklanabildiği belli değildi.
           */
-          <section className="outline-card kontrol-karti" aria-label="Kılavuz ve ilerleme">
+          <section className="outline-card kontrol-karti" aria-label={t({ tr: "Kılavuz ve ilerleme", en: "Guideline and progress" })}>
             {guideline ? (
               <header className="kontrol-kilavuz">
                 <span className="kontrol-kilavuz-ust">
-                  <span className="dashboard-kicker">Uygulanan kılavuz</span>
+                  <span className="dashboard-kicker">{t({ tr: "Uygulanan kılavuz", en: "Applied guideline" })}</span>
                   <button type="button" className="projects-filter-button button-compact" onClick={() => setGuidelineOpen(true)}>
-                    <BookOpen size={14} aria-hidden="true" /> Kurallar
+                    <BookOpen size={14} aria-hidden="true" /> {t({ tr: "Kurallar", en: "Rules" })}
                   </button>
                 </span>
                 <strong title={guideline.label}>{guideline.label}</strong>
                 <span className="kontrol-etiketler">
                   <span className="kontrol-etiket">{guideline.citationStyle.toUpperCase()}</span>
-                  {formatDate(guideline.version) ? <span className="kontrol-etiket">Onay {formatDate(guideline.version)}</span> : null}
-                  {guideline.updatePending ? <span className="kontrol-etiket">Yeni sürüm inceleniyor</span> : null}
+                  {formatDate(guideline.version) ? (
+                    <span className="kontrol-etiket">
+                      {t({ tr: `Onay ${formatDate(guideline.version)}`, en: `Approved ${formatDate(guideline.version)}` })}
+                    </span>
+                  ) : null}
+                  {guideline.updatePending ? (
+                    <span className="kontrol-etiket">{t({ tr: "Yeni sürüm inceleniyor", en: "New version under review" })}</span>
+                  ) : null}
                 </span>
               </header>
             ) : null}
 
             <dl className="kontrol-olculer">
               <div>
-                <dt>Kelime</dt>
-                <dd>{stats.words.toLocaleString("tr-TR")}</dd>
+                <dt>{t({ tr: "Kelime", en: "Words" })}</dt>
+                <dd>{stats.words.toLocaleString(YEREL[dil])}</dd>
               </div>
               <div>
-                <dt>Sayfa</dt>
+                <dt>{t({ tr: "Sayfa", en: "Pages" })}</dt>
                 <dd>
                   ≈ {pages}
                   {guideline?.minPages ? (
@@ -2231,7 +2402,7 @@ export default function ManuscriptEditor({
               </div>
               {stats.footnotes.length > 0 ? (
                 <div>
-                  <dt>Dipnot</dt>
+                  <dt>{t({ tr: "Dipnot", en: "Footnotes" })}</dt>
                   <dd>{stats.footnotes.length}</dd>
                 </div>
               ) : null}
@@ -2248,7 +2419,7 @@ export default function ManuscriptEditor({
                   className="sayfa-cubugu"
                   max={guideline.minPages}
                   value={Math.min(pages, guideline.minPages)}
-                  aria-label={`Sayfa hedefi: ${pages} / ${guideline.minPages} sayfa`}
+                  aria-label={t({ tr: `Sayfa hedefi: ${pages} / ${guideline.minPages} sayfa`, en: `Page target: ${pages} / ${guideline.minPages} pages` })}
                 />
                 {pace && !stats.empty ? <small>{pace.detail}</small> : null}
               </div>
@@ -2264,12 +2435,20 @@ export default function ManuscriptEditor({
                   liveIssues.length === 0 ? "success" : liveIssues.some((issue) => issue.tone === "danger") ? "danger" : "warning"
                 }
                 onClick={() => setIssuesOpen(true)}
-                title="Yazarken kendiliğinden denetlenir"
+                title={t({ tr: "Yazarken kendiliğinden denetlenir", en: "Checked automatically as you write" })}
               >
                 {liveIssues.length === 0 ? <CheckCircle2 size={18} aria-hidden="true" /> : <AlertTriangle size={18} aria-hidden="true" />}
                 <span>
-                  <b>{liveIssues.length === 0 ? "Yapı sorunsuz" : `${liveIssues.length} yapı uyarısı`}</b>
-                  <small>{liveIssues.length === 0 ? "Yazarken kendiliğinden denetlenir" : "Ayrıntıları gör"}</small>
+                  <b>
+                    {liveIssues.length === 0
+                      ? t({ tr: "Yapı sorunsuz", en: "Structure OK" })
+                      : t({ tr: `${liveIssues.length} yapı uyarısı`, en: `${liveIssues.length} structure warnings` })}
+                  </b>
+                  <small>
+                    {liveIssues.length === 0
+                      ? t({ tr: "Yazarken kendiliğinden denetlenir", en: "Checked automatically as you write" })
+                      : t({ tr: "Ayrıntıları gör", en: "See details" })}
+                  </small>
                 </span>
                 <ChevronRight size={16} aria-hidden="true" />
               </button>
@@ -2285,11 +2464,11 @@ export default function ManuscriptEditor({
               <button type="button" className="kontrol-son" onClick={() => setSonucAcik(true)}>
                 <History size={16} aria-hidden="true" />
                 <span>
-                  <b>Son kılavuz kontrolü</b>
+                  <b>{t({ tr: "Son kılavuz kontrolü", en: "Last guideline check" })}</b>
                   <small>
-                    {gecmis[0] ? trTarihSaat(gecmis[0].createdAt) : "Bu oturumda"}
-                    {checkResultEski ? " · metin sonradan değişti" : ""}
-                    {gecmis.length > 1 ? ` · ${gecmis.length} kayıt` : ""}
+                    {gecmis[0] ? tarihSaat(gecmis[0].createdAt) : t({ tr: "Bu oturumda", en: "This session" })}
+                    {checkResultEski ? t({ tr: " · metin sonradan değişti", en: " · text changed since" }) : ""}
+                    {gecmis.length > 1 ? t({ tr: ` · ${gecmis.length} kayıt`, en: ` · ${gecmis.length} records` }) : ""}
                   </small>
                 </span>
                 <ChevronRight size={16} aria-hidden="true" />
@@ -2314,6 +2493,7 @@ export default function ManuscriptEditor({
           projectId={projectId}
           govdeMetni={govdeMetni}
           numarali={NUMERIC_STYLES.includes(style)}
+          belgeDili={belgeDili}
           onCite={(source) => handleCite(source)}
         />
         <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
@@ -2329,9 +2509,12 @@ export default function ManuscriptEditor({
         <Dialog
           open={sonucAcik}
           onClose={() => setSonucAcik(false)}
-          kicker="Kontrol"
-          title="Kılavuz ve kaynakça kontrolü"
-          description="Kılavuzun zorunlu bölümleri, yapı ve bütünlük, atıf–kaynakça eşleşmesi. Her çalıştırma kaydedilir; öncekiler aşağıda."
+          kicker={t({ tr: "Kontrol", en: "Check" })}
+          title={t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
+          description={t({
+            tr: "Kılavuzun zorunlu bölümleri, yapı ve bütünlük, atıf–kaynakça eşleşmesi. Her çalıştırma kaydedilir; öncekiler aşağıda.",
+            en: "Required guideline sections, structure and consistency, citation–reference matching. Every run is saved; earlier ones are below.",
+          })}
         >
         <div
           className="sorun-paneli"
@@ -2346,8 +2529,8 @@ export default function ManuscriptEditor({
             çalıştırmalar arasında düzelip düzelmediğini gösteriyor.
           */}
           {gecmis.length ? (
-            <section className="kontrol-gecmisi" aria-label="Kontrol geçmişi">
-              <strong className="text-sm">Kontrol geçmişi</strong>
+            <section className="kontrol-gecmisi" aria-label={t({ tr: "Kontrol geçmişi", en: "Check history" })}>
+              <strong className="text-sm">{t({ tr: "Kontrol geçmişi", en: "Check history" })}</strong>
               <ol>
                 {gecmis.map((k, i) => (
                   <li key={k.id}>
@@ -2358,16 +2541,34 @@ export default function ManuscriptEditor({
                       onClick={() => void kontrolSec(k.id)}
                     >
                       <span className="kontrol-gecmisi-tarih">
-                        {trTarihSaat(k.createdAt)}
-                        {i === 0 ? <small>en son</small> : null}
+                        {tarihSaat(k.createdAt)}
+                        {i === 0 ? <small>{t({ tr: "en son", en: "latest" })}</small> : null}
                       </span>
                       <span className="kontrol-gecmisi-sayilar">
-                        {k.hata ? <span className="status-pill" data-tone="danger">{k.hata} hata</span> : null}
-                        {k.uyari ? <span className="status-pill" data-tone="warning">{k.uyari} uyarı</span> : null}
-                        {k.eksikBolum ? <span className="status-pill" data-tone="neutral">{k.eksikBolum} eksik bölüm</span> : null}
-                        {!k.hata && !k.uyari && !k.eksikBolum ? <span className="status-pill" data-tone="success">Sorunsuz</span> : null}
+                        {k.hata ? (
+                          <span className="status-pill" data-tone="danger">
+                            {t({ tr: `${k.hata} hata`, en: `${k.hata} errors` })}
+                          </span>
+                        ) : null}
+                        {k.uyari ? (
+                          <span className="status-pill" data-tone="warning">
+                            {t({ tr: `${k.uyari} uyarı`, en: `${k.uyari} warnings` })}
+                          </span>
+                        ) : null}
+                        {k.eksikBolum ? (
+                          <span className="status-pill" data-tone="neutral">
+                            {t({ tr: `${k.eksikBolum} eksik bölüm`, en: `${k.eksikBolum} missing sections` })}
+                          </span>
+                        ) : null}
+                        {!k.hata && !k.uyari && !k.eksikBolum ? (
+                          <span className="status-pill" data-tone="success">
+                            {t({ tr: "Sorunsuz", en: "No issues" })}
+                          </span>
+                        ) : null}
                       </span>
-                      <span className="muted text-sm">{k.kelime.toLocaleString("tr-TR")} kelime</span>
+                      <span className="muted text-sm">
+                        {t({ tr: `${k.kelime.toLocaleString(YEREL[dil])} kelime`, en: `${k.kelime.toLocaleString(YEREL[dil])} words` })}
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -2377,39 +2578,49 @@ export default function ManuscriptEditor({
 
           {seciliKontrol && gecmis[0] && seciliKontrol !== gecmis[0].id ? (
             <p className="alert" data-tone="info">
-              Önceki bir kontrolü görüntülüyorsunuz ({trTarihSaat(gecmis.find((k) => k.id === seciliKontrol)?.createdAt ?? "")}).
-              Bağlantılar metnin bugünkü hâlinde arar.
+              {t({
+                tr: `Önceki bir kontrolü görüntülüyorsunuz (${tarihSaat(gecmis.find((k) => k.id === seciliKontrol)?.createdAt ?? "")}). Bağlantılar metnin bugünkü hâlinde arar.`,
+                en: `You are viewing an earlier check (${tarihSaat(gecmis.find((k) => k.id === seciliKontrol)?.createdAt ?? "")}). Links search the current version of the text.`,
+              })}
             </p>
           ) : checkResultEski ? (
             <p className="alert" data-tone="warning">
-              Bu sonuç metnin önceki hâline ait; sonrasında değişiklik yaptınız. Güncel durum için
-              “Kılavuz ve kaynakça kontrolü” düğmesine yeniden basın.
+              {t({
+                tr: "Bu sonuç metnin önceki hâline ait; sonrasında değişiklik yaptınız. Güncel durum için “Kılavuz ve kaynakça kontrolü” düğmesine yeniden basın.",
+                en: "This result is for an earlier version of the text; you have made changes since. For the current status, click “Guideline and reference check” again.",
+              })}
             </p>
           ) : null}
 
           {checkResult.guidelineCompliance ? (
-            <section className="sorun-grubu" aria-label="Kılavuz uygunluğu">
+            <section className="sorun-grubu" aria-label={t({ tr: "Kılavuz uygunluğu", en: "Guideline compliance" })}>
               <header>
-                <strong>Kılavuz uygunluğu</strong>
+                <strong>{t({ tr: "Kılavuz uygunluğu", en: "Guideline compliance" })}</strong>
                 <span className="muted text-sm">
                   {checkResult.guidelineCompliance.sections.filter((b) => b.found).length}/
                   {checkResult.guidelineCompliance.sections.length}
                 </span>
               </header>
-              <p className="muted text-sm">Kılavuzun zorunlu bölümleri metinde başlık olarak bulunmalı.</p>
+              <p className="muted text-sm">
+                {t({ tr: "Kılavuzun zorunlu bölümleri metinde başlık olarak bulunmalı.", en: "The guideline's required sections must appear as headings in the text." })}
+              </p>
               <ul>
                 {checkResult.guidelineCompliance.sections.map((b, i) => {
                   const heading = sections.find((item) => item.section === b.section)?.heading ?? null;
                   return (
                     <li key={i} className="sorun-satir" data-tone={b.found ? "success" : "danger"}>
-                      {b.found ? <CheckCircle2 size={16} aria-label="Var" /> : <AlertCircle size={16} aria-label="Eksik" />}
+                      {b.found ? (
+                        <CheckCircle2 size={16} aria-label={t({ tr: "Var", en: "Present" })} />
+                      ) : (
+                        <AlertCircle size={16} aria-label={t({ tr: "Eksik", en: "Missing" })} />
+                      )}
                       <span className="sorun-metin">
                         {b.section}
-                        {b.found ? null : <small className="muted"> — bulunamadı</small>}
+                        {b.found ? null : <small className="muted">{t({ tr: " — bulunamadı", en: " — not found" })}</small>}
                       </span>
                       {heading ? (
                         <button type="button" className="result-link sorun-goster" onClick={() => handleJump(heading)}>
-                          Git
+                          {t({ tr: "Git", en: "Go" })}
                         </button>
                       ) : !b.found ? (
                         <button
@@ -2417,7 +2628,7 @@ export default function ManuscriptEditor({
                           className="projects-filter-button button-compact sorun-eylem kontrol-git"
                           onClick={() => handleInsertSections([b.section])}
                         >
-                          Bölümü ekle
+                          {t({ tr: "Bölümü ekle", en: "Add section" })}
                         </button>
                       ) : null}
                     </li>
@@ -2428,15 +2639,15 @@ export default function ManuscriptEditor({
           ) : null}
 
           {structureIssues ? (
-            <section className="kontrol-bolumu" aria-label="Yapı ve bütünlük">
-              <strong>Yapı ve bütünlük</strong>
+            <section className="kontrol-bolumu" aria-label={t({ tr: "Yapı ve bütünlük", en: "Structure and consistency" })}>
+              <strong>{t({ tr: "Yapı ve bütünlük", en: "Structure and consistency" })}</strong>
               {renderIssueList(structureIssues)}
             </section>
           ) : null}
 
-          <section className="sorun-grubu" aria-label="Atıf ve kaynakça eşleşmesi">
+          <section className="sorun-grubu" aria-label={t({ tr: "Atıf ve kaynakça eşleşmesi", en: "Citation and reference matching" })}>
             <header>
-              <strong>Atıf ve kaynakça eşleşmesi</strong>
+              <strong>{t({ tr: "Atıf ve kaynakça eşleşmesi", en: "Citation and reference matching" })}</strong>
               {checkResult.atif.referenceSectionFound && checkResult.atif.complianceScore !== null ? (
                 <span
                   className="status-pill"
@@ -2444,45 +2655,61 @@ export default function ManuscriptEditor({
                     checkResult.atif.complianceScore >= 85 ? "success" : checkResult.atif.complianceScore >= 60 ? "warning" : "danger"
                   }
                 >
-                  {checkResult.stil.ad} uyum {checkResult.atif.complianceScore}/100
+                  {t({
+                    tr: `${checkResult.stil.ad} uyum ${checkResult.atif.complianceScore}/100`,
+                    en: `${checkResult.stil.ad} compliance ${checkResult.atif.complianceScore}/100`,
+                  })}
                 </span>
               ) : null}
             </header>
             {!checkResult.atif.referenceSectionFound ? (
               <p className="sorun-satir" data-tone="danger">
-                <AlertCircle size={16} aria-label="Hata" />
+                <AlertCircle size={16} aria-label={t({ tr: "Hata", en: "Error" })} />
                 <span className="sorun-metin">
-                  Kaynakça bölümü bulunamadı: &quot;Kaynakça&quot; ya da &quot;Kaynaklar&quot; başlığı ekleyin.
+                  {t({
+                    tr: "Kaynakça bölümü bulunamadı: \"Kaynakça\" ya da \"Kaynaklar\" başlığı ekleyin.",
+                    en: "No reference list section found: add a \"References\" or \"Bibliography\" heading.",
+                  })}
                 </span>
               </p>
             ) : checkResult.atif.crossCheck.referencesWithoutCitation.length +
                 checkResult.atif.crossCheck.citationsWithoutReference.length ===
               0 ? (
               <p className="sorun-satir" data-tone="success">
-                <CheckCircle2 size={16} aria-label="Sorunsuz" />
+                <CheckCircle2 size={16} aria-label={t({ tr: "Sorunsuz", en: "No issues" })} />
                 <span className="sorun-metin">
                   {checkResult.stil.tur === "numara"
-                    ? `${checkResult.stil.ad} numaralı bir stil: atıf numaraları ile kaynakça sırası "Yapı ve bütünlük" altında denetlenir.`
-                    : "Her atıfın kaynakçada, her kaynağın metinde karşılığı var."}
+                    ? t({
+                        tr: `${checkResult.stil.ad} numaralı bir stil: atıf numaraları ile kaynakça sırası "Yapı ve bütünlük" altında denetlenir.`,
+                        en: `${checkResult.stil.ad} is a numbered style: citation numbers and reference order are checked under "Structure and consistency".`,
+                      })
+                    : t({
+                        tr: "Her atıfın kaynakçada, her kaynağın metinde karşılığı var.",
+                        en: "Every citation has a matching reference, and every reference is cited in the text.",
+                      })}
                 </span>
               </p>
             ) : (
               <ul>
                 {checkResult.atif.crossCheck.citationsWithoutReference.map((c, i) => (
                   <li key={`cw-${i}`} className="sorun-satir" data-tone="danger">
-                    <AlertCircle size={16} aria-label="Hata" />
-                    <span className="sorun-metin">Metinde atıf var, kaynakçada yok: {c.raw}</span>
+                    <AlertCircle size={16} aria-label={t({ tr: "Hata", en: "Error" })} />
+                    <span className="sorun-metin">
+                      {t({ tr: "Metinde atıf var, kaynakçada yok", en: "Cited in text, missing from references" })}: {c.raw}
+                    </span>
                     <button type="button" className="result-link sorun-goster" onClick={() => handleFindText(c.raw)}>
-                      Göster
+                      {t({ tr: "Göster", en: "Show" })}
                     </button>
                   </li>
                 ))}
                 {checkResult.atif.crossCheck.referencesWithoutCitation.map((r, i) => (
                   <li key={`rw-${i}`} className="sorun-satir" data-tone="warning">
-                    <AlertTriangle size={16} aria-label="Uyarı" />
-                    <span className="sorun-metin">Kaynakçada var, metinde atıf yok: {r.raw}</span>
+                    <AlertTriangle size={16} aria-label={t({ tr: "Uyarı", en: "Warning" })} />
+                    <span className="sorun-metin">
+                      {t({ tr: "Kaynakçada var, metinde atıf yok", en: "In references, not cited in text" })}: {r.raw}
+                    </span>
                     <button type="button" className="result-link sorun-goster" onClick={() => handleFindText(r.raw)}>
-                      Göster
+                      {t({ tr: "Göster", en: "Show" })}
                     </button>
                   </li>
                 ))}
@@ -2501,7 +2728,14 @@ export default function ManuscriptEditor({
         onRestored={handleRestored}
         getCurrentText={() => extractPlainText(editor.getJSON() as TiptapDoc)}
       />
-      <CiteDialog open={citeOpen} onClose={() => setCiteOpen(false)} projectId={projectId} style={style} onPick={handleCite} />
+      <CiteDialog
+        open={citeOpen}
+        onClose={() => setCiteOpen(false)}
+        projectId={projectId}
+        style={style}
+        belgeDili={belgeDili}
+        onPick={handleCite}
+      />
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
       <ImportDialog
         open={importOpen}
@@ -2523,21 +2757,24 @@ export default function ManuscriptEditor({
         <Dialog
           open={guidelineOpen}
           onClose={closeGuideline}
-          kicker="Tez yazım kılavuzu"
+          kicker={t({ tr: "Tez yazım kılavuzu", en: "Thesis writing guideline" })}
           title={guideline.label}
-          description="Ekibimizin onayladığı son sürüm. Yeni sürüm onaylandığında editörünüze kendiliğinden yansır."
+          description={t({
+            tr: "Ekibimizin onayladığı son sürüm. Yeni sürüm onaylandığında editörünüze kendiliğinden yansır.",
+            en: "The latest version approved by our team. When a new version is approved, it is reflected in your editor automatically.",
+          })}
         >
           <dl className="guideline-rules">
-            <dt>Kurum</dt>
+            <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
             <dd>
               {guideline.universityName}
               {guideline.instituteName ? ` — ${guideline.instituteName}` : ""}
             </dd>
-            <dt>Kaynakça</dt>
+            <dt>{t({ tr: "Kaynakça", en: "References" })}</dt>
             <dd>{guideline.citationStyle.toUpperCase()}</dd>
             {guideline.settings.fontFamily || guideline.settings.fontSizePt ? (
               <>
-                <dt>Yazı</dt>
+                <dt>{t({ tr: "Yazı", en: "Font" })}</dt>
                 <dd>
                   {[guideline.settings.fontFamily, guideline.settings.fontSizePt ? `${guideline.settings.fontSizePt} pt` : null]
                     .filter(Boolean)
@@ -2547,36 +2784,45 @@ export default function ManuscriptEditor({
             ) : null}
             {guideline.settings.lineSpacing ? (
               <>
-                <dt>Satır aralığı</dt>
+                <dt>{t({ tr: "Satır aralığı", en: "Line spacing" })}</dt>
                 <dd>{guideline.settings.lineSpacing}</dd>
               </>
             ) : null}
             {guideline.settings.margins ? (
               <>
-                <dt>Kenar boşlukları</dt>
+                <dt>{t({ tr: "Kenar boşlukları", en: "Margins" })}</dt>
                 <dd>
-                  Üst {guideline.settings.margins.top} · Alt {guideline.settings.margins.bottom} · Sol{" "}
-                  {guideline.settings.margins.left} · Sağ {guideline.settings.margins.right} cm
+                  {t({
+                    tr: `Üst ${guideline.settings.margins.top} · Alt ${guideline.settings.margins.bottom} · Sol ${guideline.settings.margins.left} · Sağ ${guideline.settings.margins.right} cm`,
+                    en: `Top ${guideline.settings.margins.top} · Bottom ${guideline.settings.margins.bottom} · Left ${guideline.settings.margins.left} · Right ${guideline.settings.margins.right} cm`,
+                  })}
                 </dd>
               </>
             ) : null}
             {guideline.settings.showPageNumbers !== undefined ? (
               <>
-                <dt>Sayfa numarası</dt>
-                <dd>{guideline.settings.showPageNumbers ? "Var" : "Yok"}</dd>
+                <dt>{t({ tr: "Sayfa numarası", en: "Page numbers" })}</dt>
+                <dd>{guideline.settings.showPageNumbers ? t({ tr: "Var", en: "Yes" }) : t({ tr: "Yok", en: "No" })}</dd>
               </>
             ) : null}
             {guideline.settings.headingNumbering !== undefined ? (
               <>
-                <dt>Başlık numaralandırma</dt>
-                <dd>{guideline.settings.headingNumbering ? "Ondalık (1., 1.1., 1.1.1.)" : "Numarasız"}</dd>
+                <dt>{t({ tr: "Başlık numaralandırma", en: "Heading numbering" })}</dt>
+                <dd>
+                  {guideline.settings.headingNumbering
+                    ? t({ tr: "Ondalık (1., 1.1., 1.1.1.)", en: "Decimal (1., 1.1., 1.1.1.)" })
+                    : t({ tr: "Numarasız", en: "Unnumbered" })}
+                </dd>
               </>
             ) : null}
             {guideline.settings.chapterUppercase || guideline.settings.chapterNewPage ? (
               <>
-                <dt>Ana bölüm başlıkları</dt>
+                <dt>{t({ tr: "Ana bölüm başlıkları", en: "Chapter headings" })}</dt>
                 <dd>
-                  {[guideline.settings.chapterUppercase ? "büyük harfle" : "", guideline.settings.chapterNewPage ? "her biri yeni sayfadan" : ""]
+                  {[
+                    guideline.settings.chapterUppercase ? t({ tr: "büyük harfle", en: "in uppercase" }) : "",
+                    guideline.settings.chapterNewPage ? t({ tr: "her biri yeni sayfadan", en: "each on a new page" }) : "",
+                  ]
                     .filter(Boolean)
                     .join(", ")}
                 </dd>
@@ -2584,44 +2830,44 @@ export default function ManuscriptEditor({
             ) : null}
             {paragraphFormat.indentCm || paragraphFormat.justify ? (
               <>
-                <dt>Paragraf düzeni</dt>
-                <dd>{describeParagraphFormat(paragraphFormat)}</dd>
+                <dt>{t({ tr: "Paragraf düzeni", en: "Paragraph layout" })}</dt>
+                <dd>{describeParagraphFormat(paragraphFormat, dil)}</dd>
               </>
             ) : null}
             {guideline.settings.abstract ? (
               <>
-                <dt>Özet</dt>
+                <dt>{t({ tr: "Özet", en: "Abstract" })}</dt>
                 <dd>{describeAbstractRules(guideline.settings.abstract)}</dd>
               </>
             ) : null}
             {guideline.minPages || guideline.maxPages ? (
               <>
-                <dt>Sayfa sayısı</dt>
+                <dt>{t({ tr: "Sayfa sayısı", en: "Page count" })}</dt>
                 <dd>
-                  {guideline.minPages ? `en az ${guideline.minPages}` : ""}
+                  {guideline.minPages ? t({ tr: `en az ${guideline.minPages}`, en: `at least ${guideline.minPages}` }) : ""}
                   {guideline.minPages && guideline.maxPages ? ", " : ""}
-                  {guideline.maxPages ? `en fazla ${guideline.maxPages}` : ""}
+                  {guideline.maxPages ? t({ tr: `en fazla ${guideline.maxPages}`, en: `at most ${guideline.maxPages}` }) : ""}
                 </dd>
               </>
             ) : null}
             {guideline.versionLabel ? (
               <>
-                <dt>Sürüm</dt>
+                <dt>{t({ tr: "Sürüm", en: "Version" })}</dt>
                 <dd>{guideline.versionLabel}</dd>
               </>
             ) : null}
             {formatDate(guideline.version) ? (
               <>
-                <dt>Onay tarihi</dt>
+                <dt>{t({ tr: "Onay tarihi", en: "Approval date" })}</dt>
                 <dd>{formatDate(guideline.version)}</dd>
               </>
             ) : null}
             {formatDate(guideline.lastCheckedAt) ? (
               <>
-                <dt>Son kaynak kontrolü</dt>
+                <dt>{t({ tr: "Son kaynak kontrolü", en: "Last source check" })}</dt>
                 <dd>
                   {formatDate(guideline.lastCheckedAt)}
-                  {guideline.updatePending ? " · yeni sürüm inceleniyor" : ""}
+                  {guideline.updatePending ? t({ tr: " · yeni sürüm inceleniyor", en: " · new version under review" }) : ""}
                 </dd>
               </>
             ) : null}
@@ -2629,7 +2875,7 @@ export default function ManuscriptEditor({
 
           {requiredSections.length > 0 ? (
             <div className="stack mt-md">
-              <strong>Zorunlu bölümler</strong>
+              <strong>{t({ tr: "Zorunlu bölümler", en: "Required sections" })}</strong>
               <div className="guideline-sections">
                 {requiredSections.map((section) => (
                   <span key={section} className="chip">{section}</span>
@@ -2645,7 +2891,7 @@ export default function ManuscriptEditor({
               rel="noopener noreferrer"
               className="projects-filter-button mt-md"
             >
-              Resmî kılavuzu aç
+              {t({ tr: "Resmî kılavuzu aç", en: "Open the official guideline" })}
             </a>
           ) : null}
         </Dialog>
@@ -2654,9 +2900,12 @@ export default function ManuscriptEditor({
       <Dialog
         open={footnoteDialog !== null}
         onClose={closeFootnoteDialog}
-        kicker="Dipnot"
-        title={footnoteDialog?.mode === "edit" ? "Dipnotu düzenle" : "Dipnot ekle"}
-        description="Numaralar belge sırasına göre otomatik verilir; Word'e gerçek dipnot olarak aktarılır."
+        kicker={t({ tr: "Dipnot", en: "Footnote" })}
+        title={footnoteDialog?.mode === "edit" ? t({ tr: "Dipnotu düzenle", en: "Edit footnote" }) : t({ tr: "Dipnot ekle", en: "Insert footnote" })}
+        description={t({
+          tr: "Numaralar belge sırasına göre otomatik verilir; Word'e gerçek dipnot olarak aktarılır.",
+          en: "Numbers are assigned automatically in document order; they are exported to Word as real footnotes.",
+        })}
       >
         <form
           className="stack"
@@ -2666,7 +2915,7 @@ export default function ManuscriptEditor({
           }}
         >
           <label className="dialog-field">
-            <span>Dipnot metni</span>
+            <span>{t({ tr: "Dipnot metni", en: "Footnote text" })}</span>
             <textarea
               rows={4}
               required
@@ -2682,16 +2931,16 @@ export default function ManuscriptEditor({
           </label>
           <div className="cluster">
             <button type="submit" className="projects-primary-button" disabled={!footnoteDialog?.text.trim()}>
-              {footnoteDialog?.mode === "edit" ? "Kaydet" : "Ekle"}
+              {footnoteDialog?.mode === "edit" ? t({ tr: "Kaydet", en: "Save" }) : t({ tr: "Ekle", en: "Insert" })}
             </button>
             {footnoteDialog?.mode === "edit" ? (
               <button type="button" className="button-danger" onClick={deleteFootnote}>
                 <Trash2 size={15} />
-                Dipnotu sil
+                {t({ tr: "Dipnotu sil", en: "Delete footnote" })}
               </button>
             ) : null}
             <button type="button" className="projects-filter-button" onClick={closeFootnoteDialog}>
-              Vazgeç
+              {t({ tr: "Vazgeç", en: "Cancel" })}
             </button>
           </div>
         </form>
@@ -2756,6 +3005,7 @@ function ToolbarButton({
 
 // Kılavuz sürümü değiştiğinde hangi sayfa ayarının neye döndüğünü açıkça gösterir.
 function SyncChangeList({ title, changes }: { title: string; changes: GuidelineSyncChange[] }) {
+  const t = useCeviri();
   return (
     <span className="sync-changes">
       <span className="sync-changes-title">{title}</span>
@@ -2764,7 +3014,7 @@ function SyncChangeList({ title, changes }: { title: string; changes: GuidelineS
           <li key={change.label}>
             {change.label}: <span className="sync-change-from">{change.from}</span>
             <span aria-hidden="true"> → </span>
-            <span className="sr-only"> yerine </span>
+            <span className="sr-only">{t({ tr: " yerine ", en: " changed to " })}</span>
             <strong>{change.to}</strong>
           </li>
         ))}

@@ -8,6 +8,8 @@ import YanKutu from "./yan-kutu";
 import { getLiteratureSources, type LiteratureSource } from "@/app/actions/literature";
 import { authorLabel } from "@/lib/citation-format";
 import { bekleyenKaynaklar } from "@/lib/bekleyen-kaynaklar";
+import { useCeviri } from "@/app/_components/dil-saglayici";
+import type { Dil } from "@/lib/dil";
 
 /*
   Sağ paneldeki "Kullanılmayı bekleyen kaynaklar" kartı (26.10.2026).
@@ -22,14 +24,18 @@ export default function BekleyenKaynaklarKarti({
   projectId,
   govdeMetni,
   numarali,
+  belgeDili = "tr",
   onCite,
 }: {
   projectId: string;
   /** Kaynakça bölümü hariç metin. */
   govdeMetni: string;
   numarali: boolean;
+  /** Belgenin dili: yazar etiketi ("vd." / "et al.") atıfla aynı dilde görünsün. */
+  belgeDili?: Dil;
   onCite: (source: LiteratureSource) => void;
 }) {
+  const t = useCeviri();
   const [kaynaklar, setKaynaklar] = useState<LiteratureSource[] | null>(null);
   const [okunamadi, setOkunamadi] = useState(false);
   const [acik, setAcik] = useState(false);
@@ -62,18 +68,18 @@ export default function BekleyenKaynaklarKarti({
     <>
       <YanKutu
         ikon={BookOpenCheck}
-        baslik="Kaynaklar"
+        baslik={t({ tr: "Kaynaklar", en: "Sources" })}
         deger={bekleyen ? bekleyen.length : okunamadi ? "—" : "…"}
         alt={
           bekleyen === null
             ? okunamadi
-              ? "okunamadı"
-              : "yükleniyor"
+              ? t({ tr: "okunamadı", en: "could not be read" })
+              : t({ tr: "yükleniyor", en: "loading" })
             : bekleyen.length
-              ? "atıf bekliyor"
+              ? t({ tr: "atıf bekliyor", en: "awaiting citation" })
               : kaynaklar?.length
-                ? "hepsine atıf var"
-                : "kaynak eklenmedi"
+                ? t({ tr: "hepsine atıf var", en: "all cited" })
+                : t({ tr: "kaynak eklenmedi", en: "no sources added" })
         }
         ton={bekleyen && bekleyen.length ? "warning" : undefined}
         onClick={() => {
@@ -85,9 +91,12 @@ export default function BekleyenKaynaklarKarti({
       <Dialog
         open={acik}
         onClose={() => setAcik(false)}
-        kicker="Kaynaklar"
-        title="Kullanılmayı bekleyen kaynaklar"
-        description="Çalışmaya eklediğiniz ama metinde atıf yapmadığınız kaynaklar. İmleci atıfın gireceği yere koyup “Atıf ekle”ye basın."
+        kicker={t({ tr: "Kaynaklar", en: "Sources" })}
+        title={t({ tr: "Kullanılmayı bekleyen kaynaklar", en: "Sources awaiting citation" })}
+        description={t({
+          tr: "Çalışmaya eklediğiniz ama metinde atıf yapmadığınız kaynaklar. İmleci atıfın gireceği yere koyup “Atıf ekle”ye basın.",
+          en: "Sources you added to this work but have not cited in the text. Place the cursor where the citation should go and click “Cite”.",
+        })}
       >
         {bekleyen?.length ? (
           <ul className="bekleyen-kaynaklar">
@@ -95,7 +104,7 @@ export default function BekleyenKaynaklarKarti({
               <li key={k.id}>
                 <span>
                   <b>
-                    {authorLabel(k)}
+                    {authorLabel(k, belgeDili)}
                     {k.year ? ` (${k.year})` : ""}
                   </b>
                   <small>{k.title}</small>
@@ -108,7 +117,7 @@ export default function BekleyenKaynaklarKarti({
                     onCite(k);
                   }}
                 >
-                  Atıf ekle
+                  {t({ tr: "Atıf ekle", en: "Cite" })}
                 </button>
               </li>
             ))}
@@ -117,15 +126,15 @@ export default function BekleyenKaynaklarKarti({
           <p className="muted text-sm">
             {bekleyen === null
               ? okunamadi
-                ? "Kaynaklar şu an okunamadı; biraz sonra tekrar deneyin."
-                : "Yükleniyor…"
+                ? t({ tr: "Kaynaklar şu an okunamadı; biraz sonra tekrar deneyin.", en: "Sources could not be read right now; try again shortly." })
+                : t({ tr: "Yükleniyor…", en: "Loading…" })
               : kaynaklar?.length
-                ? "Eklediğiniz bütün kaynaklara atıf yapılmış."
-                : "Bu çalışmaya henüz kaynak eklenmedi."}
+                ? t({ tr: "Eklediğiniz bütün kaynaklara atıf yapılmış.", en: "All the sources you added have been cited." })
+                : t({ tr: "Bu çalışmaya henüz kaynak eklenmedi.", en: "No sources have been added to this work yet." })}
           </p>
         )}
         <Link href="/dashboard/literature" className="muted text-sm">
-          Kaynakları yönet →
+          {t({ tr: "Kaynakları yönet →", en: "Manage sources →" })}
         </Link>
       </Dialog>
     </>

@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { aiHataMesaji, aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import type { Cevirici, Metin } from "@/lib/dil";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
@@ -46,19 +48,34 @@ export type KanitDegerlendirmeYaniti = {
   kayitliCevap?: { tarih: string } | null;
 };
 
-const RET_MESAJI: Record<Exclude<KanitDogrulamasi, { gecti: true }>["neden"], string> = {
-  bos: "Asistan değerlendirilebilir bir cevap üretmedi. Tekrar deneyebilirsiniz.",
-  alinti: "Asistanın gösterdiği alıntı incelenen metinde birebir geçmediği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilir ya da kendiniz değerlendirebilirsiniz.",
-  kunye: "Asistan metinde olmayan bir kaynak künyesi ürettiği için cevap gösterilmedi.",
-  uydurma_sayi: "Asistan verilmeyen sayılar ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
+const RET_MESAJI: Record<Exclude<KanitDogrulamasi, { gecti: true }>["neden"], Metin> = {
+  bos: {
+    tr: "Asistan değerlendirilebilir bir cevap üretmedi. Tekrar deneyebilirsiniz.",
+    en: "The assistant did not produce an answer that could be assessed. You can try again.",
+  },
+  alinti: {
+    tr: "Asistanın gösterdiği alıntı incelenen metinde birebir geçmediği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilir ya da kendiniz değerlendirebilirsiniz.",
+    en: "The answer was not shown because the quote the assistant gave does not appear verbatim in the reviewed text. This is a safety check; you can try again or assess it yourself.",
+  },
+  kunye: {
+    tr: "Asistan metinde olmayan bir kaynak künyesi ürettiği için cevap gösterilmedi.",
+    en: "The answer was not shown because the assistant produced a reference that is not in the text.",
+  },
+  uydurma_sayi: {
+    tr: "Asistan verilmeyen sayılar ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
+    en: "The answer was not shown because the assistant produced numbers that were not provided. This is a safety check; you can try again.",
+  },
 };
+const KAYIT_YOK: Metin = { tr: "Kayıt bulunamadı.", en: "Record not found." };
 
 export const kanitAsistaniAcik = async () => aiYapilandirildi();
 
 export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean }): Promise<KanitDegerlendirmeYaniti> {
-  if (!UUID.test(String(girdi.kanitId ?? ""))) return { hata: "Kayıt bulunamadı." };
+  const dil = await aktifDil();
+  const t = await ceviri();
+  if (!UUID.test(String(girdi.kanitId ?? ""))) return { hata: t(KAYIT_YOK) };
 
-  const kapi = await asistanKapisi();
+  const kapi = await asistanKapisi(dil);
   if (!kapi.ok) return { hata: kapi.hata };
 
   const supabase = await createClient();
@@ -69,10 +86,17 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
     .maybeSingle();
   if (error) {
     console.error("[ai] kanıt kaydı okunamadı:", error.message);
-    return { hata: "Kayıt okunamadı. Birazdan tekrar deneyin." };
+    return { hata: t({ tr: "Kayıt okunamadı. Birazdan tekrar deneyin.", en: "The record could not be read. Try again shortly." }) };
   }
-  if (!kayit) return { hata: "Kayıt bulunamadı." };
-  if (!kayit.incelenen_metin) return { hata: "Önce kaynaktan iddiayla ilgili metni ekleyin; asistan yalnızca eklenen metne bakar." };
+  if (!kayit) return { hata: t(KAYIT_YOK) };
+  if (!kayit.incelenen_metin) {
+    return {
+      hata: t({
+        tr: "Önce kaynaktan iddiayla ilgili metni ekleyin; asistan yalnızca eklenen metne bakar.",
+        en: "First add the passage from the source that relates to the claim; the assistant only looks at the text you add.",
+      }),
+    };
+  }
 
   let kunye: string | null = null;
   if (kayit.kaynak_id) {
@@ -94,6 +118,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
     kunye,
     incelenenMetin,
     kapsam: kayit.incelenen_kapsam === "tam_metin" ? "tam_metin" : "bolum",
+    dil,
   });
 
   /*
@@ -110,7 +135,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
         { incelenenMetin, kaynak },
       );
       if (dogrulama.gecti) {
-        const uyari = await hukmuIsle(kayit.id, kayit.project_id, onceki.id, dogrulama.sonuc);
+        const uyari = await hukmuIsle(t, kayit.id, kayit.project_id, onceki.id, dogrulama.sonuc);
         return {
           ...dogrulama.sonuc,
           ...(uyari ? { uyari } : {}), krediUyarisi: kapi.uyari ?? undefined,
@@ -123,7 +148,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
   }
 
   // Hak yalnızca modele gidilecekse yanar.
-  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
+  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
   if (hakHatasi) return { hata: hakHatasi };
 
   const basladi = Date.now();
@@ -137,7 +162,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
     if (!dogrulama.gecti) {
       console.error("[ai] kanıt değerlendirmesi reddedildi", { model: yanit.model, neden: dogrulama.neden, ayrinti: dogrulama.ayrinti });
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: dogrulama.neden, model: yanit.model, cikti: yanit.metin, bulgular: { bulgular: sonuc.bulgular, duzey: sonuc.duzey, alinti: sonuc.alinti } });
-      return { hata: RET_MESAJI[dogrulama.neden], kirpilanlar };
+      return { hata: t(RET_MESAJI[dogrulama.neden]), kirpilanlar };
     }
 
     const kayitId = await asistanKaydet({
@@ -149,13 +174,16 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
     });
 
     const uyari = kayitId
-      ? await hukmuIsle(kayit.id, kayit.project_id, kayitId, dogrulama.sonuc)
-      : "Değerlendirme gösterildi ama asistan kaydı yazılamadığı için kanıt matrisine işlenmedi.";
+      ? await hukmuIsle(t, kayit.id, kayit.project_id, kayitId, dogrulama.sonuc)
+      : t({
+          tr: "Değerlendirme gösterildi ama asistan kaydı yazılamadığı için kanıt matrisine işlenmedi.",
+          en: "The assessment is shown, but it was not added to the evidence matrix because the assistant record could not be saved.",
+        });
 
     return { ...dogrulama.sonuc, ...(uyari ? { uyari } : {}), krediUyarisi: kapi.uyari ?? undefined, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
-    const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
-    console.error("[ai] kanıt değerlendirmesi başarısız", mesaj);
+    const mesaj = aiHataMesaji(hata, dil) ?? t({ tr: "Asistan yanıt veremedi.", en: "The assistant could not respond." });
+    console.error("[ai] kanıt değerlendirmesi başarısız", hata instanceof Error ? hata.message : hata);
     await asistanKaydet({ ...ortak, durum: "failed" });
     return { hata: mesaj, kirpilanlar };
   }
@@ -163,6 +191,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
 
 /** Hükmü kanıt kaydına yazar. Yazılamazsa kullanıcıya gösterilecek uyarıyı döner. */
 async function hukmuIsle(
+  t: Cevirici,
   kanitId: string,
   projectId: string,
   asistanKaydi: string,
@@ -184,7 +213,10 @@ async function hukmuIsle(
     .eq("id", kanitId);
   if (error) {
     console.error("[ai] kanıt hükmü işlenemedi:", error.code, error.message);
-    return "Değerlendirme gösterildi ama kanıt matrisine işlenemedi (yazma yetkiniz olmayabilir).";
+    return t({
+      tr: "Değerlendirme gösterildi ama kanıt matrisine işlenemedi (yazma yetkiniz olmayabilir).",
+      en: "The assessment is shown, but it could not be added to the evidence matrix (you may not have write permission).",
+    });
   }
   revalidatePath(`/dashboard/editor/${projectId}/kanit`);
   revalidatePath(`/dashboard/editor/${projectId}/makale`);

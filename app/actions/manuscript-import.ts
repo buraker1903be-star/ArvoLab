@@ -5,6 +5,7 @@ import { convertDocxToEditorHtml, type DocxImportStats } from "@/lib/docx-import
 import { IMAGE_BUCKET, SIGNED_URL_TTL_SECONDS } from "@/lib/manuscript-images";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { isOversightRole } from "@/lib/project-labels";
+import { ceviri } from "@/lib/dil-sunucu";
 
 const MAX_DOCX_BYTES = 25 * 1024 * 1024;
 
@@ -20,12 +21,13 @@ export async function importWordDocument(
 ): Promise<{ error?: string; html?: string; stats?: DocxImportStats }> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   /* Abonelik kapısı: Word içe aktarma yeni içerik üretir; saveManuscript ile aynı kapı. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const bucket = ctx.supabase.storage.from(IMAGE_BUCKET);
   const ownImport = storagePath.startsWith(`${ctx.user.id}/imports/`) && /\.docx$/i.test(storagePath) && !storagePath.includes("..");
-  if (!ownImport) return { error: "Geçersiz dosya." };
+  if (!ownImport) return { error: t({ tr: "Geçersiz dosya.", en: "Invalid file." }) };
 
   try {
     const { data: project } = await ctx.supabase
@@ -39,15 +41,15 @@ export async function importWordDocument(
     const yazabilir =
       project && (project.owner_id === ctx.user.id || project.assignee_id === ctx.user.id || isOversightRole(ctx.role));
     if (!yazabilir) {
-      return { error: "Bu çalışmaya metin aktarma yetkiniz yok." };
+      return { error: t({ tr: "Bu çalışmaya metin aktarma yetkiniz yok.", en: "You do not have permission to import text into this work." }) };
     }
 
     const { data: file, error: downloadError } = await bucket.download(storagePath);
     if (downloadError || !file) {
       console.error(downloadError);
-      return { error: "Yüklenen dosya okunamadı." };
+      return { error: t({ tr: "Yüklenen dosya okunamadı.", en: "The uploaded file could not be read." }) };
     }
-    if (file.size > MAX_DOCX_BYTES) return { error: "Word dosyası 25 MB sınırını aşıyor." };
+    if (file.size > MAX_DOCX_BYTES) return { error: t({ tr: "Word dosyası 25 MB sınırını aşıyor.", en: "The Word file exceeds the 25 MB limit." }) };
 
     const stamp = Date.now();
     const { html, stats } = await convertDocxToEditorHtml(Buffer.from(await file.arrayBuffer()), async (image, index) => {
@@ -63,12 +65,17 @@ export async function importWordDocument(
     });
 
     if (!html.replace(/<[^>]+>/g, "").trim() && stats.images === 0) {
-      return { error: "Word dosyasında aktarılacak metin bulunamadı." };
+      return { error: t({ tr: "Word dosyasında aktarılacak metin bulunamadı.", en: "No text to import was found in the Word file." }) };
     }
     return { html, stats };
   } catch (error) {
     console.error(error);
-    return { error: "Word dosyası dönüştürülemedi. Dosyanın bozuk olmadığından ve .docx biçiminde olduğundan emin olun." };
+    return {
+      error: t({
+        tr: "Word dosyası dönüştürülemedi. Dosyanın bozuk olmadığından ve .docx biçiminde olduğundan emin olun.",
+        en: "The Word file could not be converted. Make sure the file is not corrupted and is in .docx format.",
+      }),
+    };
   } finally {
     // Geçici yükleme her durumda silinir.
     await bucket.remove([storagePath]).catch(() => undefined);

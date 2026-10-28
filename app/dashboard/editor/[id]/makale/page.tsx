@@ -11,18 +11,19 @@ import { makaleBolumleri } from "@/lib/makale/bolumler";
 import { gonderimKontrolu, type MakaleProfili } from "@/lib/makale/gonderim-kontrolu";
 import {
   EQUATOR_ADRESI,
-  MAKALE_TURLERI,
   MAKALE_TURU_SIRASI,
-  STANDART_UYARISI,
-  YONTEM_DENETIMLERI,
   bolumAdi,
+  makaleTuruTanimi,
+  standartUyarisi,
   yontemAilesi,
+  yontemDenetimi,
 } from "@/lib/makale/sablonlar";
 import { denetimListesi } from "@/lib/ai/makale-denetimi";
 import { matrisOzeti } from "@/lib/kanit/durum";
 import ActionForm from "@/app/dashboard/action-form";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
-import { trTarihSaat } from "@/lib/tr-time";
+import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
 import MakaleAsistani from "./makale-asistani";
 import CalismaSekmeleri from "../calisma-sekmeleri";
 
@@ -59,15 +60,29 @@ const VARSAYILAN_PROFIL: MakaleProfili = {
 };
 
 const MADDE_TONU = { tamam: "success", eksik: "danger", dikkat: "warning", bilgi: "info" } as const;
-const MADDE_ETIKETI = { tamam: "Tamam", eksik: "Eksik", dikkat: "Bakılacak", bilgi: "Not" } as const;
+const MADDE_ETIKETI: Record<keyof typeof MADDE_TONU, Metin> = {
+  tamam: { tr: "Tamam", en: "Done" },
+  eksik: { tr: "Eksik", en: "Missing" },
+  dikkat: { tr: "Bakılacak", en: "Review" },
+  bilgi: { tr: "Not", en: "Note" },
+};
 
-const KAPAK_MEKTUBU = [
-  "Derginin ve editörün adı; makalenin başlığı ve türü",
-  "Çalışmanın neyi ele aldığı ve alana katkısı — kendi cümlelerinizle",
-  "Makalenin özgün olduğu ve başka bir yerde değerlendirmede olmadığı beyanı",
-  "Etik kurul onayı, aydınlatılmış onam (gerekiyorsa)",
-  "Çıkar çatışması ve finansman beyanı",
-  "Derginin istediği ek bilgiler (ör. önerilen hakemler, veri paylaşım beyanı)",
+const KAPAK_MEKTUBU: Metin[] = [
+  { tr: "Derginin ve editörün adı; makalenin başlığı ve türü", en: "The journal's and editor's names; the article's title and type" },
+  {
+    tr: "Çalışmanın neyi ele aldığı ve alana katkısı — kendi cümlelerinizle",
+    en: "What the study addresses and its contribution to the field — in your own words",
+  },
+  {
+    tr: "Makalenin özgün olduğu ve başka bir yerde değerlendirmede olmadığı beyanı",
+    en: "A statement that the article is original and not under consideration elsewhere",
+  },
+  { tr: "Etik kurul onayı, aydınlatılmış onam (gerekiyorsa)", en: "Ethics committee approval, informed consent (if required)" },
+  { tr: "Çıkar çatışması ve finansman beyanı", en: "Conflict of interest and funding statement" },
+  {
+    tr: "Derginin istediği ek bilgiler (ör. önerilen hakemler, veri paylaşım beyanı)",
+    en: "Additional information the journal requires (e.g., suggested reviewers, data sharing statement)",
+  },
 ];
 
 export default async function MakaleCalismaAlani({
@@ -79,6 +94,9 @@ export default async function MakaleCalismaAlani({
 }) {
   const [{ id }, sorgu] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
+  const t = await ceviri();
+  const dil = await aktifDil();
+  const { tarihSaat } = await tarihler();
   const { data: calisma, error } = await supabase
     .from("academic_projects")
     .select("id, title, project_type, research_method")
@@ -87,7 +105,9 @@ export default async function MakaleCalismaAlani({
   if (error) {
     return (
       <main className="dashboard-page">
-        <p className="alert" role="alert">Çalışma okunamadı. Kaydınız yerinde duruyor; sayfayı yenileyin.</p>
+        <p className="alert" role="alert">
+          {t({ tr: "Çalışma okunamadı. Kaydınız yerinde duruyor; sayfayı yenileyin.", en: "The work could not be read. Your data is safe; refresh the page." })}
+        </p>
       </main>
     );
   }
@@ -97,14 +117,23 @@ export default async function MakaleCalismaAlani({
     return (
       <main className="dashboard-page">
         <article className="resume-card">
-          <span className="dashboard-kicker">Makale çalışma alanı</span>
+          <span className="dashboard-kicker">{t({ tr: "Makale çalışma alanı", en: "Article workspace" })}</span>
           <div className="resume-heading">
-            <h2>Bu çalışma makale türünde değil</h2>
-            <p>Makale çalışma alanı makale türündeki çalışmalar içindir. Türü çalışma ayarlarından değiştirebilirsiniz.</p>
+            <h2>{t({ tr: "Bu çalışma makale türünde değil", en: "This work is not an article" })}</h2>
+            <p>
+              {t({
+                tr: "Makale çalışma alanı makale türündeki çalışmalar içindir. Türü çalışma ayarlarından değiştirebilirsiniz.",
+                en: "The article workspace is for article-type works. You can change the type in the work settings.",
+              })}
+            </p>
           </div>
           <div className="cluster">
-            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">Çalışma özeti</Link>
-            <Link href={`/dashboard/editor/${id}/edit`} className="projects-filter-button">Çalışma ayarları</Link>
+            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
+              {t({ tr: "Çalışma özeti", en: "Work overview" })}
+            </Link>
+            <Link href={`/dashboard/editor/${id}/edit`} className="projects-filter-button">
+              {t({ tr: "Çalışma ayarları", en: "Work settings" })}
+            </Link>
           </div>
         </article>
       </main>
@@ -120,128 +149,144 @@ export default async function MakaleCalismaAlani({
   ]);
 
   const profil: MakaleProfili = kayitliProfil ?? VARSAYILAN_PROFIL;
-  const tur = MAKALE_TURLERI[profil.makale_turu];
-  const bolumler = makaleBolumleri(musvedde.data?.content);
+  const tur = makaleTuruTanimi(profil.makale_turu, dil);
+  const bolumler = makaleBolumleri(musvedde.data?.content, dil);
   const kanitOzeti = matrisOzeti(matris.kayitlar);
   /* Türkiye günü: UTC günü gece 00:00–03:00 arasında dünü verir ve "kontrol
      edileli N gün" bir gün eksik görünürdü. */
   const bugun = trGunAnahtari();
-  const maddeler = gonderimKontrolu({ profil, bolumler, kanit: kanitOzeti, bugun });
+  const maddeler = gonderimKontrolu({ profil, bolumler, kanit: kanitOzeti, bugun }, dil);
   const aile = yontemAilesi(calisma.research_method, profil.makale_turu);
+  const yontem = aile ? yontemDenetimi(aile, dil) : null;
 
   return (
     <main className="dashboard-page">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">Makale çalışma alanı · {tur.etiket}</span>
+          <span className="dashboard-kicker">
+            {t({ tr: "Makale çalışma alanı", en: "Article workspace" })} · {tur.etiket}
+          </span>
           <h1>{calisma.title}</h1>
           <p>
-            {profil.hedef_dergi ? `Hedef: ${profil.hedef_dergi}` : "Hedef dergi seçilmedi"}
+            {profil.hedef_dergi
+              ? t({ tr: `Hedef: ${profil.hedef_dergi}`, en: `Target: ${profil.hedef_dergi}` })
+              : t({ tr: "Hedef dergi seçilmedi", en: "No target journal selected" })}
             {profil.arastirma_sorusu ? ` · ${profil.arastirma_sorusu}` : ""}
           </p>
         </div>
         <div className="merkez-ust-eylemler">
           <PanelDrawer
-            triggerLabel={kayitliProfil ? "Makale bilgileri" : "Makale bilgilerini girin"}
+            triggerLabel={
+              kayitliProfil ? t({ tr: "Makale bilgileri", en: "Article details" }) : t({ tr: "Makale bilgilerini girin", en: "Enter article details" })
+            }
             triggerIcon={<Settings2 size={16} aria-hidden="true" />}
             triggerClassName={kayitliProfil ? "projects-filter-button" : "projects-primary-button"}
-            kicker="Makale"
-            title="Makale bilgileri"
-            description="Tür, araştırma sorusu ve hedef derginin sınırları. Dergi bilgilerini derginin kendi sayfasından kontrol edin; ArvoLab bunları doğrulamıyor."
+            kicker={t({ tr: "Makale", en: "Article" })}
+            title={t({ tr: "Makale bilgileri", en: "Article details" })}
+            description={t({
+              tr: "Tür, araştırma sorusu ve hedef derginin sınırları. Dergi bilgilerini derginin kendi sayfasından kontrol edin; ArvoLab bunları doğrulamıyor.",
+              en: "Type, research question and the target journal's limits. Check the journal details on the journal's own website; ArvoLab does not verify them.",
+            })}
             /* Yeni makale buraya ?dergi=1 ile geliyor (createProject): kılavuzun
                makaledeki karşılığı derginin kuralları, ilk iş onları girmek. */
             acikBasla={sorgu.dergi === "1" && !kayitliProfil}
           >
-            <ActionForm className="project-form-grid" action={makaleProfiliKaydet} successMessage="Makale bilgileri kaydedildi.">
+            <ActionForm className="project-form-grid" action={makaleProfiliKaydet} successMessage={t({ tr: "Makale bilgileri kaydedildi.", en: "Article details saved." })}>
               <input type="hidden" name="project_id" value={id} />
               <label>
-                <span>Makale türü</span>
+                <span>{t({ tr: "Makale türü", en: "Article type" })}</span>
                 <select name="makale_turu" defaultValue={profil.makale_turu}>
-                  {MAKALE_TURU_SIRASI.map((t) => (
-                    <option key={t} value={t}>{MAKALE_TURLERI[t].etiket}</option>
+                  {MAKALE_TURU_SIRASI.map((k) => (
+                    <option key={k} value={k}>{makaleTuruTanimi(k, dil).etiket}</option>
                   ))}
                 </select>
               </label>
               <label>
-                <span>Makale dili</span>
+                <span>{t({ tr: "Makale dili", en: "Article language" })}</span>
                 <select name="dil" defaultValue={profil.dil}>
-                  <option value="tr">Türkçe</option>
-                  <option value="en">İngilizce</option>
-                  <option value="diger">Diğer</option>
+                  <option value="tr">{t({ tr: "Türkçe", en: "Turkish" })}</option>
+                  <option value="en">{t({ tr: "İngilizce", en: "English" })}</option>
+                  <option value="diger">{t({ tr: "Diğer", en: "Other" })}</option>
                 </select>
               </label>
               <label className="project-form-full">
-                <span>Araştırma problemi</span>
+                <span>{t({ tr: "Araştırma problemi", en: "Research problem" })}</span>
                 <textarea name="arastirma_problemi" rows={2} maxLength={2000} defaultValue={profil.arastirma_problemi ?? ""} />
               </label>
               <label className="project-form-full">
-                <span>Araştırma sorusu</span>
+                <span>{t({ tr: "Araştırma sorusu", en: "Research question" })}</span>
                 <textarea name="arastirma_sorusu" rows={2} maxLength={1000} defaultValue={profil.arastirma_sorusu ?? ""} />
               </label>
               <label>
-                <span>Araştırma tasarımı</span>
-                <input name="arastirma_tasarimi" type="text" maxLength={500} defaultValue={kayitliProfil?.arastirma_tasarimi ?? ""} placeholder="Kesitsel, yarı deneysel, fenomenoloji…" />
+                <span>{t({ tr: "Araştırma tasarımı", en: "Research design" })}</span>
+                <input
+                  name="arastirma_tasarimi"
+                  type="text"
+                  maxLength={500}
+                  defaultValue={kayitliProfil?.arastirma_tasarimi ?? ""}
+                  placeholder={t({ tr: "Kesitsel, yarı deneysel, fenomenoloji…", en: "Cross-sectional, quasi-experimental, phenomenology…" })}
+                />
               </label>
               <label>
-                <span>Hedef disiplin</span>
+                <span>{t({ tr: "Hedef disiplin", en: "Target discipline" })}</span>
                 <input name="disiplin" type="text" maxLength={200} defaultValue={kayitliProfil?.disiplin ?? ""} />
               </label>
               <label>
-                <span>Hedef dergi / yayın</span>
+                <span>{t({ tr: "Hedef dergi / yayın", en: "Target journal / venue" })}</span>
                 <input name="hedef_dergi" type="text" maxLength={300} defaultValue={profil.hedef_dergi ?? ""} />
               </label>
               <label>
-                <span>Yazım kuralları adresi</span>
+                <span>{t({ tr: "Yazım kuralları adresi", en: "Author guidelines URL" })}</span>
                 <input name="dergi_kurallari_adresi" type="url" maxLength={1000} defaultValue={profil.dergi_kurallari_adresi ?? ""} placeholder="https://" />
               </label>
               <label>
-                <span>Kuralları kontrol ettiğim tarih</span>
+                <span>{t({ tr: "Kuralları kontrol ettiğim tarih", en: "Date I checked the guidelines" })}</span>
                 <input name="dergi_kurallari_kontrol" type="date" defaultValue={profil.dergi_kurallari_kontrol ?? ""} />
               </label>
               <label>
-                <span>Raporlama standardı</span>
+                <span>{t({ tr: "Raporlama standardı", en: "Reporting standard" })}</span>
                 <input name="raporlama_standardi" type="text" maxLength={100} defaultValue={profil.raporlama_standardi ?? ""} placeholder={tur.standartlar[0]?.ad ?? ""} />
               </label>
               <label>
-                <span>Kelime sınırı</span>
+                <span>{t({ tr: "Kelime sınırı", en: "Word limit" })}</span>
                 <input name="kelime_siniri" type="number" min={100} max={100000} defaultValue={profil.kelime_siniri ?? ""} />
               </label>
               <label>
-                <span>Özet sınırı (sözcük)</span>
+                <span>{t({ tr: "Özet sınırı (sözcük)", en: "Abstract limit (words)" })}</span>
                 <input name="ozet_siniri" type="number" min={30} max={2000} defaultValue={profil.ozet_siniri ?? ""} />
               </label>
               <label>
-                <span>Anahtar kelime (en az)</span>
+                <span>{t({ tr: "Anahtar kelime (en az)", en: "Keywords (minimum)" })}</span>
                 <input name="anahtar_en_az" type="number" min={1} max={20} defaultValue={profil.anahtar_en_az ?? ""} />
               </label>
               <label>
-                <span>Anahtar kelime (en çok)</span>
+                <span>{t({ tr: "Anahtar kelime (en çok)", en: "Keywords (maximum)" })}</span>
                 <input name="anahtar_en_cok" type="number" min={1} max={20} defaultValue={profil.anahtar_en_cok ?? ""} />
               </label>
               <label>
-                <span>Veri ve analiz durumu</span>
+                <span>{t({ tr: "Veri ve analiz durumu", en: "Data and analysis status" })}</span>
                 <select name="veri_durumu" defaultValue={profil.veri_durumu}>
-                  <option value="yok">Veri yok</option>
-                  <option value="toplaniyor">Veri toplanıyor</option>
-                  <option value="toplandi">Veri toplandı</option>
-                  <option value="analiz_edildi">Analiz tamamlandı</option>
-                  <option value="gerekmiyor">Veri gerekmiyor (derleme vb.)</option>
+                  <option value="yok">{t({ tr: "Veri yok", en: "No data" })}</option>
+                  <option value="toplaniyor">{t({ tr: "Veri toplanıyor", en: "Collecting data" })}</option>
+                  <option value="toplandi">{t({ tr: "Veri toplandı", en: "Data collected" })}</option>
+                  <option value="analiz_edildi">{t({ tr: "Analiz tamamlandı", en: "Analysis completed" })}</option>
+                  <option value="gerekmiyor">{t({ tr: "Veri gerekmiyor (derleme vb.)", en: "No data needed (review, etc.)" })}</option>
                 </select>
               </label>
               <label className="project-form-full">
-                <span>Özet</span>
+                <span>{t({ tr: "Özet", en: "Abstract" })}</span>
                 <textarea name="ozet" rows={5} maxLength={8000} defaultValue={profil.ozet ?? ""} />
               </label>
               <label className="project-form-full">
-                <span>Anahtar kelimeler (virgülle ayırın)</span>
+                <span>{t({ tr: "Anahtar kelimeler (virgülle ayırın)", en: "Keywords (separate with commas)" })}</span>
                 <input name="anahtar_kelimeler" type="text" defaultValue={profil.anahtar_kelimeler.join(", ")} />
               </label>
               <label className="project-form-full">
-                <span>Dergi kuralları notları</span>
+                <span>{t({ tr: "Dergi kuralları notları", en: "Journal guideline notes" })}</span>
                 <textarea name="dergi_kurallari_notu" rows={3} maxLength={4000} defaultValue={kayitliProfil?.dergi_kurallari_notu ?? ""} />
               </label>
               <div className="project-form-actions project-form-full">
-                <button type="submit" className="projects-primary-button">Kaydet</button>
+                <button type="submit" className="projects-primary-button">{t({ tr: "Kaydet", en: "Save" })}</button>
               </div>
             </ActionForm>
           </PanelDrawer>
@@ -251,27 +296,37 @@ export default async function MakaleCalismaAlani({
       <CalismaSekmeleri calisma={calisma} aktif="makale" />
 
       {profilOkunamadi && (
-        <p className="alert mb-md" role="alert">Makale bilgileri okunamadı; aşağıdaki kontroller varsayılanlarla hesaplandı. Sayfayı yenileyin.</p>
+        <p className="alert mb-md" role="alert">
+          {t({
+            tr: "Makale bilgileri okunamadı; aşağıdaki kontroller varsayılanlarla hesaplandı. Sayfayı yenileyin.",
+            en: "Article details could not be read; the checks below were calculated with defaults. Refresh the page.",
+          })}
+        </p>
       )}
       {!kayitliProfil && !profilOkunamadi && (
         <p className="callout mb-md" data-tone="accent">
-          <strong>Makale bilgileri girilmedi.</strong> Tür, araştırma sorusu ve hedef derginin sınırlarını girdiğinizde
-          şablon, gönderim kontrolü ve bölüm denetimi bunlara göre kurulur.
+          <strong>{t({ tr: "Makale bilgileri girilmedi.", en: "Article details have not been entered." })}</strong>{" "}
+          {t({
+            tr: "Tür, araştırma sorusu ve hedef derginin sınırlarını girdiğinizde şablon, gönderim kontrolü ve bölüm denetimi bunlara göre kurulur.",
+            en: "Once you enter the type, research question and the target journal's limits, the template, submission checklist and section review are built on them.",
+          })}
         </p>
       )}
 
       <section className="section">
         <h2 className="section-title">
-          <ListChecks size={18} aria-hidden="true" /> Gönderim öncesi kontrol
+          <ListChecks size={18} aria-hidden="true" /> {t({ tr: "Gönderim öncesi kontrol", en: "Pre-submission checklist" })}
         </h2>
         <p className="muted text-base">
-          Kaydedilmiş müsveddeden ve kanıt matrisinden hesaplanır. Kabul olasılığı ya da dergiye uygunluk hükmü
-          verilmez; bunları hiçbir veri doğrulayamaz.
+          {t({
+            tr: "Kaydedilmiş müsveddeden ve kanıt matrisinden hesaplanır. Kabul olasılığı ya da dergiye uygunluk hükmü verilmez; bunları hiçbir veri doğrulayamaz.",
+            en: "Calculated from the saved manuscript and the evidence matrix. No acceptance probability or journal-fit verdict is given; no data can verify these.",
+          })}
         </p>
         <ul className="asistan-bulgular mt-sm">
           {maddeler.map((m) => (
             <li className="asistan-bulgu" data-tone={MADDE_TONU[m.durum]} key={m.anahtar}>
-              <span className="asistan-bulgu-etiket">{MADDE_ETIKETI[m.durum]}</span>
+              <span className="asistan-bulgu-etiket">{t(MADDE_ETIKETI[m.durum])}</span>
               <span className="asistan-bulgu-metin">
                 <b>{m.baslik}</b>
                 {m.aciklama}
@@ -291,15 +346,19 @@ export default async function MakaleCalismaAlani({
         Dışa aktarma karosu kalktı: "Yazım" sekmesinin kendisi.
       */}
       <section className="section">
-        <h2 className="section-title">Araçlar</h2>
+        <h2 className="section-title">{t({ tr: "Araçlar", en: "Tools" })}</h2>
         <div className="calisma-karolari">
           <PanelDrawer
-            triggerLabel="Bölüm denetimi"
-            triggerNote={bolumler.length ? `${bolumler.length} bölüm · asistan` : "Müsveddede başlıklı bölüm yok"}
+            triggerLabel={t({ tr: "Bölüm denetimi", en: "Section review" })}
+            triggerNote={
+              bolumler.length
+                ? t({ tr: `${bolumler.length} bölüm · asistan`, en: `${bolumler.length} sections · assistant` })
+                : t({ tr: "Müsveddede başlıklı bölüm yok", en: "No headed sections in the manuscript" })
+            }
             triggerIcon={<Sparkles size={18} aria-hidden="true" />}
             triggerClassName="merkez-baglanti"
-            kicker="Asistan"
-            title="Bölüm denetimi"
+            kicker={t({ tr: "Asistan", en: "Assistant" })}
+            title={t({ tr: "Bölüm denetimi", en: "Section review" })}
             boy="genis"
             basaridaKapan={false}
           >
@@ -311,17 +370,21 @@ export default async function MakaleCalismaAlani({
           </PanelDrawer>
 
           <PanelDrawer
-            triggerLabel="Şablon ve bölüm planı"
+            triggerLabel={t({ tr: "Şablon ve bölüm planı", en: "Template and section plan" })}
             triggerNote={`${tur.etiket}${tur.standartlar.length ? ` · ${tur.standartlar.map((st) => st.ad).join(", ")}` : ""}`}
             triggerIcon={<FileText size={18} aria-hidden="true" />}
             triggerClassName="merkez-baglanti"
-            kicker="Makale"
-            title="Şablon ve bölüm planı"
+            kicker={t({ tr: "Makale", en: "Article" })}
+            title={t({ tr: "Şablon ve bölüm planı", en: "Template and section plan" })}
             boy="genis"
             basaridaKapan={false}
           >
             <p className="muted text-base">
-              {tur.aciklama} Bu bir başlangıç planıdır; hedef derginin talimatı farklı bir düzen istiyorsa dergi geçerlidir.
+              {tur.aciklama}{" "}
+              {t({
+                tr: "Bu bir başlangıç planıdır; hedef derginin talimatı farklı bir düzen istiyorsa dergi geçerlidir.",
+                en: "This is a starting plan; if the target journal's instructions require a different structure, the journal's take precedence.",
+              })}
             </p>
             <ul className="makale-plan mt-sm">
               {tur.bolumler.map((b) => {
@@ -330,7 +393,13 @@ export default async function MakaleCalismaAlani({
                   <li key={b}>
                     <span>{bolumAdi(b, profil.dil)}</span>
                     <span className="status-pill" data-tone={b === "ozet" ? (profil.ozet ? "success" : "neutral") : metinde ? "success" : "neutral"}>
-                      {b === "ozet" ? (profil.ozet ? "Makale bilgilerinde" : "Girilmedi") : metinde ? `Metinde · yaklaşık ${metinde.sozcuk} sözcük` : "Metinde başlık yok"}
+                      {b === "ozet"
+                        ? profil.ozet
+                          ? t({ tr: "Makale bilgilerinde", en: "In article details" })
+                          : t({ tr: "Girilmedi", en: "Not entered" })
+                        : metinde
+                          ? t({ tr: `Metinde · yaklaşık ${metinde.sozcuk} sözcük`, en: `In text · about ${metinde.sozcuk} words` })
+                          : t({ tr: "Metinde başlık yok", en: "No heading in text" })}
                     </span>
                   </li>
                 );
@@ -345,7 +414,7 @@ export default async function MakaleCalismaAlani({
             )}
             {tur.standartlar.length > 0 && (
               <div className="callout mt-md" data-tone="accent">
-                <strong>İlgili olabilecek raporlama standartları</strong>
+                <strong>{t({ tr: "İlgili olabilecek raporlama standartları", en: "Reporting standards that may apply" })}</strong>
                 <ul className="kanit-alanlar">
                   {tur.standartlar.map((s) => (
                     <li key={s.ad}>
@@ -354,7 +423,7 @@ export default async function MakaleCalismaAlani({
                   ))}
                 </ul>
                 <p className="callout-body text-sm">
-                  {STANDART_UYARISI}{" "}
+                  {standartUyarisi(dil)}{" "}
                   <a className="link-accent" href={EQUATOR_ADRESI} target="_blank" rel="noopener noreferrer">
                     EQUATOR Network <ExternalLink size={12} aria-hidden="true" />
                   </a>
@@ -363,22 +432,24 @@ export default async function MakaleCalismaAlani({
             )}
           </PanelDrawer>
 
-          {aile && (
+          {yontem && (
             <PanelDrawer
-              triggerLabel="Yönteme göre kontrol listesi"
-              triggerNote={`${YONTEM_DENETIMLERI[aile].etiket} · ${YONTEM_DENETIMLERI[aile].maddeler.length} madde`}
+              triggerLabel={t({ tr: "Yönteme göre kontrol listesi", en: "Method checklist" })}
+              triggerNote={t({ tr: `${yontem.etiket} · ${yontem.maddeler.length} madde`, en: `${yontem.etiket} · ${yontem.maddeler.length} items` })}
               triggerIcon={<ListChecks size={18} aria-hidden="true" />}
               triggerClassName="merkez-baglanti"
-              kicker="Yöntem"
-              title={`${YONTEM_DENETIMLERI[aile].etiket}: kontrol listesi`}
+              kicker={t({ tr: "Yöntem", en: "Method" })}
+              title={t({ tr: `${yontem.etiket}: kontrol listesi`, en: `${yontem.etiket}: checklist` })}
               basaridaKapan={false}
             >
               <p className="muted text-base">
-                Asistan yöntem ve bulgular bölümlerini denetlerken bu maddelere bakar. Gerçek analiz sonuçlarının yerine
-                tahmin koymaz; analiz çıktısını Analiz modülünde denetletebilirsiniz.
+                {t({
+                  tr: "Asistan yöntem ve bulgular bölümlerini denetlerken bu maddelere bakar. Gerçek analiz sonuçlarının yerine tahmin koymaz; analiz çıktısını Analiz modülünde denetletebilirsiniz.",
+                  en: "The assistant checks these items when reviewing the methods and results sections. It never substitutes guesses for actual analysis results; you can have your analysis output reviewed in the Analysis module.",
+                })}
               </p>
               <ul className="kanit-alanlar mt-sm">
-                {YONTEM_DENETIMLERI[aile].maddeler.map((m) => (
+                {yontem.maddeler.map((m) => (
                   <li key={m}>{m}</li>
                 ))}
               </ul>
@@ -386,52 +457,64 @@ export default async function MakaleCalismaAlani({
           )}
 
           <PanelDrawer
-            triggerLabel="Literatür tarama günlüğü"
-            triggerNote={gunluk.okunamadi ? "Okunamadı" : gunluk.satirlar.length ? `Son ${gunluk.satirlar.length} arama` : "Bu çalışmaya bağlı arama yok"}
+            triggerLabel={t({ tr: "Literatür tarama günlüğü", en: "Literature search log" })}
+            triggerNote={
+              gunluk.okunamadi
+                ? t({ tr: "Okunamadı", en: "Could not be read" })
+                : gunluk.satirlar.length
+                  ? t({ tr: `Son ${gunluk.satirlar.length} arama`, en: `Last ${gunluk.satirlar.length} searches` })
+                  : t({ tr: "Bu çalışmaya bağlı arama yok", en: "No searches linked to this work" })
+            }
             triggerIcon={<Search size={18} aria-hidden="true" />}
             triggerClassName="merkez-baglanti"
-            kicker="Literatür"
-            title="Literatür tarama günlüğü"
+            kicker={t({ tr: "Literatür", en: "Literature" })}
+            title={t({ tr: "Literatür tarama günlüğü", en: "Literature search log" })}
             boy="genis"
             basaridaKapan={false}
           >
             <p className="muted text-base">
-              Bu çalışma için yapılan aramalar: sorgu, tarih, filtreler ve cevap veren dizinler. Yalnızca OpenAlex ve
-              Crossref taranır; bu günlük taramanın kapsamını gösterir, literatürün tamamının tarandığını değil.
+              {t({
+                tr: "Bu çalışma için yapılan aramalar: sorgu, tarih, filtreler ve cevap veren dizinler. Yalnızca OpenAlex ve Crossref taranır; bu günlük taramanın kapsamını gösterir, literatürün tamamının tarandığını değil.",
+                en: "Searches run for this work: query, date, filters and the indexes that responded. Only OpenAlex and Crossref are searched; this log shows the scope of the search, not that the entire literature was searched.",
+              })}
             </p>
             {gunluk.okunamadi ? (
-              <p className="alert mt-sm" role="alert">Tarama günlüğü okunamadı.</p>
+              <p className="alert mt-sm" role="alert">{t({ tr: "Tarama günlüğü okunamadı.", en: "The search log could not be read." })}</p>
             ) : gunluk.satirlar.length === 0 ? (
-              <p className="muted mt-sm">Bu çalışmaya bağlı arama yok.</p>
+              <p className="muted mt-sm">{t({ tr: "Bu çalışmaya bağlı arama yok.", en: "No searches linked to this work." })}</p>
             ) : (
               <div className="kanit-matris-sarici mt-sm">
                 <table className="kanit-matris">
                   <thead>
                     <tr>
-                      <th>Tarih</th>
-                      <th>Sorgu</th>
-                      <th>Filtreler</th>
-                      <th>Cevap veren dizin</th>
-                      <th>Gösterilen sonuç</th>
+                      <th>{t({ tr: "Tarih", en: "Date" })}</th>
+                      <th>{t({ tr: "Sorgu", en: "Query" })}</th>
+                      <th>{t({ tr: "Filtreler", en: "Filters" })}</th>
+                      <th>{t({ tr: "Cevap veren dizin", en: "Responding index" })}</th>
+                      <th>{t({ tr: "Gösterilen sonuç", en: "Results shown" })}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {gunluk.satirlar.map((s) => (
                       <tr key={s.id}>
-                        <td>{trTarihSaat(s.olusturuldu)}</td>
+                        <td>{tarihSaat(s.olusturuldu)}</td>
                         <td className="mono">{s.sorgu}</td>
                         <td>
                           {[
-                            s.filtreler.yilDan ? `${s.filtreler.yilDan}’den` : "",
-                            s.filtreler.yilaKadar ? `${s.filtreler.yilaKadar}’e kadar` : "",
-                            s.filtreler.yalnizcaAcikErisim ? "yalnızca açık erişim" : "",
+                            s.filtreler.yilDan ? t({ tr: `${s.filtreler.yilDan}’den`, en: `from ${s.filtreler.yilDan}` }) : "",
+                            s.filtreler.yilaKadar ? t({ tr: `${s.filtreler.yilaKadar}’e kadar`, en: `until ${s.filtreler.yilaKadar}` }) : "",
+                            s.filtreler.yalnizcaAcikErisim ? t({ tr: "yalnızca açık erişim", en: "open access only" }) : "",
                           ]
                             .filter(Boolean)
                             .join(", ") || "—"}
                         </td>
                         <td>
-                          {s.yanit_veren.join(", ") || "Hiçbiri"}
-                          {s.ulasilamayan.length ? <small>ulaşılamadı: {s.ulasilamayan.join(", ")}</small> : null}
+                          {s.yanit_veren.join(", ") || t({ tr: "Hiçbiri", en: "None" })}
+                          {s.ulasilamayan.length ? (
+                            <small>
+                              {t({ tr: "ulaşılamadı", en: "unreachable" })}: {s.ulasilamayan.join(", ")}
+                            </small>
+                          ) : null}
                         </td>
                         <td>{s.gosterilen_sonuc}</td>
                       </tr>
@@ -441,35 +524,41 @@ export default async function MakaleCalismaAlani({
               </div>
             )}
             <Link href={`/dashboard/literature?calisma=${id}`} className="projects-filter-button mt-sm">
-              Literatürde ara
+              {t({ tr: "Literatürde ara", en: "Search literature" })}
             </Link>
           </PanelDrawer>
 
           <Link href={`/dashboard/editor/${id}/kanit`} className="merkez-baglanti">
             <Microscope size={18} aria-hidden="true" />
             <span>
-              <b>Kanıt matrisi</b>
+              <b>{t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}</b>
               {kanitOzeti.toplam
-                ? `${kanitOzeti.toplam} iddia · ${kanitOzeti.dogrudan} doğrudan · ${kanitOzeti.celisen} çelişen`
-                : "Henüz iddia yok"}
+                ? t({
+                    tr: `${kanitOzeti.toplam} iddia · ${kanitOzeti.dogrudan} doğrudan · ${kanitOzeti.celisen} çelişen`,
+                    en: `${kanitOzeti.toplam} claims · ${kanitOzeti.dogrudan} direct · ${kanitOzeti.celisen} contradicting`,
+                  })
+                : t({ tr: "Henüz iddia yok", en: "No claims yet" })}
             </span>
           </Link>
 
           <PanelDrawer
-            triggerLabel="Kapak mektubu"
-            triggerNote="Kontrol listesi"
+            triggerLabel={t({ tr: "Kapak mektubu", en: "Cover letter" })}
+            triggerNote={t({ tr: "Kontrol listesi", en: "Checklist" })}
             triggerIcon={<Mail size={18} aria-hidden="true" />}
             triggerClassName="merkez-baglanti"
-            kicker="Gönderim"
-            title="Kapak mektubu kontrol listesi"
+            kicker={t({ tr: "Gönderim", en: "Submission" })}
+            title={t({ tr: "Kapak mektubu kontrol listesi", en: "Cover letter checklist" })}
             basaridaKapan={false}
           >
             <p className="muted text-base">
-              Asistan kapak mektubu yazmaz. Derginin talimatına göre mektubunuzda bulunması gerekebilecekler:
+              {t({
+                tr: "Asistan kapak mektubu yazmaz. Derginin talimatına göre mektubunuzda bulunması gerekebilecekler:",
+                en: "The assistant does not write cover letters. Depending on the journal's instructions, your letter may need to include:",
+              })}
             </p>
             <ul className="kanit-alanlar mt-sm">
               {KAPAK_MEKTUBU.map((m) => (
-                <li key={m}>{m}</li>
+                <li key={m.tr}>{t(m)}</li>
               ))}
             </ul>
           </PanelDrawer>

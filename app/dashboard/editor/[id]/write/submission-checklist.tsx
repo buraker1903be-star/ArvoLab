@@ -3,9 +3,15 @@
 import { AlertTriangle, CheckCircle2, Circle } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
 import type { ChecklistAction, SubmissionChecklist } from "@/lib/submission-checklist";
+import { useCeviri } from "@/app/_components/dil-saglayici";
+import type { Metin } from "@/lib/dil";
 
 const ICONS = { ok: CheckCircle2, warning: AlertTriangle, todo: Circle } as const;
-const STATUS_LABEL = { ok: "Hazır", warning: "Bakılmalı", todo: "Eksik" } as const;
+const STATUS_LABEL: Record<keyof typeof ICONS, Metin> = {
+  ok: { tr: "Hazır", en: "Ready" },
+  warning: { tr: "Bakılmalı", en: "Needs review" },
+  todo: { tr: "Eksik", en: "Missing" },
+};
 
 // Teslimden önce bakılacaklar tek pencerede; her eksik tek tıkla düzeltilir.
 export default function SubmissionChecklistDialog({
@@ -36,17 +42,28 @@ export default function SubmissionChecklistDialog({
   */
   dogrulanmamis?: boolean;
 }) {
+  const t = useCeviri();
   const ready = checklist.done === checklist.total;
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      kicker="Teslim kontrolü"
-      title={ready ? "Teslime hazır görünüyor" : `${checklist.done}/${checklist.total} madde hazır`}
+      kicker={t({ tr: "Teslim kontrolü", en: "Submission checklist" })}
+      title={
+        ready
+          ? t({ tr: "Teslime hazır görünüyor", en: "Looks ready to submit" })
+          : t({ tr: `${checklist.done}/${checklist.total} madde hazır`, en: `${checklist.done}/${checklist.total} items ready` })
+      }
       description={
         dogrulanmamis
-          ? "Kendi yüklediğiniz kılavuzdan çıkarılan ve sizin onayladığınız kurallara göre denetlenir — kurumunuzun onayından GEÇMEMİŞTİR. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz."
-          : "Kılavuza göre teslimden önce bakılması gerekenler. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz."
+          ? t({
+              tr: "Kendi yüklediğiniz kılavuzdan çıkarılan ve sizin onayladığınız kurallara göre denetlenir — kurumunuzun onayından GEÇMEMİŞTİR. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz.",
+              en: "Checked against rules extracted from the guideline you uploaded and approved yourself — they have NOT been approved by your institution. This is an automated check; it does not replace review by your advisor or committee.",
+            })
+          : t({
+              tr: "Kılavuza göre teslimden önce bakılması gerekenler. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz.",
+              en: "What to check before submission according to the guideline. This is an automated check; it does not replace review by your advisor or committee.",
+            })
       }
     >
       <ul className="checklist">
@@ -59,7 +76,7 @@ export default function SubmissionChecklistDialog({
               data-status={item.status}
               data-vurgulu={item.id === vurgu ? "true" : undefined}
             >
-              <Icon size={18} className="checklist-icon" aria-label={STATUS_LABEL[item.status]} />
+              <Icon size={18} className="checklist-icon" aria-label={t(STATUS_LABEL[item.status])} />
               <span className="checklist-text">
                 <strong>{item.label}</strong>
                 <small>{item.detail}</small>

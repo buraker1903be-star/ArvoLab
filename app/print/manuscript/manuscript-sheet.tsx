@@ -1,8 +1,13 @@
 import type { PrintSheet } from "@/lib/print-sheet";
+import { ceviriciKur, YEREL, type Dil } from "@/lib/dil";
 
 // A4 baskı görünümü: kapak, metin ve dipnotlar (yazdırma ve paylaşım sayfaları ortak kullanır).
-export default function ManuscriptSheet({ title, sheet }: { title: string; sheet: PrintSheet }) {
+// `dil` BELGENİN dili (lib/belge-dili.ts): kapaktaki "Danışman", içindekiler ve
+// dipnot başlıkları çalışmanın parçası, Word çıktısıyla aynı dilde olmalı.
+export default function ManuscriptSheet({ title, sheet, dil = "tr" }: { title: string; sheet: PrintSheet; dil?: Dil }) {
   const { cover } = sheet;
+  const t = ceviriciKur(dil);
+  const buyuk = (metin: string) => metin.toLocaleUpperCase(YEREL[dil]);
   return (
     <>
       {/* Sayfalama çalışınca bu kural kaldırılır; sayfa kuralını Paged.js uygular (sayfali-baski.tsx). */}
@@ -11,18 +16,18 @@ export default function ManuscriptSheet({ title, sheet }: { title: string; sheet
         {cover ? (
           <section className="print-cover">
             <div className="print-cover-block">
-              {cover.university ? <strong>{cover.university.toLocaleUpperCase("tr-TR")}</strong> : null}
-              {cover.institute ? <strong>{cover.institute.toLocaleUpperCase("tr-TR")}</strong> : null}
-              {cover.department ? <span>{cover.department.toLocaleUpperCase("tr-TR")}</span> : null}
+              {cover.university ? <strong>{buyuk(cover.university)}</strong> : null}
+              {cover.institute ? <strong>{buyuk(cover.institute)}</strong> : null}
+              {cover.department ? <span>{buyuk(cover.department)}</span> : null}
               {cover.program ? <span>{cover.program}</span> : null}
             </div>
             <div className="print-cover-block">
-              <strong className="print-cover-title">{cover.title.toLocaleUpperCase("tr-TR")}</strong>
+              <strong className="print-cover-title">{buyuk(cover.title)}</strong>
             </div>
             <div className="print-cover-block">
               <strong>{cover.authorName}</strong>
               <span>{cover.degreeType}</span>
-              {cover.advisorName ? <span>Danışman: {cover.advisorName}</span> : null}
+              {cover.advisorName ? <span>{t({ tr: "Danışman", en: "Advisor" })}: {cover.advisorName}</span> : null}
             </div>
             <div className="print-cover-block">
               <strong>{[cover.city, cover.year].filter(Boolean).join(", ")}</strong>
@@ -31,8 +36,8 @@ export default function ManuscriptSheet({ title, sheet }: { title: string; sheet
         ) : null}
 
         {sheet.toc && sheet.toc.length ? (
-          <section className="print-toc" aria-label="İçindekiler">
-            <h2>İÇİNDEKİLER</h2>
+          <section className="print-toc" aria-label={t({ tr: "İçindekiler", en: "Table of contents" })}>
+            <h2>{t({ tr: "İÇİNDEKİLER", en: "TABLE OF CONTENTS" })}</h2>
             <ol>
               {sheet.toc.map((satir, i) => (
                 <li key={i} data-level={satir.level}>
@@ -52,12 +57,12 @@ export default function ManuscriptSheet({ title, sheet }: { title: string; sheet
         {sheet.hasText ? (
           <div className="print-body" dangerouslySetInnerHTML={{ __html: sheet.html }} />
         ) : (
-          <p>Bu çalışma için henüz kaydedilmiş bir metin yok.</p>
+          <p>{t({ tr: "Bu çalışma için henüz kaydedilmiş bir metin yok.", en: "There is no saved text for this work yet." })}</p>
         )}
 
         {sheet.footnotes.length > 0 ? (
           <section className="print-footnotes">
-            <h2>Dipnotlar</h2>
+            <h2>{t({ tr: "Dipnotlar", en: "Footnotes" })}</h2>
             <ol>
               {sheet.footnotes.map((text, index) => (
                 <li key={index}>{text}</li>

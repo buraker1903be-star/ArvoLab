@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { renderTiptapHtml } from "@/lib/tiptap-html";
 import { icindekilerSatirlari, type IcindekilerSatiri } from "@/lib/heading-numbering";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
+import type { Dil } from "@/lib/dil";
 import type { CoverPage, PageMargins } from "@/app/actions/manuscript";
 
 // Baskı görünümü (yazdırma sayfası ve danışman paylaşım sayfası aynı çıktıyı kullanır):
@@ -41,13 +42,16 @@ const clampCm = (value: unknown, fallback: number) => {
 export function buildPrintSheet(
   manuscript: PrintSheetManuscript | null,
   guideline: AppliedGuideline | null,
-  doc: { content?: unknown[] } | null
+  doc: { content?: unknown[] } | null,
+  /** Belgenin dili (şekil/tablo etiketleri; lib/belge-dili.ts) */
+  dil: Dil = "tr"
 ): PrintSheet {
   const { html, footnotes } = renderTiptapHtml(doc as Parameters<typeof renderTiptapHtml>[0], {
     headingNumbering: manuscript?.headingNumbering ?? false,
     chapterNewPage: guideline?.settings.chapterNewPage ?? false,
     // Dipnot sayfa altına inebilsin (sayfalı baskı; app/print/manuscript/sayfali-baski.tsx).
     dipnotSatirIci: true,
+    dil,
   });
 
   const margins = manuscript?.margins ?? guideline?.settings.margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };

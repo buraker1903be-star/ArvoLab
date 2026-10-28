@@ -3,6 +3,7 @@
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { snapshotManuscript, type VersionKind } from "@/lib/manuscript-versions";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
+import { ceviri } from "@/lib/dil-sunucu";
 
 export interface ManuscriptVersion {
   id: string;
@@ -13,11 +14,14 @@ export interface ManuscriptVersion {
   authorName: string | null;
 }
 
+const GECERSIZ_SURUM = { tr: "Geçersiz sürüm.", en: "Invalid version." };
+const SURUM_YOK = { tr: "Sürüm bulunamadı.", en: "Version not found." };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function listManuscriptVersions(projectId: string): Promise<{ versions: ManuscriptVersion[]; error?: string }> {
   const ctx = await getAuthContext();
   if (!ctx) return { versions: [], error: (await oturumYokMesaji()) };
+  const t = await ceviri();
 
   const { data, error } = await ctx.supabase
     .from("project_manuscript_versions")
@@ -27,7 +31,7 @@ export async function listManuscriptVersions(projectId: string): Promise<{ versi
     .limit(80);
   if (error) {
     console.error(error);
-    return { versions: [], error: "Sürüm geçmişi yüklenemedi." };
+    return { versions: [], error: t({ tr: "Sürüm geçmişi yüklenemedi.", en: "Version history could not be loaded." }) };
   }
 
   const authorIds = [...new Set((data ?? []).map((row) => row.created_by).filter(Boolean))] as string[];
@@ -56,12 +60,19 @@ export async function saveNamedVersion(projectId: string, label: string): Promis
   /* Abonelik kapısı: Yeni sürüm yazmak saveManuscript ile aynı kapıya tabi.
      Listeleme ve önizleme açık: geçmişini görebilmeli. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
+  const t = await ceviri();
   const ok = await snapshotManuscript(ctx.supabase, projectId, ctx.user.id, { kind: "manual", label });
-  return ok ? { success: true } : { error: "Sürüm kaydedilemedi. Önce metnin kaydedildiğinden emin olun." };
+  return ok ? { success: true } : {
+        error: t({
+          tr: "Sürüm kaydedilemedi. Önce metnin kaydedildiğinden emin olun.",
+          en: "The version could not be saved. Make sure the text has been saved first.",
+        }),
+      };
 }
 
 export async function getVersionPreview(versionId: string): Promise<{ text?: string; wordCount?: number; error?: string }> {
-  if (!UUID_PATTERN.test(versionId)) return { error: "Geçersiz sürüm." };
+  const t = await ceviri();
+  if (!UUID_PATTERN.test(versionId)) return { error: t(GECERSIZ_SURUM) };
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   const { data, error } = await ctx.supabase
@@ -69,13 +80,14 @@ export async function getVersionPreview(versionId: string): Promise<{ text?: str
     .select("plain_text, word_count")
     .eq("id", versionId)
     .maybeSingle();
-  if (error || !data) return { error: "Sürüm bulunamadı." };
+  if (error || !data) return { error: t(SURUM_YOK) };
   return { text: (data.plain_text ?? "").slice(0, 6000), wordCount: data.word_count ?? 0 };
 }
 
 /** Karşılaştırma için sürümün tam düz metni (RLS: yalnızca erişimi olanlar) */
 export async function getVersionText(versionId: string): Promise<{ text?: string; createdAt?: string; label?: string | null; error?: string }> {
-  if (!UUID_PATTERN.test(versionId)) return { error: "Geçersiz sürüm." };
+  const t = await ceviri();
+  if (!UUID_PATTERN.test(versionId)) return { error: t(GECERSIZ_SURUM) };
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   const { data, error } = await ctx.supabase
@@ -83,7 +95,7 @@ export async function getVersionText(versionId: string): Promise<{ text?: string
     .select("plain_text, created_at, label")
     .eq("id", versionId)
     .maybeSingle();
-  if (error || !data) return { error: "Sürüm bulunamadı." };
+  if (error || !data) return { error: t(SURUM_YOK) };
   return { text: (data.plain_text ?? "").slice(0, 3_000_000), createdAt: data.created_at, label: data.label };
 }
 
@@ -92,7 +104,8 @@ export async function restoreManuscriptVersion(
   projectId: string,
   versionId: string
 ): Promise<{ error?: string; success?: boolean; updatedAt?: string }> {
-  if (!UUID_PATTERN.test(versionId)) return { error: "Geçersiz sürüm." };
+  const t = await ceviri();
+  if (!UUID_PATTERN.test(versionId)) return { error: t(GECERSIZ_SURUM) };
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   /* Abonelik kapısı: Geri yükleme metnin üzerine yazar; saveManuscript ile aynı kapı. */
@@ -103,13 +116,18 @@ export async function restoreManuscriptVersion(
     .select("project_id, content, plain_text, word_count, settings, created_at")
     .eq("id", versionId)
     .maybeSingle();
-  if (versionError || !version || version.project_id !== projectId) return { error: "Sürüm bulunamadı." };
+  if (versionError || !version || version.project_id !== projectId) return { error: t(SURUM_YOK) };
 
   const backedUp = await snapshotManuscript(ctx.supabase, projectId, ctx.user.id, {
     kind: "restore",
-    label: "Geri yüklemeden önceki hâl",
+    label: t({ tr: "Geri yüklemeden önceki hâl", en: "Before restore" }),
   });
-  if (!backedUp) return { error: "Mevcut metin yedeklenemediği için geri yükleme yapılmadı." };
+  if (!backedUp) return {
+      error: t({
+        tr: "Mevcut metin yedeklenemediği için geri yükleme yapılmadı.",
+        en: "The restore was not performed because the current text could not be backed up.",
+      }),
+    };
 
   const settings = (version.settings ?? {}) as Record<string, unknown>;
   const pick = (key: string) => (settings[key] === undefined ? {} : { [key]: settings[key] });
@@ -134,7 +152,7 @@ export async function restoreManuscriptVersion(
     .select("updated_at");
   if (error || !data?.length) {
     console.error(error);
-    return { error: "Geri yükleme için bu metni düzenleme yetkiniz yok." };
+    return { error: t({ tr: "Geri yükleme için bu metni düzenleme yetkiniz yok.", en: "You do not have permission to edit this text, so it cannot be restored." }) };
   }
   return { success: true, updatedAt: data[0].updated_at };
 }

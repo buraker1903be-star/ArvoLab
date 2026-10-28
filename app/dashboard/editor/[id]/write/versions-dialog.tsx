@@ -14,6 +14,8 @@ import {
   type ManuscriptVersion,
 } from "@/app/actions/manuscript-versions";
 import { diffTexts, type TextDiff } from "@/lib/text-diff";
+import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
+import { YEREL, type Metin } from "@/lib/dil";
 
 interface CompareState {
   version: ManuscriptVersion;
@@ -23,14 +25,11 @@ interface CompareState {
 
 const MAX_BLOCKS_SHOWN = 400;
 
-const KIND_LABEL: Record<ManuscriptVersion["kind"], string> = {
-  auto: "Otomatik",
-  manual: "Kaydedilen sürüm",
-  restore: "Geri yükleme öncesi",
+const KIND_LABEL: Record<ManuscriptVersion["kind"], Metin> = {
+  auto: { tr: "Otomatik", en: "Automatic" },
+  manual: { tr: "Kaydedilen sürüm", en: "Saved version" },
+  restore: { tr: "Geri yükleme öncesi", en: "Before restore" },
 };
-
-const formatTime = (value: string) =>
-  new Date(value).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" });
 
 interface VersionsDialogProps {
   open: boolean;
@@ -47,6 +46,10 @@ interface VersionsDialogProps {
 // Sürüm geçmişi: otomatik (10 dakikada bir), adlandırılmış ve geri yükleme öncesi yedekler.
 // Geri yükleme de geri alınabilir: mevcut hâl önce yedeklenir.
 export default function VersionsDialog({ open, onClose, projectId, flush, onRestored, getCurrentText }: VersionsDialogProps) {
+  const t = useCeviri();
+  const dil = useDil();
+  /* Eskiden toLocaleString("tr-TR") dilimsizdi; ortak biçim kullanıcının dilim ve dilinde. */
+  const { tarihSaat: formatTime } = useTarihler();
   const [versions, setVersions] = useState<ManuscriptVersion[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -93,7 +96,7 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
     setBusy(true);
     try {
       if (!(await flush())) {
-        showToast("error", "Metin kaydedilemediği için sürüm oluşturulmadı.");
+        showToast("error", t({ tr: "Metin kaydedilemediği için sürüm oluşturulmadı.", en: "The version was not created because the text could not be saved." }));
         return;
       }
       const result = await saveNamedVersion(projectId, name);
@@ -103,7 +106,7 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
       }
       setLabel("");
       setReloadKey((key) => key + 1);
-      showToast("success", `"${name}" sürümü kaydedildi.`);
+      showToast("success", t({ tr: `"${name}" sürümü kaydedildi.`, en: `Version "${name}" saved.` }));
     } finally {
       setBusy(false);
     }
@@ -116,15 +119,24 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
     }
     const result = await getVersionPreview(version.id);
     if (result.error) showToast("error", result.error);
-    else setPreview({ id: version.id, text: result.text || "(boş metin)" });
+    else setPreview({ id: version.id, text: result.text || t({ tr: "(boş metin)", en: "(empty text)" }) });
   };
 
   const restore = async (version: ManuscriptVersion) => {
-    if (!window.confirm(`${formatTime(version.createdAt)} tarihli sürüm geri yüklensin mi? Şu anki metin önce yedeklenir.`)) return;
+    const tarih = formatTime(version.createdAt);
+    if (
+      !window.confirm(
+        t({
+          tr: `${tarih} tarihli sürüm geri yüklensin mi? Şu anki metin önce yedeklenir.`,
+          en: `Restore the version from ${tarih}? The current text is backed up first.`,
+        })
+      )
+    )
+      return;
     setBusy(true);
     try {
       if (!(await flush())) {
-        showToast("error", "Mevcut metin kaydedilemediği için geri yükleme yapılmadı.");
+        showToast("error", t({ tr: "Mevcut metin kaydedilemediği için geri yükleme yapılmadı.", en: "The restore was not performed because the current text could not be saved." }));
         return;
       }
       const result = await restoreManuscriptVersion(projectId, version.id);
@@ -132,7 +144,7 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
         showToast("error", result.error);
         return;
       }
-      showToast("success", "Sürüm geri yüklendi.");
+      showToast("success", t({ tr: "Sürüm geri yüklendi.", en: "Version restored." }));
       onRestored();
     } finally {
       setBusy(false);
@@ -143,9 +155,12 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
     <Dialog
       open={open}
       onClose={close}
-      kicker="Sürüm geçmişi"
-      title="Önceki sürümler"
-      description="Yazarken en fazla 10 dakikada bir otomatik sürüm alınır. Önemli anları adlandırarak saklayabilirsiniz."
+      kicker={t({ tr: "Sürüm geçmişi", en: "Version history" })}
+      title={t({ tr: "Önceki sürümler", en: "Previous versions" })}
+      description={t({
+        tr: "Yazarken en fazla 10 dakikada bir otomatik sürüm alınır. Önemli anları adlandırarak saklayabilirsiniz.",
+        en: "While you write, a version is saved automatically at most every 10 minutes. You can name and keep important moments.",
+      })}
     >
       {compare ? (
         <ComparePanel compare={compare} onBack={() => setCompare(null)} />
@@ -163,44 +178,56 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
             value={label}
             maxLength={120}
             onChange={(event) => setLabel(event.target.value)}
-            placeholder="Örn. Danışmana gönderilen taslak"
-            aria-label="Sürüm adı"
+            placeholder={t({ tr: "Örn. Danışmana gönderilen taslak", en: "E.g. Draft sent to advisor" })}
+            aria-label={t({ tr: "Sürüm adı", en: "Version name" })}
           />
           <button type="submit" className="projects-primary-button" disabled={busy || !label.trim()}>
             <Save size={15} aria-hidden="true" />
-            Sürüm kaydet
+            {t({ tr: "Sürüm kaydet", en: "Save version" })}
           </button>
         </form>
 
         {loadError ? <p className="alert" data-tone="danger" role="alert">{loadError}</p> : null}
         {versions === null ? (
-          <p className="muted text-sm" aria-busy="true">Sürümler yükleniyor…</p>
+          <p className="muted text-sm" aria-busy="true">{t({ tr: "Sürümler yükleniyor…", en: "Loading versions…" })}</p>
         ) : versions.length === 0 ? (
           <BosDurum
             kompakt
             ikon={History}
-            aciklama="Henüz sürüm yok. Yazmaya devam ettikçe otomatik sürümler burada birikir; yukarıdan istediğiniz an adlı bir sürüm de kaydedebilirsiniz."
+            aciklama={t({
+              tr: "Henüz sürüm yok. Yazmaya devam ettikçe otomatik sürümler burada birikir; yukarıdan istediğiniz an adlı bir sürüm de kaydedebilirsiniz.",
+              en: "No versions yet. Automatic versions build up here as you keep writing; you can also save a named version above at any time.",
+            })}
           />
         ) : (
           <ul className="picker-list">
             {versions.map((version) => (
               <li key={version.id} className="picker-item-wrap">
                 <div className="picker-item">
-                  <button type="button" className="picker-main" onClick={() => void showPreview(version)} title="Önizle">
-                    <strong>{version.label ?? KIND_LABEL[version.kind]}</strong>
+                  <button
+                    type="button"
+                    className="picker-main"
+                    onClick={() => void showPreview(version)}
+                    title={t({ tr: "Önizle", en: "Preview" })}
+                  >
+                    <strong>{version.label ?? t(KIND_LABEL[version.kind])}</strong>
                     <small>
-                      {formatTime(version.createdAt)} · {version.wordCount.toLocaleString("tr-TR")} kelime
-                      {version.label ? ` · ${KIND_LABEL[version.kind]}` : ""}
+                      {formatTime(version.createdAt)} ·{" "}
+                      {t({
+                        tr: `${version.wordCount.toLocaleString(YEREL[dil])} kelime`,
+                        en: `${version.wordCount.toLocaleString(YEREL[dil])} words`,
+                      })}
+                      {version.label ? ` · ${t(KIND_LABEL[version.kind])}` : ""}
                       {version.authorName ? ` · ${version.authorName}` : ""}
                     </small>
                   </button>
                   <span className="cluster">
                     <button type="button" className="projects-filter-button" disabled={busy} onClick={() => void startCompare(version)}>
-                      Karşılaştır
+                      {t({ tr: "Karşılaştır", en: "Compare" })}
                     </button>
                     <button type="button" className="projects-filter-button" disabled={busy} onClick={() => void restore(version)}>
                       <RotateCcw size={14} aria-hidden="true" />
-                      Geri yükle
+                      {t({ tr: "Geri yükle", en: "Restore" })}
                     </button>
                   </span>
                 </div>
@@ -217,33 +244,48 @@ export default function VersionsDialog({ open, onClose, projectId, flush, onRest
 
 function ComparePanel({ compare, onBack }: { compare: CompareState; onBack: () => void }) {
   const { version, diff, error } = compare;
+  const t = useCeviri();
+  const dil = useDil();
+  const { tarihSaat: formatTime } = useTarihler();
+  const sayi = (n: number) => n.toLocaleString(YEREL[dil]);
   return (
     <div className="stack">
       <button type="button" className="result-link compare-back" onClick={onBack}>
-        ← Sürümlere dön
+        {t({ tr: "← Sürümlere dön", en: "← Back to versions" })}
       </button>
       <p className="muted text-sm">
-        <strong>{version.label ?? KIND_LABEL[version.kind]}</strong> ({formatTime(version.createdAt)}) ile şimdiki metin
+        {t({ tr: "", en: "Comparing " })}
+        <strong>{version.label ?? t(KIND_LABEL[version.kind])}</strong> ({formatTime(version.createdAt)}){" "}
+        {t({ tr: "ile şimdiki metin", en: "with the current text" })}
       </p>
       {error ? (
         <p className="alert" data-tone="danger" role="alert">{error}</p>
       ) : !diff ? (
-        <p className="muted text-sm" aria-busy="true">Karşılaştırılıyor…</p>
+        <p className="muted text-sm" aria-busy="true">{t({ tr: "Karşılaştırılıyor…", en: "Comparing…" })}</p>
       ) : diff.identical ? (
-        <p className="tone-text" data-tone="success">Bu sürümden bu yana metinde değişiklik yok.</p>
+        <p className="tone-text" data-tone="success">{t({ tr: "Bu sürümden bu yana metinde değişiklik yok.", en: "The text has not changed since this version." })}</p>
       ) : (
         <>
           <div className="compare-stats">
-            <span className="tone-text" data-tone="success">+{diff.stats.addedWords.toLocaleString("tr-TR")} kelime</span>
-            <span className="tone-text" data-tone="danger">−{diff.stats.removedWords.toLocaleString("tr-TR")} kelime</span>
+            <span className="tone-text" data-tone="success">
+              {t({ tr: `+${sayi(diff.stats.addedWords)} kelime`, en: `+${sayi(diff.stats.addedWords)} words` })}
+            </span>
+            <span className="tone-text" data-tone="danger">
+              {t({ tr: `−${sayi(diff.stats.removedWords)} kelime`, en: `−${sayi(diff.stats.removedWords)} words` })}
+            </span>
             <span className="muted">
-              {diff.stats.changedParagraphs} paragraf değişti · {diff.stats.addedParagraphs} eklendi · {diff.stats.removedParagraphs} silindi
+              {t({
+                tr: `${diff.stats.changedParagraphs} paragraf değişti · ${diff.stats.addedParagraphs} eklendi · ${diff.stats.removedParagraphs} silindi`,
+                en: `${diff.stats.changedParagraphs} paragraphs changed · ${diff.stats.addedParagraphs} added · ${diff.stats.removedParagraphs} removed`,
+              })}
             </span>
           </div>
-          <ol className="diff-list" aria-label="Değişiklikler">
+          <ol className="diff-list" aria-label={t({ tr: "Değişiklikler", en: "Changes" })}>
             {diff.blocks.slice(0, MAX_BLOCKS_SHOWN).map((block, index) =>
               block.kind === "same" ? (
-                <li key={index} className="diff-same">… {block.count} paragraf aynı …</li>
+                <li key={index} className="diff-same">
+                  {t({ tr: `… ${block.count} paragraf aynı …`, en: `… ${block.count} paragraphs unchanged …` })}
+                </li>
               ) : block.kind === "added" ? (
                 <li key={index} className="diff-added"><ins>{block.text}</ins></li>
               ) : block.kind === "removed" ? (
@@ -264,7 +306,9 @@ function ComparePanel({ compare, onBack }: { compare: CompareState; onBack: () =
             )}
           </ol>
           {diff.blocks.length > MAX_BLOCKS_SHOWN ? (
-            <p className="muted text-sm">İlk {MAX_BLOCKS_SHOWN} fark gösteriliyor.</p>
+            <p className="muted text-sm">
+              {t({ tr: `İlk ${MAX_BLOCKS_SHOWN} fark gösteriliyor.`, en: `Showing the first ${MAX_BLOCKS_SHOWN} differences.` })}
+            </p>
           ) : null}
         </>
       )}

@@ -6,6 +6,7 @@ import Dialog from "@/app/dashboard/_components/dialog";
 import YanKutu from "./yan-kutu";
 import { icindekiler } from "@/lib/icindekiler";
 import type { OutlineHeading } from "./editor-navigation";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 /*
   Sağ paneldeki İçindekiler kartı (26.10.2026). Eskiden panelin en altında
@@ -25,6 +26,7 @@ export default function IcindekilerKarti({
   sayfaBasiKelime: number;
   onJump: (heading: OutlineHeading) => void;
 }) {
+  const t = useCeviri();
   const [acik, setAcik] = useState(false);
   const satirlar = acik ? icindekiler(headings, numaralama, sayfaBasiKelime) : [];
 
@@ -32,18 +34,21 @@ export default function IcindekilerKarti({
     <>
       <YanKutu
         ikon={ListTree}
-        baslik="İçindekiler"
+        baslik={t({ tr: "İçindekiler", en: "Contents" })}
         deger={headings.length}
-        alt={headings.length ? "başlık · sayfalarıyla" : "henüz başlık yok"}
+        alt={headings.length ? t({ tr: "başlık · sayfalarıyla", en: "headings · with pages" }) : t({ tr: "henüz başlık yok", en: "no headings yet" })}
         onClick={() => setAcik(true)}
       />
 
       <Dialog
         open={acik}
         onClose={() => setAcik(false)}
-        kicker="Belge planı"
-        title="İçindekiler"
-        description="Sayfa numaraları yazı boyutu, satır aralığı ve kenar boşluklarına göre tahmindir; şekil, tablo ve kapak dahil değildir. Kesin numaralar Word çıktısındaki içindekiler tablosunda."
+        kicker={t({ tr: "Belge planı", en: "Document outline" })}
+        title={t({ tr: "İçindekiler", en: "Table of contents" })}
+        description={t({
+          tr: "Sayfa numaraları yazı boyutu, satır aralığı ve kenar boşluklarına göre tahmindir; şekil, tablo ve kapak dahil değildir. Kesin numaralar Word çıktısındaki içindekiler tablosunda.",
+          en: "Page numbers are estimates based on font size, line spacing and margins; figures, tables and the cover are not included. Exact numbers are in the table of contents of the Word export.",
+        })}
       >
         <ol className="icindekiler-listesi">
           {satirlar.map((s) => (
@@ -57,7 +62,7 @@ export default function IcindekilerKarti({
               >
                 <span className="icindekiler-baslik">
                   {s.numara ? <b>{s.numara}</b> : null}
-                  {s.text || "(başlıksız)"}
+                  {s.text || t({ tr: "(başlıksız)", en: "(untitled)" })}
                 </span>
                 <span className="icindekiler-nokta" aria-hidden="true" />
                 <span className="icindekiler-sayfa">{s.sayfa}</span>
@@ -66,7 +71,12 @@ export default function IcindekilerKarti({
           ))}
         </ol>
         {satirlar.length === 0 ? (
-          <p className="muted text-sm">Başlık ekledikçe (Metin / H1–H3 düğmeleri) içindekiler burada oluşur.</p>
+          <p className="muted text-sm">
+            {t({
+              tr: "Başlık ekledikçe (Metin / H1–H3 düğmeleri) içindekiler burada oluşur.",
+              en: "As you add headings (Text / H1–H3 buttons), the table of contents builds up here.",
+            })}
+          </p>
         ) : null}
       </Dialog>
     </>

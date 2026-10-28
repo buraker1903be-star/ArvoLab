@@ -8,15 +8,17 @@ import BosDurum from "@/app/dashboard/_components/bos-durum";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { createCitationSource, getLiteratureSources, lookupDoi, type LiteratureSource } from "@/app/actions/literature";
 import { eksikAlanlar, formatInTextCitation, formatReferenceParts, NUMERIC_STYLES, type CitationStyle } from "@/lib/citation-format";
+import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
+import { YEREL, type Dil, type Metin } from "@/lib/dil";
 
-const TYPE_LABEL: Record<string, string> = {
-  article: "Makale",
-  book: "Kitap",
-  chapter: "Kitap bölümü",
-  thesis: "Tez",
-  report: "Rapor",
-  website: "Web sitesi",
-  other: "Diğer",
+const TYPE_LABEL: Record<string, Metin> = {
+  article: { tr: "Makale", en: "Article" },
+  book: { tr: "Kitap", en: "Book" },
+  chapter: { tr: "Kitap bölümü", en: "Book chapter" },
+  thesis: { tr: "Tez", en: "Thesis" },
+  report: { tr: "Rapor", en: "Report" },
+  website: { tr: "Web sitesi", en: "Website" },
+  other: { tr: "Diğer", en: "Other" },
 };
 
 interface CiteDialogProps {
@@ -24,6 +26,8 @@ interface CiteDialogProps {
   onClose: () => void;
   projectId: string;
   style: CitationStyle;
+  /** Belgenin dili: atıf ve künye önizlemesi metne gireceği dilde ("s." / "p."). */
+  belgeDili?: Dil;
   /* Sayfa: doğrudan alıntıda öğrencinin yazdığı; atıfa "s. 14" olarak girer. */
   onPick: (source: LiteratureSource, secenek: { sayfa?: string | null }) => void;
 }
@@ -55,7 +59,9 @@ const EMPTY_FORM: NewSourceForm = {
 };
 
 // Atıf: literatür listesinden seç ya da yeni kaynak ekle (DOI ile bilgiler Crossref'ten dolar).
-export default function CiteDialog({ open, onClose, projectId, style, onPick }: CiteDialogProps) {
+export default function CiteDialog({ open, onClose, projectId, style, belgeDili = "tr", onPick }: CiteDialogProps) {
+  const t = useCeviri();
+  const dil = useDil();
   const [tab, setTab] = useState<"list" | "new">("list");
   const [sources, setSources] = useState<LiteratureSource[] | null>(null);
   const [query, setQuery] = useState("");
@@ -95,14 +101,14 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
   const setYalnizBuCalisma = setKapsamSecimi;
 
   const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase("tr-TR");
+    const needle = query.trim().toLocaleLowerCase(YEREL[dil]);
     return (sources ?? [])
       .filter((source) => !yalnizBuCalisma || source.project_id === projectId)
       .filter((source) =>
-        !needle || [source.title, source.authors, source.year].some((value) => value?.toLocaleLowerCase("tr-TR").includes(needle))
+        !needle || [source.title, source.authors, source.year].some((value) => value?.toLocaleLowerCase(YEREL[dil]).includes(needle))
       )
       .sort((a, b) => Number(b.project_id === projectId) - Number(a.project_id === projectId));
-  }, [sources, query, projectId, yalnizBuCalisma]);
+  }, [sources, query, projectId, yalnizBuCalisma, dil]);
 
   const formKaynagi = useMemo(
     () => ({
@@ -119,14 +125,14 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
     }),
     [form],
   );
-  const formEksik = useMemo(() => eksikAlanlar(formKaynagi), [formKaynagi]);
+  const formEksik = useMemo(() => eksikAlanlar(formKaynagi, dil), [formKaynagi, dil]);
 
   const preview = useMemo(() => {
     if (!form.title.trim()) return "";
-    return formatReferenceParts(formKaynagi, style, (sources?.length ?? 0) + 1)
+    return formatReferenceParts(formKaynagi, style, (sources?.length ?? 0) + 1, {}, belgeDili)
       .map((part) => part.text)
       .join("");
-  }, [form.title, formKaynagi, style, sources]);
+  }, [form.title, formKaynagi, style, sources, belgeDili]);
 
   const close = () => {
     setQuery("");
@@ -146,7 +152,7 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
     try {
       const result = await lookupDoi(form.doi);
       if (result.error || !result.metadata) {
-        showToast("error", result.error ?? "Kaynak bilgileri alınamadı.");
+        showToast("error", result.error ?? t({ tr: "Kaynak bilgileri alınamadı.", en: "Source details could not be retrieved." }));
         return;
       }
       const meta = result.metadata;
@@ -162,7 +168,7 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
         pages: meta.pages ?? "",
         publisher: meta.publisher ?? "",
       });
-      showToast("success", "Kaynak bilgileri dolduruldu; kontrol edip kaydedin.");
+      showToast("success", t({ tr: "Kaynak bilgileri dolduruldu; kontrol edip kaydedin.", en: "Source details filled in; check them and save." }));
     } finally {
       setLooking(false);
     }
@@ -174,7 +180,7 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
     try {
       const result = await createCitationSource({ ...form, doiOrUrl: form.doi || null, projectId });
       if (result.error || !result.source) {
-        showToast("error", result.error ?? "Kaynak kaydedilemedi.");
+        showToast("error", result.error ?? t({ tr: "Kaynak kaydedilemedi.", en: "The source could not be saved." }));
         return;
       }
       onPick(result.source, { sayfa });
@@ -188,21 +194,27 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
     <Dialog
       open={open}
       onClose={close}
-      kicker="Kaynaktan atıf"
-      title="Atıf ekle"
+      kicker={t({ tr: "Kaynaktan atıf", en: "Cite a source" })}
+      title={t({ tr: "Atıf ekle", en: "Insert citation" })}
       description={
         NUMERIC_STYLES.includes(style)
-          ? "Seçtiğiniz kaynak imlecin olduğu yere numaralı atıf olarak eklenir ve Kaynakça'ya yazılır."
-          : "Seçtiğiniz kaynak imlecin olduğu yere (Yazar, Yıl) biçiminde eklenir ve Kaynakça'ya yazılır."
+          ? t({
+              tr: "Seçtiğiniz kaynak imlecin olduğu yere numaralı atıf olarak eklenir ve Kaynakça'ya yazılır.",
+              en: "The source you choose is inserted at the cursor as a numbered citation and added to the reference list.",
+            })
+          : t({
+              tr: "Seçtiğiniz kaynak imlecin olduğu yere (Yazar, Yıl) biçiminde eklenir ve Kaynakça'ya yazılır.",
+              en: "The source you choose is inserted at the cursor as (Author, Year) and added to the reference list.",
+            })
       }
     >
       <div className="stack">
-        <div className="segmented" role="tablist" aria-label="Kaynak seçimi">
+        <div className="segmented" role="tablist" aria-label={t({ tr: "Kaynak seçimi", en: "Source selection" })}>
           <button type="button" role="tab" aria-selected={tab === "list"} className={tab === "list" ? "is-active" : undefined} onClick={() => setTab("list")}>
-            Listemden
+            {t({ tr: "Listemden", en: "From my list" })}
           </button>
           <button type="button" role="tab" aria-selected={tab === "new"} className={tab === "new" ? "is-active" : undefined} onClick={() => setTab("new")}>
-            Yeni kaynak
+            {t({ tr: "Yeni kaynak", en: "New source" })}
           </button>
         </div>
 
@@ -212,12 +224,12 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
           sayfa tahmin etmez — yalnızca burada yazılanı kullanır.
         */}
         <label className="dialog-field cite-sayfa">
-          <span>Sayfa (isteğe bağlı, doğrudan alıntıda)</span>
+          <span>{t({ tr: "Sayfa (isteğe bağlı, doğrudan alıntıda)", en: "Page (optional, for direct quotes)" })}</span>
           <input
             className="picker-search"
             value={sayfa}
             onChange={(event) => setSayfa(event.target.value)}
-            placeholder="ör. 14 ya da 14-16"
+            placeholder={t({ tr: "ör. 14 ya da 14-16", en: "e.g. 14 or 14-16" })}
             inputMode="numeric"
             maxLength={20}
           />
@@ -230,8 +242,8 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Başlık, yazar ya da yıl ile ara"
-              aria-label="Kaynak ara"
+              placeholder={t({ tr: "Başlık, yazar ya da yıl ile ara", en: "Search by title, author or year" })}
+              aria-label={t({ tr: "Kaynak ara", en: "Search sources" })}
             />
             {sources && sources.length > 0 && (
               <div className="picker-kapsam">
@@ -242,7 +254,7 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
                   onClick={() => setYalnizBuCalisma(true)}
                   disabled={buCalismaSayisi === 0}
                 >
-                  Bu çalışma ({buCalismaSayisi})
+                  {t({ tr: `Bu çalışma (${buCalismaSayisi})`, en: `This work (${buCalismaSayisi})` })}
                 </button>
                 <button
                   type="button"
@@ -250,27 +262,33 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
                   className={!yalnizBuCalisma ? "is-active" : undefined}
                   onClick={() => setYalnizBuCalisma(false)}
                 >
-                  Tüm kaynaklarım ({sources.length})
+                  {t({ tr: `Tüm kaynaklarım (${sources.length})`, en: `All my sources (${sources.length})` })}
                 </button>
               </div>
             )}
             {sources === null ? (
-              <p className="muted text-sm" aria-busy="true">Kaynaklar yükleniyor…</p>
+              <p className="muted text-sm" aria-busy="true">{t({ tr: "Kaynaklar yükleniyor…", en: "Loading sources…" })}</p>
             ) : sources.length === 0 ? (
               <BosDurum
                 kompakt
                 ikon={BookMarked}
-                aciklama="Literatür listenizde henüz kaynak yok. “Yeni kaynak” ile DOI’den hemen ekleyebilirsiniz."
+                aciklama={t({
+                  tr: "Literatür listenizde henüz kaynak yok. “Yeni kaynak” ile DOI’den hemen ekleyebilirsiniz.",
+                  en: "Your literature list has no sources yet. Use “New source” to add one from a DOI right away.",
+                })}
               >
                 <button type="button" className="projects-filter-button" onClick={() => setTab("new")}>
-                  Yeni kaynak ekle
+                  {t({ tr: "Yeni kaynak ekle", en: "Add new source" })}
                 </button>
               </BosDurum>
             ) : filtered.length === 0 ? (
               <p className="muted text-sm">
                 {yalnizBuCalisma && !query.trim()
-                  ? "Bu çalışmaya bağlı kaynak yok. “Tüm kaynaklarım” ile diğerlerine bakabilirsiniz."
-                  : "Aramanızla eşleşen kaynak yok."}
+                  ? t({
+                      tr: "Bu çalışmaya bağlı kaynak yok. “Tüm kaynaklarım” ile diğerlerine bakabilirsiniz.",
+                      en: "No sources are linked to this work. Use “All my sources” to see the others.",
+                    })
+                  : t({ tr: "Aramanızla eşleşen kaynak yok.", en: "No sources match your search." })}
               </p>
             ) : (
               <ul className="picker-list">
@@ -287,24 +305,31 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
                       >
                         <strong>{source.title}</strong>
                         <small>
-                          {[source.authors, source.year, source.container_title, TYPE_LABEL[source.source_type] ?? source.source_type]
+                          {[
+                            source.authors,
+                            source.year,
+                            source.container_title,
+                            TYPE_LABEL[source.source_type] ? t(TYPE_LABEL[source.source_type]) : source.source_type,
+                          ]
                             .filter(Boolean)
                             .join(" · ")}
                         </small>
-                        {source.project_id !== projectId && <em className="picker-rozet">başka çalışma</em>}
-                        {eksikAlanlar(source).length ? (
+                        {source.project_id !== projectId && <em className="picker-rozet">{t({ tr: "başka çalışma", en: "other work" })}</em>}
+                        {eksikAlanlar(source, dil).length ? (
                           <small className="tone-text" data-tone="warning">
-                            Künyede eksik: {eksikAlanlar(source).join(", ")}
+                            {t({ tr: "Künyede eksik", en: "Missing from reference" })}: {eksikAlanlar(source, dil).join(", ")}
                           </small>
                         ) : null}
                       </button>
-                      <span className="chip">{formatInTextCitation(source, style, 1, { sayfa })}</span>
+                      <span className="chip">{formatInTextCitation(source, style, 1, { sayfa }, belgeDili)}</span>
                     </div>
                   </li>
                 ))}
               </ul>
             )}
-            <Link href="/dashboard/literature" className="muted text-sm">Literatür listesini yönet →</Link>
+            <Link href="/dashboard/literature" className="muted text-sm">
+              {t({ tr: "Literatür listesini yönet →", en: "Manage literature list →" })}
+            </Link>
           </>
         ) : (
           <form
@@ -325,77 +350,79 @@ export default function CiteDialog({ open, onClose, projectId, style, onPick }: 
                     void fetchDoi();
                   }
                 }}
-                placeholder="DOI yapıştırın (ör. 10.1016/j.compedu.2021.104...)"
+                placeholder={t({ tr: "DOI yapıştırın (ör. 10.1016/j.compedu.2021.104...)", en: "Paste a DOI (e.g. 10.1016/j.compedu.2021.104...)" })}
                 aria-label="DOI"
               />
               <button type="button" className="projects-filter-button" onClick={() => void fetchDoi()} disabled={looking || !form.doi.trim()}>
                 <Search size={15} aria-hidden="true" />
-                {looking ? "Getiriliyor…" : "Bilgileri getir"}
+                {looking ? t({ tr: "Getiriliyor…", en: "Fetching…" }) : t({ tr: "Bilgileri getir", en: "Fetch details" })}
               </button>
             </div>
 
             <div className="cite-form-grid">
               <label className="dialog-field cite-form-full">
-                <span>Başlık *</span>
+                <span>{t({ tr: "Başlık *", en: "Title *" })}</span>
                 <input className="picker-search" value={form.title} onChange={set("title")} required />
               </label>
               <label className="dialog-field cite-form-full">
-                <span>Yazarlar</span>
-                <input className="picker-search" value={form.authors} onChange={set("authors")} placeholder="Yılmaz, A., & Demir, B." />
+                <span>{t({ tr: "Yazarlar", en: "Authors" })}</span>
+                <input className="picker-search" value={form.authors} onChange={set("authors")} placeholder={t({ tr: "Yılmaz, A., & Demir, B.", en: "Smith, A., & Jones, B." })} />
               </label>
               <label className="dialog-field">
-                <span>Yıl</span>
+                <span>{t({ tr: "Yıl", en: "Year" })}</span>
                 <input className="picker-search" value={form.year} onChange={set("year")} inputMode="numeric" placeholder="2023" />
               </label>
               <label className="dialog-field">
-                <span>Tür</span>
+                <span>{t({ tr: "Tür", en: "Type" })}</span>
                 <select className="picker-search" value={form.sourceType} onChange={set("sourceType")}>
                   {Object.entries(TYPE_LABEL).map(([value, label]) => (
                     <option key={value} value={value}>
-                      {label}
+                      {t(label)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="dialog-field cite-form-full">
-                <span>{form.sourceType === "chapter" ? "Kitap adı" : "Dergi adı"}</span>
+                <span>{form.sourceType === "chapter" ? t({ tr: "Kitap adı", en: "Book title" }) : t({ tr: "Dergi adı", en: "Journal name" })}</span>
                 <input className="picker-search" value={form.containerTitle} onChange={set("containerTitle")} />
               </label>
               <label className="dialog-field">
-                <span>Cilt</span>
+                <span>{t({ tr: "Cilt", en: "Volume" })}</span>
                 <input className="picker-search" value={form.volume} onChange={set("volume")} />
               </label>
               <label className="dialog-field">
-                <span>Sayı</span>
+                <span>{t({ tr: "Sayı", en: "Issue" })}</span>
                 <input className="picker-search" value={form.issue} onChange={set("issue")} />
               </label>
               <label className="dialog-field">
-                <span>Sayfalar</span>
+                <span>{t({ tr: "Sayfalar", en: "Pages" })}</span>
                 <input className="picker-search" value={form.pages} onChange={set("pages")} placeholder="45–67" />
               </label>
               <label className="dialog-field">
-                <span>Yayınevi</span>
+                <span>{t({ tr: "Yayınevi", en: "Publisher" })}</span>
                 <input className="picker-search" value={form.publisher} onChange={set("publisher")} />
               </label>
             </div>
 
             {form.title.trim() && formEksik.length ? (
               <p className="tone-text text-sm" data-tone="warning">
-                Künyede eksik:{" "}
-                {formEksik.join(", ")}
-                . Biliyorsanız şimdi doldurun; danışmanlar eksik künyeyi düzeltme olarak geri gönderiyor.
+                {t({ tr: "Künyede eksik", en: "Missing from reference" })}: {formEksik.join(", ")}
+                {t({
+                  tr: ". Biliyorsanız şimdi doldurun; danışmanlar eksik künyeyi düzeltme olarak geri gönderiyor.",
+                  en: ". If you know them, fill them in now; advisors send incomplete references back for correction.",
+                })}
               </p>
             ) : null}
             {preview ? (
               <p className="cite-preview">
-                <span className="muted text-sm">Kaynakçada şöyle görünecek:</span>
+                <span className="muted text-sm">{t({ tr: "Kaynakçada şöyle görünecek:", en: "It will appear in the reference list as:" })}</span>
                 <br />
                 {preview}
               </p>
             ) : null}
 
             <button type="submit" className="projects-primary-button" disabled={saving || !form.title.trim()}>
-              {saving ? "Kaydediliyor…" : "Kaydet ve atıf ekle"}
+              {saving ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : t({ tr: "Kaydet ve atıf ekle", en: "Save and cite" })}
             </button>
           </form>
         )}

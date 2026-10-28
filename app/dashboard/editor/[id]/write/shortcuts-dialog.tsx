@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 import Dialog from "@/app/dashboard/_components/dialog";
+import { useCeviri } from "@/app/_components/dil-saglayici";
+import type { Metin } from "@/lib/dil";
 
 /*
   Editörün klavye kısayolları, işe göre gruplu (27.10.2026). Word'le aynı
@@ -9,75 +11,75 @@ import Dialog from "@/app/dashboard/_components/dialog";
   gruplar olmadan öğrenci aradığını bulamıyordu. Kullanım kılavuzu da bu
   listeden yazılabilir — iki ayrı liste tutulursa biri eskir.
 */
-type Kisayol = [string[], string];
-const GRUPLAR: { baslik: string; satirlar: Kisayol[] }[] = [
+type Kisayol = [string[], Metin];
+const GRUPLAR: { baslik: Metin; satirlar: Kisayol[] }[] = [
   {
-    baslik: "Belge",
+    baslik: { tr: "Belge", en: "Document" },
     satirlar: [
-      [["Mod", "S"], "Şimdi kaydet (zaten otomatik kaydedilir)"],
-      [["Mod", "P"], "Yazdır / PDF (kılavuz düzeninde, sayfalı)"],
-      [["Mod", "F"], "Bul ve değiştir"],
-      [["Mod", "Z"], "Geri al"],
-      [["Mod", "Y"], "Yinele (Ctrl+Shift+Z de olur)"],
+      [["Mod", "S"], { tr: "Şimdi kaydet (zaten otomatik kaydedilir)", en: "Save now (it already saves automatically)" }],
+      [["Mod", "P"], { tr: "Yazdır / PDF (kılavuz düzeninde, sayfalı)", en: "Print / PDF (in guideline layout, paginated)" }],
+      [["Mod", "F"], { tr: "Bul ve değiştir", en: "Find and replace" }],
+      [["Mod", "Z"], { tr: "Geri al", en: "Undo" }],
+      [["Mod", "Y"], { tr: "Yinele (Ctrl+Shift+Z de olur)", en: "Redo (Ctrl+Shift+Z also works)" }],
     ],
   },
   {
-    baslik: "Yazı biçimi",
+    baslik: { tr: "Yazı biçimi", en: "Text formatting" },
     satirlar: [
-      [["Mod", "B"], "Kalın"],
-      [["Mod", "I"], "İtalik"],
-      [["Mod", "U"], "Altı çizili"],
-      [["Mod", "Shift", "="], "Üst simge (Ctrl+. de olur)"],
-      [["Mod", ">"], "Yazıyı bir punto büyüt (Türkçe klavyede Ctrl+Shift+<; Ctrl+] de olur)"],
-      [["Mod", "<"], "Yazıyı bir punto küçült (Ctrl+[ de olur)"],
-      [["Mod", "Boşluk"], "Karakter biçimini temizle"],
-      [["Shift", "F3"], "Seçili metin: küçük harf → BÜYÜK HARF → Başlık Düzeni"],
+      [["Mod", "B"], { tr: "Kalın", en: "Bold" }],
+      [["Mod", "I"], { tr: "İtalik", en: "Italic" }],
+      [["Mod", "U"], { tr: "Altı çizili", en: "Underline" }],
+      [["Mod", "Shift", "="], { tr: "Üst simge (Ctrl+. de olur)", en: "Superscript (Ctrl+. also works)" }],
+      [["Mod", ">"], { tr: "Yazıyı bir punto büyüt (Türkçe klavyede Ctrl+Shift+<; Ctrl+] de olur)", en: "Increase font size by one point (Ctrl+Shift+< on a Turkish keyboard; Ctrl+] also works)" }],
+      [["Mod", "<"], { tr: "Yazıyı bir punto küçült (Ctrl+[ de olur)", en: "Decrease font size by one point (Ctrl+[ also works)" }],
+      [["Mod", "Boşluk"], { tr: "Karakter biçimini temizle", en: "Clear character formatting" }],
+      [["Shift", "F3"], { tr: "Seçili metin: küçük harf → BÜYÜK HARF → Başlık Düzeni", en: "Selected text: lowercase → UPPERCASE → Title Case" }],
     ],
   },
   {
-    baslik: "Paragraf",
+    baslik: { tr: "Paragraf", en: "Paragraph" },
     satirlar: [
-      [["Mod", "L"], "Sola hizala"],
-      [["Mod", "E"], "Ortala"],
-      [["Mod", "R"], "Sağa hizala"],
-      [["Mod", "J"], "İki yana yasla"],
-      [["Tab"], "Paragraf başında ilk satır girintisi; metin içinde sekme"],
-      [["Shift", "Tab"], "Paragraf başında girintiyi kaldır"],
-      [["Backspace"], "Girintili paragrafın başında: önce girintiyi kaldır"],
-      [["Shift", "Enter"], "Aynı paragrafta alt satıra geç"],
+      [["Mod", "L"], { tr: "Sola hizala", en: "Align left" }],
+      [["Mod", "E"], { tr: "Ortala", en: "Center" }],
+      [["Mod", "R"], { tr: "Sağa hizala", en: "Align right" }],
+      [["Mod", "J"], { tr: "İki yana yasla", en: "Justify" }],
+      [["Tab"], { tr: "Paragraf başında ilk satır girintisi; metin içinde sekme", en: "At the start of a paragraph: first-line indent; within text: tab" }],
+      [["Shift", "Tab"], { tr: "Paragraf başında girintiyi kaldır", en: "At the start of a paragraph: remove indent" }],
+      [["Backspace"], { tr: "Girintili paragrafın başında: önce girintiyi kaldır", en: "At the start of an indented paragraph: remove the indent first" }],
+      [["Shift", "Enter"], { tr: "Aynı paragrafta alt satıra geç", en: "Line break within the same paragraph" }],
     ],
   },
   {
-    baslik: "Başlık, liste, alıntı",
+    baslik: { tr: "Başlık, liste, alıntı", en: "Headings, lists, quotes" },
     satirlar: [
-      [["Mod", "Alt", "1"], "Başlık 1 (2 ve 3 için aynı)"],
-      [["Mod", "Alt", "0"], "Normal metne dön"],
-      [["Mod", "Shift", "8"], "Madde işaretli liste"],
-      [["Mod", "Shift", "7"], "Numaralı liste"],
-      [["Mod", "Shift", "B"], "Alıntı"],
-      [["Tab"], "Listede: maddeyi içeri al (Shift+Tab: dışarı)"],
-      [["#", "Boşluk"], "Satır başında: Başlık 1 (## ve ### ile Başlık 2 ve 3)"],
-      [["-", "Boşluk"], "Satır başında: madde işaretli liste"],
-      [["1.", "Boşluk"], "Satır başında: numaralı liste"],
-      [[">", "Boşluk"], "Satır başında: alıntı"],
+      [["Mod", "Alt", "1"], { tr: "Başlık 1 (2 ve 3 için aynı)", en: "Heading 1 (same for 2 and 3)" }],
+      [["Mod", "Alt", "0"], { tr: "Normal metne dön", en: "Back to normal text" }],
+      [["Mod", "Shift", "8"], { tr: "Madde işaretli liste", en: "Bulleted list" }],
+      [["Mod", "Shift", "7"], { tr: "Numaralı liste", en: "Numbered list" }],
+      [["Mod", "Shift", "B"], { tr: "Alıntı", en: "Block quote" }],
+      [["Tab"], { tr: "Listede: maddeyi içeri al (Shift+Tab: dışarı)", en: "In a list: indent the item (Shift+Tab: outdent)" }],
+      [["#", "Boşluk"], { tr: "Satır başında: Başlık 1 (## ve ### ile Başlık 2 ve 3)", en: "At line start: Heading 1 (## and ### for Heading 2 and 3)" }],
+      [["-", "Boşluk"], { tr: "Satır başında: madde işaretli liste", en: "At line start: bulleted list" }],
+      [["1.", "Boşluk"], { tr: "Satır başında: numaralı liste", en: "At line start: numbered list" }],
+      [[">", "Boşluk"], { tr: "Satır başında: alıntı", en: "At line start: block quote" }],
     ],
   },
   {
-    baslik: "Tablo ve dipnot",
+    baslik: { tr: "Tablo ve dipnot", en: "Tables and footnotes" },
     satirlar: [
       // Tablo kısayolları hiçbir yerde yazmıyordu; kullanıcı son hücrede Tab'a
       // basınca satır açıldığını tesadüfen öğreniyordu.
-      [["Tab"], "Tabloda sonraki hücre (son hücrede: yeni satır)"],
-      [["Shift", "Tab"], "Tabloda önceki hücre"],
-      [["Mod", "Alt", "F"], "Dipnot ekle"],
-      [["Mod", "Enter"], "Dipnot penceresinde kaydet"],
+      [["Tab"], { tr: "Tabloda sonraki hücre (son hücrede: yeni satır)", en: "Next cell in a table (in the last cell: new row)" }],
+      [["Shift", "Tab"], { tr: "Tabloda önceki hücre", en: "Previous cell in a table" }],
+      [["Mod", "Alt", "F"], { tr: "Dipnot ekle", en: "Insert footnote" }],
+      [["Mod", "Enter"], { tr: "Dipnot penceresinde kaydet", en: "Save in the footnote dialog" }],
     ],
   },
   {
-    baslik: "Pencereler",
+    baslik: { tr: "Pencereler", en: "Dialogs" },
     satirlar: [
-      [["Enter"], "Bul kutusunda sonraki eşleşme (Shift+Enter: önceki)"],
-      [["Esc"], "Açık pencereyi ya da bul çubuğunu kapat"],
+      [["Enter"], { tr: "Bul kutusunda sonraki eşleşme (Shift+Enter: önceki)", en: "In the find box: next match (Shift+Enter: previous)" }],
+      [["Esc"], { tr: "Açık pencereyi ya da bul çubuğunu kapat", en: "Close the open dialog or the find bar" }],
     ],
   },
 ];
@@ -96,7 +98,9 @@ const macMi = () => /Mac|iPhone|iPad/i.test(navigator.userAgent);
 */
 export function KisayolListesi() {
   const isMac = useSyncExternalStore(hicDinleme, macMi, () => false);
+  const t = useCeviri();
   const label = (key: string) => {
+    if (key === "Boşluk") return t({ tr: "Boşluk", en: "Space" });
     if (key === "Mod") return isMac ? "⌘" : "Ctrl";
     if (key === "Alt") return isMac ? "⌥" : "Alt";
     if (key === "Shift") return isMac ? "⇧" : "Shift";
@@ -106,8 +110,8 @@ export function KisayolListesi() {
   return (
     <>
       {GRUPLAR.map((grup) => (
-        <section key={grup.baslik} className="shortcut-grup" aria-label={grup.baslik}>
-          <h3>{grup.baslik}</h3>
+        <section key={grup.baslik.tr} className="shortcut-grup" aria-label={t(grup.baslik)}>
+          <h3>{t(grup.baslik)}</h3>
           <dl className="shortcut-list">
             {grup.satirlar.map(([keys, description], i) => (
               <div key={i} className="shortcut-row">
@@ -116,7 +120,7 @@ export function KisayolListesi() {
                     <kbd key={index}>{label(key)}</kbd>
                   ))}
                 </dt>
-                <dd>{description}</dd>
+                <dd>{t(description)}</dd>
               </div>
             ))}
           </dl>
@@ -127,13 +131,17 @@ export function KisayolListesi() {
 }
 
 export default function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useCeviri();
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      kicker="Yardım"
-      title="Klavye kısayolları"
-      description="Word'deki tuşlar burada da aynı işi yapar. Fareye uzanmadan daha hızlı yazın."
+      kicker={t({ tr: "Yardım", en: "Help" })}
+      title={t({ tr: "Klavye kısayolları", en: "Keyboard shortcuts" })}
+      description={t({
+        tr: "Word'deki tuşlar burada da aynı işi yapar. Fareye uzanmadan daha hızlı yazın.",
+        en: "The same keys as in Word do the same things here. Write faster without reaching for the mouse.",
+      })}
     >
       <KisayolListesi />
     </Dialog>

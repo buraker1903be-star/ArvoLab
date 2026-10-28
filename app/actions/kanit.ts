@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
-import { ALINTI_HATASI, alintiDenetle } from "@/lib/kanit/alinti";
+import { ALINTI_HATASI_METIN, alintiDenetle } from "@/lib/kanit/alinti";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import type { Cevirici, Metin } from "@/lib/dil";
 import { kunyeDogrula } from "@/lib/kanit/dizin";
 import { kunyeOzeti } from "@/lib/kanit/kunye-karsilastirma";
 import type { DestekDuzeyi, KanitKaydi, KaynakOzeti } from "@/lib/kanit/durum";
@@ -28,6 +30,12 @@ const HUKUMLER: DestekDuzeyi[] = ["dogrudan", "kismen", "dolayli", "celisiyor", 
 /* Saatlik künye doğrulama hakkı: Crossref ve OpenAlex ücretsiz ve açık;
    sınır kota değil nezaket (literatür aramasındaki gerekçe). */
 const SAATLIK_KUNYE_HAKKI = 60;
+const KAYIT_YOK: Metin = { tr: "Kayıt bulunamadı.", en: "Record not found." };
+const KAYIT_YOK_YA_DA_YETKI: Metin = {
+  tr: "Kayıt bulunamadı ya da düzenleme yetkiniz yok.",
+  en: "Record not found, or you do not have permission to edit it.",
+};
+const IDDIA_KISA: Metin = { tr: "İddiayı yazın (en az birkaç sözcük).", en: "Write the claim (at least a few words)." };
 
 const metin = (formData: FormData, ad: string, sinir: number) => {
   const deger = String(formData.get(ad) ?? "").trim();
@@ -47,14 +55,21 @@ const yollar = (projectId: string) => {
 };
 
 /** Veritabanı hatasını kullanıcının anlayacağı cümleye çevirir. */
-function dbHatasi(hata: { code?: string; message?: string }, varsayilan: string): ActionResult {
+function dbHatasi(t: Cevirici, hata: { code?: string; message?: string }, varsayilan: Metin): ActionResult {
   const mesaj = hata.message ?? "";
-  if (hata.code === "42501" && /kaynağa erişiminiz yok/.test(mesaj)) return { error: "Bu kaynağa erişiminiz yok." };
-  if (hata.code === "42501") return { error: "Bu çalışmada kanıt kaydı yazma yetkiniz yok." };
-  if (/Alıntı incelenen metinde geçmiyor/.test(mesaj)) return { error: ALINTI_HATASI.metinde_yok };
-  if (/kanit_metinsiz_hukum_yok/.test(mesaj)) return { error: "Destek düzeyi verebilmek için önce incelenen metni ve ondan bir alıntıyı ekleyin." };
+  if (hata.code === "42501" && /kaynağa erişiminiz yok/.test(mesaj)) return { error: t({ tr: "Bu kaynağa erişiminiz yok.", en: "You do not have access to this source." }) };
+  if (hata.code === "42501") return { error: t({ tr: "Bu çalışmada kanıt kaydı yazma yetkiniz yok.", en: "You do not have permission to write evidence records for this work." }) };
+  if (/Alıntı incelenen metinde geçmiyor/.test(mesaj)) return { error: t(ALINTI_HATASI_METIN.metinde_yok) };
+  if (/kanit_metinsiz_hukum_yok/.test(mesaj)) {
+    return {
+      error: t({
+        tr: "Destek düzeyi verebilmek için önce incelenen metni ve ondan bir alıntıyı ekleyin.",
+        en: "To assign a support level, first add the reviewed text and a quote from it.",
+      }),
+    };
+  }
   console.error("[kanit]", hata.code, mesaj);
-  return { error: varsayilan };
+  return { error: t(varsayilan) };
 }
 
 export type KanitMatrisiVerisi = {
@@ -106,12 +121,13 @@ export async function kanitMatrisiOku(projectId: string): Promise<KanitMatrisiVe
 export async function kanitEkle(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const projectId = kimlik(formData, "project_id");
-  if (!projectId) return { error: "Çalışma bulunamadı." };
+  if (!projectId) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
   const iddia = metin(formData, "iddia", 2000);
-  if (!iddia || iddia.length < 5) return { error: "İddiayı yazın (en az birkaç sözcük)." };
+  if (!iddia || iddia.length < 5) return { error: t(IDDIA_KISA) };
 
   const { error } = await ctx.supabase.from("kanit_kayitlari").insert({
     project_id: projectId,
@@ -121,41 +137,49 @@ export async function kanitEkle(formData: FormData): Promise<ActionResult> {
     atif: metin(formData, "atif", 300),
     kaynak_id: kimlik(formData, "kaynak_id"),
   });
-  if (error) return dbHatasi(error, "İddia eklenemedi.");
+  if (error) return dbHatasi(t, error, { tr: "İddia eklenemedi.", en: "The claim could not be added." });
 
   yollar(projectId);
-  return { success: true, message: "İddia kanıt matrisine eklendi." };
+  return { success: true, message: t({ tr: "İddia kanıt matrisine eklendi.", en: "The claim was added to the evidence matrix." }) };
 }
 
 /** İddia, bölüm, atıf ve kaynak. İddia ya da kaynak değişirse eski sonuçlar veritabanında düşer. */
 export async function kanitGuncelle(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
-  if (!id || !projectId) return { error: "Kayıt bulunamadı." };
+  if (!id || !projectId) return { error: t(KAYIT_YOK) };
   const iddia = metin(formData, "iddia", 2000);
-  if (!iddia || iddia.length < 5) return { error: "İddiayı yazın (en az birkaç sözcük)." };
+  if (!iddia || iddia.length < 5) return { error: t(IDDIA_KISA) };
 
   const { data, error } = await ctx.supabase
     .from("kanit_kayitlari")
     .update({ iddia, bolum: metin(formData, "bolum", 200), atif: metin(formData, "atif", 300), kaynak_id: kimlik(formData, "kaynak_id") })
     .eq("id", id)
     .select("id");
-  if (error) return dbHatasi(error, "Kayıt güncellenemedi.");
-  if (!data?.length) return { error: "Kayıt bulunamadı ya da düzenleme yetkiniz yok." };
+  if (error) return dbHatasi(t, error, { tr: "Kayıt güncellenemedi.", en: "The record could not be updated." });
+  if (!data?.length) return { error: t(KAYIT_YOK_YA_DA_YETKI) };
 
   yollar(projectId);
-  return { success: true, message: "Kayıt güncellendi. İddia ya da kaynak değiştiyse önceki doğrulama sonuçları sıfırlandı." };
+  return {
+    success: true,
+    message: t({
+      tr: "Kayıt güncellendi. İddia ya da kaynak değiştiyse önceki doğrulama sonuçları sıfırlandı.",
+      en: "Record updated. If the claim or source changed, previous verification results were reset.",
+    }),
+  };
 }
 
 /** Kaynaktan incelenen metin, kapsam beyanı, konum ve alıntı. */
 export async function kanitMetniKaydet(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
-  if (!id || !projectId) return { error: "Kayıt bulunamadı." };
+  if (!id || !projectId) return { error: t(KAYIT_YOK) };
 
   const incelenen = metin(formData, "incelenen_metin", 20000);
   const kapsam = String(formData.get("incelenen_kapsam") ?? "") === "tam_metin" ? "tam_metin" : "bolum";
@@ -163,7 +187,7 @@ export async function kanitMetniKaydet(formData: FormData): Promise<ActionResult
 
   if (alinti) {
     const denetim = alintiDenetle(alinti, incelenen);
-    if (!denetim.gecti) return { error: ALINTI_HATASI[denetim.neden] };
+    if (!denetim.gecti) return { error: t(ALINTI_HATASI_METIN[denetim.neden]) };
   }
 
   const { data, error } = await ctx.supabase
@@ -193,22 +217,31 @@ export async function kanitMetniKaydet(formData: FormData): Promise<ActionResult
     )
     .eq("id", id)
     .select("id");
-  if (error) return dbHatasi(error, "Metin kaydedilemedi.");
-  if (!data?.length) return { error: "Kayıt bulunamadı ya da düzenleme yetkiniz yok." };
+  if (error) return dbHatasi(t, error, { tr: "Metin kaydedilemedi.", en: "The text could not be saved." });
+  if (!data?.length) return { error: t(KAYIT_YOK_YA_DA_YETKI) };
 
   yollar(projectId);
-  return { success: true, message: incelenen ? "Kanıt metni kaydedildi. Metin değiştiyse önceki değerlendirme sıfırlandı." : "Kanıt metni kaldırıldı." };
+  return {
+    success: true,
+    message: incelenen
+      ? t({
+          tr: "Kanıt metni kaydedildi. Metin değiştiyse önceki değerlendirme sıfırlandı.",
+          en: "Evidence text saved. If the text changed, the previous assessment was reset.",
+        })
+      : t({ tr: "Kanıt metni kaldırıldı.", en: "Evidence text removed." }),
+  };
 }
 
 /** Kullanıcının kendi değerlendirmesi: insan incelemesi sayılır. */
 export async function kanitDegerlendirmesiKaydet(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
-  if (!id || !projectId) return { error: "Kayıt bulunamadı." };
+  if (!id || !projectId) return { error: t(KAYIT_YOK) };
   const duzey = String(formData.get("destek_duzeyi") ?? "") as DestekDuzeyi;
-  if (!HUKUMLER.includes(duzey)) return { error: "Bir destek düzeyi seçin." };
+  if (!HUKUMLER.includes(duzey)) return { error: t({ tr: "Bir destek düzeyi seçin.", en: "Choose a support level." }) };
 
   const { data, error } = await ctx.supabase
     .from("kanit_kayitlari")
@@ -222,36 +255,38 @@ export async function kanitDegerlendirmesiKaydet(formData: FormData): Promise<Ac
     })
     .eq("id", id)
     .select("id");
-  if (error) return dbHatasi(error, "Değerlendirme kaydedilemedi.");
-  if (!data?.length) return { error: "Kayıt bulunamadı ya da düzenleme yetkiniz yok." };
+  if (error) return dbHatasi(t, error, { tr: "Değerlendirme kaydedilemedi.", en: "The assessment could not be saved." });
+  if (!data?.length) return { error: t(KAYIT_YOK_YA_DA_YETKI) };
 
   yollar(projectId);
-  return { success: true, message: "Değerlendirmeniz kaydedildi." };
+  return { success: true, message: t({ tr: "Değerlendirmeniz kaydedildi.", en: "Your assessment was saved." }) };
 }
 
 /** Otomatik değerlendirmeyi bir insanın gözden geçirdiğini kaydeder. */
 export async function insanIncelemesiYapildi(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
-  if (!id || !projectId) return { error: "Kayıt bulunamadı." };
+  if (!id || !projectId) return { error: t(KAYIT_YOK) };
 
   const { data, error } = await ctx.supabase.from("kanit_kayitlari").update({ insan_incelemesi: "yapildi" }).eq("id", id).select("id");
-  if (error) return dbHatasi(error, "İnceleme kaydedilemedi.");
-  if (!data?.length) return { error: "Kayıt bulunamadı ya da düzenleme yetkiniz yok." };
+  if (error) return dbHatasi(t, error, { tr: "İnceleme kaydedilemedi.", en: "The review could not be saved." });
+  if (!data?.length) return { error: t(KAYIT_YOK_YA_DA_YETKI) };
 
   yollar(projectId);
-  return { success: true, message: "İnceleme kaydedildi." };
+  return { success: true, message: t({ tr: "İnceleme kaydedildi.", en: "Review saved." }) };
 }
 
 /** Matrisin "çelişen çalışmalar", "eksik kanıt" ve "önerilen düzeltme" sütunları. */
 export async function kanitNotlariKaydet(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
-  if (!id || !projectId) return { error: "Kayıt bulunamadı." };
+  if (!id || !projectId) return { error: t(KAYIT_YOK) };
 
   const { data, error } = await ctx.supabase
     .from("kanit_kayitlari")
@@ -262,26 +297,27 @@ export async function kanitNotlariKaydet(formData: FormData): Promise<ActionResu
     })
     .eq("id", id)
     .select("id");
-  if (error) return dbHatasi(error, "Notlar kaydedilemedi.");
-  if (!data?.length) return { error: "Kayıt bulunamadı ya da düzenleme yetkiniz yok." };
+  if (error) return dbHatasi(t, error, { tr: "Notlar kaydedilemedi.", en: "The notes could not be saved." });
+  if (!data?.length) return { error: t(KAYIT_YOK_YA_DA_YETKI) };
 
   yollar(projectId);
-  return { success: true, message: "Notlar kaydedildi." };
+  return { success: true, message: t({ tr: "Notlar kaydedildi.", en: "Notes saved." }) };
 }
 
 export async function kanitSil(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
-  if (!id || !projectId) return { error: "Kayıt bulunamadı." };
+  if (!id || !projectId) return { error: t(KAYIT_YOK) };
 
   const { data, error } = await ctx.supabase.from("kanit_kayitlari").delete().eq("id", id).select("id");
-  if (error) return dbHatasi(error, "Kayıt silinemedi.");
-  if (!data?.length) return { error: "Kayıt bulunamadı ya da silme yetkiniz yok." };
+  if (error) return dbHatasi(t, error, { tr: "Kayıt silinemedi.", en: "The record could not be deleted." });
+  if (!data?.length) return { error: t({ tr: "Kayıt bulunamadı ya da silme yetkiniz yok.", en: "Record not found, or you do not have permission to delete it." }) };
 
   yollar(projectId);
-  return { success: true, message: "Kayıt silindi." };
+  return { success: true, message: t({ tr: "Kayıt silindi.", en: "Record deleted." }) };
 }
 
 /**
@@ -292,10 +328,11 @@ export async function kanitSil(formData: FormData): Promise<ActionResult> {
 export async function kunyeyiDogrula(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
-  if (!id || !projectId) return { error: "Kayıt bulunamadı." };
+  if (!id || !projectId) return { error: t(KAYIT_YOK) };
 
   // Sayaç kurulamıyorsa doğrulama engellenmiyor (bkz. adminIstemcisiVarsa).
   const admin = adminIstemcisiVarsa();
@@ -306,21 +343,30 @@ export async function kunyeyiDogrula(formData: FormData): Promise<ActionResult> 
       p_window: "1 hour",
     });
     if (error) console.error("[kanit] hız sınırı okunamadı:", error.message);
-    else if (izin === false) return { error: `Saatlik künye doğrulama hakkınız doldu (${SAATLIK_KUNYE_HAKKI}).` };
+    else if (izin === false) {
+      return {
+        error: t({
+          tr: `Saatlik künye doğrulama hakkınız doldu (${SAATLIK_KUNYE_HAKKI}).`,
+          en: `You have used up your hourly reference verification limit (${SAATLIK_KUNYE_HAKKI}).`,
+        }),
+      };
+    }
   }
 
   const { data: kayit } = await ctx.supabase.from("kanit_kayitlari").select("id, kaynak_id").eq("id", id).maybeSingle();
-  if (!kayit) return { error: "Kayıt bulunamadı." };
-  if (!kayit.kaynak_id) return { error: "Önce literatür listenizden bir kaynak bağlayın." };
+  if (!kayit) return { error: t(KAYIT_YOK) };
+  if (!kayit.kaynak_id) return { error: t({ tr: "Önce literatür listenizden bir kaynak bağlayın.", en: "First link a source from your literature list." }) };
 
   const { data: kaynak } = await ctx.supabase
     .from("literature_sources")
     .select("title, authors, year, container_title, volume, issue, pages, doi_or_url")
     .eq("id", kayit.kaynak_id)
     .maybeSingle();
-  if (!kaynak) return { error: "Bağlı kaynağa erişilemiyor." };
+  if (!kaynak) return { error: t({ tr: "Bağlı kaynağa erişilemiyor.", en: "The linked source cannot be accessed." }) };
 
-  const sonuc = await kunyeDogrula(kaynak);
+  /* Özet kayda da bu dilde yazılıyor: sonucu isteyen kullanıcı ilk okuyandır. */
+  const dil = await aktifDil();
+  const sonuc = await kunyeDogrula(kaynak, undefined, dil);
   if (sonuc.tur === "ulasilamadi") return { error: sonuc.neden };
 
   const simdi = new Date().toISOString();
@@ -331,7 +377,7 @@ export async function kunyeyiDogrula(formData: FormData): Promise<ActionResult> 
           kunye_kaynagi: sonuc.karsilastirma.dizin,
           kunye_bakildi: simdi,
           kunye_ayrintisi: {
-            ozet: kunyeOzeti(sonuc.karsilastirma),
+            ozet: kunyeOzeti(sonuc.karsilastirma, dil),
             alanlar: sonuc.karsilastirma.alanlar,
             adres: sonuc.karsilastirma.adres,
             doi: sonuc.doi,
@@ -349,7 +395,7 @@ export async function kunyeyiDogrula(formData: FormData): Promise<ActionResult> 
         };
 
   const { error } = await ctx.supabase.from("kanit_kayitlari").update(guncelleme).eq("id", id);
-  if (error) return dbHatasi(error, "Doğrulama sonucu kaydedilemedi.");
+  if (error) return dbHatasi(t, error, { tr: "Doğrulama sonucu kaydedilemedi.", en: "The verification result could not be saved." });
 
   yollar(projectId);
   return { success: true, message: guncelleme.kunye_ayrintisi.ozet };

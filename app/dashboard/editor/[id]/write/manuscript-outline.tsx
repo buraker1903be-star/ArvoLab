@@ -5,6 +5,7 @@ import { Check, Circle, FileUp, ListChecks, Plus, Wand2 } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
 import YanKutu from "./yan-kutu";
 import type { OutlineHeading, SectionStatus } from "./editor-navigation";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 interface ManuscriptOutlineProps {
   /** En üstteki kart: kontrol düğmeleri, ilerleme ve çıktı (manuscript-editor.tsx) */
@@ -39,18 +40,23 @@ export default function ManuscriptOutline({
 }: ManuscriptOutlineProps) {
   const missing = sections.filter((item) => !item.heading).map((item) => item.section);
   const [acik, setAcik] = useState(false);
+  const t = useCeviri();
 
   return (
-    <aside className="manuscript-outline" aria-label="Belge planı">
+    <aside className="manuscript-outline" aria-label={t({ tr: "Belge planı", en: "Document outline" })}>
       {ust}
 
       <div className="yan-kutular">
         {sections.length > 0 ? (
           <YanKutu
             ikon={ListChecks}
-            baslik="Bölümler"
+            baslik={t({ tr: "Bölümler", en: "Sections" })}
             deger={`${sections.length - missing.length}/${sections.length}`}
-            alt={missing.length ? `${missing.length} bölüm eksik` : "kılavuzun bölümleri tamam"}
+            alt={
+              missing.length
+                ? t({ tr: `${missing.length} bölüm eksik`, en: `${missing.length} sections missing` })
+                : t({ tr: "kılavuzun bölümleri tamam", en: "all guideline sections present" })
+            }
             ton={missing.length ? "warning" : "success"}
             onClick={() => setAcik(true)}
           />
@@ -62,9 +68,12 @@ export default function ManuscriptOutline({
         <Dialog
           open={acik}
           onClose={() => setAcik(false)}
-          kicker="Kılavuz"
-          title="Kılavuz bölümleri"
-          description="Kılavuzun zorunlu bölümleri. Var olana basınca o bölüme gidilir; eksik olan kılavuzdaki sırasına göre eklenir."
+          kicker={t({ tr: "Kılavuz", en: "Guideline" })}
+          title={t({ tr: "Kılavuz bölümleri", en: "Guideline sections" })}
+          description={t({
+            tr: "Kılavuzun zorunlu bölümleri. Var olana basınca o bölüme gidilir; eksik olan kılavuzdaki sırasına göre eklenir.",
+            en: "The sections your guideline requires. Click an existing one to jump to it; a missing one is inserted in the guideline's order.",
+          })}
         >
           <div className="stack">
           {documentEmpty ? (
@@ -73,7 +82,7 @@ export default function ManuscriptOutline({
                 onTemplate();
               }}>
               <Wand2 size={15} aria-hidden="true" />
-              Kılavuza göre taslak oluştur
+              {t({ tr: "Kılavuza göre taslak oluştur", en: "Create outline from guideline" })}
             </button>
           ) : null}
 
@@ -84,7 +93,7 @@ export default function ManuscriptOutline({
                   <button type="button" onClick={() => {
                       setAcik(false);
                       onJump(item.heading!);
-                    }} title="Bölüme git">
+                    }} title={t({ tr: "Bölüme git", en: "Go to section" })}>
                     <Check size={14} aria-hidden="true" />
                     <span>{item.section}</span>
                   </button>
@@ -92,7 +101,7 @@ export default function ManuscriptOutline({
                   <button type="button" onClick={() => {
                       setAcik(false);
                       onInsert([item.section]);
-                    }} title="Bu bölümü ekle">
+                    }} title={t({ tr: "Bu bölümü ekle", en: "Add this section" })}>
                     <Circle size={14} aria-hidden="true" />
                     <span>{item.section}</span>
                     <Plus size={14} aria-hidden="true" className="outline-add" />
@@ -108,7 +117,7 @@ export default function ManuscriptOutline({
                 onInsert(missing);
               }}>
               <Plus size={15} aria-hidden="true" />
-              Eksik {missing.length} bölümü ekle
+              {t({ tr: `Eksik ${missing.length} bölümü ekle`, en: `Add ${missing.length} missing sections` })}
             </button>
           ) : null}
           </div>
@@ -118,7 +127,7 @@ export default function ManuscriptOutline({
       {documentEmpty ? (
         <button type="button" className="projects-filter-button outline-action" onClick={onImport}>
           <FileUp size={15} aria-hidden="true" />
-          Word dosyasından aktar
+          {t({ tr: "Word dosyasından aktar", en: "Import from Word file" })}
         </button>
       ) : null}
     </aside>

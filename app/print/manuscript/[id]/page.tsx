@@ -9,6 +9,8 @@ import { buildPrintSheet } from "@/lib/print-sheet";
 import ManuscriptSheet from "../manuscript-sheet";
 import PrintActions from "./print-actions";
 import SayfaliBaski from "../sayfali-baski";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import { belgeDili } from "@/lib/belge-dili";
 
 /*
   Sekme başlığı, "PDF olarak kaydet"in önerdiği DOSYA ADI. Eskiden sabit
@@ -19,7 +21,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const supabase = await createClient();
   const { data } = await supabase.from("academic_projects").select("title").eq("id", id).maybeSingle();
-  return { title: { absolute: data?.title?.trim() || "Çalışma" }, robots: { index: false } };
+  const t = await ceviri();
+  return { title: { absolute: data?.title?.trim() || t({ tr: "Çalışma", en: "Work" }) }, robots: { index: false } };
 }
 
 // Yazdırmaya hazır A4 görünümü: kılavuzun yazı tipi, boyutu, satır aralığı ve
@@ -54,16 +57,20 @@ export default async function PrintManuscriptPage({
     .maybeSingle();
   if (!project) notFound();
 
-  const [manuscript, guideline] = await Promise.all([getManuscript(id), calismaKilavuzu(supabase, id, project.guideline_id)]);
+  const [manuscript, guideline, dil] = await Promise.all([
+    getManuscript(id),
+    calismaKilavuzu(supabase, id, project.guideline_id),
+    aktifDil().then((arayuz) => belgeDili(supabase, id, arayuz)),
+  ]);
   // Resim bağlantıları depo yolundan tazelenir (süresi dolmuş imzalı bağlantılar çıktıda kaybolmasın).
   const doc = manuscript ? await refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : null;
-  const sheet = buildPrintSheet(manuscript, guideline, doc);
+  const sheet = buildPrintSheet(manuscript, guideline, doc, dil);
 
   return (
     <div className="print-page">
       {/* Otomatik yazdırma sayfalama bitince (sayfali-baski.tsx); erken basılırsa yarım sayfalar çıkar. */}
       <PrintActions backHref={`/dashboard/editor/${id}/write`} autoPrint={false} />
-      <ManuscriptSheet title={project.title ?? ""} sheet={sheet} />
+      <ManuscriptSheet title={project.title ?? ""} sheet={sheet} dil={dil} />
       <SayfaliBaski otomatikYazdir={auto === "1"} />
     </div>
   );

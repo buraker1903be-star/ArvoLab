@@ -1,7 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { aiHataMesaji, aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
@@ -19,6 +21,7 @@ import { makaleTuruMu, yontemAilesi } from "@/lib/makale/sablonlar";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EN_KISA_BOLUM = 80;
+const CALISMA_YOK: Metin = { tr: "Çalışma bulunamadı.", en: "Work not found." };
 
 export type MakaleDenetimYaniti = {
   hata?: string;
@@ -34,9 +37,11 @@ export type MakaleDenetimYaniti = {
 export const makaleAsistaniAcik = async () => aiYapilandirildi();
 
 export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi: number; zorla?: boolean }): Promise<MakaleDenetimYaniti> {
-  if (!UUID.test(String(girdi.projectId ?? ""))) return { hata: "Çalışma bulunamadı." };
+  const dil = await aktifDil();
+  const t = await ceviri();
+  if (!UUID.test(String(girdi.projectId ?? ""))) return { hata: t(CALISMA_YOK) };
 
-  const kapi = await asistanKapisi();
+  const kapi = await asistanKapisi(dil);
   if (!kapi.ok) return { hata: kapi.hata };
 
   const supabase = await createClient();
@@ -51,17 +56,22 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
   ]);
   if (proje.error || profil.error || musvedde.error) {
     console.error("[ai] makale bağlamı okunamadı", proje.error?.message, profil.error?.message, musvedde.error?.message);
-    return { hata: "Makale okunamadı. Birazdan tekrar deneyin." };
+    return { hata: t({ tr: "Makale okunamadı. Birazdan tekrar deneyin.", en: "The article could not be read. Try again shortly." }) };
   }
-  if (!proje.data) return { hata: "Çalışma bulunamadı." };
-  if (proje.data.project_type !== "article") return { hata: "Bölüm denetimi makale türündeki çalışmalar içindir." };
+  if (!proje.data) return { hata: t(CALISMA_YOK) };
+  if (proje.data.project_type !== "article") return { hata: t({ tr: "Bölüm denetimi makale türündeki çalışmalar içindir.", en: "Section review is for article-type works." }) };
   if (!profil.data || !makaleTuruMu(profil.data.makale_turu))
-    return { hata: "Önce makale bilgilerini (tür, araştırma sorusu) kaydedin; denetim bunlara göre kuruluyor." };
+    return {
+      hata: t({
+        tr: "Önce makale bilgilerini (tür, araştırma sorusu) kaydedin; denetim bunlara göre kuruluyor.",
+        en: "First save the article details (type, research question); the review is built on them.",
+      }),
+    };
 
   const bolumler = makaleBolumleri(musvedde.data?.content);
   const bolum = bolumler[Number(girdi.bolumSirasi)];
-  if (!bolum) return { hata: "Bölüm bulunamadı. Müsveddeyi kaydettikten sonra sayfayı yenileyin." };
-  if (bolum.metin.length < EN_KISA_BOLUM) return { hata: "Bu bölüm denetlenecek kadar uzun değil." };
+  if (!bolum) return { hata: t({ tr: "Bölüm bulunamadı. Müsveddeyi kaydettikten sonra sayfayı yenileyin.", en: "Section not found. Save the manuscript, then refresh the page." }) };
+  if (bolum.metin.length < EN_KISA_BOLUM) return { hata: t({ tr: "Bu bölüm denetlenecek kadar uzun değil.", en: "This section is not long enough to review." }) };
 
   const tur = profil.data.makale_turu;
   const bulgularBolumu = bolum.tur === "tartisma" || bolum.tur === "sonuc" ? bolumler.find((b) => b.tur === "bulgular") : undefined;
@@ -78,6 +88,7 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
     bolumBasligi: bolum.baslik,
     bolumMetni: bolum.metin,
     bulgularMetni: bulgularBolumu?.metin ?? null,
+    dil,
   });
 
   if (!girdi.zorla) {
@@ -86,7 +97,7 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
   }
 
   // Hak yalnızca modele gidilecekse yanar.
-  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
+  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
   if (hakHatasi) return { hata: hakHatasi };
 
   const basladi = Date.now();
@@ -102,7 +113,13 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
     }
     if (!bulgular.length) {
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
-      return { hata: "Asistan bu bölüm için denetlenebilir bir bulgu üretmedi. Tekrar deneyebilirsiniz.", kirpilanlar };
+      return {
+        hata: t({
+          tr: "Asistan bu bölüm için denetlenebilir bir bulgu üretmedi. Tekrar deneyebilirsiniz.",
+          en: "The assistant did not produce any reviewable findings for this section. You can try again.",
+        }),
+        kirpilanlar,
+      };
     }
 
     /*
@@ -113,21 +130,33 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
     if (yabanci.length) {
       console.error("[ai] makale denetimi künye üretti", { model: yanit.model });
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "kunye", model: yanit.model, cikti: yanit.metin, bulgular });
-      return { hata: "Asistan metinde olmayan bir kaynak künyesi ürettiği için cevap gösterilmedi.", kirpilanlar };
+      return {
+        hata: t({
+          tr: "Asistan metinde olmayan bir kaynak künyesi ürettiği için cevap gösterilmedi.",
+          en: "The answer was not shown because the assistant produced a reference that is not in the text.",
+        }),
+        kirpilanlar,
+      };
     }
 
-    const dogrulama = bulgulariDogrula(bulgular, kaynak);
+    const dogrulama = bulgulariDogrula(bulgular, kaynak, { dil });
     if (!dogrulama.gecti) {
       console.error("[ai] makale denetimi uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, cikti: yanit.metin, bulgular });
-      return { hata: "Asistan verilmeyen sayılar ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.", kirpilanlar };
+      return {
+        hata: t({
+          tr: "Asistan verilmeyen sayılar ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
+          en: "The answer was not shown because the assistant produced numbers that were not provided. This is a safety check; you can try again.",
+        }),
+        kirpilanlar,
+      };
     }
 
     const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular });
     return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
-    const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
-    console.error("[ai] makale denetimi başarısız", mesaj);
+    const mesaj = aiHataMesaji(hata, dil) ?? t({ tr: "Asistan yanıt veremedi.", en: "The assistant could not respond." });
+    console.error("[ai] makale denetimi başarısız", hata instanceof Error ? hata.message : hata);
     await asistanKaydet({ ...ortak, durum: "failed" });
     return { hata: mesaj, kirpilanlar };
   }

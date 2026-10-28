@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getAuthContext } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
+import { ceviri } from "@/lib/dil-sunucu";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { extractPlainText, countWords, type TiptapDoc } from "@/lib/tiptap-text";
 import { splitBodyAndReferences } from "@/lib/text-split";
@@ -71,7 +72,8 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
 
   if (error) {
     console.error(error);
-    throw new Error("Çalışma metni yüklenemedi. Lütfen sayfayı yenileyin.");
+    const t = await ceviri();
+    throw new Error(t({ tr: "Çalışma metni yüklenemedi. Lütfen sayfayı yenileyin.", en: "The manuscript could not be loaded. Please refresh the page." }));
   }
   if (!data) return null;
 
@@ -141,10 +143,11 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   const ctx = await getAuthContext();
   if (!ctx) {
     return {
-      error: "Oturumunuz sona erdi. Yeniden giriş yapın.",
+      error: await oturumYokMesaji(),
       sessionExpired: true,
     };
   }
+  const t = await ceviri();
   /*
     Abonelik kapısı burada da gerekli: paneldeki kapı yalnızca ekran çizimini
     engelliyor. Deneme süresi biterken editör sekmesi açık kalan kullanıcının
@@ -166,7 +169,12 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   // kaydetme: eksik metni üzerine yazmak yerine hata göster, taslak tarayıcıda kalır.
   if (!content || content.type !== "doc" || hasNonPlainAttributes(content)) {
     console.error("saveManuscript: içerik biçim bilgisi eksik ulaştı, kayıt durduruldu");
-    return { error: "Metnin biçim bilgisi sunucuya eksik ulaştı; üzerine yazmamak için kaydı durdurduk. Sayfayı yenileyin." };
+    return {
+      error: t({
+        tr: "Metnin biçim bilgisi sunucuya eksik ulaştı; üzerine yazmamak için kaydı durdurduk. Sayfayı yenileyin.",
+        en: "The text's formatting reached the server incomplete; we stopped the save so nothing is overwritten. Refresh the page.",
+      }),
+    };
   }
   const wordCount = countWords(content);
   const baseRow = {
@@ -201,13 +209,16 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   const fullRow = { ...baseRow, ...optionalColumns };
   const hasOptionalColumns = Object.keys(optionalColumns).length > 0;
 
-  const failed = { error: "Kaydedilirken bir hata oluştu." } as const;
+  const failed = { error: t({ tr: "Kaydedilirken bir hata oluştu.", en: "Something went wrong while saving." }) } as const;
   const conflict = {
-    error: "Bu belge başka bir sekmede ya da başka biri tarafından değiştirildi.",
+    error: t({
+      tr: "Bu belge başka bir sekmede ya da başka biri tarafından değiştirildi.",
+      en: "This document was changed in another tab or by someone else.",
+    }),
     conflict: true,
   } as const;
   const forbidden = {
-    error: "Bu çalışmada değişiklik kaydetme yetkiniz yok.",
+    error: t({ tr: "Bu çalışmada değişiklik kaydetme yetkiniz yok.", en: "You do not have permission to save changes to this work." }),
     forbidden: true,
   } as const;
   /*
@@ -219,7 +230,17 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   const rlsReddi = (error: { code?: string; message?: string } | null) => {
     if (!isForbidden(error)) return null;
     const mesaj = error?.message ?? "";
-    return /abonelik/i.test(mesaj) ? ({ error: mesaj, forbidden: true, abonelik: true } as const) : forbidden;
+    // Tetikleyicinin açıklaması Türkçe; İngilizcede aynı anlamı taşıyan ortak mesaj gösteriliyor.
+    return /abonelik/i.test(mesaj)
+      ? ({
+          error: t({
+            tr: mesaj,
+            en: "Your subscription is not active, so changes cannot be saved. Renew your subscription to continue.",
+          }),
+          forbidden: true,
+          abonelik: true,
+        } as const)
+      : forbidden;
   };
 
   /*
@@ -350,8 +371,9 @@ export async function runManuscriptCheck(
   yapi: unknown = [],
 ): Promise<{ error?: string; result?: ManuscriptCheckResult; kayit?: KontrolKaydiOzeti }> {
   const ctx = await getAuthContext();
-  if (!ctx) return { error: "Oturumunuz sona erdi. Yeniden giriş yapın." };
+  if (!ctx) return { error: await oturumYokMesaji() };
   const { supabase } = ctx;
+  const t = await ceviri();
 
   const { data: manuscript, error: manuscriptError } = await supabase
     .from("project_manuscripts")
@@ -361,9 +383,9 @@ export async function runManuscriptCheck(
 
   if (manuscriptError) {
     console.error(manuscriptError);
-    return { error: "Metin okunamadı; bu çalışmaya erişiminizi kontrol edin." };
+    return { error: t({ tr: "Metin okunamadı; bu çalışmaya erişiminizi kontrol edin.", en: "The text could not be read; check your access to this work." }) };
   }
-  if (!manuscript) return { error: "Kontrol için önce biraz metin yazın." };
+  if (!manuscript) return { error: t({ tr: "Kontrol için önce biraz metin yazın.", en: "Write some text before running a check." }) };
 
   const { data: project } = await supabase
     .from("academic_projects")
@@ -386,7 +408,12 @@ export async function runManuscriptCheck(
   const { kilavuz: guideline, okunamadi: kilavuzOkunamadi } = await calismaKilavuzuOku(supabase, projectId, project?.guideline_id);
   /* Kılavuz okunamadıysa kontrol eksik kalır ve geçmişe "eksik bölüm 0" yazılırdı: çalıştırılmıyor. */
   if (kilavuzOkunamadi) {
-    return { error: "Kılavuzunuz şu anda okunamadı; kontrol eksik kalacağı için çalıştırılmadı. Sayfayı yenileyip tekrar deneyin." };
+    return {
+      error: t({
+        tr: "Kılavuzunuz şu anda okunamadı; kontrol eksik kalacağı için çalıştırılmadı. Sayfayı yenileyip tekrar deneyin.",
+        en: "Your guideline could not be read right now, so the check was not run (it would have been incomplete). Refresh the page and try again.",
+      }),
+    };
   }
   // Tam metinde aranır: gövde metni "Kaynakça" başlığından önce biter, o bölüm hep eksik görünüyordu.
   const guidelineCompliance = guideline
@@ -468,7 +495,8 @@ export async function kontrolKaydiniOku(
   id: string,
 ): Promise<{ error?: string; sonuc?: ManuscriptCheckResult; yapi?: StructureIssue[] }> {
   const ctx = await getAuthContext();
-  if (!ctx) return { error: "Oturumunuz sona erdi. Yeniden giriş yapın." };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   const { data, error } = await ctx.supabase
     .from("yazim_kontrolleri")
     .select("sonuc, yapi")
@@ -477,9 +505,9 @@ export async function kontrolKaydiniOku(
     .maybeSingle();
   if (error) {
     console.error("[kontrol] kayıt okunamadı", error.message);
-    return { error: "Kontrol kaydı okunamadı; biraz sonra tekrar deneyin." };
+    return { error: t({ tr: "Kontrol kaydı okunamadı; biraz sonra tekrar deneyin.", en: "The check record could not be read; try again shortly." }) };
   }
-  if (!data) return { error: "Kontrol kaydı bulunamadı." };
+  if (!data) return { error: t({ tr: "Kontrol kaydı bulunamadı.", en: "Check record not found." }) };
   return { sonuc: data.sonuc as ManuscriptCheckResult, yapi: yapiSorunlariniTemizle(data.yapi) };
 }
 

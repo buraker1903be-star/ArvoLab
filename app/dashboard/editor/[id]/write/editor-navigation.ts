@@ -4,6 +4,7 @@ import { headingMatchesSection } from "@/lib/section-match";
 import { authorLabel, formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
 import { kalibaGoreAtif, type AtifKalibi } from "@/lib/atif/tyk";
 import { fixReferencePunctuation } from "@/lib/reference-punctuation";
+import type { Dil } from "@/lib/dil";
 import { indentCmOf, type ParagraphFormatRules, hangingIndentCmOf } from "@/lib/paragraph-format";
 
 export interface OutlineHeading {
@@ -170,8 +171,10 @@ export function insertCitation(
   source: CitableSource,
   style: CitationStyle,
   /* Sayfa (atıf penceresinde öğrencinin yazdığı) ve erişim tarihi (bugün). */
-  secenek: AtifSecenegi & KunyeSecenegi & { kalip?: AtifKalibi | null } = {}
+  /* dil: BELGENİN dili (lib/belge-dili.ts) — "s."/"p.", "t.y."/"n.d.", "vd."/"et al." ve yeni açılan Kaynakça başlığı. */
+  secenek: AtifSecenegi & KunyeSecenegi & { kalip?: AtifKalibi | null; dil?: Dil } = {}
 ): { citation: string; addedReference: boolean } {
+  const dil = secenek.dil ?? "tr";
   const section = findReferencesSection(editor.state.doc);
   const entries = section?.paragraphs.filter((item) => item.node.textContent.trim()) ?? [];
   const titleKey = source.title.trim().toLocaleLowerCase("tr-TR").slice(0, 60);
@@ -186,8 +189,8 @@ export function insertCitation(
   */
   const citation =
     secenek.kalip && (style === "apa7" || style === "chicago")
-      ? kalibaGoreAtif(authorLabel(source), source.year?.trim() || "t.y.", secenek.sayfa?.trim() || null, secenek.kalip)
-      : formatInTextCitation(source, style, number, { sayfa: secenek.sayfa });
+      ? kalibaGoreAtif(authorLabel(source, dil), source.year?.trim() || (dil === "en" ? "n.d." : "t.y."), secenek.sayfa?.trim() || null, secenek.kalip)
+      : formatInTextCitation(source, style, number, { sayfa: secenek.sayfa }, dil);
 
   const { from, to } = editor.state.selection;
   const before = editor.state.doc.textBetween(Math.max(0, from - 1), from);
@@ -196,7 +199,7 @@ export function insertCitation(
 
   if (existingIndex >= 0) return { citation, addedReference: false };
 
-  const parts = formatReferenceParts(source, style, number, { erisimTarihi: secenek.erisimTarihi });
+  const parts = formatReferenceParts(source, style, number, { erisimTarihi: secenek.erisimTarihi }, dil);
   const paragraph = editor.schema.nodeFromJSON({
     type: "paragraph",
     content: parts
@@ -208,7 +211,7 @@ export function insertCitation(
     .command(({ tr }) => {
       const current = findReferencesSection(tr.doc);
       if (!current) {
-        const heading = editor.schema.nodeFromJSON({ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "Kaynakça" }] });
+        const heading = editor.schema.nodeFromJSON({ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: dil === "en" ? "References" : "Kaynakça" }] });
         tr.insert(tr.doc.content.size, [heading, paragraph]);
         return true;
       }
