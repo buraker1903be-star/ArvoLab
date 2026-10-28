@@ -206,7 +206,10 @@ export async function uakTablosunuYorumla(tabloId: string): Promise<ActionResult
       return { error: "Öneri kaydedilemedi; tekrar deneyin." };
     }
     revalidatePath(SAYFA);
-    return { success: true, message: `${oneri.kriterler.length} kriter ve ${oneri.hedefler.length} hedef önerildi. İnceleyip onaylayın.` };
+    return {
+      success: true,
+      message: `${oneri.kriterler.length} kriter ve ${oneri.hedefler.length} hedef önerildi. İnceleyip onaylayın.${kapi.uyari ? ` ${kapi.uyari}` : ""}`,
+    };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[üak] yorumlama başarısız", mesaj);

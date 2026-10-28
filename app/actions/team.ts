@@ -239,9 +239,14 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
   }
 
   /*
-    Davet e-postası. Gönderilemezse davet yine de geçerli: kullanıcı oluştu ve
-    bağlantı üretildi; yönetici gerekirse bağlantıyı elden iletebilir.
+    Davet e-postası. Gönderilemezse kullanıcı yine de oluştu; ama eskiden
+    işlem "başarılı" dönüyor ve yönetici e-postanın gitmediğini hiç
+    öğrenmiyordu (yorum "bağlantıyı elden iletebilir" diyordu, bağlantı
+    hiçbir yerde gösterilmiyordu). Yeniden davet de "bu adres zaten kayıtlı"
+    diye düşüyordu: çıkmaz. Artık uyarı dönüyor ve çıkış yolu yazıyor —
+    şifre sıfırlama bağlantısı davet edilen hesabı da doğrular.
   */
+  let davetGitmedi = false;
   // action_link değil: o bağlantı oturumu #access_token ile döndürür, sunucu göremez (lib/auth-link.ts).
   const inviteLink = data.properties?.hashed_token ? authConfirmLink(await siteOrigin(), data.properties.hashed_token, "invite") : null;
   if (inviteLink) {
@@ -249,7 +254,13 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
     const { data: davetEden } = await auth.supabase
       .from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
     const gonderim = await sendEmail({ to: email, ...inviteEmail(inviteLink, davetEden?.full_name) });
-    if (!gonderim.ok) console.error("Davet e-postası gönderilemedi:", email, gonderim.reason);
+    if (!gonderim.ok) {
+      console.error("Davet e-postası gönderilemedi:", email, gonderim.reason);
+      davetGitmedi = true;
+    }
+  } else {
+    console.error("Davet bağlantısı üretilemedi (belirteç boş):", email);
+    davetGitmedi = true;
   }
 
   // Profil satırı kayıt tetikleyicisiyle (handle_new_user) "Üye / Öğrenci" olarak açılır.
@@ -267,6 +278,12 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
   }
 
   revalidatePath(PAGE_PATH);
+  if (davetGitmedi) {
+    return {
+      success: true,
+      warning: `Hesap oluşturuldu ama davet e-postası ${email} adresine gönderilemedi. Kişiden giriş sayfasındaki "Şifremi unuttum" ile bağlantı istemesini isteyin; o bağlantı hesabı da açar.`,
+    };
+  }
   return { success: true };
 }
 

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
-import { calismaKilavuzu } from "@/lib/guideline-rules";
+import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { resolveGuidelineSync } from "@/lib/guideline-sync";
 import { refreshImageUrls } from "@/lib/manuscript-images";
 import { detectFormatLoss } from "@/lib/format-loss";
@@ -41,10 +41,10 @@ export default async function WriteManuscriptPage({
   // Çalışma yoksa ya da kullanıcının erişimi yoksa (RLS) boş editör yerine 404.
   if (!project) notFound();
 
-  const [guideline, manuscript, userResult, gecmisYaniti] = await Promise.all([
+  const [{ kilavuz: guideline, okunamadi: kilavuzOkunamadi }, manuscript, userResult, gecmisYaniti] = await Promise.all([
     /* Katalogda eşleşme yoksa öğrencinin kendi yüklediği kılavuz
        uygulanıyor (lib/guideline-rules.ts: calismaKilavuzu). */
-    calismaKilavuzu(supabase, id, project.guideline_id),
+    calismaKilavuzuOku(supabase, id, project.guideline_id),
     getManuscript(id),
     supabase.auth.getUser(),
     /* Kılavuz ve kaynakça kontrolü geçmişi: son 10 çalıştırma; en
@@ -110,6 +110,15 @@ export default async function WriteManuscriptPage({
           </Link>
         </div>
       </section>
+
+      {kilavuzOkunamadi ? (
+        /* Geçici arıza: editör kılavuzsuz açılıyor. Söylenmezse öğrenci biçimin
+           neden değiştiğini anlamaz ya da kılavuzunu silinmiş sanıp yeniden yükler. */
+        <p className="alert" data-tone="warning" role="alert">
+          Kılavuzunuz şu anda okunamadı; bu oturumda kılavuzun biçim kuralları uygulanmıyor. Kılavuzunuz silinmedi —
+          sayfayı yenileyin. Kılavuz ve kaynakça kontrolünü yeniledikten sonra çalıştırın.
+        </p>
+      ) : null}
 
       <ManuscriptEditor
         projectId={id}

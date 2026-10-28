@@ -36,6 +36,8 @@ export type KaynakcaDenetimYaniti = {
   hata?: string;
   bulgular?: Bulgu[];
   kirpilanlar?: string[];
+  /** Kredi azalıyorsa kullanıcıya gösterilecek not (lib/ai/erisim.ts). */
+  krediUyarisi?: string;
   model?: string;
   /** Çalışma kaydının kimliği; kullanıcı buna puan veriyor. */
   kayitId?: string | null;
@@ -94,7 +96,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
   if (!girdi.zorla) {
     const onceki = await oncekiCevap(kapi.kullaniciId, "kaynakca", kaynak);
     if (onceki)
-      return { bulgular: onceki.bulgular, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+      return { krediUyarisi: kapi.uyari ?? undefined, bulgular: onceki.bulgular, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
   }
 
   // Hak yalnızca modele gidilecekse yanar.
@@ -109,7 +111,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     /* Bilerek boş liste: denetlenen metinde işaretlenecek bir şey yok. Hata değil, sonuç. */
     if (!bulgular.length && bosListeMi(yanit.metin)) {
       const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
-      return { bulgular, kirpilanlar, model: yanit.model, kayitId };
+      return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
     }
     if (!bulgular.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
@@ -132,7 +134,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     }
 
     const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
-    return { bulgular, kirpilanlar, model: yanit.model, kayitId };
+    return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[ai] kaynakça denetimi başarısız", mesaj);

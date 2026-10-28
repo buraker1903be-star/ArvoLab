@@ -29,6 +29,8 @@ export type AsistanSonucVerisi = {
   kirpilanlar?: string[];
   kayitId?: string | null;
   kayitliCevap?: { tarih: string } | null;
+  /** Kredi azalıyor (lib/ai/erisim.ts). Eskiden kapıda hesaplanıp hiçbir yetenekte gösterilmiyordu. */
+  krediUyarisi?: string;
 };
 
 function BulguListesi({
@@ -118,6 +120,12 @@ export default function AsistanSonuc({
       {sonuc?.hata && (
         <p className="asistan-uyari" data-tone="danger" role="alert">
           {sonuc.hata}
+        </p>
+      )}
+
+      {sonuc?.krediUyarisi && !sonuc.hata && (
+        <p className="asistan-uyari" data-tone="neutral" role="status">
+          {sonuc.krediUyarisi}
         </p>
       )}
 

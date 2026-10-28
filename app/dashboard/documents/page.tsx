@@ -215,6 +215,11 @@ export default async function DocumentsPage({
                   </p>
                 ) : null}
               </>
+            ) : a.kilavuzOkunamadi ? (
+              <p className="tone-text text-sm" data-tone="warning">
+                Yükleme sırasında kılavuzunuz okunamadı; zorunlu bölümler ve sayfa sınırı bu belgede denetlenmedi.
+                Kılavuzunuz silinmedi — belgeyi yeniden yükleyin.
+              </p>
             ) : calisma ? (
               <p className="muted text-sm">
                 Bu belge bir kılavuza göre denetlenmedi; zorunlu bölümler ve sayfa sınırı bakılmadı.{" "}

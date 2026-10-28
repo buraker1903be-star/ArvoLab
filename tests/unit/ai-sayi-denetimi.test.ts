@@ -237,3 +237,30 @@ describe("bilerek boş liste", () => {
     assert.equal(bosListeMi('{"bulgular": [{"tur":"bilgi","baslik":"a","aciklama":"b"}]}'), false);
   });
 });
+
+describe("yapısal türetmeler yalnızca analizde (28.10.2026)", () => {
+  const bulgu = (aciklama: string) => [{ tur: "bilgi" as const, baslik: "Not", aciklama }];
+
+  test("dört grupta 6 ikili karşılaştırma", () => {
+    const girdi = "F(3, 46) = 4,12, p = ,011. Tukey HSD: A–B, A–C, A–D, B–C, B–D, C–D";
+    assert.equal(bulgulariDogrula(bulgu("6 ikili karşılaştırma yapılmış; çoklu karşılaştırma düzeltmesi raporlanmalı."), girdi, { yapisalTuretme: true }).gecti, true);
+  });
+
+  test("n = 50'den r(48)", () => {
+    assert.equal(bulgulariDogrula(bulgu("APA'da r(48) biçiminde yazılır."), "r = ,41, p = ,003, n = 50", { yapisalTuretme: true }).gecti, true);
+  });
+
+  test("seçenek kapalıyken (kaynakça, makale) türetme yok", () => {
+    // "2020 − 1" uydurma bir yıl olurdu.
+    const sonuc = bulgulariDogrula(bulgu("Yayın yılı 2019 olmalı."), "Yılmaz, A. (2020). Başlık.");
+    assert.equal(sonuc.gecti, false);
+  });
+
+  test("bedeli: girdideki sayının bir eksiği olan uydurma tam sayı kaçar", () => {
+    assert.equal(bulgulariDogrula(bulgu("49 katılımcı."), "n = 50", { yapisalTuretme: true }).gecti, true);
+  });
+
+  test("ondalıklar türetilmez", () => {
+    assert.equal(bulgulariDogrula(bulgu("p = ,012"), "F(3, 46) = 4,12, p = ,011", { yapisalTuretme: true }).gecti, false);
+  });
+});

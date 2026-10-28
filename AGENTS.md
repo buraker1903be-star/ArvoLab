@@ -69,6 +69,10 @@ davranış da yazılır ("Eskiden … oluyordu"). Yeni kod bu üsluba uyar.
   tavsiyesinde böyle bir değer yoktur ("COVID-19", "2000'ler", "son 15-20
   yıl"); orada denetim yerine `kunyeIzi` çalışır. Yanlış alarm, kaçırılan
   uydurmadan sinsidir: kullanıcı doğru çalışan aracı kullanmayı bırakır.
+  Girdide yazılı olmadığı hâlde kabul edilenler `lib/ai/sayi-denetimi.ts`'te
+  bedeliyle birlikte sayılı: Cohen eşikleri, oranın yüzde yazımı ve —
+  YALNIZCA analiz yeteneğinde — yapısal türetmeler (n − 1, n − 2, ikili
+  karşılaştırma sayısı). Kaynakçada türetme yok: "yıl − 1" uydurma yıldır.
 - **Asistan kaynak önermez.** Literatür yeteneği arama stratejisi üretir;
   yazar, başlık, dergi ya da DOI yazması yasaktır (`kunyeIzi` kodda da
   denetler). Uydurma künye akademik çalışmada en ağır hatadır.

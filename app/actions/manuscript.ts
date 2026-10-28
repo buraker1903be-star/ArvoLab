@@ -9,7 +9,7 @@ import { extractInTextCitations, crossCheck, computeComplianceScore, type Parsed
 import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
 import { stilTanimi, type AtifTuru } from "@/lib/atif/stiller";
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
-import { calismaKilavuzu } from "@/lib/guideline-rules";
+import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
 import { hasNonPlainAttributes } from "@/lib/format-loss";
 import { kontrolSayilari, ozetOku, yapiSorunlariniTemizle, type KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
@@ -383,7 +383,11 @@ export async function runManuscriptCheck(
     (26.10.2026) bu kontrol yeni çalışmalarda zorunlu bölümlere HİÇ bakmıyor
     ve geçmişe "eksik bölüm 0" yazıyordu — editör aynı bölümü eksik derken.
   */
-  const guideline = await calismaKilavuzu(supabase, projectId, project?.guideline_id);
+  const { kilavuz: guideline, okunamadi: kilavuzOkunamadi } = await calismaKilavuzuOku(supabase, projectId, project?.guideline_id);
+  /* Kılavuz okunamadıysa kontrol eksik kalır ve geçmişe "eksik bölüm 0" yazılırdı: çalıştırılmıyor. */
+  if (kilavuzOkunamadi) {
+    return { error: "Kılavuzunuz şu anda okunamadı; kontrol eksik kalacağı için çalıştırılmadı. Sayfayı yenileyip tekrar deneyin." };
+  }
   // Tam metinde aranır: gövde metni "Kaynakça" başlığından önce biter, o bölüm hep eksik görünüyordu.
   const guidelineCompliance = guideline
     ? checkGuidelineCompliance(fullText, guideline.requiredSections, guideline.citationStyle, citationStyle)

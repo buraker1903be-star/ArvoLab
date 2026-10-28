@@ -4,7 +4,7 @@ import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-son
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { belgeMetniOku, detectDocType, splitBodyAndReferences } from "@/lib/document-extract";
-import { calismaKilavuzu } from "@/lib/guideline-rules";
+import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { BOS_METIN_MESAJI, KISMI_METIN_UYARISI, metinDurumu } from "@/lib/belge-kontrol";
 import { checkGuidelineCompliance, type GuidelineComplianceResult } from "@/lib/guideline-check";
 import {
@@ -176,6 +176,8 @@ export async function analyzeUploadedDocument(params: {
     */
     let guidelineCompliance: GuidelineComplianceResult | null = null;
     let kilavuz: { ad: string; surum: string; dogrulandi: boolean; minPages: number | null; maxPages: number | null } | null = null;
+    /* "Kılavuz yok" ile "okunamadı" ayrı: sayfa ikincisinde "kılavuz ekleyin" demesin. */
+    let kilavuzOkunamadi = false;
     if (params.projectId) {
       const { data: project, error: projeHatasi } = await supabase
         .from("academic_projects")
@@ -184,7 +186,9 @@ export async function analyzeUploadedDocument(params: {
         .maybeSingle();
       if (projeHatasi) console.error("[belge] çalışmanın kılavuzu okunamadı:", projeHatasi.message);
 
-      const uygulanan = project ? await calismaKilavuzu(supabase, params.projectId, project.guideline_id) : null;
+      const okuma = project ? await calismaKilavuzuOku(supabase, params.projectId, project.guideline_id) : null;
+      kilavuzOkunamadi = Boolean(projeHatasi) || Boolean(okuma?.okunamadi);
+      const uygulanan = okuma?.kilavuz ?? null;
       if (uygulanan) {
         guidelineCompliance = checkGuidelineCompliance(
           split.bodyText,
@@ -204,6 +208,7 @@ export async function analyzeUploadedDocument(params: {
     const ortak = {
       guidelineCompliance,
       kilavuz,
+      kilavuzOkunamadi,
       sayfaSayisi: okunan.sayfa,
       metinUyarisi: metin.durum === "kismi" ? KISMI_METIN_UYARISI : null,
     };
@@ -293,6 +298,7 @@ export interface DocumentUploadRecord {
     kilavuz?: { ad: string; surum: string; dogrulandi: boolean; minPages: number | null; maxPages: number | null } | null;
     sayfaSayisi?: number | null;
     metinUyarisi?: string | null;
+    kilavuzOkunamadi?: boolean;
   } | null;
   created_at: string;
 }

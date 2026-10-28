@@ -214,3 +214,37 @@ export function uydurmaYaziylaSayilar(cikti: string, girdi: string, ...ekGirdile
   );
   return [...new Set(bulunanlar.map((x) => x.metin))];
 }
+
+/*
+  YAPISAL TÜRETİLMİŞ SAYILAR (28.10.2026) — YALNIZCA ANALİZ YETENEĞİNDE.
+
+  Asistan girdideki yapıyı sayınca girdide yazılı olmayan bir sayı
+  çıkıyor ve cevabın tamamı düşüyordu: dört grubun Tukey çıktısında
+  "6 ikili karşılaştırma", n = 50'lik korelasyonda "r(48)". İkisi de
+  uydurma değil, girdinin aritmetik sonucu; istemin kendisi çoklu
+  karşılaştırmaya bakmasını istiyor.
+
+  Kabul edilen türetmeler SABİT ve dar: her tam sayı v için v − 1 ve v − 2
+  (serbestlik derecesi: t ve grup sayısında v − 1, r'de n − 2) ve v ≤ 30
+  ise ikili karşılaştırma sayısı — k grup için k(k−1)/2, girdide yalnızca
+  sd = k − 1 geçiyorsa (F(3, 46)) (v+1)v/2.
+
+  BEDELİ açıkça: girdideki bir sayının bir ya da iki eksiği olan UYDURMA bir
+  tam sayı (n = 50 iken "49 katılımcı") kaçar. Ondalıklar (p, etki
+  büyüklüğü, ortalama) bu kümeye hiç girmiyor. Kaynakça ve makale
+  yeteneklerinde KULLANILMAZ: orada "2020 − 1" uydurma bir yıl olurdu.
+*/
+export function yapisalTuretilmis(girdiler: string[]): string[] {
+  const sonuc = new Set<string>();
+  for (const deger of girdiler.flatMap(sayilar)) {
+    const v = Number(deger);
+    if (!Number.isInteger(v) || v < 2 || v > 100_000) continue;
+    sonuc.add(String(v - 1));
+    sonuc.add(String(v - 2));
+    if (v <= 30) {
+      sonuc.add(String((v * (v - 1)) / 2));
+      sonuc.add(String(((v + 1) * v) / 2));
+    }
+  }
+  return [...sonuc];
+}

@@ -11,6 +11,8 @@ export interface AiFeedbackResponse {
   error?: string;
   feedback?: string;
   truncated?: boolean;
+  /** Kredi azalıyor (lib/ai/erisim.ts). */
+  krediUyarisi?: string;
 }
 
 export async function requestAiFeedback(documentId: string): Promise<AiFeedbackResponse> {
@@ -95,7 +97,7 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
     if (kayitHatasi) console.error("AI geri bildirimi kaydedilemedi:", kayitHatasi.message);
 
     revalidatePath("/dashboard/documents");
-    return { feedback: result.feedback, truncated: result.truncated };
+    return { feedback: result.feedback, truncated: result.truncated, krediUyarisi: kapi.uyari ?? undefined };
   } catch (err) {
     console.error(err);
     const message = err instanceof Error ? err.message : "AI geri bildirimi alınırken bir hata oluştu.";

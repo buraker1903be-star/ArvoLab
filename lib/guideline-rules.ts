@@ -200,30 +200,50 @@ export function appliedGuidelineFromCalisma(row: CalismaKilavuzuRow): AppliedGui
   Çalışmaya UYGULANAN kılavuz: önce katalog, yoksa öğrencinin kendi
   yüklediği. Sıra tartışmalı değil — onaydan geçmiş kural, geçmemiş
   olanı her zaman yener.
+
+  OKUNAMADI ayrı taşınıyor (28.10.2026). Okuma hatası "kılavuz yok"
+  DEĞİL; eskiden ikisi de null dönüyordu: geçici bir arızada editör
+  kılavuzsuz açılıyor, kılavuz penceresi "Kılavuzunuzu yükleyin" diyor,
+  öğrenci kılavuzunun silindiğini sanıp yeniden yüklüyordu. "Yok" ile
+  "okunamadı"yı ayırması gereken ekranlar calismaKilavuzuOku'yu kullanır.
 */
-export async function calismaKilavuzu(
+export type KilavuzOkumasi = { kilavuz: AppliedGuideline | null; okunamadi: boolean };
+
+export async function calismaKilavuzuOku(
   supabase: SupabaseClient,
   projectId: string,
   guidelineId: string | null | undefined,
-): Promise<AppliedGuideline | null> {
-  const katalog = await loadAppliedGuideline(supabase, guidelineId);
-  if (katalog) return katalog;
+): Promise<KilavuzOkumasi> {
+  if (guidelineId) {
+    const { data: g, error } = await supabase.from("thesis_guidelines").select("*").eq("id", guidelineId).maybeSingle();
+    if (error) {
+      console.error("[kilavuz] katalog kılavuzu okunamadı:", error.message);
+      /* Hangisinin uygulandığı bilinmiyor: yüklenen kılavuza düşmek, onaylı kuralın yerine onaylanmamışı koyabilirdi. */
+      return { kilavuz: null, okunamadi: true };
+    }
+    const katalog = g ? appliedGuidelineFromRow(g as GuidelineRow) : null;
+    if (katalog) return { kilavuz: katalog, okunamadi: false };
+  }
 
   const { data, error } = await supabase
     .from("calisma_kilavuzu")
     .select("project_id, kaynak_adres, belge_basligi, kurallar, olusturuldu")
     .eq("project_id", projectId)
     .maybeSingle();
-  /*
-    Okuma hatası "kılavuz yok" DEĞİL. Geçici bir arızada öğrencinin
-    kuralları sessizce kaybolur ve editör kılavuzsuz çalışmaya başlar;
-    yazdığı tez biçim denetiminden geçmemiş olur.
-  */
   if (error) {
     console.error("[kilavuz] çalışma kılavuzu okunamadı:", error.message);
-    return null;
+    return { kilavuz: null, okunamadi: true };
   }
-  return data ? appliedGuidelineFromCalisma(data as CalismaKilavuzuRow) : null;
+  return { kilavuz: data ? appliedGuidelineFromCalisma(data as CalismaKilavuzuRow) : null, okunamadi: false };
+}
+
+/** "Okunamadı"nın ayrı gösterilmesi gerekmeyen yerler için (yazdırma, Word, paylaşım). */
+export async function calismaKilavuzu(
+  supabase: SupabaseClient,
+  projectId: string,
+  guidelineId: string | null | undefined,
+): Promise<AppliedGuideline | null> {
+  return (await calismaKilavuzuOku(supabase, projectId, guidelineId)).kilavuz;
 }
 
 export async function loadAppliedGuideline(

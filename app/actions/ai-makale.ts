@@ -24,6 +24,8 @@ export type MakaleDenetimYaniti = {
   hata?: string;
   bulgular?: Bulgu[];
   kirpilanlar?: string[];
+  /** Kredi azalıyorsa kullanıcıya gösterilecek not (lib/ai/erisim.ts). */
+  krediUyarisi?: string;
   model?: string;
   kayitId?: string | null;
   kayitliCevap?: { tarih: string } | null;
@@ -80,7 +82,7 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
 
   if (!girdi.zorla) {
     const onceki = await oncekiCevap(kapi.kullaniciId, "makale", kaynak);
-    if (onceki) return { bulgular: onceki.bulgular, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+    if (onceki) return { krediUyarisi: kapi.uyari ?? undefined, bulgular: onceki.bulgular, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
   }
 
   // Hak yalnızca modele gidilecekse yanar.
@@ -96,7 +98,7 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
     /* Bilerek boş liste: denetlenen metinde işaretlenecek bir şey yok. Hata değil, sonuç. */
     if (!bulgular.length && bosListeMi(yanit.metin)) {
       const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular });
-      return { bulgular, kirpilanlar, model: yanit.model, kayitId };
+      return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
     }
     if (!bulgular.length) {
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
@@ -122,7 +124,7 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
     }
 
     const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular });
-    return { bulgular, kirpilanlar, model: yanit.model, kayitId };
+    return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[ai] makale denetimi başarısız", mesaj);

@@ -34,6 +34,8 @@ export type AnalizDenetimYaniti = {
   bulgular?: Bulgu[];
   /** Uzunluk sınırı nedeniyle asistana gönderilemeyen bölümler. */
   kirpilanlar?: string[];
+  /** Kredi azalıyorsa kullanıcıya gösterilecek not (lib/ai/erisim.ts). */
+  krediUyarisi?: string;
   model?: string;
   /** Çalışma kaydının kimliği; kullanıcı buna puan veriyor. */
   kayitId?: string | null;
@@ -79,7 +81,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
   if (!girdi.zorla) {
     const onceki = await oncekiCevap(kapi.kullaniciId, "analiz", kaynak);
     if (onceki)
-      return { bulgular: onceki.bulgular, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+      return { krediUyarisi: kapi.uyari ?? undefined, bulgular: onceki.bulgular, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
   }
 
   // Hak yalnızca modele gidilecekse yanar.
@@ -94,7 +96,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
     /* Bilerek boş liste: denetlenen metinde işaretlenecek bir şey yok. Hata değil, sonuç. */
     if (!bulgular.length && bosListeMi(yanit.metin)) {
       const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
-      return { bulgular, kirpilanlar, model: yanit.model, kayitId };
+      return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
     }
     if (!bulgular.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
@@ -109,7 +111,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
       listeye güvenmek en tehlikelisi: hangi değerin uydurulduğunu kullanıcı
       ayıklayamaz. Bu yüzden tek bir uydurma sayıda cevabın tamamı düşer.
     */
-    const dogrulama = bulgulariDogrula(bulgular, kaynak, { ekKaynaklar: apaSatirlari });
+    const dogrulama = bulgulariDogrula(bulgular, kaynak, { ekKaynaklar: apaSatirlari, yapisalTuretme: true });
     if (!dogrulama.gecti) {
       console.error("[ai] analiz denetimi uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
@@ -120,7 +122,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
     }
 
     const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
-    return { bulgular, kirpilanlar, model: yanit.model, kayitId };
+    return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[ai] analiz denetimi başarısız", mesaj);

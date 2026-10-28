@@ -22,6 +22,7 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
   const [feedback, setFeedback] = useState<string | null>(initialFeedback);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [krediUyarisi, setKrediUyarisi] = useState<string | null>(null);
 
   async function handleClick() {
     setLoading(true);
@@ -32,6 +33,7 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
         setError(res.error);
       } else if (res.feedback) {
         setFeedback(res.feedback);
+        setKrediUyarisi(res.krediUyarisi ?? null);
       }
     } catch (hata) {
       /* İşlemin kendisi düştüyse (süre aşımı, bağlantı) hata ekranına gitmesin. */
@@ -64,6 +66,12 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
         /* Eskiden düğme görünüyor, her tıklama "Vercel ayarlarına anahtar
            ekleyin" diyen bir hata ve başarısız bir kayıt üretiyordu. */
         <p className="alert" data-tone="info">AI geri bildirimi şu an kapalı.</p>
+      )}
+
+      {krediUyarisi && (
+        <p className="muted text-sm mt-sm" role="status">
+          {krediUyarisi}
+        </p>
       )}
 
       {okunamadi && !feedback && (

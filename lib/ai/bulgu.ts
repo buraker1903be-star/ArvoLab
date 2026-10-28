@@ -9,7 +9,7 @@
   Saf modül; testi tests/unit/ai-analiz-yorumu.test.ts.
 */
 
-import { uydurmaSayilar, uydurmaYaziylaSayilar } from "./sayi-denetimi";
+import { uydurmaSayilar, uydurmaYaziylaSayilar, yapisalTuretilmis } from "./sayi-denetimi";
 import { SOZCUK_BASI } from "@/lib/sozcuk-siniri";
 
 export type BulguTuru = "uyari" | "oneri" | "bilgi";
@@ -139,6 +139,11 @@ export type Dogrulama = { gecti: true } | { gecti: false; uydurulan: string[] };
 export type DogrulamaSecenegi = {
   /** Doğrulanmış ek kaynaklar (ör. tespit edilen istatistiklerin APA karşılığı). */
   ekKaynaklar?: string[];
+  /**
+   * Yapısal türetmeler (sd, ikili karşılaştırma sayısı) kabul edilsin mi.
+   * YALNIZCA analiz yeteneğinde; gerekçe ve bedeli sayi-denetimi.ts'te.
+   */
+  yapisalTuretme?: boolean;
 };
 
 /**
@@ -167,9 +172,11 @@ export function bulgulariDogrula(bulgular: Bulgu[], kaynak: string, secenek: Dog
     "bir" ve "iki" Türkçede belirteç olarak da geçiyor (gerekçe
     sayi-denetimi.ts'te). Bedeli orada açıkça yazılı.
   */
+  const ek = secenek.ekKaynaklar ?? [];
+  const turetilmis = secenek.yapisalTuretme ? [yapisalTuretilmis([kaynak, ...ek]).join(" ")] : [];
   const uydurulan = [
-    ...uydurmaSayilar(cikti, kaynak, ...(secenek.ekKaynaklar ?? [])),
-    ...uydurmaYaziylaSayilar(cikti, kaynak, ...(secenek.ekKaynaklar ?? [])),
+    ...uydurmaSayilar(cikti, kaynak, ...ek, ...turetilmis),
+    ...uydurmaYaziylaSayilar(cikti, kaynak, ...ek, ...turetilmis),
   ];
   return uydurulan.length ? { gecti: false, uydurulan } : { gecti: true };
 }

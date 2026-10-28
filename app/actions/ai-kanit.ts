@@ -33,6 +33,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type KanitDegerlendirmeYaniti = {
   hata?: string;
+  /** Kredi azalıyor (lib/ai/erisim.ts); AsistanSonuc gösterir. */
+  krediUyarisi?: string;
   /** Hüküm gösterildi ama kanıt kaydına işlenemedi. */
   uyari?: string;
   duzey?: HukumDuzeyi;
@@ -111,7 +113,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
         const uyari = await hukmuIsle(kayit.id, kayit.project_id, onceki.id, dogrulama.sonuc);
         return {
           ...dogrulama.sonuc,
-          ...(uyari ? { uyari } : {}),
+          ...(uyari ? { uyari } : {}), krediUyarisi: kapi.uyari ?? undefined,
           kirpilanlar,
           kayitId: onceki.id,
           kayitliCevap: { tarih: onceki.created_at },
@@ -150,7 +152,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
       ? await hukmuIsle(kayit.id, kayit.project_id, kayitId, dogrulama.sonuc)
       : "Değerlendirme gösterildi ama asistan kaydı yazılamadığı için kanıt matrisine işlenmedi.";
 
-    return { ...dogrulama.sonuc, ...(uyari ? { uyari } : {}), kirpilanlar, model: yanit.model, kayitId };
+    return { ...dogrulama.sonuc, ...(uyari ? { uyari } : {}), krediUyarisi: kapi.uyari ?? undefined, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[ai] kanıt değerlendirmesi başarısız", mesaj);

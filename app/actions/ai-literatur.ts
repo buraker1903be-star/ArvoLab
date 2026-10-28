@@ -28,6 +28,8 @@ export type LiteraturDenetimYaniti = {
   /** Veri tabanına yapıştırılabilir arama dizeleri. */
   aramalar?: string[];
   kirpilanlar?: string[];
+  /** Kredi azalıyorsa kullanıcıya gösterilecek not (lib/ai/erisim.ts). */
+  krediUyarisi?: string;
   model?: string;
   /** Çalışma kaydının kimliği; kullanıcı buna puan veriyor. */
   kayitId?: string | null;
@@ -85,7 +87,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
   if (!girdi.zorla) {
     const onceki = await oncekiCevap(kapi.kullaniciId, "literatur", kaynak);
     if (onceki)
-      return { bulgular: onceki.bulgular, aramalar: onceki.aramalar ?? [], kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+      return { krediUyarisi: kapi.uyari ?? undefined, bulgular: onceki.bulgular, aramalar: onceki.aramalar ?? [], kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
   }
 
   // Hak yalnızca modele gidilecekse yanar.
@@ -121,7 +123,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
     }
 
     const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular: { bulgular, aramalar }, basladi });
-    return { bulgular, aramalar, kirpilanlar, model: yanit.model, kayitId };
+    return { krediUyarisi: kapi.uyari ?? undefined, bulgular, aramalar, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
     const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
     console.error("[ai] literatür taraması başarısız", mesaj);

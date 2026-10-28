@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { AsistanBulgusu, CalismaOzeti } from "@/lib/calisma-ozeti";
 import { calismaKilavuzu } from "@/app/actions/guidelines";
 import { metinListeTutarsizliklari, type KaynakSatiri, type Tutarsizlik } from "@/lib/calisma-tutarlilik";
-import { calismaKilavuzu as uygulananKilavuz } from "@/lib/guideline-rules";
+import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 
 /*
@@ -128,7 +128,7 @@ export async function calismaOzeti(
     öğrencinin teslim listesi "Kılavuz yok — Kılavuzumu yükle" demeye
     devam ediyordu, editör ise kuralları uyguluyordu.
   */
-  const uygulanan = await uygulananKilavuz(supabase, calisma.id, calisma.guideline_id);
+  const { kilavuz: uygulanan, okunamadi: uygulananOkunamadi } = await calismaKilavuzuOku(supabase, calisma.id, calisma.guideline_id);
   const hazirlik =
     musvedde.data
       ? manuscriptReadiness({
@@ -196,7 +196,8 @@ export async function calismaOzeti(
             atifStili: null,
           }
         : null,
-    kilavuzOkunamadi: kilavuz.okunamadi,
+    /* Uygulanan kılavuzun okunamaması da "okunamadı": pencere "yükleyin" demesin. */
+    kilavuzOkunamadi: kilavuz.okunamadi || uygulananOkunamadi,
   };
 }
 
