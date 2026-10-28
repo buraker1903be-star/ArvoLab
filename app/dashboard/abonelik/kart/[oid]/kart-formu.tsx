@@ -140,7 +140,8 @@ export default function KartFormu({
         </label>
         <label>
           <span>{t({ tr: "Telefon", en: "Phone" })}</span>
-          <input name="user_phone" type="tel" className="field-control" autoComplete="tel" defaultValue={fields.user_phone ?? ""} maxLength={20} required />
+          {/* ArvoOS abonenin telefonunu bilmiyor ve imzaya girmeyen bu alana yer tutucu "0" gönderiyor; kutu boş açılsın, kişi kendisi yazsın. */}
+          <input name="user_phone" type="tel" className="field-control" autoComplete="tel" defaultValue={fields.user_phone === "0" ? "" : (fields.user_phone ?? "")} maxLength={20} required />
         </label>
         <label className="kart-formu-genis">
           <span>{t({ tr: "Adres", en: "Address" })}</span>
