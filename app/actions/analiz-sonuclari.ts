@@ -5,6 +5,7 @@ import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-son
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { analizTuruMu } from "@/lib/analiz-turleri";
+import { ceviri } from "@/lib/dil-sunucu";
 
 const PAGE_PATH = "/dashboard/analysis";
 const EN_UZUN_BASLIK = 300;
@@ -50,18 +51,19 @@ export async function analizSonucuKaydet(girdi: {
   /** Çalışmalarım'daki Analiz penceresi: kaydederken teze ekleme sırasına da koyar. */
   tezeEklenecek?: boolean;
 }): Promise<ActionResult> {
+  const t = await ceviri();
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const baslik = girdi.baslik.trim();
   const apaMetni = girdi.apaMetni.trim();
-  if (!baslik || !apaMetni) return { error: "Kaydedilecek bir sonuç yok." };
-  if (!analizTuruMu(girdi.analizTuru)) return { error: "Tanınmayan analiz türü." };
+  if (!baslik || !apaMetni) return { error: t({ tr: "Kaydedilecek bir sonuç yok.", en: "There is no result to save." }) };
+  if (!analizTuruMu(girdi.analizTuru)) return { error: t({ tr: "Tanınmayan analiz türü.", en: "Unrecognised analysis type." }) };
   // Veritabanındaki check kısıtı ham hata mesajı verirdi; sınır burada anlaşılır söyleniyor.
-  if (baslik.length > EN_UZUN_BASLIK) return { error: "Başlık fazla uzun." };
+  if (baslik.length > EN_UZUN_BASLIK) return { error: t({ tr: "Başlık fazla uzun.", en: "The title is too long." }) };
   if (apaMetni.length > EN_UZUN_METIN) {
-    return { error: "Sonuç metni kaydedilemeyecek kadar uzun; daha dar bir analiz seçin." };
+    return { error: t({ tr: "Sonuç metni kaydedilemeyecek kadar uzun; daha dar bir analiz seçin.", en: "The result text is too long to save; choose a narrower analysis." }) };
   }
 
   /*
@@ -79,9 +81,9 @@ export async function analizSonucuKaydet(girdi: {
       .maybeSingle();
     if (calismaHatasi) {
       console.error(calismaHatasi);
-      return { error: "Çalışma doğrulanamadı." };
+      return { error: t({ tr: "Çalışma doğrulanamadı.", en: "The project could not be verified." }) };
     }
-    if (!calisma) return { error: "Bu çalışmaya analiz sonucu ekleyemezsiniz." };
+    if (!calisma) return { error: t({ tr: "Bu çalışmaya analiz sonucu ekleyemezsiniz.", en: "You cannot add analysis results to this project." }) };
   }
 
   const { error } = await ctx.supabase.from("analiz_sonuclari").insert({
@@ -103,10 +105,10 @@ export async function analizSonucuKaydet(girdi: {
     */
     if (error.code === "42501") {
       return /çalışmaya kayıt/i.test(error.message ?? "")
-        ? { error: "Bu çalışmaya analiz sonucu ekleyemezsiniz." }
+        ? { error: t({ tr: "Bu çalışmaya analiz sonucu ekleyemezsiniz.", en: "You cannot add analysis results to this project." }) }
         : { error: (await abonelikKapaliMesaji()) };
     }
-    return { error: "Sonuç kaydedilemedi; metni kopyalayıp saklayabilirsiniz." };
+    return { error: t({ tr: "Sonuç kaydedilemedi; metni kopyalayıp saklayabilirsiniz.", en: "The result could not be saved; you can copy the text and keep it." }) };
   }
 
   yenile();
@@ -146,9 +148,10 @@ export async function calismaAnalizleri(projectId: string): Promise<ListeSonucu<
   yok (lib/access.ts): engellenen kullanıcı da sırasını yönetebilmeli.
 */
 async function siraDurumu(id: string, alanlar: { teze_eklenecek?: boolean; teze_eklendi?: string | null }): Promise<ActionResult> {
+  const t = await ceviri();
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
-  if (!UUID.test(id)) return { error: "Kayıt bulunamadı." };
+  if (!UUID.test(id)) return { error: t({ tr: "Kayıt bulunamadı.", en: "Record not found." }) };
   const { data, error } = await ctx.supabase
     .from("analiz_sonuclari")
     .update(alanlar)
@@ -157,9 +160,9 @@ async function siraDurumu(id: string, alanlar: { teze_eklenecek?: boolean; teze_
     .select("id");
   if (error) {
     console.error("[analiz] sıra güncellenemedi:", error.message);
-    return { error: "Güncellenemedi; tekrar deneyin." };
+    return { error: t({ tr: "Güncellenemedi; tekrar deneyin.", en: "Could not update; please try again." }) };
   }
-  if (!data?.length) return { error: "Kayıt bulunamadı ya da size ait değil." };
+  if (!data?.length) return { error: t({ tr: "Kayıt bulunamadı ya da size ait değil.", en: "Record not found or it does not belong to you." }) };
   yenile();
   return { success: true };
 }
@@ -198,6 +201,7 @@ export async function getAnalizSonuclari(): Promise<ListeSonucu<AnalizSonucu>> {
   yeniden çalıştırılır — silme de bu yüzden abonelik kapısının dışında.
 */
 export async function analizSonucuSil(id: string): Promise<ActionResult> {
+  const t = await ceviri();
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
 
@@ -210,9 +214,9 @@ export async function analizSonucuSil(id: string): Promise<ActionResult> {
 
   if (error) {
     console.error(error);
-    return { error: "Silinirken bir hata oluştu." };
+    return { error: t({ tr: "Silinirken bir hata oluştu.", en: "An error occurred while deleting." }) };
   }
-  if (!data?.length) return { error: "Kayıt bulunamadı ya da size ait değil." };
+  if (!data?.length) return { error: t({ tr: "Kayıt bulunamadı ya da size ait değil.", en: "Record not found or it does not belong to you." }) };
 
   yenile();
   return { success: true };

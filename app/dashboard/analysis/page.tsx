@@ -5,13 +5,16 @@ import { analizAsistaniAcik } from "@/app/actions/ai-analiz";
 import { getMyProjects } from "@/app/actions/citation-check";
 import { analizSonucuSil, calismaAnalizleri, getAnalizSonuclari } from "@/app/actions/analiz-sonuclari";
 import { analizEtiketi } from "@/lib/analiz-turleri";
-import { trTarih } from "@/lib/tr-time";
+import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import PanelDrawer from "../_components/panel-drawer";
 import CalismaSecici from "../_components/calisma-secici";
 import ActionForm from "../action-form";
 import BosDurum from "../_components/bos-durum";
 
-export const metadata = { title: "Analiz Merkezi" };
+export async function generateMetadata() {
+  const t = await ceviri();
+  return { title: t({ tr: "Analiz Merkezi", en: "Analysis Centre" }) };
+}
 
 /*
   ANALİZ MERKEZİ — TEK EKRAN, İKİ KART (26.10.2026, Kaynaklar sayfasıyla
@@ -37,6 +40,9 @@ export default async function AnalysisPage({
   searchParams: Promise<{ calisma?: string }>;
 }) {
   const { calisma: istenen } = await searchParams;
+  const t = await ceviri();
+  const dil = await aktifDil();
+  const { tarih } = await tarihler();
   const [asistanAcik, { satirlar: calismalar, okunamadi: calismaOkunamadi }, { satirlar: tumSonuclar, okunamadi: sonucOkunamadi }] = await Promise.all([
     analizAsistaniAcik(),
     getMyProjects(),
@@ -54,21 +60,27 @@ export default async function AnalysisPage({
     <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
-          <h1>Analiz Merkezi</h1>
+          <h1>{t({ tr: "Analiz Merkezi", en: "Analysis Centre" })}</h1>
           <p>
             {calisma
-              ? `“${calisma.title}” çalışmasının analizleri. Testleri ArvoLab hesaplar; asistan sonucu okur, sayı üretmez.`
-              : "Verinizi yükleyin, analizi seçin; testleri ArvoLab hesaplar."}
+              ? t({
+                  tr: `“${calisma.title}” çalışmasının analizleri. Testleri ArvoLab hesaplar; asistan sonucu okur, sayı üretmez.`,
+                  en: `Analyses for “${calisma.title}”. ArvoLab computes the tests; the assistant reads the result and never produces numbers.`,
+                })
+              : t({ tr: "Verinizi yükleyin, analizi seçin; testleri ArvoLab hesaplar.", en: "Upload your data and choose an analysis; ArvoLab computes the tests." })}
           </p>
         </div>
         <div className="pencere-dugmeler">
           {bagsizlar.length ? (
             <PanelDrawer
-              triggerLabel="Bağlı olmayan sonuçlar"
+              triggerLabel={t({ tr: "Bağlı olmayan sonuçlar", en: "Unlinked results" })}
               triggerClassName="projects-filter-button button-compact"
-              kicker="Analiz"
-              title="Çalışmaya bağlı olmayan sonuçlar"
-              description="Eski Analiz Merkezi'nde çalışma seçilmeden kaydedilmiş sonuçlar. Kayıtlar düzenlenemez; gerekmiyorsa silin."
+              kicker={t({ tr: "Analiz", en: "Analysis" })}
+              title={t({ tr: "Çalışmaya bağlı olmayan sonuçlar", en: "Results not linked to a project" })}
+              description={t({
+                tr: "Eski Analiz Merkezi'nde çalışma seçilmeden kaydedilmiş sonuçlar. Kayıtlar düzenlenemez; gerekmiyorsa silin.",
+                en: "Results saved in the old Analysis Centre without choosing a project. Records cannot be edited; delete them if you no longer need them.",
+              })}
               boy="genis"
               basaridaKapan={false}
             >
@@ -80,7 +92,7 @@ export default async function AnalysisPage({
                         <span className="kanit-kayit-govde">
                           <b>{s.baslik}</b>
                           <small>
-                            {analizEtiketi(s.analiz_turu)} · {trTarih(s.created_at)}
+                            {analizEtiketi(s.analiz_turu, dil)} · {tarih(s.created_at)}
                           </small>
                         </span>
                       </summary>
@@ -88,10 +100,10 @@ export default async function AnalysisPage({
                     </details>
                     <ActionForm
                       action={analizSonucuSil.bind(null, s.id)}
-                      confirmMessage={`"${s.baslik}" kaydı silinsin mi? Geri alınamaz.`}
-                      successMessage="Sonuç silindi."
+                      confirmMessage={t({ tr: `"${s.baslik}" kaydı silinsin mi? Geri alınamaz.`, en: `Delete "${s.baslik}"? This cannot be undone.` })}
+                      successMessage={t({ tr: "Sonuç silindi.", en: "Result deleted." })}
                     >
-                      <button type="submit" className="projects-filter-button button-compact" aria-label={`${s.baslik}: sil`}>
+                      <button type="submit" className="projects-filter-button button-compact" aria-label={t({ tr: `${s.baslik}: sil`, en: `${s.baslik}: delete` })}>
                         <Trash2 size={14} aria-hidden="true" />
                       </button>
                     </ActionForm>
@@ -103,12 +115,15 @@ export default async function AnalysisPage({
           {/* SPSS'te yapılmış analizin çıktısını biçimlendirme ve kod kitabı
               denetimi: ayrı iş, sayfayı uzatmasın diye pencerede. */}
           <PanelDrawer
-            triggerLabel="Hazır çıktıyı biçimlendir"
+            triggerLabel={t({ tr: "Hazır çıktıyı biçimlendir", en: "Format existing output" })}
             triggerIcon={<FileText size={15} aria-hidden="true" />}
             triggerClassName="projects-filter-button button-compact"
-            kicker="Analiz"
-            title="SPSS çıktısını biçimlendirin"
-            description="Analizi başka programda yaptıysanız çıktıdaki değerleri yapıştırın; çalışmanızın kılavuzuna göre raporlama biçimine çevrilir."
+            kicker={t({ tr: "Analiz", en: "Analysis" })}
+            title={t({ tr: "SPSS çıktısını biçimlendirin", en: "Format SPSS output" })}
+            description={t({
+              tr: "Analizi başka programda yaptıysanız çıktıdaki değerleri yapıştırın; çalışmanızın kılavuzuna göre raporlama biçimine çevrilir.",
+              en: "If you ran the analysis in another program, paste the values from its output; they are converted to the reporting style required by your project's guideline.",
+            })}
             boy="genis"
             basaridaKapan={false}
           >
@@ -125,8 +140,15 @@ export default async function AnalysisPage({
 
       {calismaOkunamadi || analizOkunamadi || sonucOkunamadi ? (
         <p className="alert" role="alert">
-          {calismaOkunamadi ? "Çalışma listeniz" : "Kayıtlı analizleriniz"} okunamadı; aşağısı eksik görünebilir.
-          Kayıtlarınız yerinde duruyor — sayfayı yenileyin.
+          {calismaOkunamadi
+            ? t({
+                tr: "Çalışma listeniz okunamadı; aşağısı eksik görünebilir. Kayıtlarınız yerinde duruyor — sayfayı yenileyin.",
+                en: "Your project list could not be loaded; what follows may look incomplete. Your records are safe — refresh the page.",
+              })
+            : t({
+                tr: "Kayıtlı analizleriniz okunamadı; aşağısı eksik görünebilir. Kayıtlarınız yerinde duruyor — sayfayı yenileyin.",
+                en: "Your saved analyses could not be loaded; what follows may look incomplete. Your records are safe — refresh the page.",
+              })}
         </p>
       ) : null}
 
@@ -142,9 +164,12 @@ export default async function AnalysisPage({
       ) : (
         <BosDurum
           ikon={BarChart3}
-          baslik="Önce bir çalışma başlatın"
-          aciklama="Analiz sonuçları bir çalışmaya bağlı tutulur: sayılar o çalışmanın kılavuzundaki biçimle yazılır ve editörde tezinize eklenir."
-          eylem={{ etiket: "Yeni çalışma", href: "/dashboard/editor?yeni=1" }}
+          baslik={t({ tr: "Önce bir çalışma başlatın", en: "Start a project first" })}
+          aciklama={t({
+            tr: "Analiz sonuçları bir çalışmaya bağlı tutulur: sayılar o çalışmanın kılavuzundaki biçimle yazılır ve editörde tezinize eklenir.",
+            en: "Analysis results are kept with a project: numbers are written in the style of that project's guideline and added to your thesis in the editor.",
+          })}
+          eylem={{ etiket: t({ tr: "Yeni çalışma", en: "New project" }), href: "/dashboard/editor?yeni=1" }}
         />
       )}
     </main>

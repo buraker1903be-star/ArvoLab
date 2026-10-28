@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import SutunSecimi from "./sutun-secimi";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 /*
   DFA MODEL TANIMI (27.10.2026): faktörler ve maddeleri.
@@ -27,6 +28,8 @@ export default function DfaModeli({
   hataKovaryanslari: [string, string][];
   hataKovaryanslariniDegistir: (yeni: [string, string][]) => void;
 }) {
+  const t = useCeviri();
+  const faktorAdi = (f: DfaFaktoru, k: number) => f.ad || t({ tr: `${k + 1}. faktör`, en: `Factor ${k + 1}` });
   const guncelle = (k: number, yeni: Partial<DfaFaktoru>) =>
     degistir(
       faktorler.map((f, i) => {
@@ -39,21 +42,23 @@ export default function DfaModeli({
   return (
     <div className="project-form-full dfa-modeli">
       <p className="hint">
-        Her faktörün adını yazın ve maddelerini işaretleyin (AFA sonucunuz ya da ölçeğin özgün yapısı). Bir madde yalnızca
-        bir faktöre ait olabilir; ters maddeleri önce Veri hazırlama bölümünde çevirin.
+        {t({
+          tr: "Her faktörün adını yazın ve maddelerini işaretleyin (AFA sonucunuz ya da ölçeğin özgün yapısı). Bir madde yalnızca bir faktöre ait olabilir; ters maddeleri önce Veri hazırlama bölümünde çevirin.",
+          en: "Name each factor and tick its items (from your EFA result or the scale's original structure). An item can belong to only one factor; reverse-score negatively worded items first under Data preparation.",
+        })}
       </p>
       {faktorler.map((f, k) => (
         <div key={k} className="dfa-faktor">
           <div className="cluster">
             <label>
-              <span>{k + 1}. faktörün adı</span>
+              <span>{t({ tr: `${k + 1}. faktörün adı`, en: `Name of factor ${k + 1}` })}</span>
               <input value={f.ad} maxLength={40} onChange={(e) => guncelle(k, { ad: e.target.value })} />
             </label>
             {faktorler.length > 1 ? (
               <button
                 type="button"
                 className="projects-filter-button button-compact"
-                aria-label={`${f.ad || `${k + 1}. faktör`}: kaldır`}
+                aria-label={t({ tr: `${faktorAdi(f, k)}: kaldır`, en: `${faktorAdi(f, k)}: remove` })}
                 onClick={() => degistir(faktorler.filter((_, i) => i !== k))}
               >
                 <Trash2 size={14} aria-hidden="true" />
@@ -61,7 +66,7 @@ export default function DfaModeli({
             ) : null}
           </div>
           <SutunSecimi
-            etiket={`${f.ad || `${k + 1}. faktör`} maddeleri`}
+            etiket={t({ tr: `${faktorAdi(f, k)} maddeleri`, en: `${faktorAdi(f, k)} items` })}
             sutunlar={sutunlar}
             secili={f.maddeler}
             degistir={(m) => guncelle(k, { maddeler: m })}
@@ -70,7 +75,7 @@ export default function DfaModeli({
       ))}
       {hataKovaryanslari.length ? (
         <div className="dfa-faktor">
-          <strong className="text-sm">Serbest bırakılan hata kovaryansları</strong>
+          <strong className="text-sm">{t({ tr: "Serbest bırakılan hata kovaryansları", en: "Freed error covariances" })}</strong>
           <ul className="turetilen-sutunlar">
             {hataKovaryanslari.map(([a, b], k) => (
               <li key={`${a}-${b}`} className="cluster">
@@ -80,7 +85,7 @@ export default function DfaModeli({
                 <button
                   type="button"
                   className="projects-filter-button button-compact"
-                  aria-label={`${a} ↔ ${b}: kaldır`}
+                  aria-label={t({ tr: `${a} ↔ ${b}: kaldır`, en: `${a} ↔ ${b}: remove` })}
                   onClick={() => hataKovaryanslariniDegistir(hataKovaryanslari.filter((_, i) => i !== k))}
                 >
                   <Trash2 size={14} aria-hidden="true" />
@@ -96,7 +101,7 @@ export default function DfaModeli({
           className="projects-filter-button button-compact"
           onClick={() => degistir([...faktorler, { ad: `F${faktorler.length + 1}`, maddeler: [] }])}
         >
-          <Plus size={14} aria-hidden="true" /> Faktör ekle
+          <Plus size={14} aria-hidden="true" /> {t({ tr: "Faktör ekle", en: "Add factor" })}
         </button>
       ) : null}
     </div>

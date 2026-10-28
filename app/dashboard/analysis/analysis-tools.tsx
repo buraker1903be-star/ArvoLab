@@ -8,6 +8,7 @@ import { VARSAYILAN_BICIM, type BicimKarari } from "@/lib/sayi-bicimi";
 import { parseCodebook, type CodebookCheckResult } from "@/lib/codebook-check";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
 import AsistanSonuc from "../_components/asistan-sonuc";
+import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 
 type Calisma = { id: string; title: string; sayiBicimi?: BicimKarari };
 
@@ -23,6 +24,8 @@ export default function AnalysisTools({
      bağlantıları ?calisma=<id> taşıyor). */
   secilenCalisma?: string;
 }) {
+  const t = useCeviri();
+  const dil = useDil();
   const [statsInput, setStatsInput] = useState("");
   const [statsResult, setStatsResult] = useState<DetectedStatistic[] | null>(null);
 
@@ -41,12 +44,24 @@ export default function AnalysisTools({
   const ornek = `${bicim.bastakiSifir ? "0" : ""}${bicim.ayirici === "comma" ? "," : "."}021`;
   const bicimNotu =
     !seciliCalisma
-      ? `Çalışma seçilmedi; sayılar varsayılan biçimle yazılacak (örnek p = ${ornek}). Kendi kılavuzunuzun biçimi için aşağıdan çalışmanızı seçin.`
+      ? t({
+          tr: `Çalışma seçilmedi; sayılar varsayılan biçimle yazılacak (örnek p = ${ornek}). Kendi kılavuzunuzun biçimi için aşağıdan çalışmanızı seçin.`,
+          en: `No project selected; numbers will be written in the default style (e.g. p = ${ornek}). Select your project below to use your guideline's style.`,
+        })
       : bicim.kaynak === "kilavuz"
-        ? `Sayılar “${seciliCalisma.title}” kılavuzuna göre yazılacak (örnek p = ${ornek}).`
+        ? t({
+            tr: `Sayılar “${seciliCalisma.title}” kılavuzuna göre yazılacak (örnek p = ${ornek}).`,
+            en: `Numbers will be written according to the guideline of “${seciliCalisma.title}” (e.g. p = ${ornek}).`,
+          })
         : bicim.kaynak === "atif-sistemi"
-          ? `Kılavuz sayı biçimini belirtmiyor; atıf sisteminin geleneği uygulanacak (örnek p = ${ornek}).`
-          : `Kılavuz ve atıf sistemi bilinmiyor; varsayılan biçim uygulanacak (örnek p = ${ornek}).`;
+          ? t({
+              tr: `Kılavuz sayı biçimini belirtmiyor; atıf sisteminin geleneği uygulanacak (örnek p = ${ornek}).`,
+              en: `The guideline does not specify a number style; the citation style's convention will be used (e.g. p = ${ornek}).`,
+            })
+          : t({
+              tr: `Kılavuz ve atıf sistemi bilinmiyor; varsayılan biçim uygulanacak (örnek p = ${ornek}).`,
+              en: `Neither the guideline nor the citation style is known; the default style will be used (e.g. p = ${ornek}).`,
+            });
   const [denetim, setDenetim] = useState<AnalizDenetimYaniti | null>(null);
   const [bekleniyor, basla] = useTransition();
 
@@ -63,7 +78,7 @@ export default function AnalysisTools({
           orneklem,
           projectId: calismaId || null,
           zorla,
-        })),
+        }), dil),
       );
     });
   }
@@ -76,18 +91,18 @@ export default function AnalysisTools({
       {/* SPSS Çıktısı -> APA Biçimlendirici */}
       <section className="project-form-card">
         <div className="project-form-heading">
-          <h2>SPSS Çıktısı → APA 7 Biçimlendirici</h2>
+          <h2>{t({ tr: "SPSS Çıktısı → APA 7 Biçimlendirici", en: "SPSS Output → APA 7 Formatter" })}</h2>
           <p>
-            SPSS&apos;ten kopyaladığınız istatistik değerlerini (t, F, r, χ²)
-            yapıştırın; sistem bunları APA 7 raporlama biçimine çevirir.
-            Yeni analiz yapmaz, yorum üretmez — yalnızca biçimlendirir ve
-            anlamlılık eşiğini (p &lt; .05) mekanik olarak işaretler.
+            {t({
+              tr: "SPSS'ten kopyaladığınız istatistik değerlerini (t, F, r, χ²) yapıştırın; sistem bunları APA 7 raporlama biçimine çevirir. Yeni analiz yapmaz, yorum üretmez — yalnızca biçimlendirir ve anlamlılık eşiğini (p < .05) mekanik olarak işaretler.",
+              en: "Paste the statistics you copied from SPSS (t, F, r, χ²); they are converted to APA 7 reporting style. No new analysis is run and nothing is interpreted — values are only formatted and the significance threshold (p < .05) is flagged mechanically.",
+            })}
           </p>
         </div>
 
         <div className="project-form-grid">
           <label className="project-form-full">
-            <span>SPSS çıktısı (serbest metin)</span>
+            <span>{t({ tr: "SPSS çıktısı (serbest metin)", en: "SPSS output (free text)" })}</span>
             <textarea
               rows={6}
               placeholder={"t(28) = 2.45, p = .021\nF(2, 57) = 4.31, p = .018\nr(48) = .42, p = .003"}
@@ -112,10 +127,10 @@ export default function AnalysisTools({
           <button
             type="button"
             className="projects-primary-button"
-            onClick={() => setStatsResult(detectStatistics(statsInput, bicim))}
+            onClick={() => setStatsResult(detectStatistics(statsInput, bicim, dil))}
             disabled={!statsInput.trim()}
           >
-            İstatistikleri Tespit Et
+            {t({ tr: "İstatistikleri Tespit Et", en: "Detect statistics" })}
           </button>
         </div>
 
@@ -123,9 +138,10 @@ export default function AnalysisTools({
           <div className="mt-md">
             {statsResult.length === 0 ? (
               <p className="muted text-base">
-                Tanınabilir bir istatistik ifadesi bulunamadı. Desteklenen
-                biçimler: t(df) = ..., p = ...; F(df1, df2) = ..., p = ...;
-                r = ..., p = ...; χ²(df) = ..., p = ...
+                {t({
+                  tr: "Tanınabilir bir istatistik ifadesi bulunamadı. Desteklenen biçimler: t(df) = ..., p = ...; F(df1, df2) = ..., p = ...; r = ..., p = ...; χ²(df) = ..., p = ...",
+                  en: "No recognisable statistic was found. Supported formats: t(df) = ..., p = ...; F(df1, df2) = ..., p = ...; r = ..., p = ...; χ²(df) = ..., p = ...",
+                })}
               </p>
             ) : (
               <ul className="result-list">
@@ -155,32 +171,32 @@ export default function AnalysisTools({
         {statsResult && statsResult.length > 0 && (
           <div className="asistan-kart mt-md">
             <div className="asistan-kart-ust">
-              <h3>Asistan denetlesin</h3>
+              <h3>{t({ tr: "Asistan denetlesin", en: "Ask the assistant to review" })}</h3>
               <p>
-                Asistan raporlamayı denetler: eksik etki büyüklüğü, eksik
-                serbestlik derecesi, p değeri biçimi, varsayımlar. Metninizi
-                yazmaz ve bulgunuzu yorumlamaz; size verilmeyen hiçbir sayıyı
-                da üretemez — ürettiği anda cevap gösterilmez.
+                {t({
+                  tr: "Asistan raporlamayı denetler: eksik etki büyüklüğü, eksik serbestlik derecesi, p değeri biçimi, varsayımlar. Metninizi yazmaz ve bulgunuzu yorumlamaz; size verilmeyen hiçbir sayıyı da üretemez — ürettiği anda cevap gösterilmez.",
+                  en: "The assistant reviews your reporting: missing effect sizes, missing degrees of freedom, p-value format, assumptions. It does not write your text or interpret your finding, and it cannot produce any number you did not give it — if it does, the response is not shown.",
+                })}
               </p>
             </div>
 
             <div className="project-form-grid">
               <label>
-                <span>Araştırma sorusu (isteğe bağlı)</span>
+                <span>{t({ tr: "Araştırma sorusu (isteğe bağlı)", en: "Research question (optional)" })}</span>
                 <input
                   type="text"
                   maxLength={2000}
-                  placeholder="İki öğretim yöntemi arasında başarı farkı var mı?"
+                  placeholder={t({ tr: "İki öğretim yöntemi arasında başarı farkı var mı?", en: "Is there a difference in achievement between two teaching methods?" })}
                   value={arastirmaSorusu}
                   onChange={(e) => setArastirmaSorusu(e.target.value)}
                 />
               </label>
               <label>
-                <span>Örneklem (isteğe bağlı)</span>
+                <span>{t({ tr: "Örneklem (isteğe bağlı)", en: "Sample (optional)" })}</span>
                 <input
                   type="text"
                   maxLength={2000}
-                  placeholder="N = 60, iki bağımsız grup"
+                  placeholder={t({ tr: "N = 60, iki bağımsız grup", en: "N = 60, two independent groups" })}
                   value={orneklem}
                   onChange={(e) => setOrneklem(e.target.value)}
                 />
@@ -190,9 +206,9 @@ export default function AnalysisTools({
                   aynı seçici sayfadan sayfaya başka adla çıkıyordu. */}
               {calismalar.length > 0 ? (
                 <label>
-                  <span>Bağlı çalışma (opsiyonel)</span>
+                  <span>{t({ tr: "Bağlı çalışma (opsiyonel)", en: "Linked project (optional)" })}</span>
                   <select value={calismaId} onChange={(e) => setCalismaId(e.target.value)}>
-                    <option value="">Bağlı değil</option>
+                    <option value="">{t({ tr: "Bağlı değil", en: "Not linked" })}</option>
                     {calismalar.map((calisma) => (
                       <option key={calisma.id} value={calisma.id}>{calisma.title}</option>
                     ))}
@@ -202,10 +218,12 @@ export default function AnalysisTools({
                 /* Eskiden alan sessizce yok oluyordu: kullanıcı denetimin bir
                    çalışmaya bağlanabildiğini hiç öğrenmiyordu. */
                 <p className="hint project-form-full">
-                  Kayıtlı çalışmanız yok. Bir çalışma açarsanız denetim, o
-                  çalışmanın başlığını ve alanını da bağlam olarak kullanır.{" "}
+                  {t({
+                    tr: "Kayıtlı çalışmanız yok. Bir çalışma açarsanız denetim, o çalışmanın başlığını ve alanını da bağlam olarak kullanır.",
+                    en: "You have no saved projects. If you create one, the review also uses that project's title and field as context.",
+                  })}{" "}
                   <Link href="/dashboard/editor/new" className="result-link">
-                    Çalışma oluştur →
+                    {t({ tr: "Çalışma oluştur →", en: "Create project →" })}
                   </Link>
                 </p>
               )}
@@ -229,21 +247,24 @@ export default function AnalysisTools({
                 disabled={!asistanAcik || bekleniyor}
                 onClick={() => denetle(false)}
               >
-                {bekleniyor ? "Denetleniyor…" : "Raporlamayı Denetle"}
+                {bekleniyor ? t({ tr: "Denetleniyor…", en: "Reviewing…" }) : t({ tr: "Raporlamayı Denetle", en: "Review reporting" })}
               </button>
             </div>
 
             {!asistanAcik && (
               <p className="asistan-uyari" data-tone="neutral">
-                Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
+                {t({
+                  tr: "Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.",
+                  en: "The assistant is disabled in this installation; your administrator needs to configure the AI key.",
+                })}
               </p>
             )}
 
             <AsistanSonuc
               sonuc={denetim}
               yetenek="analiz"
-              etiketler={{ uyari: "Eksik", oneri: "Öneri", bilgi: "Not" }}
-              bulguBasligi="Denetim bulguları"
+              etiketler={{ uyari: t({ tr: "Eksik", en: "Missing" }), oneri: t({ tr: "Öneri", en: "Suggestion" }), bilgi: t({ tr: "Not", en: "Note" }) }}
+              bulguBasligi={t({ tr: "Denetim bulguları", en: "Review findings" })}
               bekleniyor={bekleniyor}
               onYenidenSorgula={() => denetle(true)}
             />
@@ -254,21 +275,21 @@ export default function AnalysisTools({
       {/* MAXQDA Kod Kitabı Kontrolü */}
       <section className="project-form-card">
         <div className="project-form-heading">
-          <h2>MAXQDA Kod Kitabı Kalite Kontrolü</h2>
+          <h2>{t({ tr: "MAXQDA Kod Kitabı Kalite Kontrolü", en: "MAXQDA Codebook Quality Check" })}</h2>
           <p>
-            Kod listenizi (her satıra bir kod, isteğe bağlı olarak frekansıyla
-            birlikte) yapıştırın. Sistem tekrar eden kod adlarını, tek
-            kullanımlık kodları ve frekans dağılımını gösterir. Yeni tema
-            veya kod önermez — yalnızca liste kalitesini denetler.
+            {t({
+              tr: "Kod listenizi (her satıra bir kod, isteğe bağlı olarak frekansıyla birlikte) yapıştırın. Sistem tekrar eden kod adlarını, tek kullanımlık kodları ve frekans dağılımını gösterir. Yeni tema veya kod önermez — yalnızca liste kalitesini denetler.",
+              en: "Paste your code list (one code per line, optionally with its frequency). Duplicate code names, single-use codes and the frequency distribution are shown. No new themes or codes are suggested — only the quality of the list is checked.",
+            })}
           </p>
         </div>
 
         <div className="project-form-grid">
           <label className="project-form-full">
-            <span>Kod listesi</span>
+            <span>{t({ tr: "Kod listesi", en: "Code list" })}</span>
             <textarea
               rows={6}
-              placeholder={"Motivasyon eksikliği: 15\nÖğretmen desteği: 8\nZaman yönetimi: 1"}
+              placeholder={t({ tr: "Motivasyon eksikliği: 15\nÖğretmen desteği: 8\nZaman yönetimi: 1", en: "Lack of motivation: 15\nTeacher support: 8\nTime management: 1" })}
               value={codebookInput}
               onChange={(e) => setCodebookInput(e.target.value)}
             />
@@ -293,7 +314,7 @@ export default function AnalysisTools({
             onClick={() => setCodebookResult(parseCodebook(codebookInput))}
             disabled={!codebookInput.trim()}
           >
-            Kod Kitabını Kontrol Et
+            {t({ tr: "Kod Kitabını Kontrol Et", en: "Check codebook" })}
           </button>
         </div>
 
@@ -306,33 +327,39 @@ export default function AnalysisTools({
               bütün sanıyordu.
             */}
             <p>
-              <strong>{codebookResult.totalCodes}</strong> kod
+              <strong>{codebookResult.totalCodes}</strong> {t({ tr: "kod", en: "codes" })}
               {codebookResult.emptyFrequencyCodes.length === 0 ? (
                 <>
                   {" · "}
-                  <strong>{codebookResult.totalFrequency}</strong> toplam kodlama
+                  <strong>{codebookResult.totalFrequency}</strong> {t({ tr: "toplam kodlama", en: "total codings" })}
                 </>
               ) : codebookResult.emptyFrequencyCodes.length < codebookResult.totalCodes ? (
                 <>
                   {" · "}
-                  <strong>{codebookResult.totalFrequency}</strong> kodlama (
-                  {codebookResult.emptyFrequencyCodes.length} kodun frekansı verilmemiş, toplama girmedi)
+                  <strong>{codebookResult.totalFrequency}</strong>{" "}
+                  {t({
+                    tr: `kodlama (${codebookResult.emptyFrequencyCodes.length} kodun frekansı verilmemiş, toplama girmedi)`,
+                    en: `codings (${codebookResult.emptyFrequencyCodes.length} code(s) have no frequency and were not counted)`,
+                  })}
                 </>
               ) : (
-                <> · hiçbir kodun frekansı verilmemiş</>
+                <> · {t({ tr: "hiçbir kodun frekansı verilmemiş", en: "no code has a frequency" })}</>
               )}
             </p>
             {codebookResult.emptyFrequencyCodes.length > 0 ? (
               <p className="hint">
-                Frekans, kod adından bir ayraçla ayrılmış olmalı: <code>Kod adı: 12</code>,{" "}
-                <code>Kod adı (12)</code> ya da sekme. Boşlukla ayrılmış sayı kod adının parçası
-                sayılır — yoksa &ldquo;COVID-19&rdquo; kodu &ldquo;COVID&rdquo; adlı, frekansı 19 bir koda dönüşürdü.
+                {t({ tr: "Frekans, kod adından bir ayraçla ayrılmış olmalı:", en: "The frequency must be separated from the code name by a delimiter:" })}{" "}
+                <code>{t({ tr: "Kod adı: 12", en: "Code name: 12" })}</code>, <code>{t({ tr: "Kod adı (12)", en: "Code name (12)" })}</code>{" "}
+                {t({
+                  tr: "ya da sekme. Boşlukla ayrılmış sayı kod adının parçası sayılır — yoksa “COVID-19” kodu “COVID” adlı, frekansı 19 bir koda dönüşürdü.",
+                  en: "or a tab. A number separated by a space counts as part of the code name — otherwise the code “COVID-19” would turn into a code named “COVID” with a frequency of 19.",
+                })}
               </p>
             ) : null}
 
             {codebookResult.duplicates.length > 0 && (
               <div className="mt-sm">
-                <strong className="tone-text" data-tone="danger">Tekrar eden kod adları:</strong>
+                <strong className="tone-text" data-tone="danger">{t({ tr: "Tekrar eden kod adları:", en: "Duplicate code names:" })}</strong>
                 <ul className="result-list">
                   {codebookResult.duplicates.map((d, i) => (
                     <li key={i}>{d}</li>
@@ -344,7 +371,7 @@ export default function AnalysisTools({
             {codebookResult.singleUseCodes.length > 0 && (
               <div className="mt-sm">
                 <strong className="tone-text" data-tone="warning">
-                  Tek kullanımlık kodlar (birleştirme/gözden geçirme adayı):
+                  {t({ tr: "Tek kullanımlık kodlar (birleştirme/gözden geçirme adayı):", en: "Single-use codes (candidates for merging/review):" })}
                 </strong>
                 <ul className="result-list">
                   {codebookResult.singleUseCodes.map((c, i) => (
@@ -355,8 +382,8 @@ export default function AnalysisTools({
             )}
 
             <div className="mt-sm">
-              <strong>Frekans Tablosu (azalan sırada)</strong>
-              <div className="table-scroll mt-sm" role="region" aria-label="Frekans tablosu" tabIndex={0}>
+              <strong>{t({ tr: "Frekans Tablosu (azalan sırada)", en: "Frequency table (descending)" })}</strong>
+              <div className="table-scroll mt-sm" role="region" aria-label={t({ tr: "Frekans tablosu", en: "Frequency table" })} tabIndex={0}>
                 <table className="stats-result-table">
                   <tbody>
                     {codebookResult.codes.map((c, i) => (

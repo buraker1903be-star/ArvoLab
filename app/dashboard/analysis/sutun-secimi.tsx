@@ -12,6 +12,8 @@
   Seçim sırası VERİDEKİ sırayı izler (Friedman'da ölçümlerin sırası
   raporun sırasıdır; öğrencinin tıklama sırasına bağlı olmasın).
 */
+import { useCeviri } from "@/app/_components/dil-saglayici";
+
 export default function SutunSecimi({
   etiket,
   sutunlar,
@@ -25,20 +27,21 @@ export default function SutunSecimi({
   degistir: (yeni: string[]) => void;
   ipucu?: string;
 }) {
+  const t = useCeviri();
   const ac = (sutun: string, isaretli: boolean) =>
     degistir(sutunlar.filter((c) => (c === sutun ? isaretli : secili.includes(c))));
 
   return (
     <fieldset className="project-form-full sutun-secimi">
       <legend>
-        {etiket} <small className="muted">· {secili.length} seçili</small>
+        {etiket} <small className="muted">· {t({ tr: `${secili.length} seçili`, en: `${secili.length} selected` })}</small>
       </legend>
       <div className="cluster">
         <button type="button" className="projects-filter-button button-compact" onClick={() => degistir([...sutunlar])}>
-          Tümünü seç
+          {t({ tr: "Tümünü seç", en: "Select all" })}
         </button>
         <button type="button" className="projects-filter-button button-compact" onClick={() => degistir([])} disabled={!secili.length}>
-          Temizle
+          {t({ tr: "Temizle", en: "Clear" })}
         </button>
       </div>
       <div className="sutun-secimi-liste">

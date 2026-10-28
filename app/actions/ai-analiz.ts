@@ -1,12 +1,13 @@
 "use server";
 
-import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { aiHataMesaji, aiYapilandirildi, sor } from "@/lib/ai/saglayici";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { bulgulariCozumle, bulgulariDogrula, type Bulgu, bosListeMi } from "@/lib/ai/bulgu";
 import { analizIstemi } from "@/lib/ai/analiz-yorumu";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 /*
   Asistanın analiz denetimi. Oturum, abonelik ve saatlik hak ortak kapıda
@@ -48,10 +49,12 @@ const kisalt = (deger: unknown, sinir: number) => String(deger ?? "").slice(0, s
 export const analizAsistaniAcik = async () => aiYapilandirildi();
 
 export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<AnalizDenetimYaniti> {
+  const t = await ceviri();
+  const dil = await aktifDil();
   const istatistikMetni = kisalt(girdi.istatistikMetni, EN_UZUN_CIKTI);
-  if (istatistikMetni.length < 10) return { hata: "Denetlenecek bir analiz çıktısı yapıştırın." };
+  if (istatistikMetni.length < 10) return { hata: t({ tr: "Denetlenecek bir analiz çıktısı yapıştırın.", en: "Paste an analysis output to review." }) };
 
-  const kapi = await asistanKapisi();
+  const kapi = await asistanKapisi(dil);
   if (!kapi.ok) return { hata: kapi.hata };
 
   /*
@@ -70,6 +73,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
     arastirmaSorusu: kisalt(girdi.arastirmaSorusu, EN_UZUN_ALAN),
     orneklem: kisalt(girdi.orneklem, EN_UZUN_ALAN),
     yontem: kisalt(girdi.yontem, EN_UZUN_ALAN),
+    dil,
   });
 
   /*
@@ -85,7 +89,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
   }
 
   // Hak yalnızca modele gidilecekse yanar.
-  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
+  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
   if (hakHatasi) return { hata: hakHatasi };
 
   const basladi = Date.now();
@@ -101,7 +105,10 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
     if (!bulgular.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
       return {
-        hata: "Asistan denetlenebilir bir yapı bulamadı. Çıktıyı test adı ve değerleriyle birlikte yapıştırmayı deneyin.",
+        hata: t({
+          tr: "Asistan denetlenebilir bir yapı bulamadı. Çıktıyı test adı ve değerleriyle birlikte yapıştırmayı deneyin.",
+          en: "The assistant could not find anything it can review. Try pasting the output together with the test name and its values.",
+        }),
         kirpilanlar,
       };
     }
@@ -111,12 +118,15 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
       listeye güvenmek en tehlikelisi: hangi değerin uydurulduğunu kullanıcı
       ayıklayamaz. Bu yüzden tek bir uydurma sayıda cevabın tamamı düşer.
     */
-    const dogrulama = bulgulariDogrula(bulgular, kaynak, { ekKaynaklar: apaSatirlari, yapisalTuretme: true });
+    const dogrulama = bulgulariDogrula(bulgular, kaynak, { ekKaynaklar: apaSatirlari, yapisalTuretme: true, dil });
     if (!dogrulama.gecti) {
       console.error("[ai] analiz denetimi uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
       return {
-        hata: "Asistan verilmeyen sayılar ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
+        hata: t({
+          tr: "Asistan verilmeyen sayılar ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
+          en: "The response was not shown because the assistant produced numbers that were not in your input. This is a safety check; you can try again.",
+        }),
         kirpilanlar,
       };
     }
@@ -124,7 +134,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
     const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
     return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
-    const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
+    const mesaj = aiHataMesaji(hata, dil) ?? t({ tr: "Asistan yanıt veremedi.", en: "The assistant could not respond." });
     console.error("[ai] analiz denetimi başarısız", mesaj);
     await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "failed", baglam: kaynak, basladi });
     return { hata: mesaj, kirpilanlar };

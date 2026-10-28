@@ -4,6 +4,7 @@ import { analizAsistaniAcik } from "@/app/actions/ai-analiz";
 import { getMyProjects } from "@/app/actions/citation-check";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import AnalizSecici from "./analiz-secici";
+import { ceviri } from "@/lib/dil-sunucu";
 
 /*
   ANALİZ PENCERESİ (26.10.2026, kurum sahibinin isteği: "Analiz butonu,
@@ -30,6 +31,7 @@ export default async function AnalizPenceresi({
   projeAdi: string;
   triggerClassName?: string;
 }) {
+  const t = await ceviri();
   const [{ satirlar: analizler, okunamadi: analizOkunamadi }, asistanAcik, { satirlar: calismalar }] = await Promise.all([
     calismaAnalizleri(projectId),
     analizAsistaniAcik(),
@@ -42,23 +44,31 @@ export default async function AnalizPenceresi({
 
   return (
     <PanelDrawer
-      triggerLabel={sirada ? `Analiz · ${sirada}` : "Analiz"}
+      triggerLabel={sirada ? t({ tr: `Analiz · ${sirada}`, en: `Analysis · ${sirada}` }) : t({ tr: "Analiz", en: "Analysis" })}
       triggerIcon={<BarChart3 size={15} aria-hidden="true" />}
       triggerClassName={triggerClassName}
-      kicker="Analiz"
-      title="Verinizi analiz edin"
+      kicker={t({ tr: "Analiz", en: "Analysis" })}
+      title={t({ tr: "Verinizi analiz edin", en: "Analyse your data" })}
       description={
         sirada
-          ? `${sirada} sonuç teze eklenmeyi bekliyor; editörde "Analiz ekle" ile imlecin olduğu yere eklenir.`
-          : "Excel ya da CSV dosyanızı yükleyin, analizi seçin; ArvoLab hesaplar, asistan sonucu okur. Sonucu teze ekleme sırasına koyun."
+          ? t({
+              tr: `${sirada} sonuç teze eklenmeyi bekliyor; editörde "Analiz ekle" ile imlecin olduğu yere eklenir.`,
+              en: `${sirada} result(s) waiting to be added to the thesis; in the editor, "Add analysis" inserts them at the cursor.`,
+            })
+          : t({
+              tr: "Excel ya da CSV dosyanızı yükleyin, analizi seçin; ArvoLab hesaplar, asistan sonucu okur. Sonucu teze ekleme sırasına koyun.",
+              en: "Upload your Excel or CSV file and choose an analysis; ArvoLab computes it and the assistant reads the result. Then queue the result for your thesis.",
+            })
       }
       boy="tam"
       basaridaKapan={false}
     >
       {analizOkunamadi ? (
         <p className="alert" role="alert">
-          Kayıtlı analizleriniz okunamadı; aşağıdaki liste eksik görünebilir. Kayıtlarınız yerinde duruyor — pencereyi
-          kapatıp yeniden açın.
+          {t({
+            tr: "Kayıtlı analizleriniz okunamadı; aşağıdaki liste eksik görünebilir. Kayıtlarınız yerinde duruyor — pencereyi kapatıp yeniden açın.",
+            en: "Your saved analyses could not be loaded; the list below may be incomplete. Your records are safe — close and reopen this window.",
+          })}
         </p>
       ) : null}
       <AnalizSecici projectId={projectId} calisma={calisma} asistanAcik={asistanAcik} analizler={analizler} />
