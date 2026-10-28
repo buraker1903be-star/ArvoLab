@@ -17,6 +17,7 @@ import LicenseCard from "../_components/license-card";
 import { changePassword, digerOturumlariKapat } from "@/app/actions/auth";
 import { KisayolListesi } from "../editor/[id]/write/shortcuts-dialog";
 import { updateMyProfile } from "@/app/actions/profile";
+import DilSecici from "@/app/_components/dil-secici";
 import ActionForm from "../action-form";
 import PasswordForm from "./password-form";
 import HesapSilmeFormu from "./hesap-silme-formu";
@@ -163,6 +164,25 @@ export default async function SettingsPage() {
               {t({ tr: "Kaydet", en: "Save" })}
             </button>
           </ActionForm>
+
+          {/*
+            ARAYÜZ DİLİ (28.10.2026, kurum sahibinin isteği: Türk öğrenciler
+            İngilizce kullanmak isteyebilir). Başlık İKİ dilde yazılı: yanlış
+            dilde açılmış bir paneli okuyamayan kişi de ayarı bulabilmeli.
+            Tercih profile yazılıyor; başka cihazda girişte de geçerli.
+          */}
+          <div className="ayar-dil-bolumu">
+            <span className="ayar-dil-baslik" lang="tr">
+              Dil · <span lang="en">Language</span>
+            </span>
+            <DilSecici sinif="ayar-dil" />
+            <small className="muted">
+              {t({
+                tr: "Seçiminiz hesabınıza kaydedilir; diğer cihazlarınızda ve size gönderilen e-postalarda da geçerli olur.",
+                en: "Your choice is saved to your account and applies on your other devices and in the emails we send you.",
+              })}
+            </small>
+          </div>
 
           {/*
             Abonelik kartı ana sayfadakiyle aynı (tek kaynak). Bireysel abone

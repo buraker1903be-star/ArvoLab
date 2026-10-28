@@ -747,3 +747,16 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .calisma-tamamlanan { margin-top: 8px; }
 .calisma-tamamlanan > summary { padding: 6px 8px; color: var(--muted); font-size: var(--fs-sm); cursor: pointer; }
 .takvim-taslak > button { justify-self: start; }
+
+/* Ayarlar · arayüz dili (28.10.2026): iki düğmelik seçim, seçili olan vurgulu. */
+.ayar-dil-bolumu { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.ayar-dil-baslik { font-size: var(--fs-sm); font-weight: 600; color: var(--ink); }
+.ayar-dil { display: flex; flex-wrap: wrap; gap: 8px; }
+.ayar-dil small { display: none; }
+.ayar-dil button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  color: var(--ink); font-size: var(--fs-sm); cursor: pointer;
+}
+.ayar-dil button[aria-pressed="true"] { border-color: var(--primary); font-weight: 600; }
+.ayar-dil button:disabled { opacity: 0.6; cursor: progress; }

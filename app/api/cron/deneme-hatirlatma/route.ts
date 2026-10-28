@@ -1,6 +1,7 @@
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
 import { denemeBitiyorEmail } from "@/lib/email/auth-emails";
+import { dilMi } from "@/lib/dil";
 import { hatirlatilacaklar, hatirlatmaPenceresi, TEK_SEFERDE } from "@/lib/deneme-hatirlatma";
 import { ensureSubscription } from "@/lib/subscription";
 import { siteOrigin } from "@/lib/site-url";
@@ -67,8 +68,16 @@ export async function GET(request: Request) {
       continue;
     }
 
+    /*
+      Hatırlatma kullanıcının seçtiği dilde (profiles.arayuz_dili). Zamanlanmış
+      iş bir isteğe bağlı değil, dili ancak profilden okuyabilir; okunamazsa
+      ya da tercih yoksa Türkçe.
+    */
+    const { data: profil } = await admin.from("profiles").select("arayuz_dili").eq("id", aday.userId).maybeSingle();
+    const dil = dilMi(profil?.arayuz_dili) ? profil.arayuz_dili : "tr";
+
     try {
-      await sendEmail({ to: eposta, ...denemeBitiyorEmail(aday.kalanGun, panel) });
+      await sendEmail({ to: eposta, ...denemeBitiyorEmail(aday.kalanGun, panel, dil) });
     } catch (sorun) {
       // Bir kişiye gönderilememesi, kalanları da göndermemek demek olmamalı.
       console.error("[deneme-hatirlatma] gönderilemedi", aday.userId, sorun instanceof Error ? sorun.message : sorun);

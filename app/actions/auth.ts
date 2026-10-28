@@ -1,8 +1,8 @@
 "use server";
 
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
-import type { Metin } from "@/lib/dil";
-import { headers } from "next/headers";
+import { DIL_CEREZI, dilMi, type Metin } from "@/lib/dil";
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -31,7 +31,7 @@ export async function login(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: oturum, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -46,6 +46,23 @@ export async function login(formData: FormData) {
     */
     if (error.code === "email_not_confirmed") redirect(`/?error=email-not-confirmed${nextQuery}`);
     redirect(`/?error=invalid-credentials${nextQuery}`);
+  }
+
+  /*
+    Profildeki dil tercihi bu tarayıcının çerezine aktarılır: telefonda
+    İngilizce seçen öğrenci bilgisayarda girişte de İngilizce görür.
+    Tercih yoksa ya da okunamazsa mevcut çerez neyse o kalır.
+  */
+  if (oturum.user) {
+    const { data: profil, error: profilHatasi } = await supabase
+      .from("profiles")
+      .select("arayuz_dili")
+      .eq("id", oturum.user.id)
+      .maybeSingle();
+    if (profilHatasi) console.error("[giriş] dil tercihi okunamadı:", profilHatasi.message);
+    if (dilMi(profil?.arayuz_dili)) {
+      (await cookies()).set(DIL_CEREZI, profil.arayuz_dili, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+    }
   }
 
   redirect(next);
