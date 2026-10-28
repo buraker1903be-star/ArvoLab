@@ -17,6 +17,8 @@ import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/at
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 import { dogrulamaOnbellegi } from "@/lib/dogrulama-onbellegi";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
+import { oturumYokMesaji } from "@/lib/auth-guards";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 export interface MyProject {
   id: string;
@@ -155,10 +157,17 @@ export async function runCitationCheck(input: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+    return { error: await oturumYokMesaji() };
   }
   /* Abonelik kapısı: Atıf denetimi ücretli bir özellik ve sonucu veritabanına yazılıyor. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
+  /*
+    Künye sorunlarının ve TYK bulgularının açıklamaları denetimi
+    çalıştıranın dilinde üretilip KAYDEDİLİYOR (parsed_references,
+    cross_check.tyk): sonucu yeniden açan da çoğunlukla odur.
+  */
+  const t = await ceviri();
+  const dil = await aktifDil();
 
   /*
     project_id kullanıcıdan geliyordu ve doğrulanmıyordu: kayıt BAŞKASININ
@@ -175,9 +184,9 @@ export async function runCitationCheck(input: {
       .maybeSingle();
     if (projectError) {
       console.error(projectError);
-      return { error: "Çalışma doğrulanamadı." };
+      return { error: t({ tr: "Çalışma doğrulanamadı.", en: "Couldn't verify the work." }) };
     }
-    if (!ownProject) return { error: "Bu çalışmaya atıf denetimi ekleyemezsiniz." };
+    if (!ownProject) return { error: t({ tr: "Bu çalışmaya atıf denetimi ekleyemezsiniz.", en: "You can't add a citation check to this work." }) };
     ornekAtif = (ownProject as { ornek_atif?: string | null }).ornek_atif ?? null;
   }
 
@@ -190,7 +199,7 @@ export async function runCitationCheck(input: {
   let kaynakcaMetni = input.referenceList;
   let metindenGovde: string | null = null;
   if (input.kaynakcayiMetindenAl) {
-    if (!input.projectId) return { error: "Kaynakçayı almak için önce bir çalışma seçin." };
+    if (!input.projectId) return { error: t({ tr: "Kaynakçayı almak için önce bir çalışma seçin.", en: "Select a work first to use its reference list." }) };
     const { data: musvedde, error: musveddeHatasi } = await supabase
       .from("project_manuscripts")
       .select("plain_text")
@@ -198,22 +207,24 @@ export async function runCitationCheck(input: {
       .maybeSingle();
     if (musveddeHatasi) {
       console.error(musveddeHatasi);
-      return { error: "Çalışmanın metni okunamadı; denetim çalıştırılmadı. Tekrar deneyin." };
+      return { error: t({ tr: "Çalışmanın metni okunamadı; denetim çalıştırılmadı. Tekrar deneyin.", en: "Couldn't read the work's text; the check wasn't run. Please try again." }) };
     }
     const bolum = splitBodyAndReferences(musvedde?.plain_text ?? "");
     if (!bolum.referenceText.trim()) {
       return {
-        error:
-          "Metninizde «Kaynakça» (ya da «Kaynaklar») başlığı bulunamadı. Editörde kaynakçanızı bu başlığın altına yazın ya da aşağıdan yapıştırarak denetleyin.",
+        error: t({
+          tr: "Metninizde «Kaynakça» (ya da «Kaynaklar») başlığı bulunamadı. Editörde kaynakçanızı bu başlığın altına yazın ya da aşağıdan yapıştırarak denetleyin.",
+          en: "No “References” (or “Kaynakça”) heading was found in your text. Write your reference list under that heading in the editor, or paste it below to check it.",
+        }),
       };
     }
     kaynakcaMetni = bolum.referenceText;
     metindenGovde = bolum.bodyText;
   }
 
-  const references = kunyeleriAyristir(kunyeleriBol(kaynakcaMetni), stil.id);
+  const references = kunyeleriAyristir(kunyeleriBol(kaynakcaMetni), stil.id, dil);
   if (references.length === 0) {
-    return { error: "Doğrulanabilecek bir kaynakça girdisi bulunamadı." };
+    return { error: t({ tr: "Doğrulanabilecek bir kaynakça girdisi bulunamadı.", en: "No reference list entry that can be checked was found." }) };
   }
 
   /*
@@ -223,7 +234,7 @@ export async function runCitationCheck(input: {
   */
   let govde = metindenGovde ?? input.bodyText ?? "";
   if (input.useProjectBody && metindenGovde === null) {
-    if (!input.projectId) return { error: "Metni almak için önce bir çalışma seçin." };
+    if (!input.projectId) return { error: t({ tr: "Metni almak için önce bir çalışma seçin.", en: "Select a work first to use its text." }) };
     const { data: musvedde, error: musveddeHatasi } = await supabase
       .from("project_manuscripts")
       .select("plain_text")
@@ -231,11 +242,11 @@ export async function runCitationCheck(input: {
       .maybeSingle();
     if (musveddeHatasi) {
       console.error(musveddeHatasi);
-      return { error: "Çalışmanın metni okunamadı; denetim çalıştırılmadı. Tekrar deneyin." };
+      return { error: t({ tr: "Çalışmanın metni okunamadı; denetim çalıştırılmadı. Tekrar deneyin.", en: "Couldn't read the work's text; the check wasn't run. Please try again." }) };
     }
     govde = musvedde?.plain_text ?? "";
     if (!govde.trim()) {
-      return { error: "Seçtiğiniz çalışmada henüz yazılmış metin yok. Metni yazım ekranından girin ya da buraya yapıştırın." };
+      return { error: t({ tr: "Seçtiğiniz çalışmada henüz yazılmış metin yok. Metni yazım ekranından girin ya da buraya yapıştırın.", en: "The selected work has no text yet. Write it in the editor or paste it here." }) };
     }
   }
 
@@ -267,13 +278,16 @@ export async function runCitationCheck(input: {
   const tyk: TykBulgusu[] =
     govdeVar && stil.tur === "yazar-tarih"
       ? [
-          ...yilsizAtiflar(govde),
+          ...yilsizAtiflar(govde, dil),
           ...yilUyusmazliklari(cross.citationsWithoutReference, references).map((u) => ({
             tur: "yil_uyusmazligi" as const,
             atif: u.atif,
-            aciklama: `Metinde ${u.atifYili}, kaynakçada ${u.kunyeYili}: ${u.kunye.slice(0, 160)}`,
+            aciklama: t({
+              tr: `Metinde ${u.atifYili}, kaynakçada ${u.kunyeYili}: ${u.kunye.slice(0, 160)}`,
+              en: `${u.atifYili} in the text, ${u.kunyeYili} in the reference list: ${u.kunye.slice(0, 160)}`,
+            }),
           })),
-          ...(kalip ? kalibaUymayanlar(govde, kalip) : []),
+          ...(kalip ? kalibaUymayanlar(govde, kalip, dil) : []),
         ]
       : [];
 
@@ -323,7 +337,7 @@ export async function runCitationCheck(input: {
 
   if (error) {
     console.error(error);
-    return { error: "Sonuç kaydedilirken bir hata oluştu." };
+    return { error: t({ tr: "Sonuç kaydedilirken bir hata oluştu.", en: "An error occurred while saving the result." }) };
   }
 
   return {

@@ -20,6 +20,8 @@ import {
   type KaynakPdfSatiri,
   type PdfDurumu,
 } from "@/lib/kaynak-pdf";
+import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
+import { YEREL } from "@/lib/dil";
 
 /*
   KAYNAK PDF'LERİ (kaynak_pdfleri, migration 20261026110024).
@@ -81,7 +83,8 @@ export async function kaynakPdfleriniBul(
   if (!ctx) return { error: await oturumYokMesaji() };
   // Dış sunuculara gidiyor ve depolamaya yazıyor: kapı burada da.
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
-  if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };
+  const t = await ceviri();
+  if (!UUID.test(projectId)) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
   const { supabase, user } = ctx;
 
   const parti = kunyeler.slice(0, PARTI).filter((k) => typeof k?.kunye === "string" && k.kunye.trim());
@@ -93,7 +96,7 @@ export async function kaynakPdfleriniBul(
     .in("kunye_anahtari", anahtarlar);
   if (okumaHatasi) {
     console.error("[kaynak-pdf] okunamadı:", okumaHatasi.message);
-    return { error: "PDF kayıtları okunamadı; tekrar deneyin." };
+    return { error: t({ tr: "PDF kayıtları okunamadı; tekrar deneyin.", en: "Couldn't read the PDF records; please try again." }) };
   }
   const yuklenmis = new Set((mevcut ?? []).filter((m) => m.durum === "yuklendi").map((m) => m.kunye_anahtari));
   const eskiYol = new Map((mevcut ?? []).map((m) => [m.kunye_anahtari, m.depo_yolu as string | null]));
@@ -168,7 +171,7 @@ export async function kaynakPdfleriniBul(
       .single();
     if (error) {
       console.error("[kaynak-pdf] kaydedilemedi:", error.message);
-      return { error: error.code === "42501" ? "Bu çalışmaya yazma yetkiniz yok." : "PDF durumu kaydedilemedi; tekrar deneyin." };
+      return { error: error.code === "42501" ? t({ tr: "Bu çalışmaya yazma yetkiniz yok.", en: "You don't have permission to write to this work." }) : t({ tr: "PDF durumu kaydedilemedi; tekrar deneyin.", en: "Couldn't save the PDF status; please try again." }) };
     }
     satirlar.push(data as KaynakPdfSatiri);
     // Yeniden bakıldıysa önceki indirme artık kullanılmıyor.
@@ -192,18 +195,19 @@ export async function kaynakPdfiYuklendi(
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
-  if (!UUID.test(projectId) || !girdi.depoYolu.startsWith(`${projectId}/kaynak-pdf/`)) return { error: "Dosya yolu geçersiz." };
+  const t = await ceviri();
+  if (!UUID.test(projectId) || !girdi.depoYolu.startsWith(`${projectId}/kaynak-pdf/`)) return { error: t({ tr: "Dosya yolu geçersiz.", en: "Invalid file path." }) };
   const { supabase, user } = ctx;
 
   const { data: dosya, error: indirmeHatasi } = await supabase.storage.from(KOVA).download(girdi.depoYolu);
   if (indirmeHatasi || !dosya) {
     console.error("[kaynak-pdf] yüklenen dosya okunamadı:", indirmeHatasi?.message);
-    return { error: "Yüklenen dosya okunamadı; tekrar deneyin." };
+    return { error: t({ tr: "Yüklenen dosya okunamadı; tekrar deneyin.", en: "Couldn't read the uploaded file; please try again." }) };
   }
   const bayt = new Uint8Array(await dosya.arrayBuffer());
   if (!pdfMi(bayt)) {
     await supabase.storage.from(KOVA).remove([girdi.depoYolu]);
-    return { error: "Dosya PDF değil. Kaynağın PDF'ini yükleyin." };
+    return { error: t({ tr: "Dosya PDF değil. Kaynağın PDF'ini yükleyin.", en: "The file isn't a PDF. Upload the source's PDF." }) };
   }
 
   /* Başlık eşleşmesi bir uyarı, engel değil: taranmış PDF'ten metin
@@ -245,7 +249,7 @@ export async function kaynakPdfiYuklendi(
     .single();
   if (error) {
     console.error("[kaynak-pdf] kaydedilemedi:", error.message);
-    return { error: error.code === "42501" ? "Bu çalışmaya yazma yetkiniz yok." : "Kaydedilemedi; tekrar deneyin." };
+    return { error: error.code === "42501" ? t({ tr: "Bu çalışmaya yazma yetkiniz yok.", en: "You don't have permission to write to this work." }) : t({ tr: "Kaydedilemedi; tekrar deneyin.", en: "Couldn't save; please try again." }) };
   }
   // Eski dosya (önceki indirme ya da yükleme) artık kullanılmıyor.
   if (eski?.depo_yolu && eski.depo_yolu !== girdi.depoYolu) await supabase.storage.from(KOVA).remove([eski.depo_yolu]);
@@ -270,7 +274,8 @@ export async function teslimPaketi(
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
-  if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };
+  const t = await ceviri();
+  if (!UUID.test(projectId)) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
   const { supabase } = ctx;
 
   const [{ data: calisma, error: calismaHatasi }, { data: satirlar, error: satirHatasi }] = await Promise.all([
@@ -279,9 +284,9 @@ export async function teslimPaketi(
   ]);
   if (calismaHatasi || satirHatasi) {
     console.error("[teslim-paketi] okunamadı:", calismaHatasi?.message ?? satirHatasi?.message);
-    return { error: "Paket hazırlanamadı; tekrar deneyin." };
+    return { error: t({ tr: "Paket hazırlanamadı; tekrar deneyin.", en: "Couldn't prepare the package; please try again." }) };
   }
-  if (!calisma) return { error: "Çalışma bulunamadı." };
+  if (!calisma) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
   const paket = paketDosyalari((satirlar ?? []) as KaynakPdfSatiri[]);
   const dosyali = paket.filter((d) => d.ad && d.satir.depo_yolu);
@@ -292,13 +297,15 @@ export async function teslimPaketi(
       .createSignedUrls(dosyali.map((d) => d.satir.depo_yolu!), 600);
     if (error) {
       console.error("[teslim-paketi] bağlantılar alınamadı:", error.message);
-      return { error: "Kaynak PDF'lerine ulaşılamadı; tekrar deneyin." };
+      return { error: t({ tr: "Kaynak PDF'lerine ulaşılamadı; tekrar deneyin.", en: "Couldn't reach the source PDFs; please try again." }) };
     }
     dosyalar = dosyali
       .map((d, i) => ({ ad: d.ad!, url: imzali?.[i]?.signedUrl ?? "" }))
       .filter((d) => d.url);
   }
 
-  const tarih = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", dateStyle: "long", timeStyle: "short" }).format(new Date());
-  return { baslik: calisma.title, dosyalar, rapor: kaynakRaporu(calisma.title, paket, tarih) };
+  /* Rapor paketi indirenin dilinde: dosya adları (ZIP) da istemcide aynı dille kuruluyor. */
+  const dil = await aktifDil();
+  const tarih = new Intl.DateTimeFormat(YEREL[dil], { timeZone: await aktifSaatDilimi(), dateStyle: "long", timeStyle: "short" }).format(new Date());
+  return { baslik: calisma.title, dosyalar, rapor: kaynakRaporu(calisma.title, paket, tarih, dil) };
 }

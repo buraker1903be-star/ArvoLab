@@ -23,7 +23,7 @@
 
 import { baglamKur, type BaglamParca } from "./baglam";
 import type { Dil } from "@/lib/dil";
-import { bulgulariCozumle, jsonOku, kunyeIziMetinde, type Bulgu, cikisDiliMesaji } from "./bulgu";
+import { bulgulariCozumle, jsonOku, kunyeIziMetinde, type Bulgu, cikisDiliMesaji, dilliKaynak } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 
 export type KayitOzeti = {
@@ -97,7 +97,7 @@ export function literaturIstemi(girdi: LiteraturGirdisi, butce = BAGLAM_BUTCESI)
     ...cikisDiliMesaji(girdi.dil),
     { rol: "kullanici", metin: baglam.metin },
   ];
-  return { mesajlar, kaynak: baglam.metin, kirpilanlar: baglam.kirpilanlar };
+  return { mesajlar, kaynak: dilliKaynak(baglam.metin, girdi.dil), kirpilanlar: baglam.kirpilanlar };
 }
 
 /** Yanıttaki arama dizeleri ve bulgular. */

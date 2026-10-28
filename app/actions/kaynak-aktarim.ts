@@ -5,6 +5,7 @@ import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork } from "@/lib/doi";
 import { DOI_TOPLU_EN_COK, ICE_AKTARMA_EN_COK, kaynakAnahtari, type KaynakTaslagi } from "@/lib/kaynak-aktarim";
+import { ceviri } from "@/lib/dil-sunucu";
 
 /*
   TOPLU KAYNAK EKLEME (27.10.2026): Zotero/Mendeley dosyası ve DOI listesi.
@@ -37,21 +38,22 @@ async function hazirlik(projectId: string) {
   const ctx = await getAuthContext();
   if (!ctx) return { hata: (await oturumYokMesaji()) } as const;
   if (await isSubscriptionBlocked()) return { hata: (await abonelikKapaliMesaji()) } as const;
+  const t = await ceviri();
   const { data: proje, error: projeHatasi } = await ctx.supabase
     .from("academic_projects")
     .select("id")
     .eq("id", projectId)
     .eq("owner_id", ctx.user.id)
     .maybeSingle();
-  if (projeHatasi) return { hata: "Çalışma okunamadı; yeniden deneyin." } as const;
-  if (!proje) return { hata: "Çalışma bulunamadı ya da size ait değil." } as const;
+  if (projeHatasi) return { hata: t({ tr: "Çalışma okunamadı; yeniden deneyin.", en: "Couldn't read the work; please try again." }) } as const;
+  if (!proje) return { hata: t({ tr: "Çalışma bulunamadı ya da size ait değil.", en: "Work not found or it doesn't belong to you." }) } as const;
   const { data: mevcut, error } = await ctx.supabase
     .from("literature_sources")
     .select("title, year, doi_or_url")
     .eq("owner_id", ctx.user.id)
     .eq("project_id", projectId);
   /* Mevcut liste okunamazsa ekleme yapılmaz: tekrar denetimi yapılamadan eklemek listeyi ikiye katlayabilir. */
-  if (error) return { hata: "Mevcut kaynaklarınız okunamadı; tekrarları ayıklayamadığımız için ekleme yapılmadı." } as const;
+  if (error) return { hata: t({ tr: "Mevcut kaynaklarınız okunamadı; tekrarları ayıklayamadığımız için ekleme yapılmadı.", en: "Couldn't read your existing sources; nothing was added because duplicates couldn't be filtered out." }) } as const;
   const anahtarlar = new Set((mevcut ?? []).map((k) => kaynakAnahtari(k)));
   return { ctx, anahtarlar } as const;
 }
@@ -83,25 +85,30 @@ async function ekle(
 ): Promise<Sonuc> {
   const satirlar: ReturnType<typeof satira>[] = [];
   let atlanan = 0;
-  for (const t of taslaklar) {
-    if (!metin(t?.title, 500)) {
+  for (const taslak of taslaklar) {
+    if (!metin(taslak?.title, 500)) {
       atlanan += 1;
       continue;
     }
-    const anahtar = kaynakAnahtari(t);
+    const anahtar = kaynakAnahtari(taslak);
     if (anahtarlar.has(anahtar)) {
       atlanan += 1;
       continue;
     }
     anahtarlar.add(anahtar);
-    satirlar.push(satira(t, ctx.user.id, projectId));
+    satirlar.push(satira(taslak, ctx.user.id, projectId));
   }
   for (let i = 0; i < satirlar.length; i += 200) {
     const { error } = await ctx.supabase.from("literature_sources").insert(satirlar.slice(i, i + 200));
     if (error) {
       console.error("[kaynak-aktarim] ekleme", error.message);
       if (i > 0) yenile();
-      return { error: i > 0 ? `${i} kaynak eklendi, kalanlar kaydedilemedi; yeniden deneyin (eklenenler tekrar edilmez).` : "Kaynaklar kaydedilemedi." };
+      const t = await ceviri();
+      return {
+        error: i > 0
+          ? t({ tr: `${i} kaynak eklendi, kalanlar kaydedilemedi; yeniden deneyin (eklenenler tekrar edilmez).`, en: `${i} sources were added, but the rest couldn't be saved; please try again (added ones won't be duplicated).` })
+          : t({ tr: "Kaynaklar kaydedilemedi.", en: "Couldn't save the sources." }),
+      };
     }
   }
   if (satirlar.length) yenile();
@@ -110,8 +117,9 @@ async function ekle(
 
 /** Zotero/Mendeley/EndNote dosyasından ayrıştırılmış künyeleri ekler. */
 export async function kaynaklariIceAktar(projectId: string, taslaklar: KaynakTaslagi[]): Promise<Sonuc> {
-  if (!Array.isArray(taslaklar) || !taslaklar.length) return { error: "Dosyada okunabilir kaynak bulunamadı." };
-  if (taslaklar.length > ICE_AKTARMA_EN_COK) return { error: `Tek seferde en çok ${ICE_AKTARMA_EN_COK} kaynak aktarılabilir; dosyayı bölün.` };
+  const t = await ceviri();
+  if (!Array.isArray(taslaklar) || !taslaklar.length) return { error: t({ tr: "Dosyada okunabilir kaynak bulunamadı.", en: "No readable sources were found in the file." }) };
+  if (taslaklar.length > ICE_AKTARMA_EN_COK) return { error: t({ tr: `Tek seferde en çok ${ICE_AKTARMA_EN_COK} kaynak aktarılabilir; dosyayı bölün.`, en: `You can import at most ${ICE_AKTARMA_EN_COK} sources at once; please split the file.` }) };
   const h = await hazirlik(projectId);
   if ("hata" in h) return { error: h.hata };
   return ekle(h.ctx, h.anahtarlar, taslaklar, projectId);
@@ -126,8 +134,9 @@ export type DoiSonucu = { doi: string; durum: "eklendi" | "vardi" | "bulunamadi"
 */
 export async function doiIleEkle(projectId: string, doilar: string[]): Promise<{ error?: string; sonuclar?: DoiSonucu[] }> {
   const temiz = [...new Set((Array.isArray(doilar) ? doilar : []).map((d) => normalizeDoi(String(d))).filter((d): d is string => !!d))];
-  if (!temiz.length) return { error: "Geçerli bir DOI bulunamadı (ör. 10.1000/xyz123 ya da https://doi.org/…)." };
-  if (temiz.length > DOI_TOPLU_EN_COK) return { error: `Tek seferde en çok ${DOI_TOPLU_EN_COK} DOI eklenebilir.` };
+  const t = await ceviri();
+  if (!temiz.length) return { error: t({ tr: "Geçerli bir DOI bulunamadı (ör. 10.1000/xyz123 ya da https://doi.org/…).", en: "No valid DOI was found (e.g. 10.1000/xyz123 or https://doi.org/…)." }) };
+  if (temiz.length > DOI_TOPLU_EN_COK) return { error: t({ tr: `Tek seferde en çok ${DOI_TOPLU_EN_COK} DOI eklenebilir.`, en: `You can add at most ${DOI_TOPLU_EN_COK} DOIs at once.` }) };
   const h = await hazirlik(projectId);
   if ("hata" in h) return { error: h.hata };
 

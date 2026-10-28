@@ -2,7 +2,7 @@ import { BookMarked, Download, FileUp, Sparkles } from "lucide-react";
 import { getLiteratureSources } from "@/app/actions/literature";
 import { getMyCitationChecks, getMyProjects, sonKaynakcaDenetimi } from "@/app/actions/citation-check";
 import { literaturAsistaniAcik } from "@/app/actions/ai-literatur";
-import { trTarih, trTarihSaat } from "@/lib/tr-time";
+import { ceviri, tarihler } from "@/lib/dil-sunucu";
 import PanelDrawer from "../_components/panel-drawer";
 import BosDurum from "../_components/bos-durum";
 import LiteraturPenceresi from "./literatur-penceresi";
@@ -14,7 +14,10 @@ import { DisaAktarma, IceAktarma } from "./kaynak-aktarim-araclari";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import type { CitationStyle } from "@/lib/citation-format";
 
-export const metadata = { title: "Kaynaklar" };
+export async function generateMetadata() {
+  const t = await ceviri();
+  return { title: t({ tr: "Kaynaklar", en: "Sources" }) };
+}
 
 /* Kaynak PDF'lerini bulan sunucu işlemi kaynakça penceresinden çağrılıyor
    ve dış arşivlerden indiriyor (app/actions/kaynak-pdf.ts, bütçe 40 sn). */
@@ -52,6 +55,8 @@ export default async function KaynaklarPage({
   searchParams: Promise<{ calisma?: string }>;
 }) {
   const { calisma: istenen } = await searchParams;
+  const t = await ceviri();
+  const { tarih, tarihSaat } = await tarihler();
   const [
     { satirlar: calismalar, okunamadi: calismaOkunamadi },
     { satirlar: tumKaynaklar, okunamadi: kaynakOkunamadi },
@@ -77,10 +82,10 @@ export default async function KaynaklarPage({
   /* Son denetimin bulguları: her biri ayrı satır, tek bir "doğrulandı" yok. */
   const bulgular = sonDenetim
     ? [
-        { ad: "Metinde atfı olmayan kaynak", sayi: sonDenetim.crossCheck.referencesWithoutCitation.length },
-        { ad: "Kaynakçada karşılığı olmayan atıf", sayi: sonDenetim.crossCheck.citationsWithoutReference.length },
-        { ad: "Dizinlerde bulunamayan kaynak", sayi: sonDenetim.verificationSummary.notFound },
-        ...(sonDenetim.tyk ? [{ ad: "Kılavuzun atıf örneğine uymayan atıf", sayi: sonDenetim.tyk.length }] : []),
+        { ad: t({ tr: "Metinde atfı olmayan kaynak", en: "Sources not cited in the text" }), sayi: sonDenetim.crossCheck.referencesWithoutCitation.length },
+        { ad: t({ tr: "Kaynakçada karşılığı olmayan atıf", en: "Citations missing from the reference list" }), sayi: sonDenetim.crossCheck.citationsWithoutReference.length },
+        { ad: t({ tr: "Dizinlerde bulunamayan kaynak", en: "Sources not found in the indexes" }), sayi: sonDenetim.verificationSummary.notFound },
+        ...(sonDenetim.tyk ? [{ ad: t({ tr: "Kılavuzun atıf örneğine uymayan atıf", en: "Citations that don't match the guideline's example" }), sayi: sonDenetim.tyk.length }] : []),
       ]
     : [];
 
@@ -88,11 +93,14 @@ export default async function KaynaklarPage({
     <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
-          <h1>Kaynaklar</h1>
+          <h1>{t({ tr: "Kaynaklar", en: "Sources" })}</h1>
           <p>
             {calisma
-              ? `“${calisma.title}” çalışmasının literatürü ve kaynakçası. Kaynak özeti ya da yorum üretilmez; künyeler dizinlerde doğrulanır.`
-              : "Çalışmalarınızın literatürü ve kaynakçası tek yerde."}
+              ? t({
+                  tr: `“${calisma.title}” çalışmasının literatürü ve kaynakçası. Kaynak özeti ya da yorum üretilmez; künyeler dizinlerde doğrulanır.`,
+                  en: `Literature and reference list for “${calisma.title}”. No source summaries or commentary are generated; references are verified against the indexes.`,
+                })
+              : t({ tr: "Çalışmalarınızın literatürü ve kaynakçası tek yerde.", en: "Your works' literature and reference lists in one place." })}
           </p>
         </div>
         {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/literature" /> : null}
@@ -100,39 +108,55 @@ export default async function KaynaklarPage({
 
       {calismaOkunamadi || kaynakOkunamadi ? (
         <p className="alert" role="alert">
-          {calismaOkunamadi ? "Çalışma listeniz" : "Kaynak listeniz"} okunamadı; aşağısı eksik görünebilir. Kayıtlarınız
-          yerinde duruyor — sayfayı yenileyin.
+          {calismaOkunamadi
+            ? t({
+                tr: "Çalışma listeniz okunamadı; aşağısı eksik görünebilir. Kayıtlarınız yerinde duruyor — sayfayı yenileyin.",
+                en: "Couldn't load your list of works; what's below may look incomplete. Your records are safe — refresh the page.",
+              })
+            : t({
+                tr: "Kaynak listeniz okunamadı; aşağısı eksik görünebilir. Kayıtlarınız yerinde duruyor — sayfayı yenileyin.",
+                en: "Couldn't load your sources; what's below may look incomplete. Your records are safe — refresh the page.",
+              })}
         </p>
       ) : null}
 
       {!calisma ? (
         <BosDurum
           ikon={BookMarked}
-          baslik="Önce bir çalışma başlatın"
-          aciklama="Kaynaklar bir çalışmaya bağlı tutulur: literatürünüz ve kaynakça denetiminiz o çalışmanın atıf stiline göre çalışır."
-          eylem={{ etiket: "Yeni çalışma", href: "/dashboard/editor?yeni=1" }}
+          baslik={t({ tr: "Önce bir çalışma başlatın", en: "Start a work first" })}
+          aciklama={t({
+            tr: "Kaynaklar bir çalışmaya bağlı tutulur: literatürünüz ve kaynakça denetiminiz o çalışmanın atıf stiline göre çalışır.",
+            en: "Sources are kept with a work: your literature and reference list check follow that work's citation style.",
+          })}
+          eylem={{ etiket: t({ tr: "Yeni çalışma", en: "New work" }), href: "/dashboard/editor?yeni=1" }}
         />
       ) : (
-        <section className="gb-sutunlar kaynaklar-ikili" aria-label="Literatür ve kaynakça">
+        <section className="gb-sutunlar kaynaklar-ikili" aria-label={t({ tr: "Literatür ve kaynakça", en: "Literature and reference list" })}>
           <article className="gb-kart gb-sutun">
             <header className="gb-kart-bas">
               <div>
-                <h2>Literatür</h2>
+                <h2>{t({ tr: "Literatür", en: "Literature" })}</h2>
                 <p>
                   {kaynaklar.length
-                    ? `${kaynaklar.length} kaynak · ${say("to_review")} okunacak · ${say("read")} okundu · ${say("used")} metinde`
-                    : "Bu çalışmaya bağlı kaynak yok"}
+                    ? t({
+                        tr: `${kaynaklar.length} kaynak · ${say("to_review")} okunacak · ${say("read")} okundu · ${say("used")} metinde`,
+                        en: `${kaynaklar.length} ${kaynaklar.length === 1 ? "source" : "sources"} · ${say("to_review")} to read · ${say("read")} read · ${say("used")} cited`,
+                      })
+                    : t({ tr: "Bu çalışmaya bağlı kaynak yok", en: "No sources linked to this work" })}
                 </p>
               </div>
               <div className="pencere-dugmeler">
                 {asistanAcik ? (
                   <PanelDrawer
-                    triggerLabel="Tarama asistanı"
+                    triggerLabel={t({ tr: "Tarama asistanı", en: "Search assistant" })}
                     triggerIcon={<Sparkles size={15} aria-hidden="true" />}
                     triggerClassName="projects-filter-button button-compact"
-                    kicker="Literatür"
-                    title="Tarama asistanı"
-                    description="Asistan kaynak önermez: araştırma sorunuzdan veri tabanlarına yapıştırabileceğiniz arama dizeleri kurar ve listenizdeki boşlukları gösterir."
+                    kicker={t({ tr: "Literatür", en: "Literature" })}
+                    title={t({ tr: "Tarama asistanı", en: "Search assistant" })}
+                    description={t({
+                      tr: "Asistan kaynak önermez: araştırma sorunuzdan veri tabanlarına yapıştırabileceğiniz arama dizeleri kurar ve listenizdeki boşlukları gösterir.",
+                      en: "The assistant doesn't recommend sources: it builds search strings from your research question that you can paste into databases, and shows gaps in your list.",
+                    })}
                     boy="genis"
                     basaridaKapan={false}
                   >
@@ -146,12 +170,15 @@ export default async function KaynaklarPage({
                 {/* Toplu ekleme ve dışa aktarma (27.10.2026): Zotero/Mendeley dosyası,
                     DOI listesi; RIS/BibTeX indirme ve stilinde kaynakça kopyalama. */}
                 <PanelDrawer
-                  triggerLabel="İçe aktar"
+                  triggerLabel={t({ tr: "İçe aktar", en: "Import" })}
                   triggerIcon={<FileUp size={15} aria-hidden="true" />}
                   triggerClassName="projects-filter-button button-compact"
-                  kicker="Literatür"
-                  title="Kaynakları toplu ekleyin"
-                  description="Zotero, Mendeley ya da EndNote kütüphanenizi dosyayla aktarın ya da DOI'leri yapıştırın. Kaynaklar bu çalışmaya “Okunacak” olarak eklenir."
+                  kicker={t({ tr: "Literatür", en: "Literature" })}
+                  title={t({ tr: "Kaynakları toplu ekleyin", en: "Add sources in bulk" })}
+                  description={t({
+                    tr: "Zotero, Mendeley ya da EndNote kütüphanenizi dosyayla aktarın ya da DOI'leri yapıştırın. Kaynaklar bu çalışmaya “Okunacak” olarak eklenir.",
+                    en: "Import your Zotero, Mendeley or EndNote library from a file, or paste DOIs. Sources are added to this work as “To read”.",
+                  })}
                   boy="genis"
                   basaridaKapan={false}
                 >
@@ -159,12 +186,15 @@ export default async function KaynaklarPage({
                 </PanelDrawer>
                 {kaynaklar.length ? (
                   <PanelDrawer
-                    triggerLabel="Dışa aktar"
+                    triggerLabel={t({ tr: "Dışa aktar", en: "Export" })}
                     triggerIcon={<Download size={15} aria-hidden="true" />}
                     triggerClassName="projects-filter-button button-compact"
-                    kicker="Literatür"
-                    title="Kaynakça ve dışa aktarma"
-                    description="Kaynakçanızı çalışmanızın atıf stilinde kopyalayın ya da kaynaklarınızı başka bir programa aktarın."
+                    kicker={t({ tr: "Literatür", en: "Literature" })}
+                    title={t({ tr: "Kaynakça ve dışa aktarma", en: "Reference list and export" })}
+                    description={t({
+                      tr: "Kaynakçanızı çalışmanızın atıf stilinde kopyalayın ya da kaynaklarınızı başka bir programa aktarın.",
+                      en: "Copy your reference list in your work's citation style, or export your sources to another program.",
+                    })}
                     boy="genis"
                     basaridaKapan={false}
                   >
@@ -179,7 +209,7 @@ export default async function KaynaklarPage({
                 <LiteraturPenceresi
                   projectId={calisma.id}
                   projeAdi={calisma.title}
-                  triggerLabel="Kaynak bul"
+                  triggerLabel={t({ tr: "Kaynak bul", en: "Find sources" })}
                   triggerClassName="projects-primary-button button-compact"
                 />
               </div>
@@ -188,27 +218,39 @@ export default async function KaynaklarPage({
               <KaynakListesi kaynaklar={kaynaklar} />
             ) : (
               <p className="gb-bos">
-                &quot;Kaynak bul&quot; ile OpenAlex ve Crossref dizinlerinde arayın, &quot;İçe aktar&quot; ile Zotero/Mendeley
-                kütüphanenizi ya da DOI listenizi ekleyin. Okuduğunuzu ve metinde kullandığınızı burada işaretlersiniz.
+                {t({
+                  tr: "\"Kaynak bul\" ile OpenAlex ve Crossref dizinlerinde arayın, \"İçe aktar\" ile Zotero/Mendeley kütüphanenizi ya da DOI listenizi ekleyin. Okuduğunuzu ve metinde kullandığınızı burada işaretlersiniz.",
+                  en: "Search the OpenAlex and Crossref indexes with \"Find sources\", or add your Zotero/Mendeley library or a DOI list with \"Import\". Mark what you've read and cited here.",
+                })}
               </p>
             )}
-            {bagsiz ? <p className="hint">{bagsiz} kaynağınız bir çalışmaya bağlı değil; burada görünmüyor.</p> : null}
+            {bagsiz ? (
+              <p className="hint">
+                {t({
+                  tr: `${bagsiz} kaynağınız bir çalışmaya bağlı değil; burada görünmüyor.`,
+                  en: `${bagsiz} of your ${bagsiz === 1 ? "sources isn't" : "sources aren't"} linked to a work and ${bagsiz === 1 ? "doesn't" : "don't"} appear here.`,
+                })}
+              </p>
+            ) : null}
           </article>
 
           <article className="gb-kart gb-sutun">
             <header className="gb-kart-bas">
               <div>
-                <h2>Kaynakça</h2>
+                <h2>{t({ tr: "Kaynakça", en: "Reference list" })}</h2>
                 <p>
                   {sonDenetim
-                    ? `Son denetim ${trTarihSaat(sonDenetim.tarih)} · ${sonDenetim.toplamKaynak} künye`
-                    : "Henüz denetlenmedi"}
+                    ? t({
+                        tr: `Son denetim ${tarihSaat(sonDenetim.tarih)} · ${sonDenetim.toplamKaynak} künye`,
+                        en: `Last checked ${tarihSaat(sonDenetim.tarih)} · ${sonDenetim.toplamKaynak} ${sonDenetim.toplamKaynak === 1 ? "reference" : "references"}`,
+                      })
+                    : t({ tr: "Henüz denetlenmedi", en: "Not checked yet" })}
                 </p>
               </div>
               <KaynakcaPenceresi
                 calisma={{ ...calisma, citation_style: calisma.citation_style ?? "apa7" }}
                 sonDenetim={sonDenetim ? { skor, tarih: sonDenetim.tarih } : null}
-                triggerLabel={sonDenetim ? "Sonuçları aç" : "Kaynakçamı denetle"}
+                triggerLabel={sonDenetim ? t({ tr: "Sonuçları aç", en: "Open results" }) : t({ tr: "Kaynakçamı denetle", en: "Check my reference list" })}
                 triggerClassName="projects-primary-button button-compact"
               />
             </header>
@@ -217,7 +259,7 @@ export default async function KaynaklarPage({
                 {/* Puan çalışmanın kendi atıf stiline göre; stil adı yazılmıyor. */}
                 <div className="kaynakca-puan" data-tone={ton}>
                   <b>{skor}</b>
-                  <span>/100 kaynakça uyumu</span>
+                  <span>{t({ tr: "/100 kaynakça uyumu", en: "/100 reference list compliance" })}</span>
                 </div>
                 <ul className="gb-liste">
                   {bulgular.map((b) => (
@@ -226,19 +268,19 @@ export default async function KaynaklarPage({
                         <b>{b.ad}</b>
                       </span>
                       <span className="status-pill" data-tone={b.sayi ? "warning" : "success"}>
-                        {b.sayi ? b.sayi : "Yok"}
+                        {b.sayi ? b.sayi : t({ tr: "Yok", en: "None" })}
                       </span>
                     </li>
                   ))}
                 </ul>
                 {oncekiDenetimler.length > 1 ? (
                   <>
-                    <h3 className="calisma-durum-alt">Önceki denetimler</h3>
+                    <h3 className="calisma-durum-alt">{t({ tr: "Önceki denetimler", en: "Previous checks" })}</h3>
                     <ul className="gb-liste">
                       {oncekiDenetimler.slice(1).map((d) => (
                         <li key={d.id} className="gb-satir">
                           <span className="gb-satir-govde">
-                            <b>{trTarih(d.created_at)}</b>
+                            <b>{tarih(d.created_at)}</b>
                           </span>
                           <span className="gb-zaman">{d.compliance_score ?? "—"}/100</span>
                         </li>
@@ -249,8 +291,10 @@ export default async function KaynaklarPage({
               </>
             ) : (
               <p className="gb-bos">
-                Kaynakçanız editördeki metinden alınır ya da yapıştırılır; künyelerin biçimi, metindeki atıflarla
-                eşleşmesi ve kaynakların gerçekten var olup olmadığı (Crossref, OpenAlex) birlikte denetlenir.
+                {t({
+                  tr: "Kaynakçanız editördeki metinden alınır ya da yapıştırılır; künyelerin biçimi, metindeki atıflarla eşleşmesi ve kaynakların gerçekten var olup olmadığı (Crossref, OpenAlex) birlikte denetlenir.",
+                  en: "Your reference list is taken from your text in the editor or pasted in; the format of each reference, its match with in-text citations, and whether the source actually exists (Crossref, OpenAlex) are checked together.",
+                })}
               </p>
             )}
           </article>

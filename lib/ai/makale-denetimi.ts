@@ -22,7 +22,7 @@
 
 import { baglamKur, type BaglamParca } from "./baglam";
 import type { Dil } from "@/lib/dil";
-import { YANIT_BICIMI, cikisDiliMesaji } from "./bulgu";
+import { YANIT_BICIMI, cikisDiliMesaji, dilliKaynak } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 import { MAKALE_TURLERI, YONTEM_DENETIMLERI, type BolumTuru, type MakaleTuru, type YontemAilesi } from "@/lib/makale/sablonlar";
 
@@ -136,5 +136,5 @@ export function makaleIstemi(girdi: MakaleDenetimGirdisi, butce = BAGLAM_BUTCESI
     ...cikisDiliMesaji(girdi.dil),
     { rol: "kullanici", metin: baglam.metin },
   ];
-  return { mesajlar, kaynak: baglam.metin, kirpilanlar: baglam.kirpilanlar };
+  return { mesajlar, kaynak: dilliKaynak(baglam.metin, girdi.dil), kirpilanlar: baglam.kirpilanlar };
 }

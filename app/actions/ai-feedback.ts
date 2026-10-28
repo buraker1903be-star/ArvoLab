@@ -6,6 +6,8 @@ import { getDocumentFeedback } from "@/lib/ai-feedback";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { kunyeIziMetinde } from "@/lib/ai/bulgu";
+import { aiHataMesaji } from "@/lib/ai/saglayici";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 export interface AiFeedbackResponse {
   error?: string;
@@ -24,7 +26,9 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
     zeka kredisi bittikten sonra bile bu düğmenin model çağırmaya devam
     etmesiydi — üstelik saatlik hak da yanmadığı için sınırsızca.
   */
-  const kapi = await asistanKapisi();
+  const t = await ceviri();
+  const dil = await aktifDil();
+  const kapi = await asistanKapisi(dil);
   if (!kapi.ok) return { error: kapi.hata };
 
   const supabase = await createClient();
@@ -35,11 +39,11 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
     .single();
 
   if (docError || !doc?.extracted_text) {
-    return { error: "Bu belge için çıkarılmış metin bulunamadı. Önce belgeyi yükleyip analiz ettirin." };
+    return { error: t({ tr: "Bu belge için çıkarılmış metin bulunamadı. Önce belgeyi yükleyip analiz ettirin.", en: "No extracted text was found for this document. Upload the document and have it analyzed first." }) };
   }
 
   // Hak yalnızca modele gidilecekse yanar (bkz. asistanHakkiVar).
-  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
+  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
   if (hakHatasi) return { error: hakHatasi };
 
   const basladi = Date.now();
@@ -51,7 +55,7 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
   };
 
   try {
-    const result = await getDocumentFeedback(doc.extracted_text);
+    const result = await getDocumentFeedback(doc.extracted_text, dil);
 
     /*
       Künye izi. Bu yetenek "şu iddia kaynaksız" diyebiliyor; oradan
@@ -69,7 +73,7 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
     if (kunyeIziMetinde(result.feedback)) {
       console.error("[ai] belge geri bildirimi künye içeriyor", { model: result.model });
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "kunye", model: result.model, baglam: result.girdi, cikti: result.feedback });
-      return { error: "Asistan kaynak künyesi ürettiği için geri bildirim gösterilmedi. Tekrar deneyebilirsiniz." };
+      return { error: t({ tr: "Asistan kaynak künyesi ürettiği için geri bildirim gösterilmedi. Tekrar deneyebilirsiniz.", en: "The feedback wasn't shown because the assistant produced a source reference. You can try again." }) };
     }
 
     /*
@@ -100,7 +104,7 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
     return { feedback: result.feedback, truncated: result.truncated, krediUyarisi: kapi.uyari ?? undefined };
   } catch (err) {
     console.error(err);
-    const message = err instanceof Error ? err.message : "AI geri bildirimi alınırken bir hata oluştu.";
+    const message = aiHataMesaji(err, dil) ?? t({ tr: "AI geri bildirimi alınırken bir hata oluştu.", en: "An error occurred while getting AI feedback." });
     await asistanKaydet({ ...ortak, durum: "failed" });
 
     const { error: kayitHatasi } = await supabase.from("ai_feedback_requests").insert({

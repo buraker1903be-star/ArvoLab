@@ -57,7 +57,8 @@ test("asistan kapısının kapsamı", async (t) => {
     );
 
     for (const { ad, kaynak } of yetenekli) {
-      assert.match(kaynak, /asistanKapisi\(\)/, `${ad}: abonelik/kurulum kapısı yok`);
+      // Dil argümanı alabilir (lib/dil.ts): asistanKapisi(dil).
+      assert.match(kaynak, /asistanKapisi\(/, `${ad}: abonelik/kurulum kapısı yok`);
       assert.match(kaynak, /asistanHakkiVar\(/, `${ad}: saatlik hak sayacı yok`);
       assert.match(kaynak, /asistanKaydet\(/, `${ad}: çalışma kaydı yok`);
     }

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork, type DoiMetadata } from "@/lib/doi";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
+import { ceviri } from "@/lib/dil-sunucu";
 
 const PAGE_PATH = "/dashboard/literature";
 /* Literatür, Çalışmalarım'daki durum kartından da pencere olarak açılıyor;
@@ -83,12 +84,13 @@ const isMissingColumn = (error: { code?: string } | null) => error?.code === "PG
 export async function createLiteratureSource(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   /* Abonelik kapısı: Yeni kaynak eklemek içerik üretir. Okuma, güncelleme ve silme
      açık kalır: mevcut kaynaklarını yönetebilmeli. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) return { error: "Kaynak başlığı zorunludur." };
+  if (!title) return { error: t({ tr: "Kaynak başlığı zorunludur.", en: "Source title is required." }) };
 
   const sourceType = String(formData.get("sourceType") ?? "article");
   const status = String(formData.get("status") ?? "to_review");
@@ -110,7 +112,7 @@ export async function createLiteratureSource(formData: FormData): Promise<Action
 
   if (error) {
     console.error(error);
-    return { error: "Kaydedilirken bir hata oluştu." };
+    return { error: t({ tr: "Kaydedilirken bir hata oluştu.", en: "An error occurred while saving." }) };
   }
 
   yenile();
@@ -120,7 +122,8 @@ export async function createLiteratureSource(formData: FormData): Promise<Action
 export async function updateLiteratureStatus(sourceId: string, status: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
-  if (!STATUSES.includes(status)) return { error: "Geçersiz durum." };
+  const t = await ceviri();
+  if (!STATUSES.includes(status)) return { error: t({ tr: "Geçersiz durum.", en: "Invalid status." }) };
 
   const { data, error } = await ctx.supabase
     .from("literature_sources")
@@ -131,9 +134,9 @@ export async function updateLiteratureStatus(sourceId: string, status: string): 
 
   if (error) {
     console.error(error);
-    return { error: "Güncellenirken bir hata oluştu." };
+    return { error: t({ tr: "Güncellenirken bir hata oluştu.", en: "An error occurred while updating." }) };
   }
-  if (!data?.length) return { error: "Kaynak bulunamadı ya da size ait değil." };
+  if (!data?.length) return { error: t({ tr: "Kaynak bulunamadı ya da size ait değil.", en: "Source not found or it doesn't belong to you." }) };
 
   yenile();
   return { success: true };
@@ -142,9 +145,10 @@ export async function updateLiteratureStatus(sourceId: string, status: string): 
 export async function updateLiteratureSource(sourceId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) return { error: "Kaynak başlığı zorunludur." };
+  if (!title) return { error: t({ tr: "Kaynak başlığı zorunludur.", en: "Source title is required." }) };
   const sourceType = String(formData.get("sourceType") ?? "article");
 
   const row = {
@@ -163,9 +167,9 @@ export async function updateLiteratureSource(sourceId: string, formData: FormDat
 
   if (error) {
     console.error(error);
-    return { error: "Güncellenirken bir hata oluştu." };
+    return { error: t({ tr: "Güncellenirken bir hata oluştu.", en: "An error occurred while updating." }) };
   }
-  if (!data?.length) return { error: "Kaynak bulunamadı ya da size ait değil." };
+  if (!data?.length) return { error: t({ tr: "Kaynak bulunamadı ya da size ait değil.", en: "Source not found or it doesn't belong to you." }) };
 
   yenile();
   return { success: true };
@@ -174,6 +178,7 @@ export async function updateLiteratureSource(sourceId: string, formData: FormDat
 export async function deleteLiteratureSource(sourceId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const { data, error } = await ctx.supabase
     .from("literature_sources")
@@ -184,9 +189,9 @@ export async function deleteLiteratureSource(sourceId: string): Promise<ActionRe
 
   if (error) {
     console.error(error);
-    return { error: "Silinirken bir hata oluştu." };
+    return { error: t({ tr: "Silinirken bir hata oluştu.", en: "An error occurred while deleting." }) };
   }
-  if (!data?.length) return { error: "Kaynak bulunamadı ya da size ait değil." };
+  if (!data?.length) return { error: t({ tr: "Kaynak bulunamadı ya da size ait değil.", en: "Source not found or it doesn't belong to you." }) };
 
   yenile();
   return { success: true };
@@ -199,9 +204,10 @@ export async function deleteLiteratureSource(sourceId: string): Promise<ActionRe
 export async function lookupDoi(input: string): Promise<{ error?: string; metadata?: DoiMetadata }> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const doi = normalizeDoi(input);
-  if (!doi) return { error: "Geçerli bir DOI girin (ör. 10.1000/xyz123 ya da https://doi.org/…)." };
+  if (!doi) return { error: t({ tr: "Geçerli bir DOI girin (ör. 10.1000/xyz123 ya da https://doi.org/…).", en: "Enter a valid DOI (e.g. 10.1000/xyz123 or https://doi.org/…)." }) };
 
   try {
     const response = await fetch(crossrefWorkUrl(doi), {
@@ -209,14 +215,14 @@ export async function lookupDoi(input: string): Promise<{ error?: string; metada
       signal: AbortSignal.timeout(8000),
       cache: "no-store",
     });
-    if (response.status === 404) return { error: "Bu DOI Crossref kayıtlarında bulunamadı." };
-    if (!response.ok) return { error: "Kaynak bilgileri şu an alınamadı; birazdan yeniden deneyin." };
+    if (response.status === 404) return { error: t({ tr: "Bu DOI Crossref kayıtlarında bulunamadı.", en: "This DOI wasn't found in Crossref." }) };
+    if (!response.ok) return { error: t({ tr: "Kaynak bilgileri şu an alınamadı; birazdan yeniden deneyin.", en: "Couldn't fetch source details right now; please try again shortly." }) };
     const body = (await response.json()) as { message?: unknown };
     const metadata = parseCrossrefWork(body.message as Parameters<typeof parseCrossrefWork>[0], doi);
-    return metadata ? { metadata } : { error: "Bu DOI için başlık bilgisi bulunamadı." };
+    return metadata ? { metadata } : { error: t({ tr: "Bu DOI için başlık bilgisi bulunamadı.", en: "No title information was found for this DOI." }) };
   } catch (error) {
     console.error(error);
-    return { error: "Kaynak bilgileri alınamadı (bağlantı zaman aşımı). Bilgileri elle de girebilirsiniz." };
+    return { error: t({ tr: "Kaynak bilgileri alınamadı (bağlantı zaman aşımı). Bilgileri elle de girebilirsiniz.", en: "Couldn't fetch source details (connection timed out). You can also enter them manually." }) };
   }
 }
 
@@ -238,11 +244,12 @@ export interface CitationSourceInput {
 export async function createCitationSource(input: CitationSourceInput): Promise<{ error?: string; source?: LiteratureSource }> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   /* Abonelik kapısı: Atıf kaynağı da yeni içeriktir. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const title = text(input.title, 500);
-  if (!title) return { error: "Kaynak başlığı zorunludur." };
+  if (!title) return { error: t({ tr: "Kaynak başlığı zorunludur.", en: "Source title is required." }) };
   const sourceType = SOURCE_TYPES.includes(input.sourceType ?? "") ? input.sourceType! : "article";
   const fields = input as unknown as Record<string, unknown>;
 
@@ -266,7 +273,7 @@ export async function createCitationSource(input: CitationSourceInput): Promise<
 
   if (error || !data) {
     console.error(error);
-    return { error: "Kaynak kaydedilemedi." };
+    return { error: t({ tr: "Kaynak kaydedilemedi.", en: "Couldn't save the source." }) };
   }
   yenile();
   return { source: data as LiteratureSource };

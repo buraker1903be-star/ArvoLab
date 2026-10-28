@@ -18,7 +18,8 @@ import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
 import type { Tone } from "@/lib/status-tone";
 import { STIL_SECENEKLERI, type AtifTuru } from "@/lib/atif/stiller";
-import { trTarihSaat } from "@/lib/tr-time";
+import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
+import { YEREL, type Metin } from "@/lib/dil";
 
 interface Project {
   id: string;
@@ -82,15 +83,24 @@ export interface CheckResult {
   ornekAtif?: string | null;
 }
 
-const STATUS_META: Record<AcademicVerification["status"], { label: string; tone: Tone }> = {
-  verified: { label: "Doğrulandı", tone: "success" },
-  possible_match: { label: "Olası eşleşme", tone: "warning" },
-  not_found: { label: "Kayıt bulunamadı", tone: "danger" },
-  insufficient_data: { label: "Yetersiz veri", tone: "neutral" },
+const STATUS_META: Record<AcademicVerification["status"], { label: Metin; tone: Tone }> = {
+  verified: { label: { tr: "Doğrulandı", en: "Verified" }, tone: "success" },
+  possible_match: { label: { tr: "Olası eşleşme", en: "Possible match" }, tone: "warning" },
+  not_found: { label: { tr: "Kayıt bulunamadı", en: "No record found" }, tone: "danger" },
+  insufficient_data: { label: { tr: "Yetersiz veri", en: "Insufficient data" }, tone: "neutral" },
 };
 
 /* Bu turda ağ doğrulamasına sıra gelmemiş künye. "Bulunamadı" DEĞİL. */
-const BAKILMADI = { label: "Bu turda bakılmadı", tone: "neutral" as Tone };
+const BAKILMADI: { label: Metin; tone: Tone } = { label: { tr: "Bu turda bakılmadı", en: "Not checked this round" }, tone: "neutral" };
+
+const ASISTAN_KAPALI: Metin = {
+  tr: "Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.",
+  en: "The assistant is turned off in this installation; your administrator needs to set up the AI key.",
+};
+const KUNYE_ORNEGI: Metin = {
+  tr: "Yılmaz, A. (2020). Örnek makale başlığı. Dergi Adı, 12(3), 45-60. https://doi.org/...",
+  en: "Smith, A. (2020). Sample article title. Journal Name, 12(3), 45-60. https://doi.org/...",
+};
 
 export default function CitationCheckForm({
   projects,
@@ -122,6 +132,10 @@ export default function CitationCheckForm({
   kaynakPdfleri?: PdfSatiri[];
 }) {
   const router = useRouter();
+  const t = useCeviri();
+  const dil = useDil();
+  const { tarihSaat } = useTarihler();
+  const etiketler = { uyari: t({ tr: "Sorun", en: "Issue" }), oneri: t({ tr: "Öneri", en: "Suggestion" }), bilgi: t({ tr: "Not", en: "Note" }) };
   // Bir çalışmadan gelindiyse çalışma hazır seçili gelir.
   const [projectId, setProjectId] = useState<string>(secilenCalisma ?? "");
   const [projectTitle, setProjectTitle] = useState("");
@@ -244,7 +258,7 @@ export default function CitationCheckForm({
           atiflar: (result.citations ?? []).map((c) => c.raw),
           projectId: projectId || null,
           zorla,
-        })),
+        }), dil),
       );
       // Yeni yorum soldaki "Geçmiş sorgular"a düşsün.
       if (gomulu) router.refresh();
@@ -270,7 +284,7 @@ export default function CitationCheckForm({
         return mevcut?.durum !== "indirildi" && mevcut?.durum !== "yuklendi";
       });
     if (!kuyruk.length) {
-      showToast("success", "Bakılacak yeni kaynak yok; PDF'i olanlar hazır.");
+      showToast("success", t({ tr: "Bakılacak yeni kaynak yok; PDF'i olanlar hazır.", en: "No new sources to check; those with PDFs are ready." }));
       return;
     }
     setPdfIlerleme({ bitti: 0, toplam: kuyruk.length });
@@ -314,7 +328,7 @@ export default function CitationCheckForm({
         router.refresh();
       }
     } catch {
-      setError("Akademik veri kaynaklarına erişilirken bir hata oluştu. Lütfen yeniden deneyin.");
+      setError(t({ tr: "Akademik veri kaynaklarına erişilirken bir hata oluştu. Lütfen yeniden deneyin.", en: "An error occurred while accessing academic data sources. Please try again." }));
     } finally {
       setLoading(false);
     }
@@ -337,30 +351,57 @@ export default function CitationCheckForm({
   const pdfSay = (...durumlar: (string | null)[]) => pdfDurumlari.filter((d) => durumlar.includes(d)).length;
   const pdfOzeti = pdfDurumlari.some(Boolean)
     ? [
-        `${pdfSay("indirildi", "yuklendi")}/${pdfDurumlari.length} kaynağın PDF'i hazır`,
-        pdfSay("bulunamadi", "erisilemedi") ? `${pdfSay("bulunamadi", "erisilemedi")} kaynağın PDF'ini siz yükleyin` : "",
-        pdfSay("kayit_yok") ? `${pdfSay("kayit_yok")} künye dizinde yok` : "",
+        t({
+          tr: `${pdfSay("indirildi", "yuklendi")}/${pdfDurumlari.length} kaynağın PDF'i hazır`,
+          en: `PDFs ready for ${pdfSay("indirildi", "yuklendi")}/${pdfDurumlari.length} sources`,
+        }),
+        pdfSay("bulunamadi", "erisilemedi")
+          ? t({
+              tr: `${pdfSay("bulunamadi", "erisilemedi")} kaynağın PDF'ini siz yükleyin`,
+              en: `upload the PDF yourself for ${pdfSay("bulunamadi", "erisilemedi")} ${pdfSay("bulunamadi", "erisilemedi") === 1 ? "source" : "sources"}`,
+            })
+          : "",
+        pdfSay("kayit_yok")
+          ? t({
+              tr: `${pdfSay("kayit_yok")} künye dizinde yok`,
+              en: `${pdfSay("kayit_yok")} ${pdfSay("kayit_yok") === 1 ? "reference isn't" : "references aren't"} in the indexes`,
+            })
+          : "",
       ]
         .filter(Boolean)
         .join(" · ")
-    : "Açık erişimli PDF'ler bulunup indirilir; ücretli kaynakların PDF'ini kendiniz yüklersiniz.";
+    : t({
+        tr: "Açık erişimli PDF'ler bulunup indirilir; ücretli kaynakların PDF'ini kendiniz yüklersiniz.",
+        en: "Open-access PDFs are found and downloaded; you upload PDFs of paywalled sources yourself.",
+      });
 
   /* Sayfada sonuçların altında; pencerede sol sütunun ikinci kartı. */
   const asistanBolumu = result ? (
     <div className="asistan-kart">
       <div className="asistan-kart-ust">
-        <h3>Asistan yorumlasın</h3>
-        <p>
-          Yukarıdaki sonuçlar mekanik: dizinde bulunmayan her kayıt hata
-          değildir — Türkçe tezler ve kurum raporları Crossref&apos;te
-          çoğu zaman yer almaz. Asistan beklenen yoklukla gerçek şüpheyi
-          ayırır, biçim sorunlarını önceliklendirir ve{" "}
-          <strong>atıf–kaynakça uyumunu</strong> denetler: metinde
-          &ldquo;Demir (2020)&rdquo;, kaynakçada &ldquo;Demir, A.
-          (2021)&rdquo; yazıyorsa yukarıda iki ayrı sorun görünür; oysa
-          tek bir yıl uyuşmazlığıdır. Düzeltilmiş künye yazmaz; DOI, yıl
-          ya da cilt numarası üretmesine izin verilmez.
-        </p>
+        <h3>{t({ tr: "Asistan yorumlasın", en: "Have the assistant interpret" })}</h3>
+        {dil === "en" ? (
+          <p>
+            The results above are mechanical: not every record missing from the indexes is an error — theses and
+            institutional reports are often not in Crossref. The assistant separates expected absences from real
+            doubts, prioritizes formatting issues and checks <strong>citation–reference list consistency</strong>: if
+            the text says &ldquo;Demir (2020)&rdquo; and the reference list says &ldquo;Demir, A. (2021)&rdquo;, you see
+            two separate issues above, but it&apos;s a single year mismatch. It doesn&apos;t write corrected references;
+            it isn&apos;t allowed to produce DOIs, years or volume numbers.
+          </p>
+        ) : (
+          <p>
+            Yukarıdaki sonuçlar mekanik: dizinde bulunmayan her kayıt hata
+            değildir — Türkçe tezler ve kurum raporları Crossref&apos;te
+            çoğu zaman yer almaz. Asistan beklenen yoklukla gerçek şüpheyi
+            ayırır, biçim sorunlarını önceliklendirir ve{" "}
+            <strong>atıf–kaynakça uyumunu</strong> denetler: metinde
+            &ldquo;Demir (2020)&rdquo;, kaynakçada &ldquo;Demir, A.
+            (2021)&rdquo; yazıyorsa yukarıda iki ayrı sorun görünür; oysa
+            tek bir yıl uyuşmazlığıdır. Düzeltilmiş künye yazmaz; DOI, yıl
+            ya da cilt numarası üretmesine izin verilmez.
+          </p>
+        )}
       </div>
 
       <div className="project-form-actions mt-sm">
@@ -370,21 +411,21 @@ export default function CitationCheckForm({
           disabled={!asistanAcik || bekleniyor}
           onClick={() => yorumlat(false)}
         >
-          {bekleniyor ? "Denetleniyor…" : "Kaynakçayı Yorumlat"}
+          {bekleniyor ? t({ tr: "Denetleniyor…", en: "Checking…" }) : t({ tr: "Kaynakçayı Yorumlat", en: "Interpret Reference List" })}
         </button>
       </div>
 
       {!asistanAcik && (
         <p className="asistan-uyari" data-tone="neutral">
-          Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
+          {t(ASISTAN_KAPALI)}
         </p>
       )}
 
       <AsistanSonuc
         sonuc={denetim}
         yetenek="kaynakca"
-        etiketler={{ uyari: "Sorun", oneri: "Öneri", bilgi: "Not" }}
-        bulguBasligi="Asistan bulguları"
+        etiketler={etiketler}
+        bulguBasligi={t({ tr: "Asistan bulguları", en: "Assistant findings" })}
         bekleniyor={bekleniyor}
         onYenidenSorgula={() => yorumlat(true)}
       />
@@ -405,16 +446,19 @@ export default function CitationCheckForm({
         <div className="results-divider">
           <div className="chip-row">
             <strong className="chip">
-              {result.stil.ad} uyumu: {result.complianceScore}/100
+              {t({ tr: `${result.stil.ad} uyumu: ${result.complianceScore}/100`, en: `${result.stil.ad} compliance: ${result.complianceScore}/100` })}
             </strong>
             <span className="chip" data-tone="success">
-              {result.verificationSummary.verified} doğrulandı
+              {t({ tr: `${result.verificationSummary.verified} doğrulandı`, en: `${result.verificationSummary.verified} verified` })}
             </span>
             <span className="chip" data-tone="warning">
-              {result.verificationSummary.possible} olası eşleşme
+              {t({
+                tr: `${result.verificationSummary.possible} olası eşleşme`,
+                en: `${result.verificationSummary.possible} possible ${result.verificationSummary.possible === 1 ? "match" : "matches"}`,
+              })}
             </span>
             <span className="chip" data-tone="danger">
-              {result.verificationSummary.notFound} bulunamadı
+              {t({ tr: `${result.verificationSummary.notFound} bulunamadı`, en: `${result.verificationSummary.notFound} not found` })}
             </span>
           </div>
 
@@ -431,12 +475,12 @@ export default function CitationCheckForm({
               çözümü kendiliğinden denemez. */}
           {result.dogrulananSayisi < result.toplamKaynak ? (
             <div className="callout mt-md" data-tone="info">
-              Biçim ve atıf eşleşmesi {result.toplamKaynak} kaynağın hepsinde çalıştı.
-              Akademik veritabanı doğrulaması {result.dogrulananSayisi} kaynak için
-              yapıldı; kalan {result.toplamKaynak - result.dogrulananSayisi} kaynağa
-              bu turda bakılmadı (bulunamadı demek değil).{" "}
-              <strong>Denetimi tekrar çalıştırdığınızda kalanlara bakılır</strong> —
-              bakılmış kaynaklar yeniden sorulmuyor.
+              {t({
+                tr: `Biçim ve atıf eşleşmesi ${result.toplamKaynak} kaynağın hepsinde çalıştı. Akademik veritabanı doğrulaması ${result.dogrulananSayisi} kaynak için yapıldı; kalan ${result.toplamKaynak - result.dogrulananSayisi} kaynağa bu turda bakılmadı (bulunamadı demek değil). `,
+                en: `Format and citation matching ran on all ${result.toplamKaynak} sources. Academic database verification was done for ${result.dogrulananSayisi} sources; the remaining ${result.toplamKaynak - result.dogrulananSayisi} weren't checked this round (that doesn't mean they weren't found). `,
+              })}
+              <strong>{t({ tr: "Denetimi tekrar çalıştırdığınızda kalanlara bakılır", en: "Run the check again to cover the rest" })}</strong>
+              {t({ tr: " — bakılmış kaynaklar yeniden sorulmuyor.", en: " — sources already checked aren't queried again." })}
             </div>
           ) : null}
 
@@ -452,19 +496,19 @@ export default function CitationCheckForm({
           */}
           {atifOlculdu && (
             <div className="result-block">
-              <h3 className="result-heading">Atıf–kaynakça uyumu</h3>
+              <h3 className="result-heading">{t({ tr: "Atıf–kaynakça uyumu", en: "Citation–reference list consistency" })}</h3>
               {atifsizKaynak.length === 0 && kaynaksizAtif.length === 0 ? (
-                <p className="tone-text" data-tone="success">Metindeki atıflarla kaynakça birbirini tutuyor.</p>
+                <p className="tone-text" data-tone="success">{t({ tr: "Metindeki atıflarla kaynakça birbirini tutuyor.", en: "The in-text citations and the reference list match." })}</p>
               ) : (
                 <ul className="result-list">
                   {atifsizKaynak.map((reference, index) => (
                     <li key={`k${index}`} className="tone-text" data-tone="warning">
-                      Kaynakçada var, metinde atfı yok: {reference.raw}
+                      {t({ tr: "Kaynakçada var, metinde atfı yok:", en: "In the reference list but not cited in the text:" })} {reference.raw}
                     </li>
                   ))}
                   {kaynaksizAtif.map((citation, index) => (
                     <li key={`a${index}`} className="tone-text" data-tone="danger">
-                      Metinde atıf var, kaynakçada yok: {citation.raw}
+                      {t({ tr: "Metinde atıf var, kaynakçada yok:", en: "Cited in the text but missing from the reference list:" })} {citation.raw}
                     </li>
                   ))}
                 </ul>
@@ -479,15 +523,29 @@ export default function CitationCheckForm({
           */}
           {result.tyk ? (
             <div className="result-block">
-              <h3 className="result-heading">Kılavuz atıf kuralları</h3>
+              <h3 className="result-heading">{t({ tr: "Kılavuz atıf kuralları", en: "Guideline citation rules" })}</h3>
               <p className="hint">
                 {result.ornekAtif
-                  ? `Kılavuz örneği: ${result.ornekAtif} — atıflar bu noktalamaya göre denetlendi.`
-                  : "Kılavuzunuzun örnek atıfını Kılavuz penceresine girerseniz noktalama (virgül, iki nokta, “s.”) da denetlenir."}
+                  ? t({
+                      tr: `Kılavuz örneği: ${result.ornekAtif} — atıflar bu noktalamaya göre denetlendi.`,
+                      en: `Guideline example: ${result.ornekAtif} — citations were checked against this punctuation.`,
+                    })
+                  : t({
+                      tr: "Kılavuzunuzun örnek atıfını Kılavuz penceresine girerseniz noktalama (virgül, iki nokta, “s.”) da denetlenir.",
+                      en: "If you enter your guideline's example citation in the Guideline window, punctuation (commas, colons, “p.”) is checked too.",
+                    })}
               </p>
               {result.tyk.length === 0 ? (
                 <p className="tone-text" data-tone="success">
-                  Yılı olmayan atıf ve yıl uyuşmazlığı yok{result.ornekAtif ? "; atıflar kılavuz örneğine uyuyor" : ""}.
+                  {result.ornekAtif
+                    ? t({
+                        tr: "Yılı olmayan atıf ve yıl uyuşmazlığı yok; atıflar kılavuz örneğine uyuyor.",
+                        en: "No citations without a year and no year mismatches; citations follow the guideline example.",
+                      })
+                    : t({
+                        tr: "Yılı olmayan atıf ve yıl uyuşmazlığı yok.",
+                        en: "No citations without a year and no year mismatches.",
+                      })}
                 </p>
               ) : (
                 <ul className="result-list">
@@ -514,7 +572,7 @@ export default function CitationCheckForm({
             toplamda görünüyordu.
           */}
           <div className="result-block">
-            <h3 className="result-heading-lg">Kaynakça ({result.references.length})</h3>
+            <h3 className="result-heading-lg">{t({ tr: "Kaynakça", en: "Reference list" })} ({result.references.length})</h3>
             <div>
               {result.references.map((reference, index) => {
                 const dogrulama = dogrulamaHaritasi.get(reference.raw);
@@ -530,27 +588,32 @@ export default function CitationCheckForm({
                           <>
                             <div className="mt-sm"><strong>{eslesme.title}</strong></div>
                             <div className="hint">
-                              {eslesme.authors.slice(0, 4).join(", ") || "Yazar bilgisi yok"}
+                              {eslesme.authors.slice(0, 4).join(", ") || t({ tr: "Yazar bilgisi yok", en: "No author information" })}
                               {eslesme.year ? ` · ${eslesme.year}` : ""}
                               {eslesme.venue ? ` · ${eslesme.venue}` : ""}
                             </div>
                             <div className="cluster cluster-spaced text-sm">
                               {eslesme.url && (
                                 <a href={eslesme.url} target="_blank" rel="noreferrer" className="link-accent">
-                                  {eslesme.doi ? `DOI: ${eslesme.doi}` : "Akademik kaydı aç"}
+                                  {eslesme.doi ? `DOI: ${eslesme.doi}` : t({ tr: "Akademik kaydı aç", en: "Open academic record" })}
                                 </a>
                               )}
                               <span>
                                 {eslesme.provider === "crossref" ? "Crossref" : "OpenAlex"}
-                                {" · "}eşleşme %{Math.round(eslesme.confidence * 100)}
+                                {" · "}
+                                {t({ tr: `eşleşme %${Math.round(eslesme.confidence * 100)}`, en: `${Math.round(eslesme.confidence * 100)}% match` })}
                               </span>
-                              {eslesme.citedByCount !== null && <span>{eslesme.citedByCount} atıf</span>}
+                              {eslesme.citedByCount !== null && (
+                                <span>
+                                  {t({ tr: `${eslesme.citedByCount} atıf`, en: `${eslesme.citedByCount} ${eslesme.citedByCount === 1 ? "citation" : "citations"}` })}
+                                </span>
+                              )}
                             </div>
                           </>
                         ) : dogrulama ? (
-                          <div className="hint mt-sm">Crossref ve OpenAlex üzerinde yeterince güçlü bir eşleşme bulunamadı.</div>
+                          <div className="hint mt-sm">{t({ tr: "Crossref ve OpenAlex üzerinde yeterince güçlü bir eşleşme bulunamadı.", en: "No sufficiently strong match was found in Crossref or OpenAlex." })}</div>
                         ) : (
-                          <div className="hint mt-sm">Ağ doğrulamasına bu turda sıra gelmedi; tekrar çalıştırın.</div>
+                          <div className="hint mt-sm">{t({ tr: "Ağ doğrulamasına bu turda sıra gelmedi; tekrar çalıştırın.", en: "Online verification didn't reach this one this round; run the check again." })}</div>
                         )}
 
                         {/* Biçim sorunları künyenin kendi kartında: ayrı
@@ -568,13 +631,13 @@ export default function CitationCheckForm({
                           </ul>
                         )}
                       </div>
-                      <span className="status-pill" data-tone={meta.tone}>{meta.label}</span>
+                      <span className="status-pill" data-tone={meta.tone}>{t(meta.label)}</span>
                     </div>
 
                     {dogrulama && (
                       <div className="cluster cluster-spaced mt-sm text-sm">
                         <a href={dogrulama.googleScholarUrl} target="_blank" rel="noreferrer" className="link-accent">
-                          Google Scholar’da kontrol et ↗
+                          {t({ tr: "Google Scholar’da kontrol et ↗", en: "Check on Google Scholar ↗" })}
                         </a>
                         {dogrulama.status === "not_found" && !alternatif[reference.raw] && (
                           <button
@@ -582,7 +645,7 @@ export default function CitationCheckForm({
                             className="projects-filter-button button-compact"
                             onClick={() => alternatifAra(reference.raw, reference.title || reference.raw)}
                           >
-                            Aynı konuda kaynak ara
+                            {t({ tr: "Aynı konuda kaynak ara", en: "Search sources on the same topic" })}
                           </button>
                         )}
                       </div>
@@ -597,7 +660,7 @@ export default function CitationCheckForm({
                       uydurma künye riski yok.
                     */}
                     {alternatif[reference.raw] === "araniyor" && (
-                      <p className="hint mt-sm">Dizinlerde aranıyor…</p>
+                      <p className="hint mt-sm">{t({ tr: "Dizinlerde aranıyor…", en: "Searching the indexes…" })}</p>
                     )}
                     {typeof alternatif[reference.raw] === "object" && (() => {
                       const bulunan = alternatif[reference.raw] as { kayitlar: AramaKaydi[]; hata?: string };
@@ -605,16 +668,22 @@ export default function CitationCheckForm({
                       if (!bulunan.kayitlar.length) {
                         return (
                           <p className="hint mt-sm">
-                            Bu konuda da dizinlerde kayıt çıkmadı. Kaynağınız Türkçe bir tez ya da kurum
-                            raporuysa bu beklenen bir sonuçtur.
+                            {t({
+                              tr: "Bu konuda da dizinlerde kayıt çıkmadı. Kaynağınız Türkçe bir tez ya da kurum raporuysa bu beklenen bir sonuçtur.",
+                              en: "No records on this topic were found in the indexes either. If your source is a thesis or an institutional report, this is expected.",
+                            })}
                           </p>
                         );
                       }
                       return (
                         <div className="mt-sm">
                           <p className="hint">
-                            Aynı konuda dizinde bulunanlar — <strong>künyenizin karşılığı değil.</strong>{" "}
-                            Kendi kaynağınızı siz doğrulayın; okumadığınız bir çalışmaya atıf yapmayın.
+                            {t({ tr: "Aynı konuda dizinde bulunanlar — ", en: "Found in the indexes on the same topic — " })}
+                            <strong>{t({ tr: "künyenizin karşılığı değil.", en: "not a match for your reference." })}</strong>{" "}
+                            {t({
+                              tr: "Kendi kaynağınızı siz doğrulayın; okumadığınız bir çalışmaya atıf yapmayın.",
+                              en: "Verify your own source yourself; don't cite a work you haven't read.",
+                            })}
                           </p>
                           <ul className="result-list">
                             {bulunan.kayitlar.map((kayit) => (
@@ -624,9 +693,9 @@ export default function CitationCheckForm({
                                 </a>
                                 <span className="muted text-sm">
                                   {" · "}
-                                  {kayit.yazarlar.slice(0, 2).join(", ") || "Yazar bilgisi yok"}
+                                  {kayit.yazarlar.slice(0, 2).join(", ") || t({ tr: "Yazar bilgisi yok", en: "No author information" })}
                                   {kayit.yil ? ` · ${kayit.yil}` : ""}
-                                  {kayit.acikErisim ? " · açık erişim" : ""}
+                                  {kayit.acikErisim ? t({ tr: " · açık erişim", en: " · open access" }) : ""}
                                 </span>
                               </li>
                             ))}
@@ -659,10 +728,12 @@ export default function CitationCheckForm({
     <section className={gomulu ? "pencere-iki-kart" : "project-form-card mt-md"}>
       {gomulu ? null : (
         <div className="project-form-heading">
-          <h2>Kaynakça ve Atıf Doğrulama</h2>
+          <h2>{t({ tr: "Kaynakça ve Atıf Doğrulama", en: "Reference List and Citation Check" })}</h2>
           <p>
-            Kaynakları seçtiğiniz atıf stilinin kuralları, metin içi atıf eşleşmesi ve
-            akademik kayıt varlığı açısından birlikte kontrol edin.
+            {t({
+              tr: "Kaynakları seçtiğiniz atıf stilinin kuralları, metin içi atıf eşleşmesi ve akademik kayıt varlığı açısından birlikte kontrol edin.",
+              en: "Check your sources against your chosen citation style's rules, in-text citation matching and the existence of an academic record, all at once.",
+            })}
           </p>
         </div>
       )}
@@ -677,33 +748,40 @@ export default function CitationCheckForm({
         */
         <div className="pencere-sol">
           <div className="pencere-kart kaynakca-basit">
-            <h3 className="pencere-kart-baslik">Denetim</h3>
+            <h3 className="pencere-kart-baslik">{t({ tr: "Denetim", en: "Check" })}</h3>
             <p className="hint">
-              Kaynakçanız ve metniniz editördeki son kaydedilmiş hâlinden alınır. Atıf stili:{" "}
-              <b>{STIL_SECENEKLERI.find((secenek) => secenek.deger === citationStyle)?.etiket ?? citationStyle}</b> (çalışma ayarlarından).
+              {t({
+                tr: "Kaynakçanız ve metniniz editördeki son kaydedilmiş hâlinden alınır. Atıf stili: ",
+                en: "Your reference list and text are taken from the last saved version in the editor. Citation style: ",
+              })}
+              <b>{STIL_SECENEKLERI.find((secenek) => secenek.deger === citationStyle)?.etiket ?? citationStyle}</b>
+              {t({ tr: " (çalışma ayarlarından).", en: " (from the work's settings)." })}
             </p>
             <div className="pencere-dugmeler">
               <button type="button" className="projects-primary-button" onClick={() => void handleCheck(true)} disabled={loading}>
-                {loading ? "Kaynaklar dizinlerde aranıyor…" : "Kaynakçamı denetle"}
+                {loading ? t({ tr: "Kaynaklar dizinlerde aranıyor…", en: "Searching the indexes for sources…" }) : t({ tr: "Kaynakçamı denetle", en: "Check my reference list" })}
               </button>
               {/* Literatür'deki "Manuel kaynak ekle" ile aynı: pencere içinde pencere. */}
               <PanelDrawer
-                triggerLabel="Manuel ekle"
+                triggerLabel={t({ tr: "Manuel ekle", en: "Add manually" })}
                 triggerIcon={<ClipboardPaste size={16} aria-hidden="true" />}
                 triggerClassName="projects-filter-button"
-                kicker="Kaynakça"
-                title="Kaynakçanızı yapıştırın"
-                description="Kaynakçanız editörde değilse buraya yapıştırın; her künye ayrı satırda olsun."
+                kicker={t({ tr: "Kaynakça", en: "Reference list" })}
+                title={t({ tr: "Kaynakçanızı yapıştırın", en: "Paste your reference list" })}
+                description={t({
+                  tr: "Kaynakçanız editörde değilse buraya yapıştırın; her künye ayrı satırda olsun.",
+                  en: "If your reference list isn't in the editor, paste it here; put each reference on its own line.",
+                })}
                 acik={yapistirAcik}
                 onAcikDegis={setYapistirAcik}
                 basaridaKapan={false}
               >
                 <div className="project-form-grid">
                   <label className="project-form-full">
-                    <span>Kaynakça listesi</span>
+                    <span>{t({ tr: "Kaynakça listesi", en: "Reference list" })}</span>
                     <textarea
                       rows={10}
-                      placeholder={"Yılmaz, A. (2020). Örnek makale başlığı. Dergi Adı, 12(3), 45-60. https://doi.org/..."}
+                      placeholder={t(KUNYE_ORNEGI)}
                       value={referenceList}
                       onChange={(e) => setReferenceList(e.target.value)}
                     />
@@ -719,7 +797,7 @@ export default function CitationCheckForm({
                       void handleCheck(false);
                     }}
                   >
-                    Yapıştırdığımı denetle
+                    {t({ tr: "Yapıştırdığımı denetle", en: "Check what I pasted" })}
                   </button>
                 </div>
               </PanelDrawer>
@@ -739,7 +817,9 @@ export default function CitationCheckForm({
                   onClick={() => void pdfleriBul()}
                 >
                   <FileSearch size={16} aria-hidden="true" />
-                  {pdfIlerleme ? `PDF'ler aranıyor… ${pdfIlerleme.bitti}/${pdfIlerleme.toplam}` : "Kaynak PDF'lerini bul"}
+                  {pdfIlerleme
+                    ? t({ tr: `PDF'ler aranıyor… ${pdfIlerleme.bitti}/${pdfIlerleme.toplam}`, en: `Searching for PDFs… ${pdfIlerleme.bitti}/${pdfIlerleme.toplam}` })
+                    : t({ tr: "Kaynak PDF'lerini bul", en: "Find source PDFs" })}
                 </button>
                 <p className="hint">{pdfOzeti}</p>
               </div>
@@ -753,10 +833,12 @@ export default function CitationCheckForm({
             yorumları altında: aynı soruyu ikinci kez sordurmamak için.
           */}
           <div className="pencere-kart">
-            <h3 className="pencere-kart-baslik">Asistan yorumu</h3>
+            <h3 className="pencere-kart-baslik">{t({ tr: "Asistan yorumu", en: "Assistant interpretation" })}</h3>
             <p className="hint">
-              Dizinde bulunmayan her kayıt hata değildir; asistan gerçek şüpheyi ayırır, sorunları önceliklendirir ve
-              atıf–kaynakça uyuşmazlıklarını birleştirir. Düzeltilmiş künye yazmaz.
+              {t({
+                tr: "Dizinde bulunmayan her kayıt hata değildir; asistan gerçek şüpheyi ayırır, sorunları önceliklendirir ve atıf–kaynakça uyuşmazlıklarını birleştirir. Düzeltilmiş künye yazmaz.",
+                en: "Not every record missing from the indexes is an error; the assistant separates real doubts, prioritizes issues and combines citation–reference list mismatches. It doesn't write corrected references.",
+              })}
             </p>
             <div className="pencere-dugmeler">
               <button
@@ -769,20 +851,20 @@ export default function CitationCheckForm({
                   yorumlat(false);
                 }}
               >
-                <Sparkles size={16} aria-hidden="true" /> {bekleniyor ? "Yorumlanıyor…" : "Kaynakçayı yorumlat"}
+                <Sparkles size={16} aria-hidden="true" /> {bekleniyor ? t({ tr: "Yorumlanıyor…", en: "Interpreting…" }) : t({ tr: "Kaynakçayı yorumlat", en: "Interpret reference list" })}
               </button>
             </div>
-            {!result ? <p className="muted text-sm">Önce kaynakçanızı denetleyin; asistan denetim sonucunu yorumlar.</p> : null}
+            {!result ? <p className="muted text-sm">{t({ tr: "Önce kaynakçanızı denetleyin; asistan denetim sonucunu yorumlar.", en: "Check your reference list first; the assistant interprets the check result." })}</p> : null}
             {!asistanAcik ? (
               <p className="asistan-uyari" data-tone="neutral">
-                Asistan bu kurulumda kapalı; yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor.
+                {t(ASISTAN_KAPALI)}
               </p>
             ) : null}
 
             {asistanGecmisi.length ? (
               <>
                 <h4 className="pencere-alt-baslik">
-                  <History size={14} aria-hidden="true" /> Geçmiş sorgular
+                  <History size={14} aria-hidden="true" /> {t({ tr: "Geçmiş sorgular", en: "Past queries" })}
                 </h4>
                 <ul className="secim-listesi">
                   {asistanGecmisi.map((kayit) => (
@@ -796,8 +878,8 @@ export default function CitationCheckForm({
                         }}
                       >
                         <span className="kanit-kayit-govde">
-                          <b>{trTarihSaat(kayit.created_at)}</b>
-                          <small>{kayit.bulgular.length} bulgu</small>
+                          <b>{tarihSaat(kayit.created_at)}</b>
+                          <small>{t({ tr: `${kayit.bulgular.length} bulgu`, en: `${kayit.bulgular.length} ${kayit.bulgular.length === 1 ? "finding" : "findings"}` })}</small>
                         </span>
                       </button>
                     </li>
@@ -809,17 +891,24 @@ export default function CitationCheckForm({
 
           <PanelDrawer
             tetiksiz
-            triggerLabel="Kaynakça yorumu"
+            triggerLabel={t({ tr: "Kaynakça yorumu", en: "Reference list interpretation" })}
             acik={yorumAcik}
             onAcikDegis={setYorumAcik}
             boy="genis"
-            kicker="Asistan"
-            title={gecmisGoster ? `Kaynakça yorumu · ${trTarihSaat(gecmisGoster.created_at)}` : "Kaynakça yorumu"}
-            description="Bulgular denetim sonucunun yorumudur, nihai hüküm değildir. Düzeltmek istediğinizi yapılacaklarınıza ekleyin."
+            kicker={t({ tr: "Asistan", en: "Assistant" })}
+            title={
+              gecmisGoster
+                ? `${t({ tr: "Kaynakça yorumu", en: "Reference list interpretation" })} · ${tarihSaat(gecmisGoster.created_at)}`
+                : t({ tr: "Kaynakça yorumu", en: "Reference list interpretation" })
+            }
+            description={t({
+              tr: "Bulgular denetim sonucunun yorumudur, nihai hüküm değildir. Düzeltmek istediğinizi yapılacaklarınıza ekleyin.",
+              en: "The findings interpret the check result; they aren't a final verdict. Add what you want to fix to your to-do list.",
+            })}
             basaridaKapan={false}
           >
             {!gecmisGoster && bekleniyor && !denetim ? (
-              <p className="gb-bos">Asistan denetim sonucunuzu okuyor…</p>
+              <p className="gb-bos">{t({ tr: "Asistan denetim sonucunuzu okuyor…", en: "The assistant is reading your check result…" })}</p>
             ) : null}
             <AsistanSonuc
               sonuc={
@@ -828,8 +917,8 @@ export default function CitationCheckForm({
                   : denetim
               }
               yetenek="kaynakca"
-              etiketler={{ uyari: "Sorun", oneri: "Öneri", bilgi: "Not" }}
-              bulguBasligi="Asistan bulguları"
+              etiketler={etiketler}
+              bulguBasligi={t({ tr: "Asistan bulguları", en: "Assistant findings" })}
               bekleniyor={bekleniyor}
               onYenidenSorgula={gecmisGoster ? undefined : () => yorumlat(true)}
               gecmisGizli
@@ -851,16 +940,16 @@ export default function CitationCheckForm({
       ) : (
         <>
         <div className="callout mb-md" data-tone="info">
-          Bibliyografik bilgiler Crossref ve OpenAlex üzerinden doğrulanır. Her sonuçta
-          ayrıca Google Scholar’da aynı kaynağı açan bağımsız arama bağlantısı verilir.
-          Biçim ve atıf eşleşmesi kaynakçanın tamamında çalışır; akademik veritabanı
-          doğrulaması ilk 25 kaynakla sınırlıdır.
+          {t({
+            tr: "Bibliyografik bilgiler Crossref ve OpenAlex üzerinden doğrulanır. Her sonuçta ayrıca Google Scholar’da aynı kaynağı açan bağımsız arama bağlantısı verilir. Biçim ve atıf eşleşmesi kaynakçanın tamamında çalışır; akademik veritabanı doğrulaması ilk 25 kaynakla sınırlıdır.",
+            en: "Bibliographic details are verified via Crossref and OpenAlex. Each result also includes an independent search link that opens the same source on Google Scholar. Format and citation matching run on the whole reference list; academic database verification is limited to the first 25 sources.",
+          })}
         </div>
 
         <div className="project-form-grid">
           {projects.length > 0 ? (
             <label>
-              <span>Bağlı çalışma (opsiyonel)</span>
+              <span>{t({ tr: "Bağlı çalışma (opsiyonel)", en: "Linked work (optional)" })}</span>
               <select
                 value={projectId}
                 onChange={(e) => {
@@ -876,7 +965,7 @@ export default function CitationCheckForm({
                   if (secilen?.citation_style) setCitationStyle(secilen.citation_style);
                 }}
               >
-                <option value="">Seçili çalışma yok</option>
+                <option value="">{t({ tr: "Seçili çalışma yok", en: "No work selected" })}</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>{p.title}</option>
                 ))}
@@ -884,10 +973,10 @@ export default function CitationCheckForm({
             </label>
           ) : (
             <label>
-              <span>Çalışma başlığı (opsiyonel etiket)</span>
+              <span>{t({ tr: "Çalışma başlığı (opsiyonel etiket)", en: "Work title (optional label)" })}</span>
               <input
                 type="text"
-                placeholder="Örn. Eğitim Bilimleri Yüksek Lisans Tezi"
+                placeholder={t({ tr: "Örn. Eğitim Bilimleri Yüksek Lisans Tezi", en: "E.g. Master's Thesis in Educational Sciences" })}
                 value={projectTitle}
                 onChange={(e) => setProjectTitle(e.target.value)}
               />
@@ -895,7 +984,7 @@ export default function CitationCheckForm({
           )}
 
           <label>
-            <span>Atıf stili</span>
+            <span>{t({ tr: "Atıf stili", en: "Citation style" })}</span>
             <select value={citationStyle} onChange={(e) => setCitationStyle(e.target.value)}>
               {STIL_SECENEKLERI.map((secenek) => (
                 <option key={secenek.deger} value={secenek.deger}>{secenek.etiket}</option>
@@ -904,21 +993,22 @@ export default function CitationCheckForm({
           </label>
 
           <label className="project-form-full">
-            <span>Kaynakça listesi</span>
+            <span>{t({ tr: "Kaynakça listesi", en: "Reference list" })}</span>
             <textarea
               rows={8}
-              placeholder={"Yılmaz, A. (2020). Örnek makale başlığı. Dergi Adı, 12(3), 45-60. https://doi.org/..."}
+              placeholder={t(KUNYE_ORNEGI)}
               value={referenceList}
               onChange={(e) => setReferenceList(e.target.value)}
             />
           </label>
 
           <div className="project-form-full field-group">
-            <span className="field-title">Metin (metin içi atıf kontrolü için, opsiyonel)</span>
+            <span className="field-title">{t({ tr: "Metin (metin içi atıf kontrolü için, opsiyonel)", en: "Text (for the in-text citation check, optional)" })}</span>
             <p className="hint">
-              Metin verilmezse çapraz kontrol YAPILMAZ: hangi kaynağa metinde
-              atıf yapılmadığı ve hangi atfın kaynakçada karşılığı olmadığı
-              ölçülemez. Denetimin elle yapılması en zor yarısı budur.
+              {t({
+                tr: "Metin verilmezse çapraz kontrol YAPILMAZ: hangi kaynağa metinde atıf yapılmadığı ve hangi atfın kaynakçada karşılığı olmadığı ölçülemez. Denetimin elle yapılması en zor yarısı budur.",
+                en: "Without text, the cross-check is NOT run: it can't tell which sources aren't cited in the text or which citations have no entry in the reference list. That's the hardest half of the check to do by hand.",
+              })}
             </p>
 
             {projectId ? (
@@ -928,36 +1018,40 @@ export default function CitationCheckForm({
                   checked={calismaMetniniKullan}
                   onChange={(e) => void metniKullan(e.target.checked)}
                 />
-                <span>Bu çalışmanın metnini kullan</span>
+                <span>{t({ tr: "Bu çalışmanın metnini kullan", en: "Use this work's text" })}</span>
               </label>
             ) : null}
 
             {calismaMetniniKullan ? (
               ozetBekleniyor ? (
-                <p className="hint" aria-busy="true">Çalışmanın metni ölçülüyor…</p>
+                <p className="hint" aria-busy="true">{t({ tr: "Çalışmanın metni ölçülüyor…", en: "Measuring the work's text…" })}</p>
               ) : metinOzeti?.okunamadi ? (
                 <p className="alert mt-sm" data-tone="warning" role="alert">
-                  Çalışmanın metni ölçülemedi. Metin olmadığı anlamına gelmez;
-                  denetimi çalıştırabilirsiniz ama metin yine okunamazsa denetim
-                  yapılmadan durur.
+                  {t({
+                    tr: "Çalışmanın metni ölçülemedi. Metin olmadığı anlamına gelmez; denetimi çalıştırabilirsiniz ama metin yine okunamazsa denetim yapılmadan durur.",
+                    en: "The work's text couldn't be measured. That doesn't mean there's no text; you can run the check, but if the text still can't be read the check stops without running.",
+                  })}
                 </p>
               ) : metinOzeti && metinOzeti.kelime === 0 ? (
                 <p className="alert mt-sm" data-tone="warning">
-                  Bu çalışmada henüz yazılmış metin yok. Yazım ekranından metni
-                  girin ya da aşağıya yapıştırın.
+                  {t({
+                    tr: "Bu çalışmada henüz yazılmış metin yok. Yazım ekranından metni girin ya da aşağıya yapıştırın.",
+                    en: "This work has no text yet. Write it in the editor or paste it below.",
+                  })}
                 </p>
               ) : metinOzeti ? (
                 <p className="hint">
-                  {metinOzeti.kelime.toLocaleString("tr-TR")} kelimelik müsvedde
-                  denetlenecek. Metin sunucuda okunur; buraya kopyalamanız
-                  gerekmez.
+                  {t({
+                    tr: `${metinOzeti.kelime.toLocaleString(YEREL.tr)} kelimelik müsvedde denetlenecek. Metin sunucuda okunur; buraya kopyalamanız gerekmez.`,
+                    en: `A ${metinOzeti.kelime.toLocaleString(YEREL.en)}-word draft will be checked. The text is read on the server; you don't need to copy it here.`,
+                  })}
                 </p>
               ) : null
             ) : (
               <textarea
                 className="mt-sm"
                 rows={6}
-                placeholder="...önceki çalışmalarda (Yılmaz, 2020) belirtildiği gibi..."
+                placeholder={t({ tr: "...önceki çalışmalarda (Yılmaz, 2020) belirtildiği gibi...", en: "...as noted in previous studies (Smith, 2020)..." })}
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
               />
@@ -972,7 +1066,7 @@ export default function CitationCheckForm({
             onClick={() => void handleCheck()}
             disabled={loading || !referenceList.trim()}
           >
-            {loading ? "Crossref, OpenAlex ve Scholar kontrol ediliyor..." : "Kaynakları Doğrula ve Kaydet"}
+            {loading ? t({ tr: "Crossref, OpenAlex ve Scholar kontrol ediliyor...", en: "Checking Crossref, OpenAlex and Scholar..." }) : t({ tr: "Kaynakları Doğrula ve Kaydet", en: "Verify and Save Sources" })}
           </button>
         </div>
 
@@ -981,16 +1075,20 @@ export default function CitationCheckForm({
 
       {gomulu ? (
         <div className="pencere-kart pencere-sonuc" aria-live="polite">
-          <h3 className="pencere-kart-baslik">Sonuç</h3>
+          <h3 className="pencere-kart-baslik">{t({ tr: "Sonuç", en: "Result" })}</h3>
           {kayitliTarih && result && !loading ? (
             <p className="hint">
-              {trTarihSaat(kayitliTarih)} tarihli son denetiminiz. Metninizi ya da kaynakçanızı değiştirdiyseniz yeniden
-              denetleyin.
+              {t({
+                tr: `${tarihSaat(kayitliTarih)} tarihli son denetiminiz. Metninizi ya da kaynakçanızı değiştirdiyseniz yeniden denetleyin.`,
+                en: `Your last check from ${tarihSaat(kayitliTarih)}. If you've changed your text or reference list, check again.`,
+              })}
             </p>
           ) : null}
           {!error && !result ? (
             <p className="gb-bos">
-              {loading ? "Kaynaklar dizinlerde aranıyor…" : "Soldan denetimi başlatın; her kaynağın durumu burada görünür."}
+              {loading
+                ? t({ tr: "Kaynaklar dizinlerde aranıyor…", en: "Searching the indexes for sources…" })
+                : t({ tr: "Soldan denetimi başlatın; her kaynağın durumu burada görünür.", en: "Start the check on the left; each source's status will appear here." })}
             </p>
           ) : null}
           {sonucIcerik}

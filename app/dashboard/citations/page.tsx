@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
+import { ceviri } from "@/lib/dil-sunucu";
 
-export const metadata = { title: "Kaynaklar" };
+export async function generateMetadata() {
+  const t = await ceviri();
+  return { title: t({ tr: "Kaynaklar", en: "Sources" }) };
+}
 
 /*
   Kaynakça doğrulama artık Kaynaklar sayfasının sağ kartı ve onun

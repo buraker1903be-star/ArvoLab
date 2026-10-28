@@ -1,3 +1,8 @@
+"use client";
+
+import { useCeviri } from "@/app/_components/dil-saglayici";
+import type { Metin } from "@/lib/dil";
+
 /*
   Kaynak formunun alanları ve etiketler. İki yerde kullanılıyor: Literatür
   sayfası ve Çalışmalarım'daki durum kartından açılan Literatür penceresi
@@ -5,20 +10,26 @@
   bir alan alır, öteki eksik kalırdı.
 */
 
-export const SOURCE_TYPE_LABELS: Record<string, string> = {
-  article: "Makale",
-  book: "Kitap",
-  chapter: "Kitap bölümü",
-  thesis: "Tez",
-  report: "Rapor",
-  website: "İnternet kaynağı",
-  other: "Diğer",
+/*
+  İstemci bileşeni (28.10.2026, İngilizce): etiketler kullanıcının dilinde
+  ve dil istemcide useCeviri ile okunuyor. Sunucu bileşeni (Literatür
+  penceresi) bu bileşenleri çizebiliyor; yalnızca haritaları doğrudan
+  okuyamaz — okuyan da yok.
+*/
+export const SOURCE_TYPE_LABELS: Record<string, Metin> = {
+  article: { tr: "Makale", en: "Journal article" },
+  book: { tr: "Kitap", en: "Book" },
+  chapter: { tr: "Kitap bölümü", en: "Book chapter" },
+  thesis: { tr: "Tez", en: "Thesis" },
+  report: { tr: "Rapor", en: "Report" },
+  website: { tr: "İnternet kaynağı", en: "Website" },
+  other: { tr: "Diğer", en: "Other" },
 };
 
-export const STATUS_LABELS: Record<string, string> = {
-  to_review: "İncelenecek",
-  read: "Okundu",
-  used: "Kullanıldı",
+export const STATUS_LABELS: Record<string, Metin> = {
+  to_review: { tr: "İncelenecek", en: "To review" },
+  read: { tr: "Okundu", en: "Read" },
+  used: { tr: "Kullanıldı", en: "Used" },
 };
 
 export type KaynakDegerleri = {
@@ -44,19 +55,20 @@ export type KaynakDegerleri = {
  * bilgileri zaten kendisi dolduruyor.
  */
 export function KunyeAlanlari({ kaynak, kisa = false }: { kaynak?: KaynakDegerleri; kisa?: boolean }) {
+  const t = useCeviri();
   const yeni = !kaynak;
   const temel = (
     <>
       <label className="project-form-full">
-        <span>Başlık</span>
-        <input name="title" type="text" placeholder={yeni ? "Kaynağın başlığı" : undefined} defaultValue={kaynak?.title ?? undefined} required />
+        <span>{t({ tr: "Başlık", en: "Title" })}</span>
+        <input name="title" type="text" placeholder={yeni ? t({ tr: "Kaynağın başlığı", en: "Title of the source" }) : undefined} defaultValue={kaynak?.title ?? undefined} required />
       </label>
       <label>
-        <span>Yazar(lar)</span>
-        <input name="authors" type="text" placeholder={yeni ? "Yılmaz, A. ve Demir, B." : undefined} defaultValue={kaynak?.authors ?? undefined} />
+        <span>{t({ tr: "Yazar(lar)", en: "Author(s)" })}</span>
+        <input name="authors" type="text" placeholder={yeni ? t({ tr: "Yılmaz, A. ve Demir, B.", en: "Smith, A., & Jones, B." }) : undefined} defaultValue={kaynak?.authors ?? undefined} />
       </label>
       <label>
-        <span>Yıl</span>
+        <span>{t({ tr: "Yıl", en: "Year" })}</span>
         <input name="year" type="text" inputMode="numeric" placeholder={yeni ? "2023" : undefined} defaultValue={kaynak?.year ?? undefined} />
       </label>
       <label>
@@ -68,34 +80,34 @@ export function KunyeAlanlari({ kaynak, kisa = false }: { kaynak?: KaynakDegerle
   const ayrinti = (
     <>
       <label>
-        <span>Kaynak türü</span>
+        <span>{t({ tr: "Kaynak türü", en: "Source type" })}</span>
         <select name="sourceType" defaultValue={kaynak?.source_type ?? "article"}>
           {Object.entries(SOURCE_TYPE_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
-              {label}
+              {t(label)}
             </option>
           ))}
         </select>
       </label>
       {/* Yayın bilgileri: kaynakça girdisi eksiksiz olsun (editörde DOI ile otomatik de dolar) */}
       <label className="project-form-full">
-        <span>Dergi / kitap adı{yeni ? " (opsiyonel)" : ""}</span>
-        <input name="containerTitle" type="text" placeholder={yeni ? "Makale için dergi, bölüm için kitap adı" : undefined} defaultValue={kaynak?.container_title ?? undefined} />
+        <span>{t({ tr: "Dergi / kitap adı", en: "Journal / book title" })}{yeni ? t({ tr: " (opsiyonel)", en: " (optional)" }) : ""}</span>
+        <input name="containerTitle" type="text" placeholder={yeni ? t({ tr: "Makale için dergi, bölüm için kitap adı", en: "Journal for an article, book title for a chapter" }) : undefined} defaultValue={kaynak?.container_title ?? undefined} />
       </label>
       <label>
-        <span>Cilt</span>
+        <span>{t({ tr: "Cilt", en: "Volume" })}</span>
         <input name="volume" type="text" defaultValue={kaynak?.volume ?? undefined} />
       </label>
       <label>
-        <span>Sayı</span>
+        <span>{t({ tr: "Sayı", en: "Issue" })}</span>
         <input name="issue" type="text" defaultValue={kaynak?.issue ?? undefined} />
       </label>
       <label>
-        <span>Sayfalar</span>
+        <span>{t({ tr: "Sayfalar", en: "Pages" })}</span>
         <input name="pages" type="text" placeholder={yeni ? "45–67" : undefined} defaultValue={kaynak?.pages ?? undefined} />
       </label>
       <label>
-        <span>Yayınevi</span>
+        <span>{t({ tr: "Yayınevi", en: "Publisher" })}</span>
         <input name="publisher" type="text" defaultValue={kaynak?.publisher ?? undefined} />
       </label>
     </>
@@ -110,7 +122,7 @@ export function KunyeAlanlari({ kaynak, kisa = false }: { kaynak?: KaynakDegerle
     <>
       {temel}
       <details className="form-details project-form-full">
-        <summary>Yayın bilgileri (isteğe bağlı)</summary>
+        <summary>{t({ tr: "Yayın bilgileri (isteğe bağlı)", en: "Publication details (optional)" })}</summary>
         <div className="project-form-grid mt-sm">{ayrinti}</div>
       </details>
     </>
@@ -118,10 +130,11 @@ export function KunyeAlanlari({ kaynak, kisa = false }: { kaynak?: KaynakDegerle
 }
 
 export function NotAlani({ kaynak }: { kaynak?: KaynakDegerleri }) {
+  const t = useCeviri();
   return (
     <label className="project-form-full">
-      <span>Notlar</span>
-      <textarea name="notes" rows={3} placeholder={kaynak ? undefined : "Kaynakla ilgili kendi notlarınız"} defaultValue={kaynak?.notes ?? undefined} />
+      <span>{t({ tr: "Notlar", en: "Notes" })}</span>
+      <textarea name="notes" rows={3} placeholder={kaynak ? undefined : t({ tr: "Kaynakla ilgili kendi notlarınız", en: "Your own notes about the source" })} defaultValue={kaynak?.notes ?? undefined} />
     </label>
   );
 }

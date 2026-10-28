@@ -41,6 +41,18 @@ export function cikisDiliMesaji(dil: Dil | undefined): { rol: "sistem"; metin: s
 }
 
 /*
+  Kaydedilen bağlam dile göre ayrışsın (28.10.2026). Önceki cevap
+  önbelleği (lib/ai/gecmis.ts, oncekiCevap) bağlamın metniyle eşleşiyor;
+  dil bağlamda olmadığı için Türkçe sorulmuş bir analiz İngilizce arayüzde
+  aynı Türkçe cevabı geri getiriyordu. İşaret yalnızca KAYDEDİLEN ve
+  doğrulamada kullanılan metne ekleniyor, modele gönderilene değil; içinde
+  rakam olmadığı için sayı denetimini etkilemiyor.
+*/
+export function dilliKaynak(metin: string, dil: Dil | undefined): string {
+  return dil === "en" ? `${metin}\n\n[çıktı dili: İngilizce]` : metin;
+}
+
+/*
   Yanıttaki JSON'u okur. İki gerçek sorunu çözüyor:
 
   1. Model JSON'u kod çitiyle ya da açıklama cümlesiyle sarabiliyor; sıkı bir

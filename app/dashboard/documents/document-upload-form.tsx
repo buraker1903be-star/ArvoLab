@@ -6,6 +6,7 @@ import { announceActionSuccess, showToast } from "@/app/dashboard/_components/to
 import { UploadCloud } from "lucide-react";
 import { analyzeUploadedDocument } from "@/app/actions/document-upload";
 import { createClient } from "@/lib/supabase/client";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 interface Project {
   id: string;
@@ -49,6 +50,7 @@ export default function DocumentUploadForm({
   gomulu?: boolean;
 }) {
   const router = useRouter();
+  const t = useCeviri();
   const [projectId, setProjectId] = useState(secilenCalisma);
   const [projectTitle, setProjectTitle] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -64,11 +66,11 @@ export default function DocumentUploadForm({
     try {
       const file = formData.get("file");
       if (!(file instanceof File) || file.size === 0) {
-        setError("Lütfen bir dosya seçin.");
+        setError(t({ tr: "Lütfen bir dosya seçin.", en: "Please choose a file." }));
         return;
       }
       if (file.size > 20 * 1024 * 1024) {
-        setError("Dosya boyutu 20 MB sınırını aşıyor.");
+        setError(t({ tr: "Dosya boyutu 20 MB sınırını aşıyor.", en: "The file exceeds the 20 MB size limit." }));
         return;
       }
 
@@ -77,7 +79,7 @@ export default function DocumentUploadForm({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        setError("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+        setError(t({ tr: "Oturum bulunamadı. Lütfen tekrar giriş yapın.", en: "No session found. Please sign in again." }));
         return;
       }
 
@@ -99,7 +101,7 @@ export default function DocumentUploadForm({
 
       if (uploadError) {
         console.error(uploadError);
-        setError("Dosya depolamaya yüklenirken hata oluştu.");
+        setError(t({ tr: "Dosya depolamaya yüklenirken hata oluştu.", en: "An error occurred while uploading the file to storage." }));
         return;
       }
 
@@ -129,7 +131,7 @@ export default function DocumentUploadForm({
           setError(res.cozumlenemedi);
         }
       } else if (gomulu) {
-        showToast("success", "Belge yüklendi ve denetlendi.");
+        showToast("success", t({ tr: "Belge yüklendi ve denetlendi.", en: "Document uploaded and checked." }));
         // Yükleme penceresi kapanır; yeni belge listede seçili açılır (page.tsx anahtarı).
         announceActionSuccess();
         router.refresh();
@@ -147,12 +149,12 @@ export default function DocumentUploadForm({
     <section className={gomulu ? undefined : "project-form-card mt-md"}>
       {gomulu ? null : (
       <div className="project-form-heading">
-        <h2>Doküman Yükle (DOCX / PDF)</h2>
+        <h2>{t({ tr: "Doküman Yükle (DOCX / PDF)", en: "Upload Document (DOCX / PDF)" })}</h2>
         <p>
-          Tez veya makalenizi yükleyin; sistem metni okuyup kaynakça bölümünü
-          otomatik tespit ederek APA 7 kural denetiminden geçirir. Dosya
-          içeriği yalnızca sizin ve yetkili rollerin görebileceği şekilde
-          saklanır; ArvoLab içerik üretmez, sadece denetler.
+          {t({
+            tr: "Tez veya makalenizi yükleyin; sistem metni okuyup kaynakça bölümünü otomatik tespit ederek APA 7 kural denetiminden geçirir. Dosya içeriği yalnızca sizin ve yetkili rollerin görebileceği şekilde saklanır; ArvoLab içerik üretmez, sadece denetler.",
+            en: "Upload your thesis or article; the system reads the text, detects the reference list automatically and checks it against APA 7 rules. File contents are stored so that only you and authorized roles can see them; ArvoLab doesn't generate content, it only checks.",
+          })}
         </p>
       </div>
       )}
@@ -164,9 +166,9 @@ export default function DocumentUploadForm({
       >
         {gomulu ? null : projects.length > 0 ? (
           <label>
-            <span>Bağlı çalışma (opsiyonel)</span>
+            <span>{t({ tr: "Bağlı çalışma (opsiyonel)", en: "Linked work (optional)" })}</span>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              <option value="">Seçili çalışma yok</option>
+              <option value="">{t({ tr: "Seçili çalışma yok", en: "No work selected" })}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
@@ -176,10 +178,10 @@ export default function DocumentUploadForm({
           </label>
         ) : (
           <label>
-            <span>Çalışma başlığı (opsiyonel etiket)</span>
+            <span>{t({ tr: "Çalışma başlığı (opsiyonel etiket)", en: "Work title (optional label)" })}</span>
             <input
               type="text"
-              placeholder="Örn. Eğitim Bilimleri Yüksek Lisans Tezi"
+              placeholder={t({ tr: "Örn. Eğitim Bilimleri Yüksek Lisans Tezi", en: "E.g. Master's Thesis in Educational Sciences" })}
               value={projectTitle}
               onChange={(e) => setProjectTitle(e.target.value)}
             />
@@ -187,7 +189,7 @@ export default function DocumentUploadForm({
         )}
 
         <label className="project-form-full">
-          <span>Dosya (.docx veya .pdf, en fazla 20 MB)</span>
+          <span>{t({ tr: "Dosya (.docx veya .pdf, en fazla 20 MB)", en: "File (.docx or .pdf, up to 20 MB)" })}</span>
           <input
             type="file"
             name="file"
@@ -200,7 +202,7 @@ export default function DocumentUploadForm({
         <div className="project-form-actions">
           <button type="submit" className="projects-primary-button" disabled={loading}>
             <UploadCloud size={16} aria-hidden="true" />
-            {loading ? "Yükleniyor ve analiz ediliyor..." : "Yükle ve Analiz Et"}
+            {loading ? t({ tr: "Yükleniyor ve analiz ediliyor...", en: "Uploading and analyzing..." }) : t({ tr: "Yükle ve Analiz Et", en: "Upload and Analyze" })}
           </button>
           {fileName ? (
             <span className="muted text-base">{fileName}</span>
@@ -219,7 +221,7 @@ export default function DocumentUploadForm({
           {result.guidelineCompliance ? (
             <div className="result-block">
               <h3 className="result-heading">
-                Kılavuz Uygunluğu
+                {t({ tr: "Kılavuz Uygunluğu", en: "Guideline Compliance" })}
               </h3>
               {result.guidelineCompliance.sections.length > 0 ? (
                 <ul className="result-list">
@@ -231,12 +233,15 @@ export default function DocumentUploadForm({
                 </ul>
               ) : (
                 <p className="muted text-base">
-                  Seçili kılavuzda zorunlu bölüm tanımlanmamış.
+                  {t({ tr: "Seçili kılavuzda zorunlu bölüm tanımlanmamış.", en: "The selected guideline defines no required sections." })}
                 </p>
               )}
               {result.guidelineCompliance.citationStyleMatches === false ? (
                 <p className="tone-text text-base" data-tone="warning">
-                  Kılavuz {result.guidelineCompliance.citationStyleExpected.toUpperCase()} kaynakça sistemi bekliyor, çalışmanızda farklı bir sistem seçili.
+                  {t({
+                    tr: `Kılavuz ${result.guidelineCompliance.citationStyleExpected.toUpperCase()} kaynakça sistemi bekliyor, çalışmanızda farklı bir sistem seçili.`,
+                    en: `The guideline expects the ${result.guidelineCompliance.citationStyleExpected.toUpperCase()} citation system, but a different system is selected in your work.`,
+                  })}
                 </p>
               ) : null}
             </div>
@@ -245,20 +250,20 @@ export default function DocumentUploadForm({
           {result.referenceSectionFound ? (
             <>
               <div className="result-heading-lg">
-                Uyum Skoru: {result.complianceScore}/100
+                {t({ tr: "Uyum Skoru:", en: "Compliance Score:" })} {result.complianceScore}/100
               </div>
 
               {result.references.length > 0 && (
                 <div className="result-block">
                   <h3 className="result-heading">
-                    Kaynak Bazlı Sorunlar
+                    {t({ tr: "Kaynak Bazlı Sorunlar", en: "Issues by Source" })}
                   </h3>
                   <div className="stack-sm text-base">
                     {result.references.map((r, i) => (
                       <div key={i}>
                         <div className="muted">{r.raw}</div>
                         {r.issues.length === 0 ? (
-                          <div className="tone-text" data-tone="success">Sorun bulunamadı.</div>
+                          <div className="tone-text" data-tone="success">{t({ tr: "Sorun bulunamadı.", en: "No issues found." })}</div>
                         ) : (
                           r.issues.map((issue, j) => (
                             <div
@@ -278,38 +283,38 @@ export default function DocumentUploadForm({
 
               <div>
                 <h3 className="result-heading">
-                  Kaynakçada olup metinde atıfı bulunmayanlar
+                  {t({ tr: "Kaynakçada olup metinde atıfı bulunmayanlar", en: "In the reference list but not cited in the text" })}
                 </h3>
                 <ul className="result-list">
                   {result.crossCheck.referencesWithoutCitation.map((r, i) => (
                     <li key={i}>{r.raw}</li>
                   ))}
                   {result.crossCheck.referencesWithoutCitation.length === 0 && (
-                    <li className="result-ok">Yok</li>
+                    <li className="result-ok">{t({ tr: "Yok", en: "None" })}</li>
                   )}
                 </ul>
               </div>
 
               <div>
                 <h3 className="result-heading">
-                  Metinde atıfı olup kaynakçada bulunmayanlar
+                  {t({ tr: "Metinde atıfı olup kaynakçada bulunmayanlar", en: "Cited in the text but missing from the reference list" })}
                 </h3>
                 <ul className="result-list">
                   {result.crossCheck.citationsWithoutReference.map((c, i) => (
                     <li key={i}>{c.raw}</li>
                   ))}
                   {result.crossCheck.citationsWithoutReference.length === 0 && (
-                    <li className="result-ok">Yok</li>
+                    <li className="result-ok">{t({ tr: "Yok", en: "None" })}</li>
                   )}
                 </ul>
               </div>
             </>
           ) : (
             <p className="tone-text" data-tone="warning">
-              Belgede otomatik olarak &quot;Kaynakça&quot; / &quot;References&quot; başlığı
-              bulunamadı, bu yüzden atıf denetimi yapılamadı. Aşağıdaki
-              &quot;Kaynakça Kontrolü&quot; bölümünden metni elle yapıştırarak
-              kontrol edebilirsiniz.
+              {t({
+                tr: "Belgede otomatik olarak \"Kaynakça\" / \"References\" başlığı bulunamadı, bu yüzden atıf denetimi yapılamadı. Aşağıdaki \"Kaynakça Kontrolü\" bölümünden metni elle yapıştırarak kontrol edebilirsiniz.",
+                en: "No \"References\" / \"Kaynakça\" heading was detected in the document, so the citation check couldn't be run. You can paste the text manually in the \"Reference List Check\" section below to check it.",
+              })}
             </p>
           )}
         </div>

@@ -20,7 +20,7 @@
 
 import { baglamKur, type BaglamParca } from "./baglam";
 import type { Dil } from "@/lib/dil";
-import { YANIT_BICIMI, cikisDiliMesaji } from "./bulgu";
+import { YANIT_BICIMI, cikisDiliMesaji, dilliKaynak } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 
 // Çözümleme ve uydurma sayı denetimi bütün yeteneklerde ortak (lib/ai/bulgu.ts);
@@ -81,5 +81,5 @@ export function analizIstemi(girdi: YorumGirdisi, butce = BAGLAM_BUTCESI) {
   // Doğrulama gönderilen metne göre yapılır: modelin görmediği bir sayıyı
   // "biliyor" saymak, kırpılan bölümden gelen tesadüfi eşleşmeyi meşru
   // gösterirdi.
-  return { mesajlar, kaynak: baglam.metin, kirpilanlar: baglam.kirpilanlar };
+  return { mesajlar, kaynak: dilliKaynak(baglam.metin, girdi.dil), kirpilanlar: baglam.kirpilanlar };
 }

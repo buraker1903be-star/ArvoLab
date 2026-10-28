@@ -18,6 +18,8 @@ import {
 } from "@/lib/kaynak-aktarim";
 import type { CitationStyle } from "@/lib/citation-format";
 import { showToast } from "../_components/toast-events";
+import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
+import type { Metin } from "@/lib/dil";
 
 /*
   KAYNAK EKLEME VE DIŞA AKTARMA ARAÇLARI (27.10.2026): Kaynaklar
@@ -29,6 +31,8 @@ import { showToast } from "../_components/toast-events";
 /** Zotero/Mendeley dosyası ve DOI listesiyle ekleme. */
 export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: LiteratureSource[] }) {
   const router = useRouter();
+  const t = useCeviri();
+  const dil = useDil();
   const [dosya, setDosya] = useState<{ ad: string; bicim: string; kayitlar: KaynakTaslagi[] } | null>(null);
   const [dosyaHatasi, setDosyaHatasi] = useState<string | null>(null);
   const [doiMetni, setDoiMetni] = useState("");
@@ -46,10 +50,10 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
     setDosya(null);
     setDosyaHatasi(null);
     if (!f) return;
-    if (f.size > 5 * 1024 * 1024) return setDosyaHatasi("Dosya 5 MB sınırını aşıyor; kütüphaneyi bölerek aktarın.");
+    if (f.size > 5 * 1024 * 1024) return setDosyaHatasi(t({ tr: "Dosya 5 MB sınırını aşıyor; kütüphaneyi bölerek aktarın.", en: "The file exceeds the 5 MB limit; split your library and import it in parts." }));
     const okunan = kaynakDosyasiOku(f.name, await f.text());
-    if (!okunan.bicim) return setDosyaHatasi("Dosya RIS ya da BibTeX biçiminde değil. Zotero/Mendeley'de “Dışa aktar” ile .ris ya da .bib seçin.");
-    if (!okunan.kayitlar.length) return setDosyaHatasi("Dosyada başlığı olan kaynak bulunamadı.");
+    if (!okunan.bicim) return setDosyaHatasi(t({ tr: "Dosya RIS ya da BibTeX biçiminde değil. Zotero/Mendeley'de “Dışa aktar” ile .ris ya da .bib seçin.", en: "The file isn't in RIS or BibTeX format. In Zotero/Mendeley, use “Export” and choose .ris or .bib." }));
+    if (!okunan.kayitlar.length) return setDosyaHatasi(t({ tr: "Dosyada başlığı olan kaynak bulunamadı.", en: "No sources with a title were found in the file." }));
     setDosya({ ad: f.name, bicim: okunan.bicim === "ris" ? "RIS" : "BibTeX", kayitlar: okunan.kayitlar });
   };
 
@@ -58,7 +62,13 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
       if (!dosya) return;
       const r = await kaynaklariIceAktar(projectId, dosya.kayitlar.slice(0, ICE_AKTARMA_EN_COK));
       if (r.error) return showToast("error", r.error);
-      showToast("success", `${r.eklenen} kaynak eklendi${r.atlanan ? `; ${r.atlanan} kaynak zaten listenizde olduğu için atlandı` : ""}.`);
+      showToast(
+        "success",
+        t({
+          tr: `${r.eklenen} kaynak eklendi${r.atlanan ? `; ${r.atlanan} kaynak zaten listenizde olduğu için atlandı` : ""}.`,
+          en: `${r.eklenen} ${r.eklenen === 1 ? "source" : "sources"} added${r.atlanan ? `; ${r.atlanan} skipped because they're already in your list` : ""}.`,
+        }),
+      );
       setDosya(null);
       router.refresh();
     });
@@ -70,38 +80,51 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
       setDoiSonuclari(r.sonuclar ?? []);
       const eklenen = (r.sonuclar ?? []).filter((s) => s.durum === "eklendi").length;
       if (eklenen) {
-        showToast("success", `${eklenen} kaynak eklendi.`);
+        showToast("success", t({ tr: `${eklenen} kaynak eklendi.`, en: `${eklenen} ${eklenen === 1 ? "source" : "sources"} added.` }));
         router.refresh();
       }
     });
 
-  const DURUM_ADI: Record<DoiSonucu["durum"], string> = {
-    eklendi: "eklendi",
-    vardi: "zaten listede",
-    bulunamadi: "Crossref'te bulunamadı",
-    hata: "şu an alınamadı, yeniden deneyin",
+  const DURUM_ADI: Record<DoiSonucu["durum"], Metin> = {
+    eklendi: { tr: "eklendi", en: "added" },
+    vardi: { tr: "zaten listede", en: "already in your list" },
+    bulunamadi: { tr: "Crossref'te bulunamadı", en: "not found in Crossref" },
+    hata: { tr: "şu an alınamadı, yeniden deneyin", en: "couldn't be fetched right now, try again" },
   };
 
   return (
     <div className="pencere-iki-kart">
       <section className="pencere-kart">
-        <h3 className="pencere-kart-baslik">Zotero, Mendeley, EndNote dosyası</h3>
-        <p className="hint">
-          Programda kaynaklarınızı seçip <b>Dışa aktar</b> ile <b>RIS (.ris)</b> ya da <b>BibTeX (.bib)</b> dosyası alın ve
-          buraya yükleyin. Google Scholar&apos;ın “BibTeX” çıktısı da olur. Aynı DOI ya da aynı başlık ve yıl ikinci kez eklenmez.
-        </p>
+        <h3 className="pencere-kart-baslik">{t({ tr: "Zotero, Mendeley, EndNote dosyası", en: "Zotero, Mendeley, EndNote file" })}</h3>
+        {dil === "en" ? (
+          <p className="hint">
+            Select your sources in the program, use <b>Export</b> to get an <b>RIS (.ris)</b> or <b>BibTeX (.bib)</b> file, and
+            upload it here. Google Scholar&apos;s “BibTeX” output works too. The same DOI, or the same title and year, isn&apos;t added twice.
+          </p>
+        ) : (
+          <p className="hint">
+            Programda kaynaklarınızı seçip <b>Dışa aktar</b> ile <b>RIS (.ris)</b> ya da <b>BibTeX (.bib)</b> dosyası alın ve
+            buraya yükleyin. Google Scholar&apos;ın “BibTeX” çıktısı da olur. Aynı DOI ya da aynı başlık ve yıl ikinci kez eklenmez.
+          </p>
+        )}
         <label className="dropzone">
           <FileUp size={22} aria-hidden="true" />
-          <span>{dosya ? dosya.ad : "RIS ya da BibTeX dosyası seçin"}</span>
+          <span>{dosya ? dosya.ad : t({ tr: "RIS ya da BibTeX dosyası seçin", en: "Choose an RIS or BibTeX file" })}</span>
           <input type="file" accept=".ris,.bib,.bibtex,.txt" hidden onChange={(e) => { void dosyaSecildi(e.target.files?.[0]); e.target.value = ""; }} />
         </label>
         {dosyaHatasi ? <p className="alert" data-tone="danger" role="alert">{dosyaHatasi}</p> : null}
         {dosya ? (
           <>
             <p className="text-sm">
-              {dosya.bicim} dosyasında {dosya.kayitlar.length} kaynak · <b>{yeni.length} yeni</b>
-              {dosya.kayitlar.length - yeni.length ? ` · ${dosya.kayitlar.length - yeni.length} zaten listenizde ya da dosyada tekrar` : ""}
-              {dosya.kayitlar.length > ICE_AKTARMA_EN_COK ? ` · ilk ${ICE_AKTARMA_EN_COK} aktarılır` : ""}
+              {t({ tr: `${dosya.bicim} dosyasında ${dosya.kayitlar.length} kaynak · `, en: `${dosya.kayitlar.length} ${dosya.kayitlar.length === 1 ? "source" : "sources"} in the ${dosya.bicim} file · ` })}
+              <b>{t({ tr: `${yeni.length} yeni`, en: `${yeni.length} new` })}</b>
+              {dosya.kayitlar.length - yeni.length
+                ? t({
+                    tr: ` · ${dosya.kayitlar.length - yeni.length} zaten listenizde ya da dosyada tekrar`,
+                    en: ` · ${dosya.kayitlar.length - yeni.length} already in your list or duplicated in the file`,
+                  })
+                : ""}
+              {dosya.kayitlar.length > ICE_AKTARMA_EN_COK ? t({ tr: ` · ilk ${ICE_AKTARMA_EN_COK} aktarılır`, en: ` · the first ${ICE_AKTARMA_EN_COK} will be imported` }) : ""}
             </p>
             <ul className="secim-listesi kaynak-onizleme">
               {yeni.slice(0, 8).map((k, i) => (
@@ -110,23 +133,31 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
                   <small>{[k.authors, k.year, k.containerTitle].filter(Boolean).join(" · ")}</small>
                 </li>
               ))}
-              {yeni.length > 8 ? <li><small>… ve {yeni.length - 8} kaynak daha</small></li> : null}
+              {yeni.length > 8 ? <li><small>{t({ tr: `… ve ${yeni.length - 8} kaynak daha`, en: `… and ${yeni.length - 8} more` })}</small></li> : null}
             </ul>
             <button type="button" className="projects-primary-button" disabled={bekliyor || !yeni.length} onClick={dosyayiEkle}>
-              {yeni.length ? `${yeni.length} kaynağı ekle` : "Eklenecek yeni kaynak yok"}
+              {yeni.length
+                ? t({ tr: `${yeni.length} kaynağı ekle`, en: `Add ${yeni.length} ${yeni.length === 1 ? "source" : "sources"}` })
+                : t({ tr: "Eklenecek yeni kaynak yok", en: "No new sources to add" })}
             </button>
           </>
         ) : null}
       </section>
       <section className="pencere-kart">
-        <h3 className="pencere-kart-baslik">DOI ile ekle</h3>
+        <h3 className="pencere-kart-baslik">{t({ tr: "DOI ile ekle", en: "Add by DOI" })}</h3>
         <p className="hint">
-          Bir ya da daha çok DOI yapıştırın (her satıra bir tane, bağlantı biçimi de olur). Künye Crossref&apos;ten gelir; en
-          çok {DOI_TOPLU_EN_COK} DOI.
+          {t({
+            tr: `Bir ya da daha çok DOI yapıştırın (her satıra bir tane, bağlantı biçimi de olur). Künye Crossref'ten gelir; en çok ${DOI_TOPLU_EN_COK} DOI.`,
+            en: `Paste one or more DOIs (one per line; link format works too). Reference details come from Crossref; at most ${DOI_TOPLU_EN_COK} DOIs.`,
+          })}
         </p>
-        <textarea rows={6} value={doiMetni} onChange={(e) => { setDoiMetni(e.target.value); setDoiSonuclari(null); }} placeholder={"10.1037/0003-066X.59.1.29\nhttps://doi.org/10.15390/EB.2021.9876"} aria-label="DOI listesi" />
+        <textarea rows={6} value={doiMetni} onChange={(e) => { setDoiMetni(e.target.value); setDoiSonuclari(null); }} placeholder={"10.1037/0003-066X.59.1.29\nhttps://doi.org/10.15390/EB.2021.9876"} aria-label={t({ tr: "DOI listesi", en: "DOI list" })} />
         <button type="button" className="projects-primary-button" disabled={bekliyor || !doilar.length} onClick={doileriEkle}>
-          {bekliyor ? "Ekleniyor…" : doilar.length ? `${doilar.length} DOI'yi ekle` : "DOI bulunamadı"}
+          {bekliyor
+            ? t({ tr: "Ekleniyor…", en: "Adding…" })
+            : doilar.length
+              ? t({ tr: `${doilar.length} DOI'yi ekle`, en: `Add ${doilar.length} ${doilar.length === 1 ? "DOI" : "DOIs"}` })
+              : t({ tr: "DOI bulunamadı", en: "No DOI found" })}
         </button>
         {doiSonuclari ? (
           <ul className="secim-listesi">
@@ -134,7 +165,7 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
               <li key={s.doi}>
                 <b>{s.baslik ?? s.doi}</b>
                 <small data-tone={s.durum === "eklendi" ? "success" : s.durum === "vardi" ? undefined : "warning"} className="tone-text">
-                  {s.doi} · {DURUM_ADI[s.durum]}
+                  {s.doi} · {t(DURUM_ADI[s.durum])}
                 </small>
               </li>
             ))}
@@ -149,6 +180,9 @@ type Kapsam = "used" | "okunan" | "hepsi";
 
 /** RIS/BibTeX indirme ve seçili stilde kaynakça kopyalama. */
 export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi }: { kaynaklar: LiteratureSource[]; stil: CitationStyle; stilAdi: string; calismaAdi: string }) {
+  const t = useCeviri();
+  const dil = useDil();
+  const { tarih, uzunTarih } = useTarihler();
   const sayilar = {
     used: kaynaklar.filter((k) => k.status === "used").length,
     okunan: kaynaklar.filter((k) => k.status !== "to_review").length,
@@ -157,9 +191,15 @@ export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi }: { kaynakla
   /* Kaynakçaya girecekler varsayılan olarak metinde kullanılanlar; yoksa hepsi. */
   const [kapsam, setKapsam] = useState<Kapsam>(sayilar.used ? "used" : "hepsi");
   const secili = kaynaklar.filter((k) => (kapsam === "used" ? k.status === "used" : kapsam === "okunan" ? k.status !== "to_review" : true));
-  const bugun = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul" }).format(new Date());
-  const kaynakca = kaynakcaMetni(secili, stil, { erisimTarihi: bugun });
-  const dosyaAdi = calismaAdi.normalize("NFD").replace(/ı/g, "i").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "kaynaklar";
+  /*
+    Künyenin DİLİ (lib/citation-format: "n.d.", "pp.", "Accessed"):
+    çalışmanın belge dili kayıtlı değil, bu yüzden arayüz dili kullanılıyor.
+    Türkçede erişim tarihi eskisi gibi "28.10.2026"; İngilizcede APA'nın
+    yazdığı biçim ("October 28, 2026").
+  */
+  const bugun = dil === "en" ? uzunTarih(new Date()) : tarih(new Date());
+  const kaynakca = kaynakcaMetni(secili, stil, { erisimTarihi: bugun }, dil);
+  const dosyaAdi = calismaAdi.normalize("NFD").replace(/ı/g, "i").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || t({ tr: "kaynaklar", en: "sources" });
 
   const indir = (icerik: string, uzanti: string, tur: string) => {
     const url = URL.createObjectURL(new Blob([icerik], { type: `${tur};charset=utf-8` }));
@@ -180,36 +220,38 @@ export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi }: { kaynakla
           }),
         ]);
       } else await navigator.clipboard.writeText(kaynakca.metin);
-      showToast("success", `${secili.length} künye kopyalandı (${stilAdi}).`);
+      showToast("success", t({ tr: `${secili.length} künye kopyalandı (${stilAdi}).`, en: `${secili.length} ${secili.length === 1 ? "reference" : "references"} copied (${stilAdi}).` }));
     } catch {
-      showToast("error", "Panoya kopyalanamadı; aşağıdaki metni seçip elle kopyalayın.");
+      showToast("error", t({ tr: "Panoya kopyalanamadı; aşağıdaki metni seçip elle kopyalayın.", en: "Couldn't copy to the clipboard; select the text below and copy it manually." }));
     }
   };
 
   return (
     <div className="kaynak-disa-aktar">
       <label>
-        <span>Hangi kaynaklar?</span>
+        <span>{t({ tr: "Hangi kaynaklar?", en: "Which sources?" })}</span>
         <select value={kapsam} onChange={(e) => setKapsam(e.target.value as Kapsam)}>
-          <option value="used">Metinde kullanılanlar ({sayilar.used})</option>
-          <option value="okunan">Okunanlar ve metindekiler ({sayilar.okunan})</option>
-          <option value="hepsi">Hepsi ({sayilar.hepsi})</option>
+          <option value="used">{t({ tr: "Metinde kullanılanlar", en: "Cited in the text" })} ({sayilar.used})</option>
+          <option value="okunan">{t({ tr: "Okunanlar ve metindekiler", en: "Read and cited" })} ({sayilar.okunan})</option>
+          <option value="hepsi">{t({ tr: "Hepsi", en: "All" })} ({sayilar.hepsi})</option>
         </select>
       </label>
       <div className="cluster">
         <button type="button" className="projects-primary-button button-compact" disabled={!secili.length} onClick={kopyala}>
-          <Copy size={14} aria-hidden="true" /> Kaynakçayı kopyala ({stilAdi})
+          <Copy size={14} aria-hidden="true" /> {t({ tr: "Kaynakçayı kopyala", en: "Copy reference list" })} ({stilAdi})
         </button>
         <button type="button" className="projects-filter-button button-compact" disabled={!secili.length} onClick={() => indir(risYaz(secili), "ris", "application/x-research-info-systems")}>
-          <Download size={14} aria-hidden="true" /> RIS indir
+          <Download size={14} aria-hidden="true" /> {t({ tr: "RIS indir", en: "Download RIS" })}
         </button>
         <button type="button" className="projects-filter-button button-compact" disabled={!secili.length} onClick={() => indir(bibtexYaz(secili), "bib", "application/x-bibtex")}>
-          <Download size={14} aria-hidden="true" /> BibTeX indir
+          <Download size={14} aria-hidden="true" /> {t({ tr: "BibTeX indir", en: "Download BibTeX" })}
         </button>
       </div>
       <p className="hint">
-        Kaynakça çalışmanızın atıf stilinde ({stilAdi}) ve stilin sırasıyla; italikler Word&apos;e yapıştırınca korunur. RIS ve
-        BibTeX dosyasını Zotero, Mendeley ya da EndNote&apos;a “İçe aktar” ile alabilirsiniz.
+        {t({
+          tr: `Kaynakça çalışmanızın atıf stilinde (${stilAdi}) ve stilin sırasıyla; italikler Word'e yapıştırınca korunur. RIS ve BibTeX dosyasını Zotero, Mendeley ya da EndNote'a “İçe aktar” ile alabilirsiniz.`,
+          en: `The reference list is in your work's citation style (${stilAdi}) and in that style's order; italics are kept when you paste into Word. You can bring the RIS and BibTeX files into Zotero, Mendeley or EndNote with “Import”.`,
+        })}
       </p>
       {secili.length ? (
         <div className="kaynakca-onizleme">
@@ -218,7 +260,7 @@ export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi }: { kaynakla
           ))}
         </div>
       ) : (
-        <p className="gb-bos">Bu kapsamda kaynak yok.</p>
+        <p className="gb-bos">{t({ tr: "Bu kapsamda kaynak yok.", en: "No sources in this selection." })}</p>
       )}
     </div>
   );

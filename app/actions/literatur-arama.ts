@@ -5,6 +5,7 @@ import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-g
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { literaturAra, type AramaKaydi } from "@/lib/literatur-arama";
+import { ceviri } from "@/lib/dil-sunucu";
 
 const PAGE_PATH = "/dashboard/literature";
 /* Literatür, Çalışmalarım'daki durum kartından da pencere olarak açılıyor;
@@ -59,9 +60,10 @@ export async function literaturAramasiYap(girdi: {
   const ctx = await getAuthContext();
   if (!ctx) return { hata: (await oturumYokMesaji()) };
   if (await isSubscriptionBlocked()) return { hata: (await abonelikKapaliMesaji()) };
+  const t = await ceviri();
 
   const sorgu = String(girdi.sorgu ?? "").trim().slice(0, EN_UZUN_SORGU);
-  if (sorgu.length < EN_KISA_SORGU) return { hata: "Aramak için en az birkaç harf yazın." };
+  if (sorgu.length < EN_KISA_SORGU) return { hata: t({ tr: "Aramak için en az birkaç harf yazın.", en: "Type at least a few letters to search." }) };
 
   // Sayaç kurulamıyorsa arama engellenmiyor (bkz. adminIstemcisiVarsa).
   const admin = adminIstemcisiVarsa();
@@ -73,7 +75,7 @@ export async function literaturAramasiYap(girdi: {
     });
     // Sayaç okunamazsa akış durmaz; kapı sert kapanmamalı (lib/ai/erisim.ts ile aynı ilke).
     if (error) console.error("[literatur-arama] hız sınırı okunamadı:", error.message);
-    else if (izin === false) return { hata: `Saatlik arama hakkınız doldu (${SAATLIK_HAK}). Bir süre sonra tekrar deneyin.` };
+    else if (izin === false) return { hata: t({ tr: `Saatlik arama hakkınız doldu (${SAATLIK_HAK}). Bir süre sonra tekrar deneyin.`, en: `You've used up your hourly search limit (${SAATLIK_HAK}). Please try again later.` }) };
   }
 
   const filtreler = {
@@ -92,7 +94,7 @@ export async function literaturAramasiYap(girdi: {
   });
 
   if (kayitlar.length === 0 && ulasilamayan.length === 2) {
-    return { hata: "Dizinlere şu anda ulaşılamıyor. Birazdan tekrar deneyin." };
+    return { hata: t({ tr: "Dizinlere şu anda ulaşılamıyor. Birazdan tekrar deneyin.", en: "The indexes can't be reached right now. Please try again shortly." }) };
   }
 
   /*
@@ -111,8 +113,12 @@ export async function literaturAramasiYap(girdi: {
   */
   if (kayitlar.length === 0 && girdi.yalnizcaAcikErisim && ulasilamayan.includes("openalex")) {
     return {
-      hata: "Açık erişim bilgisini yalnızca OpenAlex veriyor ve şu anda ulaşılamıyor. "
-        + "Açık erişim süzgecini kaldırıp arayabilir ya da birazdan tekrar deneyebilirsiniz.",
+      hata: t({
+        tr: "Açık erişim bilgisini yalnızca OpenAlex veriyor ve şu anda ulaşılamıyor. "
+          + "Açık erişim süzgecini kaldırıp arayabilir ya da birazdan tekrar deneyebilirsiniz.",
+        en: "Only OpenAlex provides open-access information, and it can't be reached right now. "
+          + "You can remove the open-access filter and search again, or try again shortly.",
+      }),
     };
   }
 
@@ -226,9 +232,10 @@ export async function aramaKaydiniEkle(kayit: {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
+  const t = await ceviri();
 
   const baslik = String(kayit.baslik ?? "").trim().slice(0, 500);
-  if (!baslik) return { error: "Kaynak başlığı okunamadı." };
+  if (!baslik) return { error: t({ tr: "Kaynak başlığı okunamadı.", en: "Couldn't read the source title." }) };
 
   const satir = {
     owner_id: ctx.user.id,
@@ -250,7 +257,7 @@ export async function aramaKaydiniEkle(kayit: {
   }
   if (error) {
     console.error(error);
-    return { error: "Kaynak listenize eklenemedi." };
+    return { error: t({ tr: "Kaynak listenize eklenemedi.", en: "Couldn't add it to your sources." }) };
   }
 
   yenile();

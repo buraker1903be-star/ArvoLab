@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { aiHataMesaji, aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import type { Bulgu } from "@/lib/ai/bulgu";
 import { kunyeIzi, literaturIstemi, taramaCozumle, type KayitOzeti } from "@/lib/ai/literatur-taramasi";
@@ -41,10 +42,12 @@ export const literaturAsistaniAcik = async () => aiYapilandirildi();
 
 export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<LiteraturDenetimYaniti> {
   const arastirmaSorusu = String(girdi.arastirmaSorusu ?? "").slice(0, EN_UZUN_SORU).trim();
+  const t = await ceviri();
+  const dil = await aktifDil();
   if (arastirmaSorusu.length < 10)
-    return { hata: "Tarama stratejisi için araştırma sorunuzu yazın (en az bir cümle)." };
+    return { hata: t({ tr: "Tarama stratejisi için araştırma sorunuzu yazın (en az bir cümle).", en: "Write your research question for the search strategy (at least one sentence)." }) };
 
-  const kapi = await asistanKapisi();
+  const kapi = await asistanKapisi(dil);
   if (!kapi.ok) return { hata: kapi.hata };
 
   /*
@@ -76,7 +79,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
     yayin: satir.container_title ? String(satir.container_title).slice(0, 200) : null,
   }));
 
-  const { mesajlar, kaynak, kirpilanlar } = literaturIstemi({ calisma: calisma?.metin, arastirmaSorusu, kayitlar });
+  const { mesajlar, kaynak, kirpilanlar } = literaturIstemi({ calisma: calisma?.metin, arastirmaSorusu, kayitlar, dil });
 
   /*
     Aynı bağlam daha önce sorulduysa modele gidilmez. Aynı analizi ikinci kez
@@ -91,7 +94,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
   }
 
   // Hak yalnızca modele gidilecekse yanar.
-  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
+  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
   if (hakHatasi) return { hata: hakHatasi };
 
   const basladi = Date.now();
@@ -101,7 +104,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
     const { bulgular, aramalar } = taramaCozumle(yanit.metin);
     if (!bulgular.length && !aramalar.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
-      return { hata: "Asistan tarama stratejisi üretemedi. Araştırma sorusunu biraz daha açık yazmayı deneyin.", kirpilanlar };
+      return { hata: t({ tr: "Asistan tarama stratejisi üretemedi. Araştırma sorusunu biraz daha açık yazmayı deneyin.", en: "The assistant couldn't produce a search strategy. Try writing your research question a bit more clearly." }), kirpilanlar };
     }
 
     /*
@@ -117,7 +120,10 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
       console.error("[ai] literatür yanıtı künye içeriyor", { model: yanit.model });
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "rejected", redNedeni: "kunye", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
       return {
-        hata: "Asistan kaynak künyesi ürettiği için cevap gösterilmedi. Kaynakları dizinden kendiniz doğrulamalısınız; tekrar deneyebilirsiniz.",
+        hata: t({
+          tr: "Asistan kaynak künyesi ürettiği için cevap gösterilmedi. Kaynakları dizinden kendiniz doğrulamalısınız; tekrar deneyebilirsiniz.",
+          en: "The response wasn't shown because the assistant produced a source reference. You should verify sources in the index yourself; you can try again.",
+        }),
         kirpilanlar,
       };
     }
@@ -125,7 +131,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
     const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular: { bulgular, aramalar }, basladi });
     return { krediUyarisi: kapi.uyari ?? undefined, bulgular, aramalar, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
-    const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
+    const mesaj = aiHataMesaji(hata, dil) ?? t({ tr: "Asistan yanıt veremedi.", en: "The assistant couldn't respond." });
     console.error("[ai] literatür taraması başarısız", mesaj);
     await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "literatur", durum: "failed", baglam: kaynak, basladi });
     return { hata: mesaj, kirpilanlar };

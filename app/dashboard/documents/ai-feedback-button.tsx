@@ -1,6 +1,7 @@
 "use client";
 
-import { ASISTANA_ULASILAMADI } from "@/lib/asistan-istemci";
+import { ASISTANA_ULASILAMADI_METIN } from "@/lib/asistan-istemci";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useState } from "react";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { requestAiFeedback } from "@/app/actions/ai-feedback";
@@ -19,6 +20,7 @@ interface AiFeedbackButtonProps {
 }
 
 export default function AiFeedbackButton({ documentId, initialFeedback, configured, okunamadi = false }: AiFeedbackButtonProps) {
+  const t = useCeviri();
   const [feedback, setFeedback] = useState<string | null>(initialFeedback);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
     } catch (hata) {
       /* İşlemin kendisi düştüyse (süre aşımı, bağlantı) hata ekranına gitmesin. */
       console.error("[geri bildirim] çağrı düştü:", hata);
-      setError(ASISTANA_ULASILAMADI);
+      setError(t(ASISTANA_ULASILAMADI_METIN));
     } finally {
       setLoading(false);
     }
@@ -60,12 +62,16 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
               ve istekler Claude'a gittiği halde kullanıcı ChatGPT kullanıldığını
               sanıyordu — üstelik model değiştiğinde burası da yalan söylemeye
               başlıyordu. Kullanıcı "ArvoLab Asistanı" görür. */}
-          {loading ? "AI geri bildirimi hazırlanıyor..." : feedback ? "Yeniden geri bildirim al" : "Asistandan geri bildirim al"}
+          {loading
+            ? t({ tr: "AI geri bildirimi hazırlanıyor...", en: "Preparing AI feedback..." })
+            : feedback
+              ? t({ tr: "Yeniden geri bildirim al", en: "Get feedback again" })
+              : t({ tr: "Asistandan geri bildirim al", en: "Get feedback from the assistant" })}
         </button>
       ) : (
         /* Eskiden düğme görünüyor, her tıklama "Vercel ayarlarına anahtar
            ekleyin" diyen bir hata ve başarısız bir kayıt üretiyordu. */
-        <p className="alert" data-tone="info">AI geri bildirimi şu an kapalı.</p>
+        <p className="alert" data-tone="info">{t({ tr: "AI geri bildirimi şu an kapalı.", en: "AI feedback is currently turned off." })}</p>
       )}
 
       {krediUyarisi && (
@@ -76,8 +82,10 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
 
       {okunamadi && !feedback && (
         <p className="alert mt-sm" data-tone="warning" role="alert">
-          Bu belgenin önceki değerlendirmesi okunamadı. Hiç değerlendirilmemiş
-          olduğu anlamına gelmez; yeniden çalıştırmadan önce sayfayı yenileyin.
+          {t({
+            tr: "Bu belgenin önceki değerlendirmesi okunamadı. Hiç değerlendirilmemiş olduğu anlamına gelmez; yeniden çalıştırmadan önce sayfayı yenileyin.",
+            en: "This document's previous review couldn't be loaded. That doesn't mean it was never reviewed; refresh the page before running it again.",
+          })}
         </p>
       )}
 
@@ -89,7 +97,10 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
         <div className="callout" data-tone="warning">
           <strong className="dashboard-kicker cluster">
             <AlertTriangle size={13} aria-hidden="true" />
-            AI geri bildirimi — öğreticidir, tezinize/makalenize doğrudan kopyalamayın
+            {t({
+              tr: "AI geri bildirimi — öğreticidir, tezinize/makalenize doğrudan kopyalamayın",
+              en: "AI feedback — for guidance only; don't copy it directly into your thesis/article",
+            })}
           </strong>
           <ul className="callout-body result-list">
             {bullets.map((b, i) => (

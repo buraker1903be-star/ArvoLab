@@ -36,7 +36,7 @@
 
 import { baglamKur, type BaglamParca } from "./baglam";
 import type { Dil } from "@/lib/dil";
-import { baglamDisiKunye, bulgulariCozumle, bulgulariDogrula, jsonOku, type Bulgu, cikisDiliMesaji } from "./bulgu";
+import { baglamDisiKunye, bulgulariCozumle, bulgulariDogrula, jsonOku, type Bulgu, cikisDiliMesaji, dilliKaynak } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 import { alintiDenetle } from "@/lib/kanit/alinti";
 import type { DestekDuzeyi } from "@/lib/kanit/durum";
@@ -118,7 +118,7 @@ export function kanitIstemi(girdi: KanitGirdisi, butce = BAGLAM_BUTCESI) {
     ...cikisDiliMesaji(girdi.dil),
     { rol: "kullanici", metin: baglam.metin },
   ];
-  return { mesajlar, kaynak: baglam.metin, kirpilanlar: baglam.kirpilanlar };
+  return { mesajlar, kaynak: dilliKaynak(baglam.metin, girdi.dil), kirpilanlar: baglam.kirpilanlar };
 }
 
 export type KanitSonucu = { duzey: HukumDuzeyi | null; alinti: string; bulgular: Bulgu[] };

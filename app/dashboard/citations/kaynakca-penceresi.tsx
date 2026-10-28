@@ -5,7 +5,7 @@ import CitationCheckForm, { type CheckResult } from "./citation-check-form";
 import { sonKaynakcaDenetimi } from "@/app/actions/citation-check";
 import { asistanGecmisim } from "@/app/actions/ai-gecmis";
 import { kaynakPdfleri } from "@/app/actions/kaynak-pdf";
-import { trTarihSaat } from "@/lib/tr-time";
+import { ceviri, tarihler } from "@/lib/dil-sunucu";
 
 /*
   KAYNAKÇA PENCERESİ (26.10.2026): Çalışmalarım'daki durum kartından,
@@ -31,6 +31,8 @@ export default async function KaynakcaPenceresi({
   triggerLabel?: string;
   triggerClassName?: string;
 }) {
+  const t = await ceviri();
+  const { tarihSaat } = await tarihler();
   const [asistanAcik, onceki, gecmis, pdfler] = await Promise.all([
     kaynakcaAsistaniAcik(),
     sonKaynakcaDenetimi(calisma.id),
@@ -41,19 +43,25 @@ export default async function KaynakcaPenceresi({
 
   return (
     <PanelDrawer
-      triggerLabel={triggerLabel ?? (sonDenetim?.skor != null ? `Kaynakça · ${sonDenetim.skor}` : "Kaynakça")}
+      triggerLabel={triggerLabel ?? (sonDenetim?.skor != null ? `${t({ tr: "Kaynakça", en: "Reference list" })} · ${sonDenetim.skor}` : t({ tr: "Kaynakça", en: "Reference list" }))}
       triggerIcon={<Quote size={15} aria-hidden="true" />}
       triggerClassName={triggerClassName}
-      kicker="Kaynakça ve atıf doğrulama"
-      title="Kaynakçanızı denetleyin"
-      description="Künyelerin biçimi, metindeki atıflarla eşleşmesi ve kaynakların gerçekten var olup olmadığı (Crossref, OpenAlex) birlikte kontrol edilir."
+      kicker={t({ tr: "Kaynakça ve atıf doğrulama", en: "Reference list and citation check" })}
+      title={t({ tr: "Kaynakçanızı denetleyin", en: "Check your reference list" })}
+      description={t({
+        tr: "Künyelerin biçimi, metindeki atıflarla eşleşmesi ve kaynakların gerçekten var olup olmadığı (Crossref, OpenAlex) birlikte kontrol edilir.",
+        en: "The format of each reference, its match with in-text citations, and whether the source actually exists (Crossref, OpenAlex) are checked together.",
+      })}
       boy="tam"
       basaridaKapan={false}
     >
       <p className="kaynakca-son" data-tone={ton}>
         {sonDenetim
-          ? `Son denetim: ${sonDenetim.skor ?? "—"}/100 kaynakça uyumu · ${trTarihSaat(sonDenetim.tarih)}`
-          : "Bu çalışma için henüz kaynakça denetimi yapılmadı."}
+          ? t({
+              tr: `Son denetim: ${sonDenetim.skor ?? "—"}/100 kaynakça uyumu · ${tarihSaat(sonDenetim.tarih)}`,
+              en: `Last check: ${sonDenetim.skor ?? "—"}/100 reference list compliance · ${tarihSaat(sonDenetim.tarih)}`,
+            })
+          : t({ tr: "Bu çalışma için henüz kaynakça denetimi yapılmadı.", en: "No reference list check has been run for this work yet." })}
       </p>
       <CitationCheckForm
         projects={[calisma]}

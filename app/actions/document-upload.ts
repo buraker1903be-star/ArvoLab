@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { belgeMetniOku, detectDocType, splitBodyAndReferences } from "@/lib/document-extract";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
-import { BOS_METIN_MESAJI, KISMI_METIN_UYARISI, metinDurumu } from "@/lib/belge-kontrol";
+import { BOS_METIN_MESAJI_METIN, KISMI_METIN_UYARISI_METIN, metinDurumu } from "@/lib/belge-kontrol";
 import { checkGuidelineCompliance, type GuidelineComplianceResult } from "@/lib/guideline-check";
 import {
   parseReferenceList,
@@ -14,6 +14,9 @@ import {
   computeComplianceScore,
 } from "@/lib/apa7";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
+import { oturumYokMesaji } from "@/lib/auth-guards";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
 
 /*
   20 MB. Buradaki kontrol istemcinin BİLDİRDİĞİ boyuta bakar ve dosya o
@@ -27,6 +30,12 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 /* Okunabilir metin yok (taranmış PDF); çözümleme hatasından ayrı mesaj alır. */
 class BosMetin extends Error {}
+
+/* Sayfa (documents/page.tsx) aynı metni tanıyıp okuyanın diline çeviriyor; iki yerde aynı yazım. */
+const CIKARMA_HATASI_METIN: Metin = {
+  tr: "Dosyadan metin çıkarılırken bir hata oluştu.",
+  en: "An error occurred while extracting text from the file.",
+};
 
 export interface UploadResult {
   error?: string;
@@ -73,8 +82,15 @@ export async function analyzeUploadedDocument(params: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+    return { error: await oturumYokMesaji() };
   }
+  /*
+    Kaydedilen metinler (künye sorunları, metin uyarısı, hata mesajı)
+    YÜKLEYENİN dilinde: sonucu okuyacak olan o. Sayfa, bilinen mesajları
+    ve `metinKismi` bayrağını okuyanın diline yeniden çeviriyor.
+  */
+  const t = await ceviri();
+  const dil = await aktifDil();
   /* Abonelik kapısı: Belge çözümleme hem depolama hem işlem maliyeti üretir.
      Silme ve listeleme açık kalır: kullanıcı kendi verisine erişebilmeli. */
   const abonelikKapali = await isSubscriptionBlocked();
@@ -89,7 +105,7 @@ export async function analyzeUploadedDocument(params: {
   */
   const ownFile = params.storagePath.startsWith(`${user.id}/`) && !params.storagePath.includes("..");
   if (!ownFile) {
-    return { error: "Geçersiz dosya yolu." };
+    return { error: t({ tr: "Geçersiz dosya yolu.", en: "Invalid file path." }) };
   }
 
   /*
@@ -108,8 +124,8 @@ export async function analyzeUploadedDocument(params: {
   };
 
   if (abonelikKapali) return reddet((await abonelikKapaliMesaji()));
-  if (boyutAsimi) return reddet("Dosya boyutu 20 MB sınırını aşıyor.");
-  if (!docType) return reddet("Yalnızca .docx ve .pdf dosyaları desteklenir.");
+  if (boyutAsimi) return reddet(t({ tr: "Dosya boyutu 20 MB sınırını aşıyor.", en: "The file exceeds the 20 MB size limit." }));
+  if (!docType) return reddet(t({ tr: "Yalnızca .docx ve .pdf dosyaları desteklenir.", en: "Only .docx and .pdf files are supported." }));
 
   /*
     project_id de kullanıcıdan geliyor ve doğrulanmıyordu. document_uploads
@@ -129,9 +145,9 @@ export async function analyzeUploadedDocument(params: {
       .maybeSingle();
     if (projectError) {
       console.error(projectError);
-      return reddet("Çalışma doğrulanamadı.");
+      return reddet(t({ tr: "Çalışma doğrulanamadı.", en: "Couldn't verify the work." }));
     }
-    if (!ownProject) return reddet("Bu çalışmaya belge ekleyemezsiniz.");
+    if (!ownProject) return reddet(t({ tr: "Bu çalışmaya belge ekleyemezsiniz.", en: "You can't add documents to this work." }));
   }
 
   // Dosyayı Supabase Storage'dan SUNUCU TARAFINDA indir
@@ -141,7 +157,7 @@ export async function analyzeUploadedDocument(params: {
 
   if (downloadError || !fileBlob) {
     console.error(downloadError);
-    return reddet("Yüklenen dosya depodan okunamadı.");
+    return reddet(t({ tr: "Yüklenen dosya depodan okunamadı.", en: "Couldn't read the uploaded file from storage." }));
   }
 
   const arrayBuffer = await fileBlob.arrayBuffer();
@@ -210,11 +226,13 @@ export async function analyzeUploadedDocument(params: {
       kilavuz,
       kilavuzOkunamadi,
       sayfaSayisi: okunan.sayfa,
-      metinUyarisi: metin.durum === "kismi" ? KISMI_METIN_UYARISI : null,
+      metinUyarisi: metin.durum === "kismi" ? t(KISMI_METIN_UYARISI_METIN) : null,
+      /* Dilden bağımsız işaret: sayfa uyarıyı okuyanın dilinde yazabilsin. */
+      metinKismi: metin.durum === "kismi",
     };
 
     if (referenceText.trim().length > 0) {
-      const references = parseReferenceList(referenceText);
+      const references = parseReferenceList(referenceText, dil);
       const citations = extractInTextCitations(split.bodyText);
       const cross = crossCheck(citations, references);
       const score = computeComplianceScore(references, cross);
@@ -239,10 +257,10 @@ export async function analyzeUploadedDocument(params: {
   } catch (err) {
     status = "failed";
     if (err instanceof BosMetin) {
-      errorMessage = BOS_METIN_MESAJI;
+      errorMessage = t(BOS_METIN_MESAJI_METIN);
     } else {
       console.error(err);
-      errorMessage = "Dosyadan metin çıkarılırken bir hata oluştu.";
+      errorMessage = t(CIKARMA_HATASI_METIN);
     }
   }
 
@@ -267,7 +285,7 @@ export async function analyzeUploadedDocument(params: {
 
   if (insertError) {
     console.error(insertError);
-    return { error: "Analiz sonucu kaydedilirken hata oluştu." };
+    return { error: t({ tr: "Analiz sonucu kaydedilirken hata oluştu.", en: "An error occurred while saving the analysis result." }) };
   }
 
   revalidatePath("/dashboard/documents");
@@ -298,6 +316,8 @@ export interface DocumentUploadRecord {
     kilavuz?: { ad: string; surum: string; dogrulandi: boolean; minPages: number | null; maxPages: number | null } | null;
     sayfaSayisi?: number | null;
     metinUyarisi?: string | null;
+    /* 28.10.2026 (İngilizce) sonrası kayıtlarda; uyarının dilden bağımsız işareti. */
+    metinKismi?: boolean;
     kilavuzOkunamadi?: boolean;
   } | null;
   created_at: string;
@@ -325,7 +345,8 @@ export async function reanalyzeDocument(documentId: string): Promise<UploadResul
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+  if (!user) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const { data: belge, error: okumaHatasi } = await supabase
     .from("document_uploads")
@@ -335,11 +356,11 @@ export async function reanalyzeDocument(documentId: string): Promise<UploadResul
     .maybeSingle();
   if (okumaHatasi) {
     console.error(okumaHatasi);
-    return { error: "Belge okunamadı. Sayfayı yenileyip tekrar deneyin." };
+    return { error: t({ tr: "Belge okunamadı. Sayfayı yenileyip tekrar deneyin.", en: "Couldn't read the document. Refresh the page and try again." }) };
   }
-  if (!belge) return { error: "Belge bulunamadı ya da size ait değil." };
+  if (!belge) return { error: t({ tr: "Belge bulunamadı ya da size ait değil.", en: "Document not found or it doesn't belong to you." }) };
   if (belge.status !== "failed") {
-    return { error: "Yalnızca çözümlenemeyen belgeler yeniden denenebilir." };
+    return { error: t({ tr: "Yalnızca çözümlenemeyen belgeler yeniden denenebilir.", en: "Only documents that couldn't be analyzed can be retried." }) };
   }
 
   const sonuc = await analyzeUploadedDocument({
@@ -369,7 +390,8 @@ export async function deleteDocumentUpload(documentId: string): Promise<{ error?
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+  if (!user) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const { data: document } = await supabase
     .from("document_uploads")
@@ -377,7 +399,7 @@ export async function deleteDocumentUpload(documentId: string): Promise<{ error?
     .eq("id", documentId)
     .eq("uploaded_by", user.id)
     .maybeSingle();
-  if (!document) return { error: "Belge bulunamadı ya da size ait değil." };
+  if (!document) return { error: t({ tr: "Belge bulunamadı ya da size ait değil.", en: "Document not found or it doesn't belong to you." }) };
 
   const { error } = await supabase
     .from("document_uploads")
@@ -386,7 +408,7 @@ export async function deleteDocumentUpload(documentId: string): Promise<{ error?
     .eq("uploaded_by", user.id);
   if (error) {
     console.error(error);
-    return { error: "Belge silinirken bir hata oluştu." };
+    return { error: t({ tr: "Belge silinirken bir hata oluştu.", en: "An error occurred while deleting the document." }) };
   }
 
   // Kayıt silindi; dosya depodan silinemezse yalnızca yer kaplar, kullanıcıya hata göstermiyoruz.

@@ -6,6 +6,8 @@ import { ExternalLink, Search } from "lucide-react";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import { eksikAlanlar } from "@/lib/citation-format";
 import { showToast } from "../_components/toast-events";
+import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
+import { YEREL, type Metin } from "@/lib/dil";
 
 /*
   KAYNAKLAR SAYFASINDAKİ LİSTE — İŞLENEBİLİR (27.10.2026, kurum sahibinin
@@ -21,35 +23,38 @@ import { showToast } from "../_components/toast-events";
     sistem uydurmaz; düzenleme Kaynak bul penceresinde.
 */
 type Durum = "to_review" | "read" | "used";
-const ETIKET: Record<Durum, { ad: string; ton: string }> = {
-  to_review: { ad: "Okunacak", ton: "neutral" },
-  read: { ad: "Okundu", ton: "info" },
-  used: { ad: "Metinde", ton: "success" },
+const ETIKET: Record<Durum, { ad: Metin; ton: string }> = {
+  to_review: { ad: { tr: "Okunacak", en: "To read" }, ton: "neutral" },
+  read: { ad: { tr: "Okundu", en: "Read" }, ton: "info" },
+  used: { ad: { tr: "Metinde", en: "Cited" }, ton: "success" },
 };
-const ILERI: Record<Durum, { durum: Durum; etiket: string } | null> = {
-  to_review: { durum: "read", etiket: "Okudum" },
-  read: { durum: "used", etiket: "Metinde kullandım" },
+const ILERI: Record<Durum, { durum: Durum; etiket: Metin } | null> = {
+  to_review: { durum: "read", etiket: { tr: "Okudum", en: "I've read it" } },
+  read: { durum: "used", etiket: { tr: "Metinde kullandım", en: "I cited it" } },
   used: null,
 };
 const GERI: Record<Durum, Durum | null> = { to_review: null, read: "to_review", used: "read" };
 type Suzgec = "hepsi" | Durum | "eksik";
 
 const baglanti = (deger: string | null) => {
-  const t = deger?.trim();
-  if (!t) return null;
-  const doi = t.match(/10\.\d{4,9}\/\S+/);
-  if (doi && !/^https?:/i.test(t)) return `https://doi.org/${doi[0]}`;
-  return /^https?:\/\//i.test(t) ? t : null;
+  const temiz = deger?.trim();
+  if (!temiz) return null;
+  const doi = temiz.match(/10\.\d{4,9}\/\S+/);
+  if (doi && !/^https?:/i.test(temiz)) return `https://doi.org/${doi[0]}`;
+  return /^https?:\/\//i.test(temiz) ? temiz : null;
 };
 
 export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSource[] }) {
   const router = useRouter();
+  const t = useCeviri();
+  const dil = useDil();
   const [arama, setArama] = useState("");
   const [suzgec, setSuzgec] = useState<Suzgec>("hepsi");
   const [bekleyen, setBekleyen] = useState<string | null>(null);
   const [, basla] = useTransition();
 
-  const eksikler = useMemo(() => new Map(kaynaklar.map((k) => [k.id, eksikAlanlar(k)])), [kaynaklar]);
+  /* Eksik alan adları arayüzde gösteriliyor: burada `dil` arayüzün dili (lib/citation-format). */
+  const eksikler = useMemo(() => new Map(kaynaklar.map((k) => [k.id, eksikAlanlar(k, dil)])), [kaynaklar, dil]);
   const sayilar = {
     hepsi: kaynaklar.length,
     to_review: kaynaklar.filter((k) => k.status === "to_review").length,
@@ -57,11 +62,11 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
     used: kaynaklar.filter((k) => k.status === "used").length,
     eksik: kaynaklar.filter((k) => (eksikler.get(k.id) ?? []).length).length,
   };
-  const terim = arama.trim().toLocaleLowerCase("tr-TR");
+  const terim = arama.trim().toLocaleLowerCase(YEREL[dil]);
   const gorunen = kaynaklar.filter((k) => {
     if (suzgec === "eksik" ? !(eksikler.get(k.id) ?? []).length : suzgec !== "hepsi" && k.status !== suzgec) return false;
     if (!terim) return true;
-    return [k.title, k.authors, k.container_title, k.publisher, k.year, k.doi_or_url].some((x) => x?.toLocaleLowerCase("tr-TR").includes(terim));
+    return [k.title, k.authors, k.container_title, k.publisher, k.year, k.doi_or_url].some((x) => x?.toLocaleLowerCase(YEREL[dil]).includes(terim));
   });
 
   const durumDegistir = (k: LiteratureSource, yeni: Durum) => {
@@ -75,11 +80,11 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
   };
 
   const SUZGECLER: { kod: Suzgec; ad: string }[] = [
-    { kod: "hepsi", ad: "Hepsi" },
-    { kod: "to_review", ad: "Okunacak" },
-    { kod: "read", ad: "Okundu" },
-    { kod: "used", ad: "Metinde" },
-    { kod: "eksik", ad: "Eksik künye" },
+    { kod: "hepsi", ad: t({ tr: "Hepsi", en: "All" }) },
+    { kod: "to_review", ad: t(ETIKET.to_review.ad) },
+    { kod: "read", ad: t(ETIKET.read.ad) },
+    { kod: "used", ad: t(ETIKET.used.ad) },
+    { kod: "eksik", ad: t({ tr: "Eksik künye", en: "Incomplete reference" }) },
   ];
 
   return (
@@ -87,9 +92,9 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
       <div className="kaynak-suzgec">
         <label className="kaynak-arama">
           <Search size={14} aria-hidden="true" />
-          <input type="search" placeholder="Başlık, yazar, dergi, yayınevi ya da DOI ara" value={arama} onChange={(e) => setArama(e.target.value)} aria-label="Kaynaklarda ara" />
+          <input type="search" placeholder={t({ tr: "Başlık, yazar, dergi, yayınevi ya da DOI ara", en: "Search by title, author, journal, publisher or DOI" })} value={arama} onChange={(e) => setArama(e.target.value)} aria-label={t({ tr: "Kaynaklarda ara", en: "Search sources" })} />
         </label>
-        <div className="cluster" role="group" aria-label="Duruma göre süz">
+        <div className="cluster" role="group" aria-label={t({ tr: "Duruma göre süz", en: "Filter by status" })}>
           {SUZGECLER.filter((s) => s.kod !== "eksik" || sayilar.eksik).map((s) => (
             <button
               key={s.kod}
@@ -116,25 +121,25 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
                 <span className="gb-satir-govde">
                   <b>{k.title}</b>
                   <small>
-                    {[k.authors || "Yazar belirtilmedi", k.year, k.container_title].filter(Boolean).join(" · ")}
+                    {[k.authors || t({ tr: "Yazar belirtilmedi", en: "No author given" }), k.year, k.container_title].filter(Boolean).join(" · ")}
                     {adres ? (
                       <>
                         {" · "}
                         <a href={adres} target="_blank" rel="noreferrer noopener">
-                          {/10\.\d{4,9}\//.test(k.doi_or_url ?? "") ? "DOI" : "Bağlantı"} <ExternalLink size={11} aria-hidden="true" />
+                          {/10\.\d{4,9}\//.test(k.doi_or_url ?? "") ? "DOI" : t({ tr: "Bağlantı", en: "Link" })} <ExternalLink size={11} aria-hidden="true" />
                         </a>
                       </>
                     ) : null}
                   </small>
-                  {eksik.length ? <small className="kaynak-eksik">Kaynakça için eksik: {eksik.join(", ")}</small> : null}
+                  {eksik.length ? <small className="kaynak-eksik">{t({ tr: "Kaynakça için eksik:", en: "Missing for the reference list:" })} {eksik.join(", ")}</small> : null}
                 </span>
                 <span className="kaynak-satiri-eylem">
                   <span className="status-pill" data-tone={ETIKET[durum].ton}>
-                    {ETIKET[durum].ad}
+                    {t(ETIKET[durum].ad)}
                   </span>
                   {ileri ? (
                     <button type="button" className="projects-filter-button button-compact" disabled={bekleyen === k.id} onClick={() => durumDegistir(k, ileri.durum)}>
-                      {ileri.etiket}
+                      {t(ileri.etiket)}
                     </button>
                   ) : null}
                   {geri ? (
@@ -142,8 +147,8 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
                       type="button"
                       className="projects-filter-button button-compact"
                       disabled={bekleyen === k.id}
-                      aria-label={`${k.title}: ${ETIKET[geri].ad} durumuna geri al`}
-                      title={`${ETIKET[geri].ad} durumuna geri al`}
+                      aria-label={t({ tr: `${k.title}: ${ETIKET[geri].ad.tr} durumuna geri al`, en: `${k.title}: move back to “${ETIKET[geri].ad.en}”` })}
+                      title={t({ tr: `${ETIKET[geri].ad.tr} durumuna geri al`, en: `Move back to “${ETIKET[geri].ad.en}”` })}
                       onClick={() => durumDegistir(k, geri)}
                     >
                       ↶
@@ -155,7 +160,7 @@ export default function KaynakListesi({ kaynaklar }: { kaynaklar: LiteratureSour
           })}
         </ul>
       ) : (
-        <p className="gb-bos">{terim || suzgec !== "hepsi" ? "Bu aramaya ya da süzgece uyan kaynak yok." : "Bu çalışmaya bağlı kaynak yok."}</p>
+        <p className="gb-bos">{terim || suzgec !== "hepsi" ? t({ tr: "Bu aramaya ya da süzgece uyan kaynak yok.", en: "No sources match this search or filter." }) : t({ tr: "Bu çalışmaya bağlı kaynak yok.", en: "No sources linked to this work." })}</p>
       )}
     </>
   );

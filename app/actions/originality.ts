@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buildShingles, computeSimilarity } from "@/lib/similarity-check";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
+import { oturumYokMesaji } from "@/lib/auth-guards";
+import { ceviri } from "@/lib/dil-sunucu";
 
 export interface OriginalityMatch {
   documentId: string;
@@ -32,11 +34,12 @@ export async function runOriginalityCheck(documentId: string): Promise<Originali
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "Oturum bulunamadı." };
+    return { error: await oturumYokMesaji() };
   }
   /* Abonelik kapısı: Özgünlük denetimi ücretli bir özellik; paneldeki kapı yalnızca
      ekranı kapatır, işlem doğrudan çağrılabilir. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
+  const t = await ceviri();
 
   const { data: targetDoc, error: targetError } = await supabase
     .from("document_uploads")
@@ -45,7 +48,7 @@ export async function runOriginalityCheck(documentId: string): Promise<Originali
     .single();
 
   if (targetError || !targetDoc?.extracted_text) {
-    return { error: "Belge metni bulunamadı. Önce belgeyi yükleyip analiz ettirin." };
+    return { error: t({ tr: "Belge metni bulunamadı. Önce belgeyi yükleyip analiz ettirin.", en: "No document text was found. Upload the document and have it analyzed first." }) };
   }
 
   // Erişilebilir tüm diğer analiz edilmiş belgeleri getir (RLS otomatik filtreler)
@@ -59,7 +62,7 @@ export async function runOriginalityCheck(documentId: string): Promise<Originali
 
   if (candidatesError) {
     console.error(candidatesError);
-    return { error: "Karşılaştırma havuzu getirilirken hata oluştu." };
+    return { error: t({ tr: "Karşılaştırma havuzu getirilirken hata oluştu.", en: "An error occurred while loading the comparison pool." }) };
   }
 
   const targetShingles = buildShingles(targetDoc.extracted_text);
@@ -91,7 +94,7 @@ export async function runOriginalityCheck(documentId: string): Promise<Originali
 
   if (insertError) {
     console.error(insertError);
-    return { error: "Sonuç kaydedilirken bir hata oluştu." };
+    return { error: t({ tr: "Sonuç kaydedilirken bir hata oluştu.", en: "An error occurred while saving the result." }) };
   }
 
   revalidatePath("/dashboard/documents");

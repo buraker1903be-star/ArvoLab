@@ -21,6 +21,7 @@
  */
 
 import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import type { Dil } from "@/lib/dil";
 
 const MAX_INPUT_CHARS = 12000; // ~3000 token civarı, maliyet/limit kontrolü için
 
@@ -42,6 +43,16 @@ KESİNLİKLE YAPMAYACAKLARIN (çok önemli):
 
 Yanıtını yalnızca Türkçe, madde işaretli liste olarak ver. Genel giriş/kapanış cümlesi ekleme, doğrudan maddelerle başla.`;
 
+/*
+  ÇIKTI DİLİ (28.10.2026). İstem Türkçe kalıyor (AGENTS.md: asistan
+  istemleri Türkçe); İngilizce arayüzdeki kullanıcı için yalnızca cevabın
+  DİLİ değişiyor. lib/ai/bulgu.ts'teki INGILIZCE_CIKTI JSON bulgu biçimine
+  göre yazılmış; bu yetenek madde işaretli düz metin döndürdüğü için ayrı
+  talimat. Ayrı sistem mesajı: istemdeki "yalnızca Türkçe" sözünün önüne
+  geçiyor, istemin kendisine dokunmadan eklenip çıkarılabiliyor.
+*/
+const INGILIZCE_YANIT = `YANIT DİLİ: Kullanıcı İngilizce arayüz kullanıyor. Geri bildirimini akademik İNGİLİZCE, madde işaretli liste olarak yaz; yukarıda "yalnızca Türkçe" yazan yer bu talimatla değişti. Öteki bütün kurallar aynen geçerli: metni yeniden yazma, hazır cümle yok, kaynak künyesi yok.`;
+
 export interface AiFeedbackResult {
   feedback: string;
   model: string;
@@ -58,7 +69,7 @@ export interface AiFeedbackResult {
 /** Sunucu tanımlı değilse özellik kapalı gösterilir; düğme boşuna tıklanmasın. */
 export const aiFeedbackConfigured = () => aiYapilandirildi();
 
-export async function getDocumentFeedback(text: string): Promise<AiFeedbackResult> {
+export async function getDocumentFeedback(text: string, dil: Dil = "tr"): Promise<AiFeedbackResult> {
   const truncated = text.length > MAX_INPUT_CHARS;
   const inputText = truncated ? text.slice(0, MAX_INPUT_CHARS) : text;
 
@@ -71,6 +82,7 @@ export async function getDocumentFeedback(text: string): Promise<AiFeedbackResul
   const yanit = await sor(
     [
       { rol: "sistem", metin: SYSTEM_PROMPT },
+      ...(dil === "en" ? [{ rol: "sistem" as const, metin: INGILIZCE_YANIT }] : []),
       { rol: "kullanici", metin: `İncelenecek metin:\n\n${inputText}` },
     ],
     { yetenek: "belge", sicaklik: 0.4, enFazlaJeton: 700 },

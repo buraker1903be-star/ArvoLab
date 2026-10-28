@@ -1,6 +1,7 @@
 "use server";
 
-import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { aiHataMesaji, aiYapilandirildi, sor } from "@/lib/ai/saglayici";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { bulgulariCozumle, bulgulariDogrula, type Bulgu, bosListeMi } from "@/lib/ai/bulgu";
 import { kaynakcaIstemi, type KaynakDurumu, type KaynakSatiri } from "@/lib/ai/kaynakca-denetimi";
@@ -61,9 +62,11 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     bicimSorunlari: liste(kaynak?.bicimSorunlari, 8, 200),
     eslesmeBasligi: kaynak?.eslesmeBasligi ? kisalt(kaynak.eslesmeBasligi, 300) : null,
   }));
-  if (!kaynaklar.some((kaynak) => kaynak.ham)) return { hata: "Denetlenecek kaynak bulunamadı." };
+  const t = await ceviri();
+  const dil = await aktifDil();
+  if (!kaynaklar.some((kaynak) => kaynak.ham)) return { hata: t({ tr: "Denetlenecek kaynak bulunamadı.", en: "No sources to check were found." }) };
 
-  const kapi = await asistanKapisi();
+  const kapi = await asistanKapisi(dil);
   if (!kapi.ok) return { hata: kapi.hata };
 
   /*
@@ -79,6 +82,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     /* Sistem istemi stili ADIYLA söylüyor; bağlam metnindeki satır
        modelin kimliğini ezmiyordu (lib/ai/kaynakca-denetimi). */
     atifStili: calisma?.atifStili ?? null,
+    dil,
     kaynaklar,
     eksikKaynaklar: liste(girdi.eksikKaynaklar, EN_FAZLA_LISTE, 300),
     kullanilmayanKaynaklar: liste(girdi.kullanilmayanKaynaklar, EN_FAZLA_LISTE, EN_UZUN_KAYNAK),
@@ -100,7 +104,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
   }
 
   // Hak yalnızca modele gidilecekse yanar.
-  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId);
+  const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
   if (hakHatasi) return { hata: hakHatasi };
 
   const basladi = Date.now();
@@ -115,7 +119,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     }
     if (!bulgular.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
-      return { hata: "Asistan kaynakçada denetlenecek bir şey bulamadı.", kirpilanlar };
+      return { hata: t({ tr: "Asistan kaynakçada denetlenecek bir şey bulamadı.", en: "The assistant found nothing to check in the reference list." }), kirpilanlar };
     }
 
     /*
@@ -123,12 +127,15 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
       ve sayfa aralığıdır. Bir tanesi bile bağlamda geçmiyorsa cevabın
       tamamı düşer — kullanıcı hangisinin uydurma olduğunu ayıklayamaz.
     */
-    const dogrulama = bulgulariDogrula(bulgular, kaynak);
+    const dogrulama = bulgulariDogrula(bulgular, kaynak, { dil });
     if (!dogrulama.gecti) {
       console.error("[ai] kaynakça denetimi uydurma sayı içerdi", { model: yanit.model, uydurulan: dogrulama.uydurulan });
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "rejected", redNedeni: "uydurma_sayi", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
       return {
-        hata: "Asistan verilmeyen künye bilgileri ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
+        hata: t({
+          tr: "Asistan verilmeyen künye bilgileri ürettiği için cevap gösterilmedi. Bu bir güvenlik kontrolüdür; tekrar deneyebilirsiniz.",
+          en: "The response wasn't shown because the assistant produced reference details that weren't provided. This is a safety check; you can try again.",
+        }),
         kirpilanlar,
       };
     }
@@ -136,7 +143,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
     const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
     return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
   } catch (hata) {
-    const mesaj = hata instanceof Error ? hata.message : "Asistan yanıt veremedi.";
+    const mesaj = aiHataMesaji(hata, dil) ?? t({ tr: "Asistan yanıt veremedi.", en: "The assistant couldn't respond." });
     console.error("[ai] kaynakça denetimi başarısız", mesaj);
     await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "failed", baglam: kaynak, basladi });
     return { hata: mesaj, kirpilanlar };

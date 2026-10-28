@@ -289,3 +289,12 @@ describe("İngilizce çıktıda yazıyla sayılar (28.10.2026)", () => {
     assert.deepEqual(yaziylaSayilar("one of the two groups; fifty percent", "en"), [{ metin: "fifty", deger: 50 }]);
   });
 });
+
+test("kaydedilen bağlam dile göre ayrışır, sayı içermez (28.10.2026)", async () => {
+  // Önceki cevap önbelleği bağlam metniyle eşleşiyor; dil bağlamda yoksa
+  // Türkçe cevap İngilizce arayüzde geri geliyordu.
+  const { dilliKaynak } = await import("@/lib/ai/bulgu");
+  assert.notEqual(dilliKaynak("t(28) = 2,45", "en"), dilliKaynak("t(28) = 2,45", "tr"));
+  assert.equal(dilliKaynak("x", "tr"), "x");
+  assert.deepEqual(sayilar(dilliKaynak("", "en")), []);
+});
