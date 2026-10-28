@@ -8,7 +8,7 @@ import { GORUNUM_ETIKETI, onizleyebilir } from "@/lib/onizleme";
 import { gorunumSec } from "@/app/actions/onizleme";
 import ActionForm from "./action-form";
 import { getAccessState } from "@/lib/access";
-import { ceviri } from "@/lib/dil-sunucu";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { gorunenUygulamalar, labUygulamalari } from "@/lib/os/uygulamalar";
 import AbonelikKapisi from "./_components/abonelik-kapisi";
 import SubscriptionNotice from "./_components/subscription-notice";
@@ -67,7 +67,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     Ürün Ölçümü ve Kılavuz Kataloğu başlatıcıda görünüyordu, öğrencinin
     göremeyeceği şeyler. Yetki değişmiyor; sayfaların kendi kapısı gerçek rolle.
   */
-  const uygulamalar = gorunenUygulamalar(labUygulamalari(t), gorunum.onizleme ? undefined : profile?.role);
+  const uygulamalar = gorunenUygulamalar(labUygulamalari(t), gorunum.onizleme ? undefined : profile?.role, await aktifDil());
   /*
     Kurum seçici yalnızca iç ekipte (lib/kurum-secimi.ts): kurucu birden çok
     kurumun sahibi ve ekranlar kurumları karışık listeliyordu. Kurum listesi

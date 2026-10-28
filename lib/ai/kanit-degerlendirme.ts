@@ -35,7 +35,8 @@
 */
 
 import { baglamKur, type BaglamParca } from "./baglam";
-import { baglamDisiKunye, bulgulariCozumle, bulgulariDogrula, jsonOku, type Bulgu } from "./bulgu";
+import type { Dil } from "@/lib/dil";
+import { baglamDisiKunye, bulgulariCozumle, bulgulariDogrula, jsonOku, type Bulgu, cikisDiliMesaji } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 import { alintiDenetle } from "@/lib/kanit/alinti";
 import type { DestekDuzeyi } from "@/lib/kanit/durum";
@@ -88,6 +89,8 @@ export function veriBlogu(metin: string): string {
 }
 
 export type KanitGirdisi = {
+  /** Kullanıcının arayüz dili: bulgular bu dilde yazılır (lib/ai/bulgu.ts, cikisDiliMesaji). */
+  dil?: Dil;
   calisma?: string;
   iddia: string;
   bolum?: string | null;
@@ -112,6 +115,7 @@ export function kanitIstemi(girdi: KanitGirdisi, butce = BAGLAM_BUTCESI) {
   const baglam = baglamKur(parcalar, butce);
   const mesajlar: Mesaj[] = [
     { rol: "sistem", metin: SISTEM_ISTEMI },
+    ...cikisDiliMesaji(girdi.dil),
     { rol: "kullanici", metin: baglam.metin },
   ];
   return { mesajlar, kaynak: baglam.metin, kirpilanlar: baglam.kirpilanlar };

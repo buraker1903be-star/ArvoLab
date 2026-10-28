@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { sayilar, uydurmaSayilar, uydurmaYaziylaSayilar } from "../../lib/ai/sayi-denetimi";
+import { sayilar, uydurmaSayilar, uydurmaYaziylaSayilar, yaziylaSayilar } from "../../lib/ai/sayi-denetimi";
 import { bulgulariCozumle, bulgulariDogrula } from "@/lib/ai/bulgu";
 
 describe("sayı çıkarma", () => {
@@ -262,5 +262,30 @@ describe("yapısal türetmeler yalnızca analizde (28.10.2026)", () => {
 
   test("ondalıklar türetilmez", () => {
     assert.equal(bulgulariDogrula(bulgu("p = ,012"), "F(3, 46) = 4,12, p = ,011", { yapisalTuretme: true }).gecti, false);
+  });
+});
+
+describe("İngilizce çıktıda yazıyla sayılar (28.10.2026)", () => {
+  const bulgu = (aciklama: string) => [{ tur: "bilgi" as const, baslik: "Note", aciklama }];
+
+  test("uydurma 'twenty participants' yakalanır", () => {
+    const sonuc = bulgulariDogrula(bulgu("The sample of twenty participants is small."), "t(28) = 2,45", { dil: "en" });
+    assert.equal(sonuc.gecti, false);
+  });
+
+  test("'on the other hand' Türkçe 'on' (10) sayılmaz", () => {
+    assert.equal(bulgulariDogrula(bulgu("On the other hand, the effect size is missing."), "t(28) = 2,45", { dil: "en" }).gecti, true);
+  });
+
+  test("girdide Türkçe yazılan sayı İngilizce çıktıda bilinir", () => {
+    assert.equal(bulgulariDogrula(bulgu("Twenty participants were included."), "Çalışmaya yirmi kişi katıldı.", { dil: "en" }).gecti, true);
+  });
+
+  test("bileşik ve tireli: two hundred thirty-five", () => {
+    assert.deepEqual(yaziylaSayilar("two hundred thirty-five students", "en"), [{ metin: "two hundred thirty five", deger: 235 }]);
+  });
+
+  test("'one'/'two' tek başına sayı sayılmaz; 'percent' ayıklanır", () => {
+    assert.deepEqual(yaziylaSayilar("one of the two groups; fifty percent", "en"), [{ metin: "fifty", deger: 50 }]);
   });
 });

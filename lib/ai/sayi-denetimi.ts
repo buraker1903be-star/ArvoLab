@@ -13,6 +13,8 @@
   denge ve bedeli var — aşağıda tek tek yazılı.
 */
 
+import type { Dil } from "@/lib/dil";
+
 /*
   APA'da "F(2,57)" İKİ serbestlik derecesidir, "2,57" ondalığı değil. Türkçe
   ondalık ayırıcısı virgül olduğu için ayrıştırıcı bunu 2.57 diye okuyordu:
@@ -144,54 +146,86 @@ export function uydurmaSayilar(cikti: string, girdi: string, ...ekGirdiler: stri
   hâlâ kaçıyor. Daraltmanın alternatifi, her cevabı "bir" yüzünden
   reddeden bir denetimdi.
 */
-const BIRLER: Record<string, number> = {
-  bir: 1, iki: 2, üç: 3, dört: 4, beş: 5, altı: 6, yedi: 7, sekiz: 8, dokuz: 9,
+type SozcukTablosu = {
+  birler: Record<string, number>;
+  onlar: Record<string, number>;
+  /** "yüz" / "hundred": önündeki parçayı çarpar. */
+  yuz: string;
+  /** Bin, milyon: toplamı kapatıp yeni parça başlatır. */
+  katlar: Record<string, number>;
+  /** Miktar olmayan, ayıklanan sözcük ("yüzde", "percent"). */
+  ayiklanan: RegExp;
 };
-const ONLAR: Record<string, number> = {
-  on: 10, yirmi: 20, otuz: 30, kırk: 40, elli: 50,
-  altmış: 60, yetmiş: 70, seksen: 80, doksan: 90,
+
+const TURKCE: SozcukTablosu = {
+  birler: { bir: 1, iki: 2, üç: 3, dört: 4, beş: 5, altı: 6, yedi: 7, sekiz: 8, dokuz: 9 },
+  onlar: { on: 10, yirmi: 20, otuz: 30, kırk: 40, elli: 50, altmış: 60, yetmiş: 70, seksen: 80, doksan: 90 },
+  yuz: "yüz",
+  katlar: { bin: 1000, milyon: 1_000_000 },
+  ayiklanan: /\byüzde\b/g,
 };
-const KATLAR: Record<string, number> = { yüz: 100, bin: 1000, milyon: 1_000_000 };
+
+/*
+  İNGİLİZCE (28.10.2026, lib/dil.ts). İngilizce arayüzdeki kullanıcıya
+  bulgular İngilizce yazılıyor; Türkçe tablo "twenty participants"ı
+  görmezdi. Aynı dar kural: tetikleyici ondan büyük ("ten" ve üstü,
+  "hundred", "thousand"); "one" ve "two" İngilizcede de sayı olmayan
+  anlamlarda geçiyor ("one of the", "the two groups").
+
+  İki tablo AYRI tutuluyor: Türkçe "on" (10) İngilizcede edattır; İngilizce
+  çıktıyı Türkçe tabloyla taramak "on the other hand"ı uydurma bir 10
+  sayardı.
+*/
+const INGILIZCE: SozcukTablosu = {
+  birler: {
+    one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+    eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+  },
+  onlar: { ten: 10, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 },
+  yuz: "hundred",
+  katlar: { thousand: 1000, million: 1_000_000 },
+  ayiklanan: /\bpercent\b/g,
+};
+
+const TABLOLAR: Record<Dil, SozcukTablosu> = { tr: TURKCE, en: INGILIZCE };
 
 /** Tek başına bir miktar başlatabilen sözcükler (ondan büyük). */
-const TETIKLEYICI = new Set([...Object.keys(ONLAR), ...Object.keys(KATLAR)]);
+const tetikleyiciMi = (t: SozcukTablosu, s: string) =>
+  s in t.onlar || s === t.yuz || s in t.katlar || (s in t.birler && t.birler[s] > 10);
+const sayiSozcuguMu = (t: SozcukTablosu, s: string) => s in t.birler || s in t.onlar || s === t.yuz || s in t.katlar;
 
-const SAYI_SOZCUGU = new Set([
-  ...Object.keys(BIRLER), ...Object.keys(ONLAR), ...Object.keys(KATLAR),
-]);
-
-/** Ardışık sayı sözcüklerinin değeri: "iki yüz otuz beş" → 235 */
-function dizininDegeri(sozcukler: string[]): number {
+/** Ardışık sayı sözcüklerinin değeri: "iki yüz otuz beş" → 235, "two hundred thirty-five" → 235 */
+function dizininDegeri(t: SozcukTablosu, sozcukler: string[]): number {
   let toplam = 0;
   let parca = 0;
   for (const s of sozcukler) {
-    if (s in BIRLER) parca += BIRLER[s];
-    else if (s in ONLAR) parca += ONLAR[s];
-    else if (s === "yüz") parca = (parca || 1) * 100;
-    else if (s === "bin") { toplam += (parca || 1) * 1000; parca = 0; }
-    else if (s === "milyon") { toplam += (parca || 1) * 1_000_000; parca = 0; }
+    if (s in t.birler) parca += t.birler[s];
+    else if (s in t.onlar) parca += t.onlar[s];
+    else if (s === t.yuz) parca = (parca || 1) * 100;
+    else if (s in t.katlar) { toplam += (parca || 1) * t.katlar[s]; parca = 0; }
   }
   return toplam + parca;
 }
 
 /** Metindeki yazıyla yazılmış miktarlar (yalnızca tetikleyici içerenler). */
-export function yaziylaSayilar(metin: string): { metin: string; deger: number }[] {
-  /* "yüzde" bir miktar değil; ayıklanmazsa her yüzde ifadesi 100
+export function yaziylaSayilar(metin: string, dil: Dil = "tr"): { metin: string; deger: number }[] {
+  const t = TABLOLAR[dil];
+  /* "yüzde"/"percent" bir miktar değil; ayıklanmazsa her yüzde ifadesi 100
      sayılırdı. */
-  const temiz = metin.toLocaleLowerCase("tr").replace(/\byüzde\b/g, " ");
+  const temiz = metin.toLocaleLowerCase(dil === "tr" ? "tr" : "en").replace(t.ayiklanan, " ");
   const sozcukler = temiz.match(/\p{L}+/gu) ?? [];
 
   const bulunanlar: { metin: string; deger: number }[] = [];
   let i = 0;
   while (i < sozcukler.length) {
-    if (!SAYI_SOZCUGU.has(sozcukler[i])) { i += 1; continue; }
+    if (!sayiSozcuguMu(t, sozcukler[i])) { i += 1; continue; }
     let son = i;
-    while (son + 1 < sozcukler.length && SAYI_SOZCUGU.has(sozcukler[son + 1])) son += 1;
+    while (son + 1 < sozcukler.length && sayiSozcuguMu(t, sozcukler[son + 1])) son += 1;
     const dizi = sozcukler.slice(i, son + 1);
-    /* Tek başına "bir"/"iki" gibi küçük sözcükler sayılmıyor:
-       Türkçede belirteç olarak da geçiyorlar. */
-    if (dizi.some((s) => TETIKLEYICI.has(s))) {
-      bulunanlar.push({ metin: dizi.join(" "), deger: dizininDegeri(dizi) });
+    /* Tek başına "bir"/"iki" ("one"/"two") gibi küçük sözcükler sayılmıyor:
+       belirteç olarak da geçiyorlar. */
+    if (dizi.some((s) => tetikleyiciMi(t, s))) {
+      bulunanlar.push({ metin: dizi.join(" "), deger: dizininDegeri(t, dizi) });
     }
     i = son + 1;
   }
@@ -205,11 +239,20 @@ export function yaziylaSayilar(metin: string): { metin: string; deger: number }[
  * uydurma sayılmıyor: kullanıcı sayıyı nasıl yazdıysa öyle arıyoruz.
  */
 export function uydurmaYaziylaSayilar(cikti: string, girdi: string, ...ekGirdiler: string[]): string[] {
+  return uydurmaYaziylaSayilarDilde("tr", cikti, girdi, ...ekGirdiler);
+}
+
+/**
+ * Aynı denetim, çıktının diline göre. Girdi her iki dilde de okunur:
+ * kullanıcının metni Türkçe, bulgu İngilizce olabilir — girdide "yirmi"
+ * yazıyorsa çıktıdaki "twenty" uydurma değil.
+ */
+export function uydurmaYaziylaSayilarDilde(dil: Dil, cikti: string, girdi: string, ...ekGirdiler: string[]): string[] {
   const tumGirdi = [girdi, ...ekGirdiler].join(" ");
   const girdiRakamlari = new Set([girdi, ...ekGirdiler].flatMap(sayilar));
-  const girdiYazilari = new Set(yaziylaSayilar(tumGirdi).map((x) => x.deger));
+  const girdiYazilari = new Set([...yaziylaSayilar(tumGirdi, "tr"), ...yaziylaSayilar(tumGirdi, "en")].map((x) => x.deger));
 
-  const bulunanlar = yaziylaSayilar(cikti).filter(
+  const bulunanlar = yaziylaSayilar(cikti, dil).filter(
     (x) => !girdiYazilari.has(x.deger) && !girdiRakamlari.has(String(x.deger)),
   );
   return [...new Set(bulunanlar.map((x) => x.metin))];

@@ -9,7 +9,8 @@
   Saf modül; testi tests/unit/ai-analiz-yorumu.test.ts.
 */
 
-import { uydurmaSayilar, uydurmaYaziylaSayilar, yapisalTuretilmis } from "./sayi-denetimi";
+import { uydurmaSayilar, uydurmaYaziylaSayilarDilde, yapisalTuretilmis } from "./sayi-denetimi";
+import type { Dil } from "@/lib/dil";
 import { SOZCUK_BASI } from "@/lib/sozcuk-siniri";
 
 export type BulguTuru = "uyari" | "oneri" | "bilgi";
@@ -24,6 +25,20 @@ export const YANIT_BICIMI = `YANIT BİÇİMİ: Yalnızca şu JSON nesnesini dön
 - "baslik": en fazla 60 karakter.
 - "aciklama": en fazla 400 karakter, Türkçe, hazır cümle içermez.
 - En fazla 8 bulgu. Denetlenecek bir şey bulamazsan boş dizi döndür.`;
+
+/*
+  ÇIKTI DİLİ (28.10.2026, lib/dil.ts). İstemler Türkçe kalıyor (AGENTS.md);
+  İngilizce arayüzdeki kullanıcı için yalnızca bulguların DİLİ değişiyor.
+  Talimat ayrı bir sistem mesajı: istemin kendisine dokunmadan eklenip
+  çıkarılabiliyor ve YANIT_BICIMI'ndeki "Türkçe" sözünün önüne geçiyor.
+  JSON alan adları ve "tur" değerleri değişmez — çözümleyici onları okuyor.
+*/
+export const INGILIZCE_CIKTI = `ÇIKTI DİLİ: Kullanıcı İngilizce arayüz kullanıyor. "baslik" ve "aciklama" alanlarını (ve varsa öteki serbest metin alanlarını) akademik İNGİLİZCE yaz; yukarıda "Türkçe" yazan yer bu talimatla değişti. JSON alan adlarını ve "tur" değerlerini ("uyari", "oneri", "bilgi") DEĞİŞTİRME. Öteki bütün kurallar aynen geçerli: hazır cümle yok, verilmeyen sayı yok, kaynak künyesi yok.`;
+
+/** Sistem mesajlarına, kullanıcının diline göre çıktı dili talimatı ekler. */
+export function cikisDiliMesaji(dil: Dil | undefined): { rol: "sistem"; metin: string }[] {
+  return dil === "en" ? [{ rol: "sistem", metin: INGILIZCE_CIKTI }] : [];
+}
 
 /*
   Yanıttaki JSON'u okur. İki gerçek sorunu çözüyor:
@@ -144,6 +159,8 @@ export type DogrulamaSecenegi = {
    * YALNIZCA analiz yeteneğinde; gerekçe ve bedeli sayi-denetimi.ts'te.
    */
   yapisalTuretme?: boolean;
+  /** Çıktının dili: yazıyla sayılar bu dilin sözcükleriyle aranır (sayi-denetimi.ts). */
+  dil?: Dil;
 };
 
 /**
@@ -176,7 +193,7 @@ export function bulgulariDogrula(bulgular: Bulgu[], kaynak: string, secenek: Dog
   const turetilmis = secenek.yapisalTuretme ? [yapisalTuretilmis([kaynak, ...ek]).join(" ")] : [];
   const uydurulan = [
     ...uydurmaSayilar(cikti, kaynak, ...ek, ...turetilmis),
-    ...uydurmaYaziylaSayilar(cikti, kaynak, ...ek, ...turetilmis),
+    ...uydurmaYaziylaSayilarDilde(secenek.dil ?? "tr", cikti, kaynak, ...ek, ...turetilmis),
   ];
   return uydurulan.length ? { gecti: false, uydurulan } : { gecti: true };
 }

@@ -21,7 +21,8 @@
 */
 
 import { baglamKur, type BaglamParca } from "./baglam";
-import { YANIT_BICIMI } from "./bulgu";
+import type { Dil } from "@/lib/dil";
+import { YANIT_BICIMI, cikisDiliMesaji } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 import { MAKALE_TURLERI, YONTEM_DENETIMLERI, type BolumTuru, type MakaleTuru, type YontemAilesi } from "@/lib/makale/sablonlar";
 
@@ -100,6 +101,8 @@ ${YANIT_BICIMI}`;
 }
 
 export type MakaleDenetimGirdisi = {
+  /** Kullanıcının arayüz dili: bulgular bu dilde yazılır (lib/ai/bulgu.ts, cikisDiliMesaji). */
+  dil?: Dil;
   tur: MakaleTuru;
   bolumTuru: BolumTuru | null;
   aile: YontemAilesi | null;
@@ -130,6 +133,7 @@ export function makaleIstemi(girdi: MakaleDenetimGirdisi, butce = BAGLAM_BUTCESI
   const baglam = baglamKur(parcalar, butce);
   const mesajlar: Mesaj[] = [
     { rol: "sistem", metin: sistemIstemi(girdi.tur, girdi.bolumTuru, girdi.aile) },
+    ...cikisDiliMesaji(girdi.dil),
     { rol: "kullanici", metin: baglam.metin },
   ];
   return { mesajlar, kaynak: baglam.metin, kirpilanlar: baglam.kirpilanlar };

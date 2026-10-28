@@ -19,7 +19,8 @@
 */
 
 import { baglamKur, type BaglamParca } from "./baglam";
-import { YANIT_BICIMI } from "./bulgu";
+import type { Dil } from "@/lib/dil";
+import { YANIT_BICIMI, cikisDiliMesaji } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 
 // Çözümleme ve uydurma sayı denetimi bütün yeteneklerde ortak (lib/ai/bulgu.ts);
@@ -27,6 +28,8 @@ import type { Mesaj } from "./saglayici";
 export { bulgulariCozumle, bulgulariDogrula, type Bulgu, type BulguTuru } from "./bulgu";
 
 export type YorumGirdisi = {
+  /** Kullanıcının arayüz dili: bulgular bu dilde yazılır (lib/ai/bulgu.ts, cikisDiliMesaji). */
+  dil?: Dil;
   /** Bağlı akademik çalışmanın künyesi (lib/ai/calisma-baglami.ts). */
   calisma?: string;
   /** Kullanıcının yapıştırdığı ham çıktı (SPSS, R, Jamovi…). */
@@ -72,6 +75,7 @@ export function analizIstemi(girdi: YorumGirdisi, butce = BAGLAM_BUTCESI) {
   const baglam = baglamKur(parcalar, butce);
   const mesajlar: Mesaj[] = [
     { rol: "sistem", metin: SISTEM_ISTEMI },
+    ...cikisDiliMesaji(girdi.dil),
     { rol: "kullanici", metin: baglam.metin },
   ];
   // Doğrulama gönderilen metne göre yapılır: modelin görmediği bir sayıyı

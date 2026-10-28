@@ -29,8 +29,9 @@
 */
 
 import { stilTanimi } from "@/lib/atif/stiller";
+import type { Dil } from "@/lib/dil";
 import { baglamKur, type BaglamParca } from "./baglam";
-import { YANIT_BICIMI } from "./bulgu";
+import { YANIT_BICIMI, cikisDiliMesaji } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 
 export type KaynakDurumu = "verified" | "possible_match" | "not_found" | "insufficient_data";
@@ -46,6 +47,8 @@ export type KaynakSatiri = {
 };
 
 export type KaynakcaGirdisi = {
+  /** Kullanıcının arayüz dili: bulgular bu dilde yazılır (lib/ai/bulgu.ts, cikisDiliMesaji). */
+  dil?: Dil;
   /** Bağlı akademik çalışmanın künyesi (lib/ai/calisma-baglami.ts). */
   calisma?: string;
   kaynaklar: KaynakSatiri[];
@@ -158,6 +161,7 @@ export function kaynakcaIstemi(girdi: KaynakcaGirdisi, butce = BAGLAM_BUTCESI) {
   const baglam = baglamKur(parcalar, butce);
   const mesajlar: Mesaj[] = [
     { rol: "sistem", metin: sistemIstemi(girdi.atifStili) },
+    ...cikisDiliMesaji(girdi.dil),
     { rol: "kullanici", metin: baglam.metin },
   ];
   return { mesajlar, kaynak: baglam.metin, kirpilanlar: baglam.kirpilanlar };

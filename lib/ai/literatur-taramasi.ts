@@ -22,7 +22,8 @@
 */
 
 import { baglamKur, type BaglamParca } from "./baglam";
-import { bulgulariCozumle, jsonOku, kunyeIziMetinde, type Bulgu } from "./bulgu";
+import type { Dil } from "@/lib/dil";
+import { bulgulariCozumle, jsonOku, kunyeIziMetinde, type Bulgu, cikisDiliMesaji } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 
 export type KayitOzeti = {
@@ -34,6 +35,8 @@ export type KayitOzeti = {
 };
 
 export type LiteraturGirdisi = {
+  /** Kullanıcının arayüz dili: bulgular bu dilde yazılır (lib/ai/bulgu.ts, cikisDiliMesaji). */
+  dil?: Dil;
   /** Bağlı akademik çalışmanın künyesi (lib/ai/calisma-baglami.ts). */
   calisma?: string;
   arastirmaSorusu: string;
@@ -91,6 +94,7 @@ export function literaturIstemi(girdi: LiteraturGirdisi, butce = BAGLAM_BUTCESI)
   const baglam = baglamKur(parcalar, butce);
   const mesajlar: Mesaj[] = [
     { rol: "sistem", metin: SISTEM_ISTEMI },
+    ...cikisDiliMesaji(girdi.dil),
     { rol: "kullanici", metin: baglam.metin },
   ];
   return { mesajlar, kaynak: baglam.metin, kirpilanlar: baglam.kirpilanlar };

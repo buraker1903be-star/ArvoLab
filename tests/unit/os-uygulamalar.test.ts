@@ -181,3 +181,9 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
     assert.equal(etkinUygulama(uygulamalar, "/dashboard/editor/abc/makale")?.key, "tez");
   });
 });
+
+test("doçentlik yalnızca Türkçe arayüzde (28.10.2026)", () => {
+  // ÜAK puanı Türk akademik sistemine ait; İngilizce arayüzde karşılığı yok.
+  assert.ok(gorunenUygulamalar(labUygulamalari(), "expert", "tr").some((u) => u.key === "docentlik"));
+  assert.equal(gorunenUygulamalar(labUygulamalari(), "expert", "en").some((u) => u.key === "docentlik"), false);
+});

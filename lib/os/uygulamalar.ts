@@ -19,7 +19,7 @@
 */
 
 import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
-import { ceviriciKur, type Cevirici } from "@/lib/dil";
+import { ceviriciKur, type Cevirici, type Dil } from "@/lib/dil";
 import { STAFF_ROLES } from "@/lib/project-labels";
 
 export type OsIkon =
@@ -157,9 +157,19 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
   ];
 }
 
-/** Rolü olmayan (ya da yetkisi yetmeyen) kullanıcıdan gizlenen uygulamalar düşer. */
-export function gorunenUygulamalar(uygulamalar: OsUygulama[], rol: string | undefined): OsUygulama[] {
-  return uygulamalar.filter((u) => !u.roller || (!!rol && u.roller.includes(rol)));
+/*
+  YALNIZCA TÜRKİYE'DE ANLAMLI UYGULAMALAR (28.10.2026). Doçentlik puanı
+  ÜAK'ın Türk akademik sistemine ait; İngilizce arayüzdeki kullanıcıya
+  göstermek, başka ülkedeki bir akademisyene kendi sisteminde karşılığı
+  olmayan bir araç sunmak olurdu.
+*/
+const YALNIZ_TURKCE = new Set(["docentlik"]);
+
+/** Rolü olmayan (ya da yetkisi yetmeyen) kullanıcıdan ve başka dildeki kullanıcıdan gizlenen uygulamalar düşer. */
+export function gorunenUygulamalar(uygulamalar: OsUygulama[], rol: string | undefined, dil: Dil = "tr"): OsUygulama[] {
+  return uygulamalar.filter(
+    (u) => (!u.roller || (!!rol && u.roller.includes(rol))) && (dil === "tr" || !YALNIZ_TURKCE.has(u.key)),
+  );
 }
 
 /**
