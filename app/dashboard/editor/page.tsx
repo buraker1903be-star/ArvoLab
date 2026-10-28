@@ -152,6 +152,10 @@ export default async function ProjectsPage({
     visible.map((project) => project.id),
     typeof params.sec === "string" ? params.sec : null,
     (id) => stats.get(id)?.updatedAt,
+    (id) => {
+      const durum = visible.find((project) => project.id === id)?.status;
+      return durum !== "delivered" && durum !== "archived";
+    },
   );
   const secili = seciliId ? visible.find((project) => project.id === seciliId) ?? null : null;
 
@@ -170,6 +174,40 @@ export default async function ProjectsPage({
     const assigneeId = String(formData.get("assigneeId") ?? "");
     return assignProject(projectId, assigneeId);
   }
+
+  const bitti = (status: string) => status === "delivered" || status === "archived";
+  const ogrenciAktif = visible.filter((project) => !bitti(project.status));
+  const ogrenciBiten = visible.filter((project) => bitti(project.status));
+  const ogrenciSatiri = (project: (typeof visible)[number]) => {
+    const yazim = stats.get(project.id);
+    const due = dueInfo(project.due_date, project.status);
+    return (
+      <li key={project.id}>
+        <Link
+          href={secimAdresi(params, project.id)}
+          className="gb-satir"
+          aria-current={project.id === seciliId ? "true" : undefined}
+          scroll={false}
+        >
+          <span className="gb-satir-govde">
+            <b>{project.title}</b>
+            <small>
+              {[
+                projectTypeLabel(project.project_type),
+                yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime · ${editedAgo(yazim.updatedAt)}` : "henüz yazılmadı",
+                due?.label,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </small>
+          </span>
+          <span className="status-pill" data-tone={statusTone(project.status)}>
+            {statusLabel(project.status)}
+          </span>
+        </Link>
+      </li>
+    );
+  };
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">
@@ -263,38 +301,20 @@ export default async function ProjectsPage({
                   <p>{visible.length === projects.length ? `${projects.length} çalışma` : `${visible.length}/${projects.length} çalışma`}</p>
                 </div>
               </header>
-              <ul className="gb-liste calisma-secim">
-                {visible.map((project) => {
-                  const yazim = stats.get(project.id);
-                  const due = dueInfo(project.due_date, project.status);
-                  return (
-                    <li key={project.id}>
-                      <Link
-                        href={secimAdresi(params, project.id)}
-                        className="gb-satir"
-                        aria-current={project.id === seciliId ? "true" : undefined}
-                        scroll={false}
-                      >
-                        <span className="gb-satir-govde">
-                          <b>{project.title}</b>
-                          <small>
-                            {[
-                              projectTypeLabel(project.project_type),
-                              yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime · ${editedAgo(yazim.updatedAt)}` : "henüz yazılmadı",
-                              due?.label,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </small>
-                        </span>
-                        <span className="status-pill" data-tone={statusTone(project.status)}>
-                          {statusLabel(project.status)}
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+              {/*
+                TAMAMLANANLAR AYRI (28.10.2026). Teslim edilmiş ve arşivlenmiş
+                çalışmalar aktiflerin arasında, son düzenlenme sırasıyla
+                karışıyordu; üç dönemlik öğrencinin listesinde güncel tez
+                eski ödevlerin arasında kayboluyordu. Aktifler üstte;
+                tamamlananlar kapalı bir grupta, seçiliyse açık.
+              */}
+              <ul className="gb-liste calisma-secim">{ogrenciAktif.map(ogrenciSatiri)}</ul>
+              {ogrenciBiten.length ? (
+                <details className="calisma-tamamlanan" open={ogrenciBiten.some((p) => p.id === seciliId) || !ogrenciAktif.length}>
+                  <summary>Tamamlananlar ve arşiv · {ogrenciBiten.length}</summary>
+                  <ul className="gb-liste calisma-secim">{ogrenciBiten.map(ogrenciSatiri)}</ul>
+                </details>
+              ) : null}
             </article>
             {secili ? (
               <CalismaDurumKarti
@@ -306,6 +326,7 @@ export default async function ProjectsPage({
                 duzenleyebilir={profile?.id === secili.owner_id || profile?.id === secili.assignee_id}
                 silebilir={profile?.id === secili.owner_id || canDeleteAnyProject}
                 kilavuzAc={params.kilavuz === "1" && params.sec === secili.id}
+                takvimAc={params.takvim === "1" && params.sec === secili.id}
               />
             ) : null}
           </section>

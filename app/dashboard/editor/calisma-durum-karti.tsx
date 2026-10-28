@@ -21,6 +21,11 @@ import { trTarih } from "@/lib/tr-time";
 import { ListeSatiri } from "../_components/genel-bakis";
 import DeleteProjectButton from "./delete-project-button";
 import TeslimPaketi from "../_components/teslim-paketi";
+import TeslimTarihiFormu from "../_components/teslim-tarihi-formu";
+import TezTakvimiPenceresi from "./tez-takvimi-penceresi";
+import { takvimiGetir } from "@/app/actions/tez-takvimi";
+import { kalanMetni, siradakiTas } from "@/lib/tez-takvimi";
+import { trGunAnahtari } from "@/lib/tr-time";
 
 /*
   ÇALIŞMALARIM — SAĞ KART: seçili çalışmanın durumu ve eksikleri.
@@ -56,6 +61,7 @@ export default async function CalismaDurumKarti({
   duzenleyebilir,
   silebilir,
   kilavuzAc,
+  takvimAc = false,
 }: {
   projectId: string;
   kelime: number | null;
@@ -65,12 +71,17 @@ export default async function CalismaDurumKarti({
   silebilir: boolean;
   /** Yeni tezde kılavuz eşleşmediyse pencere açık gelir (createProject). */
   kilavuzAc: boolean;
+  /** Ana sayfadaki "Takvim" bağlantısından gelindiyse takvim penceresi açık gelir. */
+  takvimAc?: boolean;
 }) {
-  const [ozet, yapilacaklar, analizler] = await Promise.all([
+  const [ozet, yapilacaklar, analizler, takvim] = await Promise.all([
     calismaOzeti(projectId),
     acikYapilacaklar(projectId),
     calismaAnalizleri(projectId),
+    takvimiGetir(projectId),
   ]);
+  const bugun = trGunAnahtari();
+  const siradakiKilometre = takvim ? siradakiTas(takvim, bugun) : null;
   /* Teze eklenmeyi bekleyen analizler de "Başka neler var"da: sıraya koyan öğrenci unutmasın. */
   const siradakiAnalizler = analizler.filter((a) => a.teze_eklenecek && !a.teze_eklendi);
   const merkez = `/dashboard/editor/${projectId}`;
@@ -168,10 +179,8 @@ export default async function CalismaDurumKarti({
             <>
               <dd>—</dd>
               {duzenleyebilir && !calisma.due_date ? (
-                /* Tarih yoksa kart ne kadar vakit kaldığını söyleyemiyor; eklemek tek tık. */
-                <Link href={`${merkez}/edit`} className="link-accent">
-                  Teslim tarihi ekle
-                </Link>
+                /* Tarih yoksa kart ne kadar vakit kaldığını söyleyemiyor; burada seçilip kaydediliyor (28.10.2026). */
+                <TeslimTarihiFormu projectId={calisma.id} bugun={bugun} />
               ) : (
                 <span>{calisma.due_date ? trTarih(calisma.due_date) : "Tarih belirtilmedi"}</span>
               )}
@@ -213,6 +222,17 @@ export default async function CalismaDurumKarti({
           </Link>
         )}
       </div>
+
+      {/* Takvimin sıradaki taşı (28.10.2026): plan varsa "şimdi"nin hemen altında. */}
+      {siradakiKilometre ? (
+        <p className="takvim-sirada" data-durum={siradakiKilometre.durum}>
+          <span>Sıradaki kilometre taşı</span>
+          <b>{siradakiKilometre.tas.baslik}</b>
+          <small>
+            {trTarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun)}
+          </small>
+        </p>
+      ) : null}
 
       <h3 className="calisma-durum-alt">
         {eksikler.length + yapilacaklar.length + siradakiAnalizler.length
@@ -298,6 +318,17 @@ export default async function CalismaDurumKarti({
             acikBasla={kilavuzAc && !uygulanan}
           />
         )}
+        {takvim ? (
+          <TezTakvimiPenceresi
+            projectId={calisma.id}
+            projeTuru={calisma.project_type}
+            taslar={takvim}
+            teslimTarihi={calisma.due_date ?? null}
+            bugun={bugun}
+            duzenleyebilir={duzenleyebilir}
+            acikBasla={takvimAc}
+          />
+        ) : null}
         {/* Çalışmanın birimleri iş akışı sırasıyla: literatür → kaynakça → kanıt → analiz. */}
         <LiteraturPenceresi projectId={calisma.id} projeAdi={calisma.title} />
         <KaynakcaPenceresi calisma={calisma} sonDenetim={ozet.kaynakca} />

@@ -31,6 +31,16 @@ test("seçim: adresteki geçerliyse o, değilse en son düzenlenen, o da yoksa i
   assert.equal(seciliCalismaId([], "a", son), null);
 });
 
+test("varsayılan seçimde aktif çalışma önce; açıkça istenen bitmiş çalışma yine açılır", () => {
+  const zaman: Record<string, string> = { eski: "2026-10-27T10:00:00Z", yeni: "2026-10-20T10:00:00Z" };
+  const aktif = (id: string) => id !== "eski";
+  assert.equal(seciliCalismaId(["eski", "yeni"], null, (id) => zaman[id], aktif), "yeni");
+  assert.equal(seciliCalismaId(["eski", "yeni"], "eski", (id) => zaman[id], aktif), "eski");
+  assert.equal(seciliCalismaId(["eski"], null, (id) => zaman[id], aktif), "eski", "aktif yoksa bitmiş olan");
+  assert.equal(secimAdresi({ sec: "a", takvim: "1" }, "b"), "/dashboard/editor?sec=b");
+  assert.equal(calismaAdresi("x", { takvim: true }), "/dashboard/editor?sec=x&takvim=1");
+});
+
 test("seçim adresi filtreleri korur, eski seçimi değiştirir", () => {
   assert.equal(secimAdresi({ q: "tez", durum: "aktif", sec: "eski" }, "yeni"), "/dashboard/editor?q=tez&durum=aktif&sec=yeni");
   assert.equal(secimAdresi({}, "a"), "/dashboard/editor?sec=a");

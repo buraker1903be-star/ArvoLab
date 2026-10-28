@@ -31,7 +31,11 @@ import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { writingPace } from "@/lib/writing-pace";
 import { makaleBolumleri } from "@/lib/makale/bolumler";
 import { headingMatchesSection } from "@/lib/section-match";
-import { trTarih } from "@/lib/tr-time";
+import { trGunAnahtari, trTarih } from "@/lib/tr-time";
+import { takvimiGetir } from "@/app/actions/tez-takvimi";
+import { kalanMetni, siradakiTas, takvimOzeti } from "@/lib/tez-takvimi";
+import { calismaAdresi } from "@/lib/calisma-karti";
+import TeslimTarihiFormu from "./_components/teslim-tarihi-formu";
 import DanismanaGonder from "./_components/danismana-gonder";
 import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
 
@@ -341,6 +345,14 @@ export default async function DashboardPage() {
       ])
     : [{ data: null, error: null }, { count: 0 }, { count: 0 }];
   if (ritimYaniti.error) console.error("[ana sayfa] yazım ritmi okunamadı:", ritimYaniti.error.message);
+  /*
+    TEZ TAKVİMİ (28.10.2026): sıradaki kilometre taşı tez kartında.
+    Okunamazsa satır çizilmiyor; "plan yok" demek yanlış olurdu.
+  */
+  const bugunGun = trGunAnahtari();
+  const takvim = ogrenciGorunumu ? await takvimiGetir(resume!.id) : null;
+  const siradakiKilometre = takvim ? siradakiTas(takvim, bugunGun) : null;
+  const takvimSayilari = takvim ? takvimOzeti(takvim, bugunGun) : null;
 
   /*
     BİREYSEL ABONENİN DANIŞMANI SİSTEMDE DEĞİL. Danışmanın ArvoLab'da yorum
@@ -652,9 +664,8 @@ export default async function DashboardPage() {
                   {resumeDue ? (resumeDue.days >= 0 ? resumeDue.days : -resumeDue.days) : "—"}
                   {resumeDue ? <small>{resumeDue.days >= 0 ? "gün" : "gün gecikti"}</small> : null}
                 </dd>
-                <span>
-                  {resume.due_date ? trTarih(resume.due_date) : "Teslim tarihi girilmedi — çalışma ayarlarından ekleyin"}
-                </span>
+                {/* Tarih yoksa burada seçilip kaydediliyor (28.10.2026); eskiden ayarlar sayfasına gönderiyordu. */}
+                {resume.due_date ? <span>{trTarih(resume.due_date)}</span> : <TeslimTarihiFormu projectId={resume.id} bugun={bugunGun} />}
               </div>
               <div className="tez-olcu">
                 <dt>Yazılan</dt>
@@ -694,6 +705,30 @@ export default async function DashboardPage() {
               <p className="tez-tempo tone-text" data-tone={tempo.tone}>
                 {tempo.detail}
               </p>
+            ) : null}
+            {takvim ? (
+              siradakiKilometre ? (
+                <p className="takvim-sirada" data-durum={siradakiKilometre.durum}>
+                  <span>Sıradaki kilometre taşı</span>
+                  <b>{siradakiKilometre.tas.baslik}</b>
+                  <small>
+                    {trTarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun)}
+                    {takvimSayilari ? ` · takvim ${takvimSayilari.tamam}/${takvimSayilari.toplam}` : ""}
+                  </small>
+                  <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
+                    Takvim
+                  </Link>
+                </p>
+              ) : resume.due_date && !takvim.length ? (
+                <p className="takvim-sirada">
+                  <span>Tez takvimi</span>
+                  <b>Teslime kadar bölüm bölüm hedef tarih koyun</b>
+                  <small>Teslim tarihinize göre taslak takvim önerilir; her tarihi değiştirebilirsiniz.</small>
+                  <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
+                    Takvim kur
+                  </Link>
+                </p>
+              ) : null
             ) : null}
             {/*
               Sıradaki TEK iş, tez kartının içinde: ayrı bir şerit olarak

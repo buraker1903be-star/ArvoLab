@@ -68,8 +68,18 @@ export function seciliCalismaId(
   idler: string[],
   istenen: string | null | undefined,
   sonDuzenleme: (id: string) => string | null | undefined,
+  /*
+    Varsayılan seçimde AKTİF çalışma önce (28.10.2026). Eskiden en son
+    düzenlenen seçiliyordu; teslimden sonra son okuma için açılan eski
+    tez, yeni başlanan çalışmanın önüne geçip sayfa onunla açılıyordu.
+  */
+  aktifMi?: (id: string) => boolean,
 ): string | null {
   if (istenen && idler.includes(istenen)) return istenen;
+  if (aktifMi) {
+    const aktifler = idler.filter(aktifMi);
+    if (aktifler.length) return seciliCalismaId(aktifler, null, sonDuzenleme);
+  }
   let enYeni: { id: string; zaman: string } | null = null;
   for (const id of idler) {
     const zaman = sonDuzenleme(id);
@@ -84,17 +94,17 @@ export function seciliCalismaId(
   (personel orada kalıyor). Personelle ORTAK sayfalardaki bağlantılar bu
   yüzden eski adreste kaldı; karar o sayfada veriliyor.
 */
-export function calismaAdresi(id: string, secenek: { kilavuz?: boolean } = {}): string {
-  return `/dashboard/editor?sec=${encodeURIComponent(id)}${secenek.kilavuz ? "&kilavuz=1" : ""}`;
+export function calismaAdresi(id: string, secenek: { kilavuz?: boolean; takvim?: boolean } = {}): string {
+  return `/dashboard/editor?sec=${encodeURIComponent(id)}${secenek.kilavuz ? "&kilavuz=1" : ""}${secenek.takvim ? "&takvim=1" : ""}`;
 }
 
 /** Satırın adresi: filtreler (q, durum, sirala…) korunur, yalnızca seçim değişir. */
 export function secimAdresi(params: Record<string, string | string[] | undefined>, id: string): string {
   const arama = new URLSearchParams();
   for (const [anahtar, deger] of Object.entries(params)) {
-    /* kilavuz=1 yalnızca yeni açılan çalışmanın penceresini açar;
+    /* kilavuz=1 ve takvim=1 yalnızca o çalışmanın penceresini açar;
        başka satıra geçince taşınırsa her çalışmada pencere açılırdı. */
-    if (anahtar === "sec" || anahtar === "kilavuz" || deger === undefined) continue;
+    if (anahtar === "sec" || anahtar === "kilavuz" || anahtar === "takvim" || deger === undefined) continue;
     for (const tek of Array.isArray(deger) ? deger : [deger]) arama.append(anahtar, tek);
   }
   arama.set("sec", id);

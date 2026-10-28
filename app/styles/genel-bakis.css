@@ -716,3 +716,33 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .kaynakca-onizleme { max-height: 340px; overflow-y: auto; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); font-size: var(--fs-sm); }
 .kaynakca-onizleme p { margin: 0 0 8px; padding-left: 2em; text-indent: -2em; }
 .kaynak-disa-aktar > label { display: grid; gap: 4px; max-width: 360px; font-size: var(--fs-sm); }
+
+/* Tez takvimi (28.10.2026): sıradaki taş satırı, takvim penceresi, yerinde teslim tarihi */
+.teslim-tarihi-formu { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.teslim-tarihi-formu input[type="date"] { min-width: 0; padding: 4px 8px; font-size: var(--fs-sm); }
+.takvim-sirada { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 2px 10px; margin: 0; padding: 8px 12px; border-left: 3px solid var(--line-soft); border-radius: var(--radius-sm); background: var(--surface-2); font-size: var(--fs-sm); }
+.takvim-sirada > span { color: var(--muted); font-size: var(--fs-micro); grid-row: 1; }
+.takvim-sirada > b { grid-row: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.takvim-sirada > small { grid-column: 2; grid-row: 2; color: var(--ink-soft); }
+.takvim-sirada > a { grid-column: 3; grid-row: 1 / span 2; align-self: center; }
+.takvim-sirada[data-durum="gecikti"] { border-left-color: var(--danger); }
+.takvim-sirada[data-durum="yaklasiyor"] { border-left-color: var(--warning); }
+.takvim-duzenleyici { display: grid; gap: 14px; }
+.takvim-teslim { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: var(--fs-sm); }
+.takvim-taslak { display: grid; gap: 8px; padding: 10px 12px; border: 1px dashed var(--line-soft); border-radius: var(--radius-sm); }
+.takvim-taslak-liste { display: grid; gap: 4px; margin: 0; padding-left: 20px; font-size: var(--fs-sm); }
+.takvim-taslak-liste li { display: flex; justify-content: space-between; gap: 12px; }
+.takvim-taslak-liste small { color: var(--muted); white-space: nowrap; }
+.takvim-satir { display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
+.takvim-satir .gb-satir-govde { flex: 1 1 auto; min-width: 0; }
+.takvim-satir[data-durum="tamam"] .gb-satir-govde b { color: var(--muted); text-decoration: line-through; }
+.takvim-onay { display: inline-grid; flex: none; place-items: center; width: 22px; height: 22px; padding: 0; border: 1.5px solid var(--line-soft); border-radius: 50%; background: transparent; color: var(--success); cursor: pointer; }
+.takvim-onay[aria-pressed="true"] { border-color: var(--success); background: var(--success-soft); }
+.takvim-onay:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+.takvim-tarih { width: auto; padding: 3px 6px; font-size: var(--fs-micro); }
+.takvim-ekle { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; }
+@media (max-width: 560px) { .takvim-ekle { grid-template-columns: minmax(0, 1fr); } .takvim-satir { flex-wrap: wrap; } }
+.takvim-dugme-geciken { border-color: var(--danger); color: var(--danger); }
+.calisma-tamamlanan { margin-top: 8px; }
+.calisma-tamamlanan > summary { padding: 6px 8px; color: var(--muted); font-size: var(--fs-sm); cursor: pointer; }
+.takvim-taslak > button { justify-self: start; }

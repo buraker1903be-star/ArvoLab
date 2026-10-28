@@ -14,6 +14,10 @@ import {
   UserRound,
 } from "lucide-react";
 import ActionForm from "../action-form";
+import TezTakvimiPenceresi from "./tez-takvimi-penceresi";
+import { takvimiGetir } from "@/app/actions/tez-takvimi";
+import { kalanMetni, siradakiTas, takvimOzeti } from "@/lib/tez-takvimi";
+import { trGunAnahtari } from "@/lib/tr-time";
 import DeleteProjectButton from "./delete-project-button";
 import { createClient } from "@/lib/supabase/server";
 import { projectTypeLabel, ROLE_LABELS, statusLabel, type UserRole } from "@/lib/project-labels";
@@ -90,6 +94,11 @@ export default async function PersonelCalismaKarti({
 
   /* Son kılavuz kontrolü: öğrenci kontrolü çalıştırdı mı, ne buldu. Okunamazsa satır çizilmiyor. */
   const supabase = await createClient();
+  /* Öğrencinin tez takvimi (28.10.2026): danışman ve kontrolör planı ve geciken taşı görür; düzenleme öğrencide. */
+  const takvim = await takvimiGetir(calisma.id);
+  const bugun = trGunAnahtari();
+  const siradakiKilometre = takvim ? siradakiTas(takvim, bugun) : null;
+  const takvimSayilari = takvim ? takvimOzeti(takvim, bugun) : null;
   const { data: sonKontrol } = await supabase
     .from("yazim_kontrolleri")
     .select("created_at, hata, uyari, eksik_bolum")
@@ -123,6 +132,16 @@ export default async function PersonelCalismaKarti({
             <PenLine size={15} aria-hidden="true" />
             Metni aç
           </Link>
+          {takvim && takvim.length ? (
+            <TezTakvimiPenceresi
+              projectId={calisma.id}
+              projeTuru={calisma.project_type}
+              taslar={takvim}
+              teslimTarihi={calisma.due_date ?? null}
+              bugun={bugun}
+              duzenleyebilir={false}
+            />
+          ) : null}
           <details className="kart-menu">
             <summary aria-label={`${calisma.title}: diğer işlemler`}>
               <MoreHorizontal size={18} aria-hidden="true" />
@@ -176,6 +195,17 @@ export default async function PersonelCalismaKarti({
           )}
         </div>
       </dl>
+
+      {siradakiKilometre ? (
+        <p className="takvim-sirada" data-durum={siradakiKilometre.durum}>
+          <span>Öğrencinin sıradaki taşı</span>
+          <b>{siradakiKilometre.tas.baslik}</b>
+          <small>
+            {trTarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun)}
+            {takvimSayilari ? ` · takvim ${takvimSayilari.tamam}/${takvimSayilari.toplam}${takvimSayilari.geciken ? `, ${takvimSayilari.geciken} geciken` : ""}` : ""}
+          </small>
+        </p>
+      ) : null}
 
       {/* Dikkat isteyenler: yalnızca VAR olanlar listeleniyor; boşsa tek satır "temiz". */}
       <h3 className="calisma-durum-alt">Dikkat isteyenler</h3>
