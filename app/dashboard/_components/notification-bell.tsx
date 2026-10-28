@@ -1,5 +1,7 @@
 "use client";
 
+import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
+import { YEREL, type Dil } from "@/lib/dil";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, BookOpenCheck, CheckCheck, Eye, MessageSquare, ShieldCheck, UserPlus, Workflow } from "lucide-react";
@@ -17,21 +19,23 @@ const KIND_ICON: Record<NotificationKind, typeof Bell> = {
   share_view: Eye,
 };
 
-const relativeTime = new Intl.RelativeTimeFormat("tr", { numeric: "auto" });
-function formatAgo(value: string) {
+function formatAgo(value: string, dil: Dil) {
+  const relativeTime = new Intl.RelativeTimeFormat(dil, { numeric: "auto" });
   const minutes = Math.round((new Date(value).getTime() - Date.now()) / 60_000);
-  if (minutes > -1) return "az önce";
+  if (minutes > -1) return dil === "tr" ? "az önce" : "just now";
   if (minutes > -60) return relativeTime.format(minutes, "minute");
   const hours = Math.round(minutes / 60);
   if (hours > -24) return relativeTime.format(hours, "hour");
   const days = Math.round(hours / 24);
   if (days > -7) return relativeTime.format(days, "day");
-  return new Date(value).toLocaleDateString("tr-TR", { dateStyle: "medium" });
+  return new Date(value).toLocaleDateString(YEREL[dil], { dateStyle: "medium" });
 }
 
 // Üst çubuktaki zil: yorum, atama, durum, onay ve kılavuz güncellemeleri.
 // Sekme görünürken dakikada bir yoklanır; sekmeye dönüldüğünde hemen yenilenir.
 export default function NotificationBell() {
+  const dil = useDil();
+  const t = useCeviri();
   const [items, setItems] = useState<PanelNotification[] | null>(null);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -74,7 +78,10 @@ export default function NotificationBell() {
     });
   };
 
-  const label = unread > 0 ? `Bildirimler (${unread} okunmamış)` : "Bildirimler";
+  const label =
+    unread > 0
+      ? t({ tr: `Bildirimler (${unread} okunmamış)`, en: `Notifications (${unread} unread)` })
+      : t({ tr: "Bildirimler", en: "Notifications" });
 
   return (
     <>
@@ -92,20 +99,25 @@ export default function NotificationBell() {
         {unread > 0 ? <span className="notification-badge" aria-hidden="true">{unread > 99 ? "99+" : unread}</span> : null}
       </button>
 
-      <Dialog open={open} onClose={close} kicker="Bildirimler" title="Son gelişmeler">
+      <Dialog open={open} onClose={close} kicker={t({ tr: "Bildirimler", en: "Notifications" })} title={t({ tr: "Son gelişmeler", en: "Latest updates" })}>
         <div className="stack">
           {unread > 0 ? (
             <button type="button" className="projects-filter-button notification-mark-all" onClick={() => markRead()}>
               <CheckCheck size={14} aria-hidden="true" />
-              Tümünü okundu say
+              {t({ tr: "Tümünü okundu say", en: "Mark all as read" })}
             </button>
           ) : null}
           {items === null ? (
-            <p className="muted text-sm" aria-busy="true">Bildirimler yükleniyor…</p>
+            <p className="muted text-sm" aria-busy="true">{t({ tr: "Bildirimler yükleniyor…", en: "Loading notifications…" })}</p>
           ) : items.length === 0 ? (
             <div className="empty-state">
               <Bell size={22} aria-hidden="true" />
-              <p>Henüz bildirim yok. Yorumlar, uzman atamaları, durum değişiklikleri ve kılavuz güncellemeleri burada görünür.</p>
+              <p>
+                {t({
+                  tr: "Henüz bildirim yok. Yorumlar, uzman atamaları, durum değişiklikleri ve kılavuz güncellemeleri burada görünür.",
+                  en: "No notifications yet. Comments, expert assignments, status changes and guideline updates appear here.",
+                })}
+              </p>
             </div>
           ) : (
             <ul className="picker-list notification-list">
@@ -119,9 +131,9 @@ export default function NotificationBell() {
                     <span className="picker-main">
                       <strong>{item.title}</strong>
                       {item.body ? <span className="notification-body">{item.body}</span> : null}
-                      <small>{formatAgo(item.createdAt)}</small>
+                      <small>{formatAgo(item.createdAt, dil)}</small>
                     </span>
-                    {item.readAt ? null : <span className="notification-dot" aria-label="Okunmadı" />}
+                    {item.readAt ? null : <span className="notification-dot" aria-label={t({ tr: "Okunmadı", en: "Unread" })} />}
                   </>
                 );
                 return (

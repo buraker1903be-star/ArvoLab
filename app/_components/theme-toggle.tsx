@@ -1,5 +1,6 @@
 "use client";
 
+import { useCeviri } from "./dil-saglayici";
 import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 
@@ -25,9 +26,13 @@ export default function ThemeToggle({
   variant?: "icon" | "row";
   className?: string;
 }) {
+  const t = useCeviri();
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const next: Theme = theme === "dark" ? "light" : "dark";
-  const label = theme === "dark" ? "Aydınlık moda geç" : "Karanlık moda geç";
+  const label =
+    theme === "dark"
+      ? t({ tr: "Aydınlık moda geç", en: "Switch to light mode" })
+      : t({ tr: "Karanlık moda geç", en: "Switch to dark mode" });
   const Icon = theme === "dark" ? Sun : Moon;
 
   function toggle() {
@@ -45,7 +50,7 @@ export default function ThemeToggle({
         <span className="nav-icon" aria-hidden="true">
           <Icon size={17} strokeWidth={1.9} />
         </span>
-        <span>{theme === "dark" ? "Aydınlık mod" : "Karanlık mod"}</span>
+        <span>{theme === "dark" ? t({ tr: "Aydınlık mod", en: "Light mode" }) : t({ tr: "Karanlık mod", en: "Dark mode" })}</span>
       </button>
     );
   }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ceviri } from "@/lib/dil-sunucu";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Save } from "lucide-react";
 import { getProjectForEdit, updateProject } from "@/app/actions/projects";
@@ -18,6 +19,7 @@ import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import AcademicUnitFields from "../../new/academic-unit-fields";
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await ceviri();
   const { id } = await params;
   const [project, ctx, { satirlar: universities }] = await Promise.all([getProjectForEdit(id), getAuthContext(), getUniversities()]);
   /* Okunamadı ile bulunamadı AYRI: çalışma merkezindeki (../page.tsx) ile
@@ -63,7 +65,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
     <main className="dashboard-page">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">{projectTypeLabel(project.project_type)}</span>
+          <span className="dashboard-kicker">{t(projectTypeLabel(project.project_type))}</span>
           <h1>Çalışmayı düzenle</h1>
           <p>Çalışmanın planlama bilgilerini, durumunu ve ilerlemesini güncelleyin.</p>
         </div>
@@ -145,7 +147,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
             <h2>Durum ve planlama</h2>
             <p>
               {lockedByApproval
-                ? `Bu çalışma "${statusLabel(project.status)}" durumunda; durumu yalnızca Kontrolör ve üzeri roller değiştirebilir.`
+                ? `Bu çalışma "${t(statusLabel(project.status))}" durumunda; durumu yalnızca Kontrolör ve üzeri roller değiştirebilir.`
                 : "Durum ve ilerleme, ana sayfadaki özet istatistiklere yansır."}
             </p>
           </div>
@@ -156,7 +158,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
               <select name="status" defaultValue={project.status} disabled={lockedByApproval}>
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
-                    {statusLabel(status)}
+                    {t(statusLabel(status))}
                   </option>
                 ))}
               </select>

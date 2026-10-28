@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ceviri } from "@/lib/dil-sunucu";
 import { AlertTriangle, FileText, Search, MessageSquare, Plus, ShieldCheck } from "lucide-react";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
@@ -35,6 +36,7 @@ export default async function ProjectsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const t = await ceviri();
   const [{ satirlar: projects, okunamadi }, profile, params] = await Promise.all([
     getProjects(),
     getCurrentProfile(),
@@ -195,7 +197,7 @@ export default async function ProjectsPage({
             <b>{project.title}</b>
             <small>
               {[
-                projectTypeLabel(project.project_type),
+                t(projectTypeLabel(project.project_type)),
                 yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime · ${editedAgo(yazim.updatedAt)}` : "henüz yazılmadı",
                 due?.label,
               ]
@@ -204,7 +206,7 @@ export default async function ProjectsPage({
             </small>
           </span>
           <span className="status-pill" data-tone={statusTone(project.status)}>
-            {statusLabel(project.status)}
+            {t(statusLabel(project.status))}
           </span>
         </Link>
       </li>
@@ -280,7 +282,7 @@ export default async function ProjectsPage({
         <ProjectFilters
           key={JSON.stringify(filters)}
           filters={filters}
-          statuses={PROJECT_STATUSES.map((status) => ({ value: status, label: statusLabel(status) }))}
+          statuses={PROJECT_STATUSES.map((status) => ({ value: status, label: t(statusLabel(status)) }))}
           showAssignee={canApprove}
           total={projects.length}
           shown={visible.length}
@@ -367,7 +369,7 @@ export default async function ProjectsPage({
                           <small>
                             {[
                               project.sahip_adi,
-                              projectTypeLabel(project.project_type),
+                              t(projectTypeLabel(project.project_type)),
                               yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime · ${editedAgo(yazim.updatedAt)}` : "henüz yazılmadı",
                               due?.label,
                             ]
@@ -394,7 +396,7 @@ export default async function ProjectsPage({
                             </span>
                           ) : null}
                           <span className="status-pill" data-tone={statusTone(project.status)}>
-                            {statusLabel(project.status)}
+                            {t(statusLabel(project.status))}
                           </span>
                         </span>
                       </Link>

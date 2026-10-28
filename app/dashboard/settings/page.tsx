@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ceviri } from "@/lib/dil-sunucu";
 import { redirect } from "next/navigation";
 import { Cpu, Download, Keyboard, KeyRound, LogOut, Save, Sparkles, Trash2 } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
@@ -24,6 +25,7 @@ export const metadata = { title: "Ayarlar" };
 const sayi = (deger: number) => new Intl.NumberFormat("tr-TR").format(deger);
 
 export default async function SettingsPage() {
+  const t = await ceviri();
   const ctx = await getAuthContext();
   if (!ctx) redirect("/");
 
@@ -135,7 +137,7 @@ export default async function SettingsPage() {
             </div>
             <div>
               <dt>Rol</dt>
-              <dd>{ctx.role ? ROLE_LABELS[ctx.role] : "—"}</dd>
+              <dd>{ctx.role ? t(ROLE_LABELS[ctx.role]) : "—"}</dd>
             </div>
             <div>
               <dt>Kurum</dt>

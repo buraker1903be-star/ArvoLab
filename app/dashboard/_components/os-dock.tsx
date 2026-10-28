@@ -1,5 +1,6 @@
 "use client";
 
+import { useCeviri } from "@/app/_components/dil-saglayici";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -35,6 +36,7 @@ import { OsSimge } from "./os-simge";
 */
 
 export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
+  const t = useCeviri();
   const yol = usePathname();
   const pencere = useRef<HTMLDialogElement>(null);
   const etkin = etkinUygulama(uygulamalar, yol);
@@ -210,7 +212,7 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
 
       <nav
         className="os-dock"
-        aria-label="Uygulamalar"
+        aria-label={t({ tr: "Uygulamalar", en: "Apps" })}
         onPointerLeave={(olay) => {
           if (!fareMi(olay)) return;
           setIpucu(null);
@@ -225,11 +227,11 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
           type="button"
           className="os-dock-item"
           aria-haspopup="dialog"
-          aria-label="Tüm uygulamalar"
+          aria-label={t({ tr: "Tüm uygulamalar", en: "All apps" })}
           onPointerEnter={(olay) => {
             if (!fareMi(olay)) return;
             const yer = konum(olay.currentTarget);
-            setIpucu({ ad: "Tüm uygulamalar", x: yer.x, alt: yer.alt });
+            setIpucu({ ad: t({ tr: "Tüm uygulamalar", en: "All apps" }), x: yer.x, alt: yer.alt });
           }}
           onPointerLeave={(olay) => {
             if (fareMi(olay)) setIpucu(null);
@@ -243,7 +245,7 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
       <dialog
         ref={pencere}
         className="os-launcher"
-        aria-label="Uygulamalar"
+        aria-label={t({ tr: "Uygulamalar", en: "Apps" })}
         /* Pencerenin dışına basınca kapanır: hedef dialog ise tıklama boşluğa gelmiştir. */
         onClick={(olay) => {
           if (olay.target === pencere.current) pencere.current?.close();
@@ -251,10 +253,10 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
       >
         <header className="os-launcher-head">
           <div>
-            <h2>Uygulamalar</h2>
-            <p>Hesabınızla açabildiğiniz bütün bölümler.</p>
+            <h2>{t({ tr: "Uygulamalar", en: "Apps" })}</h2>
+            <p>{t({ tr: "Hesabınızla açabildiğiniz bütün bölümler.", en: "Everything your account can open." })}</p>
           </div>
-          <button type="button" className="os-icon-btn" aria-label="Kapat" onClick={() => pencere.current?.close()}>
+          <button type="button" className="os-icon-btn" aria-label={t({ tr: "Kapat", en: "Close" })} onClick={() => pencere.current?.close()}>
             <X size={18} aria-hidden="true" />
           </button>
         </header>

@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { aktifDil } from "@/lib/dil-sunucu";
+import { DilSaglayici } from "./_components/dil-saglayici";
 import { Inter, Montserrat } from "next/font/google";
 import "./styles/tokens.css";
 import "./styles/base.css";
@@ -54,19 +56,20 @@ export const viewport: Viewport = {
 // Böylece koyu temada sayfa açılırken beyaz bir an ("flash") görünmez.
 const themeInit = `(function(){try{var t=localStorage.getItem("arvolab.theme");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const dil = await aktifDil();
   return (
-    <html lang="tr" suppressHydrationWarning>
+    <html lang={dil} suppressHydrationWarning>
       <body className={`${inter.variable} ${montserrat.variable}`}>
         {/* beforeInteractive: Next betiği <head>'e, sayfa boyanmadan önce yerleştirir */}
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInit}
         </Script>
-        {children}
+        <DilSaglayici dil={dil}>{children}</DilSaglayici>
       </body>
     </html>
   );

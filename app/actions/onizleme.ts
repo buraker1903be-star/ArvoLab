@@ -1,5 +1,6 @@
 "use server";
 
+import { ceviri } from "@/lib/dil-sunucu";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
@@ -34,5 +35,6 @@ export async function gorunumSec(formData: FormData): Promise<ActionResult> {
     });
 
   revalidatePath("/dashboard", "layout");
-  return { success: true, message: `Görünüm: ${GORUNUM_ETIKETI[secilen]}` };
+  const t = await ceviri();
+  return { success: true, message: `${t({ tr: "Görünüm", en: "View" })}: ${t(GORUNUM_ETIKETI[secilen])}` };
 }

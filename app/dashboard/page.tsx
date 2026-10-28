@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { ceviri } from "@/lib/dil-sunucu";
 import Link from "next/link";
 import { LayoutList, PenLine, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -50,6 +51,7 @@ const BOLUM_SATIRI = 5;
 const isActive = (status: string) => status !== "delivered" && status !== "archived";
 
 export default async function DashboardPage() {
+  const t = await ceviri();
   const supabase = await createClient();
   const {
     data: { user },
@@ -637,13 +639,13 @@ export default async function DashboardPage() {
             <div className="tez-kart-ust">
               <div>
                 <small>
-                  {projectTypeLabel(resume.project_type)}
+                  {t(projectTypeLabel(resume.project_type))}
                   {resume.university ? ` · ${resume.university}` : ""}
                 </small>
                 <h2>{resume.title}</h2>
                 <div className="tez-kart-rozetler">
                   <span className="status-pill" data-tone={statusTone(resume.status)}>
-                    {statusLabel(resume.status)}
+                    {t(statusLabel(resume.status))}
                   </span>
                   {resumeStats ? <span className="chip">{editedAgo(resumeStats.updatedAt, simdiAn)} düzenlendi</span> : null}
                 </div>
@@ -908,14 +910,14 @@ export default async function DashboardPage() {
                     baslik={p.title}
                     alt={[
                       isStaff ? sahipAdlari.get(p.owner_id) : null,
-                      projectTypeLabel(p.project_type),
+                      t(projectTypeLabel(p.project_type)),
                       yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime, ${editedAgo(yazim.updatedAt)}` : "yazılmadı",
                     ]
                       .filter(Boolean)
                       .join(" · ")}
                     sag={
                       <span className="status-pill" data-tone={statusTone(p.status)}>
-                        {statusLabel(p.status)}
+                        {t(statusLabel(p.status))}
                       </span>
                     }
                   />

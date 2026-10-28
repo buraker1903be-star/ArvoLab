@@ -21,14 +21,16 @@
   Saf modül; testi tests/unit/onizleme.test.ts.
 */
 
+import type { Metin } from "./dil";
+
 export const ONIZLEME_CEREZI = "arvolab_gorunum";
 
 export type Gorunum = "personel" | "ogrenci_kurumlu" | "ogrenci_bireysel";
 
-export const GORUNUM_ETIKETI: Record<Gorunum, string> = {
-  personel: "Personel",
-  ogrenci_kurumlu: "Öğrenci · kurum aboneliği",
-  ogrenci_bireysel: "Öğrenci · bireysel abone",
+export const GORUNUM_ETIKETI: Record<Gorunum, Metin> = {
+  personel: { tr: "Personel", en: "Staff" },
+  ogrenci_kurumlu: { tr: "Öğrenci · kurum aboneliği", en: "Student · institutional plan" },
+  ogrenci_bireysel: { tr: "Öğrenci · bireysel abone", en: "Student · individual plan" },
 };
 
 export const GORUNUMLER = Object.keys(GORUNUM_ETIKETI) as Gorunum[];

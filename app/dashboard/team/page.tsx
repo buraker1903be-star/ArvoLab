@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ceviri } from "@/lib/dil-sunucu";
 import { Ban, Building2, MailPlus, Plus, Search, ShieldAlert, ShieldCheck, UserCog } from "lucide-react";
 import { getCurrentProfile } from "@/app/actions/profile";
 import {
@@ -35,6 +36,7 @@ export default async function TeamPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const t = await ceviri();
   const [profile, params] = await Promise.all([getCurrentProfile(), searchParams]);
   const isAdmin = profile?.role === "system_admin" || profile?.role === "founder";
 
@@ -150,7 +152,7 @@ export default async function TeamPage({
                   <select name="role" defaultValue="employee">
                     {assignableRoles.map((r) => (
                       <option key={r} value={r}>
-                        {ROLE_LABELS[r]}
+                        {t(ROLE_LABELS[r])}
                       </option>
                     ))}
                   </select>
@@ -217,7 +219,7 @@ export default async function TeamPage({
           <EkipFiltreleri
             key={JSON.stringify(filtre)}
             filtre={filtre}
-            roller={ROLE_ORDER.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+            roller={ROLE_ORDER.map((r) => ({ value: r, label: t(ROLE_LABELS[r]) }))}
             kurumlar={organizations}
           />
 
@@ -261,7 +263,7 @@ export default async function TeamPage({
                             {m.id === profile?.id ? " (siz)" : ""}
                           </b>
                           <small>
-                            {[ROLE_LABELS[m.role], m.organization_id ? kurumAdi.get(m.organization_id) : "Kurum yok", m.full_name ? m.email : null]
+                            {[t(ROLE_LABELS[m.role]), m.organization_id ? kurumAdi.get(m.organization_id) : "Kurum yok", m.full_name ? m.email : null]
                               .filter(Boolean)
                               .join(" · ")}
                           </small>
@@ -287,7 +289,7 @@ export default async function TeamPage({
                     </span>
                     <div>
                       <span className="calisma-durum-ust">
-                        <span className="status-pill" data-tone="neutral">{ROLE_LABELS[secili.role]}</span>
+                        <span className="status-pill" data-tone="neutral">{t(ROLE_LABELS[secili.role])}</span>
                         {secili.pendingInvite ? <span className="status-pill" data-tone="warning">Davet bekliyor</span> : null}
                         {secili.disabled ? <span className="status-pill" data-tone="danger">Erişim durduruldu</span> : null}
                       </span>
@@ -336,7 +338,7 @@ export default async function TeamPage({
                         {/* Kurucu rolünü yalnızca kurucu atayabilir; mevcut rol listede kalmalı ki seçim bozulmasın. */}
                         {(assignableRoles.includes(secili.role) ? assignableRoles : [...assignableRoles, secili.role]).map((r) => (
                           <option key={r} value={r}>
-                            {ROLE_LABELS[r]}
+                            {t(ROLE_LABELS[r])}
                           </option>
                         ))}
                       </select>

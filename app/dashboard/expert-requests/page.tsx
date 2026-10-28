@@ -1,4 +1,5 @@
 import { listeBasarili } from "@/lib/liste-sonucu";
+import { ceviri } from "@/lib/dil-sunucu";
 import type { ConsultancyRequest } from "@/app/actions/consultancy";
 import type { AppSupportRequest } from "@/app/actions/support";
 import Link from "next/link";
@@ -90,6 +91,7 @@ export default async function DestekPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const t = await ceviri();
   const [profile, params] = await Promise.all([getCurrentProfile(), searchParams]);
   /*
     Kuyruklar yalnızca PERSONEL GÖRÜNÜMÜNDE: iç ekip öğrenci düzenini
@@ -294,7 +296,7 @@ export default async function DestekPage({
                   <details className="kanit-kayit" open={yeniYanit}>
                     <summary>
                       <span className="kanit-kayit-govde">
-                        <b>{requestTypeLabel(r.request_type)}</b>
+                        <b>{t(requestTypeLabel(r.request_type))}</b>
                         <small>
                           {r.project_title || "Çalışmaya bağlı değil"} · {trTarihSaat(r.created_at)}
                         </small>

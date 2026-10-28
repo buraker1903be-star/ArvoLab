@@ -1,21 +1,30 @@
-const PROJECT_TYPES: Record<string, string> = {
-  thesis: "Tez",
-  article: "Makale",
-  project: "Proje",
-  "associate-professorship": "Doçentlik dosyası",
+import type { Metin } from "./dil";
+
+/*
+  Etiketler iki dilde (lib/dil.ts). Fonksiyonlar Metin döndürüyor, düz
+  metin değil: çağıran t(...) ile seçmek ZORUNDA — sessizce Türkçe kalan
+  bir etiket derlemede yakalanıyor.
+*/
+const ayni = (deger: string): Metin => ({ tr: deger, en: deger });
+
+const PROJECT_TYPES: Record<string, Metin> = {
+  thesis: { tr: "Tez", en: "Thesis" },
+  article: { tr: "Makale", en: "Article" },
+  project: { tr: "Proje", en: "Project" },
+  "associate-professorship": { tr: "Doçentlik dosyası", en: "Associate professorship file" },
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  new: "Yeni",
-  planned: "Planlandı",
-  writing: "Yazım aşamasında",
-  analysis: "Analiz bekliyor",
-  review: "İncelemede",
-  revision: "Revizyonda",
-  turnitin: "Benzerlik kontrolünde",
-  ready: "Teslime hazır",
-  delivered: "Teslim edildi",
-  archived: "Arşivlendi",
+const STATUS_LABELS: Record<string, Metin> = {
+  new: { tr: "Yeni", en: "New" },
+  planned: { tr: "Planlandı", en: "Planned" },
+  writing: { tr: "Yazım aşamasında", en: "Writing" },
+  analysis: { tr: "Analiz bekliyor", en: "Awaiting analysis" },
+  review: { tr: "İncelemede", en: "In review" },
+  revision: { tr: "Revizyonda", en: "In revision" },
+  turnitin: { tr: "Benzerlik kontrolünde", en: "Similarity check" },
+  ready: { tr: "Teslime hazır", en: "Ready to submit" },
+  delivered: { tr: "Teslim edildi", en: "Submitted" },
+  archived: { tr: "Arşivlendi", en: "Archived" },
 };
 
 export const PROJECT_STATUSES = Object.keys(STATUS_LABELS);
@@ -24,12 +33,12 @@ export const PROJECT_STATUSES = Object.keys(STATUS_LABELS);
 // tetikleyicisindeki listeyle aynı tutulmalıdır.
 export const OVERSIGHT_ONLY_STATUSES = ["ready", "delivered"];
 
-export function projectTypeLabel(type: string) {
-  return PROJECT_TYPES[type] ?? type;
+export function projectTypeLabel(type: string): Metin {
+  return PROJECT_TYPES[type] ?? ayni(type);
 }
 
-export function statusLabel(status: string) {
-  return STATUS_LABELS[status] ?? status;
+export function statusLabel(status: string): Metin {
+  return STATUS_LABELS[status] ?? ayni(status);
 }
 
 export type UserRole =
@@ -48,14 +57,14 @@ export type UserRole =
   görünüyordu. Yalnızca görünen ad değişti — rol anahtarları
   (academic_manager, employee, founder) veritabanında ve RLS'te aynı.
 */
-export const ROLE_LABELS: Record<UserRole, string> = {
-  client: "Üye / Öğrenci",
-  employee: "Personel",
-  expert: "Uzman",
-  controller: "Kontrolör",
-  academic_manager: "Yönetici",
-  system_admin: "Sistem Yöneticisi",
-  founder: "Kurucu",
+export const ROLE_LABELS: Record<UserRole, Metin> = {
+  client: { tr: "Üye / Öğrenci", en: "Member / Student" },
+  employee: { tr: "Personel", en: "Staff" },
+  expert: { tr: "Uzman", en: "Expert" },
+  controller: { tr: "Kontrolör", en: "Reviewer" },
+  academic_manager: { tr: "Yönetici", en: "Manager" },
+  system_admin: { tr: "Sistem Yöneticisi", en: "System administrator" },
+  founder: { tr: "Kurucu", en: "Founder" },
 };
 
 export const ALL_ROLES = Object.keys(ROLE_LABELS) as UserRole[];
@@ -77,15 +86,15 @@ export function isExpertEligible(role: UserRole | null | undefined) {
   return role === "expert" || isOversightRole(role);
 }
 
-const REQUEST_TYPE_LABELS: Record<string, string> = {
-  analysis: "Analiz desteği",
-  editing: "Dil/biçim düzenleme",
-  methodology: "Metodoloji danışmanlığı",
-  statistics: "İstatistik desteği",
-  full_review: "Kapsamlı inceleme",
-  other: "Diğer",
+const REQUEST_TYPE_LABELS: Record<string, Metin> = {
+  analysis: { tr: "Analiz desteği", en: "Analysis support" },
+  editing: { tr: "Dil/biçim düzenleme", en: "Language and formatting edit" },
+  methodology: { tr: "Metodoloji danışmanlığı", en: "Methodology consulting" },
+  statistics: { tr: "İstatistik desteği", en: "Statistics support" },
+  full_review: { tr: "Kapsamlı inceleme", en: "Full review" },
+  other: { tr: "Diğer", en: "Other" },
 };
 
-export function requestTypeLabel(type: string) {
-  return REQUEST_TYPE_LABELS[type] ?? type;
+export function requestTypeLabel(type: string): Metin {
+  return REQUEST_TYPE_LABELS[type] ?? ayni(type);
 }

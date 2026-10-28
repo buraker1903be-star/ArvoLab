@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ceviri } from "@/lib/dil-sunucu";
 import { CheckCircle2, ExternalLink, Inbox, PlayCircle, UserRound } from "lucide-react";
 import type { ConsultancyRequest } from "@/app/actions/consultancy";
 import type { AppSupportRequest } from "@/app/actions/support";
@@ -34,7 +35,7 @@ const ONCELIK: Record<string, { ad: string; ton: string }> = {
 
 type Satir = { id: string; baslik: string; alt: string; pill?: { ad: string; ton: string } };
 
-export default function DestekKuyruklari({
+export default async function DestekKuyruklari({
   erisilebilir,
   istenenKuyruk,
   istenenKayit,
@@ -69,6 +70,7 @@ export default function DestekKuyruklari({
   tamamla: (id: string) => Promise<ActionResult>;
   isleAl: (id: string) => Promise<ActionResult>;
 }) {
+  const t = await ceviri();
   // "Bana atanan" sayacı yalnızca SÜREN işleri sayar; tamamlananlar listede kalır ama iş beklemez.
   const bekleyen: Record<KuyrukTuru, number> = {
     "uzman-acik": acikTalepler.length,
@@ -85,7 +87,7 @@ export default function DestekKuyruklari({
   const uzmanSatiri = (r: ConsultancyRequest): Satir => ({
     id: r.id,
     baslik: r.project_title || "Bağımsız talep",
-    alt: [kisiAdi(r.requested_by), requestTypeLabel(r.request_type), trTarihSaat(r.created_at)].filter(Boolean).join(" · "),
+    alt: [kisiAdi(r.requested_by), t(requestTypeLabel(r.request_type)), trTarihSaat(r.created_at)].filter(Boolean).join(" · "),
     /* Son söz öğrencideyse uzman cevap borçlu; listede ilk bakışta görünsün. */
     pill:
       r.status === "accepted" && yanitBekliyor(uzmanYazismasi(r.id))
@@ -189,7 +191,7 @@ export default function DestekKuyruklari({
                             <span className="status-pill" data-tone={statusTone(r.status)}>
                               {UZMAN_DURUMU[r.status]}
                             </span>
-                            {requestTypeLabel(r.request_type)} · {trTarihSaat(r.created_at)}
+                            {t(requestTypeLabel(r.request_type))} · {trTarihSaat(r.created_at)}
                           </span>
                           <h2>{r.project_title || "Bağımsız talep"}</h2>
                           <span className="personel-ogrenci">

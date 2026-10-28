@@ -1,3 +1,5 @@
+import { YEREL, type Dil, type Metin } from "./dil";
+
 // Abonelik planları ArvoOS'ta tanımlanır; tahsilatı da ArvoOS yapar. ArvoLab
 // yalnızca ArvoOS'un bildirdiği planı gösterir ve ödeme bağlantısı ister —
 // burada fiyat, dönem ya da indirim kararı verilmez.
@@ -97,23 +99,34 @@ export function normalizePlans(raw: unknown): BillingPlan[] {
 
 // Simge tutarın ardına yazılır ("1.490,00 ₺"). Intl'in "currency" biçimi simgeyi
 // öne alıyor; Türkçe yazım kuralı ve sunucu/tarayıcı arasında aynı çıktı için
-// sayı biçimlendirilip simge elle eklenir.
-export const formatTry = (kurus: number) =>
-  `${new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(kurus / 100)} ₺`;
+// sayı biçimlendirilip simge elle eklenir. İngilizcede İngilizce yazım
+// ("₺1,490.00"); tutar ArvoOS'un bildirdiği TL tutarı, para birimi değişmiyor.
+export const formatTry = (kurus: number, dil: Dil = "tr") => {
+  const sayi = new Intl.NumberFormat(YEREL[dil], { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(kurus / 100);
+  return dil === "tr" ? `${sayi} ₺` : `₺${sayi}`;
+};
 
-const INTERVAL_LABEL: Record<BillingInterval, string> = { month: "Aylık", year: "Yıllık" };
+const INTERVAL_LABEL: Record<BillingInterval, Metin> = {
+  month: { tr: "Aylık", en: "Monthly" },
+  year: { tr: "Yıllık", en: "Yearly" },
+};
 
 /** "Yıllık 1.490,00 ₺" — yıllıkta aylık karşılığı da eklenir */
-export function describePlan(plan: BillingPlan): string {
-  if (plan.price === null) return plan.interval ? INTERVAL_LABEL[plan.interval] : "";
-  const amount = formatTry(plan.price);
+export function describePlan(plan: BillingPlan, dil: Dil = "tr"): string {
+  if (plan.price === null) return plan.interval ? INTERVAL_LABEL[plan.interval][dil] : "";
+  const amount = formatTry(plan.price, dil);
   if (!plan.interval) return amount;
-  const label = `${INTERVAL_LABEL[plan.interval]} ${amount}`;
-  return plan.interval === "year" ? `${label} · ayda ${formatTry(Math.round(plan.price / 12))}` : label;
+  const label = `${INTERVAL_LABEL[plan.interval][dil]} ${amount}`;
+  if (plan.interval !== "year") return label;
+  const aylik = formatTry(Math.round(plan.price / 12), dil);
+  return dil === "tr" ? `${label} · ayda ${aylik}` : `${label} · ${aylik} per month`;
 }
 
 /** Ödeme düğmesinin üstündeki kısa etiket */
-export function planButtonLabel(plan: BillingPlan): string {
-  if (plan.price === null) return plan.interval === "year" ? "Yıllık abone ol" : "Abone ol";
-  return `${plan.interval ? INTERVAL_LABEL[plan.interval] : ""} ${formatTry(plan.price)}`.trim();
+export function planButtonLabel(plan: BillingPlan, dil: Dil = "tr"): string {
+  if (plan.price === null) {
+    if (dil === "en") return plan.interval === "year" ? "Subscribe yearly" : "Subscribe";
+    return plan.interval === "year" ? "Yıllık abone ol" : "Abone ol";
+  }
+  return `${plan.interval ? INTERVAL_LABEL[plan.interval][dil] : ""} ${formatTry(plan.price, dil)}`.trim();
 }

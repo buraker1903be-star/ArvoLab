@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ceviri } from "@/lib/dil-sunucu";
 import { notFound, redirect } from "next/navigation";
 import {
   ArrowRight,
@@ -66,6 +67,7 @@ export default async function CalismaMerkezi({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const t = await ceviri();
   const [{ id }, sorgu, profil] = await Promise.all([params, searchParams, getCurrentProfile()]);
   // Yeni tezde kılavuz eşleşmediyse kayıt buraya ?kilavuz=1 ile geliyor (createProject).
   const kilavuzAc = sorgu.kilavuz === "1";
@@ -132,7 +134,7 @@ export default async function CalismaMerkezi({
     <main className="dashboard-page">
       <section className="projects-header">
         <div>
-          <span className="dashboard-kicker">{projectTypeLabel(calisma.project_type)}</span>
+          <span className="dashboard-kicker">{t(projectTypeLabel(calisma.project_type))}</span>
           <h1>{calisma.title}</h1>
           <p>
             {[calisma.university, calisma.institute, calisma.department].filter(Boolean).join(" · ") ||
@@ -157,7 +159,7 @@ export default async function CalismaMerkezi({
       <section className="merkez-ozet">
         <article className="merkez-kutu">
           <small>Durum</small>
-          <strong>{statusLabel(calisma.status)}</strong>
+          <strong>{t(statusLabel(calisma.status))}</strong>
           <span>Birim ilerlemesi %{ilerleme}</span>
         </article>
         <article className="merkez-kutu">

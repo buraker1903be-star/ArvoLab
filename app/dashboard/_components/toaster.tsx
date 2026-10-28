@@ -1,5 +1,6 @@
 "use client";
 
+import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { TOAST_EVENT, type ToastDetail } from "./toast-events";
@@ -23,6 +24,7 @@ type Toast = ToastDetail & { id: number };
 const EN_FAZLA = 3;
 
 export default function Toaster() {
+  const t = useCeviri();
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Her bildirimin kendi zamanlayıcısı var; biri diğerini iptal etmemeli.
   const timers = useRef(new Map<number, number>());
@@ -86,10 +88,10 @@ export default function Toaster() {
               )}
             </span>
             <div className="toast-body">
-              <strong>{success ? toast.text : "İşlem tamamlanamadı"}</strong>
-              <span>{success ? "İşlem başarıyla tamamlandı." : toast.text}</span>
+              <strong>{success ? toast.text : t({ tr: "İşlem tamamlanamadı", en: "Action failed" })}</strong>
+              <span>{success ? t({ tr: "İşlem başarıyla tamamlandı.", en: "Completed successfully." }) : toast.text}</span>
             </div>
-            <button className="toast-close" type="button" onClick={() => kapat(toast.id)} aria-label="Bildirimi kapat">
+            <button className="toast-close" type="button" onClick={() => kapat(toast.id)} aria-label={t({ tr: "Bildirimi kapat", en: "Dismiss notification" })}>
               <X size={15} aria-hidden="true" />
             </button>
           </div>

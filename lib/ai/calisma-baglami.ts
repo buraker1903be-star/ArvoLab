@@ -43,7 +43,8 @@ export type CalismaSatiri = {
 export function calismaMetni(calisma: CalismaSatiri): string {
   const satirlar = [
     `Başlık: ${calisma.title}`,
-    `Tür: ${projectTypeLabel(calisma.project_type)}`,
+    /* Asistan istemi Türkçe; bağlam da Türkçe kalır. */
+    `Tür: ${projectTypeLabel(calisma.project_type).tr}`,
     `Atıf stili: ${STIL_ETIKETLERI[calisma.citation_style] ?? calisma.citation_style}`,
   ];
   if (calisma.research_method)

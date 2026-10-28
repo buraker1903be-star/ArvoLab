@@ -1,5 +1,6 @@
 "use client";
 
+import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useActionState, useRef, useState, useTransition, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import type { ActionResult } from "@/lib/auth-guards";
 import { announceActionSuccess, showToast } from "./_components/toast-events";
@@ -21,6 +22,7 @@ interface ActionFormProps {
 //   dönen gönderimlerde de formu boşaltıyordu, bu yüzden gönderimi biz başlatıyoruz)
 // - başarı: iOS benzeri bildirim + form sıfırlanır + açık PanelDrawer penceresi kapanır
 export default function ActionForm({ action, children, className, style, confirmMessage, successMessage }: ActionFormProps) {
+  const t = useCeviri();
   const formRef = useRef<HTMLFormElement>(null);
   const [surum, setSurum] = useState(0);
   const [, startTransition] = useTransition();
@@ -31,7 +33,7 @@ export default function ActionForm({ action, children, className, style, confirm
       // görmesi gereken bir şey var, başarı bildirimi onu gizlemesin.
       if (result.warning) showToast("error", result.warning);
       // Eylemin kendi metni, sayfanın sabit metninin önüne geçer.
-      else showToast("success", result.message ?? successMessage ?? "İşlem tamamlandı.");
+      else showToast("success", result.message ?? successMessage ?? t({ tr: "İşlem tamamlandı.", en: "Done." }));
       /*
         Alanlar yeniden kurulur (fieldset'in anahtarı değişir), sunucunun
         yeni gönderdiği defaultValue'larla. Eskiden form.reset() çağrılıyordu:
@@ -69,7 +71,7 @@ export default function ActionForm({ action, children, className, style, confirm
       {pending ? (
         <span className="action-capsule" role="status">
           <i aria-hidden="true" />
-          İşleniyor…
+          {t({ tr: "İşleniyor…", en: "Working…" })}
         </span>
       ) : null}
       {state?.error ? (

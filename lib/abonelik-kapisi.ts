@@ -13,6 +13,8 @@
   Bu sayfalardaki YAZAN işlemler kendi kapılarını zaten taşıyor (lib/access.ts
   listesi): burada açılan yalnızca ekranın kendisi.
 */
+import type { Dil } from "./dil";
+
 export const KAPISIZ_YOLLAR = [
   "/dashboard/abonelik",
   "/dashboard/settings",
@@ -37,8 +39,16 @@ type ErisimDurumu = {
  * "deneme süreniz doldu" ekleniyordu: deneme süresi biten her kullanıcı
  * "ArvoLab aboneliğiniz deneme süreniz doldu." okuyordu.
  */
-export function kapaliErisimCumlesi(erisim: ErisimDurumu): string {
+export function kapaliErisimCumlesi(erisim: ErisimDurumu, dil: Dil = "tr"): string {
   const bireysel = erisim.kind === "individual";
+  if (dil === "en") {
+    const ozne = bireysel ? "Your ArvoLab subscription" : `The ArvoLab subscription of ${erisim.organizationName ?? "your institution"}`;
+    if (erisim.status === "suspended") return `${ozne} has been suspended.`;
+    if (erisim.status === "canceled") return `${ozne} has been canceled.`;
+    if (erisim.status === "trialing") return bireysel ? "Your ArvoLab trial has ended." : `${ozne} trial has ended.`;
+    if (erisim.periodEnd) return `${ozne} has expired.`;
+    return `${ozne} has not started yet.`;
+  }
   const ozne = bireysel ? "ArvoLab aboneliğiniz" : `${erisim.organizationName ?? "Kurumunuzun"} ArvoLab aboneliği`;
   if (erisim.status === "suspended") return `${ozne} askıya alındı.`;
   if (erisim.status === "canceled") return `${ozne} iptal edildi.`;

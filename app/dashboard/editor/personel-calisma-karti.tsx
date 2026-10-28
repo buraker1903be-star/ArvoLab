@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ceviri } from "@/lib/dil-sunucu";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -87,6 +88,7 @@ export default async function PersonelCalismaKarti({
   onayiGeriAl: () => Promise<ActionResult>;
   ata: (formData: FormData) => Promise<ActionResult>;
 }) {
+  const t = await ceviri();
   const merkez = `/dashboard/editor/${calisma.id}`;
   const onayli = !!calisma.controller_approved_at;
   // Eski kayıtlarda sorumlu yalnızca serbest metin olarak tutuluyordu (assignee_id boş).
@@ -113,9 +115,9 @@ export default async function PersonelCalismaKarti({
         <div>
           <span className="calisma-durum-ust">
             <span className="status-pill" data-tone={statusTone(calisma.status)}>
-              {statusLabel(calisma.status)}
+              {t(statusLabel(calisma.status))}
             </span>
-            {[projectTypeLabel(calisma.project_type), calisma.university].filter(Boolean).join(" · ")}
+            {[t(projectTypeLabel(calisma.project_type)), calisma.university].filter(Boolean).join(" · ")}
           </span>
           <h2>{calisma.title}</h2>
           <span className="personel-ogrenci">
@@ -311,7 +313,7 @@ export default async function PersonelCalismaKarti({
                 </option>
                 {personel.map((uye) => (
                   <option key={uye.id} value={uye.id}>
-                    {uye.full_name || "İsimsiz personel"} · {ROLE_LABELS[uye.role]}
+                    {uye.full_name || "İsimsiz personel"} · {t(ROLE_LABELS[uye.role])}
                   </option>
                 ))}
               </select>

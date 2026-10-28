@@ -18,6 +18,21 @@ Arayüz metinleri, hata mesajları ve kod yorumları **Türkçe**. Yorumlar "ne
 yaptığını" değil **neden öyle olduğunu** anlatır; bir hata düzeltiliyorsa eski
 davranış da yazılır ("Eskiden … oluyordu"). Yeni kod bu üsluba uyar.
 
+## Arayüz dili (Türkçe + İngilizce)
+
+28.10.2026'dan beri arayüz iki dilli (`lib/dil.ts`). Yeni metin İKİ dilde
+yazılır, kullanıldığı yerde: sunucuda `const t = await ceviri()`
+(`lib/dil-sunucu.ts`), istemcide `const t = useCeviri()`
+(`app/_components/dil-saglayici.tsx`), sonra `t({ tr: "…", en: "…" })`.
+Anahtarlı katalog yok, bilerek. Etiket haritaları `Metin` taşır ve
+çağıran `t(...)` ile seçer. **Şablon metnin içine `Metin` koymayın:**
+`${statusLabel(x)}` derlenir ama "[object Object]" yazar; bunu
+`@typescript-eslint/restrict-template-expressions` yakalıyor.
+Tarih/sayı biçimi `YEREL[dil]` ile. Asistan istemleri ve asistanın
+bağlamı Türkçe kalır. İngilizce çeviri bitene kadar
+`INGILIZCE_YAYINDA = false`: tarayıcının dili yok sayılır, dil seçici
+yalnızca iç ekipte görünür.
+
 ## Değişmezler
 
 - **Abonelik kapısı.** Dış maliyet üreten (OpenAI, depolama, ağır çözümleme)

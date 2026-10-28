@@ -8,6 +8,7 @@ import { GORUNUM_ETIKETI, onizleyebilir } from "@/lib/onizleme";
 import { gorunumSec } from "@/app/actions/onizleme";
 import ActionForm from "./action-form";
 import { getAccessState } from "@/lib/access";
+import { ceviri } from "@/lib/dil-sunucu";
 import { gorunenUygulamalar, labUygulamalari } from "@/lib/os/uygulamalar";
 import AbonelikKapisi from "./_components/abonelik-kapisi";
 import SubscriptionNotice from "./_components/subscription-notice";
@@ -48,9 +49,9 @@ function initialsOf(name: string) {
   hâli yok. Çerez okunmuyor, yazan bileşen de kaldırıldı.
 */
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const profile = await getCurrentProfile();
-  const userName = profile?.full_name?.trim() || "Kullanıcı";
-  const roleLabel = profile ? ROLE_LABELS[profile.role] : "";
+  const [profile, t] = await Promise.all([getCurrentProfile(), ceviri()]);
+  const userName = profile?.full_name?.trim() || t({ tr: "Kullanıcı", en: "User" });
+  const roleLabel = profile ? t(ROLE_LABELS[profile.role]) : "";
   const initials = initialsOf(userName);
   // Kim girebilir: kurum lisansı ya da bireysel abonelik (lib/access.ts).
   const access = await getAccessState(profile);
@@ -66,7 +67,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     Ürün Ölçümü ve Kılavuz Kataloğu başlatıcıda görünüyordu, öğrencinin
     göremeyeceği şeyler. Yetki değişmiyor; sayfaların kendi kapısı gerçek rolle.
   */
-  const uygulamalar = gorunenUygulamalar(labUygulamalari(), gorunum.onizleme ? undefined : profile?.role);
+  const uygulamalar = gorunenUygulamalar(labUygulamalari(t), gorunum.onizleme ? undefined : profile?.role);
   /*
     Kurum seçici yalnızca iç ekipte (lib/kurum-secimi.ts): kurucu birden çok
     kurumun sahibi ve ekranlar kurumları karışık listeliyordu. Kurum listesi
@@ -81,7 +82,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       {/* Klavye kullanıcısı her sayfada dock'taki bağlantıları geçmek
           zorunda kalmasın; bağlantı yalnızca odaklanınca görünür. */}
       <a href="#panel-icerik" className="skip-link">
-        İçeriğe atla
+        {t({ tr: "İçeriğe atla", en: "Skip to content" })}
       </a>
 
       <div className="dashboard-content-shell">
@@ -116,12 +117,16 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         {kurum ? (
           <div className="onizleme-serit" role="status">
             <span>
-              Yalnızca <b>{kurum.ad}</b> gösteriliyor: çalışmalar, ekip, destek kuyrukları ve ana sayfa bu kuruma göre süzülü.
+              {t({ tr: "Yalnızca", en: "Showing only" })} <b>{kurum.ad}</b>
+              {t({
+                tr: " gösteriliyor: çalışmalar, ekip, destek kuyrukları ve ana sayfa bu kuruma göre süzülü.",
+                en: ": works, team, support queues and the home page are filtered to this institution.",
+              })}
             </span>
             <ActionForm action={kurumSec}>
               <input type="hidden" name="kurum" value="" />
               <button type="submit" className="projects-filter-button button-compact">
-                Bütün kurumları göster
+                {t({ tr: "Bütün kurumları göster", en: "Show all institutions" })}
               </button>
             </ActionForm>
           </div>
@@ -129,13 +134,17 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         {gorunum.onizleme ? (
           <div className="onizleme-serit" role="status">
             <span>
-              <b>{GORUNUM_ETIKETI[gorunum.onizleme]}</b> görünümünü önizliyorsunuz. Veriler sizin; rolünüz ve
-              yetkileriniz değişmedi.
+              {t({ tr: "", en: "You are previewing the " })}
+              <b>{t(GORUNUM_ETIKETI[gorunum.onizleme])}</b>
+              {t({
+                tr: " görünümünü önizliyorsunuz. Veriler sizin; rolünüz ve yetkileriniz değişmedi.",
+                en: " view. The data is yours; your role and permissions are unchanged.",
+              })}
             </span>
             <ActionForm action={gorunumSec}>
               <input type="hidden" name="gorunum" value="personel" />
               <button type="submit" className="projects-filter-button button-compact">
-                Personel görünümüne dön
+                {t({ tr: "Personel görünümüne dön", en: "Back to staff view" })}
               </button>
             </ActionForm>
           </div>

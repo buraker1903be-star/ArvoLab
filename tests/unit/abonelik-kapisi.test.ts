@@ -48,3 +48,15 @@ describe("erken yenileme", () => {
     assert.equal(erkenYenilemeDonemi("bozuk", simdi), false);
   });
 });
+
+describe("kapalı erişim cümlesi İngilizce", () => {
+  test("bireysel deneme", () => {
+    assert.equal(kapaliErisimCumlesi({ kind: "individual", status: "trialing" }, "en"), "Your ArvoLab trial has ended.");
+  });
+  test("kurum askıda", () => {
+    assert.equal(
+      kapaliErisimCumlesi({ kind: "organization", status: "suspended", organizationName: "MIT" }, "en"),
+      "The ArvoLab subscription of MIT has been suspended.",
+    );
+  });
+});

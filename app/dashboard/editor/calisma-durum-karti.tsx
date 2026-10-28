@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ceviri } from "@/lib/dil-sunucu";
 import { Check, FileText, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { acikYapilacaklar, yapilacakTamamla } from "@/app/actions/yapilacaklar";
@@ -74,6 +75,7 @@ export default async function CalismaDurumKarti({
   /** Ana sayfadaki "Takvim" bağlantısından gelindiyse takvim penceresi açık gelir. */
   takvimAc?: boolean;
 }) {
+  const t = await ceviri();
   const [ozet, yapilacaklar, analizler, takvim] = await Promise.all([
     calismaOzeti(projectId),
     acikYapilacaklar(projectId),
@@ -140,9 +142,9 @@ export default async function CalismaDurumKarti({
         <div>
           <span className="calisma-durum-ust">
             <span className="status-pill" data-tone={statusTone(calisma.status)}>
-              {statusLabel(calisma.status)}
+              {t(statusLabel(calisma.status))}
             </span>
-            {[projectTypeLabel(calisma.project_type), calisma.university].filter(Boolean).join(" · ")}
+            {[t(projectTypeLabel(calisma.project_type)), calisma.university].filter(Boolean).join(" · ")}
           </span>
           <h2>{calisma.title}</h2>
         </div>

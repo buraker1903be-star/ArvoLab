@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 import { etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar";
 
 /*
@@ -19,13 +20,14 @@ import { etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar
 */
 export default function HeaderTitle() {
   const pathname = usePathname();
-  const uygulamalar = labUygulamalari();
+  const t = useCeviri();
+  const uygulamalar = labUygulamalari(t);
   const uygulama = etkinUygulama(uygulamalar, pathname);
   const bolum = uygulama?.bolumler ? etkinBolum(uygulama.bolumler, pathname) : null;
-  const label = bolum?.label ?? uygulama?.label ?? "Çalışma alanı";
+  const label = bolum?.label ?? uygulama?.label ?? t({ tr: "Çalışma alanı", en: "Workspace" });
 
   return (
-    <Link href="/dashboard" className="os-marka" aria-label={`ArvoLab ana sayfa · ${label}`}>
+    <Link href="/dashboard" className="os-marka" aria-label={`${t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })} · ${label}`}>
       <ArvoLabIsareti />
       <span>
         <b>

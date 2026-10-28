@@ -19,6 +19,7 @@
 */
 
 import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
+import { ceviriciKur, type Cevirici } from "@/lib/dil";
 import { STAFF_ROLES } from "@/lib/project-labels";
 
 export type OsIkon =
@@ -48,6 +49,12 @@ export type OsUygulama = {
 export const ANA_SAYFA = "/dashboard";
 
 /*
+  Etiketler çağıranın dilinde üretiliyor (lib/dil.ts): liste istemci
+  bileşenlerine (dock, Ctrl+K) düz metin olarak gidiyor, onların dili
+  bilmesi gerekmiyor. Varsayılan Türkçe, testler ve eski çağıranlar için.
+*/
+
+/*
   DOCK DİZİLİMİ. Sıra günlük işin sırası: önce yazdığın şey, sonra
   onu denetleyen araçlar, sonra destek. Ayarlar ve "Tüm uygulamalar"
   sonda — ArvoOS ve ArvoARC'taki dizilimin aynısı.
@@ -57,9 +64,9 @@ export const ANA_SAYFA = "/dashboard";
   yalnızca tam eşleşmede seçiyor. Aksi hâlde bütün sayfalar Ana
   Sayfa'ya düşerdi.
 */
-export function labUygulamalari(): OsUygulama[] {
+export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
   return [
-    { key: "home", label: "Ana Sayfa", href: ANA_SAYFA, ikon: "home", yollar: [] },
+    { key: "home", label: t({ tr: "Ana Sayfa", en: "Home" }), href: ANA_SAYFA, ikon: "home", yollar: [] },
     /*
       ÇALIŞMANIN KENDİ SEKMELERİ (merkez, yazım, kanıt, makale) burada
       bölüm olarak DURMUYOR: adresleri çalışmanın kimliğini taşıyor ve
@@ -70,8 +77,8 @@ export function labUygulamalari(): OsUygulama[] {
     */
     {
       key: "tez",
-      label: "Çalışmalarım",
-      kisa: "Çalışmalar",
+      label: t({ tr: "Çalışmalarım", en: "My works" }),
+      kisa: t({ tr: "Çalışmalar", en: "Works" }),
       href: "/dashboard/editor",
       ikon: "tez",
       yollar: ["/dashboard/editor"],
@@ -84,7 +91,7 @@ export function labUygulamalari(): OsUygulama[] {
     */
     {
       key: "kaynaklar",
-      label: "Kaynaklar",
+      label: t({ tr: "Kaynaklar", en: "Sources" }),
       href: "/dashboard/literature",
       ikon: "literatur",
       yollar: ["/dashboard/literature", "/dashboard/citations"],
@@ -94,8 +101,8 @@ export function labUygulamalari(): OsUygulama[] {
         sahibi "iki sekme çıkmasın, tek sayfa" dedi.
       */
     },
-    { key: "analiz", label: "Analiz Merkezi", kisa: "Analiz", href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"] },
-    { key: "belge", label: "Belge Kontrol", kisa: "Belge", href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"] },
+    { key: "analiz", label: t({ tr: "Analiz Merkezi", en: "Analysis Center" }), kisa: t({ tr: "Analiz", en: "Analysis" }), href: "/dashboard/analysis", ikon: "analiz", yollar: ["/dashboard/analysis"] },
+    { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), kisa: t({ tr: "Belge", en: "Documents" }), href: "/dashboard/documents", ikon: "belge", yollar: ["/dashboard/documents"] },
     /*
       Kılavuz kataloğu ve doçentlik dock'tan çıktı: öğrencinin kılavuzu
       çalışma merkezinde zaten görünüyor, katalog çoğunlukla personelin
@@ -112,7 +119,7 @@ export function labUygulamalari(): OsUygulama[] {
       isteği: "öğrencilerin görmesine gerek yok"). Doçent adayı akademisyen
       ayrı bir kitle; öğrencinin başlatıcısında yer kaplamamalı.
     */
-    { key: "docentlik", label: "Doçentlik Puanı", kisa: "Doçentlik", href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"], yalnizBaslatici: true, roller: STAFF_ROLES },
+    { key: "docentlik", label: t({ tr: "Doçentlik Puanı", en: "Associate Professorship Score" }), kisa: t({ tr: "Doçentlik", en: "Assoc. Prof." }), href: "/dashboard/associate-professorship", ikon: "docentlik", yollar: ["/dashboard/associate-professorship"], yalnizBaslatici: true, roller: STAFF_ROLES },
     /*
       İKİ DESTEK YOLU TEK UYGULAMADA. Dock'ta iki ayrı simge
       olsalardı günlük işin simgelerini sıkıştırırlardı; ikisi de
@@ -120,20 +127,20 @@ export function labUygulamalari(): OsUygulama[] {
     */
     {
       key: "destek",
-      label: "Destek",
+      label: t({ tr: "Destek", en: "Support" }),
       href: "/dashboard/expert-requests",
       ikon: "destek",
       yollar: ["/dashboard/expert-requests", "/dashboard/support"],
       /* Bölüm yok: uzman ve uygulama desteği aynı sayfanın iki kartı
          (Kaynaklar'la aynı karar, 26.10.2026). */
     },
-    { key: "ayarlar", label: "Ayarlar", href: "/dashboard/settings", ikon: "settings", yollar: ["/dashboard/settings"] },
+    { key: "ayarlar", label: t({ tr: "Ayarlar", en: "Settings" }), href: "/dashboard/settings", ikon: "settings", yollar: ["/dashboard/settings"] },
     /*
       Abonelik ve kredi (26.10.2026): bireysel abone aboneliğini ve asistan
       kredisini buradan yönetiyor. Dock'ta yer kaplamıyor (ayda bir açılan
       sayfa); başlatıcıda, Ctrl+K'da, Ayarlar'da ve kullanıcı menüsünde.
     */
-    { key: "abonelik", label: "Abonelik ve Kredi", href: "/dashboard/abonelik", ikon: "abonelik", yollar: ["/dashboard/abonelik"], yalnizBaslatici: true },
+    { key: "abonelik", label: t({ tr: "Abonelik ve Kredi", en: "Subscription and Credits" }), href: "/dashboard/abonelik", ikon: "abonelik", yollar: ["/dashboard/abonelik"], yalnizBaslatici: true },
     /*
       ROLE BAĞLI UYGULAMALAR dock'ta yer kaplamıyor: iç ekibin günde
       bir kez açtığı sayfalar, öğrencinin her gün gördüğü simgelerin
@@ -144,8 +151,8 @@ export function labUygulamalari(): OsUygulama[] {
       liste "controller"ı atlamıştı, yani Kontrolör yetkisi olduğu
       sayfayı başlatıcıda göremiyordu (AGENTS.md'deki kural).
     */
-    { key: "asistan", label: "Asistan Kayıtları", href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: KAYIT_ROLLERI },
-    { key: "ekip", label: "Ekip Yönetimi", href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ["system_admin", "founder"] },
+    { key: "asistan", label: t({ tr: "Asistan Kayıtları", en: "Assistant Logs" }), href: "/dashboard/asistan", ikon: "apps", yollar: ["/dashboard/asistan"], yalnizBaslatici: true, roller: KAYIT_ROLLERI },
+    { key: "ekip", label: t({ tr: "Ekip Yönetimi", en: "Team Management" }), href: "/dashboard/team", ikon: "apps", yollar: ["/dashboard/team"], yalnizBaslatici: true, roller: ["system_admin", "founder"] },
     /* Ürün Ölçümü 26.10.2026'da kaldırıldı (app/dashboard/olcum/page.tsx). */
   ];
 }
