@@ -207,3 +207,33 @@ test("doğrulanmış kaynakta geçen miktar GEÇİYOR", () => {
   ];
   assert.equal(bulgulariDogrula(bulgular, "Çalışmaya 30 kişi katıldı.").gecti, true);
 });
+
+describe("oran ve yüzde, Cohen eşikleri (28.10.2026)", () => {
+  test("η² = ,06 girdisinde '%6' uydurma değil", () => {
+    // Canlıda analiz asistanının cevabı "uydurulan: 6" ile düşmüştü.
+    assert.deepEqual(uydurmaSayilar("Grup, varyansın %6'sını açıklıyor.", "F(2, 57) = 3,41, p = ,040, η² = ,06"), []);
+  });
+
+  test("yalnızca tam dönüşüm: ,062 girdisinde '%6' hâlâ uydurma", () => {
+    assert.deepEqual(uydurmaSayilar("Varyansın %6'sı.", "η² = ,062"), ["6"]);
+    assert.deepEqual(uydurmaSayilar("Varyansın %6,2'si.", "η² = ,062"), []);
+  });
+
+  test("Cohen'in eşikleri yorum ölçütüdür", () => {
+    assert.deepEqual(uydurmaSayilar("d = 0,31; küçük etki (.2 ile .5 arası, büyük için .8).", "t(28) = 2,45, d = 0,31"), []);
+  });
+
+  test("bedeli: eşikle aynı uydurma etki büyüklüğü kaçar", () => {
+    // Bilerek kabul edilen sınır (sayi-denetimi.ts, SERBEST).
+    assert.deepEqual(uydurmaSayilar("Etki büyüklüğü d = .5.", "t(28) = 2,45"), []);
+  });
+});
+
+describe("bilerek boş liste", () => {
+  test("boş liste okunamayan yanıttan ayrılır", async () => {
+    const { bosListeMi } = await import("@/lib/ai/bulgu");
+    assert.equal(bosListeMi('{"bulgular": []}'), true);
+    assert.equal(bosListeMi("Üzgünüm, yardımcı olamam."), false);
+    assert.equal(bosListeMi('{"bulgular": [{"tur":"bilgi","baslik":"a","aciklama":"b"}]}'), false);
+  });
+});

@@ -117,12 +117,15 @@ export async function analizSonucuKaydet(girdi: {
   Bir çalışmanın analizleri (Analiz penceresi ve editörün "Analiz ekle"
   penceresi). Sınırsız: pencere düğmesindeki sayı bu listeden geliyor;
   .limit() ile kesilen listeden sayı çıkarmak sessizce eksik sayardı.
-  Okunamazsa boş liste ve log — pencere açılmaya devam eder.
+  Okunamazsa "okunamadı" ayrı taşınıyor (lib/liste-sonucu.ts): eskiden boş
+  liste dönüyordu ve sayfa, pencere ve editörün "Analiz ekle"si geçici bir
+  arızada "kaydedilmiş analiz yok" diyordu — öğrenci analizlerini kaybettiğini
+  sanıyordu.
 */
-export async function calismaAnalizleri(projectId: string): Promise<CalismaAnalizi[]> {
-  if (!UUID.test(projectId)) return [];
+export async function calismaAnalizleri(projectId: string): Promise<ListeSonucu<CalismaAnalizi>> {
+  if (!UUID.test(projectId)) return listeBasarili([]);
   const ctx = await getAuthContext();
-  if (!ctx) return [];
+  if (!ctx) return listeBasarili([]);
   const { data, error } = await ctx.supabase
     .from("analiz_sonuclari")
     .select("id, project_id, analiz_turu, baslik, apa_metni, created_at, teze_eklenecek, teze_eklendi")
@@ -131,9 +134,9 @@ export async function calismaAnalizleri(projectId: string): Promise<CalismaAnali
     .order("created_at", { ascending: false });
   if (error) {
     console.error("[analiz] çalışma analizleri okunamadı:", error.message);
-    return [];
+    return listeOkunamadi();
   }
-  return data ?? [];
+  return listeBasarili(data ?? []);
 }
 
 /*

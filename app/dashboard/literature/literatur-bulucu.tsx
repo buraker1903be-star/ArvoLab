@@ -159,6 +159,13 @@ export default function LiteraturBulucu({
         </p>
       )}
 
+      {yanit?.listeOkunamadi && (
+        <p className="asistan-uyari" data-tone="neutral">
+          Kaynak listeniz şu anda okunamadı; &quot;listemde&quot; işaretleri bu aramada gösterilmiyor. Eklemeden önce
+          listenize bakın.
+        </p>
+      )}
+
       {yanit && !yanit.hata && kayitlar.length === 0 && (
         <p className="asistan-uyari" data-tone="neutral">
           Bu aramada sonuç çıkmadı. Daha genel bir ifade deneyin ya da yıl aralığını genişletin.

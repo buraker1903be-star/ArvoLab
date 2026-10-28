@@ -62,6 +62,18 @@ function kirp(deger: unknown, sinir: number) {
   return String(deger ?? "").replace(/\s+/g, " ").trim().slice(0, sinir);
 }
 
+/**
+ * Model bilerek BOŞ liste mi döndürdü ({"bulgular": []})? İstemler "sorun
+ * yoksa boş liste" diyor. Eskiden boş liste okunamayan yanıtla aynı dala
+ * düşüyordu: temiz bir çıktı yapıştıran öğrenci "denetlenebilir bir yapı
+ * bulamadı" hatası görüyor, kayıt da "rejected/bos" olarak eğitim verisine
+ * yanlış etiketle giriyordu.
+ */
+export function bosListeMi(ham: string): boolean {
+  const liste = (jsonOku(ham) as { bulgular?: unknown } | null)?.bulgular;
+  return Array.isArray(liste) && liste.length === 0;
+}
+
 /** Modelin yanıtını bulgulara çevirir (kesik yanıt dahil, bkz. jsonOku). */
 export function bulgulariCozumle(ham: string): Bulgu[] {
   const liste = (jsonOku(ham) as { bulgular?: unknown } | null)?.bulgular;

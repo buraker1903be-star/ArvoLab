@@ -29,13 +29,17 @@ export default function AnalizEkleDialog({
   onPick: (metin: string) => boolean;
 }) {
   const [analizler, setAnalizler] = useState<CalismaAnalizi[] | null>(null);
+  /* Okunamadı ile "analiz yok" ayrı: eskiden arıza "kaydedilmiş analiz yok" görünüyordu. */
+  const [okunamadi, setOkunamadi] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     let iptal = false;
     void (async () => {
       const liste = await calismaAnalizleri(projectId);
-      if (!iptal) setAnalizler(liste);
+      if (iptal) return;
+      setOkunamadi(liste.okunamadi);
+      setAnalizler(liste.satirlar);
     })();
     return () => {
       iptal = true;
@@ -91,6 +95,10 @@ export default function AnalizEkleDialog({
       <div className="stack">
         {analizler === null ? (
           <p className="muted text-sm" aria-busy="true">Analizler yükleniyor…</p>
+        ) : okunamadi ? (
+          <p className="alert" role="alert">
+            Analizleriniz okunamadı. Kayıtlarınız yerinde duruyor — pencereyi kapatıp yeniden açın.
+          </p>
         ) : analizler.length === 0 ? (
           <p className="muted text-sm">
             Bu çalışmaya kaydedilmiş analiz yok. Çalışmalarım&apos;da çalışma kartındaki &quot;Analiz&quot; düğmesinden

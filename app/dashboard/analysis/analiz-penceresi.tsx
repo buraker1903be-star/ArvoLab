@@ -30,7 +30,7 @@ export default async function AnalizPenceresi({
   projeAdi: string;
   triggerClassName?: string;
 }) {
-  const [analizler, asistanAcik, { satirlar: calismalar }] = await Promise.all([
+  const [{ satirlar: analizler, okunamadi: analizOkunamadi }, asistanAcik, { satirlar: calismalar }] = await Promise.all([
     calismaAnalizleri(projectId),
     analizAsistaniAcik(),
     getMyProjects(),
@@ -55,6 +55,12 @@ export default async function AnalizPenceresi({
       boy="tam"
       basaridaKapan={false}
     >
+      {analizOkunamadi ? (
+        <p className="alert" role="alert">
+          Kayıtlı analizleriniz okunamadı; aşağıdaki liste eksik görünebilir. Kayıtlarınız yerinde duruyor — pencereyi
+          kapatıp yeniden açın.
+        </p>
+      ) : null}
       <AnalizSecici projectId={projectId} calisma={calisma} asistanAcik={asistanAcik} analizler={analizler} />
     </PanelDrawer>
   );

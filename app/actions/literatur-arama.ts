@@ -32,6 +32,8 @@ export interface AramaYaniti {
   kayitlar?: (AramaKaydi & { listede: boolean })[];
   /** Cevap vermeyen dizinler: liste eksik olabilir, kullanıcı bilsin. */
   ulasilamayan?: string[];
+  /** Kendi listesi okunamadı: "zaten listemde" işaretleri bu aramada yok. */
+  listeOkunamadi?: boolean;
 }
 
 const sadeBaslik = (baslik: string) => baslik.toLocaleLowerCase("tr-TR").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -119,10 +121,12 @@ export async function literaturAramasiYap(girdi: {
     ve sonra listesinde tekrarları temizlemekle uğraşıyordu. DOI kesin
     ölçüt; DOI'si olmayan kayıtlar için başlık karşılaştırılıyor.
   */
-  const { data: mevcut } = await ctx.supabase
+  const { data: mevcut, error: listeHatasi } = await ctx.supabase
     .from("literature_sources")
     .select("title, doi_or_url")
     .eq("owner_id", ctx.user.id);
+  /* Hata yutulursa işaretler sessizce kaybolur ve öğrenci aynı kaynağı yeniden ekler. */
+  if (listeHatasi) console.error("[literatur] liste okunamadı:", listeHatasi.message);
   const doiler = new Set<string>();
   const basliklar = new Set<string>();
   for (const satir of mevcut ?? []) {
@@ -136,6 +140,7 @@ export async function literaturAramasiYap(girdi: {
       listede: (kayit.doi ? doiler.has(kayit.doi) : false) || basliklar.has(sadeBaslik(kayit.baslik)),
     })),
     ulasilamayan,
+    ...(listeHatasi ? { listeOkunamadi: true } : {}),
   };
 }
 

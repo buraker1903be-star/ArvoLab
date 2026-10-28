@@ -1,5 +1,6 @@
 "use client";
 
+import { asistanCagir } from "@/lib/asistan-istemci";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { kaynakcaDenetle, type KaynakcaDenetimYaniti } from "@/app/actions/ai-kaynakca";
@@ -227,7 +228,7 @@ export default function CitationCheckForm({
         result.references.map((kunye, index) => [kunye.raw, { sira: index + 1, issues: kunye.issues }]),
       );
       setDenetim(
-        await kaynakcaDenetle({
+        await asistanCagir(() => kaynakcaDenetle({
           kaynaklar: result.academicVerification.map((item) => {
             const kunye = kunyeBilgisi.get(item.reference);
             return {
@@ -243,7 +244,7 @@ export default function CitationCheckForm({
           atiflar: (result.citations ?? []).map((c) => c.raw),
           projectId: projectId || null,
           zorla,
-        }),
+        })),
       );
       // Yeni yorum soldaki "Geçmiş sorgular"a düşsün.
       if (gomulu) router.refresh();

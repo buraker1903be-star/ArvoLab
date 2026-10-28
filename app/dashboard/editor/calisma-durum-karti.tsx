@@ -83,7 +83,7 @@ export default async function CalismaDurumKarti({
   const bugun = trGunAnahtari();
   const siradakiKilometre = takvim ? siradakiTas(takvim, bugun) : null;
   /* Teze eklenmeyi bekleyen analizler de "Başka neler var"da: sıraya koyan öğrenci unutmasın. */
-  const siradakiAnalizler = analizler.filter((a) => a.teze_eklenecek && !a.teze_eklendi);
+  const siradakiAnalizler = analizler.satirlar.filter((a) => a.teze_eklenecek && !a.teze_eklendi);
   const merkez = `/dashboard/editor/${projectId}`;
 
   if (!ozet || ozet === CALISMA_OKUNAMADI) {

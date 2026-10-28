@@ -41,10 +41,33 @@ const temiz = (deger: string | null | undefined, enCok = 500) => {
   return t ? t.slice(0, enCok) : null;
 };
 
-/* "Yılmaz, Ahmet" ya da "Ahmet Yılmaz" → { family, given } */
+/*
+  KURUM YAZAR (28.10.2026). "Milli Eğitim Bakanlığı" kişi adı gibi
+  bölünüyor, "Bakanlığı, M. E." oluyordu; Zotero'nun {{World Health
+  Organization}} yazımı da "Organization, W. H." Türkçe tezlerde kurum
+  yazarı çok yaygın (MEB, TÜİK, YÖK, bakanlıklar) ve bozuk künye öğrencinin
+  kaynakçasına doğrudan geçiyordu.
+
+  RIS'te kişi ile kurumu ayıran bir işaret yok; kurum adının imzası olan
+  sözcüklere ve tamamı büyük harf kısaltmalara bakılıyor. Üç sözcüklü bir
+  kişi adı ("Ahmet Faruk Yılmaz") bu yüzden kişi olarak kalıyor.
+*/
+const KURUM_SOZCUGU =
+  /* \b ASCII tabanlı: "bakanlığı"nın sonundaki "ı"dan sonra sınır oluşmuyor. */
+  /(?<!\p{L})(bakanlığı|başkanlığı|müdürlüğü|üniversitesi|enstitüsü|kurumu|kurulu|derneği|vakfı|odası|merkezi|ministry|university|institute|organi[sz]ation|association|council|agency|department|office|commission|foundation|society|bank|bureau|committee|center|centre)(?!\p{L})/iu;
+
+export function kurumYazariMi(ad: string): boolean {
+  const t = ad.trim();
+  if (!t || t.includes(",")) return false;
+  if (/^[\p{Lu}\d&.-]{2,}$/u.test(t)) return true; // OECD, TÜİK, WHO
+  return KURUM_SOZCUGU.test(t.toLocaleLowerCase("tr-TR"));
+}
+
+/* "Yılmaz, Ahmet" ya da "Ahmet Yılmaz" → { family, given }; kurum → { name } */
 function kisiAyristir(ham: string): { family?: string; given?: string; name?: string } {
   const t = ham.replace(/\s+/g, " ").trim();
   if (!t) return {};
+  if (kurumYazariMi(t)) return { name: t };
   if (t.includes(",")) {
     const [family, ...given] = t.split(",");
     return { family: family.trim(), given: given.join(" ").trim() || undefined };
@@ -149,6 +172,49 @@ function latexCoz(deger: string) {
   return t.replace(/[{}]/g, "");
 }
 
+/*
+  BibTeX yazar listesi: " and " yalnızca en dış düzeyde bölünür; tamamı
+  süslü paranteze alınmış yazar ({World Health Organization}) kurumdur ve
+  olduğu gibi kalır — BibTeX'in kendi kuralı bu.
+*/
+/** Metnin tamamı TEK bir {…} grubu mu (ilk "{" son karakterde kapanıyor mu)? */
+function tekGrupMu(t: string): boolean {
+  if (!t.startsWith("{")) return false;
+  let derinlik = 0;
+  for (let i = 0; i < t.length; i++) {
+    if (t[i] === "{") derinlik++;
+    else if (t[i] === "}" && --derinlik === 0) return i === t.length - 1;
+  }
+  return false;
+}
+
+function bibYazarlari(ham: string): string | null {
+  const parcalar: string[] = [];
+  let derinlik = 0;
+  let bas = 0;
+  for (let i = 0; i < ham.length; i++) {
+    if (ham[i] === "{") derinlik++;
+    else if (ham[i] === "}") derinlik--;
+    else if (derinlik === 0 && /^\s+and\s+/i.test(ham.slice(i)) && /\s/.test(ham[i])) {
+      parcalar.push(ham.slice(bas, i));
+      const eslesme = ham.slice(i).match(/^\s+and\s+/i)!;
+      i += eslesme[0].length - 1;
+      bas = i + 1;
+    }
+  }
+  parcalar.push(ham.slice(bas));
+  const kisiler = parcalar
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => {
+      const tumuParantezli = tekGrupMu(p);
+      const ad = latexCoz(p).replace(/\s+/g, " ").trim();
+      return tumuParantezli ? { name: ad } : kisiAyristir(ad);
+    })
+    .filter((k) => k.family || k.name);
+  return kisiler.length ? formatAuthors(kisiler) : null;
+}
+
 /* Bir alan değerini okur: {…} (iç içe), "…" ya da çıplak sözcük/sayı. Konum döner. */
 function degerOku(metin: string, i: number): [string, number] {
   while (/\s/.test(metin[i] ?? "")) i += 1;
@@ -211,6 +277,8 @@ export function bibtexOku(metin: string): KaynakTaslagi[] {
       i += ad[0].length;
       const [deger, son] = degerOku(metin, i);
       alanlar[ad[1].toLowerCase()] = latexCoz(deger);
+      /* Yazar alanı süslü parantezleriyle de saklanır: {Kurum Adı} BibTeX'te "bölme" demek. */
+      if (ad[1].toLowerCase() === "author") alanlar.__yazarHam = deger;
       i = son;
     }
     desen.lastIndex = i;
@@ -220,7 +288,7 @@ export function bibtexOku(metin: string): KaynakTaslagi[] {
     const doi = temiz(alanlar.doi, 300);
     kayitlar.push({
       title: baslik,
-      authors: yazarlar((alanlar.author ?? "").split(/\s+and\s+/i).map((a) => a.trim()).filter(Boolean)),
+      authors: bibYazarlari(alanlar.__yazarHam ?? ""),
       year: yilAyikla(alanlar.year ?? alanlar.date),
       sourceType: kaynakTuru,
       doiOrUrl: doi ? doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "") : temiz(alanlar.url, 500),

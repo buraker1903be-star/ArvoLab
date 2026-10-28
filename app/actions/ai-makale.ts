@@ -6,7 +6,7 @@ import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
-import { baglamDisiKunye, bulgulariCozumle, bulgulariDogrula, type Bulgu } from "@/lib/ai/bulgu";
+import { baglamDisiKunye, bulgulariCozumle, bulgulariDogrula, type Bulgu, bosListeMi } from "@/lib/ai/bulgu";
 import { makaleIstemi } from "@/lib/ai/makale-denetimi";
 import { makaleBolumleri } from "@/lib/makale/bolumler";
 import { makaleTuruMu, yontemAilesi } from "@/lib/makale/sablonlar";
@@ -93,6 +93,11 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
   try {
     const yanit = await sor(mesajlar, { yetenek: "makale", jsonBekle: true, sicaklik: 0.2, enFazlaJeton: 3000 });
     const bulgular = bulgulariCozumle(yanit.metin);
+    /* Bilerek boş liste: denetlenen metinde işaretlenecek bir şey yok. Hata değil, sonuç. */
+    if (!bulgular.length && bosListeMi(yanit.metin)) {
+      const kayitId = await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular });
+      return { bulgular, kirpilanlar, model: yanit.model, kayitId };
+    }
     if (!bulgular.length) {
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
       return { hata: "Asistan bu bölüm için denetlenebilir bir bulgu üretmedi. Tekrar deneyebilirsiniz.", kirpilanlar };

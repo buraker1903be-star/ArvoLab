@@ -1,5 +1,7 @@
 "use client";
 
+import { asistanCagir } from "@/lib/asistan-istemci";
+import { csvOku, excelSatirlariniDuzelt, kodluGrupSutunlari } from "@/lib/veri-okuma";
 import { useState, useCallback, useMemo, useRef, useTransition } from "react";
 import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save, ListPlus, Sparkles, Code2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -136,6 +138,8 @@ export default function DataAnalyzer({
   const router = useRouter();
   const [dataset, setDataset] = useState<ParsedDataset | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  /* Okuma kararları ("ondalık virgül olarak okundu"): sessiz tahmin olmasın. */
+  const [veriNotlari, setVeriNotlari] = useState<string[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -279,12 +283,12 @@ export default function DataAnalyzer({
       yorumuBaslat(async () => {
         setYorum(null);
         setYorum(
-          await analizDenetle({
+          await asistanCagir(() => analizDenetle({
             istatistikMetni: metin,
             projectId: kayitCalismasi || null,
             yontem: baslik,
             zorla,
-          }),
+          })),
         );
       });
     },
@@ -302,26 +306,38 @@ export default function DataAnalyzer({
     setDataset(null);
     setResult(null);
     try {
-      const XLSX = await import("xlsx");
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const firstSheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[firstSheetName];
-      const json = XLSX.utils.sheet_to_json<DataRow>(sheet, { defval: null });
+      const bayt = new Uint8Array(await file.arrayBuffer());
+      /*
+        Metin dosyaları (CSV/TSV) kendi okuyucumuzdan geçiyor: kodlama,
+        ayırıcı ve ondalık kararı dosya başına (lib/veri-okuma.ts). SheetJS
+        Türkçe Excel'in noktalı virgüllü CSV'sinde "3,5"i 35 okuyordu.
+      */
+      let okunan;
+      if (/\.(csv|tsv|txt)$/i.test(file.name)) {
+        okunan = csvOku(bayt);
+      } else {
+        const XLSX = await import("xlsx");
+        const workbook = XLSX.read(bayt, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const ham = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
+        okunan = excelSatirlariniDuzelt(ham.length ? Object.keys(ham[0]) : [], ham);
+      }
+      const columns = okunan.sutunlar;
+      const json = okunan.satirlar as DataRow[];
 
       if (json.length === 0) {
         setParseError("Dosyada okunabilir veri bulunamadı.");
         return;
       }
 
-      const columns = Object.keys(json[0]);
       const { numericColumns, categoricalColumns } = detectColumnTypes(columns, json);
 
       setDataset({ columns, rows: json, numericColumns, categoricalColumns });
+      setVeriNotlari(okunan.notlar);
       setFileName(file.name);
       setVarA(numericColumns[0] ?? "");
       setVarB(numericColumns[1] ?? numericColumns[0] ?? "");
-      setGroupVar(categoricalColumns[0] ?? "");
+      setGroupVar(categoricalColumns[0] ?? kodluGrupSutunlari(numericColumns, json)[0] ?? "");
     } catch (err) {
       console.error(err);
       setParseError("Dosya okunamadı. Lütfen geçerli bir .xlsx, .xls veya .csv dosyası yükleyin.");
@@ -329,6 +345,17 @@ export default function DataAnalyzer({
       setLoading(false);
     }
   }, []);
+
+  /*
+    Grup değişkeni olabilecek sütunlar: kategorikler + sayıyla kodlanmış
+    gruplar (Cinsiyet 1/2, Sınıf 1/2/3; lib/veri-okuma.ts). SPSS'ten gelen
+    veride gruplar hep sayıyla kodlu; eskiden bu sütunlar yalnızca sayısal
+    sayıldığı için t-testi, ANOVA ve ki-karenin grup listesi boş kalıyordu.
+  */
+  const grupSutunlari = useMemo(
+    () => (dataset ? [...dataset.categoricalColumns, ...kodluGrupSutunlari(dataset.numericColumns, dataset.rows)] : []),
+    [dataset],
+  );
 
   const groupLevels = useMemo(() => {
     if (!dataset || !groupVar) return [];
@@ -2191,8 +2218,15 @@ export default function DataAnalyzer({
 
       if (analysisType === "chisquare") {
         if (!dataset) return;
-        const rowLevels = [...new Set(dataset.rows.map((r) => String(r[groupVar])).filter(Boolean))];
-        const colLevels = [...new Set(dataset.rows.map((r) => String(r[varA])).filter(Boolean))];
+        /*
+          Boş hücre kategori DEĞİL. Eskiden String(null) "null" diye bir düzey
+          açıyordu: yanıtsız anket maddeleri fazladan satır/sütun olarak χ²,
+          sd, N ve Cramér V'yi değiştiriyordu; R ve Python betikleri eksik
+          değeri atıyordu, sonuçlar uyuşmuyordu.
+        */
+        const dolu = (v: CellValue) => v !== null && v !== "";
+        const rowLevels = [...new Set(dataset.rows.filter((r) => dolu(r[groupVar]) && dolu(r[varA])).map((r) => String(r[groupVar])))];
+        const colLevels = [...new Set(dataset.rows.filter((r) => dolu(r[groupVar]) && dolu(r[varA])).map((r) => String(r[varA])))];
         if (rowLevels.length < 2 || colLevels.length < 2) {
           setResultError("Ki-kare testi için her iki değişkende de en az 2 kategori olmalıdır.");
           return;
@@ -2552,7 +2586,7 @@ export default function DataAnalyzer({
           </span>
           <input
             type="file"
-            accept=".xlsx,.xls,.csv"
+            accept=".xlsx,.xls,.csv,.tsv,.txt"
             hidden
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -2584,6 +2618,7 @@ export default function DataAnalyzer({
                 setDataset(null);
                 setResult(null);
                 setFileName(null);
+                setVeriNotlari([]);
                 setFullReport(null);
                 setCalisanAnaliz(null);
                 setKaydedildi(false);
@@ -2593,6 +2628,11 @@ export default function DataAnalyzer({
               Yeni dosya yükle
             </button>
           </div>
+          {veriNotlari.length ? (
+            <p className="muted text-sm mb-md" role="status">
+              {veriNotlari.join(" ")} Sayılar yanlış görünüyorsa dosyayı Excel&apos;den .xlsx olarak kaydedip yükleyin.
+            </p>
+          ) : null}
 
           {/*
             Pencerede kapsamlı rapor tek düğme: bütün değişkenlerin betimsel
@@ -2728,7 +2768,7 @@ export default function DataAnalyzer({
               <label>
                 <span>{analysisType === "ikiyonluanova" ? "1. faktör (kategorik)" : "Grup değişkeni (kategorik)"}</span>
                 <select value={groupVar} onChange={(e) => setGroupVar(e.target.value)}>
-                  {dataset.categoricalColumns.map((c) => (
+                  {grupSutunlari.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>
@@ -2742,7 +2782,7 @@ export default function DataAnalyzer({
                 <span>2. faktör (kategorik)</span>
                 <select value={groupVar2} onChange={(e) => setGroupVar2(e.target.value)}>
                   <option value="">Seçin</option>
-                  {dataset.categoricalColumns.map((c) => (
+                  {grupSutunlari.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>
@@ -2781,7 +2821,7 @@ export default function DataAnalyzer({
               <label>
                 <span>İkinci kategorik değişken</span>
                 <select value={varA} onChange={(e) => setVarA(e.target.value)}>
-                  {dataset.categoricalColumns.map((c) => (
+                  {grupSutunlari.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>

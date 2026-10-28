@@ -1,5 +1,6 @@
 "use client";
 
+import { asistanCagir } from "@/lib/asistan-istemci";
 import { useState, useTransition } from "react";
 import { makaleBolumDenetle, type MakaleDenetimYaniti } from "@/app/actions/ai-makale";
 import AsistanSonuc from "@/app/dashboard/_components/asistan-sonuc";
@@ -21,7 +22,7 @@ export default function MakaleAsistani({ projectId, bolumler, asistanAcik }: { p
   function denetle(zorla: boolean) {
     basla(async () => {
       setSonuc(null);
-      setSonuc(await makaleBolumDenetle({ projectId, bolumSirasi: Number(secili), zorla }));
+      setSonuc(await asistanCagir(() => makaleBolumDenetle({ projectId, bolumSirasi: Number(secili), zorla })));
     });
   }
 

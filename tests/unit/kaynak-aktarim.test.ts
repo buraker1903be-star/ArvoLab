@@ -133,3 +133,22 @@ describe("dışa aktarma", () => {
     assert.match(kaynakcaMetni(kaynaklar, "ieee").metin.split("\n")[0], /^\[1\] Yılmaz/);
   });
 });
+
+describe("kurum yazarı (28.10.2026)", () => {
+  test("RIS'te kurum adı kişi gibi bölünmez", () => {
+    // Eskiden: "Bakanlığı, M. E."
+    const [k] = risOku("TY  - RPRT\nAU  - Milli Eğitim Bakanlığı\nTI  - Rapor\nPY  - 2023\nER  - \n");
+    assert.equal(k.authors, "Milli Eğitim Bakanlığı");
+  });
+
+  test("kısaltma kurum, üç sözcüklü kişi adı kişi", () => {
+    const [k] = risOku("TY  - JOUR\nAU  - TÜİK\nAU  - Ahmet Faruk Yılmaz\nTI  - X\nER  - \n");
+    assert.equal(k.authors, "TÜİK, & Yılmaz, A. F.");
+  });
+
+  test("BibTeX'te çift süslü parantez kurumdur", () => {
+    // Zotero'nun yazımı; eskiden "Organization, W. H."
+    const [k] = bibtexOku("@report{a, author = {{World Health Organization} and Demir, Ayşe}, title = {Rapor}, year = {2020}}");
+    assert.equal(k.authors, "World Health Organization, & Demir, A.");
+  });
+});

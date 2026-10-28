@@ -37,7 +37,7 @@ export default async function AnalysisPage({
   searchParams: Promise<{ calisma?: string }>;
 }) {
   const { calisma: istenen } = await searchParams;
-  const [asistanAcik, { satirlar: calismalar, okunamadi: calismaOkunamadi }, { satirlar: tumSonuclar }] = await Promise.all([
+  const [asistanAcik, { satirlar: calismalar, okunamadi: calismaOkunamadi }, { satirlar: tumSonuclar, okunamadi: sonucOkunamadi }] = await Promise.all([
     analizAsistaniAcik(),
     getMyProjects(),
     getAnalizSonuclari(),
@@ -45,7 +45,9 @@ export default async function AnalysisPage({
 
   /* Adresteki çalışma listede yoksa yok sayılır; yoksa en son açılan. */
   const calisma = calismalar.find((c) => c.id === istenen) ?? calismalar[0] ?? null;
-  const analizler = calisma ? await calismaAnalizleri(calisma.id) : [];
+  const { satirlar: analizler, okunamadi: analizOkunamadi } = calisma
+    ? await calismaAnalizleri(calisma.id)
+    : { satirlar: [], okunamadi: false };
   const bagsizlar = tumSonuclar.filter((s) => !s.project_id);
 
   return (
@@ -121,9 +123,10 @@ export default async function AnalysisPage({
         </div>
       </section>
 
-      {calismaOkunamadi ? (
+      {calismaOkunamadi || analizOkunamadi || sonucOkunamadi ? (
         <p className="alert" role="alert">
-          Çalışma listeniz okunamadı; aşağısı eksik görünebilir. Kayıtlarınız yerinde duruyor — sayfayı yenileyin.
+          {calismaOkunamadi ? "Çalışma listeniz" : "Kayıtlı analizleriniz"} okunamadı; aşağısı eksik görünebilir.
+          Kayıtlarınız yerinde duruyor — sayfayı yenileyin.
         </p>
       ) : null}
 

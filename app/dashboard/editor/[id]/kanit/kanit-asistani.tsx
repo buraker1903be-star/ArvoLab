@@ -1,5 +1,6 @@
 "use client";
 
+import { asistanCagir } from "@/lib/asistan-istemci";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
@@ -21,7 +22,7 @@ export default function KanitAsistani({ kanitId, asistanAcik, metinVar }: { kani
   function sor(zorla: boolean) {
     basla(async () => {
       setSonuc(null);
-      const yanit = await kanitDegerlendir({ kanitId, zorla });
+      const yanit = await asistanCagir(() => kanitDegerlendir({ kanitId, zorla }));
       setSonuc(yanit);
       if (yanit.duzey) router.refresh();
     });

@@ -2,7 +2,7 @@
 
 import { aiYapilandirildi, sor } from "@/lib/ai/saglayici";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
-import { bulgulariCozumle, bulgulariDogrula, type Bulgu } from "@/lib/ai/bulgu";
+import { bulgulariCozumle, bulgulariDogrula, type Bulgu, bosListeMi } from "@/lib/ai/bulgu";
 import { analizIstemi } from "@/lib/ai/analiz-yorumu";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
@@ -91,6 +91,11 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
   try {
     const yanit = await sor(mesajlar, { yetenek: "analiz", jsonBekle: true, sicaklik: 0.1, enFazlaJeton: 3000 });
     const bulgular = bulgulariCozumle(yanit.metin);
+    /* Bilerek boş liste: denetlenen metinde işaretlenecek bir şey yok. Hata değil, sonuç. */
+    if (!bulgular.length && bosListeMi(yanit.metin)) {
+      const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
+      return { bulgular, kirpilanlar, model: yanit.model, kayitId };
+    }
     if (!bulgular.length) {
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "analiz", durum: "rejected", redNedeni: "bos", model: yanit.model, baglam: kaynak, cikti: yanit.metin, basladi });
       return {

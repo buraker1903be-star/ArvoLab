@@ -1078,6 +1078,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .asistan-uyari[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
 .asistan-uyari[data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
 .asistan-uyari[data-tone="neutral"] { --tone: var(--muted); --tone-soft: var(--surface-2); }
+.asistan-uyari[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
 .asistan-uyari-eylemli { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 
 .asistan-ikincil-dugme {

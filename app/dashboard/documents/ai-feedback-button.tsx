@@ -1,5 +1,6 @@
 "use client";
 
+import { ASISTANA_ULASILAMADI } from "@/lib/asistan-istemci";
 import { useState } from "react";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { requestAiFeedback } from "@/app/actions/ai-feedback";
@@ -32,6 +33,10 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
       } else if (res.feedback) {
         setFeedback(res.feedback);
       }
+    } catch (hata) {
+      /* İşlemin kendisi düştüyse (süre aşımı, bağlantı) hata ekranına gitmesin. */
+      console.error("[geri bildirim] çağrı düştü:", hata);
+      setError(ASISTANA_ULASILAMADI);
     } finally {
       setLoading(false);
     }

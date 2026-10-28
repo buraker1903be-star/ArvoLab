@@ -77,10 +77,32 @@ function normalize(ham: string): string {
   alarm kaçırılan uydurmadan sinsidir (AGENTS.md) — kullanıcı doğru çalışan
   aracı kullanmayı bırakır.
 
+    .1 .2 .3 .5   Cohen'in yerleşik eşikleri (28.10.2026): d için .2/.5/.8,
+    .8 .06 .14    r için .1/.3/.5, η² için .01/.06/.14. "Etki küçük (d < .2)"
+                  bir yorum ölçütüdür, veri değil; analiz asistanının istemi
+                  etki büyüklüğünü yorumlamasını istiyor ve bu cümle canlıda
+                  cevabın TAMAMINI düşürüyordu. Bedeli: tam olarak bu
+                  değerlerle uydurulmuş bir etki büyüklüğü kaçar.
+
   Bu yüzden denge burada duruyor; değiştirilecekse gerekçesi bu paragrafın
   yerine yazılmalı. tests/unit/ai-sayi-denetimi.test.ts bedeli de sabitliyor.
 */
-const SERBEST = new Set(["0", "1", "2", "3", "4", "5", ".05", ".01", ".001", "100", "95", "-1"]);
+const SERBEST = new Set(["0", "1", "2", "3", "4", "5", ".05", ".01", ".001", "100", "95", "-1", ".1", ".2", ".3", ".5", ".8", ".06", ".14"]);
+
+/*
+  ORAN ↔ YÜZDE (28.10.2026). Girdide "η² = ,06" varken asistanın "varyansın
+  %6'sı" yazması aynı değerin yüzde yazımı; eskiden ".06" ile "6" ayrı
+  sayıldığı için cevap düşüyordu (canlıda 26.10.2026'da analiz asistanında
+  "uydurulan: 6"). Yalnızca TAM dönüşüm kabul ediliyor: ".062" → "6.2",
+  yuvarlanmış "6" değil — yuvarlamaya izin vermek her yakın sayıyı geçirirdi.
+*/
+function yuzdeKarsiliklari(degerler: string[]): string[] {
+  return degerler.flatMap((d) => {
+    const n = Number(d);
+    if (!Number.isFinite(n) || Math.abs(n) >= 1 || n === 0) return [];
+    return [normalize(String(Math.round(n * 100 * 1e6) / 1e6))];
+  });
+}
 
 /**
  * Çıktıda geçip girdide geçmeyen sayılar. Boş dizi dönerse cevapta uydurma
@@ -88,7 +110,8 @@ const SERBEST = new Set(["0", "1", "2", "3", "4", "5", ".05", ".01", ".001", "10
  * istatistiklerin APA karşılıkları).
  */
 export function uydurmaSayilar(cikti: string, girdi: string, ...ekGirdiler: string[]): string[] {
-  const bilinen = new Set([...sayilar(girdi), ...ekGirdiler.flatMap(sayilar)]);
+  const girdiSayilari = [...sayilar(girdi), ...ekGirdiler.flatMap(sayilar)];
+  const bilinen = new Set([...girdiSayilari, ...yuzdeKarsiliklari(girdiSayilari)]);
   // Standart adları yalnızca çıktıda ayıklanır; girdide geçmesi zararsız.
   const temiz = cikti.replace(STANDART_ADI, " ");
   return [...new Set(sayilar(temiz))].filter((deger) => !bilinen.has(deger) && !SERBEST.has(deger));

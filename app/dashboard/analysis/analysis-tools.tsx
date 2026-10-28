@@ -1,5 +1,6 @@
 "use client";
 
+import { asistanCagir } from "@/lib/asistan-istemci";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { detectStatistics, type DetectedStatistic } from "@/lib/stats-interpreter";
@@ -55,14 +56,14 @@ export default function AnalysisTools({
     basla(async () => {
       setDenetim(null);
       setDenetim(
-        await analizDenetle({
+        await asistanCagir(() => analizDenetle({
           istatistikMetni: statsInput,
           apaSatirlari: statsResult.map((s) => s.apaSentenceFragment),
           arastirmaSorusu,
           orneklem,
           projectId: calismaId || null,
           zorla,
-        }),
+        })),
       );
     });
   }

@@ -108,7 +108,10 @@ export default function AsistanSonuc({
 
   const bulgular = sonuc?.bulgular ?? [];
   const aramalar = sonuc?.aramalar ?? [];
-  const doluSonuc = bulgular.length > 0 || aramalar.length > 0;
+  /* Bilerek boş liste (lib/ai/bulgu.ts, bosListeMi): asistan baktı, işaretlenecek bir şey bulmadı.
+     Puanlanabilir bir sonuç; "yanlış alarm vermedi" de eğitim verisi. */
+  const temiz = Boolean(sonuc && !sonuc.hata && sonuc.bulgular && sonuc.bulgular.length === 0 && aramalar.length === 0);
+  const doluSonuc = bulgular.length > 0 || aramalar.length > 0 || temiz;
 
   return (
     <>
@@ -145,6 +148,13 @@ export default function AsistanSonuc({
           <h4 className="asistan-bolum-baslik">{bulguBasligi}</h4>
           <BulguListesi bulgular={bulgular} etiketler={etiketler} eylem={bulguEylemi} />
         </div>
+      )}
+
+      {temiz && (
+        <p className="asistan-uyari" data-tone="success" role="status">
+          Asistan bu metinde işaretlenecek bir sorun bulmadı. Bu bir onay değil: yalnızca kendi denetim
+          listesinde bir eksik görmediği anlamına gelir.
+        </p>
       )}
 
       {doluSonuc && !sonuc?.kayitliCevap && <AsistanPuan kayitId={sonuc?.kayitId} />}

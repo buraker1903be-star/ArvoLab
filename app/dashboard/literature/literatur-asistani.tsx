@@ -1,5 +1,6 @@
 "use client";
 
+import { asistanCagir } from "@/lib/asistan-istemci";
 import { useState, useTransition } from "react";
 import { literaturTara, type LiteraturDenetimYaniti } from "@/app/actions/ai-literatur";
 import AsistanSonuc from "../_components/asistan-sonuc";
@@ -28,7 +29,7 @@ export default function LiteraturAsistani({
   function tara(zorla: boolean) {
     basla(async () => {
       setSonuc(null);
-      setSonuc(await literaturTara({ arastirmaSorusu: soru, projectId: projeId || null, zorla }));
+      setSonuc(await asistanCagir(() => literaturTara({ arastirmaSorusu: soru, projectId: projeId || null, zorla })));
     });
   }
 
