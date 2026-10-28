@@ -1012,7 +1012,7 @@ export default function ManuscriptEditor({
         return;
       }
       // İndirme ve hata okuma ortak yardımcıda (ana sayfadaki "Danışmanıma gönder" de kullanıyor).
-      const hata = await wordDosyasiniIndir(projectId);
+      const hata = await wordDosyasiniIndir(projectId, dil);
       if (hata) showToast("error", hata);
     } finally {
       window.setTimeout(() => setExporting(false), 1500);
@@ -2837,7 +2837,7 @@ export default function ManuscriptEditor({
             {guideline.settings.abstract ? (
               <>
                 <dt>{t({ tr: "Özet", en: "Abstract" })}</dt>
-                <dd>{describeAbstractRules(guideline.settings.abstract)}</dd>
+                <dd>{describeAbstractRules(guideline.settings.abstract, dil)}</dd>
               </>
             ) : null}
             {guideline.minPages || guideline.maxPages ? (

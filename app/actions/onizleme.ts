@@ -17,10 +17,10 @@ import { GORUNUM_ETIKETI, ONIZLEME_CEREZI, gorunumMu, onizleyebilir } from "@/li
 export async function gorunumSec(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
-  if (!onizleyebilir(ctx.role)) return { error: "Görünüm önizlemesi yalnızca sistem yöneticisi ve kurucuya açık." };
+  if (!onizleyebilir(ctx.role)) return { error: (await ceviri())({ tr: "Görünüm önizlemesi yalnızca sistem yöneticisi ve kurucuya açık.", en: "View preview is only available to system administrators and founders." }) };
 
   const secilen = String(formData.get("gorunum") ?? "");
-  if (!gorunumMu(secilen)) return { error: "Görünüm tanınmadı." };
+  if (!gorunumMu(secilen)) return { error: (await ceviri())({ tr: "Görünüm tanınmadı.", en: "Unknown view." }) };
 
   const depo = await cookies();
   if (secilen === "personel") depo.delete(ONIZLEME_CEREZI);

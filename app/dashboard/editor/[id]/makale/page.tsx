@@ -365,7 +365,7 @@ export default async function MakaleCalismaAlani({
             <MakaleAsistani
               projectId={id}
               asistanAcik={asistanAcik}
-              bolumler={bolumler.map((b, sira) => ({ sira, baslik: b.baslik, sozcuk: b.sozcuk, denetim: denetimListesi(b.tur, aile) }))}
+              bolumler={bolumler.map((b, sira) => ({ sira, baslik: b.baslik, sozcuk: b.sozcuk, denetim: denetimListesi(b.tur, aile, dil) }))}
             />
           </PanelDrawer>
 

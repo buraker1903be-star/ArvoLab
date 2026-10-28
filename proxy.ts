@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { DIL_CEREZI, ilkZiyaretDili } from "@/lib/dil";
 
 // Next.js 16 "proxy" katmanı (eski adıyla middleware):
 // 1) Supabase oturum çerezini her istekte yeniler (Server Component'ler çerez yazamaz).
@@ -8,9 +9,28 @@ import { NextResponse, type NextRequest } from "next/server";
 const SIGNED_OUT_ONLY_PATHS = ["/", "/forgot-password"];
 
 export async function proxy(request: NextRequest) {
+  /*
+    ARAYÜZ DİLİ İLK ZİYARETTE BİR KEZ KARARLAŞTIRILIR (28.10.2026, lib/dil.ts).
+    Dil çerezi yoksa: oturum çerezi olan (mevcut müşteri) Türkçe'de kalır —
+    İngilizce ayarlı tarayıcı kullanan Türk öğrencinin paneli güncellemeyle
+    birden İngilizceye dönmesin. Oturumu olmayan yeni ziyaretçiye tarayıcının
+    dili. Karar çereze yazılır; sonrasında kullanıcının seçimi geçerli.
+    İstek çerezine de yazılıyor ki bu ilk istekteki sayfa da aynı dille çizilsin.
+  */
+  const yeniDil = ilkZiyaretDili(
+    request.cookies.get(DIL_CEREZI)?.value,
+    request.cookies.getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token")),
+    request.headers.get("accept-language"),
+  );
+  if (yeniDil) request.cookies.set(DIL_CEREZI, yeniDil);
+  const dilCereziniYaz = (yanit: NextResponse) => {
+    if (yeniDil) yanit.cookies.set(DIL_CEREZI, yeniDil, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+    return yanit;
+  };
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!supabaseUrl || !supabaseKey) return NextResponse.next({ request });
+  if (!supabaseUrl || !supabaseKey) return dilCereziniYaz(NextResponse.next({ request }));
 
   let response = NextResponse.next({ request });
 
@@ -41,7 +61,7 @@ export async function proxy(request: NextRequest) {
     const redirect = NextResponse.redirect(url);
     // Yenilenen oturum çerezleri yönlendirmede kaybolmasın.
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
-    return redirect;
+    return dilCereziniYaz(redirect);
   };
 
   if (!user && pathname.startsWith("/dashboard")) {
@@ -54,7 +74,7 @@ export async function proxy(request: NextRequest) {
     return redirectTo("/dashboard");
   }
 
-  return response;
+  return dilCereziniYaz(response);
 }
 
 // _next/ altındaki her şey (static, image, geliştirmede hmr soketi) proxy'den geçmez;

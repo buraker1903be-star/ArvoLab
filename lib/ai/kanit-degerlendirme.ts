@@ -138,7 +138,7 @@ export type KanitDogrulamasi =
  * Cevap gösterilebilir mi? Sıra önemli: biçim → alıntı → künye → sayı.
  * Biri bile tutmazsa cevabın tamamı düşer.
  */
-export function kanitDogrula(sonuc: KanitSonucu, girdi: { incelenenMetin: string; kaynak: string }): KanitDogrulamasi {
+export function kanitDogrula(sonuc: KanitSonucu, girdi: { incelenenMetin: string; kaynak: string; dil?: Dil }): KanitDogrulamasi {
   if (!sonuc.duzey || !sonuc.bulgular.length) return { gecti: false, neden: "bos" };
 
   if (sonuc.duzey !== "dogrulanamadi") {
@@ -149,7 +149,8 @@ export function kanitDogrula(sonuc: KanitSonucu, girdi: { incelenenMetin: string
   const yabanci = sonuc.bulgular.flatMap((b) => baglamDisiKunye(`${b.baslik} ${b.aciklama}`, girdi.kaynak));
   if (yabanci.length) return { gecti: false, neden: "kunye", ayrinti: yabanci };
 
-  const sayilar = bulgulariDogrula(sonuc.bulgular, girdi.kaynak);
+  /* Yazıyla sayılar bulguların dilinde aranır (sayi-denetimi.ts). */
+  const sayilar = bulgulariDogrula(sonuc.bulgular, girdi.kaynak, { dil: girdi.dil });
   if (!sayilar.gecti) return { gecti: false, neden: "uydurma_sayi", ayrinti: sayilar.uydurulan };
 
   return { gecti: true, sonuc: { ...sonuc, duzey: sonuc.duzey } };

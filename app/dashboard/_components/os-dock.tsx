@@ -165,7 +165,7 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
       {altUygulama?.bolumler && alt ? (
         <nav
           className="os-subdock"
-          aria-label={`${altUygulama.label} bölümleri`}
+          aria-label={t({ tr: `${altUygulama.label} bölümleri`, en: `${altUygulama.label} sections` })}
           style={{
             left: Math.min(Math.max(alt.x, 160), (typeof window === "undefined" ? 1280 : window.innerWidth) - 160),
             bottom: alt.alt,

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { aktifDil, aktifSaatDilimi } from "@/lib/dil-sunucu";
+import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { DilSaglayici } from "./_components/dil-saglayici";
 import { Inter, Montserrat } from "next/font/google";
 import "./styles/tokens.css";
@@ -31,15 +31,18 @@ const montserrat = Montserrat({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  /* Her sayfa kendi adını verir; eskiden bütün sekmeler "ArvoLab" yazıyordu
-     ve birkaç sekme açan kullanıcı hangisinin hangisi olduğunu göremiyordu. */
-  title: { default: "ArvoLab", template: "%s · ArvoLab" },
-  description: "Akademik Araştırma ve Analiz Sistemi",
-  applicationName: "ArvoLab",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "ArvoLab" },
-  formatDetection: { telephone: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await ceviri();
+  return {
+    /* Her sayfa kendi adını verir; eskiden bütün sekmeler "ArvoLab" yazıyordu
+       ve birkaç sekme açan kullanıcı hangisinin hangisi olduğunu göremiyordu. */
+    title: { default: "ArvoLab", template: "%s · ArvoLab" },
+    description: t({ tr: "Akademik Araştırma ve Analiz Sistemi", en: "Academic research and analysis system" }),
+    applicationName: "ArvoLab",
+    appleWebApp: { capable: true, statusBarStyle: "default", title: "ArvoLab" },
+    formatDetection: { telephone: false },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

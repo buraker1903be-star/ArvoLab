@@ -40,12 +40,13 @@ const intInRange = (value: unknown, min: number, max: number) =>
   typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : undefined;
 
 /** "150–250 kelime · 3–5 anahtar kelime" */
-export function describeAbstractRules(rules: AbstractRules): string {
+export function describeAbstractRules(rules: AbstractRules, dil: "tr" | "en" = "tr"): string {
+  const en = dil === "en";
   const range = (min?: number, max?: number) =>
-    min && max ? `${min}–${max}` : min ? `en az ${min}` : max ? `en fazla ${max}` : "";
+    min && max ? `${min}–${max}` : min ? (en ? `at least ${min}` : `en az ${min}`) : max ? (en ? `at most ${max}` : `en fazla ${max}`) : "";
   return [
-    range(rules.minWords, rules.maxWords) ? `${range(rules.minWords, rules.maxWords)} kelime` : "",
-    range(rules.keywordsMin, rules.keywordsMax) ? `${range(rules.keywordsMin, rules.keywordsMax)} anahtar kelime` : "",
+    range(rules.minWords, rules.maxWords) ? `${range(rules.minWords, rules.maxWords)} ${en ? "words" : "kelime"}` : "",
+    range(rules.keywordsMin, rules.keywordsMax) ? `${range(rules.keywordsMin, rules.keywordsMax)} ${en ? "keywords" : "anahtar kelime"}` : "",
   ]
     .filter(Boolean)
     .join(" · ");

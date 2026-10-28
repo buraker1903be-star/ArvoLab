@@ -132,7 +132,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
       const ham = (onceki.ham ?? {}) as { duzey?: unknown; alinti?: unknown };
       const dogrulama = kanitDogrula(
         kanitCozumle(JSON.stringify({ duzey: ham.duzey, alinti: ham.alinti, bulgular: onceki.bulgular })),
-        { incelenenMetin, kaynak },
+        { incelenenMetin, kaynak, dil },
       );
       if (dogrulama.gecti) {
         const uyari = await hukmuIsle(t, kayit.id, kayit.project_id, onceki.id, dogrulama.sonuc);
@@ -157,7 +157,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
   try {
     const yanit = await sor(mesajlar, { yetenek: "kanit", jsonBekle: true, sicaklik: 0, enFazlaJeton: 1500 });
     const sonuc = kanitCozumle(yanit.metin);
-    const dogrulama = kanitDogrula(sonuc, { incelenenMetin, kaynak });
+    const dogrulama = kanitDogrula(sonuc, { incelenenMetin, kaynak, dil });
 
     if (!dogrulama.gecti) {
       console.error("[ai] kanıt değerlendirmesi reddedildi", { model: yanit.model, neden: dogrulama.neden, ayrinti: dogrulama.ayrinti });

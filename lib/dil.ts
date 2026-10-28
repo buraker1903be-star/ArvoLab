@@ -30,14 +30,15 @@ export type Metin = Record<Dil, string>;
 export const VARSAYILAN_DIL: Dil = "tr";
 
 /*
-  İNGİLİZCE YAYINDA MI (28.10.2026: hayır, çeviri sürüyor).
+  İNGİLİZCE YAYINDA (28.10.2026'da açıldı; çeviri tamamlandı).
 
-  Kapalıyken tarayıcının dili YOK SAYILIYOR ve dil seçici yalnızca iç
-  ekipte görünüyor. Sebep: Türk öğrencilerin önemli bir kısmı İngilizce
-  ayarlı tarayıcı kullanıyor; çeviri bitmeden açılırsa yarısı İngilizce
-  yarısı Türkçe bir panel görürlerdi. Çeviri tamamlanınca true yapılır.
+  Açıkken dil seçici herkese görünür ve oturumu olmayan yeni ziyaretçiye
+  tarayıcının dili sunulur. Mevcut müşterinin dili proxy.ts'te Türkçe'ye
+  sabitleniyor: Türk öğrencilerin önemli bir kısmı İngilizce ayarlı
+  tarayıcı kullanıyor, panelleri güncellemeyle birden İngilizceye dönmesin.
+  Kapatılırsa (false) tarayıcı dili yok sayılır, seçici yalnızca iç ekipte.
 */
-export const INGILIZCE_YAYINDA = false;
+export const INGILIZCE_YAYINDA = true;
 export const DIL_CEREZI = "arvolab_dil";
 
 /* Kullanıcının saat dilimi (tarayıcıdan); yalnızca İngilizcede kullanılıyor. */
@@ -101,4 +102,13 @@ export type Cevirici = (metin: Metin) => string;
 
 export function ceviriciKur(dil: Dil): Cevirici {
   return (metin) => metin[dil];
+}
+
+/**
+ * İlk ziyarette verilecek dil (proxy.ts). Çerez varsa karar verilmez (null).
+ * Oturumu olan mevcut müşteri Türkçe kalır; yeni ziyaretçiye tarayıcının dili.
+ */
+export function ilkZiyaretDili(dilCerezi: string | undefined, oturumVar: boolean, acceptLanguage: string | null): Dil | null {
+  if (dilCerezi) return null;
+  return oturumVar ? "tr" : tarayicidanDil(acceptLanguage);
 }

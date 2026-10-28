@@ -49,3 +49,19 @@ describe("tarih biçimleri", () => {
     assert.equal(saatDilimiMi("Europe/Berlin"), true);
   });
 });
+
+describe("ilk ziyarette dil (proxy)", () => {
+  test("İngilizce tarayıcılı mevcut müşteri Türkçe kalır", async () => {
+    const { ilkZiyaretDili } = await import("@/lib/dil");
+    assert.equal(ilkZiyaretDili(undefined, true, "en-US,en;q=0.9"), "tr");
+  });
+  test("yeni ziyaretçiye tarayıcının dili", async () => {
+    const { ilkZiyaretDili } = await import("@/lib/dil");
+    assert.equal(ilkZiyaretDili(undefined, false, "en-GB"), "en");
+    assert.equal(ilkZiyaretDili(undefined, false, "tr-TR"), "tr");
+  });
+  test("seçim yapılmışsa karar verilmez", async () => {
+    const { ilkZiyaretDili } = await import("@/lib/dil");
+    assert.equal(ilkZiyaretDili("en", true, "tr-TR"), null);
+  });
+});

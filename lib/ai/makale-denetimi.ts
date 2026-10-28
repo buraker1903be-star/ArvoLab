@@ -24,7 +24,7 @@ import { baglamKur, type BaglamParca } from "./baglam";
 import type { Dil } from "@/lib/dil";
 import { YANIT_BICIMI, cikisDiliMesaji, dilliKaynak } from "./bulgu";
 import type { Mesaj } from "./saglayici";
-import { MAKALE_TURLERI, YONTEM_DENETIMLERI, type BolumTuru, type MakaleTuru, type YontemAilesi } from "@/lib/makale/sablonlar";
+import { MAKALE_TURLERI, YONTEM_DENETIMLERI, type BolumTuru, type MakaleTuru, type YontemAilesi, yontemDenetimi } from "@/lib/makale/sablonlar";
 
 export const BAGLAM_BUTCESI = 14_000;
 
@@ -76,9 +76,62 @@ const BOLUM_DENETIMI: Record<BolumTuru | "genel", string[]> = {
   ],
 };
 
-export function denetimListesi(bolum: BolumTuru | null, aile: YontemAilesi | null): string[] {
-  const liste = [...BOLUM_DENETIMI[bolum ?? "genel"]];
-  if ((bolum === "yontem" || bolum === "model" || bolum === "bulgular") && aile) liste.push(...YONTEM_DENETIMLERI[aile].maddeler);
+/*
+  Aynı denetim listesinin İngilizcesi (28.10.2026): makale çalışma alanı
+  listeyi öğrenciye de gösteriyor. İstem (sistemIstemi) Türkçe listeyi
+  kullanmaya devam ediyor — AGENTS.md: istemler Türkçe kalır.
+*/
+const BOLUM_DENETIMI_EN: Record<BolumTuru | "genel", string[]> = {
+  ozet: [
+    "Does the abstract state the aim, method, main finding and conclusion",
+    "Does the abstract contain a claim or finding not in the main text",
+  ],
+  giris: [
+    "Are the research problem and the gap in the literature clear",
+    "Is the aim or research question stated clearly at the end of the introduction",
+    "Claims that need a source but have no citation (do NOT suggest sources, only flag them)",
+  ],
+  literatur: [
+    "Are studies summarized one by one, or synthesized into themes",
+    "Are conflicting findings addressed",
+    "Is there a bridge from the literature to the research question",
+  ],
+  yontem: [
+    "Fit of the method to the research question and the justification for it",
+    "Information needed for replicability",
+  ],
+  model: [
+    "Fit of the model to the research question",
+    "Information needed for replicability",
+  ],
+  vaka: [
+    "Order of case information and the timeline",
+    "Informed consent and ethics information",
+  ],
+  bulgular: [
+    "Separation of results from interpretation (interpretation belongs in the discussion)",
+    "Consistency of reported results with the analyses defined in the method",
+  ],
+  tartisma: [
+    "Generalizations or causal claims that go beyond the results",
+    "Balanced comparison with the literature (not only citing supporting studies)",
+    "Alternative explanations and limitations",
+  ],
+  sonuc: [
+    "Does the conclusion return directly to the research question",
+    "A new claim or finding in the conclusion that is not in the results",
+  ],
+  kaynakca: ["Use the Sources module to check the formatting of this section"],
+  genel: [
+    "Logical flow and links between paragraphs",
+    "Consistency of concepts and terms",
+    "Claims that require evidence",
+  ],
+};
+
+export function denetimListesi(bolum: BolumTuru | null, aile: YontemAilesi | null, dil: Dil = "tr"): string[] {
+  const liste = [...(dil === "en" ? BOLUM_DENETIMI_EN : BOLUM_DENETIMI)[bolum ?? "genel"]];
+  if ((bolum === "yontem" || bolum === "model" || bolum === "bulgular") && aile) liste.push(...yontemDenetimi(aile, dil).maddeler);
   return liste;
 }
 

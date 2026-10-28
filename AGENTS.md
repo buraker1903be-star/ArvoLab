@@ -29,9 +29,11 @@ Anahtarlı katalog yok, bilerek. Etiket haritaları `Metin` taşır ve
 `${statusLabel(x)}` derlenir ama "[object Object]" yazar; bunu
 `@typescript-eslint/restrict-template-expressions` yakalıyor.
 Tarih/sayı biçimi `YEREL[dil]` ile. Asistan istemleri ve asistanın
-bağlamı Türkçe kalır. İngilizce çeviri bitene kadar
-`INGILIZCE_YAYINDA = false`: tarayıcının dili yok sayılır, dil seçici
-yalnızca iç ekipte görünür.
+bağlamı Türkçe kalır. İngilizce 28.10.2026'da açıldı
+(`INGILIZCE_YAYINDA`). Dil ilk ziyarette proxy.ts'te bir kez kararlaşır:
+oturumu olan mevcut müşteri Türkçe, yeni ziyaretçi tarayıcının dili;
+sonrası kullanıcının seçimi. Belge dili (`lib/belge-dili.ts`) arayüz
+dilinden ayrıdır: şekil/tablo etiketleri, kapak, atıf biçimi ona göre.
 
 ## Değişmezler
 
