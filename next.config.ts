@@ -32,20 +32,36 @@ const OCR_ISCISI = [
   "./node_modules/bmp-js/**/*",
   "./node_modules/wasm-feature-detect/**/*",
   /*
-    Çekirdeğin YALNIZCA LSTM sürümleri: createWorker'ın öntanımlı OEM'i
-    LSTM_ONLY ve worker-script/node/getCore.js bu üçünden birini (wasm
-    özellik algılamasına göre relaxedsimd / simd / düz) istiyor, başkasını
-    hiç istemiyor. Hangisinin seçileceği çalışma anında belli olduğu için
-    üçü birlikte eklenir (~8 MB).
+    Çekirdekler. worker-script/node/getCore.js wasm özellik algılamasına
+    göre (relaxedsimd / simd / düz) birini istiyor; hangisi olacağı çalışma
+    anında belli, bu yüzden hepsi izde.
+
+    Eskiden yalnızca LSTM sürümleri listedeydi: createWorker'ın öntanımlı
+    OEM'i LSTM_ONLY olduğu için getCore'un onları isteyeceği sanıldı. Oysa
+    tesseract.js 7.0.0'da işçi getCore'a OEM sayısını değil `lstmOnly`
+    BOOLEAN'ını geçiriyor (worker-script/index.js) ve getCore onu
+    [OEM.DEFAULT, OEM.LSTM_ONLY] = [3, 1] içinde arıyor: true hiçbir zaman
+    eşleşmiyor, Node'da HER ZAMAN tam çekirdek isteniyor. İşçi betiği pakete
+    girdikten sonraki ilk gece (26.10.2026) tur
+    "Cannot find module 'tesseract.js-core/tesseract-core-relaxedsimd'" ile
+    düştü. LSTM sürümleri de kalıyor: kütüphane bu hatayı düzelttiği gün
+    onlar istenecek. tests/unit/ocr-paketi.test.ts getCore'un istediği her
+    dosyanın burada olduğunu sınıyor.
 
     *.wasm.js yedekleri (25 MB) bilerek dışarıda: onlar WebAssembly'nin
     hiç bulunmadığı ortam için ve Node 22'de o dal çalışmıyor.
   */
   "./node_modules/tesseract.js-core/package.json",
+  "./node_modules/tesseract.js-core/tesseract-core.js",
+  "./node_modules/tesseract.js-core/tesseract-core.wasm",
   "./node_modules/tesseract.js-core/tesseract-core-lstm.js",
   "./node_modules/tesseract.js-core/tesseract-core-lstm.wasm",
+  "./node_modules/tesseract.js-core/tesseract-core-simd.js",
+  "./node_modules/tesseract.js-core/tesseract-core-simd.wasm",
   "./node_modules/tesseract.js-core/tesseract-core-simd-lstm.js",
   "./node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm",
+  "./node_modules/tesseract.js-core/tesseract-core-relaxedsimd.js",
+  "./node_modules/tesseract.js-core/tesseract-core-relaxedsimd.wasm",
   "./node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.js",
   "./node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm",
 ];
@@ -69,7 +85,7 @@ const nextConfig: NextConfig = {
 
     OCR yalnızca kılavuz taramasının iki girişinde: cron turu ve Kılavuzlar
     sayfasının server action'ı. Belge Kontrol OCR'a hiç girmiyor
-    (lib/document-extract.ts), oraya 8 MB'lık çekirdeği taşımak gereksiz.
+    (lib/document-extract.ts), oraya ~18 MB'lık çekirdekleri taşımak gereksiz.
   */
   outputFileTracingIncludes: {
     "/api/cron/guideline-refresh": [PDF_WORKER, ...OCR_ISCISI],

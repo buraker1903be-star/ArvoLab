@@ -36,9 +36,14 @@ export type OcrSonucu = { metin: string; sayfa: number; guven: number; hata?: st
 
 /**
  * getCore'un isteyebileceği çekirdekler; hangisi seçileceği wasm özellik
- * algılamasına göre çalışma anında belli olur (next.config.ts'te üçü de izde).
+ * algılamasına göre çalışma anında belli olur (next.config.ts'te hepsi izde).
+ *
+ * Eskiden yalnızca LSTM sürümlerine bakılıyordu; tesseract.js 7.0.0 Node'da
+ * ise tam çekirdeği istiyor (gerekçe next.config.ts'te). Ön denetim
+ * "dosyalar tamam" deyip geçiyor, işçi 26.10.2026 gecesi
+ * tesseract-core-relaxedsimd'yi bulamadan ölüyordu.
  */
-const LSTM_CEKIRDEKLERI = ["tesseract-core-relaxedsimd-lstm", "tesseract-core-simd-lstm", "tesseract-core-lstm"];
+const CEKIRDEKLER = ["", "-simd", "-relaxedsimd"].flatMap((tur) => [`tesseract-core${tur}`, `tesseract-core${tur}-lstm`]);
 
 /** İşçinin kendi içinden istediği, izleyicinin göremediği paketler. */
 const ISCI_PAKETLERI = ["bmp-js", "is-url", "regenerator-runtime", "wasm-feature-detect"];
@@ -80,7 +85,7 @@ async function ocrDosyalariEksikMi(): Promise<string | null> {
     const eksik = [
       // Düşen dosyanın kendisi.
       yolu.join(tesseractKok, "src", "worker-script", "node", "index.js"),
-      ...LSTM_CEKIRDEKLERI.flatMap((ad) => [yolu.join(cekirdekKok, `${ad}.js`), yolu.join(cekirdekKok, `${ad}.wasm`)]),
+      ...CEKIRDEKLER.flatMap((ad) => [yolu.join(cekirdekKok, `${ad}.js`), yolu.join(cekirdekKok, `${ad}.wasm`)]),
     ].filter((dosya) => !existsSync(dosya));
 
     for (const paket of ISCI_PAKETLERI) {
