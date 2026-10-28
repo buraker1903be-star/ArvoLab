@@ -1,11 +1,12 @@
 "use client";
 
-import type { ChangeEvent } from "react";
 import Form from "next/form";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { filtreAdresi, type ProjectFilters as Filters } from "@/lib/project-filters";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import Secici from "@/app/dashboard/_components/secici";
+import type { Tone } from "@/lib/status-tone";
 
 // Çalışmalarım: arama, durum/sorumlu filtresi ve sıralama. Değerler adres satırında tutulur
 // (yenileyince ve paylaşınca korunur); seçim değişince liste sayfa yenilenmeden güncellenir.
@@ -18,14 +19,13 @@ export default function ProjectFilters({
   filtered,
 }: {
   filters: Filters;
-  statuses: { value: string; label: string }[];
+  statuses: { value: string; label: string; tone?: Tone }[];
   showAssignee: boolean;
   total: number;
   shown: number;
   filtered: boolean;
 }) {
   const t = useCeviri();
-  const submit = (event: ChangeEvent<HTMLSelectElement>) => event.currentTarget.form?.requestSubmit();
 
   /*
     "Onay bekleyenler" ve "yorumu olanlar" filtreleri ana sayfadaki dikkat
@@ -48,30 +48,69 @@ export default function ProjectFilters({
           }
           aria-label={t({ tr: "Çalışma ara", en: "Search works" })} maxLength={100} />
       </label>
-      <select name="durum" defaultValue={filters.status} onChange={submit} className="compact-select" aria-label={t({ tr: "Durum", en: "Status" })}>
-        <option value="tumu">{t({ tr: "Tüm durumlar", en: "All statuses" })}</option>
-        <option value="aktif">{t({ tr: "Aktif (teslim edilmemiş)", en: "Active (not submitted)" })}</option>
-        <option value="gecikmis">{t({ tr: "Teslimi geçmiş", en: "Overdue" })}</option>
-        <option value="yaklasan">{t({ tr: "7 gün içinde teslim", en: "Due within 7 days" })}</option>
-        {statuses.map((status) => (
-          <option key={status.value} value={status.value}>
-            {status.label}
-          </option>
-        ))}
-      </select>
+      {/* Durum seçenekleri üç grupta: teslim tarihine göre süzgeçler ile
+          çalışmanın aşaması ayrı şeyler, eskiden tek düz listedeydi. */}
+      <Secici
+        name="durum"
+        deger={filters.status}
+        otomatikGonder
+        etiket={t({ tr: "Durum", en: "Status" })}
+        onEk={t({ tr: "Durum", en: "Status" })}
+        gruplar={[
+          {
+            secenekler: [
+              { deger: "tumu", etiket: t({ tr: "Tüm durumlar", en: "All statuses" }) },
+              { deger: "aktif", etiket: t({ tr: "Aktif (teslim edilmemiş)", en: "Active (not submitted)" }), ton: "accent" },
+            ],
+          },
+          {
+            baslik: t({ tr: "Teslim", en: "Due date" }),
+            secenekler: [
+              { deger: "gecikmis", etiket: t({ tr: "Teslimi geçmiş", en: "Overdue" }), ton: "danger" },
+              { deger: "yaklasan", etiket: t({ tr: "7 gün içinde teslim", en: "Due within 7 days" }), ton: "warning" },
+            ],
+          },
+          {
+            baslik: t({ tr: "Aşama", en: "Stage" }),
+            secenekler: statuses.map((status) => ({ deger: status.value, etiket: status.label, ton: status.tone })),
+          },
+        ]}
+      />
       {showAssignee ? (
-        <select name="atanan" defaultValue={filters.assignee} onChange={submit} className="compact-select" aria-label={t({ tr: "Sorumlu", en: "Assignee" })}>
-          <option value="tumu">{t({ tr: "Tüm sorumlular", en: "All assignees" })}</option>
-          <option value="benim">{t({ tr: "Bana atananlar", en: "Assigned to me" })}</option>
-          <option value="atanmamis">{t({ tr: "Sorumlu atanmamış", en: "Unassigned" })}</option>
-        </select>
+        <Secici
+          name="atanan"
+          deger={filters.assignee}
+          otomatikGonder
+          etiket={t({ tr: "Sorumlu", en: "Assignee" })}
+          onEk={t({ tr: "Sorumlu", en: "Assignee" })}
+          gruplar={[
+            {
+              secenekler: [
+                { deger: "tumu", etiket: t({ tr: "Tüm sorumlular", en: "All assignees" }) },
+                { deger: "benim", etiket: t({ tr: "Bana atananlar", en: "Assigned to me" }) },
+                { deger: "atanmamis", etiket: t({ tr: "Sorumlu atanmamış", en: "Unassigned" }) },
+              ],
+            },
+          ]}
+        />
       ) : null}
-      <select name="sirala" defaultValue={filters.sort} onChange={submit} className="compact-select" aria-label={t({ tr: "Sıralama", en: "Sort" })}>
-        <option value="yeni">{t({ tr: "Son eklenen", en: "Recently added" })}</option>
-        <option value="duzenleme">{t({ tr: "Son düzenlenen", en: "Recently edited" })}</option>
-        <option value="teslim">{t({ tr: "Teslim tarihi yakın", en: "Due soonest" })}</option>
-        <option value="baslik">{t({ tr: "Başlığa göre (A–Z)", en: "By title (A–Z)" })}</option>
-      </select>
+      <Secici
+        name="sirala"
+        deger={filters.sort}
+        otomatikGonder
+        etiket={t({ tr: "Sıralama", en: "Sort" })}
+        onEk={t({ tr: "Sırala", en: "Sort" })}
+        gruplar={[
+          {
+            secenekler: [
+              { deger: "yeni", etiket: t({ tr: "Son eklenen", en: "Recently added" }) },
+              { deger: "duzenleme", etiket: t({ tr: "Son düzenlenen", en: "Recently edited" }) },
+              { deger: "teslim", etiket: t({ tr: "Teslim tarihi yakın", en: "Due soonest" }) },
+              { deger: "baslik", etiket: t({ tr: "Başlığa göre (A–Z)", en: "By title (A–Z)" }) },
+            ],
+          },
+        ]}
+      />
       {filters.approval !== "tumu" ? <input type="hidden" name="onay" value={filters.approval} /> : null}
       {filters.comments !== "tumu" ? <input type="hidden" name="yorum" value={filters.comments} /> : null}
       {filters.approval === "bekliyor" ? (

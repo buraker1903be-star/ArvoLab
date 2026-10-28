@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import Secici from "./secici";
 
 /*
   Modül sayfalarının (Kaynaklar, Analiz Merkezi) çalışma seçicisi: iki
@@ -23,15 +24,14 @@ export default function CalismaSecici({
   const t = useCeviri();
   if (calismalar.length < 2) return null;
   return (
-    <label className="kaynaklar-secici">
-      <span>{t({ tr: "Çalışma", en: "Work" })}</span>
-      <select value={secili} onChange={(e) => router.push(`${yol}?calisma=${e.target.value}`, { scroll: false })}>
-        {calismalar.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.title}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className="kaynaklar-secici">
+      <Secici
+        deger={secili}
+        etiket={t({ tr: "Çalışma", en: "Work" })}
+        onEk={t({ tr: "Çalışma", en: "Work" })}
+        gruplar={[{ secenekler: calismalar.map((c) => ({ deger: c.id, etiket: c.title })) }]}
+        degisince={(id) => router.push(`${yol}?calisma=${id}`, { scroll: false })}
+      />
+    </div>
   );
 }

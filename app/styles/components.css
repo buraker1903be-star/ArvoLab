@@ -520,6 +520,137 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); w
 .project-date-field:focus-within { border-color: var(--accent-500); box-shadow: var(--odak-halkasi); }
 .project-form-grid .project-date-field input[type="date"] { min-height: 0; flex: 1; padding: 0; border: 0; background: transparent; box-shadow: none; }
 
+/*
+  Yerel <select>'in ortak görünümü (28.10.2026). Tarayıcının kendi oku
+  her işletim sisteminde başka çiziliyordu ve kutunun geri kalanıyla
+  uyuşmuyordu; ok artık iki degradeden çiziliyor (ham renk ya da SVG
+  yok, tema rengini izliyor). Açılan liste yerel kalıyor: formlarda
+  mobilin kendi seçicisi daha kullanışlı. Süzgeç çubuklarında yerel
+  seçicinin yerine .secici var (app/dashboard/_components/secici.tsx).
+*/
+select:is(.compact-select, .field-control, .toolbar-select):not([multiple]),
+:is(.project-form-grid, .guideline-review-form) select:not([multiple]) {
+  appearance: none;
+  padding-right: 30px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hover:not(:disabled, :focus),
+:is(.project-form-grid, .guideline-review-form) select:not([multiple]):hover:not(:disabled, :focus) {
+  border-color: color-mix(in srgb, var(--accent-500) 45%, var(--line));
+}
+
+/* ---------- Süzgeç seçicisi (secici.tsx) ---------- */
+.secici { position: relative; display: inline-flex; min-width: 0; max-width: 100%; }
+.secici-dugme {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: var(--kontrol-h-sik);
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.secici-dugme:hover { border-color: color-mix(in srgb, var(--accent-500) 45%, var(--line)); background: var(--surface-2); }
+.secici-dugme:focus-visible,
+.secici[data-acik] .secici-dugme { outline: none; border-color: var(--accent-500); box-shadow: var(--odak-halkasi); }
+.secici-onek { color: var(--muted); font-weight: 500; }
+.secici-onek::after { content: ":"; }
+.secici-deger { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.secici-ok { flex: none; color: var(--muted); transition: transform .2s var(--ease-spring); }
+.secici[data-acik] .secici-ok { transform: rotate(180deg); color: var(--accent-strong); }
+
+.secici-liste {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-topbar);
+  min-width: max(100%, 230px);
+  max-width: min(320px, calc(100vw - 32px));
+  max-height: min(360px, 60vh);
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  transform-origin: top left;
+  animation: secici-acil .16s var(--ease-spring);
+}
+.secici-liste[hidden] { display: none; }
+.secici-liste[data-yukari] { top: auto; bottom: calc(100% + 6px); transform-origin: bottom left; }
+.secici-liste[data-sag] { left: auto; right: 0; }
+@keyframes secici-acil { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+.secici-grup + .secici-grup { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line-soft); }
+.secici-grup > ul { margin: 0; padding: 0; list-style: none; }
+.secici-grup-baslik {
+  display: block;
+  padding: 6px 10px 4px;
+  color: var(--dim);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.secici-secenek {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: var(--r-xs);
+  color: var(--ink-soft);
+  font-size: var(--fs-body);
+  cursor: pointer;
+  user-select: none;
+}
+.secici-secenek[data-etkin] { background: var(--surface-2); color: var(--ink); }
+.secici-secenek[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 650; }
+.secici-secenek-ad { flex: 1; min-width: 0; }
+.secici-isaret { flex: none; color: var(--accent-strong); }
+.secici-nokta {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  /* Tonsuz seçenekte ("Tüm durumlar") nokta boş yer tutar, hizayı korur. */
+  background: var(--tone, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone, transparent) 18%, transparent);
+}
+.secici-nokta[data-tone="success"] { --tone: var(--success); }
+.secici-nokta[data-tone="info"] { --tone: var(--info); }
+.secici-nokta[data-tone="warning"] { --tone: var(--warning); }
+.secici-nokta[data-tone="danger"] { --tone: var(--danger); }
+.secici-nokta[data-tone="accent"] { --tone: var(--accent-bright); }
+.secici-nokta[data-tone="neutral"] { --tone: var(--dim); }
+@media (max-width: 640px) {
+  .secici-dugme { min-height: var(--kontrol-h-dokunma); font-size: var(--fs-body); }
+  .secici-secenek { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .secici-liste { animation: none; }
+  .secici-ok { transition: none; }
+}
+
 /* Sıkı seçim kutusu (liste içi atama/rol seçimleri) */
 .compact-select {
   min-height: var(--kontrol-h-sik);

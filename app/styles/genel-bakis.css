@@ -448,7 +448,7 @@
 /* Başlık metni yer kaplar, düğmeler sağa yaslanır (sarınca alta iner). */
 .kaynaklar-ikili .gb-kart-bas > div:first-child { flex: 1 1 240px; min-width: 0; }
 .kaynaklar-secici { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
-.kaynaklar-secici select { max-width: 320px; }
+.kaynaklar-secici .secici { max-width: 320px; }
 .kaynakca-puan { display: flex; align-items: baseline; gap: 6px; padding: 10px 14px; border-radius: var(--r-lg); background: var(--surface-2); }
 .kaynakca-puan b { color: var(--tone-fg, var(--ink)); font-size: 28px; font-weight: 700; line-height: 1; }
 .kaynakca-puan span { color: var(--muted); font-size: var(--fs-sm); }

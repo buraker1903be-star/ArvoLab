@@ -313,7 +313,7 @@ export default async function ProjectsPage({
         <ProjectFilters
           key={JSON.stringify(filters)}
           filters={filters}
-          statuses={PROJECT_STATUSES.map((status) => ({ value: status, label: t(statusLabel(status)) }))}
+          statuses={PROJECT_STATUSES.map((status) => ({ value: status, label: t(statusLabel(status)), tone: statusTone(status) }))}
           showAssignee={canApprove}
           total={projects.length}
           shown={visible.length}
