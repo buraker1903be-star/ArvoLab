@@ -3,7 +3,8 @@
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { ceviri } from "@/lib/dil-sunucu";
 
-export type NotificationKind = "comment" | "assignment" | "status" | "approval" | "guideline_update" | "share_view";
+/* billing: ArvoOS'un yazdığı ödeme/otomatik yenileme bildirimi (migration 20261028174054). */
+export type NotificationKind = "comment" | "assignment" | "status" | "approval" | "guideline_update" | "share_view" | "billing";
 
 export interface PanelNotification {
   id: string;

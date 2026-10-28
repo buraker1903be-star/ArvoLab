@@ -11,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePlans, type BillingPlan } from "@/lib/billing-plan";
 import { krediPaketleriniOku, type KrediPaketi } from "@/lib/kredi-paketleri";
 import { faturalamaOku, type Faturalama } from "@/lib/faturalama";
+import { kartDurumuOku, kartOdemesiOku, type KartDurumu, type KartOdemesi } from "@/lib/kart-odeme";
 
 const PRODUCT = "arvolab";
 
@@ -79,6 +80,11 @@ export interface SubscriptionState {
   plans: BillingPlan[];
   /** Bireysel abonenin alabileceği AI kredi paketleri (ArvoOS'un listesi). */
   krediPaketleri: KrediPaketi[];
+  /**
+   * Kart saklama ve otomatik yenileme açık mı (ArvoOS'taki özellik anahtarı).
+   * Alan gelmezse kapalı: eski ArvoOS sürümü kart işlemlerini tanımıyor.
+   */
+  cardStorage: boolean;
   checkoutUrl?: string;
 }
 
@@ -141,6 +147,7 @@ async function call(
       ...(payload as unknown as SubscriptionState),
       plans: normalizePlans(payload),
       krediPaketleri: krediPaketleriniOku(payload),
+      cardStorage: payload.cardStorage === true,
     };
     /*
       close bir abonelik DURUMU döndürmez ({closed: true}); aynayı onunla
@@ -242,4 +249,110 @@ export function faturalamaYukle(
   user: { id: string; email: string },
 ) {
   return kapsam.tur === "bireysel" ? faturalarim(user) : kurumFaturalari(kapsam.kurumId);
+}
+
+/*
+  KAYITLI KART VE OTOMATİK YENİLEME (28.10.2026). Ödeme mantığı ArvoOS'ta
+  (PayTR kart saklama); burada yalnızca köprü çağrısı var. Yanıt ayrı
+  okunuyor çünkü bu çağrıların iş hataları ({error: "fee_not_set"} gibi)
+  KULLANICIYA söylenecek bir şey; call() her hatayı null'a indiriyor.
+
+  Köprü sağlık kaydı: yalnızca köprünün kendisinin bozulduğunu gösteren
+  hâller (anahtar uyuşmuyor, ulaşılamıyor, kodu olmayan sunucu hatası)
+  yazılır. "Ücret tanımlanmadı" ya da "kart saklama kapalı" köprü arızası
+  değil; Platform ekranında köprüyü kırmızıya çevirmemeli.
+*/
+export type KartSonucu<T> = { ok: true; veri: T } | { ok: false; hata: string | null };
+
+type Kullanici = { id: string; email: string; fullName?: string | null };
+
+async function kartIstegi(
+  action: "card_checkout" | "card_consent" | "card_state" | "card_disable_renewal" | "card_delete",
+  user: Kullanici,
+  ek: Record<string, unknown> = {},
+): Promise<KartSonucu<unknown>> {
+  const target = endpoint();
+  if (!target) {
+    await recordHealth(false, "ARVOOS_BRIDGE_URL veya PRODUCT_BRIDGE_SECRET tanımlı değil", "permanent");
+    return { ok: false, hata: null };
+  }
+  try {
+    const response = await fetch(target.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-arvo-bridge-secret": target.secret },
+      body: JSON.stringify({
+        product: PRODUCT,
+        action,
+        userId: user.id,
+        email: user.email,
+        fullName: user.fullName ?? null,
+        ...ek,
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    const govde = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!response.ok) {
+      const kod = typeof govde?.error === "string" ? govde.error.slice(0, 64) : null;
+      console.error("[kart] ArvoOS yanıtı", action, response.status, kod);
+      if (response.status === 401) await recordHealth(false, `${action}: HTTP 401`, "permanent");
+      else if (response.status >= 500 && !kod) await recordHealth(false, `${action}: HTTP ${response.status}`, "transient");
+      return { ok: false, hata: kod };
+    }
+    await recordHealth(true);
+    return { ok: true, veri: govde };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[kart] ArvoOS'a ulaşılamadı", action, message);
+    await recordHealth(false, `${action}: ${message}`, "transient");
+    return { ok: false, hata: null };
+  }
+}
+
+/**
+ * Kartla ödeme kaydı açar. HER çağrı yeni bir ödeme kaydı demek: yalnızca
+ * kullanıcının düğmesinden (sunucu işlemi) çağrılmalı, sayfa çiziminden değil.
+ * Tutarı ArvoOS belirler. ip: PayTR son kullanıcının adresini zorunlu tutuyor.
+ */
+export async function kartOdemesiBaslat(user: Kullanici, ip: string): Promise<KartSonucu<KartOdemesi>> {
+  const sonuc = await kartIstegi("card_checkout", user, { ip });
+  if (!sonuc.ok) return sonuc;
+  const odeme = kartOdemesiOku(sonuc.veri);
+  if (!odeme) {
+    console.error("[kart] card_checkout yanıtı okunamadı");
+    return { ok: false, hata: null };
+  }
+  return { ok: true, veri: odeme };
+}
+
+/**
+ * Kullanıcının "kartımı kaydet, otomatik yenilensin" kararı. Kart formu
+ * PayTR'ye gönderilmeden ÖNCE yazılır: karar ödemeden önce kayıtlı olmalı,
+ * yoksa ArvoOS kartı onaysız saklamış olurdu.
+ */
+export async function kartOnayiBildir(user: Kullanici, merchantOid: string, autoRenew: boolean, ip: string): Promise<KartSonucu<true>> {
+  const sonuc = await kartIstegi("card_consent", user, { merchantOid, autoRenew, ip });
+  return sonuc.ok ? { ok: true, veri: true } : sonuc;
+}
+
+/** Kayıtlı kartlar ve otomatik yenileme. Okunamazsa ok:false — sayfa "okunamadı" der, "kartınız yok" demez. */
+export async function kartDurumum(user: Kullanici): Promise<KartSonucu<KartDurumu>> {
+  const sonuc = await kartIstegi("card_state", user);
+  if (!sonuc.ok) return sonuc;
+  const durum = kartDurumuOku(sonuc.veri);
+  if (!durum) {
+    console.error("[kart] card_state yanıtı okunamadı");
+    return { ok: false, hata: null };
+  }
+  return { ok: true, veri: durum };
+}
+
+export async function otomatikYenilemeKapat(user: Kullanici): Promise<KartSonucu<true>> {
+  const sonuc = await kartIstegi("card_disable_renewal", user);
+  return sonuc.ok ? { ok: true, veri: true } : sonuc;
+}
+
+export async function kayitliKartSil(user: Kullanici, cardId: string): Promise<KartSonucu<true>> {
+  const sonuc = await kartIstegi("card_delete", user, { cardId });
+  return sonuc.ok ? { ok: true, veri: true } : sonuc;
 }

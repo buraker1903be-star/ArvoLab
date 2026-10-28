@@ -6,7 +6,7 @@ import { erkenYenilemeDonemi } from "@/lib/license-summary";
 describe("kapalı erişimde açık kalan sayfalar", () => {
   test("ödeme, destek ve ayarlar açık", () => {
     // AGENTS.md: ödeme, giriş ve destek yolları asla kapatılmaz.
-    for (const yol of ["/dashboard/abonelik", "/dashboard/expert-requests", "/dashboard/support", "/dashboard/settings", "/dashboard/expert-requests/abc"]) {
+    for (const yol of ["/dashboard/abonelik", "/dashboard/expert-requests", "/dashboard/support", "/dashboard/settings", "/dashboard/expert-requests/abc", "/dashboard/abonelik/kart/ARV123"]) {
       assert.equal(kapisizYolMu(yol), true, yol);
     }
   });

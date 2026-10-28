@@ -32,10 +32,12 @@ export interface AccessState {
   plans: BillingPlan[];
   /** Bireysel abonenin AI kredi paketleri; kurumda ve bilinmeyende boş. */
   krediPaketleri: KrediPaketi[];
+  /** Bireysel abonede kart saklama/otomatik yenileme açık mı (ArvoOS'un anahtarı); diğerlerinde false. */
+  kartSaklama: boolean;
 }
 
 const open = (kind: AccessKind, status: string): AccessState => ({
-  blocked: false, kind, status, trialEndsAt: null, periodEnd: null, organizationName: null, plans: [], krediPaketleri: [],
+  blocked: false, kind, status, trialEndsAt: null, periodEnd: null, organizationName: null, plans: [], krediPaketleri: [], kartSaklama: false,
 });
 
 /*
@@ -64,6 +66,7 @@ const accessFor = cache(async function accessFor(
       // Kurumun aboneliğini kurumu öder; burada ödeme planı gösterilmez.
       plans: [],
       krediPaketleri: [],
+      kartSaklama: false,
     };
   }
 
@@ -85,6 +88,7 @@ const accessFor = cache(async function accessFor(
     organizationName: null,
     plans: subscription.plans,
     krediPaketleri: subscription.krediPaketleri,
+    kartSaklama: subscription.cardStorage,
   };
 });
 
@@ -136,8 +140,11 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  * kaydın güncellenmesi, aşağıda. analizSonucuKaydet kapılı.)
  *
  * Kapı KİMDE YOK, bilerek:
- *  - auth.ts ve subscription.ts: engellenen kullanıcı giriş yapabilmeli ve
- *    ödeme yapabilmeli; buraya kapı koymak kendi kilidini açmasını engeller.
+ *  - auth.ts, subscription.ts ve kart-odeme.ts: engellenen kullanıcı giriş
+ *    yapabilmeli ve ödeme yapabilmeli; buraya kapı koymak kendi kilidini
+ *    açmasını engeller. Kayıtlı kartı silmek ve otomatik yenilemeyi kapatmak
+ *    da kapısız: aboneliği kapalı kullanıcı kartından çekim yapılmasını
+ *    durdurabilmeli.
  *  - support.ts ve destek-yazisma.ts: yardım isteyebilmeli, yanıta
  *    cevap yazabilmeli.
  *  - Okumalar, silmeler ve mevcut kaydın güncellenmesi: kullanıcı kendi
