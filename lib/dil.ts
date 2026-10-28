@@ -40,6 +40,21 @@ export const VARSAYILAN_DIL: Dil = "tr";
 export const INGILIZCE_YAYINDA = false;
 export const DIL_CEREZI = "arvolab_dil";
 
+/* Kullanıcının saat dilimi (tarayıcıdan); yalnızca İngilizcede kullanılıyor. */
+export const SAAT_DILIMI_CEREZI = "arvolab_tz";
+export const VARSAYILAN_SAAT_DILIMI = "Europe/Istanbul";
+
+/** Geçerli bir IANA saat dilimi mi? Bozuk çerez biçimleyiciyi düşürmesin. */
+export function saatDilimiMi(deger: unknown): deger is string {
+  if (typeof deger !== "string" || !deger || deger.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: deger });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Dil adı, kendi dilinde (dil seçicide). */
 export const DIL_ADLARI: Record<Dil, string> = { tr: "Türkçe", en: "English" };
 

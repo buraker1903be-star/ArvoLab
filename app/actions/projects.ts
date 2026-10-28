@@ -9,9 +9,9 @@ import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-son
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { STILLER } from "@/lib/atif/stiller";
 import {
   OVERSIGHT_ONLY_STATUSES,
@@ -104,10 +104,10 @@ async function calismaKaydet(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { error: SESSION_MISSING.error! };
+  if (!user) return { error: (await oturumYokMesaji()) };
   /* Paneldeki kapı yalnızca ekranı kapatıyor; sunucu işlemi doğrudan
      çağrılabildiği için abonelik burada da denetlenmeli. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const title = String(formData.get("title") ?? "").trim();
   const type = String(formData.get("type") ?? "");
@@ -293,7 +293,7 @@ export async function getProjectForEdit(
 */
 export async function atifStiliniKilavuzaUydur(projectId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const current = await getProjectForEdit(projectId);
   if (current === CALISMA_OKUNAMADI) {
@@ -328,7 +328,7 @@ export async function atifStiliniKilavuzaUydur(projectId: string): Promise<Actio
 
 export async function updateProject(projectId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const current = await getProjectForEdit(projectId);
   // Okunamayan kaydın üzerine yazmak, yetki denetimini de atlatırdı.
@@ -561,7 +561,7 @@ export async function assignProject(projectId: string, assigneeId: string): Prom
 // yazma metni vb.) veritabanında ON DELETE CASCADE ile otomatik silinir.
 export async function deleteProject(projectId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const { data, error } = await ctx.supabase.from("academic_projects").delete().eq("id", projectId).select("id");
 

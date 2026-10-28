@@ -3,9 +3,9 @@
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES, MANAGER_ROLES } from "@/lib/project-labels";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { korunanBirimPuan, paylasimKatsayisi, puanHesapla } from "@/lib/docentlik-puan";
 import { pdfMi } from "@/lib/kaynak-pdf";
 import type { Hedef } from "@/lib/docentlik-ozeti";
@@ -266,9 +266,9 @@ export async function getMyScoreEntries(): Promise<ListeSonucu<ScoreEntry & { cr
 
 export async function addScoreEntry(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   /* Abonelik kapısı: Doçentlik puanlama ücretli bir özellik; yeni kayıt üretir. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const { supabase, user } = ctx;
 
   const criteriaId = String(formData.get("criteriaId") ?? "").trim();
@@ -327,10 +327,10 @@ export async function addScoreEntry(formData: FormData): Promise<ActionResult> {
 */
 export async function updateScoreEntry(entryId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   /* Abonelik kapısı: ücretli özelliğin ürettiği kaydı değiştirmek de o
      özelliği kullanmaktır. Silme bilerek kapının dışında. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const { supabase, user } = ctx;
 
   const criteriaId = String(formData.get("criteriaId") ?? "").trim();
@@ -409,7 +409,7 @@ export async function updateScoreEntry(entryId: string, formData: FormData): Pro
 
 export async function deleteScoreEntry(entryId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const { data, error } = await ctx.supabase
     .from("academic_score_entries")
@@ -554,8 +554,8 @@ export async function getDoktoraTarihi(): Promise<{ tarih: string | null; temelA
 
 export async function doktoraTarihiKaydet(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const tarih = String(formData.get("doktoraTarihi") ?? "").trim() || null;
   if (tarih && !/^\d{4}-\d{2}-\d{2}$/.test(tarih)) return { error: "Tarih geçersiz." };
   const { error } = await ctx.supabase
@@ -588,8 +588,8 @@ export async function doktoraTarihiKaydet(formData: FormData): Promise<ActionRes
 */
 export async function belgeYuklendi(entryId: string, yol: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const { supabase, user } = ctx;
   if (!yol.startsWith(`${user.id}/docentlik/`) || yol.includes("..")) return { error: "Dosya yolu geçersiz." };
 
@@ -626,7 +626,7 @@ export async function belgeYuklendi(entryId: string, yol: string): Promise<Actio
 
 export async function belgeKaldir(entryId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const { supabase, user } = ctx;
   const { data: kayit, error: okumaHatasi } = await supabase
     .from("academic_score_entries").select("belge_yolu").eq("id", entryId).eq("owner_id", user.id).maybeSingle();

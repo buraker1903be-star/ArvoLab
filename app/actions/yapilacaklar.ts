@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { yapilacakGirdisi, type Yapilacak } from "@/lib/yapilacaklar";
 
 /*
@@ -48,9 +48,9 @@ export async function yapilacaklaraEkle(girdi: {
   asistanKaydi?: string | null;
 }): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   // Yeni içerik yazıyor: kapı burada da (panel kapısı yalnızca ekranı kapatıyor).
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   if (!UUID.test(girdi.projectId)) return { error: "Çalışma bulunamadı." };
 
   const kayit = yapilacakGirdisi(girdi);
@@ -77,7 +77,7 @@ export async function yapilacaklaraEkle(girdi: {
 /** "Yaptım": mevcut kaydın güncellenmesi, abonelik kapısı bilerek yok (lib/access.ts). */
 export async function yapilacakTamamla(id: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   if (!UUID.test(id)) return { error: "Madde bulunamadı." };
   const { data, error } = await ctx.supabase
     .from("calisma_yapilacaklari")

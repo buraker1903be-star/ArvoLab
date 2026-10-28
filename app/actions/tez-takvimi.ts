@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { taslakTakvim, tasGirdisi, type TakvimTasi } from "@/lib/tez-takvimi";
 import { trGunAnahtari } from "@/lib/tr-time";
 
@@ -45,8 +45,8 @@ export async function takvimiGetir(projectId: string): Promise<TakvimTasi[] | nu
 
 export async function tasEkle(projectId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };
   const girdi = tasGirdisi(formData.get("baslik"), formData.get("hedefTarih"));
   if ("hata" in girdi) return { error: girdi.hata };
@@ -63,7 +63,7 @@ export async function tasEkle(projectId: string, formData: FormData): Promise<Ac
 
 export async function tasGuncelle(tasId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   if (!UUID.test(tasId)) return { error: "Kilometre taşı bulunamadı." };
   const girdi = tasGirdisi(formData.get("baslik"), formData.get("hedefTarih"));
   if ("hata" in girdi) return { error: girdi.hata };
@@ -80,7 +80,7 @@ export async function tasGuncelle(tasId: string, formData: FormData): Promise<Ac
 
 export async function tasTamamla(tasId: string, tamam: boolean): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   if (!UUID.test(tasId)) return { error: "Kilometre taşı bulunamadı." };
   const { data, error } = await ctx.supabase
     .from("calisma_takvimi")
@@ -100,7 +100,7 @@ export async function tasTamamla(tasId: string, tamam: boolean): Promise<ActionR
 
 export async function tasSil(tasId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   if (!UUID.test(tasId)) return { error: "Kilometre taşı bulunamadı." };
   const { data, error } = await ctx.supabase.from("calisma_takvimi").delete().eq("id", tasId).select("id");
   if (error) {
@@ -118,8 +118,8 @@ export async function tasSil(tasId: string): Promise<ActionResult> {
  */
 export async function taslakTakvimOlustur(projectId: string): Promise<{ error?: string; eklenen?: number }> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };
   const { data: proje, error } = await ctx.supabase
     .from("academic_projects")
@@ -161,7 +161,7 @@ export async function taslakTakvimOlustur(projectId: string): Promise<{ error?: 
 */
 export async function teslimTarihiKaydet(projectId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };
   const tarih = String(formData.get("teslimTarihi") ?? "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(tarih)) return { error: "Teslim tarihini seçin." };

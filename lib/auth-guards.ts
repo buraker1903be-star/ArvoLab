@@ -2,6 +2,8 @@
 // Bu dosya bilinçli olarak "use server" DEĞİLDİR: "use server" dosyasındaki
 // her export dışarıdan çağrılabilir bir uç noktaya dönüşür.
 import { createClient } from "@/lib/supabase/server";
+import { ceviri } from "./dil-sunucu";
+import type { Metin } from "./dil";
 import type { UserRole } from "@/lib/project-labels";
 
 export interface ActionResult {
@@ -57,12 +59,25 @@ export async function getAuthContext(): Promise<AuthContext | null> {
 // "başarılı" görünmesini engeller ve kullanıcıya anlaşılır mesaj verir.
 export async function requireRole(
   allowed: readonly UserRole[],
-  message = "Bu işlem için yetkiniz yok."
+  message: string | Metin = { tr: "Bu işlem için yetkiniz yok.", en: "You do not have permission for this action." }
 ): Promise<GuardResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın.", reason: "unauthenticated" };
-  if (!ctx.role || !allowed.includes(ctx.role)) return { error: message, reason: "forbidden" };
+  const t = await ceviri();
+  if (!ctx) return { error: t(OTURUM_YOK), reason: "unauthenticated" };
+  if (!ctx.role || !allowed.includes(ctx.role)) return { error: typeof message === "string" ? message : t(message), reason: "forbidden" };
   return ctx;
 }
 
-export const SESSION_MISSING: ActionResult = { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+/*
+  Oturum yok mesajı, kullanıcının dilinde (lib/dil.ts). Eskiden sabit bir
+  nesneydi (SESSION_MISSING); sabit istek başına dil bilemediği için
+  işleve döndü.
+*/
+export const OTURUM_YOK: Metin = {
+  tr: "Oturum bulunamadı. Lütfen tekrar giriş yapın.",
+  en: "No active session. Please sign in again.",
+};
+
+export async function oturumYokMesaji(): Promise<string> {
+  return (await ceviri())(OTURUM_YOK);
+}

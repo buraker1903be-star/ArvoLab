@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { aktifDil } from "@/lib/dil-sunucu";
+import { aktifDil, aktifSaatDilimi } from "@/lib/dil-sunucu";
 import { DilSaglayici } from "./_components/dil-saglayici";
 import { Inter, Montserrat } from "next/font/google";
 import "./styles/tokens.css";
@@ -61,7 +61,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const dil = await aktifDil();
+  const [dil, saatDilimi] = await Promise.all([aktifDil(), aktifSaatDilimi()]);
   return (
     <html lang={dil} suppressHydrationWarning>
       <body className={`${inter.variable} ${montserrat.variable}`}>
@@ -69,7 +69,9 @@ export default async function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInit}
         </Script>
-        <DilSaglayici dil={dil}>{children}</DilSaglayici>
+        <DilSaglayici dil={dil} saatDilimi={saatDilimi}>
+          {children}
+        </DilSaglayici>
       </body>
     </html>
   );

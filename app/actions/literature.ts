@@ -3,9 +3,9 @@
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork, type DoiMetadata } from "@/lib/doi";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 
 const PAGE_PATH = "/dashboard/literature";
 /* Literatür, Çalışmalarım'daki durum kartından da pencere olarak açılıyor;
@@ -82,10 +82,10 @@ const isMissingColumn = (error: { code?: string } | null) => error?.code === "PG
 
 export async function createLiteratureSource(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   /* Abonelik kapısı: Yeni kaynak eklemek içerik üretir. Okuma, güncelleme ve silme
      açık kalır: mevcut kaynaklarını yönetebilmeli. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "Kaynak başlığı zorunludur." };
@@ -119,7 +119,7 @@ export async function createLiteratureSource(formData: FormData): Promise<Action
 
 export async function updateLiteratureStatus(sourceId: string, status: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   if (!STATUSES.includes(status)) return { error: "Geçersiz durum." };
 
   const { data, error } = await ctx.supabase
@@ -141,7 +141,7 @@ export async function updateLiteratureStatus(sourceId: string, status: string): 
 
 export async function updateLiteratureSource(sourceId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "Kaynak başlığı zorunludur." };
@@ -173,7 +173,7 @@ export async function updateLiteratureSource(sourceId: string, formData: FormDat
 
 export async function deleteLiteratureSource(sourceId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const { data, error } = await ctx.supabase
     .from("literature_sources")
@@ -198,7 +198,7 @@ export async function deleteLiteratureSource(sourceId: string): Promise<ActionRe
  */
 export async function lookupDoi(input: string): Promise<{ error?: string; metadata?: DoiMetadata }> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const doi = normalizeDoi(input);
   if (!doi) return { error: "Geçerli bir DOI girin (ör. 10.1000/xyz123 ya da https://doi.org/…)." };
@@ -237,9 +237,9 @@ export interface CitationSourceInput {
 /** Atıf penceresinden yeni kaynak: literatür listesine "kullanıldı" olarak eklenir ve döner */
 export async function createCitationSource(input: CitationSourceInput): Promise<{ error?: string; source?: LiteratureSource }> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   /* Abonelik kapısı: Atıf kaynağı da yeni içeriktir. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const title = text(input.title, 500);
   if (!title) return { error: "Kaynak başlığı zorunludur." };

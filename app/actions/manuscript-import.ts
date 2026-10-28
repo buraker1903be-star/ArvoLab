@@ -1,9 +1,9 @@
 "use server";
 
-import { getAuthContext, SESSION_MISSING } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { convertDocxToEditorHtml, type DocxImportStats } from "@/lib/docx-import";
 import { IMAGE_BUCKET, SIGNED_URL_TTL_SECONDS } from "@/lib/manuscript-images";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { isOversightRole } from "@/lib/project-labels";
 
 const MAX_DOCX_BYTES = 25 * 1024 * 1024;
@@ -19,9 +19,9 @@ export async function importWordDocument(
   storagePath: string
 ): Promise<{ error?: string; html?: string; stats?: DocxImportStats }> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   /* Abonelik kapısı: Word içe aktarma yeni içerik üretir; saveManuscript ile aynı kapı. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const bucket = ctx.supabase.storage.from(IMAGE_BUCKET);
   const ownImport = storagePath.startsWith(`${ctx.user.id}/imports/`) && /\.docx$/i.test(storagePath) && !storagePath.includes("..");

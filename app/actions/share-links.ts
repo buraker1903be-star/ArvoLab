@@ -1,7 +1,7 @@
 "use server";
 
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { generateShareToken } from "@/lib/share-token";
 import { siteOrigin } from "@/lib/site-url";
 
@@ -23,7 +23,7 @@ const isMissingTable = (error: { code?: string } | null) => error?.code === "42P
 /** Çalışmanın paylaşım bağlantıları (RLS: yalnızca çalışmayı yazabilenler görür) */
 export async function listShareLinks(projectId: string): Promise<{ links: ShareLink[]; error?: string }> {
   const ctx = await getAuthContext();
-  if (!ctx) return { links: [], error: SESSION_MISSING.error };
+  if (!ctx) return { links: [], error: (await oturumYokMesaji()) };
   if (!UUID_PATTERN.test(projectId)) return { links: [], error: "Geçersiz çalışma." };
   const { data, error } = await ctx.supabase
     .from("manuscript_share_links")
@@ -57,11 +57,11 @@ export async function createShareLink(
   input: { days: number; label?: string }
 ): Promise<{ url?: string; expiresAt?: string; error?: string }> {
   const ctx = await getAuthContext();
-  if (!ctx) return { error: SESSION_MISSING.error };
+  if (!ctx) return { error: (await oturumYokMesaji()) };
   /* Aboneliği bitmiş kullanıcı YENİ paylaşım bağlantısı üretemez. Mevcut
      bağlantılar süreleri dolana kadar çalışmaya devam eder: bağlantıyı alan
      danışmanın elindeki adresi geriye dönük kırmak doğru olmaz. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   if (!UUID_PATTERN.test(projectId)) return { error: "Geçersiz çalışma." };
   if (!DURATIONS_DAYS.includes(input.days)) return { error: "Geçerlilik süresi 7, 30 ya da 90 gün olabilir." };
   const label = input.label?.trim().slice(0, 120) || null;
@@ -87,7 +87,7 @@ export async function createShareLink(
 /** Bağlantıyı iptal eder (geri alınamaz; RLS: yalnızca revoked_at yazılabilir) */
 export async function revokeShareLink(linkId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   if (!UUID_PATTERN.test(linkId)) return { error: "Geçersiz bağlantı." };
   const { data, error } = await ctx.supabase
     .from("manuscript_share_links")

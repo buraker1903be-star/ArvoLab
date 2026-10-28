@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { makaleTuruMu } from "@/lib/makale/sablonlar";
 import type { MakaleProfili } from "@/lib/makale/gonderim-kontrolu";
 
@@ -52,8 +52,8 @@ export async function makaleProfiliOku(projectId: string): Promise<{ profil: Mak
 
 export async function makaleProfiliKaydet(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const projectId = String(formData.get("project_id") ?? "");
   if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };

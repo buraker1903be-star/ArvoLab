@@ -1,6 +1,6 @@
 "use server";
 
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 
 export type NotificationKind = "comment" | "assignment" | "status" | "approval" | "guideline_update" | "share_view";
 
@@ -56,7 +56,7 @@ export async function listNotifications(): Promise<{ items: PanelNotification[];
 /** Verilen bildirimleri (ya da hepsini) okundu işaretler */
 export async function markNotificationsRead(ids?: string[]): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   let query = ctx.supabase
     .from("notifications")
     .update({ read_at: new Date().toISOString() })

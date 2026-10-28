@@ -5,7 +5,7 @@ import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-son
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buildShingles, computeSimilarity } from "@/lib/similarity-check";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 
 export interface OriginalityMatch {
   documentId: string;
@@ -36,7 +36,7 @@ export async function runOriginalityCheck(documentId: string): Promise<Originali
   }
   /* Abonelik kapısı: Özgünlük denetimi ücretli bir özellik; paneldeki kapı yalnızca
      ekranı kapatır, işlem doğrudan çağrılabilir. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const { data: targetDoc, error: targetError } = await supabase
     .from("document_uploads")

@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { analizTuruMu } from "@/lib/analiz-turleri";
 
 const PAGE_PATH = "/dashboard/analysis";
@@ -51,8 +51,8 @@ export async function analizSonucuKaydet(girdi: {
   tezeEklenecek?: boolean;
 }): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const baslik = girdi.baslik.trim();
   const apaMetni = girdi.apaMetni.trim();
@@ -104,7 +104,7 @@ export async function analizSonucuKaydet(girdi: {
     if (error.code === "42501") {
       return /çalışmaya kayıt/i.test(error.message ?? "")
         ? { error: "Bu çalışmaya analiz sonucu ekleyemezsiniz." }
-        : { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+        : { error: (await abonelikKapaliMesaji()) };
     }
     return { error: "Sonuç kaydedilemedi; metni kopyalayıp saklayabilirsiniz." };
   }
@@ -147,7 +147,7 @@ export async function calismaAnalizleri(projectId: string): Promise<ListeSonucu<
 */
 async function siraDurumu(id: string, alanlar: { teze_eklenecek?: boolean; teze_eklendi?: string | null }): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   if (!UUID.test(id)) return { error: "Kayıt bulunamadı." };
   const { data, error } = await ctx.supabase
     .from("analiz_sonuclari")
@@ -199,7 +199,7 @@ export async function getAnalizSonuclari(): Promise<ListeSonucu<AnalizSonucu>> {
 */
 export async function analizSonucuSil(id: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const { data, error } = await ctx.supabase
     .from("analiz_sonuclari")

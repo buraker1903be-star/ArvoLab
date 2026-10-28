@@ -13,7 +13,7 @@ import {
   crossCheck,
   computeComplianceScore,
 } from "@/lib/apa7";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 
 /*
   20 MB. Buradaki kontrol istemcinin BİLDİRDİĞİ boyuta bakar ve dosya o
@@ -107,7 +107,7 @@ export async function analyzeUploadedDocument(params: {
     return { error: mesaj };
   };
 
-  if (abonelikKapali) return reddet(SUBSCRIPTION_BLOCKED_MESSAGE);
+  if (abonelikKapali) return reddet((await abonelikKapaliMesaji()));
   if (boyutAsimi) return reddet("Dosya boyutu 20 MB sınırını aşıyor.");
   if (!docType) return reddet("Yalnızca .docx ve .pdf dosyaları desteklenir.");
 

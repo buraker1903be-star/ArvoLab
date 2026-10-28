@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { loadCurrentProfile } from "@/lib/current-profile";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 import { onayGecerli } from "@/lib/hesap-silme";
@@ -27,7 +27,7 @@ export async function hesapSilmeTalebi(formData: FormData): Promise<ActionResult
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return SESSION_MISSING;
+  if (!user) return { error: await oturumYokMesaji() };
 
   const profile = await loadCurrentProfile();
   /*
@@ -76,7 +76,7 @@ export async function hesapSilmeyiIptal(): Promise<ActionResult> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return SESSION_MISSING;
+  if (!user) return { error: await oturumYokMesaji() };
 
   const { data, error } = await supabase
     .from("profiles")

@@ -2,8 +2,8 @@
 
 import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { varsayilanGetir } from "@/lib/kanit/dizin";
 import { guvenliIndir } from "@/lib/guvenli-indir";
 import { extractTextFromBuffer } from "@/lib/document-extract";
@@ -78,9 +78,9 @@ export async function kaynakPdfleriniBul(
   kunyeler: Kunye[],
 ): Promise<{ error?: string; satirlar?: KaynakPdfSatiri[] }> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   // Dış sunuculara gidiyor ve depolamaya yazıyor: kapı burada da.
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };
   const { supabase, user } = ctx;
 
@@ -190,8 +190,8 @@ export async function kaynakPdfiYuklendi(
   girdi: { kunye: string; doi?: string | null; depoYolu: string },
 ): Promise<{ error?: string; satir?: KaynakPdfSatiri }> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   if (!UUID.test(projectId) || !girdi.depoYolu.startsWith(`${projectId}/kaynak-pdf/`)) return { error: "Dosya yolu geçersiz." };
   const { supabase, user } = ctx;
 
@@ -268,8 +268,8 @@ export async function teslimPaketi(
   projectId: string,
 ): Promise<{ error?: string; baslik?: string; dosyalar?: { ad: string; url: string }[]; rapor?: string }> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   if (!UUID.test(projectId)) return { error: "Çalışma bulunamadı." };
   const { supabase } = ctx;
 

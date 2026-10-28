@@ -1,7 +1,7 @@
 "use server";
 
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 
 export interface ManuscriptComment {
   id: string;
@@ -18,7 +18,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 export async function listManuscriptComments(projectId: string): Promise<{ comments: ManuscriptComment[]; error?: string }> {
   const ctx = await getAuthContext();
-  if (!ctx) return { comments: [], error: SESSION_MISSING.error };
+  if (!ctx) return { comments: [], error: (await oturumYokMesaji()) };
 
   const { data, error } = await ctx.supabase
     .from("manuscript_comments")
@@ -54,10 +54,10 @@ export async function listManuscriptComments(projectId: string): Promise<{ comme
 
 export async function addManuscriptComment(projectId: string, body: string, quote: string | null): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   /* Abonelik kapısı: Yeni yorum içerik üretir. Yorumlar yalnızca panel editöründen
      eklenir; paylaşım bağlantısıyla gelen okuyucu bu yolu kullanmaz. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const text = body.trim();
   if (!text) return { error: "Yorum boş olamaz." };
   if (text.length > 2000) return { error: "Yorum en fazla 2000 karakter olabilir." };
@@ -78,7 +78,7 @@ export async function addManuscriptComment(projectId: string, body: string, quot
 export async function setManuscriptCommentResolved(commentId: string, resolved: boolean): Promise<ActionResult> {
   if (!UUID_PATTERN.test(commentId)) return { error: "Geçersiz yorum." };
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const { data, error } = await ctx.supabase
     .from("manuscript_comments")
     .update(resolved ? { resolved_at: new Date().toISOString(), resolved_by: ctx.user.id } : { resolved_at: null, resolved_by: null })
@@ -94,7 +94,7 @@ export async function setManuscriptCommentResolved(commentId: string, resolved: 
 export async function deleteManuscriptComment(commentId: string): Promise<ActionResult> {
   if (!UUID_PATTERN.test(commentId)) return { error: "Geçersiz yorum." };
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const { data, error } = await ctx.supabase.from("manuscript_comments").delete().eq("id", commentId).select("id");
   if (error || !data?.length) {
     if (error) console.error(error);

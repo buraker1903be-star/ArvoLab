@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 import type { Taraf, YazismaMesaji } from "@/lib/destek-yazisma";
 
@@ -27,7 +27,7 @@ type MesajSatiri = {
 
 export async function destekMesajiGonder(tur: "uzman" | "destek", talepId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const metin = String(formData.get("metin") ?? "").trim();
   if (!metin) return { error: "Boş mesaj gönderilemez." };

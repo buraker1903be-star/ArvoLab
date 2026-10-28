@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { loadCurrentProfile, type CurrentProfile } from "@/lib/current-profile";
 
 export type { CurrentProfile } from "@/lib/current-profile";
@@ -19,7 +19,7 @@ export async function updateMyProfile(formData: FormData): Promise<ActionResult>
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return SESSION_MISSING;
+  if (!user) return { error: await oturumYokMesaji() };
 
   const fullName = String(formData.get("fullName") ?? "").trim();
   if (fullName.length < 2 || fullName.length > 120) {

@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
 import { accountExistsEmail, resetPasswordEmail, signUpConfirmEmail } from "@/lib/email/auth-emails";
 import { kayitGirdisiniDenetle } from "@/lib/kayit";
-import { SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
 
@@ -305,7 +305,7 @@ export async function digerOturumlariKapat(): Promise<ActionResult> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return SESSION_MISSING;
+  if (!user) return { error: await oturumYokMesaji() };
 
   const { error } = await supabase.auth.signOut({ scope: "others" });
   if (error) {

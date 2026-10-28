@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { ornekKalibi } from "@/lib/atif/tyk";
 import { scanGuidelineBytes, scanGuidelineUrl, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
@@ -33,7 +33,7 @@ import {
 /** Çalışmaya yazma yetkisi: sahip ya da atanan kişi (RLS ile aynı kural). */
 async function calismayaYazabilir(projectId: string) {
   const ctx = await getAuthContext();
-  if (!ctx) return { hata: SESSION_MISSING.error } as const;
+  if (!ctx) return { hata: (await oturumYokMesaji()) } as const;
   const { data, error } = await ctx.supabase
     .from("academic_projects")
     .select("id, owner_id, assignee_id, guideline_id")
@@ -84,7 +84,7 @@ export async function kilavuzuTara(
   const { ctx } = izin;
   /* Ağır çözümleme (PDF, OCR, dış adresten indirme): abonelik kapısı.
      Eskiden yoktu; işlem doğrudan çağrılıp OCR tetiklenebiliyordu. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   /*
     Yol tarayıcıdan geliyor: yalnızca kullanıcının kendi klasörü. Depo
     politikası gözetim rollerine bütün kovayı açtığı için, bu denetim
@@ -149,7 +149,7 @@ export async function kilavuzuKaydet(
   if ("hata" in izin) return { error: izin.hata };
   const { ctx, calisma } = izin;
   // Yeni kural yazıyor: abonelik kapısı (lib/access.ts).
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   /*
     Katalogda onaylı kılavuz varsa öğrencinin yüklediği uygulanmaz
@@ -255,7 +255,7 @@ export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> 
  */
 export async function ornekAtifKaydet(projectId: string, ornek: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const temiz = ornek.replace(/\s+/g, " ").trim().slice(0, 300);
   if (temiz && !ornekKalibi(temiz)) {
     return { error: "Örnekte parantez içinde yazar ve yıl olan bir atıf bulunamadı. Örn. (Yılmaz, 2020: 14)" };

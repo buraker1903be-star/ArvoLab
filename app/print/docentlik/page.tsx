@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { getDoktoraTarihi, getHedefler, getMyScoreEntries } from "@/app/actions/scoring";
 import { etkinHedefler, faaliyetDonemi, hedefDurumlari, puanGruplari, puanYazisi, tavanUygula } from "@/lib/docentlik-ozeti";
@@ -32,7 +32,7 @@ export default async function DocentlikDokumu({
   if (await isSubscriptionBlocked()) {
     return (
       <div className="print-page">
-        <p className="makbuz-uyari">{SUBSCRIPTION_BLOCKED_MESSAGE}</p>
+        <p className="makbuz-uyari">{(await abonelikKapaliMesaji())}</p>
       </div>
     );
   }

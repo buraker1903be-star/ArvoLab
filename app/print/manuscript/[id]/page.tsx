@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
@@ -42,7 +42,7 @@ export default async function PrintManuscriptPage({
   if (await isSubscriptionBlocked()) {
     return (
       <div className="print-page">
-        <p style={{ padding: "2rem", textAlign: "center" }}>{SUBSCRIPTION_BLOCKED_MESSAGE}</p>
+        <p style={{ padding: "2rem", textAlign: "center" }}>{(await abonelikKapaliMesaji())}</p>
       </div>
     );
   }

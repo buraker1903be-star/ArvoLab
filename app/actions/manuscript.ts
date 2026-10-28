@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { extractPlainText, countWords, type TiptapDoc } from "@/lib/tiptap-text";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import { extractInTextCitations, crossCheck, computeComplianceScore, type ParsedReference } from "@/lib/apa7";
@@ -158,7 +158,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     basıyordu. Aboneliği biten kişinin görmesi gereken şey yenileme yolu.
   */
   if (await isSubscriptionBlocked()) {
-    return { error: SUBSCRIPTION_BLOCKED_MESSAGE, forbidden: true, abonelik: true };
+    return { error: (await abonelikKapaliMesaji()), forbidden: true, abonelik: true };
   }
 
   const { content, margins, showPageNumbers, coverPage, settingsSource, includeToc, headingNumbering } = input;

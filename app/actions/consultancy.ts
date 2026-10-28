@@ -4,7 +4,7 @@ import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { EXPERT_ROLES } from "@/lib/project-labels";
 
 const PAGE_PATH = "/dashboard/expert-requests";
@@ -24,7 +24,7 @@ export interface ConsultancyRequest {
 
 export async function createConsultancyRequest(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const { supabase, user } = ctx;
 
   let projectId = String(formData.get("projectId") ?? "").trim() || null;
@@ -145,7 +145,7 @@ export async function acceptRequest(requestId: string): Promise<ActionResult> {
 
 export async function completeRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const { data, error } = await ctx.supabase
     .from("consultancy_requests")
@@ -167,7 +167,7 @@ export async function completeRequest(requestId: string): Promise<ActionResult> 
 
 export async function cancelRequest(requestId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const { data, error } = await ctx.supabase
     .from("consultancy_requests")

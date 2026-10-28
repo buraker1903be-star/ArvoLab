@@ -4,7 +4,7 @@ import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 
 // Destek tek sayfa (expert-requests); /dashboard/support oraya yönleniyor.
@@ -30,7 +30,7 @@ export interface AppSupportRequest {
 
 export async function createSupportRequest(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const subject = String(formData.get("subject") ?? "").trim();
   const message = String(formData.get("message") ?? "").trim();

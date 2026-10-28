@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Packer } from "docx";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { buildDocxFromTiptap, type DocxImage } from "@/lib/tiptap-docx";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { readImageInfo } from "@/lib/image-info";
@@ -63,7 +63,7 @@ export async function GET(
     çıktısı indirilmeye devam ediyordu.
   */
   if (await isSubscriptionBlocked()) {
-    return NextResponse.json({ error: SUBSCRIPTION_BLOCKED_MESSAGE }, { status: 402 });
+    return NextResponse.json({ error: (await abonelikKapaliMesaji()) }, { status: 402 });
   }
 
   // RLS: çalışmayı göremeyen kullanıcı buradan öteye geçemez.

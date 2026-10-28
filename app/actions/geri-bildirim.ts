@@ -4,7 +4,7 @@ import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES, MANAGER_ROLES } from "@/lib/project-labels";
 import {
   BOLUM_SECENEKLERI,
@@ -76,7 +76,7 @@ export async function geriBildirimSorusu(): Promise<{ sorulsun: boolean; baglam:
 
 async function durumYaz(status: GeriBildirimDurumu, alanlar: Record<string, unknown> = {}): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
 
   const { error } = await ctx.supabase.from("product_feedback").upsert(
     {

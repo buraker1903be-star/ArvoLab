@@ -29,3 +29,23 @@ describe("arayüz dili", () => {
     assert.equal(ceviriciKur("en")({ tr: "Belge yükle", en: "Upload document" }), "Upload document");
   });
 });
+
+describe("tarih biçimleri", () => {
+  test("Türkçe Türkiye saatiyle, eski işlevlerle aynı", async () => {
+    const { tarihBicimleri, trTarihSaat } = await import("@/lib/tr-time");
+    const an = "2026-09-20T11:05:00Z";
+    assert.equal(tarihBicimleri("tr", "America/New_York").tarihSaat(an), trTarihSaat(an));
+  });
+
+  test("İngilizce kullanıcının saat diliminde", async () => {
+    const { tarihBicimleri } = await import("@/lib/tr-time");
+    // 02:30 UTC: New York'ta bir önceki gün.
+    assert.equal(tarihBicimleri("en", "America/New_York").tarih("2026-09-20T02:30:00Z"), "Sep 19, 2026");
+  });
+
+  test("bozuk saat dilimi reddedilir", async () => {
+    const { saatDilimiMi } = await import("@/lib/dil");
+    assert.equal(saatDilimiMi("Mars/Olympus"), false);
+    assert.equal(saatDilimiMi("Europe/Berlin"), true);
+  });
+});

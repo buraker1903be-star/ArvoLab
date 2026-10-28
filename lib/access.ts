@@ -1,4 +1,6 @@
 import { cache } from "react";
+import { ceviri } from "./dil-sunucu";
+import type { Metin } from "./dil";
 import { createClient } from "@/lib/supabase/server";
 import { getLicenseState } from "@/lib/license";
 import { ensureSubscription } from "@/lib/subscription";
@@ -93,8 +95,15 @@ export async function getAccessState(
   return accessFor(profile.id, profile.role, profile.organization_id, profile.full_name);
 }
 
-export const SUBSCRIPTION_BLOCKED_MESSAGE =
-  "Aboneliğiniz sona erdi. Devam etmek için planınızı yenileyin.";
+/* Kullanıcının dilinde (lib/dil.ts); eskiden sabit Türkçe bir metindi. */
+export const ABONELIK_KAPALI: Metin = {
+  tr: "Aboneliğiniz sona erdi. Devam etmek için planınızı yenileyin.",
+  en: "Your subscription has ended. Renew your plan to continue.",
+};
+
+export async function abonelikKapaliMesaji(): Promise<string> {
+  return (await ceviri())(ABONELIK_KAPALI);
+}
 
 /**
  * Erişim kapısı, çağıran taraf profili kendisi okumadan.
@@ -150,7 +159,7 @@ export async function isSubscriptionBlocked(): Promise<boolean> {
     devam edilebilirdi. Silinmek üzere olan bir hesaba yeni tez yazdırmak,
     silmenin ne kadarının gerçekten silineceğini belirsizleştirir.
 
-    Mesaj yine SUBSCRIPTION_BLOCKED_MESSAGE: bu yol yalnızca bayat bir
+    Mesaj yine abonelikKapaliMesaji(): bu yol yalnızca bayat bir
     sekmede görülüyor, kullanıcının gördüğü asıl ekran panelin kendisinde
     (dashboard/layout.tsx → SilmeBekliyor) ve orada durum açıkça yazıyor.
   */

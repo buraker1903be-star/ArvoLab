@@ -16,7 +16,7 @@ import { kalibaUymayanlar, ornekKalibi, yilsizAtiflar, type TykBulgusu } from "@
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 import { dogrulamaOnbellegi } from "@/lib/dogrulama-onbellegi";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 
 export interface MyProject {
   id: string;
@@ -158,7 +158,7 @@ export async function runCitationCheck(input: {
     return { error: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
   }
   /* Abonelik kapısı: Atıf denetimi ücretli bir özellik ve sonucu veritabanına yazılıyor. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   /*
     project_id kullanıcıdan geliyordu ve doğrulanmıyordu: kayıt BAŞKASININ

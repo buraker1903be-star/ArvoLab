@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { literaturAra, type AramaKaydi } from "@/lib/literatur-arama";
 
 const PAGE_PATH = "/dashboard/literature";
@@ -57,8 +57,8 @@ export async function literaturAramasiYap(girdi: {
   gunlukDisi?: boolean;
 }): Promise<AramaYaniti> {
   const ctx = await getAuthContext();
-  if (!ctx) return { hata: SESSION_MISSING.error };
-  if (await isSubscriptionBlocked()) return { hata: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { hata: (await oturumYokMesaji()) };
+  if (await isSubscriptionBlocked()) return { hata: (await abonelikKapaliMesaji()) };
 
   const sorgu = String(girdi.sorgu ?? "").trim().slice(0, EN_UZUN_SORGU);
   if (sorgu.length < EN_KISA_SORGU) return { hata: "Aramak için en az birkaç harf yazın." };
@@ -224,8 +224,8 @@ export async function aramaKaydiniEkle(kayit: {
   projectId?: string | null;
 }): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const baslik = String(kayit.baslik ?? "").trim().slice(0, 500);
   if (!baslik) return { error: "Kaynak başlığı okunamadı." };

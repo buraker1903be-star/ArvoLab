@@ -13,7 +13,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { aiKurulumSorunu } from "./saglayici";
 import { krediKarari, type KrediKarari } from "./kredi-karari";
 
@@ -82,7 +82,7 @@ export async function asistanKapisi(): Promise<KapiSonucu> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, hata: "Oturum bulunamadı." };
-  if (await isSubscriptionBlocked()) return { ok: false, hata: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { ok: false, hata: (await abonelikKapaliMesaji()) };
   /* Sebep kurulumdan geliyor: bozuk adresle "anahtar tanımlayın" demek
      yöneticiyi yanlış değişkene bakmaya gönderiyordu. */
   const kurulumSorunu = aiKurulumSorunu();

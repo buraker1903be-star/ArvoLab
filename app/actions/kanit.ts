@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { ALINTI_HATASI, alintiDenetle } from "@/lib/kanit/alinti";
 import { kunyeDogrula } from "@/lib/kanit/dizin";
@@ -105,8 +105,8 @@ export async function kanitMatrisiOku(projectId: string): Promise<KanitMatrisiVe
 
 export async function kanitEkle(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const projectId = kimlik(formData, "project_id");
   if (!projectId) return { error: "Çalışma bulunamadı." };
@@ -130,7 +130,7 @@ export async function kanitEkle(formData: FormData): Promise<ActionResult> {
 /** İddia, bölüm, atıf ve kaynak. İddia ya da kaynak değişirse eski sonuçlar veritabanında düşer. */
 export async function kanitGuncelle(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
   if (!id || !projectId) return { error: "Kayıt bulunamadı." };
@@ -152,7 +152,7 @@ export async function kanitGuncelle(formData: FormData): Promise<ActionResult> {
 /** Kaynaktan incelenen metin, kapsam beyanı, konum ve alıntı. */
 export async function kanitMetniKaydet(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
   if (!id || !projectId) return { error: "Kayıt bulunamadı." };
@@ -203,7 +203,7 @@ export async function kanitMetniKaydet(formData: FormData): Promise<ActionResult
 /** Kullanıcının kendi değerlendirmesi: insan incelemesi sayılır. */
 export async function kanitDegerlendirmesiKaydet(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
   if (!id || !projectId) return { error: "Kayıt bulunamadı." };
@@ -232,7 +232,7 @@ export async function kanitDegerlendirmesiKaydet(formData: FormData): Promise<Ac
 /** Otomatik değerlendirmeyi bir insanın gözden geçirdiğini kaydeder. */
 export async function insanIncelemesiYapildi(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
   if (!id || !projectId) return { error: "Kayıt bulunamadı." };
@@ -248,7 +248,7 @@ export async function insanIncelemesiYapildi(formData: FormData): Promise<Action
 /** Matrisin "çelişen çalışmalar", "eksik kanıt" ve "önerilen düzeltme" sütunları. */
 export async function kanitNotlariKaydet(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
   if (!id || !projectId) return { error: "Kayıt bulunamadı." };
@@ -271,7 +271,7 @@ export async function kanitNotlariKaydet(formData: FormData): Promise<ActionResu
 
 export async function kanitSil(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
   if (!id || !projectId) return { error: "Kayıt bulunamadı." };
@@ -291,8 +291,8 @@ export async function kanitSil(formData: FormData): Promise<ActionResult> {
  */
 export async function kunyeyiDogrula(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (!ctx) return { error: await oturumYokMesaji() };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const id = kimlik(formData, "id");
   const projectId = kimlik(formData, "project_id");
   if (!id || !projectId) return { error: "Kayıt bulunamadı." };

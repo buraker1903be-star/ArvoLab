@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING } from "@/lib/auth-guards";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork } from "@/lib/doi";
 import { DOI_TOPLU_EN_COK, ICE_AKTARMA_EN_COK, kaynakAnahtari, type KaynakTaslagi } from "@/lib/kaynak-aktarim";
 
@@ -35,8 +35,8 @@ type Sonuc = { error?: string; eklenen?: number; atlanan?: number };
 /* Çalışma kullanıcının mı ve mevcut kaynak anahtarları. */
 async function hazirlik(projectId: string) {
   const ctx = await getAuthContext();
-  if (!ctx) return { hata: SESSION_MISSING.error } as const;
-  if (await isSubscriptionBlocked()) return { hata: SUBSCRIPTION_BLOCKED_MESSAGE } as const;
+  if (!ctx) return { hata: (await oturumYokMesaji()) } as const;
+  if (await isSubscriptionBlocked()) return { hata: (await abonelikKapaliMesaji()) } as const;
   const { data: proje, error: projeHatasi } = await ctx.supabase
     .from("academic_projects")
     .select("id")

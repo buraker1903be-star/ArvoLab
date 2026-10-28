@@ -3,7 +3,7 @@
 import { ceviri } from "@/lib/dil-sunucu";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { GORUNUM_ETIKETI, ONIZLEME_CEREZI, gorunumMu, onizleyebilir } from "@/lib/onizleme";
 
 /*
@@ -16,7 +16,7 @@ import { GORUNUM_ETIKETI, ONIZLEME_CEREZI, gorunumMu, onizleyebilir } from "@/li
 */
 export async function gorunumSec(formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   if (!onizleyebilir(ctx.role)) return { error: "Görünüm önizlemesi yalnızca sistem yöneticisi ve kurucuya açık." };
 
   const secilen = String(formData.get("gorunum") ?? "");

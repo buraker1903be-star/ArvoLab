@@ -1,8 +1,8 @@
 "use server";
 
-import { getAuthContext, SESSION_MISSING } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { snapshotManuscript, type VersionKind } from "@/lib/manuscript-versions";
-import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 
 export interface ManuscriptVersion {
   id: string;
@@ -17,7 +17,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 export async function listManuscriptVersions(projectId: string): Promise<{ versions: ManuscriptVersion[]; error?: string }> {
   const ctx = await getAuthContext();
-  if (!ctx) return { versions: [], error: SESSION_MISSING.error };
+  if (!ctx) return { versions: [], error: (await oturumYokMesaji()) };
 
   const { data, error } = await ctx.supabase
     .from("project_manuscript_versions")
@@ -52,10 +52,10 @@ export async function listManuscriptVersions(projectId: string): Promise<{ versi
 /** Kullanıcının adlandırdığı sürüm (ör. "Danışmana gönderilen"). Metin önce istemcide kaydedilir. */
 export async function saveNamedVersion(projectId: string, label: string): Promise<{ error?: string; success?: boolean }> {
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   /* Abonelik kapısı: Yeni sürüm yazmak saveManuscript ile aynı kapıya tabi.
      Listeleme ve önizleme açık: geçmişini görebilmeli. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const ok = await snapshotManuscript(ctx.supabase, projectId, ctx.user.id, { kind: "manual", label });
   return ok ? { success: true } : { error: "Sürüm kaydedilemedi. Önce metnin kaydedildiğinden emin olun." };
 }
@@ -63,7 +63,7 @@ export async function saveNamedVersion(projectId: string, label: string): Promis
 export async function getVersionPreview(versionId: string): Promise<{ text?: string; wordCount?: number; error?: string }> {
   if (!UUID_PATTERN.test(versionId)) return { error: "Geçersiz sürüm." };
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const { data, error } = await ctx.supabase
     .from("project_manuscript_versions")
     .select("plain_text, word_count")
@@ -77,7 +77,7 @@ export async function getVersionPreview(versionId: string): Promise<{ text?: str
 export async function getVersionText(versionId: string): Promise<{ text?: string; createdAt?: string; label?: string | null; error?: string }> {
   if (!UUID_PATTERN.test(versionId)) return { error: "Geçersiz sürüm." };
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   const { data, error } = await ctx.supabase
     .from("project_manuscript_versions")
     .select("plain_text, created_at, label")
@@ -94,9 +94,9 @@ export async function restoreManuscriptVersion(
 ): Promise<{ error?: string; success?: boolean; updatedAt?: string }> {
   if (!UUID_PATTERN.test(versionId)) return { error: "Geçersiz sürüm." };
   const ctx = await getAuthContext();
-  if (!ctx) return SESSION_MISSING;
+  if (!ctx) return { error: await oturumYokMesaji() };
   /* Abonelik kapısı: Geri yükleme metnin üzerine yazar; saveManuscript ile aynı kapı. */
-  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
   const { data: version, error: versionError } = await ctx.supabase
     .from("project_manuscript_versions")

@@ -7,7 +7,20 @@
 */
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
-import { ceviriciKur, DIL_CEREZI, dilMi, INGILIZCE_YAYINDA, tarayicidanDil, VARSAYILAN_DIL, type Cevirici, type Dil } from "./dil";
+import {
+  ceviriciKur,
+  DIL_CEREZI,
+  dilMi,
+  INGILIZCE_YAYINDA,
+  SAAT_DILIMI_CEREZI,
+  saatDilimiMi,
+  tarayicidanDil,
+  VARSAYILAN_DIL,
+  VARSAYILAN_SAAT_DILIMI,
+  type Cevirici,
+  type Dil,
+} from "./dil";
+import { tarihBicimleri, type TarihBicimleri } from "./tr-time";
 
 /** İstek başına bir kez: çerez, yoksa tarayıcının dili (çerez proxy'de yazılıyor). */
 export const aktifDil = cache(async (): Promise<Dil> => {
@@ -20,4 +33,16 @@ export const aktifDil = cache(async (): Promise<Dil> => {
 /** Sunucuda çevirici: const t = await ceviri(); t({ tr: "…", en: "…" }) */
 export async function ceviri(): Promise<Cevirici> {
   return ceviriciKur(await aktifDil());
+}
+
+/** Kullanıcının saat dilimi: Türkçede Türkiye, İngilizcede tarayıcının bildirdiği. */
+export const aktifSaatDilimi = cache(async (): Promise<string> => {
+  if ((await aktifDil()) === "tr") return VARSAYILAN_SAAT_DILIMI;
+  const cerez = (await cookies()).get(SAAT_DILIMI_CEREZI)?.value;
+  return saatDilimiMi(cerez) ? cerez : VARSAYILAN_SAAT_DILIMI;
+});
+
+/** Sunucuda tarih biçimleri: const { tarih, tarihSaat } = await tarihler(); */
+export async function tarihler(): Promise<TarihBicimleri> {
+  return tarihBicimleri(await aktifDil(), await aktifSaatDilimi());
 }
