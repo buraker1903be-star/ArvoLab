@@ -26,10 +26,23 @@ export async function extractTextFromBuffer(
   buffer: Buffer,
   docType: SupportedDocType
 ): Promise<string> {
+  return (await belgeMetniOku(buffer, docType)).metin;
+}
+
+/**
+ * Metin ve (yalnızca PDF'te) sayfa sayısı. Belge Kontrol sayfa sayısını
+ * iki iş için istiyor: taranmış PDF'i ayırt etmek (sayfa başına metin) ve
+ * kılavuzun sayfa sınırını göstermek (lib/belge-kontrol.ts). Word'ün sayfa
+ * sayısı yazı tipine ve yazıcıya göre değiştiği için null.
+ */
+export async function belgeMetniOku(
+  buffer: Buffer,
+  docType: SupportedDocType
+): Promise<{ metin: string; sayfa: number | null }> {
   if (docType === "docx") {
     const mammoth = (await import("mammoth")).default;
     const result = await mammoth.extractRawText({ buffer });
-    return result.value;
+    return { metin: result.value, sayfa: null };
   }
 
   /*
@@ -52,7 +65,7 @@ export async function extractTextFromBuffer(
   const parser = new PDFParse({ data: buffer });
   try {
     const result = await parser.getText();
-    return result.text;
+    return { metin: result.text, sayfa: result.total || null };
   } finally {
     await parser.destroy();
   }

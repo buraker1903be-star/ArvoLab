@@ -22,8 +22,6 @@
 /** OCR'a girilecek en fazla sayfa; kapak ve ilk kural sayfaları yeterli. */
 const EN_FAZLA_SAYFA = 8;
 
-/** Sayfa başına ortalama bu kadar karakterden azsa belge taranmış sayılır. */
-const SAYFA_BASINA_ESIK = 100;
 
 /**
  * OCR sonucu.
@@ -140,17 +138,12 @@ export function ocrEksikDosyaUyarisi(eksik: string): string {
     + "Bu, kılavuzun değil sunucunun sorunu; dosyalar dağıtım paketine eklenmeli (next.config.ts).";
 }
 
-/**
- * Belge taranmış (görüntü) bir PDF mi?
- *
- * Metin PDF'i sayfa başına binlerce karakter verir; taranmış olan neredeyse
- * hiç vermez. Eşik ortada tutuldu: kapağı metin, gövdesi görüntü olan
- * karma belgeler de OCR'a girsin.
- */
-export function taranmisBelgeMi(metin: string, sayfaSayisi: number): boolean {
-  if (sayfaSayisi <= 0) return false;
-  return metin.trim().length / sayfaSayisi < SAYFA_BASINA_ESIK;
-}
+/*
+  Karar ayrı dosyada (lib/taranmis-belge.ts): Belge Kontrol de kullanıyor
+  ve bu dosyayı import etmek, tesseract'ın dinamik import'u yüzünden
+  OCR paketini o rotanın dağıtımına da sokardı.
+*/
+export { taranmisBelgeMi } from "@/lib/taranmis-belge";
 
 /**
  * PDF'in ilk sayfalarını görüntüye çevirip OCR ile okur.

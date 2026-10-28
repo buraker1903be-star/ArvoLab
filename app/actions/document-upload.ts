@@ -3,7 +3,9 @@
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { detectDocType, extractTextFromBuffer, splitBodyAndReferences } from "@/lib/document-extract";
+import { belgeMetniOku, detectDocType, splitBodyAndReferences } from "@/lib/document-extract";
+import { calismaKilavuzu } from "@/lib/guideline-rules";
+import { BOS_METIN_MESAJI, KISMI_METIN_UYARISI, metinDurumu } from "@/lib/belge-kontrol";
 import { checkGuidelineCompliance, type GuidelineComplianceResult } from "@/lib/guideline-check";
 import {
   parseReferenceList,
@@ -23,9 +25,14 @@ import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/acces
 */
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
+/* Okunabilir metin yok (taranmış PDF); çözümleme hatasından ayrı mesaj alır. */
+class BosMetin extends Error {}
+
 export interface UploadResult {
   error?: string;
   documentId?: string;
+  /* Kayıt oluştu ama çözümlenemedi (ör. taranmış PDF); form "denetlendi" demesin. */
+  cozumlenemedi?: string;
   analysis?: {
     complianceScore: number | null;
     referenceSectionFound: boolean;
@@ -147,35 +154,59 @@ export async function analyzeUploadedDocument(params: {
   let referenceText = "";
 
   try {
-    extractedText = await extractTextFromBuffer(buffer, docType);
+    const okunan = await belgeMetniOku(buffer, docType);
+    extractedText = okunan.metin;
+    const metin = metinDurumu(extractedText, okunan.sayfa);
+    if (metin.durum === "bos") throw new BosMetin();
     const split = splitBodyAndReferences(extractedText);
     referenceText = split.referenceText;
 
+    /*
+      Kılavuz, editör ve teslim kontrolüyle AYNI yerden: calismaKilavuzu
+      (lib/guideline-rules.ts) — katalogdaki kılavuzun ONAYLI anlık
+      görüntüsü, yoksa öğrencinin kendi yüklediği kılavuz.
+
+      Eskiden burada thesis_guidelines'ın canlı required_sections ve
+      citation_style sütunları okunuyordu. İki hata birden: (1) yönetici
+      kuralları yeniden düzenlerken çalışma hâlindeki, onaylanmamış
+      bölümler öğrenciye "Eksik" diye yansıyordu; (2) katalog 26.10.2026'da
+      kaldırılıp kılavuz çalışma başına yüklenmeye başlayınca yeni
+      çalışmaların guideline_id'si boş kaldı ve Belge Kontrol'de kılavuz
+      denetimi HİÇ çalışmadı — hata da vermeden.
+    */
     let guidelineCompliance: GuidelineComplianceResult | null = null;
+    let kilavuz: { ad: string; surum: string; dogrulandi: boolean; minPages: number | null; maxPages: number | null } | null = null;
     if (params.projectId) {
-      const { data: project } = await supabase
+      const { data: project, error: projeHatasi } = await supabase
         .from("academic_projects")
         .select("guideline_id, citation_style")
         .eq("id", params.projectId)
-        .single();
+        .maybeSingle();
+      if (projeHatasi) console.error("[belge] çalışmanın kılavuzu okunamadı:", projeHatasi.message);
 
-      if (project?.guideline_id) {
-        const { data: guideline } = await supabase
-          .from("thesis_guidelines")
-          .select("required_sections, citation_style")
-          .eq("id", project.guideline_id)
-          .single();
-
-        if (guideline) {
-          guidelineCompliance = checkGuidelineCompliance(
-            split.bodyText,
-            guideline.required_sections ?? [],
-            guideline.citation_style,
-            project.citation_style ?? null
-          );
-        }
+      const uygulanan = project ? await calismaKilavuzu(supabase, params.projectId, project.guideline_id) : null;
+      if (uygulanan) {
+        guidelineCompliance = checkGuidelineCompliance(
+          split.bodyText,
+          uygulanan.requiredSections,
+          uygulanan.citationStyle,
+          project?.citation_style ?? null
+        );
+        kilavuz = {
+          ad: uygulanan.label,
+          surum: `${uygulanan.id}@${uygulanan.version}`,
+          dogrulandi: uygulanan.dogrulandi,
+          minPages: uygulanan.minPages,
+          maxPages: uygulanan.maxPages,
+        };
       }
     }
+    const ortak = {
+      guidelineCompliance,
+      kilavuz,
+      sayfaSayisi: okunan.sayfa,
+      metinUyarisi: metin.durum === "kismi" ? KISMI_METIN_UYARISI : null,
+    };
 
     if (referenceText.trim().length > 0) {
       const references = parseReferenceList(referenceText);
@@ -188,7 +219,7 @@ export async function analyzeUploadedDocument(params: {
         crossCheck: cross,
         complianceScore: score,
         referenceSectionFound: true,
-        guidelineCompliance,
+        ...ortak,
       };
     } else {
       analysis = {
@@ -197,13 +228,17 @@ export async function analyzeUploadedDocument(params: {
         crossCheck: { citationsWithoutReference: [], referencesWithoutCitation: [] },
         complianceScore: null,
         referenceSectionFound: false,
-        guidelineCompliance,
+        ...ortak,
       };
     }
   } catch (err) {
-    console.error(err);
     status = "failed";
-    errorMessage = "Dosyadan metin çıkarılırken bir hata oluştu.";
+    if (err instanceof BosMetin) {
+      errorMessage = BOS_METIN_MESAJI;
+    } else {
+      console.error(err);
+      errorMessage = "Dosyadan metin çıkarılırken bir hata oluştu.";
+    }
   }
 
   const { data: inserted, error: insertError } = await supabase
@@ -234,6 +269,7 @@ export async function analyzeUploadedDocument(params: {
   return {
     documentId: inserted?.id,
     analysis: analysis as UploadResult["analysis"],
+    ...(status === "failed" && errorMessage ? { cozumlenemedi: errorMessage } : {}),
   };
 }
 
@@ -253,6 +289,10 @@ export interface DocumentUploadRecord {
       referencesWithoutCitation: { raw: string }[];
     };
     guidelineCompliance?: GuidelineComplianceResult | null;
+    /* 28.10.2026'dan önceki kayıtlarda yok (lib/belge-kontrol.ts). */
+    kilavuz?: { ad: string; surum: string; dogrulandi: boolean; minPages: number | null; maxPages: number | null } | null;
+    sayfaSayisi?: number | null;
+    metinUyarisi?: string | null;
   } | null;
   created_at: string;
 }

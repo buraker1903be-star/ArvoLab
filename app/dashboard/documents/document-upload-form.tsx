@@ -119,7 +119,16 @@ export default function DocumentUploadForm({
         setError(res.error);
         return;
       }
-      if (gomulu) {
+      if (res.cozumlenemedi) {
+        // Kayıt listede "Hata" olarak duruyor; sebebi hemen görülsün.
+        showToast("error", res.cozumlenemedi);
+        if (gomulu) {
+          announceActionSuccess();
+          router.refresh();
+        } else {
+          setError(res.cozumlenemedi);
+        }
+      } else if (gomulu) {
         showToast("success", "Belge yüklendi ve denetlendi.");
         // Yükleme penceresi kapanır; yeni belge listede seçili açılır (page.tsx anahtarı).
         announceActionSuccess();

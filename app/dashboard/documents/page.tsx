@@ -12,6 +12,9 @@ import { getLatestFeedback } from "@/app/actions/ai-feedback";
 import { aiFeedbackConfigured } from "@/lib/ai-feedback";
 import { similarityTone } from "@/lib/status-tone";
 import { trTarih, trTarihSaat } from "@/lib/tr-time";
+import { sayfaDenetimi, surumFarki } from "@/lib/belge-kontrol";
+import { calismaAdresi } from "@/lib/calisma-karti";
+import Link from "next/link";
 import DocumentUploadForm from "./document-upload-form";
 import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
@@ -96,11 +99,17 @@ export default async function DocumentsPage({
   async function yenidenCozumle(documentId: string) {
     "use server";
     const sonuc = await reanalyzeDocument(documentId);
-    return sonuc.error ? { error: sonuc.error } : { success: true };
+    /* Yeniden deneme de çözümleyemediyse "çözümlendi" demek yanlış olurdu. */
+    const hata = sonuc.error ?? sonuc.cozumlenemedi;
+    return hata ? { error: hata } : { success: true };
   }
 
   const ayrinti = (b: DocumentUploadRecord) => {
     const a = b.analysis;
+    /* Liste yeniden eskiye sıralı: bir önceki denetlenmiş sürüm, bundan sonra gelen ilk denetlenmiş belge. */
+    const onceki = belgeler.slice(belgeler.indexOf(b) + 1).find((x) => x.status === "analyzed" && x.analysis);
+    const farklar = a && onceki?.analysis ? surumFarki(onceki.analysis, a) : null;
+    const sayfa = a?.kilavuz ? sayfaDenetimi(a.sayfaSayisi, a.kilavuz.minPages, a.kilavuz.maxPages) : null;
     const o = orijinallik.get(b.id);
     const g = geriBildirim.get(b.id);
     const sorunluKunyeler = a?.references.filter((r) => r.issues.length > 0) ?? [];
@@ -127,6 +136,32 @@ export default async function DocumentsPage({
 
         {b.status === "analyzed" && a ? (
           <>
+            {a.metinUyarisi ? (
+              <p className="alert" data-tone="warning" role="status">
+                {a.metinUyarisi}
+              </p>
+            ) : null}
+
+            {farklar && onceki ? (
+              <>
+                <h4 className="calisma-durum-alt">Önceki sürüme göre</h4>
+                <p className="muted text-sm">
+                  {onceki.file_name} · {trTarih(onceki.created_at)}
+                </p>
+                {farklar.length ? (
+                  <ul className="belge-farklar">
+                    {farklar.map((f) => (
+                      <li key={f.metin} className="tone-text text-sm" data-tone={f.ton}>
+                        {f.metin}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted text-sm">Denetlenen ölçülerde değişiklik yok.</p>
+                )}
+              </>
+            ) : null}
+
             {a.referenceSectionFound ? (
               <div className="kaynakca-puan" data-tone={puanTonu(a.complianceScore)}>
                 <b>{a.complianceScore ?? "—"}</b>
@@ -143,6 +178,13 @@ export default async function DocumentsPage({
             {a.guidelineCompliance ? (
               <>
                 <h4 className="calisma-durum-alt">Kılavuzdaki zorunlu bölümler</h4>
+                {a.kilavuz ? (
+                  <p className="muted text-sm">
+                    {a.kilavuz.ad}
+                    {/* Öğrencinin yüklediği kılavuz onaydan geçmedi; editördeki ayrımın aynısı. */}
+                    {a.kilavuz.dogrulandi ? "" : " · sizin yüklediğiniz kılavuzdan çıkarıldı, onaylanmadı"}
+                  </p>
+                ) : null}
                 {a.guidelineCompliance.sections.length ? (
                   <ul className="gb-liste">
                     {a.guidelineCompliance.sections.map((s, i) => (
@@ -165,7 +207,18 @@ export default async function DocumentsPage({
                     farklı bir sistem seçili.
                   </p>
                 ) : null}
+                {sayfa ? (
+                  <p className="tone-text text-sm" data-tone={sayfa.ton}>
+                    {sayfa.metin}
+                  </p>
+                ) : null}
               </>
+            ) : calisma ? (
+              <p className="muted text-sm">
+                Bu belge bir kılavuza göre denetlenmedi; zorunlu bölümler ve sayfa sınırı bakılmadı.{" "}
+                <Link href={calismaAdresi(calisma.id, { kilavuz: true })}>Çalışmanıza kılavuz ekleyin</Link>, sonra belgeyi
+                yeniden yükleyin.
+              </p>
             ) : null}
 
             {a.referenceSectionFound ? (
@@ -199,6 +252,31 @@ export default async function DocumentsPage({
                               {sorun.message}
                             </small>
                           ))}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+                {a.crossCheck.referencesWithoutCitation.length ? (
+                  <details className="analiz-betik">
+                    <summary>Metinde atfı olmayan kaynaklar</summary>
+                    <ul className="belge-kunye-listesi">
+                      {a.crossCheck.referencesWithoutCitation.map((r, i) => (
+                        <li key={i} className="muted">
+                          {r.raw}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+                {a.crossCheck.citationsWithoutReference.length ? (
+                  <details className="analiz-betik">
+                    <summary>Kaynakçada karşılığı olmayan atıflar</summary>
+                    {/* Aynı atıf metinde birkaç kez geçebilir; liste her birini bir kez gösterir. */}
+                    <ul className="belge-kunye-listesi">
+                      {[...new Set(a.crossCheck.citationsWithoutReference.map((c) => c.raw))].map((raw) => (
+                        <li key={raw} className="muted">
+                          {raw}
                         </li>
                       ))}
                     </ul>
