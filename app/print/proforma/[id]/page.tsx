@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { gunYazisi, kalemTutari, proformaDurumu, tutarYazisi } from "@/lib/faturalama";
+import { gunYazisi, kalemTutari, proformaDurumu, tutarYazisi, vergiNoEtiketi } from "@/lib/faturalama";
 import { yazdirmaFaturalamasi } from "@/lib/faturalama-sunucu";
 import { trGunAnahtari } from "@/lib/tr-time";
 import { YEREL } from "@/lib/dil";
@@ -47,6 +47,7 @@ export default async function ProformaPage({ params }: { params: Promise<{ id: s
   if (!p) notFound();
   const durum = proformaDurumu(p, trGunAnahtari());
   const satici = veri.satici;
+  const alici = p.alici;
 
   return (
     <div className="print-page">
@@ -86,7 +87,24 @@ export default async function ProformaPage({ params }: { params: Promise<{ id: s
           </section>
           <section>
             <h2>{t({ tr: "Sayın", en: "Bill to" })}</h2>
-            <p><b>{p.musteriAdi}</b></p>
+            {/* Eski ArvoOS alıcıyı göndermiyor: o zaman yalnızca musteriAdi (çoğu zaman e-posta). */}
+            {alici ? (
+              <>
+                {alici.unvan ? <p><b>{alici.unvan}</b></p> : null}
+                {alici.adSoyad ? <p>{alici.unvan ? alici.adSoyad : <b>{alici.adSoyad}</b>}</p> : null}
+                {alici.adres ? <p>{alici.adres}</p> : null}
+                {alici.vergiDairesi || alici.vergiNo ? (
+                  <p>
+                    {alici.vergiDairesi ? t({ tr: `${alici.vergiDairesi} V.D.`, en: `${alici.vergiDairesi} Tax Office` }) : ""}
+                    {alici.vergiDairesi && alici.vergiNo ? " · " : ""}
+                    {alici.vergiNo ? `${vergiNoEtiketi(alici.vergiNo, dil)} ${alici.vergiNo}` : ""}
+                  </p>
+                ) : null}
+                {alici.eposta ? <p>{alici.eposta}</p> : null}
+              </>
+            ) : (
+              <p><b>{p.musteriAdi}</b></p>
+            )}
           </section>
         </div>
 

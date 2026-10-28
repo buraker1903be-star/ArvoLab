@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { faturalamaKapsami, faturalamaOku, gunYazisi, odemeAciklamasi, odemeninProformasi, proformaDurumu, tutarYazisi } from "@/lib/faturalama";
+import { faturalamaKapsami, faturalamaOku, gunYazisi, odemeAciklamasi, odemeninProformasi, proformaDurumu, tutarYazisi, vergiNoEtiketi } from "@/lib/faturalama";
 
 describe("faturalama", () => {
   test("ArvoOS yanıtı okunur; fatura ve dekont yalnızca https bağlantıyla", () => {
@@ -78,6 +78,45 @@ describe("faturalama", () => {
     assert.equal(oku({ ...PROFORMA, araToplam: 90_000, toplam: 110_000 }), 0, "kalem toplamı ara toplamı tutmuyor");
     assert.equal(oku({ ...PROFORMA, toplam: 100_000 }), 0, "ara toplam + KDV toplamı tutmuyor");
     assert.equal(oku({ ...PROFORMA, kalemler: [] }), 0);
+  });
+
+  /* Alıcı (28.10.2026): yalnızca gösterim bilgisi; kusurlu alıcı proformayı düşürmez. */
+  test("alıcı okunur; eski ArvoOS göndermiyorsa null", () => {
+    const oku = (alici: unknown) => faturalamaOku({ odemeler: [], proformalar: [{ ...PROFORMA, alici }] })!.proformalar;
+    const [p] = oku({
+      adSoyad: " Ayşe Yılmaz ", unvan: "Güzel Kurum Ltd. Şti.", vergiDairesi: "Kadıköy",
+      vergiNo: "1234567890", adres: "Moda Cad. 1, İstanbul", eposta: "muhasebe@guzel.com",
+    });
+    assert.deepEqual(p.alici, {
+      adSoyad: "Ayşe Yılmaz", unvan: "Güzel Kurum Ltd. Şti.", vergiDairesi: "Kadıköy",
+      vergiNo: "1234567890", adres: "Moda Cad. 1, İstanbul", eposta: "muhasebe@guzel.com",
+    });
+    assert.equal(p.musteriAdi, "Güzel Kurum", "musteriAdi yedek olarak okunmaya devam eder");
+    assert.equal(faturalamaOku({ odemeler: [], proformalar: [PROFORMA] })!.proformalar[0].alici, null, "alan hiç yok");
+    assert.equal(oku(undefined)[0].alici, null);
+    assert.equal(oku(null)[0].alici, null);
+  });
+
+  test("kusurlu alıcı proformayı düşürmez; bozuk alan boş kalır", () => {
+    const oku = (alici: unknown) => faturalamaOku({ odemeler: [], proformalar: [{ ...PROFORMA, alici }] })!.proformalar;
+    const [p] = oku({ adSoyad: 42, unvan: "  ", vergiNo: "12345678901", adres: ["x"], eposta: {} });
+    assert.deepEqual(p.alici, { adSoyad: null, unvan: null, vergiDairesi: null, vergiNo: "12345678901", adres: null, eposta: null });
+    for (const bozuk of ["metin", 7, [], { adSoyad: "", unvan: null }]) {
+      const liste = oku(bozuk);
+      assert.equal(liste.length, 1, "proforma yine gösterilir");
+      assert.equal(liste[0].alici, null, "hiçbir alanı dolu olmayan alıcı yok sayılır");
+    }
+  });
+
+  test("vergi numarasının etiketi hanesinden", () => {
+    assert.equal(vergiNoEtiketi("1234567890"), "VKN");
+    assert.equal(vergiNoEtiketi("12345678901"), "TCKN");
+    assert.equal(vergiNoEtiketi("123 456 7890"), "VKN", "boşluklu yazım");
+    assert.equal(vergiNoEtiketi("12345"), "Vergi No");
+    assert.equal(vergiNoEtiketi("ABC1234567"), "Vergi No");
+    assert.equal(vergiNoEtiketi("1234567890", "en"), "Tax ID");
+    assert.equal(vergiNoEtiketi("12345678901", "en"), "National ID");
+    assert.equal(vergiNoEtiketi("12345", "en"), "Tax No.");
   });
 
   test("süresi dolan proforma yalnızca görünümde; gün gösterimi saat dilimine düşmez", () => {
