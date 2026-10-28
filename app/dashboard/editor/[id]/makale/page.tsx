@@ -2,6 +2,7 @@ import { trGunAnahtari } from "@/lib/tr-time";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, FileText, ListChecks, Mail, Microscope, Search, Settings2, Sparkles } from "lucide-react";
+import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import { createClient } from "@/lib/supabase/server";
 import { makaleProfiliKaydet, makaleProfiliOku } from "@/app/actions/makale";
 import { makaleAsistaniAcik } from "@/app/actions/ai-makale";
@@ -241,7 +242,7 @@ export default async function MakaleCalismaAlani({
               </label>
               <label>
                 <span>{t({ tr: "Kuralları kontrol ettiğim tarih", en: "Date I checked the guidelines" })}</span>
-                <input name="dergi_kurallari_kontrol" type="date" defaultValue={profil.dergi_kurallari_kontrol ?? ""} />
+                <TarihSecici name="dergi_kurallari_kontrol" deger={profil.dergi_kurallari_kontrol} etiket={t({ tr: "Kuralları kontrol ettiğim tarih", en: "Date I checked the guidelines" })} />
               </label>
               <label>
                 <span>{t({ tr: "Raporlama standardı", en: "Reporting standard" })}</span>

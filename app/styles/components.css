@@ -506,19 +506,6 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .project-form-grid :is(input, select, textarea):disabled { opacity: .6; cursor: not-allowed; }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); width: 18px; height: 18px; }
 
-.project-date-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: var(--kontrol-h);
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--kontrol-r);
-  background: var(--surface-raised);
-  color: var(--muted);
-}
-.project-date-field:focus-within { border-color: var(--accent-500); box-shadow: var(--odak-halkasi); }
-.project-form-grid .project-date-field input[type="date"] { min-height: 0; flex: 1; padding: 0; border: 0; background: transparent; box-shadow: none; }
 
 /*
   Yerel <select>'in ortak görünümü (28.10.2026). Tarayıcının kendi oku
@@ -650,6 +637,170 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   .secici-liste { animation: none; }
   .secici-ok { transition: none; }
 }
+
+/* ---------- Tarih seçici (tarih-secici.tsx) ---------- */
+.tarih-secici { position: relative; display: inline-flex; min-width: 0; max-width: 100%; }
+.tarih-secici-zorunlu {
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.tarih-secici-dugme {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 168px;
+  min-height: var(--kontrol-h-sik);
+  padding: 0 14px 0 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--kontrol-r);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-inset);
+  color: var(--ink);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.tarih-secici-dugme:hover { border-color: color-mix(in srgb, var(--accent-500) 45%, var(--line)); }
+.tarih-secici-dugme:focus-visible,
+.tarih-secici[data-acik] .tarih-secici-dugme { outline: none; border-color: var(--accent-500); box-shadow: var(--odak-halkasi); }
+.tarih-secici-simge { flex: none; color: var(--accent-strong); }
+.tarih-secici-deger { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tarih-secici-bos { color: var(--dim); font-weight: 500; }
+/* Form ızgarasındaki tarih alanı öteki alanlarla aynı boyda. */
+.project-form-grid .tarih-secici,
+.guideline-review-form .tarih-secici { display: flex; width: 100%; }
+.project-form-grid .tarih-secici-dugme,
+.guideline-review-form .tarih-secici-dugme { min-height: var(--kontrol-h); font-size: var(--fs-body); font-weight: 500; }
+
+.tarih-secici-pencere {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-topbar);
+  width: 292px;
+  max-width: calc(100vw - 32px);
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  transform-origin: top left;
+  animation: secici-acil .16s var(--ease-spring);
+}
+.tarih-secici-pencere[data-yukari] { top: auto; bottom: calc(100% + 6px); transform-origin: bottom left; }
+.tarih-secici-pencere[data-sag] { left: auto; right: 0; }
+.tarih-secici-baslik { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.tarih-secici-ay-yil { display: inline-flex; gap: 2px; min-width: 0; }
+/* Seçici form ızgarasının içinde de duruyor; oradaki ortak select
+   görünümünü (kenar, ok, tam genişlik) ezmek için özgüllük yükseltildi. */
+.tarih-secici-pencere select.tarih-secici-ay-sec:not([multiple]) {
+  appearance: none;
+  width: auto;
+  min-height: 0;
+  padding: 4px 6px;
+  border: 0;
+  box-shadow: none;
+  background-image: none;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+.tarih-secici-pencere .tarih-secici-ay-sec:hover { background: var(--surface-2); }
+.tarih-secici-ay-sec:focus-visible { outline: 2px solid var(--accent-500); outline-offset: 0; }
+.tarih-secici-ok {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-xs);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.tarih-secici-ok:hover:not(:disabled) { border-color: var(--accent-500); color: var(--accent-strong); }
+.tarih-secici-ok:disabled { opacity: .35; cursor: not-allowed; }
+.tarih-secici-izgara { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.tarih-secici-hafta {
+  padding: 4px 0 6px;
+  color: var(--dim);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.tarih-secici-gun {
+  position: relative;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color .12s ease, color .12s ease;
+}
+.tarih-secici-gun[data-disari] { color: var(--dim); }
+.tarih-secici-gun:hover:not(:disabled, [aria-pressed="true"]) { background: var(--surface-2); }
+.tarih-secici-gun:focus-visible { outline: 2px solid var(--accent-500); outline-offset: 1px; }
+.tarih-secici-gun[aria-current="date"] { color: var(--accent-strong); font-weight: 700; }
+.tarih-secici-gun[aria-current="date"]::after {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translateX(-50%);
+  content: "";
+}
+.tarih-secici-gun[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); font-weight: 700; }
+.tarih-secici-gun:disabled { color: var(--dim); opacity: .4; cursor: not-allowed; text-decoration: line-through; }
+.tarih-secici-alt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.tarih-secici-not { flex: 1; color: var(--muted); font-size: var(--fs-sm); }
+.tarih-secici-metin-dugme {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--accent-strong);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  cursor: pointer;
+}
+.tarih-secici-metin-dugme:hover { background: var(--accent-soft); }
+@media (max-width: 640px) {
+  .tarih-secici-dugme { min-height: var(--kontrol-h-dokunma); font-size: var(--fs-body); }
+}
+@media (prefers-reduced-motion: reduce) { .tarih-secici-pencere { animation: none; } }
 
 /* Sıkı seçim kutusu (liste içi atama/rol seçimleri) */
 .compact-select {
@@ -1053,7 +1204,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   .project-form-grid :is(input:not([type="checkbox"], [type="radio"], [type="hidden"]), select),
   .guideline-review-form :is(input:not([type="checkbox"], [type="radio"]), select),
   .field-control,
-  .project-date-field { min-height: var(--kontrol-h-dokunma); }
+  .tarih-secici-dugme { min-height: var(--kontrol-h-dokunma); }
 }
 /* 760px: çekmece alt sayfaya (overlays.css) ve yazım araç çubuğu sarmaya
    (workspace.css) bu noktada geçiyor. Form ızgarası eskiden 720'de tek

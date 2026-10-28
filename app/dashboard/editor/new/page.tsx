@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, PenLine } from "lucide-react";
+import { ArrowLeft, PenLine } from "lucide-react";
+import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import { createProject } from "@/app/actions/projects";
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import { getUniversities } from "@/app/actions/universities";
@@ -117,10 +118,7 @@ export default async function NewProjectPage() {
 
             <label>
               <span>{t({ tr: "Teslim tarihi", en: "Due date" })}</span>
-              <div className="project-date-field">
-                <CalendarDays size={17} />
-                <input name="dueDate" type="date" />
-              </div>
+              <TarihSecici name="dueDate" etiket={t({ tr: "Teslim tarihi", en: "Due date" })} />
             </label>
 
             <label>

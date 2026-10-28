@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ceviri } from "@/lib/dil-sunucu";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Save } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
+import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import { getProjectForEdit, updateProject } from "@/app/actions/projects";
 import { getAuthContext } from "@/lib/auth-guards";
 import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
@@ -203,10 +204,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 
             <label>
               <span>{t({ tr: "Teslim tarihi", en: "Due date" })}</span>
-              <div className="project-date-field">
-                <CalendarDays size={17} />
-                <input name="dueDate" type="date" defaultValue={project.due_date ?? ""} />
-              </div>
+              <TarihSecici name="dueDate" deger={project.due_date} etiket={t({ tr: "Teslim tarihi", en: "Due date" })} />
             </label>
 
             <label>

@@ -6,6 +6,7 @@ import { Check, Plus, RotateCcw, Trash2, Wand2 } from "lucide-react";
 import { tasEkle, tasGuncelle, tasSil, tasTamamla, taslakTakvimOlustur } from "@/app/actions/tez-takvimi";
 import { kalanMetni, takvimSirala, taslakTakvim, tasDurumu, type TakvimTasi, type TasDurumu } from "@/lib/tez-takvimi";
 import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
+import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import ActionForm from "../action-form";
 import { showToast } from "../_components/toast-events";
 import TeslimTarihiFormu from "../_components/teslim-tarihi-formu";
@@ -136,16 +137,16 @@ export default function TakvimDuzenleyici({
                   {kalanMetni(durum, kalanGun, dil)}
                 </span>
                 {duzenleyebilir && !tas.tamamlandi ? (
-                  <input
-                    type="date"
-                    className="takvim-tarih"
-                    defaultValue={tas.hedef_tarih}
-                    aria-label={t({ tr: `${tas.baslik}: hedef tarihi değiştir`, en: `${tas.baslik}: change target date` })}
-                    onChange={(e) => {
+                  <TarihSecici
+                    sinif="takvim-tarih"
+                    deger={tas.hedef_tarih}
+                    gerekli
+                    etiket={t({ tr: `${tas.baslik}: hedef tarihi değiştir`, en: `${tas.baslik}: change target date` })}
+                    degisince={(yeni) => {
                       const fd = new FormData();
                       fd.set("baslik", tas.baslik);
-                      fd.set("hedefTarih", e.target.value);
-                      if (e.target.value) calistir(tas.id, () => tasGuncelle(tas.id, fd), t({ tr: "Tarih güncellendi.", en: "Date updated." }));
+                      fd.set("hedefTarih", yeni);
+                      if (yeni) calistir(tas.id, () => tasGuncelle(tas.id, fd), t({ tr: "Tarih güncellendi.", en: "Date updated." }));
                     }}
                   />
                 ) : null}
@@ -185,7 +186,7 @@ export default function TakvimDuzenleyici({
         <ActionForm action={tasEkle.bind(null, projectId)} className="takvim-ekle" successMessage={t({ tr: "Kilometre taşı eklendi.", en: "Milestone added." })}>
           <input name="baslik" maxLength={120} required placeholder={t({ tr: "Örn. Yöntem bölümünü danışmana gönder", en: "E.g. Send the methods chapter to the advisor" })}
             aria-label={t({ tr: "Kilometre taşı", en: "Milestone" })} />
-          <input type="date" name="hedefTarih" required min={bugun} max={teslimTarihi ?? undefined} aria-label={t({ tr: "Hedef tarih", en: "Target date" })} />
+          <TarihSecici name="hedefTarih" gerekli enAz={bugun} enCok={teslimTarihi} etiket={t({ tr: "Hedef tarih", en: "Target date" })} yerTutucu={t({ tr: "Hedef tarih", en: "Target date" })} />
           <button type="submit" className="projects-filter-button button-compact">
             <Plus size={14} aria-hidden="true" /> {t({ tr: "Ekle", en: "Add" })}
           </button>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, CheckCircle2, ClipboardList, FileUp, Pencil, Plus, Printer, Sparkles, Target, Trash2 } from "lucide-react";
+import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import {
   etkinHedefler,
   faaliyetDonemi,
@@ -74,7 +75,7 @@ function YazarVeTarihAlanlari({ yazarSayisi = 1, baslica = true, tarih = null }:
       </label>
       <label>
         <span>Faaliyet tarihi</span>
-        <input name="faaliyetTarihi" type="date" defaultValue={tarih ?? ""} />
+        <TarihSecici name="faaliyetTarihi" deger={tarih} etiket="Faaliyet tarihi" />
       </label>
       <p className="hint project-form-full">
         Çok yazarlı faaliyette puan, kriterde tanımlı paylaşım katsayısıyla hesaplanır; katsayı tanımlı değilse tam puan
@@ -355,7 +356,7 @@ export default async function ScoringPage({
               </p>
               <label className="project-form-full">
                 <span>Doktora tarihi</span>
-                <input name="doktoraTarihi" type="date" defaultValue={doktora.tarih ?? ""} />
+                <TarihSecici name="doktoraTarihi" deger={doktora.tarih} etiket="Doktora tarihi" />
               </label>
               <div className="project-form-actions">
                 <button type="submit" className="projects-primary-button">Kaydet</button>

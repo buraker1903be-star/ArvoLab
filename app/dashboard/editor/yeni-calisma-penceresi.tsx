@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Check, PenLine, Plus } from "lucide-react";
+import { Check, PenLine, Plus } from "lucide-react";
+import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import { yeniCalisma } from "@/app/actions/projects";
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import PanelDrawer from "../_components/panel-drawer";
@@ -164,10 +165,7 @@ export default function YeniCalismaPenceresi({
 
                 <label>
                   <span>{t({ tr: "Teslim tarihi (isteğe bağlı)", en: "Due date (optional)" })}</span>
-                  <div className="project-date-field">
-                    <CalendarDays size={17} aria-hidden="true" />
-                    <input name="dueDate" type="date" />
-                  </div>
+                  <TarihSecici name="dueDate" etiket={t({ tr: "Teslim tarihi", en: "Due date" })} />
                 </label>
                 {/*
                   Tezde kaynakça sistemi kılavuzdan gelir (kılavuz onaylanınca

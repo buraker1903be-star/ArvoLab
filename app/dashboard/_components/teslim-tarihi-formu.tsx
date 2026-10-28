@@ -3,6 +3,7 @@
 import { teslimTarihiKaydet } from "@/app/actions/tez-takvimi";
 import ActionForm from "../action-form";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import TarihSecici from "./tarih-secici";
 
 /*
   TESLİM TARİHİ YERİNDE (28.10.2026). Eskiden ana sayfa ve Çalışmalarım
@@ -19,7 +20,7 @@ export default function TeslimTarihiFormu({ projectId, bugun }: { projectId: str
       className="teslim-tarihi-formu"
       successMessage={t({ tr: "Teslim tarihi kaydedildi.", en: "Due date saved." })}
     >
-      <input type="date" name="teslimTarihi" min={bugun} required aria-label={t({ tr: "Teslim tarihi", en: "Due date" })} />
+      <TarihSecici name="teslimTarihi" enAz={bugun} gerekli etiket={t({ tr: "Teslim tarihi", en: "Due date" })} yerTutucu={t({ tr: "Teslim tarihini seçin", en: "Choose the due date" })} />
       <button type="submit" className="projects-filter-button button-compact">
         {t({ tr: "Kaydet", en: "Save" })}
       </button>
