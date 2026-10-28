@@ -185,3 +185,22 @@ describe("Word çıktısı", () => {
     }
   });
 });
+
+test("İngilizce belge: içindekiler, şekil etiketi ve kapak büyük harfi", async () => {
+  const doc = {
+    type: "doc",
+    content: [h(1, "Introduction"), { type: "paragraph", attrs: { caption: "figure" }, content: [{ type: "text", text: "Model" }] }],
+  } as unknown as TiptapDoc;
+  const kapak = {
+    university: "Bilkent University", institute: "", department: "", program: "", degreeType: "Master's Thesis",
+    title: "A thesis on things", authorName: "Jane Doe", advisorName: "Dr. Smith", city: "Ankara", year: "2026",
+  };
+  const { metin } = await metneCevir(doc, { includeToc: true, coverPage: kapak, dil: "en" });
+  assert.ok(metin.includes("TABLE OF CONTENTS"), metin);
+  assert.ok(metin.includes("LIST OF FIGURES"), metin);
+  assert.ok(metin.includes("Figure "), metin);
+  assert.ok(metin.includes("Advisor: Dr. Smith"), metin);
+  // "tr-TR" büyük harfi "THESİS" yazardı.
+  assert.ok(metin.includes("A THESIS ON THINGS"), metin);
+  assert.ok(!metin.includes("Şekil"), metin);
+});

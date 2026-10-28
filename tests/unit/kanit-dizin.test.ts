@@ -70,3 +70,11 @@ test("DOI yoksa başlıkla aranır; eşik altındaki aday kabul edilmez", async 
   );
   assert.equal(ilgisiz.tur, "bulunamadi");
 });
+
+test("İngilizce: ulaşılamadı ve bulunamadı nedenleri kullanıcının dilinde", async () => {
+  const ag = await kunyeDogrula(KAYNAK, sahte({ "api.crossref.org": "hata" }), "en");
+  assert.equal(ag.tur, "ulasilamadi");
+  if (ag.tur === "ulasilamadi") assert.equal(ag.neden, "The indexes cannot be reached right now. No result was saved; try again shortly.");
+  const yok = await kunyeDogrula({ title: "" }, sahte({}), "en");
+  assert.equal(yok.tur === "bulunamadi" && yok.neden, "The source has no title; the search could not be run.");
+});

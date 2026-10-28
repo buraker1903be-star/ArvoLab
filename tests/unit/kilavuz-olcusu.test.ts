@@ -188,3 +188,23 @@ test("OCR çalıştırılamayan belge", async (t) => {
     assert.equal(kilavuzDegilUyarisi(0, 0, "application/pdf", true), null);
   });
 });
+
+test("tarama uyarıları gösterirken çevriliyor; kayıttaki Türkçe metinle birebir eşleşmeli", async () => {
+  const { kilavuzDegilUyarisi, taramaUyarisiCevir } = await import("@/lib/guideline-scan");
+  const { sayiKuraliOner } = await import("@/lib/kilavuz-sayi-onerisi");
+  const html = kilavuzDegilUyarisi(0, 0, "text/html")!;
+  assert.equal(kilavuzDegilUyarisi(0, 0, "text/html", false, "en"), taramaUyarisiCevir(html, "en"));
+  assert.match(taramaUyarisiCevir(html, "en"), /^This address is a web page/);
+  // Üretim yeriyle çevirinin ayrışmadığını sınar: Türkçe uyarının İngilizcesi
+  // doğrudan İngilizce üretilenle aynı olmalı.
+  for (const metin of ["", "p = 0,05 p = 0,01 p = 0,03 p = .04 p = .02 p = 0,2 r = ,34 t = 0.5"]) {
+    const tr = sayiKuraliOner(metin).uyarilar;
+    assert.deepEqual(tr.map((u) => taramaUyarisiCevir(u, "en")), sayiKuraliOner(metin, "en").uyarilar);
+  }
+  assert.equal(
+    taramaUyarisiCevir("Makul olmayan kenar boşluğu değeri yok sayıldı (üst: 29,7 cm); sayfa ölçüsüyle karışmış olabilir.", "en"),
+    "Implausible margin values were ignored (üst: 29,7 cm); they may have been confused with the page size.",
+  );
+  assert.equal(taramaUyarisiCevir("Tanınmayan bir uyarı.", "en"), "Tanınmayan bir uyarı.");
+  assert.equal(taramaUyarisiCevir("Yazı tipi açıkça bulunamadı."), "Yazı tipi açıkça bulunamadı.");
+});

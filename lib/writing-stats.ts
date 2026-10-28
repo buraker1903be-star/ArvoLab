@@ -1,9 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
-import { trTarihSaat } from "./tr-time";
+import { tarihBicimleri, trTarihSaat } from "./tr-time";
+import { VARSAYILAN_SAAT_DILIMI, type Dil } from "./dil";
 
-/** "3 saat önce", "dün", "12 Eylül 14:05" */
-export function editedAgo(dateStr: string, now = Date.now()) {
+/**
+ * "3 saat önce", "dün", "12 Eylül 14:05" — İngilizcede "3 hours ago", "yesterday".
+ * saatDilimi yalnızca İngilizcede, bir haftadan eski tarihin biçimi için
+ * (Türkçe her zaman Türkiye saati; lib/dil-sunucu.ts aktifSaatDilimi).
+ */
+export function editedAgo(dateStr: string, now = Date.now(), dil: Dil = "tr", saatDilimi: string = VARSAYILAN_SAAT_DILIMI) {
   const minutes = Math.round((now - new Date(dateStr).getTime()) / 60000);
+  if (dil === "en") {
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+    const days = Math.round(hours / 24);
+    if (days === 1) return "yesterday";
+    if (days < 7) return `${days} days ago`;
+    return tarihBicimleri("en", saatDilimi).tarihSaat(dateStr);
+  }
   if (minutes < 1) return "az önce";
   if (minutes < 60) return `${minutes} dk önce`;
   const hours = Math.round(minutes / 60);

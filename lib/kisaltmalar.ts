@@ -27,6 +27,8 @@
   Saf modül; testi tests/unit/kisaltmalar.test.ts.
 */
 
+import type { Dil } from "@/lib/dil";
+
 export type KisaltmaSorunu = {
   kisaltma: string;
   tur: "once-kullanilmis" | "cok-tanimlanmis" | "kullanilmamis";
@@ -91,7 +93,17 @@ export function kisaltmaSorunlari(metin: string): KisaltmaSorunu[] {
   return sorunlar;
 }
 
-export const kisaltmaMesaji = (sorun: KisaltmaSorunu): string => {
+export const kisaltmaMesaji = (sorun: KisaltmaSorunu, dil: Dil = "tr"): string => {
+  if (dil === "en") {
+    switch (sorun.tur) {
+      case "once-kullanilmis":
+        return `The abbreviation “${sorun.kisaltma}” is used BEFORE the place where it is spelled out; spell out an abbreviation where it first appears.`;
+      case "cok-tanimlanmis":
+        return `“${sorun.kisaltma}” is spelled out more than once; define an abbreviation only where it first appears.`;
+      case "kullanilmamis":
+        return `“${sorun.kisaltma}” is defined but never used again; a single-use abbreviation is unnecessary.`;
+    }
+  }
   switch (sorun.tur) {
     case "once-kullanilmis":
       return `“${sorun.kisaltma}” kısaltması, açık yazıldığı yerden ÖNCE kullanılmış; kısaltma ilk geçtiği yerde açık yazılır.`;

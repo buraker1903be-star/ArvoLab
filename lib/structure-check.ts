@@ -19,6 +19,7 @@ import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 import { checkParagraphFormat, describeParagraphFormat, hangingIndentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
 import { metinBiciminiDenetle, type MetinBicimKurali } from "@/lib/metin-bicimi";
 import { baslikYerlesimSorunlari, uzunAlintilar, BLOK_ALINTI_ESIGI } from "@/lib/alinti-ve-baslik";
+import type { Dil } from "@/lib/dil";
 
 interface DocNode {
   type?: string;
@@ -50,9 +51,27 @@ export const SORUN_TURLERI: { tur: SorunTuru; baslik: string; neden: string }[] 
   { tur: "genel", baslik: "Diğer", neden: "" },
 ];
 
+/* İngilizcesi (28.10.2026); SORUN_TURLERI ile aynı sıra. */
+const SORUN_TURLERI_EN: Record<SorunTuru, { baslik: string; neden: string }> = {
+  bolum: { baslik: "Sections and headings", neden: "The sections the guideline requires should be filled in and heading levels should be in order." },
+  kaynakca: { baslik: "Citations and reference list", neden: "Every citation needs an entry in the reference list, and every reference needs a citation in the text." },
+  sekil: { baslik: "Figures and tables", neden: "Numbers should be sequential and every figure/table should be mentioned in the text." },
+  ozet: { baslik: "Abstract and keywords", neden: "The guideline's word and keyword limits." },
+  ek: { baslik: "Appendices", neden: "Appendices should be numbered in order and mentioned in the text." },
+  yazim: { baslik: "Abbreviations and quotations", neden: "Spell out an abbreviation where it first appears; give long quotations as block quotes." },
+  bicim: { baslik: "Page and text formatting", neden: "Font, size, line spacing and paragraph layout should follow the guideline." },
+  dipnot: { baslik: "Footnotes", neden: "An empty footnote appears in the output as a bare number." },
+  genel: { baslik: "Other", neden: "" },
+};
+
+/** Sorun türleri, istenen dilde (SORUN_TURLERI ile aynı biçim ve sıra). */
+export function sorunTurleri(dil: Dil = "tr"): { tur: SorunTuru; baslik: string; neden: string }[] {
+  return dil === "en" ? SORUN_TURLERI.map((t) => ({ tur: t.tur, ...SORUN_TURLERI_EN[t.tur] })) : SORUN_TURLERI;
+}
+
 /** Sorunları SORUN_TURLERI sırasıyla gruplar; boş grup dönmez. */
-export function sorunlariGrupla<T extends { kategori?: SorunTuru }>(sorunlar: T[]) {
-  return SORUN_TURLERI.map((t) => ({ ...t, sorunlar: sorunlar.filter((s) => (s.kategori ?? "genel") === t.tur) })).filter(
+export function sorunlariGrupla<T extends { kategori?: SorunTuru }>(sorunlar: T[], dil: Dil = "tr") {
+  return sorunTurleri(dil).map((t) => ({ ...t, sorunlar: sorunlar.filter((s) => (s.kategori ?? "genel") === t.tur) })).filter(
     (g) => g.sorunlar.length > 0,
   );
 }
@@ -77,11 +96,26 @@ export interface StructureIssue {
 const MAX_ISSUES = 60;
 /** Atıf–kaynakça uyuşmazlıklarından her türde en fazla bu kadarı tek tek listelenir */
 const CITATION_ISSUE_LIMIT = 10;
-const REFERENCE_SECTIONS = ["Kaynakça", "Kaynaklar", "References", "Bibliography", "Bibliyografya"];
+// İngilizce tezler için "Reference List" ve "Works Cited" (MLA) de kaynakça sayılır (28.10.2026).
+const REFERENCE_SECTIONS = ["Kaynakça", "Kaynaklar", "References", "Bibliography", "Bibliyografya", "Reference List", "Works Cited"];
+/*
+  Belgedeki şekil/tablo etiketi. İngilizce yazılan tezde başlıklar
+  "Figure 1. …" diye yazılıyor; yalnızca "Şekil" aranırsa her başlık
+  "numarayla başlamıyor" uyarısı alırdı. Hangisinin kullanıldığı
+  başlıklardan okunuyor (belgeEtiketi), arayüz dilinden değil.
+*/
 const CAPTION_LABEL = { figure: "Şekil", table: "Tablo" } as const;
+const CAPTION_LABEL_EN = { figure: "Figure", table: "Table" } as const;
 const ABSTRACT_SECTIONS = ["Özet", "Öz", "Abstract"];
 // "EK 1. …", "Ek-2 …", "EK 3 – …" — numarasız "EKLER" ve harfli "Ek A" dışarıda.
-const EK_BASLIGI = /^ek\s*[-–.]?\s*\d/iu;
+// İngilizcesi "Appendix 1 …"; harfli "Appendix A" aynı sebeple dışarıda.
+const EK_BASLIGI = /^(?:ek|appendix)\s*[-–.]?\s*\d/iu;
+
+/** Başlıkların çoğunluğu hangi etiketle numaralanmışsa o; eşitlikte (ya da hiç yoksa) Türkçe. */
+function belgeEtiketi(tr: string, en: string, basliklar: string[]): string {
+  const say = (etiket: string) => basliklar.filter((baslik) => baslikNumarasi(etiket, baslik)).length;
+  return say(en) > say(tr) ? en : tr;
+}
 // "Anahtar Kelimeler: a, b, c" / "Keywords: a; b"
 const KEYWORDS_LINE = /^(?:anahtar\s+(?:kelime|sözcük)\p{L}*|keywords?|key\s+words)\s*[:：]\s*(.*)$/iu;
 const countWords = (text: string) => text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
@@ -115,8 +149,12 @@ export function checkStructure(
     referenceHangingIndentCm?: number;
     /** Kılavuzun yazı tipi, punto ve satır aralığı */
     textFormat?: MetinBicimKurali;
-  } = {}
+  } = {},
+  /** Mesajların dili (arayüz). Belgenin dili ayrı: etiketler başlıklardan okunur. */
+  dil: Dil = "tr",
 ): StructureIssue[] {
+  const en = dil === "en";
+  const t = (tr: string, ing: string) => (en ? ing : tr);
   const issues: StructureIssue[] = [];
   /*
     Sınıra takılıp ATILAN sorunlar sayılıyor.
@@ -157,11 +195,13 @@ export function checkStructure(
     if (referencesIndex < 0 && REFERENCE_SECTIONS.some((name) => headingMatchesSection(text, name))) referencesIndex = index;
 
     if (!text) {
-      add({ tone: "warning", message: "Metni olmayan bir başlık var." });
+      add({ tone: "warning", message: t("Metni olmayan bir başlık var.", "There is a heading with no text.") });
     } else if (previousLevel && level > previousLevel + 1) {
       add({
         tone: "warning",
-        message: `${quote(text)} başlığı H${level}; üstünde H${level - 1} yok (H${previousLevel}'den H${level}'e atlanmış).`,
+        message: en
+          ? `The heading ${quote(text)} is H${level}, but there is no H${level - 1} above it (skips from H${previousLevel} to H${level}).`
+          : `${quote(text)} başlığı H${level}; üstünde H${level - 1} yok (H${previousLevel}'den H${level}'e atlanmış).`,
         target: text,
       });
     }
@@ -179,7 +219,7 @@ export function checkStructure(
       if (candidate.type === "heading") filled = true; // alt bölümler var; boşlukları kendi başlıklarında raporlanır
       if (filled) break;
     }
-    if (text && !filled) add({ tone: "warning", message: `${quote(text)} bölümü henüz boş.`, target: text });
+    if (text && !filled) add({ tone: "warning", message: en ? `The section ${quote(text)} is still empty.` : `${quote(text)} bölümü henüz boş.`, target: text });
   });
 
   // Kaynakça bölümü: başlığından sonraki, aynı ya da üst düzey ilk başlığa (ör. "EKLER") kadar.
@@ -226,15 +266,16 @@ export function checkStructure(
   const body = bodyTexts.join("\n");
 
   for (const kind of ["table", "figure"] as const) {
-    const label = CAPTION_LABEL[kind];
+    const label = belgeEtiketi(CAPTION_LABEL[kind], CAPTION_LABEL_EN[kind], captions[kind]);
     const count = captions[kind].length;
+    const kucuk = en ? label.toLowerCase() : label.toLocaleLowerCase("tr-TR");
 
     /* Numaralandırma başlığın İÇİNDEN okunuyor. Eskiden sıraya göre
        varsayılıyordu: üçüncü başlık "Tablo 3" sayılıyor, başlıkta ne
        yazdığına bakılmıyordu. Hem yanlış numaralandırma hiç
        yakalanmıyordu hem de 1, 3, 4 diye numaralanmış bir belgede
        "Şekil 2 metinde anılmıyor" deniyordu — var olmayan bir şey. */
-    numaralandirmaSorunlari(label, captions[kind]).forEach((sorun) => add(sorun));
+    numaralandirmaSorunlari(label, captions[kind], dil).forEach((sorun) => add(sorun));
 
     const mentioned = new Set<string>();
     // \b ASCII dışı harfleri (Ş) tanımaz; sınır lib/sozcuk-siniri.ts'te tek tanım.
@@ -247,7 +288,9 @@ export function checkStructure(
       if (!mevcut.has(number)) {
         add({
           tone: "danger",
-          message: `Metinde “${label} ${number}” geçiyor ama o numarada bir ${label.toLocaleLowerCase("tr-TR")} başlığı yok (belgede ${count ? `${count} ${label.toLocaleLowerCase("tr-TR")} başlığı var` : `hiç ${label.toLocaleLowerCase("tr-TR")} başlığı yok`}).`,
+          message: en
+            ? `The text mentions “${label} ${number}”, but there is no ${kucuk} caption with that number (the document has ${count ? `${count} ${kucuk} ${count === 1 ? "caption" : "captions"}` : `no ${kucuk} captions`}).`
+            : `Metinde “${label} ${number}” geçiyor ama o numarada bir ${kucuk} başlığı yok (belgede ${count ? `${count} ${kucuk} başlığı var` : `hiç ${kucuk} başlığı yok`}).`,
           target: `${label} ${number}`,
         });
       }
@@ -258,7 +301,9 @@ export function checkStructure(
       if (!numara || mentioned.has(numara)) return;
       add({
         tone: "warning",
-        message: `${label} ${numara}${caption ? ` (${quote(caption)})` : ""} metinde anılmıyor; kılavuzlar genellikle her ${kind === "figure" ? "şeklin" : "tablonun"} metinde anılmasını ister.`,
+        message: en
+          ? `${label} ${numara}${caption ? ` (${quote(caption)})` : ""} is not mentioned in the text; guidelines usually require every ${kind === "figure" ? "figure" : "table"} to be mentioned in the text.`
+          : `${label} ${numara}${caption ? ` (${quote(caption)})` : ""} metinde anılmıyor; kılavuzlar genellikle her ${kind === "figure" ? "şeklin" : "tablonun"} metinde anılmasını ister.`,
         target: caption || undefined,
       });
     });
@@ -304,7 +349,9 @@ export function checkStructure(
   if (punctuationProblems.length > 0) {
     add({
       tone: "warning",
-      message: `Kaynakçada ${punctuationProblems.length} girdide noktalama hatası var (çift nokta ya da noktalama işaretinden önce boşluk).`,
+      message: en
+        ? `${punctuationProblems.length} ${punctuationProblems.length === 1 ? "entry" : "entries"} in the reference list ${punctuationProblems.length === 1 ? "has" : "have"} punctuation errors (double periods or a space before punctuation).`
+        : `Kaynakçada ${punctuationProblems.length} girdide noktalama hatası var (çift nokta ya da noktalama işaretinden önce boşluk).`,
       target: punctuationProblems[0].slice(0, 40),
       action: "fix-reference-punctuation",
     });
@@ -318,7 +365,9 @@ export function checkStructure(
   if (options.referenceHangingIndentCm && hangingMissing > 0 && !referencesInList) {
     add({
       tone: "warning",
-      message: `Kaynakçada ${hangingMissing} girdide asılı girinti yok; kılavuz ${String(options.referenceHangingIndentCm).replace(".", ",")} cm asılı girinti istiyor (ilk satır kenarda, sonraki satırlar içeride).`,
+      message: en
+        ? `${hangingMissing} ${hangingMissing === 1 ? "entry" : "entries"} in the reference list ${hangingMissing === 1 ? "has" : "have"} no hanging indent; the guideline requires a ${String(options.referenceHangingIndentCm)} cm hanging indent (first line at the margin, following lines indented).`
+        : `Kaynakçada ${hangingMissing} girdide asılı girinti yok; kılavuz ${String(options.referenceHangingIndentCm).replace(".", ",")} cm asılı girinti istiyor (ilk satır kenarda, sonraki satırlar içeride).`,
       action: "apply-hanging-indent",
     });
   }
@@ -339,9 +388,16 @@ export function checkStructure(
         referencesInList
           ? {
               tone: "warning",
-              message: "Kaynakça yazar soyadına göre alfabetik sırada değil (önce listeyi paragraflara çevirin; ardından tek tıkla sıralanır).",
+              message: t(
+                "Kaynakça yazar soyadına göre alfabetik sırada değil (önce listeyi paragraflara çevirin; ardından tek tıkla sıralanır).",
+                "The reference list is not in alphabetical order by author surname (convert the list to paragraphs first; then it can be sorted in one click).",
+              ),
             }
-          : { tone: "warning", message: "Kaynakça yazar soyadına göre alfabetik sırada değil.", action: "sort-references" }
+          : {
+              tone: "warning",
+              message: t("Kaynakça yazar soyadına göre alfabetik sırada değil.", "The reference list is not in alphabetical order by author surname."),
+              action: "sort-references",
+            }
       );
     }
   }
@@ -351,7 +407,9 @@ export function checkStructure(
   if (!stil.listeIsaretiSerbest && stil.tur !== "numara" && referencesInList) {
     add({
       tone: "warning",
-      message: `Kaynakça liste biçiminde (madde işareti/numara); ${stil.ad} kaynakçasında kaynaklar liste işareti olmadan, ayrı paragraflar olarak yazılır.`,
+      message: en
+        ? `The reference list is formatted as a list (bullets/numbers); in a ${stil.ad} reference list, entries are written as separate paragraphs without list markers.`
+        : `Kaynakça liste biçiminde (madde işareti/numara); ${stil.ad} kaynakçasında kaynaklar liste işareti olmadan, ayrı paragraflar olarak yazılır.`,
       action: "convert-reference-lists",
     });
   }
@@ -361,7 +419,7 @@ export function checkStructure(
      hiç sorun üretmiyor, IEEE ve Vancouver künyeleri hiç okunmuyordu:
      öğrenci Vancouver seçtiğinde belge kontrolü "sorun yok" diyordu, çünkü
      bakmamıştı. Sessiz bir "temiz" raporu, hiç rapor vermemekten kötü. */
-  const kunyeler = kunyeleriAyristir(referenceEntries, style);
+  const kunyeler = kunyeleriAyristir(referenceEntries, style, dil);
   const bicimSorunlari = kunyeler.flatMap((kunye) =>
     kunye.issues.filter((konu) => konu.severity === "error").map((konu) => ({ kunye, konu })),
   );
@@ -369,7 +427,12 @@ export function checkStructure(
     add({ tone: "danger", message: `${quote(kunye.raw)} — ${konu.message}`, target: kunye.raw.slice(0, 40) }),
   );
   if (bicimSorunlari.length > CITATION_ISSUE_LIMIT) {
-    add({ tone: "danger", message: `…ve künye biçiminde ${bicimSorunlari.length - CITATION_ISSUE_LIMIT} sorun daha.` });
+    add({
+      tone: "danger",
+      message: en
+        ? `…and ${bicimSorunlari.length - CITATION_ISSUE_LIMIT} more reference formatting ${bicimSorunlari.length - CITATION_ISSUE_LIMIT === 1 ? "issue" : "issues"}.`
+        : `…ve künye biçiminde ${bicimSorunlari.length - CITATION_ISSUE_LIMIT} sorun daha.`,
+    });
   }
 
   /* ---------- Adla eşleşen stiller (APA 7, Chicago, MLA): metin içi atıf ↔ kaynakça ----------
@@ -389,16 +452,34 @@ export function checkStructure(
         { yilaBak },
       );
       citationsWithoutReference.slice(0, CITATION_ISSUE_LIMIT).forEach((citation) =>
-        add({ tone: "danger", message: `Metindeki ${quote(citation.raw)} atfının kaynakçada karşılığı yok.`, target: citation.raw })
+        add({
+          tone: "danger",
+          message: en ? `The in-text citation ${quote(citation.raw)} has no matching entry in the reference list.` : `Metindeki ${quote(citation.raw)} atfının kaynakçada karşılığı yok.`,
+          target: citation.raw,
+        })
       );
       if (citationsWithoutReference.length > CITATION_ISSUE_LIMIT) {
-        add({ tone: "danger", message: `…ve kaynakçada karşılığı olmayan ${citationsWithoutReference.length - CITATION_ISSUE_LIMIT} atıf daha.` });
+        add({
+          tone: "danger",
+          message: en
+            ? `…and ${citationsWithoutReference.length - CITATION_ISSUE_LIMIT} more ${citationsWithoutReference.length - CITATION_ISSUE_LIMIT === 1 ? "citation" : "citations"} with no matching reference.`
+            : `…ve kaynakçada karşılığı olmayan ${citationsWithoutReference.length - CITATION_ISSUE_LIMIT} atıf daha.`,
+        });
       }
       referencesWithoutCitation.slice(0, CITATION_ISSUE_LIMIT).forEach((reference) =>
-        add({ tone: "warning", message: `Kaynakçadaki ${quote(reference.raw)} metinde anılmıyor.`, target: reference.raw.slice(0, 40) })
+        add({
+          tone: "warning",
+          message: en ? `The reference ${quote(reference.raw)} is not cited in the text.` : `Kaynakçadaki ${quote(reference.raw)} metinde anılmıyor.`,
+          target: reference.raw.slice(0, 40),
+        })
       );
       if (referencesWithoutCitation.length > CITATION_ISSUE_LIMIT) {
-        add({ tone: "warning", message: `…ve metinde anılmayan ${referencesWithoutCitation.length - CITATION_ISSUE_LIMIT} kaynak daha.` });
+        add({
+          tone: "warning",
+          message: en
+            ? `…and ${referencesWithoutCitation.length - CITATION_ISSUE_LIMIT} more ${referencesWithoutCitation.length - CITATION_ISSUE_LIMIT === 1 ? "reference" : "references"} not cited in the text.`
+            : `…ve metinde anılmayan ${referencesWithoutCitation.length - CITATION_ISSUE_LIMIT} kaynak daha.`,
+        });
       }
     }
   }
@@ -414,13 +495,16 @@ export function checkStructure(
       if (number > references) {
         add({
           tone: "danger",
-          message: `Metinde ${citeLabel(number)} atfı var ama kaynakçada ${references} kaynak var.`,
+          message: en
+            ? `The text cites ${citeLabel(number)}, but the reference list has ${references} ${references === 1 ? "entry" : "entries"}.`
+            : `Metinde ${citeLabel(number)} atfı var ama kaynakçada ${references} kaynak var.`,
           target: citeLabel(number),
         });
       }
     }
     for (let n = 1; n <= references; n++) {
-      if (!cited.has(n)) add({ tone: "warning", message: `Kaynakçadaki ${n}. kaynağa metinde atıf yapılmamış.` });
+      if (!cited.has(n))
+        add({ tone: "warning", message: en ? `Reference ${n} in the reference list is not cited in the text.` : `Kaynakçadaki ${n}. kaynağa metinde atıf yapılmamış.` });
     }
   }
 
@@ -432,8 +516,8 @@ export function checkStructure(
       abstract.keywordsMin && abstract.keywordsMax
         ? `${abstract.keywordsMin}–${abstract.keywordsMax}`
         : abstract.keywordsMin
-          ? `en az ${abstract.keywordsMin}`
-          : `en fazla ${abstract.keywordsMax}`;
+          ? t(`en az ${abstract.keywordsMin}`, `at least ${abstract.keywordsMin}`)
+          : t(`en fazla ${abstract.keywordsMax}`, `at most ${abstract.keywordsMax}`);
     blocks.forEach((block, index) => {
       if (block.type !== "heading") return;
       const title = textOf(block).trim();
@@ -457,15 +541,29 @@ export function checkStructure(
       }
       if (words === 0) return; // boş bölüm yukarıda raporlanır
       if (abstract.maxWords && words > abstract.maxWords) {
-        add({ tone: "danger", message: `${quote(title)} ${words} kelime; kılavuz en fazla ${abstract.maxWords} kelime istiyor.`, target: title });
+        add({
+          tone: "danger",
+          message: en
+            ? `${quote(title)} is ${words} words; the guideline allows at most ${abstract.maxWords} words.`
+            : `${quote(title)} ${words} kelime; kılavuz en fazla ${abstract.maxWords} kelime istiyor.`,
+          target: title,
+        });
       } else if (abstract.minWords && words < abstract.minWords) {
-        add({ tone: "warning", message: `${quote(title)} ${words} kelime; kılavuz en az ${abstract.minWords} kelime istiyor.`, target: title });
+        add({
+          tone: "warning",
+          message: en
+            ? `${quote(title)} is ${words} words; the guideline requires at least ${abstract.minWords} words.`
+            : `${quote(title)} ${words} kelime; kılavuz en az ${abstract.minWords} kelime istiyor.`,
+          target: title,
+        });
       }
       if (abstract.keywordsMin || abstract.keywordsMax) {
         if (!keywords) {
           add({
             tone: "warning",
-            message: `${quote(title)} bölümünde anahtar kelime satırı yok (“Anahtar Kelimeler: …”); kılavuz ${keywordRange} anahtar kelime istiyor.`,
+            message: en
+              ? `${quote(title)} has no keywords line (“Keywords: …”); the guideline requires ${keywordRange} keywords.`
+              : `${quote(title)} bölümünde anahtar kelime satırı yok (“Anahtar Kelimeler: …”); kılavuz ${keywordRange} anahtar kelime istiyor.`,
             target: title,
           });
         } else if (
@@ -474,7 +572,9 @@ export function checkStructure(
         ) {
           add({
             tone: "warning",
-            message: `${quote(title)} bölümünde ${keywords.length} anahtar kelime var; kılavuz ${keywordRange} istiyor.`,
+            message: en
+              ? `${quote(title)} has ${keywords.length} ${keywords.length === 1 ? "keyword" : "keywords"}; the guideline requires ${keywordRange}.`
+              : `${quote(title)} bölümünde ${keywords.length} anahtar kelime var; kılavuz ${keywordRange} istiyor.`,
             target: title,
           });
         }
@@ -489,7 +589,9 @@ export function checkStructure(
      anılmasını ister ("… görüşme formu Ek 1'de verilmiştir"). Şekil ve
      tablo için yapılan denetimin aynısı; ekler dışarıda kalmıştı. */
   if (ekBasliklari.length > 0) {
-    numaralandirmaSorunlari("Ek", ekBasliklari).forEach((sorun) => add(sorun));
+    // "Ek" ya da "Appendix": başlıkların çoğunluğu hangisini kullanıyorsa (yukarıdaki gerekçe).
+    const ekEtiketi = belgeEtiketi("Ek", "Appendix", ekBasliklari);
+    numaralandirmaSorunlari(ekEtiketi, ekBasliklari, dil).forEach((sorun) => add(sorun));
 
     /*
       Ekin KENDİ başlığı gövde metninin içinde: onu "anılmış" saymak
@@ -497,26 +599,30 @@ export function checkStructure(
       çıkarılıyor; metinde ayrıca geçiyorsa geriye o kalıyor.
     */
     const ekGovdesi = ekBasliklari.reduce((metin, baslik) => metin.replace(baslik, " "), body);
-    const ekNumaralari = ekBasliklari.map((baslik) => baslikNumarasi("Ek", baslik));
+    const ekNumaralari = ekBasliklari.map((baslik) => baslikNumarasi(ekEtiketi, baslik));
     const mevcut = new Set(ekNumaralari.filter((numara): numara is string => Boolean(numara)));
 
     ekBasliklari.forEach((baslik, sira) => {
       const numara = ekNumaralari[sira];
       if (!numara) return;
-      if (!new RegExp(`\\bEk\\s*[-–.]?\\s*${numara.replace(".", "\\.")}\\b`, "iu").test(ekGovdesi)) {
+      if (!new RegExp(`\\b${ekEtiketi}\\s*[-–.]?\\s*${numara.replace(".", "\\.")}\\b`, "iu").test(ekGovdesi)) {
         add({
           tone: "warning",
-          message: `Ek ${numara}${baslik ? ` (${quote(baslik.slice(0, 40))})` : ""} metinde anılmıyor; kılavuzlar her ekin metinde gönderme almasını ister.`,
+          message: en
+            ? `${ekEtiketi} ${numara}${baslik ? ` (${quote(baslik.slice(0, 40))})` : ""} is not mentioned in the text; guidelines require every appendix to be referred to in the text.`
+            : `${ekEtiketi} ${numara}${baslik ? ` (${quote(baslik.slice(0, 40))})` : ""} metinde anılmıyor; kılavuzlar her ekin metinde gönderme almasını ister.`,
           target: baslik.slice(0, 40),
         });
       }
     });
 
-    for (const eslesme of ekGovdesi.matchAll(/\bEk\s*[-–.]?\s*(\d+(?:\.\d+)*)\b/giu)) {
+    for (const eslesme of ekGovdesi.matchAll(new RegExp(`\\b${ekEtiketi}\\s*[-–.]?\\s*(\\d+(?:\\.\\d+)*)\\b`, "giu"))) {
       if (!mevcut.has(eslesme[1])) {
         add({
           tone: "danger",
-          message: `Metinde “Ek ${eslesme[1]}” geçiyor ama o numarada bir ek başlığı yok (belgede ${mevcut.size} numaralı ek var).`,
+          message: en
+            ? `The text mentions “${ekEtiketi} ${eslesme[1]}”, but there is no appendix heading with that number (the document has ${mevcut.size} numbered ${mevcut.size === 1 ? "appendix" : "appendices"}).`
+            : `Metinde “${ekEtiketi} ${eslesme[1]}” geçiyor ama o numarada bir ek başlığı yok (belgede ${mevcut.size} numaralı ek var).`,
           target: eslesme[0],
         });
       }
@@ -528,7 +634,7 @@ export function checkStructure(
      Denetim yalnızca yazarın KENDİ tanımlarına dayanıyor; gerekçesi
      lib/kisaltmalar.ts'te. */
   for (const sorun of kisaltmaSorunlari(body).slice(0, CITATION_ISSUE_LIMIT)) {
-    add({ tone: "warning", message: kisaltmaMesaji(sorun), target: sorun.hedef });
+    add({ tone: "warning", message: kisaltmaMesaji(sorun, dil), target: sorun.hedef });
   }
 
   /* ---------- Uzun doğrudan alıntı ----------
@@ -538,7 +644,9 @@ export function checkStructure(
   for (const alinti of uzunAlintilar(doc).slice(0, CITATION_ISSUE_LIMIT)) {
     add({
       tone: "warning",
-      message: `${alinti.kelime} kelimelik doğrudan alıntı paragrafın içinde tırnakla yazılmış; ${BLOK_ALINTI_ESIGI} kelimeyi aşan alıntılar girintili blok alıntı olarak yazılır (araç çubuğundaki “Alıntı”).`,
+      message: en
+        ? `A ${alinti.kelime}-word direct quotation is written in quotation marks inside a paragraph; quotations longer than ${BLOK_ALINTI_ESIGI} words are set as indented block quotes (“Quote” on the toolbar).`
+        : `${alinti.kelime} kelimelik doğrudan alıntı paragrafın içinde tırnakla yazılmış; ${BLOK_ALINTI_ESIGI} kelimeyi aşan alıntılar girintili blok alıntı olarak yazılır (araç çubuğundaki “Alıntı”).`,
       target: alinti.metin,
     });
   }
@@ -553,8 +661,12 @@ export function checkStructure(
       tone: "warning",
       message:
         yerlesim.tur === "table"
-          ? `${quote(yerlesim.baslik)} tablo başlığı tablonun altında; tablo başlığı tablonun ÜSTÜNDE yazılır.`
-          : `${quote(yerlesim.baslik)} şekil başlığı şeklin üstünde; şekil başlığı şeklin ALTINDA yazılır.`,
+          ? en
+            ? `The table caption ${quote(yerlesim.baslik)} is below the table; table captions go ABOVE the table.`
+            : `${quote(yerlesim.baslik)} tablo başlığı tablonun altında; tablo başlığı tablonun ÜSTÜNDE yazılır.`
+          : en
+            ? `The figure caption ${quote(yerlesim.baslik)} is above the figure; figure captions go BELOW the figure.`
+            : `${quote(yerlesim.baslik)} şekil başlığı şeklin üstünde; şekil başlığı şeklin ALTINDA yazılır.`,
       target: yerlesim.baslik,
     });
   }
@@ -571,22 +683,23 @@ export function checkStructure(
     const yaz = (baslik: string, sapmalar: { deger: string; sayi: number; ornek: string }[], beklenen: string) => {
       if (sapmalar.length === 0) return;
       const ilk = sapmalar[0];
-      const digerleri = sapmalar.length > 1 ? ` (ve ${sapmalar.length - 1} farklı değer daha)` : "";
+      const yer = sapmalar.reduce((toplam, sapma) => toplam + sapma.sayi, 0);
+      const kalan = sapmalar.length - 1;
+      const digerleri = kalan > 0 ? (en ? ` (and ${kalan} other ${kalan === 1 ? "value" : "values"})` : ` (ve ${kalan} farklı değer daha)`) : "";
       add({
         tone: "warning",
-        message: `${baslik}: ${sapmalar.reduce((toplam, sapma) => toplam + sapma.sayi, 0)} yerde ${ilk.deger}${digerleri} kullanılmış; kılavuz ${beklenen} istiyor.`,
+        message: en
+          ? `${baslik}: ${ilk.deger}${digerleri} used in ${yer} ${yer === 1 ? "place" : "places"}; the guideline requires ${beklenen}.`
+          : `${baslik}: ${yer} yerde ${ilk.deger}${digerleri} kullanılmış; kılavuz ${beklenen} istiyor.`,
         target: ilk.ornek,
         action: "clear-manual-text-format",
       });
     };
     if (rapor) {
-      yaz("Yazı tipi", rapor.yaziTipi, options.textFormat.fontFamily ?? "");
-      yaz("Punto", rapor.punto, options.textFormat.fontSizePt ? `${options.textFormat.fontSizePt} pt` : "");
-      yaz(
-        "Satır aralığı",
-        rapor.satirAraligi,
-        options.textFormat.lineSpacing ? String(options.textFormat.lineSpacing).replace(".", ",") : "",
-      );
+      yaz(t("Yazı tipi", "Font"), rapor.yaziTipi, options.textFormat.fontFamily ?? "");
+      yaz(t("Punto", "Font size"), rapor.punto, options.textFormat.fontSizePt ? `${options.textFormat.fontSizePt} pt` : "");
+      const aralik = options.textFormat.lineSpacing;
+      yaz(t("Satır aralığı", "Line spacing"), rapor.satirAraligi, aralik ? (en ? String(aralik) : String(aralik).replace(".", ",")) : "");
     }
   }
 
@@ -594,13 +707,22 @@ export function checkStructure(
     const report = checkParagraphFormat(doc, options.paragraphFormat);
     const off = report ? Math.max(report.wrongIndent, report.notJustified) : 0;
     if (report && off > 0) {
-      const parts = [
-        report.wrongIndent ? `${report.wrongIndent} paragrafta girinti kılavuzdaki gibi değil` : "",
-        report.notJustified ? `${report.notJustified} paragraf iki yana yaslı değil` : "",
-      ].filter(Boolean);
+      const parts = (
+        en
+          ? [
+              report.wrongIndent ? `${report.wrongIndent} ${report.wrongIndent === 1 ? "paragraph has" : "paragraphs have"} an indent that differs from the guideline` : "",
+              report.notJustified ? `${report.notJustified} ${report.notJustified === 1 ? "paragraph is" : "paragraphs are"} not justified` : "",
+            ]
+          : [
+              report.wrongIndent ? `${report.wrongIndent} paragrafta girinti kılavuzdaki gibi değil` : "",
+              report.notJustified ? `${report.notJustified} paragraf iki yana yaslı değil` : "",
+            ]
+      ).filter(Boolean);
       add({
         tone: "warning",
-        message: `${parts.join(", ")} (kılavuz: ${describeParagraphFormat(options.paragraphFormat)}). Toplam ${report.total} gövde paragrafı.`,
+        message: en
+          ? `${parts.join(", ")} (guideline: ${describeParagraphFormat(options.paragraphFormat, dil)}). ${report.total} body ${report.total === 1 ? "paragraph" : "paragraphs"} in total.`
+          : `${parts.join(", ")} (kılavuz: ${describeParagraphFormat(options.paragraphFormat)}). Toplam ${report.total} gövde paragrafı.`,
         target: report.firstTarget,
         action: "apply-paragraph-format",
       });
@@ -610,7 +732,10 @@ export function checkStructure(
   kategori = "dipnot";
   // ---------- Dipnotlar ----------
   for (const number of footnoteProblems) {
-    add({ tone: "warning", message: `${number}. dipnotun metni boş; dipnot işaretine tıklayıp metnini yazın.` });
+    add({
+      tone: "warning",
+      message: en ? `Footnote ${number} is empty; click the footnote marker and write its text.` : `${number}. dipnotun metni boş; dipnot işaretine tıklayıp metnini yazın.`,
+    });
   }
 
   /*
@@ -621,8 +746,11 @@ export function checkStructure(
   if (atlananSorun > 0) {
     issues.push({
       tone: "warning",
-      message: `…ve ${atlananSorun} sorun daha. Liste ilk ${MAX_ISSUES} sorunda kesiliyor; `
-        + "bazı denetimlerin sonucu hiç yazılamamış olabilir. Üsttekileri düzeltince kalanlar görünür.",
+      message: en
+        ? `…and ${atlananSorun} more ${atlananSorun === 1 ? "issue" : "issues"}. The list stops at the first ${MAX_ISSUES} issues; `
+          + "some checks may not have been able to report at all. Fix the ones above and the rest will appear."
+        : `…ve ${atlananSorun} sorun daha. Liste ilk ${MAX_ISSUES} sorunda kesiliyor; `
+          + "bazı denetimlerin sonucu hiç yazılamamış olabilir. Üsttekileri düzeltince kalanlar görünür.",
     });
   }
 

@@ -1,4 +1,5 @@
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
+import type { Dil, Metin } from "@/lib/dil";
 
 /* Tanınan atıf stilleri TEK listeden (lib/atif/stiller.ts): ikinci bir
    dizi yazmak, yeni bir stil eklendiğinde burayı unutmak demekti. */
@@ -114,13 +115,33 @@ export function formuDogrula(form: DogrulamaFormu): DogrulamaHatasi[] {
   return hatalar;
 }
 
-export const DOGRULAMA_MESAJI: Record<DogrulamaHatasi, string> = {
-  "atif-stili-yok": "Kaynakça sistemini seçin; kılavuzunuzda hangisinin istendiği yazıyor olmalı.",
-  "atif-stili-taninmiyor": "Seçilen kaynakça sistemi tanınmıyor.",
-  "bolum-yok": "En az bir zorunlu bölüm girin (örn. Giriş, Yöntem, Bulgular).",
-  "sayfa-gecersiz": `Sayfa sayısı 1 ile ${EN_COK_SAYFA} arasında bir tam sayı olmalı.`,
-  "sayfa-ters": "En az sayfa, en çok sayfadan büyük olamaz.",
+export const DOGRULAMA_MESAJI_METIN: Record<DogrulamaHatasi, Metin> = {
+  "atif-stili-yok": {
+    tr: "Kaynakça sistemini seçin; kılavuzunuzda hangisinin istendiği yazıyor olmalı.",
+    en: "Select the citation style; your guideline should state which one is required.",
+  },
+  "atif-stili-taninmiyor": { tr: "Seçilen kaynakça sistemi tanınmıyor.", en: "The selected citation style is not recognized." },
+  "bolum-yok": {
+    tr: "En az bir zorunlu bölüm girin (örn. Giriş, Yöntem, Bulgular).",
+    en: "Enter at least one required section (e.g., Introduction, Methods, Results).",
+  },
+  "sayfa-gecersiz": {
+    tr: `Sayfa sayısı 1 ile ${EN_COK_SAYFA} arasında bir tam sayı olmalı.`,
+    en: `The page count must be a whole number between 1 and ${EN_COK_SAYFA}.`,
+  },
+  "sayfa-ters": { tr: "En az sayfa, en çok sayfadan büyük olamaz.", en: "The minimum page count cannot exceed the maximum." },
 };
+
+export const DOGRULAMA_MESAJI: Record<DogrulamaHatasi, string> = {
+  "atif-stili-yok": DOGRULAMA_MESAJI_METIN["atif-stili-yok"].tr,
+  "atif-stili-taninmiyor": DOGRULAMA_MESAJI_METIN["atif-stili-taninmiyor"].tr,
+  "bolum-yok": DOGRULAMA_MESAJI_METIN["bolum-yok"].tr,
+  "sayfa-gecersiz": DOGRULAMA_MESAJI_METIN["sayfa-gecersiz"].tr,
+  "sayfa-ters": DOGRULAMA_MESAJI_METIN["sayfa-ters"].tr,
+};
+
+/** Doğrulama hatasının metni, istenen dilde. */
+export const dogrulamaMesaji = (hata: DogrulamaHatasi, dil: Dil = "tr"): string => DOGRULAMA_MESAJI_METIN[hata][dil];
 
 /** Doğrulanmış formdan, katalogdakiyle AYNI biçimde kural nesnesi. */
 export function kurallariKur(
@@ -162,21 +183,26 @@ export function bicimOzeti(ayarlar: {
   lineSpacing?: number;
   headingNumbering?: boolean;
   chapterNewPage?: boolean;
-}): string[] {
+}, dil: Dil = "tr"): string[] {
+  const en = dil === "en";
   const satirlar: string[] = [];
   const m = ayarlar.margins;
+  /* Türkçe ondalık virgülle; "3.5 cm" yazmak kılavuzun kendi
+     yazımına yabancı duruyor. İngilizcede nokta. */
+  const yaz = (d: number) => (en ? String(d) : String(d).replace(".", ","));
   if (m && [m.top, m.right, m.bottom, m.left].every((d) => typeof d === "number")) {
-    /* Türkçe ondalık virgülle; "3.5 cm" yazmak kılavuzun kendi
-       yazımına yabancı duruyor. */
-    const yaz = (d: number) => String(d).replace(".", ",");
-    satirlar.push(`Kenar boşlukları: üst ${yaz(m.top!)} · sağ ${yaz(m.right!)} · alt ${yaz(m.bottom!)} · sol ${yaz(m.left!)} cm`);
+    satirlar.push(
+      en
+        ? `Margins: top ${yaz(m.top!)} · right ${yaz(m.right!)} · bottom ${yaz(m.bottom!)} · left ${yaz(m.left!)} cm`
+        : `Kenar boşlukları: üst ${yaz(m.top!)} · sağ ${yaz(m.right!)} · alt ${yaz(m.bottom!)} · sol ${yaz(m.left!)} cm`,
+    );
   }
-  const yazi = [ayarlar.fontFamily, ayarlar.fontSizePt ? `${String(ayarlar.fontSizePt).replace(".", ",")} punto` : null]
+  const yazi = [ayarlar.fontFamily, ayarlar.fontSizePt ? `${yaz(ayarlar.fontSizePt)} ${en ? "pt" : "punto"}` : null]
     .filter(Boolean)
     .join(" · ");
-  if (yazi) satirlar.push(`Yazı: ${yazi}`);
-  if (ayarlar.lineSpacing) satirlar.push(`Satır aralığı: ${String(ayarlar.lineSpacing).replace(".", ",")}`);
-  if (ayarlar.headingNumbering) satirlar.push("Başlıklar ondalık numaralanır (1., 1.1.)");
-  if (ayarlar.chapterNewPage) satirlar.push("Her ana bölüm yeni sayfadan başlar");
+  if (yazi) satirlar.push(en ? `Text: ${yazi}` : `Yazı: ${yazi}`);
+  if (ayarlar.lineSpacing) satirlar.push(en ? `Line spacing: ${yaz(ayarlar.lineSpacing)}` : `Satır aralığı: ${yaz(ayarlar.lineSpacing)}`);
+  if (ayarlar.headingNumbering) satirlar.push(en ? "Headings are numbered decimally (1., 1.1.)" : "Başlıklar ondalık numaralanır (1., 1.1.)");
+  if (ayarlar.chapterNewPage) satirlar.push(en ? "Each main chapter starts on a new page" : "Her ana bölüm yeni sayfadan başlar");
   return satirlar;
 }

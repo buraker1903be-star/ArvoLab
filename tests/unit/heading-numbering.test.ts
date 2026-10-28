@@ -75,3 +75,12 @@ test("başlık numaralandırma", async (t) => {
     assert.equal(stripManualNumber("1.2. Amaç"), "Amaç");
   });
 });
+
+test("İngilizce ön ve arka bölümler numarasız (28.10.2026)", () => {
+  for (const baslik of ["References", "Bibliography", "List of Figures", "Table of Contents", "Acknowledgments", "APPENDIX", "Appendix A: Survey", "Appendices"]) {
+    assert.ok(isUnnumberedHeading(baslik), baslik);
+  }
+  assert.equal(isUnnumberedHeading("Introduction"), false);
+  assert.equal(isUnnumberedHeading("Applied Methods"), false);
+  assert.equal(isUnnumberedHeading("Summary"), false);
+});

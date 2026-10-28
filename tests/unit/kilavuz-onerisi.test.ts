@@ -8,6 +8,7 @@ import {
   yoneticiVarsayilanlari,
   YONETICI_VARSAYILANI,
 } from "@/lib/kilavuz-onerisi";
+import { eksikOlcuOnerileri as oneriler, olcuEtiketleri as etiketler } from "@/lib/kilavuz-onerisi";
 
 const TAM = {
   font_size_pt: 12,
@@ -77,4 +78,15 @@ test("eksik ölçü önerileri", async (t) => {
   await t.test("etiketler okunur bir listeye çevriliyor", () => {
     assert.equal(olcuEtiketleri(["line_spacing", "margins_cm"]), "Satır aralığı, Kenar boşlukları");
   });
+});
+
+test("öneriler İngilizce; değer dilden bağımsız", () => {
+  const en = oneriler({}, "en");
+  const tr = oneriler({});
+  assert.deepEqual(en.map((o) => o.deger), tr.map((o) => o.deger));
+  const bosluk = en.find((o) => o.anahtar === "margins_cm")!;
+  assert.equal(bosluk.etiket, "Margins");
+  assert.equal(bosluk.gosterim, "top 3 · bottom 2.5 · left 3.5 · right 2.5 cm");
+  assert.equal(en.find((o) => o.anahtar === "line_spacing")?.gosterim, "1.5");
+  assert.equal(etiketler(["line_spacing", "font_size_pt"], "en"), "Line spacing, Font size");
 });

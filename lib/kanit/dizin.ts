@@ -35,6 +35,7 @@ import {
   type KaynakKunyesi,
   type KunyeKarsilastirmasi,
 } from "./kunye-karsilastirma";
+import type { Dil } from "@/lib/dil";
 
 export type Getir = (adres: string) => Promise<{ durum: number; veri: unknown }>;
 
@@ -80,7 +81,12 @@ async function erisimBilgisi(getir: Getir, doi: string | null): Promise<ErisimBi
   }
 }
 
-export async function kunyeDogrula(kaynak: KaynakKunyesi, getir: Getir = varsayilanGetir): Promise<DogrulamaSonucu> {
+/*
+  dil: `neden` ve karşılaştırma özetinin dili (28.10.2026). Dizine giden
+  istek dilden bağımsız; yalnızca kullanıcıya dönen cümle değişiyor.
+*/
+export async function kunyeDogrula(kaynak: KaynakKunyesi, getir: Getir = varsayilanGetir, dil: Dil = "tr"): Promise<DogrulamaSonucu> {
+  const t = (tr: string, en: string) => (dil === "en" ? en : tr);
   const doi = doiAyikla(kaynak.doi_or_url);
 
   try {
@@ -96,13 +102,16 @@ export async function kunyeDogrula(kaynak: KaynakKunyesi, getir: Getir = varsayi
       if (!kayit) {
         return {
           tur: "bulunamadi",
-          neden: "DOI Crossref'te ve OpenAlex'te bulunamadı. DOI yanlış yazılmış ya da başka bir kayıt kuruluşunda (ör. DataCite) olabilir; bu, kaynağın sahte olduğunu göstermez.",
+          neden: t(
+            "DOI Crossref'te ve OpenAlex'te bulunamadı. DOI yanlış yazılmış ya da başka bir kayıt kuruluşunda (ör. DataCite) olabilir; bu, kaynağın sahte olduğunu göstermez.",
+            "The DOI was not found in Crossref or OpenAlex. It may be mistyped or registered with another agency (e.g., DataCite); this does not show that the source is fake.",
+          ),
           erisim: { durum: "bilinmiyor", adres: null },
           doi,
         };
       }
     } else {
-      if (!kaynak.title?.trim()) return { tur: "bulunamadi", neden: "Kaynağın başlığı yok; arama yapılamadı.", erisim: { durum: "bilinmiyor", adres: null }, doi: null };
+      if (!kaynak.title?.trim()) return { tur: "bulunamadi", neden: t("Kaynağın başlığı yok; arama yapılamadı.", "The source has no title; the search could not be run."), erisim: { durum: "bilinmiyor", adres: null }, doi: null };
       const adres = new URL("https://api.crossref.org/works");
       adres.searchParams.set("query.bibliographic", [kaynak.title, soyadlar(kaynak.authors)[0]].filter(Boolean).join(" "));
       adres.searchParams.set("rows", "5");
@@ -117,7 +126,10 @@ export async function kunyeDogrula(kaynak: KaynakKunyesi, getir: Getir = varsayi
       if (!en || en.benzerlik < BASLIK_ESIGI) {
         return {
           tur: "bulunamadi",
-          neden: "Crossref'te başlığı eşleşen bir kayıt bulunamadı. Kaynak dizinlenmemiş olabilir; DOI ekleyip tekrar deneyin ya da yayıncı sayfasından kontrol edin.",
+          neden: t(
+            "Crossref'te başlığı eşleşen bir kayıt bulunamadı. Kaynak dizinlenmemiş olabilir; DOI ekleyip tekrar deneyin ya da yayıncı sayfasından kontrol edin.",
+            "No Crossref record with a matching title was found. The source may not be indexed; add a DOI and try again, or check the publisher's page.",
+          ),
           erisim: { durum: "bilinmiyor", adres: null },
           doi: null,
         };
@@ -125,11 +137,11 @@ export async function kunyeDogrula(kaynak: KaynakKunyesi, getir: Getir = varsayi
       kayit = en.k;
     }
 
-    const karsilastirma = kunyeKarsilastir(kaynak, kayit);
+    const karsilastirma = kunyeKarsilastir(kaynak, kayit, dil);
     return { tur: "bulundu", karsilastirma, erisim: await erisimBilgisi(getir, kayit.doi ?? doi), doi: kayit.doi ?? doi };
   } catch (hata) {
     if (hata instanceof Ulasilamadi)
-      return { tur: "ulasilamadi", neden: "Dizinlere şu anda ulaşılamıyor. Sonuç kaydedilmedi; birazdan tekrar deneyin." };
+      return { tur: "ulasilamadi", neden: t("Dizinlere şu anda ulaşılamıyor. Sonuç kaydedilmedi; birazdan tekrar deneyin.", "The indexes cannot be reached right now. No result was saved; try again shortly.") };
     throw hata;
   }
 }

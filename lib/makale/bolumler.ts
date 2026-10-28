@@ -13,6 +13,7 @@
 */
 
 import { bolumTuru, type BolumTuru } from "./sablonlar";
+import type { Dil } from "@/lib/dil";
 
 type Dugum = { type?: string; text?: string; attrs?: Record<string, unknown> | null; content?: Dugum[] };
 
@@ -72,7 +73,7 @@ function duzle(dal: Dal): Dal[] {
   return [dal];
 }
 
-export function makaleBolumleri(icerik: unknown): MakaleBolumu[] {
+export function makaleBolumleri(icerik: unknown, dil: Dil = "tr"): MakaleBolumu[] {
   const kok = (icerik ?? null) as { content?: Dugum[] } | null;
   const dugumler = duzlestir(kok?.content);
 
@@ -84,7 +85,7 @@ export function makaleBolumleri(icerik: unknown): MakaleBolumu[] {
     const metin = metniOf(dugum).trim();
     if (dugum.type === "heading") {
       const duzey = Number(dugum.attrs?.level ?? 1) || 1;
-      const dal: Dal = { baslik: metin || "Adsız bölüm", duzey, satirlar: [], cocuklar: [] };
+      const dal: Dal = { baslik: metin || (dil === "en" ? "Untitled section" : "Adsız bölüm"), duzey, satirlar: [], cocuklar: [] };
       while (yigin.length && yigin[yigin.length - 1].duzey >= duzey) yigin.pop();
       (yigin.length ? yigin[yigin.length - 1].cocuklar : kokler).push(dal);
       yigin.push(dal);

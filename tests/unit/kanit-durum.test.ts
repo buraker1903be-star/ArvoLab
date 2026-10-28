@@ -86,3 +86,18 @@ test("sonraki adım zincirin ilk eksik halkasını gösterir", () => {
   assert.match(sonrakiAdim({ ...BOS, kaynak_id: "s", kunye_durumu: "dogrulandi", kunye_kaynagi: "crossref" }), /ilgili bölümü ekleyin/);
   assert.equal(sonrakiAdim({ ...BOS, duzeltme: "Kendi notum" }), "Kendi notum");
 });
+
+test("İngilizce arayüz: rozet, zincir ve sonraki adım", () => {
+  const k: KanitKaydi = { ...BOS, kaynak_id: "s1", kunye_durumu: "uyusmuyor", kunye_kaynagi: "crossref", incelenen_metin: "metin", alinti: "alıntı", destek_duzeyi: "celisiyor" };
+  const rozetler = durumRozetleri(k, "en");
+  assert.equal(rozetler.find((r) => r.anahtar === "kunye")?.etiket, "Citation details do not match the index record");
+  assert.equal(rozetler.find((r) => r.anahtar === "uyum")?.aciklama, "The reviewed evidence contradicts the claim.");
+  assert.equal(rozetler.find((r) => r.anahtar === "insan")?.aciklama, "The evidence appears to contradict the claim; revisit the claim.");
+  const zincir = kanitZinciri(k, null, "en");
+  assert.equal(zincir.find((h) => h.anahtar === "atif")?.baslik, "In-text citation");
+  assert.equal(zincir.find((h) => h.anahtar === "kanit")?.metin, "“alıntı” — location not specified · from the added section");
+  assert.equal(zincir.find((h) => h.anahtar === "sonuc")?.metin, "Contradicts");
+  assert.equal(sonrakiAdim(k, "en"), "Compare the reference-list entry with the index record and correct it.");
+  // Kullanıcının kendi yazdığı düzeltme çevrilmez.
+  assert.equal(sonrakiAdim({ ...k, duzeltme: "Kendi notum" }, "en"), "Kendi notum");
+});

@@ -22,6 +22,7 @@
   Saf modül; testi tests/unit/kilavuz-sayi-onerisi.test.ts.
 */
 import type { OndalikAyirici } from "@/lib/sayi-bicimi";
+import type { Dil } from "@/lib/dil";
 
 /** En az bu kadar örnek bulunmayan metinden öneri çıkarılmaz. */
 const EN_AZ_ORNEK = 3;
@@ -70,7 +71,13 @@ function sec<T extends string>(
   return { kazanan: ilk.etiket as T, gecisler, ikinci };
 }
 
-export function sayiKuraliOner(metin: string): SayiOnerisi {
+/*
+  dil: uyarıların dili (28.10.2026). Sonuç kılavuz kaydına yazılıyor;
+  kayıttaki Türkçe uyarıyı ekranda çevirmek için
+  lib/guideline-scan.ts → taramaUyarisiCevir.
+*/
+export function sayiKuraliOner(metin: string, dil: Dil = "tr"): SayiOnerisi {
+  const en = dil === "en";
   const degerler = istatistikDegerleri(metin);
 
   const ayiriciSayim = new Map<"comma" | "period", number>([
@@ -102,17 +109,29 @@ export function sayiKuraliOner(metin: string): SayiOnerisi {
 
   const uyarilar: string[] = [];
   if (degerler.length === 0) {
-    uyarilar.push("Metinde istatistik örneği bulunamadı; sayı biçimi kılavuzdan çıkarılamıyor.");
+    uyarilar.push(
+      en
+        ? "No statistical examples were found in the text; the number format cannot be derived from the guideline."
+        : "Metinde istatistik örneği bulunamadı; sayı biçimi kılavuzdan çıkarılamıyor.",
+    );
   }
   if (ayiriciSecim.ikinci > 0) {
     uyarilar.push(
-      `Metinde iki ondalık ayırıcı da geçiyor (${ayiriciSecim.gecisler
-        .map((g) => `${g.etiket === "comma" ? "virgül" : "nokta"}: ${g.sayim}`)
-        .join(", ")}); örnek ya da karşılaştırma olabilir.`,
+      en
+        ? `Both decimal separators appear in the text (${ayiriciSecim.gecisler
+            .map((g) => `${g.etiket === "comma" ? "comma" : "period"}: ${g.sayim}`)
+            .join(", ")}); this may be an example or a comparison.`
+        : `Metinde iki ondalık ayırıcı da geçiyor (${ayiriciSecim.gecisler
+            .map((g) => `${g.etiket === "comma" ? "virgül" : "nokta"}: ${g.sayim}`)
+            .join(", ")}); örnek ya da karşılaştırma olabilir.`,
     );
   }
   if (sifirSecim.ikinci > 0) {
-    uyarilar.push("Metinde hem sıfırlı hem sıfırsız yazım geçiyor; kılavuzu açıp doğrulayın.");
+    uyarilar.push(
+      en
+        ? "The text uses both leading-zero and no-leading-zero forms; open the guideline and verify."
+        : "Metinde hem sıfırlı hem sıfırsız yazım geçiyor; kılavuzu açıp doğrulayın.",
+    );
   }
 
   return {

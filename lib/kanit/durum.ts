@@ -16,6 +16,8 @@
   Saf modül; testi tests/unit/kanit-durum.test.ts.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
+
 export type KunyeDurumu = "bakilmadi" | "dogrulandi" | "kismen" | "uyusmuyor" | "dogrulanamadi";
 export type ErisimDurumu = "bilinmiyor" | "acik_erisim" | "acik_erisim_yok";
 export type DestekDuzeyi = "degerlendirilmedi" | "dogrudan" | "kismen" | "dolayli" | "celisiyor" | "dogrulanamadi";
@@ -58,31 +60,43 @@ export type KaynakOzeti = {
   doi_or_url: string | null;
 };
 
-export const DESTEK_ETIKETI: Record<DestekDuzeyi, string> = {
-  degerlendirilmedi: "Değerlendirilmedi",
-  dogrudan: "Doğrudan destekleniyor",
-  kismen: "Kısmen destekleniyor",
-  dolayli: "Dolaylı destek",
-  celisiyor: "Çelişiyor",
-  dogrulanamadi: "Doğrulanamadı",
+/*
+  Etiketler iki dilde (28.10.2026). Eski Record<…, string> dışa aktarımları
+  Türkçe değerle kalıyor: çağıranlar onlara bağlı ve tipi değişirse
+  şablon metinde "[object Object]" yazardı.
+*/
+export const DESTEK_ETIKETI_METIN: Record<DestekDuzeyi, Metin> = {
+  degerlendirilmedi: { tr: "Değerlendirilmedi", en: "Not assessed" },
+  dogrudan: { tr: "Doğrudan destekleniyor", en: "Directly supported" },
+  kismen: { tr: "Kısmen destekleniyor", en: "Partially supported" },
+  dolayli: { tr: "Dolaylı destek", en: "Indirect support" },
+  celisiyor: { tr: "Çelişiyor", en: "Contradicts" },
+  dogrulanamadi: { tr: "Doğrulanamadı", en: "Could not be verified" },
 };
 
-export const DESTEK_ACIKLAMASI: Record<DestekDuzeyi, string> = {
-  degerlendirilmedi: "İddia ile kanıt henüz karşılaştırılmadı.",
-  dogrudan: "Erişilebilir kanıt iddiayı açıkça destekliyor.",
-  kismen: "Kaynak iddianın yalnızca belirli bir kısmını destekliyor.",
-  dolayli: "Kaynak ilgili arka planı sağlıyor ama iddiayı doğrudan doğrulamıyor.",
-  celisiyor: "İncelenen kanıt iddiayla çelişiyor.",
-  dogrulanamadi: "Mevcut kanıt bir sonuca ulaşmaya yetmiyor.",
+export const DESTEK_ACIKLAMASI_METIN: Record<DestekDuzeyi, Metin> = {
+  degerlendirilmedi: { tr: "İddia ile kanıt henüz karşılaştırılmadı.", en: "The claim has not yet been compared with the evidence." },
+  dogrudan: { tr: "Erişilebilir kanıt iddiayı açıkça destekliyor.", en: "The available evidence clearly supports the claim." },
+  kismen: { tr: "Kaynak iddianın yalnızca belirli bir kısmını destekliyor.", en: "The source supports only part of the claim." },
+  dolayli: { tr: "Kaynak ilgili arka planı sağlıyor ama iddiayı doğrudan doğrulamıyor.", en: "The source provides relevant background but does not directly confirm the claim." },
+  celisiyor: { tr: "İncelenen kanıt iddiayla çelişiyor.", en: "The reviewed evidence contradicts the claim." },
+  dogrulanamadi: { tr: "Mevcut kanıt bir sonuca ulaşmaya yetmiyor.", en: "The available evidence is not enough to reach a conclusion." },
 };
 
-export const KUNYE_ETIKETI: Record<KunyeDurumu, string> = {
-  bakilmadi: "Künyeye bakılmadı",
-  dogrulandi: "Kaynak kaydı doğrulandı",
-  kismen: "Bibliyografik bilgiler kısmen doğrulandı",
-  uyusmuyor: "Künye dizindeki kayıtla uyuşmuyor",
-  dogrulanamadi: "Kaynak kaydı doğrulanamadı",
+export const KUNYE_ETIKETI_METIN: Record<KunyeDurumu, Metin> = {
+  bakilmadi: { tr: "Künyeye bakılmadı", en: "Citation details not checked" },
+  dogrulandi: { tr: "Kaynak kaydı doğrulandı", en: "Source record verified" },
+  kismen: { tr: "Bibliyografik bilgiler kısmen doğrulandı", en: "Bibliographic details partially verified" },
+  uyusmuyor: { tr: "Künye dizindeki kayıtla uyuşmuyor", en: "Citation details do not match the index record" },
+  dogrulanamadi: { tr: "Kaynak kaydı doğrulanamadı", en: "Source record could not be verified" },
 };
+
+const turkcesi = <K extends string>(harita: Record<K, Metin>): Record<K, string> =>
+  Object.fromEntries(Object.entries<Metin>(harita).map(([k, v]) => [k, v.tr])) as Record<K, string>;
+
+export const DESTEK_ETIKETI: Record<DestekDuzeyi, string> = turkcesi(DESTEK_ETIKETI_METIN);
+export const DESTEK_ACIKLAMASI: Record<DestekDuzeyi, string> = turkcesi(DESTEK_ACIKLAMASI_METIN);
+export const KUNYE_ETIKETI: Record<KunyeDurumu, string> = turkcesi(KUNYE_ETIKETI_METIN);
 
 export type Ton = "success" | "warning" | "danger" | "info" | "neutral";
 
@@ -104,43 +118,77 @@ export function gecerliDestek(k: Pick<KanitKaydi, "destek_duzeyi" | "incelenen_m
 }
 
 /** Bölüm 8'deki durumlar: her biri ayrı bir kontrolün sonucu. */
-export function durumRozetleri(k: KanitKaydi): Rozet[] {
+export function durumRozetleri(k: KanitKaydi, dil: Dil = "tr"): Rozet[] {
+  const en = dil === "en";
+  const t = (tr: string, ing: string) => (en ? ing : tr);
   const rozetler: Rozet[] = [];
   const dizin = k.kunye_kaynagi === "openalex" ? "OpenAlex" : "Crossref";
+  const kunye = (d: KunyeDurumu) => KUNYE_ETIKETI_METIN[d][dil];
+  const aciklama = (d: DestekDuzeyi) => DESTEK_ACIKLAMASI_METIN[d][dil];
 
   if (k.kunye_durumu === "dogrulandi")
-    rozetler.push({ anahtar: "kunye", etiket: KUNYE_ETIKETI.dogrulandi, ton: "success", aciklama: `${dizin} kaydıyla başlık, yıl ve ilk yazar eşleşti. Bu, kaynağın iddiayı desteklediğini göstermez.` });
+    rozetler.push({
+      anahtar: "kunye",
+      etiket: kunye("dogrulandi"),
+      ton: "success",
+      aciklama: en
+        ? `Title, year and first author matched the ${dizin} record. This does not show that the source supports the claim.`
+        : `${dizin} kaydıyla başlık, yıl ve ilk yazar eşleşti. Bu, kaynağın iddiayı desteklediğini göstermez.`,
+    });
   else if (k.kunye_durumu === "kismen")
-    rozetler.push({ anahtar: "kunye", etiket: KUNYE_ETIKETI.kismen, ton: "warning", aciklama: `${dizin} kaydında bazı alanlar uyuşmuyor ya da karşılaştırılamadı.` });
+    rozetler.push({
+      anahtar: "kunye",
+      etiket: kunye("kismen"),
+      ton: "warning",
+      aciklama: en ? `Some fields in the ${dizin} record do not match or could not be compared.` : `${dizin} kaydında bazı alanlar uyuşmuyor ya da karşılaştırılamadı.`,
+    });
   else if (k.kunye_durumu === "uyusmuyor")
-    rozetler.push({ anahtar: "kunye", etiket: KUNYE_ETIKETI.uyusmuyor, ton: "danger", aciklama: "Dizindeki kaydın başlığı sizin künyenizle uyuşmuyor." });
+    rozetler.push({ anahtar: "kunye", etiket: kunye("uyusmuyor"), ton: "danger", aciklama: t("Dizindeki kaydın başlığı sizin künyenizle uyuşmuyor.", "The title of the index record does not match your citation.") });
   else if (k.kunye_durumu === "dogrulanamadi")
-    rozetler.push({ anahtar: "kunye", etiket: KUNYE_ETIKETI.dogrulanamadi, ton: "neutral", aciklama: "Dizinde kayıt bulunamadı. Bu, kaynağın sahte olduğunu kanıtlamaz; başka bir dizinde ya da yayıncı sayfasında kontrol edin." });
+    rozetler.push({
+      anahtar: "kunye",
+      etiket: kunye("dogrulanamadi"),
+      ton: "neutral",
+      aciklama: t(
+        "Dizinde kayıt bulunamadı. Bu, kaynağın sahte olduğunu kanıtlamaz; başka bir dizinde ya da yayıncı sayfasında kontrol edin.",
+        "No record was found in the index. This does not prove the source is fake; check another index or the publisher's page.",
+      ),
+    });
 
   if (k.incelenen_metin) {
     rozetler.push(
       k.incelenen_kapsam === "tam_metin"
-        ? { anahtar: "metin", etiket: "Tam metin incelendi", ton: "info", aciklama: "Kullanıcının beyanına göre eklenen metin kaynağın tamamı." }
-        : { anahtar: "metin", etiket: "İlgili bölüm incelendi", ton: "info", aciklama: "Yalnızca eklenen bölüme bakıldı; kaynağın geri kalanı incelenmedi." },
+        ? { anahtar: "metin", etiket: t("Tam metin incelendi", "Full text reviewed"), ton: "info", aciklama: t("Kullanıcının beyanına göre eklenen metin kaynağın tamamı.", "According to the user, the added text is the full source.") }
+        : { anahtar: "metin", etiket: t("İlgili bölüm incelendi", "Relevant section reviewed"), ton: "info", aciklama: t("Yalnızca eklenen bölüme bakıldı; kaynağın geri kalanı incelenmedi.", "Only the added section was reviewed; the rest of the source was not.") },
     );
   }
-  if (k.alinti) rozetler.push({ anahtar: "kanit", etiket: "İlgili kanıt bulundu", ton: "info", aciklama: "İncelenen metinden bir alıntı kaydedildi." });
+  if (k.alinti) rozetler.push({ anahtar: "kanit", etiket: t("İlgili kanıt bulundu", "Relevant evidence found"), ton: "info", aciklama: t("İncelenen metinden bir alıntı kaydedildi.", "A quotation from the reviewed text was saved.") });
 
   const destek = gecerliDestek(k);
   if (destek === "dogrudan" || destek === "kismen")
-    rozetler.push({ anahtar: "uyum", etiket: destek === "dogrudan" ? "İddia ile kanıt uyumlu görünüyor" : "İddia ile kanıt kısmen uyumlu", ton: DESTEK_TONU[destek], aciklama: "Bu bir değerlendirmedir; bulgunun bilimsel olarak doğru olduğunu göstermez." });
+    rozetler.push({
+      anahtar: "uyum",
+      etiket: destek === "dogrudan" ? t("İddia ile kanıt uyumlu görünüyor", "Claim and evidence appear consistent") : t("İddia ile kanıt kısmen uyumlu", "Claim and evidence partially consistent"),
+      ton: DESTEK_TONU[destek],
+      aciklama: t("Bu bir değerlendirmedir; bulgunun bilimsel olarak doğru olduğunu göstermez.", "This is an assessment; it does not show that the finding is scientifically correct."),
+    });
   else if (destek === "dolayli")
-    rozetler.push({ anahtar: "uyum", etiket: "Yalnızca dolaylı destek", ton: "info", aciklama: DESTEK_ACIKLAMASI.dolayli });
+    rozetler.push({ anahtar: "uyum", etiket: t("Yalnızca dolaylı destek", "Indirect support only"), ton: "info", aciklama: aciklama("dolayli") });
   else if (destek === "celisiyor")
-    rozetler.push({ anahtar: "uyum", etiket: "Çelişen kanıt bulundu", ton: "danger", aciklama: DESTEK_ACIKLAMASI.celisiyor });
+    rozetler.push({ anahtar: "uyum", etiket: t("Çelişen kanıt bulundu", "Contradicting evidence found"), ton: "danger", aciklama: aciklama("celisiyor") });
   else if (destek === "dogrulanamadi")
-    rozetler.push({ anahtar: "uyum", etiket: "Doğrulanamadı", ton: "neutral", aciklama: DESTEK_ACIKLAMASI.dogrulanamadi });
+    rozetler.push({ anahtar: "uyum", etiket: t("Doğrulanamadı", "Could not be verified"), ton: "neutral", aciklama: aciklama("dogrulanamadi") });
 
   if (!k.incelenen_metin && k.erisim_durumu !== "acik_erisim")
-    rozetler.push({ anahtar: "erisim", etiket: "Doğrulama için erişim yetersiz", ton: "warning", aciklama: "Kaynağın metni eklenmedi ve açık erişimli bir tam metin bilinmiyor." });
+    rozetler.push({
+      anahtar: "erisim",
+      etiket: t("Doğrulama için erişim yetersiz", "Insufficient access for verification"),
+      ton: "warning",
+      aciklama: t("Kaynağın metni eklenmedi ve açık erişimli bir tam metin bilinmiyor.", "The source text was not added and no open-access full text is known."),
+    });
 
   if (insanIncelemesiOneriliyor(k))
-    rozetler.push({ anahtar: "insan", etiket: "İnsan incelemesi öneriliyor", ton: "warning", aciklama: insanIncelemesiNedeni(k) });
+    rozetler.push({ anahtar: "insan", etiket: t("İnsan incelemesi öneriliyor", "Human review recommended"), ton: "warning", aciklama: insanIncelemesiNedeni(k, dil) });
 
   return rozetler;
 }
@@ -156,10 +204,13 @@ export function insanIncelemesiOneriliyor(k: KanitKaydi): boolean {
   );
 }
 
-function insanIncelemesiNedeni(k: KanitKaydi): string {
-  if (gecerliDestek(k) === "celisiyor") return "Kanıt iddiayla çelişiyor görünüyor; iddiayı yeniden ele alın.";
-  if (k.kunye_durumu === "uyusmuyor" || k.kunye_durumu === "kismen") return "Künye dizindeki kayıtla tam uyuşmuyor; kaynakçanızı kontrol edin.";
-  return "Uyum değerlendirmesini otomatik sistem yaptı; nihai akademik hüküm değildir.";
+function insanIncelemesiNedeni(k: KanitKaydi, dil: Dil): string {
+  const en = dil === "en";
+  if (gecerliDestek(k) === "celisiyor")
+    return en ? "The evidence appears to contradict the claim; revisit the claim." : "Kanıt iddiayla çelişiyor görünüyor; iddiayı yeniden ele alın.";
+  if (k.kunye_durumu === "uyusmuyor" || k.kunye_durumu === "kismen")
+    return en ? "The citation does not fully match the index record; check your reference list." : "Künye dizindeki kayıtla tam uyuşmuyor; kaynakçanızı kontrol edin.";
+  return en ? "The consistency assessment was made by an automated system; it is not a final academic judgment." : "Uyum değerlendirmesini otomatik sistem yaptı; nihai akademik hüküm değildir.";
 }
 
 // ---------- Kanıt zinciri ----------
@@ -180,50 +231,64 @@ export type Halka = {
  * Eksik halka eksik olarak gösterilir, boş bırakılmaz ya da tahminle
  * doldurulmaz: sayfa numarası yoksa "konum belirtilmedi" yazar.
  */
-export function kanitZinciri(k: KanitKaydi, kaynak: KaynakOzeti | null): Halka[] {
+export function kanitZinciri(k: KanitKaydi, kaynak: KaynakOzeti | null, dil: Dil = "tr"): Halka[] {
+  const en = dil === "en";
+  const t = (tr: string, ing: string) => (en ? ing : tr);
   const destek = gecerliDestek(k);
   const yayinAdresi =
     (k.kunye_ayrintisi as { adres?: string | null } | null | undefined)?.adres ??
     (kaynak?.doi_or_url && /^https?:\/\//.test(kaynak.doi_or_url) ? kaynak.doi_or_url : kaynak?.doi_or_url ? `https://doi.org/${kaynak.doi_or_url.replace(/^doi:\s*/i, "")}` : null);
+  const atifBaslik = t("Metin içi atıf", "In-text citation");
+  const kaynakBaslik = t("Kaynak kaydı", "Source record");
+  const yayinBaslik = t("Özgün yayın", "Original publication");
+  const kanitBaslik = t("İlgili kanıt", "Relevant evidence");
+  const kunye = (d: KunyeDurumu) => KUNYE_ETIKETI_METIN[d][dil];
 
   return [
-    { anahtar: "iddia", baslik: "Akademik iddia", durum: "tamam", metin: k.bolum ? `${k.iddia} (${k.bolum})` : k.iddia },
+    { anahtar: "iddia", baslik: t("Akademik iddia", "Academic claim"), durum: "tamam", metin: k.bolum ? `${k.iddia} (${k.bolum})` : k.iddia },
     k.atif
-      ? { anahtar: "atif", baslik: "Metin içi atıf", durum: "tamam", metin: k.atif }
-      : { anahtar: "atif", baslik: "Metin içi atıf", durum: "eksik", metin: "İddiaya bir atıf girilmedi." },
+      ? { anahtar: "atif", baslik: atifBaslik, durum: "tamam", metin: k.atif }
+      : { anahtar: "atif", baslik: atifBaslik, durum: "eksik", metin: t("İddiaya bir atıf girilmedi.", "No citation was entered for the claim.") },
     kaynak
-      ? { anahtar: "kaynak", baslik: "Kaynak kaydı", durum: "tamam", metin: [kaynak.authors, kaynak.year ? `(${kaynak.year})` : null, kaynak.title].filter(Boolean).join(" ") }
-      : { anahtar: "kaynak", baslik: "Kaynak kaydı", durum: "eksik", metin: k.kaynak_id ? "Kaynak kaydına erişilemiyor (silinmiş ya da size ait değil)." : "Literatür listenizden bir kaynak bağlanmadı." },
+      ? { anahtar: "kaynak", baslik: kaynakBaslik, durum: "tamam", metin: [kaynak.authors, kaynak.year ? `(${kaynak.year})` : null, kaynak.title].filter(Boolean).join(" ") }
+      : {
+          anahtar: "kaynak",
+          baslik: kaynakBaslik,
+          durum: "eksik",
+          metin: k.kaynak_id
+            ? t("Kaynak kaydına erişilemiyor (silinmiş ya da size ait değil).", "The source record cannot be accessed (deleted or not yours).")
+            : t("Literatür listenizden bir kaynak bağlanmadı.", "No source from your literature list is linked."),
+        },
     k.kunye_durumu === "dogrulandi"
-      ? { anahtar: "yayin", baslik: "Özgün yayın", durum: "tamam", metin: KUNYE_ETIKETI.dogrulandi, adres: yayinAdresi }
+      ? { anahtar: "yayin", baslik: yayinBaslik, durum: "tamam", metin: kunye("dogrulandi"), adres: yayinAdresi }
       : k.kunye_durumu === "kismen"
-        ? { anahtar: "yayin", baslik: "Özgün yayın", durum: "kismi", metin: KUNYE_ETIKETI.kismen, adres: yayinAdresi }
-        : { anahtar: "yayin", baslik: "Özgün yayın", durum: "eksik", metin: KUNYE_ETIKETI[k.kunye_durumu], adres: yayinAdresi },
+        ? { anahtar: "yayin", baslik: yayinBaslik, durum: "kismi", metin: kunye("kismen"), adres: yayinAdresi }
+        : { anahtar: "yayin", baslik: yayinBaslik, durum: "eksik", metin: kunye(k.kunye_durumu), adres: yayinAdresi },
     k.alinti
       ? {
           anahtar: "kanit",
-          baslik: "İlgili kanıt",
+          baslik: kanitBaslik,
           durum: k.konum ? "tamam" : "kismi",
-          metin: `“${k.alinti}” — ${k.konum ? k.konum : "konum belirtilmedi"}${k.incelenen_kapsam === "tam_metin" ? " · tam metinden" : " · eklenen bölümden"}`,
+          metin: `“${k.alinti}” — ${k.konum ? k.konum : t("konum belirtilmedi", "location not specified")}${k.incelenen_kapsam === "tam_metin" ? t(" · tam metinden", " · from the full text") : t(" · eklenen bölümden", " · from the added section")}`,
         }
       : {
           anahtar: "kanit",
-          baslik: "İlgili kanıt",
+          baslik: kanitBaslik,
           durum: "eksik",
           metin: k.incelenen_metin
-            ? "Metin eklendi ama içinden bir kanıt alıntısı seçilmedi."
+            ? t("Metin eklendi ama içinden bir kanıt alıntısı seçilmedi.", "Text was added, but no evidence quotation was selected from it.")
             : k.erisim_durumu === "acik_erisim"
-              ? "Açık erişimli tam metin var ama henüz incelenmedi."
-              : "Kaynağın metnine erişilmedi; kanıt incelenemedi.",
+              ? t("Açık erişimli tam metin var ama henüz incelenmedi.", "An open-access full text exists but has not been reviewed yet.")
+              : t("Kaynağın metnine erişilmedi; kanıt incelenemedi.", "The source text was not accessed; the evidence could not be reviewed."),
           adres: !k.incelenen_metin && k.erisim_durumu === "acik_erisim" ? k.erisim_adresi : null,
         },
     {
       anahtar: "sonuc",
-      baslik: "Doğrulama sonucu",
+      baslik: t("Doğrulama sonucu", "Verification result"),
       durum: destek === "degerlendirilmedi" || destek === "dogrulanamadi" ? "eksik" : destek === "dogrudan" ? "tamam" : "kismi",
       metin:
-        `${DESTEK_ETIKETI[destek]}` +
-        (k.degerlendiren === "asistan" ? " · otomatik değerlendirme" : k.degerlendiren === "kullanici" ? " · sizin değerlendirmeniz" : ""),
+        DESTEK_ETIKETI_METIN[destek][dil] +
+        (k.degerlendiren === "asistan" ? t(" · otomatik değerlendirme", " · automated assessment") : k.degerlendiren === "kullanici" ? t(" · sizin değerlendirmeniz", " · your assessment") : ""),
     },
   ];
 }
@@ -260,18 +325,23 @@ export function matrisOzeti(kayitlar: KanitKaydi[]): MatrisOzeti {
 }
 
 /** Kayıt için bir sonraki somut adım; matrisin "önerilen düzeltme" sütununun boş hâli. */
-export function sonrakiAdim(k: KanitKaydi): string {
+export function sonrakiAdim(k: KanitKaydi, dil: Dil = "tr"): string {
+  const t = (tr: string, en: string) => (dil === "en" ? en : tr);
+  // Kullanıcının kendi yazdığı düzeltme olduğu gibi döner; çevrilmez.
   if (k.duzeltme) return k.duzeltme;
-  if (!k.kaynak_id) return "Literatür listenizden iddiayı destekleyen kaynağı bağlayın.";
-  if (k.kunye_durumu === "bakilmadi") return "Künyeyi dizinde doğrulatın.";
-  if (k.kunye_durumu === "uyusmuyor") return "Kaynakçadaki künyeyi dizindeki kayıtla karşılaştırıp düzeltin.";
-  if (!k.incelenen_metin) return k.erisim_durumu === "acik_erisim" ? "Açık erişimli metinden ilgili bölümü ekleyin." : "Kaynaktan iddiayla ilgili bölümü ekleyin.";
-  if (!k.alinti) return "Eklenen metinden iddiayı destekleyen cümleyi seçin.";
+  if (!k.kaynak_id) return t("Literatür listenizden iddiayı destekleyen kaynağı bağlayın.", "Link the source from your literature list that supports the claim.");
+  if (k.kunye_durumu === "bakilmadi") return t("Künyeyi dizinde doğrulatın.", "Verify the citation details against the index.");
+  if (k.kunye_durumu === "uyusmuyor") return t("Kaynakçadaki künyeyi dizindeki kayıtla karşılaştırıp düzeltin.", "Compare the reference-list entry with the index record and correct it.");
+  if (!k.incelenen_metin)
+    return k.erisim_durumu === "acik_erisim"
+      ? t("Açık erişimli metinden ilgili bölümü ekleyin.", "Add the relevant section from the open-access text.")
+      : t("Kaynaktan iddiayla ilgili bölümü ekleyin.", "Add the section of the source that relates to the claim.");
+  if (!k.alinti) return t("Eklenen metinden iddiayı destekleyen cümleyi seçin.", "Select the sentence in the added text that supports the claim.");
   const destek = gecerliDestek(k);
-  if (destek === "degerlendirilmedi") return "İddia ile kanıtı karşılaştırın.";
-  if (destek === "celisiyor") return "İddiayı kanıta göre yeniden yazın ya da çelişkiyi tartışın.";
-  if (destek === "dolayli" || destek === "kismen") return "İddiayı daraltın ya da doğrudan kanıt sunan bir kaynak ekleyin.";
-  if (destek === "dogrulanamadi") return "Daha ilgili bir bölüm ekleyin ya da başka bir kaynak arayın.";
-  if (insanIncelemesiOneriliyor(k)) return "Otomatik değerlendirmeyi kendiniz kontrol edip onaylayın.";
-  return "Ek işlem gerekmiyor.";
+  if (destek === "degerlendirilmedi") return t("İddia ile kanıtı karşılaştırın.", "Compare the claim with the evidence.");
+  if (destek === "celisiyor") return t("İddiayı kanıta göre yeniden yazın ya da çelişkiyi tartışın.", "Rewrite the claim to fit the evidence, or discuss the contradiction.");
+  if (destek === "dolayli" || destek === "kismen") return t("İddiayı daraltın ya da doğrudan kanıt sunan bir kaynak ekleyin.", "Narrow the claim, or add a source that offers direct evidence.");
+  if (destek === "dogrulanamadi") return t("Daha ilgili bir bölüm ekleyin ya da başka bir kaynak arayın.", "Add a more relevant section, or look for another source.");
+  if (insanIncelemesiOneriliyor(k)) return t("Otomatik değerlendirmeyi kendiniz kontrol edip onaylayın.", "Check and confirm the automated assessment yourself.");
+  return t("Ek işlem gerekmiyor.", "No further action needed.");
 }

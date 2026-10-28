@@ -6,6 +6,7 @@ import { sayiKuraliOner, type SayiOnerisi } from "@/lib/kilavuz-sayi-onerisi";
 import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
 import { sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
+import type { Dil } from "@/lib/dil";
 
 /**
  * Kılavuz Tarama Yardımcısı
@@ -111,14 +112,87 @@ export function kilavuzDegilUyarisi(
   bolumSayisi: number,
   contentType: string,
   ocrYolu = false,
+  dil: Dil = "tr",
 ): string | null {
   if (ocrYolu) return null;
   if (confidence > 0 || bolumSayisi >= 4) return null;
-  return contentType.toLowerCase().includes("html")
-    ? "Bu adres bir web sayfası ve içinden hiçbir biçim kuralı çıkarılamadı; büyük olasılıkla "
-      + "kılavuzun kendisi değil, ona bağlanan sayfa. Sayfadaki PDF/DOCX bağlantısını kaydedin."
-    : "Bu belgeden hiçbir biçim kuralı çıkarılamadı; adres bir tez yazım kılavuzuna işaret etmiyor "
-      + "olabilir (yönetmelik, form ya da örnek sayfa olabilir).";
+  const metin = contentType.toLowerCase().includes("html") ? KILAVUZ_DEGIL_HTML : KILAVUZ_DEGIL_BELGE;
+  return dil === "en" ? (SABIT_UYARILAR_EN.get(metin) ?? metin) : metin;
+}
+
+const KILAVUZ_DEGIL_HTML =
+  "Bu adres bir web sayfası ve içinden hiçbir biçim kuralı çıkarılamadı; büyük olasılıkla "
+  + "kılavuzun kendisi değil, ona bağlanan sayfa. Sayfadaki PDF/DOCX bağlantısını kaydedin.";
+const KILAVUZ_DEGIL_BELGE =
+  "Bu belgeden hiçbir biçim kuralı çıkarılamadı; adres bir tez yazım kılavuzuna işaret etmiyor "
+  + "olabilir (yönetmelik, form ya da örnek sayfa olabilir).";
+
+/*
+  TARAMA UYARILARININ İNGİLİZCESİ (28.10.2026).
+
+  Uyarılar taramada üretilip kılavuz kaydına TÜRKÇE yazılıyor: tarama
+  çoğu zaman gece turunda, bir kullanıcı olmadan koşuyor ve kayıt iki
+  dilde de okunuyor. Kaydı dile göre üretmek, kaydın dilini o an
+  tarayanın diline bağlardı. Bu yüzden çeviri GÖSTERİRKEN yapılıyor:
+  bilinen sabit metinler birebir, sayı taşıyanlar kalıpla. Tanınmayan
+  bir uyarı (ör. lib/ocr.ts'in ya da lib/atif-sistemi.ts'in metni)
+  olduğu gibi döner — yanlış çeviri, Türkçe bir cümleden kötüdür.
+  Buradaki Türkçe metinler üretildikleri yerle BİREBİR aynı olmalı;
+  testi tests/unit/guideline-scan.test.ts sınıyor.
+*/
+const SABIT_UYARILAR_EN = new Map<string, string>([
+  [
+    KILAVUZ_DEGIL_HTML,
+    "This address is a web page and no formatting rules could be extracted from it; it is most likely "
+      + "the page linking to the guideline rather than the guideline itself. Save the PDF/DOCX link on that page.",
+  ],
+  [
+    KILAVUZ_DEGIL_BELGE,
+    "No formatting rules could be extracted from this document; the address may not point to a thesis "
+      + "writing guideline (it may be a regulation, a form or a sample page).",
+  ],
+  ["Paragraf girintisi ölçüsü bulunamadı; 1,25 cm varsayıldı.", "No paragraph indent measurement was found; 1.25 cm was assumed."],
+  ["Tüm kenar boşlukları açıkça bulunamadı.", "Not all margins were stated explicitly."],
+  ["Yazı tipi açıkça bulunamadı.", "The font was not stated explicitly."],
+  ["Gövde metninin yazı boyutu açıkça bulunamadı.", "The font size of the body text was not stated explicitly."],
+  ["Gövde metninin satır aralığı açıkça bulunamadı.", "The line spacing of the body text was not stated explicitly."],
+  ["Yeterli sayıda zorunlu bölüm tespit edilemedi.", "Not enough required sections could be identified."],
+  ["Kaynakça sistemi açıkça bulunamadı.", "The citation style was not stated explicitly."],
+  [
+    "Metinde istatistik örneği bulunamadı; sayı biçimi kılavuzdan çıkarılamıyor.",
+    "No statistical examples were found in the text; the number format cannot be derived from the guideline.",
+  ],
+  [
+    "Metinde hem sıfırlı hem sıfırsız yazım geçiyor; kılavuzu açıp doğrulayın.",
+    "The text uses both leading-zero and no-leading-zero forms; open the guideline and verify.",
+  ],
+]);
+
+const KALIP_UYARILAR_EN: [RegExp, (e: RegExpExecArray) => string][] = [
+  [
+    /^Makul olmayan kenar boşluğu değeri yok sayıldı \((.*)\); sayfa ölçüsüyle karışmış olabilir\.$/u,
+    (e) => `Implausible margin values were ignored (${e[1]}); they may have been confused with the page size.`,
+  ],
+  [
+    /^Belge taranmış görüntüden oluşuyor; metin OCR ile okundu \((\d+) sayfa, tanıma güveni %(\d+)\)\. Kurallar eksik ya da hatalı çıkmış olabilir\.$/u,
+    (e) => `The document consists of scanned images; the text was read with OCR (${e[1]} pages, recognition confidence ${e[2]}%). Rules may be missing or incorrect.`,
+  ],
+  [
+    /^Metinde iki ondalık ayırıcı da geçiyor \((.*)\); örnek ya da karşılaştırma olabilir\.$/u,
+    (e) => `Both decimal separators appear in the text (${e[1].replace(/virgül/g, "comma").replace(/nokta/g, "period")}); this may be an example or a comparison.`,
+  ],
+];
+
+/** Kılavuz kaydındaki (Türkçe) bir tarama uyarısının istenen dildeki hâli. */
+export function taramaUyarisiCevir(uyari: string, dil: Dil = "tr"): string {
+  if (dil === "tr") return uyari;
+  const sabit = SABIT_UYARILAR_EN.get(uyari);
+  if (sabit) return sabit;
+  for (const [kalip, yaz] of KALIP_UYARILAR_EN) {
+    const eslesme = kalip.exec(uyari);
+    if (eslesme) return yaz(eslesme);
+  }
+  return uyari;
 }
 
 /*

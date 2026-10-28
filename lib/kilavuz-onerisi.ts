@@ -1,4 +1,5 @@
 import { validIndentCm } from "@/lib/paragraph-format";
+import { YEREL, type Dil, type Metin } from "@/lib/dil";
 
 /*
   Kılavuzun SÖYLEMEDİĞİ ölçüler için öneri.
@@ -40,7 +41,7 @@ export interface OlcuOnerisi {
   deger: number | Bosluklar;
 }
 
-const sayi = (deger: number) => deger.toLocaleString("tr-TR");
+const sayi = (deger: number, dil: Dil = "tr") => deger.toLocaleString(YEREL[dil]);
 
 const gecerliSayi = (deger: unknown, enAz: number, enCok: number): boolean => {
   const n = typeof deger === "number" ? deger : Number(String(deger ?? "").replace(",", "."));
@@ -71,18 +72,45 @@ const ONERILER: Record<OnerilenOlcu, { etiket: string; deger: number | Bosluklar
   },
 };
 
-const gosterimi = (anahtar: OnerilenOlcu, deger: number | Bosluklar): string => {
+/*
+  Önerilerin İngilizcesi (28.10.2026). Gerekçe Türk kılavuzlarından
+  söz etmeye devam ediyor: değerler oradan geliyor, dil değişince
+  kaynak değişmiyor.
+*/
+const ONERILER_EN: Record<OnerilenOlcu, { etiket: string; gerekce: string }> = {
+  font_size_pt: { etiket: "Font size", gerekce: "Most Turkish thesis guidelines set body text at 12 pt." },
+  line_spacing: { etiket: "Line spacing", gerekce: "Most Turkish thesis guidelines set body text at 1.5 line spacing." },
+  paragraph_indent_cm: { etiket: "Paragraph indent", gerekce: "APA's default first-line indent (0.5 in ≈ 1.25 cm)." },
+  margins_cm: { etiket: "Margins", gerekce: "A common binding-margin layout; the left margin is wider because it is bound." },
+};
+
+/** Ölçünün adı, istenen dilde. */
+export const olcuEtiketi = (anahtar: OnerilenOlcu, dil: Dil = "tr"): string =>
+  dil === "en" ? ONERILER_EN[anahtar].etiket : ONERILER[anahtar].etiket;
+
+const BOSLUK_ADLARI: Record<"top" | "bottom" | "left" | "right", Metin> = {
+  top: { tr: "üst", en: "top" },
+  bottom: { tr: "alt", en: "bottom" },
+  left: { tr: "sol", en: "left" },
+  right: { tr: "sağ", en: "right" },
+};
+
+const gosterimi = (anahtar: OnerilenOlcu, deger: number | Bosluklar, dil: Dil): string => {
   if (typeof deger === "number") {
-    return anahtar === "font_size_pt" ? `${sayi(deger)} punto` : anahtar === "line_spacing" ? sayi(deger) : `${sayi(deger)} cm`;
+    return anahtar === "font_size_pt"
+      ? `${sayi(deger, dil)} ${dil === "en" ? "pt" : "punto"}`
+      : anahtar === "line_spacing"
+        ? sayi(deger, dil)
+        : `${sayi(deger, dil)} cm`;
   }
-  return `üst ${sayi(deger.top)} · alt ${sayi(deger.bottom)} · sol ${sayi(deger.left)} · sağ ${sayi(deger.right)} cm`;
+  return `${(["top", "bottom", "left", "right"] as const).map((yon) => `${BOSLUK_ADLARI[yon][dil]} ${sayi(deger[yon], dil)}`).join(" · ")} cm`;
 };
 
 /**
  * Kılavuzda bulunamamış ölçüler için öneriler. Zaten doldurulmuş ya da
  * yönetici tarafından elle yazılmış alan için öneri üretilmez.
  */
-export function eksikOlcuOnerileri(extractedRules: unknown): OlcuOnerisi[] {
+export function eksikOlcuOnerileri(extractedRules: unknown, dil: Dil = "tr"): OlcuOnerisi[] {
   const kurallar = (extractedRules ?? {}) as Record<string, unknown>;
   const elleYazilan = yoneticiVarsayilanlari(extractedRules);
   const bosluklar = (kurallar.margins_cm ?? {}) as Record<string, unknown>;
@@ -103,8 +131,9 @@ export function eksikOlcuOnerileri(extractedRules: unknown): OlcuOnerisi[] {
   return eksik
     .filter((anahtar) => !elleYazilan.includes(anahtar))
     .map((anahtar) => {
-      const { etiket, deger, gerekce } = ONERILER[anahtar];
-      return { anahtar, etiket, deger, gerekce, gosterim: gosterimi(anahtar, deger) };
+      const { deger } = ONERILER[anahtar];
+      const { etiket, gerekce } = dil === "en" ? ONERILER_EN[anahtar] : ONERILER[anahtar];
+      return { anahtar, etiket, deger, gerekce, gosterim: gosterimi(anahtar, deger, dil) };
     });
 }
 
@@ -117,8 +146,8 @@ export function yoneticiVarsayilanlari(extractedRules: unknown): OnerilenOlcu[] 
 }
 
 /** "Satır aralığı, Kenar boşlukları" — panelde ve not metninde kullanılır. */
-export const olcuEtiketleri = (anahtarlar: OnerilenOlcu[]): string =>
-  anahtarlar.map((anahtar) => ONERILER[anahtar].etiket).join(", ");
+export const olcuEtiketleri = (anahtarlar: OnerilenOlcu[], dil: Dil = "tr"): string =>
+  anahtarlar.map((anahtar) => olcuEtiketi(anahtar, dil)).join(", ");
 
 /** Seçilen ölçünün extracted_rules'a yazılacak hâli. */
 export function onerilenDeger(anahtar: OnerilenOlcu): number | Bosluklar {

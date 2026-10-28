@@ -12,6 +12,7 @@ import { HeadingNumbers } from "@/lib/tiptap-heading-numbers";
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import { WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
+import type { Dil, Metin } from "@/lib/dil";
 
 /*
   Editörün eklenti listesi.
@@ -31,9 +32,18 @@ import { WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
 
   Bu dosya bilerek "use client" DEĞİL ve React'e dokunmuyor.
 */
-export const EDITOR_PLACEHOLDER = "Çalışmanızı buraya yazmaya başlayın...";
+export const EDITOR_PLACEHOLDER_METIN: Metin = {
+  tr: "Çalışmanızı buraya yazmaya başlayın...",
+  en: "Start writing your work here...",
+};
+export const EDITOR_PLACEHOLDER = EDITOR_PLACEHOLDER_METIN.tr;
 
-export function editorExtensions(secenek: { headingNumbering: boolean }) {
+/*
+  dil yalnızca yer tutucu metni değiştirir; şemaya dokunmaz (28.10.2026).
+  Şema dilden bağımsız kalmalı, yoksa iki dilde kaydedilen belgeler
+  birbirinin editöründe açılamazdı.
+*/
+export function editorExtensions(secenek: { headingNumbering: boolean; dil?: Dil }) {
   return [
     StarterKit.configure({
       link: { openOnClick: false, protocols: ["http", "https", "mailto"] },
@@ -41,7 +51,7 @@ export function editorExtensions(secenek: { headingNumbering: boolean }) {
     TextStyleKit,
     TextAlign.configure({ types: ["heading", "paragraph"] }),
     ParagraphFormatting,
-    Placeholder.configure({ placeholder: EDITOR_PLACEHOLDER }),
+    Placeholder.configure({ placeholder: EDITOR_PLACEHOLDER_METIN[secenek.dil ?? "tr"] }),
     CharacterCount,
     Superscript,
     TiptapImage,

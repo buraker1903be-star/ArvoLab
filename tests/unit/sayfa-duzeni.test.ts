@@ -89,3 +89,13 @@ describe("özet metni", () => {
     assert.equal(ozet, "Üst boşluk 3 cm olmalı (şu an 2,5 cm).");
   });
 });
+
+test("İngilizce: alan adı, açık/kapalı ve ondalık nokta", () => {
+  const farklar = sayfaDuzeniFarklari(
+    { margins: { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }, showPageNumbers: false, kilavuz: { margins: { top: 3, bottom: 2.5, left: 3.5, right: 2.5 }, showPageNumbers: true } },
+    "en",
+  );
+  assert.deepEqual(farklar[0], { alan: "Top margin", simdi: "2.5 cm", kilavuz: "3 cm" });
+  assert.equal(farkMetni(farklar[2], "en"), "Page numbers should be on (currently off)");
+  assert.equal(sayfaDuzeniOzeti([...farklar, farklar[0]], "en"), "Top margin should be 3 cm (currently 2.5 cm); Left margin should be 3.5 cm (currently 2.5 cm); Page numbers should be on (currently off) and 1 more difference.");
+});

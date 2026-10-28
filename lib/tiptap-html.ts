@@ -5,6 +5,7 @@
 import { headingNumberMap } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
+import type { Dil, Metin } from "@/lib/dil";
 
 interface Mark {
   type: string;
@@ -81,9 +82,15 @@ interface RenderContext {
   headingNumbers: Map<object, string>;
   /** Yeni sayfadan başlayacak ana bölüm başlıkları (kural kapalıysa boş) */
   chapterBreaks: Set<object>;
+  /** Şekil/tablo etiketinin dili (belgenin parçası; lib/tiptap-caption.ts'teki gerekçe) */
+  dil: Dil;
 }
 
-const CAPTION_LABELS = { figure: "Şekil", table: "Tablo" } as const;
+// tiptap-caption.ts'teki CAPTION_LABELS_METIN ile aynı; o dosya @tiptap/core çektiği için buraya kopyalandı.
+const CAPTION_LABELS: Record<"figure" | "table", Metin> = {
+  figure: { tr: "Şekil", en: "Figure" },
+  table: { tr: "Tablo", en: "Table" },
+};
 
 function renderText(node: Node): string {
   let html = escapeHtml(node.text ?? "");
@@ -150,7 +157,7 @@ function renderNode(node: Node, ctx: RenderContext): string {
     case "paragraph": {
       if (attrs.caption === "figure" || attrs.caption === "table") {
         const number = ++ctx.captions[attrs.caption];
-        return `<p class="print-caption"${blockStyle(attrs)}><strong>${CAPTION_LABELS[attrs.caption]} ${number}.</strong> ${renderNodes(node.content, ctx)}</p>`;
+        return `<p class="print-caption"${blockStyle(attrs)}><strong>${CAPTION_LABELS[attrs.caption][ctx.dil]} ${number}.</strong> ${renderNodes(node.content, ctx)}</p>`;
       }
       return `<p${blockStyle(attrs)}>${renderNodes(node.content, ctx) || "&nbsp;"}</p>`;
     }
@@ -197,7 +204,7 @@ function renderNode(node: Node, ctx: RenderContext): string {
 
 export function renderTiptapHtml(
   doc: { content?: Node[] } | null | undefined,
-  options: { headingNumbering?: boolean; chapterNewPage?: boolean; dipnotSatirIci?: boolean } = {}
+  options: { headingNumbering?: boolean; chapterNewPage?: boolean; dipnotSatirIci?: boolean; dil?: Dil } = {}
 ): { html: string; footnotes: string[] } {
   const ctx: RenderContext = {
     footnotes: [],
@@ -205,6 +212,7 @@ export function renderTiptapHtml(
     captions: { figure: 0, table: 0 },
     headingNumbers: options.headingNumbering ? headingNumberMap(doc) : new Map(),
     chapterBreaks: options.chapterNewPage ? chapterBreakSet(doc) : new Set(),
+    dil: options.dil ?? "tr",
   };
   return { html: renderNodes(doc?.content, ctx), footnotes: ctx.footnotes };
 }

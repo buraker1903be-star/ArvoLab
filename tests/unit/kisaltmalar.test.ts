@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { kisaltmaSorunlari } from "@/lib/kisaltmalar";
+import { kisaltmaMesaji } from "@/lib/kisaltmalar";
 
 const turler = (metin: string) => kisaltmaSorunlari(metin).map((s) => `${s.kisaltma}:${s.tur}`).sort();
 
@@ -51,4 +52,12 @@ describe("kısaltma kuralları", () => {
       "Dünya Sağlık Örgütü (DSÖ) ve Türkiye İstatistik Kurumu (TÜİK) verileri. DSÖ raporu bunu doğruluyor. DSÖ ayrıca…";
     assert.deepEqual(turler(metin), ["TÜİK:kullanilmamis"]);
   });
+});
+
+test("kısaltma mesajı İngilizce", () => {
+  assert.equal(
+    kisaltmaMesaji({ kisaltma: "WHO", tur: "kullanilmamis", hedef: "World Health Organization (WHO)" }, "en"),
+    "“WHO” is defined but never used again; a single-use abbreviation is unnecessary.",
+  );
+  assert.match(kisaltmaMesaji({ kisaltma: "WHO", tur: "once-kullanilmis", hedef: "WHO" }), /açık yazıldığı yerden ÖNCE/);
 });

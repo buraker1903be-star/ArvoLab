@@ -3,6 +3,7 @@ import test from "node:test";
 import { manuscriptReadiness, type ReadinessManuscript } from "@/lib/manuscript-readiness";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import { buildSubmissionChecklist, type ChecklistInput } from "@/lib/submission-checklist";
+import { missingCoverFields, COVER_REQUIRED_FIELDS } from "@/lib/submission-checklist";
 
 /*
   Teslim hazırlığı: ana sayfadaki özet ile editördeki "Teslim kontrolü"
@@ -249,4 +250,33 @@ test("doğrulanmamış kılavuz hazır maddesinde de söyleniyor", () => {
   assert.equal(kendi?.status, "ok");
   assert.match(kendi?.detail ?? "", /onayından geçmedi/i);
   assert.ok(!/onayından geçmedi/i.test(onayli?.detail ?? ""));
+});
+
+test("teslim kontrol listesi İngilizce", () => {
+  const girdi: ChecklistInput = {
+    isThesis: true,
+    hasGuideline: false,
+    hasInstitution: false,
+    sections: { total: 4, missing: ["Results"] },
+    pages: 40,
+    minPages: 60,
+    maxPages: null,
+    issues: { danger: 1, warning: 2 },
+    cover: { enabled: true, missingFields: missingCoverFields({ title: "T" }, "en") },
+    includeToc: false,
+    headingNumbering: { enabled: true, manualNumbered: 1 },
+    pageSetup: [],
+    saveState: "dirty",
+  };
+  const liste = buildSubmissionChecklist(girdi, "en");
+  const bul = (id: string) => liste.items.find((i) => i.id === id)!;
+  assert.equal(bul("guideline").action?.label, "Select institution");
+  assert.equal(bul("sections").detail, "3/4 sections present. Missing: Results.");
+  assert.equal(bul("pages").detail, "≈ 40 pages; the guideline requires at least 60 pages.");
+  assert.equal(bul("structure").detail, "1 serious issue, 2 warnings found.");
+  assert.equal(bul("cover").detail, "Empty fields: University, Author, Advisor, City, Year.");
+  assert.equal(bul("numbering").detail, "1 heading has a manually typed number; the output will show double numbering.");
+  assert.equal(bul("save").detail, "Saving changes…");
+  // Eski liste Türkçe kalıyor.
+  assert.equal(COVER_REQUIRED_FIELDS[0][1], "Üniversite");
 });

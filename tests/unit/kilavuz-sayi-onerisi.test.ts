@@ -103,3 +103,7 @@ describe("öneri sayıma ve baskınlığa dayanır", () => {
     assert.equal(oneri.ayiriciGecisleri.length, 2);
   });
 });
+
+test("sayı önerisi uyarıları İngilizce", () => {
+  assert.deepEqual(sayiKuraliOner("", "en").uyarilar, ["No statistical examples were found in the text; the number format cannot be derived from the guideline."]);
+});

@@ -5,6 +5,7 @@ import { anaMetinSozcukSayisi, makaleBolumleri, sozcukSayisi } from "@/lib/makal
 import { DERGI_KONTROL_GUN, gonderimKontrolu, type MakaleProfili } from "@/lib/makale/gonderim-kontrolu";
 import { denetimListesi, makaleIstemi, sistemIstemi } from "@/lib/ai/makale-denetimi";
 import type { MatrisOzeti } from "@/lib/kanit/durum";
+import { makaleTuruTanimi, standartUyarisi, yontemDenetimi, YONTEM_DENETIMLERI } from "@/lib/makale/sablonlar";
 
 const baslik = (metin: string, level = 1) => ({ type: "heading", attrs: { level }, content: [{ type: "text", text: metin }] });
 const paragraf = (metin: string) => ({ type: "paragraph", content: [{ type: "text", text: metin }] });
@@ -121,4 +122,34 @@ test("tezin adı bölüm sayılmaz: tanınmayan, alt başlıklı üst başlığ�
   assert.deepEqual(bolumler.map((b) => b.baslik), ["Giriş", "Kuramsal Çerçeve", "Bulgular", "BİRİNCİ BÖLÜM: GİRİŞ"]);
   assert.equal(bolumler[0].sozcuk, sozcukSayisi("Problem ve amaç burada anlatılıyor."));
   assert.match(bolumler[3].metin, /Alt başlık\nTanınan bölüm/);
+});
+
+test("İngilizce arayüz: tür tanımı, denetim listesi ve gönderim kontrolü (Türkçe kayıtlar aynı kalır)", () => {
+  const tanim = makaleTuruTanimi("sistematik_derleme", "en");
+  assert.equal(tanim.etiket, "Systematic review");
+  assert.deepEqual(tanim.bolumler, MAKALE_TURLERI.sistematik_derleme.bolumler);
+  assert.deepEqual(tanim.standartlar, [{ ad: "PRISMA 2020", kapsam: "Reporting of systematic reviews" }]);
+  assert.equal(makaleTuruTanimi("ozgun"), MAKALE_TURLERI.ozgun);
+  // Ekrandaki liste ile asistanın istemine giden liste aynı maddeler, aynı sıra.
+  assert.equal(yontemDenetimi("muhendislik", "en").maddeler.length, YONTEM_DENETIMLERI.muhendislik.maddeler.length);
+  assert.equal(yontemDenetimi("nitel"), YONTEM_DENETIMLERI.nitel);
+  assert.match(standartUyarisi("en"), /^A completed checklist/);
+
+  const profil = {
+    makale_turu: "ozgun", arastirma_sorusu: null, arastirma_problemi: null, hedef_dergi: "J", dergi_kurallari_adresi: null,
+    dergi_kurallari_kontrol: "2026-01-01", dil: "tr", kelime_siniri: 10, ozet_siniri: null, anahtar_en_az: 3, anahtar_en_cok: null,
+    ozet: "bir iki", anahtar_kelimeler: ["a"], veri_durumu: "yok", raporlama_standardi: null,
+  } as MakaleProfili;
+  const bolumler = makaleBolumleri({ content: [baslik("Giriş"), paragraf("bir iki üç dört beş altı yedi sekiz dokuz on on bir on iki")] });
+  const kanit: MatrisOzeti = { toplam: 2, dogrudan: 0, zayif: 0, celisen: 1, degerlendirilmemis: 0, kunyeSorunlu: 0, incelemeBekleyen: 1 };
+  const maddeler = gonderimKontrolu({ profil, bolumler, kanit, bugun: "2026-10-28" }, "en");
+  const bul = (anahtar: string) => maddeler.find((m) => m.anahtar === anahtar)!;
+  assert.equal(bul("soru").baslik, "Research question");
+  // Bölüm adı MÜSVEDDENİN dilinde (profil.dil = tr), cümle arayüzün dilinde.
+  assert.match(bul("bolumler").aciklama, /^Sections in the template .*: Yöntem, Bulgular/);
+  assert.match(bul("kelime").aciklama, /words over\. Abstract and references were excluded/);
+  assert.equal(bul("anahtar").aciklama, "1 keyword; the journal requires at least 3.");
+  assert.match(bul("dergi").aciklama, /^You checked the guidelines 300 days ago/);
+  assert.equal(bul("kanit").aciklama, "Of 2 claims: 1 with contradicting evidence, 1 record awaiting human review.");
+  assert.ok(maddeler.every((m) => !/[ğışçöü]/i.test(m.baslik)));
 });

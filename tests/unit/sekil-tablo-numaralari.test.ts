@@ -61,3 +61,10 @@ describe("numaralandırma denetimi", () => {
     assert.ok(cikti.every((mesaj) => !mesaj.includes("Tablo")), cikti.join(" | "));
   });
 });
+
+test("numaralandırma sorunları İngilizce; etiket belgenin kendi etiketi", () => {
+  const mesajlar = numaralandirmaSorunlari("Table", ["Table 1. A", "Table 1. B", "Table 3. C", "Participants"], "en").map((s) => s.message);
+  assert.ok(mesajlar.includes('A table caption does not start with a number (expected: "Table 1. …"): Participants'), mesajlar.join("\n"));
+  assert.ok(mesajlar.includes("“Table 1” is used 2 times; each table must have a unique number."), mesajlar.join("\n"));
+  assert.ok(mesajlar.includes("Table numbering skips: 1 is followed by 3."), mesajlar.join("\n"));
+});

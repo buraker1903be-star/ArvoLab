@@ -9,6 +9,7 @@ import { hasManualNumber } from "@/lib/heading-numbering";
 import { estimatePages } from "@/lib/page-estimate";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { CoverPage } from "@/app/actions/manuscript";
+import type { Dil } from "@/lib/dil";
 
 interface JsonNode {
   type?: string;
@@ -50,7 +51,7 @@ export function manuscriptReadiness(input: {
      (lib/submission-checklist.ts). */
   hasInstitution?: boolean;
   citationStyle: string;
-}): SubmissionChecklist {
+}, dil: Dil = "tr"): SubmissionChecklist {
   const { manuscript, guideline } = input;
   const doc = (manuscript.content ?? null) as { content?: JsonNode[] } | null;
   const headings = headingTexts(doc?.content);
@@ -64,7 +65,7 @@ export function manuscriptReadiness(input: {
       ...(guideline?.settings.justify ? { justify: true } : {}),
     },
     referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm,
-  });
+  }, dil);
   const margins = {
     top: manuscript.margin_top_cm ?? 2.5,
     bottom: manuscript.margin_bottom_cm ?? 2.5,
@@ -93,7 +94,7 @@ export function manuscriptReadiness(input: {
     },
     cover: {
       enabled: Boolean(manuscript.cover_page),
-      missingFields: manuscript.cover_page ? missingCoverFields(manuscript.cover_page) : [],
+      missingFields: manuscript.cover_page ? missingCoverFields(manuscript.cover_page, dil) : [],
     },
     includeToc: manuscript.include_toc ?? false,
     headingNumbering: {
@@ -105,8 +106,8 @@ export function manuscriptReadiness(input: {
       margins,
       showPageNumbers: manuscript.show_page_numbers,
       kilavuz: guideline?.settings,
-    }),
+    }, dil),
     // Sunucudaki metin kaydedilmiş hâldir
     saveState: "saved",
-  });
+  }, dil);
 }

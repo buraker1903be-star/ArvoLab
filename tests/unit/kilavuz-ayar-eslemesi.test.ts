@@ -152,3 +152,13 @@ test("kılavuz ayar eşlemesi", async (t) => {
     assert.ok(sonuc.changes.some((d) => d.to === "1,25 cm"), JSON.stringify(sonuc.changes));
   });
 });
+
+test("ayar farkları İngilizce; karar dilden bağımsız", () => {
+  const tr = resolveGuidelineSync(kilavuz(), metin({ settingsSource: kaynak({ version: "eski" }) }));
+  const en = resolveGuidelineSync(kilavuz(), metin({ settingsSource: kaynak({ version: "eski" }) }), "en");
+  assert.equal(en.mode, tr.mode);
+  assert.deepEqual(en.changes, [
+    { label: "Top margin", from: "2.5 cm", to: "3 cm" },
+    { label: "Heading numbering", from: "Off", to: "On" },
+  ]);
+});

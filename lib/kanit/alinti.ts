@@ -20,6 +20,8 @@
   Saf modül; testi tests/unit/kanit-alinti.test.ts.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
+
 /** Bundan kısa bir parça "kanıt" sayılmaz: "the" ya da "ve" her metinde geçer. */
 export const ALINTI_EN_AZ = 20;
 export const ALINTI_EN_COK = 1000;
@@ -53,10 +55,38 @@ export function alintiDenetle(alinti: string | null | undefined, metin: string |
   return m.includes(a) ? { gecti: true } : { gecti: false, neden: "metinde_yok" };
 }
 
-export const ALINTI_HATASI: Record<Exclude<AlintiSonucu, { gecti: true }>["neden"], string> = {
-  bos: "Alıntı boş.",
-  kisa: `Alıntı en az ${ALINTI_EN_AZ} karakter olmalı; çok kısa bir parça her metinde geçebilir.`,
-  uzun: `Alıntı en fazla ${ALINTI_EN_COK} karakter olabilir; kanıt için ilgili cümleyi seçin.`,
-  metinde_yok: "Alıntı incelenen metinde geçmiyor. Kanıt olarak yalnızca kaynaktaki metin kaydedilebilir.",
-  metin_yok: "Önce kaynaktan incelenen metni ekleyin; alıntı o metnin içinden seçilir.",
+type AlintiNedeni = Exclude<AlintiSonucu, { gecti: true }>["neden"];
+
+/* İki dilde (28.10.2026); ALINTI_HATASI Türkçe değerle kalıyor. */
+export const ALINTI_HATASI_METIN: Record<AlintiNedeni, Metin> = {
+  bos: { tr: "Alıntı boş.", en: "The quotation is empty." },
+  kisa: {
+    tr: `Alıntı en az ${ALINTI_EN_AZ} karakter olmalı; çok kısa bir parça her metinde geçebilir.`,
+    en: `The quotation must be at least ${ALINTI_EN_AZ} characters; a very short fragment can appear in any text.`,
+  },
+  uzun: {
+    tr: `Alıntı en fazla ${ALINTI_EN_COK} karakter olabilir; kanıt için ilgili cümleyi seçin.`,
+    en: `The quotation can be at most ${ALINTI_EN_COK} characters; select the relevant sentence as evidence.`,
+  },
+  metinde_yok: {
+    tr: "Alıntı incelenen metinde geçmiyor. Kanıt olarak yalnızca kaynaktaki metin kaydedilebilir.",
+    en: "The quotation does not appear in the reviewed text. Only text from the source can be saved as evidence.",
+  },
+  metin_yok: {
+    tr: "Önce kaynaktan incelenen metni ekleyin; alıntı o metnin içinden seçilir.",
+    en: "First add the text you reviewed from the source; the quotation is selected from within it.",
+  },
 };
+
+export const ALINTI_HATASI: Record<AlintiNedeni, string> = {
+  bos: ALINTI_HATASI_METIN.bos.tr,
+  kisa: ALINTI_HATASI_METIN.kisa.tr,
+  uzun: ALINTI_HATASI_METIN.uzun.tr,
+  metinde_yok: ALINTI_HATASI_METIN.metinde_yok.tr,
+  metin_yok: ALINTI_HATASI_METIN.metin_yok.tr,
+};
+
+/** Alıntı hatasının metni, istenen dilde. */
+export function alintiHatasi(neden: AlintiNedeni, dil: Dil = "tr"): string {
+  return ALINTI_HATASI_METIN[neden][dil];
+}

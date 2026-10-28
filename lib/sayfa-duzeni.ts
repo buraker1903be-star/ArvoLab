@@ -15,6 +15,7 @@
 */
 
 import type { PageMargins } from "@/app/actions/manuscript";
+import { YEREL, type Dil, type Metin } from "@/lib/dil";
 
 export type SayfaDuzeniFarki = {
   /** Kullanıcıya gösterilen alan adı ("Üst boşluk"). */
@@ -34,13 +35,14 @@ const sayi = (deger: unknown): number | null => {
   return Number.isFinite(cevrilen) ? cevrilen : null;
 };
 const esit = (a: number | null, b: number | null) => a !== null && b !== null && Math.abs(a - b) < YAKIN;
-const cm = (deger: number) => `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(deger)} cm`;
+// Ondalık ayırıcı arayüz diline göre: Türkçede "2,5 cm", İngilizcede "2.5 cm".
+const cm = (deger: number, dil: Dil) => `${new Intl.NumberFormat(YEREL[dil], { maximumFractionDigits: 2 }).format(deger)} cm`;
 
-const KENARLAR: { anahtar: keyof PageMargins; ad: string }[] = [
-  { anahtar: "top", ad: "Üst boşluk" },
-  { anahtar: "bottom", ad: "Alt boşluk" },
-  { anahtar: "left", ad: "Sol boşluk" },
-  { anahtar: "right", ad: "Sağ boşluk" },
+const KENARLAR: { anahtar: keyof PageMargins; ad: Metin }[] = [
+  { anahtar: "top", ad: { tr: "Üst boşluk", en: "Top margin" } },
+  { anahtar: "bottom", ad: { tr: "Alt boşluk", en: "Bottom margin" } },
+  { anahtar: "left", ad: { tr: "Sol boşluk", en: "Left margin" } },
+  { anahtar: "right", ad: { tr: "Sağ boşluk", en: "Right margin" } },
 ];
 
 /**
@@ -54,7 +56,7 @@ export function sayfaDuzeniFarklari(girdi: {
   margins: PageMargins | null | undefined;
   showPageNumbers: boolean | null | undefined;
   kilavuz: { margins?: PageMargins; showPageNumbers?: boolean } | null | undefined;
-}): SayfaDuzeniFarki[] {
+}, dil: Dil = "tr"): SayfaDuzeniFarki[] {
   const kilavuz = girdi.kilavuz;
   if (!kilavuz) return [];
   const farklar: SayfaDuzeniFarki[] = [];
@@ -64,28 +66,34 @@ export function sayfaDuzeniFarklari(girdi: {
       const simdi = sayi(girdi.margins[kenar.anahtar]);
       const beklenen = sayi(kilavuz.margins[kenar.anahtar]);
       if (beklenen === null || simdi === null || esit(simdi, beklenen)) continue;
-      farklar.push({ alan: kenar.ad, simdi: cm(simdi), kilavuz: cm(beklenen) });
+      farklar.push({ alan: kenar.ad[dil], simdi: cm(simdi, dil), kilavuz: cm(beklenen, dil) });
     }
   }
 
   if (typeof kilavuz.showPageNumbers === "boolean" && typeof girdi.showPageNumbers === "boolean"
     && kilavuz.showPageNumbers !== girdi.showPageNumbers) {
+    const durum = (acik: boolean) => (dil === "en" ? (acik ? "on" : "off") : acik ? "açık" : "kapalı");
     farklar.push({
-      alan: "Sayfa numarası",
-      simdi: girdi.showPageNumbers ? "açık" : "kapalı",
-      kilavuz: kilavuz.showPageNumbers ? "açık" : "kapalı",
+      alan: dil === "en" ? "Page numbers" : "Sayfa numarası",
+      simdi: durum(girdi.showPageNumbers),
+      kilavuz: durum(kilavuz.showPageNumbers),
     });
   }
 
   return farklar;
 }
 
-/** "Üst boşluk 3 cm olmalı (şu an 2,5 cm)" — listede tek satırda okunur. */
-export const farkMetni = (fark: SayfaDuzeniFarki) =>
-  `${fark.alan} ${fark.kilavuz} olmalı (şu an ${fark.simdi})`;
+/**
+ * "Üst boşluk 3 cm olmalı (şu an 2,5 cm)" — listede tek satırda okunur.
+ * Fark aynı dilde üretilmiş olmalı (sayfaDuzeniFarklari'na aynı dil).
+ */
+export const farkMetni = (fark: SayfaDuzeniFarki, dil: Dil = "tr") =>
+  dil === "en" ? `${fark.alan} should be ${fark.kilavuz} (currently ${fark.simdi})` : `${fark.alan} ${fark.kilavuz} olmalı (şu an ${fark.simdi})`;
 
 /** Kontrol listesi satırının açıklaması; en çok üç fark yazılır. */
-export function sayfaDuzeniOzeti(farklar: SayfaDuzeniFarki[]): string {
-  const yazilan = farklar.slice(0, 3).map(farkMetni).join("; ");
-  return farklar.length > 3 ? `${yazilan} ve ${farklar.length - 3} fark daha.` : `${yazilan}.`;
+export function sayfaDuzeniOzeti(farklar: SayfaDuzeniFarki[], dil: Dil = "tr"): string {
+  const yazilan = farklar.slice(0, 3).map((f) => farkMetni(f, dil)).join("; ");
+  const kalan = farklar.length - 3;
+  if (kalan <= 0) return `${yazilan}.`;
+  return dil === "en" ? `${yazilan} and ${kalan} more ${kalan === 1 ? "difference" : "differences"}.` : `${yazilan} ve ${kalan} fark daha.`;
 }

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { belge, baslik, editorSchema, paragraf } from "./ortam";
 import { detectFormatLoss } from "@/lib/format-loss";
+import { getSchema as semaKur } from "@tiptap/core";
+import { EDITOR_PLACEHOLDER, EDITOR_PLACEHOLDER_METIN, editorExtensions as eklentiler } from "@/lib/tiptap-extensions";
 
 /*
   Şema sözleşmesi.
@@ -81,4 +83,13 @@ test("belge şeması", async (t) => {
     const rapor = detectFormatLoss(doc.toJSON());
     assert.deepEqual(rapor, { affected: false, nodesWithoutAttrs: 0, missingImages: 0, emptyFootnotes: 0 });
   });
+});
+
+test("arayüz dili şemayı değiştirmiyor; yalnızca yer tutucu metni", () => {
+  const tr = semaKur(eklentiler({ headingNumbering: true }));
+  const en = semaKur(eklentiler({ headingNumbering: true, dil: "en" }));
+  assert.deepEqual(Object.keys(en.nodes), Object.keys(tr.nodes));
+  assert.deepEqual(Object.keys(en.marks), Object.keys(tr.marks));
+  assert.equal(EDITOR_PLACEHOLDER, EDITOR_PLACEHOLDER_METIN.tr);
+  assert.equal(EDITOR_PLACEHOLDER_METIN.en, "Start writing your work here...");
 });

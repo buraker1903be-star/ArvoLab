@@ -17,7 +17,13 @@
   ("Tablo 3.1"). İkisi de kabul edilir, ama KARIŞIK kullanım hatadır.
 
   Saf modül; testi tests/unit/sekil-tablo-numaralari.test.ts.
+
+  `etiket` BELGENİN etiketidir ("Tablo", "Table", "Ek", "Appendix"),
+  `dil` ise mesajın dili; ikisi ayrı, çünkü Türkçe arayüzde İngilizce
+  tez yazılabiliyor.
 */
+
+import type { Dil } from "@/lib/dil";
 
 export type BaslikKaydi = {
   /** Başlığın tam metni ("Tablo 3.1. Katılımcıların dağılımı"). */
@@ -48,18 +54,21 @@ const bolumlu = (numara: string) => numara.includes(".");
  * tamamı başlığın "Tablo 1." gibi numarayla başlamasını ister ve
  * numarasız başlık metinden anılamaz.
  */
-export function numaralandirmaSorunlari(etiket: string, basliklar: string[]): NumaraSorunu[] {
+export function numaralandirmaSorunlari(etiket: string, basliklar: string[], dil: Dil = "tr"): NumaraSorunu[] {
   const sorunlar: NumaraSorunu[] = [];
   if (!basliklar.length) return sorunlar;
+  const en = dil === "en";
 
   const kayitlar: BaslikKaydi[] = basliklar.map((metin) => ({ metin, numara: baslikNumarasi(etiket, metin) }));
-  const kucuk = etiket.toLocaleLowerCase("tr-TR");
+  const kucuk = en ? etiket.toLowerCase() : etiket.toLocaleLowerCase("tr-TR");
 
   for (const kayit of kayitlar) {
     if (!kayit.numara) {
       sorunlar.push({
         tone: "warning",
-        message: `Bir ${kucuk} başlığı numarayla başlamıyor (beklenen: "${etiket} 1. …"): ${kayit.metin.slice(0, 60) || "(boş başlık)"}`,
+        message: en
+          ? `A ${kucuk} caption does not start with a number (expected: "${etiket} 1. …"): ${kayit.metin.slice(0, 60) || "(empty caption)"}`
+          : `Bir ${kucuk} başlığı numarayla başlamıyor (beklenen: "${etiket} 1. …"): ${kayit.metin.slice(0, 60) || "(boş başlık)"}`,
         target: kayit.metin || undefined,
       });
     }
@@ -73,7 +82,9 @@ export function numaralandirmaSorunlari(etiket: string, basliklar: string[]): Nu
   if (bolumluSayisi > 0 && bolumluSayisi < numarali.length) {
     sorunlar.push({
       tone: "danger",
-      message: `${etiket} numaralandırması karışık: bir kısmı bölüme göre ("${etiket} 3.1"), bir kısmı sürekli ("${etiket} 7"). Kılavuzlar tek düzen ister.`,
+      message: en
+        ? `${etiket} numbering is mixed: some by chapter ("${etiket} 3.1"), some continuous ("${etiket} 7"). Guidelines require a single scheme.`
+        : `${etiket} numaralandırması karışık: bir kısmı bölüme göre ("${etiket} 3.1"), bir kısmı sürekli ("${etiket} 7"). Kılavuzlar tek düzen ister.`,
     });
   }
 
@@ -82,7 +93,13 @@ export function numaralandirmaSorunlari(etiket: string, basliklar: string[]): Nu
   for (const kayit of numarali) sayim.set(kayit.numara, (sayim.get(kayit.numara) ?? 0) + 1);
   for (const [numara, adet] of sayim) {
     if (adet > 1) {
-      sorunlar.push({ tone: "danger", message: `“${etiket} ${numara}” ${adet} kez kullanılmış; her ${kucuk} tek numara taşımalı.`, target: `${etiket} ${numara}` });
+      sorunlar.push({
+        tone: "danger",
+        message: en
+          ? `“${etiket} ${numara}” is used ${adet} times; each ${kucuk} must have a unique number.`
+          : `“${etiket} ${numara}” ${adet} kez kullanılmış; her ${kucuk} tek numara taşımalı.`,
+        target: `${etiket} ${numara}`,
+      });
     }
   }
 
@@ -104,13 +121,20 @@ export function numaralandirmaSorunlari(etiket: string, basliklar: string[]): Nu
     const benzersiz = [...new Set(numaralar)].sort((a, b) => a - b);
     const onek = grup ? `${grup}.` : "";
     if (benzersiz[0] !== 1) {
-      sorunlar.push({ tone: "warning", message: `${etiket} numaraları ${onek}${benzersiz[0]} ile başlıyor; ${onek}1 ile başlamalı.` });
+      sorunlar.push({
+        tone: "warning",
+        message: en
+          ? `${etiket} numbers start at ${onek}${benzersiz[0]}; they should start at ${onek}1.`
+          : `${etiket} numaraları ${onek}${benzersiz[0]} ile başlıyor; ${onek}1 ile başlamalı.`,
+      });
     }
     for (let sira = 1; sira < benzersiz.length; sira += 1) {
       if (benzersiz[sira] !== benzersiz[sira - 1] + 1) {
         sorunlar.push({
           tone: "danger",
-          message: `${etiket} numaralandırmasında atlama var: ${onek}${benzersiz[sira - 1]} sonrası ${onek}${benzersiz[sira]} geliyor.`,
+          message: en
+            ? `${etiket} numbering skips: ${onek}${benzersiz[sira - 1]} is followed by ${onek}${benzersiz[sira]}.`
+            : `${etiket} numaralandırmasında atlama var: ${onek}${benzersiz[sira - 1]} sonrası ${onek}${benzersiz[sira]} geliyor.`,
         });
         break;
       }

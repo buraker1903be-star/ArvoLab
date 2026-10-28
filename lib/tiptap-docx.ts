@@ -21,7 +21,8 @@ import {
   SequentialIdentifier,
   type ParagraphChild,
 } from "docx";
-import { CAPTION_LABELS, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
+import { captionLabel, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
+import { YEREL, type Dil } from "@/lib/dil";
 import { headingNumberMap, icindekilerSatirlari } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
@@ -105,7 +106,10 @@ export interface CoverPageData {
 // yazar/danışman/şehir-yıl). Kurumdan kuruma küçük farklar olabilir;
 // bu makul bir varsayılan düzendir, kullanıcı alanları kendi
 // doldurur.
-function buildCoverPageParagraphs(cover: CoverPageData): Paragraph[] {
+function buildCoverPageParagraphs(cover: CoverPageData, dil: Dil): Paragraph[] {
+  /* Büyük harf belgenin diliyle: "tr-TR" İngilizce bir başlıktaki "i"yi
+     "İ" yapar ("THESİS"). */
+  const buyuk = (metin: string) => metin.toLocaleUpperCase(YEREL[dil]);
   const blank = () => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun("")] });
   const centered = (text: string, opts: { bold?: boolean; size?: number } = {}) =>
     new Paragraph({
@@ -114,14 +118,14 @@ function buildCoverPageParagraphs(cover: CoverPageData): Paragraph[] {
     });
 
   const paragraphs: Paragraph[] = [];
-  if (cover.university) paragraphs.push(centered(cover.university.toLocaleUpperCase("tr-TR"), { bold: true, size: 28 }));
-  if (cover.institute) paragraphs.push(centered(cover.institute.toLocaleUpperCase("tr-TR"), { bold: true, size: 24 }));
-  if (cover.department) paragraphs.push(centered(cover.department.toLocaleUpperCase("tr-TR"), { size: 24 }));
+  if (cover.university) paragraphs.push(centered(buyuk(cover.university), { bold: true, size: 28 }));
+  if (cover.institute) paragraphs.push(centered(buyuk(cover.institute), { bold: true, size: 24 }));
+  if (cover.department) paragraphs.push(centered(buyuk(cover.department), { size: 24 }));
   if (cover.program) paragraphs.push(centered(cover.program, { size: 22 }));
 
   for (let i = 0; i < 6; i++) paragraphs.push(blank());
 
-  paragraphs.push(centered(cover.title.toLocaleUpperCase("tr-TR"), { bold: true, size: 30 }));
+  paragraphs.push(centered(buyuk(cover.title), { bold: true, size: 30 }));
 
   for (let i = 0; i < 4; i++) paragraphs.push(blank());
 
@@ -132,7 +136,7 @@ function buildCoverPageParagraphs(cover: CoverPageData): Paragraph[] {
   if (cover.advisorName) {
     paragraphs.push(blank());
     paragraphs.push(blank());
-    paragraphs.push(centered(`Danışman: ${cover.advisorName}`, { size: 22 }));
+    paragraphs.push(centered(`${dil === "en" ? "Advisor" : "Danışman"}: ${cover.advisorName}`, { size: 22 }));
   }
 
   for (let i = 0; i < 4; i++) paragraphs.push(blank());
@@ -165,6 +169,8 @@ interface ConversionContext {
   headingNumbers: Map<object, string>;
   /** Yeni sayfadan başlayacak ana bölüm başlıkları (kural kapalıysa boş; lib/chapter-rules.ts) */
   chapterBreaks: Set<object>;
+  /** Şekil/tablo etiketinin dili (belgenin parçası) */
+  dil: Dil;
 }
 
 interface BlockOptions {
@@ -246,7 +252,7 @@ function paragraphFrom(node: TiptapNode, ctx: ConversionContext, opts: BlockOpti
   const caption = node.attrs?.caption;
   if (!list && isCaptionKind(caption)) {
     // "Şekil 3. …" — numara Word'ün SEQ alanıdır; şekil/tablo listeleri bu alanlardan oluşur.
-    const label = CAPTION_LABELS[caption];
+    const label = captionLabel(caption, ctx.dil);
     return new Paragraph({
       alignment: AlignmentType.CENTER,
       keepNext: caption === "table",
@@ -433,6 +439,11 @@ export interface BuildDocxOptions {
   includeToc?: boolean;
   /** Başlıkların önüne otomatik numara ("1.", "1.1.") */
   headingNumbering?: boolean;
+  /**
+   * Belgeye yazılan sabit metinlerin dili: şekil/tablo etiketi, içindekiler
+   * ve listelerin başlığı, kapaktaki "Danışman". Verilmezse Türkçe.
+   */
+  dil?: Dil;
 }
 
 export async function buildDocxFromTiptap({
@@ -445,7 +456,9 @@ export async function buildDocxFromTiptap({
   textDefaults = {},
   includeToc = false,
   headingNumbering = false,
+  dil = "tr",
 }: BuildDocxOptions): Promise<Document> {
+  const en = dil === "en";
   const m = margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
   const marginTwip = {
     top: convertMillimetersToTwip(m.top * 10),
@@ -461,18 +474,19 @@ export async function buildDocxFromTiptap({
     fetchImage,
     headingNumbers: headingNumbering ? headingNumberMap(doc) : new Map(),
     chapterBreaks: textDefaults.chapterNewPage ? chapterBreakSet(doc) : new Set(),
+    dil,
   };
 
   const bodyElements: (Paragraph | Table | TableOfContents)[] = [];
   if (coverPage) {
-    bodyElements.push(...buildCoverPageParagraphs(coverPage));
+    bodyElements.push(...buildCoverPageParagraphs(coverPage, dil));
   }
   if (includeToc) {
     bodyElements.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 240 },
-        children: [new TextRun({ text: "İÇİNDEKİLER", bold: true })],
+        children: [new TextRun({ text: en ? "TABLE OF CONTENTS" : "İÇİNDEKİLER", bold: true })],
       }),
       /*
         Alan ÖNCEDEN DOLU (cachedEntries). Eskiden yalnızca boş bir alan
@@ -482,7 +496,7 @@ export async function buildDocxFromTiptap({
         alanın içinde hazır; Word güncelleyince sayfa numaralarını ekler.
         Sayfa numarası önceden yazılmıyor: tahmini numara yanlış olurdu.
       */
-      new TableOfContents("İçindekiler", {
+      new TableOfContents(en ? "Table of Contents" : "İçindekiler", {
         hyperlink: true,
         headingStyleRange: "1-3",
         cachedEntries: icindekilerSatirlari(doc as Parameters<typeof icindekilerSatirlari>[0], headingNumbering).map((s) => ({
@@ -496,14 +510,19 @@ export async function buildDocxFromTiptap({
     const kinds = captionKinds(doc.content ?? []);
     for (const kind of ["table", "figure"] as CaptionKind[]) {
       if (!kinds.has(kind)) continue;
-      const label = CAPTION_LABELS[kind];
+      const label = captionLabel(kind, dil);
       bodyElements.push(
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { after: 240 },
-          children: [new TextRun({ text: kind === "table" ? "TABLOLAR LİSTESİ" : "ŞEKİLLER LİSTESİ", bold: true })],
+          children: [
+            new TextRun({
+              text: en ? (kind === "table" ? "LIST OF TABLES" : "LIST OF FIGURES") : kind === "table" ? "TABLOLAR LİSTESİ" : "ŞEKİLLER LİSTESİ",
+              bold: true,
+            }),
+          ],
         }),
-        new TableOfContents(`${label} listesi`, { hyperlink: true, captionLabelIncludingNumbers: label }),
+        new TableOfContents(en ? `List of ${label.toLowerCase()}s` : `${label} listesi`, { hyperlink: true, captionLabelIncludingNumbers: label }),
         new Paragraph({ children: [new PageBreak()] })
       );
     }

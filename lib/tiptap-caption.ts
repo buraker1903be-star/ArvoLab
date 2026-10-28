@@ -1,4 +1,5 @@
 import { Extension, getAttributes } from "@tiptap/core";
+import type { Dil, Metin } from "@/lib/dil";
 
 /**
  * Şekil ve tablo başlıkları
@@ -10,7 +11,20 @@ import { Extension, getAttributes } from "@tiptap/core";
  */
 export type CaptionKind = "figure" | "table";
 
-export const CAPTION_LABELS: Record<CaptionKind, string> = { figure: "Şekil", table: "Tablo" };
+/*
+  Etiket BELGENİN parçası: Word'deki SEQ alanının adı ve şekil/tablo
+  listesinin süzgeci bu metin. İngilizce yazılan bir tezde "Şekil 1"
+  çıkması yanlış olurdu; çıktıyı üreten çağıran dili verir
+  (28.10.2026). Verilmezse Türkçe — eski çıktılar birebir aynı kalır.
+*/
+export const CAPTION_LABELS_METIN: Record<CaptionKind, Metin> = {
+  figure: { tr: "Şekil", en: "Figure" },
+  table: { tr: "Tablo", en: "Table" },
+};
+
+export const CAPTION_LABELS: Record<CaptionKind, string> = { figure: CAPTION_LABELS_METIN.figure.tr, table: CAPTION_LABELS_METIN.table.tr };
+
+export const captionLabel = (kind: CaptionKind, dil: Dil = "tr"): string => CAPTION_LABELS_METIN[kind][dil];
 
 export const isCaptionKind = (value: unknown): value is CaptionKind => value === "figure" || value === "table";
 

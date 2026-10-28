@@ -11,6 +11,7 @@ import {
   soyadlar,
   type DizinKaydi,
 } from "@/lib/kanit/kunye-karsilastirma";
+import { alanEtiketi, kunyeKarsilastir as karsilastir, kunyeOzeti as ozeti, type DizinKaydi as Kayit } from "@/lib/kanit/kunye-karsilastirma";
 
 const KAYIT: DizinKaydi = {
   dizin: "crossref",
@@ -111,4 +112,15 @@ test("açık erişim bilgisi: bilinmiyor ile 'yok' ayrı", () => {
   assert.deepEqual(openAlexErisim({ open_access: { is_oa: true, oa_url: "https://oa.example/pdf" } }), { durum: "acik_erisim", adres: "https://oa.example/pdf" });
   assert.deepEqual(openAlexErisim({ open_access: { is_oa: false } }), { durum: "acik_erisim_yok", adres: null });
   assert.deepEqual(openAlexErisim({}), { durum: "bilinmiyor", adres: null });
+});
+
+test("künye özeti İngilizce: etiket kayıttaki metinden değil alan anahtarından", () => {
+  const kayit: Kayit = { dizin: "crossref", baslik: "Learning environments and self-efficacy", soyadlar: ["Kara"], yil: 2020, yayin: null, cilt: "3", sayi: null, sayfalar: null, doi: null, adres: null };
+  // Türkçe üretilmiş (veritabanındaki gibi) karşılaştırma İngilizce özetlenebilmeli.
+  const tr = karsilastir({ title: "Learning environments and self-efficacy", authors: "Kara, A.", year: "2021", volume: "4" }, kayit);
+  assert.equal(tr.alanlar[0].etiket, "Başlık");
+  assert.equal(ozeti(tr, "en"), "Partially matched the Crossref record (mismatched: year, volume).");
+  assert.equal(karsilastir({ title: "x" }, kayit, "en").alanlar[1].etiket, "Year");
+  assert.equal(alanEtiketi("ilk_yazar", "en"), "First author");
+  assert.equal(ozeti(karsilastir({ title: "Başka bir yayın" }, kayit), "en"), "The title of the Crossref record does not match your record; the DOI may belong to another publication.");
 });

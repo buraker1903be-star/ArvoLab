@@ -9,6 +9,7 @@ import {
   kurallariKur,
   type DogrulamaFormu,
 } from "@/lib/kilavuz-dogrulama";
+import { bicimOzeti as ozet, dogrulamaMesaji, DOGRULAMA_MESAJI as MESAJ } from "@/lib/kilavuz-dogrulama";
 
 const form = (parca: Partial<DogrulamaFormu> = {}): DogrulamaFormu => ({
   atifStili: "apa7",
@@ -115,4 +116,15 @@ test("biçim özeti", async (t) => {
     // Dört kenarın biri eksikse cümle yanlış olurdu.
     assert.deepEqual(bicimOzeti({ margins: { top: 3, right: 2.5 } }), []);
   });
+});
+
+test("doğrulama mesajı ve biçim özeti İngilizce", () => {
+  assert.equal(dogrulamaMesaji("sayfa-ters"), MESAJ["sayfa-ters"]);
+  assert.equal(dogrulamaMesaji("sayfa-ters", "en"), "The minimum page count cannot exceed the maximum.");
+  assert.deepEqual(ozet({ margins: { top: 3, right: 2.5, bottom: 2.5, left: 3.5 }, fontFamily: "Times New Roman", fontSizePt: 12, lineSpacing: 1.5, chapterNewPage: true }, "en"), [
+    "Margins: top 3 · right 2.5 · bottom 2.5 · left 3.5 cm",
+    "Text: Times New Roman · 12 pt",
+    "Line spacing: 1.5",
+    "Each main chapter starts on a new page",
+  ]);
 });

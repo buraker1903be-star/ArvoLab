@@ -1,5 +1,6 @@
 import type { PageMargins, SettingsSource } from "@/app/actions/manuscript";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
+import type { Dil, Metin } from "@/lib/dil";
 
 export type GuidelineSyncMode =
   /** Çalışmaya bağlı onaylı kılavuz yok */
@@ -49,16 +50,19 @@ const DEFAULT_MARGINS: PageMargins = { top: 2.5, bottom: 2.5, left: 2.5, right: 
 const sameMargins = (a: PageMargins, b: PageMargins) =>
   (["top", "bottom", "left", "right"] as const).every((side) => Math.abs(a[side] - b[side]) < 0.01);
 
-const MARGIN_LABELS: Record<keyof PageMargins, string> = {
-  top: "Üst kenar boşluğu",
-  bottom: "Alt kenar boşluğu",
-  left: "Sol kenar boşluğu",
-  right: "Sağ kenar boşluğu",
+const MARGIN_LABELS: Record<keyof PageMargins, Metin> = {
+  top: { tr: "Üst kenar boşluğu", en: "Top margin" },
+  bottom: { tr: "Alt kenar boşluğu", en: "Bottom margin" },
+  left: { tr: "Sol kenar boşluğu", en: "Left margin" },
+  right: { tr: "Sağ kenar boşluğu", en: "Right margin" },
 };
 
-// Ondalık ayırıcı virgül: 2.5 → "2,5 cm"
-const cm = (value: number) => `${String(Math.round(value * 100) / 100).replace(".", ",")} cm`;
-const onOff = (value: boolean) => (value ? "Açık" : "Kapalı");
+// Ondalık ayırıcı Türkçede virgül (2.5 → "2,5 cm"), İngilizcede nokta.
+const cm = (value: number, dil: Dil) => {
+  const sayi = String(Math.round(value * 100) / 100);
+  return `${dil === "en" ? sayi : sayi.replace(".", ",")} cm`;
+};
+const onOff = (value: boolean, dil: Dil) => (dil === "en" ? (value ? "On" : "Off") : value ? "Açık" : "Kapalı");
 
 interface SyncSettings {
   margins: PageMargins;
@@ -67,18 +71,22 @@ interface SyncSettings {
 }
 
 /** Metnin ayarlarıyla kılavuzun istediği ayarlar arasındaki farklar */
-function diffSettings(current: SyncSettings, wanted: SyncSettings): GuidelineSyncChange[] {
+function diffSettings(current: SyncSettings, wanted: SyncSettings, dil: Dil): GuidelineSyncChange[] {
   const changes: GuidelineSyncChange[] = [];
   for (const side of ["top", "bottom", "left", "right"] as const) {
     if (Math.abs(current.margins[side] - wanted.margins[side]) >= 0.01) {
-      changes.push({ label: MARGIN_LABELS[side], from: cm(current.margins[side]), to: cm(wanted.margins[side]) });
+      changes.push({ label: MARGIN_LABELS[side][dil], from: cm(current.margins[side], dil), to: cm(wanted.margins[side], dil) });
     }
   }
   if (current.showPageNumbers !== wanted.showPageNumbers) {
-    changes.push({ label: "Sayfa numarası", from: onOff(current.showPageNumbers), to: onOff(wanted.showPageNumbers) });
+    changes.push({ label: dil === "en" ? "Page numbers" : "Sayfa numarası", from: onOff(current.showPageNumbers, dil), to: onOff(wanted.showPageNumbers, dil) });
   }
   if (current.headingNumbering !== wanted.headingNumbering) {
-    changes.push({ label: "Başlık numaralandırma", from: onOff(current.headingNumbering), to: onOff(wanted.headingNumbering) });
+    changes.push({
+      label: dil === "en" ? "Heading numbering" : "Başlık numaralandırma",
+      from: onOff(current.headingNumbering, dil),
+      to: onOff(wanted.headingNumbering, dil),
+    });
   }
   return changes;
 }
@@ -89,7 +97,9 @@ function diffSettings(current: SyncSettings, wanted: SyncSettings): GuidelineSyn
 // ayarlar (kenar boşlukları, sayfa numarası, başlık numaralandırma) için karar verilir.
 export function resolveGuidelineSync(
   guideline: AppliedGuideline | null,
-  manuscript: ManuscriptSettings | null
+  manuscript: ManuscriptSettings | null,
+  /** Yalnızca `changes` içindeki metinlerin dili; karar dilden bağımsız. */
+  dil: Dil = "tr",
 ): GuidelineSyncResolution {
   if (!guideline) {
     return {
@@ -129,7 +139,7 @@ export function resolveGuidelineSync(
     return { mode: "current", ...current, source: stamp, changes: [] };
   }
 
-  const changes = diffSettings(current, fromGuideline);
+  const changes = diffSettings(current, fromGuideline, dil);
 
   // Ayarlar önceki bir kılavuz sürümünden geldi ve kullanıcı dokunmadı: kendiliğinden uygula.
   if (!source.customized && source.version) {

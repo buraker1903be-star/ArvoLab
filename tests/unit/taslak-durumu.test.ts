@@ -27,3 +27,9 @@ describe("kayıt hatası metni", () => {
     assert.equal(kayitHatasiMetni("   ", false), TASLAK_YAZILAMADI);
   });
 });
+
+test("kayıt hatası İngilizce", () => {
+  assert.equal(kayitHatasiMetni("Save failed", true, "en"), "Save failed. Your writing is being kept in this browser.");
+  assert.match(kayitHatasiMetni("", false, "en"), /^WARNING: your writing could not be saved/);
+  assert.equal(kayitHatasiMetni("", true), TASLAK_GUVENDE);
+});

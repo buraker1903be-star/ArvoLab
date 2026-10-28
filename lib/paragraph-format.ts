@@ -2,6 +2,8 @@
 // ilk satır girintisi (yaygın olarak 1,25 cm) ve iki yana yaslama.
 // Girinti eski kayıtlarda boolean (true = 1,25 cm), yeni kayıtlarda cm değeridir.
 
+import type { Dil } from "@/lib/dil";
+
 /** Türk tez kılavuzlarında yaygın girinti */
 export const DEFAULT_INDENT_CM = 1.25;
 const MIN_INDENT_CM = 0.3;
@@ -84,8 +86,10 @@ export function parseIndentStyle(textIndent: string | null | undefined): number 
   return validIndentCm(Number(match[1])) ?? false;
 }
 
-/** "1,25 cm girinti · iki yana yaslı" */
-export function describeParagraphFormat(rules: ParagraphFormatRules): string {
+/** "1,25 cm girinti · iki yana yaslı" — İngilizcede "1.25 cm first-line indent · justified" */
+export function describeParagraphFormat(rules: ParagraphFormatRules, dil: Dil = "tr"): string {
+  if (dil === "en")
+    return [rules.indentCm ? `${String(rules.indentCm)} cm first-line indent` : "", rules.justify ? "justified" : ""].filter(Boolean).join(" · ");
   return [
     rules.indentCm ? `${String(rules.indentCm).replace(".", ",")} cm ilk satır girintisi` : "",
     rules.justify ? "iki yana yaslı" : "",

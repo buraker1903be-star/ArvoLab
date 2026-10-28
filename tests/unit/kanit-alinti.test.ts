@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ALINTI_EN_AZ, alintiDenetle, kanitMetniNormallestir } from "@/lib/kanit/alinti";
+import { ALINTI_HATASI, alintiHatasi } from "@/lib/kanit/alinti";
 
 /*
   Alıntı denetimi kanıt zincirinin en kritik halkası: "ilgili kanıt
@@ -35,4 +36,9 @@ test("normalleştirme yalnızca biçimi eşitler, sözcükleri birleştirmez", (
   // Satır sonunda OLMAYAN tire korunur (öz-yeterlik).
   assert.equal(kanitMetniNormallestir("öz-yeterlik"), "öz-yeterlik");
   assert.equal(kanitMetniNormallestir("yük-\n  sek"), "yüksek");
+});
+
+test("alıntı hatası iki dilde; eski Türkçe harita aynı", () => {
+  assert.equal(alintiHatasi("metinde_yok"), ALINTI_HATASI.metinde_yok);
+  assert.equal(alintiHatasi("kisa", "en"), `The quotation must be at least ${ALINTI_EN_AZ} characters; a very short fragment can appear in any text.`);
 });

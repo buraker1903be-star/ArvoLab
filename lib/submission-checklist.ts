@@ -4,19 +4,23 @@
 
 import { sayfaDuzeniOzeti, type SayfaDuzeniFarki } from "@/lib/sayfa-duzeni";
 import type { CoverPage } from "@/app/actions/manuscript";
+import type { Dil, Metin } from "@/lib/dil";
 
-/** Teslim kontrolünde kapakta dolu olması beklenen alanlar (editör ve ana sayfa ortak) */
-export const COVER_REQUIRED_FIELDS: [keyof CoverPage, string][] = [
-  ["university", "Üniversite"],
-  ["title", "Tez başlığı"],
-  ["authorName", "Yazar"],
-  ["advisorName", "Danışman"],
-  ["city", "Şehir"],
-  ["year", "Yıl"],
+/** Kapak alanlarının adı iki dilde (28.10.2026); eski liste Türkçe değerle kalıyor. */
+export const COVER_FIELD_LABELS: [keyof CoverPage, Metin][] = [
+  ["university", { tr: "Üniversite", en: "University" }],
+  ["title", { tr: "Tez başlığı", en: "Thesis title" }],
+  ["authorName", { tr: "Yazar", en: "Author" }],
+  ["advisorName", { tr: "Danışman", en: "Advisor" }],
+  ["city", { tr: "Şehir", en: "City" }],
+  ["year", { tr: "Yıl", en: "Year" }],
 ];
 
-export function missingCoverFields(cover: Partial<CoverPage>): string[] {
-  return COVER_REQUIRED_FIELDS.filter(([key]) => !String(cover[key] ?? "").trim()).map(([, label]) => label);
+/** Teslim kontrolünde kapakta dolu olması beklenen alanlar (editör ve ana sayfa ortak) */
+export const COVER_REQUIRED_FIELDS: [keyof CoverPage, string][] = COVER_FIELD_LABELS.map(([key, label]) => [key, label.tr]);
+
+export function missingCoverFields(cover: Partial<CoverPage>, dil: Dil = "tr"): string[] {
+  return COVER_FIELD_LABELS.filter(([key]) => !String(cover[key] ?? "").trim()).map(([, label]) => label[dil]);
 }
 
 export type ChecklistStatus = "ok" | "warning" | "todo";
@@ -77,7 +81,15 @@ export interface ChecklistInput {
   saveState: "saved" | "dirty" | "saving" | "error" | "conflict";
 }
 
-export function buildSubmissionChecklist(input: ChecklistInput): SubmissionChecklist {
+/*
+  dil: arayüz dili (28.10.2026). input.sections.missing ve
+  input.cover.missingFields çağıranın verdiği metinlerdir (kılavuzdaki
+  bölüm adları, missingCoverFields) — onları aynı dilde üretmek
+  çağıranın işi; burada olduğu gibi yazılıyor.
+*/
+export function buildSubmissionChecklist(input: ChecklistInput, dil: Dil = "tr"): SubmissionChecklist {
+  const en = dil === "en";
+  const t = (tr: string, ing: string) => (en ? ing : tr);
   const items: ChecklistItem[] = [];
 
   if (input.isThesis) {
@@ -85,27 +97,27 @@ export function buildSubmissionChecklist(input: ChecklistInput): SubmissionCheck
       input.hasGuideline
         ? {
             id: "guideline",
-            label: "Tez yazım kılavuzu",
+            label: t("Tez yazım kılavuzu", "Thesis writing guideline"),
             status: "ok",
             detail:
               input.guidelineVerified === false
-                ? "Kendi yüklediğiniz kılavuz uygulanıyor; kurumunuzun onayından geçmedi."
-                : "Kılavuz bağlı; biçim kuralları kendiliğinden uygulanıyor.",
+                ? t("Kendi yüklediğiniz kılavuz uygulanıyor; kurumunuzun onayından geçmedi.", "The guideline you uploaded is being applied; it has not been approved by your institution.")
+                : t("Kılavuz bağlı; biçim kuralları kendiliğinden uygulanıyor.", "A guideline is linked; its formatting rules are applied automatically."),
           }
         : input.hasInstitution
           ? {
               id: "guideline",
-              label: "Tez yazım kılavuzu",
+              label: t("Tez yazım kılavuzu", "Thesis writing guideline"),
               status: "todo",
-              detail: "Kurumunuzun kılavuzu katalogda yok. Kendi kılavuzunuzu yükleyin; kuralları okuyup size onaylatalım.",
-              action: { id: "upload-guideline", label: "Kılavuzumu yükle" },
+              detail: t("Kurumunuzun kılavuzu katalogda yok. Kendi kılavuzunuzu yükleyin; kuralları okuyup size onaylatalım.", "Your institution's guideline is not in the catalog. Upload your own guideline; we will read the rules and ask you to confirm them."),
+              action: { id: "upload-guideline", label: t("Kılavuzumu yükle", "Upload my guideline") },
             }
           : {
               id: "guideline",
-              label: "Tez yazım kılavuzu",
+              label: t("Tez yazım kılavuzu", "Thesis writing guideline"),
               status: "todo",
-              detail: "Çalışmaya kılavuz bağlı değil; kurumunuzu seçince kurallar kendiliğinden uygulanır.",
-              action: { id: "link-guideline", label: "Kurum seç" },
+              detail: t("Çalışmaya kılavuz bağlı değil; kurumunuzu seçince kurallar kendiliğinden uygulanır.", "No guideline is linked to this work; once you select your institution, its rules are applied automatically."),
+              action: { id: "link-guideline", label: t("Kurum seç", "Select institution") },
             }
     );
   }
@@ -114,43 +126,49 @@ export function buildSubmissionChecklist(input: ChecklistInput): SubmissionCheck
     const { total, missing } = input.sections;
     items.push(
       missing.length === 0
-        ? { id: "sections", label: "Zorunlu bölümler", status: "ok", detail: `Kılavuzun ${total} zorunlu bölümünün hepsi var.` }
+        ? { id: "sections", label: t("Zorunlu bölümler", "Required sections"), status: "ok", detail: (en ? `All ${total} required sections of the guideline are present.` : `Kılavuzun ${total} zorunlu bölümünün hepsi var.`) }
         : {
             id: "sections",
-            label: "Zorunlu bölümler",
+            label: t("Zorunlu bölümler", "Required sections"),
             status: "todo",
-            detail: `${total - missing.length}/${total} bölüm var. Eksik: ${missing.join(", ")}.`,
-            action: { id: "insert-sections", label: "Eksikleri ekle" },
+            detail: (en ? `${total - missing.length}/${total} sections present. Missing: ${missing.join(", ")}.` : `${total - missing.length}/${total} bölüm var. Eksik: ${missing.join(", ")}.`),
+            action: { id: "insert-sections", label: t("Eksikleri ekle", "Add missing sections") },
           }
     );
   }
 
   if (input.minPages || input.maxPages) {
     const { pages, minPages, maxPages } = input;
-    const range = [minPages ? `en az ${minPages}` : "", maxPages ? `en fazla ${maxPages}` : ""].filter(Boolean).join(", ");
+    const range = [minPages ? t(`en az ${minPages}`, `at least ${minPages}`) : "", maxPages ? t(`en fazla ${maxPages}`, `at most ${maxPages}`) : ""].filter(Boolean).join(", ");
+    const istiyor = en ? `≈ ${pages} pages; the guideline requires ${range} pages.` : `≈ ${pages} sayfa; kılavuz ${range} sayfa istiyor.`;
     items.push(
       maxPages && pages > maxPages
-        ? { id: "pages", label: "Sayfa sayısı", status: "todo", detail: `≈ ${pages} sayfa; kılavuz ${range} sayfa istiyor.` }
+        ? { id: "pages", label: t("Sayfa sayısı", "Page count"), status: "todo", detail: istiyor }
         : minPages && pages < minPages
-          ? { id: "pages", label: "Sayfa sayısı", status: "warning", detail: `≈ ${pages} sayfa; kılavuz ${range} sayfa istiyor.` }
-          : { id: "pages", label: "Sayfa sayısı", status: "ok", detail: `≈ ${pages} sayfa; kılavuzun aralığında (${range}).` }
+          ? { id: "pages", label: t("Sayfa sayısı", "Page count"), status: "warning", detail: istiyor }
+          : { id: "pages", label: t("Sayfa sayısı", "Page count"), status: "ok", detail: (en ? `≈ ${pages} pages; within the guideline's range (${range}).` : `≈ ${pages} sayfa; kılavuzun aralığında (${range}).`) }
     );
   }
 
   if (!input.issues) {
-    items.push({ id: "structure", label: "Yapı ve atıflar", status: "warning", detail: "Canlı denetim birkaç saniye içinde tamamlanır." });
+    items.push({ id: "structure", label: t("Yapı ve atıflar", "Structure and citations"), status: "warning", detail: t("Canlı denetim birkaç saniye içinde tamamlanır.", "The live check completes in a few seconds.") });
   } else {
     const { danger, warning } = input.issues;
-    const count = [danger ? `${danger} ciddi sorun` : "", warning ? `${warning} uyarı` : ""].filter(Boolean).join(", ");
+    const count = [
+      danger ? (en ? `${danger} serious ${danger === 1 ? "issue" : "issues"}` : `${danger} ciddi sorun`) : "",
+      warning ? (en ? `${warning} ${warning === 1 ? "warning" : "warnings"}` : `${warning} uyarı`) : "",
+    ]
+      .filter(Boolean)
+      .join(", ");
     items.push(
       danger + warning === 0
-        ? { id: "structure", label: "Yapı ve atıflar", status: "ok", detail: "Boş bölüm, başlık, şekil/tablo, atıf–kaynakça ya da özet sorunu yok." }
+        ? { id: "structure", label: t("Yapı ve atıflar", "Structure and citations"), status: "ok", detail: t("Boş bölüm, başlık, şekil/tablo, atıf–kaynakça ya da özet sorunu yok.", "No issues with empty sections, headings, figures/tables, citations vs. reference list, or the abstract.") }
         : {
             id: "structure",
-            label: "Yapı ve atıflar",
+            label: t("Yapı ve atıflar", "Structure and citations"),
             status: danger ? "todo" : "warning",
-            detail: `${count} var.`,
-            action: { id: "open-issues", label: "Göster" },
+            detail: en ? `${count} found.` : `${count} var.`,
+            action: { id: "open-issues", label: t("Göster", "Show") },
           }
     );
   }
@@ -161,30 +179,30 @@ export function buildSubmissionChecklist(input: ChecklistInput): SubmissionCheck
       !enabled
         ? {
             id: "cover",
-            label: "Kapak sayfası",
+            label: t("Kapak sayfası", "Title page"),
             status: "todo",
-            detail: "Word ve PDF çıktısında kapak sayfası yok.",
-            action: { id: "open-cover", label: "Kapağı ekle" },
+            detail: t("Word ve PDF çıktısında kapak sayfası yok.", "The Word and PDF output has no title page."),
+            action: { id: "open-cover", label: t("Kapağı ekle", "Add title page") },
           }
         : missingFields.length > 0
           ? {
               id: "cover",
-              label: "Kapak sayfası",
+              label: t("Kapak sayfası", "Title page"),
               status: "warning",
-              detail: `Boş alanlar: ${missingFields.join(", ")}.`,
-              action: { id: "open-cover", label: "Tamamla" },
+              detail: en ? `Empty fields: ${missingFields.join(", ")}.` : `Boş alanlar: ${missingFields.join(", ")}.`,
+              action: { id: "open-cover", label: t("Tamamla", "Complete") },
             }
-          : { id: "cover", label: "Kapak sayfası", status: "ok", detail: "Kapak bilgileri tam." }
+          : { id: "cover", label: t("Kapak sayfası", "Title page"), status: "ok", detail: t("Kapak bilgileri tam.", "Title page details are complete.") }
     );
     items.push(
       input.includeToc
-        ? { id: "toc", label: "İçindekiler", status: "ok", detail: "Word ve PDF çıktısında içindekiler var; Word'de tablolar ve şekiller listesi de." }
+        ? { id: "toc", label: t("İçindekiler", "Table of contents"), status: "ok", detail: t("Word ve PDF çıktısında içindekiler var; Word'de tablolar ve şekiller listesi de.", "The Word and PDF output includes a table of contents; Word also includes lists of tables and figures.") }
         : {
             id: "toc",
-            label: "İçindekiler",
+            label: t("İçindekiler", "Table of contents"),
             status: "warning",
-            detail: "Word ve PDF çıktısında içindekiler yok.",
-            action: { id: "enable-toc", label: "Ekle" },
+            detail: t("Word ve PDF çıktısında içindekiler yok.", "The Word and PDF output has no table of contents."),
+            action: { id: "enable-toc", label: t("Ekle", "Add") },
           }
     );
   }
@@ -193,21 +211,23 @@ export function buildSubmissionChecklist(input: ChecklistInput): SubmissionCheck
   if (guidelineRule !== undefined && enabled !== guidelineRule) {
     items.push({
       id: "numbering",
-      label: "Başlık numaralandırma",
+      label: t("Başlık numaralandırma", "Heading numbering"),
       status: "warning",
-      detail: guidelineRule ? "Kılavuz başlıkların numaralı olmasını istiyor; numaralandırma kapalı." : "Kılavuz numarasız başlık istiyor; numaralandırma açık.",
-      action: { id: "apply-numbering", label: "Kılavuza uy" },
+      detail: guidelineRule ? t("Kılavuz başlıkların numaralı olmasını istiyor; numaralandırma kapalı.", "The guideline requires numbered headings; numbering is off.") : t("Kılavuz numarasız başlık istiyor; numaralandırma açık.", "The guideline requires unnumbered headings; numbering is on."),
+      action: { id: "apply-numbering", label: t("Kılavuza uy", "Follow guideline") },
     });
   } else if (enabled && manualNumbered > 0) {
     items.push({
       id: "numbering",
-      label: "Başlık numaralandırma",
+      label: t("Başlık numaralandırma", "Heading numbering"),
       status: "warning",
-      detail: `${manualNumbered} başlıkta elle yazılmış numara var; çıktıda çift numara görünür.`,
-      action: { id: "strip-manual-numbers", label: "Elle yazılanları kaldır" },
+      detail: en
+        ? `${manualNumbered} ${manualNumbered === 1 ? "heading has a manually typed number" : "headings have manually typed numbers"}; the output will show double numbering.`
+        : `${manualNumbered} başlıkta elle yazılmış numara var; çıktıda çift numara görünür.`,
+      action: { id: "strip-manual-numbers", label: t("Elle yazılanları kaldır", "Remove manual numbers") },
     });
   } else if (enabled || guidelineRule !== undefined) {
-    items.push({ id: "numbering", label: "Başlık numaralandırma", status: "ok", detail: enabled ? "Başlıklar otomatik numaralanıyor." : "Başlıklar kılavuza uygun biçimde numarasız." });
+    items.push({ id: "numbering", label: t("Başlık numaralandırma", "Heading numbering"), status: "ok", detail: enabled ? t("Başlıklar otomatik numaralanıyor.", "Headings are numbered automatically.") : t("Başlıklar kılavuza uygun biçimde numarasız.", "Headings are unnumbered, as the guideline requires.") });
   }
 
   /*
@@ -220,27 +240,27 @@ export function buildSubmissionChecklist(input: ChecklistInput): SubmissionCheck
   if (input.pageSetup.length) {
     items.push({
       id: "page-setup",
-      label: "Sayfa düzeni",
+      label: t("Sayfa düzeni", "Page layout"),
       status: "warning",
-      detail: sayfaDuzeniOzeti(input.pageSetup),
-      action: { id: "apply-page-setup", label: "Kılavuza uy" },
+      detail: sayfaDuzeniOzeti(input.pageSetup, dil),
+      action: { id: "apply-page-setup", label: t("Kılavuza uy", "Follow guideline") },
     });
   } else if (input.hasGuideline) {
-    items.push({ id: "page-setup", label: "Sayfa düzeni", status: "ok", detail: "Kenar boşlukları ve sayfa numarası kılavuza uygun." });
+    items.push({ id: "page-setup", label: t("Sayfa düzeni", "Page layout"), status: "ok", detail: t("Kenar boşlukları ve sayfa numarası kılavuza uygun.", "Margins and page numbers match the guideline.") });
   }
 
   items.push(
     input.saveState === "saved"
-      ? { id: "save", label: "Kayıt", status: "ok", detail: "Tüm değişiklikler kaydedildi." }
+      ? { id: "save", label: t("Kayıt", "Save status"), status: "ok", detail: t("Tüm değişiklikler kaydedildi.", "All changes saved.") }
       : input.saveState === "error" || input.saveState === "conflict"
         ? {
             id: "save",
-            label: "Kayıt",
+            label: t("Kayıt", "Save status"),
             status: "todo",
-            detail: input.saveState === "conflict" ? "Başka bir sekmede değişiklik var; önce çakışmayı çözün." : "Kaydedilemeyen değişiklikler var (bu tarayıcıda saklanıyor).",
-            ...(input.saveState === "error" ? { action: { id: "save" as const, label: "Yeniden dene" } } : {}),
+            detail: input.saveState === "conflict" ? t("Başka bir sekmede değişiklik var; önce çakışmayı çözün.", "There are changes in another tab; resolve the conflict first.") : t("Kaydedilemeyen değişiklikler var (bu tarayıcıda saklanıyor).", "Some changes could not be saved (they are kept in this browser)."),
+            ...(input.saveState === "error" ? { action: { id: "save" as const, label: t("Yeniden dene", "Try again") } } : {}),
           }
-        : { id: "save", label: "Kayıt", status: "warning", detail: "Değişiklikler kaydediliyor…", action: { id: "save", label: "Şimdi kaydet" } }
+        : { id: "save", label: t("Kayıt", "Save status"), status: "warning", detail: t("Değişiklikler kaydediliyor…", "Saving changes…"), action: { id: "save", label: t("Şimdi kaydet", "Save now") } }
   );
 
   return { items, done: items.filter((item) => item.status === "ok").length, total: items.length };

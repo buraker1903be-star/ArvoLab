@@ -161,3 +161,9 @@ test("yazdırma HTML'i", async (t) => {
     assert.deepEqual(renderTiptapHtml({ content: [] }), { html: "", footnotes: [] });
   });
 });
+
+test("yazdırma HTML'inde şekil/tablo etiketi belgenin dilinde", () => {
+  const doc = { content: [{ type: "paragraph", attrs: { caption: "table" }, content: [{ type: "text", text: "Participants" }] }] };
+  assert.ok(renderTiptapHtml(doc, { dil: "en" }).html.includes("<strong>Table 1.</strong> Participants"));
+  assert.ok(renderTiptapHtml(doc).html.includes("<strong>Tablo 1.</strong> Participants"));
+});

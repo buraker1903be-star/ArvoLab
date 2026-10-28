@@ -108,3 +108,10 @@ test("İngilizce teslim etiketleri doğal okunur (tekil/çoğul)", () => {
   // Dil verilmezse Türkçe aynen kalır.
   assert.equal(dueInfo("2026-09-25", null, now)?.label, "5 gün kaldı");
 });
+
+test("yazım temposu İngilizce", () => {
+  const now = new Date("2026-03-01T09:00:00Z");
+  const tempo = writingPace({ words: 0, minPages: 100, maxPages: null, dueDate: "2026-03-11", now }, "en");
+  assert.match(tempo?.detail ?? "", /^~\d{1,3}(,\d{3})* words to go · 10 days until the deadline · ~\d{1,3}(,\d{3})* words a day\.$/);
+  assert.equal(writingPace({ words: 999_999, minPages: 100, maxPages: null, now }, "en")?.detail, "Page target reached.");
+});

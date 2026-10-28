@@ -19,6 +19,8 @@
   Saf modül; testi tests/unit/kanit-kunye.test.ts.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
+
 export type DizinKaydi = {
   dizin: "crossref" | "openalex";
   baslik: string;
@@ -63,16 +65,27 @@ export type KunyeKarsilastirmasi = {
   adres: string | null;
 };
 
-const ETIKET: Record<AlanKarsilastirmasi["alan"], string> = {
-  baslik: "Başlık",
-  yil: "Yıl",
-  ilk_yazar: "İlk yazar",
-  yayin: "Dergi / kitap",
-  cilt: "Cilt",
-  sayi: "Sayı",
-  sayfalar: "Sayfalar",
-  doi: "DOI",
+/*
+  Alan etiketleri iki dilde (28.10.2026). Karşılaştırma kunye_ayrintisi
+  olarak veritabanına yazılıyor ve içindeki `etiket` yazıldığı günün
+  dilinde kalıyor; ekran etiketi `alan` anahtarından alanEtiketi ile
+  yeniden kurmalı, kayıttaki metne güvenmemeli.
+*/
+const ETIKET: Record<AlanKarsilastirmasi["alan"], Metin> = {
+  baslik: { tr: "Başlık", en: "Title" },
+  yil: { tr: "Yıl", en: "Year" },
+  ilk_yazar: { tr: "İlk yazar", en: "First author" },
+  yayin: { tr: "Dergi / kitap", en: "Journal / book" },
+  cilt: { tr: "Cilt", en: "Volume" },
+  sayi: { tr: "Sayı", en: "Issue" },
+  sayfalar: { tr: "Sayfalar", en: "Pages" },
+  doi: { tr: "DOI", en: "DOI" },
 };
+
+/** Karşılaştırılan alanın adı, istenen dilde. */
+export function alanEtiketi(alan: AlanKarsilastirmasi["alan"], dil: Dil = "tr"): string {
+  return ETIKET[alan][dil];
+}
 
 const DURAK = new Set([
   "a", "an", "and", "the", "of", "in", "on", "for", "to", "ve", "ile", "bir", "bu", "da", "de", "için", "üzerine",
@@ -146,30 +159,32 @@ function alan(
   bizde: string | null,
   kayitta: string | null,
   esit: (a: string, b: string) => boolean,
+  dil: Dil,
 ): AlanKarsilastirmasi {
   const sonuc: AlanSonucu = !bizde ? "bizde_yok" : !kayitta ? "kayitta_yok" : esit(bizde, kayitta) ? "eslesti" : "farkli";
-  return { alan: ad, etiket: ETIKET[ad], bizde, kayitta, sonuc };
+  return { alan: ad, etiket: ETIKET[ad][dil], bizde, kayitta, sonuc };
 }
 
-export function kunyeKarsilastir(kaynak: KaynakKunyesi, kayit: DizinKaydi): KunyeKarsilastirmasi {
+export function kunyeKarsilastir(kaynak: KaynakKunyesi, kayit: DizinKaydi, dil: Dil = "tr"): KunyeKarsilastirmasi {
   const ilkYazar = soyadlar(kaynak.authors)[0] ?? null;
   const alanlar: AlanKarsilastirmasi[] = [
-    alan("baslik", kaynak.title?.trim() || null, kayit.baslik || null, (a, b) => baslikBenzerligi(a, b) >= BASLIK_ESIGI),
-    alan("yil", yilOku(kaynak.year)?.toString() ?? null, kayit.yil?.toString() ?? null, (a, b) => a === b),
+    alan("baslik", kaynak.title?.trim() || null, kayit.baslik || null, (a, b) => baslikBenzerligi(a, b) >= BASLIK_ESIGI, dil),
+    alan("yil", yilOku(kaynak.year)?.toString() ?? null, kayit.yil?.toString() ?? null, (a, b) => a === b, dil),
     /* İlk yazar, dizindeki yazarların HERHANGİ biriyle eşleşirse tutmuş
        sayılır; sıra farkı burada yazar uydurmasından ayırt edilemez. */
     alan("ilk_yazar", ilkYazar, kayit.soyadlar.length ? kayit.soyadlar.join(", ") : null, (a) =>
       kayit.soyadlar.some((s) => sade(s) === sade(a)),
+    dil,
     ),
     alan("yayin", kaynak.container_title?.trim() || null, kayit.yayin, (a, b) => {
       const x = sade(a);
       const y = sade(b);
       return x === y || (Math.min(x.length, y.length) >= 8 && (x.includes(y) || y.includes(x)));
-    }),
-    alan("cilt", rakam(kaynak.volume), rakam(kayit.cilt), (a, b) => a === b),
-    alan("sayi", rakam(kaynak.issue), rakam(kayit.sayi), (a, b) => a === b),
-    alan("sayfalar", kaynak.pages?.trim() || null, kayit.sayfalar, (a, b) => ilkSayfa(a) === ilkSayfa(b)),
-    alan("doi", doiAyikla(kaynak.doi_or_url), kayit.doi?.toLowerCase() ?? null, (a, b) => a === b),
+    }, dil),
+    alan("cilt", rakam(kaynak.volume), rakam(kayit.cilt), (a, b) => a === b, dil),
+    alan("sayi", rakam(kaynak.issue), rakam(kayit.sayi), (a, b) => a === b, dil),
+    alan("sayfalar", kaynak.pages?.trim() || null, kayit.sayfalar, (a, b) => ilkSayfa(a) === ilkSayfa(b), dil),
+    alan("doi", doiAyikla(kaynak.doi_or_url), kayit.doi?.toLowerCase() ?? null, (a, b) => a === b, dil),
   ];
 
   const sonucu = (ad: AlanKarsilastirmasi["alan"]) => alanlar.find((a) => a.alan === ad)!.sonuc;
@@ -186,12 +201,22 @@ export function kunyeKarsilastir(kaynak: KaynakKunyesi, kayit: DizinKaydi): Kuny
 }
 
 /** Kullanıcıya gösterilecek tek cümle: hangi alan uyuşmuyor ya da bakılamadı. */
-export function kunyeOzeti(k: KunyeKarsilastirmasi): string {
+export function kunyeOzeti(k: KunyeKarsilastirmasi, dil: Dil = "tr"): string {
+  const dizin = k.dizin === "crossref" ? "Crossref" : "OpenAlex";
+  if (dil === "en") {
+    // Etiket kayıttan değil anahtardan: kayıt Türkçe yazılmış olabilir.
+    const ad = (a: AlanKarsilastirmasi) => alanEtiketi(a.alan, "en").toLowerCase();
+    const farkli = k.alanlar.filter((a) => a.sonuc === "farkli").map(ad);
+    const eksik = k.alanlar.filter((a) => a.sonuc === "bizde_yok" && ["baslik", "yil", "ilk_yazar"].includes(a.alan)).map(ad);
+    if (k.durum === "uyusmuyor") return `The title of the ${dizin} record does not match your record; the DOI may belong to another publication.`;
+    if (k.durum === "dogrulandi") return `Title, year and first author matched the ${dizin} record.`;
+    const parcalar = [farkli.length ? `mismatched: ${farkli.join(", ")}` : "", eksik.length ? `missing in your record: ${eksik.join(", ")}` : ""].filter(Boolean);
+    return `Partially matched the ${dizin} record (${parcalar.join("; ") || "some fields could not be checked"}).`;
+  }
   const farkli = k.alanlar.filter((a) => a.sonuc === "farkli").map((a) => a.etiket.toLocaleLowerCase("tr-TR"));
   const eksik = k.alanlar
     .filter((a) => a.sonuc === "bizde_yok" && ["baslik", "yil", "ilk_yazar"].includes(a.alan))
     .map((a) => a.etiket.toLocaleLowerCase("tr-TR"));
-  const dizin = k.dizin === "crossref" ? "Crossref" : "OpenAlex";
   if (k.durum === "uyusmuyor") return `${dizin} kaydının başlığı sizin kaydınızla uyuşmuyor; DOI başka bir yayına ait olabilir.`;
   if (k.durum === "dogrulandi") return `${dizin} kaydıyla başlık, yıl ve ilk yazar eşleşti.`;
   const parcalar = [

@@ -34,15 +34,49 @@ const UNNUMBERED_SECTIONS = new Set(
     "Kaynaklar",
     "Ekler",
     "Özgeçmiş",
+    /*
+      İngilizce karşılıklar (28.10.2026). Arayüz iki dilli oldu ve İngilizce
+      tez yazan öğrencinin "References" ya da "List of Figures" başlığı
+      "7. References" diye numaralanıyordu. "Summary" bilerek yok: bazı
+      tezlerde numaralı bir sonuç bölümünün adı.
+    */
+    "Approval Page",
+    "Declaration",
+    "Statement of Originality",
+    "Ethics Statement",
+    "Dedication",
+    "Preface",
+    "Foreword",
+    "Acknowledgments",
+    "Acknowledgements",
+    "Table of Contents",
+    "Contents",
+    "Abbreviations",
+    "List of Abbreviations",
+    "Symbols and Abbreviations",
+    "List of Symbols",
+    "List of Symbols and Abbreviations",
+    "List of Tables",
+    "List of Figures",
+    "List of Charts",
+    "Glossary",
+    "References",
+    "Bibliography",
+    "Works Cited",
+    "Appendices",
+    "Curriculum Vitae",
+    "Vita",
   ].map(normalizeHeading)
 );
 
 // "EK", "EKLER", "EK 1: Anket Formu", "EK-A" — "EKONOMİK ETKİLER" değil.
 const APPENDIX = /^EK(LER)?(?=$|[\s\-–:.\d])/;
+// "APPENDIX", "Appendix A: Survey", "APPENDICES" — normalizeHeading İ'yi I'ya indiriyor.
+const APPENDIX_EN = /^APPENDI(X|CES)(?=$|[\s\-–:.\d])/;
 
 export function isUnnumberedHeading(text: string): boolean {
   const normalized = normalizeHeading(text);
-  return UNNUMBERED_SECTIONS.has(normalized) || APPENDIX.test(normalized);
+  return UNNUMBERED_SECTIONS.has(normalized) || APPENDIX.test(normalized) || APPENDIX_EN.test(normalized);
 }
 
 /** Her başlığın numarası ("1.2.") ya da numarasızsa null; sıra girişle aynıdır. */

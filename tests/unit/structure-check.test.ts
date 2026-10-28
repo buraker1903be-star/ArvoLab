@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { checkStructure, sorunlariGrupla } from "@/lib/structure-check";
+import { sorunTurleri } from "@/lib/structure-check";
 
 /*
   checkStructure canlı denetimi sürüyor ve tek bir birim testi yoktu.
@@ -160,5 +161,47 @@ describe("kısaltmalar", () => {
     const gruplar = sorunlariGrupla(sorunlar);
     assert.deepEqual(gruplar.map((g) => g.tur), ["bolum", "kaynakca"]);
     assert.equal(gruplar.reduce((t, g) => t + g.sorunlar.length, 0), sorunlar.length);
+  });
+});
+
+describe("İngilizce arayüz ve İngilizce yazılmış tez", () => {
+  const h = (text: string, level = 1) => ({ type: "heading", attrs: { level }, content: [{ type: "text", text }] });
+  const p = (text: string, attrs: Record<string, unknown> = {}) => ({ type: "paragraph", attrs, content: [{ type: "text", text }] });
+
+  test("mesajlar İngilizce; şekil/tablo etiketi belgedeki başlıklardan okunuyor", () => {
+    const doc = {
+      content: [
+        h("Introduction"),
+        p("As Table 1 shows, the results differ. See Figure 3."),
+        p("Table 1. Participants", { caption: "table" }),
+        p("Figure 1. Model", { caption: "figure" }),
+        h("Empty Section"),
+        h("Works Cited"),
+        p("Smith, J. (2020). A title. Journal."),
+      ],
+    };
+    const mesajlar = checkStructure(doc, {}, "en").map((s) => s.message);
+    assert.ok(mesajlar.includes("The section “Empty Section” is still empty."), mesajlar.join("\n"));
+    // "Figure" başlıkları tanındı: numarasız başlık uyarısı YOK, eksik numara doğru etiketle.
+    assert.ok(!mesajlar.some((m) => m.includes("does not start with a number")), mesajlar.join("\n"));
+    assert.ok(mesajlar.some((m) => m.startsWith("The text mentions “Figure 3”, but there is no figure caption with that number (the document has 1 figure caption)")), mesajlar.join("\n"));
+    assert.ok(mesajlar.some((m) => m.startsWith("Figure 1 (“Figure 1. Model”) is not mentioned in the text")), mesajlar.join("\n"));
+  });
+
+  test("İngilizce ek başlıkları ve 'Works Cited' kaynakça sayılıyor", () => {
+    const doc = {
+      content: [h("Introduction"), p("See Appendix 2."), h("Works Cited"), p("Smith, J. (2020). A title. Journal."), h("Appendix 1. Survey"), p("x")],
+    };
+    const mesajlar = checkStructure(doc, { citationStyle: "apa7" }, "en").map((s) => s.message);
+    assert.ok(mesajlar.some((m) => m.startsWith("The text mentions “Appendix 2”")), mesajlar.join("\n"));
+    assert.ok(mesajlar.some((m) => m.startsWith("The reference “Smith, J. (2020)")), mesajlar.join("\n"));
+  });
+
+  test("sorun türlerinin başlıkları İngilizce, sıra aynı", () => {
+    const tr = sorunTurleri();
+    const en = sorunTurleri("en");
+    assert.deepEqual(en.map((t) => t.tur), tr.map((t) => t.tur));
+    assert.equal(en.find((t) => t.tur === "kaynakca")?.baslik, "Citations and reference list");
+    assert.equal(sorunlariGrupla([{ kategori: "dipnot" as const }], "en")[0].baslik, "Footnotes");
   });
 });
