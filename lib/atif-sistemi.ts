@@ -26,6 +26,8 @@
   Saf modül; testi tests/unit/atif-sistemi.test.ts.
 */
 
+import type { Dil } from "@/lib/dil";
+
 /** Veritabanının kabul ettiği değerler (thesis_guidelines.citation_style). */
 export type AtifSistemi = "apa7" | "vancouver" | "chicago" | "ieee" | "mla";
 
@@ -80,7 +82,8 @@ export function atifGecisleri(metin: string): AtifGecisi[] {
     .sort((a, b) => b.sayim - a.sayim);
 }
 
-export function atifSistemiSec(metin: string): AtifSecimi | null {
+export function atifSistemiSec(metin: string, dil: Dil = "tr"): AtifSecimi | null {
+  const en = dil === "en";
   const sayimlar = atifGecisleri(metin);
 
   const kazanan = sayimlar[0];
@@ -92,7 +95,9 @@ export function atifSistemiSec(metin: string): AtifSecimi | null {
   const uyarilar: string[] = [];
   if (ikinciSayim > 0) {
     uyarilar.push(
-      `Metinde ${sayimlar[1].etiket} adı da ${ikinciSayim} kez geçiyor; örnek ya da karşılaştırma olabilir.`,
+      en
+        ? `The name ${sayimlar[1].etiket} also appears ${ikinciSayim} ${ikinciSayim === 1 ? "time" : "times"} in the text; it may be an example or a comparison.`
+        : `Metinde ${sayimlar[1].etiket} adı da ${ikinciSayim} kez geçiyor; örnek ya da karşılaştırma olabilir.`,
     );
   }
   /*
@@ -100,7 +105,11 @@ export function atifSistemiSec(metin: string): AtifSecimi | null {
     ediyor olabilir; sessizce APA 7 saymak kullanıcıyı yanıltırdı.
   */
   if (kazanan.sistem === "apa7" && /\bapa\s*-?\s*[1-6]\b/i.test(metin) && !/\bapa\s*-?\s*7\b/i.test(metin)) {
-    uyarilar.push("Kılavuz APA'nın 7'den eski bir baskısını işaret ediyor olabilir; sürümü doğrulayın.");
+    uyarilar.push(
+      en
+        ? "The guideline may refer to an APA edition older than 7; verify the edition."
+        : "Kılavuz APA'nın 7'den eski bir baskısını işaret ediyor olabilir; sürümü doğrulayın.",
+    );
   }
 
   return { sistem: kazanan.sistem, etiket: kazanan.etiket, sayim: kazanan.sayim, ikinciSayim, uyarilar };

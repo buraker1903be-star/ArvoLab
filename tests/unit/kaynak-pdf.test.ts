@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aranacakMi, baslikPdfteGeciyor, kunyeAnahtari, pdfAdaylari, pdfDosyaAdi, pdfMi, tekilAdlar } from "@/lib/kaynak-pdf";
+import { aranacakMi, baslikPdfteGeciyor, kaynakRaporu, kunyeAnahtari, paketAdi, paketDosyalari, pdfAdaylari, pdfDosyaAdi, pdfMi, tekilAdlar, type KaynakPdfSatiri } from "@/lib/kaynak-pdf";
 
 const PESARAN =
   "Pesaran, M. H., Shin, Y., & Smith, R. J. (2001). Bounds testing approaches to the analysis of level relationships. Journal of Applied Econometrics, 16(3), 289–326. https://doi.org/10.1002/jae.616";
@@ -59,4 +59,14 @@ test("teslim paketi: PDF'i olana benzersiz ad, rapor eksikleri nedeniyle yazar",
   assert.match(rapor, /3 kaynak · 2 kaynağın PDF'i pakette · 1 eksik/);
   assert.match(rapor, /Crossref\/OpenAlex'te bulunamadı/);
   assert.equal(paketAdi("Türkiye'de Enflasyon ve İşsizlik"), "Turkiye-de-Enflasyon-ve-Issizlik-teslim-paketi.zip");
+});
+
+test("kaynak raporu ve paket adı İngilizce (28.10.2026)", () => {
+  const satir = { id: "1", kunye: "Smith, J. (2020). Writing well.", durum: "kayit_yok", depo_yolu: null, doi: null, baslik_eslesti: null } as unknown as KaynakPdfSatiri;
+  const rapor = kaynakRaporu("My Thesis", paketDosyalari([satir]), "28.10.2026", "en");
+  assert.match(rapor, /^SOURCE REPORT — My Thesis\r\nCreated: 28\.10\.2026\r\n1 source · PDF in the package for 0 · 1 missing/);
+  assert.match(rapor, /Status: No PDF: the source was not found in Crossref\/OpenAlex/);
+  assert.match(kaynakRaporu("Tez", paketDosyalari([satir]), "28.10.2026"), /^KAYNAK RAPORU — Tez/);
+  assert.equal(paketAdi("Şehir ve Kültür", "en"), "Sehir-ve-Kultur-submission-package.zip");
+  assert.equal(paketAdi("Şehir ve Kültür"), "Sehir-ve-Kultur-teslim-paketi.zip");
 });

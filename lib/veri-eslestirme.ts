@@ -22,6 +22,8 @@
 
   Saf modül: testi tests/unit/veri-eslestirme.test.ts.
 */
+import type { Dil } from "@/lib/dil";
+
 
 export type HucreDegeri = string | number | null;
 export type VeriSatiri = Record<string, HucreDegeri>;
@@ -55,8 +57,11 @@ export function eslesenSatirlar(satirlar: VeriSatiri[], sutunAdlari: string[]): 
 }
 
 /** "N = 97 (3 satır eksik veri yüzünden düştü)" — eleme sessiz kalmamalı. */
-export function elemeNotu(veri: EslesenVeri): string | null {
+export function elemeNotu(veri: EslesenVeri, dil: Dil = "tr"): string | null {
   if (veri.dusen === 0) return null;
+  if (dil === "en") {
+    return `${veri.dusen} ${veri.dusen === 1 ? "row was" : "rows were"} excluded from the analysis due to missing data (N = ${veri.n}).`;
+  }
   return `${veri.dusen} satır eksik veri yüzünden analiz dışı bırakıldı (N = ${veri.n}).`;
 }
 

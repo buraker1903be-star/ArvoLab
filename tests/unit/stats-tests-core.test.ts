@@ -20,6 +20,7 @@ import {
   independentTTest,
   oneWayAnova,
   pearsonCorrelation,
+  ETKI_YORUMU_METIN,
 } from "@/lib/stats-tests-core";
 
 const yakin = (a: number, b: number, tolerans = 1e-4) =>
@@ -566,5 +567,14 @@ describe("ki-kare varsayımı ve Fisher kesin testi", () => {
     // Faktöriyeller doğrudan çarpılsaydı 170!'ten sonra Infinity olurdu.
     const p = fisherKesinTesti([[200, 150], [180, 170]]);
     assert.ok(Number.isFinite(p) && p > 0 && p <= 1, String(p));
+  });
+});
+
+describe("etki yorumunun İngilizcesi (28.10.2026)", () => {
+  test("sonuç Türkçe anahtarı taşıyor, ekran adı haritadan", () => {
+    const r = independentTTest([1, 2, 3, 4, 5], [3, 4, 5, 6, 7]);
+    assert.equal(r.dYorum, "büyük");
+    assert.equal(ETKI_YORUMU_METIN[r.dYorum].en, "large");
+    assert.equal(ETKI_YORUMU_METIN.önemsiz.en, "negligible");
   });
 });

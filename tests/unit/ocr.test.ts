@@ -55,3 +55,13 @@ describe("OCR okuyamadığında yöneticiye söylenen", () => {
     assert.equal(typeof ocrCalismadiUyarisi("bellek yetmedi"), "string");
   });
 });
+
+describe("İngilizce uyarı (28.10.2026)", () => {
+  test("OCR uyarıları İngilizce", () => {
+    assert.equal(
+      ocrCalismadiUyarisi("bellek yetmedi", "en"),
+      "The document consists of scanned images but could not be read with OCR (bellek yetmedi); no rules could be extracted.",
+    );
+    assert.match(ocrEksikDosyaUyarisi("worker.js", "en"), /OCR files are missing on the server: worker\.js.*deployment bundle/);
+  });
+});

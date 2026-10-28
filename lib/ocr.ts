@@ -19,6 +19,8 @@
   bakmalıdır (supabase/migrations/…_kilavuz_ocr.sql).
 */
 
+import type { Dil } from "@/lib/dil";
+
 /** OCR'a girilecek en fazla sayfa; kapak ve ilk kural sayfaları yeterli. */
 const EN_FAZLA_SAYFA = 8;
 
@@ -123,7 +125,10 @@ async function ocrDosyalariEksikMi(): Promise<string | null> {
  * kilavuzDegilUyarisi ile aynı ders). Bozuk PDF de bellek de buraya düşer;
  * bu yüzden metin suçlu aramıyor, yalnızca sebebi söylüyor.
  */
-export function ocrCalismadiUyarisi(sebep: string): string {
+export function ocrCalismadiUyarisi(sebep: string, dil: Dil = "tr"): string {
+  if (dil === "en") {
+    return `The document consists of scanned images but could not be read with OCR (${sebep}); no rules could be extracted.`;
+  }
   return `Belge taranmış görüntüden oluşuyor ama OCR ile okunamadı (${sebep}); kurallar çıkarılamadı.`;
 }
 
@@ -133,7 +138,11 @@ export function ocrCalismadiUyarisi(sebep: string): string {
  * Yöneticinin yapacağı iş bambaşka: belgeye bakmak değil, eksik dosyaları
  * pakete eklemek. 05.10–25.10.2026 arasında kimse bunu bilmiyordu.
  */
-export function ocrEksikDosyaUyarisi(eksik: string): string {
+export function ocrEksikDosyaUyarisi(eksik: string, dil: Dil = "tr"): string {
+  if (dil === "en") {
+    return `${ocrCalismadiUyarisi(`OCR files are missing on the server: ${eksik}`, dil)} `
+      + "This is a server problem, not a problem with the guideline; the files must be added to the deployment bundle (next.config.ts).";
+  }
   return `${ocrCalismadiUyarisi(`OCR dosyaları sunucuda yok: ${eksik}`)} `
     + "Bu, kılavuzun değil sunucunun sorunu; dosyalar dağıtım paketine eklenmeli (next.config.ts).";
 }
@@ -152,7 +161,8 @@ export { taranmisBelgeMi } from "@/lib/taranmis-belge";
  * eski davranışa (metinsiz belge) geri düşer. Kılavuz taraması, tek bir
  * belgenin okunamaması yüzünden durmamalı.
  */
-export async function pdfMetniniOcrIleOku(veri: Buffer, sayfaSayisi: number): Promise<OcrSonucu> {
+/* `dil` yalnızca `hata` alanındaki uyarının dilini seçer; OCR'ın kendisi dilden bağımsız. */
+export async function pdfMetniniOcrIleOku(veri: Buffer, sayfaSayisi: number, dil: Dil = "tr"): Promise<OcrSonucu> {
   const sayfa = Math.min(sayfaSayisi || 1, EN_FAZLA_SAYFA);
 
   /*
@@ -162,7 +172,7 @@ export async function pdfMetniniOcrIleOku(veri: Buffer, sayfaSayisi: number): Pr
   const eksik = await ocrDosyalariEksikMi();
   if (eksik) {
     console.error(`[ocr] işçi dosyaları dağıtım paketinde yok, OCR atlandı: ${eksik}`);
-    return { metin: "", sayfa: 0, guven: 0, hata: ocrEksikDosyaUyarisi(eksik) };
+    return { metin: "", sayfa: 0, guven: 0, hata: ocrEksikDosyaUyarisi(eksik, dil) };
   }
 
   try {
@@ -230,6 +240,6 @@ export async function pdfMetniniOcrIleOku(veri: Buffer, sayfaSayisi: number): Pr
       sebebi yalnızca sunucu günlüğünde kalıyordu. Artık sebep kaydın
       uyarılarına da giriyor.
     */
-    return { metin: "", sayfa: 0, guven: 0, hata: ocrCalismadiUyarisi(mesaj) };
+    return { metin: "", sayfa: 0, guven: 0, hata: ocrCalismadiUyarisi(mesaj, dil) };
   }
 }

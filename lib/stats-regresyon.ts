@@ -22,6 +22,7 @@
 */
 import { mean, sd } from "@/lib/stats-tests-core";
 import { fTestP, tTestTwoTailedP } from "@/lib/stats-math";
+import type { Dil } from "@/lib/dil";
 
 export interface Katsayi {
   /** Değişken adı; sabit terim için "(Sabit)". */
@@ -77,6 +78,20 @@ export function tersAl(m: number[][]): number[][] | null {
     }
   }
   return a.map((satir) => satir.slice(n));
+}
+
+/*
+  SABİT TERİMİN ADI bir ANAHTAR olarak da kullanılıyor: ekran
+  `ad === "(Sabit)"` ile sabiti anlamlılık vurgusundan ve Exp(B) güven
+  aralığından ayırıyor (regresyon, lojistik, düzenleyicilik). O yüzden
+  sonuç nesnesinde dile göre DEĞİŞMİYOR; ekranda gösterilecek ad
+  `katsayiAdi` ile seçilir (28.10.2026).
+*/
+export const SABIT_TERIM = "(Sabit)";
+
+/** Katsayı adının ekrandaki yazımı: sabit terim çevrilir, değişken adları olduğu gibi. */
+export function katsayiAdi(ad: string, dil: Dil = "tr"): string {
+  return ad === SABIT_TERIM && dil === "en" ? "(Constant)" : ad;
 }
 
 const bosSonuc = (n: number, k: number, adlar: string[]): RegresyonSonucu => ({

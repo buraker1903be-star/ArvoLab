@@ -247,3 +247,21 @@ describe("IEEE yazar sırası", () => {
     assert.equal(k.title, "Örnek bir başlık");
   });
 });
+
+describe("İngilizce sorun mesajları (28.10.2026)", () => {
+  test("Vancouver numara ve yazar biçimi İngilizce", () => {
+    const [ilk] = kunyeleriAyristir(["Smith John, Jones K. Writing well. J Acad. 2020;12(3):1-20."], "vancouver", "en");
+    const mesajlar = ilk.issues.map((s) => s.message);
+    assert.ok(mesajlar.includes("The reference does not start with a number; in a Vancouver reference list each entry starts with (1)."), mesajlar.join(" | "));
+    assert.ok(mesajlar.some((m) => m.startsWith('Author format may not follow Vancouver: "Smith John" (expected: "Smith A")')), mesajlar.join(" | "));
+    const [tr] = kunyeleriAyristir(["Smith John, Jones K. Writing well. J Acad. 2020;12(3):1-20."], "vancouver");
+    assert.ok(tr.issues.some((s) => s.message.startsWith("Künye numarayla başlamıyor")));
+  });
+
+  test("APA yolu da İngilizce ve 'et al.' yazar sayılmıyor", () => {
+    const r = kunyeAyristir("Smith, J., Jones, K., et al. Writing", "apa7", 1, "en");
+    assert.equal(r.issues[0].message, "Year in parentheses not found, e.g., (2023).");
+    const chicago = kunyeAyristir("Smith, John, and Mary Jones. 2020. Writing Well. Press.", "chicago", 1, "en");
+    assert.deepEqual(chicago.issues, []);
+  });
+});

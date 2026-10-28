@@ -22,6 +22,7 @@
      yan yana açıp sayarak bulmak gerekiyordu.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
 import { taranmisBelgeMi } from "@/lib/taranmis-belge";
 
 /** Bundan kısa metin "belge okunamadı" sayılır; kapak sayfası bile bunu aşar. */
@@ -45,13 +46,36 @@ export const BOS_METIN_MESAJI =
 export const KISMI_METIN_UYARISI =
   "Belgenin bir kısmı görüntü olarak görünüyor (sayfa başına çok az metin çıktı). Taranmış sayfalardaki başlık ve künyeler denetlenemedi; sonuçlar eksik olabilir.";
 
+/* İki dilli karşılıkları; eski sabitler Türkçe kaldı, çağıranlar onlara dayanıyor. */
+export const BOS_METIN_MESAJI_METIN: Metin = {
+  tr: BOS_METIN_MESAJI,
+  en: "No readable text was found in the file. The PDF may be a scanned image: upload the Word (.docx) file of your thesis or a PDF created with Word's \"Save as PDF\".",
+};
+
+export const KISMI_METIN_UYARISI_METIN: Metin = {
+  tr: KISMI_METIN_UYARISI,
+  en: "Part of the document appears to be images (very little text was extracted per page). Headings and references on scanned pages could not be checked; the results may be incomplete.",
+};
+
 export type SayfaSonucu = { ton: "success" | "warning"; metin: string };
 
 /** PDF sayfa sayısını kılavuzun sınırıyla karşılaştırır; söylenecek bir şey yoksa null. */
-export function sayfaDenetimi(sayfa: number | null | undefined, enAz: number | null | undefined, enCok: number | null | undefined): SayfaSonucu | null {
+export function sayfaDenetimi(
+  sayfa: number | null | undefined,
+  enAz: number | null | undefined,
+  enCok: number | null | undefined,
+  dil: Dil = "tr",
+): SayfaSonucu | null {
   if (!sayfa || (!enAz && !enCok)) return null;
-  const sinir = enAz && enCok ? `${enAz}–${enCok} sayfa` : enAz ? `en az ${enAz} sayfa` : `en çok ${enCok} sayfa`;
   const disinda = (enAz && sayfa < enAz) || (enCok && sayfa > enCok);
+  if (dil === "en") {
+    const sinirEn = enAz && enCok ? `${enAz}–${enCok} pages` : enAz ? `at least ${enAz} pages` : `at most ${enCok} pages`;
+    return {
+      ton: disinda ? "warning" : "success",
+      metin: `The PDF has ${sayfa} ${sayfa === 1 ? "page" : "pages"}; the guideline specifies ${sinirEn}.${disinda ? " Check the guideline to see whether front matter and appendices count toward the limit." : ""}`,
+    };
+  }
+  const sinir = enAz && enCok ? `${enAz}–${enCok} sayfa` : enAz ? `en az ${enAz} sayfa` : `en çok ${enCok} sayfa`;
   return {
     ton: disinda ? "warning" : "success",
     metin: `PDF ${sayfa} sayfa; kılavuz ${sinir} öngörüyor.${disinda ? " Sınıra ön kısmın ve eklerin dahil olup olmadığını kılavuzdan kontrol edin." : ""}`,
@@ -79,7 +103,8 @@ export type Fark = { metin: string; ton: "success" | "warning" };
  * ölçüleri karşılaştırılmaz: "12 sorunlu künye → 0" bir iyileşme değil,
  * bölümün okunamaması olurdu.
  */
-export function surumFarki(onceki: KarsilastirilanAnaliz, simdiki: KarsilastirilanAnaliz): Fark[] {
+export function surumFarki(onceki: KarsilastirilanAnaliz, simdiki: KarsilastirilanAnaliz, dil: Dil = "tr"): Fark[] {
+  const y = (metin: Metin) => metin[dil];
   const farklar: Fark[] = [];
   const sorun = (ad: string, a: number, b: number) => {
     if (a !== b) farklar.push({ metin: `${ad}: ${a} → ${b}`, ton: b < a ? "success" : "warning" });
@@ -89,17 +114,17 @@ export function surumFarki(onceki: KarsilastirilanAnaliz, simdiki: Karsilastiril
     const a = onceki.complianceScore;
     const b = simdiki.complianceScore;
     if (a != null && b != null && a !== b) {
-      farklar.push({ metin: `Kaynakça uyumu: ${a} → ${b}`, ton: b > a ? "success" : "warning" });
+      farklar.push({ metin: `${y({ tr: "Kaynakça uyumu", en: "Reference list compliance" })}: ${a} → ${b}`, ton: b > a ? "success" : "warning" });
     }
     const sorunlu = (x: KarsilastirilanAnaliz) => x.references.filter((r) => r.issues.length > 0).length;
-    sorun("Biçim sorunu olan künye", sorunlu(onceki), sorunlu(simdiki));
-    sorun("Atıfı olmayan kaynak", onceki.crossCheck.referencesWithoutCitation.length, simdiki.crossCheck.referencesWithoutCitation.length);
-    sorun("Karşılığı olmayan atıf", onceki.crossCheck.citationsWithoutReference.length, simdiki.crossCheck.citationsWithoutReference.length);
+    sorun(y({ tr: "Biçim sorunu olan künye", en: "References with formatting issues" }), sorunlu(onceki), sorunlu(simdiki));
+    sorun(y({ tr: "Atıfı olmayan kaynak", en: "References not cited in text" }), onceki.crossCheck.referencesWithoutCitation.length, simdiki.crossCheck.referencesWithoutCitation.length);
+    sorun(y({ tr: "Karşılığı olmayan atıf", en: "Citations missing from the reference list" }), onceki.crossCheck.citationsWithoutReference.length, simdiki.crossCheck.citationsWithoutReference.length);
   } else if (onceki.referenceSectionFound !== simdiki.referenceSectionFound) {
     farklar.push(
       simdiki.referenceSectionFound
-        ? { metin: "Kaynakça bölümü artık bulunuyor", ton: "success" }
-        : { metin: "Kaynakça bölümü bu sürümde bulunamadı", ton: "warning" },
+        ? { metin: y({ tr: "Kaynakça bölümü artık bulunuyor", en: "The reference list section is now found" }), ton: "success" }
+        : { metin: y({ tr: "Kaynakça bölümü bu sürümde bulunamadı", en: "The reference list section was not found in this version" }), ton: "warning" },
     );
   }
 
@@ -109,7 +134,7 @@ export function surumFarki(onceki: KarsilastirilanAnaliz, simdiki: Karsilastiril
     değil kuralın değişmesi olabilir.
   */
   if (onceki.guidelineCompliance && simdiki.guidelineCompliance && onceki.kilavuz?.surum === simdiki.kilavuz?.surum) {
-    sorun("Eksik zorunlu bölüm", onceki.guidelineCompliance.missingSections.length, simdiki.guidelineCompliance.missingSections.length);
+    sorun(y({ tr: "Eksik zorunlu bölüm", en: "Missing required sections" }), onceki.guidelineCompliance.missingSections.length, simdiki.guidelineCompliance.missingSections.length);
   }
   return farklar;
 }

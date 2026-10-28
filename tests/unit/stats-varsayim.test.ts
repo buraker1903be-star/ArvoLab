@@ -136,3 +136,13 @@ describe("test önerisi karar vermiyor, durumu söylüyor", () => {
     assert.match(oneri.gerekce, /dörtten az/);
   });
 });
+
+describe("İngilizce gerekçe (28.10.2026)", () => {
+  test("çarpık veride gerekçe İngilizce ve ondalık noktalı", () => {
+    const oneri = ikiGrupOnerisi([1, 1, 1, 1, 1, 1, 1, 50], [2, 3, 4, 3, 2, 4, 3, 3], "en");
+    assert.equal(oneri.parametrikUygun, false);
+    assert.match(oneri.gerekce, /outside ±1\.5\)/);
+    assert.match(oneri.gerekce, /Mann-Whitney U/);
+    assert.match(ikiGrupOnerisi([1, 2, 3], [4, 5, 6], "en").gerekce, /fewer than four/);
+  });
+});

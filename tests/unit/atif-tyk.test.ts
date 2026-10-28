@@ -56,3 +56,19 @@ test("yıl uyuşmazlığı tek sorun olarak bulunur", async () => {
   assert.equal(u.length, 1);
   assert.deepEqual([u[0].atifYili, u[0].kunyeYili], ["2020", "2021"]);
 });
+
+test("İngilizce kalıp: 'p.' öneki tanınıyor, açıklamalar İngilizce (28.10.2026)", () => {
+  const kalip = ornekKalibi("(Smith & Jones, 2020, p. 14)")!;
+  assert.equal(kalip.sayfaOneki, "p.");
+  assert.equal(kalip.ikiYazar, "&");
+  assert.equal(kalibaGoreAtif("Smith and Jones", "2020", "14-16", kalip), "(Smith & Jones, 2020, pp. 14-16)");
+  assert.deepEqual(kalipOzeti(kalip, "en"), [
+    "Between author and year: a comma",
+    'Between year and page: ",", "p." before the page',
+    'Two authors are joined with "&"',
+  ]);
+  const [b] = kalibaUymayanlar("As shown (Smith and Jones, 2020, s. 3).", kalip, "en");
+  assert.equal(b.aciklama, 'Guideline example (Smith & Jones, 2020, p. 14): use "p." before the page; join two authors with "&".');
+  assert.equal(yilsizAtiflar("as noted (Smith et al.) and (Table)", "en")[0].aciklama, "The citation has no year; author–date citations require a year.");
+  assert.equal(yilsizAtiflar("(Table)").length, 0);
+});

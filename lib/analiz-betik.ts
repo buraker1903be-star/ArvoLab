@@ -18,7 +18,8 @@
   Saf modül; testi tests/unit/analiz-betik.test.ts.
 */
 
-import { ANALIZ_ETIKETLERI, type AnalizTuru } from "./analiz-turleri";
+import type { Dil, Metin } from "@/lib/dil";
+import { ANALIZ_ETIKETLERI, analizEtiketi, type AnalizTuru } from "./analiz-turleri";
 
 export type AnalizAraci = "spss" | "r" | "python";
 
@@ -42,6 +43,24 @@ export const PROGRAM_KARTLARI: ProgramKarti[] = [
     desteklenmiyor: true,
   },
 ];
+
+/*
+  Kartların İngilizcesi (28.10.2026). Eski dışa aktarımlar tipleriyle
+  birlikte Türkçe kaldı (çağıranlar onlara dayanıyor); dile göre seçim
+  aşağıdaki işlevlerle.
+*/
+const PROGRAM_ACIKLAMASI_EN: Record<ProgramKarti["anahtar"], string> = {
+  spss: "Same tests as in SPSS; SPSS syntax comes with the result.",
+  r: "Same tests; an R script (readxl, psych) comes with the result.",
+  python: "Same tests; a Python script (pandas, SciPy, statsmodels) comes with the result.",
+  ansys:
+    "Engineering simulation, not data-table analysis. ArvoLab cannot run it — add your simulation result tables as a Document.",
+};
+
+export function programKartlari(dil: Dil = "tr"): ProgramKarti[] {
+  if (dil === "tr") return PROGRAM_KARTLARI;
+  return PROGRAM_KARTLARI.map((k) => ({ ...k, aciklama: PROGRAM_ACIKLAMASI_EN[k.anahtar] }));
+}
 
 /** Yöntem kartlarının kısa açıklaması: öğrenci testi adından değil işinden tanısın. */
 export const YONTEM_ACIKLAMASI: Record<AnalizTuru, string> = {
@@ -72,6 +91,42 @@ export const YONTEM_ACIKLAMASI: Record<AnalizTuru, string> = {
   dfa: "Önerilen faktör yapısı veride doğrulanıyor mu (CFI, RMSEA…)",
 };
 
+const YONTEM_ACIKLAMASI_EN: Record<AnalizTuru, string> = {
+  descriptives: "Mean, standard deviation, minimum–maximum",
+  ttest: "Compares the means of two groups",
+  anova: "Compares the means of three or more groups",
+  correlation: "Relationship between two numeric variables",
+  chisquare: "Relationship between two categorical variables",
+  reliability: "Internal consistency of a scale (Cronbach's α)",
+  pairedttest: "Pretest–posttest comparison",
+  mannwhitney: "Two groups, non-normally distributed data",
+  kruskalwallis: "Three or more groups, non-normally distributed data",
+  spearman: "Two ordinal or non-normally distributed variables",
+  regression: "Predicts one variable from the others",
+  ikiyonluanova: "Two factors and their interaction",
+  wilcoxon: "Pretest–posttest, non-normally distributed differences",
+  friedman: "Three or more repeated measurements (pre, post, follow-up)",
+  tekorneklem: "Does the mean differ from a given value (e.g., 3)?",
+  tekrarlianova: "Three or more measurements of the same people, with sphericity correction",
+  ancova: "Compares groups while controlling for the pretest",
+  kismikorelasyon: "Relationship controlling for a third variable",
+  mcnemar: "Two-category before–after (Yes/No)",
+  lojistik: "Predicts a two-category outcome (present/absent)",
+  faktor: "Scale structure: KMO, Bartlett, factor loadings",
+  karmaanova: "Experimental–control × pretest–posttest; do the groups change differently?",
+  aracilik: "Does X affect Y through M? (bootstrap)",
+  duzenleyicilik: "Does the effect of X on Y depend on W?",
+  dfa: "Is the proposed factor structure confirmed by the data? (CFI, RMSEA…)",
+};
+
+/** Yöntem açıklamasının iki dildeki yazımı. */
+export const YONTEM_ACIKLAMASI_METIN = Object.fromEntries(
+  (Object.keys(YONTEM_ACIKLAMASI) as AnalizTuru[]).map((tur) => [
+    tur,
+    { tr: YONTEM_ACIKLAMASI[tur], en: YONTEM_ACIKLAMASI_EN[tur] },
+  ]),
+) as Record<AnalizTuru, Metin>;
+
 /*
   YÖNTEM KARTLARI ARAŞTIRMA SORUSUNA GÖRE GRUPLU (27.10.2026). On dört
   kart tek yığındaydı ve öğrenci testi adından seçmek zorundaydı ("Mann-
@@ -90,11 +145,35 @@ export const YONTEM_GRUPLARI: { baslik: string; turler: AnalizTuru[] }[] = [
   { baslik: "Ölçek", turler: ["reliability", "faktor", "dfa"] },
 ];
 
+/* Grup başlıklarının İngilizcesi; sıra YONTEM_GRUPLARI ile aynı. */
+const YONTEM_GRUP_BASLIKLARI_EN = [
+  "Describe the data",
+  "Compare a mean with a value",
+  "Compare two groups",
+  "Compare three or more groups",
+  "Compare measurements of the same people",
+  "Relationship and prediction",
+  "Scale",
+];
+
+export function yontemGruplari(dil: Dil = "tr"): { baslik: string; turler: AnalizTuru[] }[] {
+  if (dil === "tr") return YONTEM_GRUPLARI;
+  return YONTEM_GRUPLARI.map((g, i) => ({ ...g, baslik: YONTEM_GRUP_BASLIKLARI_EN[i] }));
+}
+
 export const YONTEM_KARTLARI = (Object.keys(ANALIZ_ETIKETLERI) as AnalizTuru[]).map((tur) => ({
   tur,
   ad: ANALIZ_ETIKETLERI[tur],
   aciklama: YONTEM_ACIKLAMASI[tur],
 }));
+
+export function yontemKartlari(dil: Dil = "tr"): { tur: AnalizTuru; ad: string; aciklama: string }[] {
+  return YONTEM_KARTLARI.map(({ tur }) => ({
+    tur,
+    ad: analizEtiketi(tur, dil),
+    aciklama: YONTEM_ACIKLAMASI_METIN[tur][dil],
+  }));
+}
 
 export type BetikSecimi = {
   varA?: string;
@@ -163,7 +242,13 @@ const spssAd = (ad: string) => ad.replace(/\s+/g, "_");
 
 const ad = (deger: string | undefined, yedek: string) => (deger?.trim() ? deger.trim() : yedek);
 
-function spss(tur: AnalizTuru, s: BetikSecimi): string {
+/*
+  Betiğin KODU dile göre değişmez (değişken yedek adları dahil): yalnızca
+  insanın okuduğu yorum satırları çevrilir. Komutları dile göre değiştirmek
+  iki dilde iki ayrı betiği sınamak demek olurdu.
+*/
+function spss(tur: AnalizTuru, s: BetikSecimi, en: boolean): string {
+  const y = (tr: string, ing: string) => (en ? ing : tr);
   const a = spssAd(ad(s.varA, "degisken1"));
   const b = spssAd(ad(s.varB, "degisken2"));
   const g = spssAd(ad(s.groupVar, "grup"));
@@ -180,7 +265,9 @@ function spss(tur: AnalizTuru, s: BetikSecimi): string {
   const ikiGrup = s.gruplar?.length === 2 ? s.gruplar : null;
   const spssDeger = (d: string) => (/^-?\d+(\.\d+)?$/.test(d) ? d : `'${d.replace(/'/g, "''")}'`);
   const kodlar = ikiGrup ? `(${ikiGrup.map(spssDeger).join(" ")})` : "(1 2)";
-  const grupNotu = ikiGrup ? "* Grup değerleri verinizden alındı." : "* Grup kodlarını (1 2) kendi verinizdeki değerlerle değiştirin.";
+  const grupNotu = ikiGrup
+    ? y("* Grup değerleri verinizden alındı.", "* Group values were taken from your data.")
+    : y("* Grup kodlarını (1 2) kendi verinizdeki değerlerle değiştirin.", "* Replace the group codes (1 2) with the values in your own data.");
   switch (tur) {
     case "descriptives":
       return "DESCRIPTIVES VARIABLES=ALL\n  /STATISTICS=MEAN STDDEV MIN MAX.";
@@ -201,7 +288,7 @@ function spss(tur: AnalizTuru, s: BetikSecimi): string {
     case "mannwhitney":
       return `${grupNotu}\nNPAR TESTS\n  /M-W=${a} BY ${g}${kodlar}.`;
     case "kruskalwallis":
-      return `* Grup aralığını (1 3) kendi verinizdeki en küçük ve en büyük kodla değiştirin.\nNPAR TESTS\n  /K-W=${a} BY ${g}(1 3).`;
+      return `${y("* Grup aralığını (1 3) kendi verinizdeki en küçük ve en büyük kodla değiştirin.", "* Replace the group range (1 3) with the smallest and largest codes in your own data.")}\nNPAR TESTS\n  /K-W=${a} BY ${g}(1 3).`;
     case "regression":
       return `REGRESSION\n  /STATISTICS COEFF OUTS R ANOVA COLLIN TOL\n  /DEPENDENT ${a}\n  /METHOD=ENTER ${yordayicilar}.`;
     case "wilcoxon":
@@ -213,11 +300,11 @@ function spss(tur: AnalizTuru, s: BetikSecimi): string {
     case "tekrarlianova":
       return `GLM ${maddeler}\n  /WSFACTOR=olcum ${s.maddeler?.length || 3} Polynomial\n  /PRINT=DESCRIPTIVE ETASQ\n  /EMMEANS=TABLES(olcum) COMPARE ADJ(BONFERRONI)\n  /WSDESIGN=olcum.`;
     case "aracilik":
-      return `* Hayes PROCESS makrosu gerekir (processmacro.org). Model 4, 5000 bootstrap.\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /m=${s.aracilar?.length ? s.aracilar.map(spssAd).join(" ") : b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=${s.araciModeli === "seri" && (s.aracilar?.length ?? 0) > 1 ? 6 : 4} /boot=5000 /total=1${(s.aracilar?.length ?? 0) > 1 ? " /contrast=1" : " /effsize=1"}.`;
+      return `${y("* Hayes PROCESS makrosu gerekir (processmacro.org). Model 4, 5000 bootstrap.", "* Requires the Hayes PROCESS macro (processmacro.org). Model 4, 5000 bootstrap samples.")}\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /m=${s.aracilar?.length ? s.aracilar.map(spssAd).join(" ") : b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=${s.araciModeli === "seri" && (s.aracilar?.length ?? 0) > 1 ? 6 : 4} /boot=5000 /total=1${(s.aracilar?.length ?? 0) > 1 ? " /contrast=1" : " /effsize=1"}.`;
     case "duzenleyicilik":
-      return `* Hayes PROCESS makrosu gerekir (processmacro.org). Model 1, merkezlenmiş, Johnson-Neyman.\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /w=${b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=1 /center=1 /jn=1 /plot=1.`;
+      return `${y("* Hayes PROCESS makrosu gerekir (processmacro.org). Model 1, merkezlenmiş, Johnson-Neyman.", "* Requires the Hayes PROCESS macro (processmacro.org). Model 1, mean-centered, Johnson-Neyman.")}\nPROCESS y=${spssAd(ad(s.varY, "sonuc"))} /x=${a} /w=${b}${s.kovaryatlar?.length ? ` /cov=${kovaryatlar}` : ""} /model=1 /center=1 /jn=1 /plot=1.`;
     case "dfa":
-      return `* SPSS'in kendisinde DFA yok; AMOS'ta yol şemasıyla kurulur.\n* Model (her satır bir faktör ve maddeleri):\n${dfaModelMetni(s).split("\n").map((l) => `*   ${l}`).join("\n")}\n* AMOS: Analysis Properties > Output > Standardized estimates, Modification indices.\n* "~~" satırları iki maddenin hataları arasına çizilen çift yönlü oktur.`;
+      return `${y("* SPSS'in kendisinde DFA yok; AMOS'ta yol şemasıyla kurulur.\n* Model (her satır bir faktör ve maddeleri):", "* SPSS itself has no CFA; it is built as a path diagram in AMOS.\n* Model (each line is a factor and its items):")}\n${dfaModelMetni(s).split("\n").map((l) => `*   ${l}`).join("\n")}\n* AMOS: Analysis Properties > Output > Standardized estimates, Modification indices.\n${y(`* "~~" satırları iki maddenin hataları arasına çizilen çift yönlü oktur.`, `* "~~" lines are double-headed arrows drawn between the error terms of two items.`)}`;
     case "karmaanova":
       return `GLM ${maddeler} BY ${g}\n  /WSFACTOR=olcum ${s.maddeler?.length || 3} Polynomial\n  /PRINT=DESCRIPTIVE ETASQ HOMOGENEITY\n  /PLOT=PROFILE(olcum*${g})\n  /EMMEANS=TABLES(${g}*olcum) COMPARE(${g}) ADJ(BONFERRONI)\n  /WSDESIGN=olcum\n  /DESIGN=${g}.`;
     case "ancova":
@@ -235,7 +322,8 @@ function spss(tur: AnalizTuru, s: BetikSecimi): string {
   }
 }
 
-function r(tur: AnalizTuru, s: BetikSecimi): string {
+function r(tur: AnalizTuru, s: BetikSecimi, en: boolean): string {
+  const y = (tr: string, ing: string) => (en ? ing : tr);
   const a = rAd(ad(s.varA, "degisken1"));
   const b = rAd(ad(s.varB, "degisken2"));
   const g = rAd(ad(s.groupVar, "grup"));
@@ -251,7 +339,7 @@ function r(tur: AnalizTuru, s: BetikSecimi): string {
     : `library(readxl)\nveri <- read_excel(${JSON.stringify(dosya)})`;
   const govde: Record<AnalizTuru, string> = {
     descriptives: "summary(veri)\nsapply(veri[sapply(veri, is.numeric)], sd, na.rm = TRUE)",
-    ttest: `t.test(${a} ~ ${g}, data = veri, var.equal = TRUE)\n# Levene için: car::leveneTest(${a} ~ factor(${g}), data = veri)`,
+    ttest: `t.test(${a} ~ ${g}, data = veri, var.equal = TRUE)\n# ${y("Levene için", "For Levene's test")}: car::leveneTest(${a} ~ factor(${g}), data = veri)`,
     anova: `model <- aov(${a} ~ factor(${g}), data = veri)\nsummary(model)\nTukeyHSD(model)`,
     correlation: `cor.test(veri$${a}, veri$${b}, method = "pearson")`,
     spearman: `cor.test(veri$${a}, veri$${b}, method = "spearman")`,
@@ -267,12 +355,12 @@ function r(tur: AnalizTuru, s: BetikSecimi): string {
     wilcoxon: `wilcox.test(veri$${a}, veri$${b}, paired = TRUE, exact = FALSE, correct = FALSE)`,
     friedman: `olcumler <- na.omit(veri[, c(${maddeler})])\nfriedman.test(as.matrix(olcumler))`,
     tekorneklem: `t.test(veri$${a}, mu = ${s.testDegeri ?? 0})`,
-    tekrarlianova: `library(rstatix)\nlibrary(tidyr)\nveri$id <- seq_len(nrow(veri))\nuzun <- pivot_longer(veri[, c("id", ${maddeler})], -id, names_to = "olcum", values_to = "puan")\nanova_test(uzun, dv = puan, wid = id, within = olcum)  # Mauchly ve GG/HF düzeltmesi dahil\npairwise_t_test(uzun, puan ~ olcum, paired = TRUE, p.adjust.method = "bonferroni")`,
+    tekrarlianova: `library(rstatix)\nlibrary(tidyr)\nveri$id <- seq_len(nrow(veri))\nuzun <- pivot_longer(veri[, c("id", ${maddeler})], -id, names_to = "olcum", values_to = "puan")\nanova_test(uzun, dv = puan, wid = id, within = olcum)  # ${y("Mauchly ve GG/HF düzeltmesi dahil", "includes Mauchly's test and the GG/HF correction")}\npairwise_t_test(uzun, puan ~ olcum, paired = TRUE, p.adjust.method = "bonferroni")`,
     aracilik: aracilikLavaan(s),
     duzenleyicilik: `veri$x_m <- veri$${a} - mean(veri$${a}, na.rm = TRUE)\nveri$w_m <- veri$${b} - mean(veri$${b}, na.rm = TRUE)\nmodel <- lm(${rAd(ad(s.varY, "sonuc"))} ~ x_m * w_m, data = veri)\nsummary(model)\nlibrary(interactions)\nsim_slopes(model, pred = x_m, modx = w_m, johnson_neyman = TRUE)`,
-    dfa: `library(lavaan)\nmodel <- '\n${dfaModelMetni(s)}\n'\nfit <- cfa(model, data = veri, std.lv = TRUE)\nsummary(fit, fit.measures = TRUE, standardized = TRUE)\n# Not: lavaan χ²'yi N ile, ArvoLab AMOS gibi N − 1 ile hesaplar; fark çok küçüktür.`,
+    dfa: `library(lavaan)\nmodel <- '\n${dfaModelMetni(s)}\n'\nfit <- cfa(model, data = veri, std.lv = TRUE)\nsummary(fit, fit.measures = TRUE, standardized = TRUE)\n# ${y("Not: lavaan χ²'yi N ile, ArvoLab AMOS gibi N − 1 ile hesaplar; fark çok küçüktür.", "Note: lavaan computes χ² with N, ArvoLab (like AMOS) with N − 1; the difference is very small.")}`,
     karmaanova: `library(rstatix)\nlibrary(tidyr)\nveri$id <- seq_len(nrow(veri))\nuzun <- pivot_longer(veri[, c("id", ${JSON.stringify(ad(s.groupVar, "grup"))}, ${maddeler})], -c(id, ${g}), names_to = "olcum", values_to = "puan")\nanova_test(uzun, dv = puan, wid = id, within = olcum, between = ${g})`,
-    ancova: `model <- lm(${a} ~ ${kovaryatlarR} + factor(${g}), data = veri)\ncar::Anova(model, type = 2)\nemmeans::emmeans(model, ~ ${g})  # düzeltilmiş ortalamalar`,
+    ancova: `model <- lm(${a} ~ ${kovaryatlarR} + factor(${g}), data = veri)\ncar::Anova(model, type = 2)\nemmeans::emmeans(model, ~ ${g})  # ${y("düzeltilmiş ortalamalar", "adjusted means")}`,
     kismikorelasyon: `library(ppcor)\ntemiz <- na.omit(veri[, c(${JSON.stringify(ad(s.varA, "degisken1"))}, ${JSON.stringify(ad(s.varB, "degisken2"))}, ${kovaryatlarListe})])\npcor.test(temiz[[1]], temiz[[2]], temiz[, -(1:2)])`,
     mcnemar: `mcnemar.test(table(veri$${a}, veri$${b}))`,
     lojistik: `model <- glm(${a} ~ ${yordayicilar}, data = veri, family = binomial)\nsummary(model)\nexp(cbind(OR = coef(model), confint.default(model)))`,
@@ -281,7 +369,8 @@ function r(tur: AnalizTuru, s: BetikSecimi): string {
   return `${okuma}\n\n${govde[tur]}`;
 }
 
-function python(tur: AnalizTuru, s: BetikSecimi): string {
+function python(tur: AnalizTuru, s: BetikSecimi, en: boolean): string {
+  const y = (tr: string, ing: string) => (en ? ing : tr);
   const aAd = ad(s.varA, "degisken1");
   const bAd = ad(s.varB, "degisken2");
   const gAd = ad(s.groupVar, "grup");
@@ -311,7 +400,7 @@ function python(tur: AnalizTuru, s: BetikSecimi): string {
     tekorneklem: `print(stats.ttest_1samp(${a}.dropna(), ${s.testDegeri ?? 0}))`,
     tekrarlianova: `import pingouin as pg\nuzun = veri[${maddeler}].dropna().reset_index().melt(id_vars="index", var_name="olcum", value_name="puan")\nprint(pg.rm_anova(uzun, dv="puan", within="olcum", subject="index", correction=True))\nprint(pg.pairwise_tests(uzun, dv="puan", within="olcum", subject="index", padjust="bonf"))`,
     aracilik: s.araciModeli === "seri" && (s.aracilar?.length ?? 0) > 1
-      ? `# Seri aracılığın bootstrap'lı çözümü için R betiğini (lavaan) kullanın; pingouin yalnızca paralel modeli destekler.\nimport statsmodels.formula.api as smf\n${s.aracilar!.map((m, j) => `print(smf.ols(${JSON.stringify(`${pyFormul(m)} ~ ${[aAd, ...s.aracilar!.slice(0, j)].map(pyFormul).join(" + ")}`)}, data=veri).fit().params)`).join("\n")}\nprint(smf.ols(${JSON.stringify(`${pyFormul(ad(s.varY, "sonuc"))} ~ ${[aAd, ...s.aracilar!].map(pyFormul).join(" + ")}`)}, data=veri).fit().params)`
+      ? `# ${y("Seri aracılığın bootstrap'lı çözümü için R betiğini (lavaan) kullanın; pingouin yalnızca paralel modeli destekler.", "For a bootstrapped serial mediation solution use the R script (lavaan); pingouin supports only the parallel model.")}\nimport statsmodels.formula.api as smf\n${s.aracilar!.map((m, j) => `print(smf.ols(${JSON.stringify(`${pyFormul(m)} ~ ${[aAd, ...s.aracilar!.slice(0, j)].map(pyFormul).join(" + ")}`)}, data=veri).fit().params)`).join("\n")}\nprint(smf.ols(${JSON.stringify(`${pyFormul(ad(s.varY, "sonuc"))} ~ ${[aAd, ...s.aracilar!].map(pyFormul).join(" + ")}`)}, data=veri).fit().params)`
       : `import pingouin as pg\nprint(pg.mediation_analysis(data=veri, x=${JSON.stringify(aAd)}, m=${JSON.stringify(s.aracilar?.length ? (s.aracilar.length > 1 ? s.aracilar : s.aracilar[0]) : bAd)}, y=${JSON.stringify(ad(s.varY, "sonuc"))}${s.kovaryatlar?.length ? `, covar=${kovaryatlarPy}` : ""}, n_boot=5000))`,
     duzenleyicilik: `import statsmodels.formula.api as smf\nveri["x_m"] = ${a} - ${a}.mean()\nveri["w_m"] = ${b} - ${b}.mean()\nmodel = smf.ols(${JSON.stringify(`${pyFormul(ad(s.varY, "sonuc"))} ~ x_m * w_m`)}, data=veri).fit()\nprint(model.summary())`,
     dfa: `import semopy\nmodel = semopy.Model("""\n${dfaModelMetni(s)}\n""")\nmodel.fit(veri)\nprint(model.inspect(std_est=True))\nprint(semopy.calc_stats(model).T)`,
@@ -327,13 +416,26 @@ function python(tur: AnalizTuru, s: BetikSecimi): string {
 }
 
 /** Seçilen programda aynı analizi yeniden üreten betik. */
-export function analizBetigi(arac: AnalizAraci, tur: AnalizTuru, secim: BetikSecimi): string {
+export function analizBetigi(arac: AnalizAraci, tur: AnalizTuru, secim: BetikSecimi, dil: Dil = "tr"): string {
+  const en = dil === "en";
+  const etiket = analizEtiketi(tur, dil);
+  const programAdi = arac === "r" ? "R" : "Python";
   const baslik =
     arac === "spss"
-      ? `* ${ANALIZ_ETIKETLERI[tur]} — ArvoLab'ın hesapladığı analizin SPSS sözdizimi.\n* Verinizi SPSS'te açıp bu sözdizimini çalıştırın.\n`
-      : `# ${ANALIZ_ETIKETLERI[tur]} — ArvoLab'ın hesapladığı analizin ${arac === "r" ? "R" : "Python"} betiği.\n`;
-  const govde = arac === "spss" ? spss(tur, secim) : arac === "r" ? r(tur, secim) : python(tur, secim);
+      ? en
+        ? `* ${etiket} — SPSS syntax for the analysis computed by ArvoLab.\n* Open your data in SPSS and run this syntax.\n`
+        : `* ${etiket} — ArvoLab'ın hesapladığı analizin SPSS sözdizimi.\n* Verinizi SPSS'te açıp bu sözdizimini çalıştırın.\n`
+      : en
+        ? `# ${etiket} — ${programAdi} script for the analysis computed by ArvoLab.\n`
+        : `# ${etiket} — ArvoLab'ın hesapladığı analizin ${programAdi} betiği.\n`;
+  const govde = arac === "spss" ? spss(tur, secim, en) : arac === "r" ? r(tur, secim, en) : python(tur, secim, en);
   return `${baslik}${govde}\n`;
 }
 
 export const ARAC_ADI: Record<AnalizAraci, string> = { spss: "SPSS sözdizimi", r: "R betiği", python: "Python betiği" };
+
+export const ARAC_ADI_METIN: Record<AnalizAraci, Metin> = {
+  spss: { tr: ARAC_ADI.spss, en: "SPSS syntax" },
+  r: { tr: ARAC_ADI.r, en: "R script" },
+  python: { tr: ARAC_ADI.python, en: "Python script" },
+};

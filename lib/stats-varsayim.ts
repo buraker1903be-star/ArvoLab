@@ -19,6 +19,7 @@
 */
 import { mean, median, oneWayAnova } from "@/lib/stats-tests-core";
 import { fTestP } from "@/lib/stats-math";
+import type { Dil } from "@/lib/dil";
 
 /** k. merkezi moment: Σ(x − ortalama)^k / n */
 function moment(dizi: number[], k: number): number {
@@ -134,7 +135,8 @@ export type TestOnerisi = {
   gerekce: string;
 };
 
-export function ikiGrupOnerisi(a: number[], b: number[]): TestOnerisi {
+export function ikiGrupOnerisi(a: number[], b: number[], dil: Dil = "tr"): TestOnerisi {
+  const en = dil === "en";
   const na = normallikOlcutu(a);
   const nb = normallikOlcutu(b);
   const levene = leveneTesti([a, b]);
@@ -142,24 +144,33 @@ export function ikiGrupOnerisi(a: number[], b: number[]): TestOnerisi {
   if (na.n < 4 || nb.n < 4) {
     return {
       parametrikUygun: false,
-      gerekce: "Gruplardan birinde dörtten az gözlem var; normallik ölçülemiyor.",
+      gerekce: en
+        ? "One of the groups has fewer than four observations; normality cannot be assessed."
+        : "Gruplardan birinde dörtten az gözlem var; normallik ölçülemiyor.",
     };
   }
   if (!na.normaleYakin || !nb.normaleYakin) {
     return {
       parametrikUygun: false,
-      gerekce:
-        "Dağılım normalden uzak (çarpıklık ya da basıklık ±1,5 sınırının dışında). " +
-        "Parametrik olmayan karşılığı (Mann-Whitney U) daha uygun olabilir.",
+      gerekce: en
+        ? "The distribution departs from normality (skewness or kurtosis outside ±1.5). " +
+          "The nonparametric alternative (Mann-Whitney U) may be more appropriate."
+        : "Dağılım normalden uzak (çarpıklık ya da basıklık ±1,5 sınırının dışında). " +
+          "Parametrik olmayan karşılığı (Mann-Whitney U) daha uygun olabilir.",
     };
   }
   if (!levene.homojen) {
     return {
       parametrikUygun: false,
-      gerekce:
-        "Varyanslar homojen değil (Levene p < .05). Eşit varyans varsaymayan " +
-        "t-testi (Welch) ya da parametrik olmayan karşılığı kullanılmalı.",
+      gerekce: en
+        ? "Variances are not homogeneous (Levene p < .05). Use a t-test that does not " +
+          "assume equal variances (Welch) or the nonparametric alternative."
+        : "Varyanslar homojen değil (Levene p < .05). Eşit varyans varsaymayan " +
+          "t-testi (Welch) ya da parametrik olmayan karşılığı kullanılmalı.",
     };
   }
-  return { parametrikUygun: true, gerekce: "Normallik ve varyans homojenliği sağlanıyor." };
+  return {
+    parametrikUygun: true,
+    gerekce: en ? "Normality and homogeneity of variance are satisfied." : "Normallik ve varyans homojenliği sağlanıyor.",
+  };
 }

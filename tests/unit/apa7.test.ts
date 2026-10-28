@@ -270,3 +270,21 @@ test("MLA çapraz kontrolü yıla bakmaz: doğru yazılmış kaynak 'anılmıyor
   assert.deepEqual(mlaSonuc.referencesWithoutCitation, []);
   assert.deepEqual(mlaSonuc.citationsWithoutReference, []);
 });
+
+test("İngilizce sorun mesajları ve 'and' ayırıcısı (28.10.2026)", () => {
+  const [eksik] = parseReferenceList("Yazarsız bir başlık ve uzun bir metin", "en");
+  assert.equal(eksik.issues[0].message, "Year in parentheses not found, e.g., (2023).");
+  const [ikili] = parseReferenceList("Smith, J. and Jones, K. (2020). Writing well. Academic Press.", "en");
+  assert.deepEqual(ikili.authors, ["Smith, J.", "Jones, K."]);
+  assert.deepEqual(ikili.issues, []);
+  /* Kurum adındaki "and" bölünmüyor. */
+  const [kurum] = parseReferenceList("Department of Health and Human Services. (2020). Report title. Publisher.");
+  assert.equal(kurum.authors?.length, 1);
+  const [tr] = parseReferenceList("Yazarsız bir başlık ve uzun bir metin");
+  assert.equal(tr.issues[0].message, "Yıl parantez içinde bulunamadı, örn: (2023).");
+});
+
+test("İngilizce metin içi atıf: et al., and, see (28.10.2026)", () => {
+  const atiflar = extractInTextCitations("Smith and Jones (2019) argued (see Brown et al., 2020, p. 4).");
+  assert.deepEqual(atiflar.map((a) => [a.authorKey, a.year]).sort(), [["brown", "2020"], ["smith", "2019"]]);
+});

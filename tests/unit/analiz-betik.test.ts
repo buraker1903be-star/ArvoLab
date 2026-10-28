@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import { analizBetigi, PROGRAM_KARTLARI, YONTEM_GRUPLARI, YONTEM_KARTLARI } from "@/lib/analiz-betik";
+import test, { describe } from "node:test";
+import { analizBetigi, PROGRAM_KARTLARI, programKartlari, YONTEM_GRUPLARI, YONTEM_KARTLARI, yontemGruplari, yontemKartlari } from "@/lib/analiz-betik";
 import { ANALIZ_TURLERI } from "@/lib/analiz-turleri";
 
 test("her analiz türünün kartı ve açıklaması var; ANSYS kapalı ve nedenini söylüyor", () => {
@@ -98,4 +98,23 @@ test("çoklu aracı betikleri: PROCESS model numarası ve lavaan yolları", () =
   assert.match(r, /toplam_dolayli := ind1 \+ ind2 \+ ind3/);
   assert.match(analizBetigi("python", "aracilik", paralel), /m=\["m1","m2"\]/);
   assert.match(analizBetigi("r", "aracilik", { varA: "x", varB: "m", varY: "y" }), /ind1 := a1\*b1/);
+});
+
+describe("İngilizce betik ve kartlar (28.10.2026)", () => {
+  test("yorumlar İngilizce, kod Türkçe sürümle aynı", () => {
+    const tr = analizBetigi("spss", "ttest", { varA: "puan", groupVar: "cinsiyet" });
+    const en = analizBetigi("spss", "ttest", { varA: "puan", groupVar: "cinsiyet" }, "en");
+    assert.match(en, /^\* Independent Samples t-Test — SPSS syntax/);
+    assert.match(en, /Replace the group codes \(1 2\)/);
+    const kod = (b: string) => b.split("\n").filter((l) => !l.startsWith("*")).join("\n");
+    assert.equal(kod(en), kod(tr));
+    assert.match(analizBetigi("r", "ancova", {}, "en"), /# adjusted means/);
+  });
+
+  test("kart ve grup başlıkları İngilizce", () => {
+    assert.equal(yontemGruplari("en")[0].baslik, "Describe the data");
+    assert.equal(yontemKartlari("en").find((k) => k.tur === "ttest")?.aciklama, "Compares the means of two groups");
+    assert.match(programKartlari("en").find((k) => k.anahtar === "ansys")!.aciklama, /cannot run it/);
+    assert.equal(programKartlari("tr"), PROGRAM_KARTLARI);
+  });
 });

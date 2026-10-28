@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { metinDurumu, sayfaDenetimi, surumFarki, type KarsilastirilanAnaliz } from "@/lib/belge-kontrol";
+import { BOS_METIN_MESAJI, BOS_METIN_MESAJI_METIN, metinDurumu, sayfaDenetimi, surumFarki, type KarsilastirilanAnaliz } from "@/lib/belge-kontrol";
 
 describe("belgenin metni denetime yeter mi", () => {
   test("taranmış PDF boş sayılır", () => {
@@ -83,5 +83,17 @@ describe("önceki sürümle fark", () => {
   test("kılavuz değiştiyse bölüm sayıları karşılaştırılmaz", () => {
     const f = surumFarki(analiz(), analiz({ kilavuz: { surum: "k@2" }, guidelineCompliance: { missingSections: [] } }));
     assert.deepEqual(f, []);
+  });
+});
+
+describe("İngilizce (28.10.2026)", () => {
+  test("sayfa denetimi ve sürüm farkı İngilizce", () => {
+    assert.deepEqual(sayfaDenetimi(150, 80, 120, "en"), {
+      ton: "warning",
+      metin: "The PDF has 150 pages; the guideline specifies 80–120 pages. Check the guideline to see whether front matter and appendices count toward the limit.",
+    });
+    const f = surumFarki(analiz(), analiz({ referenceSectionFound: false, references: [], complianceScore: null }), "en");
+    assert.deepEqual(f, [{ metin: "The reference list section was not found in this version", ton: "warning" }]);
+    assert.equal(BOS_METIN_MESAJI_METIN.tr, BOS_METIN_MESAJI);
   });
 });

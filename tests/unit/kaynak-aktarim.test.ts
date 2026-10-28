@@ -152,3 +152,11 @@ describe("kurum yazarı (28.10.2026)", () => {
     assert.equal(k.authors, "World Health Organization, & Demir, A.");
   });
 });
+
+describe("İngilizce kaynakça metni (28.10.2026)", () => {
+  test("tarihsiz kaynak n.d. ile yazılıyor", () => {
+    const k = { title: "Writing well", authors: "Smith, J.", year: null, source_type: "book", doi_or_url: null, publisher: "Academic Press" };
+    assert.equal(kaynakcaMetni([k], "apa7", {}, "en").metin, "Smith, J. (n.d.). Writing well. Academic Press.");
+    assert.equal(kaynakcaMetni([k], "apa7").metin, "Smith, J. (t.y.). Writing well. Academic Press.");
+  });
+});

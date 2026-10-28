@@ -39,6 +39,7 @@
 
   Saf modül; testi tests/unit/stats-dfa.test.ts.
 */
+import type { Dil, Metin } from "@/lib/dil";
 import { chiSquareP } from "@/lib/stats-math";
 import { normalCDF } from "@/lib/stats-tukey";
 import { mean } from "@/lib/stats-tests-core";
@@ -254,7 +255,13 @@ export const MI_ESIGI = 3.84;
 
 export type DfaHata = "az-madde" | "az-gozlem" | "tanimsiz" | "kestirilemedi";
 
-export function dogrulayiciFaktorAnalizi(maddeler: number[][], maddeAdlari: string[], model: DfaModeli): DfaSonucu | DfaHata {
+/* `dil` yalnızca değişiklik indekslerinin etiketindeki ekleri ("(hata)") seçer. */
+export function dogrulayiciFaktorAnalizi(
+  maddeler: number[][],
+  maddeAdlari: string[],
+  model: DfaModeli,
+  dil: Dil = "tr",
+): DfaSonucu | DfaHata {
   const p = maddeler.length;
   const n = maddeler[0]?.length ?? 0;
   const m = model.faktorler.length;
@@ -408,7 +415,7 @@ export function dogrulayiciFaktorAnalizi(maddeler: number[][], maddeAdlari: stri
         p: Number.isFinite(z) ? 2 * (1 - normalCDF(Math.abs(z))) : NaN,
       };
     }),
-    degisiklikIndeksleri: degisiklikIndeksleri(model, par, Sig, Si, S, N1, maddeAdlari).map((d) =>
+    degisiklikIndeksleri: degisiklikIndeksleri(model, par, Sig, Si, S, N1, maddeAdlari, dil).map((d) =>
       d.tur === "capraz-yuk" ? { ...d, epc: d.epc * isaret[d.j], sepc: d.sepc * isaret[d.j] } : d,
     ),
   };
@@ -428,7 +435,9 @@ function degisiklikIndeksleri(
   S: Matris,
   N1: number,
   maddeAdlari: string[],
+  dil: Dil,
 ): DegisiklikIndeksi[] {
+  const en = dil === "en";
   const p = Sig.length;
   const m = model.faktorler.length;
   const L = lambdaMatrisi(model, par.lambda);
@@ -492,7 +501,7 @@ function degisiklikIndeksleri(
         tur: "hata-kovaryansi",
         i,
         j,
-        etiket: `${maddeAdlari[i]} ↔ ${maddeAdlari[j]} (hata)`,
+        etiket: `${maddeAdlari[i]} ↔ ${maddeAdlari[j]} (${en ? "error" : "hata"})`,
         A: ciftTurevi(i, j),
         /* Hata kovaryansının standartlaştırılmışı hataların korelasyonu (lavaan std.all). */
         olcek: 1 / Math.sqrt(par.theta[i] * par.theta[j]),
@@ -506,7 +515,7 @@ function degisiklikIndeksleri(
         tur: "capraz-yuk",
         i,
         j: k,
-        etiket: `${model.faktorler[k]} → ${maddeAdlari[i]} (çapraz yük)`,
+        etiket: `${model.faktorler[k]} → ${maddeAdlari[i]} (${en ? "cross-loading" : "çapraz yük"})`,
         A: yukTurevi(i, k),
         olcek: 1 / Math.sqrt(Sig[i][i]),
       });
@@ -529,6 +538,17 @@ function degisiklikIndeksleri(
   }
   return sonuc.sort((x, y) => y.mi - x.mi);
 }
+
+/*
+  Uyum yorumunun ekrandaki adı. `uyumYorumu` Türkçe anahtar döndürmeye
+  devam ediyor (çağıranlar ve testler ona dayanıyor); ekran bu haritadan
+  seçer.
+*/
+export const UYUM_YORUMU_METIN: Record<"iyi" | "kabul edilebilir" | "zayıf", Metin> = {
+  iyi: { tr: "iyi", en: "good" },
+  "kabul edilebilir": { tr: "kabul edilebilir", en: "acceptable" },
+  zayıf: { tr: "zayıf", en: "poor" },
+};
 
 /* Yaygın kabul eşikleri (Hu & Bentler, 1999; Kline, 2016) — ekranda değerin yanında. */
 export function uyumYorumu(ad: "cfi" | "tli" | "rmsea" | "srmr" | "chiKareDf" | "gfi" | "agfi", deger: number): "iyi" | "kabul edilebilir" | "zayıf" {

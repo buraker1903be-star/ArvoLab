@@ -21,6 +21,7 @@
 
   Saf modül; testi tests/unit/veri-hazirlama.test.ts.
 */
+import type { Dil } from "@/lib/dil";
 import { sayisalMi, type VeriSatiri } from "@/lib/veri-eslestirme";
 
 export type PuanTuru = "ortalama" | "toplam";
@@ -79,8 +80,15 @@ export function tersKodla(
   sutun: string,
   aralik: { min: number; max: number },
   mevcutSutunlar: string[],
+  dil: Dil = "tr",
 ): TuretmeSonucu {
-  if (!(aralik.min < aralik.max)) throw new Error("Ölçeğin en küçük değeri en büyüğünden küçük olmalı.");
+  if (!(aralik.min < aralik.max)) {
+    throw new Error(
+      dil === "en"
+        ? "The scale's minimum value must be smaller than its maximum."
+        : "Ölçeğin en küçük değeri en büyüğünden küçük olmalı.",
+    );
+  }
   const yeni = benzersizAd(`${sutun}_ters`, mevcutSutunlar);
   let bos = 0;
   const sonuc = satirlar.map((s) => {
@@ -111,8 +119,11 @@ export function olcekPuani(
   tur: PuanTuru,
   ad: string,
   mevcutSutunlar: string[],
+  dil: Dil = "tr",
 ): TuretmeSonucu {
-  if (maddeler.length < 2) throw new Error("Ölçek puanı için en az iki madde seçin.");
+  if (maddeler.length < 2) {
+    throw new Error(dil === "en" ? "Select at least two items for a scale score." : "Ölçek puanı için en az iki madde seçin.");
+  }
   const yeni = benzersizAd(ad, mevcutSutunlar);
   let bos = 0;
   const sonuc = satirlar.map((s) => {

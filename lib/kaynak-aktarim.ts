@@ -17,6 +17,7 @@
   Saf modül; testi tests/unit/kaynak-aktarim.test.ts.
 */
 import { formatAuthors } from "@/lib/doi";
+import type { Dil } from "@/lib/dil";
 import { formatReferenceParts, splitAuthors, surname, NUMERIC_STYLES, type CitableSource, type CitationStyle } from "@/lib/citation-format";
 
 export type KaynakTuru = "article" | "book" | "chapter" | "thesis" | "report" | "website" | "other";
@@ -410,7 +411,13 @@ export function bibtexYaz(kaynaklar: AktarilacakKaynak[]): string {
   korunur — numara metindeki ilk atıf sırasıdır ve o sıra editörde. HTML
   sürümü italikleri taşır: Word'e yapıştırınca dergi adları italik kalır.
 */
-export function kaynakcaMetni(kaynaklar: AktarilacakKaynak[], stil: CitationStyle, secenek: { erisimTarihi?: string | null } = {}) {
+/* `dil` künyenin dilidir (bkz. lib/citation-format): "n.d.", "pp.", "Accessed". */
+export function kaynakcaMetni(
+  kaynaklar: AktarilacakKaynak[],
+  stil: CitationStyle,
+  secenek: { erisimTarihi?: string | null } = {},
+  dil: Dil = "tr",
+) {
   const sirali = NUMERIC_STYLES.includes(stil)
     ? [...kaynaklar]
     : [...kaynaklar].sort((a, b) => {
@@ -421,9 +428,9 @@ export function kaynakcaMetni(kaynaklar: AktarilacakKaynak[], stil: CitationStyl
         };
         const sa = anahtar(a);
         const sb = anahtar(b);
-        return sa.localeCompare(sb, "tr", { sensitivity: "base" }) || (a.year ?? "").localeCompare(b.year ?? "");
+        return sa.localeCompare(sb, dil, { sensitivity: "base" }) || (a.year ?? "").localeCompare(b.year ?? "");
       });
-  const parcalar = sirali.map((k, i) => formatReferenceParts(k, stil, i + 1, secenek));
+  const parcalar = sirali.map((k, i) => formatReferenceParts(k, stil, i + 1, secenek, dil));
   const kacis = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return {
     /** Ekranda çizmek için parçalar (italik ayrımıyla); HTML'i sayfaya basmak gerekmesin. */

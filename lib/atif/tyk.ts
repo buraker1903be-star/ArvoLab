@@ -22,14 +22,20 @@
   Saf modül; testi tests/unit/atif-tyk.test.ts.
 */
 
+import type { Dil } from "@/lib/dil";
+
 export type AtifKalibi = {
   ornek: string;
   /** Yazar ile yıl arasında: "," → "(Yılmaz, 2020)", " " → "(Yılmaz 2020)". */
   yazarYilAyraci: "," | " ";
   /** Yıl ile sayfa arasında; örnekte sayfa yoksa null (denetlenmez). */
   sayfaAyraci: ":" | "," | null;
-  /** Sayfa öneki; örnekte sayfa yoksa null. */
-  sayfaOneki: "s." | "" | null;
+  /**
+   * Sayfa öneki; örnekte sayfa yoksa null. "p." İngilizce kılavuzların
+   * önekidir (28.10.2026): eskiden "p." de "s." diye okunuyor ve
+   * İngilizce örnek veren öğrencinin atıfına "s." yazılıyordu.
+   */
+  sayfaOneki: "s." | "p." | "" | null;
   ikiYazar: "ve" | "&" | "and" | null;
   cokYazar: "vd." | "et al." | null;
 };
@@ -47,7 +53,7 @@ function parcala(ic: string) {
   return {
     yazarYilAyraci: /,\s*$/.test(yazar) ? ("," as const) : (" " as const),
     sayfaAyraci: sayfa ? (sayfa[1] as ":" | ",") : null,
-    sayfaOneki: sayfa ? (sayfa[2] ? ("s." as const) : ("" as const)) : null,
+    sayfaOneki: sayfa ? (sayfa[2] ? (/^p/i.test(sayfa[2]) ? ("p." as const) : ("s." as const)) : ("" as const)) : null,
     ikiYazar: /\s&\s/.test(yazar) ? ("&" as const) : /\sve\s/.test(yazar) ? ("ve" as const) : /\sand\s/.test(yazar) ? ("and" as const) : null,
     cokYazar: /\bvd\./.test(yazar) ? ("vd." as const) : /\bet al\./.test(yazar) ? ("et al." as const) : null,
   };
@@ -65,7 +71,16 @@ export function ornekKalibi(ornek: string | null | undefined): AtifKalibi | null
 }
 
 /** Kalıbın öğrenciye okunur özeti (kılavuz penceresinde). */
-export function kalipOzeti(k: AtifKalibi): string[] {
+export function kalipOzeti(k: AtifKalibi, dil: Dil = "tr"): string[] {
+  if (dil === "en") {
+    const satirlarEn = [`Between author and year: ${k.yazarYilAyraci === "," ? "a comma" : "a space only"}`];
+    if (k.sayfaAyraci) {
+      satirlarEn.push(`Between year and page: "${k.sayfaAyraci}"${k.sayfaOneki ? `, "${k.sayfaOneki}" before the page` : ", no page prefix"}`);
+    }
+    if (k.ikiYazar) satirlarEn.push(`Two authors are joined with "${k.ikiYazar}"`);
+    if (k.cokYazar) satirlarEn.push(`Three or more authors: "${k.cokYazar}"`);
+    return satirlarEn;
+  }
   const satirlar = [`Yazar ile yıl arasında ${k.yazarYilAyraci === "," ? "virgül" : "yalnızca boşluk"}`];
   if (k.sayfaAyraci) satirlar.push(`Yıl ile sayfa arasında "${k.sayfaAyraci}"${k.sayfaOneki ? `, sayfa önünde "${k.sayfaOneki}"` : ", sayfa öneki yok"}`);
   if (k.ikiYazar) satirlar.push(`İki yazar "${k.ikiYazar}" ile bağlanır`);
@@ -81,7 +96,8 @@ const EN_COK = 30;
   Kalıba uymayan atıflar. Yalnızca örnekte görülen kurallar denetlenir;
   aynı atıf metni bir kez raporlanır.
 */
-export function kalibaUymayanlar(govde: string, kalip: AtifKalibi): TykBulgusu[] {
+export function kalibaUymayanlar(govde: string, kalip: AtifKalibi, dil: Dil = "tr"): TykBulgusu[] {
+  const en = dil === "en";
   const bulgular: TykBulgusu[] = [];
   const gorulen = new Set<string>();
   for (const grup of govde.matchAll(/\(([^()]{3,300})\)/g)) {
@@ -91,17 +107,29 @@ export function kalibaUymayanlar(govde: string, kalip: AtifKalibi): TykBulgusu[]
       const p = parcala(parca.trim());
       if (!p) continue;
       if (p.yazarYilAyraci !== kalip.yazarYilAyraci)
-        nedenler.add(kalip.yazarYilAyraci === "," ? "yazar ile yıl arasında virgül olmalı" : "yazar ile yıl arasında virgül olmamalı");
+        nedenler.add(
+          kalip.yazarYilAyraci === ","
+            ? en ? "there should be a comma between author and year" : "yazar ile yıl arasında virgül olmalı"
+            : en ? "there should be no comma between author and year" : "yazar ile yıl arasında virgül olmamalı",
+        );
       if (kalip.sayfaAyraci && p.sayfaAyraci && p.sayfaAyraci !== kalip.sayfaAyraci)
-        nedenler.add(`yıl ile sayfa arasında "${kalip.sayfaAyraci}" olmalı`);
+        nedenler.add(en ? `use "${kalip.sayfaAyraci}" between year and page` : `yıl ile sayfa arasında "${kalip.sayfaAyraci}" olmalı`);
       if (kalip.sayfaOneki !== null && p.sayfaOneki !== null && p.sayfaOneki !== kalip.sayfaOneki)
-        nedenler.add(kalip.sayfaOneki ? `sayfa önünde "${kalip.sayfaOneki}" olmalı` : "sayfa önünde \"s.\" olmamalı");
-      if (kalip.ikiYazar && p.ikiYazar && p.ikiYazar !== kalip.ikiYazar) nedenler.add(`iki yazar "${kalip.ikiYazar}" ile bağlanmalı`);
-      if (kalip.cokYazar && p.cokYazar && p.cokYazar !== kalip.cokYazar) nedenler.add(`çok yazarda "${kalip.cokYazar}" kullanılmalı`);
+        nedenler.add(
+          kalip.sayfaOneki
+            ? en ? `use "${kalip.sayfaOneki}" before the page` : `sayfa önünde "${kalip.sayfaOneki}" olmalı`
+            : en ? `no "${p.sayfaOneki}" before the page` : `sayfa önünde "${p.sayfaOneki}" olmamalı`,
+        );
+      if (kalip.ikiYazar && p.ikiYazar && p.ikiYazar !== kalip.ikiYazar) {
+        nedenler.add(en ? `join two authors with "${kalip.ikiYazar}"` : `iki yazar "${kalip.ikiYazar}" ile bağlanmalı`);
+      }
+      if (kalip.cokYazar && p.cokYazar && p.cokYazar !== kalip.cokYazar) {
+        nedenler.add(en ? `use "${kalip.cokYazar}" for multiple authors` : `çok yazarda "${kalip.cokYazar}" kullanılmalı`);
+      }
     }
     if (!nedenler.size || gorulen.has(grup[0])) continue;
     gorulen.add(grup[0]);
-    bulgular.push({ tur: "kalip", atif: grup[0], aciklama: `Kılavuz örneği ${kalip.ornek}: ${[...nedenler].join("; ")}.` });
+    bulgular.push({ tur: "kalip", atif: grup[0], aciklama: `${en ? "Guideline example" : "Kılavuz örneği"} ${kalip.ornek}: ${[...nedenler].join("; ")}.` });
   }
   return bulgular;
 }
@@ -117,13 +145,16 @@ export function kalibaUymayanlar(govde: string, kalip: AtifKalibi): TykBulgusu[]
   ay ve mevsim adları ("(Haziran)") ayrıca dışarıda.
 */
 const AD = "\\p{Lu}[\\p{L}'’-]+";
-const YALNIZ_AD = new RegExp(`^${AD}(?:\\s+(?:ve|&|and)\\s+${AD}|\\s+(?:vd\\.|et al\\.)|,\\s*${AD}(?:,?\\s*(?:ve|&)\\s*${AD})?)?$`, "u");
+const YALNIZ_AD = new RegExp(`^${AD}(?:\\s+(?:ve|&|and)\\s+${AD}|\\s+(?:vd\\.|et al\\.)|,\\s*${AD}(?:,?\\s*(?:ve|&|and)\\s*${AD})?)?$`, "u");
 const AD_DEGIL = new Set([
   "ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül", "ekim", "kasım", "aralık",
   "bahar", "yaz", "güz", "kış", "ek", "tablo", "şekil", "not", "örnek", "bkz", "türkiye", "abd", "ab", "oecd", "tüik",
+  /* İngilizce metindeki karşılıkları (28.10.2026). */
+  "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december",
+  "spring", "summer", "fall", "autumn", "winter", "appendix", "table", "figure", "note", "see", "usa", "us", "uk", "eu",
 ]);
 
-export function yilsizAtiflar(govde: string): TykBulgusu[] {
+export function yilsizAtiflar(govde: string, dil: Dil = "tr"): TykBulgusu[] {
   const bulgular: TykBulgusu[] = [];
   const gorulen = new Set<string>();
   for (const grup of govde.matchAll(/\(([^()\d]{3,80})\)/g)) {
@@ -133,10 +164,21 @@ export function yilsizAtiflar(govde: string): TykBulgusu[] {
     if (AD_DEGIL.has(ic.split(/[\s,]/)[0].toLocaleLowerCase("tr-TR").replace(/\.$/, ""))) continue;
     if (gorulen.has(grup[0])) continue;
     gorulen.add(grup[0]);
-    bulgular.push({ tur: "yilsiz", atif: grup[0], aciklama: "Atıfta yıl yok; yazar–tarih atıfında yıl şart." });
+    bulgular.push({
+      tur: "yilsiz",
+      atif: grup[0],
+      aciklama:
+        dil === "en"
+          ? "The citation has no year; author–date citations require a year."
+          : "Atıfta yıl yok; yazar–tarih atıfında yıl şart.",
+    });
   }
   return bulgular;
 }
+
+/* Aralıkta önek çoğullanır: "ss. 14-16", "pp. 14-16". Kalıpta önek yoksa (null) Türkçe "s." — eski davranış. */
+const sayfaOnekiYaz = (onek: "s." | "p." | null, aralik: boolean) =>
+  onek === "p." ? (aralik ? "pp." : "p.") : aralik && onek === "s." ? "ss." : "s.";
 
 /*
   Atıfı kalıba göre yazar (editörün atıf penceresi): örnek girilmişse
@@ -150,7 +192,7 @@ export function kalibaGoreAtif(yazar: string, yil: string, sayfa: string | null,
   if (kalip.cokYazar) yazarMetni = yazarMetni.replace(/\b(?:vd\.|et al\.)/, kalip.cokYazar);
   const ayrac = kalip.yazarYilAyraci === "," ? ", " : " ";
   const sayfaMetni = sayfa
-    ? `${kalip.sayfaAyraci === ":" ? ": " : ", "}${kalip.sayfaOneki === "" ? "" : `${/[-–]/.test(sayfa) && kalip.sayfaOneki === "s." ? "ss." : "s."} `}${sayfa}`
+    ? `${kalip.sayfaAyraci === ":" ? ": " : ", "}${kalip.sayfaOneki === "" ? "" : `${sayfaOnekiYaz(kalip.sayfaOneki, /[-–]/.test(sayfa))} `}${sayfa}`
     : "";
   return `(${yazarMetni}${ayrac}${yil}${sayfaMetni})`;
 }

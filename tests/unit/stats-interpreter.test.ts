@@ -225,3 +225,12 @@ describe("biçim kılavuzdan geliyor", () => {
     assert.match(bulgu.apaSentenceFragment, /t\(28\)/);
   });
 });
+
+describe("İngilizce anlamlılık notu (28.10.2026)", () => {
+  test("anlamsız sonuçta not İngilizce, APA gövdesi aynı", () => {
+    const [bulgu] = detectStatistics("t(28) = 1.10, p = .28", undefined, "en");
+    assert.equal(bulgu.apaSentenceFragment, "t(28) = 1.10, p = .280 (not statistically significant)");
+    const [tr] = detectStatistics("t(28) = 1.10, p = .28");
+    assert.equal(tr.apaSentenceFragment, "t(28) = 1.10, p = .280 (istatistiksel olarak anlamlı değil)");
+  });
+});

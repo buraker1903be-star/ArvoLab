@@ -10,7 +10,7 @@
 */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { dogrusalRegresyon } from "@/lib/stats-regresyon";
+import { dogrusalRegresyon, katsayiAdi } from "@/lib/stats-regresyon";
 
 const yakin = (a: number, b: number, tolerans = 1e-4) =>
   assert.ok(Math.abs(a - b) < tolerans, `${a} ≈ ${b} değil`);
@@ -127,5 +127,15 @@ describe("çoklu regresyon", () => {
     const iki = dogrusalRegresyon(y, [x1, gurultu], ["x1", "gürültü"]);
     assert.ok(iki.rKare >= tek.rKare, "R² büyümeli ya da aynı kalmalı");
     assert.ok(iki.duzeltilmisRKare < iki.rKare, "düzeltilmiş olan cezalandırmalı");
+  });
+});
+
+describe("sabit terimin ekrandaki adı (28.10.2026)", () => {
+  test("anahtar Türkçe kalıyor, İngilizce ekranda (Constant)", () => {
+    const r = dogrusalRegresyon([1, 2, 3, 5, 4], [[1, 2, 3, 4, 5]], ["x"]);
+    assert.equal(r.katsayilar[0].ad, "(Sabit)");
+    assert.equal(katsayiAdi(r.katsayilar[0].ad, "en"), "(Constant)");
+    assert.equal(katsayiAdi(r.katsayilar[0].ad), "(Sabit)");
+    assert.equal(katsayiAdi("x", "en"), "x");
   });
 });

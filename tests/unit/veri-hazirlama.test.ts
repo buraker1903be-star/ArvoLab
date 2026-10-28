@@ -37,3 +37,10 @@ describe("veri hazırlama", () => {
     assert.equal(aralikTahmini([{ a: 1.5 }, { a: 3 }], ["a"]), null);
   });
 });
+
+describe("İngilizce hata (28.10.2026)", () => {
+  test("tek maddeli ölçek puanı İngilizce reddediliyor", () => {
+    assert.throws(() => olcekPuani([], ["m1"], "ortalama", "puan", [], "en"), /at least two items/);
+    assert.throws(() => olcekPuani([], ["m1"], "ortalama", "puan", []), /en az iki madde/);
+  });
+});

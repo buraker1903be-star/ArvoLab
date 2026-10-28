@@ -84,3 +84,9 @@ test("çift bazlı eşleştirme", async (t) => {
     assert.deepEqual(ciftEslestir(a, b), { x: [2, 3], y: [20, 30] });
   });
 });
+
+test("eleme notu İngilizce (28.10.2026)", () => {
+  const veri = eslesenSatirlar([{ a: 1 }, { a: null }, { a: 3 }], ["a"]);
+  assert.equal(elemeNotu(veri, "en"), "1 row was excluded from the analysis due to missing data (N = 2).");
+  assert.equal(elemeNotu(veri), "1 satır eksik veri yüzünden analiz dışı bırakıldı (N = 2).");
+});

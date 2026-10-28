@@ -10,6 +10,7 @@
  * ile aynı ilkede) yapılır.
  */
 
+import type { Metin } from "@/lib/dil";
 import { ciftEslestir } from "@/lib/veri-eslestirme";
 import { tTestTwoTailedP, fTestP, chiSquareP, tKritik, logFaktoriyel } from "./stats-math";
 
@@ -92,6 +93,18 @@ export interface TTestResult {
   diye değil. O yüzden etiket ayrı bir alan; sayı her zaman yanında.
 */
 export type EtkiYorumu = "önemsiz" | "küçük" | "orta" | "büyük";
+
+/*
+  Etki yorumunun ekrandaki adı (28.10.2026). Sonuç nesneleri Türkçe
+  anahtarı taşımaya devam ediyor — kaydedilmiş sonuçlar ve testler ona
+  dayanıyor; ekran adı bu haritadan seçer.
+*/
+export const ETKI_YORUMU_METIN: Record<EtkiYorumu, Metin> = {
+  önemsiz: { tr: "önemsiz", en: "negligible" },
+  küçük: { tr: "küçük", en: "small" },
+  orta: { tr: "orta", en: "medium" },
+  büyük: { tr: "büyük", en: "large" },
+};
 
 function cohenYorumu(d: number): EtkiYorumu {
   const mutlak = Math.abs(d);

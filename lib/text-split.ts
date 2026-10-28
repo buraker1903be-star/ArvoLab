@@ -6,8 +6,14 @@
  * yerlerde de kullanılır. Ağır kütüphaneleri buraya eklemeyin;
  * onlar yalnızca lib/document-extract.ts içinde olmalı.
  */
+/*
+  İngilizce başlıklar: REFERENCES ve BIBLIOGRAPHY baştan beri vardı;
+  MLA'nın "Works Cited" ve "Reference List" yazımı 28.10.2026'da eklendi
+  — İngilizce çalışmada bunlar bulunmazsa kaynakça gövdeye karışır ve
+  her künye "metinde atıf" sanılırdı.
+*/
 const REFERENCE_HEADING_RE =
-  /\n\s*(KAYNAKÇA|KAYNAKLAR|REFERENCES|BIBLIOGRAPHY|BİBLİYOGRAFYA)\s*\n/i;
+  /\n\s*(KAYNAKÇA|KAYNAKLAR|REFERENCES|REFERENCE LIST|WORKS CITED|BIBLIOGRAPHY|BİBLİYOGRAFYA)\s*\n/i;
 
 export function splitBodyAndReferences(fullText: string): {
   bodyText: string;

@@ -23,6 +23,7 @@
 
   Saf modül; testi tests/unit/stats-faktor.test.ts.
 */
+import type { Dil } from "@/lib/dil";
 import { chiSquareP } from "@/lib/stats-math";
 import { tersAl } from "@/lib/stats-regresyon";
 import { mean } from "@/lib/stats-tests-core";
@@ -233,12 +234,14 @@ export function maddeUyarisi(satir: number[]): "dusuk" | "binisik" | null {
   return null;
 }
 
-/* KMO'nun yaygın (Kaiser) yorum basamakları; ekranda sayının yanında. */
-export function kmoYorumu(kmo: number): string {
-  if (kmo >= 0.9) return "mükemmel";
-  if (kmo >= 0.8) return "çok iyi";
-  if (kmo >= 0.7) return "iyi";
-  if (kmo >= 0.6) return "orta";
-  if (kmo >= 0.5) return "zayıf";
-  return "kabul edilemez";
+/* KMO'nun yaygın (Kaiser) yorum basamakları; ekranda sayının yanında.
+   İngilizcede Kaiser'in (1974) kendi adları: literatür onları kullanıyor. */
+export function kmoYorumu(kmo: number, dil: Dil = "tr"): string {
+  const en = dil === "en";
+  if (kmo >= 0.9) return en ? "marvelous" : "mükemmel";
+  if (kmo >= 0.8) return en ? "meritorious" : "çok iyi";
+  if (kmo >= 0.7) return en ? "middling" : "iyi";
+  if (kmo >= 0.6) return en ? "mediocre" : "orta";
+  if (kmo >= 0.5) return en ? "miserable" : "zayıf";
+  return en ? "unacceptable" : "kabul edilemez";
 }

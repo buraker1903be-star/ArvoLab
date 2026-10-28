@@ -12,6 +12,7 @@
  * denetim aracıdır, otomatik metin üretici değildir.
  */
 
+import type { Dil } from "@/lib/dil";
 import { splitAuthors } from "@/lib/citation-format";
 
 export interface ReferenceIssue {
@@ -48,7 +49,8 @@ export interface CrossCheckResult {
 // Tarihsiz kaynak: APA'da "n.d.", Türkçe kaynaklarda "t.y."
 const YEAR_RE = /\((\d{4}[a-z]?|n\.d\.|t\.y\.)\)/;
 
-export function parseReferenceEntry(raw: string): ParsedReference {
+export function parseReferenceEntry(raw: string, dil: Dil = "tr"): ParsedReference {
+  const en = dil === "en";
   const issues: ReferenceIssue[] = [];
   const trimmed = raw.trim();
 
@@ -56,7 +58,7 @@ export function parseReferenceEntry(raw: string): ParsedReference {
   if (!yearMatch) {
     issues.push({
       field: "year",
-      message: "Yıl parantez içinde bulunamadı, örn: (2023).",
+      message: en ? "Year in parentheses not found, e.g., (2023)." : "Yıl parantez içinde bulunamadı, örn: (2023).",
       severity: "error",
     });
   }
@@ -77,8 +79,11 @@ export function parseReferenceEntry(raw: string): ParsedReference {
     // "Soyad, A. B., & Soyad, C." biçimini kaba şekilde ayrıştır
     // Türkçe kaynakçada ayırıcı "&" değil "ve"dir; eskiden ayrılmadığı için
     // "Kaya, M. ve Öz, S." tek yazar sanılıp biçim hatası sayılıyordu.
+    // İngilizce "and" (APA "&" ister ama yaygın bir yazım) yalnızca bir baş
+    // harf noktasından sonra ayırır: "Department of Health and Human
+    // Services" gibi kurum adları bölünüp biçim hatası almasın (28.10.2026).
     authors = authorSegment
-      .split(/,\s*&\s*|\s+ve\s+(?=[A-ZÇĞİÖŞÜ])|,\s*(?=[A-ZÇĞİÖŞÜ][a-zçğıöşü]+,)/)
+      .split(/,\s*&\s*|\s+ve\s+(?=[A-ZÇĞİÖŞÜ])|(?<=\.),?\s+and\s+(?=[A-ZÇĞİÖŞÜ])|,\s*(?=[A-ZÇĞİÖŞÜ][a-zçğıöşü]+,)/)
       .map((a) => a.trim())
       .filter(Boolean);
 
@@ -88,7 +93,9 @@ export function parseReferenceEntry(raw: string): ParsedReference {
       if (!/^[A-ZÇĞİÖŞÜ][\p{L}'\-]+,(\s*[A-ZÇĞİÖŞÜ]\.){1,3}$/u.test(a)) {
         issues.push({
           field: "author_format",
-          message: `Yazar formatı APA7'ye uymuyor olabilir: "${a}" (beklenen: "Soyad, A.")`,
+          message: en
+            ? `Author format may not follow APA 7: "${a}" (expected: "Surname, A.")`
+            : `Yazar formatı APA7'ye uymuyor olabilir: "${a}" (beklenen: "Soyad, A.")`,
           severity: "warning",
         });
       }
@@ -96,7 +103,7 @@ export function parseReferenceEntry(raw: string): ParsedReference {
   } else {
     issues.push({
       field: "author",
-      message: "Yazar adı ayrıştırılamadı.",
+      message: en ? "Author name could not be parsed." : "Yazar adı ayrıştırılamadı.",
       severity: "error",
     });
   }
@@ -110,7 +117,7 @@ export function parseReferenceEntry(raw: string): ParsedReference {
     if (!title) {
       issues.push({
         field: "title",
-        message: "Başlık bulunamadı ya da noktalama hatalı.",
+        message: en ? "Title not found or punctuation is incorrect." : "Başlık bulunamadı ya da noktalama hatalı.",
         severity: "warning",
       });
     }
@@ -121,7 +128,9 @@ export function parseReferenceEntry(raw: string): ParsedReference {
   if (!doiMatch && /journal|dergi/i.test(trimmed)) {
     issues.push({
       field: "doi",
-      message: "Dergi makalesi için DOI/URL bulunamadı (varsa eklenmeli).",
+      message: en
+        ? "No DOI/URL found for the journal article (add one if available)."
+        : "Dergi makalesi için DOI/URL bulunamadı (varsa eklenmeli).",
       severity: "warning",
     });
   }
@@ -129,13 +138,13 @@ export function parseReferenceEntry(raw: string): ParsedReference {
   return { raw: trimmed, authors, year, title, issues };
 }
 
-export function parseReferenceList(rawList: string): ParsedReference[] {
+export function parseReferenceList(rawList: string, dil: Dil = "tr"): ParsedReference[] {
   // Boş satırlarla ayrılmış veya her satır bir kaynak kabul edilir
   const entries = rawList
     .split(/\n{1,2}/)
     .map((s) => s.trim())
     .filter((s) => s.length > 10);
-  return entries.map(parseReferenceEntry);
+  return entries.map((girdi) => parseReferenceEntry(girdi, dil));
 }
 
 // Chicago yazar-tarih kaynakçası: "Yılmaz, A. 2020. "Başlık." Dergi 12 (3): 1-20." — yıl parantezsiz,

@@ -102,3 +102,13 @@ describe("atıf adlarının geçiş sayıları", () => {
     assert.equal(gecisler[1].etiket, "Chicago");
   });
 });
+
+describe("İngilizce uyarı (28.10.2026)", () => {
+  test("ikinci sistem uyarısı İngilizce", () => {
+    const metin = "APA APA APA APA APA Chicago";
+    const en = atifSistemiSec(metin, "en");
+    assert.equal(en?.sistem, "apa7");
+    assert.deepEqual(en?.uyarilar, ["The name Chicago also appears 1 time in the text; it may be an example or a comparison."]);
+    assert.match(atifSistemiSec(metin)!.uyarilar[0], /^Metinde Chicago adı da 1 kez geçiyor/);
+  });
+});

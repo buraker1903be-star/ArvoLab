@@ -4,7 +4,7 @@
 // çalışmaya APA biçiminde künye yazar, öğrenci de doğru sanır.
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { eksikAlanlar, formatInTextCitation, formatReferenceParts, sayfaEtiketi, type CitableSource, type CitationStyle } from "@/lib/citation-format";
+import { authorLabel, eksikAlanlar, formatInTextCitation, formatReferenceParts, sayfaEtiketi, type CitableSource, type CitationStyle } from "@/lib/citation-format";
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 
 const kitap: CitableSource = {
@@ -81,5 +81,30 @@ describe("atıfta sayfa, erişim tarihi ve eksik bilgi", () => {
     assert.deepEqual(eksikAlanlar(kitap), []);
     assert.deepEqual(eksikAlanlar({ ...makale, issue: null, doi_or_url: null }), ["sayı", "DOI"]);
     assert.deepEqual(eksikAlanlar({ ...kitap, authors: null, year: "" }), ["yazar", "yıl"]);
+  });
+});
+
+describe("İngilizce atıf ve künye (28.10.2026)", () => {
+  const kaynak = {
+    title: "Writing well",
+    authors: "Smith, J., & Jones, K.",
+    year: null,
+    source_type: "chapter",
+    doi_or_url: null,
+    container_title: "Handbook",
+    pages: "10-20",
+    publisher: "Academic Press",
+  };
+  test("metin içi atıf: APA '&', n.d., pp.", () => {
+    assert.equal(formatInTextCitation(kaynak, "apa7", 1, { sayfa: "14-16" }, "en"), "(Smith & Jones, n.d., pp. 14-16)");
+    assert.equal(formatInTextCitation(kaynak, "chicago", 1, {}, "en"), "(Smith and Jones n.d.)");
+    assert.equal(formatInTextCitation(kaynak, "apa7", 1, { sayfa: "14" }), "(Smith ve Jones, t.y., s. 14)");
+    assert.equal(authorLabel({ ...kaynak, authors: "A, B.; C, D.; E, F." }, "en"), "A et al.");
+  });
+  test("künye ve eksik alanlar", () => {
+    const metin = formatReferenceParts(kaynak, "apa7", 1, {}, "en").map((p) => p.text).join("");
+    assert.equal(metin, "Smith, J., & Jones, K. (n.d.). Writing well. In Handbook (pp. 10-20). Academic Press.");
+    assert.deepEqual(eksikAlanlar(kaynak, "en"), ["year"]);
+    assert.deepEqual(eksikAlanlar(kaynak), ["yıl"]);
   });
 });

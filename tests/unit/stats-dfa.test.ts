@@ -14,7 +14,8 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { dogrulayiciFaktorAnalizi, uyumYorumu } from "@/lib/stats-dfa";
+import { dogrulayiciFaktorAnalizi, UYUM_YORUMU_METIN, uyumYorumu } from "@/lib/stats-dfa";
+import { kmoYorumu } from "@/lib/stats-faktor";
 
 const yakin = (a: number, b: number, tolerans = 1e-5) => assert.ok(Math.abs(a - b) < tolerans, `${a} ≈ ${b} değil`);
 const V = JSON.parse(readFileSync("tests/fixtures/dfa-maddeleri.json", "utf8")) as Record<string, number[]>;
@@ -106,5 +107,25 @@ describe("değişiklik indeksleri", () => {
     yakin(r.chiKare - r2.chiKare, oneri.mi, 0.5);
     yakin(r2.hataKovaryanslari[0].kov, oneri.epc, 0.01);
     assert.ok(!r2.degisiklikIndeksleri.some((d) => d.tur === "hata-kovaryansi" && d.i === oneri.i && d.j === oneri.j));
+  });
+});
+
+describe("İngilizce etiketler (28.10.2026)", () => {
+  test("değişiklik indeksi etiketi İngilizce; sayılar dilden bağımsız", () => {
+    const tr = dogrulayiciFaktorAnalizi(AD.map((k) => V[k]), AD, MODEL);
+    const en = dogrulayiciFaktorAnalizi(AD.map((k) => V[k]), AD, MODEL, "en");
+    if (typeof tr === "string" || typeof en === "string") throw new Error("kestirilemedi");
+    const capraz = en.degisiklikIndeksleri.find((d) => d.tur === "capraz-yuk")!;
+    const hata = en.degisiklikIndeksleri.find((d) => d.tur === "hata-kovaryansi")!;
+    assert.match(capraz.etiket, /\(cross-loading\)$/);
+    assert.match(hata.etiket, /\(error\)$/);
+    assert.match(tr.degisiklikIndeksleri.find((d) => d.tur === "capraz-yuk")!.etiket, /\(çapraz yük\)$/);
+    assert.equal(en.degisiklikIndeksleri[0].mi, tr.degisiklikIndeksleri[0].mi);
+  });
+
+  test("uyum ve KMO yorumları İngilizce", () => {
+    assert.equal(UYUM_YORUMU_METIN[uyumYorumu("rmsea", 0.07)].en, "acceptable");
+    assert.equal(kmoYorumu(0.85, "en"), "meritorious");
+    assert.equal(kmoYorumu(0.85), "çok iyi");
   });
 });

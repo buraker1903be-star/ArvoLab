@@ -1,6 +1,13 @@
 // Literatür kaynağından metin içi atıf ve kaynakça girdisi üretir (istemci + sunucu).
 // Yazar alanı serbest metindir ("Yılmaz, A., & Demir, B." ya da "Ahmet Yılmaz; Ayşe Demir");
 // soyadları sezgisel olarak çıkarılır. Türkçe APA kullanımı: "ve", "vd.", "t.y.".
+//
+// İNGİLİZCE (28.10.2026): `dil` buradaki işlevlerde atıfın ve künyenin
+// DİLİdir ("and"/"&", "et al.", "n.d.", "p./pp.", "Accessed"). Metin
+// öğrencinin çalışmasına giriyor; çağıran arayüz dilini değil çalışmanın
+// dilini vermeli — İngilizce arayüz kullanan öğrenci Türkçe tez yazabilir.
+
+import type { Dil } from "@/lib/dil";
 
 export interface CitableSource {
   title: string;
@@ -39,17 +46,25 @@ export function surname(author: string): string {
   return words[words.length - 1] ?? value;
 }
 
-const yearOf = (source: CitableSource) => source.year?.trim() || "t.y.";
+const yearOf = (source: CitableSource, dil: Dil = "tr") => source.year?.trim() || (dil === "en" ? "n.d." : "t.y.");
 /** Ardından nokta gelen yerlerde yıl: "t.y." sonundaki nokta düşer ("t.y.." olmasın) */
-const yearText = (source: CitableSource) => yearOf(source).replace(/\.$/, "");
+const yearText = (source: CitableSource, dil: Dil = "tr") => yearOf(source, dil).replace(/\.$/, "");
 
-/** APA/Chicago metin içi atıf etiketi: "Yılmaz", "Yılmaz ve Demir", "Yılmaz vd." */
-export function authorLabel(source: CitableSource): string {
+/*
+  İki yazar bağlacı: Türkçede her yerde "ve"; İngilizce APA'da parantez
+  içinde "&", anlatıda ve öteki stillerde "and".
+*/
+function yazarEtiketi(source: CitableSource, dil: Dil, baglac: string): string {
   const names = splitAuthors(source.authors).map(surname);
   if (names.length === 0) return source.title.split(/\s+/).slice(0, 3).join(" ");
   if (names.length === 1) return names[0];
-  if (names.length === 2) return `${names[0]} ve ${names[1]}`;
-  return `${names[0]} vd.`;
+  if (names.length === 2) return `${names[0]} ${baglac} ${names[1]}`;
+  return `${names[0]} ${dil === "en" ? "et al." : "vd."}`;
+}
+
+/** APA/Chicago metin içi atıf etiketi: "Yılmaz", "Yılmaz ve Demir", "Yılmaz vd." */
+export function authorLabel(source: CitableSource, dil: Dil = "tr"): string {
+  return yazarEtiketi(source, dil, dil === "en" ? "and" : "ve");
 }
 
 /*
@@ -58,10 +73,12 @@ export function authorLabel(source: CitableSource): string {
   numarasını yalnızca alıntıyı yapan bilir; boşsa atıfa hiç girmez —
   sayfa uydurmak, yanlış sayfa yazmaktır.
 */
-export function sayfaEtiketi(sayfa: string | null | undefined): string | null {
+export function sayfaEtiketi(sayfa: string | null | undefined, dil: Dil = "tr"): string | null {
   const temiz = (sayfa ?? "").trim().replace(/^s{1,2}\.\s*/i, "").replace(/^pp?\.\s*/i, "");
   if (!temiz) return null;
-  return `${/[-–]/.test(temiz) ? "ss." : "s."} ${temiz}`;
+  const aralik = /[-–]/.test(temiz);
+  if (dil === "en") return `${aralik ? "pp." : "p."} ${temiz}`;
+  return `${aralik ? "ss." : "s."} ${temiz}`;
 }
 
 export type AtifSecenegi = { sayfa?: string | null };
@@ -83,19 +100,24 @@ export function formatInTextCitation(
   style: CitationStyle,
   number: number,
   secenek: AtifSecenegi = {},
+  dil: Dil = "tr",
 ): string {
-  const sayfa = sayfaEtiketi(secenek.sayfa);
+  const sayfa = sayfaEtiketi(secenek.sayfa, dil);
+  const yil = yearOf(source, dil);
+  const etiket = authorLabel(source, dil);
   switch (style) {
     case "ieee":
       return sayfa ? `[${number}, ${sayfa}]` : `[${number}]`;
     case "vancouver":
       return sayfa ? `(${number}, ${sayfa})` : `(${number})`;
     case "chicago":
-      return `(${authorLabel(source)} ${yearOf(source)}${sayfa ? `, ${sayfa}` : ""})`;
+      return `(${etiket} ${yil}${sayfa ? `, ${sayfa}` : ""})`;
     case "mla":
-      return `(${authorLabel(source)} ${yearOf(source)}${sayfa ? `, ${sayfa}` : ""})`;
-    default:
-      return `(${authorLabel(source)}, ${yearOf(source)}${sayfa ? `, ${sayfa}` : ""})`;
+      return `(${etiket} ${yil}${sayfa ? `, ${sayfa}` : ""})`;
+    default: {
+      const apaEtiketi = dil === "en" ? yazarEtiketi(source, dil, "&") : etiket;
+      return `(${apaEtiketi}, ${yil}${sayfa ? `, ${sayfa}` : ""})`;
+    }
   }
 }
 
@@ -105,31 +127,47 @@ export function formatInTextCitation(
   eksik bilgiyi sistem uydurmaz. Eskiden boş alan künyeden sessizce
   düşüyordu ve öğrenci eksikliği ancak danışmanından öğreniyordu.
 */
-export function eksikAlanlar(source: CitableSource): string[] {
+/* Alan adları arayüzde gösteriliyor; burada `dil` arayüzün dili. */
+const ALAN_ADI = {
+  yazar: { tr: "yazar", en: "author" },
+  yil: { tr: "yıl", en: "year" },
+  dergi: { tr: "dergi adı", en: "journal name" },
+  cilt: { tr: "cilt", en: "volume" },
+  sayi: { tr: "sayı", en: "issue" },
+  sayfa: { tr: "sayfa aralığı", en: "page range" },
+  doi: { tr: "DOI", en: "DOI" },
+  kitap: { tr: "kitap adı", en: "book title" },
+  yayinevi: { tr: "yayınevi", en: "publisher" },
+  universite: { tr: "üniversite", en: "university" },
+  url: { tr: "adres (URL)", en: "address (URL)" },
+} as const;
+
+export function eksikAlanlar(source: CitableSource, dil: Dil = "tr"): string[] {
   const bos = (deger: string | null | undefined) => !deger?.trim();
   const eksik: string[] = [];
-  if (bos(source.authors)) eksik.push("yazar");
-  if (bos(source.year)) eksik.push("yıl");
+  const ekle = (alan: keyof typeof ALAN_ADI) => eksik.push(ALAN_ADI[alan][dil]);
+  if (bos(source.authors)) ekle("yazar");
+  if (bos(source.year)) ekle("yil");
   switch (source.source_type) {
     case "article":
-      if (bos(source.container_title)) eksik.push("dergi adı");
-      if (bos(source.volume)) eksik.push("cilt");
-      if (bos(source.issue)) eksik.push("sayı");
-      if (bos(source.pages)) eksik.push("sayfa aralığı");
-      if (bos(source.doi_or_url)) eksik.push("DOI");
+      if (bos(source.container_title)) ekle("dergi");
+      if (bos(source.volume)) ekle("cilt");
+      if (bos(source.issue)) ekle("sayi");
+      if (bos(source.pages)) ekle("sayfa");
+      if (bos(source.doi_or_url)) ekle("doi");
       break;
     case "chapter":
-      if (bos(source.container_title)) eksik.push("kitap adı");
-      if (bos(source.pages)) eksik.push("sayfa aralığı");
-      if (bos(source.publisher)) eksik.push("yayınevi");
+      if (bos(source.container_title)) ekle("kitap");
+      if (bos(source.pages)) ekle("sayfa");
+      if (bos(source.publisher)) ekle("yayinevi");
       break;
     case "book":
     case "thesis":
     case "report":
-      if (bos(source.publisher)) eksik.push(source.source_type === "thesis" ? "üniversite" : "yayınevi");
+      if (bos(source.publisher)) ekle(source.source_type === "thesis" ? "universite" : "yayinevi");
       break;
     case "website":
-      if (bos(source.doi_or_url)) eksik.push("adres (URL)");
+      if (bos(source.doi_or_url)) ekle("url");
       break;
   }
   return eksik;
@@ -165,7 +203,11 @@ export function formatReferenceParts(
   style: CitationStyle,
   number: number,
   secenek: KunyeSecenegi = {},
+  dil: Dil = "tr",
 ): TextPart[] {
+  const en = dil === "en";
+  const yil = () => yearOf(source, dil);
+  const yilYazisi = () => yearText(source, dil);
   const authors = (source.authors ?? "").trim();
   const title = source.title.trim().replace(/\.$/, "");
   const url = link(source);
@@ -195,22 +237,22 @@ export function formatReferenceParts(
       if (issue) push(` no. ${issue},`);
       if (pages) push(` pp. ${pages},`);
       if (publisher && !container) push(` ${publisher},`);
-      push(` ${yearText(source)}.${url ? ` ${url}` : ""}`);
+      push(` ${yilYazisi()}.${url ? ` ${url}` : ""}`);
       break;
     }
     case "vancouver": {
       push(`${number}. ${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${title}. `);
       if (container) push(`${isChapter ? "In: " : ""}${container}. `);
       if (publisher && !container) push(`${publisher}; `);
-      push(`${yearOf(source)}`);
+      push(`${yil()}`);
       if (volume) push(`;${volume}${issue ? `(${issue})` : ""}`);
       if (pages) push(`:${pages}`);
       // "t.y." ile biterse ikinci nokta eklenmez
-      push(`${!volume && !pages && yearOf(source).endsWith(".") ? "" : "."}${url ? ` ${url}` : ""}`);
+      push(`${!volume && !pages && yil().endsWith(".") ? "" : "."}${url ? ` ${url}` : ""}`);
       break;
     }
     case "chicago": {
-      push(`${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${yearText(source)}. `);
+      push(`${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${yilYazisi()}. `);
       if (italic && !container) push(title, true);
       else push(`"${title}."`);
       if (container) {
@@ -232,23 +274,23 @@ export function formatReferenceParts(
       else push(title, italic);
       if (container) {
         push(container, true);
-        if (volume) push(`, c. ${volume}`);
-        if (issue) push(`, sy. ${issue}`);
+        if (volume) push(`, ${en ? "vol." : "c."} ${volume}`);
+        if (issue) push(`, ${en ? "no." : "sy."} ${issue}`);
         if (publisher && isChapter) push(`, ${publisher}`);
-        push(`, ${yearText(source)}`);
-        if (pages) push(`, ss. ${pages}`);
+        push(`, ${yilYazisi()}`);
+        if (pages) push(`, ${en ? "pp." : "ss."} ${pages}`);
         push(".");
       } else {
         push(".");
         if (publisher) push(` ${publisher},`);
-        push(` ${yearText(source)}.`);
+        push(` ${yilYazisi()}.`);
       }
       if (url) push(` ${url}`);
       break;
     }
     default: {
       // APA 7: Yazar (Yıl). Başlık. *Dergi*, *Cilt*(Sayı), sayfalar. DOI
-      push(`${authors ? `${authors} ` : ""}(${yearOf(source)}). `);
+      push(`${authors ? `${authors} ` : ""}(${yil()}). `);
       if (container && !isChapter) {
         push(`${title}. `);
         push(container, true);
@@ -262,7 +304,7 @@ export function formatReferenceParts(
       } else if (isChapter && container) {
         push(`${title}. In `);
         push(container, true);
-        push(`${pages ? ` (ss. ${pages})` : ""}.`);
+        push(`${pages ? ` (${en ? "pp." : "ss."} ${pages})` : ""}.`);
         if (publisher) push(` ${publisher}.`);
       } else {
         push(title, italic);
@@ -272,6 +314,6 @@ export function formatReferenceParts(
       if (url) push(` ${url}`);
     }
   }
-  if (source.source_type === "website" && url && secenek.erisimTarihi) push(` (Erişim tarihi: ${secenek.erisimTarihi})`);
+  if (source.source_type === "website" && url && secenek.erisimTarihi) push(en ? ` (Accessed ${secenek.erisimTarihi})` : ` (Erişim tarihi: ${secenek.erisimTarihi})`);
   return parts;
 }

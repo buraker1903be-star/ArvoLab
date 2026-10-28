@@ -1,4 +1,5 @@
 import { sayiMetniBicimle, VARSAYILAN_BICIM, type SayiBicimi } from "@/lib/sayi-bicimi";
+import type { Dil } from "@/lib/dil";
 
 /**
  * SPSS Çıktısı → Akademik Raporlama Biçimi
@@ -88,8 +89,12 @@ export function anlamlilik({ islec, deger }: Pick<PDegeri, "islec" | "deger">): 
   return deger < 0.05;
 }
 
-const anlamlilikNotu = (sonuc: boolean | null) =>
-  sonuc === true ? "" : sonuc === false ? " (istatistiksel olarak anlamlı değil)" : " (anlamlılık bu ifadeden belirlenemiyor)";
+const anlamlilikNotu = (sonuc: boolean | null, dil: Dil) =>
+  sonuc === true
+    ? ""
+    : sonuc === false
+      ? dil === "en" ? " (not statistically significant)" : " (istatistiksel olarak anlamlı değil)"
+      : dil === "en" ? " (significance cannot be determined from this expression)" : " (anlamlılık bu ifadeden belirlenemiyor)";
 
 /*
   Harf sınırı: istatistik harfinden önce başka bir harf gelmemeli. Yoksa
@@ -184,7 +189,12 @@ const COZUMLEYICILER: Cozumleyici[] = [
   Ama çağıran biçimi vermeli: varsayılana düşüldüğünü kullanıcıya
   söylemek onun işi (lib/sayi-bicimi → kaynak).
 */
-export function detectStatistics(rawText: string, bicim: SayiBicimi = VARSAYILAN_BICIM): DetectedStatistic[] {
+/*
+  `dil` yalnızca anlamlılık notunun dilini seçer. Sayının ayırıcısı
+  `bicim`den gelir (kılavuzun kuralı); İngilizce arayüzde ondalık nokta
+  isteyen çağıran ona göre bir biçim vermeli.
+*/
+export function detectStatistics(rawText: string, bicim: SayiBicimi = VARSAYILAN_BICIM, dil: Dil = "tr"): DetectedStatistic[] {
   const bulunanlar: (DetectedStatistic & { konum: number })[] = [];
 
   for (const { desen, tur, oku } of COZUMLEYICILER) {
@@ -198,7 +208,7 @@ export function detectStatistics(rawText: string, bicim: SayiBicimi = VARSAYILAN
         raw: m[0],
         type: tur,
         significant: sonuc,
-        apaSentenceFragment: `${govde}, ${pYazisi(p, bicim)}${anlamlilikNotu(sonuc)}`,
+        apaSentenceFragment: `${govde}, ${pYazisi(p, bicim)}${anlamlilikNotu(sonuc, dil)}`,
       });
     }
   }

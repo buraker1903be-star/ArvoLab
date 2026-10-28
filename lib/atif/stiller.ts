@@ -43,6 +43,9 @@ export type YazarBicimi = {
   */
   sonrakiDesen?: RegExp;
   sonrakiOrnek?: string;
+  /* Örneklerin İngilizcesi (28.10.2026): "Soyad" gibi yer tutucular çevrilir. */
+  ornekEn?: string;
+  sonrakiOrnekEn?: string;
 };
 
 export type StilTanimi = {
@@ -113,7 +116,7 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
     ad: "APA 7",
     tur: "yazar-tarih",
     yilYeri: "parantez",
-    yazarBicimi: { desen: APA_YAZAR, ornek: "Soyad, A." },
+    yazarBicimi: { desen: APA_YAZAR, ornek: "Soyad, A.", ornekEn: "Surname, A." },
     kaynakcaSirasi: "alfabetik",
     listeIsaretiSerbest: false,
   },
@@ -141,6 +144,8 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
       ornek: "Soyad, Ad",
       sonrakiDesen: yada(DUZ_TAM_AD, DUZ_BAS_HARF),
       sonrakiOrnek: "Ad Soyad",
+      ornekEn: "Surname, First name",
+      sonrakiOrnekEn: "First name Surname",
     },
     kaynakcaSirasi: "alfabetik",
     listeIsaretiSerbest: false,
@@ -155,7 +160,7 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
       etiket: (sira) => `[${sira}]`,
       kunyeKalibi: /^\[(\d+)\]\s*/,
     },
-    yazarBicimi: { desen: NUMARA_YAZAR, ornek: "A. Yılmaz" },
+    yazarBicimi: { desen: NUMARA_YAZAR, ornek: "A. Yılmaz", ornekEn: "A. Smith" },
     // Ad baş harfle başlıyor; yazar listesi noktayla değil virgülle ilerler.
     yazarlarVirgulle: true,
     kaynakcaSirasi: "atif-sirasi",
@@ -178,6 +183,8 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
       ornek: "Soyad, Ad",
       sonrakiDesen: DUZ_TAM_AD,
       sonrakiOrnek: "Ad Soyad",
+      ornekEn: "Surname, First name",
+      sonrakiOrnekEn: "First name Surname",
     },
     kaynakcaSirasi: "alfabetik",
     listeIsaretiSerbest: false,
@@ -192,7 +199,7 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
       etiket: (sira) => `(${sira})`,
       kunyeKalibi: /^(\d+)[.)]\s*/,
     },
-    yazarBicimi: { desen: NUMARA_YAZAR, ornek: "Yılmaz A" },
+    yazarBicimi: { desen: NUMARA_YAZAR, ornek: "Yılmaz A", ornekEn: "Smith A" },
     kaynakcaSirasi: "atif-sirasi",
     listeIsaretiSerbest: false,
   },

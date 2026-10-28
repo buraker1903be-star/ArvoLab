@@ -20,6 +20,8 @@
   yanlıştan farksızdır.
 */
 
+import type { Dil } from "@/lib/dil";
+
 export type Hucre = string | number | boolean | null;
 export type Satir = Record<string, Hucre>;
 export type OndalikAyirici = "virgul" | "nokta";
@@ -158,10 +160,15 @@ export interface OkunanVeri {
 }
 
 /** Başlık satırı + gövde → satır nesneleri. Boş/tekrarlanan başlıklar adlandırılır. */
-export function tabloKur(basliklar: string[], govde: Hucre[][], ondalik: OndalikAyirici): { sutunlar: string[]; satirlar: Satir[] } {
+export function tabloKur(
+  basliklar: string[],
+  govde: Hucre[][],
+  ondalik: OndalikAyirici,
+  dil: Dil = "tr",
+): { sutunlar: string[]; satirlar: Satir[] } {
   const kullanilan = new Map<string, number>();
   const sutunlar = basliklar.map((b, i) => {
-    const ad = String(b ?? "").trim() || `Sütun ${i + 1}`;
+    const ad = String(b ?? "").trim() || `${dil === "en" ? "Column" : "Sütun"} ${i + 1}`;
     const kez = kullanilan.get(ad) ?? 0;
     kullanilan.set(ad, kez + 1);
     return kez ? `${ad} (${kez + 1})` : ad;
@@ -173,16 +180,25 @@ export function tabloKur(basliklar: string[], govde: Hucre[][], ondalik: Ondalik
 }
 
 /** CSV/TSV metni: kodlama, ayırıcı ve ondalık kararlarıyla. */
-export function csvOku(bayt: Uint8Array): OkunanVeri {
+export function csvOku(bayt: Uint8Array, dil: Dil = "tr"): OkunanVeri {
+  const en = dil === "en";
   const { metin, kodlama } = metniCoz(bayt);
   const ayirici = ayiriciBul(metin);
   const ham = csvCoz(metin, ayirici);
   const [basliklar = [], ...govde] = ham;
   const ondalik = ondalikBul(govde.flat(), ayirici);
-  const { sutunlar, satirlar } = tabloKur(basliklar, govde, ondalik);
+  const { sutunlar, satirlar } = tabloKur(basliklar, govde, ondalik, dil);
   const notlar: string[] = [];
-  if (kodlama === "windows-1254") notlar.push("Dosya Türkçe Windows kodlamasıyla (Windows-1254) okundu.");
-  if (ondalik === "virgul") notlar.push("Ondalık ayırıcı virgül olarak okundu (3,5 → 3.5; 1.250 → 1250).");
+  if (kodlama === "windows-1254") {
+    notlar.push(en ? "The file was read with Turkish Windows encoding (Windows-1254)." : "Dosya Türkçe Windows kodlamasıyla (Windows-1254) okundu.");
+  }
+  if (ondalik === "virgul") {
+    notlar.push(
+      en
+        ? "The comma was read as the decimal separator (3,5 → 3.5; 1.250 → 1250)."
+        : "Ondalık ayırıcı virgül olarak okundu (3,5 → 3.5; 1.250 → 1250).",
+    );
+  }
   return { sutunlar, satirlar, notlar };
 }
 
@@ -191,13 +207,17 @@ export function csvOku(bayt: Uint8Array): OkunanVeri {
  * saklanmış sayılar ("3,5" metin biçimli hücrede) ve boşluk hücreleri
  * aynı kurallardan geçer; ondalık, metin hücrelerinin kendisinden çıkarılır.
  */
-export function excelSatirlariniDuzelt(sutunlar: string[], satirlar: Record<string, unknown>[]): OkunanVeri {
+export function excelSatirlariniDuzelt(sutunlar: string[], satirlar: Record<string, unknown>[], dil: Dil = "tr"): OkunanVeri {
   const metinler = satirlar.flatMap((s) => sutunlar.map((c) => s[c]).filter((v): v is string => typeof v === "string"));
   const ondalik = ondalikBul(metinler, null);
   const govde = satirlar.map((s) => sutunlar.map((c) => (s[c] ?? null) as Hucre));
-  const tablo = tabloKur(sutunlar, govde, ondalik);
+  const tablo = tabloKur(sutunlar, govde, ondalik, dil);
   const notlar = ondalik === "virgul" && metinler.some((m) => VIRGUL_ONDALIK.test(m.trim()))
-    ? ["Metin olarak saklanmış sayılarda ondalık ayırıcı virgül olarak okundu."]
+    ? [
+        dil === "en"
+          ? "In numbers stored as text, the comma was read as the decimal separator."
+          : "Metin olarak saklanmış sayılarda ondalık ayırıcı virgül olarak okundu.",
+      ]
     : [];
   return { ...tablo, notlar };
 }

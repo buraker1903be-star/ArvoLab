@@ -95,3 +95,13 @@ describe("sayıyla kodlanmış grup", () => {
     assert.deepEqual(kodluGrupSutunlari(["Yas"], satirlar), []);
   });
 });
+
+describe("İngilizce notlar (28.10.2026)", () => {
+  test("virgül ondalık notu ve adsız sütun İngilizce", () => {
+    const bayt = new TextEncoder().encode(";puan\n1;3,5\n2;4,25\n");
+    const en = csvOku(bayt, "en");
+    assert.deepEqual(en.sutunlar, ["Column 1", "puan"]);
+    assert.deepEqual(en.notlar, ["The comma was read as the decimal separator (3,5 → 3.5; 1.250 → 1250)."]);
+    assert.deepEqual(csvOku(bayt).sutunlar, ["Sütun 1", "puan"]);
+  });
+});

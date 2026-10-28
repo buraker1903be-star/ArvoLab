@@ -16,6 +16,8 @@
   Bilerek "use server" DEĞİL (AGENTS.md). Testi tests/unit/kaynak-pdf.test.ts.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
+
 export type PdfDurumu = "indirildi" | "yuklendi" | "bulunamadi" | "erisilemedi" | "kayit_yok";
 export type DogrulamaDurumu = "verified" | "possible_match" | "not_found" | "insufficient_data";
 
@@ -163,6 +165,25 @@ export const DURUM_ACIKLAMASI: Record<PdfDurumu, string> = {
   kayit_yok: "PDF yok: kaynak Crossref/OpenAlex'te bulunamadı, künye kontrol edilmeli",
 };
 
+export const DURUM_ACIKLAMASI_METIN: Record<PdfDurumu, Metin> = {
+  indirildi: { tr: DURUM_ACIKLAMASI.indirildi, en: "PDF in the package (open-access version downloaded)" },
+  yuklendi: { tr: DURUM_ACIKLAMASI.yuklendi, en: "PDF in the package (uploaded by the student)" },
+  bulunamadi: { tr: DURUM_ACIKLAMASI.bulunamadi, en: "No PDF: no open-access version found" },
+  erisilemedi: { tr: DURUM_ACIKLAMASI.erisilemedi, en: "No PDF: an address exists but it could not be downloaded" },
+  kayit_yok: {
+    tr: DURUM_ACIKLAMASI.kayit_yok,
+    en: "No PDF: the source was not found in Crossref/OpenAlex; the reference should be checked",
+  },
+};
+
+/*
+  Paketteki klasör ve rapor dosyasının adı (28.10.2026). Rapor PDF'lerin
+  yerini klasör adıyla söylüyor; ZIP'i kuran ekran da aynı adı buradan
+  almalı, yoksa İngilizce raporda yazan klasör pakette bulunmaz.
+*/
+export const KAYNAK_KLASORU: Metin = { tr: "Kaynaklar", en: "Sources" };
+export const RAPOR_DOSYASI: Metin = { tr: "Kaynak raporu.txt", en: "Source report.txt" };
+
 export type PaketDosyasi = { satir: KaynakPdfSatiri; ad: string | null };
 
 /** PDF'i olan satırlara ZIP'teki benzersiz adı verir; olmayanlarda ad null. */
@@ -174,8 +195,9 @@ export function paketDosyalari(satirlar: KaynakPdfSatiri[]): PaketDosyasi[] {
   return sirali.map((satir) => ({ satir, ad: adHaritasi.get(satir.id) ?? null }));
 }
 
-export function kaynakRaporu(baslik: string, dosyalar: PaketDosyasi[], tarih: string): string {
+export function kaynakRaporu(baslik: string, dosyalar: PaketDosyasi[], tarih: string, dil: Dil = "tr"): string {
   const hazir = dosyalar.filter((d) => d.ad).length;
+  if (dil === "en") return kaynakRaporuEn(baslik, dosyalar, tarih, hazir);
   const satirlar = [
     `KAYNAK RAPORU — ${baslik}`,
     `Oluşturulma: ${tarih}`,
@@ -197,9 +219,35 @@ export function kaynakRaporu(baslik: string, dosyalar: PaketDosyasi[], tarih: st
   return satirlar.join("\r\n");
 }
 
+/* Raporun İngilizcesi; satır düzeni Türkçesiyle aynı. */
+function kaynakRaporuEn(baslik: string, dosyalar: PaketDosyasi[], tarih: string, hazir: number): string {
+  const klasor = KAYNAK_KLASORU.en;
+  const satirlar = [
+    `SOURCE REPORT — ${baslik}`,
+    `Created: ${tarih}`,
+    `${dosyalar.length} ${dosyalar.length === 1 ? "source" : "sources"} · PDF in the package for ${hazir} · ${dosyalar.length - hazir} missing`,
+    "",
+    `The PDFs are in the '${klasor}' folder. The statuses are ArvoLab's automatic check;`,
+    "they do not mean that the source's content supports the claim in the text.",
+    "",
+  ];
+  dosyalar.forEach(({ satir, ad }, i) => {
+    satirlar.push(`${i + 1}. ${satir.kunye}`);
+    satirlar.push(`   Status: ${DURUM_ACIKLAMASI_METIN[satir.durum].en}`);
+    if (ad) satirlar.push(`   File: ${klasor}/${ad}`);
+    if (satir.durum === "yuklendi" && satir.baslik_eslesti === false) {
+      satirlar.push("   Warning: the reference's title was not found in the PDF; check that it is the right file.");
+    }
+    if (satir.doi) satirlar.push(`   DOI: ${satir.doi}`);
+    satirlar.push("");
+  });
+  return satirlar.join("\r\n");
+}
+
 /** ZIP'in adı: çalışmanın başlığından, dosya sistemine uygun. */
-export function paketAdi(baslik: string): string {
+export function paketAdi(baslik: string, dil: Dil = "tr"): string {
   const sade = baslik.replace(/[çğıöşüÇĞİÖŞÜ]/g, (h) => ASCII[h] ?? h).normalize("NFKD").replace(/[̀-ͯ]/g, "");
-  const kok = sade.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "calisma";
-  return `${kok}-teslim-paketi.zip`;
+  const en = dil === "en";
+  const kok = sade.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || (en ? "project" : "calisma");
+  return `${kok}-${en ? "submission-package" : "teslim-paketi"}.zip`;
 }
