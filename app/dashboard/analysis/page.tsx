@@ -11,6 +11,8 @@ import CalismaSecici from "../_components/calisma-secici";
 import ActionForm from "../action-form";
 import BosDurum from "../_components/bos-durum";
 
+export const metadata = { title: "Analiz Merkezi" };
+
 /*
   ANALİZ MERKEZİ — TEK EKRAN, İKİ KART (26.10.2026, Kaynaklar sayfasıyla
   aynı düzen).

@@ -3,6 +3,8 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { requestPasswordReset } from "@/app/actions/auth";
 import ThemeToggle from "@/app/_components/theme-toggle";
 
+export const metadata = { title: "Şifremi unuttum" };
+
 const errorMessages: Record<string, string> = {
   "missing-email": "E-posta adresi zorunludur.",
   "rate-limited": "Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar deneyin.",

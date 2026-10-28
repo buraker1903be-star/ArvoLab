@@ -30,7 +30,9 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "ArvoLab",
+  /* Her sayfa kendi adını verir; eskiden bütün sekmeler "ArvoLab" yazıyordu
+     ve birkaç sekme açan kullanıcı hangisinin hangisi olduğunu göremiyordu. */
+  title: { default: "ArvoLab", template: "%s · ArvoLab" },
   description: "Akademik Araştırma ve Analiz Sistemi",
   applicationName: "ArvoLab",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "ArvoLab" },

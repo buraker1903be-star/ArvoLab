@@ -36,6 +36,8 @@ import PanelDrawer from "../_components/panel-drawer";
 import BosDurum from "../_components/bos-durum";
 import PartnerSeridi from "../_components/partner-seridi";
 
+export const metadata = { title: "Destek" };
+
 /*
   DESTEK — TEK SAYFA, İKİ EŞİT KART (26.10.2026, Kaynaklar'la aynı karar:
   dock'tan girince iki sekme çıkmasın).

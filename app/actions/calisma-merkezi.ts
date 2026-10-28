@@ -166,16 +166,36 @@ export async function calismaOzeti(
       kaynakListesi.data ?? [],
       calisma.citation_style,
     ),
-    kilavuz: kilavuz.kilavuz
+    /*
+      Atıf stili uyarısı UYGULANAN kılavuza göre (katalogdaki onaylı ya da
+      öğrencinin yüklediği). Eskiden guideline_id boşken (26.10.2026'dan beri
+      her yeni çalışma) kılavuz üniversite adına göre kataloğun canlı
+      sütunlarından tahmin ediliyordu: öğrenci uygulanmayan bir kılavuz
+      adına kırmızı uyarı görüyor, "Kılavuza göre düzelt" de "bağlı onaylı
+      kılavuz yok" diye düşüyordu; yüklediği kılavuzla çelişen stil ise
+      hiç uyarılmıyordu. Ada göre eşleşme yalnızca uygulanan yoksa,
+      bilgi için kalıyor.
+    */
+    kilavuz: uygulanan
       ? {
-          id: kilavuz.kilavuz.id,
-          baslik: kilavuz.kilavuz.document_title,
-          surum: kilavuz.kilavuz.version_label,
-          kurum: kilavuz.kilavuz.university_name,
-          enstitu: kilavuz.kilavuz.institute_name,
-          atifStili: kilavuz.kilavuz.citation_style,
+          id: uygulanan.id,
+          baslik: uygulanan.label,
+          surum: uygulanan.versionLabel,
+          kurum: uygulanan.universityName || null,
+          enstitu: uygulanan.instituteName,
+          atifStili: uygulanan.citationStyle,
         }
-      : null,
+      : kilavuz.kilavuz
+        ? {
+            id: kilavuz.kilavuz.id,
+            baslik: kilavuz.kilavuz.document_title,
+            surum: kilavuz.kilavuz.version_label,
+            kurum: kilavuz.kilavuz.university_name,
+            enstitu: kilavuz.kilavuz.institute_name,
+            /* Uygulanmayan kılavuzun stili uyarı doğurmaz: düzeltme düğmesi onu uygulayamaz. */
+            atifStili: null,
+          }
+        : null,
     kilavuzOkunamadi: kilavuz.okunamadi,
   };
 }

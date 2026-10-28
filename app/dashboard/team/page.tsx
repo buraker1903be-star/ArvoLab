@@ -18,6 +18,8 @@ import EkipFiltreleri from "./ekip-filtreleri";
 import { basHarfler, ekipAdresi, ekipFiltresiOku, ekipSayaclari, ekipSuz } from "@/lib/ekip-listesi";
 import { trTarih, trTarihSaat } from "@/lib/tr-time";
 
+export const metadata = { title: "Ekip Yönetimi" };
+
 const ROLE_ORDER: UserRole[] = [
   "client",
   "employee",

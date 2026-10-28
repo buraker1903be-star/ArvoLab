@@ -8,7 +8,7 @@ import { etkinHedefler, faaliyetDonemi, hedefDurumlari, puanGruplari, puanYazisi
 import { trTarih } from "@/lib/tr-time";
 import PrintActions from "../manuscript/[id]/print-actions";
 
-export const metadata: Metadata = { title: "Doçentlik puan dökümü · ArvoLab", robots: { index: false } };
+export const metadata: Metadata = { title: "Doçentlik puan dökümü", robots: { index: false } };
 
 /*
   DOÇENTLİK PUAN DÖKÜMÜ (26.10.2026). Başvuru dosyasını hazırlayan

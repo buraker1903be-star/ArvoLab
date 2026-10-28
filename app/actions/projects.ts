@@ -10,7 +10,7 @@ import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
-import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { STILLER } from "@/lib/atif/stiller";
 import {
@@ -305,10 +305,10 @@ export async function atifStiliniKilavuzaUydur(projectId: string): Promise<Actio
   if (!canOversee && current.owner_id !== ctx.user.id && current.assignee_id !== ctx.user.id) {
     return { error: "Bu çalışmayı düzenleme yetkiniz yok." };
   }
-  if (!current.guideline_id) return { error: "Bu çalışmaya bağlı onaylı bir kılavuz yok." };
-
-  const kilavuz = await loadAppliedGuideline(ctx.supabase, current.guideline_id);
-  const stil = kilavuz?.citationStyle;
+  /* Uygulanan kılavuz: katalogdaki ya da öğrencinin yüklediği (uyarıyla aynı kaynak). */
+  const kilavuz = await calismaKilavuzu(ctx.supabase, projectId, current.guideline_id);
+  if (!kilavuz) return { error: "Bu çalışmaya uygulanan bir kılavuz yok." };
+  const stil = kilavuz.citationStyle;
   if (!stil) return { error: "Kılavuzun atıf stili okunamadı; sayfayı yenileyip tekrar deneyin." };
   if (!CITATION_STYLES.includes(stil)) return { error: "Kılavuzun atıf stili tanınmıyor." };
   if (stil === current.citation_style) return { success: true };

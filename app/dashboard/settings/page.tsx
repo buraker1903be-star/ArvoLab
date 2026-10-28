@@ -19,6 +19,8 @@ import PasswordForm from "./password-form";
 import HesapSilmeFormu from "./hesap-silme-formu";
 import { hesapSilmeTalebi } from "@/app/actions/hesap";
 
+export const metadata = { title: "Ayarlar" };
+
 const sayi = (deger: number) => new Intl.NumberFormat("tr-TR").format(deger);
 
 export default async function SettingsPage() {

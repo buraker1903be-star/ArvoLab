@@ -14,6 +14,8 @@ import { DisaAktarma, IceAktarma } from "./kaynak-aktarim-araclari";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import type { CitationStyle } from "@/lib/citation-format";
 
+export const metadata = { title: "Kaynaklar" };
+
 /* Kaynak PDF'lerini bulan sunucu işlemi kaynakça penceresinden çağrılıyor
    ve dış arşivlerden indiriyor (app/actions/kaynak-pdf.ts, bütçe 40 sn). */
 export const maxDuration = 60;

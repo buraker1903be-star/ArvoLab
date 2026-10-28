@@ -6,6 +6,8 @@ import { KAYIT_ROLLERI, RED_ETIKETI, YETENEK_ETIKETI } from "@/lib/ai/kayit-goru
 import { ADMIN_ROLES } from "@/lib/project-labels";
 import { trTarihSaat } from "@/lib/tr-time";
 
+export const metadata = { title: "Asistan Kayıtları" };
+
 /*
   Asistan kayıtları — iç ekip görünümü. İki soruya cevap verir:
   "hangi model daha iyi denetliyor" ve "ince ayar için elimizde ne var".

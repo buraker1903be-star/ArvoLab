@@ -5,7 +5,7 @@ import { yazdirmaFaturalamasi } from "@/lib/faturalama-sunucu";
 import { trTarihSaat } from "@/lib/tr-time";
 import PrintActions from "../../manuscript/[id]/print-actions";
 
-export const metadata: Metadata = { title: "Ödeme makbuzu · ArvoLab", robots: { index: false } };
+export const metadata: Metadata = { title: "Ödeme makbuzu", robots: { index: false } };
 
 /*
   ÖDEME MAKBUZU (26.10.2026). Kart ödemesinin dekontu yok; müşteri

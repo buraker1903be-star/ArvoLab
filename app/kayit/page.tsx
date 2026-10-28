@@ -4,7 +4,7 @@ import ThemeToggle from "@/app/_components/theme-toggle";
 import KayitFormu from "./kayit-formu";
 
 export const metadata = {
-  title: "Kayıt · ArvoLab",
+  title: "Kayıt",
   description: "ArvoLab hesabı oluşturun; tez yazımı, kaynak doğrulama ve kılavuz denetimi tek yerde.",
 };
 

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { buildDocxFromTiptap, type DocxImage } from "@/lib/tiptap-docx";
-import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { readImageInfo } from "@/lib/image-info";
 import { downloadWriterImage, storagePathFromUrl } from "@/lib/manuscript-images";
 import type { TiptapDoc } from "@/lib/tiptap-text";
@@ -91,8 +91,13 @@ export async function GET(
     return NextResponse.json({ error: "Bu çalışma için henüz kaydedilmiş bir metin yok." }, { status: 404 });
   }
 
-  // Editörde görünen gövde yazı tipi/boyutu/satır aralığı kılavuzun son onaylı sürümünden gelir; Word'de de aynısı.
-  const guideline = await loadAppliedGuideline(supabase, project.guideline_id);
+  /*
+    Editörde görünen gövde yazı tipi/boyutu/satır aralığı uygulanan kılavuzdan
+    gelir; Word'de de aynısı (calismaKilavuzu). Eskiden yalnızca katalog
+    okunuyordu: kendi kılavuzunu yükleyen öğrencinin .docx'i öntanımlı
+    biçimle iniyor, editör ve PDF ise kılavuzu uyguluyordu.
+  */
+  const guideline = await calismaKilavuzu(supabase, projectId, project.guideline_id);
   const textDefaults = guideline
     ? {
         fontFamily: guideline.settings.fontFamily,

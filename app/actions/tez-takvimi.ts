@@ -113,8 +113,8 @@ export async function tasSil(tasId: string): Promise<ActionResult> {
 }
 
 /**
- * Teslim tarihinden taslak takvim. Aynı adlı açık taş varsa atlanır
- * (benzersiz dizin de korur); takvimi silip yeniden oluşturmak gerekmesin.
+ * Teslim tarihinden taslak takvim. Aynı adlı taş (açık ya da tamamlanmış)
+ * varsa atlanır; takvimi silip yeniden oluşturmak gerekmesin.
  */
 export async function taslakTakvimOlustur(projectId: string): Promise<{ error?: string; eklenen?: number }> {
   const ctx = await getAuthContext();
@@ -132,8 +132,14 @@ export async function taslakTakvimOlustur(projectId: string): Promise<{ error?: 
   if (!taslak.length) return { error: "Teslime 14 günden az kaldığı için taslak takvim oluşturulmadı; taşları elle ekleyin." };
   const mevcut = await takvimiGetir(projectId);
   if (mevcut === null) return { error: "Mevcut takviminiz okunamadı; tekrarları ayıklayamadığımız için ekleme yapılmadı." };
-  const acik = new Set(mevcut.filter((t) => !t.tamamlandi).map((t) => t.baslik.trim().toLocaleLowerCase("tr-TR")));
-  const yeni = taslak.filter((t) => !acik.has(t.baslik.toLocaleLowerCase("tr-TR")));
+  /*
+    Tamamlanmış taşlar da sayılır. Eskiden yalnızca açıklara bakılıyordu ve
+    düğme açık taş kalmayınca yeniden çıktığı için, bütün adımları bitiren
+    öğrenci ona bastığında planın tamamı yeniden (ve gecikmiş görünerek)
+    ekleniyordu.
+  */
+  const mevcutAdlar = new Set(mevcut.map((t) => t.baslik.trim().toLocaleLowerCase("tr-TR")));
+  const yeni = taslak.filter((t) => !mevcutAdlar.has(t.baslik.toLocaleLowerCase("tr-TR")));
   if (!yeni.length) return { eklenen: 0 };
   const { error: ekleme } = await ctx.supabase
     .from("calisma_takvimi")

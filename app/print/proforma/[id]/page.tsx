@@ -5,7 +5,7 @@ import { yazdirmaFaturalamasi } from "@/lib/faturalama-sunucu";
 import { trGunAnahtari } from "@/lib/tr-time";
 import PrintActions from "../../manuscript/[id]/print-actions";
 
-export const metadata: Metadata = { title: "Proforma fatura · ArvoLab", robots: { index: false } };
+export const metadata: Metadata = { title: "Proforma fatura", robots: { index: false } };
 
 /*
   PROFORMA FATURA (27.10.2026). Ödemeden önce müşteriye giden belge:

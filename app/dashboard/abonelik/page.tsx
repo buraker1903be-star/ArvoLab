@@ -15,6 +15,8 @@ import LicenseCard from "../_components/license-card";
 import OdemeButonu from "../_components/odeme-butonu";
 import FaturalarBolumu from "./faturalar-bolumu";
 
+export const metadata = { title: "Abonelik ve Kredi" };
+
 /*
   ABONELİK VE KREDİ (26.10.2026, kurum sahibinin isteği: "bireysel
   öğrencilerin abonelik ve kullanım hakları, kredi satın alabilecekleri

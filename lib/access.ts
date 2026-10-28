@@ -116,7 +116,8 @@ export const SUBSCRIPTION_BLOCKED_MESSAGE =
  * saveManuscript, saveNamedVersion, restoreManuscriptVersion,
  * createLiteratureSource, createCitationSource, kaynaklariIceAktar ve doiIleEkle
  * (toplu kaynak ekleme; DOI ayrıca Crossref'e gider), addManuscriptComment,
- * addScoreEntry, createProject, yeniCalisma, tasEkle ve taslakTakvimOlustur (tez takvimi;
+ * addScoreEntry, createProject, yeniCalisma, kilavuzuTara ve kilavuzuKaydet (öğrencinin
+ * kılavuz yüklemesi; PDF/OCR çözümlemesi), tasEkle ve taslakTakvimOlustur (tez takvimi;
  * tamamlama, tarih değiştirme, silme ve teslimTarihiKaydet kapısız: mevcut kayıt), createShareLink, kanitEkle, kunyeyiDogrula
  * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
  * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi,

@@ -38,6 +38,8 @@ import BelgeSatiri from "./belge-satiri";
 import UakYukle from "./uak-yukle";
 import UakPdfAc from "./uak-pdf-ac";
 
+export const metadata = { title: "Doçentlik Puanı" };
+
 /*
   ÜAK tablosunu yorumlatmak dil modeli çağrısı (uzun tablolarda parçalar
   aynı anda, her biri en fazla 240 sn). 180 sn, 12 sayfalık Güzel Sanatlar

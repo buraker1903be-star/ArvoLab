@@ -38,8 +38,9 @@ export default function TakvimDuzenleyici({
   const [bekleyen, setBekleyen] = useState<string | null>(null);
   const [, basla] = useTransition();
   const sirali = takvimSirala(taslar);
-  const acikVar = taslar.some((t) => !t.tamamlandi);
-  const taslak = !acikVar && teslimTarihi ? taslakTakvim(projeTuru, bugun, teslimTarihi) : [];
+  /* Taslak yalnızca takvim BOŞKEN önerilir: bütün taşları bitiren öğrenciye
+     "taslak oluştur" göstermek, bitmiş planı yeniden kurmaya çağırıyordu. */
+  const taslak = !taslar.length && teslimTarihi ? taslakTakvim(projeTuru, bugun, teslimTarihi) : [];
 
   const calistir = (anahtar: string, islem: () => Promise<{ error?: string }>, basari?: string) => {
     setBekleyen(anahtar);

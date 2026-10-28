@@ -2,6 +2,8 @@ import { resetPassword } from "@/app/actions/auth";
 import PasswordForm from "@/app/dashboard/settings/password-form";
 import ThemeToggle from "@/app/_components/theme-toggle";
 
+export const metadata = { title: "Yeni şifre" };
+
 // Proxy, oturumu olmayan ziyaretçiyi bu sayfadan giriş sayfasına yönlendirir;
 // buraya yalnızca /auth/confirm üzerinden doğrulanmış bağlantıyla gelinir.
 export default function ResetPasswordPage() {

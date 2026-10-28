@@ -1,3 +1,4 @@
+import { trGunAnahtari } from "@/lib/tr-time";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, FileText, ListChecks, Mail, Microscope, Search, Settings2, Sparkles } from "lucide-react";
@@ -122,7 +123,9 @@ export default async function MakaleCalismaAlani({
   const tur = MAKALE_TURLERI[profil.makale_turu];
   const bolumler = makaleBolumleri(musvedde.data?.content);
   const kanitOzeti = matrisOzeti(matris.kayitlar);
-  const bugun = new Date().toISOString().slice(0, 10);
+  /* Türkiye günü: UTC günü gece 00:00–03:00 arasında dünü verir ve "kontrol
+     edileli N gün" bir gün eksik görünürdü. */
+  const bugun = trGunAnahtari();
   const maddeler = gonderimKontrolu({ profil, bolumler, kanit: kanitOzeti, bugun });
   const aile = yontemAilesi(calisma.research_method, profil.makale_turu);
 

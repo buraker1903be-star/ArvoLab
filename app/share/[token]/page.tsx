@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashShareToken, isShareTokenFormat } from "@/lib/share-token";
 import { recordShareView } from "@/lib/share-views";
-import { loadAppliedGuideline } from "@/lib/guideline-rules";
+import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { refreshImageUrls } from "@/lib/manuscript-images";
 import { buildPrintSheet } from "@/lib/print-sheet";
 import type { CoverPage } from "@/app/actions/manuscript";
@@ -16,7 +16,7 @@ import { trUzunTarih } from "@/lib/tr-time";
 // (notlar, atanan uzman, durum) gösterilmez; yalnızca kaydedilmiş metnin baskı görünümü.
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Paylaşılan çalışma · ArvoLab",
+  title: "Paylaşılan çalışma",
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };
@@ -77,7 +77,9 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
 
   const [{ data: row, error: manuscriptError }, guideline] = await Promise.all([
     admin.from("project_manuscripts").select("*").eq("project_id", link.project_id).maybeSingle(),
-    loadAppliedGuideline(admin, project.guideline_id),
+    /* Öğrencinin PDF'iyle aynı kılavuz; eskiden yalnızca katalog okunuyor,
+       yüklenen kılavuzla yazılan çalışma danışmana biçimsiz görünüyordu. */
+    calismaKilavuzu(admin, link.project_id, project.guideline_id),
   ]);
   if (manuscriptError) {
     console.error("[share] metin okunamadı", { code: manuscriptError.code, message: manuscriptError.message });

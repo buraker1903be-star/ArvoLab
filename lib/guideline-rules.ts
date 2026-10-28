@@ -262,3 +262,42 @@ export async function loadAppliedGuidelines(
   }
   return result;
 }
+
+/*
+  Birden çok çalışmanın UYGULANAN kılavuzu, çalışma kimliğine göre
+  (Çalışmalarım listesi). calismaKilavuzu'nun toplu karşılığı: önce katalog,
+  katalogda onaylı sürümü olmayan çalışmalar için öğrencinin yüklediği.
+
+  Eskiden liste loadAppliedGuidelines ile yalnızca kataloğu okuyordu; kılavuz
+  çalışma başına yüklenmeye başlayınca (26.10.2026) yeni çalışmaların
+  kartında tempo ve hedef kayboldu, ana sayfa aynı çalışma için ikisini de
+  gösteriyordu.
+*/
+export async function calismaKilavuzlari(
+  supabase: SupabaseClient,
+  calismalar: { id: string; guideline_id: string | null | undefined }[],
+): Promise<Map<string, AppliedGuideline>> {
+  const katalog = await loadAppliedGuidelines(supabase, calismalar.map((c) => c.guideline_id));
+  const sonuc = new Map<string, AppliedGuideline>();
+  const kalan: string[] = [];
+  for (const c of calismalar) {
+    const k = c.guideline_id ? katalog.get(c.guideline_id) : undefined;
+    if (k) sonuc.set(c.id, k);
+    else kalan.push(c.id);
+  }
+  if (!kalan.length) return sonuc;
+
+  const { data, error } = await supabase
+    .from("calisma_kilavuzu")
+    .select("project_id, kaynak_adres, belge_basligi, kurallar, olusturuldu")
+    .in("project_id", kalan);
+  if (error) {
+    console.error("[kilavuz] çalışma kılavuzları okunamadı:", error.message);
+    return sonuc;
+  }
+  for (const row of (data ?? []) as CalismaKilavuzuRow[]) {
+    const uygulanan = appliedGuidelineFromCalisma(row);
+    if (uygulanan) sonuc.set(row.project_id, uygulanan);
+  }
+  return sonuc;
+}

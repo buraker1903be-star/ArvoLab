@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthContext, SESSION_MISSING, type ActionResult } from "@/lib/auth-guards";
+import { isSubscriptionBlocked, SUBSCRIPTION_BLOCKED_MESSAGE } from "@/lib/access";
 import { ornekKalibi } from "@/lib/atif/tyk";
 import { scanGuidelineBytes, scanGuidelineUrl, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
@@ -81,6 +82,18 @@ export async function kilavuzuTara(
   const izin = await calismayaYazabilir(projectId);
   if ("hata" in izin) return { error: izin.hata };
   const { ctx } = izin;
+  /* Ağır çözümleme (PDF, OCR, dış adresten indirme): abonelik kapısı.
+     Eskiden yoktu; işlem doğrudan çağrılıp OCR tetiklenebiliyordu. */
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
+  /*
+    Yol tarayıcıdan geliyor: yalnızca kullanıcının kendi klasörü. Depo
+    politikası gözetim rollerine bütün kovayı açtığı için, bu denetim
+    olmadan başkasının dosyası taratılıp içeriği okunabilirdi
+    (document-upload.ts'teki denetimin eşi).
+  */
+  if (girdi.depoYolu && (!girdi.depoYolu.startsWith(`${ctx.user.id}/`) || girdi.depoYolu.includes(".."))) {
+    return { error: "Geçersiz dosya yolu." };
+  }
 
   try {
     let sonuc: GuidelineScanResult;
@@ -135,6 +148,8 @@ export async function kilavuzuKaydet(
   const izin = await calismayaYazabilir(projectId);
   if ("hata" in izin) return { error: izin.hata };
   const { ctx, calisma } = izin;
+  // Yeni kural yazıyor: abonelik kapısı (lib/access.ts).
+  if (await isSubscriptionBlocked()) return { error: SUBSCRIPTION_BLOCKED_MESSAGE };
 
   /*
     Katalogda onaylı kılavuz varsa öğrencinin yüklediği uygulanmaz

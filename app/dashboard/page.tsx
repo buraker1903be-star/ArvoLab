@@ -39,6 +39,8 @@ import TeslimTarihiFormu from "./_components/teslim-tarihi-formu";
 import DanismanaGonder from "./_components/danismana-gonder";
 import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
 
+export const metadata = { title: "Ana Sayfa" };
+
 /*
   TEK EKRAN KURALI (kurum sahibinin altın kuralı: her modülün ana sayfası
   tek sayfa, yatay ve dikey kayma yok). Bölümlerim kartı en fazla bu kadar

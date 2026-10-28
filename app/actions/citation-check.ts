@@ -1,7 +1,7 @@
 "use server";
 
-import { sayiBicimi, type BicimKarari, type KilavuzSayiKurali } from "@/lib/sayi-bicimi";
-import { appliedGuidelineFromRow, type GuidelineRow } from "@/lib/guideline-rules";
+import { sayiBicimi, type BicimKarari } from "@/lib/sayi-bicimi";
+import { calismaKilavuzlari } from "@/lib/guideline-rules";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -70,27 +70,23 @@ export async function getMyProjects(): Promise<ListeSonucu<MyProject>> {
     kalıcı bir yanlışa çevirmek olurdu (AGENTS.md: kapıyı yalnızca
     net bir "hayır" kapatır).
   */
-  const kilavuzIdleri = [...new Set(data.map((p) => p.guideline_id).filter(Boolean))] as string[];
-  const kurallar = new Map<string, { kural: KilavuzSayiKurali; stil: string }>();
-  if (kilavuzIdleri.length) {
-    const { data: kilavuzlar, error: kilavuzHatasi } = await supabase
-      .from("thesis_guidelines")
-      .select("*")
-      .in("id", kilavuzIdleri);
-    if (kilavuzHatasi) console.error(kilavuzHatasi);
-    for (const satir of kilavuzlar ?? []) {
-      const uygulanan = appliedGuidelineFromRow(satir as GuidelineRow);
-      if (uygulanan) kurallar.set(uygulanan.id, { kural: uygulanan.numberFormat, stil: uygulanan.citationStyle });
-    }
-  }
+  /*
+    Uygulanan kılavuz calismaKilavuzlari'ndan: katalogda onaylı sürüm, yoksa
+    öğrencinin yüklediği. Eskiden yalnızca katalog okunuyordu; yüklenen
+    kılavuzun ondalık ayırıcısı bu ekranlarda hiç kullanılmıyordu.
+  */
+  const kurallar = await calismaKilavuzlari(supabase, data);
 
   return listeBasarili(
-    data.map(({ guideline_id, ...proje }) => {
-      const kilavuz = guideline_id ? kurallar.get(guideline_id) : undefined;
+    data.map((satir) => {
+      /* guideline_id dışarı verilmez: ekranın işi uygulanan kılavuzla. */
+      const { id, title, university, citation_style } = satir;
+      const proje = { id, title, university, citation_style };
+      const kilavuz = kurallar.get(proje.id);
       /* Öğrencinin ÇALIŞMASINDA seçtiği stil önce gelir: yazdığı
          metin ona göre. Çalışmada seçilmemişse kılavuzunki. */
-      const stil = proje.citation_style ?? kilavuz?.stil ?? null;
-      return { ...proje, sayiBicimi: sayiBicimi(kilavuz?.kural ?? null, stil) };
+      const stil = proje.citation_style ?? kilavuz?.citationStyle ?? null;
+      return { ...proje, sayiBicimi: sayiBicimi(kilavuz?.numberFormat ?? null, stil) };
     }),
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, FileText, Search, MessageSquare, Plus, ShieldCheck } from "lucide-react";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
-import { loadAppliedGuidelines } from "@/lib/guideline-rules";
+import { calismaKilavuzlari } from "@/lib/guideline-rules";
 import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
 import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff, type StaffMember } from "@/app/actions/projects";
@@ -22,6 +22,8 @@ import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
 import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
 import CalismaDurumKarti from "./calisma-durum-karti";
+
+export const metadata = { title: "Çalışmalarım" };
 
 
 /* Kaynak PDF'lerini bulan sunucu işlemi dış arşivlerden indirme yapıyor
@@ -43,8 +45,8 @@ export default async function ProjectsPage({
       projects.map((project) => project.id),
       profile?.id
     ),
-    // Kartlardaki yazım temposu için kılavuzlar tek sorguda
-    createClient().then((supabase) => loadAppliedGuidelines(supabase, projects.map((project) => project.guideline_id))),
+    // Kartlardaki yazım temposu için uygulanan kılavuzlar (yüklenenler dahil), çalışma kimliğine göre
+    createClient().then((supabase) => calismaKilavuzlari(supabase, projects)),
   ]);
   /*
     Denetim şeridi, filtreler ve personel metni gözetim rolünde; iç ekip
@@ -115,7 +117,7 @@ export default async function ProjectsPage({
   type Calisma = (typeof projects)[number];
   // Kartlardaki yazım temposu ve ilerleme: iki düzen de aynı hesabı kullanıyor.
   function yazimDurumu(project: Calisma) {
-    const guideline = project.guideline_id ? guidelines.get(project.guideline_id) : undefined;
+    const guideline = guidelines.get(project.id);
     const pace =
       guideline && stats.has(project.id)
         ? writingPace({

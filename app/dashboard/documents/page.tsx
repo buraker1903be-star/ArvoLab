@@ -23,6 +23,8 @@ import BosDurum from "../_components/bos-durum";
 import IkiKartSecim from "../_components/iki-kart-secim";
 import CalismaSecici from "../_components/calisma-secici";
 
+export const metadata = { title: "Belge Kontrol" };
+
 // Belge yükleme + çözümleme (mammoth/pdf-parse), asistan geri bildirimi ve
 // orijinallik taraması büyük dosyalarda varsayılan 10 saniyeyi aşabiliyor;
 // aşınca kullanıcı uygulama içi hata yerine ham bir tarayıcı hatası görüyordu.

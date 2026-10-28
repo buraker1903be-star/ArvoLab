@@ -6,6 +6,8 @@ import { getUniversities } from "@/app/actions/universities";
 import ActionForm from "../../action-form";
 import AcademicUnitFields from "./academic-unit-fields";
 
+export const metadata = { title: "Yeni çalışma" };
+
 // Müşteri yalnızca başlığı ve kurumunu seçer; kılavuz otomatik bağlanır ve
 // kayıttan sonra doğrudan editör açılır. Planlama alanları isteğe bağlıdır.
 export default async function NewProjectPage() {

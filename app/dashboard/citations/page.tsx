@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 
+export const metadata = { title: "Kaynaklar" };
+
 /*
   Kaynakça doğrulama artık Kaynaklar sayfasının sağ kartı ve onun
   penceresi (literature/page.tsx, 26.10.2026). Eski bağlantılar

@@ -10,7 +10,17 @@ import ManuscriptSheet from "../manuscript-sheet";
 import PrintActions from "./print-actions";
 import SayfaliBaski from "../sayfali-baski";
 
-export const metadata: Metadata = { title: "Yazdır · ArvoLab", robots: { index: false } };
+/*
+  Sekme başlığı, "PDF olarak kaydet"in önerdiği DOSYA ADI. Eskiden sabit
+  "Yazdır · ArvoLab" idi: öğrencinin tezi o adla iniyordu. Başlık okunamazsa
+  (RLS, silinmiş kayıt) sayfanın kendisi zaten 404 veriyor.
+*/
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.from("academic_projects").select("title").eq("id", id).maybeSingle();
+  return { title: { absolute: data?.title?.trim() || "Çalışma" }, robots: { index: false } };
+}
 
 // Yazdırmaya hazır A4 görünümü: kılavuzun yazı tipi, boyutu, satır aralığı ve
 // metnin kenar boşlukları; tarayıcının yazdır penceresinden "PDF olarak kaydet".
