@@ -15,6 +15,8 @@ export interface LicenseSummaryInput {
   periodEnd: string | null;
   organizationName: string | null;
   blocked: boolean;
+  /** Bireysel abonede kart saklama/otomatik yenileme açık mı (ArvoOS'un anahtarı). */
+  kartSaklama?: boolean;
 }
 
 export interface LicenseSummary {
@@ -38,6 +40,11 @@ export interface LicenseSummary {
   arvo_activate_subscriber_period). Olmayan bir otomatik ödemeyi ima etmek
   iki yönden yanlış: kullanıcı kartını kontrol etmeye gidiyor ve bir
   yandan da "demek ki kendiliğinden çekilecek" sanıyor.
+
+  28.10.2026'dan beri kart saklama ArvoOS'un anahtarıyla İSTEĞE BAĞLI
+  (kullanıcının açık onayıyla). Durum metinleri yine karttan söz etmiyor:
+  onay vermemiş kullanıcı için de doğru kalmalılar. Kart, yalnızca
+  yenilemeNotu'nda ve kayıtlı kart bölümünde anılıyor.
 */
 const STATUS: Record<string, { label: Metin; tone: LicenseTone; note?: Metin }> = {
   active: { label: { tr: "Aktif", en: "Active" }, tone: "success" },
@@ -157,7 +164,18 @@ export function licenseSummary(access: LicenseSummaryInput, now: Date = new Date
       kalmasın: çekilecek bir şey yok, iptal için yapılacak bir şey yok.
       Kurum aboneliğinde muhatap kurum olduğu için gösterilmiyor.
     */
-    yenilemeNotu: individual
+    /*
+      Kart saklama açıksa (28.10.2026) "kartınız saklanmıyor" cümlesi yanlış
+      olur: kullanıcı kartını kaydedip otomatik yenilemeyi açmış olabilir.
+      Not hâlâ kesin konuşuyor — onay vermediyse çekim YOK — ve kapatmanın
+      yerini söylüyor.
+    */
+    yenilemeNotu: individual && access.kartSaklama
+      ? t({
+          tr: "Otomatik yenileme yalnızca kartınızı kaydedip onay verdiyseniz çalışır; onay vermediyseniz kendiliğinden çekim yapılmaz. Açıksa dönem sonunda kayıtlı kartınızdan çekilir; bu sayfadan istediğiniz an kapatabilirsiniz. Dönem bittiğinde çalışma ekranları kapanır (Abonelik, Destek ve Ayarlar açık kalır, verilerinizi indirebilirsiniz), çalışmalarınız silinmez.",
+          en: "Automatic renewal only works if you saved your card and gave consent; otherwise nothing is charged automatically. If it is on, your saved card is charged at the end of the period, and you can turn it off on this page at any time. When the period ends, the work screens close (Subscription, Support and Settings stay open, and you can download your data); your works are not deleted.",
+        })
+      : individual
       ? t({
           tr: "Otomatik ödeme yok: kartınız saklanmıyor ve kendiliğinden çekim yapılmıyor. Dönem bittiğinde çalışma ekranları kapanır (Abonelik, Destek ve Ayarlar açık kalır, verilerinizi indirebilirsiniz), çalışmalarınız silinmez. Dönem bitmeden yenilerseniz yeni dönem mevcut dönemin sonuna eklenir, gün kaybetmezsiniz.",
           en: "No automatic payments: your card is not stored and nothing is charged automatically. When the period ends, the work screens close (Subscription, Support and Settings stay open, and you can download your data); your works are not deleted. If you renew before the period ends, the new period is added to the end of the current one, so you lose no days.",

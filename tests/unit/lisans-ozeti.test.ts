@@ -34,6 +34,17 @@ describe("lisans kartı metinleri", () => {
     assert.match(ozet?.yenilemeNotu ?? "", /silinmez/);
   });
 
+  /*
+    Kart saklama açıkken (28.10.2026) "kartınız saklanmıyor" yanlış olur;
+    not onaysız çekim olmadığını ve kapatmanın yerini söylemeli.
+  */
+  test("kart saklama açıkken yenileme notu kayıtlı karttan söz ediyor", () => {
+    const ozet = bireysel({ kartSaklama: true });
+    assert.doesNotMatch(ozet?.yenilemeNotu ?? "", /Otomatik ödeme yok/);
+    assert.match(ozet?.yenilemeNotu ?? "", /onay vermediyseniz kendiliğinden çekim yapılmaz/);
+    assert.match(ozet?.yenilemeNotu ?? "", /kapatabilirsiniz/);
+  });
+
   test("kurum aboneliğinde yenileme notu yok: muhatap kurum", () => {
     const ozet = licenseSummary({
       kind: "organization", status: "active", trialEndsAt: null, periodEnd: null,

@@ -4,7 +4,7 @@ import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL, type Dil } from "@/lib/dil";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, BookOpenCheck, CheckCheck, Eye, MessageSquare, ShieldCheck, UserPlus, Workflow } from "lucide-react";
+import { Bell, BookOpenCheck, CheckCheck, CreditCard, Eye, MessageSquare, ShieldCheck, UserPlus, Workflow } from "lucide-react";
 import Dialog from "./dialog";
 import { listNotifications, markNotificationsRead, type NotificationKind, type PanelNotification } from "@/app/actions/notifications";
 
@@ -17,6 +17,7 @@ const KIND_ICON: Record<NotificationKind, typeof Bell> = {
   approval: ShieldCheck,
   guideline_update: BookOpenCheck,
   share_view: Eye,
+  billing: CreditCard,
 };
 
 function formatAgo(value: string, dil: Dil) {

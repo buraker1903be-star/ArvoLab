@@ -760,3 +760,20 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 }
 .ayar-dil button[aria-pressed="true"] { border-color: var(--primary); font-weight: 600; }
 .ayar-dil button:disabled { opacity: 0.6; cursor: progress; }
+/* Kartla ödeme (abonelik/kart/[oid]): kart formu ve kayıtlı kart bölümü */
+.kart-odeme-karti { max-width: 640px; }
+.kart-formu { display: flex; flex-direction: column; gap: 14px; }
+.kart-formu-guven { display: flex; align-items: flex-start; gap: 6px; margin: 0; }
+.kart-formu-guven > svg { flex: none; margin-top: 2px; }
+.kart-formu-alanlar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.kart-formu-alanlar label { display: grid; gap: 6px; }
+.kart-formu-alanlar label > span { color: var(--muted); font-size: var(--fs-sm); font-weight: 600; }
+.kart-formu-genis { grid-column: 1 / -1; }
+.kart-formu-onay { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.kart-formu-onay > input { flex: none; margin-top: 2px; }
+.kart-formu-onay > span { display: flex; flex-direction: column; gap: 4px; }
+.kart-formu-onay small { color: var(--muted); font-size: var(--fs-micro); line-height: var(--lh-metin); }
+.kart-formu > button { align-self: flex-start; }
+@media (max-width: 640px) {
+  .kart-formu-alanlar { grid-template-columns: minmax(0, 1fr); }
+}

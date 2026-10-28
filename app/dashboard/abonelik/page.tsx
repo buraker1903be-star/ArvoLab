@@ -13,10 +13,14 @@ import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { YEREL, type Metin } from "@/lib/dil";
 import { formatTry } from "@/lib/billing-plan";
 import { faturalamaKapsami } from "@/lib/faturalama";
-import { faturalamaYukle } from "@/lib/subscription";
+import { faturalamaYukle, kartDurumum } from "@/lib/subscription";
+import { KART_HATALARI } from "@/lib/kart-odeme";
+import { licenseSummary } from "@/lib/license-summary";
+import { kartlaOdemeBaslat } from "@/app/actions/kart-odeme";
 import LicenseCard from "../_components/license-card";
 import OdemeButonu from "../_components/odeme-butonu";
 import FaturalarBolumu from "./faturalar-bolumu";
+import KartBolumu from "./kart-bolumu";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await ceviri();
@@ -55,6 +59,31 @@ const HATA: Record<string, Metin> = {
     tr: "Kurum üyesi olduğunuz için krediyi kurum yöneticiniz alır.",
     en: "Because you are an institution member, your institution administrator buys credits.",
   },
+  ...KART_HATALARI,
+};
+
+/*
+  Kartla ödemeden dönüş (app/api/odeme-donus) ve kart işlemlerinin sonucu.
+  "tamam" ödemenin ONAYLANDIĞI anlamına gelmez: onay ArvoOS'a PayTR'nin
+  bildirimiyle gelir, dönem orada uzar. Kullanıcıya "işleniyor" denir.
+*/
+const KART_DURUMU: Record<string, { ton: "success" | "danger" | "info"; metin: Metin }> = {
+  tamam: {
+    ton: "info",
+    metin: { tr: "Ödemeniz işleniyor; onaylanınca aboneliğiniz uzar.", en: "Your payment is being processed; your subscription will be extended once it is approved." },
+  },
+  hata: {
+    ton: "danger",
+    metin: { tr: "Ödeme tamamlanamadı. Kart bilgilerinizi kontrol edip yeniden deneyin.", en: "The payment could not be completed. Check your card details and try again." },
+  },
+  yenileme_kapali: {
+    ton: "success",
+    metin: { tr: "Otomatik yenileme kapatıldı; kartınızdan kendiliğinden çekim yapılmayacak.", en: "Automatic renewal has been turned off; your card will not be charged automatically." },
+  },
+  silindi: {
+    ton: "success",
+    metin: { tr: "Kart silindi.", en: "The card has been deleted." },
+  },
 };
 
 const HAREKET: Record<string, { ad: Metin; isaret: string }> = {
@@ -63,10 +92,10 @@ const HAREKET: Record<string, { ad: Metin; isaret: string }> = {
   tuketim: { ad: { tr: "Asistan çalışması", en: "Assistant run" }, isaret: "−" },
 };
 
-export default async function AbonelikPage({ searchParams }: { searchParams: Promise<{ hata?: string }> }) {
+export default async function AbonelikPage({ searchParams }: { searchParams: Promise<{ hata?: string; kart?: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx) redirect("/");
-  const { hata } = await searchParams;
+  const { hata, kart } = await searchParams;
   const t = await ceviri();
   const dil = await aktifDil();
   const { tarihSaat } = await tarihler();
@@ -100,6 +129,15 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   }
   const faturalama = kapsam && ctx.user.email ? await faturalamaYukle(kapsam, { id: ctx.user.id, email: ctx.user.email }) : null;
 
+  /*
+    Kart saklama yalnızca bireysel abonede ve ArvoOS anahtarı açıkken. Kart
+    durumu ayrı bir köprü çağrısı; okunamazsa null ("okunamadı").
+  */
+  const kartSaklama = access.kind === "individual" && access.kartSaklama && Boolean(ctx.user.email);
+  const kartDurumu = kartSaklama && ctx.user.email ? await kartDurumum({ id: ctx.user.id, email: ctx.user.email }) : null;
+  // Mevcut ödeme düğmesiyle aynı koşul (lib/license-summary.ts → showPayment).
+  const kartlaOdenebilir = kartSaklama && Boolean(licenseSummary(access, new Date(), dil)?.showPayment);
+
   const paketler = access.kind === "individual" ? access.krediPaketleri : [];
   const enUcuzBirim = paketler.length ? Math.max(...paketler.map(binKrediFiyati)) : 0;
 
@@ -117,6 +155,11 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
           {t(HATA[hata])}
         </p>
       ) : null}
+      {kart && KART_DURUMU[kart] ? (
+        <p className="alert" data-tone={KART_DURUMU[kart].ton} role={KART_DURUMU[kart].ton === "danger" ? "alert" : "status"}>
+          {t(KART_DURUMU[kart].metin)}
+        </p>
+      ) : null}
 
       <section className="gb-sutunlar kaynaklar-ikili" aria-label={t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}>
         <article className="gb-kart gb-sutun kayan-kart">
@@ -127,13 +170,26 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                 {access.kind === "organization"
                   ? t({ tr: "Aboneliğinizi kurumunuz yönetiyor.", en: "Your subscription is managed by your institution." })
                   : access.kind === "individual"
-                    ? t({ tr: "Bireysel abonelik; ödeme kartla, otomatik çekim yok.", en: "Individual subscription; paid by card, no automatic charges." })
+                    ? kartSaklama
+                      ? t({ tr: "Bireysel abonelik; ödeme kartla, otomatik yenileme isteğe bağlı.", en: "Individual subscription; paid by card, automatic renewal is optional." })
+                      : t({ tr: "Bireysel abonelik; ödeme kartla, otomatik çekim yok.", en: "Individual subscription; paid by card, no automatic charges." })
                     : t({ tr: "İç ekip hesabı.", en: "Internal team account." })}
               </p>
             </div>
           </header>
 
           <LicenseCard access={access} />
+
+          {/*
+            Kartla ödeme, kart kaydetme seçeneğiyle (28.10.2026). Ödeme kaydı
+            düğmenin sunucu işleminde açılır, sayfa çiziminde değil. Tutarı
+            ArvoOS belirler; buradan plan ya da tutar gitmez.
+          */}
+          {kartlaOdenebilir ? (
+            <form action={kartlaOdemeBaslat} className="cluster">
+              <OdemeButonu birincil={false} etiket={t({ tr: "Kartla öde · kartı kaydetme seçeneğiyle", en: "Pay by card · with option to save card" })} />
+            </form>
+          ) : null}
 
           {access.kind === "individual" ? (
             <p className="hint">
@@ -154,6 +210,7 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
               })}
             </p>
           ) : null}
+          {kartSaklama ? <KartBolumu durum={kartDurumu?.ok ? kartDurumu.veri : null} /> : null}
           {kapsam ? <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} /> : null}
         </article>
 
