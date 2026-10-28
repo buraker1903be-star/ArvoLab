@@ -1,5 +1,6 @@
 "use server";
 
+import { aktifDil } from "@/lib/dil-sunucu";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
@@ -253,7 +254,7 @@ export async function inviteUser(formData: FormData): Promise<UpdateResult> {
     // Davet edenin adı e-postada görünsün; okunamazsa davet yine gider.
     const { data: davetEden } = await auth.supabase
       .from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
-    const gonderim = await sendEmail({ to: email, ...inviteEmail(inviteLink, davetEden?.full_name) });
+    const gonderim = await sendEmail({ to: email, ...inviteEmail(inviteLink, davetEden?.full_name, await aktifDil()) });
     if (!gonderim.ok) {
       console.error("Davet e-postası gönderilemedi:", email, gonderim.reason);
       davetGitmedi = true;

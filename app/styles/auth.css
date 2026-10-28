@@ -89,6 +89,11 @@
 }
 .login-panel { position: relative; }
 .login-theme-toggle { position: absolute; top: 16px; right: 16px; }
+/* Dil seçici (lib/dil.ts, INGILIZCE_YAYINDA açılınca görünür): tema düğmesinin solunda. */
+.login-dil { position: absolute; top: 16px; right: 64px; display: flex; align-items: center; gap: 6px; }
+.login-dil small { display: none; }
+.login-dil button { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: var(--fs-sm); cursor: pointer; }
+.login-dil button[aria-pressed="true"] { border-color: var(--primary); }
 .login-card { width: min(100%, 420px); }
 .login-mobile-brand { display: none; }
 .login-heading { margin-bottom: 28px; }

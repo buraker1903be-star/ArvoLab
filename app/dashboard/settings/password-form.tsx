@@ -1,5 +1,6 @@
 "use client";
 
+import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useActionState } from "react";
 import { ArrowRight, KeyRound } from "lucide-react";
 import type { ActionResult } from "@/lib/auth-guards";
@@ -12,18 +13,19 @@ interface PasswordFormProps {
 }
 
 export default function PasswordForm({ action, variant, submitLabel }: PasswordFormProps) {
+  const t = useCeviri();
   const [state, formAction, pending] = useActionState(action, null);
 
   if (variant === "login") {
     return (
       <form className="login-form" action={formAction}>
         {state?.error ? <p className="alert" role="alert">{state.error}</p> : null}
-        <label htmlFor="password">Yeni şifre</label>
+        <label htmlFor="password">{t({ tr: "Yeni şifre", en: "New password" })}</label>
         <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
-        <label htmlFor="passwordConfirm">Yeni şifre (tekrar)</label>
+        <label htmlFor="passwordConfirm">{t({ tr: "Yeni şifre (tekrar)", en: "Confirm new password" })}</label>
         <input id="passwordConfirm" name="passwordConfirm" type="password" autoComplete="new-password" minLength={8} required />
         <button className="login-button" type="submit" disabled={pending}>
-          {pending ? "Kaydediliyor…" : submitLabel}
+          {pending ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : submitLabel}
           <ArrowRight size={18} aria-hidden="true" />
         </button>
       </form>
@@ -33,17 +35,17 @@ export default function PasswordForm({ action, variant, submitLabel }: PasswordF
   return (
     <form className="project-form-grid" action={formAction}>
       <label>
-        <span>Yeni şifre</span>
+        <span>{t({ tr: "Yeni şifre", en: "New password" })}</span>
         <input name="password" type="password" autoComplete="new-password" minLength={8} required />
       </label>
       <label>
-        <span>Yeni şifre (tekrar)</span>
+        <span>{t({ tr: "Yeni şifre (tekrar)", en: "Confirm new password" })}</span>
         <input name="passwordConfirm" type="password" autoComplete="new-password" minLength={8} required />
       </label>
       <div className="project-form-actions">
         <button type="submit" className="projects-primary-button" disabled={pending}>
           <KeyRound size={16} aria-hidden="true" />
-          {pending ? "Kaydediliyor…" : submitLabel}
+          {pending ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : submitLabel}
         </button>
       </div>
       {state?.error ? (
@@ -53,7 +55,7 @@ export default function PasswordForm({ action, variant, submitLabel }: PasswordF
       ) : null}
       {state?.success ? (
         <p role="status" className="action-form-message action-form-success">
-          Şifreniz güncellendi.
+          {t({ tr: "Şifreniz güncellendi.", en: "Your password has been updated." })}
         </p>
       ) : null}
     </form>

@@ -1,3 +1,4 @@
+import type { Metin } from "./dil";
 /*
   Kayıt formunun doğrulaması. Saf modül; testi tests/unit/kayit.test.ts.
 
@@ -19,7 +20,7 @@ const EN_UZUN_EPOSTA = 254;
 const EPOSTA = /^[^\s@]+@[^\s@.]+\.[^\s@]{2,}$/;
 
 export type KayitGirdisi = { email: string; sifre: string; adSoyad: string; kvkk: boolean };
-export type KayitSonucu = { hata: string } | { deger: { email: string; sifre: string; adSoyad: string } };
+export type KayitSonucu = { hata: Metin } | { deger: { email: string; sifre: string; adSoyad: string } };
 
 export function kayitGirdisiniDenetle(ham: {
   email?: unknown;
@@ -37,16 +38,16 @@ export function kayitGirdisiniDenetle(ham: {
   const sifre = String(ham.sifre ?? "");
   const adSoyad = String(ham.adSoyad ?? "").trim().replace(/\s+/g, " ").slice(0, EN_UZUN_AD);
 
-  if (!adSoyad || adSoyad.length < 2) return { hata: "Ad ve soyadınızı yazın." };
-  if (!email || !EPOSTA.test(email)) return { hata: "Geçerli bir e-posta adresi yazın." };
-  if (sifre.length < EN_KISA_SIFRE) return { hata: `Şifre en az ${EN_KISA_SIFRE} karakter olmalı.` };
+  if (!adSoyad || adSoyad.length < 2) return { hata: { tr: "Ad ve soyadınızı yazın.", en: "Enter your full name." } };
+  if (!email || !EPOSTA.test(email)) return { hata: { tr: "Geçerli bir e-posta adresi yazın.", en: "Enter a valid email address." } };
+  if (sifre.length < EN_KISA_SIFRE) return { hata: { tr: `Şifre en az ${EN_KISA_SIFRE} karakter olmalı.`, en: `Password must be at least ${EN_KISA_SIFRE} characters.` } };
   /*
     Şifre ile e-posta aynı olamaz. Karmaşıklık kuralı (büyük harf, rakam,
     simge) KOYMUYORUZ: kullanıcıyı "Parola1!" gibi tahmin edilebilir
     kalıplara itiyor ve uzunluktan daha az koruyor.
   */
-  if (sifre.toLowerCase() === email) return { hata: "Şifreniz e-posta adresinizle aynı olamaz." };
-  if (!ham.kvkk) return { hata: "Devam etmek için aydınlatma metnini onaylayın." };
+  if (sifre.toLowerCase() === email) return { hata: { tr: "Şifreniz e-posta adresinizle aynı olamaz.", en: "Your password cannot be the same as your email address." } };
+  if (!ham.kvkk) return { hata: { tr: "Devam etmek için aydınlatma metnini onaylayın.", en: "Please accept the privacy notice to continue." } };
 
   return { deger: { email, sifre, adSoyad } };
 }

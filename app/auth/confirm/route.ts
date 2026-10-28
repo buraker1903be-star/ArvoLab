@@ -1,3 +1,4 @@
+import { aktifDil } from "@/lib/dil-sunucu";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     const eposta = data.user?.email;
     if (eposta) {
       try {
-        await sendEmail({ to: eposta, ...hosgeldinizEmail(new URL("/dashboard", origin).toString()) });
+        await sendEmail({ to: eposta, ...hosgeldinizEmail(new URL("/dashboard", origin).toString(), await aktifDil()) });
       } catch (sorun) {
         console.error("[kayit] hoş geldiniz postası gönderilemedi", sorun instanceof Error ? sorun.message : sorun);
       }

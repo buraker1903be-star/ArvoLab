@@ -4,6 +4,10 @@
  * Supabase'in kendi şablonları yerine buradakiler kullanılıyor; gönderim de
  * bizde (lib/email/resend.ts). Böylece hem ArvoLab kimliğinde görünüyorlar
  * hem de Supabase'in üretim için uygun olmayan gönderim sınırına takılmıyorlar.
+ *
+ * İki dilli (lib/dil.ts): dil, isteği yapanın arayüz dili. Zamanlanmış işler
+ * (deneme hatırlatması) bir isteğe bağlı olmadığı için şimdilik Türkçe;
+ * kullanıcının dil tercihi profilde tutulmaya başlayınca oradan okunacak.
  */
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://lab.arvo-os.com").replace(/\/$/, "");
@@ -11,8 +15,13 @@ const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://lab.arvo-os.com").rep
 const escape = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-const shell = (title: string, body: string) => `<!DOCTYPE html>
-<html lang="tr">
+import type { Dil } from "@/lib/dil";
+
+const P = `style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;"`;
+const NOT = `style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;"`;
+
+const shell = (title: string, body: string, dil: Dil) => `<!DOCTYPE html>
+<html lang="${dil}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
 <body style="margin:0;padding:24px 12px;background:#f5f6f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:14px;">
@@ -28,7 +37,7 @@ const shell = (title: string, body: string) => `<!DOCTYPE html>
     </tr>
   </table>
   <p style="max-width:520px;margin:16px auto 0;font-size:11px;line-height:1.6;color:#878d8a;text-align:center;">
-    ArvoLab · Akademik çalışma ve editöryal kontrol
+    ${dil === "tr" ? "ArvoLab · Akademik çalışma ve editöryal kontrol" : "ArvoLab · Academic writing and editorial checks"}
   </p>
 </body>
 </html>`;
@@ -40,60 +49,83 @@ const button = (href: string, label: string) => `
   </a>`;
 
 /** Şifre sıfırlama. */
-export function resetPasswordEmail(link: string) {
+export function resetPasswordEmail(link: string, dil: Dil = "tr") {
+  if (dil === "en") {
+    return {
+      subject: "ArvoLab password reset",
+      html: shell(
+        "Reset your password",
+        `<p ${P}>Click the link below to set a new password.</p>
+         ${button(link, "Set new password")}
+         <p ${NOT}>The link is valid for 1 hour. If you did not make this request, you can ignore this email; your password will not change.</p>`,
+        dil,
+      ),
+    };
+  }
   return {
     subject: "ArvoLab şifre sıfırlama",
     html: shell(
       "Şifrenizi sıfırlayın",
-      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
-         Şifrenizi yenilemek için aşağıdaki bağlantıya tıklayın.
-       </p>
+      `<p ${P}>Şifrenizi yenilemek için aşağıdaki bağlantıya tıklayın.</p>
        ${button(link, "Yeni şifre belirle")}
-       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
-         Bağlantı 1 saat geçerlidir. Bu isteği siz yapmadıysanız bu e-postayı
-         yok sayabilirsiniz; şifreniz değişmez.
-       </p>`,
+       <p ${NOT}>Bağlantı 1 saat geçerlidir. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.</p>`,
+      dil,
     ),
   };
 }
 
 /** Ekip daveti. */
-export function inviteEmail(link: string, inviterName?: string | null) {
+export function inviteEmail(link: string, inviterName?: string | null, dil: Dil = "tr") {
   const davetEden = inviterName?.trim();
+  if (dil === "en") {
+    return {
+      subject: "You have been invited to ArvoLab",
+      html: shell(
+        "Welcome to ArvoLab",
+        `<p ${P}>${davetEden ? `${escape(davetEden)} has invited you to ArvoLab.` : "You have been invited to ArvoLab."} Click the link below to open your account and set your password.</p>
+         ${button(link, "Create my account")}
+         <p ${NOT}>The link is valid for 24 hours.</p>`,
+        dil,
+      ),
+    };
+  }
   return {
     subject: "ArvoLab'a davet edildiniz",
     html: shell(
       "ArvoLab'a hoş geldiniz",
-      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
-         ${davetEden ? `${escape(davetEden)} sizi ArvoLab'a davet etti.` : "ArvoLab'a davet edildiniz."}
-         Hesabınızı açmak ve şifrenizi belirlemek için aşağıdaki bağlantıya tıklayın.
-       </p>
+      `<p ${P}>${davetEden ? `${escape(davetEden)} sizi ArvoLab'a davet etti.` : "ArvoLab'a davet edildiniz."} Hesabınızı açmak ve şifrenizi belirlemek için aşağıdaki bağlantıya tıklayın.</p>
        ${button(link, "Hesabımı oluştur")}
-       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
-         Bağlantı 24 saat geçerlidir.
-       </p>`,
+       <p ${NOT}>Bağlantı 24 saat geçerlidir.</p>`,
+      dil,
     ),
   };
 }
 
 /** Kendi kaydolan kullanıcının e-posta doğrulaması. */
-export function signUpConfirmEmail(link: string, denemeGunu: number | null) {
-  const deneme = denemeGunu && denemeGunu > 0
-    ? `Doğrulamadan sonra ${denemeGunu} günlük deneme süreniz başlar.`
-    : "Doğrulamadan sonra çalışma alanınız açılır.";
+export function signUpConfirmEmail(link: string, denemeGunu: number | null, dil: Dil = "tr") {
+  const denemeVar = denemeGunu !== null && denemeGunu > 0;
+  if (dil === "en") {
+    const deneme = denemeVar ? `Your ${denemeGunu}-day trial starts after verification.` : "Your workspace opens after verification.";
+    return {
+      subject: "Verify your ArvoLab account",
+      html: shell(
+        "Verify your account",
+        `<p ${P}>Welcome to ArvoLab. Verify your email address to start using your account. ${escape(deneme)}</p>
+         ${button(link, "Verify my email")}
+         <p ${NOT}>The link is valid for 24 hours. If you did not sign up, ignore this email; unverified accounts are not opened.</p>`,
+        dil,
+      ),
+    };
+  }
+  const deneme = denemeVar ? `Doğrulamadan sonra ${denemeGunu} günlük deneme süreniz başlar.` : "Doğrulamadan sonra çalışma alanınız açılır.";
   return {
     subject: "ArvoLab hesabınızı doğrulayın",
     html: shell(
       "Hesabınızı doğrulayın",
-      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
-         ArvoLab'a hoş geldiniz. Hesabınızı kullanmaya başlamak için e-posta
-         adresinizi doğrulayın. ${escape(deneme)}
-       </p>
+      `<p ${P}>ArvoLab'a hoş geldiniz. Hesabınızı kullanmaya başlamak için e-posta adresinizi doğrulayın. ${escape(deneme)}</p>
        ${button(link, "E-postamı doğrula")}
-       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
-         Bağlantı 24 saat geçerlidir. Bu kaydı siz yapmadıysanız bu e-postayı
-         yok sayın; doğrulanmayan hesap açılmaz.
-       </p>`,
+       <p ${NOT}>Bağlantı 24 saat geçerlidir. Bu kaydı siz yapmadıysanız bu e-postayı yok sayın; doğrulanmayan hesap açılmaz.</p>`,
+      dil,
     ),
   };
 }
@@ -106,62 +138,81 @@ export function signUpConfirmEmail(link: string, denemeGunu: number | null) {
   adresin SAHİBİNE söylemek sızıntı değil, yardım: kişi büyük ihtimalle
   kaydolmayı deniyor çünkü hesabı olduğunu unutmuş.
 */
-export function accountExistsEmail(girisAdresi: string, sifreAdresi: string) {
+export function accountExistsEmail(girisAdresi: string, sifreAdresi: string, dil: Dil = "tr") {
+  if (dil === "en") {
+    return {
+      subject: "You already have an ArvoLab account",
+      html: shell(
+        "You already have an account",
+        `<p ${P}>Someone tried to sign up to ArvoLab with this address, but your account is already open. You can sign in directly.</p>
+         ${button(girisAdresi, "Sign in")}
+         <p ${NOT}>If you don't remember your password, <a href="${escape(sifreAdresi)}" style="color:#5b625e;">reset your password</a>. If this wasn't you, you can ignore this email.</p>`,
+        dil,
+      ),
+    };
+  }
   return {
     subject: "ArvoLab hesabınız zaten var",
     html: shell(
       "Zaten bir hesabınız var",
-      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
-         Bu adresle ArvoLab'a kaydolma denemesi yapıldı; oysa hesabınız zaten
-         açık. Doğrudan giriş yapabilirsiniz.
-       </p>
+      `<p ${P}>Bu adresle ArvoLab'a kaydolma denemesi yapıldı; oysa hesabınız zaten açık. Doğrudan giriş yapabilirsiniz.</p>
        ${button(girisAdresi, "Giriş yap")}
-       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
-         Şifrenizi hatırlamıyorsanız
-         <a href="${escape(sifreAdresi)}" style="color:#5b625e;">şifrenizi sıfırlayın</a>.
-         Bu denemeyi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.
-       </p>`,
+       <p ${NOT}>Şifrenizi hatırlamıyorsanız <a href="${escape(sifreAdresi)}" style="color:#5b625e;">şifrenizi sıfırlayın</a>. Bu denemeyi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>`,
+      dil,
     ),
   };
 }
 
 /** Deneme süresi bitmeden önceki tek hatırlatma. */
-export function denemeBitiyorEmail(kalanGun: number, panelAdresi: string) {
+export function denemeBitiyorEmail(kalanGun: number, panelAdresi: string, dil: Dil = "tr") {
+  if (dil === "en") {
+    const sure = kalanGun === 1 ? "tomorrow" : `in ${kalanGun} days`;
+    return {
+      subject: `Your ArvoLab trial ends ${sure}`,
+      html: shell(
+        `Your trial ends ${sure}`,
+        `<p ${P}>Your work stays where it is and is not deleted. When the trial ends, the working screens close; Subscription, Support and Settings stay open and you can download your data. When you renew your plan, you continue where you left off.</p>
+         ${button(panelAdresi, "View my plan")}
+         <p ${NOT}>This is the only reminder; we won't send it again.</p>`,
+        dil,
+      ),
+    };
+  }
   const sure = kalanGun === 1 ? "yarın" : `${kalanGun} gün sonra`;
   return {
     subject: `ArvoLab deneme süreniz ${sure} bitiyor`,
     html: shell(
-      `Deneme süreniz ${escape(sure)} bitiyor`,
-      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
-         Çalışmalarınız yerinde duruyor ve silinmiyor. Deneme bittiğinde
-         çalışma ekranları kapanır; Abonelik, Destek ve Ayarlar açık kalır,
-         verilerinizi indirebilirsiniz. Planınızı yenilediğinizde kaldığınız
-         yerden devam edersiniz.
-       </p>
+      `Deneme süreniz ${sure} bitiyor`,
+      `<p ${P}>Çalışmalarınız yerinde duruyor ve silinmiyor. Deneme bittiğinde çalışma ekranları kapanır; Abonelik, Destek ve Ayarlar açık kalır, verilerinizi indirebilirsiniz. Planınızı yenilediğinizde kaldığınız yerden devam edersiniz.</p>
        ${button(panelAdresi, "Planımı görüntüle")}
-       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
-         Bu tek hatırlatmadır; aynı uyarıyı tekrar göndermiyoruz.
-       </p>`,
+       <p ${NOT}>Bu tek hatırlatmadır; aynı uyarıyı tekrar göndermiyoruz.</p>`,
+      dil,
     ),
   };
 }
 
 /** Hesabını doğrulayan kullanıcıya ilk selam. */
-export function hosgeldinizEmail(panelAdresi: string) {
+export function hosgeldinizEmail(panelAdresi: string, dil: Dil = "tr") {
+  if (dil === "en") {
+    return {
+      subject: "Welcome to ArvoLab",
+      html: shell(
+        "Your account is ready",
+        `<p ${P}>Your workspace is open. The quickest start: create a work, add your university's guideline and start writing — the guideline check runs as you write.</p>
+         ${button(panelAdresi, "Go to my workspace")}
+         <p ${NOT}>ArvoLab does not write your text for you; it checks what you write against your guideline and reference rules, and searches real indexes for sources.</p>`,
+        dil,
+      ),
+    };
+  }
   return {
     subject: "ArvoLab'a hoş geldiniz",
     html: shell(
       "Hesabınız hazır",
-      `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
-         Çalışma alanınız açıldı. En hızlı başlangıç: bir çalışma oluşturun,
-         üniversitenizin kılavuzunu seçin ve yazmaya başlayın — kılavuz
-         denetimi siz yazarken çalışır.
-       </p>
+      `<p ${P}>Çalışma alanınız açıldı. En hızlı başlangıç: bir çalışma oluşturun, üniversitenizin kılavuzunu ekleyin ve yazmaya başlayın — kılavuz denetimi siz yazarken çalışır.</p>
        ${button(panelAdresi, "Çalışma alanıma git")}
-       <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">
-         ArvoLab metninizi sizin yerinize yazmaz; yazdığınızı kılavuza ve
-         kaynakça kurallarına göre denetler, kaynakları gerçek dizinlerde arar.
-       </p>`,
+       <p ${NOT}>ArvoLab metninizi sizin yerinize yazmaz; yazdığınızı kılavuza ve kaynakça kurallarına göre denetler, kaynakları gerçek dizinlerde arar.</p>`,
+      dil,
     ),
   };
 }

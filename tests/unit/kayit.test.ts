@@ -5,7 +5,7 @@ import { kayitGirdisiniDenetle } from "@/lib/kayit";
 const gecerli = { email: "ogrenci@ornek.edu.tr", sifre: "uzunbirsifre", adSoyad: "Ahmet Yılmaz", kvkk: true };
 const hata = (girdi: Parameters<typeof kayitGirdisiniDenetle>[0]) => {
   const sonuc = kayitGirdisiniDenetle(girdi);
-  return "hata" in sonuc ? sonuc.hata : null;
+  return "hata" in sonuc ? sonuc.hata.tr : null;
 };
 
 describe("kayıt doğrulaması", () => {

@@ -1,5 +1,7 @@
 "use server";
 
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -69,8 +71,14 @@ export async function login(formData: FormData) {
      olup olmadığı sızmamalı. Adresin SAHİBİNE e-postayla söylemek
      sızıntı değil, yardım (accountExistsEmail).
 */
-const EPOSTA_GONDERILEMEDI =
-  "Doğrulama e-postası şu anda gönderilemedi. Birkaç dakika sonra aynı bilgilerle tekrar deneyin; sorun sürerse \"Şifremi unuttum\" ile yeni bağlantı isteyebilirsiniz.";
+const EPOSTA_GONDERILEMEDI: Metin = {
+  tr: "Doğrulama e-postası şu anda gönderilemedi. Birkaç dakika sonra aynı bilgilerle tekrar deneyin; sorun sürerse \"Şifremi unuttum\" ile yeni bağlantı isteyebilirsiniz.",
+  en: "The verification email could not be sent right now. Try again in a few minutes with the same details; if it persists, request a new link with \"Forgot password\".",
+};
+const KAYIT_YAPILAMIYOR: Metin = {
+  tr: "Kayıt şu anda yapılamıyor. Birazdan tekrar deneyin.",
+  en: "Sign-up is not available right now. Try again shortly.",
+};
 
 export async function signUp(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const denetim = kayitGirdisiniDenetle({
@@ -79,7 +87,8 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
     adSoyad: formData.get("fullName"),
     kvkk: formData.get("kvkk") === "on",
   });
-  if ("hata" in denetim) return { error: denetim.hata };
+  const t = await ceviri();
+  if ("hata" in denetim) return { error: t(denetim.hata) };
   const { email, sifre, adSoyad } = denetim.deger;
 
   let admin;
@@ -87,7 +96,7 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
     admin = createAdminClient();
   } catch (adminError) {
     console.error("Kayıt: sunucu anahtarı yok", adminError);
-    return { error: "Kayıt şu anda yapılamıyor. Birazdan tekrar deneyin." };
+    return { error: t(KAYIT_YAPILAMIYOR) };
   }
 
   /*
@@ -105,7 +114,7 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
     console.error("Kayıt hız sınırı okunamadı:", izin.find((sonuc) => sonuc.error)?.error?.message);
   } else if (izin.some((sonuc) => sonuc.data === false)) {
     console.warn("Kayıt hız sınırı:", ip);
-    return { error: "Çok fazla deneme yapıldı. Bir saat sonra tekrar deneyin." };
+    return { error: t({ tr: "Çok fazla deneme yapıldı. Bir saat sonra tekrar deneyin.", en: "Too many attempts. Try again in an hour." }) };
   }
 
   const origin = await siteOrigin();
@@ -119,31 +128,31 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
   if (error) {
     // Zaten kayıtlı adres: ekranda ayırt edilmiyor, sahibine e-posta gidiyor.
     if (/already|registered|exists/i.test(error.message)) {
-      const gonderim = await sendEmail({ to: email, ...accountExistsEmail(origin, `${origin}/forgot-password`) });
-      return gonderim.ok ? { success: true } : { error: EPOSTA_GONDERILEMEDI };
+      const gonderim = await sendEmail({ to: email, ...accountExistsEmail(origin, `${origin}/forgot-password`, await aktifDil()) });
+      return gonderim.ok ? { success: true } : { error: t(EPOSTA_GONDERILEMEDI) };
     }
     console.error("Kayıt bağlantısı üretilemedi:", error.message);
-    return { error: "Kayıt şu anda yapılamıyor. Birazdan tekrar deneyin." };
+    return { error: t(KAYIT_YAPILAMIYOR) };
   }
 
   const token = data.properties?.hashed_token;
   if (!token) {
     console.error("Kayıt: doğrulama belirteci boş");
-    return { error: "Kayıt şu anda yapılamıyor. Birazdan tekrar deneyin." };
+    return { error: t(KAYIT_YAPILAMIYOR) };
   }
   /*
     Deneme süresinin kaç gün olduğunu ArvoLab bilmiyor: değer ArvoOS'ta
     product_plans tablosunda ve okumak için bir uç nokta yok. Uydurmak
     yerine genel cümle kuruluyor.
   */
-  const gonderim = await sendEmail({ to: email, ...signUpConfirmEmail(authConfirmLink(origin, token, "signup", "/dashboard"), null) });
+  const gonderim = await sendEmail({ to: email, ...signUpConfirmEmail(authConfirmLink(origin, token, "signup", "/dashboard"), null, await aktifDil()) });
   /*
     Gönderim düştüyse "posta kutunuza bakın" demek, hiç gelmeyecek bir
     bağlantıyı bekletmek ve hesabı açılamaz bırakmak demekti. İki dal da
     (yeni ve kayıtlı adres) aynı mesajı veriyor; adresin kayıtlı olup
     olmadığı sızmıyor.
   */
-  return gonderim.ok ? { success: true } : { error: EPOSTA_GONDERILEMEDI };
+  return gonderim.ok ? { success: true } : { error: t(EPOSTA_GONDERILEMEDI) };
 }
 
 export async function logout() {
@@ -211,35 +220,42 @@ export async function requestPasswordReset(formData: FormData) {
   } else {
     // action_link değil: o bağlantı oturumu #access_token ile döndürür, sunucu göremez (lib/auth-link.ts).
     const token = data.properties?.hashed_token;
-    if (token) await sendEmail({ to: email, ...resetPasswordEmail(authConfirmLink(await siteOrigin(), token, "recovery")) });
+    if (token) await sendEmail({ to: email, ...resetPasswordEmail(authConfirmLink(await siteOrigin(), token, "recovery"), await aktifDil()) });
   }
 
   // Hesabın var olup olmadığını sızdırmamak için her durumda aynı mesaj gösterilir.
   redirect("/forgot-password?sent=1");
 }
 
-function passwordErrorMessage(code: string | undefined) {
+function passwordErrorMessage(code: string | undefined): Metin {
   switch (code) {
     case "same_password":
-      return "Yeni şifre mevcut şifrenizden farklı olmalı.";
+      return { tr: "Yeni şifre mevcut şifrenizden farklı olmalı.", en: "The new password must be different from your current one." };
     case "weak_password":
-      return "Şifre yeterince güçlü değil; harf, rakam ve sembolleri birlikte kullanın.";
+      return {
+        tr: "Şifre yeterince güçlü değil; harf, rakam ve sembolleri birlikte kullanın.",
+        en: "The password is not strong enough; combine letters, numbers and symbols.",
+      };
     case "reauthentication_needed":
-      return "Güvenlik nedeniyle çıkış yapıp yeniden giriş yaptıktan sonra tekrar deneyin.";
+      return {
+        tr: "Güvenlik nedeniyle çıkış yapıp yeniden giriş yaptıktan sonra tekrar deneyin.",
+        en: "For security reasons, sign out, sign in again and then retry.",
+      };
     default:
-      return "Şifre güncellenemedi. Lütfen tekrar deneyin.";
+      return { tr: "Şifre güncellenemedi. Lütfen tekrar deneyin.", en: "The password could not be updated. Please try again." };
   }
 }
 
 async function applyNewPassword(formData: FormData): Promise<ActionResult> {
   const password = String(formData.get("password") ?? "");
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
+  const t = await ceviri();
 
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.` };
+    return { error: t({ tr: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`, en: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }) };
   }
   if (password !== passwordConfirm) {
-    return { error: "Şifreler eşleşmiyor." };
+    return { error: t({ tr: "Şifreler eşleşmiyor.", en: "The passwords do not match." }) };
   }
 
   const supabase = await createClient();
@@ -247,13 +263,18 @@ async function applyNewPassword(formData: FormData): Promise<ActionResult> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "Oturumunuzun süresi dolmuş. Lütfen yeniden şifre sıfırlama bağlantısı isteyin." };
+    return {
+      error: t({
+        tr: "Oturumunuzun süresi dolmuş. Lütfen yeniden şifre sıfırlama bağlantısı isteyin.",
+        en: "Your session has expired. Please request a new password reset link.",
+      }),
+    };
   }
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
     console.error(error);
-    return { error: passwordErrorMessage(error.code) };
+    return { error: t(passwordErrorMessage(error.code)) };
   }
   return { success: true };
 }
@@ -289,7 +310,8 @@ export async function digerOturumlariKapat(): Promise<ActionResult> {
   const { error } = await supabase.auth.signOut({ scope: "others" });
   if (error) {
     console.error("[oturum] diğer oturumlar kapatılamadı", error.message);
-    return { error: "Oturumlar kapatılamadı. Lütfen tekrar deneyin." };
+    const t = await ceviri();
+    return { error: t({ tr: "Oturumlar kapatılamadı. Lütfen tekrar deneyin.", en: "Sessions could not be signed out. Please try again." }) };
   }
   return { success: true };
 }
