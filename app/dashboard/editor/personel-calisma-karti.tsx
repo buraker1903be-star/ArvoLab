@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ceviri } from "@/lib/dil-sunucu";
+import { aktifDil, aktifSaatDilimi, ceviri, tarihler } from "@/lib/dil-sunucu";
+import { YEREL } from "@/lib/dil";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -23,7 +24,7 @@ import DeleteProjectButton from "./delete-project-button";
 import { createClient } from "@/lib/supabase/server";
 import { projectTypeLabel, ROLE_LABELS, statusLabel, type UserRole } from "@/lib/project-labels";
 import { statusTone } from "@/lib/status-tone";
-import { trTarih, trTarihSaat } from "@/lib/tr-time";
+import { simdi } from "@/lib/genel-bakis";
 import { editedAgo } from "@/lib/writing-stats";
 import type { DueInfo } from "@/lib/due-date";
 import type { KartIlerlemesi } from "@/lib/calisma-karti";
@@ -89,6 +90,9 @@ export default async function PersonelCalismaKarti({
   ata: (formData: FormData) => Promise<ActionResult>;
 }) {
   const t = await ceviri();
+  const dil = await aktifDil();
+  const saatDilimi = await aktifSaatDilimi();
+  const { tarih, tarihSaat } = await tarihler();
   const merkez = `/dashboard/editor/${calisma.id}`;
   const onayli = !!calisma.controller_approved_at;
   // Eski kayıtlarda sorumlu yalnızca serbest metin olarak tutuluyordu (assignee_id boş).
@@ -110,7 +114,7 @@ export default async function PersonelCalismaKarti({
     .maybeSingle();
 
   return (
-    <article className="gb-kart gb-sutun calisma-durum kayan-kart" aria-label={`${calisma.title}: durum`}>
+    <article className="gb-kart gb-sutun calisma-durum kayan-kart" aria-label={t({ tr: `${calisma.title}: durum`, en: `${calisma.title}: status` })}>
       <header className="calisma-durum-bas">
         <div>
           <span className="calisma-durum-ust">
@@ -122,17 +126,17 @@ export default async function PersonelCalismaKarti({
           <h2>{calisma.title}</h2>
           <span className="personel-ogrenci">
             <UserRound size={14} aria-hidden="true" />
-            {sahipAdi ?? "Öğrenci adı görünmüyor"}
+            {sahipAdi ?? t({ tr: "Öğrenci adı görünmüyor", en: "Student name not visible" })}
           </span>
         </div>
         <div className="calisma-durum-eylemler">
           <Link href={merkez} className="projects-primary-button button-compact">
             <LayoutDashboard size={15} aria-hidden="true" />
-            Çalışma özeti
+            {t({ tr: "Çalışma özeti", en: "Work overview" })}
           </Link>
           <Link href={`${merkez}/write`} className="projects-filter-button button-compact">
             <PenLine size={15} aria-hidden="true" />
-            Metni aç
+            {t({ tr: "Metni aç", en: "Open text" })}
           </Link>
           {takvim && takvim.length ? (
             <TezTakvimiPenceresi
@@ -145,17 +149,17 @@ export default async function PersonelCalismaKarti({
             />
           ) : null}
           <details className="kart-menu">
-            <summary aria-label={`${calisma.title}: diğer işlemler`}>
+            <summary aria-label={t({ tr: `${calisma.title}: diğer işlemler`, en: `${calisma.title}: more actions` })}>
               <MoreHorizontal size={18} aria-hidden="true" />
             </summary>
             <div className="kart-menu-liste">
               <Link href={`${merkez}/edit`}>
                 <Pencil size={15} aria-hidden="true" />
-                Bilgileri düzenle
+                {t({ tr: "Bilgileri düzenle", en: "Edit details" })}
               </Link>
               <Link href={`/dashboard/documents?calisma=${calisma.id}`}>
                 <Upload size={15} aria-hidden="true" />
-                Belge yükle
+                {t({ tr: "Belge yükle", en: "Upload document" })}
               </Link>
               {silebilir ? <DeleteProjectButton projectId={calisma.id} projectTitle={calisma.title} /> : null}
             </div>
@@ -165,34 +169,39 @@ export default async function PersonelCalismaKarti({
 
       <dl className="tez-olcumler calisma-olcumler">
         <div className="tez-olcu">
-          <dt>Yazılan</dt>
+          <dt>{t({ tr: "Yazılan", en: "Written" })}</dt>
           <dd>
-            {(yazim?.words ?? 0).toLocaleString("tr-TR")}
-            <small>kelime</small>
+            {(yazim?.words ?? 0).toLocaleString(YEREL[dil])}
+            <small>{t({ tr: "kelime", en: "words" })}</small>
           </dd>
           <span title={ilerleme?.ipucu}>
-            {yazim ? `${editedAgo(yazim.updatedAt)} düzenlendi` : "Henüz yazılmadı"}
+            {yazim
+              ? t({
+                  tr: `${editedAgo(yazim.updatedAt, simdi(), dil, saatDilimi)} düzenlendi`,
+                  en: `Edited ${editedAgo(yazim.updatedAt, simdi(), dil, saatDilimi)}`,
+                })
+              : t({ tr: "Henüz yazılmadı", en: "Not written yet" })}
           </span>
         </div>
         <div className="tez-olcu" data-tone={ilerleme && ilerleme.yuzde >= 100 ? "success" : undefined}>
-          <dt>İlerleme</dt>
-          <dd>{ilerleme ? `%${ilerleme.yuzde}` : "—"}</dd>
-          <span title={ilerleme?.ipucu}>{ilerleme ? ilerleme.etiket : "Hedef yok — kılavuz bağlı değil"}</span>
+          <dt>{t({ tr: "İlerleme", en: "Progress" })}</dt>
+          <dd>{ilerleme ? t({ tr: `%${ilerleme.yuzde}`, en: `${ilerleme.yuzde}%` }) : "—"}</dd>
+          <span title={ilerleme?.ipucu}>{ilerleme ? ilerleme.etiket : t({ tr: "Hedef yok — kılavuz bağlı değil", en: "No target — no guideline linked" })}</span>
         </div>
         <div className="tez-olcu" data-tone={due?.tone}>
-          <dt>Teslim</dt>
+          <dt>{t({ tr: "Teslim", en: "Due" })}</dt>
           {due ? (
             <>
               <dd>
                 {Math.abs(due.days)}
-                <small>{due.days < 0 ? "gün gecikti" : "gün"}</small>
+                <small>{due.days < 0 ? t({ tr: "gün gecikti", en: "days overdue" }) : t({ tr: "gün", en: "days" })}</small>
               </dd>
-              <span>{calisma.due_date ? trTarih(calisma.due_date) : due.label}</span>
+              <span>{calisma.due_date ? tarih(calisma.due_date) : due.label}</span>
             </>
           ) : (
             <>
               <dd>—</dd>
-              <span>{calisma.due_date ? trTarih(calisma.due_date) : "Tarih belirtilmedi"}</span>
+              <span>{calisma.due_date ? tarih(calisma.due_date) : t({ tr: "Tarih belirtilmedi", en: "No date set" })}</span>
             </>
           )}
         </div>
@@ -200,39 +209,44 @@ export default async function PersonelCalismaKarti({
 
       {siradakiKilometre ? (
         <p className="takvim-sirada" data-durum={siradakiKilometre.durum}>
-          <span>Öğrencinin sıradaki taşı</span>
+          <span>{t({ tr: "Öğrencinin sıradaki taşı", en: "Student's next milestone" })}</span>
           <b>{siradakiKilometre.tas.baslik}</b>
           <small>
-            {trTarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun)}
-            {takvimSayilari ? ` · takvim ${takvimSayilari.tamam}/${takvimSayilari.toplam}${takvimSayilari.geciken ? `, ${takvimSayilari.geciken} geciken` : ""}` : ""}
+            {tarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun, dil)}
+            {takvimSayilari
+              ? t({
+                  tr: ` · takvim ${takvimSayilari.tamam}/${takvimSayilari.toplam}${takvimSayilari.geciken ? `, ${takvimSayilari.geciken} geciken` : ""}`,
+                  en: ` · schedule ${takvimSayilari.tamam}/${takvimSayilari.toplam}${takvimSayilari.geciken ? `, ${takvimSayilari.geciken} overdue` : ""}`,
+                })
+              : ""}
           </small>
         </p>
       ) : null}
 
       {/* Dikkat isteyenler: yalnızca VAR olanlar listeleniyor; boşsa tek satır "temiz". */}
-      <h3 className="calisma-durum-alt">Dikkat isteyenler</h3>
+      <h3 className="calisma-durum-alt">{t({ tr: "Dikkat isteyenler", en: "Needs attention" })}</h3>
       <ul className="gb-liste">
         {acikYorum ? (
           <li>
             <Link href={`${merkez}/write`} className="gb-satir">
               <MessageSquare size={16} aria-hidden="true" />
               <span className="gb-satir-govde">
-                <b>{acikYorum} açık yorum</b>
-                <small>Yanıt ya da düzeltme bekliyor</small>
+                <b>{t({ tr: `${acikYorum} açık yorum`, en: `${acikYorum} open comment${acikYorum === 1 ? "" : "s"}` })}</b>
+                <small>{t({ tr: "Yanıt ya da düzeltme bekliyor", en: "Awaiting a reply or a fix" })}</small>
               </span>
-              <span className="status-pill" data-tone="warning">Yorum</span>
+              <span className="status-pill" data-tone="warning">{t({ tr: "Yorum", en: "Comment" })}</span>
             </Link>
           </li>
         ) : null}
-        {tutarsizliklar.map((t, i) => (
+        {tutarsizliklar.map((sorun, i) => (
           <li key={i}>
-            <Link href={merkez} className="gb-satir" title={t.baslik}>
+            <Link href={merkez} className="gb-satir" title={sorun.baslik}>
               <AlertTriangle size={16} aria-hidden="true" />
               <span className="gb-satir-govde">
-                <b>{t.baslik}</b>
-                <small>Metin ile literatür arasında; ayrıntı çalışma özetinde</small>
+                <b>{sorun.baslik}</b>
+                <small>{t({ tr: "Metin ile literatür arasında; ayrıntı çalışma özetinde", en: "Between text and literature; details in the work overview" })}</small>
               </span>
-              <span className="status-pill" data-tone="warning">Tutarsızlık</span>
+              <span className="status-pill" data-tone="warning">{t({ tr: "Tutarsızlık", en: "Inconsistency" })}</span>
             </Link>
           </li>
         ))}
@@ -240,10 +254,15 @@ export default async function PersonelCalismaKarti({
           <li className="gb-satir">
             <PenLine size={16} aria-hidden="true" />
             <span className="gb-satir-govde">
-              <b>Günde ~{tempo.perDay.toLocaleString("tr-TR")} kelime gerekiyor</b>
+              <b>
+                {t({
+                  tr: `Günde ~${tempo.perDay.toLocaleString(YEREL[dil])} kelime gerekiyor`,
+                  en: `~${tempo.perDay.toLocaleString(YEREL[dil])} words a day needed`,
+                })}
+              </b>
               <small>{tempo.detail}</small>
             </span>
-            <span className="status-pill" data-tone={tempo.tone}>Tempo</span>
+            <span className="status-pill" data-tone={tempo.tone}>{t({ tr: "Tempo", en: "Pace" })}</span>
           </li>
         ) : null}
         {sonKontrol ? (
@@ -252,24 +271,33 @@ export default async function PersonelCalismaKarti({
               <ClipboardCheck size={16} aria-hidden="true" />
               <span className="gb-satir-govde">
                 <b>
-                  Son kılavuz kontrolü:{" "}
+                  {t({ tr: "Son kılavuz kontrolü:", en: "Last guideline check:" })}{" "}
                   {sonKontrol.hata || sonKontrol.uyari || sonKontrol.eksik_bolum
                     ? [
-                        sonKontrol.hata ? `${sonKontrol.hata} hata` : null,
-                        sonKontrol.uyari ? `${sonKontrol.uyari} uyarı` : null,
-                        sonKontrol.eksik_bolum ? `${sonKontrol.eksik_bolum} eksik bölüm` : null,
+                        sonKontrol.hata
+                          ? t({ tr: `${sonKontrol.hata} hata`, en: `${sonKontrol.hata} error${sonKontrol.hata === 1 ? "" : "s"}` })
+                          : null,
+                        sonKontrol.uyari
+                          ? t({ tr: `${sonKontrol.uyari} uyarı`, en: `${sonKontrol.uyari} warning${sonKontrol.uyari === 1 ? "" : "s"}` })
+                          : null,
+                        sonKontrol.eksik_bolum
+                          ? t({
+                              tr: `${sonKontrol.eksik_bolum} eksik bölüm`,
+                              en: `${sonKontrol.eksik_bolum} missing section${sonKontrol.eksik_bolum === 1 ? "" : "s"}`,
+                            })
+                          : null,
                       ]
                         .filter(Boolean)
                         .join(" · ")
-                    : "sorunsuz"}
+                    : t({ tr: "sorunsuz", en: "no issues" })}
                 </b>
-                <small>{trTarihSaat(sonKontrol.created_at)}</small>
+                <small>{tarihSaat(sonKontrol.created_at)}</small>
               </span>
               <span
                 className="status-pill"
                 data-tone={sonKontrol.hata ? "danger" : sonKontrol.uyari || sonKontrol.eksik_bolum ? "warning" : "success"}
               >
-                Kontrol
+                {t({ tr: "Kontrol", en: "Check" })}
               </span>
             </Link>
           </li>
@@ -277,50 +305,57 @@ export default async function PersonelCalismaKarti({
           <li className="gb-satir">
             <ClipboardCheck size={16} aria-hidden="true" />
             <span className="gb-satir-govde">
-              <b>Kılavuz kontrolü hiç çalıştırılmadı</b>
-              <small>Öğrenci editörde &quot;Kılavuz ve kaynakça kontrolü&quot;nü çalıştırınca burada görünür</small>
+              <b>{t({ tr: "Kılavuz kontrolü hiç çalıştırılmadı", en: "Guideline check has never been run" })}</b>
+              <small>
+                {t({
+                  tr: "Öğrenci editörde \"Kılavuz ve kaynakça kontrolü\"nü çalıştırınca burada görünür",
+                  en: "Shows up here once the student runs \"Guideline and reference check\" in the editor",
+                })}
+              </small>
             </span>
           </li>
         )}
       </ul>
 
-      <section className="personel-denetim" aria-label="Denetim">
-        <h3 className="calisma-durum-alt">Denetim</h3>
+      <section className="personel-denetim" aria-label={t({ tr: "Denetim", en: "Oversight" })}>
+        <h3 className="calisma-durum-alt">{t({ tr: "Denetim", en: "Oversight" })}</h3>
         {/* Durum satırı üstte; altında atama ve onay düğmeleri YAN YANA (27.10.2026). */}
         {onayli ? (
           <span className="tone-text personel-denetim-durum" data-tone="success">
             <ShieldCheck size={15} aria-hidden="true" />
-            Kontrolör onayı · {trTarihSaat(calisma.controller_approved_at!)}
+            {t({ tr: "Kontrolör onayı", en: "Controller approval" })} · {tarihSaat(calisma.controller_approved_at!)}
           </span>
         ) : (
           <span className="muted text-sm">
-            {calisma.status === "ready" ? "Teslime hazır; onayınızı bekliyor." : "Henüz kontrolör onayı yok."}
+            {calisma.status === "ready"
+              ? t({ tr: "Teslime hazır; onayınızı bekliyor.", en: "Ready to submit; awaiting your approval." })
+              : t({ tr: "Henüz kontrolör onayı yok.", en: "No controller approval yet." })}
           </span>
         )}
         <div className="personel-denetim-satir">
-          <ActionForm action={ata} className="personel-ata" successMessage="Sorumlu kaydedildi.">
+          <ActionForm action={ata} className="personel-ata" successMessage={t({ tr: "Sorumlu kaydedildi.", en: "Assignee saved." })}>
             <label className="personel-ata">
-              <span className="muted text-sm">Sorumlu</span>
-              <select name="assigneeId" defaultValue={calisma.assignee_id ?? ""} aria-label="Sorumlu personel" className="compact-select grow-select">
+              <span className="muted text-sm">{t({ tr: "Sorumlu", en: "Assignee" })}</span>
+              <select name="assigneeId" defaultValue={calisma.assignee_id ?? ""} aria-label={t({ tr: "Sorumlu personel", en: "Assigned staff" })} className="compact-select grow-select">
                 {/* Personel listesi okunamadıysa "kimse yok" denmiyor:
                     yönetici atayacak kişi kalmadığını sanırdı. */}
                 <option value="">
                   {personelOkunamadi
-                    ? "Personel listesi okunamadı"
+                    ? t({ tr: "Personel listesi okunamadı", en: "Staff list could not be loaded" })
                     : eskiSorumlu
-                      ? `${calisma.assignee_name} (listede değil)`
-                      : "Sorumlu atanmadı"}
+                      ? t({ tr: `${calisma.assignee_name} (listede değil)`, en: `${calisma.assignee_name} (not in list)` })
+                      : t({ tr: "Sorumlu atanmadı", en: "No assignee" })}
                 </option>
                 {personel.map((uye) => (
                   <option key={uye.id} value={uye.id}>
-                    {uye.full_name || "İsimsiz personel"} · {t(ROLE_LABELS[uye.role])}
+                    {uye.full_name || t({ tr: "İsimsiz personel", en: "Unnamed staff" })} · {t(ROLE_LABELS[uye.role])}
                   </option>
                 ))}
               </select>
             </label>
             <button type="submit" className="projects-filter-button button-compact">
               <UserRound size={14} aria-hidden="true" />
-              Ata
+              {t({ tr: "Ata", en: "Assign" })}
             </button>
           </ActionForm>
           {onayli ? (
@@ -328,22 +363,25 @@ export default async function PersonelCalismaKarti({
               action={onayiGeriAl}
               /* Onayı iptal eden düğme, "onayla" ile aynı yerde dönüşümlü
                  çiziliyor: yanlış tıklama kolay, sonucu ağır. */
-              confirmMessage={`"${calisma.title}" çalışmasının kontrolör onayını geri almak istediğinize emin misiniz? Çalışma yeniden inceleme bekler duruma döner.`}
-              successMessage="Kontrolör onayı geri alındı."
+              confirmMessage={t({
+                tr: `"${calisma.title}" çalışmasının kontrolör onayını geri almak istediğinize emin misiniz? Çalışma yeniden inceleme bekler duruma döner.`,
+                en: `Are you sure you want to revoke the controller approval of "${calisma.title}"? The work goes back to awaiting review.`,
+              })}
+              successMessage={t({ tr: "Kontrolör onayı geri alındı.", en: "Controller approval revoked." })}
             >
               <button type="submit" className="projects-filter-button button-compact">
                 <RotateCcw size={14} aria-hidden="true" />
-                Onayı geri al
+                {t({ tr: "Onayı geri al", en: "Revoke approval" })}
               </button>
             </ActionForm>
           ) : (
-            <ActionForm action={onayla} successMessage="Çalışma kontrolör onayı aldı.">
+            <ActionForm action={onayla} successMessage={t({ tr: "Çalışma kontrolör onayı aldı.", en: "The work received controller approval." })}>
               <button
                 type="submit"
                 className={calisma.status === "ready" ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}
               >
                 <CheckCircle2 size={14} aria-hidden="true" />
-                Kontrolör olarak onayla
+                {t({ tr: "Kontrolör olarak onayla", en: "Approve as controller" })}
               </button>
             </ActionForm>
           )}

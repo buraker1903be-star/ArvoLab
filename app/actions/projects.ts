@@ -13,6 +13,8 @@ import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from 
 import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { STILLER } from "@/lib/atif/stiller";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
 import {
   OVERSIGHT_ONLY_STATUSES,
   OVERSIGHT_ROLES,
@@ -22,7 +24,10 @@ import {
   type UserRole,
 } from "@/lib/project-labels";
 
-const OVERSIGHT_ONLY = "Bu işlem için Kontrolör veya üzeri bir role sahip olmalısınız.";
+const OVERSIGHT_ONLY: Metin = {
+  tr: "Bu işlem için Kontrolör veya üzeri bir role sahip olmalısınız.",
+  en: "You need the Controller role or higher for this action.",
+};
 const PRIORITIES = ["low", "normal", "high", "urgent"];
 const RESEARCH_METHODS = ["quantitative", "qualitative", "mixed", "review"];
 // Stil listesi tek yerde: lib/atif/stiller.ts. Kopyalanınca yeni stil
@@ -37,9 +42,12 @@ const CITATION_STYLES: string[] = Object.keys(STILLER);
   olduğunu anlamasının yolu yoktu. CHECK ihlali (23514) bu yüzden ayrı
   yazılıyor.
 */
-const stilKisiti = (error: { code?: string; message?: string } | null) =>
+const stilKisiti = (error: { code?: string; message?: string } | null): Metin | null =>
   error?.code === "23514" && /citation_style/.test(error.message ?? "")
-    ? "Bu kaynakça sistemi veritabanında henüz tanımlı değil; sistem yöneticinize bildirin. Şimdilik başka bir sistem seçebilirsiniz."
+    ? {
+        tr: "Bu kaynakça sistemi veritabanında henüz tanımlı değil; sistem yöneticinize bildirin. Şimdilik başka bir sistem seçebilirsiniz.",
+        en: "This citation system is not defined in the database yet; please notify your system administrator. For now you can choose another system.",
+      }
     : null;
 
 export interface AcademicProject {
@@ -108,15 +116,16 @@ async function calismaKaydet(
   /* Paneldeki kapı yalnızca ekranı kapatıyor; sunucu işlemi doğrudan
      çağrılabildiği için abonelik burada da denetlenmeli. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
+  const t = await ceviri();
 
   const title = String(formData.get("title") ?? "").trim();
   const type = String(formData.get("type") ?? "");
 
   if (title.length < 3 || title.length > 240) {
-    return { error: "Çalışma başlığı 3 ile 240 karakter arasında olmalıdır." };
+    return { error: t({ tr: "Çalışma başlığı 3 ile 240 karakter arasında olmalıdır.", en: "The title must be between 3 and 240 characters." }) };
   }
   if (!PROJECT_TYPES.includes(type)) {
-    return { error: "Lütfen çalışma türünü seçin." };
+    return { error: t({ tr: "Lütfen çalışma türünü seçin.", en: "Please choose the type of work." }) };
   }
 
   const dueDateRaw = String(formData.get("dueDate") ?? "").trim();
@@ -152,7 +161,7 @@ async function calismaKaydet(
 
   if (error || !created) {
     console.error(error);
-    return { error: stilKisiti(error) ?? "Kaydedilirken bir hata oluştu, lütfen tekrar deneyin." };
+    return { error: t(stilKisiti(error) ?? { tr: "Kaydedilirken bir hata oluştu, lütfen tekrar deneyin.", en: "An error occurred while saving; please try again." }) };
   }
 
   revalidatePath("/dashboard/editor");
@@ -294,23 +303,24 @@ export async function getProjectForEdit(
 export async function atifStiliniKilavuzaUydur(projectId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const current = await getProjectForEdit(projectId);
   if (current === CALISMA_OKUNAMADI) {
-    return { error: "Çalışma okunamadı; değişiklik kaydedilmedi. Tekrar deneyin." };
+    return { error: t({ tr: "Çalışma okunamadı; değişiklik kaydedilmedi. Tekrar deneyin.", en: "The work could not be read; the change was not saved. Try again." }) };
   }
-  if (!current) return { error: "Çalışma bulunamadı." };
+  if (!current) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
   const canOversee = isOversightRole(ctx.role);
   if (!canOversee && current.owner_id !== ctx.user.id && current.assignee_id !== ctx.user.id) {
-    return { error: "Bu çalışmayı düzenleme yetkiniz yok." };
+    return { error: t({ tr: "Bu çalışmayı düzenleme yetkiniz yok.", en: "You don't have permission to edit this work." }) };
   }
   /* Uygulanan kılavuz: katalogdaki ya da öğrencinin yüklediği (uyarıyla aynı kaynak). */
   const kilavuz = await calismaKilavuzu(ctx.supabase, projectId, current.guideline_id);
-  if (!kilavuz) return { error: "Bu çalışmaya uygulanan bir kılavuz yok." };
+  if (!kilavuz) return { error: t({ tr: "Bu çalışmaya uygulanan bir kılavuz yok.", en: "No guideline is applied to this work." }) };
   const stil = kilavuz.citationStyle;
-  if (!stil) return { error: "Kılavuzun atıf stili okunamadı; sayfayı yenileyip tekrar deneyin." };
-  if (!CITATION_STYLES.includes(stil)) return { error: "Kılavuzun atıf stili tanınmıyor." };
+  if (!stil) return { error: t({ tr: "Kılavuzun atıf stili okunamadı; sayfayı yenileyip tekrar deneyin.", en: "The guideline's citation style could not be read; refresh the page and try again." }) };
+  if (!CITATION_STYLES.includes(stil)) return { error: t({ tr: "Kılavuzun atıf stili tanınmıyor.", en: "The guideline's citation style is not recognized." }) };
   if (stil === current.citation_style) return { success: true };
 
   const { error } = await ctx.supabase
@@ -319,7 +329,7 @@ export async function atifStiliniKilavuzaUydur(projectId: string): Promise<Actio
     .eq("id", projectId);
   if (error) {
     console.error("[calisma] atıf stili kılavuza uydurulamadı:", error.message);
-    return { error: "Atıf stili güncellenemedi. Tekrar deneyin." };
+    return { error: t({ tr: "Atıf stili güncellenemedi. Tekrar deneyin.", en: "The citation style could not be updated. Try again." }) };
   }
 
   revalidatePath("/dashboard/editor");
@@ -329,54 +339,55 @@ export async function atifStiliniKilavuzaUydur(projectId: string): Promise<Actio
 export async function updateProject(projectId: string, formData: FormData): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const current = await getProjectForEdit(projectId);
   // Okunamayan kaydın üzerine yazmak, yetki denetimini de atlatırdı.
   if (current === CALISMA_OKUNAMADI) {
-    return { error: "Çalışma okunamadı; değişiklik kaydedilmedi. Tekrar deneyin." };
+    return { error: t({ tr: "Çalışma okunamadı; değişiklik kaydedilmedi. Tekrar deneyin.", en: "The work could not be read; the change was not saved. Try again." }) };
   }
-  if (!current) return { error: "Çalışma bulunamadı." };
+  if (!current) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
   const canOversee = isOversightRole(ctx.role);
   if (!canOversee && current.owner_id !== ctx.user.id && current.assignee_id !== ctx.user.id) {
-    return { error: "Bu çalışmayı düzenleme yetkiniz yok." };
+    return { error: t({ tr: "Bu çalışmayı düzenleme yetkiniz yok.", en: "You don't have permission to edit this work." }) };
   }
 
   const title = String(formData.get("title") ?? "").trim();
   if (title.length < 3 || title.length > 240) {
-    return { error: "Başlık 3 ile 240 karakter arasında olmalı." };
+    return { error: t({ tr: "Başlık 3 ile 240 karakter arasında olmalı.", en: "The title must be between 3 and 240 characters." }) };
   }
 
   const priority = String(formData.get("priority") ?? current.priority);
-  if (!PRIORITIES.includes(priority)) return { error: "Geçersiz öncelik." };
+  if (!PRIORITIES.includes(priority)) return { error: t({ tr: "Geçersiz öncelik.", en: "Invalid priority." }) };
 
   const method = String(formData.get("method") ?? "");
-  if (method && !RESEARCH_METHODS.includes(method)) return { error: "Geçersiz araştırma yöntemi." };
+  if (method && !RESEARCH_METHODS.includes(method)) return { error: t({ tr: "Geçersiz araştırma yöntemi.", en: "Invalid research method." }) };
 
   const dueDate = String(formData.get("dueDate") ?? "").trim();
-  if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return { error: "Geçersiz teslim tarihi." };
+  if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return { error: t({ tr: "Geçersiz teslim tarihi.", en: "Invalid due date." }) };
 
   const progress = Number(formData.get("progress"));
   if (!Number.isInteger(progress) || progress < 0 || progress > 100) {
-    return { error: "İlerleme 0 ile 100 arasında bir tam sayı olmalı." };
+    return { error: t({ tr: "İlerleme 0 ile 100 arasında bir tam sayı olmalı.", en: "Progress must be a whole number between 0 and 100." }) };
   }
 
   // Devre dışı (disabled) alanlar forma eklenmez; o durumda mevcut değer korunur.
   const statusField = formData.get("status");
   const status = statusField === null ? current.status : String(statusField);
-  if (!PROJECT_STATUSES.includes(status)) return { error: "Geçersiz durum." };
+  if (!PROJECT_STATUSES.includes(status)) return { error: t({ tr: "Geçersiz durum.", en: "Invalid status." }) };
   if (
     !canOversee &&
     status !== current.status &&
     (OVERSIGHT_ONLY_STATUSES.includes(status) || OVERSIGHT_ONLY_STATUSES.includes(current.status))
   ) {
-    return { error: "Bu durum değişikliğini yalnızca Kontrolör ve üzeri roller yapabilir." };
+    return { error: t({ tr: "Bu durum değişikliğini yalnızca Kontrolör ve üzeri roller yapabilir.", en: "Only Controller and higher roles can make this status change." }) };
   }
 
   const citationField = formData.get("citationStyle");
   const citationStyle =
     current.guideline_id || citationField === null ? current.citation_style : String(citationField);
-  if (!CITATION_STYLES.includes(citationStyle)) return { error: "Geçersiz kaynakça sistemi." };
+  if (!CITATION_STYLES.includes(citationStyle)) return { error: t({ tr: "Geçersiz kaynakça sistemi.", en: "Invalid citation system." }) };
 
   const { data, error } = await ctx.supabase
     .from("academic_projects")
@@ -401,11 +412,11 @@ export async function updateProject(projectId: string, formData: FormData): Prom
     return {
       error:
         error.code === "42501"
-          ? "Bu değişiklik için yetkiniz yok."
-          : stilKisiti(error) ?? "Kaydedilirken bir hata oluştu.",
+          ? t({ tr: "Bu değişiklik için yetkiniz yok.", en: "You don't have permission for this change." })
+          : t(stilKisiti(error) ?? { tr: "Kaydedilirken bir hata oluştu.", en: "An error occurred while saving." }),
     };
   }
-  if (!data?.length) return { error: "Bu çalışmayı düzenleme yetkiniz yok." };
+  if (!data?.length) return { error: t({ tr: "Bu çalışmayı düzenleme yetkiniz yok.", en: "You don't have permission to edit this work." }) };
 
   revalidatePath("/dashboard/editor");
   revalidatePath("/dashboard");
@@ -447,6 +458,7 @@ export async function getAssignableStaff(): Promise<ListeSonucu<StaffMember>> {
 export async function approveProject(projectId: string): Promise<ActionResult> {
   const auth = await requireRole(OVERSIGHT_ROLES, OVERSIGHT_ONLY);
   if ("error" in auth) return { error: auth.error };
+  const t = await ceviri();
 
   const { data, error } = await auth.supabase
     .from("academic_projects")
@@ -460,9 +472,9 @@ export async function approveProject(projectId: string): Promise<ActionResult> {
 
   if (error) {
     console.error(error);
-    return { error: "Onaylanırken bir hata oluştu." };
+    return { error: t({ tr: "Onaylanırken bir hata oluştu.", en: "An error occurred while approving." }) };
   }
-  if (!data?.length) return { error: "Çalışma bulunamadı." };
+  if (!data?.length) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
   revalidatePath("/dashboard/editor");
   revalidatePath("/dashboard");
@@ -479,7 +491,7 @@ export async function approveProject(projectId: string): Promise<ActionResult> {
     const ozet = await calismaOzeti(projectId);
     // Okunamadıysa uyarı hesaplanmaz; onay zaten verildi, sessiz geçiliyor.
     const uyari = ozet && ozet !== CALISMA_OKUNAMADI
-      ? onayUyarisi({ tutarsizliklar: ozet.tutarsizliklar, hazirlik: ozet.hazirlik })
+      ? onayUyarisi({ tutarsizliklar: ozet.tutarsizliklar, hazirlik: ozet.hazirlik, dil: await aktifDil() })
       : null;
     if (uyari) return { success: true, warning: uyari };
   } catch (hata) {
@@ -492,6 +504,7 @@ export async function approveProject(projectId: string): Promise<ActionResult> {
 export async function revokeApproval(projectId: string): Promise<ActionResult> {
   const auth = await requireRole(OVERSIGHT_ROLES, OVERSIGHT_ONLY);
   if ("error" in auth) return { error: auth.error };
+  const t = await ceviri();
 
   const { data, error } = await auth.supabase
     .from("academic_projects")
@@ -505,9 +518,9 @@ export async function revokeApproval(projectId: string): Promise<ActionResult> {
 
   if (error) {
     console.error(error);
-    return { error: "İşlem sırasında bir hata oluştu." };
+    return { error: t({ tr: "İşlem sırasında bir hata oluştu.", en: "An error occurred during the operation." }) };
   }
-  if (!data?.length) return { error: "Çalışma bulunamadı." };
+  if (!data?.length) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
   revalidatePath("/dashboard/editor");
   revalidatePath("/dashboard");
@@ -521,6 +534,7 @@ export async function revokeApproval(projectId: string): Promise<ActionResult> {
 export async function assignProject(projectId: string, assigneeId: string): Promise<ActionResult> {
   const auth = await requireRole(OVERSIGHT_ROLES, OVERSIGHT_ONLY);
   if ("error" in auth) return { error: auth.error };
+  const t = await ceviri();
 
   let assignee: StaffMember | null = null;
   if (assigneeId) {
@@ -530,7 +544,7 @@ export async function assignProject(projectId: string, assigneeId: string): Prom
       .eq("id", assigneeId)
       .maybeSingle();
     if (!staff || !STAFF_ROLES.includes(staff.role as UserRole)) {
-      return { error: "Seçilen kişi personel listesinde bulunamadı." };
+      return { error: t({ tr: "Seçilen kişi personel listesinde bulunamadı.", en: "The selected person was not found in the staff list." }) };
     }
     assignee = staff as StaffMember;
   }
@@ -539,6 +553,7 @@ export async function assignProject(projectId: string, assigneeId: string): Prom
     .from("academic_projects")
     .update({
       assignee_id: assignee?.id ?? null,
+      /* Veritabanına yazılan değer: kullanıcının diline göre değişmiyor. */
       assignee_name: assignee ? assignee.full_name || "İsimsiz personel" : null,
     })
     .eq("id", projectId)
@@ -546,9 +561,9 @@ export async function assignProject(projectId: string, assigneeId: string): Prom
 
   if (error) {
     console.error(error);
-    return { error: "Atama sırasında bir hata oluştu." };
+    return { error: t({ tr: "Atama sırasında bir hata oluştu.", en: "An error occurred while assigning." }) };
   }
-  if (!data?.length) return { error: "Çalışma bulunamadı." };
+  if (!data?.length) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
   revalidatePath("/dashboard/editor");
   return { success: true };
@@ -562,14 +577,15 @@ export async function assignProject(projectId: string, assigneeId: string): Prom
 export async function deleteProject(projectId: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
 
   const { data, error } = await ctx.supabase.from("academic_projects").delete().eq("id", projectId).select("id");
 
   if (error) {
     console.error(error);
-    return { error: "Silme sırasında bir hata oluştu." };
+    return { error: t({ tr: "Silme sırasında bir hata oluştu.", en: "An error occurred while deleting." }) };
   }
-  if (!data?.length) return { error: "Bu çalışmayı silme yetkiniz yok." };
+  if (!data?.length) return { error: t({ tr: "Bu çalışmayı silme yetkiniz yok.", en: "You don't have permission to delete this work." }) };
 
   revalidatePath("/dashboard/editor");
   revalidatePath("/dashboard");

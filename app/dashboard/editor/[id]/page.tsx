@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ceviri } from "@/lib/dil-sunucu";
+import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
+import type { Metin } from "@/lib/dil";
 import { notFound, redirect } from "next/navigation";
 import {
   ArrowRight,
@@ -27,7 +28,6 @@ import ActionForm from "@/app/dashboard/action-form";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu, birimIlerlemesi, siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import { isOversightRole, projectTypeLabel, statusLabel, STAFF_ROLES } from "@/lib/project-labels";
-import { trTarih, trTarihSaat } from "@/lib/tr-time";
 
 /*
   ÇALIŞMA ÖZETİ (personel): bir tezin/makalenin bütün birimleri tek sayfada.
@@ -51,7 +51,11 @@ import { trTarih, trTarihSaat } from "@/lib/tr-time";
 */
 
 const BULGU_TONU: Record<string, string> = { uyari: "danger", oneri: "warning", bilgi: "info" };
-const BULGU_ETIKETI: Record<string, string> = { uyari: "Eksik", oneri: "Öneri", bilgi: "Not" };
+const BULGU_ETIKETI: Record<string, Metin> = {
+  uyari: { tr: "Eksik", en: "Missing" },
+  oneri: { tr: "Öneri", en: "Suggestion" },
+  bilgi: { tr: "Not", en: "Note" },
+};
 
 const ADIM_SIMGESI: Record<string, typeof PenLine> = {
   literatur: BookOpenCheck,
@@ -68,6 +72,8 @@ export default async function CalismaMerkezi({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const t = await ceviri();
+  const dil = await aktifDil();
+  const { tarih, tarihSaat } = await tarihler();
   const [{ id }, sorgu, profil] = await Promise.all([params, searchParams, getCurrentProfile()]);
   // Yeni tezde kılavuz eşleşmediyse kayıt buraya ?kilavuz=1 ile geliyor (createProject).
   const kilavuzAc = sorgu.kilavuz === "1";
@@ -88,14 +94,23 @@ export default async function CalismaMerkezi({
     return (
       <main className="dashboard-page">
         <article className="resume-card" role="alert">
-          <span className="dashboard-kicker">Bağlantı sorunu</span>
+          <span className="dashboard-kicker">{t({ tr: "Bağlantı sorunu", en: "Connection problem" })}</span>
           <div className="resume-heading">
-            <h2>Çalışma yüklenemedi</h2>
-            <p>Kaydınız yerinde duruyor. Sayfayı yenileyin; sorun sürerse destekten bildirin.</p>
+            <h2>{t({ tr: "Çalışma yüklenemedi", en: "The work could not be loaded" })}</h2>
+            <p>
+              {t({
+                tr: "Kaydınız yerinde duruyor. Sayfayı yenileyin; sorun sürerse destekten bildirin.",
+                en: "Your record is safe. Refresh the page; if the problem persists, report it to support.",
+              })}
+            </p>
           </div>
           <div className="cluster">
-            <Link href="/dashboard/editor" className="projects-filter-button">Çalışmalarım</Link>
-            <Link href="/dashboard/expert-requests" className="projects-filter-button">Uygulama Destek</Link>
+            <Link href="/dashboard/editor" className="projects-filter-button">
+              {t({ tr: "Çalışmalarım", en: "My works" })}
+            </Link>
+            <Link href="/dashboard/expert-requests" className="projects-filter-button">
+              {t({ tr: "Uygulama Destek", en: "App Support" })}
+            </Link>
           </div>
         </article>
       </main>
@@ -109,14 +124,19 @@ export default async function CalismaMerkezi({
   const eksikMaddeler = (hazirlik?.items ?? [])
     .filter((madde) => madde.status !== "ok")
     .sort((a, b) => (a.status === "todo" ? 0 : 1) - (b.status === "todo" ? 0 : 1));
-  const adimlar = siradakiAdimlar(ozet);
+  const adimlar = siradakiAdimlar(ozet, dil);
   const ilerleme = birimIlerlemesi(adimlar);
 
   const eksikSayisi = eksikMaddeler.filter((madde) => madde.status === "todo").length;
   const teslimNotu =
-    [eksikSayisi ? `${eksikSayisi} eksik` : "", eksikMaddeler.length - eksikSayisi ? `${eksikMaddeler.length - eksikSayisi} bakılacak` : ""]
+    [
+      eksikSayisi ? t({ tr: `${eksikSayisi} eksik`, en: `${eksikSayisi} missing` }) : "",
+      eksikMaddeler.length - eksikSayisi
+        ? t({ tr: `${eksikMaddeler.length - eksikSayisi} bakılacak`, en: `${eksikMaddeler.length - eksikSayisi} to review` })
+        : "",
+    ]
       .filter(Boolean)
-      .join(" · ") || "Bütün maddeler hazır";
+      .join(" · ") || t({ tr: "Bütün maddeler hazır", en: "All items ready" });
   /*
     SADE MERKEZ (26.10.2026, kurum sahibinin isteği: "kalabalık
     karmaşık yapıdan kurtulalım, ArvoOS gibi açılır pencereler").
@@ -138,16 +158,16 @@ export default async function CalismaMerkezi({
           <h1>{calisma.title}</h1>
           <p>
             {[calisma.university, calisma.institute, calisma.department].filter(Boolean).join(" · ") ||
-              "Kurum bilgisi girilmemiş"}
-            {calisma.due_date ? ` · Teslim: ${trTarih(calisma.due_date)}` : ""}
+              t({ tr: "Kurum bilgisi girilmemiş", en: "No institution entered" })}
+            {calisma.due_date ? t({ tr: ` · Teslim: ${tarih(calisma.due_date)}`, en: ` · Due: ${tarih(calisma.due_date)}` }) : ""}
           </p>
         </div>
         <div className="merkez-ust-eylemler">
           <Link href={`/dashboard/editor/${calisma.id}/write`} className="projects-primary-button">
-            <PenLine size={16} aria-hidden="true" /> Yazmaya devam et
+            <PenLine size={16} aria-hidden="true" /> {t({ tr: "Yazmaya devam et", en: "Continue writing" })}
           </Link>
           <Link href={`/dashboard/editor/${calisma.id}/edit`} className="projects-filter-button">
-            <Settings2 size={16} aria-hidden="true" /> Çalışma ayarları
+            <Settings2 size={16} aria-hidden="true" /> {t({ tr: "Çalışma ayarları", en: "Work settings" })}
           </Link>
           {/* Kurum çalışanı da teslim paketini buradan indirir (kurum sahibinin isteği). */}
           <TeslimPaketi projectId={calisma.id} className="projects-filter-button" />
@@ -158,19 +178,29 @@ export default async function CalismaMerkezi({
 
       <section className="merkez-ozet">
         <article className="merkez-kutu">
-          <small>Durum</small>
+          <small>{t({ tr: "Durum", en: "Status" })}</small>
           <strong>{t(statusLabel(calisma.status))}</strong>
-          <span>Birim ilerlemesi %{ilerleme}</span>
+          <span>{t({ tr: `Birim ilerlemesi %${ilerleme}`, en: `Unit progress ${ilerleme}%` })}</span>
         </article>
         <article className="merkez-kutu">
-          <small>Teslim hazırlığı</small>
+          <small>{t({ tr: "Teslim hazırlığı", en: "Submission readiness" })}</small>
           <strong>{hazirlik ? `${hazirlik.done}/${hazirlik.total}` : "—"}</strong>
-          <span>{hazirlik ? (hazirlik.done === hazirlik.total ? "Hazır görünüyor" : "madde hazır") : "Müsvedde yok"}</span>
+          <span>
+            {hazirlik
+              ? hazirlik.done === hazirlik.total
+                ? t({ tr: "Hazır görünüyor", en: "Looks ready" })
+                : t({ tr: "madde hazır", en: "items ready" })
+              : t({ tr: "Müsvedde yok", en: "No manuscript" })}
+          </span>
         </article>
         <article className="merkez-kutu">
-          <small>Asistan denetimi</small>
+          <small>{t({ tr: "Asistan denetimi", en: "Assistant checks" })}</small>
           <strong>{asistan.toplam}</strong>
-          <span>{asistan.sonTarih ? `Son: ${trTarihSaat(asistan.sonTarih)}` : "Henüz denetim yok"}</span>
+          <span>
+            {asistan.sonTarih
+              ? t({ tr: `Son: ${tarihSaat(asistan.sonTarih)}`, en: `Last: ${tarihSaat(asistan.sonTarih)}` })
+              : t({ tr: "Henüz denetim yok", en: "No checks yet" })}
+          </span>
         </article>
       </section>
 
@@ -185,24 +215,34 @@ export default async function CalismaMerkezi({
         <div className="asistan-uyari asistan-uyari-eylemli mt-md" data-tone="danger" role="alert">
           <span>
             <TriangleAlert size={16} aria-hidden="true" />{" "}
-            Çalışmanız <b>{STIL_ETIKETLERI[calisma.citation_style] ?? calisma.citation_style}</b> olarak ayarlı,
-            ancak {kilavuz?.kurum} kılavuzu{" "}
-            <b>{STIL_ETIKETLERI[kilavuz?.atifStili ?? ""] ?? kilavuz?.atifStili}</b> istiyor. Kılavuz bu çalışma
-            için geçerli değilse çalışma ayarlarından kurumu düzeltin.
+            {dil === "en" ? (
+              <>
+                Your work is set to <b>{STIL_ETIKETLERI[calisma.citation_style] ?? calisma.citation_style}</b>, but the{" "}
+                {kilavuz?.kurum} guideline requires <b>{STIL_ETIKETLERI[kilavuz?.atifStili ?? ""] ?? kilavuz?.atifStili}</b>. If
+                the guideline does not apply to this work, correct the institution in the work settings.
+              </>
+            ) : (
+              <>
+                Çalışmanız <b>{STIL_ETIKETLERI[calisma.citation_style] ?? calisma.citation_style}</b> olarak ayarlı,
+                ancak {kilavuz?.kurum} kılavuzu{" "}
+                <b>{STIL_ETIKETLERI[kilavuz?.atifStili ?? ""] ?? kilavuz?.atifStili}</b> istiyor. Kılavuz bu çalışma
+                için geçerli değilse çalışma ayarlarından kurumu düzeltin.
+              </>
+            )}
           </span>
           <ActionForm
             action={atifStiliniKilavuzaUydur.bind(null, calisma.id)}
-            successMessage="Atıf stili kılavuza göre güncellendi."
+            successMessage={t({ tr: "Atıf stili kılavuza göre güncellendi.", en: "Citation style updated to match the guideline." })}
           >
             <button type="submit" className="projects-filter-button button-compact">
-              Kılavuza göre düzelt
+              {t({ tr: "Kılavuza göre düzelt", en: "Fix per guideline" })}
             </button>
           </ActionForm>
         </div>
       )}
 
       <section className="section mt-lg">
-        <h2 className="section-title">Sıradaki adımlar</h2>
+        <h2 className="section-title">{t({ tr: "Sıradaki adımlar", en: "Next steps" })}</h2>
         <ol className="merkez-adimlar mt-md">
           {adimlar.map((adim) => {
             const Simge = ADIM_SIMGESI[adim.anahtar] ?? PenLine;
@@ -214,10 +254,12 @@ export default async function CalismaMerkezi({
                 <span className="merkez-adim-metin">
                   <b>{adim.baslik}</b>
                   {adim.aciklama}
-                  {adim.zaman ? <small>Son hareket: {trTarihSaat(adim.zaman)}</small> : null}
+                  {adim.zaman ? (
+                    <small>{t({ tr: `Son hareket: ${tarihSaat(adim.zaman)}`, en: `Last activity: ${tarihSaat(adim.zaman)}` })}</small>
+                  ) : null}
                 </span>
                 <Link href={adim.href} className="merkez-adim-baglanti">
-                  {adim.tamam ? "Görüntüle" : "Başla"} <ArrowRight size={14} aria-hidden="true" />
+                  {adim.tamam ? t({ tr: "Görüntüle", en: "View" }) : t({ tr: "Başla", en: "Start" })} <ArrowRight size={14} aria-hidden="true" />
                 </Link>
               </li>
             );
@@ -226,24 +268,27 @@ export default async function CalismaMerkezi({
       </section>
 
       <section className="section">
-        <h2 className="section-title">Kontroller ve kayıtlar</h2>
+        <h2 className="section-title">{t({ tr: "Kontroller ve kayıtlar", en: "Checks and records" })}</h2>
         <div className="calisma-karolari">
           {hazirlik ? (
             <PanelDrawer
-              triggerLabel="Teslim öncesi bakılacaklar"
+              triggerLabel={t({ tr: "Teslim öncesi bakılacaklar", en: "To review before submission" })}
               triggerNote={teslimNotu}
               triggerIcon={<ListChecks size={18} aria-hidden="true" />}
               triggerClassName="merkez-baglanti"
-              kicker="Teslim hazırlığı"
-              title="Teslim öncesi bakılacaklar"
-              description="Editördeki “Teslim kontrolü” ile aynı liste; kaydedilmiş metinden hesaplanır."
+              kicker={t({ tr: "Teslim hazırlığı", en: "Submission readiness" })}
+              title={t({ tr: "Teslim öncesi bakılacaklar", en: "To review before submission" })}
+              description={t({
+                tr: "Editördeki “Teslim kontrolü” ile aynı liste; kaydedilmiş metinden hesaplanır.",
+                en: "The same list as “Submission check” in the editor; calculated from the saved text.",
+              })}
               basaridaKapan={false}
             >
               {eksikMaddeler.length ? (
                 <ul className="asistan-bulgular">
                   {eksikMaddeler.map((madde) => (
                     <li className="asistan-bulgu" data-tone={madde.status === "todo" ? "danger" : "warning"} key={madde.id}>
-                      <span className="asistan-bulgu-etiket">{madde.status === "todo" ? "Eksik" : "Bakılacak"}</span>
+                      <span className="asistan-bulgu-etiket">{madde.status === "todo" ? t({ tr: "Eksik", en: "Missing" }) : t({ tr: "Bakılacak", en: "To review" })}</span>
                       <span className="asistan-bulgu-metin">
                         <b>{madde.label}</b>
                         {madde.detail}
@@ -252,7 +297,7 @@ export default async function CalismaMerkezi({
                   ))}
                 </ul>
               ) : (
-                <p className="muted">Kaydedilmiş metinde eksik bir madde görünmüyor.</p>
+                <p className="muted">{t({ tr: "Kaydedilmiş metinde eksik bir madde görünmüyor.", en: "No missing items in the saved text." })}</p>
               )}
             </PanelDrawer>
           ) : null}
@@ -260,19 +305,25 @@ export default async function CalismaMerkezi({
           {/* Metin ile literatür listesinin karşılaştırması kendiliğinden çalışır; boşsa karo çizilmez. */}
           {tutarsizliklar.length > 0 && (
             <PanelDrawer
-              triggerLabel="Birimler arası tutarsızlıklar"
-              triggerNote={`${tutarsizliklar.length} tutarsızlık`}
+              triggerLabel={t({ tr: "Birimler arası tutarsızlıklar", en: "Inconsistencies between units" })}
+              triggerNote={t({
+                tr: `${tutarsizliklar.length} tutarsızlık`,
+                en: `${tutarsizliklar.length} inconsistenc${tutarsizliklar.length === 1 ? "y" : "ies"}`,
+              })}
               triggerIcon={<TriangleAlert size={18} aria-hidden="true" />}
               triggerClassName="merkez-baglanti"
-              kicker="Otomatik karşılaştırma"
-              title="Birimler arası tutarsızlıklar"
-              description="Metniniz ile literatür listeniz karşılaştırıldı; hiçbir şey yapıştırmanız gerekmez."
+              kicker={t({ tr: "Otomatik karşılaştırma", en: "Automatic comparison" })}
+              title={t({ tr: "Birimler arası tutarsızlıklar", en: "Inconsistencies between units" })}
+              description={t({
+                tr: "Metniniz ile literatür listeniz karşılaştırıldı; hiçbir şey yapıştırmanız gerekmez.",
+                en: "Your text was compared with your literature list; you don't need to paste anything.",
+              })}
               basaridaKapan={false}
             >
               <ul className="asistan-bulgular">
                 {tutarsizliklar.map((sorun) => (
                   <li className="asistan-bulgu" data-tone="warning" key={sorun.tur}>
-                    <span className="asistan-bulgu-etiket">Tutarsızlık</span>
+                    <span className="asistan-bulgu-etiket">{t({ tr: "Tutarsızlık", en: "Inconsistency" })}</span>
                     <span className="asistan-bulgu-metin">
                       <b>{sorun.baslik}</b>
                       {sorun.aciklama}
@@ -285,18 +336,21 @@ export default async function CalismaMerkezi({
 
           {asistan.sonBulgular.length > 0 && (
             <PanelDrawer
-              triggerLabel="Asistanın son bulguları"
-              triggerNote={`${asistan.sonBulgular.length} bulgu`}
+              triggerLabel={t({ tr: "Asistanın son bulguları", en: "Assistant's latest findings" })}
+              triggerNote={t({
+                tr: `${asistan.sonBulgular.length} bulgu`,
+                en: `${asistan.sonBulgular.length} finding${asistan.sonBulgular.length === 1 ? "" : "s"}`,
+              })}
               triggerIcon={<Sparkles size={18} aria-hidden="true" />}
               triggerClassName="merkez-baglanti"
-              kicker="Asistan"
-              title="Asistanın son bulguları"
+              kicker={t({ tr: "Asistan", en: "Assistant" })}
+              title={t({ tr: "Asistanın son bulguları", en: "Assistant's latest findings" })}
               basaridaKapan={false}
             >
               <ul className="asistan-bulgular">
                 {asistan.sonBulgular.map((bulgu, index) => (
                   <li className="asistan-bulgu" data-tone={BULGU_TONU[bulgu.tur] ?? "info"} key={index}>
-                    <span className="asistan-bulgu-etiket">{BULGU_ETIKETI[bulgu.tur] ?? "Not"}</span>
+                    <span className="asistan-bulgu-etiket">{t(BULGU_ETIKETI[bulgu.tur] ?? BULGU_ETIKETI.bilgi)}</span>
                     <span className="asistan-bulgu-metin">
                       <b>{bulgu.baslik}</b>
                       {bulgu.aciklama}
@@ -317,8 +371,13 @@ export default async function CalismaMerkezi({
           <Link href="/dashboard/expert-requests" className="merkez-baglanti">
             <Users size={18} aria-hidden="true" />
             <span>
-              <b>Uzman desteği</b>
-              {danismanlikSayisi ? `${danismanlikSayisi} talep açıldı` : "Talep yok"}
+              <b>{t({ tr: "Uzman desteği", en: "Expert support" })}</b>
+              {danismanlikSayisi
+                ? t({
+                    tr: `${danismanlikSayisi} talep açıldı`,
+                    en: `${danismanlikSayisi} request${danismanlikSayisi === 1 ? "" : "s"} opened`,
+                  })
+                : t({ tr: "Talep yok", en: "No requests" })}
             </span>
           </Link>
         </div>

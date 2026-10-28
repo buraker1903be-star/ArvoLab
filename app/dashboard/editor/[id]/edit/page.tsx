@@ -18,6 +18,11 @@ import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import AcademicUnitFields from "../../new/academic-unit-fields";
 
+export async function generateMetadata() {
+  const t = await ceviri();
+  return { title: t({ tr: "Çalışmayı düzenle", en: "Edit work" }) };
+}
+
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await ceviri();
   const { id } = await params;
@@ -29,14 +34,23 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
     return (
       <main className="dashboard-page">
         <article className="resume-card" role="alert">
-          <span className="dashboard-kicker">Bağlantı sorunu</span>
+          <span className="dashboard-kicker">{t({ tr: "Bağlantı sorunu", en: "Connection problem" })}</span>
           <div className="resume-heading">
-            <h2>Çalışma yüklenemedi</h2>
-            <p>Kaydınız yerinde duruyor. Sayfayı yenileyin; sorun sürerse destekten bildirin.</p>
+            <h2>{t({ tr: "Çalışma yüklenemedi", en: "The work could not be loaded" })}</h2>
+            <p>
+              {t({
+                tr: "Kaydınız yerinde duruyor. Sayfayı yenileyin; sorun sürerse destekten bildirin.",
+                en: "Your record is safe. Refresh the page; if the problem persists, report it to support.",
+              })}
+            </p>
           </div>
           <div className="cluster">
-            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">Çalışma özeti</Link>
-            <Link href="/dashboard/expert-requests" className="projects-filter-button">Uygulama Destek</Link>
+            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
+              {t({ tr: "Çalışma özeti", en: "Work overview" })}
+            </Link>
+            <Link href="/dashboard/expert-requests" className="projects-filter-button">
+              {t({ tr: "Uygulama Destek", en: "App Support" })}
+            </Link>
           </div>
         </article>
       </main>
@@ -66,31 +80,33 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
       <section className="projects-header">
         <div>
           <span className="dashboard-kicker">{t(projectTypeLabel(project.project_type))}</span>
-          <h1>Çalışmayı düzenle</h1>
-          <p>Çalışmanın planlama bilgilerini, durumunu ve ilerlemesini güncelleyin.</p>
+          <h1>{t({ tr: "Çalışmayı düzenle", en: "Edit work" })}</h1>
+          <p>{t({ tr: "Çalışmanın planlama bilgilerini, durumunu ve ilerlemesini güncelleyin.", en: "Update the work's planning details, status and progress." })}</p>
         </div>
         {/* Yazım ekranıyla aynı: çıkış çalışmanın kendi merkezine.
             Düzenlemeyi bitiren kullanıcı listeye değil, çalıştığı teze
             dönmek istiyor. */}
         <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
           <ArrowLeft size={17} aria-hidden="true" />
-          Çalışma özeti
+          {t({ tr: "Çalışma özeti", en: "Work overview" })}
         </Link>
       </section>
 
-      <ActionForm action={handleUpdate} className="project-form" successMessage="Çalışma güncellendi.">
+      <ActionForm action={handleUpdate} className="project-form" successMessage={t({ tr: "Çalışma güncellendi.", en: "Work updated." })}>
         <section className="project-form-card">
           <div className="project-form-heading">
-            <h2>Temel bilgiler</h2>
+            <h2>{t({ tr: "Temel bilgiler", en: "Basic details" })}</h2>
             <p>
-              Tezlerde tez yazım kılavuzu seçtiğiniz kuruma göre otomatik belirlenir; kurumu değiştirirseniz
-              kılavuz ve kaynakça sistemi yeniden eşleştirilir.
+              {t({
+                tr: "Tezlerde tez yazım kılavuzu seçtiğiniz kuruma göre otomatik belirlenir; kurumu değiştirirseniz kılavuz ve kaynakça sistemi yeniden eşleştirilir.",
+                en: "For theses, the writing guideline is determined automatically from the institution you choose; if you change the institution, the guideline and citation system are matched again.",
+              })}
             </p>
           </div>
 
           <div className="project-form-grid">
             <label className="project-form-full">
-              <span>Çalışma başlığı</span>
+              <span>{t({ tr: "Çalışma başlığı", en: "Title of the work" })}</span>
               <input name="title" type="text" defaultValue={project.title} minLength={3} maxLength={240} required />
             </label>
 
@@ -108,7 +124,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
             />
 
             <label>
-              <span>Kaynakça sistemi</span>
+              <span>{t({ tr: "Kaynakça sistemi", en: "Citation system" })}</span>
               <select name="citationStyle" defaultValue={project.citation_style} disabled={!!project.guideline_id}>
                 {STIL_SECENEKLERI.map((secenek) => (
                   <option key={secenek.deger} value={secenek.deger}>
@@ -125,18 +141,23 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
                   diyordu. Düzeltme yolu Çalışma Merkezi'ndeki
                   "Kılavuza göre düzelt" düğmesi.
                 */
-                <small>Kılavuz bağlı olduğu için burada değiştirilmez; uyuşmazlık varsa Çalışma Merkezi&apos;nden düzeltin.</small>
+                <small>
+                  {t({
+                    tr: "Kılavuz bağlı olduğu için burada değiştirilmez; uyuşmazlık varsa Çalışma Merkezi'nden düzeltin.",
+                    en: "It can't be changed here because a guideline is linked; if there is a mismatch, fix it from the work overview.",
+                  })}
+                </small>
               ) : null}
             </label>
 
             <label>
-              <span>Araştırma yöntemi</span>
+              <span>{t({ tr: "Araştırma yöntemi", en: "Research method" })}</span>
               <select name="method" defaultValue={project.research_method ?? ""}>
-                <option value="">Belirtilmedi</option>
-                <option value="quantitative">Nicel</option>
-                <option value="qualitative">Nitel</option>
-                <option value="mixed">Karma</option>
-                <option value="review">Derleme</option>
+                <option value="">{t({ tr: "Belirtilmedi", en: "Not specified" })}</option>
+                <option value="quantitative">{t({ tr: "Nicel", en: "Quantitative" })}</option>
+                <option value="qualitative">{t({ tr: "Nitel", en: "Qualitative" })}</option>
+                <option value="mixed">{t({ tr: "Karma", en: "Mixed" })}</option>
+                <option value="review">{t({ tr: "Derleme", en: "Review" })}</option>
               </select>
             </label>
           </div>
@@ -144,17 +165,20 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 
         <section className="project-form-card">
           <div className="project-form-heading">
-            <h2>Durum ve planlama</h2>
+            <h2>{t({ tr: "Durum ve planlama", en: "Status and planning" })}</h2>
             <p>
               {lockedByApproval
-                ? `Bu çalışma "${t(statusLabel(project.status))}" durumunda; durumu yalnızca Kontrolör ve üzeri roller değiştirebilir.`
-                : "Durum ve ilerleme, ana sayfadaki özet istatistiklere yansır."}
+                ? t({
+                    tr: `Bu çalışma "${t(statusLabel(project.status))}" durumunda; durumu yalnızca Kontrolör ve üzeri roller değiştirebilir.`,
+                    en: `This work is "${t(statusLabel(project.status))}"; only Controller and higher roles can change its status.`,
+                  })
+                : t({ tr: "Durum ve ilerleme, ana sayfadaki özet istatistiklere yansır.", en: "Status and progress are reflected in the summary on the home page." })}
             </p>
           </div>
 
           <div className="project-form-grid">
             <label>
-              <span>Durum</span>
+              <span>{t({ tr: "Durum", en: "Status" })}</span>
               <select name="status" defaultValue={project.status} disabled={lockedByApproval}>
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
@@ -165,15 +189,20 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
             </label>
 
             <label>
-              <span>İlerleme (%)</span>
+              <span>{t({ tr: "İlerleme (%)", en: "Progress (%)" })}</span>
               <input name="progress" type="number" min={0} max={100} step={1} defaultValue={project.progress} required />
               {project.guideline_id ? (
-                <small className="muted text-sm">Yazdıkça kılavuzun bölümlerine ve sayfa sınırına göre otomatik güncellenir.</small>
+                <small className="muted text-sm">
+                  {t({
+                    tr: "Yazdıkça kılavuzun bölümlerine ve sayfa sınırına göre otomatik güncellenir.",
+                    en: "Updated automatically as you write, based on the guideline's sections and page limit.",
+                  })}
+                </small>
               ) : null}
             </label>
 
             <label>
-              <span>Teslim tarihi</span>
+              <span>{t({ tr: "Teslim tarihi", en: "Due date" })}</span>
               <div className="project-date-field">
                 <CalendarDays size={17} />
                 <input name="dueDate" type="date" defaultValue={project.due_date ?? ""} />
@@ -181,17 +210,17 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
             </label>
 
             <label>
-              <span>Öncelik</span>
+              <span>{t({ tr: "Öncelik", en: "Priority" })}</span>
               <select name="priority" defaultValue={project.priority}>
-                <option value="low">Düşük</option>
-                <option value="normal">Normal</option>
-                <option value="high">Yüksek</option>
-                <option value="urgent">Acil</option>
+                <option value="low">{t({ tr: "Düşük", en: "Low" })}</option>
+                <option value="normal">{t({ tr: "Normal", en: "Normal" })}</option>
+                <option value="high">{t({ tr: "Yüksek", en: "High" })}</option>
+                <option value="urgent">{t({ tr: "Acil", en: "Urgent" })}</option>
               </select>
             </label>
 
             <label className="project-form-full">
-              <span>Konu ve çalışma notları</span>
+              <span>{t({ tr: "Konu ve çalışma notları", en: "Topic and work notes" })}</span>
               <textarea name="notes" rows={6} defaultValue={project.notes ?? ""} />
             </label>
           </div>
@@ -199,11 +228,11 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 
         <div className="project-form-actions">
           <Link href="/dashboard/editor" className="projects-filter-button">
-            İptal
+            {t({ tr: "İptal", en: "Cancel" })}
           </Link>
           <button type="submit" className="projects-primary-button">
             <Save size={17} />
-            Değişiklikleri kaydet
+            {t({ tr: "Değişiklikleri kaydet", en: "Save changes" })}
           </button>
         </div>
       </ActionForm>

@@ -11,15 +11,19 @@
 
   Tarayıcıda çalışır (document); sunucuda çağrılmaz.
 */
+import type { Dil, Metin } from "@/lib/dil";
 
-const VARSAYILAN_HATA = "Word dosyası oluşturulamadı. Metin çok büyükse resimleri küçültüp tekrar deneyin.";
+const VARSAYILAN_HATA: Metin = {
+  tr: "Word dosyası oluşturulamadı. Metin çok büyükse resimleri küçültüp tekrar deneyin.",
+  en: "The Word file could not be created. If the text is very large, shrink the images and try again.",
+};
 
 /** Word dosyasının kendisi (ZIP'e konmak için); hata varsa Türkçe mesaj. */
-export async function wordBlobu(projectId: string): Promise<{ blob: Blob; ad: string } | { hata: string }> {
+export async function wordBlobu(projectId: string, dil: Dil = "tr"): Promise<{ blob: Blob; ad: string } | { hata: string }> {
   const response = await fetch(`/api/manuscripts/${projectId}/export`, { cache: "no-store" });
   if (!response.ok) {
     const govde = (await response.json().catch(() => null)) as { error?: string } | null;
-    return { hata: govde?.error ?? VARSAYILAN_HATA };
+    return { hata: govde?.error ?? VARSAYILAN_HATA[dil] };
   }
   /*
     Büyük dosyalar Vercel'in yanıt sınırına takıldığı için depoya yazılıp
@@ -28,7 +32,7 @@ export async function wordBlobu(projectId: string): Promise<{ blob: Blob; ad: st
   if (response.headers.get("Content-Type")?.includes("application/json")) {
     const { downloadUrl, fileName } = (await response.json()) as { downloadUrl: string; fileName?: string };
     const dosya = await fetch(downloadUrl);
-    if (!dosya.ok) return { hata: VARSAYILAN_HATA };
+    if (!dosya.ok) return { hata: VARSAYILAN_HATA[dil] };
     return { blob: await dosya.blob(), ad: fileName ?? "calisma.docx" };
   }
   const adBasligi = response.headers.get("Content-Disposition") ?? "";
@@ -46,8 +50,8 @@ export function dosyayiKaydet(blob: Blob, ad: string) {
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
-export async function wordDosyasiniIndir(projectId: string): Promise<string | null> {
-  const sonuc = await wordBlobu(projectId);
+export async function wordDosyasiniIndir(projectId: string, dil: Dil = "tr"): Promise<string | null> {
+  const sonuc = await wordBlobu(projectId, dil);
   if ("hata" in sonuc) return sonuc.hata;
   dosyayiKaydet(sonuc.blob, sonuc.ad);
   return null;

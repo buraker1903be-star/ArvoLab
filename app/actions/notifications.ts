@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
+import { ceviri } from "@/lib/dil-sunucu";
 
 export type NotificationKind = "comment" | "assignment" | "status" | "approval" | "guideline_update" | "share_view";
 
@@ -70,7 +71,7 @@ export async function markNotificationsRead(ids?: string[]): Promise<ActionResul
   const { error } = await query;
   if (error) {
     console.error(error);
-    return { error: "Bildirimler güncellenemedi." };
+    return { error: (await ceviri())({ tr: "Bildirimler güncellenemedi.", en: "Notifications could not be updated." }) };
   }
   return { success: true };
 }

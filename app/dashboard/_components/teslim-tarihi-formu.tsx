@@ -2,6 +2,7 @@
 
 import { teslimTarihiKaydet } from "@/app/actions/tez-takvimi";
 import ActionForm from "../action-form";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 /*
   TESLİM TARİHİ YERİNDE (28.10.2026). Eskiden ana sayfa ve Çalışmalarım
@@ -11,11 +12,16 @@ import ActionForm from "../action-form";
   seçilip kaydediliyor.
 */
 export default function TeslimTarihiFormu({ projectId, bugun }: { projectId: string; bugun: string }) {
+  const t = useCeviri();
   return (
-    <ActionForm action={teslimTarihiKaydet.bind(null, projectId)} className="teslim-tarihi-formu" successMessage="Teslim tarihi kaydedildi.">
-      <input type="date" name="teslimTarihi" min={bugun} required aria-label="Teslim tarihi" />
+    <ActionForm
+      action={teslimTarihiKaydet.bind(null, projectId)}
+      className="teslim-tarihi-formu"
+      successMessage={t({ tr: "Teslim tarihi kaydedildi.", en: "Due date saved." })}
+    >
+      <input type="date" name="teslimTarihi" min={bugun} required aria-label={t({ tr: "Teslim tarihi", en: "Due date" })} />
       <button type="submit" className="projects-filter-button button-compact">
-        Kaydet
+        {t({ tr: "Kaydet", en: "Save" })}
       </button>
     </ActionForm>
   );

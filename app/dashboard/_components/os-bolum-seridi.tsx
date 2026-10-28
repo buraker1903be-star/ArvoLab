@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 import { etkinBolum, etkinUygulama, type OsUygulama } from "@/lib/os/uygulamalar";
 
 /*
@@ -16,6 +17,7 @@ import { etkinBolum, etkinUygulama, type OsUygulama } from "@/lib/os/uygulamalar
   doğrudan açıyor, bölümler buraya taşındı.
 */
 export function OsBolumSeridi({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
+  const t = useCeviri();
   const yol = usePathname();
   const serit = useRef<HTMLElement>(null);
   const uygulama = etkinUygulama(uygulamalar, yol);
@@ -30,7 +32,7 @@ export function OsBolumSeridi({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
   // Tek bölümlü uygulamada şerit bir seçim sunmuyor, yalnızca yer kaplıyor.
   if (bolumler.length < 2) return null;
   return (
-    <nav ref={serit} className="os-bolum-serit" aria-label={`${uygulama?.label ?? ""} bölümleri`}>
+    <nav ref={serit} className="os-bolum-serit" aria-label={t({ tr: `${uygulama?.label ?? ""} bölümleri`, en: `${uygulama?.label ?? ""} sections` })}>
       {bolumler.map((bolum) => (
         <Link
           key={bolum.key}

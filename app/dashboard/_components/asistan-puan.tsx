@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { asistanPuanla, type Puan } from "@/app/actions/ai-puan";
+import { useCeviri } from "@/app/_components/dil-saglayici";
+import type { Metin } from "@/lib/dil";
 
 /*
   Asistan çalışmasının değerlendirmesi. Üç yetenekte de aynı bileşen
@@ -12,13 +14,14 @@ import { asistanPuanla, type Puan } from "@/app/actions/ai-puan";
   bulunamadı" demek kullanıcıya bir şey anlatmıyor.
 */
 
-const SECENEKLER: { puan: Puan; etiket: string }[] = [
-  { puan: "faydali", etiket: "Faydalı" },
-  { puan: "kismen", etiket: "Kısmen" },
-  { puan: "faydasiz", etiket: "Faydasız" },
+const SECENEKLER: { puan: Puan; etiket: Metin }[] = [
+  { puan: "faydali", etiket: { tr: "Faydalı", en: "Helpful" } },
+  { puan: "kismen", etiket: { tr: "Kısmen", en: "Partly" } },
+  { puan: "faydasiz", etiket: { tr: "Faydasız", en: "Not helpful" } },
 ];
 
 export default function AsistanPuan({ kayitId }: { kayitId?: string | null }) {
+  const t = useCeviri();
   const [secilen, setSecilen] = useState<Puan | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [bekleniyor, basla] = useTransition();
@@ -28,13 +31,13 @@ export default function AsistanPuan({ kayitId }: { kayitId?: string | null }) {
   if (secilen)
     return (
       <p className="asistan-puan-tesekkur text-base mt-sm">
-        Değerlendirmeniz kaydedildi — asistanı bununla geliştiriyoruz.
+        {t({ tr: "Değerlendirmeniz kaydedildi — asistanı bununla geliştiriyoruz.", en: "Your rating was saved — we use it to improve the assistant." })}
       </p>
     );
 
   return (
     <div className="asistan-puan mt-sm">
-      <span className="text-base">Bu denetim işinize yaradı mı?</span>
+      <span className="text-base">{t({ tr: "Bu denetim işinize yaradı mı?", en: "Was this check useful?" })}</span>
       <span className="asistan-puan-dugmeler">
         {SECENEKLER.map((secenek) => (
           <button
@@ -51,7 +54,7 @@ export default function AsistanPuan({ kayitId }: { kayitId?: string | null }) {
               })
             }
           >
-            {secenek.etiket}
+            {t(secenek.etiket)}
           </button>
         ))}
       </span>

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { ceviri } from "@/lib/dil-sunucu";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { yapilacakGirdisi, type Yapilacak } from "@/lib/yapilacaklar";
@@ -51,10 +52,11 @@ export async function yapilacaklaraEkle(girdi: {
   if (!ctx) return { error: await oturumYokMesaji() };
   // Yeni içerik yazıyor: kapı burada da (panel kapısı yalnızca ekranı kapatıyor).
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
-  if (!UUID.test(girdi.projectId)) return { error: "Çalışma bulunamadı." };
+  const t = await ceviri();
+  if (!UUID.test(girdi.projectId)) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
   const kayit = yapilacakGirdisi(girdi);
-  if (!kayit) return { error: "Eklenecek bir başlık yok." };
+  if (!kayit) return { error: t({ tr: "Eklenecek bir başlık yok.", en: "There is no title to add." }) };
 
   const { error } = await ctx.supabase.from("calisma_yapilacaklari").insert({
     project_id: girdi.projectId,
@@ -66,9 +68,14 @@ export async function yapilacaklaraEkle(girdi: {
   });
   if (error) {
     // Aynı açık madde zaten var: hata değil, kullanıcıya söylenecek bir durum.
-    if (error.code === "23505") return { error: "Bu madde zaten yapılacaklarınızda." };
+    if (error.code === "23505") return { error: t({ tr: "Bu madde zaten yapılacaklarınızda.", en: "This item is already in your to-dos." }) };
     console.error("[yapılacaklar] eklenemedi:", error.message);
-    return { error: error.code === "42501" ? "Bu çalışmaya ekleme yetkiniz yok." : "Eklenemedi; tekrar deneyin." };
+    return {
+      error:
+        error.code === "42501"
+          ? t({ tr: "Bu çalışmaya ekleme yetkiniz yok.", en: "You don't have permission to add to this work." })
+          : t({ tr: "Eklenemedi; tekrar deneyin.", en: "Could not add; try again." }),
+    };
   }
   yenile();
   return {};
@@ -78,7 +85,8 @@ export async function yapilacaklaraEkle(girdi: {
 export async function yapilacakTamamla(id: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
-  if (!UUID.test(id)) return { error: "Madde bulunamadı." };
+  const t = await ceviri();
+  if (!UUID.test(id)) return { error: t({ tr: "Madde bulunamadı.", en: "Item not found." }) };
   const { data, error } = await ctx.supabase
     .from("calisma_yapilacaklari")
     .update({ tamamlandi: new Date().toISOString() })
@@ -86,10 +94,10 @@ export async function yapilacakTamamla(id: string): Promise<ActionResult> {
     .select("id");
   if (error) {
     console.error("[yapılacaklar] tamamlanamadı:", error.message);
-    return { error: "Kaydedilemedi; tekrar deneyin." };
+    return { error: t({ tr: "Kaydedilemedi; tekrar deneyin.", en: "Could not save; try again." }) };
   }
   // RLS yetkisiz güncellemeyi sessizce sıfır satıra çeviriyor; başarı sanılmasın.
-  if (!data?.length) return { error: "Bu maddeyi güncelleme yetkiniz yok." };
+  if (!data?.length) return { error: t({ tr: "Bu maddeyi güncelleme yetkiniz yok.", en: "You don't have permission to update this item." }) };
   yenile();
   return {};
 }

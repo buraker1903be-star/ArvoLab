@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES } from "@/lib/project-labels";
 import { KURUM_CEREZI, kurumKimligiMi } from "@/lib/kurum-secimi";
+import { ceviri } from "@/lib/dil-sunucu";
 
 /*
   İç ekibin kurum seçimi (lib/kurum-secimi.ts). Rol sunucuda yeniden
@@ -12,15 +13,19 @@ import { KURUM_CEREZI, kurumKimligiMi } from "@/lib/kurum-secimi";
   kapısı yok: iç ekip kapıdan geçiyor ve yeni içerik yazılmıyor.
 */
 export async function kurumSec(formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(ADMIN_ROLES, "Kurum seçimi yalnızca Arvo ekibine açık.");
+  const auth = await requireRole(ADMIN_ROLES, {
+    tr: "Kurum seçimi yalnızca Arvo ekibine açık.",
+    en: "Institution selection is only available to the Arvo team.",
+  });
   if ("error" in auth) return { error: auth.error };
 
+  const t = await ceviri();
   const secilen = String(formData.get("kurum") ?? "");
   const depo = await cookies();
   if (!secilen) {
     depo.delete(KURUM_CEREZI);
   } else {
-    if (!kurumKimligiMi(secilen)) return { error: "Kurum tanınmadı." };
+    if (!kurumKimligiMi(secilen)) return { error: t({ tr: "Kurum tanınmadı.", en: "Institution not recognized." }) };
     depo.set(KURUM_CEREZI, secilen, {
       httpOnly: true,
       sameSite: "lax",
@@ -30,5 +35,10 @@ export async function kurumSec(formData: FormData): Promise<ActionResult> {
     });
   }
   revalidatePath("/dashboard", "layout");
-  return { success: true, message: secilen ? "Kurum seçildi." : "Bütün kurumlar gösteriliyor." };
+  return {
+    success: true,
+    message: secilen
+      ? t({ tr: "Kurum seçildi.", en: "Institution selected." })
+      : t({ tr: "Bütün kurumlar gösteriliyor.", en: "Showing all institutions." }),
+  };
 }

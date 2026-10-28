@@ -3,6 +3,8 @@ import { ChevronRight, Coins } from "lucide-react";
 import { licenseSummary } from "@/lib/license-summary";
 import type { AccessState } from "@/lib/access";
 import type { KrediOzeti } from "@/lib/ai/kredi-ozeti";
+import { YEREL } from "@/lib/dil";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 /*
   ANA SAYFA: ABONELİK VE KREDİ KARTI (26.10.2026, kurum sahibinin isteği:
@@ -16,9 +18,7 @@ import type { KrediOzeti } from "@/lib/ai/kredi-ozeti";
   satırı "0" demiyor, bilinmediğini söylüyor (lib/ai/kredi-ozeti.ts).
   Kurum üyesine satın alma düğmesi gösterilmiyor: kredisini kurum alıyor.
 */
-const sayi = (deger: number) => new Intl.NumberFormat("tr-TR").format(deger);
-
-export default function AbonelikOzetKarti({
+export default async function AbonelikOzetKarti({
   access,
   kredi,
   bireysel,
@@ -27,7 +27,10 @@ export default function AbonelikOzetKarti({
   kredi: KrediOzeti;
   bireysel: boolean;
 }) {
-  const ozet = licenseSummary(access);
+  const t = await ceviri();
+  const dil = await aktifDil();
+  const sayi = (deger: number) => new Intl.NumberFormat(YEREL[dil]).format(deger);
+  const ozet = licenseSummary(access, new Date(), dil);
   const krediTonu = !kredi.goster
     ? undefined
     : kredi.tukendi
@@ -40,11 +43,15 @@ export default function AbonelikOzetKarti({
     <article className="gb-kart abonelik-ozet">
       <header className="gb-kart-bas">
         <div>
-          <h2>Abonelik ve kredi</h2>
-          <p>{access.kind === "organization" ? "Kurumunuz yönetiyor" : "Planınız ve asistan hakkınız"}</p>
+          <h2>{t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}</h2>
+          <p>
+            {access.kind === "organization"
+              ? t({ tr: "Kurumunuz yönetiyor", en: "Managed by your institution" })
+              : t({ tr: "Planınız ve asistan hakkınız", en: "Your plan and assistant allowance" })}
+          </p>
         </div>
         <Link href="/dashboard/abonelik" className="gb-kart-baglanti">
-          Ayrıntı <ChevronRight size={14} aria-hidden="true" />
+          {t({ tr: "Ayrıntı", en: "Details" })} <ChevronRight size={14} aria-hidden="true" />
         </Link>
       </header>
 
@@ -61,25 +68,36 @@ export default function AbonelikOzetKarti({
         <>
           <div className="kaynakca-puan" data-tone={krediTonu}>
             <b>{sayi(kredi.toplam)}</b>
-            <span>kredi kullanılabilir</span>
+            <span>{t({ tr: "kredi kullanılabilir", en: "credits available" })}</span>
           </div>
           <progress
             className="kredi-cubugu"
             max={Math.max(1, kredi.aylikLimit)}
             value={kredi.aylikKalan}
-            aria-label={`Aylık hakkın ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} kredisi kaldı`}
+            aria-label={t({
+              tr: `Aylık hakkın ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} kredisi kaldı`,
+              en: `${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} monthly credits left`,
+            })}
           />
           <small className="abonelik-ozet-not">
-            Bu ay {sayi(kredi.aylikKalan)} / {sayi(kredi.aylikLimit)} hak · bakiye {sayi(kredi.ekBakiye)}
+            {t({
+              tr: `Bu ay ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} hak · bakiye ${sayi(kredi.ekBakiye)}`,
+              en: `This month ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} allowance · balance ${sayi(kredi.ekBakiye)}`,
+            })}
           </small>
         </>
       ) : (
-        <p className="muted text-sm">Asistan kredisi şu an gösterilemiyor; asistanı kullanmaya devam edebilirsiniz.</p>
+        <p className="muted text-sm">
+          {t({
+            tr: "Asistan kredisi şu an gösterilemiyor; asistanı kullanmaya devam edebilirsiniz.",
+            en: "Assistant credits can't be shown right now; you can keep using the assistant.",
+          })}
+        </p>
       )}
 
       {bireysel ? (
         <Link href="/dashboard/abonelik" className="projects-filter-button button-compact abonelik-ozet-eylem">
-          <Coins size={15} aria-hidden="true" /> Kredi satın al
+          <Coins size={15} aria-hidden="true" /> {t({ tr: "Kredi satın al", en: "Buy credits" })}
         </Link>
       ) : null}
     </article>

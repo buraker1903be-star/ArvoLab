@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, Plus, RotateCcw, Trash2, Wand2 } from "lucide-react";
 import { tasEkle, tasGuncelle, tasSil, tasTamamla, taslakTakvimOlustur } from "@/app/actions/tez-takvimi";
 import { kalanMetni, takvimSirala, taslakTakvim, tasDurumu, type TakvimTasi, type TasDurumu } from "@/lib/tez-takvimi";
-import { trTarih } from "@/lib/tr-time";
+import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
 import ActionForm from "../action-form";
 import { showToast } from "../_components/toast-events";
 import TeslimTarihiFormu from "../_components/teslim-tarihi-formu";
@@ -34,13 +34,16 @@ export default function TakvimDuzenleyici({
   bugun: string;
   duzenleyebilir: boolean;
 }) {
+  const t = useCeviri();
+  const dil = useDil();
+  const { tarih } = useTarihler();
   const router = useRouter();
   const [bekleyen, setBekleyen] = useState<string | null>(null);
   const [, basla] = useTransition();
   const sirali = takvimSirala(taslar);
   /* Taslak yalnızca takvim BOŞKEN önerilir: bütün taşları bitiren öğrenciye
      "taslak oluştur" göstermek, bitmiş planı yeniden kurmaya çağırıyordu. */
-  const taslak = !taslar.length && teslimTarihi ? taslakTakvim(projeTuru, bugun, teslimTarihi) : [];
+  const taslak = !taslar.length && teslimTarihi ? taslakTakvim(projeTuru, bugun, teslimTarihi, dil) : [];
 
   const calistir = (anahtar: string, islem: () => Promise<{ error?: string }>, basari?: string) => {
     setBekleyen(anahtar);
@@ -56,32 +59,34 @@ export default function TakvimDuzenleyici({
   return (
     <div className="takvim-duzenleyici">
       <section className="takvim-teslim">
-        <b>Teslim tarihi</b>
+        <b>{t({ tr: "Teslim tarihi", en: "Due date" })}</b>
         {teslimTarihi ? (
           <span>
-            {trTarih(teslimTarihi)} · {(() => {
+            {tarih(teslimTarihi)} · {(() => {
               const d = tasDurumu({ hedef_tarih: teslimTarihi, tamamlandi: null }, bugun);
-              return kalanMetni(d.durum, d.kalanGun);
+              return kalanMetni(d.durum, d.kalanGun, dil);
             })()}
           </span>
         ) : duzenleyebilir ? (
           <TeslimTarihiFormu projectId={projectId} bugun={bugun} />
         ) : (
-          <span>Girilmedi</span>
+          <span>{t({ tr: "Girilmedi", en: "Not set" })}</span>
         )}
       </section>
 
       {taslak.length && duzenleyebilir ? (
         <section className="takvim-taslak">
           <p className="hint">
-            Teslime kalan süreyi olağan adımlara paylaştıran bir taslak; oluşturduktan sonra her tarihi değiştirebilir ya da
-            silebilirsiniz.
+            {t({
+              tr: "Teslime kalan süreyi olağan adımlara paylaştıran bir taslak; oluşturduktan sonra her tarihi değiştirebilir ya da silebilirsiniz.",
+              en: "A draft that spreads the time until submission over the usual steps; once created, you can change or delete any date.",
+            })}
           </p>
           <ol className="takvim-taslak-liste">
-            {taslak.map((t) => (
-              <li key={t.baslik}>
-                <span>{t.baslik}</span>
-                <small>{trTarih(t.hedef_tarih)}</small>
+            {taslak.map((adim) => (
+              <li key={adim.baslik}>
+                <span>{adim.baslik}</span>
+                <small>{tarih(adim.hedef_tarih)}</small>
               </li>
             ))}
           </ol>
@@ -93,55 +98,59 @@ export default function TakvimDuzenleyici({
               calistir("taslak", async () => {
                 const r = await taslakTakvimOlustur(projectId);
                 return r.error ? r : {};
-              }, "Taslak takvim oluşturuldu.")
+              }, t({ tr: "Taslak takvim oluşturuldu.", en: "Draft schedule created." }))
             }
           >
-            <Wand2 size={14} aria-hidden="true" /> Taslak takvimi oluştur
+            <Wand2 size={14} aria-hidden="true" /> {t({ tr: "Taslak takvimi oluştur", en: "Create draft schedule" })}
           </button>
         </section>
       ) : null}
 
       {sirali.length ? (
         <ul className="gb-liste takvim-liste">
-          {sirali.map((t) => {
-            const { durum, kalanGun } = tasDurumu(t, bugun);
+          {sirali.map((tas) => {
+            const { durum, kalanGun } = tasDurumu(tas, bugun);
             return (
-              <li key={t.id} className="takvim-satir" data-durum={durum}>
+              <li key={tas.id} className="takvim-satir" data-durum={durum}>
                 {duzenleyebilir ? (
                   <button
                     type="button"
                     className="takvim-onay"
-                    aria-pressed={Boolean(t.tamamlandi)}
-                    aria-label={t.tamamlandi ? `${t.baslik}: tamamlanmadı olarak işaretle` : `${t.baslik}: tamamlandı`}
-                    disabled={bekleyen === t.id}
-                    onClick={() => calistir(t.id, () => tasTamamla(t.id, !t.tamamlandi))}
+                    aria-pressed={Boolean(tas.tamamlandi)}
+                    aria-label={
+                      tas.tamamlandi
+                        ? t({ tr: `${tas.baslik}: tamamlanmadı olarak işaretle`, en: `${tas.baslik}: mark as not done` })
+                        : t({ tr: `${tas.baslik}: tamamlandı`, en: `${tas.baslik}: done` })
+                    }
+                    disabled={bekleyen === tas.id}
+                    onClick={() => calistir(tas.id, () => tasTamamla(tas.id, !tas.tamamlandi))}
                   >
-                    {t.tamamlandi ? <Check size={14} aria-hidden="true" /> : null}
+                    {tas.tamamlandi ? <Check size={14} aria-hidden="true" /> : null}
                   </button>
                 ) : null}
                 <span className="gb-satir-govde">
-                  <b>{t.baslik}</b>
-                  <small>{trTarih(t.hedef_tarih)}</small>
+                  <b>{tas.baslik}</b>
+                  <small>{tarih(tas.hedef_tarih)}</small>
                 </span>
                 <span className="status-pill" data-tone={TON[durum]}>
-                  {kalanMetni(durum, kalanGun)}
+                  {kalanMetni(durum, kalanGun, dil)}
                 </span>
-                {duzenleyebilir && !t.tamamlandi ? (
+                {duzenleyebilir && !tas.tamamlandi ? (
                   <input
                     type="date"
                     className="takvim-tarih"
-                    defaultValue={t.hedef_tarih}
-                    aria-label={`${t.baslik}: hedef tarihi değiştir`}
+                    defaultValue={tas.hedef_tarih}
+                    aria-label={t({ tr: `${tas.baslik}: hedef tarihi değiştir`, en: `${tas.baslik}: change target date` })}
                     onChange={(e) => {
                       const fd = new FormData();
-                      fd.set("baslik", t.baslik);
+                      fd.set("baslik", tas.baslik);
                       fd.set("hedefTarih", e.target.value);
-                      if (e.target.value) calistir(t.id, () => tasGuncelle(t.id, fd), "Tarih güncellendi.");
+                      if (e.target.value) calistir(tas.id, () => tasGuncelle(tas.id, fd), t({ tr: "Tarih güncellendi.", en: "Date updated." }));
                     }}
                   />
                 ) : null}
-                {duzenleyebilir && t.tamamlandi ? (
-                  <button type="button" className="projects-filter-button button-compact" aria-label={`${t.baslik}: geri al`} onClick={() => calistir(t.id, () => tasTamamla(t.id, false))}>
+                {duzenleyebilir && tas.tamamlandi ? (
+                  <button type="button" className="projects-filter-button button-compact" aria-label={t({ tr: `${tas.baslik}: geri al`, en: `${tas.baslik}: undo` })} onClick={() => calistir(tas.id, () => tasTamamla(tas.id, false))}>
                     <RotateCcw size={13} aria-hidden="true" />
                   </button>
                 ) : null}
@@ -149,10 +158,11 @@ export default function TakvimDuzenleyici({
                   <button
                     type="button"
                     className="projects-filter-button button-compact"
-                    aria-label={`${t.baslik}: sil`}
-                    disabled={bekleyen === t.id}
+                    aria-label={t({ tr: `${tas.baslik}: sil`, en: `${tas.baslik}: delete` })}
+                    disabled={bekleyen === tas.id}
                     onClick={() => {
-                      if (window.confirm(`“${t.baslik}” takvimden silinsin mi?`)) calistir(t.id, () => tasSil(t.id), "Silindi.");
+                      if (window.confirm(t({ tr: `“${tas.baslik}” takvimden silinsin mi?`, en: `Delete “${tas.baslik}” from the schedule?` })))
+                        calistir(tas.id, () => tasSil(tas.id), t({ tr: "Silindi.", en: "Deleted." }));
                     }}
                   >
                     <Trash2 size={13} aria-hidden="true" />
@@ -164,16 +174,20 @@ export default function TakvimDuzenleyici({
         </ul>
       ) : taslak.length ? null : (
         <p className="gb-bos">
-          Henüz kilometre taşı yok. {teslimTarihi ? "Aşağıdan bölüm bölüm hedef tarih ekleyin." : "Teslim tarihini girerseniz taslak takvim önerilir."}
+          {t({ tr: "Henüz kilometre taşı yok.", en: "No milestones yet." })}{" "}
+          {teslimTarihi
+            ? t({ tr: "Aşağıdan bölüm bölüm hedef tarih ekleyin.", en: "Add target dates chapter by chapter below." })
+            : t({ tr: "Teslim tarihini girerseniz taslak takvim önerilir.", en: "Enter the due date and a draft schedule will be suggested." })}
         </p>
       )}
 
       {duzenleyebilir ? (
-        <ActionForm action={tasEkle.bind(null, projectId)} className="takvim-ekle" successMessage="Kilometre taşı eklendi.">
-          <input name="baslik" maxLength={120} required placeholder="Örn. Yöntem bölümünü danışmana gönder" aria-label="Kilometre taşı" />
-          <input type="date" name="hedefTarih" required min={bugun} max={teslimTarihi ?? undefined} aria-label="Hedef tarih" />
+        <ActionForm action={tasEkle.bind(null, projectId)} className="takvim-ekle" successMessage={t({ tr: "Kilometre taşı eklendi.", en: "Milestone added." })}>
+          <input name="baslik" maxLength={120} required placeholder={t({ tr: "Örn. Yöntem bölümünü danışmana gönder", en: "E.g. Send the methods chapter to the advisor" })}
+            aria-label={t({ tr: "Kilometre taşı", en: "Milestone" })} />
+          <input type="date" name="hedefTarih" required min={bugun} max={teslimTarihi ?? undefined} aria-label={t({ tr: "Hedef tarih", en: "Target date" })} />
           <button type="submit" className="projects-filter-button button-compact">
-            <Plus size={14} aria-hidden="true" /> Ekle
+            <Plus size={14} aria-hidden="true" /> {t({ tr: "Ekle", en: "Add" })}
           </button>
         </ActionForm>
       ) : null}

@@ -4,18 +4,21 @@ import { licenseSummary } from "@/lib/license-summary";
 import { planButtonLabel } from "@/lib/billing-plan";
 import type { AccessState } from "@/lib/access";
 import OdemeButonu from "./odeme-butonu";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 // Ana sayfadaki lisans/abonelik bölümü: aktif mi, ödeme alınmadıysa neden ve
 // geçerlilik tarihi. İç ekipte ve durum bilinmiyorken hiç gösterilmez.
 
-export default function LicenseCard({ access }: { access: AccessState }) {
-  const summary = licenseSummary(access);
+export default async function LicenseCard({ access }: { access: AccessState }) {
+  const t = await ceviri();
+  const dil = await aktifDil();
+  const summary = licenseSummary(access, new Date(), dil);
   if (!summary) return null;
 
   return (
-    <section className="license-card" data-tone={summary.tone} aria-label="Lisans durumu">
+    <section className="license-card" data-tone={summary.tone} aria-label={t({ tr: "Lisans durumu", en: "License status" })}>
       <div className="license-card-head">
-        <span className="dashboard-kicker">Lisans ve abonelik</span>
+        <span className="dashboard-kicker">{t({ tr: "Lisans ve abonelik", en: "License and subscription" })}</span>
         <span className="chip" data-tone={summary.tone}>
           <BadgeCheck size={14} aria-hidden="true" />
           {summary.statusLabel}
@@ -36,16 +39,21 @@ export default function LicenseCard({ access }: { access: AccessState }) {
             {access.plans.map((plan, index) => (
               <form action={payArvolabSubscription} key={plan.code ?? plan.interval ?? index}>
                 {plan.code ? <input type="hidden" name="plan" value={plan.code} /> : null}
-                <OdemeButonu birincil={index === 0} etiket={`Kartla öde · ${planButtonLabel(plan)}`} />
+                <OdemeButonu birincil={index === 0} etiket={`${t({ tr: "Kartla öde", en: "Pay by card" })} · ${planButtonLabel(plan, dil)}`} />
               </form>
             ))}
           </div>
         ) : (
-          <p className="muted text-sm">Abonelik planı henüz tanımlanmadı. Bizimle iletişime geçin.</p>
+          <p className="muted text-sm">
+            {t({ tr: "Abonelik planı henüz tanımlanmadı. Bizimle iletişime geçin.", en: "No subscription plan has been set up yet. Please contact us." })}
+          </p>
         )
       ) : access.kind === "organization" && (summary.tone === "warning" || summary.tone === "danger") ? (
         <p className="muted text-sm">
-          Yenilemek için ArvoOS panelinizdeki Ödeme ve Lisans sayfasından ArvoLab aboneliğini ödeyin.
+          {t({
+            tr: "Yenilemek için ArvoOS panelinizdeki Ödeme ve Lisans sayfasından ArvoLab aboneliğini ödeyin.",
+            en: "To renew, pay for the ArvoLab subscription on the Payment and License page of your ArvoOS panel.",
+          })}
         </p>
       ) : null}
     </section>

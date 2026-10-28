@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import { CreditCard } from "lucide-react";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 /*
   Ödeme formunun gönder düğmesi.
@@ -26,6 +27,7 @@ export default function OdemeButonu({
   birincil: boolean;
   ikonlu?: boolean;
 }) {
+  const t = useCeviri();
   const { pending } = useFormStatus();
 
   return (
@@ -38,7 +40,7 @@ export default function OdemeButonu({
       {pending ? (
         /* ActionForm'un "İşleniyor…" kalıbıyla aynı dil; panelde tek bekleme
            anlatımı olsun diye ayrı bir dönen simge eklenmedi. */
-        "Yönlendiriliyorsunuz…"
+        t({ tr: "Yönlendiriliyorsunuz…", en: "Redirecting…" })
       ) : (
         <>
           {ikonlu ? <CreditCard size={16} aria-hidden="true" /> : null}

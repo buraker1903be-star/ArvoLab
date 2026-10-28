@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { ceviri } from "@/lib/dil-sunucu";
+import { aktifDil, aktifSaatDilimi, ceviri, tarihler } from "@/lib/dil-sunucu";
+import { YEREL } from "@/lib/dil";
 import Link from "next/link";
 import { LayoutList, PenLine, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -32,7 +33,7 @@ import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { writingPace } from "@/lib/writing-pace";
 import { makaleBolumleri } from "@/lib/makale/bolumler";
 import { headingMatchesSection } from "@/lib/section-match";
-import { trGunAnahtari, trTarih } from "@/lib/tr-time";
+import { trGunAnahtari } from "@/lib/tr-time";
 import { takvimiGetir } from "@/app/actions/tez-takvimi";
 import { kalanMetni, siradakiTas, takvimOzeti } from "@/lib/tez-takvimi";
 import { calismaAdresi } from "@/lib/calisma-karti";
@@ -40,7 +41,10 @@ import TeslimTarihiFormu from "./_components/teslim-tarihi-formu";
 import DanismanaGonder from "./_components/danismana-gonder";
 import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
 
-export const metadata = { title: "Ana Sayfa" };
+export async function generateMetadata() {
+  const t = await ceviri();
+  return { title: t({ tr: "Ana Sayfa", en: "Home" }) };
+}
 
 /*
   TEK EKRAN KURALI (kurum sahibinin altın kuralı: her modülün ana sayfası
@@ -52,6 +56,12 @@ const isActive = (status: string) => status !== "delivered" && status !== "archi
 
 export default async function DashboardPage() {
   const t = await ceviri();
+  const dil = await aktifDil();
+  const saatDilimi = await aktifSaatDilimi();
+  const { tarih } = await tarihler();
+  const sayi = (n: number) => n.toLocaleString(YEREL[dil]);
+  /* editedAgo: dil ve saat dilimi her çağrıda aynı; "şimdi" verilmezse o anki saat. */
+  const once = (damga: string, an?: number) => editedAgo(damga, an ?? simdi(), dil, saatDilimi);
   const supabase = await createClient();
   const {
     data: { user },
@@ -113,7 +123,7 @@ export default async function DashboardPage() {
       .filter((p) => writing.has(p.id))
       .sort((a, b) => writing.get(b.id)!.updatedAt.localeCompare(writing.get(a.id)!.updatedAt))[0] ?? activeProjects[0];
   const resumeStats = resume ? writing.get(resume.id) : undefined;
-  const resumeDue = resume ? dueInfo(resume.due_date, resume.status) : null;
+  const resumeDue = resume ? dueInfo(resume.due_date, resume.status, new Date(), dil) : null;
   /*
     Yazım temposu ve teslim hazırlığı (editördekiyle aynı hesap).
 
@@ -138,7 +148,7 @@ export default async function DashboardPage() {
           guideline: resumeGuideline ?? null,
           projectType: resume.project_type,
           citationStyle: resume.citation_style ?? "apa7",
-        })
+        }, dil)
       : null;
   /*
     Metin ile literatür listesi arasındaki tutarsızlıklar. Çalışma merkezinde
@@ -210,11 +220,11 @@ export default async function DashboardPage() {
             ? { id: resumeDenetim.id, skor: resumeDenetim.compliance_score, tarih: resumeDenetim.created_at }
             : null,
           belgeSayisi: resumeBelgeSayisi ?? 0,
-        })
+        }, dil)
       : [];
 
   const resumeTutarsizliklari = resume
-    ? metinListeTutarsizliklari(resumeManuscript?.plain_text ?? null, resumeKaynaklar ?? [], resume.citation_style)
+    ? metinListeTutarsizliklari(resumeManuscript?.plain_text ?? null, resumeKaynaklar ?? [], resume.citation_style, dil)
     : [];
 
   // Eksikler önce, bakılması gerekenler sonra
@@ -235,6 +245,7 @@ export default async function DashboardPage() {
           adimlar: resumeAdimlar,
           eksikler: readinessGapsSirali,
           kalanGun: resumeDue?.days ?? null,
+          dil,
         })
       : null;
 
@@ -244,7 +255,7 @@ export default async function DashboardPage() {
 
 
   // Personel için "dikkat isteyenler" (öğrencinin ana sayfası değişmez); sorumlu ataması yalnızca denetim rollerinde
-  const attention = isStaff ? computeAttention(projects, openComments, { includeUnassigned: isOversightRole(profile?.role) }) : null;
+  const attention = isStaff ? computeAttention(projects, openComments, { includeUnassigned: isOversightRole(profile?.role), dil }) : null;
 
   /*
     PERSONEL ANA SAYFASI: SAYAÇLAR VE KUYRUKLAR (27.10.2026). Sayaçlar
@@ -260,7 +271,7 @@ export default async function DashboardPage() {
         lastEdited: (id) => writing.get(id)?.updatedAt,
         userId: user.id,
         canFilterAssignee: true,
-      })
+      }, dil)
     : [];
   const uzmanKuyrugu = isStaff && isExpertEligible(profile?.role);
   const destekKuyrugu = isStaff && Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
@@ -283,10 +294,10 @@ export default async function DashboardPage() {
   /* Okunamayan kuyruk "0" demiyor: sayaç çizilmiyor, uyarı satırı söylüyor. */
   const kuyrukSayaclari = [
     ...(uzmanKuyrugu && !uzmanHatasi
-      ? [{ anahtar: "uzman", etiket: "Açık uzman talebi", sayi: acikUzman ?? 0, href: kuyrukAdresi("uzman-acik") }]
+      ? [{ anahtar: "uzman", etiket: t({ tr: "Açık uzman talebi", en: "Open expert requests" }), sayi: acikUzman ?? 0, href: kuyrukAdresi("uzman-acik") }]
       : []),
     ...(destekKuyrugu && !destekHatasi
-      ? [{ anahtar: "destek", etiket: "Uygulama desteği", sayi: acikDestek ?? 0, href: kuyrukAdresi("destek") }]
+      ? [{ anahtar: "destek", etiket: t({ tr: "Uygulama desteği", en: "App support" }), sayi: acikDestek ?? 0, href: kuyrukAdresi("destek") }]
       : []),
   ];
 
@@ -391,8 +402,8 @@ export default async function DashboardPage() {
   if (hareketYaniti.error) console.error("[ana sayfa] hareketler okunamadı:", hareketYaniti.error.message);
   if (yorumYaniti.error) console.error("[ana sayfa] yorumlar okunamadı:", yorumYaniti.error.message);
   const simdiAn = simdi();
-  const seri = hareketSerisi((hareketYaniti.data ?? []) as { gun: string; tur: string; adet: number }[], simdiAn);
-  const ritim = yazimRitmi((ritimYaniti.data ?? []) as { gun: string; kelime: number }[], simdiAn, 14, resumeStats?.words ?? null);
+  const seri = hareketSerisi((hareketYaniti.data ?? []) as { gun: string; tur: string; adet: number }[], simdiAn, 14, dil);
+  const ritim = yazimRitmi((ritimYaniti.data ?? []) as { gun: string; kelime: number }[], simdiAn, 14, resumeStats?.words ?? null, dil);
   /*
     Hedef kelime ve günlük tempo kılavuzun sayfa sınırından
     (lib/writing-pace.ts). Kılavuz yoksa hedef de yok; uydurma bir
@@ -411,7 +422,7 @@ export default async function DashboardPage() {
             lineSpacing: resumeGuideline.settings.lineSpacing,
             margins: resumeGuideline.settings.margins,
           },
-        })
+        }, dil)
       : null;
   const yazilanYuzde = tempo ? Math.min(100, Math.round(((resumeStats?.words ?? 0) / Math.max(1, tempo.targetWords)) * 100)) : null;
 
@@ -426,12 +437,12 @@ export default async function DashboardPage() {
     (bolum) => !metinBolumleri.some((b) => headingMatchesSection(b.baslik, bolum)),
   );
   const okunamayanlar = [
-    projelerOkunamadi ? "çalışmalar" : "",
-    hareketYaniti.error ? "çalışma hareketi" : "",
-    yorumYaniti.error ? "yorumlar" : "",
-    uzmanHatasi ? "uzman kuyruğu" : "",
-    destekHatasi ? "destek kuyruğu" : "",
-    ritimYaniti.error ? "yazım ritmi" : "",
+    projelerOkunamadi ? t({ tr: "çalışmalar", en: "works" }) : "",
+    hareketYaniti.error ? t({ tr: "çalışma hareketi", en: "work activity" }) : "",
+    yorumYaniti.error ? t({ tr: "yorumlar", en: "comments" }) : "",
+    uzmanHatasi ? t({ tr: "uzman kuyruğu", en: "expert queue" }) : "",
+    destekHatasi ? t({ tr: "destek kuyruğu", en: "support queue" }) : "",
+    ritimYaniti.error ? t({ tr: "yazım ritmi", en: "writing rhythm" }) : "",
   ].filter(Boolean);
 
   const calismaAdi = new Map(projects.map((p) => [p.id, p.title]));
@@ -449,7 +460,7 @@ export default async function DashboardPage() {
     .slice(0, GENEL_BAKIS_SATIR);
 
   const teslimler = activeProjects
-    .map((project) => ({ project, due: dueInfo(project.due_date, project.status) }))
+    .map((project) => ({ project, due: dueInfo(project.due_date, project.status, new Date(), dil) }))
     .filter((item): item is { project: (typeof activeProjects)[number]; due: NonNullable<ReturnType<typeof dueInfo>> } => Boolean(item.due))
     .sort((a, b) => a.due.days - b.due.days)
     .slice(0, GENEL_BAKIS_SATIR);
@@ -484,8 +495,14 @@ export default async function DashboardPage() {
     : null;
   const sonGonderimMetni = sonGonderim
     ? sonGonderim.acilmaSayisi
-      ? `Danışmanınız ${sonGonderim.acilmaSayisi} kez açtı · son ${editedAgo(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu, simdiAn)}`
-      : `Bağlantı ${editedAgo(sonGonderim.olusturuldu, simdiAn)} gönderildi · henüz açılmadı`
+      ? t({
+          tr: `Danışmanınız ${sonGonderim.acilmaSayisi} kez açtı · son ${once(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu, simdiAn)}`,
+          en: `Your advisor opened it ${sonGonderim.acilmaSayisi} time${sonGonderim.acilmaSayisi === 1 ? "" : "s"} · last ${once(sonGonderim.sonAcilis ?? sonGonderim.olusturuldu, simdiAn)}`,
+        })
+      : t({
+          tr: `Bağlantı ${once(sonGonderim.olusturuldu, simdiAn)} gönderildi · henüz açılmadı`,
+          en: `Link sent ${once(sonGonderim.olusturuldu, simdiAn)} · not opened yet`,
+        })
     : null;
 
   return (
@@ -503,47 +520,57 @@ export default async function DashboardPage() {
       */}
       <header className="gb-selam">
         <div>
-          <h1>{ad ? `${selamlama(simdiAn)}, ${ad}` : selamlama(simdiAn)}</h1>
+          <h1>{ad ? `${selamlama(simdiAn, dil, saatDilimi)}, ${ad}` : selamlama(simdiAn, dil, saatDilimi)}</h1>
           <p>
             {yeniKullanici
-              ? "Çalışma alanınız hazır. İlk çalışmanızı oluşturduğunuzda kılavuzunuz, kaynaklarınız ve denetimleriniz burada toplanır."
+              ? t({
+                  tr: "Çalışma alanınız hazır. İlk çalışmanızı oluşturduğunuzda kılavuzunuz, kaynaklarınız ve denetimleriniz burada toplanır.",
+                  en: "Your workspace is ready. Once you create your first work, your guideline, sources and checks will gather here.",
+                })
               : isStaff
                 ? /* Personel: kurumun özeti — sayaçların ilk üçü, cümle olarak. */
                   sayaclar.length
                   ? sayaclar
                       .filter((s) => s.anahtar === "aktif" || (s.sayi > 0 && (s.anahtar === "onay" || s.anahtar === "gecikmis")))
-                      .map((s) => `${s.sayi.toLocaleString("tr-TR")} ${s.etiket.toLocaleLowerCase("tr")}`)
+                      .map((s) => `${sayi(s.sayi)} ${s.etiket.toLocaleLowerCase(YEREL[dil])}`)
                       .join(" · ")
-                  : "Çalışmalar, teslim tarihleri ve gelen yorumlar burada."
+                  : t({ tr: "Çalışmalar, teslim tarihleri ve gelen yorumlar burada.", en: "Works, due dates and incoming comments are here." })
               : ogrenciGorunumu
                 ? [
-                    resumeDue ? `Teslim: ${resumeDue.label.toLocaleLowerCase("tr")}` : "",
-                    ritim.buHafta > 0 ? `bu hafta ${ritim.buHafta.toLocaleString("tr-TR")} kelime yazdınız` : "bu hafta henüz yazmadınız",
+                    resumeDue
+                      ? t({ tr: `Teslim: ${resumeDue.label.toLocaleLowerCase("tr")}`, en: `Due: ${resumeDue.label.toLocaleLowerCase("en")}` })
+                      : "",
+                    ritim.buHafta > 0
+                      ? t({ tr: `bu hafta ${sayi(ritim.buHafta)} kelime yazdınız`, en: `you wrote ${sayi(ritim.buHafta)} words this week` })
+                      : t({ tr: "bu hafta henüz yazmadınız", en: "you haven't written this week yet" }),
                   ]
                     .filter(Boolean)
                     .join(" · ")
                 : resume
-                ? `Kaldığınız yer: ${resume.title}${resumeStats ? ` · ${resumeStats.words.toLocaleString("tr-TR")} kelime, ${editedAgo(resumeStats.updatedAt)} düzenlendi` : ""}`
-                : "Çalışmalarınız, teslim tarihleriniz ve gelen yorumlar burada."}
+                ? t({
+                    tr: `Kaldığınız yer: ${resume.title}${resumeStats ? ` · ${sayi(resumeStats.words)} kelime, ${once(resumeStats.updatedAt)} düzenlendi` : ""}`,
+                    en: `Where you left off: ${resume.title}${resumeStats ? ` · ${sayi(resumeStats.words)} words, edited ${once(resumeStats.updatedAt)}` : ""}`,
+                  })
+                : t({ tr: "Çalışmalarınız, teslim tarihleriniz ve gelen yorumlar burada.", en: "Your works, due dates and incoming comments are here." })}
           </p>
         </div>
         <div className="gb-selam-eylemler">
           {isStaff ? (
             <Link href="/dashboard/editor" className="projects-primary-button">
               <LayoutList size={16} aria-hidden="true" />
-              Çalışmalar
+              {t({ tr: "Çalışmalar", en: "Works" })}
             </Link>
           ) : null}
           {resume && !ogrenciGorunumu ? (
             <Link href={`/dashboard/editor/${resume.id}/write`} className="projects-primary-button">
               <PenLine size={16} aria-hidden="true" />
-              {resumeStats ? "Yazmaya devam et" : "Yazmaya başla"}
+              {resumeStats ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
             </Link>
           ) : null}
           {ogrenciGorunumu ? null : (
             <Link href={yeniCalismaHref} className={resume || isStaff ? "projects-filter-button" : "projects-primary-button"}>
               <Plus size={16} aria-hidden="true" />
-              Yeni çalışma
+              {t({ tr: "Yeni çalışma", en: "New work" })}
             </Link>
           )}
         </div>
@@ -554,7 +581,7 @@ export default async function DashboardPage() {
         Sayı = basınca açılan listenin uzunluğu (lib/personel-sayaclari.ts).
       */}
       {sayaclar.length || kuyrukSayaclari.length ? (
-        <nav className="personel-sayaclar ana-sayaclar" aria-label="Dikkat isteyenler">
+        <nav className="personel-sayaclar ana-sayaclar" aria-label={t({ tr: "Dikkat isteyenler", en: "Needs attention" })}>
           {sayaclar.map((sayac) => (
             <Link key={sayac.anahtar} href={sayac.href} className="personel-sayac" data-tone={sayac.sayi ? sayac.ton : undefined}>
               <b>{sayac.sayi}</b>
@@ -572,7 +599,10 @@ export default async function DashboardPage() {
 
       {okunamayanlar.length ? (
         <p className="alert" role="alert">
-          {okunamayanlar.join(", ")} okunamadı; aşağıdaki listeler eksik olabilir. Kayıtlarınız yerinde duruyor — sayfayı yenileyin.
+          {t({
+            tr: `${okunamayanlar.join(", ")} okunamadı; aşağıdaki listeler eksik olabilir. Kayıtlarınız yerinde duruyor — sayfayı yenileyin.`,
+            en: `Could not load ${okunamayanlar.join(", ")}; the lists below may be incomplete. Your records are safe — refresh the page.`,
+          })}
         </p>
       ) : null}
 
@@ -585,8 +615,8 @@ export default async function DashboardPage() {
         <article className="gb-kart gb-baslangic">
           <header className="gb-kart-bas">
             <div>
-              <h2>Üç adımda başlayın</h2>
-              <p>Üniversitenizi seçin; tez yazım kılavuzunuz editöre kendiliğinden uygulanır.</p>
+              <h2>{t({ tr: "Üç adımda başlayın", en: "Get started in three steps" })}</h2>
+              <p>{t({ tr: "Üniversitenizi seçin; tez yazım kılavuzunuz editöre kendiliğinden uygulanır.", en: "Choose your university; your thesis writing guideline is applied to the editor automatically." })}</p>
             </div>
           </header>
           {/*
@@ -596,21 +626,30 @@ export default async function DashboardPage() {
           */}
           <ol className="baslangic-adimlari">
             <li>
-              <strong>Çalışmanızı açın.</strong> Üniversite ve bölümünüzü seçtiğinizde kurumunuzun onaylı tez
-              kılavuzu çalışmaya bağlanır; biçim kuralları editörde kendiliğinden uygulanır.
+              <strong>{t({ tr: "Çalışmanızı açın.", en: "Create your work." })}</strong>{" "}
+              {t({
+                tr: "Üniversite ve bölümünüzü seçtiğinizde kurumunuzun onaylı tez kılavuzu çalışmaya bağlanır; biçim kuralları editörde kendiliğinden uygulanır.",
+                en: "When you choose your university and department, your institution's approved thesis guideline is linked to the work; formatting rules are applied in the editor automatically.",
+              })}
             </li>
             <li>
-              <strong>Kaynaklarınızı toplayın.</strong> DOI yapıştırın, künye Crossref ve OpenAlex kayıtlarından
-              dolsun. Atıf stiliniz kılavuzdan gelir; elle seçmeniz gerekmez.
+              <strong>{t({ tr: "Kaynaklarınızı toplayın.", en: "Gather your sources." })}</strong>{" "}
+              {t({
+                tr: "DOI yapıştırın, künye Crossref ve OpenAlex kayıtlarından dolsun. Atıf stiliniz kılavuzdan gelir; elle seçmeniz gerekmez.",
+                en: "Paste a DOI and the reference fills in from Crossref and OpenAlex records. Your citation style comes from the guideline; no need to pick it by hand.",
+              })}
             </li>
             <li>
-              <strong>Yazın ve denetleyin.</strong> Metin içi atıflarınız kaynakçanızla karşılaştırılır, iddialarınız
-              kanıt matrisinde kaynaklarına bağlanır ve teslim kontrol listesi aynı ekranda durur.
+              <strong>{t({ tr: "Yazın ve denetleyin.", en: "Write and check." })}</strong>{" "}
+              {t({
+                tr: "Metin içi atıflarınız kaynakçanızla karşılaştırılır, iddialarınız kanıt matrisinde kaynaklarına bağlanır ve teslim kontrol listesi aynı ekranda durur.",
+                en: "Your in-text citations are compared with your reference list, your claims are linked to their sources in the evidence matrix, and the submission checklist sits on the same screen.",
+              })}
             </li>
           </ol>
           <Link href={yeniCalismaHref} className="projects-primary-button">
             <Plus size={16} aria-hidden="true" />
-            İlk çalışmayı oluştur
+            {t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" })}
           </Link>
         </article>
       ) : ogrenciGorunumu && resume ? (
@@ -647,60 +686,74 @@ export default async function DashboardPage() {
                   <span className="status-pill" data-tone={statusTone(resume.status)}>
                     {t(statusLabel(resume.status))}
                   </span>
-                  {resumeStats ? <span className="chip">{editedAgo(resumeStats.updatedAt, simdiAn)} düzenlendi</span> : null}
+                  {resumeStats ? (
+                    <span className="chip">
+                      {t({ tr: `${once(resumeStats.updatedAt, simdiAn)} düzenlendi`, en: `Edited ${once(resumeStats.updatedAt, simdiAn)}` })}
+                    </span>
+                  ) : null}
                 </div>
               </div>
               <div className="tez-kart-eylemler">
                 <Link href={`/dashboard/editor/${resume.id}/write`} className="projects-primary-button">
                   <PenLine size={16} aria-hidden="true" />
-                  {resumeStats ? "Yazmaya devam et" : "Yazmaya başla"}
+                  {resumeStats ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
                 </Link>
                 <Link href={`/dashboard/editor/${resume.id}`} className="projects-filter-button">
-                  Çalışma özeti
+                  {t({ tr: "Çalışma özeti", en: "Work overview" })}
                 </Link>
               </div>
             </div>
 
             <dl className="tez-olcumler">
               <div className="tez-olcu" data-tone={resumeDue?.tone}>
-                <dt>Teslime kalan</dt>
+                <dt>{t({ tr: "Teslime kalan", en: "Until due" })}</dt>
                 <dd>
                   {resumeDue ? (resumeDue.days >= 0 ? resumeDue.days : -resumeDue.days) : "—"}
-                  {resumeDue ? <small>{resumeDue.days >= 0 ? "gün" : "gün gecikti"}</small> : null}
+                  {resumeDue ? (
+                    <small>
+                      {resumeDue.days >= 0 ? t({ tr: "gün", en: "days" }) : t({ tr: "gün gecikti", en: "days overdue" })}
+                    </small>
+                  ) : null}
                 </dd>
                 {/* Tarih yoksa burada seçilip kaydediliyor (28.10.2026); eskiden ayarlar sayfasına gönderiyordu. */}
-                {resume.due_date ? <span>{trTarih(resume.due_date)}</span> : <TeslimTarihiFormu projectId={resume.id} bugun={bugunGun} />}
+                {resume.due_date ? <span>{tarih(resume.due_date)}</span> : <TeslimTarihiFormu projectId={resume.id} bugun={bugunGun} />}
               </div>
               <div className="tez-olcu">
-                <dt>Yazılan</dt>
+                <dt>{t({ tr: "Yazılan", en: "Written" })}</dt>
                 <dd>
-                  {(resumeStats?.words ?? 0).toLocaleString("tr-TR")}
-                  <small>kelime</small>
+                  {sayi(resumeStats?.words ?? 0)}
+                  <small>{t({ tr: "kelime", en: "words" })}</small>
                 </dd>
                 <span>
                   {tempo
-                    ? `Kılavuz hedefi ~${tempo.targetWords.toLocaleString("tr-TR")} kelime · %${yazilanYuzde}`
-                    : "Kılavuzda sayfa sınırı yok; hedef hesaplanmadı"}
+                    ? t({
+                        tr: `Kılavuz hedefi ~${sayi(tempo.targetWords)} kelime · %${yazilanYuzde}`,
+                        en: `Guideline target ~${sayi(tempo.targetWords)} words · ${yazilanYuzde}%`,
+                      })
+                    : t({ tr: "Kılavuzda sayfa sınırı yok; hedef hesaplanmadı", en: "The guideline sets no page limit; no target calculated" })}
                 </span>
               </div>
               <div className="tez-olcu" data-tone={resumeReadiness && readinessGaps.length === 0 ? "success" : undefined}>
-                <dt>Teslim hazırlığı</dt>
+                <dt>{t({ tr: "Teslim hazırlığı", en: "Submission readiness" })}</dt>
                 <dd>
                   {resumeReadiness ? `${resumeReadiness.done}/${resumeReadiness.total}` : "—"}
-                  {resumeReadiness ? <small>madde</small> : null}
+                  {resumeReadiness ? <small>{t({ tr: "madde", en: "items" })}</small> : null}
                 </dd>
                 <span>
                   {resumeReadiness
                     ? readinessGaps.length === 0
-                      ? "Teslime hazır görünüyor"
-                      : `${readinessGaps.length} madde bakılmayı bekliyor`
-                    : "Yazmaya başlayınca hesaplanır"}
+                      ? t({ tr: "Teslime hazır görünüyor", en: "Looks ready to submit" })
+                      : t({
+                          tr: `${readinessGaps.length} madde bakılmayı bekliyor`,
+                          en: `${readinessGaps.length} item${readinessGaps.length === 1 ? "" : "s"} need${readinessGaps.length === 1 ? "s" : ""} attention`,
+                        })
+                    : t({ tr: "Yazmaya başlayınca hesaplanır", en: "Calculated once you start writing" })}
                 </span>
               </div>
             </dl>
 
             {yazilanYuzde !== null ? (
-              <div className="tez-cubuk" role="progressbar" aria-valuenow={yazilanYuzde} aria-valuemin={0} aria-valuemax={100} aria-label="Kılavuz hedefine göre yazılan">
+              <div className="tez-cubuk" role="progressbar" aria-valuenow={yazilanYuzde} aria-valuemin={0} aria-valuemax={100} aria-label={t({ tr: "Kılavuz hedefine göre yazılan", en: "Written against the guideline target" })}>
                 {/* Genişlik veriye bağlı: satır içi değer yalnızca bu. */}
                 <i style={{ "--w": `${yazilanYuzde}%` } as React.CSSProperties} />
               </div>
@@ -713,23 +766,33 @@ export default async function DashboardPage() {
             {takvim ? (
               siradakiKilometre ? (
                 <p className="takvim-sirada" data-durum={siradakiKilometre.durum}>
-                  <span>Sıradaki kilometre taşı</span>
+                  <span>{t({ tr: "Sıradaki kilometre taşı", en: "Next milestone" })}</span>
                   <b>{siradakiKilometre.tas.baslik}</b>
                   <small>
-                    {trTarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun)}
-                    {takvimSayilari ? ` · takvim ${takvimSayilari.tamam}/${takvimSayilari.toplam}` : ""}
+                    {tarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun, dil)}
+                    {takvimSayilari
+                      ? t({
+                          tr: ` · takvim ${takvimSayilari.tamam}/${takvimSayilari.toplam}`,
+                          en: ` · schedule ${takvimSayilari.tamam}/${takvimSayilari.toplam}`,
+                        })
+                      : ""}
                   </small>
                   <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
-                    Takvim
+                    {t({ tr: "Takvim", en: "Schedule" })}
                   </Link>
                 </p>
               ) : resume.due_date && !takvim.length ? (
                 <p className="takvim-sirada">
-                  <span>Tez takvimi</span>
-                  <b>Teslime kadar bölüm bölüm hedef tarih koyun</b>
-                  <small>Teslim tarihinize göre taslak takvim önerilir; her tarihi değiştirebilirsiniz.</small>
+                  <span>{t({ tr: "Tez takvimi", en: "Thesis schedule" })}</span>
+                  <b>{t({ tr: "Teslime kadar bölüm bölüm hedef tarih koyun", en: "Set target dates chapter by chapter until submission" })}</b>
+                  <small>
+                    {t({
+                      tr: "Teslim tarihinize göre taslak takvim önerilir; her tarihi değiştirebilirsiniz.",
+                      en: "A draft schedule is suggested from your due date; you can change every date.",
+                    })}
+                  </small>
                   <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
-                    Takvim kur
+                    {t({ tr: "Takvim kur", en: "Set up schedule" })}
                   </Link>
                 </p>
               ) : null
@@ -742,7 +805,7 @@ export default async function DashboardPage() {
             */}
             {sirada ? (
               <div className="tez-simdi" data-aciliyet={sirada.aciliyet} data-bitti={sirada.bitti ? "true" : undefined}>
-                <span className="sirada-etiket">{sirada.bitti ? "Durum" : "Şimdi"}</span>
+                <span className="sirada-etiket">{sirada.bitti ? t({ tr: "Durum", en: "Status" }) : t({ tr: "Şimdi", en: "Now" })}</span>
                 <div className="sirada-govde">
                   <b>{sirada.baslik}</b>
                   <span>{sirada.aciklama}</span>
@@ -756,26 +819,36 @@ export default async function DashboardPage() {
           <AbonelikOzetKarti access={access} kredi={kredi} bireysel={Boolean((krediSatiri as KrediSatiri | null)?.bireysel)} />
           </div>
 
-          <ListeIzgarasi etiket="Tezim">
+          <ListeIzgarasi etiket={t({ tr: "Tezim", en: "My thesis" })}>
             <ListeKarti
-              baslik="Bölümlerim"
+              baslik={t({ tr: "Bölümlerim", en: "My sections" })}
               alt={[
-                eksikZorunlu.length ? `${eksikZorunlu.length} zorunlu bölümün başlığı yok` : "Müsveddenin bölümleri",
-                metinBolumleri.length + eksikZorunlu.length > BOLUM_SATIRI ? `ilk ${BOLUM_SATIRI} gösteriliyor` : "",
+                eksikZorunlu.length
+                  ? t({
+                      tr: `${eksikZorunlu.length} zorunlu bölümün başlığı yok`,
+                      en: `${eksikZorunlu.length} required section${eksikZorunlu.length === 1 ? " has" : "s have"} no heading`,
+                    })
+                  : t({ tr: "Müsveddenin bölümleri", en: "Sections of the manuscript" }),
+                metinBolumleri.length + eksikZorunlu.length > BOLUM_SATIRI
+                  ? t({ tr: `ilk ${BOLUM_SATIRI} gösteriliyor`, en: `showing first ${BOLUM_SATIRI}` })
+                  : "",
               ]
                 .filter(Boolean)
                 .join(" · ")}
-              bos="Henüz bölüm başlığı yok. Editörde başlıklarla bölüm açın; kılavuzunuzun istediği bölümler burada izlenir."
+              bos={t({
+                tr: "Henüz bölüm başlığı yok. Editörde başlıklarla bölüm açın; kılavuzunuzun istediği bölümler burada izlenir.",
+                en: "No section headings yet. Create sections with headings in the editor; the sections your guideline requires are tracked here.",
+              })}
               sayi={metinBolumleri.length + eksikZorunlu.length}
               href={`/dashboard/editor/${resume.id}/write`}
-              hrefEtiket="Editörde aç"
+              hrefEtiket={t({ tr: "Editörde aç", en: "Open in editor" })}
             >
               {metinBolumleri.slice(0, BOLUM_SATIRI).map((bolum, sira) => (
                 <ListeSatiri
                   key={`${sira}-${bolum.baslik}`}
                   href={`/dashboard/editor/${resume.id}/write`}
                   baslik={bolum.baslik}
-                  sag={<span className="gb-sayi">{bolum.sozcuk.toLocaleString("tr-TR")} kelime</span>}
+                  sag={<span className="gb-sayi">{t({ tr: `${sayi(bolum.sozcuk)} kelime`, en: `${sayi(bolum.sozcuk)} words` })}</span>}
                 />
               ))}
               {eksikZorunlu.slice(0, Math.max(0, BOLUM_SATIRI - metinBolumleri.length)).map((bolum) => (
@@ -783,10 +856,10 @@ export default async function DashboardPage() {
                   key={`eksik-${bolum}`}
                   href={`/dashboard/editor/${resume.id}/write?teslim=sections`}
                   baslik={bolum}
-                  alt="Kılavuzunuz istiyor"
+                  alt={t({ tr: "Kılavuzunuz istiyor", en: "Required by your guideline" })}
                   sag={
                     <span className="status-pill" data-tone="warning">
-                      Henüz yok
+                      {t({ tr: "Henüz yok", en: "Not yet" })}
                     </span>
                   }
                 />
@@ -804,66 +877,113 @@ export default async function DashboardPage() {
               />
             ) : (
             <ListeKarti
-              baslik="Danışman yorumları"
-              alt="Çözülmemiş yorumlar"
-              bos="Bekleyen yorum yok. Danışmanınız metninize yorum yazınca burada görünür."
+              baslik={t({ tr: "Danışman yorumları", en: "Advisor comments" })}
+              alt={t({ tr: "Çözülmemiş yorumlar", en: "Unresolved comments" })}
+              bos={t({
+                tr: "Bekleyen yorum yok. Danışmanınız metninize yorum yazınca burada görünür.",
+                en: "No pending comments. When your advisor comments on your text, it shows up here.",
+              })}
               sayi={yorumlar.length}
             >
               {yorumlar.map((yorum) => (
                 <ListeSatiri
                   key={yorum.id}
                   href={`/dashboard/editor/${yorum.project_id}/write`}
-                  baslik={yorum.yazar?.full_name?.trim() || calismaAdi.get(yorum.project_id) || "Yorum"}
+                  baslik={yorum.yazar?.full_name?.trim() || calismaAdi.get(yorum.project_id) || t({ tr: "Yorum", en: "Comment" })}
                   alt={yorum.body}
                   onizleme
-                  zaman={editedAgo(yorum.created_at, simdiAn)}
+                  zaman={once(yorum.created_at, simdiAn)}
                 />
               ))}
             </ListeKarti>
             )}
 
-            <ListeKarti baslik="Kaynaklar ve kanıt" alt="Tezinizin dayanakları" bos="" sayi={4}>
+            <ListeKarti
+              baslik={t({ tr: "Kaynaklar ve kanıt", en: "Sources and evidence" })}
+              alt={t({ tr: "Tezinizin dayanakları", en: "What your thesis rests on" })}
+              bos=""
+              sayi={4}
+            >
               <ListeSatiri
                 href={`/dashboard/literature?calisma=${resume.id}`}
-                baslik="Literatür"
+                baslik={t({ tr: "Literatür", en: "Literature" })}
                 alt={
                   resumeKaynakSayisi
-                    ? `${resumeOkunan ?? 0} okundu · ${resumeKullanilan ?? 0} metinde kullanıldı`
-                    : "Henüz kaynak eklenmedi"
+                    ? t({
+                        tr: `${resumeOkunan ?? 0} okundu · ${resumeKullanilan ?? 0} metinde kullanıldı`,
+                        en: `${resumeOkunan ?? 0} read · ${resumeKullanilan ?? 0} used in text`,
+                      })
+                    : t({ tr: "Henüz kaynak eklenmedi", en: "No sources added yet" })
                 }
-                sag={<span className="gb-sayi">{(resumeKaynakSayisi ?? 0).toLocaleString("tr-TR")} kaynak</span>}
+                sag={
+                  <span className="gb-sayi">
+                    {t({
+                      tr: `${sayi(resumeKaynakSayisi ?? 0)} kaynak`,
+                      en: `${sayi(resumeKaynakSayisi ?? 0)} source${resumeKaynakSayisi === 1 ? "" : "s"}`,
+                    })}
+                  </span>
+                }
               />
               <ListeSatiri
                 href={`/dashboard/citations?calisma=${resume.id}`}
-                baslik="Kaynakça denetimi"
-                alt={resumeDenetim ? `Son denetim ${editedAgo(resumeDenetim.created_at, simdiAn)}` : "Henüz denetlenmedi"}
+                baslik={t({ tr: "Kaynakça denetimi", en: "Reference list check" })}
+                alt={
+                  resumeDenetim
+                    ? t({ tr: `Son denetim ${once(resumeDenetim.created_at, simdiAn)}`, en: `Last checked ${once(resumeDenetim.created_at, simdiAn)}` })
+                    : t({ tr: "Henüz denetlenmedi", en: "Not checked yet" })
+                }
                 sag={
                   resumeDenetim?.compliance_score != null ? (
                     <span className="status-pill" data-tone={Number(resumeDenetim.compliance_score) >= 80 ? "success" : "warning"}>
-                      %{Math.round(Number(resumeDenetim.compliance_score))}
+                      {t({
+                        tr: `%${Math.round(Number(resumeDenetim.compliance_score))}`,
+                        en: `${Math.round(Number(resumeDenetim.compliance_score))}%`,
+                      })}
                     </span>
                   ) : undefined
                 }
               />
               <ListeSatiri
                 href={`/dashboard/editor/${resume.id}/kanit`}
-                baslik="Kanıt matrisi"
-                alt={iddiaSayisi ? `${dogrudanSayisi ?? 0} iddia doğrudan destekleniyor` : "İddialarınızı kaynaklarına bağlayın"}
-                sag={<span className="gb-sayi">{(iddiaSayisi ?? 0).toLocaleString("tr-TR")} iddia</span>}
+                baslik={t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}
+                alt={
+                  iddiaSayisi
+                    ? t({
+                        tr: `${dogrudanSayisi ?? 0} iddia doğrudan destekleniyor`,
+                        en: `${dogrudanSayisi ?? 0} claim${dogrudanSayisi === 1 ? "" : "s"} directly supported`,
+                      })
+                    : t({ tr: "İddialarınızı kaynaklarına bağlayın", en: "Link your claims to their sources" })
+                }
+                sag={
+                  <span className="gb-sayi">
+                    {t({ tr: `${sayi(iddiaSayisi ?? 0)} iddia`, en: `${sayi(iddiaSayisi ?? 0)} claim${iddiaSayisi === 1 ? "" : "s"}` })}
+                  </span>
+                }
               />
               <ListeSatiri
                 href={`/dashboard/documents?calisma=${resume.id}`}
-                baslik="Belge kontrolü"
-                alt={resumeBelgeSayisi ? "Kılavuz uyumu ve orijinallik ön-kontrolü" : "Tam belgenizi yükleyip denetletin"}
-                sag={<span className="gb-sayi">{(resumeBelgeSayisi ?? 0).toLocaleString("tr-TR")} belge</span>}
+                baslik={t({ tr: "Belge kontrolü", en: "Document check" })}
+                alt={
+                  resumeBelgeSayisi
+                    ? t({ tr: "Kılavuz uyumu ve orijinallik ön-kontrolü", en: "Guideline compliance and originality pre-check" })
+                    : t({ tr: "Tam belgenizi yükleyip denetletin", en: "Upload your full document to have it checked" })
+                }
+                sag={
+                  <span className="gb-sayi">
+                    {t({
+                      tr: `${sayi(resumeBelgeSayisi ?? 0)} belge`,
+                      en: `${sayi(resumeBelgeSayisi ?? 0)} document${resumeBelgeSayisi === 1 ? "" : "s"}`,
+                    })}
+                  </span>
+                }
               />
             </ListeKarti>
           </ListeIzgarasi>
 
           {/* Birden çok çalışması olan öğrenci için: odak tek tezde, diğerleri bir tık uzakta. */}
           {activeProjects.length > 1 ? (
-            <nav className="diger-calismalar" aria-label="Diğer çalışmalarınız">
-              <span>Diğer çalışmalarınız:</span>
+            <nav className="diger-calismalar" aria-label={t({ tr: "Diğer çalışmalarınız", en: "Your other works" })}>
+              <span>{t({ tr: "Diğer çalışmalarınız:", en: "Your other works:" })}</span>
               {activeProjects
                 .filter((p) => p.id !== resume.id)
                 .slice(0, 5)
@@ -878,28 +998,34 @@ export default async function DashboardPage() {
       ) : (
         <>
           <SeriKarti
-            baslik="Çalışma hareketiniz"
-            alt="Son 14 gün"
+            baslik={t({ tr: "Çalışma hareketiniz", en: "Your activity" })}
+            alt={t({ tr: "Son 14 gün", en: "Last 14 days" })}
             seri={seri}
-            adet="hareket"
+            adet={t({ tr: "hareket", en: "actions" })}
             ozet={[
-              { ad: "Kayıtlı sürüm", deger: seri.turler.surum },
-              { ad: "Eklenen kaynak", deger: seri.turler.kaynak },
-              { ad: "Denetim", deger: seri.turler.denetim },
-              { ad: "Asistan", deger: seri.turler.asistan },
-              { ad: "Kanıt", deger: seri.turler.kanit },
+              { ad: t({ tr: "Kayıtlı sürüm", en: "Saved versions" }), deger: seri.turler.surum },
+              { ad: t({ tr: "Eklenen kaynak", en: "Sources added" }), deger: seri.turler.kaynak },
+              { ad: t({ tr: "Denetim", en: "Checks" }), deger: seri.turler.denetim },
+              { ad: t({ tr: "Asistan", en: "Assistant" }), deger: seri.turler.asistan },
+              { ad: t({ tr: "Kanıt", en: "Evidence" }), deger: seri.turler.kanit },
             ]}
-            bos="Son 14 günde kayıtlı hareket yok. Yazdıkça, kaynak ekledikçe ve denetim çalıştırdıkça burada görünür."
+            bos={t({
+              tr: "Son 14 günde kayıtlı hareket yok. Yazdıkça, kaynak ekledikçe ve denetim çalıştırdıkça burada görünür.",
+              en: "No recorded activity in the last 14 days. It shows up here as you write, add sources and run checks.",
+            })}
           />
 
-          <ListeIzgarasi etiket="Güncel işler">
+          <ListeIzgarasi etiket={t({ tr: "Güncel işler", en: "Current work" })}>
             <ListeKarti
-              baslik={isStaff ? "Son düzenlenenler" : "Çalışmalarım"}
-              alt={`Aktif ${activeProjects.length} çalışma`}
-              bos="Aktif çalışma yok."
+              baslik={isStaff ? t({ tr: "Son düzenlenenler", en: "Recently edited" }) : t({ tr: "Çalışmalarım", en: "My works" })}
+              alt={t({
+                tr: `Aktif ${activeProjects.length} çalışma`,
+                en: `${activeProjects.length} active work${activeProjects.length === 1 ? "" : "s"}`,
+              })}
+              bos={t({ tr: "Aktif çalışma yok.", en: "No active works." })}
               sayi={calismalarim.length}
               href="/dashboard/editor"
-              hrefEtiket="Tüm çalışmalar"
+              hrefEtiket={t({ tr: "Tüm çalışmalar", en: "All works" })}
             >
               {calismalarim.map((p) => {
                 const yazim = writing.get(p.id);
@@ -911,7 +1037,9 @@ export default async function DashboardPage() {
                     alt={[
                       isStaff ? sahipAdlari.get(p.owner_id) : null,
                       t(projectTypeLabel(p.project_type)),
-                      yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime, ${editedAgo(yazim.updatedAt)}` : "yazılmadı",
+                      yazim
+                        ? t({ tr: `${sayi(yazim.words)} kelime, ${once(yazim.updatedAt)}`, en: `${sayi(yazim.words)} words, ${once(yazim.updatedAt)}` })
+                        : t({ tr: "yazılmadı", en: "not written" }),
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -926,19 +1054,22 @@ export default async function DashboardPage() {
             </ListeKarti>
 
             <ListeKarti
-              baslik="Teslim tarihleri"
-              alt="En yakın teslimler"
-              bos="Teslim tarihi girilmiş çalışma yok. Çalışma ayarlarından ekleyebilirsiniz."
+              baslik={t({ tr: "Teslim tarihleri", en: "Due dates" })}
+              alt={t({ tr: "En yakın teslimler", en: "Nearest due dates" })}
+              bos={t({
+                tr: "Teslim tarihi girilmiş çalışma yok. Çalışma ayarlarından ekleyebilirsiniz.",
+                en: "No works with a due date. You can add one in the work settings.",
+              })}
               sayi={teslimler.length}
               href="/dashboard/editor"
-              hrefEtiket="Çalışmalara git"
+              hrefEtiket={t({ tr: "Çalışmalara git", en: "Go to works" })}
             >
               {teslimler.map(({ project, due }) => (
                 <ListeSatiri
                   key={project.id}
                   href={`/dashboard/editor/${project.id}`}
                   baslik={project.title}
-                  alt={[isStaff ? sahipAdlari.get(project.owner_id) : null, project.due_date ? trTarih(project.due_date) : null].filter(Boolean).join(" · ") || undefined}
+                  alt={[isStaff ? sahipAdlari.get(project.owner_id) : null, project.due_date ? tarih(project.due_date) : null].filter(Boolean).join(" · ") || undefined}
                   sag={
                     <span className="status-pill" data-tone={due.tone}>
                       {due.label}
@@ -949,19 +1080,19 @@ export default async function DashboardPage() {
             </ListeKarti>
 
             <ListeKarti
-              baslik="Gelen yorumlar"
-              alt="Çözülmemiş, son 6"
-              bos="Danışmanınızdan ya da ekipten bekleyen yorum yok."
+              baslik={t({ tr: "Gelen yorumlar", en: "Incoming comments" })}
+              alt={t({ tr: "Çözülmemiş, son 6", en: "Unresolved, latest 6" })}
+              bos={t({ tr: "Danışmanınızdan ya da ekipten bekleyen yorum yok.", en: "No pending comments from your advisor or the team." })}
               sayi={yorumlar.length}
             >
               {yorumlar.map((yorum) => (
                 <ListeSatiri
                   key={yorum.id}
                   href={`/dashboard/editor/${yorum.project_id}/write`}
-                  baslik={yorum.yazar?.full_name?.trim() || calismaAdi.get(yorum.project_id) || "Yorum"}
+                  baslik={yorum.yazar?.full_name?.trim() || calismaAdi.get(yorum.project_id) || t({ tr: "Yorum", en: "Comment" })}
                   alt={yorum.body}
                   onizleme
-                  zaman={editedAgo(yorum.created_at, simdiAn)}
+                  zaman={once(yorum.created_at, simdiAn)}
                 />
               ))}
             </ListeKarti>
@@ -974,9 +1105,12 @@ export default async function DashboardPage() {
             */}
             {attention ? (
               <ListeKarti
-                baslik="Dikkat isteyenler"
-                alt="Gecikmiş, sorumlusuz ya da yanıt bekleyen"
-                bos="Gecikmiş, sorumlusuz, onay ya da yanıt bekleyen çalışma yok."
+                baslik={t({ tr: "Dikkat isteyenler", en: "Needs attention" })}
+                alt={t({ tr: "Gecikmiş, sorumlusuz ya da yanıt bekleyen", en: "Overdue, unassigned or awaiting a reply" })}
+                bos={t({
+                  tr: "Gecikmiş, sorumlusuz, onay ya da yanıt bekleyen çalışma yok.",
+                  en: "No works that are overdue, unassigned, or awaiting approval or a reply.",
+                })}
                 sayi={attention.length}
               >
                 {attention.slice(0, GENEL_BAKIS_SATIR).map((item) => (
@@ -994,12 +1128,16 @@ export default async function DashboardPage() {
               </ListeKarti>
             ) : (
               <ListeKarti
-                baslik="Sıradaki işler"
-                alt={resume ? resume.title : "Kaldığınız çalışma"}
-                bos={sirada?.bitti ? "Teslim listesinde eksik görünmüyor." : "Şu an bekleyen bir adım yok."}
+                baslik={t({ tr: "Sıradaki işler", en: "Next up" })}
+                alt={resume ? resume.title : t({ tr: "Kaldığınız çalışma", en: "Where you left off" })}
+                bos={
+                  sirada?.bitti
+                    ? t({ tr: "Teslim listesinde eksik görünmüyor.", en: "Nothing appears to be missing from the submission checklist." })
+                    : t({ tr: "Şu an bekleyen bir adım yok.", en: "No pending steps right now." })
+                }
                 sayi={siradakiler.length}
                 href={resume ? `/dashboard/editor/${resume.id}` : undefined}
-                hrefEtiket="Çalışma özeti"
+                hrefEtiket={t({ tr: "Çalışma özeti", en: "Work overview" })}
               >
                 {siradakiler.map((madde) => (
                   <ListeSatiri key={madde.anahtar} href={madde.href} baslik={madde.baslik} alt={madde.alt} />

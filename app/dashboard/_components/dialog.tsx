@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useOdakTuzagi } from "./odak-tuzagi";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 const subscribeNothing = () => () => undefined;
 
@@ -24,6 +25,7 @@ export default function Dialog({
   description?: string;
   children: ReactNode;
 }) {
+  const t = useCeviri();
   const titleId = useId();
   const dialogRef = useRef<HTMLElement>(null);
   const isClient = useSyncExternalStore(subscribeNothing, () => true, () => false);
@@ -54,7 +56,7 @@ export default function Dialog({
 
   return createPortal(
     <div className={open ? "drawer-root open" : "drawer-root"}>
-      <button className="drawer-backdrop" type="button" aria-label="Pencereyi kapat" tabIndex={open ? 0 : -1} onClick={onClose} />
+      <button className="drawer-backdrop" type="button" aria-label={t({ tr: "Pencereyi kapat", en: "Close window" })} tabIndex={open ? 0 : -1} onClick={onClose} />
       <section
         ref={dialogRef}
         className="drawer drawer-compact"
@@ -70,7 +72,7 @@ export default function Dialog({
             <h2 id={titleId}>{title}</h2>
             {description ? <p>{description}</p> : null}
           </div>
-          <button className="drawer-close" type="button" aria-label="Kapat" onClick={onClose}>
+          <button className="drawer-close" type="button" aria-label={t({ tr: "Kapat", en: "Close" })} onClick={onClose}>
             <X size={18} aria-hidden="true" />
           </button>
         </header>

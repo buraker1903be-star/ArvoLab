@@ -3,6 +3,8 @@ import { ChevronRight } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import type { HareketSerisi } from "@/lib/genel-bakis";
 import type { YazimRitmi } from "@/lib/yazim-ritmi";
+import { YEREL } from "@/lib/dil";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 /*
   GENEL BAKIŞ PARÇALARI — ArvoOS'un ana ekran şablonunun
@@ -19,7 +21,7 @@ export const GENEL_BAKIS_SATIR = 6;
 export type SeriOzeti = { ad: string; deger: number };
 
 /** Tam genişlikte grafik: son 14 gün, toplam ve önceki döneme göre değişim. */
-export function SeriKarti({
+export async function SeriKarti({
   baslik,
   alt,
   seri,
@@ -41,6 +43,8 @@ export function SeriKarti({
   bos: string;
 }) {
   const bosSeri = seri.toplam === 0;
+  const t = await ceviri();
+  const dil = await aktifDil();
   return (
     <article className="gb-kart gb-grafik">
       <header className="gb-kart-bas">
@@ -53,27 +57,27 @@ export function SeriKarti({
             {ozet.map((o) => (
               <div key={o.ad}>
                 <dt>{o.ad}</dt>
-                <dd>{o.deger.toLocaleString("tr-TR")}</dd>
+                <dd>{o.deger.toLocaleString(YEREL[dil])}</dd>
               </div>
             ))}
           </dl>
         ) : null}
         <div className="gb-toplam">
-          <strong>{seri.toplam.toLocaleString("tr-TR")}</strong>
+          <strong>{seri.toplam.toLocaleString(YEREL[dil])}</strong>
           {seri.degisim !== null ? (
             <span data-tone={seri.degisim >= 0 ? "success" : "danger"}>
               {seri.degisim >= 0 ? "+" : ""}
-              {seri.degisim}% önceki döneme göre
+              {seri.degisim}% {t({ tr: "önceki döneme göre", en: "vs. previous period" })}
             </span>
           ) : seri.toplam ? (
-            <span data-tone="neutral">önceki dönemde kayıt yok</span>
+            <span data-tone="neutral">{t({ tr: "önceki dönemde kayıt yok", en: "no records in previous period" })}</span>
           ) : null}
         </div>
       </header>
       {bosSeri ? (
         <p className="gb-seri-bos">{bos}</p>
       ) : (
-        <div className="gb-cubuklar" role="img" aria-label={`${alt}: toplam ${seri.toplam} ${adet}`}>
+        <div className="gb-cubuklar" role="img" aria-label={t({ tr: `${alt}: toplam ${seri.toplam} ${adet}`, en: `${alt}: ${seri.toplam} ${adet} in total` })}>
           {seri.gunler.map((gun) => (
             <div
               key={gun.anahtar}
@@ -180,38 +184,40 @@ export function ListeSatiri({
   kelime; eksi gün (silme, taşıma) çubuğun altında kendi rengiyle.
   Üstte öğrencinin asıl sorusunun cevabı: "bu hafta ne kadar yazdım".
 */
-export function RitimKarti({ ritim, href }: { ritim: YazimRitmi; href: string }) {
+export async function RitimKarti({ ritim, href }: { ritim: YazimRitmi; href: string }) {
   const yazildi = ritim.gunler.some((g) => g.net !== 0);
-  const isaret = (n: number) => `${n > 0 ? "+" : ""}${n.toLocaleString("tr-TR")}`;
+  const t = await ceviri();
+  const dil = await aktifDil();
+  const isaret = (n: number) => `${n > 0 ? "+" : ""}${n.toLocaleString(YEREL[dil])}`;
   return (
     <article className="gb-kart gb-sutun">
       <header className="gb-kart-bas">
         <div>
-          <h2>Yazım ritmi</h2>
-          <p>Son 14 gün, net kelime</p>
+          <h2>{t({ tr: "Yazım ritmi", en: "Writing rhythm" })}</h2>
+          <p>{t({ tr: "Son 14 gün, net kelime", en: "Last 14 days, net words" })}</p>
         </div>
       </header>
       <dl className="gb-ritim-ozet">
         <div>
-          <dt>Bu hafta</dt>
+          <dt>{t({ tr: "Bu hafta", en: "This week" })}</dt>
           <dd data-tone={ritim.buHafta > 0 ? "success" : ritim.buHafta < 0 ? "danger" : undefined}>{isaret(ritim.buHafta)}</dd>
         </div>
         <div>
-          <dt>Seri</dt>
-          <dd>{ritim.seri ? `${ritim.seri} gün` : "—"}</dd>
+          <dt>{t({ tr: "Seri", en: "Streak" })}</dt>
+          <dd>{ritim.seri ? t({ tr: `${ritim.seri} gün`, en: `${ritim.seri} day${ritim.seri === 1 ? "" : "s"}` }) : "—"}</dd>
         </div>
         <div>
-          <dt>Yazılan gün</dt>
+          <dt>{t({ tr: "Yazılan gün", en: "Days written" })}</dt>
           <dd>{ritim.aktifGun}/14</dd>
         </div>
       </dl>
       {yazildi ? (
-        <div className="gb-cubuklar gb-ritim" role="img" aria-label={`Bu hafta net ${isaret(ritim.buHafta)} kelime`}>
+        <div className="gb-cubuklar gb-ritim" role="img" aria-label={t({ tr: `Bu hafta net ${isaret(ritim.buHafta)} kelime`, en: `Net ${isaret(ritim.buHafta)} words this week` })}>
           {ritim.gunler.map((gun) => (
             <div
               key={gun.anahtar}
               className={`gb-cubuk${gun.bugun ? " is-bugun" : ""}${gun.net > 0 ? "" : " is-bos"}${gun.net < 0 ? " is-eksi" : ""}`}
-              title={`${gun.baslik}: ${isaret(gun.net)} kelime`}
+              title={t({ tr: `${gun.baslik}: ${isaret(gun.net)} kelime`, en: `${gun.baslik}: ${isaret(gun.net)} words` })}
             >
               <span
                 className="gb-cubuk-dolgu"
@@ -222,10 +228,15 @@ export function RitimKarti({ ritim, href }: { ritim: YazimRitmi; href: string })
           ))}
         </div>
       ) : (
-        <p className="gb-bos">Son iki haftada kaydedilmiş yazım yok. Editörde yazdıkça günlük ilerlemeniz burada birikir.</p>
+        <p className="gb-bos">
+          {t({
+            tr: "Son iki haftada kaydedilmiş yazım yok. Editörde yazdıkça günlük ilerlemeniz burada birikir.",
+            en: "No saved writing in the last two weeks. As you write in the editor, your daily progress builds up here.",
+          })}
+        </p>
       )}
       <Link className="gb-kart-baglanti" href={href}>
-        Yazmaya devam et <ChevronRight size={14} aria-hidden="true" />
+        {t({ tr: "Yazmaya devam et", en: "Continue writing" })} <ChevronRight size={14} aria-hidden="true" />
       </Link>
     </article>
   );

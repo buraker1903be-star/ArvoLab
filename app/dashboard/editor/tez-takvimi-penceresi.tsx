@@ -2,13 +2,14 @@ import { CalendarDays } from "lucide-react";
 import PanelDrawer from "../_components/panel-drawer";
 import { takvimOzeti, type TakvimTasi } from "@/lib/tez-takvimi";
 import TakvimDuzenleyici from "./takvim-duzenleyici";
+import { ceviri } from "@/lib/dil-sunucu";
 
 /*
   Takvim penceresi (Çalışmalarım kartının alt şeridinde, kılavuz ve
   literatür pencereleriyle aynı yerde). Düğmede geciken taş varsa sayısı
   yazıyor; öğrenci pencereyi açmadan geride kaldığını görsün.
 */
-export default function TezTakvimiPenceresi({
+export default async function TezTakvimiPenceresi({
   projectId,
   projeTuru,
   taslar,
@@ -25,15 +26,25 @@ export default function TezTakvimiPenceresi({
   duzenleyebilir: boolean;
   acikBasla?: boolean;
 }) {
+  const t = await ceviri();
   const ozet = takvimOzeti(taslar, bugun);
   return (
     <PanelDrawer
-      triggerLabel={ozet.geciken ? `Takvim · ${ozet.geciken} geciken` : ozet.toplam ? `Takvim · ${ozet.tamam}/${ozet.toplam}` : "Takvim"}
+      triggerLabel={
+        ozet.geciken
+          ? t({ tr: `Takvim · ${ozet.geciken} geciken`, en: `Schedule · ${ozet.geciken} overdue` })
+          : ozet.toplam
+            ? t({ tr: `Takvim · ${ozet.tamam}/${ozet.toplam}`, en: `Schedule · ${ozet.tamam}/${ozet.toplam}` })
+            : t({ tr: "Takvim", en: "Schedule" })
+      }
       triggerIcon={<CalendarDays size={15} aria-hidden="true" />}
       triggerClassName={ozet.geciken ? "projects-filter-button button-compact takvim-dugme-geciken" : "projects-filter-button button-compact"}
-      kicker="Tez takvimi"
-      title="Kilometre taşları"
-      description="Bölüm bölüm hedef tarihler. Ana sayfa sıradakini gösterir; danışmanınız ve kurumunuz da planı görür."
+      kicker={t({ tr: "Tez takvimi", en: "Thesis schedule" })}
+      title={t({ tr: "Kilometre taşları", en: "Milestones" })}
+      description={t({
+        tr: "Bölüm bölüm hedef tarihler. Ana sayfa sıradakini gösterir; danışmanınız ve kurumunuz da planı görür.",
+        en: "Target dates chapter by chapter. The home page shows the next one; your advisor and institution see the plan too.",
+      })}
       boy="orta"
       basaridaKapan={false}
       acikBasla={acikBasla}

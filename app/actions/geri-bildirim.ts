@@ -6,6 +6,7 @@ import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-son
 import { revalidatePath } from "next/cache";
 import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { ADMIN_ROLES, MANAGER_ROLES } from "@/lib/project-labels";
+import { ceviri } from "@/lib/dil-sunucu";
 import {
   BOLUM_SECENEKLERI,
   soruSorulsunMu,
@@ -90,7 +91,12 @@ async function durumYaz(status: GeriBildirimDurumu, alanlar: Record<string, unkn
   );
   if (error) {
     console.error(error);
-    return { error: "Geri bildiriminiz kaydedilemedi. Birazdan tekrar deneyin." };
+    return {
+      error: (await ceviri())({
+        tr: "Geri bildiriminiz kaydedilemedi. Birazdan tekrar deneyin.",
+        en: "Your feedback could not be saved. Try again in a moment.",
+      }),
+    };
   }
   revalidatePath("/dashboard");
   return { success: true };
@@ -99,7 +105,7 @@ async function durumYaz(status: GeriBildirimDurumu, alanlar: Record<string, unkn
 export async function geriBildirimGonder(formData: FormData): Promise<ActionResult> {
   const puan = Number(formData.get("score"));
   if (!Number.isInteger(puan) || puan < 1 || puan > 5) {
-    return { error: "Önce bir puan seçin." };
+    return { error: (await ceviri())({ tr: "Önce bir puan seçin.", en: "Choose a rating first." }) };
   }
   const bolum = String(formData.get("most_used") ?? "");
   const yorum = String(formData.get("comment") ?? "").trim();
@@ -161,10 +167,11 @@ export async function tumGeriBildirimler(): Promise<ListeSonucu<GeriBildirimSati
     .select("id, full_name")
     .in("id", satirlar.map((satir) => satir.user_id));
   const adlar = new Map((profiller ?? []).map((profil) => [profil.id, profil.full_name]));
+  const t = await ceviri();
 
   return listeBasarili(satirlar.map((satir) => ({
     userId: satir.user_id,
-    ad: adlar.get(satir.user_id) || "Adı girilmemiş kullanıcı",
+    ad: adlar.get(satir.user_id) || t({ tr: "Adı girilmemiş kullanıcı", en: "User without a name" }),
     score: satir.score,
     mostUsed: satir.most_used,
     comment: satir.comment,

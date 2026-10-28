@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { kilavuzuKaydet, kilavuzuTara, type TaramaSonucu } from "@/app/actions/calisma-kilavuzu";
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
-import { DOGRULAMA_MESAJI, formuDogrula, type DogrulamaFormu } from "@/lib/kilavuz-dogrulama";
+import { dogrulamaMesaji, formuDogrula, type DogrulamaFormu } from "@/lib/kilavuz-dogrulama";
+import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 
 /*
   ÖĞRENCİNİN KENDİ KILAVUZUNU YÜKLEMESİ (26.10.2026).
@@ -33,6 +34,8 @@ import { DOGRULAMA_MESAJI, formuDogrula, type DogrulamaFormu } from "@/lib/kilav
 type Adim = "secim" | "tarama" | "dogrulama";
 
 export default function KilavuzYukle({ projectId, onKapat }: { projectId: string; onKapat?: () => void }) {
+  const t = useCeviri();
+  const dil = useDil();
   const [adim, setAdim] = useState<Adim>("secim");
   const [durum, setDurum] = useState("");
   const [adres, setAdres] = useState("");
@@ -45,7 +48,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
 
   const taramayiBitir = (cevap: TaramaSonucu) => {
     if (cevap.error || !cevap.form) {
-      showToast("error", cevap.error ?? "Kılavuz okunamadı.");
+      showToast("error", cevap.error ?? t({ tr: "Kılavuz okunamadı.", en: "The guideline could not be read." }));
       setAdim("secim");
       return;
     }
@@ -56,18 +59,18 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
 
   const dosyaSec = async (dosya: File) => {
     if (dosya.type !== "application/pdf") {
-      showToast("error", "Şimdilik yalnızca PDF okunabiliyor.");
+      showToast("error", t({ tr: "Şimdilik yalnızca PDF okunabiliyor.", en: "Only PDFs can be read for now." }));
       return;
     }
     setAdim("tarama");
     try {
-      setDurum("Dosya yükleniyor…");
+      setDurum(t({ tr: "Dosya yükleniyor…", en: "Uploading file…" }));
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        showToast("error", "Oturumunuz sona erdi. Yeniden giriş yapın.");
+        showToast("error", t({ tr: "Oturumunuz sona erdi. Yeniden giriş yapın.", en: "Your session has expired. Sign in again." }));
         setAdim("secim");
         return;
       }
@@ -78,17 +81,22 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
       });
       if (error) {
         console.error(error);
-        showToast("error", "Dosya yüklenemedi. Yeniden deneyin.");
+        showToast("error", t({ tr: "Dosya yüklenemedi. Yeniden deneyin.", en: "The file could not be uploaded. Try again." }));
         setAdim("secim");
         return;
       }
       setDepoYolu(yol);
       /* Süre dürüstçe yazılıyor: taranmış PDF'te OCR yarım dakikayı bulabiliyor. */
-      setDurum("Kılavuz okunuyor… Taranmış bir belgeyse yarım dakikayı bulabilir.");
+      setDurum(
+        t({
+          tr: "Kılavuz okunuyor… Taranmış bir belgeyse yarım dakikayı bulabilir.",
+          en: "Reading the guideline… If it is a scanned document, this can take up to half a minute.",
+        }),
+      );
       taramayiBitir(await kilavuzuTara(projectId, { depoYolu: yol }));
     } catch (err) {
       console.error(err);
-      showToast("error", "Kılavuz okunamadı. Yeniden deneyin.");
+      showToast("error", t({ tr: "Kılavuz okunamadı. Yeniden deneyin.", en: "The guideline could not be read. Try again." }));
       setAdim("secim");
     }
   };
@@ -96,12 +104,12 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
   const adresTara = async () => {
     if (!adres.trim()) return;
     setAdim("tarama");
-    setDurum("Kılavuz indiriliyor ve okunuyor…");
+    setDurum(t({ tr: "Kılavuz indiriliyor ve okunuyor…", en: "Downloading and reading the guideline…" }));
     try {
       taramayiBitir(await kilavuzuTara(projectId, { adres }));
     } catch (err) {
       console.error(err);
-      showToast("error", "Adres okunamadı. Yeniden deneyin.");
+      showToast("error", t({ tr: "Adres okunamadı. Yeniden deneyin.", en: "The address could not be read. Try again." }));
       setAdim("secim");
     }
   };
@@ -110,7 +118,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
     if (!form) return;
     const hatalar = formuDogrula(form);
     if (hatalar.length > 0) {
-      showToast("error", DOGRULAMA_MESAJI[hatalar[0]]);
+      showToast("error", dogrulamaMesaji(hatalar[0], dil));
       return;
     }
     setKaydediliyor(true);
@@ -126,7 +134,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
       showToast("error", cevap.error);
       return;
     }
-    showToast("success", "Kılavuzunuz çalışmaya uygulandı.");
+    showToast("success", t({ tr: "Kılavuzunuz çalışmaya uygulandı.", en: "Your guideline has been applied to the work." }));
     /* Pencerenin bulunduğu sayfa (Çalışmalarım kartı) yeni kuralları ve
        teslim listesini göstersin; eskiden pencere eski hâliyle kalıyordu. */
     router.refresh();
@@ -138,7 +146,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
       <div className="kilavuz-bekleme" role="status" aria-live="polite">
         <span className="kilavuz-bekleme-nokta" aria-hidden="true" />
         <strong>{durum}</strong>
-        <p className="muted text-sm">Bu sırada sayfadan ayrılmayın.</p>
+        <p className="muted text-sm">{t({ tr: "Bu sırada sayfadan ayrılmayın.", en: "Don't leave the page in the meantime." })}</p>
       </div>
     );
   }
@@ -147,25 +155,34 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
     return (
       <div className="stack">
         <p className="text-sm">
-          Kılavuzunuzdan şunları okudum. <b>Yanlış olanı düzeltin</b> — bu kurallar sonradan da
-          değiştirilebilir ve resmî bir onay yerine geçmez.
+          {t({ tr: "Kılavuzunuzdan şunları okudum.", en: "This is what I read from your guideline." })}{" "}
+          <b>{t({ tr: "Yanlış olanı düzeltin", en: "Correct anything that's wrong" })}</b>{" "}
+          {t({
+            tr: "— bu kurallar sonradan da değiştirilebilir ve resmî bir onay yerine geçmez.",
+            en: "— these rules can be changed later and do not replace an official approval.",
+          })}
         </p>
 
         {sonuc?.uyarilar?.length ? (
           <p className="tone-text text-sm" data-tone="warning">
             {sonuc.uyarilar[0]}
-            {sonuc.uyarilar.length > 1 ? ` (+${sonuc.uyarilar.length - 1} not)` : ""}
+            {sonuc.uyarilar.length > 1
+              ? t({
+                  tr: ` (+${sonuc.uyarilar.length - 1} not)`,
+                  en: ` (+${sonuc.uyarilar.length - 1} note${sonuc.uyarilar.length === 2 ? "" : "s"})`,
+                })
+              : ""}
           </p>
         ) : null}
 
         <label>
-          <span>Kaynakça sistemi</span>
+          <span>{t({ tr: "Kaynakça sistemi", en: "Citation system" })}</span>
           <select
             className="field-control"
             value={form.atifStili}
             onChange={(e) => setForm({ ...form, atifStili: e.target.value })}
           >
-            <option value="">Seçin</option>
+            <option value="">{t({ tr: "Seçin", en: "Select" })}</option>
             {STIL_SECENEKLERI.map((secenek) => (
               <option key={secenek.deger} value={secenek.deger}>
                 {secenek.etiket}
@@ -173,12 +190,12 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
             ))}
           </select>
           {!sonuc?.form?.atifStili ? (
-            <small>Kılavuzda bulamadım; hangisi isteniyorsa seçin.</small>
+            <small>{t({ tr: "Kılavuzda bulamadım; hangisi isteniyorsa seçin.", en: "I couldn't find it in the guideline; select the one required." })}</small>
           ) : null}
         </label>
 
         <div>
-          <span className="kilavuz-alan-basligi">Zorunlu bölümler</span>
+          <span className="kilavuz-alan-basligi">{t({ tr: "Zorunlu bölümler", en: "Required sections" })}</span>
           {/* Etiket listesi: on beş bölümü elle yeniden yazmak kimsenin işi değil. */}
           <div className="kilavuz-etiketler">
             {form.zorunluBolumler.map((bolum) => (
@@ -186,7 +203,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
                 {bolum}
                 <button
                   type="button"
-                  aria-label={`${bolum} bölümünü çıkar`}
+                  aria-label={t({ tr: `${bolum} bölümünü çıkar`, en: `Remove section ${bolum}` })}
                   onClick={() => setForm({ ...form, zorunluBolumler: form.zorunluBolumler.filter((b) => b !== bolum) })}
                 >
                   <X size={13} aria-hidden="true" />
@@ -194,14 +211,14 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
               </span>
             ))}
             {form.zorunluBolumler.length === 0 ? (
-              <span className="muted text-sm">Kılavuzda bulamadım; aşağıdan ekleyin.</span>
+              <span className="muted text-sm">{t({ tr: "Kılavuzda bulamadım; aşağıdan ekleyin.", en: "I couldn't find them in the guideline; add them below." })}</span>
             ) : null}
           </div>
           <div className="cluster mt-sm">
             <input
               className="field-control"
               value={yeniBolum}
-              placeholder="Bölüm ekle (örn. Bulgular)"
+              placeholder={t({ tr: "Bölüm ekle (örn. Bulgular)", en: "Add a section (e.g. Results)" })}
               onChange={(e) => setYeniBolum(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key !== "Enter") return;
@@ -217,7 +234,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
 
         <div className="kilavuz-sayfa">
           <label>
-            <span>En az sayfa</span>
+            <span>{t({ tr: "En az sayfa", en: "Minimum pages" })}</span>
             <input
               className="field-control"
               type="number"
@@ -227,7 +244,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
             />
           </label>
           <label>
-            <span>En çok sayfa</span>
+            <span>{t({ tr: "En çok sayfa", en: "Maximum pages" })}</span>
             <input
               className="field-control"
               type="number"
@@ -237,7 +254,9 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
             />
           </label>
           {/* Boş bırakmak geçerli: her kılavuz sayfa sınırı söylemiyor. */}
-          <p className="muted text-sm">Kılavuzunuz sayfa sınırı vermiyorsa ikisini de boş bırakın.</p>
+          <p className="muted text-sm">
+            {t({ tr: "Kılavuzunuz sayfa sınırı vermiyorsa ikisini de boş bırakın.", en: "If your guideline sets no page limit, leave both empty." })}
+          </p>
         </div>
 
         {/*
@@ -247,7 +266,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
           açıklamaz.
         */}
         <div className="kilavuz-bicim">
-          <span className="kilavuz-alan-basligi">Ayrıca şu biçim kuralları uygulanacak</span>
+          <span className="kilavuz-alan-basligi">{t({ tr: "Ayrıca şu biçim kuralları uygulanacak", en: "These formatting rules will also be applied" })}</span>
           {sonuc?.bicim?.length ? (
             <ul className="muted text-sm">
               {sonuc.bicim.map((satir) => (
@@ -256,17 +275,20 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
             </ul>
           ) : (
             <p className="muted text-sm">
-              Kılavuzda biçim kuralı bulamadım; editörün varsayılanları kullanılacak.
+              {t({
+                tr: "Kılavuzda biçim kuralı bulamadım; editörün varsayılanları kullanılacak.",
+                en: "I found no formatting rules in the guideline; the editor's defaults will be used.",
+              })}
             </p>
           )}
         </div>
 
         <div className="cluster">
           <button type="button" className="projects-primary-button" onClick={kaydet} disabled={kaydediliyor}>
-            {kaydediliyor ? "Uygulanıyor…" : "Kurallarımı uygula"}
+            {kaydediliyor ? t({ tr: "Uygulanıyor…", en: "Applying…" }) : t({ tr: "Kurallarımı uygula", en: "Apply my rules" })}
           </button>
           <button type="button" className="projects-filter-button" onClick={() => setAdim("secim")}>
-            Başka bir dosya seç
+            {t({ tr: "Başka bir dosya seç", en: "Choose another file" })}
           </button>
         </div>
       </div>
@@ -276,14 +298,21 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
   return (
     <div className="stack">
       <p className="text-sm">
-        Kurumunuzun kılavuzu sistemde yok. Kendi kılavuzunuzu yüklerseniz biçim kuralları editöre
-        kendiliğinden uygulanır; zorunlu bölümleri ve sayfa sınırını sizin yerinize takip ederim.
+        {t({
+          tr: "Kurumunuzun kılavuzu sistemde yok. Kendi kılavuzunuzu yüklerseniz biçim kuralları editöre kendiliğinden uygulanır; zorunlu bölümleri ve sayfa sınırını sizin yerinize takip ederim.",
+          en: "Your institution's guideline is not in the system. If you upload your own, its formatting rules are applied to the editor automatically, and I keep track of the required sections and page limit for you.",
+        })}
       </p>
 
       <label className="dropzone">
         <UploadCloud size={28} aria-hidden="true" />
-        <span className="text-base">Kılavuz PDF&apos;inizi seçin</span>
-        <small className="muted">Danışmanınızın gönderdiği ya da enstitü sitesinden indirdiğiniz dosya.</small>
+        <span className="text-base">{t({ tr: "Kılavuz PDF'inizi seçin", en: "Choose your guideline PDF" })}</span>
+        <small className="muted">
+          {t({
+            tr: "Danışmanınızın gönderdiği ya da enstitü sitesinden indirdiğiniz dosya.",
+            en: "The file your advisor sent or that you downloaded from your graduate school's website.",
+          })}
+        </small>
         <input
           type="file"
           accept="application/pdf"
@@ -295,17 +324,17 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
       </label>
 
       <details className="form-details">
-        <summary>Dosya yerine adres vereyim</summary>
+        <summary>{t({ tr: "Dosya yerine adres vereyim", en: "I'll give an address instead of a file" })}</summary>
         <div className="cluster mt-sm">
           <input
             className="field-control"
             value={adres}
-            placeholder="https://… kılavuzun bulunduğu sayfa ya da PDF"
+            placeholder={t({ tr: "https://… kılavuzun bulunduğu sayfa ya da PDF", en: "https://… the page or PDF with the guideline" })}
             onChange={(e) => setAdres(e.target.value)}
           />
           <button type="button" className="projects-filter-button" onClick={adresTara} disabled={!adres.trim()}>
             <Link2 size={15} aria-hidden="true" />
-            Adresten oku
+            {t({ tr: "Adresten oku", en: "Read from address" })}
           </button>
         </div>
       </details>

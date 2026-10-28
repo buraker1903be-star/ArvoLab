@@ -7,6 +7,7 @@ import { bicimOzeti } from "@/lib/kilavuz-dogrulama";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import KilavuzYukle from "./kilavuz-yukle";
 import OrnekAtifFormu from "./ornek-atif-formu";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 /*
   KILAVUZ TEK PENCEREDE. Çalışmalarım'daki durum kartı ve personelin
@@ -21,7 +22,7 @@ import OrnekAtifFormu from "./ornek-atif-formu";
   Biçim kuralları doğrulama ekranındakiyle AYNI cümlelerle yazılıyor
   (lib/kilavuz-dogrulama): öğrenci onayladığı satırı burada tanıyor.
 */
-export default function KilavuzPenceresi({
+export default async function KilavuzPenceresi({
   calisma,
   uygulanan,
   kilavuzOkunamadi,
@@ -37,31 +38,48 @@ export default function KilavuzPenceresi({
   /** Dar yerlerde (kartın alt satırı) düğme tek satır: ikinci satırdaki not yazılmaz. */
   kisa?: boolean;
 }) {
-  const bicimSatirlari = uygulanan ? bicimOzeti(uygulanan.settings) : [];
+  const t = await ceviri();
+  const dil = await aktifDil();
+  const bicimSatirlari = uygulanan ? bicimOzeti(uygulanan.settings, dil) : [];
   const not = uygulanan
     ? uygulanan.dogrulandi
       ? uygulanan.label
-      : "Kendi yüklediğiniz kılavuz kullanılıyor"
+      : t({ tr: "Kendi yüklediğiniz kılavuz kullanılıyor", en: "Using the guideline you uploaded" })
     : kilavuzOkunamadi
-      ? "Kılavuz aranamadı; sayfayı yenileyin"
+      ? t({ tr: "Kılavuz aranamadı; sayfayı yenileyin", en: "Couldn't look up the guideline; refresh the page" })
       : calisma.university
-        ? "Onaylı kılavuz yok — kendi kılavuzunuzu yükleyin"
-        : "Çalışma ayarlarından kurumu girin";
+        ? t({ tr: "Onaylı kılavuz yok — kendi kılavuzunuzu yükleyin", en: "No approved guideline — upload your own" })
+        : t({ tr: "Çalışma ayarlarından kurumu girin", en: "Enter the institution in the work settings" });
 
   return (
     <PanelDrawer
-      triggerLabel={kisa ? (uygulanan ? "Kılavuz" : "Kılavuzu yükle") : "Yazım kılavuzu"}
+      triggerLabel={
+        kisa
+          ? uygulanan
+            ? t({ tr: "Kılavuz", en: "Guideline" })
+            : t({ tr: "Kılavuzu yükle", en: "Upload guideline" })
+          : t({ tr: "Yazım kılavuzu", en: "Writing guideline" })
+      }
       triggerNote={kisa ? undefined : not}
       triggerIcon={<BookOpenCheck size={18} aria-hidden="true" />}
       triggerClassName={triggerClassName}
-      kicker="Tez yazım kılavuzu"
-      title={uygulanan ? uygulanan.label : "Kılavuzunuzu yükleyin"}
+      kicker={t({ tr: "Tez yazım kılavuzu", en: "Thesis writing guideline" })}
+      title={uygulanan ? uygulanan.label : t({ tr: "Kılavuzunuzu yükleyin", en: "Upload your guideline" })}
       description={
         uygulanan
           ? uygulanan.dogrulandi
-            ? "Kurumunuzun onaylı kılavuzu; kurallar editörde kendiliğinden uygulanıyor."
-            : "Kurallar yüklediğiniz dosyadan çıkarıldı ve sizin onayınızla uygulanıyor; kurumunuzun resmî onayından geçmedi."
-          : "Kurumunuzun onaylı kılavuzu katalogda yok. Elinizdeki kılavuzu yükleyin; sayfa düzeni, zorunlu bölümler ve kaynakça sistemi editöre kendiliğinden uygulansın. Bu, kurumunuzun resmî onayı yerine geçmez."
+            ? t({
+                tr: "Kurumunuzun onaylı kılavuzu; kurallar editörde kendiliğinden uygulanıyor.",
+                en: "Your institution's approved guideline; the rules are applied in the editor automatically.",
+              })
+            : t({
+                tr: "Kurallar yüklediğiniz dosyadan çıkarıldı ve sizin onayınızla uygulanıyor; kurumunuzun resmî onayından geçmedi.",
+                en: "The rules were extracted from the file you uploaded and are applied with your approval; they have not been officially approved by your institution.",
+              })
+          : t({
+              tr: "Kurumunuzun onaylı kılavuzu katalogda yok. Elinizdeki kılavuzu yükleyin; sayfa düzeni, zorunlu bölümler ve kaynakça sistemi editöre kendiliğinden uygulansın. Bu, kurumunuzun resmî onayı yerine geçmez.",
+              en: "Your institution's approved guideline is not in the catalog. Upload the guideline you have so that page layout, required sections and the citation system are applied to the editor automatically. This does not replace your institution's official approval.",
+            })
       }
       boy="tam"
       basaridaKapan={false}
@@ -74,15 +92,22 @@ export default function KilavuzPenceresi({
       */}
       <div className="pencere-iki-kart">
         <section className="pencere-kart">
-          <h3 className="pencere-kart-baslik">Uygulanan kurallar</h3>
+          <h3 className="pencere-kart-baslik">{t({ tr: "Uygulanan kurallar", en: "Applied rules" })}</h3>
           {uygulanan ? (
             <div className="kilavuz-bicim">
               <ul>
-                <li>Kaynakça sistemi: {STIL_ETIKETLERI[uygulanan.citationStyle] ?? uygulanan.citationStyle}</li>
-                {uygulanan.requiredSections.length > 0 ? <li>Zorunlu bölümler: {uygulanan.requiredSections.join(", ")}</li> : null}
+                <li>
+                  {t({ tr: "Kaynakça sistemi:", en: "Citation system:" })} {STIL_ETIKETLERI[uygulanan.citationStyle] ?? uygulanan.citationStyle}
+                </li>
+                {uygulanan.requiredSections.length > 0 ? <li>
+                    {t({ tr: "Zorunlu bölümler:", en: "Required sections:" })} {uygulanan.requiredSections.join(", ")}
+                  </li> : null}
                 {uygulanan.minPages || uygulanan.maxPages ? (
                   <li>
-                    Uzunluk: {uygulanan.minPages ?? "?"}–{uygulanan.maxPages ?? "?"} sayfa
+                    {t({
+                      tr: `Uzunluk: ${uygulanan.minPages ?? "?"}–${uygulanan.maxPages ?? "?"} sayfa`,
+                      en: `Length: ${uygulanan.minPages ?? "?"}–${uygulanan.maxPages ?? "?"} pages`,
+                    })}
                   </li>
                 ) : null}
                 {bicimSatirlari.map((satir) => (
@@ -92,12 +117,17 @@ export default function KilavuzPenceresi({
             </div>
           ) : (
             <>
-              <p className="muted text-sm">Henüz kılavuz yok. Yüklediğinizde şunlar editöre kendiliğinden uygulanır:</p>
+              <p className="muted text-sm">
+                {t({
+                  tr: "Henüz kılavuz yok. Yüklediğinizde şunlar editöre kendiliğinden uygulanır:",
+                  en: "No guideline yet. Once you upload one, these are applied to the editor automatically:",
+                })}
+              </p>
               <div className="kilavuz-bicim">
                 <ul>
-                  <li>Sayfa düzeni: kenar boşlukları, yazı tipi, satır aralığı</li>
-                  <li>Zorunlu bölümler: teslim listesinde eksik olanlar söylenir</li>
-                  <li>Kaynakça sistemi: APA, IEEE, Chicago…</li>
+                  <li>{t({ tr: "Sayfa düzeni: kenar boşlukları, yazı tipi, satır aralığı", en: "Page layout: margins, font, line spacing" })}</li>
+                  <li>{t({ tr: "Zorunlu bölümler: teslim listesinde eksik olanlar söylenir", en: "Required sections: missing ones are flagged in the submission checklist" })}</li>
+                  <li>{t({ tr: "Kaynakça sistemi: APA, IEEE, Chicago…", en: "Citation system: APA, IEEE, Chicago…" })}</li>
                 </ul>
               </div>
             </>
@@ -107,18 +137,20 @@ export default function KilavuzPenceresi({
         </section>
 
         <section className="pencere-kart">
-          <h3 className="pencere-kart-baslik">{uygulanan ? "Kılavuzu değiştir" : "Kılavuzunuzu yükleyin"}</h3>
+          <h3 className="pencere-kart-baslik">{uygulanan ? t({ tr: "Kılavuzu değiştir", en: "Change guideline" }) : t({ tr: "Kılavuzunuzu yükleyin", en: "Upload your guideline" })}</h3>
           {/* Katalog bağlantısı yok: katalog personelin sayfası (lib/os/uygulamalar.ts). */}
           {uygulanan?.dogrulandi ? (
             <p className="muted text-sm">
-              Kurumunuzun onaylı kılavuzu kullanılıyor; değiştirmeniz gerekmiyor. Kurumunuz yanlışsa çalışma
-              ayarlarından düzeltin.
+              {t({
+                tr: "Kurumunuzun onaylı kılavuzu kullanılıyor; değiştirmeniz gerekmiyor. Kurumunuz yanlışsa çalışma ayarlarından düzeltin.",
+                en: "Your institution's approved guideline is in use; you don't need to change it. If your institution is wrong, correct it in the work settings.",
+              })}
             </p>
           ) : null}
 
           {uygulanan && !uygulanan.dogrulandi ? (
             <>
-              <p className="muted text-sm">Yeni bir dosya yüklerseniz kurallar onunla değişir.</p>
+              <p className="muted text-sm">{t({ tr: "Yeni bir dosya yüklerseniz kurallar onunla değişir.", en: "If you upload a new file, the rules change with it." })}</p>
               <KilavuzYukle projectId={calisma.id} />
               {/*
                 Onay metni ÖLÇÜLEREK yazıldı: kılavuz kalkınca sayfa düzeni
@@ -128,12 +160,15 @@ export default function KilavuzPenceresi({
               <ActionForm
                 className="mt-sm"
                 action={kilavuzuKaldir}
-                confirmMessage="Kılavuz kaldırılsın mı? Belgenizin sayfa düzeni olduğu gibi kalır; yalnızca belge kontrolü ve teslim listesi kurallara göre denetlenemez olur."
-                successMessage="Kılavuz kaldırıldı."
+                confirmMessage={t({
+                  tr: "Kılavuz kaldırılsın mı? Belgenizin sayfa düzeni olduğu gibi kalır; yalnızca belge kontrolü ve teslim listesi kurallara göre denetlenemez olur.",
+                  en: "Remove the guideline? Your document's page layout stays as it is; only the document check and submission checklist can no longer be checked against the rules.",
+                })}
+                successMessage={t({ tr: "Kılavuz kaldırıldı.", en: "Guideline removed." })}
               >
                 <input type="hidden" name="projectId" value={calisma.id} />
                 <button type="submit" className="link-button">
-                  Kılavuzu kaldır
+                  {t({ tr: "Kılavuzu kaldır", en: "Remove guideline" })}
                 </button>
               </ActionForm>
             </>
@@ -141,7 +176,12 @@ export default function KilavuzPenceresi({
 
           {!uygulanan && !kilavuzOkunamadi ? <KilavuzYukle projectId={calisma.id} /> : null}
           {!uygulanan && kilavuzOkunamadi ? (
-            <p className="muted text-sm">Kılavuz aranamadı; sayfayı yenileyin. Geçici bir arızada dosya yüklemeniz gerekmez.</p>
+            <p className="muted text-sm">
+              {t({
+                tr: "Kılavuz aranamadı; sayfayı yenileyin. Geçici bir arızada dosya yüklemeniz gerekmez.",
+                en: "Couldn't look up the guideline; refresh the page. You don't need to upload a file because of a temporary failure.",
+              })}
+            </p>
           ) : null}
         </section>
       </div>

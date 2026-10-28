@@ -6,7 +6,7 @@ import { asistanGecmisim } from "@/app/actions/ai-gecmis";
 import type { GecmisKaydi } from "@/lib/ai/gecmis";
 import type { Bulgu } from "@/lib/ai/bulgu";
 import type { YetenekAdi } from "@/lib/ai/kayit-gorunum";
-import { trTarihSaat } from "@/lib/tr-time";
+import { useCeviri, useTarihler } from "@/app/_components/dil-saglayici";
 import AsistanPuan from "./asistan-puan";
 
 /*
@@ -59,9 +59,10 @@ function BulguListesi({
 }
 
 function AramaListesi({ aramalar, onCalistir }: { aramalar: string[]; onCalistir?: (arama: string) => void }) {
+  const t = useCeviri();
   return (
     <div className="asistan-bolum">
-      <h4 className="asistan-bolum-baslik">Arama dizeleri</h4>
+      <h4 className="asistan-bolum-baslik">{t({ tr: "Arama dizeleri", en: "Search strings" })}</h4>
       <ul className="asistan-aramalar">
         {aramalar.map((arama, index) => (
           <li key={index}>
@@ -70,7 +71,7 @@ function AramaListesi({ aramalar, onCalistir }: { aramalar: string[]; onCalistir
                 bırakıyordu; sayfanın kendi bulucusu varken tek tık yeter. */}
             {onCalistir && (
               <button type="button" className="asistan-arama-calistir" onClick={() => onCalistir(arama)}>
-                Bu aramayı çalıştır
+                {t({ tr: "Bu aramayı çalıştır", en: "Run this search" })}
               </button>
             )}
           </li>
@@ -105,6 +106,8 @@ export default function AsistanSonuc({
   /** Geçmiş başka yerde gösteriliyorsa (Kaynakça penceresinin sol kartı). */
   gecmisGizli?: boolean;
 }) {
+  const t = useCeviri();
+  const { tarihSaat } = useTarihler();
   const [gecmis, setGecmis] = useState<GecmisKaydi[] | null>(null);
   const [yukleniyor, basla] = useTransition();
 
@@ -132,12 +135,14 @@ export default function AsistanSonuc({
       {sonuc?.kayitliCevap && (
         <div className="asistan-uyari asistan-uyari-eylemli" data-tone="info">
           <span>
-            Bu soruyu {trTarihSaat(sonuc.kayitliCevap.tarih)} tarihinde sormuştunuz; kayıtlı cevap gösteriliyor.
-            Yeni bir denetim için yeniden sorgulayın.
+            {t({
+              tr: `Bu soruyu ${tarihSaat(sonuc.kayitliCevap.tarih)} tarihinde sormuştunuz; kayıtlı cevap gösteriliyor. Yeni bir denetim için yeniden sorgulayın.`,
+              en: `You asked this on ${tarihSaat(sonuc.kayitliCevap.tarih)}; the saved answer is shown. Ask again for a fresh check.`,
+            })}
           </span>
           {onYenidenSorgula && (
             <button type="button" className="asistan-ikincil-dugme" onClick={onYenidenSorgula} disabled={bekleniyor}>
-              <RotateCcw size={14} aria-hidden="true" /> Yeniden sorgula
+              <RotateCcw size={14} aria-hidden="true" /> {t({ tr: "Yeniden sorgula", en: "Ask again" })}
             </button>
           )}
         </div>
@@ -145,7 +150,10 @@ export default function AsistanSonuc({
 
       {sonuc?.kirpilanlar && sonuc.kirpilanlar.length > 0 && (
         <p className="asistan-uyari" data-tone="neutral">
-          Uzunluk sınırı nedeniyle asistana gönderilemeyen bölümler: {sonuc.kirpilanlar.join(", ")}.
+          {t({
+            tr: `Uzunluk sınırı nedeniyle asistana gönderilemeyen bölümler: ${sonuc.kirpilanlar.join(", ")}.`,
+            en: `Sections not sent to the assistant because of the length limit: ${sonuc.kirpilanlar.join(", ")}.`,
+          })}
         </p>
       )}
 
@@ -160,8 +168,10 @@ export default function AsistanSonuc({
 
       {temiz && (
         <p className="asistan-uyari" data-tone="success" role="status">
-          Asistan bu metinde işaretlenecek bir sorun bulmadı. Bu bir onay değil: yalnızca kendi denetim
-          listesinde bir eksik görmediği anlamına gelir.
+          {t({
+            tr: "Asistan bu metinde işaretlenecek bir sorun bulmadı. Bu bir onay değil: yalnızca kendi denetim listesinde bir eksik görmediği anlamına gelir.",
+            en: "The assistant found nothing to flag in this text. This is not an approval: it only means it saw no gaps against its own checklist.",
+          })}
         </p>
       )}
 
@@ -176,11 +186,11 @@ export default function AsistanSonuc({
         }}
       >
         <summary>
-          <History size={14} aria-hidden="true" /> Önceki sorgularım
+          <History size={14} aria-hidden="true" /> {t({ tr: "Önceki sorgularım", en: "My previous queries" })}
         </summary>
-        {yukleniyor && <p className="asistan-gecmis-bos">Yükleniyor…</p>}
+        {yukleniyor && <p className="asistan-gecmis-bos">{t({ tr: "Yükleniyor…", en: "Loading…" })}</p>}
         {gecmis && gecmis.length === 0 && (
-          <p className="asistan-gecmis-bos">Bu bölümde henüz kayıtlı sorgunuz yok.</p>
+          <p className="asistan-gecmis-bos">{t({ tr: "Bu bölümde henüz kayıtlı sorgunuz yok.", en: "You have no saved queries in this section yet." })}</p>
         )}
         {gecmis && gecmis.length > 0 && (
           <ul className="asistan-gecmis-listesi">
@@ -189,7 +199,7 @@ export default function AsistanSonuc({
                 <details>
                   <summary>
                     <b>{kayit.ozet}</b>
-                    <small>{trTarihSaat(kayit.created_at)}</small>
+                    <small>{tarihSaat(kayit.created_at)}</small>
                   </summary>
                   {kayit.aramalar && kayit.aramalar.length > 0 && <AramaListesi aramalar={kayit.aramalar} onCalistir={onAramaCalistir} />}
                   {kayit.bulgular.length > 0 && <BulguListesi bulgular={kayit.bulgular} etiketler={etiketler} />}

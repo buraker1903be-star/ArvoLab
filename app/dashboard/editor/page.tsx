@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { ceviri } from "@/lib/dil-sunucu";
+import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
+import { YEREL } from "@/lib/dil";
 import { AlertTriangle, FileText, Search, MessageSquare, Plus, ShieldCheck } from "lucide-react";
+import { simdi } from "@/lib/genel-bakis";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
 import { calismaKilavuzlari } from "@/lib/guideline-rules";
@@ -24,7 +26,10 @@ import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from 
 import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
 import CalismaDurumKarti from "./calisma-durum-karti";
 
-export const metadata = { title: "Çalışmalarım" };
+export async function generateMetadata() {
+  const t = await ceviri();
+  return { title: t({ tr: "Çalışmalarım", en: "My works" }) };
+}
 
 
 /* Kaynak PDF'lerini bulan sunucu işlemi dış arşivlerden indirme yapıyor
@@ -37,6 +42,16 @@ export default async function ProjectsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const t = await ceviri();
+  const dil = await aktifDil();
+  const saatDilimi = await aktifSaatDilimi();
+  const vade = (dueDate: string | null, status: string) => dueInfo(dueDate, status, new Date(), dil);
+  const yazimOzeti = (yazim: { words: number; updatedAt: string } | undefined) =>
+    yazim
+      ? t({
+          tr: `${yazim.words.toLocaleString(YEREL[dil])} kelime · ${editedAgo(yazim.updatedAt, simdi(), dil, saatDilimi)}`,
+          en: `${yazim.words.toLocaleString(YEREL[dil])} words · ${editedAgo(yazim.updatedAt, simdi(), dil, saatDilimi)}`,
+        })
+      : t({ tr: "henüz yazılmadı", en: "not written yet" });
   const [{ satirlar: projects, okunamadi }, profile, params] = await Promise.all([
     getProjects(),
     getCurrentProfile(),
@@ -87,7 +102,7 @@ export default async function ProjectsPage({
     canFilterAssignee: canApprove,
   };
   const visible = applyProjectFilters(calismalar, filters, filtreBaglami);
-  const sayaclar = canApprove ? personelSayaclari(calismalar, filters, filtreBaglami) : [];
+  const sayaclar = canApprove ? personelSayaclari(calismalar, filters, filtreBaglami, dil) : [];
   const { satirlar: staff, okunamadi: personelOkunamadi } = canApprove
     ? await getAssignableStaff()
     : listeBasarili<StaffMember>([]);
@@ -133,12 +148,13 @@ export default async function ProjectsPage({
               lineSpacing: guideline.settings.lineSpacing,
               margins: guideline.settings.margins,
             },
-          })
+          }, dil)
         : null;
     const ilerleme = kartIlerlemesi({
       kelime: stats.get(project.id)?.words ?? null,
       hedefKelime: pace?.targetWords ?? null,
       elleIlerleme: project.progress,
+      dil,
     });
     return { pace, ilerleme };
   }
@@ -179,12 +195,16 @@ export default async function ProjectsPage({
     return assignProject(projectId, assigneeId);
   }
 
+  const calismaSayisi =
+    visible.length === projects.length
+      ? t({ tr: `${projects.length} çalışma`, en: `${projects.length} work${projects.length === 1 ? "" : "s"}` })
+      : t({ tr: `${visible.length}/${projects.length} çalışma`, en: `${visible.length}/${projects.length} works` });
   const bitti = (status: string) => status === "delivered" || status === "archived";
   const ogrenciAktif = visible.filter((project) => !bitti(project.status));
   const ogrenciBiten = visible.filter((project) => bitti(project.status));
   const ogrenciSatiri = (project: (typeof visible)[number]) => {
     const yazim = stats.get(project.id);
-    const due = dueInfo(project.due_date, project.status);
+    const due = vade(project.due_date, project.status);
     return (
       <li key={project.id}>
         <Link
@@ -198,7 +218,7 @@ export default async function ProjectsPage({
             <small>
               {[
                 t(projectTypeLabel(project.project_type)),
-                yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime · ${editedAgo(yazim.updatedAt)}` : "henüz yazılmadı",
+                yazimOzeti(yazim),
                 due?.label,
               ]
                 .filter(Boolean)
@@ -217,11 +237,17 @@ export default async function ProjectsPage({
     <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
         <div>
-          <h1>Çalışmalarım</h1>
+          <h1>{t({ tr: "Çalışmalarım", en: "My works" })}</h1>
           <p>
             {canApprove
-              ? "Kurumunuzdaki tez, makale ve proje çalışmaları. Bir çalışma seçin; onay ve sorumlu ataması sağdaki kartta."
-              : "Tezinizi ve diğer çalışmalarınızı buradan açın; yazmaya kaldığınız yerden devam edin."}
+              ? t({
+                  tr: "Kurumunuzdaki tez, makale ve proje çalışmaları. Bir çalışma seçin; onay ve sorumlu ataması sağdaki kartta.",
+                  en: "Thesis, article and project works in your institution. Select a work; approval and assignment are on the card on the right.",
+                })
+              : t({
+                  tr: "Tezinizi ve diğer çalışmalarınızı buradan açın; yazmaya kaldığınız yerden devam edin.",
+                  en: "Open your thesis and other works here; continue writing where you left off.",
+                })}
           </p>
         </div>
         {/* Öğrenci pencerede başlatır ve kendi kılavuzunu ekler; personelin tam formu ayrı sayfada. */}
@@ -230,7 +256,7 @@ export default async function ProjectsPage({
         ) : (
           <Link href="/dashboard/editor/new" className="projects-primary-button">
             <Plus size={18} aria-hidden="true" />
-            Yeni çalışma
+            {t({ tr: "Yeni çalışma", en: "New work" })}
           </Link>
         )}
       </section>
@@ -241,10 +267,12 @@ export default async function ProjectsPage({
           geçici bir arıza kullanıcıya tezini kaybettiğini düşündürüyordu.
         */
         <section className="alert" data-tone="danger" role="alert">
-          <strong>Çalışmalarınız yüklenemedi.</strong>
+          <strong>{t({ tr: "Çalışmalarınız yüklenemedi.", en: "Your works could not be loaded." })}</strong>
           <p>
-            Bu bir bağlantı ya da yetki arızası; kayıtlarınız yerinde duruyor. Sayfayı yenileyin, sorun
-            sürerse Uygulama Destek&apos;ten bildirin.
+            {t({
+              tr: "Bu bir bağlantı ya da yetki arızası; kayıtlarınız yerinde duruyor. Sayfayı yenileyin, sorun sürerse Uygulama Destek'ten bildirin.",
+              en: "This is a connection or permission failure; your records are safe. Refresh the page, and if the problem persists, report it via App Support.",
+            })}
           </p>
         </section>
       ) : projects.length === 0 ? (
@@ -252,9 +280,12 @@ export default async function ProjectsPage({
            sayfaya başka görünüyordu (bos-durum.tsx). */
         <BosDurum
           ikon={FileText}
-          baslik="Henüz kayıtlı çalışmanız yok"
-          aciklama="Üniversitenizi seçerek başlayın; tez yazım kılavuzunuz editöre otomatik uygulanır, kaynakça sistemi ve sayfa düzeni sizin için hazırlanır."
-          eylem={{ etiket: "İlk çalışmayı oluştur", href: ogrenciDuzeni ? "/dashboard/editor?yeni=1" : "/dashboard/editor/new" }}
+          baslik={t({ tr: "Henüz kayıtlı çalışmanız yok", en: "You have no works yet" })}
+          aciklama={t({
+            tr: "Üniversitenizi seçerek başlayın; tez yazım kılavuzunuz editöre otomatik uygulanır, kaynakça sistemi ve sayfa düzeni sizin için hazırlanır.",
+            en: "Start by choosing your university; your thesis writing guideline is applied to the editor automatically, and the citation system and page layout are set up for you.",
+          })}
+          eylem={{ etiket: t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" }), href: ogrenciDuzeni ? "/dashboard/editor?yeni=1" : "/dashboard/editor/new" }}
         />
       ) : (
         <>
@@ -263,7 +294,7 @@ export default async function ProjectsPage({
           (lib/personel-sayaclari.ts). Seçili olana yeniden basmak kaldırır.
         */}
         {sayaclar.length ? (
-          <nav className="personel-sayaclar" aria-label="Çalışma durumları">
+          <nav className="personel-sayaclar" aria-label={t({ tr: "Çalışma durumları", en: "Work statuses" })}>
             {sayaclar.map((sayac) => (
               <Link
                 key={sayac.anahtar}
@@ -293,16 +324,19 @@ export default async function ProjectsPage({
           <BosDurum
             kompakt
             ikon={Search}
-            aciklama="Filtreye uyan çalışma yok. Ölçütleri gevşetin ya da filtreyi temizleyin."
-            eylem={{ etiket: "Filtreyi temizle", href: "/dashboard/editor" }}
+            aciklama={t({
+              tr: "Filtreye uyan çalışma yok. Ölçütleri gevşetin ya da filtreyi temizleyin.",
+              en: "No works match the filter. Loosen the criteria or clear the filter.",
+            })}
+            eylem={{ etiket: t({ tr: "Filtreyi temizle", en: "Clear filter" }), href: "/dashboard/editor" }}
           />
         ) : ogrenciDuzeni ? (
-          <section className="gb-sutunlar calismalar-ikili" aria-label="Çalışmalarım">
+          <section className="gb-sutunlar calismalar-ikili" aria-label={t({ tr: "Çalışmalarım", en: "My works" })}>
             <article className="gb-kart gb-sutun">
               <header className="gb-kart-bas">
                 <div>
-                  <h2>Tüm çalışmalar</h2>
-                  <p>{visible.length === projects.length ? `${projects.length} çalışma` : `${visible.length}/${projects.length} çalışma`}</p>
+                  <h2>{t({ tr: "Tüm çalışmalar", en: "All works" })}</h2>
+                  <p>{calismaSayisi}</p>
                 </div>
               </header>
               {/*
@@ -315,7 +349,9 @@ export default async function ProjectsPage({
               <ul className="gb-liste calisma-secim">{ogrenciAktif.map(ogrenciSatiri)}</ul>
               {ogrenciBiten.length ? (
                 <details className="calisma-tamamlanan" open={ogrenciBiten.some((p) => p.id === seciliId) || !ogrenciAktif.length}>
-                  <summary>Tamamlananlar ve arşiv · {ogrenciBiten.length}</summary>
+                  <summary>
+                    {t({ tr: "Tamamlananlar ve arşiv", en: "Completed and archived" })} · {ogrenciBiten.length}
+                  </summary>
                   <ul className="gb-liste calisma-secim">{ogrenciBiten.map(ogrenciSatiri)}</ul>
                 </details>
               ) : null}
@@ -326,7 +362,7 @@ export default async function ProjectsPage({
                 projectId={secili.id}
                 kelime={stats.get(secili.id)?.words ?? null}
                 ilerleme={yazimDurumu(secili).ilerleme}
-                due={dueInfo(secili.due_date, secili.status)}
+                due={vade(secili.due_date, secili.status)}
                 duzenleyebilir={profile?.id === secili.owner_id || profile?.id === secili.assignee_id}
                 silebilir={profile?.id === secili.owner_id || canDeleteAnyProject}
                 kilavuzAc={params.kilavuz === "1" && params.sec === secili.id}
@@ -342,18 +378,18 @@ export default async function ProjectsPage({
             Solda öğrenci adıyla liste ve küçük işaretler (yorum, tutarsızlık,
             onay), sağda seçili çalışmanın ayrıntısı ve denetim eylemleri.
           */
-          <section className="gb-sutunlar calismalar-ikili" aria-label="Çalışmalar">
+          <section className="gb-sutunlar calismalar-ikili" aria-label={t({ tr: "Çalışmalar", en: "Works" })}>
             <article className="gb-kart gb-sutun">
               <header className="gb-kart-bas">
                 <div>
-                  <h2>Çalışmalar</h2>
-                  <p>{visible.length === projects.length ? `${projects.length} çalışma` : `${visible.length}/${projects.length} çalışma`}</p>
+                  <h2>{t({ tr: "Çalışmalar", en: "Works" })}</h2>
+                  <p>{calismaSayisi}</p>
                 </div>
               </header>
               <ul className="gb-liste calisma-secim">
                 {visible.map((project) => {
                   const yazim = stats.get(project.id);
-                  const due = dueInfo(project.due_date, project.status);
+                  const due = vade(project.due_date, project.status);
                   const yorum = openComments.get(project.id) ?? 0;
                   const tutarsiz = tutarsizliklar.get(project.id)?.length ?? 0;
                   return (
@@ -370,7 +406,7 @@ export default async function ProjectsPage({
                             {[
                               project.sahip_adi,
                               t(projectTypeLabel(project.project_type)),
-                              yazim ? `${yazim.words.toLocaleString("tr-TR")} kelime · ${editedAgo(yazim.updatedAt)}` : "henüz yazılmadı",
+                              yazimOzeti(yazim),
                               due?.label,
                             ]
                               .filter(Boolean)
@@ -379,20 +415,20 @@ export default async function ProjectsPage({
                         </span>
                         <span className="personel-isaretler">
                           {yorum ? (
-                            <span className="personel-isaret" data-tone="warning" title={`${yorum} açık yorum`}>
+                            <span className="personel-isaret" data-tone="warning" title={t({ tr: `${yorum} açık yorum`, en: `${yorum} open comment${yorum === 1 ? "" : "s"}` })}>
                               <MessageSquare size={13} aria-hidden="true" />
                               {yorum}
                             </span>
                           ) : null}
                           {tutarsiz ? (
-                            <span className="personel-isaret" data-tone="warning" title={`${tutarsiz} tutarsızlık`}>
+                            <span className="personel-isaret" data-tone="warning" title={t({ tr: `${tutarsiz} tutarsızlık`, en: `${tutarsiz} inconsistenc${tutarsiz === 1 ? "y" : "ies"}` })}>
                               <AlertTriangle size={13} aria-hidden="true" />
                               {tutarsiz}
                             </span>
                           ) : null}
                           {project.controller_approved_at ? (
-                            <span className="personel-isaret" data-tone="success" title="Kontrolör onayı verildi">
-                              <ShieldCheck size={13} aria-label="Onaylı" />
+                            <span className="personel-isaret" data-tone="success" title={t({ tr: "Kontrolör onayı verildi", en: "Controller approval given" })}>
+                              <ShieldCheck size={13} aria-label={t({ tr: "Onaylı", en: "Approved" })} />
                             </span>
                           ) : null}
                           <span className="status-pill" data-tone={statusTone(project.status)}>
@@ -413,7 +449,7 @@ export default async function ProjectsPage({
                 yazim={stats.get(secili.id)}
                 ilerleme={yazimDurumu(secili).ilerleme}
                 tempo={yazimDurumu(secili).pace}
-                due={dueInfo(secili.due_date, secili.status)}
+                due={vade(secili.due_date, secili.status)}
                 acikYorum={openComments.get(secili.id) ?? 0}
                 tutarsizliklar={tutarsizliklar.get(secili.id) ?? []}
                 personel={staff}

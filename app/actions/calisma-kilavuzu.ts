@@ -4,11 +4,12 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { ornekKalibi } from "@/lib/atif/tyk";
-import { scanGuidelineBytes, scanGuidelineUrl, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { scanGuidelineBytes, scanGuidelineUrl, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
 import {
   bicimOzeti,
-  DOGRULAMA_MESAJI,
+  dogrulamaMesaji,
   formaDoldur,
   formuDogrula,
   kurallariKur,
@@ -34,6 +35,7 @@ import {
 async function calismayaYazabilir(projectId: string) {
   const ctx = await getAuthContext();
   if (!ctx) return { hata: (await oturumYokMesaji()) } as const;
+  const t = await ceviri();
   const { data, error } = await ctx.supabase
     .from("academic_projects")
     .select("id, owner_id, assignee_id, guideline_id")
@@ -41,11 +43,11 @@ async function calismayaYazabilir(projectId: string) {
     .maybeSingle();
   if (error) {
     console.error("[calisma-kilavuzu] çalışma okunamadı:", error.message);
-    return { hata: "Çalışma okunamadı; tekrar deneyin." } as const;
+    return { hata: t({ tr: "Çalışma okunamadı; tekrar deneyin.", en: "The work could not be read; try again." }) } as const;
   }
-  if (!data) return { hata: "Çalışma bulunamadı." } as const;
+  if (!data) return { hata: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) } as const;
   if (data.owner_id !== ctx.user.id && data.assignee_id !== ctx.user.id) {
-    return { hata: "Bu çalışmaya kılavuz yükleyemezsiniz." } as const;
+    return { hata: t({ tr: "Bu çalışmaya kılavuz yükleyemezsiniz.", en: "You can't upload a guideline to this work." }) } as const;
   }
   return { ctx, calisma: data } as const;
 }
@@ -85,6 +87,8 @@ export async function kilavuzuTara(
   /* Ağır çözümleme (PDF, OCR, dış adresten indirme): abonelik kapısı.
      Eskiden yoktu; işlem doğrudan çağrılıp OCR tetiklenebiliyordu. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
+  const t = await ceviri();
+  const dil = await aktifDil();
   /*
     Yol tarayıcıdan geliyor: yalnızca kullanıcının kendi klasörü. Depo
     politikası gözetim rollerine bütün kovayı açtığı için, bu denetim
@@ -92,7 +96,7 @@ export async function kilavuzuTara(
     (document-upload.ts'teki denetimin eşi).
   */
   if (girdi.depoYolu && (!girdi.depoYolu.startsWith(`${ctx.user.id}/`) || girdi.depoYolu.includes(".."))) {
-    return { error: "Geçersiz dosya yolu." };
+    return { error: t({ tr: "Geçersiz dosya yolu.", en: "Invalid file path." }) };
   }
 
   try {
@@ -101,13 +105,13 @@ export async function kilavuzuTara(
       const { data: dosya, error } = await ctx.supabase.storage.from("project-files").download(girdi.depoYolu);
       if (error || !dosya) {
         console.error("[calisma-kilavuzu] dosya depodan okunamadı:", error?.message);
-        return { error: "Yüklenen dosya okunamadı. Tekrar yükleyin." };
+        return { error: t({ tr: "Yüklenen dosya okunamadı. Tekrar yükleyin.", en: "The uploaded file could not be read. Upload it again." }) };
       }
       sonuc = await scanGuidelineBytes(dosya, dosya.type || "application/pdf", girdi.depoYolu);
     } else if (girdi.adres?.trim()) {
       sonuc = await scanGuidelineUrl(girdi.adres.trim());
     } else {
-      return { error: "Kılavuz dosyası yükleyin ya da adresini girin." };
+      return { error: t({ tr: "Kılavuz dosyası yükleyin ya da adresini girin.", en: "Upload a guideline file or enter its address." }) };
     }
 
     return {
@@ -119,12 +123,13 @@ export async function kilavuzuTara(
       }),
       belgeBasligi: sonuc.versionLabel,
       ham: sonuc,
-      uyarilar: sonuc.warnings,
-      bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules)),
+      /* Çıkarımın uyarıları Türkçe üretiliyor (lib/guideline-scan.ts); ekranda kullanıcının dilinde. */
+      uyarilar: sonuc.warnings.map((uyari) => taramaUyarisiCevir(uyari, dil)),
+      bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules), dil),
     };
   } catch (err) {
     console.error("[calisma-kilavuzu] tarama başarısız:", err);
-    const mesaj = err instanceof Error ? err.message : "Kılavuz okunamadı.";
+    const mesaj = err instanceof Error ? taramaUyarisiCevir(err.message, dil) : t({ tr: "Kılavuz okunamadı.", en: "The guideline could not be read." });
     return { error: mesaj };
   }
 }
@@ -150,6 +155,8 @@ export async function kilavuzuKaydet(
   const { ctx, calisma } = izin;
   // Yeni kural yazıyor: abonelik kapısı (lib/access.ts).
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
+  const t = await ceviri();
+  const dil = await aktifDil();
 
   /*
     Katalogda onaylı kılavuz varsa öğrencinin yüklediği uygulanmaz
@@ -158,11 +165,16 @@ export async function kilavuzuKaydet(
     yaptığı işin bir karşılığı varmış gibi göstermek olurdu.
   */
   if (calisma.guideline_id) {
-    return { error: "Bu çalışmaya kurumunuzun onaylı kılavuzu bağlı; kendi kılavuzunuz uygulanmaz." };
+    return {
+      error: t({
+        tr: "Bu çalışmaya kurumunuzun onaylı kılavuzu bağlı; kendi kılavuzunuz uygulanmaz.",
+        en: "Your institution's approved guideline is linked to this work; your own guideline is not applied.",
+      }),
+    };
   }
 
   const hatalar = formuDogrula(girdi.form);
-  if (hatalar.length > 0) return { error: DOGRULAMA_MESAJI[hatalar[0]] };
+  if (hatalar.length > 0) return { error: dogrulamaMesaji(hatalar[0], dil) };
 
   const kurallar = kurallariKur(girdi.form, {
     belgeBasligi: girdi.belgeBasligi,
@@ -184,7 +196,7 @@ export async function kilavuzuKaydet(
   );
   if (error) {
     console.error("[calisma-kilavuzu] kaydedilemedi:", error.message);
-    return { error: "Kılavuz kaydedilemedi. Tekrar deneyin." };
+    return { error: t({ tr: "Kılavuz kaydedilemedi. Tekrar deneyin.", en: "The guideline could not be saved. Try again." }) };
   }
 
   /*
@@ -206,7 +218,12 @@ export async function kilavuzuKaydet(
     .eq("id", projectId);
   if (stilHatasi) {
     console.error("[calisma-kilavuzu] çalışmanın atıf stili güncellenemedi:", stilHatasi.message);
-    return { error: "Kurallar kaydedildi ama çalışmanın atıf stili güncellenemedi; sayfayı yenileyip tekrar deneyin." };
+    return {
+      error: t({
+        tr: "Kurallar kaydedildi ama çalışmanın atıf stili güncellenemedi; sayfayı yenileyip tekrar deneyin.",
+        en: "The rules were saved, but the work's citation style could not be updated; refresh the page and try again.",
+      }),
+    };
   }
 
   revalidatePath(`/dashboard/editor/${projectId}`);
@@ -225,8 +242,9 @@ export async function kilavuzuKaydet(
   geri alma yolu yoktu.
 */
 export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> {
+  const t = await ceviri();
   const projectId = String(formData.get("projectId") ?? "");
-  if (!projectId) return { error: "Çalışma bulunamadı." };
+  if (!projectId) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
 
   const izin = await calismayaYazabilir(projectId);
   if ("hata" in izin) return { error: izin.hata };
@@ -240,7 +258,7 @@ export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> 
   const { error } = await izin.ctx.supabase.from("calisma_kilavuzu").delete().eq("project_id", projectId);
   if (error) {
     console.error("[calisma-kilavuzu] silinemedi:", error.message);
-    return { error: "Kılavuz kaldırılamadı. Tekrar deneyin." };
+    return { error: t({ tr: "Kılavuz kaldırılamadı. Tekrar deneyin.", en: "The guideline could not be removed. Try again." }) };
   }
   revalidatePath(`/dashboard/editor/${projectId}`);
   revalidatePath("/dashboard/editor");
@@ -256,9 +274,15 @@ export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> 
 export async function ornekAtifKaydet(projectId: string, ornek: string): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
   const temiz = ornek.replace(/\s+/g, " ").trim().slice(0, 300);
   if (temiz && !ornekKalibi(temiz)) {
-    return { error: "Örnekte parantez içinde yazar ve yıl olan bir atıf bulunamadı. Örn. (Yılmaz, 2020: 14)" };
+    return {
+      error: t({
+        tr: "Örnekte parantez içinde yazar ve yıl olan bir atıf bulunamadı. Örn. (Yılmaz, 2020: 14)",
+        en: "No citation with an author and year in parentheses was found in the example. E.g. (Smith, 2020: 14)",
+      }),
+    };
   }
   const { data, error } = await ctx.supabase
     .from("academic_projects")
@@ -267,10 +291,10 @@ export async function ornekAtifKaydet(projectId: string, ornek: string): Promise
     .select("id");
   if (error) {
     console.error("[örnek atıf] kaydedilemedi:", error.message);
-    return { error: "Kaydedilemedi; tekrar deneyin." };
+    return { error: t({ tr: "Kaydedilemedi; tekrar deneyin.", en: "Could not save; try again." }) };
   }
   // RLS yetkisiz güncellemeyi sessizce sıfır satıra çeviriyor; başarı sanılmasın.
-  if (!data?.length) return { error: "Bu çalışmayı güncelleme yetkiniz yok." };
+  if (!data?.length) return { error: t({ tr: "Bu çalışmayı güncelleme yetkiniz yok.", en: "You don't have permission to update this work." }) };
   revalidatePath("/dashboard/editor");
   revalidatePath(`/dashboard/editor/${projectId}`);
   revalidatePath(`/dashboard/editor/${projectId}/write`);

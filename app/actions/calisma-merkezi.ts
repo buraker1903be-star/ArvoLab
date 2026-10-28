@@ -7,6 +7,7 @@ import { calismaKilavuzu } from "@/app/actions/guidelines";
 import { metinListeTutarsizliklari, type KaynakSatiri, type Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
+import { aktifDil } from "@/lib/dil-sunucu";
 
 /*
   Çalışma merkezinin verisi: bir çalışmaya bağlı bütün birimler tek yerde.
@@ -129,6 +130,7 @@ export async function calismaOzeti(
     devam ediyordu, editör ise kuralları uyguluyordu.
   */
   const { kilavuz: uygulanan, okunamadi: uygulananOkunamadi } = await calismaKilavuzuOku(supabase, calisma.id, calisma.guideline_id);
+  const dil = await aktifDil();
   const hazirlik =
     musvedde.data
       ? manuscriptReadiness({
@@ -136,7 +138,7 @@ export async function calismaOzeti(
           guideline: uygulanan,
           projectType: calisma.project_type,
           citationStyle: calisma.citation_style ?? "apa7",
-        })
+        }, dil)
       : null;
 
   return {
@@ -165,6 +167,7 @@ export async function calismaOzeti(
       musvedde.data?.plain_text ?? null,
       kaynakListesi.data ?? [],
       calisma.citation_style,
+      dil,
     ),
     /*
       Atıf stili uyarısı UYGULANAN kılavuza göre (katalogdaki onaylı ya da
@@ -232,6 +235,7 @@ export async function topluTutarsizliklar(projectIds: string[]): Promise<Map<str
   for (const okuma of [musveddeler, kaynaklar, calismalar])
     if (okuma.error) console.error("[merkez] toplu tutarsızlık okunamadı:", okuma.error.message);
 
+  const dil = await aktifDil();
   const stilHaritasi = new Map((calismalar.data ?? []).map((satir) => [satir.id, satir.citation_style]));
 
   const kaynakHaritasi = new Map<string, KaynakSatiri[]>();
@@ -246,6 +250,7 @@ export async function topluTutarsizliklar(projectIds: string[]): Promise<Map<str
       musvedde.plain_text ?? null,
       kaynakHaritasi.get(musvedde.project_id) ?? [],
       stilHaritasi.get(musvedde.project_id),
+      dil,
     );
     if (tutarsizliklar.length) sonuc.set(musvedde.project_id, tutarsizliklar);
   }

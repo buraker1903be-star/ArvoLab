@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ceviri } from "@/lib/dil-sunucu";
+import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
+import { YEREL, type Metin } from "@/lib/dil";
 import { Check, FileText, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { acikYapilacaklar, yapilacakTamamla } from "@/app/actions/yapilacaklar";
@@ -18,7 +19,6 @@ import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
 import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
 import { statusTone } from "@/lib/status-tone";
 import type { DueInfo } from "@/lib/due-date";
-import { trTarih } from "@/lib/tr-time";
 import { ListeSatiri } from "../_components/genel-bakis";
 import DeleteProjectButton from "./delete-project-button";
 import TeslimPaketi from "../_components/teslim-paketi";
@@ -45,13 +45,13 @@ import { trGunAnahtari } from "@/lib/tr-time";
   her satır için çağırmak listeyi yavaşlatırdı.
 */
 
-const TUR: Record<EksikTuru, { etiket: string; ton: string }> = {
-  stil: { etiket: "Stil", ton: "danger" },
-  eksik: { etiket: "Eksik", ton: "danger" },
-  tutarsizlik: { etiket: "Tutarsızlık", ton: "warning" },
-  bakilacak: { etiket: "Bakılacak", ton: "warning" },
-  asistan: { etiket: "Asistan", ton: "info" },
-  yapilmadi: { etiket: "Yapılmadı", ton: "neutral" },
+const TUR: Record<EksikTuru, { etiket: Metin; ton: string }> = {
+  stil: { etiket: { tr: "Stil", en: "Style" }, ton: "danger" },
+  eksik: { etiket: { tr: "Eksik", en: "Missing" }, ton: "danger" },
+  tutarsizlik: { etiket: { tr: "Tutarsızlık", en: "Inconsistency" }, ton: "warning" },
+  bakilacak: { etiket: { tr: "Bakılacak", en: "To review" }, ton: "warning" },
+  asistan: { etiket: { tr: "Asistan", en: "Assistant" }, ton: "info" },
+  yapilmadi: { etiket: { tr: "Yapılmadı", en: "Not done" }, ton: "neutral" },
 };
 
 export default async function CalismaDurumKarti({
@@ -76,6 +76,8 @@ export default async function CalismaDurumKarti({
   takvimAc?: boolean;
 }) {
   const t = await ceviri();
+  const dil = await aktifDil();
+  const { tarih } = await tarihler();
   const [ozet, yapilacaklar, analizler, takvim] = await Promise.all([
     calismaOzeti(projectId),
     acikYapilacaklar(projectId),
@@ -94,11 +96,13 @@ export default async function CalismaDurumKarti({
     return (
       <article className="gb-kart gb-sutun calisma-durum">
         <p className="gb-bos">
-          Bu çalışmanın durumu şu an okunamadı; kaydınız yerinde duruyor. Sayfayı yenileyin ya da doğrudan
-          yazmaya dönün.
+          {t({
+            tr: "Bu çalışmanın durumu şu an okunamadı; kaydınız yerinde duruyor. Sayfayı yenileyin ya da doğrudan yazmaya dönün.",
+            en: "This work's status could not be loaded right now; your record is safe. Refresh the page or go straight back to writing.",
+          })}
         </p>
         <Link href={`${merkez}/write`} className="projects-primary-button button-compact">
-          <PenLine size={15} aria-hidden="true" /> Yazmaya devam et
+          <PenLine size={15} aria-hidden="true" /> {t({ tr: "Yazmaya devam et", en: "Continue writing" })}
         </Link>
       </article>
     );
@@ -106,11 +110,11 @@ export default async function CalismaDurumKarti({
 
   const { calisma, hazirlik, tutarsizliklar, kilavuz, uygulanan, kilavuzOkunamadi } = ozet;
   const makale = calisma.project_type === "article";
-  const adimlar = siradakiAdimlar(ozet);
+  const adimlar = siradakiAdimlar(ozet, dil);
   const maddeler = (hazirlik?.items ?? [])
     .filter((madde) => madde.status !== "ok")
     .sort((a, b) => (a.status === "todo" ? 0 : 1) - (b.status === "todo" ? 0 : 1));
-  const sirada = siradakiIs({ calismaId: calisma.id, adimlar, eksikler: maddeler, kalanGun: due?.days ?? null });
+  const sirada = siradakiIs({ calismaId: calisma.id, adimlar, eksikler: maddeler, kalanGun: due?.days ?? null, dil });
   const stil = (anahtar: string | null | undefined) => STIL_ETIKETLERI[anahtar ?? ""] ?? anahtar ?? "";
   /*
     Stil çelişkisi listede değil, düğmesiyle birlikte üstte: düzeltmesi
@@ -118,7 +122,10 @@ export default async function CalismaDurumKarti({
     Düğme serbest seçim sunmuyor, yalnızca kılavuzun istediğine çeviriyor.
   */
   const stilUyarisi = atifStiliCelisiyorMu(ozet)
-    ? `Çalışmanız ${stil(calisma.citation_style)} olarak ayarlı, ${kilavuz?.kurum ?? "kurumunuzun"} kılavuzu ${stil(kilavuz?.atifStili)} istiyor.`
+    ? t({
+        tr: `Çalışmanız ${stil(calisma.citation_style)} olarak ayarlı, ${kilavuz?.kurum ?? "kurumunuzun"} kılavuzu ${stil(kilavuz?.atifStili)} istiyor.`,
+        en: `Your work is set to ${stil(calisma.citation_style)}, but ${kilavuz?.kurum ? `the ${kilavuz.kurum}` : "your institution's"} guideline requires ${stil(kilavuz?.atifStili)}.`,
+      })
     : null;
   const eksikler = eksikSatirlari({
     calismaId: calisma.id,
@@ -134,10 +141,11 @@ export default async function CalismaDurumKarti({
     */
     adimlar,
     sirada,
+    dil,
   });
 
   return (
-    <article className="gb-kart gb-sutun calisma-durum" aria-label={`${calisma.title}: durum`}>
+    <article className="gb-kart gb-sutun calisma-durum" aria-label={t({ tr: `${calisma.title}: durum`, en: `${calisma.title}: status` })}>
       <header className="calisma-durum-bas">
         <div>
           <span className="calisma-durum-ust">
@@ -153,29 +161,31 @@ export default async function CalismaDurumKarti({
           {kelime ? <TeslimPaketi projectId={calisma.id} /> : null}
           <Link href={`${merkez}/write`} className="projects-primary-button button-compact">
             <PenLine size={15} aria-hidden="true" />
-            {kelime ? "Yazmaya devam et" : "Yazmaya başla"}
+            {kelime ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
           </Link>
         </div>
       </header>
 
       <dl className="tez-olcumler calisma-olcumler">
         <div className="tez-olcu">
-          <dt>Yazılan</dt>
+          <dt>{t({ tr: "Yazılan", en: "Written" })}</dt>
           <dd>
-            {(kelime ?? 0).toLocaleString("tr-TR")}
-            <small>kelime</small>
+            {(kelime ?? 0).toLocaleString(YEREL[dil])}
+            <small>{t({ tr: "kelime", en: "words" })}</small>
           </dd>
-          <span title={ilerleme?.ipucu}>{ilerleme ? `%${ilerleme.yuzde} ${ilerleme.etiket}` : "Hedef yok — kılavuz bağlanınca hesaplanır"}</span>
+          <span title={ilerleme?.ipucu}>{ilerleme
+              ? t({ tr: `%${ilerleme.yuzde} ${ilerleme.etiket}`, en: `${ilerleme.yuzde}% ${ilerleme.etiket}` })
+              : t({ tr: "Hedef yok — kılavuz bağlanınca hesaplanır", en: "No target — calculated once a guideline is linked" })}</span>
         </div>
         <div className="tez-olcu" data-tone={due?.tone}>
-          <dt>Teslim</dt>
+          <dt>{t({ tr: "Teslim", en: "Due" })}</dt>
           {due ? (
             <>
               <dd>
                 {Math.abs(due.days)}
-                <small>{due.days < 0 ? "gün gecikti" : "gün"}</small>
+                <small>{due.days < 0 ? t({ tr: "gün gecikti", en: "days overdue" }) : t({ tr: "gün", en: "days" })}</small>
               </dd>
-              <span>{calisma.due_date ? trTarih(calisma.due_date) : due.label}</span>
+              <span>{calisma.due_date ? tarih(calisma.due_date) : due.label}</span>
             </>
           ) : (
             <>
@@ -184,17 +194,23 @@ export default async function CalismaDurumKarti({
                 /* Tarih yoksa kart ne kadar vakit kaldığını söyleyemiyor; burada seçilip kaydediliyor (28.10.2026). */
                 <TeslimTarihiFormu projectId={calisma.id} bugun={bugun} />
               ) : (
-                <span>{calisma.due_date ? trTarih(calisma.due_date) : "Tarih belirtilmedi"}</span>
+                <span>{calisma.due_date ? tarih(calisma.due_date) : t({ tr: "Tarih belirtilmedi", en: "No date set" })}</span>
               )}
             </>
           )}
         </div>
         <div className="tez-olcu" data-tone={hazirlik && hazirlik.done === hazirlik.total ? "success" : undefined}>
-          <dt>Teslim hazırlığı</dt>
+          <dt>{t({ tr: "Teslim hazırlığı", en: "Submission readiness" })}</dt>
           <dd>
             {hazirlik ? `${hazirlik.done}/${hazirlik.total}` : "—"}
           </dd>
-          <span>{hazirlik ? (hazirlik.done === hazirlik.total ? "Otomatik denetimler temiz" : "madde hazır") : "Müsvedde henüz boş"}</span>
+          <span>
+            {hazirlik
+              ? hazirlik.done === hazirlik.total
+                ? t({ tr: "Otomatik denetimler temiz", en: "Automatic checks are clean" })
+                : t({ tr: "madde hazır", en: "items ready" })
+              : t({ tr: "Müsvedde henüz boş", en: "Manuscript is still empty" })}
+          </span>
         </div>
       </dl>
 
@@ -203,16 +219,16 @@ export default async function CalismaDurumKarti({
           <span>
             <TriangleAlert size={16} aria-hidden="true" /> {stilUyarisi}
           </span>
-          <ActionForm action={atifStiliniKilavuzaUydur.bind(null, calisma.id)} successMessage="Atıf stili kılavuza göre güncellendi.">
+          <ActionForm action={atifStiliniKilavuzaUydur.bind(null, calisma.id)} successMessage={t({ tr: "Atıf stili kılavuza göre güncellendi.", en: "Citation style updated to match the guideline." })}>
             <button type="submit" className="projects-filter-button button-compact">
-              Kılavuza göre düzelt
+              {t({ tr: "Kılavuza göre düzelt", en: "Fix per guideline" })}
             </button>
           </ActionForm>
         </div>
       ) : null}
 
       <div className="tez-simdi" data-aciliyet={sirada.aciliyet} data-bitti={sirada.bitti ? "true" : undefined}>
-        <span className="sirada-etiket">{sirada.bitti ? "Durum" : "Şimdi"}</span>
+        <span className="sirada-etiket">{sirada.bitti ? t({ tr: "Durum", en: "Status" }) : t({ tr: "Şimdi", en: "Now" })}</span>
         <div className="sirada-govde">
           <b>{sirada.baslik}</b>
           <span>{sirada.aciklama}</span>
@@ -228,18 +244,21 @@ export default async function CalismaDurumKarti({
       {/* Takvimin sıradaki taşı (28.10.2026): plan varsa "şimdi"nin hemen altında. */}
       {siradakiKilometre ? (
         <p className="takvim-sirada" data-durum={siradakiKilometre.durum}>
-          <span>Sıradaki kilometre taşı</span>
+          <span>{t({ tr: "Sıradaki kilometre taşı", en: "Next milestone" })}</span>
           <b>{siradakiKilometre.tas.baslik}</b>
           <small>
-            {trTarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun)}
+            {tarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun, dil)}
           </small>
         </p>
       ) : null}
 
       <h3 className="calisma-durum-alt">
         {eksikler.length + yapilacaklar.length + siradakiAnalizler.length
-          ? `Başka neler var · ${eksikler.length + yapilacaklar.length + siradakiAnalizler.length}`
-          : "Başka eksik görünmüyor"}
+          ? t({
+              tr: `Başka neler var · ${eksikler.length + yapilacaklar.length + siradakiAnalizler.length}`,
+              en: `What else is there · ${eksikler.length + yapilacaklar.length + siradakiAnalizler.length}`,
+            })
+          : t({ tr: "Başka eksik görünmüyor", en: "Nothing else appears to be missing" })}
       </h3>
       {eksikler.length + yapilacaklar.length + siradakiAnalizler.length ? (
         <ul className="gb-liste">
@@ -255,11 +274,11 @@ export default async function CalismaDurumKarti({
                 {madde.aciklama ? <small className="gb-onizleme">{madde.aciklama}</small> : null}
               </span>
               <span className="status-pill" data-tone="info">
-                Yapılacak
+                {t({ tr: "Yapılacak", en: "To-do" })}
               </span>
-              <ActionForm action={yapilacakTamamla.bind(null, madde.id)} successMessage="Tamamlandı olarak işaretlendi.">
-                <button type="submit" className="projects-filter-button button-compact" aria-label={`${madde.baslik}: yaptım`}>
-                  <Check size={14} aria-hidden="true" /> Yaptım
+              <ActionForm action={yapilacakTamamla.bind(null, madde.id)} successMessage={t({ tr: "Tamamlandı olarak işaretlendi.", en: "Marked as done." })}>
+                <button type="submit" className="projects-filter-button button-compact" aria-label={t({ tr: `${madde.baslik}: yaptım`, en: `${madde.baslik}: done` })}>
+                  <Check size={14} aria-hidden="true" /> {t({ tr: "Yaptım", en: "Done" })}
                 </button>
               </ActionForm>
             </li>
@@ -269,11 +288,14 @@ export default async function CalismaDurumKarti({
               key={analiz.id}
               href={`${merkez}/write`}
               baslik={analiz.baslik}
-              alt="Editörde araç çubuğundaki “Analiz sonucu ekle” ile imlecin olduğu yere ekleyin."
+              alt={t({
+                tr: "Editörde araç çubuğundaki “Analiz sonucu ekle” ile imlecin olduğu yere ekleyin.",
+                en: "In the editor, use “Insert analysis result” on the toolbar to add it at the cursor.",
+              })}
               onizleme
               sag={
                 <span className="status-pill" data-tone="info">
-                  Teze eklenecek
+                  {t({ tr: "Teze eklenecek", en: "To add to thesis" })}
                 </span>
               }
             />
@@ -287,7 +309,7 @@ export default async function CalismaDurumKarti({
               onizleme
               sag={
                 <span className="status-pill" data-tone={TUR[satir.tur].ton}>
-                  {TUR[satir.tur].etiket}
+                  {t(TUR[satir.tur].etiket)}
                 </span>
               }
             />
@@ -295,8 +317,10 @@ export default async function CalismaDurumKarti({
         </ul>
       ) : (
         <p className="gb-bos">
-          Kaydedilmiş metinde, kaynaklarda ve teslim listesinde açık bir madde yok. Otomatik denetim danışmanınızın
-          kontrolünün yerini tutmaz.
+          {t({
+            tr: "Kaydedilmiş metinde, kaynaklarda ve teslim listesinde açık bir madde yok. Otomatik denetim danışmanınızın kontrolünün yerini tutmaz.",
+            en: "No open items in the saved text, sources or submission checklist. Automatic checks do not replace your advisor's review.",
+          })}
         </p>
       )}
 
@@ -308,7 +332,7 @@ export default async function CalismaDurumKarti({
         */}
         {makale ? (
           <Link href={`${merkez}/makale`} className="projects-filter-button button-compact">
-            <FileText size={15} aria-hidden="true" /> Makale ve dergi
+            <FileText size={15} aria-hidden="true" /> {t({ tr: "Makale ve dergi", en: "Article and journal" })}
           </Link>
         ) : (
           <KilavuzPenceresi
@@ -338,19 +362,19 @@ export default async function CalismaDurumKarti({
         <AnalizPenceresi projectId={calisma.id} projeAdi={calisma.title} />
         {/* Ayda bir yapılan işler menüde; menü yukarı açılıyor, kartın içinde kalıyor. */}
         <details className="kart-menu">
-          <summary aria-label={`${calisma.title}: diğer işlemler`}>
+          <summary aria-label={t({ tr: `${calisma.title}: diğer işlemler`, en: `${calisma.title}: more actions` })}>
             <MoreHorizontal size={18} aria-hidden="true" />
           </summary>
           <div className="kart-menu-liste">
             {duzenleyebilir ? (
               <Link href={`${merkez}/edit`}>
                 <Pencil size={15} aria-hidden="true" />
-                Bilgileri düzenle
+                {t({ tr: "Bilgileri düzenle", en: "Edit details" })}
               </Link>
             ) : null}
             <Link href={`/dashboard/documents?calisma=${calisma.id}`}>
               <Upload size={15} aria-hidden="true" />
-              Belge yükle
+              {t({ tr: "Belge yükle", en: "Upload document" })}
             </Link>
             {silebilir ? <DeleteProjectButton projectId={calisma.id} projectTitle={calisma.title} /> : null}
           </div>

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { enUstPencere, useOdakTuzagi } from "./odak-tuzagi";
 import { ACTION_SUCCESS_EVENT } from "./toast-events";
+import { useCeviri } from "@/app/_components/dil-saglayici";
 
 const subscribeNothing = () => () => undefined;
 
@@ -75,6 +76,7 @@ export default function PanelDrawer({
   tetiksiz = false,
   children,
 }: PanelDrawerProps) {
+  const t = useCeviri();
   const [icAcik, setIcAcik] = useState(acikBasla);
   const open = acik ?? icAcik;
   /* Geri çağırım ref'te: satır içi bir fonksiyon her çizimde değişir ve
@@ -145,7 +147,7 @@ export default function PanelDrawer({
       <button
         className="drawer-backdrop"
         type="button"
-        aria-label="Pencereyi kapat"
+        aria-label={t({ tr: "Pencereyi kapat", en: "Close window" })}
         tabIndex={open ? 0 : -1}
         onClick={() => setOpen(false)}
       />
@@ -164,7 +166,7 @@ export default function PanelDrawer({
             <h2 id={titleId}>{title}</h2>
             {description ? <p>{description}</p> : null}
           </div>
-          <button className="drawer-close" type="button" aria-label="Kapat" onClick={() => setOpen(false)}>
+          <button className="drawer-close" type="button" aria-label={t({ tr: "Kapat", en: "Close" })} onClick={() => setOpen(false)}>
             <X size={18} aria-hidden="true" />
           </button>
         </header>
