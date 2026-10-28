@@ -43,10 +43,29 @@ export type Odeme = {
 */
 export type ProformaKalemi = { aciklama: string; miktar: number; birimFiyat: number };
 
+/*
+  Alıcı (28.10.2026). Eskiden "Sayın" bölümünde yalnızca musteriAdi
+  vardı ve çoğu zaman bir e-posta adresiydi: kurum muhasebesi
+  proformayı unvan, vergi dairesi ve numarası olmadan işleme
+  alamıyordu. ArvoOS alıcıyı artık ayrıca gönderiyor; eski sürüm
+  göndermiyor, o zaman musteriAdi satırı gösterilmeye devam eder.
+*/
+export type ProformaAlici = {
+  adSoyad: string | null;
+  unvan: string | null;
+  vergiDairesi: string | null;
+  /** VKN (10 hane) ya da TCKN (11 hane); başka biçim de gelebilir, olduğu gibi yazılır. */
+  vergiNo: string | null;
+  adres: string | null;
+  eposta: string | null;
+};
+
 export type Proforma = {
   id: string;
   no: string;
   musteriAdi: string;
+  /** Eski ArvoOS göndermiyor ya da hiçbir alanı dolu değilse null. */
+  alici: ProformaAlici | null;
   kalemler: ProformaKalemi[];
   araToplam: number;
   kdvOrani: number;
@@ -162,6 +181,7 @@ function proformaOku(oge: unknown): Proforma | null {
     id,
     no,
     musteriAdi: metin(o.musteriAdi) ?? "",
+    alici: aliciOku(o.alici),
     kalemler,
     araToplam,
     kdvOrani,
@@ -174,6 +194,39 @@ function proformaOku(oge: unknown): Proforma | null {
     durum: o.durum === "odendi" ? "odendi" : "bekliyor",
     odemeId: metin(o.odemeId),
   };
+}
+
+/*
+  Alıcı toplamlardan farklı okunuyor: kusurlu bir alıcı proformayı
+  DÜŞÜRMEZ. Tutar ödenecek parayı belirliyor, alıcı yalnızca gösterim;
+  okunamayan alan boş kalır, musteriAdi zaten yanında geliyor.
+*/
+function aliciOku(oge: unknown): ProformaAlici | null {
+  if (!oge || typeof oge !== "object" || Array.isArray(oge)) return null;
+  const o = oge as Record<string, unknown>;
+  const alici: ProformaAlici = {
+    adSoyad: metin(o.adSoyad),
+    unvan: metin(o.unvan),
+    vergiDairesi: metin(o.vergiDairesi),
+    vergiNo: metin(o.vergiNo),
+    adres: metin(o.adres),
+    eposta: metin(o.eposta),
+  };
+  return Object.values(alici).some((d) => d !== null) ? alici : null;
+}
+
+/*
+  Vergi numarasının etiketi hanesinden: 10 hane VKN (tüzel kişi ya da
+  vergi mükellefi), 11 hane TCKN (şahıs). Başka biçimde gelen numara
+  için "Vergi No" — hangisi olduğunu bilmeden VKN yazmak, şahsın
+  kimlik numarasını şirket numarası gibi göstermek olurdu.
+*/
+export function vergiNoEtiketi(vergiNo: string, dil: Dil = "tr"): string {
+  const rakam = vergiNo.replace(/\s/g, "");
+  const en = dil === "en";
+  if (/^\d{10}$/.test(rakam)) return en ? "Tax ID" : "VKN";
+  if (/^\d{11}$/.test(rakam)) return en ? "National ID" : "TCKN";
+  return en ? "Tax No." : "Vergi No";
 }
 
 function saticiOku(oge: unknown): Satici | null {
