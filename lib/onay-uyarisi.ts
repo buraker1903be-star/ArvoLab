@@ -14,6 +14,7 @@
 */
 
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
+import type { Dil } from "@/lib/dil";
 import type { SubmissionChecklist } from "@/lib/submission-checklist";
 
 /**
@@ -23,14 +24,20 @@ import type { SubmissionChecklist } from "@/lib/submission-checklist";
 export function onayUyarisi(input: {
   tutarsizliklar: Tutarsizlik[];
   hazirlik: SubmissionChecklist | null;
+  /* Tutarsızlık ve madde başlıkları da çağıran tarafından AYNI dilde verilmeli. */
+  dil?: Dil;
 }): string | null {
   const parcalar: string[] = [];
+  const en = input.dil === "en";
+  const kucuk = (metin: string) => metin.toLocaleLowerCase(en ? "en-US" : "tr-TR");
 
   if (input.tutarsizliklar.length)
     parcalar.push(
       input.tutarsizliklar.length === 1
-        ? input.tutarsizliklar[0].baslik.toLocaleLowerCase("tr-TR")
-        : `${input.tutarsizliklar.length} tutarsızlık`,
+        ? kucuk(input.tutarsizliklar[0].baslik)
+        : en
+          ? `${input.tutarsizliklar.length} inconsistencies`
+          : `${input.tutarsizliklar.length} tutarsızlık`,
     );
 
   /*
@@ -42,10 +49,15 @@ export function onayUyarisi(input: {
   if (eksik.length)
     parcalar.push(
       eksik.length === 1
-        ? `teslim listesinde eksik: ${eksik[0].label.toLocaleLowerCase("tr-TR")}`
-        : `teslim listesinde ${eksik.length} eksik madde`,
+        ? en
+          ? `missing from the submission checklist: ${kucuk(eksik[0].label)}`
+          : `teslim listesinde eksik: ${kucuk(eksik[0].label)}`
+        : en
+          ? `${eksik.length} missing items in the submission checklist`
+          : `teslim listesinde ${eksik.length} eksik madde`,
     );
 
   if (!parcalar.length) return null;
+  if (en) return `The work was approved, but there are issues: ${parcalar.join(" and ")}. Review them in the work overview.`;
   return `Çalışma onaylandı, ancak ${parcalar.join(" ve ")} var. Çalışma özetinden inceleyin.`;
 }

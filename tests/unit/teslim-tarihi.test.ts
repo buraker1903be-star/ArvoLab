@@ -97,3 +97,14 @@ test("yazım temposu", async (t) => {
     assert.equal(tempo?.tone, "neutral");
   });
 });
+
+test("İngilizce teslim etiketleri doğal okunur (tekil/çoğul)", () => {
+  const now = new Date("2026-09-20T12:00:00+03:00");
+  assert.equal(dueInfo("2026-09-19", null, now, "en")?.label, "1 day overdue");
+  assert.equal(dueInfo("2026-09-17", null, now, "en")?.label, "3 days overdue");
+  assert.equal(dueInfo("2026-09-20", null, now, "en")?.label, "Due today");
+  assert.equal(dueInfo("2026-09-21", null, now, "en")?.label, "Due tomorrow");
+  assert.equal(dueInfo("2026-09-25", null, now, "en")?.label, "5 days left");
+  // Dil verilmezse Türkçe aynen kalır.
+  assert.equal(dueInfo("2026-09-25", null, now)?.label, "5 gün kaldı");
+});

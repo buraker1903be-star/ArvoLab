@@ -16,6 +16,8 @@
   kimse engellenmez.
 */
 
+import { YEREL, type Dil, type Metin } from "@/lib/dil";
+
 /** 1 kredi = 1.000 karakter (istem + yanıt). ArvoOS'taki tanımla aynı. */
 export const KREDI_KARAKTERI = 1000;
 
@@ -68,12 +70,13 @@ export interface KrediKarari {
   kullanilanKredi: number;
 }
 
-const sayi = (deger: number) => new Intl.NumberFormat("tr-TR").format(deger);
+const sayi = (deger: number, dil: Dil = "tr") => new Intl.NumberFormat(YEREL[dil]).format(deger);
 
 /** Karakteri krediye çevirir; başlanan dilim tam sayılır. */
 export const krediye = (karakter: number) => Math.ceil(Math.max(0, karakter) / KREDI_KARAKTERI);
 
-export function krediKarari(durum: KrediDurumu): KrediKarari {
+export function krediKarari(durum: KrediDurumu, dil: Dil = "tr"): KrediKarari {
+  const t = (metin: Metin) => metin[dil];
   const kullanilanKredi = krediye(durum.kullanilanKarakter);
   const bos: KrediKarari = { engel: null, uyari: null, oran: null, kullanilanKredi };
 
@@ -93,8 +96,14 @@ export function krediKarari(durum: KrediDurumu): KrediKarari {
       ...bos,
       oran: 100,
       engel: durum.bireysel
-        ? "Aboneliğinizde AI kredisi tanımlı değil. Abonelik ve kredi sayfasından kredi alabilirsiniz: " + BIREYSEL_KREDI_SAYFASI
-        : "Bu kurumun AI kredisi tanımlı değil. Kurum yöneticinizden paket yükseltmesi isteyin.",
+        ? t({
+            tr: "Aboneliğinizde AI kredisi tanımlı değil. Abonelik ve kredi sayfasından kredi alabilirsiniz: ",
+            en: "Your subscription has no AI credits. You can buy credits on the Subscription and credits page: ",
+          }) + BIREYSEL_KREDI_SAYFASI
+        : t({
+            tr: "Bu kurumun AI kredisi tanımlı değil. Kurum yöneticinizden paket yükseltmesi isteyin.",
+            en: "This institution has no AI credits. Ask your institution administrator to upgrade the plan.",
+          }),
     };
   }
 
@@ -111,17 +120,23 @@ export function krediKarari(durum: KrediDurumu): KrediKarari {
       return {
         ...bos,
         oran,
-        engel: "AI krediniz bitti. Aylık hakkınız ayın başında yenilenir; "
-          + "beklemek istemiyorsanız Abonelik ve kredi sayfasından ek kredi alabilirsiniz: "
-          + BIREYSEL_KREDI_SAYFASI,
+        engel: t({
+          tr: "AI krediniz bitti. Aylık hakkınız ayın başında yenilenir; "
+            + "beklemek istemiyorsanız Abonelik ve kredi sayfasından ek kredi alabilirsiniz: ",
+          en: "You're out of AI credits. Your monthly allowance renews at the start of the month; "
+            + "if you don't want to wait, you can buy extra credits on the Subscription and credits page: ",
+        }) + BIREYSEL_KREDI_SAYFASI,
       };
     }
     return {
       ...bos,
       oran,
-      engel: "Kurumunuzun AI kredisi bitti. Aylık hak ayın başında yenilenir; "
-        + "beklemek istemiyorsanız kurum yöneticiniz ArvoOS panelinden ek kredi satın alabilir: "
-        + KREDI_SATIN_ALMA_ADRESI,
+      engel: t({
+        tr: "Kurumunuzun AI kredisi bitti. Aylık hak ayın başında yenilenir; "
+          + "beklemek istemiyorsanız kurum yöneticiniz ArvoOS panelinden ek kredi satın alabilir: ",
+        en: "Your institution is out of AI credits. The monthly allowance renews at the start of the month; "
+          + "if you don't want to wait, your institution administrator can buy extra credits in the ArvoOS panel: ",
+      }) + KREDI_SATIN_ALMA_ADRESI,
     };
   }
 
@@ -135,17 +150,23 @@ export function krediKarari(durum: KrediDurumu): KrediKarari {
       return {
         ...bos,
         oran,
-        uyari: `Aylık AI kredinizin %${oran}'i kullanıldı (${sayi(kullanilanKredi)}/${sayi(limit)}). `
-          + "Hak dolduğunda asistan durur; Abonelik ve kredi sayfasından ek kredi alabilirsiniz: "
-          + BIREYSEL_KREDI_SAYFASI,
+        uyari: t({
+          tr: `Aylık AI kredinizin %${oran}'i kullanıldı (${sayi(kullanilanKredi)}/${sayi(limit)}). `
+            + "Hak dolduğunda asistan durur; Abonelik ve kredi sayfasından ek kredi alabilirsiniz: ",
+          en: `${oran}% of your monthly AI credits have been used (${sayi(kullanilanKredi, "en")}/${sayi(limit, "en")}). `
+            + "The assistant stops when the allowance runs out; you can buy extra credits on the Subscription and credits page: ",
+        }) + BIREYSEL_KREDI_SAYFASI,
       };
     }
     return {
       ...bos,
       oran,
-      uyari: `Kurumunuzun AI kredisinin %${oran}'i kullanıldı (${sayi(kullanilanKredi)}/${sayi(limit)}). `
-        + "Hak dolduğunda asistan durur; kurum yöneticiniz ek kredi satın alarak sürdürebilir: "
-        + KREDI_SATIN_ALMA_ADRESI,
+      uyari: t({
+        tr: `Kurumunuzun AI kredisinin %${oran}'i kullanıldı (${sayi(kullanilanKredi)}/${sayi(limit)}). `
+          + "Hak dolduğunda asistan durur; kurum yöneticiniz ek kredi satın alarak sürdürebilir: ",
+        en: `${oran}% of your institution's AI credits have been used (${sayi(kullanilanKredi, "en")}/${sayi(limit, "en")}). `
+          + "The assistant stops when the allowance runs out; your institution administrator can buy extra credits to continue: ",
+      }) + KREDI_SATIN_ALMA_ADRESI,
     };
   }
 

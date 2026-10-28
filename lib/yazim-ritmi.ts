@@ -15,6 +15,7 @@
   Saf modül; testi tests/unit/yazim-ritmi.test.ts.
 */
 
+import { YEREL, type Dil } from "./dil";
 import { TR } from "./tr-time";
 
 const GUN_MS = 24 * 60 * 60 * 1000;
@@ -34,7 +35,14 @@ export type YazimRitmi = {
   enBuyuk: number;
 };
 
-export function yazimRitmi(satirlar: RitimSatiri[], simdi: number, gun = 14, bugunKelime?: number | null): YazimRitmi {
+/* Etiketler İngilizcede de Türkiye gününe göre: gün anahtarlarıyla aynı sınır. */
+export function yazimRitmi(
+  satirlar: RitimSatiri[],
+  simdi: number,
+  gun = 14,
+  bugunKelime?: number | null,
+  dil: Dil = "tr",
+): YazimRitmi {
   const sirali = [...satirlar].sort((a, b) => a.gun.localeCompare(b.gun));
   const sonSayi = new Map(sirali.map((s) => [s.gun, Number(s.kelime) || 0]));
   const anahtarlar = Array.from({ length: gun }, (_, i) => gunAnahtari(simdi - (gun - 1 - i) * GUN_MS));
@@ -56,8 +64,8 @@ export function yazimRitmi(satirlar: RitimSatiri[], simdi: number, gun = 14, bug
     return {
       anahtar,
       net,
-      gun: new Intl.DateTimeFormat("tr-TR", { timeZone: TR, day: "numeric" }).format(new Date(an)),
-      baslik: new Intl.DateTimeFormat("tr-TR", { timeZone: TR, weekday: "short", day: "numeric", month: "short" }).format(new Date(an)),
+      gun: new Intl.DateTimeFormat(YEREL[dil], { timeZone: TR, day: "numeric" }).format(new Date(an)),
+      baslik: new Intl.DateTimeFormat(YEREL[dil], { timeZone: TR, weekday: "short", day: "numeric", month: "short" }).format(new Date(an)),
       bugun: i === gun - 1,
     };
   });

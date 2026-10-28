@@ -11,6 +11,7 @@
   gösterilirken model çağrılmadığı için hak da yanmamalı.
 */
 
+import type { Dil } from "@/lib/dil";
 import { createClient } from "@/lib/supabase/server";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
@@ -30,7 +31,7 @@ export type KapiSonucu =
  * Okunamazsa engel YOK: geçici bir veritabanı arızası bütün kullanıcıları
  * asistandan mahrum bırakmamalı — hız sınırındaki kuralın aynısı.
  */
-async function krediDurumu(): Promise<KrediKarari> {
+async function krediDurumu(dil: Dil): Promise<KrediKarari> {
   const bos: KrediKarari = { engel: null, uyari: null, oran: null, kullanilanKredi: 0 };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("ai_kredi_durumum").maybeSingle();
@@ -50,7 +51,7 @@ async function krediDurumu(): Promise<KrediKarari> {
     bildirildi: Boolean(satir.bildirildi),
     icEkip: Boolean(satir.ic_ekip),
     bireysel: Boolean(satir.bireysel),
-  });
+  }, dil);
 }
 
 /**
@@ -58,7 +59,7 @@ async function krediDurumu(): Promise<KrediKarari> {
  * çağrılmıyor, dolayısıyla hak da yanmamalı. Aksi halde kullanıcı kendi
  * geçmişine bakarken hakkını tüketirdi.
  */
-export async function asistanHakkiVar(kullaniciId: string): Promise<string | null> {
+export async function asistanHakkiVar(kullaniciId: string, dil: Dil = "tr"): Promise<string | null> {
   // Sayaç kurulamıyorsa kullanıcı engellenmiyor (bkz. adminIstemcisiVarsa).
   const admin = adminIstemcisiVarsa();
   if (!admin) return null;
@@ -72,20 +73,27 @@ export async function asistanHakkiVar(kullaniciId: string): Promise<string | nul
     console.error("[ai] hız sınırı okunamadı:", error.message);
     return null;
   }
-  return izin === false ? `Saatlik asistan hakkınız doldu (${SAATLIK_HAK}). Bir süre sonra tekrar deneyin.` : null;
+  if (izin !== false) return null;
+  return dil === "en"
+    ? `You've reached your hourly assistant limit (${SAATLIK_HAK}). Try again a little later.`
+    : `Saatlik asistan hakkınız doldu (${SAATLIK_HAK}). Bir süre sonra tekrar deneyin.`;
 }
 
-/** Oturum, abonelik ve kurulum. Sayaç burada işlemez (bkz. asistanHakkiVar). */
-export async function asistanKapisi(): Promise<KapiSonucu> {
+/**
+ * Oturum, abonelik ve kurulum. Sayaç burada işlemez (bkz. asistanHakkiVar).
+ * `dil` bu dosyanın, kurulumun ve kredi kapısının mesajlarına uygulanır;
+ * abonelik mesajı lib/access.ts'ten geldiği gibi geçer.
+ */
+export async function asistanKapisi(dil: Dil = "tr"): Promise<KapiSonucu> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, hata: "Oturum bulunamadı." };
+  if (!user) return { ok: false, hata: dil === "en" ? "No session found." : "Oturum bulunamadı." };
   if (await isSubscriptionBlocked()) return { ok: false, hata: (await abonelikKapaliMesaji()) };
   /* Sebep kurulumdan geliyor: bozuk adresle "anahtar tanımlayın" demek
      yöneticiyi yanlış değişkene bakmaya gönderiyordu. */
-  const kurulumSorunu = aiKurulumSorunu();
+  const kurulumSorunu = aiKurulumSorunu(dil);
   if (kurulumSorunu) return { ok: false, hata: kurulumSorunu };
 
   /*
@@ -93,7 +101,7 @@ export async function asistanKapisi(): Promise<KapiSonucu> {
     mesajı ("hakkınız doldu") kuruluma hiç bakmamış bir kullanıcıya
     gösterilirse yanlış yere bakmasına yol açar.
   */
-  const kredi = await krediDurumu();
+  const kredi = await krediDurumu(dil);
   if (kredi.engel) return { ok: false, hata: kredi.engel };
 
   return { ok: true, kullaniciId: user.id, uyari: kredi.uyari };

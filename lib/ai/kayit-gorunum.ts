@@ -5,6 +5,7 @@
   fonksiyon dışa aktarılabilir; sabit ve tipler oraya konunca derleme kırılır.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
 import type { UserRole } from "@/lib/project-labels";
 
 /*
@@ -23,22 +24,39 @@ export const KAYIT_ROLLERI: UserRole[] = ["system_admin", "founder"];
 
 export type YetenekAdi = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale" | "uak";
 
-export const YETENEK_ETIKETI: Record<YetenekAdi, string> = {
-  analiz: "Analiz denetimi",
-  kaynakca: "Kaynakça",
-  literatur: "Literatür",
-  belge: "Belge geri bildirimi",
-  kanit: "İddia–kanıt uyumu",
-  makale: "Makale bölüm denetimi",
-  uak: "ÜAK tablosu okuma",
+/*
+  İki dilli kaynak *_METIN; eski Türkçe haritalar ondan türetiliyor (tipi
+  değişmedi, çağıranlar dizgi okuyor).
+*/
+export const YETENEK_ETIKETI_METIN: Record<YetenekAdi, Metin> = {
+  analiz: { tr: "Analiz denetimi", en: "Analysis check" },
+  kaynakca: { tr: "Kaynakça", en: "Reference list" },
+  literatur: { tr: "Literatür", en: "Literature" },
+  belge: { tr: "Belge geri bildirimi", en: "Document feedback" },
+  kanit: { tr: "İddia–kanıt uyumu", en: "Claim–evidence match" },
+  makale: { tr: "Makale bölüm denetimi", en: "Article section check" },
+  uak: { tr: "ÜAK tablosu okuma", en: "ÜAK table reading" },
 };
 
-export const RED_ETIKETI: Record<string, string> = {
-  uydurma_sayi: "uydurma sayı",
-  kunye: "künye izi",
-  bos: "boş/çözümlenemedi",
-  alinti: "metinde olmayan alıntı",
+export const YETENEK_ETIKETI = Object.fromEntries(
+  Object.entries(YETENEK_ETIKETI_METIN).map(([anahtar, metin]) => [anahtar, metin.tr]),
+) as Record<YetenekAdi, string>;
+
+export const yetenekEtiketi = (yetenek: YetenekAdi, dil: Dil = "tr") => YETENEK_ETIKETI_METIN[yetenek][dil];
+
+export const RED_ETIKETI_METIN: Record<string, Metin> = {
+  uydurma_sayi: { tr: "uydurma sayı", en: "fabricated number" },
+  kunye: { tr: "künye izi", en: "citation trace" },
+  bos: { tr: "boş/çözümlenemedi", en: "empty/unparseable" },
+  alinti: { tr: "metinde olmayan alıntı", en: "quote not in text" },
 };
+
+export const RED_ETIKETI: Record<string, string> = Object.fromEntries(
+  Object.entries(RED_ETIKETI_METIN).map(([anahtar, metin]) => [anahtar, metin.tr]),
+);
+
+/** Ret sebebinin etiketi; bilinmeyen sebep olduğu gibi döner. */
+export const redEtiketi = (sebep: string, dil: Dil = "tr") => RED_ETIKETI_METIN[sebep]?.[dil] ?? sebep;
 
 export type AsistanKayitSatiri = {
   id: string;

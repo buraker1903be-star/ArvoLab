@@ -15,6 +15,8 @@
   Saf modül; testi tests/unit/ekip-listesi.test.ts.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
+
 export type EkipDurumu = "tumu" | "personel" | "uye" | "davet" | "durdurulmus" | "kurumsuz";
 
 export type EkipFiltresi = { q: string; rol: string; kurum: string; durum: EkipDurumu };
@@ -87,24 +89,24 @@ export function ekipAdresi(f: EkipFiltresi, sec?: string | null): string {
 
 export type EkipSayaci = { durum: EkipDurumu; etiket: string; sayi: number; href: string; secili: boolean; ton?: "warning" | "danger" };
 
-const SAYACLAR: { durum: EkipDurumu; etiket: string; ton?: "warning" | "danger" }[] = [
-  { durum: "tumu", etiket: "Tüm kullanıcılar" },
-  { durum: "personel", etiket: "Personel" },
-  { durum: "uye", etiket: "Öğrenci / üye" },
-  { durum: "davet", etiket: "Davet bekliyor", ton: "warning" },
-  { durum: "kurumsuz", etiket: "Kurumsuz", ton: "warning" },
-  { durum: "durdurulmus", etiket: "Erişimi durdurulmuş", ton: "danger" },
+const SAYACLAR: { durum: EkipDurumu; etiket: Metin; ton?: "warning" | "danger" }[] = [
+  { durum: "tumu", etiket: { tr: "Tüm kullanıcılar", en: "All users" } },
+  { durum: "personel", etiket: { tr: "Personel", en: "Staff" } },
+  { durum: "uye", etiket: { tr: "Öğrenci / üye", en: "Students / members" } },
+  { durum: "davet", etiket: { tr: "Davet bekliyor", en: "Invitation pending" }, ton: "warning" },
+  { durum: "kurumsuz", etiket: { tr: "Kurumsuz", en: "No institution" }, ton: "warning" },
+  { durum: "durdurulmus", etiket: { tr: "Erişimi durdurulmuş", en: "Access suspended" }, ton: "danger" },
 ];
 
 /* Sayaçlar arama ve rol/kurum süzgecinden bağımsız: "kurumun bütününde
    kaç tane" sorusunu yanıtlıyor. Basınca arama sıfırlanır. */
-export function ekipSayaclari<T extends EkipUyesi>(uyeler: T[], f: EkipFiltresi): EkipSayaci[] {
+export function ekipSayaclari<T extends EkipUyesi>(uyeler: T[], f: EkipFiltresi, dil: Dil = "tr"): EkipSayaci[] {
   return SAYACLAR.map((s) => {
     const filtre = { ...VARSAYILAN_EKIP_FILTRESI, durum: s.durum };
     const secili = f.durum === s.durum && !f.rol && !f.kurum;
     return {
       durum: s.durum,
-      etiket: s.etiket,
+      etiket: s.etiket[dil],
       sayi: ekipSuz(uyeler, filtre).length,
       href: ekipAdresi(secili && s.durum !== "tumu" ? VARSAYILAN_EKIP_FILTRESI : filtre),
       secili,

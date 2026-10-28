@@ -1,3 +1,4 @@
+import type { Dil } from "@/lib/dil";
 import type { Tone } from "@/lib/status-tone";
 
 export interface DueInfo {
@@ -23,14 +24,23 @@ function toUtcDay(isoDate: string) {
 }
 
 /** Teslim tarihi için kalan gün, kısa etiket ve renk tonu. Tarih yoksa ya da iş kapandıysa null. */
-export function dueInfo(dueDate: string | null | undefined, status?: string | null, now = new Date()): DueInfo | null {
+export function dueInfo(
+  dueDate: string | null | undefined,
+  status?: string | null,
+  now = new Date(),
+  dil: Dil = "tr",
+): DueInfo | null {
   if (!dueDate || !/^\d{4}-\d{2}-\d{2}/.test(dueDate)) return null;
   if (status && CLOSED_STATUSES.has(status)) return null;
   const days = Math.round((toUtcDay(dueDate) - toUtcDay(todayInTurkey(now))) / DAY_MS);
-  if (days < 0) return { days, label: `${-days} gün gecikti`, tone: "danger" };
-  if (days === 0) return { days, label: "Bugün teslim", tone: "danger" };
-  if (days === 1) return { days, label: "Yarın teslim", tone: "warning" };
-  if (days <= 7) return { days, label: `${days} gün kaldı`, tone: "warning" };
-  if (days <= 30) return { days, label: `${days} gün kaldı`, tone: "info" };
-  return { days, label: `${days} gün kaldı`, tone: "neutral" };
+  const en = dil === "en";
+  /* İngilizcede tekil/çoğul ayrımı var ("1 day", "2 days"); Türkçede yok. */
+  const gun = (n: number) => (en ? `${n} ${n === 1 ? "day" : "days"}` : `${n} gün`);
+  const kalan = (n: number) => (en ? `${gun(n)} left` : `${gun(n)} kaldı`);
+  if (days < 0) return { days, label: en ? `${gun(-days)} overdue` : `${gun(-days)} gecikti`, tone: "danger" };
+  if (days === 0) return { days, label: en ? "Due today" : "Bugün teslim", tone: "danger" };
+  if (days === 1) return { days, label: en ? "Due tomorrow" : "Yarın teslim", tone: "warning" };
+  if (days <= 7) return { days, label: kalan(days), tone: "warning" };
+  if (days <= 30) return { days, label: kalan(days), tone: "info" };
+  return { days, label: kalan(days), tone: "neutral" };
 }

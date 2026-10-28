@@ -1,5 +1,6 @@
 // Personel ana sayfası: dikkat isteyen çalışmaların sayıları. Her madde Çalışmalarım listesini
 // ilgili filtreyle açar (lib/project-filters.ts adres parametreleri). Sıfır olan maddeler gösterilmez.
+import type { Dil } from "@/lib/dil";
 import { dueInfo, DUE_SOON_DAYS } from "@/lib/due-date";
 import type { Tone } from "@/lib/status-tone";
 
@@ -27,29 +28,30 @@ const CLOSED_STATUSES = new Set(["delivered", "archived"]);
 export function computeAttention(
   projects: AttentionProject[],
   openComments: ReadonlyMap<string, number>,
-  options: { includeUnassigned?: boolean; now?: Date } = {}
+  options: { includeUnassigned?: boolean; now?: Date; dil?: Dil } = {}
 ): AttentionItem[] {
+  const en = options.dil === "en";
   const active = projects.filter((project) => !CLOSED_STATUSES.has(project.status));
   const days = active.map((project) => dueInfo(project.due_date, project.status, options.now)?.days ?? null);
 
   const items: AttentionItem[] = [
     {
       id: "overdue",
-      label: "Teslim tarihi geçmiş",
+      label: en ? "Past due date" : "Teslim tarihi geçmiş",
       count: days.filter((day) => day !== null && day < 0).length,
       tone: "danger",
       href: "/dashboard/editor?durum=gecikmis&sirala=teslim",
     },
     {
       id: "due-soon",
-      label: `${DUE_SOON_DAYS} gün içinde teslim`,
+      label: en ? `Due within ${DUE_SOON_DAYS} days` : `${DUE_SOON_DAYS} gün içinde teslim`,
       count: days.filter((day) => day !== null && day >= 0 && day <= DUE_SOON_DAYS).length,
       tone: "warning",
       href: "/dashboard/editor?durum=yaklasan&sirala=teslim",
     },
     {
       id: "unassigned",
-      label: "Sorumlusu atanmamış",
+      label: en ? "No assignee" : "Sorumlusu atanmamış",
       // Eski kayıtlardaki serbest metin sorumlu da atanmış sayılır (liste filtresiyle aynı kural)
       count: options.includeUnassigned ? active.filter((project) => !project.assignee_id && !project.assignee_name).length : 0,
       tone: "warning",
@@ -57,7 +59,7 @@ export function computeAttention(
     },
     {
       id: "approval",
-      label: "Kontrolör onayı bekliyor",
+      label: en ? "Awaiting controller approval" : "Kontrolör onayı bekliyor",
       count: projects.filter((project) => project.status === "ready" && !project.controller_approved_at).length,
       tone: "info",
       /* Adres sayaçla AYNI kümeyi açar: "durum=ready" tek başına onaylanmış
@@ -67,7 +69,7 @@ export function computeAttention(
     },
     {
       id: "comments",
-      label: "Yanıt bekleyen yorumu var",
+      label: en ? "Has comments awaiting reply" : "Yanıt bekleyen yorumu var",
       count: active.filter((project) => (openComments.get(project.id) ?? 0) > 0).length,
       tone: "info",
       // Eskiden bütün aktif çalışmaları açıyordu; şimdi yalnızca yorumu olanları.

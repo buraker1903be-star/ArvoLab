@@ -15,6 +15,7 @@
   Saf modül; testi tests/unit/calisma-tutarlilik.test.ts.
 */
 
+import type { Dil } from "@/lib/dil";
 import { crossCheck, extractInTextCitations, type ParsedReference } from "@/lib/apa7";
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 
@@ -64,7 +65,9 @@ export function metinListeTutarsizliklari(
   duzMetin: string | null,
   kaynaklar: KaynakSatiri[],
   atifStili?: string | null,
+  dil: Dil = "tr",
 ): Tutarsizlik[] {
+  const en = dil === "en";
   const metin = (duzMetin ?? "").trim();
   if (metin.length < 200) return [];
 
@@ -95,8 +98,12 @@ export function metinListeTutarsizliklari(
   if (atifsiz.length)
     tutarsizliklar.push({
       tur: "atifsiz_kaynak",
-      baslik: `${atifsiz.length} kaynak "kullanıldı" işaretli ama metinde atfı yok`,
-      aciklama: `${atifsiz.slice(0, 3).map((b) => kisalt(b)).join(" · ")}${atifsiz.length > 3 ? " …" : ""}. Metinde atıf yapın ya da durumu "okundu" olarak değiştirin.`,
+      baslik: en
+        ? `${atifsiz.length} ${atifsiz.length === 1 ? "source is" : "sources are"} marked "used" but never cited in the text`
+        : `${atifsiz.length} kaynak "kullanıldı" işaretli ama metinde atfı yok`,
+      aciklama: `${atifsiz.slice(0, 3).map((b) => kisalt(b)).join(" · ")}${atifsiz.length > 3 ? " …" : ""}. ${
+        en ? 'Cite them in the text or change their status to "read".' : 'Metinde atıf yapın ya da durumu "okundu" olarak değiştirin.'
+      }`,
     });
 
   // Liste boşken her atıf "kaynaksız" görünürdü; o bir tutarsızlık değil,
@@ -106,8 +113,12 @@ export function metinListeTutarsizliklari(
     if (kaynaksiz.length)
       tutarsizliklar.push({
         tur: "kaynaksiz_atif",
-        baslik: `Metinde ${kaynaksiz.length} atfın literatürde karşılığı yok`,
-        aciklama: `${kaynaksiz.slice(0, 5).join(" · ")}${kaynaksiz.length > 5 ? " …" : ""}. Kaynağı literatür listesine ekleyin ya da atfı kontrol edin.`,
+        baslik: en
+          ? `${kaynaksiz.length} ${kaynaksiz.length === 1 ? "citation" : "citations"} in the text ${kaynaksiz.length === 1 ? "has" : "have"} no match in the literature list`
+          : `Metinde ${kaynaksiz.length} atfın literatürde karşılığı yok`,
+        aciklama: `${kaynaksiz.slice(0, 5).join(" · ")}${kaynaksiz.length > 5 ? " …" : ""}. ${
+          en ? "Add the source to the literature list or check the citation." : "Kaynağı literatür listesine ekleyin ya da atfı kontrol edin."
+        }`,
       });
   }
 

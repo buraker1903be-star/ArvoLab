@@ -58,3 +58,15 @@ describe("onay uyarısı", () => {
     assert.match(uyari ?? "", /Çalışma özetinden inceleyin/);
   });
 });
+
+test("İngilizce uyarı", () => {
+  const metin = onayUyarisi({
+    tutarsizliklar: [
+      { tur: "atifsiz_kaynak", baslik: "a", aciklama: "" },
+      { tur: "kaynaksiz_atif", baslik: "b", aciklama: "" },
+    ],
+    hazirlik: null,
+    dil: "en",
+  });
+  assert.equal(metin, "The work was approved, but there are issues: 2 inconsistencies. Review them in the work overview.");
+});

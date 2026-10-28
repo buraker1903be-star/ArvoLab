@@ -104,3 +104,22 @@ describe("bireysel abone", () => {
     assert.equal(karar.engel, null);
   });
 });
+
+describe("İngilizce", () => {
+  test("bireysel abonede kredi bitti mesajı", () => {
+    const karar = krediKarari(
+      { kullanilanKarakter: 200_000, limitKredi: 100, aylikKalan: 0, ekBakiye: 0, bildirildi: true, icEkip: false, bireysel: true },
+      "en",
+    );
+    assert.equal(karar.engel, "You're out of AI credits. Your monthly allowance renews at the start of the month; if you don't want to wait, you can buy extra credits on the Subscription and credits page: " + BIREYSEL_KREDI_SAYFASI);
+  });
+
+  test("uyarı İngilizce sayı biçimiyle", () => {
+    const karar = krediKarari(
+      { kullanilanKarakter: 1_700_000, limitKredi: 2000, aylikKalan: 300, ekBakiye: 0, bildirildi: true, icEkip: false },
+      "en",
+    );
+    assert.match(karar.uyari ?? "", /^85% of your institution's AI credits have been used \(1,700\/2,000\)/);
+    assert.ok(karar.uyari?.endsWith(KREDI_SATIN_ALMA_ADRESI));
+  });
+});

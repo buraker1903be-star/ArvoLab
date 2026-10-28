@@ -4,6 +4,8 @@
   Saf modül; testi tests/unit/calisma-karti.test.ts.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
+
 /*
   Arama, durum, sorumlu ve sıralama filtreleri: personelde her zaman
   (onlarca çalışmayı yönetiyorlar), öğrencide yalnızca listenin gerçekten
@@ -33,18 +35,24 @@ export function kartIlerlemesi(girdi: {
   kelime: number | null;
   hedefKelime: number | null;
   elleIlerleme: number | null;
+  dil?: Dil;
 }): KartIlerlemesi | null {
+  const en = girdi.dil === "en";
   if (girdi.hedefKelime && girdi.hedefKelime > 0) {
     const yuzde = Math.min(100, Math.round(((girdi.kelime ?? 0) / girdi.hedefKelime) * 100));
     return {
       yuzde,
-      etiket: "yazıldı",
-      ipucu: `Kılavuzun sayfa sınırına göre ~${girdi.hedefKelime.toLocaleString("tr-TR")} kelimelik hedefin %${yuzde}'i`,
+      etiket: en ? "written" : "yazıldı",
+      ipucu: en
+        ? `${yuzde}% of the ~${girdi.hedefKelime.toLocaleString("en-US")}-word target based on the guideline's page limit`
+        : `Kılavuzun sayfa sınırına göre ~${girdi.hedefKelime.toLocaleString("tr-TR")} kelimelik hedefin %${yuzde}'i`,
     };
   }
   if (girdi.elleIlerleme && girdi.elleIlerleme > 0) {
     const yuzde = Math.min(100, Math.max(0, Math.round(girdi.elleIlerleme)));
-    return { yuzde, etiket: "ilerleme", ipucu: "Çalışma bilgilerinde girilen ilerleme" };
+    return en
+      ? { yuzde, etiket: "progress", ipucu: "Progress entered in the work details" }
+      : { yuzde, etiket: "ilerleme", ipucu: "Çalışma bilgilerinde girilen ilerleme" };
   }
   return null;
 }
@@ -142,7 +150,10 @@ export function eksikSatirlari(girdi: {
   asistanBulgulari?: { baslik: string; aciklama: string }[];
   adimlar: AdimGirdisi[];
   sirada?: { kaynakMadde?: string; href: string; bitti: boolean } | null;
+  /** Yalnızca bu modülün kendi yazdığı başlığın dili; madde ve bulgular çağıranın dilinde gelir. */
+  dil?: Dil;
 }): EksikSatiri[] {
+  const stilBasligi: Metin = { tr: "Atıf stili kılavuzla çelişiyor", en: "Citation style conflicts with the guideline" };
   const { calismaId, sirada } = girdi;
   const merkez = calismaAdresi(calismaId);
   // Tutarsızlık metin ile literatür listesi arasında; düzeltileceği yer liste.
@@ -159,7 +170,7 @@ export function eksikSatirlari(girdi: {
 
   return [
     ...(girdi.stilUyarisi
-      ? [{ anahtar: "stil", tur: "stil" as const, baslik: "Atıf stili kılavuzla çelişiyor", aciklama: girdi.stilUyarisi, href: merkez }]
+      ? [{ anahtar: "stil", tur: "stil" as const, baslik: stilBasligi[girdi.dil ?? "tr"], aciklama: girdi.stilUyarisi, href: merkez }]
       : []),
     ...kalan.filter((m) => m.status === "todo").map((m) => madde(m, "eksik")),
     ...girdi.tutarsizliklar.map((t) => ({ anahtar: `tutarsizlik-${t.tur}`, tur: "tutarsizlik" as const, baslik: t.baslik, aciklama: t.aciklama, href: literatur })),

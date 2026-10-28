@@ -100,3 +100,10 @@ test("öğrencinin çalışma adresi Çalışmalarım, çalışma seçili", () =
   assert.equal(calismaAdresi("a"), "/dashboard/editor?sec=a");
   assert.equal(calismaAdresi("a", { kilavuz: true }), "/dashboard/editor?sec=a&kilavuz=1");
 });
+
+test("İngilizce kart ilerlemesi ve stil başlığı", () => {
+  const i = kartIlerlemesi({ kelime: 5000, hedefKelime: 20000, elleIlerleme: null, dil: "en" });
+  assert.deepEqual(i, { yuzde: 25, etiket: "written", ipucu: "25% of the ~20,000-word target based on the guideline's page limit" });
+  const satirlar = eksikSatirlari({ calismaId: "c1", stilUyarisi: "x", maddeler: [], tutarsizliklar: [], adimlar: [], dil: "en" });
+  assert.equal(satirlar[0].baslik, "Citation style conflicts with the guideline");
+});

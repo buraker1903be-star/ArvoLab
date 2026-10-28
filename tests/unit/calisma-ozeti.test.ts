@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { atifStiliCelisiyorMu, BIRIMLER, birimIlerlemesi, birimYolu, siradakiAdimlar, type CalismaOzeti } from "@/lib/calisma-ozeti";
+import { atifStiliCelisiyorMu, BIRIM_METINLERI, BIRIMLER, birimEtiketi, birimIlerlemesi, birimYolu, siradakiAdimlar, type CalismaOzeti } from "@/lib/calisma-ozeti";
 
 const CALISMA = {
   id: "c1",
@@ -205,5 +205,25 @@ describe("birim listesi tek kaynaktan", () => {
       assert.equal(adim.baslik, birim?.adimBasligi);
       assert.equal(adim.href, birimYolu(adim.anahtar as never, "c1"));
     }
+  });
+});
+
+describe("İngilizce", () => {
+  test("BIRIM_METINLERI'nin Türkçesi BIRIMLER ile aynı", () => {
+    for (const birim of BIRIMLER) {
+      assert.equal(BIRIM_METINLERI[birim.anahtar].etiket.tr, birim.etiket);
+      assert.equal(BIRIM_METINLERI[birim.anahtar].adimBasligi?.tr, birim.adimBasligi);
+    }
+  });
+
+  test("adımlar İngilizce", () => {
+    const adimlar = siradakiAdimlar(
+      ozet({ musvedde: { kelime: 1500, guncellendi: "2026-09-20T10:00:00Z" }, literatur: { toplam: 1, okunan: 0, kullanilan: 0 } }),
+      "en",
+    );
+    assert.equal(adimlar[0].baslik, "Gather literature");
+    assert.equal(adimlar[0].aciklama, "1 source saved, 0 read, 0 used.");
+    assert.equal(adimlar[1].aciklama, "1,500 words written.");
+    assert.equal(birimEtiketi("kaynakca", "en"), "References");
   });
 });

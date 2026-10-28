@@ -48,3 +48,17 @@ describe("tez takvimi", () => {
     assert.equal(kalanMetni("yaklasiyor", 0), "bugün");
   });
 });
+
+describe("İngilizce", () => {
+  test("taslak takvim adımları ve kalan metni İngilizce", () => {
+    const tr = taslakTakvim("thesis", "2026-10-01", "2027-04-01");
+    const en = taslakTakvim("thesis", "2026-10-01", "2027-04-01", "en");
+    assert.equal(en[0].baslik, "Literature review and theoretical framework");
+    // Tarihler dilden bağımsız.
+    assert.deepEqual(en.map((t) => t.hedef_tarih), tr.map((t) => t.hedef_tarih));
+    assert.equal(kalanMetni("ileride", 1, "en"), "1 day left");
+    assert.equal(kalanMetni("gecikti", -2, "en"), "2 days overdue");
+    assert.equal(kalanMetni("tamam", 0, "en"), "completed");
+    assert.deepEqual(tasGirdisi("", "2026-10-01", "en"), { hata: "Enter a name for the milestone." });
+  });
+});

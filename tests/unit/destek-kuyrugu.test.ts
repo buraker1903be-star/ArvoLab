@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { acikKuyruk, kuyrukAdresi, seciliKayit } from "@/lib/destek-kuyrugu";
+import { acikKuyruk, KUYRUK_ETIKETI, KUYRUK_ETIKETI_METIN, kuyrukAdresi, kuyrukEtiketi, seciliKayit } from "@/lib/destek-kuyrugu";
 
 describe("destek kuyrukları", () => {
   test("istenen kuyruk erişilebilirse açılır, değilse işi olan ilk kuyruk", () => {
@@ -20,4 +20,10 @@ describe("destek kuyrukları", () => {
     assert.equal(seciliKayit([], "a"), null);
     assert.equal(kuyrukAdresi("destek", "x1"), "/dashboard/expert-requests?kuyruk=destek&sec=x1");
   });
+});
+
+test("kuyruk etiketleri iki dilde; eski harita Türkçe", () => {
+  assert.equal(kuyrukEtiketi("uzman-bana", "en"), "Assigned to me");
+  assert.equal(kuyrukEtiketi("uzman-bana"), "Bana atanan");
+  for (const [tur, metin] of Object.entries(KUYRUK_ETIKETI_METIN)) assert.equal(KUYRUK_ETIKETI[tur as keyof typeof KUYRUK_ETIKETI], metin.tr);
 });

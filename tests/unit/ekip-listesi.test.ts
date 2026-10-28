@@ -46,3 +46,9 @@ describe("ekip listesi", () => {
     assert.equal(basHarfler(null, null), "?");
   });
 });
+
+test("İngilizce sayaç etiketleri", () => {
+  const sayaclar = ekipSayaclari([], VARSAYILAN_EKIP_FILTRESI, "en");
+  assert.equal(sayaclar[0].etiket, "All users");
+  assert.equal(sayaclar[3].etiket, "Invitation pending");
+});

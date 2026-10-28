@@ -110,3 +110,15 @@ describe("atıf stili", () => {
     assert.ok(sonuc.some((t) => t.tur === "atifsiz_kaynak"));
   });
 });
+
+test("İngilizce tutarsızlık başlığı", () => {
+  const sonuc = metinListeTutarsizliklari(
+    govde("Özyeterlik kavramı Bandura (1977) tarafından ortaya konmuştur."),
+    [kaynak({ title: "Self-efficacy", authors: "Bandura, A.", year: "1977" }), kaynak({ title: "Sınıf yönetimi", authors: "Demir, B.", year: "2021" })],
+    null,
+    "en",
+  );
+  const atifsiz = sonuc.find((t) => t.tur === "atifsiz_kaynak");
+  assert.equal(atifsiz?.baslik, '1 source is marked "used" but never cited in the text');
+  assert.match(atifsiz?.aciklama ?? "", /Cite them in the text/);
+});

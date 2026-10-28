@@ -122,3 +122,10 @@ test("iş bir eksikten geldiyse kaynağı bildiriliyor", () => {
   });
   assert.equal(birimden.kaynakMadde, undefined);
 });
+
+test("İngilizce: bitmiş çalışmada cümle ve eylem", () => {
+  const is = siradakiIs({ calismaId: "c1", adimlar: [], eksikler: [], kalanGun: null, dil: "en" });
+  assert.equal(is.baslik, "Looks ready for submission");
+  assert.equal(is.eylem, "Open work overview");
+  assert.equal(siradakiIs({ calismaId: "c1", adimlar: [], eksikler: [], kalanGun: null }).baslik, "Teslime hazır görünüyor");
+});

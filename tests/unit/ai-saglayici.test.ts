@@ -1,6 +1,16 @@
 import { describe, test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { aiKurulumSorunu, aiYapilandirildi, bicim, parametreDusur, yanitMetni, yetenekModeli } from "../../lib/ai/saglayici";
+import {
+  AiHatasi,
+  aiHataMesaji,
+  aiKurulumSorunu,
+  aiYapilandirildi,
+  bicim,
+  parametreDusur,
+  saglayiciHatasi,
+  yanitMetni,
+  yetenekModeli,
+} from "../../lib/ai/saglayici";
 
 const KAYITLI = { ...process.env };
 afterEach(() => {
@@ -179,4 +189,25 @@ describe("boş yanıtın sebebi", () => {
     assert.equal(butceyeTakildi("stop"), false);
     assert.equal(butceyeTakildi(null), false);
   });
+});
+
+describe("İngilizce hata metinleri", () => {
+  test("sağlayıcı hatası iki dilde", () => {
+    assert.equal(saglayiciHatasi(429, "", "en"), "The AI server rate-limited the request (quota or concurrency). Try again in a few minutes.");
+    assert.match(saglayiciHatasi(429, ""), /^Yapay zeka sunucusu isteği sınırladı/);
+  });
+
+  test("AiHatasi: message Türkçe kalır, aiHataMesaji dili seçer", () => {
+    const hata = new AiHatasi({ tr: "Türkçe", en: "English" });
+    assert.equal(hata.message, "Türkçe");
+    assert.equal(aiHataMesaji(hata, "en"), "English");
+    assert.equal(aiHataMesaji(hata), "Türkçe");
+    assert.equal(aiHataMesaji(new Error("düz"), "en"), "düz");
+    assert.equal(aiHataMesaji("x", "en"), null);
+  });
+});
+
+test("kurulum sorunu İngilizce", () => {
+  process.env.AI_TABAN_URL = "10.0.0.5:11434/v1";
+  assert.match(aiKurulumSorunu("en") ?? "", /^The AI server address could not be read \(AI_TABAN_URL\)/);
 });

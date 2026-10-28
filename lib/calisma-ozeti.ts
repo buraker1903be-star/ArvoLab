@@ -12,6 +12,7 @@
   ilgili sayfaya götürür.
 */
 
+import { YEREL, type Dil, type Metin } from "@/lib/dil";
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import type { SubmissionChecklist } from "@/lib/submission-checklist";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
@@ -132,6 +133,24 @@ export const BIRIMLER: Birim[] = [
 ];
 
 /*
+  BIRIMLER'in iki dilli ikizi. BIRIMLER'in tipi değişmedi (çağıranlar
+  `etiket`i dizgi olarak okuyor); Türkçe değerler BIRIMLER ile birebir
+  aynı olmalı — testi bunu sabitliyor.
+*/
+export const BIRIM_METINLERI: Record<BirimAnahtari, { etiket: Metin; adimBasligi?: Metin }> = {
+  literatur: { etiket: { tr: "Literatür", en: "Literature" }, adimBasligi: { tr: "Literatür topla", en: "Gather literature" } },
+  yazim: { etiket: { tr: "Yazım", en: "Writing" }, adimBasligi: { tr: "Metni yaz", en: "Write the text" } },
+  kaynakca: { etiket: { tr: "Kaynakça", en: "References" }, adimBasligi: { tr: "Kaynakçayı denetle", en: "Check the reference list" } },
+  belge: { etiket: { tr: "Belge", en: "Document" }, adimBasligi: { tr: "Belgeyi kontrol ettir", en: "Have the document checked" } },
+  analiz: { etiket: { tr: "Analiz", en: "Analysis" } },
+};
+
+/** Birimin bağlam şeridindeki kısa adı, istenen dilde. */
+export function birimEtiketi(anahtar: BirimAnahtari, dil: Dil = "tr"): string {
+  return BIRIM_METINLERI[anahtar].etiket[dil];
+}
+
+/*
   Birimin adresi. Yazım çalışmanın KENDİ adresinde, ötekiler bağlamı
   sorgu değişkeniyle taşıyor; bu fark da tek yerde dursun.
 */
@@ -162,9 +181,10 @@ export function birimYolu(anahtar: BirimAnahtari, calismaId: string): string {
 */
 export type AdimGirdisi = Pick<CalismaOzeti, "calisma" | "musvedde" | "literatur" | "kaynakca" | "belgeSayisi">;
 
-export function siradakiAdimlar(ozet: AdimGirdisi): Adim[] {
+export function siradakiAdimlar(ozet: AdimGirdisi, dil: Dil = "tr"): Adim[] {
   const { calisma, musvedde, literatur, kaynakca, belgeSayisi } = ozet;
   const yazimVar = (musvedde?.kelime ?? 0) > 0;
+  const t = (metin: Metin) => metin[dil];
 
   /*
     Her adımın yalnızca DEĞİŞEN yanı burada; başlık ve sıra BIRIMLER'den
@@ -174,15 +194,24 @@ export function siradakiAdimlar(ozet: AdimGirdisi): Adim[] {
   const durum: Record<string, Pick<Adim, "aciklama" | "tamam" | "zaman">> = {
     literatur: {
       aciklama: literatur.toplam
-        ? `${literatur.toplam} kaynak kayıtlı, ${literatur.okunan} okundu, ${literatur.kullanilan} kullanıldı.`
-        : "Bu çalışmaya bağlı kaynak yok. Tarama asistanı arama stratejisi kurabilir.",
+        ? t({
+            tr: `${literatur.toplam} kaynak kayıtlı, ${literatur.okunan} okundu, ${literatur.kullanilan} kullanıldı.`,
+            en: `${literatur.toplam} ${literatur.toplam === 1 ? "source" : "sources"} saved, ${literatur.okunan} read, ${literatur.kullanilan} used.`,
+          })
+        : t({
+            tr: "Bu çalışmaya bağlı kaynak yok. Tarama asistanı arama stratejisi kurabilir.",
+            en: "No sources are linked to this work yet. The search assistant can build a search strategy.",
+          }),
       tamam: literatur.toplam > 0,
       zaman: null,
     },
     yazim: {
       aciklama: yazimVar
-        ? `${musvedde?.kelime.toLocaleString("tr-TR")} kelime yazıldı.`
-        : "Müsvedde henüz boş. Editörde yazmaya başlayın.",
+        ? t({
+            tr: `${musvedde?.kelime.toLocaleString("tr-TR")} kelime yazıldı.`,
+            en: `${musvedde?.kelime.toLocaleString(YEREL.en)} ${musvedde?.kelime === 1 ? "word" : "words"} written.`,
+          })
+        : t({ tr: "Müsvedde henüz boş. Editörde yazmaya başlayın.", en: "The draft is still empty. Start writing in the editor." }),
       tamam: yazimVar,
       zaman: yazimVar ? musvedde?.guncellendi : null,
     },
@@ -194,17 +223,23 @@ export function siradakiAdimlar(ozet: AdimGirdisi): Adim[] {
         kullanan bir tezde yanlış bilgi vermekti.
       */
       aciklama: kaynakca
-        ? `Son denetim: kaynakça uyumu ${kaynakca.skor ?? "—"}/100.`
+        ? t({
+            tr: `Son denetim: kaynakça uyumu ${kaynakca.skor ?? "—"}/100.`,
+            en: `Last check: reference list compliance ${kaynakca.skor ?? "—"}/100.`,
+          })
         : literatur.kullanilan > 0 || yazimVar
-          ? "Kaynakça ve atıf tutarlılığı henüz denetlenmedi."
-          : "Metin ve kaynaklar hazır olunca denetleyin.",
+          ? t({ tr: "Kaynakça ve atıf tutarlılığı henüz denetlenmedi.", en: "Reference list and citation consistency have not been checked yet." })
+          : t({ tr: "Metin ve kaynaklar hazır olunca denetleyin.", en: "Run the check once the text and sources are ready." }),
       tamam: Boolean(kaynakca),
       zaman: kaynakca?.tarih ?? null,
     },
     belge: {
       aciklama: belgeSayisi
-        ? `${belgeSayisi} belge yüklendi.`
-        : "Tamamlanan bölümleri yükleyip biçim ve yapı kontrolü yaptırın.",
+        ? t({ tr: `${belgeSayisi} belge yüklendi.`, en: `${belgeSayisi} ${belgeSayisi === 1 ? "document" : "documents"} uploaded.` })
+        : t({
+            tr: "Tamamlanan bölümleri yükleyip biçim ve yapı kontrolü yaptırın.",
+            en: "Upload finished chapters to have their formatting and structure checked.",
+          }),
       tamam: belgeSayisi > 0,
       zaman: null,
     },
@@ -212,7 +247,7 @@ export function siradakiAdimlar(ozet: AdimGirdisi): Adim[] {
 
   return BIRIMLER.filter((birim) => birim.adimMi).map((birim) => ({
     anahtar: birim.anahtar,
-    baslik: birim.adimBasligi ?? birim.etiket,
+    baslik: t(BIRIM_METINLERI[birim.anahtar].adimBasligi ?? BIRIM_METINLERI[birim.anahtar].etiket),
     href: birimYolu(birim.anahtar, calisma.id),
     ...durum[birim.anahtar],
   }));

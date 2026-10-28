@@ -4,6 +4,8 @@
   okusun diye burada; Next/Supabase'e dokunmaz.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
+
 export type Taraf = "talep_sahibi" | "uzman" | "destek";
 
 export type YazismaMesaji = {
@@ -48,17 +50,28 @@ export const yanitGeldi = (mesajlar: YazismaMesaji[]) =>
 export function uzmanYazismaDurumu(
   durum: string,
   ben: "talep_sahibi" | "uzman",
+  dil: Dil = "tr",
 ): { yazabilir: true } | { yazabilir: false; neden: string } {
-  if (durum === "completed") return { yazabilir: false, neden: "Talep tamamlandı. Yeni bir sorunuz varsa yeni talep açın." };
-  if (durum === "cancelled") return { yazabilir: false, neden: "Talep iptal edildi." };
-  if (ben === "uzman" && durum !== "accepted") return { yazabilir: false, neden: "Yazışma talebi üstlenince açılır." };
+  const t = (metin: Metin) => metin[dil];
+  if (durum === "completed")
+    return {
+      yazabilir: false,
+      neden: t({
+        tr: "Talep tamamlandı. Yeni bir sorunuz varsa yeni talep açın.",
+        en: "This request is completed. If you have a new question, open a new request.",
+      }),
+    };
+  if (durum === "cancelled") return { yazabilir: false, neden: t({ tr: "Talep iptal edildi.", en: "This request was canceled." }) };
+  if (ben === "uzman" && durum !== "accepted")
+    return { yazabilir: false, neden: t({ tr: "Yazışma talebi üstlenince açılır.", en: "Messaging opens once you take on the request." }) };
   return { yazabilir: true };
 }
 
 /** Baloncuğun başlığı: kendi mesajında "Siz", karşı tarafta ad ya da rol. */
-export function yazanEtiketi(m: YazismaMesaji, benimTarafim: Taraf): string {
-  if (m.taraf === benimTarafim) return "Siz";
-  if (m.taraf === "talep_sahibi") return m.yazanAdi ?? "Talep sahibi";
-  if (m.taraf === "uzman") return m.yazanAdi ? `${m.yazanAdi} · Uzman` : "Uzman";
-  return m.yazanAdi ? `${m.yazanAdi} · Destek ekibi` : "Destek ekibi";
+export function yazanEtiketi(m: YazismaMesaji, benimTarafim: Taraf, dil: Dil = "tr"): string {
+  const en = dil === "en";
+  if (m.taraf === benimTarafim) return en ? "You" : "Siz";
+  if (m.taraf === "talep_sahibi") return m.yazanAdi ?? (en ? "Requester" : "Talep sahibi");
+  const rol = m.taraf === "uzman" ? (en ? "Expert" : "Uzman") : en ? "Support team" : "Destek ekibi";
+  return m.yazanAdi ? `${m.yazanAdi} · ${rol}` : rol;
 }

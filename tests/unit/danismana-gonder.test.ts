@@ -20,3 +20,11 @@ test("WhatsApp ve e-posta adresleri kodlanır; boşluk '+' olmaz", () => {
   assert.ok(posta.startsWith(`mailto:?subject=${encodeURIComponent("Tez taslağı")}&body=`));
   assert.ok(!posta.includes("+"));
 });
+
+test("İngilizce mesaj", () => {
+  const m = danismanMesaji({ baslik: "Econometrics", url: "https://arvolab.app/share/abc", gun: 30 }, "en");
+  assert.match(m, /^Hello,/);
+  assert.match(m, /"Econometrics"/);
+  assert.match(m, /\(valid for 30 days\):\nhttps:\/\/arvolab\.app\/share\/abc/);
+  assert.match(danismanMesaji({ baslik: "Thesis" }, "en"), /I've attached the file\./);
+});

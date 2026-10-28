@@ -13,6 +13,9 @@
   Saf modül; testi tests/unit/faturalama.test.ts.
 */
 
+import type { Dil } from "./dil";
+import { tarihBicimleri } from "./tr-time";
+
 export type Fatura = { no: string; tarih: string; url: string | null };
 
 export type Odeme = {
@@ -211,21 +214,35 @@ export function proformaDurumu(p: Pick<Proforma, "durum" | "gecerlilikTarihi">, 
 export const odemeninProformasi = (veri: Faturalama, odemeId: string) =>
   veri.proformalar.find((p) => p.odemeId === odemeId) ?? null;
 
-/** "15.11.2026" — gün anahtarından; saat dilimine düşmeden. */
-export const gunYazisi = (g: string) => g.slice(0, 10).split("-").reverse().join(".");
+/**
+ * "15.11.2026" (en: "Nov 15, 2026") — gün anahtarından; saat dilimine düşmeden.
+ * İngilizcede gün, UTC öğlesine sabitlenip UTC'de yazılır: anahtar bir AN
+ * değil GÜN taşıyor, başka dilimde yazmak onu komşu güne kaydırabilirdi.
+ */
+export const gunYazisi = (g: string, dil: Dil = "tr") =>
+  dil === "en"
+    ? tarihBicimleri("en", "UTC").tarih(`${g.slice(0, 10)}T12:00:00Z`)
+    : g.slice(0, 10).split("-").reverse().join(".");
 
-/** "499,00 TL" — kuruştan. */
-export const tutarYazisi = (kurusTutar: number, paraBirimi = "TRY") =>
-  `${(kurusTutar / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${paraBirimi === "TRY" ? "TL" : paraBirimi}`;
+/** "499,00 TL" — kuruştan (en: "499.00 TRY"). */
+export const tutarYazisi = (kurusTutar: number, paraBirimi = "TRY", dil: Dil = "tr") =>
+  dil === "en"
+    ? `${(kurusTutar / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${paraBirimi}`
+    : `${(kurusTutar / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${paraBirimi === "TRY" ? "TL" : paraBirimi}`;
 
 /** Satırın açıklaması: "ArvoLab aboneliği · 26.10–26.11.2026" ya da "AI kredisi". */
-export function odemeAciklamasi(o: Odeme): string {
-  if (o.tur === "kredi") return "AI kredisi";
+export function odemeAciklamasi(o: Odeme, dil: Dil = "tr"): string {
+  const en = dil === "en";
+  if (o.tur === "kredi") return en ? "AI credits" : "AI kredisi";
+  const ad = en ? "ArvoLab subscription" : "ArvoLab aboneliği";
   if (o.donemBaslangic && o.donemBitis) {
-    const g = (t: string) => new Date(t).toLocaleDateString("tr-TR", { timeZone: "Europe/Istanbul" });
-    return `ArvoLab aboneliği · ${g(o.donemBaslangic)} – ${g(o.donemBitis)}`;
+    /* Dönem sınırları Türkiye saatiyle yazılıyor (ArvoOS dönemi orada açıyor). */
+    const g = en
+      ? tarihBicimleri("en", "Europe/Istanbul").tarih
+      : (t: string) => new Date(t).toLocaleDateString("tr-TR", { timeZone: "Europe/Istanbul" });
+    return `${ad} · ${g(o.donemBaslangic)} – ${g(o.donemBitis)}`;
   }
-  return "ArvoLab aboneliği";
+  return ad;
 }
 
 /*

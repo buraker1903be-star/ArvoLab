@@ -15,6 +15,7 @@
 
   Saf modül; testi tests/unit/personel-sayaclari.test.ts.
 */
+import type { Dil, Metin } from "@/lib/dil";
 import {
   applyProjectFilters,
   DEFAULT_PROJECT_FILTERS,
@@ -34,19 +35,20 @@ export type PersonelSayaci = {
   secili: boolean;
 };
 
-const TANIMLAR: { anahtar: string; etiket: string; filtre: Partial<ProjectFilters>; ton: PersonelSayaci["ton"] }[] = [
-  { anahtar: "aktif", etiket: "Aktif çalışma", filtre: { status: "aktif" }, ton: "neutral" },
-  { anahtar: "onay", etiket: "Onay bekliyor", filtre: { approval: "bekliyor" }, ton: "warning" },
-  { anahtar: "atanmamis", etiket: "Sorumlu yok", filtre: { assignee: "atanmamis" }, ton: "warning" },
-  { anahtar: "gecikmis", etiket: "Teslimi geçmiş", filtre: { status: "gecikmis" }, ton: "danger" },
-  { anahtar: "yaklasan", etiket: "7 gün içinde teslim", filtre: { status: "yaklasan" }, ton: "info" },
-  { anahtar: "yorum", etiket: "Açık yorumlu", filtre: { comments: "acik" }, ton: "info" },
+const TANIMLAR: { anahtar: string; etiket: Metin; filtre: Partial<ProjectFilters>; ton: PersonelSayaci["ton"] }[] = [
+  { anahtar: "aktif", etiket: { tr: "Aktif çalışma", en: "Active works" }, filtre: { status: "aktif" }, ton: "neutral" },
+  { anahtar: "onay", etiket: { tr: "Onay bekliyor", en: "Awaiting approval" }, filtre: { approval: "bekliyor" }, ton: "warning" },
+  { anahtar: "atanmamis", etiket: { tr: "Sorumlu yok", en: "No assignee" }, filtre: { assignee: "atanmamis" }, ton: "warning" },
+  { anahtar: "gecikmis", etiket: { tr: "Teslimi geçmiş", en: "Overdue" }, filtre: { status: "gecikmis" }, ton: "danger" },
+  { anahtar: "yaklasan", etiket: { tr: "7 gün içinde teslim", en: "Due within 7 days" }, filtre: { status: "yaklasan" }, ton: "info" },
+  { anahtar: "yorum", etiket: { tr: "Açık yorumlu", en: "Open comments" }, filtre: { comments: "acik" }, ton: "info" },
 ];
 
 export function personelSayaclari<T extends ProjectFilterInput>(
   calismalar: T[],
   simdikiFiltre: ProjectFilters,
   baglam: Parameters<typeof applyProjectFilters<T>>[2],
+  dil: Dil = "tr",
 ): PersonelSayaci[] {
   return TANIMLAR.map((t) => {
     const filtre: ProjectFilters = { ...DEFAULT_PROJECT_FILTERS, ...t.filtre };
@@ -55,7 +57,7 @@ export function personelSayaclari<T extends ProjectFilterInput>(
     );
     return {
       anahtar: t.anahtar,
-      etiket: t.etiket,
+      etiket: t.etiket[dil],
       sayi: applyProjectFilters(calismalar, filtre, { ...baglam, canFilterAssignee: true }).length,
       // Seçili sayaca yeniden basınca filtre kalkar.
       href: secili ? "/dashboard/editor" : filtreAdresi(filtre),

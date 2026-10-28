@@ -31,6 +31,7 @@
   olabildiği için sınır AI_ZAMAN_ASIMI_MS ile uzatılabilir.
 */
 
+import type { Dil, Metin } from "@/lib/dil";
 import type { YetenekAdi } from "./kayit-gorunum";
 
 export type Rol = "sistem" | "kullanici";
@@ -138,13 +139,18 @@ export const aiYapilandirildi = () => aiKurulumSorunu() === null;
  * Tek bir "asistan kapalı" mesajı yetmiyordu: adres bozukken kullanıcıya
  * "anahtar tanımlanmalı" deniyordu ve yönetici yanlış değişkene bakıyordu.
  */
-export function aiKurulumSorunu(): string | null {
+export function aiKurulumSorunu(dil: Dil = "tr"): string | null {
   if (!aiAdresi()) {
-    return "Yapay zeka sunucusunun adresi okunamadı (AI_TABAN_URL). Adres şemayla yazılmalı: "
-      + "örn. http://10.0.0.5:11434/v1 ya da https://api.anthropic.com/v1.";
+    return dil === "en"
+      ? "The AI server address could not be read (AI_TABAN_URL). The address must include a scheme, "
+        + "e.g. http://10.0.0.5:11434/v1 or https://api.anthropic.com/v1."
+      : "Yapay zeka sunucusunun adresi okunamadı (AI_TABAN_URL). Adres şemayla yazılmalı: "
+        + "örn. http://10.0.0.5:11434/v1 ya da https://api.anthropic.com/v1.";
   }
   if (!kendiSunucu() && !anahtar()) {
-    return "Asistan bu kurulumda kapalı. Yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor (AI_ANAHTAR).";
+    return dil === "en"
+      ? "The assistant is disabled in this installation. Your administrator needs to set the AI key (AI_ANAHTAR)."
+      : "Asistan bu kurulumda kapalı. Yöneticinizin yapay zeka anahtarını tanımlaması gerekiyor (AI_ANAHTAR).";
   }
   return null;
 }
@@ -153,23 +159,66 @@ export function aiKurulumSorunu(): string | null {
 export const aiKurulumu = () => ({ tabanUrl: tabanUrl(), model: process.env.AI_MODEL || process.env.OPENAI_MODEL || VARSAYILAN_MODEL });
 
 /**
- * Sağlayıcı hatasını kullanıcının okuyabileceği Türkçeye çevirir. Saf
+ * Sağlayıcı hatasını kullanıcının okuyabileceği dile çevirir. Saf
  * fonksiyon: testi tests/unit/ai-analiz-yorumu.test.ts. Gövde kullanıcıya
  * gösterilmez — sunucu mesajları İngilizce ve zaman zaman anahtar parçası,
  * kuruluş kimliği gibi ayrıntılar içeriyor.
  */
-export function saglayiciHatasi(durum: number, govde: string): string {
+export function saglayiciHatasi(durum: number, govde: string, dil: Dil = "tr"): string {
+  return saglayiciHatasiMetni(durum, govde)[dil];
+}
+
+function saglayiciHatasiMetni(durum: number, govde: string): Metin {
   if (durum === 401 || durum === 403)
-    return "Yapay zeka sunucusu isteği reddetti. Erişim anahtarı silinmiş ya da yanlış olabilir.";
+    return {
+      tr: "Yapay zeka sunucusu isteği reddetti. Erişim anahtarı silinmiş ya da yanlış olabilir.",
+      en: "The AI server rejected the request. The access key may have been deleted or may be wrong.",
+    };
   if (durum === 429)
-    return "Yapay zeka sunucusu isteği sınırladı (kota ya da eşzamanlılık). Birkaç dakika sonra tekrar deneyin.";
+    return {
+      tr: "Yapay zeka sunucusu isteği sınırladı (kota ya da eşzamanlılık). Birkaç dakika sonra tekrar deneyin.",
+      en: "The AI server rate-limited the request (quota or concurrency). Try again in a few minutes.",
+    };
   if (durum === 404)
-    return "Yapay zeka sunucusunda bu model bulunamadı. Model adını (AI_MODEL) kontrol edin.";
+    return {
+      tr: "Yapay zeka sunucusunda bu model bulunamadı. Model adını (AI_MODEL) kontrol edin.",
+      en: "This model was not found on the AI server. Check the model name (AI_MODEL).",
+    };
   if (durum === 400 && /context length|maximum context|too long/i.test(govde))
-    return "Gönderilen metin modelin sınırını aştı. Daha kısa bir bölüm seçip tekrar deneyin.";
+    return {
+      tr: "Gönderilen metin modelin sınırını aştı. Daha kısa bir bölüm seçip tekrar deneyin.",
+      en: "The text sent exceeds the model's limit. Choose a shorter section and try again.",
+    };
   if (durum >= 500)
-    return "Yapay zeka sunucusuna ulaşılamıyor. Sunucu kapalı ya da aşırı yüklü olabilir; birkaç dakika sonra tekrar deneyin.";
-  return `Yapay zeka isteği başarısız oldu (HTTP ${durum}).`;
+    return {
+      tr: "Yapay zeka sunucusuna ulaşılamıyor. Sunucu kapalı ya da aşırı yüklü olabilir; birkaç dakika sonra tekrar deneyin.",
+      en: "The AI server cannot be reached. It may be down or overloaded; try again in a few minutes.",
+    };
+  return { tr: `Yapay zeka isteği başarısız oldu (HTTP ${durum}).`, en: `The AI request failed (HTTP ${durum}).` };
+}
+
+/*
+  sor() hatayı derinde, kullanıcının dilini bilmeden fırlatıyor. Hata iki
+  dili birden taşıyor: `message` Türkçe (eski çağıranlar `hata.message`
+  okuyor ve aynı metni görmeye devam ediyor), `metin` iki dilli. Dili bilen
+  çağıran aiHataMesaji(hata, dil) ile seçer.
+*/
+export class AiHatasi extends Error {
+  readonly metin: Metin;
+  constructor(metin: Metin) {
+    super(metin.tr);
+    this.metin = metin;
+  }
+}
+
+/**
+ * Yakalanan hatanın kullanıcıya gösterilecek metni: AiHatasi ise istenen
+ * dilde, başka bir Error ise mesajı olduğu gibi, Error değilse null
+ * (çağıran kendi yedek metnini koyar).
+ */
+export function aiHataMesaji(hata: unknown, dil: Dil = "tr"): string | null {
+  if (hata instanceof AiHatasi) return hata.metin[dil];
+  return hata instanceof Error ? hata.message : null;
 }
 
 export type IstekBayraklari = { json: boolean; sicaklik: boolean };
@@ -300,10 +349,13 @@ export const butceyeTakildi = (sebep: string | null) => sebep === "length" || se
 
 const EN_GENIS_BUTCE = 32_000;
 
-/** Modele sorar. Hata durumunda Türkçe mesajla Error fırlatır. */
+/** Modele sorar. Hata durumunda AiHatasi fırlatır (message Türkçe; iki dil için aiHataMesaji). */
 export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<Yanit> {
   if (!aiYapilandirildi())
-    throw new Error("Yapay zeka sunucusu tanımlı değil (AI_TABAN_URL ya da AI_ANAHTAR). Yönetici ortam değişkenlerini eklemeli.");
+    throw new AiHatasi({
+      tr: "Yapay zeka sunucusu tanımlı değil (AI_TABAN_URL ya da AI_ANAHTAR). Yönetici ortam değişkenlerini eklemeli.",
+      en: "No AI server is configured (AI_TABAN_URL or AI_ANAHTAR). An administrator needs to add the environment variables.",
+    });
 
   const model =
     secenek.model ?? yetenekModeli(secenek.yetenek) ?? process.env.AI_MODEL ?? process.env.OPENAI_MODEL ?? VARSAYILAN_MODEL;
@@ -325,8 +377,11 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
     } catch (hata) {
       // AbortSignal.timeout TimeoutError fırlatır; ağ hatası TypeError.
       if (hata instanceof Error && hata.name === "TimeoutError")
-        throw new Error("Yapay zeka zamanında yanıt vermedi. Daha kısa bir metinle tekrar deneyin.");
-      throw new Error("Yapay zeka sunucusuna bağlanılamadı.");
+        throw new AiHatasi({
+          tr: "Yapay zeka zamanında yanıt vermedi. Daha kısa bir metinle tekrar deneyin.",
+          en: "The AI did not respond in time. Try again with a shorter text.",
+        });
+      throw new AiHatasi({ tr: "Yapay zeka sunucusuna bağlanılamadı.", en: "Could not connect to the AI server." });
     }
     return { cevap, govde: cevap.ok ? "" : await cevap.text().catch(() => "") };
   }
@@ -347,7 +402,7 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
 
   if (!yanit.ok) {
     console.error("[ai] sunucu hatası", { ...aiKurulumu(), model, durum: yanit.status, govde: govde.slice(0, 500) });
-    throw new Error(saglayiciHatasi(yanit.status, govde));
+    throw new AiHatasi(saglayiciHatasiMetni(yanit.status, govde));
   }
 
   ogrenilen.set(ogrenmeAnahtari(model), {
@@ -375,10 +430,16 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
   if (!metin) {
     // İçerik günlüğe yazılmaz (kullanıcının metni); yalnızca sebep ve kullanım.
     console.error("[ai] boş yanıt", { ...aiKurulumu(), model, sebep, kullanim: (veri as { usage?: unknown } | null)?.usage ?? null });
-    throw new Error(
+    throw new AiHatasi(
       butceyeTakildi(sebep)
-        ? "Yapay zeka yanıtı bütçe sınırına takıldı ve boş döndü. Model düşünmeye fazla pay ayırıyor olabilir; tekrar deneyin ya da bu yetenek için daha hızlı bir model tanımlayın."
-        : `Yapay zeka boş yanıt verdi${sebep ? ` (${sebep})` : ""}. Tekrar deneyin.`,
+        ? {
+            tr: "Yapay zeka yanıtı bütçe sınırına takıldı ve boş döndü. Model düşünmeye fazla pay ayırıyor olabilir; tekrar deneyin ya da bu yetenek için daha hızlı bir model tanımlayın.",
+            en: "The AI response hit the token budget and came back empty. The model may be spending too much on reasoning; try again or configure a faster model for this capability.",
+          }
+        : {
+            tr: `Yapay zeka boş yanıt verdi${sebep ? ` (${sebep})` : ""}. Tekrar deneyin.`,
+            en: `The AI returned an empty response${sebep ? ` (${sebep})` : ""}. Try again.`,
+          },
     );
   }
 

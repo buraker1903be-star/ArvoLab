@@ -15,7 +15,23 @@
   Saf modül; testi tests/unit/danismana-gonder.test.ts.
 */
 
-export function danismanMesaji(girdi: { baslik: string; url?: string | null; gun?: number | null }): string {
+import type { Dil } from "@/lib/dil";
+
+/*
+  Mesaj ÖĞRENCİNİN arayüz dilinde: danışmanın dilini bilmiyoruz, öğrenci
+  metni göndermeden önce düzenleyebiliyor.
+*/
+export function danismanMesaji(girdi: { baslik: string; url?: string | null; gun?: number | null }, dil: Dil = "tr"): string {
+  if (dil === "en") {
+    return [
+      "Hello,",
+      `I'm sharing the latest version of my work "${girdi.baslik}" for your review.`,
+      girdi.url
+        ? `You can read it without signing in using the link below${girdi.gun ? ` (valid for ${girdi.gun} ${girdi.gun === 1 ? "day" : "days"})` : ""}:\n${girdi.url}`
+        : "I've attached the file.",
+      "Thank you in advance for your feedback.",
+    ].join("\n\n");
+  }
   const satirlar = [
     "Hocam merhaba,",
     `"${girdi.baslik}" çalışmamın güncel hâlini incelemenize sunuyorum.`,

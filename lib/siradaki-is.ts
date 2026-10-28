@@ -1,4 +1,5 @@
 import type { Adim } from "@/lib/calisma-ozeti";
+import type { Dil, Metin } from "@/lib/dil";
 import type { ChecklistItem } from "@/lib/submission-checklist";
 
 /*
@@ -65,8 +66,11 @@ export function siradakiIs(girdi: {
   eksikler: ChecklistItem[];
   /** Teslime kalan gün; yoksa null. */
   kalanGun: number | null;
+  /** Bu modülün kendi yazdığı metinlerin dili; adım ve madde metinleri çağıranın dilinde gelir. */
+  dil?: Dil;
 }): SiradakiIs {
   const aciliyet = aciliyetOlc(girdi.kalanGun);
+  const t = (metin: Metin) => metin[girdi.dil ?? "tr"];
 
   /*
     "todo" ile "warning" ayrı: ilki eksik bir şey, ikincisi bakılması
@@ -78,7 +82,7 @@ export function siradakiIs(girdi: {
       baslik: eksik.label,
       aciklama: eksik.detail,
       href: `/dashboard/editor/${girdi.calismaId}/write?teslim=${eksik.id}`,
-      eylem: eksik.action?.label ?? "Teslim kontrolünde aç",
+      eylem: eksik.action?.label ?? t({ tr: "Teslim kontrolünde aç", en: "Open in submission check" }),
       aciliyet,
       bitti: false,
       kaynakMadde: eksik.id,
@@ -91,19 +95,22 @@ export function siradakiIs(girdi: {
       baslik: yarim.baslik,
       aciklama: yarim.aciklama,
       href: yarim.href,
-      eylem: "Başla",
+      eylem: t({ tr: "Başla", en: "Start" }),
       aciliyet,
       bitti: false,
     };
   }
 
   return {
-    baslik: "Teslime hazır görünüyor",
+    baslik: t({ tr: "Teslime hazır görünüyor", en: "Looks ready for submission" }),
     /* "Hazır" DENMİYOR: otomatik denetim danışman ve jüri kontrolünün
        yerini tutmuyor; öyle demek öğrenciyi yanlış güvene sokardı. */
-    aciklama: "Otomatik denetimler temiz. Danışmanınızın kontrolü bunun yerini tutmaz.",
+    aciklama: t({
+      tr: "Otomatik denetimler temiz. Danışmanınızın kontrolü bunun yerini tutmaz.",
+      en: "Automated checks are clean. This does not replace your advisor's review.",
+    }),
     href: `/dashboard/editor/${girdi.calismaId}`,
-    eylem: "Çalışma özetini aç",
+    eylem: t({ tr: "Çalışma özetini aç", en: "Open work overview" }),
     aciliyet,
     bitti: true,
   };

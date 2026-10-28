@@ -87,3 +87,16 @@ describe("faturalama", () => {
     assert.equal(gunYazisi("2026-11-01"), "01.11.2026");
   });
 });
+
+describe("İngilizce", () => {
+  test("tarih, tutar ve ödeme açıklaması", () => {
+    assert.equal(gunYazisi("2026-11-15", "en"), "Nov 15, 2026");
+    assert.equal(tutarYazisi(49900, "TRY", "en"), "499.00 TRY");
+    const odeme = faturalamaOku({ odemeler: [{ id: "o1", tutar: 49900, tur: "kredi" }] })!.odemeler[0];
+    assert.equal(odemeAciklamasi(odeme, "en"), "AI credits");
+    const abonelik = faturalamaOku({
+      odemeler: [{ id: "o2", tutar: 49900, donemBaslangic: "2026-10-26T10:00:00Z", donemBitis: "2026-11-26T10:00:00Z" }],
+    })!.odemeler[0];
+    assert.equal(odemeAciklamasi(abonelik, "en"), "ArvoLab subscription · Oct 26, 2026 – Nov 26, 2026");
+  });
+});

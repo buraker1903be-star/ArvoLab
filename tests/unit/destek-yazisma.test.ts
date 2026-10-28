@@ -53,3 +53,10 @@ describe("destek yazışması", () => {
     assert.equal(yazanEtiketi(m("a", "talep_sahibi", "1", "Ayşe"), "destek"), "Ayşe");
   });
 });
+
+test("İngilizce yazan etiketi ve kapalı talep gerekçesi", () => {
+  assert.equal(yazanEtiketi(m("a", "uzman", "x", "Ayşe"), "talep_sahibi", "en"), "Ayşe · Expert");
+  assert.equal(yazanEtiketi(m("a", "destek", "x"), "talep_sahibi", "en"), "Support team");
+  assert.equal(yazanEtiketi(m("a", "talep_sahibi", "x"), "talep_sahibi", "en"), "You");
+  assert.deepEqual(uzmanYazismaDurumu("cancelled", "talep_sahibi", "en"), { yazabilir: false, neden: "This request was canceled." });
+});

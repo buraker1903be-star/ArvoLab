@@ -48,3 +48,17 @@ describe("lisans kartı metinleri", () => {
     assert.equal(bireysel({ status: "unreachable" }), null);
   });
 });
+
+describe("İngilizce", () => {
+  test("deneme süresi kartı İngilizce, gün sayısı Türkiye takviminden", () => {
+    const ozet = licenseSummary(
+      { kind: "individual", status: "trialing", trialEndsAt: "2026-09-25T09:00:00Z", periodEnd: null, organizationName: null, blocked: false },
+      new Date("2026-09-20T09:00:00Z"),
+      "en",
+    );
+    assert.equal(ozet?.title, "Your ArvoLab subscription");
+    assert.equal(ozet?.statusLabel, "Trial");
+    assert.equal(ozet?.detail, "Your trial ends on September 25, 2026 · 5 days left.");
+    assert.match(ozet?.yenilemeNotu ?? "", /^No automatic payments/);
+  });
+});

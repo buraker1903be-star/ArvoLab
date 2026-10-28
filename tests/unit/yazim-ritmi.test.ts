@@ -38,3 +38,9 @@ test("seri bugün yazılmadıysa dünden sayılır", () => {
   assert.equal(yazimRitmi(satirlar, SIMDI).aktifGun, 4);
   assert.equal(yazimRitmi(satirlar, SIMDI, 14, 600).seri, 5);
 });
+
+test("İngilizce gün etiketleri, Türkiye gününe göre", () => {
+  const r = yazimRitmi([], Date.parse("2026-09-20T01:00:00+03:00"), 14, null, "en");
+  assert.equal(r.gunler[13].anahtar, "2026-09-20");
+  assert.equal(r.gunler[13].baslik, "Sun, Sep 20");
+});

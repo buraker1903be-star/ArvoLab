@@ -1,6 +1,15 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { ERTELEME_GUN, YETERLI_KELIME, soruSorulsunMu, bolumEtiketi } from "@/lib/geri-bildirim";
+import {
+  BAGLAM_METNI,
+  BOLUM_SECENEKLERI,
+  ERTELEME_GUN,
+  PUAN_ETIKETLERI,
+  PUAN_ETIKETLERI_METIN,
+  YETERLI_KELIME,
+  soruSorulsunMu,
+  bolumEtiketi,
+} from "@/lib/geri-bildirim";
 
 const GUN = 24 * 60 * 60 * 1000;
 const SIMDI = Date.UTC(2026, 8, 23, 9, 0, 0);
@@ -48,5 +57,16 @@ describe("cevabın okunması", () => {
     assert.equal(bolumEtiketi("editor"), "Belge Editörü (panelde yazma)");
     assert.equal(bolumEtiketi(null), "Belirtilmedi");
     assert.equal(bolumEtiketi("olmayan-bolum"), "Belirtilmedi");
+  });
+});
+
+describe("İngilizce", () => {
+  test("bölüm ve puan etiketleri; eski haritalar Türkçe kalır", () => {
+    assert.equal(bolumEtiketi("editor", "en"), "Document Editor (writing in the panel)");
+    assert.equal(bolumEtiketi(null, "en"), "Not specified");
+    assert.equal(PUAN_ETIKETLERI_METIN[5].en, "Very helpful");
+    assert.equal(PUAN_ETIKETLERI[5], "Çok işime yaradı");
+    assert.equal(BAGLAM_METNI.yazma, "panelde yazdıktan sonra");
+    assert.equal(BOLUM_SECENEKLERI[0].etiket, "Belge Editörü (panelde yazma)");
   });
 });

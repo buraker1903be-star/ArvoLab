@@ -17,6 +17,8 @@
   Saf modül; testi tests/unit/tez-takvimi.test.ts.
 */
 
+import type { Dil } from "./dil";
+
 export interface TakvimTasi {
   id: string;
   baslik: string;
@@ -59,28 +61,30 @@ export function takvimOzeti(taslar: TakvimTasi[], bugun: string) {
   };
 }
 
-/* Çalışma türüne göre adımlar ve süre payları (toplam 1). */
-const ADIMLAR: Record<string, [string, number][]> = {
+/* Çalışma türüne göre adımlar ve süre payları (toplam 1). Taslak başlıkları
+   öğrencinin dilinde yazılır; kayda geçtikten sonra öğrencinin kendi metni
+   sayılır ve dil değişince çevrilmez. */
+const ADIMLAR_METIN: Record<string, [Record<Dil, string>, number][]> = {
   thesis: [
-    ["Literatür taraması ve kuramsal çerçeve", 0.2],
-    ["Yöntem bölümü", 0.15],
-    ["Veri toplama", 0.2],
-    ["Analiz ve bulgular", 0.2],
-    ["Tartışma ve sonuç", 0.15],
-    ["Son okuma, kaynakça ve biçim kontrolü", 0.1],
+    [{ tr: "Literatür taraması ve kuramsal çerçeve", en: "Literature review and theoretical framework" }, 0.2],
+    [{ tr: "Yöntem bölümü", en: "Methods chapter" }, 0.15],
+    [{ tr: "Veri toplama", en: "Data collection" }, 0.2],
+    [{ tr: "Analiz ve bulgular", en: "Analysis and findings" }, 0.2],
+    [{ tr: "Tartışma ve sonuç", en: "Discussion and conclusion" }, 0.15],
+    [{ tr: "Son okuma, kaynakça ve biçim kontrolü", en: "Final read-through, reference list and formatting check" }, 0.1],
   ],
   article: [
-    ["Giriş ve literatür", 0.25],
-    ["Yöntem", 0.15],
-    ["Bulgular", 0.25],
-    ["Tartışma ve sonuç", 0.2],
-    ["Dergi kurallarına göre son kontrol", 0.15],
+    [{ tr: "Giriş ve literatür", en: "Introduction and literature" }, 0.25],
+    [{ tr: "Yöntem", en: "Methods" }, 0.15],
+    [{ tr: "Bulgular", en: "Results" }, 0.25],
+    [{ tr: "Tartışma ve sonuç", en: "Discussion and conclusion" }, 0.2],
+    [{ tr: "Dergi kurallarına göre son kontrol", en: "Final check against journal guidelines" }, 0.15],
   ],
   project: [
-    ["Plan ve kaynak taraması", 0.25],
-    ["İlk taslak", 0.4],
-    ["Gözden geçirme", 0.2],
-    ["Son kontrol", 0.15],
+    [{ tr: "Plan ve kaynak taraması", en: "Plan and source search" }, 0.25],
+    [{ tr: "İlk taslak", en: "First draft" }, 0.4],
+    [{ tr: "Gözden geçirme", en: "Revision" }, 0.2],
+    [{ tr: "Son kontrol", en: "Final check" }, 0.15],
   ],
 };
 
@@ -95,13 +99,19 @@ const gunEkle = (gun: string, n: number) => {
  * iki gün önce biter (danışmana son okuma payı). Teslim yoksa ya da
  * TASLAK_EN_AZ_GUN'den yakınsa boş döner.
  */
-export function taslakTakvim(projeTuru: string, bugun: string, teslim: string | null): { baslik: string; hedef_tarih: string }[] {
+export function taslakTakvim(
+  projeTuru: string,
+  bugun: string,
+  teslim: string | null,
+  dil: Dil = "tr",
+): { baslik: string; hedef_tarih: string }[] {
   if (!teslim) return [];
   const toplamGun = gunFarki(bugun, teslim) - 2;
   if (toplamGun < TASLAK_EN_AZ_GUN - 2) return [];
-  const adimlar = ADIMLAR[projeTuru] ?? ADIMLAR.project;
+  const adimlar = ADIMLAR_METIN[projeTuru] ?? ADIMLAR_METIN.project;
   let birikim = 0;
-  return adimlar.map(([baslik, pay], i) => {
+  return adimlar.map(([metin, pay], i) => {
+    const baslik = metin[dil];
     birikim += pay;
     /* Son adım tam olarak teslim − 2'ye düşsün; yuvarlama kaydırmasın. */
     const gun = i === adimlar.length - 1 ? toplamGun : Math.round(toplamGun * birikim);
@@ -110,17 +120,30 @@ export function taslakTakvim(projeTuru: string, bugun: string, teslim: string | 
 }
 
 /** Formdan gelen taşı doğrular; geçersizse hata metni. */
-export function tasGirdisi(baslik: unknown, tarih: unknown): { baslik: string; hedef_tarih: string } | { hata: string } {
+export function tasGirdisi(
+  baslik: unknown,
+  tarih: unknown,
+  dil: Dil = "tr",
+): { baslik: string; hedef_tarih: string } | { hata: string } {
+  const en = dil === "en";
   const b = typeof baslik === "string" ? baslik.replace(/\s+/g, " ").trim() : "";
-  if (!b) return { hata: "Kilometre taşının adını yazın." };
-  if (b.length > 120) return { hata: "Ad en çok 120 karakter olabilir." };
+  if (!b) return { hata: en ? "Enter a name for the milestone." : "Kilometre taşının adını yazın." };
+  if (b.length > 120) return { hata: en ? "The name can be at most 120 characters." : "Ad en çok 120 karakter olabilir." };
   const t = typeof tarih === "string" ? tarih.trim() : "";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(t) || Number.isNaN(Date.parse(`${t}T00:00:00Z`))) return { hata: "Hedef tarihi seçin." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t) || Number.isNaN(Date.parse(`${t}T00:00:00Z`)))
+    return { hata: en ? "Choose a target date." : "Hedef tarihi seçin." };
   return { baslik: b, hedef_tarih: t };
 }
 
-/** "3 gün kaldı", "bugün", "2 gün gecikti", "tamamlandı" */
-export function kalanMetni(durum: TasDurumu, kalanGun: number) {
+/** "3 gün kaldı", "bugün", "2 gün gecikti", "tamamlandı" (en: "3 days left", "today", …) */
+export function kalanMetni(durum: TasDurumu, kalanGun: number, dil: Dil = "tr") {
+  if (dil === "en") {
+    if (durum === "tamam") return "completed";
+    if (kalanGun === 0) return "today";
+    const n = Math.abs(kalanGun);
+    const gun = `${n} ${n === 1 ? "day" : "days"}`;
+    return kalanGun > 0 ? `${gun} left` : `${gun} overdue`;
+  }
   if (durum === "tamam") return "tamamlandı";
   if (kalanGun === 0) return "bugün";
   return kalanGun > 0 ? `${kalanGun} gün kaldı` : `${-kalanGun} gün gecikti`;

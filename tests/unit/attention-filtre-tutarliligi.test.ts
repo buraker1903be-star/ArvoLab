@@ -98,3 +98,8 @@ describe("dikkat sayaçları bağlandıkları filtreyle tutuyor", () => {
     assert.equal(adresinActigiListe("/dashboard/editor?onay=palavra").length, PROJELER.length);
   });
 });
+
+test("İngilizce etiketler", () => {
+  const ogeler = computeAttention([proje({ id: "g", due_date: gun(-2) })], new Map(), { now: SIMDI, dil: "en" });
+  assert.equal(ogeler[0].label, "Past due date");
+});

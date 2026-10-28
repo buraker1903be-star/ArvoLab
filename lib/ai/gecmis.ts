@@ -15,6 +15,7 @@
   Bilerek "use server" DEĞİL (AGENTS.md): yardımcılar böyle dosyalarda durmaz.
 */
 
+import type { Dil } from "@/lib/dil";
 import { createClient } from "@/lib/supabase/server";
 import type { Bulgu } from "./bulgu";
 import type { YetenekAdi } from "./kayit-gorunum";
@@ -37,13 +38,15 @@ export type GecmisKaydi = {
  * "### Başlık" bölümlerinden oluşuyor; ilk bölümün ilk dolu satırı
  * kullanıcının ne sorduğunu en iyi anlatan parçadır.
  */
-export function baglamOzeti(baglam: string | null, sinir = 120): string {
-  if (!baglam) return "Kayıtlı sorgu";
+export function baglamOzeti(baglam: string | null, sinir = 120, dil: Dil = "tr"): string {
+  /* Özet bağlamın kendisinden alınıyor (kullanıcının girdisi); yalnızca yedek metin çevrilir. */
+  const yedek = dil === "en" ? "Saved query" : "Kayıtlı sorgu";
+  if (!baglam) return yedek;
   const satir = baglam
     .split("\n")
     .map((s) => s.trim())
     .find((s) => s && !s.startsWith("###"));
-  if (!satir) return "Kayıtlı sorgu";
+  if (!satir) return yedek;
   return satir.length > sinir ? `${satir.slice(0, sinir)}…` : satir;
 }
 
@@ -65,6 +68,7 @@ export async function oncekiCevap(
   kullaniciId: string,
   yetenek: YetenekAdi,
   baglam: string,
+  dil: Dil = "tr",
 ): Promise<GecmisKaydi | null> {
   const supabase = await createClient();
   const esik = new Date(Date.now() - GECERLILIK_GUN * 24 * 60 * 60 * 1000).toISOString();
@@ -89,7 +93,7 @@ export async function oncekiCevap(
 
   const { bulgular, aramalar } = bulgulariAyikla(data.findings);
   if (!bulgular.length && !aramalar?.length) return null;
-  return { id: data.id, created_at: data.created_at, ozet: baglamOzeti(data.context), bulgular, aramalar, ham: data.findings };
+  return { id: data.id, created_at: data.created_at, ozet: baglamOzeti(data.context, undefined, dil), bulgular, aramalar, ham: data.findings };
 }
 
 /** Kullanıcının bu yetenekteki son sorguları. */
@@ -99,6 +103,7 @@ export async function gecmisSorgular(
   limit = 5,
   /** Verilirse yalnızca bu çalışmaya bağlı sorgular (Kaynakça penceresi). */
   projectId?: string | null,
+  dil: Dil = "tr",
 ): Promise<GecmisKaydi[]> {
   const supabase = await createClient();
   let sorgu = supabase
@@ -120,7 +125,7 @@ export async function gecmisSorgular(
   return (data ?? [])
     .map((satir) => {
       const { bulgular, aramalar } = bulgulariAyikla(satir.findings);
-      return { id: satir.id, created_at: satir.created_at, ozet: baglamOzeti(satir.context), bulgular, aramalar };
+      return { id: satir.id, created_at: satir.created_at, ozet: baglamOzeti(satir.context, undefined, dil), bulgular, aramalar };
     })
     .filter((kayit) => kayit.bulgular.length || kayit.aramalar?.length);
 }

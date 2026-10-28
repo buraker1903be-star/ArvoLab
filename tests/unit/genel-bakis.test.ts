@@ -42,3 +42,15 @@ test("selamlamada yalnızca ad", () => {
   assert.equal(ilkAd("  Burak Erdoğan "), "Burak");
   assert.equal(ilkAd(""), null);
 });
+
+test("İngilizce selamlama ve gün etiketleri", () => {
+  const sabah = Date.parse("2026-09-20T08:00:00+03:00");
+  assert.equal(selamlama(sabah, "en"), "Good morning");
+  assert.equal(selamlama(Date.parse("2026-09-20T14:00:00+03:00"), "en"), "Good afternoon");
+  assert.equal(selamlama(Date.parse("2026-09-20T23:30:00+03:00"), "en"), "Good evening");
+  // Kullanıcının dilimi verilirse onun saati: İstanbul'da 08:00, New York'ta 01:00.
+  assert.equal(selamlama(sabah, "en", "America/New_York"), "Good evening");
+  assert.equal(selamlama(sabah), "Günaydın");
+  const seri = hareketSerisi([], Date.parse("2026-09-20T12:00:00+03:00"), 14, "en");
+  assert.equal(seri.gunler[13].baslik, "Sun, Sep 20");
+});

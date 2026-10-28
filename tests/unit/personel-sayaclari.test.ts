@@ -38,3 +38,10 @@ describe("personel sayaçları", () => {
     assert.equal(sayaclar.filter((s) => s.secili).length, 1);
   });
 });
+
+test("İngilizce sayaç etiketleri", () => {
+  const sayaclar = personelSayaclari([], DEFAULT_PROJECT_FILTERS, { lastEdited: () => undefined, canFilterAssignee: true }, "en");
+  assert.deepEqual(sayaclar.map((s) => s.etiket), [
+    "Active works", "Awaiting approval", "No assignee", "Overdue", "Due within 7 days", "Open comments",
+  ]);
+});

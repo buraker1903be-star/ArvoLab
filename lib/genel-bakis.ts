@@ -12,6 +12,7 @@
   testi tests/unit/genel-bakis.test.ts.
 */
 
+import { YEREL, type Dil } from "./dil";
 import { TR } from "./tr-time";
 
 const GUN_MS = 24 * 60 * 60 * 1000;
@@ -34,7 +35,12 @@ export type HareketSerisi = {
   turler: Record<HareketTuru, number>;
 };
 
-export function hareketSerisi(satirlar: HareketSatiri[], simdi: number, gun = 14): HareketSerisi {
+/*
+  Çubuk etiketleri İngilizcede de TÜRKİYE gününe göre yazılır: gün
+  anahtarları (ve veritabanındaki sayım) Türkiye günüyle, etiketi başka
+  dilimde yazmak çubuğu komşu günün adıyla gösterirdi.
+*/
+export function hareketSerisi(satirlar: HareketSatiri[], simdi: number, gun = 14, dil: Dil = "tr"): HareketSerisi {
   const indeks = new Map<string, number>();
   const gunler: SeriGunu[] = Array.from({ length: gun }, (_, sira) => {
     const an = simdi - (gun - 1 - sira) * GUN_MS;
@@ -43,8 +49,8 @@ export function hareketSerisi(satirlar: HareketSatiri[], simdi: number, gun = 14
     return {
       anahtar,
       adet: 0,
-      gun: new Intl.DateTimeFormat("tr-TR", { timeZone: TR, day: "numeric" }).format(new Date(an)),
-      baslik: new Intl.DateTimeFormat("tr-TR", { timeZone: TR, weekday: "short", day: "numeric", month: "short" }).format(new Date(an)),
+      gun: new Intl.DateTimeFormat(YEREL[dil], { timeZone: TR, day: "numeric" }).format(new Date(an)),
+      baslik: new Intl.DateTimeFormat(YEREL[dil], { timeZone: TR, weekday: "short", day: "numeric", month: "short" }).format(new Date(an)),
       bugun: sira === gun - 1,
     };
   });
@@ -78,13 +84,18 @@ export function hareketSerisi(satirlar: HareketSatiri[], simdi: number, gun = 14
   };
 }
 
-/** Türkiye saatine göre selamlama. */
-export function selamlama(simdi: number): string {
-  const saat = Number(new Intl.DateTimeFormat("en-GB", { timeZone: TR, hour: "2-digit", hourCycle: "h23" }).format(new Date(simdi)));
-  if (saat >= 5 && saat < 11) return "Günaydın";
-  if (saat >= 11 && saat < 18) return "İyi günler";
-  if (saat >= 18 && saat < 23) return "İyi akşamlar";
-  return "İyi geceler";
+/**
+ * Saate göre selamlama; varsayılan Türkiye saati. İngilizce kullanıcı yurt
+ * dışında olabilir: çağıran aktifSaatDilimi() verirse sabah onun sabahıdır.
+ */
+export function selamlama(simdi: number, dil: Dil = "tr", saatDilimi: string = TR): string {
+  const saat = Number(new Intl.DateTimeFormat("en-GB", { timeZone: saatDilimi, hour: "2-digit", hourCycle: "h23" }).format(new Date(simdi)));
+  const en = dil === "en";
+  if (saat >= 5 && saat < 11) return en ? "Good morning" : "Günaydın";
+  if (saat >= 11 && saat < 18) return en ? "Good afternoon" : "İyi günler";
+  /* "Good night" İngilizcede vedadır; gece yarısı da "Good evening" denir. */
+  if (saat >= 18 && saat < 23) return en ? "Good evening" : "İyi akşamlar";
+  return en ? "Good evening" : "İyi geceler";
 }
 
 /** "Burak Erdoğan" → "Burak": selamlamada yalnızca ad, ArvoOS'taki gibi. */

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Dil } from "@/lib/dil";
 
 export interface ShareViewLink {
   id: string;
@@ -21,7 +22,13 @@ export async function recordShareView(
   admin: SupabaseClient,
   link: ShareViewLink,
   projectTitle: string,
-  now = new Date()
+  now = new Date(),
+  /*
+    Bildirim veritabanına METİN olarak yazılıyor ve sonradan çevrilmiyor:
+    dil, bağlantıyı OLUŞTURANIN dili olmalı (açan danışmanın değil).
+    Bilinmiyorsa Türkçe kalır.
+  */
+  dil: Dil = "tr",
 ): Promise<{ firstView: boolean }> {
   const { data: viewCount, error: bumpError } = await admin.rpc("bump_share_view", {
     p_link_id: link.id,
@@ -38,8 +45,8 @@ export async function recordShareView(
     user_id: link.created_by,
     project_id: link.project_id,
     kind: "share_view",
-    title: "Paylaşım bağlantınız açıldı",
-    body: `${link.label ?? "Adsız bağlantı"} · ${projectTitle}`.slice(0, 500),
+    title: dil === "en" ? "Your share link was opened" : "Paylaşım bağlantınız açıldı",
+    body: `${link.label ?? (dil === "en" ? "Untitled link" : "Adsız bağlantı")} · ${projectTitle}`.slice(0, 500),
     link: `/dashboard/editor/${link.project_id}/write`,
   });
   // Bildirim migration'ı çalıştırılmadıysa tür kısıtı reddeder: sayfa yine gösterilir.
