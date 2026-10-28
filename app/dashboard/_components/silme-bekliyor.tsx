@@ -4,7 +4,9 @@ import { BEKLEME_GUNU, kalanGun, silinmeTarihi } from "@/lib/hesap-silme";
 import ActionForm from "../action-form";
 
 const tarih = (deger: Date) =>
-  new Intl.DateTimeFormat("tr-TR", { dateStyle: "long" }).format(deger);
+  // Türkiye saatiyle: dilimsiz biçimleyici sunucuda UTC günü yazıyor, gece verilen
+  // talepte kalıcı silme günü bir gün erken görünüyordu.
+  new Intl.DateTimeFormat("tr-TR", { dateStyle: "long", timeZone: "Europe/Istanbul" }).format(deger);
 
 /*
   Silme talebi verilmiş hesabın gördüğü ekran; paneli tamamen kaplıyor

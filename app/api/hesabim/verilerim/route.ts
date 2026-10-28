@@ -39,12 +39,22 @@ export async function GET() {
     .eq("id", user.id)
     .maybeSingle();
 
-  const { data: calismalar } = await supabase.from("academic_projects").select("*").eq("owner_id", user.id);
-  const kimlikler = (calismalar ?? []).map((satir) => satir.id);
+  /*
+    Çalışmalar ve metinleri de aynı kuralla: eskiden hataları yutuluyordu ve
+    okunamayan tez "calismalar: []" olarak, eksiksiz bir döküm gibi iniyordu.
+    Bu dosya silme öncesi "verilerimi al" yolu; eksik dökümü tam sanan
+    kullanıcı tezini kaybedebilir.
+  */
+  const { data: calismaSatirlari, error: calismaHatasi } = await supabase.from("academic_projects").select("*").eq("owner_id", user.id);
+  const calismalar = calismaHatasi ? { hata: calismaHatasi.message } : calismaSatirlari ?? [];
+  const kimlikler = Array.isArray(calismalar) ? calismalar.map((satir) => satir.id as string) : [];
 
-  const metinler = kimlikler.length
-    ? (await supabase.from("project_manuscripts").select("*").in("project_id", kimlikler)).data ?? []
-    : [];
+  let metinler: unknown[] | { hata: string } = [];
+  if (calismaHatasi) metinler = { hata: "Çalışmalar okunamadığı için metinler alınamadı." };
+  else if (kimlikler.length) {
+    const { data, error } = await supabase.from("project_manuscripts").select("*").in("project_id", kimlikler);
+    metinler = error ? { hata: error.message } : data ?? [];
+  }
 
   const [kaynaklar, atifDenetimleri, belgeler, ozgunluk, analizler, puanlar, destek] = await Promise.all([
     oku("literature_sources"),

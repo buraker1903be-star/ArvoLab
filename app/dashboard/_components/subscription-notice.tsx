@@ -2,23 +2,18 @@ import { payArvolabSubscription } from "@/app/actions/subscription";
 import type { AccessState } from "@/lib/access";
 import { describePlan, planButtonLabel } from "@/lib/billing-plan";
 import OdemeButonu from "./odeme-butonu";
+import Link from "next/link";
+import { kapaliErisimCumlesi } from "@/lib/abonelik-kapisi";
 
 // Erişimi kapalı kullanıcıya gösterilen ekran. Kurum üyesi ödeme yapamaz
 // (kurumu öder); bireysel kullanıcı buradan aylık ya da yıllık planı seçip
 // kartla ödeyerek hemen devam eder. Planları ve tutarları ArvoOS bildirir.
 //
-// "Verilerimi indir" bilerek BURADA da duruyor: bu ekran paneli tamamen
-// kaplıyor (dashboard/layout.tsx), yani Ayarlar sayfasındaki indirme bağlantısı
-// aboneliği bitmiş kullanıcıya hiç görünmüyordu. Verisini alabilmek için
+// Kapalı erişimde de açık kalan sayfalar (lib/abonelik-kapisi.ts) burada
+// bağlantı olarak duruyor. Eskiden bu ekranın yorumu "Verilerimi indir
+// burada da duruyor" diyordu ama bileşende böyle bir bağlantı yoktu;
+// "bizimle iletişime geçin" de hiçbir yere gitmiyordu. Verisini almak için
 // önce ödeme yapması gereken bir ürün, veriyi rehin tutuyor demektir.
-
-function reason(access: AccessState) {
-  if (access.status === "suspended") return "askıya alındı";
-  if (access.status === "canceled") return "iptal edildi";
-  if (access.kind === "individual" && access.status === "trialing") return "deneme süreniz doldu";
-  if (access.periodEnd) return "sona erdi";
-  return "henüz başlatılmadı";
-}
 
 export default function SubscriptionNotice({ access }: { access: AccessState }) {
   const individual = access.kind === "individual";
@@ -29,8 +24,8 @@ export default function SubscriptionNotice({ access }: { access: AccessState }) 
           <span className="dashboard-kicker">Abonelik</span>
           <h1>Erişiminiz şu an kapalı</h1>
           <p>
-            {individual ? "ArvoLab aboneliğiniz" : `${access.organizationName ?? "Kurumunuzun"} ArvoLab aboneliği`}{" "}
-            {reason(access)}. Çalışmalarınız duruyor, silinmedi; abonelik yenilenince kaldığınız yerden devam edersiniz.
+            {kapaliErisimCumlesi(access)} Çalışmalarınız duruyor, silinmedi; abonelik yenilenince kaldığınız yerden devam
+            edersiniz.
           </p>
           {individual ? (
             access.plans.length > 0 ? (
@@ -52,11 +47,25 @@ export default function SubscriptionNotice({ access }: { access: AccessState }) 
                 </ul>
               </>
             ) : (
-              <p>Abonelik planı henüz tanımlanmadı. Bizimle iletişime geçin.</p>
+              <p>Abonelik planı henüz tanımlanmadı. Aşağıdaki Destek bölümünden bize yazın; erişiminizi birlikte açalım.</p>
             )
           ) : (
-            <p>Yenilemek için ArvoOS panelinizdeki Ödeme ve Lisans sayfasından ArvoLab aboneliğini ödeyin ya da bizimle iletişime geçin.</p>
+            <p>Yenilemek için ArvoOS panelinizdeki Ödeme ve Lisans sayfasından ArvoLab aboneliğini ödeyin ya da Destek bölümünden bize yazın.</p>
           )}
+          <nav className="pencere-dugmeler" aria-label="Kapalı erişimde açık sayfalar">
+            <Link className="projects-filter-button button-compact" href="/dashboard/abonelik">
+              Abonelik ve faturalar
+            </Link>
+            <Link className="projects-filter-button button-compact" href="/dashboard/expert-requests">
+              Destek
+            </Link>
+            <Link className="projects-filter-button button-compact" href="/dashboard/settings">
+              Ayarlar
+            </Link>
+            <a className="projects-filter-button button-compact" href="/api/hesabim/verilerim" download>
+              Verilerimi indir
+            </a>
+          </nav>
         </div>
       </section>
     </main>

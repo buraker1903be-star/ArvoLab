@@ -35,6 +35,14 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
+    /*
+      Doğrulanmamış adres ayrı söyleniyor. Eskiden her hata "e-posta veya
+      şifre hatalı" oluyordu: kaydolup bağlantıya henüz tıklamayan kullanıcı
+      DOĞRU şifreyle bu mesajı alıyor, şifresini değiştirmeye uğraşıyordu.
+      Supabase bu kodu yalnızca şifre doğruysa döndürür; adresin kayıtlı
+      olup olmadığını sızdırmaz.
+    */
+    if (error.code === "email_not_confirmed") redirect(`/?error=email-not-confirmed${nextQuery}`);
     redirect(`/?error=invalid-credentials${nextQuery}`);
   }
 
@@ -61,6 +69,9 @@ export async function login(formData: FormData) {
      olup olmadığı sızmamalı. Adresin SAHİBİNE e-postayla söylemek
      sızıntı değil, yardım (accountExistsEmail).
 */
+const EPOSTA_GONDERILEMEDI =
+  "Doğrulama e-postası şu anda gönderilemedi. Birkaç dakika sonra aynı bilgilerle tekrar deneyin; sorun sürerse \"Şifremi unuttum\" ile yeni bağlantı isteyebilirsiniz.";
+
 export async function signUp(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const denetim = kayitGirdisiniDenetle({
     email: formData.get("email"),
@@ -108,8 +119,8 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
   if (error) {
     // Zaten kayıtlı adres: ekranda ayırt edilmiyor, sahibine e-posta gidiyor.
     if (/already|registered|exists/i.test(error.message)) {
-      await sendEmail({ to: email, ...accountExistsEmail(origin, `${origin}/forgot-password`) });
-      return { success: true };
+      const gonderim = await sendEmail({ to: email, ...accountExistsEmail(origin, `${origin}/forgot-password`) });
+      return gonderim.ok ? { success: true } : { error: EPOSTA_GONDERILEMEDI };
     }
     console.error("Kayıt bağlantısı üretilemedi:", error.message);
     return { error: "Kayıt şu anda yapılamıyor. Birazdan tekrar deneyin." };
@@ -125,8 +136,14 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
     product_plans tablosunda ve okumak için bir uç nokta yok. Uydurmak
     yerine genel cümle kuruluyor.
   */
-  await sendEmail({ to: email, ...signUpConfirmEmail(authConfirmLink(origin, token, "signup", "/dashboard"), null) });
-  return { success: true };
+  const gonderim = await sendEmail({ to: email, ...signUpConfirmEmail(authConfirmLink(origin, token, "signup", "/dashboard"), null) });
+  /*
+    Gönderim düştüyse "posta kutunuza bakın" demek, hiç gelmeyecek bir
+    bağlantıyı bekletmek ve hesabı açılamaz bırakmak demekti. İki dal da
+    (yeni ve kayıtlı adres) aynı mesajı veriyor; adresin kayıtlı olup
+    olmadığı sızmıyor.
+  */
+  return gonderim.ok ? { success: true } : { error: EPOSTA_GONDERILEMEDI };
 }
 
 export async function logout() {

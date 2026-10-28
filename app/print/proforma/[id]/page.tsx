@@ -120,7 +120,9 @@ export default async function ProformaPage({ params }: { params: Promise<{ id: s
                 </div>
               ))}
             </dl>
-            <p>Havale açıklamasına <b>{p.no}</b> yazınız. Kartla ödemeyi Abonelik ve kredi sayfasından yapabilirsiniz.</p>
+            {/* Kartla ödeme cümlesi kaldırıldı: kurumun Abonelik sayfasında kart düğmesi yok, bireyselde
+                düğme plan tutarını çeker, bu proformanın tutarını değil. Proforma havale belgesidir. */}
+            <p>Havale açıklamasına <b>{p.no}</b> yazınız.</p>
           </section>
         ) : null}
 

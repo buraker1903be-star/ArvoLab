@@ -9,6 +9,7 @@ import { gorunumSec } from "@/app/actions/onizleme";
 import ActionForm from "./action-form";
 import { getAccessState } from "@/lib/access";
 import { gorunenUygulamalar, labUygulamalari } from "@/lib/os/uygulamalar";
+import AbonelikKapisi from "./_components/abonelik-kapisi";
 import SubscriptionNotice from "./_components/subscription-notice";
 import SilmeBekliyor from "./_components/silme-bekliyor";
 import ThemeToggle from "@/app/_components/theme-toggle";
@@ -152,10 +153,11 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           */}
           {profile?.silme_talebi_at ? (
             <SilmeBekliyor talep={profile.silme_talebi_at} />
-          ) : access.blocked ? (
-            <SubscriptionNotice access={access} />
           ) : (
-            children
+            /* Destek, Abonelik ve Ayarlar kapalı erişimde de açık (lib/abonelik-kapisi.ts). */
+            <AbonelikKapisi kapali={access.blocked} uyari={<SubscriptionNotice access={access} />}>
+              {children}
+            </AbonelikKapisi>
           )}
         </div>
       </div>

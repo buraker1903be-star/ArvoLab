@@ -134,8 +134,9 @@ export function denemeBitiyorEmail(kalanGun: number, panelAdresi: string) {
       `Deneme süreniz ${escape(sure)} bitiyor`,
       `<p style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;">
          Çalışmalarınız yerinde duruyor ve silinmiyor. Deneme bittiğinde
-         yalnızca yeni yazma ve denetim durur; planınızı yenilediğinizde
-         kaldığınız yerden devam edersiniz.
+         çalışma ekranları kapanır; Abonelik, Destek ve Ayarlar açık kalır,
+         verilerinizi indirebilirsiniz. Planınızı yenilediğinizde kaldığınız
+         yerden devam edersiniz.
        </p>
        ${button(panelAdresi, "Planımı görüntüle")}
        <p style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;">

@@ -119,9 +119,29 @@ export function licenseSummary(access: LicenseSummaryInput, now: Date = new Date
       Kurum aboneliğinde muhatap kurum olduğu için gösterilmiyor.
     */
     yenilemeNotu: individual
-      ? "Otomatik ödeme yok: kartınız saklanmıyor ve kendiliğinden çekim yapılmıyor. Dönem bittiğinde yeni yazma ve denetim durur, çalışmalarınız silinmez; devam etmek için ödemeyi kendiniz yenilersiniz."
+      ? "Otomatik ödeme yok: kartınız saklanmıyor ve kendiliğinden çekim yapılmıyor. Dönem bittiğinde çalışma ekranları kapanır (Abonelik, Destek ve Ayarlar açık kalır, verilerinizi indirebilirsiniz), çalışmalarınız silinmez. Dönem bitmeden yenilerseniz yeni dönem mevcut dönemin sonuna eklenir, gün kaybetmezsiniz."
       : "",
     // Kurum aboneliğini kurumu öder; kişisel ödeme yalnızca bireysel kullanıcıda.
-    showPayment: individual && access.status !== "active" && access.status !== "unsynced",
+    /*
+      Etkin abonede de dönemin son ERKEN_YENILEME_GUN gününde. Eskiden etkin
+      abonede düğme hiç yoktu: otomatik ödeme olmadığı için öğrencinin tek
+      yolu dönemin bitmesini, panelin kapanmasını beklemekti — editör kaydı
+      oturumun ortasında reddediliyordu. ArvoOS yeni dönemi
+      greatest(now(), mevcut bitiş)'ten başlatıyor (arvo_activate_license_period),
+      erken ödeme gün yakmıyor.
+    */
+    showPayment:
+      individual &&
+      access.status !== "unsynced" &&
+      (access.status !== "active" || erkenYenilemeDonemi(access.periodEnd)),
   };
+}
+
+export const ERKEN_YENILEME_GUN = 14;
+
+/** Dönemin bitişine ERKEN_YENILEME_GUN ya da daha az kaldı mı (bitiş bilinmiyorsa hayır). */
+export function erkenYenilemeDonemi(periodEnd: string | null | undefined, simdi = Date.now()): boolean {
+  if (!periodEnd) return false;
+  const bitis = Date.parse(periodEnd);
+  return Number.isFinite(bitis) && bitis - simdi <= ERKEN_YENILEME_GUN * 86_400_000;
 }

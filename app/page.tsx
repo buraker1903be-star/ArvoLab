@@ -29,6 +29,8 @@ type HomePageProps = {
 const errorMessages: Record<string, string> = {
   "missing-credentials": "E-posta adresi ve şifre zorunludur.",
   "invalid-credentials": "E-posta adresi veya şifre hatalı.",
+  "email-not-confirmed":
+    "E-posta adresiniz henüz doğrulanmadı. Kayıtta gönderdiğimiz bağlantıya tıklayın; e-postayı bulamıyorsanız \"Şifremi unuttum\" ile yeni bir bağlantı isteyin — o bağlantı adresinizi de doğrular.",
   "link-invalid": "Bağlantı geçersiz ya da süresi dolmuş. Lütfen yeniden şifre sıfırlama isteyin.",
   "session-missing": "Oturumunuz sona ermiş. Lütfen tekrar giriş yapın.",
 };
