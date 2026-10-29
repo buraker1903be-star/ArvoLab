@@ -62,6 +62,10 @@ const HATA: Record<string, Metin> = {
     tr: "Kurumunuzun kredisini kurum yöneticiniz alır.",
     en: "Your institution administrator buys your institution's credits.",
   },
+  platform: {
+    tr: "Seçili kurum ArvoOS'un kendisi; ArvoOS kendi kredisi için ödeme almaz ve iç ekip krediye tabi değil. Bir müşteri kurumu adına almak için profil menüsündeki Kurum seçiminden o kurumu seçin.",
+    en: "The selected institution is ArvoOS itself; ArvoOS does not take payment for its own credits and the internal team is not subject to credits. To buy for a customer institution, select it under Institution in the profile menu.",
+  },
   sahip: {
     tr: "Kurumunuzun ArvoOS'ta etkin bir sahibi bulunamadığı için ödeme açılamadı. Arvo destek ekibiyle iletişime geçin.",
     en: "Payment could not be started because your institution has no active owner in ArvoOS. Contact Arvo support.",
@@ -156,7 +160,8 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   const kartlaOdenebilir = kartSaklama && Boolean(licenseSummary(access, new Date(), dil)?.showPayment);
 
   /* Satış: bireysel abone kendine, kurum yöneticisi kurumuna. Paketler bireyselde ensure'dan, kurumda org_billing'den. */
-  const satis = access.kind === "individual" ? ("bireysel" as const) : kurumKredisi ? ("kurum" as const) : null;
+  const platformKurumu = Boolean(faturalamaVeri?.platformKurumu);
+  const satis = access.kind === "individual" ? ("bireysel" as const) : kurumKredisi && !platformKurumu ? ("kurum" as const) : null;
   const paketler = satis === "bireysel" ? access.krediPaketleri : satis === "kurum" ? (faturalamaVeri?.krediPaketleri ?? []) : [];
   const enUcuzBirim = paketler.length ? Math.max(...paketler.map(binKrediFiyati)) : 0;
   /*
@@ -328,6 +333,15 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                   })}
             </p>
           )}
+
+          {platformKurumu ? (
+            <p className="hint">
+              {t({
+                tr: "Seçili kurum ArvoOS'un kendisi; kendi kredisi satılmaz. Bir müşteri kurumu adına kredi almak için profil menüsündeki Kurum seçiminden o kurumu seçin.",
+                en: "The selected institution is ArvoOS itself; its own credits are not sold. To buy credits for a customer institution, select it under Institution in the profile menu.",
+              })}
+            </p>
+          ) : null}
 
           {access.kind === "organization" && !satis ? (
             <p className="hint">

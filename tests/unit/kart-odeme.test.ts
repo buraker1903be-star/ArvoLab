@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  kurumKrediHataAnahtari,
   istemciIpsi,
   kartDurumuOku,
   kartHataAnahtari,
@@ -122,4 +123,12 @@ describe("ödeme oturumu çerezi", () => {
     assert.equal(kartOturumuOku("bozuk!!", "ARV123abc", "u1"), null);
     assert.equal(kartOturumuOku(undefined, "ARV123abc", "u1"), null);
   });
+});
+
+test("kurum kredisi hata kodu sayfanın mesaj anahtarına iner", () => {
+  assert.equal(kurumKrediHataAnahtari("platform_self"), "platform");
+  assert.equal(kurumKrediHataAnahtari("not_found"), "paket");
+  assert.equal(kurumKrediHataAnahtari("no_owner"), "sahip");
+  assert.equal(kurumKrediHataAnahtari(null), "odeme");
+  assert.equal(kurumKrediHataAnahtari("unavailable"), "odeme");
 });

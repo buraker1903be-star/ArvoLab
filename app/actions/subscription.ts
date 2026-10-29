@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { kurumKrediOdemesiBaslat, startCreditCheckout, startSubscriptionCheckout } from "@/lib/subscription";
 import { faturalamaKapsamim } from "@/lib/faturalama-sunucu";
+import { kurumKrediHataAnahtari } from "@/lib/kart-odeme";
 
 // Bireysel abonenin "Aboneliği başlat / yenile" düğmesi. Tutar ArvoOS'ta
 // belirlenir; buradan tutar gönderilmez, yalnızca kim olduğu ve kullanıcının
@@ -80,6 +81,7 @@ export async function kurumKrediSatinAl(formData: FormData) {
   if (!/^[a-z0-9_-]{1,32}$/i.test(paket)) redirect("/dashboard/abonelik?hata=paket");
 
   const sonuc = await kurumKrediOdemesiBaslat(kapsam.kurumId, paket);
-  if (!sonuc.ok) redirect(`/dashboard/abonelik?hata=${sonuc.hata === "not_found" ? "paket" : sonuc.hata === "no_owner" ? "sahip" : "odeme"}`);
+  /* platform_self: seçili kurum ArvoOS'un kendisi (lib/subscription.ts → platformKurumu). */
+  if (!sonuc.ok) redirect(`/dashboard/abonelik?hata=${kurumKrediHataAnahtari(sonuc.hata)}`);
   redirect(sonuc.veri);
 }

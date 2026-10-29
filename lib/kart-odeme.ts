@@ -200,3 +200,15 @@ export function kartHataAnahtari(kod: string | null | undefined): keyof typeof K
 
 /* Ödeme dönüşü (?sonuc=…) → abonelik sayfasının ?kart=… değeri. Bilinmeyen her şey "hata". */
 export const odemeDonusuDurumu = (sonuc: string | null | undefined): "tamam" | "hata" => (sonuc === "tamam" ? "tamam" : "hata");
+
+/**
+ * Kurum kredisi ödemesinin köprü hata kodu → Abonelik sayfasının `?hata=`
+ * anahtarı. platform_self: seçili kurum ArvoOS'un kendisi (29.10.2026'ya
+ * kadar "ödeme başlatılamadı" genel mesajına düşüyordu).
+ */
+export function kurumKrediHataAnahtari(kod: string | null | undefined): "paket" | "sahip" | "platform" | "odeme" {
+  if (kod === "not_found") return "paket";
+  if (kod === "no_owner") return "sahip";
+  if (kod === "platform_self") return "platform";
+  return "odeme";
+}

@@ -244,9 +244,20 @@ export const faturalarim = async (user: { id: string; email: string }) =>
   Yanıt okunamazsa paket listesi boş — sayfa "yüklenemedi" der.
 */
 /* YETKİ ÇAĞIRANDA: köprü kurumu kimliğiyle okuyor, kişiyi tanımıyor — kurum yöneticisi olduğu doğrulanmadan çağrılmamalı. */
-export async function kurumFaturalamasi(organizationId: string): Promise<{ faturalama: Faturalama | null; krediPaketleri: KrediPaketi[] }> {
+/*
+  `platformKurumu` (29.10.2026): kurum ArvoOS'un KENDİSİ. ArvoOS kendi
+  kredisi için ödeme almıyor (platform_self); iç ekip kurum seçicide bir
+  müşteri seçmeyince sayfa kendi kurumunu gösteriyor, paketleri satıyor ve
+  düğmeye basan "ödeme başlatılamadı" görüyordu (29.10.2026 canlı
+  günlüğü). İşaret yoksa (eski ArvoOS) false: paketler eskisi gibi çizilir,
+  hatayı satın alma işlemi açık bir mesaja çevirir.
+*/
+export type KurumFaturalamasi = { faturalama: Faturalama | null; krediPaketleri: KrediPaketi[]; platformKurumu: boolean };
+
+export async function kurumFaturalamasi(organizationId: string): Promise<KurumFaturalamasi> {
   const ham = await faturalamaIstegi({ action: "org_billing", organizationId });
-  return { faturalama: faturalamaOku(ham), krediPaketleri: krediPaketleriniOku(ham) };
+  const platformKurumu = (ham as { platformKurumu?: unknown } | null)?.platformKurumu === true;
+  return { faturalama: faturalamaOku(ham), krediPaketleri: platformKurumu ? [] : krediPaketleriniOku(ham), platformKurumu };
 }
 
 /** Kapsama göre liste: bireysel abonenin kendi ödemeleri ya da kurum yöneticisinin kurumunkiler. */
@@ -261,9 +272,9 @@ export async function faturalamaYukle(
 export async function faturalamaVePaketler(
   kapsam: { tur: "bireysel" } | { tur: "kurum"; kurumId: string },
   user: { id: string; email: string },
-): Promise<{ faturalama: Faturalama | null; krediPaketleri: KrediPaketi[] }> {
+): Promise<KurumFaturalamasi> {
   if (kapsam.tur === "kurum") return kurumFaturalamasi(kapsam.kurumId);
-  return { faturalama: await faturalarim(user), krediPaketleri: [] };
+  return { faturalama: await faturalarim(user), krediPaketleri: [], platformKurumu: false };
 }
 
 /*
