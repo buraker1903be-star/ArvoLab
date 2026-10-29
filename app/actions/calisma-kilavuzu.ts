@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createHmac } from "node:crypto";
+import { taramaDogrula, taramaImzala } from "@/lib/imzali-tarama";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { ornekKalibi } from "@/lib/atif/tyk";
@@ -53,13 +55,31 @@ async function calismayaYazabilir(projectId: string) {
   return { ctx, calisma: data } as const;
 }
 
+/** İmzalı belirtecin taşıdığı: tarama sonucu ve kaynağı. */
+type ImzaliTarama = { ham: GuidelineScanResult; belgeBasligi: string | null; kaynakAdres: string | null; depoYolu: string | null };
+
+/*
+  İmza anahtarı Supabase'in gizli anahtarından TÜRETİLİYOR (ayrı bir sır
+  eklenmedi: o anahtar sunucuda her zaman var ve dışarı çıkmıyor). Amaç
+  etiketiyle ayrıldığı için başka bir imzayla karışmaz. Anahtar yoksa
+  boş dize: imza yine kurulur ama yalnızca aynı yapılandırmada doğrulanır
+  — yerel geliştirmede kayıt çalışmaya devam etsin.
+*/
+const taramaAnahtari = () =>
+  createHmac("sha256", process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").update("arvolab:kilavuz-taramasi").digest("hex");
+const taramaKapsami = (kullaniciId: string, projectId: string) => `${kullaniciId}:${projectId}`;
+
 export interface TaramaSonucu {
   error?: string;
   /** Öğrenciye onaylatılacak alanlar. */
   form?: DogrulamaFormu;
-  belgeBasligi?: string | null;
-  /** Çıkarımın ham sonucu; kaydederken geri gönderiliyor. */
-  ham?: GuidelineScanResult;
+  /*
+    Tarama sonucu, kılavuzun adı ve kaynağı — sunucuda İMZALI ve süreli
+    (lib/imzali-tarama.ts). Kayıt yalnızca bunu geri alıyor. Eskiden ham
+    sonuç, ad, adres ve dosya yolu ayrı ayrı tarayıcıdan geri geliyor ve
+    doğrulanmadan saklanıyordu.
+  */
+  belirtec?: string;
   /* Çıkarımın kendi uyarıları (OCR gürültüsü, düşük güven). Öğrenciye
      gösteriliyor: "bunu ben çıkardım, siz bakın" demenin yolu. */
   uyarilar?: string[];
@@ -115,6 +135,21 @@ export async function kilavuzuTara(
       return { error: t({ tr: "Kılavuz dosyası yükleyin ya da adresini girin.", en: "Upload a guideline file or enter its address." }) };
     }
 
+    const belirtec = taramaImzala(
+      {
+        ham: sonuc,
+        // Ad kaynaktan (dosya adı / adres); eskiden sürüm etiketiydi ("2019"). Bkz. kilavuzAdi.
+        belgeBasligi: kilavuzAdi({ depoYolu: girdi.depoYolu, adres: girdi.adres }),
+        kaynakAdres: girdi.depoYolu ? null : girdi.adres?.trim() || null,
+        depoYolu: girdi.depoYolu || null,
+      } satisfies ImzaliTarama,
+      taramaAnahtari(),
+      taramaKapsami(ctx.user.id, projectId),
+    );
+    if (!belirtec) {
+      return { error: t({ tr: "Kılavuzun okunan içeriği beklenenden büyük; daha kısa bir belge yükleyin.", en: "The guideline's extracted content is larger than expected; upload a shorter document." }) };
+    }
+
     return {
       form: formaDoldur({
         citationStyle: sonuc.detectedCitationHint,
@@ -122,9 +157,7 @@ export async function kilavuzuTara(
         minPages: sonuc.minPages,
         maxPages: sonuc.maxPages,
       }),
-      // Ad kaynaktan (dosya adı / adres); eskiden sürüm etiketiydi ("2019"). Bkz. kilavuzAdi.
-      belgeBasligi: kilavuzAdi({ depoYolu: girdi.depoYolu, adres: girdi.adres }),
-      ham: sonuc,
+      belirtec,
       /* Çıkarımın uyarıları Türkçe üretiliyor (lib/guideline-scan.ts); ekranda kullanıcının dilinde. */
       uyarilar: sonuc.warnings.map((uyari) => taramaUyarisiCevir(uyari, dil)),
       bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules), dil),
@@ -146,10 +179,8 @@ export async function kilavuzuKaydet(
   projectId: string,
   girdi: {
     form: DogrulamaFormu;
-    belgeBasligi?: string | null;
-    kaynakAdres?: string | null;
-    depoYolu?: string | null;
-    hamCikarim?: unknown;
+    /** kilavuzuTara'nın imzalı belirteci; ad, kaynak ve kurallar YALNIZCA buradan. */
+    belirtec?: string;
   },
 ): Promise<ActionResult> {
   const izin = await calismayaYazabilir(projectId);
@@ -178,14 +209,23 @@ export async function kilavuzuKaydet(
   const hatalar = formuDogrula(girdi.form);
   if (hatalar.length > 0) return { error: dogrulamaMesaji(hatalar[0], dil) };
 
+  const dogrulama = taramaDogrula(girdi.belirtec, taramaAnahtari(), taramaKapsami(ctx.user.id, projectId));
+  if (!dogrulama.ok) {
+    return {
+      error:
+        dogrulama.neden === "sure"
+          ? t({ tr: "Okuma sonucunun süresi doldu; kılavuzu yeniden okutun.", en: "The reading has expired; read the guideline again." })
+          : t({ tr: "Okuma sonucu doğrulanamadı; kılavuzu yeniden okutun.", en: "The reading could not be verified; read the guideline again." }),
+    };
+  }
+  const imzali = dogrulama.veri as ImzaliTarama;
   /*
-    Dosya yolu kayıtta da taramadaki gibi denetleniyor: yalnızca kullanıcının
-    kendi klasörü. Eskiden yalnızca taramada denetleniyordu; kayıt yolu
-    sütunu doğrudan yazıyordu (bugün okuyan yok, ama aşağıdaki depo
-    temizliği bu yolu SİLECEK).
+    Dosya yolu taramada kullanıcının klasörüyle sınırlanmıştı ve imza onu
+    değişmeden taşıyor; yine de aşağıdaki depo temizliği bu yolu SİLECEĞİ
+    için ikinci kez denetleniyor.
   */
   const depoYolu =
-    girdi.depoYolu && girdi.depoYolu.startsWith(`${ctx.user.id}/`) && !girdi.depoYolu.includes("..") ? girdi.depoYolu : null;
+    imzali.depoYolu && imzali.depoYolu.startsWith(`${ctx.user.id}/`) && !imzali.depoYolu.includes("..") ? imzali.depoYolu : null;
   const { data: onceki } = await ctx.supabase
     .from("calisma_kilavuzu")
     .select("depo_yolu")
@@ -193,17 +233,17 @@ export async function kilavuzuKaydet(
     .maybeSingle();
 
   const kurallar = kurallariKur(girdi.form, {
-    belgeBasligi: girdi.belgeBasligi,
-    kaynakAdres: girdi.kaynakAdres,
-    hamCikarim: girdi.hamCikarim,
+    belgeBasligi: imzali.belgeBasligi,
+    kaynakAdres: imzali.kaynakAdres,
+    hamCikarim: imzali.ham,
   });
 
   const { error } = await ctx.supabase.from("calisma_kilavuzu").upsert(
     {
       project_id: projectId,
-      kaynak_adres: girdi.kaynakAdres ?? null,
+      kaynak_adres: imzali.kaynakAdres,
       depo_yolu: depoYolu,
-      belge_basligi: girdi.belgeBasligi ?? null,
+      belge_basligi: imzali.belgeBasligi,
       kurallar,
       yukleyen: ctx.user.id,
       guncellendi: new Date().toISOString(),
