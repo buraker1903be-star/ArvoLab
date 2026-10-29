@@ -98,6 +98,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-sync";
 import Link from "next/link";
+import { calismaAdresi } from "@/lib/calisma-karti";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
@@ -2171,15 +2172,21 @@ export default function ManuscriptEditor({
       ) : !guideline && isThesis ? (
         <div className="guideline-applied-banner" data-tone="muted" role="status">
           <div>
-            <strong>{t({ tr: "Bu çalışmaya bağlı onaylı kılavuz yok", en: "No approved guideline is linked to this work" })}</strong>
+            <strong>{t({ tr: "Bu çalışmaya bağlı kılavuz yok", en: "No guideline is linked to this work" })}</strong>
+            {/* Eskiden yalnızca "kurumu seçin" deniyordu: kataloğunda kılavuzu
+                olmayan (yurt dışındaki her) öğrenci kurumu seçse de bir şey
+                değişmiyordu. Asıl yol kendi kılavuzunu yüklemek. */}
             <span>
               {t({
-                tr: "Üniversite, enstitü ve bölümünüzü seçin; kılavuzunuz onaylandığında editöre kendiliğinden uygulanır.",
-                en: "Select your university, institute and department; once your guideline is approved, it is applied to the editor automatically.",
+                tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
+                en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
               })}
             </span>
           </div>
           <div className="cluster">
+            <Link href={calismaAdresi(projectId, { kilavuz: true })} className="projects-primary-button">
+              {t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}
+            </Link>
             <Link href={editHref} className="projects-filter-button">
               {t({ tr: "Kurumu seç", en: "Select institution" })}
             </Link>

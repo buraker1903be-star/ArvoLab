@@ -616,7 +616,12 @@ export default async function DashboardPage() {
           <header className="gb-kart-bas">
             <div>
               <h2>{t({ tr: "Üç adımda başlayın", en: "Get started in three steps" })}</h2>
-              <p>{t({ tr: "Üniversitenizi seçin; tez yazım kılavuzunuz editöre kendiliğinden uygulanır.", en: "Choose your university; your thesis writing guideline is applied to the editor automatically." })}</p>
+              <p>
+                {t({
+                  tr: "Tez yazım kılavuzunuzu bir kez ekleyin; sayfa düzeni, zorunlu bölümler ve atıf sistemi editöre uygulanır.",
+                  en: "Add your thesis writing guideline once; page layout, required sections and the citation system are applied to the editor.",
+                })}
+              </p>
             </div>
           </header>
           {/*
@@ -624,19 +629,28 @@ export default async function DashboardPage() {
             literatür ya da denetim ekranına göndermek, onu bir boş ekrana
             daha götürmek olurdu; tek yol ileri gidiyor.
           */}
+          {/*
+            Eskiden 1. adım "üniversitenizi seçtiğinizde kurumunuzun onaylı
+            kılavuzu bağlanır, kurallar kendiliğinden uygulanır" diyordu.
+            26.10.2026'dan beri yeni çalışmaya kılavuz ada göre BAĞLANMIYOR:
+            üniversite serbest metin, kuralları öğrencinin eklediği kılavuz
+            veriyor ve öğrenci onaylıyor (app/actions/calisma-kilavuzu.ts).
+            Yurt dışındaki öğrenci listede olmayan üniversitesini arayıp
+            bulamayınca ürünün ona göre olmadığını sanıyordu.
+          */}
           <ol className="baslangic-adimlari">
             <li>
-              <strong>{t({ tr: "Çalışmanızı açın.", en: "Create your work." })}</strong>{" "}
+              <strong>{t({ tr: "Çalışmanızı açın, kılavuzunuzu ekleyin.", en: "Create your work and add your guideline." })}</strong>{" "}
               {t({
-                tr: "Üniversite ve bölümünüzü seçtiğinizde kurumunuzun onaylı tez kılavuzu çalışmaya bağlanır; biçim kuralları editörde kendiliğinden uygulanır.",
-                en: "When you choose your university and department, your institution's approved thesis guideline is linked to the work; formatting rules are applied in the editor automatically.",
+                tr: "Enstitünüzden ya da danışmanınızdan aldığınız kılavuz PDF'ini veya kılavuzun web adresini verin; kurallar dosyadan çıkarılır, siz onaylayınca editöre uygulanır. Kılavuzu sonra da ekleyebilirsiniz.",
+                en: "Upload the guideline PDF from your graduate school or advisor, or give the guideline's web address; the rules are extracted from the file and applied to the editor once you approve them. You can also add it later.",
               })}
             </li>
             <li>
               <strong>{t({ tr: "Kaynaklarınızı toplayın.", en: "Gather your sources." })}</strong>{" "}
               {t({
-                tr: "DOI yapıştırın, künye Crossref ve OpenAlex kayıtlarından dolsun. Atıf stiliniz kılavuzdan gelir; elle seçmeniz gerekmez.",
-                en: "Paste a DOI and the reference fills in from Crossref and OpenAlex records. Your citation style comes from the guideline; no need to pick it by hand.",
+                tr: "DOI yapıştırın, künye Crossref ve OpenAlex kayıtlarından dolsun. Atıf stiliniz kılavuzunuzdan gelir.",
+                en: "Paste a DOI and the reference fills in from Crossref and OpenAlex records. Your citation style comes from your guideline.",
               })}
             </li>
             <li>

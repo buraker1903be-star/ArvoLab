@@ -281,10 +281,20 @@ export default async function ProjectsPage({
         <BosDurum
           ikon={FileText}
           baslik={t({ tr: "Henüz kayıtlı çalışmanız yok", en: "You have no works yet" })}
-          aciklama={t({
-            tr: "Üniversitenizi seçerek başlayın; tez yazım kılavuzunuz editöre otomatik uygulanır, kaynakça sistemi ve sayfa düzeni sizin için hazırlanır.",
-            en: "Start by choosing your university; your thesis writing guideline is applied to the editor automatically, and the citation system and page layout are set up for you.",
-          })}
+          /* Öğrencinin yolu (pencere) kılavuzu YÜKLETİYOR; katalogdan kurum
+             seçtiren yol (/dashboard/editor/new) personelde. Eskiden ikisine
+             de "üniversitenizi seçin, kılavuz otomatik uygulanır" deniyordu. */
+          aciklama={
+            ogrenciDuzeni
+              ? t({
+                  tr: "Çalışmanızı açın ve tez yazım kılavuzunuzu ekleyin; onayladığınız kurallarla sayfa düzeni, zorunlu bölümler ve kaynakça sistemi editöre uygulanır.",
+                  en: "Create your work and add your thesis writing guideline; once you approve its rules, page layout, required sections and the citation system are applied to the editor.",
+                })
+              : t({
+                  tr: "Üniversitenizi seçerek başlayın; tez yazım kılavuzunuz editöre otomatik uygulanır, kaynakça sistemi ve sayfa düzeni sizin için hazırlanır.",
+                  en: "Start by choosing your university; your thesis writing guideline is applied to the editor automatically, and the citation system and page layout are set up for you.",
+                })
+          }
           eylem={{ etiket: t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" }), href: ogrenciDuzeni ? "/dashboard/editor?yeni=1" : "/dashboard/editor/new" }}
         />
       ) : (
