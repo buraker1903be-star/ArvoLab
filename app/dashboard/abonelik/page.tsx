@@ -1,4 +1,3 @@
-import { ADMIN_ROLES } from "@/lib/project-labels";
 import SozlesmeOnayi from "../_components/sozlesme-onayi";
 import { odemeSonrasiOnayVar, sozlesmeOnayGerekli } from "@/lib/sozlesme/onay-durumu";
 import { logout } from "@/app/actions/auth";
@@ -189,7 +188,6 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   */
   const odemeSonrasiOnay =
     kart === "tamam" &&
-    ctx.role !== null && !ADMIN_ROLES.includes(ctx.role) &&
     !(await sozlesmeOnayGerekli({ id: ctx.user.id, role: ctx.role })) &&
     !(await odemeSonrasiOnayVar(ctx.user.id));
 

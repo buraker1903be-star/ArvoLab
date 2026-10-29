@@ -9,14 +9,14 @@
   anahtarı yoksa da gösterilmez: onay yazılamayacağı için pencere
   kullanıcıyı hiç çıkamayacağı bir yere kapatırdı.
 
-  İç ekip (system_admin, founder) muaf: müşteri değiller.
+  MUAFİYET YOK (29.10.2026, kurum sahibinin kararı): iç ekip de
+  (system_admin, founder) dahil herkes onaylar. Başta iç ekip muaftı.
 
   Bilerek "use server" DEĞİL (AGENTS.md).
 */
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
-import { ADMIN_ROLES } from "@/lib/project-labels";
 import type { UserRole } from "@/lib/project-labels";
 import { SOZLESME_SURUMU } from "./kullanim-sozlesmesi";
 
@@ -33,7 +33,6 @@ export type SozlesmeOnayi = {
 };
 
 export const sozlesmeOnayGerekli = cache(async (kullanici: { id: string; role: UserRole | string | null }): Promise<boolean> => {
-  if (kullanici.role && (ADMIN_ROLES as readonly string[]).includes(kullanici.role)) return false;
   if (!adminIstemcisiVarsa()) return false;
   const supabase = await createClient();
   const { data, error } = await supabase
