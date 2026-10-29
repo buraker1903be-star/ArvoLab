@@ -1,6 +1,7 @@
 // Server action'lar için ortak oturum/rol kontrolü.
 // Bu dosya bilinçli olarak "use server" DEĞİLDİR: "use server" dosyasındaki
 // her export dışarıdan çağrılabilir bir uç noktaya dönüşür.
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { ceviri } from "./dil-sunucu";
 import type { Metin } from "./dil";
@@ -34,7 +35,13 @@ export interface AuthContext {
 
 export type GuardResult = AuthContext | { error: string; reason: "unauthenticated" | "forbidden" };
 
-export async function getAuthContext(): Promise<AuthContext | null> {
+/*
+  İstek başına bir kez (React cache): ana sayfa bunu dolaylı yoldan altı-yedi
+  kez çağırıyordu ve her çağrı Auth sunucusuna ayrı bir getUser ile profil
+  okuması demekti. Sunucu işlemi kendi isteğinde çalıştığı için önbellek
+  işlemler arasında taşınmaz.
+*/
+export const getAuthContext = cache(async (): Promise<AuthContext | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -53,7 +60,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     role: (profile?.role as UserRole | undefined) ?? null,
     organizationId: profile?.organization_id ?? null,
   };
-}
+});
 
 // RLS asıl güvenlik katmanıdır; bu kontrol yetkisiz isteklerin sessizce
 // "başarılı" görünmesini engeller ve kullanıcıya anlaşılır mesaj verir.

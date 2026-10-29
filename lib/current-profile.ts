@@ -53,11 +53,17 @@ export const loadCurrentProfile = cache(async function loadCurrentProfile(): Pro
   const profil = data as CurrentProfile;
   if (profil.organization_id) return profil;
 
-  const { error: baglamaHatasi } = await supabase.rpc("arvoos_uyeligimi_bagla");
+  /*
+    Bağlanan kurumu döndüren sürüm (20261029152936): profil yalnızca bir
+    kuruma bağlandıysa yeniden okunur. Eskiden void dönen RPC'nin ardından
+    HER İSTEKTE ikinci bir profil okuması yapılıyordu.
+  */
+  const { data: kurum, error: baglamaHatasi } = await supabase.rpc("arvoos_uyeligimi_bagla_kurum");
   if (baglamaHatasi) {
     console.error("[arvoos] üyelik bağlanamadı", baglamaHatasi.message);
     return profil;
   }
+  if (!kurum) return profil;
 
   const { data: yeni } = await supabase
     .from("profiles")

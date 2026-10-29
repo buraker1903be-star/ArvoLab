@@ -192,6 +192,8 @@ describe("fonksiyon yetkileri", () => {
       arvoos_uyeligimi_bagla   — PARAMETRE ALMIYOR; yalnızca çağıranın
         kendi profilini, yalnızca kurumsuzsa ve yalnızca ArvoOS'un ittiği
         listede e-postası varsa bağlar. Başkasının profiline dokunulamaz.
+      arvoos_uyeligimi_bagla_kurum — yukarıdakinin aynısını çağırıp çağıranın
+        KENDİ kurumunu döndürür (performans: profil yeniden okunmasın).
       ai_kredi_durumum         — PARAMETRE ALMIYOR; yalnızca çağıranın
         kendi kurumunun tüketimini döndürür. Kurum kimliğini parametre
         alsaydı herkes başka bir kurumun tüketimini okuyabilirdi
@@ -221,9 +223,9 @@ describe("fonksiyon yetkileri", () => {
         görmekle aynı kural. Yetkisiz çağıran boş liste alır
         (tests/db/kurum-kredi-hareketleri.test.mjs).
   */
-  test("authenticated ek olarak yalnızca kendi kapsamındaki dokuz fonksiyon", async () => {
+  test("authenticated ek olarak yalnızca kendi kapsamındaki on fonksiyon", async () => {
     assert.deepEqual(await acik("authenticated"),
-      [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "ai_kredi_durumum", "olcum_ozeti",
+      [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "arvoos_uyeligimi_bagla_kurum", "ai_kredi_durumum", "olcum_ozeti",
        "asistan_model_ozetleri", "calisma_hareketlerim", "yazim_ritmi", "ai_bireysel_kredi_hareketlerim",
        "ai_kurum_kredi_hareketleri"].sort());
   });

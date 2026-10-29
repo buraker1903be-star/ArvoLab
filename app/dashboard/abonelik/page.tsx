@@ -135,7 +135,14 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
     faturaKurumu = kendi?.name ?? null;
   }
   const kurumKredisi = kapsam?.tur === "kurum" ? kapsam.kurumId : null;
-  const [faturalamaVeri, { data: hareketler }] = await Promise.all([
+  /*
+    Kart saklama yalnızca bireysel abonede ve ArvoOS anahtarı açıkken. Kart
+    durumu ayrı bir köprü çağrısı; okunamazsa null ("okunamadı"). Faturalarla
+    AYNI ANDA istenir: eskiden ardından geliyordu ve sayfa üç ArvoOS
+    çağrısını sırayla bekliyordu (her biri 8 sn zaman aşımlı).
+  */
+  const kartSaklama = access.kind === "individual" && access.kartSaklama && Boolean(ctx.user.email);
+  const [faturalamaVeri, { data: hareketler }, kartDurumu] = await Promise.all([
     kapsam && ctx.user.email ? faturalamaVePaketler(kapsam, { id: ctx.user.id, email: ctx.user.email }) : null,
     /*
       Son hareketler: bireysel abonenin kendi defteri ya da kurum
@@ -147,16 +154,11 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
       : kurumKredisi
         ? ctx.supabase.rpc("ai_kurum_kredi_hareketleri", { p_organization_id: kurumKredisi })
         : Promise.resolve({ data: null }),
+    kartSaklama && ctx.user.email ? kartDurumum({ id: ctx.user.id, email: ctx.user.email }) : null,
   ]);
   const faturalama = faturalamaVeri?.faturalama ?? null;
   const sonHareketler = (hareketler ?? []) as { tur: string; kredi: number; created_at: string }[];
 
-  /*
-    Kart saklama yalnızca bireysel abonede ve ArvoOS anahtarı açıkken. Kart
-    durumu ayrı bir köprü çağrısı; okunamazsa null ("okunamadı").
-  */
-  const kartSaklama = access.kind === "individual" && access.kartSaklama && Boolean(ctx.user.email);
-  const kartDurumu = kartSaklama && ctx.user.email ? await kartDurumum({ id: ctx.user.id, email: ctx.user.email }) : null;
   // Mevcut ödeme düğmesiyle aynı koşul (lib/license-summary.ts → showPayment).
   const kartlaOdenebilir = kartSaklama && Boolean(licenseSummary(access, new Date(), dil)?.showPayment);
 

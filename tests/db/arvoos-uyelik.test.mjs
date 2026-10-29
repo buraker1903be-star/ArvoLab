@@ -111,6 +111,22 @@ describe("ArvoOS üyeliği ilk girişte bağlanır", () => {
       assert.equal(sonra.organization_id, KURUM);
     }));
 
+  test("kurum döndüren sürüm bağlar ve kurumu söyler; bağlanacak yoksa NULL", () =>
+    islem(db, async () => {
+      await rol(db, "postgres");
+      await db.exec(`
+        insert into public.organizations (id, name) values ('${KURUM}', 'AkademikMerkez');
+        insert into auth.users (id, email) values ('${ESKI}', 'eski@akademikmerkez.com');
+        insert into public.arvoos_members (email, organization_id)
+          values ('eski@akademikmerkez.com', '${KURUM}');
+        insert into auth.users (id, email) values ('${YABANCI}', 'kimse@baska.com');
+      `);
+      await rol(db, "authenticated", ESKI);
+      assert.equal((await tek(`select public.arvoos_uyeligimi_bagla_kurum() as k`)).k, KURUM);
+      await rol(db, "authenticated", YABANCI);
+      assert.equal((await tek(`select public.arvoos_uyeligimi_bagla_kurum() as k`)).k, null);
+    }));
+
   test("kendi çağrısı başkasının profilini bağlayamaz", () =>
     islem(db, async () => {
       await tohum();

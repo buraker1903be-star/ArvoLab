@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Bireysel abonelik ArvoOS'ta tutulur: fiyat, deneme süresi ve askıya alma
@@ -26,7 +27,28 @@ const PRODUCT = "arvolab";
 
   Kaydetme başarısız olursa yutulur: sağlık kaydı yüzünden girişi bozmak anlamsız.
 */
-async function recordHealth(ok: boolean, message?: string, kind: "permanent" | "transient" = "transient") {
+/*
+  Sağlık kaydı yanıtı BEKLETMEZ (after): her panel isteğinde ve her otomatik
+  kayıtta ensure çağrılıyor ve bu yazım isteğe sıralı bir gidiş-dönüş
+  ekliyordu. Başarı kaydı aynı satırı yeniden yazdığı için örnek başına
+  dakikada bire indirildi; hata kaydı her seferinde yazılır. İstek
+  kapsamı dışında (betik, test) after fırlatır; o zaman doğrudan yazılır.
+*/
+let sonBasariKaydi = 0;
+function recordHealth(ok: boolean, message?: string, kind: "permanent" | "transient" = "transient") {
+  if (ok) {
+    if (Date.now() - sonBasariKaydi < 60_000) return;
+    sonBasariKaydi = Date.now();
+  }
+  const yaz = () => saglikYaz(ok, message, kind);
+  try {
+    after(yaz);
+  } catch {
+    void yaz();
+  }
+}
+
+async function saglikYaz(ok: boolean, message: string | undefined, kind: "permanent" | "transient") {
   try {
     const admin = createAdminClient();
     const now = new Date().toISOString();
@@ -111,7 +133,7 @@ async function call(
   const target = endpoint();
   if (!target) {
     // Ortam değişkeni eksik: kalıcı yapılandırma hatası, kendiliğinden düzelmez.
-    await recordHealth(false, "ARVOOS_BRIDGE_URL veya PRODUCT_BRIDGE_SECRET tanımlı değil", "permanent");
+    recordHealth(false, "ARVOOS_BRIDGE_URL veya PRODUCT_BRIDGE_SECRET tanımlı değil", "permanent");
     return null;
   }
   try {
@@ -148,14 +170,14 @@ async function call(
       */
       const bicimHatasi = response.status === 400 && /invalid_(product|json)/.test(body);
       if (response.status === 401 || bicimHatasi) {
-        await recordHealth(false, `${action}: HTTP ${response.status} ${body}`.trim(), "permanent");
+        recordHealth(false, `${action}: HTTP ${response.status} ${body}`.trim(), "permanent");
       } else if (response.status >= 500 || response.status === 408 || response.status === 429) {
-        await recordHealth(false, `${action}: HTTP ${response.status} ${body}`.trim(), "transient");
+        recordHealth(false, `${action}: HTTP ${response.status} ${body}`.trim(), "transient");
       }
       return null;
     }
     const payload = (await response.json()) as Record<string, unknown>;
-    await recordHealth(true);
+    recordHealth(true);
     const state = {
       ...(payload as unknown as SubscriptionState),
       plans: normalizePlans(payload),
@@ -172,7 +194,7 @@ async function call(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[abonelik] ArvoOS'a ulaşılamadı", action, message);
-    await recordHealth(false, `${action}: ${message}`, "transient");
+    recordHealth(false, `${action}: ${message}`, "transient");
     return null;
   }
 }
@@ -313,7 +335,7 @@ type Kullanici = { id: string; email: string; fullName?: string | null };
 async function kodluIstek(action: string, govde: Record<string, unknown>): Promise<KartSonucu<unknown>> {
   const target = endpoint();
   if (!target) {
-    await recordHealth(false, "ARVOOS_BRIDGE_URL veya PRODUCT_BRIDGE_SECRET tanımlı değil", "permanent");
+    recordHealth(false, "ARVOOS_BRIDGE_URL veya PRODUCT_BRIDGE_SECRET tanımlı değil", "permanent");
     return { ok: false, hata: null };
   }
   try {
@@ -328,16 +350,16 @@ async function kodluIstek(action: string, govde: Record<string, unknown>): Promi
     if (!response.ok) {
       const kod = typeof yanit?.error === "string" ? yanit.error.slice(0, 64) : null;
       console.error("[kart] ArvoOS yanıtı", action, response.status, kod);
-      if (response.status === 401) await recordHealth(false, `${action}: HTTP 401`, "permanent");
-      else if (response.status >= 500 && !kod) await recordHealth(false, `${action}: HTTP ${response.status}`, "transient");
+      if (response.status === 401) recordHealth(false, `${action}: HTTP 401`, "permanent");
+      else if (response.status >= 500 && !kod) recordHealth(false, `${action}: HTTP ${response.status}`, "transient");
       return { ok: false, hata: kod };
     }
-    await recordHealth(true);
+    recordHealth(true);
     return { ok: true, veri: yanit };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[kart] ArvoOS'a ulaşılamadı", action, message);
-    await recordHealth(false, `${action}: ${message}`, "transient");
+    recordHealth(false, `${action}: ${message}`, "transient");
     return { ok: false, hata: null };
   }
 }
