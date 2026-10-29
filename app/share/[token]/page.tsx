@@ -11,6 +11,9 @@ import ManuscriptSheet from "@/app/print/manuscript/manuscript-sheet";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { belgeDili } from "@/lib/belge-dili";
 import { kagitOku } from "@/lib/kagit-boyutu";
+import { headers } from "next/headers";
+import { onizlemeBotuMu } from "@/lib/onizleme-botu";
+import { dilMi } from "@/lib/dil";
 
 // Danışmana salt okunur paylaşım: giriş gerekmez; bağlantı özetine göre sunucuda (service role)
 // aranır, süresi dolmuş ya da iptal edilmişse metin gösterilmez. Arama motorlarına kapalıdır,
@@ -87,6 +90,24 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
   }
   if (!project) return <Unavailable />;
 
+  /*
+    Silme talebi veren sahibin çalışması paylaşımdan da çekilir: talep
+    "erişim HEMEN kapanır" diyor (lib/hesap-silme.ts). Eskiden bağlantılar
+    30 günlük bekleme boyunca açık kalıyordu. Aynı okumada bağlantıyı
+    oluşturanın dili de alınıyor: bildirimi onun dilinde yazmak için.
+  */
+  const kisiler = [...new Set([project.owner_id, link.created_by].filter(Boolean))];
+  const { data: profiller, error: profilError } = await admin
+    .from("profiles")
+    .select("id, silme_talebi_at, arayuz_dili")
+    .in("id", kisiler);
+  if (profilError) {
+    console.error("[share] profil okunamadı", { code: profilError.code, message: profilError.message });
+    return <TemporarilyUnavailable />;
+  }
+  if (profiller?.find((p) => p.id === project.owner_id)?.silme_talebi_at) return <Unavailable />;
+  const olusturanDili = profiller?.find((p) => p.id === link.created_by)?.arayuz_dili;
+
   const [{ data: row, error: manuscriptError }, guideline] = await Promise.all([
     admin.from("project_manuscripts").select("*").eq("project_id", link.project_id).maybeSingle(),
     /* Öğrencinin PDF'iyle aynı kılavuz; eskiden yalnızca katalog okunuyor,
@@ -116,7 +137,11 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
   const doc = row ? await refreshImageUrls(row.content as TiptapDoc, [link.project_id, project.owner_id, project.assignee_id], admin) : null;
 
   // Görüntülenme sayısı; ilk açılışta bağlantıyı oluşturana panel içi bildirim (en iyi çaba)
-  await recordShareView(admin, link, project.title ?? "Çalışma");
+  // Önizleme botları (WhatsApp, Slack…) sayılmaz: danışman açmadan "açıldı" bildirimi gidiyordu.
+  if (!onizlemeBotuMu((await headers()).get("user-agent"))) {
+    const bildirimDili = dilMi(olusturanDili) ? olusturanDili : "tr";
+    await recordShareView(admin, link, project.title ?? (bildirimDili === "en" ? "Work" : "Çalışma"), new Date(), bildirimDili);
+  }
 
   const t = await ceviri();
   const { uzunTarih } = await tarihler();

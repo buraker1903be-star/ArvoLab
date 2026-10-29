@@ -69,8 +69,29 @@ describe("asistan kayıtları", () => {
         db,
         `insert into public.ai_assistant_runs (user_id, capability, status) values ('${SAHIP}', 'analiz', 'completed')`,
         [],
-        /row-level security/i,
+        /permission denied/i,
       );
+    });
+  });
+
+  /*
+    20261029133812'ye kadar kendi adına kayıt açıktı ve kredi tetikleyicisi
+    prompt_chars'a güvendiği için kurumun bir üyesi sahte bir satırla
+    kurumun bütün kredisini sıfırlayabiliyordu. Kayıt artık yalnızca
+    sunucudan (service_role) yazılır.
+  */
+  test("kullanıcı kendi adına da kayıt yazamaz; sunucu yazabilir", async () => {
+    await islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", SAHIP);
+      await reddedilir(
+        db,
+        `insert into public.ai_assistant_runs (user_id, capability, status, prompt_chars) values ('${SAHIP}', 'analiz', 'completed', 2000000000)`,
+        [],
+        /permission denied/i,
+      );
+      await rol(db, "service_role");
+      await db.query(`insert into public.ai_assistant_runs (user_id, capability, status) values ('${SAHIP}', 'analiz', 'completed')`);
     });
   });
 

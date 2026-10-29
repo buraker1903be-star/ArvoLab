@@ -71,11 +71,17 @@ export async function GET(
   }
 
   // RLS: çalışmayı göremeyen kullanıcı buradan öteye geçemez.
-  const { data: project } = await supabase
+  const { data: project, error: projectError } = await supabase
     .from("academic_projects")
     .select("title, guideline_id, owner_id, assignee_id")
     .eq("id", projectId)
     .maybeSingle();
+
+  // Okuma hatası "çalışma yok" değildir: eskiden geçici bir arıza 404 ("bulunamadı") dönüyordu.
+  if (projectError) {
+    console.error("[export] çalışma okunamadı", { code: projectError.code, message: projectError.message });
+    return NextResponse.json({ error: t({ tr: "Çalışma şu anda okunamadı; birazdan yeniden deneyin.", en: "The work could not be read right now; try again shortly." }) }, { status: 503 });
+  }
 
   if (!project) {
     return NextResponse.json({ error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) }, { status: 404 });

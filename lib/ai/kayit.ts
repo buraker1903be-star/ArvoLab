@@ -15,7 +15,7 @@
   dışarıdan çağrılabilir bir uç noktaya dönüşür.
 */
 
-import { createClient } from "@/lib/supabase/server";
+import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { aiKurulumu } from "./saglayici";
 
 export type Yetenek = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale" | "uak";
@@ -45,9 +45,21 @@ function sunucuAdi() {
 }
 
 /** Kaydı yazar, kimliğini döner. Başarısız olursa null — akış sürer. */
+/*
+  Satır service_role ile yazılır, oturum istemcisiyle DEĞİL
+  (20261029133812). Tarayıcıya açık INSERT, kullanıcının sahte bir
+  "completed" satırla kurumun bütün kredisini sıfırlamasına izin
+  veriyordu: kredi tetikleyicisi prompt_chars'a güveniyor. Çağıranlar
+  kullaniciId'yi doğrulanmış oturumdan (asistanKapisi) veriyor; bu
+  fonksiyon tarayıcıdan çağrılamaz ("use server" değil).
+*/
 export async function asistanKaydet(kayit: AsistanKaydi): Promise<string | null> {
   try {
-    const supabase = await createClient();
+    const supabase = adminIstemcisiVarsa();
+    if (!supabase) {
+      console.error("[ai] çalışma kaydı yazılamadı: Supabase sunucu anahtarı eksik.");
+      return null;
+    }
     const { data, error } = await supabase
       .from("ai_assistant_runs")
       .insert({

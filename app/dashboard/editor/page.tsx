@@ -146,7 +146,8 @@ export default async function ProjectsPage({
             settings: {
               fontSizePt: guideline.settings.fontSizePt,
               lineSpacing: guideline.settings.lineSpacing,
-              margins: guideline.settings.margins,
+              margins: stats.get(project.id)!.margins ?? guideline.settings.margins,
+              pageSize: stats.get(project.id)!.pageSize,
             },
           }, dil)
         : null;

@@ -370,7 +370,8 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                       <form action={satis === "kurum" ? kurumKrediSatinAl : krediSatinAl} key={paket.kod} className="kredi-paketi" data-one-cikan={oneCikan || undefined}>
                         <input type="hidden" name="paket" value={paket.kod} />
                         {oneCikan ? <span className="kredi-paketi-serit">{t({ tr: "En avantajlı", en: "Best value" })}</span> : null}
-                        <span className="kredi-paketi-ad">{paket.ad}</span>
+                        {/* Paket adını ArvoOS Türkçe gönderiyor ("2.500 kredi"); İngilizce arayüzde adı krediden kuruyoruz. */}
+                        <span className="kredi-paketi-ad">{dil === "en" ? `${sayi(paket.kredi)} credits` : paket.ad}</span>
                         <span className="kredi-paketi-fiyat">{fiyat(paket.fiyat)}</span>
                         <span className="kredi-paketi-birim">
                           {t({ tr: `1.000 kredi ${fiyat(birim)}`, en: `${fiyat(birim)} per 1,000 credits` })}

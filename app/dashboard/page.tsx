@@ -420,7 +420,8 @@ export default async function DashboardPage() {
           settings: {
             fontSizePt: resumeGuideline.settings.fontSizePt,
             lineSpacing: resumeGuideline.settings.lineSpacing,
-            margins: resumeGuideline.settings.margins,
+            margins: resumeStats?.margins ?? resumeGuideline.settings.margins,
+            pageSize: resumeStats?.pageSize,
           },
         }, dil)
       : null;

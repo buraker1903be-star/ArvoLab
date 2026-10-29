@@ -79,7 +79,8 @@ describe("ÜAK tabloları", () => {
   test("asistan kaydı 'uak' yeteneğini kabul ediyor", () =>
     islem(db, async () => {
       await tohum();
-      await rol(db, "authenticated", YONETICI_A);
+      // Kaydı yalnızca sunucu yazar (20261029133812).
+      await rol(db, "service_role");
       await db.query(`insert into public.ai_assistant_runs (user_id, capability, status) values ($1, 'uak', 'completed')`, [YONETICI_A]);
     }));
 });

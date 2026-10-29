@@ -62,6 +62,12 @@ describe("kredi kararı", () => {
     assert.match(durum({ limitKredi: 0, aylikKalan: 0 }).engel ?? "", /tanımlı değil/);
   });
 
+  test("aylık hakkı 0 olan kurum satın aldığı krediyi kullanabilir", () => {
+    // Eskiden limit 0 dalı bakiyeye hiç bakmıyordu: kredi alan kurum
+    // "AI kredisi tanımlı değil" ile durduruluyordu.
+    assert.equal(durum({ limitKredi: 0, aylikKalan: 0, ekBakiye: 500 }).engel, null);
+  });
+
   test("iç ekip hiçbir koşulda engellenmez", () => {
     // Ürünü denerken kendi kotamıza takılmak, ürünü denememek demek.
     const karar = durum({ kullanilanKarakter: 9_999_999, aylikKalan: 0, icEkip: true });

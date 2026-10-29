@@ -87,6 +87,12 @@ export function krediKarari(durum: KrediDurumu, dil: Dil = "tr"): KrediKarari {
     biri "hak tanımlanmadı", diğeri "hak yok". İkisini aynı saymak ya
     hakkı olmayanı çalıştırır ya da hiç bildirilmemiş kurumu durdurur.
   */
+  /*
+    Aylık hakkı 0 olan kurum da kredi satın alabiliyor (Abonelik sayfası
+    satışı limite bağlamıyor). Eskiden bu dal bakiyeye hiç bakmıyordu:
+    5.000 kredi alan kurum "AI kredisi tanımlı değil" ile durduruluyordu.
+  */
+  if (limit === 0 && durum.ekBakiye > 0) return bos;
   if (limit === 0) {
     return {
       ...bos,

@@ -45,16 +45,18 @@ export default async function PrintManuscriptPage({
   if (await isSubscriptionBlocked()) {
     return (
       <div className="print-page">
-        <p style={{ padding: "2rem", textAlign: "center" }}>{(await abonelikKapaliMesaji())}</p>
+        <p className="makbuz-uyari">{(await abonelikKapaliMesaji())}</p>
       </div>
     );
   }
 
-  const { data: project } = await supabase
+  const { data: project, error: projectError } = await supabase
     .from("academic_projects")
     .select("id, title, guideline_id, owner_id, assignee_id")
     .eq("id", id)
     .maybeSingle();
+  // Okuma hatası "çalışma yok" değildir: eskiden geçici bir arıza 404 gösteriyordu.
+  if (projectError) throw new Error(`Çalışma okunamadı: ${projectError.message}`);
   if (!project) notFound();
 
   const [manuscript, guideline, dil] = await Promise.all([

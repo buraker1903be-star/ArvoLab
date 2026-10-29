@@ -111,6 +111,55 @@ describe("AI kredi bakiyesi", () => {
       assert.equal(Number(h.ek_bakiye), 7, "satın alınan kredi ay sonunda yanmaz");
     }));
 
+  /*
+    20261029133812'ye kadar yenileme satırının anahtarı yalnızca ay
+    ('2026-10') idi ve tekillik dizini kurumdan bağımsızdı: ayın ilk
+    kurumu yenilenince ötekilerin yenilemesi tekillik hatasıyla düşüyor,
+    tetikleyici hatayı yutuyordu. O kurumlar eski ayda kaldı, çalışmaları
+    hiç düşülmedi; ödemeli kredi yüklemeleri de hata verdi. Tek kurumlu
+    test bunu göremiyordu.
+  */
+  test("iki kurum aynı ayda yenilenir; ikincisinin tüketimi ve yüklemesi düşmez", () =>
+    islem(db, async () => {
+      const KURUM_B = "00000000-0000-4000-8000-000000000a02";
+      const UYE_B = "00000000-0000-4000-8000-000000000b02";
+      await tohum(10);
+      await db.exec(`
+        insert into public.organizations (id, name, ai_credit_limit, synced_at)
+          values ('${KURUM_B}', 'IkinciKurum', 20, now());
+        insert into auth.users (id, email) values ('${UYE_B}', 'b@ikincikurum.com');
+        update public.profiles set organization_id = '${KURUM_B}' where id = '${UYE_B}';
+      `);
+      await db.exec(calisma(1000));
+      await db.exec(`insert into public.ai_assistant_runs (user_id, capability, status, prompt_chars)
+                       values ('${UYE_B}', 'analiz', 'completed', 1000);`);
+      const geriAl = `update public.ai_kredi_hesabi
+                         set donem = (date_trunc('month', now()) - interval '1 month')::date`;
+      await db.exec(geriAl);
+      await db.exec(calisma(2000)); // A yenilenir: 10 − 2 = 8
+      await db.exec(`insert into public.ai_assistant_runs (user_id, capability, status, prompt_chars)
+                       values ('${UYE_B}', 'analiz', 'completed', 3000);`); // B: 20 − 3 = 17
+      const b = await tek(`select aylik_kalan, donem from public.ai_kredi_hesabi where organization_id = $1`, [KURUM_B]);
+      assert.equal(Number((await hesap()).aylik_kalan), 8);
+      assert.equal(Number(b.aylik_kalan), 17, "ikinci kurum yenilenip düşülmeli");
+      await db.exec(geriAl);
+      await db.exec(`select public.ai_kredi_yukle('${KURUM}', 5, 'odeme-a');`);
+      // Eskiden burada tekillik hatası: parası alınan kredi yüklenmiyordu.
+      await db.exec(`select public.ai_kredi_yukle('${KURUM_B}', 5, 'odeme-b');`);
+      const b2 = await tek(`select ek_bakiye from public.ai_kredi_hesabi where organization_id = $1`, [KURUM_B]);
+      assert.equal(Number(b2.ek_bakiye), 5);
+    }));
+
+  test("defter yalnızca gerçekten düşülen krediyi yazar", () =>
+    islem(db, async () => {
+      await tohum(2);
+      await db.exec(calisma(50_000)); // 50 kredilik çalışma, kalan 2
+      const defter = (await db.query(
+        `select kredi from public.ai_kredi_hareketleri where organization_id = $1 and tur = 'tuketim'`, [KURUM])).rows;
+      // Eskiden 50 yazılıyordu, bakiyeden 2 düşüyordu: defter ile bakiye ayrışıyordu.
+      assert.deepEqual(defter.map((r) => Number(r.kredi)), [2]);
+    }));
+
   test("her hareket deftere yazılır", () =>
     islem(db, async () => {
       await tohum(10);

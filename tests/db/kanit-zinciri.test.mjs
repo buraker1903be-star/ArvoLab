@@ -61,6 +61,18 @@ async function kanitEkle() {
   );
 }
 
+/*
+  Asistan kaydını yalnızca sunucu yazar (20261029133812: tarayıcıya
+  açık INSERT kurumun kredisini sıfırlatabiliyordu). Kayıt service_role
+  ile yazılıp oturum yeniden öğrenciye döner.
+*/
+async function sunucuKaydi(sql, params, kullanici) {
+  await rol(db, "service_role");
+  const sonuc = await db.query(sql, params);
+  await rol(db, "authenticated", kullanici);
+  return sonuc.rows[0];
+}
+
 describe("alıntı normalleştirmesi: uygulama ve veritabanı aynı kuralı uyguluyor", () => {
   /*
     lib/kanit/alinti.ts ile public.kanit_metni_normallestir ayrışırsa
@@ -192,9 +204,10 @@ describe("kanıt kaydı kuralları", () => {
         /asistan kaydına bağlanmalı/,
       );
       // Başka yeteneğin kaydı
-      const { id: analiz } = await tek(
+      const { id: analiz } = await sunucuKaydi(
         `insert into public.ai_assistant_runs (user_id, capability, status) values ($1, 'analiz', 'completed') returning id`,
         [OGRENCI],
+        OGRENCI,
       );
       await reddedilir(
         db,
@@ -203,9 +216,10 @@ describe("kanıt kaydı kuralları", () => {
         /asistan kaydına bağlanmalı/,
       );
       // Meşru: kendi tamamlanmış kanıt kaydı
-      const { id: kanitKaydi } = await tek(
+      const { id: kanitKaydi } = await sunucuKaydi(
         `insert into public.ai_assistant_runs (user_id, capability, status, findings) values ($1, 'kanit', 'completed', '{"duzey":"dolayli"}') returning id`,
         [OGRENCI],
+        OGRENCI,
       );
       await db.query(
         `update public.kanit_kayitlari set destek_duzeyi = 'dolayli', degerlendiren = 'asistan', asistan_kaydi = $2, degerlendirildi = now() where id = $1`,
@@ -216,7 +230,7 @@ describe("kanıt kaydı kuralları", () => {
   test("asistan kayıtları yeni yetenekleri ve 'alinti' ret nedenini kabul ediyor", () =>
     islem(db, async () => {
       await tohum();
-      await rol(db, "authenticated", OGRENCI);
+      await rol(db, "service_role");
       await db.query(`insert into public.ai_assistant_runs (user_id, capability, status, reject_reason) values ($1, 'kanit', 'rejected', 'alinti')`, [OGRENCI]);
       await db.query(`insert into public.ai_assistant_runs (user_id, capability, status) values ($1, 'makale', 'completed')`, [OGRENCI]);
       await reddedilir(db, `insert into public.ai_assistant_runs (user_id, capability, status) values ($1, 'uydurma', 'completed')`, [OGRENCI], /capability_check/);

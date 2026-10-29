@@ -31,12 +31,35 @@ export async function listShareLinks(projectId: string): Promise<{ links: ShareL
   if (!ctx) return { links: [], error: (await oturumYokMesaji()) };
   const t = await ceviri();
   if (!UUID_PATTERN.test(projectId)) return { links: [], error: t(GECERSIZ_CALISMA) };
-  const { data, error } = await ctx.supabase
-    .from("manuscript_share_links")
-    .select("id, label, created_at, expires_at, revoked_at, last_viewed_at, view_count")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .limit(20);
+  /*
+    Açık bağlantılar SINIRSIZ (pratikte 100), kapanmışlardan yalnızca son
+    10'u. Eskiden en yeni 20 satır, iptal ve süresi dolmuşlar dahil
+    çekiliyordu: 20 bağlantıyı aşan öğrencide eski ama hâlâ açık bir
+    bağlantı listeden düşüyor, iptal etmenin tek yolu da onunla
+    kayboluyordu — yanlış kişiye gitmiş bir bağlantı 90 güne kadar açık
+    kalıyordu.
+  */
+  const simdi = new Date().toISOString();
+  const sutunlar = "id, label, created_at, expires_at, revoked_at, last_viewed_at, view_count";
+  const [acik, kapali] = await Promise.all([
+    ctx.supabase
+      .from("manuscript_share_links")
+      .select(sutunlar)
+      .eq("project_id", projectId)
+      .is("revoked_at", null)
+      .gt("expires_at", simdi)
+      .order("created_at", { ascending: false })
+      .limit(100),
+    ctx.supabase
+      .from("manuscript_share_links")
+      .select(sutunlar)
+      .eq("project_id", projectId)
+      .or(`revoked_at.not.is.null,expires_at.lte.${simdi}`)
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+  const error = acik.error ?? kapali.error;
+  const data = [...(acik.data ?? []), ...(kapali.data ?? [])];
   if (error) {
     console.error(error);
     return { links: [], error: isMissingTable(error) ? t(MISSING_TABLE_ERROR) : t({ tr: "Bağlantılar yüklenemedi.", en: "Links could not be loaded." }) };
