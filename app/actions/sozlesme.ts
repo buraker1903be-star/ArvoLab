@@ -1,0 +1,134 @@
+"use server";
+
+import { createHash } from "node:crypto";
+import { cookies, headers } from "next/headers";
+import { after } from "next/server";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
+import { ceviri } from "@/lib/dil-sunucu";
+import { dilMi, type Dil } from "@/lib/dil";
+import { oturumYokMesaji } from "@/lib/auth-guards";
+import { kullanimSozlesmesi, sozlesmeDuzMetni, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
+import { sendEmail } from "@/lib/email/resend";
+import { sozlesmeOnayEmail } from "@/lib/email/auth-emails";
+
+/*
+  KULLANIM SÖZLEŞMESİ ONAYI (29.10.2026).
+
+  Delil değeri sunucunun okuduklarından gelir: IP, cihaz/tarayıcı ve dil
+  istek BAŞLIKLARINDAN, zaman veritabanının saatinden (onaylandi default
+  now()), metin özeti sunucudaki metinden. İstemciden gelen tek bilgi hangi
+  dilde okuduğu ve sonuna kadar kaydırdığıdır — kaydırma yapılmadıysa onay
+  hiç yazılmaz. Kayıt service_role ile yazılır; kullanıcı tabloya yazamaz
+  (20261029153742).
+
+  Abonelik kapısı YOK: onay bir yasal adım, içerik üretmiyor; aboneliği
+  bitmiş kullanıcı da onaylayıp ödeme sayfasına ulaşabilmeli.
+*/
+
+/** İstemcinin IP'si: Vercel x-forwarded-for'un ilk girdisini istemci olarak yazar. */
+function istemciIp(h: Headers): string | null {
+  const ileri = h.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return (ileri || h.get("x-real-ip") || "").slice(0, 100) || null;
+}
+
+/*
+  Ödemeden dönüşte onayı ödemeye bağlayan referans: kartla ödeme
+  başlatılınca kullanıcıya özel bir çerez yazılıyor (lib/kart-oturumu.ts,
+  arvolab_kart_<sipariş>). Sipariş kimlikleri oradan okunur; ödemenin
+  kendisi ArvoOS'ta, bu kimlikle eşleştirilebilir.
+*/
+async function odemeReferansi(): Promise<string | null> {
+  const siparisler = (await cookies())
+    .getAll()
+    .map((c) => c.name)
+    .filter((ad) => ad.startsWith("arvolab_kart_"))
+    .map((ad) => ad.slice("arvolab_kart_".length))
+    .filter((oid) => /^[A-Za-z0-9_-]{1,64}$/.test(oid));
+  return siparisler.length ? `paytr:${siparisler.join(",")}`.slice(0, 300) : null;
+}
+
+export async function sozlesmeyiOnayla(girdi: {
+  dil: string;
+  kaydirmaTamamlandi: boolean;
+  olay: "giris" | "odeme_sonrasi";
+}): Promise<{ ok: true } | { error: string }> {
+  const t = await ceviri();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: await oturumYokMesaji() };
+
+  if (!girdi.kaydirmaTamamlandi) {
+    return { error: t({ tr: "Onaylamadan önce sözleşmeyi sonuna kadar okuyun.", en: "Read the agreement to the end before approving." }) };
+  }
+  const dil: Dil = dilMi(girdi.dil) ? girdi.dil : "tr";
+  const olay = girdi.olay === "odeme_sonrasi" ? "odeme_sonrasi" : "giris";
+
+  const admin = adminIstemcisiVarsa();
+  if (!admin) {
+    return { error: t({ tr: "Onay şu anda kaydedilemiyor; birazdan yeniden deneyin.", en: "Your approval can't be recorded right now; try again shortly." }) };
+  }
+
+  const h = await headers();
+  const { data: profil } = await supabase.from("profiles").select("full_name, organization_id").eq("id", user.id).maybeSingle();
+  const ozet = createHash("sha256").update(sozlesmeDuzMetni(dil), "utf8").digest("hex");
+  const ip = istemciIp(h);
+  const cihaz = (h.get("user-agent") ?? "").slice(0, 1000) || null;
+  const referans = olay === "odeme_sonrasi" ? await odemeReferansi() : null;
+
+  const { data: kayit, error } = await admin
+    .from("sozlesme_onaylari")
+    .insert({
+      user_id: user.id,
+      belge: "kullanim_sozlesmesi",
+      surum: SOZLESME_SURUMU,
+      dil,
+      metin_ozeti: ozet,
+      olay,
+      odeme_referansi: referans,
+      kaydirma_tamamlandi: true,
+      ip,
+      kullanici_araci: cihaz,
+      tarayici_dili: (h.get("accept-language") ?? "").slice(0, 200) || null,
+      eposta: user.email ?? null,
+      ad_soyad: profil?.full_name ?? null,
+      organization_id: profil?.organization_id ?? null,
+    })
+    .select("onaylandi")
+    .single();
+  if (error || !kayit) {
+    console.error("[sözleşme] onay yazılamadı", error?.code, error?.message);
+    return { error: t({ tr: "Onay kaydedilemedi; lütfen yeniden deneyin.", en: "Your approval could not be saved; please try again." }) };
+  }
+
+  /* Kopya e-postası yanıtı bekletmez ve gönderilemezse akış düşmez (AGENTS.md). */
+  if (user.email) {
+    const eposta = user.email;
+    const metin = kullanimSozlesmesi(dil);
+    after(async () => {
+      try {
+        await sendEmail({
+          to: eposta,
+          ...sozlesmeOnayEmail(
+            {
+              ...metin,
+              surum: SOZLESME_SURUMU,
+              ozet,
+              zaman: new Date(kayit.onaylandi as string).toLocaleString(dil === "en" ? "en-GB" : "tr-TR", { timeZone: "Europe/Istanbul" }) + " (Europe/Istanbul)",
+              ip,
+              cihaz,
+              odemeReferansi: referans,
+            },
+            dil,
+          ),
+        });
+      } catch (sorun) {
+        console.error("[sözleşme] kopya e-postası gönderilemedi", sorun instanceof Error ? sorun.message : sorun);
+      }
+    });
+  }
+
+  revalidatePath("/dashboard", "layout");
+  return { ok: true };
+}

@@ -1,3 +1,7 @@
+import { ADMIN_ROLES } from "@/lib/project-labels";
+import SozlesmeOnayi from "../_components/sozlesme-onayi";
+import { odemeSonrasiOnayVar, sozlesmeOnayGerekli } from "@/lib/sozlesme/onay-durumu";
+import { logout } from "@/app/actions/auth";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { redirect } from "next/navigation";
 import { Gift, History, Infinity as Sinirsiz, Lock, Plus, RefreshCw, Sparkles, Wallet } from "lucide-react";
@@ -175,8 +179,23 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   */
   const enAvantajli = paketler.length > 1 ? paketler.reduce((a, b) => (binKrediFiyati(b) < binKrediFiyati(a) ? b : a)).kod : null;
 
+  /*
+    ÖDEMEDEN SONRA SÖZLEŞME ONAYI (29.10.2026, kurum sahibinin isteği):
+    kartla ödemeden dönüşte (kart=tamam) sözleşme yeniden gösterilir ve onay
+    ödemeye bağlanarak kaydedilir; itirazda "ödedikten sonra okuyup
+    onayladı" delili budur. Sürüm onayı hiç yoksa önce panelin kendi
+    penceresi açılır (layout), ardından bu. Son yarım saatte verilmiş ödeme
+    sonrası onay varsa yeniden sorulmaz (sayfa yenilemesi).
+  */
+  const odemeSonrasiOnay =
+    kart === "tamam" &&
+    ctx.role !== null && !ADMIN_ROLES.includes(ctx.role) &&
+    !(await sozlesmeOnayGerekli({ id: ctx.user.id, role: ctx.role })) &&
+    !(await odemeSonrasiOnayVar(ctx.user.id));
+
   return (
     <main className="dashboard-page gb gb-tek-ekran">
+      {odemeSonrasiOnay ? <SozlesmeOnayi olay="odeme_sonrasi" cikis={logout} /> : null}
       <section className="projects-header">
         <div>
           <h1>{t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}</h1>

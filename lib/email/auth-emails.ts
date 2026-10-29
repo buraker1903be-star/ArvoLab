@@ -216,3 +216,57 @@ export function hosgeldinizEmail(panelAdresi: string, dil: Dil = "tr") {
     ),
   };
 }
+
+/*
+  Sözleşme onayının kopyası (29.10.2026). Onay kaydının (sozlesme_onaylari)
+  yanında kullanıcının kendi posta kutusunda da bir iz kalsın: sözleşmenin
+  14. maddesi bunu vaat ediyor. Metnin tamamı postada; kayıt bilgileri
+  (zaman, sürüm, özet, IP, cihaz) altta. Gövdedeki her metin kaçırılır.
+*/
+export function sozlesmeOnayEmail(
+  girdi: {
+    baslik: string;
+    bolumler: { baslik: string; paragraflar: string[] }[];
+    giris: string;
+    surum: string;
+    ozet: string;
+    zaman: string;
+    ip: string | null;
+    cihaz: string | null;
+    odemeReferansi: string | null;
+  },
+  dil: Dil = "tr",
+) {
+  const en = dil === "en";
+  const metin = girdi.bolumler
+    .map(
+      (b) =>
+        `<p style="margin:16px 0 4px;font-size:13px;font-weight:600;color:#14181a;">${escape(b.baslik)}</p>`
+        + b.paragraflar.map((p) => `<p ${P}>${escape(p)}</p>`).join(""),
+    )
+    .join("");
+  const satir = (ad: string, deger: string | null) =>
+    deger ? `<tr><td style="padding:2px 10px 2px 0;font-size:12px;color:#878d8a;vertical-align:top;">${escape(ad)}</td><td style="padding:2px 0;font-size:12px;color:#14181a;word-break:break-all;">${escape(deger)}</td></tr>` : "";
+  const kayit = `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 0;border-top:1px solid #e3e6e3;padding-top:12px;">
+    ${satir(en ? "Approved at" : "Onay zamanı", girdi.zaman)}
+    ${satir(en ? "Version" : "Sürüm", girdi.surum)}
+    ${satir(en ? "Text digest (SHA-256)" : "Metin özeti (SHA-256)", girdi.ozet)}
+    ${satir(en ? "IP address" : "IP adresi", girdi.ip)}
+    ${satir(en ? "Device / browser" : "Cihaz / tarayıcı", girdi.cihaz)}
+    ${satir(en ? "Payment reference" : "Ödeme referansı", girdi.odemeReferansi)}
+  </table>`;
+  return {
+    subject: en ? `You approved the ${girdi.baslik}` : `${girdi.baslik} onayınız`,
+    html: shell(
+      en ? "Your approval has been recorded" : "Onayınız kaydedildi",
+      `<p ${P}>${escape(en
+        ? "You approved the terms below on ArvoLab. Keep this email; it is your copy of the agreement and of the approval record."
+        : "Aşağıdaki sözleşmeyi ArvoLab'da onayladınız. Bu e-postayı saklayın; sözleşmenin ve onay kaydının size ait kopyasıdır.")}</p>
+       <p style="margin:18px 0 0;font-size:15px;font-weight:600;color:#14181a;">${escape(girdi.baslik)}</p>
+       <p ${NOT}>${escape(girdi.giris)}</p>
+       ${metin}
+       ${kayit}`,
+      dil,
+    ),
+  };
+}

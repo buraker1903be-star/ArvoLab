@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
 import { redirect } from "next/navigation";
-import { Cpu, Download, Keyboard, KeyRound, LogOut, Save, Sparkles, Trash2 } from "lucide-react";
+import { Cpu, Download, FileCheck2, Keyboard, KeyRound, LogOut, Save, Sparkles, Trash2 } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { ADMIN_ROLES, ROLE_LABELS, STAFF_ROLES } from "@/lib/project-labels";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
@@ -21,6 +21,8 @@ import ActionForm from "../action-form";
 import PasswordForm from "./password-form";
 import HesapSilmeFormu from "./hesap-silme-formu";
 import { hesapSilmeTalebi } from "@/app/actions/hesap";
+import { sozlesmeOnaylarim } from "@/lib/sozlesme/onay-durumu";
+import { kullanimSozlesmesi } from "@/lib/sozlesme/kullanim-sozlesmesi";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await ceviri();
@@ -33,6 +35,8 @@ export default async function SettingsPage() {
   const sayi = (deger: number) => new Intl.NumberFormat(YEREL[dil]).format(deger);
   const ctx = await getAuthContext();
   if (!ctx) redirect("/");
+  const [sozlesmeOnaylari, { tarihSaat }] = await Promise.all([sozlesmeOnaylarim(ctx.user.id), tarihler()]);
+  const sozlesmeMetni = kullanimSozlesmesi(dil);
 
   const { data: profile } = await ctx.supabase
     .from("profiles")
@@ -350,6 +354,74 @@ export default async function SettingsPage() {
                 </span>
               </li>
             ) : null}
+
+            {/*
+              KULLANIM SÖZLEŞMESİ: onaylanan sürümler ve kayıt bilgileri
+              (lib/sozlesme). Kullanıcı neyi, ne zaman, hangi cihazdan
+              onayladığını kendisi de görebilmeli; kopyası e-postasında.
+            */}
+            <li className="ayar-satir">
+              <FileCheck2 size={18} aria-hidden="true" />
+              <span className="ayar-govde">
+                <b>{t({ tr: "Kullanım Sözleşmesi", en: "Terms of Use" })}</b>
+                <small>
+                  {sozlesmeOnaylari.okunamadi
+                    ? t({ tr: "Onay kayıtlarınız şu anda okunamadı.", en: "Your approval records could not be loaded right now." })
+                    : sozlesmeOnaylari.satirlar.length
+                      ? t({
+                          tr: `Son onay: ${tarihSaat(sozlesmeOnaylari.satirlar[0].onaylandi)} · Sürüm ${sozlesmeOnaylari.satirlar[0].surum}`,
+                          en: `Last approved: ${tarihSaat(sozlesmeOnaylari.satirlar[0].onaylandi)} · Version ${sozlesmeOnaylari.satirlar[0].surum}`,
+                        })
+                      : t({ tr: "Henüz onay kaydı yok.", en: "No approval record yet." })}
+                </small>
+              </span>
+              <PanelDrawer
+                triggerLabel={t({ tr: "Görüntüle", en: "View" })}
+                triggerClassName="projects-filter-button button-compact"
+                kicker={t({ tr: "Sözleşme", en: "Agreement" })}
+                title={sozlesmeMetni.baslik}
+                description={sozlesmeMetni.giris}
+              >
+                <h3 className="section-title">{t({ tr: "Onay kayıtlarınız", en: "Your approval records" })}</h3>
+                {sozlesmeOnaylari.satirlar.length ? (
+                  <ul className="sozlesme-onaylarim">
+                    {sozlesmeOnaylari.satirlar.map((o) => (
+                      <li key={o.id}>
+                        <b>{tarihSaat(o.onaylandi)}</b> ·{" "}
+                        {o.olay === "odeme_sonrasi" ? t({ tr: "Ödemeden sonra", en: "After payment" }) : t({ tr: "Giriş", en: "Sign-in" })}
+                        <dl>
+                          <dt>{t({ tr: "Sürüm", en: "Version" })}</dt>
+                          <dd>{o.surum} ({o.dil.toUpperCase()})</dd>
+                          <dt>{t({ tr: "IP adresi", en: "IP address" })}</dt>
+                          <dd>{o.ip ?? "—"}</dd>
+                          <dt>{t({ tr: "Cihaz", en: "Device" })}</dt>
+                          <dd>{o.kullanici_araci ?? "—"}</dd>
+                          {o.odeme_referansi ? (
+                            <>
+                              <dt>{t({ tr: "Ödeme", en: "Payment" })}</dt>
+                              <dd>{o.odeme_referansi}</dd>
+                            </>
+                          ) : null}
+                          <dt>{t({ tr: "Metin özeti", en: "Text digest" })}</dt>
+                          <dd>{o.metin_ozeti}</dd>
+                        </dl>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted text-sm">{t({ tr: "Henüz onay kaydı yok.", en: "No approval record yet." })}</p>
+                )}
+                <h3 className="section-title">{t({ tr: "Yürürlükteki metin", en: "Current text" })}</h3>
+                {sozlesmeMetni.bolumler.map((b) => (
+                  <section key={b.baslik}>
+                    <h4>{b.baslik}</h4>
+                    {b.paragraflar.map((p) => (
+                      <p key={p.slice(0, 40)} className="text-sm">{p}</p>
+                    ))}
+                  </section>
+                ))}
+              </PanelDrawer>
+            </li>
 
             {/*
               HESAP SİLME EN SONDA ve iç ekibe gösterilmiyor (founder ya da

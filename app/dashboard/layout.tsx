@@ -1,4 +1,6 @@
 import AcilirKapatici from "./_components/acilir-kapatici";
+import SozlesmeOnayi from "./_components/sozlesme-onayi";
+import { sozlesmeOnayGerekli } from "@/lib/sozlesme/onay-durumu";
 import { Suspense } from "react";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -54,7 +56,15 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const roleLabel = profile ? t(ROLE_LABELS[profile.role]) : "";
   const initials = initialsOf(userName);
   // Kim girebilir: kurum lisansı ya da bireysel abonelik (lib/access.ts).
-  const access = await getAccessState(profile);
+  /*
+    Kullanım Sözleşmesi'nin yürürlükteki sürümü onaylanmamışsa panel bir
+    onay penceresinin arkasında etkisiz kalır (lib/sozlesme). Silme talebi
+    bekleyen hesapta sorulmaz: o ekranın tek işi geri dönüş.
+  */
+  const [access, sozlesmeGerekli] = await Promise.all([
+    getAccessState(profile),
+    profile && !profile.silme_talebi_at ? sozlesmeOnayGerekli({ id: profile.id, role: profile.role }) : Promise.resolve(false),
+  ]);
   // Görünüm önizlemesi yalnızca iç ekipte (lib/onizleme.ts).
   const gorunum = await sayfaGorunumu({
     rol: profile?.role,
@@ -85,7 +95,9 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         {t({ tr: "İçeriğe atla", en: "Skip to content" })}
       </a>
 
-      <div className="dashboard-content-shell">
+      {sozlesmeGerekli ? <SozlesmeOnayi olay="giris" cikis={logout} /> : null}
+
+      <div className="dashboard-content-shell" inert={sozlesmeGerekli || undefined}>
         <header className="dashboard-header">
           <HeaderTitle />
           <OsAramaDugmesi />
@@ -171,11 +183,16 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         </div>
       </div>
 
-      <Suspense>
-        <OsDock uygulamalar={uygulamalar} />
-      </Suspense>
-      {/* Çıkış bir sunucu eylemi: istemci bileşenine referans olarak geçilebiliyor. */}
-      <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />
+      {/* Onay penceresi açıkken dock ve komut paleti (Ctrl+K) çizilmez: pencerenin üstüne açılıp odağı çalmasınlar. */}
+      {sozlesmeGerekli ? null : (
+        <>
+          <Suspense>
+            <OsDock uygulamalar={uygulamalar} />
+          </Suspense>
+          {/* Çıkış bir sunucu eylemi: istemci bileşenine referans olarak geçilebiliyor. */}
+          <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />
+        </>
+      )}
       {/* Kullanıcı menüsü ve kart menüleri dışarı tıklayınca kapansın. */}
       <AcilirKapatici />
       <Toaster />
