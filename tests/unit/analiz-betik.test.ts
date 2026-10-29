@@ -35,7 +35,7 @@ test("boşluklu ve Türkçe değişken adları her dilde güvenle yazılır", ()
   assert.match(analizBetigi("r", "ttest", s), /`sınav puanı` ~ `öğrenci grubu`/);
   assert.match(analizBetigi("python", "regression", { varA: "sınav puanı", yordayicilar: ["yaş"] }), /Q\(/);
   assert.match(analizBetigi("spss", "anova", s), /sınav_puanı BY öğrenci_grubu/);
-  assert.match(analizBetigi("r", "descriptives", { dosyaAdi: "a.csv" }), /read\.csv\("a\.csv"\)/);
+  assert.match(analizBetigi("r", "descriptives", { dosyaAdi: "a.csv" }), /read\.table\("a\.csv", header = TRUE, sep = ",", dec = "\."/);
 });
 
 test("SPSS iki gruplu testte verideki grup değerleri yazılır; bilinmiyorsa (1 2) ve not", () => {
@@ -117,4 +117,18 @@ describe("İngilizce betik ve kartlar (28.10.2026)", () => {
     assert.match(programKartlari("en").find((k) => k.anahtar === "ansys")!.aciklama, /cannot run it/);
     assert.equal(programKartlari("tr"), PROGRAM_KARTLARI);
   });
+});
+
+/*
+  Eskiden her CSV öntanımlı read.csv / pd.read_csv ile okunuyordu: Türkçe
+  Excel'in noktalı virgüllü, virgül ondalıklı dosyası betikte tek sütun
+  okunup düşüyordu; .tsv ve .txt read_excel'e gidiyordu.
+*/
+test("betik dosyayı ArvoLab'ın kararlarıyla okur", () => {
+  const turkce = { dosyaAdi: "veri.csv", metinBicimi: { ayirici: ";", ondalik: "virgul", kodlama: "windows-1254" } } as const;
+  assert.match(analizBetigi("r", "descriptives", turkce), /sep = ";", dec = ","[\s\S]*fileEncoding = "windows-1254"/);
+  assert.match(analizBetigi("python", "descriptives", turkce), /sep=";", decimal=",", thousands="\.", encoding="cp1254"/);
+  assert.match(analizBetigi("r", "descriptives", { dosyaAdi: "v.tsv" }), /read\.table\("v\.tsv", header = TRUE, sep = "\\t"/);
+  assert.doesNotMatch(analizBetigi("python", "descriptives", { dosyaAdi: "v.txt" }), /read_excel/);
+  assert.match(analizBetigi("r", "descriptives", { dosyaAdi: "v.xlsx" }), /read_excel/);
 });

@@ -67,6 +67,22 @@ describe("ayrıştırma", () => {
     assert.equal(ayiriciBul("a,b\n1,2\n"), ",");
   });
 
+  /*
+    Eskiden başlıkta ayırıcı yoksa "," varsayılıyordu: tek sütunlu Türkçe
+    dosyada "3,5" bölünüp 3 oluyordu (ortalama 3,25 yerine 3, uyarısız).
+  */
+  test("tek sütunlu Türkçe dosyada ondalık kaybolmaz", () => {
+    assert.equal(ayiriciBul("Puan\n3,5\n4,25\n2\n"), "");
+    const v = csvOku(utf8("Puan\n3,5\n4,25\n2\n"));
+    assert.deepEqual(v.sutunlar, ["Puan"]);
+    assert.deepEqual(v.satirlar.map((s) => s.Puan), [3.5, 4.25, 2]);
+  });
+
+  test("başlıktan fazla alanı olan satır sessiz kalmaz", () => {
+    const v = csvOku(utf8("a,b\n1,2\n3,4,5\n"));
+    assert.ok(v.notlar.some((n) => /1 satırda başlıktan fazla alan/.test(n)), v.notlar.join(" | "));
+  });
+
   test("geçersiz UTF-8 Windows-1254'e düşer", () => {
     assert.equal(metniCoz(Uint8Array.from([0xde, 0x61])).kodlama, "windows-1254");
     assert.equal(metniCoz(utf8("Şa")).kodlama, "utf-8");

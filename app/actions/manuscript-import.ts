@@ -22,14 +22,16 @@ export async function importWordDocument(
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   const t = await ceviri();
-  /* Abonelik kapısı: Word içe aktarma yeni içerik üretir; saveManuscript ile aynı kapı. */
-  if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
-
   const bucket = ctx.supabase.storage.from(IMAGE_BUCKET);
   const ownImport = storagePath.startsWith(`${ctx.user.id}/imports/`) && /\.docx$/i.test(storagePath) && !storagePath.includes("..");
   if (!ownImport) return { error: t({ tr: "Geçersiz dosya.", en: "Invalid file." }) };
 
   try {
+    /* Abonelik kapısı: Word içe aktarma yeni içerik üretir; saveManuscript ile aynı kapı.
+       try İÇİNDE: eskiden kapı try'dan önceydi, reddedilen yüklemenin geçici
+       dosyası finally'deki silmeye hiç ulaşmıyor, depoda kalıyordu. */
+    if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
+
     const { data: project } = await ctx.supabase
       .from("academic_projects")
       .select("owner_id, assignee_id")

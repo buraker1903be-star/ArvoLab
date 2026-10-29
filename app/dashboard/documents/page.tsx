@@ -81,7 +81,7 @@ export default async function DocumentsPage({
   const dil = await aktifDil();
   const { tarih, tarihSaat } = await tarihler();
   const aiAcik = aiFeedbackConfigured();
-  const [{ satirlar: calismalar, okunamadi: calismaOkunamadi }, { satirlar: sonYuklemeler }] = await Promise.all([
+  const [{ satirlar: calismalar, okunamadi: calismaOkunamadi }, { satirlar: bagsizlar, okunamadi: bagsizOkunamadi }] = await Promise.all([
     getMyProjects(),
     getMyDocumentUploads(),
   ]);
@@ -91,7 +91,6 @@ export default async function DocumentsPage({
   const { satirlar: belgeler, okunamadi: belgeOkunamadi } = calisma
     ? await calismaBelgeleri(calisma.id)
     : { satirlar: [] as DocumentUploadRecord[], okunamadi: false };
-  const bagsizlar = sonYuklemeler.filter((b) => !b.project_id);
 
   /* Orijinallik ve geri bildirim yalnızca bu çalışmanın denetlenmiş belgeleri için. */
   const denetlenen = belgeler.filter((b) => b.status === "analyzed");
@@ -453,7 +452,7 @@ export default async function DocumentsPage({
         </div>
       </section>
 
-      {calismaOkunamadi || belgeOkunamadi ? (
+      {calismaOkunamadi || belgeOkunamadi || bagsizOkunamadi ? (
         <p className="alert" role="alert">
           {calismaOkunamadi
             ? t({

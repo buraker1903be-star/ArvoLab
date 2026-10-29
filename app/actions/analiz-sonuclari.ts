@@ -176,6 +176,11 @@ export async function analizTezeEklendi(id: string): Promise<ActionResult> {
   return siraDurumu(id, { teze_eklendi: new Date().toISOString() });
 }
 
+/*
+  Çalışmaya bağlı OLMAYAN analiz sonuçları, sınırsız. Eskiden son 50 sonuç
+  çekilip sayfada bağsızlar süzülüyordu: çok analiz yapan kullanıcıda eski
+  bağsız sonuçlar listeden düşüyor, silinemiyordu.
+*/
 export async function getAnalizSonuclari(): Promise<ListeSonucu<AnalizSonucu>> {
   const ctx = await getAuthContext();
   if (!ctx) return listeBasarili([]);
@@ -184,8 +189,8 @@ export async function getAnalizSonuclari(): Promise<ListeSonucu<AnalizSonucu>> {
     .from("analiz_sonuclari")
     .select("id, project_id, analiz_turu, baslik, apa_metni, created_at")
     .eq("owner_id", ctx.user.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
+    .is("project_id", null)
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error(error);

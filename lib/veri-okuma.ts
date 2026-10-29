@@ -43,10 +43,16 @@ export function metniCoz(bayt: Uint8Array): { metin: string; kodlama: "utf-8" | 
 
 /* ---------- CSV ---------- */
 
-/** Tırnak dışındaki ayırıcı sayısına göre: ilk satırlarda en tutarlı olan. */
-export function ayiriciBul(metin: string): ";" | "," | "\t" {
+/**
+ * Tırnak dışındaki ayırıcı sayısına göre: ilk satırlarda en tutarlı olan.
+ * Başlıkta hiçbir ayırıcı yoksa dosya TEK SÜTUNDUR ve "" döner (bölünmez).
+ * Eskiden varsayılan "," dönüyordu: tek sütunlu Türkçe dosyada "3,5"
+ * iki alana bölünüyor, ikinci alan atılıyor ve 3,5 sessizce 3 oluyordu —
+ * ortalama ve bütün test istatistikleri yanlış, hiçbir uyarı yok.
+ */
+export function ayiriciBul(metin: string): ";" | "," | "\t" | "" {
   const satirlar = metin.split(/\r?\n/).filter((s) => s.trim()).slice(0, 20);
-  let enIyi: ";" | "," | "\t" = ",";
+  let enIyi: ";" | "," | "\t" | "" = "";
   let enIyiPuan = -1;
   for (const ayirici of [";", "\t", ","] as const) {
     const sayilar = satirlar.map((s) => alanlaraBol(s, ayirici).length - 1);
@@ -157,7 +163,11 @@ export interface OkunanVeri {
   satirlar: Satir[];
   /** Kullanıcıya gösterilecek kararlar ("ondalık virgül olarak okundu"…). */
   notlar: string[];
+  /** Yalnızca metin dosyasında: R/Python betiği dosyayı AYNI kararlarla okusun (lib/analiz-betik.ts). */
+  metinBicimi?: MetinBicimi;
 }
+
+export type MetinBicimi = { ayirici: ";" | "," | "\t" | ""; ondalik: OndalikAyirici; kodlama: "utf-8" | "windows-1254" };
 
 /** Başlık satırı + gövde → satır nesneleri. Boş/tekrarlanan başlıklar adlandırılır. */
 export function tabloKur(
@@ -165,7 +175,7 @@ export function tabloKur(
   govde: Hucre[][],
   ondalik: OndalikAyirici,
   dil: Dil = "tr",
-): { sutunlar: string[]; satirlar: Satir[] } {
+): { sutunlar: string[]; satirlar: Satir[]; fazlaAlanliSatir: number } {
   const kullanilan = new Map<string, number>();
   const sutunlar = basliklar.map((b, i) => {
     const ad = String(b ?? "").trim() || `${dil === "en" ? "Column" : "Sütun"} ${i + 1}`;
@@ -176,7 +186,9 @@ export function tabloKur(
   const satirlar = govde
     .map((hucreler) => Object.fromEntries(sutunlar.map((s, i) => [s, hucreDegeri(hucreler[i] ?? null, ondalik)])) as Satir)
     .filter((satir) => Object.values(satir).some((v) => v !== null));
-  return { sutunlar, satirlar };
+  /* Başlıktan fazla alanı olan satırın fazlası atılıyor; sessiz kalmasın. */
+  const fazlaAlanliSatir = govde.filter((h) => h.slice(sutunlar.length).some((v) => v !== null && String(v).trim() !== "")).length;
+  return { sutunlar, satirlar, fazlaAlanliSatir };
 }
 
 /** CSV/TSV metni: kodlama, ayırıcı ve ondalık kararlarıyla. */
@@ -186,9 +198,16 @@ export function csvOku(bayt: Uint8Array, dil: Dil = "tr"): OkunanVeri {
   const ayirici = ayiriciBul(metin);
   const ham = csvCoz(metin, ayirici);
   const [basliklar = [], ...govde] = ham;
-  const ondalik = ondalikBul(govde.flat(), ayirici);
-  const { sutunlar, satirlar } = tabloKur(basliklar, govde, ondalik, dil);
+  const ondalik = ondalikBul(govde.flat(), ayirici || null);
+  const { sutunlar, satirlar, fazlaAlanliSatir } = tabloKur(basliklar, govde, ondalik, dil);
   const notlar: string[] = [];
+  if (fazlaAlanliSatir) {
+    notlar.push(
+      en
+        ? `${fazlaAlanliSatir} row(s) have more fields than the header; the extra fields were ignored. Check the separator and quoting.`
+        : `${fazlaAlanliSatir} satırda başlıktan fazla alan var; fazla alanlar alınmadı. Ayırıcıyı ve tırnakları kontrol edin.`,
+    );
+  }
   if (kodlama === "windows-1254") {
     notlar.push(en ? "The file was read with Turkish Windows encoding (Windows-1254)." : "Dosya Türkçe Windows kodlamasıyla (Windows-1254) okundu.");
   }
@@ -199,7 +218,7 @@ export function csvOku(bayt: Uint8Array, dil: Dil = "tr"): OkunanVeri {
         : "Ondalık ayırıcı virgül olarak okundu (3,5 → 3.5; 1.250 → 1250).",
     );
   }
-  return { sutunlar, satirlar, notlar };
+  return { sutunlar, satirlar, notlar, metinBicimi: { ayirici, ondalik, kodlama } };
 }
 
 /**
@@ -211,7 +230,9 @@ export function excelSatirlariniDuzelt(sutunlar: string[], satirlar: Record<stri
   const metinler = satirlar.flatMap((s) => sutunlar.map((c) => s[c]).filter((v): v is string => typeof v === "string"));
   const ondalik = ondalikBul(metinler, null);
   const govde = satirlar.map((s) => sutunlar.map((c) => (s[c] ?? null) as Hucre));
-  const tablo = tabloKur(sutunlar, govde, ondalik, dil);
+  // Excel satırları zaten başlığa göre anahtarlı: fazla alan oluşamaz.
+  const { sutunlar: tabloSutunlari, satirlar: tabloSatirlari } = tabloKur(sutunlar, govde, ondalik, dil);
+  const tablo = { sutunlar: tabloSutunlari, satirlar: tabloSatirlari };
   const notlar = ondalik === "virgul" && metinler.some((m) => VIRGUL_ONDALIK.test(m.trim()))
     ? [
         dil === "en"

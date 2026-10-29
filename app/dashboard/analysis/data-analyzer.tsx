@@ -1,7 +1,7 @@
 "use client";
 
 import { asistanCagir } from "@/lib/asistan-istemci";
-import { csvOku, excelSatirlariniDuzelt, kodluGrupSutunlari } from "@/lib/veri-okuma";
+import { csvOku, excelSatirlariniDuzelt, kodluGrupSutunlari, type MetinBicimi } from "@/lib/veri-okuma";
 import { useState, useCallback, useMemo, useRef, useTransition } from "react";
 import { UploadCloud, Play, Table as TableIcon, FileBarChart, Copy, Check, Save, ListPlus, Sparkles, Code2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -345,6 +345,7 @@ export default function DataAnalyzer({
     [kayitCalismasi, dil],
   );
   const [betikKopyalandi, setBetikKopyalandi] = useState(false);
+  const [metinBicimi, setMetinBicimi] = useState<MetinBicimi | undefined>(undefined);
   const [betikAraci, setBetikAraci] = useState<AnalizAraci>("spss");
   const betik = pencere && calisanAnaliz ? analizBetigi(betikAraci, calisanAnaliz.tur, calisanAnaliz.secim, dil) : null;
 
@@ -384,6 +385,7 @@ export default function DataAnalyzer({
 
       setDataset({ columns, rows: json, numericColumns, categoricalColumns });
       setVeriNotlari(okunan.notlar);
+      setMetinBicimi(okunan.metinBicimi);
       setFileName(file.name);
       setVarA(numericColumns[0] ?? "");
       setVarB(numericColumns[1] ?? numericColumns[0] ?? "");
@@ -668,7 +670,7 @@ export default function DataAnalyzer({
         dfaHataKovaryanslari,
         aracilar: analysisType === "aracilik" ? aracilar : undefined,
         araciModeli,
-        dosyaAdi: fileName, gruplar: groupLevels,
+        dosyaAdi: fileName, metinBicimi, gruplar: groupLevels,
       },
       tur: analysisType,
       baslik,
@@ -2927,7 +2929,7 @@ export default function DataAnalyzer({
         }),
       );
     }
-  }, [dataset, fileName, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, olcumler, testDegeri, kovaryatlar, olayDegeri, faktorSayisi, varY, aracilar, araciModeli, dfaFaktorleri, dfaHataKovaryanslari, ikiDegerliSutunlar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, yazYuzde, anlamliYaz, etkiEtiketi, GA95, SONUC_TABLOSU, t, dil, pencere, yorumIste]);
+  }, [dataset, fileName, metinBicimi, analysisType, varA, varB, groupVar, groupVar2, groupLevels, reliabilityItems, yordayicilar, olcumler, testDegeri, kovaryatlar, olayDegeri, faktorSayisi, varY, aracilar, araciModeli, dfaFaktorleri, dfaHataKovaryanslari, ikiDegerliSutunlar, getNumericColumn, getGroupedNumeric, eslesenSutunlar, yazP, yazSayi, yazYuzde, anlamliYaz, etkiEtiketi, GA95, SONUC_TABLOSU, t, dil, pencere, yorumIste]);
 
   return (
     <section className={pencere ? "analiz-pencere-govde" : "project-form-card"}>

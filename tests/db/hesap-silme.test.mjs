@@ -11,7 +11,7 @@
 */
 import { before, describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { islem, rol, veritabani } from "./ortam.mjs";
+import { islem, reddedilir, rol, veritabani } from "./ortam.mjs";
 
 const SILINEN = "00000000-0000-4000-8000-0000000000a1";
 const BASKASI = "00000000-0000-4000-8000-0000000000a2";
@@ -136,6 +136,27 @@ describe("hesap silme", () => {
       const { rows } = await db.query(
         `select silme_talebi_at from public.profiles where id = $1`, [BASKASI]);
       assert.equal(rows[0].silme_talebi_at, null);
+    }));
+
+  /*
+    20261029140126'ya kadar kullanıcı kendi satırına geçmiş bir tarih
+    yazabiliyordu: bir sonraki cron turu hesabı 30 gün beklemeden ve
+    e-posta onayı olmadan kalıcı olarak siliyordu. KVKK onayının kanıtı
+    da silinebiliyor ya da geriye tarihlenebiliyordu.
+  */
+  test("silme talebinin zamanı ve KVKK onayı istemciden yazılamaz", () =>
+    islem(db, async () => {
+      await tohum();
+      await db.query(`update public.profiles set kvkk_onay_at = now() - interval '1 day' where id = $1`, [SILINEN]);
+      await rol(db, "authenticated", SILINEN);
+      await reddedilir(db, `update public.profiles set silme_talebi_at = '2000-01-01' where id = $1`, [SILINEN], /istemciden belirlenemez/);
+      await reddedilir(db, `update public.profiles set kvkk_onay_at = null where id = $1`, [SILINEN], /KVKK/);
+      await reddedilir(db, `update public.profiles set kvkk_onay_at = '2020-01-01' where id = $1`, [SILINEN], /KVKK/);
+      // Meşru akış (app/actions/hesap.ts): şimdi ile talep, sonra vazgeçme.
+      await db.query(`update public.profiles set silme_talebi_at = now() where id = $1`, [SILINEN]);
+      await db.query(`update public.profiles set silme_talebi_at = null where id = $1`, [SILINEN]);
+      // Ad değiştirmek gibi ilgisiz güncellemeler etkilenmez.
+      await db.query(`update public.profiles set full_name = 'Yeni Ad' where id = $1`, [SILINEN]);
     }));
 
   /* Cron'un aday sorgusu (app/api/cron/hesap-silme): yalnızca süresi dolanlar. */

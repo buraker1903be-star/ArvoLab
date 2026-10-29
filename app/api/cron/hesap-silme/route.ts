@@ -75,26 +75,41 @@ export async function GET(request: Request) {
     */
     if (!suresiDoldu(aday.silme_talebi_at)) continue;
 
-    const { data: kullanici } = await admin.auth.admin.getUserById(aday.id);
-    const eposta = kullanici?.user?.email;
     /*
-      auth kaydı yoksa kişi zaten silinmiş, geride yetim bir profil kalmış:
-      profili silip geçiyoruz. Köprüye e-postasız gidilemez zaten.
+      Arama hatası "kullanıcı yok" DEĞİLDİR. Eskiden hata okunmuyordu:
+      geçici bir arızada (ağ, 5xx, 429) kullanıcı null geliyor, yetim
+      profil dalına giriliyor ve YALNIZCA profil siliniyordu. auth kaydı,
+      çalışmalar, dosyalar ve ArvoOS abone kaydı kalıyor; silme_talebi_at
+      profille gittiği için hesap bir daha aday olmuyor, kullanıcı giriş
+      yapıp çalışmaya devam edebiliyordu — silme talebi "yapıldı" sayılıp
+      hiç yapılmıyordu.
     */
-    if (!eposta) {
+    const { data: kullanici, error: aramaHatasi } = await admin.auth.admin.getUserById(aday.id);
+    if (aramaHatasi && aramaHatasi.status !== 404) {
+      console.error("[hesap-silme] kullanıcı okunamadı, ertelendi", aday.id, aramaHatasi.message);
+      ertelenen += 1;
+      continue;
+    }
+    // auth kaydı yoksa kişi zaten silinmiş, geride yetim bir profil kalmış.
+    if (!kullanici?.user) {
       await admin.from("profiles").delete().eq("id", aday.id);
       silinen += 1;
       continue;
     }
+    const eposta = kullanici.user.email;
 
-    const kapatma = await closeSubscription({ id: aday.id, email: eposta });
+    // ArvoOS abone kaydı e-postaya bağlı; e-postasız hesabın orada kaydı yok.
+    const kapatma = eposta ? await closeSubscription({ id: aday.id, email: eposta }) : true;
     if (!kapatma) {
       console.error("[hesap-silme] ArvoOS kaydı kapatılamadı, hesap silinmedi", aday.id);
       ertelenen += 1;
       continue;
     }
 
-    await dosyalariSil(admin, aday.id);
+    if (!(await dosyalariSil(admin, aday.id))) {
+      ertelenen += 1;
+      continue;
+    }
 
     const { error: silmeHatasi } = await admin.auth.admin.deleteUser(aday.id);
     if (silmeHatasi) {
@@ -113,32 +128,58 @@ export async function GET(request: Request) {
   seviye listeler; klasör girdisinin id'si null olur. Silme başarısız olursa
   akış durmuyor: dosya yüzünden hesabı silmemek, kullanıcının asıl istediği
   şeyi (verisinin gitmesi) hiç yapmamak olurdu — kalan dosya log'a düşüyor.
+
+  İki kök geziliyor: kullanıcının klasörü ve SAHİBİ OLDUĞU her çalışmanın
+  klasörü. Kaynak PDF'leri (<çalışma>/kaynak-pdf) ve editör resimleri
+  (<çalışma>/editor-images) çalışmaya göre saklanıyor; eskiden yalnızca
+  <kullanıcı>/ geziliyordu, çalışma satırları kaskatla gidiyor, dosyalar
+  depoda sahipsiz kalıyordu. Listeleme de 1000'de kesiliyordu; artık
+  sayfalanıyor.
 */
-async function dosyalariSil(admin: ReturnType<typeof adminIstemcisiVarsa>, userId: string) {
-  if (!admin) return;
+async function dosyalariSil(admin: ReturnType<typeof adminIstemcisiVarsa>, userId: string): Promise<boolean> {
+  if (!admin) return false;
   const depo = admin.storage.from(KOVA);
   const yollar: string[] = [];
+  const SAYFA = 1000;
 
   const gez = async (klasor: string, derinlik: number) => {
     if (derinlik > EN_DERIN) {
       console.error("[hesap-silme] depo klasörü fazla derin, atlandı", klasor);
       return;
     }
-    const { data, error } = await depo.list(klasor, { limit: 1000 });
-    if (error) {
-      console.error("[hesap-silme] depo listelenemedi", klasor, error.message);
-      return;
-    }
-    for (const girdi of data ?? []) {
-      const yol = `${klasor}/${girdi.name}`;
-      if (girdi.id === null) await gez(yol, derinlik + 1);
-      else yollar.push(yol);
+    for (let offset = 0; ; offset += SAYFA) {
+      const { data, error } = await depo.list(klasor, { limit: SAYFA, offset });
+      if (error) {
+        console.error("[hesap-silme] depo listelenemedi", klasor, error.message);
+        return;
+      }
+      for (const girdi of data ?? []) {
+        const yol = `${klasor}/${girdi.name}`;
+        if (girdi.id === null) await gez(yol, derinlik + 1);
+        else yollar.push(yol);
+      }
+      if ((data?.length ?? 0) < SAYFA) break;
     }
   };
 
-  await gez(userId, 0);
-  if (yollar.length === 0) return;
+  const { data: calismalar, error: calismaHatasi } = await admin
+    .from("academic_projects")
+    .select("id")
+    .eq("owner_id", userId);
+  /* Okunamazsa silme ERTELENİR: kullanıcı silindikten sonra çalışma
+     kimlikleri kaskatla gider ve klasörler bir daha bulunamaz. */
+  if (calismaHatasi) {
+    console.error("[hesap-silme] çalışmalar okunamadı, silme ertelendi", userId, calismaHatasi.message);
+    return false;
+  }
 
-  const { error } = await depo.remove(yollar);
-  if (error) console.error("[hesap-silme] dosyalar silinemedi", userId, error.message);
+  await gez(userId, 0);
+  for (const c of calismalar ?? []) await gez(c.id as string, 0);
+  if (yollar.length === 0) return true;
+
+  for (let i = 0; i < yollar.length; i += SAYFA) {
+    const { error } = await depo.remove(yollar.slice(i, i + SAYFA));
+    if (error) console.error("[hesap-silme] dosyalar silinemedi", userId, error.message);
+  }
+  return true;
 }

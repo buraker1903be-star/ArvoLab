@@ -69,14 +69,24 @@ export interface UploadResult {
  * kendisini bu fonksiyon Supabase'ten SUNUCU TARAFINDA indirir
  * (bu, gelen istek boyutu sınırına tabi değildir).
  */
-export async function analyzeUploadedDocument(params: {
+type BelgeParametreleri = {
   storagePath: string;
   fileName: string;
   mimeType: string;
   fileSize: number;
   projectId: string | null;
   projectTitle: string | null;
-}): Promise<UploadResult> {
+};
+
+export async function analyzeUploadedDocument(params: BelgeParametreleri): Promise<UploadResult> {
+  return belgeyiCozumle(params, { yeniYukleme: true });
+}
+
+/*
+  Dışa açık DEĞİL (export yok): "use server" dosyasındaki her export bir
+  uç nokta, dosyayı koruma kararı istemciye bırakılmamalı.
+*/
+async function belgeyiCozumle(params: BelgeParametreleri, { yeniYukleme }: { yeniYukleme: boolean }): Promise<UploadResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -114,7 +124,14 @@ export async function analyzeUploadedDocument(params: {
     biten kullanıcı hata mesajı alıyor ama dosya yer kaplamaya devam ediyordu).
     Reddedilen her yolda dosya siliniyor; silme başarısız olursa akış durmaz.
   */
+  /*
+    Yeniden denemede dosya kullanıcının KAYITLI belgesidir, sahipsiz bir
+    yükleme değil. Eskiden yeniden deneme de reddedilince (abonelik bitti,
+    geçici indirme hatası) dosya siliniyor, satır "başarısız" kalıyor ve
+    sonraki her deneme "dosya depodan okunamadı" ile düşüyordu.
+  */
   const dosyayiSil = async () => {
+    if (!yeniYukleme) return;
     const { error } = await supabase.storage.from("project-files").remove([params.storagePath]);
     if (error) console.error("Reddedilen yükleme silinemedi:", params.storagePath, error.message);
   };
@@ -363,14 +380,14 @@ export async function reanalyzeDocument(documentId: string): Promise<UploadResul
     return { error: t({ tr: "Yalnızca çözümlenemeyen belgeler yeniden denenebilir.", en: "Only documents that couldn't be analyzed can be retried." }) };
   }
 
-  const sonuc = await analyzeUploadedDocument({
+  const sonuc = await belgeyiCozumle({
     storagePath: belge.storage_path,
     fileName: belge.file_name,
     mimeType: belge.mime_type ?? "",
     fileSize: Number(belge.file_size ?? 0),
     projectId: belge.project_id ?? null,
     projectTitle: belge.project_title ?? null,
-  });
+  }, { yeniYukleme: false });
   if (sonuc.error) return sonuc;
 
   // Yeni kayıt oluştu; eski başarısız satır listede kalmasın.
@@ -420,6 +437,12 @@ export async function deleteDocumentUpload(documentId: string): Promise<{ error?
 }
 
 /* Okunamadı ile "belge yüklemediniz" ayrı; lib/liste-sonucu.ts. */
+/*
+  Çalışmaya bağlı OLMAYAN yüklemeler, sınırsız. Belge sayfası eskiden son
+  20 yüklemeyi çekip bağsızları ondan süzüyordu: başka çalışmalara 20'den
+  fazla belge yükleyen kullanıcıda eski bağsız belgeler listeden düşüyor
+  ve silinemiyordu.
+*/
 export async function getMyDocumentUploads(): Promise<ListeSonucu<DocumentUploadRecord>> {
   const supabase = await createClient();
   const {
@@ -431,8 +454,8 @@ export async function getMyDocumentUploads(): Promise<ListeSonucu<DocumentUpload
     .from("document_uploads")
     .select("id, project_id, project_title, file_name, status, error_message, analysis, created_at")
     .eq("uploaded_by", user.id)
-    .order("created_at", { ascending: false })
-    .limit(20);
+    .is("project_id", null)
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error(error);

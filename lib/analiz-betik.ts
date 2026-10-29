@@ -1,3 +1,4 @@
+import type { MetinBicimi } from "@/lib/veri-okuma";
 /*
   ANALİZ YÖNTEMİ KARTLARI VE TEKRAR ÜRETİM BETİĞİ (26.10.2026, kurum
   sahibinin isteği: "hangi analiz yöntemi uygulanacağı kartlar halinde
@@ -183,6 +184,8 @@ export type BetikSecimi = {
   maddeler?: string[];
   yordayicilar?: string[];
   dosyaAdi?: string | null;
+  /** Metin dosyasında ArvoLab'ın ayırıcı ve ondalık kararı (lib/veri-okuma.ts csvOku). */
+  metinBicimi?: MetinBicimi;
   /** İki gruplu testlerde grup değişkeninin verideki iki değeri (SPSS GROUPS= için). */
   gruplar?: string[];
   /** ANCOVA kovaryatları ve kısmi korelasyonun kontrol değişkenleri. */
@@ -322,6 +325,39 @@ function spss(tur: AnalizTuru, s: BetikSecimi, en: boolean): string {
   }
 }
 
+/*
+  Betik dosyayı ArvoLab'ın okuduğu gibi okumalı. Eskiden her CSV için
+  read.csv / pd.read_csv öntanımlıları (virgül ayırıcı, nokta ondalık)
+  yazılıyordu: Türkçe Excel'in noktalı virgüllü dosyası tek sütun okunup
+  betik düşüyordu; .tsv ve .txt de read_excel'e gidiyordu.
+*/
+const METIN_DOSYASI = /\.(csv|tsv|txt)$/i;
+
+function metinVarsayilan(dosya: string): MetinBicimi {
+  return { ayirici: /\.tsv$/i.test(dosya) ? "\t" : ",", ondalik: "nokta", kodlama: "utf-8" };
+}
+
+function rOkuma(dosya: string, bicim?: MetinBicimi): string {
+  const yol = JSON.stringify(dosya);
+  if (!METIN_DOSYASI.test(dosya)) return `library(readxl)\nveri <- read_excel(${yol})`;
+  const { ayirici, ondalik, kodlama } = bicim ?? metinVarsayilan(dosya);
+  /* read.table'da sep = "" BOŞLUKTA böler; tek sütunlu dosyaya bölmeyeceği bir ayırıcı verilir. */
+  const sep = JSON.stringify(ayirici || "\x1f");
+  const dec = JSON.stringify(ondalik === "virgul" ? "," : ".");
+  const enc = kodlama === "windows-1254" ? "windows-1254" : "UTF-8-BOM";
+  return `veri <- read.table(${yol}, header = TRUE, sep = ${sep}, dec = ${dec}, quote = "\\"", fileEncoding = "${enc}", check.names = FALSE)`;
+}
+
+function pyOkuma(dosya: string, bicim?: MetinBicimi): string {
+  const yol = JSON.stringify(dosya);
+  if (!METIN_DOSYASI.test(dosya)) return `veri = pd.read_excel(${yol})`;
+  const { ayirici, ondalik, kodlama } = bicim ?? metinVarsayilan(dosya);
+  const ek = ondalik === "virgul" ? `, decimal=",", thousands="."` : "";
+  /* Tek sütunlu dosyada ayırıcı yok: pandas'a bölmeyeceği bir ayırıcı verilir. */
+  const sep = JSON.stringify(ayirici || "\x1f");
+  return `veri = pd.read_csv(${yol}, sep=${sep}${ek}, encoding="${kodlama === "windows-1254" ? "cp1254" : "utf-8-sig"}")`;
+}
+
 function r(tur: AnalizTuru, s: BetikSecimi, en: boolean): string {
   const y = (tr: string, ing: string) => (en ? ing : tr);
   const a = rAd(ad(s.varA, "degisken1"));
@@ -334,9 +370,7 @@ function r(tur: AnalizTuru, s: BetikSecimi, en: boolean): string {
   const kovaryatlarR = kovListe.map(rAd).join(" + ");
   const kovaryatlarListe = kovListe.map((k) => JSON.stringify(k)).join(", ");
   const dosya = s.dosyaAdi?.trim() || "veriniz.xlsx";
-  const okuma = /\.csv$/i.test(dosya)
-    ? `veri <- read.csv(${JSON.stringify(dosya)})`
-    : `library(readxl)\nveri <- read_excel(${JSON.stringify(dosya)})`;
+  const okuma = rOkuma(dosya, s.metinBicimi);
   const govde: Record<AnalizTuru, string> = {
     descriptives: "summary(veri)\nsapply(veri[sapply(veri, is.numeric)], sd, na.rm = TRUE)",
     ttest: `t.test(${a} ~ ${g}, data = veri, var.equal = TRUE)\n# ${y("Levene için", "For Levene's test")}: car::leveneTest(${a} ~ factor(${g}), data = veri)`,
@@ -378,7 +412,7 @@ function python(tur: AnalizTuru, s: BetikSecimi, en: boolean): string {
   const a = pyKolon(aAd);
   const b = pyKolon(bAd);
   const dosya = s.dosyaAdi?.trim() || "veriniz.xlsx";
-  const okuma = /\.csv$/i.test(dosya) ? `veri = pd.read_csv(${JSON.stringify(dosya)})` : `veri = pd.read_excel(${JSON.stringify(dosya)})`;
+  const okuma = pyOkuma(dosya, s.metinBicimi);
   const gruplar = `gruplar = [g[${JSON.stringify(aAd)}].dropna() for _, g in veri.groupby(${JSON.stringify(gAd)})]`;
   const maddeler = JSON.stringify(s.maddeler?.length ? s.maddeler : ["madde1", "madde2", "madde3"]);
   const yordayicilar = (s.yordayicilar?.length ? s.yordayicilar : ["yordayici1"]).map(pyFormul).join(" + ");

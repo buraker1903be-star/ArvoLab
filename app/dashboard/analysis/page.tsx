@@ -43,7 +43,7 @@ export default async function AnalysisPage({
   const t = await ceviri();
   const dil = await aktifDil();
   const { tarih } = await tarihler();
-  const [asistanAcik, { satirlar: calismalar, okunamadi: calismaOkunamadi }, { satirlar: tumSonuclar, okunamadi: sonucOkunamadi }] = await Promise.all([
+  const [asistanAcik, { satirlar: calismalar, okunamadi: calismaOkunamadi }, { satirlar: bagsizlar, okunamadi: sonucOkunamadi }] = await Promise.all([
     analizAsistaniAcik(),
     getMyProjects(),
     getAnalizSonuclari(),
@@ -54,7 +54,6 @@ export default async function AnalysisPage({
   const { satirlar: analizler, okunamadi: analizOkunamadi } = calisma
     ? await calismaAnalizleri(calisma.id)
     : { satirlar: [], okunamadi: false };
-  const bagsizlar = tumSonuclar.filter((s) => !s.project_id);
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">

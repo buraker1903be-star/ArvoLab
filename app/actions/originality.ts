@@ -51,36 +51,48 @@ export async function runOriginalityCheck(documentId: string): Promise<Originali
     return { error: t({ tr: "Belge metni bulunamadı. Önce belgeyi yükleyip analiz ettirin.", en: "No document text was found. Upload the document and have it analyzed first." }) };
   }
 
-  // Erişilebilir tüm diğer analiz edilmiş belgeleri getir (RLS otomatik filtreler)
-  const { data: candidates, error: candidatesError } = await supabase
-    .from("document_uploads")
-    .select("id, file_name, extracted_text")
-    .eq("status", "analyzed")
-    .not("extracted_text", "is", null)
-    .neq("id", documentId)
-    .limit(200);
-
-  if (candidatesError) {
-    console.error(candidatesError);
-    return { error: t({ tr: "Karşılaştırma havuzu getirilirken hata oluştu.", en: "An error occurred while loading the comparison pool." }) };
-  }
-
+  /*
+    Erişilebilir analiz edilmiş belgeler (RLS süzer), EN YENİDEN ESKİYE,
+    100'lük sayfalarla en fazla HAVUZ_TAVANI belge. Eskiden sırasız tek bir
+    .limit(200) vardı: kurumunda 200'den fazla belge gören Kontrolör için
+    rastgele bir alt küme karşılaştırılıyor, gerçek bir örtüşme "anlamlı
+    eşleşme yok" diye raporlanabiliyor ve aynı tarama iki kez farklı sonuç
+    verebiliyordu. Karşılaştırılan sayı ekranda yazdığı için tavan da
+    görünür kalıyor. Metinler sayfa sayfa işlenip bırakılıyor: hepsini
+    birden belleğe almak büyük kurumda sunucu işlevini taşırır.
+  */
   const targetShingles = buildShingles(targetDoc.extracted_text);
+  const SAYFA = 100;
+  const HAVUZ_TAVANI = 1000;
+  let karsilastirilan = 0;
+  let adaylar: OriginalityMatch[] = [];
+  for (let bas = 0; bas < HAVUZ_TAVANI; bas += SAYFA) {
+    const { data: sayfa, error: candidatesError } = await supabase
+      .from("document_uploads")
+      .select("id, file_name, extracted_text")
+      .eq("status", "analyzed")
+      .not("extracted_text", "is", null)
+      .neq("id", documentId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(bas, bas + SAYFA - 1);
 
-  const matches: OriginalityMatch[] = (candidates ?? [])
-    .map((c) => {
-      const candidateShingles = buildShingles(c.extracted_text ?? "");
-      const result = computeSimilarity(targetShingles, candidateShingles);
-      return {
-        documentId: c.id,
-        fileName: c.file_name,
-        similarity: result.score,
-        sampleOverlap: result.sampleOverlap,
-      };
-    })
-    .filter((m) => m.similarity >= 10) // yalnızca anlamlı örtüşmeleri göster
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, 10);
+    if (candidatesError) {
+      console.error(candidatesError);
+      return { error: t({ tr: "Karşılaştırma havuzu getirilirken hata oluştu.", en: "An error occurred while loading the comparison pool." }) };
+    }
+    for (const c of sayfa ?? []) {
+      const result = computeSimilarity(targetShingles, buildShingles(c.extracted_text ?? ""));
+      // yalnızca anlamlı örtüşmeleri tut
+      if (result.score >= 10) {
+        adaylar.push({ documentId: c.id, fileName: c.file_name, similarity: result.score, sampleOverlap: result.sampleOverlap });
+      }
+    }
+    karsilastirilan += sayfa?.length ?? 0;
+    adaylar = adaylar.sort((a, b) => b.similarity - a.similarity).slice(0, 10);
+    if ((sayfa?.length ?? 0) < SAYFA) break;
+  }
+  const matches = adaylar;
 
   const overallSimilarity = matches.length > 0 ? matches[0].similarity : 0;
 
@@ -88,7 +100,7 @@ export async function runOriginalityCheck(documentId: string): Promise<Originali
     document_id: documentId,
     requested_by: user.id,
     overall_similarity: overallSimilarity,
-    compared_document_count: candidates?.length ?? 0,
+    compared_document_count: karsilastirilan,
     matches,
   });
 
@@ -100,7 +112,7 @@ export async function runOriginalityCheck(documentId: string): Promise<Originali
   revalidatePath("/dashboard/documents");
   return {
     overallSimilarity,
-    comparedDocumentCount: candidates?.length ?? 0,
+    comparedDocumentCount: karsilastirilan,
     matches,
   };
 }
