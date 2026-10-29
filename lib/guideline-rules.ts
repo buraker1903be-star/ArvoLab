@@ -176,6 +176,26 @@ export interface CalismaKilavuzuRow {
   satır aralığı, girinti ve yaslama boş kalıyordu. Okuyucu iki biçimi de
   tanıyor; mevcut kayıtlar yeniden kaydedilmeden düzeliyor.
 */
+/*
+  Öğrencinin kılavuzunun sürüm damgasına eklenen OKUYUCU sürümü.
+
+  Editör sayfa ayarlarını (kenar boşlukları, kâğıt, sayfa numarası) kılavuz
+  sürümüyle damgalıyor ve damga eşitse "güncel" deyip bir şey uygulamıyor
+  (lib/guideline-sync.ts). kuralKumesi düzeltilmeden önce editörü açan
+  öğrencinin belgesi bu kılavuzla "eşitlendi" diye damgalandı — o sırada
+  kılavuzun ayarı yoktu. Damga değişmeseydi düzeltmeden sonra da kenar
+  boşlukları hiç inmeyecekti (ölçüldü: mode "current", boşluklar 2,5).
+  Ek, o damgaları eskitiyor: dokunulmamış belgeye kılavuz kendiliğinden
+  uygulanıyor ve neyin değiştiği gösteriliyor, elle değiştirilmişe
+  öneriliyor. Okuyucu bir daha değişirse bu sayı artırılır.
+
+  Yan etkisi bilerek kabul edildi: editör `version`'ı tarih sanıp "Onay:
+  <tarih>" yazıyordu; ek yüzünden tarih ayrıştırılamıyor ve satır
+  gizleniyor. Öğrencinin kendi kılavuzu kimsenin onayından geçmedi,
+  gösterilen tarih yalnızca yükleme tarihiydi — "Onay" demek yanlıştı.
+*/
+const OKUYUCU_SURUMU = "#2";
+
 export function kuralKumesi(ham: unknown): unknown {
   if (ham && typeof ham === "object" && "suggestedRules" in ham) return (ham as { suggestedRules: unknown }).suggestedRules;
   return ham;
@@ -193,7 +213,7 @@ export function appliedGuidelineFromCalisma(row: CalismaKilavuzuRow): AppliedGui
 
   return {
     id: `calisma:${row.project_id}`,
-    version: String(row.olusturuldu ?? ""),
+    version: `${String(row.olusturuldu ?? "")}${OKUYUCU_SURUMU}`,
     label: row.belge_basligi ?? "Yüklediğiniz kılavuz",
     universityName: "",
     instituteName: null,

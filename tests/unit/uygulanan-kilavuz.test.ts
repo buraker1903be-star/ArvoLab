@@ -2,6 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { appliedGuidelineFromCalisma, appliedGuidelineFromRow, type GuidelineRow } from "../../lib/guideline-rules";
 import { kurallariKur } from "../../lib/kilavuz-dogrulama";
+import { resolveGuidelineSync } from "../../lib/guideline-sync";
 
 /*
   Onaylı kılavuzun öğrenciye ulaştığı son halka.
@@ -243,5 +244,36 @@ describe("öğrencinin yüklediği kılavuz", () => {
 
   test("düz kural kümesi de okunur", () => {
     assert.equal(appliedGuidelineFromCalisma(satir(ham.suggestedRules) as never)?.settings.fontSizePt, 12);
+  });
+});
+
+describe("öğrenci kılavuzunun eski damgası", () => {
+  /*
+    kuralKumesi düzeltilmeden önce editörü açan öğrencinin belgesi bu
+    kılavuzla "eşitlendi" diye damgalandı (o sırada ayar yoktu). Damga eşit
+    kalsaydı eşitleme "current" der, kenar boşlukları hiç inmezdi.
+  */
+  test("hatalı dönemde basılan damga eskimiş sayılır, kılavuz uygulanır", () => {
+    const row = {
+      project_id: "p",
+      olusturuldu: "2026-10-27T10:00:00Z",
+      belge_basligi: null,
+      kaynak_adres: null,
+      kurallar: {
+        citation_style: "apa7",
+        required_sections: ["Giriş"],
+        min_pages: null,
+        max_pages: null,
+        extracted_rules: { suggestedRules: { margins_cm: { top: 3, bottom: 2.5, left: 3.5, right: 2.5 } } },
+      },
+    };
+    const g = appliedGuidelineFromCalisma(row as never)!;
+    const eskiDamga = { guidelineId: g.id, version: "2026-10-27T10:00:00Z", customized: false };
+    const metin = { margins: { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }, showPageNumbers: true, headingNumbering: false };
+    const sonuc = resolveGuidelineSync(g, { ...metin, settingsSource: eskiDamga });
+    assert.equal(sonuc.mode, "auto-applied");
+    assert.deepEqual(sonuc.margins, { top: 3, bottom: 2.5, left: 3.5, right: 2.5 });
+    // Elle değiştirilmişse dayatılmaz, önerilir.
+    assert.equal(resolveGuidelineSync(g, { ...metin, settingsSource: { ...eskiDamga, customized: true } }).mode, "offer");
   });
 });
