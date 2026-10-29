@@ -3,7 +3,7 @@ import { SOZCUK_SONU } from "@/lib/sozcuk-siniri";
 import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
 import { atifGecisleri, atifSistemiSec } from "@/lib/atif-sistemi";
 import { sayiKuraliOner, type SayiOnerisi } from "@/lib/kilavuz-sayi-onerisi";
-import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
+import { ocrCalismadiUyarisi, ocrEksikDosyaUyarisi, pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
 import { kilavuzdanKagit } from "@/lib/kagit-boyutu";
 import { kelimeSiniriCikar, sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
@@ -175,6 +175,17 @@ const SABIT_UYARILAR_EN = new Map<string, string>([
     "Metinde hem sıfırlı hem sıfırsız yazım geçiyor; kılavuzu açıp doğrulayın.",
     "The text uses both leading-zero and no-leading-zero forms; open the guideline and verify.",
   ],
+  /* Kaynak indirme hataları (lib/safe-official-fetch.ts) de buradan geçiyor:
+     err.message olarak kullanıcıya ulaşıyordu ve İngilizce arayüzde Türkçe
+     kalıyordu — en sık olanı yurt dışı üniversite adreslerinde (29.10.2026). */
+  ["Kılavuz kaynağı standart HTTPS kullanmalıdır.", "The guideline source must use standard HTTPS."],
+  [
+    "Otomatik tarama yalnızca resmî .edu.tr kaynaklarında çalışır.",
+    "Automatic scanning only works for official .edu.tr sources. Download the guideline and upload the PDF or DOCX file instead.",
+  ],
+  ["Kaynak adresi güvenli bir genel ağ adresine çözümlenemedi.", "The source address could not be resolved to a safe public network address."],
+  ["Kaynak geçersiz bir yönlendirme döndürdü.", "The source returned an invalid redirect."],
+  ["Kaynak çok fazla yönlendirme yaptı.", "The source redirected too many times."],
 ]);
 
 const KALIP_UYARILAR_EN: [RegExp, (e: RegExpExecArray) => string][] = [
@@ -185,6 +196,21 @@ const KALIP_UYARILAR_EN: [RegExp, (e: RegExpExecArray) => string][] = [
   [
     /^Belge taranmış görüntüden oluşuyor; metin OCR ile okundu \((\d+) sayfa, tanıma güveni %(\d+)\)\. Kurallar eksik ya da hatalı çıkmış olabilir\.$/u,
     (e) => `The document consists of scanned images; the text was read with OCR (${e[1]} pages, recognition confidence ${e[2]}%). Rules may be missing or incorrect.`,
+  ],
+  [/^Kaynak alınamadı \(HTTP (\d+)\)\.$/u, (e) => `The source could not be retrieved (HTTP ${e[1]}).`],
+  [
+    /^Kaynak dosya çok büyük \((\d+) MB\); en fazla (\d+) MB okunur\.$/u,
+    (e) => `The source file is too large (${e[1]} MB); at most ${e[2]} MB is read.`,
+  ],
+  [/^Kaynak dosya çok büyük; en fazla (\d+) MB okunur\.$/u, (e) => `The source file is too large; at most ${e[1]} MB is read.`],
+  /* OCR uyarısı kayda TÜRKÇE yazılıyor (gece turu kullanıcısız koşuyor); gösterirken çevrilir. */
+  [
+    /^Belge taranmış görüntüden oluşuyor ama OCR ile okunamadı \(OCR dosyaları sunucuda yok: (.*)\); kurallar çıkarılamadı\. Bu, kılavuzun değil sunucunun sorunu; dosyalar dağıtım paketine eklenmeli \(next\.config\.ts\)\.$/u,
+    (e) => ocrEksikDosyaUyarisi(e[1], "en"),
+  ],
+  [
+    /^Belge taranmış görüntüden oluşuyor ama OCR ile okunamadı \((.*)\); kurallar çıkarılamadı\.$/u,
+    (e) => ocrCalismadiUyarisi(e[1], "en"),
   ],
   [
     /^Metinde iki ondalık ayırıcı da geçiyor \((.*)\); örnek ya da karşılaştırma olabilir\.$/u,

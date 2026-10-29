@@ -63,6 +63,9 @@
    karakterini korur: pre-wrap metindeki satır sonlarını değiştirmez, metinde \n yok. */
 .print-body :is(p, li, td, th) { white-space: pre-wrap; tab-size: 1.25cm; }
 .print-body :is(ul, ol) { margin: 0 0 .6em; padding-left: 1.2cm; }
+/* İç içe numaralı liste Word'deki gibi: 1. → a. → i. */
+.print-body ol ol { list-style-type: lower-alpha; }
+.print-body ol ol ol { list-style-type: lower-roman; }
 .print-body blockquote { margin: .6em 0 .6em 1.2cm; }
 .print-body img { display: block; max-width: 100%; margin: .6em auto; break-inside: avoid; }
 .print-body table { width: 100%; margin: .6em 0; border-collapse: collapse; break-inside: avoid; }

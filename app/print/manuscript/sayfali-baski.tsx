@@ -44,6 +44,17 @@ const SAYFALI_CSS = `
  * bağlantıdaki numara ile metin arasında boşluk düğümü olmadığından
  * "1.Giriş" ile "1. Giriş" eşleşmiyordu.
  */
+/*
+  Başlıktaki dipnotun gizli metni (satır içi dipnot, .print-dipnot) ve
+  numarası textContent'e karışıyordu: "Giriş¹" "giriş11açıklama" okunuyor,
+  eşleşme düşüyor, içindekilerde o başlığın sayfa numarası boş kalıyordu.
+*/
+function gorunenMetin(el: HTMLElement) {
+  const kopya = el.cloneNode(true) as HTMLElement;
+  kopya.querySelectorAll(".print-dipnot, .print-fn").forEach((d) => d.remove());
+  return kopya.textContent;
+}
+
 function basliklaraKimlik(kok: ParentNode) {
   const sade = (m: string | null | undefined) => (m ?? "").replace(/\s+/g, "").toLocaleLowerCase("tr-TR");
   const baglantilar = [...kok.querySelectorAll<HTMLAnchorElement>(".print-toc a[data-toc-index]")];
@@ -53,7 +64,7 @@ function basliklaraKimlik(kok: ParentNode) {
     const aranan = sade(baglanti.dataset.baslik);
     // Bulunamazsa sıradaki bağlantı aynı yerden aramaya devam eder (başlıklar tüketilmez).
     for (let i = b; i < basliklar.length; i++) {
-      if (aranan && sade(basliklar[i].textContent).endsWith(aranan)) {
+      if (aranan && sade(gorunenMetin(basliklar[i])).endsWith(aranan)) {
         basliklar[i].id = `bas-${baglanti.dataset.tocIndex}`;
         b = i + 1;
         break;

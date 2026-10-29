@@ -198,6 +198,16 @@ export interface CalismaKilavuzuRow {
   gizleniyor. Öğrencinin kendi kılavuzu kimsenin onayından geçmedi,
   gösterilen tarih yalnızca yükleme tarihiydi — "Onay" demek yanlıştı.
 */
+/*
+  Adı bilinmeyen öğrenci kılavuzunun yer tutucu adı. Gösterilirken çevrilir
+  (kilavuzGorunenAdi); eskiden İngilizce arayüzde de Türkçe görünüyordu.
+*/
+export const YUKLENEN_KILAVUZ_ADI = "Yüklediğiniz kılavuz";
+
+export function kilavuzGorunenAdi(ad: string, dil: "tr" | "en"): string {
+  return ad === YUKLENEN_KILAVUZ_ADI && dil === "en" ? "Your uploaded guideline" : ad;
+}
+
 const OKUYUCU_SURUMU = "#2";
 
 export function kuralKumesi(ham: unknown): unknown {
@@ -229,7 +239,7 @@ export function appliedGuidelineFromCalisma(row: CalismaKilavuzuRow): AppliedGui
     label:
       (row.belge_basligi && !surumEtiketiMi(row.belge_basligi) ? row.belge_basligi : null) ??
       kilavuzAdi({ depoYolu: row.depo_yolu, adres: row.kaynak_adres }) ??
-      "Yüklediğiniz kılavuz",
+      YUKLENEN_KILAVUZ_ADI,
     universityName: "",
     instituteName: null,
     versionLabel: null,

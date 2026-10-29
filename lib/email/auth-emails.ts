@@ -6,8 +6,8 @@
  * hem de Supabase'in üretim için uygun olmayan gönderim sınırına takılmıyorlar.
  *
  * İki dilli (lib/dil.ts): dil, isteği yapanın arayüz dili. Zamanlanmış işler
- * (deneme hatırlatması) bir isteğe bağlı olmadığı için şimdilik Türkçe;
- * kullanıcının dil tercihi profilde tutulmaya başlayınca oradan okunacak.
+ * (deneme hatırlatması) bir isteğe bağlı değil; dili kullanıcının profilinden
+ * (profiles.arayuz_dili) okuyor (app/api/cron/deneme-hatirlatma).
  */
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://lab.arvo-os.com").replace(/\/$/, "");

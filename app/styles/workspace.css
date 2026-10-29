@@ -173,6 +173,13 @@
 .manuscript-editor-content p[data-caption="table"] { counter-increment: table; }
 .manuscript-editor-content p[data-caption="figure"]::before { content: "Şekil " counter(figure) ". "; font-weight: 700; }
 .manuscript-editor-content p[data-caption="table"]::before { content: "Tablo " counter(table) ". "; font-weight: 700; }
+/* İngilizce belgede etiket İngilizce (editörün kökü lang=belge dili). Eskiden hep
+   "Şekil/Tablo" yazıyordu; baskı ve Word "Figure/Table" diyordu. */
+.manuscript-editor-content:lang(en) p[data-caption="figure"]::before { content: "Figure " counter(figure) ". "; }
+.manuscript-editor-content:lang(en) p[data-caption="table"]::before { content: "Table " counter(table) ". "; }
+/* İç içe numaralı liste Word'deki gibi: 1. → a. → i. (eskiden editör ve baskı hep "1." yazıyordu). */
+.manuscript-editor-content ol ol { list-style-type: lower-alpha; }
+.manuscript-editor-content ol ol ol { list-style-type: lower-roman; }
 
 /* Bul ve değiştir: araç çubuğunun içinde tam satır (yapışık kalır) */
 .search-match { border-radius: 2px; background: color-mix(in srgb, var(--warning) 35%, transparent); }

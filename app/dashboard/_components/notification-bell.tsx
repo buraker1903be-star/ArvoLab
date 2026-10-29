@@ -1,5 +1,6 @@
 "use client";
 
+import { bildirimBasligi, bildirimGovdesi } from "@/lib/bildirim-metni";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL, type Dil } from "@/lib/dil";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -130,8 +131,9 @@ export default function NotificationBell() {
                       <Icon size={16} />
                     </span>
                     <span className="picker-main">
-                      <strong>{item.title}</strong>
-                      {item.body ? <span className="notification-body">{item.body}</span> : null}
+                      {/* Tetikleyiciler Türkçe yazıyor; İngilizce arayüzde bilinen kalıplar çevrilir (lib/bildirim-metni.ts). */}
+                      <strong>{bildirimBasligi(item.title, dil)}</strong>
+                      {item.body ? <span className="notification-body">{bildirimGovdesi(item.body, dil)}</span> : null}
                       <small>{formatAgo(item.createdAt, dil)}</small>
                     </span>
                     {item.readAt ? null : <span className="notification-dot" aria-label={t({ tr: "Okunmadı", en: "Unread" })} />}

@@ -113,7 +113,7 @@ function buildCoverPageParagraphs(cover: CoverPageData, dil: Dil): Paragraph[] {
   const centered = (text: string, opts: { bold?: boolean; size?: number } = {}) =>
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text, bold: opts.bold ?? false, size: opts.size })],
+      children: [new TextRun({ text: xmlTemiz(text), bold: opts.bold ?? false, size: opts.size })],
     });
 
   const paragraphs: Paragraph[] = [];
@@ -162,6 +162,8 @@ interface ConversionContext {
   footnotes: Record<string, { children: Paragraph[] }>;
   nextFootnoteId: number;
   nextListInstance: number;
+  /** 1'den farklı başlayan numaralı listelerin başlangıçları (her biri ayrı numaralandırma tanımı) */
+  numaraBaslangiclari: Set<number>;
   contentWidthTwip: number;
   fetchImage: (url: string) => Promise<DocxImage | null>;
   /** Otomatik başlık numaraları (kapalıysa boş) */
@@ -174,8 +176,19 @@ interface ConversionContext {
 
 interface BlockOptions {
   quoteDepth: number;
-  list?: { level: number; ordered: boolean; instance: number };
+  list?: { level: number; ordered: boolean; instance: number; baslangic: number; devam?: boolean };
 }
+
+const numaraReferansi = (baslangic: number) => (baslangic === 1 ? "arvolab-numbering" : `arvolab-numbering-${baslangic}`);
+
+/*
+  XML 1.0'da yasak denetim karakterleri. PDF'ten yapıştırılan metinde
+  (\u0002 tire yerine sık) ve Word'den gelen metinde (\u000B satır sonu)
+  bulunuyor; docx kitaplığı ayıklamıyor. Eskiden olduğu gibi yazılıyor ve
+  Word dosyayı "okunamayan içerik" diye açmıyordu (29.10.2026).
+*/
+const XML_YASAK = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+export const xmlTemiz = (metin: string) => metin.replace(XML_YASAK, "");
 
 // Yalnızca güvenli bağlantı türleri Word'e köprü olarak aktarılır.
 function safeHref(marks: TiptapMark[]) {
@@ -189,8 +202,17 @@ function textRun(node: TiptapNode, isLink: boolean) {
   const has = (type: string) => marks.some((m) => m.type === type);
   const textStyle = marks.find((m) => m.type === "textStyle")?.attrs ?? {};
   const fontFamily = textStyle.fontFamily as string | undefined;
-  // fontSize editörde "12pt" gibi saklanır; docx.js yarım punto (half-point) bekler.
-  const fontSize = parseFloat(String(textStyle.fontSize ?? ""));
+  /*
+    fontSize editörde "12pt" gibi saklanır; docx.js yarım punto bekler.
+    Yapıştırılan metin "16px" ya da "0.875em" taşıyabiliyor ve eskiden
+    parseFloat bunları punto sayıyordu: 16px Word'de 16pt (doğrusu 12pt),
+    0.875em 1pt — neredeyse görünmez metin. pt okunur, px 0,75 ile çevrilir,
+    öteki birimler yok sayılır (baskı yolu da onları yok sayıyor).
+  */
+  const boyutHam = String(textStyle.fontSize ?? "").trim();
+  const ptEslesme = /^(\d+(?:\.\d+)?)pt$/i.exec(boyutHam);
+  const pxEslesme = /^(\d+(?:\.\d+)?)px$/i.exec(boyutHam);
+  const fontSize = ptEslesme ? Number(ptEslesme[1]) : pxEslesme ? Number(pxEslesme[1]) * 0.75 : NaN;
   const color = typeof textStyle.color === "string" && /^#[0-9a-f]{6}$/i.test(textStyle.color)
     ? textStyle.color.slice(1)
     : undefined;
@@ -200,7 +222,7 @@ function textRun(node: TiptapNode, isLink: boolean) {
     bırakılırsa Word onu tek bir boşluk gibi çiziyordu (editörde Tab ile
     yazılan sekmeler, 27.10.2026).
   */
-  const metin = node.text ?? "";
+  const metin = xmlTemiz(node.text ?? "");
   const parcalar = metin.split("\t");
   const icerik =
     parcalar.length > 1
@@ -233,7 +255,7 @@ function inlineChildren(nodes: TiptapNode[], ctx: ConversionContext): ParagraphC
     } else if (node.type === "footnoteReference") {
       // Numara belge sırasından gelir (editördeki gibi); Word kendisi numaralar.
       const id = ctx.nextFootnoteId++;
-      const footnoteText = String(node.attrs?.text ?? "");
+      const footnoteText = xmlTemiz(String(node.attrs?.text ?? ""));
       ctx.footnotes[String(id)] = {
         children: [new Paragraph({ children: [new TextRun({ text: footnoteText, size: 20 })] })],
       };
@@ -252,8 +274,10 @@ function paragraphFrom(node: TiptapNode, ctx: ConversionContext, opts: BlockOpti
   if (!list && isCaptionKind(caption)) {
     // "Şekil 3. …" — numara Word'ün SEQ alanıdır; şekil/tablo listeleri bu alanlardan oluşur.
     const label = captionLabel(caption, ctx.dil);
+    /* Hizalama editördeki gibi; yalnızca seçilmemişse ortalı. Eskiden hep
+       ortalıydı: APA 7'nin istediği sola dayalı başlık Word'de ortalanıyordu. */
     return new Paragraph({
-      alignment: AlignmentType.CENTER,
+      alignment: align ? ALIGNMENTS[align] : AlignmentType.CENTER,
       keepNext: caption === "table",
       spacing: lineSpacingValue(node.attrs?.lineSpacing),
       children: [
@@ -264,12 +288,19 @@ function paragraphFrom(node: TiptapNode, ctx: ConversionContext, opts: BlockOpti
       ],
     });
   }
+  /*
+    Bir madde birden çok paragraf taşıyabilir; numarayı/imi yalnızca İLKİ
+    alır, ötekiler maddenin girintisiyle devam eder. Eskiden her paragraf
+    ayrı numaralanıyordu: editörde "3. ilk+devam, 4. ikinci" olan liste
+    Word'de "1. ilk, 2. devam, 3. ikinci" oluyordu.
+  */
+  const devam = list?.devam;
   return new Paragraph({
     alignment: align ? ALIGNMENTS[align] : undefined,
     spacing: lineSpacingValue(node.attrs?.lineSpacing),
-    indent: list ? undefined : indentFromAttrs(node.attrs, opts.quoteDepth),
-    bullet: list && !list.ordered ? { level: list.level } : undefined,
-    numbering: list?.ordered ? { reference: "arvolab-numbering", level: list.level, instance: list.instance } : undefined,
+    indent: list ? (devam ? { left: convertInchesToTwip(0.35 * (list.level + 1)) } : undefined) : indentFromAttrs(node.attrs, opts.quoteDepth),
+    bullet: list && !list.ordered && !devam ? { level: list.level } : undefined,
+    numbering: list?.ordered && !devam ? { reference: numaraReferansi(list.baslangic), level: list.level, instance: list.instance } : undefined,
     children: inlineChildren(node.content ?? [], ctx),
   });
 }
@@ -295,6 +326,8 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
           pageBreakBefore: newPage || undefined,
           alignment: align ? ALIGNMENTS[align] : undefined,
           spacing: lineSpacingValue(node.attrs?.lineSpacing),
+          // Editör ve baskı başlıktaki ilk satır/asılı girintiyi uyguluyor; Word atlıyordu.
+          indent: indentFromAttrs(node.attrs, 0),
           children: [...(number ? [new TextRun({ text: `${number} ` })] : []), ...inlineChildren(node.content ?? [], ctx)],
         }),
       ];
@@ -306,16 +339,21 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
     case "bulletList":
     case "orderedList": {
       const ordered = node.type === "orderedList";
-      // Her numaralı liste 1'den başlar (önceden tüm listeler tek sayaçtan devam ediyordu).
+      // Her numaralı liste kendi başından sayar (önceden tüm listeler tek sayaçtan devam ediyordu).
       const instance = ordered ? ctx.nextListInstance++ : 0;
+      /* Editördeki "şuradan başla" (start) Word'e de geçer; eskiden yok sayılıyor, liste 1'den başlıyordu. */
+      const baslangic = ordered ? Math.max(1, Math.floor(Number(node.attrs?.start) || 1)) : 1;
+      if (baslangic !== 1) ctx.numaraBaslangiclari.add(baslangic);
       const level = opts.list ? Math.min(opts.list.level + 1, MAX_LIST_LEVEL) : 0;
       const out: (Paragraph | Table)[] = [];
       for (const item of node.content ?? []) {
+        let ilkParagraf = true;
         for (const child of item.content ?? []) {
           if (child.type === "paragraph") {
-            out.push(paragraphFrom(child, ctx, { ...opts, list: { level, ordered, instance } }));
+            out.push(paragraphFrom(child, ctx, { ...opts, list: { level, ordered, instance, baslangic, devam: !ilkParagraf } }));
+            ilkParagraf = false;
           } else {
-            out.push(...(await blockToDocx(child, ctx, { ...opts, list: { level, ordered, instance } })));
+            out.push(...(await blockToDocx(child, ctx, { ...opts, list: { level, ordered, instance, baslangic } })));
           }
         }
       }
@@ -344,6 +382,21 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
         )
       );
       const colWidth = Math.floor(ctx.contentWidthTwip / colCount);
+      /*
+        Editörde elle ayarlanan sütun genişlikleri (colwidth, piksel) oranı
+        korunarak yazı alanına yayılır; eskiden Word'de bütün sütunlar eşitti.
+        İlk satırın her hücresi genişlik taşımıyorsa eşit bölünür.
+      */
+      const ilkSatir = rowNodes[0]?.content ?? [];
+      const pikseller = ilkSatir.flatMap((cell) => {
+        const span = Number(cell.attrs?.colspan) || 1;
+        const w = Array.isArray(cell.attrs?.colwidth) ? (cell.attrs.colwidth as unknown[]) : [];
+        return Array.from({ length: span }, (_, i) => Number(w[i]) || 0);
+      });
+      const sutunGenislikleri =
+        pikseller.length === colCount && pikseller.every((px) => px > 0)
+          ? pikseller.map((px) => Math.floor((px / pikseller.reduce((a, b) => a + b, 0)) * ctx.contentWidthTwip))
+          : Array.from({ length: colCount }, () => colWidth);
       const rows: TableRow[] = [];
       for (const [rowIndex, row] of rowNodes.entries()) {
         const cells: TableCell[] = [];
@@ -356,7 +409,9 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
              satıra düşüyor, altındaki satırlar bir hücre kayıyordu.
              Editörde doğru görünen tablo çıktıda bozuluyordu. */
           const rowSpan = Number(cell.attrs?.rowspan) || 1;
-          const children = (await convertAll(cell.content ?? [], { quoteDepth: 0 })).filter(
+          /* Başlık hücresi editörde ve baskıda kalın (<th>); Word'de düz çıkıyordu. */
+          const icerik = cell.type === "tableHeader" ? kalinlastir(cell.content ?? []) : cell.content ?? [];
+          const children = (await convertAll(icerik, { quoteDepth: 0 })).filter(
             (child): child is Paragraph => child instanceof Paragraph
           );
           cells.push(
@@ -374,7 +429,7 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
       return [
         new Table({
           rows,
-          columnWidths: Array.from({ length: colCount }, () => colWidth),
+          columnWidths: sutunGenislikleri,
           width: { size: colWidth * colCount, type: WidthType.DXA },
         }),
       ];
@@ -405,6 +460,16 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
       // Bilinmeyen kapsayıcılar içeriğini kaybetmesin
       return node.content ? convertAll(node.content, opts) : [];
   }
+}
+
+function kalinlastir(nodes: TiptapNode[]): TiptapNode[] {
+  return nodes.map((n) =>
+    n.type === "text"
+      ? { ...n, marks: [...(n.marks ?? []).filter((m) => m.type !== "bold"), { type: "bold" }] }
+      : n.content
+        ? { ...n, content: kalinlastir(n.content) }
+        : n,
+  );
 }
 
 function captionKinds(nodes: TiptapNode[], found = new Set<CaptionKind>()): Set<CaptionKind> {
@@ -473,6 +538,7 @@ export async function buildDocxFromTiptap({
     footnotes: {},
     nextFootnoteId: 1,
     nextListInstance: 1,
+    numaraBaslangiclari: new Set<number>(),
     contentWidthTwip: Math.max(kagit.genislikTwip - marginTwip.left - marginTwip.right, 2000),
     fetchImage,
     headingNumbers: headingNumbering ? headingNumberMap(doc) : new Map(),
@@ -540,14 +606,17 @@ export async function buildDocxFromTiptap({
   const headingParagraph = { spacing: { before: 240, after: 120 }, keepNext: true };
 
   return new Document({
-    title,
+    title: xmlTemiz(title),
     footnotes: ctx.footnotes,
     ...(includeToc ? { features: { updateFields: true } } : {}),
     styles: {
       default: {
         document: {
           run: { font, size: baseSize },
-          paragraph: { spacing: { after: 120, ...lineSpacingValue(textDefaults.lineSpacing) } },
+          /* Varsayılan 1,5: baskı/PDF yolu da 1,5 kullanıyor (lib/print-sheet.ts).
+             Eskiden kılavuzsuz belgede Word tek aralıklı, PDF 1,5 aralıklı
+             çıkıyordu; sayfa sayıları birbirini tutmuyordu. */
+          paragraph: { spacing: { after: 120, ...lineSpacingValue(textDefaults.lineSpacing ?? 1.5) } },
         },
         heading1: {
           run: { ...headingRun, size: baseSize + 4, ...(textDefaults.chapterUppercase ? { allCaps: true } : {}) },
@@ -559,20 +628,19 @@ export async function buildDocxFromTiptap({
       },
     },
     numbering: {
-      config: [
-        {
-          reference: "arvolab-numbering",
-          levels: Array.from({ length: MAX_LIST_LEVEL + 1 }, (_, level) => ({
-            level,
-            format: level % 3 === 1 ? "lowerLetter" : level % 3 === 2 ? "lowerRoman" : "decimal",
-            text: `%${level + 1}.`,
-            alignment: AlignmentType.START,
-            style: {
-              paragraph: { indent: { left: convertInchesToTwip(0.35 * (level + 1)), hanging: convertInchesToTwip(0.25) } },
-            },
-          })),
-        },
-      ],
+      config: [1, ...ctx.numaraBaslangiclari].map((baslangic) => ({
+        reference: numaraReferansi(baslangic),
+        levels: Array.from({ length: MAX_LIST_LEVEL + 1 }, (_, level) => ({
+          level,
+          format: level % 3 === 1 ? "lowerLetter" : level % 3 === 2 ? "lowerRoman" : "decimal",
+          text: `%${level + 1}.`,
+          start: baslangic,
+          alignment: AlignmentType.START,
+          style: {
+            paragraph: { indent: { left: convertInchesToTwip(0.35 * (level + 1)), hanging: convertInchesToTwip(0.25) } },
+          },
+        })),
+      })),
     },
     sections: [
       {

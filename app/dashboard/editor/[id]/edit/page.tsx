@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ceviri } from "@/lib/dil-sunucu";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Save } from "lucide-react";
 import TarihSecici from "@/app/dashboard/_components/tarih-secici";
@@ -15,7 +15,7 @@ import {
 } from "@/lib/project-labels";
 import ActionForm from "../../../action-form";
 import { getUniversities } from "@/app/actions/universities";
-import { calismaKilavuzu } from "@/lib/guideline-rules";
+import { calismaKilavuzu, kilavuzGorunenAdi } from "@/lib/guideline-rules";
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import AcademicUnitFields from "../../new/academic-unit-fields";
 
@@ -121,7 +121,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
                 department: project.department ?? "",
                 departmentId: project.department_id,
               }}
-              initialGuidelineLabel={guideline ? `${guideline.label} · ${guideline.citationStyle.toUpperCase()}` : null}
+              initialGuidelineLabel={guideline ? `${kilavuzGorunenAdi(guideline.label, await aktifDil())} · ${guideline.citationStyle.toUpperCase()}` : null}
             />
 
             <label>

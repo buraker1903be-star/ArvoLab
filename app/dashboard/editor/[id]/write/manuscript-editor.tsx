@@ -96,7 +96,7 @@ import {
 } from "@/app/actions/manuscript";
 import { saveNamedVersion } from "@/app/actions/manuscript-versions";
 import { createClient } from "@/lib/supabase/client";
-import type { AppliedGuideline } from "@/lib/guideline-rules";
+import { kilavuzGorunenAdi, type AppliedGuideline } from "@/lib/guideline-rules";
 import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-sync";
 import Link from "next/link";
 import { calismaAdresi } from "@/lib/calisma-karti";
@@ -2283,7 +2283,7 @@ export default function ManuscriptEditor({
                 ? t({ tr: "Kılavuzun yeni sürümü uygulandı", en: "The guideline's new version was applied" })
                 : t({ tr: "Kılavuzunuzun kuralları uygulandı", en: "Your guideline's rules were applied" })}
             </strong>
-            <span>{guideline.label}</span>
+            <span>{kilavuzGorunenAdi(guideline.label, dil)}</span>
             <span className="guideline-meta text-sm">
               {stilAdi(guideline.citationStyle)}
               {guideline.versionLabel ? ` · ${guideline.versionLabel}` : ""}
@@ -2525,7 +2525,7 @@ export default function ManuscriptEditor({
                     <BookOpen size={14} aria-hidden="true" /> {t({ tr: "Kurallar", en: "Rules" })}
                   </button>
                 </span>
-                <strong title={guideline.label}>{guideline.label}</strong>
+                <strong title={kilavuzGorunenAdi(guideline.label, dil)}>{kilavuzGorunenAdi(guideline.label, dil)}</strong>
                 <span className="kontrol-etiketler">
                   <span className="kontrol-etiket">{stilAdi(guideline.citationStyle)}</span>
                   {formatDate(guideline.version) ? (
@@ -2916,7 +2916,7 @@ export default function ManuscriptEditor({
           open={guidelineOpen}
           onClose={closeGuideline}
           kicker={t({ tr: "Tez yazım kılavuzu", en: "Thesis writing guideline" })}
-          title={guideline.label}
+          title={kilavuzGorunenAdi(guideline.label, dil)}
           /* Öğrencinin kendi yüklediği kılavuz ekibin onayından geçmedi; eskiden
              bu pencere onu da "ekibimizin onayladığı son sürüm" diye sunuyordu. */
           description={
