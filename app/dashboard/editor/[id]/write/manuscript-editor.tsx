@@ -499,8 +499,9 @@ export default function ManuscriptEditor({
         fontSizePt: guideline?.settings.fontSizePt,
         lineSpacing: guideline?.settings.lineSpacing,
       },
+      belgeDili,
     }),
-    [citationStyle, guideline, paragraphFormat]
+    [citationStyle, guideline, paragraphFormat, belgeDili]
   );
   const [includeToc, setIncludeToc] = useState(initialIncludeToc);
   const [headingNumbering, setHeadingNumbering] = useState(initialHeadingNumbering);

@@ -84,3 +84,17 @@ test("İngilizce ön ve arka bölümler numarasız (28.10.2026)", () => {
   assert.equal(isUnnumberedHeading("Applied Methods"), false);
   assert.equal(isUnnumberedHeading("Summary"), false);
 });
+
+/*
+  29.10.2026'ya kadar "EK"ten sonra boşluk yetiyordu: "Ek Analizler" ek
+  sayılıyor, kendisi ve alt başlıkları numarasını her çıktıda kaybediyordu.
+*/
+test("'Ek Analizler' ek başlığı değildir; 'Ek 1', 'EK-A', 'Ek A', 'EKLER' öyledir", async () => {
+  const { isUnnumberedHeading, numberHeadings } = await import("@/lib/heading-numbering");
+  for (const ek of ["EKLER", "Ek 1: Anket Formu", "EK-A", "Ek A Ölçek", "Ek"]) assert.equal(isUnnumberedHeading(ek), true, ek);
+  for (const degil of ["Ek Analizler", "Ekonomik Etkiler"]) assert.equal(isUnnumberedHeading(degil), false, degil);
+  assert.deepEqual(
+    numberHeadings([{ level: 1, text: "Giriş" }, { level: 2, text: "Amaç" }, { level: 2, text: "Ek Analizler" }]),
+    ["1.", "1.1.", "1.2."],
+  );
+});

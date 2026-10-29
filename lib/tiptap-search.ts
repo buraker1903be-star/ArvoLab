@@ -1,3 +1,4 @@
+import { katla } from "@/lib/arama-katlama";
 import { Extension, type Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
@@ -25,7 +26,8 @@ export interface SearchState {
 
 export const MAX_MATCHES = 2000;
 
-const fold = (value: string) => value.toLocaleLowerCase("tr-TR");
+// İngilizce I/i de eşleşsin (lib/arama-katlama.ts).
+const fold = katla;
 
 /** Metin düğümleri içindeki eşleşmeler (biçim sınırını aşan eşleşmeler aranmaz) */
 export function findMatches(doc: ProseMirrorNode, query: string, limit = MAX_MATCHES): TextMatch[] {
@@ -129,7 +131,11 @@ export function replaceAll(editor: Editor, replacement: string): number {
   const state = getSearchState(editor);
   if (!state || state.matches.length === 0) return 0;
   const tr = editor.state.tr;
-  const count = replaceMatches(tr, state.matches, replacement);
+  /* Vurgulama 2000 eşleşmede kesiliyor (MAX_MATCHES); değiştirme kesilmemeli.
+     Eskiden yalnızca ilk 2000 yer değişiyor, bildirim "2000 yer değiştirildi"
+     diyerek hepsinin değiştiğini ima ediyordu. */
+  const hepsi = findMatches(editor.state.doc, state.query, Number.POSITIVE_INFINITY);
+  const count = replaceMatches(tr, hepsi, replacement);
   tr.setMeta(searchKey, { query: state.query, current: 0 });
   editor.view.dispatch(tr);
   return count;

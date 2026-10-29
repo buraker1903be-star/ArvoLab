@@ -149,6 +149,8 @@ export function checkStructure(
     referenceHangingIndentCm?: number;
     /** Kılavuzun yazı tipi, punto ve satır aralığı */
     textFormat?: MetinBicimKurali;
+    /** Belgenin dili (lib/belge-dili.ts): şekil/tablo etiketi "Tablo" mu "Table" mı. Verilmezse metinden tahmin edilir. */
+    belgeDili?: Dil;
   } = {},
   /** Mesajların dili (arayüz). Belgenin dili ayrı: etiketler başlıklardan okunur. */
   dil: Dil = "tr",
@@ -266,23 +268,43 @@ export function checkStructure(
   const body = bodyTexts.join("\n");
 
   for (const kind of ["table", "figure"] as const) {
-    const label = belgeEtiketi(CAPTION_LABEL[kind], CAPTION_LABEL_EN[kind], captions[kind]);
+    const label = options.belgeDili
+      ? options.belgeDili === "en" ? CAPTION_LABEL_EN[kind] : CAPTION_LABEL[kind]
+      : belgeEtiketi(CAPTION_LABEL[kind], CAPTION_LABEL_EN[kind], [...captions[kind], ...body.split("\n")]);
     const count = captions[kind].length;
     const kucuk = en ? label.toLowerCase() : label.toLocaleLowerCase("tr-TR");
 
-    /* Numaralandırma başlığın İÇİNDEN okunuyor. Eskiden sıraya göre
-       varsayılıyordu: üçüncü başlık "Tablo 3" sayılıyor, başlıkta ne
-       yazdığına bakılmıyordu. Hem yanlış numaralandırma hiç
-       yakalanmıyordu hem de 1, 3, 4 diye numaralanmış bir belgede
-       "Şekil 2 metinde anılmıyor" deniyordu — var olmayan bir şey. */
-    numaralandirmaSorunlari(label, captions[kind], dil).forEach((sorun) => add(sorun));
+    /*
+      Şekil/tablo başlığının NUMARASI BELGEDE SAKLANMIYOR: editör (CSS
+      sayacı), baskı (lib/tiptap-html.ts) ve Word (SEQ alanı) başlıkları
+      sırayla kendisi numaralıyor; başlık düğmesi ve Word aktarımı elle
+      yazılmış "Tablo 1." önekini siliyor. Denetim ise numarayı başlık
+      METNİNDE arıyordu (29.10.2026'ya kadar): doğru kurulmuş her başlık
+      "numarayla başlamıyor" uyarısı, her "Tablo 1'de" anışı da "o
+      numarada başlık yok" tehlikesi alıyordu. Öğrenci numarayı elle
+      yazmaya itiliyor, çıktıda "Tablo 1. Tablo 1." basılıyordu.
+
+      Artık numara belgedeki sıradır. Elle yazılmış numara ise çift
+      basılacağı için ayrıca uyarılır.
+    */
+    captions[kind].forEach((caption) => {
+      const elle = baslikNumarasi(CAPTION_LABEL[kind], caption) ?? baslikNumarasi(CAPTION_LABEL_EN[kind], caption);
+      if (!elle) return;
+      add({
+        tone: "warning",
+        message: en
+          ? `A ${kucuk} caption starts with a typed number (“${caption.slice(0, 40)}”). Captions are numbered automatically, so it will print twice (“${label} 1. ${label} 1. …”); delete the typed number.`
+          : `Bir ${kucuk} başlığı elle yazılmış numarayla başlıyor (“${caption.slice(0, 40)}”). Başlıklar otomatik numaralanır, çıktıda iki kez basılır (“${label} 1. ${label} 1. …”); elle yazılan numarayı silin.`,
+        target: caption,
+      });
+    });
 
     const mentioned = new Set<string>();
     // \b ASCII dışı harfleri (Ş) tanımaz; sınır lib/sozcuk-siniri.ts'te tek tanım.
     // Bölüme göre numaralandırma ("Tablo 3.1") da eşleşmeli.
     for (const match of body.matchAll(new RegExp(`${SOZCUK_BASI}${label}\\s+(\\d+(?:\\.\\d+)*)`, "gu"))) mentioned.add(match[1]);
 
-    const numaralar = captions[kind].map((caption) => baslikNumarasi(label, caption));
+    const numaralar = captions[kind].map((_, i) => String(i + 1));
     const mevcut = new Set(numaralar.filter((numara): numara is string => Boolean(numara)));
     for (const number of [...mentioned].sort()) {
       if (!mevcut.has(number)) {
@@ -605,7 +627,8 @@ export function checkStructure(
     ekBasliklari.forEach((baslik, sira) => {
       const numara = ekNumaralari[sira];
       if (!numara) return;
-      if (!new RegExp(`\\b${ekEtiketi}\\s*[-–.]?\\s*${numara.replace(".", "\\.")}\\b`, "iu").test(ekGovdesi)) {
+      // \b ASCII: "Şek. 3"teki "ek"i Ek 3 sayıyordu; sınır Unicode harfe göre (lib/sozcuk-siniri.ts).
+      if (!new RegExp(`${SOZCUK_BASI}${ekEtiketi}\\s*[-–.]?\\s*${numara.replace(".", "\\.")}(?![\\p{L}\\p{N}])`, "iu").test(ekGovdesi)) {
         add({
           tone: "warning",
           message: en
@@ -616,7 +639,7 @@ export function checkStructure(
       }
     });
 
-    for (const eslesme of ekGovdesi.matchAll(new RegExp(`\\b${ekEtiketi}\\s*[-–.]?\\s*(\\d+(?:\\.\\d+)*)\\b`, "giu"))) {
+    for (const eslesme of ekGovdesi.matchAll(new RegExp(`${SOZCUK_BASI}${ekEtiketi}\\s*[-–.]?\\s*(\\d+(?:\\.\\d+)*)(?![\\p{L}\\p{N}])`, "giu"))) {
       if (!mevcut.has(eslesme[1])) {
         add({
           tone: "danger",

@@ -7,7 +7,8 @@ import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { isOversightRole } from "@/lib/project-labels";
 import { ceviri } from "@/lib/dil-sunucu";
 
-const MAX_DOCX_BYTES = 25 * 1024 * 1024;
+// İstemcideki sınırla (import-dialog.tsx) aynı; eskiden 20 ve 25 MB diye iki ayrı mesaj veriliyordu.
+const MAX_DOCX_BYTES = 20 * 1024 * 1024;
 
 /**
  * Word dosyasını editör içeriğine çevirir. Dosya, Vercel'in istek boyutu sınırına
@@ -51,7 +52,7 @@ export async function importWordDocument(
       console.error(downloadError);
       return { error: t({ tr: "Yüklenen dosya okunamadı.", en: "The uploaded file could not be read." }) };
     }
-    if (file.size > MAX_DOCX_BYTES) return { error: t({ tr: "Word dosyası 25 MB sınırını aşıyor.", en: "The Word file exceeds the 25 MB limit." }) };
+    if (file.size > MAX_DOCX_BYTES) return { error: t({ tr: "Word dosyası 20 MB sınırını aşıyor.", en: "The Word file exceeds the 20 MB limit." }) };
 
     const stamp = Date.now();
     const { html, stats } = await convertDocxToEditorHtml(Buffer.from(await file.arrayBuffer()), async (image, index) => {

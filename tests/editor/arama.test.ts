@@ -115,3 +115,14 @@ test("bul ve değiştir", async (t) => {
     assert.equal(islemSonrasiMetin(tr), "köpek bir\nköpek iki\nköpek üç");
   });
 });
+
+/*
+  29.10.2026'ya kadar katlama "tr-TR" idi: "I" "ı" oluyor, İngilizce
+  "Introduction" "introduction" aramasıyla HİÇ bulunmuyordu.
+*/
+test("İngilizce I/i büyük-küçük harf duyarsız eşleşir, Türkçe İ de", () => {
+  assert.equal(findMatches(belge(paragraf("Introduction and IBM")), "introduction").length, 1);
+  assert.equal(findMatches(belge(paragraf("Introduction")), "INTRODUCTION").length, 1);
+  assert.equal(findMatches(belge(paragraf("İstanbul ve istanbul")), "istanbul").length, 2);
+  assert.equal(findMatches(belge(paragraf("Işık")), "ışık").length, 1);
+});

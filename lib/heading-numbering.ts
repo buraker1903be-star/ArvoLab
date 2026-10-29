@@ -69,8 +69,14 @@ const UNNUMBERED_SECTIONS = new Set(
   ].map(normalizeHeading)
 );
 
-// "EK", "EKLER", "EK 1: Anket Formu", "EK-A" — "EKONOMİK ETKİLER" değil.
-const APPENDIX = /^EK(LER)?(?=$|[\s\-–:.\d])/;
+/*
+  "EK", "EKLER", "EK 1: Anket Formu", "EK-A", "EK A" — "EKONOMİK ETKİLER"
+  ve "EK ANALİZLER" değil. "EK"ten sonra bir numara ya da TEK harf
+  gelmeli; eskiden boşluk yetiyordu ve "Ek Analizler" başlığı (ile bütün
+  alt başlıkları) numarasını editörde, baskıda, Word'de ve içindekilerde
+  kaybediyordu.
+*/
+const APPENDIX = /^(?:EKLER(?=$|[\s:.])|EK(?=$|\s*[-–:.]?\s*(?:\d|[A-Z](?![A-Z]))))/;
 // "APPENDIX", "Appendix A: Survey", "APPENDICES" — normalizeHeading İ'yi I'ya indiriyor.
 const APPENDIX_EN = /^APPENDI(X|CES)(?=$|[\s\-–:.\d])/;
 

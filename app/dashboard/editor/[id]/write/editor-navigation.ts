@@ -59,18 +59,46 @@ export function jumpToHeading(editor: Editor, heading: OutlineHeading) {
   scrollToPos(editor, heading.pos);
 }
 
-/** Metin parçasını bul ve seç (kontrol sonuçlarından atıfa gitmek için) */
-export function selectText(editor: Editor, needle: string): boolean {
+/**
+ * Belgedeki metin parçasının konumu. Metin, blok aralarına bir boşluk
+ * koyarak birleştirilir — yorumun alıntısı da böyle alınıyor
+ * (textBetween(from, to, " ")). Eskiden yalnızca TEK bir metin düğümünün
+ * içinde aranıyordu: kalın/italik bir sözcük, bağlantı, dipnot işareti ya
+ * da paragraf sonu içeren her alıntı "bu ifade metinde bulunamadı"
+ * diyordu; yapı denetiminin italik APA başlıklarına gitmesi de düşüyordu.
+ */
+export function metinKonumu(doc: Editor["state"]["doc"], needle: string): { from: number; to: number } | null {
   const target = needle.trim();
-  if (!target) return false;
-  let found: { from: number; to: number } | null = null;
-  editor.state.doc.descendants((node, pos) => {
-    if (found) return false;
-    if (!node.isText || !node.text) return true;
-    const index = node.text.indexOf(target);
-    if (index >= 0) found = { from: pos + index, to: pos + index + target.length };
-    return !found;
+  if (!target) return null;
+  let metin = "";
+  const konumlar: (number | null)[] = [];
+  let ilkBlok = true;
+  doc.descendants((node, pos) => {
+    if (node.isTextblock) {
+      if (!ilkBlok) {
+        metin += " ";
+        konumlar.push(null);
+      }
+      ilkBlok = false;
+      return true;
+    }
+    if (node.isText && node.text) {
+      for (let i = 0; i < node.text.length; i++) konumlar.push(pos + i);
+      metin += node.text;
+    }
+    return true;
   });
+  const bas = metin.indexOf(target);
+  if (bas < 0) return null;
+  const from = konumlar[bas];
+  const son = konumlar[bas + target.length - 1];
+  if (from === null || son === null || from === undefined || son === undefined) return null;
+  return { from, to: son + 1 };
+}
+
+/** Metin parçasını bul ve seç (kontrol sonuçlarından ve yorumlardan metne gitmek için) */
+export function selectText(editor: Editor, needle: string): boolean {
+  const found = metinKonumu(editor.state.doc, needle);
   if (!found) return false;
   const { from, to } = found;
   editor.chain().focus().setTextSelection({ from, to }).run();

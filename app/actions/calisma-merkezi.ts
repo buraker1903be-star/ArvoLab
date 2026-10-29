@@ -138,6 +138,8 @@ export async function calismaOzeti(
           guideline: uygulanan,
           projectType: calisma.project_type,
           citationStyle: calisma.citation_style ?? "apa7",
+          // Editörle aynı: kurumsuz kullanıcı "Kurum seç" değil "Kılavuzumu yükle"ye yönlenir.
+          hasInstitution: Boolean(calisma.university),
         }, dil)
       : null;
 

@@ -27,8 +27,11 @@ export async function listManuscriptComments(projectId: string): Promise<{ comme
     .from("manuscript_comments")
     .select("id, quote, body, created_at, resolved_at, author_id")
     .eq("project_id", projectId)
-    .order("created_at", { ascending: true })
-    .limit(200);
+    /* EN YENİ 500, sonra eskiden yeniye çevrilir. Eskiden en ESKİ 200
+       alınıyordu: 200'ü aşan çalışmada danışmanın yeni yorumları hiç
+       görünmüyor, açık yorum sayısı da yanlış çıkıyordu. */
+    .order("created_at", { ascending: false })
+    .limit(500);
   if (error) {
     console.error(error);
     return { comments: [], error: t({ tr: "Yorumlar yüklenemedi.", en: "Comments could not be loaded." }) };
@@ -42,7 +45,7 @@ export async function listManuscriptComments(projectId: string): Promise<{ comme
   }
 
   return {
-    comments: (data ?? []).map((row) => ({
+    comments: [...(data ?? [])].reverse().map((row) => ({
       id: row.id,
       quote: row.quote,
       body: row.body,

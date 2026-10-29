@@ -148,6 +148,8 @@ export default async function DashboardPage() {
           guideline: resumeGuideline ?? null,
           projectType: resume.project_type,
           citationStyle: resume.citation_style ?? "apa7",
+          // Editörle aynı: kurumsuz kullanıcı "Kurum seç" değil "Kılavuzumu yükle"ye yönlenir.
+          hasInstitution: Boolean(resume.university),
         }, dil)
       : null;
   /*

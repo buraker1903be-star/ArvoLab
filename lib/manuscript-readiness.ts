@@ -54,6 +54,8 @@ export function manuscriptReadiness(input: {
      (lib/submission-checklist.ts). */
   hasInstitution?: boolean;
   citationStyle: string;
+  /** Belgenin dili: şekil/tablo etiketleri (lib/belge-dili.ts). */
+  belgeDili?: Dil;
 }, dil: Dil = "tr"): SubmissionChecklist {
   const { manuscript, guideline } = input;
   const doc = (manuscript.content ?? null) as { content?: JsonNode[] } | null;
@@ -68,6 +70,16 @@ export function manuscriptReadiness(input: {
       ...(guideline?.settings.justify ? { justify: true } : {}),
     },
     referenceHangingIndentCm: guideline?.settings.referenceHangingIndentCm,
+    /* Editördeki denetimle AYNI seçenekler (manuscript-editor.tsx
+       structureOptions). Eskiden yazı tipi/punto/satır aralığı verilmiyordu:
+       editörde görünen biçim sorunları ana sayfada "yapı sorunu yok"
+       oluyordu. */
+    textFormat: {
+      fontFamily: guideline?.settings.fontFamily,
+      fontSizePt: guideline?.settings.fontSizePt,
+      lineSpacing: guideline?.settings.lineSpacing,
+    },
+    belgeDili: input.belgeDili,
   }, dil);
   const margins = {
     top: manuscript.margin_top_cm ?? 2.5,

@@ -188,6 +188,38 @@ describe("İngilizce arayüz ve İngilizce yazılmış tez", () => {
     assert.ok(mesajlar.some((m) => m.startsWith("Figure 1 (“Figure 1. Model”) is not mentioned in the text")), mesajlar.join("\n"));
   });
 
+  /*
+    Başlık numarası belgede saklanmıyor (editör, baskı ve Word sırayla
+    numaralıyor). 29.10.2026'ya kadar denetim numarayı başlık metninde
+    arıyor, doğru kurulmuş her başlığa uyarı, her "Tablo 1'de" anışına
+    "o numarada başlık yok" tehlikesi veriyordu.
+  */
+  test("otomatik numaralı başlıklar sıradan numara alır; elle yazılan numara çift basılacağı için uyarılır", () => {
+    const dogru = {
+      content: [h("Giriş"), p("Dağılım Tablo 1'de, model Şekil 1'de verilmiştir."), p("Katılımcıların dağılımı", { caption: "table" }), p("Araştırma modeli", { caption: "figure" })],
+    };
+    const temiz = checkStructure(dogru, { belgeDili: "tr" }).map((s) => s.message);
+    assert.ok(!temiz.some((m) => /Tablo|Şekil/.test(m)), temiz.join("\n"));
+
+    const ingilizce = {
+      content: [h("Introduction"), p("See Table 1 and Table 2."), p("Participants", { caption: "table" })],
+    };
+    const en = checkStructure(ingilizce, { belgeDili: "en" }, "en").map((s) => s.message);
+    assert.ok(en.some((m) => m.startsWith("The text mentions “Table 2”")), en.join("\n"));
+    assert.ok(!en.some((m) => m.includes("“Table 1”")), en.join("\n"));
+
+    const elle = { content: [h("Giriş"), p("Tablo 1'e bakınız."), p("Tablo 1. Dağılım", { caption: "table" })] };
+    const uyarilar = checkStructure(elle, { belgeDili: "tr" }).map((s) => s.message);
+    assert.ok(uyarilar.some((m) => m.includes("elle yazılmış numarayla başlıyor")), uyarilar.join("\n"));
+  });
+
+  test("'Şek. 3' ek anışı sayılmaz (Unicode sözcük sınırı)", () => {
+    // \b ASCII olduğu için "Şek. 3"teki "ek" eskiden "Ek 3" anışı sayılıyordu.
+    const doc = { content: [h("Giriş"), p("Şek. 3 ve Ek 1 incelendi."), h("Ek 1. Anket"), p("x")] };
+    const mesajlar = checkStructure(doc, { belgeDili: "tr" }).map((s) => s.message);
+    assert.ok(!mesajlar.some((m) => m.includes("Ek 3")), mesajlar.join("\n"));
+  });
+
   test("İngilizce ek başlıkları ve 'Works Cited' kaynakça sayılıyor", () => {
     const doc = {
       content: [h("Introduction"), p("See Appendix 2."), h("Works Cited"), p("Smith, J. (2020). A title. Journal."), h("Appendix 1. Survey"), p("x")],

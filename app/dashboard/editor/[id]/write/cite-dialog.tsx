@@ -1,5 +1,6 @@
 "use client";
 
+import { katla } from "@/lib/arama-katlama";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BookMarked, Search } from "lucide-react";
@@ -9,7 +10,7 @@ import { showToast } from "@/app/dashboard/_components/toast-events";
 import { createCitationSource, getLiteratureSources, lookupDoi, type LiteratureSource } from "@/app/actions/literature";
 import { eksikAlanlar, formatInTextCitation, formatReferenceParts, NUMERIC_STYLES, type CitationStyle } from "@/lib/citation-format";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
-import { YEREL, type Dil, type Metin } from "@/lib/dil";
+import type { Dil, Metin } from "@/lib/dil";
 
 const TYPE_LABEL: Record<string, Metin> = {
   article: { tr: "Makale", en: "Article" },
@@ -101,14 +102,15 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
   const setYalnizBuCalisma = setKapsamSecimi;
 
   const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase(YEREL[dil]);
+    // tr-TR/en-US küçültmesi İngilizce başlıkta "I"yi, Türkçe "İ"yi bozuyordu (lib/arama-katlama.ts).
+    const needle = katla(query.trim());
     return (sources ?? [])
       .filter((source) => !yalnizBuCalisma || source.project_id === projectId)
       .filter((source) =>
-        !needle || [source.title, source.authors, source.year].some((value) => value?.toLocaleLowerCase(YEREL[dil]).includes(needle))
+        !needle || [source.title, source.authors, source.year].some((value) => (value ? katla(value).includes(needle) : false))
       )
       .sort((a, b) => Number(b.project_id === projectId) - Number(a.project_id === projectId));
-  }, [sources, query, projectId, yalnizBuCalisma, dil]);
+  }, [sources, query, projectId, yalnizBuCalisma]);
 
   const formKaynagi = useMemo(
     () => ({
