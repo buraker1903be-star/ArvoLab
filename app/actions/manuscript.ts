@@ -16,6 +16,7 @@ import { hasNonPlainAttributes } from "@/lib/format-loss";
 import { kontrolSayilari, ozetOku, yapiSorunlariniTemizle, type KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import type { StructureIssue } from "@/lib/structure-check";
 import { kagitMi, kagitOku, type KagitBoyutu } from "@/lib/kagit-boyutu";
+import { eksikSutunAdi } from "@/lib/eksik-sutun";
 
 export interface PageMargins {
   top: number;
@@ -269,14 +270,16 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     return data.updated_at === expectedUpdatedAt ? forbidden : conflict;
   };
 
-  const write = async (row: Record<string, unknown>): Promise<SaveManuscriptResult | "missing-column"> => {
+  /* Eksik sütun: adı okunabildiyse yalnızca o düşürülür (lib/eksik-sutun.ts). */
+  type EksikSutun = { eksik: string | null };
+  const write = async (row: Record<string, unknown>): Promise<SaveManuscriptResult | EksikSutun> => {
     if (input.force) {
       const { data, error } = await ctx.supabase
         .from("project_manuscripts")
         .upsert({ project_id: projectId, ...row }, { onConflict: "project_id" })
         .select("updated_at")
         .single();
-      if (isMissingColumn(error)) return "missing-column";
+      if (isMissingColumn(error)) return { eksik: eksikSutunAdi(error) };
       const reddedildi = rlsReddi(error);
       if (reddedildi) return reddedildi;
       if (error || !data) {
@@ -293,7 +296,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
         .eq("project_id", projectId)
         .eq("updated_at", input.expectedUpdatedAt)
         .select("updated_at");
-      if (isMissingColumn(error)) return "missing-column";
+      if (isMissingColumn(error)) return { eksik: eksikSutunAdi(error) };
       const reddedildi = rlsReddi(error);
       if (reddedildi) return reddedildi;
       if (error) {
@@ -309,7 +312,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
       .insert({ project_id: projectId, ...row })
       .select("updated_at")
       .single();
-    if (isMissingColumn(error)) return "missing-column";
+    if (isMissingColumn(error)) return { eksik: eksikSutunAdi(error) };
     const reddedildi = rlsReddi(error);
     if (reddedildi) return reddedildi;
     if (error?.code === "23505") return conflict;
@@ -320,10 +323,39 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     return { success: true, updatedAt: data.updated_at, wordCount };
   };
 
-  // Kılavuz senkron migration'ı henüz çalıştırılmadıysa metin yine kaydedilsin.
-  let result = await write(fullRow);
-  if (result === "missing-column" && hasOptionalColumns) result = await write(baseRow);
-  if (result === "missing-column") return failed;
+  /*
+    "Benim sürümümü kaydet" başka sekmenin/cihazın kaydettiğinin ÜZERİNE
+    yazar. Eskiden yedek alınmıyordu: otomatik anlık görüntü yazmadan SONRA
+    ve en çok on dakikada bir alındığı için, öteki sürümün son on dakikası
+    hiçbir yerde kalmıyordu. Word aktarımı ve sürüm geri yükleme zaten
+    önce yedek alıyor; zorla kayıt da artık aynı.
+  */
+  if (input.force) {
+    await snapshotManuscript(ctx.supabase, projectId, ctx.user.id, {
+      kind: "manual",
+      label: t({ tr: "Üzerine yazılmadan önce (öteki sürüm)", en: "Before overwrite (the other version)" }),
+    });
+  }
+
+  /*
+    Sonradan eklenen sütunlar migration'dan önce dağıtılabiliyor: metin yine
+    kaydedilsin. Eskiden ilk hatada BÜTÜN isteğe bağlı ayarlar düşürülüyordu
+    (tek eksik page_size içindekiler ve başlık numarasını da götürüyordu);
+    artık yalnızca adı geçen sütun düşüyor, ad okunamazsa hepsi.
+  */
+  let satir: Record<string, unknown> = fullRow;
+  let result = await write(satir);
+  for (let deneme = 0; "eksik" in result && deneme <= Object.keys(optionalColumns).length; deneme++) {
+    const ad = result.eksik;
+    if (ad && ad in satir && ad in optionalColumns) {
+      console.error(`[metin] '${ad}' sütunu yok; o ayar kaydedilmeden yeniden deneniyor (migration uygulanmamış olabilir)`);
+      satir = Object.fromEntries(Object.entries(satir).filter(([k]) => k !== ad));
+    } else if (hasOptionalColumns && satir !== baseRow) {
+      satir = baseRow;
+    } else break;
+    result = await write(satir);
+  }
+  if ("eksik" in result) return failed;
 
   // Sürüm geçmişi: en fazla 10 dakikada bir otomatik anlık görüntü (başarısızlığı kaydı etkilemez).
   if (result.success) {

@@ -129,6 +129,7 @@ export default async function WriteManuscriptPage({
 
       <ManuscriptEditor
         projectId={id}
+        kullaniciId={userResult.data.user?.id ?? null}
         belgeDili={dokumanDili}
         acilacakMadde={teslim ?? null}
         kurumGirili={Boolean(project.university)}

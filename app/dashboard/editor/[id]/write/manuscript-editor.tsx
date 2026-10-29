@@ -94,6 +94,7 @@ import {
   type CoverPage,
   type SettingsSource,
 } from "@/app/actions/manuscript";
+import { saveNamedVersion } from "@/app/actions/manuscript-versions";
 import { createClient } from "@/lib/supabase/client";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-sync";
@@ -166,6 +167,8 @@ const DEGREE_TYPE_BY_PROJECT_TYPE: Record<string, Metin> = {
 
 interface ManuscriptEditorProps {
   projectId: string;
+  /** Oturumdaki kullanıcı: yerel taslağın anahtarı ona bağlı (ortak bilgisayar). */
+  kullaniciId: string | null;
   /** Belgenin dili (lib/belge-dili.ts): şekil/tablo etiketleri, atıf biçimi, kapak, yazım denetimi. */
   belgeDili?: Dil;
   /*
@@ -252,11 +255,21 @@ interface LocalDraft {
 
 // Kaydedilemeyen değişiklikler (bağlantı kopması, oturum bitmesi, sekme
 // kapanması) bu tarayıcıda saklanır ve sayfa yeniden açılınca önerilir.
-const draftKey = (projectId: string) => `arvolab:manuscript-draft:${projectId}`;
+/*
+  Anahtar KULLANICIYA da bağlı (29.10.2026). Eskiden yalnızca çalışmaya
+  bağlıydı ve çıkışta silinmiyordu: ortak bir bilgisayarda aynı çalışmaya
+  erişen danışman ya da uzman, öğrencinin kaydedilmemiş taslağını "sizin
+  kaydedilmemiş değişiklikleriniz" diye görüyor, geri yükleyip öğrencinin
+  sunucudaki metninin üzerine yazabiliyordu. Eski biçimdeki anahtar bir
+  geçiş dönemi okunuyor: içindeki metin kaybolmasın.
+*/
+const draftKey = (projectId: string, kullaniciId: string | null) =>
+  kullaniciId ? `arvolab:manuscript-draft:${projectId}:${kullaniciId}` : `arvolab:manuscript-draft:${projectId}`;
+const eskiDraftKey = (projectId: string) => `arvolab:manuscript-draft:${projectId}`;
 
-function readDraft(projectId: string): LocalDraft | null {
+function readDraft(projectId: string, kullaniciId: string | null): LocalDraft | null {
   try {
-    const raw = window.localStorage.getItem(draftKey(projectId));
+    const raw = window.localStorage.getItem(draftKey(projectId, kullaniciId)) ?? window.localStorage.getItem(eskiDraftKey(projectId));
     return raw ? (JSON.parse(raw) as LocalDraft) : null;
   } catch {
     return null;
@@ -271,18 +284,19 @@ function readDraft(projectId: string): LocalDraft | null {
   olduğunda kullanıcıya metninin güvende olduğu söyleniyor, o da sekmeyi
   kapatıyordu. Bir tez bölümünün kaybolması için bu yeterli.
 */
-function writeDraft(projectId: string, draft: LocalDraft): boolean {
+function writeDraft(projectId: string, kullaniciId: string | null, draft: LocalDraft): boolean {
   try {
-    window.localStorage.setItem(draftKey(projectId), JSON.stringify(draft));
+    window.localStorage.setItem(draftKey(projectId, kullaniciId), JSON.stringify(draft));
     return true;
   } catch {
     return false;
   }
 }
 
-function clearDraft(projectId: string) {
+function clearDraft(projectId: string, kullaniciId: string | null) {
   try {
-    window.localStorage.removeItem(draftKey(projectId));
+    window.localStorage.removeItem(draftKey(projectId, kullaniciId));
+    window.localStorage.removeItem(eskiDraftKey(projectId));
   } catch {
     // yok say
   }
@@ -355,6 +369,7 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
 
 export default function ManuscriptEditor({
   projectId,
+  kullaniciId,
   belgeDili = "tr",
   acilacakMadde = null,
   kurumGirili = false,
@@ -399,6 +414,17 @@ export default function ManuscriptEditor({
   const [abonelikBitti, setAbonelikBitti] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(initialUpdatedAt ? new Date(initialUpdatedAt) : null);
   const [draftOffer, setDraftOffer] = useState<LocalDraft | null>(null);
+  const [taslakYukleniyor, setTaslakYukleniyor] = useState(false);
+  const draftOfferRef = useRef<LocalDraft | null>(null);
+  /*
+    Kayıtlı içerik editörün şemasına uymuyorsa (eski/bozuk düğüm) Tiptap onu
+    sessizce budayarak açar. Eskiden ilk tuşta otomatik kayıt bu budanmış
+    hâli sunucuya yazıyor ve tezin bir kısmı geri dönüşsüz gidiyordu.
+    Artık kayıt kilitlenir; kullanıcı sunucudaki hâli yedekleyip açıkça
+    "devam et" demeden hiçbir şey yazılmaz.
+  */
+  const [icerikUyumsuz, setIcerikUyumsuz] = useState(false);
+  const icerikUyumsuzRef = useRef(false);
   /*
     Son kontrol açılışta veritabanından geliyor (yazim_kontrolleri).
     Eskiden yalnızca bellekteydi: sayfa yenilenince sonuç kayboluyordu.
@@ -543,7 +569,7 @@ export default function ManuscriptEditor({
     const editor = editorRef.current;
     if (!editor || revisionRef.current === savedRevisionRef.current) return true;
     const yazildi = olc("taslak yazımı", () =>
-      writeDraft(projectId, {
+      writeDraft(projectId, kullaniciId, {
         content: editor.getJSON() as unknown as TiptapDoc,
         baseUpdatedAt: updatedAtRef.current,
         writtenAt: new Date().toISOString(),
@@ -552,7 +578,7 @@ export default function ManuscriptEditor({
     taslakYazilamadiRef.current = !yazildi;
     setTaslakYazilamadi(!yazildi);
     return yazildi;
-  }, [projectId]);
+  }, [projectId, kullaniciId]);
 
   /* Hata metnine taslağın GERÇEK durumunu ekler (lib/taslak-durumu.ts). */
   const hataYaz = useCallback(
@@ -580,6 +606,8 @@ export default function ManuscriptEditor({
       }
       // Aynı anda tek kayıt: öncekinin bitmesi beklenir, sonra en güncel metin gönderilir.
       while (inFlightRef.current) await inFlightRef.current;
+      // Uyumsuz içerikte "benim sürümümü kaydet" (force) de budanmış metni yazardı.
+      if (icerikUyumsuzRef.current) return false;
       if (blockedRef.current && !force) return false;
       if (!force && revisionRef.current === savedRevisionRef.current) return true;
 
@@ -626,7 +654,9 @@ export default function ManuscriptEditor({
             setLastSavedAt(new Date(res.updatedAt));
             if (revisionRef.current === revision) {
               setSaveState("saved");
-              clearDraft(projectId);
+              // Taslak teklifi henüz yanıtlanmadıysa taslağı silmek kullanıcının
+              // kararını onun yerine vermek olur (eskiden böyleydi).
+              if (!draftOfferRef.current) clearDraft(projectId, kullaniciId);
             } else {
               setSaveState("dirty");
               scheduleSave(autosaveDelay(payloadBytesRef.current));
@@ -693,7 +723,7 @@ export default function ManuscriptEditor({
         inFlightRef.current = null;
       }
     },
-    [projectId, guideline, persistDraft, scheduleSave, hataYaz, t]
+    [projectId, kullaniciId, guideline, persistDraft, scheduleSave, hataYaz, t]
   );
 
   const markDirty = useCallback(() => {
@@ -716,12 +746,22 @@ export default function ManuscriptEditor({
     content: initialContent ?? "",
     onCreate: ({ editor: created }) => {
       editorRef.current = created;
+      if (initialContent) {
+        try {
+          created.schema.nodeFromJSON(initialContent).check();
+        } catch (hata) {
+          console.error("[editor] kayıtlı içerik şemaya uymuyor", hata);
+          icerikUyumsuzRef.current = true;
+          blockedRef.current = true;
+          setIcerikUyumsuz(true);
+        }
+      }
       // Önceki oturumdan kalan, kaydedilememiş taslak varsa geri yüklemeyi öner.
-      const draft = readDraft(projectId);
+      const draft = readDraft(projectId, kullaniciId);
       if (draft && JSON.stringify(draft.content) !== JSON.stringify(created.getJSON())) {
         setDraftOffer(draft);
       } else if (draft) {
-        clearDraft(projectId);
+        clearDraft(projectId, kullaniciId);
       }
     },
     onUpdate: () => markDirtyRef.current(),
@@ -931,17 +971,66 @@ export default function ManuscriptEditor({
     // projectId sayfa boyunca değişmez; Ctrl+P'nin baskı adresi için.
   }, [persistDraft, projectId, t]);
 
-  const restoreDraft = useCallback(() => {
+  /*
+    Geri yüklemeden önce sunucudaki metin geçmişe yedeklenir. Eskiden taslak
+    doğrudan yazılıyordu: başka bir cihazda sonradan yapılan değişiklikler,
+    bu tarayıcıda kalmış ESKİ taslak geri yüklenince otomatik kayıtla
+    sessizce siliniyordu. Taslak sunucudan eskiyse ve yedek alınamıyorsa
+    geri yükleme yapılmaz.
+  */
+  const restoreDraft = useCallback(async () => {
     if (!editor || !draftOffer) return;
-    editor.commands.setContent(draftOffer.content);
-    setDraftOffer(null);
-    showToast("success", t({ tr: "Kaydedilmemiş değişiklikleriniz geri yüklendi.", en: "Your unsaved changes were restored." }));
-  }, [editor, draftOffer, t]);
+    const eski = draftOffer.baseUpdatedAt !== initialUpdatedAt;
+    setTaslakYukleniyor(true);
+    try {
+      const yedek = await saveNamedVersion(projectId, t({ tr: "Taslak geri yüklenmeden önce", en: "Before restoring draft" }));
+      if (yedek.error && eski) {
+        showToast("error", yedek.error);
+        return;
+      }
+      editor.commands.setContent(draftOffer.content);
+      setDraftOffer(null);
+      showToast("success", t({ tr: "Kaydedilmemiş değişiklikleriniz geri yüklendi.", en: "Your unsaved changes were restored." }));
+    } catch {
+      showToast("error", t({ tr: "Bağlantı sorunu nedeniyle geri yüklenemedi.", en: "Could not restore due to a connection problem." }));
+    } finally {
+      setTaslakYukleniyor(false);
+    }
+  }, [editor, draftOffer, initialUpdatedAt, projectId, t]);
 
   const discardDraft = useCallback(() => {
-    clearDraft(projectId);
+    clearDraft(projectId, kullaniciId);
     setDraftOffer(null);
-  }, [projectId]);
+  }, [projectId, kullaniciId]);
+
+  /*
+    Taslak teklifi ya da uyumsuz içerik uyarısı yanıtlanana kadar editör salt
+    okunur. Eskiden teklif açıkken yazılan ilk harf kaydedilip taslağı
+    siliyordu; "Geri yükle"ye basılırsa da arada yazılan metin gidiyordu.
+  */
+  useEffect(() => {
+    draftOfferRef.current = draftOffer;
+    if (editor && !editor.isDestroyed) editor.setEditable(!draftOffer && !icerikUyumsuz);
+  }, [editor, draftOffer, icerikUyumsuz]);
+
+  const [uyumsuzYedekleniyor, setUyumsuzYedekleniyor] = useState(false);
+  const uyumsuzIcerikleDevam = useCallback(async () => {
+    setUyumsuzYedekleniyor(true);
+    try {
+      const yedek = await saveNamedVersion(projectId, t({ tr: "Uyumsuz içerik düzenlenmeden önce", en: "Before editing incompatible content" }));
+      if (yedek.error) {
+        showToast("error", yedek.error);
+        return;
+      }
+      icerikUyumsuzRef.current = false;
+      blockedRef.current = false;
+      setIcerikUyumsuz(false);
+    } catch {
+      showToast("error", t({ tr: "Bağlantı sorunu nedeniyle yedeklenemedi.", en: "Could not back up due to a connection problem." }));
+    } finally {
+      setUyumsuzYedekleniyor(false);
+    }
+  }, [projectId, t]);
 
   const handleCheck = useCallback(async () => {
     setChecking(true);
@@ -1573,7 +1662,7 @@ export default function ManuscriptEditor({
     else window.open(target, "_self");
   };
   const handleRestored = () => {
-    clearDraft(projectId);
+    clearDraft(projectId, kullaniciId);
     window.location.reload();
   };
   // Word'den gelen içerik: boş belgede ya da "yerine koy"da tüm metin, aksi hâlde sona eklenir.
@@ -1976,6 +2065,25 @@ export default function ManuscriptEditor({
         {findOpen ? <FindReplaceBar editor={editor} onClose={() => setFindOpen(false)} /> : null}
       </div>
 
+      {icerikUyumsuz ? (
+        <div className="callout editor-notice cluster" data-tone="danger" role="alert">
+          <span>
+            {t({
+              tr: "Kayıtlı metnin bir kısmı editörde açılamadı. Metin kaybolmasın diye kayıt durduruldu; devam ederseniz önce sunucudaki hâli geçmişe yedeklenir.",
+              en: "Part of the saved text could not be opened in the editor. Saving is paused so nothing is lost; if you continue, the server copy is first backed up to the history.",
+            })}
+          </span>
+          <span className="cluster">
+            <button type="button" className="projects-primary-button" disabled={uyumsuzYedekleniyor} onClick={() => void uyumsuzIcerikleDevam()}>
+              {t({ tr: "Yedekle ve devam et", en: "Back up and continue" })}
+            </button>
+            <Link href="/dashboard/support" className="projects-filter-button">
+              {t({ tr: "Destek", en: "Support" })}
+            </Link>
+          </span>
+        </div>
+      ) : null}
+
       {draftOffer ? (
         <div className="callout editor-notice cluster" data-tone="warning" role="status">
           <span>
@@ -1983,9 +2091,16 @@ export default function ManuscriptEditor({
               tr: `Bu tarayıcıda kaydedilmemiş değişiklikleriniz bulundu (${tarihSaat(draftOffer.writtenAt)}).`,
               en: `Unsaved changes were found in this browser (${tarihSaat(draftOffer.writtenAt)}).`,
             })}
+            {draftOffer.baseUpdatedAt !== initialUpdatedAt
+              ? t({
+                  tr: " Metin bu taslaktan sonra başka bir yerde değişmiş; geri yüklerseniz sunucudaki hâl önce geçmişe yedeklenir.",
+                  en: " The text has changed elsewhere since this draft; if you restore, the server copy is first backed up to the history.",
+                })
+              : ""}{" "}
+            {t({ tr: "Karar verene kadar editör salt okunur.", en: "The editor is read-only until you decide." })}
           </span>
           <span className="cluster">
-            <button type="button" className="projects-primary-button" onClick={restoreDraft}>
+            <button type="button" className="projects-primary-button" disabled={taslakYukleniyor} onClick={() => void restoreDraft()}>
               {t({ tr: "Geri yükle", en: "Restore" })}
             </button>
             <button type="button" className="projects-filter-button" onClick={discardDraft}>
@@ -2080,8 +2195,8 @@ export default function ManuscriptEditor({
             {saveError}
             {abonelikBitti
               ? t({
-                  tr: " Yazdıklarınız bu tarayıcıda duruyor; plan yenilenince kaydedilir.",
-                  en: " What you wrote is kept in this browser; it will be saved once your plan is renewed.",
+                  tr: " Yazdıklarınız bu tarayıcıda duruyor; plan yenilendikten sonra bu sayfayı açınca geri yüklemeniz önerilir.",
+                  en: " What you wrote is kept in this browser; after renewing your plan, open this page and you will be offered to restore it.",
                 })
               : ""}
           </span>
