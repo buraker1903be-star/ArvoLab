@@ -401,3 +401,4 @@ html.drawer-open { overflow: hidden; }
 .sozlesme-onaylarim dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 6px 0 0; font-size: var(--fs-sm); }
 .sozlesme-onaylarim dt { color: var(--muted); }
 .sozlesme-onaylarim dd { margin: 0; word-break: break-all; }
+.sozlesme-kopyasi { display: grid; gap: 8px; justify-items: start; margin: 0 0 12px; }

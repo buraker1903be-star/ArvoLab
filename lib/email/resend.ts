@@ -31,7 +31,9 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
       console.error("[e-posta] gönderilemedi", response.status, detay);
       return { ok: false as const, reason: "saglayici_hatasi" };
     }
-    return { ok: true as const };
+    // Sağlayıcının ileti kimliği: "gönderildi mi" sorusunun cevabı Resend panelinde bu kimlikle aranır.
+    const yanit = (await response.json().catch(() => null)) as { id?: unknown } | null;
+    return { ok: true as const, id: typeof yanit?.id === "string" ? yanit.id : null };
   } catch (error) {
     console.error("[e-posta] sağlayıcıya ulaşılamadı", error instanceof Error ? error.message : error);
     return { ok: false as const, reason: "ag_hatasi" };

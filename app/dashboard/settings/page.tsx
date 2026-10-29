@@ -22,7 +22,8 @@ import PasswordForm from "./password-form";
 import HesapSilmeFormu from "./hesap-silme-formu";
 import { hesapSilmeTalebi } from "@/app/actions/hesap";
 import { sozlesmeOnaylarim } from "@/lib/sozlesme/onay-durumu";
-import { kullanimSozlesmesi } from "@/lib/sozlesme/kullanim-sozlesmesi";
+import SozlesmeKopyasi from "./sozlesme-kopyasi";
+import { kullanimSozlesmesi, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await ceviri();
@@ -383,6 +384,7 @@ export default async function SettingsPage() {
                 description={sozlesmeMetni.giris}
               >
                 <h3 className="section-title">{t({ tr: "Onay kayıtlarınız", en: "Your approval records" })}</h3>
+                {sozlesmeOnaylari.satirlar.some((o) => o.surum === SOZLESME_SURUMU) ? <SozlesmeKopyasi /> : null}
                 {sozlesmeOnaylari.satirlar.length ? (
                   <ul className="sozlesme-onaylarim">
                     {sozlesmeOnaylari.satirlar.map((o) => (

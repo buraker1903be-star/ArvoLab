@@ -159,6 +159,25 @@ describe("hesap silme", () => {
       await db.query(`update public.profiles set full_name = 'Yeni Ad' where id = $1`, [SILINEN]);
     }));
 
+  /*
+    Canlıda kvkk_onay_at sütunu YOK (20260924100026 uygulanmamış). Koruma
+    sütuna doğrudan başvurduğunda profiles'taki her güncelleme
+    "record new has no field kvkk_onay_at" ile düşüyordu — dil tercihi,
+    ad soyad dahil (29.10.2026, 20261029164231). Burada bütün migration'lar
+    kurulu olduğu için sütun vardı ve test bunu göremedi; canlının hâli
+    sütun düşürülerek kuruluyor.
+  */
+  test("koruma kvkk_onay_at sütunu olmayan veritabanında güncellemeyi düşürmez", () =>
+    islem(db, async () => {
+      await tohum();
+      await db.exec(`alter table public.profiles drop column kvkk_onay_at cascade`);
+      await rol(db, "authenticated", SILINEN);
+      await db.query(`update public.profiles set full_name = 'Yeni Ad' where id = $1`, [SILINEN]);
+      await db.query(`update public.profiles set silme_talebi_at = now() where id = $1`, [SILINEN]);
+      // Silme talebi kuralı sütunsuz da yürürlükte.
+      await reddedilir(db, `update public.profiles set silme_talebi_at = '2000-01-01' where id = $1`, [SILINEN], /istemciden belirlenemez/);
+    }));
+
   /* Cron'un aday sorgusu (app/api/cron/hesap-silme): yalnızca süresi dolanlar. */
   test("cron 30 günü dolmayanı almıyor, dolanı alıyor", () =>
     islem(db, async () => {

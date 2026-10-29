@@ -105,30 +105,94 @@ export async function sozlesmeyiOnayla(girdi: {
   /* Kopya e-postası yanıtı bekletmez ve gönderilemezse akış düşmez (AGENTS.md). */
   if (user.email) {
     const eposta = user.email;
-    const metin = kullanimSozlesmesi(dil);
-    after(async () => {
-      try {
-        await sendEmail({
-          to: eposta,
-          ...sozlesmeOnayEmail(
-            {
-              ...metin,
-              surum: SOZLESME_SURUMU,
-              ozet,
-              zaman: new Date(kayit.onaylandi as string).toLocaleString(dil === "en" ? "en-GB" : "tr-TR", { timeZone: "Europe/Istanbul" }) + " (Europe/Istanbul)",
-              ip,
-              cihaz,
-              odemeReferansi: referans,
-            },
-            dil,
-          ),
-        });
-      } catch (sorun) {
-        console.error("[sözleşme] kopya e-postası gönderilemedi", sorun instanceof Error ? sorun.message : sorun);
-      }
-    });
+    after(() =>
+      kopyayiGonder(eposta, dil, {
+        onaylandi: kayit.onaylandi as string,
+        surum: SOZLESME_SURUMU,
+        ozet,
+        ip,
+        cihaz,
+        odemeReferansi: referans,
+      }),
+    );
   }
 
   revalidatePath("/dashboard", "layout");
   return { ok: true };
+}
+
+/*
+  Kopyanın gönderimi ve SONUCUN günlüğe yazılması. Eskiden sendEmail'in
+  dönüşü okunmuyordu: başarılı gönderim hiçbir iz bırakmıyordu, kullanıcı
+  "e-posta gelmedi" dediğinde gönderimin denenip denenmediği, sağlayıcının
+  kabul edip etmediği günlükten anlaşılamıyordu (29.10.2026). Şimdi her
+  sonuç (Resend ileti kimliğiyle) günlükte.
+*/
+async function kopyayiGonder(
+  eposta: string,
+  dil: Dil,
+  kayit: { onaylandi: string; surum: string; ozet: string; ip: string | null; cihaz: string | null; odemeReferansi: string | null },
+): Promise<boolean> {
+  try {
+    const sonuc = await sendEmail({
+      to: eposta,
+      ...sozlesmeOnayEmail(
+        {
+          ...kullanimSozlesmesi(dil),
+          surum: kayit.surum,
+          ozet: kayit.ozet,
+          zaman: new Date(kayit.onaylandi).toLocaleString(dil === "en" ? "en-GB" : "tr-TR", { timeZone: "Europe/Istanbul" }) + " (Europe/Istanbul)",
+          ip: kayit.ip,
+          cihaz: kayit.cihaz,
+          odemeReferansi: kayit.odemeReferansi,
+        },
+        dil,
+      ),
+    });
+    if (sonuc.ok) console.info("[sözleşme] kopya e-postası gönderildi", sonuc.id ?? "(kimlik yok)");
+    else console.error("[sözleşme] kopya e-postası gönderilemedi", sonuc.reason);
+    return sonuc.ok;
+  } catch (sorun) {
+    console.error("[sözleşme] kopya e-postası gönderilemedi", sorun instanceof Error ? sorun.message : sorun);
+    return false;
+  }
+}
+
+/*
+  Ayarlar → Kullanım Sözleşmesi → "Kopyayı e-postama gönder". Kayıt
+  kullanıcının KENDİ satırından okunur (RLS); e-posta yalnızca hesabın
+  kendi adresine gider, başka adres girilemez. Kopya yalnızca YÜRÜRLÜKTEKİ
+  sürümün onayı için gönderilir: metnin eski sürümü kodda tutulmuyor ve
+  eski onaya bugünün metnini eklemek yanlış belge olurdu.
+*/
+export async function sozlesmeKopyasiniGonder(): Promise<{ ok: true } | { error: string }> {
+  const t = await ceviri();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: await oturumYokMesaji() };
+  if (!user.email) return { error: t({ tr: "Hesabınızda e-posta adresi yok.", en: "Your account has no email address." }) };
+
+  const { data: kayit, error } = await supabase
+    .from("sozlesme_onaylari")
+    .select("onaylandi, surum, dil, metin_ozeti, ip, kullanici_araci, odeme_referansi")
+    .eq("user_id", user.id)
+    .eq("surum", SOZLESME_SURUMU)
+    .order("onaylandi", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return { error: t({ tr: "Onay kaydınız okunamadı; birazdan yeniden deneyin.", en: "Your approval record could not be read; try again shortly." }) };
+  if (!kayit) return { error: t({ tr: "Yürürlükteki sözleşme için onay kaydınız yok.", en: "You have no approval record for the current agreement." }) };
+
+  const dil: Dil = dilMi(kayit.dil) ? kayit.dil : "tr";
+  const gitti = await kopyayiGonder(user.email, dil, {
+    onaylandi: kayit.onaylandi as string,
+    surum: kayit.surum as string,
+    ozet: kayit.metin_ozeti as string,
+    ip: kayit.ip as string | null,
+    cihaz: kayit.kullanici_araci as string | null,
+    odemeReferansi: kayit.odeme_referansi as string | null,
+  });
+  return gitti
+    ? { ok: true }
+    : { error: t({ tr: "E-posta şu anda gönderilemedi; birazdan yeniden deneyin.", en: "The email could not be sent right now; try again shortly." }) };
 }
