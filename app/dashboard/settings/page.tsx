@@ -22,6 +22,7 @@ import PasswordForm from "./password-form";
 import HesapSilmeFormu from "./hesap-silme-formu";
 import { hesapSilmeTalebi } from "@/app/actions/hesap";
 import { sozlesmeOnaylarim } from "@/lib/sozlesme/onay-durumu";
+import { konumYazisi } from "@/lib/sozlesme/konum";
 import { kullanimSozlesmesi } from "@/lib/sozlesme/kullanim-sozlesmesi";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -394,6 +395,12 @@ export default async function SettingsPage() {
                           <dd>{o.surum} ({o.dil.toUpperCase()})</dd>
                           <dt>{t({ tr: "IP adresi", en: "IP address" })}</dt>
                           <dd>{o.ip ?? "—"}</dd>
+                          {konumYazisi({ ulke: o.ulke ?? null, bolge: o.bolge ?? null, sehir: o.sehir ?? null, enlem: o.enlem ?? null, boylam: o.boylam ?? null }) ? (
+                            <>
+                              <dt>{t({ tr: "Yaklaşık konum", en: "Approximate location" })}</dt>
+                              <dd>{konumYazisi({ ulke: o.ulke ?? null, bolge: o.bolge ?? null, sehir: o.sehir ?? null, enlem: o.enlem ?? null, boylam: o.boylam ?? null })}</dd>
+                            </>
+                          ) : null}
                           <dt>{t({ tr: "Cihaz", en: "Device" })}</dt>
                           <dd>{o.kullanici_araci ?? "—"}</dd>
                           {o.odeme_referansi ? (

@@ -232,6 +232,8 @@ export function sozlesmeOnayEmail(
     ozet: string;
     zaman: string;
     ip: string | null;
+    /** IP'den belirlenen yaklaşık konum (lib/sozlesme/konum); eski çağrılarda yok. */
+    konum?: string | null;
     cihaz: string | null;
     odemeReferansi: string | null;
   },
@@ -252,6 +254,7 @@ export function sozlesmeOnayEmail(
     ${satir(en ? "Version" : "Sürüm", girdi.surum)}
     ${satir(en ? "Text digest (SHA-256)" : "Metin özeti (SHA-256)", girdi.ozet)}
     ${satir(en ? "IP address" : "IP adresi", girdi.ip)}
+    ${satir(en ? "Approximate location (from IP)" : "Yaklaşık konum (IP'den)", girdi.konum ?? null)}
     ${satir(en ? "Device / browser" : "Cihaz / tarayıcı", girdi.cihaz)}
     ${satir(en ? "Payment reference" : "Ödeme referansı", girdi.odemeReferansi)}
   </table>`;
