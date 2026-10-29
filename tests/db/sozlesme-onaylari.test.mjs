@@ -77,3 +77,23 @@ describe("sözleşme onay kaydı", () => {
       assert.deepEqual(rows[0], { user_id: null, eposta: "k@x.co", ip: "203.0.113.5", metin_ozeti: OZET });
     }));
 });
+
+// Yaklaşık konum (20261029163058): sunucu yazar, sonradan değiştirilemez.
+describe("sözleşme onayında konum", () => {
+  test("konum yazılıyor ve değişmezlik onu da koruyor", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "service_role");
+      const { rows: [k] } = await db.query(
+        `insert into public.sozlesme_onaylari (user_id, belge, surum, dil, metin_ozeti, olay, kaydirma_tamamlandi, ip, ulke, bolge, sehir, enlem, boylam, saat_dilimi)
+           values ($1, 'kullanim_sozlesmesi', '2026-10-29.3', 'tr', $2, 'giris', true, '203.0.113.5', 'TR', '34', 'İstanbul', 41.0082, 28.97, 'Europe/Istanbul') returning id`,
+        [KULLANICI, OZET],
+      );
+      await rol(db, "postgres");
+      await reddedilir(db, `update public.sozlesme_onaylari set sehir = 'Ankara' where id = $1`, [k.id], /değiştirilemez/);
+      await rol(db, "authenticated", KULLANICI);
+      const { rows } = await db.query(`select sehir, enlem from public.sozlesme_onaylari where id = $1`, [k.id]);
+      assert.equal(rows[0].sehir, "İstanbul");
+      assert.equal(Number(rows[0].enlem), 41.0082);
+    }));
+});

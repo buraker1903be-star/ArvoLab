@@ -12,6 +12,7 @@ import { oturumYokMesaji } from "@/lib/auth-guards";
 import { kullanimSozlesmesi, sozlesmeDuzMetni, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
 import { sendEmail } from "@/lib/email/resend";
 import { sozlesmeOnayEmail } from "@/lib/email/auth-emails";
+import { konumOku, konumYazisi } from "@/lib/sozlesme/konum";
 
 /*
   KULLANIM SÖZLEŞMESİ ONAYI (29.10.2026).
@@ -76,10 +77,10 @@ export async function sozlesmeyiOnayla(girdi: {
   const ip = istemciIp(h);
   const cihaz = (h.get("user-agent") ?? "").slice(0, 1000) || null;
   const referans = olay === "odeme_sonrasi" ? await odemeReferansi() : null;
+  // Yaklaşık konum barındırıcının IP başlıklarından (lib/sozlesme/konum; 29.10.2026).
+  const konum = konumOku((ad) => h.get(ad));
 
-  const { data: kayit, error } = await admin
-    .from("sozlesme_onaylari")
-    .insert({
+  const satir = {
       user_id: user.id,
       belge: "kullanim_sozlesmesi",
       surum: SOZLESME_SURUMU,
@@ -94,9 +95,18 @@ export async function sozlesmeyiOnayla(girdi: {
       eposta: user.email ?? null,
       ad_soyad: profil?.full_name ?? null,
       organization_id: profil?.organization_id ?? null,
-    })
-    .select("onaylandi")
-    .single();
+  };
+  const konumlu = { ...satir, ulke: konum.ulke, bolge: konum.bolge, sehir: konum.sehir, enlem: konum.enlem, boylam: konum.boylam, saat_dilimi: konum.saatDilimi };
+  let { data: kayit, error } = await admin.from("sozlesme_onaylari").insert(konumlu).select("onaylandi").single();
+  /*
+    Konum sütunları henüz yoksa (kod 20261029163058 migration'ından önce
+    canlıya çıktıysa) onay KONUMSUZ yazılır: aksi hâlde insert düşer ve
+    kullanıcı kapatılamaz pencerede kalırdı. Konum bir sonraki onayda gelir.
+  */
+  if (error && (error.code === "PGRST204" || error.code === "42703")) {
+    console.error("[sözleşme] konum sütunları yok; onay konumsuz yazılıyor", error.message);
+    ({ data: kayit, error } = await admin.from("sozlesme_onaylari").insert(satir).select("onaylandi").single());
+  }
   if (error || !kayit) {
     console.error("[sözleşme] onay yazılamadı", error?.code, error?.message);
     return { error: t({ tr: "Onay kaydedilemedi; lütfen yeniden deneyin.", en: "Your approval could not be saved; please try again." }) };
@@ -117,6 +127,7 @@ export async function sozlesmeyiOnayla(girdi: {
               ozet,
               zaman: new Date(kayit.onaylandi as string).toLocaleString(dil === "en" ? "en-GB" : "tr-TR", { timeZone: "Europe/Istanbul" }) + " (Europe/Istanbul)",
               ip,
+              konum: konumYazisi(konum),
               cihaz,
               odemeReferansi: referans,
             },
