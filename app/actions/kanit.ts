@@ -353,7 +353,7 @@ export async function kunyeyiDogrula(formData: FormData): Promise<ActionResult> 
     }
   }
 
-  const { data: kayit } = await ctx.supabase.from("kanit_kayitlari").select("id, kaynak_id").eq("id", id).maybeSingle();
+  const { data: kayit } = await ctx.supabase.from("kanit_kayitlari").select("id, kaynak_id").eq("id", id).eq("project_id", projectId).maybeSingle();
   if (!kayit) return { error: t(KAYIT_YOK) };
   if (!kayit.kaynak_id) return { error: t({ tr: "Önce literatür listenizden bir kaynak bağlayın.", en: "First link a source from your literature list." }) };
 
@@ -394,8 +394,34 @@ export async function kunyeyiDogrula(formData: FormData): Promise<ActionResult> 
           erisim_adresi: sonuc.erisim.adres,
         };
 
-  const { error } = await ctx.supabase.from("kanit_kayitlari").update(guncelleme).eq("id", id);
+  /*
+    Dizin sorgusu sürerken kaynak değiştirildiyse sonuç ESKİ kaynağa ait:
+    yalnızca kaynak hâlâ aynıysa yazılır. Eskiden id ile yazılıyordu ve
+    yeni kaynağa eskisinin "doğrulandı" hükmü düşebiliyordu.
+  */
+  /*
+    Künye sütunlarını istemci yazamaz (20261029143148: öğrenci kendi kaydına
+    "Crossref'te doğrulandı" yazabiliyordu); sonucu sunucu yazar. Yönetim
+    istemcisi RLS'i atladığı için yazma hakkı önce çağıranın oturumuyla,
+    veritabanının kendi kuralıyla (can_write_project) sınanır.
+  */
+  const { data: yazabilir, error: yetkiHatasi } = await ctx.supabase.rpc("can_write_project", { p_project_id: projectId });
+  if (yetkiHatasi) return dbHatasi(t, yetkiHatasi, { tr: "Yetki doğrulanamadı.", en: "Permission could not be verified." });
+  if (!yazabilir) return { error: t({ tr: "Bu kanıt kaydına yazma yetkiniz yok.", en: "You don't have permission to write to this evidence record." }) };
+  const yazici = adminIstemcisiVarsa();
+  if (!yazici) return { error: t({ tr: "Doğrulama sonucu şu anda kaydedilemiyor.", en: "The verification result can't be saved right now." }) };
+
+  const { data: yazilan, error } = await yazici
+    .from("kanit_kayitlari")
+    .update(guncelleme)
+    .eq("project_id", projectId)
+    .eq("id", id)
+    .eq("kaynak_id", kayit.kaynak_id)
+    .select("id");
   if (error) return dbHatasi(t, error, { tr: "Doğrulama sonucu kaydedilemedi.", en: "The verification result could not be saved." });
+  if (!yazilan?.length) {
+    return { error: t({ tr: "Doğrulama sürerken bağlı kaynak değişti; sonuç kaydedilmedi. Yeniden doğrulayın.", en: "The linked source changed during verification; the result was not saved. Verify again." }) };
+  }
 
   yollar(projectId);
   return { success: true, message: guncelleme.kunye_ayrintisi.ozet };

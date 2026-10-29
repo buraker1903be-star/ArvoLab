@@ -27,16 +27,96 @@ export type CitationStyle = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver
 
 export const NUMERIC_STYLES: CitationStyle[] = ["ieee", "vancouver"];
 
+/*
+  İki hata düzeltildi (29.10.2026):
+  - "ve"/"and" \b ile aranıyordu ve JS'de \b ASCII tabanlı: "Güve, A., &
+    Demir, B." içindeki "ve" sözcük sayılıp "Gü" | "A." | "Demir, B."
+    çıkıyordu, atıf "(Gü vd.)" oluyordu. Sınır artık Unicode harfe göre.
+  - Küçük harfli soyadı öneki ("de Souza", "van Dijk") ilk yazar dışında
+    bölmeyi durduruyordu: "Yılmaz, A., de Souza, A., & Kaya, B." iki yazar
+    sayılıp atıf "vd." yerine "Yılmaz ve Kaya" yazılıyordu. RIS/BibTeX
+    aktarımı tam böyle dizeler üretiyor.
+*/
+const YAZAR_BAGLACI = /\s*(?:&|(?<![\p{L}\p{N}])(?:ve|and)(?![\p{L}\p{N}]))\s*/iu;
+const SONRAKI_YAZAR = /,\s*(?=(?:\p{Ll}+\s+)*[\p{Lu}][\p{L}'’-]+,\s*[\p{Lu}]\.)/u;
+
 export function splitAuthors(authors: string | null): string[] {
   const raw = (authors ?? "").trim();
   if (!raw) return [];
   const parts = raw.includes(";")
     ? raw.split(";")
     : raw
-        .split(/\s*(?:&|\bve\b|\band\b)\s*/i)
+        .split(YAZAR_BAGLACI)
         // "Yılmaz, A., Demir, B." → "Yılmaz, A." | "Demir, B."
-        .flatMap((part) => part.split(/,\s*(?=[\p{Lu}][\p{L}'’-]+,\s*[\p{Lu}]\.)/u));
+        .flatMap((part) => part.split(SONRAKI_YAZAR));
   return parts.map((part) => part.trim().replace(/^,|,$/g, "").trim()).filter(Boolean);
+}
+
+/*
+  "Soyad, A. B." biçimindeki yazarı parçalar. Virgülsüz yazar ("Dünya
+  Sağlık Örgütü", "Ahmet Yılmaz") parçalanmaz: kurum adını soyad sanıp
+  "Örgütü DS" yazmaktansa olduğu gibi bırakmak doğru.
+*/
+function yazarParcalari(yazar: string): { soyad: string; basHarfler: string[] } | null {
+  const virgul = yazar.indexOf(",");
+  if (virgul < 0) return null;
+  const soyad = yazar.slice(0, virgul).trim();
+  const adlar = yazar.slice(virgul + 1).trim();
+  const basHarfler = [...adlar.matchAll(/\p{Lu}/gu)].map((m) => m[0]);
+  if (!soyad || !basHarfler.length) return null;
+  return { soyad, basHarfler };
+}
+
+/*
+  Stile göre yazar listesi. Eskiden Vancouver, IEEE, Chicago ve MLA,
+  kayıtlı APA dizesini ("Yılmaz, A., Demir, B. C., & Kaya, D.") olduğu
+  gibi basıyordu; uygulamanın kendi künye denetimi bu çıktıya dört yazar
+  biçimi uyarısı veriyordu.
+*/
+export function stilYazarlari(authors: string | null, style: CitationStyle, dil: Dil = "tr"): string {
+  const yazarlar = splitAuthors(authors);
+  if (!yazarlar.length) return "";
+  const p = yazarlar.map((y) => ({ ham: y, parca: yazarParcalari(y) }));
+  const en = dil === "en";
+  const ve = en ? "and" : "ve";
+  // Sıralı virgül İngilizcenin kuralı; Türkçede "ve"den önce virgül yok.
+  const seriVirgul = en ? "," : "";
+  switch (style) {
+    case "vancouver": {
+      // Yılmaz A, Demir BC, Kaya D — altıdan fazlasında ilk altı + et al.
+      const ad = (x: (typeof p)[number]) => (x.parca ? `${x.parca.soyad} ${x.parca.basHarfler.join("")}` : x.ham.replace(/\.$/, ""));
+      const liste = p.slice(0, 6).map(ad).join(", ");
+      return p.length > 6 ? `${liste}, ${en ? "et al." : "ve ark."}` : liste;
+    }
+    case "ieee": {
+      // A. Yılmaz, B. C. Demir, and D. Kaya — yediden fazlasında ilk + et al.
+      const ad = (x: (typeof p)[number]) => (x.parca ? `${x.parca.basHarfler.map((h) => `${h}.`).join(" ")} ${x.parca.soyad}` : x.ham);
+      if (p.length > 6) return `${ad(p[0])} ${en ? "et al." : "vd."}`;
+      const adlar = p.map(ad);
+      if (adlar.length === 1) return adlar[0];
+      if (adlar.length === 2) return `${adlar[0]} ${ve} ${adlar[1]}`;
+      return `${adlar.slice(0, -1).join(", ")}${seriVirgul} ${ve} ${adlar[adlar.length - 1]}`;
+    }
+    case "mla": {
+      // Yılmaz, A. | Yılmaz, A., and B. Demir | Yılmaz, A., et al.
+      const ilk = p[0].ham;
+      if (p.length === 1) return ilk;
+      if (p.length > 2) return `${ilk}, ${en ? "et al." : "vd."}`;
+      const ikinci = p[1].parca ? `${p[1].parca.basHarfler.map((h) => `${h}.`).join(" ")} ${p[1].parca.soyad}` : p[1].ham;
+      return `${ilk}, ${ve} ${ikinci}`;
+    }
+    case "chicago": {
+      // İlk yazar ters (Yılmaz, A.), ötekiler düz (B. C. Demir), sonuncudan önce "and".
+      const duz = (x: (typeof p)[number]) => (x.parca ? `${x.parca.basHarfler.map((h) => `${h}.`).join(" ")} ${x.parca.soyad}` : x.ham);
+      const ilk = p[0].ham;
+      if (p.length === 1) return ilk;
+      const kalan = p.slice(1).map(duz);
+      if (p.length === 2) return `${ilk}, ${ve} ${kalan[0]}`;
+      return `${ilk}, ${kalan.slice(0, -1).join(", ")}${seriVirgul} ${ve} ${kalan[kalan.length - 1]}`;
+    }
+    default:
+      return (authors ?? "").trim();
+  }
 }
 
 export function surname(author: string): string {
@@ -189,7 +269,9 @@ export function eksikAlanlar(source: CitableSource, dil: Dil = "tr"): string[] {
 function link(source: CitableSource): string | null {
   const value = source.doi_or_url?.trim();
   if (!value) return null;
-  if (/^10\.\d{4,}\//.test(value)) return `https://doi.org/${value}`;
+  // RIS'ten "doi:10.x/…" ve eski "dx.doi.org" adresleri de aynı biçime iner.
+  const doi = value.replace(/^(?:doi:\s*|https?:\/\/(?:dx\.)?doi\.org\/)/i, "");
+  if (/^10\.\d{4,}\//.test(doi)) return `https://doi.org/${doi}`;
   return value;
 }
 
@@ -238,7 +320,8 @@ export function formatReferenceParts(
 
   switch (style) {
     case "ieee": {
-      push(`[${number}] ${authors ? `${authors}, ` : ""}`);
+      const yazarlar = stilYazarlari(authors, "ieee", dil);
+      push(`[${number}] ${yazarlar ? `${yazarlar}, ` : ""}`);
       if (italic) push(title, true);
       else push(`"${title},"`);
       if (container) {
@@ -254,7 +337,8 @@ export function formatReferenceParts(
       break;
     }
     case "vancouver": {
-      push(`${number}. ${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${title}. `);
+      const yazarlar = stilYazarlari(authors, "vancouver", dil);
+      push(`${number}. ${yazarlar ? `${yazarlar.replace(/\.$/, "")}. ` : ""}${title}. `);
       if (container) push(`${isChapter ? "In: " : ""}${container}. `);
       if (publisher && !container) push(`${publisher}; `);
       push(`${yil()}`);
@@ -265,7 +349,8 @@ export function formatReferenceParts(
       break;
     }
     case "chicago": {
-      push(`${authors ? `${authors.replace(/\.$/, "")}. ` : ""}${yilYazisi()}. `);
+      const yazarlar = stilYazarlari(authors, "chicago", dil);
+      push(`${yazarlar ? `${yazarlar.replace(/\.$/, "")}. ` : ""}${yilYazisi()}. `);
       if (italic && !container) push(title, true);
       else push(`"${title}."`);
       if (container) {
@@ -282,7 +367,8 @@ export function formatReferenceParts(
     }
     case "mla": {
       // MLA 9: Yazar. "Başlık." *Kapsayıcı*, cilt, sayı, yıl, ss. sayfalar. URL
-      push(`${authors ? `${authors.replace(/\.$/, "")}. ` : ""}`);
+      const yazarlar = stilYazarlari(authors, "mla", dil);
+      push(`${yazarlar ? `${yazarlar.replace(/\.$/, "")}. ` : ""}`);
       if (container) push(`“${title}.” `);
       else push(title, italic);
       if (container) {
@@ -347,7 +433,8 @@ export function formatReferenceParts(
         if (pages) push(`, ${pages}`);
         push(".");
       } else if (isChapter && container) {
-        push(`${title}. In `);
+        // Türkçe APA uyarlamasında "İçinde" (Harvard dalı da "içinde" yazıyor).
+        push(`${title}. ${en ? "In" : "İçinde"} `);
         push(container, true);
         push(`${pages ? ` (${en ? "pp." : "ss."} ${pages})` : ""}.`);
         if (publisher) push(` ${publisher}.`);

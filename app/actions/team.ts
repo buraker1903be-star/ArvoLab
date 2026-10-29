@@ -91,10 +91,26 @@ export async function getAllProfiles(): Promise<TeamDirectory> {
   if ("error" in auth) return { members: [], directoryAvailable: false };
 
   const kurum = await seciliKurum();
-  let sorgu = auth.supabase.from("profiles").select("id, full_name, role, organization_id, created_at");
-  // İç ekibin kurum seçimi (lib/kurum-secimi.ts): yalnızca görünümü süzer.
-  if (kurum) sorgu = sorgu.eq("organization_id", kurum.id);
-  const [{ data, error }, authUsers] = await Promise.all([sorgu.order("created_at", { ascending: false }), loadAuthUsers()]);
+  /*
+    Sayfa sayfa: PostgREST tek yanıtta en çok 1000 satır döndürüyor.
+    Eskiden tek sorgu vardı; 1000'i aşan kurulumda liste ve başlıktaki
+    "N kullanıcı" sayısı sessizce 1000'de kalıyordu.
+  */
+  const profilleriOku = async () => {
+    const SAYFA = 1000;
+    const satirlar: Omit<TeamMember, "email" | "disabled" | "pendingInvite" | "lastSignInAt">[] = [];
+    for (let bas = 0; bas < 50_000; bas += SAYFA) {
+      let sorgu = auth.supabase.from("profiles").select("id, full_name, role, organization_id, created_at");
+      // İç ekibin kurum seçimi (lib/kurum-secimi.ts): yalnızca görünümü süzer.
+      if (kurum) sorgu = sorgu.eq("organization_id", kurum.id);
+      const { data, error } = await sorgu.order("created_at", { ascending: false }).order("id").range(bas, bas + SAYFA - 1);
+      if (error) return { data: null, error };
+      satirlar.push(...((data ?? []) as typeof satirlar));
+      if ((data?.length ?? 0) < SAYFA) break;
+    }
+    return { data: satirlar, error: null };
+  };
+  const [{ data, error }, authUsers] = await Promise.all([profilleriOku(), loadAuthUsers()]);
 
   if (error) {
     console.error(error);

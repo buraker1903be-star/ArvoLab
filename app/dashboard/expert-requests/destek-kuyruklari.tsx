@@ -57,6 +57,8 @@ export default async function DestekKuyruklari({
   acikTalepler,
   banaAtananlar,
   destek,
+  acikOkunamadi,
+  banaOkunamadi,
   destekOkunamadi,
   geriBildirimler,
   geriBildirimOkunamadi,
@@ -73,6 +75,8 @@ export default async function DestekKuyruklari({
   istenenKayit: string | null;
   acikTalepler: ConsultancyRequest[];
   banaAtananlar: ConsultancyRequest[];
+  acikOkunamadi: boolean;
+  banaOkunamadi: boolean;
   destek: AppSupportRequest[];
   destekOkunamadi: boolean;
   geriBildirimler: GeriBildirimSatiri[];
@@ -141,7 +145,13 @@ export default async function DestekKuyruklari({
     satirlar.map((s) => s.id),
     istenenKayit,
   );
-  const okunamadi = (tur === "destek" && destekOkunamadi) || (tur === "geri-bildirim" && geriBildirimOkunamadi);
+  /* Uzman kuyrukları da: eskiden okuma hatası "açık talep yok" görünüyor,
+     öğrencinin talebi cevapsız kalıyordu. */
+  const okunamadi =
+    (tur === "destek" && destekOkunamadi) ||
+    (tur === "geri-bildirim" && geriBildirimOkunamadi) ||
+    (tur === "uzman-acik" && acikOkunamadi) ||
+    (tur === "uzman-bana" && banaOkunamadi);
 
   return (
     <>

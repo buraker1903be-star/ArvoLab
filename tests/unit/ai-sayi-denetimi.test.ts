@@ -298,3 +298,26 @@ test("kaydedilen bağlam dile göre ayrışır, sayı içermez (28.10.2026)", as
   assert.equal(dilliKaynak("x", "tr"), "x");
   assert.deepEqual(sayilar(dilliKaynak("", "en")), []);
 });
+
+/*
+  29.10.2026'ya kadar "12.000" ondalık okunup 12'ye iniyordu: girdide t(12)
+  varken uydurulmuş "12.000 katılımcı" geçiyor, girdideki "1.500"e karşılık
+  çıktıdaki "1500" uydurma sanılıyordu.
+*/
+describe("binlik ayırıcı", () => {
+  test("uydurulmuş binlikli sayı, küçük bir sayının kılığına giremez", () => {
+    assert.deepEqual(uydurmaSayilar("Çalışmaya 12.000 katılımcı katıldı.", "t(12) = 2,31"), ["12000"]);
+    assert.deepEqual(uydurmaSayilar("12,000 participants", "t(12) = 2.31"), ["12000"]);
+  });
+
+  test("aynı sayının iki yazımı birbirine eşittir", () => {
+    assert.deepEqual(uydurmaSayilar("1500 kişi", "Örneklem 1.500 kişi."), []);
+    assert.deepEqual(uydurmaSayilar("1.500 kişi", "n = 1500"), []);
+    assert.deepEqual(uydurmaSayilar("12.345,67", "12345.67"), []);
+  });
+
+  test("belirsiz tek grup iki okumayı da taşır, baştaki sıfır binlik değildir", () => {
+    assert.deepEqual(uydurmaSayilar("M = 1.5", "Ortalama 1.500"), []);
+    assert.deepEqual(uydurmaSayilar("p = .001", "p = 0.001"), []);
+  });
+});

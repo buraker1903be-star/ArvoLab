@@ -130,7 +130,7 @@ describe("dışa aktarma", () => {
     assert.deepEqual(satirlar.map((s) => s.split(",")[0]), ["Büyüköztürk", "Kaya", "Yılmaz"]);
     assert.match(html, /<i>Eğitim ve Bilim<\/i>/);
     /* Sayısal stilde verilen sıra korunur. */
-    assert.match(kaynakcaMetni(kaynaklar, "ieee").metin.split("\n")[0], /^\[1\] Yılmaz/);
+    assert.match(kaynakcaMetni(kaynaklar, "ieee").metin.split("\n")[0], /^\[1\] A\. Yılmaz/);
   });
 });
 

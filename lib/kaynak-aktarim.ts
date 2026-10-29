@@ -16,7 +16,7 @@
 
   Saf modül; testi tests/unit/kaynak-aktarim.test.ts.
 */
-import { formatAuthors } from "@/lib/doi";
+import { formatAuthors, normalizeDoi } from "@/lib/doi";
 import type { Dil } from "@/lib/dil";
 import { formatReferenceParts, splitAuthors, surname, NUMERIC_STYLES, type CitableSource, type CitationStyle } from "@/lib/citation-format";
 
@@ -119,7 +119,7 @@ export function risOku(metin: string): KaynakTaslagi[] {
         authors: yazarlar([...(alanlar.AU ?? []), ...(alanlar.A1 ?? [])]),
         year: yilAyikla(ilk("PY", "Y1", "DA")),
         sourceType: tur,
-        doiOrUrl: doi ? doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "") : temiz(a("UR"), 500),
+        doiOrUrl: doi ? doi.replace(/^(?:https?:\/\/(dx\.)?doi\.org\/|doi:\s*)/i, "") : temiz(a("UR"), 500),
         /* Kitap bölümünde T2 kitabın adı; makalede dergi adı. */
         containerTitle: temiz(ilk("T2", "JO", "JF", "JA", "J2")),
         volume: temiz(a("VL"), 40),
@@ -207,6 +207,9 @@ function bibYazarlari(ham: string): string | null {
   const kisiler = parcalar
     .map((p) => p.trim())
     .filter(Boolean)
+    /* Google Scholar uzun listeyi "and others" ile kesiyor; "others" bir
+       yazar değil. Eskiden "…, & others" diye kaydediliyordu. */
+    .filter((p, i, hepsi) => !(i === hepsi.length - 1 && i > 0 && /^others$/i.test(p)))
     .map((p) => {
       const tumuParantezli = tekGrupMu(p);
       const ad = latexCoz(p).replace(/\s+/g, " ").trim();
@@ -316,10 +319,24 @@ export function kaynakDosyasiOku(ad: string, metin: string): { bicim: "ris" | "b
 
 /** Tekrar anahtarı: DOI varsa DOI, yoksa harf-sayıya indirgenmiş başlık + yıl. */
 export function kaynakAnahtari(k: { title: string; year: string | null; doiOrUrl?: string | null; doi_or_url?: string | null }) {
-  const doi = (k.doiOrUrl ?? k.doi_or_url ?? "").match(/10\.\d{4,9}\/\S+/);
-  if (doi) return `doi:${doi[0].toLowerCase().replace(/[.,;]+$/, "")}`;
+  return kaynakAnahtarlari(k)[0];
+}
+
+/*
+  Kaydın BÜTÜN tekrar anahtarları: DOI'si varsa DOI VE başlık+yıl. Eskiden
+  tek anahtar vardı (DOI varsa yalnızca DOI): elle DOI'siz girilmiş bir
+  kaynak, aynı eser sonradan DOI'li aktarılınca tanınmıyordu. DOI de
+  normalizeDoi'den geçiyor; yüzde kodlu adresle çıplak DOI ayrı anahtar
+  üretiyordu.
+*/
+export function kaynakAnahtarlari(k: { title: string; year: string | null; doiOrUrl?: string | null; doi_or_url?: string | null }): string[] {
+  const anahtarlar: string[] = [];
+  const ham = (k.doiOrUrl ?? k.doi_or_url ?? "").trim();
+  const doi = ham ? (normalizeDoi(ham) ?? ham.match(/10\.\d{4,9}\/\S+/)?.[0].replace(/[.,;]+$/, "") ?? null) : null;
+  if (doi) anahtarlar.push(`doi:${doi.toLowerCase()}`);
   const baslik = k.title.toLocaleLowerCase("tr-TR").replace(/[^\p{L}\p{N}]+/gu, "");
-  return `b:${baslik}:${k.year ?? ""}`;
+  if (baslik) anahtarlar.push(`b:${baslik}:${k.year ?? ""}`);
+  return anahtarlar.length ? anahtarlar : [`b::${k.year ?? ""}`];
 }
 
 /* ---------- DOI ayıklama ---------- */
@@ -328,7 +345,9 @@ export const DOI_TOPLU_EN_COK = 50;
 
 /** Yapıştırılan metindeki DOI'ler (bağlantı, "doi:" ya da çıplak), benzersiz ve sırasıyla. */
 export function doiAyikla(metin: string): string[] {
-  const bulunan = metin.match(/10\.\d{4,9}\/[^\s"'<>]+/g) ?? [];
+  /* Eski Wiley SICI DOI'leri "<693::AID-ASI4>" gibi açılı parantez taşıyor;
+     eskiden "<"da kesiliyor, kesik DOI dizinde bulunamıyordu. */
+  const bulunan = metin.match(/10\.\d{4,9}\/(?:[^\s"'<>]|<[^\s"'<>]*>)+/g) ?? [];
   const sonuc: string[] = [];
   for (const ham of bulunan) {
     const doi = ham.replace(/[.,;)\]]+$/, "");

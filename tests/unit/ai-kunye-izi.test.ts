@@ -9,7 +9,7 @@
 */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { kunyeIziMetinde } from "@/lib/ai/bulgu";
+import { baglamDisiKunye, kunyeIziMetinde } from "@/lib/ai/bulgu";
 import { kunyeIzi } from "@/lib/ai/literatur-taramasi";
 
 describe("künye izi · düz metin", () => {
@@ -63,6 +63,43 @@ describe("künye izi · düz metin", () => {
     for (const satir of mesru) {
       assert.equal(kunyeIziMetinde(satir), false, `Yanlış alarm: ${satir}`);
     }
+  });
+
+  /*
+    29.10.2026'ya kadar yalnızca "Soyad, A. (2020)" aranıyordu; en yaygın
+    biçimler geçiyordu ve literatür yeteneğinde sayı denetimi yok.
+  */
+  test("yaygın künye ve atıf biçimlerinin hepsi yakalanır", () => {
+    for (const satir of [
+      "Deci, E. L. (1985) öz belirleme kuramını önerdi.",
+      "Smith, J. (2020a) bunu gösterdi.",
+      "McDonald, R. (2018) modeline bakın.",
+      "Smith et al. (2020) benzer sonuç buldu.",
+      "Yılmaz vd. (2019) çalışmasına bakın.",
+      "Bandura (1977) öz yeterliği tanımladı.",
+      "Bu bulgu desteklenir (Yılmaz & Demir, 2020).",
+      "Bkz. (Kaya et al., 2018).",
+      "DOI: 10.1037/0022-3514.53.6.1024",
+    ]) {
+      assert.equal(kunyeIziMetinde(satir), true, `Kaçtı: ${satir}`);
+    }
+  });
+
+  test("kısaltma ve yıl içeren meşru cümleler künye sayılmaz", () => {
+    for (const satir of [
+      "TÜİK (2022) verileri güncellenmeli.",
+      "COVID (2020) dönemi ayrıca ele alınmalı.",
+      "Bu iddia (2019 verisi) eskimiş olabilir.",
+      "APA 7 (2020) kurallarına göre başlıklar düzenlenmeli.",
+    ]) {
+      assert.equal(kunyeIziMetinde(satir), false, `Yanlış alarm: ${satir}`);
+    }
+  });
+
+  test("öğrencinin metninde geçen atıfa değinmek uydurma değildir", () => {
+    const metin = "Öz yeterlik Bandura (1977) tarafından tanımlanmıştır.";
+    assert.deepEqual(baglamDisiKunye("- Bandura (1977) atfının kaynakçada karşılığı yok.", metin), []);
+    assert.deepEqual(baglamDisiKunye("- Örneğin Deci (1985) de eklenebilir.", metin), ["Deci (1985)"]);
   });
 
   test("metnin herhangi bir yerindeki künye yeter", () => {

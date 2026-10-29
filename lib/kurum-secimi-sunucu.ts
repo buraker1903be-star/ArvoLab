@@ -34,10 +34,23 @@ export const seciliKurum = cache(async (): Promise<SeciliKurum | null> => {
   const id = kurumSecimi(cerez, kurumlar ?? [], icEkip);
   if (!id) return null;
 
-  const { data: uyeler, error: uyeHatasi } = await supabase.from("profiles").select("id").eq("organization_id", id);
-  if (uyeHatasi) {
-    console.error("[kurum seçimi] kurum kullanıcıları okunamadı", uyeHatasi.message);
-    return null;
+  /* Sayfa sayfa: tek sorgu 1000 satırda kesiliyordu ve 1000'den fazla
+     kullanıcısı olan kurumda süzgeç bazı kişilerin taleplerini sessizce
+     düşürüyordu. */
+  const kullanicilar: string[] = [];
+  for (let bas = 0; bas < 50_000; bas += 1000) {
+    const { data: uyeler, error: uyeHatasi } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("organization_id", id)
+      .order("id")
+      .range(bas, bas + 999);
+    if (uyeHatasi) {
+      console.error("[kurum seçimi] kurum kullanıcıları okunamadı", uyeHatasi.message);
+      return null;
+    }
+    kullanicilar.push(...(uyeler ?? []).map((u) => u.id as string));
+    if ((uyeler?.length ?? 0) < 1000) break;
   }
-  return { id, ad: (kurumlar ?? []).find((k) => k.id === id)?.name ?? "Kurum", kullanicilar: (uyeler ?? []).map((u) => u.id) };
+  return { id, ad: (kurumlar ?? []).find((k) => k.id === id)?.name ?? "Kurum", kullanicilar };
 });

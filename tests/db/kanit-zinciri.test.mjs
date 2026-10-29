@@ -167,9 +167,11 @@ describe("kanıt kaydı kuralları", () => {
     islem(db, async () => {
       await tohum();
       await kanitEkle();
-      await db.query(
+      // Künye sonucunu yalnızca sunucu yazar (20261029143148).
+      await sunucuKaydi(
         `update public.kanit_kayitlari set kunye_durumu = 'dogrulandi', kunye_kaynagi = 'crossref', kunye_bakildi = now(), erisim_durumu = 'acik_erisim' where id = $1`,
         [KANIT],
+        OGRENCI,
       );
       await db.query(`update public.kanit_kayitlari set kaynak_id = null where id = $1`, [KANIT]);
       const satir = await tek(`select kunye_durumu, kunye_kaynagi, erisim_durumu from public.kanit_kayitlari where id = $1`, [KANIT]);
@@ -180,7 +182,26 @@ describe("kanıt kaydı kuralları", () => {
     islem(db, async () => {
       await tohum();
       await kanitEkle();
+      await rol(db, "service_role");
       await reddedilir(db, `update public.kanit_kayitlari set kunye_durumu = 'dogrulandi' where id = $1`, [KANIT], /kanit_kunye_kaynakli/);
+    }));
+
+  /*
+    20261029143148'e kadar öğrenci kendi kaydına "Crossref'te doğrulandı"
+    yazabiliyordu: dizine hiç bakılmamış künye doğrulanmış görünüyordu.
+  */
+  test("öğrenci künye sonucunu kendisi yazamaz", () =>
+    islem(db, async () => {
+      await tohum();
+      await kanitEkle();
+      await reddedilir(
+        db,
+        `update public.kanit_kayitlari set kunye_durumu = 'dogrulandi', kunye_kaynagi = 'crossref', kunye_bakildi = now() where id = $1`,
+        [KANIT],
+        /yalnızca doğrulama işlemiyle/,
+      );
+      // İlgisiz alanlar (notlar) yazılabilir.
+      await db.query(`update public.kanit_kayitlari set eksik_kanit = 'Sayfa numarası eksik.' where id = $1`, [KANIT]);
     }));
 
   test("başkasının kaynağı bağlanamaz", () =>
@@ -201,7 +222,7 @@ describe("kanıt kaydı kuralları", () => {
         db,
         `update public.kanit_kayitlari set destek_duzeyi = 'dolayli', degerlendiren = 'asistan' where id = $1`,
         [KANIT],
-        /asistan kaydına bağlanmalı/,
+        /asistan kaydına bağlanmalı|verdiği düzeyle/,
       );
       // Başka yeteneğin kaydı
       const { id: analiz } = await sunucuKaydi(
@@ -213,7 +234,23 @@ describe("kanıt kaydı kuralları", () => {
         db,
         `update public.kanit_kayitlari set destek_duzeyi = 'dolayli', degerlendiren = 'asistan', asistan_kaydi = $2 where id = $1`,
         [KANIT, analiz],
-        /asistan kaydına bağlanmalı/,
+        /asistan kaydına bağlanmalı|verdiği düzeyle/,
+      );
+      /*
+        Asistanın "doğrulanamadı" dediği çalışmanın kimliğiyle "doğrudan
+        destekleniyor — asistan" yazılamaz (20261029143148'e kadar
+        yazılabiliyordu: yalnızca kaydın varlığına bakılıyordu).
+      */
+      const { id: baskaHukum } = await sunucuKaydi(
+        `insert into public.ai_assistant_runs (user_id, capability, status, findings) values ($1, 'kanit', 'completed', '{"duzey":"dogrulanamadi"}') returning id`,
+        [OGRENCI],
+        OGRENCI,
+      );
+      await reddedilir(
+        db,
+        `update public.kanit_kayitlari set destek_duzeyi = 'dolayli', degerlendiren = 'asistan', asistan_kaydi = $2 where id = $1`,
+        [KANIT, baskaHukum],
+        /verdiği düzeyle/,
       );
       // Meşru: kendi tamamlanmış kanıt kaydı
       const { id: kanitKaydi } = await sunucuKaydi(

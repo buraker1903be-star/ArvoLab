@@ -129,7 +129,10 @@ export const BASLIK_ESIGI = 0.85;
 export function soyadlar(yazarlar: string | null | undefined): string[] {
   const metin = (yazarlar ?? "").trim();
   if (!metin) return [];
-  const apa = [...metin.matchAll(/(\p{Lu}[\p{L}'’-]*(?:\s+\p{Lu}[\p{L}'’-]*)*),\s*(?:\p{Lu}\.\s*-?\s*)+/gu)].map((m) => m[1]);
+  /* Küçük harfli önek ("de Souza", "van Dijk") soyadın parçası: eskiden
+     "Souza" alınıyor, Crossref'in "de Souza"sıyla eşleşmiyor ve doğru
+     künye "kısmen" çıkıyordu. Bağlaç ("ve", "and") önek sayılmaz. */
+  const apa = [...metin.matchAll(/(?<![\p{L}])((?:(?!(?:ve|and)\s)\p{Ll}+\s+)*\p{Lu}[\p{L}'’-]*(?:\s+\p{Lu}[\p{L}'’-]*)*),\s*(?:\p{Lu}\.\s*-?\s*)+/gu)].map((m) => m[1]);
   if (apa.length) return apa;
   return metin
     .split(/\s*(?:;|&|\bve\b|\band\b|,)\s*/u)
@@ -150,7 +153,8 @@ const ilkSayfa = (deger: string | null | undefined) => {
 };
 
 export function doiAyikla(deger: string | null | undefined): string | null {
-  const m = /10\.\d{4,9}\/[^\s"<>]+/i.exec(deger ?? "");
+  // Eski Wiley SICI DOI'leri "<…>" taşıyor; eskiden "<"da kesilip kalıcı "doğrulanamadı" yazılıyordu.
+  const m = /10\.\d{4,9}\/(?:[^\s"<>]|<[^\s"<>]*>)+/i.exec(deger ?? "");
   return m ? m[0].replace(/[.,;)\]]+$/, "").toLowerCase() : null;
 }
 

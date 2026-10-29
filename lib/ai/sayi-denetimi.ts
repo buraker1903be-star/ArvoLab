@@ -34,6 +34,26 @@ const STANDART_ADI = /\b(APA|MLA|IEEE|Vancouver|Chicago|Tip|Tür)\s*\d+/gi;
 
 /** Metindeki sayısal değerler; "χ²(1, N = 120) = 6.14" → 1, 120, 6.14 */
 export function sayilar(metin: string): string[] {
+  return sayiOkumalari(metin).map((okumalar) => okumalar[0]);
+}
+
+/*
+  BİNLİK AYIRICI (29.10.2026). "12.000" tek bir ondalık sayı gibi okunup
+  sondaki sıfırlar atılıyordu: 12 oluyordu. Girdide "t(12)" varken asistanın
+  uydurduğu "12.000 katılımcı" denetimden geçiyordu; tersine girdide
+  "1.500", çıktıda "1500" yazınca doğru cevap uydurma sanılıp atılıyordu.
+
+  Gruplu yazım (ilk grup 1–3 hane ve sıfırla başlamıyor, ardından üçer
+  haneli gruplar) artık BİNLİK okunur. Tek gruplu ve "000" ile bitmeyen
+  yazım ("1.500", "2,315") belirsizdir — Türkçede binlik, İngilizcede
+  ondalık olabilir — ve İKİ okuması da taşınır: girdide herhangi biri
+  geçen, çıktıda herhangi biriyle eşleşir. "12.000" gibi sıfır grubu
+  ondalık okumada anlamsız (12'den farksız) olduğu için yalnızca binliktir.
+*/
+const SAYI = /-?(?:[1-9]\d{0,2}([.,])\d{3}(?:\1\d{3})*(?:[.,]\d+)?|\d+(?:[.,]\d+)?|[.,]\d+)/g;
+
+/** Her sayının olası okumaları; ilki asıl (raporlanan) okumadır. */
+export function sayiOkumalari(metin: string): string[][] {
   /*
     İki rakamın arasındaki tire eksi işareti değil, aralıktır: "45-72" iki
     sayıdır (45 ve 72), "-72" değil. Kaynakçada sayfa aralıkları böyle
@@ -43,10 +63,19 @@ export function sayilar(metin: string): string[] {
   */
   const duz = metin.replace(/[\u2010-\u2015]/g, "-").replace(SERBESTLIK_DERECESI, "$1; ");
   // ".05" gibi baştaki sıfırı yazılmayan değerler de yakalanır (APA'da yaygın).
-  return [...duz.matchAll(/-?(?:\d+(?:[.,]\d+)?|[.,]\d+)/g)].map((eslesme) => {
-    const ham = eslesme[0];
+  return [...duz.matchAll(SAYI)].map((eslesme) => {
     const oncekiRakam = eslesme.index > 0 && /\d/.test(duz[eslesme.index - 1]);
-    return normalize(ham.startsWith("-") && oncekiRakam ? ham.slice(1) : ham);
+    const ham = eslesme[0].startsWith("-") && oncekiRakam ? eslesme[0].slice(1) : eslesme[0];
+    const grupAyirici = eslesme[1];
+    if (!grupAyirici) return [normalize(ham)];
+    const eksi = ham.startsWith("-") ? "-" : "";
+    const govde = ham.replace("-", "");
+    const ondalikAyirici = grupAyirici === "." ? "," : ".";
+    const [tam, kesir] = govde.split(ondalikAyirici);
+    const binlik = normalize(eksi + tam.split(grupAyirici).join("") + (kesir !== undefined ? `.${kesir}` : ""));
+    const tekGrup = tam.split(grupAyirici).length === 2;
+    if (!tekGrup || kesir !== undefined || tam.endsWith("000")) return [binlik];
+    return [binlik, normalize(ham)];
   });
 }
 
@@ -112,11 +141,14 @@ function yuzdeKarsiliklari(degerler: string[]): string[] {
  * istatistiklerin APA karşılıkları).
  */
 export function uydurmaSayilar(cikti: string, girdi: string, ...ekGirdiler: string[]): string[] {
-  const girdiSayilari = [...sayilar(girdi), ...ekGirdiler.flatMap(sayilar)];
+  const girdiSayilari = [girdi, ...ekGirdiler].flatMap((m) => sayiOkumalari(m).flat());
   const bilinen = new Set([...girdiSayilari, ...yuzdeKarsiliklari(girdiSayilari)]);
   // Standart adları yalnızca çıktıda ayıklanır; girdide geçmesi zararsız.
   const temiz = cikti.replace(STANDART_ADI, " ");
-  return [...new Set(sayilar(temiz))].filter((deger) => !bilinen.has(deger) && !SERBEST.has(deger));
+  const uydurma = sayiOkumalari(temiz)
+    .filter((okumalar) => !okumalar.some((d) => bilinen.has(d) || SERBEST.has(d)))
+    .map((okumalar) => okumalar[0]);
+  return [...new Set(uydurma)];
 }
 
 /*

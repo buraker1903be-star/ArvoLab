@@ -67,7 +67,10 @@ export default async function AsistanKayitlariSayfasi() {
     { satirlar: modeller, okunamadi: modelOkunamadi },
   ] = await Promise.all([asistanKayitlari(50), modelOzetleri()]);
   const puanlanan = modeller.reduce((toplam, model) => toplam + model.puanlanan, 0);
-  const faydali = modeller.reduce((toplam, model) => toplam + model.faydali + model.kismen, 0);
+  /* İndirme bağlantısı varsayılan olarak YALNIZCA "faydalı"ları veriyor
+     (app/api/asistan/egitim-kumesi). Eskiden "kısmen" de sayılıyor, sayfa
+     indirilen dosyadan büyük bir küme vaat ediyordu. */
+  const faydali = modeller.reduce((toplam, model) => toplam + model.faydali, 0);
 
   return (
     <main className="dashboard-page">

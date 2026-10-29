@@ -1,3 +1,4 @@
+import { UAK_ISTEMI } from "@/lib/ai/uak-tablosu";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ADMIN_ROLES } from "@/lib/project-labels";
@@ -64,6 +65,8 @@ const ISTEMLER: Record<string, string> = {
      burada da temsilî biçim (özgün makale, genel denetim) veriliyor. Asıl
      tür ve bölüm bağlamın kendisinde yazılı (lib/ai/makale-denetimi.ts). */
   makale: makaleIstemiMetni("ozgun", null, null),
+  /* "uak" da eksikti: ÜAK tablosu yorumlamaları sessizce eleniyordu. */
+  uak: UAK_ISTEMI,
 };
 
 export async function GET(request: Request) {

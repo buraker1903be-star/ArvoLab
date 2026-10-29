@@ -64,7 +64,7 @@ export default async function TeamPage({
     );
   }
 
-  const [{ members, directoryAvailable, okunamadi }, { satirlar: organizations }] = await Promise.all([getAllProfiles(), getOrganizations()]);
+  const [{ members, directoryAvailable, okunamadi }, { satirlar: organizations, okunamadi: kurumOkunamadi }] = await Promise.all([getAllProfiles(), getOrganizations()]);
   const assignableRoles = profile?.role === "founder" ? ROLE_ORDER : ROLE_ORDER.filter((r) => r !== "founder");
   const kurumAdi = new Map(organizations.map((o) => [o.id, o.name]));
 
@@ -219,6 +219,17 @@ export default async function TeamPage({
         </p>
       ) : null}
 
+      {kurumOkunamadi ? (
+        /* Eskiden kurum listesinin okunamaması sessizdi: kurum adları boş,
+           kurum seçici gizli, davet formu yalnızca "Kurum yok" sunuyordu ve
+           yönetici farkında olmadan kurumsuz bir Kontrolör davet edebiliyordu. */
+        <p className="alert" data-tone="danger" role="alert">
+          {t({
+            tr: "Kurum listesi okunamadı; kurum adları ve kurum seçimi eksik görünür. Davet ya da kurum ataması yapmadan önce sayfayı yenileyin.",
+            en: "The institution list could not be loaded; institution names and selection will look incomplete. Refresh the page before inviting or assigning institutions.",
+          })}
+        </p>
+      ) : null}
       {okunamadi ? (
         <section className="alert" data-tone="danger" role="alert">
           <strong>{t({ tr: "Kullanıcı listesi okunamadı.", en: "The user list could not be loaded." })}</strong>

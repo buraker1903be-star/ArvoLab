@@ -20,7 +20,7 @@
 */
 
 import { jsonOku } from "./bulgu";
-import { sayilar } from "./sayi-denetimi";
+import { sayiOkumalari } from "./sayi-denetimi";
 import type { Mesaj } from "./saglayici";
 
 export const METIN_BUTCESI = 60_000;
@@ -41,7 +41,7 @@ export type UakKriteri = {
 export type UakHedefi = { grup: string | null; alt_alan: string | null; asgari_puan: number | null; azami_puan: number | null; doktora_sonrasi: boolean };
 export type UakOnerisi = { kriterler: UakKriteri[]; hedefler: UakHedefi[]; notlar: string[] };
 
-const SISTEM = `Sen bir veri çıkarma aracısın. Sana ÜAK (Üniversitelerarası Kurul) doçentlik başvuru şartları tablosunun PDF'ten çıkarılmış metni verilecek. Görevin bu tabloyu yapılandırılmış bir listeye çevirmek.
+export const UAK_ISTEMI = `Sen bir veri çıkarma aracısın. Sana ÜAK (Üniversitelerarası Kurul) doçentlik başvuru şartları tablosunun PDF'ten çıkarılmış metni verilecek. Görevin bu tabloyu yapılandırılmış bir listeye çevirmek.
 
 KURALLAR:
 - Yalnızca metinde YAZAN değerleri kullan. Metinde olmayan hiçbir sayı, kod ya da kural yazma; emin olmadığın satırı atla.
@@ -142,7 +142,7 @@ export function uakIstemleri(metin: string, temelAlan: string, butce = METIN_BUT
     return { istemler: [uakIstemi(kaynak, temelAlan, butce).mesajlar], kaynak, kirpildi: temiz.length > butce };
   }
   const istemler = parcalar.map((parca, i): Mesaj[] => [
-    { rol: "sistem", metin: SISTEM },
+    { rol: "sistem", metin: UAK_ISTEMI },
     {
       rol: "kullanici",
       metin:
@@ -184,7 +184,7 @@ export function uakIstemi(metin: string, temelAlan: string, butce = METIN_BUTCES
   const kaynak = temiz.slice(0, butce);
   return {
     mesajlar: [
-      { rol: "sistem", metin: SISTEM },
+      { rol: "sistem", metin: UAK_ISTEMI },
       { rol: "kullanici", metin: `Temel alan: ${temelAlan}\n\nTABLO METNİ:\n${kaynak}` },
     ],
     kaynak,
@@ -287,13 +287,14 @@ export function uakOnerisiniCozumle(ham: string, bosKabul = false): UakOnerisi |
   birlikte taranıyor. Serbest liste YOK (bkz. dosya başı).
 */
 export function metindeOlmayanSayilar(oneri: UakOnerisi, metin: string): string[] {
-  const bilinen = new Set(sayilar(metin));
+  // Okumaların hepsi: "1.500" binlik de ondalık da olabilir (lib/ai/sayi-denetimi.ts).
+  const bilinen = new Set(sayiOkumalari(metin).flat());
   const yazi = [
     ...oneri.kriterler.flatMap((k) => [k.kod, k.etiket, k.grup ?? "", k.alt_alan ?? "", String(k.puan), k.baslica_katsayi ?? "", k.diger_katsayi ?? ""].map(String)),
     ...oneri.hedefler.flatMap((h) => [h.grup ?? "", h.alt_alan ?? "", h.asgari_puan ?? "", h.azami_puan ?? ""].map(String)),
     ...oneri.notlar,
   ].join(" \n ");
-  return [...new Set(sayilar(yazi))].filter((s) => !bilinen.has(s));
+  return [...new Set(sayiOkumalari(yazi).filter((o) => !o.some((d) => bilinen.has(d))).map((o) => o[0]))];
 }
 
 /** "2026 Mart", "2026 Ekim": içinde bulunulan ve bir sonraki başvuru dönemi. */

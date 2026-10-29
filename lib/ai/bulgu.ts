@@ -141,7 +141,33 @@ export function bulgulariCozumle(ham: string): Bulgu[] {
   sayılan bir alfabe hep eksik kalır. Sınır da \b yerine "önünde harf
   yok" olarak yazıldı.
 */
-const KUNYE = new RegExp(`${SOZCUK_BASI}\\p{Lu}\\p{Ll}+,\\s*\\p{Lu}\\.\\s*\\(\\d{4}\\)`, "u");
+/*
+  Yalnızca "Soyad, A. (2020)" biçimi aranıyordu (TEK baş harf, harfsiz
+  yıl). En yaygın künye ve atıf biçimleri denetimden geçiyordu (29.10.2026):
+  "Deci, E. L. (1985)", "Smith, J. (2020a)", "McDonald, R. (2018)",
+  "Smith et al. (2020)", "Bandura (1977)", "(Yılmaz & Demir, 2020)" ve
+  çıplak DOI. Literatür yeteneğinde sayı denetimi bilerek yok; bu biçimlerle
+  uydurulmuş bir kaynak doğrudan öğrenciye ulaşıyordu.
+
+  Soyadı küçük harfle BİTMEK zorunda: "TÜİK (2022)", "COVID (2020)",
+  "APA (2020)" gibi kısaltmalar künye sayılmasın (yanlış alarm, kaçırılan
+  uydurmadan sinsidir). Yıl parantezi hemen kapanmalı: "(2019 verisi)"
+  künye değildir.
+*/
+const SOYAD = "\\p{Lu}[\\p{L}'’-]*\\p{Ll}";
+const COK_YAZAR = "(?:et al\\.|vd\\.|ve ark\\.|ve diğerleri)";
+const YIL = "\\d{4}[a-z]?";
+const KUNYE_BICIMLERI = [
+  // Kaynakça satırı: Deci, E. L. (1985)
+  `${SOYAD},\\s*(?:\\p{Lu}\\.\\s*-?\\s*){1,3}\\(${YIL}\\)`,
+  // Metin içi anlatı: Bandura (1977), Smith et al. (2020), Yılmaz ve Demir (2020)
+  `${SOYAD}(?:\\s*(?:&|ve|and)\\s*${SOYAD})?(?:\\s+${COK_YAZAR})?\\s*\\(${YIL}\\)`,
+  // Parantez içi: (Yılmaz, 2020), (Smith et al., 2020), (Yılmaz & Demir, 2020)
+  `\\(${SOYAD}(?:\\s*(?:&|ve|and)\\s*${SOYAD})?(?:\\s+${COK_YAZAR})?,\\s*${YIL}`,
+  // DOI
+  `10\\.\\d{4,9}/[^\\s"<>]+`,
+];
+const KUNYE = new RegExp(`${SOZCUK_BASI}(?:${KUNYE_BICIMLERI.join("|")})`, "u");
 
 export function kunyeIziMetinde(metin: string): boolean {
   return KUNYE.test(metin);

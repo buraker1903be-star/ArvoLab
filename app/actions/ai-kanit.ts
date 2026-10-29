@@ -135,7 +135,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
         { incelenenMetin, kaynak, dil },
       );
       if (dogrulama.gecti) {
-        const uyari = await hukmuIsle(t, kayit.id, kayit.project_id, onceki.id, dogrulama.sonuc);
+        const uyari = await hukmuIsle(t, kayit.id, kayit.project_id, onceki.id, dogrulama.sonuc, { iddia: kayit.iddia, incelenenMetin });
         return {
           ...dogrulama.sonuc,
           ...(uyari ? { uyari } : {}), krediUyarisi: kapi.uyari ?? undefined,
@@ -174,7 +174,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
     });
 
     const uyari = kayitId
-      ? await hukmuIsle(t, kayit.id, kayit.project_id, kayitId, dogrulama.sonuc)
+      ? await hukmuIsle(t, kayit.id, kayit.project_id, kayitId, dogrulama.sonuc, { iddia: kayit.iddia, incelenenMetin })
       : t({
           tr: "Değerlendirme gösterildi ama asistan kaydı yazılamadığı için kanıt matrisine işlenmedi.",
           en: "The assessment is shown, but it was not added to the evidence matrix because the assistant record could not be saved.",
@@ -196,9 +196,33 @@ async function hukmuIsle(
   projectId: string,
   asistanKaydi: string,
   sonuc: { duzey: HukumDuzeyi; alinti: string; bulgular: Bulgu[] },
+  beklenen: { iddia: string; incelenenMetin: string },
 ): Promise<string | null> {
   const supabase = await createClient();
-  const { error } = await supabase
+  /*
+    Model çağrısı saniyeler sürüyor. Bu arada öğrenci iddiayı ya da
+    incelenen metni değiştirirse eski metnin hükmü YENİ metne yazılıyordu:
+    tetikleyici hükmü yalnızca metin aynı güncellemede değişirse düşürüyor.
+    Kayıt yeniden okunuyor; metin değiştiyse hüküm yazılmıyor. Okuma ile
+    yazma arasındaki aralık guncellendi damgasıyla kapatılıyor (her
+    güncellemede tetikleyici yeniler).
+  */
+  const { data: guncel, error: okumaHatasi } = await supabase
+    .from("kanit_kayitlari")
+    .select("iddia, incelenen_metin, guncellendi")
+    .eq("id", kanitId)
+    .maybeSingle();
+  const metinDegisti = t({
+    tr: "Değerlendirme sürerken iddia ya da incelenen metin değişti; hüküm eski metne ait olduğu için matrise işlenmedi. Yeniden değerlendirin.",
+    en: "The claim or the reviewed text changed during the assessment; the verdict belongs to the old text, so it was not added to the matrix. Assess again.",
+  });
+  if (okumaHatasi || !guncel) {
+    if (okumaHatasi) console.error("[ai] kanıt kaydı yeniden okunamadı:", okumaHatasi.message);
+    return t({ tr: "Değerlendirme gösterildi ama kanıt matrisine işlenemedi.", en: "The assessment is shown, but it could not be added to the evidence matrix." });
+  }
+  if (guncel.iddia !== beklenen.iddia || guncel.incelenen_metin !== beklenen.incelenenMetin) return metinDegisti;
+
+  const { data: yazilan, error } = await supabase
     .from("kanit_kayitlari")
     .update({
       destek_duzeyi: sonuc.duzey,
@@ -210,7 +234,10 @@ async function hukmuIsle(
       degerlendirildi: new Date().toISOString(),
       insan_incelemesi: "bekliyor",
     })
-    .eq("id", kanitId);
+    .eq("id", kanitId)
+    .eq("guncellendi", guncel.guncellendi)
+    .select("id");
+  if (!error && !yazilan?.length) return metinDegisti;
   if (error) {
     console.error("[ai] kanıt hükmü işlenemedi:", error.code, error.message);
     return t({

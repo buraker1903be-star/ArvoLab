@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getDocumentFeedback } from "@/lib/ai-feedback";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
-import { kunyeIziMetinde } from "@/lib/ai/bulgu";
+import { baglamDisiKunye } from "@/lib/ai/bulgu";
 import { aiHataMesaji } from "@/lib/ai/saglayici";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
@@ -70,7 +70,14 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
       kaçırılan uydurmadan sinsidir — kullanıcı doğru çalışan aracı
       kullanmayı bırakır.
     */
-    if (kunyeIziMetinde(result.feedback)) {
+    /*
+      Öğrencinin METNİNDE geçen atıf uydurma değildir: geri bildirim
+      "Bandura (1977) atfının kaynakçada karşılığı yok" diyebilmeli. Künye
+      deseni genişleyince (29.10.2026: "Soyad (yıl)" biçimi de aranıyor)
+      düz denetim bu meşru alıntıyı da düşürürdü; yalnızca bağlamda
+      GEÇMEYEN künye reddedilir.
+    */
+    if (baglamDisiKunye(result.feedback, result.girdi ?? "").length) {
       console.error("[ai] belge geri bildirimi künye içeriyor", { model: result.model });
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "kunye", model: result.model, baglam: result.girdi, cikti: result.feedback });
       return { error: t({ tr: "Asistan kaynak künyesi ürettiği için geri bildirim gösterilmedi. Tekrar deneyebilirsiniz.", en: "The feedback wasn't shown because the assistant produced a source reference. You can try again." }) };

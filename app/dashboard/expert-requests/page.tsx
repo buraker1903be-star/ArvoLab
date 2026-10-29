@@ -120,8 +120,8 @@ export default async function DestekPage({
     { satirlar: calismalar },
     { satirlar: uzmanTaleplerim, okunamadi: uzmanOkunamadi },
     { satirlar: destekTaleplerim, okunamadi: destekOkunamadi },
-    { satirlar: acikTalepler },
-    { satirlar: banaAtananlar },
+    { satirlar: acikTalepler, okunamadi: acikOkunamadi },
+    { satirlar: banaAtananlar, okunamadi: banaOkunamadi },
     { satirlar: tumDestek, okunamadi: tumDestekOkunamadi },
     { satirlar: geriBildirimler, okunamadi: geriBildirimOkunamadi },
   ] = await Promise.all([
@@ -218,6 +218,8 @@ export default async function DestekPage({
           istenenKayit={typeof params.sec === "string" ? params.sec : null}
           acikTalepler={acikTalepler}
           banaAtananlar={banaAtananlar}
+          acikOkunamadi={acikOkunamadi}
+          banaOkunamadi={banaOkunamadi}
           destek={tumDestek}
           destekOkunamadi={tumDestekOkunamadi}
           geriBildirimler={geriBildirimler}

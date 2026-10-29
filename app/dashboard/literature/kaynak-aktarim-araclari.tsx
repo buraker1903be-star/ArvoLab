@@ -10,7 +10,7 @@ import {
   DOI_TOPLU_EN_COK,
   doiAyikla,
   ICE_AKTARMA_EN_COK,
-  kaynakAnahtari,
+  kaynakAnahtarlari,
   kaynakcaMetni,
   kaynakDosyasiOku,
   risYaz,
@@ -18,8 +18,8 @@ import {
 } from "@/lib/kaynak-aktarim";
 import type { CitationStyle } from "@/lib/citation-format";
 import { showToast } from "../_components/toast-events";
-import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
-import type { Metin } from "@/lib/dil";
+import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
+import { YEREL, type Dil, type Metin } from "@/lib/dil";
 
 /*
   KAYNAK EKLEME VE DIŞA AKTARMA ARAÇLARI (27.10.2026): Kaynaklar
@@ -39,11 +39,15 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
   const [doiSonuclari, setDoiSonuclari] = useState<DoiSonucu[] | null>(null);
   const [bekliyor, basla] = useTransition();
 
-  const mevcutAnahtarlar = new Set(mevcut.map((k) => kaynakAnahtari(k)));
-  const yeni = dosya ? dosya.kayitlar.filter((k, i, hepsi) => {
-    const a = kaynakAnahtari(k);
-    return !mevcutAnahtarlar.has(a) && hepsi.findIndex((x) => kaynakAnahtari(x) === a) === i;
-  }) : [];
+  // Sunucuyla aynı kural (app/actions/kaynak-aktarim.ts): DOI ya da başlık+yıl eşleşmesi tekrardır.
+  const mevcutAnahtarlar = new Set(mevcut.flatMap((k) => kaynakAnahtarlari(k)));
+  const yeni: KaynakTaslagi[] = [];
+  for (const k of dosya?.kayitlar ?? []) {
+    const anahtarlari = kaynakAnahtarlari(k);
+    if (anahtarlari.some((a) => mevcutAnahtarlar.has(a))) continue;
+    anahtarlari.forEach((a) => mevcutAnahtarlar.add(a));
+    yeni.push(k);
+  }
   const doilar = doiAyikla(doiMetni);
 
   const dosyaSecildi = async (f: File | undefined) => {
@@ -179,10 +183,8 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
 type Kapsam = "used" | "okunan" | "hepsi";
 
 /** RIS/BibTeX indirme ve seçili stilde kaynakça kopyalama. */
-export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi }: { kaynaklar: LiteratureSource[]; stil: CitationStyle; stilAdi: string; calismaAdi: string }) {
+export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi, dil }: { kaynaklar: LiteratureSource[]; stil: CitationStyle; stilAdi: string; calismaAdi: string; dil: Dil }) {
   const t = useCeviri();
-  const dil = useDil();
-  const { tarih, uzunTarih } = useTarihler();
   const sayilar = {
     used: kaynaklar.filter((k) => k.status === "used").length,
     okunan: kaynaklar.filter((k) => k.status !== "to_review").length,
@@ -192,12 +194,17 @@ export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi }: { kaynakla
   const [kapsam, setKapsam] = useState<Kapsam>(sayilar.used ? "used" : "hepsi");
   const secili = kaynaklar.filter((k) => (kapsam === "used" ? k.status === "used" : kapsam === "okunan" ? k.status !== "to_review" : true));
   /*
-    Künyenin DİLİ (lib/citation-format: "n.d.", "pp.", "Accessed"):
-    çalışmanın belge dili kayıtlı değil, bu yüzden arayüz dili kullanılıyor.
-    Türkçede erişim tarihi eskisi gibi "28.10.2026"; İngilizcede APA'nın
-    yazdığı biçim ("October 28, 2026").
+    Künyenin DİLİ (lib/citation-format: "n.d.", "pp.", "Accessed")
+    ÇALIŞMANIN dili (lib/belge-dili.ts), arayüzün değil. Eskiden arayüz
+    dili kullanılıyordu: İngilizce arayüzle Türkçe makale yazan öğrencinin
+    editörü "t.y."/"vd." eklerken kopyalanan kaynakçada "n.d."/"Accessed"
+    çıkıyordu. Erişim tarihi de aynı dilde: Türkçede "28.10.2026",
+    İngilizcede APA'nın yazdığı biçim ("October 28, 2026").
   */
-  const bugun = dil === "en" ? uzunTarih(new Date()) : tarih(new Date());
+  const bugun = new Date().toLocaleDateString(YEREL[dil], {
+    timeZone: "Europe/Istanbul",
+    ...(dil === "en" ? { day: "numeric", month: "long", year: "numeric" } : { day: "2-digit", month: "2-digit", year: "numeric" }),
+  });
   const kaynakca = kaynakcaMetni(secili, stil, { erisimTarihi: bugun }, dil);
   const dosyaAdi = calismaAdi.normalize("NFD").replace(/ı/g, "i").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || t({ tr: "kaynaklar", en: "sources" });
 

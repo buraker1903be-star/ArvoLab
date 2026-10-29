@@ -2,7 +2,9 @@ import { BookMarked, Download, FileUp, Sparkles } from "lucide-react";
 import { getLiteratureSources } from "@/app/actions/literature";
 import { getMyCitationChecks, getMyProjects, sonKaynakcaDenetimi } from "@/app/actions/citation-check";
 import { literaturAsistaniAcik } from "@/app/actions/ai-literatur";
-import { ceviri, tarihler } from "@/lib/dil-sunucu";
+import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
+import { belgeDili } from "@/lib/belge-dili";
+import { createClient } from "@/lib/supabase/server";
 import PanelDrawer from "../_components/panel-drawer";
 import BosDurum from "../_components/bos-durum";
 import LiteraturPenceresi from "./literatur-penceresi";
@@ -67,6 +69,9 @@ export default async function KaynaklarPage({
   /* Adresteki çalışma listede yoksa yok sayılır; yoksa en son açılan. */
   const calisma = calismalar.find((c) => c.id === istenen) ?? calismalar[0] ?? null;
   const sonDenetim = calisma ? await sonKaynakcaDenetimi(calisma.id) : null;
+  /* Kopyalanan kaynakça çalışmanın diliyle ("n.d." mi "t.y." mi): editörün
+     eklediği atıflarla aynı dil (lib/belge-dili.ts). */
+  const kaynakcaDili = calisma ? await belgeDili(await createClient(), calisma.id, await aktifDil()) : await aktifDil();
 
   const kaynaklar = calisma
     ? tumKaynaklar
@@ -200,6 +205,7 @@ export default async function KaynaklarPage({
                   >
                     <DisaAktarma
                       kaynaklar={kaynaklar}
+                      dil={kaynakcaDili}
                       stil={(calisma.citation_style && calisma.citation_style in STIL_ETIKETLERI ? calisma.citation_style : "apa7") as CitationStyle}
                       stilAdi={STIL_ETIKETLERI[calisma.citation_style ?? "apa7"] ?? "APA 7"}
                       calismaAdi={calisma.title}

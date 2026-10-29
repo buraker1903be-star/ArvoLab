@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork } from "@/lib/doi";
-import { DOI_TOPLU_EN_COK, ICE_AKTARMA_EN_COK, kaynakAnahtari, type KaynakTaslagi } from "@/lib/kaynak-aktarim";
+import { DOI_TOPLU_EN_COK, ICE_AKTARMA_EN_COK, kaynakAnahtari, kaynakAnahtarlari, type KaynakTaslagi } from "@/lib/kaynak-aktarim";
 import { ceviri } from "@/lib/dil-sunucu";
 
 /*
@@ -54,7 +54,8 @@ async function hazirlik(projectId: string) {
     .eq("project_id", projectId);
   /* Mevcut liste okunamazsa ekleme yapılmaz: tekrar denetimi yapılamadan eklemek listeyi ikiye katlayabilir. */
   if (error) return { hata: t({ tr: "Mevcut kaynaklarınız okunamadı; tekrarları ayıklayamadığımız için ekleme yapılmadı.", en: "Couldn't read your existing sources; nothing was added because duplicates couldn't be filtered out." }) } as const;
-  const anahtarlar = new Set((mevcut ?? []).map((k) => kaynakAnahtari(k)));
+  // DOI ve başlık+yıl birlikte: biriyle eşleşen kayıt tekrardır (lib/kaynak-aktarim kaynakAnahtarlari).
+  const anahtarlar = new Set((mevcut ?? []).flatMap((k) => kaynakAnahtarlari(k)));
   return { ctx, anahtarlar } as const;
 }
 
@@ -90,12 +91,12 @@ async function ekle(
       atlanan += 1;
       continue;
     }
-    const anahtar = kaynakAnahtari(taslak);
-    if (anahtarlar.has(anahtar)) {
+    const anahtarlari = kaynakAnahtarlari(taslak);
+    if (anahtarlari.some((a) => anahtarlar.has(a))) {
       atlanan += 1;
       continue;
     }
-    anahtarlar.add(anahtar);
+    for (const a of anahtarlari) anahtarlar.add(a);
     satirlar.push(satira(taslak, ctx.user.id, projectId));
   }
   for (let i = 0; i < satirlar.length; i += 200) {
@@ -133,7 +134,12 @@ export type DoiSonucu = { doi: string; durum: "eklendi" | "vardi" | "bulunamadi"
   beş istek: Crossref'in "kibar havuz" sınırı.
 */
 export async function doiIleEkle(projectId: string, doilar: string[]): Promise<{ error?: string; sonuclar?: DoiSonucu[] }> {
-  const temiz = [...new Set((Array.isArray(doilar) ? doilar : []).map((d) => normalizeDoi(String(d))).filter((d): d is string => !!d))];
+  /* DOI büyük/küçük harfe duyarsız: eskiden yalnızca harfi farklı iki DOI
+     ikisi de getirilip ikisi de "eklendi" raporlanıyor, biri ekleniyordu. */
+  const gorulen = new Set<string>();
+  const temiz = (Array.isArray(doilar) ? doilar : [])
+    .map((d) => normalizeDoi(String(d)))
+    .filter((d): d is string => !!d && !gorulen.has(d.toLowerCase()) && !!gorulen.add(d.toLowerCase()));
   const t = await ceviri();
   if (!temiz.length) return { error: t({ tr: "Geçerli bir DOI bulunamadı (ör. 10.1000/xyz123 ya da https://doi.org/…).", en: "No valid DOI was found (e.g. 10.1000/xyz123 or https://doi.org/…)." }) };
   if (temiz.length > DOI_TOPLU_EN_COK) return { error: t({ tr: `Tek seferde en çok ${DOI_TOPLU_EN_COK} DOI eklenebilir.`, en: `You can add at most ${DOI_TOPLU_EN_COK} DOIs at once.` }) };
