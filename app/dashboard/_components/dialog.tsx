@@ -33,11 +33,24 @@ export default function Dialog({
   // aria-modal tek başına odağı hapsetmez; Tab arka plana kaçıyordu.
   useOdakTuzagi(dialogRef, open);
 
+  /*
+    Geri çağırım ref'te (PanelDrawer'daki gibi). Pencereler satır içi bir
+    kapatma fonksiyonu veriyor; etki ona bağlıyken HER ÇİZİMDE sökülüp
+    yeniden kuruluyordu: odak editöre dönüp sonra ilk alana atlıyordu.
+    "Kaynak ekle"de başlığa yazılan ilk harften sonra imleç DOI kutusuna
+    kaçıyor, sonraki harfler oraya yazılıyordu.
+  */
+  const kapatRef = useRef(onClose);
+  useEffect(() => {
+    kapatRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!open) return;
     const previousFocus = document.activeElement as HTMLElement | null;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      // İçteki seçici ya da takvim Escape'i kendisi işlediyse pencere kapanmaz.
+      if (event.key === "Escape" && !event.defaultPrevented) kapatRef.current();
     };
     document.addEventListener("keydown", onKeyDown);
     document.documentElement.classList.add("drawer-open");
@@ -50,7 +63,7 @@ export default function Dialog({
       document.documentElement.classList.remove("drawer-open");
       previousFocus?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!isClient) return null;
 

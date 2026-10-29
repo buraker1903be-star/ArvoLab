@@ -150,6 +150,12 @@ export default function Secici({
     } else if (key === "End" || key === "PageDown") {
       olay.preventDefault();
       setEtkin(duz.length - 1);
+    } else if (key === " " && arama.current.metin && Date.now() - arama.current.zaman <= 700) {
+      /* Yazarak aramanın ortasındaki boşluk aramanın parçası ("yazım a…");
+         eskiden etkin seçeneği seçip süzgeç formunu gönderiyordu. */
+      olay.preventDefault();
+      const i = harfleAra(key);
+      if (i >= 0) setEtkin(i);
     } else if (key === "Enter" || key === " ") {
       olay.preventDefault();
       sec(etkin);

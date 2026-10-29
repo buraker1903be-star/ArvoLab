@@ -83,9 +83,17 @@ export default function TarihSecici({
     return () => document.removeEventListener("pointerdown", disari);
   }, [acik]);
 
-  /* Odaktaki gün düğmesine klavye odağını taşı (ay değişince de). */
+  /*
+    Odaktaki gün düğmesine klavye odağını taşı — YALNIZCA değişiklik
+    ızgaradan (ok tuşları) ya da açılıştan geldiyse. Eskiden ay/yıl
+    seçimi ve "önceki ay" düğmesi de odağı ızgaraya çekiyordu: yıl
+    kutusuna "2019" yazan kullanıcının ilk rakamından sonra odak gün
+    düğmesine kaçıyordu.
+  */
+  const izgaradan = useRef(false);
   useEffect(() => {
-    if (acik && odak) izgara.current?.querySelector<HTMLButtonElement>(`[data-gun="${odak}"]`)?.focus();
+    if (acik && odak && izgaradan.current) izgara.current?.querySelector<HTMLButtonElement>(`[data-gun="${odak}"]`)?.focus();
+    izgaradan.current = false;
   }, [acik, odak]);
 
   const sinirla = (anahtar: string) => (enAz && anahtar < enAz ? enAz : enCok && anahtar > enCok ? enCok : anahtar);
@@ -97,6 +105,7 @@ export default function TarihSecici({
     const simdi = new Date();
     const bugunAnahtari = gunAnahtari(new Date(Date.UTC(simdi.getFullYear(), simdi.getMonth(), simdi.getDate())));
     setBugun(bugunAnahtari);
+    izgaradan.current = true;
     setOdak(sinirla(anahtardanTarih(deger) ? deger : bugunAnahtari));
     setAcik(true);
   };
@@ -125,11 +134,20 @@ export default function TarihSecici({
       End: () => gunEkle(odak, 6 - ((anahtardanTarih(odak)!.getUTCDay() - haftaBasi + 7) % 7)),
     };
     if (olay.key === "Escape") {
+      // preventDefault: çevredeki pencere bu Esc'i görüp kendini kapatmasın (dialog.tsx, panel-drawer.tsx).
       olay.preventDefault();
       kapat();
-    } else if (adim[olay.key]) {
+    } else if (adim[olay.key] && (olay.target as HTMLElement).dataset?.gun) {
+      /*
+        Yalnızca gün düğmesindeyken: ay ve yıl kutuları ok tuşlarını kendi
+        işlemeli (eskiden onlarda da gün ±7 kayıyordu). Sınırla: eskiden ok
+        tuşu en erken tarihin dışına çıkabiliyor, kapalı güne odak
+        verilemediği için odak sayfaya düşüyor, takvim klavyeden
+        kopuyordu.
+      */
       olay.preventDefault();
-      setOdak(adim[olay.key]());
+      izgaradan.current = true;
+      setOdak(sinirla(adim[olay.key]()));
     }
   };
 
@@ -196,6 +214,11 @@ export default function TarihSecici({
         popover="manual"
         hidden={!acik}
         onKeyDown={tus}
+        /* Tab ile takvimden çıkınca kapanır; eskiden açık kalıp sonraki alanın üstünü örtüyordu. */
+        onBlur={(olay) => {
+          const hedef = olay.relatedTarget as Node | null;
+          if (hedef && !kok.current?.contains(hedef)) setAcik(false);
+        }}
           /* Form alanları <label> içinde: pencerenin boş yerine tıklamak
              etiketi etkinleştirip düğmeye "tıklıyor" ve takvimi kapatıyordu. */
           onClick={(olay) => olay.preventDefault()}

@@ -25,7 +25,8 @@ export async function payArvolabSubscription(formData: FormData) {
   // Plan kodu ArvoOS'un bildirdiği listeden gelir; doğrulaması ArvoOS'ta.
   const planCode = String(formData.get("plan") ?? "").trim().slice(0, 64) || null;
   const result = await startSubscriptionCheckout({ id: user.id, email: user.email, fullName: profile?.full_name }, planCode);
-  if (!result?.checkoutUrl) redirect("/dashboard?error=odeme-baslatilamadi");
+  // Kurum yolundaki gibi yalnızca https: köprü yanıtı bozulursa başka bir şemaya gidilmesin.
+  if (!result?.checkoutUrl || !/^https:\/\//i.test(result.checkoutUrl)) redirect("/dashboard?error=odeme-baslatilamadi");
   redirect(result.checkoutUrl);
 }
 
@@ -52,7 +53,7 @@ export async function krediSatinAl(formData: FormData) {
   if (!/^[a-z0-9_-]{1,32}$/i.test(paket)) redirect("/dashboard/abonelik?hata=paket");
 
   const result = await startCreditCheckout({ id: user.id, email: user.email, fullName: profile?.full_name }, paket);
-  if (!result?.checkoutUrl) redirect("/dashboard/abonelik?hata=odeme");
+  if (!result?.checkoutUrl || !/^https:\/\//i.test(result.checkoutUrl)) redirect("/dashboard/abonelik?hata=odeme");
   redirect(result.checkoutUrl);
 }
 

@@ -1,3 +1,4 @@
+import { cronYetkiliMi } from "@/lib/cron-yetki";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { closeSubscription } from "@/lib/subscription";
 import { BEKLEME_GUNU, suresiDoldu } from "@/lib/hesap-silme";
@@ -40,7 +41,7 @@ const KOVA = "project-files";
       (migration 20260925110522_hesap_silme).
 */
 export async function GET(request: Request) {
-  if (!process.env.CRON_SECRET || request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronYetkiliMi(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

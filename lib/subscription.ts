@@ -63,6 +63,11 @@ async function mirrorSubscription(userId: string, state: SubscriptionState) {
       status: state.status ?? "unknown",
       trial_ends_at: state.trialEndsAt ?? null,
       current_period_end: state.currentPeriodEnd ?? null,
+      /* ArvoOS'un erişim KARARI: veritabanı kapısı ona bakar (20261029151315).
+         Eskiden yalnızca ham durum yazılıyor, kuruma bağlı abone ya da
+         ödemesi gecikmiş ama erişimi süren abone veritabanında kapalı
+         sayılıyordu: panel açık, her kayıt "aboneliğiniz sona erdi". */
+      erisim: state.access,
       synced_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
     if (error) console.error("[abonelik] yerel ayna yazılamadı", error.message);
@@ -134,11 +139,19 @@ async function call(
       const body = await response.text().catch(() => "");
       console.error("[abonelik] ArvoOS yanıtı", action, response.status, body);
       /*
-        401 anahtar uyuşmuyor, 400 istek hatalı: ikisi de kendiliğinden
-        düzelmez, yapılandırma düzeltilmeli. Diğerleri geçici sayılır.
+        401 anahtar uyuşmuyor, 400 invalid_product/invalid_json istek
+        biçimi bozuk: kendiliğinden düzelmez, yapılandırma düzeltilmeli.
+        Öteki 4xx bir İŞ cevabıdır (bilinmeyen paket kodu, kurum lisansı,
+        ücret tanımsız) ve köprünün sağlığıyla ilgisi yok. Eskiden her 400
+        "kalıcı köprü arızası" yazılıyor, ArvoOS'un sağlık sayfası eski
+        bir sayfadan gelen paket kodu yüzünden "anahtar farklı" diyordu.
       */
-      const kind = response.status === 401 || response.status === 400 ? "permanent" : "transient";
-      await recordHealth(false, `${action}: HTTP ${response.status} ${body}`.trim(), kind);
+      const bicimHatasi = response.status === 400 && /invalid_(product|json)/.test(body);
+      if (response.status === 401 || bicimHatasi) {
+        await recordHealth(false, `${action}: HTTP ${response.status} ${body}`.trim(), "permanent");
+      } else if (response.status >= 500 || response.status === 408 || response.status === 429) {
+        await recordHealth(false, `${action}: HTTP ${response.status} ${body}`.trim(), "transient");
+      }
       return null;
     }
     const payload = (await response.json()) as Record<string, unknown>;

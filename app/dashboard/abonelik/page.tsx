@@ -243,7 +243,7 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
             </p>
           ) : null}
           {kartSaklama ? <KartBolumu durum={kartDurumu?.ok ? kartDurumu.veri : null} /> : null}
-          {kapsam ? <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} /> : null}
+          {kapsam ? <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} kartSaklama={kartSaklama} /> : null}
         </article>
 
         <article className="gb-kart gb-sutun kayan-kart">

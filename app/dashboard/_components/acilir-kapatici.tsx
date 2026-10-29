@@ -32,7 +32,12 @@ export default function AcilirKapatici() {
       if (hedef?.closest("a") && hedef.closest("details.os-kullanici, details.kart-menu")) kapat();
     };
     const onKeyDown = (olay: KeyboardEvent) => {
-      if (olay.key === "Escape") kapat();
+      if (olay.key !== "Escape") return;
+      /* Odak menünün içindeyse başlığa döner; yoksa kapanan menüyle birlikte
+         odak sayfaya düşüyor, klavye kullanıcısı yerini kaybediyordu. */
+      const odakliMenu = (document.activeElement as Element | null)?.closest<HTMLDetailsElement>(SECICI);
+      kapat();
+      odakliMenu?.querySelector<HTMLElement>("summary")?.focus();
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("click", onClick);

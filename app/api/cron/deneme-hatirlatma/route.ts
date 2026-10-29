@@ -1,3 +1,4 @@
+import { cronYetkiliMi } from "@/lib/cron-yetki";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
 import { denemeBitiyorEmail } from "@/lib/email/auth-emails";
@@ -23,7 +24,7 @@ export const maxDuration = 60;
   Soru aynı zamanda aynayı da güncelliyor.
 */
 export async function GET(request: Request) {
-  if (!process.env.CRON_SECRET || request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronYetkiliMi(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

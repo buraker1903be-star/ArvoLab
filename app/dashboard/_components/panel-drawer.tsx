@@ -127,7 +127,10 @@ export default function PanelDrawer({
     }
     const enUsttekiMi = () => enUstPencere() === kokRef.current;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && enUsttekiMi()) setOpen(false);
+      /* İçteki seçici ya da takvim Escape'i işlediyse (preventDefault) pencere
+         açık kalır. Eskiden takvimi kapatan Esc yarım doldurulmuş "Yeni
+         çalışma" penceresini de kapatıyor, yazılanlar gidiyordu. */
+      if (event.key === "Escape" && !event.defaultPrevented && enUsttekiMi()) setOpen(false);
     };
     const onSuccess = () => setOpen(false);
     document.addEventListener("keydown", onKeyDown);

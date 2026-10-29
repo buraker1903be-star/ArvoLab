@@ -1,3 +1,4 @@
+import { cronYetkiliMi } from "@/lib/cron-yetki";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ export const runtime = "nodejs";
   eklenmesinden ucuz.
 */
 export async function GET(request: Request) {
-  if (!process.env.CRON_SECRET || request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronYetkiliMi(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

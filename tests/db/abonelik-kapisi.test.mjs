@@ -93,6 +93,49 @@ describe("bireysel abone", () => {
       assert.equal(await yazabilirMi(), true);
     }));
 
+  /*
+    20261029151315'e kadar ayna yalnızca ham durumu taşıyordu: ArvoOS'un
+    erişim tanıdığı (kuruma bağlı, ödemesi gecikmiş) abone veritabanında
+    kapalı sayılıyor, panel açıkken her kayıt reddediliyordu.
+  */
+  test("ArvoOS'un taze erişim kararı ham durumdan önce gelir", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "postgres");
+      await db.query(
+        `insert into public.individual_subscriptions (user_id, status, current_period_end, erisim, synced_at)
+           values ($1, 'past_due', now() - interval '3 days', true, now())`, [BIREYSEL]);
+      await rol(db, "authenticated", BIREYSEL);
+      assert.equal(await yazabilirMi(), true);
+      // Net "hayır" da taze kararla kapatır.
+      await rol(db, "postgres");
+      await db.query(`update public.individual_subscriptions set status = 'active', current_period_end = now() + interval '10 days', erisim = false where user_id = $1`, [BIREYSEL]);
+      await rol(db, "authenticated", BIREYSEL);
+      assert.equal(await yazabilirMi(), false);
+    }));
+
+  test("ArvoOS'a ulaşılamazken dönemi biten abone bir hafta engellenmez", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "postgres");
+      // Ayna dönem bitmeden yazılmış (yenileme bilinmiyor) ve karar eskimiş.
+      await db.query(
+        `insert into public.individual_subscriptions (user_id, status, current_period_end, erisim, synced_at)
+           values ($1, 'active', now() - interval '1 day', true, now() - interval '10 days')`, [BIREYSEL]);
+      await rol(db, "authenticated", BIREYSEL);
+      assert.equal(await yazabilirMi(), true);
+      // Bitişten sonra bildirilmiş süresi geçmiş durum net bir hayırdır.
+      await rol(db, "postgres");
+      await db.query(`update public.individual_subscriptions set erisim = null, synced_at = now() where user_id = $1`, [BIREYSEL]);
+      await rol(db, "authenticated", BIREYSEL);
+      assert.equal(await yazabilirMi(), false);
+      // Bir haftadan uzun sessizlik artık "bilinmiyor" sayılmaz.
+      await rol(db, "postgres");
+      await db.query(`update public.individual_subscriptions set current_period_end = now() - interval '8 days', synced_at = now() - interval '20 days' where user_id = $1`, [BIREYSEL]);
+      await rol(db, "authenticated", BIREYSEL);
+      assert.equal(await yazabilirMi(), false);
+    }));
+
   test("iptal edilmiş abonelik kapalı", () =>
     islem(db, async () => {
       await tohum();

@@ -1,3 +1,4 @@
+import { cronYetkiliMi } from "@/lib/cron-yetki";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cronRotasi } from "@/lib/cron-gunlugu";
 import { kosulluTara, kunyeYamasi, TARAYICI_SURUMU } from "@/lib/guideline-scan";
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 }
 
 async function turuKosu(request: Request): Promise<Response> {
-  if (!process.env.CRON_SECRET || request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronYetkiliMi(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
