@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { startCreditCheckout, startSubscriptionCheckout } from "@/lib/subscription";
+import { kurumKrediOdemesiBaslat, startCreditCheckout, startSubscriptionCheckout } from "@/lib/subscription";
+import { faturalamaKapsamim } from "@/lib/faturalama-sunucu";
 
 // Bireysel abonenin "Aboneliği başlat / yenile" düğmesi. Tutar ArvoOS'ta
 // belirlenir; buradan tutar gönderilmez, yalnızca kim olduğu ve kullanıcının
@@ -43,7 +44,7 @@ export async function krediSatinAl(formData: FormData) {
   if (!user?.email) redirect("/?error=session-missing");
 
   const profile = await getCurrentProfile();
-  // Kurumun kredisini kurum yöneticisi ArvoOS panelinden alır.
+  // Kurumun kredisini kurum yöneticisi alır (kurumKrediSatinAl).
   if (profile?.organization_id) redirect("/dashboard/abonelik?hata=kurum");
 
   const paket = String(formData.get("paket") ?? "").trim();
@@ -52,4 +53,33 @@ export async function krediSatinAl(formData: FormData) {
   const result = await startCreditCheckout({ id: user.id, email: user.email, fullName: profile?.full_name }, paket);
   if (!result?.checkoutUrl) redirect("/dashboard/abonelik?hata=odeme");
   redirect(result.checkoutUrl);
+}
+
+/*
+  Kurumun "Kredi satın al" düğmesi (28.10.2026, kurum sahibinin kararı:
+  ArvoOS panelinde yalnızca "Abonelik ve faturalama" kaldı, kurum
+  yöneticisi krediyi buradan alıyor). Eskiden kurum üyesi bu sayfadan
+  ArvoOS paneline gönderiliyordu.
+
+  Yetki faturaları görmekle AYNI karar (faturalamaKapsamim): kurumun
+  Akademik Yöneticisi kendi kurumu için, iç ekip kurum seçicide seçtiği
+  kurum için. Köprü kurumu kimliğiyle tanıyor, kişiyi tanımıyor; bu
+  denetim burada yapılmazsa herhangi bir kurum üyesi (ya da işlemi
+  doğrudan çağıran biri) başka bir kurum adına ödeme bağlantısı açabilirdi.
+  Kurum kimliği formdan ALINMAZ, kapsamdan gelir.
+
+  Abonelik kapısı YOK: ödeme yolları asla kapatılmaz (lib/access.ts).
+*/
+export async function kurumKrediSatinAl(formData: FormData) {
+  const kapsamim = await faturalamaKapsamim();
+  if (!kapsamim) redirect("/?error=session-missing");
+  const { kapsam } = kapsamim;
+  if (!kapsam || kapsam.tur !== "kurum") redirect("/dashboard/abonelik?hata=kurum");
+
+  const paket = String(formData.get("paket") ?? "").trim();
+  if (!/^[a-z0-9_-]{1,32}$/i.test(paket)) redirect("/dashboard/abonelik?hata=paket");
+
+  const sonuc = await kurumKrediOdemesiBaslat(kapsam.kurumId, paket);
+  if (!sonuc.ok) redirect(`/dashboard/abonelik?hata=${sonuc.hata === "not_found" ? "paket" : sonuc.hata === "no_owner" ? "sahip" : "odeme"}`);
+  redirect(sonuc.veri);
 }

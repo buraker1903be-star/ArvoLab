@@ -209,7 +209,7 @@ export const startCreditCheckout = (
   Ulaşılamazsa null — sayfa "okunamadı" der, boş liste göstermez (boş
   liste "hiç ödemeniz yok" demek olurdu).
 */
-async function faturalamaIstegi(govde: Record<string, unknown>): Promise<Faturalama | null> {
+async function faturalamaIstegi(govde: Record<string, unknown>): Promise<unknown> {
   const target = endpoint();
   if (!target) return null;
   try {
@@ -224,7 +224,7 @@ async function faturalamaIstegi(govde: Record<string, unknown>): Promise<Fatural
       console.error("[faturalama] ArvoOS yanıtı", govde.action, response.status);
       return null;
     }
-    return faturalamaOku(await response.json());
+    return (await response.json()) as unknown;
   } catch (error) {
     console.error("[faturalama] ArvoOS'a ulaşılamadı", error instanceof Error ? error.message : error);
     return null;
@@ -232,23 +232,38 @@ async function faturalamaIstegi(govde: Record<string, unknown>): Promise<Fatural
 }
 
 /** Bireysel abonenin kendi ödemeleri ve faturaları. */
-export const faturalarim = (user: { id: string; email: string }) =>
-  faturalamaIstegi({ action: "billing", userId: user.id, email: user.email });
+export const faturalarim = async (user: { id: string; email: string }) =>
+  faturalamaOku(await faturalamaIstegi({ action: "billing", userId: user.id, email: user.email }));
 
-/**
- * Kurumun ArvoLab ödemeleri ve faturaları. YETKİ ÇAĞIRANDA: kurum
- * yöneticisi olduğu doğrulanmadan çağrılmamalı — köprü kurumu kimliğiyle
- * okuyor, kişiyi tanımıyor.
- */
-export const kurumFaturalari = (organizationId: string) =>
-  faturalamaIstegi({ action: "org_billing", organizationId });
+
+/*
+  org_billing kurumun KREDİ PAKETLERİNİ de taşıyor (28.10.2026, kurum
+  sahibinin kararı: kurum yöneticisi krediyi ArvoLab'dan alıyor). Ayrı bir
+  çağrı açılmadı: Abonelik ve kredi sayfası faturaları zaten bu çağrıyla
+  okuyor ve paketi kimin görebileceği faturaları kimin görebileceğiyle aynı.
+  Yanıt okunamazsa paket listesi boş — sayfa "yüklenemedi" der.
+*/
+/* YETKİ ÇAĞIRANDA: köprü kurumu kimliğiyle okuyor, kişiyi tanımıyor — kurum yöneticisi olduğu doğrulanmadan çağrılmamalı. */
+export async function kurumFaturalamasi(organizationId: string): Promise<{ faturalama: Faturalama | null; krediPaketleri: KrediPaketi[] }> {
+  const ham = await faturalamaIstegi({ action: "org_billing", organizationId });
+  return { faturalama: faturalamaOku(ham), krediPaketleri: krediPaketleriniOku(ham) };
+}
 
 /** Kapsama göre liste: bireysel abonenin kendi ödemeleri ya da kurum yöneticisinin kurumunkiler. */
-export function faturalamaYukle(
+export async function faturalamaYukle(
   kapsam: { tur: "bireysel" } | { tur: "kurum"; kurumId: string },
   user: { id: string; email: string },
 ) {
-  return kapsam.tur === "bireysel" ? faturalarim(user) : kurumFaturalari(kapsam.kurumId);
+  return (await faturalamaVePaketler(kapsam, user)).faturalama;
+}
+
+/** Faturalama ve (kurumda) kredi paketleri tek köprü çağrısıyla. Bireysel abonenin paketleri ensure'dan gelir. */
+export async function faturalamaVePaketler(
+  kapsam: { tur: "bireysel" } | { tur: "kurum"; kurumId: string },
+  user: { id: string; email: string },
+): Promise<{ faturalama: Faturalama | null; krediPaketleri: KrediPaketi[] }> {
+  if (kapsam.tur === "kurum") return kurumFaturalamasi(kapsam.kurumId);
+  return { faturalama: await faturalarim(user), krediPaketleri: [] };
 }
 
 /*
@@ -266,11 +281,12 @@ export type KartSonucu<T> = { ok: true; veri: T } | { ok: false; hata: string | 
 
 type Kullanici = { id: string; email: string; fullName?: string | null };
 
-async function kartIstegi(
-  action: "card_checkout" | "card_consent" | "card_state" | "card_disable_renewal" | "card_delete",
-  user: Kullanici,
-  ek: Record<string, unknown> = {},
-): Promise<KartSonucu<unknown>> {
+/*
+  İş hatasını taşıyan köprü çağrısı. Kart işlemleri ve kurumun kredi
+  ödemesi (org_credit_checkout) aynı sözleşmeyi kullanıyor: 2xx → gövde,
+  aksi hâlde {error: "<kod>"}.
+*/
+async function kodluIstek(action: string, govde: Record<string, unknown>): Promise<KartSonucu<unknown>> {
   const target = endpoint();
   if (!target) {
     await recordHealth(false, "ARVOOS_BRIDGE_URL veya PRODUCT_BRIDGE_SECRET tanımlı değil", "permanent");
@@ -280,27 +296,20 @@ async function kartIstegi(
     const response = await fetch(target.url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-arvo-bridge-secret": target.secret },
-      body: JSON.stringify({
-        product: PRODUCT,
-        action,
-        userId: user.id,
-        email: user.email,
-        fullName: user.fullName ?? null,
-        ...ek,
-      }),
+      body: JSON.stringify({ product: PRODUCT, action, ...govde }),
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
-    const govde = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    const yanit = (await response.json().catch(() => null)) as Record<string, unknown> | null;
     if (!response.ok) {
-      const kod = typeof govde?.error === "string" ? govde.error.slice(0, 64) : null;
+      const kod = typeof yanit?.error === "string" ? yanit.error.slice(0, 64) : null;
       console.error("[kart] ArvoOS yanıtı", action, response.status, kod);
       if (response.status === 401) await recordHealth(false, `${action}: HTTP 401`, "permanent");
       else if (response.status >= 500 && !kod) await recordHealth(false, `${action}: HTTP ${response.status}`, "transient");
       return { ok: false, hata: kod };
     }
     await recordHealth(true);
-    return { ok: true, veri: govde };
+    return { ok: true, veri: yanit };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[kart] ArvoOS'a ulaşılamadı", action, message);
@@ -308,6 +317,12 @@ async function kartIstegi(
     return { ok: false, hata: null };
   }
 }
+
+const kartIstegi = (
+  action: "card_checkout" | "card_consent" | "card_state" | "card_disable_renewal" | "card_delete",
+  user: Kullanici,
+  ek: Record<string, unknown> = {},
+) => kodluIstek(action, { userId: user.id, email: user.email, fullName: user.fullName ?? null, ...ek });
 
 /**
  * Kartla ödeme kaydı açar. HER çağrı yeni bir ödeme kaydı demek: yalnızca
@@ -355,4 +370,22 @@ export async function otomatikYenilemeKapat(user: Kullanici): Promise<KartSonucu
 export async function kayitliKartSil(user: Kullanici, cardId: string): Promise<KartSonucu<true>> {
   const sonuc = await kartIstegi("card_delete", user, { cardId });
   return sonuc.ok ? { ok: true, veri: true } : sonuc;
+}
+
+/**
+ * Kurumun AI kredi paketi için ödeme bağlantısı (28.10.2026). YETKİ
+ * ÇAĞIRANDA: köprü kurumu kimliğiyle tanıyor, kişiyi tanımıyor — çağıran
+ * kişinin o kurumun faturalarını görmeye yetkili olduğunu (faturalamaKapsami)
+ * doğrulamadan çağrılmamalı. Tutarı ve kredi miktarını ArvoOS paket
+ * kodundan belirler.
+ */
+export async function kurumKrediOdemesiBaslat(organizationId: string, paket: string): Promise<KartSonucu<string>> {
+  const sonuc = await kodluIstek("org_credit_checkout", { organizationId, paket });
+  if (!sonuc.ok) return sonuc;
+  const adres = (sonuc.veri as { checkoutUrl?: unknown } | null)?.checkoutUrl;
+  if (typeof adres !== "string" || !/^https:\/\//.test(adres)) {
+    console.error("[kredi] org_credit_checkout yanıtında ödeme adresi yok");
+    return { ok: false, hata: null };
+  }
+  return { ok: true, veri: adres };
 }

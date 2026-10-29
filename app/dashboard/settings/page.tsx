@@ -10,7 +10,6 @@ import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import PanelDrawer from "../_components/panel-drawer";
 import { aiKurulumu, aiKurulumSorunu } from "@/lib/ai/saglayici";
 import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
-import { KREDI_SATIN_ALMA_ADRESI } from "@/lib/ai/kredi-karari";
 import { getAccessState } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
 import LicenseCard from "../_components/license-card";
@@ -282,7 +281,7 @@ export default async function SettingsPage() {
                       en: `${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} credits left this month · purchased balance ${sayi(kredi.ekBakiye)} · available ${sayi(kredi.toplam)}. 1 credit = 1,000 characters; the monthly allowance renews at the start of each month, and purchased credits never expire.`,
                     })}
                   </small>
-                  {/* Bireysel abone krediyi Abonelik ve kredi sayfasından alır; kurum üyesi için yönetici ArvoOS'tan. */}
+                  {/* Bireysel abone krediyi Abonelik ve kredi sayfasından alır; kurum üyesi için kurum yöneticisi aynı sayfadan (28.10.2026'ya kadar ArvoOS panelindendi). */}
                   {kredi.tukendi || (kredi.ekBakiye === 0 && kredi.oran >= 80) ? (
                     <small className="tone-text" data-tone={kredi.tukendi ? "danger" : "warning"}>
                       {kredi.tukendi
@@ -291,13 +290,7 @@ export default async function SettingsPage() {
                       {bireyselKredi ? (
                         <>{t({ tr: "Ek kredi için “Ayrıntı”ya gidin.", en: "Go to “Details” for more credits." })}</>
                       ) : (
-                        <>
-                          {t({ tr: "Kurum yöneticiniz", en: "Your institution administrator can buy more credits from the" })}{" "}
-                          <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">
-                            {t({ tr: "ArvoOS panelinden", en: "ArvoOS panel" })}
-                          </a>
-                          {t({ tr: " ek kredi satın alabilir.", en: "." })}
-                        </>
+                        <>{t({ tr: "Kurum yöneticiniz Abonelik ve kredi sayfasından ek kredi satın alabilir.", en: "Your institution administrator can buy more credits on the Subscription and credits page." })}</>
                       )}
                     </small>
                   ) : null}
