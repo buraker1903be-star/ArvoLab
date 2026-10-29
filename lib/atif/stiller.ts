@@ -21,7 +21,7 @@
 */
 
 /** Veritabanının kabul ettiği değerler (thesis_projects.citation_style). */
-export type StilKimligi = "apa7" | "chicago" | "ieee" | "vancouver" | "mla";
+export type StilKimligi = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla";
 
 /**
  * Atfın metinde nasıl göründüğü. Denetimin tamamı buna dayanır:
@@ -114,6 +114,24 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
   apa7: {
     id: "apa7",
     ad: "APA 7",
+    tur: "yazar-tarih",
+    yilYeri: "parantez",
+    yazarBicimi: { desen: APA_YAZAR, ornek: "Soyad, A.", ornekEn: "Surname, A." },
+    kaynakcaSirasi: "alfabetik",
+    listeIsaretiSerbest: false,
+  },
+  /*
+    HARVARD (29.10.2026, Cite Them Right biçimi). İngiltere, İrlanda,
+    Avustralya ve Güney Afrika üniversitelerinin çoğunun sistemi; ArvoLab
+    dünya geneline açılınca bu öğrenciler APA seçip yanlış denetleniyordu.
+    APA'ya yakın: yazar–tarih, yıl parantezde, yazar "Soyad, A.". Farkı
+    künyenin noktalamasında: yıldan sonra NOKTA YOK ("Smith, J. (2020)
+    Başlık") ve makale başlığı tek tırnakta ('Başlık', Dergi) — ayrıştırıcı
+    bunu stil kimliğinden biliyor (lib/atif/kunye.ts).
+  */
+  harvard: {
+    id: "harvard",
+    ad: "Harvard",
     tur: "yazar-tarih",
     yilYeri: "parantez",
     yazarBicimi: { desen: APA_YAZAR, ornek: "Soyad, A.", ornekEn: "Surname, A." },
@@ -220,8 +238,12 @@ export const stilAdi = (deger: string | null | undefined) => stilTanimi(deger).a
  * belge yükleme ile çalışma tutarlılığı stili hiç geçirmiyor, her
  * kaynakçayı APA sanıyordu. Tek kaynak, unutulacak bir yer bırakmıyor.
  */
+/*
+  Harvard'ın atfında virgül isteğe bağlı ("(Smith, 2020)" de "(Smith 2020)"
+  de yaygın); APA çıkarıcısı virgül istiyor, Chicago'nunki istemiyor.
+*/
 export const atifCikarmaStili = (stil: StilTanimi): "apa7" | "chicago" | "mla" =>
-  stil.id === "mla" ? "mla" : stil.id === "chicago" ? "chicago" : "apa7";
+  stil.id === "mla" ? "mla" : stil.id === "chicago" || stil.id === "harvard" ? "chicago" : "apa7";
 
 /** Metin içi atıf künyeyle ADLA eşleşiyor mu (numara stillerinde eşleşmez). */
 export const adlaEslesir = (stil: StilTanimi) => stil.tur !== "numara";

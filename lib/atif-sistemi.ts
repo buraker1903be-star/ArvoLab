@@ -29,7 +29,7 @@
 import type { Dil } from "@/lib/dil";
 
 /** Veritabanının kabul ettiği değerler (thesis_guidelines.citation_style). */
-export type AtifSistemi = "apa7" | "vancouver" | "chicago" | "ieee" | "mla";
+export type AtifSistemi = "apa7" | "harvard" | "vancouver" | "chicago" | "ieee" | "mla";
 
 /** Metinde hangi sistemin kaç kez geçtiği; karar verilemediğinde de üretilir. */
 export type AtifGecisi = { sistem: AtifSistemi; etiket: string; sayim: number };
@@ -49,6 +49,8 @@ export type AtifSecimi = {
 const DESENLER: { sistem: AtifSistemi; etiket: string; desen: RegExp }[] = [
   { sistem: "apa7", etiket: "APA 7", desen: /\bapa\b/gi },
   { sistem: "vancouver", etiket: "Vancouver", desen: /\bvancouver\b/gi },
+  /* "Harvard University" bir üniversite adı, atıf sistemi değil (29.10.2026). */
+  { sistem: "harvard", etiket: "Harvard", desen: /\bharvard\b(?!\s+(?:university|business|medical|law|college))/gi },
   { sistem: "chicago", etiket: "Chicago", desen: /\bchicago\b/gi },
   { sistem: "ieee", etiket: "IEEE", desen: /\bieee\b/gi },
   { sistem: "mla", etiket: "MLA 9", desen: /\bmla\b/gi },

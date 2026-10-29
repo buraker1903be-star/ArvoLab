@@ -8,7 +8,7 @@ import { extractPlainText, countWords, type TiptapDoc } from "@/lib/tiptap-text"
 import { splitBodyAndReferences } from "@/lib/text-split";
 import { extractInTextCitations, crossCheck, computeComplianceScore, type ParsedReference } from "@/lib/apa7";
 import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
-import { stilTanimi, type AtifTuru } from "@/lib/atif/stiller";
+import { atifCikarmaStili, stilTanimi, type AtifTuru } from "@/lib/atif/stiller";
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
@@ -440,7 +440,8 @@ export async function runManuscriptCheck(
   };
   if (split.referenceText.trim().length > 0) {
     const references = kunyeleriAyristir(kunyeleriBol(split.referenceText), stil.id);
-    const atifStili = stil.id === "mla" ? "mla" : stil.id === "chicago" ? "chicago" : "apa7";
+    // Tek kaynak (lib/atif/stiller.ts): elle yazılmış eşleme Harvard'ı APA sanardı.
+    const atifStili = atifCikarmaStili(stil);
     const citations = stil.tur === "numara" ? [] : extractInTextCitations(split.bodyText, { style: atifStili });
     const cross =
       stil.tur === "numara"

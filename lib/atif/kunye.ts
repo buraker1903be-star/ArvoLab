@@ -17,7 +17,7 @@ import { SOZCUK_BASI, SOZCUK_SONU, sozcuk } from "@/lib/sozcuk-siniri";
 import { stilTanimi, type StilTanimi } from "./stiller";
 
 /** Yıl ya da tarihsiz kaynak ("n.d." APA, "t.y." Türkçe). */
-const YIL = "\\d{4}[a-z]?|n\\.d\\.|t\\.y\\.";
+const YIL = "\\d{4}[a-z]?|n\\.d\\.|t\\.y\\.|no date";
 const PARANTEZ_YIL = new RegExp(`\\((${YIL})\\)`);
 /** Chicago: "Yılmaz, Ahmet. 2020. …" — yıl yazardan sonra, parantezsiz. */
 const YAZARDAN_SONRA = new RegExp(`^(.+?)\\.\\s+(${YIL})\\.?(?=\\s|$)`, "u");
@@ -91,7 +91,14 @@ function yazarTarihAyristir(ham: string, stil: StilTanimi, dil: Dil): ParsedRefe
 
   // Başlık: yıldan sonraki ilk cümle.
   const yildanSonra = metin.slice((eslesme.index ?? 0) + eslesme[0].length).trim();
-  const baslik = yildanSonra.match(/^[.\s"“]*([^.]+)\./)?.[1]?.trim() ?? null;
+  /*
+    Harvard'da makale başlığı tek tırnakta ve VİRGÜLLE biter ("'Başlık',
+    Dergi"); nokta aramak başlığa dergi adını ve cildi katıyordu. Kapanış
+    tırnağı yalnızca ardından virgül gelince sayılıyor: "Children's" gibi
+    kesme işareti başlığı bölmemeli. APA ve Chicago'nun ölçütü değişmedi.
+  */
+  const harvardTirnakli = stil.id === "harvard" ? yildanSonra.match(/^\s*[‘']\s*(.+?)\s*[’']\s*,/)?.[1]?.trim() : undefined;
+  const baslik = harvardTirnakli ?? yildanSonra.match(/^[.\s"“]*([^.]+)\./)?.[1]?.trim() ?? null;
   if (!baslik) {
     sorunlar.push(sorun("title", { tr: "Başlık bulunamadı ya da noktalama hatalı.", en: "Title not found or punctuation is incorrect." }, dil));
   }

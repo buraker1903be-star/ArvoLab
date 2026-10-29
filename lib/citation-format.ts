@@ -23,7 +23,7 @@ export interface CitableSource {
   publisher?: string | null;
 }
 
-export type CitationStyle = "apa7" | "chicago" | "ieee" | "vancouver" | "mla";
+export type CitationStyle = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla";
 
 export const NUMERIC_STYLES: CitationStyle[] = ["ieee", "vancouver"];
 
@@ -60,6 +60,17 @@ function yazarEtiketi(source: CitableSource, dil: Dil, baglac: string): string {
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} ${baglac} ${names[1]}`;
   return `${names[0]} ${dil === "en" ? "et al." : "vd."}`;
+}
+
+/*
+  Harvard (Cite Them Right) üç yazara kadar hepsini yazar: "Smith, Jones
+  and Brown"; dört ve üstü "et al.". APA ve Chicago üçte kısaltıyor.
+*/
+function harvardEtiketi(source: CitableSource, dil: Dil): string {
+  const names = splitAuthors(source.authors).map(surname);
+  const baglac = dil === "en" ? "and" : "ve";
+  if (names.length === 3) return `${names[0]}, ${names[1]} ${baglac} ${names[2]}`;
+  return yazarEtiketi(source, dil, baglac);
 }
 
 /** APA/Chicago metin içi atıf etiketi: "Yılmaz", "Yılmaz ve Demir", "Yılmaz vd." */
@@ -114,6 +125,8 @@ export function formatInTextCitation(
       return `(${etiket} ${yil}${sayfa ? `, ${sayfa}` : ""})`;
     case "mla":
       return `(${etiket} ${yil}${sayfa ? `, ${sayfa}` : ""})`;
+    case "harvard":
+      return `(${harvardEtiketi(source, dil)}, ${yil}${sayfa ? `, ${sayfa}` : ""})`;
     default: {
       const apaEtiketi = dil === "en" ? yazarEtiketi(source, dil, "&") : etiket;
       return `(${apaEtiketi}, ${yil}${sayfa ? `, ${sayfa}` : ""})`;
@@ -288,6 +301,38 @@ export function formatReferenceParts(
       if (url) push(` ${url}`);
       break;
     }
+    case "harvard": {
+      /*
+        Harvard (Cite Them Right): Yazar (Yıl) 'Başlık', *Dergi*,
+        cilt(sayı), ss. sayfalar. Erişim adresi: URL. Yıldan sonra nokta
+        YOK; makale/bölüm başlığı tek tırnakta, kitap başlığı italik.
+        Yazar listesindeki "&" Harvard'da "and"/"ve" (APA alışkanlığıyla
+        girilmiş yazar alanı burada çevriliyor).
+      */
+      const yazarlar = authors.replace(/,?\s*&\s*/g, en ? " and " : " ve ");
+      push(`${yazarlar ? `${yazarlar} ` : ""}(${yil()}) `);
+      const sayfaOn = en ? "pp." : "ss.";
+      if (container && !isChapter) {
+        push(`‘${title}’, `);
+        push(container, true);
+        if (volume) push(`, ${volume}${issue ? `(${issue})` : ""}`);
+        else if (issue) push(`, (${issue})`);
+        if (pages) push(`, ${sayfaOn} ${pages}`);
+        push(".");
+      } else if (isChapter && container) {
+        push(`‘${title}’, ${en ? "in" : "içinde"} `);
+        push(container, true);
+        push(".");
+        if (publisher) push(` ${publisher}`);
+        push(`${pages ? `, ${sayfaOn} ${pages}` : ""}.`);
+      } else {
+        push(title, italic);
+        push(".");
+        if (publisher) push(` ${publisher}.`);
+      }
+      if (url) push(en ? ` Available at: ${url}` : ` Erişim adresi: ${url}`);
+      break;
+    }
     default: {
       // APA 7: Yazar (Yıl). Başlık. *Dergi*, *Cilt*(Sayı), sayfalar. DOI
       push(`${authors ? `${authors} ` : ""}(${yil()}). `);
@@ -314,6 +359,9 @@ export function formatReferenceParts(
       if (url) push(` ${url}`);
     }
   }
-  if (source.source_type === "website" && url && secenek.erisimTarihi) push(en ? ` (Accessed ${secenek.erisimTarihi})` : ` (Erişim tarihi: ${secenek.erisimTarihi})`);
+  if (source.source_type === "website" && url && secenek.erisimTarihi) {
+    // Harvard'ın erişim notu iki noktalı: "(Accessed: 12 March 2026)".
+    push(en ? ` (Accessed${style === "harvard" ? ":" : ""} ${secenek.erisimTarihi})` : ` (Erişim tarihi: ${secenek.erisimTarihi})`);
+  }
   return parts;
 }

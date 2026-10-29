@@ -26,7 +26,7 @@ test("kılavuz doğrulama", async (t) => {
       Onaylatmak, çıkarımın hatasını öğrencinin imzasıyla kurala
       çevirmek olurdu.
     */
-    const doldurulmus = formaDoldur({ citationStyle: "harvard", minPages: 0, maxPages: 99999 });
+    const doldurulmus = formaDoldur({ citationStyle: "oxford", minPages: 0, maxPages: 99999 });
     assert.equal(doldurulmus.atifStili, "");
     assert.equal(doldurulmus.enAzSayfa, null);
     assert.equal(doldurulmus.enCokSayfa, null);
@@ -61,7 +61,7 @@ test("kılavuz doğrulama", async (t) => {
 
   await t.test("stil ve bölüm zorunlu", () => {
     assert.deepEqual(formuDogrula(form({ atifStili: "" })), ["atif-stili-yok"]);
-    assert.deepEqual(formuDogrula(form({ atifStili: "harvard" })), ["atif-stili-taninmiyor"]);
+    assert.deepEqual(formuDogrula(form({ atifStili: "oxford" })), ["atif-stili-taninmiyor"]); // Harvard 29.10.2026’dan beri tanınıyor; örnek tanınmayan stil.
     assert.deepEqual(formuDogrula(form({ zorunluBolumler: ["  ", ""] })), ["bolum-yok"]);
   });
 

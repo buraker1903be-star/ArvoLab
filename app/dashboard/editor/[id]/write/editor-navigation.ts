@@ -188,7 +188,7 @@ export function insertCitation(
     Numaralı stillerde (IEEE, Vancouver) örnek uygulanmaz.
   */
   const citation =
-    secenek.kalip && (style === "apa7" || style === "chicago")
+    secenek.kalip && (style === "apa7" || style === "chicago" || style === "harvard")
       ? kalibaGoreAtif(authorLabel(source, dil), source.year?.trim() || (dil === "en" ? "n.d." : "t.y."), secenek.sayfa?.trim() || null, secenek.kalip)
       : formatInTextCitation(source, style, number, { sayfa: secenek.sayfa }, dil);
 

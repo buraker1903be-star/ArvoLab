@@ -51,6 +51,7 @@ export type KilavuzSayiKurali = {
 */
 const GELENEK: Record<string, SayiBicimi> = {
   apa7: { ayirici: "period", bastakiSifir: false },
+  harvard: { ayirici: "period", bastakiSifir: true },
   chicago: { ayirici: "period", bastakiSifir: true },
   mla: { ayirici: "period", bastakiSifir: true },
   ieee: { ayirici: "period", bastakiSifir: true },
