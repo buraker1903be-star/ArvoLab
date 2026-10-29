@@ -4,7 +4,7 @@ import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe
 import { atifGecisleri, atifSistemiSec } from "@/lib/atif-sistemi";
 import { sayiKuraliOner, type SayiOnerisi } from "@/lib/kilavuz-sayi-onerisi";
 import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
-import { sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
+import { kelimeSiniriCikar, sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
 import type { Dil } from "@/lib/dil";
 import { INGILIZCE_BOLUMLER, ingilizceBelgeMi, ingilizceKurallar } from "@/lib/kilavuz-ingilizce";
@@ -68,6 +68,8 @@ const CANDIDATE_SECTIONS = [
         alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
         14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
         girinti 2 cm çıkmıştı (blok alıntının kuralı; gövdeninki 1 cm).
+    9 — tezin kelime sınırı (thesis_min_words/thesis_max_words) ve
+        İngilizce sayfa sınırı okunuyor (lib/kilavuz-kunyesi.ts).
     8 — İngilizce kılavuzlar okunuyor (lib/kilavuz-ingilizce.ts): inç ve
         cm kenar boşlukları, "12-point", "double-spaced", İngilizce bölüm
         adları. Eskiden İngilizce bir kılavuzdan yalnızca yazı tipi
@@ -77,7 +79,7 @@ const CANDIDATE_SECTIONS = [
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 8;
+export const TARAYICI_SURUMU = 9;
 
 /*
   Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
@@ -626,6 +628,8 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   const sayiBicimiOnerisi = sayiKuraliOner(text);
   const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint), ingilizce);
   const sayfaSiniri = sayfaSiniriCikar(text);
+  /* Kelime sınırının ayrı sütunu yok; kural kümesinde taşınıyor (lib/guideline-editor-settings.ts → thesisWords). */
+  const kelimeSiniri = kelimeSiniriCikar(text);
   const kilavuzDegil = kilavuzDegilUyarisi(
     formatting.confidence,
     suggestedSections.length,
@@ -650,6 +654,11 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     minPages: sayfaSiniri.enAz,
     maxPages: sayfaSiniri.enFazla,
     ...formatting,
+    suggestedRules: {
+      ...formatting.suggestedRules,
+      ...(kelimeSiniri.enAz !== null ? { thesis_min_words: kelimeSiniri.enAz } : {}),
+      ...(kelimeSiniri.enFazla !== null ? { thesis_max_words: kelimeSiniri.enFazla } : {}),
+    },
     /*
       formatting'den SONRA gelmeli: yayma onu ezerdi. Atıf seçiminin ne
       kadar net olduğu yöneticiye söylenir; sessiz bir tahmin bırakılmaz.

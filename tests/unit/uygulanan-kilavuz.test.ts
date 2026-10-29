@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { appliedGuidelineFromRow, type GuidelineRow } from "../../lib/guideline-rules";
+import { appliedGuidelineFromCalisma, appliedGuidelineFromRow, type GuidelineRow } from "../../lib/guideline-rules";
+import { kurallariKur } from "../../lib/kilavuz-dogrulama";
 
 /*
   Onaylı kılavuzun öğrenciye ulaştığı son halka.
@@ -204,5 +205,43 @@ describe("makul olmayan sayfa düzeni", () => {
   test("makul boşluklar geçmeye devam ediyor", () => {
     const uygulanan = appliedGuidelineFromRow(satir());
     assert.deepEqual(uygulanan?.settings.margins, { top: 3, bottom: 2.5, left: 3.5, right: 2 });
+  });
+});
+
+/*
+  Öğrencinin kendi kılavuzu: extracted_rules taramanın TAMAMI, kurallar
+  `suggestedRules` içinde. 29.10.2026'ya kadar okuyucu üst düzeye
+  bakıyordu ve hiçbir biçim kuralı editöre inmiyordu.
+*/
+describe("öğrencinin yüklediği kılavuz", () => {
+  const ham = {
+    suggestedRules: {
+      margins_cm: { top: 2.54, bottom: 2.54, left: 3.81, right: 2.54 },
+      font_family: "Times New Roman",
+      font_size_pt: 12,
+      line_spacing: 2,
+      thesis_max_words: 100000,
+    },
+    confidence: 1,
+    warnings: [],
+  };
+  const satir = (extracted: unknown) => ({
+    project_id: "p",
+    kurallar: { ...kurallariKur({ atifStili: "harvard", zorunluBolumler: ["Introduction"], enAzSayfa: null, enCokSayfa: null }), extracted_rules: extracted },
+    belge_basligi: null,
+    kaynak_adres: null,
+    olusturuldu: null,
+  });
+
+  test("kaydedildiği biçimdeki (tarama sonucu) kurallar uygulanır", () => {
+    const settings = appliedGuidelineFromCalisma(satir(ham) as never)?.settings;
+    assert.deepEqual(settings?.margins, { top: 2.54, bottom: 2.54, left: 3.81, right: 2.54 });
+    assert.equal(settings?.fontSizePt, 12);
+    assert.equal(settings?.lineSpacing, 2);
+    assert.deepEqual(settings?.thesisWords, { max: 100000 });
+  });
+
+  test("düz kural kümesi de okunur", () => {
+    assert.equal(appliedGuidelineFromCalisma(satir(ham.suggestedRules) as never)?.settings.fontSizePt, 12);
   });
 });

@@ -1202,6 +1202,8 @@ export default function ManuscriptEditor({
     pages,
     minPages: guideline?.minPages ?? null,
     maxPages: guideline?.maxPages ?? null,
+    words: stats.words,
+    wordLimit: guideline?.settings.thesisWords,
     issues: liveIssues
       ? {
           danger: liveIssues.filter((issue) => issue.tone === "danger").length,

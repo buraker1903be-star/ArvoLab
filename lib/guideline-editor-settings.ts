@@ -18,6 +18,12 @@ export interface GuidelineEditorSettings {
   justify?: boolean;
   /** Özet/Abstract kelime ve anahtar kelime sınırları */
   abstract?: AbstractRules;
+  /*
+    Tezin BÜTÜNÜNÜN kelime sınırı (29.10.2026). İngiltere ve Avustralya
+    kılavuzları sınırı sayfayla değil kelimeyle veriyor ("100,000 words");
+    sayfa sınırının sütunu var, bunun yok — kural kümesinde taşınıyor.
+  */
+  thesisWords?: { min?: number; max?: number };
   fontFamily?: string;
   fontSizePt?: number;
   lineSpacing?: number;
@@ -73,6 +79,14 @@ function abstractRulesFrom(rules: Record<string, unknown>): { abstract?: Abstrac
   return Object.keys(abstract).length ? { abstract } : {};
 }
 
+function tezKelimeSiniri(rules: Record<string, unknown>): { thesisWords?: { min?: number; max?: number } } {
+  let min = intInRange(rules.thesis_min_words, 1000, 300000);
+  const max = intInRange(rules.thesis_max_words, 1000, 300000);
+  if (min && max && min >= max) min = undefined;
+  if (!min && !max) return {};
+  return { thesisWords: { ...(min ? { min } : {}), ...(max ? { max } : {}) } };
+}
+
 /** Farklı çıkarım sürümlerindeki anahtarları tek editör modeline dönüştürür. */
 export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorSettings {
   if (!raw || typeof raw !== "object") return {};
@@ -117,6 +131,7 @@ export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorS
       : {}),
     ...(typeof rules.justify === "boolean" ? { justify: rules.justify } : {}),
     ...abstractRulesFrom(rules),
+    ...tezKelimeSiniri(rules),
     ...(fontFamily ? { fontFamily } : {}),
     ...(fontSizePt && fontSizePt >= 8 && fontSizePt <= 24 ? { fontSizePt } : {}),
     ...(lineSpacing && lineSpacing >= 1 && lineSpacing <= 3 ? { lineSpacing } : {}),

@@ -183,6 +183,7 @@ export function bicimOzeti(ayarlar: {
   lineSpacing?: number;
   headingNumbering?: boolean;
   chapterNewPage?: boolean;
+  thesisWords?: { min?: number; max?: number };
 }, dil: Dil = "tr"): string[] {
   const en = dil === "en";
   const satirlar: string[] = [];
@@ -220,5 +221,17 @@ export function bicimOzeti(ayarlar: {
   if (ayarlar.lineSpacing) satirlar.push(en ? `Line spacing: ${yaz(ayarlar.lineSpacing)}` : `Satır aralığı: ${yaz(ayarlar.lineSpacing)}`);
   if (ayarlar.headingNumbering) satirlar.push(en ? "Headings are numbered decimally (1., 1.1.)" : "Başlıklar ondalık numaralanır (1., 1.1.)");
   if (ayarlar.chapterNewPage) satirlar.push(en ? "Each main chapter starts on a new page" : "Her ana bölüm yeni sayfadan başlar");
+  /* Kelime sınırı teslim kontrolüne giriyor; öğrenci onaylamadan önce görmeli. */
+  const kelime = ayarlar.thesisWords;
+  if (kelime?.min || kelime?.max) {
+    const sayi = (n: number) => n.toLocaleString(en ? "en-US" : "tr-TR");
+    const aralik =
+      kelime.min && kelime.max
+        ? `${sayi(kelime.min)}–${sayi(kelime.max)}`
+        : kelime.max
+          ? en ? `at most ${sayi(kelime.max)}` : `en fazla ${sayi(kelime.max)}`
+          : en ? `at least ${sayi(kelime.min!)}` : `en az ${sayi(kelime.min!)}`;
+    satirlar.push(en ? `Thesis length: ${aralik} words` : `Tez uzunluğu: ${aralik} kelime`);
+  }
   return satirlar;
 }

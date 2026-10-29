@@ -280,3 +280,28 @@ test("teslim kontrol listesi İngilizce", () => {
   // Eski liste Türkçe kalıyor.
   assert.equal(COVER_REQUIRED_FIELDS[0][1], "Üniversite");
 });
+
+test("tez kelime sınırı: aşım uyarı (kaynakça dahil sayıldığı söyleniyor), sınır yoksa madde yok", () => {
+  const ortak: ChecklistInput = {
+    isThesis: true,
+    hasGuideline: true,
+    sections: { total: 0, missing: [] },
+    pages: 300,
+    minPages: null,
+    maxPages: null,
+    issues: null,
+    cover: { enabled: false, missingFields: [] },
+    includeToc: true,
+    headingNumbering: { enabled: true, manualNumbered: 0 },
+    pageSetup: [],
+    saveState: "saved",
+  };
+  const kelime = (girdi: ChecklistInput, dil: "tr" | "en" = "tr") => buildSubmissionChecklist(girdi, dil).items.find((i) => i.id === "words");
+
+  assert.equal(kelime({ ...ortak, words: 50000 }), undefined, "kılavuz sınır söylemiyorsa madde yok");
+  const asim = kelime({ ...ortak, words: 104500, wordLimit: { max: 100000 } }, "en");
+  assert.equal(asim?.status, "warning");
+  assert.match(asim?.detail ?? "", /104,500 words \(references and appendices included/);
+  assert.equal(kelime({ ...ortak, words: 82000, wordLimit: { max: 100000 } })?.status, "ok");
+  assert.equal(kelime({ ...ortak, words: 9000, wordLimit: { min: 15000, max: 20000 } })?.status, "warning");
+});

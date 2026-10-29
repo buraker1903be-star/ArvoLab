@@ -163,6 +163,24 @@ export interface CalismaKilavuzuRow {
   olusturuldu?: string | null;
 }
 
+/*
+  Öğrencinin kaydında extracted_rules taramanın TAMAMI (lib/kilavuz-
+  dogrulama.ts → kurallariKur, hamCikarim: yöneticinin "neyi okumuş"
+  diye bakabilmesi için). Kurallar onun `suggestedRules` alanında;
+  katalogda ise extracted_rules doğrudan kural kümesi.
+
+  Eskiden ikisi aynı sanılıyordu ve okuyucu taramanın üst düzeyinde
+  margins_cm, font_size_pt arıyordu: 26.10.2026'dan 29.10.2026'ya kadar
+  kendi kılavuzunu yükleyen HER öğrencide editöre hiçbir biçim kuralı
+  inmedi — ekran "Kılavuzunuz uygulandı" derken kenar boşluğu, punto,
+  satır aralığı, girinti ve yaslama boş kalıyordu. Okuyucu iki biçimi de
+  tanıyor; mevcut kayıtlar yeniden kaydedilmeden düzeliyor.
+*/
+export function kuralKumesi(ham: unknown): unknown {
+  if (ham && typeof ham === "object" && "suggestedRules" in ham) return (ham as { suggestedRules: unknown }).suggestedRules;
+  return ham;
+}
+
 export function appliedGuidelineFromCalisma(row: CalismaKilavuzuRow): AppliedGuideline | null {
   const kurallar = (row.kurallar ?? {}) as Snapshot;
   /*
@@ -189,7 +207,7 @@ export function appliedGuidelineFromCalisma(row: CalismaKilavuzuRow): AppliedGui
     requiredSections: kurallar.required_sections ?? [],
     minPages: kurallar.min_pages ?? null,
     maxPages: kurallar.max_pages ?? null,
-    settings: normalizeGuidelineEditorSettings(kurallar.extracted_rules),
+    settings: normalizeGuidelineEditorSettings(kuralKumesi(kurallar.extracted_rules)),
     lastCheckedAt: row.olusturuldu ?? null,
     updatePending: false,
     dogrulandi: false,

@@ -88,6 +88,8 @@ export function manuscriptReadiness(input: {
     pages,
     minPages: guideline?.minPages ?? null,
     maxPages: guideline?.maxPages ?? null,
+    words: manuscript.word_count ?? 0,
+    wordLimit: guideline?.settings.thesisWords,
     issues: {
       danger: issues.filter((issue) => issue.tone === "danger").length,
       warning: issues.filter((issue) => issue.tone === "warning").length,

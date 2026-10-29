@@ -93,11 +93,120 @@ export function sayfaSiniriCikar(metin: string): SayfaSiniri {
     if (gecemez) enFazla ??= gecerliSayfa(gecemez[1]);
   }
 
+  /* Türkçe cümle bulunamadıysa İngilizcesi (29.10.2026). */
+  if (enAz === null && enFazla === null) ({ enAz, enFazla } = ingilizceSayfaSiniri(duz));
+
   /*
     Çelişkili sınır (alt > üst) kabul edilmez: ikisinden hangisinin yanlış
     okunduğu bilinemez, tahmin etmek yanlış uyarı üretir.
   */
   if (enAz !== null && enFazla !== null && enAz >= enFazla) return { enAz: null, enFazla: null };
+  return { enAz, enFazla };
+}
+
+/*
+  İNGİLİZCE SAYFA SINIRI VE TEZ KELİME SINIRI (29.10.2026).
+
+  Sayfa sınırı yalnızca Türkçe cümlelerden okunuyordu ("en fazla 150
+  sayfa"). İngiltere ve Avustralya kılavuzları ise sınırı çoğunlukla
+  KELİMEYLE veriyor: "The thesis must not exceed 100,000 words,
+  excluding the bibliography and appendices." Kelime sınırı hiç
+  okunmadığı için teslim kontrolü onu bilmiyordu.
+
+  Tuzak: tipik cümle başka bölümlerin adını HARİÇ TUTMAK için anıyor
+  ("excluding the bibliography"). Bölüm adı geçti diye cümleyi atlamak
+  tam da asıl kuralı atlamaktı; bu yüzden "excluding/except/not
+  including …" ve "… hariç/dahil" kısımları denetimden önce ayıklanıyor.
+*/
+const ISTISNA_YAN_CUMLE = /(?:excluding|exclusive\s+of|not\s+including|except(?:\s+for)?|including|inclusive\s+of)\s[^.;]*|[^\s,;]+(?:\s+(?:ve|ile)\s+[^\s,;]+)*\s+(?:hariç|dahil|haricinde)\p{L}*/giu;
+const istisnasiz = (cumle: string) => cumle.replace(ISTISNA_YAN_CUMLE, " ");
+
+const BASKA_BOLUM_EN = /\b(?:abstract|summary|bibliography|references|appendi\w*|footnotes?|tables?|figures?|chapters?|sections?|title\s+page|cover|poster|article|paper|proposal)\b/iu;
+const TEZDEN_SOZ_EN = /\b(?:thesis|theses|dissertation|main\s+text|body\s+of\s+the\s+(?:thesis|dissertation))\b/iu;
+
+/** "100,000", "100 000", "80.000", "80000" → sayı. */
+const binlikliSayi = (ham: string) => Number(ham.replace(/[\s,.\u00a0\u202f]/g, ""));
+const SAYI_BINLIK = "(\\d{1,3}(?:[,.\\s\\u00a0\\u202f]\\d{3})+|\\d{4,6})";
+
+const EN_KUCUK_KELIME = 1000;
+const EN_BUYUK_KELIME = 300000;
+const gecerliKelime = (ham: string | undefined) => {
+  if (!ham) return null;
+  const n = binlikliSayi(ham);
+  return Number.isInteger(n) && n >= EN_KUCUK_KELIME && n <= EN_BUYUK_KELIME ? n : null;
+};
+
+export type KelimeSiniri = { enAz: number | null; enFazla: number | null };
+
+/**
+ * Tezin bütününün kelime sınırı; bulunamazsa null. Sayfa sınırıyla aynı
+ * ilke: cümle tezden söz etmeli ve (istisna yan cümleleri dışında) başka
+ * bir bölümün adını taşımamalı — "the abstract must not exceed 300 words"
+ * tezin sınırı değil.
+ */
+export function kelimeSiniriCikar(metin: string): KelimeSiniri {
+  const duz = metin.replace(/\s+/g, " ");
+  let enAz: number | null = null;
+  let enFazla: number | null = null;
+  const K = "(?:words?|kelime\\p{L}*|sözcük\\p{L}*)";
+  const desenler = {
+    aralik: new RegExp(`(?:between\\s+)?${SAYI_BINLIK}\\s*(?:-|–|to|and|ile|ila)\\s*${SAYI_BINLIK}\\s*${K}`, "iu"),
+    ust: new RegExp(
+      `(?:not\\s+(?:to\\s+)?exceed|no\\s+(?:more|longer)\\s+than|(?:a\\s+)?maximum\\s+(?:of\\s+)?|up\\s+to|limit(?:ed)?\\s+(?:of|to|is)|at\\s+most|en\\s+(?:fazla|çok)|azami)\\s*${SAYI_BINLIK}\\s*${K}|${SAYI_BINLIK}\\s*${K}\\s*(?:maximum|max\\b|or\\s+(?:less|fewer)|limit|\\p{L}*\\s*(?:geç|aş)\\p{L}*(?:mez|maz|memeli|mamalı))`,
+      "iu",
+    ),
+    /* "The word limit for the thesis is 80,000 (words)." */
+    sinir: new RegExp(`word\\s+limit[^.;]{0,40}?(?:\\bis|\\bof|:)\\s*${SAYI_BINLIK}`, "iu"),
+    alt: new RegExp(`(?:at\\s+least|(?:a\\s+)?minimum\\s+(?:of\\s+)?|en\\s+az|asgari)\\s*${SAYI_BINLIK}\\s*${K}`, "iu"),
+  };
+  for (const cumle of duz.split(/(?<=[.;!?])\s+(?=[\p{Lu}\d])/u)) {
+    if (!TEZDEN_SOZ_EN.test(cumle) && !TEZDEN_SOZ.test(cumle)) continue;
+    const ana = istisnasiz(cumle);
+    if (BASKA_BOLUM_EN.test(ana) || BASKA_BOLUM.test(ana)) continue;
+    const aralik = desenler.aralik.exec(ana);
+    if (aralik) {
+      const alt = gecerliKelime(aralik[1]);
+      const ust = gecerliKelime(aralik[2]);
+      if (alt !== null && ust !== null && alt < ust) {
+        enAz ??= alt;
+        enFazla ??= ust;
+        continue;
+      }
+    }
+    const ust = desenler.ust.exec(ana);
+    if (ust) enFazla ??= gecerliKelime(ust[1] ?? ust[2]);
+    const sinir = desenler.sinir.exec(ana);
+    if (sinir) enFazla ??= gecerliKelime(sinir[1]);
+    const alt = desenler.alt.exec(ana);
+    if (alt) enAz ??= gecerliKelime(alt[1]);
+  }
+  if (enAz !== null && enFazla !== null && enAz >= enFazla) return { enAz: null, enFazla: null };
+  return { enAz, enFazla };
+}
+
+/** İngilizce cümlelerden tez sayfa sınırı ("must not exceed 300 pages"). */
+function ingilizceSayfaSiniri(duz: string): SayfaSiniri {
+  let enAz: number | null = null;
+  let enFazla: number | null = null;
+  for (const cumle of duz.split(/(?<=[.;!?])\s+(?=[\p{Lu}\d])/u)) {
+    if (!TEZDEN_SOZ_EN.test(cumle) || !/\bpages?\b/i.test(cumle)) continue;
+    const ana = istisnasiz(cumle);
+    if (BASKA_BOLUM_EN.test(ana)) continue;
+    const aralik = /(?:between\s+)?(\d{2,4})\s*(?:-|–|to|and)\s*(\d{2,4})\s*pages/i.exec(ana);
+    if (aralik) {
+      const alt = gecerliSayfa(aralik[1]);
+      const ust = gecerliSayfa(aralik[2]);
+      if (alt !== null && ust !== null && alt < ust) {
+        enAz ??= alt;
+        enFazla ??= ust;
+        continue;
+      }
+    }
+    const ust = /(?:not\s+(?:to\s+)?exceed|no\s+(?:more|longer)\s+than|(?:a\s+)?maximum\s+(?:of\s+)?|up\s+to|at\s+most|limited\s+to)\s*(\d{2,4})\s*pages|(\d{2,4})\s*pages?\s*(?:maximum|max\b|or\s+(?:less|fewer))/i.exec(ana);
+    if (ust) enFazla ??= gecerliSayfa(ust[1] ?? ust[2]);
+    const alt = /(?:at\s+least|(?:a\s+)?minimum\s+(?:of\s+)?)\s*(\d{2,4})\s*pages/i.exec(ana);
+    if (alt) enAz ??= gecerliSayfa(alt[1]);
+  }
   return { enAz, enFazla };
 }
 

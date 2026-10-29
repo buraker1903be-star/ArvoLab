@@ -71,6 +71,9 @@ export interface ChecklistInput {
   pages: number;
   minPages: number | null;
   maxPages: number | null;
+  /** Belgedeki kelime sayısı ve kılavuzun tez kelime sınırı (settings.thesisWords). */
+  words?: number;
+  wordLimit?: { min?: number; max?: number };
   /** Canlı yapı denetimi sonucu; null = henüz denetlenmedi */
   issues: { danger: number; warning: number } | null;
   cover: { enabled: boolean; missingFields: string[] };
@@ -147,6 +150,47 @@ export function buildSubmissionChecklist(input: ChecklistInput, dil: Dil = "tr")
         : minPages && pages < minPages
           ? { id: "pages", label: t("Sayfa sayısı", "Page count"), status: "warning", detail: istiyor }
           : { id: "pages", label: t("Sayfa sayısı", "Page count"), status: "ok", detail: (en ? `≈ ${pages} pages; within the guideline's range (${range}).` : `≈ ${pages} sayfa; kılavuzun aralığında (${range}).`) }
+    );
+  }
+
+  /*
+    TEZ KELİME SINIRI (29.10.2026). Sayılan, belgenin TAMAMI: kaynakça ve
+    ekler de içinde. Kılavuzların çoğu onları sınırın dışında tutuyor;
+    bölüm bölüm ayırmak tahmin olurdu. Bu yüzden aşım "yapılacak" değil
+    UYARI ve cümle bunu açıkça söylüyor — öğrenci kaynakçası yüzünden
+    gereksiz yere metin silmesin.
+  */
+  if (input.wordLimit && (input.wordLimit.min || input.wordLimit.max) && input.words !== undefined) {
+    const { min, max } = input.wordLimit;
+    const sayi = (n: number) => n.toLocaleString(en ? "en-US" : "tr-TR");
+    const w = sayi(input.words);
+    const aralik = [min ? t(`en az ${sayi(min)}`, `at least ${sayi(min)}`) : "", max ? t(`en fazla ${sayi(max)}`, `at most ${sayi(max)}`) : ""]
+      .filter(Boolean)
+      .join(", ");
+    const kapsam = t("kaynakça ve ekler dahil sayıldı", "references and appendices included in the count");
+    items.push(
+      max && input.words > max
+        ? {
+            id: "words",
+            label: t("Kelime sayısı", "Word count"),
+            status: "warning",
+            detail: en
+              ? `${w} words (${kapsam}); the guideline allows ${aralik}. If your guideline excludes references and appendices, the count that matters is lower.`
+              : `${w} kelime (${kapsam}); kılavuz ${aralik} kelimeye izin veriyor. Kılavuzunuz kaynakça ve ekleri saymıyorsa geçerli sayı daha düşüktür.`,
+          }
+        : min && input.words < min
+          ? {
+              id: "words",
+              label: t("Kelime sayısı", "Word count"),
+              status: "warning",
+              detail: en ? `${w} words; the guideline requires ${aralik}.` : `${w} kelime; kılavuz ${aralik} kelime istiyor.`,
+            }
+          : {
+              id: "words",
+              label: t("Kelime sayısı", "Word count"),
+              status: "ok",
+              detail: en ? `${w} words; within the guideline's limit (${aralik}).` : `${w} kelime; kılavuzun sınırında (${aralik}).`,
+            },
     );
   }
 

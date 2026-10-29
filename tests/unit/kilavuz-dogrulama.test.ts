@@ -138,3 +138,8 @@ test("İngilizce özet inçe tam oturan boşlukları inçle yazar", () => {
     "Kenar boşlukları: üst 2,54 · sağ 2,54 · alt 2,54 · sol 3,81 cm",
   ]);
 });
+
+test("tez kelime sınırı onay özetinde görünüyor", () => {
+  assert.deepEqual(ozet({ thesisWords: { max: 100000 } }, "en"), ["Thesis length: at most 100,000 words"]);
+  assert.deepEqual(ozet({ thesisWords: { min: 15000, max: 20000 } }), ["Tez uzunluğu: 15.000–20.000 kelime"]);
+});

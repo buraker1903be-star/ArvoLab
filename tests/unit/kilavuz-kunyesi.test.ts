@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
+import { kelimeSiniriCikar, sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 
 describe("tez sayfa sınırı", () => {
   test("en az / en fazla ayrı cümlelerde", () => {
@@ -123,4 +123,31 @@ describe("Türkçe harfle başlayan sözcükler", () => {
   test("kural cümlesi 'çalışma' ile kurulmuşsa da sayfa sınırı okunur", () => {
     assert.deepEqual(sayfaSiniriCikar("Çalışma en fazla 120 sayfa olmalıdır."), { enAz: null, enFazla: 120 });
   });
+});
+
+/* İngilizce sayfa sınırı ve tez kelime sınırı (29.10.2026). */
+
+test("tez kelime sınırı: İngiltere tipi cümle, istisna yan cümlesiyle", () => {
+  assert.deepEqual(
+    kelimeSiniriCikar("The thesis must not exceed 100,000 words, excluding the bibliography and appendices."),
+    { enAz: null, enFazla: 100000 },
+  );
+  assert.deepEqual(
+    kelimeSiniriCikar("A Masters dissertation should be between 15,000 and 20,000 words including footnotes."),
+    { enAz: 15000, enFazla: 20000 },
+  );
+  assert.deepEqual(kelimeSiniriCikar("The word limit for the thesis is 80 000 words."), { enAz: null, enFazla: 80000 });
+  assert.deepEqual(kelimeSiniriCikar("Tez metni kaynakça hariç 80.000 kelimeyi geçmemelidir."), { enAz: null, enFazla: 80000 });
+});
+
+test("tez kelime sınırı başka bölümün sınırını almaz", () => {
+  assert.deepEqual(kelimeSiniriCikar("The abstract of the thesis must not exceed 300 words."), { enAz: null, enFazla: null });
+  assert.deepEqual(kelimeSiniriCikar("Each chapter of the thesis should be no more than 12,000 words."), { enAz: null, enFazla: null });
+  assert.deepEqual(kelimeSiniriCikar("Essays must not exceed 5,000 words."), { enAz: null, enFazla: null }, "tezden söz etmiyor");
+});
+
+test("İngilizce tez sayfa sınırı", () => {
+  assert.deepEqual(sayfaSiniriCikar("The dissertation must not exceed 300 pages, excluding appendices."), { enAz: null, enFazla: 300 });
+  assert.deepEqual(sayfaSiniriCikar("A thesis should be between 80 and 200 pages long."), { enAz: 80, enFazla: 200 });
+  assert.deepEqual(sayfaSiniriCikar("The abstract of the thesis must not exceed 2 pages."), { enAz: null, enFazla: null });
 });
