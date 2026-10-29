@@ -509,12 +509,158 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .kredi-cubugu::-webkit-progress-bar { background: var(--surface-2); border-radius: 999px; }
 .kredi-cubugu::-webkit-progress-value { background: var(--accent); border-radius: 999px; }
 .kredi-cubugu::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
-.kredi-paketleri { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.kredi-paketi { display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
-.kredi-paketi b { color: var(--ink); font-size: var(--fs-base); font-weight: 650; }
-.kredi-paketi-fiyat { color: var(--ink); font-size: 22px; font-weight: 700; }
-.kredi-paketi small { margin-bottom: 6px; color: var(--muted); font-size: var(--fs-micro); }
-.kredi-paketi button { align-self: stretch; justify-content: center; }
+/*
+  ABONELİK VE KREDİ (28.10.2026, yeniden tasarım). Kredi göstergesi lacivert
+  bir kart: sayfanın tek "cüzdan" anı, öteki her şey sakin yüzeyde kalıyor.
+  Paketlerin düğmeleri kartın DİBİNE hizalı (eskiden açıklaması iki
+  satıra sarılan paketin düğmesi aşağı kayıyor, sıra bozuk görünüyordu).
+*/
+.kredi-sayac {
+  --sayac-vurgu: var(--accent-bright);
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--brand-700) 70%, transparent);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--accent-bright) 28%, transparent) 0%, transparent 55%),
+    linear-gradient(140deg, var(--brand-900), var(--brand-700));
+  color: var(--on-brand);
+  box-shadow: var(--shadow-md);
+}
+.kredi-sayac[data-tone="warning"] { --sayac-vurgu: var(--warning); }
+.kredi-sayac[data-tone="danger"] { --sayac-vurgu: var(--danger); }
+.kredi-sayac-ust { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.kredi-sayac-etiket {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: color-mix(in srgb, var(--on-brand) 72%, transparent);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.kredi-sayac-rozet {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid color-mix(in srgb, var(--on-brand) 22%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--on-brand) 10%, transparent);
+  font-size: var(--fs-micro);
+  font-weight: 650;
+}
+.kredi-sayac-sayi { font-size: clamp(34px, 4vw, 44px); font-weight: 750; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.kredi-sayac .kredi-cubugu,
+.kredi-sayac .kredi-cubugu::-webkit-progress-bar { height: 8px; background: color-mix(in srgb, var(--on-brand) 16%, transparent); }
+.kredi-sayac .kredi-cubugu::-webkit-progress-value { background: var(--sayac-vurgu); }
+.kredi-sayac .kredi-cubugu::-moz-progress-bar { background: var(--sayac-vurgu); }
+.kredi-sayac-ayrinti { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 4px 0 0; }
+.kredi-sayac-ayrinti > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--on-brand) 8%, transparent);
+}
+.kredi-sayac-ayrinti dt { display: inline-flex; align-items: center; gap: 6px; color: color-mix(in srgb, var(--on-brand) 72%, transparent); font-size: var(--fs-micro); font-weight: 600; }
+.kredi-sayac-ayrinti dd { margin: 0; font-size: var(--fs-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
+.kredi-sayac-ayrinti dd small { color: color-mix(in srgb, var(--on-brand) 60%, transparent); font-size: var(--fs-sm); font-weight: 500; }
+.kredi-sayac-ayrinti > div > small { color: color-mix(in srgb, var(--on-brand) 60%, transparent); font-size: var(--fs-micro); }
+.kredi-nokta { width: 8px; height: 8px; border-radius: 50%; background: var(--sayac-vurgu); }
+.kredi-nokta[data-tur="ek"] { background: var(--on-brand); }
+@media (max-width: 420px) { .kredi-sayac-ayrinti { grid-template-columns: minmax(0, 1fr); } }
+.kredi-bos { display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* Üstte boşluk: öne çıkan paketin şeridi kartın kenarından taşıyor. */
+.kredi-paketleri { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px 12px; padding-top: 8px; }
+/* Dar ekranda tek sütun: ikili ızgarada üçüncü paket tek başına kalıyordu. */
+@media (max-width: 520px) { .kredi-paketleri { grid-template-columns: minmax(0, 1fr); } }
+.kredi-paketi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  transition: border-color .15s ease, box-shadow .2s ease, transform .2s var(--ease-spring);
+}
+.kredi-paketi:hover { border-color: color-mix(in srgb, var(--accent-500) 45%, var(--line)); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.kredi-paketi[data-one-cikan] {
+  border-color: var(--accent-500);
+  background: linear-gradient(180deg, var(--accent-soft), var(--surface) 70%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-500) 14%, transparent), var(--shadow-sm);
+}
+.kredi-paketi-serit {
+  position: absolute;
+  top: -10px;
+  left: 14px;
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  /* Yeşil (accent-500) üstünde beyaz 11px yazı AA'yı geçmiyordu. */
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.kredi-paketi-ad { color: var(--muted); font-size: var(--fs-sm); font-weight: 650; }
+.kredi-paketi-fiyat { color: var(--ink); font-size: 26px; font-weight: 750; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.kredi-paketi-birim { color: var(--muted); font-size: var(--fs-sm); }
+.kredi-paketi-indirim {
+  align-self: flex-start;
+  margin: 6px 0 12px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+}
+.kredi-paketi-indirim[data-bos] { background: var(--surface-2); color: var(--muted); }
+.kredi-paketi button { align-self: stretch; justify-content: center; margin-top: auto; }
+@media (prefers-reduced-motion: reduce) { .kredi-paketi, .kredi-paketi:hover { transform: none; transition: none; } }
+.kredi-guvence { display: flex; align-items: flex-start; gap: 8px; }
+.kredi-guvence svg { flex: none; margin-top: 2px; color: var(--success); }
+
+.kredi-hareketleri { display: grid; margin: 0; padding: 0; list-style: none; }
+.kredi-hareket { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid var(--line-soft); }
+.kredi-hareket:last-child { border-bottom: 0; }
+.kredi-hareket .gb-satir-govde { flex: 1; min-width: 0; }
+.kredi-hareket-ikon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.kredi-hareket[data-tone="success"] .kredi-hareket-ikon { background: var(--success-soft); color: var(--success); }
+.kredi-hareket[data-tone="info"] .kredi-hareket-ikon { background: var(--info-soft); color: var(--info); }
+.kredi-hareket-tutar { color: var(--ink-soft); font-size: var(--fs-base); font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kredi-hareket-tutar small { color: var(--muted); font-size: var(--fs-micro); font-weight: 500; }
+.kredi-hareket[data-tone="success"] .kredi-hareket-tutar { color: var(--success); }
+
+.fatura-bos {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 28px 16px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-lg);
+  text-align: center;
+}
+.fatura-bos-ikon { display: inline-grid; place-items: center; width: 44px; height: 44px; margin-bottom: 6px; border-radius: 50%; background: var(--surface-2); color: var(--muted); }
+.fatura-bos b { color: var(--ink); font-size: var(--fs-body); }
+.fatura-bos small { color: var(--muted); font-size: var(--fs-sm); }
 /* Ana sayfa: tez kartı ve yanında Abonelik ve kredi kartı tek sırada */
 .tez-ust-sira { display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 1fr); gap: 16px; align-items: stretch; }
 .tez-ust-sira .tez-olcumler { gap: 10px; }
@@ -527,9 +673,9 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .abonelik-ozet-eylem { align-self: flex-start; margin-top: auto; }
 /* Abonelik sayfası: faturalar ve ödemeler (cari özet + ödeme satırları) */
 .cari-ozet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
-.cari-ozet > div { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); }
+.cari-ozet > div { padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-2); }
 .cari-ozet dt { color: var(--muted); font-size: var(--fs-micro); }
-.cari-ozet dd { margin: 2px 0 0; color: var(--ink); font-size: var(--fs-base); font-weight: 650; }
+.cari-ozet dd { margin: 4px 0 0; color: var(--ink); font-size: var(--fs-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
 .fatura-satir { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 4px 10px; padding: 8px; border-bottom: 1px solid var(--line); }
 .fatura-satir:last-child { border-bottom: 0; }
 .fatura-tutar { color: var(--ink); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }

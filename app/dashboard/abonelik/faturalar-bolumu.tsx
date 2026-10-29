@@ -137,7 +137,18 @@ export default async function FaturalarBolumu({ veri, kurum }: { veri: Faturalam
               ))}
             </ul>
           ) : (
-            <p className="gb-bos">{t({ tr: "Henüz ödeme yok.", en: "No payments yet." })}</p>
+            <div className="fatura-bos">
+              <span className="fatura-bos-ikon" aria-hidden="true">
+                <Receipt size={20} />
+              </span>
+              <b>{t({ tr: "Henüz ödeme yok", en: "No payments yet" })}</b>
+              <small>
+                {t({
+                  tr: "Ödemeler, faturalar ve makbuzlar burada listelenir.",
+                  en: "Payments, invoices and receipts will be listed here.",
+                })}
+              </small>
+            </div>
           )}
         </>
       )}

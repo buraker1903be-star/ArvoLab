@@ -1,6 +1,6 @@
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { redirect } from "next/navigation";
-import { History } from "lucide-react";
+import { Gift, History, Infinity as Sinirsiz, Lock, Plus, RefreshCw, Sparkles, Wallet } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { getAccessState } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -93,10 +93,11 @@ const KART_DURUMU: Record<string, { ton: "success" | "danger" | "info"; metin: M
   },
 };
 
-const HAREKET: Record<string, { ad: Metin; isaret: string }> = {
-  yukleme: { ad: { tr: "Satın alındı", en: "Purchased" }, isaret: "+" },
-  yenileme: { ad: { tr: "Aylık hak yenilendi", en: "Monthly allowance renewed" }, isaret: "" },
-  tuketim: { ad: { tr: "Asistan çalışması", en: "Assistant run" }, isaret: "−" },
+/* Hareket türünün simgesi ve tonu: listeyi okumadan taramak için (yükleme yeşil, tüketim nötr). */
+const HAREKET: Record<string, { ad: Metin; isaret: string; ikon: typeof Plus; ton: "success" | "info" | "neutral" }> = {
+  yukleme: { ad: { tr: "Satın alındı", en: "Purchased" }, isaret: "+", ikon: Plus, ton: "success" },
+  yenileme: { ad: { tr: "Aylık hak yenilendi", en: "Monthly allowance renewed" }, isaret: "", ikon: RefreshCw, ton: "info" },
+  tuketim: { ad: { tr: "Asistan çalışması", en: "Assistant run" }, isaret: "−", ikon: Sparkles, ton: "neutral" },
 };
 
 export default async function AbonelikPage({ searchParams }: { searchParams: Promise<{ hata?: string; kart?: string }> }) {
@@ -158,6 +159,13 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   const satis = access.kind === "individual" ? ("bireysel" as const) : kurumKredisi ? ("kurum" as const) : null;
   const paketler = satis === "bireysel" ? access.krediPaketleri : satis === "kurum" ? (faturalamaVeri?.krediPaketleri ?? []) : [];
   const enUcuzBirim = paketler.length ? Math.max(...paketler.map(binKrediFiyati)) : 0;
+  /*
+    Öne çıkan paket: birim fiyatı EN DÜŞÜK olan ("En avantajlı"). Eskiden
+    listenin ilk paketi birincil düğmeyi alıyordu — en pahalı birim
+    fiyatlı paket görsel olarak önerilmiş oluyordu. Etiket ölçülebilir bir
+    gerçeği söylüyor, "popüler" gibi doğrulanamayan bir iddiayı değil.
+  */
+  const enAvantajli = paketler.length > 1 ? paketler.reduce((a, b) => (binKrediFiyati(b) < binKrediFiyati(a) ? b : a)).kod : null;
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">
@@ -251,38 +259,53 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
           */}
           {kredi.goster ? (
             <>
-              <div className="kaynakca-puan" data-tone={kredi.tukendi ? "danger" : kredi.ekBakiye === 0 && kredi.oran >= 80 ? "warning" : "success"}>
-                <b>{sayi(kredi.toplam)}</b>
-                <span>{t({ tr: "kredi kullanılabilir", en: "credits available" })}</span>
+              {/*
+                Kredi göstergesi: büyük sayı toplam kullanılabilir kredi; şerit
+                iki parçalı — aylık hak (yanar) ile satın alınan bakiye (yanmaz)
+                ayrı renkte, çünkü kullanıcının "hangisi önce biter" sorusu
+                tam bu ayrım. Yerleşik <progress> aylık oranı erişilebilir
+                biçimde taşıyor; satır içi genişlik stili yazılmıyor.
+              */}
+              <div className="kredi-sayac" data-tone={kredi.tukendi ? "danger" : kredi.ekBakiye === 0 && kredi.oran >= 80 ? "warning" : "success"}>
+                <div className="kredi-sayac-ust">
+                  <span className="kredi-sayac-etiket">
+                    <Wallet size={15} aria-hidden="true" /> {t({ tr: "Kullanılabilir kredi", en: "Available credits" })}
+                  </span>
+                  {kredi.ekBakiye > 0 ? (
+                    <span className="kredi-sayac-rozet">
+                      <Sinirsiz size={13} aria-hidden="true" /> {t({ tr: `${sayi(kredi.ekBakiye)} yanmaz`, en: `${sayi(kredi.ekBakiye)} never expire` })}
+                    </span>
+                  ) : null}
+                </div>
+                <b className="kredi-sayac-sayi">{sayi(kredi.toplam)}</b>
+                <progress
+                  className="kredi-cubugu"
+                  max={Math.max(1, kredi.aylikLimit)}
+                  value={kredi.aylikKalan}
+                  aria-label={t({
+                    tr: `Aylık hakkın ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} kredisi kaldı`,
+                    en: `${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} monthly credits left`,
+                  })}
+                />
+                <dl className="kredi-sayac-ayrinti">
+                  <div>
+                    <dt>
+                      <span className="kredi-nokta" data-tur="aylik" aria-hidden="true" /> {t({ tr: "Bu ay kalan hak", en: "Left this month" })}
+                    </dt>
+                    <dd>
+                      {sayi(kredi.aylikKalan)} <small>/ {sayi(kredi.aylikLimit)}</small>
+                    </dd>
+                    <small>{t({ tr: "Ayın başında yenilenir", en: "Renews at the start of the month" })}</small>
+                  </div>
+                  <div>
+                    <dt>
+                      <span className="kredi-nokta" data-tur="ek" aria-hidden="true" /> {t({ tr: "Satın alınan bakiye", en: "Purchased balance" })}
+                    </dt>
+                    <dd>{sayi(kredi.ekBakiye)}</dd>
+                    <small>{t({ tr: "Yanmaz; aylık hak bitince kullanılır", en: "Never expires; used after the monthly allowance" })}</small>
+                  </div>
+                </dl>
               </div>
-              {/* Yerleşik <progress>: satır içi genişlik stili yazmadan dolu oranı gösterir. */}
-              <progress
-                className="kredi-cubugu"
-                max={Math.max(1, kredi.aylikLimit)}
-                value={kredi.aylikKalan}
-                aria-label={t({
-                  tr: `Aylık hakkın ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} kredisi kaldı`,
-                  en: `${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} monthly credits left`,
-                })}
-              />
-              <ul className="gb-liste">
-                <li className="gb-satir">
-                  <span className="gb-satir-govde">
-                    <b>{t({ tr: "Bu ay kalan hak", en: "Left this month" })}</b>
-                    <small>{t({ tr: `Ayın başında ${sayi(kredi.aylikLimit)} krediye yenilenir`, en: `Renews to ${sayi(kredi.aylikLimit)} credits at the start of the month` })}</small>
-                  </span>
-                  <span className="gb-zaman">
-                    {sayi(kredi.aylikKalan)} / {sayi(kredi.aylikLimit)}
-                  </span>
-                </li>
-                <li className="gb-satir">
-                  <span className="gb-satir-govde">
-                    <b>{t({ tr: "Satın alınan bakiye", en: "Purchased balance" })}</b>
-                    <small>{t({ tr: "Yanmaz; aylık hak bitince kullanılır", en: "Never expires; used once the monthly allowance runs out" })}</small>
-                  </span>
-                  <span className="gb-zaman">{sayi(kredi.ekBakiye)}</span>
-                </li>
-              </ul>
               {kredi.tukendi ? (
                 <p className="tone-text text-sm" data-tone="danger">
                   {t({ tr: "Krediniz bitti; asistan yeni çalışma yapmıyor.", en: "You are out of credits; the assistant will not run new checks." })}{" "}
@@ -295,7 +318,8 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
               ) : null}
             </>
           ) : (
-            <p className="gb-bos">
+            <p className="gb-bos kredi-bos">
+              {access.kind === "staff" ? <Gift size={18} aria-hidden="true" /> : null}
               {access.kind === "staff"
                 ? t({ tr: "İç ekip hesapları asistan kredisine tabi değil.", en: "Internal team accounts are not subject to assistant credits." })
                 : t({
@@ -323,19 +347,25 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
               </h3>
               {paketler.length ? (
                 <div className="kredi-paketleri">
-                  {paketler.map((paket, i) => {
+                  {paketler.map((paket) => {
                     const birim = binKrediFiyati(paket);
                     const indirim = enUcuzBirim > birim ? Math.round((1 - birim / enUcuzBirim) * 100) : 0;
+                    const oneCikan = paket.kod === enAvantajli;
                     return (
-                      <form action={satis === "kurum" ? kurumKrediSatinAl : krediSatinAl} key={paket.kod} className="kredi-paketi">
+                      <form action={satis === "kurum" ? kurumKrediSatinAl : krediSatinAl} key={paket.kod} className="kredi-paketi" data-one-cikan={oneCikan || undefined}>
                         <input type="hidden" name="paket" value={paket.kod} />
-                        <b>{paket.ad}</b>
+                        {oneCikan ? <span className="kredi-paketi-serit">{t({ tr: "En avantajlı", en: "Best value" })}</span> : null}
+                        <span className="kredi-paketi-ad">{paket.ad}</span>
                         <span className="kredi-paketi-fiyat">{fiyat(paket.fiyat)}</span>
-                        <small>
+                        <span className="kredi-paketi-birim">
                           {t({ tr: `1.000 kredi ${fiyat(birim)}`, en: `${fiyat(birim)} per 1,000 credits` })}
-                          {indirim ? t({ tr: ` · %${indirim} avantajlı`, en: ` · save ${indirim}%` }) : ""}
-                        </small>
-                        <OdemeButonu birincil={i === 0} etiket={t({ tr: "Satın al", en: "Buy" })} />
+                        </span>
+                        {indirim ? (
+                          <span className="kredi-paketi-indirim">{t({ tr: `%${indirim} tasarruf`, en: `Save ${indirim}%` })}</span>
+                        ) : (
+                          <span className="kredi-paketi-indirim" data-bos="true">{t({ tr: "Başlangıç paketi", en: "Starter pack" })}</span>
+                        )}
+                        <OdemeButonu birincil={oneCikan} etiket={t({ tr: "Satın al", en: "Buy" })} />
                       </form>
                     );
                   })}
@@ -348,7 +378,8 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                   })}
                 </p>
               )}
-              <p className="hint">
+              <p className="hint kredi-guvence">
+                <Lock size={14} aria-hidden="true" />
                 {satis === "kurum"
                   ? t({
                       tr: "Ödeme ArvoOS üzerinden kartla alınır (PayTR) ve kurumunuz adına kaydedilir; ödeme geçmişinde ve faturalarda görünür. Onaylanınca kredi birkaç dakika içinde kurumun bakiyesine eklenir ve bütün üyeler kullanır.",
@@ -367,19 +398,26 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
               <h3 className="calisma-durum-alt">
                 <History size={14} aria-hidden="true" /> {t({ tr: "Son hareketler", en: "Recent activity" })}
               </h3>
-              <ul className="gb-liste">
-                {sonHareketler.map((h, i) => (
-                  <li key={i} className="gb-satir">
-                    <span className="gb-satir-govde">
-                      <b>{HAREKET[h.tur] ? t(HAREKET[h.tur].ad) : h.tur}</b>
-                      <small>{tarihSaat(h.created_at)}</small>
-                    </span>
-                    <span className="gb-zaman">
-                      {HAREKET[h.tur]?.isaret ?? ""}
-                      {sayi(Number(h.kredi))} {t({ tr: "kredi", en: "credits" })}
-                    </span>
-                  </li>
-                ))}
+              <ul className="kredi-hareketleri">
+                {sonHareketler.map((h, i) => {
+                  const tur = HAREKET[h.tur];
+                  const Ikon = tur?.ikon ?? Sparkles;
+                  return (
+                    <li key={i} className="kredi-hareket" data-tone={tur?.ton ?? "neutral"}>
+                      <span className="kredi-hareket-ikon" aria-hidden="true">
+                        <Ikon size={14} />
+                      </span>
+                      <span className="gb-satir-govde">
+                        <b>{tur ? t(tur.ad) : h.tur}</b>
+                        <small>{tarihSaat(h.created_at)}</small>
+                      </span>
+                      <span className="kredi-hareket-tutar">
+                        {tur?.isaret ?? ""}
+                        {sayi(Number(h.kredi))} <small>{t({ tr: "kredi", en: "credits" })}</small>
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </>
           ) : null}
