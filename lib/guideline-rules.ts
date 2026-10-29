@@ -1,6 +1,7 @@
 import type { KilavuzSayiKurali, OndalikAyirici } from "@/lib/sayi-bicimi";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeGuidelineEditorSettings, type GuidelineEditorSettings } from "@/lib/guideline-editor-settings";
+import { kilavuzAdi, surumEtiketiMi } from "@/lib/kilavuz-dogrulama";
 
 // Bir çalışmaya uygulanan kılavuzun SON ONAYLI sürümü. Editör, kontrol ve
 // Word çıktısı hep buradan okur; böylece üçü aynı kuralları kullanır.
@@ -161,6 +162,9 @@ export interface CalismaKilavuzuRow {
   belge_basligi: string | null;
   kurallar: unknown;
   olusturuldu?: string | null;
+  /* Her kayıtta yenilenir; olusturuldu yalnızca ilk eklemede yazılıyor (upsert). */
+  guncellendi?: string | null;
+  depo_yolu?: string | null;
 }
 
 /*
@@ -213,8 +217,19 @@ export function appliedGuidelineFromCalisma(row: CalismaKilavuzuRow): AppliedGui
 
   return {
     id: `calisma:${row.project_id}`,
-    version: `${String(row.olusturuldu ?? "")}${OKUYUCU_SURUMU}`,
-    label: row.belge_basligi ?? "Yüklediğiniz kılavuz",
+    /*
+      Sürüm `guncellendi`'den. Eskiden `olusturuldu`'dan üretiliyordu; kayıt
+      upsert olduğu için o sütun yalnızca İLK yüklemede yazılıyor. Öğrenci
+      "Kılavuzu değiştir" ile düzeltilmiş PDF yüklediğinde sürüm aynı
+      kalıyor, eşitleme "güncel" diyor ve yeni kenar boşlukları editöre hiç
+      inmiyordu (29.10.2026, ölçüldü).
+    */
+    version: `${String(row.guncellendi ?? row.olusturuldu ?? "")}${OKUYUCU_SURUMU}`,
+    /* Hatalı dönemde ad yerine sürüm etiketi yazıldı ("2019"); o kayıtlarda ad kaynaktan türetilir. */
+    label:
+      (row.belge_basligi && !surumEtiketiMi(row.belge_basligi) ? row.belge_basligi : null) ??
+      kilavuzAdi({ depoYolu: row.depo_yolu, adres: row.kaynak_adres }) ??
+      "Yüklediğiniz kılavuz",
     universityName: "",
     instituteName: null,
     versionLabel: null,
@@ -228,7 +243,7 @@ export function appliedGuidelineFromCalisma(row: CalismaKilavuzuRow): AppliedGui
     minPages: kurallar.min_pages ?? null,
     maxPages: kurallar.max_pages ?? null,
     settings: normalizeGuidelineEditorSettings(kuralKumesi(kurallar.extracted_rules)),
-    lastCheckedAt: row.olusturuldu ?? null,
+    lastCheckedAt: row.guncellendi ?? row.olusturuldu ?? null,
     updatePending: false,
     dogrulandi: false,
   };
@@ -265,7 +280,7 @@ export async function calismaKilavuzuOku(
 
   const { data, error } = await supabase
     .from("calisma_kilavuzu")
-    .select("project_id, kaynak_adres, belge_basligi, kurallar, olusturuldu")
+    .select("project_id, kaynak_adres, depo_yolu, belge_basligi, kurallar, olusturuldu, guncellendi")
     .eq("project_id", projectId)
     .maybeSingle();
   if (error) {
@@ -347,7 +362,7 @@ export async function calismaKilavuzlari(
 
   const { data, error } = await supabase
     .from("calisma_kilavuzu")
-    .select("project_id, kaynak_adres, belge_basligi, kurallar, olusturuldu")
+    .select("project_id, kaynak_adres, depo_yolu, belge_basligi, kurallar, olusturuldu, guncellendi")
     .in("project_id", kalan);
   if (error) {
     console.error("[kilavuz] çalışma kılavuzları okunamadı:", error.message);

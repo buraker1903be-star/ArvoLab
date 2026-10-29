@@ -143,3 +143,13 @@ test("tez kelime sınırı onay özetinde görünüyor", () => {
   assert.deepEqual(ozet({ thesisWords: { max: 100000 } }, "en"), ["Thesis length: at most 100,000 words"]);
   assert.deepEqual(ozet({ thesisWords: { min: 15000, max: 20000 } }), ["Tez uzunluğu: 15.000–20.000 kelime"]);
 });
+
+test("kılavuzun adı kaynaktan, sürüm etiketinden değil", async () => {
+  const { kilavuzAdi, surumEtiketiMi } = await import("@/lib/kilavuz-dogrulama");
+  assert.equal(kilavuzAdi({ depoYolu: "u1/kilavuz/1793270000000-Tez_Yazim_Kilavuzu_2024.pdf" }), "Tez Yazim Kilavuzu 2024");
+  assert.equal(kilavuzAdi({ adres: "https://grad.example.edu/files/Thesis%20Guide.pdf" }), "Thesis Guide");
+  assert.equal(kilavuzAdi({ adres: "https://grad.example.edu/" }), "grad.example.edu");
+  assert.equal(kilavuzAdi({}), null);
+  for (const eski of ["2019", "Sürüm 3", "Şubat 2024"]) assert.equal(surumEtiketiMi(eski), true, eski);
+  assert.equal(surumEtiketiMi("Tez Yazım Kılavuzu 2019"), false);
+});

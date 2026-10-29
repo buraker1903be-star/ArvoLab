@@ -235,3 +235,42 @@ export function bicimOzeti(ayarlar: {
   }
   return satirlar;
 }
+
+/*
+  KILAVUZUN ADI (29.10.2026). Eskiden öğrencinin yüklediği kılavuzun adı
+  tarayıcının SÜRÜM etiketinden dolduruluyordu (surumEtiketiCikar: "Sürüm 3",
+  "Şubat 2024", ya da kapaktaki ilk yıl). Editörün "Uygulanan kılavuz"
+  kartı, çalışma özeti ve Belge Kontrol kılavuzu "2019" diye adlandırıyordu;
+  "Sürüm …" İngilizce arayüzde de Türkçe kalıyordu. Ad artık öğrencinin
+  verdiği kaynaktan: dosyanın adı ya da adresin son parçası.
+*/
+export function kilavuzAdi(kaynak: { depoYolu?: string | null; adres?: string | null }): string | null {
+  const temizle = (ham: string) =>
+    ham
+      .replace(/\.(pdf|docx?|html?)$/i, "")
+      .replace(/[_+]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 120) || null;
+  if (kaynak.depoYolu) {
+    // "<kullanıcı>/kilavuz/<zaman>-<dosya adı>" (kilavuz-yukle.tsx)
+    const son = kaynak.depoYolu.split("/").pop() ?? "";
+    return temizle(son.replace(/^\d{10,}-/, ""));
+  }
+  if (kaynak.adres) {
+    try {
+      const url = new URL(kaynak.adres.trim());
+      const parca = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() ?? "");
+      return temizle(parca) ?? url.hostname;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** Hatalı dönemde ad yerine yazılmış sürüm etiketi mi ("2019", "Sürüm 3", "Şubat 2024")? */
+export function surumEtiketiMi(ad: string | null | undefined): boolean {
+  const s = (ad ?? "").trim();
+  return /^(?:(?:19|20)\d{2}|Sürüm \d+(?:\.\d+)*|(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık) (?:19|20)\d{2})$/u.test(s);
+}

@@ -41,7 +41,14 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
   const [adres, setAdres] = useState("");
   const [sonuc, setSonuc] = useState<TaramaSonucu | null>(null);
   const [form, setForm] = useState<DogrulamaFormu | null>(null);
-  const [depoYolu, setDepoYolu] = useState<string | null>(null);
+  /*
+    En son TARANAN kaynak; kayıt yalnızca bunu gönderir (29.10.2026).
+    Eskiden adres kutusu ve dosya yolu ayrı tutuluyor, "Başka bir dosya
+    seç" ile geri dönülünce sıfırlanmıyordu: adresi okutup sonra PDF
+    yükleyen öğrencinin kuralları PDF'ten, "kılavuzu aç" bağlantısı
+    ilgisiz adresten geliyordu.
+  */
+  const [taranan, setTaranan] = useState<{ depoYolu?: string; adres?: string } | null>(null);
   const [yeniBolum, setYeniBolum] = useState("");
   const [kaydediliyor, setKaydediliyor] = useState(false);
   const router = useRouter();
@@ -85,7 +92,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
         setAdim("secim");
         return;
       }
-      setDepoYolu(yol);
+      setTaranan({ depoYolu: yol });
       /* Süre dürüstçe yazılıyor: taranmış PDF'te OCR yarım dakikayı bulabiliyor. */
       setDurum(
         t({
@@ -106,6 +113,7 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
     setAdim("tarama");
     setDurum(t({ tr: "Kılavuz indiriliyor ve okunuyor…", en: "Downloading and reading the guideline…" }));
     try {
+      setTaranan({ adres: adres.trim() });
       taramayiBitir(await kilavuzuTara(projectId, { adres }));
     } catch (err) {
       console.error(err);
@@ -125,8 +133,8 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
     const cevap = await kilavuzuKaydet(projectId, {
       form,
       belgeBasligi: sonuc?.belgeBasligi ?? null,
-      kaynakAdres: adres.trim() || null,
-      depoYolu,
+      kaynakAdres: taranan?.adres ?? null,
+      depoYolu: taranan?.depoYolu ?? null,
       hamCikarim: sonuc?.ham,
     });
     setKaydediliyor(false);

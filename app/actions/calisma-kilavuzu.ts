@@ -13,6 +13,7 @@ import {
   formaDoldur,
   formuDogrula,
   kurallariKur,
+  kilavuzAdi,
   type DogrulamaFormu,
 } from "@/lib/kilavuz-dogrulama";
 
@@ -121,7 +122,8 @@ export async function kilavuzuTara(
         minPages: sonuc.minPages,
         maxPages: sonuc.maxPages,
       }),
-      belgeBasligi: sonuc.versionLabel,
+      // Ad kaynaktan (dosya adı / adres); eskiden sürüm etiketiydi ("2019"). Bkz. kilavuzAdi.
+      belgeBasligi: kilavuzAdi({ depoYolu: girdi.depoYolu, adres: girdi.adres }),
       ham: sonuc,
       /* Çıkarımın uyarıları Türkçe üretiliyor (lib/guideline-scan.ts); ekranda kullanıcının dilinde. */
       uyarilar: sonuc.warnings.map((uyari) => taramaUyarisiCevir(uyari, dil)),
@@ -176,6 +178,20 @@ export async function kilavuzuKaydet(
   const hatalar = formuDogrula(girdi.form);
   if (hatalar.length > 0) return { error: dogrulamaMesaji(hatalar[0], dil) };
 
+  /*
+    Dosya yolu kayıtta da taramadaki gibi denetleniyor: yalnızca kullanıcının
+    kendi klasörü. Eskiden yalnızca taramada denetleniyordu; kayıt yolu
+    sütunu doğrudan yazıyordu (bugün okuyan yok, ama aşağıdaki depo
+    temizliği bu yolu SİLECEK).
+  */
+  const depoYolu =
+    girdi.depoYolu && girdi.depoYolu.startsWith(`${ctx.user.id}/`) && !girdi.depoYolu.includes("..") ? girdi.depoYolu : null;
+  const { data: onceki } = await ctx.supabase
+    .from("calisma_kilavuzu")
+    .select("depo_yolu")
+    .eq("project_id", projectId)
+    .maybeSingle();
+
   const kurallar = kurallariKur(girdi.form, {
     belgeBasligi: girdi.belgeBasligi,
     kaynakAdres: girdi.kaynakAdres,
@@ -186,7 +202,7 @@ export async function kilavuzuKaydet(
     {
       project_id: projectId,
       kaynak_adres: girdi.kaynakAdres ?? null,
-      depo_yolu: girdi.depoYolu ?? null,
+      depo_yolu: depoYolu,
       belge_basligi: girdi.belgeBasligi ?? null,
       kurallar,
       yukleyen: ctx.user.id,
@@ -216,6 +232,7 @@ export async function kilavuzuKaydet(
     .from("academic_projects")
     .update({ citation_style: girdi.form.atifStili })
     .eq("id", projectId);
+  await eskiDosyayiSil(ctx.supabase, onceki?.depo_yolu, depoYolu);
   if (stilHatasi) {
     console.error("[calisma-kilavuzu] çalışmanın atıf stili güncellenemedi:", stilHatasi.message);
     return {
@@ -241,6 +258,23 @@ export async function kilavuzuKaydet(
   yani kuralları yanlış çıkarılmış bir kılavuzu yükleyen öğrencinin onu
   geri alma yolu yoktu.
 */
+/*
+  Değiştirilen ya da kaldırılan kılavuzun PDF'i depodan silinir (29.10.2026).
+  Eskiden hiç silinmiyordu: her yükleme project-files'ta kalıyordu ve
+  depo_yolu'nu okuyan kimse yoktu (kaynak-pdf.ts ile uak-tablosu.ts eski
+  dosyayı zaten siliyor). Silinemezse akış düşmez, yalnızca log'a yazılır:
+  kılavuz kaydedildi/kaldırıldı, artık dosya kalması bir bedel, hata değil.
+*/
+async function eskiDosyayiSil(
+  supabase: NonNullable<Awaited<ReturnType<typeof getAuthContext>>>["supabase"],
+  eskiYol: string | null | undefined,
+  yeniYol: string | null,
+) {
+  if (!eskiYol || eskiYol === yeniYol) return;
+  const { error } = await supabase.storage.from("project-files").remove([eskiYol]);
+  if (error) console.error("[calisma-kilavuzu] eski kılavuz dosyası silinemedi:", error.message);
+}
+
 export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> {
   const t = await ceviri();
   const projectId = String(formData.get("projectId") ?? "");
@@ -255,11 +289,17 @@ export async function kilavuzuKaldir(formData: FormData): Promise<ActionResult> 
     yazılmış olabilir. Kılavuz kalkınca stili eski değerine döndürmek,
     öğrencinin yazdığı künyeleri sessizce "hatalı" gösterirdi.
   */
-  const { error } = await izin.ctx.supabase.from("calisma_kilavuzu").delete().eq("project_id", projectId);
+  const { data: silinen, error } = await izin.ctx.supabase
+    .from("calisma_kilavuzu")
+    .delete()
+    .eq("project_id", projectId)
+    .select("depo_yolu")
+    .maybeSingle();
   if (error) {
     console.error("[calisma-kilavuzu] silinemedi:", error.message);
     return { error: t({ tr: "Kılavuz kaldırılamadı. Tekrar deneyin.", en: "The guideline could not be removed. Try again." }) };
   }
+  await eskiDosyayiSil(izin.ctx.supabase, silinen?.depo_yolu, null);
   revalidatePath(`/dashboard/editor/${projectId}`);
   revalidatePath("/dashboard/editor");
   revalidatePath(`/dashboard/editor/${projectId}/write`);

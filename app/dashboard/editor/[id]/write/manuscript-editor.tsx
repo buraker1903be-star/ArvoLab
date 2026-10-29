@@ -83,7 +83,7 @@ import AnalizEkleDialog from "./analiz-ekle-dialog";
 import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import type { CitationStyle } from "@/lib/citation-format";
-import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
+import { STIL_SECENEKLERI, stilAdi } from "@/lib/atif/stiller";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
   saveManuscript,
@@ -2162,10 +2162,15 @@ export default function ManuscriptEditor({
       {guideline && syncMode === "auto-applied" ? (
         <div className="guideline-applied-banner" role="status">
           <div>
-            <strong>{t({ tr: "Kılavuzun yeni sürümü uygulandı", en: "The guideline's new version was applied" })}</strong>
+            {/* Öğrencinin kendi kılavuzunda "yeni sürüm" yok: kurallar yüklendi ya da yeniden okundu. */}
+            <strong>
+              {guideline.dogrulandi
+                ? t({ tr: "Kılavuzun yeni sürümü uygulandı", en: "The guideline's new version was applied" })
+                : t({ tr: "Kılavuzunuzun kuralları uygulandı", en: "Your guideline's rules were applied" })}
+            </strong>
             <span>{guideline.label}</span>
             <span className="guideline-meta text-sm">
-              {guideline.citationStyle.toUpperCase()}
+              {stilAdi(guideline.citationStyle)}
               {guideline.versionLabel ? ` · ${guideline.versionLabel}` : ""}
               {formatDate(guideline.version)
                 ? t({ tr: ` · Onay: ${formatDate(guideline.version)}`, en: ` · Approved: ${formatDate(guideline.version)}` })
@@ -2407,7 +2412,7 @@ export default function ManuscriptEditor({
                 </span>
                 <strong title={guideline.label}>{guideline.label}</strong>
                 <span className="kontrol-etiketler">
-                  <span className="kontrol-etiket">{guideline.citationStyle.toUpperCase()}</span>
+                  <span className="kontrol-etiket">{stilAdi(guideline.citationStyle)}</span>
                   {formatDate(guideline.version) ? (
                     <span className="kontrol-etiket">
                       {t({ tr: `Onay ${formatDate(guideline.version)}`, en: `Approved ${formatDate(guideline.version)}` })}
@@ -2797,19 +2802,32 @@ export default function ManuscriptEditor({
           onClose={closeGuideline}
           kicker={t({ tr: "Tez yazım kılavuzu", en: "Thesis writing guideline" })}
           title={guideline.label}
-          description={t({
-            tr: "Ekibimizin onayladığı son sürüm. Yeni sürüm onaylandığında editörünüze kendiliğinden yansır.",
-            en: "The latest version approved by our team. When a new version is approved, it is reflected in your editor automatically.",
-          })}
+          /* Öğrencinin kendi yüklediği kılavuz ekibin onayından geçmedi; eskiden
+             bu pencere onu da "ekibimizin onayladığı son sürüm" diye sunuyordu. */
+          description={
+            guideline.dogrulandi
+              ? t({
+                  tr: "Ekibimizin onayladığı son sürüm. Yeni sürüm onaylandığında editörünüze kendiliğinden yansır.",
+                  en: "The latest version approved by our team. When a new version is approved, it is reflected in your editor automatically.",
+                })
+              : t({
+                  tr: "Kendi yüklediğiniz kılavuz: kuralları siz onayladınız, kurumunuzun onayından geçmedi. Değiştirmek ya da kaldırmak için çalışma özetindeki Kılavuz penceresini kullanın.",
+                  en: "The guideline you uploaded: you confirmed its rules; it has not been approved by your institution. To replace or remove it, use the Guideline window in the work overview.",
+                })
+          }
         >
           <dl className="guideline-rules">
-            <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
-            <dd>
-              {guideline.universityName}
-              {guideline.instituteName ? ` — ${guideline.instituteName}` : ""}
-            </dd>
+            {guideline.universityName ? (
+              <>
+                <dt>{t({ tr: "Kurum", en: "Institution" })}</dt>
+                <dd>
+                  {guideline.universityName}
+                  {guideline.instituteName ? ` — ${guideline.instituteName}` : ""}
+                </dd>
+              </>
+            ) : null}
             <dt>{t({ tr: "Kaynakça", en: "References" })}</dt>
-            <dd>{guideline.citationStyle.toUpperCase()}</dd>
+            <dd>{stilAdi(guideline.citationStyle)}</dd>
             {guideline.settings.fontFamily || guideline.settings.fontSizePt ? (
               <>
                 <dt>{t({ tr: "Yazı", en: "Font" })}</dt>
@@ -2929,7 +2947,9 @@ export default function ManuscriptEditor({
               rel="noopener noreferrer"
               className="projects-filter-button mt-md"
             >
-              {t({ tr: "Resmî kılavuzu aç", en: "Open the official guideline" })}
+              {guideline.dogrulandi
+                ? t({ tr: "Resmî kılavuzu aç", en: "Open the official guideline" })
+                : t({ tr: "Yüklediğiniz kılavuzu aç", en: "Open the guideline you uploaded" })}
             </a>
           ) : null}
         </Dialog>

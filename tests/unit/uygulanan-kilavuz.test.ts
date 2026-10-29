@@ -277,3 +277,44 @@ describe("öğrenci kılavuzunun eski damgası", () => {
     assert.equal(resolveGuidelineSync(g, { ...metin, settingsSource: { ...eskiDamga, customized: true } }).mode, "offer");
   });
 });
+
+describe("öğrenci kılavuzunu değiştirince", () => {
+  /*
+    Kayıt upsert: olusturuldu yalnızca ilk yüklemede yazılıyor. Sürüm ondan
+    üretildiğinde "Kılavuzu değiştir" sonrası eşitleme "current" diyor ve yeni
+    kenar boşlukları editöre inmiyordu (inceleme, 29.10.2026).
+  */
+  const satir = (guncellendi: string, ust: number) => ({
+    project_id: "p",
+    olusturuldu: "2026-10-27T10:00:00Z",
+    guncellendi,
+    belge_basligi: "2019",
+    depo_yolu: "u1/kilavuz/1793270000000-Graduate_Thesis_Guide.pdf",
+    kaynak_adres: null,
+    kurallar: {
+      citation_style: "apa7",
+      required_sections: ["Introduction"],
+      min_pages: null,
+      max_pages: null,
+      extracted_rules: { suggestedRules: { margins_cm: { top: ust, bottom: ust, left: ust, right: ust } } },
+    },
+  });
+
+  test("yeniden yükleme yeni sürümdür; dokunulmamış belgeye uygulanır", () => {
+    const ilk = appliedGuidelineFromCalisma(satir("2026-10-27T10:00:00Z", 3) as never)!;
+    const yeni = appliedGuidelineFromCalisma(satir("2026-10-29T09:00:00Z", 4) as never)!;
+    assert.notEqual(ilk.version, yeni.version);
+    const sonuc = resolveGuidelineSync(yeni, {
+      margins: { top: 3, bottom: 3, left: 3, right: 3 },
+      showPageNumbers: true,
+      headingNumbering: false,
+      settingsSource: { guidelineId: ilk.id, version: ilk.version, customized: false },
+    });
+    assert.equal(sonuc.mode, "auto-applied");
+    assert.equal(sonuc.margins.top, 4);
+  });
+
+  test("ad sürüm etiketinden değil, dosyadan", () => {
+    assert.equal(appliedGuidelineFromCalisma(satir("2026-10-29T09:00:00Z", 3) as never)!.label, "Graduate Thesis Guide");
+  });
+});
