@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { appliedGuidelineFromCalisma, appliedGuidelineFromRow, type GuidelineRow } from "../../lib/guideline-rules";
+import { appliedGuidelineFromCalisma, appliedGuidelineFromRow, calismaKilavuzlari, type GuidelineRow } from "../../lib/guideline-rules";
 import { kurallariKur } from "../../lib/kilavuz-dogrulama";
 import { resolveGuidelineSync } from "../../lib/guideline-sync";
 
@@ -316,5 +316,37 @@ describe("öğrenci kılavuzunu değiştirince", () => {
 
   test("ad sürüm etiketinden değil, dosyadan", () => {
     assert.equal(appliedGuidelineFromCalisma(satir("2026-10-29T09:00:00Z", 3) as never)!.label, "Graduate Thesis Guide");
+  });
+});
+
+describe("toplu okuma: katalog okunamazsa", () => {
+  const ogrenciSatiri = (projectId: string) => ({
+    project_id: projectId,
+    kaynak_adres: null,
+    depo_yolu: null,
+    belge_basligi: "Kendi kılavuzum",
+    kurallar: { citation_style: "apa7", required_sections: ["Giriş"], min_pages: null, max_pages: null },
+    olusturuldu: "2026-10-27T10:00:00Z",
+    guncellendi: "2026-10-27T10:00:00Z",
+  });
+  /* Yalnızca iki sorguyu yanıtlayan sahte istemci: katalog hata veriyor, öğrenci tablosu iki satır döndürüyor. */
+  const istemci = {
+    from: (tablo: string) => ({
+      select: () => ({
+        in: async (_sutun: string, degerler: string[]) =>
+          tablo === "thesis_guidelines"
+            ? { data: null, error: { message: "geçici arıza" } }
+            : { data: [ogrenciSatiri("katalogBagli"), ogrenciSatiri("katalogsuz")].filter((r) => degerler.includes(r.project_id)), error: null },
+      }),
+    }),
+  };
+
+  test("katalog kılavuzu bağlı çalışmaya öğrencinin yüklediği uygulanmaz", async () => {
+    const sonuc = await calismaKilavuzlari(istemci as never, [
+      { id: "katalogBagli", guideline_id: "k1" },
+      { id: "katalogsuz", guideline_id: null },
+    ]);
+    assert.equal(sonuc.has("katalogBagli"), false, "onaylı kuralın yerine onaylanmamış olan konmamalı");
+    assert.equal(sonuc.get("katalogsuz")?.label, "Kendi kılavuzum");
   });
 });

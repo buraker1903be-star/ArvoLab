@@ -321,19 +321,27 @@ export async function loadAppliedGuidelines(
   supabase: SupabaseClient,
   guidelineIds: (string | null | undefined)[]
 ): Promise<Map<string, AppliedGuideline>> {
-  const result = new Map<string, AppliedGuideline>();
+  return (await katalogKilavuzlari(supabase, guidelineIds)).harita;
+}
+
+/* Okuma hatası "katalogda yok"tan AYRI taşınıyor (calismaKilavuzlari'na bakın). */
+async function katalogKilavuzlari(
+  supabase: SupabaseClient,
+  guidelineIds: (string | null | undefined)[]
+): Promise<{ harita: Map<string, AppliedGuideline>; okunamadi: boolean }> {
+  const harita = new Map<string, AppliedGuideline>();
   const ids = [...new Set(guidelineIds.filter((id): id is string => Boolean(id)))];
-  if (ids.length === 0) return result;
+  if (ids.length === 0) return { harita, okunamadi: false };
   const { data, error } = await supabase.from("thesis_guidelines").select("*").in("id", ids);
   if (error) {
     console.error(error);
-    return result;
+    return { harita, okunamadi: true };
   }
   for (const row of (data ?? []) as GuidelineRow[]) {
     const applied = appliedGuidelineFromRow(row);
-    if (applied) result.set(applied.id, applied);
+    if (applied) harita.set(applied.id, applied);
   }
-  return result;
+  return { harita, okunamadi: false };
 }
 
 /*
@@ -350,13 +358,22 @@ export async function calismaKilavuzlari(
   supabase: SupabaseClient,
   calismalar: { id: string; guideline_id: string | null | undefined }[],
 ): Promise<Map<string, AppliedGuideline>> {
-  const katalog = await loadAppliedGuidelines(supabase, calismalar.map((c) => c.guideline_id));
+  const { harita: katalog, okunamadi: katalogOkunamadi } = await katalogKilavuzlari(
+    supabase,
+    calismalar.map((c) => c.guideline_id),
+  );
   const sonuc = new Map<string, AppliedGuideline>();
   const kalan: string[] = [];
   for (const c of calismalar) {
     const k = c.guideline_id ? katalog.get(c.guideline_id) : undefined;
     if (k) sonuc.set(c.id, k);
-    else kalan.push(c.id);
+    /*
+      Katalog OKUNAMADIYSA katalog kılavuzu bağlı çalışmaya öğrencinin
+      yüklediği uygulanmaz (calismaKilavuzuOku ile aynı kural, 29.10.2026).
+      Eskiden okuma hatası boş sonuçtan ayırt edilmiyordu ve geçici bir
+      arızada kartlar onaylı kuralın yerine onaylanmamış olanı gösteriyordu.
+    */
+    else if (!(c.guideline_id && katalogOkunamadi)) kalan.push(c.id);
   }
   if (!kalan.length) return sonuc;
 
