@@ -43,7 +43,13 @@ const CUMLE_SONU = /[.;:!?]\s+(?=[A-ZÇĞİÖŞÜ])/gu;
 const sadelestir = (metin: string) => metin.toLocaleLowerCase("tr-TR").replaceAll("ı", "i");
 
 /** Cümle gövde metninden söz ediyor. */
-const GOVDE = /metin kismi|metin kisimlari|metin içeri|ana metin|tüm metin|tüm yazi|tez metni|tezin tamami|gövde metni|gövde|düz metin|normal metin/gu;
+/*
+  İngilizce işaretler (29.10.2026, lib/kilavuz-ingilizce.ts) bilerek DAR:
+  "the text" gibi genel bir ifade "Tables in the text should be 10 pt"
+  cümlesini gövdenin kuralı yapardı.
+*/
+const GOVDE =
+  /metin kismi|metin kisimlari|metin içeri|ana metin|tüm metin|tüm yazi|tez metni|tezin tamami|gövde metni|gövde|düz metin|normal metin|body text|main text|running text|body of the (?:thesis|dissertation|text|document)|text of the (?:thesis|dissertation)|entire (?:thesis|dissertation|document|manuscript)/gu;
 
 /*
   Gövde dışı işareti iptal eden olumsuzlama.
@@ -56,12 +62,16 @@ const GOVDE = /metin kismi|metin kisimlari|metin içeri|ana metin|tüm metin|tü
 */
 const OLUMSUZ = /hariç|haricinde|dişinda|dişindaki|dişindakiler|olmayan/gu;
 
+/* İngilizcede olumsuzlama işaretin ÖNÜNDE: "all text except headings is 12 pt". */
+const ONCEKI_OLUMSUZ = /(?:except(?: for)?|other than|excluding|apart from|with the exception of)\s[^.;]{0,25}$/u;
+
 /*
   Cümle gövdeden BAŞKA bir şeyden söz ediyor. Geniş tutuldu: bu listeye
   yanlışlıkla giren bir cümle ölçüyü kaybettirir (yönetici elle girer),
   girmeyen bir cümle ise yanlış ölçüyü öğrencinin belgesine yazar.
 */
-const GOVDE_DISI = /başlik|dipnot|kapak|özet|abstract|içindekiler|tablo|çizelge|şekil|resim|grafik|alinti|kaynak|sayfa numara|jüri|beyan|teşekkür|simge|kisaltma|\bek(?:ler|i|te)?\b/gu;
+const GOVDE_DISI =
+  /başlik|dipnot|kapak|özet|abstract|içindekiler|tablo|çizelge|şekil|resim|grafik|alinti|kaynak|sayfa numara|jüri|beyan|teşekkür|simge|kisaltma|\bek(?:ler|i|te)?\b|heading|\btitles?\b|title page|cover|footnote|endnote|caption|\btables?\b|figure|contents|quot|block quot|references?\b|bibliograph|appendi|acknowledg|page numb|signature|committee|copyright|dedication/gu;
 
 /** Desenin metindeki bütün eşleşme konumları. */
 function konumlar(metin: string, desen: RegExp): number[] {
@@ -84,7 +94,7 @@ const sonKonum = (metin: string, desen: RegExp): number => konumlar(metin, desen
  */
 function disiKonum(onceki: string): number {
   const gecerliler = konumlar(onceki, GOVDE_DISI).filter(
-    (konum) => sonKonum(onceki.slice(konum), OLUMSUZ) < 0,
+    (konum) => sonKonum(onceki.slice(konum), OLUMSUZ) < 0 && !ONCEKI_OLUMSUZ.test(onceki.slice(0, konum)),
   );
   return gecerliler.at(-1) ?? -1;
 }

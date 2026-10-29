@@ -190,10 +190,26 @@ export function bicimOzeti(ayarlar: {
   /* Türkçe ondalık virgülle; "3.5 cm" yazmak kılavuzun kendi
      yazımına yabancı duruyor. İngilizcede nokta. */
   const yaz = (d: number) => (en ? String(d) : String(d).replace(".", ","));
+  /*
+    İngilizce kılavuzlar boşluğu inçle yazıyor (29.10.2026, lib/kilavuz-
+    ingilizce.ts) ve öğrenci onay formunda kendi kılavuzunun "1 inch"ini
+    tanımalı; "2.54 cm" ona yabancı. Dört değer de çeyrek inçe tam
+    oturuyorsa inç önde, cm parantezde; oturmuyorsa yalnızca cm (yuvarlayıp
+    "1 in" yazmak, ölçüyü değiştirmek olurdu).
+  */
+  const inchMargins = (k: { top?: number; right?: number; bottom?: number; left?: number }) => {
+    const cm = `top ${yaz(k.top!)} · right ${yaz(k.right!)} · bottom ${yaz(k.bottom!)} · left ${yaz(k.left!)} cm`;
+    const inc = [k.top!, k.right!, k.bottom!, k.left!].map((d) => {
+      const i = Math.round((d / 2.54) * 4) / 4;
+      return Math.abs(i * 2.54 - d) < 0.02 ? i : null;
+    });
+    if (inc.some((i) => i === null)) return `Margins: ${cm}`;
+    return `Margins: top ${inc[0]} · right ${inc[1]} · bottom ${inc[2]} · left ${inc[3]} in (${cm})`;
+  };
   if (m && [m.top, m.right, m.bottom, m.left].every((d) => typeof d === "number")) {
     satirlar.push(
       en
-        ? `Margins: top ${yaz(m.top!)} · right ${yaz(m.right!)} · bottom ${yaz(m.bottom!)} · left ${yaz(m.left!)} cm`
+        ? inchMargins(m)
         : `Kenar boşlukları: üst ${yaz(m.top!)} · sağ ${yaz(m.right!)} · alt ${yaz(m.bottom!)} · sol ${yaz(m.left!)} cm`,
     );
   }

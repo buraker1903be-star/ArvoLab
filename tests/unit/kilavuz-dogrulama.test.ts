@@ -128,3 +128,13 @@ test("doğrulama mesajı ve biçim özeti İngilizce", () => {
     "Each main chapter starts on a new page",
   ]);
 });
+
+test("İngilizce özet inçe tam oturan boşlukları inçle yazar", () => {
+  assert.deepEqual(ozet({ margins: { top: 2.54, right: 2.54, bottom: 2.54, left: 3.81 } }, "en"), [
+    "Margins: top 1 · right 1 · bottom 1 · left 1.5 in (top 2.54 · right 2.54 · bottom 2.54 · left 3.81 cm)",
+  ]);
+  // Türkçede her zaman cm.
+  assert.deepEqual(ozet({ margins: { top: 2.54, right: 2.54, bottom: 2.54, left: 3.81 } }), [
+    "Kenar boşlukları: üst 2,54 · sağ 2,54 · alt 2,54 · sol 3,81 cm",
+  ]);
+});

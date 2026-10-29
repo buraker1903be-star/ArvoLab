@@ -7,6 +7,7 @@ import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
 import { sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
 import type { Dil } from "@/lib/dil";
+import { INGILIZCE_BOLUMLER, ingilizceBelgeMi, ingilizceKurallar } from "@/lib/kilavuz-ingilizce";
 
 /**
  * Kılavuz Tarama Yardımcısı
@@ -67,12 +68,16 @@ const CANDIDATE_SECTIONS = [
         alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
         14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
         girinti 2 cm çıkmıştı (blok alıntının kuralı; gövdeninki 1 cm).
+    8 — İngilizce kılavuzlar okunuyor (lib/kilavuz-ingilizce.ts): inç ve
+        cm kenar boşlukları, "12-point", "double-spaced", İngilizce bölüm
+        adları. Eskiden İngilizce bir kılavuzdan yalnızca yazı tipi
+        çıkıyordu. Türkçe belgelerde çıkarım değişmedi.
     4 — saçma kenar boşlukları yok sayılıyor. Canlıda Burdur Fen Bilimleri
         kılavuzu "üst 29,7 cm" ile onaylandı: A4'ün tam yüksekliği, sayfa
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 7;
+export const TARAYICI_SURUMU = 8;
 
 /*
   Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
@@ -349,8 +354,10 @@ function detectedNumber(text: string, pattern: RegExp): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
-function extractFormattingRules(text: string, sectionCount: number, hasCitation: boolean) {
+export function extractFormattingRules(text: string, sectionCount: number, hasCitation: boolean, ingilizce = false) {
   const compact = text.replace(/\s+/g, " ");
+  /* İngilizce belgede Türkçe kalıpların bulamadığını İngilizce kalıplar doldurur (bkz. TARAYICI_SURUMU 8). */
+  const en = ingilizce ? ingilizceKurallar(compact) : null;
   /*
     Kenar boşluğu MAKUL ARALIKTA olmalı.
 
@@ -384,9 +391,10 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
     return deger;
   };
   const margins = {
-    top: margin("üst|üstten"), bottom: margin("alt|alttan"),
-    left: margin("sol|soldan"), right: margin("sağ|sağdan"),
+    top: margin("üst|üstten") ?? en?.bosluklar.top, bottom: margin("alt|alttan") ?? en?.bosluklar.bottom,
+    left: margin("sol|soldan") ?? en?.bosluklar.left, right: margin("sağ|sağdan") ?? en?.bosluklar.right,
   };
+  if (en) elenenBoslular.push(...en.elenenBosluklar);
   const fontFamily = /times\s+new\s+roman/i.test(compact) ? "Times New Roman"
     : /\barial\b/i.test(compact) ? "Arial"
     : /\bcalibri\b/i.test(compact) ? "Calibri"
@@ -399,8 +407,9 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
   */
   const gecerliPunto = (deger: number) => deger >= 8 && deger <= 24;
   const gecerliAralik = (deger: number) => deger >= 1 && deger <= 3;
-  const validFontSize = govdeOlcusu(compact, /(\d{1,2}(?:[,.]\d+)?)\s*(?:punto|pt)\b/iu, gecerliPunto);
-  const validLineSpacing = govdeOlcusu(compact, /(\d(?:[,.]\d+)?)\s*(?:satır\s+aralığı|satır\s+aralıklı)/iu, gecerliAralik);
+  const validFontSize = govdeOlcusu(compact, /(\d{1,2}(?:[,.]\d+)?)\s*(?:punto|pt)\b/iu, gecerliPunto) ?? en?.punto;
+  const validLineSpacing =
+    govdeOlcusu(compact, /(\d(?:[,.]\d+)?)\s*(?:satır\s+aralığı|satır\s+aralıklı)/iu, gecerliAralik) ?? en?.satirAraligi;
   /*
     Paragraf girintisi: önce gövdenin ölçüsü aranır, yoksa kural varlığına
     bakılır. Eskiden ilk eşleşme alınıyordu ve Adıyaman kılavuzunda BLOK
@@ -408,8 +417,10 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
     girintisi sanılıyordu; gerçek kural iki cümle sonra: "Her paragraf,
     soldan 1 cm içeriden başlar".
   */
-  const indentCm = validIndentCm(govdeOlcusu(compact, PARAGRAPH_INDENT_CM, (deger) => validIndentCm(deger) !== undefined));
-  const wantsIndent = PARAGRAPH_INDENT.test(compact);
+  const indentCm =
+    validIndentCm(govdeOlcusu(compact, PARAGRAPH_INDENT_CM, (deger) => validIndentCm(deger) !== undefined)) ??
+    validIndentCm(en?.girintiCm);
+  const wantsIndent = PARAGRAPH_INDENT.test(compact) || Boolean(en?.girintiIsteniyor);
   const paragraphIndentRule = indentCm
     ? { paragraph_indent_cm: indentCm }
     : wantsIndent
@@ -440,25 +451,46 @@ function extractFormattingRules(text: string, sectionCount: number, hasCitation:
       ...(fontFamily ? { font_family: fontFamily } : {}),
       ...(validFontSize ? { font_size_pt: validFontSize } : {}),
       ...(validLineSpacing ? { line_spacing: validLineSpacing } : {}),
-      show_page_numbers: /sayfa\s+numara(?:sı|ları|landırma)/iu.test(compact),
+      show_page_numbers: /sayfa\s+numara(?:sı|ları|landırma)/iu.test(compact) || Boolean(en?.sayfaNumarasi),
       // Ondalık başlık numaralandırması ("1.1.1.") yalnızca açıkça geçiyorsa önerilir;
       // bulunamazsa kural hiç yazılmaz (kapalı sayılmaz, yönetici karar verir).
-      ...(HEADING_NUMBERING.test(compact) ? { heading_numbering: true } : {}),
-      ...(CHAPTER_UPPERCASE.test(compact) ? { chapter_uppercase: true } : {}),
-      ...(CHAPTER_NEW_PAGE.test(compact) ? { chapter_new_page: true } : {}),
+      ...(HEADING_NUMBERING.test(compact) || en?.baslikNumarasi ? { heading_numbering: true } : {}),
+      ...(CHAPTER_UPPERCASE.test(compact) || en?.bolumBuyukHarf ? { chapter_uppercase: true } : {}),
+      ...(CHAPTER_NEW_PAGE.test(compact) || en?.bolumYeniSayfa ? { chapter_new_page: true } : {}),
       ...paragraphIndentRule,
-      ...(JUSTIFY.test(compact) ? { justify: true } : {}),
+      ...(JUSTIFY.test(compact) || en?.yasla ? { justify: true } : {}),
       /* Ölçü yazılmamışsa APA'nın standardı (1,27 cm) varsayılıyor;
          kural hiç geçmiyorsa yazılmıyor — "bilmiyorum" ile "istemiyor"
          aynı şey değil. */
       ...(HANGING_INDENT.test(compact)
-        ? { reference_hanging_indent_cm: detectedNumber(compact, HANGING_INDENT_CM) ?? DEFAULT_HANGING_CM }
+        ? { reference_hanging_indent_cm: detectedNumber(compact, HANGING_INDENT_CM) ?? en?.asiliCm ?? DEFAULT_HANGING_CM }
         : {}),
+      /* Türkçe sınır bulunduysa o; yoksa İngilizcesi (alan alan). */
+      ...(en ? en.ozet : {}),
       ...detectAbstractRules(compact),
     },
     confidence: Math.round(score * 100) / 100,
     warnings,
   };
+}
+
+/**
+ * Satır başında geçen bölüm adları. İngilizce belgede İngilizce adlar
+ * aranır; Türkçe listeye İngilizce ad eklemek Türkçe kılavuzun içindeki
+ * bir örnek satırı zorunlu bölüm yapardı.
+ */
+export function onerilenBolumler(text: string, ingilizce: boolean): string[] {
+  const adaylar = ingilizce ? INGILIZCE_BOLUMLER : CANDIDATE_SECTIONS.map((ad) => ({ ad, desen: ad }));
+  /* İngilizce kılavuzlar "CHAPTER 1", "IV." ile numaralıyor; Türkçe önek eskisi gibi. */
+  const onek = ingilizce ? "(?:\\d+|[IVX]+|chapter\\s+\\w+)?[.):]?" : "\\d*[.)]?";
+  return adaylar
+    .filter(({ desen }) => {
+      // \b, Türkçe karakterlerde (ş, ı, ğ vb.) güvenilir çalışmadığı için
+      // sınır lib/sozcuk-siniri.ts'ten gelir (tek tanım).
+      const re = new RegExp(`(^|\\n)\\s*${onek}\\s*${desen}${SOZCUK_SONU}`, "iu");
+      return re.test(text);
+    })
+    .map(({ ad }) => ad);
 }
 
 async function sha256(data: ArrayBuffer): Promise<string> {
@@ -580,12 +612,8 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     text = stripHtml(html);
   }
 
-  const suggestedSections = CANDIDATE_SECTIONS.filter((section) => {
-    // \b, Türkçe karakterlerde (ş, ı, ğ vb.) güvenilir çalışmadığı için
-    // sınır lib/sozcuk-siniri.ts'ten gelir (tek tanım).
-    const re = new RegExp(`(^|\\n)\\s*\\d*[.)]?\\s*${section}${SOZCUK_SONU}`, "iu");
-    return re.test(text);
-  });
+  const ingilizce = ingilizceBelgeMi(text);
+  const suggestedSections = onerilenBolumler(text, ingilizce);
 
   /*
     Atıf sistemi sayıma ve baskınlığa göre seçilir (lib/atif-sistemi.ts).
@@ -596,7 +624,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
   const citationHint = atifSecimi?.etiket ?? null;
   const citationMentions = atifGecisleri(text);
   const sayiBicimiOnerisi = sayiKuraliOner(text);
-  const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint));
+  const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint), ingilizce);
   const sayfaSiniri = sayfaSiniriCikar(text);
   const kilavuzDegil = kilavuzDegilUyarisi(
     formatting.confidence,
