@@ -151,13 +151,18 @@ export default function KartFormu({
         </label>
       </div>
 
-      <label className="kart-formu-onay">
-        <input type="checkbox" checked={kaydet} onChange={(e) => setKaydet(e.target.checked)} />
-        <span>
-          <b>{t({ tr: "Kartımı kaydet, aboneliğim otomatik yenilensin", en: "Save my card and renew my subscription automatically" })}</b>
-          {consentText ? <small>{consentText}</small> : null}
-        </span>
-      </label>
+      {/* Onay metni boş = ArvoOS otomatik yenilemeyi kapattı (29.10.2026, her ödeme
+          3D Secure'lu). Eskiden kutu metinsiz de çiziliyordu; seçilse bile ArvoOS
+          onayı "hayır" yazacağı için kullanıcıyı yanıltırdı. */}
+      {consentText ? (
+        <label className="kart-formu-onay">
+          <input type="checkbox" checked={kaydet} onChange={(e) => setKaydet(e.target.checked)} />
+          <span>
+            <b>{t({ tr: "Kartımı kaydet, aboneliğim otomatik yenilensin", en: "Save my card and renew my subscription automatically" })}</b>
+            <small>{consentText}</small>
+          </span>
+        </label>
+      ) : null}
 
       {/*
         Sözleşme onayı (29.10.2026). Eskiden form tutarı ve kart alanlarını

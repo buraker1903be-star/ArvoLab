@@ -221,9 +221,7 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                 {access.kind === "organization"
                   ? t({ tr: "Aboneliğinizi kurumunuz yönetiyor.", en: "Your subscription is managed by your institution." })
                   : access.kind === "individual"
-                    ? kartSaklama
-                      ? t({ tr: "Bireysel abonelik; ödeme kartla, otomatik yenileme isteğe bağlı.", en: "Individual subscription; paid by card, automatic renewal is optional." })
-                      : t({ tr: "Bireysel abonelik; ödeme kartla, otomatik çekim yok.", en: "Individual subscription; paid by card, no automatic charges." })
+                    ? t({ tr: "Bireysel abonelik; ödeme kartla, otomatik çekim yok.", en: "Individual subscription; paid by card, no automatic charges." })
                     : t({ tr: "İç ekip hesabı.", en: "Internal team account." })}
               </p>
             </div>
@@ -261,8 +259,13 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
               })}
             </p>
           ) : null}
-          {kartSaklama ? <KartBolumu durum={kartDurumu?.ok ? kartDurumu.veri : null} /> : null}
-          {kapsam ? <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} kartSaklama={kartSaklama} /> : null}
+          {/* Otomatik yenileme kaldırıldıktan sonra (29.10.2026) yeni kart kaydedilmiyor;
+              bölüm yalnızca eskiden kaydedilmiş bir kart (silebilsin) ya da açık kalmış
+              bir yenileme varsa çizilir. Boş "kayıtlı kartınız yok" kutusu yalnızca gürültüydü. */}
+          {kartSaklama && kartDurumu?.ok && (kartDurumu.veri.cards.length || kartDurumu.veri.autoRenew?.active) ? (
+            <KartBolumu durum={kartDurumu.veri} />
+          ) : null}
+          {kapsam ? <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} /> : null}
         </article>
 
         <article className="gb-kart gb-sutun kayan-kart">

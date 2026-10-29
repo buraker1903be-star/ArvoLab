@@ -22,7 +22,7 @@ export default async function KartBolumu({ durum }: { durum: KartDurumu | null }
   return (
     <>
       <h3 className="calisma-durum-alt">
-        <CreditCard size={14} aria-hidden="true" /> {t({ tr: "Kayıtlı kart ve otomatik yenileme", en: "Saved card and automatic renewal" })}
+        <CreditCard size={14} aria-hidden="true" /> {t({ tr: "Kayıtlı kart", en: "Saved card" })}
       </h3>
       {!durum ? (
         <p className="gb-bos">
@@ -62,8 +62,8 @@ export default async function KartBolumu({ durum }: { durum: KartDurumu | null }
           ) : (
             <p className="muted text-sm">
               {t({
-                tr: "Otomatik yenileme kapalı: kartınızdan kendiliğinden çekim yapılmaz. Açmak için kartla öderken \"Kartımı kaydet\" kutusunu işaretleyin.",
-                en: "Automatic renewal is off: nothing is charged to your card automatically. To turn it on, tick \"Save my card\" when paying by card.",
+                tr: "Kartınızdan kendiliğinden çekim yapılmaz; her dönemin ödemesini bankanızın 3D Secure onayıyla siz yaparsınız.",
+                en: "Nothing is charged to your card automatically; you pay each period yourself and approve it with your bank's 3D Secure check.",
               })}
             </p>
           )}

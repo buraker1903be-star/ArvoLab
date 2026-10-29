@@ -27,7 +27,10 @@
 import type { Dil } from "@/lib/dil";
 import { yasalAdres } from "@/lib/yasal-baglantilar";
 
-export const SOZLESME_SURUMU = "2026-10-29";
+/* Aynı gün ikinci sürüm: 5. madde otomatik yenilemeyi anlatıyordu, otomatik
+   çekim 29.10.2026'da kaldırıldı (ArvoOS otomatikYenilemeAcik). Sürüm
+   değişince herkes metni yeniden onaylar; eski onay neye verildiyse onu kanıtlar. */
+export const SOZLESME_SURUMU = "2026-10-29.2";
 
 export type SozlesmeBolumu = { baslik: string; paragraflar: string[] };
 export type SozlesmeMetni = { baslik: string; giris: string; bolumler: SozlesmeBolumu[] };
@@ -82,7 +85,7 @@ function turkce(): SozlesmeMetni {
         baslik: "5. Abonelik, ücret ve ödeme",
         paragraflar: [
           "Bireysel abonelik ve yapay zekâ kredi paketleri, ödeme anında gösterilen bedel üzerinden, Şirket'in anlaşmalı ödeme kuruluşu aracılığıyla tahsil edilir. Kart bilgileri Şirket tarafından saklanmaz.",
-          "Varsayılan olarak karttan otomatik çekim yapılmaz. Kullanıcı kartını kaydedip otomatik yenilemeyi açıkça seçerse dönem bedeli dönem sonunda kayıtlı karttan tahsil edilir; Kullanıcı otomatik yenilemeyi dilediği zaman kapatabilir.",
+          "Karttan otomatik çekim yapılmaz. Her dönemin bedeli ayrı ayrı ödenir ve kartla ödeme, Kullanıcı'nın bankasının 3D Secure doğrulamasıyla (tek kullanımlık şifre) onaylanır. Abonelik, dönem bedeli ödenmedikçe kendiliğinden yenilenmez.",
           "Kurum lisansı kapsamındaki kullanıcıların ücreti, kurum ile Şirket arasındaki sözleşmeye tabidir.",
           "Ödemenin onaylanmasıyla hizmet derhâl kullanıma açılır. Kullanıcı, ödemeden sonra bu sözleşmeyi yeniden görüntüleyip onaylayarak hizmetin ifasının başladığını kabul eder.",
         ],
@@ -214,7 +217,7 @@ function ingilizce(): SozlesmeMetni {
         baslik: "5. Subscription, fees and payment",
         paragraflar: [
           "Individual subscriptions and AI credit packages are charged at the price shown at the time of payment, through the Company's contracted payment institution. The Company does not store card details.",
-          "By default no automatic card charges are made. If the User saves a card and explicitly turns on automatic renewal, the period fee is charged to the saved card at the end of each period; the User may turn automatic renewal off at any time.",
+          "No automatic card charges are made. Each period is paid separately, and card payments are authorised by the User's bank through 3D Secure (one-time passcode). The subscription does not renew by itself unless the period fee is paid.",
           "Fees for users covered by an institution's licence are governed by the agreement between the institution and the Company.",
           "The service becomes available immediately once payment is approved. By reviewing and approving these terms again after payment, the User acknowledges that performance of the service has begun.",
         ],

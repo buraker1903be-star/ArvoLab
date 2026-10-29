@@ -37,7 +37,7 @@ const PROFORMA_DURUMU = {
   suresi_doldu: { ad: { tr: "Süresi doldu", en: "Expired" }, ton: "warning" },
 } as const;
 
-export default async function FaturalarBolumu({ veri, kurum, kartSaklama = false }: { veri: Faturalama | null; kurum: boolean; kartSaklama?: boolean }) {
+export default async function FaturalarBolumu({ veri, kurum }: { veri: Faturalama | null; kurum: boolean }) {
   const t = await ceviri();
   const dil = await aktifDil();
   const { tarih } = await tarihler();
@@ -67,13 +67,11 @@ export default async function FaturalarBolumu({ veri, kurum, kartSaklama = false
               <dd>{kurum ? tutarYazisi(veri.bekleyenTutar, "TRY", dil) : t({ tr: "Yok", en: "None" })}</dd>
             </div>
           </dl>
-          {/* Kart saklama açıkken otomatik yenileme seçilebiliyor; eskiden burada her
-              durumda "otomatik çekim yok" yazıyordu, hemen üstteki kart bölümüyle çelişiyordu. */}
+          {/* 28–29.10.2026 arasında kart saklama açıkken burada otomatik yenileme
+              anlatılıyordu; otomatik çekim kaldırıldı (her ödeme 3D Secure'lu). */}
           {!kurum ? (
             <p className="hint">
-              {kartSaklama
-                ? t({ tr: "Ödemeler peşin alınır, borç oluşmaz. Otomatik yenilemeyi açtıysanız dönem sonunda kayıtlı kartınızdan çekilir.", en: "Payments are taken up front and no debt builds up. If you turned on automatic renewal, your saved card is charged at the end of each period." })
-                : t({ tr: "Ödemeler peşin alınır; otomatik çekim ve borç oluşmaz.", en: "Payments are taken up front; there are no automatic charges and no debt." })}
+              {t({ tr: "Ödemeler peşin alınır; otomatik çekim ve borç oluşmaz.", en: "Payments are taken up front; there are no automatic charges and no debt." })}
             </p>
           ) : null}
           {veri.proformalar.length ? (
