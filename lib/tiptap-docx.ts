@@ -26,6 +26,7 @@ import { YEREL, type Dil } from "@/lib/dil";
 import { headingNumberMap, icindekilerSatirlari } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
+import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
 
 interface TiptapMark {
   type: string;
@@ -59,8 +60,6 @@ const ALIGNMENTS: Record<string, (typeof AlignmentType)[keyof typeof AlignmentTy
   justify: AlignmentType.JUSTIFIED,
 };
 
-const A4_WIDTH_TWIP = 11906;
-const A4_HEIGHT_TWIP = 16838;
 const TWIP_PER_PIXEL = 15; // 96 dpi
 const MAX_LIST_LEVEL = 8;
 
@@ -432,6 +431,8 @@ export interface BuildDocxOptions {
   doc: TiptapDoc;
   fetchImage: ConversionContext["fetchImage"];
   margins?: { top: number; bottom: number; left: number; right: number }; // cm cinsinden
+  /** Kâğıt boyutu; yoksa A4. Eskiden A4 sabitti (lib/kagit-boyutu.ts). */
+  pageSize?: KagitBoyutu;
   showPageNumbers?: boolean;
   coverPage?: CoverPageData | null;
   textDefaults?: DocxTextDefaults;
@@ -451,6 +452,7 @@ export async function buildDocxFromTiptap({
   doc,
   fetchImage,
   margins,
+  pageSize,
   showPageNumbers = true,
   coverPage,
   textDefaults = {},
@@ -460,6 +462,7 @@ export async function buildDocxFromTiptap({
 }: BuildDocxOptions): Promise<Document> {
   const en = dil === "en";
   const m = margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
+  const kagit = kagitOlcusu(pageSize);
   const marginTwip = {
     top: convertMillimetersToTwip(m.top * 10),
     bottom: convertMillimetersToTwip(m.bottom * 10),
@@ -470,7 +473,7 @@ export async function buildDocxFromTiptap({
     footnotes: {},
     nextFootnoteId: 1,
     nextListInstance: 1,
-    contentWidthTwip: Math.max(A4_WIDTH_TWIP - marginTwip.left - marginTwip.right, 2000),
+    contentWidthTwip: Math.max(kagit.genislikTwip - marginTwip.left - marginTwip.right, 2000),
     fetchImage,
     headingNumbers: headingNumbering ? headingNumberMap(doc) : new Map(),
     chapterBreaks: textDefaults.chapterNewPage ? chapterBreakSet(doc) : new Set(),
@@ -575,7 +578,7 @@ export async function buildDocxFromTiptap({
       {
         properties: {
           page: {
-            size: { width: A4_WIDTH_TWIP, height: A4_HEIGHT_TWIP },
+            size: { width: kagit.genislikTwip, height: kagit.yukseklikTwip },
             margin: marginTwip,
           },
         },

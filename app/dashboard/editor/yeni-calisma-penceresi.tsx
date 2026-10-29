@@ -156,7 +156,7 @@ export default function YeniCalismaPenceresi({
 
                 <label>
                   <span>{t({ tr: "Üniversite (isteğe bağlı)", en: "University (optional)" })}</span>
-                  <input name="university" type="text" maxLength={240} placeholder={t({ tr: "Örn. Dokuz Eylül Üniversitesi", en: "E.g. Dokuz Eylül University" })} />
+                  <input name="university" type="text" maxLength={240} placeholder={t({ tr: "Örn. Dokuz Eylül Üniversitesi", en: "E.g. University of Manchester" })} />
                 </label>
                 <label>
                   <span>{t({ tr: "Anabilim dalı (isteğe bağlı)", en: "Department (optional)" })}</span>

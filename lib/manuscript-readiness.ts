@@ -10,6 +10,7 @@ import { estimatePages } from "@/lib/page-estimate";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { CoverPage } from "@/app/actions/manuscript";
 import type { Dil } from "@/lib/dil";
+import { kagitOku } from "@/lib/kagit-boyutu";
 
 interface JsonNode {
   type?: string;
@@ -30,6 +31,8 @@ export interface ReadinessManuscript {
   margin_left_cm?: number | null;
   margin_right_cm?: number | null;
   show_page_numbers?: boolean | null;
+  /** Kâğıt boyutu (lib/kagit-boyutu.ts); yoksa A4. */
+  page_size?: string | null;
 }
 
 const textOf = (node: JsonNode): string => node.text ?? (node.content ?? []).map(textOf).join("");
@@ -72,10 +75,12 @@ export function manuscriptReadiness(input: {
     left: manuscript.margin_left_cm ?? 2.5,
     right: manuscript.margin_right_cm ?? 2.5,
   };
+  const pageSize = kagitOku(manuscript.page_size);
   const pages = estimatePages(manuscript.word_count ?? 0, {
     fontSizePt: guideline?.settings.fontSizePt,
     lineSpacing: guideline?.settings.lineSpacing,
     margins,
+    pageSize,
   });
   const headingNumbering = manuscript.heading_numbering ?? false;
 
@@ -106,6 +111,7 @@ export function manuscriptReadiness(input: {
     },
     pageSetup: sayfaDuzeniFarklari({
       margins,
+      pageSize,
       showPageNumbers: manuscript.show_page_numbers,
       kilavuz: guideline?.settings,
     }, dil),

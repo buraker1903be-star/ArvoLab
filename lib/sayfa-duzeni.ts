@@ -16,6 +16,7 @@
 
 import type { PageMargins } from "@/app/actions/manuscript";
 import { YEREL, type Dil, type Metin } from "@/lib/dil";
+import { KAGITLAR, kagitOku, type KagitBoyutu } from "@/lib/kagit-boyutu";
 
 export type SayfaDuzeniFarki = {
   /** Kullanıcıya gösterilen alan adı ("Üst boşluk"). */
@@ -55,11 +56,19 @@ const KENARLAR: { anahtar: keyof PageMargins; ad: Metin }[] = [
 export function sayfaDuzeniFarklari(girdi: {
   margins: PageMargins | null | undefined;
   showPageNumbers: boolean | null | undefined;
-  kilavuz: { margins?: PageMargins; showPageNumbers?: boolean } | null | undefined;
+  /** Yoksa A4 sayılır (bütün eski belgeler A4). */
+  pageSize?: KagitBoyutu | null;
+  kilavuz: { margins?: PageMargins; showPageNumbers?: boolean; pageSize?: KagitBoyutu } | null | undefined;
 }, dil: Dil = "tr"): SayfaDuzeniFarki[] {
   const kilavuz = girdi.kilavuz;
   if (!kilavuz) return [];
   const farklar: SayfaDuzeniFarki[] = [];
+
+  /* Kâğıt boyutu en başta: farklıysa kenar boşluklarının da anlamı değişir. */
+  const kagit = kagitOku(girdi.pageSize);
+  if (kilavuz.pageSize && kilavuz.pageSize !== kagit) {
+    farklar.push({ alan: dil === "en" ? "Paper size" : "Kâğıt boyutu", simdi: KAGITLAR[kagit].ad[dil], kilavuz: KAGITLAR[kilavuz.pageSize].ad[dil] });
+  }
 
   if (kilavuz.margins && girdi.margins) {
     for (const kenar of KENARLAR) {

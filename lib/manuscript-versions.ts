@@ -48,6 +48,7 @@ export async function snapshotManuscript(
         include_toc: manuscript.include_toc ?? false,
         // Migration çalıştırılmadıysa kolon yok: geri yüklemede olmayan kolona yazılmasın.
         ...(manuscript.heading_numbering !== undefined ? { heading_numbering: manuscript.heading_numbering } : {}),
+        ...(manuscript.page_size !== undefined ? { page_size: manuscript.page_size } : {}),
       },
       kind: options.kind,
       label: options.label?.trim().slice(0, 120) || null,

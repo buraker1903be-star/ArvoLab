@@ -10,6 +10,7 @@ import { downloadWriterImage, storagePathFromUrl } from "@/lib/manuscript-images
 import type { TiptapDoc } from "@/lib/tiptap-text";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { belgeDili } from "@/lib/belge-dili";
+import { kagitOku } from "@/lib/kagit-boyutu";
 
 // Büyük/resimli belgelerde Word oluşturma zaman alabilir.
 export const maxDuration = 60;
@@ -124,6 +125,7 @@ export async function GET(
       left: manuscript.margin_left_cm ?? 2.5,
       right: manuscript.margin_right_cm ?? 2.5,
     },
+    pageSize: kagitOku(manuscript.page_size),
     showPageNumbers: manuscript.show_page_numbers ?? true,
     coverPage: manuscript.cover_page ?? null,
     textDefaults,

@@ -10,6 +10,7 @@ import type { TiptapDoc } from "@/lib/tiptap-text";
 import ManuscriptSheet from "@/app/print/manuscript/manuscript-sheet";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { belgeDili } from "@/lib/belge-dili";
+import { kagitOku } from "@/lib/kagit-boyutu";
 
 // Danışmana salt okunur paylaşım: giriş gerekmez; bağlantı özetine göre sunucuda (service role)
 // aranır, süresi dolmuş ya da iptal edilmişse metin gösterilmez. Arama motorlarına kapalıdır,
@@ -104,6 +105,7 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
           left: row.margin_left_cm ?? 2.5,
           right: row.margin_right_cm ?? 2.5,
         },
+        pageSize: kagitOku(row.page_size),
         showPageNumbers: row.show_page_numbers ?? true,
         coverPage: (row.cover_page as CoverPage | null) ?? null,
         headingNumbering: row.heading_numbering ?? false,

@@ -102,6 +102,7 @@ import { calismaAdresi } from "@/lib/calisma-karti";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
+import { KAGIT_BOYUTLARI, KAGITLAR, kagitOku, type KagitBoyutu } from "@/lib/kagit-boyutu";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import type { KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import IcindekilerKarti from "./icindekiler-karti";
@@ -182,6 +183,8 @@ interface ManuscriptEditorProps {
   /** Veritabanındaki sürümün zamanı (çakışma denetimi için); null = hiç kaydedilmemiş */
   initialUpdatedAt: string | null;
   initialMargins?: PageMargins;
+  /** Kâğıt boyutu (lib/kagit-boyutu.ts); kılavuz eşitlemesinden geçmiş hâli. */
+  initialPageSize?: KagitBoyutu;
   initialShowPageNumbers?: boolean;
   initialCoverPage?: CoverPage | null;
   projectDefaults?: ProjectDefaults;
@@ -358,6 +361,7 @@ export default function ManuscriptEditor({
   initialContent,
   initialUpdatedAt,
   initialMargins,
+  initialPageSize,
   initialShowPageNumbers,
   initialCoverPage,
   projectDefaults,
@@ -485,6 +489,7 @@ export default function ManuscriptEditor({
   const [margins, setMargins] = useState<PageMargins>(
     initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
   );
+  const [pageSize, setPageSize] = useState<KagitBoyutu>(initialPageSize ?? "a4");
   const [showPageNumbers, setShowPageNumbers] = useState(initialShowPageNumbers ?? true);
   const [showPageSettings, setShowPageSettings] = useState(false);
   const [showCoverPageEditor, setShowCoverPageEditor] = useState(false);
@@ -518,6 +523,7 @@ export default function ManuscriptEditor({
   const payloadBytesRef = useRef(0);
   const settingsRef = useRef({
     margins,
+    pageSize,
     showPageNumbers,
     coverPage: coverPageEnabled ? coverPage : null,
     settingsSource,
@@ -597,6 +603,7 @@ export default function ManuscriptEditor({
                   fontSizePt: guideline.settings.fontSizePt,
                   lineSpacing: guideline.settings.lineSpacing,
                   margins: settingsRef.current.margins,
+                  pageSize: settingsRef.current.pageSize,
                 }),
                 minPages: guideline.minPages,
                 maxPages: guideline.maxPages,
@@ -771,14 +778,14 @@ export default function ManuscriptEditor({
   // (geliştirmedeki çift effect çalıştırması boş kayıt tetiklemesin).
   const settingsSnapshot = useRef<string | null>(null);
   useEffect(() => {
-    const next = { margins, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource, includeToc, headingNumbering };
+    const next = { margins, pageSize, showPageNumbers, coverPage: coverPageEnabled ? coverPage : null, settingsSource, includeToc, headingNumbering };
     const serialized = JSON.stringify(next);
     settingsRef.current = next;
     const previous = settingsSnapshot.current;
     settingsSnapshot.current = serialized;
     if (previous === null || previous === serialized) return;
     markDirtyRef.current();
-  }, [margins, showPageNumbers, coverPageEnabled, coverPage, settingsSource, includeToc, headingNumbering]);
+  }, [margins, pageSize, showPageNumbers, coverPageEnabled, coverPage, settingsSource, includeToc, headingNumbering]);
 
   // Numaralar editörde süsleme olarak gösterilir; açıp kapatmak metni değiştirmez.
   useEffect(() => {
@@ -1096,6 +1103,7 @@ export default function ManuscriptEditor({
   const acceptGuidelineSettings = useCallback(() => {
     if (!guideline) return;
     if (guideline.settings.margins) setMargins(guideline.settings.margins);
+    if (guideline.settings.pageSize) setPageSize(guideline.settings.pageSize);
     if (guideline.settings.showPageNumbers !== undefined) setShowPageNumbers(guideline.settings.showPageNumbers);
     if (guideline.settings.headingNumbering !== undefined) setHeadingNumbering(guideline.settings.headingNumbering);
     setSettingsSource({ guidelineId: guideline.id, version: guideline.version, customized: false });
@@ -1173,11 +1181,13 @@ export default function ManuscriptEditor({
     fontSizePt: guideline?.settings.fontSizePt,
     lineSpacing: guideline?.settings.lineSpacing,
     margins,
+    pageSize,
   });
   const sayfaBasiKelime = wordsPerPage({
     fontSizePt: guideline?.settings.fontSizePt,
     lineSpacing: guideline?.settings.lineSpacing,
     margins,
+    pageSize,
   });
   const pageTone = pageRangeTone(pages, guideline?.minPages ?? null, guideline?.maxPages ?? null);
 
@@ -1188,7 +1198,7 @@ export default function ManuscriptEditor({
     maxPages: guideline?.maxPages ?? null,
     dueDate,
     status: projectStatus,
-    settings: { fontSizePt: guideline?.settings.fontSizePt, lineSpacing: guideline?.settings.lineSpacing, margins },
+    settings: { fontSizePt: guideline?.settings.fontSizePt, lineSpacing: guideline?.settings.lineSpacing, margins, pageSize },
   }, dil);
 
   // Teslim kontrolü: editördeki denetimlerin tek listede özeti (lib/submission-checklist.ts)
@@ -1218,7 +1228,7 @@ export default function ManuscriptEditor({
     headingNumbering: { enabled: headingNumbering, guidelineRule: guideline?.settings.headingNumbering, manualNumbered },
     /* Kılavuz bağlanınca uygulanan sayfa düzeni sonradan elle
        değiştirilebiliyor; fark oluştuğunda listede görünür. */
-    pageSetup: sayfaDuzeniFarklari({ margins, showPageNumbers, kilavuz: guideline?.settings }, dil),
+    pageSetup: sayfaDuzeniFarklari({ margins, pageSize, showPageNumbers, kilavuz: guideline?.settings }, dil),
     saveState,
   }, dil);
   const handleChecklistAction = (action: ChecklistAction) => {
@@ -1272,6 +1282,7 @@ export default function ManuscriptEditor({
         break;
       case "apply-page-setup":
         if (guideline?.settings.margins) setMargins(guideline.settings.margins);
+        if (guideline?.settings.pageSize) setPageSize(guideline.settings.pageSize);
         if (guideline?.settings.showPageNumbers !== undefined) setShowPageNumbers(guideline.settings.showPageNumbers);
         showToast("success", t({ tr: "Sayfa düzeni kılavuza göre ayarlandı.", en: "Page layout set according to the guideline." }));
         break;
@@ -2224,6 +2235,24 @@ export default function ManuscriptEditor({
             <AlignVerticalSpaceAround size={14} />
             {t({ tr: "Sayfa kenar boşlukları (cm)", en: "Page margins (cm)" })}
           </span>
+          {/* Kâğıt boyutu (29.10.2026): ABD ve Kanada tezleri US Letter basılıyor. */}
+          <label>
+            <span>{t({ tr: "Kâğıt", en: "Paper" })}</span>
+            <select
+              className="compact-select"
+              value={pageSize}
+              onChange={(e) => {
+                markCustomized();
+                setPageSize(kagitOku(e.target.value));
+              }}
+            >
+              {KAGIT_BOYUTLARI.map((k) => (
+                <option key={k} value={k}>
+                  {t(KAGITLAR[k].ad)}
+                </option>
+              ))}
+            </select>
+          </label>
           {(["top", "bottom", "left", "right"] as const).map((side) => (
             <label key={side}>
               <span>

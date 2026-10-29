@@ -4,6 +4,7 @@ import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe
 import { atifGecisleri, atifSistemiSec } from "@/lib/atif-sistemi";
 import { sayiKuraliOner, type SayiOnerisi } from "@/lib/kilavuz-sayi-onerisi";
 import { pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
+import { kilavuzdanKagit } from "@/lib/kagit-boyutu";
 import { kelimeSiniriCikar, sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
 import type { Dil } from "@/lib/dil";
@@ -68,6 +69,7 @@ const CANDIDATE_SECTIONS = [
         alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
         14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
         girinti 2 cm çıkmıştı (blok alıntının kuralı; gövdeninki 1 cm).
+    10 — kâğıt boyutu (A4 / US Letter) okunuyor (lib/kagit-boyutu.ts).
     9 — tezin kelime sınırı (thesis_min_words/thesis_max_words) ve
         İngilizce sayfa sınırı okunuyor (lib/kilavuz-kunyesi.ts).
     8 — İngilizce kılavuzlar okunuyor (lib/kilavuz-ingilizce.ts): inç ve
@@ -79,7 +81,7 @@ const CANDIDATE_SECTIONS = [
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 9;
+export const TARAYICI_SURUMU = 10;
 
 /*
   Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
@@ -461,6 +463,7 @@ export function extractFormattingRules(text: string, sectionCount: number, hasCi
       ...(CHAPTER_NEW_PAGE.test(compact) || en?.bolumYeniSayfa ? { chapter_new_page: true } : {}),
       ...paragraphIndentRule,
       ...(JUSTIFY.test(compact) || en?.yasla ? { justify: true } : {}),
+      ...(kilavuzdanKagit(compact) ? { page_size: kilavuzdanKagit(compact) } : {}),
       /* Ölçü yazılmamışsa APA'nın standardı (1,27 cm) varsayılıyor;
          kural hiç geçmiyorsa yazılmıyor — "bilmiyorum" ile "istemiyor"
          aynı şey değil. */

@@ -136,6 +136,7 @@ export default async function WriteManuscriptPage({
         formatLoss={formatLoss?.affected ? formatLoss : null}
         initialUpdatedAt={manuscript?.updatedAt ?? null}
         initialMargins={sync.margins}
+        initialPageSize={sync.pageSize}
         initialShowPageNumbers={sync.showPageNumbers}
         initialCoverPage={manuscript?.coverPage}
         guideline={guideline}

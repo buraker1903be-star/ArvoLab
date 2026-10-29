@@ -1,6 +1,7 @@
 import type { PageMargins, SettingsSource } from "@/app/actions/manuscript";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { Dil, Metin } from "@/lib/dil";
+import { KAGITLAR, VARSAYILAN_KAGIT, type KagitBoyutu } from "@/lib/kagit-boyutu";
 
 export type GuidelineSyncMode =
   /** Çalışmaya bağlı onaylı kılavuz yok */
@@ -29,6 +30,8 @@ export interface GuidelineSyncResolution {
   margins: PageMargins;
   showPageNumbers: boolean;
   headingNumbering: boolean;
+  /* Kâğıt boyutu da metne kaydedilen bir sayfa ayarı (29.10.2026, lib/kagit-boyutu.ts). */
+  pageSize: KagitBoyutu;
   source: SettingsSource;
   /**
    * "auto-applied" için neyin değiştiği, "offer" için kabul edilirse neyin değişeceği.
@@ -42,6 +45,7 @@ interface ManuscriptSettings {
   showPageNumbers: boolean;
   /** Eski kayıtlarda (migration öncesi) olmayabilir */
   headingNumbering?: boolean;
+  pageSize?: KagitBoyutu;
   settingsSource: SettingsSource;
 }
 
@@ -68,11 +72,15 @@ interface SyncSettings {
   margins: PageMargins;
   showPageNumbers: boolean;
   headingNumbering: boolean;
+  pageSize: KagitBoyutu;
 }
 
 /** Metnin ayarlarıyla kılavuzun istediği ayarlar arasındaki farklar */
 function diffSettings(current: SyncSettings, wanted: SyncSettings, dil: Dil): GuidelineSyncChange[] {
   const changes: GuidelineSyncChange[] = [];
+  if (current.pageSize !== wanted.pageSize) {
+    changes.push({ label: dil === "en" ? "Paper size" : "Kâğıt boyutu", from: KAGITLAR[current.pageSize].ad[dil], to: KAGITLAR[wanted.pageSize].ad[dil] });
+  }
   for (const side of ["top", "bottom", "left", "right"] as const) {
     if (Math.abs(current.margins[side] - wanted.margins[side]) >= 0.01) {
       changes.push({ label: MARGIN_LABELS[side][dil], from: cm(current.margins[side], dil), to: cm(wanted.margins[side], dil) });
@@ -107,6 +115,7 @@ export function resolveGuidelineSync(
       margins: manuscript?.margins ?? DEFAULT_MARGINS,
       showPageNumbers: manuscript?.showPageNumbers ?? true,
       headingNumbering: manuscript?.headingNumbering ?? false,
+      pageSize: manuscript?.pageSize ?? VARSAYILAN_KAGIT,
       source: manuscript?.settingsSource ?? { guidelineId: null, version: null, customized: false },
       changes: [],
     };
@@ -117,6 +126,7 @@ export function resolveGuidelineSync(
     margins: guideline.settings.margins ?? manuscript?.margins ?? DEFAULT_MARGINS,
     showPageNumbers: guideline.settings.showPageNumbers ?? manuscript?.showPageNumbers ?? true,
     headingNumbering: guideline.settings.headingNumbering ?? manuscript?.headingNumbering ?? false,
+    pageSize: guideline.settings.pageSize ?? manuscript?.pageSize ?? VARSAYILAN_KAGIT,
   };
   if (!manuscript) return { mode: "fresh", ...fromGuideline, source: stamp, changes: [] };
 
@@ -124,6 +134,7 @@ export function resolveGuidelineSync(
     margins: manuscript.margins,
     showPageNumbers: manuscript.showPageNumbers,
     headingNumbering: manuscript.headingNumbering ?? false,
+    pageSize: manuscript.pageSize ?? VARSAYILAN_KAGIT,
   };
   const source = manuscript.settingsSource;
   if (source.guidelineId === guideline.id && source.version === guideline.version) {
@@ -134,7 +145,8 @@ export function resolveGuidelineSync(
   if (
     sameMargins(current.margins, fromGuideline.margins) &&
     current.showPageNumbers === fromGuideline.showPageNumbers &&
-    current.headingNumbering === fromGuideline.headingNumbering
+    current.headingNumbering === fromGuideline.headingNumbering &&
+    current.pageSize === fromGuideline.pageSize
   ) {
     return { mode: "current", ...current, source: stamp, changes: [] };
   }

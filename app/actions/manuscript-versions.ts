@@ -145,6 +145,7 @@ export async function restoreManuscriptVersion(
       ...pick("cover_page"),
       ...pick("include_toc"),
       ...pick("heading_numbering"),
+      ...pick("page_size"),
       updated_by: ctx.user.id,
       updated_at: new Date().toISOString(),
     })

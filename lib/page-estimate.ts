@@ -1,4 +1,6 @@
-// Kelime sayısından yaklaşık A4 sayfa sayısı. Şekil, tablo ve kapak dahil
+import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
+
+// Kelime sayısından yaklaşık sayfa sayısı (A4 ya da US Letter; lib/kagit-boyutu.ts). Şekil, tablo ve kapak dahil
 // değildir; kılavuzdaki sayfa aralığına ne kadar yaklaşıldığını göstermek için
 // kaba bir tahmindir. Referans: 12 pt, tek satır aralığı, 2,5 cm boşluklarda
 // sayfa başına ~500 kelime.
@@ -6,6 +8,8 @@ export interface PageEstimateSettings {
   fontSizePt?: number;
   lineSpacing?: number;
   margins?: { top: number; bottom: number; left: number; right: number };
+  /* Letter A4'ten kısa: aynı metin daha çok sayfa tutar (29.10.2026'ya kadar hep A4 sayılıyordu). */
+  pageSize?: KagitBoyutu;
 }
 
 const REFERENCE_AREA = (21 - 5) * (29.7 - 5);
@@ -15,7 +19,8 @@ export function wordsPerPage(settings: PageEstimateSettings = {}): number {
   const fontSize = settings.fontSizePt && settings.fontSizePt > 0 ? settings.fontSizePt : 12;
   const spacing = settings.lineSpacing && settings.lineSpacing > 0 ? settings.lineSpacing : 1.5;
   const m = settings.margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
-  const area = Math.max((21 - m.left - m.right) * (29.7 - m.top - m.bottom), 60) / REFERENCE_AREA;
+  const kagit = kagitOlcusu(settings.pageSize);
+  const area = Math.max((kagit.genislikCm - m.left - m.right) * (kagit.yukseklikCm - m.top - m.bottom), 60) / REFERENCE_AREA;
   return (500 / spacing) * (12 / fontSize) ** 2 * area;
 }
 

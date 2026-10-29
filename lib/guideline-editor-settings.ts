@@ -1,5 +1,6 @@
 import type { PageMargins } from "@/app/actions/manuscript";
 import { validHangingCm, validIndentCm } from "@/lib/paragraph-format";
+import { kagitMi, type KagitBoyutu } from "@/lib/kagit-boyutu";
 
 export interface GuidelineEditorSettings {
   margins?: PageMargins;
@@ -24,6 +25,8 @@ export interface GuidelineEditorSettings {
     sayfa sınırının sütunu var, bunun yok — kural kümesinde taşınıyor.
   */
   thesisWords?: { min?: number; max?: number };
+  /** Kılavuzun açıkça söylediği kâğıt boyutu (lib/kagit-boyutu.ts); söylemiyorsa yok. */
+  pageSize?: KagitBoyutu;
   fontFamily?: string;
   fontSizePt?: number;
   lineSpacing?: number;
@@ -132,6 +135,7 @@ export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorS
     ...(typeof rules.justify === "boolean" ? { justify: rules.justify } : {}),
     ...abstractRulesFrom(rules),
     ...tezKelimeSiniri(rules),
+    ...(kagitMi(rules.page_size) ? { pageSize: rules.page_size } : {}),
     ...(fontFamily ? { fontFamily } : {}),
     ...(fontSizePt && fontSizePt >= 8 && fontSizePt <= 24 ? { fontSizePt } : {}),
     ...(lineSpacing && lineSpacing >= 1 && lineSpacing <= 3 ? { lineSpacing } : {}),

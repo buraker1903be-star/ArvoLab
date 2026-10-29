@@ -3,12 +3,15 @@ import { renderTiptapHtml } from "@/lib/tiptap-html";
 import { icindekilerSatirlari, type IcindekilerSatiri } from "@/lib/heading-numbering";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { Dil } from "@/lib/dil";
+import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
 import type { CoverPage, PageMargins } from "@/app/actions/manuscript";
 
 // Baskı görünümü (yazdırma sayfası ve danışman paylaşım sayfası aynı çıktıyı kullanır):
 // kılavuzun yazı tipi, boyutu, satır aralığı ve metnin kenar boşlukları.
 export interface PrintSheetManuscript {
   margins?: PageMargins;
+  /** Yoksa A4 (lib/kagit-boyutu.ts). */
+  pageSize?: KagitBoyutu;
   showPageNumbers?: boolean;
   coverPage?: CoverPage | null;
   headingNumbering?: boolean;
@@ -65,11 +68,13 @@ export function buildPrintSheet(
   const fontSize = guideline?.settings.fontSizePt ?? 12;
   const lineSpacing = guideline?.settings.lineSpacing ?? 1.5;
   const showPageNumbers = manuscript?.showPageNumbers ?? true;
+  /* Eskiden `size: A4` sabitti: US Letter seçen öğrencinin PDF'i A4 çıkıyordu. */
+  const kagit = kagitOlcusu(manuscript?.pageSize);
 
   return {
     html,
     footnotes,
-    pageRule: `@page { size: A4; margin: ${m.top}cm ${m.right}cm ${m.bottom}cm ${m.left}cm;${
+    pageRule: `@page { size: ${kagit.css}; margin: ${m.top}cm ${m.right}cm ${m.bottom}cm ${m.left}cm;${
       /* Sayfa numarası Word'deki gibi metnin yazı tipi ve boyutunda (tiptap-docx: Footer). */
       showPageNumbers ? ` @bottom-center { content: counter(page); font-family: '${fontFamily}', 'Times New Roman', serif; font-size: ${fontSize}pt; }` : ""
     } }`,
@@ -81,6 +86,8 @@ export function buildPrintSheet(
       "--print-margin-right": `${m.right}cm`,
       "--print-margin-bottom": `${m.bottom}cm`,
       "--print-margin-left": `${m.left}cm`,
+      "--print-page-width": `${kagit.genislikCm}cm`,
+      "--print-page-height": `${kagit.yukseklikCm}cm`,
     } as CSSProperties,
     chapterCase: guideline?.settings.chapterUppercase ? "upper" : undefined,
     cover: manuscript?.coverPage ?? null,

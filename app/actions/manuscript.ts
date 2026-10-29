@@ -15,6 +15,7 @@ import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-v
 import { hasNonPlainAttributes } from "@/lib/format-loss";
 import { kontrolSayilari, ozetOku, yapiSorunlariniTemizle, type KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import type { StructureIssue } from "@/lib/structure-check";
+import { kagitMi, kagitOku, type KagitBoyutu } from "@/lib/kagit-boyutu";
 
 export interface PageMargins {
   top: number;
@@ -49,6 +50,8 @@ export interface ManuscriptData {
   wordCount: number;
   updatedAt: string;
   margins: PageMargins;
+  /** Kâğıt boyutu (lib/kagit-boyutu.ts); sütun yoksa A4. */
+  pageSize: KagitBoyutu;
   showPageNumbers: boolean;
   coverPage: CoverPage | null;
   settingsSource: SettingsSource;
@@ -87,6 +90,7 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
       left: data.margin_left_cm ?? 2.5,
       right: data.margin_right_cm ?? 2.5,
     },
+    pageSize: kagitOku(data.page_size),
     showPageNumbers: data.show_page_numbers ?? true,
     coverPage: (data.cover_page as CoverPage) ?? null,
     settingsSource: {
@@ -102,6 +106,7 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
 export interface SaveManuscriptInput {
   content: TiptapDoc;
   margins?: PageMargins;
+  pageSize?: KagitBoyutu;
   showPageNumbers?: boolean;
   coverPage?: CoverPage | null;
   settingsSource?: SettingsSource;
@@ -164,7 +169,7 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     return { error: (await abonelikKapaliMesaji()), forbidden: true, abonelik: true };
   }
 
-  const { content, margins, showPageNumbers, coverPage, settingsSource, includeToc, headingNumbering } = input;
+  const { content, margins, pageSize, showPageNumbers, coverPage, settingsSource, includeToc, headingNumbering } = input;
   // Biçim bilgisi (başlık düzeyi, resim adresi, dipnot metni…) sunucuya eksik ulaştıysa
   // kaydetme: eksik metni üzerine yazmak yerine hata göster, taslak tarayıcıda kalır.
   if (!content || content.type !== "doc" || hasNonPlainAttributes(content)) {
@@ -205,6 +210,8 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
       : {}),
     ...(includeToc !== undefined ? { include_toc: includeToc } : {}),
     ...(headingNumbering !== undefined ? { heading_numbering: headingNumbering } : {}),
+    /* Bilinmeyen değer sunucuya yazılmaz (kısıt da reddeder; kayıt düşmesin). */
+    ...(kagitMi(pageSize) ? { page_size: pageSize } : {}),
   };
   const fullRow = { ...baseRow, ...optionalColumns };
   const hasOptionalColumns = Object.keys(optionalColumns).length > 0;
