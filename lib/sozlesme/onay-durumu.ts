@@ -30,6 +30,12 @@ export type SozlesmeOnayi = {
   kullanici_araci: string | null;
   odeme_referansi: string | null;
   metin_ozeti: string;
+  /* Konum 20261029163058'den beri; eski satırlarda ve migration öncesinde boş. */
+  ulke?: string | null;
+  bolge?: string | null;
+  sehir?: string | null;
+  enlem?: number | null;
+  boylam?: number | null;
 };
 
 export const sozlesmeOnayGerekli = cache(async (kullanici: { id: string; role: UserRole | string | null }): Promise<boolean> => {
@@ -69,14 +75,14 @@ export async function odemeSonrasiOnayVar(kullaniciId: string): Promise<boolean>
 
 export async function sozlesmeOnaylarim(kullaniciId: string): Promise<{ satirlar: SozlesmeOnayi[]; okunamadi: boolean }> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("sozlesme_onaylari")
-    .select("id, surum, dil, olay, onaylandi, ip, kullanici_araci, odeme_referansi, metin_ozeti")
-    .eq("user_id", kullaniciId)
-    .order("onaylandi", { ascending: false });
+  const temel = "id, surum, dil, olay, onaylandi, ip, kullanici_araci, odeme_referansi, metin_ozeti";
+  const oku = (secim: string) => supabase.from("sozlesme_onaylari").select(secim).eq("user_id", kullaniciId).order("onaylandi", { ascending: false });
+  let { data, error } = await oku(`${temel}, ulke, bolge, sehir, enlem, boylam`);
+  // Konum sütunları henüz yoksa (migration öncesi) kayıtlar konumsuz okunur; "okunamadı" denmez.
+  if (error && error.code === "42703") ({ data, error } = await oku(temel));
   if (error) {
     console.error("[sözleşme] onaylar okunamadı", error.message);
     return { satirlar: [], okunamadi: true };
   }
-  return { satirlar: (data ?? []) as SozlesmeOnayi[], okunamadi: false };
+  return { satirlar: (data ?? []) as unknown as SozlesmeOnayi[], okunamadi: false };
 }

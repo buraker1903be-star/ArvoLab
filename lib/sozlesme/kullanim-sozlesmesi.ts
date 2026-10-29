@@ -29,8 +29,10 @@ import { yasalAdres } from "@/lib/yasal-baglantilar";
 
 /* Aynı gün ikinci sürüm: 5. madde otomatik yenilemeyi anlatıyordu, otomatik
    çekim 29.10.2026'da kaldırıldı (ArvoOS otomatikYenilemeAcik). Sürüm
-   değişince herkes metni yeniden onaylar; eski onay neye verildiyse onu kanıtlar. */
-export const SOZLESME_SURUMU = "2026-10-29.2";
+   değişince herkes metni yeniden onaylar; eski onay neye verildiyse onu kanıtlar.
+   Üçüncü sürüm (aynı gün): delil maddesine (14) IP'den belirlenen yaklaşık
+   konum eklendi; kayıt artık konumu da tutuyor (20261029163058). */
+export const SOZLESME_SURUMU = "2026-10-29.3";
 
 export type SozlesmeBolumu = { baslik: string; paragraflar: string[] };
 export type SozlesmeMetni = { baslik: string; giris: string; bolumler: SozlesmeBolumu[] };
@@ -151,7 +153,7 @@ function turkce(): SozlesmeMetni {
       {
         baslik: "14. Delil sözleşmesi ve elektronik onay kaydı",
         paragraflar: [
-          "Kullanıcı, bu sözleşmeyi onayladığı anda aşağıdaki bilgilerin kayıt altına alındığını bilir ve kabul eder: onay tarihi ve saati, sözleşmenin sürümü ve metninin özeti (SHA-256), Kullanıcı'nın hesap ve e-posta bilgisi, IP adresi, cihaz ve tarayıcı bilgisi, metnin sonuna kadar görüntülendiği bilgisi ve onay, ödemeden sonra verildiyse ilgili ödemenin bilgisi. Onayın bir kopyası Kullanıcı'nın e-posta adresine gönderilir.",
+          "Kullanıcı, bu sözleşmeyi onayladığı anda aşağıdaki bilgilerin kayıt altına alındığını bilir ve kabul eder: onay tarihi ve saati, sözleşmenin sürümü ve metninin özeti (SHA-256), Kullanıcı'nın hesap ve e-posta bilgisi, IP adresi, IP adresinden belirlenen yaklaşık konum (ülke, bölge, şehir ve koordinat), cihaz ve tarayıcı bilgisi, metnin sonuna kadar görüntülendiği bilgisi ve onay, ödemeden sonra verildiyse ilgili ödemenin bilgisi. Onayın bir kopyası Kullanıcı'nın e-posta adresine gönderilir.",
           "Taraflar, 6100 sayılı Hukuk Muhakemeleri Kanunu m.193 uyarınca, Şirket'in sistemlerinde tutulan bu elektronik kayıtların, e-posta yazışmalarının ve işlem kayıtlarının uyuşmazlıklarda delil teşkil edeceğini kabul eder; karşı delil sunma hakkı saklıdır.",
         ],
       },
@@ -283,7 +285,7 @@ function ingilizce(): SozlesmeMetni {
       {
         baslik: "14. Evidence agreement and electronic approval record",
         paragraflar: [
-          "The User knows and accepts that, at the moment of approving these terms, the following is recorded: the date and time of approval, the version of the terms and a digest of their text (SHA-256), the User's account and email, IP address, device and browser information, the fact that the text was viewed to the end, and, if the approval follows a payment, information about that payment. A copy of the approval is sent to the User's email address.",
+          "The User knows and accepts that, at the moment of approving these terms, the following is recorded: the date and time of approval, the version of the terms and a digest of their text (SHA-256), the User's account and email, IP address, the approximate location derived from the IP address (country, region, city and coordinates), device and browser information, the fact that the text was viewed to the end, and, if the approval follows a payment, information about that payment. A copy of the approval is sent to the User's email address.",
           "Under Article 193 of the Turkish Code of Civil Procedure No. 6100, the parties agree that these electronic records, email correspondence and transaction logs kept in the Company's systems constitute evidence in disputes; the right to submit counter-evidence is reserved.",
         ],
       },
