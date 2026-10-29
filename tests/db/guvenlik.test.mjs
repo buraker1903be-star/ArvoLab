@@ -215,11 +215,17 @@ describe("fonksiyon yetkileri", () => {
       ai_bireysel_kredi_hareketlerim — PARAMETRE ALMIYOR; yalnızca çağıranın
         KENDİ kredi defteri (Abonelik sayfası). Kullanıcı kimliği alsaydı
         başkasının satın almaları okunabilirdi.
+      ai_kurum_kredi_hareketleri — kurum kimliği PARAMETRE (iç ekip kurum
+        seçicide seçtiği kurumu görüyor) ama kapı içeride:
+        gozetim_kapsami(kurum, '{academic_manager}'), yani faturaları
+        görmekle aynı kural. Yetkisiz çağıran boş liste alır
+        (tests/db/kurum-kredi-hareketleri.test.mjs).
   */
-  test("authenticated ek olarak yalnızca kendi kapsamındaki sekiz fonksiyon", async () => {
+  test("authenticated ek olarak yalnızca kendi kapsamındaki dokuz fonksiyon", async () => {
     assert.deepEqual(await acik("authenticated"),
       [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "ai_kredi_durumum", "olcum_ozeti",
-       "asistan_model_ozetleri", "calisma_hareketlerim", "yazim_ritmi", "ai_bireysel_kredi_hareketlerim"].sort());
+       "asistan_model_ozetleri", "calisma_hareketlerim", "yazim_ritmi", "ai_bireysel_kredi_hareketlerim",
+       "ai_kurum_kredi_hareketleri"].sort());
   });
 
   test("notify anonim ve oturumlu kullanıcıya kapalı (sahte bildirim)", () =>

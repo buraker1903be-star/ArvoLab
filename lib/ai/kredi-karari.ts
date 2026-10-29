@@ -25,23 +25,19 @@ export const KREDI_KARAKTERI = 1000;
 export const UYARI_ORANI = 80;
 
 /*
-  Kredi ArvoLab'da harcanıyor ama ArvoOS'ta satılıyor. Mesajlar önce
-  yalnızca "ArvoOS panelinden yükleyebilirsiniz" diyordu: doğru ama
-  eksik — kullanıcı asistanın ortasında durdurulduğunda nereye
-  gideceğini aramak zorunda kalıyordu. Adres, gidilecek SAYFANIN kendisi.
+  Kredinin satın alındığı sayfa: ArvoLab'ın Abonelik ve kredi sayfası.
+  Mesaj adresi düz metin olarak taşıyor (hata kutusu ve bildirim şeridi
+  düz metin çiziyor); kullanıcı asistanın ortasında durdurulduğunda
+  nereye gideceğini aramak zorunda kalmasın.
 
-  Bağlantı değil düz metin, çünkü bu metinler hata kutusunda ve bildirim
-  şeridinde düz metin olarak gösteriliyor; bağlantıya çevirmek üç ayrı
-  yanıt tipini ve onları çizen bileşenleri değiştirmeyi gerektirirdi.
+  Eskiden iki adres vardı: bireysel abone bu sayfaya, kurum üyesi
+  ArvoOS panelinin ödeme sayfasına yönlendiriliyordu. 28.10.2026'dan
+  beri (kurum sahibinin kararı) ArvoOS panelinde yalnızca "Abonelik ve
+  faturalama" var; kurum yöneticisi de krediyi bu sayfadan alıyor. Tek
+  adres kaldı.
 */
-export const KREDI_SATIN_ALMA_ADRESI = "https://app.arvo-os.com/panel/billing";
+export const KREDI_SAYFASI = "/dashboard/abonelik";
 
-/*
-  Bireysel abone krediyi ArvoLab'ın içinden alıyor (Abonelik ve kredi
-  sayfası; ödeme ArvoOS'ta). Kurum yöneticisinin ArvoOS paneli onun için
-  anlamsız: girebileceği bir panel yok.
-*/
-export const BIREYSEL_KREDI_SAYFASI = "/dashboard/abonelik";
 
 export interface KrediDurumu {
   /** Bu ay tüketilen karakter. */
@@ -99,11 +95,11 @@ export function krediKarari(durum: KrediDurumu, dil: Dil = "tr"): KrediKarari {
         ? t({
             tr: "Aboneliğinizde AI kredisi tanımlı değil. Abonelik ve kredi sayfasından kredi alabilirsiniz: ",
             en: "Your subscription has no AI credits. You can buy credits on the Subscription and credits page: ",
-          }) + BIREYSEL_KREDI_SAYFASI
+          }) + KREDI_SAYFASI
         : t({
-            tr: "Bu kurumun AI kredisi tanımlı değil. Kurum yöneticinizden paket yükseltmesi isteyin.",
-            en: "This institution has no AI credits. Ask your institution administrator to upgrade the plan.",
-          }),
+            tr: "Bu kurumun AI kredisi tanımlı değil. Kurum yöneticiniz Abonelik ve kredi sayfasından kredi alabilir: ",
+            en: "This institution has no AI credits. Your institution administrator can buy credits on the Subscription and credits page: ",
+          }) + KREDI_SAYFASI,
     };
   }
 
@@ -125,7 +121,7 @@ export function krediKarari(durum: KrediDurumu, dil: Dil = "tr"): KrediKarari {
             + "beklemek istemiyorsanız Abonelik ve kredi sayfasından ek kredi alabilirsiniz: ",
           en: "You're out of AI credits. Your monthly allowance renews at the start of the month; "
             + "if you don't want to wait, you can buy extra credits on the Subscription and credits page: ",
-        }) + BIREYSEL_KREDI_SAYFASI,
+        }) + KREDI_SAYFASI,
       };
     }
     return {
@@ -133,10 +129,10 @@ export function krediKarari(durum: KrediDurumu, dil: Dil = "tr"): KrediKarari {
       oran,
       engel: t({
         tr: "Kurumunuzun AI kredisi bitti. Aylık hak ayın başında yenilenir; "
-          + "beklemek istemiyorsanız kurum yöneticiniz ArvoOS panelinden ek kredi satın alabilir: ",
+          + "beklemek istemiyorsanız kurum yöneticiniz Abonelik ve kredi sayfasından ek kredi satın alabilir: ",
         en: "Your institution is out of AI credits. The monthly allowance renews at the start of the month; "
-          + "if you don't want to wait, your institution administrator can buy extra credits in the ArvoOS panel: ",
-      }) + KREDI_SATIN_ALMA_ADRESI,
+          + "if you don't want to wait, your institution administrator can buy extra credits on the Subscription and credits page: ",
+      }) + KREDI_SAYFASI,
     };
   }
 
@@ -155,7 +151,7 @@ export function krediKarari(durum: KrediDurumu, dil: Dil = "tr"): KrediKarari {
             + "Hak dolduğunda asistan durur; Abonelik ve kredi sayfasından ek kredi alabilirsiniz: ",
           en: `${oran}% of your monthly AI credits have been used (${sayi(kullanilanKredi, "en")}/${sayi(limit, "en")}). `
             + "The assistant stops when the allowance runs out; you can buy extra credits on the Subscription and credits page: ",
-        }) + BIREYSEL_KREDI_SAYFASI,
+        }) + KREDI_SAYFASI,
       };
     }
     return {
@@ -163,10 +159,10 @@ export function krediKarari(durum: KrediDurumu, dil: Dil = "tr"): KrediKarari {
       oran,
       uyari: t({
         tr: `Kurumunuzun AI kredisinin %${oran}'i kullanıldı (${sayi(kullanilanKredi)}/${sayi(limit)}). `
-          + "Hak dolduğunda asistan durur; kurum yöneticiniz ek kredi satın alarak sürdürebilir: ",
+          + "Hak dolduğunda asistan durur; kurum yöneticiniz Abonelik ve kredi sayfasından ek kredi satın alarak sürdürebilir: ",
         en: `${oran}% of your institution's AI credits have been used (${sayi(kullanilanKredi, "en")}/${sayi(limit, "en")}). `
-          + "The assistant stops when the allowance runs out; your institution administrator can buy extra credits to continue: ",
-      }) + KREDI_SATIN_ALMA_ADRESI,
+          + "The assistant stops when the allowance runs out; your institution administrator can buy extra credits on the Subscription and credits page to continue: ",
+      }) + KREDI_SAYFASI,
     };
   }
 

@@ -1,19 +1,18 @@
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { redirect } from "next/navigation";
-import { ExternalLink, History } from "lucide-react";
+import { History } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { getAccessState } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
-import { krediSatinAl } from "@/app/actions/subscription";
+import { krediSatinAl, kurumKrediSatinAl } from "@/app/actions/subscription";
 import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
-import { KREDI_SATIN_ALMA_ADRESI } from "@/lib/ai/kredi-karari";
 import { binKrediFiyati, paketFiyati } from "@/lib/kredi-paketleri";
 import type { Metadata } from "next";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { YEREL, type Metin } from "@/lib/dil";
 import { formatTry } from "@/lib/billing-plan";
 import { faturalamaKapsami } from "@/lib/faturalama";
-import { faturalamaYukle, kartDurumum } from "@/lib/subscription";
+import { faturalamaVePaketler, kartDurumum } from "@/lib/subscription";
 import { KART_HATALARI } from "@/lib/kart-odeme";
 import { licenseSummary } from "@/lib/license-summary";
 import { kartlaOdemeBaslat } from "@/app/actions/kart-odeme";
@@ -42,8 +41,12 @@ export async function generateMetadata(): Promise<Metadata> {
   ArvoOS'tan geliyor (lib/kredi-paketleri.ts) — kurumla aynı liste.
   Ödeme ArvoOS'ta (PayTR); onaylanınca kredi bakiyeye kendiliğinden ekleniyor.
 
-  Kurum üyesine aynı sayfa kurumun kredisini gösteriyor ama satış yok:
-  kurumun kredisini kurum yöneticisi ArvoOS panelinden alıyor.
+  Kurum üyesine aynı sayfa kurumun kredisini gösteriyor. Kurumun
+  kredisini kurum yöneticisi (Akademik Yönetici; iç ekip seçtiği kurum
+  için) bu sayfadan alıyor — 28.10.2026'ya kadar ArvoOS panelinden
+  alıyordu, orada artık yalnızca "Abonelik ve faturalama" var. Paketi
+  kimin görüp alabileceği faturaları kimin görebileceğiyle aynı karar
+  (faturalamaKapsami); öğrenci ve personel yalnızca durumu görür.
 */
 
 const HATA: Record<string, Metin> = {
@@ -56,8 +59,12 @@ const HATA: Record<string, Metin> = {
     en: "The selected package was not recognized; refresh the page and try again.",
   },
   kurum: {
-    tr: "Kurum üyesi olduğunuz için krediyi kurum yöneticiniz alır.",
-    en: "Because you are an institution member, your institution administrator buys credits.",
+    tr: "Kurumunuzun kredisini kurum yöneticiniz alır.",
+    en: "Your institution administrator buys your institution's credits.",
+  },
+  sahip: {
+    tr: "Kurumunuzun ArvoOS'ta etkin bir sahibi bulunamadığı için ödeme açılamadı. Arvo destek ekibiyle iletişime geçin.",
+    en: "Payment could not be started because your institution has no active owner in ArvoOS. Contact Arvo support.",
   },
   ...KART_HATALARI,
 };
@@ -112,12 +119,6 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   const kredi = krediOzeti(satir);
   const bireysel = Boolean(satir?.bireysel);
 
-  /* Son hareketler yalnızca bireysel abonede (kurumun defteri kurum yöneticisinin). */
-  const { data: hareketler } = bireysel
-    ? await ctx.supabase.rpc("ai_bireysel_kredi_hareketlerim")
-    : { data: null };
-  const sonHareketler = (hareketler ?? []) as { tur: string; kredi: number; created_at: string }[];
-
   /* Faturalar: bireysel abone kendi ödemelerini, kurumda yalnızca kurum yöneticisi kurumunkileri görür. */
   /* İç ekip: kurum seçicide seçili kurum, yoksa kendi kurumu (lib/kurum-secimi.ts). */
   const seciliKurumu = access.kind === "staff" ? await seciliKurum() : null;
@@ -127,7 +128,22 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
     const { data: kendi } = await ctx.supabase.from("organizations").select("name").eq("id", ctx.organizationId).maybeSingle();
     faturaKurumu = kendi?.name ?? null;
   }
-  const faturalama = kapsam && ctx.user.email ? await faturalamaYukle(kapsam, { id: ctx.user.id, email: ctx.user.email }) : null;
+  const kurumKredisi = kapsam?.tur === "kurum" ? kapsam.kurumId : null;
+  const [faturalamaVeri, { data: hareketler }] = await Promise.all([
+    kapsam && ctx.user.email ? faturalamaVePaketler(kapsam, { id: ctx.user.id, email: ctx.user.email }) : null,
+    /*
+      Son hareketler: bireysel abonenin kendi defteri ya da kurum
+      yöneticisinin kurumunki (ai_kurum_kredi_hareketleri; yetki içeride,
+      faturalarla aynı kural). Öğrenci kurumun defterini görmez.
+    */
+    bireysel
+      ? ctx.supabase.rpc("ai_bireysel_kredi_hareketlerim")
+      : kurumKredisi
+        ? ctx.supabase.rpc("ai_kurum_kredi_hareketleri", { p_organization_id: kurumKredisi })
+        : Promise.resolve({ data: null }),
+  ]);
+  const faturalama = faturalamaVeri?.faturalama ?? null;
+  const sonHareketler = (hareketler ?? []) as { tur: string; kredi: number; created_at: string }[];
 
   /*
     Kart saklama yalnızca bireysel abonede ve ArvoOS anahtarı açıkken. Kart
@@ -138,7 +154,9 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   // Mevcut ödeme düğmesiyle aynı koşul (lib/license-summary.ts → showPayment).
   const kartlaOdenebilir = kartSaklama && Boolean(licenseSummary(access, new Date(), dil)?.showPayment);
 
-  const paketler = access.kind === "individual" ? access.krediPaketleri : [];
+  /* Satış: bireysel abone kendine, kurum yöneticisi kurumuna. Paketler bireyselde ensure'dan, kurumda org_billing'den. */
+  const satis = access.kind === "individual" ? ("bireysel" as const) : kurumKredisi ? ("kurum" as const) : null;
+  const paketler = satis === "bireysel" ? access.krediPaketleri : satis === "kurum" ? (faturalamaVeri?.krediPaketleri ?? []) : [];
   const enUcuzBirim = paketler.length ? Math.max(...paketler.map(binKrediFiyati)) : 0;
 
   return (
@@ -270,7 +288,9 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                   {t({ tr: "Krediniz bitti; asistan yeni çalışma yapmıyor.", en: "You are out of credits; the assistant will not run new checks." })}{" "}
                   {bireysel
                     ? t({ tr: "Aşağıdan ek kredi alabilir ya da ayın başını bekleyebilirsiniz.", en: "You can buy more credits below or wait for the start of the month." })
-                    : t({ tr: "Kurum yöneticiniz ek kredi alabilir.", en: "Your institution administrator can buy more credits." })}
+                    : satis === "kurum"
+                      ? t({ tr: "Aşağıdan kurum için ek kredi alabilirsiniz.", en: "You can buy more credits for the institution below." })
+                      : t({ tr: "Kurum yöneticiniz ek kredi alabilir.", en: "Your institution administrator can buy more credits." })}
                 </p>
               ) : null}
             </>
@@ -285,26 +305,29 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
             </p>
           )}
 
-          {access.kind === "organization" ? (
+          {access.kind === "organization" && !satis ? (
             <p className="hint">
-              {t({ tr: "Kurumunuzun kredisini kurum yöneticiniz", en: "Your institution administrator buys your institution's credits from the" })}{" "}
-              <a href={KREDI_SATIN_ALMA_ADRESI} target="_blank" rel="noreferrer noopener">
-                {t({ tr: "ArvoOS panelinden", en: "ArvoOS panel" })} <ExternalLink size={12} aria-hidden="true" />
-              </a>
-              {t({ tr: " alır.", en: "." })}
+              {t({
+                tr: "Kurumunuzun kredisini kurum yöneticiniz bu sayfadan alır.",
+                en: "Your institution administrator buys your institution's credits on this page.",
+              })}
             </p>
           ) : null}
 
-          {access.kind === "individual" ? (
+          {satis ? (
             <>
-              <h3 className="calisma-durum-alt">{t({ tr: "Ek kredi paketleri", en: "Extra credit packages" })}</h3>
+              <h3 className="calisma-durum-alt">
+                {satis === "kurum"
+                  ? t({ tr: "Kurum için ek kredi paketleri", en: "Extra credit packages for the institution" })
+                  : t({ tr: "Ek kredi paketleri", en: "Extra credit packages" })}
+              </h3>
               {paketler.length ? (
                 <div className="kredi-paketleri">
                   {paketler.map((paket, i) => {
                     const birim = binKrediFiyati(paket);
                     const indirim = enUcuzBirim > birim ? Math.round((1 - birim / enUcuzBirim) * 100) : 0;
                     return (
-                      <form action={krediSatinAl} key={paket.kod} className="kredi-paketi">
+                      <form action={satis === "kurum" ? kurumKrediSatinAl : krediSatinAl} key={paket.kod} className="kredi-paketi">
                         <input type="hidden" name="paket" value={paket.kod} />
                         <b>{paket.ad}</b>
                         <span className="kredi-paketi-fiyat">{fiyat(paket.fiyat)}</span>
@@ -326,15 +349,20 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                 </p>
               )}
               <p className="hint">
-                {t({
-                  tr: "Ödeme ArvoOS üzerinden kartla alınır (PayTR). Ödeme onaylanınca kredi birkaç dakika içinde bakiyenize eklenir; aboneliğiniz kapalıyken kredi satılmaz.",
-                  en: "Payment is taken by card through ArvoOS (PayTR). Once the payment is approved, the credits are added to your balance within a few minutes; credits cannot be bought while your subscription is inactive.",
-                })}
+                {satis === "kurum"
+                  ? t({
+                      tr: "Ödeme ArvoOS üzerinden kartla alınır (PayTR) ve kurumunuz adına kaydedilir; ödeme geçmişinde ve faturalarda görünür. Onaylanınca kredi birkaç dakika içinde kurumun bakiyesine eklenir ve bütün üyeler kullanır.",
+                      en: "Payment is taken by card through ArvoOS (PayTR) and recorded for your institution; it appears in the payment history and invoices. Once approved, the credits are added to the institution's balance within a few minutes and every member can use them.",
+                    })
+                  : t({
+                      tr: "Ödeme ArvoOS üzerinden kartla alınır (PayTR). Ödeme onaylanınca kredi birkaç dakika içinde bakiyenize eklenir; aboneliğiniz kapalıyken kredi satılmaz.",
+                      en: "Payment is taken by card through ArvoOS (PayTR). Once the payment is approved, the credits are added to your balance within a few minutes; credits cannot be bought while your subscription is inactive.",
+                    })}
               </p>
             </>
           ) : null}
 
-          {bireysel && sonHareketler.length ? (
+          {sonHareketler.length ? (
             <>
               <h3 className="calisma-durum-alt">
                 <History size={14} aria-hidden="true" /> {t({ tr: "Son hareketler", en: "Recent activity" })}
