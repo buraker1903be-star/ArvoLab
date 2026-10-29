@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL } from "@/lib/dil";
+import { useAcilirKonum } from "./acilir-konum";
 import { anahtardanTarih, ayBasi, ayEkle, ayIzgarasi, gunAnahtari, gunEkle, gunFarki, sinirDisi } from "@/lib/takvim-izgara";
 
 /*
@@ -60,10 +61,11 @@ export default function TarihSecici({
   const [acik, setAcik] = useState(false);
   const [odak, setOdak] = useState("");
   const [bugun, setBugun] = useState("");
-  const [yon, setYon] = useState({ yukari: false, sag: false });
   const kok = useRef<HTMLDivElement>(null);
   const dugme = useRef<HTMLButtonElement>(null);
   const izgara = useRef<HTMLDivElement>(null);
+  const pencere = useRef<HTMLDivElement>(null);
+  useAcilirKonum(acik, dugme, pencere);
 
   /* Türkçede hafta Pazartesi başlar, ABD İngilizcesinde Pazar. */
   const haftaBasi: 0 | 1 = dil === "en" ? 0 : 1;
@@ -95,13 +97,6 @@ export default function TarihSecici({
     const simdi = new Date();
     const bugunAnahtari = gunAnahtari(new Date(Date.UTC(simdi.getFullYear(), simdi.getMonth(), simdi.getDate())));
     setBugun(bugunAnahtari);
-    const kutu = dugme.current?.getBoundingClientRect();
-    if (kutu) {
-      setYon({
-        yukari: window.innerHeight - kutu.bottom < 380 && kutu.top > window.innerHeight - kutu.bottom,
-        sag: kutu.left + 300 > window.innerWidth,
-      });
-    }
     setOdak(sinirla(anahtardanTarih(deger) ? deger : bugunAnahtari));
     setAcik(true);
   };
@@ -191,19 +186,22 @@ export default function TarihSecici({
         <input className="tarih-secici-zorunlu" tabIndex={-1} aria-hidden="true" required value={deger} onChange={() => undefined} onFocus={() => dugme.current?.focus()} />
       ) : null}
 
-      {acik ? (
-        <div
-          id={`${kimlik}-takvim`}
-          role="dialog"
-          aria-label={etiket}
-          className="tarih-secici-pencere"
-          data-yukari={yon.yukari || undefined}
-          data-sag={yon.sag || undefined}
-          onKeyDown={tus}
+      {/* Pencere hep DOM'da (üst katmana taşınması için); içi yalnızca açıkken çizilir. */}
+      <div
+        ref={pencere}
+        id={`${kimlik}-takvim`}
+        role="dialog"
+        aria-label={etiket}
+        className="tarih-secici-pencere"
+        popover="manual"
+        hidden={!acik}
+        onKeyDown={tus}
           /* Form alanları <label> içinde: pencerenin boş yerine tıklamak
              etiketi etkinleştirip düğmeye "tıklıyor" ve takvimi kapatıyordu. */
           onClick={(olay) => olay.preventDefault()}
-        >
+      >
+        {acik ? (
+          <>
           <div className="tarih-secici-baslik">
             <button type="button" className="tarih-secici-ok" disabled={oncekiAyKapali} aria-label={t({ tr: "Önceki ay", en: "Previous month" })} onClick={() => setOdak(sinirla(ayEkle(odak, -1)))}>
               <ChevronLeft size={16} aria-hidden="true" />
@@ -282,8 +280,9 @@ export default function TarihSecici({
               </button>
             ) : null}
           </div>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }

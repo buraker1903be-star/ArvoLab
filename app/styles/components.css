@@ -563,12 +563,25 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
 .secici-ok { flex: none; color: var(--muted); transition: transform .2s var(--ease-spring); }
 .secici[data-acik] .secici-ok { transform: rotate(180deg); color: var(--accent-strong); }
 
+/*
+  Açılır pencereler tarayıcının üst katmanında (popover) ve ekrana göre
+  konumlu; konum --acilir-x/y/w değişkenlerinden (acilir-konum.ts).
+  Eskiden düğmenin altına absolute açılıyor, kartın overflow'una takılıp
+  kırpılıyordu. Tarayıcının [popover] varsayılanları (inset: 0, margin:
+  auto, kenarlık) burada sıfırlanıyor.
+*/
+:is(.secici-liste, .tarih-secici-pencere) {
+  position: fixed;
+  inset: auto;
+  top: var(--acilir-y, 0);
+  left: var(--acilir-x, 0);
+  z-index: var(--z-toast);
+  margin: 0;
+  color: var(--ink);
+}
+:is(.secici-liste, .tarih-secici-pencere):popover-open { display: block; }
 .secici-liste {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: var(--z-topbar);
-  min-width: max(100%, 230px);
+  min-width: max(var(--acilir-w, 0px), 230px);
   max-width: min(320px, calc(100vw - 32px));
   max-height: min(360px, 60vh);
   margin: 0;
@@ -583,9 +596,8 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   transform-origin: top left;
   animation: secici-acil .16s var(--ease-spring);
 }
-.secici-liste[hidden] { display: none; }
-.secici-liste[data-yukari] { top: auto; bottom: calc(100% + 6px); transform-origin: bottom left; }
-.secici-liste[data-sag] { left: auto; right: 0; }
+.secici-liste[hidden]:not(:popover-open) { display: none; }
+.secici-liste[data-yukari] { transform-origin: bottom left; }
 @keyframes secici-acil { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
 .secici-grup + .secici-grup { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line-soft); }
 .secici-grup > ul { margin: 0; padding: 0; list-style: none; }
@@ -684,10 +696,6 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
 .guideline-review-form .tarih-secici-dugme { min-height: var(--kontrol-h); font-size: var(--fs-body); font-weight: 500; }
 
 .tarih-secici-pencere {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: var(--z-topbar);
   width: 292px;
   max-width: calc(100vw - 32px);
   padding: 12px;
@@ -698,8 +706,8 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   transform-origin: top left;
   animation: secici-acil .16s var(--ease-spring);
 }
-.tarih-secici-pencere[data-yukari] { top: auto; bottom: calc(100% + 6px); transform-origin: bottom left; }
-.tarih-secici-pencere[data-sag] { left: auto; right: 0; }
+.tarih-secici-pencere[hidden]:not(:popover-open) { display: none; }
+.tarih-secici-pencere[data-yukari] { transform-origin: bottom left; }
 .tarih-secici-baslik { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .tarih-secici-ay-yil { display: inline-flex; gap: 2px; min-width: 0; }
 /* Seçici form ızgarasının içinde de duruyor; oradaki ortak select

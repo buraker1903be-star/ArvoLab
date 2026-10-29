@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { flushSync } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 import type { Tone } from "@/lib/status-tone";
+import { useAcilirKonum } from "./acilir-konum";
 
 /*
   SÜZGEÇ SEÇİCİSİ (28.10.2026). Liste çubuklarındaki yerel <select>'in yerini
@@ -57,11 +58,11 @@ export default function Secici({
   }
   const [acik, setAcik] = useState(false);
   const [etkin, setEtkin] = useState(-1);
-  const [yon, setYon] = useState<{ yukari: boolean; sag: boolean }>({ yukari: false, sag: false });
   const kok = useRef<HTMLDivElement>(null);
   const dugme = useRef<HTMLButtonElement>(null);
   const liste = useRef<HTMLUListElement>(null);
   const arama = useRef({ metin: "", zaman: 0 });
+  useAcilirKonum(acik, dugme, liste);
 
   const duz = gruplar.flatMap((g) => g.secenekler);
   /* Her grubun düz listedeki başlangıç sırası (etkin seçenek düz sırayla tutuluyor). */
@@ -90,16 +91,6 @@ export default function Secici({
   }, [acik, etkin]);
 
   const ac = (baslangic?: number) => {
-    /* Ekranın altına ya da sağına taşacaksa ters yöne açılır; ölçü açılış
-       anında alınıyor, kaydırma sırasında güncellenmiyor (menü küçük ve
-       kaydırınca kapanması da olağan). */
-    const kutu = dugme.current?.getBoundingClientRect();
-    if (kutu) {
-      setYon({
-        yukari: window.innerHeight - kutu.bottom < 280 && kutu.top > window.innerHeight - kutu.bottom,
-        sag: kutu.left + 260 > window.innerWidth,
-      });
-    }
     setEtkin(baslangic ?? Math.max(0, duz.findIndex((s) => s.deger === secili)));
     setAcik(true);
   };
@@ -195,8 +186,7 @@ export default function Secici({
         role="listbox"
         aria-label={etiket}
         className="secici-liste"
-        data-yukari={yon.yukari || undefined}
-        data-sag={yon.sag || undefined}
+        popover="manual"
         hidden={!acik}
         tabIndex={-1}
       >
