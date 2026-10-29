@@ -2,7 +2,8 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { CreditCard, Lock } from "lucide-react";
-import { useCeviri } from "@/app/_components/dil-saglayici";
+import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
+import { yasalAdres } from "@/lib/yasal-baglantilar";
 import { kartOnayiKaydet } from "@/app/actions/kart-odeme";
 import { kartNumarasiTemizle, sonKullanmaYillari } from "@/lib/kart-odeme";
 
@@ -44,6 +45,7 @@ export default function KartFormu({
   buYil: number;
 }) {
   const t = useCeviri();
+  const dil = useDil();
   const formRef = useRef<HTMLFormElement>(null);
   const [kaydet, setKaydet] = useState(false);
   const [gonderiliyor, setGonderiliyor] = useState(false);
@@ -154,6 +156,31 @@ export default function KartFormu({
         <span>
           <b>{t({ tr: "Kartımı kaydet, aboneliğim otomatik yenilensin", en: "Save my card and renew my subscription automatically" })}</b>
           {consentText ? <small>{consentText}</small> : null}
+        </span>
+      </label>
+
+      {/*
+        Sözleşme onayı (29.10.2026). Eskiden form tutarı ve kart alanlarını
+        gösterip doğrudan ödemeye gidiyordu; mesafeli satış sözleşmesine ve
+        iptal-iade koşullarına hiç bağlantı yoktu. Mevzuat bu metinlerin
+        ödemeden ÖNCE gösterilip onaylatılmasını istiyor. Kutu zorunlu
+        (required): işaretlenmeden tarayıcı formu göndermez. Kart kaydetme
+        onayından AYRI tutuldu — biri sözleşme, öteki isteğe bağlı otomatik
+        çekim; tek kutuda birleşmeleri ikincisini zorunlu yapardı.
+      */}
+      <label className="kart-formu-onay">
+        {/* Adsız: form PayTR'ye gidiyor, ödeme isteğine fazladan alan eklenmesin. */}
+        <input type="checkbox" required />
+        <span>
+          {t({ tr: "", en: "I have read and accept the " })}
+          <a href={yasalAdres("mesafeli-satis", dil)} target="_blank" rel="noreferrer">
+            {t({ tr: "Mesafeli satış sözleşmesini", en: "distance sales agreement" })}
+          </a>
+          {t({ tr: " ve ", en: " and the " })}
+          <a href={yasalAdres("iptal-iade", dil)} target="_blank" rel="noreferrer">
+            {t({ tr: "iptal ve iade koşullarını", en: "cancellation and refund policy" })}
+          </a>
+          {t({ tr: " okudum, kabul ediyorum.", en: "." })}
         </span>
       </label>
 

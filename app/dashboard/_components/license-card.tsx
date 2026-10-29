@@ -4,6 +4,7 @@ import { licenseSummary } from "@/lib/license-summary";
 import { planButtonLabel } from "@/lib/billing-plan";
 import type { AccessState } from "@/lib/access";
 import OdemeButonu from "./odeme-butonu";
+import YasalNot from "./yasal-not";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 // Ana sayfadaki lisans/abonelik bölümü: aktif mi, ödeme alınmadıysa neden ve
@@ -35,6 +36,7 @@ export default async function LicenseCard({ access }: { access: AccessState }) {
       {summary.yenilemeNotu ? <p className="muted text-sm">{summary.yenilemeNotu}</p> : null}
       {summary.showPayment ? (
         access.plans.length > 0 ? (
+          <>
           <div className="cluster">
             {access.plans.map((plan, index) => (
               <form action={payArvolabSubscription} key={plan.code ?? plan.interval ?? index}>
@@ -43,6 +45,8 @@ export default async function LicenseCard({ access }: { access: AccessState }) {
               </form>
             ))}
           </div>
+          <YasalNot />
+          </>
         ) : (
           <p className="muted text-sm">
             {t({ tr: "Abonelik planı henüz tanımlanmadı. Bizimle iletişime geçin.", en: "No subscription plan has been set up yet. Please contact us." })}

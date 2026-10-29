@@ -923,3 +923,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 @media (max-width: 640px) {
   .kart-formu-alanlar { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Ödeme düğmelerinin yanındaki sözleşme notu ve kart formunun onay kutusu (yasal-not.tsx, kart-formu.tsx). */
+.yasal-not { margin: 6px 0 0; }
+:is(.yasal-not, .kart-formu-onay) a { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }

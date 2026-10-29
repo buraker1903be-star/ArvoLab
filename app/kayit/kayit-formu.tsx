@@ -1,6 +1,7 @@
 "use client";
 
-import { useCeviri } from "@/app/_components/dil-saglayici";
+import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
+import { yasalAdres } from "@/lib/yasal-baglantilar";
 import { useActionState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -8,7 +9,6 @@ import { signUp } from "@/app/actions/auth";
 import type { ActionResult } from "@/lib/auth-guards";
 import { EN_KISA_SIFRE } from "@/lib/kayit";
 
-const AYDINLATMA = "https://arvo-os.com/gizlilik";
 
 /*
   Kayıt formu.
@@ -21,6 +21,7 @@ const AYDINLATMA = "https://arvo-os.com/gizlilik";
 */
 export default function KayitFormu() {
   const t = useCeviri();
+  const dil = useDil();
   const [durum, gonder, bekliyor] = useActionState<ActionResult | null, FormData>(
     async (_onceki, formData) => (await signUp(_onceki, formData)) ?? null,
     null,
@@ -98,7 +99,7 @@ export default function KayitFormu() {
           <input type="checkbox" name="kvkk" required />
           <span>
             {t({ tr: "", en: "I have read the " })}
-            <a href={AYDINLATMA} target="_blank" rel="noreferrer">
+            <a href={yasalAdres("gizlilik", dil)} target="_blank" rel="noreferrer">
               {t({ tr: "Aydınlatma metnini", en: "privacy notice" })}
             </a>
             {t({

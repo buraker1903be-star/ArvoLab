@@ -18,6 +18,7 @@ import { licenseSummary } from "@/lib/license-summary";
 import { kartlaOdemeBaslat } from "@/app/actions/kart-odeme";
 import LicenseCard from "../_components/license-card";
 import OdemeButonu from "../_components/odeme-butonu";
+import YasalNot from "../_components/yasal-not";
 import FaturalarBolumu from "./faturalar-bolumu";
 import KartBolumu from "./kart-bolumu";
 
@@ -392,6 +393,7 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                   })}
                 </p>
               )}
+              {paketler.length ? <YasalNot /> : null}
               <p className="hint kredi-guvence">
                 <Lock size={14} aria-hidden="true" />
                 {satis === "kurum"
