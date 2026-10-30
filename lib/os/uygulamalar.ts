@@ -136,6 +136,11 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
     },
     { key: "ayarlar", label: t({ tr: "Ayarlar", en: "Settings" }), href: "/dashboard/settings", ikon: "settings", yollar: ["/dashboard/settings"] },
     /*
+      Kullanım Kılavuzu (30.10.2026): dock'ta yer kaplamıyor (yeni başlayan
+      birkaç kez açar); başlatıcıda, Ctrl+K'da ve kullanıcı menüsünde.
+    */
+    { key: "yardim", label: t({ tr: "Kullanım Kılavuzu", en: "User Guide" }), kisa: t({ tr: "Kılavuz", en: "Guide" }), href: "/dashboard/yardim", ikon: "kilavuz", yollar: ["/dashboard/yardim"], yalnizBaslatici: true },
+    /*
       Abonelik ve kredi (26.10.2026): bireysel abone aboneliğini ve asistan
       kredisini buradan yönetiyor. Dock'ta yer kaplamıyor (ayda bir açılan
       sayfa); başlatıcıda, Ctrl+K'da, Ayarlar'da ve kullanıcı menüsünde.

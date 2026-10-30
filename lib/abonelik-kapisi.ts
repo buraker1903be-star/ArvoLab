@@ -20,6 +20,8 @@ export const KAPISIZ_YOLLAR = [
   "/dashboard/settings",
   "/dashboard/expert-requests",
   "/dashboard/support",
+  // Kullanım Kılavuzu (30.10.2026): yalnızca okunur; kilitli kullanıcı ne yapacağını burada okur.
+  "/dashboard/yardim",
 ] as const;
 
 export function kapisizYolMu(yol: string | null | undefined): boolean {

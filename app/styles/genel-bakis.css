@@ -927,3 +927,29 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 /* Ödeme düğmelerinin yanındaki sözleşme notu ve kart formunun onay kutusu (yasal-not.tsx, kart-formu.tsx). */
 .yasal-not { margin: 6px 0 0; }
 :is(.yasal-not, .kart-formu-onay) a { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }
+
+/* KULLANIM KILAVUZU (app/dashboard/yardim, 30.10.2026). Sayfa kayar: kılavuz
+   uzun bir metin, tek ekrana sığdırılmaya çalışılmaz. İçindekiler geniş
+   ekranda yanda yapışık durur, telefonda içeriğin üstüne iner. */
+.yardim-izgara { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.yardim-icindekiler { position: sticky; top: calc(var(--topbar-height) + 12px); }
+.yardim-icindekiler h2 { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; color: var(--ink); font-size: var(--fs-md); font-weight: 650; }
+.yardim-icindekiler ol { display: grid; gap: 2px; margin: 0; padding: 0 0 0 18px; font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.yardim-icindekiler a { color: var(--ink-soft); text-decoration: none; }
+.yardim-icindekiler a:hover, .yardim-icindekiler a:focus-visible { color: var(--accent-strong); text-decoration: underline; }
+.yardim-icerik { display: grid; gap: 16px; min-width: 0; }
+.yardim-bolum { scroll-margin-top: calc(var(--topbar-height) + 12px); }
+.yardim-sira { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-right: 4px; border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent-strong); font-size: var(--fs-sm); font-weight: 650; }
+.yardim-adimlar { display: grid; gap: 8px; margin: 12px 0 0; padding: 0 0 0 20px; color: var(--ink); font-size: var(--fs-body); line-height: var(--lh-metin); }
+.yardim-notlar { display: grid; gap: 6px; margin: 12px 0 0; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface-2); list-style: none; color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.yardim-notlar li { display: flex; gap: 8px; align-items: flex-start; }
+.yardim-notlar svg { flex: none; margin-top: 3px; color: var(--muted); }
+.yardim-git { align-self: flex-start; margin-top: 4px; }
+.yardim-sss { display: grid; gap: 6px; margin: 12px 0; }
+.yardim-sss details { padding: 8px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-md); }
+.yardim-sss summary { cursor: pointer; color: var(--ink); font-weight: 600; font-size: var(--fs-body); }
+.yardim-sss p { margin: 6px 0 0; color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+@media (max-width: 860px) {
+  .yardim-izgara { grid-template-columns: minmax(0, 1fr); }
+  .yardim-icindekiler { position: static; }
+}

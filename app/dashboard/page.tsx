@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { aktifDil, aktifSaatDilimi, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
 import Link from "next/link";
-import { LayoutList, PenLine, Plus } from "lucide-react";
+import { BookOpen, LayoutList, PenLine, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
@@ -40,6 +40,7 @@ import { calismaAdresi } from "@/lib/calisma-karti";
 import TeslimTarihiFormu from "./_components/teslim-tarihi-formu";
 import DanismanaGonder from "./_components/danismana-gonder";
 import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
+import { KILAVUZ_ADRESI } from "@/lib/yardim/kullanim-kilavuzu";
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -667,6 +668,11 @@ export default async function DashboardPage() {
           <Link href={yeniCalismaHref} className="projects-primary-button">
             <Plus size={16} aria-hidden="true" />
             {t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" })}
+          </Link>
+          {/* Yeni kullanıcı için Kullanım Kılavuzu (30.10.2026): üç adımın ötesini merak eden buradan okur. */}
+          <Link href={KILAVUZ_ADRESI} className="projects-filter-button button-compact">
+            <BookOpen size={15} aria-hidden="true" />
+            {t({ tr: "Kullanım Kılavuzu'nu okuyun", en: "Read the User Guide" })}
           </Link>
         </article>
       ) : ogrenciGorunumu && resume ? (

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Check, Eye, LifeBuoy, LogOut, Settings, ShieldCheck, CreditCard } from "lucide-react";
+import { BookOpen, Building2, Check, Eye, LifeBuoy, LogOut, Settings, ShieldCheck, CreditCard } from "lucide-react";
 import ActionForm from "../action-form";
 import { gorunumSec } from "@/app/actions/onizleme";
 import { kurumSec } from "@/app/actions/kurum-secimi";
@@ -103,6 +103,10 @@ export default async function KullaniciMenusu({
           <Link href="/dashboard/abonelik">
             <CreditCard size={16} aria-hidden="true" />
             {t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}
+          </Link>
+          <Link href="/dashboard/yardim">
+            <BookOpen size={13} aria-hidden="true" />
+            {t({ tr: "Kullanım Kılavuzu", en: "User Guide" })}
           </Link>
           <Link href="/dashboard/expert-requests">
             <LifeBuoy size={16} aria-hidden="true" />

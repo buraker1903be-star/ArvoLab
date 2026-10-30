@@ -17,8 +17,9 @@ import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { aiKurulumSorunu } from "./saglayici";
 import { krediKarari, type KrediKarari } from "./kredi-karari";
+import { SAATLIK_HAK } from "./sinirlar";
 
-export const SAATLIK_HAK = 20;
+export { SAATLIK_HAK };
 
 export type KapiSonucu =
   | { ok: false; hata: string }

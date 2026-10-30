@@ -5,7 +5,7 @@ import type { Metin } from "@/lib/dil";
 import type { ConsultancyRequest } from "@/app/actions/consultancy";
 import type { AppSupportRequest } from "@/app/actions/support";
 import Link from "next/link";
-import { GraduationCap, Inbox, LifeBuoy, Send, XCircle } from "lucide-react";
+import { BookOpen, GraduationCap, Inbox, LifeBuoy, Send, XCircle } from "lucide-react";
 import {
   createConsultancyRequest,
   getMyRequests,
@@ -391,6 +391,12 @@ export default async function DestekPage({
             <div>
               <h2>{t({ tr: "Uygulama desteği", en: "App support" })}</h2>
               <p>{t({ tr: "Hata, erişim, ödeme sorunu ya da bir özellik isteği.", en: "A bug, an access or payment problem, or a feature request." })}</p>
+              {/* Yazmadan önce cevabı belki kılavuzda vardır (30.10.2026). */}
+              <p className="text-sm">
+                <Link href="/dashboard/yardim">
+                  <BookOpen size={13} aria-hidden="true" /> {t({ tr: "Kullanım Kılavuzu", en: "User Guide" })}
+                </Link>
+              </p>
             </div>
             <PanelDrawer
               triggerLabel={t({ tr: "Bize yaz", en: "Write to us" })}
