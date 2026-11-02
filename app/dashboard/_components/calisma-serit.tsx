@@ -1,3 +1,4 @@
+import { calismaAdresi } from "@/lib/calisma-karti";
 import Link from "next/link";
 import { ArrowLeft, BookOpenCheck, ChartNoAxesCombined, FileCheck2, PenLine, Quote, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -58,7 +59,7 @@ export default async function CalismaSerit({
 
   return (
     <nav className="calisma-serit" aria-label={t({ tr: "Çalışma bağlamı", en: "Work context" })}>
-      <Link href={`/dashboard/editor/${calisma.id}`} className="calisma-serit-baslik">
+      <Link href={calismaAdresi(calisma.id)} className="calisma-serit-baslik">
         <ArrowLeft size={15} aria-hidden="true" />
         <span className="calisma-serit-etiket">{t({ tr: "Çalışma özeti", en: "Work overview" })}</span>
         <strong>{calisma.title}</strong>

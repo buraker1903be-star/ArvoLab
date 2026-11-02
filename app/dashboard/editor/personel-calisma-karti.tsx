@@ -5,13 +5,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardCheck,
-  LayoutDashboard,
   MessageSquare,
   MoreHorizontal,
   PenLine,
   Pencil,
   RotateCcw,
   ShieldCheck,
+  TriangleAlert,
   Upload,
   UserRound,
 } from "lucide-react";
@@ -23,7 +23,10 @@ import { trGunAnahtari } from "@/lib/tr-time";
 import DeleteProjectButton from "./delete-project-button";
 import { createClient } from "@/lib/supabase/server";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
-import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
+import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu } from "@/lib/calisma-ozeti";
+import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
+import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
+import TeslimPaketi from "../_components/teslim-paketi";
 import KilavuzPenceresi from "./[id]/kilavuz-penceresi";
 import KanitMatrisiPenceresi from "./[id]/kanit/kanit-matrisi-penceresi";
 import EtikKurulPenceresi from "./[id]/etik/etik-penceresi";
@@ -135,6 +138,7 @@ export default async function PersonelCalismaKarti({
   ]);
   const ozet = ozetHam && ozetHam !== CALISMA_OKUNAMADI ? ozetHam : null;
   const hazirlik = ozet?.hazirlik ?? null;
+  const stilAdi = (anahtar: string | null | undefined) => STIL_ETIKETLERI[anahtar ?? ""] ?? anahtar ?? "";
   /* Etik: yalnızca tehlike ve uyarı "Dikkat isteyenler"e girer; bilgi notları personeli boğmasın. */
   const etikUyarisi = etik ? etikUyarilari(etik, bugun).find((u) => u.ton !== "info") ?? null : null;
 
@@ -155,14 +159,13 @@ export default async function PersonelCalismaKarti({
           </span>
         </div>
         <div className="calisma-durum-eylemler">
-          <Link href={merkez} className="projects-primary-button button-compact">
-            <LayoutDashboard size={15} aria-hidden="true" />
-            {t({ tr: "Çalışma özeti", en: "Work overview" })}
-          </Link>
-          <Link href={`${merkez}/write`} className="projects-filter-button button-compact">
+          {/* Ayrı "Çalışma özeti" sayfası kaldırıldı (02.11.2026, kurum sahibinin kararı): her şey bu kartta. */}
+          <Link href={`${merkez}/write`} className="projects-primary-button button-compact">
             <PenLine size={15} aria-hidden="true" />
             {t({ tr: "Metni aç", en: "Open text" })}
           </Link>
+          {/* Teslim paketi (PDF + Word + kontrol raporu): eskiden yalnızca özet sayfasındaydı. */}
+          {yazim?.words ? <TeslimPaketi projectId={calisma.id} className="projects-filter-button button-compact" /> : null}
           {takvim && takvim.length ? (
             <TezTakvimiPenceresi
               projectId={calisma.id}
@@ -191,6 +194,24 @@ export default async function PersonelCalismaKarti({
           </details>
         </div>
       </header>
+
+      {/* Atıf stili kılavuzla çelişiyorsa tek tıkla düzeltme; eskiden yalnızca özet sayfasındaydı. */}
+      {ozet && atifStiliCelisiyorMu(ozet) ? (
+        <div className="asistan-uyari asistan-uyari-eylemli" data-tone="danger" role="alert">
+          <span>
+            <TriangleAlert size={16} aria-hidden="true" />{" "}
+            {t({
+              tr: `Çalışma ${stilAdi(ozet.calisma.citation_style)} olarak ayarlı, ${ozet.kilavuz?.kurum ?? "kurumun"} kılavuzu ${stilAdi(ozet.kilavuz?.atifStili)} istiyor.`,
+              en: `The work is set to ${stilAdi(ozet.calisma.citation_style)}, but ${ozet.kilavuz?.kurum ? `the ${ozet.kilavuz.kurum}` : "the institution's"} guideline requires ${stilAdi(ozet.kilavuz?.atifStili)}.`,
+            })}
+          </span>
+          <ActionForm action={atifStiliniKilavuzaUydur.bind(null, calisma.id)} successMessage={t({ tr: "Atıf stili kılavuza göre güncellendi.", en: "Citation style updated to match the guideline." })}>
+            <button type="submit" className="projects-filter-button button-compact">
+              {t({ tr: "Kılavuza göre düzelt", en: "Fix per guideline" })}
+            </button>
+          </ActionForm>
+        </div>
+      ) : null}
 
       <dl className="tez-olcumler calisma-olcumler">
         <div className="tez-olcu">
@@ -289,11 +310,11 @@ export default async function PersonelCalismaKarti({
         ) : null}
         {tutarsizliklar.map((sorun, i) => (
           <li key={i}>
-            <Link href={merkez} className="gb-satir" title={sorun.baslik}>
+            <Link href={`${merkez}/write`} className="gb-satir" title={sorun.baslik}>
               <AlertTriangle size={16} aria-hidden="true" />
               <span className="gb-satir-govde">
                 <b>{sorun.baslik}</b>
-                <small>{t({ tr: "Metin ile literatür arasında; ayrıntı çalışma özetinde", en: "Between text and literature; details in the work overview" })}</small>
+                <small>{sorun.aciklama}</small>
               </span>
               <span className="status-pill" data-tone="warning">{t({ tr: "Tutarsızlık", en: "Inconsistency" })}</span>
             </Link>

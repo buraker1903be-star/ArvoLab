@@ -498,12 +498,12 @@ export default async function DashboardPage() {
       alt: madde.detail ?? "",
       href: `/dashboard/editor/${resume?.id}/write?teslim=${madde.id}`
     })),
-    /* Metin ile literatür listesi arasındaki tutarsızlık: ayrıntısı çalışma merkezinde. */
+    /* Metin ile literatür listesi arasındaki tutarsızlık: ayrıntısı Çalışmalarım'daki kartta. */
     ...resumeTutarsizliklari.map((sorun) => ({
       anahtar: `tutarsizlik-${sorun.tur}`,
       baslik: sorun.baslik,
       alt: sorun.aciklama,
-      href: `/dashboard/editor/${resume?.id}`
+      href: calismaAdresi(resume?.id ?? "")
     })),
   ].slice(0, GENEL_BAKIS_SATIR);
 
@@ -741,7 +741,7 @@ export default async function DashboardPage() {
                   <PenLine size={16} aria-hidden="true" />
                   {resumeStats ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
                 </Link>
-                <Link href={`/dashboard/editor/${resume.id}`} className="projects-filter-button">
+                <Link href={calismaAdresi(resume.id)} className="projects-filter-button">
                   {t({ tr: "Çalışma özeti", en: "Work overview" })}
                 </Link>
               </div>

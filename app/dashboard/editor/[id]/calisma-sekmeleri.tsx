@@ -1,3 +1,4 @@
+import { calismaAdresi } from "@/lib/calisma-karti";
 import Link from "next/link";
 import { ceviri } from "@/lib/dil-sunucu";
 
@@ -24,7 +25,8 @@ export default async function CalismaSekmeleri({
 }) {
   const t = await ceviri();
   const sekmeler: { anahtar: CalismaSekmesi; etiket: string; href: string }[] = [
-    { anahtar: "merkez", etiket: t({ tr: "Özet", en: "Overview" }), href: `/dashboard/editor/${calisma.id}` },
+    /* Özet artık Çalışmalarım'daki kart (ayrı sayfa 02.11.2026'da kalktı). */
+    { anahtar: "merkez", etiket: t({ tr: "Özet", en: "Overview" }), href: calismaAdresi(calisma.id) },
     { anahtar: "yazim", etiket: t({ tr: "Yazım", en: "Writing" }), href: `/dashboard/editor/${calisma.id}/write` },
     { anahtar: "kanit", etiket: t({ tr: "Kanıt matrisi", en: "Evidence matrix" }), href: `/dashboard/editor/${calisma.id}/kanit` },
     /* Etik kurul (02.11.2026): tez, makale ve projede; veri toplayan her çalışmada gerekebilir. */

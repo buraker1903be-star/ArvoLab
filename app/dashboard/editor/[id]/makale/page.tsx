@@ -1,3 +1,4 @@
+import { calismaAdresi } from "@/lib/calisma-karti";
 import { trGunAnahtari } from "@/lib/tr-time";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -129,8 +130,8 @@ export default async function MakaleCalismaAlani({
             </p>
           </div>
           <div className="cluster">
-            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
-              {t({ tr: "Çalışma özeti", en: "Work overview" })}
+            <Link href={calismaAdresi(id)} className="projects-filter-button">
+              {t({ tr: "Çalışmalarım", en: "My works" })}
             </Link>
             <Link href={`/dashboard/editor/${id}/edit`} className="projects-filter-button">
               {t({ tr: "Çalışma ayarları", en: "Work settings" })}

@@ -1353,11 +1353,11 @@ export default function ManuscriptEditor({
       case "link-guideline":
         window.open(editHref, "_self");
         break;
-      /* Kurum girili ama katalogda karşılığı yok: yükleme teklifi
-         Çalışma Merkezi'nde duruyor. Ayarlara göndermek, hiçbir şeyi
-         değiştirmeyen bir ekrana göndermekti. */
+      /* Kurum girili ama katalogda karşılığı yok: kılavuz penceresi
+         Çalışmalarım'daki kartta açılır (?kilavuz=1). Ayarlara göndermek,
+         hiçbir şeyi değiştirmeyen bir ekrana göndermekti. */
       case "upload-guideline":
-        window.open(`/dashboard/editor/${projectId}`, "_self");
+        window.open(`/dashboard/editor?sec=${encodeURIComponent(projectId)}&kilavuz=1`, "_self");
         break;
       /*
         ÖNCE PENCERE KAPANIYOR, SONRA EKLENİYOR.

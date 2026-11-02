@@ -1,3 +1,4 @@
+import { calismaAdresi } from "@/lib/calisma-karti";
 import Link from "next/link";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { notFound } from "next/navigation";
@@ -46,8 +47,8 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
             </p>
           </div>
           <div className="cluster">
-            <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
-              {t({ tr: "Çalışma özeti", en: "Work overview" })}
+            <Link href={calismaAdresi(id)} className="projects-filter-button">
+              {t({ tr: "Çalışmalarım", en: "My works" })}
             </Link>
             <Link href="/dashboard/expert-requests" className="projects-filter-button">
               {t({ tr: "Uygulama Destek", en: "App Support" })}
@@ -87,9 +88,9 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
         {/* Yazım ekranıyla aynı: çıkış çalışmanın kendi merkezine.
             Düzenlemeyi bitiren kullanıcı listeye değil, çalıştığı teze
             dönmek istiyor. */}
-        <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
+        <Link href={calismaAdresi(id)} className="projects-filter-button">
           <ArrowLeft size={17} aria-hidden="true" />
-          {t({ tr: "Çalışma özeti", en: "Work overview" })}
+          {t({ tr: "Çalışmalarım", en: "My works" })}
         </Link>
       </section>
 
@@ -139,13 +140,13 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
                   stil kılavuz BAĞLANIRKEN yazılıyor, sonradan yeni bir
                   sürüm başka bir stille onaylanırsa çalışma eski
                   stilde kalıyor ve alan yine "kılavuza göre belirlenir"
-                  diyordu. Düzeltme yolu Çalışma Merkezi'ndeki
+                  diyordu. Düzeltme yolu Çalışmalarım'daki kartın
                   "Kılavuza göre düzelt" düğmesi.
                 */
                 <small>
                   {t({
-                    tr: "Kılavuz bağlı olduğu için burada değiştirilmez; uyuşmazlık varsa Çalışma Merkezi'nden düzeltin.",
-                    en: "It can't be changed here because a guideline is linked; if there is a mismatch, fix it from the work overview.",
+                    tr: "Kılavuz bağlı olduğu için burada değiştirilmez; uyuşmazlık varsa Çalışmalarım'daki çalışma kartından düzeltin.",
+                    en: "It can't be changed here because a guideline is linked; if there is a mismatch, fix it from the work's card in My works.",
                   })}
                 </small>
               ) : null}

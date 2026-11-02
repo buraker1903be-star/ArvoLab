@@ -1,3 +1,4 @@
+import { calismaAdresi } from "@/lib/calisma-karti";
 import { etikKaydiOku } from "@/lib/etik/oku";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -110,11 +111,11 @@ export default async function WriteManuscriptPage({
           ekran olmamalı.
         */}
         {/* Teslim kontrolü, Word, PDF ve kılavuz kontrolü düğmeleri editörden
-            buraya, "Çalışma özeti"nin sağına yerleşir (manuscript-editor.tsx). */}
+            buraya, "Çalışmalarım" düğmesinin sağına yerleşir (manuscript-editor.tsx). */}
         <div className="cluster yazma-eylemleri" id="yazma-eylemleri">
-          <Link href={`/dashboard/editor/${id}`} className="projects-filter-button">
+          <Link href={calismaAdresi(id)} className="projects-filter-button">
             <ArrowLeft size={17} />
-            {t({ tr: "Çalışma özeti", en: "Work overview" })}
+            {t({ tr: "Çalışmalarım", en: "My works" })}
           </Link>
         </div>
       </section>

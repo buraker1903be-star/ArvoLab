@@ -387,8 +387,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Fill in the cover page with \"Document\" → \"Cover\"; turn on margins, page numbers and the table of contents in \"Page setup\".",
       },
       {
-        tr: "\"Word olarak indir\" ya da \"PDF / Yazdır\" (Ctrl+P) ile çıktı alın. Çalışma özetindeki \"Teslim paketi (ZIP)\" metni kaynak PDF'leriyle birlikte indirir.",
-        en: "Export with \"Download as Word\" or \"PDF / Print\" (Ctrl+P). \"Submission package (ZIP)\" in the work summary downloads the text together with source PDFs.",
+        tr: "\"Word olarak indir\" ya da \"PDF / Yazdır\" (Ctrl+P) ile çıktı alın. Çalışmalarım'daki çalışma kartında \"Teslim paketi (ZIP)\" metni kaynak PDF'leriyle birlikte indirir.",
+        en: "Export with \"Download as Word\" or \"PDF / Print\" (Ctrl+P). \"Submission package (ZIP)\" on the work's card in My works downloads the text together with source PDFs.",
       },
     ],
     notlar: [
