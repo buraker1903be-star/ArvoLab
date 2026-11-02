@@ -116,3 +116,41 @@ export function atifSistemiSec(metin: string, dil: Dil = "tr"): AtifSecimi | nul
 
   return { sistem: kazanan.sistem, etiket: kazanan.etiket, sayim: kazanan.sayim, ikinciSayim, uyarilar };
 }
+
+/*
+  SİSTEM ADI VERMEYEN KILAVUZ (02.11.2026).
+
+  Türkçe kılavuzların bir kısmı APA ya da Chicago demiyor, YÖNTEM
+  anlatıyor: "Tezlerde dipnot yöntemi ve metin içi yöntem olmak üzere iki
+  farklı yöntem kullanılabilir" (DEÜ Sosyal Bilimler, 2011). Seçici
+  (atifSistemiSec) burada doğru olarak null dönüyor, ama ekranda yalnızca
+  "Kaynakça sistemi açıkça bulunamadı" yazıyordu: öğrenci kılavuzun
+  bir şey söylemediğini sanıyordu, oysa söylüyor — yalnızca adı yok.
+
+  Yöntem bir sisteme EŞLENMİYOR: "metin içi" APA da olabilir Harvard da;
+  yanlış sistem hiç sistem olmamasından kötü (dosya başındaki not). Kılavuzun
+  ne dediği söylenir, seçim öğrencide kalır.
+*/
+export type AtifYontemleri = { dipnot: boolean; metinIci: boolean };
+
+export function atifYontemleri(metin: string): AtifYontemleri {
+  const duz = metin.replaceAll("İ", "I");
+  return {
+    dipnot: /dipnot(?:lu)?\s+(?:yöntem|sistem|usul|tekni)/iu.test(duz),
+    metinIci: /metin\s*içi\s+(?:yöntem|sistem|usul|atıf|atif|kaynak\s+göster)/iu.test(duz),
+  };
+}
+
+/** Yöntem anlatan ama sistem adı vermeyen kılavuz için uyarı (Türkçe; gösterirken çevrilir). */
+export function atifYontemiUyarisi(yontem: AtifYontemleri): string | null {
+  if (yontem.dipnot && yontem.metinIci) {
+    return "Kılavuz bir kaynakça sistemi adı vermiyor; iki yönteme izin veriyor: dipnot ve metin içi (yazar-tarih). Kılavuzdaki örneklere en yakın sistemi siz seçin.";
+  }
+  if (yontem.metinIci) {
+    return "Kılavuz bir kaynakça sistemi adı vermiyor; metin içi (yazar-tarih) yöntemi anlatıyor. Kılavuzdaki örneklere en yakın sistemi siz seçin.";
+  }
+  if (yontem.dipnot) {
+    return "Kılavuz bir kaynakça sistemi adı vermiyor; dipnot yöntemini anlatıyor. Kılavuzdaki örneklere en yakın sistemi siz seçin.";
+  }
+  return null;
+}

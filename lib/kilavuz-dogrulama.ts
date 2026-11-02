@@ -183,6 +183,10 @@ export function bicimOzeti(ayarlar: {
   lineSpacing?: number;
   headingNumbering?: boolean;
   chapterNewPage?: boolean;
+  chapterUppercase?: boolean;
+  paragraphIndentCm?: number;
+  justify?: boolean;
+  pageSize?: string;
   thesisWords?: { min?: number; max?: number };
 }, dil: Dil = "tr"): string[] {
   const en = dil === "en";
@@ -219,7 +223,20 @@ export function bicimOzeti(ayarlar: {
     .join(" · ");
   if (yazi) satirlar.push(en ? `Text: ${yazi}` : `Yazı: ${yazi}`);
   if (ayarlar.lineSpacing) satirlar.push(en ? `Line spacing: ${yaz(ayarlar.lineSpacing)}` : `Satır aralığı: ${yaz(ayarlar.lineSpacing)}`);
+  /*
+    Girinti, yaslama, kâğıt ve büyük harfli bölüm başlığı da editöre
+    iniyor; eskiden özette yoktu ve öğrenci onayladığı ekranda görmediği
+    bir biçimle karşılaşıyordu (02.11.2026, DEÜ SBE kılavuzu).
+  */
+  const kagit = ayarlar.pageSize === "letter" ? "US Letter" : ayarlar.pageSize === "a4" ? "A4" : null;
+  if (kagit) satirlar.push(en ? `Paper: ${kagit}` : `Kâğıt: ${kagit}`);
+  const paragraf = [
+    ayarlar.paragraphIndentCm ? (en ? `first-line indent ${yaz(ayarlar.paragraphIndentCm)} cm` : `ilk satır girintisi ${yaz(ayarlar.paragraphIndentCm)} cm`) : null,
+    ayarlar.justify ? (en ? "justified" : "iki yana yaslı") : null,
+  ].filter(Boolean);
+  if (paragraf.length) satirlar.push(en ? `Paragraphs: ${paragraf.join(" · ")}` : `Paragraf: ${paragraf.join(" · ")}`);
   if (ayarlar.headingNumbering) satirlar.push(en ? "Headings are numbered decimally (1., 1.1.)" : "Başlıklar ondalık numaralanır (1., 1.1.)");
+  if (ayarlar.chapterUppercase) satirlar.push(en ? "Chapter headings in capitals" : "Bölüm başlıkları büyük harfle");
   if (ayarlar.chapterNewPage) satirlar.push(en ? "Each main chapter starts on a new page" : "Her ana bölüm yeni sayfadan başlar");
   /* Kelime sınırı teslim kontrolüne giriyor; öğrenci onaylamadan önce görmeli. */
   const kelime = ayarlar.thesisWords;

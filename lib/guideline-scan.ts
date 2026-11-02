@@ -1,7 +1,7 @@
 import { DEFAULT_HANGING_CM, DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
 import { SOZCUK_SONU } from "@/lib/sozcuk-siniri";
 import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
-import { atifGecisleri, atifSistemiSec } from "@/lib/atif-sistemi";
+import { atifGecisleri, atifSistemiSec, atifYontemiUyarisi, atifYontemleri } from "@/lib/atif-sistemi";
 import { sayiKuraliOner, type SayiOnerisi } from "@/lib/kilavuz-sayi-onerisi";
 import { ocrCalismadiUyarisi, ocrEksikDosyaUyarisi, pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
 import { kilavuzdanKagit } from "@/lib/kagit-boyutu";
@@ -69,6 +69,11 @@ const CANDIDATE_SECTIONS = [
         alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
         14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
         girinti 2 cm çıkmıştı (blok alıntının kuralı; gövdeninki 1 cm).
+    11 — DEÜ Sosyal Bilimler kılavuzu (02.11.2026): büyük "İ" ile yazılmış
+        kurallar ("İki yana yaslanmış", "GİRİŞ") görülüyor, "Satır
+        Aralıkları : 1,5" düzeni okunuyor, punto seçilen yazı tipinin
+        puntosu ("Arial 11, Times New Roman 12"), çok düzeyli numaralı
+        bölüm adları ("2.2.1. Giriş") tanınıyor.
     10 — kâğıt boyutu (A4 / US Letter) okunuyor (lib/kagit-boyutu.ts).
     9 — tezin kelime sınırı (thesis_min_words/thesis_max_words) ve
         İngilizce sayfa sınırı okunuyor (lib/kilavuz-kunyesi.ts).
@@ -81,7 +86,7 @@ const CANDIDATE_SECTIONS = [
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 10;
+export const TARAYICI_SURUMU = 11;
 
 /*
   Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
@@ -168,6 +173,18 @@ const SABIT_UYARILAR_EN = new Map<string, string>([
   ["Yeterli sayıda zorunlu bölüm tespit edilemedi.", "Not enough required sections could be identified."],
   ["Kaynakça sistemi açıkça bulunamadı.", "The citation style was not stated explicitly."],
   [
+    "Kılavuz bir kaynakça sistemi adı vermiyor; iki yönteme izin veriyor: dipnot ve metin içi (yazar-tarih). Kılavuzdaki örneklere en yakın sistemi siz seçin.",
+    "The guideline names no citation style; it allows two methods: footnotes and in-text (author-date). Choose the style closest to the guideline's examples.",
+  ],
+  [
+    "Kılavuz bir kaynakça sistemi adı vermiyor; metin içi (yazar-tarih) yöntemi anlatıyor. Kılavuzdaki örneklere en yakın sistemi siz seçin.",
+    "The guideline names no citation style; it describes in-text (author-date) citation. Choose the style closest to the guideline's examples.",
+  ],
+  [
+    "Kılavuz bir kaynakça sistemi adı vermiyor; dipnot yöntemini anlatıyor. Kılavuzdaki örneklere en yakın sistemi siz seçin.",
+    "The guideline names no citation style; it describes footnote citation. Choose the style closest to the guideline's examples.",
+  ],
+  [
     "Metinde istatistik örneği bulunamadı; sayı biçimi kılavuzdan çıkarılamıyor.",
     "No statistical examples were found in the text; the number format cannot be derived from the guideline.",
   ],
@@ -189,6 +206,10 @@ const SABIT_UYARILAR_EN = new Map<string, string>([
 ]);
 
 const KALIP_UYARILAR_EN: [RegExp, (e: RegExpExecArray) => string][] = [
+  [
+    /^Kılavuz birden fazla yazı tipine izin veriyor \((.*)\); (.*) önerildi, punto ona göre alındı\.$/u,
+    (e) => `The guideline allows more than one font (${e[1]}); ${e[2]} was suggested and the size taken for it.`,
+  ],
   [
     /^Makul olmayan kenar boşluğu değeri yok sayıldı \((.*)\); sayfa ölçüsüyle karışmış olabilir\.$/u,
     (e) => `Implausible margin values were ignored (${e[1]}); they may have been confused with the page size.`,
@@ -302,8 +323,15 @@ export const CHAPTER_NEW_PAGE =
   /bölüm(?:ler(?:i|in)?)?(?:\s+başl[ıi]klar[ıi])?[^.;]{0,50}yeni\s+(?:bir\s+)?sayfa(?:dan|da|ya)?\s+(?:başla(?!maz|mamal)|geç)|her\s+(?:ana\s+)?bölüm[^.;]{0,30}yeni\s+(?:bir\s+)?sayfa/iu;
 
 // "Birinci düzey / ana bölüm başlıkları büyük harfle yazılır" — "yazılmaz" kural değildir.
+/*
+  "başlığı" da sayılır (ğ ile). Eskiden yalnızca "başlık/başlıklar(ı)"
+  aranıyordu ve DEÜ Sosyal Bilimler kılavuzunun cümlesi ("bölüm başlığı ve
+  birinci derece alt başlığı oluşturan cümlenin tümü BÜYÜK HARFLERLE")
+  hiç eşleşmiyordu; araya giren "ve birinci derece alt başlığı …" için
+  pencere de 50'den 90'a çıktı (02.11.2026).
+*/
 export const CHAPTER_UPPERCASE =
-  /(?:birinci\s+düzey|ana\s+bölüm|bölüm)\s+başl[ıi]k(?:lar[ıi]?)?[^.;]{0,50}büyük\s+harf(?!\p{L}*\s+yaz[ıi]lmaz)/iu;
+  /(?:birinci\s+düzey|ana\s+bölüm|bölüm)\s+başl[ıi](?:k|ğ)\p{L}*[^.;]{0,90}büyük\s+harf(?!\p{L}*\s+yaz[ıi]lmaz)/iu;
 
 // Özet/Abstract kelime sınırları ve anahtar kelime sayısı ("Özet 150-250 kelime", "300 kelimeyi
 // geçmemelidir", "Anahtar kelimeler 3-5"). "Özgün" gibi kelimeler "öz" sayılmaz.
@@ -384,8 +412,67 @@ function detectedNumber(text: string, pattern: RegExp): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
+/*
+  NOKTALI BÜYÜK "İ".
+
+  JavaScript'in `i` bayrağı "İ" ile "i"yi eşleştirmez ("İ"nin yalnızca
+  çok karakterli küçük hâli var: "i̇"). Kılavuzlar başlıkları ve tablo
+  etiketlerini büyük harfle yazıyor; DEÜ Sosyal Bilimler kılavuzunda
+  (02.11.2026) "İki yana yaslanmış", "GİRİŞ", "İÇİNDEKİLER" bu yüzden HİÇ
+  görülmüyordu: iki yana yaslama ve bölümlerin yarısı çıkmadı. Her desene
+  ayrı ayrı "[iİ]" yazmak yerine metin bir kez düzleştirilir: "I", `i`
+  bayrağıyla hem "i" hem "[ıi]" kalıplarına uyuyor. Noktasız "ı"nın büyüğü
+  zaten "I"; ona dokunulmuyor.
+*/
+export const noktaliIDuzle = (metin: string) => metin.replaceAll("İ", "I");
+
+const YAZI_TIPLERI = ["Times New Roman", "Arial", "Calibri", "Cambria"] as const;
+
+/*
+  YAZI TİPİNE BAĞLI PUNTO.
+
+  Kılavuzlar çoğu zaman iki yazı tipine izin verip puntoyu her birine ayrı
+  yazıyor: "Punto: Arial karakterinde 11 punto, Times New Roman
+  karakterinde 12 punto" (DEÜ SBE). Tarayıcı yazı tipi olarak Times New
+  Roman'ı, puntoyu ise ilk eşleşmeden — Arial'inkinden — alıyordu: öneri
+  "Times New Roman 11" oldu, kılavuzun izin vermediği bir bileşim. Punto
+  önce SEÇİLEN yazı tipinin adının hemen ardında aranır; gövde/gövde dışı
+  ayrımı yine govdeOlcusu'nda (dipnotun "Times New Roman için 10" kuralı
+  elenir).
+*/
+function yaziTipininPuntosu(compact: string, aile: string): number | undefined {
+  const ad = aile.replace(/\s+/g, "\\s+");
+  const desen = new RegExp(
+    `${ad}\\s*(?:karakter\\p{L}*\\s+|yaz[ıi]\\s+tip\\p{L}*\\s+|font\\p{L}*\\s+)?(?:için\\s+|ile\\s+)?(\\d{1,2}(?:[,.]\\d)?)\\s*(?:punto|pt)\\b`,
+    "iu",
+  );
+  return govdeOlcusu(compact, desen, (deger) => deger >= 8 && deger <= 24);
+}
+
+/** "Arial veya Times New Roman": kılavuz birden fazla yazı tipine izin veriyor. */
+function izinliYaziTipleri(compact: string): string[] {
+  const ad = YAZI_TIPLERI.map((y) => y.replace(/\s+/g, "\\s+")).join("|");
+  const desen = new RegExp(`(${ad})\\s*(?:,|veya|ya\\s+da|yahut|ve\\/veya|or|\\/)\\s*(${ad})`, "giu");
+  const bulunan = new Set<string>();
+  for (const eslesme of compact.matchAll(desen)) {
+    for (const ham of [eslesme[1], eslesme[2]]) {
+      const tip = YAZI_TIPLERI.find((y) => y.toLowerCase() === ham.replace(/\s+/g, " ").toLowerCase());
+      if (tip) bulunan.add(tip);
+    }
+  }
+  return [...bulunan];
+}
+
+/*
+  Satır aralığı iki biçimde yazılıyor: "1,5 satır aralığı" ve tablo
+  düzeninde "Satır Aralıkları : 1,5" (DEÜ SBE). Eskiden yalnızca ilki
+  aranıyordu. Ardında birim olan sayı ("satır aralığı 6 nk") aralık değil.
+*/
+const SATIR_ARALIGI =
+  /(\d(?:[,.]\d+)?)\s*(?:satır\s+aralığı|satır\s+aralıklı)|satır\s+aralı\p{L}*\s*[:=]?\s*(\d(?:[,.]\d+)?)(?![,.]?\d|\s*(?:cm|mm|nk|pt|punto))/iu;
+
 export function extractFormattingRules(text: string, sectionCount: number, hasCitation: boolean, ingilizce = false) {
-  const compact = text.replace(/\s+/g, " ");
+  const compact = noktaliIDuzle(text).replace(/\s+/g, " ");
   /* İngilizce belgede Türkçe kalıpların bulamadığını İngilizce kalıplar doldurur (bkz. TARAYICI_SURUMU 8). */
   const en = ingilizce ? ingilizceKurallar(compact) : null;
   /*
@@ -437,9 +524,12 @@ export function extractFormattingRules(text: string, sectionCount: number, hasCi
   */
   const gecerliPunto = (deger: number) => deger >= 8 && deger <= 24;
   const gecerliAralik = (deger: number) => deger >= 1 && deger <= 3;
-  const validFontSize = govdeOlcusu(compact, /(\d{1,2}(?:[,.]\d+)?)\s*(?:punto|pt)\b/iu, gecerliPunto) ?? en?.punto;
-  const validLineSpacing =
-    govdeOlcusu(compact, /(\d(?:[,.]\d+)?)\s*(?:satır\s+aralığı|satır\s+aralıklı)/iu, gecerliAralik) ?? en?.satirAraligi;
+  const validFontSize =
+    (fontFamily ? yaziTipininPuntosu(compact, fontFamily) : undefined) ??
+    govdeOlcusu(compact, /(\d{1,2}(?:[,.]\d+)?)\s*(?:punto|pt)\b/iu, gecerliPunto) ??
+    en?.punto;
+  const validLineSpacing = govdeOlcusu(compact, SATIR_ARALIGI, gecerliAralik) ?? en?.satirAraligi;
+  const yaziTipleri = izinliYaziTipleri(compact);
   /*
     Paragraf girintisi: önce gövdenin ölçüsü aranır, yoksa kural varlığına
     bakılır. Eskiden ilk eşleşme alınıyordu ve Adıyaman kılavuzunda BLOK
@@ -464,6 +554,10 @@ export function extractFormattingRules(text: string, sectionCount: number, hasCi
   }
   if (Object.values(margins).some((value) => value === undefined)) warnings.push("Tüm kenar boşlukları açıkça bulunamadı.");
   if (!fontFamily) warnings.push("Yazı tipi açıkça bulunamadı.");
+  /* Seçim sessiz kalmasın: öğrenci kılavuzunda diğer yazı tipini de görecek. */
+  else if (yaziTipleri.length > 1) {
+    warnings.push(`Kılavuz birden fazla yazı tipine izin veriyor (${yaziTipleri.join(", ")}); ${fontFamily} önerildi, punto ona göre alındı.`);
+  }
   if (!validFontSize) warnings.push("Gövde metninin yazı boyutu açıkça bulunamadı.");
   if (!validLineSpacing) warnings.push("Gövde metninin satır aralığı açıkça bulunamadı.");
   if (sectionCount < 4) warnings.push("Yeterli sayıda zorunlu bölüm tespit edilemedi.");
@@ -512,14 +606,35 @@ export function extractFormattingRules(text: string, sectionCount: number, hasCi
  */
 export function onerilenBolumler(text: string, ingilizce: boolean): string[] {
   const adaylar = ingilizce ? INGILIZCE_BOLUMLER : CANDIDATE_SECTIONS.map((ad) => ({ ad, desen: ad }));
-  /* İngilizce kılavuzlar "CHAPTER 1", "IV." ile numaralıyor; Türkçe önek eskisi gibi. */
-  const onek = ingilizce ? "(?:\\d+|[IVX]+|chapter\\s+\\w+)?[.):]?" : "\\d*[.)]?";
+  /*
+    İngilizce kılavuzlar "CHAPTER 1", "IV." ile numaralıyor. Türkçe önek
+    ÇOK DÜZEYLİ numarayı da kabul ediyor: kılavuzun İçindekiler'i
+    "2.2.1. Giriş", "2.3.1. Kaynakça" diye yazıyor ve eskiden yalnızca tek
+    düzeyli "1." tanınıyordu — DEÜ SBE kılavuzundan 3 bölüm çıktı (02.11.2026).
+  */
+  const onek = ingilizce ? "(?:\\d+|[IVX]+|chapter\\s+\\w+)?[.):]?" : "(?:\\d+\\.)*\\d*[.)]?";
+  const duz = noktaliIDuzle(text);
   return adaylar
-    .filter(({ desen }) => {
+    .filter(({ ad, desen }) => {
+      /*
+        Daha uzun bir adın başı olarak geçen kısa ad sayılmaz: "Sonuç ve
+        Öneriler" satırı "Sonuç"u da buluyordu ve öğrenciden aynı bölüm
+        iki kez isteniyordu.
+      */
+      /* İngilizce adlar düzenli ifade; ön ek kesmesi yalnızca düz Türkçe adlarda güvenli. */
+      const uzunlar = ingilizce ? [] : adaylar
+        .filter((diger) => diger.ad !== ad && diger.ad.toLocaleLowerCase("tr-TR").startsWith(`${ad.toLocaleLowerCase("tr-TR")} `))
+        .map((diger) => noktaliIDuzle(diger.desen.slice(desen.length).trim()));
+      /*
+        Ardından virgül gelen ad başlık değil, cümlenin içindeki bir
+        sayımdır: "SONUÇ, KAYNAKÇA başlıkları … en sola yaslı" satırı
+        kılavuzda olmayan bir "Sonuç" bölümü üretiyordu.
+      */
+      const degil = `(?!\\s*[,;])${uzunlar.length ? `(?!\\s+(?:${uzunlar.join("|")})${SOZCUK_SONU})` : ""}`;
       // \b, Türkçe karakterlerde (ş, ı, ğ vb.) güvenilir çalışmadığı için
       // sınır lib/sozcuk-siniri.ts'ten gelir (tek tanım).
-      const re = new RegExp(`(^|\\n)\\s*${onek}\\s*${desen}${SOZCUK_SONU}`, "iu");
-      return re.test(text);
+      const re = new RegExp(`(^|\\n)\\s*${onek}\\s*${noktaliIDuzle(desen)}${SOZCUK_SONU}${degil}`, "iu");
+      return re.test(duz);
     })
     .map(({ ad }) => ad);
 }
@@ -701,6 +816,8 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
       ...(kilavuzDegil ? [kilavuzDegil] : []),
       ...formatting.warnings,
       ...(atifSecimi?.uyarilar ?? []),
+      /* Sistem adı yoksa kılavuzun anlattığı yöntem söylenir (lib/atif-sistemi.ts). */
+      ...(!atifSecimi && atifYontemiUyarisi(atifYontemleri(text)) ? [atifYontemiUyarisi(atifYontemleri(text))!] : []),
       /*
         OCR metni gürültülüdür ("ÜNİVERSİTESİ" bir yerde "ONİVER"
         çıkabiliyor). Kullanıcıya söylenmezse, çıkarımın neden eksik
