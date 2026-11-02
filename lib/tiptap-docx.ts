@@ -15,6 +15,7 @@ import {
   convertMillimetersToTwip,
   Footer,
   Header,
+  NumberFormat,
   PageNumber,
   Tab,
   PageBreak,
@@ -24,7 +25,7 @@ import {
 } from "docx";
 import { captionLabel, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
 import { YEREL, type Dil } from "@/lib/dil";
-import { headingNumberMap, icindekilerSatirlari } from "@/lib/heading-numbering";
+import { anaMetinBaslangici, headingNumberMap, icindekilerSatirlari } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
@@ -148,7 +149,7 @@ function buildCoverPageParagraphs(cover: CoverPageData, dil: Dil): Paragraph[] {
   }
 
   // Kapak sayfasından sonra yeni sayfaya geç
-  paragraphs.push(new Paragraph({ children: [new PageBreak()] }));
+  paragraphs.push(sayfaSonu());
 
   return paragraphs;
 }
@@ -521,6 +522,8 @@ export interface DocxTextDefaults {
   unnumberedSections?: string[];
   /** Belli düzeyden itibaren alt başlıkların sol girintisi */
   subheadingIndent?: AltBaslikGirintisi;
+  /** Ön sayfalar küçük Romen rakamıyla, ana metin 1'den (lib/heading-numbering.ts anaMetinBaslangici) */
+  frontMatterRoman?: boolean;
 }
 
 export interface BuildDocxOptions {
@@ -544,15 +547,25 @@ export interface BuildDocxOptions {
   dil?: Dil;
 }
 
-function sayfaNumarasiAlani(konum: SayfaNumarasiKonumu = "bottom-center") {
+function sayfaNumarasiAlani(konum: SayfaNumarasiKonumu = "bottom-center", ilkSayfaBos = false) {
   const paragraf = new Paragraph({
     alignment: konum.endsWith("right") ? AlignmentType.RIGHT : AlignmentType.CENTER,
     children: [new TextRun({ children: [PageNumber.CURRENT] })],
   });
+  // Kapak sayfası (bölümün ilk sayfası) numarasız: boş bir "ilk sayfa" alanı.
+  const bos = () => new Paragraph({ children: [] });
   return konum.startsWith("top")
-    ? { headers: { default: new Header({ children: [paragraf] }) } }
-    : { footers: { default: new Footer({ children: [paragraf] }) } };
+    ? { headers: { default: new Header({ children: [paragraf] }), ...(ilkSayfaBos ? { first: new Header({ children: [bos()] }) } : {}) } }
+    : { footers: { default: new Footer({ children: [paragraf] }), ...(ilkSayfaBos ? { first: new Footer({ children: [bos()] }) } : {}) } };
 }
+
+/* Kapak ve içindekiler sonundaki sayfa sonları: bölüm bölünürken boş sayfa bırakmasınlar. */
+const sayfaSonlari = new WeakSet<object>();
+const sayfaSonu = () => {
+  const p = new Paragraph({ children: [new PageBreak()] });
+  sayfaSonlari.add(p);
+  return p;
+};
 
 export async function buildDocxFromTiptap({
   title,
@@ -622,7 +635,7 @@ export async function buildDocxFromTiptap({
           level: s.level,
         })),
       }),
-      new Paragraph({ children: [new PageBreak()] })
+      sayfaSonu()
     );
     // Türk tez kılavuzlarındaki sıra: Tablolar Listesi, ardından Şekiller Listesi (varsa).
     const kinds = captionKinds(doc.content ?? []);
@@ -641,11 +654,19 @@ export async function buildDocxFromTiptap({
           ],
         }),
         new TableOfContents(en ? `List of ${label.toLowerCase()}s` : `${label} listesi`, { hyperlink: true, captionLabelIncludingNumbers: label }),
-        new Paragraph({ children: [new PageBreak()] })
+        sayfaSonu()
       );
     }
   }
-  for (const node of doc.content ?? []) {
+  /*
+    Ana metnin Word'deki başlangıcı (Romen rakamlı ön sayfalar için). Kapak
+    ve içindekiler her zaman ön tarafta; belgedeki ön bölümler (Özet,
+    Kısaltmalar …) ilk ana başlığa kadar.
+  */
+  const anaSira = textDefaults.frontMatterRoman ? anaMetinBaslangici(doc as Parameters<typeof anaMetinBaslangici>[0]) : -1;
+  let bolunme = -1;
+  for (const [sira, node] of (doc.content ?? []).entries()) {
+    if (sira === anaSira) bolunme = bodyElements.length;
     bodyElements.push(...(await blockToDocx(node, ctx, { quoteDepth: 0 })));
   }
 
@@ -653,6 +674,47 @@ export async function buildDocxFromTiptap({
   const baseSize = Math.round((textDefaults.fontSizePt ?? 12) * 2);
   const headingRun = { font, bold: true, italics: false, color: "000000" };
   const headingParagraph = { spacing: { before: 240, after: 120 }, keepNext: true };
+
+  const sayfa = { size: { width: kagit.genislikTwip, height: kagit.yukseklikTwip }, margin: marginTwip };
+  /*
+    Sayfa numarasının yeri kılavuzdan (lib/kilavuz-bicim.ts); eskiden hep
+    alt ortaydı ve "sağ alt köşe" isteyen kılavuzda her sayfa yanlıştı.
+    Üstteyse altbilgi değil üstbilgi.
+
+    ÖN SAYFALAR ROMEN RAKAMIYLA (02.11.2026, kılavuzun front_matter_roman
+    kuralı): iki bölüm. Birincisi kapak, içindekiler ve ön bölümler —
+    i, ii, iii; kapağın kendisine numara yazılmaz (ilk sayfa ayrı). İkincisi
+    Giriş'ten itibaren 1'den. Eskiden tek bölümdü ve Giriş, ön sayfaların
+    sayısı kadar ilerden (ör. 7) başlıyordu. Ön tarafın son öğesi bir sayfa
+    sonuysa düşürülür: bölüm sonu zaten yeni sayfa açıyor, ikisi boş sayfa
+    bırakırdı.
+  */
+  const bolumler = () => {
+    const tek = [{
+      properties: { page: sayfa },
+      ...(showPageNumbers ? sayfaNumarasiAlani(textDefaults.pageNumberPosition) : {}),
+      children: bodyElements.length > 0 ? bodyElements : [new Paragraph({ children: [] })],
+    }];
+    if (bolunme <= 0 || bolunme >= bodyElements.length) return tek;
+    const on = bodyElements.slice(0, bolunme);
+    while (on.length && sayfaSonlari.has(on[on.length - 1])) on.pop();
+    if (!on.length) return tek;
+    return [
+      {
+        properties: {
+          page: { ...sayfa, pageNumbers: { start: 1, formatType: NumberFormat.LOWER_ROMAN } },
+          titlePage: Boolean(coverPage),
+        },
+        ...(showPageNumbers ? sayfaNumarasiAlani(textDefaults.pageNumberPosition, Boolean(coverPage)) : {}),
+        children: on,
+      },
+      {
+        properties: { page: { ...sayfa, pageNumbers: { start: 1, formatType: NumberFormat.DECIMAL } } },
+        ...(showPageNumbers ? sayfaNumarasiAlani(textDefaults.pageNumberPosition) : {}),
+        children: bodyElements.slice(bolunme),
+      },
+    ];
+  };
 
   return new Document({
     title: xmlTemiz(title),
@@ -699,22 +761,6 @@ export async function buildDocxFromTiptap({
         })),
       })),
     },
-    sections: [
-      {
-        properties: {
-          page: {
-            size: { width: kagit.genislikTwip, height: kagit.yukseklikTwip },
-            margin: marginTwip,
-          },
-        },
-        /*
-          Sayfa numarasının yeri kılavuzdan (lib/kilavuz-bicim.ts); eskiden hep
-          alt ortaydı ve "sağ alt köşe" isteyen kılavuzda her sayfa yanlıştı.
-          Üstteyse altbilgi değil üstbilgi.
-        */
-        ...(showPageNumbers ? sayfaNumarasiAlani(textDefaults.pageNumberPosition) : {}),
-        children: bodyElements.length > 0 ? bodyElements : [new Paragraph({ children: [] })],
-      },
-    ],
+    sections: bolumler(),
   });
 }

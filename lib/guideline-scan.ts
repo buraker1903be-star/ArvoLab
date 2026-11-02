@@ -8,7 +8,7 @@ import { kilavuzdanKagit } from "@/lib/kagit-boyutu";
 import { kelimeSiniriCikar, sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
 import { stilAdi } from "@/lib/atif/stiller";
-import { altBaslikGirintisiCikar, bolumHizasiCikar, dipnotPuntosuCikar, numarasizBolumlerCikar, paragrafAraligiCikar, sayfaNumarasiKonumuCikar } from "@/lib/kilavuz-bicim";
+import { altBaslikGirintisiCikar, onSayfaRomenCikar, bolumHizasiCikar, dipnotPuntosuCikar, numarasizBolumlerCikar, paragrafAraligiCikar, sayfaNumarasiKonumuCikar } from "@/lib/kilavuz-bicim";
 import type { Dil } from "@/lib/dil";
 import { INGILIZCE_BOLUMLER, ingilizceBelgeMi, ingilizceKurallar } from "@/lib/kilavuz-ingilizce";
 
@@ -71,6 +71,7 @@ const CANDIDATE_SECTIONS = [
         alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
         14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
         girinti 2 cm çıkmıştı (blok alıntının kuralı; gövdeninki 1 cm).
+    15 — ön sayfalar Romen rakamıyla, ana metin 1'den (front_matter_roman).
     14 — alt başlık girintisi ("birinci dereceden sonraki başlıklar 1,25 cm
         içeriden"; lib/kilavuz-bicim.ts).
     13 — yalnızca dipnot yöntemini anlatan kılavuz "dipnot" stilini alıyor
@@ -97,7 +98,7 @@ const CANDIDATE_SECTIONS = [
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 14;
+export const TARAYICI_SURUMU = 15;
 
 /*
   Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
@@ -499,6 +500,7 @@ function inceKurallar(compact: string, fontFamily: string | undefined): Record<s
   const altGirinti = altBaslikGirintisiCikar(compact);
   return {
     ...(altGirinti ? { subheading_indent: altGirinti } : {}),
+    ...(onSayfaRomenCikar(compact) ? { front_matter_roman: true } : {}),
     ...(dipnot ? { footnote_size_pt: dipnot } : {}),
     ...(aralik ? { paragraph_spacing_pt: aralik } : {}),
     ...(hiza ? { chapter_align: hiza.hiza, ...(hiza.solaYasli.length ? { chapter_left_sections: hiza.solaYasli } : {}) } : {}),

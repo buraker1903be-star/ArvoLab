@@ -12,7 +12,7 @@ export default function ManuscriptSheet({ title, sheet, dil = "tr" }: { title: s
     <>
       {/* Sayfalama çalışınca bu kural kaldırılır; sayfa kuralını Paged.js uygular (sayfali-baski.tsx). */}
       <style id="sayfa-kurali">{sheet.pageRule}</style>
-      <article className="print-sheet" style={sheet.style} aria-label={title} data-chapter-case={sheet.chapterCase}>
+      <article className="print-sheet" style={sheet.style} aria-label={title} data-chapter-case={sheet.chapterCase} data-on-sayfa-romen={sheet.onSayfaRomen ? "true" : undefined}>
         {cover ? (
           <section className="print-cover">
             <div className="print-cover-block">

@@ -247,3 +247,17 @@ export function altGirintiMetni(kural: AltBaslikGirintisi): { tr: string; en: st
     en: `From level-${duzey} subheadings: indented ${cm.en} cm`,
   };
 }
+
+/*
+  ÖN SAYFALARDA ROMEN RAKAMI (02.11.2026). DEÜ SBE 1.6: "… küçük harf Romen
+  rakamları ile numaralandırılır. Giriş bölümünde sayfa numarası 1'den
+  başlar ve … Arap rakamları". İki yarı da aranır: yalnızca "Romen rakamı"
+  geçen bir cümle (ör. bölüm numaralandırması: "BÖLÜM I") sayfa kuralı
+  değildir.
+*/
+export function onSayfaRomenCikar(compact: string): boolean {
+  const romenVar = /romen\s+rakam|roman\s+numeral/iu.test(compact);
+  const anaMetin =
+    /giriş\p{L}*[^.;]{0,80}?1\s*['’]?\s*(?:den|dan)\s+başla|arap\s+rakam|arabic\s+numeral|introduction[^.;]{0,60}?page\s+1\b/iu.test(compact);
+  return romenVar && anaMetin;
+}

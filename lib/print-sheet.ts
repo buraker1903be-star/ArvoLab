@@ -27,6 +27,8 @@ export interface PrintSheet {
   pageRule: string;
   style: CSSProperties;
   chapterCase?: "upper";
+  /** Ön sayfalar Romen rakamıyla, ana metin 1'den (sayfali-baski.tsx etiketleri yazar) */
+  onSayfaRomen?: boolean;
   cover: CoverPage | null;
   hasText: boolean;
   /*
@@ -68,6 +70,7 @@ export function buildPrintSheet(
     chapterAlign: guideline?.settings.chapterAlign,
     chapterLeftSections: guideline?.settings.chapterLeftSections,
     altGirinti: guideline?.settings.subheadingIndent,
+    onSayfaRomen: guideline?.settings.frontMatterRoman ?? false,
   });
 
   const margins = manuscript?.margins ?? guideline?.settings.margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
@@ -110,6 +113,7 @@ export function buildPrintSheet(
       ...(aralik ? { "--print-p-once": `${aralik.beforePt}pt`, "--print-p-sonra": `${aralik.afterPt}pt` } : {}),
     } as CSSProperties,
     chapterCase: guideline?.settings.chapterUppercase ? "upper" : undefined,
+    onSayfaRomen: guideline?.settings.frontMatterRoman ? true : undefined,
     cover: manuscript?.coverPage ?? null,
     hasText: Boolean(manuscript),
     toc: manuscript?.includeToc

@@ -196,3 +196,73 @@ export function icindekilerSatirlari(
   walk(doc?.content);
   return satirlar;
 }
+
+/*
+  ÖN SAYFALAR VE ANA METİN (02.11.2026). Türk tez kılavuzlarının ortak
+  kuralı: ön sayfalar (Özet, İçindekiler, Kısaltmalar …) küçük Romen
+  rakamıyla, Giriş'ten itibaren 1'den başlayan Arap rakamıyla numaralanır
+  (DEÜ SBE 1.6). Ana metin, numarasız ÖN bölüm OLMAYAN ilk birinci düzey
+  başlıkta başlar: Giriş kılavuz gereği numarasız olsa da (lib/kilavuz-bicim.ts)
+  bir ön sayfa değildir. Arka bölümler (Kaynakça, Ekler, Özgeçmiş) ön
+  sayfa sayılmaz — yalnızca onlardan oluşan bir belge "ana metin yok"
+  demek değil.
+*/
+const ARKA_BOLUMLER = new Set(
+  [
+    "Kaynakça", "Kaynaklar", "Ekler", "Özgeçmiş", "Sözlük",
+    "References", "Bibliography", "Works Cited", "Appendices", "Curriculum Vitae", "Vita", "Glossary",
+  ].map(normalizeHeading),
+);
+
+/** Başlık bir ÖN sayfanın başlığı mı (Özet, Önsöz, İçindekiler, Kısaltmalar …)? */
+export function onSayfaBasligiMi(text: string): boolean {
+  const n = normalizeHeading(text);
+  if (APPENDIX.test(n) || APPENDIX_EN.test(n) || ARKA_BOLUMLER.has(n)) return false;
+  return UNNUMBERED_SECTIONS.has(n);
+}
+
+/**
+ * Belgenin üst düzey düğümleri içinde ana metnin başladığı yer: ön sayfa
+ * olmayan ilk H1'in sırası. Hiç H1 yoksa 0 (her şey ana metin); H1'lerin
+ * hepsi ön sayfaysa düğüm sayısı (ana metin yok).
+ */
+export function anaMetinBaslangici(doc: { content?: JsonNode[] } | null | undefined): number {
+  const dugumler = doc?.content ?? [];
+  for (const [sira, dugum] of dugumler.entries()) {
+    if (dugum.type === "heading" && (Number(dugum.attrs?.level) || 1) === 1 && !onSayfaBasligiMi(jsonText(dugum))) return sira;
+  }
+  return dugumler.some((d) => d.type === "heading" && (Number(d.attrs?.level) || 1) === 1) ? dugumler.length : 0;
+}
+
+/** Küçük Romen rakamı (i, ii, iii …); ön sayfa numarası. */
+export function romen(n: number): string {
+  if (!Number.isInteger(n) || n < 1 || n > 3999) return String(n);
+  const tablo: [number, string][] = [[1000, "m"], [900, "cm"], [500, "d"], [400, "cd"], [100, "c"], [90, "xc"], [50, "l"], [40, "xl"], [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]];
+  let kalan = n;
+  let sonuc = "";
+  for (const [deger, harf] of tablo) {
+    while (kalan >= deger) {
+      sonuc += harf;
+      kalan -= deger;
+    }
+  }
+  return sonuc;
+}
+
+/**
+ * Sayfalı baskıda her sayfanın numara etiketi (app/print/manuscript/sayfali-baski.tsx).
+ * Kapak (varsa) numarasız; ana metinden önceki sayfalar i, ii, iii …
+ * (kapak da sayılır, yazılmaz); ana metin 1'den. `anaSayfa` ana metnin
+ * başladığı sayfanın sırası; yoksa (-1) her sayfa ön sayfadır.
+ *
+ * Paged.js'in kendi sayacına bırakılmadı: sayfa sayacını bir sayfada
+ * sıfırlamak yalnızca O sayfayı etkiliyordu (Chromium'da ölçüldü: Giriş 1,
+ * sonraki sayfa yine 4).
+ */
+export function sayfaEtiketleri(sayfaSayisi: number, anaSayfa: number, kapakVar: boolean): string[] {
+  return Array.from({ length: Math.max(0, sayfaSayisi) }, (_, i) => {
+    if (kapakVar && i === 0) return "";
+    if (anaSayfa >= 0 && i >= anaSayfa) return String(i - anaSayfa + 1);
+    return romen(i + 1);
+  });
+}

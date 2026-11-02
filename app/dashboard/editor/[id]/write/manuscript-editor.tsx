@@ -2675,6 +2675,7 @@ export default function ManuscriptEditor({
           headings={stats.headings}
           numaralama={headingNumbering}
           numarasiz={guideline?.settings.unnumberedSections}
+          onSayfaRomen={guideline?.settings.frontMatterRoman}
           sayfaBasiKelime={sayfaBasiKelime}
           onJump={handleJump}
         />
@@ -3051,6 +3052,12 @@ export default function ManuscriptEditor({
               <>
                 <dt>{t({ tr: "Bölüm başlığı hizası", en: "Chapter heading alignment" })}</dt>
                 <dd>{t(bolumHizasiMetni(guideline.settings.chapterAlign, guideline.settings.chapterLeftSections))}</dd>
+              </>
+            ) : null}
+            {guideline.settings.frontMatterRoman ? (
+              <>
+                <dt>{t({ tr: "Ön sayfa numaraları", en: "Front matter numbering" })}</dt>
+                <dd>{t({ tr: "i, ii, iii …; Giriş'ten itibaren 1, 2, 3 …", en: "i, ii, iii …; from the Introduction 1, 2, 3 …" })}</dd>
               </>
             ) : null}
             {guideline.settings.subheadingIndent ? (

@@ -19,6 +19,7 @@ export default function IcindekilerKarti({
   headings,
   numaralama,
   numarasiz,
+  onSayfaRomen,
   sayfaBasiKelime,
   onJump,
 }: {
@@ -26,12 +27,14 @@ export default function IcindekilerKarti({
   numaralama: boolean;
   /** Kılavuzun numarasız tuttuğu ana başlıklar; editördeki numarayla aynı (lib/kilavuz-bicim.ts). */
   numarasiz?: string[];
+  /** Kılavuz ön sayfaları Romen rakamıyla istiyor (lib/kilavuz-bicim.ts). */
+  onSayfaRomen?: boolean;
   sayfaBasiKelime: number;
   onJump: (heading: OutlineHeading) => void;
 }) {
   const t = useCeviri();
   const [acik, setAcik] = useState(false);
-  const satirlar = acik ? icindekiler(headings, numaralama, sayfaBasiKelime, numarasiz) : [];
+  const satirlar = acik ? icindekiler(headings, numaralama, sayfaBasiKelime, numarasiz, onSayfaRomen) : [];
 
   return (
     <>
@@ -68,7 +71,7 @@ export default function IcindekilerKarti({
                   {s.text || t({ tr: "(başlıksız)", en: "(untitled)" })}
                 </span>
                 <span className="icindekiler-nokta" aria-hidden="true" />
-                <span className="icindekiler-sayfa">{s.sayfa}</span>
+                <span className="icindekiler-sayfa">{s.sayfaEtiketi}</span>
               </button>
             </li>
           ))}

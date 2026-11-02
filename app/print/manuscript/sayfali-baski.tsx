@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import { sayfaEtiketleri } from "@/lib/heading-numbering";
 
 /*
   SAYFALI BASKI (27.10.2026, kurum sahibinin isteği: "PDF ile Word aynı
@@ -30,6 +31,7 @@ const SAYFALI_CSS = `
 .print-cover { break-after: page; }
 .print-toc { break-after: page; }
 .print-body .print-new-page { break-before: page; }
+.print-body .print-ana-baslangic { break-before: page; }
 .print-body h1, .print-body h2, .print-body h3, .print-body h4 { break-after: avoid; }
 .print-body img, .print-body table, .print-body .print-caption { break-inside: avoid; }
 .print-toc a::after { content: target-counter(attr(href), page); }
@@ -73,6 +75,32 @@ function basliklaraKimlik(kok: ParentNode) {
   }
 }
 
+/*
+  ÖN SAYFALAR ROMEN RAKAMIYLA (02.11.2026, kılavuzun front_matter_roman
+  kuralı). Sayfa numarası ve içindekiler numarası sayfalamadan SONRA
+  yazılır: Paged.js'in sayacını bir sayfada sıfırlamak yalnızca o sayfayı
+  etkiliyordu (Chromium'da ölçüldü: Giriş 1, sonraki sayfa 4). Etiketler
+  saf fonksiyondan (sayfaEtiketleri); burada yalnızca yerlerine konur.
+  Yerleşim değişmiyor (numaralar sayfanın kenarında), yeniden sayfalamak
+  gerekmiyor.
+*/
+function romenNumaralariYaz(kap: HTMLElement, kapakVar: boolean) {
+  const sayfalar = [...kap.querySelectorAll<HTMLElement>(".pagedjs_page")];
+  const ana = kap.querySelector(".print-ana-baslangic");
+  const anaSayfa = ana ? sayfalar.findIndex((s) => s.contains(ana)) : -1;
+  const etiketler = sayfaEtiketleri(sayfalar.length, anaSayfa, kapakVar);
+  sayfalar.forEach((sayfa, i) => {
+    for (const kutu of sayfa.querySelectorAll<HTMLElement>(".pagedjs_margin-content")) {
+      if (getComputedStyle(kutu, "::after").content.includes("counter(page")) kutu.dataset.sayfaNo = etiketler[i];
+    }
+  });
+  for (const baglanti of kap.querySelectorAll<HTMLAnchorElement>(".print-toc a[href^='#']")) {
+    const hedef = kap.querySelector(`[id="${baglanti.hash.slice(1)}"]`);
+    const i = hedef ? sayfalar.findIndex((s) => s.contains(hedef)) : -1;
+    if (i >= 0) baglanti.dataset.sayfaNo = etiketler[i];
+  }
+}
+
 export default function SayfaliBaski({ otomatikYazdir }: { otomatikYazdir: boolean }) {
   const t = useCeviri();
   const [durum, setDurum] = useState<"hazirlaniyor" | "hazir" | "kapali">("hazirlaniyor");
@@ -109,6 +137,7 @@ export default function SayfaliBaski({ otomatikYazdir }: { otomatikYazdir: boole
          sayfaların kabına da veriliyor, yoksa dipnot arayüz yazı tipiyle çıkıyordu. */
       const kap = hedef.querySelector<HTMLElement>(".pagedjs_pages");
       if (kap) kap.setAttribute("style", kaynak.getAttribute("style") ?? "");
+      if (kap && kaynak.dataset.onSayfaRomen === "true") romenNumaralariYaz(kap, Boolean(kaynak.querySelector(".print-cover")));
       kok.dataset.sayfali = "hazir";
       setDurum("hazir");
       yazdir();

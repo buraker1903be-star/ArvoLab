@@ -168,6 +168,9 @@ html[data-sayfali="hazirlaniyor"] .print-page > .print-sheet { opacity: .35; }
 /* Kılavuz dipnot puntosu yazmışsa o (--print-dipnot, lib/print-sheet.ts). */
 .pagedjs_pages .pagedjs_footnote_area { font-family: var(--print-font); font-size: var(--print-dipnot, calc(var(--print-size) - 2pt)); line-height: 1.2; }
 .print-dipnot-no { font-size: .75em; vertical-align: super; line-height: 0; }
+/* Romen rakamlı ön sayfalar: etiketi sayfalamadan sonra sayfali-baski.tsx yazar (sayfa kenarı ve içindekiler). */
+.pagedjs_pages .pagedjs_margin-content[data-sayfa-no]::after { content: attr(data-sayfa-no) !important; }
+.pagedjs_pages .print-toc a[data-sayfa-no]::after { content: attr(data-sayfa-no) !important; }
 .pagedjs_pages .pagedjs_margin-content { font-family: var(--print-font); }
 /* İçindekiler satırı: metin · noktalı çizgi · sayfa numarası (Word'ün varsayılan içindekiler biçimi) */
 .pagedjs_pages .print-toc a { display: flex; align-items: baseline; }

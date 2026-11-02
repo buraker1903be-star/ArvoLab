@@ -14,10 +14,15 @@
 
   Saf modül; testi tests/unit/icindekiler.test.ts.
 */
-import { numberHeadings } from "@/lib/heading-numbering";
+import { numberHeadings, onSayfaBasligiMi, romen } from "@/lib/heading-numbering";
 
 export type IcindekilerBasligi = { pos: number; level: number; text: string; kelimeOncesi: number };
-export type IcindekilerSatiri = IcindekilerBasligi & { numara: string | null; sayfa: number };
+export type IcindekilerSatiri = IcindekilerBasligi & {
+  numara: string | null;
+  sayfa: number;
+  /** Ekranda yazılan: "iii" (ön sayfa, kılavuz Romen istiyorsa) ya da "1". */
+  sayfaEtiketi: string;
+};
 
 export function icindekiler(
   basliklar: IcindekilerBasligi[],
@@ -25,12 +30,14 @@ export function icindekiler(
   sayfaBasiKelime: number,
   /* Kılavuzun numarasız tuttuğu ana başlıklar (lib/kilavuz-bicim.ts); editördeki numarayla aynı. */
   ekNumarasiz?: readonly string[],
+  /* Kılavuz ön sayfaları Romen rakamıyla istiyorsa: ön sayfalar i, ii …; ana metin (Giriş) 1'den — Word ve baskıyla aynı. */
+  onSayfaRomen = false,
 ): IcindekilerSatiri[] {
   const numaralar = numaralama ? numberHeadings(basliklar, ekNumarasiz) : basliklar.map(() => null);
   const kelime = sayfaBasiKelime > 0 ? sayfaBasiKelime : 500;
   let kayma = 0;
   let onceki = 0;
-  return basliklar.map((b, i) => {
+  const satirlar = basliklar.map((b, i) => {
     const ham = Math.floor(Math.max(0, b.kelimeOncesi) / kelime) + 1;
     let sayfa = ham + kayma;
     if (b.level === 1 && i > 0 && sayfa <= onceki) {
@@ -38,6 +45,14 @@ export function icindekiler(
       kayma = sayfa - ham;
     }
     onceki = Math.max(onceki, sayfa);
-    return { ...b, numara: numaralar[i], sayfa };
+    return { ...b, numara: numaralar[i], sayfa, sayfaEtiketi: String(sayfa) };
   });
+  return onSayfaRomen ? romenEtiketle(satirlar) : satirlar;
+}
+
+function romenEtiketle(satirlar: IcindekilerSatiri[]): IcindekilerSatiri[] {
+  const ana = satirlar.findIndex((s) => s.level === 1 && !onSayfaBasligiMi(s.text));
+  if (ana <= 0) return satirlar;
+  const fark = satirlar[ana].sayfa - 1;
+  return satirlar.map((s, i) => ({ ...s, sayfaEtiketi: i < ana ? romen(s.sayfa) : String(s.sayfa - fark) }));
 }

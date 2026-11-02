@@ -239,3 +239,46 @@ test("alt başlık girintisi: belirtilen düzeyden itibaren, başlığın kendi 
     assert.doesNotMatch(wordBasligi(xml, "Kendi Girintisi"), /w:left="708"/);
   });
 });
+
+test("ön sayfalar Romen rakamıyla: Word iki bölüm, yazdırma ana metni işaretliyor", async (t) => {
+  const tez = {
+    type: "doc",
+    content: [h1("ÖZET"), p("Özet."), h1("ABSTRACT"), p("Abstract."), h1("GİRİŞ"), p("Giriş."), h1("Yöntem"), p("Yöntem.")],
+  };
+
+  await t.test("Word", async () => {
+    const xml = async (frontMatterRoman: boolean, kapak = false) => {
+      const doc = await buildDocxFromTiptap({
+        title: "T",
+        doc: tez as never,
+        fetchImage: async () => null,
+        textDefaults: { frontMatterRoman },
+        includeToc: true,
+        ...(kapak ? { coverPage: { title: "Tez", authorName: "Ö", degreeType: "YL" } as never } : {}),
+      });
+      const zip = await JSZip.loadAsync(await Packer.toBuffer(doc));
+      return zip.file("word/document.xml")!.async("string");
+    };
+    const acik = await xml(true, true);
+    // Ön bölüm Romen, ana bölüm 1'den; kapak sayfası ayrı (numarasız).
+    assert.match(acik, /<w:pgNumType w:start="1" w:fmt="lowerRoman"\/>/);
+    assert.match(acik, /<w:pgNumType w:start="1" w:fmt="decimal"\/>/);
+    assert.match(acik, /<w:titlePg\/>/);
+    // Bölüm sonu GİRİŞ'ten hemen önce: ön bölümün sectPr'i ABSTRACT'tan sonra, GİRİŞ'ten önce.
+    const bolumSonu = acik.indexOf("lowerRoman");
+    // (İlk "GİRİŞ" içindekiler alanında; bakılan, Abstract'tan sonraki başlık.)
+    assert.ok(acik.indexOf("Abstract.") < bolumSonu && bolumSonu < acik.indexOf("GİRİŞ", acik.indexOf("Abstract.")));
+    // Kural yokken tek bölüm, Romen yok.
+    assert.doesNotMatch(await xml(false), /lowerRoman"\/>/);
+  });
+
+  await t.test("yazdırma", () => {
+    const html = renderTiptapHtml(tez as never, { onSayfaRomen: true }).html;
+    assert.match(html, /<h1 class="print-ana-baslangic">GİRİŞ/);
+    assert.equal((html.match(/print-ana-baslangic/g) ?? []).length, 1);
+    assert.doesNotMatch(renderTiptapHtml(tez as never).html, /print-ana-baslangic/);
+    // Başlıksız başlayan belge: işaret ilk düğümün önünde.
+    const duz = renderTiptapHtml({ type: "doc", content: [p("Metin.")] } as never, { onSayfaRomen: true }).html;
+    assert.match(duz, /^<div class="print-ana-baslangic"><\/div><p/);
+  });
+});

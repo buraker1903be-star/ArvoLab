@@ -196,6 +196,7 @@ export function bicimOzeti(ayarlar: {
   pageNumberPosition?: SayfaNumarasiKonumu;
   unnumberedSections?: string[];
   subheadingIndent?: AltBaslikGirintisi;
+  frontMatterRoman?: boolean;
 }, dil: Dil = "tr"): string[] {
   const en = dil === "en";
   const satirlar: string[] = [];
@@ -257,6 +258,9 @@ export function bicimOzeti(ayarlar: {
   if (ayarlar.chapterAlign) {
     const hiza = bolumHizasiMetni(ayarlar.chapterAlign, ayarlar.chapterLeftSections);
     satirlar.push(en ? `Chapter headings: ${hiza.en}` : `Bölüm başlıkları: ${hiza.tr}`);
+  }
+  if (ayarlar.frontMatterRoman) {
+    satirlar.push(en ? "Page numbers: front matter i, ii, iii …; from the Introduction 1, 2, 3 …" : "Sayfa numarası: ön sayfalar i, ii, iii …; Giriş'ten itibaren 1, 2, 3 …");
   }
   if (ayarlar.subheadingIndent) {
     const g = altGirintiMetni(ayarlar.subheadingIndent);

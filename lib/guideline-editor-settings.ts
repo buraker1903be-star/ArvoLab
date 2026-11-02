@@ -56,6 +56,8 @@ export interface GuidelineEditorSettings {
   unnumberedSections?: string[];
   /** Belli düzeyden itibaren alt başlıkların sol girintisi (cm) */
   subheadingIndent?: AltBaslikGirintisi;
+  /** Ön sayfalar küçük Romen rakamıyla, ana metin (Giriş) 1'den Arap rakamıyla */
+  frontMatterRoman?: boolean;
 }
 
 /* Ad listesi: metin, boş olmayan, makul uzunlukta; en çok 12 ad. */
@@ -181,5 +183,6 @@ export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorS
     ...(sayfaNumarasiKonumuMu(rules.page_number_position) ? { pageNumberPosition: rules.page_number_position } : {}),
     ...(adListesi(rules.unnumbered_sections) ? { unnumberedSections: adListesi(rules.unnumbered_sections) } : {}),
     ...(altBaslikGirintisiMi(rules.subheading_indent) ? { subheadingIndent: rules.subheading_indent } : {}),
+    ...(rules.front_matter_roman === true ? { frontMatterRoman: true } : {}),
   };
 }

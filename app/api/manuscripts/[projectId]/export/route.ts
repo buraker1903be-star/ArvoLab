@@ -123,6 +123,7 @@ export async function GET(
         pageNumberPosition: guideline.settings.pageNumberPosition,
         unnumberedSections: guideline.settings.unnumberedSections,
         subheadingIndent: guideline.settings.subheadingIndent,
+        frontMatterRoman: guideline.settings.frontMatterRoman,
       }
     : {};
   // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).

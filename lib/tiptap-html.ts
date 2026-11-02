@@ -2,7 +2,7 @@
 // Ham HTML hiç geçirilmez: metin kaçışlanır; yazı tipi, boyut, renk, hizalama,
 // bağlantı ve resim kaynakları izin listesinden geçer. Dipnotlar sırayla
 // numaralanır ve belgenin sonunda listelenir.
-import { headingNumberMap } from "@/lib/heading-numbering";
+import { anaMetinBaslangici, headingNumberMap } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
 import { altBaslikGirintisi, anaBaslikHizasi, type AltBaslikGirintisi, type BolumHizasi } from "@/lib/kilavuz-bicim";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
@@ -89,6 +89,8 @@ interface RenderContext {
   anaBaslik: { chapterAlign?: BolumHizasi; chapterLeftSections?: string[] };
   /** Kılavuzun alt başlık girintisi; başlığın kendi girintisi varsa o kazanır. */
   altGirinti?: AltBaslikGirintisi;
+  /** Ana metnin ilk düğümü (Romen rakamlı ön sayfalar; sayfalı baskı onu bulup numarayı 1'den başlatır). */
+  anaDugum?: object;
 }
 
 // tiptap-caption.ts'teki CAPTION_LABELS_METIN ile aynı; o dosya @tiptap/core çektiği için buraya kopyalandı.
@@ -171,7 +173,9 @@ function renderNode(node: Node, ctx: RenderContext): string {
     case "heading": {
       const level = Math.min(Math.max(Number(attrs.level) || 1, 1), 4);
       const number = ctx.headingNumbers.get(node);
-      const newPage = ctx.chapterBreaks.has(node) ? ' class="print-new-page"' : "";
+      /* Ana metnin başı yeni sayfadan: ön sayfalar Romen, buradan itibaren 1 (sayfali-baski.tsx). */
+      const siniflar = [ctx.chapterBreaks.has(node) ? "print-new-page" : "", ctx.anaDugum === node ? "print-ana-baslangic" : ""].filter(Boolean);
+      const newPage = siniflar.length ? ` class="${siniflar.join(" ")}"` : "";
       /* Başlığın kendi hizası yoksa kılavuzunki (editörde süsleme, burada satır içi). */
       const kilavuzHizasi = level === 1 && !attrs.textAlign ? anaBaslikHizasi(duzMetin(node), ctx.anaBaslik) : null;
       const girinti = hangingIndentCmOf(attrs) || indentCmOf(attrs) ? null : altBaslikGirintisi(level, ctx.altGirinti);
@@ -226,6 +230,8 @@ export function renderTiptapHtml(
     chapterAlign?: BolumHizasi;
     chapterLeftSections?: string[];
     altGirinti?: AltBaslikGirintisi;
+    /** Ön sayfalar Romen rakamıyla: ana metnin başını işaretle */
+    onSayfaRomen?: boolean;
   } = {}
 ): { html: string; footnotes: string[] } {
   const ctx: RenderContext = {
@@ -238,5 +244,18 @@ export function renderTiptapHtml(
     anaBaslik: { chapterAlign: options.chapterAlign, chapterLeftSections: options.chapterLeftSections },
     altGirinti: options.altGirinti,
   };
+  if (options.onSayfaRomen) {
+    const sira = anaMetinBaslangici(doc as Parameters<typeof anaMetinBaslangici>[0]);
+    const dugum = doc?.content?.[sira];
+    if (dugum?.type === "heading") ctx.anaDugum = dugum;
+    else if (dugum) {
+      // Başlıksız başlangıç (ilk düğüm paragraf): yerini boş bir işaret tutar.
+      const icerik = doc!.content!;
+      return {
+        html: `${renderNodes(icerik.slice(0, sira), ctx)}<div class="print-ana-baslangic"></div>${renderNodes(icerik.slice(sira), ctx)}`,
+        footnotes: ctx.footnotes,
+      };
+    }
+  }
   return { html: renderNodes(doc?.content, ctx), footnotes: ctx.footnotes };
 }
