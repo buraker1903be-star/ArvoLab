@@ -391,7 +391,11 @@ export default async function SettingsPage() {
                     {sozlesmeOnaylari.satirlar.map((o) => (
                       <li key={o.id}>
                         <b>{tarihSaat(o.onaylandi)}</b> ·{" "}
-                        {o.olay === "odeme_sonrasi" ? t({ tr: "Ödemeden sonra", en: "After payment" }) : t({ tr: "Giriş", en: "Sign-in" })}
+                        {o.olay === "odeme_sonrasi"
+                          ? t({ tr: "Ödemeden sonra", en: "After payment" })
+                          : o.olay === "kayit"
+                            ? t({ tr: "Kayıt sırasında", en: "At sign-up" })
+                            : t({ tr: "Giriş", en: "Sign-in" })}
                         <dl>
                           <dt>{t({ tr: "Sürüm", en: "Version" })}</dt>
                           <dd>{o.surum} ({o.dil.toUpperCase()})</dd>

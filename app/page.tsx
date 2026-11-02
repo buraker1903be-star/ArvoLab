@@ -1,9 +1,9 @@
 import Image from "next/image";
-import Link from "next/link";
-import { BookOpenCheck, ChartNoAxesCombined, FileCheck2, PenLine, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
+import { BookOpenCheck, ChartNoAxesCombined, FileCheck2, PenLine, ShieldCheck, Sparkles } from "lucide-react";
 import ThemeToggle from "@/app/_components/theme-toggle";
 import DilSecici from "@/app/_components/dil-secici";
 import GirisFormu from "@/app/_components/giris-formu";
+import KayitPenceresi from "@/app/_components/kayit-penceresi";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { INGILIZCE_YAYINDA, type Metin } from "@/lib/dil";
 import { yasalAdres } from "@/lib/yasal-baglantilar";
@@ -69,7 +69,7 @@ const ILKELER: Metin[] = [
 ];
 
 type HomePageProps = {
-  searchParams: Promise<{ error?: string; next?: string; bilgi?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; bilgi?: string; kayit?: string }>;
 };
 
 const errorMessages: Record<string, Metin> = {
@@ -159,10 +159,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   en: "Start right away with a free trial; no card details required.",
                 })}
               </p>
-              <Link href="/kayit" className="giris-kayit-dugme">
-                <UserPlus size={16} aria-hidden="true" />
-                {t({ tr: "Ücretsiz hesap oluştur", en: "Create a free account" })}
-              </Link>
+              {/* Açılır pencere (02.11.2026); JavaScript'siz /kayit sayfasına gider. */}
+              <KayitPenceresi acik={params.kayit === "1"} />
               <small>
                 {t({
                   tr: "Kurumunuz ArvoLab kullanıyorsa kayıt olmak yerine kurum yöneticinizden davet isteyin.",

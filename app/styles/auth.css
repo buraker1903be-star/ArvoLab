@@ -234,6 +234,37 @@ html[data-theme="dark"] .login-button { background: linear-gradient(180deg, var(
 .auth-back-link:hover { color: var(--accent); }
 .auth-theme-toggle { position: fixed; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); z-index: var(--z-topbar); }
 
+/* ---------- Kayıt formu (app/kayit/kayit-formu.tsx, 02.11.2026) ----------
+   Aynı form hem giriş sayfasındaki pencerede hem /kayit sayfasında. Alanlar
+   ikişerli (e-posta + telefon, şifre + tekrar); dar ekranda tek sütun. */
+.kayit-formu { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
+.auth-simple-page .login-card.kayit-kart { width: min(100%, 560px); }
+.kayit-alan { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.kayit-alan-genis { grid-column: 1 / -1; }
+.kayit-ipucu { display: block; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.kayit-ipucu[data-tone="danger"] { color: var(--danger); }
+.login-form input[aria-invalid="true"] { border-color: var(--danger); }
+
+.kayit-onaylar { display: grid; gap: 10px; margin: 4px 0 0; padding: 14px; border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface-2); }
+.kayit-onay { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; color: var(--ink-soft); font-size: var(--fs-base); font-weight: 500; line-height: var(--lh-metin); cursor: pointer; }
+.login-form .kayit-onay input { width: 18px; min-height: 18px; height: 18px; margin: 2px 0 0; padding: 0; accent-color: var(--accent-500); box-shadow: none; cursor: pointer; }
+.kayit-onay a, .kayit-metin-baglanti { color: var(--accent-strong); font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+.kayit-metin-baglanti { display: inline; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
+.kayit-metin-baglanti:focus-visible { outline: none; box-shadow: var(--odak-halkasi); border-radius: 4px; }
+.kayit-zorunlu { color: var(--muted); font-size: var(--fs-micro); font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.kayit-istege-bagli { color: var(--muted); font-size: var(--fs-micro); letter-spacing: .04em; text-transform: uppercase; }
+.kayit-onay .kayit-ipucu { margin-top: 2px; }
+
+.kayit-okuyucu { display: grid; gap: 10px; }
+.kayit-okuyucu-baslik { display: flex; align-items: center; gap: 10px; color: var(--accent-strong); }
+.kayit-okuyucu-baslik h2 { margin: 0; color: var(--ink); font-size: var(--fs-md); font-weight: 700; }
+.kayit-okuyucu-baslik small { color: var(--muted); font-size: var(--fs-sm); }
+.kayit-okuyucu-metin { max-height: min(52dvh, 460px); border: 1px solid var(--line-soft); border-radius: var(--r-md); }
+.kayit-okuyucu-dugmeler { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+
+.kayit-tamam { display: grid; gap: 6px; }
+.kayit-tamam-ikon { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 4px; border-radius: 13px; background: var(--accent-soft); color: var(--accent-strong); }
+
 /* ---------- Duyarlı ---------- */
 @media (max-width: 1100px) {
   .giris-ozellikler { grid-template-columns: minmax(0, 1fr); }
@@ -244,6 +275,9 @@ html[data-theme="dark"] .login-button { background: linear-gradient(180deg, var(
   .giris-tanitim h2 { font-size: 26px; }
   .login-heading h1, .login-heading h2 { font-size: 26px; }
   .login-form input { font-size: 16px; }
+}
+@media (max-width: 520px) {
+  .kayit-formu { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 420px) {
   .giris-logo { width: 132px; height: 32px; }

@@ -58,8 +58,8 @@ const BOLUMLER: KilavuzBolumu[] = [
     },
     adimlar: [
       {
-        tr: "İlk girişte Kullanım Sözleşmesi açılır. Metni sonuna kadar kaydırın; \"Okudum ve onaylıyorum\" düğmesi ancak o zaman etkinleşir. Onayın bir kopyası e-postanıza gelir.",
-        en: "On your first sign-in the Terms of Use open. Scroll to the end of the text; only then does \"I have read and agree\" become active. A copy of your approval is emailed to you.",
+        tr: "Kullanım Sözleşmesi'ni kayıt olurken onaylarsınız: kutuya basınca metin açılır, sonuna kadar kaydırınca \"Okudum ve onaylıyorum\" düğmesi etkinleşir. Onayın bir kopyası e-postanıza gelir. Sözleşmenin yeni bir sürümü yayımlanırsa girişte yeniden onayınız istenir.",
+        en: "You accept the Terms of Use when you sign up: ticking the box opens the text, and \"I have read and agree\" becomes active once you scroll to the end. A copy of your approval is emailed to you. If a new version is published, you're asked to accept it again when you sign in.",
       },
       {
         tr: "Alttaki çubukta günlük işin uygulamaları sırayla durur: Ana Sayfa, Çalışmalarım, Kaynaklar, Analiz Merkezi, Belge Kontrol, Destek, Ayarlar. Simgenin üstüne gelince adı görünür.",

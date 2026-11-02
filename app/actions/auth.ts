@@ -12,6 +12,8 @@ import { kayitGirdisiniDenetle } from "@/lib/kayit";
 import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
+import { after } from "next/server";
+import { onayKaydiYaz, onayKopyasiGonder } from "@/lib/sozlesme/onay-yaz";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -101,12 +103,17 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
   const denetim = kayitGirdisiniDenetle({
     email: formData.get("email"),
     sifre: formData.get("password"),
+    sifreTekrar: formData.get("passwordRepeat"),
     adSoyad: formData.get("fullName"),
+    telefon: formData.get("phone"),
     kvkk: formData.get("kvkk") === "on",
+    sozlesme: formData.get("sozlesme") === "on",
+    sozlesmeOkundu: formData.get("sozlesmeOkundu") === "1",
+    iletisimIzni: formData.get("iletisim") === "on",
   });
   const t = await ceviri();
   if ("hata" in denetim) return { error: t(denetim.hata) };
-  const { email, sifre, adSoyad } = denetim.deger;
+  const { email, sifre, adSoyad, telefon, iletisimIzni } = denetim.deger;
 
   let admin;
   try {
@@ -135,11 +142,25 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
   }
 
   const origin = await siteOrigin();
+  const simdi = new Date().toISOString();
+  /*
+    Telefon ve iletişim izni (02.11.2026) kullanıcı üst verisinde: profiles'ta
+    telefon sütunu yok ve ArvoOS abone kaydı da e-postayla eşleşiyor. İletişim
+    izni ZAMANIYLA tutulur (ticari elektronik ileti onayının kanıtı; izin
+    verilmediyse alan hiç yazılmaz).
+  */
   const { data, error } = await admin.auth.admin.generateLink({
     type: "signup",
     email,
     password: sifre,
-    options: { data: { full_name: adSoyad, kvkk_onay_at: new Date().toISOString() } },
+    options: {
+      data: {
+        full_name: adSoyad,
+        phone: telefon,
+        kvkk_onay_at: simdi,
+        ...(iletisimIzni ? { iletisim_izni_at: simdi } : {}),
+      },
+    },
   });
 
   if (error) {
@@ -157,6 +178,23 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
     console.error("Kayıt: doğrulama belirteci boş");
     return { error: t(KAYIT_YAPILAMIYOR) };
   }
+
+  /*
+    KAYITTA VERİLEN SÖZLEŞME ONAYI (02.11.2026). Kayıt penceresindeki kutu
+    ancak metin sonuna kadar okununca işaretlenebiliyor (lib/kayit.ts denetler);
+    onay panel içindeki onayla AYNI kayda, aynı delillerle (IP, cihaz, konum)
+    'kayit' olayıyla yazılır. Böylece kullanıcı ilk girişte aynı sözleşmeyi
+    ikinci kez onaylamaz (lib/sozlesme/onay-durumu.ts yürürlükteki sürümün
+    kaydına bakıyor).
+    Yazılamazsa kayıt DÜŞMEZ: kullanıcı ilk girişte panel içindeki onay
+    penceresini görür — delil yine alınır, yalnızca bir adım fazla olur.
+    Kopya e-postası doğrulama postasını bekletmez (after).
+  */
+  const dil = await aktifDil();
+  const yazim = data.user?.id
+    ? await onayKaydiYaz(admin, istek, { userId: data.user.id, eposta: email, adSoyad, organizationId: null, dil, olay: "kayit", odemeReferansi: null })
+    : ({ ok: false } as const);
+  if (yazim.ok) after(() => onayKopyasiGonder(email, dil, yazim.kopya));
   /*
     Deneme süresinin kaç gün olduğunu ArvoLab bilmiyor: değer ArvoOS'ta
     product_plans tablosunda ve okumak için bir uç nokta yok. Uydurmak

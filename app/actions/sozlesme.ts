@@ -1,6 +1,5 @@
 "use server";
 
-import { createHash } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -9,10 +8,9 @@ import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { ceviri } from "@/lib/dil-sunucu";
 import { dilMi, type Dil } from "@/lib/dil";
 import { oturumYokMesaji } from "@/lib/auth-guards";
-import { kullanimSozlesmesi, sozlesmeDuzMetni, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
-import { sendEmail } from "@/lib/email/resend";
-import { sozlesmeOnayEmail } from "@/lib/email/auth-emails";
-import { konumOku, konumYazisi } from "@/lib/sozlesme/konum";
+import { SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
+import { konumYazisi } from "@/lib/sozlesme/konum";
+import { onayKaydiYaz, onayKopyasiGonder } from "@/lib/sozlesme/onay-yaz";
 
 /*
   KULLANIM SÖZLEŞMESİ ONAYI (29.10.2026).
@@ -27,12 +25,6 @@ import { konumOku, konumYazisi } from "@/lib/sozlesme/konum";
   Abonelik kapısı YOK: onay bir yasal adım, içerik üretmiyor; aboneliği
   bitmiş kullanıcı da onaylayıp ödeme sayfasına ulaşabilmeli.
 */
-
-/** İstemcinin IP'si: Vercel x-forwarded-for'un ilk girdisini istemci olarak yazar. */
-function istemciIp(h: Headers): string | null {
-  const ileri = h.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return (ileri || h.get("x-real-ip") || "").slice(0, 100) || null;
-}
 
 /*
   Ödemeden dönüşte onayı ödemeye bağlayan referans: kartla ödeme
@@ -73,101 +65,27 @@ export async function sozlesmeyiOnayla(girdi: {
 
   const h = await headers();
   const { data: profil } = await supabase.from("profiles").select("full_name, organization_id").eq("id", user.id).maybeSingle();
-  const ozet = createHash("sha256").update(sozlesmeDuzMetni(dil), "utf8").digest("hex");
-  const ip = istemciIp(h);
-  const cihaz = (h.get("user-agent") ?? "").slice(0, 1000) || null;
-  const referans = olay === "odeme_sonrasi" ? await odemeReferansi() : null;
-  // Yaklaşık konum barındırıcının IP başlıklarından (lib/sozlesme/konum; 29.10.2026).
-  const konum = konumOku((ad) => h.get(ad));
-
-  const satir = {
-      user_id: user.id,
-      belge: "kullanim_sozlesmesi",
-      surum: SOZLESME_SURUMU,
-      dil,
-      metin_ozeti: ozet,
-      olay,
-      odeme_referansi: referans,
-      kaydirma_tamamlandi: true,
-      ip,
-      kullanici_araci: cihaz,
-      tarayici_dili: (h.get("accept-language") ?? "").slice(0, 200) || null,
-      eposta: user.email ?? null,
-      ad_soyad: profil?.full_name ?? null,
-      organization_id: profil?.organization_id ?? null,
-  };
-  const konumlu = { ...satir, ulke: konum.ulke, bolge: konum.bolge, sehir: konum.sehir, enlem: konum.enlem, boylam: konum.boylam, saat_dilimi: konum.saatDilimi };
-  let { data: kayit, error } = await admin.from("sozlesme_onaylari").insert(konumlu).select("onaylandi").single();
-  /*
-    Konum sütunları henüz yoksa (kod 20261029163058 migration'ından önce
-    canlıya çıktıysa) onay KONUMSUZ yazılır: aksi hâlde insert düşer ve
-    kullanıcı kapatılamaz pencerede kalırdı. Konum bir sonraki onayda gelir.
-  */
-  if (error && (error.code === "PGRST204" || error.code === "42703")) {
-    console.error("[sözleşme] konum sütunları yok; onay konumsuz yazılıyor", error.message);
-    ({ data: kayit, error } = await admin.from("sozlesme_onaylari").insert(satir).select("onaylandi").single());
-  }
-  if (error || !kayit) {
-    console.error("[sözleşme] onay yazılamadı", error?.code, error?.message);
+  const yazim = await onayKaydiYaz(admin, h, {
+    userId: user.id,
+    eposta: user.email ?? null,
+    adSoyad: profil?.full_name ?? null,
+    organizationId: profil?.organization_id ?? null,
+    dil,
+    olay,
+    odemeReferansi: olay === "odeme_sonrasi" ? await odemeReferansi() : null,
+  });
+  if (!yazim.ok) {
     return { error: t({ tr: "Onay kaydedilemedi; lütfen yeniden deneyin.", en: "Your approval could not be saved; please try again." }) };
   }
 
   /* Kopya e-postası yanıtı bekletmez ve gönderilemezse akış düşmez (AGENTS.md). */
   if (user.email) {
     const eposta = user.email;
-    after(() =>
-      kopyayiGonder(eposta, dil, {
-        onaylandi: kayit.onaylandi as string,
-        surum: SOZLESME_SURUMU,
-        ozet,
-        ip,
-        konum: konumYazisi(konum),
-        cihaz,
-        odemeReferansi: referans,
-      }),
-    );
+    after(() => onayKopyasiGonder(eposta, dil, yazim.kopya));
   }
 
   revalidatePath("/dashboard", "layout");
   return { ok: true };
-}
-
-/*
-  Kopyanın gönderimi ve SONUCUN günlüğe yazılması. Eskiden sendEmail'in
-  dönüşü okunmuyordu: başarılı gönderim hiçbir iz bırakmıyordu, kullanıcı
-  "e-posta gelmedi" dediğinde gönderimin denenip denenmediği, sağlayıcının
-  kabul edip etmediği günlükten anlaşılamıyordu (29.10.2026). Şimdi her
-  sonuç (Resend ileti kimliğiyle) günlükte.
-*/
-async function kopyayiGonder(
-  eposta: string,
-  dil: Dil,
-  kayit: { onaylandi: string; surum: string; ozet: string; ip: string | null; konum: string | null; cihaz: string | null; odemeReferansi: string | null },
-): Promise<boolean> {
-  try {
-    const sonuc = await sendEmail({
-      to: eposta,
-      ...sozlesmeOnayEmail(
-        {
-          ...kullanimSozlesmesi(dil),
-          surum: kayit.surum,
-          ozet: kayit.ozet,
-          zaman: new Date(kayit.onaylandi).toLocaleString(dil === "en" ? "en-GB" : "tr-TR", { timeZone: "Europe/Istanbul" }) + " (Europe/Istanbul)",
-          ip: kayit.ip,
-          konum: kayit.konum,
-          cihaz: kayit.cihaz,
-          odemeReferansi: kayit.odemeReferansi,
-        },
-        dil,
-      ),
-    });
-    if (sonuc.ok) console.info("[sözleşme] kopya e-postası gönderildi", sonuc.id ?? "(kimlik yok)");
-    else console.error("[sözleşme] kopya e-postası gönderilemedi", sonuc.reason);
-    return sonuc.ok;
-  } catch (sorun) {
-    console.error("[sözleşme] kopya e-postası gönderilemedi", sorun instanceof Error ? sorun.message : sorun);
-    return false;
-  }
 }
 
 /*
@@ -197,7 +115,7 @@ export async function sozlesmeKopyasiniGonder(): Promise<{ ok: true } | { error:
   if (!kayit) return { error: t({ tr: "Yürürlükteki sözleşme için onay kaydınız yok.", en: "You have no approval record for the current agreement." }) };
 
   const dil: Dil = dilMi(kayit.dil) ? kayit.dil : "tr";
-  const gitti = await kopyayiGonder(user.email, dil, {
+  const gitti = await onayKopyasiGonder(user.email, dil, {
     onaylandi: kayit.onaylandi as string,
     surum: kayit.surum as string,
     ozet: kayit.metin_ozeti as string,

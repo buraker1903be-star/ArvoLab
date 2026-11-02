@@ -41,6 +41,22 @@ describe("sözleşme onay kaydı", () => {
       await onayYaz(KULLANICI);
     }));
 
+  /* 20261102124048: kayıt penceresindeki onay 'kayit' olayıyla yazılır; uydurma bir olay hâlâ reddedilir. */
+  test("kayıt sırasında verilen onay yazılabilir, bilinmeyen olay yazılamaz", () =>
+    islem(db, async () => {
+      await tohum();
+      await rol(db, "service_role");
+      const ekle = (olay) =>
+        db.query(
+          `insert into public.sozlesme_onaylari (user_id, belge, surum, dil, metin_ozeti, olay, kaydirma_tamamlandi, ip)
+             values ($1, 'kullanim_sozlesmesi', '2026-10-29', 'tr', $2, $3, true, '203.0.113.5')`,
+          [KULLANICI, OZET, olay],
+        );
+      await ekle("kayit");
+      await reddedilir(db, `insert into public.sozlesme_onaylari (user_id, belge, surum, dil, metin_ozeti, olay, kaydirma_tamamlandi)
+             values ($1, 'kullanim_sozlesmesi', '2026-10-29', 'tr', $2, 'uydurma', true)`, [KULLANICI, OZET], /check constraint|violates/i);
+    }));
+
   test("kullanıcı yalnızca kendi onaylarını görür", () =>
     islem(db, async () => {
       await tohum();

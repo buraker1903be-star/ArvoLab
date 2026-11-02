@@ -22,7 +22,8 @@ export default async function KayitPage() {
       <div className="auth-theme-toggle">
         <ThemeToggle />
       </div>
-      <div className="login-card">
+      {/* Kayıt formu iki sütunlu (02.11.2026): giriş kartından geniş. */}
+      <div className="login-card kayit-kart">
         <KayitFormu />
         <Link href="/" className="auth-back-link">
           <ArrowLeft size={16} aria-hidden="true" />
