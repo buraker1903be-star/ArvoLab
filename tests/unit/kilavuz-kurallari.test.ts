@@ -145,3 +145,24 @@ test("yanıtın kabı esnek: sarmalsız nesne ve liste de okunuyor", async () =>
   const sonuc = kilavuzOkumasiniCozumle(JSON.stringify({ satir_araligi: tek }), METIN) as KilavuzOkumasi;
   assert.equal(sonuc.kurallar.line_spacing, 1.5);
 });
+
+test("kusurlu JSON onarılıyor: çit, alıntıdaki düz tırnak, satır sonu, sondaki virgül", () => {
+  // Canlıda model doğru biçimi ```json çiti içinde ve alıntıda kaçışlanmamış tırnakla döndürdü; yanıtın tamamı "boş" sayılmıştı.
+  const ham = [
+    "```json",
+    '{"kurallar":{',
+    '  "kenar_ust_cm":{"deger":3,"alinti":"Üst boşluk (top) : 3 cm"},',
+    '  "numarasiz_bolumler":{"deger":["Giriş","Sonuç"],"alinti":""Giriş" ve "Sonuç" başlıkları ayrı bir bölüm olmadığından',
+    'numaralandırma yapılmayacaktır"},',
+    '  "satir_araligi":{"deger":1.5,"alinti":"Satır Aralıkları : 1,5"},',
+    "}}",
+    "```",
+  ].join("\n");
+  const sonuc = kilavuzOkumasiniCozumle(ham, METIN);
+  assert.ok(!redMi(sonuc), JSON.stringify(sonuc));
+  const o = sonuc as KilavuzOkumasi;
+  assert.equal(o.kurallar.line_spacing, 1.5);
+  assert.deepEqual(o.kurallar.unnumbered_sections, ["Giriş", "Sonuç"]);
+  // Onarım içeriği değiştirmiyor: uydurma alıntı yine düşer.
+  assert.ok(redMi(kilavuzOkumasiniCozumle(ham.replace("Satır Aralıkları : 1,5", "Satırlar 1,5 aralıklı yazılır"), METIN)));
+});

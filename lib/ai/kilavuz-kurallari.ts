@@ -67,7 +67,7 @@ ALANLAR (hepsi isteğe bağlı; her biri {"deger": …, "alinti": "…"}):
 - atif_stili: ${ATIF_STILLERI.map((y) => `"${y}"`).join(" | ")} — yalnızca metin bu sistemi ADIYLA söylüyorsa; yalnızca dipnot yöntemini anlatıyorsa "dipnot". İki yöntemi birden serbest bırakıyorsa yazma.
 - zorunlu_bolumler: tezin zorunlu ana bölümleri, metindeki adlarıyla (ör. ["Özet", "Giriş", "Sonuç", "Kaynakça"]); alintisi bölümlerin sayıldığı yer.
 
-YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür, başka hiçbir şey yazma:
+YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür, başka hiçbir şey yazma (kod bloğu ya da \`\`\` kullanma). Geçerli JSON yaz: alıntıdaki çift tırnağı \\" olarak kaçışla, alıntıya satır sonu koyma.
 {"kurallar":{"kenar_ust_cm":{"deger":3,"alinti":"Üst boşluk (top) : 3 cm"}}}`;
 
 /*
@@ -149,7 +149,7 @@ const aralik = (n: number | null, en: number, ec: number) => (n !== null && n >=
  * okuma yanlış (kâğıt ölçüsü) — kalıpla okumadaki elemenin aynısı.
  */
 export function kilavuzOkumasiniCozumle(ham: string, kilavuzMetniTam: string): KilavuzOkumasi | KilavuzRed {
-  const girdiler = kuralGirdileri(jsonOku(ham));
+  const girdiler = kuralGirdileri(jsonOku(ham) ?? jsonOnar(ham));
   if (!girdiler.length) return { neden: "bos", ayrinti: [] };
 
   const tam = duzle(kilavuzMetniTam);
@@ -308,6 +308,63 @@ export function kuralGirdileri(veri: unknown): Girdi[] {
     });
   }
   return [];
+}
+
+/*
+  KUSURLU JSON'U ONARMA (02.11.2026). Canlıdaki okuma doğru biçimde geldi
+  ama JSON.parse düştü: alıntılar kılavuzdan birebir kopyalanıyor ve
+  kılavuz cümleleri düz tırnak ("Giriş" ve "Sonuç" başlıkları) ya da satır
+  sonu taşıyabiliyor; model bunları kaçışlamadan yazınca yanıtın TAMAMI
+  "boş" sayıldı. Burada yalnızca sözdizimi onarılıyor — dizgi içindeki
+  ham satır sonu ve kapatmayan tırnak kaçışlanıyor, sondaki virgül
+  siliniyor, ```json çiti atılıyor. İçerik değişmiyor; doğrulama aynen
+  (alıntı metinde, sayı alıntıda).
+
+  Bir dizgi içindeki tırnak, ardından (boşluktan sonra) , : } ] gelmiyorsa
+  dizgiyi kapatmıyor sayılır: "Örnek: "Yazarın Soyadı"" → içteki iki tırnak
+  metnin parçası.
+*/
+export function jsonOnar(ham: string): unknown {
+  const govde = ham.replace(/```(?:json)?/gi, "");
+  const bas = govde.indexOf("{");
+  const son = govde.lastIndexOf("}");
+  if (bas === -1 || son <= bas) return null;
+  const k = govde.slice(bas, son + 1);
+  let cikti = "";
+  let dizgide = false;
+  for (let i = 0; i < k.length; i++) {
+    const c = k[i];
+    if (!dizgide) {
+      if (c === '"') dizgide = true;
+      cikti += c;
+      continue;
+    }
+    if (c === "\\") {
+      cikti += c + (k[i + 1] ?? "");
+      i += 1;
+      continue;
+    }
+    if (c === "\n" || c === "\r") {
+      cikti += " ";
+      continue;
+    }
+    if (c === '"') {
+      const sonraki = k.slice(i + 1).match(/^\s*(.)/)?.[1];
+      if (sonraki === undefined || ",:}]".includes(sonraki)) {
+        dizgide = false;
+        cikti += c;
+      } else {
+        cikti += '\\"';
+      }
+      continue;
+    }
+    cikti += c;
+  }
+  try {
+    return JSON.parse(cikti.replace(/,\s*([}\]])/g, "$1"));
+  } catch {
+    return null;
+  }
 }
 
 /** Okuma mı ret mi. */

@@ -133,7 +133,7 @@ async function yapayZekaylaOku(
     const sonuc = kilavuzOkumasiniCozumle(yanit.metin, metin);
     if (redMi(sonuc)) {
       // "bos"ta yanıtın başı da yazılır: biçim sorunu günlükten teşhis edilebilsin (ilk canlı okumalar böyle düştü).
-      console.warn("[calisma-kilavuzu] yapay zekâ okuması reddedildi", sonuc.neden, sonuc.ayrinti.slice(0, 5), sonuc.neden === "bos" ? yanit.metin.slice(0, 400) : "");
+      console.warn("[calisma-kilavuzu] yapay zekâ okuması reddedildi", sonuc.neden, sonuc.ayrinti.slice(0, 5), sonuc.neden === "bos" ? `${yanit.metin.length} karakter | ${yanit.metin.slice(0, 300)} … ${yanit.metin.slice(-200)}` : "");
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: sonuc.neden, model: yanit.model, cikti: yanit.metin, bulgular: sonuc });
       return { okuma: null, not: null };
     }
