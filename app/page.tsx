@@ -1,37 +1,71 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, ChartNoAxesCombined, FileCheck2, ShieldCheck } from "lucide-react";
-import { login } from "@/app/actions/auth";
+import { BookOpenCheck, ChartNoAxesCombined, FileCheck2, PenLine, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
 import ThemeToggle from "@/app/_components/theme-toggle";
 import DilSecici from "@/app/_components/dil-secici";
-import { ceviri } from "@/lib/dil-sunucu";
+import GirisFormu from "@/app/_components/giris-formu";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { INGILIZCE_YAYINDA, type Metin } from "@/lib/dil";
+import { yasalAdres } from "@/lib/yasal-baglantilar";
 
-const highlights = [
+/*
+  GİRİŞ SAYFASI (02.11.2026'da baştan yazıldı, kurum sahibinin isteği).
+
+  Eskiden sayfa kurumlara hitap ediyordu ("akademik üretimi tek, güvenli ve
+  izlenebilir çalışma alanında yönetin") ve kayıt bağlantısı formun altındaki
+  küçük bir dipnottaydı. Kayıt artık herkese açık ve ücretsiz denemeyle
+  başlıyor (lib/ai/deneme-hakki.ts): sayfaya gelenlerin çoğu henüz hesabı
+  olmayan öğrenci ve araştırmacı. Bu yüzden:
+   - kayıt, girişin hemen altında kendi kartında ve düğme olarak duruyor;
+   - tanıtım, ekranın NE YAPTIĞINI somut olarak anlatıyor ve ürünün iki
+     temel sözünü (asistan yazmaz, kaynak uydurmaz) açıkça söylüyor.
+  Telefonda eski sürümde logo yerine boş bir "A" kutusu çıkıyor, dil
+  düğmeleri markanın üstüne biniyordu; üst çubuk artık her genişlikte aynı.
+
+  Deneme süresinin GÜN SAYISI yazılmıyor: ArvoOS'ta ayarlanıyor
+  (product_plans.trial_days) ve ArvoLab'ın okuyacağı bir uç nokta yok —
+  burada yazılan sayı bir gün ayarla çelişirdi.
+*/
+
+const OZELLIKLER: { ikon: typeof PenLine; baslik: Metin; aciklama: Metin }[] = [
   {
-    icon: BookOpenCheck,
-    title: { tr: "Literatür ve kaynak doğrulama", en: "Literature and source verification" },
-    description: {
-      tr: "Akademik kaynakları doğrulayın, atıf ve kaynakça uyumunu tek merkezden yönetin.",
-      en: "Verify academic sources and manage citation and reference-list consistency in one place.",
+    ikon: PenLine,
+    baslik: { tr: "Kılavuza göre yazım", en: "Writing to your guideline" },
+    aciklama: {
+      tr: "Üniversitenizin kılavuzunu yükleyin; zorunlu bölümler, sayfa düzeni ve atıf sistemi editöre uygulanır.",
+      en: "Upload your university's guideline; required sections, page layout and citation style are applied to the editor.",
     },
   },
   {
-    icon: ChartNoAxesCombined,
-    title: { tr: "Analiz merkezi", en: "Analysis center" },
-    description: {
-      tr: "Nicel ve nitel analiz süreçlerini kontrollü, kayıtlı ve tekrarlanabilir şekilde yürütün.",
-      en: "Run quantitative and qualitative analysis in a controlled, recorded and reproducible way.",
+    ikon: BookOpenCheck,
+    baslik: { tr: "Doğrulanmış kaynaklar", en: "Verified sources" },
+    aciklama: {
+      tr: "Kaynaklarınızı Crossref ve OpenAlex dizinlerinde bulun, kaynakçanızı metindeki atıflarla karşılaştırın.",
+      en: "Find sources in the Crossref and OpenAlex indexes and check your reference list against your in-text citations.",
     },
   },
   {
-    icon: FileCheck2,
-    title: { tr: "Belge ve kılavuz kontrolü", en: "Document and guideline check" },
-    description: {
-      tr: "Tez ve makaleleri üniversite kılavuzları ile yayın kurallarına göre denetleyin.",
-      en: "Check theses and articles against university guidelines and publication rules.",
+    ikon: ChartNoAxesCombined,
+    baslik: { tr: "Analiz Merkezi", en: "Analysis Center" },
+    aciklama: {
+      tr: "T testinden faktör analizine; hesap tarayıcınızda yapılır, veri dosyanız sunucuya gönderilmez.",
+      en: "From t-tests to factor analysis; computed in your browser, your data file is never sent to the server.",
     },
   },
+  {
+    ikon: FileCheck2,
+    baslik: { tr: "Teslime hazırlık", en: "Ready to submit" },
+    aciklama: {
+      tr: "Teslim kontrol listesi, Word ve PDF çıktısı, danışmanınız için salt okunur paylaşım bağlantısı.",
+      en: "Submission checklist, Word and PDF export, and a read-only share link for your advisor.",
+    },
+  },
+];
+
+const ILKELER: Metin[] = [
+  { tr: "Asistan metninizi yazmaz, denetler", en: "The assistant reviews your text, it doesn't write it" },
+  { tr: "Kaynak uydurmaz, gerçek dizinlerde arar", en: "It never invents sources; it searches real indexes" },
+  { tr: "Çalışmanız yalnızca size ve yetki verdiklerinize açık", en: "Your work is visible only to you and those you authorize" },
 ];
 
 type HomePageProps = {
@@ -68,144 +102,128 @@ const bilgiMesajlari: Record<string, Metin> = {
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const t = await ceviri();
+  const dil = await aktifDil();
   const hata = params.error ? errorMessages[params.error] : undefined;
   const bilgi = params.bilgi ? bilgiMesajlari[params.bilgi] : undefined;
-  const errorMessage = hata ? t(hata) : null;
-  const bilgiMesaji = bilgi ? t(bilgi) : null;
   const next = params.next?.startsWith("/dashboard") ? params.next : "";
 
   return (
-    <main className="login-page">
-      <section className="login-showcase" aria-label={t({ tr: "ArvoLab tanıtımı", en: "About ArvoLab" })}>
-        <div className="brand-lockup">
-          <Image src="/arvolab-logo.png" alt="ArvoLab" width={440} height={112} priority />
-          {/* lang="en": Türkçe büyük harf dönüşümü "i"yi "İ" yapmasın */}
-          <span className="eyebrow" lang="en">
-            Research Operating System
-          </span>
+    <div className="giris">
+      <header className="giris-ust">
+        <Image className="giris-logo" src="/arvolab-logo.png" alt="ArvoLab" width={1920} height={1080} priority />
+        <div className="giris-ust-araclar">
+          {/* Çeviri bitene kadar gizli (lib/dil.ts, INGILIZCE_YAYINDA). */}
+          {INGILIZCE_YAYINDA ? <DilSecici sinif="giris-dil" /> : null}
+          <ThemeToggle className="dashboard-icon-button" />
         </div>
+      </header>
 
-        <div className="showcase-copy">
-          <h1>
-            {t({
-              tr: "Akademik üretimi tek, güvenli ve izlenebilir çalışma alanında yönetin.",
-              en: "Manage academic work in one secure, traceable workspace.",
-            })}
-          </h1>
-          <p>
-            {t({
-              tr: "Literatür taramasından belge kontrolüne, veri analizinden akademik kalite onayına kadar tüm süreçleri ArvoLab üzerinden yürütün.",
-              en: "From literature search to document checks, from data analysis to academic quality review — run the whole process in ArvoLab.",
-            })}
-          </p>
-        </div>
-
-        <div className="highlight-list">
-          {highlights.map(({ icon: Icon, title, description }) => (
-            <article className="highlight-card" key={title.tr}>
-              <div className="highlight-icon" aria-hidden="true">
-                <Icon size={20} strokeWidth={1.8} />
-              </div>
-              <div>
-                <h2>{t(title)}</h2>
-                <p>{t(description)}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <div className="security-note">
-          <ShieldCheck size={18} aria-hidden="true" />
-          <span>
-            {t({
-              tr: "Kurumsal veriler ve akademik dosyalar yetki seviyelerine göre korunur.",
-              en: "Institutional data and academic files are protected by permission level.",
-            })}
-          </span>
-        </div>
-      </section>
-
-      <section className="login-panel" aria-label={t({ tr: "ArvoLab giriş formu", en: "ArvoLab sign-in form" })}>
-        <ThemeToggle className="dashboard-icon-button login-theme-toggle" />
-        {/* Çeviri bitene kadar gizli (lib/dil.ts, INGILIZCE_YAYINDA). */}
-        {INGILIZCE_YAYINDA ? <DilSecici sinif="login-dil" /> : null}
-        <div className="login-card">
-          <div className="login-mobile-brand">
-            <div className="brand-mark" aria-hidden="true">
-              A
+      <main className="giris-govde">
+        <section className="giris-panel" aria-labelledby="giris-baslik">
+          <div className="login-card">
+            <div className="login-heading">
+              <span className="login-kicker">{t({ tr: "Çalışma alanınız", en: "Your workspace" })}</span>
+              <h1 id="giris-baslik">{t({ tr: "ArvoLab'a giriş yapın", en: "Sign in to ArvoLab" })}</h1>
+              <p>{t({ tr: "E-posta adresiniz ve şifrenizle devam edin.", en: "Continue with your email address and password." })}</p>
             </div>
-            <div>
-              <strong>ArvoLab</strong>
-              <span lang="en">Research OS</span>
-            </div>
+
+            {hata ? (
+              <p className="alert" role="alert">
+                {t(hata)}
+              </p>
+            ) : null}
+            {bilgi ? (
+              <p className="tone-text" data-tone="warning" role="status">
+                {t(bilgi)}
+              </p>
+            ) : null}
+
+            <GirisFormu next={next} />
           </div>
-
-          <div className="login-heading">
-            <span className="login-kicker">{t({ tr: "Çalışma alanına erişim", en: "Workspace access" })}</span>
-            <h2>{t({ tr: "ArvoLab'a giriş yapın", en: "Sign in to ArvoLab" })}</h2>
-            <p>{t({ tr: "E-posta adresiniz ve şifrenizle devam edin.", en: "Continue with your email address and password." })}</p>
-          </div>
-
-          {errorMessage ? (
-            <p className="alert" role="alert">
-              {errorMessage}
-            </p>
-          ) : null}
-
-          {bilgiMesaji ? (
-            <p className="tone-text" data-tone="warning" role="status">
-              {bilgiMesaji}
-            </p>
-          ) : null}
-
-          <form className="login-form" action={login}>
-            {next ? <input type="hidden" name="next" value={next} /> : null}
-            <label htmlFor="email">{t({ tr: "E-posta adresi", en: "Email address" })}</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder={t({ tr: "ornek@kurum.com", en: "name@university.edu" })}
-              required
-            />
-
-            <div className="password-label-row">
-              <label htmlFor="password">{t({ tr: "Şifre", en: "Password" })}</label>
-              <Link href="/forgot-password">{t({ tr: "Şifremi unuttum", en: "Forgot password" })}</Link>
-            </div>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder={t({ tr: "Şifrenizi girin", en: "Enter your password" })}
-              required
-            />
-
-            <button className="login-button" type="submit">
-              {t({ tr: "Giriş yap", en: "Sign in" })}
-              <ArrowRight size={18} aria-hidden="true" />
-            </button>
-          </form>
 
           {/*
-            Eskiden burada yalnızca "kurum yöneticinizden davet talep edin"
-            yazıyordu: kurumu olmayan kişinin ArvoLab'a girmesinin hiçbir
-            yolu yoktu, tanıtım sayfasındaki çağrı da bir iletişim formuydu.
+            Kayıt kartı girişin hemen altında ve bir DÜĞME: sayfaya gelenlerin
+            çoğu henüz hesabı olmayanlar. Kurumsal kullanıcı notu da burada —
+            kurumu ArvoLab kullanan biri kendi başına kayıt olursa bireysel
+            denemeye düşer, kurum lisansına bağlanmaz.
           */}
-          <div className="login-footer">
-            <p>
-              {t({ tr: "Hesabınız yok mu?", en: "No account yet?" })}{" "}
-              <Link href="/kayit">{t({ tr: "Kayıt olun", en: "Sign up" })}</Link>
-              {t({
-                tr: " — kurumsal kullanıcıysanız kurum yöneticinizden davet isteyin.",
-                en: " — if you are an institutional user, ask your institution's administrator for an invitation.",
-              })}
-            </p>
-          </div>
-        </div>
-      </section>
-    </main>
+          <aside className="giris-kayit" aria-labelledby="giris-kayit-baslik">
+            <div className="giris-kayit-ikon" aria-hidden="true">
+              <Sparkles size={18} />
+            </div>
+            <div className="giris-kayit-govde">
+              <h2 id="giris-kayit-baslik">{t({ tr: "ArvoLab'da yeni misiniz?", en: "New to ArvoLab?" })}</h2>
+              <p>
+                {t({
+                  tr: "Ücretsiz deneme ile hemen başlayın; kart bilgisi istenmez.",
+                  en: "Start right away with a free trial; no card details required.",
+                })}
+              </p>
+              <Link href="/kayit" className="giris-kayit-dugme">
+                <UserPlus size={16} aria-hidden="true" />
+                {t({ tr: "Ücretsiz hesap oluştur", en: "Create a free account" })}
+              </Link>
+              <small>
+                {t({
+                  tr: "Kurumunuz ArvoLab kullanıyorsa kayıt olmak yerine kurum yöneticinizden davet isteyin.",
+                  en: "If your institution uses ArvoLab, ask your institution's administrator for an invitation instead of signing up.",
+                })}
+              </small>
+            </div>
+          </aside>
+        </section>
+
+        <section className="giris-tanitim" aria-labelledby="tanitim-baslik">
+          <span className="giris-ust-yazi" lang="en">
+            Research Operating System
+          </span>
+          <h2 id="tanitim-baslik">
+            {t({
+              tr: "Tezinizi kılavuza uygun yazın, kaynaklarınızı doğrulayın, güvenle teslim edin.",
+              en: "Write your thesis to the guideline, verify your sources, submit with confidence.",
+            })}
+          </h2>
+          <p className="giris-tanitim-ozet">
+            {t({
+              tr: "ArvoLab, yazdığınızı üniversitenizin kılavuzuna ve kaynakça kurallarına göre denetleyen akademik çalışma alanıdır.",
+              en: "ArvoLab is an academic workspace that checks what you write against your university's guideline and citation rules.",
+            })}
+          </p>
+
+          <ul className="giris-ozellikler">
+            {OZELLIKLER.map(({ ikon: Ikon, baslik, aciklama }) => (
+              <li key={baslik.tr}>
+                <span className="giris-ozellik-ikon" aria-hidden="true">
+                  <Ikon size={18} strokeWidth={1.8} />
+                </span>
+                <span>
+                  <b>{t(baslik)}</b>
+                  {t(aciklama)}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <ul className="giris-ilkeler" aria-label={t({ tr: "İlkelerimiz", en: "Our principles" })}>
+            {ILKELER.map((ilke) => (
+              <li key={ilke.tr}>
+                <ShieldCheck size={15} aria-hidden="true" />
+                {t(ilke)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </main>
+
+      <footer className="giris-alt">
+        <span>© {new Date().getFullYear()} ArvoCulture Group</span>
+        <a href={yasalAdres("gizlilik", dil)} target="_blank" rel="noreferrer">
+          {t({ tr: "Gizlilik ve KVKK", en: "Privacy" })}
+        </a>
+        <a href="https://arvo-os.com" target="_blank" rel="noreferrer">
+          arvo-os.com
+        </a>
+      </footer>
+    </div>
   );
 }

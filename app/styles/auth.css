@@ -3,23 +3,115 @@
    Mobilde form ilk ekranda: tanıtım alanı formun altına iner.
    ============================================================ */
 
-.login-page {
+/* ---------- Giriş sayfası (app/page.tsx, 02.11.2026'da yeniden yazıldı) ----------
+   Üst çubuk (logo + dil + tema) her genişlikte aynı; eskiden telefonda
+   logo yerine boş bir "A" kutusu çıkıyor, dil düğmeleri markanın üstüne
+   biniyordu. Geniş ekranda solda giriş + kayıt, sağda koyu tanıtım;
+   telefonda giriş önce, tanıtım altta. */
+.giris {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(440px, .95fr);
-  gap: 20px;
+  grid-template-rows: auto 1fr auto;
   min-height: 100dvh;
-  padding: 20px;
+  padding: max(16px, env(safe-area-inset-top)) clamp(16px, 3vw, 28px) max(16px, env(safe-area-inset-bottom));
+  gap: 16px;
+}
+.giris-ust { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* Logo dosyası 16:9 ve geniş boşluklu: kutu yalnızca yazının şeridini gösterir. */
+.giris-logo { width: 168px; height: 40px; object-fit: cover; }
+html[data-theme="dark"] .giris-logo { filter: brightness(0) invert(1); }
+.giris-ust-araclar { display: flex; align-items: center; gap: 8px; }
+.giris-dil { display: flex; align-items: center; gap: 6px; }
+.giris-dil small { display: none; }
+.giris-dil button { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface); color: var(--ink); font-size: var(--fs-sm); cursor: pointer; }
+.giris-dil button[aria-pressed="true"] { border-color: var(--primary); }
+
+.giris-govde {
+  display: grid;
+  grid-template-columns: minmax(360px, 480px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
 }
 
-/* ---------- Tanıtım alanı (kenar çubuğuyla aynı koyu malzeme) ---------- */
-.login-showcase {
+.giris-panel { display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+.giris-panel .login-card {
+  width: 100%;
+  padding: clamp(24px, 3.5vw, 36px);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-xl);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-md);
+  animation: ui-rise .55s var(--ease-spring) backwards;
+}
+
+.giris-sifre { position: relative; }
+.giris-sifre input { padding-right: 52px; }
+.giris-sifre-goster {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.giris-sifre-goster:hover { color: var(--ink); background: var(--surface-2); }
+.giris-sifre-goster:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.giris-donen { animation: giris-don 1s linear infinite; }
+@keyframes giris-don { to { transform: rotate(360deg); } }
+
+.giris-kayit {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent-500) 35%, var(--line-soft));
+  border-radius: var(--r-xl);
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface));
+  animation: ui-rise .55s var(--ease-spring) .08s backwards;
+}
+.giris-kayit-ikon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: var(--surface); color: var(--accent-strong); box-shadow: var(--shadow-sm); }
+.giris-kayit-govde { display: grid; gap: 6px; min-width: 0; }
+.giris-kayit h2 { margin: 0; color: var(--ink); font-size: var(--fs-md); font-weight: 700; letter-spacing: -.01em; }
+.giris-kayit p { margin: 0; color: var(--ink-soft); font-size: var(--fs-base); line-height: var(--lh-metin); }
+.giris-kayit small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.giris-kayit-dugme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  gap: 8px;
+  min-height: 42px;
+  margin: 6px 0 4px;
+  padding: 0 18px;
+  border: 1px solid var(--accent-500);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--accent-strong);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .15s ease, transform .3s var(--ease-spring);
+}
+.giris-kayit-dugme:hover { background: var(--accent-soft); }
+.giris-kayit-dugme:active { transform: scale(.975); }
+.giris-kayit-dugme:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+
+/* Tanıtım alanı (kenar çubuğuyla aynı koyu malzeme) */
+.giris-tanitim {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 40px;
-  min-height: calc(100dvh - 40px);
-  padding: clamp(32px, 5vw, 64px);
+  justify-content: center;
+  gap: 18px;
+  padding: clamp(28px, 4.5vw, 64px);
   overflow: hidden;
   border-radius: var(--r-xl);
   background:
@@ -29,76 +121,45 @@
   color: var(--sidebar-ink);
   box-shadow: var(--shadow-lg);
 }
-.brand-lockup { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.brand-lockup img { height: 72px; width: auto; filter: brightness(0) invert(1); }
-.eyebrow {
-  color: var(--accent-300);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-}
-.showcase-copy { position: relative; max-width: 640px; }
-.showcase-copy h1 {
-  margin: 0 0 16px;
+.giris-ust-yazi { color: var(--accent-300); font-size: var(--fs-sm); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.giris-tanitim h2 {
+  max-width: 640px;
+  margin: 0;
   color: var(--sidebar-ink);
-  font-size: clamp(34px, 4.2vw, 56px);
+  font-size: clamp(30px, 3.4vw, 48px);
   font-weight: 700;
-  line-height: 1.06;
-  letter-spacing: -.035em;
+  line-height: 1.08;
+  letter-spacing: -.03em;
 }
-.showcase-copy > p { max-width: 560px; margin: 0; color: var(--sidebar-muted); font-size: var(--fs-md); line-height: 1.7; }
-
-.highlight-list { position: relative; display: grid; gap: 10px; }
-.highlight-card {
+.giris-tanitim-ozet { max-width: 560px; margin: 0; color: var(--sidebar-muted); font-size: var(--fs-md); line-height: 1.65; }
+.giris-ozellikler { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 8px 0 0; padding: 0; list-style: none; }
+.giris-ozellikler li {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 14px;
+  gap: 12px;
   padding: 14px 16px;
   border: 1px solid var(--sidebar-line);
   border-radius: var(--r-lg);
   background: color-mix(in srgb, var(--n-0) 6%, transparent);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  color: var(--sidebar-muted);
+  font-size: var(--fs-base);
+  line-height: var(--lh-metin);
 }
-.highlight-icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--accent-bright) 22%, transparent);
-  color: var(--accent-300);
-}
-.highlight-card h2 { margin: 0 0 3px; color: var(--sidebar-ink); font-size: var(--fs-body); font-weight: 650; }
-.highlight-card p { margin: 0; color: var(--sidebar-muted); font-size: var(--fs-base); line-height: var(--lh-metin); }
-.security-note { position: relative; display: flex; align-items: center; gap: 9px; color: var(--sidebar-muted); font-size: var(--fs-sm); }
+.giris-ozellikler b { display: block; margin-bottom: 2px; color: var(--sidebar-ink); font-size: var(--fs-body); font-weight: 650; }
+.giris-ozellik-ikon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: color-mix(in srgb, var(--accent-bright) 22%, transparent); color: var(--accent-300); }
+.giris-ilkeler { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 6px 0 0; padding: 0; list-style: none; color: var(--sidebar-muted); font-size: var(--fs-sm); }
+.giris-ilkeler li { display: inline-flex; align-items: center; gap: 7px; }
+.giris-ilkeler svg { color: var(--accent-300); flex: none; }
+
+.giris-alt { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; color: var(--muted); font-size: var(--fs-sm); }
+.giris-alt a { color: var(--muted); }
+.giris-alt a:hover { color: var(--accent); }
 
 /* ---------- Giriş formu ---------- */
-.login-panel {
-  display: grid;
-  place-items: center;
-  min-height: calc(100dvh - 40px);
-  padding: clamp(28px, 5vw, 64px);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-xl);
-  background: var(--glass-strong);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-md);
-}
-.login-panel { position: relative; }
-.login-theme-toggle { position: absolute; top: 16px; right: 16px; }
-/* Dil seçici (lib/dil.ts, INGILIZCE_YAYINDA açılınca görünür): tema düğmesinin solunda. */
-.login-dil { position: absolute; top: 16px; right: 64px; display: flex; align-items: center; gap: 6px; }
-.login-dil small { display: none; }
-.login-dil button { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: var(--fs-sm); cursor: pointer; }
-.login-dil button[aria-pressed="true"] { border-color: var(--primary); }
 .login-card { width: min(100%, 420px); }
-.login-mobile-brand { display: none; }
 .login-heading { margin-bottom: 28px; }
 .login-kicker { color: var(--accent); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-.login-heading h2 {
+.login-heading h1, .login-heading h2 {
   margin: 10px 0 8px;
   font-size: 30px;
   font-weight: 700;
@@ -151,10 +212,6 @@ html[data-theme="dark"] .login-button { background: linear-gradient(180deg, var(
 .login-button:active { transform: scale(.975); transition-duration: .08s; }
 .login-button:disabled { opacity: .6; cursor: not-allowed; }
 
-.login-footer { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: var(--fs-sm); text-align: center; }
-.login-footer p { margin: 0 0 10px; }
-.login-footer > div { display: flex; justify-content: center; gap: 9px; }
-.login-footer a:hover { color: var(--accent); }
 
 /* ---------- Tek kartlı sayfalar ---------- */
 .auth-simple-page {
@@ -179,18 +236,22 @@ html[data-theme="dark"] .login-button { background: linear-gradient(180deg, var(
 
 /* ---------- Duyarlı ---------- */
 @media (max-width: 1100px) {
-  .login-page { grid-template-columns: minmax(0, 1fr) minmax(400px, 1fr); }
-  .showcase-copy h1 { font-size: 38px; }
+  .giris-ozellikler { grid-template-columns: minmax(0, 1fr); }
 }
-@media (max-width: 900px) {
-  .login-page { display: flex; flex-direction: column; gap: 14px; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
-  .login-panel { order: 1; min-height: auto; padding: 28px 22px; }
-  .login-showcase { order: 2; min-height: auto; gap: 24px; padding: 28px 22px; }
-  .login-showcase .brand-lockup { display: none; }
-  .login-mobile-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
-  .login-mobile-brand strong { display: block; font-family: var(--font-brand); font-size: var(--fs-xl); font-weight: 750; letter-spacing: -.02em; }
-  .login-mobile-brand span { color: var(--muted); font-size: var(--fs-micro); letter-spacing: .1em; text-transform: uppercase; }
-  .showcase-copy h1 { font-size: 28px; }
-  .login-heading h2 { font-size: 26px; }
+@media (max-width: 860px) {
+  .giris-govde { grid-template-columns: minmax(0, 1fr); }
+  .giris-tanitim { padding: 26px 22px; }
+  .giris-tanitim h2 { font-size: 26px; }
+  .login-heading h1, .login-heading h2 { font-size: 26px; }
   .login-form input { font-size: 16px; }
+}
+@media (max-width: 420px) {
+  .giris-logo { width: 132px; height: 32px; }
+  .giris-dil button { padding: 0 9px; }
+  .giris-kayit { grid-template-columns: minmax(0, 1fr); }
+  .giris-kayit-ikon { display: none; }
+  .giris-kayit-dugme { justify-self: stretch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .giris-donen { animation: none; }
 }
