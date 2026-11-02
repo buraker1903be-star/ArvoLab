@@ -27,39 +27,52 @@ import { yasalAdres } from "@/lib/yasal-baglantilar";
   burada yazılan sayı bir gün ayarla çelişirdi.
 */
 
+/*
+  TANITIM METNİ (02.11.2026, kurum sahibinin isteği: "biraz pazarlama dili").
+  Dil satış odaklı ama her cümle ürünün GERÇEKTEN yaptığını söylüyor: sayı,
+  kullanıcı sayısı ya da müşteri yorumu yok (uydurma bir rakam en kötü
+  pazarlamadır), "jüriden geçer" gibi bir söz de yok — ArvoLab onay vermiyor,
+  denetliyor. Özellikler "ne var" değil "size ne kazandırır" diye yazıldı.
+*/
 const OZELLIKLER: { ikon: typeof PenLine; baslik: Metin; aciklama: Metin }[] = [
   {
     ikon: PenLine,
-    baslik: { tr: "Kılavuza göre yazım", en: "Writing to your guideline" },
+    baslik: { tr: "Kılavuzunuz hep önünüzde", en: "Your guideline, always in view" },
     aciklama: {
-      tr: "Üniversitenizin kılavuzunu yükleyin; zorunlu bölümler, sayfa düzeni ve atıf sistemi editöre uygulanır.",
-      en: "Upload your university's guideline; required sections, page layout and citation style are applied to the editor.",
+      tr: "Üniversitenizin kılavuzunu bir kez yükleyin; zorunlu bölümler, sayfa düzeni ve atıf sistemi siz yazarken editöre uygulanır.",
+      en: "Upload your university's guideline once; required sections, page layout and citation style are applied as you write.",
     },
   },
   {
     ikon: BookOpenCheck,
-    baslik: { tr: "Doğrulanmış kaynaklar", en: "Verified sources" },
+    baslik: { tr: "Kaynakçanız kendiliğinden tutarlı", en: "A reference list that stays consistent" },
     aciklama: {
-      tr: "Kaynaklarınızı Crossref ve OpenAlex dizinlerinde bulun, kaynakçanızı metindeki atıflarla karşılaştırın.",
-      en: "Find sources in the Crossref and OpenAlex indexes and check your reference list against your in-text citations.",
+      tr: "Crossref ve OpenAlex'te arayın, atfı tek tıkla ekleyin; metindeki atıfla kaynakça eşleşmezse anında görün.",
+      en: "Search Crossref and OpenAlex, cite in one click, and see instantly when a citation and your reference list don't match.",
     },
   },
   {
     ikon: ChartNoAxesCombined,
-    baslik: { tr: "Analiz Merkezi", en: "Analysis Center" },
+    baslik: { tr: "Ayrı istatistik programı gerekmez", en: "No separate stats package needed" },
     aciklama: {
-      tr: "T testinden faktör analizine; hesap tarayıcınızda yapılır, veri dosyanız sunucuya gönderilmez.",
-      en: "From t-tests to factor analysis; computed in your browser, your data file is never sent to the server.",
+      tr: "T testinden faktör analizine, sonuç tablosu hazır; SPSS, R ve Python sözdizimi de yanında. Veri dosyanız bilgisayarınızdan çıkmaz.",
+      en: "From t-tests to factor analysis, with ready result tables plus SPSS, R and Python syntax. Your data file never leaves your computer.",
     },
   },
   {
     ikon: FileCheck2,
-    baslik: { tr: "Teslime hazırlık", en: "Ready to submit" },
+    baslik: { tr: "Teslim gününe hazır", en: "Ready for submission day" },
     aciklama: {
-      tr: "Teslim kontrol listesi, Word ve PDF çıktısı, danışmanınız için salt okunur paylaşım bağlantısı.",
-      en: "Submission checklist, Word and PDF export, and a read-only share link for your advisor.",
+      tr: "Teslim kontrol listesi, Word ve PDF çıktısı, danışmanınıza salt okunur paylaşım bağlantısı — son gece sürprizi yok.",
+      en: "Submission checklist, Word and PDF export, a read-only link for your advisor — no last-night surprises.",
     },
   },
+];
+
+const ADIMLAR: Metin[] = [
+  { tr: "Ücretsiz hesabınızı açın", en: "Create your free account" },
+  { tr: "Kılavuzunuzu yükleyin", en: "Upload your guideline" },
+  { tr: "Yazmaya başlayın", en: "Start writing" },
 ];
 
 const ILKELER: Metin[] = [
@@ -172,19 +185,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </section>
 
         <section className="giris-tanitim" aria-labelledby="tanitim-baslik">
-          <span className="giris-ust-yazi" lang="en">
-            Research Operating System
+          <span className="giris-ust-yazi">
+            {t({ tr: "Tez ve makale yazanlar için", en: "For thesis and article writers" })}
           </span>
           <h2 id="tanitim-baslik">
-            {t({
-              tr: "Tezinizi kılavuza uygun yazın, kaynaklarınızı doğrulayın, güvenle teslim edin.",
-              en: "Write your thesis to the guideline, verify your sources, submit with confidence.",
-            })}
+            {t({ tr: "Siz yazın, ArvoLab kontrol etsin.", en: "You write. ArvoLab checks." })}
           </h2>
           <p className="giris-tanitim-ozet">
             {t({
-              tr: "ArvoLab, yazdığınızı üniversitenizin kılavuzuna ve kaynakça kurallarına göre denetleyen akademik çalışma alanıdır.",
-              en: "ArvoLab is an academic workspace that checks what you write against your university's guideline and citation rules.",
+              tr: "Kılavuza uymayan bir başlık, kaynakçada eksik bir künye, numarası kaymış bir tablo… Hepsini teslimden önce görün; danışmanınıza ve jüriye daha hazır bir metinle gidin.",
+              en: "A heading that breaks the guideline, a missing reference, a table numbered out of order… Catch them all before you submit, and go to your advisor and committee with a stronger draft.",
             })}
           </p>
 
@@ -201,6 +211,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </li>
             ))}
           </ul>
+
+          <div className="giris-baslangic">
+            <ol className="giris-adimlar" aria-label={t({ tr: "Üç adımda başlayın", en: "Get started in three steps" })}>
+              {ADIMLAR.map((adim, sira) => (
+                <li key={adim.tr}>
+                  <span aria-hidden="true">{sira + 1}</span>
+                  {t(adim)}
+                </li>
+              ))}
+            </ol>
+            {/* Aynı kayıt penceresi; tanıtımı okuyup ikna olan, forma geri dönmeden başlasın. */}
+            <KayitPenceresi sinif="giris-tanitim-dugme" etiket={{ tr: "Ücretsiz denemeye başla", en: "Start your free trial" }} />
+          </div>
 
           <ul className="giris-ilkeler" aria-label={t({ tr: "İlkelerimiz", en: "Our principles" })}>
             {ILKELER.map((ilke) => (

@@ -147,6 +147,28 @@ html[data-theme="dark"] .giris-logo { filter: brightness(0) invert(1); }
 }
 .giris-ozellikler b { display: block; margin-bottom: 2px; color: var(--sidebar-ink); font-size: var(--fs-body); font-weight: 650; }
 .giris-ozellik-ikon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: color-mix(in srgb, var(--accent-bright) 22%, transparent); color: var(--accent-300); }
+.giris-baslangic { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px; margin-top: 6px; padding: 14px 16px; border: 1px solid var(--sidebar-line); border-radius: var(--r-lg); background: color-mix(in srgb, var(--n-0) 4%, transparent); }
+.giris-adimlar { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; color: var(--sidebar-ink); font-size: var(--fs-base); font-weight: 600; }
+.giris-adimlar li { display: inline-flex; align-items: center; gap: 8px; }
+.giris-adimlar span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--accent-bright) 26%, transparent); color: var(--accent-300); font-size: var(--fs-sm); font-weight: 700; }
+.giris-tanitim-dugme {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: var(--accent-300);
+  color: var(--brand-900);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent-bright) 25%, transparent);
+  transition: transform .3s var(--ease-spring), filter .15s ease;
+}
+.giris-tanitim-dugme:hover { filter: brightness(1.06); }
+.giris-tanitim-dugme:active { transform: scale(.975); }
+.giris-tanitim-dugme:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 .giris-ilkeler { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 6px 0 0; padding: 0; list-style: none; color: var(--sidebar-muted); font-size: var(--fs-sm); }
 .giris-ilkeler li { display: inline-flex; align-items: center; gap: 7px; }
 .giris-ilkeler svg { color: var(--accent-300); flex: none; }

@@ -5,6 +5,7 @@ import { UserPlus } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
 import KayitFormu from "@/app/kayit/kayit-formu";
 import { useCeviri } from "./dil-saglayici";
+import type { Metin } from "@/lib/dil";
 
 /*
   Giriş sayfasındaki "Ücretsiz hesap oluştur" penceresi (02.11.2026, kurum
@@ -16,7 +17,20 @@ import { useCeviri } from "./dil-saglayici";
   pencereyi açar. Adres "?kayit=1" ile gelinirse pencere kendiliğinden
   açılır — e-postadan ya da reklamdan doğrudan kayda gelinebilsin.
 */
-export default function KayitPenceresi({ acik: baslangicta = false }: { acik?: boolean }) {
+/*
+  Sayfada iki düğme aynı pencereyi açabilir (giriş kartının altındaki kayıt
+  kartı ve tanıtım alanı); `sinif` ve `etiket` yalnızca düğmenin görünüşü.
+  ?kayit=1 ile açılış yalnızca birinde (acik) verilmeli, yoksa iki pencere açılır.
+*/
+export default function KayitPenceresi({
+  acik: baslangicta = false,
+  sinif = "giris-kayit-dugme",
+  etiket = { tr: "Ücretsiz hesap oluştur", en: "Create a free account" },
+}: {
+  acik?: boolean;
+  sinif?: string;
+  etiket?: Metin;
+}) {
   const t = useCeviri();
   const [acik, setAcik] = useState(baslangicta);
 
@@ -34,14 +48,14 @@ export default function KayitPenceresi({ acik: baslangicta = false }: { acik?: b
     <>
       <a
         href="/kayit"
-        className="giris-kayit-dugme"
+        className={sinif}
         onClick={(e) => {
           e.preventDefault();
           setAcik(true);
         }}
       >
         <UserPlus size={16} aria-hidden="true" />
-        {t({ tr: "Ücretsiz hesap oluştur", en: "Create a free account" })}
+        {t(etiket)}
       </a>
       <Dialog
         open={acik}
