@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UploadCloud, Link2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -43,6 +43,8 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
   const [form, setForm] = useState<DogrulamaFormu | null>(null);
   const [yeniBolum, setYeniBolum] = useState("");
   const [kaydediliyor, setKaydediliyor] = useState(false);
+  const [stilEksik, setStilEksik] = useState(false);
+  const stilKutusu = useRef<HTMLSelectElement>(null);
   const router = useRouter();
 
   const taramayiBitir = (cevap: TaramaSonucu) => {
@@ -117,6 +119,14 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
     const hatalar = formuDogrula(form);
     if (hatalar.length > 0) {
       showToast("error", dogrulamaMesaji(hatalar[0], dil));
+      /* Kutu pencerenin en üstünde; "Kurallarımı uygula" en altta.
+         Eskiden yalnızca bildirim çıkıyordu ve öğrenci hangi kutunun
+         boş olduğunu kaydırıp aramak zorundaydı (02.11.2026, DEÜ SBE). */
+      if (hatalar[0] === "atif-stili-yok" || hatalar[0] === "atif-stili-taninmiyor") {
+        setStilEksik(true);
+        stilKutusu.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        stilKutusu.current?.focus({ preventScroll: true });
+      }
       return;
     }
     setKaydediliyor(true);
@@ -147,6 +157,9 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
     );
   }
 
+  const stilUyarisi = sonuc?.atifUyarisi ?? null;
+  const digerUyarilar = sonuc?.uyarilar ?? [];
+
   if (adim === "dogrulama" && form) {
     return (
       <div className="stack">
@@ -159,13 +172,13 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
           })}
         </p>
 
-        {sonuc?.uyarilar?.length ? (
+        {digerUyarilar.length ? (
           <p className="tone-text text-sm" data-tone="warning">
-            {sonuc.uyarilar[0]}
-            {sonuc.uyarilar.length > 1
+            {digerUyarilar[0]}
+            {digerUyarilar.length > 1
               ? t({
-                  tr: ` (+${sonuc.uyarilar.length - 1} not)`,
-                  en: ` (+${sonuc.uyarilar.length - 1} note${sonuc.uyarilar.length === 2 ? "" : "s"})`,
+                  tr: ` (+${digerUyarilar.length - 1} not)`,
+                  en: ` (+${digerUyarilar.length - 1} note${digerUyarilar.length === 2 ? "" : "s"})`,
                 })
               : ""}
           </p>
@@ -174,9 +187,14 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
         <label>
           <span>{t({ tr: "Kaynakça sistemi", en: "Citation system" })}</span>
           <select
+            ref={stilKutusu}
             className="field-control"
             value={form.atifStili}
-            onChange={(e) => setForm({ ...form, atifStili: e.target.value })}
+            aria-invalid={stilEksik && !form.atifStili ? true : undefined}
+            onChange={(e) => {
+              setStilEksik(false);
+              setForm({ ...form, atifStili: e.target.value });
+            }}
           >
             <option value="">{t({ tr: "Seçin", en: "Select" })}</option>
             {STIL_SECENEKLERI.map((secenek) => (
@@ -185,8 +203,18 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
               </option>
             ))}
           </select>
+          {/*
+            Kılavuz iki yönteme birden izin veriyorsa (DEÜ SBE: dipnot ve
+            metin içi) seçim öğrencinindir, uydurulmaz. Gerekçe kutunun
+            ALTINDA söyleniyor: eskiden üstteki uyarı satırında "(+3 not)"
+            arkasında kalıyordu, kutunun yanında yalnızca "bulamadım"
+            yazıyordu ve kılavuzu doğru okunmamış sanılıyordu.
+          */}
           {!sonuc?.form?.atifStili ? (
-            <small>{t({ tr: "Kılavuzda bulamadım; hangisi isteniyorsa seçin.", en: "I couldn't find it in the guideline; select the one required." })}</small>
+            <small className={stilEksik && !form.atifStili ? "tone-text" : undefined} data-tone={stilEksik && !form.atifStili ? "danger" : undefined}>
+              {stilUyarisi ??
+                t({ tr: "Kılavuzda bulamadım; hangisi isteniyorsa seçin.", en: "I couldn't find it in the guideline; select the one required." })}
+            </small>
           ) : null}
         </label>
 

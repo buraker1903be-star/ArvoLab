@@ -6,7 +6,7 @@ import { taramaDogrula, taramaImzala } from "@/lib/imzali-tarama";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { ornekKalibi } from "@/lib/atif/tyk";
-import { scanGuidelineBytesMetinli, scanGuidelineUrlMetinli, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { atifYontemiUyarisiMi, scanGuidelineBytesMetinli, scanGuidelineUrlMetinli, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { butceyeTakildi, sor } from "@/lib/ai/saglayici";
@@ -88,6 +88,8 @@ export interface TaramaSonucu {
   /* Çıkarımın kendi uyarıları (OCR gürültüsü, düşük güven). Öğrenciye
      gösteriliyor: "bunu ben çıkardım, siz bakın" demenin yolu. */
   uyarilar?: string[];
+  /** Atıf yönteminin neden öğrenciye bırakıldığı; seçim kutusunun altında gösterilir. */
+  atifUyarisi?: string | null;
   /*
     Onaylatılmayan ama UYGULANACAK biçim kuralları, okunur cümleler
     hâlinde. Düzenlenmiyor, söyleniyor: on alanlık bir form okunmadan
@@ -248,7 +250,16 @@ export async function kilavuzuTara(
       }),
       belirtec,
       /* Çıkarımın uyarıları Türkçe üretiliyor (lib/guideline-scan.ts); ekranda kullanıcının dilinde. */
-      uyarilar: [...ekUyarilar, ...sonuc.warnings.map((uyari) => taramaUyarisiCevir(uyari, dil))],
+      uyarilar: [
+        ...ekUyarilar,
+        ...sonuc.warnings
+          // Gerekçe kutunun altında söyleniyorsa üstteki "bulunamadı" tekrardır.
+          .filter((u) => !atifYontemiUyarisiMi(u) && !(u === "Kaynakça sistemi açıkça bulunamadı." && sonuc.warnings.some(atifYontemiUyarisiMi)))
+          .map((uyari) => taramaUyarisiCevir(uyari, dil)),
+      ],
+      /* Ayrı alan: eskiden genel uyarı satırında "(+3 not)" arkasında
+         kalıyordu ve kutunun yanında yalnızca "bulamadım" yazıyordu. */
+      atifUyarisi: ((u) => (u ? taramaUyarisiCevir(u, dil) : null))(sonuc.warnings.find(atifYontemiUyarisiMi)),
       bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules), dil),
       kanitlar: yz.okuma?.kanitlar.map((k) => ({ ad: ALAN_ADI[k.alan]?.[dil] ?? k.alan, alinti: k.alinti })) ?? [],
       okuyan: yz.okuma ? "yapay-zeka" : "kalip",

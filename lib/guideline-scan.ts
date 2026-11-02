@@ -251,6 +251,11 @@ const KALIP_UYARILAR_EN: [RegExp, (e: RegExpExecArray) => string][] = [
   ],
 ];
 
+/** Atıf yönteminin öğrenciye bırakıldığını söyleyen uyarı mı (lib/atif-sistemi.ts üretir). */
+export function atifYontemiUyarisiMi(uyari: string): boolean {
+  return uyari.startsWith("Kılavuz bir kaynakça sistemi adı vermiyor");
+}
+
 /** Kılavuz kaydındaki (Türkçe) bir tarama uyarısının istenen dildeki hâli. */
 export function taramaUyarisiCevir(uyari: string, dil: Dil = "tr"): string {
   if (dil === "tr") return uyari;

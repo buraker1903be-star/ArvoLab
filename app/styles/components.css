@@ -503,6 +503,8 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .project-form-grid :is(input, textarea)::placeholder,
 .guideline-review-form :is(input, textarea)::placeholder,
 .field-control::placeholder { color: var(--dim); }
+/* Doldurulması gereken boş kutu (ör. kılavuz formundaki kaynakça sistemi). */
+.field-control[aria-invalid="true"] { border-color: var(--danger); }
 .project-form-grid :is(input, select, textarea):disabled { opacity: .6; cursor: not-allowed; }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-500); width: 18px; height: 18px; }
 
