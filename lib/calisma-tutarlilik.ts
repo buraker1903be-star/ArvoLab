@@ -78,6 +78,13 @@ export function metinListeTutarsizliklari(
     "atıfsız" gösterirdi — susmak doğrusu.
   */
   if (!adlaEslesir(stil)) return [];
+  /*
+    Dipnotlu stilde atıflar dipnotlarda ve buraya gelen düz metin
+    (plain_text) dipnotları taşımıyor: her "kullanıldı" kaynağı atıfsız
+    gösterirdi. Bu stilin çapraz kontrolü belge kontrolünde, dipnotlar
+    okunarak yapılıyor (app/actions/manuscript.ts).
+  */
+  if (stil.tur === "dipnot") return [];
 
   const atiflar = extractInTextCitations(metin, { style: atifCikarmaStili(stil) });
   const sonuc = crossCheck(atiflar, kaynaklar.map(kaynagaCevir), { yilaBak: yilaBakilir(stil) });

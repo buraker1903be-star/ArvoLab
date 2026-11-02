@@ -1,12 +1,13 @@
 import { DEFAULT_HANGING_CM, DEFAULT_INDENT_CM, validIndentCm } from "@/lib/paragraph-format";
 import { SOZCUK_SONU } from "@/lib/sozcuk-siniri";
 import { fetchOfficialSource, kaynagiOku, type Dogrulayicilar } from "@/lib/safe-official-fetch";
-import { atifGecisleri, atifSistemiSec, atifYontemiUyarisi, atifYontemleri } from "@/lib/atif-sistemi";
+import { atifGecisleri, atifSistemiSec, atifYontemiUyarisi, atifYontemleri, yontemdenSistem, type AtifSistemi } from "@/lib/atif-sistemi";
 import { sayiKuraliOner, type SayiOnerisi } from "@/lib/kilavuz-sayi-onerisi";
 import { ocrCalismadiUyarisi, ocrEksikDosyaUyarisi, pdfMetniniOcrIleOku, taranmisBelgeMi } from "@/lib/ocr";
 import { kilavuzdanKagit } from "@/lib/kagit-boyutu";
 import { kelimeSiniriCikar, sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
+import { stilAdi } from "@/lib/atif/stiller";
 import { bolumHizasiCikar, dipnotPuntosuCikar, numarasizBolumlerCikar, paragrafAraligiCikar, sayfaNumarasiKonumuCikar } from "@/lib/kilavuz-bicim";
 import type { Dil } from "@/lib/dil";
 import { INGILIZCE_BOLUMLER, ingilizceBelgeMi, ingilizceKurallar } from "@/lib/kilavuz-ingilizce";
@@ -70,6 +71,9 @@ const CANDIDATE_SECTIONS = [
         alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
         14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
         girinti 2 cm çıkmıştı (blok alıntının kuralı; gövdeninki 1 cm).
+    13 — yalnızca dipnot yöntemini anlatan kılavuz "dipnot" stilini alıyor
+        (lib/atif/stiller.ts); stil kimliği tarayıcıdan geliyor
+        (detectedCitationStyle) — katalog "MLA 9"u "mla9"a çeviriyordu.
     12 — ince biçim kuralları (lib/kilavuz-bicim.ts): dipnot puntosu,
         paragraf aralığı, bölüm başlığı hizası ve istisnaları, sayfa
         numarasının yeri, numarasız Giriş/Sonuç. Editör, baskı ve Word
@@ -91,7 +95,7 @@ const CANDIDATE_SECTIONS = [
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 12;
+export const TARAYICI_SURUMU = 13;
 
 /*
   Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
@@ -178,16 +182,16 @@ const SABIT_UYARILAR_EN = new Map<string, string>([
   ["Yeterli sayıda zorunlu bölüm tespit edilemedi.", "Not enough required sections could be identified."],
   ["Kaynakça sistemi açıkça bulunamadı.", "The citation style was not stated explicitly."],
   [
-    "Kılavuz bir kaynakça sistemi adı vermiyor; iki yönteme izin veriyor: dipnot ve metin içi (yazar-tarih). Kılavuzdaki örneklere en yakın sistemi siz seçin.",
-    "The guideline names no citation style; it allows two methods: footnotes and in-text (author-date). Choose the style closest to the guideline's examples.",
+    "Kılavuz bir kaynakça sistemi adı vermiyor; iki yönteme izin veriyor: dipnot ve metin içi (yazar-tarih). Dipnotla yazacaksanız «Dipnot (klasik)» sistemini, metin içi için kılavuzdaki örneklere en yakın yazar-tarih sistemini seçin.",
+    "The guideline names no citation style; it allows two methods: footnotes and in-text (author-date). For footnotes choose «Dipnot (klasik)»; for in-text citation choose the author-date style closest to the guideline's examples.",
   ],
   [
     "Kılavuz bir kaynakça sistemi adı vermiyor; metin içi (yazar-tarih) yöntemi anlatıyor. Kılavuzdaki örneklere en yakın sistemi siz seçin.",
     "The guideline names no citation style; it describes in-text (author-date) citation. Choose the style closest to the guideline's examples.",
   ],
   [
-    "Kılavuz bir kaynakça sistemi adı vermiyor; dipnot yöntemini anlatıyor. Kılavuzdaki örneklere en yakın sistemi siz seçin.",
-    "The guideline names no citation style; it describes footnote citation. Choose the style closest to the guideline's examples.",
+    "Kılavuz bir kaynakça sistemi adı vermiyor; dipnot yöntemini anlatıyor. «Dipnot (klasik)» sistemini seçin.",
+    "The guideline names no citation style; it describes footnote citation. Choose «Dipnot (klasik)».",
   ],
   [
     "Metinde istatistik örneği bulunamadı; sayı biçimi kılavuzdan çıkarılamıyor.",
@@ -293,6 +297,14 @@ export interface GuidelineScanResult {
   fullTextLength: number;
   suggestedSections: string[];
   detectedCitationHint: string | null;
+  /*
+    Saklanabilir stil kimliği ("apa7", "mla", "dipnot"). Eskiden çağıranlar
+    görünen adı (detectedCitationHint, "APA 7") kimliğe kendileri
+    çeviriyordu: öğrencinin onay formu adı olduğu gibi aldığı için stil HİÇ
+    önceden seçili gelmiyordu, katalog "MLA 9"u geçersiz "mla9"a
+    çeviriyordu (02.11.2026).
+  */
+  detectedCitationStyle: AtifSistemi | null;
   /* Karar verilemese de hangi adın kaç kez geçtiği; yönetici seçerken
      belgeyi açmak zorunda kalmasın. */
   citationMentions?: { sistem: string; etiket: string; sayim: number }[];
@@ -789,7 +801,11 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     kılavuzda geçen tek bir "Chicago" sistemi Chicago yapıyordu.
   */
   const atifSecimi = atifSistemiSec(text);
-  const citationHint = atifSecimi?.etiket ?? null;
+  /* Sistem adı yoksa kılavuzun anlattığı yöntem (yalnızca dipnot → "dipnot"). */
+  const yontem = atifYontemleri(text);
+  const yontemSistemi = atifSecimi ? null : yontemdenSistem(yontem);
+  const citationStyleId: AtifSistemi | null = atifSecimi?.sistem ?? yontemSistemi;
+  const citationHint = atifSecimi?.etiket ?? (yontemSistemi ? stilAdi(yontemSistemi) : null);
   const citationMentions = atifGecisleri(text);
   const sayiBicimiOnerisi = sayiKuraliOner(text);
   const formatting = extractFormattingRules(text, suggestedSections.length, Boolean(citationHint), ingilizce);
@@ -808,6 +824,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     fullTextLength: text.length,
     suggestedSections,
     detectedCitationHint: citationHint,
+    detectedCitationStyle: citationStyleId,
     citationMentions,
     sayiBicimiOnerisi,
     sourceChecksum: await sha256(sourceBytes),
@@ -839,7 +856,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
       ...formatting.warnings,
       ...(atifSecimi?.uyarilar ?? []),
       /* Sistem adı yoksa kılavuzun anlattığı yöntem söylenir (lib/atif-sistemi.ts). */
-      ...(!atifSecimi && atifYontemiUyarisi(atifYontemleri(text)) ? [atifYontemiUyarisi(atifYontemleri(text))!] : []),
+      ...(!citationStyleId && atifYontemiUyarisi(yontem) ? [atifYontemiUyarisi(yontem)!] : []),
       /*
         OCR metni gürültülüdür ("ÜNİVERSİTESİ" bir yerde "ONİVER"
         çıkabiliyor). Kullanıcıya söylenmezse, çıkarımın neden eksik

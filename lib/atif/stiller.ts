@@ -21,14 +21,14 @@
 */
 
 /** Veritabanının kabul ettiği değerler (thesis_projects.citation_style). */
-export type StilKimligi = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla";
+export type StilKimligi = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla" | "dipnot";
 
 /**
  * Atfın metinde nasıl göründüğü. Denetimin tamamı buna dayanır:
  * yazar-tarih stilinde atıf ile künye ADLA eşleşir, numara stilinde
  * SIRAYLA.
  */
-export type AtifTuru = "yazar-tarih" | "yazar-sayfa" | "numara";
+export type AtifTuru = "yazar-tarih" | "yazar-sayfa" | "numara" | "dipnot";
 
 export type YazarBicimi = {
   /** Tek bir yazar alanının beklenen biçimi. */
@@ -105,6 +105,9 @@ const TERS_TAM_AD = /^[\p{Lu}][\p{L}'’\-]+,\s*[\p{Lu}][\p{L}'’\-]{1,}(?:\s+[
 const DUZ_TAM_AD = /^[\p{Lu}][\p{L}'’\-]+(?:\s+[\p{Lu}][\p{L}'’\-]*\.?)+$/u;
 /** Baş harfli düz yazım: "A. Demir" — Chicago sonraki yazarlarda kabul eder. */
 const DUZ_BAS_HARF = /^(?:[\p{Lu}]\.\s*){1,3}[\p{Lu}][\p{L}'’\-]+$/u;
+
+/* Baş harf + ad: "Atay, M. Çınar" — DEÜ SBE kılavuzunun kendi örneği ("M. Çınar Atay"). */
+const TERS_KARMA_AD = /^[\p{Lu}][\p{L}'’\-]+,\s*(?:[\p{Lu}]\.\s*)+[\p{Lu}][\p{L}'’\-]+(?:\s+[\p{Lu}][\p{L}'’\-]*\.?)*$/u;
 
 /** İki biçimi de kabul eden tek desen; hangi alternatifin tuttuğu önemsiz. */
 const yada = (...desenler: RegExp[]) =>
@@ -200,6 +203,37 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
       desen: TERS_TAM_AD,
       ornek: "Soyad, Ad",
       sonrakiDesen: DUZ_TAM_AD,
+      sonrakiOrnek: "Ad Soyad",
+      ornekEn: "Surname, First name",
+      sonrakiOrnekEn: "First name Surname",
+    },
+    kaynakcaSirasi: "alfabetik",
+    listeIsaretiSerbest: false,
+  },
+  /*
+    DİPNOT (KLASİK YÖNTEM, 02.11.2026). Türk sosyal bilimler kılavuzlarının
+    çoğu (ör. DEÜ Sosyal Bilimler) metin içi yöntemin yanında dipnotlu
+    atıfa izin veriyor ve hukuk, tarih, ilahiyat tezlerinin büyük kısmı
+    böyle yazılıyor. Stil listede yoktu: bu öğrenciler APA seçip yanlış
+    denetleniyordu (dipnottaki atıf hiç okunmuyor, kaynakçadaki her künye
+    "metinde atfı yok" çıkıyordu).
+
+    Atıf metinde değil DİPNOTTA: ilk atıfta tam bilgi ("A. Yılmaz, Kitap,
+    Yayınevi, 2020, s. 45."), sonrakilerde kısa biçim ("Yılmaz, s. 50.").
+    Kısa biçimde YIL YOK, bu yüzden eşleşme yalnızca yazara bakar
+    (yilaBakilir). Kaynakça klasik yöntemle: "Yılmaz, Ahmet. Kitap,
+    Yayınevi, 2020." — yazar-sayfa stillerinin künyesi gibi yıl sonda.
+    Dipnotlar lib/atif/dipnot.ts'te okunuyor.
+  */
+  dipnot: {
+    id: "dipnot",
+    ad: "Dipnot (klasik)",
+    tur: "dipnot",
+    yilYeri: "sonda",
+    yazarBicimi: {
+      desen: yada(TERS_TAM_AD, TERS_KARMA_AD, APA_YAZAR),
+      ornek: "Soyad, Ad",
+      sonrakiDesen: yada(DUZ_TAM_AD, DUZ_BAS_HARF),
       sonrakiOrnek: "Ad Soyad",
       ornekEn: "Surname, First name",
       sonrakiOrnekEn: "First name Surname",

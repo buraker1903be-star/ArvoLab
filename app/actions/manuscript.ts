@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { ceviri } from "@/lib/dil-sunucu";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
-import { extractPlainText, countWords, type TiptapDoc } from "@/lib/tiptap-text";
+import { extractPlainText, countWords, dipnotMetinleri, type TiptapDoc } from "@/lib/tiptap-text";
+import { dipnotAtiflari } from "@/lib/atif/dipnot";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import { extractInTextCitations, crossCheck, computeComplianceScore, type ParsedReference } from "@/lib/apa7";
 import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
@@ -481,7 +482,13 @@ export async function runManuscriptCheck(
     const references = kunyeleriAyristir(kunyeleriBol(split.referenceText), stil.id);
     // Tek kaynak (lib/atif/stiller.ts): elle yazılmış eşleme Harvard'ı APA sanardı.
     const atifStili = atifCikarmaStili(stil);
-    const citations = stil.tur === "numara" ? [] : extractInTextCitations(split.bodyText, { style: atifStili });
+    /* Dipnotlu stilde atıflar dipnotlarda (lib/atif/dipnot.ts); gövde metninde aranırsa hiçbiri bulunmaz. */
+    const citations =
+      stil.tur === "numara"
+        ? []
+        : stil.tur === "dipnot"
+          ? dipnotAtiflari(dipnotMetinleri(content))
+          : extractInTextCitations(split.bodyText, { style: atifStili });
     const cross =
       stil.tur === "numara"
         ? { citationsWithoutReference: [], referencesWithoutCitation: [] }

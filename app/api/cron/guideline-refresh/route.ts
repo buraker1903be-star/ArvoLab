@@ -198,7 +198,8 @@ async function turuKosu(request: Request): Promise<Response> {
       */
       const eskiSurum = Number((guideline.ai_analysis as { scannerVersion?: unknown } | null)?.scannerVersion ?? 0);
       const surumEskimis = eskiSurum < TARAYICI_SURUMU;
-      const citationStyle = scan.detectedCitationHint?.toLowerCase().replace(" ", "") ?? null;
+      /* Kimlik tarayıcıdan; ad ("MLA 9") burada "mla9"a dönüşüp geçersiz oluyordu (02.11.2026). */
+      const citationStyle = scan.detectedCitationStyle;
       /*
         Ölçüt veritabanındaki tetikleyiciyle (set_thesis_guideline_ready)
         AYNI olmalı: buradaki değer yöneticinin gördüğü nota ve cron'un

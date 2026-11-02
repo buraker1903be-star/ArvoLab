@@ -152,7 +152,7 @@ export async function kilavuzuTara(
 
     return {
       form: formaDoldur({
-        citationStyle: sonuc.detectedCitationHint,
+        citationStyle: sonuc.detectedCitationStyle,
         requiredSections: sonuc.suggestedSections,
         minPages: sonuc.minPages,
         maxPages: sonuc.maxPages,

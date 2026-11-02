@@ -81,3 +81,22 @@ export function countWords(doc: TiptapDoc | null | undefined): number {
   if (!text) return 0;
   return text.split(/\s+/).filter(Boolean).length;
 }
+
+/*
+  Dipnot metinleri, belgedeki sırayla (02.11.2026). Dipnotlu atıf stilinde
+  atıflar burada (lib/atif/dipnot.ts); extractPlainText dipnotları bilerek
+  dışarıda bırakıyor, gövde metni bozulmasın diye.
+*/
+export function dipnotMetinleri(doc: TiptapDoc | null | undefined): string[] {
+  const notlar: string[] = [];
+  const gez = (dugumler: TiptapNode[] | undefined) => {
+    for (const dugum of dugumler ?? []) {
+      if (dugum.type === "footnoteReference") {
+        const metin = String(dugum.attrs?.text ?? "").trim();
+        if (metin) notlar.push(metin);
+      } else gez(dugum.content);
+    }
+  };
+  gez(doc?.content);
+  return notlar;
+}

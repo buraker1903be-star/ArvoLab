@@ -13,6 +13,8 @@ import type { AbstractRules } from "@/lib/guideline-editor-settings";
 import { crossCheck, extractInTextCitations } from "@/lib/apa7";
 import { kunyeleriAyristir } from "@/lib/atif/kunye";
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
+import { dipnotAtiflari } from "@/lib/atif/dipnot";
+import { dipnotMetinleri } from "@/lib/tiptap-text";
 import { baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
 import { kisaltmaMesaji, kisaltmaSorunlari } from "@/lib/kisaltmalar";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
@@ -468,15 +470,23 @@ export function checkStructure(
     // biçim hatası yukarıda zaten raporlandı.
     const references = kunyeler.filter((reference) => reference.authors?.length && (!yilaBak || reference.year));
     if (references.length > 0) {
+      /* Dipnotlu stilde atıflar dipnotlarda (lib/atif/dipnot.ts); gövdede aranırsa hiçbiri bulunmaz. */
+      const dipnotlu = stil.tur === "dipnot";
       const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(
-        extractInTextCitations(body, { style: atifCikarmaStili(stil) }),
+        dipnotlu
+          ? dipnotAtiflari(dipnotMetinleri(doc as Parameters<typeof dipnotMetinleri>[0]))
+          : extractInTextCitations(body, { style: atifCikarmaStili(stil) }),
         references,
         { yilaBak },
       );
       citationsWithoutReference.slice(0, CITATION_ISSUE_LIMIT).forEach((citation) =>
         add({
           tone: "danger",
-          message: en ? `The in-text citation ${quote(citation.raw)} has no matching entry in the reference list.` : `Metindeki ${quote(citation.raw)} atfının kaynakçada karşılığı yok.`,
+          message: dipnotlu
+            ? en
+              ? `The footnote citation ${quote(citation.raw)} has no matching entry in the reference list.`
+              : `Dipnottaki ${quote(citation.raw)} atfının kaynakçada karşılığı yok.`
+            : en ? `The in-text citation ${quote(citation.raw)} has no matching entry in the reference list.` : `Metindeki ${quote(citation.raw)} atfının kaynakçada karşılığı yok.`,
           target: citation.raw,
         })
       );

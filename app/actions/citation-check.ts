@@ -14,6 +14,7 @@ import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import { kalibaUymayanlar, ornekKalibi, yilsizAtiflar, type TykBulgusu } from "@/lib/atif/tyk";
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
+import { dipnotAtiflari, metindekiDipnotlar } from "@/lib/atif/dipnot";
 import { verifyAcademicReferences } from "@/lib/academic-reference-verification";
 import { dogrulamaOnbellegi } from "@/lib/dogrulama-onbellegi";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
@@ -251,7 +252,12 @@ export async function runCitationCheck(input: {
   }
 
   const govdeVar = Boolean(govde.trim());
-  const citations = govdeVar ? extractInTextCitations(govde, { style: atifCikarmaStili(stil) }) : [];
+  /* Dipnotlu stilde atıflar sayfa altı notlarda; yapıştırılan metinde numarayla başlayan satırlar (lib/atif/dipnot.ts). */
+  const citations = !govdeVar
+    ? []
+    : stil.tur === "dipnot"
+      ? dipnotAtiflari(metindekiDipnotlar(govde))
+      : extractInTextCitations(govde, { style: atifCikarmaStili(stil) });
   /*
     Çapraz kontrol yalnızca GÖVDE METNİ VARKEN yapılıyor.
 

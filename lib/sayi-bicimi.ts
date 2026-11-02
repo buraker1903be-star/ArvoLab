@@ -56,6 +56,8 @@ const GELENEK: Record<string, SayiBicimi> = {
   mla: { ayirici: "period", bastakiSifir: true },
   ieee: { ayirici: "period", bastakiSifir: true },
   vancouver: { ayirici: "period", bastakiSifir: true },
+  /* Dipnot yönteminin bir sayı kuralı yok; ötekiler gibi olağan yazım (kılavuz söylüyorsa o kazanır). */
+  dipnot: { ayirici: "period", bastakiSifir: true },
 };
 
 /** Atıf sistemi bilinmiyorsa düşülen biçim. Çağıran bunu kullanıcıya söyler. */

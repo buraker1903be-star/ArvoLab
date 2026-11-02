@@ -1,7 +1,8 @@
 import type { Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { headingMatchesSection } from "@/lib/section-match";
-import { authorLabel, formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
+import { authorLabel, dipnotNotu, formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
+import { oncedenAtifYapildi } from "@/lib/atif/dipnot";
 import { kalibaGoreAtif, type AtifKalibi } from "@/lib/atif/tyk";
 import { fixReferencePunctuation } from "@/lib/reference-punctuation";
 import type { Dil } from "@/lib/dil";
@@ -215,15 +216,30 @@ export function insertCitation(
     yazılır ("(Yılmaz, 2020: 14)"); öğrenci her atıfı elle düzeltmesin.
     Numaralı stillerde (IEEE, Vancouver) örnek uygulanmaz.
   */
-  const citation =
-    secenek.kalip && (style === "apa7" || style === "chicago" || style === "harvard")
-      ? kalibaGoreAtif(authorLabel(source, dil), source.year?.trim() || (dil === "en" ? "n.d." : "t.y."), secenek.sayfa?.trim() || null, secenek.kalip)
-      : formatInTextCitation(source, style, number, { sayfa: secenek.sayfa }, dil);
-
   const { from, to } = editor.state.selection;
-  const before = editor.state.doc.textBetween(Math.max(0, from - 1), from);
-  const text = `${before && !/[\s(\[]/.test(before) ? " " : ""}${citation}`;
-  editor.chain().focus().insertContentAt({ from: to, to }, { type: "text", text }).run();
+  let citation: string;
+  if (style === "dipnot") {
+    /*
+      Dipnotlu stil (02.11.2026): atıf metne değil, imlecin olduğu yere
+      DİPNOT olarak girer. Kılavuz ilk atıfta tam bilgi, sonrakilerde kısa
+      biçim istiyor ("Atay, s. 55."); imleçten önceki dipnotlarda bu
+      kaynağın başlığı geçiyorsa ilk atıf yapılmış sayılır.
+    */
+    const oncekiNotlar: string[] = [];
+    editor.state.doc.nodesBetween(0, from, (node) => {
+      if (node.type.name === "footnoteReference") oncekiNotlar.push(String(node.attrs.text ?? ""));
+    });
+    citation = dipnotNotu(source, { sayfa: secenek.sayfa, kisa: oncedenAtifYapildi(source.title, oncekiNotlar) }, dil);
+    editor.chain().focus().insertContentAt({ from: to, to }, { type: "footnoteReference", attrs: { text: citation } }).run();
+  } else {
+    citation =
+      secenek.kalip && (style === "apa7" || style === "chicago" || style === "harvard")
+        ? kalibaGoreAtif(authorLabel(source, dil), source.year?.trim() || (dil === "en" ? "n.d." : "t.y."), secenek.sayfa?.trim() || null, secenek.kalip)
+        : formatInTextCitation(source, style, number, { sayfa: secenek.sayfa }, dil);
+    const before = editor.state.doc.textBetween(Math.max(0, from - 1), from);
+    const text = `${before && !/[\s(\[]/.test(before) ? " " : ""}${citation}`;
+    editor.chain().focus().insertContentAt({ from: to, to }, { type: "text", text }).run();
+  }
 
   if (existingIndex >= 0) return { citation, addedReference: false };
 

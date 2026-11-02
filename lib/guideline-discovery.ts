@@ -124,7 +124,8 @@ async function enstituBirimi(universityId: string, enstituAdi: string): Promise<
 }
 
 function scanUpdate(scan: GuidelineScanResult, detectedAt: string) {
-  const citationStyle = scan.detectedCitationHint?.toLowerCase().replace(" ", "") ?? null;
+  /* Kimlik tarayıcıdan; ad ("MLA 9") burada "mla9"a dönüşüp geçersiz oluyordu (02.11.2026). */
+  const citationStyle = scan.detectedCitationStyle;
   return {
     source_checksum: scan.sourceChecksum,
     source_content_type: scan.sourceContentType,

@@ -23,7 +23,7 @@ export interface CitableSource {
   publisher?: string | null;
 }
 
-export type CitationStyle = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla";
+export type CitationStyle = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla" | "dipnot";
 
 export const NUMERIC_STYLES: CitationStyle[] = ["ieee", "vancouver"];
 
@@ -105,6 +105,19 @@ export function stilYazarlari(authors: string | null, style: CitationStyle, dil:
       const ikinci = p[1].parca ? `${p[1].parca.basHarfler.map((h) => `${h}.`).join(" ")} ${p[1].parca.soyad}` : p[1].ham;
       return `${ilk}, ${ve} ${ikinci}`;
     }
+    case "dipnot": {
+      /*
+        Klasik yöntem (DEÜ SBE 2.3.1): yalnızca ilk yazar ters, ötekilerin
+        "adları ve soyadları tam olarak yazılır" — Chicago dalı baş harfe
+        indiriyordu ("M. R. Erdem"). "Tezcan, Durmuş, Mustafa Ruhan Erdem ve
+        Rıfat Murat Önok"; Türkçede "ve"den önce virgül yok.
+      */
+      const ilk = p[0].ham;
+      if (p.length === 1) return ilk;
+      const kalan = p.slice(1).map((x) => duzAd(x.ham));
+      const ara = kalan.slice(0, -1);
+      return `${[ilk, ...ara].join(", ")}${ara.length ? seriVirgul : ""} ${ve} ${kalan[kalan.length - 1]}`;
+    }
     case "chicago": {
       // İlk yazar ters (Yılmaz, A.), ötekiler düz (B. C. Demir), sonuncudan önce "and".
       const duz = (x: (typeof p)[number]) => (x.parca ? `${x.parca.basHarfler.map((h) => `${h}.`).join(" ")} ${x.parca.soyad}` : x.ham);
@@ -174,6 +187,75 @@ export function sayfaEtiketi(sayfa: string | null | undefined, dil: Dil = "tr"):
 
 export type AtifSecenegi = { sayfa?: string | null };
 
+/* "Yılmaz, Ahmet" → "Ahmet Yılmaz", "Yılmaz, A." → "A. Yılmaz"; virgülsüz (kurum) olduğu gibi. */
+function duzAd(yazar: string): string {
+  const virgul = yazar.indexOf(",");
+  if (virgul < 0) return yazar.trim();
+  return `${yazar.slice(virgul + 1).trim()} ${yazar.slice(0, virgul).trim()}`.trim();
+}
+
+/*
+  DİPNOT METNİ (klasik yöntem, 02.11.2026; lib/atif/stiller.ts'teki "dipnot").
+
+  Biçim DEÜ Sosyal Bilimler kılavuzunun örneklerinden:
+    ilk atıf   "M. Çınar Atay, Tarih İçinde İzmir, Yaşar Eğitim ve Kültür Vakfı Yayını, 1978, s. 51."
+               "Tunç Demirbilek, “Liderlik Tipleri …”, D.E.Ü. Sosyal Bilimler Enstitüsü Dergisi, Cilt: 5, Sayı: 1, 2003, s. 25."
+    sonraki    "Atay, s. 55."   ·   "Nomer ve Şanlı, s. 10."   ·   "Tezcan ve diğerleri, s. 11."
+  Kılavuz a.g.e./a.g.m. kısaltmalarını yasaklıyor; kısa biçim soyadı ve
+  sayfadır. Basım yeri kaynak kaydında tutulmuyor: uydurulmaz, yazılmaz.
+  Sayfa yalnızca öğrencinin yazdığı (sayfaEtiketi).
+*/
+export function dipnotNotu(
+  source: CitableSource,
+  secenek: AtifSecenegi & { kisa?: boolean } = {},
+  dil: Dil = "tr",
+): string {
+  const en = dil === "en";
+  const sayfa = sayfaEtiketi(secenek.sayfa, dil);
+  const yazarlar = splitAuthors(source.authors);
+  const ve = en ? "and" : "ve";
+  const digerleri = en ? "et al." : "ve diğerleri";
+  const bitir = (metin: string) => `${metin.replace(/[.\s]+$/, "")}.`;
+  if (secenek.kisa) {
+    const adlar = yazarlar.map(surname);
+    const etiket =
+      adlar.length === 0
+        ? source.title.split(/\s+/).slice(0, 3).join(" ")
+        : adlar.length === 1
+          ? adlar[0]
+          : adlar.length === 2
+            ? `${adlar[0]} ${ve} ${adlar[1]}`
+            : `${adlar[0]} ${digerleri}`;
+    return bitir(`${etiket}${sayfa ? `, ${sayfa}` : ""}`);
+  }
+  const yazar =
+    yazarlar.length === 0
+      ? ""
+      : yazarlar.length === 1
+        ? duzAd(yazarlar[0])
+        : yazarlar.length === 2
+          ? `${duzAd(yazarlar[0])} ${ve} ${duzAd(yazarlar[1])}`
+          : `${duzAd(yazarlar[0])} ${digerleri}`;
+  const title = source.title.trim().replace(/\.$/, "");
+  const container = field(source.container_title);
+  const parcalar: string[] = [];
+  if (yazar) parcalar.push(yazar);
+  if (container) {
+    parcalar.push(`“${title}”`, container);
+    if (source.source_type === "article") {
+      if (field(source.volume)) parcalar.push(`${en ? "Vol." : "Cilt"}: ${field(source.volume)}`);
+      if (field(source.issue)) parcalar.push(`${en ? "No." : "Sayı"}: ${field(source.issue)}`);
+    }
+  } else {
+    parcalar.push(title);
+  }
+  if (field(source.publisher)) parcalar.push(field(source.publisher)!);
+  parcalar.push(yearText(source, dil));
+  if (source.source_type === "website" && link(source)) parcalar.push(link(source)!);
+  if (sayfa) parcalar.push(sayfa);
+  return bitir(parcalar.join(", "));
+}
+
 /*
   METİN İÇİ ATIF — "HEPSİ OLSUN, GEREKSİZİ SİLİNSİN" (26.10.2026, kurum
   sahibinin geri bildirimi: "bazı danışmanlar atıfları virgülüne kadar
@@ -207,6 +289,9 @@ export function formatInTextCitation(
       return `(${etiket} ${yil}${sayfa ? `, ${sayfa}` : ""})`;
     case "harvard":
       return `(${harvardEtiketi(source, dil)}, ${yil}${sayfa ? `, ${sayfa}` : ""})`;
+    case "dipnot":
+      // Atıf metne değil dipnota yazılır (editor-navigation.ts); burada ilk atfın tam biçimi.
+      return dipnotNotu(source, { sayfa: secenek.sayfa }, dil);
     default: {
       const apaEtiketi = dil === "en" ? yazarEtiketi(source, dil, "&") : etiket;
       return `(${apaEtiketi}, ${yil}${sayfa ? `, ${sayfa}` : ""})`;
@@ -384,6 +469,34 @@ export function formatReferenceParts(
         if (publisher) push(` ${publisher},`);
         push(` ${yilYazisi()}.`);
       }
+      if (url) push(` ${url}`);
+      break;
+    }
+    case "dipnot": {
+      /*
+        Klasik yöntem (DEÜ SBE 2.3.1.1): Soyad, Ad. “Makale”, *Dergi*,
+        Cilt: 5, Sayı: 1, 2003, ss. 22-37. — kitapta Soyad, Ad. *Kitap*,
+        Yayınevi, 1989. Yıl sonda, ögeler virgülle; yazardan sonra nokta.
+        İngilizce tezde "Vol.", "No.", "pp." (kılavuz: kısaltmalar tezin
+        dilinde yazılır).
+      */
+      const yazarlar = stilYazarlari(authors, "dipnot", dil);
+      if (yazarlar) push(`${yazarlar.replace(/\.$/, "")}. `);
+      if (container) {
+        push(`“${title}”, `);
+        push(container, true);
+        if (!isChapter) {
+          if (volume) push(`, ${en ? "Vol." : "Cilt"}: ${volume}`);
+          if (issue) push(`, ${en ? "No." : "Sayı"}: ${issue}`);
+        }
+        if (isChapter && publisher) push(`, ${publisher}`);
+      } else {
+        push(title, italic);
+        if (publisher) push(`, ${publisher}`);
+      }
+      push(`, ${yilYazisi()}`);
+      if (container && pages) push(`, ${en ? "pp." : "ss."} ${pages}`);
+      push(".");
       if (url) push(` ${url}`);
       break;
     }

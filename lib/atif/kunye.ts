@@ -270,11 +270,57 @@ const VE_DIGERLERI = new RegExp(
   "giu",
 );
 
+/**
+ * Dipnot yönteminin kaynakçası (klasik yöntem, 02.11.2026):
+ *   "Çetiner, Ertuğrul. Konaklama Yönetim Muhasebesi, Güney Grafik, Ankara, 1989."
+ *   "Demirbilek, Tunç. “Liderlik Tipleri …”, D.E.Ü. … Dergisi, Cilt:5, Sayı:1, 2003, ss. 22-37."
+ *   "Tezcan, Durmuş, Mustafa Ruhan Erdem ve Rıfat Murat Önok. İnsan Hakları El Kitabı, …"
+ *
+ * yazarSayfaAyristir'ın iki varsayımı burada tutmuyor: yazar bölümü ilk
+ * ". "de bitmez ("Yılmaz, A., B. Demir. …" baş harfin noktasında kesilirdi)
+ * ve yazarlar yalnızca VİRGÜLLE ayrılır ("Tezcan, Durmuş, Mustafa Ruhan
+ * Erdem" — splitAuthors bunu tek yazar sanıp biçim uyarısı basıyordu).
+ */
+function dipnotKunyesiAyristir(ham: string, stil: StilTanimi, dil: Dil): ParsedReference {
+  const metin = ham.trim();
+  const sorunlar: ReferenceIssue[] = [];
+  // Yazar bölümü: en az iki harfli bir sözcüğün ardındaki ilk ". " (baş harf değil); yoksa ilk ". ".
+  const son = /^(.+?\p{L}{2,}\.)\s+(?=\S)/u.exec(metin) ?? /^(.+?\.)\s+(?=\S)/u.exec(metin);
+  const yazarBolumu = son?.[1] ?? "";
+  const parcalar = yazarBolumu
+    .replace(/\.$/, (nokta, konum, tum: string) => (/(?:^|\s)\p{Lu}\.$/u.test(tum) ? nokta : ""))
+    .split(/\s*,\s*|\s+(?:ve|and|&)\s+/u)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  // İlk yazar "Soyad, Ad" iki parça; sonrakiler tek parça ("Ad Soyad").
+  const yazarlar = parcalar.length >= 2 ? [`${parcalar[0]}, ${parcalar[1]}`, ...parcalar.slice(2)] : parcalar;
+  if (!yazarlar.length) sorunlar.push(sorun("author", YAZAR_AYRISTIRILAMADI, dil, "error"));
+  else yazarlariDenetle(yazarlar, stil, sorunlar, dil);
+
+  const yillar = [...metin.matchAll(SONDA_YIL)].map((e) => e[1]);
+  const yil = yillar.at(-1) ?? null;
+  if (!yil) {
+    sorunlar.push(sorun("year", {
+      tr: `Künyede yayın yılı bulunamadı; ${stil.ad} künyesinde yıl sonda yer alır.`,
+      en: `Publication year not found; in a ${stil.ad} reference the year comes at the end.`,
+    }, dil, "error"));
+  }
+
+  // Başlık: tırnaklıysa tırnağın içi (makale, bölüm), değilse ilk virgüle kadar (kitap).
+  const kalan = son ? metin.slice(son[0].length).trim() : "";
+  const tirnakli = kalan.match(/^[“"]\s*(.+?)\s*[”"]/u)?.[1];
+  const baslik = (tirnakli ?? kalan.split(",")[0]).trim().replace(/\.$/, "") || null;
+  if (!baslik) sorunlar.push(sorun("title", BASLIK_YOK, dil));
+
+  return { raw: metin, authors: yazarlar.length ? yazarlar : null, year: yil, title: baslik, issues: sorunlar };
+}
+
 export function kunyeAyristir(ham: string, stilDegeri: string | null | undefined, sira = 1, dil: Dil = "tr"): ParsedReference {
   const stil = stilTanimi(stilDegeri);
   if (stil.id === "apa7") return parseReferenceEntry(ham, dil);
   if (stil.tur === "numara") return numaraAyristir(ham, stil, sira, dil);
   if (stil.tur === "yazar-sayfa") return yazarSayfaAyristir(ham, stil, dil);
+  if (stil.tur === "dipnot") return dipnotKunyesiAyristir(ham, stil, dil);
   return yazarTarihAyristir(ham, stil, dil);
 }
 

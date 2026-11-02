@@ -29,7 +29,7 @@
 import type { Dil } from "@/lib/dil";
 
 /** Veritabanının kabul ettiği değerler (thesis_guidelines.citation_style). */
-export type AtifSistemi = "apa7" | "harvard" | "vancouver" | "chicago" | "ieee" | "mla";
+export type AtifSistemi = "apa7" | "harvard" | "vancouver" | "chicago" | "ieee" | "mla" | "dipnot";
 
 /** Metinde hangi sistemin kaç kez geçtiği; karar verilemediğinde de üretilir. */
 export type AtifGecisi = { sistem: AtifSistemi; etiket: string; sayim: number };
@@ -141,16 +141,27 @@ export function atifYontemleri(metin: string): AtifYontemleri {
   };
 }
 
+/*
+  YALNIZCA dipnot yöntemini anlatan kılavuzda sistem bellidir: "dipnot"
+  (klasik yöntem, lib/atif/stiller.ts). Metin içi yöntem de anlatılıyorsa
+  ikisi de serbesttir ve seçim öğrencinin (DEÜ SBE böyle). "Dipnot"
+  sözcüğünün kendisi sayılmıyor — açıklama dipnotu her kılavuzda geçer;
+  aranan "dipnot yöntemi/sistemi" ifadesi.
+*/
+export function yontemdenSistem(yontem: AtifYontemleri): AtifSistemi | null {
+  return yontem.dipnot && !yontem.metinIci ? "dipnot" : null;
+}
+
 /** Yöntem anlatan ama sistem adı vermeyen kılavuz için uyarı (Türkçe; gösterirken çevrilir). */
 export function atifYontemiUyarisi(yontem: AtifYontemleri): string | null {
   if (yontem.dipnot && yontem.metinIci) {
-    return "Kılavuz bir kaynakça sistemi adı vermiyor; iki yönteme izin veriyor: dipnot ve metin içi (yazar-tarih). Kılavuzdaki örneklere en yakın sistemi siz seçin.";
+    return "Kılavuz bir kaynakça sistemi adı vermiyor; iki yönteme izin veriyor: dipnot ve metin içi (yazar-tarih). Dipnotla yazacaksanız «Dipnot (klasik)» sistemini, metin içi için kılavuzdaki örneklere en yakın yazar-tarih sistemini seçin.";
   }
   if (yontem.metinIci) {
     return "Kılavuz bir kaynakça sistemi adı vermiyor; metin içi (yazar-tarih) yöntemi anlatıyor. Kılavuzdaki örneklere en yakın sistemi siz seçin.";
   }
   if (yontem.dipnot) {
-    return "Kılavuz bir kaynakça sistemi adı vermiyor; dipnot yöntemini anlatıyor. Kılavuzdaki örneklere en yakın sistemi siz seçin.";
+    return "Kılavuz bir kaynakça sistemi adı vermiyor; dipnot yöntemini anlatıyor. «Dipnot (klasik)» sistemini seçin.";
   }
   return null;
 }

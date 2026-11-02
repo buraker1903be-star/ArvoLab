@@ -199,7 +199,12 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
       kicker={t({ tr: "Kaynaktan atıf", en: "Cite a source" })}
       title={t({ tr: "Atıf ekle", en: "Insert citation" })}
       description={
-        NUMERIC_STYLES.includes(style)
+        style === "dipnot"
+          ? t({
+              tr: "Seçtiğiniz kaynak imlecin olduğu yere DİPNOT olarak eklenir ve Kaynakça'ya yazılır: ilk atıfta tam bilgi, sonrakilerde kısa biçim (Soyad, s.).",
+              en: "The source you choose is inserted at the cursor as a FOOTNOTE and added to the reference list: full details on first citation, a short form (Surname, p.) after that.",
+            })
+          : NUMERIC_STYLES.includes(style)
           ? t({
               tr: "Seçtiğiniz kaynak imlecin olduğu yere numaralı atıf olarak eklenir ve Kaynakça'ya yazılır.",
               en: "The source you choose is inserted at the cursor as a numbered citation and added to the reference list.",
