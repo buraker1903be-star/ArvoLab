@@ -23,8 +23,10 @@ export function icindekiler(
   basliklar: IcindekilerBasligi[],
   numaralama: boolean,
   sayfaBasiKelime: number,
+  /* Kılavuzun numarasız tuttuğu ana başlıklar (lib/kilavuz-bicim.ts); editördeki numarayla aynı. */
+  ekNumarasiz?: readonly string[],
 ): IcindekilerSatiri[] {
-  const numaralar = numaralama ? numberHeadings(basliklar) : basliklar.map(() => null);
+  const numaralar = numaralama ? numberHeadings(basliklar, ekNumarasiz) : basliklar.map(() => null);
   const kelime = sayfaBasiKelime > 0 ? sayfaBasiKelime : 500;
   let kayma = 0;
   let onceki = 0;

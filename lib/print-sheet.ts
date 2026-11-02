@@ -4,6 +4,7 @@ import { icindekilerSatirlari, type IcindekilerSatiri } from "@/lib/heading-numb
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { Dil } from "@/lib/dil";
 import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
+import type { SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
 import type { CoverPage, PageMargins } from "@/app/actions/manuscript";
 
 // Baskı görünümü (yazdırma sayfası ve danışman paylaşım sayfası aynı çıktıyı kullanır):
@@ -37,6 +38,14 @@ export interface PrintSheet {
   toc: IcindekilerSatiri[] | null;
 }
 
+/* CSS Paged Media'nın kenar kutuları. */
+const SAYFA_KUTUSU: Record<SayfaNumarasiKonumu, string> = {
+  "bottom-center": "@bottom-center",
+  "bottom-right": "@bottom-right",
+  "top-center": "@top-center",
+  "top-right": "@top-right",
+};
+
 const clampCm = (value: unknown, fallback: number) => {
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 && number <= 10 ? number : fallback;
@@ -55,6 +64,9 @@ export function buildPrintSheet(
     // Dipnot sayfa altına inebilsin (sayfalı baskı; app/print/manuscript/sayfali-baski.tsx).
     dipnotSatirIci: true,
     dil,
+    numarasiz: guideline?.settings.unnumberedSections,
+    chapterAlign: guideline?.settings.chapterAlign,
+    chapterLeftSections: guideline?.settings.chapterLeftSections,
   });
 
   const margins = manuscript?.margins ?? guideline?.settings.margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };
@@ -68,6 +80,10 @@ export function buildPrintSheet(
   const fontSize = guideline?.settings.fontSizePt ?? 12;
   const lineSpacing = guideline?.settings.lineSpacing ?? 1.5;
   const showPageNumbers = manuscript?.showPageNumbers ?? true;
+  /* Kılavuzun yazdığı yer (lib/kilavuz-bicim.ts); Word'ün altbilgisiyle aynı. Eskiden hep alt ortaydı. */
+  const numaraYeri = SAYFA_KUTUSU[guideline?.settings.pageNumberPosition ?? "bottom-center"];
+  const dipnotPt = guideline?.settings.footnoteSizePt;
+  const aralik = guideline?.settings.paragraphSpacing;
   /* Eskiden `size: A4` sabitti: US Letter seçen öğrencinin PDF'i A4 çıkıyordu. */
   const kagit = kagitOlcusu(manuscript?.pageSize);
 
@@ -76,7 +92,7 @@ export function buildPrintSheet(
     footnotes,
     pageRule: `@page { size: ${kagit.css}; margin: ${m.top}cm ${m.right}cm ${m.bottom}cm ${m.left}cm;${
       /* Sayfa numarası Word'deki gibi metnin yazı tipi ve boyutunda (tiptap-docx: Footer). */
-      showPageNumbers ? ` @bottom-center { content: counter(page); font-family: '${fontFamily}', 'Times New Roman', serif; font-size: ${fontSize}pt; }` : ""
+      showPageNumbers ? ` ${numaraYeri} { content: counter(page); font-family: '${fontFamily}', 'Times New Roman', serif; font-size: ${fontSize}pt; }` : ""
     } }`,
     style: {
       "--print-font": `'${fontFamily}', 'Times New Roman', serif`,
@@ -88,12 +104,19 @@ export function buildPrintSheet(
       "--print-margin-left": `${m.left}cm`,
       "--print-page-width": `${kagit.genislikCm}cm`,
       "--print-page-height": `${kagit.yukseklikCm}cm`,
+      /* Kılavuzun dipnot puntosu ve paragraf aralığı; yoksa CSS'teki varsayılan (print.css). */
+      ...(dipnotPt ? { "--print-dipnot": `${dipnotPt}pt` } : {}),
+      ...(aralik ? { "--print-p-once": `${aralik.beforePt}pt`, "--print-p-sonra": `${aralik.afterPt}pt` } : {}),
     } as CSSProperties,
     chapterCase: guideline?.settings.chapterUppercase ? "upper" : undefined,
     cover: manuscript?.coverPage ?? null,
     hasText: Boolean(manuscript),
     toc: manuscript?.includeToc
-      ? icindekilerSatirlari(doc as Parameters<typeof icindekilerSatirlari>[0], manuscript.headingNumbering ?? false)
+      ? icindekilerSatirlari(
+          doc as Parameters<typeof icindekilerSatirlari>[0],
+          manuscript.headingNumbering ?? false,
+          guideline?.settings.unnumberedSections,
+        )
       : null,
   };
 }

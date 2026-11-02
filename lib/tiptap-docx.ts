@@ -14,6 +14,7 @@ import {
   convertInchesToTwip,
   convertMillimetersToTwip,
   Footer,
+  Header,
   PageNumber,
   Tab,
   PageBreak,
@@ -27,6 +28,7 @@ import { headingNumberMap, icindekilerSatirlari } from "@/lib/heading-numbering"
 import { chapterBreakSet } from "@/lib/chapter-rules";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
+import { anaBaslikHizasi, type BolumHizasi, type ParagrafAraligi, type SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
 
 interface TiptapMark {
   type: string;
@@ -172,7 +174,13 @@ interface ConversionContext {
   chapterBreaks: Set<object>;
   /** Şekil/tablo etiketinin dili (belgenin parçası) */
   dil: Dil;
+  /** Dipnot metninin boyutu, yarım punto (Word birimi); kılavuz yazmamışsa 20 = 10 pt */
+  dipnotBoyu: number;
+  /** Kılavuzun ana başlık hizası (lib/kilavuz-bicim.ts); editör ve baskı aynı kararı veriyor */
+  anaBaslik: { chapterAlign?: BolumHizasi; chapterLeftSections?: string[] };
 }
+
+const duzMetin = (node: TiptapNode): string => node.text ?? (node.content ?? []).map(duzMetin).join("");
 
 interface BlockOptions {
   quoteDepth: number;
@@ -257,7 +265,7 @@ function inlineChildren(nodes: TiptapNode[], ctx: ConversionContext): ParagraphC
       const id = ctx.nextFootnoteId++;
       const footnoteText = xmlTemiz(String(node.attrs?.text ?? ""));
       ctx.footnotes[String(id)] = {
-        children: [new Paragraph({ children: [new TextRun({ text: footnoteText, size: 20 })] })],
+        children: [new Paragraph({ children: [new TextRun({ text: footnoteText, size: ctx.dipnotBoyu })] })],
       };
       children.push(new FootnoteReferenceRun(id));
     } else if (node.content) {
@@ -320,11 +328,13 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
       const number = ctx.headingNumbers.get(node);
       // Ana bölüm yeni sayfadan (baskıyla aynı kural: öncesinde içerik varsa).
       const newPage = ctx.chapterBreaks.has(node);
+      /* Başlığın kendi hizası yoksa kılavuzunki (birinci düzey; lib/kilavuz-bicim.ts). */
+      const kilavuzHizasi = level === 0 && !align ? anaBaslikHizasi(duzMetin(node), ctx.anaBaslik) : null;
       return [
         new Paragraph({
           heading: HEADING_LEVELS[level],
           pageBreakBefore: newPage || undefined,
-          alignment: align ? ALIGNMENTS[align] : undefined,
+          alignment: align ? ALIGNMENTS[align] : kilavuzHizasi ? ALIGNMENTS[kilavuzHizasi] : undefined,
           spacing: lineSpacingValue(node.attrs?.lineSpacing),
           // Editör ve baskı başlıktaki ilk satır/asılı girintiyi uyguluyor; Word atlıyordu.
           indent: indentFromAttrs(node.attrs, 0),
@@ -489,6 +499,18 @@ export interface DocxTextDefaults {
   chapterUppercase?: boolean;
   /** Her birinci düzey başlık yeni sayfadan (ilki hariç: kapak/içindekiler zaten sayfa sonuyla biter) */
   chapterNewPage?: boolean;
+  /* İnce biçim kuralları (02.11.2026, lib/kilavuz-bicim.ts). */
+  /** Dipnot metninin puntosu */
+  footnoteSizePt?: number;
+  /** Gövde paragraflarının öncesi/sonrası (nk) */
+  paragraphSpacing?: ParagrafAraligi;
+  /** Birinci düzey başlığın hizası ve sola yaslı istisnaları */
+  chapterAlign?: BolumHizasi;
+  chapterLeftSections?: string[];
+  /** Sayfa numarasının yeri; yoksa alt orta */
+  pageNumberPosition?: SayfaNumarasiKonumu;
+  /** Kılavuzun numarasız tuttuğu ana başlıklar ("Giriş", "Sonuç") */
+  unnumberedSections?: string[];
 }
 
 export interface BuildDocxOptions {
@@ -510,6 +532,16 @@ export interface BuildDocxOptions {
    * ve listelerin başlığı, kapaktaki "Danışman". Verilmezse Türkçe.
    */
   dil?: Dil;
+}
+
+function sayfaNumarasiAlani(konum: SayfaNumarasiKonumu = "bottom-center") {
+  const paragraf = new Paragraph({
+    alignment: konum.endsWith("right") ? AlignmentType.RIGHT : AlignmentType.CENTER,
+    children: [new TextRun({ children: [PageNumber.CURRENT] })],
+  });
+  return konum.startsWith("top")
+    ? { headers: { default: new Header({ children: [paragraf] }) } }
+    : { footers: { default: new Footer({ children: [paragraf] }) } };
 }
 
 export async function buildDocxFromTiptap({
@@ -541,9 +573,11 @@ export async function buildDocxFromTiptap({
     numaraBaslangiclari: new Set<number>(),
     contentWidthTwip: Math.max(kagit.genislikTwip - marginTwip.left - marginTwip.right, 2000),
     fetchImage,
-    headingNumbers: headingNumbering ? headingNumberMap(doc) : new Map(),
+    headingNumbers: headingNumbering ? headingNumberMap(doc, textDefaults.unnumberedSections) : new Map(),
     chapterBreaks: textDefaults.chapterNewPage ? chapterBreakSet(doc) : new Set(),
     dil,
+    dipnotBoyu: Math.round((textDefaults.footnoteSizePt ?? 10) * 2),
+    anaBaslik: { chapterAlign: textDefaults.chapterAlign, chapterLeftSections: textDefaults.chapterLeftSections },
   };
 
   const bodyElements: (Paragraph | Table | TableOfContents)[] = [];
@@ -568,7 +602,11 @@ export async function buildDocxFromTiptap({
       new TableOfContents(en ? "Table of Contents" : "İçindekiler", {
         hyperlink: true,
         headingStyleRange: "1-3",
-        cachedEntries: icindekilerSatirlari(doc as Parameters<typeof icindekilerSatirlari>[0], headingNumbering).map((s) => ({
+        cachedEntries: icindekilerSatirlari(
+          doc as Parameters<typeof icindekilerSatirlari>[0],
+          headingNumbering,
+          textDefaults.unnumberedSections,
+        ).map((s) => ({
           title: s.numara ? `${s.numara} ${s.text}` : s.text,
           level: s.level,
         })),
@@ -616,7 +654,15 @@ export async function buildDocxFromTiptap({
           /* Varsayılan 1,5: baskı/PDF yolu da 1,5 kullanıyor (lib/print-sheet.ts).
              Eskiden kılavuzsuz belgede Word tek aralıklı, PDF 1,5 aralıklı
              çıkıyordu; sayfa sayıları birbirini tutmuyordu. */
-          paragraph: { spacing: { after: 120, ...lineSpacingValue(textDefaults.lineSpacing ?? 1.5) } },
+          /* Paragraf öncesi/sonrası kılavuzdan (nk × 20 = twip); yoksa 6 nk sonra, baskıyla aynı. */
+          paragraph: {
+            spacing: {
+              ...(textDefaults.paragraphSpacing
+                ? { before: Math.round(textDefaults.paragraphSpacing.beforePt * 20), after: Math.round(textDefaults.paragraphSpacing.afterPt * 20) }
+                : { after: 120 }),
+              ...lineSpacingValue(textDefaults.lineSpacing ?? 1.5),
+            },
+          },
         },
         heading1: {
           run: { ...headingRun, size: baseSize + 4, ...(textDefaults.chapterUppercase ? { allCaps: true } : {}) },
@@ -650,18 +696,12 @@ export async function buildDocxFromTiptap({
             margin: marginTwip,
           },
         },
-        footers: showPageNumbers
-          ? {
-              default: new Footer({
-                children: [
-                  new Paragraph({
-                    alignment: AlignmentType.CENTER,
-                    children: [new TextRun({ children: [PageNumber.CURRENT] })],
-                  }),
-                ],
-              }),
-            }
-          : undefined,
+        /*
+          Sayfa numarasının yeri kılavuzdan (lib/kilavuz-bicim.ts); eskiden hep
+          alt ortaydı ve "sağ alt köşe" isteyen kılavuzda her sayfa yanlıştı.
+          Üstteyse altbilgi değil üstbilgi.
+        */
+        ...(showPageNumbers ? sayfaNumarasiAlani(textDefaults.pageNumberPosition) : {}),
         children: bodyElements.length > 0 ? bodyElements : [new Paragraph({ children: [] })],
       },
     ],

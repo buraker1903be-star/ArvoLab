@@ -7,6 +7,7 @@ import { ocrCalismadiUyarisi, ocrEksikDosyaUyarisi, pdfMetniniOcrIleOku, taranmi
 import { kilavuzdanKagit } from "@/lib/kagit-boyutu";
 import { kelimeSiniriCikar, sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
+import { bolumHizasiCikar, dipnotPuntosuCikar, numarasizBolumlerCikar, paragrafAraligiCikar, sayfaNumarasiKonumuCikar } from "@/lib/kilavuz-bicim";
 import type { Dil } from "@/lib/dil";
 import { INGILIZCE_BOLUMLER, ingilizceBelgeMi, ingilizceKurallar } from "@/lib/kilavuz-ingilizce";
 
@@ -69,6 +70,10 @@ const CANDIDATE_SECTIONS = [
         alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
         14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
         girinti 2 cm çıkmıştı (blok alıntının kuralı; gövdeninki 1 cm).
+    12 — ince biçim kuralları (lib/kilavuz-bicim.ts): dipnot puntosu,
+        paragraf aralığı, bölüm başlığı hizası ve istisnaları, sayfa
+        numarasının yeri, numarasız Giriş/Sonuç. Editör, baskı ve Word
+        üçü de uyguluyor.
     11 — DEÜ Sosyal Bilimler kılavuzu (02.11.2026): büyük "İ" ile yazılmış
         kurallar ("İki yana yaslanmış", "GİRİŞ") görülüyor, "Satır
         Aralıkları : 1,5" düzeni okunuyor, punto seçilen yazı tipinin
@@ -86,7 +91,7 @@ const CANDIDATE_SECTIONS = [
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 11;
+export const TARAYICI_SURUMU = 12;
 
 /*
   Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
@@ -471,6 +476,21 @@ function izinliYaziTipleri(compact: string): string[] {
 const SATIR_ARALIGI =
   /(\d(?:[,.]\d+)?)\s*(?:satır\s+aralığı|satır\s+aralıklı)|satır\s+aralı\p{L}*\s*[:=]?\s*(\d(?:[,.]\d+)?)(?![,.]?\d|\s*(?:cm|mm|nk|pt|punto))/iu;
 
+function inceKurallar(compact: string, fontFamily: string | undefined): Record<string, unknown> {
+  const dipnot = dipnotPuntosuCikar(compact, fontFamily);
+  const aralik = paragrafAraligiCikar(compact);
+  const hiza = bolumHizasiCikar(compact);
+  const konum = sayfaNumarasiKonumuCikar(compact);
+  const numarasiz = numarasizBolumlerCikar(compact);
+  return {
+    ...(dipnot ? { footnote_size_pt: dipnot } : {}),
+    ...(aralik ? { paragraph_spacing_pt: aralik } : {}),
+    ...(hiza ? { chapter_align: hiza.hiza, ...(hiza.solaYasli.length ? { chapter_left_sections: hiza.solaYasli } : {}) } : {}),
+    ...(konum ? { page_number_position: konum } : {}),
+    ...(numarasiz.length ? { unnumbered_sections: numarasiz } : {}),
+  };
+}
+
 export function extractFormattingRules(text: string, sectionCount: number, hasCitation: boolean, ingilizce = false) {
   const compact = noktaliIDuzle(text).replace(/\s+/g, " ");
   /* İngilizce belgede Türkçe kalıpların bulamadığını İngilizce kalıplar doldurur (bkz. TARAYICI_SURUMU 8). */
@@ -590,6 +610,8 @@ export function extractFormattingRules(text: string, sectionCount: number, hasCi
       ...(HANGING_INDENT.test(compact)
         ? { reference_hanging_indent_cm: detectedNumber(compact, HANGING_INDENT_CM) ?? en?.asiliCm ?? DEFAULT_HANGING_CM }
         : {}),
+      /* İnce biçim kuralları (lib/kilavuz-bicim.ts); yalnızca açıkça yazılmışsa. */
+      ...inceKurallar(compact, fontFamily),
       /* Türkçe sınır bulunduysa o; yoksa İngilizcesi (alan alan). */
       ...(en ? en.ozet : {}),
       ...detectAbstractRules(compact),

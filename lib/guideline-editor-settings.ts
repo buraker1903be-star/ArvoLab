@@ -1,6 +1,15 @@
 import type { PageMargins } from "@/app/actions/manuscript";
 import { validHangingCm, validIndentCm } from "@/lib/paragraph-format";
 import { kagitMi, type KagitBoyutu } from "@/lib/kagit-boyutu";
+import {
+  bolumHizasiMi,
+  dipnotPuntosuMu,
+  paragrafAraligiMi,
+  sayfaNumarasiKonumuMu,
+  type BolumHizasi,
+  type ParagrafAraligi,
+  type SayfaNumarasiKonumu,
+} from "@/lib/kilavuz-bicim";
 
 export interface GuidelineEditorSettings {
   margins?: PageMargins;
@@ -30,7 +39,27 @@ export interface GuidelineEditorSettings {
   fontFamily?: string;
   fontSizePt?: number;
   lineSpacing?: number;
+  /* İnce biçim kuralları (02.11.2026, lib/kilavuz-bicim.ts): editör, baskı ve Word üçü de uygular. */
+  /** Dipnot metninin puntosu */
+  footnoteSizePt?: number;
+  /** Gövde paragraflarının öncesi/sonrası (nk) */
+  paragraphSpacing?: ParagrafAraligi;
+  /** Birinci düzey başlıkların hizası */
+  chapterAlign?: BolumHizasi;
+  /** Ortalanan bölümlerin İSTİSNASI: sola yaslanan ana başlıklar ("Giriş", "Kaynakça") */
+  chapterLeftSections?: string[];
+  /** Sayfa numarasının yeri; yoksa alt orta */
+  pageNumberPosition?: SayfaNumarasiKonumu;
+  /** Varsayılan numaralandırmada numaralı olup bu kılavuzda numarasız kalan ana başlıklar */
+  unnumberedSections?: string[];
 }
+
+/* Ad listesi: metin, boş olmayan, makul uzunlukta; en çok 12 ad. */
+const adListesi = (deger: unknown): string[] | undefined => {
+  if (!Array.isArray(deger)) return undefined;
+  const adlar = deger.filter((a): a is string => typeof a === "string" && a.trim().length > 0 && a.length <= 60).map((a) => a.trim()).slice(0, 12);
+  return adlar.length ? adlar : undefined;
+};
 
 const numberValue = (...values: unknown[]) => {
   const value = values.find((item) => typeof item === "number" || (typeof item === "string" && item.trim()));
@@ -139,5 +168,13 @@ export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorS
     ...(fontFamily ? { fontFamily } : {}),
     ...(fontSizePt && fontSizePt >= 8 && fontSizePt <= 24 ? { fontSizePt } : {}),
     ...(lineSpacing && lineSpacing >= 1 && lineSpacing <= 3 ? { lineSpacing } : {}),
+    ...(dipnotPuntosuMu(rules.footnote_size_pt) ? { footnoteSizePt: rules.footnote_size_pt } : {}),
+    ...(paragrafAraligiMi(rules.paragraph_spacing_pt) ? { paragraphSpacing: rules.paragraph_spacing_pt } : {}),
+    ...(bolumHizasiMi(rules.chapter_align) ? { chapterAlign: rules.chapter_align } : {}),
+    ...(bolumHizasiMi(rules.chapter_align) && adListesi(rules.chapter_left_sections)
+      ? { chapterLeftSections: adListesi(rules.chapter_left_sections) }
+      : {}),
+    ...(sayfaNumarasiKonumuMu(rules.page_number_position) ? { pageNumberPosition: rules.page_number_position } : {}),
+    ...(adListesi(rules.unnumbered_sections) ? { unnumberedSections: adListesi(rules.unnumbered_sections) } : {}),
   };
 }

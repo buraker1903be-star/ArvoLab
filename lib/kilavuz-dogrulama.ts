@@ -1,5 +1,6 @@
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import type { Dil, Metin } from "@/lib/dil";
+import { SAYFA_NUMARASI_ADI, bolumHizasiMetni, type BolumHizasi, type ParagrafAraligi, type SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
 
 /* Tanınan atıf stilleri TEK listeden (lib/atif/stiller.ts): ikinci bir
    dizi yazmak, yeni bir stil eklendiğinde burayı unutmak demekti. */
@@ -188,6 +189,12 @@ export function bicimOzeti(ayarlar: {
   justify?: boolean;
   pageSize?: string;
   thesisWords?: { min?: number; max?: number };
+  footnoteSizePt?: number;
+  paragraphSpacing?: ParagrafAraligi;
+  chapterAlign?: BolumHizasi;
+  chapterLeftSections?: string[];
+  pageNumberPosition?: SayfaNumarasiKonumu;
+  unnumberedSections?: string[];
 }, dil: Dil = "tr"): string[] {
   const en = dil === "en";
   const satirlar: string[] = [];
@@ -236,6 +243,24 @@ export function bicimOzeti(ayarlar: {
   ].filter(Boolean);
   if (paragraf.length) satirlar.push(en ? `Paragraphs: ${paragraf.join(" · ")}` : `Paragraf: ${paragraf.join(" · ")}`);
   if (ayarlar.headingNumbering) satirlar.push(en ? "Headings are numbered decimally (1., 1.1.)" : "Başlıklar ondalık numaralanır (1., 1.1.)");
+  /* İnce biçim kuralları (lib/kilavuz-bicim.ts): editöre, baskıya ve Word'e iniyor. */
+  if (ayarlar.paragraphSpacing) {
+    const a = ayarlar.paragraphSpacing;
+    satirlar.push(en ? `Paragraph spacing: before ${yaz(a.beforePt)} pt · after ${yaz(a.afterPt)} pt` : `Paragraf aralığı: önce ${yaz(a.beforePt)} nk · sonra ${yaz(a.afterPt)} nk`);
+  }
+  if (ayarlar.footnoteSizePt) satirlar.push(en ? `Footnotes: ${yaz(ayarlar.footnoteSizePt)} pt` : `Dipnot: ${yaz(ayarlar.footnoteSizePt)} punto`);
+  if (ayarlar.pageNumberPosition) {
+    const yer = SAYFA_NUMARASI_ADI[ayarlar.pageNumberPosition];
+    satirlar.push(en ? `Page numbers: ${yer.en}` : `Sayfa numarası: ${yer.tr}`);
+  }
+  if (ayarlar.chapterAlign) {
+    const hiza = bolumHizasiMetni(ayarlar.chapterAlign, ayarlar.chapterLeftSections);
+    satirlar.push(en ? `Chapter headings: ${hiza.en}` : `Bölüm başlıkları: ${hiza.tr}`);
+  }
+  if (ayarlar.unnumberedSections?.length) {
+    const adlar = ayarlar.unnumberedSections.join(", ");
+    satirlar.push(en ? `Not numbered: ${adlar}` : `Numarasız ana başlıklar: ${adlar}`);
+  }
   if (ayarlar.chapterUppercase) satirlar.push(en ? "Chapter headings in capitals" : "Bölüm başlıkları büyük harfle");
   if (ayarlar.chapterNewPage) satirlar.push(en ? "Each main chapter starts on a new page" : "Her ana bölüm yeni sayfadan başlar");
   /* Kelime sınırı teslim kontrolüne giriyor; öğrenci onaylamadan önce görmeli. */

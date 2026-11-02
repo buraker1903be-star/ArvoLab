@@ -3,6 +3,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { hasManualNumber, numberHeadings, stripManualNumber } from "@/lib/heading-numbering";
+import { anaBaslikHizasi, type BolumHizasi } from "@/lib/kilavuz-bicim";
 
 /**
  * Editörde otomatik başlık numaraları. Numara metne yazılmaz; başlığa
@@ -30,13 +31,31 @@ function headingsOf(doc: ProseMirrorNode) {
   return found;
 }
 
-function buildDecorations(doc: ProseMirrorNode) {
+/*
+  Kılavuzun ana başlık kuralları (02.11.2026, lib/kilavuz-bicim.ts): ek
+  numarasız başlıklar ("Giriş", "Sonuç") ve birinci düzey başlığın hizası.
+  Hiza süsleme olarak veriliyor (data-kilavuz-hiza), belgeye yazılmıyor:
+  kılavuz değişince metin değişmeden görünüm değişmeli. CSS'te (workspace.css)
+  öğrencinin başlığa kendisi verdiği hiza (satır içi stil) her zaman kazanır.
+*/
+export interface BaslikKurallari {
+  numarasiz?: string[];
+  chapterAlign?: BolumHizasi;
+  chapterLeftSections?: string[];
+}
+
+/** Dışa açık: tests/editor bu süslemeyi tarayıcısız sınıyor. */
+export function buildDecorations(doc: ProseMirrorNode, numaralama: boolean, kurallar: BaslikKurallari) {
   const headings = headingsOf(doc);
-  const numbers = numberHeadings(headings);
+  const numbers = numaralama ? numberHeadings(headings, kurallar.numarasiz) : [];
   const decorations: Decoration[] = [];
   headings.forEach((heading, index) => {
+    const ozellik: Record<string, string> = {};
     const number = numbers[index];
-    if (number) decorations.push(Decoration.node(heading.pos, heading.pos + heading.size, { "data-heading-number": number }));
+    if (number) ozellik["data-heading-number"] = number;
+    const hiza = heading.level === 1 ? anaBaslikHizasi(heading.text, kurallar) : null;
+    if (hiza) ozellik["data-kilavuz-hiza"] = hiza;
+    if (Object.keys(ozellik).length) decorations.push(Decoration.node(heading.pos, heading.pos + heading.size, ozellik));
   });
   return DecorationSet.create(doc, decorations);
 }
@@ -56,11 +75,11 @@ declare module "@tiptap/core" {
   }
 }
 
-export const HeadingNumbers = Extension.create<{ enabled: boolean }>({
+export const HeadingNumbers = Extension.create<{ enabled: boolean; kurallar: BaslikKurallari }>({
   name: "headingNumbers",
 
   addOptions() {
-    return { enabled: false };
+    return { enabled: false, kurallar: {} };
   },
 
   addCommands() {
@@ -93,17 +112,22 @@ export const HeadingNumbers = Extension.create<{ enabled: boolean }>({
 
   addProseMirrorPlugins() {
     const initial = this.options.enabled;
+    const kurallar = this.options.kurallar ?? {};
+    /* Hiza kuralı varsa süsleme numaralandırma kapalıyken de gerekli. */
+    const hizaVar = Boolean(kurallar.chapterAlign);
+    const kur = (doc: ProseMirrorNode, enabled: boolean) =>
+      enabled || hizaVar ? buildDecorations(doc, enabled, kurallar) : DecorationSet.empty;
     return [
       new Plugin<HeadingNumbersState>({
         key: headingNumbersKey,
         state: {
-          init: (_, state) => ({ enabled: initial, decorations: initial ? buildDecorations(state.doc) : DecorationSet.empty }),
+          init: (_, state) => ({ enabled: initial, decorations: kur(state.doc, initial) }),
           apply: (tr, value, _oldState, newState) => {
             const meta = tr.getMeta(headingNumbersKey) as boolean | undefined;
             const enabled = meta ?? value.enabled;
-            if (!enabled) return value.enabled ? { enabled, decorations: DecorationSet.empty } : value;
             if (meta === undefined && !tr.docChanged) return value;
-            return { enabled, decorations: buildDecorations(newState.doc) };
+            if (!enabled && !hizaVar) return value.enabled ? { enabled, decorations: DecorationSet.empty } : value;
+            return { enabled, decorations: kur(newState.doc, enabled) };
           },
         },
         props: {

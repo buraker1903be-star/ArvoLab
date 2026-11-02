@@ -18,17 +18,20 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 export default function IcindekilerKarti({
   headings,
   numaralama,
+  numarasiz,
   sayfaBasiKelime,
   onJump,
 }: {
   headings: OutlineHeading[];
   numaralama: boolean;
+  /** Kılavuzun numarasız tuttuğu ana başlıklar; editördeki numarayla aynı (lib/kilavuz-bicim.ts). */
+  numarasiz?: string[];
   sayfaBasiKelime: number;
   onJump: (heading: OutlineHeading) => void;
 }) {
   const t = useCeviri();
   const [acik, setAcik] = useState(false);
-  const satirlar = acik ? icindekiler(headings, numaralama, sayfaBasiKelime) : [];
+  const satirlar = acik ? icindekiler(headings, numaralama, sayfaBasiKelime, numarasiz) : [];
 
   return (
     <>

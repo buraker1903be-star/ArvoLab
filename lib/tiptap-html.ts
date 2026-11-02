@@ -4,6 +4,7 @@
 // numaralanır ve belgenin sonunda listelenir.
 import { headingNumberMap } from "@/lib/heading-numbering";
 import { chapterBreakSet } from "@/lib/chapter-rules";
+import { anaBaslikHizasi, type BolumHizasi } from "@/lib/kilavuz-bicim";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 import type { Dil, Metin } from "@/lib/dil";
 
@@ -84,6 +85,8 @@ interface RenderContext {
   chapterBreaks: Set<object>;
   /** Şekil/tablo etiketinin dili (belgenin parçası; lib/tiptap-caption.ts'teki gerekçe) */
   dil: Dil;
+  /** Kılavuzun ana başlık hizası (lib/kilavuz-bicim.ts); editör ve Word aynı kararı veriyor. */
+  anaBaslik: { chapterAlign?: BolumHizasi; chapterLeftSections?: string[] };
 }
 
 // tiptap-caption.ts'teki CAPTION_LABELS_METIN ile aynı; o dosya @tiptap/core çektiği için buraya kopyalandı.
@@ -132,6 +135,8 @@ function renderText(node: Node): string {
   return html;
 }
 
+const duzMetin = (node: Node): string => node.text ?? (node.content ?? []).map(duzMetin).join("");
+
 function renderNodes(nodes: Node[] | undefined, ctx: RenderContext): string {
   return (nodes ?? []).map((node) => renderNode(node, ctx)).join("");
 }
@@ -165,7 +170,9 @@ function renderNode(node: Node, ctx: RenderContext): string {
       const level = Math.min(Math.max(Number(attrs.level) || 1, 1), 4);
       const number = ctx.headingNumbers.get(node);
       const newPage = ctx.chapterBreaks.has(node) ? ' class="print-new-page"' : "";
-      return `<h${level}${newPage}${blockStyle(attrs)}>${number ? `${escapeHtml(number)} ` : ""}${renderNodes(node.content, ctx)}</h${level}>`;
+      /* Başlığın kendi hizası yoksa kılavuzunki (editörde süsleme, burada satır içi). */
+      const kilavuzHizasi = level === 1 && !attrs.textAlign ? anaBaslikHizasi(duzMetin(node), ctx.anaBaslik) : null;
+      return `<h${level}${newPage}${blockStyle(kilavuzHizasi ? { ...attrs, textAlign: kilavuzHizasi } : attrs)}>${number ? `${escapeHtml(number)} ` : ""}${renderNodes(node.content, ctx)}</h${level}>`;
     }
     case "bulletList":
       return `<ul>${renderNodes(node.content, ctx)}</ul>`;
@@ -204,15 +211,25 @@ function renderNode(node: Node, ctx: RenderContext): string {
 
 export function renderTiptapHtml(
   doc: { content?: Node[] } | null | undefined,
-  options: { headingNumbering?: boolean; chapterNewPage?: boolean; dipnotSatirIci?: boolean; dil?: Dil } = {}
+  options: {
+    headingNumbering?: boolean;
+    chapterNewPage?: boolean;
+    dipnotSatirIci?: boolean;
+    dil?: Dil;
+    /* Kılavuzun ana başlık kuralları (lib/kilavuz-bicim.ts). */
+    numarasiz?: string[];
+    chapterAlign?: BolumHizasi;
+    chapterLeftSections?: string[];
+  } = {}
 ): { html: string; footnotes: string[] } {
   const ctx: RenderContext = {
     footnotes: [],
     dipnotSatirIci: options.dipnotSatirIci ?? false,
     captions: { figure: 0, table: 0 },
-    headingNumbers: options.headingNumbering ? headingNumberMap(doc) : new Map(),
+    headingNumbers: options.headingNumbering ? headingNumberMap(doc, options.numarasiz) : new Map(),
     chapterBreaks: options.chapterNewPage ? chapterBreakSet(doc) : new Set(),
     dil: options.dil ?? "tr",
+    anaBaslik: { chapterAlign: options.chapterAlign, chapterLeftSections: options.chapterLeftSections },
   };
   return { html: renderNodes(doc?.content, ctx), footnotes: ctx.footnotes };
 }

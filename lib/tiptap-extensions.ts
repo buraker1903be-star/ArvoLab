@@ -8,7 +8,7 @@ import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table
 import { TextStyleKit } from "@tiptap/extension-text-style";
 import { Caption } from "@/lib/tiptap-caption";
 import { SearchHighlight } from "@/lib/tiptap-search";
-import { HeadingNumbers } from "@/lib/tiptap-heading-numbers";
+import { HeadingNumbers, type BaslikKurallari } from "@/lib/tiptap-heading-numbers";
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import { WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
@@ -43,7 +43,12 @@ export const EDITOR_PLACEHOLDER = EDITOR_PLACEHOLDER_METIN.tr;
   Şema dilden bağımsız kalmalı, yoksa iki dilde kaydedilen belgeler
   birbirinin editöründe açılamazdı.
 */
-export function editorExtensions(secenek: { headingNumbering: boolean; dil?: Dil }) {
+export function editorExtensions(secenek: {
+  headingNumbering: boolean;
+  dil?: Dil;
+  /* Kılavuzun ana başlık kuralları (lib/kilavuz-bicim.ts); şemaya dokunmuyor, yalnızca süsleme. */
+  baslikKurallari?: BaslikKurallari;
+}) {
   return [
     StarterKit.configure({
       link: { openOnClick: false, protocols: ["http", "https", "mailto"] },
@@ -62,7 +67,7 @@ export function editorExtensions(secenek: { headingNumbering: boolean; dil?: Dil
     FootnoteReference,
     Caption,
     SearchHighlight,
-    HeadingNumbers.configure({ enabled: secenek.headingNumbering }),
+    HeadingNumbers.configure({ enabled: secenek.headingNumbering, kurallar: secenek.baslikKurallari ?? {} }),
     // Tab, hizalama ve punto kısayolları (Word gibi); şemaya düğüm eklemiyor.
     WordKlavyesi,
     WordKisayollari,

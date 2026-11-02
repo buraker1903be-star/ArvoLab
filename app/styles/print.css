@@ -58,7 +58,8 @@
 /* Kılavuzun ana bölüm kuralları: büyük harf; yeni sayfa sınıfını Word'le aynı kural verir (lib/chapter-rules.ts) */
 .print-sheet[data-chapter-case="upper"] .print-body h1 { text-transform: uppercase; }
 .print-body .print-new-page { break-before: page; }
-.print-body p { margin: 0 0 .6em; orphans: 3; widows: 3; }
+/* Paragraf aralığı kılavuzdan gelebilir (lib/print-sheet.ts → --print-p-once/--print-p-sonra). */
+.print-body p { margin: var(--print-p-once, 0) 0 var(--print-p-sonra, .6em); orphans: 3; widows: 3; }
 /* Editörde Tab ile yazılan sekme baskıda da sekme (Word: 1,25 cm). Yalnızca sekme
    karakterini korur: pre-wrap metindeki satır sonlarını değiştirmez, metinde \n yok. */
 .print-body :is(p, li, td, th) { white-space: pre-wrap; tab-size: 1.25cm; }
@@ -91,7 +92,7 @@
   margin-top: 2em;
   padding-top: .6em;
   border-top: 1px solid var(--print-ink);
-  font-size: .85em;
+  font-size: var(--print-dipnot, .85em);
 }
 .print-footnotes h2 { margin: 0 0 .4em; font-size: 1em; }
 
@@ -148,7 +149,7 @@ html[data-sayfali="hazirlaniyor"] .print-page > .print-sheet { opacity: .35; }
 .pagedjs_pages .print-footnotes,
 .pagedjs_pages .print-fn { display: none; }
 /* Word ile aynı ölçüler (tiptap-docx): paragraf arası 6 pt, başlık önü 12 / arkası 6 pt. */
-.pagedjs_pages .print-body p { margin: 0 0 6pt; }
+.pagedjs_pages .print-body p { margin: var(--print-p-once, 0) 0 var(--print-p-sonra, 6pt); }
 .pagedjs_pages .print-body :is(h1, h2, h3, h4) { margin: 12pt 0 6pt; }
 .pagedjs_pages .print-body h1 { font-size: calc(var(--print-size) + 2pt); }
 .pagedjs_pages .print-body h2 { font-size: calc(var(--print-size) + 1pt); }
@@ -164,7 +165,8 @@ html[data-sayfali="hazirlaniyor"] .print-page > .print-sheet { opacity: .35; }
 /* Son sayfadan sonraki sayfa sonu yazdırmada BOŞ bir sayfa daha açıyordu. */
 @media print { .pagedjs_pages > .pagedjs_page:last-child { break-after: auto; page-break-after: auto; } }
 /* Dipnot alanı Word'deki gibi metnin yazı tipinde, iki punto küçük (Word dipnot stili). */
-.pagedjs_pages .pagedjs_footnote_area { font-family: var(--print-font); font-size: calc(var(--print-size) - 2pt); line-height: 1.2; }
+/* Kılavuz dipnot puntosu yazmışsa o (--print-dipnot, lib/print-sheet.ts). */
+.pagedjs_pages .pagedjs_footnote_area { font-family: var(--print-font); font-size: var(--print-dipnot, calc(var(--print-size) - 2pt)); line-height: 1.2; }
 .print-dipnot-no { font-size: .75em; vertical-align: super; line-height: 0; }
 .pagedjs_pages .pagedjs_margin-content { font-family: var(--print-font); }
 /* İçindekiler satırı: metin · noktalı çizgi · sayfa numarası (Word'ün varsayılan içindekiler biçimi) */

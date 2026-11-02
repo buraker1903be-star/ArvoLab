@@ -5,6 +5,7 @@
 // numarasız kalır. Karşılaştırma section-match ile aynı kuralla yapılır (büyük/küçük harf,
 // Türkçe I/İ, baştaki numara ve sondaki noktalama gözetilmez).
 import { normalizeHeading } from "@/lib/section-match";
+import { adListedeMi } from "@/lib/kilavuz-bicim";
 
 const UNNUMBERED_SECTIONS = new Set(
   [
@@ -85,8 +86,18 @@ export function isUnnumberedHeading(text: string): boolean {
   return UNNUMBERED_SECTIONS.has(normalized) || APPENDIX.test(normalized) || APPENDIX_EN.test(normalized);
 }
 
-/** Her başlığın numarası ("1.2.") ya da numarasızsa null; sıra girişle aynıdır. */
-export function numberHeadings(headings: { level: number; text: string }[]): (string | null)[] {
+/**
+ * Her başlığın numarası ("1.2.") ya da numarasızsa null; sıra girişle aynıdır.
+ *
+ * `ekNumarasiz`: kılavuzun AYRICA numarasız tuttuğu ana başlıklar (02.11.2026,
+ * lib/kilavuz-bicim.ts). DEÜ SBE "Giriş ve Sonuç başlıkları ayrı bir bölüm
+ * olmadığından numaralandırma yapılmayacaktır" diyor; varsayılan liste ikisini
+ * de numaralıyordu ve öğrencinin tezinde "1. GİRİŞ" yazıyordu.
+ */
+export function numberHeadings(
+  headings: { level: number; text: string }[],
+  ekNumarasiz?: readonly string[],
+): (string | null)[] {
   const counters = [0, 0, 0, 0, 0, 0];
   // Numarasız bir bölümün altındaki başlıklar da numarasızdır (ör. EKLER > Ek 1).
   let unnumberedParent: number | null = null;
@@ -94,7 +105,7 @@ export function numberHeadings(headings: { level: number; text: string }[]): (st
     const depth = Math.min(Math.max(Math.round(level), 1), counters.length);
     if (unnumberedParent !== null && depth > unnumberedParent) return null;
     unnumberedParent = null;
-    if (isUnnumberedHeading(text)) {
+    if (isUnnumberedHeading(text) || (depth === 1 && adListedeMi(text, ekNumarasiz))) {
       unnumberedParent = depth;
       return null;
     }
@@ -120,7 +131,10 @@ const jsonText = (node: JsonNode): string => node.text ?? (node.content ?? []).m
  * Kayıtlı belge (JSON) için başlık → numara eşlemesi. Anahtar düğüm nesnesinin kendisidir;
  * Word ve baskı çıktısı belgeyi hangi sırayla gezerse gezsin doğru numarayı bulur.
  */
-export function headingNumberMap(doc: { content?: JsonNode[] } | null | undefined): Map<JsonNode, string> {
+export function headingNumberMap(
+  doc: { content?: JsonNode[] } | null | undefined,
+  ekNumarasiz?: readonly string[],
+): Map<JsonNode, string> {
   const headings: JsonNode[] = [];
   const walk = (nodes: JsonNode[] | undefined) => {
     for (const node of nodes ?? []) {
@@ -129,7 +143,10 @@ export function headingNumberMap(doc: { content?: JsonNode[] } | null | undefine
     }
   };
   walk(doc?.content);
-  const numbers = numberHeadings(headings.map((node) => ({ level: Number(node.attrs?.level) || 1, text: jsonText(node) })));
+  const numbers = numberHeadings(
+    headings.map((node) => ({ level: Number(node.attrs?.level) || 1, text: jsonText(node) })),
+    ekNumarasiz,
+  );
   const map = new Map<JsonNode, string>();
   headings.forEach((node, index) => {
     const number = numbers[index];
@@ -163,8 +180,9 @@ export type IcindekilerSatiri = { level: number; text: string; numara: string | 
 export function icindekilerSatirlari(
   doc: { content?: JsonNode[] } | null | undefined,
   numaralama: boolean,
+  ekNumarasiz?: readonly string[],
 ): IcindekilerSatiri[] {
-  const numaralar = numaralama ? headingNumberMap(doc) : new Map<JsonNode, string>();
+  const numaralar = numaralama ? headingNumberMap(doc, ekNumarasiz) : new Map<JsonNode, string>();
   const satirlar: IcindekilerSatiri[] = [];
   const walk = (nodes: JsonNode[] | undefined) => {
     for (const node of nodes ?? []) {

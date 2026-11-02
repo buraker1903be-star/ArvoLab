@@ -115,6 +115,13 @@ export async function GET(
         lineSpacing: guideline.settings.lineSpacing,
         chapterUppercase: guideline.settings.chapterUppercase,
         chapterNewPage: guideline.settings.chapterNewPage,
+        /* İnce biçim kuralları (lib/kilavuz-bicim.ts): baskı ve editörle aynı. */
+        footnoteSizePt: guideline.settings.footnoteSizePt,
+        paragraphSpacing: guideline.settings.paragraphSpacing,
+        chapterAlign: guideline.settings.chapterAlign,
+        chapterLeftSections: guideline.settings.chapterLeftSections,
+        pageNumberPosition: guideline.settings.pageNumberPosition,
+        unnumberedSections: guideline.settings.unnumberedSections,
       }
     : {};
   // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).

@@ -121,6 +121,12 @@
 
 /* Kılavuzun ana bölüm kuralları (metin değişmez; Word ve baskı da aynı kuralı uygular) */
 .manuscript-editor-content[data-chapter-case="upper"] h1 { text-transform: uppercase; }
+/* Kılavuzun bölüm başlığı hizası (süsleme: lib/tiptap-heading-numbers.ts). Öğrencinin başlığa
+   verdiği hiza satır içi stil olduğu için bunu her zaman ezer. */
+.manuscript-editor-content h1[data-kilavuz-hiza="center"] { text-align: center; }
+.manuscript-editor-content h1[data-kilavuz-hiza="left"] { text-align: left; }
+/* Kılavuzun paragraf öncesi/sonrası (nk); ölçü editörün değişkenlerinde (manuscript-editor.tsx). */
+.manuscript-editor-content[data-paragraf-araligi] p { margin: var(--kilavuz-p-once, 0) 0 var(--kilavuz-p-sonra, 10px); }
 .manuscript-editor-content[data-chapter-new-page] h1:not(:first-child) { margin-top: 34px; padding-top: 22px; border-top: 1px dashed var(--line); }
 
 /* Teslim kontrol listesi */
@@ -240,6 +246,14 @@
 /* Dipnotlar listesi (belgenin altında; telefonda üzerine gelme olmadığı için) */
 .footnote-list { margin: 0; padding: 14px 18px 18px 40px; border-top: 1px solid var(--line-soft); font-size: var(--fs-base); }
 .footnote-list li { padding: 3px 0; color: var(--ink-soft); }
+/* Kılavuzun dipnot puntosu (lib/kilavuz-bicim.ts): editördeki liste baskı ve Word'le aynı ölçüde.
+   9 puntonun altı ekranda okunmuyor (en küçük yazı 11px); orada liste kendi boyutunda kalır. */
+.footnote-list[data-kilavuz-dipnot="9"] { font-size: 9pt; }
+.footnote-list[data-kilavuz-dipnot="10"] { font-size: 10pt; }
+.footnote-list[data-kilavuz-dipnot="11"] { font-size: 11pt; }
+.footnote-list[data-kilavuz-dipnot="12"] { font-size: 12pt; }
+.footnote-list[data-kilavuz-dipnot="13"] { font-size: 13pt; }
+.footnote-list[data-kilavuz-dipnot="14"] { font-size: 14pt; }
 .footnote-list button { color: inherit; text-align: left; cursor: pointer; }
 .footnote-list button:hover { color: var(--accent); }
 

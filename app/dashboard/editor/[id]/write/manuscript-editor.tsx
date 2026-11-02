@@ -111,6 +111,7 @@ import IcindekilerKarti from "./icindekiler-karti";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
+import { SAYFA_NUMARASI_ADI, bolumHizasiMetni } from "@/lib/kilavuz-bicim";
 import ManuscriptOutline from "./manuscript-outline";
 import {
   applyTemplate,
@@ -747,7 +748,16 @@ export default function ManuscriptEditor({
   const editor = useEditor({
     immediatelyRender: false,
     /* Liste lib/tiptap-extensions.ts'te: şemayı testler de aynı yerden kurar. */
-    extensions: editorExtensions({ headingNumbering: initialHeadingNumbering, dil: belgeDili }),
+    extensions: editorExtensions({
+      headingNumbering: initialHeadingNumbering,
+      dil: belgeDili,
+      /* Kılavuzun ana başlık kuralları: ek numarasızlar ve bölüm başlığı hizası (lib/kilavuz-bicim.ts). */
+      baslikKurallari: {
+        numarasiz: guideline?.settings.unnumberedSections,
+        chapterAlign: guideline?.settings.chapterAlign,
+        chapterLeftSections: guideline?.settings.chapterLeftSections,
+      },
+    }),
     content: initialContent ?? "",
     onCreate: ({ editor: created }) => {
       editorRef.current = created;
@@ -776,6 +786,8 @@ export default function ManuscriptEditor({
         // Kılavuzun ana bölüm kuralları editörde de görünür (metin değişmez; CSS workspace.css)
         ...(guideline?.settings.chapterUppercase ? { "data-chapter-case": "upper" } : {}),
         ...(guideline?.settings.chapterNewPage ? { "data-chapter-new-page": "true" } : {}),
+        /* Paragraf öncesi/sonrası (nk): ölçü değişkenle, kural CSS'te (workspace.css). */
+        ...(guideline?.settings.paragraphSpacing ? { "data-paragraf-araligi": "true" } : {}),
         "aria-label": t({ tr: "Çalışma metni", en: "Manuscript text" }),
         // Tarayıcının yazım denetimi belgenin diliyle çalışsın (eskiden hep Türkçe sözlüktü)
         spellcheck: "true",
@@ -784,6 +796,9 @@ export default function ManuscriptEditor({
           guideline?.settings.fontFamily ? `font-family: '${guideline.settings.fontFamily}'` : "",
           guideline?.settings.fontSizePt ? `font-size: ${guideline.settings.fontSizePt}pt` : "",
           guideline?.settings.lineSpacing ? `line-height: ${guideline.settings.lineSpacing}` : "",
+          guideline?.settings.paragraphSpacing
+            ? `--kilavuz-p-once: ${guideline.settings.paragraphSpacing.beforePt}pt; --kilavuz-p-sonra: ${guideline.settings.paragraphSpacing.afterPt}pt`
+            : "",
         ].filter(Boolean).join("; "),
       },
       handleClickOn: (_view, pos, node) => {
@@ -2460,7 +2475,12 @@ export default function ManuscriptEditor({
       <OlcumPaneli editor={editor} />
 
       {stats.footnotes.length > 0 ? (
-        <ol className="footnote-list" aria-label={t({ tr: "Dipnotlar", en: "Footnotes" })}>
+        <ol
+          className="footnote-list"
+          aria-label={t({ tr: "Dipnotlar", en: "Footnotes" })}
+          /* Kılavuzun dipnot puntosu (lib/kilavuz-bicim.ts); baskı ve Word de aynı ölçüyü kullanıyor. */
+          data-kilavuz-dipnot={guideline?.settings.footnoteSizePt ? String(guideline.settings.footnoteSizePt) : undefined}
+        >
           {stats.footnotes.map((footnote) => (
             <li key={footnote.pos}>
               <button type="button" onClick={() => openFootnoteEditor(footnote.pos, footnote.text)}>
@@ -2652,6 +2672,7 @@ export default function ManuscriptEditor({
         <IcindekilerKarti
           headings={stats.headings}
           numaralama={headingNumbering}
+          numarasiz={guideline?.settings.unnumberedSections}
           sayfaBasiKelime={sayfaBasiKelime}
           onJump={handleJump}
         />
@@ -3011,6 +3032,41 @@ export default function ManuscriptEditor({
               <>
                 <dt>{t({ tr: "Paragraf düzeni", en: "Paragraph layout" })}</dt>
                 <dd>{describeParagraphFormat(paragraphFormat, dil)}</dd>
+              </>
+            ) : null}
+            {guideline.settings.paragraphSpacing ? (
+              <>
+                <dt>{t({ tr: "Paragraf aralığı", en: "Paragraph spacing" })}</dt>
+                <dd>
+                  {t({
+                    tr: `Önce ${guideline.settings.paragraphSpacing.beforePt} nk · sonra ${guideline.settings.paragraphSpacing.afterPt} nk`,
+                    en: `Before ${guideline.settings.paragraphSpacing.beforePt} pt · after ${guideline.settings.paragraphSpacing.afterPt} pt`,
+                  })}
+                </dd>
+              </>
+            ) : null}
+            {guideline.settings.chapterAlign ? (
+              <>
+                <dt>{t({ tr: "Bölüm başlığı hizası", en: "Chapter heading alignment" })}</dt>
+                <dd>{t(bolumHizasiMetni(guideline.settings.chapterAlign, guideline.settings.chapterLeftSections))}</dd>
+              </>
+            ) : null}
+            {guideline.settings.unnumberedSections?.length ? (
+              <>
+                <dt>{t({ tr: "Numarasız ana başlıklar", en: "Unnumbered main headings" })}</dt>
+                <dd>{guideline.settings.unnumberedSections.join(", ")}</dd>
+              </>
+            ) : null}
+            {guideline.settings.footnoteSizePt ? (
+              <>
+                <dt>{t({ tr: "Dipnot", en: "Footnotes" })}</dt>
+                <dd>{t({ tr: `${guideline.settings.footnoteSizePt} punto`, en: `${guideline.settings.footnoteSizePt} pt` })}</dd>
+              </>
+            ) : null}
+            {guideline.settings.pageNumberPosition ? (
+              <>
+                <dt>{t({ tr: "Sayfa numarasının yeri", en: "Page number position" })}</dt>
+                <dd>{t(SAYFA_NUMARASI_ADI[guideline.settings.pageNumberPosition])}</dd>
               </>
             ) : null}
             {guideline.settings.abstract ? (
