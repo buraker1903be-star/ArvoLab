@@ -82,3 +82,25 @@ test("ana bölüm sayfa sonları", async (t) => {
     assert.equal(chapterBreakSet(belge()).size, 0);
   });
 });
+
+test("ön sayfalar ve Giriş her zaman yeni sayfadan (kural kapalıyken de)", async () => {
+  const { onSayfaKirilimlari, sayfaKirilimlari } = await import("@/lib/chapter-rules");
+  const h1 = (text: string) => ({ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text }] });
+  const p = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
+  const icKapak = p("ENFLASYON BEKLENTİLERİ");
+  const onay = h1("TEZ ONAY SAYFASI");
+  const ozet = h1("ÖZET");
+  const giris = h1("GİRİŞ");
+  const yontem = h1("BİRİNCİ BÖLÜM");
+  const kaynakca = h1("KAYNAKÇA");
+  const doc = { content: [icKapak, onay, p("x"), ozet, p("y"), giris, p("z"), yontem, p("w"), kaynakca] };
+  const kume = onSayfaKirilimlari(doc);
+  // İç kapaktan sonra onay; özet; Giriş. Bölümler ve kaynakça kural kapalıyken etkilenmez.
+  assert.deepEqual([onay, ozet, giris].map((d) => kume.has(d)), [true, true, true]);
+  assert.deepEqual([yontem, kaynakca].map((d) => kume.has(d)), [false, false]);
+  // Kural açıksa her ana bölüm.
+  assert.ok(sayfaKirilimlari(doc, true).has(yontem));
+  // Belgenin başındaki başlık boş sayfa açmaz; ön sayfasız belgede Giriş kırılmaz.
+  assert.equal(onSayfaKirilimlari({ content: [ozet, p("y")] }).has(ozet), false);
+  assert.equal(onSayfaKirilimlari({ content: [giris, p("z"), yontem] }).size, 0);
+});

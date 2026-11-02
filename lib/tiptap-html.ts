@@ -3,7 +3,7 @@
 // bağlantı ve resim kaynakları izin listesinden geçer. Dipnotlar sırayla
 // numaralanır ve belgenin sonunda listelenir.
 import { anaMetinBaslangici, headingNumberMap } from "@/lib/heading-numbering";
-import { chapterBreakSet } from "@/lib/chapter-rules";
+import { sayfaKirilimlari } from "@/lib/chapter-rules";
 import { altBaslikGirintisi, anaBaslikHizasi, type AltBaslikGirintisi, type BolumHizasi } from "@/lib/kilavuz-bicim";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 import type { Dil, Metin } from "@/lib/dil";
@@ -239,7 +239,7 @@ export function renderTiptapHtml(
     dipnotSatirIci: options.dipnotSatirIci ?? false,
     captions: { figure: 0, table: 0 },
     headingNumbers: options.headingNumbering ? headingNumberMap(doc, options.numarasiz) : new Map(),
-    chapterBreaks: options.chapterNewPage ? chapterBreakSet(doc) : new Set(),
+    chapterBreaks: sayfaKirilimlari(doc, options.chapterNewPage ?? false),
     dil: options.dil ?? "tr",
     anaBaslik: { chapterAlign: options.chapterAlign, chapterLeftSections: options.chapterLeftSections },
     altGirinti: options.altGirinti,

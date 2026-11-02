@@ -26,7 +26,7 @@ import {
 import { captionLabel, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
 import { YEREL, type Dil } from "@/lib/dil";
 import { anaMetinBaslangici, headingNumberMap, icindekilerSatirlari } from "@/lib/heading-numbering";
-import { chapterBreakSet } from "@/lib/chapter-rules";
+import { sayfaKirilimlari } from "@/lib/chapter-rules";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
 import { altBaslikGirintisi, anaBaslikHizasi, type AltBaslikGirintisi, type BolumHizasi, type ParagrafAraligi, type SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
@@ -597,7 +597,7 @@ export async function buildDocxFromTiptap({
     contentWidthTwip: Math.max(kagit.genislikTwip - marginTwip.left - marginTwip.right, 2000),
     fetchImage,
     headingNumbers: headingNumbering ? headingNumberMap(doc, textDefaults.unnumberedSections) : new Map(),
-    chapterBreaks: textDefaults.chapterNewPage ? chapterBreakSet(doc) : new Set(),
+    chapterBreaks: sayfaKirilimlari(doc, textDefaults.chapterNewPage ?? false),
     dil,
     dipnotBoyu: Math.round((textDefaults.footnoteSizePt ?? 10) * 2),
     anaBaslik: { chapterAlign: textDefaults.chapterAlign, chapterLeftSections: textDefaults.chapterLeftSections },

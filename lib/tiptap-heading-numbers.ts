@@ -2,7 +2,7 @@ import { Extension } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
-import { hasManualNumber, numberHeadings, stripManualNumber } from "@/lib/heading-numbering";
+import { hasManualNumber, numberHeadings, onSayfaBasligiMi, stripManualNumber } from "@/lib/heading-numbering";
 import { altBaslikGirintisi, anaBaslikHizasi, type AltBaslikGirintisi, type BolumHizasi } from "@/lib/kilavuz-bicim";
 
 /**
@@ -51,8 +51,14 @@ export function buildDecorations(doc: ProseMirrorNode, numaralama: boolean, kura
   const headings = headingsOf(doc);
   const numbers = numaralama ? numberHeadings(headings, kurallar.numarasiz) : [];
   const decorations: Decoration[] = [];
+  /* Ön sayfa ve ana metnin başı her zaman yeni sayfadan (lib/chapter-rules.ts onSayfaKirilimlari): editörde ayraç. */
+  const anaBas = headings.findIndex((h) => h.level === 1 && !onSayfaBasligiMi(h.text));
+  const onSayfaVar = headings.some((h, i) => h.level === 1 && (anaBas < 0 || i < anaBas));
   headings.forEach((heading, index) => {
     const ozellik: Record<string, string> = {};
+    if (heading.level === 1 && heading.pos > 0 && (onSayfaBasligiMi(heading.text) || (index === anaBas && onSayfaVar))) {
+      ozellik["data-yeni-sayfa"] = "true";
+    }
     const number = numbers[index];
     if (number) ozellik["data-heading-number"] = number;
     const hiza = heading.level === 1 ? anaBaslikHizasi(heading.text, kurallar) : null;
@@ -116,10 +122,8 @@ export const HeadingNumbers = Extension.create<{ enabled: boolean; kurallar: Bas
   addProseMirrorPlugins() {
     const initial = this.options.enabled;
     const kurallar = this.options.kurallar ?? {};
-    /* Hiza ya da girinti kuralı varsa süsleme numaralandırma kapalıyken de gerekli. */
-    const hizaVar = Boolean(kurallar.chapterAlign || kurallar.altGirinti);
-    const kur = (doc: ProseMirrorNode, enabled: boolean) =>
-      enabled || hizaVar ? buildDecorations(doc, enabled, kurallar) : DecorationSet.empty;
+    /* Süsleme numaralandırma kapalıyken de kuruluyor: ön sayfa ayracı, hiza ve girinti her belgede (02.11.2026). */
+    const kur = (doc: ProseMirrorNode, enabled: boolean) => buildDecorations(doc, enabled, kurallar);
     return [
       new Plugin<HeadingNumbersState>({
         key: headingNumbersKey,
@@ -129,7 +133,6 @@ export const HeadingNumbers = Extension.create<{ enabled: boolean; kurallar: Bas
             const meta = tr.getMeta(headingNumbersKey) as boolean | undefined;
             const enabled = meta ?? value.enabled;
             if (meta === undefined && !tr.docChanged) return value;
-            if (!enabled && !hizaVar) return value.enabled ? { enabled, decorations: DecorationSet.empty } : value;
             return { enabled, decorations: kur(newState.doc, enabled) };
           },
         },

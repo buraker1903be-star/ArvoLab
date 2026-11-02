@@ -129,6 +129,7 @@
 .manuscript-editor-content [data-kilavuz-girinti] { padding-left: var(--kilavuz-alt-girinti, 1.25cm); }
 /* Kılavuzun paragraf öncesi/sonrası (nk); ölçü editörün değişkenlerinde (manuscript-editor.tsx). */
 .manuscript-editor-content[data-paragraf-araligi] p { margin: var(--kilavuz-p-once, 0) 0 var(--kilavuz-p-sonra, 10px); }
+.manuscript-editor-content h1[data-yeni-sayfa],
 .manuscript-editor-content[data-chapter-new-page] h1:not(:first-child) { margin-top: 34px; padding-top: 22px; border-top: 1px dashed var(--line); }
 
 /* Teslim kontrol listesi */

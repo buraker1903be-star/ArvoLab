@@ -274,11 +274,34 @@ test("ön sayfalar Romen rakamıyla: Word iki bölüm, yazdırma ana metni işar
 
   await t.test("yazdırma", () => {
     const html = renderTiptapHtml(tez as never, { onSayfaRomen: true }).html;
-    assert.match(html, /<h1 class="print-ana-baslangic">GİRİŞ/);
+    // Giriş ön sayfalardan sonra her zaman yeni sayfadan da başlıyor (print-new-page).
+    assert.match(html, /<h1 class="print-new-page print-ana-baslangic">GİRİŞ/);
     assert.equal((html.match(/print-ana-baslangic/g) ?? []).length, 1);
     assert.doesNotMatch(renderTiptapHtml(tez as never).html, /print-ana-baslangic/);
     // Başlıksız başlayan belge: işaret ilk düğümün önünde.
     const duz = renderTiptapHtml({ type: "doc", content: [p("Metin.")] } as never, { onSayfaRomen: true }).html;
     assert.match(duz, /^<div class="print-ana-baslangic"><\/div><p/);
   });
+});
+
+test("ön sayfalar her zaman yeni sayfadan: yazdırma ve Word (bölüm kuralı kapalıyken)", async () => {
+  const tez = {
+    type: "doc",
+    content: [p("TEZİN BAŞLIĞI"), h1("TEZ ONAY SAYFASI"), p("Onay."), h1("ÖZET"), p("Özet."), h1("GİRİŞ"), p("Giriş."), h1("Yöntem"), p("Yöntem.")],
+  };
+  const html = renderTiptapHtml(tez as never).html;
+  for (const ad of ["TEZ ONAY SAYFASI", "ÖZET", "GİRİŞ"]) assert.match(html, new RegExp(`<h1 class="print-new-page">${ad}`), ad);
+  assert.doesNotMatch(html, /<h1 class="print-new-page">Yöntem/);
+
+  const doc = await buildDocxFromTiptap({ title: "T", doc: tez as never, fetchImage: async () => null });
+  const xml = await (await JSZip.loadAsync(await Packer.toBuffer(doc))).file("word/document.xml")!.async("string");
+  assert.match(wordBasligi(xml, "TEZ ONAY SAYFASI"), /<w:pageBreakBefore\/>/);
+  assert.match(wordBasligi(xml, "GİRİŞ"), /<w:pageBreakBefore\/>/);
+  assert.doesNotMatch(wordBasligi(xml, "Yöntem"), /<w:pageBreakBefore\/>/);
+
+  // Editör: ayraç süslemesi aynı başlıklarda.
+  const isaretli = buildDecorations(belge(...(tez.content as JsonNode[])), false, {})
+    .find()
+    .filter((d) => (d as unknown as { type: { attrs: Record<string, string> } }).type.attrs["data-yeni-sayfa"]).length;
+  assert.equal(isaretli, 3);
 });
