@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
-import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { login } from "@/app/actions/auth";
 import { useCeviri } from "./dil-saglayici";
+import SifreSifirlamaPenceresi from "./sifre-sifirlama-penceresi";
 
 /*
   Giriş formu (02.11.2026, giriş sayfası yeniden yazılırken ayrıldı).
@@ -55,7 +55,8 @@ export default function GirisFormu({ next }: { next: string }) {
 
       <div className="password-label-row">
         <label htmlFor="password">{t({ tr: "Şifre", en: "Password" })}</label>
-        <Link href="/forgot-password">{t({ tr: "Şifremi unuttum", en: "Forgot password" })}</Link>
+        {/* Pencere olarak açılır (sifre-sifirlama-penceresi.tsx); JS yoksa sayfaya gider. */}
+        <SifreSifirlamaPenceresi />
       </div>
       <div className="giris-sifre">
         <input

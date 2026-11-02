@@ -234,7 +234,30 @@ export async function requestPasswordReset(formData: FormData) {
   if (!email) {
     redirect("/forgot-password?error=missing-email");
   }
+  await sifirlamaBaglantisiGonder(email);
+  // Hesabın var olup olmadığını sızdırmamak için her durumda aynı mesaj gösterilir.
+  redirect("/forgot-password?sent=1");
+}
 
+/*
+  GİRİŞ EKRANINDAKİ "ŞİFREMİ UNUTTUM" PENCERESİ (02.11.2026, kurum sahibinin
+  isteği; app/_components/sifre-sifirlama-penceresi.tsx). Sayfa yolu
+  (requestPasswordReset) yönlendirmeyle sonuç bildiriyor, pencere kalmalı:
+  aynı iş sonucu DÖNDÜREREK yapılıyor. Mantık tek yerde
+  (sifirlamaBaglantisiGonder); iki yol da adresin kayıtlı olup olmadığını
+  sızdırmıyor, sınıra takılan da "gönderildi" görüyor.
+*/
+export type SifirlamaDurumu = { durum: "bos" | "eksik" | "gonderildi" };
+
+export async function sifreSifirlamaIste(_onceki: SifirlamaDurumu, formData: FormData): Promise<SifirlamaDurumu> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { durum: "eksik" };
+  await sifirlamaBaglantisiGonder(email);
+  return { durum: "gonderildi" };
+}
+
+/* "use server" dosyasında export EDİLMİYOR: dışarıdan çağrılabilen bir uç nokta olmasın. */
+async function sifirlamaBaglantisiGonder(email: string): Promise<void> {
   /*
     Bağlantıyı biz üretip e-postayı kendimiz gönderiyoruz. Supabase'in yerleşik
     gönderimi üretim için değil: saatlik sınırı çok düşük ve aşıldığında şifre
@@ -246,7 +269,7 @@ export async function requestPasswordReset(formData: FormData) {
     admin = createAdminClient();
   } catch (adminError) {
     console.error("Şifre sıfırlama: sunucu anahtarı yok", adminError);
-    redirect("/forgot-password?sent=1");
+    return;
   }
 
   /*
@@ -271,7 +294,7 @@ export async function requestPasswordReset(formData: FormData) {
   }
   if (engellendi) {
     console.warn("Şifre sıfırlama hız sınırı:", ip);
-    redirect("/forgot-password?sent=1");
+    return;
   }
 
   const { data, error } = await admin.auth.admin.generateLink({
@@ -290,9 +313,6 @@ export async function requestPasswordReset(formData: FormData) {
     const token = data.properties?.hashed_token;
     if (token) await sendEmail({ to: email, ...resetPasswordEmail(authConfirmLink(await siteOrigin(), token, "recovery"), await aktifDil()) });
   }
-
-  // Hesabın var olup olmadığını sızdırmamak için her durumda aynı mesaj gösterilir.
-  redirect("/forgot-password?sent=1");
 }
 
 function passwordErrorMessage(code: string | undefined): Metin {
