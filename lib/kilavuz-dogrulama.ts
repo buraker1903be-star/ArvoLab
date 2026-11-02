@@ -1,5 +1,6 @@
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import type { Dil, Metin } from "@/lib/dil";
+import { describeAbstractRules, type AbstractRules } from "@/lib/guideline-editor-settings";
 import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni, type AltBaslikGirintisi, type BolumHizasi, type ParagrafAraligi, type SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
 
 /* Tanınan atıf stilleri TEK listeden (lib/atif/stiller.ts): ikinci bir
@@ -197,6 +198,7 @@ export function bicimOzeti(ayarlar: {
   unnumberedSections?: string[];
   subheadingIndent?: AltBaslikGirintisi;
   frontMatterRoman?: boolean;
+  abstract?: AbstractRules;
 }, dil: Dil = "tr"): string[] {
   const en = dil === "en";
   const satirlar: string[] = [];
@@ -258,6 +260,10 @@ export function bicimOzeti(ayarlar: {
   if (ayarlar.chapterAlign) {
     const hiza = bolumHizasiMetni(ayarlar.chapterAlign, ayarlar.chapterLeftSections);
     satirlar.push(en ? `Chapter headings: ${hiza.en}` : `Bölüm başlıkları: ${hiza.tr}`);
+  }
+  /* Özet sınırı teslim kontrolüne giriyor; eskiden bu özette yoktu ve ekranda görünmüyordu (02.11.2026). */
+  if (ayarlar.abstract && describeAbstractRules(ayarlar.abstract, dil)) {
+    satirlar.push(`${en ? "Abstract" : "Özet"}: ${describeAbstractRules(ayarlar.abstract, dil)}`);
   }
   if (ayarlar.frontMatterRoman) {
     satirlar.push(en ? "Page numbers: front matter i, ii, iii …; from the Introduction 1, 2, 3 …" : "Sayfa numarası: ön sayfalar i, ii, iii …; Giriş'ten itibaren 1, 2, 3 …");

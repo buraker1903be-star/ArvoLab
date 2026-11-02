@@ -12,6 +12,7 @@ import {
 } from "@/lib/ai/kilavuz-kurallari";
 import { extractFormattingRules } from "@/lib/guideline-scan";
 import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
+import { bicimOzeti } from "@/lib/kilavuz-dogrulama";
 
 /*
   Yapay zekâyla kılavuz okuma (02.11.2026). Metin DEÜ Sosyal Bilimler
@@ -64,6 +65,35 @@ test("doğrulanan okuma kural kümesine çevriliyor ve editör ayarına iniyor",
   assert.equal(ayar.footnoteSizePt, 10);
   assert.equal(ayar.frontMatterRoman, true);
   assert.equal(o.kanitlar.length, Object.keys(JSON.parse(DOGRU).kurallar).length);
+});
+
+test("türetilen düzey alıntıdan hesaplanıyor; modelin yanlış yorumu düzeltiliyor", () => {
+  // Canlıda model "birinci dereceden sonraki" için 2 dedi; doğrusu 3.
+  const yanit = JSON.parse(DOGRU);
+  yanit.kurallar.alt_baslik_girintisi.deger.duzey = 2;
+  const o = kilavuzOkumasiniCozumle(JSON.stringify(yanit), METIN) as KilavuzOkumasi;
+  assert.deepEqual(o.kurallar.subheading_indent, { fromLevel: 3, cm: 1.25 });
+  // Onay özeti özet sınırını da söylüyor (eskiden yazmıyordu).
+  const satirlar = bicimOzeti(normalizeGuidelineEditorSettings(o.kurallar));
+  assert.ok(satirlar.includes("Özet: en fazla 250 kelime"), satirlar.join(" | "));
+  assert.ok(satirlar.includes("Alt başlıklar: 2. derece alt başlıktan itibaren 1,25 cm içeriden"));
+});
+
+test("zorunlu bölümler okumayla şekilleniyor: otomatik sayfalar ve başlık olmayanlar ayıklanıyor", async () => {
+  const { bolumleriSekillendir } = await import("@/lib/ai/kilavuz-kurallari");
+  assert.deepEqual(
+    bolumleriSekillendir([
+      "Kapak Sayfası", "İç Kapak Sayfası", "Tez Onay Sayfası", "Yemin Metni", "Özet", "İngilizce Özet",
+      "İçindekiler Listesi", "Kısaltmalar", "Tablolar Listesi", "Şekiller Listesi", "2.2.1. Giriş",
+      "Tez Metni (Ana kısım)", "Sonuç ve Öneriler", "Kaynakça", "Ekler", "ÖZET",
+    ]),
+    ["Yemin Metni", "Özet", "Abstract", "Kısaltmalar", "Giriş", "Sonuç ve Öneriler", "Kaynakça", "Ekler"],
+  );
+  // Okumanın listesi kalıbınkinin yerine geçiyor; adlar yine kılavuz metninde aranıyor.
+  const yanit = JSON.parse(DOGRU);
+  yanit.kurallar.zorunlu_bolumler.deger = ["Yemin Metni", "Özet", "İngilizce Özet", "İçindekiler", "Giriş", "Sonuç ve Öneriler", "Kaynakça", "Ekler"];
+  const o = kilavuzOkumasiniCozumle(JSON.stringify(yanit), METIN) as KilavuzOkumasi;
+  assert.deepEqual(o.zorunluBolumler, ["Yemin Metni", "Özet", "Abstract", "Giriş", "Sonuç ve Öneriler", "Kaynakça", "Ekler"]);
 });
 
 test("metinde olmayan alıntı yanıtın tamamını düşürüyor", () => {

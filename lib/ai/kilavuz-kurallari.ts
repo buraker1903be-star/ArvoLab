@@ -27,6 +27,7 @@
 import { jsonOku } from "./bulgu";
 import { sayiOkumalari } from "./sayi-denetimi";
 import type { Mesaj } from "./saglayici";
+import { altBaslikGirintisiCikar } from "@/lib/kilavuz-bicim";
 
 export const KILAVUZ_METIN_BUTCESI = 45_000;
 
@@ -65,7 +66,7 @@ ALANLAR (hepsi isteğe bağlı; her biri {"deger": …, "alinti": "…"}):
 - ozet_en_cok_kelime, ozet_en_az_kelime, anahtar_kelime_en_az, anahtar_kelime_en_cok: sayı
 - en_az_sayfa, en_cok_sayfa: tezin sayfa sınırı (sayı)
 - atif_stili: ${ATIF_STILLERI.map((y) => `"${y}"`).join(" | ")} — yalnızca metin bu sistemi ADIYLA söylüyorsa; yalnızca dipnot yöntemini anlatıyorsa "dipnot". İki yöntemi birden serbest bırakıyorsa yazma.
-- zorunlu_bolumler: tezin zorunlu ana bölümleri, metindeki adlarıyla (ör. ["Özet", "Giriş", "Sonuç", "Kaynakça"]); alintisi bölümlerin sayıldığı yer.
+- zorunlu_bolumler: öğrencinin tez metninde BAŞLIK olarak yazacağı bölümler, kılavuzun belirttiği SIRAYLA ve kılavuzdaki adlarıyla. Ön sayfalardan yemin metni/beyan, özet ve yabancı dilde özet (abstract), önsöz isteniyorsa onlar; ardından giriş, kılavuz adlandırıyorsa ana bölümler (yöntem, bulgular, tartışma gibi), sonuç, kaynakça, ekler. Kapak, iç kapak, onay sayfası, içindekiler ve tablo/şekil/ekler listeleri YAZMA (bunlar otomatik üretiliyor); "tez metni", "ana kısım" gibi başlık olmayan ifadeleri yazma. Örn. ["Yemin Metni", "Özet", "Abstract", "Giriş", "Sonuç ve Öneriler", "Kaynakça", "Ekler"]; alintisi bölümlerin anlatıldığı ya da sayıldığı yer.
 
 YANIT BİÇİMİ: Yalnızca şu JSON nesnesini döndür, başka hiçbir şey yazma (kod bloğu ya da \`\`\` kullanma). Geçerli JSON yaz: alıntıdaki çift tırnağı \\" olarak kaçışla, alıntıya satır sonu koyma.
 {"kurallar":{"kenar_ust_cm":{"deger":3,"alinti":"Üst boşluk (top) : 3 cm"}}}`;
@@ -234,7 +235,16 @@ export function kilavuzOkumasiniCozumle(ham: string, kilavuzMetniTam: string): K
   const numarasiz = adlar(deger.numarasiz_bolumler);
   if (numarasiz.length) k.unnumbered_sections = numarasiz.slice(0, 12);
   const alt = deger.alt_baslik_girintisi as { duzey?: unknown; cm?: unknown } | undefined;
-  const altDuzey = sayi(alt?.duzey);
+  /*
+    Düzey metinde YAZMAZ, cümleden türetilir ("birinci dereceden SONRAKİ"
+    = 3. düzey); sayı denetimi onu yakalayamıyor. Canlıda model 2 dedi
+    (02.11.2026) ve ekranda "1. derece alt başlıktan itibaren" yazdı. Düzey
+    önce alıntının KENDİSİNDEN kuralla hesaplanır (lib/kilavuz-bicim.ts);
+    kural alıntıyı okuyamazsa modelinki kalır.
+  */
+  const altAlinti = kanitlar.find((x) => x.alan === "alt_baslik_girintisi")?.alinti ?? "";
+  const kuralla = altAlinti ? altBaslikGirintisiCikar(altAlinti.replaceAll("İ", "I")) : undefined;
+  const altDuzey = kuralla?.fromLevel ?? sayi(alt?.duzey);
   const altCm = aralik(sayi(alt?.cm), 0.3, 3);
   if ((altDuzey === 2 || altDuzey === 3 || altDuzey === 4) && altCm !== null) k.subheading_indent = { fromLevel: altDuzey, cm: altCm };
   const tam_ = (v: unknown, en: number, ec: number) => {
@@ -256,7 +266,7 @@ export function kilavuzOkumasiniCozumle(ham: string, kilavuzMetniTam: string): K
 
   return {
     kurallar: k,
-    zorunluBolumler: adlar(deger.zorunlu_bolumler).slice(0, 30),
+    zorunluBolumler: bolumleriSekillendir(adlar(deger.zorunlu_bolumler)),
     atifStili: atif,
     enAzSayfa: enAz,
     enCokSayfa: enCok !== null && (enAz === null || enAz <= enCok) ? enCok : null,
@@ -384,6 +394,45 @@ export function jsonOnar(ham: string): unknown {
     if (kurtarilan) return kurtarilan;
   }
   return null;
+}
+
+/*
+  ZORUNLU BÖLÜMLER OKUMAYLA ŞEKİLLENİR (02.11.2026, kurum sahibinin isteği).
+  Liste editörde "eksik bölüm" denetimine ve ön sayfa/bölüm ekleme sırasına
+  giriyor, bu yüzden yalnızca öğrencinin BAŞLIK olarak yazacağı bölümler
+  kalır. Çıktıda kendiliğinden oluşanlar (kapak, içindekiler, listeler) ve
+  başlık olmayan ifadeler ("Tez Metni (Ana kısım)") ayıklanır: listede
+  kalsalar öğrenci yazamayacağı bir başlık için "eksik" uyarısı alırdı.
+  Onay sayfası savunmadan sonra eklendiği için yazım sırasında zorunlu
+  değil. "İngilizce Özet" tezin başlığında "Abstract" olarak yazılır.
+  Ad karşılaştırması Türkçe büyük/küçük harf ve parantez açıklamasından
+  bağımsız.
+*/
+const kucuk = (s: string) => s.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR");
+const OTOMATIK_BOLUMLER = new Set(
+  [
+    "Kapak", "Dış Kapak", "Kapak Sayfası", "Dış Kapak Sayfası", "İç Kapak", "İç Kapak Sayfası",
+    "Tez Onay Sayfası", "Onay Sayfası", "Onay", "İçindekiler", "İçindekiler Listesi",
+    "Tablolar Listesi", "Şekiller Listesi", "Ekler Listesi", "Çizelgeler Listesi", "Grafikler Listesi",
+    "Tez Metni", "Metin", "Ana Kısım", "Bölümler", "Ön Sayfalar", "Kaynakça ve Ekler",
+    "Title Page", "Approval Page", "Table of Contents", "Contents", "List of Tables", "List of Figures", "Main Text",
+  ].map(kucuk),
+);
+const BOLUM_ESLERI: Record<string, string> = {
+  [kucuk("İngilizce Özet")]: "Abstract",
+  [kucuk("Yabancı Dilde Özet")]: "Abstract",
+  [kucuk("Türkçe Özet")]: "Özet",
+};
+
+export function bolumleriSekillendir(adlar: string[]): string[] {
+  const sonuc: string[] = [];
+  for (const ham of adlar) {
+    const temiz = ham.replace(/^\s*(?:\d+(?:\.\d+)*\.?|[IVX]+\.)\s*/u, "").replace(/\s*\([^)]*\)\s*$/u, "").trim();
+    const ad = BOLUM_ESLERI[kucuk(temiz)] ?? temiz;
+    if (!ad || OTOMATIK_BOLUMLER.has(kucuk(ad))) continue;
+    if (!sonuc.some((x) => kucuk(x) === kucuk(ad))) sonuc.push(ad);
+  }
+  return sonuc.slice(0, 30);
 }
 
 /** Okuma mı ret mi. */
