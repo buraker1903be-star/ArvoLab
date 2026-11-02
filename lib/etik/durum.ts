@@ -109,3 +109,7 @@ export function analizEtikUyarisi(k: EtikKaydi | null): EtikUyari | null {
   }
   return null;
 }
+
+/* Personelin listesi ve ana sayfası için: çalışmada etik kurul TEHLİKESİ var mı (tarih kilidi, ret). */
+export const etikTehlikesi = (k: EtikKaydi | null | undefined, bugun: string): boolean =>
+  Boolean(k) && etikUyarilari(k ?? null, bugun).some((u) => u.ton === "danger");

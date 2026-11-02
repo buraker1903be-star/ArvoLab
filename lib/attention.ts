@@ -13,7 +13,7 @@ export interface AttentionProject {
   controller_approved_at: string | null;
 }
 
-export type AttentionId = "overdue" | "due-soon" | "unassigned" | "approval" | "comments";
+export type AttentionId = "overdue" | "due-soon" | "unassigned" | "approval" | "comments" | "ethics";
 
 export interface AttentionItem {
   id: AttentionId;
@@ -28,13 +28,26 @@ const CLOSED_STATUSES = new Set(["delivered", "archived"]);
 export function computeAttention(
   projects: AttentionProject[],
   openComments: ReadonlyMap<string, number>,
-  options: { includeUnassigned?: boolean; now?: Date; dil?: Dil } = {}
+  /* etikRiski: lib/etik/durum.ts etikTehlikesi; verilmezse etik maddesi çıkmaz (02.11.2026). */
+  options: { includeUnassigned?: boolean; now?: Date; dil?: Dil; etikRiski?: (projectId: string) => boolean } = {}
 ): AttentionItem[] {
   const en = options.dil === "en";
   const active = projects.filter((project) => !CLOSED_STATUSES.has(project.status));
   const days = active.map((project) => dueInfo(project.due_date, project.status, options.now)?.days ?? null);
 
   const items: AttentionItem[] = [
+    /*
+      Etik kurul riski en üstte: onaydan önce toplanan veri kullanılamaz ve
+      geriye dönük onay verilmez — geç fark edilen her gün tezi daha çok
+      etkiler. Adres listeyle AYNI kümeyi açar (etik=risk, project-filters).
+    */
+    {
+      id: "ethics",
+      label: en ? "Ethics approval problem" : "Etik kurul sorunu",
+      count: options.etikRiski ? active.filter((project) => options.etikRiski!(project.id)).length : 0,
+      tone: "danger",
+      href: "/dashboard/editor?durum=aktif&etik=risk",
+    },
     {
       id: "overdue",
       label: en ? "Past due date" : "Teslim tarihi geçmiş",

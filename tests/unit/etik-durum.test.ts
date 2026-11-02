@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { analizEtikUyarisi, etikTeslimSatiri, etikUyarilari, veriOnaydanOnce, type EtikKaydi } from "@/lib/etik/durum";
+import { analizEtikUyarisi, etikTehlikesi, etikTeslimSatiri, etikUyarilari, veriOnaydanOnce, type EtikKaydi } from "@/lib/etik/durum";
 
 const onayli: EtikKaydi = { durum: "onaylandi", onay_tarihi: "2026-10-01", karar_no: "2026/45", veri_toplama_baslangic: "2026-10-15" };
 
@@ -45,5 +45,14 @@ describe("Analiz Merkezi uyarısı", () => {
     assert.equal(analizEtikUyarisi({ durum: "gerekmiyor", onay_tarihi: null, karar_no: null, veri_toplama_baslangic: null }), null);
     assert.equal(analizEtikUyarisi({ durum: "basvuruldu", onay_tarihi: null, karar_no: null, veri_toplama_baslangic: null })?.ton, "warning");
     assert.equal(analizEtikUyarisi({ ...onayli, veri_toplama_baslangic: "2026-09-01" })?.ton, "danger");
+  });
+});
+
+describe("personel işareti", () => {
+  test("yalnızca tehlike işaretlenir", () => {
+    assert.equal(etikTehlikesi(null, "2026-11-02"), false);
+    assert.equal(etikTehlikesi(onayli, "2026-11-02"), false);
+    assert.equal(etikTehlikesi({ ...onayli, veri_toplama_baslangic: "2026-09-01" }, "2026-11-02"), true);
+    assert.equal(etikTehlikesi({ durum: "hazirlaniyor", onay_tarihi: null, karar_no: null, veri_toplama_baslangic: null }, "2026-11-02"), false);
   });
 });

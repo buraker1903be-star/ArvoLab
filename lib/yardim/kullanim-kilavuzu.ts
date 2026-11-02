@@ -549,6 +549,14 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "On the Support page, the \"Queues\" view shows open expert requests and the ones assigned to you.",
       },
       {
+        tr: "Çalışmalarım'da bir çalışmayı seçince sağdaki kartta öğrencinin gördüğü pencerelerin aynısı açılır: kılavuz, literatür, kaynakça, kanıt matrisi, etik kurul ve analiz. Teslim hazırlığı da orada.",
+        en: "Selecting a work in My works shows, on the right, the same windows the student sees: guideline, literature, references, evidence matrix, ethics and analysis. Submission readiness is there too.",
+      },
+      {
+        tr: "Ana Sayfa'daki \"Etik kurul sorunu\" maddesi, verisi onaydan önce toplanmış ya da başvurusu reddedilmiş çalışmaları açar; listede bu çalışmalar kırmızı kalkanla işaretlidir.",
+        en: "The \"Ethics approval problem\" item on Home opens works whose data was collected before approval or whose application was rejected; in the list they carry a red shield.",
+      },
+      {
         tr: "Çalışmanın durumunu \"Çalışma ayarları\"ndan değiştirebilirsiniz (Kontrolör ve üstü).",
         en: "You can change a work's status from \"Work settings\" (Controller and above).",
       },

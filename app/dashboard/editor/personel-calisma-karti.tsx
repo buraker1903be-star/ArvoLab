@@ -22,6 +22,16 @@ import { kalanMetni, siradakiTas, takvimOzeti } from "@/lib/tez-takvimi";
 import { trGunAnahtari } from "@/lib/tr-time";
 import DeleteProjectButton from "./delete-project-button";
 import { createClient } from "@/lib/supabase/server";
+import { calismaOzeti } from "@/app/actions/calisma-merkezi";
+import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
+import KilavuzPenceresi from "./[id]/kilavuz-penceresi";
+import KanitMatrisiPenceresi from "./[id]/kanit/kanit-matrisi-penceresi";
+import EtikKurulPenceresi from "./[id]/etik/etik-penceresi";
+import LiteraturPenceresi from "../literature/literatur-penceresi";
+import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
+import AnalizPenceresi from "../analysis/analiz-penceresi";
+import { etikKaydiOku } from "@/lib/etik/oku";
+import { etikUyarilari } from "@/lib/etik/durum";
 import { projectTypeLabel, ROLE_LABELS, statusLabel, type UserRole } from "@/lib/project-labels";
 import { statusTone } from "@/lib/status-tone";
 import { simdi } from "@/lib/genel-bakis";
@@ -105,13 +115,28 @@ export default async function PersonelCalismaKarti({
   const bugun = trGunAnahtari();
   const siradakiKilometre = takvim ? siradakiTas(takvim, bugun) : null;
   const takvimSayilari = takvim ? takvimOzeti(takvim, bugun) : null;
-  const { data: sonKontrol } = await supabase
-    .from("yazim_kontrolleri")
-    .select("created_at, hata, uyari, eksik_bolum")
-    .eq("project_id", calisma.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  /*
+    ÖĞRENCİNİN GÖRDÜĞÜ ÖZET PERSONELDE DE (02.11.2026, kurum sahibinin isteği:
+    "öğrenci gözünden gördüklerimizi personel gözüne entegre edelim").
+    Teslim hazırlığı ve kılavuz/kaynakça bilgisi öğrencinin kartıyla AYNI
+    özetten (calismaOzeti) gelir; etik kurul durumu aynı karardan
+    (lib/etik/durum.ts). Okunamazsa ilgili parça çizilmez — kart yine açılır.
+  */
+  const [{ data: sonKontrol }, ozetHam, etik] = await Promise.all([
+    supabase
+      .from("yazim_kontrolleri")
+      .select("created_at, hata, uyari, eksik_bolum")
+      .eq("project_id", calisma.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    calismaOzeti(calisma.id),
+    etikKaydiOku(supabase, calisma.id),
+  ]);
+  const ozet = ozetHam && ozetHam !== CALISMA_OKUNAMADI ? ozetHam : null;
+  const hazirlik = ozet?.hazirlik ?? null;
+  /* Etik: yalnızca tehlike ve uyarı "Dikkat isteyenler"e girer; bilgi notları personeli boğmasın. */
+  const etikUyarisi = etik ? etikUyarilari(etik, bugun).find((u) => u.ton !== "info") ?? null : null;
 
   return (
     <article className="gb-kart gb-sutun calisma-durum kayan-kart" aria-label={t({ tr: `${calisma.title}: durum`, en: `${calisma.title}: status` })}>
@@ -205,6 +230,16 @@ export default async function PersonelCalismaKarti({
             </>
           )}
         </div>
+        {hazirlik ? (
+          <div className="tez-olcu" data-tone={hazirlik.done === hazirlik.total ? "success" : undefined}>
+            <dt>{t({ tr: "Teslim hazırlığı", en: "Submission readiness" })}</dt>
+            <dd>
+              {hazirlik.done}
+              <small>/ {hazirlik.total}</small>
+            </dd>
+            <span>{t({ tr: "öğrencinin teslim kontrolü", en: "student's submission check" })}</span>
+          </div>
+        ) : null}
       </dl>
 
       {siradakiKilometre ? (
@@ -226,6 +261,20 @@ export default async function PersonelCalismaKarti({
       {/* Dikkat isteyenler: yalnızca VAR olanlar listeleniyor; boşsa tek satır "temiz". */}
       <h3 className="calisma-durum-alt">{t({ tr: "Dikkat isteyenler", en: "Needs attention" })}</h3>
       <ul className="gb-liste">
+        {etikUyarisi ? (
+          <li>
+            <span className="gb-satir" data-tone={etikUyarisi.ton}>
+              <ShieldCheck size={16} aria-hidden="true" />
+              <span className="gb-satir-govde">
+                <b>{t({ tr: "Etik kurul", en: "Ethics committee" })}</b>
+                <small title={t(etikUyarisi.metin)}>{t(etikUyarisi.metin)}</small>
+              </span>
+              <span className="status-pill" data-tone={etikUyarisi.ton}>
+                {etikUyarisi.ton === "danger" ? t({ tr: "Tehlike", en: "Danger" }) : t({ tr: "Bakılmalı", en: "Review" })}
+              </span>
+            </span>
+          </li>
+        ) : null}
         {acikYorum ? (
           <li>
             <Link href={`${merkez}/write`} className="gb-satir">
@@ -316,6 +365,24 @@ export default async function PersonelCalismaKarti({
           </li>
         )}
       </ul>
+
+      {/*
+        ÇALIŞMANIN BİRİMLERİ: öğrencinin kartındaki pencerelerin aynısı, aynı
+        sırada (calisma-durum-karti.tsx). Kontrolör kaynakçaya, kanıta ya da
+        etik başvuruya bakmak için artık çalışmanın içine girmiyor. Yazma
+        yetkisi RLS'te (can_write_project); pencereler yetkisi olmayan işlemi
+        anlaşılır mesajla reddeder.
+      */}
+      <footer className="calisma-durum-alt-serit" aria-label={t({ tr: "Çalışmanın birimleri", en: "Work sections" })}>
+        {ozet && calisma.project_type !== "article" ? (
+          <KilavuzPenceresi calisma={ozet.calisma} uygulanan={ozet.uygulanan} kilavuzOkunamadi={ozet.kilavuzOkunamadi} triggerClassName="projects-filter-button button-compact" kisa />
+        ) : null}
+        <LiteraturPenceresi projectId={calisma.id} projeAdi={calisma.title} />
+        {ozet ? <KaynakcaPenceresi calisma={ozet.calisma} sonDenetim={ozet.kaynakca} /> : null}
+        <KanitMatrisiPenceresi projectId={calisma.id} />
+        <EtikKurulPenceresi projectId={calisma.id} />
+        <AnalizPenceresi projectId={calisma.id} projeAdi={calisma.title} />
+      </footer>
 
       <section className="personel-denetim" aria-label={t({ tr: "Denetim", en: "Oversight" })}>
         <h3 className="calisma-durum-alt">{t({ tr: "Denetim", en: "Oversight" })}</h3>

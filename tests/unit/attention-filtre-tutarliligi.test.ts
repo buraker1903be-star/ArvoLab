@@ -46,6 +46,9 @@ const PROJELER: Kayit[] = [
 ];
 
 const YORUMLAR = new Map([["yorumlu", 2]]);
+/* Etik kurul tehlikesi (lib/etik/durum.ts): teslim edilmiş çalışma sayaca da süzgece de girmemeli. */
+const ETIK_RISKLI = new Set(["uzak", "teslim"]);
+const etikRiski = (id: string) => ETIK_RISKLI.has(id);
 const DURUMLAR = ["new", "planned", "writing", "analysis", "review", "revision", "turnitin", "ready", "delivered", "archived"];
 
 /** Adresteki sorgu parametrelerini filtreye çevirip listeyi uygular. */
@@ -55,16 +58,22 @@ function adresinActigiListe(href: string) {
   return applyProjectFilters(PROJELER, filtreler, {
     lastEdited: () => undefined,
     openComments: (id) => YORUMLAR.get(id) ?? 0,
+    etikRiski,
     canFilterAssignee: true,
     now: SIMDI,
   });
 }
 
 describe("dikkat sayaçları bağlandıkları filtreyle tutuyor", () => {
-  const maddeler = computeAttention(PROJELER, YORUMLAR, { includeUnassigned: true, now: SIMDI });
+  const maddeler = computeAttention(PROJELER, YORUMLAR, { includeUnassigned: true, now: SIMDI, etikRiski });
 
-  test("beş maddenin hepsi üretiliyor", () => {
-    assert.deepEqual(maddeler.map((m) => m.id).sort(), ["approval", "comments", "due-soon", "overdue", "unassigned"]);
+  test("altı maddenin hepsi üretiliyor", () => {
+    assert.deepEqual(maddeler.map((m) => m.id).sort(), ["approval", "comments", "due-soon", "ethics", "overdue", "unassigned"]);
+  });
+
+  test("etik kurul maddesi yalnızca aktif riskli çalışmayı sayar; etik bilgisi verilmezse çıkmaz", () => {
+    assert.equal(maddeler.find((m) => m.id === "ethics")?.count, 1);
+    assert.ok(!computeAttention(PROJELER, YORUMLAR, { includeUnassigned: true, now: SIMDI }).some((m) => m.id === "ethics"));
   });
 
   for (const madde of maddeler) {

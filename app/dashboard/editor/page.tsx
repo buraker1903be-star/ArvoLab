@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
-import { AlertTriangle, FileText, Search, MessageSquare, Plus, ShieldCheck } from "lucide-react";
+import { AlertTriangle, FileText, Search, MessageSquare, Plus, ShieldAlert, ShieldCheck } from "lucide-react";
 import { simdi } from "@/lib/genel-bakis";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
+import { etikKayitlariOku } from "@/lib/etik/oku";
+import { etikTehlikesi } from "@/lib/etik/durum";
+import { trGunAnahtari } from "@/lib/tr-time";
 import { calismaKilavuzlari } from "@/lib/guideline-rules";
 import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
@@ -95,7 +98,16 @@ export default async function ProjectsPage({
   const calismalar = projects.map((project) => ({ ...project, sahip_adi: sahipAdlari.get(project.owner_id) ?? null }));
   // Arama, filtre ve sıralama (adres satırındaki ?q=…&durum=…&sirala=…&atanan=…)
   const filters = parseProjectFilters(params, PROJECT_STATUSES);
+  /*
+    Etik kurul tehlikesi (lib/etik/durum.ts): onaydan önce veri toplama ya da
+    reddedilmiş başvuru. Yalnızca personelde; tek sorgu. Süzmeden ÖNCE
+    okunuyor: "etik=risk" süzgeci (ana sayfanın sayacından gelinir) ve
+    listedeki işaret aynı kümeyi kullanır.
+  */
+  const etikKayitlari = canApprove ? await etikKayitlariOku(await createClient(), calismalar.map((p) => p.id)) : new Map();
+  const etikBugun = trGunAnahtari();
   const filtreBaglami = {
+    etikRiski: (id: string) => etikTehlikesi(etikKayitlari.get(id), etikBugun),
     openComments: (id: string) => openComments.get(id) ?? 0,
     lastEdited: (projectId: string) => stats.get(projectId)?.updatedAt,
     userId: profile?.id,
@@ -435,6 +447,11 @@ export default async function ProjectsPage({
                             <span className="personel-isaret" data-tone="warning" title={t({ tr: `${tutarsiz} tutarsızlık`, en: `${tutarsiz} inconsistenc${tutarsiz === 1 ? "y" : "ies"}` })}>
                               <AlertTriangle size={13} aria-hidden="true" />
                               {tutarsiz}
+                            </span>
+                          ) : null}
+                          {etikTehlikesi(etikKayitlari.get(project.id), etikBugun) ? (
+                            <span className="personel-isaret" data-tone="danger" title={t({ tr: "Etik kurul: tarih ya da onay sorunu", en: "Ethics: date or approval problem" })}>
+                              <ShieldAlert size={13} aria-label={t({ tr: "Etik kurul riski", en: "Ethics risk" })} />
                             </span>
                           ) : null}
                           {project.controller_approved_at ? (

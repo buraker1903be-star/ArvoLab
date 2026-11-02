@@ -14,6 +14,8 @@ export type AssigneeFilter = "tumu" | "benim" | "atanmamis";
 */
 export type ApprovalFilter = "tumu" | "bekliyor";
 export type CommentFilter = "tumu" | "acik";
+/* "risk": etik kurul tehlikesi (tarih kilidi, ret) — lib/etik/durum.ts etikTehlikesi (02.11.2026). */
+export type EthicsFilter = "tumu" | "risk";
 
 export interface ProjectFilters {
   q: string;
@@ -28,6 +30,8 @@ export interface ProjectFilters {
   approval: ApprovalFilter;
   /** "acik": yanıt bekleyen yorumu var */
   comments: CommentFilter;
+  /** "risk": etik kurul tehlikesi var (personel ana sayfasındaki sayaçla aynı küme) */
+  ethics: EthicsFilter;
 }
 
 export interface ProjectFilterInput {
@@ -45,7 +49,7 @@ export interface ProjectFilterInput {
 }
 
 export const DEFAULT_PROJECT_FILTERS: ProjectFilters = {
-  q: "", status: "tumu", sort: "yeni", assignee: "tumu", approval: "tumu", comments: "tumu",
+  q: "", status: "tumu", sort: "yeni", assignee: "tumu", approval: "tumu", comments: "tumu", ethics: "tumu",
 };
 
 const SORTS: ProjectSort[] = ["yeni", "duzenleme", "teslim", "baslik"];
@@ -53,6 +57,7 @@ const SPECIAL_STATUSES = ["aktif", "gecikmis", "yaklasan"];
 const ASSIGNEE_FILTERS: AssigneeFilter[] = ["tumu", "benim", "atanmamis"];
 const APPROVAL_FILTERS: ApprovalFilter[] = ["tumu", "bekliyor"];
 const COMMENT_FILTERS: CommentFilter[] = ["tumu", "acik"];
+const ETHICS_FILTERS: EthicsFilter[] = ["tumu", "risk"];
 const CLOSED_STATUSES = new Set(["delivered", "archived"]);
 
 const firstValue = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? "";
@@ -63,6 +68,7 @@ export function parseProjectFilters(params: Record<string, string | string[] | u
   const assignee = firstValue(params.atanan) as AssigneeFilter;
   const approval = firstValue(params.onay) as ApprovalFilter;
   const comments = firstValue(params.yorum) as CommentFilter;
+  const ethics = firstValue(params.etik) as EthicsFilter;
   return {
     q: firstValue(params.q).trim().slice(0, 100),
     status: SPECIAL_STATUSES.includes(status) || statuses.includes(status) ? status : "tumu",
@@ -70,6 +76,7 @@ export function parseProjectFilters(params: Record<string, string | string[] | u
     assignee: ASSIGNEE_FILTERS.includes(assignee) ? assignee : "tumu",
     approval: APPROVAL_FILTERS.includes(approval) ? approval : "tumu",
     comments: COMMENT_FILTERS.includes(comments) ? comments : "tumu",
+    ethics: ETHICS_FILTERS.includes(ethics) ? ethics : "tumu",
   };
 }
 
@@ -82,6 +89,7 @@ export function filtreAdresi(filters: ProjectFilters): string {
   if (filters.assignee !== "tumu") p.set("atanan", filters.assignee);
   if (filters.approval !== "tumu") p.set("onay", filters.approval);
   if (filters.comments !== "tumu") p.set("yorum", filters.comments);
+  if (filters.ethics !== "tumu") p.set("etik", filters.ethics);
   const sorgu = p.toString();
   return sorgu ? `/dashboard/editor?${sorgu}` : "/dashboard/editor";
 }
@@ -99,6 +107,8 @@ export function applyProjectFilters<T extends ProjectFilterInput>(
     lastEdited: (projectId: string) => string | undefined;
     /** Yanıt bekleyen yorum sayısı; "yorum=acik" filtresi bunu kullanır. */
     openComments?: (projectId: string) => number;
+    /** Etik kurul tehlikesi var mı; "etik=risk" filtresi bunu kullanır. */
+    etikRiski?: (projectId: string) => boolean;
     userId?: string;
     canFilterAssignee: boolean;
     now?: Date;
@@ -136,6 +146,7 @@ export function applyProjectFilters<T extends ProjectFilterInput>(
     /* Sayaçla aynı kural: "ready" ama henüz onaylanmamış (lib/attention.ts). */
     if (filters.approval === "bekliyor" && !(project.status === "ready" && !project.controller_approved_at)) return false;
     if (filters.comments === "acik" && (context.openComments?.(project.id) ?? 0) === 0) return false;
+    if (filters.ethics === "risk" && !context.etikRiski?.(project.id)) return false;
     return true;
   });
 

@@ -22,7 +22,8 @@ import { geriBildirimSorusu } from "@/app/actions/geri-bildirim";
 import { computeAttention } from "@/lib/attention";
 import { ilkKullanim } from "@/lib/ilk-kullanim";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
-import { etikKaydiOku } from "@/lib/etik/oku";
+import { etikKaydiOku, etikKayitlariOku } from "@/lib/etik/oku";
+import { etikTehlikesi } from "@/lib/etik/durum";
 import EtikKurulPenceresi from "./editor/[id]/etik/etik-penceresi";
 import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 import { statusTone } from "@/lib/status-tone";
@@ -263,7 +264,20 @@ export default async function DashboardPage() {
 
 
   // Personel için "dikkat isteyenler" (öğrencinin ana sayfası değişmez); sorumlu ataması yalnızca denetim rollerinde
-  const attention = isStaff ? computeAttention(projects, openComments, { includeUnassigned: isOversightRole(profile?.role), dil }) : null;
+  /*
+    Etik kurul sorunu (02.11.2026): yalnızca gözetim rolünde — maddenin açtığı
+    "etik=risk" süzgeci Çalışmalarım'ın personel düzeninde çalışıyor, öteki
+    personelde sayı listeyle eşleşmezdi.
+  */
+  const etikKayitlari = isStaff && isOversightRole(profile?.role) ? await etikKayitlariOku(supabase, projects.map((p) => p.id)) : null;
+  const etikBugunu = trGunAnahtari();
+  const attention = isStaff
+    ? computeAttention(projects, openComments, {
+        includeUnassigned: isOversightRole(profile?.role),
+        dil,
+        etikRiski: etikKayitlari ? (id) => etikTehlikesi(etikKayitlari.get(id), etikBugunu) : undefined,
+      })
+    : null;
 
   /*
     PERSONEL ANA SAYFASI: SAYAÇLAR VE KUYRUKLAR (27.10.2026). Sayaçlar
