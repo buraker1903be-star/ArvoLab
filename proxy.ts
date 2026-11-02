@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { DIL_CEREZI, ilkZiyaretDili } from "@/lib/dil";
+import { BASKA_CIHAZ_BILGISI, baskaCihazdanKapatildiMi, oturumCereziMi } from "@/lib/tek-oturum";
 
 // Next.js 16 "proxy" katmanı (eski adıyla middleware):
 // 1) Supabase oturum çerezini her istekte yeniler (Server Component'ler çerez yazamaz).
@@ -19,7 +20,7 @@ export async function proxy(request: NextRequest) {
   */
   const yeniDil = ilkZiyaretDili(
     request.cookies.get(DIL_CEREZI)?.value,
-    request.cookies.getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token")),
+    request.cookies.getAll().some((c) => oturumCereziMi(c.name)),
     request.headers.get("accept-language"),
   );
   if (yeniDil) request.cookies.set(DIL_CEREZI, yeniDil);
@@ -32,6 +33,8 @@ export async function proxy(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !supabaseKey) return dilCereziniYaz(NextResponse.next({ request }));
 
+  // getUser oturumu reddedince çerezi kendisi siler; "çerez vardı mı" ondan ÖNCE okunur (lib/tek-oturum.ts).
+  const oturumCereziVardi = request.cookies.getAll().some((c) => oturumCereziMi(c.name));
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -50,6 +53,7 @@ export async function proxy(request: NextRequest) {
   // getUser() token'ı Supabase Auth sunucusunda doğrular ve süresi dolmuşsa yeniler.
   const {
     data: { user },
+    error: oturumHatasi,
   } = await supabase.auth.getUser();
 
   const { pathname, search } = request.nextUrl;
@@ -64,6 +68,16 @@ export async function proxy(request: NextRequest) {
     return dilCereziniYaz(redirect);
   };
 
+  /*
+    Oturum başka bir cihazdan yapılan girişle kapatıldı (lib/tek-oturum.ts):
+    bu tarayıcının çerezleri silinir ve kişi NEDENİYLE giriş ekranına iner.
+    Bu kural yokken aynı durum sessiz bir yönlendirme olurdu; kişi "neden
+    çıkış yaptım" diye kalırdı.
+  */
+  if (!user && pathname.startsWith("/dashboard") && baskaCihazdanKapatildiMi(oturumHatasi, oturumCereziVardi)) {
+    await supabase.auth.signOut({ scope: "local" });
+    return redirectTo("/", { bilgi: BASKA_CIHAZ_BILGISI });
+  }
   if (!user && pathname.startsWith("/dashboard")) {
     return redirectTo("/", { next: `${pathname}${search}` });
   }

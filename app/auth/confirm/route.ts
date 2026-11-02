@@ -62,6 +62,11 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     verified = !error;
     if (error) console.error(error);
+    /* Bağlantıyla giriş de bir giriş: öteki cihazlar kapanır (lib/tek-oturum.ts, login ile aynı kural). */
+    if (verified) {
+      const { error: digerleriHatasi } = await supabase.auth.signOut({ scope: "others" });
+      if (digerleriHatasi) console.error("[doğrulama] öteki oturumlar kapatılamadı:", digerleriHatasi.message);
+    }
   }
 
   /*

@@ -51,6 +51,19 @@ export async function login(formData: FormData) {
   }
 
   /*
+    TEK CİHAZDA OTURUM (02.11.2026, lib/tek-oturum.ts): bu giriş, hesabın
+    öteki cihazlardaki oturumlarını kapatır. O cihazlar bir sonraki istekte
+    (proxy.ts) ya da en geç bir dakika içinde (OturumGozcusu) "başka bir
+    cihazdan giriş yapıldı" uyarısıyla giriş ekranına düşer. Kapatılamazsa
+    giriş yine sürer — kişiyi kendi girişinden etmek, eski oturumun bir süre
+    daha açık kalmasından kötü; hata günlüğe gider.
+  */
+  {
+    const { error: digerleriHatasi } = await supabase.auth.signOut({ scope: "others" });
+    if (digerleriHatasi) console.error("[giriş] öteki oturumlar kapatılamadı:", digerleriHatasi.message);
+  }
+
+  /*
     Profildeki dil tercihi bu tarayıcının çerezine aktarılır: telefonda
     İngilizce seçen öğrenci bilgisayarda girişte de İngilizce görür.
     Tercih yoksa ya da okunamazsa mevcut çerez neyse o kalır.

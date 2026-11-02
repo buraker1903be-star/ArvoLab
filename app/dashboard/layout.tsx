@@ -1,4 +1,5 @@
 import AcilirKapatici from "./_components/acilir-kapatici";
+import OturumGozcusu from "./_components/oturum-gozcusu";
 import SozlesmeOnayi from "./_components/sozlesme-onayi";
 import { sozlesmeOnayGerekli } from "@/lib/sozlesme/onay-durumu";
 import { Suspense } from "react";
@@ -195,6 +196,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       )}
       {/* Kullanıcı menüsü ve kart menüleri dışarı tıklayınca kapansın. */}
       <AcilirKapatici />
+      {/* Başka cihazdan girişle kapatılan oturumu bekleyen sekmede de fark eder (lib/tek-oturum.ts). */}
+      <OturumGozcusu />
       <Toaster />
     </div>
   );

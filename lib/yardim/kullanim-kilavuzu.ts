@@ -464,8 +464,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "In Settings, edit your full name (used on the cover page) and choose the interface language.",
       },
       {
-        tr: "Şifrenizi \"Değiştir\" ile güncelleyin; bir cihazı kaybettiyseniz \"Diğer cihazlar\" → \"Kapat\" ile öteki oturumları sonlandırın.",
-        en: "Update your password with \"Change\"; if you lost a device, end other sessions with \"Other devices\" → \"Sign out\".",
+        tr: "Şifrenizi \"Değiştir\" ile güncelleyin. Hesabınız aynı anda tek cihazda açık kalır: başka bir cihazdan giriş yapınca öncekindeki oturum uyarıyla kapanır. \"Diğer cihazlar\" → \"Kapat\" aynı işi hemen yapar.",
+        en: "Update your password with \"Change\". Your account stays signed in on one device at a time: signing in on another device signs out the previous one with a notice. \"Other devices\" → \"Sign out\" does the same right away.",
       },
       {
         tr: "\"Verilerim\" → \"İndir\" bütün verilerinizi tek dosya olarak verir.",

@@ -234,8 +234,8 @@ export default async function SettingsPage() {
                 <b>{t({ tr: "Diğer cihazlar", en: "Other devices" })}</b>
                 <small>
                   {t({
-                    tr: "Bu cihaz dışındaki bütün oturumları kapatır. Ortak bir bilgisayarda açık unuttuysanız ya da şifrenizi değiştirdiyseniz kullanın.",
-                    en: "Signs out every session except this device. Use it if you left yourself signed in on a shared computer or changed your password.",
+                    tr: "Hesabınız aynı anda tek cihazda açık kalır: başka bir cihazdan giriş yapılınca öncekiler kendiliğinden kapanır. Bu düğme aynı işi şimdi yapar — şifrenizi değiştirdiyseniz kullanın.",
+                    en: "Your account stays signed in on one device at a time: signing in elsewhere signs out the others automatically. This button does the same right now — use it if you changed your password.",
                   })}
                 </small>
               </span>

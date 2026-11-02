@@ -7,6 +7,7 @@ import KayitPenceresi from "@/app/_components/kayit-penceresi";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { INGILIZCE_YAYINDA, type Metin } from "@/lib/dil";
 import { yasalAdres } from "@/lib/yasal-baglantilar";
+import { BASKA_CIHAZ_BILGISI } from "@/lib/tek-oturum";
 
 /*
   GİRİŞ SAYFASI (02.11.2026'da baştan yazıldı, kurum sahibinin isteği).
@@ -106,6 +107,11 @@ const errorMessages: Record<string, Metin> = {
   düşünür.
 */
 const bilgiMesajlari: Record<string, Metin> = {
+  /* Tek cihazda oturum (lib/tek-oturum.ts). "Siz değilseniz" cümlesi bilerek: beklenmeyen giriş, ele geçirilmiş şifrenin ilk işaretidir. */
+  [BASKA_CIHAZ_BILGISI]: {
+    tr: "Hesabınıza başka bir cihazdan giriş yapıldığı için bu cihazdaki oturumunuz kapatıldı. Bu giriş size ait değilse şifrenizi hemen değiştirin.",
+    en: "You were signed out on this device because your account was signed in on another device. If that wasn't you, change your password right away.",
+  },
   "hesap-silme-talebi": {
     tr: "Hesabınızın silinmesi başlatıldı ve oturumunuz kapatıldı. 30 gün içinde giriş yaparsanız silmeden vazgeçebilirsiniz.",
     en: "Deletion of your account has started and you have been signed out. Sign in within 30 days to cancel the deletion.",
@@ -146,7 +152,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               </p>
             ) : null}
             {bilgi ? (
-              <p className="tone-text" data-tone="warning" role="status">
+              <p className="alert" data-tone="warning" role="status">
                 {t(bilgi)}
               </p>
             ) : null}
