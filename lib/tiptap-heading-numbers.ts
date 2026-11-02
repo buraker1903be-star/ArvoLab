@@ -3,7 +3,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { hasManualNumber, numberHeadings, stripManualNumber } from "@/lib/heading-numbering";
-import { anaBaslikHizasi, type BolumHizasi } from "@/lib/kilavuz-bicim";
+import { altBaslikGirintisi, anaBaslikHizasi, type AltBaslikGirintisi, type BolumHizasi } from "@/lib/kilavuz-bicim";
 
 /**
  * Editörde otomatik başlık numaraları. Numara metne yazılmaz; başlığa
@@ -42,6 +42,8 @@ export interface BaslikKurallari {
   numarasiz?: string[];
   chapterAlign?: BolumHizasi;
   chapterLeftSections?: string[];
+  /** Alt başlık girintisi: ölçü editörün değişkeninde (--kilavuz-alt-girinti), burada yalnızca işaret. */
+  altGirinti?: AltBaslikGirintisi;
 }
 
 /** Dışa açık: tests/editor bu süslemeyi tarayıcısız sınıyor. */
@@ -55,6 +57,7 @@ export function buildDecorations(doc: ProseMirrorNode, numaralama: boolean, kura
     if (number) ozellik["data-heading-number"] = number;
     const hiza = heading.level === 1 ? anaBaslikHizasi(heading.text, kurallar) : null;
     if (hiza) ozellik["data-kilavuz-hiza"] = hiza;
+    if (altBaslikGirintisi(heading.level, kurallar.altGirinti) !== null) ozellik["data-kilavuz-girinti"] = "true";
     if (Object.keys(ozellik).length) decorations.push(Decoration.node(heading.pos, heading.pos + heading.size, ozellik));
   });
   return DecorationSet.create(doc, decorations);
@@ -113,8 +116,8 @@ export const HeadingNumbers = Extension.create<{ enabled: boolean; kurallar: Bas
   addProseMirrorPlugins() {
     const initial = this.options.enabled;
     const kurallar = this.options.kurallar ?? {};
-    /* Hiza kuralı varsa süsleme numaralandırma kapalıyken de gerekli. */
-    const hizaVar = Boolean(kurallar.chapterAlign);
+    /* Hiza ya da girinti kuralı varsa süsleme numaralandırma kapalıyken de gerekli. */
+    const hizaVar = Boolean(kurallar.chapterAlign || kurallar.altGirinti);
     const kur = (doc: ProseMirrorNode, enabled: boolean) =>
       enabled || hizaVar ? buildDecorations(doc, enabled, kurallar) : DecorationSet.empty;
     return [

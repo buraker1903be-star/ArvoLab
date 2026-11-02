@@ -75,6 +75,7 @@ function satira(taslak: KaynakTaslagi, ownerId: string, projectId: string) {
     issue: metin(taslak.issue, 40),
     pages: metin(taslak.pages, 40),
     publisher: metin(taslak.publisher, 300),
+    publication_place: metin(taslak.publicationPlace, 200),
   };
 }
 
@@ -175,6 +176,7 @@ export async function doiIleEkle(projectId: string, doilar: string[]): Promise<{
         issue: m.issue,
         pages: m.pages,
         publisher: m.publisher,
+        publicationPlace: m.publicationPlace,
       });
       sonuclar.push({ doi, durum: "eklendi", baslik: m.title });
     } catch (error) {

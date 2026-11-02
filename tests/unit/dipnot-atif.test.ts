@@ -192,3 +192,19 @@ test("çalışma tutarlılığı dipnotlu stilde yanlış alarm vermiyor", () =>
   const kaynak = { title: kitap.title, authors: kitap.authors, year: kitap.year, status: "used" };
   assert.deepEqual(metinListeTutarsizliklari(uzun, [kaynak] as never, "dipnot"), []);
 });
+
+test("basım yeri: dipnotta ve klasik kaynakçada yayınevinden sonra; yoksa yazılmıyor", () => {
+  const yerli = { ...kitap, publication_place: "İzmir" };
+  assert.equal(
+    dipnotNotu(yerli, { sayfa: "51" }),
+    "M. Çınar Atay, Tarih İçinde İzmir, Yaşar Eğitim ve Kültür Vakfı Yayını, İzmir, 1978, s. 51.",
+  );
+  const kunye = formatReferenceParts(yerli, "dipnot", 1).map((p) => p.text).join("");
+  assert.equal(kunye, "Atay, M. Çınar. Tarih İçinde İzmir, Yaşar Eğitim ve Kültür Vakfı Yayını, İzmir, 1978.");
+  assert.deepEqual(kunyeAyristir(kunye, "dipnot").issues, []);
+  // Chicago ve Harvard: "Yer: Yayınevi".
+  assert.match(formatReferenceParts(yerli, "chicago", 1).map((p) => p.text).join(""), /İzmir: Yaşar Eğitim/);
+  assert.match(formatReferenceParts(yerli, "harvard", 1).map((p) => p.text).join(""), /İzmir: Yaşar Eğitim/);
+  // APA 7 basım yeri istemiyor; değişmemeli.
+  assert.doesNotMatch(formatReferenceParts(yerli, "apa7", 1).map((p) => p.text).join(""), /İzmir:/);
+});

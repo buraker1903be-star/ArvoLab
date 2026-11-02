@@ -35,6 +35,8 @@ export interface LiteratureSource {
   issue?: string | null;
   pages?: string | null;
   publisher?: string | null;
+  /** Basım yeri (migration 20261102175708) */
+  publication_place?: string | null;
 }
 
 /*
@@ -76,6 +78,7 @@ function publicationFields(get: (name: string) => unknown) {
     issue: text(get("issue"), 40),
     pages: text(get("pages"), 40),
     publisher: text(get("publisher"), 300),
+    publication_place: text(get("publicationPlace"), 200),
   };
 }
 
@@ -237,6 +240,7 @@ export interface CitationSourceInput {
   issue?: string | null;
   pages?: string | null;
   publisher?: string | null;
+  publicationPlace?: string | null;
   projectId?: string | null;
 }
 

@@ -43,6 +43,7 @@ export type KaynakDegerleri = {
   issue?: string | null;
   pages?: string | null;
   publisher?: string | null;
+  publication_place?: string | null;
   notes?: string | null;
 };
 
@@ -109,6 +110,10 @@ export function KunyeAlanlari({ kaynak, kisa = false }: { kaynak?: KaynakDegerle
       <label>
         <span>{t({ tr: "Yayınevi", en: "Publisher" })}</span>
         <input name="publisher" type="text" defaultValue={kaynak?.publisher ?? undefined} />
+      </label>
+      <label>
+        <span>{t({ tr: "Basım yeri", en: "Place of publication" })}</span>
+        <input name="publicationPlace" type="text" placeholder={yeni ? t({ tr: "Ankara", en: "London" }) : undefined} defaultValue={kaynak?.publication_place ?? undefined} />
       </label>
     </>
   );

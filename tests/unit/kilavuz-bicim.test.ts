@@ -105,3 +105,24 @@ test("kurallar tarayıcıdan editör ayarına iniyor, saçma değer inmiyor", ()
   });
   assert.deepEqual(saçma, {});
 });
+
+test("alt başlık girintisi okunuyor", async () => {
+  const { altBaslikGirintisiCikar, altGirintiMetni } = await import("@/lib/kilavuz-bicim");
+  const deu = noktaliIDuzle(
+    "BİRİNCİ DERECE ALT BAŞLIKLAR en sola yaslı olarak yazılmalı ve birinci dereceden sonraki başlıkların tümü 1,25 cm içeriden hizalı şekilde yazılmalıdır. Ancak içindekiler bölümünde her derece için 1’er cm içeride hizalanmalıdır.",
+  );
+  assert.deepEqual(altBaslikGirintisiCikar(deu), { fromLevel: 3, cm: 1.25 });
+  assert.deepEqual(altBaslikGirintisiCikar(noktaliIDuzle("İkinci derece başlıklar 1 cm içeriden yazılır.")), { fromLevel: 3, cm: 1 });
+  // Büyük harfle yazılmış sıra sözcüğü ("BİRİNCİ DERECEDEN SONRAKİ") da tanınıyor.
+  assert.deepEqual(
+    altBaslikGirintisiCikar(noktaliIDuzle("BİRİNCİ DERECEDEN SONRAKİ BAŞLIKLAR 1,25 cm içeriden yazılır.")),
+    { fromLevel: 3, cm: 1.25 },
+  );
+  assert.deepEqual(altBaslikGirintisiCikar("Alt başlıklar 1,25 cm içeriden başlar."), { fromLevel: 2, cm: 1.25 });
+  // İçindekiler'in "1'er cm"i ve ölçüsüz kural okunmuyor.
+  assert.equal(altBaslikGirintisiCikar("İçindekilerde her derece için 1’er cm içeride hizalanır."), undefined);
+  assert.equal(altBaslikGirintisiCikar("Alt başlıklar kalın yazılır."), undefined);
+  assert.equal(altGirintiMetni({ fromLevel: 3, cm: 1.25 }).tr, "2. derece alt başlıktan itibaren 1,25 cm içeriden");
+  assert.deepEqual(normalizeGuidelineEditorSettings({ subheading_indent: { fromLevel: 3, cm: 1.25 } }).subheadingIndent, { fromLevel: 3, cm: 1.25 });
+  assert.equal(normalizeGuidelineEditorSettings({ subheading_indent: { fromLevel: 1, cm: 9 } }).subheadingIndent, undefined);
+});

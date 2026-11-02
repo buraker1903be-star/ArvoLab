@@ -33,6 +33,8 @@ export interface KaynakTaslagi {
   issue: string | null;
   pages: string | null;
   publisher: string | null;
+  /** Basım yeri: RIS "CY", BibTeX "address" (02.11.2026). */
+  publicationPlace: string | null;
 }
 
 export const ICE_AKTARMA_EN_COK = 1000;
@@ -126,6 +128,7 @@ export function risOku(metin: string): KaynakTaslagi[] {
         issue: temiz(a("IS"), 40),
         pages: sayfalar(a("SP"), a("EP")),
         publisher: temiz(tur === "thesis" ? ilk("PB", "IN") : a("PB"), 300),
+        publicationPlace: temiz(a("CY"), 200),
       });
     }
     alanlar = null;
@@ -301,6 +304,7 @@ export function bibtexOku(metin: string): KaynakTaslagi[] {
       issue: temiz(alanlar.number ?? alanlar.issue, 40),
       pages: temiz(alanlar.pages?.replace(/-+/g, "-"), 40),
       publisher: temiz(alanlar.publisher ?? alanlar.school ?? alanlar.institution, 300),
+      publicationPlace: temiz(alanlar.address ?? alanlar.location, 200),
     });
   }
   return kayitlar;
@@ -380,6 +384,7 @@ export function risYaz(kaynaklar: AktarilacakKaynak[]): string {
         if (son) s.push(`EP  - ${son.trim()}`);
       }
       if (k.publisher) s.push(`PB  - ${k.publisher}`);
+      if (k.publication_place) s.push(`CY  - ${k.publication_place}`);
       const doi = k.doi_or_url?.match(/10\.\d{4,9}\/\S+/);
       if (doi) s.push(`DO  - ${doi[0]}`);
       else if (k.doi_or_url) s.push(`UR  - ${k.doi_or_url}`);
@@ -414,6 +419,7 @@ export function bibtexYaz(kaynaklar: AktarilacakKaynak[]): string {
         ["number", k.issue],
         ["pages", k.pages?.replace(/[-–]/, "--")],
         [k.source_type === "thesis" ? "school" : "publisher", k.publisher],
+        ["address", k.publication_place],
         ["doi", k.doi_or_url?.match(/10\.\d{4,9}\/\S+/)?.[0]],
         ["url", k.doi_or_url && !/10\.\d{4,9}\//.test(k.doi_or_url) ? k.doi_or_url : null],
       ];

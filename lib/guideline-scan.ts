@@ -8,7 +8,7 @@ import { kilavuzdanKagit } from "@/lib/kagit-boyutu";
 import { kelimeSiniriCikar, sayfaSiniriCikar, surumEtiketiCikar, yururlukTarihiCikar } from "@/lib/kilavuz-kunyesi";
 import { govdeOlcusu } from "@/lib/kilavuz-olcusu";
 import { stilAdi } from "@/lib/atif/stiller";
-import { bolumHizasiCikar, dipnotPuntosuCikar, numarasizBolumlerCikar, paragrafAraligiCikar, sayfaNumarasiKonumuCikar } from "@/lib/kilavuz-bicim";
+import { altBaslikGirintisiCikar, bolumHizasiCikar, dipnotPuntosuCikar, numarasizBolumlerCikar, paragrafAraligiCikar, sayfaNumarasiKonumuCikar } from "@/lib/kilavuz-bicim";
 import type { Dil } from "@/lib/dil";
 import { INGILIZCE_BOLUMLER, ingilizceBelgeMi, ingilizceKurallar } from "@/lib/kilavuz-ingilizce";
 
@@ -71,6 +71,8 @@ const CANDIDATE_SECTIONS = [
         alınıyor (lib/kilavuz-olcusu.ts). Adıyaman kılavuzunda gövde
         14 punto çıkmıştı (cümle başlıkların kuralını anlatıyordu) ve
         girinti 2 cm çıkmıştı (blok alıntının kuralı; gövdeninki 1 cm).
+    14 — alt başlık girintisi ("birinci dereceden sonraki başlıklar 1,25 cm
+        içeriden"; lib/kilavuz-bicim.ts).
     13 — yalnızca dipnot yöntemini anlatan kılavuz "dipnot" stilini alıyor
         (lib/atif/stiller.ts); stil kimliği tarayıcıdan geliyor
         (detectedCitationStyle) — katalog "MLA 9"u "mla9"a çeviriyordu.
@@ -95,7 +97,7 @@ const CANDIDATE_SECTIONS = [
         ölçüsü anlatan cümleden kaçmıştı. Değer öğrencinin editörüne
         iniyordu, yani yanlış çıkarım doğrudan belgeye yazıyordu.
 */
-export const TARAYICI_SURUMU = 13;
+export const TARAYICI_SURUMU = 14;
 
 /*
   Adres kılavuza değil, başka bir şeye işaret ediyor olabilir.
@@ -494,7 +496,9 @@ function inceKurallar(compact: string, fontFamily: string | undefined): Record<s
   const hiza = bolumHizasiCikar(compact);
   const konum = sayfaNumarasiKonumuCikar(compact);
   const numarasiz = numarasizBolumlerCikar(compact);
+  const altGirinti = altBaslikGirintisiCikar(compact);
   return {
+    ...(altGirinti ? { subheading_indent: altGirinti } : {}),
     ...(dipnot ? { footnote_size_pt: dipnot } : {}),
     ...(aralik ? { paragraph_spacing_pt: aralik } : {}),
     ...(hiza ? { chapter_align: hiza.hiza, ...(hiza.solaYasli.length ? { chapter_left_sections: hiza.solaYasli } : {}) } : {}),

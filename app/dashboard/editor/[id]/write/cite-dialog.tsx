@@ -44,6 +44,7 @@ interface NewSourceForm {
   issue: string;
   pages: string;
   publisher: string;
+  publicationPlace: string;
 }
 
 const EMPTY_FORM: NewSourceForm = {
@@ -57,6 +58,7 @@ const EMPTY_FORM: NewSourceForm = {
   issue: "",
   pages: "",
   publisher: "",
+  publicationPlace: "",
 };
 
 // Atıf: literatür listesinden seç ya da yeni kaynak ekle (DOI ile bilgiler Crossref'ten dolar).
@@ -124,6 +126,7 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
       issue: form.issue || null,
       pages: form.pages || null,
       publisher: form.publisher || null,
+      publication_place: form.publicationPlace || null,
     }),
     [form],
   );
@@ -169,6 +172,7 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
         issue: meta.issue ?? "",
         pages: meta.pages ?? "",
         publisher: meta.publisher ?? "",
+        publicationPlace: meta.publicationPlace ?? "",
       });
       showToast("success", t({ tr: "Kaynak bilgileri dolduruldu; kontrol edip kaydedin.", en: "Source details filled in; check them and save." }));
     } finally {
@@ -408,6 +412,10 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
               <label className="dialog-field">
                 <span>{t({ tr: "Yayınevi", en: "Publisher" })}</span>
                 <input className="picker-search" value={form.publisher} onChange={set("publisher")} />
+              </label>
+              <label className="dialog-field">
+                <span>{t({ tr: "Basım yeri", en: "Place of publication" })}</span>
+                <input className="picker-search" value={form.publicationPlace} onChange={set("publicationPlace")} />
               </label>
             </div>
 

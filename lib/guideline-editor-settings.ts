@@ -2,10 +2,12 @@ import type { PageMargins } from "@/app/actions/manuscript";
 import { validHangingCm, validIndentCm } from "@/lib/paragraph-format";
 import { kagitMi, type KagitBoyutu } from "@/lib/kagit-boyutu";
 import {
+  altBaslikGirintisiMi,
   bolumHizasiMi,
   dipnotPuntosuMu,
   paragrafAraligiMi,
   sayfaNumarasiKonumuMu,
+  type AltBaslikGirintisi,
   type BolumHizasi,
   type ParagrafAraligi,
   type SayfaNumarasiKonumu,
@@ -52,6 +54,8 @@ export interface GuidelineEditorSettings {
   pageNumberPosition?: SayfaNumarasiKonumu;
   /** Varsayılan numaralandırmada numaralı olup bu kılavuzda numarasız kalan ana başlıklar */
   unnumberedSections?: string[];
+  /** Belli düzeyden itibaren alt başlıkların sol girintisi (cm) */
+  subheadingIndent?: AltBaslikGirintisi;
 }
 
 /* Ad listesi: metin, boş olmayan, makul uzunlukta; en çok 12 ad. */
@@ -176,5 +180,6 @@ export function normalizeGuidelineEditorSettings(raw: unknown): GuidelineEditorS
       : {}),
     ...(sayfaNumarasiKonumuMu(rules.page_number_position) ? { pageNumberPosition: rules.page_number_position } : {}),
     ...(adListesi(rules.unnumbered_sections) ? { unnumberedSections: adListesi(rules.unnumbered_sections) } : {}),
+    ...(altBaslikGirintisiMi(rules.subheading_indent) ? { subheadingIndent: rules.subheading_indent } : {}),
   };
 }

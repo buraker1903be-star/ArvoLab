@@ -1,6 +1,6 @@
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
 import type { Dil, Metin } from "@/lib/dil";
-import { SAYFA_NUMARASI_ADI, bolumHizasiMetni, type BolumHizasi, type ParagrafAraligi, type SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
+import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni, type AltBaslikGirintisi, type BolumHizasi, type ParagrafAraligi, type SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
 
 /* Tanınan atıf stilleri TEK listeden (lib/atif/stiller.ts): ikinci bir
    dizi yazmak, yeni bir stil eklendiğinde burayı unutmak demekti. */
@@ -195,6 +195,7 @@ export function bicimOzeti(ayarlar: {
   chapterLeftSections?: string[];
   pageNumberPosition?: SayfaNumarasiKonumu;
   unnumberedSections?: string[];
+  subheadingIndent?: AltBaslikGirintisi;
 }, dil: Dil = "tr"): string[] {
   const en = dil === "en";
   const satirlar: string[] = [];
@@ -256,6 +257,10 @@ export function bicimOzeti(ayarlar: {
   if (ayarlar.chapterAlign) {
     const hiza = bolumHizasiMetni(ayarlar.chapterAlign, ayarlar.chapterLeftSections);
     satirlar.push(en ? `Chapter headings: ${hiza.en}` : `Bölüm başlıkları: ${hiza.tr}`);
+  }
+  if (ayarlar.subheadingIndent) {
+    const g = altGirintiMetni(ayarlar.subheadingIndent);
+    satirlar.push(en ? `Subheadings: ${g.en}` : `Alt başlıklar: ${g.tr}`);
   }
   if (ayarlar.unnumberedSections?.length) {
     const adlar = ayarlar.unnumberedSections.join(", ");

@@ -21,6 +21,8 @@ export interface CitableSource {
   issue?: string | null;
   pages?: string | null;
   publisher?: string | null;
+  /** Basım yeri ("Ankara"); klasik yöntem, Chicago ve Harvard kitap künyesinde. Uydurulmaz: yoksa yazılmaz. */
+  publication_place?: string | null;
 }
 
 export type CitationStyle = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla" | "dipnot";
@@ -250,6 +252,8 @@ export function dipnotNotu(
     parcalar.push(title);
   }
   if (field(source.publisher)) parcalar.push(field(source.publisher)!);
+  /* Basım yeri yayınevinden sonra ("…, Yaşar Eğitim ve Kültür Vakfı Yayını, İzmir, 1978"); kayıtta yoksa yazılmaz. */
+  if (field(source.publication_place)) parcalar.push(field(source.publication_place)!);
   parcalar.push(yearText(source, dil));
   if (source.source_type === "website" && link(source)) parcalar.push(link(source)!);
   if (sayfa) parcalar.push(sayfa);
@@ -397,6 +401,9 @@ export function formatReferenceParts(
   const issue = field(source.issue);
   const pages = field(source.pages);
   const publisher = field(source.publisher);
+  const yer = field(source.publication_place);
+  /* "Ankara: İletişim" (Chicago, Harvard); yer yoksa yalnızca yayınevi — yer uydurulmaz. */
+  const yerYayinevi = publisher ? (yer ? `${yer}: ${publisher}` : publisher) : null;
   const isChapter = source.source_type === "chapter";
   const parts: TextPart[] = [];
   const push = (text: string, isItalic = false) => {
@@ -446,7 +453,7 @@ export function formatReferenceParts(
         if (pages) push(`${isChapter ? ", " : ": "}${pages}`);
         push(".");
       }
-      if (publisher && (isChapter || !container)) push(` ${publisher}.`);
+      if (yerYayinevi && (isChapter || !container)) push(` ${yerYayinevi}.`);
       if (url) push(` ${url}`);
       break;
     }
@@ -490,9 +497,11 @@ export function formatReferenceParts(
           if (issue) push(`, ${en ? "No." : "Sayı"}: ${issue}`);
         }
         if (isChapter && publisher) push(`, ${publisher}`);
+        if (isChapter && yer) push(`, ${yer}`);
       } else {
         push(title, italic);
         if (publisher) push(`, ${publisher}`);
+        if (yer) push(`, ${yer}`);
       }
       push(`, ${yilYazisi()}`);
       if (container && pages) push(`, ${en ? "pp." : "ss."} ${pages}`);
@@ -522,12 +531,12 @@ export function formatReferenceParts(
         push(`‘${title}’, ${en ? "in" : "içinde"} `);
         push(container, true);
         push(".");
-        if (publisher) push(` ${publisher}`);
+        if (yerYayinevi) push(` ${yerYayinevi}`);
         push(`${pages ? `, ${sayfaOn} ${pages}` : ""}.`);
       } else {
         push(title, italic);
         push(".");
-        if (publisher) push(` ${publisher}.`);
+        if (yerYayinevi) push(` ${yerYayinevi}.`);
       }
       if (url) push(en ? ` Available at: ${url}` : ` Erişim adresi: ${url}`);
       break;

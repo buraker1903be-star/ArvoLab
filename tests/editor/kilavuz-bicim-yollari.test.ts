@@ -198,3 +198,44 @@ test("sayfa numarasının yeri", async (t) => {
     assert.doesNotMatch(ust.altbilgi, /PAGE/);
   });
 });
+
+test("alt başlık girintisi: belirtilen düzeyden itibaren, başlığın kendi girintisi kazanır", async (t) => {
+  // DEÜ SBE: "birinci dereceden sonraki başlıkların tümü 1,25 cm içeriden" → H3 ve altı.
+  const kural = { fromLevel: 3 as const, cm: 1.25 };
+  const alt: JsonNode[] = [
+    h1("Kuramsal Çerçeve"),
+    { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Birinci Derece" }] },
+    { type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "İkinci Derece" }] },
+    { type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: "Üçüncü Derece" }] },
+    { type: "heading", attrs: { level: 3, firstLineIndent: 2 }, content: [{ type: "text", text: "Kendi Girintisi" }] },
+  ];
+  const json = { type: "doc", content: alt };
+
+  await t.test("editör (süsleme)", () => {
+    const isaretli = buildDecorations(belge(...alt), false, { altGirinti: kural })
+      .find()
+      .map((d) => (d as unknown as { type: { attrs: Record<string, string> } }).type.attrs["data-kilavuz-girinti"]);
+    // H3, H4 ve kendi girintili H3 (editörde satır içi stil onu ezer) işaretli; H1, H2 değil.
+    assert.deepEqual(isaretli, ["true", "true", "true"]);
+  });
+
+  await t.test("yazdırma", () => {
+    const html = renderTiptapHtml(json as never, { altGirinti: kural }).html;
+    const baslik = (metin: string) => html.slice(html.lastIndexOf("<h", html.indexOf(metin)), html.indexOf(metin));
+    assert.doesNotMatch(baslik("Birinci Derece"), /padding-left/);
+    assert.match(baslik("İkinci Derece"), /padding-left:1\.25cm/);
+    assert.match(baslik("Üçüncü Derece"), /padding-left:1\.25cm/);
+    assert.doesNotMatch(baslik("Kendi Girintisi"), /padding-left/);
+    assert.doesNotMatch(renderTiptapHtml(json as never).html, /padding-left/, "kural yokken girinti yok");
+  });
+
+  await t.test("Word", async () => {
+    const doc = await buildDocxFromTiptap({ title: "T", doc: json as never, fetchImage: async () => null, textDefaults: { subheadingIndent: kural } });
+    const zip = await JSZip.loadAsync(await Packer.toBuffer(doc));
+    const xml = (await zip.file("word/document.xml")!.async("string"));
+    // 1,25 cm = 708 twip (paragraf girintisiyle aynı yuvarlama).
+    assert.match(wordBasligi(xml, "İkinci Derece"), /<w:ind w:left="708"\/>/);
+    assert.doesNotMatch(wordBasligi(xml, "Birinci Derece"), /<w:ind /);
+    assert.doesNotMatch(wordBasligi(xml, "Kendi Girintisi"), /w:left="708"/);
+  });
+});

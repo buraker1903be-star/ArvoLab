@@ -122,6 +122,7 @@ export async function GET(
         chapterLeftSections: guideline.settings.chapterLeftSections,
         pageNumberPosition: guideline.settings.pageNumberPosition,
         unnumberedSections: guideline.settings.unnumberedSections,
+        subheadingIndent: guideline.settings.subheadingIndent,
       }
     : {};
   // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).

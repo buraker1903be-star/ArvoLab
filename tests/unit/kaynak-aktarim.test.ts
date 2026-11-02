@@ -70,6 +70,7 @@ describe("içe aktarma", () => {
       issue: "205",
       pages: "101-120",
       publisher: null,
+      publicationPlace: null,
     });
     assert.deepEqual([k[1].sourceType, k[1].publisher, k[1].authors], ["book", "Pegem Akademi", "Büyüköztürk, Ş."]);
     assert.deepEqual([k[2].sourceType, k[2].publisher], ["thesis", "Hacettepe Üniversitesi"]);
@@ -82,6 +83,17 @@ describe("içe aktarma", () => {
     assert.equal(k[0].authors, "Yılmaz, A., & Demir, A. B.");
     assert.deepEqual([k[0].year, k[0].containerTitle, k[0].volume, k[0].issue, k[0].pages, k[0].doiOrUrl], ["2021", "Eğitim ve Bilim", "46", "205", "101-120", "10.15390/EB.2021.9876"]);
     assert.deepEqual([k[1].sourceType, k[1].containerTitle, k[1].publisher], ["chapter", "Editörlü Kitap", "Anı Yayıncılık"]);
+  });
+
+  test("basım yeri: RIS CY, BibTeX address; yazıp okuyunca korunuyor (02.11.2026)", () => {
+    const ris = "TY  - BOOK\r\nAU  - Çetiner, Ertuğrul\r\nTI  - Konaklama Yönetim Muhasebesi\r\nPY  - 1989\r\nPB  - Güney Grafik\r\nCY  - Ankara\r\nER  - ";
+    const [kitap] = risOku(ris);
+    assert.equal(kitap.publicationPlace, "Ankara");
+    const [bib] = bibtexOku("@book{c1989,\n  title = {Kitap},\n  author = {Çetiner, Ertuğrul},\n  year = {1989},\n  address = {Ankara}\n}");
+    assert.equal(bib.publicationPlace, "Ankara");
+    const satir = { title: kitap.title, authors: kitap.authors, year: kitap.year, source_type: "book", doi_or_url: null, publisher: kitap.publisher, publication_place: "Ankara" };
+    assert.equal(risOku(risYaz([satir]))[0].publicationPlace, "Ankara");
+    assert.equal(bibtexOku(bibtexYaz([satir]))[0].publicationPlace, "Ankara");
   });
 
   test("biçim dosya adından ya da içerikten seçilir", () => {

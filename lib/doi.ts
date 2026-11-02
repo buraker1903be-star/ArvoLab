@@ -35,6 +35,8 @@ export interface DoiMetadata {
   issue: string | null;
   pages: string | null;
   publisher: string | null;
+  /** Crossref "publisher-location"; çoğu kayıtta yok, varsa kitap künyesine girer. */
+  publicationPlace: string | null;
 }
 
 interface CrossrefAuthor {
@@ -60,6 +62,7 @@ interface CrossrefWork {
   issue?: string;
   page?: string;
   publisher?: string;
+  "publisher-location"?: string;
 }
 
 const TYPE_MAP: Record<string, DoiMetadata["sourceType"]> = {
@@ -135,5 +138,6 @@ export function parseCrossrefWork(work: CrossrefWork | null | undefined, doi: st
     issue: clean(work.issue, 40),
     pages: clean(work.page?.replace(/-/g, "–"), 40),
     publisher: clean(work.publisher, 300),
+    publicationPlace: clean(work["publisher-location"], 200),
   };
 }

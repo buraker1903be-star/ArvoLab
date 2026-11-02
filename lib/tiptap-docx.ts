@@ -28,7 +28,7 @@ import { headingNumberMap, icindekilerSatirlari } from "@/lib/heading-numbering"
 import { chapterBreakSet } from "@/lib/chapter-rules";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
-import { anaBaslikHizasi, type BolumHizasi, type ParagrafAraligi, type SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
+import { altBaslikGirintisi, anaBaslikHizasi, type AltBaslikGirintisi, type BolumHizasi, type ParagrafAraligi, type SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
 
 interface TiptapMark {
   type: string;
@@ -178,6 +178,14 @@ interface ConversionContext {
   dipnotBoyu: number;
   /** Kılavuzun ana başlık hizası (lib/kilavuz-bicim.ts); editör ve baskı aynı kararı veriyor */
   anaBaslik: { chapterAlign?: BolumHizasi; chapterLeftSections?: string[] };
+  /** Kılavuzun alt başlık girintisi; başlığın kendi girintisi varsa o kazanır */
+  altGirinti?: AltBaslikGirintisi;
+}
+
+/* Alt başlığın kılavuz girintisi Word'de sol girinti (lib/kilavuz-bicim.ts). */
+function kilavuzGirintisi(duzey: number, kural: AltBaslikGirintisi | undefined) {
+  const cm = altBaslikGirintisi(duzey, kural);
+  return cm === null ? undefined : { left: convertMillimetersToTwip(cm * 10) };
 }
 
 const duzMetin = (node: TiptapNode): string => node.text ?? (node.content ?? []).map(duzMetin).join("");
@@ -337,7 +345,7 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
           alignment: align ? ALIGNMENTS[align] : kilavuzHizasi ? ALIGNMENTS[kilavuzHizasi] : undefined,
           spacing: lineSpacingValue(node.attrs?.lineSpacing),
           // Editör ve baskı başlıktaki ilk satır/asılı girintiyi uyguluyor; Word atlıyordu.
-          indent: indentFromAttrs(node.attrs, 0),
+          indent: indentFromAttrs(node.attrs, 0) ?? kilavuzGirintisi(level + 1, ctx.altGirinti),
           children: [...(number ? [new TextRun({ text: `${number} ` })] : []), ...inlineChildren(node.content ?? [], ctx)],
         }),
       ];
@@ -511,6 +519,8 @@ export interface DocxTextDefaults {
   pageNumberPosition?: SayfaNumarasiKonumu;
   /** Kılavuzun numarasız tuttuğu ana başlıklar ("Giriş", "Sonuç") */
   unnumberedSections?: string[];
+  /** Belli düzeyden itibaren alt başlıkların sol girintisi */
+  subheadingIndent?: AltBaslikGirintisi;
 }
 
 export interface BuildDocxOptions {
@@ -578,6 +588,7 @@ export async function buildDocxFromTiptap({
     dil,
     dipnotBoyu: Math.round((textDefaults.footnoteSizePt ?? 10) * 2),
     anaBaslik: { chapterAlign: textDefaults.chapterAlign, chapterLeftSections: textDefaults.chapterLeftSections },
+    altGirinti: textDefaults.subheadingIndent,
   };
 
   const bodyElements: (Paragraph | Table | TableOfContents)[] = [];

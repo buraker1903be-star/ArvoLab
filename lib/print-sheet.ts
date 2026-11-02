@@ -67,6 +67,7 @@ export function buildPrintSheet(
     numarasiz: guideline?.settings.unnumberedSections,
     chapterAlign: guideline?.settings.chapterAlign,
     chapterLeftSections: guideline?.settings.chapterLeftSections,
+    altGirinti: guideline?.settings.subheadingIndent,
   });
 
   const margins = manuscript?.margins ?? guideline?.settings.margins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 };

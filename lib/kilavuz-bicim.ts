@@ -192,3 +192,58 @@ export function bolumHizasiMetni(hiza: BolumHizasi, solaYasli?: string[]): { tr:
     ? { tr: `Ortalanır (${solaYasli.join(", ")} sola yaslı)`, en: `Centred (${solaYasli.join(", ")} left-aligned)` }
     : { tr: "Ortalanır", en: "Centred" };
 }
+
+/*
+  ALT BAŞLIK GİRİNTİSİ (02.11.2026). DEÜ SBE: "birinci dereceden sonraki
+  başlıkların tümü 1,25 cm içeriden hizalı". Belgede H1 bölüm, H2 birinci
+  derece alt başlık; "birinci dereceden SONRAKİ" H3 ve altı demek.
+  Sıra sözcüğü düzeye çevrilir: N. derece alt başlık = H(N+1), "N.
+  dereceden sonraki" = H(N+2). İçindekiler'in kendi girintisi ("her derece
+  için 1'er cm") bu kural değil; "1’er" bir ölçü olarak okunmuyor.
+*/
+export type AltBaslikGirintisi = { fromLevel: 2 | 3 | 4; cm: number };
+
+const SIRA: Record<string, number> = { birinci: 1, ikinci: 2, üçüncü: 3, "1.": 1, "2.": 2, "3.": 3 };
+
+export const altBaslikGirintisiMi = (deger: unknown): deger is AltBaslikGirintisi => {
+  if (!deger || typeof deger !== "object") return false;
+  const { fromLevel, cm } = deger as Record<string, unknown>;
+  return (fromLevel === 2 || fromLevel === 3 || fromLevel === 4) && typeof cm === "number" && cm >= 0.3 && cm <= 3;
+};
+
+export function altBaslikGirintisiCikar(compact: string): AltBaslikGirintisi | undefined {
+  const olcu = "(\\d(?:[,.]\\d+)?)\\s*cm\\s+(?:içeriden|içeri|girinti)";
+  const sirali = new RegExp(
+    `(birinci|ikinci|üçüncü|[123]\\.)\\s+derece(den\\s+sonraki)?\\s+(?:alt\\s+)?başl[ıi](?:k|ğ)\\p{L}*[^.;]{0,50}?${olcu}`,
+    "iu",
+  ).exec(compact);
+  if (sirali) {
+    /* Metin noktalı İ'si düzleştirilmiş geliyor ("BİRİNCİ" → "BIRINCI"); Türkçe küçültme onu
+       "bırıncı" yapar ve sözlükte bulunmazdı — ı da i'ye indiriliyor. */
+    const n = SIRA[sirali[1].toLocaleLowerCase("tr-TR").replaceAll("ı", "i")];
+    const duzey = n + 1 + (sirali[2] ? 1 : 0);
+    const deger = { fromLevel: duzey, cm: Number(sirali[3].replace(",", ".")) };
+    return altBaslikGirintisiMi(deger) ? deger : undefined;
+  }
+  const genel = new RegExp(`(?<!\\p{L})alt\\s+başl[ıi](?:k|ğ)\\p{L}*[^.;]{0,40}?${olcu}`, "iu").exec(compact);
+  if (genel) {
+    const deger = { fromLevel: 2 as const, cm: Number(genel[1].replace(",", ".")) };
+    return altBaslikGirintisiMi(deger) ? deger : undefined;
+  }
+  return undefined;
+}
+
+/** Başlık bu düzeyde kılavuzun girintisini alıyor mu; ölçüsü ya da null. */
+export function altBaslikGirintisi(duzey: number, kural: AltBaslikGirintisi | undefined): number | null {
+  return kural && duzey >= kural.fromLevel ? kural.cm : null;
+}
+
+/** Ekranda alt başlık girintisinin cümlesi ("H3 ve altı" yerine okunur sıra). */
+export function altGirintiMetni(kural: AltBaslikGirintisi): { tr: string; en: string } {
+  const cm = { tr: String(kural.cm).replace(".", ","), en: String(kural.cm) };
+  const duzey = kural.fromLevel - 1;
+  return {
+    tr: `${duzey}. derece alt başlıktan itibaren ${cm.tr} cm içeriden`,
+    en: `From level-${duzey} subheadings: indented ${cm.en} cm`,
+  };
+}

@@ -111,7 +111,7 @@ import IcindekilerKarti from "./icindekiler-karti";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
-import { SAYFA_NUMARASI_ADI, bolumHizasiMetni } from "@/lib/kilavuz-bicim";
+import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni } from "@/lib/kilavuz-bicim";
 import ManuscriptOutline from "./manuscript-outline";
 import {
   applyTemplate,
@@ -756,6 +756,7 @@ export default function ManuscriptEditor({
         numarasiz: guideline?.settings.unnumberedSections,
         chapterAlign: guideline?.settings.chapterAlign,
         chapterLeftSections: guideline?.settings.chapterLeftSections,
+        altGirinti: guideline?.settings.subheadingIndent,
       },
     }),
     content: initialContent ?? "",
@@ -799,6 +800,7 @@ export default function ManuscriptEditor({
           guideline?.settings.paragraphSpacing
             ? `--kilavuz-p-once: ${guideline.settings.paragraphSpacing.beforePt}pt; --kilavuz-p-sonra: ${guideline.settings.paragraphSpacing.afterPt}pt`
             : "",
+          guideline?.settings.subheadingIndent ? `--kilavuz-alt-girinti: ${guideline.settings.subheadingIndent.cm}cm` : "",
         ].filter(Boolean).join("; "),
       },
       handleClickOn: (_view, pos, node) => {
@@ -3049,6 +3051,12 @@ export default function ManuscriptEditor({
               <>
                 <dt>{t({ tr: "Bölüm başlığı hizası", en: "Chapter heading alignment" })}</dt>
                 <dd>{t(bolumHizasiMetni(guideline.settings.chapterAlign, guideline.settings.chapterLeftSections))}</dd>
+              </>
+            ) : null}
+            {guideline.settings.subheadingIndent ? (
+              <>
+                <dt>{t({ tr: "Alt başlık girintisi", en: "Subheading indent" })}</dt>
+                <dd>{t(altGirintiMetni(guideline.settings.subheadingIndent))}</dd>
               </>
             ) : null}
             {guideline.settings.unnumberedSections?.length ? (
