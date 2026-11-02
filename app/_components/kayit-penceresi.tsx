@@ -63,8 +63,8 @@ export default function KayitPenceresi({
         kicker={t({ tr: "Ücretsiz deneme", en: "Free trial" })}
         title={t({ tr: "ArvoLab hesabı oluşturun", en: "Create your ArvoLab account" })}
         description={t({
-          tr: "Birkaç bilgiyle başlayın; kart bilgisi istenmez.",
-          en: "Start with a few details; no card required.",
+          tr: "Birkaç bilgiyle hemen başlayın.",
+          en: "Get started with just a few details.",
         })}
       >
         <KayitFormu pencerede />

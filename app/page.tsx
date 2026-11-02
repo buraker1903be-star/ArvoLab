@@ -168,8 +168,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <h2 id="giris-kayit-baslik">{t({ tr: "ArvoLab'da yeni misiniz?", en: "New to ArvoLab?" })}</h2>
               <p>
                 {t({
-                  tr: "Ücretsiz deneme ile hemen başlayın; kart bilgisi istenmez.",
-                  en: "Start right away with a free trial; no card details required.",
+                  tr: "Ücretsiz deneme ile hemen başlayın.",
+                  en: "Start right away with a free trial.",
                 })}
               </p>
               {/* Açılır pencere (02.11.2026); JavaScript'siz /kayit sayfasına gider. */}
