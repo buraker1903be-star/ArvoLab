@@ -23,6 +23,7 @@ import { computeAttention } from "@/lib/attention";
 import { ilkKullanim } from "@/lib/ilk-kullanim";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 import { etikKaydiOku } from "@/lib/etik/oku";
+import { ETIK_DURUM_ADI } from "@/lib/etik/durum";
 import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
@@ -144,7 +145,7 @@ export default async function DashboardPage() {
       ? await supabase.from("project_manuscripts").select("*").eq("project_id", resume.id).maybeSingle()
       : { data: null };
   // Etik kurul satırı: editördeki teslim kontrolüyle aynı hesap (lib/etik/durum.ts).
-  const resumeEtik = resume && resumeManuscript ? await etikKaydiOku(supabase, resume.id) : null;
+  const resumeEtik = resume ? await etikKaydiOku(supabase, resume.id) : null;
   const resumeReadiness =
     resume && resumeManuscript
       ? manuscriptReadiness({
@@ -986,6 +987,12 @@ export default async function DashboardPage() {
                     {t({ tr: `${sayi(iddiaSayisi ?? 0)} iddia`, en: `${sayi(iddiaSayisi ?? 0)} claim${iddiaSayisi === 1 ? "" : "s"}` })}
                   </span>
                 }
+              />
+              {/* Etik kurul (02.11.2026): sekme yalnızca çalışma özetindeydi, ana sayfadan bulunmuyordu. */}
+              <ListeSatiri
+                href={`/dashboard/editor/${resume.id}/etik`}
+                baslik={t({ tr: "Etik kurul", en: "Ethics committee" })}
+                alt={resumeEtik ? t(ETIK_DURUM_ADI[resumeEtik.durum]) : t({ tr: "Başvurunuzu ve belgelerinizi takip edin", en: "Track your application and documents" })}
               />
               <ListeSatiri
                 href={`/dashboard/documents?calisma=${resume.id}`}
