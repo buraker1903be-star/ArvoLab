@@ -107,12 +107,12 @@ describe("role göre bölümler", () => {
     }
   });
 
-  /* editor/page.tsx: gözetim rolleri pencereyi değil ayrı sayfayı kullanıyor. */
+  /* 02.11.2026'dan beri personel de pencereyi kullanıyor (editor/page.tsx). */
   test("yeni çalışma bağlantısı role göre doğru yere", () => {
     const adres = (rol: string | null) => kilavuzBolumleri(rol).find((b) => b.id === "ilk-calisma")?.baglanti?.href;
     assert.equal(adres(null), "/dashboard/editor?yeni=1");
     assert.equal(adres("employee"), "/dashboard/editor?yeni=1");
-    assert.equal(adres("controller"), "/dashboard/editor/new");
-    assert.equal(adres("founder"), "/dashboard/editor/new");
+    assert.equal(adres("controller"), "/dashboard/editor?yeni=1");
+    assert.equal(adres("founder"), "/dashboard/editor?yeni=1");
   });
 });

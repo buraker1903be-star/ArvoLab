@@ -23,7 +23,7 @@
   kullanıcıyı olmayan bir düğmeyi aramaya gönderir.
 */
 import type { Metin } from "@/lib/dil";
-import { ADMIN_ROLES, OVERSIGHT_ROLES, STAFF_ROLES } from "@/lib/project-labels";
+import { ADMIN_ROLES, STAFF_ROLES } from "@/lib/project-labels";
 import { SAATLIK_HAK } from "@/lib/ai/sinirlar";
 import { DENEME_ASISTAN_HAKKI } from "@/lib/ai/deneme-hakki";
 
@@ -642,18 +642,17 @@ const SORULAR: KilavuzSorusu[] = [
 ];
 
 /*
-  Yeni çalışma iki yerden açılıyor: öğrenci düzeninde Çalışmalarım'daki
-  pencere (?yeni=1), gözetim rollerinde ayrı sayfa (editor/new) —
-  app/dashboard/editor/page.tsx'teki ogrenciDuzeni ile aynı ayrım.
-  Personel pencere adresine gitseydi pencere açılmazdı.
+  Yeni çalışma herkes için Çalışmalarım'daki pencerede (?yeni=1). Eskiden
+  gözetim rolleri ayrı sayfaya (editor/new) gidiyordu; 02.11.2026'dan beri
+  personelin tam formu da pencerede (personel-yeni-calisma-penceresi.tsx),
+  eski adres buraya yönlendiriyor.
 */
-const yeniCalismaAdresi = (rol: string | null | undefined) =>
-  rol && (OVERSIGHT_ROLES as readonly string[]).includes(rol) ? "/dashboard/editor/new" : "/dashboard/editor?yeni=1";
+const YENI_CALISMA_ADRESI = "/dashboard/editor?yeni=1";
 
 /** Kullanıcının rolüne göre görünen bölümler. Rolü bilinmeyen yalnızca herkese açık bölümleri görür. */
 export function kilavuzBolumleri(rol: string | null | undefined): KilavuzBolumu[] {
   return BOLUMLER.filter((b) => !b.roller || (!!rol && b.roller.includes(rol))).map((b) =>
-    b.id === "ilk-calisma" && b.baglanti ? { ...b, baglanti: { ...b.baglanti, href: yeniCalismaAdresi(rol) } } : b,
+    b.id === "ilk-calisma" && b.baglanti ? { ...b, baglanti: { ...b.baglanti, href: YENI_CALISMA_ADRESI } } : b,
   );
 }
 

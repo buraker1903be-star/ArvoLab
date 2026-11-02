@@ -369,7 +369,8 @@ export default async function DashboardPage() {
   const ogrenciGorunumu = !isStaff && Boolean(resume) && !yeniKullanici;
   /* Öğrenci yeni çalışmayı Çalışmalarım'daki pencerede başlatır (kendi
      kılavuzunu orada ekler); personelin tam formu ayrı sayfada. */
-  const yeniCalismaHref = isStaff ? "/dashboard/editor/new" : "/dashboard/editor?yeni=1";
+  // İkisi de pencerede açılıyor (öğrenci ve personel, 02.11.2026).
+  const yeniCalismaHref = "/dashboard/editor?yeni=1";
   const [ritimYaniti, { count: iddiaSayisi }, { count: dogrudanSayisi }] = ogrenciGorunumu
     ? await Promise.all([
         supabase.rpc("yazim_ritmi", { p_project: resume!.id, p_gun: 14 }),

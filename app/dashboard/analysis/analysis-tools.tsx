@@ -222,7 +222,7 @@ export default function AnalysisTools({
                     tr: "Kayıtlı çalışmanız yok. Bir çalışma açarsanız denetim, o çalışmanın başlığını ve alanını da bağlam olarak kullanır.",
                     en: "You have no saved projects. If you create one, the review also uses that project's title and field as context.",
                   })}{" "}
-                  <Link href="/dashboard/editor/new" className="result-link">
+                  <Link href="/dashboard/editor?yeni=1" className="result-link">
                     {t({ tr: "Çalışma oluştur →", en: "Create project →" })}
                   </Link>
                 </p>

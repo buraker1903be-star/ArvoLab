@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
-import { AlertTriangle, FileText, Search, MessageSquare, Plus, ShieldAlert, ShieldCheck } from "lucide-react";
+import { AlertTriangle, FileText, Search, MessageSquare, ShieldAlert, ShieldCheck } from "lucide-react";
 import { simdi } from "@/lib/genel-bakis";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
@@ -27,6 +27,8 @@ import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
 import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
+import PersonelYeniCalismaPenceresi from "./personel-yeni-calisma-penceresi";
+import { getUniversities } from "@/app/actions/universities";
 import CalismaDurumKarti from "./calisma-durum-karti";
 
 export async function generateMetadata() {
@@ -180,6 +182,8 @@ export default async function ProjectsPage({
     kartları gerekiyor.
   */
   const ogrenciDuzeni = !canApprove;
+  /* Personelin penceresi kurum seçicileri için üniversite listesini ister; öğrencide okunmuyor. */
+  const universiteListesi = ogrenciDuzeni ? null : await getUniversities();
   /* Personel düzeni de iki kart (26.10.2026): seçim ikisinde de aynı kuralla. */
   const seciliId = seciliCalismaId(
     visible.map((project) => project.id),
@@ -263,15 +267,16 @@ export default async function ProjectsPage({
                 })}
           </p>
         </div>
-        {/* Öğrenci pencerede başlatır ve kendi kılavuzunu ekler; personelin tam formu ayrı sayfada. */}
+        {/* İkisi de pencere (02.11.2026): öğrenci kendi kılavuzunu ekler, personel kurumu katalogdan seçer. */}
         {ogrenciDuzeni ? (
           <YeniCalismaPenceresi acikBasla={params.yeni === "1"} />
-        ) : (
-          <Link href="/dashboard/editor/new" className="projects-primary-button">
-            <Plus size={18} aria-hidden="true" />
-            {t({ tr: "Yeni çalışma", en: "New work" })}
-          </Link>
-        )}
+        ) : universiteListesi ? (
+          <PersonelYeniCalismaPenceresi
+            universities={universiteListesi.satirlar}
+            universiteOkunamadi={universiteListesi.okunamadi}
+            acikBasla={params.yeni === "1"}
+          />
+        ) : null}
       </section>
 
       {okunamadi ? (
@@ -294,8 +299,8 @@ export default async function ProjectsPage({
         <BosDurum
           ikon={FileText}
           baslik={t({ tr: "Henüz kayıtlı çalışmanız yok", en: "You have no works yet" })}
-          /* Öğrencinin yolu (pencere) kılavuzu YÜKLETİYOR; katalogdan kurum
-             seçtiren yol (/dashboard/editor/new) personelde. Eskiden ikisine
+          /* Öğrencinin penceresi kılavuzu YÜKLETİYOR; katalogdan kurum
+             seçtiren pencere personelde (personel-yeni-calisma-penceresi.tsx). Eskiden ikisine
              de "üniversitenizi seçin, kılavuz otomatik uygulanır" deniyordu. */
           aciklama={
             ogrenciDuzeni
@@ -308,7 +313,7 @@ export default async function ProjectsPage({
                   en: "Start by choosing your university; your thesis writing guideline is applied to the editor automatically, and the citation system and page layout are set up for you.",
                 })
           }
-          eylem={{ etiket: t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" }), href: ogrenciDuzeni ? "/dashboard/editor?yeni=1" : "/dashboard/editor/new" }}
+          eylem={{ etiket: t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" }), href: "/dashboard/editor?yeni=1" }}
         />
       ) : (
         <>

@@ -29,7 +29,7 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
   katalog eşleşmesine bilerek gönderilmiyor, yoksa eşleşen katalog
   kılavuzu öğrencinin yüklediğini geçersiz kılardı
   (calisma-kilavuzu.ts: katalog bağlıysa yükleme reddediliyor).
-  Personelin tam formu /dashboard/editor/new adresinde duruyor.
+  Personelin tam formu da pencerede (personel-yeni-calisma-penceresi.tsx).
 */
 
 const TURLER = [
@@ -39,7 +39,7 @@ const TURLER = [
 ] as const;
 /* Doçentlik dosyası türü öğrencinin penceresinde yok: doçentlik modülü
    personelin (kurum sahibinin kararı, 26.10.2026). Personelin tam formu
-   (/dashboard/editor/new) bu türü sunmaya devam ediyor. */
+   (new/yeni-calisma-formu.tsx) bu türü sunmaya devam ediyor. */
 
 type Tur = (typeof TURLER)[number]["deger"];
 
