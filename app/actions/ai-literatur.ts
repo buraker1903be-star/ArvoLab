@@ -25,6 +25,8 @@ export type LiteraturDenetimGirdisi = {
 
 export type LiteraturDenetimYaniti = {
   hata?: string;
+  /** Deneme hakkı bitti: hata kutusunda Abonelik düğmesi (lib/ai/erisim.ts). */
+  odemeGerekli?: boolean;
   bulgular?: Bulgu[];
   /** Veri tabanına yapıştırılabilir arama dizeleri. */
   aramalar?: string[];
@@ -48,7 +50,7 @@ export async function literaturTara(girdi: LiteraturDenetimGirdisi): Promise<Lit
     return { hata: t({ tr: "Tarama stratejisi için araştırma sorunuzu yazın (en az bir cümle).", en: "Write your research question for the search strategy (at least one sentence)." }) };
 
   const kapi = await asistanKapisi(dil);
-  if (!kapi.ok) return { hata: kapi.hata };
+  if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
 
   /*
     Çalışma bağlamı: atıf stili, araştırma yöntemi ve tür. Bunları bilmeden

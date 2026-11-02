@@ -11,6 +11,8 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 
 export interface AiFeedbackResponse {
   error?: string;
+  /** Deneme hakkı bitti: hata kutusunda Abonelik düğmesi (lib/ai/erisim.ts). */
+  odemeGerekli?: boolean;
   feedback?: string;
   truncated?: boolean;
   /** Kredi azalıyor (lib/ai/erisim.ts). */
@@ -29,7 +31,7 @@ export async function requestAiFeedback(documentId: string): Promise<AiFeedbackR
   const t = await ceviri();
   const dil = await aktifDil();
   const kapi = await asistanKapisi(dil);
-  if (!kapi.ok) return { error: kapi.hata };
+  if (!kapi.ok) return { error: kapi.hata, odemeGerekli: kapi.odemeGerekli };
 
   const supabase = await createClient();
   const { data: doc, error: docError } = await supabase

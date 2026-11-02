@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
-import { History, RotateCcw } from "lucide-react";
+import Link from "next/link";
+import { CreditCard, History, RotateCcw } from "lucide-react";
 import { asistanGecmisim } from "@/app/actions/ai-gecmis";
 import type { GecmisKaydi } from "@/lib/ai/gecmis";
 import type { Bulgu } from "@/lib/ai/bulgu";
@@ -24,6 +25,8 @@ export type Etiketler = { uyari: string; oneri: string; bilgi: string };
 
 export type AsistanSonucVerisi = {
   hata?: string;
+  /** Deneme hakkı bitti (lib/ai/erisim.ts): hata kutusunda Abonelik'e giden düğme. */
+  odemeGerekli?: boolean;
   bulgular?: Bulgu[];
   aramalar?: string[];
   kirpilanlar?: string[];
@@ -123,6 +126,14 @@ export default function AsistanSonuc({
       {sonuc?.hata && (
         <p className="asistan-uyari" data-tone="danger" role="alert">
           {sonuc.hata}
+          {sonuc.odemeGerekli ? (
+            <>
+              {" "}
+              <Link href="/dashboard/abonelik" className="projects-primary-button button-compact">
+                <CreditCard size={14} aria-hidden="true" /> {t({ tr: "Aboneliği başlat", en: "Start subscription" })}
+              </Link>
+            </>
+          ) : null}
         </p>
       )}
 

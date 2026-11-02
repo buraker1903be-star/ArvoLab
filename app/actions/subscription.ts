@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { denemeAsistanHakkim } from "@/lib/ai/erisim";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { kurumKrediOdemesiBaslat, startCreditCheckout, startSubscriptionCheckout } from "@/lib/subscription";
 import { faturalamaKapsamim } from "@/lib/faturalama-sunucu";
@@ -48,6 +49,10 @@ export async function krediSatinAl(formData: FormData) {
   const profile = await getCurrentProfile();
   // Kurumun kredisini kurum yöneticisi alır (kurumKrediSatinAl).
   if (profile?.organization_id) redirect("/dashboard/abonelik?hata=kurum");
+  /* Denemede ek kredi satılmaz: deneme kilidi kullanım sayısına bakıyor, satın
+     alınan kredi onu açmazdı (lib/ai/deneme-hakki.ts). Sayfa düğmeyi göstermiyor;
+     bu satır eski sekmeden ya da doğrudan çağrıdan gelen isteği durduruyor. */
+  if ((await denemeAsistanHakkim(user.id)).denemede) redirect("/dashboard/abonelik?hata=deneme");
 
   const paket = String(formData.get("paket") ?? "").trim();
   if (!/^[a-z0-9_-]{1,32}$/i.test(paket)) redirect("/dashboard/abonelik?hata=paket");

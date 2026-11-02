@@ -14,7 +14,9 @@
 import type { Dil } from "@/lib/dil";
 import { createClient } from "@/lib/supabase/server";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
-import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
+import { isSubscriptionBlocked, abonelikKapaliMesaji, getAccessState } from "@/lib/access";
+import { loadCurrentProfile } from "@/lib/current-profile";
+import { denemeHakki, type DenemeHakki } from "./deneme-hakki";
 import { aiKurulumSorunu } from "./saglayici";
 import { krediKarari, type KrediKarari } from "./kredi-karari";
 import { SAATLIK_HAK } from "./sinirlar";
@@ -22,7 +24,8 @@ import { SAATLIK_HAK } from "./sinirlar";
 export { SAATLIK_HAK };
 
 export type KapiSonucu =
-  | { ok: false; hata: string }
+  /** odemeGerekli: kilidi ödeme açar; arayüz hata kutusuna Abonelik düğmesi koyar. */
+  | { ok: false; hata: string; odemeGerekli?: boolean }
   /** uyari doluysa çalışma sürer, kullanıcıya not gösterilir. */
   | { ok: true; kullaniciId: string; uyari: string | null };
 
@@ -53,6 +56,30 @@ async function krediDurumu(dil: Dil): Promise<KrediKarari> {
     icEkip: Boolean(satir.ic_ekip),
     bireysel: Boolean(satir.bireysel),
   }, dil);
+}
+
+/**
+ * Deneme süresindeki asistan hakkı (lib/ai/deneme-hakki.ts). Sayaç ayrı bir
+ * tablo değil, asistan kayıtlarının kendisi (ai_assistant_runs): kayıt her
+ * çalışmada zaten yazılıyor ve kullanıcı ona yazamıyor (yalnızca sunucu,
+ * 20261029133812) — sayacı sıfırlamak için kaydı silmesi gerekirdi.
+ * Erişim durumu istek başına önbellekli (lib/access.ts); ek ArvoOS çağrısı yok.
+ */
+export async function denemeAsistanHakkim(kullaniciId: string, dil: Dil = "tr"): Promise<DenemeHakki> {
+  const access = await getAccessState(await loadCurrentProfile());
+  if (access.kind !== "individual" || access.status !== "trialing") return { denemede: false };
+  const admin = adminIstemcisiVarsa();
+  let kullanilan: number | null = null;
+  if (admin) {
+    const { count, error } = await admin
+      .from("ai_assistant_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", kullaniciId)
+      .eq("status", "completed");
+    if (error) console.error("[ai] deneme hakkı okunamadı:", error.message);
+    else kullanilan = count ?? 0;
+  }
+  return denemeHakki({ tur: access.kind, durum: access.status, kullanilan }, dil);
 }
 
 /**
@@ -96,6 +123,10 @@ export async function asistanKapisi(dil: Dil = "tr"): Promise<KapiSonucu> {
      yöneticiyi yanlış değişkene bakmaya gönderiyordu. */
   const kurulumSorunu = aiKurulumSorunu(dil);
   if (kurulumSorunu) return { ok: false, hata: kurulumSorunu };
+
+  // Denemedeki bireysel abone: iki tamamlanmış çalışmadan sonra asistan kilitli.
+  const deneme = await denemeAsistanHakkim(user.id, dil);
+  if (deneme.denemede && deneme.engel) return { ok: false, hata: deneme.engel, odemeGerekli: true };
 
   /*
     Kredi kapısı EN SONDA: önce oturum, abonelik ve kurulum. Kredi

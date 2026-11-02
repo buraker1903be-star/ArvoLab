@@ -35,6 +35,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type KanitDegerlendirmeYaniti = {
   hata?: string;
+  /** Deneme hakkı bitti: hata kutusunda Abonelik düğmesi (lib/ai/erisim.ts). */
+  odemeGerekli?: boolean;
   /** Kredi azalıyor (lib/ai/erisim.ts); AsistanSonuc gösterir. */
   krediUyarisi?: string;
   /** Hüküm gösterildi ama kanıt kaydına işlenemedi. */
@@ -76,7 +78,7 @@ export async function kanitDegerlendir(girdi: { kanitId: string; zorla?: boolean
   if (!UUID.test(String(girdi.kanitId ?? ""))) return { hata: t(KAYIT_YOK) };
 
   const kapi = await asistanKapisi(dil);
-  if (!kapi.ok) return { hata: kapi.hata };
+  if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
 
   const supabase = await createClient();
   const { data: kayit, error } = await supabase

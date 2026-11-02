@@ -16,6 +16,7 @@ const escape = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 import type { Dil } from "@/lib/dil";
+import { DENEME_ASISTAN_HAKKI } from "@/lib/ai/deneme-hakki";
 
 const P = `style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;"`;
 const NOT = `style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;"`;
@@ -164,28 +165,64 @@ export function accountExistsEmail(girisAdresi: string, sifreAdresi: string, dil
 }
 
 /** Deneme süresi bitmeden önceki tek hatırlatma. */
-export function denemeBitiyorEmail(kalanGun: number, panelAdresi: string, dil: Dil = "tr") {
+/*
+  Denemenin son günü (02.11.2026'dan beri bitişe 24 saat kala, deneme 3
+  gün). Eskiden "yarın" / "N gün sonra" yazıyordu; bitişe 24 saat kala
+  "yarın" her zaman doğru değil (bitiş aynı gün de olabilir). Kesin tarih
+  ve saat yazılır. `bitisYazisi` çağıranın dilinde ve Türkiye saatinde.
+*/
+export function denemeBitiyorEmail(bitisYazisi: string, aboneligimAdresi: string, dil: Dil = "tr") {
   if (dil === "en") {
-    const sure = kalanGun === 1 ? "tomorrow" : `in ${kalanGun} days`;
     return {
-      subject: `Your ArvoLab trial ends ${sure}`,
+      subject: "Your ArvoLab trial ends soon",
       html: shell(
-        `Your trial ends ${sure}`,
-        `<p ${P}>Your work stays where it is and is not deleted. When the trial ends, the working screens close; Subscription, Support and Settings stay open and you can download your data. When you renew your plan, you continue where you left off.</p>
-         ${button(panelAdresi, "View my plan")}
-         <p ${NOT}>This is the only reminder; we won't send it again.</p>`,
+        "Your trial ends soon",
+        `<p ${P}>Your ArvoLab trial ends on <b>${escape(bitisYazisi)}</b>. To keep working without interruption, start your subscription before then.</p>
+         <p ${P}>Your work is not deleted. When the trial ends, the working screens close; Subscription, Support and Settings stay open and you can download your data. When you subscribe, you continue where you left off.</p>
+         ${button(aboneligimAdresi, "Start my subscription")}
+         <p ${NOT}>Card payments are approved by your bank with 3D Secure; your card is never charged automatically.</p>`,
         dil,
       ),
     };
   }
-  const sure = kalanGun === 1 ? "yarın" : `${kalanGun} gün sonra`;
   return {
-    subject: `ArvoLab deneme süreniz ${sure} bitiyor`,
+    subject: "ArvoLab deneme süreniz bitmek üzere",
     html: shell(
-      `Deneme süreniz ${sure} bitiyor`,
-      `<p ${P}>Çalışmalarınız yerinde duruyor ve silinmiyor. Deneme bittiğinde çalışma ekranları kapanır; Abonelik, Destek ve Ayarlar açık kalır, verilerinizi indirebilirsiniz. Planınızı yenilediğinizde kaldığınız yerden devam edersiniz.</p>
-       ${button(panelAdresi, "Planımı görüntüle")}
-       <p ${NOT}>Bu tek hatırlatmadır; aynı uyarıyı tekrar göndermiyoruz.</p>`,
+      "Deneme süreniz bitmek üzere",
+      `<p ${P}>ArvoLab deneme süreniz <b>${escape(bitisYazisi)}</b> tarihinde bitiyor. Kesintisiz devam etmek için aboneliğinizi bu tarihten önce başlatın.</p>
+       <p ${P}>Çalışmalarınız silinmez. Deneme bittiğinde çalışma ekranları kapanır; Abonelik, Destek ve Ayarlar açık kalır, verilerinizi indirebilirsiniz. Abone olduğunuzda kaldığınız yerden devam edersiniz.</p>
+       ${button(aboneligimAdresi, "Aboneliğimi başlat")}
+       <p ${NOT}>Kartla ödeme bankanızın 3D Secure onayıyla yapılır; kartınızdan otomatik çekim yapılmaz.</p>`,
+      dil,
+    ),
+  };
+}
+
+/*
+  Deneme bitti (02.11.2026). Erişimin durduğunu, verinin silinmediğini ve
+  ödemeyle kaldığı yerden devam edileceğini söyler. Bir kez gönderilir
+  (individual_subscriptions.deneme_bitti_bildirildi_at).
+*/
+export function denemeBittiEmail(aboneligimAdresi: string, dil: Dil = "tr") {
+  if (dil === "en") {
+    return {
+      subject: "Your ArvoLab trial has ended",
+      html: shell(
+        "Your trial has ended",
+        `<p ${P}>Your ArvoLab trial has ended and access to the working screens has been paused. Your work and sources are kept; nothing has been deleted.</p>
+         <p ${P}>Start your subscription to continue exactly where you left off.</p>
+         ${button(aboneligimAdresi, "Start my subscription")}`,
+        dil,
+      ),
+    };
+  }
+  return {
+    subject: "ArvoLab deneme süreniz sona erdi",
+    html: shell(
+      "Deneme süreniz sona erdi",
+      `<p ${P}>ArvoLab deneme süreniz sona erdi ve çalışma ekranlarına erişiminiz durduruldu. Çalışmalarınız ve kaynaklarınız saklanıyor; hiçbir şey silinmedi.</p>
+       <p ${P}>Aboneliğinizi başlattığınızda kaldığınız yerden devam edersiniz.</p>
+       ${button(aboneligimAdresi, "Aboneliğimi başlat")}`,
       dil,
     ),
   };
@@ -199,6 +236,7 @@ export function hosgeldinizEmail(panelAdresi: string, dil: Dil = "tr") {
       html: shell(
         "Your account is ready",
         `<p ${P}>Your workspace is open. The quickest start: create a work, add your university's guideline and start writing — the guideline check runs as you write.</p>
+         <p ${P}>Your free trial has started. During the trial every screen is open and you can try the assistant ${DENEME_ASISTAN_HAKKI} times; we'll email you before it ends.</p>
          ${button(panelAdresi, "Go to my workspace")}
          <p ${NOT}>ArvoLab does not write your text for you; it checks what you write against your guideline and reference rules, and searches real indexes for sources.</p>`,
         dil,
@@ -210,6 +248,7 @@ export function hosgeldinizEmail(panelAdresi: string, dil: Dil = "tr") {
     html: shell(
       "Hesabınız hazır",
       `<p ${P}>Çalışma alanınız açıldı. En hızlı başlangıç: bir çalışma oluşturun, üniversitenizin kılavuzunu ekleyin ve yazmaya başlayın — kılavuz denetimi siz yazarken çalışır.</p>
+       <p ${P}>Ücretsiz deneme süreniz başladı. Deneme boyunca bütün ekranlar açık, asistanı ${DENEME_ASISTAN_HAKKI} kez deneyebilirsiniz; süre bitmeden önce size e-postayla haber veririz.</p>
        ${button(panelAdresi, "Çalışma alanıma git")}
        <p ${NOT}>ArvoLab metninizi sizin yerinize yazmaz; yazdığınızı kılavuza ve kaynakça kurallarına göre denetler, kaynakları gerçek dizinlerde arar.</p>`,
       dil,

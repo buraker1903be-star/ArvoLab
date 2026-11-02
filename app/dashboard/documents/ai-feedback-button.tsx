@@ -3,7 +3,8 @@
 import { ASISTANA_ULASILAMADI_METIN } from "@/lib/asistan-istemci";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useState } from "react";
-import { Sparkles, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, AlertTriangle, CreditCard } from "lucide-react";
 import { requestAiFeedback } from "@/app/actions/ai-feedback";
 
 interface AiFeedbackButtonProps {
@@ -24,6 +25,7 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
   const [feedback, setFeedback] = useState<string | null>(initialFeedback);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [odemeGerekli, setOdemeGerekli] = useState(false);
   const [krediUyarisi, setKrediUyarisi] = useState<string | null>(null);
 
   async function handleClick() {
@@ -33,6 +35,7 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
       const res = await requestAiFeedback(documentId);
       if (res.error) {
         setError(res.error);
+        setOdemeGerekli(res.odemeGerekli === true);
       } else if (res.feedback) {
         setFeedback(res.feedback);
         setKrediUyarisi(res.krediUyarisi ?? null);
@@ -90,7 +93,18 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
       )}
 
       {error && (
-        <p className="alert mt-sm" data-tone="danger" role="alert">{error}</p>
+        <p className="alert mt-sm" data-tone="danger" role="alert">
+          {error}
+          {/* Deneme hakkı bitti (lib/ai/erisim.ts): kilidi ödeme açar. */}
+          {odemeGerekli ? (
+            <>
+              {" "}
+              <Link href="/dashboard/abonelik" className="projects-primary-button button-compact">
+                <CreditCard size={14} aria-hidden="true" /> {t({ tr: "Aboneliği başlat", en: "Start subscription" })}
+              </Link>
+            </>
+          ) : null}
+        </p>
       )}
 
       {feedback && (

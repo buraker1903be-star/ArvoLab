@@ -35,6 +35,8 @@ export type KaynakcaDenetimGirdisi = {
 
 export type KaynakcaDenetimYaniti = {
   hata?: string;
+  /** Deneme hakkı bitti: hata kutusunda Abonelik düğmesi (lib/ai/erisim.ts). */
+  odemeGerekli?: boolean;
   bulgular?: Bulgu[];
   kirpilanlar?: string[];
   /** Kredi azalıyorsa kullanıcıya gösterilecek not (lib/ai/erisim.ts). */
@@ -67,7 +69,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
   if (!kaynaklar.some((kaynak) => kaynak.ham)) return { hata: t({ tr: "Denetlenecek kaynak bulunamadı.", en: "No sources to check were found." }) };
 
   const kapi = await asistanKapisi(dil);
-  if (!kapi.ok) return { hata: kapi.hata };
+  if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
 
   /*
     Çalışma bağlamı: atıf stili, araştırma yöntemi ve tür. Bunları bilmeden

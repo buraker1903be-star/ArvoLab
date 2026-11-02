@@ -32,6 +32,8 @@ export type AnalizDenetimGirdisi = {
 
 export type AnalizDenetimYaniti = {
   hata?: string;
+  /** Deneme hakkı bitti: hata kutusunda Abonelik düğmesi (lib/ai/erisim.ts). */
+  odemeGerekli?: boolean;
   bulgular?: Bulgu[];
   /** Uzunluk sınırı nedeniyle asistana gönderilemeyen bölümler. */
   kirpilanlar?: string[];
@@ -55,7 +57,7 @@ export async function analizDenetle(girdi: AnalizDenetimGirdisi): Promise<Analiz
   if (istatistikMetni.length < 10) return { hata: t({ tr: "Denetlenecek bir analiz çıktısı yapıştırın.", en: "Paste an analysis output to review." }) };
 
   const kapi = await asistanKapisi(dil);
-  if (!kapi.ok) return { hata: kapi.hata };
+  if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
 
   /*
     Çalışma bağlamı: atıf stili, araştırma yöntemi ve tür. Bunları bilmeden

@@ -25,6 +25,8 @@ const CALISMA_YOK: Metin = { tr: "Çalışma bulunamadı.", en: "Work not found.
 
 export type MakaleDenetimYaniti = {
   hata?: string;
+  /** Deneme hakkı bitti: hata kutusunda Abonelik düğmesi (lib/ai/erisim.ts). */
+  odemeGerekli?: boolean;
   bulgular?: Bulgu[];
   kirpilanlar?: string[];
   /** Kredi azalıyorsa kullanıcıya gösterilecek not (lib/ai/erisim.ts). */
@@ -42,7 +44,7 @@ export async function makaleBolumDenetle(girdi: { projectId: string; bolumSirasi
   if (!UUID.test(String(girdi.projectId ?? ""))) return { hata: t(CALISMA_YOK) };
 
   const kapi = await asistanKapisi(dil);
-  if (!kapi.ok) return { hata: kapi.hata };
+  if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
 
   const supabase = await createClient();
   const [proje, profil, musvedde] = await Promise.all([

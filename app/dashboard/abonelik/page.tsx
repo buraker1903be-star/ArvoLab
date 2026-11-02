@@ -9,6 +9,8 @@ import { getAccessState } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { krediSatinAl, kurumKrediSatinAl } from "@/app/actions/subscription";
 import { krediOzeti, type KrediSatiri } from "@/lib/ai/kredi-ozeti";
+import { denemeAsistanHakkim } from "@/lib/ai/erisim";
+import { DENEME_ASISTAN_HAKKI } from "@/lib/ai/deneme-hakki";
 import { binKrediFiyati, paketFiyati } from "@/lib/kredi-paketleri";
 import type { Metadata } from "next";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
@@ -70,6 +72,10 @@ const HATA: Record<string, Metin> = {
     tr: "Seçili kurum ArvoOS'un kendisi; ArvoOS kendi kredisi için ödeme almaz ve iç ekip krediye tabi değil. Bir müşteri kurumu adına almak için profil menüsündeki Kurum seçiminden o kurumu seçin.",
     en: "The selected institution is ArvoOS itself; ArvoOS does not take payment for its own credits and the internal team is not subject to credits. To buy for a customer institution, select it under Institution in the profile menu.",
   },
+  deneme: {
+    tr: "Deneme süresinde ek kredi satılmaz: deneme hakkı krediyle değil kullanım sayısıyla ölçülür. Aboneliğinizi başlattıktan sonra ek kredi alabilirsiniz.",
+    en: "Extra credits aren't sold during the trial: trial use is counted in runs, not credits. You can buy extra credits after you start your subscription.",
+  },
   sahip: {
     tr: "Kurumunuzun ArvoOS'ta etkin bir sahibi bulunamadığı için ödeme açılamadı. Arvo destek ekibiyle iletişime geçin.",
     en: "Payment could not be started because your institution has no active owner in ArvoOS. Contact Arvo support.",
@@ -127,6 +133,8 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
   const satir = (krediSatiri as KrediSatiri | null) ?? null;
   const kredi = krediOzeti(satir);
   const bireysel = Boolean(satir?.bireysel);
+  /* Denemedeki bireysel abone: asistan hakkı krediyle değil sayıyla (lib/ai/deneme-hakki.ts). */
+  const deneme = await denemeAsistanHakkim(ctx.user.id, dil);
 
   /* Faturalar: bireysel abone kendi ödemelerini, kurumda yalnızca kurum yöneticisi kurumunkileri görür. */
   /* İç ekip: kurum seçicide seçili kurum, yoksa kendi kurumu (lib/kurum-secimi.ts). */
@@ -167,7 +175,9 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
 
   /* Satış: bireysel abone kendine, kurum yöneticisi kurumuna. Paketler bireyselde ensure'dan, kurumda org_billing'den. */
   const platformKurumu = Boolean(faturalamaVeri?.platformKurumu);
-  const satis = access.kind === "individual" ? ("bireysel" as const) : kurumKredisi && !platformKurumu ? ("kurum" as const) : null;
+  /* Denemede paket SATILMAZ (02.11.2026): deneme kilidi kullanım sayısına bakıyor, satın alınan
+     kredi onu açmazdı — kullanıcı parasını hiçbir şey almadan ödemiş olurdu. */
+  const satis = access.kind === "individual" ? (deneme.denemede ? null : ("bireysel" as const)) : kurumKredisi && !platformKurumu ? ("kurum" as const) : null;
   const paketler = satis === "bireysel" ? access.krediPaketleri : satis === "kurum" ? (faturalamaVeri?.krediPaketleri ?? []) : [];
   const enUcuzBirim = paketler.length ? Math.max(...paketler.map(binKrediFiyati)) : 0;
   /*
@@ -281,11 +291,31 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
           </header>
 
           {/*
+            DENEME HAKKI (02.11.2026): deneme süresinde asistan ayda 1.000
+            krediyle değil, 2 kullanımla sınırlı. Kredi göstergesi bu
+            kullanıcıya "1.000 kredi" gösterseydi ikinci kullanımdan sonraki
+            kilit ona bir hata gibi görünürdü.
+          */}
+          {deneme.denemede ? (
+            <p className="alert" data-tone={deneme.kalan > 0 ? "info" : "warning"} role="status">
+              {deneme.kalan > 0
+                ? t({
+                    tr: `Deneme süresince asistanı ${DENEME_ASISTAN_HAKKI} kez kullanabilirsiniz; kalan hakkınız: ${deneme.kalan}. Aboneliğinizi başlattığınızda aylık kredi tanımlanır.`,
+                    en: `During the trial you can use the assistant ${DENEME_ASISTAN_HAKKI} times; uses left: ${deneme.kalan}. Monthly credits are added when you start your subscription.`,
+                  })
+                : t({
+                    tr: `Deneme süresindeki ${DENEME_ASISTAN_HAKKI} asistan hakkınızı kullandınız. Aboneliğinizi başlattığınızda asistan aylık krediyle yeniden açılır.`,
+                    en: `You've used your ${DENEME_ASISTAN_HAKKI} trial assistant runs. The assistant reopens with monthly credits once you start your subscription.`,
+                  })}
+            </p>
+          ) : null}
+
+          {/*
             Sayı üretilemiyorsa (okunamadı, hak bildirilmemiş, iç ekip) kutu
             çizilmiyor: "0 kredi" yazmak, hakkı olmayanla ölçümü okunamayanı
             aynı göstermek olurdu (lib/ai/kredi-ozeti.ts).
           */}
-          {kredi.goster ? (
+          {deneme.denemede ? null : kredi.goster ? (
             <>
               {/*
                 Kredi göstergesi: büyük sayı toplam kullanılabilir kredi; şerit

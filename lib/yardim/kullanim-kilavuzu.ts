@@ -25,6 +25,7 @@
 import type { Metin } from "@/lib/dil";
 import { ADMIN_ROLES, OVERSIGHT_ROLES, STAFF_ROLES } from "@/lib/project-labels";
 import { SAATLIK_HAK } from "@/lib/ai/sinirlar";
+import { DENEME_ASISTAN_HAKKI } from "@/lib/ai/deneme-hakki";
 
 export type KilavuzAdimi = Metin;
 
@@ -419,6 +420,10 @@ const BOLUMLER: KilavuzBolumu[] = [
         tr: `Kullanım hakkı: saatte en fazla ${SAATLIK_HAK} istek; aylık kredi ve satın alınan ek kredi Abonelik ve Kredi sayfasında görünür.`,
         en: `Usage: at most ${SAATLIK_HAK} requests an hour; your monthly credits and any extra credits you buy are shown on the Subscription and Credits page.`,
       },
+      {
+        tr: `Ücretsiz deneme süresinde asistanı ${DENEME_ASISTAN_HAKKI} kez kullanabilirsiniz; sonra asistan, aboneliğinizi başlatana kadar kapanır. Editör, kaynaklar ve analiz deneme boyunca açık kalır.`,
+        en: `During the free trial you can use the assistant ${DENEME_ASISTAN_HAKKI} times; after that the assistant stays closed until you start your subscription. The editor, sources and analysis stay open throughout the trial.`,
+      },
     ],
   },
   {
@@ -570,6 +575,13 @@ const SORULAR: KilavuzSorusu[] = [
     cevap: {
       tr: "Bireysel abonelikte yalnızca siz. Kuruma bağlıysanız kurumunuzun yetkili personeli; başka bir kurum göremez. Paylaşım bağlantısı verdiğiniz kişi yalnızca okur.",
       en: "On an individual subscription, only you. If you belong to an institution, its authorized staff; no other institution can. Anyone you give a share link to can only read.",
+    },
+  },
+  {
+    soru: { tr: "Deneme süresi nasıl işliyor?", en: "How does the trial work?" },
+    cevap: {
+      tr: `Kayıt olduğunuzda ücretsiz deneme kendiliğinden başlar; bütün ekranlar açıktır, asistanı ${DENEME_ASISTAN_HAKKI} kez kullanabilirsiniz. Süre bitmeden bir gün önce ve bittiğinde e-posta ve panel bildirimi alırsınız. Ödeme yapmazsanız çalışma ekranlarına erişim durur, verileriniz silinmez.`,
+      en: `The free trial starts automatically when you sign up; every screen is open and you can use the assistant ${DENEME_ASISTAN_HAKKI} times. You get an email and a panel notification one day before it ends and when it ends. If you don't pay, access to the working screens stops; your data is not deleted.`,
     },
   },
   {
