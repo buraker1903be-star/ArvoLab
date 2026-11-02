@@ -291,8 +291,10 @@ export function kuralGirdileri(veri: unknown): Girdi[] {
     if (!v || typeof v !== "object" || Array.isArray(v)) return null;
     const o = v as Record<string, unknown>;
     const deger = o.deger ?? o["değer"] ?? o.value;
-    if (deger === undefined) return null;
-    return { deger, alinti: o.alinti ?? o["alıntı"] ?? o.quote };
+    const alinti = o.alinti ?? o["alıntı"] ?? o.quote;
+    /* Alıntısız girdi okunmaz (ret değil): kesik yanıtın yarım kuralı böyle kalıyor. Alıntısı YANLIŞ olan ret. */
+    if (deger === undefined || typeof alinti !== "string" || !alinti.trim()) return null;
+    return { deger, alinti };
   };
   if (Array.isArray(kap)) {
     return kap.flatMap((v): Girdi[] => {
@@ -327,9 +329,9 @@ export function kuralGirdileri(veri: unknown): Girdi[] {
 export function jsonOnar(ham: string): unknown {
   const govde = ham.replace(/```(?:json)?/gi, "");
   const bas = govde.indexOf("{");
-  const son = govde.lastIndexOf("}");
-  if (bas === -1 || son <= bas) return null;
-  const k = govde.slice(bas, son + 1);
+  if (bas === -1) return null;
+  /* Son "}"te KESİLMİYOR: kesik yanıtta son "}" yarım kuralın önünde, son tam kuralın "},"si dışarıda kalırdı. */
+  const k = govde.slice(bas);
   let cikti = "";
   let dizgide = false;
   for (let i = 0; i < k.length; i++) {
@@ -360,11 +362,28 @@ export function jsonOnar(ham: string): unknown {
     }
     cikti += c;
   }
-  try {
-    return JSON.parse(cikti.replace(/,\s*([}\]])/g, "$1"));
-  } catch {
-    return null;
+  const dene = (metin: string) => {
+    try {
+      return JSON.parse(metin.replace(/,\s*([}\]])/g, "$1")) as unknown;
+    } catch {
+      return null;
+    }
+  };
+  const tam = dene(cikti.slice(0, cikti.lastIndexOf("}") + 1));
+  if (tam) return tam;
+  /*
+    KESİK YANIT (canlıda 02.11.2026: 2071 karakterde "sola_yasli_bolumler"
+    ortasında bitti). Son tamamlanmış kuralın ardından kesilip kaplar
+    kapatılır; sondan başa her "}," denenir. Yarım kalan kural yok sayılır
+    (alıntısız girdi okunmaz, kuralGirdileri) — eksik kural kalıpla
+    okunandan gelir, uydurma riski doğmaz.
+  */
+  const govdeOnarilmis = cikti.replace(/\s+$/, "");
+  for (let i = govdeOnarilmis.lastIndexOf("},"); i > 0; i = govdeOnarilmis.lastIndexOf("},", i - 1)) {
+    const kurtarilan = dene(`${govdeOnarilmis.slice(0, i + 1)}}}`);
+    if (kurtarilan) return kurtarilan;
   }
+  return null;
 }
 
 /** Okuma mı ret mi. */

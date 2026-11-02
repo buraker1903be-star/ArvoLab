@@ -38,8 +38,10 @@ export async function generateMetadata() {
 
 
 /* Kaynak PDF'lerini bulan sunucu işlemi dış arşivlerden indirme yapıyor
-   (app/actions/kaynak-pdf.ts, süre bütçesi 40 sn). */
-export const maxDuration = 60;
+   (app/actions/kaynak-pdf.ts, süre bütçesi 40 sn). Kılavuz okuma da bu
+   sayfadan çalışıyor (kilavuzuTara: PDF, gerekirse OCR, ardından model;
+   modelin süresi 150 sn) — 60 sn'de işlem yarıda kesilirdi (02.11.2026). */
+export const maxDuration = 300;
 
 export default async function ProjectsPage({
   searchParams,

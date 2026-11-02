@@ -9,7 +9,7 @@ import { ornekKalibi } from "@/lib/atif/tyk";
 import { scanGuidelineBytesMetinli, scanGuidelineUrlMetinli, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
-import { sor } from "@/lib/ai/saglayici";
+import { butceyeTakildi, sor } from "@/lib/ai/saglayici";
 import { ALAN_ADI, cozulenUyarilariAyikla, kilavuzIstemi, kilavuzOkumasiniCozumle, kurallariBirlestir, redMi, type KilavuzOkumasi } from "@/lib/ai/kilavuz-kurallari";
 import type { AtifSistemi } from "@/lib/atif-sistemi";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
@@ -124,11 +124,14 @@ async function yapayZekaylaOku(
   const { mesajlar, kaynak } = kilavuzIstemi(metin);
   const ortak = { kullaniciId: kapi.kullaniciId, calismaId: projectId, yetenek: "kilavuz" as const, baglam: kaynak, basladi: Date.now() };
   try {
-    const yanit = await sor(mesajlar, { yetenek: "kilavuz", jsonBekle: true, sicaklik: 0, enFazlaJeton: 4_000, zamanAsimiMs: 90_000 });
-    if (yanit.bitis === "length") {
-      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
-      return { okuma: null, not: null };
-    }
+    /*
+      Bütçe geniş (ÜAK okumasıyla aynı): düşünen modellerde düşünme payı da
+      bu bütçeden düşüyor; 4 000 jetonda yanıt 2 071 karakterde kesildi
+      (canlı, 02.11.2026). Kesik yanıt artık atılmıyor: tamamlanmış kurallar
+      kurtarılıyor (jsonOnar), her biri yine kendi alıntısıyla doğrulanıyor.
+    */
+    const yanit = await sor(mesajlar, { yetenek: "kilavuz", jsonBekle: true, sicaklik: 0, enFazlaJeton: 16_000, zamanAsimiMs: 150_000 });
+    if (butceyeTakildi(yanit.bitis ?? null)) console.warn("[calisma-kilavuzu] yanıt bütçeye takıldı; tamamlanmış kurallar kurtarılıyor", yanit.metin.length);
     // Alıntılar TAM metne karşı doğrulanır (gönderilen kırpılmış parçaya değil).
     const sonuc = kilavuzOkumasiniCozumle(yanit.metin, metin);
     if (redMi(sonuc)) {

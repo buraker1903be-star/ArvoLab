@@ -166,3 +166,17 @@ test("kusurlu JSON onarılıyor: çit, alıntıdaki düz tırnak, satır sonu, s
   // Onarım içeriği değiştirmiyor: uydurma alıntı yine düşer.
   assert.ok(redMi(kilavuzOkumasiniCozumle(ham.replace("Satır Aralıkları : 1,5", "Satırlar 1,5 aralıklı yazılır"), METIN)));
 });
+
+test("kesik yanıt: tamamlanmış kurallar kurtarılıyor, yarım kalan kural okunmuyor", () => {
+  // Canlıdaki yanıt 2 071 karakterde "sola_yasli_bolumler" ortasında bitmişti; tamamı "boş" sayılıyordu.
+  const tam = JSON.stringify(JSON.parse(DOGRU), null, 1);
+  const kesik = tam.slice(0, tam.indexOf('"sola_yasli_bolumler"') + 30);
+  const sonuc = kilavuzOkumasiniCozumle(kesik, METIN);
+  assert.ok(!redMi(sonuc), JSON.stringify(sonuc));
+  const o = sonuc as KilavuzOkumasi;
+  assert.deepEqual(o.kurallar.margins_cm, { top: 3, bottom: 3, left: 4, right: 2.5 });
+  assert.equal(o.kurallar.chapter_align, "center");
+  // Yarım kalan ve sonrası yok: kalıpla okunan değer kullanılacak.
+  assert.equal(o.kurallar.chapter_left_sections, undefined);
+  assert.equal(o.kurallar.abstract_max_words, undefined);
+});
