@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { YEREL, type Metin } from "@/lib/dil";
-import { Check, FileText, MoreHorizontal, PenLine, Pencil, ShieldCheck, TriangleAlert, Upload } from "lucide-react";
+import { Check, FileText, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { acikYapilacaklar, yapilacakTamamla } from "@/app/actions/yapilacaklar";
 import { calismaAnalizleri } from "@/app/actions/analiz-sonuclari";
@@ -9,6 +9,7 @@ import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
 import ActionForm from "../action-form";
 import KilavuzPenceresi from "./[id]/kilavuz-penceresi";
 import KanitMatrisiPenceresi from "./[id]/kanit/kanit-matrisi-penceresi";
+import EtikKurulPenceresi from "./[id]/etik/etik-penceresi";
 import LiteraturPenceresi from "../literature/literatur-penceresi";
 import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
 import AnalizPenceresi from "../analysis/analiz-penceresi";
@@ -359,10 +360,8 @@ export default async function CalismaDurumKarti({
         <LiteraturPenceresi projectId={calisma.id} projeAdi={calisma.title} />
         <KaynakcaPenceresi calisma={calisma} sonDenetim={ozet.kaynakca} />
         <KanitMatrisiPenceresi projectId={calisma.id} />
-        {/* Etik kurul (02.11.2026): sekme yalnızca çalışma özetindeydi ve öğrenciler bulamıyordu. */}
-        <Link href={`${merkez}/etik`} className="projects-filter-button button-compact">
-          <ShieldCheck size={15} aria-hidden="true" /> {t({ tr: "Etik kurul", en: "Ethics" })}
-        </Link>
+        {/* Etik kurul (02.11.2026): öteki birimler gibi pencere (etik-penceresi.tsx). */}
+        <EtikKurulPenceresi projectId={calisma.id} />
         <AnalizPenceresi projectId={calisma.id} projeAdi={calisma.title} />
         {/* Ayda bir yapılan işler menüde; menü yukarı açılıyor, kartın içinde kalıyor. */}
         <details className="kart-menu">

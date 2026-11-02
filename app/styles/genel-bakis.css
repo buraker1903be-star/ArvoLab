@@ -984,3 +984,6 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   .etik-liste li { grid-template-columns: minmax(0, 1fr) auto; }
   .etik-liste li > select { grid-column: 1; grid-row: 2; justify-self: start; }
 }
+/* Etik kurul penceresi: tarih kilidi tehlikedeyse düğme de söyler (etik-penceresi.tsx). */
+.etik-tetik-tehlike { border-color: var(--danger); color: var(--danger); }
+.etik-pencere { display: grid; gap: 14px; }

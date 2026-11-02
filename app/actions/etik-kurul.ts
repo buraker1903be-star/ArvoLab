@@ -71,6 +71,8 @@ export async function etikBilgileriniKaydet(formData: FormData): Promise<ActionR
     return { error: await yaziHatasi(error.code) };
   }
   revalidatePath(`/dashboard/editor/${projectId}`, "layout");
+  // Çalışmalarım sayfasındaki pencere düğmesi durumu taşıyor (etik-penceresi.tsx).
+  revalidatePath("/dashboard/editor");
   return { success: true };
 }
 
@@ -86,6 +88,8 @@ export async function etikBelgeleriniKaydet(projectId: string, ham: unknown): Pr
     return { error: await yaziHatasi(error.code) };
   }
   revalidatePath(`/dashboard/editor/${projectId}`, "layout");
+  // Çalışmalarım sayfasındaki pencere düğmesi durumu taşıyor (etik-penceresi.tsx).
+  revalidatePath("/dashboard/editor");
   return { ok: true, belgeler };
 }
 
@@ -154,6 +158,8 @@ export async function etikYonergesiniTara(
       return { error: await yaziHatasi(error.code) };
     }
     revalidatePath(`/dashboard/editor/${projectId}`, "layout");
+  // Çalışmalarım sayfasındaki pencere düğmesi durumu taşıyor (etik-penceresi.tsx).
+  revalidatePath("/dashboard/editor");
     return { ok: true, belgeler, bulunan: bulunan.length };
   } finally {
     const { error } = await ctx.supabase.storage.from("project-files").remove([depoYolu]);
