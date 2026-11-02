@@ -131,3 +131,17 @@ test("uzun kılavuzda bütçe biçim satırlarına harcanıyor, sırası korunuy
   // DEÜ kılavuzu bütçeye sığıyor: olduğu gibi gidiyor.
   assert.equal(kilavuzIstemi(METIN).kirpildi, false);
 });
+
+test("yanıtın kabı esnek: sarmalsız nesne ve liste de okunuyor", async () => {
+  const { kuralGirdileri } = await import("@/lib/ai/kilavuz-kurallari");
+  const tek = { deger: 1.5, alinti: "Satır Aralıkları : 1,5" };
+  // Canlıdaki ilk okumalar sarmalsız gelince "boş" diye reddedilmişti.
+  assert.deepEqual(kuralGirdileri({ satir_araligi: tek }), [["satir_araligi", tek]]);
+  assert.deepEqual(kuralGirdileri({ kurallar: [{ alan: "satir_araligi", ...tek }] }), [["satir_araligi", tek]]);
+  assert.deepEqual(kuralGirdileri({ kurallar: { satir_araligi: tek } }), [["satir_araligi", tek]]);
+  assert.deepEqual(kuralGirdileri({ kurallar: { satir_araligi: { "değer": 1.5, "alıntı": "Satır Aralıkları : 1,5" } } }), [["satir_araligi", tek]]);
+  // Bilinmeyen alan ve alıntısız düz değer alınmaz.
+  assert.deepEqual(kuralGirdileri({ uydurma: tek, punto: 12 }), []);
+  const sonuc = kilavuzOkumasiniCozumle(JSON.stringify({ satir_araligi: tek }), METIN) as KilavuzOkumasi;
+  assert.equal(sonuc.kurallar.line_spacing, 1.5);
+});

@@ -149,8 +149,7 @@ const aralik = (n: number | null, en: number, ec: number) => (n !== null && n >=
  * okuma yanlış (kâğıt ölçüsü) — kalıpla okumadaki elemenin aynısı.
  */
 export function kilavuzOkumasiniCozumle(ham: string, kilavuzMetniTam: string): KilavuzOkumasi | KilavuzRed {
-  const veri = jsonOku(ham) as { kurallar?: Record<string, { deger?: unknown; alinti?: unknown }> } | null;
-  const girdiler = veri?.kurallar && typeof veri.kurallar === "object" ? Object.entries(veri.kurallar) : [];
+  const girdiler = kuralGirdileri(jsonOku(ham));
   if (!girdiler.length) return { neden: "bos", ayrinti: [] };
 
   const tam = duzle(kilavuzMetniTam);
@@ -263,6 +262,52 @@ export function kilavuzOkumasiniCozumle(ham: string, kilavuzMetniTam: string): K
     enCokSayfa: enCok !== null && (enAz === null || enAz <= enCok) ? enCok : null,
     kanitlar,
   };
+}
+
+/*
+  YANITIN BİÇİMİ ESNEK OKUNUR (02.11.2026). Canlıdaki ilk iki okuma "boş"
+  diye reddedildi: model kuralları istenen {"kurallar": {alan: {deger,
+  alinti}}} sarmalında döndürmedi. Bilinen alan adlarıyla gelen üç biçim
+  kabul ediliyor — sarmalsız nesne, sarmal içinde liste ({alan, deger,
+  alinti}) ve istenen biçim. Doğrulama (alıntı, sayı, bölüm adı)
+  değişmedi; yalnızca kabın biçimi gevşek.
+*/
+type Girdi = [string, { deger?: unknown; alinti?: unknown }];
+const BILINEN_ALANLAR = new Set([
+  "kenar_ust_cm", "kenar_alt_cm", "kenar_sol_cm", "kenar_sag_cm", "yazi_tipi", "punto", "satir_araligi",
+  "paragraf_girintisi_cm", "paragraf_once_nk", "paragraf_sonra_nk", "iki_yana_yasla", "dipnot_punto", "kagit",
+  "sayfa_numarasi_yeri", "on_sayfalar_romen", "baslik_numaralandirma", "bolum_buyuk_harf", "bolum_yeni_sayfa",
+  "bolum_hizasi", "sola_yasli_bolumler", "numarasiz_bolumler", "alt_baslik_girintisi", "ozet_en_cok_kelime",
+  "ozet_en_az_kelime", "anahtar_kelime_en_az", "anahtar_kelime_en_cok", "en_az_sayfa", "en_cok_sayfa",
+  "atif_stili", "zorunlu_bolumler",
+]);
+
+export function kuralGirdileri(veri: unknown): Girdi[] {
+  if (!veri || typeof veri !== "object") return [];
+  const kok = veri as Record<string, unknown>;
+  const kap = kok.kurallar ?? kok.rules ?? kok;
+  /* Türkçe istemde model anahtarı Türkçe harfle de yazabiliyor ("değer", "alıntı"). */
+  const kayit = (v: unknown): { deger?: unknown; alinti?: unknown } | null => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+    const o = v as Record<string, unknown>;
+    const deger = o.deger ?? o["değer"] ?? o.value;
+    if (deger === undefined) return null;
+    return { deger, alinti: o.alinti ?? o["alıntı"] ?? o.quote };
+  };
+  if (Array.isArray(kap)) {
+    return kap.flatMap((v): Girdi[] => {
+      const alan = (v as { alan?: unknown })?.alan;
+      const k = kayit(v);
+      return typeof alan === "string" && BILINEN_ALANLAR.has(alan) && k ? [[alan, k]] : [];
+    });
+  }
+  if (kap && typeof kap === "object") {
+    return Object.entries(kap as Record<string, unknown>).flatMap(([alan, v]): Girdi[] => {
+      const k = kayit(v);
+      return BILINEN_ALANLAR.has(alan) && k ? [[alan, k]] : [];
+    });
+  }
+  return [];
 }
 
 /** Okuma mı ret mi. */
