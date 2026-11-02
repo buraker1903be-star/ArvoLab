@@ -263,11 +263,16 @@ test("ön sayfalar Romen rakamıyla: Word iki bölüm, yazdırma ana metni işar
     // Ön bölüm Romen, ana bölüm 1'den; kapak sayfası ayrı (numarasız).
     assert.match(acik, /<w:pgNumType w:start="1" w:fmt="lowerRoman"\/>/);
     assert.match(acik, /<w:pgNumType w:start="1" w:fmt="decimal"\/>/);
-    assert.match(acik, /<w:titlePg\/>/);
+    // Dış kapak kendi bölümünde, altbilgisiz ve sayılmıyor (eskiden "i" sayılıyordu).
+    const ilkBolum = acik.match(/<w:sectPr>[\s\S]*?<\/w:sectPr>/)![0];
+    assert.doesNotMatch(ilkBolum, /footerReference/);
+    // İçindekiler kapağın ardında değil, Abstract'tan sonra (kılavuzların sırası).
+    assert.ok(acik.indexOf("Abstract.") < acik.indexOf("İÇİNDEKİLER"));
     // Bölüm sonu GİRİŞ'ten hemen önce: ön bölümün sectPr'i ABSTRACT'tan sonra, GİRİŞ'ten önce.
     const bolumSonu = acik.indexOf("lowerRoman");
     // (İlk "GİRİŞ" içindekiler alanında; bakılan, Abstract'tan sonraki başlık.)
-    assert.ok(acik.indexOf("Abstract.") < bolumSonu && bolumSonu < acik.indexOf("GİRİŞ", acik.indexOf("Abstract.")));
+    // (Abstract'tan sonra içindekiler de "GİRİŞ" yazıyor; bakılan Giriş'in metni.)
+    assert.ok(acik.indexOf("Abstract.") < bolumSonu && bolumSonu < acik.indexOf("Giriş."));
     // Kural yokken tek bölüm, Romen yok.
     assert.doesNotMatch(await xml(false), /lowerRoman"\/>/);
   });
@@ -304,4 +309,39 @@ test("ön sayfalar her zaman yeni sayfadan: yazdırma ve Word (bölüm kuralı k
     .find()
     .filter((d) => (d as unknown as { type: { attrs: Record<string, string> } }).type.attrs["data-yeni-sayfa"]).length;
   assert.equal(isaretli, 3);
+});
+
+test("iç kapak ve onay: Word'de numaralı ama yazılmayan bölüm, yazdırmada ayrı parça", async () => {
+  const tez = {
+    type: "doc",
+    content: [p("TEZİN BAŞLIĞI"), h1("TEZ ONAY SAYFASI"), p("Onay."), h1("YEMİN METNİ"), p("Yemin."), h1("ÖZET"), p("Özet."), h1("KISALTMALAR"), p("Kısaltma."), h1("GİRİŞ"), p("Giriş.")],
+  };
+  const doc = await buildDocxFromTiptap({
+    title: "T",
+    doc: tez as never,
+    fetchImage: async () => null,
+    includeToc: true,
+    textDefaults: { frontMatterRoman: true },
+    coverPage: { title: "Tez", authorName: "Ö", degreeType: "YL" } as never,
+  });
+  const xml = await (await JSZip.loadAsync(await Packer.toBuffer(doc))).file("word/document.xml")!.async("string");
+  const bolumler = xml.match(/<w:sectPr>[\s\S]*?<\/w:sectPr>/g)!;
+  // Dış kapak | iç kapak + onay (Romen, 1'den, altbilgisiz) | yemin… (Romen, devam, altbilgili) | ana metin.
+  assert.equal(bolumler.length, 4);
+  assert.doesNotMatch(bolumler[0], /footerReference/);
+  assert.match(bolumler[1], /w:start="1" w:fmt="lowerRoman"/);
+  assert.doesNotMatch(bolumler[1], /footerReference/);
+  assert.match(bolumler[2], /footerReference/);
+  assert.doesNotMatch(bolumler[2], /w:start=/);
+  assert.match(bolumler[3], /w:start="1" w:fmt="decimal"/);
+  // İçindekiler Özet'ten sonra, Kısaltmalar'dan önce.
+  assert.ok(xml.indexOf("Özet.") < xml.indexOf("İÇİNDEKİLER") && xml.indexOf("İÇİNDEKİLER") < xml.indexOf("Kısaltma."));
+
+  const { buildPrintSheet } = await import("@/lib/print-sheet");
+  const sayfa = buildPrintSheet({ includeToc: true }, { settings: { frontMatterRoman: true } } as never, tez as never);
+  assert.match(sayfa.govde.gizli, /TEZİN BAŞLIĞI[\s\S]*TEZ ONAY SAYFASI/);
+  assert.match(sayfa.govde.tocOncesi, /YEMİN METNİ[\s\S]*ÖZET/);
+  assert.match(sayfa.govde.tocSonrasi, /^<h1[^>]*>KISALTMALAR/);
+  // Parçalar birlikte tam belge.
+  assert.equal(sayfa.govde.gizli + sayfa.govde.tocOncesi + sayfa.govde.tocSonrasi, sayfa.html);
 });

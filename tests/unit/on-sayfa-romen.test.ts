@@ -33,8 +33,11 @@ test("ana metnin başı: ön sayfa olmayan ilk H1", () => {
   assert.equal(anaMetinBaslangici({ content: [h1("ÖZET"), p("x")] }), 2);
 });
 
-test("sayfa etiketleri: kapak boş, ön sayfalar Romen, ana metin 1'den", () => {
-  assert.deepEqual(sayfaEtiketleri(7, 4, true), ["", "ii", "iii", "iv", "1", "2", "3"]);
+test("sayfa etiketleri: dış kapak sayılmaz, ön sayfalar Romen, ana metin 1'den", () => {
+  // Eskiden dış kapak "i" sayılıyordu ve ilk ön sayfa "ii" oluyordu (DEÜ SBE 1.6: dış kapağa numara verilmez).
+  assert.deepEqual(sayfaEtiketleri(7, 4, true), ["", "i", "ii", "iii", "1", "2", "3"]);
+  // İç kapak (1) ve onay (2) numaralanır ama yazılmaz: yemin metni "iii".
+  assert.deepEqual(sayfaEtiketleri(6, 5, true, new Set([1, 2])), ["", "", "", "iii", "iv", "1"]);
   assert.deepEqual(sayfaEtiketleri(4, 2, false), ["i", "ii", "1", "2"]);
   assert.deepEqual(sayfaEtiketleri(2, -1, false), ["i", "ii"]);
 });
@@ -62,4 +65,16 @@ test("editörün içindekiler tahmini Romen ve 1'den", () => {
   assert.deepEqual(romenli, ["i", "ii", "1", "2"]);
   // Kural yokken eskisi gibi tek sayı dizisi.
   assert.deepEqual(icindekiler(basliklar, false, 500).map((s) => s.sayfaEtiketi), ["1", "2", "3", "4"]);
+});
+
+test("içindekilerin yeri: özetlerden sonra, liste sayfalarından ya da Giriş'ten önce", async () => {
+  const { icindekilerSirasi, gizliNumaraSonu } = await import("@/lib/heading-numbering");
+  const tez = { content: [p("TEZİN BAŞLIĞI"), h1("TEZ ONAY SAYFASI"), p("o"), h1("YEMİN METNİ"), p("y"), h1("ÖZET"), p("x"), h1("ABSTRACT"), p("a"), h1("KISALTMALAR"), p("k"), h1("GİRİŞ"), p("g")] };
+  assert.equal(icindekilerSirasi(tez), 9); // KISALTMALAR'ın önü
+  assert.equal(icindekilerSirasi({ content: [h1("ÖZET"), p("x"), h1("GİRİŞ")] }), 2); // liste yoksa Giriş'in önü
+  assert.equal(icindekilerSirasi({ content: [h1("GİRİŞ"), p("g")] }), 0); // ön sayfa yoksa eskisi gibi en baş
+  // İç kapak + onay: numarası yazılmayan aralık yemin metnine kadar.
+  assert.equal(gizliNumaraSonu(tez), 3);
+  assert.equal(gizliNumaraSonu({ content: [h1("ÖZET"), p("x")] }), 0);
+  assert.equal(gizliNumaraSonu({ content: [p("TEZİN BAŞLIĞI"), h1("ÖZET")] }), 1);
 });

@@ -8,6 +8,8 @@ export default function ManuscriptSheet({ title, sheet, dil = "tr" }: { title: s
   const { cover } = sheet;
   const t = ceviriciKur(dil);
   const buyuk = (metin: string) => metin.toLocaleUpperCase(YEREL[dil]);
+  /* İçindekilerden önce ön sayfa varsa içindekiler kendi sayfasından başlar. */
+  const onSayfaVar = Boolean(sheet.govde.gizli || sheet.govde.tocOncesi);
   return (
     <>
       {/* Sayfalama çalışınca bu kural kaldırılır; sayfa kuralını Paged.js uygular (sayfali-baski.tsx). */}
@@ -35,8 +37,20 @@ export default function ManuscriptSheet({ title, sheet, dil = "tr" }: { title: s
           </section>
         ) : null}
 
+
+        {/*
+          Gövde parçaları (lib/print-sheet.ts): numarası yazılmayan ön sayfalar
+          (iç kapak, onay), öteki ön sayfalar, İÇİNDEKİLER, kalan metin.
+          Eskiden içindekiler kapağın hemen ardındaydı.
+        */}
+        {sheet.hasText && sheet.govde.gizli ? (
+          <div className="print-body print-numara-gizli" dangerouslySetInnerHTML={{ __html: sheet.govde.gizli }} />
+        ) : null}
+        {sheet.hasText && sheet.govde.tocOncesi ? (
+          <div className="print-body" dangerouslySetInnerHTML={{ __html: sheet.govde.tocOncesi }} />
+        ) : null}
         {sheet.toc && sheet.toc.length ? (
-          <section className="print-toc" aria-label={t({ tr: "İçindekiler", en: "Table of contents" })}>
+          <section className={onSayfaVar ? "print-toc print-toc-arada" : "print-toc"} aria-label={t({ tr: "İçindekiler", en: "Table of contents" })}>
             <h2>{t({ tr: "İÇİNDEKİLER", en: "TABLE OF CONTENTS" })}</h2>
             <ol>
               {sheet.toc.map((satir, i) => (
@@ -53,9 +67,8 @@ export default function ManuscriptSheet({ title, sheet, dil = "tr" }: { title: s
             </ol>
           </section>
         ) : null}
-
         {sheet.hasText ? (
-          <div className="print-body" dangerouslySetInnerHTML={{ __html: sheet.html }} />
+          <div className="print-body" dangerouslySetInnerHTML={{ __html: sheet.govde.tocSonrasi }} />
         ) : (
           <p>{t({ tr: "Bu çalışma için henüz kaydedilmiş bir metin yok.", en: "There is no saved text for this work yet." })}</p>
         )}

@@ -25,7 +25,7 @@ import {
 } from "docx";
 import { captionLabel, isCaptionKind, type CaptionKind } from "@/lib/tiptap-caption";
 import { YEREL, type Dil } from "@/lib/dil";
-import { anaMetinBaslangici, headingNumberMap, icindekilerSatirlari } from "@/lib/heading-numbering";
+import { anaMetinBaslangici, gizliNumaraSonu, headingNumberMap, icindekilerSatirlari, icindekilerSirasi } from "@/lib/heading-numbering";
 import { sayfaKirilimlari } from "@/lib/chapter-rules";
 import { hangingIndentCmOf, indentCmOf } from "@/lib/paragraph-format";
 import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
@@ -608,8 +608,14 @@ export async function buildDocxFromTiptap({
   if (coverPage) {
     bodyElements.push(...buildCoverPageParagraphs(coverPage, dil));
   }
+  /*
+    İçindekiler ve listeler ayrı toplanıyor: belgede ön sayfa varsa
+    (özet, abstract …) onlardan SONRA yerleşir (heading-numbering.ts
+    icindekilerSirasi). Eskiden hep kapağın hemen ardındaydı.
+  */
+  const icindekilerOgeleri: (Paragraph | TableOfContents)[] = [];
   if (includeToc) {
-    bodyElements.push(
+    icindekilerOgeleri.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 240 },
@@ -642,7 +648,7 @@ export async function buildDocxFromTiptap({
     for (const kind of ["table", "figure"] as CaptionKind[]) {
       if (!kinds.has(kind)) continue;
       const label = captionLabel(kind, dil);
-      bodyElements.push(
+      icindekilerOgeleri.push(
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { after: 240 },
@@ -663,12 +669,37 @@ export async function buildDocxFromTiptap({
     ve içindekiler her zaman ön tarafta; belgedeki ön bölümler (Özet,
     Kısaltmalar …) ilk ana başlığa kadar.
   */
-  const anaSira = textDefaults.frontMatterRoman ? anaMetinBaslangici(doc as Parameters<typeof anaMetinBaslangici>[0]) : -1;
+  const belge = doc as Parameters<typeof anaMetinBaslangici>[0];
+  const anaSira = textDefaults.frontMatterRoman ? anaMetinBaslangici(belge) : -1;
+  // İç kapak ve onay sayfası: numara verilir, yazılmaz (DEÜ SBE 1.6).
+  const gizliSon = textDefaults.frontMatterRoman ? gizliNumaraSonu(belge) : 0;
+  const tocSira = includeToc ? Math.max(icindekilerSirasi(belge), gizliSon) : -1;
+  const kapakSon = bodyElements.length;
   let bolunme = -1;
+  let gizliBitis = -1;
+  const icindekileriKoy = () => {
+    if (!icindekilerOgeleri.length) return;
+    /* Ön sayfaların arasındaysa kendi sayfasından başlar ve sonundaki sayfa sonu
+       düşer: ardından gelen ön sayfa başlığı zaten yeni sayfadan başlıyor. */
+    if (bodyElements.length > kapakSon) {
+      icindekilerOgeleri[0] = new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 240 },
+        pageBreakBefore: true,
+        children: [new TextRun({ text: en ? "TABLE OF CONTENTS" : "İÇİNDEKİLER", bold: true })],
+      });
+      while (icindekilerOgeleri.length && sayfaSonlari.has(icindekilerOgeleri[icindekilerOgeleri.length - 1])) icindekilerOgeleri.pop();
+    }
+    bodyElements.push(...icindekilerOgeleri);
+    icindekilerOgeleri.length = 0;
+  };
   for (const [sira, node] of (doc.content ?? []).entries()) {
+    if (sira === gizliSon && gizliSon > 0) gizliBitis = bodyElements.length;
+    if (sira === tocSira) icindekileriKoy();
     if (sira === anaSira) bolunme = bodyElements.length;
     bodyElements.push(...(await blockToDocx(node, ctx, { quoteDepth: 0 })));
   }
+  icindekileriKoy();
 
   const font = textDefaults.fontFamily ?? "Times New Roman";
   const baseSize = Math.round((textDefaults.fontSizePt ?? 12) * 2);
@@ -696,24 +727,41 @@ export async function buildDocxFromTiptap({
       children: bodyElements.length > 0 ? bodyElements : [new Paragraph({ children: [] })],
     }];
     if (bolunme <= 0 || bolunme >= bodyElements.length) return tek;
-    const on = bodyElements.slice(0, bolunme);
-    while (on.length && sayfaSonlari.has(on[on.length - 1])) on.pop();
-    if (!on.length) return tek;
-    return [
-      {
-        properties: {
-          page: { ...sayfa, pageNumbers: { start: 1, formatType: NumberFormat.LOWER_ROMAN } },
-          titlePage: Boolean(coverPage),
-        },
-        ...(showPageNumbers ? sayfaNumarasiAlani(textDefaults.pageNumberPosition, Boolean(coverPage)) : {}),
-        children: on,
-      },
+    /*
+      Bölümler (Romen rakamlı ön sayfalar): dış kapak (sayılmaz, numarasız) |
+      iç kapak + onay (i, ii — sayılır, YAZILMAZ) | öteki ön sayfalar (iii …) |
+      ana metin (1'den). Altbilgisi olmayan bölüm öncekinden devralır; kapak
+      ve gizli bölümün ikisi de altbilgisiz olduğu için numara görünmez.
+      Her bölümün sonundaki sayfa sonu düşer: bölüm sonu yeni sayfa açıyor.
+    */
+    const kes = (bas: number, son: number) => {
+      const parca = bodyElements.slice(bas, son);
+      while (parca.length && sayfaSonlari.has(parca[parca.length - 1])) parca.pop();
+      return parca;
+    };
+    const kapak = coverPage ? kes(0, kapakSon) : [];
+    const gizliBas = coverPage ? kapakSon : 0;
+    const gizli = gizliBitis > gizliBas ? kes(gizliBas, gizliBitis) : [];
+    const romenBas = gizli.length ? gizliBitis : gizliBas;
+    const romen = kes(romenBas, bolunme);
+    const romenSayfa = { ...sayfa, pageNumbers: { start: 1, formatType: NumberFormat.LOWER_ROMAN } };
+    const bolumListesi = [
+      ...(kapak.length ? [{ properties: { page: sayfa }, children: kapak }] : []),
+      ...(gizli.length ? [{ properties: { page: romenSayfa }, children: gizli }] : []),
+      ...(romen.length
+        ? [{
+            properties: { page: gizli.length ? { ...sayfa, pageNumbers: { formatType: NumberFormat.LOWER_ROMAN } } : romenSayfa },
+            ...(showPageNumbers ? sayfaNumarasiAlani(textDefaults.pageNumberPosition) : {}),
+            children: romen,
+          }]
+        : []),
       {
         properties: { page: { ...sayfa, pageNumbers: { start: 1, formatType: NumberFormat.DECIMAL } } },
         ...(showPageNumbers ? sayfaNumarasiAlani(textDefaults.pageNumberPosition) : {}),
         children: bodyElements.slice(bolunme),
       },
     ];
+    return bolumListesi.length > 1 ? bolumListesi : tek;
   };
 
   return new Document({

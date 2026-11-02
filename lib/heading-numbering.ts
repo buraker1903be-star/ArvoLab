@@ -262,10 +262,69 @@ export function romen(n: number): string {
  * sıfırlamak yalnızca O sayfayı etkiliyordu (Chromium'da ölçüldü: Giriş 1,
  * sonraki sayfa yine 4).
  */
-export function sayfaEtiketleri(sayfaSayisi: number, anaSayfa: number, kapakVar: boolean): string[] {
+export function sayfaEtiketleri(
+  sayfaSayisi: number,
+  anaSayfa: number,
+  kapakVar: boolean,
+  /* Numarası verilip YAZILMAYAN sayfalar (iç kapak, onay; gizliNumaraSonu). */
+  gizli: ReadonlySet<number> = new Set(),
+): string[] {
+  /* Dış kapak SAYILMAZ (DEÜ SBE 1.6); eskiden "i" sayılıyordu ve iç kapak "ii" oluyordu. */
+  const ilk = kapakVar ? 1 : 0;
   return Array.from({ length: Math.max(0, sayfaSayisi) }, (_, i) => {
-    if (kapakVar && i === 0) return "";
+    if (i < ilk) return "";
     if (anaSayfa >= 0 && i >= anaSayfa) return String(i - anaSayfa + 1);
-    return romen(i + 1);
+    return gizli.has(i) ? "" : romen(i - ilk + 1);
   });
+}
+
+/*
+  İÇİNDEKİLERİN YERİ (02.11.2026). Word ve PDF içindekileri kapağın hemen
+  ardına basıyordu; kılavuzların sırası (DEÜ SBE 1.6) ise yemin metni,
+  özet, abstract, İÇİNDEKİLER, kısaltmalar, tablo/şekil listeleri.
+  İçindekiler, belgedeki ilk "liste" ön sayfasının (Kısaltmalar, Tablolar
+  Listesi …) ya da ana metnin önüne gelir; belgede ön sayfa yoksa (0)
+  eskisi gibi en başa.
+*/
+const LISTE_SAYFALARI = new Set(
+  [
+    "Kısaltmalar", "Kısaltmalar Listesi", "Simgeler ve Kısaltmalar", "Simgeler ve Kısaltmalar Listesi",
+    "Tablolar Listesi", "Şekiller Listesi", "Çizelgeler Listesi", "Grafikler Listesi",
+    "Abbreviations", "List of Abbreviations", "Symbols and Abbreviations", "List of Symbols",
+    "List of Symbols and Abbreviations", "List of Tables", "List of Figures", "List of Charts",
+  ].map(normalizeHeading),
+);
+
+const ustBaslik = (d: JsonNode) => d.type === "heading" && (Number(d.attrs?.level) || 1) === 1;
+
+export function icindekilerSirasi(doc: { content?: JsonNode[] } | null | undefined): number {
+  const dugumler = doc?.content ?? [];
+  const ana = anaMetinBaslangici(doc);
+  const onSayfaVar = dugumler.slice(0, ana).some((d) => ustBaslik(d) || (d.type !== "heading" && jsonText(d).trim()));
+  if (!onSayfaVar) return 0;
+  const liste = dugumler.findIndex((d, i) => i < ana && ustBaslik(d) && LISTE_SAYFALARI.has(normalizeHeading(jsonText(d))));
+  return liste >= 0 ? liste : Math.min(ana, dugumler.length);
+}
+
+/*
+  NUMARASI YAZILMAYAN ÖN SAYFALAR (DEÜ SBE 1.6): "İç kapak sayfası ve tez
+  onay sayfasına numara verilecek ancak sayfaya yazılmayacaktır." Belgenin
+  başındaki başlıksız blok (iç kapak, lib/on-sayfalar.ts) ve onay sayfası
+  bu aralıkta; aralığın sonu ondan sonraki ilk birinci düzey başlık.
+  Aralık yoksa 0.
+*/
+const ONAY_SAYFALARI = new Set(["Tez Onay Sayfası", "Onay Sayfası", "Thesis Approval Page", "Approval Page"].map(normalizeHeading));
+
+export function gizliNumaraSonu(doc: { content?: JsonNode[] } | null | undefined): number {
+  const dugumler = doc?.content ?? [];
+  let i = 0;
+  while (i < dugumler.length && !ustBaslik(dugumler[i])) i += 1;
+  const icKapak = dugumler.slice(0, i).some((d) => jsonText(d).trim());
+  let onay = false;
+  if (i < dugumler.length && ONAY_SAYFALARI.has(normalizeHeading(jsonText(dugumler[i])))) {
+    onay = true;
+    i += 1;
+    while (i < dugumler.length && !ustBaslik(dugumler[i])) i += 1;
+  }
+  return icKapak || onay ? i : 0;
 }

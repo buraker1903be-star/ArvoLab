@@ -157,8 +157,8 @@ test("yazdırma HTML'i", async (t) => {
   });
 
   await t.test("boş belge boş çıktı veriyor", () => {
-    assert.deepEqual(renderTiptapHtml(null), { html: "", footnotes: [] });
-    assert.deepEqual(renderTiptapHtml({ content: [] }), { html: "", footnotes: [] });
+    assert.deepEqual(renderTiptapHtml(null), { html: "", parcalar: [""], footnotes: [] });
+    assert.deepEqual(renderTiptapHtml({ content: [] }), { html: "", parcalar: [""], footnotes: [] });
   });
 });
 

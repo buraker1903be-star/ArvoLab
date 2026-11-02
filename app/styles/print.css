@@ -130,6 +130,10 @@
 
 /* İçindekiler (yazdırma/PDF ve danışman paylaşımı; lib/print-sheet.ts). Sayfa numarası yok — bkz. print-sheet. */
 .print-toc { break-after: page; }
+/* Ön sayfaların arasındaki içindekiler (manuscript-sheet.tsx) kendi sayfasından başlar.
+   Ardındaki sayfa sonu kalkar: sonra gelen başlık (kısaltmalar ya da Giriş) zaten yeni
+   sayfadan başlıyor; ikisi birlikte Chromium'da BOŞ bir sayfa açıyordu (ölçüldü). */
+.print-toc-arada { break-before: page; break-after: auto; }
 .print-toc h2 { margin: 0 0 1em; font-size: inherit; text-align: center; }
 .print-toc ol { margin: 0; padding: 0; list-style: none; }
 .print-toc li { margin: 0 0 .35em; }

@@ -30,6 +30,7 @@ import { sayfaEtiketleri } from "@/lib/heading-numbering";
 const SAYFALI_CSS = `
 .print-cover { break-after: page; }
 .print-toc { break-after: page; }
+.print-toc-arada { break-before: page; break-after: auto; }
 .print-body .print-new-page { break-before: page; }
 .print-body .print-ana-baslangic { break-before: page; }
 .print-body h1, .print-body h2, .print-body h3, .print-body h4 { break-after: avoid; }
@@ -88,7 +89,9 @@ function romenNumaralariYaz(kap: HTMLElement, kapakVar: boolean) {
   const sayfalar = [...kap.querySelectorAll<HTMLElement>(".pagedjs_page")];
   const ana = kap.querySelector(".print-ana-baslangic");
   const anaSayfa = ana ? sayfalar.findIndex((s) => s.contains(ana)) : -1;
-  const etiketler = sayfaEtiketleri(sayfalar.length, anaSayfa, kapakVar);
+  /* İç kapak ve onay sayfası numaralanır ama numarası yazılmaz (DEÜ SBE 1.6). */
+  const gizli = new Set(sayfalar.flatMap((s, i) => (s.querySelector(".print-numara-gizli") ? [i] : [])));
+  const etiketler = sayfaEtiketleri(sayfalar.length, anaSayfa, kapakVar, gizli);
   sayfalar.forEach((sayfa, i) => {
     for (const kutu of sayfa.querySelectorAll<HTMLElement>(".pagedjs_margin-content")) {
       if (getComputedStyle(kutu, "::after").content.includes("counter(page")) kutu.dataset.sayfaNo = etiketler[i];

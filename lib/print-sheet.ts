@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { renderTiptapHtml } from "@/lib/tiptap-html";
-import { icindekilerSatirlari, type IcindekilerSatiri } from "@/lib/heading-numbering";
+import { gizliNumaraSonu, icindekilerSatirlari, icindekilerSirasi, type IcindekilerSatiri } from "@/lib/heading-numbering";
 import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { Dil } from "@/lib/dil";
 import { kagitOlcusu, type KagitBoyutu } from "@/lib/kagit-boyutu";
@@ -31,6 +31,8 @@ export interface PrintSheet {
   onSayfaRomen?: boolean;
   cover: CoverPage | null;
   hasText: boolean;
+  /** Gövde parçaları (yukarıdaki sıra); tek parça baskıda html yeterli. */
+  govde: { gizli: string; tocOncesi: string; tocSonrasi: string };
   /*
     İçindekiler (kapaktan sonra). Eskiden PDF çıktısında hiç yoktu; Word'de
     vardı (27.10.2026). Sayfa numarası YOK: tarayıcı baskıda bir başlığın
@@ -60,7 +62,17 @@ export function buildPrintSheet(
   /** Belgenin dili (şekil/tablo etiketleri; lib/belge-dili.ts) */
   dil: Dil = "tr"
 ): PrintSheet {
-  const { html, footnotes } = renderTiptapHtml(doc as Parameters<typeof renderTiptapHtml>[0], {
+  /*
+    Gövdenin parçaları: [numarası yazılmayan ön sayfalar (iç kapak, onay)]
+    [öteki ön sayfalar] İÇİNDEKİLER [liste sayfaları ve ana metin].
+    İçindekiler eskiden kapağın hemen ardındaydı; kılavuzların sırası
+    özetlerden sonra (heading-numbering.ts icindekilerSirasi).
+  */
+  const belge = doc as Parameters<typeof icindekilerSirasi>[0];
+  const gizliSon = guideline?.settings.frontMatterRoman ? gizliNumaraSonu(belge) : 0;
+  const tocSira = manuscript?.includeToc ? Math.max(icindekilerSirasi(belge), gizliSon) : 0;
+  const { html, parcalar, footnotes } = renderTiptapHtml(doc as Parameters<typeof renderTiptapHtml>[0], {
+    bolmeler: [gizliSon, tocSira],
     headingNumbering: manuscript?.headingNumbering ?? false,
     chapterNewPage: guideline?.settings.chapterNewPage ?? false,
     // Dipnot sayfa altına inebilsin (sayfalı baskı; app/print/manuscript/sayfali-baski.tsx).
@@ -93,6 +105,7 @@ export function buildPrintSheet(
 
   return {
     html,
+    govde: { gizli: parcalar[0], tocOncesi: parcalar[1], tocSonrasi: parcalar[2] },
     footnotes,
     pageRule: `@page { size: ${kagit.css}; margin: ${m.top}cm ${m.right}cm ${m.bottom}cm ${m.left}cm;${
       /* Sayfa numarası Word'deki gibi metnin yazı tipi ve boyutunda (tiptap-docx: Footer). */

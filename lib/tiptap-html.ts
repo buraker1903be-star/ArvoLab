@@ -232,8 +232,10 @@ export function renderTiptapHtml(
     altGirinti?: AltBaslikGirintisi;
     /** Ön sayfalar Romen rakamıyla: ana metnin başını işaretle */
     onSayfaRomen?: boolean;
+    /** Çıktıyı bu üst düzey düğüm sıralarından parçalara böl (parcalar) */
+    bolmeler?: number[];
   } = {}
-): { html: string; footnotes: string[] } {
+): { html: string; parcalar: string[]; footnotes: string[] } {
   const ctx: RenderContext = {
     footnotes: [],
     dipnotSatirIci: options.dipnotSatirIci ?? false,
@@ -244,18 +246,28 @@ export function renderTiptapHtml(
     anaBaslik: { chapterAlign: options.chapterAlign, chapterLeftSections: options.chapterLeftSections },
     altGirinti: options.altGirinti,
   };
+  const icerik = doc?.content ?? [];
+  let isaretSirasi = -1;
   if (options.onSayfaRomen) {
     const sira = anaMetinBaslangici(doc as Parameters<typeof anaMetinBaslangici>[0]);
-    const dugum = doc?.content?.[sira];
+    const dugum = icerik[sira];
     if (dugum?.type === "heading") ctx.anaDugum = dugum;
-    else if (dugum) {
-      // Başlıksız başlangıç (ilk düğüm paragraf): yerini boş bir işaret tutar.
-      const icerik = doc!.content!;
-      return {
-        html: `${renderNodes(icerik.slice(0, sira), ctx)}<div class="print-ana-baslangic"></div>${renderNodes(icerik.slice(sira), ctx)}`,
-        footnotes: ctx.footnotes,
-      };
-    }
+    // Başlıksız başlangıç (ilk düğüm paragraf): yerini boş bir işaret tutar.
+    else if (dugum) isaretSirasi = sira;
   }
-  return { html: renderNodes(doc?.content, ctx), footnotes: ctx.footnotes };
+  /*
+    Düğümler SIRAYLA ve aynı bağlamla çiziliyor (dipnot, şekil/tablo
+    numaraları kesintisiz); bölme yalnızca çıktıyı parçalara ayırıyor —
+    baskı sayfası içindekileri ön sayfaların arasına koyabilsin
+    (lib/print-sheet.ts). Bölme yoksa tek parça, eskisiyle aynı.
+  */
+  /* Parça sayısı her zaman sınır sayısı + 1 (boş parçalar dahil): çağıran parçayı sırasından tanır. */
+  const sinirlar = [...(options.bolmeler ?? [])].sort((a, b) => a - b);
+  const parcalar: string[] = sinirlar.map(() => "").concat("");
+  icerik.forEach((dugum, i) => {
+    const p = sinirlar.filter((s) => s <= i).length;
+    if (i === isaretSirasi) parcalar[p] += '<div class="print-ana-baslangic"></div>';
+    parcalar[p] += renderNode(dugum, ctx);
+  });
+  return { html: parcalar.join(""), parcalar, footnotes: ctx.footnotes };
 }
