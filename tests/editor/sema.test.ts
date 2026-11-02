@@ -93,3 +93,14 @@ test("arayüz dili şemayı değiştirmiyor; yalnızca yer tutucu metni", () => 
   assert.equal(EDITOR_PLACEHOLDER, EDITOR_PLACEHOLDER_METIN.tr);
   assert.equal(EDITOR_PLACEHOLDER_METIN.en, "Start writing your work here...");
 });
+
+test("ön sayfa şablonları editör şemasından geçiyor (lib/on-sayfalar.ts)", async () => {
+  const { onSayfaDugumleri, ON_SAYFALAR } = await import("@/lib/on-sayfalar");
+  for (const { id } of ON_SAYFALAR) {
+    for (const dil of ["tr", "en"] as const) {
+      const dugumler = onSayfaDugumleri(id, { kapak: null, dil });
+      // nodeFromJSON şemaya uymayan düğümde (bilinmeyen tür, boş metin düğümü) hata fırlatır.
+      editorSchema.nodeFromJSON({ type: "doc", content: dugumler }).check();
+    }
+  }
+});

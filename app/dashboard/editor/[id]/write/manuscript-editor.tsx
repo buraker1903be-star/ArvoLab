@@ -108,6 +108,8 @@ import { KAGIT_BOYUTLARI, KAGITLAR, kagitOku, type KagitBoyutu } from "@/lib/kag
 import { splitBodyAndReferences } from "@/lib/text-split";
 import type { KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import IcindekilerKarti from "./icindekiler-karti";
+import OnSayfalarKarti from "./on-sayfalar-karti";
+import type { OnSayfaKimligi } from "@/lib/on-sayfalar";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
@@ -117,6 +119,7 @@ import {
   applyTemplate,
   collectHeadings,
   insertSections,
+  insertFrontMatter,
   insertCitation,
   isDocumentEmpty,
   jumpToHeading,
@@ -1625,6 +1628,21 @@ export default function ManuscriptEditor({
         : t({ tr: `"${list[0]}" bölümü eklendi.`, en: `Section "${list[0]}" added.` })
     );
   };
+  /* Ön sayfalar (lib/on-sayfalar.ts): kapak bilgisi kapak açık olmasa da doldurmak için kullanılır. */
+  const handleOnSayfalar = (idler: OnSayfaKimligi[]) => {
+    const eklenen = insertFrontMatter(editor, idler, {
+      kapak: coverPage,
+      dil: belgeDili,
+      ozet: guideline?.settings.abstract,
+      calismaBasligi: coverPage.title,
+    });
+    showToast(
+      eklenen ? "success" : "error",
+      eklenen
+        ? t({ tr: `${eklenen} ön sayfa yerine eklendi; [ … ] yerlerini doldurun.`, en: `${eklenen} front matter pages added in place; fill in the [ … ] places.` })
+        : t({ tr: "Seçilen sayfalar belgede zaten var.", en: "The selected pages are already in the document." }),
+    );
+  };
   const handleTemplate = () => {
     applyTemplate(editor, requiredSections);
     showToast("success", t({ tr: "Kılavuzun bölümleriyle taslak oluşturuldu.", en: "An outline was created from the guideline's sections." }));
@@ -2671,6 +2689,9 @@ export default function ManuscriptEditor({
         onTemplate={handleTemplate}
         onImport={() => setImportOpen(true)}
       >
+        {isThesis ? (
+          <OnSayfalarKarti belge={() => editor.getJSON()} calismaBasligi={coverPage.title} onEkle={handleOnSayfalar} />
+        ) : null}
         <IcindekilerKarti
           headings={stats.headings}
           numaralama={headingNumbering}

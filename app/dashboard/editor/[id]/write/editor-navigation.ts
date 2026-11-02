@@ -3,6 +3,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { headingMatchesSection } from "@/lib/section-match";
 import { authorLabel, dipnotNotu, formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
 import { oncedenAtifYapildi } from "@/lib/atif/dipnot";
+import { onSayfaDugumleri, onSayfaYerlesimi, type OnSayfaKimligi, type OnSayfaVerisi } from "@/lib/on-sayfalar";
 import { kalibaGoreAtif, type AtifKalibi } from "@/lib/atif/tyk";
 import { fixReferencePunctuation } from "@/lib/reference-punctuation";
 import type { Dil } from "@/lib/dil";
@@ -462,4 +463,38 @@ export function clearManualTextFormat(editor: Pick<Editor, "state" | "view">): n
 
   if (changed > 0) editor.view.dispatch(tr);
   return changed;
+}
+
+/*
+  Ön sayfaları yerlerine ekler (lib/on-sayfalar.ts onSayfaYerlesimi).
+  Yerleşim üst düzey düğüm SIRASIYLA geliyor; sıra konuma çevrilir ve
+  sondan başa eklenir — önce eklenen sonraki konumları kaydırmasın.
+  Tek işlem: bir kez geri alınca hepsi gider.
+*/
+export function insertFrontMatter(
+  editor: Editor,
+  idler: OnSayfaKimligi[],
+  veri: OnSayfaVerisi & { calismaBasligi?: string },
+): number {
+  const plan = onSayfaYerlesimi(editor.getJSON() as Parameters<typeof onSayfaYerlesimi>[0], idler, veri.calismaBasligi);
+  if (!plan.length) return 0;
+  let eklenen = 0;
+  editor
+    .chain()
+    .focus()
+    .command(({ tr }) => {
+      const konumlar: number[] = [];
+      tr.doc.forEach((_node, offset, index) => {
+        konumlar[index] = offset;
+      });
+      konumlar[tr.doc.childCount] = tr.doc.content.size;
+      for (const { sira, idler: grup } of [...plan].reverse()) {
+        const dugumler = grup.flatMap((id) => onSayfaDugumleri(id, veri)).map((json) => editor.schema.nodeFromJSON(json));
+        tr.insert(konumlar[Math.min(sira, tr.doc.childCount)], dugumler);
+        eklenen += grup.length;
+      }
+      return true;
+    })
+    .run();
+  return eklenen;
 }

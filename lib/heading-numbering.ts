@@ -11,6 +11,9 @@ const UNNUMBERED_SECTIONS = new Set(
   [
     "Onay Sayfası",
     "Tez Onay Sayfası",
+    // Ön sayfa şablonlarının başlıkları (lib/on-sayfalar.ts); eskiden yemin metni ana metnin başı sanılırdı.
+    "Yemin Metni",
+    "Thesis Approval Page",
     "Beyan",
     "Etik Beyan",
     "Bilimsel Etik Bildirimi",

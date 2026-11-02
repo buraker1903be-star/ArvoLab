@@ -15,6 +15,7 @@ import { kunyeleriAyristir } from "@/lib/atif/kunye";
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 import { dipnotAtiflari } from "@/lib/atif/dipnot";
 import { dipnotMetinleri } from "@/lib/tiptap-text";
+import { yerTutuculari } from "@/lib/on-sayfalar";
 import { baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
 import { kisaltmaMesaji, kisaltmaSorunlari } from "@/lib/kisaltmalar";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
@@ -768,6 +769,37 @@ export function checkStructure(
     add({
       tone: "warning",
       message: en ? `Footnote ${number} is empty; click the footnote marker and write its text.` : `${number}. dipnotun metni boş; dipnot işaretine tıklayıp metnini yazın.`,
+    });
+  }
+
+  /*
+    DOLDURULMAMIŞ YER TUTUCU (02.11.2026). Ön sayfa şablonları
+    (lib/on-sayfalar.ts) öğrencinin dolduracağı yerleri "[Üniversite adı]",
+    "[gg.aa.yyyy]" diye bırakıyor; biri unutulursa teslim edilen tezde
+    köşeli parantezli bir yönerge kalır. Numaralı atıflar ("[1]") sayılmaz.
+  */
+  kategori = "genel";
+  const yerler: string[] = [];
+  const yerGez = (dugumler: DocNode[] | undefined) => {
+    for (const d of dugumler ?? []) {
+      if (d.type === "paragraph" || d.type === "heading") yerler.push(...yerTutuculari(textOf(d)));
+      else yerGez(d.content);
+    }
+  };
+  yerGez(doc?.content);
+  for (const yer of yerler.slice(0, CITATION_ISSUE_LIMIT)) {
+    add({
+      tone: "warning",
+      message: en ? `Placeholder not filled in: ${quote(yer)}. Replace it with your own text.` : `Doldurulmamış yer: ${quote(yer)}. Kendi bilginizle değiştirin.`,
+      target: yer,
+    });
+  }
+  if (yerler.length > CITATION_ISSUE_LIMIT) {
+    add({
+      tone: "warning",
+      message: en
+        ? `…and ${yerler.length - CITATION_ISSUE_LIMIT} more placeholders.`
+        : `…ve doldurulmamış ${yerler.length - CITATION_ISSUE_LIMIT} yer daha.`,
     });
   }
 
