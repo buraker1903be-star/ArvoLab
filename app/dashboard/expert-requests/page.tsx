@@ -282,6 +282,7 @@ export default async function DestekPage({
                     <option value="methodology">{t({ tr: "Metodoloji danışmanlığı", en: "Methodology consulting" })}</option>
                     <option value="editing">{t({ tr: "Dil/biçim düzenleme", en: "Language/format editing" })}</option>
                     <option value="full_review">{t({ tr: "Kapsamlı inceleme", en: "Comprehensive review" })}</option>
+                    <option value="ethics">{t({ tr: "Etik kurul başvurusu", en: "Ethics committee application" })}</option>
                     <option value="other">{t({ tr: "Diğer", en: "Other" })}</option>
                   </select>
                 </label>

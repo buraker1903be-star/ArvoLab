@@ -9,7 +9,8 @@ import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from 
 import { EXPERT_ROLES } from "@/lib/project-labels";
 
 const PAGE_PATH = "/dashboard/expert-requests";
-const REQUEST_TYPES = ["analysis", "editing", "methodology", "statistics", "full_review", "other"];
+// "ethics": Etik kurul başvurusu (02.11.2026, 20261102134543 kısıtıyla aynı küme).
+const REQUEST_TYPES = ["analysis", "editing", "methodology", "statistics", "full_review", "ethics", "other"];
 
 export interface ConsultancyRequest {
   id: string;

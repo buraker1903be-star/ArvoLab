@@ -7,6 +7,7 @@ import { calismaKilavuzu } from "@/app/actions/guidelines";
 import { metinListeTutarsizliklari, type KaynakSatiri, type Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
+import { etikKaydiOku } from "@/lib/etik/oku";
 import { aktifDil } from "@/lib/dil-sunucu";
 
 /*
@@ -131,9 +132,12 @@ export async function calismaOzeti(
   */
   const { kilavuz: uygulanan, okunamadi: uygulananOkunamadi } = await calismaKilavuzuOku(supabase, calisma.id, calisma.guideline_id);
   const dil = await aktifDil();
+  // Etik kurul satırı teslim listesinde (lib/etik/durum.ts); okunamazsa satır yok.
+  const etik = musvedde.data ? await etikKaydiOku(supabase, calisma.id) : null;
   const hazirlik =
     musvedde.data
       ? manuscriptReadiness({
+          etik,
           manuscript: musvedde.data,
           guideline: uygulanan,
           projectType: calisma.project_type,

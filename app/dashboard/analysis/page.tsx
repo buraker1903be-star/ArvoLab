@@ -1,3 +1,7 @@
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { etikKaydiOku } from "@/lib/etik/oku";
+import { analizEtikUyarisi } from "@/lib/etik/durum";
 import { BarChart3, FileText, Trash2 } from "lucide-react";
 import AnalysisTools from "./analysis-tools";
 import AnalizSecici from "./analiz-secici";
@@ -51,9 +55,11 @@ export default async function AnalysisPage({
 
   /* Adresteki çalışma listede yoksa yok sayılır; yoksa en son açılan. */
   const calisma = calismalar.find((c) => c.id === istenen) ?? calismalar[0] ?? null;
-  const { satirlar: analizler, okunamadi: analizOkunamadi } = calisma
-    ? await calismaAnalizleri(calisma.id)
-    : { satirlar: [], okunamadi: false };
+  const [{ satirlar: analizler, okunamadi: analizOkunamadi }, etik] = calisma
+    ? await Promise.all([calismaAnalizleri(calisma.id), createClient().then((s) => etikKaydiOku(s, calisma.id))])
+    : [{ satirlar: [], okunamadi: false }, null];
+  /* Etik kurul tarih kilidi (lib/etik/durum.ts): veri yüklenen yerde hatırlatılır. */
+  const etikUyarisi = analizEtikUyarisi(etik);
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">
@@ -68,6 +74,12 @@ export default async function AnalysisPage({
                 })
               : t({ tr: "Verinizi yükleyin, analizi seçin; testleri ArvoLab hesaplar.", en: "Upload your data and choose an analysis; ArvoLab computes the tests." })}
           </p>
+          {etikUyarisi && calisma ? (
+            <p className="alert" data-tone={etikUyarisi.ton} role={etikUyarisi.ton === "danger" ? "alert" : "status"}>
+              {t(etikUyarisi.metin)}{" "}
+              <Link href={`/dashboard/editor/${calisma.id}/etik`}>{t({ tr: "Etik kurul sekmesi", en: "Ethics tab" })}</Link>
+            </p>
+          ) : null}
         </div>
         <div className="pencere-dugmeler">
           {bagsizlar.length ? (

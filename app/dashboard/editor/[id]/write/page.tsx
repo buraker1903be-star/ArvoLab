@@ -1,3 +1,4 @@
+import { etikKaydiOku } from "@/lib/etik/oku";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -44,7 +45,7 @@ export default async function WriteManuscriptPage({
   // Çalışma yoksa ya da kullanıcının erişimi yoksa (RLS) boş editör yerine 404.
   if (!project) notFound();
 
-  const [{ kilavuz: guideline, okunamadi: kilavuzOkunamadi }, manuscript, userResult, gecmisYaniti, dokumanDili] = await Promise.all([
+  const [{ kilavuz: guideline, okunamadi: kilavuzOkunamadi }, manuscript, userResult, gecmisYaniti, dokumanDili, etik] = await Promise.all([
     /* Katalogda eşleşme yoksa öğrencinin kendi yüklediği kılavuz
        uygulanıyor (lib/guideline-rules.ts: calismaKilavuzu). */
     calismaKilavuzuOku(supabase, id, project.guideline_id),
@@ -61,6 +62,8 @@ export default async function WriteManuscriptPage({
       .limit(10),
     /* Şekil/tablo etiketleri, içindekiler ve kapak BELGENİN dilinde (lib/belge-dili.ts). */
     aktifDil().then((arayuz) => belgeDili(supabase, id, arayuz)),
+    /* Etik kurul kaydı: teslim kontrolünün etik satırı (lib/etik/durum.ts). */
+    etikKaydiOku(supabase, id),
   ]);
   if (gecmisYaniti.error) console.error("[kontrol] geçmiş okunamadı", gecmisYaniti.error.message);
   const gecmisSatirlari = gecmisYaniti.data ?? [];
@@ -129,6 +132,7 @@ export default async function WriteManuscriptPage({
 
       <ManuscriptEditor
         projectId={id}
+        etik={etik}
         kullaniciId={userResult.data.user?.id ?? null}
         belgeDili={dokumanDili}
         acilacakMadde={teslim ?? null}

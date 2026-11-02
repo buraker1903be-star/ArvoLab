@@ -261,6 +261,46 @@ const BOLUMLER: KilavuzBolumu[] = [
     ],
   },
   {
+    id: "etik",
+    baslik: { tr: "Etik kurul başvurusu", en: "Ethics committee application" },
+    ozet: {
+      tr: "Çalışmanın \"Etik kurul\" sekmesi başvurunuzu takip eder, kurulun istediği belgeleri listeler ve verinin onaydan önce toplanmadığını denetler.",
+      en: "The work's \"Ethics\" tab tracks your application, lists the documents the committee requires and checks that no data is collected before approval.",
+    },
+    adimlar: [
+      {
+        tr: "Sekmede \"Durum\"u seçin: etik kurul gerekmiyorsa gerekçesini yazın, gerekiyorsa başvurunun hangi aşamada olduğunu işaretleyin.",
+        en: "Choose the \"Status\" in the tab: if approval isn't needed, write why; if it is, mark where your application stands.",
+      },
+      {
+        tr: "\"Yönerge yükle\" ile kurulunuzun başvuru yönergesini yükleyin. Yönergede geçen belgeler listeye eklenir; her birinin altında \"Yönergede ne diyor\" cümlesi durur. Yönergede olmayan bir belgeyi elle ekleyebilirsiniz.",
+        en: "Upload your committee's application guideline with \"Upload guideline\". Documents mentioned in it are added to the list, each with \"What the guideline says\". You can add documents that aren't in it by hand.",
+      },
+      {
+        tr: "Her belgeyi \"Eksik\", \"Hazırlanıyor\" ya da \"Hazır\" diye işaretleyip \"Listeyi kaydet\"e basın.",
+        en: "Mark each document \"Missing\", \"In progress\" or \"Ready\" and click \"Save list\".",
+      },
+      {
+        tr: "Karar gelince onay tarihini ve karar sayısını, veri toplamaya başladığınızda da başlama tarihini girin.",
+        en: "When the decision arrives, enter the approval date and decision number, and the start date once you begin collecting data.",
+      },
+    ],
+    notlar: [
+      {
+        tr: "Veri toplama onay tarihinden önce başladıysa sekme, Analiz Merkezi ve teslim kontrolü bunu tehlike olarak gösterir: onaydan önce toplanan veri kullanılamaz.",
+        en: "If data collection started before the approval date, the tab, the Analysis Center and the submission check flag it as a danger: data collected before approval can't be used.",
+      },
+      {
+        tr: "Teslim kontrolü karar sayısının metninizde geçip geçmediğine bakar; yöntem bölümüne kurul adını, karar tarihini ve sayısını yazın.",
+        en: "The submission check looks for the decision number in your text; write the committee name, decision date and number in your method section.",
+      },
+      {
+        tr: "Başvuru formunu, protokolü ve onam formunu siz yazarsınız; ArvoLab bunları yazmaz. Bir uzmanın bakmasını isterseniz Destek'te \"Etik kurul başvurusu\" konusunu seçin.",
+        en: "You write the application form, protocol and consent form; ArvoLab doesn't. To have an expert review them, choose the \"Ethics committee application\" topic in Support.",
+      },
+    ],
+  },
+  {
     id: "analiz",
     baslik: { tr: "Analiz Merkezi", en: "Analysis Center" },
     ozet: {

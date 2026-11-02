@@ -92,6 +92,7 @@ const REQUEST_TYPE_LABELS: Record<string, Metin> = {
   methodology: { tr: "Metodoloji danışmanlığı", en: "Methodology consulting" },
   statistics: { tr: "İstatistik desteği", en: "Statistics support" },
   full_review: { tr: "Kapsamlı inceleme", en: "Full review" },
+  ethics: { tr: "Etik kurul başvurusu", en: "Ethics committee application" },
   other: { tr: "Diğer", en: "Other" },
 };
 

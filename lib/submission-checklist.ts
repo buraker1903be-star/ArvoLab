@@ -5,6 +5,7 @@
 import { sayfaDuzeniOzeti, type SayfaDuzeniFarki } from "@/lib/sayfa-duzeni";
 import type { CoverPage } from "@/app/actions/manuscript";
 import type { Dil, Metin } from "@/lib/dil";
+import type { EtikTeslimSatiri } from "@/lib/etik/durum";
 
 /** Kapak alanlarının adı iki dilde (28.10.2026); eski liste Türkçe değerle kalıyor. */
 export const COVER_FIELD_LABELS: [keyof CoverPage, Metin][] = [
@@ -82,6 +83,12 @@ export interface ChecklistInput {
   /** Kılavuzla çalışma arasındaki sayfa düzeni farkları (lib/sayfa-duzeni.ts) */
   pageSetup: SayfaDuzeniFarki[];
   saveState: "saved" | "dirty" | "saving" | "error" | "conflict";
+  /*
+    Etik kurul satırı (02.11.2026, lib/etik/durum.ts → etikTeslimSatiri):
+    çağıran metinle birlikte hesaplar. null/undefined = satır yok (kullanıcı
+    henüz belirlemedi ya da kayıt okunamadı).
+  */
+  etik?: EtikTeslimSatiri;
 }
 
 /*
@@ -306,6 +313,10 @@ export function buildSubmissionChecklist(input: ChecklistInput, dil: Dil = "tr")
           }
         : { id: "save", label: t("Kayıt", "Save status"), status: "warning", detail: t("Değişiklikler kaydediliyor…", "Saving changes…"), action: { id: "save", label: t("Şimdi kaydet", "Save now") } }
   );
+
+  if (input.etik) {
+    items.push({ id: "ethics", label: t("Etik kurul", "Ethics approval"), status: input.etik.durum, detail: input.etik.detay[dil] });
+  }
 
   return { items, done: items.filter((item) => item.status === "ok").length, total: items.length };
 }

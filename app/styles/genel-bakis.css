@@ -953,3 +953,34 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   .yardim-izgara { grid-template-columns: minmax(0, 1fr); }
   .yardim-icindekiler { position: static; }
 }
+
+/* ETİK KURUL SEKMESİ (app/dashboard/editor/[id]/etik, 02.11.2026). */
+.etik-uyarilar { display: grid; gap: 8px; }
+.etik-izgara { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); align-items: start; }
+.etik-belgeler { display: grid; gap: 12px; }
+.etik-yonerge { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: var(--r-md); background: var(--surface-2); }
+.etik-yonerge > div { display: grid; gap: 2px; min-width: 0; flex: 1 1 220px; }
+.etik-yonerge small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.etik-yukle { cursor: pointer; }
+.etik-liste { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.etik-liste li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line-soft); border-left: 3px solid var(--tone, var(--line)); border-radius: var(--r-md); background: var(--surface); }
+.etik-liste li[data-tone="danger"] { --tone: var(--danger); }
+.etik-liste li[data-tone="warning"] { --tone: var(--warning); }
+.etik-liste li[data-tone="success"] { --tone: var(--success); }
+.etik-liste select { min-height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-raised); color: var(--ink); font-size: var(--fs-sm); }
+.etik-satir-govde { display: grid; gap: 3px; min-width: 0; }
+.etik-satir-govde b { color: var(--ink); font-size: var(--fs-body); font-weight: 650; }
+.etik-kaynak { justify-self: start; padding: 1px 8px; border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent-strong); font-size: var(--fs-micro); font-weight: 650; }
+.etik-kaynak[data-kaynak="elle"] { background: var(--surface-2); color: var(--muted); }
+.etik-satir-govde details { color: var(--muted); font-size: var(--fs-sm); }
+.etik-satir-govde summary { cursor: pointer; }
+.etik-satir-govde q { display: block; margin-top: 4px; color: var(--ink-soft); font-style: italic; line-height: var(--lh-metin); }
+.etik-ekle { display: flex; flex-wrap: wrap; gap: 8px; }
+.etik-ekle input { flex: 1 1 220px; }
+.etik-not { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface-2); color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.etik-not p { margin: 0; }
+.etik-not svg { flex: none; margin-top: 2px; color: var(--accent-strong); }
+@media (max-width: 560px) {
+  .etik-liste li { grid-template-columns: minmax(0, 1fr) auto; }
+  .etik-liste li > select { grid-column: 1; grid-row: 2; justify-self: start; }
+}

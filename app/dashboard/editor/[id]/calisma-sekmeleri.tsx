@@ -13,7 +13,7 @@ import { ceviri } from "@/lib/dil-sunucu";
   çalışmanın kimliğini taşıyor ve "Makale" yalnızca makale türünde
   anlamlı — bunu bilen tek yer çalışmayı okuyan sunucu bileşeni.
 */
-export type CalismaSekmesi = "merkez" | "yazim" | "kanit" | "makale";
+export type CalismaSekmesi = "merkez" | "yazim" | "kanit" | "etik" | "makale";
 
 export default async function CalismaSekmeleri({
   calisma,
@@ -27,6 +27,8 @@ export default async function CalismaSekmeleri({
     { anahtar: "merkez", etiket: t({ tr: "Özet", en: "Overview" }), href: `/dashboard/editor/${calisma.id}` },
     { anahtar: "yazim", etiket: t({ tr: "Yazım", en: "Writing" }), href: `/dashboard/editor/${calisma.id}/write` },
     { anahtar: "kanit", etiket: t({ tr: "Kanıt matrisi", en: "Evidence matrix" }), href: `/dashboard/editor/${calisma.id}/kanit` },
+    /* Etik kurul (02.11.2026): tez, makale ve projede; veri toplayan her çalışmada gerekebilir. */
+    { anahtar: "etik", etiket: t({ tr: "Etik kurul", en: "Ethics" }), href: `/dashboard/editor/${calisma.id}/etik` },
     ...(calisma.project_type === "article"
       ? [{ anahtar: "makale" as const, etiket: t({ tr: "Makale", en: "Article" }), href: `/dashboard/editor/${calisma.id}/makale` }]
       : []),

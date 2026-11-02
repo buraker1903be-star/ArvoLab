@@ -3,6 +3,7 @@
 // kılavuz bölüm eşleştirmesi, sayfa tahmini, yapı/atıf denetimi, kapak ve numaralandırma.
 import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
 import { buildSubmissionChecklist, missingCoverFields, type SubmissionChecklist } from "@/lib/submission-checklist";
+import { etikTeslimSatiri, type EtikKaydi } from "@/lib/etik/durum";
 import { checkStructure } from "@/lib/structure-check";
 import { headingMatchesSection } from "@/lib/section-match";
 import { hasManualNumber } from "@/lib/heading-numbering";
@@ -56,6 +57,8 @@ export function manuscriptReadiness(input: {
   citationStyle: string;
   /** Belgenin dili: şekil/tablo etiketleri (lib/belge-dili.ts). */
   belgeDili?: Dil;
+  /** Etik kurul kaydı (lib/etik/oku.ts); editördeki teslim listesiyle aynı satır. */
+  etik?: EtikKaydi | null;
 }, dil: Dil = "tr"): SubmissionChecklist {
   const { manuscript, guideline } = input;
   const doc = (manuscript.content ?? null) as { content?: JsonNode[] } | null;
@@ -98,6 +101,7 @@ export function manuscriptReadiness(input: {
 
   return buildSubmissionChecklist({
     isThesis: input.projectType === "thesis",
+    etik: etikTeslimSatiri(input.etik ?? null, (doc?.content ?? []).map(textOf).join(" ")),
     hasGuideline: Boolean(guideline),
     hasInstitution: input.hasInstitution,
     guidelineVerified: guideline?.dogrulandi,

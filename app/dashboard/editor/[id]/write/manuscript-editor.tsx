@@ -77,6 +77,7 @@ import VersionsDialog from "./versions-dialog";
 import SubmissionChecklistDialog from "./submission-checklist";
 import ShareDialog from "./share-dialog";
 import { buildSubmissionChecklist, missingCoverFields, type ChecklistAction } from "@/lib/submission-checklist";
+import { etikTeslimSatiri, type EtikKaydi } from "@/lib/etik/durum";
 import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
 import CiteDialog from "./cite-dialog";
 import AnalizEkleDialog from "./analiz-ekle-dialog";
@@ -167,6 +168,8 @@ const DEGREE_TYPE_BY_PROJECT_TYPE: Record<string, Metin> = {
 
 interface ManuscriptEditorProps {
   projectId: string;
+  /** Etik kurul kaydı: teslim kontrolünün etik satırı (lib/etik/durum.ts). */
+  etik?: EtikKaydi | null;
   /** Oturumdaki kullanıcı: yerel taslağın anahtarı ona bağlı (ortak bilgisayar). */
   kullaniciId: string | null;
   /** Belgenin dili (lib/belge-dili.ts): şekil/tablo etiketleri, atıf biçimi, kapak, yazım denetimi. */
@@ -369,6 +372,7 @@ function selectToolbarState({ editor }: { editor: Editor | null }) {
 
 export default function ManuscriptEditor({
   projectId,
+  etik = null,
   kullaniciId,
   belgeDili = "tr",
   acilacakMadde = null,
@@ -1295,6 +1299,9 @@ export default function ManuscriptEditor({
   const missingSections = sections.filter((item) => !item.heading).map((item) => item.section);
   const checklist = buildSubmissionChecklist({
     isThesis,
+    /* Metin yalnızca onaylı kayıtta gerekiyor (karar sayısı metinde mi); her çizimde
+       bütün belgenin metnini kurmamak için. */
+    etik: etikTeslimSatiri(etik, etik?.durum === "onaylandi" ? editor.getText() : ""),
     hasGuideline: Boolean(guideline),
     hasInstitution: kurumGirili,
     guidelineVerified: guideline?.dogrulandi,

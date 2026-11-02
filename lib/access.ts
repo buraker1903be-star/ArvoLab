@@ -134,6 +134,8 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  * tamamlama, tarih değiştirme, silme ve teslimTarihiKaydet kapısız: mevcut kayıt), createShareLink, kanitEkle, kunyeyiDogrula
  * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
  * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi,
+ * etikBilgileriniKaydet, etikBelgeleriniKaydet ve etikYonergesiniTara (etik
+ * kurul sekmesi; tarama PDF/OCR çözümlemesi),
  * runManuscriptCheck (yalnızca geçmişe yazma: kontrolün kendisi kapısız,
  * engellenen kullanıcı sonucunu görür ama yazim_kontrolleri'ne yazılmaz).
  * (yapilacakTamamla, analizSirasi ve analizTezeEklendi kapısız: mevcut

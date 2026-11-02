@@ -22,6 +22,7 @@ import { geriBildirimSorusu } from "@/app/actions/geri-bildirim";
 import { computeAttention } from "@/lib/attention";
 import { ilkKullanim } from "@/lib/ilk-kullanim";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
+import { etikKaydiOku } from "@/lib/etik/oku";
 import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
@@ -142,9 +143,12 @@ export default async function DashboardPage() {
     resume && resumeStats
       ? await supabase.from("project_manuscripts").select("*").eq("project_id", resume.id).maybeSingle()
       : { data: null };
+  // Etik kurul satırı: editördeki teslim kontrolüyle aynı hesap (lib/etik/durum.ts).
+  const resumeEtik = resume && resumeManuscript ? await etikKaydiOku(supabase, resume.id) : null;
   const resumeReadiness =
     resume && resumeManuscript
       ? manuscriptReadiness({
+          etik: resumeEtik,
           manuscript: resumeManuscript,
           guideline: resumeGuideline ?? null,
           projectType: resume.project_type,
