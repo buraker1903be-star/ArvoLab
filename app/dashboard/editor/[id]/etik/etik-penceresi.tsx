@@ -16,21 +16,30 @@ import EtikIcerigi, { etikVerisiOku } from "./etik-icerigi";
 export default async function EtikKurulPenceresi({
   projectId,
   triggerClassName = "projects-filter-button button-compact",
+  satir = false,
 }: {
   projectId: string;
   triggerClassName?: string;
+  /*
+    Ana sayfanın "Kaynaklar ve kanıt" listesindeki satır görünümü: başlık ve
+    altında durum, öteki satırlar gibi; düğme simgesiz (genel-bakis.css,
+    .gb-satir-dugme).
+  */
+  satir?: boolean;
 }) {
   const t = await ceviri();
   const veri = await etikVerisiOku(await createClient(), projectId);
   const durumAdi = t(ETIK_DURUM_ADI[veri.durum]);
   const etiket = veri.etik ? t({ tr: `Etik kurul · ${durumAdi}`, en: `Ethics · ${durumAdi}` }) : t({ tr: "Etik kurul", en: "Ethics" });
   const tehlike = veri.uyarilar.some((u) => u.ton === "danger");
+  const satirNotu = veri.etik ? durumAdi : t({ tr: "Başvurunuzu ve belgelerinizi takip edin", en: "Track your application and documents" });
 
   return (
     <PanelDrawer
-      triggerLabel={etiket}
-      triggerIcon={<ShieldCheck size={15} aria-hidden="true" />}
-      triggerClassName={tehlike ? `${triggerClassName} etik-tetik-tehlike` : triggerClassName}
+      triggerLabel={satir ? t({ tr: "Etik kurul", en: "Ethics committee" }) : etiket}
+      triggerNote={satir ? satirNotu : undefined}
+      triggerIcon={satir ? undefined : <ShieldCheck size={15} aria-hidden="true" />}
+      triggerClassName={satir ? `gb-satir gb-satir-dugme${tehlike ? " etik-tetik-tehlike" : ""}` : tehlike ? `${triggerClassName} etik-tetik-tehlike` : triggerClassName}
       kicker={t({ tr: "Etik kurul", en: "Ethics committee" })}
       title={t({ tr: "Etik kurul başvurusu", en: "Ethics committee application" })}
       description={t({

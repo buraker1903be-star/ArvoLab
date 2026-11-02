@@ -30,7 +30,7 @@ export default async function KilavuzPenceresi({
   acikBasla = false,
   kisa = false,
 }: {
-  calisma: { id: string; university: string | null; ornek_atif?: string | null };
+  calisma: { id: string; university: string | null; ornek_atif?: string | null; guideline_id?: string | null };
   uygulanan: AppliedGuideline | null;
   kilavuzOkunamadi: boolean;
   triggerClassName?: string;
@@ -139,18 +139,35 @@ export default async function KilavuzPenceresi({
         <section className="pencere-kart">
           <h3 className="pencere-kart-baslik">{uygulanan ? t({ tr: "Kılavuzu değiştir", en: "Change guideline" }) : t({ tr: "Kılavuzunuzu yükleyin", en: "Upload your guideline" })}</h3>
           {/* Katalog bağlantısı yok: katalog personelin sayfası (lib/os/uygulamalar.ts). */}
+          {/*
+            KILAVUZ HER DURUMDA DEĞİŞTİRİLEBİLİR (02.11.2026, kurum sahibinin
+            isteği). Eskiden kurumun onaylı kılavuzu bağlıyken burada yalnızca
+            "değiştirmeniz gerekmiyor" yazıyordu; enstitü yeni sürüm yayımladığında
+            ya da eşleşme yanlış olduğunda öğrencinin yolu yoktu. Yüklenen kılavuz
+            öncelikli (lib/guideline-rules.ts); kaldırılınca onaylı olan geri gelir.
+          */}
           {uygulanan?.dogrulandi ? (
-            <p className="muted text-sm">
-              {t({
-                tr: "Kurumunuzun onaylı kılavuzu kullanılıyor; değiştirmeniz gerekmiyor. Kurumunuz yanlışsa çalışma ayarlarından düzeltin.",
-                en: "Your institution's approved guideline is in use; you don't need to change it. If your institution is wrong, correct it in the work settings.",
-              })}
-            </p>
+            <>
+              <p className="muted text-sm">
+                {t({
+                  tr: "Kurumunuzun onaylı kılavuzu kullanılıyor. Enstitünüz daha yeni bir sürüm yayımladıysa ya da farklı bir kılavuza tabiyseniz kendi dosyanızı yükleyin; yüklediğiniz kılavuz bu çalışmada onaylı olanın yerine geçer.",
+                  en: "Your institution's approved guideline is in use. If your graduate school has published a newer version or you follow a different guideline, upload your own file; it replaces the approved one for this work.",
+                })}
+              </p>
+              <KilavuzYukle projectId={calisma.id} />
+            </>
           ) : null}
 
           {uygulanan && !uygulanan.dogrulandi ? (
             <>
-              <p className="muted text-sm">{t({ tr: "Yeni bir dosya yüklerseniz kurallar onunla değişir.", en: "If you upload a new file, the rules change with it." })}</p>
+              <p className="muted text-sm">
+                {calisma.guideline_id
+                  ? t({
+                      tr: "Yeni bir dosya yüklerseniz kurallar onunla değişir. Kılavuzunuzu kaldırırsanız kurumunuzun onaylı kılavuzu yeniden uygulanır.",
+                      en: "If you upload a new file, the rules change with it. If you remove your guideline, your institution's approved guideline applies again.",
+                    })
+                  : t({ tr: "Yeni bir dosya yüklerseniz kurallar onunla değişir.", en: "If you upload a new file, the rules change with it." })}
+              </p>
               <KilavuzYukle projectId={calisma.id} />
               {/*
                 Onay metni ÖLÇÜLEREK yazıldı: kılavuz kalkınca sayfa düzeni

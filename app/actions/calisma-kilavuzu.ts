@@ -185,27 +185,19 @@ export async function kilavuzuKaydet(
 ): Promise<ActionResult> {
   const izin = await calismayaYazabilir(projectId);
   if ("hata" in izin) return { error: izin.hata };
-  const { ctx, calisma } = izin;
+  const { ctx } = izin;
   // Yeni kural yazıyor: abonelik kapısı (lib/access.ts).
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
   const t = await ceviri();
   const dil = await aktifDil();
 
   /*
-    Katalogda onaylı kılavuz varsa öğrencinin yüklediği uygulanmaz
-    zaten (lib/guideline-rules.ts sırası). Yazmasına da izin
-    vermiyoruz: uygulanmayacak bir kuralı kaydetmek, kullanıcıya
-    yaptığı işin bir karşılığı varmış gibi göstermek olurdu.
+    Katalogdaki onaylı kılavuz bağlı olsa da öğrenci KENDİ kılavuzunu
+    yükleyebilir (02.11.2026): yüklenen kılavuz öncelikli
+    (lib/guideline-rules.ts, calismaKilavuzuOku). Eskiden burada
+    reddediliyordu ve enstitü yeni sürüm yayımladığında ya da eşleşme
+    yanlış olduğunda öğrencinin kılavuzunu değiştirmesinin yolu yoktu.
   */
-  if (calisma.guideline_id) {
-    return {
-      error: t({
-        tr: "Bu çalışmaya kurumunuzun onaylı kılavuzu bağlı; kendi kılavuzunuz uygulanmaz.",
-        en: "Your institution's approved guideline is linked to this work; your own guideline is not applied.",
-      }),
-    };
-  }
-
   const hatalar = formuDogrula(girdi.form);
   if (hatalar.length > 0) return { error: dogrulamaMesaji(hatalar[0], dil) };
 
@@ -264,9 +256,11 @@ export async function kilavuzuKaydet(
     Öğrenci zaten az önce bu stili ONAYLADI; iki yerde iki ayrı
     cevap olmasının savunulur bir gerekçesi yok.
 
-    Katalog kılavuzu bağlıyken bu yol zaten kapalı (yukarıda
-    reddediliyor), yani kılavuzun kuralını elle seçimle bozma riski
-    doğmuyor.
+    Katalog kılavuzu bağlı çalışmada da yazılır: öğrencinin yüklediği
+    kılavuz öncelikli ve stil onunla gelir. Bilinen bedel: katalog
+    kılavuzu yeniden eşitlenirse (resync_project_guidelines) tetikleyici
+    stili katalogdakine çevirebilir; öğrenci kılavuzunu yeniden onaylayınca
+    düzelir.
   */
   const { error: stilHatasi } = await ctx.supabase
     .from("academic_projects")

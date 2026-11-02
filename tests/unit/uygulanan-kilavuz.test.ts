@@ -319,7 +319,7 @@ describe("öğrenci kılavuzunu değiştirince", () => {
   });
 });
 
-describe("toplu okuma: katalog okunamazsa", () => {
+describe("toplu okuma: öğrencinin yüklediği kılavuz öncelikli (02.11.2026)", () => {
   const ogrenciSatiri = (projectId: string) => ({
     project_id: projectId,
     kaynak_adres: null,
@@ -329,24 +329,52 @@ describe("toplu okuma: katalog okunamazsa", () => {
     olusturuldu: "2026-10-27T10:00:00Z",
     guncellendi: "2026-10-27T10:00:00Z",
   });
-  /* Yalnızca iki sorguyu yanıtlayan sahte istemci: katalog hata veriyor, öğrenci tablosu iki satır döndürüyor. */
-  const istemci = {
+  /* İki tabloyu yanıtlayan sahte istemci; hangi tablonun hata vereceği ve öğrenci satırları ayarlanıyor. */
+  const istemci = (ayar: { ogrenci: string[]; ogrenciHatasi?: boolean; katalogHatasi?: boolean }) => ({
     from: (tablo: string) => ({
       select: () => ({
-        in: async (_sutun: string, degerler: string[]) =>
-          tablo === "thesis_guidelines"
-            ? { data: null, error: { message: "geçici arıza" } }
-            : { data: [ogrenciSatiri("katalogBagli"), ogrenciSatiri("katalogsuz")].filter((r) => degerler.includes(r.project_id)), error: null },
+        in: async (_sutun: string, degerler: string[]) => {
+          if (tablo === "thesis_guidelines") {
+            return ayar.katalogHatasi ? { data: null, error: { message: "geçici arıza" } } : { data: [satir()].filter((r) => degerler.includes(r.id)), error: null };
+          }
+          if (ayar.ogrenciHatasi) return { data: null, error: { message: "geçici arıza" } };
+          return { data: ayar.ogrenci.filter((id) => degerler.includes(id)).map(ogrenciSatiri), error: null };
+        },
       }),
     }),
-  };
+  });
 
-  test("katalog kılavuzu bağlı çalışmaya öğrencinin yüklediği uygulanmaz", async () => {
-    const sonuc = await calismaKilavuzlari(istemci as never, [
+  /*
+    Eskiden katalog bağlı çalışmada öğrencinin yüklediği HİÇ uygulanmıyordu
+    ve yüklemesi reddediliyordu: enstitü yeni sürüm yayımlayınca ya da eşleşme
+    yanlış olunca kılavuz değiştirilemiyordu.
+  */
+  test("katalog bağlı çalışmada öğrencinin yüklediği uygulanır", async () => {
+    const sonuc = await calismaKilavuzlari(istemci({ ogrenci: ["katalogBagli"] }) as never, [{ id: "katalogBagli", guideline_id: "k1" }]);
+    assert.equal(sonuc.get("katalogBagli")?.label, "Kendi kılavuzum");
+  });
+
+  test("öğrenci yüklemediyse katalogdaki onaylı kılavuz uygulanır", async () => {
+    const sonuc = await calismaKilavuzlari(istemci({ ogrenci: [] }) as never, [
       { id: "katalogBagli", guideline_id: "k1" },
-      { id: "katalogsuz", guideline_id: null },
+      { id: "kilavuzsuz", guideline_id: null },
     ]);
-    assert.equal(sonuc.has("katalogBagli"), false, "onaylı kuralın yerine onaylanmamış olan konmamalı");
-    assert.equal(sonuc.get("katalogsuz")?.label, "Kendi kılavuzum");
+    assert.ok(sonuc.get("katalogBagli"));
+    assert.notEqual(sonuc.get("katalogBagli")?.label, "Kendi kılavuzum");
+    assert.equal(sonuc.has("kilavuzsuz"), false);
+  });
+
+  test("öğrenci tablosu okunamazsa hiçbir kılavuz uygulanmaz (yanlışı koymaktansa boş)", async () => {
+    const sonuc = await calismaKilavuzlari(istemci({ ogrenci: ["katalogBagli"], ogrenciHatasi: true }) as never, [{ id: "katalogBagli", guideline_id: "k1" }]);
+    assert.equal(sonuc.size, 0);
+  });
+
+  test("katalog okunamasa da öğrencinin yüklediği uygulanır", async () => {
+    const sonuc = await calismaKilavuzlari(istemci({ ogrenci: ["a"], katalogHatasi: true }) as never, [
+      { id: "a", guideline_id: "k1" },
+      { id: "b", guideline_id: "k1" },
+    ]);
+    assert.equal(sonuc.get("a")?.label, "Kendi kılavuzum");
+    assert.equal(sonuc.has("b"), false);
   });
 });

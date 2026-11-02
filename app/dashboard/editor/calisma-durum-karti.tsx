@@ -342,7 +342,8 @@ export default async function CalismaDurumKarti({
             kilavuzOkunamadi={kilavuzOkunamadi}
             triggerClassName={uygulanan ? "projects-filter-button button-compact" : "projects-primary-button button-compact"}
             kisa
-            acikBasla={kilavuzAc && !uygulanan}
+            /* "Kılavuzu değiştir" bağlantısı (editör) kılavuz varken de buraya gelir. */
+            acikBasla={kilavuzAc}
           />
         )}
         {takvim ? (

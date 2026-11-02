@@ -606,8 +606,8 @@ const SORULAR: KilavuzSorusu[] = [
   {
     soru: { tr: "Kılavuzumu sonradan değiştirebilir miyim?", en: "Can I change my guideline later?" },
     cevap: {
-      tr: "Evet. Çalışmanın \"Kılavuz\" penceresinden yeni bir PDF yükleyip kuralları yeniden onaylarsınız.",
-      en: "Yes. Upload a new PDF from the work's \"Guideline\" window and approve the rules again.",
+      tr: "Evet. Editördeki kılavuz penceresinde \"Kılavuzu değiştir\"e basın (ya da Çalışmalarım'da çalışmanın \"Kılavuz\" penceresini açın), yeni dosyayı yükleyip kuralları onaylayın. Kurumunuzun onaylı kılavuzu bağlı olsa da yüklediğiniz kılavuz onun yerine geçer; kaldırırsanız onaylı olan geri gelir.",
+      en: "Yes. Click \"Change guideline\" in the editor's guideline window (or open the work's \"Guideline\" window in My works), upload the new file and approve the rules. Even if your institution's approved guideline is linked, the one you upload replaces it; remove yours and the approved one applies again.",
     },
   },
   {

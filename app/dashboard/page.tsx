@@ -23,7 +23,7 @@ import { computeAttention } from "@/lib/attention";
 import { ilkKullanim } from "@/lib/ilk-kullanim";
 import { manuscriptReadiness } from "@/lib/manuscript-readiness";
 import { etikKaydiOku } from "@/lib/etik/oku";
-import { ETIK_DURUM_ADI } from "@/lib/etik/durum";
+import EtikKurulPenceresi from "./editor/[id]/etik/etik-penceresi";
 import { metinListeTutarsizliklari } from "@/lib/calisma-tutarlilik";
 import { statusTone } from "@/lib/status-tone";
 import { dueInfo } from "@/lib/due-date";
@@ -988,12 +988,10 @@ export default async function DashboardPage() {
                   </span>
                 }
               />
-              {/* Etik kurul (02.11.2026): sekme yalnızca çalışma özetindeydi, ana sayfadan bulunmuyordu. */}
-              <ListeSatiri
-                href={`/dashboard/editor/${resume.id}/etik`}
-                baslik={t({ tr: "Etik kurul", en: "Ethics committee" })}
-                alt={resumeEtik ? t(ETIK_DURUM_ADI[resumeEtik.durum]) : t({ tr: "Başvurunuzu ve belgelerinizi takip edin", en: "Track your application and documents" })}
-              />
+              {/* Etik kurul (02.11.2026): öteki birimler gibi pencere açar (etik-penceresi.tsx). */}
+              <li>
+                <EtikKurulPenceresi projectId={resume.id} satir />
+              </li>
               <ListeSatiri
                 href={`/dashboard/documents?calisma=${resume.id}`}
                 baslik={t({ tr: "Belge kontrolü", en: "Document check" })}

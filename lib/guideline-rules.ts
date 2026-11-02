@@ -277,17 +277,17 @@ export async function calismaKilavuzuOku(
   projectId: string,
   guidelineId: string | null | undefined,
 ): Promise<KilavuzOkumasi> {
-  if (guidelineId) {
-    const { data: g, error } = await supabase.from("thesis_guidelines").select("*").eq("id", guidelineId).maybeSingle();
-    if (error) {
-      console.error("[kilavuz] katalog kılavuzu okunamadı:", error.message);
-      /* Hangisinin uygulandığı bilinmiyor: yüklenen kılavuza düşmek, onaylı kuralın yerine onaylanmamışı koyabilirdi. */
-      return { kilavuz: null, okunamadi: true };
-    }
-    const katalog = g ? appliedGuidelineFromRow(g as GuidelineRow) : null;
-    if (katalog) return { kilavuz: katalog, okunamadi: false };
-  }
-
+  /*
+    ÖĞRENCİNİN YÜKLEDİĞİ KILAVUZ ÖNCE (02.11.2026, kurum sahibinin isteği:
+    "mevcut tez yazım kılavuzunu değiştirebilmek lazım"). Eskiden katalogdaki
+    onaylı kılavuz her zaman kazanıyordu ve bağlı bir çalışmada öğrencinin
+    kendi kılavuzunu yüklemesi reddediliyordu: enstitü yeni sürüm yayımladığında
+    ya da eşleşme yanlış olduğunda öğrencinin hiçbir yolu yoktu. Katalog bağı
+    (guideline_id) veritabanı tetikleyicisinin elinde, uygulama onu
+    koparamıyor (sync_academic_project_guideline); bu yüzden kural öncelikte:
+    öğrenci açıkça kendi kılavuzunu yükleyip onayladıysa o uygulanır,
+    kaldırırsa onaylı kılavuz geri gelir.
+  */
   const { data, error } = await supabase
     .from("calisma_kilavuzu")
     .select("project_id, kaynak_adres, depo_yolu, belge_basligi, kurallar, olusturuldu, guncellendi")
@@ -295,9 +295,18 @@ export async function calismaKilavuzuOku(
     .maybeSingle();
   if (error) {
     console.error("[kilavuz] çalışma kılavuzu okunamadı:", error.message);
+    /* Hangisinin uygulandığı bilinmiyor: katalogdakine düşmek, öğrencinin seçtiğinin yerine başkasını koyabilirdi. */
     return { kilavuz: null, okunamadi: true };
   }
-  return { kilavuz: data ? appliedGuidelineFromCalisma(data as CalismaKilavuzuRow) : null, okunamadi: false };
+  const yuklenen = data ? appliedGuidelineFromCalisma(data as CalismaKilavuzuRow) : null;
+  if (yuklenen || !guidelineId) return { kilavuz: yuklenen, okunamadi: false };
+
+  const { data: g, error: katalogHatasi } = await supabase.from("thesis_guidelines").select("*").eq("id", guidelineId).maybeSingle();
+  if (katalogHatasi) {
+    console.error("[kilavuz] katalog kılavuzu okunamadı:", katalogHatasi.message);
+    return { kilavuz: null, okunamadi: true };
+  }
+  return { kilavuz: g ? appliedGuidelineFromRow(g as GuidelineRow) : null, okunamadi: false };
 }
 
 /** "Okunamadı"nın ayrı gösterilmesi gerekmeyen yerler için (yazdırma, Word, paylaşım). */
@@ -368,36 +377,28 @@ export async function calismaKilavuzlari(
   supabase: SupabaseClient,
   calismalar: { id: string; guideline_id: string | null | undefined }[],
 ): Promise<Map<string, AppliedGuideline>> {
-  const { harita: katalog, okunamadi: katalogOkunamadi } = await katalogKilavuzlari(
-    supabase,
-    calismalar.map((c) => c.guideline_id),
-  );
   const sonuc = new Map<string, AppliedGuideline>();
-  const kalan: string[] = [];
-  for (const c of calismalar) {
-    const k = c.guideline_id ? katalog.get(c.guideline_id) : undefined;
-    if (k) sonuc.set(c.id, k);
-    /*
-      Katalog OKUNAMADIYSA katalog kılavuzu bağlı çalışmaya öğrencinin
-      yüklediği uygulanmaz (calismaKilavuzuOku ile aynı kural, 29.10.2026).
-      Eskiden okuma hatası boş sonuçtan ayırt edilmiyordu ve geçici bir
-      arızada kartlar onaylı kuralın yerine onaylanmamış olanı gösteriyordu.
-    */
-    else if (!(c.guideline_id && katalogOkunamadi)) kalan.push(c.id);
-  }
-  if (!kalan.length) return sonuc;
-
+  if (!calismalar.length) return sonuc;
+  /* Öğrencinin yüklediği önce (calismaKilavuzuOku ile aynı sıra, 02.11.2026). */
   const { data, error } = await supabase
     .from("calisma_kilavuzu")
     .select("project_id, kaynak_adres, depo_yolu, belge_basligi, kurallar, olusturuldu, guncellendi")
-    .in("project_id", kalan);
+    .in("project_id", calismalar.map((c) => c.id));
   if (error) {
+    /* Hangisinin uygulandığı bilinmiyor: kartlar kılavuzsuz görünür, yanlış kılavuzla değil. */
     console.error("[kilavuz] çalışma kılavuzları okunamadı:", error.message);
     return sonuc;
   }
   for (const row of (data ?? []) as CalismaKilavuzuRow[]) {
     const uygulanan = appliedGuidelineFromCalisma(row);
     if (uygulanan) sonuc.set(row.project_id, uygulanan);
+  }
+  const kalan = calismalar.filter((c) => !sonuc.has(c.id) && c.guideline_id);
+  if (!kalan.length) return sonuc;
+  const { harita: katalog } = await katalogKilavuzlari(supabase, kalan.map((c) => c.guideline_id));
+  for (const c of kalan) {
+    const k = katalog.get(c.guideline_id as string);
+    if (k) sonuc.set(c.id, k);
   }
   return sonuc;
 }

@@ -5,8 +5,8 @@ import { join } from "node:path";
 
 /*
   Bir çalışmanın kılavuzunu okuyan her ekran calismaKilavuzu /
-  calismaKilavuzlari'ndan geçmeli (lib/guideline-rules.ts): katalogdaki
-  ONAYLI sürüm, yoksa öğrencinin yüklediği kılavuz.
+  calismaKilavuzlari'ndan geçmeli (lib/guideline-rules.ts): öğrencinin
+  yüklediği kılavuz, yoksa katalogdaki ONAYLI sürüm (02.11.2026'dan beri bu sırayla).
 
   Katalog 26.10.2026'da kaldırılıp kılavuz çalışma başına yüklenmeye
   başlayınca yalnızca kataloğu okuyan yardımcılar (loadAppliedGuideline,

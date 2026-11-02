@@ -2930,12 +2930,12 @@ export default function ManuscriptEditor({
           description={
             guideline.dogrulandi
               ? t({
-                  tr: "Ekibimizin onayladığı son sürüm. Yeni sürüm onaylandığında editörünüze kendiliğinden yansır.",
-                  en: "The latest version approved by our team. When a new version is approved, it is reflected in your editor automatically.",
+                  tr: "Ekibimizin onayladığı son sürüm. Enstitünüz daha yeni bir sürüm yayımladıysa \"Kılavuzu değiştir\" ile kendi dosyanızı yükleyebilirsiniz.",
+                  en: "The latest version approved by our team. If your graduate school has published a newer version, upload your own file with \"Change guideline\".",
                 })
               : t({
-                  tr: "Kendi yüklediğiniz kılavuz: kuralları siz onayladınız, kurumunuzun onayından geçmedi. Değiştirmek ya da kaldırmak için çalışma özetindeki Kılavuz penceresini kullanın.",
-                  en: "The guideline you uploaded: you confirmed its rules; it has not been approved by your institution. To replace or remove it, use the Guideline window in the work overview.",
+                  tr: "Kendi yüklediğiniz kılavuz: kuralları siz onayladınız, kurumunuzun onayından geçmedi. Değiştirmek ya da kaldırmak için \"Kılavuzu değiştir\"e basın.",
+                  en: "The guideline you uploaded: you confirmed its rules; it has not been approved by your institution. To replace or remove it, click \"Change guideline\".",
                 })
           }
         >
@@ -3051,6 +3051,10 @@ export default function ManuscriptEditor({
               </>
             ) : null}
           </dl>
+          {/* Kılavuzu değiştirme (02.11.2026): Çalışmalarım'daki Kılavuz penceresi bu çalışma seçili açılır. */}
+          <a className="projects-filter-button button-compact mt-sm" href={`/dashboard/editor?sec=${projectId}&kilavuz=1`}>
+            {t({ tr: "Kılavuzu değiştir", en: "Change guideline" })}
+          </a>
 
           {requiredSections.length > 0 ? (
             <div className="stack mt-md">
