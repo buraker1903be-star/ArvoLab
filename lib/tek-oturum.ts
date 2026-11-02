@@ -3,6 +3,10 @@
   oturum açıkken B'den aynı hesapla girilince A'daki oturum kapanmalı ve
   kişiye 'başka bir cihazda oturum açıldı' denmeli").
 
+  İSTİSNA YOK: iç ekip (system_admin, founder) dahil herkese uygulanır
+  (kurum sahibinin kararı, 02.11.2026). Rol ayrımı bilerek eklenmedi; en
+  geniş yetkili hesabın açık kalan ikinci oturumu en riskli oturumdur.
+
   Mekanizma Supabase'in kendisi: girişte signOut({ scope: "others" })
   (app/actions/auth.ts → login) öteki oturumların sunucudaki kaydını ve
   yenileme belirteçlerini siler. A'nın elindeki erişim belirteci süresi
