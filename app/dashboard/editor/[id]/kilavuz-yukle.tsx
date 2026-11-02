@@ -204,16 +204,17 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
             ))}
           </select>
           {/*
-            Kılavuz iki yönteme birden izin veriyorsa (DEÜ SBE: dipnot ve
-            metin içi) seçim öğrencinindir, uydurulmaz. Gerekçe kutunun
-            ALTINDA söyleniyor: eskiden üstteki uyarı satırında "(+3 not)"
-            arkasında kalıyordu, kutunun yanında yalnızca "bulamadım"
-            yazıyordu ve kılavuzu doğru okunmamış sanılıyordu.
+            Kılavuz sistem ADI vermiyorsa sunucu çalışmanın kendi sistemini
+            (ya da yöntemin en yaygın sistemini) seçip nedenini yazıyor
+            (otomatikAtifSistemi). Eskiden kutu boş geliyordu, gerekçe
+            üstteki uyarı satırında "(+N not)" arkasında kalıyordu ve
+            "Kurallarımı uygula" hata veriyordu (02.11.2026).
           */}
-          {!sonuc?.form?.atifStili ? (
+          {stilUyarisi ? (
+            <small>{stilUyarisi}</small>
+          ) : !sonuc?.form?.atifStili ? (
             <small className={stilEksik && !form.atifStili ? "tone-text" : undefined} data-tone={stilEksik && !form.atifStili ? "danger" : undefined}>
-              {stilUyarisi ??
-                t({ tr: "Kılavuzda bulamadım; hangisi isteniyorsa seçin.", en: "I couldn't find it in the guideline; select the one required." })}
+              {t({ tr: "Kılavuzda bulamadım; hangisi isteniyorsa seçin.", en: "I couldn't find it in the guideline; select the one required." })}
             </small>
           ) : null}
         </label>

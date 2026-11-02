@@ -6,6 +6,8 @@ import { taramaDogrula, taramaImzala } from "@/lib/imzali-tarama";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { ornekKalibi } from "@/lib/atif/tyk";
+import { atifYontemleri, otomatikAtifSistemi } from "@/lib/atif-sistemi";
+import { stilAdi } from "@/lib/atif/stiller";
 import { atifYontemiUyarisiMi, scanGuidelineBytesMetinli, scanGuidelineUrlMetinli, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
@@ -46,7 +48,7 @@ async function calismayaYazabilir(projectId: string) {
   const t = await ceviri();
   const { data, error } = await ctx.supabase
     .from("academic_projects")
-    .select("id, owner_id, assignee_id, guideline_id")
+    .select("id, owner_id, assignee_id, guideline_id, citation_style")
     .eq("id", projectId)
     .maybeSingle();
   if (error) {
@@ -163,7 +165,7 @@ export async function kilavuzuTara(
 ): Promise<TaramaSonucu> {
   const izin = await calismayaYazabilir(projectId);
   if ("hata" in izin) return { error: izin.hata };
-  const { ctx } = izin;
+  const { ctx, calisma } = izin;
   /* Ağır çözümleme (PDF, OCR, dış adresten indirme): abonelik kapısı.
      Eskiden yoktu; işlem doğrudan çağrılıp OCR tetiklenebiliyordu. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
@@ -226,6 +228,39 @@ export async function kilavuzuTara(
       ekUyarilar.push(yz.not);
     }
 
+    /*
+      Kılavuz sistem ADI vermiyorsa kutu boş bırakılmıyor
+      (lib/atif-sistemi.ts, otomatikAtifSistemi): çalışmanın kendi sistemi
+      kılavuzun yöntemiyle uyuşuyorsa korunur. Eskiden boş geliyordu ve
+      "Kurallarımı uygula" hata veriyordu (02.11.2026).
+    */
+    let atifNotu: string | null = null;
+    if (!sonuc.detectedCitationStyle) {
+      const yontem = atifYontemleri(tarama.metin);
+      const secim = otomatikAtifSistemi(yontem, calisma.citation_style as string | null);
+      sonuc = { ...sonuc, detectedCitationStyle: secim.sistem };
+      const ad = stilAdi(secim.sistem);
+      const kilavuz =
+        yontem.dipnot && yontem.metinIci
+          ? t({ tr: "Kılavuz bir sistem adı vermiyor, dipnot ve metin içi yönteme izin veriyor", en: "The guideline names no style and allows both footnote and in-text citation" })
+          : yontem.metinIci
+            ? t({ tr: "Kılavuz bir sistem adı vermiyor, metin içi (yazar-tarih) yöntemi anlatıyor", en: "The guideline names no style and describes in-text (author-date) citation" })
+            : yontem.dipnot
+              ? t({ tr: "Kılavuz bir sistem adı vermiyor, dipnot yöntemini anlatıyor", en: "The guideline names no style and describes footnote citation" })
+              : t({ tr: "Kılavuz bir kaynakça sistemi belirtmiyor", en: "The guideline does not specify a citation style" });
+      const secildi =
+        secim.neden === "calisma"
+          ? t({ tr: `çalışmanızda seçili olan ${ad} korundu.`, en: `the ${ad} style already set for your work was kept.` })
+          : t({ tr: `${ad} seçildi.`, en: `${ad} was selected.` });
+      const ek =
+        yontem.dipnot && yontem.metinIci && secim.sistem !== "dipnot"
+          ? t({ tr: " Dipnotla yazacaksanız «Dipnot (klasik)»i seçin.", en: " If you will use footnotes, select «Dipnot (klasik)»." })
+          : yontem.dipnot && yontem.metinIci
+            ? t({ tr: " Metin içi atıfla yazacaksanız bir yazar-tarih sistemi seçin.", en: " If you will cite in-text, select an author-date style." })
+            : "";
+      atifNotu = `${kilavuz}; ${secildi}${ek}`;
+    }
+
     const belirtec = taramaImzala(
       {
         ham: sonuc,
@@ -254,12 +289,13 @@ export async function kilavuzuTara(
         ...ekUyarilar,
         ...sonuc.warnings
           // Gerekçe kutunun altında söyleniyorsa üstteki "bulunamadı" tekrardır.
-          .filter((u) => !atifYontemiUyarisiMi(u) && !(u === "Kaynakça sistemi açıkça bulunamadı." && sonuc.warnings.some(atifYontemiUyarisiMi)))
+          // Atıf seçimi kutunun altında kendi notuyla anlatılıyor (atifNotu).
+          .filter((u) => !atifYontemiUyarisiMi(u) && !(atifNotu && u === "Kaynakça sistemi açıkça bulunamadı."))
           .map((uyari) => taramaUyarisiCevir(uyari, dil)),
       ],
       /* Ayrı alan: eskiden genel uyarı satırında "(+3 not)" arkasında
          kalıyordu ve kutunun yanında yalnızca "bulamadım" yazıyordu. */
-      atifUyarisi: ((u) => (u ? taramaUyarisiCevir(u, dil) : null))(sonuc.warnings.find(atifYontemiUyarisiMi)),
+      atifUyarisi: atifNotu,
       bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules), dil),
       kanitlar: yz.okuma?.kanitlar.map((k) => ({ ad: ALAN_ADI[k.alan]?.[dil] ?? k.alan, alinti: k.alinti })) ?? [],
       okuyan: yz.okuma ? "yapay-zeka" : "kalip",

@@ -26,6 +26,7 @@
   Saf modül; testi tests/unit/atif-sistemi.test.ts.
 */
 
+import { STILLER } from "@/lib/atif/stiller";
 import type { Dil } from "@/lib/dil";
 
 /** Veritabanının kabul ettiği değerler (thesis_guidelines.citation_style). */
@@ -164,4 +165,36 @@ export function atifYontemiUyarisi(yontem: AtifYontemleri): string | null {
     return "Kılavuz bir kaynakça sistemi adı vermiyor; dipnot yöntemini anlatıyor. «Dipnot (klasik)» sistemini seçin.";
   }
   return null;
+}
+
+/*
+  KAYNAKÇA SİSTEMİ OTOMATİK SEÇİLİR (02.11.2026).
+
+  Eskiden kılavuz bir sistem ADI vermediğinde kutu boş kalıyordu ve
+  "Kurallarımı uygula" öğrenciyi seçmeye zorluyordu; öğrenci bunu hata
+  sandı. Oysa çalışmanın zaten bir sistemi var — çalışmayı açarken
+  seçildi. Kılavuzun izin verdiği yöntemlerle uyuşuyorsa o korunur;
+  uyuşmuyorsa (kılavuz yalnızca metin içi diyor, çalışma IEEE) yöntemin
+  en yaygın sistemi önerilir. Kutu düzenlenebilir kalıyor ve neden o
+  sistemin seçildiği altında yazıyor.
+
+  Kılavuz bir sistem adlandırıyorsa bu işlev çağrılmaz: o kazanır.
+*/
+export type OtomatikAtif = { sistem: AtifSistemi; neden: "calisma" | "yontem" | "varsayilan" };
+
+export function otomatikAtifSistemi(yontem: AtifYontemleri, calismaStili: string | null | undefined): OtomatikAtif {
+  const yalnizDipnot = yontem.dipnot && !yontem.metinIci;
+  if (yalnizDipnot) return { sistem: "dipnot", neden: "yontem" };
+
+  const mevcut = calismaStili && calismaStili in STILLER ? (calismaStili as AtifSistemi) : null;
+  if (mevcut) {
+    const tur = STILLER[mevcut].tur;
+    const uyar =
+      !yontem.metinIci && !yontem.dipnot
+        ? true // Kılavuz yöntemden söz etmiyor: öğrencinin seçimi geçerli.
+        : (yontem.dipnot && tur === "dipnot") || (yontem.metinIci && (tur === "yazar-tarih" || tur === "yazar-sayfa"));
+    if (uyar) return { sistem: mevcut, neden: "calisma" };
+  }
+  // Türkiye'de metin içi yöntemin en yaygın karşılığı.
+  return { sistem: "apa7", neden: "varsayilan" };
 }
