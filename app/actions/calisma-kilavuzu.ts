@@ -212,8 +212,8 @@ export async function kilavuzuTara(
       if (farklar.length) {
         ekUyarilar.push(
           t({
-            tr: `Kalıpla okuma ile yapay zekâ ${farklar.length} kuralı farklı okudu; yapay zekânın kılavuzdan alıntıladığı değer kullanıldı. Aşağıdaki alıntılara bakın.`,
-            en: `Pattern reading and the AI read ${farklar.length} rule(s) differently; the value the AI quoted from the guideline was used. Check the quotes below.`,
+            tr: `${farklar.length} kural iki farklı biçimde okunabildi; kılavuzdaki cümlesiyle doğrulanan değer kullanıldı. Aşağıdaki alıntılara bakın.`,
+            en: `${farklar.length} rule(s) could be read in two ways; the value confirmed by its sentence in the guideline was used. Check the quotes below.`,
           }),
         );
       }

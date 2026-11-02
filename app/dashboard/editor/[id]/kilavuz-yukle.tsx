@@ -263,12 +263,14 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
         */}
         <div className="kilavuz-bicim">
           <span className="kilavuz-alan-basligi">{t({ tr: "Ayrıca şu biçim kuralları uygulanacak", en: "These formatting rules will also be applied" })}</span>
-          {/* Kuralları kim okudu: yapay zekâ (alıntılarıyla) ya da yalnızca kalıp (lib/ai/kilavuz-kurallari.ts). */}
+          {/* Kuralları kim okudu: model (alıntılarıyla) ya da yalnızca kalıp (lib/ai/kilavuz-kurallari.ts).
+              Ekranda "yapay zekâ" denmiyor (02.11.2026, kurum sahibinin kararı): öğrenciye
+              söylenmesi gereken kaynak değil, kuralın kılavuzdaki cümlesiyle doğrulandığı. */}
           <p className="muted text-sm">
             {sonuc?.okuyan === "yapay-zeka"
               ? t({
-                  tr: "Kurallar kılavuzunuzdan yapay zekâyla okundu; her biri kılavuzdaki cümlesiyle doğrulandı.",
-                  en: "The rules were read from your guideline by AI; each one was checked against its sentence in the guideline.",
+                  tr: "Kurallar kılavuzunuzdan okundu; her biri kılavuzdaki cümlesiyle doğrulandı.",
+                  en: "The rules were read from your guideline; each one was checked against its sentence in the guideline.",
                 })
               : t({
                   tr: "Kurallar kılavuzunuzdan otomatik okundu; lütfen kılavuzla karşılaştırın.",
