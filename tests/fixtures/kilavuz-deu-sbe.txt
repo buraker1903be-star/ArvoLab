@@ -1,0 +1,778 @@
+T.C.
+DOKUZ EYLÜL ÜNİVERSİTESİ
+SOSYAL BİLİMLER ENSTİTÜSÜ
+TEZ YAZIMINDA UYULMASI GEREKEN KURALLAR
+İZMİR - 2011
+
+-- 1 of 30 --
+
+i
+TEZ YAZIMINDA UYULMASI GEREKEN KURALLAR
+İÇİNDEKİLER i
+EKLER LİSTESİ iii
+GİRİŞ 1
+BİRİNCİ BÖLÜM
+BİÇİM VE GÖRÜNÜŞ
+1.1. KAĞIDIN NİTELİKLERİ VE KULLANMA ALANI 2
+1.2. METİN SAYFALARININ DÜZENLENMESİ 2
+1.3. BAŞLIKLANDIRMA YÖNTEMLERİ 3
+1.4. METİN İÇİ KISALTMALAR 4
+1.5. ATIF USULLERİ 4
+1.5.1. Dipnot Yöntemi 5
+1.5.2. Metin İçi Yöntem 9
+1.6. SAYFA NUMARALARI 10
+1.7. TABLO VE ŞEKİLLER (GÖRSEL MALZEME) 12
+1.8. TEZİN CD’YE KAYDEDİLMESİ 13
+İKİNCİ BÖLÜM
+İÇERİĞİN DÜZENLENMESİ
+2.1. ÖN SAYFALAR 15
+2.1.1. Kapak Sayfası 15
+2.1.2. İç Kapak Sayfası 15
+2.1.3. Tez Onay Sayfası (Bu form spiral olarak tezinizi bastırdığınızda tezin
+içinde konmayacak olup, savunmadan sonra başarılı bulunduğunuz takdirde
+bastıracağınız tezin içine eklenecektir.) 15
+2.1.4. Yemin Metni 16
+2.1.5. Özet 16
+
+-- 2 of 30 --
+
+ii
+2.1.6. İçindekiler Listesi 16
+2.1.7. Kısaltmalar 16
+2.1.8. Tablolar Listesi 16
+2.1.9. Şekiller Listesi 17
+2.1.10 Ekler Listesi 17
+2.2. METİN 17
+2.2.1. Giriş 17
+2.2.2. Tez Metni (Ana kısım) 17
+2.2.3. Sonuç ve Öneriler 18
+2.3. KAYNAKÇA VE EKLER 18
+2.3.1. Kaynakça 18
+2.3.1.1. Klasik Yöntem 19
+2.3.1.2. Güncel Yöntem 21
+2.3.2. Ekler 23
+2.4. İNTİHAL 24
+EKLER
+
+-- 3 of 30 --
+
+iii
+EKLER LİSTESİ
+EK 1: İç ve Dış Kapak Örneği ek s.1
+EK 2: İngilizce Doktora Programları İçin Dış ve İç Kapak Örneği ek s.2
+EK 3: İngilizce Tezli Yüksek Lisans Programları için Dış ve İç Kapak
+Örneği ek s.3
+EK 4: Tezli Yüksek Lisans ve Doktora İçin Tez Onay Sayfası, Tezsiz
+Yüksek Lisans Dönem Projesi Onay Sayfası Örneği ek s.4
+EK 5: Yemin Metni Örneği (Doktora Öğrencileri İçin) ek s.5
+EK 6: İngilizce Yemin Metni Örneği (Doktora Öğrencileri İçin) ek s.6
+EK 7: Yemin Metni Örneği (Tezli Yüksek Lisans/ Tezsiz Yüksek Lisans
+Öğrencileri İçin)
+ek s.7
+EK 8: İngilizce Yemin Metni Örneği (Tezli Yüksek Lisans / Tezsiz Yüksek
+Lisans Öğrencileri İçin)
+ek s.8
+EK 9: Türkçe Özet ek s.9
+EK 10: İngilizce Özet (Doktora Programı Örneği) ek s.11
+EK 11: İngilizce Özet (Tezli / Tezsiz Yüksek Lisans Programı Örneği) ek s.13
+EK 12: İçindekiler Listesi ek s.15
+EK 13: Kısaltmalar ek s.17
+EK 14: Tablolar Listesi ek s.18
+EK 15: Şekiller Listesi ek s.19
+EK 16: Ekler Listesi ek s.20
+
+-- 4 of 30 --
+
+1
+GİRİŞ
+Yazım Kuralları Kullanıcılarına;
+Bu tez yazım kuralları “Yükseköğretim Kurumlarında Hazırlanan Yüksek
+Lisans, Doktora, Tıpta Uzmanlık, Sanatta Yeterlik Tezlerinin YÖK Tez Merkezine
+Teslim Edilmesine İlişkin Kılavuz” ile uyumlu olacak şekilde, Dokuz Eylül
+Üniversitesi Sosyal Bilimler Enstitüsü’nün (SBE) çeşitli Anabilim dallarında
+tamamlanan lisansüstü tezlerin ve dönem projelerinin yazımında birliği sağlamak
+amacıyla hazırlanmıştır.
+Dokuz Eylül Üniversitesi Sosyal Bilimler Enstitüsü’ne teslim edilecek
+tezlerin kabul edilebilmesi için, bu kılavuzda belirtilen biçimsel kurallara ve yazım
+kurallarına uygun olarak hazırlanmış olmaları gerekmektedir. Araştırmacılar
+tarafından hazırlanan tez çalışmaları, yazım kurallarında gösterilen kurallar
+çerçevesinde ele alınmalı; daha önce hazırlanan tezler/projeler şekilsel açıdan örnek
+alınmamalıdır.
+Tezin teslim aşamasında, sonradan doğabilecek sorunların engellenmesi için
+öğrencilerin tezlerini ciltletmeden önce bir kopyasını öğrenci işlerine getirerek
+biçimsel kurallara uygunluğunu kontrol ettirmeleri tavsiye edilmektedir.
+
+-- 5 of 30 --
+
+2
+BİRİNCİ BÖLÜM
+BİÇİM VE GÖRÜNÜŞ
+1.1. KAĞIDIN NİTELİKLERİ
+Tez A4 (210 x 297 mm) boyutlarında 1. hamur beyaz kağıda yazılmalıdır.
+1.2. METİN SAYFALARININ DÜZENLENMESİ
+Metin, çoğaltma (fotokopi vb.) sırasında net çıkacak biçimde yazılmalıdır ve
+yazılarda silinti olmamalıdır. Sayfanın tek yüzü kullanılmalıdır. Tezin çıktısının
+alınmasında “laser yazıcılar”dan yararlanılmalıdır. Yazımda şu ölçütler geçerlidir:
+Kelime İşlem Yazılımı: Word for Windows
+Kenar Boşlukları : Üst boşluk (top) : 3 cm
+Alt boşluk (bottom) : 3 cm
+Sol (left) : 4 cm
+Sağ (right) : 2,5 cm
+Karakter : Arial veya Times New Roman
+Punto : Arial karakterinde 11 punto,
+Times New Roman karakterinde 12 punto
+Satır Aralıkları : 1,5
+Paragraf Aralıkları : Paragraflar ararsında boşluk bırakılmamalı (önce 0nk,
+sonra 0nk).
+Paragraf Girintisi : 1,25 cm
+Paragraf Düzeni : İki yana yaslanmış (Justified)
+Sayfa Numarası : Sağ alt köşe (Altbilgi (footer): 1,25 cm)
+Yazı Rengi : Siyah
+
+-- 6 of 30 --
+
+3
+Yazımda uzun çizelgeler, uzun alıntılar, dipnotlar, tek aralıkta yazılmalıdır.
+Paragraf başlarının 1,25 cm içeri alınarak yazılması, her virgülden ve noktadan sonra
+bir boşluk bırakılması gerekmektedir.
+1.3. BAŞLIKLANDIRMA YÖNTEMLERİ
+Başlıklandırma yöntemi olarak ondalık sistem veya harf sistemi kullanılabilir.
+Araştırmacılar, çalışmalarının niteliği doğrultusunda uygun gördüğü başlıklandırma
+yöntemini seçebilir.
+“Giriş” ve “Sonuç” başlıkları ayrı bir bölüm olmadığından numaralandırma
+yapılmayacaktır.
+Bunların dışındaki tüm başlıklar numaralandırılmalı, bölüm başlığı ve birinci
+derece alt başlığı oluşturan cümlenin tümü “BÜYÜK HARFLERLE ve KOYU
+(BOLD)” yazılmalıdır. İkinci derece alt başlıklardan itibaren başlıklar “İlk Harfleri
+Büyük ve Koyu (Bold)” yazılmalıdır. Gerek alt alta gelen başlıklar ve gerekse başlık
+ile metnin arasında boş bir satır ara verilmelidir.
+Sayfanın alt kısmına gelen alt başlıklardan sonra en az iki dolu satır olmalı ya
+da metne yeni sayfadan başlanmalıdır.
+Tezin BÖLÜM BAŞLIKLARI sayfanın ortasına yazılmak kaydıyla, GİRİŞ,
+SONUÇ, KAYNAKÇA başlıkları ve BİRİNCİ DERECE ALT BAŞLIKLAR en sola
+yaslı olarak yazılmalı ve birinci dereceden sonraki başlıkların tümü 1,25 cm içeriden
+hizalı şekilde yazılmalıdır. Ancak içindekiler bölümünde başlıklar aşağıdaki
+örneklerde gösterildiği gibi birinci dereceden sonraki başlıklarda her derece için 1’er
+cm içeride hizalanmalıdır.
+ONDALIK SİSTEM
+BİRİNCİ BÖLÜM
+BİRİNCİ BÖLÜM BAŞLIĞI
+1.1. BİRİNCİ DERECE ALT BAŞLIK
+1.1.1. İkinci Derece Alt Başlık
+1.1.1.1. Üçüncü Derece Alt Başlık
+
+-- 7 of 30 --
+
+4
+1.1.1.2. Üçüncü Derece Alt Başlık
+1.1.2. İkinci Derece Alt Başlık
+1.2. BİRİNCİ DERECE ALT BAŞLIK
+İKİNCİ BÖLÜM
+İKİNCİ BÖLÜM BAŞLIĞI
+2.1. BİRİNCİ DERECE ALT BAŞLIK
+2.1.1. İkinci Derece Alt Başlık
+2.1.1.1. Üçüncü Derece Alt Başlık
+HARF SİSTEMİ
+BİRİNCİ BÖLÜM
+BİRİNCİ BÖLÜM BAŞLIĞI
+I. BİRİNCİ DERECE ALT BAŞLIK
+A. İkinci Derece Alt Başlık
+1. Üçüncü Derece Alt Başlık
+a. Dördüncü Derece Alt Başlık
+(1)Beşinci Derece Alt Başlık
+(i) Altıncı Derece Alt Başlık
+(ii) Altıncı Derece Alt Başlık
+1.4. METİN İÇİ KISALTMALAR
+Metin içinde kısaltma kullanıldığı takdirde, ilk kısaltmaya konu ifade tam
+açılımıyla yazılmalı ve kısaltma parantez içerisinde belirtilmelidir.
+1.5. ATIF USULLERİ
+Tezlerde dipnot yöntemi ve metin içi yöntem olmak üzere iki farklı yöntem
+kullanılabilir. Aşağıda her iki kaynak gösterme yöntemi örneklerle açıklanmaktadır.
+
+-- 8 of 30 --
+
+5
+Tez yazımı ile ilgili belirtilmeyen diğer konularda bilimsel araştırma ve yazma
+kuralları esas alınmalıdır.
+1.5.1. Dipnot Yöntemi
+Dipnotlar tüm metin için (1)’den başlayarak numaralandırılır. Dipnotlarda yazı
+boyutu olarak tezin yazıldığı yazı karakterine göre Times New Roman için 10, Arial
+için 9 punto kullanılır.
+Bu yöntemde bir konuya ilişkin açıklama yapılması istendiğinde açıklama
+sayfa altına dipnot olarak verilebilir.
+Bu yöntemde aynı kaynağa ikinci kez atıf yapıldığında a.g.e. (adı geçen eser)
+ve a.g.m. (adı geçen makale) şeklindeki kısaltmalar kullanılmamalı. Ayrıca ve
+diğerleri, Cilt, Sayı gibi ifadeler kısaltma kullanılmadan açık şekilde yazılmalıdır.
+- Alıntı yapılan kaynak metinde ilk kez kullanıldığında, dipnotta kaynağa ilişkin tüm
+bilgilere yer verilir.
+Örnek:
+1 M. Çınar Atay, Tarih İçinde İzmir, Yaşar Eğitim ve Kültür Vakfı Yayını, İzmir, 1978, s. 51.
+- Aynı kaynağa ikinci kez atıf yapıldığında yazarın soyadı ve atıfta bulunulan eserin
+sayfa numarası yazılır.
+Örnek: Atay, s. 55.
+- Aynı yazarın birden fazla eseri kullanılmışsa, esere ilk kez atıf yapıldığında basım
+yılından sonra parantez içinde eserin adını anımsatacak bir kelime yazılır. İkinci kez
+bu esere başvurulurken “Yazarın Soyadı, Eserin Adını Anımsatacak Kelime, Sayfa
+Numarası” şeklinde kaynak gösterilir.
+Örnek:
+Ziya Akıncı, Karayolu ile Milletlerarası Eşya Taşımacılığı ve CMR, Seçkin Yayıncılık, Ankara,
+1999, (CMR), s.190.
+
+-- 9 of 30 --
+
+6
+Ziya Akıncı, Milletlerarası Usul Hukukunda Yetki Sözleşmesine Dayanan Yabancı Derdestlik,
+Seçkin Yayıncılık, Ankara, 2002, (Yabancı Derdestlik), s.72.
+Akıncı, CMR, s.101.
+- Aynı soyadı taşıyan birden fazla yazar olması halinde aynı soyadı taşıyan ikinci
+yazara ilk kez atıfta bulunulurken kaynak bilgileri “Yazarın Adı Soyadı, Kitabın Adı,
+Baskı Sayısı, Yayınevi, Basım Yeri, Yıl, Sayfa Numarası” yazılır. Bu esere ikinci
+kez atıfta bulunulduğunda, “Yazarın Adının İlk Harfi. Soyadı, Sayfa Numarası”
+verilmelidir.
+Örnek: “E. Yıldırım, s.101” , “ R. Yıldırım, s. 23”
+- İki yazarlı esere atıfta bulunulurken, “Birinci Yazarın Adı Soyadı ve İkinci Yazarın
+Adı Soyadı, Kitabın Adı, Baskı Sayısı, Yayın Evi, Basım Yeri, Yıl, Sayfa Numarası”
+yazılır.
+Örnek:
+Ergin Nomer ve Cemal Şanlı, Devletler Hususi Hukuku, 16. Baskı, Beta Basım, İstanbul, 2008, 227.
+- İkiden fazla yazarı olan bir esere metin içinde atıfta bulunulurken isteğe bağlı
+olarak tüm yazarlar belirtilebileceği gibi ilk yazarın adı, soyadı tam yazılıp ve sonuna
+“ve diğerleri (et al.)” ifadesi eklenebilir. “İlk Yazarın Adı Soyadı ve diğerleri,
+Kitabın Adı, Yayınevi, Basım Yeri, Yıl, Sayfa Numarası” şeklinde atıf yapılır. Daha
+sonraki atıflarda “Yazarın Soyadı ve diğerleri, sayfa numarası” şeklinde atıfta
+bulunulur. Bu kural kaynakça için geçerli olmayıp, kaynakçada tüm yazar isimlerinin
+yazılması gereklidir.
+Örnek 1:
+Durmuş Tezcan ve diğerleri, İnsan Hakları El Kitabı, Seçkin Yayıncılık, Ankara, 2006, s. 10.
+Örnek 2:
+Tezcan ve diğerleri, s. 11.
+- Bir eserde birden fazla sayfaya atıfta bulunulması halinde aşağıdaki yöntemler
+uygulanır:
+
+-- 10 of 30 --
+
+7
+a) Ard arda birkaç sayfaya atıfta bulunulabilir bu durumda sayfa aralığı ss.
+kısaltmasıyla birlikte gösterilir.
+Örnek: Atay, ss. 50-55.
+b) Aynı eserde birkaç sayfaya ayrı ayrı atıfta bulunulabilir.
+Örnek: Atay, ss. 51, 53, 56.
+- Kitabın birden fazla basımı yapılmışsa baskı sayısı belirtilmelidir.
+Örnek:
+Halil Seyidoğlu, Bilimsel Araştırma ve Yazma El Kitabı, 7.baskı, Güzem Yayınları, İstanbul,1997,
+s.159.
+-Bildiri, konferans, kongre, sempozyum kitaplarının bir bölümüne yapılan atıflar
+aşağıdaki gibi gösterilir:
+Halil Sarıaslan, “KİT’lerin Özelleştirilmesinde Sistematik Bir Yaklaşım”, Özelleştirme
+Sempozyumu Kitabı, Dokuz Eylül Üniversitesi İ.İ.B.F. Maliye Bölümü ve Celal Bayar Üniversitesi
+İ.İ.B.F., Manisa, 28-29.04.1994, s.186.
+- Atıfta bulunulan eserin yazarının adının belirtilmemesi halinde, “Başvurulan
+Metnin Başlığı, Kitabın Adı, Yayınevi, Basım Yeri, Yılı, Sayfa numarası” şeklinde
+atıfta bulunulur.
+Örnek: Avrupa’da Dil Öğrenimi, Avrupa Dergisi, Aralık 1978, ss.15-16.
+- Yazar bir kurum ise, yazarın soyadı yerine kurumun adı yazılır.
+Örnek:
+Avrupa Komisyonu Türkiye Temsilciliği, AB Adalet ve İçişleri Politikası-Özgürlük, Güvenlik ve
+Adalet Alanı, Avrupa Komisyonu Türkiye Temsilciliği Yayınları, Ankara, 2000, s.3.
+- Derleme (editörlü) yayınlara atıfta bulunurken derleyen anlamında (Der.), editör
+anlamında (Ed.) ifadesi kullanılır.
+Örnek: Mehmet Altan (Ed.), Hukuk Devleti, Akademi Yayınları, İstanbul, 2006, s.40.
+Derleme (editörlü) kitap içinde bir bölümden yararlanıldığında ise aşağıdaki şekilde
+dipnot yazılır:
+
+-- 11 of 30 --
+
+8
+Örnek: Ahmet Livaneli, “Devlet ve Piyasa”, Hukuk Devleti, (Ed. Mehmet Altan), Akademi
+Yayınları, İstanbul, 2006, s.40.
+-Çeviri kitaplara atıfta bulunulması halinde çeviren Çev. şeklinde kısaltılır.
+Örnek: Walter Benjamin, Pasajlar, çev. Ahmet Cemal, Yapı Kredi Yayınları, İstanbul, 1995, s. 52.
+-Orijinal kaynağa ulaşılamaması durumunda yapılan aktarmalar dipnotta aşağıdaki
+şekilde gösterilir:
+Örnek:
+Ahmet Livaneli, Hukuk Devleti, Akademi Yayınları, İstanbul, 2003, s.40’dan aktaran Mehmet Altan,
+Piyasa ve Devlet, Bilim Yayınları, İstanbul, 2006, s.99.
+- Yayınlanmamış tezlerden yapılan atıflarda tezin yüksek lisans ya da doktora tezi
+olduğu ve yayınlanmadığı belirtilmelidir. (Yayınlanmış tezlerde kaynak gösterme
+kitapta olduğu gibi yapılır.)
+Örnek:
+Vildan Saba Aktop, Türkiye’de Para Arzının İçselliği: Ekonometrik Bir Uygulama,
+(Yayınlanmamış Yüksek Lisans Tezi), Dokuz Eylül Üniversitesi Sosyal Bilimler Enstitüsü, İzmir,
+2010, s.32.
+-Süreli yayınlardan yapılan atıflar şu şekilde yapılır:
+Örnek:
+Tunç Demirbilek, “Liderlik Tipleri Açısından İşçi Sendikası Yöneticileri Üzerine Bir Araştırma”,
+D.E.Ü. Sosyal Bilimler Enstitüsü Dergisi, Cilt:5, Sayı:1, 2003, s.25.
+Tom Baum and Vjollca Bakiu, “Tourism in Albania: Competing in the Mediterranean Region”,
+Anatolia: An International Journal of Tourism And Hospitality Research, Vol.10, 1999, p. 5.
+- İnternet alıntılarında internetten alıntı yapıldığı tarih parantez içinde ve internet
+adresinin sonunda verilmelidir. Yazarın Adı Soyadı, “Alıntı Yapılan Kaynağın
+Başlığı”, varsa Kaynağın Tarihi, Erişim Adresi, (Erişim tarihi gün.ay.yıl olarak),
+varsa Sayfa numarası.
+Örnek:
+TÜSİAD, “AB Komisyonu’nun Raporu ile AB-Türkiye İlişkilerinde Tarihsel Bir Aşama
+Kaydedilmiştir”, Basın Bülteni, 06.10.2004,
+
+-- 12 of 30 --
+
+9
+http://www.tusiad.org/internet.nsf/0ce54dd76703eef8c225669b0026d587/2ef1340e85d2053ec2256b2
+2004abd42/$FILE/duyuruno104.pdf, (30.08.2007), s.1.
+- İnternette yayınlanan bir gazeteden alıntı yapıldıysa, Yazarın Adı Soyadı,
+“Makalenin Adı”, Gazetenin Adı, Gazetenin Yayın Tarihi, Erişim Adresi, (Erişim
+tarihi gün.ay.yıl olarak).
+Örnek:
+Fatoş Karahasan, “Diziler Topluma Kötü Örnek Oluyor mu?”, Milliyet, 27.09.2010,
+http://www.milliyet.com.tr/Yazar.aspx?aType=YazarDetay&ArticleID=
+1293985&AuthorID=166&b=Diziler%20topluma%20kotu%20ornek%20oluyor%20mu&a=Fatos%20
+Karahasan&KategoriID=3, (29.10.2010).
+1.5.2. Metin İçi Yöntem: Metin içi yöntemde parantez içinde kaynak
+gösterimi yapılır. Atıflar tez metninde kullanılan punto ile yazılır. Bir konuya ilişkin
+açıklama yapılması istendiğinde sayfa altına dipnot verilebilir.
+Bu yöntemde, metin içinde alıntı sonrasında “Yazarın Soyadı, Basım Yılı:
+Sayfa Numarası” parantez içinde verilir.
+Örnek:
+....Birçok alt kültür ve karşı kültür alanlarıyla günümüz toplumları çoğulcu toplum
+yapısını oluşturmaktadır (Eroğlu, 1996: 26)
+- Yazar bir kurum ise, yazarın soyadı yerine kurumun adı yazılır.
+Örnek: (Avrupa Komisyonu Türkiye Temsilciliği, 2000: 3)
+- İki yazarlı esere atıfta bulunulurken, “Birinci Yazarın Soyadı ve İkinci Yazarın
+Soyadı, Basım Yılı: Sayfa Numarası” belirtilir.
+Örnek: (Nomer ve Şanlı, 2008: 227).
+- İkiden fazla yazarı olan bir esere metin içinde atıfta bulunulurken isteğe bağlı
+olarak tüm yazarlar belirtilebileceği gibi “İlk Yazarın Soyadı ve diğerleri, Basım
+Yılı: Sayfa Numarası” şeklinde kısaltma da yapılabilir.
+Örnek:
+
+-- 13 of 30 --
+
+10
+….Genel olarak, istatistiksel analiz teknikleri iki amaca hizmet etmektedir.
+Bunlardan ilki farklılıkların tespiti, diğeri ilişkilerin incelenmesidir (Altunışık ve
+diğerleri, 2001: 141)….
+- Metin içinde birden fazla kaynağa başvuruluyorsa parantez içinde “İlk Eserin
+Yazarının Soyadı, Basım Yılı: Sayfa Numarası; İkinci Eserin Yazarının Soyadı,
+Basım Yılı: Sayfa Numarası; Üçüncü Eserin Yazarının Soyadı, Basım Yılı: Sayfa
+Numarası” belirtilir. Yazarların soyadları alfabetik sıralamaya göre verilmelidir.
+Örnek:
+….Ekonomik bütünleşmenin başarısı statik ve dinamik etkinliğine bağlıdır (Güran,
+1999: 41; Walther, 2002: 426)…
+- Aynı yazarın aynı yıla ait birden fazla eseri kullanılmışsa, her bir eseri için ayrı bir
+harf (a, b, c, ) eserin basım yılının yanına yazılmalıdır.
+Örnek: (Gillespie, 1997a: 25) ve (Gillespie, 1997b: 58)
+- Aynı soyadı taşıyan birden fazla yazar olması halinde yazarların adlarının ilk
+harfleri de kullanılır. “Yazarın Adının İlk Harfi. Soyadı, Basım yılı: Sayfa Numarası”
+verilmelidir.
+Örnek: (Yıldırım E., 2001: 101; Yıldırım R., 1999: 23).
+- Orijinal kaynağa ulaşılamaması durumunda yapılan aktarmalar dipnotta aşağıdaki
+şekilde gösterilir:
+Örnek: (Metin içinde bahsedilirse) Livaneli’ye göre (aktaran Altan, 2006: 40)
+(Metin içinde bahsedilmezse) (Livaneli’den aktaran Altan, 2006: 40)
+1.6. SAYFA NUMARALARI
+Tezin yazı karakteri ile sayfa numaralarının yazı karakteri aynı olmalıdır. Tüm
+sayfa numaraları sayfanın sağ alt köşesine metinde kullanılan punto ile yazılmalıdır.
+
+-- 14 of 30 --
+
+11
+Dış kapak sayfası ile cildin başına ve sonuna konan boş sayfalara sayfa
+numarası verilmezken, diğer sayfalar sırayla numaralandırılır. İç kapak sayfası ve tez
+onay sayfasına numara verilecek ancak sayfaya yazılmayacaktır. Romen rakamı “iii”
+ile başlayarak Yemin Metni, Özet, İngilizce Özet, İçindekiler, Kısaltmalar, Tablolar
+Listesi, Şekiller Listesi ve Ekler Listesi küçük harf Romen rakamları ile
+numaralandırılır. Giriş bölümünde sayfa numarası 1’den başlar ve buradan itibaren
+metnin diğer sayfalarına Arap rakamları (1, 2, 3, 4, ...) sırayla verilir. EK veya
+EKLER yazısının yer aldığı sayfaya numara verilmez. Tek sayfalık bir ek olması
+durumunda sayfa numarası verilmez. Birden fazla sayfası olan ek veya ekler için
+EK1’in bulunduğu sayfadan itibaren Ek numarasına bakılmaksızın “ek s.1”den
+başlanarak “ek s.2, ek s.3” şeklinde sayfa numarası verilmelidir.
+Sayfaların numaralandırılması ile ilgili verilen bilgiler aşağıdaki şekilde
+özetlenebilir:
+Ön sayfalar
+DIŞ KAPAK SAYFASI (sayfa numarası verilmez)
+İÇ KAPAK SAYFASI (sayfa numarası verilir (i) ancak sayfaya yazılmaz,)
+TEZ ONAY SAYFASI (Bu form spiral cilt kullanarak tezinizi bastırdığınızda tezin
+içinde konmayacak olup, savunmadan sonra başarılı bulunduğunuz takdirde
+bastıracağınız tezin içine eklenecektir.) (sayfa numarası verilir (ii) ancak sayfaya
+yazılmaz)
+YEMİN METNİ iii
+TÜRKÇE ÖZET iv
+İNGİLİZCE ÖZET v
+İÇİNDEKİLER vi
+KISALTMALAR vii
+TABLOLAR LİSTESİ viii
+ŞEKİLLER LİSTESİ ix
+EKLER LİSTESİ x
+Metin Sayfaları
+
+-- 15 of 30 --
+
+12
+GİRİŞ 1’den başlayarak BÖLÜMLER, SONUÇ, KAYNAKÇA Arap Rakamları
+(1,2,3,..) ile numaralandırılır.
+EKLER
+EK/EKLER yazısının bulunduğu sayfaya sayfa numarası verilmez. EK 1’in ilk
+sayfasından başlayarak sayfalar ek s.1, ek s.2,… şeklinde numaralandırılır.
+1.7. TABLO VE ŞEKİLLER (GÖRSEL MALZEME)
+“Tablo”, çalışma bölümünde ve eklerinde kullanılan sayısal verilerin
+sıralanmasıdır. Aynı ya da benzer verilerin birden fazla tabloda sunulmamasına ve
+bir iki cümlede özetlenebilecek verilerin tablolaştırılmamasına özen gösterilmelidir.
+“Şekil”, çalışma bütününde ve eklerinde kullanılan akım şeması, grafik, harita,
+fotoğraf, çizim vb. görsel malzemelerin tümünü içerir.
+Tablolar ve Şekiller Listesi İçindekiler Listesi’nde “İÇİNDEKİLER”den
+sonra ve “EKLER LİSTESİ”nden önce yer alır. Tablolar Listesi’nde yukarıdaki
+“Tablo” tanımına uyan sayısal değerler, Şekiller Listesi’nde ise, “Şekil” tanımı
+içinde yer alan “akım şemaları”, “grafikler”, “haritalar”, “fotoğraflar” ve “çizimler”,
+alt gruplara ayrıştırılarak kendi içinde sıralanır ve numaralandırılır (Şekil 1, Şekil 2,
+... gibi).
+Metne koymak için fazla uzun görsel malzemeler, veriler ve alıntılar
+“EKLER” de yer almalıdır.
+Tablolar: Tablo numarası ve başlığı, tablonun bir aralık üstünde yer alır. Tablo
+numaralarına Arap rakamları (1, 2, 3…) verilir. Tablo kelimesi ve numarası koyu
+(bold) yazılır. Tablolarda kullanılan verilerin kaynağı, tablonun sol alt köşesinde
+belirtilir. Tablonun başlığı ve kaynağı yazılırken her kelimenin ilk harfi büyük
+yazılır. Kaynak gösterimi tezin tamamında kullanılan atıf yöntemine uygun olarak
+yapılır. Tablo başlığı ve kaynağının tamamı tezin puntosundan bir punto küçük
+yazılmalıdır.
+Örnek başlık:
+
+-- 16 of 30 --
+
+13
+Tablo 1: GSYH Büyüme Oranları
+Örnek kaynak (dipnot yöntemi ile):
+(Kaynağa ilk kez atıfta bulunulduğunda)
+Kaynak: Durmuş Tezcan ve diğerleri, İnsan Hakları El Kitabı, Seçkin Yayıncılık, Ankara,
+2006, s. 10.
+(Kaynağa daha önce atıfta bulunulduğunda)
+Kaynak: Tezcan ve diğerleri, s. 11.
+Örnek kaynak (metin içi yöntemi ile):
+Kaynak: Eroğlu, 1996: 26.
+Tabloların içindeki yazılar Times New Roman karakteri için 6 ile 11 punto
+aralığında, Arial karakteri için 5 ile 10 punto aralığında yazılmalıdır.
+Şekiller: Şekil numarası ve başlığı, şeklin bir aralık üstünde yer alır. Şeklin kaynağı
+sol alt köşede belirtilir. Kaynak gösterimi tezin tamamında kullanılan atıf yöntemine
+uygun olarak yapılır. Şekil numaralarına Arap rakamları (1, 2, 3…) verilir. Şekil ismi
+ve numarası koyu (bold) yazılır. Şekil adı ve kaynağı tezin puntosundan bir punto
+küçük yazılmalıdır.
+Örnek:
+Şekil 1: Algılanan Hizmet Kalitesinin Belirleyicileri
+Örnek:
+Kaynak: Atay, 1978, s. 47.
+Kaynak: Eroğlu, 1996: 26.
+Tablo veya şeklin dikey veya yatay yerleştirilmesi, sayfa numarasının yerinde
+herhangi bir değişiklik yaratmamalıdır. Ayrıca tablo ve şekillerde başlık
+olabildiğince kısa tutulmalıdır.
+
+-- 17 of 30 --
+
+14
+1.8. TEZİN CD’YE KAYDEDİLMESİ
+ Tezin tamamı pdf formatında kaydedilmiş olarak, 2 CD içinde teslim edilmelidir
+(Macintosh versiyonları kabul edilmeyecektir).
+ Tezin tamamı aşağıda belirtilen dosya başlıkları adı altında düzenlenerek CD’ye
+kaydedilmelidir. Toplam 2 adet CD’nin, tez teslim edilirken ilgili birime teslim
+edilmesi zorunludur.
+Tezin tamamının dosya adının isimlendirilmesi: ad_soyadı_tez.pdf
+Türkçe özetin dosya adının isimlendirilmesi: ad_soyadı_ozet_tr.pdf
+İngilizce özetin dosya adının isimlendirilmesi: ad_soyadı_ozet_en.pdf
+İstenen resim formatı;
+GIF(.gif)
+PDF(.pdf)
+TIFF(.tiff)
+JPEG (.jpeg)
+
+-- 18 of 30 --
+
+15
+İKİNCİ BÖLÜM
+İÇERİĞİN DÜZENLENMESİ
+2.1. ÖN SAYFALAR
+Ön sayfalar aşağıda belirtilen ve örnekleri ekler kısmında verilen onbir alt
+kısımdan meydana gelir.
+Enstitümüzde hazırlanan tezlerde ithaf, teşekkür, önsöz kısımlarına yer
+verilmez.
+2.1.1. Kapak Sayfası
+Dış kapak sayfası; Üniversite, Enstitü, Anabilim Dalı, Program adı, tezin
+doktora/ yüksek lisans tezi/ tezsiz yüksek lisans dönem projesi olduğu, araştırmanın
+tam ve açık ismi, araştırmacının adı soyadı, danışmanların adı soyadı (2. Tez
+danışmanlık görevini yürütenlerin ad ve soyadları da “2. Danışman” olarak ön
+kapakta yer almalıdır) ve araştırmanın yeri ve tarihini (yıl olarak) içermelidir
+Türkçe programların tez kapaklarında tüm bilgiler Türkçe yazılırken (EK 1),
+İngilizce programların tez kapaklarında tüm bilgiler İngilizce olarak yazılmalıdır (EK
+2, EK 3).
+2.1.2 İç Kapak Sayfası
+İç Kapak Sayfası; dış kapak formunda A4 kağıdına basılır (EK 1, EK 2 ve EK
+3).
+
+-- 19 of 30 --
+
+16
+2.1.3. Tez Onay Sayfası
+Tez Onay Sayfası (İngilizce tezler için “THESIS APPROVAL PAGE”)
+savunmadan sonra başarılı bulunduğunuz takdirde basılacak tezin içine eklenecektir
+(EK4).
+2.1.4. Yemin Metni
+Yüksek Lisans ve Doktora Yemin Metnine ilişkin örnekler EK 5, EK6, EK 7
+ve EK 8’de verilmiştir.
+2.1.5. Özet
+Türkçe yazılan tezlerde öncelikle Türkçe Özet (EK 9), daha sonra Türkçe
+özet metninin İngilizce çevirisi (EK 10, EK 11) yer alır. Yabancı dilde yazılan
+tezlerde ise öncelikle o dilde yazılan özet, ardından bu özetin Türkçe çevirisi yer alır.
+Özette araştırma sorusu, yöntem, sonuçlar ve düşünceler kısaca yer alır. Tez
+özeti 250 kelimeyi geçmemelidir.
+Hem orijinal dilde hem de farklı dilde yazılan özetlerde özetin tamamı koyu
+(bold) olarak yazılmalıdır.
+2.1.6. İçindekiler Listesi
+“İÇİNDEKİLER” (İngilizce tezlerde “CONTENTS”) EK 12’de gösterildiği
+şekilde yazılmalıdır.
+2.1.7. Kısaltmalar
+“KISALTMALAR”a (İngilizce tezlerde “ABBREVIATIONS”) ilişkin örnek
+EK 13’te verilmiştir.
+
+-- 20 of 30 --
+
+17
+2.1.8. Tablolar Listesi
+“TABLOLAR LİSTESİ” (İngilizce tezlerde “LIST OF TABLES”) EK
+14’teki gibi hazırlanmalıdır.
+2.1.9. Şekiller Listesi
+“ŞEKİLLER LİSTESİ” (İngilizce tezlerde “LIST OF FIGURES”) EK 15’te
+gösterilmiştir.
+2.1.10 Ekler Listesi (EK 16)
+“EKLER” listesi örneği EK 16’da yer almaktadır.
+2.2. METİN
+2.2.1. Giriş
+“GİRİŞ” (İngilizce tezlerde “INTRODUCTION”) başlığı, sayfanın ilk
+satırına yerleştirilir. Metin başlıktan bir aralık aşağıdan başlar. Giriş ayrı bir bölüm
+değildir, numaralandırma yapılmayacaktır. Giriş içinde çalışmanın amacı, yöntemi
+gibi alt başlıklar yapılmak istenirse küçük harf a,b… alt başlıkları yapılabilir.
+Bölümler Giriş’ten sonra başlayacaktır.
+2.2.2. Tez Metni (Ana kısım)
+Tez metni, içindekiler listesinde tanımlanan bölüm ve alt bölümler ile, bütün
+tablolar ve şekiller ile dipnotları içerir. Metinde kaynakların ve dipnotların veriliş
+biçimi “1.5. Atıf Usulleri” başlığı altında, tablolar ve şekillerin verilişi “1.7. Tablolar
+ve Şekiller (Görsel Malzeme)” başlığı altında ayrıntısıyla anlatılmıştır.
+
+-- 21 of 30 --
+
+18
+Ana kısmın alt bölümlerinde önce kuramsal nitelikteki bölüme yer verilir.
+Böylece araştırmanın kuramsal çerçevesi çizilir. Bu bölüm bir tarihçe niteliğinde de
+olabilir. Eğer araştırmada uygulama kullanılmışsa, kuramsal nitelikteki böümün
+ardından uygulama bölümüne yer verilir.
+2.2.3. Sonuç ve Öneriler
+5 ila10 sayfa civarında olması beklenen sonuç kısmında araştırma sürecinde
+elde edilen bulgularla varılan sonuçlar açıklanır, öneriler geliştirilir. Sonuç ayrı bir
+bölüm değildir, “SONUÇ” başlığı ayrıca numaralandırılmaz.
+2.3. KAYNAKÇA VE EKLER
+2.3.1. Kaynakça
+Konuya ilişkin diğer kaynak ve çalışmaları doğrudan alıntı yaparak veya
+atıfta bulunarak kullanan araştırmacılar, bu kaynakların listesini “KAYNAKÇA”
+(İngilizce tezlerde “REFERENCES”) başlığı altında çalışmalarına eklemelidirler.
+Kaynak aralıklarında boş bir satır bırakılmalıdır. Seçilen atıf yöntemine bağlı olarak
+yararlanılan kaynakların bilgileri aşağıda yer alan iki yönteme bağlı kalınarak yazılır.
+Kaynak bilgileri verilirken yazarın soyadı ve adı yer değiştirir. Çok yazarlı
+kaynaklarda, yalnızca ilk yazarın soyadı ve adı yer değiştirir, diğer yazarların adları
+ve soyadları tam olarak yazılır.
+İstenirse kaynakçada kitap, makale gibi alt ayrımlar yapılabilir.
+Atıflarda dipnot yöntemini kullananlar kaynakçada klasik yöntemi, metin içi
+yöntemini kullananlar ise kaynakçada güncel yöntemi kullanmalıdır. Her iki
+yöntemde de alfabetik sıra kullanılmalıdır. Ayrıca Kaynaklar yazılırken
+girinti verilmemeli ve kaynaklar arasında birer satır boşluk bırakılmalıdır.
+Latin alfabesi dışında farklı alfabelerde kullanılan kaynaklarda örneğin;
+Rusça, Japonca, Çince veya Arapça vb., öncelikle kaynağın orijinal hali tezde
+
+-- 22 of 30 --
+
+19
+kullanılan klasik yöntem ya da güncel yöntem kurallarına göre yazılmalı, sonuna
+kaynağın tezin yazıldığı dildeki (Türkçe tezler için Türkçe, İngilizce tezler için
+İngilizce) çevirisi parantez içinde yine kullanılan yöntemin kurallarına göre
+yazılmalıdır.
+Kaynakçada eserlerin gösteriminde kullanılan ve/and, ss./pp., Cilt/Volume,
+Sayı/No gibi bağlaç ve kısaltmalar kaynağın dili ne olursa olsun, tezin yazıldığı dile
+uygun olarak yazılmalıdır. Aynı kural metin kısmında dipnot yöntemi için de
+geçerlidir.
+- Dili Türkçe olan tezler için İngilizce makale örneği:
+Hasenkamp, Torben. "Engineering Design for Six Sigma - a Systematic Approach",
+Quality and Reliability Engineering International, Cilt: 4, Sayı: 26, 2010, ss. 317-
+324.
+- Dili İngilizce olan tezler için Türkçe makale örneği:
+Özgüven, Nihan. "Hizmet Pazarlamasında Müşteri Memnuniyeti ve Ulaştırma
+Sektörü Üzerinde Bir Uygulama", Ege Akademik Bakış, Vol.: 8, No.: 2, 2008, pp.
+651-682.
+2.3.1.1.Klasik Yöntem: Bu yöntemde kaynak listesi şu şekilde hazırlanır:
+-Tek yazarlı kitap için;
+Çetiner, Ertuğrul. Konaklama Yönetim Muhasebesi, Güney Grafik, Ankara, 1989.
+Walther, Ted. Dünya Ekonomisi, çev. Ünal Çağlar, Alfa Yayınları, İstanbul, 2002.
+-Çok yazarlı kitap için;
+Fantorini, Stefano ve Hakan Üzeltürk. Avrupa Birliği’nin Vergilendirme Politikası
+ve Türkiye’nin Uyumu, İktisadi Kalkınma Vakfı, İstanbul, 2001.
+Tezcan, Durmuş, Mustafa Ruhan Erdem, Oğuz Sancakdar ve Rıfat Murat Önok.
+İnsan Hakları El Kitabı, Seçkin Yayıncılık, Ankara, 2006.
+
+-- 23 of 30 --
+
+20
+-Aynı yazarın aynı yıla ait birden fazla eserinin olması halinde kaynakçada eser adı
+belirtilirken kısaltma yapılmaz, eserin tam adı yazılır.
+Gillespie, Richard. “Spanish Protagonismo and the Euro-Med Partnership Initiative”,
+The Euro-Mediterranean Partnership: Political and Economic Perspectives, Ed.
+Richard Gillespie, Frank Cass Publishers, London, 1997, pp. 33-48.
+Gillespie, Richard. “The Euro-Mediterranean Partnership Initiative”, The Euro-
+Mediterranean Partnership: Political and Economic Perspectives, Ed. Richard
+Gillespie, Frank Cass Publishers, London, 1997, pp.1-8.
+- Kitap içinde bölüm olması halinde başvurulan kaynağın sayfa aralığı belirtilir;
+Baltas, Nickos. “The Economy of the European Union”, European Union
+Enlargement, Palgrave Macmillan, New York, 2004, pp.146-157.
+Edwards, Geoffrey. “The Pattern of the EU’s Global Activity”, The International
+Relations and The European Union, Ed. Christopher Hill ve Michael Smith,
+Oxford University Press, Oxford, 2005, pp.39-63.
+-Makalenin yayınlandığı dergideki sayfa aralığı belirtilir;
+Demirbilek, Tunç. “Liderlik Tipleri Açısından İşçi Sendikası Yöneticileri Üzerine
+Bir Araştırma”, D.E.Ü. Sosyal Bilimler Enstitüsü Dergisi, Cilt:5, Sayı:1, 2003, ss.
+22-37.
+Lee, Daniel Y. “Purchasing Power Parity and Dynamic Error Correction Evidence
+from Asia Pacific Economies”, International Review of Economics and Finance,
+Vol.:8, 1999, pp. 199–212.
+-Bildiri kitabında yer alan bir kaynağın sayfa aralığı belirtilir;
+Sarıaslan, Halil. “KİT’lerin Özelleştirilmesinde Sistematik Bir Yaklaşım”,
+Özelleştirme Sempozyumu Kitabı, Dokuz Eylül Üniversitesi İ.İ.B.F. Maliye Bölüm
+ve Celal Bayar Üniversitesi İ.İ.B.F., Manisa, 28-29.04.1994, ss.183-193.
+
+-- 24 of 30 --
+
+21
+-Tez için;
+Çolakoğlu, Ülker. Konaklama İşletmelerinin Yönetici-Yönetilen İlişkilerinde
+İletişim Stratejileri, (Yayınlanmamış Doktora Tezi), Dokuz Eylül Üniversitesi
+Sosyal Bilimler Enstitüsü, İzmir, 1997.
+-İnternet alıntılarında internetten alıntı yapıldığı tarih parantez içinde ve internet
+adresinin sonunda verilmelidir. Yazar Soyadı, Adı. “Alıntı Yapılan Kaynağın
+Başlığı”, varsa Kaynağın Tarihi, Erişim adresi, (Erişim Tarihi).
+TÜSİAD, “AB Komisyonu’nun raporu ile AB – Türkiye İlişkilerinde Tarihsel Bir
+Aşama Kaydedilmiştir”, Basın Bülteni, 06.10.2004,
+http://www.tusiad.org/internet.nsf/0ce54dd76703eef8c225669b0026d587/2ef1340e8
+5d2053ec2256b22004abd42/$FILE/duyuruno104.pdf, (30.08.2007).
+-Çeviri kitaplar için;
+Benjamin,Walter, Pasajlar, çev. Ahmet Cemal, Yapı Kredi Yayınları, İstanbul,
+1995.
+2.3.1.2. Güncel Yöntem: Güncel yönteme göre kaynak listesi şu şekilde
+hazırlanır:
+-Kitap için; Yazarın Soyadı, Adının ilk harfi., İkinci Yazarın Soyadı, Adının ilk harfi.
+ve Üçüncü Yazarın Soyadı, Adının ilk harfi. (Basım Yılı). Eserin Adı. Basım Yeri:
+Yayınevi.
+Çetiner, E. (1989). Konaklama Yönetim Muhasebesi. Ankara: Güney Grafik.
+Altunışık, R., Çoşkun, R., Yıldırım, E. ve Bayraktaroğlu, S. (2001). Sosyal
+Bilimlerde Araştırma Yöntemleri. Sakarya: Sakarya Kitabevi.
+
+-- 25 of 30 --
+
+22
+-Makale için; Yazarın Soyadı, Adının ilk harfi, İkinci Yazarın Soyadı, Adının ilk
+harfi. ve Üçüncü Yazarın Soyadı, Adının ilk harfi. (Basım Yılı). Makalenin Adı.
+Derginin Adı. Cilt(Sayı): Sayfa Aralığı.
+Demirbilek, T. (2003). Liderlik Tipleri Açısından İşçi Sendikası Yöneticileri Üzerine
+Bir Araştırma. D.E.Ü. Sosyal Bilimler Enstitüsü Dergisi. 5(1): 22-37.
+Wahba, M.A. ve House, R. J. (1974). Expectancy Theory in Work and Motivation:
+Some Logical and Methodological Issues. Human Relations. 27(2): 121-147.
+- Kitap içinde bölüm olması halinde “Yazarın Soyadı, Adının ilk harfi., İkinci
+Yazarın Soyadı, Adının ilk harfi. ve Üçüncü Yazarın Soyadı, Adının ilk harfi.
+(Basım Yılı). Bölümün Adı. Kitabın Adı (ss. Sayfa Aralığı). Basım Yeri: Yayınevi.
+Baltaş, N. (2004). The Economy of the European Union. European Union
+Enlargement (pp.146-157). New York: Palgrave Macmillan.
+Edwards, G. (2005). The Pattern of the EU’s Global Activity. The International
+Relations and The European Union (pp.39-63). Editors Christopher Hill and Michael
+Smith. Oxford: Oxford University Press.
+-Bildiri kitabında yer alan bir kaynağın sayfa aralığı belirtilir;
+Sarıaslan, H. (1994). KİT’lerin Özelleştirilmesinde Sistematik Bir Yaklaşım.
+Özelleştirme Sempozyumu Kitabı (ss.183-193), Düzenleyen Dokuz Eylül Üniversitesi
+İ.İ.B.F. Maliye Bölümü ve Celal Bayar Üniversitesi İ.İ.B.F. Manisa. 28-29 Nisan
+1994.
+-Tez için;
+Çolakoğlu, Ü. (1997). Konaklama İşletmelerinin Yönetici-Yönetilen İlişkilerinde
+İletişim Stratejileri. (Yayınlanmamış Doktora Tezi). İzmir: Dokuz Eylül Üniversitesi
+Sosyal Bilimler Enstitüsü.
+
+-- 26 of 30 --
+
+23
+Hansen, M. (2009). Investigating the Construct Validity of Perceived Cultural
+Tightness and Culture Strength. (Unpublished Doctoral Dissertation). North
+Carolina: Graduate Faculty of North Carolina State University.
+-Çeviri kitaplarda;
+Walter, B. (1995). Pasajlar. Çev. Ahmet Cemal. İstanbul: Yapı Kredi Yayınları.
+-İnternet kaynağı için “Yazarın Soyadı, Adının ilk harfi. (Eserin Tarihi). Internet
+Sayfasının Adı. Erişim Adresi, (Erişim Tarihi).
+Fettweis, C.J. (14 Mart 2006). Eurasia, “The World Island": Geopolitics, and
+Policymaking in the 21st Century.
+http://www.globalresearch.ca/index.php?context=viewArticle&code=FET20060314
+&articleId=2095, (24.05.2007).
+-Gazeteden alıntı yapılmışsa;
+Arolat, O. S. (20.08.2007). Liderleri Değerlendirirken. Dünya Gazetesi.
+http://www.dunyagazetesi.com.tr/news_display.asp?upsale_id=323869&dept_id=10
+27, (25.08.2007).
+2.3.2. Ekler
+Yardımcı görsel malzemeler, veriler ve metne koymak için çok uzun alıntılar
+eklerde yer alabilir.
+Bu bölüm, bilgisayar yazımında sayfanın geometrik ortasına 20 punto ile
+koyu (bold) olarak “EKLER” (İngilizce tezlerde APPENDICES) yazan bir sayfayla
+diğer bölümlerden ayrılmalıdır. Tek bir ek bulunması durumunda “EKLER yerine
+“EK” yazılmalıdır. Bu sayfaya sayfa numarası verilmemelidir. Araştırmacının
+sunacağı diğer ekler EK 1, EK 2,... (İngilizce tezlerde APPENDIX 1) biçiminde
+numaralandırılabilir. EK’in bulunduğu sayfada EK numarası ve başlığı sola dayalı
+olarak yazıldıktan sonra, iki boş satır bırakılarak metne, tabloya ya da şekle
+geçilmelidir.
+
+-- 27 of 30 --
+
+24
+Tek sayfalık bir ek olması durumunda sayfa numarası verilmez. Birden fazla
+sayfası olan ek veya ekler için EK1’in bulunduğu sayfadan itibaren Ek numarasına
+bakılmaksızın “ek s.1”den başlanarak “ek s.2, ek s.3” şeklinde sayfa numarası
+verilmelidir. (Bkz. Tez Yazım Kuralları “Ekler” bölümü.)
+İçindekiler bölümünde yer alan EK/EKLER başlığına sayfa numarası
+yazılmaz.
+2.4. İNTİHAL
+Yüksek lisans ve doktora tezlerinin yazımında intihal ya da başka bir deyişle
+“aşırmacılık” yapılamaz. İntihal, “bir başkasına ait olan bir fikrin, buluşun, araştırma
+sonuçlarının veya araştırma ürünlerinin bir bölümünün ya da tümünün, hatta
+kitapların tümünün ya da bir bölümünün kaynak gösterilmeksizin istemli olarak
+kopya ya da tercüme edilip yazarın kendi üretimi imiş gibi gösterilmesi”1 olarak
+tanımlanmaktadır. İntihal, bilimde etik dışı davranış kapsamına girmekte ve ciddi bir
+akademik suç sayılmaktadır.
+Yazar, başkalarına ait fikirleri kendi cümleleriyle ve yararlandığı esere atıfta
+bulunarak aktarabilir. Ayrıca, başkalarına ait fikirleri aynen aktarma yoluyla da
+kullanabilir. Bu tür aktarmalarda söz konusu metin hiçbir değiştirme yapılmaksızın
+olduğu gibi alınır. Aynen yapılan aktarmalarda dört satıra kadar olan aktarmalar
+tırnak içerisine alınarak metne konulur. Eğer kullanılan metnin yazarının kendi
+özgün cümleleri alınarak yapılan aynen aktarma dört satırı aşıyorsa sağdan ve soldan
+1 cm girinti yapılarak, tek satır aralığında, italik harflerle, tezin puntosundan bir
+punto küçük olarak ayrı bir metin şeklinde yazılır.
+Örnek:
+Bir bilimsel araştırma, bir bilim insanının veya araştırma grubunun
+kendi özgün gözlemlerine dayanarak ya da başka araştırıcıların birikmiş
+bilgilerini kullanarak bir konuda özgün bir düşünceye varmasını
+gerektirir. Bu düşünce geliştirilerek özgün bir varsayım haline getirilir.
+Bu tasarım ile araştırma yapmaya karar verilir.2
+1 Türkiye Bilimler Akademisi, Bilimsel Araştırmada Etik ve Sorunları, TÜBA Yayınları, Ankara,
+2002, s. 39.
+2 Türkiye Bilimler Akademisi, s. 15.
+
+-- 28 of 30 --
+
+25
+Bilimsel araştırma yapılırken sadece başkalarının fikirlerini ve eserlerini
+derleme yöntemine başvurulmamalıdır. Araştırmacının topladığı bilgi ve verilerden
+yola çıkarak kendi fikir ve yorumlarını oluşturması ve eserine aktarması
+gerekmektedir. Ayrıca, yapılan araştırmada değiştirerek aktarma ya da aynen
+aktarma yapılsa dahi ilgili kısmın tek bir kaynağa dayanarak yazılması makul
+görülmemektedir. Bu açıdan kaynak çeşitliliğine özen gösterilmelidir.
+
+-- 29 of 30 --
+
+EKLER
+
+-- 30 of 30 --
+

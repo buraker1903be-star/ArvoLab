@@ -22,7 +22,7 @@ import type { UserRole } from "@/lib/project-labels";
 */
 export const KAYIT_ROLLERI: UserRole[] = ["system_admin", "founder"];
 
-export type YetenekAdi = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale" | "uak";
+export type YetenekAdi = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale" | "uak" | "kilavuz";
 
 /*
   İki dilli kaynak *_METIN; eski Türkçe haritalar ondan türetiliyor (tipi
@@ -36,6 +36,7 @@ export const YETENEK_ETIKETI_METIN: Record<YetenekAdi, Metin> = {
   kanit: { tr: "İddia–kanıt uyumu", en: "Claim–evidence match" },
   makale: { tr: "Makale bölüm denetimi", en: "Article section check" },
   uak: { tr: "ÜAK tablosu okuma", en: "ÜAK table reading" },
+  kilavuz: { tr: "Kılavuz kuralları okuma", en: "Guideline rule reading" },
 };
 
 export const YETENEK_ETIKETI = Object.fromEntries(

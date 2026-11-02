@@ -263,6 +263,18 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
         */}
         <div className="kilavuz-bicim">
           <span className="kilavuz-alan-basligi">{t({ tr: "Ayrıca şu biçim kuralları uygulanacak", en: "These formatting rules will also be applied" })}</span>
+          {/* Kuralları kim okudu: yapay zekâ (alıntılarıyla) ya da yalnızca kalıp (lib/ai/kilavuz-kurallari.ts). */}
+          <p className="muted text-sm">
+            {sonuc?.okuyan === "yapay-zeka"
+              ? t({
+                  tr: "Kurallar kılavuzunuzdan yapay zekâyla okundu; her biri kılavuzdaki cümlesiyle doğrulandı.",
+                  en: "The rules were read from your guideline by AI; each one was checked against its sentence in the guideline.",
+                })
+              : t({
+                  tr: "Kurallar kılavuzunuzdan otomatik okundu; lütfen kılavuzla karşılaştırın.",
+                  en: "The rules were read from your guideline automatically; please compare them with the guideline.",
+                })}
+          </p>
           {sonuc?.bicim?.length ? (
             <ul className="muted text-sm">
               {sonuc.bicim.map((satir) => (
@@ -277,6 +289,20 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
               })}
             </p>
           )}
+          {sonuc?.kanitlar?.length ? (
+            <details className="kilavuz-kanitlar">
+              <summary className="text-sm">
+                {t({ tr: `Kılavuzunuzda nerede yazıyor (${sonuc.kanitlar.length})`, en: `Where your guideline says it (${sonuc.kanitlar.length})` })}
+              </summary>
+              <ul className="text-sm">
+                {sonuc.kanitlar.map((k) => (
+                  <li key={k.ad}>
+                    <b>{k.ad}:</b> <q>{k.alinti}</q>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
         </div>
 
         <div className="cluster">

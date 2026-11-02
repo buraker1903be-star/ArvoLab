@@ -75,7 +75,11 @@ export async function denemeAsistanHakkim(kullaniciId: string, dil: Dil = "tr"):
       .from("ai_assistant_runs")
       .select("id", { count: "exact", head: true })
       .eq("user_id", kullaniciId)
-      .eq("status", "completed");
+      .eq("status", "completed")
+      /* Kılavuz okuma deneme hakkından düşmez (02.11.2026): kurulumun bir
+         adımı, asistanın kendisi değil; yoksa deneme kullanıcısı kılavuzunu
+         yükleyince iki hakkından birini kaybederdi. */
+      .neq("capability", "kilavuz");
     if (error) console.error("[ai] deneme hakkı okunamadı:", error.message);
     else kullanilan = count ?? 0;
   }

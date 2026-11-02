@@ -6,7 +6,12 @@ import { taramaDogrula, taramaImzala } from "@/lib/imzali-tarama";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { ornekKalibi } from "@/lib/atif/tyk";
-import { scanGuidelineBytes, scanGuidelineUrl, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { scanGuidelineBytesMetinli, scanGuidelineUrlMetinli, taramaUyarisiCevir, type GuidelineScanResult } from "@/lib/guideline-scan";
+import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
+import { asistanKaydet } from "@/lib/ai/kayit";
+import { sor } from "@/lib/ai/saglayici";
+import { ALAN_ADI, cozulenUyarilariAyikla, kilavuzIstemi, kilavuzOkumasiniCozumle, kurallariBirlestir, redMi, type KilavuzOkumasi } from "@/lib/ai/kilavuz-kurallari";
+import type { AtifSistemi } from "@/lib/atif-sistemi";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { normalizeGuidelineEditorSettings } from "@/lib/guideline-editor-settings";
 import {
@@ -90,6 +95,54 @@ export interface TaramaSonucu {
     da öğrenciye metninin neden başkalaştığını açıklamaz.
   */
   bicim?: string[];
+  /*
+    Yapay zekânın okuduğu kurallar ve kılavuzdaki ALINTILARI (02.11.2026,
+    lib/ai/kilavuz-kurallari.ts). Öğrenci her kuralın kılavuzunda nerede
+    yazdığını görür; doğrulanmamış bir okuma burada hiç görünmez.
+  */
+  kanitlar?: { ad: string; alinti: string }[];
+  /** "okundu": yapay zekâ okudu; "kalip": yalnızca kalıpla okundu (kapalı, hak doldu ya da yanıt reddedildi). */
+  okuyan?: "yapay-zeka" | "kalip";
+}
+
+/*
+  KILAVUZU YAPAY ZEKÂYLA OKUMA (02.11.2026). Kalıpla okumanın ÜSTÜNE:
+  model okuyamazsa (kurulum yok, abonelik/hak, yanıt reddedildi, ağ)
+  tarama düşmez, kalıpla okunan kurallar kalır. Her çalışma kaydedilir
+  (AGENTS.md). Öğrencinin deneme hakkından düşmez (lib/ai/erisim.ts).
+  Dışarı açılmıyor: "use server" dosyasında export edilmeyen yardımcı.
+*/
+async function yapayZekaylaOku(
+  metin: string,
+  projectId: string,
+  dil: "tr" | "en",
+): Promise<{ okuma: KilavuzOkumasi | null; not: string | null }> {
+  const kapi = await asistanKapisi(dil);
+  if (!kapi.ok) return { okuma: null, not: null };
+  const hak = await asistanHakkiVar(kapi.kullaniciId, dil);
+  if (hak) return { okuma: null, not: hak };
+  const { mesajlar, kaynak } = kilavuzIstemi(metin);
+  const ortak = { kullaniciId: kapi.kullaniciId, calismaId: projectId, yetenek: "kilavuz" as const, baglam: kaynak, basladi: Date.now() };
+  try {
+    const yanit = await sor(mesajlar, { yetenek: "kilavuz", jsonBekle: true, sicaklik: 0, enFazlaJeton: 4_000, zamanAsimiMs: 90_000 });
+    if (yanit.bitis === "length") {
+      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });
+      return { okuma: null, not: null };
+    }
+    // Alıntılar TAM metne karşı doğrulanır (gönderilen kırpılmış parçaya değil).
+    const sonuc = kilavuzOkumasiniCozumle(yanit.metin, metin);
+    if (redMi(sonuc)) {
+      console.warn("[calisma-kilavuzu] yapay zekâ okuması reddedildi", sonuc.neden, sonuc.ayrinti.slice(0, 5));
+      await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: sonuc.neden, model: yanit.model, cikti: yanit.metin, bulgular: sonuc });
+      return { okuma: null, not: null };
+    }
+    await asistanKaydet({ ...ortak, durum: "completed", model: yanit.model, cikti: yanit.metin, bulgular: sonuc });
+    return { okuma: sonuc, not: null };
+  } catch (hata) {
+    console.error("[calisma-kilavuzu] yapay zekâ okuması başarısız:", hata instanceof Error ? hata.message : hata);
+    await asistanKaydet({ ...ortak, durum: "failed" });
+    return { okuma: null, not: null };
+  }
 }
 
 /**
@@ -121,18 +174,50 @@ export async function kilavuzuTara(
   }
 
   try {
-    let sonuc: GuidelineScanResult;
+    let tarama: { sonuc: GuidelineScanResult; metin: string };
     if (girdi.depoYolu) {
       const { data: dosya, error } = await ctx.supabase.storage.from("project-files").download(girdi.depoYolu);
       if (error || !dosya) {
         console.error("[calisma-kilavuzu] dosya depodan okunamadı:", error?.message);
         return { error: t({ tr: "Yüklenen dosya okunamadı. Tekrar yükleyin.", en: "The uploaded file could not be read. Upload it again." }) };
       }
-      sonuc = await scanGuidelineBytes(dosya, dosya.type || "application/pdf", girdi.depoYolu);
+      tarama = await scanGuidelineBytesMetinli(dosya, dosya.type || "application/pdf", girdi.depoYolu);
     } else if (girdi.adres?.trim()) {
-      sonuc = await scanGuidelineUrl(girdi.adres.trim());
+      tarama = await scanGuidelineUrlMetinli(girdi.adres.trim());
     } else {
       return { error: t({ tr: "Kılavuz dosyası yükleyin ya da adresini girin.", en: "Upload a guideline file or enter its address." }) };
+    }
+    let sonuc = tarama.sonuc;
+
+    /*
+      Yapay zekâ okuması kalıbın ÜSTÜNE (lib/ai/kilavuz-kurallari.ts,
+      kurallariBirlestir): alıntıyla doğrulanan değer kazanır, okumadığı
+      kural kalıptan kalır. Bölümler, atıf sistemi ve sayfa sınırı da
+      okuduysa onun. Metin yoksa (OCR bile okuyamadıysa) çağrılmaz.
+    */
+    const yz = tarama.metin.trim().length >= 200 ? await yapayZekaylaOku(tarama.metin, projectId, dil) : { okuma: null, not: null };
+    const ekUyarilar: string[] = [];
+    if (yz.okuma) {
+      const { kurallar, farklar } = kurallariBirlestir(sonuc.suggestedRules, yz.okuma.kurallar);
+      sonuc = {
+        ...sonuc,
+        suggestedRules: kurallar,
+        suggestedSections: yz.okuma.zorunluBolumler.length ? yz.okuma.zorunluBolumler : sonuc.suggestedSections,
+        detectedCitationStyle: (yz.okuma.atifStili as AtifSistemi | null) ?? sonuc.detectedCitationStyle,
+        minPages: yz.okuma.enAzSayfa ?? sonuc.minPages,
+        maxPages: yz.okuma.enCokSayfa ?? sonuc.maxPages,
+        warnings: cozulenUyarilariAyikla(sonuc.warnings, yz.okuma),
+      };
+      if (farklar.length) {
+        ekUyarilar.push(
+          t({
+            tr: `Kalıpla okuma ile yapay zekâ ${farklar.length} kuralı farklı okudu; yapay zekânın kılavuzdan alıntıladığı değer kullanıldı. Aşağıdaki alıntılara bakın.`,
+            en: `Pattern reading and the AI read ${farklar.length} rule(s) differently; the value the AI quoted from the guideline was used. Check the quotes below.`,
+          }),
+        );
+      }
+    } else if (yz.not) {
+      ekUyarilar.push(yz.not);
     }
 
     const belirtec = taramaImzala(
@@ -159,8 +244,10 @@ export async function kilavuzuTara(
       }),
       belirtec,
       /* Çıkarımın uyarıları Türkçe üretiliyor (lib/guideline-scan.ts); ekranda kullanıcının dilinde. */
-      uyarilar: sonuc.warnings.map((uyari) => taramaUyarisiCevir(uyari, dil)),
+      uyarilar: [...ekUyarilar, ...sonuc.warnings.map((uyari) => taramaUyarisiCevir(uyari, dil))],
       bicim: bicimOzeti(normalizeGuidelineEditorSettings(sonuc.suggestedRules), dil),
+      kanitlar: yz.okuma?.kanitlar.map((k) => ({ ad: ALAN_ADI[k.alan]?.[dil] ?? k.alan, alinti: k.alinti })) ?? [],
+      okuyan: yz.okuma ? "yapay-zeka" : "kalip",
     };
   } catch (err) {
     console.error("[calisma-kilavuzu] tarama başarısız:", err);

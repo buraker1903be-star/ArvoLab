@@ -1999,6 +1999,10 @@ button.merkez-baglanti { width: 100%; font: inherit; text-align: left; cursor: p
 }
 .kilavuz-bicim ul { margin: 0; padding-left: 18px; line-height: var(--lh-metin); }
 .kilavuz-bicim p { margin: 0; }
+/* Yapay zekânın kural alıntıları (kilavuz-yukle.tsx): kapalı başlar, öğrenci isterse açar. */
+.kilavuz-kanitlar summary { cursor: pointer; color: var(--accent); }
+.kilavuz-kanitlar ul { margin-top: 6px; display: grid; gap: 4px; }
+.kilavuz-kanitlar q { color: var(--ink-soft); }
 
 /* ---------- Kanıt matrisi ve kanıt zinciri ----------
    Matris geniş bir tablo; dar ekranda sayfa yatay kaymasın diye tablo

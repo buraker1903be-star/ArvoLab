@@ -718,6 +718,11 @@ export async function scanGuidelineUrl(url: string): Promise<GuidelineScanResult
   return taramayiTamamla(url, await fetchOfficialSource(url));
 }
 
+/** Adresten tarama + tam metin (scanGuidelineBytesMetinli'nin eşi). */
+export async function scanGuidelineUrlMetinli(url: string): Promise<{ sonuc: GuidelineScanResult; metin: string }> {
+  return taramayiTamamlaMetinli(url, await fetchOfficialSource(url));
+}
+
 /*
   YÜKLENEN DOSYADAN TARAMA (26.10.2026).
 
@@ -735,11 +740,29 @@ export async function scanGuidelineBytes(
   contentType: string,
   etiketAdres: string,
 ): Promise<GuidelineScanResult> {
+  return (await scanGuidelineBytesMetinli(bytes, contentType, etiketAdres)).sonuc;
+}
+
+/*
+  Tarama + belgenin TAM metni (02.11.2026): yapay zekâ kuralları tam metinden
+  okuyor ve alıntılarını ona karşı doğruluyor (lib/ai/kilavuz-kurallari.ts).
+  Metin tarama sonucuna konmuyor: sonuç imzalanıp tarayıcıya gidiyor ve
+  katalog kaydına yazılıyor, tam metin ikisine de büyük.
+*/
+export async function scanGuidelineBytesMetinli(
+  bytes: ArrayBuffer | Uint8Array | Blob,
+  contentType: string,
+  etiketAdres: string,
+): Promise<{ sonuc: GuidelineScanResult; metin: string }> {
   const yanit = new Response(bytes as BodyInit, { status: 200, headers: { "content-type": contentType } });
-  return taramayiTamamla(etiketAdres, yanit);
+  return taramayiTamamlaMetinli(etiketAdres, yanit);
 }
 
 async function taramayiTamamla(url: string, res: Response): Promise<GuidelineScanResult> {
+  return (await taramayiTamamlaMetinli(url, res)).sonuc;
+}
+
+async function taramayiTamamlaMetinli(url: string, res: Response): Promise<{ sonuc: GuidelineScanResult; metin: string }> {
   if (!res.ok) {
     throw new Error(`Kaynak alınamadı (HTTP ${res.status}).`);
   }
@@ -825,7 +848,7 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
     ocrKullanildi || ocrHatasi !== null,
   );
 
-  return {
+  const sonuc: GuidelineScanResult = {
     textPreview: text.slice(0, 4000),
     fullTextLength: text.length,
     suggestedSections,
@@ -882,4 +905,5 @@ async function taramayiTamamla(url: string, res: Response): Promise<GuidelineSca
       ...(ocrHatasi ? [ocrHatasi] : []),
     ],
   };
+  return { sonuc, metin: text };
 }
