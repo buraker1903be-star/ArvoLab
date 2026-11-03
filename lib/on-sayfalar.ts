@@ -222,8 +222,11 @@ export function mevcutOnSayfalar(doc: { content?: Dugum[] } | null | undefined, 
   const bas = (ilkBaslik < 0 ? dugumler : dugumler.slice(0, ilkBaslik)).map(metin).join(" ").trim();
   const aranan = calismaBasligi?.trim().toLocaleLowerCase("tr-TR");
   if (bas && (!aranan || bas.toLocaleLowerCase("tr-TR").includes(aranan))) var_.add("ic-kapak");
+  /* Her düzeyde (03.11.2026): başlığı H1 olan bir yazı yapıştırılınca ön
+     sayfalar H2 oluyor; yalnızca H1'e bakılırken belgede zaten olan
+     Kısaltmalar ve Onay sayfaları "eksik" sayılıp ikinci kez ekleniyordu. */
   for (const d of dugumler) {
-    if (d.type !== "heading" || (Number(d.attrs?.level) || 1) !== 1) continue;
+    if (d.type !== "heading") continue;
     const id = baslikKimligi(metin(d));
     if (id) var_.add(id);
   }
@@ -247,7 +250,7 @@ export function onSayfaYerlesimi(
   const anaSira = Math.min(anaMetinBaslangici(doc as Parameters<typeof anaMetinBaslangici>[0]), dugumler.length);
   const mevcutSirasi = new Map<OnSayfaKimligi, number>();
   dugumler.forEach((d, i) => {
-    if (d.type === "heading" && (Number(d.attrs?.level) || 1) === 1) {
+    if (d.type === "heading") {
       const id = baslikKimligi(metin(d));
       if (id && !mevcutSirasi.has(id)) mevcutSirasi.set(id, i);
     }
@@ -271,13 +274,73 @@ export function onSayfaYerlesimi(
 }
 
 /*
-  Doldurulmamış yer tutucu: "[Üniversite adı]", "[gg.aa.yyyy]". IEEE ve
-  benzeri numaralı atıflar ("[1]", "[2, 5–7]") yer tutucu DEĞİL; köşeli
-  parantez içinde harf olmalı.
+  DOLDURULMAMIŞ YER TUTUCU.
+
+  Köşeli parantezli yönerge: "[Üniversite adı]", "[gg.aa.yyyy]",
+  "[.........]". Yer tutucu SAYILMAYANLAR (03.11.2026, örnek tezde yanlış
+  alarm verdiler):
+    - IEEE ve benzeri numaralı atıflar: "[1]", "[2, 5–7]";
+    - APA 7'nin tür belirteçleri: "[Haber bülteni]", "[Yayımlanmamış
+      yüksek lisans tezi]", "[Veri seti]"… — künyenin parçasıdır;
+    - kod: "["LENF", "ISS"]" (tırnak ya da "=" içeren parantez).
+  Köşeli parantezsiz boş alanlar da yer tutucudur: dört ve daha çok nokta
+  ("İmza: ...................."), "..../..../2026" tarih kalıbı ve iki ya
+  da daha çok üç nokta karakteri ("……"). Önünde "Etiket:" varsa birlikte
+  döner ("Tarih: ..../..../2026"), öğrenci hangi alan olduğunu görsün.
 */
 const YER_TUTUCU = /\[([^\]\n]{2,160})\]/gu;
+const APA_BELIRTECLERI = new Set(
+  [
+    "Haber bülteni", "Yayımlanmamış yüksek lisans tezi", "Yayımlanmamış doktora tezi", "Yüksek lisans tezi", "Doktora tezi",
+    "Veri seti", "Video", "Rapor", "Bildiri", "Çevrimiçi", "Poster", "Sunum", "Kitap", "E-kitap", "Ses kaydı", "Film", "Fotoğraf",
+    "Harita", "Yazılım", "Bilgisayar yazılımı", "Blog yazısı", "Web sayfası", "Kitap incelemesi", "Editöre mektup", "Özet", "Ön baskı",
+    "Press release", "Unpublished master's thesis", "Unpublished doctoral dissertation", "Master's thesis", "Doctoral dissertation",
+    "Data set", "Dataset", "Report", "Conference presentation", "Paper presentation", "Online", "Poster session", "Audio podcast",
+    "Computer software", "Software", "Blog post", "Book review", "Letter to the editor", "Abstract", "Preprint", "Fact sheet",
+  ].map((b) => b.toLocaleLowerCase("tr-TR")),
+);
+const apaBelirteciMi = (ic: string) => {
+  const sade = ic.trim().toLocaleLowerCase("tr-TR");
+  // "Yüksek lisans tezi, Dokuz Eylül Üniversitesi" gibi uzantılar da belirteçtir.
+  return APA_BELIRTECLERI.has(sade) || APA_BELIRTECLERI.has(sade.split(",")[0].trim());
+};
+// 1: "Etiket:" (isteğe bağlı), 2: boş alan
+const BOS_NOKTA = /(?:([\p{L}][\p{L} .]{0,30}?:)\s*)?((?:\.{2,}\/){2}\d{2,4}|\.{4,}|…{2,}|_{4,})/gu;
+
 export function yerTutuculari(text: string): string[] {
-  return [...text.matchAll(YER_TUTUCU)].map((e) => e[0]).filter((y) => /\p{L}/u.test(y) && !/^\[\s*(?:\d|[a-z]\.)/u.test(y) && !/^\[(?:sic|…|\.\.\.)\]$/iu.test(y));
+  const kosesi = [...text.matchAll(YER_TUTUCU)]
+    .filter((e) => {
+      const ic = e[1];
+      if (/^\s*(?:\d|[a-z]\.)/u.test(ic) || /^(?:sic|…|\.\.\.)$/iu.test(ic)) return false;
+      if (/["=]/u.test(ic) || ic.startsWith("[")) return false;
+      if (apaBelirteciMi(ic)) return false;
+      // Harf taşıyan yönerge ya da yalnızca nokta/alt çizgiden oluşan boş alan ("[.........]").
+      return /\p{L}/u.test(ic) || /^[.\s…_]{3,}$/u.test(ic);
+    })
+    .map((e) => e[0]);
+  const noktali = [...text.replaceAll(YER_TUTUCU, (m) => " ".repeat(m.length)).matchAll(BOS_NOKTA)].map((e) =>
+    e[1] ? `${e[1].trim()} ${e[2]}` : e[2],
+  );
+  return [...kosesi, ...noktali];
+}
+
+/*
+  ŞABLON ALANLARI (03.11.2026). ArvoLab'ın eklediği ön sayfa şablonlarının
+  yer tutucuları ayrı raporlanır, hangi şablondan geldiği yazılarak:
+  öğrencinin kendi metnindeki boşlukla karışınca kaynağı belirsizleşiyordu
+  ("[Unvanı Adı Soyadı]" kurum sahibinin tezinde hiç yoktu).
+*/
+let sablonHaritasi: Map<string, OnSayfaKimligi> | null = null;
+export function sablonAlaniKaynagi(yer: string): OnSayfaKimligi | null {
+  if (!sablonHaritasi) {
+    sablonHaritasi = new Map();
+    const harita = sablonHaritasi;
+    for (const d of ["tr", "en"] as const)
+      for (const s of ON_SAYFALAR)
+        for (const dugum of onSayfaDugumleri(s.id, { kapak: null, dil: d }))
+          for (const y of yerTutuculari(metin(dugum))) if (!harita.has(y)) harita.set(y, s.id);
+  }
+  return sablonHaritasi.get(yer) ?? null;
 }
 
 /*

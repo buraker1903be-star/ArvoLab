@@ -16,7 +16,7 @@ import { kunyeleriAyristir } from "@/lib/atif/kunye";
 import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/atif/stiller";
 import { dipnotAtiflari } from "@/lib/atif/dipnot";
 import { dipnotMetinleri } from "@/lib/tiptap-text";
-import { yerTutuculari } from "@/lib/on-sayfalar";
+import { ON_SAYFALAR, sablonAlaniKaynagi, yerTutuculari } from "@/lib/on-sayfalar";
 import { anilanNumaralar, baslikAdlandirmaSorunu, baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
 import { kisaltmaMesaji, kisaltmaSorunlari } from "@/lib/kisaltmalar";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
@@ -41,7 +41,7 @@ export type StructureIssueTone = "warning" | "danger";
   çıkarıyordu. Tür, denetimin hangi bloğundan çıktığından gelir
   (aşağıda her bloğun başında atanıyor); mesaj metninden tahmin edilmez.
 */
-export type SorunTuru = "bolum" | "sekil" | "kaynakca" | "ozet" | "ek" | "yazim" | "bicim" | "dipnot" | "genel";
+export type SorunTuru = "bolum" | "sekil" | "kaynakca" | "ozet" | "ek" | "yazim" | "bicim" | "dipnot" | "sablon" | "genel";
 
 export const SORUN_TURLERI: { tur: SorunTuru; baslik: string; neden: string }[] = [
   { tur: "bolum", baslik: "Bölümler ve başlıklar", neden: "Kılavuzun istediği bölümler dolu ve başlık düzeyleri sıralı olmalı." },
@@ -52,6 +52,7 @@ export const SORUN_TURLERI: { tur: SorunTuru; baslik: string; neden: string }[] 
   { tur: "yazim", baslik: "Kısaltma ve alıntı", neden: "Kısaltma ilk geçtiği yerde açılır; uzun alıntı blok olarak verilir." },
   { tur: "bicim", baslik: "Sayfa ve yazı biçimi", neden: "Yazı tipi, punto, satır aralığı ve paragraf düzeni kılavuza uymalı." },
   { tur: "dipnot", baslik: "Dipnotlar", neden: "Boş dipnot çıktıda yalnızca numara olarak görünür." },
+  { tur: "sablon", baslik: "Şablon alanları", neden: "ArvoLab'ın eklediği ön sayfa şablonlarında doldurulmamış yerler." },
   { tur: "genel", baslik: "Diğer", neden: "" },
 ];
 
@@ -65,6 +66,7 @@ const SORUN_TURLERI_EN: Record<SorunTuru, { baslik: string; neden: string }> = {
   yazim: { baslik: "Abbreviations and quotations", neden: "Spell out an abbreviation where it first appears; give long quotations as block quotes." },
   bicim: { baslik: "Page and text formatting", neden: "Font, size, line spacing and paragraph layout should follow the guideline." },
   dipnot: { baslik: "Footnotes", neden: "An empty footnote appears in the output as a bare number." },
+  sablon: { baslik: "Template fields", neden: "Unfilled places in the front-matter templates ArvoLab inserted." },
   genel: { baslik: "Other", neden: "" },
 };
 
@@ -821,27 +823,54 @@ export function checkStructure(
     köşeli parantezli bir yönerge kalır. Numaralı atıflar ("[1]") sayılmaz.
   */
   kategori = "genel";
-  const yerler: string[] = [];
+  /*
+    03.11.2026: aynı alan tek satırda sayısıyla ("[Ad SOYAD]" — 2 kez);
+    İçindekiler ve tablo/şekil listeleri taranmaz (nokta dizili sayfa
+    satırları boş alan değildir); ArvoLab şablonundan gelen alanlar ayrı
+    kategoride, şablonun adıyla. Kod blokları zaten okunmaz (paragraf değil).
+  */
+  const taranmaz = (index: number) =>
+    bolumler.listeler.some((aralik) => aralik !== bolumler.kisaltmalar && (index === aralik.bas || aralikta(aralik, index)));
+  const yerler = new Map<string, number>();
   const yerGez = (dugumler: DocNode[] | undefined) => {
     for (const d of dugumler ?? []) {
-      if (d.type === "paragraph" || d.type === "heading") yerler.push(...yerTutuculari(textOf(d)));
+      if (d.type === "paragraph" || d.type === "heading") for (const y of yerTutuculari(textOf(d))) yerler.set(y, (yerler.get(y) ?? 0) + 1);
       else yerGez(d.content);
     }
   };
-  yerGez(doc?.content);
-  for (const yer of yerler.slice(0, CITATION_ISSUE_LIMIT)) {
-    add({
-      tone: "warning",
-      message: en ? `Placeholder not filled in: ${quote(yer)}. Replace it with your own text.` : `Doldurulmamış yer: ${quote(yer)}. Kendi bilginizle değiştirin.`,
-      target: yer,
-    });
-  }
-  if (yerler.length > CITATION_ISSUE_LIMIT) {
+  blocks.forEach((block, index) => {
+    if (!taranmaz(index)) yerGez([block]);
+  });
+  const kez = (n: number) => (n > 1 ? (en ? ` (${n} times)` : ` (${n} kez)`) : "");
+  const kullanici = [...yerler].filter(([yer]) => !sablonAlaniKaynagi(yer));
+  const sablon = [...yerler].filter(([yer]) => sablonAlaniKaynagi(yer));
+  for (const [yer, sayi] of kullanici.slice(0, CITATION_ISSUE_LIMIT)) {
     add({
       tone: "warning",
       message: en
-        ? `…and ${yerler.length - CITATION_ISSUE_LIMIT} more placeholders.`
-        : `…ve doldurulmamış ${yerler.length - CITATION_ISSUE_LIMIT} yer daha.`,
+        ? `Placeholder not filled in: ${quote(yer)}${kez(sayi)}. Replace it with your own text.`
+        : `Doldurulmamış alan: ${quote(yer)}${kez(sayi)}. Kendi bilginizle değiştirin.`,
+      target: yer,
+    });
+  }
+  if (kullanici.length > CITATION_ISSUE_LIMIT) {
+    add({
+      tone: "warning",
+      message: en
+        ? `…and ${kullanici.length - CITATION_ISSUE_LIMIT} more placeholders.`
+        : `…ve doldurulmamış ${kullanici.length - CITATION_ISSUE_LIMIT} alan daha.`,
+    });
+  }
+  kategori = "sablon";
+  for (const [yer, sayi] of sablon.slice(0, CITATION_ISSUE_LIMIT)) {
+    const kaynak = ON_SAYFALAR.find((sayfa) => sayfa.id === sablonAlaniKaynagi(yer));
+    const sablonAdi = kaynak ? kaynak.ad[dil] : "";
+    add({
+      tone: "warning",
+      message: en
+        ? `Template field to fill in (${sablonAdi} template): ${quote(yer)}${kez(sayi)}. If you have your own version of this page, delete the template page.`
+        : `Şablon alanı — doldurulmalı (${sablonAdi} şablonu): ${quote(yer)}${kez(sayi)}. Bu sayfanın kendi sürümünüz varsa şablon sayfasını silin.`,
+      target: yer,
     });
   }
 

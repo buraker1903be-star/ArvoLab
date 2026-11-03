@@ -84,9 +84,13 @@ test("yer tutucu: şablonun yerleri evet, numaralı atıf hayır", () => {
 test("teslim kontrolü doldurulmamış yeri söylüyor", () => {
   const doc = { content: onSayfaDugumleri("yemin", { kapak: KAPAK, dil: "tr" }) };
   const sorunlar = checkStructure(doc as never, {}, "tr");
-  assert.ok(sorunlar.some((s) => s.message.startsWith("Doldurulmamış yer: “[Kurumunuzun yemin")), sorunlar.map((s) => s.message).join(" | "));
+  // 03.11.2026: şablondan gelen alan ayrı kategoride, şablonun adıyla.
+  assert.ok(
+    sorunlar.some((s) => s.kategori === "sablon" && s.message.startsWith("Şablon alanı — doldurulmalı (Yemin metni şablonu): “[Kurumunuzun yemin")),
+    sorunlar.map((s) => s.message).join(" | "),
+  );
   const dolu = { content: [h1("YEMİN METNİ"), p("Tezimi bilimsel etik kurallarına uygun yazdığımı beyan ederim.")] };
-  assert.ok(!checkStructure(dolu as never, {}, "tr").some((s) => s.message.startsWith("Doldurulmamış yer")));
+  assert.ok(!checkStructure(dolu as never, {}, "tr").some((s) => s.kategori === "sablon" || s.message.startsWith("Doldurulmamış")));
 });
 
 /*
@@ -115,4 +119,31 @@ test("taslak: ön sayfalar şablonla ve kılavuzun adıyla, gövde başlık olar
   // Özet şablonu anahtar kelime satırını taşıyor (düz başlık değil).
   const metin = JSON.stringify(dugumler);
   assert.match(metin, /Anahtar [Kk]elimeler/);
+});
+
+
+/* Madde 8 (03.11.2026, örnek tez): doldurulmamış alan tespiti. */
+test("APA tür belirteci yer tutucu değildir", () => {
+  assert.deepEqual(yerTutuculari("TÜİK. (2026a). Tüketici Fiyat Endeksi [Haber bülteni]. Türkiye İstatistik Kurumu."), []);
+  assert.deepEqual(yerTutuculari("Yağmur, M. (2022). Başlık [Yayımlanmamış yüksek lisans tezi]. Üniversite."), []);
+  assert.deepEqual(yerTutuculari("Kaynak (2020). Veri [Data set]. Kurum."), []);
+});
+
+test("kapak, tarih ve imza boşlukları yakalanır", () => {
+  assert.deepEqual(yerTutuculari("Hazırlayan: [Ad SOYAD] — Öğrenci No: [.........]"), ["[Ad SOYAD]", "[.........]"]);
+  assert.deepEqual(yerTutuculari("Tarih: ..../..../2026"), ["Tarih: ..../..../2026"]);
+  assert.deepEqual(yerTutuculari("İmza: ...................."), ["İmza: ...................."]);
+  // Tek üç nokta ve formüldeki "…" boş alan değildir.
+  assert.deepEqual(yerTutuculari("a₂₁ = … = a₂ₖ ve benzerleri..."), []);
+});
+
+test("kod satırındaki köşeli parantez yer tutucu değildir", () => {
+  assert.deepEqual(yerTutuculari('for c in ["LENF", "ISS"]:'), []);
+  assert.deepEqual(yerTutuculari('X = sm.add_constant(d[["LENF_1", "ISS"]])'), []);
+});
+
+test("ön sayfa her başlık düzeyinde tanınır; kendi Kısaltmalar'ı olan belgeye şablon eklenmez", () => {
+  const doc = { content: [h1("Tezin Başlığı"), { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Kısaltmalar" }] }, p("AIC  Akaike Bilgi Ölçütü")] };
+  assert.ok(mevcutOnSayfalar(doc as never).has("kisaltmalar"));
+  assert.deepEqual(onSayfaYerlesimi(doc as never, ["kisaltmalar"]), []);
 });
