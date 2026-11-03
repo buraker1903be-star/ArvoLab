@@ -342,6 +342,12 @@ cp .env.example .env.local   # Supabase bilgilerinizi girin
 npm run dev
 ```
 
+**Veritabanısız önizleme** (`npm run onizleme`, http://localhost:3123):
+panel ekranları Supabase ve oturum olmadan, örnek bir tezle açılır
+(`scripts/onizleme/`). Tasarım değişikliğini görerek yapmak için;
+yazmalar kalıcı değildir. `.env.local`'deki Supabase değişkenlerini bu
+komutla birlikte kullanmayın: proxy oturum arayıp girişe yönlendirir.
+
 ## Supabase Kurulumu
 
 1. https://supabase.com üzerinde yeni proje oluşturun.

@@ -90,6 +90,8 @@ export default function GeriBildirimKarti({ baglam }: { baglam: string | null })
               type="button"
               className="geri-bildirim-puan"
               aria-pressed={puan === deger}
+              // Ana sayfada kart tek satıra iner ve etiketler gizlenir; anlamı ipucunda kalır.
+              title={`${deger} · ${t(PUAN_ETIKETLERI_METIN[deger])}`}
               onClick={() => setPuan(deger)}
             >
               <strong>{deger}</strong>

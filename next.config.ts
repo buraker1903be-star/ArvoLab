@@ -66,7 +66,31 @@ const OCR_ISCISI = [
   "./node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm",
 ];
 
+/*
+  YEREL ÖNİZLEME (04.11.2026, `npm run onizleme`): Supabase istemcileri
+  örnek veri döndüren sahteleriyle değiştirilir (scripts/onizleme/). Panel
+  ekranları geliştirme makinesinde veritabanı ve oturum olmadan
+  açılabilsin, tasarım görülerek yapılsın diye. Üretim derlemesinde
+  bayrak açıksa derleme DURUR: sahte istemcinin canlıya çıkması, her
+  sorgunun "başarılı" görünüp hiçbir şey yazmaması demek.
+*/
+const ONIZLEME = process.env.ARVOLAB_ONIZLEME === "1";
+if (ONIZLEME && process.env.NODE_ENV === "production") {
+  throw new Error("ARVOLAB_ONIZLEME üretim derlemesinde açık olamaz.");
+}
+
 const nextConfig: NextConfig = {
+  ...(ONIZLEME
+    ? {
+        turbopack: {
+          resolveAlias: {
+            "@/lib/supabase/server": "./scripts/onizleme/server.ts",
+            "@/lib/supabase/client": "./scripts/onizleme/client.ts",
+            "@/lib/supabase/admin": "./scripts/onizleme/admin.ts",
+          },
+        },
+      }
+    : {}),
   poweredByHeader: false,
   reactStrictMode: true,
   /*

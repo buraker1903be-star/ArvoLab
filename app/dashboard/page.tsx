@@ -722,7 +722,7 @@ export default async function DashboardPage() {
                   {t(projectTypeLabel(resume.project_type))}
                   {resume.university ? ` · ${resume.university}` : ""}
                 </small>
-                <h2>{resume.title}</h2>
+                <h2 title={resume.title}>{resume.title}</h2>
                 <div className="tez-kart-rozetler">
                   <span className="status-pill" data-tone={statusTone(resume.status)}>
                     {t(statusLabel(resume.status))}
@@ -857,7 +857,7 @@ export default async function DashboardPage() {
               </div>
             ) : null}
           </article>
-          <AbonelikOzetKarti access={access} kredi={kredi} bireysel={Boolean((krediSatiri as KrediSatiri | null)?.bireysel)} />
+          <AbonelikOzetKarti access={access} kredi={kredi} bireysel={Boolean((krediSatiri as KrediSatiri | null)?.bireysel)} calismaId={resume.id} />
           </div>
 
           <ListeIzgarasi etiket={t({ tr: "Tezim", en: "My thesis" })}>

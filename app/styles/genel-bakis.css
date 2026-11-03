@@ -234,7 +234,14 @@
   .gb-tek-ekran > .gb-sutunlar,
   .gb-tek-ekran > .gb-grafik + .gb-sutunlar { flex: 1 1 auto; min-height: 0; }
   .gb-tek-ekran .gb-sutunlar { grid-auto-rows: minmax(0, 1fr); }
-  .gb-tek-ekran .gb-sutun { min-height: 0; overflow: hidden; }
+  /*
+    Kart kendi içinde kayar (04.11.2026). Eskiden overflow:hidden ile
+    KIRPIYORDU: dar ya da alçak ekranda Danışmanıma gönder kartının
+    "Dosya olarak" satırı ve Kaynaklar kartının son satırı yarıda
+    kesiliyor, öğrenci orada bir şey olduğunu bilmiyordu. Sayfa yine
+    kaymıyor (tek ekran kuralı); kayan yalnızca kartın içi.
+  */
+  .gb-tek-ekran .gb-sutun { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
   .gb-tek-ekran .gb-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
   .gb-tek-ekran .gb-selam h1 { font-size: clamp(22px, 1.8vw, 28px); }
   .gb-tek-ekran .gb-selam p { margin-top: 2px; }
@@ -256,6 +263,9 @@
   .gb-tek-ekran .tez-olcu dd { font-size: 20px; }
   .gb-tek-ekran .tez-kart-rozetler { display: none; }
   .gb-tek-ekran .tez-tempo { display: none; }
+  /* Asistan kısayolları ve takvim şeridi çekilir: üst sırayı uzatıp alt kartları eziyorlardı (04.11.2026). */
+  .gb-tek-ekran .abonelik-araclar,
+  .gb-tek-ekran .takvim-sirada { display: none; }
 }
 
 /* ============================================================
@@ -671,6 +681,9 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .abonelik-ozet .kaynakca-puan { padding: 8px 12px; }
 .abonelik-ozet .kaynakca-puan b { font-size: 24px; }
 .abonelik-ozet-eylem { align-self: flex-start; margin-top: auto; }
+.abonelik-araclar { display: grid; margin: 4px -8px 0; padding: 8px 0 0; border-top: 1px solid var(--line-soft); list-style: none; }
+.abonelik-araclar .gb-satir { gap: 10px; }
+.abonelik-araclar .gb-satir > svg:first-child { flex: none; color: var(--accent-strong); }
 /* Abonelik sayfası: faturalar ve ödemeler (cari özet + ödeme satırları) */
 .cari-ozet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .cari-ozet > div { padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-2); }
@@ -995,3 +1008,56 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .gb-satir-dugme .drawer-tetik-metin b { overflow: hidden; color: var(--ink); font-size: var(--fs-sm); font-weight: 550; text-overflow: ellipsis; }
 .gb-satir-dugme.etik-tetik-tehlike .drawer-tetik-metin { color: var(--danger); }
 .personel-isaret[data-tone="danger"] { color: var(--danger); }
+
+/*
+  ANA SAYFANIN DİKEY BÜTÇESİ (04.11.2026). Tek ekran kuralında üstteki
+  her piksel alt kartlardan gidiyor: bir kerelik geri bildirim sorusu
+  ~170 piksel kaplıyor ve Bölümlerim kartı tek satıra düşüyordu. Geniş
+  ekranda soru tek şeride iner (puan etiketleri ipucuna geçer); tez
+  kartının iki bilgi şeridi ve asistan kısayolları sıkılaşır.
+*/
+@media (min-width: 1200px) and (min-height: 640px) {
+  .gb-tek-ekran .geri-bildirim-karti {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "kicker metin form kapat" "baslik metin form kapat";
+    align-items: center;
+    gap: 2px 24px;
+    margin-top: 0;
+    padding: 12px 18px;
+  }
+  .gb-tek-ekran .geri-bildirim-bas { display: contents; }
+  .gb-tek-ekran .geri-bildirim-karti .dashboard-kicker { grid-area: kicker; }
+  .gb-tek-ekran .geri-bildirim-karti h2 { grid-area: baslik; font-size: var(--fs-md); }
+  .gb-tek-ekran .geri-bildirim-karti > p { grid-area: metin; max-width: 560px; }
+  .gb-tek-ekran .geri-bildirim-form { grid-area: form; }
+  .gb-tek-ekran .geri-bildirim-kapat { grid-area: kapat; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .gb-tek-ekran .geri-bildirim-puan { min-width: 40px; justify-content: center; padding-inline: 10px; }
+  .gb-tek-ekran .geri-bildirim-puan span { display: none; }
+  /* Puan seçilince açılan ayrıntı alanı tam satır */
+  .gb-tek-ekran .geri-bildirim-detay { grid-column: 1 / -1; }
+
+  .gb-tek-ekran .takvim-sirada { padding: 6px 12px; }
+  .gb-tek-ekran .tez-simdi { padding: 8px 14px; }
+  .gb-tek-ekran .abonelik-araclar small { display: none; }
+  .gb-tek-ekran .abonelik-araclar .gb-satir { min-height: 34px; }
+}
+/*
+  Tez kartının başlığı tek satır, eylemler sağda kalır: uzun tez adı
+  satıra sarınca "Yazmaya devam et" kendi satırına düşüyor ve 1440×900'de
+  alt kartlara ~120 piksel kalıyordu. Adın tamamı üzerine gelince.
+*/
+@media (min-width: 901px) and (min-height: 640px) {
+  .gb-tek-ekran .tez-kart-ust { flex-wrap: nowrap; align-items: center; }
+  .gb-tek-ekran .tez-kart-ust > div:first-child { min-width: 0; }
+  .gb-tek-ekran .tez-kart-ust h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+  .gb-tek-ekran .tez-kart-eylemler { flex: none; flex-wrap: nowrap; }
+}
+/* Orta yükseklik (≤1000): açıklama satırları çekilir, sayılar kalır. */
+@media (min-width: 901px) and (min-height: 640px) and (max-height: 1000px) {
+  .gb-tek-ekran .geri-bildirim-karti > p { display: none; }
+  .gb-tek-ekran .takvim-sirada > small { display: none; }
+  .gb-tek-ekran .tez-olcu { padding: 8px 14px; }
+  .gb-tek-ekran .tez-olcu dd { font-size: 20px; }
+  .gb-tek-ekran .gb-selam p { display: inline; margin-left: 10px; }
+  .gb-tek-ekran .gb-selam h1 { display: inline; }
+}
