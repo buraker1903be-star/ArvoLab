@@ -252,7 +252,7 @@ export default async function ProjectsPage({
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">
-      <section className="projects-header calismalar-basligi">
+      <section className="projects-header">
         <div>
           <h1>{t({ tr: "Çalışmalarım", en: "My works" })}</h1>
           <p>

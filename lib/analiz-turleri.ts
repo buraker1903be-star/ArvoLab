@@ -192,3 +192,22 @@ export function analizBasligi(tur: string, secim: AnalizSecimi, dil: Dil = "tr")
   const tam = govde ? `${ad}: ${govde}` : ad;
   return tam.length > EN_UZUN_BASLIK ? `${tam.slice(0, EN_UZUN_BASLIK - 1)}…` : tam;
 }
+
+/*
+  Analiz türlerinin GRUPLARI (04.11.2026). Analiz Merkezi'nde dosya
+  yüklenmeden önce gösteriliyor: öğrenci ArvoLab'ın neleri yapabildiğini
+  ancak dosya yükleyip açılır listeyi açınca görüyordu, boş ekran "burada
+  ne yapılır" sorusunu cevaplamıyordu. Her tür tam olarak bir grupta;
+  yeni bir tür eklenip buraya yazılmazsa birim testi düşer
+  (tests/unit/analiz-gruplari.test.ts).
+*/
+export const ANALIZ_GRUPLARI: { ad: Metin; turler: AnalizTuru[] }[] = [
+  { ad: { tr: "Betimsel ve güvenilirlik", en: "Descriptives and reliability" }, turler: ["descriptives", "reliability"] },
+  {
+    ad: { tr: "Grup karşılaştırma", en: "Comparing groups" },
+    turler: ["ttest", "pairedttest", "tekorneklem", "anova", "ikiyonluanova", "tekrarlianova", "karmaanova", "ancova"],
+  },
+  { ad: { tr: "Parametrik olmayan", en: "Non-parametric" }, turler: ["mannwhitney", "kruskalwallis", "wilcoxon", "friedman", "mcnemar", "chisquare"] },
+  { ad: { tr: "İlişki ve regresyon", en: "Relationships and regression" }, turler: ["correlation", "spearman", "kismikorelasyon", "regression", "lojistik"] },
+  { ad: { tr: "Ölçek ve model", en: "Scales and models" }, turler: ["faktor", "dfa", "aracilik", "duzenleyicilik"] },
+];

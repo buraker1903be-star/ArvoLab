@@ -29,7 +29,7 @@ import {
   type EtkiYorumu,
 } from "@/lib/stats-tests-core";
 import { formatP, hesaplanabilir, isSignificant, formatNumber } from "@/lib/apa-format";
-import { ANALIZ_ETIKETLERI_METIN, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
+import { ANALIZ_ETIKETLERI_METIN, ANALIZ_GRUPLARI, ANALIZ_TURLERI, analizBasligi, type AnalizTuru } from "@/lib/analiz-turleri";
 import { analizSonucuKaydet } from "@/app/actions/analiz-sonuclari";
 import { analizDenetle, type AnalizDenetimYaniti } from "@/app/actions/ai-analiz";
 import { analizBetigi, ARAC_ADI_METIN, programKartlari, yontemGruplari, yontemKartlari, type AnalizAraci, type BetikSecimi } from "@/lib/analiz-betik";
@@ -2973,6 +2973,27 @@ export default function DataAnalyzer({
           />
         </label>
       )}
+
+      {/* Dosya yüklenmeden önce neler yapılabildiği (04.11.2026; lib/analiz-turleri.ts ANALIZ_GRUPLARI). */}
+      {!dataset && !loading ? (
+        <div className="analiz-katalog" aria-label={t({ tr: "Yapılabilen analizler", en: "Available analyses" })}>
+          <span className="analiz-katalog-bas">
+            {t({ tr: `Yapılabilen ${ANALIZ_TURLERI.length} analiz`, en: `${ANALIZ_TURLERI.length} available analyses` })}
+          </span>
+          {ANALIZ_GRUPLARI.map((grup) => (
+            <div key={grup.ad.tr} className="analiz-katalog-grup">
+              <b>{t(grup.ad)}</b>
+              <span>
+                {grup.turler.map((tur) => (
+                  <span key={tur} className="chip">
+                    {t(ANALIZ_ETIKETLERI_METIN[tur])}
+                  </span>
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {parseError && (
         <p className="alert mt-sm" data-tone="danger" role="alert">

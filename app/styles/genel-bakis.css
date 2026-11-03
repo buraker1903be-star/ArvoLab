@@ -292,10 +292,16 @@
 .calisma-ilerleme::-webkit-progress-bar { background: var(--surface-2); }
 .calisma-ilerleme::-webkit-progress-value { border-radius: 999px; background: var(--accent); }
 .calisma-ilerleme::-moz-progress-bar { border-radius: 999px; background: var(--accent); }
-/* İnce sayfa başlığı: editördekiyle aynı ölçü, tek satır açıklama */
-.calismalar-basligi { margin-bottom: 4px; }
-.calismalar-basligi h1 { font-size: clamp(22px, 1.8vw, 28px); }
-.calismalar-basligi p { margin-top: 2px; }
+/*
+  İnce sayfa başlığı, BÜTÜN tek ekran modül sayfalarında (04.11.2026):
+  Çalışmalarım, Kaynaklar, Analiz, Belge… Her sayfanın 34 piksellik
+  büyük başlığı ve iki satırlık açıklaması tek ekran kuralında kartların
+  yüksekliğinden yiyordu; editör ve ana sayfa zaten inceydi, ekranlar
+  arası geçişte başlık boyu zıplıyordu.
+*/
+.gb-tek-ekran > .projects-header { margin-bottom: 4px; }
+.gb-tek-ekran > .projects-header h1 { margin: 2px 0; font-size: clamp(22px, 1.8vw, 28px); }
+.gb-tek-ekran > .projects-header p { margin-top: 2px; font-size: var(--fs-base); }
 .calisma-durum-bas { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .calisma-durum-bas > div { min-width: 0; }
 .calisma-durum-bas h2 { margin: 6px 0 0; color: var(--ink); font-size: var(--fs-lg); font-weight: 700; letter-spacing: -.015em; line-height: 1.25; }
@@ -889,7 +895,9 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .kaynak-arama:focus-within { border-color: var(--accent); }
 .kaynak-satiri { align-items: flex-start; }
 .kaynak-satiri .gb-satir-govde a { display: inline-flex; align-items: center; gap: 2px; }
-.kaynak-eksik { color: var(--warning); }
+/* Eksik künye: sarı ve önünde uyarı işareti; gri metin arasında gözden kaçıyordu */
+.kaynak-eksik { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); font-weight: 550; }
+.kaynak-eksik::before { content: "⚠ "; }
 .kaynak-satiri-eylem { display: flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
 .kaynak-onizleme li { display: grid; gap: 2px; }
 .kaynak-disa-aktar { display: grid; gap: 12px; }
@@ -1081,3 +1089,11 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   .gb-tek-ekran .gb-selam p { display: inline; margin-left: 10px; }
   .gb-tek-ekran .gb-selam h1 { display: inline; }
 }
+
+/* Analiz Merkezi: dosya yüklenmeden önce gruplu analiz listesi (data-analyzer.tsx) */
+.analiz-katalog { display: grid; gap: 8px; margin-top: 14px; }
+.analiz-katalog-bas { color: var(--muted); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.analiz-katalog-grup { display: grid; gap: 6px; }
+.analiz-katalog-grup > b { font-size: var(--fs-sm); }
+.analiz-katalog-grup > span { display: flex; flex-wrap: wrap; gap: 4px; }
+.analiz-katalog .chip { min-height: 0; padding: 3px 9px; font-size: var(--fs-micro); font-weight: 550; }
