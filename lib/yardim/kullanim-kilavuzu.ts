@@ -212,6 +212,10 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "\"Check my reference list\" checks the reference list in your editor (or text you paste) for format, citation matching and index records.",
       },
       {
+        tr: "Kaynakça penceresinde PDF'i olan her kaynakta \"Kaynağa sor\" vardır: makaleye soru sorun (yöntem, örneklem, bulgular). Cevap kaynaktan birebir alıntı ve PDF sayfasıyla gelir; alıntı kaynakta bulunamazsa cevap gösterilmez.",
+        en: "In the reference list window, every source with a PDF has \"Ask the source\": ask the paper a question (method, sample, findings). The answer comes with word-for-word quotes and the PDF page; if a quote isn't in the source, the answer is withheld.",
+      },
+      {
         tr: "\"Dışa aktar\" ile kaynakçayı kopyalayın ya da RIS/BibTeX olarak indirin.",
         en: "Use \"Export\" to copy the reference list or download it as RIS/BibTeX.",
       },

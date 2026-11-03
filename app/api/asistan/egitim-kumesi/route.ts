@@ -1,6 +1,7 @@
 import { UAK_ISTEMI } from "@/lib/ai/uak-tablosu";
 import { KILAVUZ_ISTEMI } from "@/lib/ai/kilavuz-kurallari";
 import { YAZIM_ISTEMI } from "@/lib/ai/yazim-asistani";
+import { KAYNAK_ISTEMI } from "@/lib/ai/kaynak-sohbeti";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ADMIN_ROLES } from "@/lib/project-labels";
@@ -71,6 +72,7 @@ const ISTEMLER: Record<string, string> = {
   uak: UAK_ISTEMI,
   kilavuz: KILAVUZ_ISTEMI,
   yazim: YAZIM_ISTEMI,
+  kaynak: KAYNAK_ISTEMI,
 };
 
 export async function GET(request: Request) {

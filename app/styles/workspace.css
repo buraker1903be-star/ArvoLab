@@ -1177,3 +1177,23 @@
 @media (max-width: 760px) {
   .yazim-paneli { top: auto; right: 0; bottom: 0; left: 0; width: 100%; height: 70dvh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
 }
+
+/* ---------- Kaynakla sohbet (03.11.2026) ---------- */
+.kaynak-sohbet { display: flex; flex-direction: column; min-height: min(60dvh, 560px); }
+.kaynak-sohbet-liste { padding: 0 0 12px; }
+.kaynak-sohbet-oneri { padding: 0; border-top: 0; }
+.kaynak-alinti {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-style: italic;
+  line-height: 1.5;
+}
+.kaynak-alinti > svg { margin-top: 3px; color: var(--accent); }
+.kaynak-alinti footer { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-style: normal; }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ExternalLink, FileCheck2, FileUp } from "lucide-react";
+import { ExternalLink, FileCheck2, FileUp, MessageSquareText } from "lucide-react";
+import KaynakSohbetPenceresi from "./kaynak-sohbet-penceresi";
 import { createClient } from "@/lib/supabase/client";
 import { kaynakPdfiYuklendi } from "@/app/actions/kaynak-pdf";
 import { PDF_EN_FAZLA_BAYT, type KaynakPdfSatiri } from "@/lib/kaynak-pdf";
@@ -40,6 +41,7 @@ export default function KaynakPdfSatiri({
   const t = useCeviri();
   const dosyaRef = useRef<HTMLInputElement>(null);
   const [yukleniyor, setYukleniyor] = useState(false);
+  const [sohbetAcik, setSohbetAcik] = useState(false);
 
   const ac = async () => {
     if (!satir?.depo_yolu) return;
@@ -116,6 +118,12 @@ export default function KaynakPdfSatiri({
             <FileCheck2 size={14} aria-hidden="true" /> {t({ tr: "PDF'i aç", en: "Open PDF" })}
           </button>
         ) : null}
+        {/* Kaynakla sohbet (03.11.2026): cevap PDF'ten birebir alıntıyla (kaynak-sohbet-penceresi.tsx). */}
+        {dosyaVar && satir ? (
+          <button type="button" className="projects-filter-button button-compact" onClick={() => setSohbetAcik(true)}>
+            <MessageSquareText size={14} aria-hidden="true" /> {t({ tr: "Kaynağa sor", en: "Ask the source" })}
+          </button>
+        ) : null}
         {satir?.durum === "erisilemedi" && satir.kaynak_adres ? (
           <a className="projects-filter-button button-compact" href={satir.kaynak_adres} target="_blank" rel="noopener noreferrer">
             <ExternalLink size={14} aria-hidden="true" /> {t({ tr: "Kaynağa git", en: "Go to source" })}
@@ -140,6 +148,9 @@ export default function KaynakPdfSatiri({
           }}
         />
       </span>
+      {dosyaVar && satir ? (
+        <KaynakSohbetPenceresi projectId={projectId} pdfId={satir.id} kunye={kunye} acik={sohbetAcik} onAcikDegis={setSohbetAcik} />
+      ) : null}
     </div>
   );
 }

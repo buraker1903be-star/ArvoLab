@@ -97,6 +97,7 @@ const YETENEK_DEGISKENI: Record<YetenekAdi, string> = {
   uak: "AI_MODEL_UAK",
   kilavuz: "AI_MODEL_KILAVUZ",
   yazim: "AI_MODEL_YAZIM",
+  kaynak: "AI_MODEL_KAYNAK",
 };
 
 /** Yeteneğe özel model; tanımlı değilse undefined (varsayılana düşer). */

@@ -23,7 +23,9 @@ export async function generateMetadata() {
 
 /* Kaynak PDF'lerini bulan sunucu işlemi kaynakça penceresinden çağrılıyor
    ve dış arşivlerden indiriyor (app/actions/kaynak-pdf.ts, bütçe 40 sn). */
-export const maxDuration = 60;
+/* 120 sn (03.11.2026): Kaynakça penceresindeki "Kaynağa sor" PDF'i okuyup
+   modele soruyor; 60 sn'de uzun bir PDF'in cevabı yarıda kesiliyordu. */
+export const maxDuration = 120;
 
 /*
   KAYNAKLAR — TEK SAYFA, İKİ EŞİT KART (26.10.2026, kurum sahibinin isteği:

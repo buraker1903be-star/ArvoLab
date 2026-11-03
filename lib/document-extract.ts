@@ -38,7 +38,7 @@ export async function extractTextFromBuffer(
 export async function belgeMetniOku(
   buffer: Buffer,
   docType: SupportedDocType
-): Promise<{ metin: string; sayfa: number | null }> {
+): Promise<{ metin: string; sayfa: number | null; sayfalar?: { num: number; text: string }[] }> {
   if (docType === "docx") {
     const mammoth = (await import("mammoth")).default;
     const result = await mammoth.extractRawText({ buffer });
@@ -65,7 +65,9 @@ export async function belgeMetniOku(
   const parser = new PDFParse({ data: buffer });
   try {
     const result = await parser.getText();
-    return { metin: result.text, sayfa: result.total || null };
+    /* Sayfa metinleri: kaynakla sohbette alıntının hangi PDF sayfasında
+       olduğunu söylemek için (lib/ai/kaynak-sohbeti.ts). */
+    return { metin: result.text, sayfa: result.total || null, sayfalar: result.pages.map((s) => ({ num: s.num, text: s.text })) };
   } finally {
     await parser.destroy();
   }

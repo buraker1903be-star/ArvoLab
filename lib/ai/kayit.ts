@@ -18,7 +18,7 @@
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { aiKurulumu } from "./saglayici";
 
-export type Yetenek = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale" | "uak" | "kilavuz" | "yazim";
+export type Yetenek = "analiz" | "kaynakca" | "literatur" | "belge" | "kanit" | "makale" | "uak" | "kilavuz" | "yazim" | "kaynak";
 export type RedNedeni = "uydurma_sayi" | "kunye" | "bos" | "alinti";
 
 export type AsistanKaydi = {
