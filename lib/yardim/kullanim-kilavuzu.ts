@@ -467,6 +467,10 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "The \"Authorship\" card in the right panel shows what percentage of the body was inserted from the writing assistant; the window lists the insertions and can highlight them in the editor. Text taken by copy–paste isn't counted; this is not an AI-detection score.",
       },
       {
+        tr: "Satır içi öneri: editörde Alt+/ imlecin önüne gri bir devam önerir; Tab kabul eder, Esc ya da yazmaya devam etmek vazgeçer. Araç çubuğundaki \"Öneri\" açıksa yazma durduğunda öneri kendiliğinden gelir. Her öneri bir asistan hakkı kullanır; öneri de kütüphanenizde olmayan kaynağa atıf yapamaz ve metninizde olmayan sayı yazamaz.",
+        en: "Inline suggestions: in the editor, Alt+/ shows a grey continuation at the cursor; Tab accepts, Esc or continuing to type dismisses. With \"Suggest\" on the toolbar turned on, a suggestion appears when you pause. Each suggestion uses one assistant credit; suggestions also can't cite sources outside your library or write numbers that aren't in your text.",
+      },
+      {
         tr: "Paneldeki \"Ana hat\" kılavuzunuzun zorunlu bölümlerini omurga alarak bir başlık iskeleti ve her başlık altına ne yazılacağına dair kısa notlar önerir; \"İmlece ekle\" ile başlıklar ve köşeli parantezli notlar belgeye girer, notların yerine kendi metninizi yazarsınız.",
         en: "\"Outline\" in the panel proposes a heading skeleton built on your guideline's required sections, with a short note under each heading on what to write; \"Insert at cursor\" adds the headings and bracketed notes, which you replace with your own text.",
       },

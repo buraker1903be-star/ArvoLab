@@ -192,6 +192,8 @@
 
 /* Bul ve değiştir: araç çubuğunun içinde tam satır (yapışık kalır) */
 .search-match { border-radius: 2px; background: color-mix(in srgb, var(--warning) 35%, transparent); }
+/* Satır içi öneri (03.11.2026): belgede değil, süsleme; gri ve seçilemez. Tab kabul eder. */
+.satir-ici-oneri { color: var(--muted); pointer-events: none; user-select: none; }
 .search-match.is-current { background: color-mix(in srgb, var(--accent-500) 45%, transparent); outline: 1px solid var(--accent-500); }
 .manuscript-toolbar .find-bar {
   display: flex;

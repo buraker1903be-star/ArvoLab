@@ -13,6 +13,7 @@ import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import { WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
 import { AsistanIzi } from "@/lib/tiptap-asistan-izi";
+import { SatirIciOneri } from "@/lib/tiptap-satir-ici-oneri";
 import type { Dil, Metin } from "@/lib/dil";
 
 /*
@@ -68,6 +69,8 @@ export function editorExtensions(secenek: {
     FootnoteReference,
     // Yazım asistanından eklenen metin (yazarlık raporu); çıktılarda görünmez.
     AsistanIzi,
+    // Satır içi öneri: yalnızca süsleme, şemaya düğüm eklemiyor; Tab ile kabul.
+    SatirIciOneri,
     Caption,
     SearchHighlight,
     HeadingNumbers.configure({ enabled: secenek.headingNumbering, kurallar: secenek.baslikKurallari ?? {} }),

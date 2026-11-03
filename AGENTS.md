@@ -72,7 +72,13 @@ dilinden ayrıdır: şekil/tablo etiketleri, kapak, atıf biçimi ona göre.
   ürünü Jenni AI'ın karşısına koymak için değiştirdi. Yazım asistanı
   (`lib/ai/yazim-asistani.ts`, editörde `yazim-paneli.tsx`) paragraf
   yazabilir, ama metin belgeye hiçbir zaman kendiliğinden girmez: "İmlece
-  ekle" / "Seçilenin yerine koy" kullanıcının düğmesidir. Eklenen metin
+  ekle" / "Seçilenin yerine koy" kullanıcının düğmesidir. Satır içi öneri
+  (03.11.2026, `lib/tiptap-satir-ici-oneri.ts`) bu kuralın genişletilmiş
+  hâli: öneri imlecin önünde gri görünür ama bir SÜSLEMEDİR, belgenin
+  düğümü değil — kaydedilmez, hiçbir çıktıya girmez; Tab kullanıcının
+  kabulüdür. Öneriyi belgeye düğüm olarak yazan bir yol bu kuralı çiğner.
+  Ana hat ve öneri yazım asistanının görevleridir (`anahat`, `tamamla`):
+  aynı atıf/sayı denetiminden geçer. Eklenen metin
   görünmez bir asistan izi taşır (`lib/tiptap-asistan-izi.ts`); yazarlık
   raporu (`lib/yazarlik-raporu.ts`) payı ondan sayar. İz hiçbir çıktıya
   (yazdırma, paylaşım, Word) girmez; yeni bir ekleme yolu yazarken izi

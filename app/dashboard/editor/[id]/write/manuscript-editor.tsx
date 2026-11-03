@@ -3,7 +3,7 @@
 import { ornekKalibi } from "@/lib/atif/tyk";
 import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { kayitHatasiMetni, TASLAK_GUVENDE_METIN, TASLAK_YAZILAMADI_METIN } from "@/lib/taslak-durumu";
 import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   FileCode,
   SearchCheck,
+  WandSparkles,
   FileDown,
   AlignLeft,
   AlignCenter,
@@ -92,6 +93,7 @@ import { cslCoz, type CslKodu } from "@/lib/atif/csl-kimlik";
 import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
 import KaynakBulPenceresi from "./kaynak-bul-penceresi";
+import { useSatirIciOneri } from "./satir-ici-oneri";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
@@ -150,6 +152,17 @@ import {
 // ve yeni stil eklendiğinde "Kaynak ekle" penceresi sessizce APA biçiminde
 // künye üretiyordu.
 const CITATION_STYLES = STIL_SECENEKLERI.map((secenek) => secenek.deger) as CitationStyle[];
+
+/* Otomatik satır içi öneri tercihi (tarayıcıda; satir-ici-oneri.tsx). */
+const ONERI_TERCIHI = "arvolab:otomatik-oneri";
+function oneriTercihiAboneligi(degisti: () => void) {
+  window.addEventListener(ONERI_TERCIHI, degisti);
+  window.addEventListener("storage", degisti);
+  return () => {
+    window.removeEventListener(ONERI_TERCIHI, degisti);
+    window.removeEventListener("storage", degisti);
+  };
+}
 
 interface ProjectDefaults {
   title: string;
@@ -825,6 +838,37 @@ export default function ManuscriptEditor({
       },
     },
   });
+
+  /*
+    Satır içi öneri (03.11.2026): otomatik mod tarayıcıda hatırlanır,
+    varsayılan kapalı (her öneri bir asistan hakkı; satir-ici-oneri.tsx).
+  */
+  /*
+    Sunucuda ve ilk çizimde "kapalı": localStorage'ı useState'in ilk
+    değerinde okumak sunucu ile tarayıcının farklı çizmesine (hydration
+    uyuşmazlığı) yol açardı. Değer bir dış kaynak gibi okunuyor.
+  */
+  const otomatikOneri = useSyncExternalStore(
+    oneriTercihiAboneligi,
+    () => {
+      try {
+        return window.localStorage.getItem(ONERI_TERCIHI) === "1";
+      } catch {
+        return false;
+      }
+    },
+    () => false,
+  );
+  const otomatikOneriAyarla = useCallback((acik: boolean) => {
+    try {
+      window.localStorage.setItem(ONERI_TERCIHI, acik ? "1" : "0");
+    } catch {
+      // Depolama kapalıysa tercih tutulamaz; düğme kapalı görünmeye devam eder.
+    }
+    window.dispatchEvent(new Event(ONERI_TERCIHI));
+  }, []);
+  const otomatigiKapat = useCallback(() => otomatikOneriAyarla(false), [otomatikOneriAyarla]);
+  useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, otomatigiKapat });
 
   const toolbarState = useEditorState({ editor, selector: selectToolbarState });
 
@@ -2169,6 +2213,21 @@ export default function ManuscriptEditor({
           {/* Yazım asistanı (03.11.2026): sohbette yazar, ekleme öğrencinin (yazim-paneli.tsx). */}
           <ToolbarButton label={t({ tr: "Yazım asistanı", en: "Writing assistant" })} metin={t({ tr: "Asistan", en: "Assistant" })} onClick={() => setYazimAcik((acik) => !acik)}>
             <Sparkles size={16} />
+          </ToolbarButton>
+          <ToolbarButton
+            label={t({
+              tr: otomatikOneri
+                ? "Otomatik öneri açık: yazma durunca gri öneri gelir, Tab ile kabul edersiniz. Kapatmak için tıklayın. (Her öneri bir asistan hakkı kullanır; Alt+/ ile istediğiniz an isteyebilirsiniz.)"
+                : "Otomatik öneri kapalı. Alt+/ ile imlece öneri isteyin; Tab kabul eder, Esc vazgeçer. Açmak için tıklayın.",
+              en: otomatikOneri
+                ? "Automatic suggestions on: a grey suggestion appears when you pause; press Tab to accept. Click to turn off. (Each suggestion uses an assistant credit; press Alt+/ any time.)"
+                : "Automatic suggestions off. Press Alt+/ for a suggestion at the cursor; Tab accepts, Esc dismisses. Click to turn on.",
+            })}
+            metin={t({ tr: "Öneri", en: "Suggest" })}
+            active={otomatikOneri}
+            onClick={() => otomatikOneriAyarla(!otomatikOneri)}
+          >
+            <WandSparkles size={16} />
           </ToolbarButton>
           <ToolbarButton
             label={t({ tr: "Seçili cümleye kaynak bul", en: "Find a source for the selected sentence" })}
