@@ -43,7 +43,7 @@ export default async function KaynakcaPenceresi({
 
   return (
     <PanelDrawer
-      triggerLabel={triggerLabel ?? (sonDenetim?.skor != null ? `${t({ tr: "Kaynakça", en: "Reference list" })} · ${sonDenetim.skor}` : t({ tr: "Kaynakça", en: "Reference list" }))}
+      triggerLabel={triggerLabel ?? (sonDenetim?.skor != null ? `${t({ tr: "Kaynakça", en: "Reference list" })} %${sonDenetim.skor}` : t({ tr: "Kaynakça", en: "Reference list" }))}
       triggerIcon={<Quote size={15} aria-hidden="true" />}
       triggerClassName={triggerClassName}
       kicker={t({ tr: "Kaynakça ve atıf doğrulama", en: "Reference list and citation check" })}

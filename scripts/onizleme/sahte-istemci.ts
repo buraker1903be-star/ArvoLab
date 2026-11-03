@@ -26,13 +26,15 @@ function sorgu(tablo: string) {
   let tek: "single" | "maybe" | null = null;
   let sayim = false;
   let yalnizSayim = false;
-  const kurucu: Record<string, unknown> = {};
+  const ham: Record<string, unknown> = {};
+  // Bilinmeyen süzgeçler (ilike, or, not, contains, filter, textSearch…) zinciri bozmasın: her yöntem bu vekili döndürür.
+  const kurucu: Record<string, unknown> = new Proxy(ham, { get: (h, ad) => (ad in h ? h[ad as string] : () => kurucu) });
   const zincir = (f: (s: Satir[]) => Satir[]) => {
     satirlar = f(satirlar);
     return kurucu;
   };
   const deger = (s: Satir, sutun: string) => s[sutun.split("->")[0]];
-  Object.assign(kurucu, {
+  Object.assign(ham, {
     select: (_s?: string, o?: { count?: string; head?: boolean }) => {
       if (o?.count) sayim = true;
       if (o?.head) yalnizSayim = true;
@@ -64,8 +66,7 @@ function sorgu(tablo: string) {
       return Promise.resolve(sonuc).then(coz);
     },
   });
-  // Bilinmeyen süzgeçler (ilike, or, not, contains, filter, textSearch…) zinciri bozmasın.
-  return new Proxy(kurucu, { get: (h, ad) => (ad in h ? h[ad as string] : () => kurucu) });
+  return kurucu;
 }
 
 export function sahteIstemci() {

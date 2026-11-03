@@ -236,6 +236,15 @@ export default async function ProjectsPage({
           <span className="status-pill" data-tone={statusTone(project.status)}>
             {t(statusLabel(project.status))}
           </span>
+          {/*
+            İlerleme çizgisi (04.11.2026): listede çalışmanın ne kadar
+            ilerlediği yalnızca "%55" yazısıyla sağdaki kartta görünüyordu;
+            birden çok çalışması olan öğrenci hangisinin geride kaldığını
+            listeye bakarak göremiyordu.
+          */}
+          {typeof project.progress === "number" && project.progress > 0 ? (
+            <progress className="calisma-ilerleme" max={100} value={Math.min(100, project.progress)} aria-label={t({ tr: `İlerleme %${project.progress}`, en: `Progress ${project.progress}%` })} />
+          ) : null}
         </Link>
       </li>
     );
@@ -243,7 +252,7 @@ export default async function ProjectsPage({
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">
-      <section className="projects-header">
+      <section className="projects-header calismalar-basligi">
         <div>
           <h1>{t({ tr: "Çalışmalarım", en: "My works" })}</h1>
           <p>
