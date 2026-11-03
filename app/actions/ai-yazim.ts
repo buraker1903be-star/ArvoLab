@@ -30,7 +30,9 @@ import {
   geçer (asistanKapisi).
 */
 
-const GOREVLER: YazimGorevi[] = ["serbest", "devam", "paragraf", "akademik", "kisalt", "genislet"];
+const GOREVLER: YazimGorevi[] = ["serbest", "devam", "paragraf", "akademik", "kisalt", "genislet", "anahat", "tamamla"];
+/* Tamamlama kısa bir öneri (iki cümle): uzun cevap hem pahalı hem gecikir. */
+const JETON: Partial<Record<YazimGorevi, number>> = { tamamla: 400, anahat: 2_500 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type YazimIstegi = {
@@ -41,6 +43,8 @@ export type YazimIstegi = {
   oncesi?: string | null;
   secim?: string | null;
   gecmis?: SohbetMesaji[];
+  /** Ana hat görevinde kılavuzun zorunlu bölümleri (editör biliyor). */
+  zorunluBolumler?: string[];
 };
 
 export type YazimYaniti = {
@@ -65,6 +69,9 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
   if (!istek && gorev === "serbest") return { hata: t({ tr: "Ne yazmamı istediğinizi yazın.", en: "Tell me what to write." }) };
   if (!secim && (gorev === "akademik" || gorev === "kisalt" || gorev === "genislet"))
     return { hata: t({ tr: "Önce editörde bir metin seçin.", en: "Select some text in the editor first." }) };
+
+  if (gorev === "tamamla" && !temizle(girdi.oncesi, 50).trim())
+    return { hata: t({ tr: "Öneri için imleçten önce metin olmalı.", en: "There must be text before the cursor for a suggestion." }) };
 
   const kapi = await asistanKapisi(dil);
   if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
@@ -116,9 +123,12 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
     oncesi,
     secim,
     kutuphane,
-    gecmis,
+    gecmis: gorev === "tamamla" ? [] : gecmis,
     istek,
     gorev,
+    zorunluBolumler: (Array.isArray(girdi.zorunluBolumler) ? girdi.zorunluBolumler : [])
+      .filter((b): b is string => typeof b === "string")
+      .map((b) => b.slice(0, 120)),
   });
 
   const hakHatasi = await asistanHakkiVar(kapi.kullaniciId, dil);
@@ -127,7 +137,7 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
   const basladi = Date.now();
   const ortak = { kullaniciId: kapi.kullaniciId, calismaId: calisma.id, yetenek: "yazim" as const, baglam: kaynak, basladi };
   try {
-    const yanit = await sor(mesajlar, { yetenek: "yazim", jsonBekle: true, sicaklik: 0.4, enFazlaJeton: 4_000 });
+    const yanit = await sor(mesajlar, { yetenek: "yazim", jsonBekle: true, sicaklik: 0.4, enFazlaJeton: JETON[gorev] ?? 4_000 });
     const sonuc = yazimCozumle(yanit.metin);
     if (!sonuc) {
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: "bos", model: yanit.model, cikti: yanit.metin });

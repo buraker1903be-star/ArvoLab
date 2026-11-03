@@ -6,6 +6,7 @@ import { ArrowUp, Check, Copy, CornerDownLeft, Replace, Sparkles, X } from "luci
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
 import { ASISTAN_IZI } from "@/lib/tiptap-asistan-izi";
+import { anaHattiCozumle } from "@/lib/ai/yazim-metni";
 import { paragraflara, type SohbetMesaji } from "@/lib/ai/yazim-metni";
 import type { YazimGorevi } from "@/lib/ai/yazim-asistani";
 import { showToast } from "@/app/dashboard/_components/toast-events";
@@ -30,9 +31,22 @@ import { collectHeadings } from "./editor-navigation";
 */
 
 type Aralik = { from: number; to: number };
-type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean };
+type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi };
 
-export default function YazimPaneli({ editor, projectId, acik, onKapat }: { editor: Editor; projectId: string; acik: boolean; onKapat: () => void }) {
+export default function YazimPaneli({
+  editor,
+  projectId,
+  acik,
+  onKapat,
+  zorunluBolumler = [],
+}: {
+  editor: Editor;
+  projectId: string;
+  acik: boolean;
+  onKapat: () => void;
+  /** Kılavuzun zorunlu bölümleri: ana hat görevinin omurgası. */
+  zorunluBolumler?: string[];
+}) {
   const t = useCeviri();
   const [mesajlar, setMesajlar] = useState<Kayit[]>([]);
   const [istek, setIstek] = useState("");
@@ -67,6 +81,8 @@ export default function YazimPaneli({ editor, projectId, acik, onKapat }: { edit
         akademik: t({ tr: "Seçili metni akademik üsluba çevir.", en: "Make the selected text academic." }),
         kisalt: t({ tr: "Seçili metni kısalt.", en: "Shorten the selected text." }),
         genislet: t({ tr: "Seçili metni genişlet.", en: "Expand the selected text." }),
+        anahat: t({ tr: "Çalışmam için bir ana hat (başlık iskeleti) çıkar.", en: "Draft an outline (heading skeleton) for my work." }),
+        tamamla: "",
       }[gorev];
     if (!gorunen) return;
     const gecmis: SohbetMesaji[] = mesajlar.map((m) => ({ rol: m.rol, metin: m.rol === "asistan" ? `${m.metin}\n${m.ekMetin ?? ""}`.trim() : m.metin }));
@@ -74,7 +90,7 @@ export default function YazimPaneli({ editor, projectId, acik, onKapat }: { edit
     setIstek("");
     setBekliyor(true);
     try {
-      const cevap = await yazimAsistani({ projectId, istek: gorunen, gorev, bolum, oncesi, secim: secim || null, gecmis });
+      const cevap = await yazimAsistani({ projectId, istek: gorunen, gorev, bolum, oncesi, secim: secim || null, gecmis, zorunluBolumler });
       if (cevap.hata) {
         setMesajlar((onceki) => [...onceki, { rol: "asistan", metin: cevap.hata! }]);
         return;
@@ -82,7 +98,7 @@ export default function YazimPaneli({ editor, projectId, acik, onKapat }: { edit
       if (cevap.krediUyarisi) showToast("error", cevap.krediUyarisi);
       setMesajlar((onceki) => [
         ...onceki,
-        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, secimVardi: from !== to },
+        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, secimVardi: from !== to, gorev },
       ]);
     } catch (hata) {
       console.error(hata);
@@ -108,7 +124,20 @@ export default function YazimPaneli({ editor, projectId, acik, onKapat }: { edit
     const from = Math.min(kayit.aralik.from, boyut);
     const to = Math.min(kayit.aralik.to, boyut);
     let tamam: boolean;
-    if (yerineKoy && from !== to) {
+    const anaHat = kayit.gorev === "anahat" ? anaHattiCozumle(kayit.ekMetin) : [];
+    if (anaHat.length) {
+      /*
+        Ana hat başlık ve not olarak girer; not köşeli parantezde: öğrencinin
+        yerine yazacağı yer tutucu olduğu görülsün. Hepsi asistan izli
+        (yazarlık raporu başlıkları da sayar).
+      */
+      const dugumlerAnaHat = anaHat.flatMap((s) => [
+        { type: "heading", attrs: { level: s.duzey }, content: [izliMetin(s.baslik, kayit.kayitId)] },
+        ...s.notlar.map((n) => ({ type: "paragraph", content: [izliMetin(`[${n}]`, kayit.kayitId)] })),
+      ]);
+      const $pos = editor.state.doc.resolve(to);
+      tamam = editor.chain().focus().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumlerAnaHat).run();
+    } else if (yerineKoy && from !== to) {
       const paragraflar = paragraflara(kayit.ekMetin);
       // Tek paragraf seçimin yerine satır içi girer; çok paragraf blok olarak.
       tamam =
@@ -149,6 +178,7 @@ export default function YazimPaneli({ editor, projectId, acik, onKapat }: { edit
     { gorev: "akademik", ad: t({ tr: "Akademikleştir", en: "Make academic" }) },
     { gorev: "kisalt", ad: t({ tr: "Kısalt", en: "Shorten" }) },
     { gorev: "genislet", ad: t({ tr: "Genişlet", en: "Expand" }) },
+    { gorev: "anahat", ad: t({ tr: "Ana hat", en: "Outline" }) },
   ];
 
   return (
@@ -185,9 +215,20 @@ export default function YazimPaneli({ editor, projectId, acik, onKapat }: { edit
               {m.metin ? <p>{m.metin}</p> : null}
               {m.ekMetin ? (
                 <div className="yazim-oneri">
-                  {paragraflara(m.ekMetin).map((p, j) => (
-                    <p key={j}>{p}</p>
-                  ))}
+                  {m.gorev === "anahat" && anaHattiCozumle(m.ekMetin).length ? (
+                    <ul className="yazim-anahat">
+                      {anaHattiCozumle(m.ekMetin).map((s, j) => (
+                        <li key={j} data-duzey={s.duzey}>
+                          <b>{s.baslik}</b>
+                          {s.notlar.map((n, k) => (
+                            <small key={k}>{n}</small>
+                          ))}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    paragraflara(m.ekMetin).map((p, j) => <p key={j}>{p}</p>)
+                  )}
                   <div className="yazim-oneri-eylem">
                     <button type="button" className="projects-filter-button button-compact" onClick={() => ekle(i, false)} disabled={m.eklendi}>
                       {m.eklendi ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}

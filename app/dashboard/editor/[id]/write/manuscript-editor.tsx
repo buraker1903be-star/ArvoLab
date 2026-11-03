@@ -3165,7 +3165,7 @@ export default function ManuscriptEditor({
         cumle={kaynakBulCumle.slice(0, 600)}
         onCite={(source) => void handleCite(source)}
       />
-      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => setYazimAcik(false)} />
+      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => setYazimAcik(false)} zorunluBolumler={guideline?.requiredSections ?? []} />
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
       <ImportDialog
         open={importOpen}

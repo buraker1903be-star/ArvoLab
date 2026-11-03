@@ -467,6 +467,10 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "The \"Authorship\" card in the right panel shows what percentage of the body was inserted from the writing assistant; the window lists the insertions and can highlight them in the editor. Text taken by copy–paste isn't counted; this is not an AI-detection score.",
       },
       {
+        tr: "Paneldeki \"Ana hat\" kılavuzunuzun zorunlu bölümlerini omurga alarak bir başlık iskeleti ve her başlık altına ne yazılacağına dair kısa notlar önerir; \"İmlece ekle\" ile başlıklar ve köşeli parantezli notlar belgeye girer, notların yerine kendi metninizi yazarsınız.",
+        en: "\"Outline\" in the panel proposes a heading skeleton built on your guideline's required sections, with a short note under each heading on what to write; \"Insert at cursor\" adds the headings and bracketed notes, which you replace with your own text.",
+      },
+      {
         tr: "Asistanın yazdığı metin belgenize kendiliğinden girmez: \"İmlece ekle\", \"Seçilenin yerine koy\" ya da \"Kopyala\" ile siz eklersiniz. Eklemeden önce okuyun ve kendi sözcüklerinizle düzenleyin.",
         en: "Text the assistant writes never enters your document by itself: you insert it with \"Insert at cursor\", \"Replace selection\" or \"Copy\". Read it and edit it in your own words before inserting.",
       },

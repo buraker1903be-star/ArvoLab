@@ -31,7 +31,7 @@ import { crossCheck, extractInTextCitations, type ParsedReference } from "@/lib/
 import { splitAuthors } from "@/lib/citation-format";
 export { paragraflara } from "./yazim-metni";
 
-export type YazimGorevi = "serbest" | "devam" | "paragraf" | "akademik" | "kisalt" | "genislet";
+export type YazimGorevi = "serbest" | "devam" | "paragraf" | "akademik" | "kisalt" | "genislet" | "anahat" | "tamamla";
 
 export type KutuphaneKaydi = {
   yazarlar: string | null;
@@ -61,6 +61,8 @@ export type YazimGirdisi = {
   gecmis: SohbetMesaji[];
   istek: string;
   gorev: YazimGorevi;
+  /** Kılavuzun zorunlu bölümleri (ana hat görevinde iskeletin omurgası). */
+  zorunluBolumler?: string[];
 };
 
 export const SINIR = {
@@ -79,6 +81,20 @@ const GOREV_ACIKLAMASI: Record<YazimGorevi, string> = {
   akademik: "Seçili metni anlamını değiştirmeden akademik üsluba çevir.",
   kisalt: "Seçili metni anlamını koruyarak kısalt.",
   genislet: "Seçili metni anlamını değiştirmeden, mevcut bilgilerle derinleştirerek genişlet; yeni olgu ekleme.",
+  /*
+    Ana hat (03.11.2026): başlık iskeleti. Kılavuzun zorunlu bölümleri
+    omurga; alt başlıklar konudan. Numara yazdırılmıyor — editör
+    numaralıyor, elle numara çift numara olur ve sayı denetimine takılır.
+  */
+  anahat:
+    "Çalışma için bir ANA HAT (başlık iskeleti) çıkar. 'metin' alanında her satır ya bir başlık ('# ' ana bölüm, '## ' alt başlık, '### ' üçüncü düzey) ya da hemen üstündeki başlığın altına ne yazılacağını anlatan TEK cümlelik bir not ('- ' ile başlar) olsun. Kılavuzun zorunlu bölümleri verildiyse ana bölümler onlar olmalı ve aynı adla yazılmalı. Başlıklara numara yazma. Not cümleleri öğrenciye yöneliktir ('Bu bölümde … açıklanır.'); bulgu, sayı ya da atıf içermez.",
+  /*
+    Satır içi tamamlama (03.11.2026, Jenni'nin imza özelliği): editörde
+    gri öneri, kabul Tab ile kullanıcının. Kısa tutulur: uzun öneri hem
+    pahalı hem okunmadan kabul edilir.
+  */
+  tamamla:
+    "İmleçten önceki metni kaldığı yerden sürdür: cümle yarımsa önce onu tamamla, toplamda EN ÇOK iki cümle yaz. 'metin' alanına YALNIZCA eklenecek devamı yaz (öncesini tekrarlama); 'yanit' alanını boş bırak. Bağlam yeterli değilse 'metin' alanını boş bırak.",
 };
 
 export const YAZIM_ISTEMI = `Sen ArvoLab'ın akademik yazım asistanısın. Türkiye'deki üniversitelerde tez ve makale yazan öğrencilere yazarken yardım ediyorsun.
@@ -92,7 +108,8 @@ KESİN KURALLAR:
 3. SAYI UYDURMA. Metindeki her sayı (yüzde, örneklem, yıl, katsayı, p değeri) aşağıdaki bağlamda (öğrencinin metni, isteği, kütüphane) birebir geçmeli. Bağlamda olmayan bir veri gerekiyorsa "[…]" yer tutucusu bırak ve "yanit" alanında öğrenciden iste.
 4. Öğrencinin bulgularını, verisini ya da yöntemini değiştirme ve yorumunu abartma; bağlamda yazanın ötesine geçme.
 5. Metni, belgenin dilinde ve çalışmanın akademik üslubunda yaz: edilgen ya da birinci çoğul şahıs, ölçülü, gereksiz süssüz. Başlık, madde işareti ya da Markdown kullanma; paragraflar arasında boş satır bırak.
-6. Kullanıcı yalnızca bir şey soruyorsa (metin istemiyorsa) "metin" alanını boş bırak.`;
+6. Kullanıcı yalnızca bir şey soruyorsa (metin istemiyorsa) "metin" alanını boş bırak.
+7. GÖREV satırı 5. kuraldan farklı bir biçim tarif ediyorsa (ana hat) o biçimi kullan.`;
 
 const kirp = (metin: string | null | undefined, n: number) => {
   const m = (metin ?? "").trim();
@@ -121,6 +138,7 @@ export function yazimIstemi(g: YazimGirdisi): { mesajlar: Mesaj[]; kaynak: strin
     g.bolum ? `İMLECİN BULUNDUĞU BÖLÜM: ${bastanKirp(g.bolum, 200)}` : "",
     g.oncesi ? `BELGEDE İMLEÇTEN ÖNCEKİ METİN:\n${kirp(g.oncesi, SINIR.oncesi)}` : "",
     g.secim ? `SEÇİLİ METİN:\n${bastanKirp(g.secim, SINIR.secim)}` : "",
+    g.zorunluBolumler?.length ? `KILAVUZUN ZORUNLU BÖLÜMLERİ: ${g.zorunluBolumler.slice(0, 30).map((b) => bastanKirp(b, 80)).join(" | ")}` : "",
     `GÖREV: ${GOREV_ACIKLAMASI[g.gorev]}`,
   ]
     .filter(Boolean)
