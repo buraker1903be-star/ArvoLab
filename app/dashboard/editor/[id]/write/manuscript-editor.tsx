@@ -86,6 +86,8 @@ import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import type { CitationStyle } from "@/lib/citation-format";
 import { STIL_SECENEKLERI, stilAdi } from "@/lib/atif/stiller";
+import { cslCoz, type CslKodu } from "@/lib/atif/csl-kimlik";
+import { cslAtifUret } from "@/app/actions/csl";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
   saveManuscript,
@@ -123,6 +125,8 @@ import {
   insertSections,
   insertFrontMatter,
   insertCitation,
+  atifSirasi,
+  oncekiDipnottaVar,
   isDocumentEmpty,
   jumpToHeading,
   sectionStatuses,
@@ -1748,7 +1752,18 @@ export default function ManuscriptEditor({
       showToast("error", t({ tr: "Bu ifade metinde bulunamadı; değiştirilmiş olabilir.", en: "This phrase was not found in the text; it may have been changed." }));
     }
   };
-  const style: CitationStyle = CITATION_STYLES.includes(citationStyle as CitationStyle) ? (citationStyle as CitationStyle) : "apa7";
+  /*
+    CSL stilinde (03.11.2026) atıfı citeproc yazar; `style` o stile en
+    yakın yerleşik aile — yalnızca pencere açıklaması ve "numaralı mı"
+    kararı için, metne giren biçim için değil.
+  */
+  const csl = cslCoz(citationStyle);
+  const CSL_AILESI: Record<CslKodu, CitationStyle> = { a: "apa7", k: "ieee", p: "vancouver", s: "vancouver", d: "dipnot", y: "mla" };
+  const style: CitationStyle = csl
+    ? CSL_AILESI[csl.kod]
+    : CITATION_STYLES.includes(citationStyle as CitationStyle)
+      ? (citationStyle as CitationStyle)
+      : "apa7";
   /*
     Analiz sonucu satır satır paragraf olarak eklenir: sonuç metni tablo
     satırlarını da taşıyor, tek paragrafa sığdırmak satırları birbirine
@@ -1763,14 +1778,39 @@ export default function ManuscriptEditor({
       .insertContent(satirlar.map((text) => ({ type: "paragraph", content: [{ type: "text", text }] })))
       .run();
   };
-  const handleCite = (source: LiteratureSource, secenek: { sayfa?: string | null } = {}) => {
+  const handleCite = async (source: LiteratureSource, secenek: { sayfa?: string | null } = {}) => {
     /* Erişim tarihi künyeye girer: belgenin dilinde yazılır. */
     const bugun = new Intl.DateTimeFormat(YEREL[belgeDili], { timeZone: "Europe/Istanbul" }).format(new Date());
+    let hazir: { atif: { text: string; italic?: boolean }[]; kunye: { text: string; italic?: boolean }[]; dipnot: boolean } | undefined;
+    if (csl) {
+      /*
+        Sunucuya gidilirken imleç yerinde kalır: insertCitation yine
+        editörün o anki seçimine yazar. Numara gidişten ÖNCE alınır;
+        arada başka bir atıf eklenmesi (çift tık) aynı numarayı verir ama
+        künye başlıkla tanındığı için ikinci kez yazılmaz.
+      */
+      const { number } = atifSirasi(editor.state.doc, source);
+      const sonuc = await cslAtifUret({
+        stil: citationStyle,
+        kaynak: source,
+        numara: number,
+        sayfa: secenek.sayfa,
+        kisa: csl.kod === "d" && oncekiDipnottaVar(editor, source),
+        dil: belgeDili,
+        erisim: new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul" }).format(new Date()),
+      }).catch(() => ({ hata: t({ tr: "Atıf stili sunucusuna ulaşılamadı.", en: "Couldn't reach the citation style server." }) }) as { hata: string; atif?: undefined; kunye?: undefined });
+      if (sonuc.hata || !sonuc.atif) {
+        showToast("error", sonuc.hata ?? t({ tr: "Atıf üretilemedi.", en: "The citation couldn't be produced." }));
+        return;
+      }
+      hazir = { atif: sonuc.atif, kunye: sonuc.kunye ?? [], dipnot: csl.kod === "d" };
+    }
     const { citation, addedReference } = insertCitation(editor, source, style, {
       sayfa: secenek.sayfa,
       erisimTarihi: bugun,
       kalip: ornekKalibi(ornekAtif),
       dil: belgeDili,
+      hazir,
     });
     /* Eksik künye bilgisi sessizce düşmüyor: kaynakçaya ne eksik yazıldığı söyleniyor. */
     const eksik = addedReference ? eksikAlanlar(source, dil) : [];
@@ -2805,7 +2845,7 @@ export default function ManuscriptEditor({
           govdeMetni={govdeMetni}
           numarali={NUMERIC_STYLES.includes(style)}
           belgeDili={belgeDili}
-          onCite={(source) => handleCite(source)}
+          onCite={(source) => void handleCite(source)}
         />
         <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
       </ManuscriptOutline>
@@ -3048,8 +3088,9 @@ export default function ManuscriptEditor({
         onClose={() => setCiteOpen(false)}
         projectId={projectId}
         style={style}
+        cslStili={Boolean(csl)}
         belgeDili={belgeDili}
-        onPick={handleCite}
+        onPick={(source, secenek) => void handleCite(source, secenek)}
       />
       <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => setYazimAcik(false)} />
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />

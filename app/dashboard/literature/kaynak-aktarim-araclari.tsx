@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { cslKaynakca } from "@/app/actions/csl";
 import { useRouter } from "next/navigation";
 import { Copy, Download, FileUp } from "lucide-react";
 import { doiIleEkle, kaynaklariIceAktar, type DoiSonucu } from "@/app/actions/kaynak-aktarim";
@@ -183,7 +184,22 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
 type Kapsam = "used" | "okunan" | "hepsi";
 
 /** RIS/BibTeX indirme ve seçili stilde kaynakça kopyalama. */
-export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi, dil }: { kaynaklar: LiteratureSource[]; stil: CitationStyle; stilAdi: string; calismaAdi: string; dil: Dil }) {
+export function DisaAktarma({
+  kaynaklar,
+  stil,
+  stilAdi,
+  calismaAdi,
+  dil,
+  cslStil,
+}: {
+  kaynaklar: LiteratureSource[];
+  stil: CitationStyle;
+  stilAdi: string;
+  calismaAdi: string;
+  dil: Dil;
+  /** Çalışmanın stili CSL ise kaynakça citeproc ile sunucuda yazılır (app/actions/csl.ts). */
+  cslStil?: string | null;
+}) {
   const t = useCeviri();
   const sayilar = {
     used: kaynaklar.filter((k) => k.status === "used").length,
@@ -205,7 +221,37 @@ export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi, dil }: { kay
     timeZone: "Europe/Istanbul",
     ...(dil === "en" ? { day: "numeric", month: "long", year: "numeric" } : { day: "2-digit", month: "2-digit", year: "numeric" }),
   });
-  const kaynakca = kaynakcaMetni(secili, stil, { erisimTarihi: bugun }, dil);
+  /*
+    CSL stilinde (03.11.2026) kaynakça sunucudan gelir. Eskiden bu ekran
+    çalışmanın stilini tanımadığında APA'ya düşüyordu; CSL stili seçen
+    öğrenci AMA beklerken APA kopyalardı.
+  */
+  const [cslSatirlari, setCslSatirlari] = useState<{ anahtar: string; satirlar: { text: string; italic?: boolean }[][] } | null>(null);
+  const cslAnahtari = cslStil ? `${cslStil}|${dil}|${secili.map((k) => k.id).join(",")}` : "";
+  useEffect(() => {
+    if (!cslStil) return;
+    let iptal = false;
+    void cslKaynakca({ stil: cslStil, kaynaklar: secili, dil }).then((cevap) => {
+      if (iptal) return;
+      if (cevap.hata) showToast("error", cevap.hata);
+      setCslSatirlari({ anahtar: cslAnahtari, satirlar: cevap.satirlar ?? [] });
+    });
+    return () => {
+      iptal = true;
+    };
+    // secili her çizimde yeni dizi; anahtar aynı kapsamı temsil ediyor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cslAnahtari]);
+  const cslHazir = Boolean(cslStil) && cslSatirlari?.anahtar === cslAnahtari;
+  const kacis = (metin: string) => metin.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const kaynakca =
+    cslStil && cslSatirlari
+      ? {
+          satirlar: cslSatirlari.satirlar,
+          metin: cslSatirlari.satirlar.map((p) => p.map((x) => x.text).join("")).join("\n"),
+          html: cslSatirlari.satirlar.map((p) => `<p>${p.map((x) => (x.italic ? `<i>${kacis(x.text)}</i>` : kacis(x.text))).join("")}</p>`).join(""),
+        }
+      : kaynakcaMetni(secili, stil, { erisimTarihi: bugun }, dil);
   const dosyaAdi = calismaAdi.normalize("NFD").replace(/ı/g, "i").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || t({ tr: "kaynaklar", en: "sources" });
 
   const indir = (icerik: string, uzanti: string, tur: string) => {
@@ -244,7 +290,7 @@ export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi, dil }: { kay
         </select>
       </label>
       <div className="cluster">
-        <button type="button" className="projects-primary-button button-compact" disabled={!secili.length} onClick={kopyala}>
+        <button type="button" className="projects-primary-button button-compact" disabled={!secili.length || (Boolean(cslStil) && !cslHazir)} onClick={kopyala}>
           <Copy size={14} aria-hidden="true" /> {t({ tr: "Kaynakçayı kopyala", en: "Copy reference list" })} ({stilAdi})
         </button>
         <button type="button" className="projects-filter-button button-compact" disabled={!secili.length} onClick={() => indir(risYaz(secili), "ris", "application/x-research-info-systems")}>
@@ -260,7 +306,9 @@ export function DisaAktarma({ kaynaklar, stil, stilAdi, calismaAdi, dil }: { kay
           en: `The reference list is in your work's citation style (${stilAdi}) and in that style's order; italics are kept when you paste into Word. You can bring the RIS and BibTeX files into Zotero, Mendeley or EndNote with “Import”.`,
         })}
       </p>
-      {secili.length ? (
+      {secili.length && cslStil && !cslHazir ? (
+        <p className="muted text-sm">{t({ tr: "Kaynakça stile göre hazırlanıyor…", en: "Formatting the reference list…" })}</p>
+      ) : secili.length ? (
         <div className="kaynakca-onizleme">
           {kaynakca.satirlar.map((parcalar, i) => (
             <p key={i}>{parcalar.map((x, j) => (x.italic ? <i key={j}>{x.text}</i> : <span key={j}>{x.text}</span>))}</p>

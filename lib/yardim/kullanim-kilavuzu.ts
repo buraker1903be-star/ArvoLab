@@ -216,6 +216,10 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "In the reference list window, every source with a PDF has \"Ask the source\": ask the paper a question (method, sample, findings). The answer comes with word-for-word quotes and the PDF page; if a quote isn't in the source, the answer is withheld.",
       },
       {
+        tr: "Atıf stili listesinde yedi yerleşik stilin yanında \"Dergi ya da yayınevi stili ara…\" vardır: Zotero ve Mendeley'in kullandığı 10.800'den fazla dergi stili (Nature, AMA, Elsevier…). Bu stillerde atıf ve künye stilin kendi kuralıyla yazılır; denetim atıf–kaynakça eşleşmesine ve numaralara bakar, künyenin biçimine bakmaz.",
+        en: "Next to the seven built-in styles, the citation style list has \"Search journal or publisher styles…\": more than 10,800 journal styles used by Zotero and Mendeley (Nature, AMA, Elsevier…). In these styles citations and references are written by the style's own rules; the check covers citation–reference matching and numbering, not the reference format.",
+      },
+      {
         tr: "\"Dışa aktar\" ile kaynakçayı kopyalayın ya da RIS/BibTeX olarak indirin.",
         en: "Use \"Export\" to copy the reference list or download it as RIS/BibTeX.",
       },

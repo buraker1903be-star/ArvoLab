@@ -29,6 +29,13 @@ interface CiteDialogProps {
   style: CitationStyle;
   /** Belgenin dili: atıf ve künye önizlemesi metne gireceği dilde ("s." / "p."). */
   belgeDili?: Dil;
+  /*
+    CSL stili (03.11.2026): atıf ve künye sunucuda citeproc ile yazılıyor;
+    buradaki önizleme ArvoLab'ın kendi biçimleyicisinden geldiği için o
+    stilde YANLIŞ biçimi gösterirdi. Önizleme gizlenir; `style` yalnızca
+    açıklama metni için en yakın yerleşik aile.
+  */
+  cslStili?: boolean;
   /* Sayfa: doğrudan alıntıda öğrencinin yazdığı; atıfa "s. 14" olarak girer. */
   onPick: (source: LiteratureSource, secenek: { sayfa?: string | null }) => void;
 }
@@ -62,7 +69,7 @@ const EMPTY_FORM: NewSourceForm = {
 };
 
 // Atıf: literatür listesinden seç ya da yeni kaynak ekle (DOI ile bilgiler Crossref'ten dolar).
-export default function CiteDialog({ open, onClose, projectId, style, belgeDili = "tr", onPick }: CiteDialogProps) {
+export default function CiteDialog({ open, onClose, projectId, style, belgeDili = "tr", cslStili = false, onPick }: CiteDialogProps) {
   const t = useCeviri();
   const dil = useDil();
   const [tab, setTab] = useState<"list" | "new">("list");
@@ -133,11 +140,11 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
   const formEksik = useMemo(() => eksikAlanlar(formKaynagi, dil), [formKaynagi, dil]);
 
   const preview = useMemo(() => {
-    if (!form.title.trim()) return "";
+    if (!form.title.trim() || cslStili) return "";
     return formatReferenceParts(formKaynagi, style, (sources?.length ?? 0) + 1, {}, belgeDili)
       .map((part) => part.text)
       .join("");
-  }, [form.title, formKaynagi, style, sources, belgeDili]);
+  }, [form.title, formKaynagi, style, sources, belgeDili, cslStili]);
 
   const close = () => {
     setQuery("");
@@ -332,7 +339,7 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
                           </small>
                         ) : null}
                       </button>
-                      <span className="chip">{formatInTextCitation(source, style, 1, { sayfa }, belgeDili)}</span>
+                      {cslStili ? null : <span className="chip">{formatInTextCitation(source, style, 1, { sayfa }, belgeDili)}</span>}
                     </div>
                   </li>
                 ))}

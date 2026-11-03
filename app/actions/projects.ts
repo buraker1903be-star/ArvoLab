@@ -14,6 +14,8 @@ import { calismaKilavuzu, kilavuzGorunenAdi } from "@/lib/guideline-rules";
 import { getUniversities, type University } from "@/app/actions/universities";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { STILLER } from "@/lib/atif/stiller";
+import { cslCoz } from "@/lib/atif/csl-kimlik";
+import { cslBul } from "@/lib/atif/csl-dizin";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
 import {
@@ -32,6 +34,12 @@ const RESEARCH_METHODS = ["quantitative", "qualitative", "mixed", "review"];
 // Stil listesi tek yerde: lib/atif/stiller.ts. Kopyalanınca yeni stil
 // eklendiğinde burası unutuluyor ve seçim sessizce APA'ya düşüyordu.
 const CITATION_STYLES: string[] = Object.keys(STILLER);
+/* CSL stili (03.11.2026): desen yetmez, dizinde gerçekten bulunmalı (elle yazılmış kimlik atıf üretemez). */
+const stilGecerli = (stil: string) => {
+  if (CITATION_STYLES.includes(stil)) return true;
+  const csl = cslCoz(stil);
+  return csl !== null && cslBul(csl.ad, csl.kod) !== null;
+};
 
 /*
   Veritabanının kabul ettiği stil listesi bir migration'la genişliyor
@@ -148,7 +156,7 @@ async function calismaKaydet(
       title,
       project_type: type,
       ...readInstitution(formData),
-      citation_style: CITATION_STYLES.includes(citationStyle) ? citationStyle : "apa7",
+      citation_style: stilGecerli(citationStyle) ? citationStyle : "apa7",
       research_method: RESEARCH_METHODS.includes(method) ? method : null,
       due_date: /^\d{4}-\d{2}-\d{2}$/.test(dueDateRaw) ? dueDateRaw : null,
       priority: PRIORITIES.includes(priority) ? priority : "normal",
@@ -351,7 +359,7 @@ export async function atifStiliniKilavuzaUydur(projectId: string): Promise<Actio
   if (!kilavuz) return { error: t({ tr: "Bu çalışmaya uygulanan bir kılavuz yok.", en: "No guideline is applied to this work." }) };
   const stil = kilavuz.citationStyle;
   if (!stil) return { error: t({ tr: "Kılavuzun atıf stili okunamadı; sayfayı yenileyip tekrar deneyin.", en: "The guideline's citation style could not be read; refresh the page and try again." }) };
-  if (!CITATION_STYLES.includes(stil)) return { error: t({ tr: "Kılavuzun atıf stili tanınmıyor.", en: "The guideline's citation style is not recognized." }) };
+  if (!stilGecerli(stil)) return { error: t({ tr: "Kılavuzun atıf stili tanınmıyor.", en: "The guideline's citation style is not recognized." }) };
   if (stil === current.citation_style) return { success: true };
 
   const { error } = await ctx.supabase
@@ -418,7 +426,7 @@ export async function updateProject(projectId: string, formData: FormData): Prom
   const citationField = formData.get("citationStyle");
   const citationStyle =
     current.guideline_id || citationField === null ? current.citation_style : String(citationField);
-  if (!CITATION_STYLES.includes(citationStyle)) return { error: t({ tr: "Geçersiz kaynakça sistemi.", en: "Invalid citation system." }) };
+  if (!stilGecerli(citationStyle)) return { error: t({ tr: "Geçersiz kaynakça sistemi.", en: "Invalid citation system." }) };
 
   const { data, error } = await ctx.supabase
     .from("academic_projects")

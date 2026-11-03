@@ -25,6 +25,7 @@ import { checkParagraphFormat, describeParagraphFormat, hangingIndentCmOf, type 
 import { metinBiciminiDenetle, type MetinBicimKurali } from "@/lib/metin-bicimi";
 import { baslikYerlesimSorunlari, uzunAlintilar, BLOK_ALINTI_ESIGI } from "@/lib/alinti-ve-baslik";
 import type { Dil } from "@/lib/dil";
+import { ustSimgedenRakam } from "@/lib/atif/csl-kimlik";
 
 interface DocNode {
   type?: string;
@@ -565,9 +566,12 @@ export function checkStructure(
   // ---------- Numaralı atıf stilleri: metin ↔ kaynakça ----------
   if (stil.tur === "numara" && stil.numara) {
     const references = referenceEntries.length;
-    const pattern = new RegExp(stil.numara.metinKalibi.source, "g");
+    /* Bayraklar korunur: üst simge kalıbı (CSL) \p{L} için "u" istiyor; eskiden yalnızca "g" veriliyordu. */
+    const { source, flags } = stil.numara.metinKalibi;
+    const pattern = new RegExp(source, flags.includes("g") ? flags : `${flags}g`);
     const cited = new Set<number>();
-    for (const match of body.matchAll(pattern)) for (const number of expandNumbers(match[1])) cited.add(number);
+    const okunur = (grup: string) => (stil.numara?.ustSimge ? ustSimgedenRakam(grup) : grup);
+    for (const match of body.matchAll(pattern)) for (const number of expandNumbers(okunur(match[1]))) cited.add(number);
     const citeLabel = stil.numara.etiket;
     for (const number of [...cited].sort((a, b) => a - b)) {
       if (number > references) {

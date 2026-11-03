@@ -5,7 +5,7 @@ import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import { updateProject, type ProjectEditData } from "@/app/actions/projects";
 import type { University } from "@/app/actions/universities";
 import { OVERSIGHT_ONLY_STATUSES, PROJECT_STATUSES, statusLabel } from "@/lib/project-labels";
-import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
+import StilSecici from "@/app/dashboard/_components/stil-secici";
 import ActionForm from "../../action-form";
 import AcademicUnitFields from "../new/academic-unit-fields";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -73,13 +73,7 @@ export default function CalismaDuzenleFormu({ veri, iptal }: { veri: CalismaDuze
 
           <label>
             <span>{t({ tr: "Kaynakça sistemi", en: "Citation system" })}</span>
-            <select name="citationStyle" defaultValue={project.citation_style} disabled={!!project.guideline_id}>
-              {STIL_SECENEKLERI.map((secenek) => (
-                <option key={secenek.deger} value={secenek.deger}>
-                  {secenek.etiket}
-                </option>
-              ))}
-            </select>
+            <StilSecici name="citationStyle" defaultValue={project.citation_style} disabled={!!project.guideline_id} />
             {project.guideline_id ? (
               /*
                 Metin, kılavuzun sürümü değişince yanıltıcı oluyordu:

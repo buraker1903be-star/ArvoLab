@@ -136,6 +136,8 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi,
  * etikBilgileriniKaydet, etikBelgeleriniKaydet ve etikYonergesiniTara (etik
  * kurul sekmesi; tarama PDF/OCR çözümlemesi),
+ * cslAtifUret (CSL stilinde belgeye girecek atıf ve künye; stil araması ve
+ * cslKaynakca kapısız: okuma ve panoya kopyalama, RIS/BibTeX gibi),
  * runManuscriptCheck (yalnızca geçmişe yazma: kontrolün kendisi kapısız,
  * engellenen kullanıcı sonucunu görür ama yazim_kontrolleri'ne yazılmaz).
  * (yapilacakTamamla, analizSirasi ve analizTezeEklendi kapısız: mevcut

@@ -17,7 +17,8 @@ import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-chec
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
 import type { Tone } from "@/lib/status-tone";
-import { STIL_SECENEKLERI, type AtifTuru } from "@/lib/atif/stiller";
+import { stilAdi, type AtifTuru } from "@/lib/atif/stiller";
+import StilSecici from "@/app/dashboard/_components/stil-secici";
 import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
 
@@ -754,7 +755,7 @@ export default function CitationCheckForm({
                 tr: "Kaynakçanız ve metniniz editördeki son kaydedilmiş hâlinden alınır. Atıf stili: ",
                 en: "Your reference list and text are taken from the last saved version in the editor. Citation style: ",
               })}
-              <b>{STIL_SECENEKLERI.find((secenek) => secenek.deger === citationStyle)?.etiket ?? citationStyle}</b>
+              <b>{stilAdi(citationStyle)}</b>
               {t({ tr: " (çalışma ayarlarından).", en: " (from the work's settings)." })}
             </p>
             <div className="pencere-dugmeler">
@@ -985,11 +986,7 @@ export default function CitationCheckForm({
 
           <label>
             <span>{t({ tr: "Atıf stili", en: "Citation style" })}</span>
-            <select value={citationStyle} onChange={(e) => setCitationStyle(e.target.value)}>
-              {STIL_SECENEKLERI.map((secenek) => (
-                <option key={secenek.deger} value={secenek.deger}>{secenek.etiket}</option>
-              ))}
-            </select>
+            <StilSecici value={citationStyle} onChange={setCitationStyle} />
           </label>
 
           <label className="project-form-full">

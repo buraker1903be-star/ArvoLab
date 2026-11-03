@@ -1,4 +1,5 @@
 import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
+import { cslMi } from "@/lib/atif/csl-kimlik";
 import type { Dil, Metin } from "@/lib/dil";
 import { describeAbstractRules, type AbstractRules } from "@/lib/guideline-editor-settings";
 import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni, type AltBaslikGirintisi, type BolumHizasi, type ParagrafAraligi, type SayfaNumarasiKonumu } from "@/lib/kilavuz-bicim";
@@ -6,6 +7,8 @@ import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni, type AltBaslikGi
 /* Tanınan atıf stilleri TEK listeden (lib/atif/stiller.ts): ikinci bir
    dizi yazmak, yeni bir stil eklendiğinde burayı unutmak demekti. */
 const TANINAN_STILLER: string[] = STIL_SECENEKLERI.map((secenek) => secenek.deger);
+/* CSL stili de seçilebilir (03.11.2026); desen burada, dizindeki varlığı atıf üretilirken sunucu sınar. */
+const taninir = (stil: string) => TANINAN_STILLER.includes(stil) || cslMi(stil);
 
 /*
   ÖĞRENCİNİN YÜKLEDİĞİ KILAVUZUN DOĞRULAMA EKRANI (26.10.2026).
@@ -68,7 +71,7 @@ export function formaDoldur(tarama: {
 }): DogrulamaFormu {
   const stil = tarama.citationStyle ?? "";
   return {
-    atifStili: TANINAN_STILLER.includes(stil) ? stil : "",
+    atifStili: taninir(stil) ? stil : "",
     zorunluBolumler: (tarama.requiredSections ?? []).map((b) => b.trim()).filter(Boolean),
     enAzSayfa: sayfaMi(tarama.minPages) ? tarama.minPages! : null,
     enCokSayfa: sayfaMi(tarama.maxPages) ? tarama.maxPages! : null,
@@ -95,7 +98,7 @@ export type DogrulamaHatasi =
 export function formuDogrula(form: DogrulamaFormu): DogrulamaHatasi[] {
   const hatalar: DogrulamaHatasi[] = [];
   if (!form.atifStili.trim()) hatalar.push("atif-stili-yok");
-  else if (!TANINAN_STILLER.includes(form.atifStili)) hatalar.push("atif-stili-taninmiyor");
+  else if (!taninir(form.atifStili)) hatalar.push("atif-stili-taninmiyor");
 
   if (form.zorunluBolumler.filter((b) => b.trim()).length === 0) hatalar.push("bolum-yok");
 

@@ -40,4 +40,16 @@ registerHooks({
     }
     return nextResolve(specifier, context);
   },
+  /*
+    JSON modülü (03.11.2026, CSL stil dizini): paketleyici "import x from
+    './a.json'" yazımını olduğu gibi kabul ediyor, Node ESM ise
+    `with { type: "json" }` istiyor. Kaynak kodu teste göre değiştirmek
+    yerine öznitelik burada ekleniyor.
+  */
+  load(url, context, nextLoad) {
+    if (url.endsWith(".json") && url.startsWith("file:") && !context.importAttributes?.type) {
+      return nextLoad(url, { ...context, importAttributes: { ...context.importAttributes, type: "json" } });
+    }
+    return nextLoad(url, context);
+  },
 });

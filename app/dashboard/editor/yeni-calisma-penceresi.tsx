@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Check, PenLine, Plus } from "lucide-react";
 import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import { yeniCalisma } from "@/app/actions/projects";
-import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
+import StilSecici from "@/app/dashboard/_components/stil-secici";
 import PanelDrawer from "../_components/panel-drawer";
 import KilavuzYukle from "./[id]/kilavuz-yukle";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -177,13 +177,7 @@ export default function YeniCalismaPenceresi({
                 ) : (
                   <label>
                     <span>{t({ tr: "Kaynakça sistemi", en: "Citation system" })}</span>
-                    <select name="citationStyle" defaultValue="apa7">
-                      {STIL_SECENEKLERI.map((secenek) => (
-                        <option key={secenek.deger} value={secenek.deger}>
-                          {secenek.etiket}
-                        </option>
-                      ))}
-                    </select>
+                    <StilSecici name="citationStyle" defaultValue="apa7" />
                   </label>
                 )}
 

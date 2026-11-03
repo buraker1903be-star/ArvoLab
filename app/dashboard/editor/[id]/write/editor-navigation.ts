@@ -203,22 +203,51 @@ function findReferencesSection(doc: ProseMirrorNode): ReferencesSection | null {
  * eklenir, bölüm hiç yoksa belgenin sonunda oluşturulur. Numaralı stillerde
  * (IEEE, Vancouver) numara kaynakçadaki sıradır; aynı kaynağa ikinci atıf aynı numarayı alır.
  */
+/**
+ * Kaynağın kaynakçadaki yeri: zaten varsa sırası, yoksa eklenecek sıra.
+ * CSL atfı sunucuda üretilmeden önce numarayı bilmek için ayrıldı
+ * (numaralı stilde numara editörün sayacıdır, citeproc'un değil).
+ */
+export function atifSirasi(doc: ProseMirrorNode, source: CitableSource): { number: number; existingIndex: number } {
+  const section = findReferencesSection(doc);
+  const entries = section?.paragraphs.filter((item) => item.node.textContent.trim()) ?? [];
+  const titleKey = source.title.trim().toLocaleLowerCase("tr-TR").slice(0, 60);
+  const existingIndex = titleKey
+    ? entries.findIndex((item) => item.node.textContent.toLocaleLowerCase("tr-TR").includes(titleKey))
+    : -1;
+  return { number: existingIndex >= 0 ? existingIndex + 1 : entries.length + 1, existingIndex };
+}
+
+/** İmleçten önceki dipnotlarda bu kaynağa atıf var mı (dipnot stillerinde kısa biçim için). */
+export function oncekiDipnottaVar(editor: Editor, source: CitableSource): boolean {
+  const notlar: string[] = [];
+  editor.state.doc.nodesBetween(0, editor.state.selection.from, (node) => {
+    if (node.type.name === "footnoteReference") notlar.push(String(node.attrs.text ?? ""));
+  });
+  return oncedenAtifYapildi(source.title, notlar);
+}
+
+type Parca = { text: string; italic?: boolean };
+const metinDugumleri = (parcalar: Parca[]) =>
+  parcalar
+    .filter((part) => part.text)
+    .map((part) => ({ type: "text", text: part.text, ...(part.italic ? { marks: [{ type: "italic" }] } : {}) }));
+
 export function insertCitation(
   editor: Editor,
   source: CitableSource,
   style: CitationStyle,
   /* Sayfa (atıf penceresinde öğrencinin yazdığı) ve erişim tarihi (bugün). */
   /* dil: BELGENİN dili (lib/belge-dili.ts) — "s."/"p.", "t.y."/"n.d.", "vd."/"et al." ve yeni açılan Kaynakça başlığı. */
-  secenek: AtifSecenegi & KunyeSecenegi & { kalip?: AtifKalibi | null; dil?: Dil } = {}
+  /*
+    hazir: CSL stilinde atıf ve künye sunucuda citeproc ile üretildi
+    (app/actions/csl.ts); burada yalnızca yerine konur. Numara, çağıran
+    atifSirasi ile aldığı sıradır.
+  */
+  secenek: AtifSecenegi & KunyeSecenegi & { kalip?: AtifKalibi | null; dil?: Dil; hazir?: { atif: Parca[]; kunye: Parca[]; dipnot: boolean } } = {}
 ): { citation: string; addedReference: boolean } {
   const dil = secenek.dil ?? "tr";
-  const section = findReferencesSection(editor.state.doc);
-  const entries = section?.paragraphs.filter((item) => item.node.textContent.trim()) ?? [];
-  const titleKey = source.title.trim().toLocaleLowerCase("tr-TR").slice(0, 60);
-  const existingIndex = titleKey
-    ? entries.findIndex((item) => item.node.textContent.toLocaleLowerCase("tr-TR").includes(titleKey))
-    : -1;
-  const number = existingIndex >= 0 ? existingIndex + 1 : entries.length + 1;
+  const { number, existingIndex } = atifSirasi(editor.state.doc, source);
   /*
     Kılavuzun örnek atıfı girildiyse yazar–tarih atıfı ONUN noktalamasıyla
     yazılır ("(Yılmaz, 2020: 14)"); öğrenci her atıfı elle düzeltmesin.
@@ -226,7 +255,19 @@ export function insertCitation(
   */
   const { from, to } = editor.state.selection;
   let citation: string;
-  if (style === "dipnot") {
+  const hazir = secenek.hazir;
+  if (hazir) {
+    citation = hazir.atif.map((p) => p.text).join("");
+    if (hazir.dipnot) {
+      editor.chain().focus().insertContentAt({ from: to, to }, { type: "footnoteReference", attrs: { text: citation } }).run();
+    } else {
+      /* Üst simge atıf sözcüğe yapışır ("bulunmuştur¹"); öteki biçimlerde öncesine boşluk. */
+      const before = editor.state.doc.textBetween(Math.max(0, from - 1), from);
+      const ustSimge = /^[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(citation);
+      const bosluk = !ustSimge && before && !/[\s(\[]/.test(before) ? [{ type: "text", text: " " }] : [];
+      editor.chain().focus().insertContentAt({ from: to, to }, [...bosluk, ...metinDugumleri(hazir.atif)]).run();
+    }
+  } else if (style === "dipnot") {
     /*
       Dipnotlu stil (02.11.2026): atıf metne değil, imlecin olduğu yere
       DİPNOT olarak girer. Kılavuz ilk atıfta tam bilgi, sonrakilerde kısa
@@ -251,13 +292,8 @@ export function insertCitation(
 
   if (existingIndex >= 0) return { citation, addedReference: false };
 
-  const parts = formatReferenceParts(source, style, number, { erisimTarihi: secenek.erisimTarihi }, dil);
-  const paragraph = editor.schema.nodeFromJSON({
-    type: "paragraph",
-    content: parts
-      .filter((part) => part.text)
-      .map((part) => ({ type: "text", text: part.text, ...(part.italic ? { marks: [{ type: "italic" }] } : {}) })),
-  });
+  const parts = hazir?.kunye.length ? hazir.kunye : formatReferenceParts(source, style, number, { erisimTarihi: secenek.erisimTarihi }, dil);
+  const paragraph = editor.schema.nodeFromJSON({ type: "paragraph", content: metinDugumleri(parts) });
   editor
     .chain()
     .command(({ tr }) => {

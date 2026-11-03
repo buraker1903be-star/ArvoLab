@@ -45,6 +45,7 @@
     "@tiptap/pm": "^3.29.2",
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
+    "citeproc": "2.4.63",
     "docx": "^9.7.1",
     "fflate": "^0.8.2",
     "lucide-react": "^0.468.0",

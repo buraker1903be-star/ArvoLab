@@ -13,7 +13,8 @@ import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
 import CalismaSecici from "../_components/calisma-secici";
 import KaynakListesi from "./kaynak-listesi";
 import { DisaAktarma, IceAktarma } from "./kaynak-aktarim-araclari";
-import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
+import { STIL_ETIKETLERI, stilAdi } from "@/lib/atif/stiller";
+import { cslMi } from "@/lib/atif/csl-kimlik";
 import type { CitationStyle } from "@/lib/citation-format";
 
 export async function generateMetadata() {
@@ -209,7 +210,8 @@ export default async function KaynaklarPage({
                       kaynaklar={kaynaklar}
                       dil={kaynakcaDili}
                       stil={(calisma.citation_style && calisma.citation_style in STIL_ETIKETLERI ? calisma.citation_style : "apa7") as CitationStyle}
-                      stilAdi={STIL_ETIKETLERI[calisma.citation_style ?? "apa7"] ?? "APA 7"}
+                      stilAdi={cslMi(calisma.citation_style) ? stilAdi(calisma.citation_style) : STIL_ETIKETLERI[calisma.citation_style ?? "apa7"] ?? "APA 7"}
+                      cslStil={cslMi(calisma.citation_style) ? calisma.citation_style : null}
                       calismaAdi={calisma.title}
                     />
                   </PanelDrawer>

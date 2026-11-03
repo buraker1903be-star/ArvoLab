@@ -6,7 +6,7 @@ import { UploadCloud, Link2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { kilavuzuKaydet, kilavuzuTara, type TaramaSonucu } from "@/app/actions/calisma-kilavuzu";
-import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
+import StilSecici from "@/app/dashboard/_components/stil-secici";
 import { dogrulamaMesaji, formuDogrula, type DogrulamaFormu } from "@/lib/kilavuz-dogrulama";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 
@@ -186,23 +186,17 @@ export default function KilavuzYukle({ projectId, onKapat }: { projectId: string
 
         <label>
           <span>{t({ tr: "Kaynakça sistemi", en: "Citation system" })}</span>
-          <select
-            ref={stilKutusu}
+          <StilSecici
+            kutuRef={stilKutusu}
             className="field-control"
             value={form.atifStili}
-            aria-invalid={stilEksik && !form.atifStili ? true : undefined}
-            onChange={(e) => {
+            gecersiz={stilEksik && !form.atifStili}
+            bosEtiket={t({ tr: "Seçin", en: "Select" })}
+            onChange={(deger) => {
               setStilEksik(false);
-              setForm({ ...form, atifStili: e.target.value });
+              setForm({ ...form, atifStili: deger });
             }}
-          >
-            <option value="">{t({ tr: "Seçin", en: "Select" })}</option>
-            {STIL_SECENEKLERI.map((secenek) => (
-              <option key={secenek.deger} value={secenek.deger}>
-                {secenek.etiket}
-              </option>
-            ))}
-          </select>
+          />
           {/*
             Kılavuz sistem ADI vermiyorsa sunucu çalışmanın kendi sistemini
             (ya da yöntemin en yaygın sistemini) seçip nedenini yazıyor

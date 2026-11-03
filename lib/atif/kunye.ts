@@ -70,9 +70,29 @@ function yazarlariDenetle(yazarlar: string[], stil: StilTanimi, sorunlar: Refere
   }
 }
 
+/*
+  CSL yazar-tarih stilleri (03.11.2026): yıl dergiye göre parantezde,
+  yazardan sonra ya da sonda. Künyeyi citeproc yazdığı için biçimi
+  denetlenmez; çapraz kontrolün ihtiyacı olan yazar ve yıl okunur. Yazar
+  bölümü, ilk tam sözcükten sonraki ". " ya da ilk yıl — hangisi önce
+  gelirse.
+*/
+const ILK_YIL = new RegExp(`(?:^|[\\s,;(.])(n\\.d\\.|t\\.y\\.|(?:1[5-9]|20)\\d{2}[a-z]?)(?=[\\s,;.:)]|$)`, "u");
+function esnekAyristir(metin: string, dil: Dil): ParsedReference {
+  const sorunlar: ReferenceIssue[] = [];
+  const yil = ILK_YIL.exec(metin);
+  const cumleSonu = /\p{L}{2,}\.\s/u.exec(metin);
+  const yazarSonu = Math.min(yil ? yil.index : metin.length, cumleSonu ? cumleSonu.index + cumleSonu[0].length - 2 : metin.length);
+  const yazarlar = splitAuthors(metin.slice(0, yazarSonu).replace(/[\s,.(]+$/, ""));
+  if (!yazarlar.length) sorunlar.push(sorun("author", YAZAR_AYRISTIRILAMADI, dil, "error"));
+  if (!yil) sorunlar.push(sorun("year", { tr: "Künyede yayın yılı bulunamadı.", en: "Publication year not found in the reference." }, dil, "error"));
+  return { raw: metin, authors: yazarlar.length ? yazarlar : null, year: yil?.[1] ?? null, title: null, issues: sorunlar };
+}
+
 /** Yazar-tarih stillerinde yılı parantezden ya da yazardan sonradan okur. */
 function yazarTarihAyristir(ham: string, stil: StilTanimi, dil: Dil): ParsedReference {
   const metin = ham.trim();
+  if (stil.yilYeri === "esnek") return esnekAyristir(metin, dil);
   const sorunlar: ReferenceIssue[] = [];
 
   const eslesme = stil.yilYeri === "parantez" ? PARANTEZ_YIL.exec(metin) : YAZARDAN_SONRA.exec(metin);

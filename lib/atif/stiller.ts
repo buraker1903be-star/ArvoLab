@@ -20,8 +20,12 @@
   Saf modül; testi tests/unit/atif-kunye.test.ts.
 */
 
+import { cslCoz, cslGorunenAd, cslMi, ustSimge, type CslKodu } from "./csl-kimlik";
+
 /** Veritabanının kabul ettiği değerler (thesis_projects.citation_style). */
 export type StilKimligi = "apa7" | "harvard" | "chicago" | "ieee" | "vancouver" | "mla" | "dipnot";
+/** Yerleşik stil ya da CSL deposundan bir stil (lib/atif/csl-kimlik.ts). */
+export type StilDegeri = StilKimligi | `csl:${string}`;
 
 /**
  * Atfın metinde nasıl göründüğü. Denetimin tamamı buna dayanır:
@@ -49,7 +53,7 @@ export type YazarBicimi = {
 };
 
 export type StilTanimi = {
-  id: StilKimligi;
+  id: StilDegeri;
   ad: string;
   tur: AtifTuru;
   /**
@@ -57,14 +61,18 @@ export type StilTanimi = {
    *   parantez        → "Yılmaz, A. (2020). Başlık."      (APA)
    *   yazardan-sonra  → "Yılmaz, A. 2020. Başlık."        (Chicago)
    *   sonda           → "… Dergi. 2020;12(3):1-20."       (Vancouver, IEEE)
+   *   esnek           → ilk yıl nerede olursa (CSL yazar-tarih stilleri;
+   *                     binlerce derginin her biri yılı başka yere koyuyor)
    */
-  yilYeri: "parantez" | "yazardan-sonra" | "sonda";
+  yilYeri: "parantez" | "yazardan-sonra" | "sonda" | "esnek";
   /** Numara stillerinde metin içi atıf kalıbı ve künye numarası. */
   numara?: {
     metinKalibi: RegExp;
     etiket: (sira: number) => string;
     /** Künyenin başındaki numara: "[1] " ya da "1. " */
     kunyeKalibi: RegExp;
+    /** Atıf üst simge rakamla (¹²); eşleşme sıradan rakama çevrilip okunur. */
+    ustSimge?: boolean;
   };
   yazarBicimi: YazarBicimi | null;
   /**
@@ -257,8 +265,66 @@ export const STILLER: Record<StilKimligi, StilTanimi> = {
   },
 };
 
+/*
+  CSL STİLLERİ (03.11.2026). Künyeyi ve atfı citeproc yazıyor
+  (lib/atif/csl.ts), yani biçim zaten doğru; denetçinin işi YALNIZCA
+  metin ile kaynakçanın eşleşmesi, numaralandırma ve eksik yıl. Yazar
+  biçimi denetlenmez (yazarBicimi: null): binlerce stilin her birinin
+  yazar kuralını burada yeniden yazmak mümkün değil, tahmin etmek de
+  kusursuz künyelere yanlış alarm basmak olurdu.
+*/
+const CSL_NUMARA_KUNYE = /^[[(]?(\d+)[\]).]?\s*/;
+/*
+  citeproc sayfayı numaranın yanına yazıyor ("[3, p. 12]", "(3 s. 45)");
+  yerleşik IEEE kalıbı yalnızca çıplak numarayı tanıyor ve sayfalı atıf
+  "metinde anılmıyor" uyarısına dönerdi. Numaradan sonraki kısa ek kabul
+  edilir, numara grubu yine yalnızca rakamlar. Numara en çok üç hane:
+  "(2020)" gibi bir yıl parantezi 2020 numaralı atıf sayılıp "kaynakçada
+  12 kaynak var" yanlış alarmına dönmesin.
+*/
+const CSL_KOSELI = /\[(\d{1,3}(?:\s*[,–-]\s*\d{1,3})*)(?:[,\s]\s*[^\]\d][^\]]{0,24})?\]/g;
+const CSL_PARANTEZ = /\((\d{1,3}(?:\s*[,–-]\s*\d{1,3})*)(?:[,\s]\s*[^)\d][^)]{0,24})?\)/g;
+const RAKAM_GRUBU = (rakam: string, ayrac: string) => `${rakam}+(?:\\s*[${ayrac}]\\s*${rakam}+)*`;
+/*
+  Üst simge atıf: "…bulunmuştur.¹" Aynı karakterler istatistikte de var
+  (R², η², χ², m²). Atıf sözcüğe ya da noktalamaya yapışır; bu
+  simgelerin önünde ise bir-iki harf durur. Önünde en az üç harf ya da
+  noktalama isteyen bakış, "R²"yi 2 numaralı atıf saymayı önlüyor.
+*/
+const UST_SIMGE_KALIBI = new RegExp(`(?<=\\p{L}{3}|[.,;:)\\]"”’])(${RAKAM_GRUBU("[⁰¹²³⁴⁵⁶⁷⁸⁹]", "˒,⁻–-")})`, "gu");
+
+function cslTanimi(deger: string, kod: CslKodu): StilTanimi {
+  const ad = cslGorunenAd(deger);
+  const ortak = { id: deger as StilDegeri, ad, yazarBicimi: null, listeIsaretiSerbest: false };
+  switch (kod) {
+    case "a":
+      return { ...ortak, tur: "yazar-tarih", yilYeri: "esnek", kaynakcaSirasi: "alfabetik" };
+    case "y":
+      return { ...ortak, tur: "yazar-sayfa", yilYeri: "sonda", kaynakcaSirasi: "alfabetik" };
+    case "d":
+      return { ...ortak, tur: "dipnot", yilYeri: "sonda", kaynakcaSirasi: "alfabetik" };
+    case "k":
+    case "p":
+    case "s":
+      return {
+        ...ortak,
+        tur: "numara",
+        yilYeri: "sonda",
+        kaynakcaSirasi: "atif-sirasi",
+        numara: {
+          metinKalibi: kod === "k" ? CSL_KOSELI : kod === "p" ? CSL_PARANTEZ : UST_SIMGE_KALIBI,
+          etiket: (sira) => (kod === "k" ? `[${sira}]` : kod === "p" ? `(${sira})` : ustSimge(String(sira))),
+          kunyeKalibi: CSL_NUMARA_KUNYE,
+          ...(kod === "s" ? { ustSimge: true } : {}),
+        },
+      };
+  }
+}
+
 /** Bilinmeyen değer APA'ya düşer: kayıtların varsayılanı da odur. */
 export function stilTanimi(deger: string | null | undefined): StilTanimi {
+  const csl = cslCoz(deger);
+  if (csl) return cslTanimi(deger as string, csl.kod);
   return STILLER[(deger ?? "") as StilKimligi] ?? STILLER.apa7;
 }
 
@@ -276,8 +342,13 @@ export const stilAdi = (deger: string | null | undefined) => stilTanimi(deger).a
   Harvard'ın atfında virgül isteğe bağlı ("(Smith, 2020)" de "(Smith 2020)"
   de yaygın); APA çıkarıcısı virgül istiyor, Chicago'nunki istemiyor.
 */
+/* CSL yazar-tarih stillerinde virgül stile göre değişiyor; Chicago çıkarıcısı ikisini de okur. */
 export const atifCikarmaStili = (stil: StilTanimi): "apa7" | "chicago" | "mla" =>
-  stil.id === "mla" ? "mla" : stil.id === "chicago" || stil.id === "harvard" ? "chicago" : "apa7";
+  stil.id === "mla" || (cslMi(stil.id) && stil.tur === "yazar-sayfa")
+    ? "mla"
+    : stil.id === "chicago" || stil.id === "harvard" || cslMi(stil.id)
+      ? "chicago"
+      : "apa7";
 
 /** Metin içi atıf künyeyle ADLA eşleşiyor mu (numara stillerinde eşleşmez). */
 export const adlaEslesir = (stil: StilTanimi) => stil.tur !== "numara";

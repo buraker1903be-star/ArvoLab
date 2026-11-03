@@ -4,7 +4,7 @@ import { PenLine } from "lucide-react";
 import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import { createProject } from "@/app/actions/projects";
 import type { University } from "@/app/actions/universities";
-import { STIL_SECENEKLERI } from "@/lib/atif/stiller";
+import StilSecici from "@/app/dashboard/_components/stil-secici";
 import ActionForm from "../../action-form";
 import AcademicUnitFields from "./academic-unit-fields";
 import { useCeviri } from "@/app/_components/dil-saglayici";
@@ -59,13 +59,7 @@ export default function YeniCalismaFormu({
 
         <label>
           <span>{t({ tr: "Kaynakça sistemi", en: "Citation system" })}</span>
-          <select name="citationStyle" defaultValue="apa7">
-            {STIL_SECENEKLERI.map((secenek) => (
-              <option key={secenek.deger} value={secenek.deger}>
-                {secenek.etiket}
-              </option>
-            ))}
-          </select>
+          <StilSecici name="citationStyle" defaultValue="apa7" />
           <small>{t({ tr: "Tezlerde onaylı kılavuz varsa ondan belirlenir.", en: "For theses, set by the approved guideline if there is one." })}</small>
         </label>
 
