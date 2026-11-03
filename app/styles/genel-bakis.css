@@ -430,7 +430,7 @@
 .pencere-dugmeler { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pencere-alt-baslik { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 650; }
 /* Bulgunun sağındaki eylem ("Yapılacaklara ekle") */
-.asistan-bulgu:has(.asistan-bulgu-eylem) { grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; }
+.asistan-bulgu:has(.asistan-bulgu-eylem) { grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; }
 .asistan-bulgu-eylem { justify-self: end; }
 @media (max-width: 760px) { .asistan-bulgu:has(.asistan-bulgu-eylem) { grid-template-columns: 1fr; } .asistan-bulgu-eylem { justify-self: start; } }
 /* Kaynak PDF'leri: sol karttaki kontrol ve her künyenin PDF satırı */
@@ -1224,3 +1224,12 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   .kunye-kart-bas .status-pill { grid-column: 2; justify-self: start; }
   .kunye-eslesme, .kunye-not, .kunye-sorunlar, .kunye-eylem, .kunye-kart .kaynak-pdf-satiri { margin-left: 0; }
 }
+/* Belge geri bildirimi (04.11.2026): asistan sonuçlarıyla aynı kart dili. */
+.belge-geri-bildirim { display: grid; gap: 8px; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-sm); }
+.belge-geri-bildirim-bas { display: flex; align-items: center; gap: 8px; }
+.belge-geri-bildirim-bas b { color: var(--ink); font-size: var(--fs-body); }
+.belge-geri-bildirim-bas small { margin-left: auto; color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 600; }
+.belge-geri-bildirim-not { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--warning); font-size: var(--fs-sm); }
+.belge-geri-bildirim-liste { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; counter-reset: madde; }
+.belge-geri-bildirim-liste li { position: relative; padding: 8px 10px 8px 36px; border-radius: var(--r-sm); background: var(--surface-2); color: var(--ink); font-size: var(--fs-base); line-height: var(--lh-metin); counter-increment: madde; }
+.belge-geri-bildirim-liste li::before { content: counter(madde); position: absolute; top: 8px; left: 10px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent); font-size: var(--fs-micro); font-weight: 700; }

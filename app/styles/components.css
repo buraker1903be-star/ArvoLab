@@ -1382,27 +1382,49 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
 
 .asistan-bolum { margin-top: 16px; }
 .asistan-bolum-baslik { margin: 0 0 8px; color: var(--ink-soft); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; }
+/* Bulgu başlığı ve türlere göre sayı (04.11.2026). */
+.asistan-bolum-bas { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 8px; }
+.asistan-bolum-bas .asistan-bolum-baslik { margin: 0; }
+.asistan-bulgu-sayilari { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.asistan-bulgu-sayilari > span { padding: 2px 8px; border-radius: var(--r-pill); background: var(--tone-soft); color: var(--tone); font-size: var(--fs-micro); font-weight: 700; }
+.asistan-bulgu-sayilari > [data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
+.asistan-bulgu-sayilari > [data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
+.asistan-bulgu-sayilari > [data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
 
+/*
+  Bulgu KARTI (04.11.2026). Eskiden kartın bütün zemini tonun soluk
+  rengiydi: altı bulguluk bir listede pembe-sarı-mavi şeritler göz
+  yoruyordu ve başlık zemin üstünde zor seçiliyordu. Zemin artık yüzey
+  rengi; ton yalnızca sol kenarda ve simgeli etikette.
+*/
 .asistan-bulgular { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .asistan-bulgu {
-  display: grid; grid-template-columns: 72px 1fr; gap: 12px; align-items: start;
-  padding: 12px 14px; border-radius: var(--r-sm);
-  border-left: 3px solid var(--tone, var(--line));
-  background: var(--tone-soft, var(--surface-2));
+  display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: start;
+  padding: 12px 14px; border: 1px solid var(--line-soft); border-left: 3px solid var(--tone, var(--line));
+  border-radius: var(--r-sm); background: var(--surface);
+  transition: box-shadow .15s ease;
 }
 .asistan-bulgu[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
 .asistan-bulgu[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
 .asistan-bulgu[data-tone="info"] { --tone: var(--info); --tone-soft: var(--info-soft); }
-.asistan-bulgu-etiket { color: var(--tone); font-size: var(--fs-sm); font-weight: 600; }
-.asistan-bulgu-metin { color: var(--ink); font-size: var(--fs-body); line-height: var(--lh-metin); }
-.asistan-bulgu-metin b { display: block; margin-bottom: 2px; }
+.asistan-bulgu-etiket {
+  display: inline-flex; align-items: center; gap: 5px; justify-self: start;
+  padding: 2px 8px; border-radius: var(--r-pill); background: var(--tone-soft);
+  color: var(--tone); font-size: var(--fs-micro); font-weight: 700;
+}
+.asistan-bulgu-metin { color: var(--ink-soft); font-size: var(--fs-base); line-height: var(--lh-metin); }
+.asistan-bulgu-metin b { display: block; margin-bottom: 2px; color: var(--ink); font-size: var(--fs-body); }
 
 .asistan-aramalar { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.asistan-aramalar > li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 6px 6px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-sm); background: var(--surface-sunken);
+}
 .asistan-aramalar code {
-  display: block; padding: 9px 12px; border-radius: var(--r-sm);
-  background: var(--surface-sunken); color: var(--ink);
+  flex: 1 1 auto; min-width: 0; color: var(--ink);
   font-size: var(--fs-sm); line-height: var(--lh-metin); word-break: break-word;
 }
+.asistan-arama-eylem { display: inline-flex; flex: 0 0 auto; gap: 4px; }
 
 /* Değerlendirme: üç yetenekte de aynı soru sorulur, yoksa veri karşılaştırılamaz. */
 .asistan-puan { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
@@ -1837,7 +1859,10 @@ button.merkez-baglanti { width: 100%; font: inherit; text-align: left; cursor: p
 
 /* Asistanın kurduğu arama dizesi tek tıkla bulucuya taşınır. */
 .asistan-arama-calistir {
-  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
   padding: 2px 8px;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-pill);

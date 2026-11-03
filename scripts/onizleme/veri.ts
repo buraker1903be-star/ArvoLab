@@ -6,6 +6,7 @@
 */
 import tez from "@/tests/fixtures/tez-enflasyon-issizlik.json";
 import { kunyeleriAyristir } from "@/lib/atif/kunye";
+import { kunyeAnahtari } from "@/lib/kaynak-pdf";
 
 const KULLANICI = "00000000-0000-4000-8000-0000000000a1";
 const PROJE = "00000000-0000-4000-8000-0000000000b1";
@@ -72,6 +73,21 @@ export const ORNEK: Record<string, Record<string, unknown>[]> = {
         ornekAtif: null,
       },
     },
+  ],
+  document_uploads: [
+    {
+      id: "d1", project_id: PROJE, project_title: "Türkiye'de Enflasyon ve İşsizlik", file_name: "tez-taslak-v3.pdf", status: "analyzed", error_message: null, created_at: gunOnce(2),
+      analysis: { complianceScore: 88, referenceSectionFound: true, references: [], crossCheck: { citationsWithoutReference: [], referencesWithoutCitation: [] }, guidelineCompliance: null, kilavuz: null, sayfaSayisi: 42, metinUyarisi: null },
+    },
+  ],
+  ai_feedback_requests: [
+    {
+      id: "f1", document_id: "d1", status: "completed", error_message: null, created_at: gunOnce(1),
+      feedback_text: "- Giriş bölümünde araştırma sorusu açıkça yazılmamış; amaç paragrafının sonuna eklenebilir.\n- Yöntem bölümünde veri kaynağı ve dönem belirtilmiş, ancak değişkenlerin dönüşümü anlatılmamış.\n- Bulgular tablolarla destekleniyor; tablo başlıkları kılavuzdaki biçime uymuyor.\n- Sonuç bölümü bulguları tekrar ediyor; politika önerileri ayrı bir alt başlıkta toplanabilir.",
+    },
+  ],
+  kaynak_pdfleri: [
+    { id: "p1", project_id: PROJE, kunye_anahtari: kunyeAnahtari(ORNEK_KUNYELER[1]), kunye: ORNEK_KUNYELER[1], doi: "10.0000/ornek.2", durum: "indirildi", depo_yolu: "ornek.pdf", kaynak_adres: null, baslik_eslesti: true, bakildi: gunOnce(1) },
   ],
   manuscript_comments: [],
   manuscript_share_links: [],

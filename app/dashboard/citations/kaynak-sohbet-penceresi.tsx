@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Copy, Quote } from "lucide-react";
+import { ArrowUp, BookOpenText, Copy, FlaskConical, ListChecks, Quote, ShieldCheck, Sparkles, Target, TriangleAlert } from "lucide-react";
 import PanelDrawer from "../_components/panel-drawer";
 import { kaynaklaSohbet } from "@/app/actions/ai-kaynak-sohbeti";
 import { showToast } from "../_components/toast-events";
@@ -79,10 +79,10 @@ export default function KaynakSohbetPenceresi({
   };
 
   const oneriler = [
-    t({ tr: "Araştırma sorusu ve amacı nedir?", en: "What is the research question and aim?" }),
-    t({ tr: "Yöntem, veri ve örneklem nedir?", en: "What are the method, data and sample?" }),
-    t({ tr: "Temel bulgular nelerdir?", en: "What are the main findings?" }),
-    t({ tr: "Yazarlar hangi sınırlılıkları belirtiyor?", en: "What limitations do the authors mention?" }),
+    { ikon: Target, soru: t({ tr: "Araştırma sorusu ve amacı nedir?", en: "What is the research question and aim?" }) },
+    { ikon: FlaskConical, soru: t({ tr: "Yöntem, veri ve örneklem nedir?", en: "What are the method, data and sample?" }) },
+    { ikon: ListChecks, soru: t({ tr: "Temel bulgular nelerdir?", en: "What are the main findings?" }) },
+    { ikon: TriangleAlert, soru: t({ tr: "Yazarlar hangi sınırlılıkları belirtiyor?", en: "What limitations do the authors mention?" }) },
   ];
 
   return (
@@ -102,48 +102,95 @@ export default function KaynakSohbetPenceresi({
     >
       <div className="kaynak-sohbet">
         <div className="yazim-paneli-liste kaynak-sohbet-liste" ref={listeRef} aria-live="polite">
+          {/*
+            Yazım asistanıyla AYNI sohbet dili (04.11.2026): boşken başlangıç
+            kartları, asistan satırı simgeli, alıntılar sayfa rozetli kartlar,
+            beklerken üç nokta. Eskiden öneriler sıradan çiplerdi ve
+            "Kaynak okunuyor…" düz yazıydı.
+          */}
           {mesajlar.length === 0 ? (
-            <div className="yazim-hizli kaynak-sohbet-oneri">
-              {oneriler.map((o) => (
-                <button key={o} type="button" className="yazim-hizli-dugme" onClick={() => void sor(o)} disabled={bekliyor}>
-                  {o}
-                </button>
-              ))}
+            <div className="yazim-paneli-bos">
+              <div className="yazim-bos-bas">
+                <span className="yazim-bos-ikon" aria-hidden="true">
+                  <BookOpenText size={18} />
+                </span>
+                <b>{t({ tr: "Bu kaynağa ne sormak istersiniz?", en: "What would you like to ask this source?" })}</b>
+                <small>{t({ tr: "Her cevap kaynaktan birebir alıntıyla gelir.", en: "Every answer comes with a word-for-word quote from the source." })}</small>
+              </div>
+              <div className="yazim-baslangic kaynak-sohbet-baslangic">
+                {oneriler.map((o) => (
+                  <button key={o.soru} type="button" className="yazim-baslangic-kart" onClick={() => void sor(o.soru)} disabled={bekliyor}>
+                    <o.ikon size={16} aria-hidden="true" />
+                    <span>
+                      <b>{o.soru}</b>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="yazim-bos-not">
+                <ShieldCheck size={14} aria-hidden="true" />
+                <span>
+                  {t({
+                    tr: "Alıntı kaynakta birebir bulunamazsa cevap hiç gösterilmez; kaynakta olmayan bir şeyi söyletmek mümkün değil.",
+                    en: "If a quote can't be found word for word in the source, the answer isn't shown at all; the source can't be made to say what it doesn't.",
+                  })}
+                </span>
+              </p>
             </div>
           ) : (
-            mesajlar.map((m, i) => (
-              <div key={i} className="yazim-mesaj" data-rol={m.rol}>
-                <p className={m.rol === "asistan" && m.hata ? "tone-text" : undefined} data-tone={m.rol === "asistan" && m.hata ? "danger" : undefined}>
-                  {m.metin}
-                </p>
-                {m.rol === "asistan" && m.alintilar?.length
-                  ? m.alintilar.map((a, j) => (
-                      <blockquote key={j} className="kaynak-alinti">
-                        <Quote size={14} aria-hidden="true" />
-                        <span>{a.metin}</span>
-                        <footer>
-                          <span className="muted text-sm">{t({ tr: `PDF s. ${a.sayfa}`, en: `PDF p. ${a.sayfa}` })}</span>
-                          <button type="button" className="yazim-ikon" onClick={() => void kopyala(a)} aria-label={t({ tr: "Alıntıyı kopyala", en: "Copy quote" })} title={t({ tr: "Alıntıyı kopyala", en: "Copy quote" })}>
-                            <Copy size={14} aria-hidden="true" />
-                          </button>
-                        </footer>
-                      </blockquote>
-                    ))
-                  : null}
-                {m.rol === "asistan" && m.okunmayanSayfa ? (
-                  <small className="muted">
-                    {t({
-                      tr: `Kaynak uzun: soruyla en ilgili sayfalar okundu, ${m.okunmayanSayfa} sayfa okunmadı.`,
-                      en: `The source is long: the pages most relevant to the question were read; ${m.okunmayanSayfa} pages were not.`,
-                    })}
-                  </small>
-                ) : null}
-              </div>
-            ))
+            mesajlar.map((m, i) =>
+              m.rol === "kullanici" ? (
+                <div key={i} className="yazim-mesaj" data-rol="kullanici">
+                  <p>{m.metin}</p>
+                </div>
+              ) : (
+                <div key={i} className="yazim-mesaj" data-rol="asistan">
+                  <div className="yazim-asistan-satir">
+                    <span className="yazim-asistan-ikon" data-tone={m.hata ? "danger" : m.bulundu === false ? "warning" : undefined} aria-hidden="true">
+                      {m.hata || m.bulundu === false ? <TriangleAlert size={12} /> : <Sparkles size={12} />}
+                    </span>
+                    <p className={m.hata ? "tone-text" : undefined} data-tone={m.hata ? "danger" : undefined}>
+                      {m.metin}
+                    </p>
+                  </div>
+                  {m.alintilar?.length
+                    ? m.alintilar.map((a, j) => (
+                        <blockquote key={j} className="kaynak-alinti">
+                          <Quote size={14} aria-hidden="true" />
+                          <span>{a.metin}</span>
+                          <footer>
+                            <span className="kaynak-alinti-sayfa">{t({ tr: `PDF s. ${a.sayfa}`, en: `PDF p. ${a.sayfa}` })}</span>
+                            <button type="button" className="yazim-ikon" onClick={() => void kopyala(a)} aria-label={t({ tr: "Alıntıyı kopyala", en: "Copy quote" })} title={t({ tr: "Alıntıyı kopyala", en: "Copy quote" })}>
+                              <Copy size={14} aria-hidden="true" />
+                            </button>
+                          </footer>
+                        </blockquote>
+                      ))
+                    : null}
+                  {m.okunmayanSayfa ? (
+                    <small className="muted kaynak-sohbet-not">
+                      {t({
+                        tr: `Kaynak uzun: soruyla en ilgili sayfalar okundu, ${m.okunmayanSayfa} sayfa okunmadı.`,
+                        en: `The source is long: the pages most relevant to the question were read; ${m.okunmayanSayfa} pages were not.`,
+                      })}
+                    </small>
+                  ) : null}
+                </div>
+              ),
+            )
           )}
           {bekliyor ? (
             <div className="yazim-mesaj" data-rol="asistan" role="status">
-              <p className="muted">{t({ tr: "Kaynak okunuyor…", en: "Reading the source…" })}</p>
+              <div className="yazim-asistan-satir">
+                <span className="yazim-asistan-ikon" aria-hidden="true">
+                  <Sparkles size={12} />
+                </span>
+                <span className="yazim-yaziyor" aria-label={t({ tr: "Kaynak okunuyor…", en: "Reading the source…" })}>
+                  <i />
+                  <i />
+                  <i />
+                </span>
+              </div>
             </div>
           ) : null}
         </div>

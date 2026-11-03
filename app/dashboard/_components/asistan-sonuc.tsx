@@ -2,12 +2,13 @@
 
 import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { CreditCard, History, RotateCcw } from "lucide-react";
+import { CircleAlert, Copy, CreditCard, History, Info, Lightbulb, Play, RotateCcw } from "lucide-react";
+import { showToast } from "./toast-events";
 import { asistanGecmisim } from "@/app/actions/ai-gecmis";
 import type { GecmisKaydi } from "@/lib/ai/gecmis";
 import type { Bulgu } from "@/lib/ai/bulgu";
 import type { YetenekAdi } from "@/lib/ai/kayit-gorunum";
-import { useCeviri, useTarihler } from "@/app/_components/dil-saglayici";
+import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
 import AsistanPuan from "./asistan-puan";
 
 /*
@@ -20,6 +21,7 @@ import AsistanPuan from "./asistan-puan";
 */
 
 const BULGU_TONU = { uyari: "danger", oneri: "warning", bilgi: "info" } as const;
+const BULGU_IKONU = { uyari: CircleAlert, oneri: Lightbulb, bilgi: Info } as const;
 
 export type Etiketler = { uyari: string; oneri: string; bilgi: string };
 
@@ -47,16 +49,22 @@ function BulguListesi({
 }) {
   return (
     <ul className="asistan-bulgular">
-      {bulgular.map((bulgu, index) => (
+      {bulgular.map((bulgu, index) => {
+        const Ikon = BULGU_IKONU[bulgu.tur];
+        return (
         <li className="asistan-bulgu" data-tone={BULGU_TONU[bulgu.tur]} key={index}>
-          <span className="asistan-bulgu-etiket">{etiketler[bulgu.tur]}</span>
+          <span className="asistan-bulgu-etiket">
+            <Ikon size={13} aria-hidden="true" />
+            {etiketler[bulgu.tur]}
+          </span>
           <span className="asistan-bulgu-metin">
             <b>{bulgu.baslik}</b>
             {bulgu.aciklama}
           </span>
           {eylem ? <span className="asistan-bulgu-eylem">{eylem(bulgu, index)}</span> : null}
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }
@@ -70,13 +78,32 @@ function AramaListesi({ aramalar, onCalistir }: { aramalar: string[]; onCalistir
         {aramalar.map((arama, index) => (
           <li key={index}>
             <code>{arama}</code>
-            {/* Dize kurup "şimdi bunu bir yere yapıştırın" demek işi yarıda
-                bırakıyordu; sayfanın kendi bulucusu varken tek tık yeter. */}
-            {onCalistir && (
-              <button type="button" className="asistan-arama-calistir" onClick={() => onCalistir(arama)}>
-                {t({ tr: "Bu aramayı çalıştır", en: "Run this search" })}
+            <span className="asistan-arama-eylem">
+              {/* Kopyalamak, dizeyi Scholar ya da kütüphane veritabanına
+                  taşımanın yolu; eskiden metni elle seçmek gerekiyordu. */}
+              <button
+                type="button"
+                className="asistan-arama-calistir"
+                aria-label={t({ tr: "Kopyala", en: "Copy" })}
+                title={t({ tr: "Kopyala", en: "Copy" })}
+                onClick={() =>
+                  void navigator.clipboard
+                    .writeText(arama)
+                    .then(() => showToast("success", t({ tr: "Arama dizesi kopyalandı.", en: "Search string copied." })))
+                    .catch(() => showToast("error", t({ tr: "Kopyalanamadı.", en: "Couldn't copy." })))
+                }
+              >
+                <Copy size={13} aria-hidden="true" />
               </button>
-            )}
+              {/* Dize kurup "şimdi bunu bir yere yapıştırın" demek işi yarıda
+                  bırakıyordu; sayfanın kendi bulucusu varken tek tık yeter. */}
+              {onCalistir && (
+                <button type="button" className="asistan-arama-calistir" onClick={() => onCalistir(arama)}>
+                  <Play size={12} aria-hidden="true" />
+                  {t({ tr: "Çalıştır", en: "Run" })}
+                </button>
+              )}
+            </span>
           </li>
         ))}
       </ul>
@@ -110,6 +137,7 @@ export default function AsistanSonuc({
   gecmisGizli?: boolean;
 }) {
   const t = useCeviri();
+  const dil = useDil();
   const { tarihSaat } = useTarihler();
   const [gecmis, setGecmis] = useState<GecmisKaydi[] | null>(null);
   const [yukleniyor, basla] = useTransition();
@@ -172,7 +200,21 @@ export default function AsistanSonuc({
 
       {bulgular.length > 0 && (
         <div className="asistan-bolum">
-          <h4 className="asistan-bolum-baslik">{bulguBasligi}</h4>
+          {/* Başlığın yanında türlere göre sayı: öğrenci listeyi okumadan
+              önce kaç uyarı olduğunu görüyor. Sıra asistanınki (öncelik). */}
+          <div className="asistan-bolum-bas">
+            <h4 className="asistan-bolum-baslik">{bulguBasligi}</h4>
+            <span className="asistan-bulgu-sayilari">
+              {(["uyari", "oneri", "bilgi"] as const).map((tur) => {
+                const sayi = bulgular.filter((b) => b.tur === tur).length;
+                return sayi ? (
+                  <span key={tur} data-tone={BULGU_TONU[tur]}>
+                    {sayi} {etiketler[tur].toLocaleLowerCase(dil === "en" ? "en-US" : "tr-TR")}
+                  </span>
+                ) : null;
+              })}
+            </span>
+          </div>
           <BulguListesi bulgular={bulgular} etiketler={etiketler} eylem={bulguEylemi} />
         </div>
       )}

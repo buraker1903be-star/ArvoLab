@@ -1351,7 +1351,12 @@
 /* ---------- Kaynakla sohbet (03.11.2026) ---------- */
 .kaynak-sohbet { display: flex; flex-direction: column; min-height: min(60dvh, 560px); }
 .kaynak-sohbet-liste { padding: 0 0 12px; }
-.kaynak-sohbet-oneri { padding: 0; border-top: 0; }
+/* Geniş pencerede başlangıç kartları iki sütun; alıntı ve not asistan satırının hizasında. */
+.kaynak-sohbet-baslangic { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.kaynak-sohbet .kaynak-alinti, .kaynak-sohbet-not { margin-left: 30px; }
+.kaynak-alinti-sayfa { padding: 1px 8px; border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent); font-size: var(--fs-micro); font-weight: 700; }
+.yazim-asistan-ikon[data-tone="warning"] { background: var(--warning-soft); color: var(--warning); }
+.yazim-asistan-ikon[data-tone="danger"] { background: var(--danger-soft); color: var(--danger); }
 .kaynak-alinti {
   display: grid;
   grid-template-columns: auto 1fr;

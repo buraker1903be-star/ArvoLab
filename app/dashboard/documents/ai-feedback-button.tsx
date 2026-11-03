@@ -107,20 +107,33 @@ export default function AiFeedbackButton({ documentId, initialFeedback, configur
         </p>
       )}
 
+      {/*
+        Öteki asistan sonuçlarıyla AYNI kart dili (04.11.2026): başlıklı
+        kart, maddeler tek tek satır. Eskiden bütün geri bildirim sarı bir
+        uyarı kutusunun içindeydi; uyarı rengi içeriği "hata listesi" gibi
+        gösteriyordu. Kopyalama uyarısı kaybolmadı, başlığın altında.
+      */}
       {feedback && (
-        <div className="callout" data-tone="warning">
-          <strong className="dashboard-kicker cluster">
+        <div className="belge-geri-bildirim">
+          <div className="belge-geri-bildirim-bas">
+            <span className="yazim-asistan-ikon" aria-hidden="true">
+              <Sparkles size={12} />
+            </span>
+            <b>{t({ tr: "Asistanın geri bildirimi", en: "Assistant feedback" })}</b>
+            <small>{t({ tr: `${bullets.length} madde`, en: `${bullets.length} ${bullets.length === 1 ? "point" : "points"}` })}</small>
+          </div>
+          <p className="belge-geri-bildirim-not">
             <AlertTriangle size={13} aria-hidden="true" />
             {t({
-              tr: "AI geri bildirimi — öğreticidir, tezinize/makalenize doğrudan kopyalamayın",
-              en: "AI feedback — for guidance only; don't copy it directly into your thesis/article",
+              tr: "Öğreticidir; tezinize ya da makalenize doğrudan kopyalamayın.",
+              en: "For guidance only; don't copy it directly into your thesis or article.",
             })}
-          </strong>
-          <ul className="callout-body result-list">
+          </p>
+          <ol className="belge-geri-bildirim-liste">
             {bullets.map((b, i) => (
               <li key={i}>{b.replace(/^[-•]\s*/, "")}</li>
             ))}
-          </ul>
+          </ol>
         </div>
       )}
     </div>
