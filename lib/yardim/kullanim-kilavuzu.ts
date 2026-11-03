@@ -451,6 +451,10 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "In the editor, the \"Assistant\" button on the toolbar opens the writing assistant on the right. Describe what you want to write, or select text and use \"Continue\", \"Make academic\", \"Shorten\", \"Expand\".",
       },
       {
+        tr: "Sağ paneldeki \"Yazım ipuçları\" yazarken kendiliğinden güncellenir: atıfsız iddia (\"çalışmalar göstermektedir\" deyip atıf vermeyen cümle), aşırı kesin dil (\"kanıtlamaktadır\"), kişisel görüş kalıbı (\"bence\") ve çok uzun cümle/paragraf. \"Göster\" metindeki yeri seçer. Yapay zekâ kullanmaz, kredi harcamaz.",
+        en: "\"Writing tips\" in the right panel update as you write: uncited claims (a sentence saying \"studies have shown\" with no citation), overstated language (\"proves\"), personal-opinion phrases (\"I think\") and very long sentences/paragraphs. \"Show\" selects the spot in the text. It doesn't use AI or credits.",
+      },
+      {
         tr: "Asistanın yazdığı metin belgenize kendiliğinden girmez: \"İmlece ekle\", \"Seçilenin yerine koy\" ya da \"Kopyala\" ile siz eklersiniz. Eklemeden önce okuyun ve kendi sözcüklerinizle düzenleyin.",
         en: "Text the assistant writes never enters your document by itself: you insert it with \"Insert at cursor\", \"Replace selection\" or \"Copy\". Read it and edit it in your own words before inserting.",
       },
