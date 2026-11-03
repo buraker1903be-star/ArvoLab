@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import { ArrowUp, Check, Copy, CornerDownLeft, ListTree, MessageSquareText, PenLine, Replace, ShieldCheck, Sparkles, StepForward, X } from "lucide-react";
+import { ArrowUp, Check, Copy, CornerDownLeft, ListTree, ThumbsDown, MessageSquareText, PenLine, Replace, ShieldCheck, Sparkles, StepForward, X } from "lucide-react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
 import { ASISTAN_IZI } from "@/lib/tiptap-asistan-izi";
@@ -31,7 +31,19 @@ import { collectHeadings } from "./editor-navigation";
 */
 
 type Aralik = { from: number; to: number };
-type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi };
+
+/* Öneri kartının başlığı: kartın ne olduğu, istek metni değil. */
+const ONERI_ADI: Record<YazimGorevi, { tr: string; en: string }> = {
+  serbest: { tr: "Öneri", en: "Suggestion" },
+  devam: { tr: "Devamı için öneri", en: "Suggested continuation" },
+  paragraf: { tr: "Önerilen paragraf", en: "Suggested paragraph" },
+  akademik: { tr: "Akademik hâli", en: "Academic version" },
+  kisalt: { tr: "Kısaltılmış hâli", en: "Shortened version" },
+  genislet: { tr: "Genişletilmiş hâli", en: "Expanded version" },
+  anahat: { tr: "Ana hat", en: "Outline" },
+  tamamla: { tr: "Öneri", en: "Suggestion" },
+};
+type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi; begenilmedi?: boolean };
 
 export default function YazimPaneli({
   editor,
@@ -171,6 +183,13 @@ export default function YazimPaneli({
     }
   };
 
+  const begenmedim = (indeks: number) => {
+    const kayitId = mesajlar[indeks]?.kayitId;
+    if (!kayitId) return;
+    setMesajlar((onceki) => onceki.map((m, j) => (j === indeks ? { ...m, begenilmedi: true } : m)));
+    void asistanPuanla(kayitId, "faydasiz", "panelde beğenilmedi").catch(() => undefined);
+  };
+
   if (!acik) return null;
   const hizli: { gorev: YazimGorevi; ad: string }[] = [
     { gorev: "devam", ad: t({ tr: "Devam ettir", en: "Continue" }) },
@@ -277,48 +296,99 @@ export default function YazimPaneli({
             </p>
           </div>
         ) : (
-          mesajlar.map((m, i) => (
-            <div key={i} className="yazim-mesaj" data-rol={m.rol}>
-              {m.metin ? <p>{m.metin}</p> : null}
-              {m.ekMetin ? (
-                <div className="yazim-oneri">
-                  {m.gorev === "anahat" && anaHattiCozumle(m.ekMetin).length ? (
-                    <ul className="yazim-anahat">
-                      {anaHattiCozumle(m.ekMetin).map((s, j) => (
-                        <li key={j} data-duzey={s.duzey}>
-                          <b>{s.baslik}</b>
-                          {s.notlar.map((n, k) => (
-                            <small key={k}>{n}</small>
-                          ))}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    paragraflara(m.ekMetin).map((p, j) => <p key={j}>{p}</p>)
-                  )}
-                  <div className="yazim-oneri-eylem">
-                    <button type="button" className="projects-filter-button button-compact" onClick={() => ekle(i, false)} disabled={m.eklendi}>
-                      {m.eklendi ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}
-                      {m.eklendi ? t({ tr: "Eklendi", en: "Inserted" }) : t({ tr: "İmlece ekle", en: "Insert at cursor" })}
-                    </button>
-                    {m.secimVardi ? (
-                      <button type="button" className="projects-filter-button button-compact" onClick={() => ekle(i, true)} disabled={m.eklendi}>
-                        <Replace size={14} aria-hidden="true" />
-                        {t({ tr: "Seçilenin yerine koy", en: "Replace selection" })}
-                      </button>
-                    ) : null}
-                    <button type="button" className="yazim-ikon" onClick={() => void kopyala(m.ekMetin!)} aria-label={t({ tr: "Kopyala", en: "Copy" })} title={t({ tr: "Kopyala", en: "Copy" })}>
-                      <Copy size={14} aria-hidden="true" />
-                    </button>
+          /*
+            DOLU SOHBET (04.11.2026). Asistanın önerisi artık başlıklı bir
+            kart: ne olduğu yazıyor ("Önerilen paragraf", "Ana hat"…),
+            metin belge yazısıyla, eylemler kartın altında. Eskiden
+            asistanın açıklaması ile önerdiği metin aynı düz akıştaydı ve
+            hangisinin belgeye gireceği ilk bakışta seçilmiyordu.
+            "Beğenmedim" eğitim verisine olumsuz işaret yazıyor
+            (lib/ai/kayit.ts); eklemek zaten olumlu işaret.
+          */
+          mesajlar.map((m, i) =>
+            m.rol === "kullanici" ? (
+              <div key={i} className="yazim-mesaj" data-rol="kullanici">
+                <p>{m.metin}</p>
+              </div>
+            ) : (
+              <div key={i} className="yazim-mesaj" data-rol="asistan">
+                {m.metin ? (
+                  <div className="yazim-asistan-satir">
+                    <span className="yazim-asistan-ikon" aria-hidden="true">
+                      <Sparkles size={12} />
+                    </span>
+                    <p>{m.metin}</p>
                   </div>
-                </div>
-              ) : null}
-            </div>
-          ))
+                ) : null}
+                {m.ekMetin ? (
+                  <div className="yazim-oneri" data-eklendi={m.eklendi || undefined}>
+                    <div className="yazim-oneri-bas">
+                      <small>{t(ONERI_ADI[m.gorev ?? "serbest"])}</small>
+                      <span>
+                        <button type="button" className="yazim-ikon" onClick={() => void kopyala(m.ekMetin!)} aria-label={t({ tr: "Kopyala", en: "Copy" })} title={t({ tr: "Kopyala", en: "Copy" })}>
+                          <Copy size={14} aria-hidden="true" />
+                        </button>
+                        {m.kayitId ? (
+                          <button
+                            type="button"
+                            className="yazim-ikon"
+                            data-secili={m.begenilmedi || undefined}
+                            disabled={m.begenilmedi || m.eklendi}
+                            onClick={() => begenmedim(i)}
+                            aria-label={t({ tr: "Beğenmedim", en: "Not helpful" })}
+                            title={m.begenilmedi ? t({ tr: "Bildirildi, teşekkürler", en: "Noted, thanks" }) : t({ tr: "Beğenmedim", en: "Not helpful" })}
+                          >
+                            <ThumbsDown size={14} aria-hidden="true" />
+                          </button>
+                        ) : null}
+                      </span>
+                    </div>
+                    <div className="yazim-oneri-metin">
+                      {m.gorev === "anahat" && anaHattiCozumle(m.ekMetin).length ? (
+                        <ul className="yazim-anahat">
+                          {anaHattiCozumle(m.ekMetin).map((s, j) => (
+                            <li key={j} data-duzey={s.duzey}>
+                              <b>{s.baslik}</b>
+                              {s.notlar.map((n, k) => (
+                                <small key={k}>{n}</small>
+                              ))}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        paragraflara(m.ekMetin).map((p, j) => <p key={j}>{p}</p>)
+                      )}
+                    </div>
+                    <div className="yazim-oneri-eylem">
+                      <button type="button" className="projects-primary-button button-compact" onClick={() => ekle(i, false)} disabled={m.eklendi}>
+                        {m.eklendi ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}
+                        {m.eklendi ? t({ tr: "Eklendi", en: "Inserted" }) : t({ tr: "İmlece ekle", en: "Insert at cursor" })}
+                      </button>
+                      {m.secimVardi ? (
+                        <button type="button" className="projects-filter-button button-compact" onClick={() => ekle(i, true)} disabled={m.eklendi}>
+                          <Replace size={14} aria-hidden="true" />
+                          {t({ tr: "Seçilenin yerine koy", en: "Replace selection" })}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ),
+          )
         )}
         {bekliyor ? (
           <div className="yazim-mesaj" data-rol="asistan" role="status">
-            <p className="muted">{t({ tr: "Yazıyor…", en: "Writing…" })}</p>
+            <div className="yazim-asistan-satir">
+              <span className="yazim-asistan-ikon" aria-hidden="true">
+                <Sparkles size={12} />
+              </span>
+              <span className="yazim-yaziyor" aria-label={t({ tr: "Yazıyor…", en: "Writing…" })}>
+                <i />
+                <i />
+                <i />
+              </span>
+            </div>
           </div>
         ) : null}
       </div>
