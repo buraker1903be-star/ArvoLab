@@ -163,12 +163,12 @@ export default async function MakaleCalismaAlani({
 
   return (
     <main className="dashboard-page">
-      <section className="projects-header">
+      <section className="projects-header calisma-basligi">
         <div>
           <span className="dashboard-kicker">
             {t({ tr: "Makale çalışma alanı", en: "Article workspace" })} · {tur.etiket}
           </span>
-          <h1>{calisma.title}</h1>
+          <h1 title={calisma.title}>{calisma.title}</h1>
           <p>
             {profil.hedef_dergi
               ? t({ tr: `Hedef: ${profil.hedef_dergi}`, en: `Target: ${profil.hedef_dergi}` })

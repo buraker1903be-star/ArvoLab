@@ -44,10 +44,10 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
 
   return (
     <main className="dashboard-page">
-      <section className="projects-header">
+      <section className="projects-header calisma-basligi">
         <div>
           <span className="dashboard-kicker">{t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}</span>
-          <h1>{calisma.title}</h1>
+          <h1 title={calisma.title}>{calisma.title}</h1>
           <p>
             {t({
               tr: "Önemli iddialarınızı, dayandıkları kaynakları ve kanıt durumlarını tek yerde izleyin. Destek düzeyleri otomatik sistemin ya da sizin değerlendirmenizdir; nihai akademik hüküm değildir.",

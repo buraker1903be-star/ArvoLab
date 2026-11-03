@@ -45,10 +45,10 @@ export default async function EtikKurulSayfasi({ params }: { params: Promise<{ i
 
   return (
     <main className="dashboard-page">
-      <section className="projects-header">
+      <section className="projects-header calisma-basligi">
         <div>
           <span className="dashboard-kicker">{t({ tr: "Etik kurul", en: "Ethics committee" })} · {t(ETIK_DURUM_ADI[veri.durum])}</span>
-          <h1>{calisma.title}</h1>
+          <h1 title={calisma.title}>{calisma.title}</h1>
           <p>
             {t({
               tr: "Başvurunuzu takip edin, kurulun istediği belgeleri listeleyin ve verinin onaydan önce toplanmadığından emin olun. Belgeleri siz hazırlarsınız; ArvoLab takip eder ve denetler.",

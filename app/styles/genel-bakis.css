@@ -1132,3 +1132,22 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   .calisma-yeni-kutu:hover { border-color: var(--accent-500); background: var(--accent-soft); color: var(--ink); }
 }
 .calisma-yeni-kutu:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+
+/*
+  Çalışmanın alt sayfaları (Etik kurul, Kanıt matrisi, Makale): başlık
+  tez adı ve tek satır (04.11.2026). Uzun tez adı 34 piksellik başlıkta
+  üç satıra sarıp sekmeleri ve formu ekranın yarısına itiyordu; adın
+  tamamı üzerine gelince.
+*/
+.calisma-basligi { margin-bottom: 12px; }
+.calisma-basligi > div:first-child { min-width: 0; max-width: none; }
+.calisma-basligi h1 { overflow: hidden; font-size: clamp(20px, 1.6vw, 24px); text-overflow: ellipsis; white-space: nowrap; }
+.calisma-basligi p { font-size: var(--fs-base); }
+
+/* Belge Kontrol: belge yokken ne denetlendiği (documents/page.tsx) */
+.belge-denetimler { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.belge-denetimler li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface-2); }
+.belge-denetimler li > svg { flex: none; margin-top: 2px; color: var(--accent-strong); }
+.belge-denetimler li > span { display: grid; gap: 2px; min-width: 0; }
+.belge-denetimler b { font-size: var(--fs-sm); }
+.belge-denetimler small { color: var(--muted); font-size: var(--fs-micro); }

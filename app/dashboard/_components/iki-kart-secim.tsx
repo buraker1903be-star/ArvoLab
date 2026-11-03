@@ -17,6 +17,7 @@ export type Secenek = { id: string; satir: ReactNode; ayrinti: ReactNode };
 export default function IkiKartSecim({
   solBaslik,
   solUst,
+  solAlt,
   secenekler,
   bos,
   sayfa = false,
@@ -24,6 +25,8 @@ export default function IkiKartSecim({
   solBaslik: string;
   /** Listenin üstünde (ör. "İddia ekle"). */
   solUst?: ReactNode;
+  /** Listenin altında (ör. liste boşken ne yapıldığını anlatan kısa liste). */
+  solAlt?: ReactNode;
   secenekler: Secenek[];
   /** Hiç seçenek yokken sağ kartta yazan. */
   bos: ReactNode;
@@ -54,6 +57,7 @@ export default function IkiKartSecim({
             ))}
           </ul>
         ) : null}
+        {solAlt}
       </section>
       <section className={sayfa ? "gb-kart gb-sutun kayan-kart" : "pencere-kart pencere-sonuc"} aria-live="polite">
         {gosterilen ? gosterilen.ayrinti : <div className="gb-bos">{bos}</div>}

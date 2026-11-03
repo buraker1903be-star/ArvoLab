@@ -1,4 +1,4 @@
-import { FileText, RotateCcw, ShieldQuestion, Trash2, UploadCloud } from "lucide-react";
+import { FileText, RotateCcw, ShieldQuestion, Trash2, UploadCloud, ListChecks, Quote, Copy } from "lucide-react";
 import { getMyProjects } from "@/app/actions/citation-check";
 import {
   calismaBelgeleri,
@@ -486,6 +486,37 @@ export default async function DocumentsPage({
             >
               <DocumentUploadForm projects={[calisma]} secilenCalisma={calisma.id} gomulu />
             </PanelDrawer>
+          }
+          /*
+            Belge yokken sol kart ne denetlendiğini anlatır (04.11.2026):
+            eskiden yalnızca "Belge yükle" düğmesi vardı, kartın kalanı boştu.
+          */
+          solAlt={
+            belgeler.length ? null : (
+              <ul className="belge-denetimler">
+                <li>
+                  <ListChecks size={16} aria-hidden="true" />
+                  <span>
+                    <b>{t({ tr: "Kılavuz uyumu", en: "Guideline compliance" })}</b>
+                    <small>{t({ tr: "Zorunlu bölümler, başlık düzeni, yazı biçimi", en: "Required sections, heading structure, formatting" })}</small>
+                  </span>
+                </li>
+                <li>
+                  <Quote size={16} aria-hidden="true" />
+                  <span>
+                    <b>{t({ tr: "Kaynakça ve atıf", en: "References and citations" })}</b>
+                    <small>{t({ tr: "Metindeki atıf ile kaynakçanın eşleşmesi, stil puanı", en: "Citation–reference matching, style score" })}</small>
+                  </span>
+                </li>
+                <li>
+                  <Copy size={16} aria-hidden="true" />
+                  <span>
+                    <b>{t({ tr: "Örtüşme", en: "Overlap" })}</b>
+                    <small>{t({ tr: "Erişebildiğiniz belgelerle karşılaştırma; Turnitin yerine geçmez", en: "Compared with documents you can access; not a Turnitin replacement" })}</small>
+                  </span>
+                </li>
+              </ul>
+            )
           }
           secenekler={belgeler.map((b) => ({
             id: b.id,
