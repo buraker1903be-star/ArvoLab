@@ -29,6 +29,7 @@ import {
   Redo2,
   ShieldCheck,
   FileCode,
+  SearchCheck,
   FileDown,
   AlignLeft,
   AlignCenter,
@@ -90,6 +91,7 @@ import { STIL_SECENEKLERI, stilAdi } from "@/lib/atif/stiller";
 import { cslCoz, type CslKodu } from "@/lib/atif/csl-kimlik";
 import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
+import KaynakBulPenceresi from "./kaynak-bul-penceresi";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
@@ -1160,6 +1162,8 @@ export default function ManuscriptEditor({
     gereksiz: indirilen, editörde görülendir.
   */
   const [latexHazirlaniyor, setLatexHazirlaniyor] = useState(false);
+  const [kaynakBulAcik, setKaynakBulAcik] = useState(false);
+  const [kaynakBulCumle, setKaynakBulCumle] = useState("");
   const handleLatex = async () => {
     if (!editor) return;
     setLatexHazirlaniyor(true);
@@ -2166,6 +2170,18 @@ export default function ManuscriptEditor({
           <ToolbarButton label={t({ tr: "Yazım asistanı", en: "Writing assistant" })} metin={t({ tr: "Asistan", en: "Assistant" })} onClick={() => setYazimAcik((acik) => !acik)}>
             <Sparkles size={16} />
           </ToolbarButton>
+          <ToolbarButton
+            label={t({ tr: "Seçili cümleye kaynak bul", en: "Find a source for the selected sentence" })}
+            metin={t({ tr: "Kaynak bul", en: "Find source" })}
+            onClick={() => {
+              /* Seçim yoksa imlecin paragrafı: öğrenci cümleyi seçmeyi bilmeyebilir. */
+              const { from, to, $from } = editor.state.selection;
+              setKaynakBulCumle(from !== to ? editor.state.doc.textBetween(from, to, " ") : $from.parent.textContent);
+              setKaynakBulAcik(true);
+            }}
+          >
+            <SearchCheck size={16} />
+          </ToolbarButton>
           <ToolbarButton label={t({ tr: "Kaynaktan atıf ekle", en: "Cite a source" })} metin={t({ tr: "Atıf", en: "Citation" })} onClick={() => setCiteOpen(true)}>
             <BookMarked size={16} />
           </ToolbarButton>
@@ -3140,6 +3156,14 @@ export default function ManuscriptEditor({
         cslStili={Boolean(csl)}
         belgeDili={belgeDili}
         onPick={(source, secenek) => void handleCite(source, secenek)}
+      />
+      <KaynakBulPenceresi
+        key={kaynakBulCumle}
+        open={kaynakBulAcik}
+        onClose={() => setKaynakBulAcik(false)}
+        projectId={projectId}
+        cumle={kaynakBulCumle.slice(0, 600)}
+        onCite={(source) => void handleCite(source)}
       />
       <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => setYazimAcik(false)} />
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
