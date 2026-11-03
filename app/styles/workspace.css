@@ -652,6 +652,18 @@
 
 /* Belgenin üstündeki ince şerit: kayıt durumu ve bul-değiştir */
 .manuscript-ust { justify-content: flex-end; min-height: 40px; padding: 4px 12px; }
+/*
+  Kayıt şeridi araç çubuğunun ALTINA yapışır (04.11.2026). İkisi aynı
+  yüksekliğe yapışıyordu (üst çubuğun hemen altı): belge kaydırılınca
+  "Kaydedildi" şeridi tek satır araç çubuğunun üstüne biniyor, yazı tipi,
+  B/I/U ve Ekle düğmeleri kayboluyordu. Çubuğun yüksekliği 46 piksel
+  (32'lik düğme + 6'lık iki iç boşluk + çerçeve); şerit onun 6 piksel
+  altında ve bir kat aşağıda.
+*/
+.manuscript-layout .manuscript-ust {
+  top: calc(var(--topbar-height) + 8px + 46px + 6px);
+  z-index: calc(var(--z-sticky) - 1);
+}
 
 /* Sağ paneldeki kontrol kartı (eskiden belgenin altındaki çubuk) */
 .kontrol-karti { gap: 12px; }
