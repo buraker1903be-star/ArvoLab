@@ -142,6 +142,12 @@ export default async function PersonelCalismaKarti({
             <span className="status-pill" data-tone={statusTone(calisma.status)}>
               {t(statusLabel(calisma.status))}
             </span>
+            {onayli ? (
+              <span className="status-pill" data-tone="success" title={tarihSaat(calisma.controller_approved_at!)}>
+                <ShieldCheck size={13} aria-hidden="true" />
+                {t({ tr: "Onaylı", en: "Approved" })}
+              </span>
+            ) : null}
             {[t(projectTypeLabel(calisma.project_type)), calisma.university].filter(Boolean).join(" · ")}
           </span>
           <h2>{calisma.title}</h2>
@@ -156,6 +162,29 @@ export default async function PersonelCalismaKarti({
             <PenLine size={15} aria-hidden="true" />
             {t({ tr: "Metni aç", en: "Open text" })}
           </Link>
+          {/*
+            KONTROLÖR ONAYI BAŞLIKTA (03.11.2026, kurum sahibinin isteği).
+            Eskiden kartın altında ayrı bir "Denetim" kutusuydu: tek düğme
+            için tam genişlikte bir alan kaplıyor, kartı uzatıyordu. Onay
+            durumu artık durum etiketinin yanındaki "Onaylı" rozetinde;
+            geri alma, yanlışlıkla basılmasın diye ⋯ menüsünde.
+          */}
+          {onayli ? null : (
+            <ActionForm action={onayla} successMessage={t({ tr: "Çalışma kontrolör onayı aldı.", en: "The work received controller approval." })}>
+              <button
+                type="submit"
+                className={calisma.status === "ready" ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}
+                title={
+                  calisma.status === "ready"
+                    ? t({ tr: "Teslime hazır; onayınızı bekliyor.", en: "Ready to submit; awaiting your approval." })
+                    : t({ tr: "Kontrolör olarak onayla", en: "Approve as controller" })
+                }
+              >
+                <CheckCircle2 size={14} aria-hidden="true" />
+                {t({ tr: "Onayla", en: "Approve" })}
+              </button>
+            </ActionForm>
+          )}
           {/* Teslim paketi (PDF + Word + kontrol raporu): eskiden yalnızca özet sayfasındaydı. */}
           {yazim?.words ? <TeslimPaketi projectId={calisma.id} className="projects-filter-button button-compact" /> : null}
           {takvim && takvim.length ? (
@@ -175,6 +204,22 @@ export default async function PersonelCalismaKarti({
             <div className="kart-menu-liste">
               <CalismaDuzenlePenceresi projectId={calisma.id} baslik={calisma.title} />
               <BelgeYuklePenceresi calisma={{ id: calisma.id, title: calisma.title, university: calisma.university ?? null }} />
+              {onayli ? (
+                <ActionForm
+                  action={onayiGeriAl}
+                  confirmMessage={t({
+                    tr: `"${calisma.title}" çalışmasının kontrolör onayını geri almak istediğinize emin misiniz?\n\nÇalışma yeniden inceleme bekler duruma döner.`,
+                    en: `Are you sure you want to revoke the controller approval of "${calisma.title}"?\n\nThe work goes back to awaiting review.`,
+                  })}
+                  confirmButtonLabel={t({ tr: "Onayı geri al", en: "Revoke approval" })}
+                  successMessage={t({ tr: "Kontrolör onayı geri alındı.", en: "Controller approval revoked." })}
+                >
+                  <button type="submit">
+                    <RotateCcw size={15} aria-hidden="true" />
+                    {t({ tr: "Onayı geri al", en: "Revoke approval" })}
+                  </button>
+                </ActionForm>
+              ) : null}
               {silebilir ? <DeleteProjectButton projectId={calisma.id} projectTitle={calisma.title} /> : null}
             </div>
           </details>
@@ -391,59 +436,6 @@ export default async function PersonelCalismaKarti({
         <AnalizPenceresi projectId={calisma.id} projeAdi={calisma.title} />
       </footer>
 
-      <section className="personel-denetim" aria-label={t({ tr: "Denetim", en: "Oversight" })}>
-        <h3 className="calisma-durum-alt">{t({ tr: "Denetim", en: "Oversight" })}</h3>
-        {/* Durum satırı üstte; altında onay düğmesi. */}
-        {onayli ? (
-          <span className="tone-text personel-denetim-durum" data-tone="success">
-            <ShieldCheck size={15} aria-hidden="true" />
-            {t({ tr: "Kontrolör onayı", en: "Controller approval" })} · {tarihSaat(calisma.controller_approved_at!)}
-          </span>
-        ) : (
-          <span className="muted text-sm">
-            {calisma.status === "ready"
-              ? t({ tr: "Teslime hazır; onayınızı bekliyor.", en: "Ready to submit; awaiting your approval." })
-              : t({ tr: "Henüz kontrolör onayı yok.", en: "No controller approval yet." })}
-          </span>
-        )}
-        <div className="personel-denetim-satir">
-          {/*
-            SORUMLU ATAMASI KALDIRILDI (03.11.2026, kurum sahibinin kararı).
-            Atama yalnızca Personel/Uzman rolüne öğrenci çalışmasında yazma
-            yetkisi veriyordu; AkademikMerkez'in bütün personeli Kontrolör
-            ve üstü, yani zaten yazabiliyor. Satır "kimseye atanmamış"
-            uyarısı üretip boşuna iş gösteriyordu. Sütun ve RLS kuralı
-            yerinde: eski atamalar yetki vermeye devam ediyor.
-          */}
-          {onayli ? (
-            <ActionForm
-              action={onayiGeriAl}
-              /* Onayı iptal eden düğme, "onayla" ile aynı yerde dönüşümlü
-                 çiziliyor: yanlış tıklama kolay, sonucu ağır. */
-              confirmMessage={t({
-                tr: `"${calisma.title}" çalışmasının kontrolör onayını geri almak istediğinize emin misiniz? Çalışma yeniden inceleme bekler duruma döner.`,
-                en: `Are you sure you want to revoke the controller approval of "${calisma.title}"? The work goes back to awaiting review.`,
-              })}
-              successMessage={t({ tr: "Kontrolör onayı geri alındı.", en: "Controller approval revoked." })}
-            >
-              <button type="submit" className="projects-filter-button button-compact">
-                <RotateCcw size={14} aria-hidden="true" />
-                {t({ tr: "Onayı geri al", en: "Revoke approval" })}
-              </button>
-            </ActionForm>
-          ) : (
-            <ActionForm action={onayla} successMessage={t({ tr: "Çalışma kontrolör onayı aldı.", en: "The work received controller approval." })}>
-              <button
-                type="submit"
-                className={calisma.status === "ready" ? "projects-primary-button button-compact" : "projects-filter-button button-compact"}
-              >
-                <CheckCircle2 size={14} aria-hidden="true" />
-                {t({ tr: "Kontrolör olarak onayla", en: "Approve as controller" })}
-              </button>
-            </ActionForm>
-          )}
-        </div>
-      </section>
     </article>
   );
 }
