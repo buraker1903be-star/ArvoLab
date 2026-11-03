@@ -398,6 +398,10 @@ const BOLUMLER: KilavuzBolumu[] = [
         tr: "\"Word olarak indir\" ya da \"PDF / Yazdır\" (Ctrl+P) ile çıktı alın. Çalışmalarım'daki çalışma kartında \"Teslim paketi (ZIP)\" metni kaynak PDF'leriyle birlikte indirir.",
         en: "Export with \"Download as Word\" or \"PDF / Print\" (Ctrl+P). \"Submission package (ZIP)\" on the work's card in My works downloads the text together with source PDFs.",
       },
+      {
+        tr: "\"LaTeX\" düğmesi çalışmayı main.tex, kaynaklar.bib ve görsellerle bir ZIP olarak indirir; Overleaf'te \"Yeni proje → ZIP yükle\" ile açılır. Başlık numaraları yazdırmayla aynıdır, kaynakça editördeki biçimiyle gelir.",
+        en: "The \"LaTeX\" button downloads the work as a ZIP with main.tex, kaynaklar.bib and the images; open it in Overleaf with \"New project → Upload ZIP\". Heading numbers match the print output; the reference list keeps its editor formatting.",
+      },
     ],
     notlar: [
       {

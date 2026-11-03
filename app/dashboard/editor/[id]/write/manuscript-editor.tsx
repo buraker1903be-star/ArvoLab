@@ -28,6 +28,7 @@ import {
   Undo2,
   Redo2,
   ShieldCheck,
+  FileCode,
   FileDown,
   AlignLeft,
   AlignCenter,
@@ -1152,6 +1153,46 @@ export default function ManuscriptEditor({
        indirme hataları ilk açılıştaki dilde çıkıyordu. */
   }, [projectId, saveNow, t, dil]);
 
+  /*
+    LaTeX paketi (03.11.2026): ekrandaki son hâl, yazdırmayla aynı başlık
+    numaralarıyla (lib/tiptap-latex.ts). Kaydetmeye bağlı değil — dosya
+    tarayıcıda üretiliyor — ama kaydedilmemiş metin uyarısı Word'deki gibi
+    gereksiz: indirilen, editörde görülendir.
+  */
+  const [latexHazirlaniyor, setLatexHazirlaniyor] = useState(false);
+  const handleLatex = async () => {
+    if (!editor) return;
+    setLatexHazirlaniyor(true);
+    try {
+      const { latexPaketiniIndir } = await import("./latex-paketi");
+      const sonuc = await latexPaketiniIndir(editor.getJSON(), projectId, {
+        baslik: coverPage.title?.trim() || projectDefaults?.title || t({ tr: "Çalışma", en: "Work" }),
+        dil: belgeDili,
+        headingNumbering,
+        chapterNewPage: guideline?.settings.chapterNewPage ?? false,
+        numarasiz: guideline?.settings.unnumberedSections,
+        kenarCm: margins,
+        puntoPt: guideline?.settings.fontSizePt,
+        satirAraligi: guideline?.settings.lineSpacing,
+      });
+      const notlar = [
+        sonuc.atlananGorsel ? t({ tr: `${sonuc.atlananGorsel} görsel indirilemedi`, en: `${sonuc.atlananGorsel} images couldn't be downloaded` }) : "",
+        sonuc.kaynakSayisi === null ? t({ tr: "kaynaklar okunamadığı için .bib eklenmedi", en: "the .bib file was left out because sources couldn't be read" }) : "",
+      ].filter(Boolean);
+      showToast(
+        notlar.length ? "error" : "success",
+        notlar.length
+          ? t({ tr: `LaTeX paketi indirildi; ${notlar.join(", ")}.`, en: `LaTeX package downloaded; ${notlar.join(", ")}.` })
+          : t({ tr: "LaTeX paketi indirildi; Overleaf'te \"Yeni proje → ZIP yükle\" ile açabilirsiniz.", en: "LaTeX package downloaded; open it in Overleaf with \"New project → Upload ZIP\"." }),
+      );
+    } catch (hata) {
+      console.error(hata);
+      showToast("error", t({ tr: "LaTeX paketi hazırlanamadı.", en: "The LaTeX package couldn't be prepared." }));
+    } finally {
+      setLatexHazirlaniyor(false);
+    }
+  };
+
   const handleImageUpload = useCallback(
     async (file: File) => {
       if (!editor) return;
@@ -1908,6 +1949,10 @@ export default function ManuscriptEditor({
               <button type="button" className="projects-filter-button" onClick={handleExport} disabled={exporting}>
                 <FileDown size={15} />
                 {exporting ? t({ tr: "Hazırlanıyor...", en: "Preparing..." }) : t({ tr: "Word olarak indir", en: "Download as Word" })}
+              </button>
+              <button type="button" className="projects-filter-button" onClick={() => void handleLatex()} disabled={latexHazirlaniyor}>
+                <FileCode size={15} aria-hidden="true" />
+                {latexHazirlaniyor ? t({ tr: "Hazırlanıyor...", en: "Preparing..." }) : "LaTeX"}
               </button>
               <button type="button" className="projects-filter-button" onClick={() => void handlePrint()}>
                 <Printer size={15} />
