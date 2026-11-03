@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import { ArrowUp, Check, Copy, CornerDownLeft, Replace, Sparkles, X } from "lucide-react";
+import { ArrowUp, Check, Copy, CornerDownLeft, ListTree, MessageSquareText, PenLine, Replace, ShieldCheck, Sparkles, StepForward, X } from "lucide-react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
 import { ASISTAN_IZI } from "@/lib/tiptap-asistan-izi";
@@ -180,6 +180,46 @@ export default function YazimPaneli({
     { gorev: "genislet", ad: t({ tr: "Genişlet", en: "Expand" }) },
     { gorev: "anahat", ad: t({ tr: "Ana hat", en: "Outline" }) },
   ];
+  /* Boşken çiplerde yalnızca seçim isteyenler kalır; ötekiler kartlarda. */
+  const seciliIcin = new Set<YazimGorevi>(["akademik", "kisalt", "genislet"]);
+  const gorunenCipler = mesajlar.length ? hizli : hizli.filter((h) => seciliIcin.has(h.gorev));
+  const ornekIstek = t({ tr: "Şu konuda bir paragraf yaz: ", en: "Write a paragraph about: " });
+  /* "Kendi isteğini yaz": kutuya başlangıç koyup imleci sona götürür. */
+  const kendiIstegi = () => {
+    setIstek(ornekIstek);
+    window.requestAnimationFrame(() => {
+      const kutu = girdiRef.current;
+      if (!kutu) return;
+      kutu.focus();
+      kutu.setSelectionRange(kutu.value.length, kutu.value.length);
+    });
+  };
+  const baslangic = [
+    {
+      ikon: PenLine,
+      ad: t({ tr: "Bu bölüme paragraf yaz", en: "Write a paragraph here" }),
+      aciklama: t({ tr: "İmlecin olduğu bölüme ve önceki metne göre", en: "Based on the section at your cursor and the text before it" }),
+      gorev: "paragraf" as YazimGorevi,
+    },
+    {
+      ikon: StepForward,
+      ad: t({ tr: "Kaldığım yerden devam et", en: "Continue where I left off" }),
+      aciklama: t({ tr: "İmlecin önündeki metni sürdürür", en: "Picks up the text before your cursor" }),
+      gorev: "devam" as YazimGorevi,
+    },
+    {
+      ikon: ListTree,
+      ad: t({ tr: "Ana hat çıkar", en: "Draft an outline" }),
+      aciklama: t({ tr: "Kılavuzunuzun zorunlu bölümleriyle başlık iskeleti", en: "Heading skeleton with your guideline's required sections" }),
+      gorev: "anahat" as YazimGorevi,
+    },
+    {
+      ikon: MessageSquareText,
+      ad: t({ tr: "Kendi isteğini yaz", en: "Ask in your own words" }),
+      aciklama: t({ tr: "Kutuya bir başlangıç koyar, siz tamamlarsınız", en: "Starts the box for you to finish" }),
+      gorev: null,
+    },
+  ];
 
   return (
     <aside className="yazim-paneli" aria-label={t({ tr: "Yazım asistanı", en: "Writing assistant" })}>
@@ -195,18 +235,45 @@ export default function YazimPaneli({
 
       <div className="yazim-paneli-liste" ref={listeRef} aria-live="polite">
         {mesajlar.length === 0 ? (
+          /*
+            Boş panel bir BAŞLANGIÇ menüsü (04.11.2026). Eskiden burada iki
+            paragraf kural metni vardı ve düğmeler en altta küçük çipler
+            hâlindeydi: öğrenci ne isteyebileceğini metinden çıkarmak
+            zorundaydı. Kartlar en sık dört işi doğrudan başlatıyor; kural
+            metni (atıf ve sayı sınırı) dipnota indi ama kaybolmadı.
+          */
           <div className="yazim-paneli-bos">
-            <p>
-              {t({
-                tr: "Ne yazmak istediğinizi anlatın ya da editörde metin seçip aşağıdaki düğmeleri kullanın. Yazdıklarım metninize kendiliğinden girmez; eklemek size kalır.",
-                en: "Describe what you want to write, or select text in the editor and use the buttons below. Nothing I write enters your text by itself; inserting it is up to you.",
-              })}
-            </p>
-            <p className="muted text-sm">
-              {t({
-                tr: "Yalnızca Literatür kütüphanenizdeki kaynaklara atıf yaparım ve metninizde ya da isteğinizde olmayan bir sayı yazmam. Kurumunuzun yapay zekâ kullanım kurallarına uymak sizin sorumluluğunuzdadır.",
-                en: "I only cite sources in your Literature library and never write a number that isn't in your text or request. Following your institution's AI-use rules is your responsibility.",
-              })}
+            <div className="yazim-bos-bas">
+              <span className="yazim-bos-ikon" aria-hidden="true">
+                <Sparkles size={18} />
+              </span>
+              <b>{t({ tr: "Ne yazalım?", en: "What shall we write?" })}</b>
+              <small>
+                {t({
+                  tr: "Yazdıklarım metninize kendiliğinden girmez; eklemek size kalır.",
+                  en: "Nothing I write enters your text by itself; inserting it is up to you.",
+                })}
+              </small>
+            </div>
+            <div className="yazim-baslangic">
+              {baslangic.map((b) => (
+                <button key={b.ad} type="button" className="yazim-baslangic-kart" onClick={() => (b.gorev ? void gonder(b.gorev) : kendiIstegi())} disabled={bekliyor}>
+                  <b.ikon size={16} aria-hidden="true" />
+                  <span>
+                    <b>{b.ad}</b>
+                    <small>{b.aciklama}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="yazim-bos-not">
+              <ShieldCheck size={14} aria-hidden="true" />
+              <span>
+                {t({
+                  tr: "Yalnızca Literatür kütüphanenizdeki kaynaklara atıf yaparım ve metninizde ya da isteğinizde olmayan bir sayı yazmam. Kurumunuzun yapay zekâ kullanım kurallarına uymak sizin sorumluluğunuzdadır.",
+                  en: "I only cite sources in your Literature library and never write a number that isn't in your text or request. Following your institution's AI-use rules is your responsibility.",
+                })}
+              </span>
             </p>
           </div>
         ) : (
@@ -257,7 +324,8 @@ export default function YazimPaneli({
       </div>
 
       <div className="yazim-hizli">
-        {hizli.map((h) => (
+        {mesajlar.length ? null : <small className="yazim-hizli-etiket">{t({ tr: "Seçili metin için", en: "For selected text" })}</small>}
+        {gorunenCipler.map((h) => (
           <button key={h.gorev} type="button" className="yazim-hizli-dugme" onClick={() => void gonder(h.gorev)} disabled={bekliyor}>
             {h.ad}
           </button>

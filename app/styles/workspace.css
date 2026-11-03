@@ -1265,8 +1265,37 @@
 }
 .yazim-ikon:hover { color: var(--accent); }
 .yazim-paneli-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px; display: grid; align-content: start; gap: 12px; }
-.yazim-paneli-bos { display: grid; gap: 8px; color: var(--ink-soft); line-height: 1.55; }
+.yazim-paneli-bos { display: grid; gap: 14px; align-content: start; color: var(--ink-soft); line-height: 1.55; }
 .yazim-paneli-bos p { margin: 0; }
+/* Boş panelin başlangıç menüsü (04.11.2026). */
+.yazim-bos-bas { display: grid; justify-items: start; gap: 4px; padding-top: 4px; }
+.yazim-bos-bas b { color: var(--ink); font-size: var(--fs-lg); letter-spacing: -.01em; }
+.yazim-bos-bas small { font-size: var(--fs-sm); }
+.yazim-bos-ikon { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 4px; border-radius: var(--r-md); background: var(--accent-soft); color: var(--accent); }
+.yazim-baslangic { display: grid; gap: 8px; }
+.yazim-baslangic-kart {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.yazim-baslangic-kart > svg { flex: 0 0 auto; margin-top: 2px; color: var(--accent); }
+.yazim-baslangic-kart span { display: grid; gap: 1px; }
+.yazim-baslangic-kart b { color: var(--ink); font-size: var(--fs-sm); }
+.yazim-baslangic-kart small { font-size: var(--fs-micro); line-height: 1.4; }
+.yazim-baslangic-kart:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
+.yazim-baslangic-kart:disabled { opacity: .6; cursor: default; }
+.yazim-bos-not { display: flex; gap: 8px; align-items: flex-start; font-size: var(--fs-micro); line-height: 1.45; }
+.yazim-bos-not > svg { flex: 0 0 auto; margin-top: 1px; color: var(--success); }
+.yazim-hizli-etiket { flex-basis: 100%; color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 600; }
 .yazim-mesaj { display: grid; gap: 8px; max-width: 100%; }
 .yazim-mesaj p { margin: 0; line-height: 1.55; white-space: pre-wrap; }
 .yazim-mesaj[data-rol="kullanici"] { justify-self: end; max-width: 85%; padding: 8px 12px; border-radius: var(--r-md); background: var(--accent-soft); color: var(--ink); }
