@@ -103,17 +103,39 @@ export function baslikYerlesimSorunlari(doc: { content?: Dugum[] } | null | unde
     return bloklar[i];
   };
 
+  /*
+    TABLO BAŞLIĞI TABLODAN BAKILARAK bulunur (03.11.2026). Eskiden başlıktan
+    bakılıyordu: "öncesi tablo, sonrası tablo değil" ise başlık altta
+    sayılıyordu. Kural tablonun kendisine bağlandı:
+      - Tablodan hemen önceki (boş paragraflar atlanarak) tablo başlığı o
+        tablonundur.
+      - Önceki öge de tabloysa (Panel A / Panel B) aynı başlığı paylaşır.
+      - Tablonun altındaki "Not:"/"Kaynak:" satırı başlık değil nottur;
+        zaten başlık olarak işaretli değildir.
+      - Üstünde başlık yokken ALTINDA bir tablo başlığı varsa, başlık
+        yanlış tarafta: uyarı.
+  */
+  const tabloBasligi = (dugum: Dugum | undefined) => dugum?.type === "paragraph" && dugum.attrs?.caption === "table";
+  bloklar.forEach((blok, indeks) => {
+    if (blok.type !== "table") return;
+    const onceki = komsu(indeks, -1);
+    if (tabloBasligi(onceki) || onceki?.type === "table") return;
+    const sonraki = komsu(indeks, 1);
+    if (!tabloBasligi(sonraki)) return;
+    // [tablo][başlık][tablo]: başlık SONRAKİ tablonun üstündeki başlıktır; bu tablonun başlığı yok (yer sorunu değil).
+    const sonrakiSirasi = bloklar.indexOf(sonraki!);
+    if (komsu(sonrakiSirasi, 1)?.type === "table") return;
+    sorunlar.push({ tur: "table", baslik: metniAl(sonraki!).trim().slice(0, 60) });
+  });
+
   bloklar.forEach((blok, indeks) => {
     const tur = blok.attrs?.caption;
-    if (blok.type !== "paragraph" || (tur !== "table" && tur !== "figure")) return;
+    if (blok.type !== "paragraph" || tur !== "figure") return;
     const baslik = metniAl(blok).trim().slice(0, 60);
     const onceki = komsu(indeks, -1);
     const sonraki = komsu(indeks, 1);
 
-    if (tur === "table") {
-      // Tablo başlığı tablonun üstünde olmalı.
-      if (onceki?.type === "table" && sonraki?.type !== "table") sorunlar.push({ tur, baslik });
-    } else if (gorsel(onceki) === false && gorsel(sonraki)) {
+    if (gorsel(onceki) === false && gorsel(sonraki)) {
       // Şekil başlığı şeklin altında olmalı.
       sorunlar.push({ tur, baslik });
     }

@@ -24,3 +24,21 @@ export function headingMatchesSection(heading: string, section: string): boolean
   const normalizedSection = normalizeHeading(section);
   return normalizedSection.length > 0 && normalizeHeading(heading) === normalizedSection;
 }
+
+/*
+  BELGENİN BÖLÜM DÜZEYİ (03.11.2026). "Eksik bölümü ekle" yeni bölümü hep
+  H1 açıyordu. Bölümleri H2 olan bir belgede (başlığı H1 olan bir yazı
+  yapıştırılınca böyle oluyor) eklenen "Giriş" H1, altındaki "1.1" H3
+  kalıyor ve denetim "H1'den H3'e atlanmış" diyordu. Düzey belgeden
+  okunur: kılavuzun bölümlerinden biri belgede varsa onun düzeyi; yoksa
+  alt başlığı olan başlıkların en sık düzeyi; hiçbiri yoksa 1.
+*/
+export function bolumDuzeyi(basliklar: { level: number; text: string }[], zorunluBolumler: readonly string[]): number {
+  const eslesen = basliklar.find((b) => zorunluBolumler.some((bolum) => headingMatchesSection(b.text, bolum)));
+  if (eslesen) return eslesen.level;
+  const sayac = new Map<number, number>();
+  basliklar.forEach((b, i) => {
+    if (basliklar[i + 1]?.level === b.level + 1) sayac.set(b.level, (sayac.get(b.level) ?? 0) + 1);
+  });
+  return [...sayac.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? 1;
+}

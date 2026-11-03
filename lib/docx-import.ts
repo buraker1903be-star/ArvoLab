@@ -200,7 +200,34 @@ export async function convertDocxToEditorHtml(buffer: Buffer, uploadImage: Image
     return `<p data-caption="${kind}">${inner.replace(CAPTION_PREFIX, `${match[1]}${match[3]}`).trim()}</p>`;
   });
 
+  const altyazili = gorselAltyazilari(html);
+  html = altyazili.html;
+  stats.captions += altyazili.eklenen;
+
   stats.headings = (html.match(/<h[1-6][\s>]/g) ?? []).length;
   stats.tables = (html.match(/<table[\s>]/g) ?? []).length;
   return { html, stats };
+}
+
+/*
+  GÖMÜLÜ GÖRSELİN ALTYAZISI (03.11.2026). Word'de grafik ve resimlerin
+  "Alternatif metin / açıklama" alanı sık sık şeklin başlığını taşıyor
+  ("Şekil 1. …"); mammoth onu <img alt> olarak veriyor. Görselin hemen
+  altında bir şekil başlığı paragrafı YOKSA başlık bu alandan kurulur;
+  varsa (çoğu belgede ikisi aynı metin) dokunulmaz, başlık iki kez
+  olmasın.
+*/
+const GORSEL_PARAGRAFI = /<p>(<img [^>]*?alt="([^"]*)"[^>]*\/?>)<\/p>(\s*<p data-caption="figure">)?/g;
+const SEKIL_ALT_METNI = /^\s*(?:Şekil|Sekil|Figure)\s+\d+(?:[.\-]\d+)*\s*[.:]\s*(.+)$/iu;
+
+export function gorselAltyazilari(html: string): { html: string; eklenen: number } {
+  let eklenen = 0;
+  const sonuc = html.replace(GORSEL_PARAGRAFI, (tumu, _img: string, alt: string, baslikVar: string | undefined) => {
+    if (baslikVar) return tumu;
+    const eslesme = SEKIL_ALT_METNI.exec(decodeEntities(alt));
+    if (!eslesme) return tumu;
+    eklenen += 1;
+    return `${tumu}<p data-caption="figure">${escapeAttribute(eslesme[1].trim())}</p>`;
+  });
+  return { html: sonuc, eklenen };
 }

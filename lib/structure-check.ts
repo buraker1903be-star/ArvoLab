@@ -17,7 +17,7 @@ import { adlaEslesir, atifCikarmaStili, stilTanimi, yilaBakilir } from "@/lib/at
 import { dipnotAtiflari } from "@/lib/atif/dipnot";
 import { dipnotMetinleri } from "@/lib/tiptap-text";
 import { yerTutuculari } from "@/lib/on-sayfalar";
-import { baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
+import { anilanNumaralar, baslikAdlandirmaSorunu, baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
 import { kisaltmaMesaji, kisaltmaSorunlari } from "@/lib/kisaltmalar";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 import { checkParagraphFormat, describeParagraphFormat, hangingIndentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
@@ -191,14 +191,45 @@ export function checkStructure(
     de numaralandırma denetimine sokmak kusursuz bir teze uyarı basardı.
   */
   const ekBasliklari: string[] = [];
+  /*
+    KARIŞIK BÖLÜM DÜZEYİ (03.11.2026). Örnek tezde "Giriş", "Sonuç ve
+    Öneriler" ve "Kaynakça" H1, öteki bölümler H2'ydi (ArvoLab'ın taslağı
+    bölümleri H1 açmış, yapıştırılan içerik H2 getirmişti). Sonuç: "1.1"
+    ve "7.1" için iki ayrı "H1'den H3'e atlanmış" uyarısı; öğrenci alt
+    başlığın düzeyini değiştirmeye gidiyordu, oysa yanlış olan BÖLÜMÜN
+    düzeyiydi. Belgede aynı işi gören başka bölümler bir düzey aşağıdaysa
+    uyarı bölüm başlığına ve bir kez verilir.
+  */
+  const basliklar = blocks
+    .map((b, sira) => ({ b, sira }))
+    .filter(({ b }) => b.type === "heading")
+    .map(({ b, sira }) => ({ sira, level: Number(b.attrs?.level) || 1, text: textOf(b).trim() }));
+  const altBasligiOlanDuzey = (duzey: number) =>
+    basliklar.find((h, i) => h.level === duzey && basliklar[i + 1]?.level === duzey + 1);
+  let oncekiBaslik: { level: number; text: string } | null = null;
+  const uyarilanBolumler = new Set<string>();
   blocks.forEach((block, index) => {
     if (block.type !== "heading") return;
     const level = Number(block.attrs?.level) || 1;
     const text = textOf(block).trim();
     if (EK_BASLIGI.test(text)) ekBasliklari.push(text);
+    const ust = oncekiBaslik;
+    oncekiBaslik = { level, text };
+    const ornekBolum = previousLevel && level > previousLevel + 1 ? altBasligiOlanDuzey(level - 1) : undefined;
 
     if (!text) {
       add({ tone: "warning", message: t("Metni olmayan bir başlık var.", "There is a heading with no text.") });
+    } else if (ust && ornekBolum && ust.text) {
+      if (!uyarilanBolumler.has(ust.text)) {
+        uyarilanBolumler.add(ust.text);
+        add({
+          tone: "warning",
+          message: en
+            ? `The section heading ${quote(ust.text)} is H${ust.level}, but other sections such as ${quote(ornekBolum.text)} are H${level - 1} and their subheadings H${level}. Make ${quote(ust.text)} H${level - 1} too.`
+            : `${quote(ust.text)} bölüm başlığı H${ust.level}; oysa ${quote(ornekBolum.text)} gibi öteki bölümler H${level - 1}, alt başlıkları H${level}. ${quote(ust.text)} da H${level - 1} olmalı.`,
+          target: ust.text,
+        });
+      }
     } else if (previousLevel && level > previousLevel + 1) {
       add({
         tone: "warning",
@@ -297,10 +328,28 @@ export function checkStructure(
       });
     });
 
-    const mentioned = new Set<string>();
-    // \b ASCII dışı harfleri (Ş) tanımaz; sınır lib/sozcuk-siniri.ts'te tek tanım.
-    // Bölüme göre numaralandırma ("Tablo 3.1") da eşleşmeli.
-    for (const match of body.matchAll(new RegExp(`${SOZCUK_BASI}${label}\\s+(\\d+(?:\\.\\d+)*)`, "gu"))) mentioned.add(match[1]);
+    // Türkçe ekler, aralıklar ve listeler: "Tablo 3'te", "Tablo 4–6", "Tablo 4 ve 5" (lib/sekil-tablo-numaralari.ts).
+    const mentioned = anilanNumaralar(body, label);
+
+    /* Adlandırıcı olmayan başlık (03.11.2026): "Şekil 1. Kaynak: TÜİK…"
+       şeklin ne gösterdiğini söylemiyor; "'de enflasyondaki…" ise başlık
+       olarak işaretlenmiş bir metin içi atıf. */
+    captions[kind].forEach((caption, index) => {
+      const sorun = baslikAdlandirmaSorunu(caption);
+      if (!sorun) return;
+      add({
+        tone: "warning",
+        message:
+          sorun === "kaynak-yalniz"
+            ? en
+              ? `${label} ${index + 1} has no descriptive caption: “${caption.slice(0, 40)}” only gives the source. Write what the ${kind === "figure" ? "figure" : "table"} shows first; the source goes after it or in a note.`
+              : `${label} ${index + 1} için adlandırıcı başlık eksik: “${caption.slice(0, 40)}” yalnızca kaynağı söylüyor. Önce ${kind === "figure" ? "şeklin" : "tablonun"} ne gösterdiğini yazın; kaynak ardından ya da notta verilir.`
+            : en
+              ? `${label} ${index + 1}'s caption (“${caption.slice(0, 40)}”) looks like an in-text reference (“${label} ${index + 1}'de …”) marked as a caption; turn it back into a normal paragraph.`
+              : `${label} ${index + 1} başlığı (“${caption.slice(0, 40)}”) bir metin içi atfa benziyor (“${label} ${index + 1}'de …”) ve başlık olarak işaretlenmiş; normal paragrafa çevirin.`,
+        target: caption,
+      });
+    });
 
     const numaralar = captions[kind].map((_, i) => String(i + 1));
     const mevcut = new Set(numaralar.filter((numara): numara is string => Boolean(numara)));

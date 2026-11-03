@@ -1,6 +1,6 @@
 import type { Editor } from "@tiptap/react";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { headingMatchesSection } from "@/lib/section-match";
+import { bolumDuzeyi, headingMatchesSection } from "@/lib/section-match";
 import { authorLabel, dipnotNotu, formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
 import { oncedenAtifYapildi } from "@/lib/atif/dipnot";
 import { onSayfaDugumleri, onSayfaYerlesimi, taslakDugumleri, type OnSayfaKimligi, type OnSayfaVerisi } from "@/lib/on-sayfalar";
@@ -108,8 +108,8 @@ export function selectText(editor: Editor, needle: string): boolean {
   return true;
 }
 
-const sectionNodes = (section: string) => [
-  { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: section }] },
+const sectionNodes = (section: string, level = 1) => [
+  { type: "heading", attrs: { level }, content: [{ type: "text", text: section }] },
   { type: "paragraph" },
 ];
 
@@ -121,6 +121,8 @@ const sectionNodes = (section: string) => [
 export function insertSections(editor: Editor, requiredSections: string[], sections: string[]) {
   const ordered = requiredSections.filter((section) => sections.includes(section));
   if (ordered.length === 0) return;
+  // Belgenin kendi bölüm düzeyinde (lib/section-match.ts bolumDuzeyi); eskiden hep H1.
+  const level = bolumDuzeyi(collectHeadings(editor.state.doc), requiredSections);
 
   const chain = editor.chain();
   for (const section of ordered) {
@@ -135,7 +137,7 @@ export function insertSections(editor: Editor, requiredSections: string[], secti
           break;
         }
       }
-      const nodes = sectionNodes(section).map((json) => editor.schema.nodeFromJSON(json));
+      const nodes = sectionNodes(section, level).map((json) => editor.schema.nodeFromJSON(json));
       tr.insert(insertAt, nodes);
       return true;
     });

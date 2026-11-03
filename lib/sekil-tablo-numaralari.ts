@@ -143,3 +143,55 @@ export function numaralandirmaSorunlari(etiket: string, basliklar: string[], dil
 
   return sorunlar;
 }
+
+/*
+  METİNDE ANILAN NUMARALAR (03.11.2026). Türkçe atıf ekleri ve
+  aralıklarla: "Şekil 1'de", "Şekil 1’deki", "Tablo 3'te", "Tablo 8'den",
+  "Tablo 4 ve 5", "Tablo 4–6", "Tablolar 4, 5 ve 6", "(bkz. Tablo 2)".
+  Eskiden yalnızca ilk numara alınıyordu: "Tablo 4 ve 5" yazan öğrenci
+  Tablo 5 için "metinde anılmıyor" uyarısı alıyordu. Apostrof (' ya da ’)
+  numaradan sonra geldiği için ek ayrıca ele alınmıyor; numaranın hemen
+  ardından harf ya da rakam gelmemesi yeterli ("Tablo 12" ≠ "Tablo 1").
+*/
+/*
+  Virgüllü liste yalnızca "ve/ile/and/&" ile bitiyorsa liste sayılır
+  ("Tablo 4, 5 ve 6"); yoksa "Tablo 2, 2020 yılında…" cümlesindeki yıl
+  tablo numarası sanılırdı.
+*/
+export function anilanNumaralar(metin: string, etiket: string): Set<string> {
+  const N = String.raw`\d+(?:\.\d+)*`;
+  const BAG = String.raw`\s*(?:ve|ile|and|&)\s*`;
+  const liste = String.raw`${N}(?:\s*,\s*${N})*${BAG}${N}`;
+  const aralik = String.raw`\d+\s*[–—-]\s*\d+`;
+  const desen = new RegExp(
+    String.raw`(?<![\p{L}\p{N}])${etiket}(?:lar|ler|s)?\s*[-–.]?\s*(${liste}|${aralik}|${N})(?![\p{N}]|\.\d)`,
+    "giu",
+  );
+  const sonuc = new Set<string>();
+  for (const eslesme of metin.matchAll(desen)) {
+    const grup = eslesme[1];
+    const uclar = /^(\d+)\s*[–—-]\s*(\d+)$/u.exec(grup);
+    if (uclar) {
+      const [a, b] = [Number(uclar[1]), Number(uclar[2])];
+      sonuc.add(uclar[1]);
+      if (b > a && b - a < 50) for (let n = a + 1; n <= b; n++) sonuc.add(String(n));
+      else sonuc.add(uclar[2]);
+      continue;
+    }
+    for (const parca of grup.split(/\s*(?:,|ve|ile|and|&)\s*/u)) if (parca) sonuc.add(parca);
+  }
+  return sonuc;
+}
+
+/*
+  ADLANDIRICI OLMAYAN BAŞLIK. "Şekil 1. Kaynak: TÜİK verilerinden…"
+  yalnızca kaynağı söyler, şeklin NE gösterdiğini söylemez (örnek tezde
+  böyleydi). "'de enflasyondaki…" ise bir metin içi atfın ("Şekil 1'de …")
+  başlık olarak işaretlenmiş hâlidir: numara silinince geriye ek kalır.
+*/
+export function baslikAdlandirmaSorunu(baslikMetni: string): "kaynak-yalniz" | "atif-cumlesi" | null {
+  const metin = baslikMetni.trim();
+  if (/^(?:kaynak|kaynakça|source|not|note)\s*:/iu.test(metin)) return "kaynak-yalniz";
+  if (/^['’]\s*\p{Ll}/u.test(metin)) return "atif-cumlesi";
+  return null;
+}
