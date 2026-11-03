@@ -1,10 +1,13 @@
-// Çalışmalarım listesi: arama, durum/sorumlu filtresi ve sıralama. Değerler adres satırında
-// (?q=…&durum=…&sirala=…&atanan=…) tutulur; geçersiz değerler varsayılana döner.
+// Çalışmalarım listesi: arama, durum filtresi ve sıralama. Değerler adres satırında
+// (?q=…&durum=…&sirala=…) tutulur; geçersiz değerler varsayılana döner.
+//
+// "Sorumlu" filtresi (atanan=benim|atanmamis) 03.11.2026'da kaldırıldı: sorumlu
+// ataması kalktı (personel-calisma-karti.tsx). Eski yer imlerindeki
+// "atanan=" yok sayılır.
 
 import { dueInfo, DUE_SOON_DAYS } from "@/lib/due-date";
 
 export type ProjectSort = "yeni" | "duzenleme" | "teslim" | "baslik";
-export type AssigneeFilter = "tumu" | "benim" | "atanmamis";
 /*
   Ana sayfadaki "dikkat isteyenler" sayaçları bu iki filtreyi kullanıyor.
   Eskiden yokturdu ve sayaçlar DAHA GENİŞ bir listeye bağlanıyordu:
@@ -25,7 +28,6 @@ export interface ProjectFilters {
    */
   status: string;
   sort: ProjectSort;
-  assignee: AssigneeFilter;
   /** "bekliyor": teslime hazır ama kontrolör onayı yok */
   approval: ApprovalFilter;
   /** "acik": yanıt bekleyen yorumu var */
@@ -43,18 +45,15 @@ export interface ProjectFilterInput {
   status: string;
   due_date: string | null;
   created_at: string;
-  assignee_id: string | null;
-  assignee_name: string | null;
   controller_approved_at?: string | null;
 }
 
 export const DEFAULT_PROJECT_FILTERS: ProjectFilters = {
-  q: "", status: "tumu", sort: "yeni", assignee: "tumu", approval: "tumu", comments: "tumu", ethics: "tumu",
+  q: "", status: "tumu", sort: "yeni", approval: "tumu", comments: "tumu", ethics: "tumu",
 };
 
 const SORTS: ProjectSort[] = ["yeni", "duzenleme", "teslim", "baslik"];
 const SPECIAL_STATUSES = ["aktif", "gecikmis", "yaklasan"];
-const ASSIGNEE_FILTERS: AssigneeFilter[] = ["tumu", "benim", "atanmamis"];
 const APPROVAL_FILTERS: ApprovalFilter[] = ["tumu", "bekliyor"];
 const COMMENT_FILTERS: CommentFilter[] = ["tumu", "acik"];
 const ETHICS_FILTERS: EthicsFilter[] = ["tumu", "risk"];
@@ -65,7 +64,6 @@ const firstValue = (value: string | string[] | undefined) => (Array.isArray(valu
 export function parseProjectFilters(params: Record<string, string | string[] | undefined>, statuses: readonly string[]): ProjectFilters {
   const status = firstValue(params.durum);
   const sort = firstValue(params.sirala) as ProjectSort;
-  const assignee = firstValue(params.atanan) as AssigneeFilter;
   const approval = firstValue(params.onay) as ApprovalFilter;
   const comments = firstValue(params.yorum) as CommentFilter;
   const ethics = firstValue(params.etik) as EthicsFilter;
@@ -73,7 +71,6 @@ export function parseProjectFilters(params: Record<string, string | string[] | u
     q: firstValue(params.q).trim().slice(0, 100),
     status: SPECIAL_STATUSES.includes(status) || statuses.includes(status) ? status : "tumu",
     sort: SORTS.includes(sort) ? sort : "yeni",
-    assignee: ASSIGNEE_FILTERS.includes(assignee) ? assignee : "tumu",
     approval: APPROVAL_FILTERS.includes(approval) ? approval : "tumu",
     comments: COMMENT_FILTERS.includes(comments) ? comments : "tumu",
     ethics: ETHICS_FILTERS.includes(ethics) ? ethics : "tumu",
@@ -86,7 +83,6 @@ export function filtreAdresi(filters: ProjectFilters): string {
   if (filters.q) p.set("q", filters.q);
   if (filters.status !== "tumu") p.set("durum", filters.status);
   if (filters.sort !== "yeni") p.set("sirala", filters.sort);
-  if (filters.assignee !== "tumu") p.set("atanan", filters.assignee);
   if (filters.approval !== "tumu") p.set("onay", filters.approval);
   if (filters.comments !== "tumu") p.set("yorum", filters.comments);
   if (filters.ethics !== "tumu") p.set("etik", filters.ethics);
@@ -110,7 +106,6 @@ export function applyProjectFilters<T extends ProjectFilterInput>(
     /** Etik kurul tehlikesi var mı; "etik=risk" filtresi bunu kullanır. */
     etikRiski?: (projectId: string) => boolean;
     userId?: string;
-    canFilterAssignee: boolean;
     now?: Date;
   }
 ): T[] {
@@ -138,11 +133,6 @@ export function applyProjectFilters<T extends ProjectFilterInput>(
   const result = projects.filter((project) => {
     if (needle && !fold(`${project.title} ${project.university ?? ""} ${project.sahip_adi ?? ""}`).includes(needle)) return false;
     if (!matchesStatus(project)) return false;
-    // Sorumlu filtresi yalnızca tüm çalışmaları gören denetim rollerinde anlamlıdır
-    if (context.canFilterAssignee) {
-      if (filters.assignee === "benim" && project.assignee_id !== context.userId) return false;
-      if (filters.assignee === "atanmamis" && (project.assignee_id || project.assignee_name)) return false;
-    }
     /* Sayaçla aynı kural: "ready" ama henüz onaylanmamış (lib/attention.ts). */
     if (filters.approval === "bekliyor" && !(project.status === "ready" && !project.controller_approved_at)) return false;
     if (filters.comments === "acik" && (context.openComments?.(project.id) ?? 0) === 0) return false;

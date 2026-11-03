@@ -11,8 +11,7 @@ import { trGunAnahtari } from "@/lib/tr-time";
 import { calismaKilavuzlari } from "@/lib/guideline-rules";
 import { writingPace } from "@/lib/writing-pace";
 import { dueInfo } from "@/lib/due-date";
-import { getProjects, approveProject, revokeApproval, assignProject, getAssignableStaff, type StaffMember } from "@/app/actions/projects";
-import { listeBasarili } from "@/lib/liste-sonucu";
+import { getProjects, approveProject, revokeApproval } from "@/app/actions/projects";
 import { projectTypeLabel, statusLabel, isOversightRole, PROJECT_STATUSES, STAFF_ROLES } from "@/lib/project-labels";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
 import { applyProjectFilters, isFiltered, parseProjectFilters } from "@/lib/project-filters";
@@ -115,13 +114,9 @@ export default async function ProjectsPage({
     openComments: (id: string) => openComments.get(id) ?? 0,
     lastEdited: (projectId: string) => stats.get(projectId)?.updatedAt,
     userId: profile?.id,
-    canFilterAssignee: canApprove,
   };
   const visible = applyProjectFilters(calismalar, filters, filtreBaglami);
   const sayaclar = canApprove ? personelSayaclari(calismalar, filters, filtreBaglami, dil) : [];
-  const { satirlar: staff, okunamadi: personelOkunamadi } = canApprove
-    ? await getAssignableStaff()
-    : listeBasarili<StaffMember>([]);
 
   /*
     Kontrolör onayı verirken metinle literatürün çelişip çelişmediğini
@@ -206,12 +201,6 @@ export default async function ProjectsPage({
   async function handleRevoke(projectId: string) {
     "use server";
     return revokeApproval(projectId);
-  }
-
-  async function handleAssign(projectId: string, formData: FormData) {
-    "use server";
-    const assigneeId = String(formData.get("assigneeId") ?? "");
-    return assignProject(projectId, assigneeId);
   }
 
   const calismaSayisi =
@@ -344,7 +333,7 @@ export default async function ProjectsPage({
           key={JSON.stringify(filters)}
           filters={filters}
           statuses={PROJECT_STATUSES.map((status) => ({ value: status, label: t(statusLabel(status)), tone: statusTone(status) }))}
-          showAssignee={canApprove}
+          personel={canApprove}
           total={projects.length}
           shown={visible.length}
           filtered={isFiltered(filters)}
@@ -487,12 +476,9 @@ export default async function ProjectsPage({
                 due={vade(secili.due_date, secili.status)}
                 acikYorum={openComments.get(secili.id) ?? 0}
                 tutarsizliklar={tutarsizliklar.get(secili.id) ?? []}
-                personel={staff}
-                personelOkunamadi={personelOkunamadi}
                 silebilir={profile?.id === secili.owner_id || canDeleteAnyProject}
                 onayla={handleApprove.bind(null, secili.id)}
                 onayiGeriAl={handleRevoke.bind(null, secili.id)}
-                ata={handleAssign.bind(null, secili.id)}
               />
             ) : null}
           </section>

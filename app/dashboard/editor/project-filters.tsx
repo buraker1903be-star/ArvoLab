@@ -8,19 +8,20 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 import Secici from "@/app/dashboard/_components/secici";
 import type { Tone } from "@/lib/status-tone";
 
-// Çalışmalarım: arama, durum/sorumlu filtresi ve sıralama. Değerler adres satırında tutulur
+// Çalışmalarım: arama, durum filtresi ve sıralama. Değerler adres satırında tutulur
 // (yenileyince ve paylaşınca korunur); seçim değişince liste sayfa yenilenmeden güncellenir.
 export default function ProjectFilters({
   filters,
   statuses,
-  showAssignee,
+  personel,
   total,
   shown,
   filtered,
 }: {
   filters: Filters;
   statuses: { value: string; label: string; tone?: Tone }[];
-  showAssignee: boolean;
+  /** Personel görünümü: arama öğrenci adını da kapsar. */
+  personel: boolean;
   total: number;
   shown: number;
   filtered: boolean;
@@ -42,7 +43,7 @@ export default function ProjectFilters({
       <label className="project-filter-search">
         <Search size={15} aria-hidden="true" />
         <input type="search" name="q" defaultValue={filters.q} placeholder={
-            showAssignee
+            personel
               ? t({ tr: "Başlık, öğrenci ya da üniversite ara", en: "Search title, student or university" })
               : t({ tr: "Başlık ya da üniversite ara", en: "Search title or university" })
           }
@@ -76,24 +77,6 @@ export default function ProjectFilters({
           },
         ]}
       />
-      {showAssignee ? (
-        <Secici
-          name="atanan"
-          deger={filters.assignee}
-          otomatikGonder
-          etiket={t({ tr: "Sorumlu", en: "Assignee" })}
-          onEk={t({ tr: "Sorumlu", en: "Assignee" })}
-          gruplar={[
-            {
-              secenekler: [
-                { deger: "tumu", etiket: t({ tr: "Tüm sorumlular", en: "All assignees" }) },
-                { deger: "benim", etiket: t({ tr: "Bana atananlar", en: "Assigned to me" }) },
-                { deger: "atanmamis", etiket: t({ tr: "Sorumlu atanmamış", en: "Unassigned" }) },
-              ],
-            },
-          ]}
-        />
-      ) : null}
       <Secici
         name="sirala"
         deger={filters.sort}

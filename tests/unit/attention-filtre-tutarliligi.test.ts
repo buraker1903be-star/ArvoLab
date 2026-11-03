@@ -59,21 +59,20 @@ function adresinActigiListe(href: string) {
     lastEdited: () => undefined,
     openComments: (id) => YORUMLAR.get(id) ?? 0,
     etikRiski,
-    canFilterAssignee: true,
     now: SIMDI,
   });
 }
 
 describe("dikkat sayaçları bağlandıkları filtreyle tutuyor", () => {
-  const maddeler = computeAttention(PROJELER, YORUMLAR, { includeUnassigned: true, now: SIMDI, etikRiski });
+  const maddeler = computeAttention(PROJELER, YORUMLAR, { now: SIMDI, etikRiski });
 
   test("altı maddenin hepsi üretiliyor", () => {
-    assert.deepEqual(maddeler.map((m) => m.id).sort(), ["approval", "comments", "due-soon", "ethics", "overdue", "unassigned"]);
+    assert.deepEqual(maddeler.map((m) => m.id).sort(), ["approval", "comments", "due-soon", "ethics", "overdue"]);
   });
 
   test("etik kurul maddesi yalnızca aktif riskli çalışmayı sayar; etik bilgisi verilmezse çıkmaz", () => {
     assert.equal(maddeler.find((m) => m.id === "ethics")?.count, 1);
-    assert.ok(!computeAttention(PROJELER, YORUMLAR, { includeUnassigned: true, now: SIMDI }).some((m) => m.id === "ethics"));
+    assert.ok(!computeAttention(PROJELER, YORUMLAR, { now: SIMDI }).some((m) => m.id === "ethics"));
   });
 
   for (const madde of maddeler) {
@@ -88,7 +87,6 @@ describe("dikkat sayaçları bağlandıkları filtreyle tutuyor", () => {
     const say = (id: string) => maddeler.find((m) => m.id === id)?.count;
     assert.equal(say("overdue"), 1, "teslim edilmiş gecikmiş çalışma sayılmamalı");
     assert.equal(say("due-soon"), 1);
-    assert.equal(say("unassigned"), 1);
     assert.equal(say("approval"), 1, "onaylanmış 'ready' çalışma sayılmamalı");
     assert.equal(say("comments"), 1);
   });

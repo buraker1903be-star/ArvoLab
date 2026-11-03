@@ -29,7 +29,7 @@ export function computeAttention(
   projects: AttentionProject[],
   openComments: ReadonlyMap<string, number>,
   /* etikRiski: lib/etik/durum.ts etikTehlikesi; verilmezse etik maddesi çıkmaz (02.11.2026). */
-  options: { includeUnassigned?: boolean; now?: Date; dil?: Dil; etikRiski?: (projectId: string) => boolean } = {}
+  options: { now?: Date; dil?: Dil; etikRiski?: (projectId: string) => boolean } = {}
 ): AttentionItem[] {
   const en = options.dil === "en";
   const active = projects.filter((project) => !CLOSED_STATUSES.has(project.status));
@@ -61,14 +61,6 @@ export function computeAttention(
       count: days.filter((day) => day !== null && day >= 0 && day <= DUE_SOON_DAYS).length,
       tone: "warning",
       href: "/dashboard/editor?durum=yaklasan&sirala=teslim",
-    },
-    {
-      id: "unassigned",
-      label: en ? "No assignee" : "Sorumlusu atanmamış",
-      // Eski kayıtlardaki serbest metin sorumlu da atanmış sayılır (liste filtresiyle aynı kural)
-      count: options.includeUnassigned ? active.filter((project) => !project.assignee_id && !project.assignee_name).length : 0,
-      tone: "warning",
-      href: "/dashboard/editor?durum=aktif&atanan=atanmamis",
     },
     {
       id: "approval",

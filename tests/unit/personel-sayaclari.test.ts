@@ -18,10 +18,10 @@ describe("personel sayaçları", () => {
       c("d", { due_date: "2026-10-29" }),
       c("e", { status: "delivered", assignee_name: "Eski" }),
     ];
-    const baglam = { lastEdited: () => undefined, openComments: (id: string) => (id === "d" ? 2 : 0), userId: "p1", canFilterAssignee: true, now };
+    const baglam = { lastEdited: () => undefined, openComments: (id: string) => (id === "d" ? 2 : 0), userId: "p1", now };
     const sayaclar = personelSayaclari(calismalar, DEFAULT_PROJECT_FILTERS, baglam);
     const sayi = Object.fromEntries(sayaclar.map((s) => [s.anahtar, s.sayi]));
-    assert.deepEqual(sayi, { aktif: 4, onay: 1, atanmamis: 2, gecikmis: 1, yaklasan: 1, yorum: 1 });
+    assert.deepEqual(sayi, { aktif: 4, onay: 1, gecikmis: 1, yaklasan: 1, yorum: 1 });
     for (const s of sayaclar) {
       const params = Object.fromEntries(new URL(s.href, "https://x").searchParams);
       const liste = applyProjectFilters(calismalar, parseProjectFilters(params, PROJECT_STATUSES), baglam);
@@ -31,7 +31,7 @@ describe("personel sayaçları", () => {
 
   test("seçili sayaç işaretlenir ve tekrar basınca filtreyi kaldırır", () => {
     const filtre = { ...DEFAULT_PROJECT_FILTERS, approval: "bekliyor" as const, q: "tez" };
-    const sayaclar = personelSayaclari([], filtre, { lastEdited: () => undefined, canFilterAssignee: true });
+    const sayaclar = personelSayaclari([], filtre, { lastEdited: () => undefined });
     const onay = sayaclar.find((s) => s.anahtar === "onay")!;
     assert.equal(onay.secili, true);
     assert.equal(onay.href, "/dashboard/editor");
@@ -40,8 +40,8 @@ describe("personel sayaçları", () => {
 });
 
 test("İngilizce sayaç etiketleri", () => {
-  const sayaclar = personelSayaclari([], DEFAULT_PROJECT_FILTERS, { lastEdited: () => undefined, canFilterAssignee: true }, "en");
+  const sayaclar = personelSayaclari([], DEFAULT_PROJECT_FILTERS, { lastEdited: () => undefined }, "en");
   assert.deepEqual(sayaclar.map((s) => s.etiket), [
-    "Active works", "Awaiting approval", "No assignee", "Overdue", "Due within 7 days", "Open comments",
+    "Active works", "Awaiting approval", "Overdue", "Due within 7 days", "Open comments",
   ]);
 });

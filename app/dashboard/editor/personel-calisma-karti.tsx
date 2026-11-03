@@ -35,7 +35,7 @@ import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
 import AnalizPenceresi from "../analysis/analiz-penceresi";
 import { etikKaydiOku } from "@/lib/etik/oku";
 import { etikUyarilari } from "@/lib/etik/durum";
-import { projectTypeLabel, ROLE_LABELS, statusLabel, type UserRole } from "@/lib/project-labels";
+import { projectTypeLabel, statusLabel } from "@/lib/project-labels";
 import { statusTone } from "@/lib/status-tone";
 import { simdi } from "@/lib/genel-bakis";
 import { editedAgo } from "@/lib/writing-stats";
@@ -80,12 +80,9 @@ export default async function PersonelCalismaKarti({
   due,
   acikYorum,
   tutarsizliklar,
-  personel,
-  personelOkunamadi,
   silebilir,
   onayla,
   onayiGeriAl,
-  ata,
 }: {
   calisma: Calisma;
   sahipAdi: string | null;
@@ -95,12 +92,9 @@ export default async function PersonelCalismaKarti({
   due: DueInfo | null;
   acikYorum: number;
   tutarsizliklar: Tutarsizlik[];
-  personel: { id: string; full_name: string | null; role: UserRole }[];
-  personelOkunamadi: boolean;
   silebilir: boolean;
   onayla: () => Promise<ActionResult>;
   onayiGeriAl: () => Promise<ActionResult>;
-  ata: (formData: FormData) => Promise<ActionResult>;
 }) {
   const t = await ceviri();
   const dil = await aktifDil();
@@ -108,8 +102,6 @@ export default async function PersonelCalismaKarti({
   const { tarih, tarihSaat } = await tarihler();
   const merkez = `/dashboard/editor/${calisma.id}`;
   const onayli = !!calisma.controller_approved_at;
-  // Eski kayıtlarda sorumlu yalnızca serbest metin olarak tutuluyordu (assignee_id boş).
-  const eskiSorumlu = !calisma.assignee_id && calisma.assignee_name;
 
   /* Son kılavuz kontrolü: öğrenci kontrolü çalıştırdı mı, ne buldu. Okunamazsa satır çizilmiyor. */
   const supabase = await createClient();
@@ -401,7 +393,7 @@ export default async function PersonelCalismaKarti({
 
       <section className="personel-denetim" aria-label={t({ tr: "Denetim", en: "Oversight" })}>
         <h3 className="calisma-durum-alt">{t({ tr: "Denetim", en: "Oversight" })}</h3>
-        {/* Durum satırı üstte; altında atama ve onay düğmeleri YAN YANA (27.10.2026). */}
+        {/* Durum satırı üstte; altında onay düğmesi. */}
         {onayli ? (
           <span className="tone-text personel-denetim-durum" data-tone="success">
             <ShieldCheck size={15} aria-hidden="true" />
@@ -415,31 +407,14 @@ export default async function PersonelCalismaKarti({
           </span>
         )}
         <div className="personel-denetim-satir">
-          <ActionForm action={ata} className="personel-ata" successMessage={t({ tr: "Sorumlu kaydedildi.", en: "Assignee saved." })}>
-            <label className="personel-ata">
-              <span className="muted text-sm">{t({ tr: "Sorumlu", en: "Assignee" })}</span>
-              <select name="assigneeId" defaultValue={calisma.assignee_id ?? ""} aria-label={t({ tr: "Sorumlu personel", en: "Assigned staff" })} className="compact-select grow-select">
-                {/* Personel listesi okunamadıysa "kimse yok" denmiyor:
-                    yönetici atayacak kişi kalmadığını sanırdı. */}
-                <option value="">
-                  {personelOkunamadi
-                    ? t({ tr: "Personel listesi okunamadı", en: "Staff list could not be loaded" })
-                    : eskiSorumlu
-                      ? t({ tr: `${calisma.assignee_name} (listede değil)`, en: `${calisma.assignee_name} (not in list)` })
-                      : t({ tr: "Sorumlu atanmadı", en: "No assignee" })}
-                </option>
-                {personel.map((uye) => (
-                  <option key={uye.id} value={uye.id}>
-                    {uye.full_name || t({ tr: "İsimsiz personel", en: "Unnamed staff" })} · {t(ROLE_LABELS[uye.role])}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="projects-filter-button button-compact">
-              <UserRound size={14} aria-hidden="true" />
-              {t({ tr: "Ata", en: "Assign" })}
-            </button>
-          </ActionForm>
+          {/*
+            SORUMLU ATAMASI KALDIRILDI (03.11.2026, kurum sahibinin kararı).
+            Atama yalnızca Personel/Uzman rolüne öğrenci çalışmasında yazma
+            yetkisi veriyordu; AkademikMerkez'in bütün personeli Kontrolör
+            ve üstü, yani zaten yazabiliyor. Satır "kimseye atanmamış"
+            uyarısı üretip boşuna iş gösteriyordu. Sütun ve RLS kuralı
+            yerinde: eski atamalar yetki vermeye devam ediyor.
+          */}
           {onayli ? (
             <ActionForm
               action={onayiGeriAl}

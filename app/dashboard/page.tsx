@@ -273,7 +273,6 @@ export default async function DashboardPage() {
   const etikBugunu = trGunAnahtari();
   const attention = isStaff
     ? computeAttention(projects, openComments, {
-        includeUnassigned: isOversightRole(profile?.role),
         dil,
         etikRiski: etikKayitlari ? (id) => etikTehlikesi(etikKayitlari.get(id), etikBugunu) : undefined,
       })
@@ -292,7 +291,6 @@ export default async function DashboardPage() {
         openComments: (id) => openComments.get(id) ?? 0,
         lastEdited: (id) => writing.get(id)?.updatedAt,
         userId: user.id,
-        canFilterAssignee: true,
       }, dil)
     : [];
   const uzmanKuyrugu = isStaff && isExpertEligible(profile?.role);

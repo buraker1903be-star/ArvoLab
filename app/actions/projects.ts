@@ -20,9 +20,7 @@ import {
   OVERSIGHT_ONLY_STATUSES,
   OVERSIGHT_ROLES,
   PROJECT_STATUSES,
-  STAFF_ROLES,
   isOversightRole,
-  type UserRole,
 } from "@/lib/project-labels";
 
 const OVERSIGHT_ONLY: Metin = {
@@ -458,31 +456,6 @@ export async function updateProject(projectId: string, formData: FormData): Prom
   return { success: true };
 }
 
-export interface StaffMember {
-  id: string;
-  full_name: string | null;
-  role: UserRole;
-}
-
-/** Atama listesi için personel (RLS: aynı kurum ya da Sistem Yöneticisi/Kurucu için herkes). */
-export async function getAssignableStaff(): Promise<ListeSonucu<StaffMember>> {
-  const auth = await requireRole(OVERSIGHT_ROLES);
-  // Yetkisizlik okuma hatası değil: sayfa atama bölümünü zaten göstermiyor.
-  if ("error" in auth) return listeBasarili([]);
-
-  const { data, error } = await auth.supabase
-    .from("profiles")
-    .select("id, full_name, role")
-    .in("role", [...STAFF_ROLES])
-    .order("full_name", { ascending: true });
-
-  if (error) {
-    console.error(error);
-    // Eskiden boş liste dönüyordu: yönetici atayacak personel olmadığını sanıyordu.
-    return listeOkunamadi();
-  }
-  return listeBasarili((data ?? []) as StaffMember[]);
-}
 
 // Yalnızca Kontrolör / Yönetici / Sistem Yöneticisi / Kurucu rolleri
 // bir çalışmayı onaylayabilir (proje dosyası 6.2 "Biçim" aşaması onayı).
@@ -560,47 +533,13 @@ export async function revokeApproval(projectId: string): Promise<ActionResult> {
   return { success: true };
 }
 
-// Sorumlu personel ataması, çalışma müşteri tarafından oluşturulduktan
-// SONRA, yalnızca Kontrolör ve üzeri roller tarafından yapılır.
-// Müşteriye açık "Yeni Çalışma" formunda bu alan bulunmaz.
-// assignee_id doldurulduğu için atanan kişi çalışmayı RLS üzerinden görebilir.
-export async function assignProject(projectId: string, assigneeId: string): Promise<ActionResult> {
-  const auth = await requireRole(OVERSIGHT_ROLES, OVERSIGHT_ONLY);
-  if ("error" in auth) return { error: auth.error };
-  const t = await ceviri();
-
-  let assignee: StaffMember | null = null;
-  if (assigneeId) {
-    const { data: staff } = await auth.supabase
-      .from("profiles")
-      .select("id, full_name, role")
-      .eq("id", assigneeId)
-      .maybeSingle();
-    if (!staff || !STAFF_ROLES.includes(staff.role as UserRole)) {
-      return { error: t({ tr: "Seçilen kişi personel listesinde bulunamadı.", en: "The selected person was not found in the staff list." }) };
-    }
-    assignee = staff as StaffMember;
-  }
-
-  const { data, error } = await auth.supabase
-    .from("academic_projects")
-    .update({
-      assignee_id: assignee?.id ?? null,
-      /* Veritabanına yazılan değer: kullanıcının diline göre değişmiyor. */
-      assignee_name: assignee ? assignee.full_name || "İsimsiz personel" : null,
-    })
-    .eq("id", projectId)
-    .select("id");
-
-  if (error) {
-    console.error(error);
-    return { error: t({ tr: "Atama sırasında bir hata oluştu.", en: "An error occurred while assigning." }) };
-  }
-  if (!data?.length) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
-
-  revalidatePath("/dashboard/editor");
-  return { success: true };
-}
+/*
+  SORUMLU ATAMASI (assignProject, getAssignableStaff) 03.11.2026'da
+  kaldırıldı: kurumun bütün personeli Kontrolör ve üstü, çalışmalara zaten
+  yazabiliyor. "use server" dosyasında kullanılmayan her export dışarıdan
+  çağrılabilir bir uç nokta olarak kalırdı. Sütun (assignee_id) ve RLS
+  kuralı yerinde; eski atamalar yetki vermeye devam ediyor.
+*/
 
 // Silme yetkisi RLS'te zaten tanımlı: çalışmanın sahibi ya da
 // Yönetici/Sistem Yöneticisi/Kurucu rolleri silebilir

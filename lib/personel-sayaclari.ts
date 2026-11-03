@@ -38,7 +38,6 @@ export type PersonelSayaci = {
 const TANIMLAR: { anahtar: string; etiket: Metin; filtre: Partial<ProjectFilters>; ton: PersonelSayaci["ton"] }[] = [
   { anahtar: "aktif", etiket: { tr: "Aktif çalışma", en: "Active works" }, filtre: { status: "aktif" }, ton: "neutral" },
   { anahtar: "onay", etiket: { tr: "Onay bekliyor", en: "Awaiting approval" }, filtre: { approval: "bekliyor" }, ton: "warning" },
-  { anahtar: "atanmamis", etiket: { tr: "Sorumlu yok", en: "No assignee" }, filtre: { assignee: "atanmamis" }, ton: "warning" },
   { anahtar: "gecikmis", etiket: { tr: "Teslimi geçmiş", en: "Overdue" }, filtre: { status: "gecikmis" }, ton: "danger" },
   { anahtar: "yaklasan", etiket: { tr: "7 gün içinde teslim", en: "Due within 7 days" }, filtre: { status: "yaklasan" }, ton: "info" },
   { anahtar: "yorum", etiket: { tr: "Açık yorumlu", en: "Open comments" }, filtre: { comments: "acik" }, ton: "info" },
@@ -58,7 +57,7 @@ export function personelSayaclari<T extends ProjectFilterInput>(
     return {
       anahtar: t.anahtar,
       etiket: t.etiket[dil],
-      sayi: applyProjectFilters(calismalar, filtre, { ...baglam, canFilterAssignee: true }).length,
+      sayi: applyProjectFilters(calismalar, filtre, baglam).length,
       // Seçili sayaca yeniden basınca filtre kalkar.
       href: secili ? "/dashboard/editor" : filtreAdresi(filtre),
       ton: t.ton,
