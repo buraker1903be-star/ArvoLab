@@ -343,6 +343,22 @@
 .kaynakca-son { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--r-lg); background: var(--surface-2); color: var(--ink-soft); font-size: var(--fs-sm); }
 .kaynakca-son[data-tone="success"] { color: var(--success); }
 .kaynakca-son[data-tone="danger"] { color: var(--danger); }
+/* Kaynakça sonucunun puan şeridi (04.11.2026): puan büyük, üç sayı yanında. */
+.kaynakca-skor { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 14px 16px; border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface-2); }
+.kaynakca-skor-puan { display: flex; align-items: center; gap: 10px; }
+.kaynakca-skor-puan b { font-size: 40px; line-height: 1; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.kaynakca-skor[data-tone="success"] .kaynakca-skor-puan b { color: var(--success); }
+.kaynakca-skor[data-tone="warning"] .kaynakca-skor-puan b { color: var(--warning); }
+.kaynakca-skor[data-tone="danger"] .kaynakca-skor-puan b { color: var(--danger); }
+.kaynakca-skor-puan span { display: grid; gap: 1px; color: var(--ink-soft); font-size: var(--fs-sm); line-height: 1.3; }
+.kaynakca-skor-puan span small:last-child { color: var(--ink); font-weight: 650; }
+.kaynakca-skor-sayilar { display: flex; flex: 1 1 auto; flex-wrap: wrap; gap: 8px; margin: 0; }
+.kaynakca-skor-sayilar > div { display: grid; flex: 1 1 96px; gap: 2px; padding: 8px 12px; border-left: 3px solid var(--line-soft); border-radius: var(--r-sm); background: var(--surface); }
+.kaynakca-skor-sayilar dt { color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.kaynakca-skor-sayilar dd { margin: 0; color: var(--ink); font-size: var(--fs-xl); font-weight: 750; font-variant-numeric: tabular-nums; }
+.kaynakca-skor-sayilar > div[data-tone="success"] { border-left-color: var(--success); }
+.kaynakca-skor-sayilar > div[data-tone="warning"] { border-left-color: var(--warning); }
+.kaynakca-skor-sayilar > div[data-tone="danger"] { border-left-color: var(--danger); }
 .kaynakca-son[data-tone="warning"] { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
 
 /* Metin gibi duran ikincil düğme ("geri al"): asıl eylemin yanında göze batmasın. */
@@ -1180,3 +1196,6 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .analiz-sonuc .tone-text[data-tone="danger"] { background: var(--danger-soft); }
 .analiz-sonuc ul { margin: 4px 0 0; padding-left: 18px; }
 .analiz-secili { margin-bottom: 12px; }
+/* Pencerenin sonuç kartında başlık ve tarih satırı zaten ayırıyor; ikinci çizgi boşluk yaratıyordu. */
+.pencere-sonuc .results-divider { margin-top: 12px; padding-top: 0; border-top: 0; }
+.kaynakca-skor { margin-bottom: 16px; }

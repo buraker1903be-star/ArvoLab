@@ -55,14 +55,18 @@ export default async function KaynakcaPenceresi({
       boy="tam"
       basaridaKapan={false}
     >
-      <p className="kaynakca-son" data-tone={ton}>
-        {sonDenetim
-          ? t({
-              tr: `Son denetim: ${sonDenetim.skor ?? "—"}/100 kaynakça uyumu · ${tarihSaat(sonDenetim.tarih)}`,
-              en: `Last check: ${sonDenetim.skor ?? "—"}/100 reference list compliance · ${tarihSaat(sonDenetim.tarih)}`,
-            })
-          : t({ tr: "Bu çalışma için henüz kaynakça denetimi yapılmadı.", en: "No reference list check has been run for this work yet." })}
-      </p>
+      {/* Son denetim kayıtlıysa tarihi ve puanı sonuç kartında yazıyor;
+          bu şerit eskiden aynı bilgiyi ikinci kez veriyordu. */}
+      {onceki ? null : (
+        <p className="kaynakca-son" data-tone={ton}>
+          {sonDenetim
+            ? t({
+                tr: `Son denetim: ${sonDenetim.skor ?? "—"}/100 kaynakça uyumu · ${tarihSaat(sonDenetim.tarih)}`,
+                en: `Last check: ${sonDenetim.skor ?? "—"}/100 reference list compliance · ${tarihSaat(sonDenetim.tarih)}`,
+              })
+            : t({ tr: "Bu çalışma için henüz kaynakça denetimi yapılmadı.", en: "No reference list check has been run for this work yet." })}
+        </p>
+      )}
       <CitationCheckForm
         projects={[calisma]}
         asistanAcik={asistanAcik}

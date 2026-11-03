@@ -445,22 +445,34 @@ export default function CitationCheckForm({
 
       {result && (
         <div className="results-divider">
-          <div className="chip-row">
-            <strong className="chip">
-              {t({ tr: `${result.stil.ad} uyumu: ${result.complianceScore}/100`, en: `${result.stil.ad} compliance: ${result.complianceScore}/100` })}
-            </strong>
-            <span className="chip" data-tone="success">
-              {t({ tr: `${result.verificationSummary.verified} doğrulandı`, en: `${result.verificationSummary.verified} verified` })}
-            </span>
-            <span className="chip" data-tone="warning">
-              {t({
-                tr: `${result.verificationSummary.possible} olası eşleşme`,
-                en: `${result.verificationSummary.possible} possible ${result.verificationSummary.possible === 1 ? "match" : "matches"}`,
-              })}
-            </span>
-            <span className="chip" data-tone="danger">
-              {t({ tr: `${result.verificationSummary.notFound} bulunamadı`, en: `${result.verificationSummary.notFound} not found` })}
-            </span>
+          {/*
+            PUAN BAŞTA, BÜYÜK (04.11.2026). Eskiden puan ve üç sayı aynı
+            boyda dört çipti: öğrencinin ilk aradığı "kaç aldım" sorusu
+            "0 olası eşleşme" ile yan yana, aynı ağırlıkta duruyordu.
+            Eşikler Çalışmalarım'daki kartla aynı (85 / 60).
+          */}
+          <div className="kaynakca-skor" data-tone={result.complianceScore >= 85 ? "success" : result.complianceScore >= 60 ? "warning" : "danger"}>
+            <div className="kaynakca-skor-puan">
+              <b>{result.complianceScore}</b>
+              <span>
+                <small>/100</small>
+                <small>{t({ tr: `${result.stil.ad} uyumu`, en: `${result.stil.ad} compliance` })}</small>
+              </span>
+            </div>
+            <dl className="kaynakca-skor-sayilar">
+              <div data-tone="success">
+                <dt>{t({ tr: "Doğrulandı", en: "Verified" })}</dt>
+                <dd>{result.verificationSummary.verified}</dd>
+              </div>
+              <div data-tone="warning">
+                <dt>{t({ tr: "Olası eşleşme", en: "Possible match" })}</dt>
+                <dd>{result.verificationSummary.possible}</dd>
+              </div>
+              <div data-tone="danger">
+                <dt>{t({ tr: "Bulunamadı", en: "Not found" })}</dt>
+                <dd>{result.verificationSummary.notFound}</dd>
+              </div>
+            </dl>
           </div>
 
           {/* Kaç kaynağın ağ üzerinden doğrulandığı yazılıyor: "bulunamadı"
