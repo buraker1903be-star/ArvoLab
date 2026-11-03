@@ -109,7 +109,7 @@ import { splitBodyAndReferences } from "@/lib/text-split";
 import type { KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import IcindekilerKarti from "./icindekiler-karti";
 import OnSayfalarKarti from "./on-sayfalar-karti";
-import type { OnSayfaKimligi } from "@/lib/on-sayfalar";
+import { kilavuzOnSayfaAdlari, kilavuzOnSayfalari, onSayfaAdiKimligi, type OnSayfaKimligi } from "@/lib/on-sayfalar";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
@@ -1216,6 +1216,10 @@ export default function ManuscriptEditor({
     setSettingsSource((source) => (source.customized ? source : { ...source, customized: true }));
   }, []);
 
+  /* Kılavuzun ön sayfaları bir kez eklenir (aşağıda kilavuzOnSayfalariniEkle). */
+  const onSayfaOtoRef = useRef(false);
+  const kilavuzOnSayfalariniEkleRef = useRef<() => void>(() => undefined);
+
   const acceptGuidelineSettings = useCallback(() => {
     if (!guideline) return;
     if (guideline.settings.margins) setMargins(guideline.settings.margins);
@@ -1225,12 +1229,17 @@ export default function ManuscriptEditor({
     setSettingsSource({ guidelineId: guideline.id, version: guideline.version, customized: false });
     setSyncMode("current");
     showToast("success", t({ tr: "Sayfa ayarları kılavuzun güncel sürümüne göre güncellendi.", en: "Page settings were updated to the guideline's current version." }));
+    onSayfaOtoRef.current = true;
+    kilavuzOnSayfalariniEkleRef.current();
   }, [guideline, t]);
 
   const keepOwnSettings = useCallback(() => {
     if (!guideline) return;
     setSettingsSource({ guidelineId: guideline.id, version: guideline.version, customized: true });
     setSyncMode("current");
+    // Sayfa ayarlarını korumak ön sayfalardan vazgeçmek değil.
+    onSayfaOtoRef.current = true;
+    kilavuzOnSayfalariniEkleRef.current();
   }, [guideline]);
 
   const submitFootnote = useCallback(() => {
@@ -1281,6 +1290,66 @@ export default function ManuscriptEditor({
     () => (editor && docStats ? splitBodyAndReferences(`\n${editor.getText({ blockSeparator: "\n" })}\n`).bodyText : ""),
     [editor, docStats],
   );
+
+  /*
+    KILAVUZUN ÖN SAYFALARI KENDİLİĞİNDEN (03.11.2026). Kılavuz Özet,
+    Abstract, Yemin Metni gibi ön sayfalar istiyorsa, kılavuz bu metne
+    İLK KEZ uygulandığında (ya da yeni sürümü geldiğinde) eksik olanlar
+    şablonlarıyla yerlerine eklenir; boş belgede bütün taslak kurulur.
+    Eskiden öğrenci bunları "Ön sayfalar" kutusundan tek tek eklemek
+    zorundaydı ve çoğu fark etmiyordu.
+
+    Bir kez: ölçüt, metne kayıtlı kılavuz damgasının (settingsSource)
+    uygulanan kılavuzdan farklı olması. Damga bir sonraki kayıtta
+    yazıldığı için öğrencinin sildiği sayfa her açılışta geri gelmez.
+    Sayfa ayarı teklif edilen ("offer") durumda ekleme, öğrenci teklife
+    cevap verince yapılır.
+  */
+  const kilavuzOnSayfalariniEkle = useCallback(() => {
+    if (!editor || !guideline) return;
+    const istenen = kilavuzOnSayfalari(guideline.requiredSections);
+    if (!istenen.length) return;
+    const veri = {
+      kapak: coverPage,
+      dil: belgeDili,
+      ozet: guideline.settings.abstract,
+      basliklar: kilavuzOnSayfaAdlari(guideline.requiredSections),
+      calismaBasligi: coverPage.title,
+    };
+    if (editor.isEmpty) {
+      applyTemplate(editor, guideline.requiredSections, veri);
+      markDirtyRef.current();
+      showToast(
+        "success",
+        t({
+          tr: "Kılavuzunuzun bölümleriyle taslak kuruldu; ön sayfalardaki [ … ] yerlerini doldurun.",
+          en: "An outline was built from your guideline's sections; fill in the [ … ] places on the front pages.",
+        }),
+      );
+      return;
+    }
+    const eklenen = insertFrontMatter(editor, istenen, veri);
+    if (!eklenen) return;
+    markDirtyRef.current();
+    showToast(
+      "success",
+      t({
+        tr: `Kılavuzunuzun istediği ${eklenen} ön sayfa yerine eklendi; [ … ] yerlerini doldurun.`,
+        en: `${eklenen} front matter page${eklenen === 1 ? "" : "s"} required by your guideline added in place; fill in the [ … ] places.`,
+      }),
+    );
+  }, [editor, guideline, coverPage, belgeDili, t]);
+
+  useEffect(() => {
+    kilavuzOnSayfalariniEkleRef.current = kilavuzOnSayfalariniEkle;
+  }, [kilavuzOnSayfalariniEkle]);
+  useEffect(() => {
+    if (!editor || !guideline || onSayfaOtoRef.current || guidelineSync.mode === "offer") return;
+    const yeniKilavuz = guidelineSync.source.guidelineId !== guideline.id || guidelineSync.source.version !== guideline.version;
+    if (!yeniKilavuz) return;
+    onSayfaOtoRef.current = true;
+    kilavuzOnSayfalariniEkle();
+  }, [editor, guideline, guidelineSync, kilavuzOnSayfalariniEkle]);
 
   if (!editor) return <div className="manuscript-editor-shell manuscript-editor-loading" aria-busy="true" />;
   const eylemHedefi = document.getElementById("yazma-eylemleri");
@@ -1622,7 +1691,23 @@ export default function ManuscriptEditor({
     );
   };
   const handleInsertSections = (list: string[]) => {
-    insertSections(editor, requiredSections, list);
+    /* Ön sayfa olan bölüm (Özet, Yemin Metni…) şablonuyla ve kendi yerine
+       gelir; eskiden düz başlık olarak sonraki bölümün önüne ekleniyordu. */
+    const onSayfaIdleri = list.map(onSayfaAdiKimligi).filter((id): id is OnSayfaKimligi => id !== null);
+    if (onSayfaIdleri.length) {
+      insertFrontMatter(editor, onSayfaIdleri, {
+        kapak: coverPage,
+        dil: belgeDili,
+        ozet: guideline?.settings.abstract,
+        basliklar: kilavuzOnSayfaAdlari(requiredSections),
+        calismaBasligi: coverPage.title,
+      });
+    }
+    insertSections(
+      editor,
+      requiredSections.filter((b) => onSayfaAdiKimligi(b) === null),
+      list.filter((b) => onSayfaAdiKimligi(b) === null),
+    );
     showToast(
       "success",
       list.length > 1
@@ -1636,6 +1721,7 @@ export default function ManuscriptEditor({
       kapak: coverPage,
       dil: belgeDili,
       ozet: guideline?.settings.abstract,
+      basliklar: kilavuzOnSayfaAdlari(requiredSections),
       calismaBasligi: coverPage.title,
     });
     showToast(
@@ -1646,7 +1732,12 @@ export default function ManuscriptEditor({
     );
   };
   const handleTemplate = () => {
-    applyTemplate(editor, requiredSections);
+    applyTemplate(editor, requiredSections, {
+      kapak: coverPage,
+      dil: belgeDili,
+      ozet: guideline?.settings.abstract,
+      basliklar: kilavuzOnSayfaAdlari(requiredSections),
+    });
     showToast("success", t({ tr: "Kılavuzun bölümleriyle taslak oluşturuldu.", en: "An outline was created from the guideline's sections." }));
   };
   const handleFindText = (text: string) => {

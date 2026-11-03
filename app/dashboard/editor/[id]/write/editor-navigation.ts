@@ -3,7 +3,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { headingMatchesSection } from "@/lib/section-match";
 import { authorLabel, dipnotNotu, formatInTextCitation, formatReferenceParts, type AtifSecenegi, type CitableSource, type CitationStyle, type KunyeSecenegi } from "@/lib/citation-format";
 import { oncedenAtifYapildi } from "@/lib/atif/dipnot";
-import { onSayfaDugumleri, onSayfaYerlesimi, type OnSayfaKimligi, type OnSayfaVerisi } from "@/lib/on-sayfalar";
+import { onSayfaDugumleri, onSayfaYerlesimi, taslakDugumleri, type OnSayfaKimligi, type OnSayfaVerisi } from "@/lib/on-sayfalar";
 import { kalibaGoreAtif, type AtifKalibi } from "@/lib/atif/tyk";
 import { fixReferencePunctuation } from "@/lib/reference-punctuation";
 import type { Dil } from "@/lib/dil";
@@ -151,9 +151,14 @@ export function insertSections(editor: Editor, requiredSections: string[], secti
   }
 }
 
-/** Boş belgeye kılavuzun bölümlerinden oluşan taslak iskelet; imleç ilk bölümün altındaki boş satıra gelir */
-export function applyTemplate(editor: Editor, requiredSections: string[]) {
-  editor.commands.setContent({ type: "doc", content: requiredSections.flatMap(sectionNodes) });
+/**
+ * Boş belgeye kılavuzun bölümlerinden oluşan taslak iskelet; imleç ilk
+ * bölümün altındaki boş satıra gelir. Ön sayfalar (Özet, Abstract, Yemin
+ * Metni…) şablonlarıyla gelir (lib/on-sayfalar.ts taslakDugumleri);
+ * eskiden onlar da düz başlıktı.
+ */
+export function applyTemplate(editor: Editor, requiredSections: string[], onSayfaVerisi: OnSayfaVerisi) {
+  editor.commands.setContent({ type: "doc", content: taslakDugumleri(requiredSections, onSayfaVerisi) });
   const first = collectHeadings(editor.state.doc)[0];
   if (!first) return;
   const node = editor.state.doc.nodeAt(first.pos);

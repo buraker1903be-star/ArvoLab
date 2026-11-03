@@ -88,3 +88,31 @@ test("teslim kontrolü doldurulmamış yeri söylüyor", () => {
   const dolu = { content: [h1("YEMİN METNİ"), p("Tezimi bilimsel etik kurallarına uygun yazdığımı beyan ederim.")] };
   assert.ok(!checkStructure(dolu as never, {}, "tr").some((s) => s.message.startsWith("Doldurulmamış yer")));
 });
+
+/*
+  03.11.2026: kılavuzun istediği ön sayfalar editöre kendiliğinden ve
+  şablonlarıyla iniyor; eskiden "Taslak oluştur" Yemin Metni'ni de düz
+  başlık olarak ekliyordu.
+*/
+test("kılavuzun ön sayfaları ayrılıyor, kanonik sırada", async () => {
+  const { kilavuzOnSayfalari, onSayfaAdiKimligi } = await import("@/lib/on-sayfalar");
+  const deu = ["Yemin Metni", "Özet", "Abstract", "Giriş", "Sonuç ve Öneriler", "Kaynakça", "Ekler"];
+  assert.deepEqual(kilavuzOnSayfalari(deu), ["yemin", "ozet", "abstract"]);
+  // Sıra kılavuzdaki yazıma değil kanonik sıraya göre.
+  assert.deepEqual(kilavuzOnSayfalari(["Abstract", "Özet", "Kısaltmalar", "İç Kapak"]), ["ic-kapak", "ozet", "abstract", "kisaltmalar"]);
+  assert.equal(onSayfaAdiKimligi("Bilimsel Etik Bildirimi"), "yemin");
+  assert.equal(onSayfaAdiKimligi("Giriş"), null);
+  assert.deepEqual(kilavuzOnSayfalari(["Giriş", "Yöntem", "Kaynakça"]), []);
+});
+
+test("taslak: ön sayfalar şablonla ve kılavuzun adıyla, gövde başlık olarak", async () => {
+  const { taslakDugumleri } = await import("@/lib/on-sayfalar");
+  const dugumler = taslakDugumleri(["Bilimsel Etik Bildirimi", "Özet", "Giriş", "Kaynakça"], { kapak: null, dil: "tr" });
+  const basliklar = dugumler
+    .filter((d) => d.type === "heading")
+    .map((d) => (d.content ?? []).map((c) => c.text ?? "").join(""));
+  assert.deepEqual(basliklar, ["BİLİMSEL ETİK BİLDİRİMİ", "ÖZET", "Giriş", "Kaynakça"]);
+  // Özet şablonu anahtar kelime satırını taşıyor (düz başlık değil).
+  const metin = JSON.stringify(dugumler);
+  assert.match(metin, /Anahtar [Kk]elimeler/);
+});

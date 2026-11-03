@@ -101,6 +101,12 @@ export interface OnSayfaVerisi {
   dil: Dil;
   /** Kılavuzun özet sınırları (lib/guideline-editor-settings.ts abstract) */
   ozet?: { maxWords?: number; keywordsMin?: number; keywordsMax?: number };
+  /*
+    Kılavuzun bu sayfaya verdiği ad ("Bilimsel Etik Bildirimi"). Verilirse
+    başlık o olur: kılavuz "Bilimsel Etik Bildirimi" isterken "YEMİN
+    METNİ" yazmak, bölüm denetiminin onu eksik saymasına yol açardı.
+  */
+  basliklar?: Partial<Record<OnSayfaKimligi, string>>;
 }
 
 /** Bir ön sayfanın düğümleri (Tiptap JSON). */
@@ -110,6 +116,8 @@ export function onSayfaDugumleri(id: OnSayfaKimligi, veri: OnSayfaVerisi): Dugum
   const buyuk = (s: string) => s.toLocaleUpperCase(YEREL[veri.dil]);
   const alan = (deger: string | undefined, tr: string, ing: string) => (deger?.trim() ? deger.trim() : yt(en ? ing : tr));
   const tanim = ON_SAYFALAR.find((s) => s.id === id)!;
+  const ozelAd = veri.basliklar?.[id]?.trim();
+  const sayfaBasligi = ozelAd ? buyuk(ozelAd) : (tanim.baslik?.[veri.dil] ?? "");
   const ortali = { textAlign: "center" };
   const anahtar = (ozet: OnSayfaVerisi["ozet"], ing: boolean) => {
     const a = ozet?.keywordsMin;
@@ -141,7 +149,7 @@ export function onSayfaDugumleri(id: OnSayfaKimligi, veri: OnSayfaVerisi): Dugum
     }
     case "onay":
       return [
-        baslik(tanim.baslik![veri.dil]),
+        baslik(sayfaBasligi),
         paragraf(
           yt(
             en
@@ -157,7 +165,7 @@ export function onSayfaDugumleri(id: OnSayfaKimligi, veri: OnSayfaVerisi): Dugum
       ];
     case "yemin":
       return [
-        baslik(tanim.baslik![veri.dil]),
+        baslik(sayfaBasligi),
         paragraf(
           yt(
             en
@@ -178,13 +186,13 @@ export function onSayfaDugumleri(id: OnSayfaKimligi, veri: OnSayfaVerisi): Dugum
         ? `Research question, method and findings${sinir ? `; at most ${sinir} words` : ""}`
         : `Araştırma sorusu, yöntem ve bulgular${sinir ? `; en fazla ${sinir} kelime` : ""}`;
       return [
-        baslik(tanim.baslik![veri.dil]),
+        baslik(sayfaBasligi),
         paragraf(yt(icerik)),
         paragraf(`${ing ? "Keywords" : "Anahtar Kelimeler"}: ${anahtar(veri.ozet, ing)}`),
       ];
     }
     case "kisaltmalar":
-      return [baslik(tanim.baslik![veri.dil]), paragraf(`${yt(en ? "Abbr." : "Kısaltma")}  ${yt(en ? "Meaning" : "Açılımı")}`)];
+      return [baslik(sayfaBasligi), paragraf(`${yt(en ? "Abbr." : "Kısaltma")}  ${yt(en ? "Meaning" : "Açılımı")}`)];
   }
 }
 
@@ -270,4 +278,52 @@ export function onSayfaYerlesimi(
 const YER_TUTUCU = /\[([^\]\n]{2,160})\]/gu;
 export function yerTutuculari(text: string): string[] {
   return [...text.matchAll(YER_TUTUCU)].map((e) => e[0]).filter((y) => /\p{L}/u.test(y) && !/^\[\s*(?:\d|[a-z]\.)/u.test(y) && !/^\[(?:sic|…|\.\.\.)\]$/iu.test(y));
+}
+
+/*
+  KILAVUZUN İSTEDİĞİ ÖN SAYFALAR (03.11.2026, kurum sahibinin isteği:
+  "kılavuzda özet, abstract, yemin gibi bölümler var ise onları da
+  editörde otomatik olarak eklemeli").
+
+  Kılavuzun zorunlu bölüm listesindeki adlar ön sayfa kimliklerine
+  eşlenir; eşlenmeyen (Giriş, Sonuç, Kaynakça…) ana metin bölümüdür.
+  Eskiden "Taslak oluştur" bunları da düz başlık olarak ekliyordu: Yemin
+  Metni başlığının altı boştu, Özet'in anahtar kelime satırı yoktu.
+*/
+const IC_KAPAK_ADLARI = ["İç Kapak", "İç Kapak Sayfası", "Inner Title Page", "Title Page"];
+
+export function onSayfaAdiKimligi(ad: string): OnSayfaKimligi | null {
+  const n = normalizeHeading(ad);
+  if (IC_KAPAK_ADLARI.some((a) => normalizeHeading(a) === n)) return "ic-kapak";
+  return baslikKimligi(ad);
+}
+
+/** Kılavuzun ön sayfalara verdiği adlar (başlık olarak kullanılır). */
+export function kilavuzOnSayfaAdlari(zorunluBolumler: readonly string[]): Partial<Record<OnSayfaKimligi, string>> {
+  const adlar: Partial<Record<OnSayfaKimligi, string>> = {};
+  for (const ad of zorunluBolumler) {
+    const id = onSayfaAdiKimligi(ad);
+    if (id && id !== "ic-kapak" && !adlar[id]) adlar[id] = ad;
+  }
+  return adlar;
+}
+
+/** Kılavuzun zorunlu bölümlerinden ön sayfa olanlar, kanonik sırada. */
+export function kilavuzOnSayfalari(zorunluBolumler: readonly string[]): OnSayfaKimligi[] {
+  const istenen = new Set(zorunluBolumler.map(onSayfaAdiKimligi).filter((id): id is OnSayfaKimligi => id !== null));
+  return ON_SAYFALAR.map((s) => s.id).filter((id) => istenen.has(id));
+}
+
+/**
+ * Boş belgeye kılavuzdan taslak: önce kılavuzun istediği ön sayfalar
+ * (şablonlarıyla), sonra ana metin bölümleri kılavuz sırasıyla başlık +
+ * boş satır olarak.
+ */
+export function taslakDugumleri(zorunluBolumler: readonly string[], veri: OnSayfaVerisi): Dugum[] {
+  const onSayfalar = kilavuzOnSayfalari(zorunluBolumler);
+  const govde = zorunluBolumler.filter((b) => onSayfaAdiKimligi(b) === null);
+  return [
+    ...onSayfalar.flatMap((id) => onSayfaDugumleri(id, { ...veri, basliklar: { ...kilavuzOnSayfaAdlari(zorunluBolumler), ...veri.basliklar } })),
+    ...govde.flatMap((b) => [baslik(b), { type: "paragraph" } as Dugum]),
+  ];
 }
