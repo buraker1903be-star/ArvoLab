@@ -12,6 +12,7 @@ import { HeadingNumbers, type BaslikKurallari } from "@/lib/tiptap-heading-numbe
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
 import { WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
+import { AsistanIzi } from "@/lib/tiptap-asistan-izi";
 import type { Dil, Metin } from "@/lib/dil";
 
 /*
@@ -65,6 +66,8 @@ export function editorExtensions(secenek: {
     TableHeader,
     TableCell,
     FootnoteReference,
+    // Yazım asistanından eklenen metin (yazarlık raporu); çıktılarda görünmez.
+    AsistanIzi,
     Caption,
     SearchHighlight,
     HeadingNumbers.configure({ enabled: secenek.headingNumbering, kurallar: secenek.baslikKurallari ?? {} }),

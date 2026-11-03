@@ -669,6 +669,8 @@
 .bekleyen-kaynaklar small { overflow: hidden; color: var(--muted); font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
 .bekleyen-kaynaklar button { flex: none; }
 .manuscript-main { min-width: 0; }
+/* Yazarlık raporu: asistan izli metin yalnızca "Vurgula" açıkken renklenir (lib/tiptap-asistan-izi.ts). */
+.asistan-vurgu .asistan-izi { border-radius: 2px; background: color-mix(in srgb, var(--accent-500) 18%, transparent); }
 .manuscript-outline {
   position: sticky;
   top: calc(var(--topbar-height) + 16px);

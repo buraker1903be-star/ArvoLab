@@ -72,7 +72,11 @@ dilinden ayrıdır: şekil/tablo etiketleri, kapak, atıf biçimi ona göre.
   ürünü Jenni AI'ın karşısına koymak için değiştirdi. Yazım asistanı
   (`lib/ai/yazim-asistani.ts`, editörde `yazim-paneli.tsx`) paragraf
   yazabilir, ama metin belgeye hiçbir zaman kendiliğinden girmez: "İmlece
-  ekle" / "Seçilenin yerine koy" kullanıcının düğmesidir. Öteki yetenekler
+  ekle" / "Seçilenin yerine koy" kullanıcının düğmesidir. Eklenen metin
+  görünmez bir asistan izi taşır (`lib/tiptap-asistan-izi.ts`); yazarlık
+  raporu (`lib/yazarlik-raporu.ts`) payı ondan sayar. İz hiçbir çıktıya
+  (yazdırma, paylaşım, Word) girmez; yeni bir ekleme yolu yazarken izi
+  koymayı unutmak raporu sessizce temiz gösterir. Öteki yetenekler
   (analiz, kaynakça, literatür, belge, kanıt, makale, kılavuz) DENETÇİ
   olarak kaldı: çıktı kanalları bulgu listesi (`bulgulariCozumle` başka
   biçimi okumaz), başlık 60 ve açıklama 400 karakterle sınırlı. Yeni bir

@@ -89,6 +89,7 @@ import { STIL_SECENEKLERI, stilAdi } from "@/lib/atif/stiller";
 import { cslCoz, type CslKodu } from "@/lib/atif/csl-kimlik";
 import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
+import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
   saveManuscript,
@@ -2842,6 +2843,7 @@ export default function ManuscriptEditor({
           onJump={handleJump}
         />
         <YazimIpuclariKarti editor={editor} onFind={handleFindText} />
+        <YazarlikRaporuKarti editor={editor} onFind={handleFindText} />
         <BekleyenKaynaklarKarti
           projectId={projectId}
           govdeMetni={govdeMetni}

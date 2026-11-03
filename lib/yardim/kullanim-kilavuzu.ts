@@ -455,6 +455,10 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "\"Writing tips\" in the right panel update as you write: uncited claims (a sentence saying \"studies have shown\" with no citation), overstated language (\"proves\"), personal-opinion phrases (\"I think\") and very long sentences/paragraphs. \"Show\" selects the spot in the text. It doesn't use AI or credits.",
       },
       {
+        tr: "Sağ paneldeki \"Yazarlık\" kartı gövdenin yüzde kaçının yazım asistanından eklendiğini gösterir; pencerede eklemeler listelenir ve istenirse editörde vurgulanır. Kopyala–yapıştırla alınan metin bu sayıya girmez; bu bir yapay zekâ tespit puanı değildir.",
+        en: "The \"Authorship\" card in the right panel shows what percentage of the body was inserted from the writing assistant; the window lists the insertions and can highlight them in the editor. Text taken by copy–paste isn't counted; this is not an AI-detection score.",
+      },
+      {
         tr: "Asistanın yazdığı metin belgenize kendiliğinden girmez: \"İmlece ekle\", \"Seçilenin yerine koy\" ya da \"Kopyala\" ile siz eklersiniz. Eklemeden önce okuyun ve kendi sözcüklerinizle düzenleyin.",
         en: "Text the assistant writes never enters your document by itself: you insert it with \"Insert at cursor\", \"Replace selection\" or \"Copy\". Read it and edit it in your own words before inserting.",
       },

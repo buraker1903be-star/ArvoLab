@@ -5,6 +5,7 @@ import type { Editor } from "@tiptap/react";
 import { ArrowUp, Check, Copy, CornerDownLeft, Replace, Sparkles, X } from "lucide-react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
+import { ASISTAN_IZI } from "@/lib/tiptap-asistan-izi";
 import { paragraflara, type SohbetMesaji } from "@/lib/ai/yazim-metni";
 import type { YazimGorevi } from "@/lib/ai/yazim-asistani";
 import { showToast } from "@/app/dashboard/_components/toast-events";
@@ -92,7 +93,13 @@ export default function YazimPaneli({ editor, projectId, acik, onKapat }: { edit
   };
 
   /* Eklenen metin paragraf düğümleri olarak girer; boş satırlar paragraf sınırıdır. */
-  const dugumler = (metin: string) => paragraflara(metin).map((p) => ({ type: "paragraph", content: [{ type: "text", text: p }] }));
+  /*
+    Eklenen metin asistan iziyle girer (lib/tiptap-asistan-izi.ts):
+    yazarlık raporu belgede duran asistan metnini buradan sayıyor.
+  */
+  const izliMetin = (text: string, kayit: string | null | undefined) => ({ type: "text", text, marks: [{ type: ASISTAN_IZI, attrs: { kayit: kayit ?? null } }] });
+  const dugumler = (metin: string, kayit?: string | null) =>
+    paragraflara(metin).map((p) => ({ type: "paragraph", content: [izliMetin(p, kayit)] }));
 
   const ekle = (indeks: number, yerineKoy: boolean) => {
     const kayit = mesajlar[indeks];
@@ -106,16 +113,16 @@ export default function YazimPaneli({ editor, projectId, acik, onKapat }: { edit
       // Tek paragraf seçimin yerine satır içi girer; çok paragraf blok olarak.
       tamam =
         paragraflar.length === 1
-          ? editor.chain().focus().insertContentAt({ from, to }, paragraflar[0]).run()
-          : editor.chain().focus().insertContentAt({ from, to }, dugumler(kayit.ekMetin)).run();
+          ? editor.chain().focus().insertContentAt({ from, to }, izliMetin(paragraflar[0], kayit.kayitId)).run()
+          : editor.chain().focus().insertContentAt({ from, to }, dugumler(kayit.ekMetin, kayit.kayitId)).run();
     } else {
       /* İmlecin bulunduğu bloğun SONUNA: paragrafın ortasına blok eklemek onu ikiye bölerdi. Boş paragraftaysa onun yerine. */
       const $pos = editor.state.doc.resolve(to);
       const blok = $pos.depth >= 1 ? $pos.node(1) : null;
       const bosParagraf = blok?.type.name === "paragraph" && blok.textContent.trim() === "";
       tamam = bosParagraf
-        ? editor.chain().focus().insertContentAt({ from: $pos.before(1), to: $pos.after(1) }, dugumler(kayit.ekMetin)).run()
-        : editor.chain().focus().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumler(kayit.ekMetin)).run();
+        ? editor.chain().focus().insertContentAt({ from: $pos.before(1), to: $pos.after(1) }, dugumler(kayit.ekMetin, kayit.kayitId)).run()
+        : editor.chain().focus().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumler(kayit.ekMetin, kayit.kayitId)).run();
     }
     if (!tamam) {
       showToast("error", t({ tr: "Metin eklenemedi; imleci metnin içine koyup tekrar deneyin.", en: "Couldn't insert the text; place the cursor in the text and try again." }));
