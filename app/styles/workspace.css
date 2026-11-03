@@ -507,7 +507,7 @@
 /* ---------- Editör yerleşimi (04.11.2026): üstte tek satır araç çubuğu, belge, kapanabilir inceleme paneli ---------- */
 .manuscript-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 16px;
   align-items: start;
 }
@@ -1148,15 +1148,16 @@
 .kontrol-son small { overflow: hidden; color: var(--muted); font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
 .kontrol-son > svg { color: var(--muted); }
 
-/* Sağ panel: küçük kutular (2×2), ayrıntı pencerede (yan-kutu.tsx) */
-.yan-kutular { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* İncele paneli: açıklamalı inceleme kartları, tam satır (yan-kutu.tsx, 04.11.2026) */
+.yan-kutular { display: grid; gap: 8px; }
 .yan-kutu {
   --tone: var(--accent);
   display: grid;
-  align-content: start;
-  gap: 2px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
-  padding: 12px;
+  padding: 12px 12px 12px 14px;
   border: 1px solid var(--line-soft);
   border-radius: var(--karo-r);
   background: var(--surface);
@@ -1164,21 +1165,53 @@
   color: var(--ink);
   text-align: left;
   cursor: pointer;
-  transition: border-color .15s ease, transform .2s var(--ease-spring), box-shadow .15s ease;
+  transition: border-color .15s ease, transform .2s var(--ease-spring), box-shadow .15s ease, background-color .15s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .yan-kutu:hover { border-color: var(--line); box-shadow: var(--shadow-md); }
+  .yan-kutu:hover { border-color: var(--line); background: var(--surface-raised); box-shadow: var(--shadow-md); }
+  .yan-kutu:hover .yan-kutu-ok { color: var(--ink); transform: translateX(2px); }
 }
-.yan-kutu:active { transform: scale(.97); }
+.yan-kutu:active { transform: scale(.985); }
 .yan-kutu:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
-.yan-kutu-bas { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: var(--muted); font-size: var(--fs-micro); font-weight: 650; }
-.yan-kutu-bas svg { flex: none; color: var(--tone); }
-.yan-kutu b { font-size: 22px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
-.yan-kutu small { overflow: hidden; color: var(--muted); font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
+/* Simge kutucuğu kartın tonunu taşır: uyarı sarı, tamam yeşil, varsayılan vurgu rengi */
+.yan-kutu-ikon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  color: var(--tone);
+}
+.yan-kutu-govde { display: grid; gap: 2px; min-width: 0; }
+.yan-kutu-bas { font-size: var(--fs-sm); font-weight: 700; }
+.yan-kutu-aciklama {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.yan-kutu small { overflow: hidden; color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.yan-kutu-deger {
+  min-width: 34px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.yan-kutu-ok { color: var(--muted); transition: transform .2s var(--ease-spring), color .15s ease; }
 .yan-kutu[data-tone="success"] { --tone: var(--success); }
 .yan-kutu[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
-.yan-kutu[data-tone="warning"] b { color: var(--tone); }
+.yan-kutu[data-tone="warning"] .yan-kutu-deger { background: color-mix(in srgb, var(--warning) 18%, transparent); color: var(--tone); }
+.yan-kutu[data-tone="success"] .yan-kutu-deger { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--tone); }
 .yan-kutu[data-tone="danger"] { --tone: var(--danger); }
+.yan-kutu[data-tone="danger"] .yan-kutu-deger { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--tone); }
 .yan-kutu[data-vurgu] { border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-soft); }
 .yorum-penceresi { display: grid; gap: 12px; }
 .yorum-penceresi p { margin: 0; }

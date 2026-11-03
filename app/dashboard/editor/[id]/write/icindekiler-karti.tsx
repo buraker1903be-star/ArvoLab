@@ -41,6 +41,7 @@ export default function IcindekilerKarti({
       <YanKutu
         ikon={ListTree}
         baslik={t({ tr: "İçindekiler", en: "Contents" })}
+        aciklama={t({ tr: "Başlık ağacı ve tahmini sayfaları; başlığa basınca oraya gidersiniz.", en: "Heading tree with estimated pages; click a heading to jump there." })}
         deger={headings.length}
         alt={headings.length ? t({ tr: "başlık · sayfalarıyla", en: "headings · with pages" }) : t({ tr: "henüz başlık yok", en: "no headings yet" })}
         onClick={() => setAcik(true)}

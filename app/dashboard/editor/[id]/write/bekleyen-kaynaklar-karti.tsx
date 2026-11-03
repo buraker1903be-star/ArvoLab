@@ -69,6 +69,7 @@ export default function BekleyenKaynaklarKarti({
       <YanKutu
         ikon={BookOpenCheck}
         baslik={t({ tr: "Kaynaklar", en: "Sources" })}
+        aciklama={t({ tr: "Çalışmaya eklenmiş ama metinde atıf yapılmamış kaynaklar; tek tıkla atıf.", en: "Sources added to this work but not cited in the text; cite in one click." })}
         deger={bekleyen ? bekleyen.length : okunamadi ? "—" : "…"}
         alt={
           bekleyen === null

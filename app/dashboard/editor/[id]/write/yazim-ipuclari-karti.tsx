@@ -54,6 +54,7 @@ export default function YazimIpuclariKarti({ editor, onFind }: { editor: Editor;
       <YanKutu
         ikon={Lightbulb}
         baslik={t({ tr: "Yazım ipuçları", en: "Writing tips" })}
+        aciklama={t({ tr: "Atıfsız iddia, aşırı kesin dil, kişisel görüş, uzun cümle; yazarken güncellenir.", en: "Uncited claims, overstated language, opinion, long sentences; updates as you write." })}
         deger={sayi ?? "…"}
         alt={sayi === null ? t({ tr: "okunuyor", en: "reading" }) : sayi ? t({ tr: "göz atın", en: "take a look" }) : t({ tr: "öneri yok", en: "no suggestions" })}
         ton={sayi ? "warning" : undefined}

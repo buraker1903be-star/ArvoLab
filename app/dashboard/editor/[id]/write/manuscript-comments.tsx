@@ -154,6 +154,7 @@ export default function ManuscriptComments({ projectId, getQuote, onFind }: Manu
     <YanKutu
       ikon={MessageSquare}
       baslik={t({ tr: "Yorumlar", en: "Comments" })}
+      aciklama={t({ tr: "Danışmanın ve sizin notlarınız; yoruma basınca metindeki yerine gidersiniz.", en: "Your and your advisor's notes; click one to jump to its place in the text." })}
       deger={comments === null ? (yuklemeHatasi ? "—" : "…") : open.length}
       alt={
         comments === null

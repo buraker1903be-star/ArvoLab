@@ -37,6 +37,7 @@ export default function OnSayfalarKarti({
       <YanKutu
         ikon={BookOpenCheck}
         baslik={t({ tr: "Ön sayfalar", en: "Front matter" })}
+        aciklama={t({ tr: "İç kapak, onay, yemin, özet ve kısaltmalar: kılavuzun istediği şablonla eklenir.", en: "Inner cover, approval, declaration, abstract, abbreviations from the guideline's template." })}
         deger={t({ tr: "Ekle", en: "Add" })}
         alt={t({ tr: "iç kapak, onay, yemin, özet", en: "title page, approval, declaration, abstract" })}
         onClick={() => {

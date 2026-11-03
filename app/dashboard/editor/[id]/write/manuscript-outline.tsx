@@ -61,6 +61,7 @@ export default function ManuscriptOutline({
           <YanKutu
             ikon={ListChecks}
             baslik={t({ tr: "Bölümler", en: "Sections" })}
+            aciklama={t({ tr: "Kılavuzun zorunlu bölümleri var mı; eksik olanı kılavuzdaki sırasıyla ekler.", en: "Checks the guideline's required sections; adds missing ones in order." })}
             deger={`${sections.length - missing.length}/${sections.length}`}
             alt={
               missing.length

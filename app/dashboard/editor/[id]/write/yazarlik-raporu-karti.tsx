@@ -52,6 +52,7 @@ export default function YazarlikRaporuKarti({ editor, onFind }: { editor: Editor
       <YanKutu
         ikon={Fingerprint}
         baslik={t({ tr: "Yazarlık", en: "Authorship" })}
+        aciklama={t({ tr: "Metnin ne kadarı yazım asistanından eklendi; eklemeleri listeler ve vurgular.", en: "How much of the text came from the writing assistant; lists and highlights it." })}
         deger={rapor ? `%${rapor.yuzde}` : "…"}
         alt={
           rapor === null
