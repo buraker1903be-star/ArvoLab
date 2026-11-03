@@ -1,5 +1,6 @@
 import { UAK_ISTEMI } from "@/lib/ai/uak-tablosu";
 import { KILAVUZ_ISTEMI } from "@/lib/ai/kilavuz-kurallari";
+import { YAZIM_ISTEMI } from "@/lib/ai/yazim-asistani";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ADMIN_ROLES } from "@/lib/project-labels";
@@ -69,6 +70,7 @@ const ISTEMLER: Record<string, string> = {
   /* "uak" da eksikti: ÜAK tablosu yorumlamaları sessizce eleniyordu. */
   uak: UAK_ISTEMI,
   kilavuz: KILAVUZ_ISTEMI,
+  yazim: YAZIM_ISTEMI,
 };
 
 export async function GET(request: Request) {
