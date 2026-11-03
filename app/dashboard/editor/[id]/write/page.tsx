@@ -95,9 +95,10 @@ export default async function WriteManuscriptPage({
        (araçlar, belge, kontroller) --content-max sınırı belgeyi daraltıyor,
        sayfa öbür ekranlardan dar görünüyordu. */
     <main className="dashboard-page gb">
-      <section className="projects-header">
+      {/* İnce başlık (04.11.2026): tek satır, kesilen başlığın tamamı üzerine gelince. Eskiden üç satırlık dev başlık yazı alanını ekranın üçte birine itiyordu. */}
+      <section className="projects-header yazma-basligi">
         <div>
-          <h1>{project.title ?? t({ tr: "Çalışma", en: "Work" })}</h1>
+          <h1 title={project.title ?? undefined}>{project.title ?? t({ tr: "Çalışma", en: "Work" })}</h1>
           {/* Açıklama satırı kaldırıldı: otomatik kaydı belgenin üstündeki
               kayıt durumu zaten gösteriyor, andığı "Kontrol Et" düğmesinin
               adı ise artık "Kılavuz ve kaynakça kontrolü". */}

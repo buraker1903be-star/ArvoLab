@@ -31,6 +31,12 @@ import {
   FileCode,
   SearchCheck,
   WandSparkles,
+  Plus,
+  MoreHorizontal,
+  PanelRightOpen,
+  PanelRightClose,
+  Maximize2,
+  Minimize2,
   FileDown,
   AlignLeft,
   AlignCenter,
@@ -94,6 +100,7 @@ import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
 import KaynakBulPenceresi from "./kaynak-bul-penceresi";
 import { useSatirIciOneri } from "./satir-ici-oneri";
+import AracMenusu from "./arac-menusu";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
@@ -153,15 +160,39 @@ import {
 // künye üretiyordu.
 const CITATION_STYLES = STIL_SECENEKLERI.map((secenek) => secenek.deger) as CitationStyle[];
 
-/* Otomatik satır içi öneri tercihi (tarayıcıda; satir-ici-oneri.tsx). */
+/*
+  Editörün tarayıcıda hatırlanan tercihleri (04.11.2026): otomatik satır
+  içi öneri ve inceleme panelinin açıklığı. Değer bir dış kaynak gibi
+  okunuyor (useSyncExternalStore): useState'in ilk değerinde localStorage
+  okumak sunucu ile tarayıcının farklı çizmesine yol açardı. Depolama
+  kapalıysa varsayılan geçerli.
+*/
 const ONERI_TERCIHI = "arvolab:otomatik-oneri";
-function oneriTercihiAboneligi(degisti: () => void) {
-  window.addEventListener(ONERI_TERCIHI, degisti);
+const INCELEME_TERCIHI = "arvolab:inceleme-paneli";
+const TERCIH_OLAYI = "arvolab:editor-tercihi";
+function tercihAboneligi(degisti: () => void) {
+  window.addEventListener(TERCIH_OLAYI, degisti);
   window.addEventListener("storage", degisti);
   return () => {
-    window.removeEventListener(ONERI_TERCIHI, degisti);
+    window.removeEventListener(TERCIH_OLAYI, degisti);
     window.removeEventListener("storage", degisti);
   };
+}
+function tercihOku(anahtar: string, varsayilan: boolean): boolean {
+  try {
+    const deger = window.localStorage.getItem(anahtar);
+    return deger === null ? varsayilan : deger === "1";
+  } catch {
+    return varsayilan;
+  }
+}
+function tercihYaz(anahtar: string, acik: boolean) {
+  try {
+    window.localStorage.setItem(anahtar, acik ? "1" : "0");
+  } catch {
+    // Depolama kapalıysa tercih tutulamaz; düğme varsayılanda kalır.
+  }
+  window.dispatchEvent(new Event(TERCIH_OLAYI));
 }
 
 interface ProjectDefaults {
@@ -848,25 +879,25 @@ export default function ManuscriptEditor({
     değerinde okumak sunucu ile tarayıcının farklı çizmesine (hydration
     uyuşmazlığı) yol açardı. Değer bir dış kaynak gibi okunuyor.
   */
-  const otomatikOneri = useSyncExternalStore(
-    oneriTercihiAboneligi,
-    () => {
-      try {
-        return window.localStorage.getItem(ONERI_TERCIHI) === "1";
-      } catch {
-        return false;
-      }
-    },
-    () => false,
-  );
-  const otomatikOneriAyarla = useCallback((acik: boolean) => {
-    try {
-      window.localStorage.setItem(ONERI_TERCIHI, acik ? "1" : "0");
-    } catch {
-      // Depolama kapalıysa tercih tutulamaz; düğme kapalı görünmeye devam eder.
-    }
-    window.dispatchEvent(new Event(ONERI_TERCIHI));
-  }, []);
+  const otomatikOneri = useSyncExternalStore(tercihAboneligi, () => tercihOku(ONERI_TERCIHI, false), () => false);
+  const otomatikOneriAyarla = useCallback((acik: boolean) => tercihYaz(ONERI_TERCIHI, acik), []);
+  /* İnceleme paneli varsayılan AÇIK: kılavuz ve yapı uyarıları orada; kapatan öğrenci bilerek kapatır. */
+  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, true), () => true);
+  /*
+    Odak modu: sayfa başlığı, araç çubuğu dışındaki her şey ve inceleme
+    paneli gizlenir, metin ortada kalır. Bilerek hatırlanmıyor: sayfayı
+    yeniden açan öğrenci uyarıları görmeden yazmaya devam etmesin. Esc çıkar.
+  */
+  const [odak, setOdak] = useState(false);
+  useEffect(() => {
+    if (!odak) return;
+    const tus = (e: KeyboardEvent) => {
+      // Açık bir pencere ya da öneri Esc'i kendisi kullanıyor; yalnızca editör boştayken çık.
+      if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector("dialog[open], [role=dialog]")) setOdak(false);
+    };
+    window.addEventListener("keydown", tus);
+    return () => window.removeEventListener("keydown", tus);
+  }, [odak]);
   const otomatigiKapat = useCallback(() => otomatikOneriAyarla(false), [otomatikOneriAyarla]);
   useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, otomatigiKapat });
 
@@ -1994,18 +2025,26 @@ export default function ManuscriptEditor({
                     açmadan "neye göre hazır" sorusunun cevabı bilinmeli. */}
                 {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi">{t({ tr: "kendi kılavuzunuz", en: "your own guideline" })}</small> : null}
               </button>
-              <button type="button" className="projects-filter-button" onClick={handleExport} disabled={exporting}>
-                <FileDown size={15} />
-                {exporting ? t({ tr: "Hazırlanıyor...", en: "Preparing..." }) : t({ tr: "Word olarak indir", en: "Download as Word" })}
-              </button>
-              <button type="button" className="projects-filter-button" onClick={() => void handleLatex()} disabled={latexHazirlaniyor}>
-                <FileCode size={15} aria-hidden="true" />
-                {latexHazirlaniyor ? t({ tr: "Hazırlanıyor...", en: "Preparing..." }) : "LaTeX"}
-              </button>
-              <button type="button" className="projects-filter-button" onClick={() => void handlePrint()}>
-                <Printer size={15} />
-                {t({ tr: "PDF / Yazdır", en: "PDF / Print" })}
-              </button>
+              {/* Üç çıktı tek menüde (04.11.2026): başlık satırı tek satıra sığsın. */}
+              <AracMenusu
+                dugmeSinifi="projects-filter-button"
+                ikon={<FileDown size={15} aria-hidden="true" />}
+                etiket={exporting || latexHazirlaniyor ? t({ tr: "Hazırlanıyor...", en: "Preparing..." }) : t({ tr: "Dışa aktar", en: "Export" })}
+                aciklama={t({ tr: "Word, PDF ya da LaTeX olarak indir", en: "Download as Word, PDF or LaTeX" })}
+              >
+                <button type="button" className="arac-menu-oge" onClick={handleExport} disabled={exporting}>
+                  <FileDown size={16} aria-hidden="true" />
+                  <span>{t({ tr: "Word (.docx)", en: "Word (.docx)" })}</span>
+                </button>
+                <button type="button" className="arac-menu-oge" onClick={() => void handlePrint()}>
+                  <Printer size={16} aria-hidden="true" />
+                  <span>{t({ tr: "PDF / Yazdır", en: "PDF / Print" })}</span>
+                </button>
+                <button type="button" className="arac-menu-oge" onClick={() => void handleLatex()} disabled={latexHazirlaniyor}>
+                  <FileCode size={16} aria-hidden="true" />
+                  <span>{t({ tr: "LaTeX (Overleaf)", en: "LaTeX (Overleaf)" })}</span>
+                </button>
+              </AracMenusu>
               {/*
                 Adı NE DENETLEDİĞİNİ söylüyor. Alt çubukta üç ayrı "kontrol"
                 vardı ve en kapsamlısının adı en belirsiziydi: soldaki rozet
@@ -2031,17 +2070,31 @@ export default function ManuscriptEditor({
             eylemHedefi,
           )
         : null}
-    <div className="manuscript-layout">
+    <div className="manuscript-layout" data-inceleme={incelemeAcik ? "" : undefined} data-odak={odak ? "" : undefined}>
       {/*
-        ARAÇLAR SOLDA, DİKEY KARTLARDA (26.10.2026, kurum sahibinin isteği).
-        Eskiden belgenin üstünde iki satıra sarılan tek bir çubuktu: geniş
-        ekranda bile kırk düğme yan yana, hangisinin ne işe yaradığı ancak
-        üzerine gelince anlaşılıyordu. Kartlar işe göre gruplu (yazı,
-        başlık ve liste, paragraf, ekle, belge); tablo kartı yalnızca imleç
-        tablodayken görünür. Telefonda panel belgenin üstünde yatay kayar.
+        TEK SATIR ARAÇ ÇUBUĞU (04.11.2026, kurum sahibinin isteği: Jenni'nin
+        yazım ekranı örnek; "daha elit, daha akışkan").
+
+        26.10.2026'da araçlar sol sütunda dikey kartlara alınmıştı: o zamanki
+        tek çubuk kırk düğmeyi iki satıra sarıyordu ve hangisinin ne işe
+        yaradığı ancak üzerine gelince anlaşılıyordu. Sütun bu sorunu çözdü
+        ama metne yer bırakmadı. Yeni düzen kırk düğmeyi çubuğa dizmiyor:
+        her gün kullanılanlar (geri al, yazı, biçim, başlık, liste, asistan,
+        atıf) çubukta; seyrek olanlar adı yazan menülerde (Paragraf, Ekle,
+        Belge). Tablo menüsü yalnızca imleç tablodayken görünür.
       */}
-      <aside className="manuscript-araclar" role="toolbar" aria-label={t({ tr: "Biçimlendirme", en: "Formatting" })} aria-orientation="vertical">
-        <AracKarti baslik={t({ tr: "Yazı", en: "Text" })}>
+      <div className="manuscript-araclar" role="toolbar" aria-label={t({ tr: "Biçimlendirme", en: "Formatting" })}>
+        <div className="arac-grup">
+          <div className="arac-segment" role="group" aria-label={t({ tr: "Geri al ve yinele", en: "Undo and redo" })}>
+          <ToolbarButton label={t({ tr: "Geri al (Ctrl+Z)", en: "Undo (Ctrl+Z)" })} disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
+            <Undo2 size={16} />
+          </ToolbarButton>
+          <ToolbarButton label={t({ tr: "Yinele (Ctrl+Y)", en: "Redo (Ctrl+Y)" })} disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
+            <Redo2 size={16} />
+          </ToolbarButton>
+          </div>
+        </div>
+        <div className="arac-grup arac-grup-yazi">
           <select
             className="toolbar-select"
             title={t({ tr: "Yazı tipi", en: "Font" })}
@@ -2087,7 +2140,8 @@ export default function ManuscriptEditor({
               </option>
             ))}
           </select>
-
+        </div>
+        <div className="arac-grup">
           <div className="arac-segment" role="group" aria-label={t({ tr: "Yazı biçimi", en: "Text style" })}>
           <ToolbarButton label={t({ tr: "Kalın (Ctrl+B)", en: "Bold (Ctrl+B)" })} active={ui.bold} onClick={() => editor.chain().focus().toggleBold().run()}>
             <BoldIcon size={16} />
@@ -2102,9 +2156,8 @@ export default function ManuscriptEditor({
             <SuperscriptIcon size={16} />
           </ToolbarButton>
           </div>
-
-        </AracKarti>
-        <AracKarti baslik={t({ tr: "Başlık ve liste", en: "Headings and lists" })}>
+        </div>
+        <div className="arac-grup">
           <div className="arac-segment" role="group" aria-label={t({ tr: "Paragraf türü", en: "Paragraph type" })}>
           {/* "Metin": başlıktan normal paragrafa dönüş. Eskiden yalnızca aynı
               başlık düğmesine yeniden basarak dönülüyordu; bu belli değildi. */}
@@ -2126,6 +2179,8 @@ export default function ManuscriptEditor({
             </ToolbarButton>
           ))}
           </div>
+        </div>
+        <div className="arac-grup">
           <div className="arac-segment" role="group" aria-label={t({ tr: "Liste ve alıntı", en: "Lists and quotes" })}>
 
           <ToolbarButton label={t({ tr: "Madde işaretli liste (Ctrl+Shift+8)", en: "Bulleted list (Ctrl+Shift+8)" })} active={ui.bulletList} onClick={() => editor.chain().focus().toggleBulletList().run()}>
@@ -2138,9 +2193,7 @@ export default function ManuscriptEditor({
             <Quote size={16} />
           </ToolbarButton>
           </div>
-
-        </AracKarti>
-        <AracKarti baslik={t({ tr: "Paragraf", en: "Paragraph" })}>
+          <AracMenusu ikon={<AlignLeft size={16} />} etiket={t({ tr: "Paragraf", en: "Paragraph" })} aciklama={t({ tr: "Hizalama, satır aralığı, girinti", en: "Alignment, line spacing, indent" })}>
           <div className="arac-segment" role="group" aria-label={t({ tr: "Hizalama", en: "Alignment" })}>
           <ToolbarButton label={t({ tr: "Sola hizala (Ctrl+L)", en: "Align left (Ctrl+L)" })} active={ui.align === "left"} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
             <AlignLeft size={16} />
@@ -2155,7 +2208,6 @@ export default function ManuscriptEditor({
             <AlignJustify size={16} />
           </ToolbarButton>
           </div>
-
           <select
             className="toolbar-select"
             title={t({ tr: "Satır aralığı", en: "Line spacing" })}
@@ -2173,7 +2225,6 @@ export default function ManuscriptEditor({
             <option value="1.5">1.5</option>
             <option value="2">{t({ tr: "Çift (2.0)", en: "Double (2.0)" })}</option>
           </select>
-
           <ToolbarButton
             label={t({ tr: "İlk satır girintisi (1.25 cm) — paragraf başında Tab", en: "First-line indent (1.25 cm) — Tab at paragraph start" })}
             metin={t({ tr: "İlk satır girintisi", en: "First-line indent" })}
@@ -2182,9 +2233,10 @@ export default function ManuscriptEditor({
           >
             <IndentIncrease size={16} />
           </ToolbarButton>
-
-        </AracKarti>
-        <AracKarti baslik={t({ tr: "Ekle", en: "Insert" })} izgara>
+          </AracMenusu>
+        </div>
+        <div className="arac-grup">
+          <AracMenusu ikon={<Plus size={16} />} etiket={t({ tr: "Ekle", en: "Insert" })} aciklama={t({ tr: "Tablo, resim, dipnot, analiz, başlık…", en: "Table, image, footnote, analysis, caption…" })}>
           <ToolbarButton label={t({ tr: "Tablo ekle", en: "Insert table" })} metin={t({ tr: "Tablo", en: "Table" })} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
             <TableIcon size={16} />
           </ToolbarButton>
@@ -2210,6 +2262,76 @@ export default function ManuscriptEditor({
           <ToolbarButton label={t({ tr: "Dipnot ekle (Ctrl+Alt+F)", en: "Insert footnote (Ctrl+Alt+F)" })} metin={t({ tr: "Dipnot", en: "Footnote" })} onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
             <StickyNote size={16} />
           </ToolbarButton>
+          <ToolbarButton label={t({ tr: "Analiz sonucu ekle", en: "Insert analysis result" })} metin={t({ tr: "Analiz", en: "Analysis" })} onClick={() => setAnalizOpen(true)}>
+            <BarChart3 size={16} />
+          </ToolbarButton>
+          <ToolbarButton label={t({ tr: "Resimlerim (daha önce yüklenenler)", en: "My images (previously uploaded)" })} metin={t({ tr: "Resimlerim", en: "My images" })} onClick={() => setLibraryOpen(true)}>
+            <Images size={16} />
+          </ToolbarButton>
+          <ToolbarButton
+            label={t({ tr: "Şekil başlığı (otomatik numaralı)", en: "Figure caption (auto-numbered)" })}
+            metin={t({ tr: "Şekil başlığı", en: "Figure caption" })}
+            genis
+            active={ui.caption === "figure"}
+            onClick={() => editor.chain().focus().toggleCaption("figure").run()}
+          >
+            <Captions size={16} />
+          </ToolbarButton>
+          <ToolbarButton
+            label={t({ tr: "Tablo başlığı (otomatik numaralı)", en: "Table caption (auto-numbered)" })}
+            metin={t({ tr: "Tablo başlığı", en: "Table caption" })}
+            genis
+            active={ui.caption === "table"}
+            onClick={() => editor.chain().focus().toggleCaption("table").run()}
+          >
+            <TableProperties size={16} />
+          </ToolbarButton>
+          <ToolbarButton label={t({ tr: "Word dosyasından aktar", en: "Import from Word file" })} metin={t({ tr: "Word'den aktar", en: "Import Word" })} genis onClick={() => setImportOpen(true)}>
+            <FileUp size={16} />
+          </ToolbarButton>
+          </AracMenusu>
+          {/*
+            Tablo kontrolleri: yalnızca imleç tablodayken. Eskiden hiç yoktu:
+            tablo 3×3 ekleniyor, sütun eklemenin ya da tabloyu silmenin yolu
+            yoktu. Tablo dışındayken tıklanamaz sekiz düğme kalabalıktan
+            başka bir şey değil; bu yüzden menü de yalnızca tabloda görünür.
+          */}
+          {ui.inTable ? (
+            <AracMenusu ikon={<TableIcon size={16} />} etiket={t({ tr: "Tablo", en: "Table" })}>
+            <ToolbarButton label={t({ tr: "Soluna sütun ekle", en: "Insert column left" })} metin={t({ tr: "Sola sütun", en: "Column left" })} onClick={() => editor.chain().focus().addColumnBefore().run()}>
+              <ArrowLeftToLine size={16} />
+            </ToolbarButton>
+            <ToolbarButton label={t({ tr: "Sağına sütun ekle", en: "Insert column right" })} metin={t({ tr: "Sağa sütun", en: "Column right" })} onClick={() => editor.chain().focus().addColumnAfter().run()}>
+              <ArrowRightToLine size={16} />
+            </ToolbarButton>
+            <ToolbarButton label={t({ tr: "Sütunu sil", en: "Delete column" })} metin={t({ tr: "Sütunu sil", en: "Delete column" })} onClick={() => editor.chain().focus().deleteColumn().run()}>
+              <Columns2 size={16} />
+            </ToolbarButton>
+            <ToolbarButton label={t({ tr: "Üstüne satır ekle", en: "Insert row above" })} metin={t({ tr: "Üste satır", en: "Row above" })} onClick={() => editor.chain().focus().addRowBefore().run()}>
+              <ArrowUpToLine size={16} />
+            </ToolbarButton>
+            <ToolbarButton label={t({ tr: "Altına satır ekle", en: "Insert row below" })} metin={t({ tr: "Alta satır", en: "Row below" })} onClick={() => editor.chain().focus().addRowAfter().run()}>
+              <ArrowDownToLine size={16} />
+            </ToolbarButton>
+            <ToolbarButton label={t({ tr: "Satırı sil", en: "Delete row" })} metin={t({ tr: "Satırı sil", en: "Delete row" })} onClick={() => editor.chain().focus().deleteRow().run()}>
+              <Rows2 size={16} />
+            </ToolbarButton>
+            <ToolbarButton label={t({ tr: "Başlık satırını aç/kapat", en: "Toggle header row" })} metin={t({ tr: "Başlık satırı", en: "Header row" })} genis onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
+              <PanelTop size={16} />
+            </ToolbarButton>
+            <ToolbarButton label={t({ tr: "Hücreleri birleştir", en: "Merge cells" })} metin={t({ tr: "Birleştir", en: "Merge" })} disabled={!ui.canMergeCells} onClick={() => editor.chain().focus().mergeCells().run()}>
+              <TableCellsMerge size={16} />
+            </ToolbarButton>
+            <ToolbarButton label={t({ tr: "Hücreyi böl", en: "Split cell" })} metin={t({ tr: "Böl", en: "Split" })} disabled={!ui.canSplitCell} onClick={() => editor.chain().focus().splitCell().run()}>
+              <TableCellsSplit size={16} />
+            </ToolbarButton>
+            <ToolbarButton label={t({ tr: "Tabloyu sil", en: "Delete table" })} metin={t({ tr: "Tabloyu sil", en: "Delete table" })} genis onClick={() => editor.chain().focus().deleteTable().run()}>
+              <Trash2 size={16} />
+            </ToolbarButton>
+            </AracMenusu>
+          ) : null}
+        </div>
+        <div className="arac-grup arac-grup-asistan">
           {/* Yazım asistanı (03.11.2026): sohbette yazar, ekleme öğrencinin (yazim-paneli.tsx). */}
           <ToolbarButton label={t({ tr: "Yazım asistanı", en: "Writing assistant" })} metin={t({ tr: "Asistan", en: "Assistant" })} onClick={() => setYazimAcik((acik) => !acik)}>
             <Sparkles size={16} />
@@ -2244,93 +2366,12 @@ export default function ManuscriptEditor({
           <ToolbarButton label={t({ tr: "Kaynaktan atıf ekle", en: "Cite a source" })} metin={t({ tr: "Atıf", en: "Citation" })} onClick={() => setCiteOpen(true)}>
             <BookMarked size={16} />
           </ToolbarButton>
-          <ToolbarButton label={t({ tr: "Analiz sonucu ekle", en: "Insert analysis result" })} metin={t({ tr: "Analiz", en: "Analysis" })} onClick={() => setAnalizOpen(true)}>
-            <BarChart3 size={16} />
+        </div>
+        <div className="arac-grup arac-grup-son">
+          <ToolbarButton label={t({ tr: "Bul ve değiştir (Ctrl+F)", en: "Find and replace (Ctrl+F)" })} metin={t({ tr: "Bul", en: "Find" })} active={findOpen} onClick={() => setFindOpen((open) => !open)}>
+            <Search size={16} />
           </ToolbarButton>
-          <ToolbarButton label={t({ tr: "Resimlerim (daha önce yüklenenler)", en: "My images (previously uploaded)" })} metin={t({ tr: "Resimlerim", en: "My images" })} onClick={() => setLibraryOpen(true)}>
-            <Images size={16} />
-          </ToolbarButton>
-          <ToolbarButton
-            label={t({ tr: "Şekil başlığı (otomatik numaralı)", en: "Figure caption (auto-numbered)" })}
-            metin={t({ tr: "Şekil başlığı", en: "Figure caption" })}
-            genis
-            active={ui.caption === "figure"}
-            onClick={() => editor.chain().focus().toggleCaption("figure").run()}
-          >
-            <Captions size={16} />
-          </ToolbarButton>
-          <ToolbarButton
-            label={t({ tr: "Tablo başlığı (otomatik numaralı)", en: "Table caption (auto-numbered)" })}
-            metin={t({ tr: "Tablo başlığı", en: "Table caption" })}
-            genis
-            active={ui.caption === "table"}
-            onClick={() => editor.chain().focus().toggleCaption("table").run()}
-          >
-            <TableProperties size={16} />
-          </ToolbarButton>
-          <ToolbarButton label={t({ tr: "Word dosyasından aktar", en: "Import from Word file" })} metin={t({ tr: "Word'den aktar", en: "Import Word" })} genis onClick={() => setImportOpen(true)}>
-            <FileUp size={16} />
-          </ToolbarButton>
-
-        </AracKarti>
-        {/*
-          Tablo kontrolleri: yalnızca imleç tablodayken.
-
-          Eskiden hiç yoktu. Tablo 3×3 olarak ekleniyor, sonrasında
-          SATIR eklenebiliyordu (Tiptap'ta son hücrede Tab yeni satır
-          açar) ama SÜTUN eklemenin, satır ya da sütun silmenin, tabloyu
-          kaldırmanın hiçbir yolu yoktu. Kullanıcı üç sütunla kalıyor,
-          dördüncüyü isteyince tabloyu silip baştan kurmak zorundaydı —
-          silmenin de yolu olmadığı için gerçekte kalıyordu.
-
-          Araç çubuğunda sürekli durmuyor: tablo dışındayken hepsi
-          tıklanamaz sekiz düğme, kalabalıktan başka bir şey değil.
-        */}
-        {ui.inTable ? (
-          <AracKarti baslik={t({ tr: "Tablo", en: "Table" })} izgara>
-            <ToolbarButton label={t({ tr: "Soluna sütun ekle", en: "Insert column left" })} metin={t({ tr: "Sola sütun", en: "Column left" })} onClick={() => editor.chain().focus().addColumnBefore().run()}>
-              <ArrowLeftToLine size={16} />
-            </ToolbarButton>
-            <ToolbarButton label={t({ tr: "Sağına sütun ekle", en: "Insert column right" })} metin={t({ tr: "Sağa sütun", en: "Column right" })} onClick={() => editor.chain().focus().addColumnAfter().run()}>
-              <ArrowRightToLine size={16} />
-            </ToolbarButton>
-            <ToolbarButton label={t({ tr: "Sütunu sil", en: "Delete column" })} metin={t({ tr: "Sütunu sil", en: "Delete column" })} onClick={() => editor.chain().focus().deleteColumn().run()}>
-              <Columns2 size={16} />
-            </ToolbarButton>
-            <ToolbarButton label={t({ tr: "Üstüne satır ekle", en: "Insert row above" })} metin={t({ tr: "Üste satır", en: "Row above" })} onClick={() => editor.chain().focus().addRowBefore().run()}>
-              <ArrowUpToLine size={16} />
-            </ToolbarButton>
-            <ToolbarButton label={t({ tr: "Altına satır ekle", en: "Insert row below" })} metin={t({ tr: "Alta satır", en: "Row below" })} onClick={() => editor.chain().focus().addRowAfter().run()}>
-              <ArrowDownToLine size={16} />
-            </ToolbarButton>
-            <ToolbarButton label={t({ tr: "Satırı sil", en: "Delete row" })} metin={t({ tr: "Satırı sil", en: "Delete row" })} onClick={() => editor.chain().focus().deleteRow().run()}>
-              <Rows2 size={16} />
-            </ToolbarButton>
-            <ToolbarButton label={t({ tr: "Başlık satırını aç/kapat", en: "Toggle header row" })} metin={t({ tr: "Başlık satırı", en: "Header row" })} genis onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
-              <PanelTop size={16} />
-            </ToolbarButton>
-            <ToolbarButton label={t({ tr: "Hücreleri birleştir", en: "Merge cells" })} metin={t({ tr: "Birleştir", en: "Merge" })} disabled={!ui.canMergeCells} onClick={() => editor.chain().focus().mergeCells().run()}>
-              <TableCellsMerge size={16} />
-            </ToolbarButton>
-            <ToolbarButton label={t({ tr: "Hücreyi böl", en: "Split cell" })} metin={t({ tr: "Böl", en: "Split" })} disabled={!ui.canSplitCell} onClick={() => editor.chain().focus().splitCell().run()}>
-              <TableCellsSplit size={16} />
-            </ToolbarButton>
-            <ToolbarButton label={t({ tr: "Tabloyu sil", en: "Delete table" })} metin={t({ tr: "Tabloyu sil", en: "Delete table" })} genis onClick={() => editor.chain().focus().deleteTable().run()}>
-              <Trash2 size={16} />
-            </ToolbarButton>
-          </AracKarti>
-        ) : null}
-
-        <AracKarti baslik={t({ tr: "Belge", en: "Document" })} izgara>
-          <div className="arac-segment" role="group" aria-label={t({ tr: "Geri al ve yinele", en: "Undo and redo" })}>
-          <ToolbarButton label={t({ tr: "Geri al (Ctrl+Z)", en: "Undo (Ctrl+Z)" })} disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
-            <Undo2 size={16} />
-          </ToolbarButton>
-          <ToolbarButton label={t({ tr: "Yinele (Ctrl+Y)", en: "Redo (Ctrl+Y)" })} disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
-            <Redo2 size={16} />
-          </ToolbarButton>
-          </div>
-
+          <AracMenusu ikon={<MoreHorizontal size={16} />} etiket={t({ tr: "Belge", en: "Document" })} aciklama={t({ tr: "Sayfa ayarı, kapak, paylaş, sürümler, kısayollar", en: "Page setup, cover, share, versions, shortcuts" })} etiketiGizle>
           <ToolbarButton label={t({ tr: "Sayfa ayarları", en: "Page settings" })} metin={t({ tr: "Sayfa ayarı", en: "Page setup" })} active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
             <Settings2 size={16} />
           </ToolbarButton>
@@ -2343,15 +2384,26 @@ export default function ManuscriptEditor({
           <ToolbarButton label={t({ tr: "Sürüm geçmişi", en: "Version history" })} metin={t({ tr: "Sürümler", en: "Versions" })} onClick={() => setVersionsOpen(true)}>
             <History size={16} />
           </ToolbarButton>
-          <ToolbarButton label={t({ tr: "Bul ve değiştir (Ctrl+F)", en: "Find and replace (Ctrl+F)" })} metin={t({ tr: "Bul", en: "Find" })} active={findOpen} onClick={() => setFindOpen((open) => !open)}>
-            <Search size={16} />
-          </ToolbarButton>
-
           <ToolbarButton label={t({ tr: "Klavye kısayolları", en: "Keyboard shortcuts" })} metin={t({ tr: "Kısayollar", en: "Shortcuts" })} onClick={() => setShortcutsOpen(true)}>
             <Keyboard size={16} />
           </ToolbarButton>
-        </AracKarti>
-      </aside>
+          </AracMenusu>
+          <ToolbarButton
+            label={incelemeAcik ? t({ tr: "İnceleme panelini kapat", en: "Close review panel" }) : t({ tr: "İnceleme panelini aç", en: "Open review panel" })}
+            active={incelemeAcik}
+            onClick={() => tercihYaz(INCELEME_TERCIHI, !incelemeAcik)}
+          >
+            {incelemeAcik ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+          </ToolbarButton>
+          <ToolbarButton
+            label={odak ? t({ tr: "Odak modundan çık (Esc)", en: "Exit focus mode (Esc)" }) : t({ tr: "Odak modu: yalnızca metin", en: "Focus mode: just the text" })}
+            active={odak}
+            onClick={() => setOdak((o) => !o)}
+          >
+            {odak ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </ToolbarButton>
+        </div>
+      </div>
 
     <div className="manuscript-main">
     <div className="manuscript-editor-shell">
@@ -2817,6 +2869,7 @@ export default function ManuscriptEditor({
         inince görünüyordu; artık sağ panelin başında, her zaman görünür.
       */}
       <ManuscriptOutline
+        onKapat={() => tercihYaz(INCELEME_TERCIHI, false)}
         ust={
           /*
             KONTROL KARTI (26.10.2026, ikinci elden geçiriş: "bu kartı daha
@@ -3505,19 +3558,6 @@ export default function ManuscriptEditor({
   );
 }
 
-/* Sol paneldeki araç kartı. `izgara`: etiketli düğmeler iki sütunda
-   (Ekle, Tablo, Belge); yalnız simgeli düğmeyi öğrenci üzerine gelmeden
-   tanımıyordu. */
-function AracKarti({ baslik, izgara = false, children }: { baslik: string; izgara?: boolean; children: React.ReactNode }) {
-  return (
-    <section className="arac-karti" aria-label={baslik}>
-      <span className="arac-karti-baslik">{baslik}</span>
-      <div className="arac-karti-govde" data-izgara={izgara ? "" : undefined}>
-        {children}
-      </div>
-    </section>
-  );
-}
 
 function ToolbarButton({
   label,

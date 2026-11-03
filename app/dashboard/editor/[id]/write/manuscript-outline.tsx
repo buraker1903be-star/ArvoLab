@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Check, Circle, FileUp, ListChecks, Plus, Wand2 } from "lucide-react";
+import { Check, Circle, FileUp, ListChecks, Plus, Wand2, PanelRightClose } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
 import YanKutu from "./yan-kutu";
 import type { OutlineHeading, SectionStatus } from "./editor-navigation";
@@ -36,14 +36,24 @@ export default function ManuscriptOutline({
   onInsert,
   onTemplate,
   onImport,
+  onKapat,
   children,
-}: ManuscriptOutlineProps) {
+}: ManuscriptOutlineProps & { onKapat?: () => void }) {
   const missing = sections.filter((item) => !item.heading).map((item) => item.section);
   const [acik, setAcik] = useState(false);
   const t = useCeviri();
 
   return (
-    <aside className="manuscript-outline" aria-label={t({ tr: "Belge planı", en: "Document outline" })}>
+    <aside className="manuscript-outline" aria-label={t({ tr: "İnceleme paneli", en: "Review panel" })}>
+      {/* Panel kapanabilir (04.11.2026): yazmaya odaklanan öğrenci metne yer açar; tercih tarayıcıda kalır. */}
+      <header className="inceleme-bas">
+        <b>{t({ tr: "İncele", en: "Review" })}</b>
+        {onKapat ? (
+          <button type="button" className="yazim-ikon" onClick={onKapat} aria-label={t({ tr: "İnceleme panelini kapat", en: "Close review panel" })} title={t({ tr: "İnceleme panelini kapat", en: "Close review panel" })}>
+            <PanelRightClose size={16} aria-hidden="true" />
+          </button>
+        ) : null}
+      </header>
       {ust}
 
       <div className="yan-kutular">

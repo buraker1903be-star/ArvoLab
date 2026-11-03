@@ -67,7 +67,12 @@
 /* Belge sayfayla birlikte uzar (iç kaydırma çubuğu yok); araç çubuğu üstte yapışık kalır */
 .manuscript-editor-content {
   min-height: 60vh;
-  padding: 32px clamp(18px, 5vw, 48px);
+  /*
+    Satır uzunluğu sınırlı (04.11.2026): geniş ekranda metin 1.500 piksele
+    yayılıyor, göz satır başını kaybediyordu. Sütun ~860 piksel (A4
+    sayfanın yazı alanına yakın) ve ortada; dar ekranda eski kenar boşluğu.
+  */
+  padding: 40px max(clamp(18px, 5vw, 48px), calc((100% - 860px) / 2)) 32px;
   counter-reset: footnote figure table;
   color: var(--ink);
   font-size: var(--fs-md);
@@ -499,67 +504,62 @@
   .guideline-applied-banner > span { text-align: left; }
 }
 
-/* ---------- Editör yerleşimi: belge + yol gösteren yan panel ---------- */
-.manuscript-layout { display: grid; grid-template-columns: 236px minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+/* ---------- Editör yerleşimi (04.11.2026): üstte tek satır araç çubuğu, belge, kapanabilir inceleme paneli ---------- */
+.manuscript-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+/* Panel kapalıyken ya da odak modunda belge ortada, okunur bir genişlikte. */
+.manuscript-layout:not([data-inceleme]),
+.manuscript-layout[data-odak] { grid-template-columns: minmax(0, 1fr); }
+.manuscript-layout:not([data-inceleme]) .manuscript-outline,
+.manuscript-layout[data-odak] .manuscript-outline { display: none; }
+.manuscript-layout:not([data-inceleme]) .manuscript-main,
+.manuscript-layout[data-odak] .manuscript-main { width: 100%; max-width: 980px; margin-inline: auto; }
+/* Odak modu: sayfa başlığı da çekilir, yalnızca araç çubuğu ve metin kalır. */
+.dashboard-page:has(.manuscript-layout[data-odak]) > .projects-header { display: none; }
 
-/* Sol araç paneli: işe göre gruplu dikey kartlar (manuscript-editor.tsx, AracKarti) */
+/*
+  Araç çubuğu: tek satır, gruplar ince çizgiyle ayrık, sayfa kayarken
+  üst çubuğun hemen altında yapışık. Seyrek araçlar menülerde
+  (arac-menusu.tsx). Dar ekranda yatay kayar, satır sarmaz.
+*/
 .manuscript-araclar {
   position: sticky;
-  top: calc(var(--topbar-height) + 16px);
-  display: grid;
-  gap: 10px;
-  max-height: calc(100vh - var(--topbar-height) - var(--dock-alani) - 24px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-}
-.arac-karti {
-  display: grid;
-  gap: 8px;
-  padding: 10px;
+  top: calc(var(--topbar-height) + 8px);
+  z-index: var(--z-sticky);
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  padding: 6px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
   border: 1px solid var(--line-soft);
   border-radius: var(--karo-r);
-  background: var(--surface);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-sm);
 }
-.arac-karti-baslik { color: var(--muted); font-size: var(--fs-micro); font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
-.arac-karti-govde { display: flex; flex-wrap: wrap; gap: 2px; }
-.arac-karti-govde .toolbar-select { flex: 1 1 100%; min-width: 0; }
-/* Bitişik düğme grubu (B/İ/A, Metin/H1–H3, hizalama, geri al/yinele) */
-.arac-segment {
-  display: flex;
-  flex: 1 1 100%;
-  padding: 2px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-xs);
-  background: var(--surface-2);
-}
-.manuscript-araclar .arac-segment button { flex: 1 1 0; min-width: 0; height: 30px; padding: 0 4px; }
-.manuscript-araclar .arac-segment button.is-active { background: var(--surface); box-shadow: var(--shadow-sm); }
-/* Etiketli düğmeler: simge + kısa ad; Ekle, Tablo, Belge kartlarında iki sütun */
-.arac-karti-govde[data-izgara] { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.arac-karti-govde[data-izgara] > [data-genis] { grid-column: 1 / -1; }
-.manuscript-araclar button[data-etiketli] {
-  justify-content: flex-start;
-  gap: 6px;
-  min-width: 0;
-  height: 34px;
-  padding: 0 8px;
-  border-color: var(--line-soft);
-  background: var(--surface);
-  font-weight: 600;
-}
-.manuscript-araclar .arac-karti-govde:not([data-izgara]) > button[data-etiketli] { flex: 1 1 100%; }
-.manuscript-araclar button[data-etiketli] svg { flex: none; color: var(--muted); }
-.manuscript-araclar button[data-etiketli].is-active svg { color: var(--accent-strong); }
-.arac-metin { overflow: hidden; font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
-@media (hover: hover) and (pointer: fine) {
-  .manuscript-araclar button[data-etiketli]:hover { border-color: var(--line); background: var(--surface-2); }
-}
+.manuscript-araclar::-webkit-scrollbar { display: none; }
+.arac-grup { display: flex; flex: none; align-items: center; gap: 2px; padding: 0 6px; }
+.arac-grup + .arac-grup { border-left: 1px solid var(--line-soft); }
+.arac-grup-son { margin-left: auto; }
+.arac-grup-yazi .toolbar-select { width: auto; max-width: 132px; text-overflow: ellipsis; }
+.arac-grup-yazi { gap: 6px; }
+/* Bitişik düğme grubu (B/İ/A, Metin/H1–H3): çubukta çerçevesiz, etkin olan yükselir */
+.arac-segment { display: flex; gap: 1px; padding: 2px; border-radius: var(--r-xs); background: var(--surface-2); }
+.manuscript-araclar .arac-segment button { min-width: 30px; height: 28px; padding: 0 6px; }
+.manuscript-araclar .arac-segment button.is-active { border-color: transparent; background: var(--surface); box-shadow: var(--shadow-sm); }
 .manuscript-araclar button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   min-width: 32px;
   height: 32px;
   padding: 0 7px;
@@ -567,9 +567,89 @@
   border-radius: var(--r-xs);
   color: var(--ink-soft);
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 650;
+  white-space: nowrap;
   cursor: pointer;
 }
+.manuscript-araclar button:disabled { opacity: .45; cursor: default; }
+.manuscript-araclar button svg { flex: none; }
+/* Asistan grubu: etiketli, belgenin yanındaki en değerli araçlar. Orta
+   genişlikte yalnızca "Asistan" adını taşır; ötekiler simge + ipucu. */
+@media (max-width: 1640px) {
+  .arac-grup-asistan button[data-etiketli]:not(:first-child) .arac-metin { display: none; }
+}
+.arac-grup-asistan button[data-etiketli] svg { color: var(--accent-strong); }
+.arac-metin { overflow: hidden; font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+.arac-menu-dugme[data-acik] { border-color: var(--line); background: var(--surface); color: var(--ink); }
+.arac-menu-ok { color: var(--muted); transition: transform .2s var(--ease-spring); }
+[data-acik] > .arac-menu-ok { transform: rotate(180deg); }
+
+/* Açılır menü: tarayıcının üst katmanında, düğmeye göre konumlu (acilir-konum.ts) */
+.arac-menu-pencere {
+  position: fixed;
+  inset: auto;
+  top: var(--acilir-y, 0);
+  left: var(--acilir-x, 0);
+  z-index: var(--z-toast);
+  display: grid;
+  gap: 2px;
+  min-width: 232px;
+  max-width: min(320px, calc(100vw - 32px));
+  max-height: min(70vh, 520px);
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  transform-origin: top left;
+  animation: secici-acil .16s var(--ease-spring);
+}
+.arac-menu-pencere[hidden]:not(:popover-open) { display: none; }
+.arac-menu-pencere:popover-open { display: grid; }
+.arac-menu-pencere[data-yukari] { transform-origin: bottom left; }
+.arac-menu-pencere button,
+.arac-menu-oge {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+.arac-menu-pencere button svg { flex: none; color: var(--muted); }
+.arac-menu-pencere button.is-active { background: var(--accent-soft); color: var(--accent-strong); }
+.arac-menu-pencere button.is-active svg { color: var(--accent-strong); }
+.arac-menu-pencere button:disabled { opacity: .45; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .arac-menu-pencere button:not(:disabled):hover { background: var(--surface-2); }
+}
+/* Menüdeki hizalama dörtlüsü yan yana kalır; seçim kutusu tam genişlik */
+.arac-menu-pencere .arac-segment { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 4px; }
+.arac-menu-pencere .arac-segment button { justify-content: center; min-height: 30px; padding: 0; }
+.arac-menu-pencere .toolbar-select { width: 100%; height: 34px; margin: 2px 0 4px; }
+
+/* İnceleme panelinin başlığı (manuscript-outline.tsx) */
+.inceleme-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px; }
+.inceleme-bas b { color: var(--muted); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+
+/* İnce sayfa başlığı (page.tsx): tek satır, eylemler sağda */
+.yazma-basligi { flex-wrap: nowrap; align-items: center; gap: 16px; margin-bottom: 12px; }
+.yazma-basligi > div:first-child { min-width: 0; }
+.yazma-basligi h1 { overflow: hidden; font-size: clamp(18px, 1.6vw, 22px); line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.yazma-basligi .yazma-eylemleri { flex: none; flex-wrap: nowrap; }
+
 /* Belgenin üstündeki ince şerit: kayıt durumu ve bul-değiştir */
 .manuscript-ust { justify-content: flex-end; min-height: 40px; padding: 4px 12px; }
 
@@ -876,39 +956,25 @@
 
 @media (max-width: 1180px) {
   .manuscript-layout { grid-template-columns: minmax(0, 1fr); }
-  /* Dar ekranda araç kartları belgenin üstünde yan yana, yatay kayar */
-  .manuscript-araclar {
-    top: var(--topbar-height);
-    z-index: var(--z-sticky);
-    display: flex;
-    max-height: none;
-    overflow-x: auto;
-    overflow-y: visible;
-    padding-bottom: 4px;
-    background: var(--glass-strong);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-  }
-  .arac-karti { flex: none; }
-  .arac-karti-govde { flex-wrap: nowrap; }
-  /* Dar ekranda yatay şerit: etiketler gizlenir, düğmeler tek satır */
-  .arac-karti-govde[data-izgara] { display: flex; }
-  .arac-metin { display: none; }
-  .manuscript-araclar button[data-etiketli] { justify-content: center; padding: 0 7px; }
-  .arac-segment { flex: none; }
-  .arac-karti-govde .toolbar-select { flex: none; width: auto; }
-  /* Araç şeridi yapışık; kayıt şeridi onunla üst üste binmesin */
+  /* Dar ekranda araç çubuğundaki etiketler gizlenir; çubuk yatay kayar */
+  .manuscript-araclar { order: -2; }
+  .manuscript-araclar .arac-grup-asistan .arac-metin { display: none; }
+  /* Kayıt şeridi araç çubuğuyla üst üste binmesin */
   .manuscript-ust { position: static; }
   .manuscript-outline {
     position: static;
     order: -1;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    align-items: start;
     max-height: none;
     overflow: visible;
   }
+  /* Panel başlığı ızgarada bir hücre değil, satırın tamamı */
+  .manuscript-outline > .inceleme-bas { grid-column: 1 / -1; }
+  .yazma-basligi { flex-wrap: wrap; }
 }
 @media (max-width: 900px) {
-  .manuscript-araclar { top: calc(56px + env(safe-area-inset-top)); }
+  .manuscript-araclar { top: calc(56px + env(safe-area-inset-top)); border-radius: 0; }
 }
 @media (max-width: 760px) {
   /* Telefonda önce yazma alanı: kılavuz listesi, ilerleme ve yorumlar editörün altında */

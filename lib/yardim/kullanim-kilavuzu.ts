@@ -134,8 +134,8 @@ const BOLUMLER: KilavuzBolumu[] = [
     id: "yazim",
     baslik: { tr: "Yazım editörü", en: "The writing editor" },
     ozet: {
-      tr: "Çalışmanızı \"Yazmaya devam et\" ile açın. Editör yazdıklarınızı kendiliğinden kaydeder; soldaki araç kartları biçim, ekleme ve belge ayarlarını, sağdaki panel bölümleri, kaynakları ve canlı kontrolleri taşır.",
-      en: "Open your work with \"Continue writing\". The editor saves automatically; the tool cards on the left hold formatting, insert and document settings, and the side panel holds sections, sources and live checks.",
+      tr: "Çalışmanızı \"Yazmaya devam et\" ile açın. Editör yazdıklarınızı kendiliğinden kaydeder. Üstteki tek satırlık araç çubuğunda biçim, asistan ve atıf; \"Paragraf\", \"Ekle\" ve ⋯ menülerinde seyrek kullanılanlar var. Sağdaki \"İncele\" paneli bölümleri, kaynakları ve canlı kontrolleri taşır; kapatabilir ya da odak moduyla yalnızca metni bırakabilirsiniz (Esc çıkar).",
+      en: "Open your work with \"Continue writing\". The editor saves automatically. The single-row toolbar at the top has formatting, the assistant and citations; less frequent tools are in the \"Paragraph\", \"Insert\" and ⋯ menus. The \"Review\" panel on the right holds sections, sources and live checks; you can close it, or use focus mode to keep only the text (Esc exits).",
     },
     adimlar: [
       {
@@ -143,8 +143,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Save status is shown at the top: \"Saving…\", then \"Saved\" with the time. Press Ctrl+S to save right away if you like.",
       },
       {
-        tr: "Başlıkları \"Başlık ve liste\" kartından (ya da Ctrl+Alt+1/2/3 ile) verin. \"Belge\" → \"Sayfa ayarı\" içindeki \"Başlıkları otomatik numarala\" seçeneği 1., 1.1. numaralarını kendisi verir; elle yazdığınız numaraları kaldırın.",
-        en: "Set headings from the \"Headings and lists\" card (or with Ctrl+Alt+1/2/3). \"Document\" → \"Page setup\" → \"Number headings automatically\" adds 1., 1.1. numbers for you; remove numbers you typed by hand.",
+        tr: "Başlıkları araç çubuğundaki H1/H2/H3 düğmeleriyle (ya da Ctrl+Alt+1/2/3 ile) verin. \"Belge\" → \"Sayfa ayarı\" içindeki \"Başlıkları otomatik numarala\" seçeneği 1., 1.1. numaralarını kendisi verir; elle yazdığınız numaraları kaldırın.",
+        en: "Set headings with the H1/H2/H3 buttons on the toolbar (or with Ctrl+Alt+1/2/3). \"Document\" → \"Page setup\" → \"Number headings automatically\" adds 1., 1.1. numbers for you; remove numbers you typed by hand.",
       },
       {
         tr: "Atıf eklemek için \"Ekle\" → \"Atıf\"ı seçin. \"Listemden\" sekmesinde kaynağınızı arayın ya da \"Yeni kaynak\" sekmesine DOI yapıştırıp \"Bilgileri getir\" deyin. Atıf imlecin olduğu yere girer, kaynak kaynakçaya yazılır.",
