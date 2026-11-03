@@ -986,6 +986,8 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 }
 /* Etik kurul penceresi: tarih kilidi tehlikedeyse düğme de söyler (etik-penceresi.tsx). */
 .etik-tetik-tehlike { border-color: var(--danger); color: var(--danger); }
+/* Personel kartında bakılacak bir şey varsa "Dikkat isteyenler" düğmesi uyarı renginde. */
+.dikkat-tetik { border-color: var(--warning); color: var(--warning); }
 .etik-pencere { display: grid; gap: 14px; }
 /* Satır görünümlü pencere düğmesi (ana sayfa, Etik kurul): .gb-satir bağlantısıyla aynı görünüm. */
 .gb-satir-dugme { width: 100%; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }

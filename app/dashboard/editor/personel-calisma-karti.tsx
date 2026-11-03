@@ -14,6 +14,7 @@ import {
   UserRound,
 } from "lucide-react";
 import ActionForm from "../action-form";
+import PanelDrawer from "../_components/panel-drawer";
 import TezTakvimiPenceresi from "./tez-takvimi-penceresi";
 import { takvimiGetir } from "@/app/actions/tez-takvimi";
 import { kalanMetni, siradakiTas, takvimOzeti } from "@/lib/tez-takvimi";
@@ -133,6 +134,15 @@ export default async function PersonelCalismaKarti({
   const stilAdi = (anahtar: string | null | undefined) => STIL_ETIKETLERI[anahtar ?? ""] ?? anahtar ?? "";
   /* Etik: yalnızca tehlike ve uyarı "Dikkat isteyenler"e girer; bilgi notları personeli boğmasın. */
   const etikUyarisi = etik ? etikUyarilari(etik, bugun).find((u) => u.ton !== "info") ?? null : null;
+  /* Düğmedeki sayı: yalnızca gerçekten bakılması gerekenler. Tempo "yolunda"
+     ise ve son kontrol sorunsuzsa sayılmaz; hiç kontrol yapılmadıysa sayılır. */
+  const kontrolSorunlu = !sonKontrol || !!(sonKontrol.hata || sonKontrol.uyari || sonKontrol.eksik_bolum);
+  const dikkatSayisi =
+    (etikUyarisi ? 1 : 0) +
+    (acikYorum ? 1 : 0) +
+    tutarsizliklar.length +
+    (tempo?.perDay && (tempo.tone === "warning" || tempo.tone === "danger") ? 1 : 0) +
+    (kontrolSorunlu ? 1 : 0);
 
   return (
     <article className="gb-kart gb-sutun calisma-durum kayan-kart" aria-label={t({ tr: `${calisma.title}: durum`, en: `${calisma.title}: status` })}>
@@ -310,113 +320,6 @@ export default async function PersonelCalismaKarti({
         </p>
       ) : null}
 
-      {/* Dikkat isteyenler: yalnızca VAR olanlar listeleniyor; boşsa tek satır "temiz". */}
-      <h3 className="calisma-durum-alt">{t({ tr: "Dikkat isteyenler", en: "Needs attention" })}</h3>
-      <ul className="gb-liste">
-        {etikUyarisi ? (
-          <li>
-            <span className="gb-satir" data-tone={etikUyarisi.ton}>
-              <ShieldCheck size={16} aria-hidden="true" />
-              <span className="gb-satir-govde">
-                <b>{t({ tr: "Etik kurul", en: "Ethics committee" })}</b>
-                <small title={t(etikUyarisi.metin)}>{t(etikUyarisi.metin)}</small>
-              </span>
-              <span className="status-pill" data-tone={etikUyarisi.ton}>
-                {etikUyarisi.ton === "danger" ? t({ tr: "Tehlike", en: "Danger" }) : t({ tr: "Bakılmalı", en: "Review" })}
-              </span>
-            </span>
-          </li>
-        ) : null}
-        {acikYorum ? (
-          <li>
-            <Link href={`${merkez}/write`} className="gb-satir">
-              <MessageSquare size={16} aria-hidden="true" />
-              <span className="gb-satir-govde">
-                <b>{t({ tr: `${acikYorum} açık yorum`, en: `${acikYorum} open comment${acikYorum === 1 ? "" : "s"}` })}</b>
-                <small>{t({ tr: "Yanıt ya da düzeltme bekliyor", en: "Awaiting a reply or a fix" })}</small>
-              </span>
-              <span className="status-pill" data-tone="warning">{t({ tr: "Yorum", en: "Comment" })}</span>
-            </Link>
-          </li>
-        ) : null}
-        {tutarsizliklar.map((sorun, i) => (
-          <li key={i}>
-            <Link href={`${merkez}/write`} className="gb-satir" title={sorun.baslik}>
-              <AlertTriangle size={16} aria-hidden="true" />
-              <span className="gb-satir-govde">
-                <b>{sorun.baslik}</b>
-                <small>{sorun.aciklama}</small>
-              </span>
-              <span className="status-pill" data-tone="warning">{t({ tr: "Tutarsızlık", en: "Inconsistency" })}</span>
-            </Link>
-          </li>
-        ))}
-        {tempo?.perDay ? (
-          <li className="gb-satir">
-            <PenLine size={16} aria-hidden="true" />
-            <span className="gb-satir-govde">
-              <b>
-                {t({
-                  tr: `Günde ~${tempo.perDay.toLocaleString(YEREL[dil])} kelime gerekiyor`,
-                  en: `~${tempo.perDay.toLocaleString(YEREL[dil])} words a day needed`,
-                })}
-              </b>
-              <small>{tempo.detail}</small>
-            </span>
-            <span className="status-pill" data-tone={tempo.tone}>{t({ tr: "Tempo", en: "Pace" })}</span>
-          </li>
-        ) : null}
-        {sonKontrol ? (
-          <li>
-            <Link href={`${merkez}/write`} className="gb-satir">
-              <ClipboardCheck size={16} aria-hidden="true" />
-              <span className="gb-satir-govde">
-                <b>
-                  {t({ tr: "Son kılavuz kontrolü:", en: "Last guideline check:" })}{" "}
-                  {sonKontrol.hata || sonKontrol.uyari || sonKontrol.eksik_bolum
-                    ? [
-                        sonKontrol.hata
-                          ? t({ tr: `${sonKontrol.hata} hata`, en: `${sonKontrol.hata} error${sonKontrol.hata === 1 ? "" : "s"}` })
-                          : null,
-                        sonKontrol.uyari
-                          ? t({ tr: `${sonKontrol.uyari} uyarı`, en: `${sonKontrol.uyari} warning${sonKontrol.uyari === 1 ? "" : "s"}` })
-                          : null,
-                        sonKontrol.eksik_bolum
-                          ? t({
-                              tr: `${sonKontrol.eksik_bolum} eksik bölüm`,
-                              en: `${sonKontrol.eksik_bolum} missing section${sonKontrol.eksik_bolum === 1 ? "" : "s"}`,
-                            })
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")
-                    : t({ tr: "sorunsuz", en: "no issues" })}
-                </b>
-                <small>{tarihSaat(sonKontrol.created_at)}</small>
-              </span>
-              <span
-                className="status-pill"
-                data-tone={sonKontrol.hata ? "danger" : sonKontrol.uyari || sonKontrol.eksik_bolum ? "warning" : "success"}
-              >
-                {t({ tr: "Kontrol", en: "Check" })}
-              </span>
-            </Link>
-          </li>
-        ) : (
-          <li className="gb-satir">
-            <ClipboardCheck size={16} aria-hidden="true" />
-            <span className="gb-satir-govde">
-              <b>{t({ tr: "Kılavuz kontrolü hiç çalıştırılmadı", en: "Guideline check has never been run" })}</b>
-              <small>
-                {t({
-                  tr: "Öğrenci editörde \"Kılavuz ve kaynakça kontrolü\"nü çalıştırınca burada görünür",
-                  en: "Shows up here once the student runs \"Guideline and reference check\" in the editor",
-                })}
-              </small>
-            </span>
-          </li>
-        )}
-      </ul>
 
       {/*
         ÇALIŞMANIN BİRİMLERİ: öğrencinin kartındaki pencerelerin aynısı, aynı
@@ -426,6 +329,133 @@ export default async function PersonelCalismaKarti({
         anlaşılır mesajla reddeder.
       */}
       <footer className="calisma-durum-alt-serit" aria-label={t({ tr: "Çalışmanın birimleri", en: "Work sections" })}>
+        {/*
+          DİKKAT İSTEYENLER PENCEREDE (03.11.2026, kurum sahibinin isteği).
+          Eskiden kartın ortasında açık bir listeydi ve kartı en çok o
+          uzatıyordu. Sayı düğmenin üstünde: kontrolör pencereyi açmadan
+          bakılacak bir şey olup olmadığını görüyor.
+        */}
+        <PanelDrawer
+          triggerLabel={
+            dikkatSayisi
+              ? t({ tr: `Dikkat isteyenler · ${dikkatSayisi}`, en: `Needs attention · ${dikkatSayisi}` })
+              : t({ tr: "Dikkat isteyenler", en: "Needs attention" })
+          }
+          triggerIcon={<AlertTriangle size={15} aria-hidden="true" />}
+          triggerClassName={dikkatSayisi ? "projects-filter-button button-compact dikkat-tetik" : "projects-filter-button button-compact"}
+          kicker={t({ tr: "Dikkat isteyenler", en: "Needs attention" })}
+          title={calisma.title}
+          description={t({
+            tr: "Öğrencinin çalışmasında bakılması gereken noktalar. Satıra basınca metin açılır.",
+            en: "Points in the student's work that need a look. Click a row to open the text.",
+          })}
+        >
+          <ul className="gb-liste">
+            {etikUyarisi ? (
+              <li>
+                <span className="gb-satir" data-tone={etikUyarisi.ton}>
+                  <ShieldCheck size={16} aria-hidden="true" />
+                  <span className="gb-satir-govde">
+                    <b>{t({ tr: "Etik kurul", en: "Ethics committee" })}</b>
+                    <small title={t(etikUyarisi.metin)}>{t(etikUyarisi.metin)}</small>
+                  </span>
+                  <span className="status-pill" data-tone={etikUyarisi.ton}>
+                    {etikUyarisi.ton === "danger" ? t({ tr: "Tehlike", en: "Danger" }) : t({ tr: "Bakılmalı", en: "Review" })}
+                  </span>
+                </span>
+              </li>
+            ) : null}
+            {acikYorum ? (
+              <li>
+                <Link href={`${merkez}/write`} className="gb-satir">
+                  <MessageSquare size={16} aria-hidden="true" />
+                  <span className="gb-satir-govde">
+                    <b>{t({ tr: `${acikYorum} açık yorum`, en: `${acikYorum} open comment${acikYorum === 1 ? "" : "s"}` })}</b>
+                    <small>{t({ tr: "Yanıt ya da düzeltme bekliyor", en: "Awaiting a reply or a fix" })}</small>
+                  </span>
+                  <span className="status-pill" data-tone="warning">{t({ tr: "Yorum", en: "Comment" })}</span>
+                </Link>
+              </li>
+            ) : null}
+            {tutarsizliklar.map((sorun, i) => (
+              <li key={i}>
+                <Link href={`${merkez}/write`} className="gb-satir" title={sorun.baslik}>
+                  <AlertTriangle size={16} aria-hidden="true" />
+                  <span className="gb-satir-govde">
+                    <b>{sorun.baslik}</b>
+                    <small>{sorun.aciklama}</small>
+                  </span>
+                  <span className="status-pill" data-tone="warning">{t({ tr: "Tutarsızlık", en: "Inconsistency" })}</span>
+                </Link>
+              </li>
+            ))}
+            {tempo?.perDay ? (
+              <li className="gb-satir">
+                <PenLine size={16} aria-hidden="true" />
+                <span className="gb-satir-govde">
+                  <b>
+                    {t({
+                      tr: `Günde ~${tempo.perDay.toLocaleString(YEREL[dil])} kelime gerekiyor`,
+                      en: `~${tempo.perDay.toLocaleString(YEREL[dil])} words a day needed`,
+                    })}
+                  </b>
+                  <small>{tempo.detail}</small>
+                </span>
+                <span className="status-pill" data-tone={tempo.tone}>{t({ tr: "Tempo", en: "Pace" })}</span>
+              </li>
+            ) : null}
+            {sonKontrol ? (
+              <li>
+                <Link href={`${merkez}/write`} className="gb-satir">
+                  <ClipboardCheck size={16} aria-hidden="true" />
+                  <span className="gb-satir-govde">
+                    <b>
+                      {t({ tr: "Son kılavuz kontrolü:", en: "Last guideline check:" })}{" "}
+                      {sonKontrol.hata || sonKontrol.uyari || sonKontrol.eksik_bolum
+                        ? [
+                            sonKontrol.hata
+                              ? t({ tr: `${sonKontrol.hata} hata`, en: `${sonKontrol.hata} error${sonKontrol.hata === 1 ? "" : "s"}` })
+                              : null,
+                            sonKontrol.uyari
+                              ? t({ tr: `${sonKontrol.uyari} uyarı`, en: `${sonKontrol.uyari} warning${sonKontrol.uyari === 1 ? "" : "s"}` })
+                              : null,
+                            sonKontrol.eksik_bolum
+                              ? t({
+                                  tr: `${sonKontrol.eksik_bolum} eksik bölüm`,
+                                  en: `${sonKontrol.eksik_bolum} missing section${sonKontrol.eksik_bolum === 1 ? "" : "s"}`,
+                                })
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : t({ tr: "sorunsuz", en: "no issues" })}
+                    </b>
+                    <small>{tarihSaat(sonKontrol.created_at)}</small>
+                  </span>
+                  <span
+                    className="status-pill"
+                    data-tone={sonKontrol.hata ? "danger" : sonKontrol.uyari || sonKontrol.eksik_bolum ? "warning" : "success"}
+                  >
+                    {t({ tr: "Kontrol", en: "Check" })}
+                  </span>
+                </Link>
+              </li>
+            ) : (
+              <li className="gb-satir">
+                <ClipboardCheck size={16} aria-hidden="true" />
+                <span className="gb-satir-govde">
+                  <b>{t({ tr: "Kılavuz kontrolü hiç çalıştırılmadı", en: "Guideline check has never been run" })}</b>
+                  <small>
+                    {t({
+                      tr: "Öğrenci editörde \"Kılavuz ve kaynakça kontrolü\"nü çalıştırınca burada görünür",
+                      en: "Shows up here once the student runs \"Guideline and reference check\" in the editor",
+                    })}
+                  </small>
+                </span>
+              </li>
+            )}
+          </ul>
+        </PanelDrawer>
         {ozet && calisma.project_type !== "article" ? (
           <KilavuzPenceresi calisma={ozet.calisma} uygulanan={ozet.uygulanan} kilavuzOkunamadi={ozet.kilavuzOkunamadi} triggerClassName="projects-filter-button button-compact" kisa />
         ) : null}
