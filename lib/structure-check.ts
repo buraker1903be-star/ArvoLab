@@ -8,6 +8,7 @@
 // Her sorun, metinde bulunup seçilebilecek bir "hedef" metin taşır.
 
 import { headingMatchesSection } from "@/lib/section-match";
+import { aralikta, belgeBolumleri, kaynakcaGirdileri } from "@/lib/kaynakca-bolumu";
 import { SOZCUK_BASI } from "@/lib/sozcuk-siniri";
 import type { AbstractRules } from "@/lib/guideline-editor-settings";
 import { crossCheck, extractInTextCitations } from "@/lib/apa7";
@@ -100,7 +101,6 @@ const MAX_ISSUES = 60;
 /** Atıf–kaynakça uyuşmazlıklarından her türde en fazla bu kadarı tek tek listelenir */
 const CITATION_ISSUE_LIMIT = 10;
 // İngilizce tezler için "Reference List" ve "Works Cited" (MLA) de kaynakça sayılır (28.10.2026).
-const REFERENCE_SECTIONS = ["Kaynakça", "Kaynaklar", "References", "Bibliography", "Bibliyografya", "Reference List", "Works Cited"];
 /*
   Belgedeki şekil/tablo etiketi. İngilizce yazılan tezde başlıklar
   "Figure 1. …" diye yazılıyor; yalnızca "Şekil" aranırsa her başlık
@@ -185,7 +185,6 @@ export function checkStructure(
 
   // ---------- Başlıklar: boş bölüm ve düzey atlama ----------
   let previousLevel = 0;
-  let referencesIndex = -1;
   /*
     Numaralı ek başlıkları ("EK 1. Görüşme Formu"). Yalnızca numaralı
     olanlar: "EKLER" bölüm başlığıdır, "Ek A" harfli düzendir ve ikisini
@@ -197,7 +196,6 @@ export function checkStructure(
     const level = Number(block.attrs?.level) || 1;
     const text = textOf(block).trim();
     if (EK_BASLIGI.test(text)) ekBasliklari.push(text);
-    if (referencesIndex < 0 && REFERENCE_SECTIONS.some((name) => headingMatchesSection(text, name))) referencesIndex = index;
 
     if (!text) {
       add({ tone: "warning", message: t("Metni olmayan bir başlık var.", "There is a heading with no text.") });
@@ -227,20 +225,17 @@ export function checkStructure(
     if (text && !filled) add({ tone: "warning", message: en ? `The section ${quote(text)} is still empty.` : `${quote(text)} bölümü henüz boş.`, target: text });
   });
 
-  // Kaynakça bölümü: başlığından sonraki, aynı ya da üst düzey ilk başlığa (ör. "EKLER") kadar.
-  // Sonrasındaki ekler yine gövde metnidir: eklerde anılan şekil/tablo "anılmıyor" sayılmaz.
-  let referencesEnd = blocks.length;
-  if (referencesIndex >= 0) {
-    const referencesLevel = Number(blocks[referencesIndex].attrs?.level) || 1;
-    for (let next = referencesIndex + 1; next < blocks.length; next++) {
-      const block = blocks[next];
-      if (block.type === "heading" && (Number(block.attrs?.level) || 1) <= referencesLevel) {
-        referencesEnd = next;
-        break;
-      }
-    }
-  }
-  const inReferences = (index: number) => referencesIndex >= 0 && index > referencesIndex && index < referencesEnd;
+  /*
+    Kaynakça ve liste bölümlerinin sınırı lib/kaynakca-bolumu.ts'te (sunucudaki
+    kontrolle ORTAK). Kaynakça ek başlığında da biter; ekler gövdedir:
+    eklerde anılan şekil/tablo "anılmıyor" sayılmaz. İçindekiler, Tablolar
+    Listesi, Şekiller Listesi ve Kısaltmalar gövde değildir: eskiden
+    "Tablolar Listesi"ndeki "Tablo 1. …" satırı tabloyu metinde anılmış
+    gösteriyordu.
+  */
+  const bolumler = belgeBolumleri(blocks);
+  const inReferences = (index: number) => aralikta(bolumler.kaynakca, index);
+  const listede = (index: number) => bolumler.listeler.some((aralik) => aralikta(aralik, index));
 
   kategori = "sekil";
   // ---------- Şekil/tablo başlıkları ve metindeki anılmaları ----------
@@ -267,7 +262,7 @@ export function checkStructure(
       walk(node.content, inReferences);
     }
   };
-  blocks.forEach((block, index) => walk([block], inReferences(index)));
+  blocks.forEach((block, index) => walk([block], inReferences(index) || listede(index)));
   const body = bodyTexts.join("\n");
 
   for (const kind of ["table", "figure"] as const) {
@@ -335,39 +330,13 @@ export function checkStructure(
   }
 
   kategori = "kaynakca";
-  // Kaynakça girdileri: Kaynakça bölümündeki (gövde metniyle aynı sınır) dolu paragraflar ve
-  // liste maddeleri. Word'de kaynakça sık sık numaralı/madde işaretli liste olarak yazılır;
-  // önceden bunlar "0 kaynak" sayılıyordu. İç içe liste maddeleri ayrı girdidir.
-  const referenceEntries: string[] = [];
-  let referencesInList = false;
-  /* Asılı girintisi olmayan kaynakça paragrafı sayısı; kılavuz asılı
-     girinti istiyorsa aşağıda raporlanır. */
-  let hangingMissing = 0;
-  const collectEntries = (node: DocNode) => {
-    if (node.type === "paragraph") {
-      const text = textOf(node).trim();
-      if (text) {
-        referenceEntries.push(text);
-        if (!hangingIndentCmOf(node.attrs)) hangingMissing += 1;
-      }
-      return;
-    }
-    if (node.type !== "bulletList" && node.type !== "orderedList") return;
-    referencesInList = true;
-    for (const item of node.content ?? []) {
-      const children = item.content ?? [];
-      const text = children
-        .filter((child) => child.type === "paragraph")
-        .map(textOf)
-        .join(" ")
-        .trim();
-      if (text) referenceEntries.push(text);
-      for (const child of children) collectEntries(child.type === "paragraph" ? {} : child);
-    }
-  };
-  blocks.forEach((block, index) => {
-    if (inReferences(index)) collectEntries(block);
-  });
+  // Kaynakça girdileri: dolu paragraflar ve liste maddeleri; künye adayı
+  // olmayan satırlar (CSV, kod, açıklama) elenir (lib/kaynakca-bolumu.ts).
+  const {
+    girdiler: referenceEntries,
+    listede: referencesInList,
+    asiliEksik: hangingMissing,
+  } = kaynakcaGirdileri(blocks, bolumler.kaynakca, (attrs) => Boolean(hangingIndentCmOf(attrs)));
 
   // ---------- Kaynakça noktalaması: çift nokta, noktalamadan önce boşluk (tüm stiller) ----------
   const punctuationProblems = referenceEntries.filter(hasReferencePunctuationIssue);

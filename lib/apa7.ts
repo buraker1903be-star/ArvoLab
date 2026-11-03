@@ -398,19 +398,34 @@ export function yilUyusmazliklari(
 
 // --- Genel uyum skoru --------------------------------------------------------
 
+/*
+  UYUM PUANI (03.11.2026'da yeniden yazıldı).
+
+  Eskiden: 100 − 5 × (künye hatası) − 3 × (eşleşmeyen atıf/künye), en az 0.
+  Ceza MUTLAKTI, kaynak sayısına bölünmüyordu: 35 künyeli bir tezde
+  8 anılmayan kaynak tek başına −24 ediyordu, her "yıl yok" hatası −5.
+  Kaynakça büyüdükçe puan sıfıra yapışıyordu; örnek tezde 0/100 çıktı.
+  Sıfır puan, öğrenciye "her şey yanlış" der ve hiçbir şey öğretmez.
+
+  Şimdi üç ORAN, ağırlıklı ortalama:
+    • %50  anılan kaynak oranı      = metinde anılan künye / künye
+    • %25  karşılığı olan atıf oranı = 1 − karşılıksız atıf / künye
+           (en az 0; karşılıksız atıf sayısı künye sayısıyla ölçeklenir)
+    • %25  biçim                    = hata ("error") içermeyen künye / künye
+  Uyarılar ("warning") puanı düşürmez: DOI önerisi gibi tavsiyelerdir.
+  Künye yoksa 0 (çağıran "kaynakça bulunamadı"yı ayrıca söyler).
+
+  Örnek: 35 künye, 27'si anılıyor, karşılıksız atıf yok, hepsi biçimce
+  doğru → 100 × (0,5 × 27/35 + 0,25 + 0,25) ≈ 89.
+*/
 export function computeComplianceScore(
   references: ParsedReference[],
   crossCheckResult: CrossCheckResult
 ): number {
-  if (references.length === 0) return 0;
-  const errorCount = references.reduce(
-    (sum, r) => sum + r.issues.filter((i) => i.severity === "error").length,
-    0
-  );
-  const mismatchCount =
-    crossCheckResult.citationsWithoutReference.length +
-    crossCheckResult.referencesWithoutCitation.length;
-
-  const penalty = errorCount * 5 + mismatchCount * 3;
-  return Math.max(0, Math.round(100 - penalty));
+  const n = references.length;
+  if (n === 0) return 0;
+  const anilan = 1 - Math.min(n, crossCheckResult.referencesWithoutCitation.length) / n;
+  const karsilikli = 1 - Math.min(1, crossCheckResult.citationsWithoutReference.length / n);
+  const bicim = references.filter((r) => !r.issues.some((i) => i.severity === "error")).length / n;
+  return Math.round(100 * (0.5 * anilan + 0.25 * karsilikli + 0.25 * bicim));
 }

@@ -12,21 +12,17 @@
   — İngilizce çalışmada bunlar bulunmazsa kaynakça gövdeye karışır ve
   her künye "metinde atıf" sanılırdı.
 */
-const REFERENCE_HEADING_RE =
-  /\n\s*(KAYNAKÇA|KAYNAKLAR|REFERENCES|REFERENCE LIST|WORKS CITED|BIBLIOGRAPHY|BİBLİYOGRAFYA)\s*\n/i;
+/*
+  03.11.2026: bölme kuralı lib/kaynakca-bolumu.ts'e taşındı (metniBol).
+  Eskiden "Kaynakça" sözcüğünün İLK geçtiği satırdan belge sonuna kadar
+  her şey kaynakça sayılıyordu: İçindekiler'deki satır tezin tamamını,
+  ekler de CSV ve kod satırlarını "künye" yapıyordu.
+*/
+import { metniBol } from "./kaynakca-bolumu";
 
 export function splitBodyAndReferences(fullText: string): {
   bodyText: string;
   referenceText: string;
 } {
-  const match = fullText.match(REFERENCE_HEADING_RE);
-  if (!match || match.index === undefined) {
-    return { bodyText: fullText, referenceText: "" };
-  }
-
-  const splitAt = match.index + match[0].length;
-  return {
-    bodyText: fullText.slice(0, match.index),
-    referenceText: fullText.slice(splitAt),
-  };
+  return metniBol(fullText);
 }

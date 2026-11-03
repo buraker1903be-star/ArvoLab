@@ -15,6 +15,7 @@ import { splitAuthors } from "@/lib/citation-format";
 import { parseReferenceEntry, type ParsedReference, type ReferenceIssue } from "@/lib/apa7";
 import { SOZCUK_BASI, SOZCUK_SONU, sozcuk } from "@/lib/sozcuk-siniri";
 import { stilTanimi, type StilTanimi } from "./stiller";
+import { kunyeAdayiMi } from "@/lib/kaynakca-bolumu";
 
 /** Yıl ya da tarihsiz kaynak ("n.d." APA, "t.y." Türkçe). */
 const YIL = "\\d{4}[a-z]?|n\\.d\\.|t\\.y\\.|no date";
@@ -338,8 +339,11 @@ export function kunyeleriAyristir(kunyeler: string[], stilDegeri: string | null 
  * dışarıdan çağrılabilen bir uç noktaya dönüşürdü.
  */
 export function kunyeleriBol(ham: string): string[] {
+  /* Künye adayı olmayan satır (CSV, kod, ek açıklaması) künye sayılmaz ve
+     raporlanmaz (lib/kaynakca-bolumu.ts, kunyeAdayiMi). Eskiden yalnızca
+     10 karakterden kısa satırlar eleniyordu. */
   return ham
     .split(/\n{1,2}/)
     .map((satir) => satir.trim())
-    .filter((satir) => satir.length > 10);
+    .filter((satir) => satir.length > 10 && kunyeAdayiMi(satir));
 }

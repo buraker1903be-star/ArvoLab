@@ -4,12 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { ceviri } from "@/lib/dil-sunucu";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
-import { extractPlainText, countWords, dipnotMetinleri, type TiptapDoc } from "@/lib/tiptap-text";
-import { dipnotAtiflari } from "@/lib/atif/dipnot";
-import { splitBodyAndReferences } from "@/lib/text-split";
-import { extractInTextCitations, crossCheck, computeComplianceScore, type ParsedReference } from "@/lib/apa7";
-import { kunyeleriAyristir, kunyeleriBol } from "@/lib/atif/kunye";
-import { atifCikarmaStili, stilTanimi, type AtifTuru } from "@/lib/atif/stiller";
+import { extractPlainText, countWords, type TiptapDoc } from "@/lib/tiptap-text";
+import { type ParsedReference, type crossCheck } from "@/lib/apa7";
+import { atifDenetimi } from "@/lib/atif-denetimi";
+import { stilTanimi, type AtifTuru } from "@/lib/atif/stiller";
 import { checkGuidelineCompliance } from "@/lib/guideline-check";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
@@ -436,7 +434,6 @@ export async function runManuscriptCheck(
 
   const content = manuscript.content as TiptapDoc;
   const fullText = extractPlainText(content);
-  const split = splitBodyAndReferences(fullText);
   const citationStyle = project?.citation_style ?? "apa7";
 
   /*
@@ -462,45 +459,14 @@ export async function runManuscriptCheck(
     : null;
 
   /*
-    Kaynakça denetimi eskiden YALNIZCA APA 7'de çalışıyordu; başka stil
-    seçen öğrenci burada "otomatik denetim yapılamıyor" yazısı görüyordu.
-    Artık Atıf Kontrolü ekranıyla aynı motor kullanılıyor (lib/atif/kunye.ts):
-    künyeler stilin kendi kurallarına göre okunuyor.
-
-    Numara stillerinde (IEEE, Vancouver) atıf ile künye ADLA değil SIRAYLA
-    eşleşir; çapraz kontrol orada anlamsız olduğu için boş bırakılıyor —
-    numara eşleşmesini "Yapı ve bütünlük" bölümü (lib/structure-check.ts)
-    zaten denetliyor.
+    Kaynakça denetimi her stilde çalışır (lib/atif/kunye.ts). Kaynakçanın
+    sınırı ve gövde metni belge ağacından, yapı denetimiyle aynı kuralla
+    bulunur (lib/atif-denetimi.ts). Eskiden düz metinde "Kaynakça"nın ilk
+    geçtiği yerden belge sonuna kadar her şey künye sayılıyordu
+    (03.11.2026: İçindekiler satırı ve ekler yüzünden 0/100).
   */
   const stil = stilTanimi(citationStyle);
-  let atifSonucu: ManuscriptCheckResult["atif"] = {
-    referenceSectionFound: false,
-    complianceScore: null,
-    references: [],
-    crossCheck: { citationsWithoutReference: [], referencesWithoutCitation: [] },
-  };
-  if (split.referenceText.trim().length > 0) {
-    const references = kunyeleriAyristir(kunyeleriBol(split.referenceText), stil.id);
-    // Tek kaynak (lib/atif/stiller.ts): elle yazılmış eşleme Harvard'ı APA sanardı.
-    const atifStili = atifCikarmaStili(stil);
-    /* Dipnotlu stilde atıflar dipnotlarda (lib/atif/dipnot.ts); gövde metninde aranırsa hiçbiri bulunmaz. */
-    const citations =
-      stil.tur === "numara"
-        ? []
-        : stil.tur === "dipnot"
-          ? dipnotAtiflari(dipnotMetinleri(content))
-          : extractInTextCitations(split.bodyText, { style: atifStili });
-    const cross =
-      stil.tur === "numara"
-        ? { citationsWithoutReference: [], referencesWithoutCitation: [] }
-        : crossCheck(citations, references, { yilaBak: stil.tur === "yazar-tarih" });
-    atifSonucu = {
-      referenceSectionFound: true,
-      complianceScore: computeComplianceScore(references, cross),
-      references,
-      crossCheck: cross,
-    };
-  }
+  const atifSonucu: ManuscriptCheckResult["atif"] = atifDenetimi(content, citationStyle);
 
   const result: ManuscriptCheckResult = {
     wordCount: countWords(content),
