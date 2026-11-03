@@ -2994,30 +2994,34 @@ export default function ManuscriptEditor({
                 </span>
               </p>
             ) : (
-              <ul>
-                {checkResult.atif.crossCheck.citationsWithoutReference.map((c, i) => (
-                  <li key={`cw-${i}`} className="sorun-satir" data-tone="danger">
-                    <AlertCircle size={16} aria-label={t({ tr: "Hata", en: "Error" })} />
-                    <span className="sorun-metin">
-                      {t({ tr: "Metinde atıf var, kaynakçada yok", en: "Cited in text, missing from references" })}: {c.raw}
-                    </span>
-                    <button type="button" className="result-link sorun-goster" onClick={() => handleFindText(c.raw)}>
-                      {t({ tr: "Göster", en: "Show" })}
-                    </button>
-                  </li>
-                ))}
-                {checkResult.atif.crossCheck.referencesWithoutCitation.map((r, i) => (
-                  <li key={`rw-${i}`} className="sorun-satir" data-tone="warning">
-                    <AlertTriangle size={16} aria-label={t({ tr: "Uyarı", en: "Warning" })} />
-                    <span className="sorun-metin">
-                      {t({ tr: "Kaynakçada var, metinde atıf yok", en: "In references, not cited in text" })}: {r.raw}
-                    </span>
-                    <button type="button" className="result-link sorun-goster" onClick={() => handleFindText(r.raw)}>
-                      {t({ tr: "Göster", en: "Show" })}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              /*
+                YİNELEME YOK (03.11.2026). Eskiden eşleşmeyen atıf ve kaynaklar
+                burada da tek tek listeleniyordu; aynı liste "Yapı ve bütünlük >
+                Atıf ve kaynakça" altında zaten var. Kurum sahibi aynı 8 kaynağı
+                iki bölümde gördü. Burada yalnızca sayı ve yönlendirme kalır;
+                bulguların tek kaynağı yapı denetimi.
+              */
+              <p className="sorun-satir" data-tone="warning">
+                <AlertTriangle size={16} aria-label={t({ tr: "Uyarı", en: "Warning" })} />
+                <span className="sorun-metin">
+                  {(() => {
+                    const anilmayan = checkResult.atif.crossCheck.referencesWithoutCitation.length;
+                    const karsiliksiz = checkResult.atif.crossCheck.citationsWithoutReference.length;
+                    const tr = [
+                      karsiliksiz ? `${karsiliksiz} atıfın kaynakçada karşılığı yok` : "",
+                      anilmayan ? `${anilmayan} kaynak metinde anılmıyor` : "",
+                    ].filter(Boolean).join(", ");
+                    const en = [
+                      karsiliksiz ? `${karsiliksiz} citation${karsiliksiz === 1 ? " has" : "s have"} no matching reference` : "",
+                      anilmayan ? `${anilmayan} reference${anilmayan === 1 ? " is" : "s are"} not cited in the text` : "",
+                    ].filter(Boolean).join(", ");
+                    return t({
+                      tr: `${tr}. Ayrıntılar yukarıda, "Yapı ve bütünlük › Atıf ve kaynakça" altında.`,
+                      en: `${en}. Details above, under "Structure and consistency › Citations and reference list".`,
+                    });
+                  })()}
+                </span>
+              </p>
             )}
           </section>
         </div>

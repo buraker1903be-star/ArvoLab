@@ -137,3 +137,23 @@ test("puan: oranlardan, kaynak sayısıyla ölçekli", () => {
   assert.equal(computeComplianceScore(refs, { citationsWithoutReference: [], referencesWithoutCitation: refs.slice(0, 8) }), 89);
   assert.equal(computeComplianceScore([], { citationsWithoutReference: [], referencesWithoutCitation: [] }), 0);
 });
+
+/*
+  Madde 2 (03.11.2026): anılmayan kaynak iki bölümde ayrı ayrı listeleniyordu.
+  Bulgunun tek kaynağı yapı denetimi; uyarı sayısı (kontrolSayilari) yalnızca
+  ondan sayılır, editör kontrolünün atıf bölümü yalnızca özet gösterir.
+*/
+test("anılmayan kaynak toplam uyarı sayısında bir kez sayılır", async () => {
+  const { kontrolSayilari } = await import("@/lib/kontrol-gecmisi");
+  const doc = {
+    type: "doc",
+    content: [h(1, "Giriş"), p("Friedman (1968) bunu söyler."), h(1, "Kaynakça"), p(KUNYELER[0]), p(KUNYELER[1])],
+  };
+  const yapi = checkStructure(doc, { citationStyle: "apa7", belgeDili: "tr" });
+  const anilmayan = yapi.filter((s) => s.message.includes("metinde anılmıyor"));
+  assert.equal(anilmayan.length, 1);
+  assert.ok(anilmayan[0].message.includes("Phillips"));
+  assert.equal(atifDenetimi(doc as never, "apa7").crossCheck.referencesWithoutCitation.length, 1);
+  assert.equal(kontrolSayilari(yapi, 0, 0).uyari, yapi.filter((s) => s.tone === "warning").length);
+  assert.equal(kontrolSayilari(yapi, 0, 0).uyari, 1);
+});
