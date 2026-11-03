@@ -491,13 +491,37 @@ export function checkStructure(
     if (references.length > 0) {
       /* Dipnotlu stilde atıflar dipnotlarda (lib/atif/dipnot.ts); gövdede aranırsa hiçbiri bulunmaz. */
       const dipnotlu = stil.tur === "dipnot";
-      const { citationsWithoutReference, referencesWithoutCitation } = crossCheck(
+      const { citationsWithoutReference, referencesWithoutCitation, tireliAtiflar = [], yilsizAnilanlar = [] } = crossCheck(
         dipnotlu
           ? dipnotAtiflari(dipnotMetinleri(doc as Parameters<typeof dipnotMetinleri>[0]))
           : extractInTextCitations(body, { style: atifCikarmaStili(stil) }),
         references,
-        { yilaBak },
+        // Yılsız anma yalnızca yazar-tarih stillerinde anlamlı (dipnotta ve MLA'da yıl atıfta yazılmaz).
+        { yilaBak, govde: yilaBak && !dipnotlu ? body : undefined },
       );
+      /* Eşleşti ama biçim hatalı (03.11.2026): "Engle–Granger (1987)" → "Engle ve Granger (1987)". */
+      const soyad = (kunye: { authors: string[] | null }, i: number) => kunye.authors?.[i]?.split(",")[0].replace(/^&\s*/, "").trim() ?? "";
+      for (const { atif, kaynak } of tireliAtiflar.slice(0, CITATION_ISSUE_LIMIT)) {
+        const dogru = `${soyad(kaynak, 0)} ${en ? "and" : "ve"} ${soyad(kaynak, 1)} (${atif.year})`;
+        add({
+          tone: "warning",
+          message: en
+            ? `Citation format: ${quote(atif.raw)} joins the authors with a dash; write ${quote(dogru)}.`
+            : `Atıf biçimi hatalı: ${quote(atif.raw)} yazarları tireyle bağlıyor; ${stil.ad} biçimi ${quote(dogru)}.`,
+          target: atif.raw,
+        });
+      }
+      /* Yazarlarıyla anılmış ama yılsız (03.11.2026): "anılmıyor" demek yanlıştı. */
+      for (const { ifade, kaynak } of yilsizAnilanlar.slice(0, CITATION_ISSUE_LIMIT)) {
+        const dogru = `${soyad(kaynak, 0)} ${en ? "and" : "ve"} ${soyad(kaynak, 1)} (${kaynak.year})`;
+        add({
+          tone: "warning",
+          message: en
+            ? `Citation without a year: ${quote(ifade)} names the authors of a reference but gives no year; write ${quote(dogru)}.`
+            : `Yılsız atıf: ${quote(ifade)} kaynağın yazarlarını anıyor ama yıl yok; ${quote(dogru)} biçiminde yazın.`,
+          target: ifade,
+        });
+      }
       citationsWithoutReference.slice(0, CITATION_ISSUE_LIMIT).forEach((citation) =>
         add({
           tone: "danger",

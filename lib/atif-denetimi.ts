@@ -47,15 +47,17 @@ export function atifDenetimi(doc: TiptapDoc | null | undefined, stilDegeri: stri
     eşleşir; çapraz kontrol orada anlamsız, numara eşleşmesini yapı
     denetimi yapıyor. Dipnotlu stilde atıflar dipnotlarda.
   */
+  const govde = govdeMetni(doc);
   const citations =
     stil.tur === "numara"
       ? []
       : stil.tur === "dipnot"
         ? dipnotAtiflari(dipnotMetinleri(doc))
-        : extractInTextCitations(govdeMetni(doc), { style: atifCikarmaStili(stil) });
+        : extractInTextCitations(govde, { style: atifCikarmaStili(stil) });
+  const yazarTarih = stil.tur === "yazar-tarih";
   const cross =
     stil.tur === "numara"
       ? { citationsWithoutReference: [], referencesWithoutCitation: [] }
-      : crossCheck(citations, references, { yilaBak: stil.tur === "yazar-tarih" });
+      : crossCheck(citations, references, { yilaBak: yazarTarih, govde: yazarTarih ? govde : undefined });
   return { referenceSectionFound: true, complianceScore: computeComplianceScore(references, cross), references, crossCheck: cross };
 }

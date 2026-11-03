@@ -37,11 +37,19 @@ export interface InTextCitation {
   position: number;
   /** "(Yılmaz, 2020)" parantez içi; "Yılmaz (2020)" anlatı biçimi */
   kind: "parenthetical" | "narrative";
+  /** "Engle–Granger (1987)": yazarlar tireyle bağlanmış (APA: "ve"/"&"); iki ad */
+  tire?: [string, string];
+  /** Anlatı atfında listedeki öteki adlar: ilk sözcük cümle başıysa gerçek yazar kaçmasın */
+  digerAdaylar?: string[];
 }
 
 export interface CrossCheckResult {
   citationsWithoutReference: InTextCitation[];
   referencesWithoutCitation: ParsedReference[];
+  /** Eşleşti ama yazarlar tireyle bağlanmış: "Engle–Granger (1987)" (03.11.2026) */
+  tireliAtiflar?: { atif: InTextCitation; kaynak: ParsedReference }[];
+  /** Metinde yazarlarıyla anılmış ama yılsız: "Granger ve Newbold'un …" (03.11.2026) */
+  yilsizAnilanlar?: { ifade: string; kaynak: ParsedReference }[];
 }
 
 // --- Kaynakça girdisi ayrıştırma -------------------------------------------
@@ -212,13 +220,48 @@ const MLA_NOT_AUTHORS = new Set([
   "tablo", "şekil", "şema", "grafik", "resim", "ek", "bölüm", "madde", "sayfa", "satır", "adım", "grup", "soru",
   "table", "figure", "fig", "chart", "chapter", "section", "page", "line", "step", "group", "item", "no", "vol", "cilt", "sayı",
 ]);
+/*
+  ANLATI ATFI (03.11.2026'da genişletildi). Eskiden "ve"den sonra TEK ad
+  kabul ediliyordu ve virgüllü yazar listesi hiç tanınmıyordu:
+  "Buyrukoğlu ve Altunakar Mercan (2022)" yalnızca "Altunakar Mercan",
+  "Staiger, Stock ve Watson (1997)" yalnızca "Stock ve Watson" olarak
+  yakalanıyor, ilk yazar kaçtığı için kaynak "metinde anılmıyor"
+  sayılıyordu. Şimdi her yazar en çok üç sözcük, aralarında virgül ve
+  son bağlaç ("ve", "ile", "&", "and"); tireyle bağlı ad çifti
+  ("Engle–Granger") ayrıca ele alınır (aşağıda).
+*/
+const AD_GRUBU = `${NAME}(?:\\s+${NAME}){0,2}`;
+/* Dışlama listeleri anahtarla AYNI sadeleştirmeden geçer ("şekil" → "sekil"); yoksa aksan atılınca eşleşmezdi. */
+const sade = (liste: Set<string>) => new Set([...liste].map((ad) => ad.toLocaleLowerCase("tr-TR").normalize("NFD").replace(/\p{M}+/gu, "")));
+const NOT_AUTHORS_SADE = sade(NOT_AUTHORS);
+const MLA_NOT_AUTHORS_SADE = sade(MLA_NOT_AUTHORS);
 const NARRATIVE_RE = new RegExp(
-  `(${NAME}(?:\\s+${NAME}){0,4}?(?:\\s+(?:ve|&|and)\\s+${NAME}|\\s+${ET_AL})?)\\s*\\((${YEARS})${PAGE}\\)`,
+  `(${AD_GRUBU}(?:\\s*,\\s*${AD_GRUBU})*(?:\\s*,?\\s+(?:ve|ile|&|and)\\s+${AD_GRUBU}|\\s+${ET_AL})?)\\s*\\((${YEARS})${PAGE}\\)`,
   "gu"
 );
+/* Tireyle bağlı iki yazar: "Engle–Granger (1987)", "Zivot-Andrews (1992)". */
+const TIRELI_RE = new RegExp(`(?<![\\p{L}])(\\p{Lu}[\\p{L}'’]+)\\s*[–—-]\\s*(\\p{Lu}[\\p{L}'’]+)\\s*\\((${YEARS})${PAGE}\\)`, "gu");
 
+/*
+  Aksanlar eşleşmede yok sayılır (03.11.2026): kaynakçada "Galí", metinde
+  "Gali" yazılabiliyor. Türkçe harfler de aynı yoldan sadeleşir (ş → s);
+  iki taraf aynı işlemden geçtiği için ayrım kaybı eşleşmeyi bozmaz.
+*/
 const normalizeName = (value: string) =>
-  value.toLocaleLowerCase("tr-TR").replace(/[.,;:]+$/, "").replace(/\s+/g, " ").trim();
+  value
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .replace(/[.,;:]+$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+/*
+  Kesme işaretinden sonraki Türkçe ek atılır: "Kuştepeli'nin (2005)",
+  "Solow'un (1960)", "Önder'in". Yalnızca bilinen ekler: "O'Brien" gibi
+  adlar bozulmasın.
+*/
+const IYELIK_EKI = /['’](?:n?[ıiuü]n|y?[ıiuü]|y?[ea]|[dt][ea](?:n|ki)?|y?l[ea]|l[ea]r)$/iu;
+const ekiAt = (ad: string) => ad.replace(IYELIK_EKI, "");
 const normalizeYear = (year: string | null) => (year ? year.toLowerCase().replace("n.d.", "t.y.") : null);
 
 /*
@@ -235,7 +278,8 @@ const normalizeYear = (year: string | null) => (year ? year.toLowerCase().replac
   doğruluk değişmiyor.
 */
 const ET_AL_SONU = new RegExp(`\\s+${ET_AL}\\s*$`, "iu");
-const AYIRICI = /\s+(?:ve|and)\s+|\s*&\s*/u;
+// Virgül de ayırır: "(Staiger, Stock ve Watson, 1997)"un ilk yazarı "Staiger".
+const AYIRICI = /\s*,\s*|\s+(?:ve|ile|and)\s+|\s*&\s*/u;
 const ANAHTAR_SINIRI = 5000;
 const anahtarOnbellegi = new Map<string, string>();
 
@@ -244,7 +288,7 @@ function authorKey(author: string): string {
   const onbellekli = anahtarOnbellegi.get(author);
   if (onbellekli !== undefined) return onbellekli;
   const first = author.replace(ET_AL_SONU, "").split(AYIRICI)[0];
-  const anahtar = normalizeName(first);
+  const anahtar = normalizeName(ekiAt(first.trim()));
   if (anahtarOnbellegi.size >= ANAHTAR_SINIRI) anahtarOnbellegi.clear();
   anahtarOnbellegi.set(author, anahtar);
   return anahtar;
@@ -264,7 +308,7 @@ export function extractInTextCitations(
   const mla = options.style === "mla";
   const partRe = mla ? MLA_PART_RE : options.style === "chicago" ? CHICAGO_PART_RE : CITATION_PART_RE;
   const narrativeRe = mla ? MLA_NARRATIVE_RE : NARRATIVE_RE;
-  const atifDisi = (key: string) => NOT_AUTHORS.has(key) || (mla && MLA_NOT_AUTHORS.has(key));
+  const atifDisi = (key: string) => NOT_AUTHORS_SADE.has(key) || (mla && MLA_NOT_AUTHORS_SADE.has(key));
 
   for (const group of bodyText.matchAll(PAREN_GROUP_RE)) {
     for (const part of group[1].split(";")) {
@@ -290,8 +334,40 @@ export function extractInTextCitations(
       results.push({ raw: match[0], authorKey: key, year: null, position: match.index ?? 0, kind: "narrative" });
       continue;
     }
+    /*
+      Anlatı atfı yalnızca kaynağı "anılmış" yapar, karşılıksız diye
+      raporlanmaz; bu yüzden listedeki öteki adlar da aday olarak
+      taşınır (digerAdaylar). Cümle başındaki sözcük ilk yazar sanılsa bile ("Türkiye,
+      Phillips (1958)") gerçek yazar kaçmaz.
+    */
+    const digerAdaylar = [...new Set(match[1].replace(ET_AL_SONU, "").split(AYIRICI).map((ad) => normalizeName(ekiAt(ad.trim()))))].filter(
+      (aday) => aday && aday !== key && !atifDisi(aday),
+    );
     for (const year of match[2].split(",")) {
-      results.push({ raw: match[0], authorKey: key, year: year.trim(), position: match.index ?? 0, kind: "narrative" });
+      results.push({
+        raw: match[0],
+        authorKey: key,
+        year: year.trim(),
+        position: match.index ?? 0,
+        kind: "narrative",
+        ...(digerAdaylar.length ? { digerAdaylar } : {}),
+      });
+    }
+  }
+
+  if (!mla) {
+    for (const match of bodyText.matchAll(TIRELI_RE)) {
+      const [ilk, ikinci] = [ekiAt(match[1]), ekiAt(match[2])];
+      for (const year of match[3].split(",")) {
+        results.push({
+          raw: match[0],
+          authorKey: normalizeName(ilk),
+          year: year.trim(),
+          position: match.index ?? 0,
+          kind: "narrative",
+          tire: [ilk, ikinci],
+        });
+      }
     }
   }
 
@@ -302,6 +378,8 @@ export function extractInTextCitations(
 
 const referenceKey = (reference: ParsedReference) =>
   reference.authors?.[0] ? normalizeName(reference.authors[0].split(",")[0]) : "";
+const yazarSoyadi = (reference: ParsedReference, sira: number) =>
+  reference.authors?.[sira] ? reference.authors[sira].split(",")[0].replace(/^&\s*/, "").trim() : "";
 
 // Anlatı atfının önünde cümle başı kelimesi olabilir ("Ayrıca Yılmaz (2020)"); kurum adında
 // "ve" geçebilir ("Milli Eğitim ve Kültür Bakanlığı"); kaynakçada ad önce yazılmış olabilir
@@ -322,7 +400,11 @@ export function crossCheck(
     için "metinde atıf yok" uyarısı alırdı. yilaBak=false, eşleştirmeyi
     yalnızca yazara bırakır.
   */
-  options: { yilaBak?: boolean } = {}
+  options: {
+    yilaBak?: boolean;
+    /** Gövde metni verilirse çok yazarlı kaynakların yılsız anılması aranır. */
+    govde?: string;
+  } = {}
 ): CrossCheckResult {
   const yilaBak = options.yilaBak !== false;
   const refKeys = references.map((ref) => ({ ref, key: referenceKey(ref), year: normalizeYear(ref.year) }));
@@ -347,7 +429,11 @@ export function crossCheck(
     else yilaGore.set(anahtar, [rk]);
   }
   const eslesenler = (citation: InTextCitation, yil: string | null) =>
-    (yilaGore.get(yilaBak ? yil ?? "" : "") ?? []).filter((rk) => Boolean(rk.key) && keysMatch(citation.authorKey, rk.key));
+    (yilaGore.get(yilaBak ? yil ?? "" : "") ?? []).filter(
+      (rk) =>
+        Boolean(rk.key) &&
+        (keysMatch(citation.authorKey, rk.key) || (citation.digerAdaylar ?? []).some((aday) => keysMatch(aday, rk.key))),
+    );
 
   // Karşılıksız atıf yalnızca parantez içi atıflarda raporlanır: "Türkiye (2020)" gibi
   // anlatı biçimine benzeyen her ifade atıf değildir (yanlış alarm olmasın).
@@ -366,11 +452,46 @@ export function crossCheck(
     citationsWithoutReference.push(citation);
   }
 
-  const referencesWithoutCitation = refKeys
-    .filter((rk) => !anilanKaynaklar.has(rk.ref))
-    .map((rk) => rk.ref);
+  /*
+    Tireli atıf ("Engle–Granger (1987)") kaynağı anılmış yapar ama biçim
+    hatasıdır; yalnızca ikinci ad gerçekten kaynağın ikinci yazarıysa
+    (tireli soyadlarla karışmasın: "Altunakar-Mercan").
+  */
+  const tireliAtiflar: { atif: InTextCitation; kaynak: ParsedReference }[] = [];
+  const tireliGorulen = new Set<ParsedReference>();
+  for (const citation of citations) {
+    if (!citation.tire) continue;
+    const kaynak = eslesenler(citation, normalizeYear(citation.year)).find(
+      (rk) => normalizeName(yazarSoyadi(rk.ref, 1)) === normalizeName(citation.tire![1]),
+    )?.ref;
+    if (!kaynak || tireliGorulen.has(kaynak)) continue;
+    tireliGorulen.add(kaynak);
+    tireliAtiflar.push({ atif: citation, kaynak });
+  }
 
-  return { citationsWithoutReference, referencesWithoutCitation };
+  /*
+    YILSIZ ANMA: çok yazarlı kaynağın yazarları metinde yan yana geçiyor
+    ama yıl yok ("Granger ve Newbold'un …", "Newey–West (HAC)"). Bu
+    kaynak "anılmıyor" değil, "yılsız anılmış"; öğrenciye doğru şeyi
+    söylemek için ayrılır. Tek yazarlı kaynakta aranmaz: "Phillips eğrisi",
+    "Granger nedenselliği" kavram adıdır, atıf değil.
+  */
+  const yilsizAnilanlar: { ifade: string; kaynak: ParsedReference }[] = [];
+  const kalan = refKeys.filter((rk) => !anilanKaynaklar.has(rk.ref));
+  if (options.govde) {
+    const kac = (metin: string) => metin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    for (const rk of kalan) {
+      const [a, b] = [yazarSoyadi(rk.ref, 0), yazarSoyadi(rk.ref, 1)];
+      if (!a || !b) continue;
+      const desen = new RegExp(`(?<![\\p{L}])${kac(a)}\\s*(?:ve|and|&|ile|[–—-])\\s*${kac(b)}(?:['’]\\p{L}+)?(?![\\p{L}])`, "iu");
+      const bulunan = desen.exec(options.govde);
+      if (bulunan) yilsizAnilanlar.push({ ifade: bulunan[0], kaynak: rk.ref });
+    }
+  }
+  const yilsizSet = new Set(yilsizAnilanlar.map((y) => y.kaynak));
+  const referencesWithoutCitation = kalan.filter((rk) => !yilsizSet.has(rk.ref)).map((rk) => rk.ref);
+
+  return { citationsWithoutReference, referencesWithoutCitation, tireliAtiflar, yilsizAnilanlar };
 }
 
 /*
