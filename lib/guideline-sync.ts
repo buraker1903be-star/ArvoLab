@@ -160,3 +160,43 @@ export function resolveGuidelineSync(
 
   return { mode: "offer", ...current, source, changes };
 }
+
+/*
+  AYAR KAYNAĞININ VERİTABANI KARŞILIĞI (03.11.2026).
+
+  `project_manuscripts.settings_guideline_id` katalog kılavuzuna bağlı bir
+  UUID sütunu (yabancı anahtar). Öğrencinin yüklediği kılavuzun kimliği
+  ise UUID değil: `calisma:<çalışma kimliği>` (lib/guideline-rules.ts).
+  26.10.2026'dan beri bu kimlik sütuna yazılmaya çalışılıyor, Postgres
+  22P02 ile reddediyor ve metnin TAMAMI kaydedilemiyordu — "Kuralları
+  uygula"dan sonra editör "Kaydedilemedi" deyip kalıyordu.
+
+  Migration'sız çözüm: katalog dışı kimlik sütuna NULL olarak, sürüm
+  sütununa "kimlik@sürüm" olarak yazılır, okurken geri ayrılır. Yabancı
+  anahtar katalog için yerinde kalır; eşitleme kararı
+  (resolveGuidelineSync) aynı kimlik/sürüm çiftini görür.
+*/
+const KATALOG_KIMLIGI = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const AYIRAC = "@";
+
+export function kaynakSutunlari(kaynak: Pick<SettingsSource, "guidelineId" | "version">): {
+  settings_guideline_id: string | null;
+  settings_guideline_version: string | null;
+} {
+  const kimlik = kaynak.guidelineId;
+  if (!kimlik || KATALOG_KIMLIGI.test(kimlik)) {
+    return { settings_guideline_id: kimlik ?? null, settings_guideline_version: kaynak.version ?? null };
+  }
+  return { settings_guideline_id: null, settings_guideline_version: `${kimlik}${AYIRAC}${kaynak.version ?? ""}` };
+}
+
+export function kaynakOku(
+  sutunKimligi: string | null | undefined,
+  sutunSurumu: string | null | undefined,
+): Pick<SettingsSource, "guidelineId" | "version"> {
+  if (!sutunKimligi && sutunSurumu?.startsWith("calisma:")) {
+    const i = sutunSurumu.indexOf(AYIRAC);
+    if (i > 0) return { guidelineId: sutunSurumu.slice(0, i), version: sutunSurumu.slice(i + 1) || null };
+  }
+  return { guidelineId: sutunKimligi ?? null, version: sutunSurumu ?? null };
+}

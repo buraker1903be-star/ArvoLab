@@ -18,6 +18,7 @@ import { kontrolSayilari, ozetOku, yapiSorunlariniTemizle, type KontrolKaydiOzet
 import type { StructureIssue } from "@/lib/structure-check";
 import { kagitMi, kagitOku, type KagitBoyutu } from "@/lib/kagit-boyutu";
 import { eksikSutunAdi } from "@/lib/eksik-sutun";
+import { kaynakOku, kaynakSutunlari } from "@/lib/guideline-sync";
 
 export interface PageMargins {
   top: number;
@@ -96,8 +97,8 @@ export async function getManuscript(projectId: string): Promise<ManuscriptData |
     showPageNumbers: data.show_page_numbers ?? true,
     coverPage: (data.cover_page as CoverPage) ?? null,
     settingsSource: {
-      guidelineId: data.settings_guideline_id ?? null,
-      version: data.settings_guideline_version ?? null,
+      // Öğrencinin kılavuzu "calisma:…" kimliğiyle sürüm sütununda (kaynakSutunlari).
+      ...kaynakOku(data.settings_guideline_id, data.settings_guideline_version),
       customized: data.settings_customized ?? false,
     },
     includeToc: data.include_toc ?? false,
@@ -205,8 +206,8 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   const optionalColumns = {
     ...(settingsSource
       ? {
-          settings_guideline_id: settingsSource.guidelineId,
-          settings_guideline_version: settingsSource.version,
+          // UUID sütununa "calisma:…" yazılınca kaydın tamamı düşüyordu (22P02).
+          ...kaynakSutunlari(settingsSource),
           settings_customized: settingsSource.customized,
         }
       : {}),
