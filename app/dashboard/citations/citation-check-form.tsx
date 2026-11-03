@@ -201,6 +201,7 @@ export default function CitationCheckForm({
       [anahtar]: { kayitlar: (yanit.kayitlar ?? []).slice(0, 4), hata: yanit.hata },
     }));
   };
+  const [kunyeSuzgeci, setKunyeSuzgeci] = useState<"hepsi" | "dikkat" | "tamam">("hepsi");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [denetim, setDenetim] = useState<KaynakcaDenetimYaniti | null>(null);
@@ -341,6 +342,10 @@ export default function CitationCheckForm({
     atlayabiliyor (lib/academic-reference-verification.ts).
   */
   const dogrulamaHaritasi = new Map((result?.academicVerification ?? []).map((item) => [item.reference, item]));
+  /* "Dikkat isteyen": dizinde doğrulanmamış (bakılmamış dahil) ya da biçim sorunu olan künye.
+     Öteki sekme "Sorunsuz", "Doğrulandı" değil: doğrulanmış ama biçim sorunu olan
+     künye dikkat isteyende sayılıyor ve iki adın çakışması sayıları yalan gösterirdi. */
+  const dikkatIster = (r: { raw: string; issues: unknown[] }) => dogrulamaHaritasi.get(r.raw)?.status !== "verified" || r.issues.length > 0;
   /* Atıf çıkarılamadıysa çapraz kontrol ölçülmemiştir; "Yok" yazmak
      yapılmamış bir denetimi temiz rapor gibi gösterirdi. */
   const atifOlculdu = (result?.citations?.length ?? 0) > 0;
@@ -585,70 +590,100 @@ export default function CitationCheckForm({
             toplamda görünüyordu.
           */}
           <div className="result-block">
-            <h3 className="result-heading-lg">{t({ tr: "Kaynakça", en: "Reference list" })} ({result.references.length})</h3>
-            <div>
+            {/*
+              SÜZGEÇ (04.11.2026). Altmış künyelik bir tezde öğrencinin işi
+              doğrulanmayan beş tanesi; eskiden onları bulmak için bütün
+              listeyi kaydırıyordu. Sıra DEĞİŞMİYOR (kaynakçanın sırası
+              anlamlı), yalnızca gizleniyor; numara künyenin kaynakçadaki
+              yeri olarak kalıyor.
+            */}
+            <div className="kunye-liste-bas">
+              <h3 className="result-heading-lg">{t({ tr: "Kaynakça", en: "Reference list" })} ({result.references.length})</h3>
+              <div className="segmented kunye-suzgec" role="tablist" aria-label={t({ tr: "Künye süzgeci", en: "Reference filter" })}>
+                {(
+                  [
+                    ["hepsi", t({ tr: "Tümü", en: "All" }), result.references.length],
+                    ["dikkat", t({ tr: "Dikkat isteyen", en: "Needs attention" }), result.references.filter((r) => dikkatIster(r)).length],
+                    ["tamam", t({ tr: "Sorunsuz", en: "No issues" }), result.references.filter((r) => !dikkatIster(r)).length],
+                  ] as const
+                ).map(([deger, ad, sayi]) => (
+                  <button key={deger} type="button" role="tab" aria-selected={kunyeSuzgeci === deger} className={kunyeSuzgeci === deger ? "active" : undefined} onClick={() => setKunyeSuzgeci(deger)}>
+                    {ad} <span className="kunye-suzgec-sayi">{sayi}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="kunye-liste">
+              {kunyeSuzgeci !== "hepsi" && !result.references.some((r) => (kunyeSuzgeci === "dikkat") === dikkatIster(r)) ? (
+                <p className="gb-bos">
+                  {kunyeSuzgeci === "dikkat"
+                    ? t({ tr: "Dikkat isteyen künye yok.", en: "No references need attention." })
+                    : t({ tr: "Henüz sorunsuz künye yok.", en: "No issue-free references yet." })}
+                </p>
+              ) : null}
               {result.references.map((reference, index) => {
                 const dogrulama = dogrulamaHaritasi.get(reference.raw);
                 const meta = dogrulama ? STATUS_META[dogrulama.status] : BAKILMADI;
                 const eslesme = dogrulama?.bestMatch ?? null;
+                if (kunyeSuzgeci !== "hepsi" && (kunyeSuzgeci === "dikkat") !== dikkatIster(reference)) return null;
                 return (
-                  <article key={index} className="result-item" data-tone={meta.tone}>
-                    <div className="project-card-main">
-                      <div>
-                        <div className="muted text-sm">{reference.raw}</div>
-
-                        {eslesme ? (
-                          <>
-                            <div className="mt-sm"><strong>{eslesme.title}</strong></div>
-                            <div className="hint">
-                              {eslesme.authors.slice(0, 4).join(", ") || t({ tr: "Yazar bilgisi yok", en: "No author information" })}
-                              {eslesme.year ? ` · ${eslesme.year}` : ""}
-                              {eslesme.venue ? ` · ${eslesme.venue}` : ""}
-                            </div>
-                            <div className="cluster cluster-spaced text-sm">
-                              {eslesme.url && (
-                                <a href={eslesme.url} target="_blank" rel="noreferrer" className="link-accent">
-                                  {eslesme.doi ? `DOI: ${eslesme.doi}` : t({ tr: "Akademik kaydı aç", en: "Open academic record" })}
-                                </a>
-                              )}
-                              <span>
-                                {eslesme.provider === "crossref" ? "Crossref" : "OpenAlex"}
-                                {" · "}
-                                {t({ tr: `eşleşme %${Math.round(eslesme.confidence * 100)}`, en: `${Math.round(eslesme.confidence * 100)}% match` })}
-                              </span>
-                              {eslesme.citedByCount !== null && (
-                                <span>
-                                  {t({ tr: `${eslesme.citedByCount} atıf`, en: `${eslesme.citedByCount} ${eslesme.citedByCount === 1 ? "citation" : "citations"}` })}
-                                </span>
-                              )}
-                            </div>
-                          </>
-                        ) : dogrulama ? (
-                          <div className="hint mt-sm">{t({ tr: "Crossref ve OpenAlex üzerinde yeterince güçlü bir eşleşme bulunamadı.", en: "No sufficiently strong match was found in Crossref or OpenAlex." })}</div>
-                        ) : (
-                          <div className="hint mt-sm">{t({ tr: "Ağ doğrulamasına bu turda sıra gelmedi; tekrar çalıştırın.", en: "Online verification didn't reach this one this round; run the check again." })}</div>
-                        )}
-
-                        {/* Biçim sorunları künyenin kendi kartında: ayrı
-                            blokta iken kullanıcı hangi künyeye ait olduğunu
-                            yukarı kaydırıp eşleştiriyordu. Sorun yoksa
-                            hiçbir şey yazılmıyor — "sorun bulunamadı"
-                            satırları listenin yarısını kaplıyordu. */}
-                        {reference.issues.length > 0 && (
-                          <ul className="result-list mt-sm">
-                            {reference.issues.map((issue, issueIndex) => (
-                              <li key={issueIndex} className="tone-text" data-tone={issue.severity === "error" ? "danger" : "warning"}>
-                                {issue.message}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
+                  <article key={index} className="result-item kunye-kart" data-tone={meta.tone}>
+                    <div className="kunye-kart-bas">
+                      <span className="kunye-no" aria-hidden="true">{index + 1}</span>
+                      <p className="kunye-metin">{reference.raw}</p>
                       <span className="status-pill" data-tone={meta.tone}>{t(meta.label)}</span>
                     </div>
 
+                    {/* Dizindeki kayıt ayrı kutuda: öğrencinin yazdığı künye ile
+                        dizinin bulduğu kayıt eskiden alt alta aynı kartta düz
+                        yazıydı ve hangisinin hangisi olduğu ayırt edilmiyordu. */}
+                    {eslesme ? (
+                      <div className="kunye-eslesme">
+                        <small>
+                          {t({ tr: "Dizindeki kayıt", en: "Indexed record" })}
+                          {" · "}
+                          {eslesme.provider === "crossref" ? "Crossref" : "OpenAlex"}
+                          {" · "}
+                          {t({ tr: `eşleşme %${Math.round(eslesme.confidence * 100)}`, en: `${Math.round(eslesme.confidence * 100)}% match` })}
+                        </small>
+                        <strong>{eslesme.title}</strong>
+                        <span className="hint">
+                          {eslesme.authors.slice(0, 4).join(", ") || t({ tr: "Yazar bilgisi yok", en: "No author information" })}
+                          {eslesme.year ? ` · ${eslesme.year}` : ""}
+                          {eslesme.venue ? ` · ${eslesme.venue}` : ""}
+                          {eslesme.citedByCount !== null
+                            ? ` · ${t({ tr: `${eslesme.citedByCount} atıf`, en: `${eslesme.citedByCount} ${eslesme.citedByCount === 1 ? "citation" : "citations"}` })}`
+                            : ""}
+                        </span>
+                      </div>
+                    ) : dogrulama ? (
+                      <p className="hint kunye-not">{t({ tr: "Crossref ve OpenAlex üzerinde yeterince güçlü bir eşleşme bulunamadı.", en: "No sufficiently strong match was found in Crossref or OpenAlex." })}</p>
+                    ) : (
+                      <p className="hint kunye-not">{t({ tr: "Ağ doğrulamasına bu turda sıra gelmedi; tekrar çalıştırın.", en: "Online verification didn't reach this one this round; run the check again." })}</p>
+                    )}
+
+                    {/* Biçim sorunları künyenin kendi kartında: ayrı
+                        blokta iken kullanıcı hangi künyeye ait olduğunu
+                        yukarı kaydırıp eşleştiriyordu. Sorun yoksa
+                        hiçbir şey yazılmıyor — "sorun bulunamadı"
+                        satırları listenin yarısını kaplıyordu. */}
+                    {reference.issues.length > 0 && (
+                      <ul className="result-list kunye-sorunlar">
+                        {reference.issues.map((issue, issueIndex) => (
+                          <li key={issueIndex} className="tone-text" data-tone={issue.severity === "error" ? "danger" : "warning"}>
+                            {issue.message}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
                     {dogrulama && (
-                      <div className="cluster cluster-spaced mt-sm text-sm">
+                      <div className="kunye-eylem">
+                        {eslesme?.url ? (
+                          <a href={eslesme.url} target="_blank" rel="noreferrer" className="link-accent">
+                            {eslesme.doi ? `DOI: ${eslesme.doi}` : t({ tr: "Akademik kaydı aç", en: "Open academic record" })}
+                          </a>
+                        ) : null}
                         <a href={dogrulama.googleScholarUrl} target="_blank" rel="noreferrer" className="link-accent">
                           {t({ tr: "Google Scholar’da kontrol et ↗", en: "Check on Google Scholar ↗" })}
                         </a>

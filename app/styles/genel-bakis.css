@@ -1199,3 +1199,28 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 /* Pencerenin sonuç kartında başlık ve tarih satırı zaten ayırıyor; ikinci çizgi boşluk yaratıyordu. */
 .pencere-sonuc .results-divider { margin-top: 12px; padding-top: 0; border-top: 0; }
 .kaynakca-skor { margin-bottom: 16px; }
+/* Künye kartları (04.11.2026): numara, öğrencinin künyesi, durum; altında dizindeki kayıt ayrı kutuda. */
+.kunye-liste-bas { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 10px; }
+.kunye-liste-bas .result-heading-lg { margin: 0; }
+.kunye-suzgec > button { display: inline-flex; align-items: center; min-height: 30px; padding: 4px 10px; font-size: var(--fs-sm); }
+.kunye-suzgec-sayi { margin-left: 4px; color: var(--ink-soft); font-variant-numeric: tabular-nums; font-weight: 600; }
+.kunye-liste { display: grid; gap: 8px; }
+.kunye-liste .result-item + .result-item { margin-top: 0; }
+.kunye-kart { display: grid; gap: 8px; padding: 12px 14px; transition: border-color .15s ease, box-shadow .15s ease; }
+.kunye-kart:hover { box-shadow: var(--shadow-sm); }
+.kunye-kart-bas { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 10px; }
+.kunye-no { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 700; font-variant-numeric: tabular-nums; }
+.kunye-metin { margin: 0; color: var(--ink); font-size: var(--fs-base); line-height: 1.5; overflow-wrap: anywhere; }
+.kunye-eslesme, .kunye-not, .kunye-sorunlar, .kunye-eylem { margin-left: 32px; }
+.kunye-eslesme { display: grid; gap: 2px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface-2); }
+.kunye-eslesme small { color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.kunye-eslesme strong { color: var(--ink); font-size: var(--fs-base); }
+.kunye-not { margin-top: 0; margin-bottom: 0; }
+.kunye-sorunlar { margin-top: 0; margin-bottom: 0; }
+.kunye-eylem { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: var(--fs-sm); }
+.kunye-kart .kaynak-pdf-satiri { margin-top: 2px; margin-left: 32px; }
+@media (max-width: 640px) {
+  .kunye-kart-bas { grid-template-columns: auto minmax(0, 1fr); }
+  .kunye-kart-bas .status-pill { grid-column: 2; justify-self: start; }
+  .kunye-eslesme, .kunye-not, .kunye-sorunlar, .kunye-eylem, .kunye-kart .kaynak-pdf-satiri { margin-left: 0; }
+}
