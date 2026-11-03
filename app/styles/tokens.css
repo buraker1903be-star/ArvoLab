@@ -205,13 +205,14 @@
      bildirimler, "İşleniyor…" kapsülü ve editörün yan paneli bunun
      üstünde durur.
 
-     66px = 48px simge + 8px'lik iki iç boşluk + çerçeve. Telefonda
-     simge 44px'e düşüyor (dock 62px) ama BÜYÜK olan yazılı: küçük
-     olanı yazmak masaüstünde 4px'lik bir çakışma bırakıyordu.
+     58px = telefondaki 44px simge + 6px'lik iki iç boşluk + çerçeve.
+     Masaüstünde simge 40px (dock 54px; 04.11.2026'da 48'den indi, dock
+     daha ince) ama BÜYÜK olan yazılı: küçük olanı yazmak telefonda
+     4px'lik bir çakışma bırakıyordu.
 
      Eskiden burada sekme çubuğunun yüksekliği vardı; dock onun yerini
      alınca bildirimler dock'un altında kalıyordu. */
-  --dock-alani: calc(66px + max(16px, env(safe-area-inset-bottom)));
+  --dock-alani: calc(58px + max(16px, env(safe-area-inset-bottom)));
   /* Kenar çubuğu (264px) dock'a geçişle kalktı; içerik o genişliği
      geri alıyor. Sınırsız bırakılmıyor: sayfa başlığındaki açıklama
      metni zaten 720px'te kesiliyor, asıl kazanan liste ve kartlar. */

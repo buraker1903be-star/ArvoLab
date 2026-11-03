@@ -155,7 +155,7 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
           }
         }}
       >
-        <OsSimge ad={uygulama.ikon} />
+        <OsSimge ad={uygulama.ikon} boyut={20} />
       </Link>
     );
   };
@@ -238,7 +238,7 @@ export function OsDock({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
           }}
           onClick={() => pencere.current?.showModal()}
         >
-          <OsSimge ad="apps" />
+          <OsSimge ad="apps" boyut={20} />
         </button>
       </nav>
 
