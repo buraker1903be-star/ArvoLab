@@ -135,6 +135,9 @@ const NOKTALI_YIL = new RegExp(String.raw`[\s,(]${YIL}[.;:]`, "u");
 const YAZAR_BASI = /^\[?\d{0,3}[.\]]?\s*\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)*,\s*\p{Lu}\./u;
 const KOD_IZI = /^(?:#|\/\/|import\s|from\s\S+\simport|def\s|print\(|for\s|if\s|return\s)|[=]{1,2}\s*\S+\(|\bpd\.|\bnp\./u;
 
+/** Yapıştırılmış kod satırı (Python, R): kısaltma tanımı ya da künye olamaz. */
+export const kodSatiriMi = (satir: string): boolean => KOD_IZI.test(satir.trim());
+
 export function kunyeAdayiMi(satir: string): boolean {
   const metin = satir.trim();
   if (metin.length < 10) return false;

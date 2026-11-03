@@ -8,7 +8,8 @@
 // Her sorun, metinde bulunup seçilebilecek bir "hedef" metin taşır.
 
 import { headingMatchesSection } from "@/lib/section-match";
-import { aralikta, belgeBolumleri, kaynakcaGirdileri } from "@/lib/kaynakca-bolumu";
+import { aralikta, belgeBolumleri, kaynakcaGirdileri, kodSatiriMi } from "@/lib/kaynakca-bolumu";
+import { onSayfaBasligiMi } from "@/lib/heading-numbering";
 import { SOZCUK_BASI } from "@/lib/sozcuk-siniri";
 import type { AbstractRules } from "@/lib/guideline-editor-settings";
 import { crossCheck, extractInTextCitations } from "@/lib/apa7";
@@ -18,7 +19,7 @@ import { dipnotAtiflari } from "@/lib/atif/dipnot";
 import { dipnotMetinleri } from "@/lib/tiptap-text";
 import { ON_SAYFALAR, sablonAlaniKaynagi, yerTutuculari } from "@/lib/on-sayfalar";
 import { anilanNumaralar, baslikAdlandirmaSorunu, baslikNumarasi, numaralandirmaSorunlari } from "@/lib/sekil-tablo-numaralari";
-import { kisaltmaMesaji, kisaltmaSorunlari } from "@/lib/kisaltmalar";
+import { kisaltmaMesaji, kisaltmaSorunlari, kisaltmaSozlugu, type Parca } from "@/lib/kisaltmalar";
 import { hasReferencePunctuationIssue } from "@/lib/reference-punctuation";
 import { checkParagraphFormat, describeParagraphFormat, hangingIndentCmOf, type ParagraphFormatRules } from "@/lib/paragraph-format";
 import { metinBiciminiDenetle, type MetinBicimKurali } from "@/lib/metin-bicimi";
@@ -711,7 +712,70 @@ export function checkStructure(
   /* ---------- Kısaltmalar ----------
      Denetim yalnızca yazarın KENDİ tanımlarına dayanıyor; gerekçesi
      lib/kisaltmalar.ts'te. */
-  for (const sorun of kisaltmaSorunlari(body).slice(0, CITATION_ISSUE_LIMIT)) {
+  /*
+    Gövde parçaları belge sırasıyla: düzyazı (tanım yapabilir) ve tablo
+    hücresi / şekil-tablo başlığı (yalnızca kullanım). Kaynakça ve liste
+    bölümleri dışarıda; Kısaltmalar bölümü sözlük olarak ayrıca okunur
+    (lib/kisaltmalar.ts, 03.11.2026).
+  */
+  /*
+    Ön sayfalar (Kapak, Yemin, Özet, Abstract) taranmaz: kural "ana
+    metinde ilk geçtiği yerde açılır"dır; Özet'te kısaltma kullanıp
+    açılımı ana metinde vermek kılavuzlara uygun (örnek tezde ADF böyleydi).
+    Kod satırı (yapıştırılmış Python) tanım yapamaz: yorum satırındaki
+    "(HAC)" ikinci tanım sayılıyordu. "Kısaltma | Tanım" satırlı tablo
+    (Modelde kullanılan değişkenler: "ENF | TÜFE, …") tanım tablosudur.
+  */
+  const onSayfaAraliklari: { bas: number; bit: number }[] = [];
+  blocks.forEach((block, index) => {
+    if (block.type !== "heading") return;
+    const metin = textOf(block).trim();
+    if (!onSayfaBasligiMi(metin) && !/^(?:kapak|iç kapak|title page|cover)$/iu.test(metin)) return;
+    const duzey = Number(block.attrs?.level) || 1;
+    let bit = blocks.length;
+    for (let i = index + 1; i < blocks.length; i++)
+      if (blocks[i].type === "heading" && (Number(blocks[i].attrs?.level) || 1) <= duzey) {
+        bit = i;
+        break;
+      }
+    onSayfaAraliklari.push({ bas: index, bit });
+  });
+  const onSayfada = (index: number) => onSayfaAraliklari.some((a) => index >= a.bas && index < a.bit);
+  const kisaltmaParcalari: Parca[] = [];
+  const tablodaTanimli = new Set<string>();
+  const tanimSatiri = (satir: DocNode) => {
+    const hucreler = (satir.content ?? []).map((hucre) => textOf(hucre).trim());
+    return hucreler.length >= 2 && /^[A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜ0-9]{1,7}$/u.test(hucreler[0]) && /\p{Ll}/u.test(hucreler[1]);
+  };
+  const parcaGez = (dugum: DocNode, tabloda: boolean) => {
+    if (dugum.type === "paragraph" || dugum.type === "heading") {
+      const metin = textOf(dugum);
+      const baslik = dugum.attrs?.caption === "figure" || dugum.attrs?.caption === "table";
+      if (metin.trim()) kisaltmaParcalari.push({ metin, tanimOlabilir: !tabloda && !baslik && !kodSatiriMi(metin) });
+      return;
+    }
+    if (dugum.type === "codeBlock") return;
+    if (dugum.type === "tableRow" && tanimSatiri(dugum)) {
+      // Tanım tablosundaki kısaltma açılmış sayılır; satır yine kullanım olarak taranır.
+      tablodaTanimli.add(textOf((dugum.content ?? [])[0]).trim());
+    }
+    for (const cocuk of dugum.content ?? []) parcaGez(cocuk, tabloda || dugum.type === "table");
+  };
+  blocks.forEach((block, index) => {
+    if (onSayfada(index) || inReferences(index) || listede(index)) return;
+    if (block.type === "heading" && bolumler.listeler.some((a) => a.bas === index)) return;
+    parcaGez(block, false);
+  });
+  const sozlukSatirlari: string[] = [];
+  if (bolumler.kisaltmalar) {
+    const satirGez = (dugum: DocNode) => {
+      if (dugum.type === "tableRow") sozlukSatirlari.push((dugum.content ?? []).map((hucre) => textOf(hucre).trim()).join(" | "));
+      else if (dugum.type === "paragraph") sozlukSatirlari.push(textOf(dugum));
+      else (dugum.content ?? []).forEach(satirGez);
+    };
+    for (let i = bolumler.kisaltmalar.bas + 1; i < bolumler.kisaltmalar.bit; i++) satirGez(blocks[i]);
+  }
+  for (const sorun of kisaltmaSorunlari(kisaltmaParcalari, kisaltmaSozlugu(sozlukSatirlari), tablodaTanimli).slice(0, CITATION_ISSUE_LIMIT)) {
     add({ tone: "warning", message: kisaltmaMesaji(sorun, dil), target: sorun.hedef });
   }
 
