@@ -1,0 +1,29 @@
+KILAVUZ 7/7
+ATIF künye=33 puan=97 anılmayan=2 karşılıksız=0
+[sekil] warning: Tablo 1 (“Türkiye üzerine seçilmiş ampirik çalışmalar”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 2 (“Modelde kullanılan değişkenler”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 3 (“Tanımlayıcı istatistikler (2000–2025, n = 26)”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 4 (“ADF, PP ve KPSS birim kök testi sonuçları”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 5 (“Zivot–Andrews yapısal kırılmalı birim kök testi”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 6 (“Statik ve beklentilerle genişletilmiş Phillips denklemler…”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 7 (“Model 2 için tanısal testler”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 9 (“VAR gecikme uzunluğu seçimi”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 10 (“Toda–Yamamoto nedensellik testi sonuçları (k = 2, d_max = 1)”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 11 (“Alt dönemlere göre enflasyon–işsizlik ilişkisi”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Tablo 12 (“Hipotez testlerinin özeti”) metinde anılmıyor; kılavuzlar genellikle her tablonun metinde anılmasını ister.
+[sekil] warning: Şekil 1 için adlandırıcı başlık eksik: “Kaynak: TÜİK verilerinden derlenmiştir ·” yalnızca kaynağı söylüyor. Önce şeklin ne gösterdiğini yazın; kaynak ardından ya da notta verilir.
+[kaynakca] warning: Atıf biçimi hatalı: “Zivot–Andrews (1992)” yazarları tireyle bağlıyor; APA 7 biçimi “Zivot ve Andrews (1992)”.
+[kaynakca] warning: Atıf biçimi hatalı: “Engle–Granger (1987)” yazarları tireyle bağlıyor; APA 7 biçimi “Engle ve Granger (1987)”.
+[kaynakca] warning: Yılsız atıf: “Granger ve Newbold'un” kaynağın yazarlarını anıyor ama yıl yok; “Granger ve Newbold (1974)” biçiminde yazın.
+[kaynakca] warning: Yılsız atıf: “Newey–West” kaynağın yazarlarını anıyor ama yıl yok; “Newey ve West (1987)” biçiminde yazın.
+[kaynakca] warning: Kaynakçadaki “TÜİK. (2026a). Tüketici Fiyat Endeksi, Aralık 2025 [Haber…” metinde anılmıyor.
+[kaynakca] warning: Kaynakçadaki “TÜİK. (2026b). İşgücü İstatistikleri, 2025 [Haber bülteni…” metinde anılmıyor.
+[ek] warning: Ek 2 (“Ek 2. Analiz Kodunun Özeti (Python)”) metinde anılmıyor; kılavuzlar her ekin metinde gönderme almasını ister.
+[yazim] warning: “NARDL” tanımlanmış ama bir daha kullanılmamış; tek kullanımlık kısaltma gereksizdir.
+[yazim] warning: Ana metinde ilk geçtiği yerde açılmamış kısaltmalar (yalnızca Kısaltmalar listesinde var): TÜFE, ARDL, TÜİK, TCMB, JB, KPSS, RESET, CUSUM, VAR, OLS, SC, BIC, FPE, HQ, EVDS, GMM. İlk kullanımda “Açık adı (KISALTMA)” biçiminde yazın.
+[yazim] warning: Kısaltmalar listesinde olup metinde geçmeyenler: EKK.
+[genel] warning: Doldurulmamış alan: “[Ad SOYAD]” (2 kez). Kendi bilginizle değiştirin.
+[genel] warning: Doldurulmamış alan: “[.........]”. Kendi bilginizle değiştirin.
+[genel] warning: Doldurulmamış alan: “[Unvan Ad SOYAD]”. Kendi bilginizle değiştirin.
+[genel] warning: Doldurulmamış alan: “Tarih: ..../..../2026”. Kendi bilginizle değiştirin.
+[genel] warning: Doldurulmamış alan: “İmza: ....................”. Kendi bilginizle değiştirin.

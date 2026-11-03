@@ -173,3 +173,11 @@ test("ek atfı Türkçe eklerle tanınır; anılmayan ek uyarı alır", () => {
   const doc2 = { content: [...doc.content.slice(0, 2), p("Kodun özeti Ek 2'deki gibidir."), ...doc.content.slice(2)] };
   assert.deepEqual(checkStructure(doc2 as never, { belgeDili: "tr" }).filter((s) => s.kategori === "ek"), []);
 });
+
+test("'Ekler' bölümünü numaralı ek başlıkları karşılar; 'Ek 1'de …' cümlesi karşılamaz", async () => {
+  const { headingMatchesSection } = await import("@/lib/section-match");
+  for (const baslik of ["Ekler", "EKLER", "Ek 1. Veri Seti", "EK-2: Kod", "Ek A", "Appendix B. Survey"]) assert.ok(headingMatchesSection(baslik, "Ekler"), baslik);
+  for (const degil of ["Ek 1'de verilmiştir.", "Ekonomi", "Eklenen tablolar"]) assert.ok(!headingMatchesSection(degil, "Ekler"), degil);
+  // Başka bölümler etkilenmez.
+  assert.ok(!headingMatchesSection("Ek 1. Veri Seti", "Kaynakça"));
+});

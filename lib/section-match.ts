@@ -20,9 +20,22 @@ export function normalizeHeading(text: string): string {
     .trim();
 }
 
+/*
+  "Ekler" bölümünü numaralı ek başlıkları da karşılar (03.11.2026): örnek
+  tezde "Ekler" başlığı yoktu, ekler doğrudan "Ek 1. Veri Seti", "Ek 2. …"
+  diye başlıyordu ve kılavuz uygunluğu "Ekler eksik" (6/7) diyordu.
+  Numaradan sonra ayraç ya da satır sonu şart: "Ek 1'de verilmiştir" bir
+  cümledir, başlık değil.
+*/
+const EKLER = new Set(["EKLER", "APPENDICES", "APPENDIX"]);
+const NUMARALI_EK = /^(?:EK|APPENDIX)\s*[-–]?\s*(?:\d+|[A-Z])\s*(?:[.:–-]|$)/u;
+
 export function headingMatchesSection(heading: string, section: string): boolean {
   const normalizedSection = normalizeHeading(section);
-  return normalizedSection.length > 0 && normalizeHeading(heading) === normalizedSection;
+  if (normalizedSection.length === 0) return false;
+  const normalizedHeading = normalizeHeading(heading);
+  if (normalizedHeading === normalizedSection) return true;
+  return EKLER.has(normalizedSection) && NUMARALI_EK.test(heading.trim().toLocaleUpperCase("tr-TR").replace(/[İI]/g, "I"));
 }
 
 /*
