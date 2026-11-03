@@ -8,11 +8,9 @@ import {
   MessageSquare,
   MoreHorizontal,
   PenLine,
-  Pencil,
   RotateCcw,
   ShieldCheck,
   TriangleAlert,
-  Upload,
   UserRound,
 } from "lucide-react";
 import ActionForm from "../action-form";
@@ -21,6 +19,8 @@ import { takvimiGetir } from "@/app/actions/tez-takvimi";
 import { kalanMetni, siradakiTas, takvimOzeti } from "@/lib/tez-takvimi";
 import { trGunAnahtari } from "@/lib/tr-time";
 import DeleteProjectButton from "./delete-project-button";
+import CalismaDuzenlePenceresi from "./_duzenle/calisma-duzenle-penceresi";
+import BelgeYuklePenceresi from "./_duzenle/belge-yukle-penceresi";
 import { createClient } from "@/lib/supabase/server";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { CALISMA_OKUNAMADI, atifStiliCelisiyorMu } from "@/lib/calisma-ozeti";
@@ -181,14 +181,8 @@ export default async function PersonelCalismaKarti({
               <MoreHorizontal size={18} aria-hidden="true" />
             </summary>
             <div className="kart-menu-liste">
-              <Link href={`${merkez}/edit`}>
-                <Pencil size={15} aria-hidden="true" />
-                {t({ tr: "Bilgileri düzenle", en: "Edit details" })}
-              </Link>
-              <Link href={`/dashboard/documents?calisma=${calisma.id}`}>
-                <Upload size={15} aria-hidden="true" />
-                {t({ tr: "Belge yükle", en: "Upload document" })}
-              </Link>
+              <CalismaDuzenlePenceresi projectId={calisma.id} baslik={calisma.title} />
+              <BelgeYuklePenceresi calisma={{ id: calisma.id, title: calisma.title, university: calisma.university ?? null }} />
               {silebilir ? <DeleteProjectButton projectId={calisma.id} projectTitle={calisma.title} /> : null}
             </div>
           </details>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { YEREL, type Metin } from "@/lib/dil";
-import { Check, FileText, MoreHorizontal, PenLine, Pencil, TriangleAlert, Upload } from "lucide-react";
+import { Check, FileText, MoreHorizontal, PenLine, TriangleAlert } from "lucide-react";
 import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { acikYapilacaklar, yapilacakTamamla } from "@/app/actions/yapilacaklar";
 import { calismaAnalizleri } from "@/app/actions/analiz-sonuclari";
@@ -22,6 +22,8 @@ import { statusTone } from "@/lib/status-tone";
 import type { DueInfo } from "@/lib/due-date";
 import { ListeSatiri } from "../_components/genel-bakis";
 import DeleteProjectButton from "./delete-project-button";
+import CalismaDuzenlePenceresi from "./_duzenle/calisma-duzenle-penceresi";
+import BelgeYuklePenceresi from "./_duzenle/belge-yukle-penceresi";
 import TeslimPaketi from "../_components/teslim-paketi";
 import TeslimTarihiFormu from "../_components/teslim-tarihi-formu";
 import TezTakvimiPenceresi from "./tez-takvimi-penceresi";
@@ -371,15 +373,9 @@ export default async function CalismaDurumKarti({
           </summary>
           <div className="kart-menu-liste">
             {duzenleyebilir ? (
-              <Link href={`${merkez}/edit`}>
-                <Pencil size={15} aria-hidden="true" />
-                {t({ tr: "Bilgileri düzenle", en: "Edit details" })}
-              </Link>
+              <CalismaDuzenlePenceresi projectId={calisma.id} baslik={calisma.title} />
             ) : null}
-            <Link href={`/dashboard/documents?calisma=${calisma.id}`}>
-              <Upload size={15} aria-hidden="true" />
-              {t({ tr: "Belge yükle", en: "Upload document" })}
-            </Link>
+            <BelgeYuklePenceresi calisma={{ id: calisma.id, title: calisma.title, university: calisma.university ?? null }} />
             {silebilir ? <DeleteProjectButton projectId={calisma.id} projectTitle={calisma.title} /> : null}
           </div>
         </details>

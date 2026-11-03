@@ -151,6 +151,11 @@ html.drawer-open { overflow: hidden; }
    Bin piksellik pencerede iki kart da sıkışıyor, sonuç başlıkları üç
    satıra kırılıyordu. */
 .drawer-root[data-boy="tam"] .drawer { width: min(1360px, 100%); max-height: min(92dvh, 1100px); }
+/* Onay penceresi ("emin misiniz?"): kısa metin ve iki düğme (ActionForm). */
+.drawer-root[data-boy="onay"] .drawer { width: min(480px, 100%); }
+.onay-metni { display: grid; gap: 10px; color: var(--muted); line-height: 1.55; }
+.onay-metni p { margin: 0; }
+.onay-eylemleri { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 
 .drawer-header {
   position: relative;

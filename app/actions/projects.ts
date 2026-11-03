@@ -10,7 +10,8 @@ import { calismaOzeti } from "@/app/actions/calisma-merkezi";
 import { onayUyarisi } from "@/lib/onay-uyarisi";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, requireRole, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
-import { calismaKilavuzu } from "@/lib/guideline-rules";
+import { calismaKilavuzu, kilavuzGorunenAdi } from "@/lib/guideline-rules";
+import { getUniversities, type University } from "@/app/actions/universities";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { STILLER } from "@/lib/atif/stiller";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
@@ -269,6 +270,38 @@ export async function getProjectForEdit(
     return CALISMA_OKUNAMADI;
   }
   return data;
+}
+
+/*
+  "Bilgileri düzenle" PENCERESİNİN VERİSİ (03.11.2026). Çalışmalarım'daki
+  her kart için formu önceden çizmek, sayfa açılırken çalışma başına bir
+  çalışma okuması ve bütün üniversite listesi demekti; pencere açılınca
+  istenir. Yetki kararı düzenleme sayfasıyla aynı (sahip, atanan personel,
+  denetim rolleri) — RLS asıl katman, bu yalnızca anlaşılır mesaj için.
+*/
+export async function calismaDuzenlemeVerisi(
+  projectId: string,
+): Promise<
+  | { veri: { project: ProjectEditData; universities: University[]; guidelineLabel: string | null; canOversee: boolean } }
+  | { error: string }
+> {
+  const ctx = await getAuthContext();
+  if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
+  const [project, { satirlar: universities, okunamadi }] = await Promise.all([getProjectForEdit(projectId), getUniversities()]);
+  if (project === CALISMA_OKUNAMADI || okunamadi) {
+    return { error: t({ tr: "Çalışma yüklenemedi; tekrar deneyin.", en: "The work could not be loaded; try again." }) };
+  }
+  if (!project) return { error: t({ tr: "Çalışma bulunamadı.", en: "Work not found." }) };
+  const canOversee = isOversightRole(ctx.role);
+  if (!canOversee && project.owner_id !== ctx.user.id && project.assignee_id !== ctx.user.id) {
+    return { error: t({ tr: "Bu çalışmayı düzenleyemezsiniz.", en: "You can't edit this work." }) };
+  }
+  const guideline = await calismaKilavuzu(ctx.supabase, project.id, project.guideline_id);
+  const guidelineLabel = guideline
+    ? `${kilavuzGorunenAdi(guideline.label, await aktifDil())} · ${guideline.citationStyle.toUpperCase()}`
+    : null;
+  return { veri: { project, universities, guidelineLabel, canOversee } };
 }
 
 // Çalışmanın sahibi, atanan personel ve Kontrolör+ roller düzenleyebilir.

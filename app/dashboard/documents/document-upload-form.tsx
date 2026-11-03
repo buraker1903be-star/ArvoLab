@@ -36,6 +36,7 @@ export default function DocumentUploadForm({
   projects,
   secilenCalisma = "",
   gomulu = false,
+  sonucAdresi,
 }: {
   projects: Project[];
   /* Çalışma merkezinden gelindiyse o çalışma hazır seçili gelir; kullanıcı
@@ -48,6 +49,12 @@ export default function DocumentUploadForm({
     biri güncellenip öteki unutulan iki ekran demekti.
   */
   gomulu?: boolean;
+  /*
+    Çalışmalarım kartındaki pencereden yüklenince sonuçlar Belge Kontrol'de
+    okunur: yükleme bitince oraya gidilir. Sonucu kartta yeniden çizmek,
+    iki yerde güncellenmesi gereken bir ekran daha demekti.
+  */
+  sonucAdresi?: string;
 }) {
   const router = useRouter();
   const t = useCeviri();
@@ -126,7 +133,8 @@ export default function DocumentUploadForm({
         showToast("error", res.cozumlenemedi);
         if (gomulu) {
           announceActionSuccess();
-          router.refresh();
+          if (sonucAdresi) router.push(sonucAdresi);
+          else router.refresh();
         } else {
           setError(res.cozumlenemedi);
         }
@@ -134,7 +142,8 @@ export default function DocumentUploadForm({
         showToast("success", t({ tr: "Belge yüklendi ve denetlendi.", en: "Document uploaded and checked." }));
         // Yükleme penceresi kapanır; yeni belge listede seçili açılır (page.tsx anahtarı).
         announceActionSuccess();
-        router.refresh();
+        if (sonucAdresi) router.push(sonucAdresi);
+        else router.refresh();
       } else if (res.analysis) {
         setResult(res.analysis as AnalysisResult);
       }

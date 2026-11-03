@@ -26,7 +26,7 @@ type PanelDrawerProps = {
    * Pencere genişliği: form için "orta", tablo ve zincir için "genis",
    * yan yana iki kartlı çalışma pencereleri (arama + sonuçlar) için "tam".
    */
-  boy?: "orta" | "genis" | "tam";
+  boy?: "onay" | "orta" | "genis" | "tam";
   /**
    * Bir işlem başarıyla bitince pencere kapansın mı?
    *

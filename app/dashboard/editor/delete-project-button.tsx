@@ -15,6 +15,7 @@ export default function DeleteProjectButton({ projectId, projectTitle }: { proje
         en: `Are you sure you want to delete the work "${projectTitle}"?\n\nThis cannot be undone — all document uploads, reference list checks and text written in the panel for this work will also be deleted.`,
       })}
       successMessage={t({ tr: `"${projectTitle}" silindi.`, en: `"${projectTitle}" was deleted.` })}
+      confirmButtonLabel={t({ tr: "Evet, sil", en: "Yes, delete" })}
     >
       <button type="submit" className="button-danger button-compact">
         <Trash2 size={15} aria-hidden="true" />
