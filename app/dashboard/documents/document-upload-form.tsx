@@ -161,8 +161,8 @@ export default function DocumentUploadForm({
         <h2>{t({ tr: "Doküman Yükle (DOCX / PDF)", en: "Upload Document (DOCX / PDF)" })}</h2>
         <p>
           {t({
-            tr: "Tez veya makalenizi yükleyin; sistem metni okuyup kaynakça bölümünü otomatik tespit ederek APA 7 kural denetiminden geçirir. Dosya içeriği yalnızca sizin ve yetkili rollerin görebileceği şekilde saklanır; ArvoLab içerik üretmez, sadece denetler.",
-            en: "Upload your thesis or article; the system reads the text, detects the reference list automatically and checks it against APA 7 rules. File contents are stored so that only you and authorized roles can see them; ArvoLab doesn't generate content, it only checks.",
+            tr: "Tez veya makalenizi yükleyin; sistem metni okuyup kaynakça bölümünü otomatik tespit ederek APA 7 kural denetiminden geçirir. Dosya içeriği yalnızca sizin ve yetkili rollerin görebileceği şekilde saklanır; Belge Kontrol içerik üretmez, yalnızca denetler.",
+            en: "Upload your thesis or article; the system reads the text, detects the reference list automatically and checks it against APA 7 rules. File contents are stored so that only you and authorized roles can see them; Document Check doesn't generate content; it only checks.",
           })}
         </p>
       </div>

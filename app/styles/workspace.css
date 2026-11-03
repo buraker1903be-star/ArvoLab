@@ -1115,3 +1115,65 @@
 /* Kısayollar penceresi: gruplar */
 .shortcut-grup + .shortcut-grup { margin-top: 14px; }
 .shortcut-grup h3 { margin: 0 0 4px; color: var(--muted); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+
+/* ---------- Yazım asistanı paneli (03.11.2026) ----------
+   Modal değil: sağa yaslı kalıcı panel, editör kullanılabilir kalır.
+   Telefonda alttan açılan sayfa gibi tam genişlik. */
+.yazim-paneli {
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: min(400px, calc(100vw - 32px));
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.yazim-paneli-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); }
+.yazim-paneli-bas > span { display: inline-flex; align-items: center; gap: 8px; color: var(--accent); }
+.yazim-paneli-bas b { color: var(--ink); }
+.yazim-ikon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.yazim-ikon:hover { color: var(--accent); }
+.yazim-paneli-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px; display: grid; align-content: start; gap: 12px; }
+.yazim-paneli-bos { display: grid; gap: 8px; color: var(--ink-soft); line-height: 1.55; }
+.yazim-paneli-bos p { margin: 0; }
+.yazim-mesaj { display: grid; gap: 8px; max-width: 100%; }
+.yazim-mesaj p { margin: 0; line-height: 1.55; white-space: pre-wrap; }
+.yazim-mesaj[data-rol="kullanici"] { justify-self: end; max-width: 85%; padding: 8px 12px; border-radius: var(--r-md); background: var(--accent-soft); color: var(--ink); }
+.yazim-mesaj[data-rol="asistan"] { color: var(--ink-soft); }
+.yazim-oneri { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface-2); color: var(--ink); }
+.yazim-oneri-eylem { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.yazim-hizli { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 0; border-top: 1px solid var(--line-soft); }
+.yazim-hizli-dugme {
+  padding: 6px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.yazim-hizli-dugme:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.yazim-hizli-dugme:disabled { opacity: .6; cursor: default; }
+.yazim-girdi { display: flex; align-items: flex-end; gap: 8px; padding: 10px 14px 14px; }
+.yazim-girdi textarea { flex: 1 1 auto; min-width: 0; resize: none; }
+@media (max-width: 760px) {
+  .yazim-paneli { top: auto; right: 0; bottom: 0; left: 0; width: 100%; height: 70dvh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+}

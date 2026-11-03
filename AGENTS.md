@@ -67,16 +67,20 @@ dilinden ayrıdır: şekil/tablo etiketleri, kapak, atıf biçimi ona göre.
   verir; RLS'in yerini tutmaz.
 - **Paylaşım belirteci veritabanında ham tutulmaz.** Yalnızca SHA-256 özeti
   yazılır, belirtecin kendisi bir kez gösterilir (`lib/share-token.ts`).
-- **Asistan denetler, yazmaz.** Yapay zeka yetenekleri (`lib/ai/`)
-  kullanıcının çalışmasına yapıştırabileceği metin üretmez: neyin eksik
-  olduğunu ve neden önemli olduğunu söyler, cümlesini kurmaz. Kural sistem
-  isteminde yazılı; koddaki karşılığı YAPISALDIR, ayrı bir denetim değil:
-  çıktı kanalı bulgu listesidir (`bulgulariCozumle` başka biçimi hiç
-  okumaz, yani model düz yazı döndüremez), başlık 60 ve açıklama 400
-  karakterle sınırlıdır, künye üretimi `kunyeIzi` ile reddedilir. "Hazır
-  cümle" arayan bir denetim bilerek YOK: asistanın öğrencinin kendi
-  cümlesini alıntılaması meşru ve gerekli, ikisini ayırt edecek güvenilir
-  bir desen yok — yanlış alarm aracı kullanılamaz hâle getirir.
+- **Asistan yalnızca SOHBETTE yazar; belgeye eklemek kullanıcının eylemidir.**
+  03.11.2026'ya kadar kural "asistan denetler, yazmaz" idi; kurum sahibi
+  ürünü Jenni AI'ın karşısına koymak için değiştirdi. Yazım asistanı
+  (`lib/ai/yazim-asistani.ts`, editörde `yazim-paneli.tsx`) paragraf
+  yazabilir, ama metin belgeye hiçbir zaman kendiliğinden girmez: "İmlece
+  ekle" / "Seçilenin yerine koy" kullanıcının düğmesidir. Öteki yetenekler
+  (analiz, kaynakça, literatür, belge, kanıt, makale, kılavuz) DENETÇİ
+  olarak kaldı: çıktı kanalları bulgu listesi (`bulgulariCozumle` başka
+  biçimi okumaz), başlık 60 ve açıklama 400 karakterle sınırlı. Yeni bir
+  yetenek yazarken hangisi olduğuna karar verin; denetçiye metin
+  ürettirmeyin. Yazım asistanında da iki kural kodda yapısaldır ve
+  çiğneyen cevap DÜŞER: atıf yalnızca öğrencinin Literatür kütüphanesinden
+  (eşleşmeyen tek atıf yeter), sayı yalnızca bağlamdan; künye ve DOI
+  üretilmez.
 - **Asistanın ürettiği her sayı girdide geçmek zorunda.** `lib/ai/bulgu.ts`
   çıktıyı tarar; bağlamda geçmeyen tek bir değer varsa cevabın tamamı düşer
   ve kullanıcıya hiç gösterilmez. Bir kısmı doğru olan listeye güvenmek en

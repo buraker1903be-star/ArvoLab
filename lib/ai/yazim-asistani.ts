@@ -29,6 +29,7 @@ import { jsonOku } from "./bulgu";
 import { uydurmaSayilar } from "./sayi-denetimi";
 import { crossCheck, extractInTextCitations, type ParsedReference } from "@/lib/apa7";
 import { splitAuthors } from "@/lib/citation-format";
+export { paragraflara } from "./yazim-metni";
 
 export type YazimGorevi = "serbest" | "devam" | "paragraf" | "akademik" | "kisalt" | "genislet";
 
@@ -40,7 +41,8 @@ export type KutuphaneKaydi = {
   not?: string | null;
 };
 
-export type SohbetMesaji = { rol: "kullanici" | "asistan"; metin: string };
+export type { SohbetMesaji } from "./yazim-metni";
+import type { SohbetMesaji } from "./yazim-metni";
 
 export type YazimGirdisi = {
   /** Çalışmanın özeti (başlık, tür, yöntem, atıf stili): calismaBaglami */
@@ -193,12 +195,4 @@ export function yazimDenetle(
   const uydurma = uydurmaSayilar(metin, baglamMetinleri.join("\n"));
   if (uydurma.length) return { gecti: false, neden: "uydurma_sayi", ayrinti: uydurma };
   return { gecti: true };
-}
-
-/** Eklenebilir metin → paragraflar (boş satırla ayrılmış). */
-export function paragraflara(metin: string): string[] {
-  return metin
-    .split(/\n\s*\n/)
-    .map((p) => p.replace(/\s*\n\s*/g, " ").trim())
-    .filter(Boolean);
 }

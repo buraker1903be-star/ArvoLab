@@ -434,10 +434,18 @@ const BOLUMLER: KilavuzBolumu[] = [
     id: "asistan",
     baslik: { tr: "Asistan: ne yapar, ne yapmaz", en: "The assistant: what it does and doesn't do" },
     ozet: {
-      tr: "ArvoLab'daki yapay zekâ asistanı bir denetçidir, yazar değildir: neyin eksik olduğunu ve neden önemli olduğunu söyler.",
-      en: "ArvoLab's AI assistant is a reviewer, not a writer: it tells you what is missing and why it matters.",
+      tr: "Editördeki yazım asistanı sizinle sohbet ederek metin yazar; metne eklemek size kalır. Öteki ekranlardaki asistan bir denetçidir: neyin eksik olduğunu ve neden önemli olduğunu söyler.",
+      en: "The writing assistant in the editor writes text with you in a chat; inserting it is up to you. The assistant on the other screens is a reviewer: it tells you what is missing and why it matters.",
     },
     adimlar: [
+      {
+        tr: "Editörde araç çubuğundaki \"Asistan\" düğmesi yazım asistanını sağda açar. Ne yazmak istediğinizi anlatın ya da metin seçip \"Devam ettir\", \"Akademikleştir\", \"Kısalt\", \"Genişlet\" düğmelerini kullanın.",
+        en: "In the editor, the \"Assistant\" button on the toolbar opens the writing assistant on the right. Describe what you want to write, or select text and use \"Continue\", \"Make academic\", \"Shorten\", \"Expand\".",
+      },
+      {
+        tr: "Asistanın yazdığı metin belgenize kendiliğinden girmez: \"İmlece ekle\", \"Seçilenin yerine koy\" ya da \"Kopyala\" ile siz eklersiniz. Eklemeden önce okuyun ve kendi sözcüklerinizle düzenleyin.",
+        en: "Text the assistant writes never enters your document by itself: you insert it with \"Insert at cursor\", \"Replace selection\" or \"Copy\". Read it and edit it in your own words before inserting.",
+      },
       {
         tr: "Asistan; kaynakça, analiz sonucu, kanıt, belge ve makale bölümleri gibi ekranlarda ilgili düğmeyle çalışır ve bulgularını kısa maddeler hâlinde verir.",
         en: "The assistant runs from the relevant button on screens such as references, analysis results, evidence, documents and article sections, and returns its findings as short items.",
@@ -449,8 +457,12 @@ const BOLUMLER: KilavuzBolumu[] = [
     ],
     notlar: [
       {
-        tr: "Asistan çalışmanıza yapıştırılacak cümle, paragraf ya da özet yazmaz; kaynak (yazar, başlık, DOI) önermez.",
-        en: "The assistant does not write sentences, paragraphs or abstracts for your work, and does not suggest sources (authors, titles, DOIs).",
+        tr: "Yazım asistanı yalnızca Literatür kütüphanenizdeki kaynaklara atıf yapar; kütüphanede olmayan bir kaynağa atıf yaparsa ya da kaynakça satırı (künye, DOI) yazarsa metin gösterilmez. Kaynak önermez: kaynağı siz eklersiniz.",
+        en: "The writing assistant only cites sources in your Literature library; if it cites a source that isn't there or writes a reference entry (author–title, DOI), the text is withheld. It doesn't suggest sources: you add them.",
+      },
+      {
+        tr: "Kurumunuzun ve danışmanınızın yapay zekâ kullanım kurallarına uymak sizin sorumluluğunuzdadır.",
+        en: "Following your institution's and advisor's rules on AI use is your responsibility.",
       },
       {
         tr: "Asistanın verdiği her sayı sizin girdinizde geçmek zorundadır; geçmeyen bir değer bulunursa cevabın tamamı gösterilmez.",

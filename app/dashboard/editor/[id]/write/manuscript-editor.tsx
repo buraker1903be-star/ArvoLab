@@ -64,6 +64,7 @@ import {
   PanelTop,
   TableCellsMerge,
   TableCellsSplit,
+  Sparkles,
 } from "lucide-react";
 import FindReplaceBar from "./find-replace-bar";
 import ImportDialog, { type ImportMode } from "./import-dialog";
@@ -109,6 +110,7 @@ import { splitBodyAndReferences } from "@/lib/text-split";
 import type { KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import IcindekilerKarti from "./icindekiler-karti";
 import OnSayfalarKarti from "./on-sayfalar-karti";
+import YazimPaneli from "./yazim-paneli";
 import { kilavuzOnSayfaAdlari, kilavuzOnSayfalari, onSayfaAdiKimligi, type OnSayfaKimligi } from "@/lib/on-sayfalar";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
@@ -515,6 +517,7 @@ export default function ManuscriptEditor({
   const [headingNumbering, setHeadingNumbering] = useState(initialHeadingNumbering);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
+  const [yazimAcik, setYazimAcik] = useState(false);
   const [analizOpen, setAnalizOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -2072,6 +2075,10 @@ export default function ManuscriptEditor({
           <ToolbarButton label={t({ tr: "Dipnot ekle (Ctrl+Alt+F)", en: "Insert footnote (Ctrl+Alt+F)" })} metin={t({ tr: "Dipnot", en: "Footnote" })} onClick={() => setFootnoteDialog({ mode: "insert", text: "" })}>
             <StickyNote size={16} />
           </ToolbarButton>
+          {/* Yazım asistanı (03.11.2026): sohbette yazar, ekleme öğrencinin (yazim-paneli.tsx). */}
+          <ToolbarButton label={t({ tr: "Yazım asistanı", en: "Writing assistant" })} metin={t({ tr: "Asistan", en: "Assistant" })} onClick={() => setYazimAcik((acik) => !acik)}>
+            <Sparkles size={16} />
+          </ToolbarButton>
           <ToolbarButton label={t({ tr: "Kaynaktan atıf ekle", en: "Cite a source" })} metin={t({ tr: "Atıf", en: "Citation" })} onClick={() => setCiteOpen(true)}>
             <BookMarked size={16} />
           </ToolbarButton>
@@ -3044,6 +3051,7 @@ export default function ManuscriptEditor({
         belgeDili={belgeDili}
         onPick={handleCite}
       />
+      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => setYazimAcik(false)} />
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
       <ImportDialog
         open={importOpen}
