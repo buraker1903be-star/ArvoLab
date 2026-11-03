@@ -55,11 +55,31 @@ export default function AnalizSecici({
               <AnalizSatiri key={a.id} analiz={a} />
             ))}
           </ul>
+        ) : analizler.length === 0 ? (
+          /*
+            Hiç analiz yokken kart üç adımlık akışı gösterir (04.11.2026):
+            eskiden kartın ortasında tek bir gri cümle duruyordu ve yarım
+            ekranlık boşluk "burada ne olacak" sorusunu cevaplamıyordu.
+          */
+          <ol className="analiz-akis">
+            <li>
+              <b>{t({ tr: "Verinizi yükleyin", en: "Upload your data" })}</b>
+              <span>{t({ tr: "Excel ya da CSV. Hesap tarayıcınızda yapılır, dosyanız sunucuya gitmez.", en: "Excel or CSV. Computation runs in your browser; your file never reaches the server." })}</span>
+            </li>
+            <li>
+              <b>{t({ tr: "Analizi seçip çalıştırın", en: "Choose and run an analysis" })}</b>
+              <span>{t({ tr: "Varsayımlar denetlenir, uymayan testin parametrik olmayan karşılığı önerilir.", en: "Assumptions are checked; a non-parametric alternative is suggested when they fail." })}</span>
+            </li>
+            <li>
+              <b>{t({ tr: "Teze ekleme sırasına koyun", en: "Queue it for your thesis" })}</b>
+              <span>{t({ tr: "Editörde Ekle → Analiz, sonucu imlecin olduğu yere yerleştirir.", en: "In the editor, Insert → Analysis places the result at the cursor." })}</span>
+            </li>
+          </ol>
         ) : (
           <p className="gb-bos">
             {t({
-              tr: "Henüz sırada sonuç yok. Analizi çalıştırdıktan sonra \"Teze ekleme sırasına koy\"a basın; sonuç editörde \"Analiz ekle\" ile imlecin olduğu yere eklenir.",
-              en: "No results queued yet. After running an analysis, press \"Queue for thesis\"; in the editor, \"Add analysis\" inserts the result at the cursor.",
+              tr: "Henüz sırada sonuç yok. Analizi çalıştırdıktan sonra \"Teze ekleme sırasına koy\"a basın; sonuç editörde Ekle → Analiz ile imlecin olduğu yere eklenir.",
+              en: "No results queued yet. After running an analysis, press \"Queue for thesis\"; in the editor, Insert → Analysis places the result at the cursor.",
             })}
           </p>
         )}

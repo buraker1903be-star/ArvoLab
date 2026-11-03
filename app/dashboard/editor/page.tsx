@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
-import { AlertTriangle, FileText, Search, MessageSquare, ShieldAlert, ShieldCheck } from "lucide-react";
+import { AlertTriangle, FileText, Search, MessageSquare, ShieldAlert, ShieldCheck, Plus } from "lucide-react";
 import { simdi } from "@/lib/genel-bakis";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
@@ -375,6 +375,14 @@ export default async function ProjectsPage({
                 tamamlananlar kapalı bir grupta, seçiliyse açık.
               */}
               <ul className="gb-liste calisma-secim">{ogrenciAktif.map(ogrenciSatiri)}</ul>
+              {/* Listenin hemen altında yeni çalışma: sağ üstteki düğmeyle aynı pencere (?yeni=1). */}
+              <Link href="/dashboard/editor?yeni=1" className="calisma-yeni-kutu" scroll={false}>
+                <Plus size={16} aria-hidden="true" />
+                <span>
+                  <b>{t({ tr: "Yeni çalışma", en: "New work" })}</b>
+                  <small>{t({ tr: "Tez, makale ya da proje; kılavuzunuz ve kaynaklarınızla", en: "Thesis, article or project, with your guideline and sources" })}</small>
+                </span>
+              </Link>
               {ogrenciBiten.length ? (
                 <details className="calisma-tamamlanan" open={ogrenciBiten.some((p) => p.id === seciliId) || !ogrenciAktif.length}>
                   <summary>
@@ -383,6 +391,42 @@ export default async function ProjectsPage({
                   <ul className="gb-liste calisma-secim">{ogrenciBiten.map(ogrenciSatiri)}</ul>
                 </details>
               ) : null}
+              {/*
+                ÖZET (04.11.2026). Bir iki çalışması olan öğrencide kartın
+                altı yarım ekran boş kalıyordu. Kartın dibine üç sayı
+                iniyor: toplam yazılan, en yakın teslim, son yazım. Hepsi
+                listenin zaten okuduğu veriden; ayrı sorgu yok.
+              */}
+              {(() => {
+                const toplam = ogrenciAktif.reduce((n, p) => n + (stats.get(p.id)?.words ?? 0), 0);
+                const yakin = ogrenciAktif
+                  .map((p) => ({ p, d: vade(p.due_date, p.status) }))
+                  .filter((x): x is { p: (typeof ogrenciAktif)[number]; d: NonNullable<ReturnType<typeof vade>> } => x.d !== null)
+                  .sort((a, b) => a.d.days - b.d.days)[0];
+                const son = ogrenciAktif
+                  .map((p) => stats.get(p.id)?.updatedAt)
+                  .filter((d): d is string => Boolean(d))
+                  .sort()
+                  .at(-1);
+                return (
+                  <dl className="calismalar-ozet">
+                    <div>
+                      <dt>{t({ tr: "Toplam yazılan", en: "Total written" })}</dt>
+                      <dd>
+                        {toplam.toLocaleString(YEREL[dil])} <small>{t({ tr: "kelime", en: "words" })}</small>
+                      </dd>
+                    </div>
+                    <div data-tone={yakin?.d.tone}>
+                      <dt>{t({ tr: "En yakın teslim", en: "Next due" })}</dt>
+                      <dd title={yakin?.p.title}>{yakin ? yakin.d.label : "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>{t({ tr: "Son yazım", en: "Last written" })}</dt>
+                      <dd>{son ? editedAgo(son, simdi(), dil, saatDilimi) : "—"}</dd>
+                    </div>
+                  </dl>
+                );
+              })()}
             </article>
             {secili ? (
               <CalismaDurumKarti
