@@ -1139,7 +1139,9 @@ export default function ManuscriptEditor({
     } finally {
       window.setTimeout(() => setExporting(false), 1500);
     }
-  }, [projectId, saveNow, t]);
+    /* dil bağımlılıkta: eskiden yoktu ve dil değiştirildikten sonra Word
+       indirme hataları ilk açılıştaki dilde çıkıyordu. */
+  }, [projectId, saveNow, t, dil]);
 
   const handleImageUpload = useCallback(
     async (file: File) => {

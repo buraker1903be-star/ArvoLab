@@ -24,7 +24,7 @@ import { baglamKur, type BaglamParca } from "./baglam";
 import type { Dil } from "@/lib/dil";
 import { YANIT_BICIMI, cikisDiliMesaji, dilliKaynak } from "./bulgu";
 import type { Mesaj } from "./saglayici";
-import { MAKALE_TURLERI, YONTEM_DENETIMLERI, type BolumTuru, type MakaleTuru, type YontemAilesi, yontemDenetimi } from "@/lib/makale/sablonlar";
+import { MAKALE_TURLERI, type BolumTuru, type MakaleTuru, type YontemAilesi, yontemDenetimi } from "@/lib/makale/sablonlar";
 
 export const BAGLAM_BUTCESI = 14_000;
 
