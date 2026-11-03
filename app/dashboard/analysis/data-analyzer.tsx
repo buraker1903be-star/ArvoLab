@@ -169,6 +169,8 @@ export default function DataAnalyzer({
     yalnızca SPSS yapıştırma aracı kılavuza uyuyordu ve bu motor
     APA'ya sabitti: aynı ekranda iki farklı biçim üretiliyordu.
   */
+  /* Analiz kutuları açık mı: seçim yapılınca katlanır (aşağıda, "Hangi analiz?"). */
+  const [secimAcik, setSecimAcik] = useState(true);
   const [analysisType, setAnalysisType] = useState<AnalysisType>("descriptives");
   const [varA, setVarA] = useState("");
   const [varB, setVarB] = useState("");
@@ -3110,6 +3112,24 @@ export default function DataAnalyzer({
           {/* Pencerede yöntem kartla seçilir; dosya yüklü kalır, yöntem değiştirmek tek dokunuş. */}
           {pencere ? (
             <>
+              {/*
+                SEÇİM KATLANIR (04.11.2026). Analiz seçilince 25 kutu tek
+                satırlık bir şeride iner; eskiden kutular açık kalıyor ve
+                değişken seçimi ile "Analizi Çalıştır" hepsinin altında
+                duruyordu: öğrenci her analizde aşağı kaydırıyordu.
+              */}
+              {!secimAcik ? (
+                <div className="analiz-secili">
+                  <span>
+                    <small>{t({ tr: "Analiz", en: "Analysis" })}</small>
+                    <b>{yontemKartlari(dil).find((x) => x.tur === analysisType)?.ad}</b>
+                  </span>
+                  <button type="button" className="projects-filter-button button-compact" onClick={() => setSecimAcik(true)}>
+                    {t({ tr: "Değiştir", en: "Change" })}
+                  </button>
+                </div>
+              ) : (
+              <>
               <h3 className="pencere-kart-baslik">{t({ tr: "Hangi analiz?", en: "Which analysis?" })}</h3>
               {yontemGruplari(dil).map((g) => (
                 <div key={g.baslik}>
@@ -3140,6 +3160,7 @@ export default function DataAnalyzer({
                             setCalisanAnaliz(null);
                             setKaydedildi(false);
                             setYorum(null);
+                            setSecimAcik(false);
                           }}
                         >
                           <b>{k.ad}</b>
@@ -3150,6 +3171,8 @@ export default function DataAnalyzer({
                   </div>
                 </div>
               ))}
+              </>
+              )}
             </>
           ) : null}
           <div className="project-form-grid">
@@ -3490,7 +3513,7 @@ export default function DataAnalyzer({
                 kurmak yerine kapsayıcının kendi metni okunuyor. Tek
                 dokunuş, bütün türlerde çalışıyor.
               */}
-              <div ref={sonucKutusu}>{result}</div>
+              <div ref={sonucKutusu} className="analiz-sonuc">{result}</div>
               {sonucGrafigi}
               <div className="cluster mt-sm">
                 <button type="button" className="projects-filter-button button-compact" onClick={sonucuKopyala}>
