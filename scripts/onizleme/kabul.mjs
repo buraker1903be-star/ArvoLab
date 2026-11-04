@@ -36,6 +36,23 @@ async function senaryo(ad, govde) {
 function bekle(kosul, mesaj) {
   if (!kosul) throw new Error(mesaj);
 }
+/*
+  Yazım ekranında 40 pikselden küçük dokunma hedefleri (Phase 3
+  stabilizasyonu). Telefonda 39 hedefin 15'i küçüktü; artık sıfır olmalı.
+  Editörün metni (ProseMirror) ve gizli öğeler sayılmaz.
+*/
+async function kucukHedefler(sayfa) {
+  await sayfa.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 30000 });
+  return sayfa.evaluate(() =>
+    [...document.querySelectorAll("a[href], button, [role=button], input, select, textarea")]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        const gorunur = el.checkVisibility({ visibilityProperty: true, opacityProperty: true }) && getComputedStyle(el).pointerEvents !== "none";
+        return gorunur && r.width > 0 && r.top < innerHeight && r.bottom > 0 && (r.width < 40 || r.height < 40) && !el.closest(".ProseMirror");
+      })
+      .map((el) => `${Math.round(el.getBoundingClientRect().width)}x${Math.round(el.getBoundingClientRect().height)} ${el.getAttribute("aria-label") || el.textContent?.trim().slice(0, 20)}`),
+  );
+}
 const git = (sayfa, yol) => sayfa.goto(TABAN + yol, { waitUntil: "networkidle", timeout: 150000 });
 
 const tarayici = await chromium.launch();
@@ -81,6 +98,22 @@ const tarayici = await chromium.launch();
     bekle((await kutu.inputValue()).includes("10.1002/jae.616"), "DOI kutuya gelmedi");
     bekle(!(await sayfa.locator('.doi-kutusu-durum [data-tone="success"]').count()), "DOI kendiliğinden eklenmemeli");
   });
+  await senaryo("Çalışmalarım'dayken Ctrl+K 'Yeni çalışma' pencereyi açar, kapanınca ?yeni adresten silinir", async () => {
+    // Eskiden pencere ?yeni=1'i yalnızca ilk çizimde okuyordu: aynı sayfada adres değişince hiçbir şey olmuyordu.
+    await git(sayfa, "/dashboard/editor");
+    await sayfa.keyboard.press("Control+k");
+    await sayfa.locator(".os-palette-input input").fill("Yeni çalışma");
+    await sayfa.waitForTimeout(300);
+    await sayfa.keyboard.press("Enter");
+    await sayfa.waitForURL(/yeni=1/, { timeout: 30000 });
+    const pencere = sayfa.locator("[role=dialog][aria-modal=true]:visible");
+    await pencere.first().waitFor({ state: "visible", timeout: 10000 });
+    await sayfa.keyboard.press("Escape");
+    await sayfa.waitForURL((u) => !u.search.includes("yeni=1"), { timeout: 10000 });
+    // Kapanış animasyonu var; beklenen süre içinde gizlenmezse düşer.
+    await pencere.first().waitFor({ state: "hidden", timeout: 5000 }).catch(() => {});
+    bekle((await pencere.count()) === 0, "Esc pencereyi kapatmadı");
+  });
   await senaryo("Ctrl+K: Esc paleti kapatır", async () => {
     await git(sayfa, "/dashboard");
     await sayfa.keyboard.press("Control+k");
@@ -125,6 +158,11 @@ const tarayici = await chromium.launch();
     bekle(await sayfa.locator(".calisma-sekmeleri").first().isVisible(), "çalışma sekmeleri görünmüyor");
     bekle(!(await sayfa.locator(".os-gezinme-baglam").isVisible()), "rayda bağlam görünmemeli");
   });
+  await senaryo("tablet: yazım ekranında 40 pikselden küçük dokunma hedefi yok", async () => {
+    await git(sayfa, `/dashboard/editor/${TEZ}/write`);
+    const kucuk = await kucukHedefler(sayfa);
+    bekle(kucuk.length === 0, `${kucuk.length} küçük hedef: ${kucuk.slice(0, 4).join(" | ")}`);
+  });
   await sayfa.close();
 }
 
@@ -147,6 +185,11 @@ const tarayici = await chromium.launch();
     await sayfa.keyboard.press("Escape");
     await sayfa.waitForTimeout(200);
     bekle(!(await pencere.isVisible()), "Esc pencereyi kapatmadı");
+  });
+  await senaryo("telefon: yazım ekranında 40 pikselden küçük dokunma hedefi yok", async () => {
+    await git(sayfa, `/dashboard/editor/${TEZ}/write`);
+    const kucuk = await kucukHedefler(sayfa);
+    bekle(kucuk.length === 0, `${kucuk.length} küçük hedef: ${kucuk.slice(0, 4).join(" | ")}`);
   });
   await senaryo("telefon: yazım ekranı yatay kaymıyor", async () => {
     await git(sayfa, `/dashboard/editor/${TEZ}/write`);

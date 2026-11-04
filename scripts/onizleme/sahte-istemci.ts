@@ -37,6 +37,13 @@ const OLCUM = ortam.ONIZLEME_OLCUM === "1";
   tablolar boşalır; profil ve abonelik yerinde.
 */
 const BOS = ortam.ONIZLEME_BOS === "1";
+/*
+  ROL (Phase 3 stabilizasyonu). ONIZLEME_ROL=controller | system_admin | …
+  örnek kullanıcının profil rolünü değiştirir: personel ve yönetici ana
+  sayfası örnek veriyle hiç görülemiyordu. Yalnızca önizlemedeki sahte
+  profil satırı değişir; uygulamanın rol kararları aynı koddan geçer.
+*/
+const ROL = ortam.ONIZLEME_ROL || null;
 const BOS_TABLOLAR = new Set(["academic_projects", "project_manuscripts", "literature_sources", "document_uploads", "manuscript_comments", "citation_checks", "kanit_kayitlari"]);
 function tur<T>(etiket: string, deger: T): Promise<T> {
   if (OLCUM) console.log(`[olcum] ${Date.now()} ${etiket}`);
@@ -48,6 +55,7 @@ type Sonuc = { data: unknown; error: null; count?: number | null };
 
 function sorgu(tablo: string) {
   let satirlar: Satir[] = BOS && BOS_TABLOLAR.has(tablo) ? [] : [...((ORNEK as Record<string, Satir[]>)[tablo] ?? [])];
+  if (ROL && tablo === "profiles") satirlar = satirlar.map((r) => ({ ...r, role: ROL }));
   let tek: "single" | "maybe" | null = null;
   let sayim = false;
   let yalnizSayim = false;
