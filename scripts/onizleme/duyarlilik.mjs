@@ -70,7 +70,10 @@ function olc() {
   disari.sort((a, b) => b.sag - a.sag);
   const hedefler = [...document.querySelectorAll("a[href], button, [role=button], input, select, textarea")].filter((el) => {
     const r = el.getBoundingClientRect();
-    return r.width > 0 && r.height > 0 && r.top < innerHeight && r.bottom > 0;
+    // Kapalı çekmeceler (drawer) ve gizli pencereler DOM'da duruyor ama görünmüyor;
+    // sayılırsa "dock altında 21 düğme" gibi yanlış alarmlar çıkıyordu.
+    const gorunur = el.checkVisibility({ visibilityProperty: true, opacityProperty: true }) && getComputedStyle(el).pointerEvents !== "none";
+    return gorunur && r.width > 0 && r.height > 0 && r.top < innerHeight && r.bottom > 0;
   });
   const kucuk = hedefler.filter((el) => {
     const r = el.getBoundingClientRect();

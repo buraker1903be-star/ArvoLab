@@ -131,9 +131,10 @@ export default async function WriteManuscriptPage({
         {/* Teslim kontrolü, Word, PDF ve kılavuz kontrolü düğmeleri editörden
             buraya, "Çalışmalarım" düğmesinin sağına yerleşir (manuscript-editor.tsx). */}
         <div className="cluster yazma-eylemleri" id="yazma-eylemleri">
-          <Link href={calismaAdresi(id)} className="projects-filter-button">
-            <ArrowLeft size={17} />
-            {t({ tr: "Çalışmalarım", en: "My works" })}
+          {/* Telefonda yalnızca simge (Phase 3): adı aria-label taşıyor, yazı gizlenince ekran okuyucu adı kaybetmesin. */}
+          <Link href={calismaAdresi(id)} className="projects-filter-button" aria-label={t({ tr: "Çalışmalarım", en: "My works" })}>
+            <ArrowLeft size={17} aria-hidden="true" />
+            <span className="yazma-etiket">{t({ tr: "Çalışmalarım", en: "My works" })}</span>
           </Link>
         </div>
       </section>

@@ -1372,3 +1372,38 @@
 }
 .kaynak-alinti > svg { margin-top: 3px; color: var(--accent); }
 .kaynak-alinti footer { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-style: normal; }
+
+/* ============================================================
+   TELEFONDA EDİTÖR (Phase 3, 04.11.2026)
+   Ölçüm (scripts/onizleme/duyarlilik.mjs, 390px): başlıktaki eylem
+   satırı 722 piksele uzanıyor, sayfa 332 piksel yana kayıyordu ve
+   "Dışa aktar" ekranın dışında kalıyordu. Editörün işlevleri aynı;
+   yalnızca yerleşim değişir:
+   - başlık kendi satırında, eylemler altta tek satır: ikincil
+     düğmeler yalnızca simge (adları aria-label'da), teslim kontrolü
+     yalnızca "1/5", ana eylem kısa adıyla ("Kontrol");
+   - araç çubuğunda yazı tipi ve punto seçicileri gizli (kılavuz
+     belirliyor; Paragraf menüsünde ayarlar duruyor), geri kalanı tek
+     satırda yana kayar; kaydığı sağ kenardaki solmadan anlaşılır;
+   - dokunma hedefleri 40–44 piksel.
+   ============================================================ */
+.yazma-etiket-kisa { display: none; }
+@media (max-width: 760px) {
+  .yazma-basligi { flex-wrap: wrap; gap: var(--s-2); }
+  .yazma-basligi > div:first-child { flex: 1 1 100%; }
+  .yazma-basligi .yazma-eylemleri { width: 100%; flex-wrap: nowrap; gap: 6px; }
+  .yazma-basligi .yazma-eylemleri > * { flex: 0 0 auto; min-height: 44px; min-width: 44px; justify-content: center; }
+  .yazma-basligi .yazma-eylemleri > :last-child { margin-left: auto; }
+  .yazma-eylemleri .yazma-etiket,
+  .yazma-eylemleri .arac-metin,
+  .yazma-eylemleri .arac-menu-ok,
+  .yazma-eylemleri .kural-kaynagi { display: none; }
+  .yazma-eylemleri .yazma-etiket-kisa { display: inline; }
+
+  .manuscript-araclar .arac-grup-yazi { display: none; }
+  .manuscript-araclar {
+    -webkit-mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
+  }
+  .manuscript-araclar button { min-width: 40px; min-height: 40px; }
+}

@@ -2044,9 +2044,11 @@ export default function ManuscriptEditor({
                 data-tone={checklist.done === checklist.total ? "success" : undefined}
                 onClick={() => setChecklistOpen(true)}
                 title={t({ tr: "Teslimden önce bakılacaklar", en: "What to check before submission" })}
+                aria-label={t({ tr: `Teslim kontrolü ${checklist.done}/${checklist.total}`, en: `Submission checklist ${checklist.done}/${checklist.total}` })}
               >
                 <ClipboardCheck size={15} aria-hidden="true" />
-                {t({ tr: "Teslim kontrolü", en: "Submission checklist" })} {checklist.done}/{checklist.total}
+                {/* Telefonda yalnızca sayı kalır (Phase 3): başlık satırı 390 pikselde 722 piksele taşıyordu. */}
+                <span className="yazma-etiket">{t({ tr: "Teslim kontrolü", en: "Submission checklist" })}</span> {checklist.done}/{checklist.total}
                 {/* Kuralların kaynağı alt çubukta da görünüyor: pencereyi
                     açmadan "neye göre hazır" sorusunun cevabı bilinmeli. */}
                 {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi">{t({ tr: "kendi kılavuzunuz", en: "your own guideline" })}</small> : null}
@@ -2089,8 +2091,11 @@ export default function ManuscriptEditor({
                   en: "Required guideline sections, citation style and reference–citation matching",
                 })}
               >
-                <ShieldCheck size={15} />
-                {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
+                <ShieldCheck size={15} aria-hidden="true" />
+                <span className="yazma-etiket">
+                  {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
+                </span>
+                <span className="yazma-etiket-kisa">{checking ? t({ tr: "Kontrol…", en: "Checking…" }) : t({ tr: "Kontrol", en: "Check" })}</span>
               </button>
             </>,
             eylemHedefi,
