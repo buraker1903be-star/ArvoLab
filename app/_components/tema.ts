@@ -1,6 +1,6 @@
 "use client";
 
-import { KOYU_SORGUSU, TEMA_ANAHTARI, temaCoz, tercihOku, type Tema, type TemaTercihi } from "@/lib/tema";
+import { KOYU_SORGUSU, TEMA_ANAHTARI, TEMA_RENGI, temaCoz, tercihOku, type Tema, type TemaTercihi } from "@/lib/tema";
 
 /*
   Tema tercihini kaydedip <html>'e uygular (Phase 4.1). Tema düğmesi ve
@@ -21,8 +21,11 @@ export function temaTercihiniUygula(tercih: TemaTercihi) {
     // matchMedia yoksa sistem açık sayılır.
   }
   const kok = document.documentElement;
-  kok.setAttribute("data-theme", temaCoz(tercih, sistemKoyu));
+  const tema = temaCoz(tercih, sistemKoyu);
+  kok.setAttribute("data-theme", tema);
   kok.setAttribute("data-theme-tercih", tercih);
+  // Tarayıcı çubuğu da uygulanan temanın renginde (lib/tema.ts TEMA_RENGI).
+  document.querySelectorAll('meta[name="theme-color"]').forEach((etiket) => etiket.setAttribute("content", TEMA_RENGI[tema]));
 }
 
 /** <html>'deki güncel durum (ön boyama betiği yazar). Sunucuda çağrılmaz. */

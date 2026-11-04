@@ -227,6 +227,9 @@ const tarayici = await chromium.launch();
     await sayfa.emulateMedia({ colorScheme: "light" });
     await sayfa.waitForTimeout(150);
     bekle((await tema(sayfa)) === "dark/dark", `sistem değişince ${await tema(sayfa)}`);
+    // Phase 4.2: cihaz açıkken uygulamada Koyu seçiliyse tarayıcı çubuğu da koyu renkte olmalı.
+    const metalar = await sayfa.evaluate(() => [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute("content")));
+    bekle(metalar.length > 0 && metalar.every((r) => r === "#000d1f"), `theme-color ${metalar.join(",")}`);
     await ctx.close();
   });
 

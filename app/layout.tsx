@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { DilSaglayici } from "./_components/dil-saglayici";
 import { Inter, Montserrat, Newsreader } from "next/font/google";
-import { TEMA_BETIGI } from "@/lib/tema";
+import { TEMA_BETIGI, TEMA_RENGI } from "@/lib/tema";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/components.css";
@@ -66,9 +66,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Betik çalışmadan önceki (ve JavaScript kapalıyken) değer: cihazın teması.
+  // Ön boyama betiği içeriği uygulanan temaya göre yeniden yazar (lib/tema.ts).
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#000d1f" },
+    { media: "(prefers-color-scheme: light)", color: TEMA_RENGI.light },
+    { media: "(prefers-color-scheme: dark)", color: TEMA_RENGI.dark },
   ],
 };
 

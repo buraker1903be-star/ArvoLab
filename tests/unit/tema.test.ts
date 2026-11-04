@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
-import { TEMA_ANAHTARI, TEMA_BETIGI, temaCoz, tercihOku } from "@/lib/tema";
+import fs from "node:fs";
+import path from "node:path";
+import { TEMA_ANAHTARI, TEMA_BETIGI, TEMA_RENGI, temaCoz, tercihOku } from "@/lib/tema";
 
 /*
   Tema tercihi (Phase 4.1). Ön boyama betiği bir METİN olarak sayfaya
@@ -33,6 +35,10 @@ function ortam({ kayit, sistemKoyu = false, depoKapali = false, matchMediaYok = 
   eskiApi?: boolean;
 }) {
   const oznitelik: Record<string, string> = {};
+  // Next'in iki theme-color etiketi (biri açık, biri koyu media sorgulu)
+  const metaYap = (content: string) => ({ content, setAttribute(ad: string, deger: string) { if (ad === "content") this.content = deger; }, getAttribute(ad: string) { return ad === "content" ? this.content : null; } });
+  const metalar = [metaYap("#ilk-acik"), metaYap("#ilk-koyu")];
+  let headGozcusu: (() => void) | null = null;
   const depo = new Map<string, string>();
   if (kayit != null) depo.set(TEMA_ANAHTARI, kayit);
   const medyaDinleyicileri: Array<() => void> = [];
@@ -46,7 +52,12 @@ function ortam({ kayit, sistemKoyu = false, depoKapali = false, matchMediaYok = 
   };
   const baglam = {
     window: pencere,
-    document: { documentElement: { setAttribute: (ad: string, deger: string) => (oznitelik[ad] = deger) } },
+    MutationObserver: class { constructor(f: () => void) { headGozcusu = f; } observe() {} },
+    document: {
+      head: {},
+      documentElement: { setAttribute: (ad: string, deger: string) => (oznitelik[ad] = deger), getAttribute: (ad: string) => oznitelik[ad] ?? null },
+      querySelectorAll: (secici: string) => (secici === 'meta[name="theme-color"]' ? metalar : []),
+    },
     localStorage: {
       getItem: (a: string) => {
         if (depoKapali) throw new Error("SecurityError");
@@ -57,6 +68,12 @@ function ortam({ kayit, sistemKoyu = false, depoKapali = false, matchMediaYok = 
   vm.runInNewContext(TEMA_BETIGI, baglam);
   return {
     tema: () => oznitelik["data-theme"],
+    metaRenkleri: () => metalar.map((m) => m.content),
+    /** Next'in hidrasyonda sona eklediği etiketi taklit eder. */
+    metaEklendi(content: string) {
+      metalar.push(metaYap(content));
+      headGozcusu?.();
+    },
     tercih: () => oznitelik["data-theme-tercih"],
     sistemDegisti(koyu: boolean) {
       medya.matches = koyu;
@@ -146,4 +163,41 @@ test("betik: eski Safari'nin addListener yolu da dinlenir", () => {
   const o = ortam({ kayit: "system", sistemKoyu: false, eskiApi: true });
   o.sistemDegisti(true);
   assert.equal(o.tema(), "dark");
+});
+
+test("betik: tarayıcı çubuğu (theme-color) UYGULANAN temanın renginde, sistemin değil", () => {
+  // Cihaz açık, kullanıcı Koyu seçmiş: iki etiket de koyu renk olmalı (hangisi eşleşirse eşleşsin).
+  const o = ortam({ kayit: "dark", sistemKoyu: false });
+  assert.deepEqual(o.metaRenkleri(), [TEMA_RENGI.dark, TEMA_RENGI.dark]);
+  o.baskaSekme("light");
+  assert.deepEqual(o.metaRenkleri(), [TEMA_RENGI.light, TEMA_RENGI.light]);
+  const s = ortam({ kayit: "system", sistemKoyu: false });
+  s.sistemDegisti(true);
+  assert.deepEqual(s.metaRenkleri(), [TEMA_RENGI.dark, TEMA_RENGI.dark]);
+});
+
+/*
+  TEMA_RENGI, tokens.css'teki --bg'nin kopyası (ilk boyamadan önce CSS
+  okunamıyor). Zemin değişip bu sabit unutulursa tarayıcı çubuğu
+  uygulamadan farklı renkte kalır; bu test o kaymayı yakalar.
+*/
+test("TEMA_RENGI tokens.css'teki --bg ile aynı (açık ve koyu)", () => {
+  const css = fs.readFileSync(path.join(process.cwd(), "app/styles/tokens.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const palet = new Map([...css.matchAll(/(--[a-z0-9-]+):\s*(#[0-9a-f]{3,8})\s*;/gi)].map((m) => [m[1], m[2].toLowerCase()]));
+  const coz = (deger: string): string => {
+    const v = deger.trim().match(/^var\((--[a-z0-9-]+)\)$/i);
+    return v ? (palet.get(v[1]) ?? `çözülemedi:${v[1]}`) : deger.trim().toLowerCase();
+  };
+  const kok = css.match(/:root\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+  const koyu = css.match(/html\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+  const bg = (blok: string) => coz(blok.match(/--bg:\s*([^;]+);/)?.[1] ?? "yok");
+  assert.equal(bg(kok), TEMA_RENGI.light.toLowerCase());
+  assert.equal(bg(koyu), TEMA_RENGI.dark.toLowerCase());
+});
+
+test("betik: Next'in sonradan eklediği theme-color etiketi de uygulanan temaya boyanır", () => {
+  // Ölçüldü: hidrasyon <head>'in sonuna cihaz temasının renginde bir etiket daha ekliyor.
+  const o = ortam({ kayit: "dark", sistemKoyu: false });
+  o.metaEklendi(TEMA_RENGI.light);
+  assert.deepEqual(o.metaRenkleri(), [TEMA_RENGI.dark, TEMA_RENGI.dark, TEMA_RENGI.dark]);
 });

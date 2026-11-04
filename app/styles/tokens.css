@@ -80,15 +80,23 @@
   --line: var(--n-200);
   --line-soft: var(--n-150);
 
-  /* ---- Anlamsal: marka ----
-     --accent küçük yazıda okunaklı (AA) koyu yeşil; --accent-bright süs öğeleri. */
+  /* ---- Anlamsal: marka ---- */
   --primary: var(--brand-800);
   --primary-strong: var(--brand-950);
-  --accent: var(--accent-600);
-  --accent-strong: var(--accent-800);
-  --accent-bright: var(--accent-500);
-  --accent-soft: var(--accent-100);
-  --focus: #6f954866;
+  /* ESKİ ADLAR (Phase 4.2, 04.11.2026). --accent* eskiden YEŞİLDİ ve hem
+     etkileşim hem başarı anlamında kullanılıyordu (301 yer). 4.2'de her
+     kullanım işlevine göre --primary-* (lacivert) ya da --secondary-*
+     (yeşil) tokenına taşındı; bileşenlerde --accent* KALMADI ve
+     `npm run check:css` yenisini engelliyor. Adlar yalnızca geriye dönük
+     uyumluluk için duruyor ve ArvoOS'taki anlamlarına (panel-tokens.css:
+     --accent = --primary) eşlendi; ileride ortak katmanda tek ad kalır. */
+  --accent: var(--primary-ink);
+  --accent-strong: var(--primary-ink);
+  --accent-bright: var(--primary);
+  --accent-soft: var(--primary-soft);
+  /* Odak rengi LACİVERT (Phase 4.2): odak bir etkileşim durumu. Eskiden
+     yeşildi (#6f954866); "seçili" ile "başarılı" aynı renkte okunuyordu. */
+  --focus: color-mix(in srgb, var(--brand-500) 60%, transparent);
 
   /* ============================================================
      ANLAMSAL KATMAN: BİRİNCİL (lacivert) ve İKİNCİL (yeşil)
@@ -110,18 +118,23 @@
      olumlu analiz sonucu, sınırlı marka vurgusu. Logo kendi renkleriyle
      bir görüntü dosyası; bu tokenlar ona dokunmaz.
 
-     GEÇİŞ: bugün bileşenlerin çoğu yeşili --accent* ile okuyor (278
-     kullanım) ve --accent hem etkileşim hem başarı anlamında. 4.1
-     yalnızca yeni katmanı kurar, GÖRÜNÜM DEĞİŞMEZ. 4.2'de her --accent
-     kullanımı rolüne göre --primary-* ya da --secondary-*'e taşınır;
-     sonunda --accent, ArvoOS'taki gibi --primary'nin eş adı olur.
+     GEÇİŞ TAMAMLANDI (4.2): bileşenler yalnızca --primary-* ve
+     --secondary-* okur. Yeşil kalanlar: başarı, tamamlanan ilerleme,
+     olumlu sonuç, giriş sayfasının koyu tanıtım panelindeki marka süsü,
+     kicker etiketleri ve logo. Uyarı/hata/bilgi tonları (--warning,
+     --danger, --info) değişmedi.
      ============================================================ */
   --primary-hover: var(--brand-700);
   --primary-soft: var(--brand-50);
   /* Lacivert yazı: bağlantı, seçili menü öğesinin metni. Zeminde AA. */
   --primary-ink: var(--brand-700);
   --on-primary: var(--n-0);
-  --primary-focus: 0 0 0 3px color-mix(in srgb, var(--brand-500) 28%, transparent);
+  /* Odak halkası metin dışı öğe kontrastını (WCAG 1.4.11, ≥3:1) karşılar:
+     brand-500 %60 → beyaz kartta 3,15, zeminde 3,06, seçili zeminde 3,0
+     (Phase 4.2 ölçümü). Eskiden yeşil %20'ydi: 1,24:1 — menü öğesi ve
+     liste satırı gibi odağın TEK göstergesi halka olan yerlerde klavye
+     kullanıcısı nerede olduğunu göremiyordu. */
+  --primary-focus: 0 0 0 3px color-mix(in srgb, var(--brand-500) 60%, transparent);
 
   --secondary: var(--accent-600);
   --secondary-strong: var(--accent-800);
@@ -177,7 +190,8 @@
   --kontrol-r: var(--r-sm);
   --kontrol-dolgu: 14px;
   --kontrol-dolgu-sik: 10px;
-  --odak-halkasi: 0 0 0 3px color-mix(in srgb, var(--accent-500) 20%, transparent);
+  /* Odak halkası birincil (lacivert) odak tokenının kendisi (Phase 4.2). */
+  --odak-halkasi: var(--primary-focus);
 
   /* Kart ızgaralarının arası dört ayrı değerdeydi (10 / 12 / 14px);
      aynı ekranda farklı yoğunlukta görünüyorlardı. */
@@ -346,17 +360,15 @@ html[data-theme="dark"] {
 
   --primary: var(--brand-500);
   --primary-strong: var(--brand-700);
-  --accent: var(--accent-400);
-  --accent-strong: var(--accent-300);
-  --accent-bright: var(--accent-400);
-  --accent-soft: #1d2a14;
-  --focus: #89ab6366;
+  /* Eski --accent* adları :root'ta birincile eşli; koyu değerleri oradan gelir. */
+  --focus: color-mix(in srgb, var(--brand-300) 65%, transparent);
 
   /* Anlamsal katman, koyu (Phase 4.1; açıklama :root'ta). */
   --primary-hover: var(--brand-400);
   --primary-soft: color-mix(in srgb, var(--brand-300) 16%, transparent);
   --primary-ink: var(--brand-200);
-  --primary-focus: 0 0 0 3px color-mix(in srgb, var(--brand-300) 40%, transparent);
+  /* Koyu: brand-300 %65 → kartta 3,33, zeminde 3,44 (≥3:1). */
+  --primary-focus: 0 0 0 3px color-mix(in srgb, var(--brand-300) 65%, transparent);
   --secondary: var(--accent-400);
   --secondary-strong: var(--accent-300);
   --secondary-bright: var(--accent-400);

@@ -73,7 +73,7 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   .dashboard-icon-button { width: 40px; height: 40px; }
 }
 @media (hover: hover) and (pointer: fine) {
-  .dashboard-icon-button:hover { border-color: color-mix(in srgb, var(--accent-bright) 45%, var(--line)); color: var(--accent); }
+  .dashboard-icon-button:hover { border-color: color-mix(in srgb, var(--primary-ink) 45%, var(--line)); color: var(--primary-ink); }
 }
 .dashboard-icon-button:active { transform: scale(.94); transition-duration: .08s; }
 
@@ -104,8 +104,8 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   text-decoration: none;
   cursor: pointer;
 }
-.notification-item[data-unread] { border-color: color-mix(in srgb, var(--accent-bright) 35%, var(--line-soft)); background: var(--accent-soft); }
-.notification-icon { flex: none; padding-top: 2px; color: var(--accent); }
+.notification-item[data-unread] { border-color: color-mix(in srgb, var(--primary-ink) 35%, var(--line-soft)); background: var(--primary-soft); }
+.notification-icon { flex: none; padding-top: 2px; color: var(--primary-ink); }
 .notification-body {
   display: -webkit-box;
   overflow: hidden;
@@ -115,7 +115,7 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
-.notification-dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--accent); }
+.notification-dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--primary-ink); }
 
 /* Tarih ve saat (ArvoOS'taki os-clock) */
 .os-saat { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; min-width: 44px; padding: 0 6px; line-height: 1.2; }
@@ -206,14 +206,14 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 36px; padding: 0 12px;
   border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink); font: inherit; font-size: var(--fs-base); text-align: left; cursor: pointer;
 }
-.os-kullanici-gorunum button[aria-pressed="true"] { color: var(--accent-strong); font-weight: 600; }
+.os-kullanici-gorunum button[aria-pressed="true"] { color: var(--primary-ink); font-weight: 600; }
 @media (hover: hover) and (pointer: fine) { .os-kullanici-gorunum button:hover { background: var(--surface-2); } }
 
 /* Önizleme şeridi: her sayfada, üst çubuğun altında */
 .onizleme-serit {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
-  padding: 8px 32px; border-bottom: 1px solid color-mix(in srgb, var(--accent-500) 35%, var(--line));
-  background: var(--accent-soft); color: var(--ink); font-size: var(--fs-sm);
+  padding: 8px 32px; border-bottom: 1px solid color-mix(in srgb, var(--primary-ink) 35%, var(--line));
+  background: var(--primary-soft); color: var(--ink); font-size: var(--fs-sm);
 }
-.onizleme-serit b { color: var(--accent-strong); }
+.onizleme-serit b { color: var(--primary-ink); }
 @media (max-width: 900px) { .onizleme-serit { padding: 8px 16px; } }

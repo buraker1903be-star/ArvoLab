@@ -48,6 +48,17 @@ for (const { file, text } of files) {
     for (const match of text.matchAll(/(--(?:brand|accent|n)-\d+)\s*:/gi)) {
       report(file, text, match.index, `palet değişkeni ${match[1]} yalnızca tokens.css'te tanımlanabilir`);
     }
+    /*
+      Eski --accent* adları (Phase 4.2). Eskiden yeşildi ve hem "seçili"
+      hem "başarılı" anlamında kullanılıyordu; 301 kullanım işlevine göre
+      --primary-* (etkileşim, lacivert) ya da --secondary-* (başarı, yeşil)
+      tokenına taşındı. Ad artık birincile eşli bir uyumluluk kalıntısı:
+      yeni kodda yazılırsa hangi rolde olduğu yine okunamaz hâle gelir.
+      Palet basamakları (--accent-300 gibi) bu kuralın dışında.
+    */
+    for (const match of text.matchAll(/var\(\s*(--accent(?:-strong|-bright|-soft)?)\s*[,)]/gi)) {
+      report(file, text, match.index, `${match[1]} eski bir ad — etkileşim için --primary-*, başarı/tamamlanma için --secondary-* kullanın`);
+    }
   }
 
   for (const match of text.matchAll(/var\(\s*(--[a-z0-9-]+)\s*(,)?/gi)) {
