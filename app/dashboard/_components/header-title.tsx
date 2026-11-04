@@ -18,6 +18,12 @@ import { etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar
   uygulamada bölümün adı yazılıyor ("Kaynaklar" değil "Kaynakça
   doğrulama") — kullanıcının baktığı sayfa odur.
 */
+/*
+  Signature OS (04.11.2026): bu bileşen artık YALNIZCA TELEFONDA görünür
+  (shell.css). Tablet ve masaüstünde marka kenar çubuğunun başında,
+  üst çubukta konum yolu (konum-yolu.tsx) duruyor; telefonda üç öğelik
+  bir yol sığmıyor ve kenar çubuğu yok.
+*/
 export default function HeaderTitle() {
   const pathname = usePathname();
   const t = useCeviri();

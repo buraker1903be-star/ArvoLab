@@ -18,6 +18,7 @@ import SubscriptionNotice from "./_components/subscription-notice";
 import SilmeBekliyor from "./_components/silme-bekliyor";
 import ThemeToggle from "@/app/_components/theme-toggle";
 import HeaderTitle from "./_components/header-title";
+import { KonumYolu } from "./_components/konum-yolu";
 import Toaster from "./_components/toaster";
 import NotificationBell from "./_components/notification-bell";
 import ActionErrorToast from "./_components/action-error-toast";
@@ -99,7 +100,11 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
       <div className="dashboard-content-shell" inert={sozlesmeGerekli || undefined}>
         <header className="dashboard-header">
+          {/* Telefonda marka; tablet ve masaüstünde marka kenar çubuğunda, burada konum yolu (shell.css). */}
           <HeaderTitle />
+          <Suspense>
+            <KonumYolu uygulamalar={uygulamalar} />
+          </Suspense>
           <OsAramaDugmesi />
           <div className="dashboard-header-actions">
             <OsSaat />

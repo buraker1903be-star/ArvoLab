@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useRef } from "react";
-import { Ellipsis, X } from "lucide-react";
+import { useRef, useSyncExternalStore } from "react";
+import { Ellipsis, PanelLeftClose, PanelLeftOpen, Plus, X } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import {
   ALT_CUBUK,
@@ -17,6 +17,33 @@ import {
 } from "@/lib/os/uygulamalar";
 import { OsSimge } from "./os-simge";
 import { useCalismaBaglami } from "./calisma-baglami";
+import { ArvoLabIsareti } from "./header-title";
+import { KENAR_ANAHTARI, kenarOku } from "@/lib/os/kenar";
+
+/*
+  KENAR ÇUBUĞUNUN HÂLİ <html data-kenar> özniteliğinde (lib/os/kenar.ts):
+  boyamadan önce oradaki betik yazıyor, düğme de orayı değiştiriyor.
+  React durumu ayrıca tutulmuyor — iki kaynak olsaydı başka sekmeden
+  gelen değişiklik (storage olayı, betik) düğmenin aria-expanded'ını
+  eski hâlde bırakırdı. Sunucu her zaman "geniş" çizer; hidrasyon dar
+  hâli useSyncExternalStore ile uyumsuzluk uyarısı vermeden alır.
+*/
+function kenarAbone(dinle: () => void) {
+  const gozcu = new MutationObserver(dinle);
+  gozcu.observe(document.documentElement, { attributes: true, attributeFilter: ["data-kenar"] });
+  return () => gozcu.disconnect();
+}
+const kenarDarMi = () => document.documentElement.getAttribute("data-kenar") === "dar";
+
+function kenarDegistir(dar: boolean) {
+  if (dar) document.documentElement.setAttribute("data-kenar", "dar");
+  else document.documentElement.removeAttribute("data-kenar");
+  try {
+    localStorage.setItem(KENAR_ANAHTARI, kenarOku(dar ? "dar" : "genis"));
+  } catch {
+    // Gizli sekmede depolama kapalı olabilir: seçim bu sayfada geçerli kalır, kalıcı olmaz.
+  }
+}
 
 /*
   UYARLANIR GEZİNME (Phase 3, 04.11.2026). Dock'un ve "Tüm uygulamalar"
@@ -35,6 +62,11 @@ import { useCalismaBaglami } from "./calisma-baglami";
     zaman yazılı: dock'ta adlar yalnızca fareyle üzerine gelince
     görünüyordu, dokunmatikte hiç görünmüyordu.
 
+  Signature OS (04.11.2026): kenar çubuğu tam boy; başında marka,
+  masaüstünde daraltma düğmesi ve "Yeni çalışma". Daraltılmış masaüstü
+  tabletteki rayla aynı çizilir, çalışma bölümleri o zaman sayfanın
+  sekmelerine döner.
+
   Dock'tan farkı bilerek: ikinci dock (bölüm menüsü) yok — hiçbir
   uygulamanın bölümü kalmamıştı, kod hiç açılmayan bir menüyü
   yönetiyordu.
@@ -45,6 +77,7 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
   const sorgu = useSearchParams();
   const pencere = useRef<HTMLDialogElement>(null);
   const baglam = useCalismaBaglami();
+  const dar = useSyncExternalStore(kenarAbone, kenarDarMi, () => false);
   const etkin = etkinUygulama(uygulamalar, yol);
   const { ana, diger, ayarlar } = gezinmeGruplari(uygulamalar);
   const cubukta = new Set<string>(ALT_CUBUK);
@@ -76,7 +109,39 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
 
   return (
     <>
-      <nav className="os-gezinme" aria-label={t({ tr: "Ana gezinme", en: "Main navigation" })}>
+      <nav id="os-gezinme" className="os-gezinme" aria-label={t({ tr: "Ana gezinme", en: "Main navigation" })}>
+        {/*
+          Kenar çubuğunun başı (tablet ve masaüstünde; telefonda gizli):
+          marka, daraltma düğmesi ve ana eylem. Marka eskiden üst çubuktaydı;
+          kenar çubuğu tam boy olunca üst çubuk konum yoluna ve bağlamsal
+          eylemlere kaldı. Daraltma düğmesi yalnızca masaüstünde: tablette
+          ray zaten dar.
+        */}
+        <div className="os-gezinme-bas">
+          <Link href="/dashboard" className="os-gezinme-marka" aria-label={t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })}>
+            <ArvoLabIsareti />
+            <b aria-hidden="true">
+              Arvo<em>Lab</em>
+            </b>
+          </Link>
+          <button
+            type="button"
+            className="os-gezinme-daralt"
+            aria-controls="os-gezinme"
+            aria-expanded={!dar}
+            aria-label={dar ? t({ tr: "Kenar çubuğunu genişlet", en: "Expand sidebar" }) : t({ tr: "Kenar çubuğunu daralt", en: "Collapse sidebar" })}
+            title={dar ? t({ tr: "Kenar çubuğunu genişlet", en: "Expand sidebar" }) : t({ tr: "Kenar çubuğunu daralt", en: "Collapse sidebar" })}
+            onClick={() => kenarDegistir(!dar)}
+          >
+            {dar ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
+          </button>
+        </div>
+        {/* Ana eylem: Ctrl+K'daki ve Çalışmalarım'daki "Yeni çalışma" ile aynı pencere (?yeni=1). */}
+        <Link href="/dashboard/editor?yeni=1" className="os-gezinme-yeni" scroll={false} title={t({ tr: "Yeni çalışma", en: "New work" })}>
+          <Plus size={18} aria-hidden="true" />
+          <span className="os-gezinme-ad">{t({ tr: "Yeni çalışma", en: "New work" })}</span>
+        </Link>
+
         {baglamGorunur ? (
           <section className="os-gezinme-baglam" aria-label={t({ tr: `Açık çalışma: ${baglam.baslik}`, en: `Open work: ${baglam.baslik}` })}>
             <span className="os-gezinme-baslik">{t({ tr: "Açık çalışma", en: "Open work" })}</span>

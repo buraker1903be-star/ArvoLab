@@ -36,7 +36,7 @@
   justify-content: space-between;
   gap: 16px;
   min-height: var(--topbar-height);
-  padding: 10px 32px;
+  padding: 8px 24px;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
   background: var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -54,6 +54,34 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
 .os-marka b em { color: var(--brand-green); font-style: normal; }
 .os-marka small { overflow: hidden; color: var(--muted); font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-header-actions { display: flex; align-items: center; gap: 8px; }
+
+/* Konum yolu (Signature OS, konum-yolu.tsx). Tablet ve masaüstünde marka
+   kenar çubuğunda; üst çubuğun solunda "neredeyim" duruyor. Telefonda
+   tersi: konum yolu sığmıyor, marka ve uygulama adı kalıyor. */
+.konum-yolu { flex: 1 1 auto; min-width: 0; }
+.konum-yolu ol { display: flex; align-items: center; gap: 2px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.konum-yolu li { display: flex; align-items: center; gap: 2px; min-width: 0; font-size: var(--fs-body); white-space: nowrap; }
+/* Yalnızca ikinci öğe (çalışmanın adı) kısalır: uygulama ve bölüm adı kısa
+   ve hep okunur kalmalı. İlk denemede hepsi kısalıyordu ve 1440 pikselde
+   "Çalışmala… › … › Ya…" yazıyordu. */
+.konum-yolu li { flex: none; }
+.konum-yolu li:nth-child(2) { flex: 0 1 auto; }
+.konum-yolu a, .konum-yolu [aria-current] { overflow: hidden; text-overflow: ellipsis; padding: 4px 6px; border-radius: var(--r-xs); }
+.konum-yolu a { color: var(--muted); text-decoration: none; }
+/* Dokunmatikte ve tablette bağlantılar 40 piksel boyunda (Phase 3'teki dokunma hedefi kuralı). */
+@media (max-width: 1199px), (pointer: coarse) {
+  .konum-yolu a, .konum-yolu [aria-current] { display: inline-flex; align-items: center; min-height: 40px; padding-block: 0; }
+}
+.konum-yolu a:hover { background: var(--surface-2); color: var(--ink); }
+.konum-yolu a:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.konum-yolu [aria-current] { color: var(--ink); font-weight: 600; }
+.konum-yolu-ayrac { flex: none; color: var(--dim); }
+@media (min-width: 761px) {
+  .dashboard-header > .os-marka { display: none; }
+}
+@media (max-width: 760px) {
+  .konum-yolu { display: none; }
+}
 
 .dashboard-icon-button {
   display: inline-grid;

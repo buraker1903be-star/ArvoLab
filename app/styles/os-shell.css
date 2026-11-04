@@ -6,8 +6,11 @@
      masaüstü ≥ 1200px  solda geniş kenar çubuğu (+ çalışma bağlamı)
      tablet  761–1199px dar ray (simge + kısa ad)
      telefon ≤ 760px    alt çubuk (dört uygulama + Daha fazla)
-   Kenar çubuğu üst çubuğun ALTINDAN başlar: logo ve arama üstte kalır,
-   üst çubuk tam genişlikte.
+   Signature OS'tan (04.11.2026) beri kenar çubuğu TAM BOY: marka,
+   daraltma düğmesi ve "Yeni çalışma" onun başında; üst çubuk içerik
+   sütununun başında ve konum yolunu taşıyor. Masaüstünde kenar çubuğu
+   daraltılabilir (html[data-kenar="dar"], lib/os/kenar.ts); dar hâli
+   tabletteki rayın aynısı.
    ============================================================ */
 
 .os-root {
@@ -54,36 +57,96 @@
 .os-gezinme-alt.is-active { background: var(--primary-soft); color: var(--primary-ink); font-weight: 600; }
 .os-gezinme-ayrac { margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--line-soft); }
 
-/* ---------- Masaüstü: geniş kenar çubuğu ---------- */
-@media (min-width: 1200px) {
+/* ---------- Kenar çubuğunun başı ve ana eylem (Signature OS) ----------
+   Marka, daraltma düğmesi ve "Yeni çalışma" tablet ve masaüstünde kenar
+   çubuğunun en üstünde; telefonda gizli (orada marka üst çubukta, yeni
+   çalışma Çalışmalarım'da ve Ctrl+K'da). */
+.os-gezinme-bas, .os-gezinme-yeni { display: none; }
+.os-gezinme-marka {
+  display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 40px; padding: 0 var(--s-1);
+  border-radius: var(--r-sm); color: var(--ink); text-decoration: none;
+}
+.os-gezinme-marka .os-marka-isaret { width: 30px; height: 30px; }
+.os-gezinme-marka b { overflow: hidden; font-size: var(--fs-md); font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
+.os-gezinme-marka b em { color: var(--brand-green); font-style: normal; }
+.os-gezinme-daralt {
+  display: grid; place-items: center; flex: none; width: 32px; height: 32px;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer;
+  transition: background-color var(--sure-hizli) ease, color var(--sure-hizli) ease;
+}
+.os-gezinme-daralt:hover { background: var(--surface-2); color: var(--ink); }
+.os-gezinme-marka:focus-visible, .os-gezinme-daralt:focus-visible, .os-gezinme-yeni:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.os-gezinme-yeni {
+  align-items: center; justify-content: center; gap: var(--s-2); min-height: 40px; padding: 0 var(--s-3);
+  border-radius: var(--r-sm); background: var(--primary); color: var(--on-brand);
+  font-size: var(--fs-body); font-weight: 600; text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--sure-hizli) ease;
+}
+.os-gezinme-yeni:hover { background: var(--primary-hover); }
+
+/* ---------- Tablet ve masaüstü: tam boy kenar çubuğu ----------
+   Eskiden kenar çubuğu üst çubuğun ALTINDAN başlıyordu ve marka üst
+   çubuktaydı; içerik alanının her parçası (içerik, önizleme şeridi,
+   bölüm şeridi) ayrı ayrı sola boşluk alıyordu. Artık kenar çubuğu tam
+   boy, üst çubuk içerik sütununun başında; içerik sütunu TEK yerde,
+   --kenar-genislik kadar itiliyor. */
+@media (min-width: 761px) {
+  .os-root { --kenar-genislik: var(--gezinme-ray); }
+  .os-root .dashboard-content-shell { margin-left: var(--kenar-genislik); transition: margin-left var(--sure-orta) var(--ease-sheet); }
   .os-gezinme {
-    top: var(--topbar-height); left: 0; bottom: 0; width: var(--gezinme-genislik);
-    flex-direction: column; gap: var(--s-4); padding: var(--s-4) var(--s-3);
-    overflow-y: auto; scrollbar-width: thin;
+    top: 0; left: 0; bottom: 0; width: var(--kenar-genislik);
+    flex-direction: column; gap: var(--s-2); padding: var(--s-3) var(--s-2);
+    overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
     border-right: 1px solid var(--line-soft);
+    background: var(--kenar-zemin);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    transition: width var(--sure-orta) var(--ease-sheet);
   }
-  .os-gezinme-baglam { display: block; padding-bottom: var(--s-4); border-bottom: 1px solid var(--line-soft); }
+  .os-gezinme-bas { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); }
+  .os-gezinme-yeni { display: flex; }
   .os-gezinme-son { margin-top: auto; }
-  .os-gezinme-daha-li { display: none; }
-  .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--gezinme-genislik); }
-  /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin. */
-  .os-root .calisma-sekmeleri { display: none; }
 }
 
-/* ---------- Tablet: dar ray ---------- */
+/* ---------- Dar ray: tablette her zaman, masaüstünde daraltılınca ----------
+   Kurallar iki yerde yazılı (aşağıdaki masaüstü bloğunda data-kenar ile
+   bir kez daha): CSS değişkeni medya sorgusunda kullanılamıyor ve
+   "tablet YA DA daraltılmış masaüstü" tek bir seçiciyle söylenemiyor.
+   Seçiciler .os-gezinme ile sınırlı: "Daha fazla" penceresi aynı
+   .os-gezinme-oge sınıfını kullanıyor ve eskiden tablette oradaki adlar
+   da gizleniyordu. */
 @media (min-width: 761px) and (max-width: 1199px) {
-  .os-gezinme {
-    top: var(--topbar-height); left: 0; bottom: 0; width: var(--gezinme-ray);
-    flex-direction: column; gap: var(--s-2); padding: var(--s-3) var(--s-2);
-    overflow-y: auto; scrollbar-width: none;
-    border-right: 1px solid var(--line-soft);
-  }
-  .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
-  .os-gezinme-ad { display: none; }
-  .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
-  .os-gezinme-diger { display: none; }
-  .os-gezinme-son { margin-top: auto; }
-  .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--gezinme-ray); }
+  .os-gezinme .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
+  .os-gezinme .os-gezinme-ad { display: none; }
+  .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
+  .os-gezinme-diger, .os-gezinme-marka b, .os-gezinme-daralt { display: none; }
+  .os-gezinme-yeni { align-self: center; width: 44px; padding: 0; }
+  .os-gezinme-marka { justify-content: center; min-width: 44px; min-height: 44px; }
+}
+
+@media (min-width: 1200px) {
+  .os-root { --kenar-genislik: var(--gezinme-genislik); }
+  html[data-kenar="dar"] .os-root { --kenar-genislik: var(--gezinme-ray); }
+
+  /* Geniş */
+  html:not([data-kenar="dar"]) .os-gezinme { gap: var(--s-4); padding: var(--s-3) var(--s-3) var(--s-4); scrollbar-width: thin; }
+  html:not([data-kenar="dar"]) .os-gezinme-bas { flex-direction: row; justify-content: space-between; }
+  html:not([data-kenar="dar"]) .os-gezinme-baglam { display: block; padding-bottom: var(--s-4); border-bottom: 1px solid var(--line-soft); }
+  html:not([data-kenar="dar"]) .os-gezinme-daha-li { display: none; }
+  /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin.
+     Daraltılınca bölümler kenar çubuğundan çıkar, sekmeler geri gelir. */
+  html:not([data-kenar="dar"]) .os-root .calisma-sekmeleri { display: none; }
+
+  /* Daraltılmış: tabletteki rayın aynısı (yukarıdaki notu okuyun) */
+  html[data-kenar="dar"] .os-gezinme .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
+  html[data-kenar="dar"] .os-gezinme .os-gezinme-ad { display: none; }
+  html[data-kenar="dar"] .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
+  html[data-kenar="dar"] .os-gezinme-diger, html[data-kenar="dar"] .os-gezinme-marka b { display: none; }
+  html[data-kenar="dar"] .os-gezinme-yeni { align-self: center; width: 44px; padding: 0; }
+  html[data-kenar="dar"] .os-gezinme-marka { justify-content: center; min-width: 44px; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .os-root .dashboard-content-shell, .os-gezinme { transition: none; }
 }
 
 /* ---------- Telefon: alt çubuk ---------- */
@@ -99,15 +162,15 @@
   .os-gezinme-son { display: contents; }
   .os-gezinme-ana > li:not([data-alt-cubuk]), .os-gezinme-son > li:not(.os-gezinme-daha-li), .os-gezinme-diger { display: none; }
   .os-gezinme > ul > li, .os-gezinme-daha-li { flex: 1 1 0; min-width: 0; display: flex; }
-  .os-gezinme-oge {
+  .os-gezinme .os-gezinme-oge {
     flex-direction: column; justify-content: center; gap: 2px; min-height: var(--alt-cubuk-h); padding: 4px 2px;
     border-radius: 0; background: transparent; text-align: center;
   }
-  .os-gezinme-oge:hover { background: transparent; }
-  .os-gezinme-oge.is-active { background: transparent; }
-  .os-gezinme-oge.is-active > svg { color: var(--primary-ink); }
-  .os-gezinme-ad { display: none; }
-  .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
+  .os-gezinme .os-gezinme-oge:hover { background: transparent; }
+  .os-gezinme .os-gezinme-oge.is-active { background: transparent; }
+  .os-gezinme .os-gezinme-oge.is-active > svg { color: var(--primary-ink); }
+  .os-gezinme .os-gezinme-ad { display: none; }
+  .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
   /* Klavye açıkken alt çubuk aşağı çekilir: yazarken ekranın altı zaten klavyede. */
   html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-gezinme { transform: translateY(110%); }
 }
@@ -170,8 +233,11 @@
 }
 
 /* ---------- Ctrl+K: ara veya komut çalıştır ---------- */
+/* Üst çubukta konum yolunun SAĞINDA, eylemlerin yanında (Signature OS).
+   Eskiden çubuğun ortasında 480 piksellik bir kutuydu; konum yoluna yer
+   kalmıyordu. Masaüstünde kısa kutu, tablette yalnızca büyüteç. */
 .os-search {
-  flex: 1 1 280px; max-width: 480px; margin-inline: auto;
+  flex: 0 1 240px; margin-left: auto;
   display: flex; align-items: center; gap: 12px;
   height: 40px; padding: 0 12px;
   border: 1px solid var(--line); border-radius: var(--r-md);
@@ -186,9 +252,9 @@
   background: var(--surface); color: var(--ink-soft);
   font-family: var(--font-mono); font-size: var(--fs-micro);
 }
-/* Telefonda yazı yerine yalnızca büyüteç: üst çubukta yer yok. */
-@media (max-width: 760px) {
-  .os-search { flex: none; width: 40px; margin-inline: 0; justify-content: center; }
+/* Tablette ve telefonda yazı yerine yalnızca büyüteç: konum yoluna yer kalsın. */
+@media (max-width: 1199px) {
+  .os-search { flex: none; width: 40px; justify-content: center; }
   .os-search-text, .os-search kbd { display: none; }
 }
 

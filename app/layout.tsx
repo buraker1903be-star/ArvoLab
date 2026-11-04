@@ -3,6 +3,7 @@ import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { DilSaglayici } from "./_components/dil-saglayici";
 import { Inter } from "next/font/google";
 import { TEMA_BETIGI, TEMA_RENGI } from "@/lib/tema";
+import { KENAR_BETIGI } from "@/lib/os/kenar";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/components.css";
@@ -89,6 +90,8 @@ export default async function RootLayout({
     <html lang={dil} suppressHydrationWarning>
       <head>
         <script id="theme-init" dangerouslySetInnerHTML={{ __html: TEMA_BETIGI }} />
+        {/* Kenar çubuğunun geniş/dar tercihi de boyamadan önce (lib/os/kenar.ts): aynı sebep, düzen kayması. */}
+        <script id="kenar-init" dangerouslySetInnerHTML={{ __html: KENAR_BETIGI }} />
       </head>
       <body className={inter.variable}>
         <DilSaglayici dil={dil} saatDilimi={saatDilimi}>

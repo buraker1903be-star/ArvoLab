@@ -121,6 +121,9 @@
   --surface-sunken: var(--gri-100);
   --surface-raised: var(--gri-0);
   --kagit: var(--n-0);
+  /* Kenar çubuğu zeminden bir ton koyu (Signature OS): tam boy olunca
+     içerikle aynı renkte kalsaydı ayrımı yalnızca 1 piksellik çizgi taşırdı. */
+  --kenar-zemin: var(--gri-50);
   --overlay: #0f172a59;
 
   /* ---- Anlamsal: yazı ----
@@ -382,7 +385,9 @@
   --gezinme-ray: 88px;
   --alt-cubuk-h: 64px;
   --sidebar-width: 264px;
-  --topbar-height: 64px;
+  /* Üst çubuk 56 piksel (Signature OS): marka kenar çubuğuna geçti, çubukta
+     yalnızca konum yolu ve eylemler kaldı. Eskiden 64'tü. */
+  --topbar-height: 56px;
   /* Sabit alt gezinmenin ekranın altında kapladığı yer: içerik,
      bildirimler, "İşleniyor…" kapsülü ve editörün yan paneli bunun
      üstünde durur. Phase 3'ten (04.11.2026) beri yalnızca telefonda
@@ -441,6 +446,8 @@ html[data-theme="dark"] {
   --surface-2: var(--gece-800);
   --surface-sunken: var(--gece-950);
   --surface-raised: var(--gece-750);
+  /* Koyuda kenar çubuğu zeminden bir ton AÇIK: zeminden koyusu (950) çökük yüzeyle karışırdı. */
+  --kenar-zemin: var(--gece-875);
   /* Örtü saf siyah değil: pencerenin arkası kararır, kapkara olmaz. */
   --overlay: #05080db3;
 

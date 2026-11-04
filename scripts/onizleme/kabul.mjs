@@ -81,6 +81,47 @@ const tarayici = await chromium.launch();
     bekle(await sayfa.locator("nav.os-gezinme").isVisible(), "gezinme çizilmedi (sayfa açılmadı mı?)");
     bekle(!(await sayfa.locator(".os-gezinme-baglam").isVisible()), "genel sayfada bağlam görünmemeli");
   });
+  await senaryo("konum yolu: Çalışmalarım › çalışma › Yazım; son öğe bağlantısız, marka kenar çubuğunda (Signature OS)", async () => {
+    await git(sayfa, `/dashboard/editor/${TEZ}/write`);
+    const yol = sayfa.locator("nav.konum-yolu");
+    await yol.locator("li").nth(2).waitFor({ state: "visible", timeout: 10000 });
+    bekle((await yol.locator("li").count()) === 3, `konum yolunda ${await yol.locator("li").count()} öğe var (3 beklenir)`);
+    bekle((await yol.locator("a").first().getAttribute("href")) === "/dashboard/editor", "ilk öğe Çalışmalarım'a gitmiyor");
+    const son = yol.locator('[aria-current="page"]');
+    bekle((await son.count()) === 1 && (await son.innerText()) === "Yazım", `son öğe: ${await son.allInnerTexts()}`);
+    // Uygulama ve bölüm adı kısalmaz; yalnızca çalışmanın adı kısalır.
+    const kesik = await yol.locator("li > :is(a, span)").evaluateAll((el) => el.filter((e, i) => i !== 1 && e.scrollWidth > e.clientWidth + 1).length);
+    bekle(kesik === 0, `${kesik} kısa öğe üç noktayla kesilmiş`);
+    bekle(!(await sayfa.locator(".dashboard-header > .os-marka").isVisible()), "masaüstünde marka üst çubukta da görünüyor");
+    bekle(await sayfa.locator(".os-gezinme-marka").isVisible(), "marka kenar çubuğunda yok");
+  });
+  await senaryo("kenar çubuğu: daraltılır, tercih kalır, yeniden açılışta parlama yok, geri genişler", async () => {
+    // Kanıt sayfası: sayfa içi sekmeleri olan bir çalışma sayfası (yazım ekranında sekme yok).
+    await git(sayfa, `/dashboard/editor/${TEZ}/kanit`);
+    const dugme = sayfa.locator(".os-gezinme-daralt");
+    bekle((await dugme.getAttribute("aria-expanded")) === "true", "geniş hâlde aria-expanded true değil");
+    await dugme.click();
+    await sayfa.waitForTimeout(400);
+    bekle((await dugme.getAttribute("aria-expanded")) === "false", "daraltınca aria-expanded false olmadı");
+    const genislik = (await sayfa.locator("nav.os-gezinme").boundingBox())?.width ?? 0;
+    bekle(genislik <= 100, `daraltılmış kenar çubuğu ${genislik}px`);
+    bekle(await sayfa.locator(".calisma-sekmeleri").first().isVisible(), "daraltınca çalışma sekmeleri sayfaya dönmeli");
+    bekle((await sayfa.evaluate(() => localStorage.getItem("arvolab.kenar"))) === "dar", "tercih kaydedilmedi");
+    // Yeniden açılış: JS paketleri 3 sn gecikse de ilk boyamada dar.
+    await sayfa.route("**/*", async (r) => {
+      if (r.request().resourceType() === "script") await new Promise((c) => setTimeout(c, 3000));
+      r.continue().catch(() => {});
+    });
+    sayfa.goto(TABAN + "/dashboard", { timeout: 150000 }).catch(() => {});
+    await sayfa.waitForEvent("domcontentloaded", { timeout: 150000 });
+    bekle((await sayfa.evaluate(() => document.documentElement.getAttribute("data-kenar"))) === "dar", "JS gelmeden kenar çubuğu geniş");
+    await sayfa.unroute("**/*");
+    await sayfa.waitForLoadState("networkidle");
+    await sayfa.locator(".os-gezinme-daralt").click();
+    await sayfa.waitForTimeout(400);
+    bekle(((await sayfa.locator("nav.os-gezinme").boundingBox())?.width ?? 0) >= 200, "geri genişlemedi");
+    bekle((await sayfa.evaluate(() => localStorage.getItem("arvolab.kenar"))) === "genis", "genişletme kaydedilmedi");
+  });
   await senaryo("Ctrl+K: açılır, yazılan DOI tanınır, Enter Kaynaklar'a götürür, ekleme yapılmaz", async () => {
     await git(sayfa, "/dashboard");
     await sayfa.keyboard.press("Control+k");
@@ -158,6 +199,15 @@ const tarayici = await chromium.launch();
     bekle(await sayfa.locator(".calisma-sekmeleri").first().isVisible(), "çalışma sekmeleri görünmüyor");
     bekle(!(await sayfa.locator(".os-gezinme-baglam").isVisible()), "rayda bağlam görünmemeli");
   });
+  await senaryo("tablet: Daha fazla penceresinde adlar yazılı (rayın kuralları pencereye sızmıyor)", async () => {
+    await git(sayfa, "/dashboard");
+    // Next'in geliştirme araçları düğmesi sol alt köşede rayın "Daha fazla"sının üstüne biniyor (yalnızca dev).
+    await sayfa.addStyleTag({ content: "nextjs-portal { display: none !important }" });
+    await sayfa.locator(".os-gezinme-daha").click();
+    const ad = sayfa.locator("dialog.os-daha .os-gezinme-ad").first();
+    bekle(await ad.isVisible(), "pencerede uygulama adı görünmüyor");
+    await sayfa.keyboard.press("Escape");
+  });
   await senaryo("tablet: yazım ekranında 40 pikselden küçük dokunma hedefi yok", async () => {
     await git(sayfa, `/dashboard/editor/${TEZ}/write`);
     const kucuk = await kucukHedefler(sayfa);
@@ -182,6 +232,7 @@ const tarayici = await chromium.launch();
     const pencere = sayfa.locator("dialog.os-daha");
     bekle(await pencere.isVisible(), "pencere açılmadı");
     bekle((await pencere.locator("a").count()) >= 3, "pencerede bölüm yok");
+    bekle(await pencere.locator(".os-gezinme-ad").first().isVisible(), "pencerede uygulama adları gizli");
     await sayfa.keyboard.press("Escape");
     await sayfa.waitForTimeout(200);
     bekle(!(await pencere.isVisible()), "Esc pencereyi kapatmadı");
