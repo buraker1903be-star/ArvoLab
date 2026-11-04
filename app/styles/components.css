@@ -2137,3 +2137,34 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   .kart-menu-liste button:hover { background: var(--surface-2); }
 }
 .project-progress strong small { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; }
+
+/* ============================================================
+   TEMA SEÇİCİ (Phase 4.1, app/_components/theme-toggle.tsx)
+   Üç seçenekli küçük menü. Yeni anlamsal katmanın (--primary-*) ilk
+   kullanıcısı: seçili seçenek lacivert, yeşil değil.
+   ============================================================ */
+.tema-secici { position: relative; display: inline-flex; }
+.tema-menu {
+  position: absolute; top: calc(100% + var(--s-2)); right: 0; z-index: var(--z-menu);
+  display: grid; gap: 2px; min-width: 208px; padding: var(--s-1);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface-raised); box-shadow: var(--shadow-md);
+  animation: tema-menu-ac var(--sure-orta) var(--ease-spring);
+}
+.tema-menu [role="menuitemradio"] {
+  display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: var(--kontrol-h); padding: var(--s-2) var(--s-3);
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink-soft);
+  font: inherit; font-size: var(--fs-body); text-align: left; cursor: pointer;
+  transition: background-color var(--sure-hizli) ease, color var(--sure-hizli) ease;
+}
+.tema-menu [role="menuitemradio"]:hover { background: var(--surface-2); color: var(--ink); }
+.tema-menu [role="menuitemradio"]:focus-visible { outline: none; box-shadow: var(--primary-focus); }
+.tema-menu [aria-checked="true"] { background: var(--primary-soft); color: var(--primary-ink); font-weight: 600; }
+.tema-menu-ad { display: grid; flex: 1; gap: 1px; }
+.tema-menu-ad small { color: var(--muted); font-size: var(--fs-micro); font-weight: 400; }
+.tema-menu-isaret { flex: none; }
+@media (max-width: 1199px), (pointer: coarse) {
+  .tema-menu [role="menuitemradio"] { min-height: var(--kontrol-h-dokunma); }
+}
+@keyframes tema-menu-ac { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .tema-menu { animation: none; } }

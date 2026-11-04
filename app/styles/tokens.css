@@ -90,6 +90,44 @@
   --accent-soft: var(--accent-100);
   --focus: #6f954866;
 
+  /* ============================================================
+     ANLAMSAL KATMAN: BİRİNCİL (lacivert) ve İKİNCİL (yeşil)
+     Phase 4.1, 04.11.2026 — kurum sahibinin kararı: "Academic Navy
+     ana renk; ArvoLab yeşili ölçülü ikincil".
+
+     Üç kademe, ArvoOS'la ortak mimari:
+       1. PALET   (--brand-*, --accent-*, --n-*): ürüne özgü ham renk.
+       2. ANLAM   (--primary-*, --secondary-*, --bg, --surface, --ink…):
+                  bileşenlerin TEK okuduğu katman. Adlar ArvoOS'la aynı
+                  (panel-tokens.css: --primary, --primary-strong,
+                  --primary-soft, --on-primary); ArvoOS ileride aynı
+                  "Soft Elite" yöne geçerse yalnızca palet ve bu blok
+                  değişir, bileşenler değil.
+       3. BİLEŞEN (--kontrol-*, --kart-*): ölçü ve biçim.
+
+     BİRİNCİL = etkileşim rengi: ana düğme, seçili menü, odak halkası,
+     bağlantı. İKİNCİL = yeşil, YALNIZCA: başarı, tamamlanan ilerleme,
+     olumlu analiz sonucu, sınırlı marka vurgusu. Logo kendi renkleriyle
+     bir görüntü dosyası; bu tokenlar ona dokunmaz.
+
+     GEÇİŞ: bugün bileşenlerin çoğu yeşili --accent* ile okuyor (278
+     kullanım) ve --accent hem etkileşim hem başarı anlamında. 4.1
+     yalnızca yeni katmanı kurar, GÖRÜNÜM DEĞİŞMEZ. 4.2'de her --accent
+     kullanımı rolüne göre --primary-* ya da --secondary-*'e taşınır;
+     sonunda --accent, ArvoOS'taki gibi --primary'nin eş adı olur.
+     ============================================================ */
+  --primary-hover: var(--brand-700);
+  --primary-soft: var(--brand-50);
+  /* Lacivert yazı: bağlantı, seçili menü öğesinin metni. Zeminde AA. */
+  --primary-ink: var(--brand-700);
+  --on-primary: var(--n-0);
+  --primary-focus: 0 0 0 3px color-mix(in srgb, var(--brand-500) 28%, transparent);
+
+  --secondary: var(--accent-600);
+  --secondary-strong: var(--accent-800);
+  --secondary-bright: var(--accent-500);
+  --secondary-soft: var(--accent-100);
+
   /* ---- Anlamsal: durum tonları (metin + yumuşak zemin) ---- */
   --success: #2f7d57;
   --success-soft: #e7f3ec;
@@ -164,6 +202,11 @@
   --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter, "Inter"),
     "Helvetica Neue", system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   --font-brand: var(--font-montserrat, "Montserrat"), var(--font-body);
+  /* Editoryal başlık yazısı (Phase 4.1): YALNIZCA sayfa başlıkları, çalışma
+     ve proje başlıkları, seçilmiş içerik kartı başlıkları. Gövde, form,
+     tablo, menü ve düğmeler --font-body'de kalır; belge editörü kendi
+     biçim sistemini kullanır. Yazı yüklenemezse Georgia: aynı karakterde. */
+  --font-display: var(--font-newsreader, "Newsreader"), Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
   --fs-micro: 11px;
   --fs-sm: 12px;
@@ -308,6 +351,16 @@ html[data-theme="dark"] {
   --accent-bright: var(--accent-400);
   --accent-soft: #1d2a14;
   --focus: #89ab6366;
+
+  /* Anlamsal katman, koyu (Phase 4.1; açıklama :root'ta). */
+  --primary-hover: var(--brand-400);
+  --primary-soft: color-mix(in srgb, var(--brand-300) 16%, transparent);
+  --primary-ink: var(--brand-200);
+  --primary-focus: 0 0 0 3px color-mix(in srgb, var(--brand-300) 40%, transparent);
+  --secondary: var(--accent-400);
+  --secondary-strong: var(--accent-300);
+  --secondary-bright: var(--accent-400);
+  --secondary-soft: #1d2a14;
 
   --success: #5bbf8a;
   --success-soft: #12301f;

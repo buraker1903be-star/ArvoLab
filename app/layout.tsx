@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { DilSaglayici } from "./_components/dil-saglayici";
-import { Inter, Montserrat } from "next/font/google";
+import { Inter, Montserrat, Newsreader } from "next/font/google";
+import { TEMA_BETIGI } from "@/lib/tema";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/components.css";
@@ -21,6 +21,24 @@ const inter = Inter({
   subsets: ["latin", "latin-ext"],
   variable: "--font-inter",
   display: "swap",
+  preload: false,
+});
+
+/*
+  Editoryal başlık yazısı (Phase 4.1, kurum sahibinin kararı 04.11.2026):
+  yalnızca sayfa ve çalışma başlıkları, bazı içerik kartı başlıkları.
+  Gövde, form, tablo, menü ve düğmeler Inter'de kalır; akademik belge
+  editörü kendi biçim sistemini kullanır. Değişken yazı: ağırlık ve
+  optik boyut (opsz) eksenleri tek dosyada; büyük başlıkta ince, küçükte
+  dolgun çizilir. preload kapalı: dosya ancak bir başlık --font-display
+  kullandığında iner — 4.1'de hiçbir öğe kullanmıyor, ziyaretçi boşuna
+  indirmez. latin-ext: Türkçe harfler (ş, ğ, İ).
+*/
+const newsreader = Newsreader({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-newsreader",
+  display: "swap",
+  axes: ["opsz"],
   preload: false,
 });
 
@@ -54,10 +72,21 @@ export const viewport: Viewport = {
   ],
 };
 
-// Tema, boyamadan önce <html data-theme> üzerine yazılır: kayıtlı tercih
-// (bkz. app/_components/theme-toggle.tsx), yoksa işletim sistemi ayarı.
-// Böylece koyu temada sayfa açılırken beyaz bir an ("flash") görünmez.
-const themeInit = `(function(){try{var t=localStorage.getItem("arvolab.theme");if(t!=="light"&&t!=="dark")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`;
+/*
+  TEMA, BOYAMADAN ÖNCE <html data-theme> üzerine yazılır (betik ve
+  açık/koyu/sistem kararı: lib/tema.ts, birim testi tema.test.ts).
+
+  <head> içinde GERÇEK bir satır içi <script> (Phase 4.1 düzeltmesi,
+  node_modules/next/dist/docs/01-app/02-guides/preventing-flash-before-hydration.md).
+  Eskiden next/script'in beforeInteractive'i kullanılıyordu; Next 16 bunu
+  HTML'e çalışan kod olarak değil, self.__next_s kuyruğuna VERİ olarak
+  yazıyor ve kuyruğu ancak Next'in kendi JS paketi gelince işliyor.
+  Ölçüldü (04.11.2026, betik paketleri 4 sn geciktirilerek): o süre
+  boyunca data-theme hiç yoktu, koyu temayı seçmiş kullanıcı sayfayı
+  açık zeminle görüyordu — yavaş mobil bağlantıda saniyelerce. Tarayıcı
+  satır içi betiği HTML'i ayrıştırırken, ilk boyamadan önce çalıştırır.
+  suppressHydrationWarning (html'de): betik özniteliği React'ten önce yazıyor.
+*/
 
 export default async function RootLayout({
   children,
@@ -67,11 +96,10 @@ export default async function RootLayout({
   const [dil, saatDilimi] = await Promise.all([aktifDil(), aktifSaatDilimi()]);
   return (
     <html lang={dil} suppressHydrationWarning>
-      <body className={`${inter.variable} ${montserrat.variable}`}>
-        {/* beforeInteractive: Next betiği <head>'e, sayfa boyanmadan önce yerleştirir */}
-        <Script id="theme-init" strategy="beforeInteractive">
-          {themeInit}
-        </Script>
+      <head>
+        <script id="theme-init" dangerouslySetInnerHTML={{ __html: TEMA_BETIGI }} />
+      </head>
+      <body className={`${inter.variable} ${montserrat.variable} ${newsreader.variable}`}>
         <DilSaglayici dil={dil} saatDilimi={saatDilimi}>
           {children}
         </DilSaglayici>

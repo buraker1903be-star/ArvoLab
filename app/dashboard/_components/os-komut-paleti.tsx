@@ -3,7 +3,7 @@
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookPlus, ChartNoAxesCombined, Moon, Plus, Search, Sparkles, type LucideIcon } from "lucide-react";
+import { BookPlus, ChartNoAxesCombined, Monitor, Moon, Plus, Search, Sparkles, Sun, type LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
 import { aramaAnahtari, osSayfalari, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
 import { normalizeDoi } from "@/lib/doi";
@@ -11,6 +11,8 @@ import { calismaAdresi } from "@/lib/calisma-karti";
 import { projectTypeLabel } from "@/lib/project-labels";
 import { komutCalismalari } from "@/app/actions/projects";
 import { OsSimge } from "./os-simge";
+import { temaTercihiniUygula } from "@/app/_components/tema";
+import type { TemaTercihi } from "@/lib/tema";
 
 /*
   CTRL+K / ⌘K: uygulamalar, bölümler ve komutlar tek kutuda. Panelde hiç
@@ -37,11 +39,11 @@ import { OsSimge } from "./os-simge";
 /* Öğeler düz veri; ne yapacakları çalıştır() içinde. */
 type Oge = { id: string; grup: string; label: string; ipucu?: string; ikon: OsIkon; simge?: LucideIcon } & (
   | { tur: "git"; href: string }
-  | { tur: "tema" }
+  | { tur: "tema"; tercih: TemaTercihi }
   | { tur: "cikis" }
 );
 
-const KOMUT_IKONU: Record<"tema" | "cikis", LucideIcon> = { tema: Moon, cikis: LogOut };
+const TEMA_IKONU: Record<TemaTercihi, LucideIcon> = { light: Sun, dark: Moon, system: Monitor };
 type Calisma = { id: string; title: string; project_type: string };
 
 export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[]; cikis: () => Promise<void> }) {
@@ -120,7 +122,10 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
       tur: "git",
       href: s.href,
     })),
-    { id: "komut:tema", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Aydınlık / karanlık temaya geç", en: "Switch light / dark theme" }), ikon: "settings", tur: "tema" },
+    /* Üç tema seçeneği (Phase 4.1): eskiden tek bir "aydınlık / karanlık geç" vardı ve "sisteme uy"a dönülemiyordu. */
+    { id: "komut:tema-acik", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Tema: Açık", en: "Theme: Light" }), ikon: "settings", tur: "tema", tercih: "light" },
+    { id: "komut:tema-koyu", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Tema: Koyu", en: "Theme: Dark" }), ikon: "settings", tur: "tema", tercih: "dark" },
+    { id: "komut:tema-sistem", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Tema: Sistem", en: "Theme: System" }), ipucu: t({ tr: "cihazın ayarını izler", en: "follows your device" }), ikon: "settings", tur: "tema", tercih: "system" },
     { id: "komut:cikis", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Çıkış yap", en: "Sign out" }), ikon: "settings", tur: "cikis" },
   ];
 
@@ -134,13 +139,7 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
       router.push(oge.href);
       return;
     }
-    const sonraki = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", sonraki);
-    try {
-      window.localStorage.setItem("arvolab.theme", sonraki);
-    } catch {
-      // gizli sekmede depolama kapalı olabilir; tema yine de değişsin
-    }
+    temaTercihiniUygula(oge.tercih);
   };
 
   const anahtar = aramaAnahtari(sorgu.trim());
@@ -206,7 +205,7 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
         {sonuc.map((oge, sira) => {
           const baslik = oge.grup !== sonGrup ? oge.grup : null;
           sonGrup = oge.grup;
-          const KomutIkonu = oge.simge ?? (oge.tur === "tema" || oge.tur === "cikis" ? KOMUT_IKONU[oge.tur] : null);
+          const KomutIkonu = oge.simge ?? (oge.tur === "tema" ? TEMA_IKONU[oge.tercih] : oge.tur === "cikis" ? LogOut : null);
           return (
             <li key={oge.id} role="presentation">
               {baslik ? (

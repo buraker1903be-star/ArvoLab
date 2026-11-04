@@ -201,6 +201,93 @@ const tarayici = await chromium.launch();
   await sayfa.close();
 }
 
+// ---- TEMA: Açık / Koyu / Sistem (Phase 4.1) ----
+{
+  const tema = (sayfa) => sayfa.evaluate(() => `${document.documentElement.getAttribute("data-theme")}/${document.documentElement.getAttribute("data-theme-tercih")}`);
+  const kayit = (sayfa) => sayfa.evaluate(() => localStorage.getItem("arvolab.theme"));
+
+  await senaryo("tema: kaydı olmayan kullanıcı sisteme uyar, sistem değişince sayfa da değişir", async () => {
+    const ctx = await tarayici.newContext({ colorScheme: "dark" });
+    const sayfa = await ctx.newPage();
+    await git(sayfa, "/dashboard");
+    bekle((await tema(sayfa)) === "dark/system", `ilk tema ${await tema(sayfa)}`);
+    await sayfa.emulateMedia({ colorScheme: "light" });
+    await sayfa.waitForTimeout(150);
+    bekle((await tema(sayfa)) === "light/system", `sistem açığa dönünce ${await tema(sayfa)}`);
+    await ctx.close();
+  });
+
+  await senaryo("tema: eski kayıt ('dark') korunur ve sistem değişikliği onu ezmez", async () => {
+    const ctx = await tarayici.newContext({ colorScheme: "light" });
+    await ctx.addInitScript(() => { if (!sessionStorage.getItem("k")) { localStorage.setItem("arvolab.theme", "dark"); sessionStorage.setItem("k", "1"); } });
+    const sayfa = await ctx.newPage();
+    await git(sayfa, "/dashboard");
+    bekle((await tema(sayfa)) === "dark/dark", `tema ${await tema(sayfa)}`);
+    await sayfa.emulateMedia({ colorScheme: "dark" });
+    await sayfa.emulateMedia({ colorScheme: "light" });
+    await sayfa.waitForTimeout(150);
+    bekle((await tema(sayfa)) === "dark/dark", `sistem değişince ${await tema(sayfa)}`);
+    await ctx.close();
+  });
+
+  await senaryo("tema: üst çubuk menüsünden Sistem seçilir, kaydedilir; Esc odağı düğmeye verir", async () => {
+    const ctx = await tarayici.newContext({ colorScheme: "dark", viewport: { width: 1440, height: 900 } });
+    await ctx.addInitScript(() => { if (!sessionStorage.getItem("k")) { localStorage.setItem("arvolab.theme", "light"); sessionStorage.setItem("k", "1"); } });
+    const sayfa = await ctx.newPage();
+    await git(sayfa, "/dashboard");
+    const dugme = sayfa.locator(".dashboard-header .tema-secici > button");
+    await dugme.click();
+    const menu = sayfa.locator(".tema-menu[role=menu]");
+    await menu.waitFor({ state: "visible", timeout: 5000 });
+    bekle((await menu.locator('[aria-checked="true"]').innerText()).includes("Açık"), "seçili seçenek Açık değil");
+    await menu.getByRole("menuitemradio", { name: /Sistem/ }).click();
+    bekle((await tema(sayfa)) === "dark/system", `Sistem seçilince ${await tema(sayfa)}`);
+    bekle((await kayit(sayfa)) === "system", `kayıt ${await kayit(sayfa)}`);
+    await sayfa.reload({ waitUntil: "networkidle" });
+    bekle((await tema(sayfa)) === "dark/system", `yenileyince ${await tema(sayfa)}`);
+    await dugme.click();
+    await menu.waitFor({ state: "visible", timeout: 5000 });
+    await sayfa.keyboard.press("ArrowDown");
+    await sayfa.keyboard.press("Escape");
+    await menu.waitFor({ state: "hidden", timeout: 5000 });
+    bekle(await dugme.evaluate((el) => el === document.activeElement), "Esc sonrası odak düğmede değil");
+    await ctx.close();
+  });
+
+  await senaryo("tema: Ctrl+K 'Tema: Koyu' uygular; başka sekme de değişir", async () => {
+    const ctx = await tarayici.newContext({ colorScheme: "light" });
+    const sayfa = await ctx.newPage();
+    const diger = await ctx.newPage();
+    await git(sayfa, "/dashboard");
+    await git(diger, "/dashboard/analysis");
+    await sayfa.keyboard.press("Control+k");
+    await sayfa.locator(".os-palette-input input").fill("Tema: Koyu");
+    await sayfa.waitForTimeout(200);
+    await sayfa.keyboard.press("Enter");
+    await sayfa.waitForTimeout(200);
+    bekle((await tema(sayfa)) === "dark/dark", `Ctrl+K sonrası ${await tema(sayfa)}`);
+    await diger.waitForFunction(() => document.documentElement.getAttribute("data-theme") === "dark", null, { timeout: 5000 }).catch(() => {});
+    bekle((await tema(diger)) === "dark/dark", `öteki sekme ${await tema(diger)}`);
+    await ctx.close();
+  });
+
+  await senaryo("tema: ilk boyama doğru temada (JS paketleri gecikse bile parlama yok)", async () => {
+    // Eskiden betik Next'in kuyruğundaydı ve JS gelene kadar data-theme yoktu: koyu tercihli kullanıcı açık zemin görüyordu.
+    const ctx = await tarayici.newContext({ colorScheme: "light" });
+    await ctx.addInitScript(() => { try { localStorage.setItem("arvolab.theme", "dark"); } catch {} });
+    const sayfa = await ctx.newPage();
+    await sayfa.route("**/*", async (r) => {
+      if (r.request().resourceType() === "script") await new Promise((c) => setTimeout(c, 3000));
+      r.continue().catch(() => {});
+    });
+    sayfa.goto(TABAN + "/dashboard", { timeout: 150000 }).catch(() => {});
+    await sayfa.waitForEvent("domcontentloaded", { timeout: 150000 });
+    const ilk = await sayfa.evaluate(() => ({ tema: document.documentElement.getAttribute("data-theme") }));
+    bekle(ilk.tema === "dark", `JS gelmeden tema ${ilk.tema}`);
+    await ctx.close();
+  });
+}
+
 await tarayici.close();
 
 let dusen = 0;
