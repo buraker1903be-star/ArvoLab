@@ -1,3 +1,4 @@
+import { CalismaBaglamiYayinla } from "../_components/calisma-baglami";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { etikKaydiOku } from "@/lib/etik/oku";
@@ -63,6 +64,8 @@ export default async function AnalysisPage({
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">
+      {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
+      {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       <section className="projects-header">
         <div>
           <h1>{t({ tr: "Analiz Merkezi", en: "Analysis Centre" })}</h1>

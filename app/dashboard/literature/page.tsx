@@ -1,3 +1,4 @@
+import { CalismaBaglamiYayinla } from "../_components/calisma-baglami";
 import DoiEkleKutusu from "./doi-ekle-kutusu";
 import { BookMarked, Download, FileUp, Sparkles } from "lucide-react";
 import { getLiteratureSources } from "@/app/actions/literature";
@@ -100,6 +101,8 @@ export default async function KaynaklarPage({
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">
+      {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
+      {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       <section className="projects-header">
         <div>
           <h1>{t({ tr: "Kaynaklar", en: "Sources" })}</h1>

@@ -24,6 +24,8 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 export interface MyProject {
   id: string;
   title: string;
+  /* Gezinmenin çalışma bağlamı için (Phase 3): makalede Makale bölümü gösterilir. */
+  project_type: string;
   university: string | null;
   citation_style: string | null;
   /*
@@ -54,7 +56,7 @@ export async function getMyProjects(): Promise<ListeSonucu<MyProject>> {
 
   const { data, error } = await supabase
     .from("academic_projects")
-    .select("id, title, university, citation_style, guideline_id")
+    .select("id, title, project_type, university, citation_style, guideline_id")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -83,8 +85,8 @@ export async function getMyProjects(): Promise<ListeSonucu<MyProject>> {
   return listeBasarili(
     data.map((satir) => {
       /* guideline_id dışarı verilmez: ekranın işi uygulanan kılavuzla. */
-      const { id, title, university, citation_style } = satir;
-      const proje = { id, title, university, citation_style };
+      const { id, title, project_type, university, citation_style } = satir;
+      const proje = { id, title, project_type, university, citation_style };
       const kilavuz = kurallar.get(proje.id);
       /* Öğrencinin ÇALIŞMASINDA seçtiği stil önce gelir: yazdığı
          metin ona göre. Çalışmada seçilmemişse kılavuzunki. */

@@ -1,3 +1,4 @@
+import { CalismaBaglamiYayinla } from "../_components/calisma-baglami";
 import { FileText, RotateCcw, ShieldQuestion, Trash2, UploadCloud, ListChecks, Quote, Copy } from "lucide-react";
 import { getMyProjects } from "@/app/actions/citation-check";
 import {
@@ -401,6 +402,8 @@ export default async function DocumentsPage({
 
   return (
     <main className="dashboard-page gb gb-tek-ekran">
+      {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
+      {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       <section className="projects-header">
         <div>
           <h1>{t({ tr: "Belge Kontrol", en: "Document Check" })}</h1>
