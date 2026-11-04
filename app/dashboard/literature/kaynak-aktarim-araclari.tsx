@@ -162,7 +162,8 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
             ? t({ tr: "Ekleniyor…", en: "Adding…" })
             : doilar.length
               ? t({ tr: `${doilar.length} DOI'yi ekle`, en: `Add ${doilar.length} ${doilar.length === 1 ? "DOI" : "DOIs"}` })
-              : t({ tr: "DOI bulunamadı", en: "No DOI found" })}
+              /* Kutu boşken "DOI bulunamadı" yazıyordu: hiçbir şey yazmamış kullanıcıya hata gibi görünüyordu (Phase 3). */
+              : t({ tr: "DOI'leri ekle", en: "Add DOIs" })}
         </button>
         {doiSonuclari ? (
           <ul className="secim-listesi">

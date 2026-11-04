@@ -1,3 +1,4 @@
+import DoiEkleKutusu from "./doi-ekle-kutusu";
 import { BookMarked, Download, FileUp, Sparkles } from "lucide-react";
 import { getLiteratureSources } from "@/app/actions/literature";
 import { getMyCitationChecks, getMyProjects, sonKaynakcaDenetimi } from "@/app/actions/citation-check";
@@ -57,9 +58,9 @@ const SIRA: Durum[] = ["to_review", "read", "used"];
 export default async function KaynaklarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ calisma?: string }>;
+  searchParams: Promise<{ calisma?: string; doi?: string; ekle?: string }>;
 }) {
-  const { calisma: istenen } = await searchParams;
+  const { calisma: istenen, doi: gelenDoi, ekle } = await searchParams;
   const t = await ceviri();
   const { tarih, tarihSaat } = await tarihler();
   const [
@@ -220,10 +221,17 @@ export default async function KaynaklarPage({
                   projectId={calisma.id}
                   projeAdi={calisma.title}
                   triggerLabel={t({ tr: "Kaynak bul", en: "Find sources" })}
-                  triggerClassName="projects-primary-button button-compact"
+                  triggerClassName="projects-primary-button button-compact kaynak-bul-tetik"
                 />
               </div>
             </header>
+            {/* DOI ile ekleme görünür (Phase 3): eskiden "İçe aktar" penceresinin içindeydi. */}
+            <DoiEkleKutusu
+              projectId={calisma.id}
+              ilkDeger={typeof gelenDoi === "string" ? gelenDoi.slice(0, 300) : ""}
+              odakla={ekle === "1" || typeof gelenDoi === "string"}
+              aramaTetikleyicisi=".kaynak-bul-tetik"
+            />
             {kaynaklar.length ? (
               <KaynakListesi kaynaklar={kaynaklar} />
             ) : (

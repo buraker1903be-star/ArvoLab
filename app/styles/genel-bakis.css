@@ -1281,3 +1281,23 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
     border-top: 1px solid var(--line-soft); background: var(--surface);
   }
 }
+/* DOI ile kaynak ekle (Phase 3, doi-ekle-kutusu.tsx): literatür listesinin üstünde tek satır. */
+.doi-kutusu { display: grid; gap: var(--s-2); }
+.doi-kutusu-satir {
+  display: flex; align-items: center; gap: var(--s-2); padding: 4px 4px 4px var(--s-3);
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface);
+  color: var(--muted); transition: border-color var(--sure-hizli) ease, box-shadow var(--sure-hizli) ease;
+}
+.doi-kutusu-satir:focus-within { border-color: var(--accent); box-shadow: var(--odak-halkasi); }
+.doi-kutusu-satir input { flex: 1 1 auto; min-width: 0; height: 36px; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: var(--fs-body); }
+.doi-kutusu-durum:empty { display: none; }
+.doi-kutusu-durum p { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--s-2); margin: 0; font-size: var(--fs-sm); color: var(--ink-soft); }
+.doi-kutusu-durum p > svg { flex: none; }
+.doi-kutusu-durum p[data-tone="success"] > svg { color: var(--success); }
+.doi-kutusu-durum p[data-tone="warning"] > svg { color: var(--warning); }
+.doi-kutusu-durum p[data-tone="danger"] { color: var(--danger); }
+.doi-kutusu-durum p[data-tone="info"] > svg { color: var(--info); }
+.doi-kutusu-durum p > span { flex: 1 1 220px; min-width: 0; }
+.doi-kutusu-donen { animation: doi-don .9s linear infinite; }
+@keyframes doi-don { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .doi-kutusu-donen { animation: none; } }
