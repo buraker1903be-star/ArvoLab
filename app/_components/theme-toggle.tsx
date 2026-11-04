@@ -99,7 +99,7 @@ export default function ThemeToggle({ className = "dashboard-icon-button" }: { c
         aria-haspopup="menu"
         aria-expanded={acik}
         aria-label={etiket}
-        title={etiket}
+        data-ipucu={etiket}
         onClick={() => setAcik((a) => !a)}
       >
         <Simge size={17} strokeWidth={1.9} aria-hidden="true" />

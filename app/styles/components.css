@@ -84,29 +84,29 @@
   padding: 0 var(--kontrol-dolgu);
   border-radius: var(--kontrol-r);
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--dugme-agirlik);
   line-height: 1.1;
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
   transition:
-    transform .34s var(--ease-spring),
-    box-shadow .25s ease,
-    background-color .2s ease,
-    border-color .2s ease,
-    color .2s ease;
+    transform var(--sure-hizli) ease,
+    box-shadow var(--sure-hizli) ease,
+    background-color var(--sure-hizli) ease,
+    border-color var(--sure-hizli) ease,
+    color var(--sure-hizli) ease;
 }
+/*
+  Birincil düğme DÜZ (Signature OS). Eskiden iki tonlu bir degrade, iç
+  parlama, mavi halka ve 16 piksellik renkli gölge taşıyordu; sayfada
+  en çok göze batan şey düğmeydi, içerik değil. Renk bileşen
+  tokenından (tokens.css --dugme-birincil): iki tema için ayrı kural yok.
+*/
 .projects-primary-button {
   border: 1px solid transparent;
-  background: linear-gradient(180deg, var(--brand-600), var(--brand-800));
+  background: var(--dugme-birincil);
   color: var(--on-brand);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--n-0) 12%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--primary-ink) 26%, transparent),
-    0 6px 16px color-mix(in srgb, var(--brand-900) 18%, transparent);
-}
-html[data-theme="dark"] .projects-primary-button {
-  background: linear-gradient(180deg, var(--brand-500), var(--brand-700));
+  box-shadow: var(--shadow-sm);
 }
 .projects-filter-button {
   border: 1px solid var(--line);
@@ -127,27 +127,22 @@ html[data-theme="dark"] .projects-primary-button {
   color: var(--success);
 }
 @media (hover: hover) and (pointer: fine) {
-  .projects-primary-button:hover {
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--n-0) 12%, transparent),
-      0 0 0 1px color-mix(in srgb, var(--primary-ink) 55%, transparent),
-      0 12px 26px color-mix(in srgb, var(--brand-900) 24%, transparent);
-  }
-  .projects-filter-button:hover { border-color: color-mix(in srgb, var(--primary-ink) 45%, var(--line)); color: var(--primary-ink); }
+  .projects-primary-button:hover { background: var(--dugme-birincil-hover); }
+  .projects-filter-button:hover { border-color: var(--kenarlik-hover); background: var(--dugme-hover-zemin); }
   .button-danger:hover { border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
 }
 :is(.projects-primary-button, .projects-filter-button, .button-danger, .button-success):active {
-  transform: scale(.965);
+  transform: scale(.98);
   transition-duration: .08s;
 }
 :is(.projects-primary-button, .projects-filter-button, .button-danger, .button-success):is(:disabled, [aria-disabled="true"]),
 fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button-danger, .button-success) {
-  opacity: .52;
-  filter: saturate(.65);
+  opacity: .5;
   cursor: not-allowed;
   transform: none;
 }
 [aria-busy="true"] :is(.projects-primary-button, .projects-filter-button, .button-danger) { opacity: .72; }
+:is(.projects-primary-button, .projects-filter-button, .button-danger, .button-success):focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 .button-compact { min-height: var(--kontrol-h-sik); padding: 0 var(--kontrol-dolgu-sik); font-size: var(--fs-sm); }
 
 /* ---------- Kartlar ve listeler ---------- */
@@ -404,7 +399,7 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   color: var(--tone);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 16%, transparent);
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--hap-agirlik);
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -540,7 +535,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]),
 }
 select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hover:not(:disabled, :focus),
 :is(.project-form-grid, .guideline-review-form) select:not([multiple]):hover:not(:disabled, :focus) {
-  border-color: color-mix(in srgb, var(--primary-ink) 45%, var(--line));
+  border-color: var(--kenarlik-hover);
 }
 
 /* ---------- Süzgeç seçicisi (secici.tsx) ---------- */
@@ -1018,34 +1013,44 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   max-width: 100%;
   padding: 4px;
   overflow-x: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
-  box-shadow: var(--shadow-inset);
+  background: var(--surface-2);
   scrollbar-width: none;
 }
+/*
+  Sekmeler (Signature OS): yazı 600, seçili sekme beyaz yüzey + ince
+  çizgi. Eskiden seçili sekmede mavi bir halka vardı ve her yazı 700'dü;
+  sayfanın en kalın yazısı sekmelerdi. Dokunmatikte ve tablette 40
+  piksel: 36 piksellik sekme dokunma hedefi kuralının altındaydı
+  (duyarlilik.mjs, kanıt ve etik sayfaları).
+*/
 .segmented > :is(a, button) {
   display: grid;
   place-items: center;
-  min-height: 36px;
-  padding: 7px 14px;
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 0;
   border-radius: var(--r-sm);
+  background: transparent;
   color: var(--muted);
+  font: inherit;
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--dugme-agirlik);
+  text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
-  transition: transform .34s var(--ease-spring), background-color .2s ease, color .2s ease;
+  transition: background-color var(--sure-hizli) ease, color var(--sure-hizli) ease;
 }
-.segmented > :is(a, button):active { transform: scale(.95); transition-duration: .08s; }
+@media (max-width: 1199px), (pointer: coarse) {
+  .segmented > :is(a, button) { min-height: 40px; }
+}
+.segmented > :is(a, button):hover { color: var(--ink); }
+.segmented > :is(a, button):focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 .segmented > :is(.active, [aria-current="page"], [aria-selected="true"]) {
   background: var(--surface);
   color: var(--ink);
-  /* Yükselme token'dan (koyu temada karşılığı var), üstüne seçili
-     olduğunu söyleyen marka halkası. */
-  box-shadow:
-    var(--shadow-sm),
-    0 0 0 1px color-mix(in srgb, var(--primary-ink) 24%, var(--line));
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--line-soft);
 }
 
 /* ---------- Ana sayfa ---------- */
@@ -1762,7 +1767,7 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   padding: 18px 20px;
   border: 1px solid color-mix(in srgb, var(--primary-ink) 35%, var(--line-soft));
   border-radius: var(--r-lg);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-ink) 6%, var(--surface)), var(--surface));
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
 /* Genel bakış sayfalarında kartlar arası boşluk sayfanın kendi aralığından gelir; 22 piksel üstüne ekleniyor, kartın üstünde iki kat boşluk açıyordu. */
@@ -2117,12 +2122,14 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .kart-menu { position: relative; margin-left: auto; }
 .kart-menu > summary {
   display: grid; place-items: center; width: 38px; height: 38px;
-  border: 1px solid var(--line); border-radius: 11px; background: var(--surface);
+  border: 1px solid transparent; border-radius: var(--r-sm); background: transparent;
   color: var(--ink-soft); list-style: none; cursor: pointer;
+  transition: background-color var(--sure-hizli) ease, border-color var(--sure-hizli) ease;
 }
+.kart-menu > summary:hover { background: var(--dugme-hover-zemin); }
 .kart-menu > summary::-webkit-details-marker { display: none; }
-.kart-menu > summary:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
-.kart-menu[open] > summary { border-color: var(--primary-ink); color: var(--primary-ink); }
+.kart-menu > summary:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.kart-menu[open] > summary { border-color: var(--line); background: var(--dugme-hover-zemin); color: var(--ink); }
 .kart-menu-liste {
   position: absolute; right: 0; bottom: calc(100% + 6px); z-index: var(--z-acilir);
   display: flex; flex-direction: column; min-width: 200px; padding: 6px;

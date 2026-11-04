@@ -409,3 +409,102 @@ html.drawer-open { overflow: hidden; }
 .sozlesme-onaylarim dt { color: var(--muted); }
 .sozlesme-onaylarim dd { margin: 0; word-break: break-all; }
 .sozlesme-kopyasi { display: grid; gap: 8px; justify-items: start; margin: 0 0 12px; }
+
+/* ============================================================
+   ORTAK AÇILIR YÜZEYLER (Signature OS, 04.11.2026)
+   Menüler ve pencereler aynı kararları bileşen tokenlarından okur
+   (tokens.css: --menu-*, --pencere-*). Eskiden beş açılır menünün
+   yarıçapı 6 / 10 / 12px, dolgusu 4 / 6 / 8px, öğe yüksekliği
+   34 / 36 / 38 / 40px'ti; kullanıcı menüsü ile kart menüsü yan yana
+   açılınca iki ayrı uygulamadan gelmiş gibi duruyordu.
+
+   Bu blok BİLEREK dosyaların en sonunda (overlays.css yükleme sırasında
+   workspace.css'ten sonra): seçiciler bileşenlerin kendi seçicileriyle
+   aynı özgüllükte, sıra kazanır. Konum, genişlik ve hareket bileşende
+   kalır; burada yalnızca görünüm.
+   ============================================================ */
+:is(.os-kullanici-menu, .kart-menu-liste, .tema-menu, .arac-menu-pencere, .secici-liste) {
+  padding: var(--menu-dolgu);
+  border: 1px solid var(--line);
+  border-radius: var(--menu-r);
+  background: var(--surface-raised);
+  box-shadow: var(--menu-golge);
+}
+.os-kullanici-baglantilar a,
+.os-kullanici-cikis button,
+.kart-menu-liste > a,
+.kart-menu-liste button,
+.tema-menu [role="menuitemradio"],
+.arac-menu-pencere button,
+.arac-menu-oge,
+.secici-secenek {
+  min-height: var(--menu-oge-h);
+  border-radius: var(--menu-oge-r);
+  font-size: var(--fs-body);
+}
+@media (max-width: 1199px), (pointer: coarse) {
+  .os-kullanici-baglantilar a,
+  .os-kullanici-cikis button,
+  .kart-menu-liste > a,
+  .kart-menu-liste button,
+  .tema-menu [role="menuitemradio"],
+  .arac-menu-pencere button,
+  .arac-menu-oge,
+  .secici-secenek { min-height: var(--kontrol-h-dokunma); }
+}
+.os-kullanici-baglantilar a:focus-visible,
+.os-kullanici-cikis button:focus-visible,
+.kart-menu-liste > a:focus-visible,
+.kart-menu-liste button:focus-visible,
+.arac-menu-pencere button:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+
+:is(.drawer, .os-daha, .os-palette, .sozlesme-onay) {
+  border-radius: var(--pencere-r);
+  box-shadow: var(--pencere-golge);
+}
+/* Kapat düğmesi: 34 piksellik yuvarlak düğme tablette dokunma hedefi
+   kuralının altındaydı (duyarlilik.mjs); artık üst çubuktaki simge
+   düğmeleriyle aynı aile. */
+.drawer-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  transition: background-color var(--sure-hizli) ease, color var(--sure-hizli) ease;
+}
+.drawer-close:hover { background: var(--dugme-hover-zemin); color: var(--ink); }
+.drawer-close:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+@media (max-width: 1199px), (pointer: coarse) {
+  .drawer-close { width: 40px; height: 40px; }
+}
+.drawer-header h2 { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.015em; }
+
+/* ============================================================
+   İPUCU (tooltip): data-ipucu="metin" (Signature OS)
+   Yalnızca simgeden ibaret denetimler için. Tarayıcının title
+   balonu bir saniye gecikiyor, klavyeyle odaklanınca hiç çıkmıyor ve
+   dokunmatikte yok; bu ipucu imleçte ve klavye odağında görünür.
+   Erişilebilir ad aria-label'da kalır; ipucu onun görünen kopyası
+   (aria-label varken ::after içeriği ada katılmaz). title ile birlikte
+   KULLANILMAZ: iki balon üst üste çıkar. Kenar çubuğunda kullanılmıyor:
+   kaydırma kabı (overflow) balonu keserdi, orada title duruyor.
+   ============================================================ */
+[data-ipucu] { position: relative; }
+[data-ipucu]::after {
+  content: attr(data-ipucu);
+  position: absolute; top: calc(100% + 6px); left: 50%; z-index: var(--z-menu);
+  padding: 4px 8px; border-radius: var(--r-xs);
+  background: var(--ink); color: var(--surface);
+  font-size: var(--fs-sm); font-weight: 500; line-height: 1.3; white-space: nowrap;
+  pointer-events: none; opacity: 0; transform: translate(-50%, -2px);
+  transition: opacity var(--sure-hizli) ease, transform var(--sure-hizli) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-ipucu]:hover::after { opacity: 1; transform: translate(-50%, 0); transition-delay: .3s; }
+}
+[data-ipucu]:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+/* Menüsü açıkken ipucu menünün üstüne binmesin. */
+[data-ipucu][aria-haspopup][aria-expanded="true"]::after { display: none; }
+@media (prefers-reduced-motion: reduce) { [data-ipucu]::after { transition: none; } }

@@ -95,7 +95,7 @@ export default function NotificationBell() {
           void refresh();
         }}
         aria-label={label}
-        title={label}
+        data-ipucu={label}
       >
         <Bell size={17} strokeWidth={1.9} aria-hidden="true" />
         {unread > 0 ? <span className="notification-badge" aria-hidden="true">{unread > 99 ? "99+" : unread}</span> : null}

@@ -214,9 +214,8 @@
   --neutral: var(--yazi-600);
   --neutral-soft: var(--gri-100);
 
-  /* ---- Kenar çubuğu (her iki temada koyu) ---- */
-  --sidebar-from: #03264d;
-  --sidebar-to: var(--brand-950);
+  /* ---- Giriş sayfasının koyu tanıtım paneli (her iki temada koyu) ----
+     Degrade uçları (--sidebar-from/-to) Signature OS'ta kalktı: panel düz. */
   --sidebar-ink: var(--n-0);
   --sidebar-muted: #ffffffa6;
   --sidebar-line: #ffffff17;
@@ -253,6 +252,35 @@
   --kontrol-dolgu-sik: 10px;
   /* Odak halkası birincil (lacivert) odak tokenının kendisi (Phase 4.2). */
   --odak-halkasi: var(--primary-focus);
+
+  /* ---- Bileşen katmanı (Signature OS, 04.11.2026) ----
+     Ortak bileşenlerin kararları burada; bileşen CSS'i yalnızca bunları
+     okur. Eskiden her menü kendi yarıçapını (10 / 12 / 14px), dolgusunu
+     (4 / 6 / 8px) ve gölgesini seçiyordu; birincil düğme ile giriş
+     düğmesi iki ayrı degradeyle çiziliyordu.
+
+     Birincil düğme DÜZ ve koyu lacivert: mockup'taki sayfa eylemi
+     ("AI Sohbet") gibi. Kenar çubuğundaki "Yeni çalışma" uygulamanın
+     tek global eylemi, o daha açık --primary'de (os-shell.css). */
+  --dugme-birincil: var(--primary-strong);
+  --dugme-birincil-hover: var(--primary-hover);
+  --dugme-agirlik: 600;
+  /* İkincil düğme ve satır üstü: imleç gelince yüzey bir ton koyulaşır;
+     eskiden kenarlık ve yazı maviye dönüyordu, her düğme bağlantı gibi
+     görünüyordu. */
+  --dugme-hover-zemin: var(--surface-2);
+  --kenarlik-hover: color-mix(in srgb, var(--ink) 22%, var(--line));
+  /* Açılır menüler: kullanıcı menüsü, kart menüsü, tema menüsü, araç menüleri. */
+  --menu-r: var(--r-md);
+  --menu-dolgu: var(--s-1);
+  --menu-golge: var(--shadow-md);
+  --menu-oge-h: 36px;
+  --menu-oge-r: var(--r-sm);
+  /* Pencere (PanelDrawer, Dialog, yerel <dialog>) */
+  --pencere-r: var(--r-xl);
+  --pencere-golge: var(--shadow-lg);
+  /* Durum etiketi */
+  --hap-agirlik: 600;
 
   /* Kart ızgaralarının arası dört ayrı değerdeydi (10 / 12 / 14px);
      aynı ekranda farklı yoğunlukta görünüyorlardı. */
@@ -487,8 +515,6 @@ html[data-theme="dark"] {
   --neutral: var(--gece-yazi-400);
   --neutral-soft: var(--gece-700);
 
-  --sidebar-from: #04203f;
-  --sidebar-to: #000814;
 
   /* Gölgeler en az (Signature OS): ayrım çizgiden gelir, gölgeden değil. */
   --shadow-sm: 0 1px 2px #00000033;

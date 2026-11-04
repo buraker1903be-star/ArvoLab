@@ -18,9 +18,8 @@ html {
 body {
   min-height: 100dvh;
   margin: 0;
-  background:
-    radial-gradient(circle at 72% -12%, color-mix(in srgb, var(--surface) 75%, transparent), transparent 30rem),
-    var(--bg);
+  /* Düz zemin (Signature OS): sağ üstteki dekoratif ışık halesi kaldırıldı. */
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--fs-body);
@@ -34,11 +33,6 @@ body {
   transition: background-color .25s ease, color .25s ease;
 }
 
-html[data-theme="dark"] body {
-  background:
-    radial-gradient(circle at 72% -12%, color-mix(in srgb, var(--primary-ink) 8%, transparent), transparent 30rem),
-    var(--bg);
-}
 
 h1, h2, h3, h4 { color: var(--ink); text-wrap: balance; }
 p { text-wrap: pretty; }

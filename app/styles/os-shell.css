@@ -254,7 +254,8 @@
 }
 /* Tablette ve telefonda yazı yerine yalnızca büyüteç: konum yoluna yer kalsın. */
 @media (max-width: 1199px) {
-  .os-search { flex: none; width: 40px; justify-content: center; }
+  .os-search { flex: none; width: 40px; justify-content: center; border-color: transparent; background: transparent; }
+  .os-search:hover { border-color: transparent; background: var(--dugme-hover-zemin); }
   .os-search-text, .os-search kbd { display: none; }
 }
 

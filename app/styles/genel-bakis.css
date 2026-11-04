@@ -617,9 +617,8 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--brand-700) 70%, transparent);
   border-radius: var(--r-xl);
-  background:
-    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--primary-ink) 28%, transparent) 0%, transparent 55%),
-    linear-gradient(140deg, var(--brand-900), var(--brand-700));
+  /* Düz lacivert (Signature OS): degrade ve hale kaldırıldı. */
+  background: var(--brand-900);
   color: var(--on-brand);
   box-shadow: var(--shadow-md);
 }
@@ -686,7 +685,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .kredi-paketi:hover { border-color: color-mix(in srgb, var(--primary-ink) 45%, var(--line)); box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .kredi-paketi[data-one-cikan] {
   border-color: var(--primary-ink);
-  background: linear-gradient(180deg, var(--primary-soft), var(--surface) 70%);
+  background: var(--surface);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-ink) 14%, transparent), var(--shadow-sm);
 }
 .kredi-paketi-serit {
