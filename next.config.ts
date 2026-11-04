@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { guvenlikBasliklari } from "./lib/guvenlik-basliklari";
 
 const PDF_WORKER = "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs";
 
@@ -92,6 +93,18 @@ const nextConfig: NextConfig = {
       }
     : {}),
   poweredByHeader: false,
+  /* Güvenlik başlıkları her yanıtta; ne zorlandığı, ne yalnızca raporlandığı ve nedeni lib/guvenlik-basliklari.ts'te. */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: guvenlikBasliklari({
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          gelistirme: process.env.NODE_ENV !== "production",
+        }),
+      },
+    ];
+  },
   reactStrictMode: true,
   /*
     tesseract.js listede: işçi yolu __dirname'den kuruluyor, yani paketin
