@@ -248,3 +248,84 @@ export function osSayfalari(uygulamalar: OsUygulama[]): OsSayfa[] {
   for (const u of uygulamalar) if (u.yalnizBaslatici) sayfalar.push({ label: u.label, href: u.href, uygulama: u.key });
   return sayfalar;
 }
+
+/*
+  ═══ UYARLANIR GEZİNME (Phase 3, 04.11.2026) ═══
+
+  Dört ayrı gezinme vardı: dock, "Tüm uygulamalar" ızgarası, çalışma
+  sekmeleri ve Çalışmalarım'daki araç çipleri. Kullanıcı aynı yere üç
+  yoldan gidebiliyor, hangisinin "ana" olduğunu bilemiyordu. Artık tek
+  gezinme (os-gezinme.tsx) aynı listeden üç biçimde çiziliyor
+  (lib/os/kirilimlar.ts); başlatıcı ızgarası kalktı, bütün uygulamalar
+  ya gezinmede ya "Daha fazla"da ya da Ctrl+K'da.
+*/
+
+/** Telefondaki alt çubukta kalıcı duran uygulamalar (geri kalanı "Daha fazla"da). */
+export const ALT_CUBUK = ["home", "tez", "kaynaklar", "analiz"] as const;
+
+/** Gezinmenin altında, ana listeden ayrı duranlar: ayarlar ve başlatıcıya ayrılmış uygulamalar. */
+export function gezinmeGruplari(uygulamalar: OsUygulama[]) {
+  const ana = uygulamalar.filter((u) => !u.yalnizBaslatici && u.key !== "ayarlar");
+  const diger = uygulamalar.filter((u) => u.yalnizBaslatici);
+  const ayarlar = uygulamalar.find((u) => u.key === "ayarlar") ?? null;
+  return { ana, diger, ayarlar };
+}
+
+/** Telefonda alt çubukta olmayan her şey "Daha fazla" sayfasında (ayarlar dahil). */
+export function dahaFazlasi(uygulamalar: OsUygulama[]): OsUygulama[] {
+  const cubukta = new Set<string>(ALT_CUBUK);
+  return uygulamalar.filter((u) => !cubukta.has(u.key));
+}
+
+export type CalismaBaglami = { id: string; baslik: string; tur: string };
+export type BaglamBaglantisi = { key: string; label: string; href: string; grup: "calisma" | "arac" };
+
+/*
+  ÇALIŞMANIN İÇİNDEYKEN GEZİNME. Çalışmanın kendi bölümleri (Özet,
+  Yazım, Kanıt, Etik, makalede Makale) ve o çalışmaya süzülmüş araçlar
+  (Kaynaklar, Analiz, Belge Kontrol). Araçların adresleri `calisma`
+  değişkeniyle çalışmayı seçili açar; o sayfalar bunu zaten tanıyor.
+  Makale bölümü yalnızca makale türünde: tezde boş bir sekme göstermek
+  calisma-sekmeleri.tsx'teki kuralla çelişirdi.
+*/
+export function calismaBaglantilari(calisma: CalismaBaglami, t: Cevirici = ceviriciKur("tr")): BaglamBaglantisi[] {
+  const id = encodeURIComponent(calisma.id);
+  return [
+    { key: "merkez", label: t({ tr: "Özet", en: "Overview" }), href: `/dashboard/editor?sec=${id}`, grup: "calisma" },
+    { key: "yazim", label: t({ tr: "Yazım", en: "Writing" }), href: `/dashboard/editor/${id}/write`, grup: "calisma" },
+    { key: "kanit", label: t({ tr: "Kanıt matrisi", en: "Evidence matrix" }), href: `/dashboard/editor/${id}/kanit`, grup: "calisma" },
+    { key: "etik", label: t({ tr: "Etik kurul", en: "Ethics" }), href: `/dashboard/editor/${id}/etik`, grup: "calisma" },
+    ...(calisma.tur === "article"
+      ? [{ key: "makale", label: t({ tr: "Makale", en: "Article" }), href: `/dashboard/editor/${id}/makale`, grup: "calisma" as const }]
+      : []),
+    { key: "kaynaklar", label: t({ tr: "Kaynaklar", en: "Sources" }), href: `/dashboard/literature?calisma=${id}`, grup: "arac" },
+    { key: "analiz", label: t({ tr: "Analiz", en: "Analysis" }), href: `/dashboard/analysis?calisma=${id}`, grup: "arac" },
+    { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), href: `/dashboard/documents?calisma=${id}`, grup: "arac" },
+  ];
+}
+
+/**
+ * Bu adres şu çalışmanın içinde mi? Çalışmanın kendi sayfaları
+ * (/dashboard/editor/<id>/…), Özet (?sec=<id>) ve ona süzülmüş araçlar
+ * (?calisma=<id>). Başka bir çalışmaya ya da genel sayfaya geçince
+ * bağlam gizlenir: kullanıcı yanlış çalışmanın bölümlerini görmesin.
+ */
+export function calismaIcindeMi(calismaId: string, yol: string, sorgu: URLSearchParams): boolean {
+  if (yol.startsWith(`/dashboard/editor/${calismaId}/`) || yol === `/dashboard/editor/${calismaId}`) return true;
+  if (yol === "/dashboard/editor" && sorgu.get("sec") === calismaId) return true;
+  return sorgu.get("calisma") === calismaId;
+}
+
+/** Bağlamdaki etkin bağlantı: yol eşleşmesi; Özet ve araçlar sorgu değişkeniyle. */
+export function etkinBaglanti(baglantilar: BaglamBaglantisi[], yol: string): BaglamBaglantisi | null {
+  for (const b of baglantilar) {
+    const [bYol] = b.href.split("?");
+    if (b.grup === "calisma" && b.key !== "merkez" && (yol === bYol || yol.startsWith(`${bYol}/`))) return b;
+  }
+  for (const b of baglantilar) {
+    const [bYol] = b.href.split("?");
+    if ((b.key === "merkez" || b.grup === "arac") && yol === bYol) return b;
+  }
+  return null;
+}
+

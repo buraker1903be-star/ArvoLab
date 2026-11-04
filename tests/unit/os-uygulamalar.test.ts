@@ -187,3 +187,54 @@ test("doçentlik yalnızca Türkçe arayüzde (28.10.2026)", () => {
   assert.ok(gorunenUygulamalar(labUygulamalari(), "expert", "tr").some((u) => u.key === "docentlik"));
   assert.equal(gorunenUygulamalar(labUygulamalari(), "expert", "en").some((u) => u.key === "docentlik"), false);
 });
+
+/* Phase 3 (04.11.2026): uyarlanır gezinme tek listeden üç biçim; çalışma bağlamı. */
+import { ALT_CUBUK, calismaBaglantilari, calismaIcindeMi, dahaFazlasi, etkinBaglanti, gezinmeGruplari } from "@/lib/os/uygulamalar";
+import { ekranSinifi } from "@/lib/os/kirilimlar";
+
+test("gezinme grupları: her uygulama tam olarak bir yerde, hiçbiri kaybolmuyor", () => {
+  const hepsi = labUygulamalari();
+  const { ana, diger, ayarlar } = gezinmeGruplari(hepsi);
+  const yerlesen = [...ana, ...diger, ...(ayarlar ? [ayarlar] : [])].map((u) => u.key).sort();
+  assert.deepEqual(yerlesen, hepsi.map((u) => u.key).sort());
+});
+
+test("telefonda alt çubuk + Daha fazla bütün uygulamaları kapsar", () => {
+  const hepsi = labUygulamalari();
+  const cubuk = hepsi.filter((u) => (ALT_CUBUK as readonly string[]).includes(u.key));
+  assert.equal(cubuk.length, ALT_CUBUK.length, "alt çubuktaki her anahtar listede olmalı");
+  assert.equal(cubuk.length + dahaFazlasi(hepsi).length, hepsi.length);
+});
+
+test("ekran sınıfı kırılımları", () => {
+  assert.equal(ekranSinifi(390), "telefon");
+  assert.equal(ekranSinifi(760), "telefon");
+  assert.equal(ekranSinifi(761), "tablet");
+  assert.equal(ekranSinifi(1199), "tablet");
+  assert.equal(ekranSinifi(1200), "masaustu");
+});
+
+test("çalışma bağlamı: Makale yalnızca makale türünde, araçlar çalışmaya süzülü", () => {
+  const tez = calismaBaglantilari({ id: "c1", baslik: "Tez", tur: "thesis" });
+  const makale = calismaBaglantilari({ id: "c1", baslik: "M", tur: "article" });
+  assert.equal(tez.some((b) => b.key === "makale"), false);
+  assert.equal(makale.some((b) => b.key === "makale"), true);
+  assert.equal(tez.find((b) => b.key === "kaynaklar")?.href, "/dashboard/literature?calisma=c1");
+});
+
+test("bağlam yalnızca o çalışmanın sayfalarında görünür", () => {
+  const q = (s: string) => new URLSearchParams(s);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/c1/write", q("")), true);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor", q("sec=c1")), true);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/literature", q("calisma=c1")), true);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/literature", q("calisma=c2")), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard/editor/c2/write", q("")), false);
+  assert.equal(calismaIcindeMi("c1", "/dashboard", q("")), false);
+});
+
+test("bağlamda etkin bağlantı", () => {
+  const b = calismaBaglantilari({ id: "c1", baslik: "Tez", tur: "thesis" });
+  assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/kanit")?.key, "kanit");
+  assert.equal(etkinBaglanti(b, "/dashboard/editor")?.key, "merkez");
+  assert.equal(etkinBaglanti(b, "/dashboard/analysis")?.key, "analiz");
+});

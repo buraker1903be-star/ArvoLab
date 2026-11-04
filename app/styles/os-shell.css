@@ -1,140 +1,142 @@
 /* ============================================================
-   DOCK KABUĞU (25.10.2026)
-   Kenar çubuğunun yerini alan alt dock, bölümlerin açıldığı ikinci
-   dock, başlatıcı penceresi ve telefondaki bölüm şeridi.
-
-   Düzen ArvoOS/ArvoARC'tan taşındı; token adları ArvoLab'ınkine
-   çevrildi: orada boşluk ve süre için ayrı token'lar var, burada
-   marka tonu --accent-soft ve boşluklar sabit.
+   UYARLANIR GEZİNME (Phase 3, 04.11.2026)
+   Dock'un ve başlatıcının yerini alan tek gezinme
+   (app/dashboard/_components/os-gezinme.tsx). Üç biçim; kırılımlar
+   lib/os/kirilimlar.ts ile aynı:
+     masaüstü ≥ 1200px  solda geniş kenar çubuğu (+ çalışma bağlamı)
+     tablet  761–1199px dar ray (simge + kısa ad)
+     telefon ≤ 760px    alt çubuk (dört uygulama + Daha fazla)
+   Kenar çubuğu üst çubuğun ALTINDAN başlar: logo ve arama üstte kalır,
+   üst çubuk tam genişlikte.
    ============================================================ */
 
 .os-root {
-  /* Dock yüzüyor: içeriğin son satırı altında kalmasın diye taban boşluk. */
+  /* İçeriğin son satırı alt çubuğun altında kalmasın diye taban boşluk (telefonda; tokens.css --dock-alani). */
   --os-dock-space: calc(var(--dock-alani) + 24px);
   min-height: 100dvh;
 }
-/* Kenar çubuğu yok: kabuk tek sütun. */
 .dashboard-shell.os-root { grid-template-columns: minmax(0, 1fr); }
 .os-root .dashboard-main-content { padding-bottom: var(--os-dock-space); }
 
-/* ---------- Dock ---------- */
-.os-dock {
-  position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%);
-  z-index: var(--z-dock);
-  display: flex; align-items: center; gap: 4px;
-  max-width: calc(100vw - 24px); padding: 6px; box-sizing: border-box;
-  overflow-x: auto; scrollbar-width: none;
-  border: 1px solid var(--line); border-radius: var(--r-xl);
+.os-gezinme {
+  position: fixed; z-index: var(--z-gezinme);
+  display: flex; box-sizing: border-box;
   background: var(--glass-strong);
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-lg);
 }
-.os-dock::-webkit-scrollbar { display: none; }
-.os-dock-sep { flex: none; width: 1px; height: 22px; margin: 0 4px; background: var(--line); }
-.os-dock-item {
-  position: relative; flex: none; display: grid; place-items: center; width: 40px; height: 40px;
+.os-gezinme-liste { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.os-gezinme-oge {
+  display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 40px; padding: 0 var(--s-3);
   border: 0; border-radius: var(--r-md); background: transparent; color: var(--ink-soft);
-  cursor: pointer; text-decoration: none;
-  transition: transform .18s var(--ease-spring), background-color .18s var(--ease-spring), color .18s var(--ease-spring);
+  font: inherit; font-size: var(--fs-body); font-weight: 500; text-align: left; text-decoration: none; cursor: pointer;
+  transition: background-color var(--sure-hizli) ease, color var(--sure-hizli) ease;
 }
-.os-dock-item:hover { background: var(--surface-2); color: var(--ink); transform: translateY(-3px); }
-.os-dock-item.is-active { background: var(--accent-soft); color: var(--accent-strong); }
-.os-dock-item.is-active::after {
-  content: ""; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
-}
-/*
-  Üstüne gelinen simgenin adı. Dock'un DIŞINDA, sabit konumda duruyor.
+.os-gezinme-oge > svg { flex: none; }
+.os-gezinme-oge:hover { background: var(--surface-2); color: var(--ink); }
+.os-gezinme-oge.is-active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+.os-gezinme-oge:focus-visible, .os-gezinme-alt:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.os-gezinme-ad { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.os-gezinme-kisa { display: none; }
+.os-gezinme-baslik { display: block; padding: 0 var(--s-3) var(--s-1); color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 
-  Eskiden ikonun içinde, ikonun üstünde konumlanan bir <span>'di ve
-  GÖRÜNMÜYORDU: dock'ta `overflow-x: auto` var (dar ekranda on bir
-  simge sığmıyor) ve bir eksende görünür olmayan taşma ÖTEKİ ekseni de
-  kırpıyor. Ölçüldü (26.10.2026, 1200px): etiket kutusu 696–721, dock
-  kutusu 718–784 — etiket çiziliyor ama dock'un kaydırma kutusu onu
-  kesiyordu.
+/* Çalışmanın içindeyken: o çalışmanın bölümleri (yalnızca masaüstünde görünür). */
+.os-gezinme-baglam { display: none; }
+.os-gezinme-calisma {
+  display: -webkit-box; margin: 0 var(--s-3) var(--s-2); overflow: hidden;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  color: var(--ink); font-size: var(--fs-body); font-weight: 650; line-height: var(--lh-baslik);
+}
+.os-gezinme-alt {
+  display: flex; align-items: center; min-height: 34px; padding: 0 var(--s-3) 0 calc(var(--s-3) + 10px);
+  border-radius: var(--r-sm); color: var(--ink-soft); font-size: var(--fs-base); text-decoration: none;
+}
+.os-gezinme-alt:hover { background: var(--surface-2); color: var(--ink); }
+.os-gezinme-alt.is-active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+.os-gezinme-ayrac { margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--line-soft); }
 
-  Ekran okuyucu bunu okumaz (aria-hidden); adı bağlantının
-  aria-label'ından alıyor.
-*/
-.os-dock-ipucu {
-  position: fixed; z-index: calc(var(--z-dock) + 2); transform: translateX(-50%);
-  padding: 4px 10px; border-radius: var(--r-xs);
-  background: var(--ink); color: var(--surface);
-  font-size: var(--fs-micro); font-weight: 500; white-space: nowrap; pointer-events: none;
-  animation: os-ipucu .12s var(--ease-spring);
+/* ---------- Masaüstü: geniş kenar çubuğu ---------- */
+@media (min-width: 1200px) {
+  .os-gezinme {
+    top: var(--topbar-height); left: 0; bottom: 0; width: var(--gezinme-genislik);
+    flex-direction: column; gap: var(--s-4); padding: var(--s-4) var(--s-3);
+    overflow-y: auto; scrollbar-width: thin;
+    border-right: 1px solid var(--line-soft);
+  }
+  .os-gezinme-baglam { display: block; padding-bottom: var(--s-4); border-bottom: 1px solid var(--line-soft); }
+  .os-gezinme-son { margin-top: auto; }
+  .os-gezinme-daha-li { display: none; }
+  .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--gezinme-genislik); }
+  /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin. */
+  .os-root .calisma-sekmeleri { display: none; }
 }
-@keyframes os-ipucu {
-  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
-  to { opacity: 1; transform: translateX(-50%); }
-}
-@media (prefers-reduced-motion: reduce) { .os-dock-ipucu { animation: none; } }
 
-/* ---------- İkinci dock: açık uygulamanın bölümleri ---------- */
-.os-subdock {
-  position: fixed; z-index: calc(var(--z-dock) + 1); transform: translateX(-50%);
-  display: flex; align-items: center; gap: 2px; max-width: calc(100vw - 24px);
-  padding: 4px; box-sizing: border-box; overflow-x: auto; scrollbar-width: none;
-  border: 1px solid var(--line); border-radius: var(--r-lg);
-  background: var(--glass-strong);
-  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-lg);
-  animation: os-alt-ac .16s var(--ease-spring);
+/* ---------- Tablet: dar ray ---------- */
+@media (min-width: 761px) and (max-width: 1199px) {
+  .os-gezinme {
+    top: var(--topbar-height); left: 0; bottom: 0; width: var(--gezinme-ray);
+    flex-direction: column; gap: var(--s-2); padding: var(--s-3) var(--s-2);
+    overflow-y: auto; scrollbar-width: none;
+    border-right: 1px solid var(--line-soft);
+  }
+  .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
+  .os-gezinme-ad { display: none; }
+  .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
+  .os-gezinme-diger { display: none; }
+  .os-gezinme-son { margin-top: auto; }
+  .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--gezinme-ray); }
 }
-.os-subdock::-webkit-scrollbar { display: none; }
-/* İkon ile şerit arasındaki boşlukta imleç düşmesin diye görünmez köprü */
-.os-subdock::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 12px; }
-@keyframes os-alt-ac {
-  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
-  to { opacity: 1; transform: translateX(-50%); }
-}
-.os-subdock-title {
-  flex: none; padding: 0 12px 0 8px; margin-right: 4px; border-right: 1px solid var(--line);
-  font-size: var(--fs-micro); font-weight: 600; color: var(--muted); white-space: nowrap;
-}
-.os-subdock a {
-  flex: none; display: flex; align-items: center; min-height: 36px; padding: 0 12px;
-  border-radius: var(--r-md); color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 500;
-  text-decoration: none; white-space: nowrap;
-}
-.os-subdock a:hover { background: var(--surface-2); color: var(--ink); }
-.os-subdock a.is-active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
-/* İkinci dock açıkken ipucu hiç çizilmiyor (os-dock.tsx): o şerit
-   uygulamanın adını kendisi yazıyor, ikisi üst üste binerdi. */
-.os-dock-item.is-sub-open { background: var(--surface-2); color: var(--ink); }
-.os-dock-item.is-sub-open.is-active { background: var(--accent-soft); color: var(--accent-strong); }
-@media (prefers-reduced-motion: reduce) { .os-subdock { animation: none; } }
 
-/* ---------- Başlatıcı ---------- */
-.os-launcher {
-  /* margin:auto AÇIKÇA: genel sıfırlama tarayıcının modal pencereyi ortalayan
-     margin:auto değerini 0 yapıyor ve pencere sol üst köşede açılıyordu. */
-  margin: auto; padding: 0; border: 1px solid var(--line); border-radius: var(--r-xl);
-  width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 64px); overflow: auto;
+/* ---------- Telefon: alt çubuk ---------- */
+@media (max-width: 760px) {
+  .os-gezinme {
+    left: 0; right: 0; bottom: 0; height: calc(var(--alt-cubuk-h) + env(safe-area-inset-bottom));
+    padding: 0 max(4px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left));
+    border-top: 1px solid var(--line);
+    transition: transform var(--sure-yavas) var(--ease-sheet);
+  }
+  .os-gezinme-liste { flex-direction: row; gap: 0; }
+  .os-gezinme-ana { display: contents; }
+  .os-gezinme-son { display: contents; }
+  .os-gezinme-ana > li:not([data-alt-cubuk]), .os-gezinme-son > li:not(.os-gezinme-daha-li), .os-gezinme-diger { display: none; }
+  .os-gezinme > ul > li, .os-gezinme-daha-li { flex: 1 1 0; min-width: 0; display: flex; }
+  .os-gezinme-oge {
+    flex-direction: column; justify-content: center; gap: 2px; min-height: var(--alt-cubuk-h); padding: 4px 2px;
+    border-radius: 0; background: transparent; text-align: center;
+  }
+  .os-gezinme-oge:hover { background: transparent; }
+  .os-gezinme-oge.is-active { background: transparent; }
+  .os-gezinme-oge.is-active > svg { color: var(--accent); }
+  .os-gezinme-ad { display: none; }
+  .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
+  /* Klavye açıkken alt çubuk aşağı çekilir: yazarken ekranın altı zaten klavyede. */
+  html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-gezinme { transform: translateY(110%); }
+}
+@media (prefers-reduced-motion: reduce) { .os-gezinme { transition: none; } }
+
+/* ---------- "Daha fazla" ---------- */
+.os-daha {
+  margin: auto; padding: 0; overflow: hidden;
+  width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 64px);
+  border: 1px solid var(--line); border-radius: var(--r-xl);
   background: var(--surface-raised); color: var(--ink); box-shadow: var(--shadow-lg);
 }
-.os-launcher::backdrop {
-  background: var(--overlay);
-  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-}
-.os-launcher[open] { animation: os-ac .22s var(--ease-spring); }
+.os-daha::backdrop { background: var(--overlay); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.os-daha[open] { animation: os-ac var(--sure-orta) var(--ease-spring); }
 @keyframes os-ac {
   from { opacity: 0; transform: translateY(8px) scale(.985); }
   to { opacity: 1; transform: none; }
 }
-.os-launcher-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 24px 24px 8px; }
-.os-launcher-head h2 { margin: 0; font-size: var(--fs-lg); font-weight: 600; }
-.os-launcher-head p { margin: 4px 0 0; color: var(--muted); font-size: var(--fs-sm); }
-.os-launcher-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 24px 12px; padding: 16px 24px 24px; }
-.os-launcher-app {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  color: var(--ink); text-decoration: none; font-size: var(--fs-sm); font-weight: 500; text-align: center;
+.os-daha-bas { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); padding: var(--s-4) var(--s-4) var(--s-2) var(--s-5); }
+.os-daha-bas h2 { margin: 0; font-size: var(--fs-lg); font-weight: 600; }
+.os-daha-liste { display: grid; gap: 2px; margin: 0; padding: 0 var(--s-3) var(--s-3); list-style: none; }
+.os-daha-liste .os-gezinme-oge { min-height: 48px; }
+.os-daha-ipucu { margin: 0; padding: var(--s-3) var(--s-5); border-top: 1px solid var(--line-soft); background: var(--surface-2); color: var(--muted); font-size: var(--fs-micro); }
+@media (max-width: 760px) {
+  /* Telefonda alt sayfa: ekranın altından açılır, başparmağın ulaştığı yerde. */
+  .os-daha { width: 100%; max-width: none; margin: auto 0 0; border-radius: var(--r-xl) var(--r-xl) 0 0; padding-bottom: env(safe-area-inset-bottom); }
 }
-.os-app-tile {
-  display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px;
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); box-shadow: var(--shadow-sm);
-  transition: transform .18s var(--ease-spring), box-shadow .18s var(--ease-spring);
-}
-.os-launcher-app:hover .os-app-tile { transform: translateY(-3px); box-shadow: var(--shadow-md); }
-.os-app-tile.is-active { background: var(--primary); border-color: var(--primary); color: var(--on-brand); }
+@media (prefers-reduced-motion: reduce) { .os-daha[open] { animation: none; } }
+
 .os-icon-btn {
   display: grid; place-items: center; flex: none; width: 40px; height: 40px;
   border: 0; border-radius: var(--r-md); background: transparent; color: var(--muted); cursor: pointer;
@@ -142,7 +144,7 @@
 .os-icon-btn:hover { background: var(--surface-2); color: var(--ink); }
 
 /* ---------- Telefon ---------- */
-/* Bölüm şeridi yalnızca telefonda: masaüstünde bölümlere ikinci dock'tan gidiliyor. */
+/* Bölüm şeridi yalnızca telefonda (bugün bölümü olan uygulama yok; liste eklenirse çalışır). */
 .os-bolum-serit { display: none; }
 @media (max-width: 760px) {
   .os-root .os-bolum-serit {
@@ -159,76 +161,12 @@
     text-decoration: none; white-space: nowrap;
   }
   .os-root .os-bolum-serit a.is-active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
-  /* Ara menü telefonda hiç açılmaz; ekran döndürülüp açık kalmışsa görünmesin. */
-  .os-root .os-subdock { display: none; }
-  .os-root .os-dock-item.is-sub-open { background: none; }
   .os-icon-btn { width: 44px; height: 44px; }
 }
-/*
-  KLAVYE AÇIKKEN DOCK AŞAĞI ÇEKİLİR.
 
-  Telefonda yazarken ekranın altı zaten klavyeye gidiyor; dock da
-  metnin üstünde duruyordu. Kural kalkan mobil sekme çubuğunda VARDI
-  (shell.css, acc04c0'da ölü CSS temizliğiyle birlikte gitti) ama
-  dock'a taşınmadı — davranış sessizce geriledi.
-
-  Dönüşüm iki kırılımda farklı: 560px altında dock kenarlara yaslı
-  (yatay ötelemesi yok), üstünde ortalanmış (translateX(-50%)). İkisi
-  ayrı yazılmazsa dock yana fırlar.
-*/
-@media (max-width: 760px) {
-  .os-dock { transition: transform .4s var(--ease-sheet); }
-  html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-dock {
-    transform: translateX(-50%) translateY(130%);
-  }
-  /* Ara menü de kapansın: açık kalırsa klavyenin üstünde asılı durur. */
-  html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-subdock { display: none; }
-}
-@media (max-width: 560px) {
-  html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-dock {
-    transform: translateY(130%);
-  }
-}
-/*
-  MASAÜSTÜNDE YAZARKEN DOCK GERİ ÇEKİLİR (04.11.2026, Jenni'nin yazım
-  ekranı örnek: metnin altında sabit bir şerit yok). Editöre (ya da
-  herhangi bir zengin metin alanına) odaklanınca dock aşağı kayar, altta
-  6 piksellik bir şerit kalır; fare o şeride gelince ya da klavyeyle
-  dock'a geçilince geri çıkar. Form kutuları (input, select) bunu
-  tetiklemez: kısa bir alanı doldururken menünün kaybolması kafa
-  karıştırırdı. Eskiden dock metnin son satırlarının üstünde duruyordu.
-*/
-@media (min-width: 761px) {
-  .os-dock { transition: transform .35s var(--ease-sheet), opacity .2s ease; }
-  html:has([contenteditable="true"]:focus) .os-dock:not(:hover):not(:focus-within) {
-    transform: translateX(-50%) translateY(calc(100% + max(16px, env(safe-area-inset-bottom)) - 6px));
-    opacity: .55;
-  }
-  html:has([contenteditable="true"]:focus) .os-subdock { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .os-dock { transition: none; }
-}
-
-/* Yazdırmada dock basılmaz: sabit konumlu olduğu için HER sayfada çıkardı. */
+/* Yazdırmada gezinme basılmaz: sabit konumlu olduğu için HER sayfada çıkardı. */
 @media print {
-  .os-dock, .os-subdock, .os-launcher, .os-palette, .os-search { display: none !important; }
-}
-
-/* Telefonda dock ekranın tamamına yayılır: ortalanmış sıra 375px'te sığmıyor.
-   On bir uygulama hiçbir telefona sığmadığı için sıra yana KAYIYOR; kaydığı
-   belli olsun diye kenarlar soluyor — maskesiz hâlinde son simge kesik
-   görünüyor ve devamı olduğu anlaşılmıyordu. Maskedeki "black" bir renk
-   değil, tam saydamsızlık: maske yalnızca alfa kanalını okuyor. */
-@media (max-width: 560px) {
-  .os-dock {
-    left: 8px; right: 8px; transform: none; max-width: none; border-radius: var(--r-lg);
-    -webkit-mask-image: linear-gradient(90deg, transparent, black 18px, black calc(100% - 18px), transparent);
-    mask-image: linear-gradient(90deg, transparent, black 18px, black calc(100% - 18px), transparent);
-  }
-  .os-dock-sep { display: none; }
-  /* 44px dokunma hedefinin alt sınırı; daha fazla simge sığsın diye buraya kadar. */
-  .os-dock-item { width: 44px; height: 44px; }
+  .os-gezinme, .os-daha, .os-palette, .os-search { display: none !important; }
 }
 
 /* ---------- Ctrl+K: ara veya komut çalıştır ---------- */

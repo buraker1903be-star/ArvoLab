@@ -53,8 +53,8 @@ const BOLUMLER: KilavuzBolumu[] = [
     id: "ilk-adimlar",
     baslik: { tr: "İlk adımlar: panelin düzeni", en: "First steps: the panel layout" },
     ozet: {
-      tr: "ArvoLab bir masaüstü gibi düzenlenmiştir: altta uygulama çubuğu (dock), üstte arama, bildirimler ve hesap menünüz.",
-      en: "ArvoLab is laid out like a desktop: the app bar (dock) at the bottom, and search, notifications and your account menu at the top.",
+      tr: "Bölümler bilgisayarda solda, tablette solda dar bir şeritte, telefonda ekranın altında durur; üstte arama, bildirimler ve hesap menünüz.",
+      en: "Sections sit on the left on a computer, in a narrow strip on the left on a tablet, and at the bottom of the screen on a phone; search, notifications and your account menu are at the top.",
     },
     adimlar: [
       {
@@ -62,12 +62,12 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "You accept the Terms of Use when you sign up: ticking the box opens the text, and \"I have read and agree\" becomes active once you scroll to the end. A copy of your approval is emailed to you. If a new version is published, you're asked to accept it again when you sign in.",
       },
       {
-        tr: "Alttaki çubukta günlük işin uygulamaları sırayla durur: Ana Sayfa, Çalışmalarım, Kaynaklar, Analiz Merkezi, Belge Kontrol, Destek, Ayarlar. Simgenin üstüne gelince adı görünür.",
-        en: "The bar at the bottom holds the everyday apps in order: Home, My works, Sources, Analysis Center, Document Check, Support, Settings. Hover over an icon to see its name.",
+        tr: "Gezinmede günlük işin bölümleri sırayla durur: Ana Sayfa, Çalışmalarım, Kaynaklar, Analiz Merkezi, Belge Kontrol, Destek, Ayarlar. Bir çalışmayı açtığınızda bilgisayarda o çalışmanın bölümleri (Özet, Yazım, Kanıt matrisi, Etik kurul) en üstte görünür.",
+        en: "The navigation holds the everyday sections in order: Home, My works, Sources, Analysis Center, Document Check, Support, Settings. When you open a work, on a computer that work's sections (Overview, Writing, Evidence matrix, Ethics) appear at the top.",
       },
       {
-        tr: "Çubuğun sonundaki \"Tüm uygulamalar\" düğmesi, çubukta yer almayan sayfaları (örneğin Abonelik ve Kredi, bu kılavuz) açar.",
-        en: "The \"All apps\" button at the end of the bar opens the pages that are not on the bar (for example Subscription and Credits, and this guide).",
+        tr: "Seyrek açılan sayfalar (örneğin Abonelik ve Kredi, bu kılavuz) bilgisayarda \"Diğer\" başlığının altında, tablet ve telefonda \"Daha fazla\" düğmesindedir.",
+        en: "Pages you open less often (for example Subscription and Credits, and this guide) are under \"More\" on a computer, and behind the \"More\" button on a tablet or phone.",
       },
       {
         tr: "Herhangi bir yerden Ctrl+K (Mac'te Cmd+K) ile arama penceresini açın; sayfa ya da komut adını yazıp Enter'a basın.",
@@ -607,8 +607,8 @@ const BOLUMLER: KilavuzBolumu[] = [
     ],
     notlar: [
       {
-        tr: "Doçentlik Puanı aracı \"Tüm uygulamalar\"dadır; ÜAK duyurusunun yerini tutmaz.",
-        en: "The Associate Professorship Score tool is under \"All apps\"; it does not replace the official ÜAK announcement.",
+        tr: "Doçentlik Puanı aracı gezinmede \"Diğer\" başlığının altında (tablet ve telefonda \"Daha fazla\"da) durur; ÜAK duyurusunun yerini tutmaz.",
+        en: "The Associate Professorship Score tool is under \"More\" in the navigation; it does not replace the official ÜAK announcement.",
       },
     ],
     roller: STAFF_ROLES,
@@ -622,8 +622,8 @@ const BOLUMLER: KilavuzBolumu[] = [
     },
     adimlar: [
       {
-        tr: "\"Tüm uygulamalar\" → \"Ekip Yönetimi\"nde \"Kurum ekle\" ve \"Kullanıcı davet et\" ile hesap açın; rol ve kurumu satırdan kaydedin.",
-        en: "In \"All apps\" → \"Team Management\", open accounts with \"Add institution\" and \"Invite user\"; save role and institution on each row.",
+        tr: "\"Diğer\" → \"Ekip Yönetimi\"nde \"Kurum ekle\" ve \"Kullanıcı davet et\" ile hesap açın; rol ve kurumu satırdan kaydedin.",
+        en: "In \"More\" → \"Team Management\", open accounts with \"Add institution\" and \"Invite user\"; save role and institution on each row.",
       },
       {
         tr: "\"Asistan Kayıtları\" her asistan çalışmasını, kullanıcı puanlarını ve model karşılaştırmasını gösterir.",

@@ -235,22 +235,17 @@
        tablet   761–1199px dar ray
        masaüstü ≥ 1200px  geniş kenar çubuğu */
   --gezinme-genislik: 248px;
-  --gezinme-ray: 76px;
+  --gezinme-ray: 88px;
   --alt-cubuk-h: 64px;
   --sidebar-width: 264px;
   --topbar-height: 64px;
-  /* Dock'un ekranın altında kapladığı yer (os-shell.css): içerik,
+  /* Sabit alt gezinmenin ekranın altında kapladığı yer: içerik,
      bildirimler, "İşleniyor…" kapsülü ve editörün yan paneli bunun
-     üstünde durur.
-
-     58px = telefondaki 44px simge + 6px'lik iki iç boşluk + çerçeve.
-     Masaüstünde simge 40px (dock 54px; 04.11.2026'da 48'den indi, dock
-     daha ince) ama BÜYÜK olan yazılı: küçük olanı yazmak telefonda
-     4px'lik bir çakışma bırakıyordu.
-
-     Eskiden burada sekme çubuğunun yüksekliği vardı; dock onun yerini
-     alınca bildirimler dock'un altında kalıyordu. */
-  --dock-alani: calc(58px + max(16px, env(safe-area-inset-bottom)));
+     üstünde durur. Phase 3'ten (04.11.2026) beri yalnızca telefonda
+     alt çubuk var; tablet ve masaüstünde gezinme solda, burada yalnızca
+     cihazın güvenli alanı kalır (aşağıdaki medya sorgusu). Eskiden dock
+     her ekranda 58px + 16px yer kaplıyordu. */
+  --dock-alani: calc(var(--alt-cubuk-h) + env(safe-area-inset-bottom));
   /* Kenar çubuğu (264px) dock'a geçişle kalktı; içerik o genişliği
      geri alıyor. Sınırsız bırakılmıyor: sayfa başlığındaki açıklama
      metni zaten 720px'te kesiliyor, asıl kazanan liste ve kartlar. */
@@ -270,6 +265,10 @@
   --radius-sm: var(--r-sm);
   --radius-md: var(--r-md);
   --radius-lg: var(--r-xl);
+}
+
+@media (min-width: 761px) {
+  :root { --dock-alani: env(safe-area-inset-bottom, 0px); }
 }
 
 /* Yazdırma / PDF: kâğıt her temada beyaz, mürekkep siyah (karanlık temada yeniden tanımlanmaz) */

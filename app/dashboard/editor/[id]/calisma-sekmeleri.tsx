@@ -1,6 +1,7 @@
 import { calismaAdresi } from "@/lib/calisma-karti";
 import Link from "next/link";
 import { ceviri } from "@/lib/dil-sunucu";
+import { CalismaBaglamiYayinla } from "../../_components/calisma-baglami";
 
 /*
   ÇALIŞMANIN SEKMELERİ: Özet · Yazım · Kanıt · Makale.
@@ -20,7 +21,7 @@ export default async function CalismaSekmeleri({
   calisma,
   aktif,
 }: {
-  calisma: { id: string; project_type: string };
+  calisma: { id: string; project_type: string; title?: string | null };
   aktif: CalismaSekmesi;
 }) {
   const t = await ceviri();
@@ -36,7 +37,14 @@ export default async function CalismaSekmeleri({
       : []),
   ];
 
+  /*
+    Phase 3 (04.11.2026): sekmeler masaüstünde gizli, aynı bölümler kenar
+    çubuğunda (os-gezinme.tsx) duruyor; çalışmayı oraya bu bileşen
+    bildiriyor. Tablet ve telefonda sekmeler sayfadaki tek bölüm gezinmesi.
+  */
   return (
+    <>
+    <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title ?? ""} tur={calisma.project_type} />
     <nav className="segmented calisma-sekmeleri" aria-label={t({ tr: "Çalışma bölümleri", en: "Work sections" })}>
       {sekmeler.map((sekme) => (
         <Link key={sekme.anahtar} href={sekme.href} aria-current={sekme.anahtar === aktif ? "page" : undefined}>
@@ -44,5 +52,6 @@ export default async function CalismaSekmeleri({
         </Link>
       ))}
     </nav>
+    </>
   );
 }

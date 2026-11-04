@@ -26,6 +26,7 @@ import { taranacakCalismalar } from "@/lib/toplu-tutarsizlik";
 import type { Tutarsizlik } from "@/lib/calisma-tutarlilik";
 import { filtrelerGorunsun, kartIlerlemesi, secimAdresi, seciliCalismaId } from "@/lib/calisma-karti";
 import YeniCalismaPenceresi from "./yeni-calisma-penceresi";
+import { CalismaBaglamiYayinla } from "../_components/calisma-baglami";
 import PersonelYeniCalismaPenceresi from "./personel-yeni-calisma-penceresi";
 import { getUniversities } from "@/app/actions/universities";
 import CalismaDurumKarti from "./calisma-durum-karti";
@@ -428,6 +429,8 @@ export default async function ProjectsPage({
                 );
               })()}
             </article>
+            {/* Seçili çalışma kenar çubuğuna bildirilir (Phase 3): o çalışmanın bölümleri orada açılır. */}
+            {secili ? <CalismaBaglamiYayinla id={secili.id} baslik={secili.title} tur={secili.project_type} /> : null}
             {secili ? (
               <CalismaDurumKarti
                 key={secili.id}

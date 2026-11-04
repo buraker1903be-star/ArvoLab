@@ -24,7 +24,7 @@ import ActionErrorToast from "./_components/action-error-toast";
 import NavProgress from "./_components/nav-progress";
 import OsSaat from "./_components/os-saat";
 import KullaniciMenusu from "./_components/kullanici-menusu";
-import { OsDock } from "./_components/os-dock";
+import { OsGezinme } from "./_components/os-gezinme";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
 import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
@@ -43,13 +43,12 @@ function initialsOf(name: string) {
 }
 
 /*
-  DOCK KABUĞU (25.10.2026, kurum sahibinin isteği). Kenar çubuğu ve
-  mobil sekme çubuğu kalktı; her iş alanı artık bir "uygulama" ve
-  hepsi tek listeden besleniyor (lib/os/uygulamalar.ts) — ArvoOS ile
-  ArvoARC'taki düzenin aynısı.
-
-  Daraltma tercihi (NAV_COOKIE) da gitti: dock'un daraltılacak bir
-  hâli yok. Çerez okunmuyor, yazan bileşen de kaldırıldı.
+  KABUK. 25.10.2026'da kenar çubuğu yerine ArvoOS'taki dock geldi; Phase 3'te
+  (04.11.2026, kurum sahibinin kararı: "tek ve tutarlı ana gezinme") dock ve
+  "Tüm uygulamalar" ızgarası kalktı, yerine uyarlanır gezinme geldi
+  (os-gezinme.tsx): masaüstünde kenar çubuğu, tablette ray, telefonda alt
+  çubuk. Liste yine tek (lib/os/uygulamalar.ts); daraltma tercihi yok,
+  biçimi ekran boyu belirliyor.
 */
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [profile, t] = await Promise.all([getCurrentProfile(), ceviri()]);
@@ -184,11 +183,11 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         </div>
       </div>
 
-      {/* Onay penceresi açıkken dock ve komut paleti (Ctrl+K) çizilmez: pencerenin üstüne açılıp odağı çalmasınlar. */}
+      {/* Onay penceresi açıkken gezinme ve komut paleti (Ctrl+K) çizilmez: pencerenin üstüne açılıp odağı çalmasınlar. */}
       {sozlesmeGerekli ? null : (
         <>
           <Suspense>
-            <OsDock uygulamalar={uygulamalar} />
+            <OsGezinme uygulamalar={uygulamalar} />
           </Suspense>
           {/* Çıkış bir sunucu eylemi: istemci bileşenine referans olarak geçilebiliyor. */}
           <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />
