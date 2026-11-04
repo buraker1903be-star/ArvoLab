@@ -1495,3 +1495,89 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   .diger-calismalar .chip { display: inline-flex; align-items: center; min-height: 40px; }
   .geri-bildirim-kapat button { min-height: 40px; min-width: 40px; }
 }
+
+/* ============================================================
+   SIGNATURE OS 4.0 (04.11.2026): yoğunluk ve boşluk düzeltmeleri.
+   Ölçümler (Phase 3 sonu, aynı önizleme verisi):
+   - Ana Sayfa 1440×900'de 1.905 px, telefonda 3.555 px uzunluktaydı;
+     telefonda "Şimdi" satırının alt kenarı 848 px'te, yani ilk ekranın
+     ve alt çubuğun altındaydı.
+   - Çalışmalarım tek ekrana kilitli ve iki kart satır yüksekliğine
+     geriliyordu: ayrıntı kartının ortası, liste kartının altı boştu.
+   - Personel sayaçları altı çerçeveli, gölgeli kutuydu; yeni kullanıcı
+     başlangıcındaki üç adım kartın içinde üç kart.
+   ============================================================ */
+
+/* ---- Telefonda aktif çalışma: üç ölçü yan yana, açıklamalar gizli ----
+   Teslim tarihi formu (tarih yoksa) açıklama değil, işlev: görünür kalır. */
+@media (max-width: 760px) {
+  .tez-kart { gap: var(--s-4); padding: var(--s-4); }
+  .tez-kart-ust h2 { font-size: var(--fs-calisma-sik); }
+  .tez-kart .tez-olcumler { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; padding-top: var(--s-3); }
+  .tez-kart .tez-olcu { flex-direction: column; align-items: flex-start; gap: 2px; padding: 0 var(--s-2); }
+  .tez-kart .tez-olcu:first-child { padding-left: 0; }
+  .tez-kart .tez-olcu + .tez-olcu { border-top: 0; border-left: 1px solid var(--line-soft); }
+  .tez-kart .tez-olcu dt { flex-basis: auto; font-size: var(--fs-micro); }
+  .tez-kart .tez-olcu dd { font-size: 20px; }
+  .tez-kart .tez-olcu dd small { display: block; margin-left: 0; font-size: var(--fs-micro); }
+  .tez-kart .tez-olcu > span,
+  .tez-kart .tez-tempo { display: none; }
+  .tez-kart .tez-olcu .teslim-tarihi-formu { margin-top: var(--s-1); }
+  .tez-kart .tez-simdi { padding-top: var(--s-3); }
+  .tez-kart .tez-simdi .sirada-govde span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+}
+
+/* ---- Çalışmalarım: kartlar içerik yüksekliğinde ----
+   Tek ekran kuralı (sayfa kaymaz) yerinde; kart içeriği satırdan uzunsa
+   kendi içinde kayar. Araç ızgarası içeriğin hemen altında. */
+.calismalar-ikili { align-items: start; }
+.calismalar-ikili > .gb-sutun { align-self: start; max-height: 100%; }
+.calisma-durum .calisma-durum-alt-serit { margin-top: 0; }
+.calismalar-ozet { margin-top: var(--s-2); }
+/* Ölçüler burada yönetim için kısa: rakam küçük, ana sayfadaki büyük ölçülerin tekrarı değil. */
+.calisma-durum .tez-olcumler { padding-top: var(--s-3); }
+.calisma-durum .tez-olcu dd { font-size: 18px; }
+
+/* ---- Personel sayaçları: kutusuz şerit ---- */
+.personel-sayaclar {
+  display: flex; flex-wrap: wrap; gap: 0;
+  padding: var(--s-2) 0; border-block: 1px solid var(--line-soft);
+}
+.personel-sayac {
+  display: flex; align-items: baseline; gap: var(--s-2);
+  min-height: 40px; padding: var(--s-1) var(--s-4);
+  border: 0; border-radius: var(--r-sm); background: transparent; box-shadow: none;
+}
+.personel-sayac + .personel-sayac { border-left: 1px solid var(--line-soft); border-radius: 0; }
+.personel-sayac b { font-size: var(--fs-xl); font-weight: 650; }
+.personel-sayac span { font-size: var(--fs-sm); font-weight: 500; }
+@media (hover: hover) and (pointer: fine) { .personel-sayac:hover { background: var(--dugme-hover-zemin); } }
+.personel-sayac:focus-visible { box-shadow: var(--odak-halkasi); }
+.personel-sayac[aria-current="true"] { background: var(--primary-soft); }
+@media (max-width: 760px) {
+  .personel-sayaclar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0; }
+  .personel-sayac { padding: var(--s-2) var(--s-3); }
+  .personel-sayac + .personel-sayac { border-left: 0; }
+  .personel-sayac:nth-child(even) { border-left: 1px solid var(--line-soft); }
+  .personel-sayac:nth-child(n + 3) { border-top: 1px solid var(--line-soft); }
+}
+
+/* ---- Yeni kullanıcı: adımlar kartın içinde kart değil, ince çizgiyle ayrık üç sütun ---- */
+@media (min-width: 761px) {
+  .gb-baslangic .baslangic-adimlari { gap: 0; }
+  .gb-baslangic .baslangic-adimlari li { padding: 0 var(--s-5); border: 0; border-radius: 0; background: transparent; }
+  .gb-baslangic .baslangic-adimlari li:first-child { padding-left: 0; }
+  .gb-baslangic .baslangic-adimlari li + li { border-left: 1px solid var(--line-soft); }
+}
+
+/* ---- Ana Sayfa'da kart içi boşluklar ---- */
+/* Boş liste ve ritim mesajı kartın ortasında 24 piksel üst-alt boşlukla duruyordu; sol hizalı tek satır. */
+.gb-ana-sayfa .gb-bos,
+.gb-ana-sayfa .gb-seri-bos { padding: var(--s-1) 0 var(--s-2); text-align: start; place-items: start; }
+.gb-ana-sayfa .gb-kart { gap: var(--s-2); }
+/* Abonelik: kredi sayısı ayrı bir gri kutu değil, başlığın altında tek satır. */
+.gb-ana-sayfa .abonelik-ozet .kaynakca-puan { padding: 0; border-radius: 0; background: transparent; }
+.gb-ana-sayfa .abonelik-ozet .kaynakca-puan b { font-size: 22px; }
+/* Danışmanıma gönder: bağlantı düğmesi içerik genişliğinde, dosya satırı hemen altında (kartın dibine itilmiyor). */
+.gb-ana-sayfa .danisman-gonder > .projects-filter-button { align-self: flex-start; }
+.gb-ana-sayfa .danisman-dosyalar { margin-top: 0; }

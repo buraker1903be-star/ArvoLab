@@ -414,7 +414,13 @@ export default async function ProjectsPage({
                 iniyor: toplam yazılan, en yakın teslim, son yazım. Hepsi
                 listenin zaten okuduğu veriden; ayrı sorgu yok.
               */}
-              {(() => {
+              {/*
+                Signature OS 4.0: özet yalnızca üç ve daha fazla aktif çalışmada.
+                Bir iki çalışmada üç sayı listenin satırlarını tekrarlıyordu
+                (son yazım ve teslim zaten satırda); toplamın anlamı çok
+                çalışmada var.
+              */}
+              {ogrenciAktif.length < 3 ? null : (() => {
                 const toplam = ogrenciAktif.reduce((n, p) => n + (stats.get(p.id)?.words ?? 0), 0);
                 const yakin = ogrenciAktif
                   .map((p) => ({ p, d: vade(p.due_date, p.status) }))

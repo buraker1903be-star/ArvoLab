@@ -491,20 +491,29 @@ html.drawer-open { overflow: hidden; }
    KULLANILMAZ: iki balon üst üste çıkar. Kenar çubuğunda kullanılmıyor:
    kaydırma kabı (overflow) balonu keserdi, orada title duruyor.
    ============================================================ */
+/*
+  Balon YALNIZCA imleç ya da klavye odağı varken çizilir (Signature OS
+  4.0). Eskiden her zaman çizili ama saydamdı: ekranın sağ kenarındaki
+  tema düğmesinin görünmez balonu telefonda giriş sayfasını 11 piksel
+  yana kaydırıyordu (saydam ama konumlu bir kutu da kaydırma alanına
+  sayılır). Görünme geçişi bu yüzden yok; bekleme süresi animasyonla.
+*/
 [data-ipucu] { position: relative; }
-[data-ipucu]::after {
+[data-ipucu]:is(:hover, :focus-visible)::after {
   content: attr(data-ipucu);
   position: absolute; top: calc(100% + 6px); left: 50%; z-index: var(--z-menu);
   padding: 4px 8px; border-radius: var(--r-xs);
   background: var(--ink); color: var(--surface);
   font-size: var(--fs-sm); font-weight: 500; line-height: 1.3; white-space: nowrap;
-  pointer-events: none; opacity: 0; transform: translate(-50%, -2px);
-  transition: opacity var(--sure-hizli) ease, transform var(--sure-hizli) ease;
+  pointer-events: none; transform: translateX(-50%);
 }
-@media (hover: hover) and (pointer: fine) {
-  [data-ipucu]:hover::after { opacity: 1; transform: translate(-50%, 0); transition-delay: .3s; }
+/* Dokunmatikte ":hover" dokunuştan sonra takılı kalıyor: balon yalnızca fareli cihazda imleçle. */
+@media not ((hover: hover) and (pointer: fine)) {
+  [data-ipucu]:hover:not(:focus-visible)::after { content: none; }
 }
-[data-ipucu]:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  [data-ipucu]:hover::after { animation: ipucu-gecikme .3s steps(1, end) both; }
+  @keyframes ipucu-gecikme { from { opacity: 0; } to { opacity: 1; } }
+}
 /* Menüsü açıkken ipucu menünün üstüne binmesin. */
-[data-ipucu][aria-haspopup][aria-expanded="true"]::after { display: none; }
-@media (prefers-reduced-motion: reduce) { [data-ipucu]::after { transition: none; } }
+[data-ipucu][aria-haspopup][aria-expanded="true"]::after { content: none; }

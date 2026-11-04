@@ -364,6 +364,13 @@ const tarayici = await chromium.launch();
     bekle(await secili.locator(".calisma-teslim").isVisible(), "teslim satırı yok");
   });
 
+  await senaryo("çalışmalarım: ayrıntı kartı içerik yüksekliğinde, araçların altında boşluk yok (Signature OS 4.0)", async () => {
+    await git(sayfa, `/dashboard/editor?sec=${TEZ}`);
+    const kart = await sayfa.locator(".calisma-durum").boundingBox();
+    const araclar = await sayfa.locator(".calisma-durum .calisma-araclari").boundingBox();
+    const bosluk = kart.y + kart.height - (araclar.y + araclar.height);
+    bekle(bosluk <= 40, `araçların altında ${Math.round(bosluk)} px boşluk`);
+  });
   await senaryo("çalışmalarım: tek ana eylem 'Yazmaya devam et'; seyrek işler ⋯ menüsünde, araçların hepsi yerinde", async () => {
     await git(sayfa, `/dashboard/editor?sec=${TEZ}`);
     const kart = sayfa.locator(".calisma-durum");
@@ -441,6 +448,23 @@ const tarayici = await chromium.launch();
     await git(sayfa, `/dashboard/editor/${TEZ}/write`);
     const kucuk = await kucukHedefler(sayfa);
     bekle(kucuk.length === 0, `${kucuk.length} küçük hedef: ${kucuk.slice(0, 4).join(" | ")}`);
+  });
+  await senaryo("telefon: ana sayfanın ilk ekranında aktif çalışma, ölçüler ve 'Şimdi' (Signature OS 4.0)", async () => {
+    await git(sayfa, "/dashboard");
+    const simdi = sayfa.locator(".tez-kart .tez-simdi");
+    await simdi.waitFor({ state: "visible", timeout: 30000 });
+    const alt = (await simdi.boundingBox()).y + (await simdi.boundingBox()).height;
+    // Alt çubuk (64 px + güvenli alan) ekranın altını kaplıyor: "Şimdi" onun üstünde bitmeli.
+    bekle(alt <= 844 - 64, `'Şimdi' ilk ekranın dışında (alt kenar ${Math.round(alt)} px)`);
+    bekle((await sayfa.locator(".tez-kart .tez-olcu").count()) === 3, "üç ölçü yok");
+  });
+  await senaryo("telefon: giriş sayfası yatay kaymıyor (ipucu balonu kaydırma alanını büyütmüyor)", async () => {
+    const ctx = await tarayici.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const giris = await ctx.newPage();
+    await git(giris, "/");
+    const tasma = await giris.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    bekle(tasma <= 0, `giriş sayfası ${tasma}px taşıyor`);
+    await ctx.close();
   });
   await senaryo("telefon: yazım ekranı yatay kaymıyor", async () => {
     await git(sayfa, `/dashboard/editor/${TEZ}/write`);

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpenText, ChevronRight, Coins, MessagesSquare, Sparkles } from "lucide-react";
+import { ChevronRight, Coins } from "lucide-react";
 import { licenseSummary } from "@/lib/license-summary";
 import type { AccessState } from "@/lib/access";
 import type { KrediOzeti } from "@/lib/ai/kredi-ozeti";
@@ -22,13 +22,10 @@ export default async function AbonelikOzetKarti({
   access,
   kredi,
   bireysel,
-  calismaId,
 }: {
   access: AccessState;
   kredi: KrediOzeti;
   bireysel: boolean;
-  /** Öğrencinin sürdürdüğü çalışma: asistan kısayolları ona açılır. */
-  calismaId?: string | null;
 }) {
   const t = await ceviri();
   const dil = await aktifDil();
@@ -99,45 +96,12 @@ export default async function AbonelikOzetKarti({
       )}
 
       {/*
-        ASİSTAN KISAYOLLARI (04.11.2026). Kart tez kartıyla aynı yükseklikte
-        duruyor ve kredi satırının altı boş kalıyordu. Boşluk kredinin ne
-        işe yaradığını gösteren üç kısayolla doluyor: öğrenci asistanı
-        ararken menüleri dolaşmasın.
+        Asistan kısayolları (yazım asistanı, kaynağa sor, literatür taraması)
+        Signature OS 4.0'da buradan Ana Sayfa'nın "Hızlı eylemler" listesine
+        taşındı: kart sağ sütunda ~170 piksel uzuyor ve aynı yerlere giden
+        bağlantılar ana sayfada iki kez duruyordu. Kart artık yalnızca
+        abonelik ve kredi durumunu söylüyor.
       */}
-      {calismaId ? (
-        <ul className="abonelik-araclar">
-          <li>
-            <Link className="gb-satir" href={`/dashboard/editor/${calismaId}/write`}>
-              <Sparkles size={16} aria-hidden="true" />
-              <span className="gb-satir-govde">
-                <b>{t({ tr: "Yazım asistanı", en: "Writing assistant" })}</b>
-                <small>{t({ tr: "Paragraf, ana hat, satır içi öneri", en: "Paragraphs, outlines, inline suggestions" })}</small>
-              </span>
-              <ChevronRight className="gb-ok" size={14} aria-hidden="true" />
-            </Link>
-          </li>
-          <li>
-            <Link className="gb-satir" href={`/dashboard/citations?calisma=${calismaId}`}>
-              <MessagesSquare size={16} aria-hidden="true" />
-              <span className="gb-satir-govde">
-                <b>{t({ tr: "Kaynağa sor", en: "Ask a source" })}</b>
-                <small>{t({ tr: "PDF'e soru; cevap birebir alıntıyla", en: "Ask a PDF; answers come with exact quotes" })}</small>
-              </span>
-              <ChevronRight className="gb-ok" size={14} aria-hidden="true" />
-            </Link>
-          </li>
-          <li>
-            <Link className="gb-satir" href={`/dashboard/literature?calisma=${calismaId}`}>
-              <BookOpenText size={16} aria-hidden="true" />
-              <span className="gb-satir-govde">
-                <b>{t({ tr: "Literatür taraması", en: "Literature search" })}</b>
-                <small>{t({ tr: "Arama stratejisi ve gerçek dizinler", en: "Search strategy and real indexes" })}</small>
-              </span>
-              <ChevronRight className="gb-ok" size={14} aria-hidden="true" />
-            </Link>
-          </li>
-        </ul>
-      ) : null}
 
       {bireysel ? (
         <Link href="/dashboard/abonelik" className="projects-filter-button button-compact abonelik-ozet-eylem">

@@ -71,7 +71,7 @@ export async function generateMetadata() {
   tek sayfa, yatay ve dikey kayma yok). Bölümlerim kartı en fazla bu kadar
   satır çizer; fazlası alt başlıkta söylenir, tam liste editörde.
 */
-const BOLUM_SATIRI = 5;
+const BOLUM_SATIRI = 3;
 const isActive = (status: string) => status !== "delivered" && status !== "archived";
 
 export default async function DashboardPage() {
@@ -1108,7 +1108,7 @@ export default async function DashboardPage() {
                 </ListeKarti>
                 )}
 
-            <AbonelikOzetKarti access={access} kredi={kredi} bireysel={Boolean((krediSatiri as KrediSatiri | null)?.bireysel)} calismaId={resume.id} />
+            <AbonelikOzetKarti access={access} kredi={kredi} bireysel={Boolean((krediSatiri as KrediSatiri | null)?.bireysel)} />
             </div>
           </div>
 
@@ -1200,10 +1200,13 @@ export default async function DashboardPage() {
               baslik={t({ tr: "Hızlı eylemler", en: "Quick actions" })}
               alt={t({ tr: "Ctrl+K ile de açılır", en: "Also available with Ctrl+K" })}
               bos=""
-              sayi={4}
+              sayi={6}
             >
               <ListeSatiri href={`/dashboard/literature?calisma=${resume.id}&ekle=1`} baslik={t({ tr: "DOI ile kaynak ekle", en: "Add a source by DOI" })} />
               <ListeSatiri href={`/dashboard/editor/${resume.id}/write?asistan=1`} baslik={t({ tr: "Yazım asistanını aç", en: "Open the writing assistant" })} />
+              {/* Abonelik kartından taşındı (Signature OS 4.0): kart yalnızca abonelik ve krediyi söylüyor. */}
+              <ListeSatiri href={`/dashboard/citations?calisma=${resume.id}`} baslik={t({ tr: "Kaynağa sor (PDF'e soru, birebir alıntıyla)", en: "Ask a source (PDF, exact quotes)" })} />
+              <ListeSatiri href={`/dashboard/literature?calisma=${resume.id}`} baslik={t({ tr: "Literatür taraması", en: "Literature search" })} />
               <ListeSatiri href="/dashboard/analysis" baslik={t({ tr: "Veri analizi", en: "Data analysis" })} />
               <ListeSatiri href={`/dashboard/documents?calisma=${resume.id}`} baslik={t({ tr: "Belge kontrolü", en: "Document check" })} />
             </ListeKarti>
