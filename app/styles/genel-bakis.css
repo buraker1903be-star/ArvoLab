@@ -211,7 +211,8 @@
 
 .diger-calismalar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-sm); }
 
-@media (max-width: 900px) {
+/* Telefon kırılımı (Signature OS Phase 3): eskiden 900 pikseldi, tablette üç ölçü gereksiz yere alt alta diziliyordu. */
+@media (max-width: 760px) {
   .tez-olcumler { grid-template-columns: minmax(0, 1fr); }
   .tez-olcu { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
   .tez-olcu dt { flex-basis: 100%; }
@@ -1352,3 +1353,145 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .doi-kutusu-donen { animation: doi-don .9s linear infinite; }
 @keyframes doi-don { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .doi-kutusu-donen { animation: none; } }
+
+/* ============================================================
+   RESEARCH HOME ve ÇALIŞMALARIM (Signature OS Phase 3, 04.11.2026)
+
+   Minimum kart, minimum çizgi, gölge yok. Kartın içinde kart yok:
+   ölçüler kutu değil, ince dikey çizgiyle ayrılan üç sütun; "Şimdi" ve
+   takvim renkli kutu değil, üstünde ince çizgi olan düz satır.
+   Eskiden tez kartının içinde üç gri ölçü kutusu, mavi zeminli "Şimdi"
+   kutusu ve gri takvim kutusu vardı: kartın içinde beş ayrı yüzey.
+   Ölçü, "Şimdi" ve takvim sınıfları Çalışmalarım'ın ayrıntı kartıyla
+   ORTAK; iki ekran aynı dili konuşur.
+   ============================================================ */
+.gb-kart { border-color: var(--line-soft); border-radius: var(--r-lg); box-shadow: none; }
+
+/* ---- Aktif çalışma ---- */
+.tez-kart { gap: var(--s-5); padding: var(--s-6); }
+.tez-kart-ust { align-items: flex-start; gap: var(--s-4) var(--s-6); }
+.tez-kart-ust > div:first-child { flex: 1 1 360px; min-width: 0; }
+.tez-kart-ust h2 { margin-top: var(--s-1); font-size: var(--fs-calisma); font-weight: 600; text-wrap: balance; }
+.tez-kart-rozetler { align-items: center; gap: var(--s-3); margin-top: var(--s-3); }
+.tez-kart-zaman { color: var(--muted); font-size: var(--fs-sm); }
+.tez-kart-eylemler { flex: none; align-items: center; }
+
+/* Ölçüler: kutusuz üç sütun, aralarında ince çizgi */
+/* auto-fit: öğrencide üç, personelin kartında dört ölçü (ilerleme dahil) tek sırada; eskiden dördüncüsü alt satıra düşüyordu. */
+.tez-olcumler { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--s-4) 0; padding-top: var(--s-5); border-top: 1px solid var(--line-soft); }
+.tez-olcu { gap: var(--s-1); padding: 0 var(--s-5); border-radius: 0; background: transparent; }
+.tez-olcu:first-child { padding-left: 0; }
+.tez-olcu + .tez-olcu { border-left: 1px solid var(--line-soft); }
+.tez-olcu dd { font-size: 28px; font-weight: 650; }
+.tez-olcu span { color: var(--muted); }
+.tez-olcu .tez-cubuk { height: 4px; margin-top: var(--s-2); }
+.tez-cubuk i { background: var(--primary); }
+.tez-tempo { margin: 0; color: var(--muted); }
+
+/* "Şimdi": düz satır; aciliyet etiketin renginde ve metinde söyleniyor */
+.tez-simdi { padding: var(--s-4) 0 0; border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: transparent; }
+.tez-simdi[data-aciliyet="yaklasiyor"],
+.tez-simdi[data-aciliyet="acil"],
+.tez-simdi[data-bitti] { background: transparent; }
+.tez-simdi .sirada-etiket { padding: 2px 8px; border-radius: var(--r-pill); background: var(--primary-soft); letter-spacing: .08em; }
+.tez-simdi[data-aciliyet="yaklasiyor"] .sirada-etiket { background: var(--warning-soft); color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.tez-simdi[data-aciliyet="acil"] .sirada-etiket { background: var(--danger-soft); color: var(--danger); }
+.tez-simdi[data-bitti] .sirada-etiket { background: var(--success-soft); color: var(--success); }
+.tez-simdi .sirada-govde b { font-size: var(--fs-md); }
+
+/* Takvim: kutusuz küçük satır */
+.takvim-sirada { padding: 0; border-left: 0; border-radius: 0; background: transparent; }
+.takvim-sirada[data-durum="gecikti"] > span { color: var(--danger); }
+.takvim-sirada[data-durum="yaklasiyor"] > span { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+
+.diger-calismalar { padding-top: var(--s-3); border-top: 1px solid var(--line-soft); }
+.tez-kart .diger-calismalar .chip { padding: 4px 10px; border-radius: var(--r-pill); }
+
+/* ---- Alt ızgara: solda yapılacaklar, sağda durum ---- */
+.ana-izgara { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); align-items: start; }
+.ana-sutun { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+@media (min-width: 1100px) {
+  .ana-izgara { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+}
+
+/* ---- İkincil: son eklenenler, açılır ---- */
+.ana-detay > summary {
+  display: flex; align-items: center; gap: var(--s-3); min-height: 48px; padding: 0 var(--s-1);
+  border-top: 1px solid var(--line-soft); color: var(--ink); font-size: var(--fs-body); font-weight: 600;
+  list-style: none; cursor: pointer;
+}
+.ana-detay > summary::-webkit-details-marker { display: none; }
+.ana-detay > summary small { color: var(--muted); font-size: var(--fs-sm); font-weight: 400; }
+.ana-detay > summary::after { content: ""; width: 8px; height: 8px; margin-left: auto; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg) translateY(-2px); transition: transform var(--sure-hizli) ease; }
+.ana-detay[open] > summary::after { transform: rotate(225deg) translateY(-2px); }
+.ana-detay > summary:focus-visible { outline: none; box-shadow: var(--odak-halkasi); border-radius: var(--r-sm); }
+.ana-detay[open] > summary { margin-bottom: var(--s-3); }
+
+@media (max-width: 900px) {
+  .tez-kart { padding: var(--s-5); }
+}
+@media (max-width: 760px) {
+  .tez-olcumler { grid-template-columns: minmax(0, 1fr); }
+  .tez-olcu { padding: var(--s-3) 0; }
+  .tez-olcu + .tez-olcu { border-left: 0; border-top: 1px solid var(--line-soft); }
+  .tez-olcu dd { font-size: 22px; }
+}
+@media (max-width: 760px) {
+  .tez-kart-eylemler { width: 100%; }
+  .tez-kart-eylemler > * { flex: 1 1 auto; min-height: var(--kontrol-h-dokunma); }
+}
+@media (prefers-reduced-motion: reduce) { .ana-detay > summary::after { transition: none; } }
+
+/* ---- Çalışmalarım (Signature OS Phase 3) ---- */
+/* Liste satırı: başlık iki satıra kadar, altında tür ve son düzenleme, teslim kendi tonunda */
+.calisma-secim .gb-satir { align-items: flex-start; padding-block: var(--s-3); }
+.calisma-secim .gb-satir-govde { gap: 3px; }
+.calisma-secim .gb-satir-govde b {
+  display: -webkit-box; overflow: hidden; white-space: normal;
+  -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.35;
+}
+.calisma-teslim { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.calisma-teslim[data-tone="warning"] { color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.calisma-teslim[data-tone="danger"] { color: var(--danger); }
+/* Seçili satır: ince sol çizgi ve açık mavi zemin; çerçeve ve gölge yok */
+.calisma-secim .gb-satir[aria-current="true"] { border-left-color: var(--primary); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+
+/* Liste özeti: kutusuz, tek satır üç sayı */
+/* Personel satırında işaretler ve durum hapı kırpılmasın: başlık iki satıra kadar kısalır, hap tam görünür. */
+.calisma-secim .personel-isaretler { flex: none; }
+.calisma-secim .personel-isaretler .status-pill { max-width: none; }
+.calismalar-ozet { gap: 0; }
+.calismalar-ozet > div { padding: 0 var(--s-3); border-radius: 0; background: transparent; }
+.calismalar-ozet > div:first-child { padding-left: 0; }
+.calismalar-ozet > div + div { border-left: 1px solid var(--line-soft); }
+
+/* Ayrıntı: başlıkta tek ana eylem + "⋯" (aşağı açılan menü) */
+.kart-menu-asagi { margin-left: 0; }
+.kart-menu-asagi > .kart-menu-liste { top: calc(100% + 6px); bottom: auto; min-width: 232px; }
+.calisma-durum-bas h2 { font-size: var(--fs-calisma-sik); font-weight: 600; }
+
+/* Araç ızgarası: çerçevesiz simgeli satırlar, eşit sütunlar */
+.calisma-araclari { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 2px var(--s-2); }
+.calisma-araclari :is(.projects-filter-button, .projects-primary-button) {
+  justify-content: flex-start; width: 100%; min-height: 36px; padding: 0 var(--s-2);
+  border-color: transparent; background: transparent; box-shadow: none; color: var(--ink-soft); font-weight: 500;
+}
+.calisma-araclari :is(.projects-filter-button, .projects-primary-button):hover { background: var(--dugme-hover-zemin); color: var(--ink); }
+.calisma-araclari :is(.projects-filter-button, .projects-primary-button) svg { color: var(--muted); }
+.calisma-araclari .takvim-dugme-geciken { color: var(--danger); }
+@media (max-width: 1199px), (pointer: coarse) {
+  .calisma-araclari :is(.projects-filter-button, .projects-primary-button) { min-height: var(--kontrol-h-dokunma); }
+}
+@media (max-width: 760px) {
+  /* Telefonda başlıktaki "Yeni çalışma" listenin hemen üstünde; listenin altındaki ikinci kutu yineleme olurdu. */
+  .calisma-yeni-kutu { display: none; }
+  .calisma-araclari { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .calisma-durum-eylemler { width: 100%; }
+  .calisma-durum-eylemler > .projects-primary-button { flex: 1 1 auto; min-height: var(--kontrol-h-dokunma); }
+}
+/* Kart altı bağlantıları ("Teslim kontrolünü aç", "Editörde aç") ve takvim bağlantısı dokunmatikte 40 piksel (dokunma hedefi kuralı). */
+@media (max-width: 1199px), (pointer: coarse) {
+  .gb-kart-baglanti, .takvim-sirada > .link-accent { display: inline-flex; align-items: center; min-height: 40px; }
+  .diger-calismalar .chip { display: inline-flex; align-items: center; min-height: 40px; }
+  .geri-bildirim-kapat button { min-height: 40px; min-width: 40px; }
+}

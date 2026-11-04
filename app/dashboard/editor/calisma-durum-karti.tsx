@@ -159,13 +159,32 @@ export default async function CalismaDurumKarti({
           </span>
           <h2>{calisma.title}</h2>
         </div>
+        {/*
+          TEK ANA EYLEM (Signature OS Phase 3): "Yazmaya devam et". Teslim
+          paketi eskiden yanında ikinci bir düğmeydi; seyrek işler (teslim
+          paketi, düzenle, belge yükle, sil) artık yanındaki "⋯" menüsünde.
+          Menü eskiden kartın en altındaki araç şeridinin sonundaydı ve
+          yukarı açılıyordu; aradığını bilen öğrenci bile onu bulamıyordu.
+        */}
         <div className="calisma-durum-eylemler">
-          {/* Bitince tek tık: tez Word + kaynak PDF'leri + rapor (teslim-paketi.tsx). */}
-          {kelime ? <TeslimPaketi projectId={calisma.id} /> : null}
           <Link href={`${merkez}/write`} className="projects-primary-button button-compact">
             <PenLine size={15} aria-hidden="true" />
             {kelime ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
           </Link>
+          <details className="kart-menu kart-menu-asagi">
+            <summary aria-label={t({ tr: `${calisma.title}: diğer işlemler`, en: `${calisma.title}: more actions` })}>
+              <MoreHorizontal size={18} aria-hidden="true" />
+            </summary>
+            <div className="kart-menu-liste">
+              {/* Bitince tek tık: tez Word + kaynak PDF'leri + rapor (teslim-paketi.tsx). */}
+              {kelime ? <TeslimPaketi projectId={calisma.id} className="" /> : null}
+              {duzenleyebilir ? (
+                <CalismaDuzenlePenceresi projectId={calisma.id} baslik={calisma.title} />
+              ) : null}
+              <BelgeYuklePenceresi calisma={{ id: calisma.id, title: calisma.title, university: calisma.university ?? null }} />
+              {silebilir ? <DeleteProjectButton projectId={calisma.id} projectTitle={calisma.title} /> : null}
+            </div>
+          </details>
         </div>
       </header>
 
@@ -237,8 +256,9 @@ export default async function CalismaDurumKarti({
           <span>{sirada.aciklama}</span>
         </div>
         {/* İş bittiyse düğme bu kartın kendisine gidiyordu; çizilmiyor. */}
+        {/* İkincil düğme: kartın tek ana eylemi "Yazmaya devam et" (Signature OS Phase 3); iki koyu düğme hangisinin asıl olduğunu söylemiyordu. */}
         {sirada.bitti ? null : (
-          <Link href={sirada.href} className="projects-primary-button button-compact">
+          <Link href={sirada.href} className="projects-filter-button button-compact">
             {sirada.eylem}
           </Link>
         )}
@@ -327,7 +347,12 @@ export default async function CalismaDurumKarti({
         </p>
       )}
 
-      <footer className="calisma-durum-alt-serit">
+      {/*
+        ÇALIŞMANIN ARAÇLARI (Signature OS Phase 3): sekiz düğmelik şerit
+        sakin bir araç ızgarası oldu — her biri çerçevesiz, simgeli bir
+        satır. Araçlar ve pencereleri aynı; değişen yalnızca görünüm.
+      */}
+      <footer className="calisma-durum-alt-serit calisma-araclari" aria-label={t({ tr: "Çalışmanın araçları", en: "Work tools" })}>
         {/*
           Tezde kılavuz penceresi; makalede kılavuzun karşılığı derginin
           kuralları ve onların yeri makale çalışma alanı (orada doğrulama
@@ -342,7 +367,8 @@ export default async function CalismaDurumKarti({
             calisma={calisma}
             uygulanan={uygulanan}
             kilavuzOkunamadi={kilavuzOkunamadi}
-            triggerClassName={uygulanan ? "projects-filter-button button-compact" : "projects-primary-button button-compact"}
+            /* Kılavuz yoksa bunu "Şimdi" satırı zaten söylüyor; ikinci koyu düğme gerekmiyor (Signature OS Phase 3). */
+            triggerClassName="projects-filter-button button-compact"
             kisa
             /* "Kılavuzu değiştir" bağlantısı (editör) kılavuz varken de buraya gelir. */
             acikBasla={kilavuzAc}
@@ -366,19 +392,6 @@ export default async function CalismaDurumKarti({
         {/* Etik kurul (02.11.2026): öteki birimler gibi pencere (etik-penceresi.tsx). */}
         <EtikKurulPenceresi projectId={calisma.id} />
         <AnalizPenceresi projectId={calisma.id} projeAdi={calisma.title} />
-        {/* Ayda bir yapılan işler menüde; menü yukarı açılıyor, kartın içinde kalıyor. */}
-        <details className="kart-menu">
-          <summary aria-label={t({ tr: `${calisma.title}: diğer işlemler`, en: `${calisma.title}: more actions` })}>
-            <MoreHorizontal size={18} aria-hidden="true" />
-          </summary>
-          <div className="kart-menu-liste">
-            {duzenleyebilir ? (
-              <CalismaDuzenlePenceresi projectId={calisma.id} baslik={calisma.title} />
-            ) : null}
-            <BelgeYuklePenceresi calisma={{ id: calisma.id, title: calisma.title, university: calisma.university ?? null }} />
-            {silebilir ? <DeleteProjectButton projectId={calisma.id} projectTitle={calisma.title} /> : null}
-          </div>
-        </details>
       </footer>
     </article>
   );

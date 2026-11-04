@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
-import { AlertTriangle, FileText, Search, MessageSquare, ShieldAlert, ShieldCheck, Plus } from "lucide-react";
+import { AlertTriangle, FileText, Search, MessageSquare, ShieldAlert, ShieldCheck, Plus, CalendarClock } from "lucide-react";
 import { simdi } from "@/lib/genel-bakis";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
@@ -222,17 +222,22 @@ export default async function ProjectsPage({
           aria-current={project.id === seciliId ? "true" : undefined}
           scroll={false}
         >
+          {/*
+            Satır taranabilir (Signature OS Phase 3): tür ve son düzenleme bir
+            satırda, teslim ayrı satırda kendi tonuyla. Eskiden dördü tek
+            satırda "Tez · 6.172 kelime · 34 dk önce · …" diye kesiliyordu;
+            teslim tarihi hiç okunmuyordu.
+          */}
           <span className="gb-satir-govde">
             <b>{project.title}</b>
-            <small>
-              {[
-                t(projectTypeLabel(project.project_type)),
-                yazimOzeti(yazim),
-                due?.label,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </small>
+            <small>{[t(projectTypeLabel(project.project_type)), yazimOzeti(yazim)].filter(Boolean).join(" · ")}</small>
+            {due ? (
+              <small className="calisma-teslim" data-tone={due.tone}>
+                {/* Etiket kendi içinde "kaldı / gecikti / bugün teslim" diyor (lib/due-date.ts); simge teslim olduğunu söyler. */}
+                <CalendarClock size={12} aria-hidden="true" />
+                {due.label}
+              </small>
+            ) : null}
           </span>
           <span className="status-pill" data-tone={statusTone(project.status)}>
             {t(statusLabel(project.status))}
@@ -279,7 +284,8 @@ export default async function ProjectsPage({
           görünüm. Liste okunamadığında boş durum çizilmiyor, düğme ana kalır.
         */}
         {ogrenciDuzeni ? (
-          <YeniCalismaPenceresi acikBasla={params.yeni === "1"} triggerClassName={bosListe ? "projects-filter-button" : undefined} />
+          /* İkincil (Signature OS Phase 3): sayfanın ana eylemi seçili çalışmanın "Yazmaya devam et"i; kenar çubuğunda ve listenin altında da "Yeni çalışma" var. */
+          <YeniCalismaPenceresi acikBasla={params.yeni === "1"} triggerClassName="projects-filter-button" />
         ) : universiteListesi ? (
           <PersonelYeniCalismaPenceresi
             universities={universiteListesi.satirlar}

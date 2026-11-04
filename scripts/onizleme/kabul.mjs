@@ -221,6 +221,8 @@ const tarayici = await chromium.launch();
     const panel = sayfa.locator("#yazim-yan-panel");
     await sayfa.waitForTimeout(300);
     bekle((await panel.getByRole("tab", { selected: true }).innerText()).includes("Asistan"), "Arvo AI asistan görünümünü açmadı");
+    // Asistan ayrı bir paket (dynamic import): soğuk sunucuda ilk derleme birkaç saniye sürebilir.
+    await panel.locator(".yazim-paneli textarea").waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
     bekle(await panel.locator(".yazim-paneli textarea").isVisible(), "asistanın istek kutusu görünmüyor");
     const kutu = await panel.locator(".yazim-paneli textarea").boundingBox();
     bekle(kutu.y + kutu.height <= 900, `istek kutusu ekranın altına taşıyor (${Math.round(kutu.y + kutu.height)})`);
@@ -308,6 +310,78 @@ const tarayici = await chromium.launch();
     bekle(tasma <= 1, `sayfa ${tasma}px taşıyor`);
     await ctx.close();
   });
+}
+
+// ---- RESEARCH HOME ve ÇALIŞMALARIM (Signature OS Phase 3): üç soru, tek ana eylem, işlev matrisi ----
+{
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const sayfa = await ctx.newPage();
+  /* Görünen her etkileşimli öğenin adı (aria-label, title, metin). */
+  const adlar = async (kok) =>
+    (await sayfa.locator(`${kok} :is(a, button, summary, h2, h3)`).evaluateAll((el) =>
+      el.filter((e) => e.checkVisibility()).map((e) => `${e.getAttribute("aria-label") ?? ""} ${e.getAttribute("title") ?? ""} ${e.textContent ?? ""}`.replace(/\s+/g, " ")),
+    )).join(" | ");
+
+  await senaryo("ana sayfa: ilk bakışta hangi çalışma, ne kadar ilerleme, şimdi ne — tek ana eylem", async () => {
+    await git(sayfa, "/dashboard");
+    const kart = sayfa.locator("section.tez-kart");
+    await kart.waitFor({ state: "visible", timeout: 30000 });
+    bekle((await kart.locator("h2").innerText()).length > 5, "aktif çalışmanın adı yok");
+    bekle((await kart.locator(".tez-olcu").count()) === 3, "üç ölçü yok (teslim, yazılan, hazırlık)");
+    bekle(await kart.locator(".tez-simdi").isVisible(), "'Şimdi' satırı yok");
+    const kutu = await kart.boundingBox();
+    bekle(kutu.y < 200, `aktif çalışma ekranın üstünde değil (y=${Math.round(kutu.y)})`);
+    // Ana içerikte yalnızca BİR birincil düğme: "Yazmaya devam et".
+    const birincil = await sayfa.locator("main .projects-primary-button").evaluateAll((el) => el.filter((e) => e.checkVisibility()).map((e) => e.textContent.trim()));
+    bekle(birincil.length === 1 && /Yazmaya/.test(birincil[0]), `birincil düğmeler: ${birincil.join(", ")}`);
+    // İçinde kart yok: ölçüler kutu değil.
+    const olcuZemin = await kart.locator(".tez-olcu").first().evaluate((e) => getComputedStyle(e).backgroundColor);
+    bekle(/rgba\(0, 0, 0, 0\)|transparent/.test(olcuZemin), `ölçü kutusu zeminli: ${olcuZemin}`);
+  });
+
+  await senaryo("ana sayfa: işlev matrisi — eski ana sayfanın bütün bağlantı ve eylemleri yerinde", async () => {
+    await git(sayfa, "/dashboard");
+    await sayfa.locator("details.ana-detay > summary").click();
+    await sayfa.waitForTimeout(200);
+    const hepsi = await adlar("main");
+    const GEREKEN = [
+      "Yazmaya devam et", "Çalışma özeti", "Takvim",
+      "Dikkat isteyenler", "Teslim kontrolünü aç", "Bölümlerim", "Editörde aç", "Yazım ritmi",
+      "Literatür", "Kaynakça denetimi", "Kanıt matrisi", "Etik kurul", "Belge kontrolü",
+      "Danışman", "Abonelik ve kredi", "Ayrıntı", "Kredi satın al",
+      "Son kaynaklar", "Bütün kaynaklar", "Son belge kontrolleri", "DOI ile kaynak ekle", "Yazım asistanını aç", "Veri analizi",
+    ];
+    const eksik = GEREKEN.filter((g) => !hepsi.includes(g));
+    bekle(eksik.length === 0, `ana sayfada ulaşılamayan: ${eksik.join(", ")}`);
+  });
+
+  await senaryo("çalışmalarım: satırda tür, son düzenleme ve teslim; seçili satır işaretli", async () => {
+    await git(sayfa, `/dashboard/editor?sec=${TEZ}`);
+    const secili = sayfa.locator('.calisma-secim .gb-satir[aria-current="true"]');
+    bekle((await secili.count()) === 1, `${await secili.count()} seçili satır`);
+    const metin = await secili.innerText();
+    bekle(/Tez/.test(metin) && /önce|ago/.test(metin), `tür/son düzenleme yok: ${metin}`);
+    bekle(await secili.locator(".calisma-teslim").isVisible(), "teslim satırı yok");
+  });
+
+  await senaryo("çalışmalarım: tek ana eylem 'Yazmaya devam et'; seyrek işler ⋯ menüsünde, araçların hepsi yerinde", async () => {
+    await git(sayfa, `/dashboard/editor?sec=${TEZ}`);
+    const kart = sayfa.locator(".calisma-durum");
+    const birincil = await sayfa.locator("main .projects-primary-button").evaluateAll((el) => el.filter((e) => e.checkVisibility()).map((e) => e.textContent.trim()));
+    bekle(birincil.length === 1 && /Yazmaya/.test(birincil[0]), `birincil düğmeler: ${birincil.join(", ")}`);
+    await kart.locator(".kart-menu-asagi > summary").click();
+    await sayfa.waitForTimeout(200);
+    const menu = kart.locator(".kart-menu-asagi .kart-menu-liste");
+    const menuKutu = await menu.boundingBox();
+    const ozet = await kart.locator(".kart-menu-asagi > summary").boundingBox();
+    bekle(menuKutu.y > ozet.y, "menü aşağı açılmadı");
+    const hepsi = await adlar(".calisma-durum");
+    const GEREKEN = ["Teslim paketi", "Bilgileri düzenle", "Belge yükle", "Çalışmayı sil", "Kılavuz", "Takvim", "Literatür", "Kaynakça", "Kanıt matrisi", "Etik kurul", "Analiz", "Başka neler var"];
+    const eksik = GEREKEN.filter((g) => !hepsi.includes(g));
+    bekle(eksik.length === 0, `çalışmalarımda ulaşılamayan: ${eksik.join(", ")}`);
+    await sayfa.keyboard.press("Escape");
+  });
+  await ctx.close();
 }
 
 // ---- TABLET (820×1180): dar ray, sayfa sekmeleri ----
