@@ -3,6 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { safeConfirmNext } from "@/lib/auth-link";
+import { ayniKokenMi } from "@/lib/istek-koken";
 import { sendEmail } from "@/lib/email/resend";
 import { hosgeldinizEmail } from "@/lib/email/auth-emails";
 
@@ -51,6 +52,21 @@ export async function GET(request: NextRequest) {
 /* Onay sayfasındaki düğme (app/auth/dogrula/page.tsx). */
 export async function POST(request: NextRequest) {
   const { origin } = request.nextUrl;
+  /*
+    Yalnızca bizim onay sayfamızdan gelen form oturum açar (lib/istek-koken.ts).
+    Eskiden başka bir site kendi bağlantısını buraya gönderip kurbanı kendi
+    hesabına sokabiliyordu (giriş CSRF'i).
+  */
+  if (
+    !ayniKokenMi({
+      secFetchSite: request.headers.get("sec-fetch-site"),
+      origin: request.headers.get("origin"),
+      host: request.headers.get("host"),
+    })
+  ) {
+    console.warn("[doğrulama] başka kökenden POST reddedildi");
+    return NextResponse.redirect(new URL("/?error=link-invalid", origin), 303);
+  }
   const form = await request.formData();
   const tokenHash = String(form.get("token_hash") ?? "");
   const type = String(form.get("type") ?? "") as EmailOtpType;

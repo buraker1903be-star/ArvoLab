@@ -6,6 +6,7 @@ import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ADRES_SINIRI, GIRIS_PENCERESI_SQL, IP_SINIRI, girisAnahtarlari, girisKilitliMi } from "@/lib/giris-siniri";
 import { sendEmail } from "@/lib/email/resend";
 import { accountExistsEmail, resetPasswordEmail, signUpConfirmEmail } from "@/lib/email/auth-emails";
 import { kayitGirdisiniDenetle } from "@/lib/kayit";
@@ -32,11 +33,56 @@ export async function login(formData: FormData) {
     redirect(`/?error=missing-credentials${nextQuery}`);
   }
 
+  /*
+    Hız sınırı (lib/giris-siniri.ts): yalnızca hatalı denemeler sayılır.
+    Sunucu anahtarı yoksa ya da sayaç okunamazsa giriş ENGELLENMEZ — sayaç
+    bir korumadır, girişin ön koşulu değil.
+  */
+  const istek = await headers();
+  const ip = (istek.get("x-forwarded-for") ?? "").split(",")[0].trim() || "bilinmiyor";
+  const anahtar = girisAnahtarlari(email, ip);
+  let sayacIstemcisi: ReturnType<typeof createAdminClient> | null = null;
+  try {
+    sayacIstemcisi = createAdminClient();
+  } catch {
+    sayacIstemcisi = null;
+  }
+  if (sayacIstemcisi) {
+    const { data: sayaclar, error: sayacHatasi } = await sayacIstemcisi
+      .from("auth_rate_limits")
+      .select("key, count, window_start")
+      .in("key", [anahtar.adres, anahtar.ip]);
+    if (sayacHatasi) {
+      console.error("[giriş] hız sınırı okunamadı:", sayacHatasi.message);
+    } else {
+      const simdi = Date.now();
+      const bul = (k: string) => (sayaclar ?? []).find((s) => s.key === k);
+      if (girisKilitliMi(bul(anahtar.adres), ADRES_SINIRI, simdi) || girisKilitliMi(bul(anahtar.ip), IP_SINIRI, simdi)) {
+        console.warn("[giriş] hız sınırı:", ip);
+        redirect(`/?error=too-many-attempts${nextQuery}`);
+      }
+    }
+  }
+
   const supabase = await createClient();
   const { data: oturum, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
+
+  if (error && sayacIstemcisi) {
+    const sayac = sayacIstemcisi;
+    const sonuc = await Promise.all([
+      sayac.rpc("rate_limit_hit", { p_key: anahtar.adres, p_limit: ADRES_SINIRI, p_window: GIRIS_PENCERESI_SQL }),
+      sayac.rpc("rate_limit_hit", { p_key: anahtar.ip, p_limit: IP_SINIRI, p_window: GIRIS_PENCERESI_SQL }),
+    ]);
+    const hata = sonuc.find((r) => r.error)?.error;
+    if (hata) console.error("[giriş] hatalı deneme sayılamadı:", hata.message);
+  } else if (!error && sayacIstemcisi) {
+    /* Başarılı giriş adresin hatalı deneme sayacını sıfırlar; IP sayacı (ortak ağ) kendi penceresiyle düşer. */
+    const { error: silmeHatasi } = await sayacIstemcisi.from("auth_rate_limits").delete().eq("key", anahtar.adres);
+    if (silmeHatasi) console.error("[giriş] sayaç sıfırlanamadı:", silmeHatasi.message);
+  }
 
   if (error) {
     /*
