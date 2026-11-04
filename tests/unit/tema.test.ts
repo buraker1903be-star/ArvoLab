@@ -188,7 +188,8 @@ test("TEMA_RENGI tokens.css'teki --bg ile aynı (açık ve koyu)", () => {
     const v = deger.trim().match(/^var\((--[a-z0-9-]+)\)$/i);
     return v ? (palet.get(v[1]) ?? `çözülemedi:${v[1]}`) : deger.trim().toLowerCase();
   };
-  const kok = css.match(/:root\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+  // Açık blok `:root, .kagit` seçicisiyle yazılı (Phase 4.3: belge kâğıdı her temada açık).
+  const kok = css.match(/:root(?:,\s*\.kagit)?\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
   const koyu = css.match(/html\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
   const bg = (blok: string) => coz(blok.match(/--bg:\s*([^;]+);/)?.[1] ?? "yok");
   assert.equal(bg(kok), TEMA_RENGI.light.toLowerCase());

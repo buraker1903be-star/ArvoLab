@@ -229,7 +229,7 @@ const tarayici = await chromium.launch();
     bekle((await tema(sayfa)) === "dark/dark", `sistem değişince ${await tema(sayfa)}`);
     // Phase 4.2: cihaz açıkken uygulamada Koyu seçiliyse tarayıcı çubuğu da koyu renkte olmalı.
     const metalar = await sayfa.evaluate(() => [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute("content")));
-    bekle(metalar.length > 0 && metalar.every((r) => r === "#000d1f"), `theme-color ${metalar.join(",")}`);
+    bekle(metalar.length > 0 && metalar.every((r) => r === "#0f1626"), `theme-color ${metalar.join(",")}`);
     await ctx.close();
   });
 
@@ -271,6 +271,21 @@ const tarayici = await chromium.launch();
     bekle((await tema(sayfa)) === "dark/dark", `Ctrl+K sonrası ${await tema(sayfa)}`);
     await diger.waitForFunction(() => document.documentElement.getAttribute("data-theme") === "dark", null, { timeout: 5000 }).catch(() => {});
     bekle((await tema(diger)) === "dark/dark", `öteki sekme ${await tema(diger)}`);
+    await ctx.close();
+  });
+
+  await senaryo("tema: belge kâğıdı koyu temada da beyaz ve koyu mürekkepli (Phase 4.3)", async () => {
+    // Akademik belgenin sayfası uygulama temasından bağımsız: .kagit açık tokenları kendi üzerinde kurar.
+    const ctx = await tarayici.newContext({ colorScheme: "dark" });
+    const sayfa = await ctx.newPage();
+    await git(sayfa, `/dashboard/editor/${TEZ}/write`);
+    const kagit = sayfa.locator(".manuscript-editor-content.kagit").first();
+    await kagit.waitFor({ state: "visible", timeout: 30000 });
+    const renk = await kagit.evaluate((el) => ({ zemin: getComputedStyle(el).backgroundColor, yazi: getComputedStyle(el).color, tema: document.documentElement.getAttribute("data-theme") }));
+    bekle(renk.tema === "dark", `tema ${renk.tema}`);
+    bekle(renk.zemin === "rgb(255, 255, 255)", `kâğıt zemini ${renk.zemin}`);
+    const [r, g, b] = renk.yazi.match(/\d+/g).map(Number);
+    bekle(r + g + b < 150, `kâğıt yazısı koyu değil: ${renk.yazi}`);
     await ctx.close();
   });
 

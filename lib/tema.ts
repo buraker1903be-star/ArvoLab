@@ -34,14 +34,14 @@ export const KOYU_SORGUSU = "(prefers-color-scheme: dark)";
   Eskiden yalnızca cihazın temasına göre seçiliyordu (media sorgulu iki
   etiket): cihazı açık olan kullanıcı uygulamada Koyu'yu seçince tarayıcı
   çubuğu açık kalıyordu. Açık renk de uygulamanın zemini değildi
-  (#f2f2f7, eski iOS grisi; zemin #f6f7f9). Artık etiketin içeriği
+  (#f2f2f7, eski iOS grisi). Artık etiketin içeriği
   UYGULANAN temaya göre yazılır (ön boyama betiği ve tema seçici).
 
   Değerler tokens.css'teki --bg'nin aynısı olmalı; CSS değişkeni ilk
   boyamadan önce okunamadığı için burada sabit. tema.test.ts ikisini
   karşılaştırır: zemin değişince (4.3, Warm Ivory) test bunu söyler.
 */
-export const TEMA_RENGI: Record<Tema, string> = { light: "#f6f7f9", dark: "#000d1f" };
+export const TEMA_RENGI: Record<Tema, string> = { light: "#f7f5f0", dark: "#0f1626" };
 
 /** Depodan gelen ham değer → tercih. Bilinmeyen her şey "system". */
 export function tercihOku(ham: unknown): TemaTercihi {

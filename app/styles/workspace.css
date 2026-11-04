@@ -74,6 +74,13 @@
   */
   padding: 40px max(clamp(18px, 5vw, 48px), calc((100% - 860px) / 2)) 32px;
   counter-reset: footnote figure table;
+  /*
+    Belge kâğıdı (Phase 4.3): her temada saf beyaz, koyu mürekkep. .kagit
+    sınıfı açık tokenları burada yeniden kurar (tokens.css). Eskiden belge
+    kartın yüzeyini alıyordu: koyu temada açık yazıyla koyu zemindeydi,
+    açık temada da fildişi zemine geçişle sayfa kırık beyaza kayacaktı.
+  */
+  background: var(--kagit);
   color: var(--ink);
   font-size: var(--fs-md);
   line-height: 1.75;

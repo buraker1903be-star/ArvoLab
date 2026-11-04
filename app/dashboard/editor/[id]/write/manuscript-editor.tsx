@@ -868,7 +868,8 @@ export default function ManuscriptEditor({
     onUpdate: () => markDirtyRef.current(),
     editorProps: {
       attributes: {
-        class: "manuscript-editor-content",
+        // "kagit": belge alanı her temada açık kâğıt (tokens.css `:root, .kagit`, Phase 4.3).
+        class: "manuscript-editor-content kagit",
         // Kılavuzun ana bölüm kuralları editörde de görünür (metin değişmez; CSS workspace.css)
         ...(guideline?.settings.chapterUppercase ? { "data-chapter-case": "upper" } : {}),
         ...(guideline?.settings.chapterNewPage ? { "data-chapter-new-page": "true" } : {}),
