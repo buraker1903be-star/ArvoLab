@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { DilSaglayici } from "./_components/dil-saglayici";
-import { Inter, Montserrat, Newsreader } from "next/font/google";
+import { Inter } from "next/font/google";
 import { TEMA_BETIGI, TEMA_RENGI } from "@/lib/tema";
 import "./styles/tokens.css";
 import "./styles/base.css";
@@ -14,48 +14,29 @@ import "./styles/overlays.css";
 import "./styles/genel-bakis.css";
 import "./styles/print.css";
 
-// Tek yazı ailesi: Apple cihazlarında sistemin SF Pro'su (-apple-system),
-// diğerlerinde ona en yakın açık yazı tipi Inter. preload kapalı: Apple
-// cihazları SF'yi bulduğu için Inter dosyasını hiç indirmez.
+/*
+  ARAYÜZ YAZISI HER PLATFORMDA INTER (Signature OS, 04.11.2026). Eskiden
+  Apple cihazlarda sistemin SF Pro'su öndeydi ve Inter hiç indirilmiyordu
+  (preload kapalı); arayüz iki platformda iki ayrı yazıyla görünüyordu.
+  Artık her ekranda Inter: önceden yüklenir, yedek yazıyla çizilip sonra
+  değişme (düzen kayması) olmasın.
+
+  Phase 4.4'teki Newsreader (editoryal başlık) kaldırıldı: kurum sahibinin
+  kararı, başlıklar dahil her yerde Inter. Sayfa başına 38 KB daha az.
+
+  Belgenin yazısı arayüzden bağımsız: editör kâğıdı --font-belge
+  yığınında (tokens.css), kılavuz yazı tipleri satır içi.
+*/
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
   variable: "--font-inter",
   display: "swap",
-  preload: false,
-});
-
-/*
-  Editoryal başlık yazısı (Phase 4.1, kurum sahibinin kararı 04.11.2026):
-  yalnızca sayfa ve çalışma başlıkları, bazı içerik kartı başlıkları.
-  Gövde, form, tablo, menü ve düğmeler Inter'de kalır; akademik belge
-  editörü kendi biçim sistemini kullanır. latin-ext: Türkçe harfler (ş, ğ, İ).
-
-  TEK AĞIRLIK, STATİK (Phase 4.4). 4.1'de değişken dosya (ağırlık +
-  optik boyut eksenleri) seçilmişti; başlıklar ona bağlanınca ölçüldü:
-  sayfa başına +214 KB (latin 129 + latin-ext 85). Başlıkların hepsi
-  tek ağırlıkta (500, --fw-display); statik 500 dosyası +38 KB (15 + 23).
-  Başka bir ağırlık istenirse buraya eklenir — yoksa tarayıcı kalını
-  kendisi üretir (sahte kalın).
-
-  ÖNCEDEN YÜKLENİR (Phase 4.4): editoryal başlık neredeyse her sayfada
-  (karşılama, modül başlıkları, çalışma adı, giriş). Yüklenmezken
-  başlık önce yedek yazıyla çizilip sonra değişiyordu: giriş ekranında
-  düzen kayması (CLS) 0,0126 ölçüldü; önceden yüklemeyle 0.
-*/
-const newsreader = Newsreader({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-newsreader",
-  display: "swap",
-  weight: "500",
   preload: true,
 });
 
-// Yalnızca marka yazısı ve logo işareti için.
-const montserrat = Montserrat({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-montserrat",
-  display: "swap",
-});
+// Montserrat kaldırıldı (Signature OS): her sayfada önceden yükleniyordu
+// (102 KB) ama hiçbir öğe kullanmıyordu — logo bir görüntü dosyası, tek
+// kullanıcısı olan .brand-wordmark sınıfı hiçbir bileşende geçmiyordu.
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await ceviri();
@@ -109,7 +90,7 @@ export default async function RootLayout({
       <head>
         <script id="theme-init" dangerouslySetInnerHTML={{ __html: TEMA_BETIGI }} />
       </head>
-      <body className={`${inter.variable} ${montserrat.variable} ${newsreader.variable}`}>
+      <body className={inter.variable}>
         <DilSaglayici dil={dil} saatDilimi={saatDilimi}>
           {children}
         </DilSaglayici>

@@ -41,7 +41,7 @@ export const KOYU_SORGUSU = "(prefers-color-scheme: dark)";
   boyamadan önce okunamadığı için burada sabit. tema.test.ts ikisini
   karşılaştırır: zemin değişince (4.3, Warm Ivory) test bunu söyler.
 */
-export const TEMA_RENGI: Record<Tema, string> = { light: "#f7f5f0", dark: "#0f1626" };
+export const TEMA_RENGI: Record<Tema, string> = { light: "#fafbfd", dark: "#0d1219" };
 
 /** Depodan gelen ham değer → tercih. Bilinmeyen her şey "system". */
 export function tercihOku(ham: unknown): TemaTercihi {

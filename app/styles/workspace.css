@@ -81,6 +81,9 @@
     açık temada da fildişi zemine geçişle sayfa kırık beyaza kayacaktı.
   */
   background: var(--kagit);
+  /* Belgenin yazısı arayüzün yazısından bağımsız (Signature OS): arayüz her
+     yerde Inter'e geçti; kâğıt eski yığında kalır, belgenin görünümü değişmez. */
+  font-family: var(--font-belge);
   color: var(--ink);
   font-size: var(--fs-md);
   line-height: 1.75;

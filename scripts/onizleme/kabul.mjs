@@ -229,7 +229,7 @@ const tarayici = await chromium.launch();
     bekle((await tema(sayfa)) === "dark/dark", `sistem değişince ${await tema(sayfa)}`);
     // Phase 4.2: cihaz açıkken uygulamada Koyu seçiliyse tarayıcı çubuğu da koyu renkte olmalı.
     const metalar = await sayfa.evaluate(() => [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute("content")));
-    bekle(metalar.length > 0 && metalar.every((r) => r === "#0f1626"), `theme-color ${metalar.join(",")}`);
+    bekle(metalar.length > 0 && metalar.every((r) => r === "#0d1219"), `theme-color ${metalar.join(",")}`);
     await ctx.close();
   });
 
@@ -289,20 +289,21 @@ const tarayici = await chromium.launch();
     await ctx.close();
   });
 
-  await senaryo("tipografi: Newsreader yalnızca rol başlıklarında; belge içeriği ve kart başlıkları etkilenmez (Phase 4.4)", async () => {
+  await senaryo("tipografi: arayüz her yerde Inter; belge kâğıdı kendi yazı yığınında (Signature OS)", async () => {
     const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
     const sayfa = await ctx.newPage();
     const aile = (sec) => sayfa.$eval(sec, (e) => getComputedStyle(e).fontFamily);
     await git(sayfa, "/dashboard/editor");
-    bekle(/newsreader/i.test(await aile(".projects-header h1")), "sayfa başlığı Newsreader değil");
+    const baslik = await aile(".projects-header h1");
+    bekle(/inter/i.test(baslik.split(",")[0]) && !/newsreader/i.test(baslik), `sayfa başlığı Inter değil: ${baslik}`);
     await git(sayfa, `/dashboard/editor/${TEZ}/write`);
     await sayfa.locator(".manuscript-editor-content.kagit h1").first().waitFor({ state: "visible", timeout: 30000 });
-    bekle(/newsreader/i.test(await aile(".yazma-basligi h1")), "çalışma adı Newsreader değil");
-    // Belgenin kendi başlığı ve paragrafı arayüz başlık yazısını ALMAMALI (element seçiciyle sızma olmasın).
-    bekle(!/newsreader/i.test(await aile(".manuscript-editor-content.kagit h1")), "belge başlığına Newsreader sızmış");
-    bekle(!/newsreader/i.test(await aile(".manuscript-editor-content.kagit p")), "belge paragrafına Newsreader sızmış");
-    await git(sayfa, "/dashboard");
-    bekle(!/newsreader/i.test(await aile(".gb-kart-bas h2")), "kart başlığına Newsreader uygulanmış");
+    // Belgenin yazısı arayüzden bağımsız: kâğıt --font-belge yığınında (SF Pro önde), arayüz değişince değişmez.
+    const kagit = await aile(".manuscript-editor-content.kagit");
+    bekle(/SF Pro Text/.test(kagit), `kâğıt belge yığınında değil: ${kagit}`);
+    bekle(/SF Pro Text/.test(await aile(".manuscript-editor-content.kagit h1")), "belge başlığı belge yığınında değil");
+    const govde = await sayfa.evaluate(() => getComputedStyle(document.body).fontFamily);
+    bekle(/inter/i.test(govde.split(",")[0]), `arayüz gövdesi Inter değil: ${govde}`);
     await ctx.close();
   });
 
