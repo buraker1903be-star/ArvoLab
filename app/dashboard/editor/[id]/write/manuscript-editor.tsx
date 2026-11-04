@@ -264,6 +264,8 @@ interface ManuscriptEditorProps {
     alınacak işe çevirirdi.
   */
   acilacakMadde?: string | null;
+  /** "?asistan=1" ile gelinirse yazım asistanı açık başlar (Ctrl+K'daki "Yazım asistanını aç", Phase 3). */
+  asistanAcikBasla?: boolean;
   /* Çalışmada kurum girili mi: teslim kontrolünde "kılavuz yok"un iki
      hâli farklı çözüm istiyor (lib/submission-checklist.ts). */
   kurumGirili?: boolean;
@@ -457,6 +459,7 @@ export default function ManuscriptEditor({
   kullaniciId,
   belgeDili = "tr",
   acilacakMadde = null,
+  asistanAcikBasla = false,
   kurumGirili = false,
   initialContent,
   initialUpdatedAt,
@@ -593,7 +596,7 @@ export default function ManuscriptEditor({
   const [headingNumbering, setHeadingNumbering] = useState(initialHeadingNumbering);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
-  const [yazimAcik, setYazimAcik] = useState(false);
+  const [yazimAcik, setYazimAcik] = useState(asistanAcikBasla);
   const [analizOpen, setAnalizOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -3300,7 +3303,15 @@ export default function ManuscriptEditor({
         cumle={kaynakBulCumle.slice(0, 600)}
         onCite={(source) => void handleCite(source)}
       />
-      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => setYazimAcik(false)} zorunluBolumler={guideline?.requiredSections ?? []} />
+      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => {
+        setYazimAcik(false);
+        /* Adres temizlenir: "?asistan=1" kalsaydı sayfa yenilenince panel yeniden açılırdı (teslim ile aynı kural). */
+        const temiz = new URL(window.location.href);
+        if (temiz.searchParams.has("asistan")) {
+          temiz.searchParams.delete("asistan");
+          window.history.replaceState(null, "", temiz.toString());
+        }
+      }} zorunluBolumler={guideline?.requiredSections ?? []} />
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
       <ImportDialog
         open={importOpen}

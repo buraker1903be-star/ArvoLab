@@ -202,6 +202,28 @@ export async function yeniCalisma(formData: FormData): Promise<{ error?: string;
  * Dönüş tipi bilerek dizi DEĞİL: okuma başarısızken de boş dizi dönmek,
  * arayüzde "hiç çalışmanız yok" yalanına dönüşüyordu (lib/liste-sonucu.ts).
  */
+/*
+  KOMUT MERKEZİ İÇİN ÇALIŞMALAR (Phase 3, 04.11.2026). Ctrl+K'da "çalışma
+  aç": yalnızca kimlik, başlık ve tür; son düzenlenen önce. Yalnızca okuma;
+  hangi satırların döneceğine RLS karar verir (kullanıcının gördüğü
+  çalışmalar). Liste bir sayım değil, en çok 50 satırlık bir atlama
+  listesi: daha eskisi Çalışmalarım'daki aramada.
+*/
+export async function komutCalismalari(): Promise<{ id: string; title: string; project_type: string }[]> {
+  const ctx = await getAuthContext();
+  if (!ctx) return [];
+  const { data, error } = await ctx.supabase
+    .from("academic_projects")
+    .select("id, title, project_type")
+    .order("updated_at", { ascending: false })
+    .limit(50);
+  if (error) {
+    console.error("[komut merkezi] çalışmalar okunamadı:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
 export async function getProjects(): Promise<ListeSonucu<AcademicProject>> {
   const supabase = await createClient();
   const {

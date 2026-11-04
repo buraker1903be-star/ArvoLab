@@ -3,9 +3,13 @@
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Moon, Search, type LucideIcon } from "lucide-react";
+import { BookPlus, ChartNoAxesCombined, Moon, Plus, Search, Sparkles, type LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
 import { aramaAnahtari, osSayfalari, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
+import { normalizeDoi } from "@/lib/doi";
+import { calismaAdresi } from "@/lib/calisma-karti";
+import { projectTypeLabel } from "@/lib/project-labels";
+import { komutCalismalari } from "@/app/actions/projects";
 import { OsSimge } from "./os-simge";
 
 /*
@@ -21,14 +25,24 @@ import { OsSimge } from "./os-simge";
   burada da çıkmasın.
 */
 
+/*
+  KOMUT MERKEZİ (Phase 3, 04.11.2026): uygulamaların yanında artık
+  kullanıcının ÇALIŞMALARI (aç), hızlı işlemler (yeni çalışma, kaynak/DOI
+  ekle, analiz, yazım asistanı) ve kutuya yapıştırılan bir DOI'nin kendisi
+  ("DOI ile ekle"). Çalışmalar pencere ilk açıldığında bir kez okunur
+  (komutCalismalari, RLS'li salt okuma); okunamazsa yalnızca o grup
+  eksik kalır.
+*/
+
 /* Öğeler düz veri; ne yapacakları çalıştır() içinde. */
-type Oge = { id: string; grup: string; label: string; ipucu?: string; ikon: OsIkon } & (
+type Oge = { id: string; grup: string; label: string; ipucu?: string; ikon: OsIkon; simge?: LucideIcon } & (
   | { tur: "git"; href: string }
   | { tur: "tema" }
   | { tur: "cikis" }
 );
 
 const KOMUT_IKONU: Record<"tema" | "cikis", LucideIcon> = { tema: Moon, cikis: LogOut };
+type Calisma = { id: string; title: string; project_type: string };
 
 export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[]; cikis: () => Promise<void> }) {
   const t = useCeviri();
@@ -38,6 +52,8 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
   const cikisFormu = useRef<HTMLFormElement>(null);
   const [sorgu, setSorgu] = useState("");
   const [secili, setSecili] = useState(0);
+  const [calismalar, setCalismalar] = useState<Calisma[] | null>(null);
+  const yuklendi = useRef(false);
 
   const kapat = () => pencere.current?.close();
 
@@ -45,6 +61,12 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
     const ac = () => {
       setSorgu("");
       setSecili(0);
+      if (!yuklendi.current) {
+        yuklendi.current = true;
+        komutCalismalari()
+          .then(setCalismalar)
+          .catch(() => setCalismalar([]));
+      }
       if (!pencere.current?.open) pencere.current?.showModal();
       window.requestAnimationFrame(() => kutu.current?.focus());
     };
@@ -65,7 +87,29 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
   }, []);
 
   const ikonu = new Map(uygulamalar.map((u) => [u.key, u.ikon]));
+  const hizli = t({ tr: "Hızlı işlemler", en: "Quick actions" });
+  const sonCalisma = calismalar?.[0];
+  const doi = normalizeDoi(sorgu);
   const ogeler: Oge[] = [
+    /* Kutuya DOI yapıştırıldıysa en üstte: tek Enter ile kaynak eklemeye. */
+    ...(doi
+      ? [{ id: "doi", grup: hizli, label: t({ tr: `DOI ile kaynak ekle: ${doi}`, en: `Add source by DOI: ${doi}` }), ikon: "literatur" as const, simge: BookPlus, tur: "git" as const, href: `/dashboard/literature?doi=${encodeURIComponent(doi)}` }]
+      : []),
+    { id: "yeni", grup: hizli, label: t({ tr: "Yeni çalışma oluştur", en: "Create a new work" }), ikon: "tez", simge: Plus, tur: "git", href: "/dashboard/editor?yeni=1" },
+    { id: "kaynak", grup: hizli, label: t({ tr: "Kaynak ekle (DOI ya da arama)", en: "Add a source (DOI or search)" }), ikon: "literatur", simge: BookPlus, tur: "git", href: "/dashboard/literature?ekle=1" },
+    { id: "analiz", grup: hizli, label: t({ tr: "Veri analizi başlat", en: "Start a data analysis" }), ikon: "analiz", simge: ChartNoAxesCombined, tur: "git", href: "/dashboard/analysis" },
+    ...(sonCalisma
+      ? [{ id: "asistan", grup: hizli, label: t({ tr: "Yazım asistanını aç", en: "Open the writing assistant" }), ipucu: sonCalisma.title, ikon: "tez" as const, simge: Sparkles, tur: "git" as const, href: `/dashboard/editor/${sonCalisma.id}/write?asistan=1` }]
+      : []),
+    ...(calismalar ?? []).map((c): Oge => ({
+      id: `calisma:${c.id}`,
+      grup: t({ tr: "Çalışmalarım", en: "My works" }),
+      label: c.title,
+      ipucu: t(projectTypeLabel(c.project_type)),
+      ikon: "tez",
+      tur: "git",
+      href: calismaAdresi(c.id),
+    })),
     ...uygulamalar.map((u): Oge => ({ id: `app:${u.key}`, grup: t({ tr: "Uygulamalar", en: "Apps" }), label: u.label, ikon: u.ikon, tur: "git", href: u.href })),
     ...osSayfalari(uygulamalar).map((s): Oge => ({
       id: `sayfa:${s.href}`,
@@ -100,7 +144,17 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
   };
 
   const anahtar = aramaAnahtari(sorgu.trim());
-  const sonuc = anahtar ? ogeler.filter((oge) => aramaAnahtari(`${oge.label} ${oge.ipucu ?? ""}`).includes(anahtar)) : ogeler;
+  /* Boş kutuda çalışmaların yalnızca son beşi; yazınca hepsinde aranır. */
+  let gosterilenCalisma = 0;
+  const sonuc = anahtar
+    ? ogeler.filter(
+        (oge) =>
+          oge.id === "doi" ||
+          /* Hızlı işlemler yalnızca KENDİ adıyla eşleşir: "Yazım asistanını aç"ın ipucu son çalışmanın adı;
+             ipucuyla eşleşseydi çalışma adını yazan kullanıcı Enter'da çalışmayı değil asistanı açardı. */
+          aramaAnahtari(oge.grup === hizli ? oge.label : `${oge.label} ${oge.ipucu ?? ""}`).includes(anahtar),
+      )
+    : ogeler.filter((oge) => !oge.id.startsWith("calisma:") || ++gosterilenCalisma <= 5);
   const etkin = Math.min(secili, Math.max(sonuc.length - 1, 0));
 
   const klavye = (olay: React.KeyboardEvent) => {
@@ -137,7 +191,7 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
             setSecili(0);
           }}
           onKeyDown={klavye}
-          placeholder={t({ tr: "Uygulama, sayfa ya da komut ara", en: "Search apps, pages or commands" })}
+          placeholder={t({ tr: "Çalışma, sayfa, komut ara ya da DOI yapıştır", en: "Search works, pages, commands or paste a DOI" })}
           aria-label={t({ tr: "Ara", en: "Search" })}
           aria-controls="os-palette-list"
           aria-activedescendant={sonuc[etkin] ? `os-oge-${etkin}` : undefined}
@@ -152,7 +206,7 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
         {sonuc.map((oge, sira) => {
           const baslik = oge.grup !== sonGrup ? oge.grup : null;
           sonGrup = oge.grup;
-          const KomutIkonu = oge.tur === "tema" || oge.tur === "cikis" ? KOMUT_IKONU[oge.tur] : null;
+          const KomutIkonu = oge.simge ?? (oge.tur === "tema" || oge.tur === "cikis" ? KOMUT_IKONU[oge.tur] : null);
           return (
             <li key={oge.id} role="presentation">
               {baslik ? (

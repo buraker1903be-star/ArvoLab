@@ -31,10 +31,10 @@ export default async function WriteManuscriptPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ teslim?: string }>;
+  searchParams: Promise<{ teslim?: string; asistan?: string }>;
 }) {
   const { id } = await params;
-  const { teslim } = await searchParams;
+  const { teslim, asistan } = await searchParams;
   const supabase = await createClient();
   const t = await ceviri();
 
@@ -155,6 +155,7 @@ export default async function WriteManuscriptPage({
         kullaniciId={user?.id ?? null}
         belgeDili={dokumanDili}
         acilacakMadde={teslim ?? null}
+        asistanAcikBasla={asistan === "1"}
         kurumGirili={Boolean(project.university)}
         initialContent={content}
         formatLoss={formatLoss?.affected ? formatLoss : null}
