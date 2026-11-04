@@ -137,16 +137,180 @@ export default async function DashboardPage() {
     sayfa hedefini ve hazırlık listesini KILAVUZSUZ hesaplamasıydı —
     aynı çalışma iki ekranda iki ayrı cevap veriyordu.
   */
-  const resumeGuideline = resume
-    ? (await calismaKilavuzu(supabase, resume.id, resume.guideline_id)) ?? undefined
-    : undefined;
-  // Teslim hazırlığı: editördeki "Teslim kontrolü" ile aynı hesap, kaydedilmiş metinden (yalnızca bu çalışma)
-  const { data: resumeManuscript } =
+  /*
+    SORGULAR TEK AŞAMADA (Phase 2, 04.11.2026). Aşağıdaki okumaların hiçbiri
+    birbirinin sonucunu beklemiyor; hepsinin ihtiyacı yukarıda belli olan
+    "resume", rol ve çalışma listesi. Eskiden her biri ayrı ayrı
+    bekleniyordu: ana sayfa 34 sorguyu 21 SIRALI turda yapıyordu (önizleme
+    ölçümü, sorgu başına 40 ms gecikmeyle 1,38 s). Koşullar ve hata
+    davranışı aynı; yalnızca bekleme sırası değişti.
+
+    Müsvedde "*" ile değil gereken sütunlarla okunuyor. İçeriğin (content)
+    TAMAMI hâlâ gerekiyor: teslim hazırlığı bütün belgede yapı denetimi
+    yapıyor (lib/manuscript-readiness.ts), plain_text de metin–liste
+    tutarsızlığı için. Bunu kaldırmak kayıtta özet üretmeyi gerektirir.
+  */
+  const yeniKullanici = ilkKullanim({
+    calismaSayisi: projects.length,
+    okunamadi: projelerOkunamadi,
+    personel: isStaff,
+  });
+  const ogrenciGorunumu = !isStaff && Boolean(resume) && !yeniKullanici;
+  const bireysel = ogrenciGorunumu && gorunum.bireysel;
+  const gozetim = isStaff && isOversightRole(profile?.role);
+  const uzmanKuyrugu = isStaff && isExpertEligible(profile?.role);
+  const destekKuyrugu = isStaff && Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
+  const birimSayimi = (tablo: string, durum?: string) => {
+    const sorgu = supabase.from(tablo).select("id", { count: "exact", head: true }).eq("project_id", resume!.id);
+    return durum ? sorgu.eq("status", durum) : sorgu;
+  };
+  /* Kuyruk sayaçları kurum seçimini bekliyor; o bekleme kendi kolunda kalıyor. */
+  const kuyrukSayilari = async () => {
+    /* Sayaçlar kuyruk listeleriyle AYNI kurum süzgecinden geçer (lib/kurum-secimi.ts); yoksa rozet başka, liste başka sayı söylerdi. */
+    const kurum = await seciliKurum();
+    // Kurumda hiç kullanıcı yoksa hiçbir talep eşleşmemeli: boş dizi PostgREST'te geçersiz, eşleşmeyen bir kimlik veriliyor.
+    const talepSahipleri = kurum ? (kurum.kullanicilar.length ? kurum.kullanicilar : ["00000000-0000-0000-0000-000000000000"]) : null;
+    const uzmanSorgusu = supabase.from("consultancy_requests").select("id", { count: "exact", head: true }).eq("status", "open");
+    const destekSorgusu = supabase.from("app_support_requests").select("id", { count: "exact", head: true }).neq("status", "resolved");
+    return Promise.all([
+      uzmanKuyrugu
+        ? talepSahipleri ? uzmanSorgusu.in("requested_by", talepSahipleri) : uzmanSorgusu
+        : Promise.resolve({ count: null, error: null }),
+      destekKuyrugu
+        ? talepSahipleri ? destekSorgusu.in("requested_by", talepSahipleri) : destekSorgusu
+        : Promise.resolve({ count: null, error: null }),
+    ]);
+  };
+  const [
+    resumeGuideline,
+    { data: resumeManuscript },
+    resumeEtik,
+    { data: resumeKaynaklar },
+    [
+      { data: resumeDenetim },
+      { count: resumeBelgeSayisi },
+      { count: resumeKaynakSayisi },
+      { count: resumeOkunan },
+      { count: resumeKullanilan },
+    ],
+    etikKayitlari,
+    [{ count: acikUzman, error: uzmanHatasi }, { count: acikDestek, error: destekHatasi }],
+    sahipYaniti,
+    [hareketYaniti, yorumYaniti],
+    [ritimYaniti, { count: iddiaSayisi }, { count: dogrudanSayisi }],
+    takvim,
+    { data: krediSatiri, error: krediHatasi },
+    { data: sonBaglanti },
+  ] = await Promise.all([
+    /*
+      calismaKilavuzu kullanılıyor, loadAppliedGuidelines DEĞİL: ikincisi
+      yalnızca kataloğa bakıyor ve öğrencinin kendi yüklediği kılavuzu
+      görmüyordu (editörle ana sayfa iki ayrı cevap veriyordu).
+    */
+    resume ? calismaKilavuzu(supabase, resume.id, resume.guideline_id).then((k) => k ?? undefined) : Promise.resolve(undefined),
+    // Teslim hazırlığı: editördeki "Teslim kontrolü" ile aynı hesap, kaydedilmiş metinden (yalnızca bu çalışma)
     resume && resumeStats
-      ? await supabase.from("project_manuscripts").select("*").eq("project_id", resume.id).maybeSingle()
-      : { data: null };
-  // Etik kurul satırı: editördeki teslim kontrolüyle aynı hesap (lib/etik/durum.ts).
-  const resumeEtik = resume ? await etikKaydiOku(supabase, resume.id) : null;
+      ? supabase
+          .from("project_manuscripts")
+          .select("content, plain_text, word_count, cover_page, show_page_numbers, include_toc, heading_numbering, page_size, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm")
+          .eq("project_id", resume.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    // Etik kurul satırı: editördeki teslim kontrolüyle aynı hesap (lib/etik/durum.ts).
+    resume ? etikKaydiOku(supabase, resume.id) : Promise.resolve(null),
+    /*
+      Metin ile literatür listesi arasındaki tutarsızlıklar. Çalışma merkezinde
+      ayrıntısıyla duruyor; burada yalnızca sayısı görünüyor ki kullanıcı
+      ana sayfadan haberdar olsun.
+    */
+    resume
+      ? supabase.from("literature_sources").select("id, title, authors, year, status").eq("project_id", resume.id).limit(500)
+      : Promise.resolve({ data: null }),
+    /*
+      BİRİM İLERLEMESİ. "Tezimde ne yarım kaldı" sorusunun yarısı metinde
+      değil, bağlı birimlerde. Kaynak sayıları ELDEKİ LİSTEDEN sayılmıyor:
+      liste `.limit(500)` ile çekiliyor ve ondan `filter().length` ile
+      saymak 500'den çok kaynakta sessizce eksik sayı verirdi.
+    */
+    resume
+      ? Promise.all([
+          supabase
+            .from("citation_checks")
+            .select("id, compliance_score, created_at")
+            .eq("project_id", resume.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          birimSayimi("document_uploads"),
+          birimSayimi("literature_sources"),
+          birimSayimi("literature_sources", "read"),
+          birimSayimi("literature_sources", "used"),
+        ])
+      : Promise.resolve([{ data: null }, { count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }] as const),
+    /*
+      Etik kurul sorunu (02.11.2026): yalnızca gözetim rolünde — maddenin açtığı
+      "etik=risk" süzgeci Çalışmalarım'ın personel düzeninde çalışıyor.
+    */
+    gozetim ? etikKayitlariOku(supabase, projects.map((p) => p.id)) : Promise.resolve(null),
+    kuyrukSayilari(),
+    /* Personel listelerinde öğrencinin adı (RLS: kendi kurumu). Okunamazsa ad boş kalır. */
+    isStaff && projects.length
+      ? supabase.from("profiles").select("id, full_name").in("id", [...new Set(projects.map((p) => p.owner_id))])
+      : Promise.resolve({ data: null, error: null }),
+    /*
+      Çalışma hareketi (grafik) ve son yorumlar. Sayım veritabanında
+      (public.calisma_hareketlerim): satırları çekip burada saymak, satır
+      tavanına çarpılan gün grafiği sessizce eksiltirdi.
+    */
+    Promise.all([
+      // Çok çalışmalı grafik yalnızca personelde; öğrencinin grafiği yazım ritmi.
+      isStaff ? supabase.rpc("calisma_hareketlerim", { p_gun: 14 }) : Promise.resolve({ data: [], error: null }),
+      activeProjects.length
+        ? supabase
+            .from("manuscript_comments")
+            .select("id, project_id, body, created_at, author_id, yazar:profiles!manuscript_comments_author_id_fkey(full_name)")
+            .in("project_id", activeProjects.map((p) => p.id))
+            .is("resolved_at", null)
+            .neq("author_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(GENEL_BAKIS_SATIR)
+        : Promise.resolve({ data: [], error: null }),
+    ]),
+    /*
+      ÖĞRENCİNİN TEZ KARTI İÇİN: yazım ritmi (public.yazim_ritmi) ve kanıt
+      matrisinin iki sayısı. Personelde istenmiyor.
+    */
+    ogrenciGorunumu
+      ? Promise.all([
+          supabase.rpc("yazim_ritmi", { p_project: resume!.id, p_gun: 14 }),
+          supabase.from("kanit_kayitlari").select("id", { count: "exact", head: true }).eq("project_id", resume!.id),
+          supabase
+            .from("kanit_kayitlari")
+            .select("id", { count: "exact", head: true })
+            .eq("project_id", resume!.id)
+            .eq("destek_duzeyi", "dogrudan"),
+        ])
+      : Promise.resolve([{ data: null, error: null }, { count: 0 }, { count: 0 }] as const),
+    /* TEZ TAKVİMİ (28.10.2026). Okunamazsa satır çizilmiyor; "plan yok" demek yanlış olurdu. */
+    ogrenciGorunumu ? takvimiGetir(resume!.id) : Promise.resolve(null),
+    /* Asistan kredisi. Okunamazsa kart sayı göstermiyor; ana sayfa düşmüyor. */
+    ogrenciGorunumu ? supabase.rpc("ai_kredi_durumum").maybeSingle() : Promise.resolve({ data: null, error: null }),
+    /*
+      BİREYSEL ABONENİN DANIŞMANI SİSTEMDE DEĞİL: "Danışmanıma gönder" ve son
+      gönderilen bağlantının durumu (açıldı mı, kaç kez).
+    */
+    bireysel
+      ? supabase
+          .from("manuscript_share_links")
+          .select("created_at, last_viewed_at, view_count, expires_at")
+          .eq("project_id", resume!.id)
+          .is("revoked_at", null)
+          .gt("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
   const resumeReadiness =
     resume && resumeManuscript
       ? manuscriptReadiness({
@@ -159,62 +323,6 @@ export default async function DashboardPage() {
           hasInstitution: Boolean(resume.university),
         }, dil)
       : null;
-  /*
-    Metin ile literatür listesi arasındaki tutarsızlıklar. Çalışma merkezinde
-    ayrıntısıyla duruyor; burada yalnızca sayısı görünüyor ki kullanıcı
-    ana sayfadan haberdar olsun. Müsvedde zaten okunmuş durumda, ek maliyet
-    yalnızca kaynak listesi.
-  */
-  const { data: resumeKaynaklar } = resume
-    ? await supabase
-        .from("literature_sources")
-        .select("id, title, authors, year, status")
-        .eq("project_id", resume.id)
-        .limit(500)
-    : { data: null };
-  /*
-    BİRİM İLERLEMESİ. "Tezimde ne yarım kaldı" sorusunun yarısı metinde
-    değil, bağlı birimlerde: literatür toplandı mı, kaynakça denetlendi
-    mi, belge yüklendi mi. Bu bilgi yalnızca Çalışma Merkezi'nde
-    duruyordu; öğrenci ana sayfada göremiyordu.
-
-    Çalışma merkezinin tamamı (calismaOzeti) çağrılmıyor: o on sorgu
-    yapıyor ve çoğu burada zaten okunmuş durumda. Eksik olan iki şey
-    ayrıca soruluyor; literatür sayıları elde olan listeden türetiliyor.
-  */
-  const birimSayimi = (tablo: string, durum?: string) => {
-    const sorgu = supabase.from(tablo).select("id", { count: "exact", head: true }).eq("project_id", resume!.id);
-    return durum ? sorgu.eq("status", durum) : sorgu;
-  };
-  const [
-    { data: resumeDenetim },
-    { count: resumeBelgeSayisi },
-    { count: resumeKaynakSayisi },
-    { count: resumeOkunan },
-    { count: resumeKullanilan },
-  ] = resume
-    ? await Promise.all([
-        supabase
-          .from("citation_checks")
-          .select("id, compliance_score, created_at")
-          .eq("project_id", resume.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        birimSayimi("document_uploads"),
-        /*
-          Kaynak sayıları ELDEKİ LİSTEDEN sayılmıyor. O liste
-          `.limit(500)` ile çekiliyor (tutarsızlık denetimi için) ve
-          ondan `filter().length` ile saymak, 500'den çok kaynağı olan
-          bir tezde sessizce eksik sayı verirdi — `npm run
-          check:rakamlar`ın aradığı hata sınıfı tam olarak bu.
-        */
-        birimSayimi("literature_sources"),
-        birimSayimi("literature_sources", "read"),
-        birimSayimi("literature_sources", "used"),
-      ])
-    : [{ data: null }, { count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }];
-
   const resumeAdimlar =
     resume && !projelerOkunamadi
       ? siradakiAdimlar({
@@ -269,7 +377,6 @@ export default async function DashboardPage() {
     "etik=risk" süzgeci Çalışmalarım'ın personel düzeninde çalışıyor, öteki
     personelde sayı listeyle eşleşmezdi.
   */
-  const etikKayitlari = isStaff && isOversightRole(profile?.role) ? await etikKayitlariOku(supabase, projects.map((p) => p.id)) : null;
   const etikBugunu = trGunAnahtari();
   const attention = isStaff
     ? computeAttention(projects, openComments, {
@@ -285,7 +392,6 @@ export default async function DashboardPage() {
     filtreler (onay, sorumlu) orada anlamlı. Kuyruk sayıları Destek'in
     kuyruklarına gidiyor; yalnızca o kuyruğa yetkisi olana.
   */
-  const gozetim = isStaff && isOversightRole(profile?.role);
   const sayaclar = gozetim
     ? personelSayaclari(projects, { ...DEFAULT_PROJECT_FILTERS }, {
         openComments: (id) => openComments.get(id) ?? 0,
@@ -293,22 +399,6 @@ export default async function DashboardPage() {
         userId: user.id,
       }, dil)
     : [];
-  const uzmanKuyrugu = isStaff && isExpertEligible(profile?.role);
-  const destekKuyrugu = isStaff && Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
-  /* Sayaçlar kuyruk listeleriyle AYNI kurum süzgecinden geçer (lib/kurum-secimi.ts); yoksa rozet başka, liste başka sayı söylerdi. */
-  const kurum = await seciliKurum();
-  // Kurumda hiç kullanıcı yoksa hiçbir talep eşleşmemeli: boş dizi PostgREST'te geçersiz, eşleşmeyen bir kimlik veriliyor.
-  const talepSahipleri = kurum ? (kurum.kullanicilar.length ? kurum.kullanicilar : ["00000000-0000-0000-0000-000000000000"]) : null;
-  const uzmanSorgusu = supabase.from("consultancy_requests").select("id", { count: "exact", head: true }).eq("status", "open");
-  const destekSorgusu = supabase.from("app_support_requests").select("id", { count: "exact", head: true }).neq("status", "resolved");
-  const [{ count: acikUzman, error: uzmanHatasi }, { count: acikDestek, error: destekHatasi }] = await Promise.all([
-    uzmanKuyrugu
-      ? talepSahipleri ? uzmanSorgusu.in("requested_by", talepSahipleri) : uzmanSorgusu
-      : Promise.resolve({ count: null, error: null }),
-    destekKuyrugu
-      ? talepSahipleri ? destekSorgusu.in("requested_by", talepSahipleri) : destekSorgusu
-      : Promise.resolve({ count: null, error: null }),
-  ]);
   if (uzmanHatasi) console.error("[ana sayfa] uzman kuyruğu okunamadı:", uzmanHatasi.message);
   if (destekHatasi) console.error("[ana sayfa] destek kuyruğu okunamadı:", destekHatasi.message);
   /* Okunamayan kuyruk "0" demiyor: sayaç çizilmiyor, uyarı satırı söylüyor. */
@@ -323,70 +413,25 @@ export default async function DashboardPage() {
 
   /* Personel listelerinde öğrencinin adı (RLS: kendi kurumu). Okunamazsa ad boş kalır. */
   const sahipAdlari = new Map<string, string>();
-  if (isStaff && projects.length) {
-    const { data: sahipler, error: sahipHatasi } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", [...new Set(projects.map((p) => p.owner_id))]);
-    if (sahipHatasi) console.error("[ana sayfa] öğrenci adları okunamadı:", sahipHatasi.message);
-    for (const sahip of sahipler ?? []) if (sahip.full_name) sahipAdlari.set(sahip.id, sahip.full_name);
-  }
+  if (sahipYaniti.error) console.error("[ana sayfa] öğrenci adları okunamadı:", sahipYaniti.error.message);
+  for (const sahip of sahipYaniti.data ?? []) if (sahip.full_name) sahipAdlari.set(sahip.id, sahip.full_name);
 
-  // Karar ve gerekçesi lib/ilk-kullanim.ts'te (sınanabilsin diye orada).
-  const yeniKullanici = ilkKullanim({
-    calismaSayisi: projects.length,
-    okunamadi: projelerOkunamadi,
-    personel: isStaff,
-  });
 
-  /*
-    Çalışma hareketi (grafik) ve son yorumlar. Sayım veritabanında
-    (public.calisma_hareketlerim): satırları çekip burada saymak, satır
-    tavanına çarpılan gün grafiği sessizce eksiltirdi. Okunamazsa sayfa
-    düşmüyor; uyarı satırı neyin eksik olduğunu söylüyor.
-  */
-  const [hareketYaniti, yorumYaniti] = await Promise.all([
-    // Çok çalışmalı grafik yalnızca personelde; öğrencinin grafiği yazım ritmi.
-    isStaff ? supabase.rpc("calisma_hareketlerim", { p_gun: 14 }) : Promise.resolve({ data: [], error: null }),
-    activeProjects.length
-      ? supabase
-          .from("manuscript_comments")
-          .select("id, project_id, body, created_at, author_id, yazar:profiles!manuscript_comments_author_id_fkey(full_name)")
-          .in("project_id", activeProjects.map((p) => p.id))
-          .is("resolved_at", null)
-          .neq("author_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(GENEL_BAKIS_SATIR)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
   /*
     ÖĞRENCİNİN TEZ KARTI İÇİN: yazım ritmi (gün başına son kelime sayısı,
     sayım veritabanında: public.yazim_ritmi) ve kanıt matrisinin iki
     sayısı. Personelde istenmiyor; onun ana sayfası çok çalışmalı liste.
   */
-  const ogrenciGorunumu = !isStaff && Boolean(resume) && !yeniKullanici;
   /* Öğrenci yeni çalışmayı Çalışmalarım'daki pencerede başlatır (kendi
      kılavuzunu orada ekler); personelin tam formu ayrı sayfada. */
   // İkisi de pencerede açılıyor (öğrenci ve personel, 02.11.2026).
   const yeniCalismaHref = "/dashboard/editor?yeni=1";
-  const [ritimYaniti, { count: iddiaSayisi }, { count: dogrudanSayisi }] = ogrenciGorunumu
-    ? await Promise.all([
-        supabase.rpc("yazim_ritmi", { p_project: resume!.id, p_gun: 14 }),
-        supabase.from("kanit_kayitlari").select("id", { count: "exact", head: true }).eq("project_id", resume!.id),
-        supabase
-          .from("kanit_kayitlari")
-          .select("id", { count: "exact", head: true })
-          .eq("project_id", resume!.id)
-          .eq("destek_duzeyi", "dogrudan"),
-      ])
-    : [{ data: null, error: null }, { count: 0 }, { count: 0 }];
   if (ritimYaniti.error) console.error("[ana sayfa] yazım ritmi okunamadı:", ritimYaniti.error.message);
   /*
     TEZ TAKVİMİ (28.10.2026): sıradaki kilometre taşı tez kartında.
     Okunamazsa satır çizilmiyor; "plan yok" demek yanlış olurdu.
   */
   const bugunGun = trGunAnahtari();
-  const takvim = ogrenciGorunumu ? await takvimiGetir(resume!.id) : null;
   const siradakiKilometre = takvim ? siradakiTas(takvim, bugunGun) : null;
   const takvimSayilari = takvim ? takvimOzeti(takvim, bugunGun) : null;
 
@@ -397,29 +442,13 @@ export default async function DashboardPage() {
     duruyor ve son gönderilen bağlantının durumu (açıldı mı, kaç kez)
     gösteriliyor — öğrencinin "hocam baktı mı?" sorusu.
   */
-  const bireysel = ogrenciGorunumu && gorunum.bireysel;
 
   /*
     Asistan kredisi (tez kartının yanındaki Abonelik ve kredi kartı).
     Okunamazsa kart sayı göstermiyor; ana sayfa düşmüyor.
   */
-  const { data: krediSatiri, error: krediHatasi } = ogrenciGorunumu
-    ? await supabase.rpc("ai_kredi_durumum").maybeSingle()
-    : { data: null, error: null };
   if (krediHatasi) console.error("[ana sayfa] kredi durumu okunamadı:", krediHatasi.message);
   const kredi = krediOzeti((krediSatiri as KrediSatiri | null) ?? null);
-  const { data: sonBaglanti } = bireysel
-    ? await supabase
-        .from("manuscript_share_links")
-        .select("created_at, last_viewed_at, view_count, expires_at")
-        .eq("project_id", resume!.id)
-        .is("revoked_at", null)
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null };
-
   if (hareketYaniti.error) console.error("[ana sayfa] hareketler okunamadı:", hareketYaniti.error.message);
   if (yorumYaniti.error) console.error("[ana sayfa] yorumlar okunamadı:", yorumYaniti.error.message);
   const simdiAn = simdi();

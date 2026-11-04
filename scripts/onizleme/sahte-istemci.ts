@@ -18,6 +18,23 @@
 */
 import { ORNEK, ORNEK_KULLANICI, ORNEK_RPC } from "./veri";
 
+/*
+  ÖLÇÜM (Phase 2, 04.11.2026). Gerçek uygulamada her Supabase çağrısı bir
+  ağ turudur; sahte istemci anında cevap verdiği için sıralı sorgu
+  şelalesinin bedeli önizlemede görünmüyordu. ONIZLEME_GECIKME_MS her
+  çağrıya sabit bir bekleme ekler (gerçek tur süresinin yerine, mutlak
+  değeri değil önce/sonra farkını ölçmek için). ONIZLEME_OLCUM=1 her
+  çağrıyı sunucu günlüğüne yazar: sorgu sayısı ve hangi tablolar.
+  İkisi de yalnızca sunucuda okunur; tarayıcıda process.env boştur.
+*/
+const ortam: Record<string, string | undefined> = typeof process === "undefined" ? {} : process.env;
+const GECIKME = Number(ortam.ONIZLEME_GECIKME_MS ?? 0) || 0;
+const OLCUM = ortam.ONIZLEME_OLCUM === "1";
+function tur<T>(etiket: string, deger: T): Promise<T> {
+  if (OLCUM) console.log(`[olcum] ${Date.now()} ${etiket}`);
+  return GECIKME ? new Promise((coz) => setTimeout(() => coz(deger), GECIKME)) : Promise.resolve(deger);
+}
+
 type Satir = Record<string, unknown>;
 type Sonuc = { data: unknown; error: null; count?: number | null };
 
@@ -63,7 +80,7 @@ function sorgu(tablo: string) {
       const sonuc: Sonuc = yalnizSayim
         ? { data: null, error: null, count: satirlar.length }
         : { data: tek ? (satirlar[0] ?? null) : satirlar, error: null, count: sayim ? satirlar.length : null };
-      return Promise.resolve(sonuc).then(coz);
+      return tur(`from:${tablo}`, sonuc).then(coz);
     },
   });
   return kurucu;
@@ -79,20 +96,20 @@ export function sahteIstemci() {
       const kurucu = {
         single: () => kurucu,
         maybeSingle: () => kurucu,
-        then: (coz: (s: typeof sonuc) => unknown) => Promise.resolve(sonuc).then(coz),
+        then: (coz: (s: typeof sonuc) => unknown) => tur(`rpc:${ad}`, sonuc).then(coz),
       };
       return kurucu;
     },
     auth: {
-      getUser: async () => ({ data: { user: ORNEK_KULLANICI }, error: null }),
-      getSession: async () => ({ data: { session: { user: ORNEK_KULLANICI } }, error: null }),
+      getUser: () => tur("auth:getUser", { data: { user: ORNEK_KULLANICI }, error: null }),
+      getSession: () => tur("auth:getSession", { data: { session: { user: ORNEK_KULLANICI } }, error: null }),
       signOut: async () => ({ error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     },
     storage: {
       from: () => ({
-        createSignedUrl: async () => ({ data: { signedUrl: "#" }, error: null }),
-        createSignedUrls: async () => ({ data: [], error: null }),
+        createSignedUrl: () => tur("storage:createSignedUrl", { data: { signedUrl: "#" }, error: null }),
+        createSignedUrls: () => tur("storage:createSignedUrls", { data: [], error: null }),
         download: async () => ({ data: null, error: { message: "önizleme" } }),
         upload: async () => ({ data: null, error: null }),
         remove: async () => ({ data: null, error: null }),
