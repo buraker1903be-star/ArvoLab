@@ -1,7 +1,6 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, Circle } from "lucide-react";
-import Dialog from "@/app/dashboard/_components/dialog";
 import type { ChecklistAction, SubmissionChecklist } from "@/lib/submission-checklist";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import type { Metin } from "@/lib/dil";
@@ -13,22 +12,25 @@ const STATUS_LABEL: Record<keyof typeof ICONS, Metin> = {
   todo: { tr: "Eksik", en: "Missing" },
 };
 
-// Teslimden önce bakılacaklar tek pencerede; her eksik tek tıkla düzeltilir.
-export default function SubmissionChecklistDialog({
-  open,
-  onClose,
+/*
+  TESLİM LİSTESİ (Signature OS Phase 2): yazım panelinin "Teslim"
+  görünümünde, belgenin yanında. Eskiden başlıktaki "Teslim kontrolü"
+  düğmesi bir pencere açıyordu; pencere belgeyi örttüğü için "Ekle" ya
+  da "Göster" diyen madde önce pencereyi kapatmak zorundaydı ve öğrenci
+  listeye dönmek için düğmeyi yeniden buluyordu. Liste ve maddelerin
+  eylemleri aynı (lib/submission-checklist.ts).
+*/
+export default function TeslimListesi({
   checklist,
   onAction,
   vurgu,
   dogrulanmamis,
 }: {
-  open: boolean;
-  onClose: () => void;
   checklist: SubmissionChecklist;
   onAction: (action: ChecklistAction) => void;
   /*
     Ana sayfadan gelindiğinde hangi maddeye bakılacağı. Liste sekiz
-    maddeli; "Eksik: Bulgular, Sonuç" yazısına tıklayıp açılan pencerede
+    maddeli; "Eksik: Bulgular, Sonuç" yazısına tıklayıp açılan panelde
     o maddeyi yeniden aramak, tıklamanın kazandırdığı kolaylığı geri
     alırdı.
   */
@@ -45,17 +47,17 @@ export default function SubmissionChecklistDialog({
   const t = useCeviri();
   const ready = checklist.done === checklist.total;
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      kicker={t({ tr: "Teslim kontrolü", en: "Submission checklist" })}
-      title={
-        ready
-          ? t({ tr: "Teslime hazır görünüyor", en: "Looks ready to submit" })
-          : t({ tr: `${checklist.done}/${checklist.total} madde hazır`, en: `${checklist.done}/${checklist.total} items ready` })
-      }
-      description={
-        dogrulanmamis
+    <section className="yan-bolum" aria-labelledby="teslim-listesi-baslik">
+      <header className="yan-bolum-bas">
+        <h3 id="teslim-listesi-baslik">{t({ tr: "Teslim kontrolü", en: "Submission checklist" })}</h3>
+        <span className="status-pill" data-tone={ready ? "success" : "neutral"}>
+          {ready
+            ? t({ tr: "Hazır görünüyor", en: "Looks ready" })
+            : t({ tr: `${checklist.done}/${checklist.total} hazır`, en: `${checklist.done}/${checklist.total} ready` })}
+        </span>
+      </header>
+      <p className="yan-not">
+        {dogrulanmamis
           ? t({
               tr: "Kendi yüklediğiniz kılavuzdan çıkarılan ve sizin onayladığınız kurallara göre denetlenir — kurumunuzun onayından GEÇMEMİŞTİR. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz.",
               en: "Checked against rules extracted from the guideline you uploaded and approved yourself — they have NOT been approved by your institution. This is an automated check; it does not replace review by your advisor or committee.",
@@ -63,9 +65,8 @@ export default function SubmissionChecklistDialog({
           : t({
               tr: "Kılavuza göre teslimden önce bakılması gerekenler. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz.",
               en: "What to check before submission according to the guideline. This is an automated check; it does not replace review by your advisor or committee.",
-            })
-      }
-    >
+            })}
+      </p>
       <ul className="checklist">
         {checklist.items.map((item) => {
           const Icon = ICONS[item.status];
@@ -90,6 +91,6 @@ export default function SubmissionChecklistDialog({
           );
         })}
       </ul>
-    </Dialog>
+    </section>
   );
 }

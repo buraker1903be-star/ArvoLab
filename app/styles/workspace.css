@@ -516,22 +516,7 @@
   .guideline-applied-banner > span { text-align: left; }
 }
 
-/* ---------- Editör yerleşimi (04.11.2026): üstte tek satır araç çubuğu, belge, kapanabilir inceleme paneli ---------- */
-.manuscript-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 16px;
-  align-items: start;
-}
-/* Panel kapalıyken ya da odak modunda belge ortada, okunur bir genişlikte. */
-.manuscript-layout:not([data-inceleme]),
-.manuscript-layout[data-odak] { grid-template-columns: minmax(0, 1fr); }
-.manuscript-layout:not([data-inceleme]) .manuscript-outline,
-.manuscript-layout[data-odak] .manuscript-outline { display: none; }
-.manuscript-layout:not([data-inceleme]) .manuscript-main,
-.manuscript-layout[data-odak] .manuscript-main { width: 100%; max-width: 980px; margin-inline: auto; }
-/* Odak modu: sayfa başlığı da çekilir, yalnızca araç çubuğu ve metin kalır. */
-.dashboard-page:has(.manuscript-layout[data-odak]) > .projects-header { display: none; }
+/* ---------- Editör yerleşimi: Signature OS Phase 2 bloğuna bakın (dosyanın sonu) ---------- */
 
 /*
   Araç çubuğu: tek satır, gruplar ince çizgiyle ayrık, sayfa kayarken
@@ -539,10 +524,6 @@
   (arac-menusu.tsx). Dar ekranda yatay kayar, satır sarmaz.
 */
 .manuscript-araclar {
-  position: sticky;
-  top: calc(var(--topbar-height) + 8px);
-  z-index: var(--z-sticky);
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 0;
@@ -550,12 +531,6 @@
   padding: 6px 8px;
   overflow-x: auto;
   scrollbar-width: none;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--karo-r);
-  background: var(--glass-strong);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-sm);
 }
 .manuscript-araclar::-webkit-scrollbar { display: none; }
 .arac-grup { display: flex; flex: none; align-items: center; gap: 2px; padding: 0 6px; }
@@ -652,30 +627,10 @@
 .arac-menu-pencere .arac-segment button { justify-content: center; min-height: 30px; padding: 0; }
 .arac-menu-pencere .toolbar-select { width: 100%; height: 34px; margin: 2px 0 4px; }
 
-/* İnceleme panelinin başlığı (manuscript-outline.tsx) */
-.inceleme-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px; }
-.inceleme-bas b { color: var(--muted); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 
-/* İnce sayfa başlığı (page.tsx): tek satır, eylemler sağda */
-.yazma-basligi { flex-wrap: nowrap; align-items: center; gap: 16px; margin-bottom: 12px; }
-.yazma-basligi > div:first-child { min-width: 0; }
-.yazma-basligi h1 { overflow: hidden; font-size: var(--fs-calisma-sik); line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
-.yazma-basligi .yazma-eylemleri { flex: none; flex-wrap: nowrap; }
 
 /* Belgenin üstündeki ince şerit: kayıt durumu ve bul-değiştir */
 .manuscript-ust { justify-content: flex-end; min-height: 40px; padding: 4px 12px; }
-/*
-  Kayıt şeridi araç çubuğunun ALTINA yapışır (04.11.2026). İkisi aynı
-  yüksekliğe yapışıyordu (üst çubuğun hemen altı): belge kaydırılınca
-  "Kaydedildi" şeridi tek satır araç çubuğunun üstüne biniyor, yazı tipi,
-  B/I/U ve Ekle düğmeleri kayboluyordu. Çubuğun yüksekliği 46 piksel
-  (32'lik düğme + 6'lık iki iç boşluk + çerçeve); şerit onun 6 piksel
-  altında ve bir kat aşağıda.
-*/
-.manuscript-layout .manuscript-ust {
-  top: calc(var(--topbar-height) + 8px + 46px + 6px);
-  z-index: calc(var(--z-sticky) - 1);
-}
 
 /* Sağ paneldeki kontrol kartı (eskiden belgenin altındaki çubuk) */
 .kontrol-karti { gap: 12px; }
@@ -735,14 +690,6 @@
 .kontrol-yapi[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
 .kontrol-yapi[data-tone="warning"] { --tone: color-mix(in srgb, var(--warning) 85%, var(--ink)); --tone-soft: var(--warning-soft); }
 .kontrol-yapi[data-tone="danger"] { --tone: var(--danger); --tone-soft: var(--danger-soft); }
-/* Sayfa başlığındaki eylemler: Çalışma özeti + teslim, çıktı ve kontrol düğmeleri */
-.yazma-eylemleri { justify-content: flex-end; }
-@media (max-width: 760px) { .yazma-eylemleri > * { flex: 1 1 auto; justify-content: center; } }
-.yazma-eylemleri .projects-filter-button[data-tone="success"] {
-  border-color: color-mix(in srgb, var(--success) 45%, var(--line));
-  color: var(--success);
-  background: var(--success-soft);
-}
 
 /* İçindekiler penceresi: numara, başlık, noktalı çizgi, sayfa */
 .icindekiler-listesi { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
@@ -777,17 +724,6 @@
 .manuscript-main { min-width: 0; }
 /* Yazarlık raporu: asistan izli metin yalnızca "Vurgula" açıkken renklenir (lib/tiptap-asistan-izi.ts). */
 .asistan-vurgu .asistan-izi { border-radius: 2px; background: color-mix(in srgb, var(--primary-ink) 18%, transparent); }
-.manuscript-outline {
-  position: sticky;
-  top: calc(var(--topbar-height) + 16px);
-  display: grid;
-  gap: 12px;
-  /* Dock ekranın altını kaplıyor; yan panelin son başlıkları onun
-     arkasında kalıyordu. */
-  max-height: calc(100vh - var(--topbar-height) - var(--dock-alani) - 24px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
 .outline-card {
   display: grid;
   gap: 10px;
@@ -978,32 +914,6 @@
 .result-link { flex-shrink: 0; color: var(--primary-ink); font-size: var(--fs-sm); font-weight: 650; cursor: pointer; }
 .result-link:hover { text-decoration: underline; }
 
-@media (max-width: 1180px) {
-  .manuscript-layout { grid-template-columns: minmax(0, 1fr); }
-  /* Dar ekranda araç çubuğundaki etiketler gizlenir; çubuk yatay kayar */
-  .manuscript-araclar { order: -2; }
-  .manuscript-araclar .arac-grup-asistan .arac-metin { display: none; }
-  /* Kayıt şeridi araç çubuğuyla üst üste binmesin */
-  .manuscript-ust { position: static; }
-  .manuscript-outline {
-    position: static;
-    order: -1;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    align-items: start;
-    max-height: none;
-    overflow: visible;
-  }
-  /* Panel başlığı ızgarada bir hücre değil, satırın tamamı */
-  .manuscript-outline > .inceleme-bas { grid-column: 1 / -1; }
-  .yazma-basligi { flex-wrap: wrap; }
-}
-@media (max-width: 900px) {
-  .manuscript-araclar { top: calc(56px + env(safe-area-inset-top)); border-radius: 0; }
-}
-@media (max-width: 760px) {
-  /* Telefonda önce yazma alanı: kılavuz listesi, ilerleme ve yorumlar editörün altında */
-  .manuscript-outline { order: 1; }
-}
 
 /* ---------- Editör alt çubuğu: sayfa hedefi ve kayıt onayı ---------- */
 
@@ -1246,24 +1156,13 @@
 /* ---------- Yazım asistanı paneli (03.11.2026) ----------
    Modal değil: sağa yaslı kalıcı panel, editör kullanılabilir kalır.
    Telefonda alttan açılan sayfa gibi tam genişlik. */
+/* Signature OS Phase 2: yazım panelinin "Asistan" görünümünü dolduran sütun (eskiden ekrana sabitlenmiş ayrı kutu). */
 .yazim-paneli {
-  position: fixed;
-  top: 72px;
-  right: 16px;
-  bottom: 16px;
-  z-index: var(--z-topbar);
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  width: min(400px, calc(100vw - 32px));
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  min-height: 0;
 }
-.yazim-paneli-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); }
-.yazim-paneli-bas > span { display: inline-flex; align-items: center; gap: 8px; color: var(--primary-ink); }
-.yazim-paneli-bas b { color: var(--ink); }
 .yazim-ikon {
   display: inline-grid;
   place-items: center;
@@ -1356,9 +1255,6 @@
 .yazim-hizli-dugme:disabled { opacity: .6; cursor: default; }
 .yazim-girdi { display: flex; align-items: flex-end; gap: 8px; padding: 10px 14px 14px; }
 .yazim-girdi textarea { flex: 1 1 auto; min-width: 0; resize: none; }
-@media (max-width: 760px) {
-  .yazim-paneli { top: auto; right: 0; bottom: 0; left: 0; width: 100%; height: 70dvh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
-}
 
 /* ---------- Kaynakla sohbet (03.11.2026) ---------- */
 .kaynak-sohbet { display: flex; flex-direction: column; min-height: min(60dvh, 560px); }
@@ -1391,28 +1287,13 @@
    satırı 722 piksele uzanıyor, sayfa 332 piksel yana kayıyordu ve
    "Dışa aktar" ekranın dışında kalıyordu. Editörün işlevleri aynı;
    yalnızca yerleşim değişir:
-   - başlık kendi satırında, eylemler altta tek satır: ikincil
-     düğmeler yalnızca simge (adları aria-label'da), teslim kontrolü
-     yalnızca "1/5", ana eylem kısa adıyla ("Kontrol");
+   - başlık satırı: Signature OS Phase 2 bloğuna bakın (dosyanın sonu);
    - araç çubuğunda yazı tipi ve punto seçicileri gizli (kılavuz
      belirliyor; Paragraf menüsünde ayarlar duruyor), geri kalanı tek
      satırda yana kayar; kaydığı sağ kenardaki solmadan anlaşılır;
    - dokunma hedefleri 40–44 piksel.
    ============================================================ */
-.yazma-etiket-kisa { display: none; }
 @media (max-width: 760px) {
-  .yazma-basligi { flex-wrap: wrap; gap: var(--s-2); }
-  .yazma-basligi > div:first-child { flex: 1 1 100%; }
-  .yazma-basligi .yazma-eylemleri { width: 100%; flex-wrap: nowrap; gap: 6px; }
-  .yazma-basligi .yazma-eylemleri > * { flex: 0 0 auto; min-height: 44px; min-width: 44px; justify-content: center; }
-  .yazma-basligi .yazma-eylemleri > :last-child { margin-left: auto; }
-  .yazma-eylemleri .yazma-etiket,
-  .yazma-eylemleri .arac-metin,
-  .yazma-eylemleri .arac-menu-ok,
-  .yazma-eylemleri .kural-kaynagi { display: none; }
-  .yazma-eylemleri .yazma-etiket-kisa { display: inline; }
-
-  .manuscript-araclar .arac-grup-yazi { display: none; }
   .manuscript-araclar {
     -webkit-mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
     mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
@@ -1448,3 +1329,262 @@
     mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
   }
 }
+
+/* ============================================================
+   AKADEMİK YAZIM STÜDYOSU (Signature OS Phase 2, 04.11.2026)
+   page.tsx, manuscript-editor.tsx, yan-panel.tsx.
+
+   Yerleşim:
+     başlık satırı  — belge simgesi, başlık, kayıt durumu | paylaş,
+                      dışa aktar, Arvo AI, panel
+     belge sütunu   — araç çubuğu ve belge TEK çerçevede (çubuk üstte
+                      yapışık), altında durum çubuğu
+     yazım paneli   — masaüstünde belgenin yanında sütun; tablet ve
+                      telefonda belgenin üstüne açılan sayfa
+
+   Eskiden araç çubuğu iki sütunun üstünü kaplıyor, kayıt durumu
+   belgenin üstünde ayrı bir yapışık şeritte duruyor (ikisinin yapışma
+   yüksekliği elle hesaplanıyordu), sağda kartlardan oluşan İncele
+   paneli ve onun üstüne binen ayrı bir asistan kutusu vardı.
+   ============================================================ */
+/*
+  Sayfa İKİ SÜTUNLU bir ızgara: solda başlık satırı ve belge, sağda yazım
+  paneli sayfanın en üstünden başlar. İlk denemede panel belgeyle
+  birlikte başlık satırının ALTINDAN başlıyordu; ekran yüksekliğinde
+  olduğu için ilk açılışta altı ~70 piksel taşıyor ve asistanın istek
+  kutusu sayfa kaydırılana kadar kesik görünüyordu. Editörün kendi kabı
+  (.manuscript-layout) bunun için "display: contents": çocukları
+  (belge sütunu, panel) doğrudan bu ızgaraya yerleşir.
+*/
+/* Özgüllük .gb'nin (genel-bakis.css, display:flex) üstünde olmalı; o dosya bundan SONRA yükleniyor. */
+.dashboard-page.yazim-sayfasi {
+  --yan-panel-genislik: 340px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 var(--s-4);
+  align-items: start;
+}
+.dashboard-page.yazim-sayfasi:has(> .manuscript-layout[data-inceleme]:not([data-odak])) { grid-template-columns: minmax(0, 1fr) var(--yan-panel-genislik); }
+.yazim-sayfasi > * { grid-column: 1; min-width: 0; }
+.yazim-sayfasi > .manuscript-layout { display: contents; }
+.yazim-sayfasi .yan-panel[data-bicim="sutun"] { grid-column: 2; grid-row: 1 / span 12; }
+/* Panel kapalıyken, tablet/telefonda (panel üstte açılır) ve odak modunda başlık ve belge okunur genişlikte ortada. */
+.yazim-sayfasi:not(:has(> .manuscript-layout[data-inceleme]:not([data-odak]))) > :is(.yazma-basligi, .alert),
+.yazim-sayfasi:not(:has(> .manuscript-layout[data-inceleme]:not([data-odak]))) .manuscript-main { justify-self: center; width: 100%; max-width: 1040px; }
+.dashboard-page:has(.manuscript-layout[data-odak]) > .yazma-basligi { display: none; }
+
+/* ---- Başlık satırı ---- */
+.yazma-basligi { display: flex; align-items: center; gap: var(--s-3); min-width: 0; margin: 0 0 var(--s-3); }
+.yazma-geri { display: none; }
+.yazma-baslik { display: flex; flex: 1 1 auto; align-items: center; gap: var(--s-2); min-width: 0; }
+.yazma-baslik-simge { flex: none; color: var(--muted); }
+.yazma-baslik h1 {
+  min-width: 0; margin: 0; overflow: hidden;
+  font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.015em; line-height: 1.3;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.yazma-durum { flex: none; display: inline-flex; }
+/* Kayıt durumu hap: kaydedildiyse yeşil, kaydediliyorsa nötr, hata ve çakışmada kırmızı. */
+.yazma-durum .save-status { min-height: 26px; border: 1px solid color-mix(in srgb, var(--tone) 24%, transparent); background: color-mix(in srgb, var(--tone) 9%, transparent); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+.yazma-durum .save-status:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.yazma-eylemleri { display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: var(--s-2); margin-left: auto; }
+.yazma-eylemleri .projects-filter-button,
+.yazma-eylemleri .projects-primary-button { min-height: var(--kontrol-h-sik); padding: 0 var(--s-3); }
+.yazma-eylemleri .yazma-panel-dugmesi { width: var(--kontrol-h-sik); padding: 0; }
+/* Dokunmatikte ve tablette başlık satırının düğmeleri ve kayıt durumu 40 piksel (dokunma hedefi kuralı), telefonda 44. */
+@media (max-width: 1199px), (pointer: coarse) {
+  .yazma-eylemleri .projects-filter-button,
+  .yazma-eylemleri .projects-primary-button,
+  .yazma-durum .save-status { min-height: 40px; }
+  .yazma-eylemleri .yazma-panel-dugmesi { width: 40px; }
+}
+@media (max-width: 760px) {
+  .yazma-eylemleri .projects-filter-button,
+  .yazma-eylemleri .projects-primary-button { min-height: 44px; min-width: 44px; }
+  .yazma-eylemleri .yazma-panel-dugmesi { width: 44px; }
+}
+
+/* ---- Belge sütunu: araç çubuğu + belge tek çerçeve ---- */
+.manuscript-main { display: flex; flex-direction: column; min-width: 0; }
+.manuscript-main > .manuscript-araclar {
+  position: sticky; top: var(--topbar-height); z-index: var(--z-sticky);
+  border: 1px solid var(--line-soft); border-bottom-color: var(--line-soft);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--surface);
+}
+.manuscript-main > .manuscript-editor-shell { border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); box-shadow: none; }
+/* Bul-değiştir şeridi araç çubuğunun hemen altına yapışır (çubuk 46 piksel). */
+.manuscript-main .manuscript-ust { top: calc(var(--topbar-height) + 46px); z-index: calc(var(--z-sticky) - 1); background: var(--surface); }
+/* Seçim kutuları çubukta kenarlıksız; mockup'taki "Normal Metin" gibi. */
+.manuscript-araclar .toolbar-select { border-color: transparent; background-color: transparent; font-weight: 600; }
+.manuscript-araclar .toolbar-select:hover { background-color: var(--dugme-hover-zemin); }
+.arac-paragraf-stili { min-width: 128px; }
+/*
+  Menü düğmelerinin adları (Yazı, Paragraf, Ekle) yalnızca belge sütunu
+  genişken yazılı: panel açıkken 1440 pikselde sütun ~770 piksel ve
+  adlarla çubuk taşıyordu. Adlar aria-label ve ipucunda her zaman var.
+  Kap sorgusu (container query) bilerek kullanılmadı: kap, içindeki
+  pencerelerin (position:fixed) konum kutusu olurdu.
+*/
+.manuscript-araclar .arac-menu-dugme .arac-metin,
+.manuscript-araclar .arac-menu-dugme .arac-menu-ok { display: none; }
+@media (min-width: 1700px) {
+  .manuscript-araclar .arac-menu-dugme .arac-metin,
+  .manuscript-araclar .arac-menu-dugme .arac-menu-ok { display: inline; }
+}
+@media (min-width: 1200px) {
+  .manuscript-layout:not([data-inceleme]) .manuscript-araclar .arac-menu-dugme .arac-metin,
+  .manuscript-layout:not([data-inceleme]) .manuscript-araclar .arac-menu-dugme .arac-menu-ok { display: inline; }
+}
+.manuscript-araclar .arac-grup { padding: 0 4px; }
+.manuscript-araclar .arac-segment { background: transparent; }
+.manuscript-araclar button:hover:not(:disabled) { border-color: transparent; background: var(--dugme-hover-zemin); }
+.manuscript-araclar button.is-active,
+.manuscript-araclar .arac-segment button.is-active { border-color: transparent; background: var(--primary-soft); color: var(--primary-ink); box-shadow: none; }
+.arac-grup + .arac-grup { border-left-color: var(--line-soft); }
+
+/* ---- Durum çubuğu ---- */
+.yazim-durum-cubugu {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-4);
+  padding: var(--s-2) var(--s-1);
+  color: var(--muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums;
+}
+.yazim-durum-cubugu > span + span:not(.yazim-durum-kayit)::before { content: ""; display: inline-block; width: 1px; height: 12px; margin-right: var(--s-4); background: var(--line); vertical-align: -1px; }
+.yazim-durum-kayit { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.yazim-durum-kayit[data-tone="danger"] { color: var(--danger); }
+@media (min-width: 761px) {
+  /* Belge uzun olsa da sayılar görünür kalsın: çubuk ekranın altına yapışır. */
+  .yazim-durum-cubugu { position: sticky; bottom: 0; z-index: var(--z-sticky); background: var(--bg); }
+}
+
+/* ---- Yazım paneli ---- */
+/*
+  Masaüstünde panel, içerik alanının üst boşluğu (26 piksel,
+  .dashboard-main-content) kadar aşağıda yapışır: ilk açılışta ve
+  kaydırınca aynı yerde durur, yüksekliği ekranın kalanı.
+*/
+.yan-panel {
+  position: sticky; top: calc(var(--topbar-height) + 26px);
+  display: flex; flex-direction: column;
+  height: calc(100dvh - var(--topbar-height) - 26px - var(--s-4));
+  min-height: 420px; overflow: hidden;
+  border: 1px solid var(--line-soft); border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.yan-panel[hidden] { display: none; }
+.yan-panel-bas { display: flex; flex: none; align-items: center; gap: var(--s-1); padding: var(--s-2); border-bottom: 1px solid var(--line-soft); }
+/* Dört sekme eşit genişlikte, simge üstte: 360 pikselde adlar kesilmeden sığsın. */
+.yan-panel-sekmeler { display: grid; flex: 1 1 auto; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; min-width: 0; }
+.yan-panel-sekmeler [role="tab"] {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: 0; min-height: 44px; padding: 4px 2px;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted);
+  font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+  transition: background-color var(--sure-hizli) ease, color var(--sure-hizli) ease;
+}
+.yan-panel-sekmeler [role="tab"] > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yan-panel-sekmeler [role="tab"]:hover { background: var(--dugme-hover-zemin); color: var(--ink); }
+.yan-panel-sekmeler [role="tab"][aria-selected="true"] { background: var(--primary-soft); color: var(--primary-ink); }
+.yan-panel-sekmeler [role="tab"]:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.yan-panel-rozet {
+  position: absolute; top: 2px; right: 4px;
+  padding: 0 5px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-soft);
+  font-size: var(--fs-micro); font-weight: 600; line-height: 16px; font-variant-numeric: tabular-nums;
+}
+.yan-panel-kapat {
+  display: grid; flex: none; place-items: center; width: 36px; height: 36px;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer;
+}
+.yan-panel-kapat:hover { background: var(--dugme-hover-zemin); color: var(--ink); }
+.yan-panel-kapat:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.yan-panel-govde { display: grid; flex: 1 1 auto; align-content: start; gap: var(--s-4); min-height: 0; padding: var(--s-4); overflow-y: auto; overscroll-behavior: contain; }
+.yan-panel-govde[hidden] { display: none; }
+/* Asistan görünümü kendi kaydırmasını yapar (sohbet listesi), istek kutusu altta sabit. */
+.yan-panel-govde[data-gorunum="asistan"] { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; }
+.yan-panel-govde[data-gorunum="asistan"][hidden] { display: none; }
+/* Bölümler kart değil, ince çizgiyle ayrılan düz kesitler: panelin kendisi tek yüzey. */
+.yan-panel-govde > * + * { padding-top: var(--s-4); border-top: 1px solid var(--line-soft); }
+.yan-bolum { display: grid; gap: var(--s-3); min-width: 0; }
+.yan-bolum-bas { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.yan-bolum-bas h3 { margin: 0; font-size: var(--fs-md); font-weight: 600; }
+.yan-not { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.yan-eylemler { display: grid; gap: var(--s-2); }
+.yan-eylemler > button { justify-content: flex-start; width: 100%; }
+.yan-bolum.kontrol-karti > .projects-primary-button { width: 100%; }
+.yan-baglanti { display: flex; align-items: center; gap: var(--s-2); color: var(--primary-ink); font-size: var(--fs-sm); font-weight: 600; text-decoration: none; }
+.yan-baglanti > svg:last-child { margin-left: auto; }
+.yan-baglanti:hover { text-decoration: underline; }
+/* Paneldeki kutular satır: çerçeve ve gölge yok, imleçte yüzey koyulaşır. */
+.yan-panel .yan-kutular { gap: 2px; }
+.yan-panel .yan-kutu { padding: var(--s-2); border: 0; border-radius: var(--r-sm); background: transparent; box-shadow: none; }
+@media (hover: hover) and (pointer: fine) {
+  .yan-panel .yan-kutu:hover { border: 0; background: var(--dugme-hover-zemin); box-shadow: none; }
+}
+.yan-panel .yan-kutu:focus-visible { box-shadow: var(--odak-halkasi); }
+.yan-panel .yan-kutu-ikon { width: 30px; height: 30px; }
+.yan-panel .yan-kutu-bas { font-weight: 600; }
+.yan-panel .kontrol-olculer > div { border: 0; }
+.yan-panel .checklist-item { border-width: 0 0 1px; border-radius: 0; background: transparent; padding-inline: 0; }
+
+/* Satır içi öneri anahtarı (Asistan görünümünün başı) */
+.yan-anahtar { display: flex; flex: none; align-items: flex-start; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--line-soft); }
+.yan-anahtar > span { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
+.yan-anahtar b { font-size: var(--fs-sm); font-weight: 600; }
+.yan-anahtar small { color: var(--muted); font-size: var(--fs-micro); line-height: 1.45; }
+.yan-anahtar-dugme {
+  position: relative; flex: none; width: 36px; height: 22px; margin-top: 2px; padding: 0;
+  border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface-sunken); cursor: pointer;
+  transition: background-color var(--sure-hizli) ease, border-color var(--sure-hizli) ease;
+}
+.yan-anahtar-dugme > span {
+  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--surface); box-shadow: var(--shadow-sm); transition: transform var(--sure-hizli) ease;
+}
+.yan-anahtar-dugme[aria-checked="true"] { border-color: var(--primary); background: var(--primary); }
+.yan-anahtar-dugme[aria-checked="true"] > span { transform: translateX(14px); }
+.yan-anahtar-dugme:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+/* Dokunmatikte basılan alan büyür, görünen anahtar aynı. */
+@media (max-width: 1199px), (pointer: coarse) {
+  .yan-anahtar-dugme::after { content: ""; position: absolute; inset: -11px -4px; }
+}
+
+/* ---- Tablet ve telefon: panel belgenin üstüne açılan sayfa ---- */
+.yan-panel-ortu { position: fixed; inset: 0; z-index: calc(var(--z-dock) + 1); padding: 0; border: 0; background: var(--overlay); cursor: default; }
+.yan-panel[data-bicim="sayfa"] {
+  position: fixed; top: calc(var(--topbar-height) + var(--s-2)); right: var(--s-2); bottom: var(--s-2);
+  z-index: calc(var(--z-dock) + 2);
+  width: min(420px, calc(100vw - var(--s-4))); height: auto; min-height: 0;
+  border-color: var(--line); box-shadow: var(--pencere-golge);
+  animation: yan-panel-gir var(--sure-orta) var(--ease-sheet);
+}
+@keyframes yan-panel-gir { from { opacity: 0; transform: translateX(16px); } }
+@media (max-width: 760px) {
+  .yan-panel[data-bicim="sayfa"] {
+    top: auto; right: 0; bottom: 0; left: 0; width: 100%; height: 85dvh;
+    border-radius: var(--r-xl) var(--r-xl) 0 0; padding-bottom: env(safe-area-inset-bottom);
+    animation-name: yan-panel-alttan;
+  }
+  @keyframes yan-panel-alttan { from { transform: translateY(24px); opacity: 0; } }
+
+  /* Başlık satırı: geri, başlık ve kayıt durumu üstte; eylemler altta tek satır, ikinciller simge. */
+  .yazma-basligi { flex-wrap: wrap; gap: var(--s-2); }
+  .yazma-geri { display: inline-flex; flex: none; width: 44px; min-height: 44px; padding: 0; }
+  .yazma-baslik { flex: 1 1 calc(100% - 56px); }
+  .yazma-baslik-simge { display: none; }
+  .yazma-baslik h1 { font-size: var(--fs-lg); }
+  .yazma-eylemleri { width: 100%; margin-left: 0; }
+  .yazma-eylemleri > * { min-height: 44px; min-width: 44px; justify-content: center; }
+  .yazma-eylemleri .yazma-etiket,
+  .yazma-eylemleri .arac-metin,
+  .yazma-eylemleri .arac-menu-ok { display: none; }
+  .yazma-eylemleri .yazma-ai { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yan-panel[data-bicim="sayfa"] { animation: none; }
+  .yan-anahtar-dugme, .yan-anahtar-dugme > span { transition: none; }
+}
+@media print {
+  .yazma-basligi, .yan-panel, .yan-panel-ortu, .yazim-durum-cubugu { display: none !important; }
+}
+

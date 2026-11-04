@@ -1,15 +1,13 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { Check, Circle, FileUp, ListChecks, Plus, Wand2, PanelRightClose } from "lucide-react";
+import { useState } from "react";
+import { Check, Circle, FileUp, ListChecks, Plus, Wand2 } from "lucide-react";
 import Dialog from "@/app/dashboard/_components/dialog";
 import YanKutu from "./yan-kutu";
 import type { OutlineHeading, SectionStatus } from "./editor-navigation";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 
 interface ManuscriptOutlineProps {
-  /** En üstteki kart: kontrol düğmeleri, ilerleme ve çıktı (manuscript-editor.tsx) */
-  ust?: ReactNode;
   sections: SectionStatus[];
   documentEmpty: boolean;
   onJump: (heading: OutlineHeading) => void;
@@ -17,46 +15,29 @@ interface ManuscriptOutlineProps {
   onTemplate: () => void;
   /** Word dosyasından aktarma penceresini açar */
   onImport: () => void;
-  /** Kılavuz bölümleri kutusunun yanındaki küçük kutular (içindekiler, kaynaklar, yorumlar) */
-  children?: ReactNode;
 }
 
 /*
-  Yazarken yol gösteren sağ panel. Sıra (26.10.2026, kurum sahibinin
-  isteği): kontrol kartı, kılavuz bölümleri, içindekiler, bekleyen
-  kaynaklar, yorumlar. Eskiden "İlerleme" ayrı karttı ve "Belge planı"
-  panelin altında her zaman açık uzun bir listeydi; ilerleme kontrol
-  kartına, belge planı İçindekiler penceresine taşındı.
+  KILAVUZ BÖLÜMLERİ: yazım panelinin "Teslim" görünümünde bir satır ve
+  penceresi. Eskiden bu bileşen "İncele" panelinin kendisiydi (kabuk,
+  başlık, kontrol kartı ve öteki kutular onun çocuklarıydı); Signature
+  OS Phase 2'de panel tek bir bileşene (yan-panel.tsx) geçti ve burada
+  yalnızca bölümlerin işi kaldı.
 */
 export default function ManuscriptOutline({
-  ust,
   sections,
   documentEmpty,
   onJump,
   onInsert,
   onTemplate,
   onImport,
-  onKapat,
-  children,
-}: ManuscriptOutlineProps & { onKapat?: () => void }) {
+}: ManuscriptOutlineProps) {
   const missing = sections.filter((item) => !item.heading).map((item) => item.section);
   const [acik, setAcik] = useState(false);
   const t = useCeviri();
 
   return (
-    <aside className="manuscript-outline" aria-label={t({ tr: "İnceleme paneli", en: "Review panel" })}>
-      {/* Panel kapanabilir (04.11.2026): yazmaya odaklanan öğrenci metne yer açar; tercih tarayıcıda kalır. */}
-      <header className="inceleme-bas">
-        <b>{t({ tr: "İncele", en: "Review" })}</b>
-        {onKapat ? (
-          <button type="button" className="yazim-ikon" onClick={onKapat} aria-label={t({ tr: "İnceleme panelini kapat", en: "Close review panel" })} title={t({ tr: "İnceleme panelini kapat", en: "Close review panel" })}>
-            <PanelRightClose size={16} aria-hidden="true" />
-          </button>
-        ) : null}
-      </header>
-      {ust}
-
-      <div className="yan-kutular">
+    <>
         {sections.length > 0 ? (
           <YanKutu
             ikon={ListChecks}
@@ -72,8 +53,6 @@ export default function ManuscriptOutline({
             onClick={() => setAcik(true)}
           />
         ) : null}
-        {children}
-      </div>
 
       {sections.length > 0 ? (
         <Dialog
@@ -141,6 +120,6 @@ export default function ManuscriptOutline({
           {t({ tr: "Word dosyasından aktar", en: "Import from Word file" })}
         </button>
       ) : null}
-    </aside>
+    </>
   );
 }

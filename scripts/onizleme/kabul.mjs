@@ -184,6 +184,132 @@ const tarayici = await chromium.launch();
   await sayfa.close();
 }
 
+// ---- YAZIM STÜDYOSU (Signature OS Phase 2): tek sağ panel, başlık satırı, işlev matrisi ----
+{
+  const YAZ = `/dashboard/editor/${TEZ}/write`;
+  const yeniSayfa = async (viewport, yol = YAZ, ek = {}) => {
+    const ctx = await tarayici.newContext({ viewport, ...ek });
+    const sayfa = await ctx.newPage();
+    await git(sayfa, yol);
+    await sayfa.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
+    // Next'in geliştirme araçları düğmesi sol alt köşede bazı düğmelerin üstüne biniyor (yalnızca dev).
+    await sayfa.addStyleTag({ content: "nextjs-portal { display: none !important }" });
+    return { ctx, sayfa };
+  };
+
+  await senaryo("stüdyo: masaüstünde tek panel sütun; dört sekme, ok tuşu sekme değiştirir", async () => {
+    const { ctx, sayfa } = await yeniSayfa({ width: 1440, height: 900 });
+    const panel = sayfa.locator("#yazim-yan-panel");
+    bekle(await panel.isVisible(), "panel masaüstünde varsayılan açık değil");
+    bekle((await panel.getAttribute("data-bicim")) === "sutun", "panel sütun biçiminde değil");
+    const sekmeler = panel.getByRole("tab");
+    bekle((await sekmeler.count()) === 4, `${await sekmeler.count()} sekme var (4 beklenir)`);
+    bekle((await panel.getByRole("tab", { selected: true }).innerText()).includes("İnceleme"), "varsayılan görünüm İnceleme değil");
+    await panel.getByRole("tab", { selected: true }).focus();
+    await sayfa.keyboard.press("ArrowRight");
+    bekle((await panel.getByRole("tab", { selected: true }).innerText()).includes("Kaynaklar"), "→ Kaynaklar'a geçmedi");
+    bekle(await sayfa.evaluate(() => document.activeElement?.getAttribute("role") === "tab"), "odak sekmede kalmadı");
+    // Asistan kutusu ayrı bir sabit kutu değil: yalnızca panelin içinde var.
+    bekle((await sayfa.locator(".yazim-paneli").count()) <= 1, "birden fazla asistan kutusu");
+    await ctx.close();
+  });
+
+  await senaryo("stüdyo: Arvo AI asistanı panelde açar; panel kapanınca belge sütunu genişler", async () => {
+    const { ctx, sayfa } = await yeniSayfa({ width: 1440, height: 900 });
+    const once = (await sayfa.locator(".manuscript-main").boundingBox()).width;
+    await sayfa.locator(".yazma-ai").click();
+    const panel = sayfa.locator("#yazim-yan-panel");
+    await sayfa.waitForTimeout(300);
+    bekle((await panel.getByRole("tab", { selected: true }).innerText()).includes("Asistan"), "Arvo AI asistan görünümünü açmadı");
+    bekle(await panel.locator(".yazim-paneli textarea").isVisible(), "asistanın istek kutusu görünmüyor");
+    const kutu = await panel.locator(".yazim-paneli textarea").boundingBox();
+    bekle(kutu.y + kutu.height <= 900, `istek kutusu ekranın altına taşıyor (${Math.round(kutu.y + kutu.height)})`);
+    await panel.getByRole("button", { name: "Paneli kapat" }).click();
+    await sayfa.waitForTimeout(300);
+    bekle(!(await panel.isVisible()), "panel kapanmadı");
+    const sonra = (await sayfa.locator(".manuscript-main").boundingBox()).width;
+    bekle(sonra > once + 150, `belge sütunu genişlemedi (${Math.round(once)} → ${Math.round(sonra)})`);
+    bekle((await sayfa.evaluate(() => localStorage.getItem("arvolab:inceleme-paneli"))) === "0", "kapalı tercih kaydedilmedi");
+    await ctx.close();
+  });
+
+  await senaryo("stüdyo: ?teslim=… Teslim görünümünü açar ve maddeyi vurgular", async () => {
+    const { ctx, sayfa } = await yeniSayfa({ width: 1440, height: 900 }, `${YAZ}?teslim=cover`);
+    const panel = sayfa.locator("#yazim-yan-panel");
+    bekle((await panel.getByRole("tab", { selected: true }).innerText()).includes("Teslim"), "Teslim görünümü açılmadı");
+    bekle(await panel.locator(".checklist").isVisible(), "teslim listesi panelde değil");
+    bekle(await panel.getByRole("button", { name: /Kılavuz ve kaynakça kontrolü/ }).isVisible(), "kılavuz kontrolü düğmesi Teslim görünümünde değil");
+    await ctx.close();
+  });
+
+  /*
+    İŞLEV MATRİSİ: Phase 2'den önce editörde olan her denetimin yeni
+    yerleşimde hâlâ ULAŞILABİLİR olduğu. Menüler açılarak taranır; ad
+    aria-label, title ya da görünen metinden okunur. Bir işlev sessizce
+    kaybolursa burası düşer.
+  */
+  await senaryo("stüdyo: işlev matrisi — eski editörün bütün denetimleri yeni yerleşimde var", async () => {
+    const { ctx, sayfa } = await yeniSayfa({ width: 1440, height: 900 });
+    const adlar = new Set();
+    const topla = async (kok) => {
+      for (const ad of await sayfa.locator(`${kok} :is(button, select, a, h3, [role=switch], [role=tab])`).evaluateAll((el) =>
+        el.filter((e) => e.checkVisibility()).map((e) => `${e.getAttribute("aria-label") ?? ""} ${e.getAttribute("title") ?? ""} ${e.textContent ?? ""}`),
+      )) adlar.add(ad.replace(/\s+/g, " "));
+    };
+    await topla(".yazma-basligi");
+    await topla(".manuscript-araclar");
+    for (const menu of await sayfa.locator(".manuscript-araclar .arac-menu-dugme, .yazma-eylemleri [aria-haspopup=menu]").all()) {
+      await menu.click();
+      await sayfa.waitForTimeout(150);
+      await topla(".arac-menu-pencere:not([hidden])");
+      await sayfa.keyboard.press("Escape");
+    }
+    const panel = sayfa.locator("#yazim-yan-panel");
+    for (const sekme of ["Asistan", "İnceleme", "Kaynaklar", "Teslim"]) {
+      await panel.getByRole("tab", { name: new RegExp(sekme) }).click();
+      await sayfa.waitForTimeout(250);
+      await topla("#yazim-yan-panel");
+    }
+    const hepsi = [...adlar].join(" | ");
+    const GEREKEN = [
+      "Geri al", "Yinele", "Kalın", "İtalik", "Altı çizili", "Üst simge", "Paragraf stili", "Yazı tipi", "Yazı boyutu",
+      "Madde işaretli liste", "Numaralı liste", "Alıntı", "Sola hizala", "Ortala", "Sağa hizala", "İki yana yasla", "Satır aralığı", "İlk satır girintisi",
+      "Tablo ekle", "Resim ekle", "Dipnot ekle", "Analiz sonucu ekle", "Resimlerim", "Şekil başlığı", "Tablo başlığı", "Word dosyasından aktar",
+      "Kaynaktan atıf ekle", "Bul ve değiştir", "Sayfa ayarları", "Kapak sayfası", "Sürüm geçmişi", "Klavye kısayolları", "Odak modu",
+      "Danışmana paylaş", "Word (.docx)", "PDF / Yazdır", "LaTeX", "Arvo AI", "Otomatik satır içi öneri", "Seçili cümleye kaynak bul",
+      "Kılavuz ve kaynakça kontrolü", "Teslim kontrolü", "İçindekiler", "Yazım ipuçları", "Yazarlık", "Yorumlar", "yapı uyarısı", "Kaynak kütüphanesini aç",
+    ];
+    const eksik = GEREKEN.filter((g) => !hepsi.includes(g));
+    bekle(eksik.length === 0, `ulaşılamayan işlevler: ${eksik.join(", ")}`);
+    await ctx.close();
+  });
+
+  await senaryo("stüdyo: tablette panel kapalı başlar, Arvo AI sayfa olarak açar, Esc kapatır ve odak geri döner", async () => {
+    const { ctx, sayfa } = await yeniSayfa({ width: 820, height: 1180 });
+    const panel = sayfa.locator("#yazim-yan-panel");
+    bekle(!(await panel.isVisible()), "tablette panel belgeyi örterek açık başladı");
+    await sayfa.locator(".yazma-ai").click();
+    await sayfa.waitForTimeout(400);
+    bekle(await panel.isVisible() && (await panel.getAttribute("data-bicim")) === "sayfa", "panel sayfa biçiminde açılmadı");
+    await sayfa.keyboard.press("Escape");
+    await sayfa.waitForTimeout(300);
+    bekle(!(await panel.isVisible()), "Esc paneli kapatmadı");
+    bekle(await sayfa.evaluate(() => document.activeElement?.classList.contains("yazma-ai")), "odak Arvo AI düğmesine dönmedi");
+    await ctx.close();
+  });
+
+  await senaryo("stüdyo: telefonda panel alttan açılan sayfa, yatay kayma yok", async () => {
+    const { ctx, sayfa } = await yeniSayfa({ width: 390, height: 844 }, YAZ, { hasTouch: true, isMobile: true });
+    await sayfa.locator(".yazma-panel-dugmesi").click();
+    await sayfa.waitForTimeout(400);
+    const kutu = await sayfa.locator("#yazim-yan-panel").boundingBox();
+    bekle(kutu && kutu.width >= 389 && kutu.y + kutu.height >= 843, `alttan açılan sayfa değil: ${JSON.stringify(kutu)}`);
+    const tasma = await sayfa.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    bekle(tasma <= 1, `sayfa ${tasma}px taşıyor`);
+    await ctx.close();
+  });
+}
+
 // ---- TABLET (820×1180): dar ray, sayfa sekmeleri ----
 {
   const sayfa = await tarayici.newPage({ viewport: { width: 820, height: 1180 } });

@@ -32,7 +32,6 @@ import {
   ShieldCheck,
   FileCode,
   SearchCheck,
-  WandSparkles,
   Plus,
   MoreHorizontal,
   PanelRightOpen,
@@ -67,6 +66,7 @@ import {
   ClipboardCheck,
   Share2,
   ArrowLeftToLine,
+  Type,
   ArrowRightToLine,
   ArrowUpToLine,
   ArrowDownToLine,
@@ -76,6 +76,10 @@ import {
   TableCellsMerge,
   TableCellsSplit,
   Sparkles,
+  FileSearch,
+  Library,
+  Cloud,
+  CloudOff,
 } from "lucide-react";
 
 import type { ImportMode } from "./import-dialog";
@@ -135,6 +139,9 @@ import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
 import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni } from "@/lib/kilavuz-bicim";
 import ManuscriptOutline from "./manuscript-outline";
+import TeslimListesi from "./submission-checklist";
+import YanPanel, { useEkranSinifi, type PanelSekmesi } from "./yan-panel";
+import { acilisGorunumu, panelAcikMi, panelBicimi, type PanelGorunumu } from "@/lib/yazim-yan-panel";
 import {
   applyTemplate,
   collectHeadings,
@@ -170,7 +177,6 @@ const ImportDialog = dynamic(() => import("./import-dialog"), { ssr: false });
 const ImageLibraryDialog = dynamic(() => import("./image-library-dialog"), { ssr: false });
 const ShortcutsDialog = dynamic(() => import("./shortcuts-dialog"), { ssr: false });
 const VersionsDialog = dynamic(() => import("./versions-dialog"), { ssr: false });
-const SubmissionChecklistDialog = dynamic(() => import("./submission-checklist"), { ssr: false });
 const ShareDialog = dynamic(() => import("./share-dialog"), { ssr: false });
 const CiteDialog = dynamic(() => import("./cite-dialog"), { ssr: false });
 const AnalizEkleDialog = dynamic(() => import("./analiz-ekle-dialog"), { ssr: false });
@@ -408,6 +414,8 @@ function computeDocStats(editor: Editor) {
   });
   return {
     words: (editor.storage.characterCount?.words?.() as number | undefined) ?? 0,
+    /* Durum çubuğunda (Signature OS Phase 2). Dipnot ve boşluklar dahil, Word'ün "karakter (boşluklar dahil)" sayısı gibi. */
+    characters: (editor.storage.characterCount?.characters?.() as number | undefined) ?? 0,
     footnotes,
     headings: collectHeadings(editor.state.doc),
     empty: isDocumentEmpty(editor.state.doc),
@@ -547,7 +555,6 @@ export default function ManuscriptEditor({
   const [structureIssues, setStructureIssues] = useState<StructureIssue[] | null>(sonKontrol?.yapi ?? null);
   const [liveIssues, setLiveIssues] = useState<StructureIssue[] | null>(null);
   const [issuesOpen, setIssuesOpen] = useState(false);
-  const [checklistOpen, setChecklistOpen] = useState(Boolean(acilacakMadde));
   /*
     ANA SAYFADAN GELEN MADDE. Ana sayfa eksikleri yazıyordu ama onlar
     düz metindi: öğrenci "Eksik: Bulgular, Sonuç" okuyup nereye
@@ -596,7 +603,6 @@ export default function ManuscriptEditor({
   const [headingNumbering, setHeadingNumbering] = useState(initialHeadingNumbering);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [citeOpen, setCiteOpen] = useState(false);
-  const [yazimAcik, setYazimAcik] = useState(asistanAcikBasla);
   const [analizOpen, setAnalizOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -908,8 +914,57 @@ export default function ManuscriptEditor({
   */
   const otomatikOneri = useSyncExternalStore(tercihAboneligi, () => tercihOku(ONERI_TERCIHI, false), () => false);
   const otomatikOneriAyarla = useCallback((acik: boolean) => tercihYaz(ONERI_TERCIHI, acik), []);
-  /* İnceleme paneli varsayılan AÇIK: kılavuz ve yapı uyarıları orada; kapatan öğrenci bilerek kapatır. */
-  const incelemeAcik = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, true), () => true);
+  /*
+    YAZIM PANELİ (Signature OS Phase 2, lib/yazim-yan-panel.ts): asistan,
+    inceleme, kaynaklar ve teslim tek panelde. Masaüstünde açıklık
+    tarayıcıda hatırlanır (varsayılan AÇIK: kılavuz ve yapı uyarıları
+    orada; kapatan öğrenci bilerek kapatır). Tablet ve telefonda panel
+    belgenin üstüne açılan bir sayfa ve yalnızca açılınca açık.
+    "?asistan=1" ve "?teslim=<madde>" ilgili görünümü açık başlatır.
+  */
+  const panelTercihi = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, true), () => true);
+  const ekran = useEkranSinifi();
+  const bicim = panelBicimi(ekran);
+  const ilkGorunum = acilisGorunumu({ asistan: asistanAcikBasla, teslim: acilacakMadde });
+  const [panelOturumda, setPanelOturumda] = useState<boolean | null>(ilkGorunum ? true : null);
+  const [gorunum, setGorunum] = useState<PanelGorunumu>(ilkGorunum ?? "inceleme");
+  /* Asistan, ilk kez açılana kadar kurulmaz (yazim-paneli.tsx ayrı bir paket); açıldıktan sonra sohbet korunur. */
+  const [asistanKuruldu, setAsistanKuruldu] = useState(ilkGorunum === "asistan");
+  const panelAcik = panelAcikMi({ ekran, tercih: panelTercihi, oturumdaAcildi: panelOturumda });
+  const panelAc = useCallback(
+    (hedef: PanelGorunumu) => {
+      setGorunum(hedef);
+      if (hedef === "asistan") setAsistanKuruldu(true);
+      setPanelOturumda(true);
+      if (bicim === "sutun") tercihYaz(INCELEME_TERCIHI, true);
+    },
+    [bicim],
+  );
+  const panelKapat = useCallback(() => {
+    setPanelOturumda(false);
+    if (bicim === "sutun") tercihYaz(INCELEME_TERCIHI, false);
+    setVurguluMadde(null);
+    /*
+      Adres temizlenir: "?asistan=1" ya da "?teslim=…" kalsaydı sayfa
+      yenilenince panel yeniden açılırdı. Olay işleyicisinde, çizim
+      sırasında değil.
+    */
+    const temiz = new URL(window.location.href);
+    if (temiz.searchParams.has("asistan") || temiz.searchParams.has("teslim")) {
+      temiz.searchParams.delete("asistan");
+      temiz.searchParams.delete("teslim");
+      window.history.replaceState(null, "", temiz.toString());
+    }
+  }, [bicim]);
+  /*
+    Belgede bir yere götüren eylemden (bölüm ekle, kapak, numara temizle)
+    önce: panel belgenin ÜSTÜNDEYSE (tablet, telefon) kapanır, yoksa
+    öğrenci "ekle"ye basar ama eklenen yeri göremezdi. Masaüstünde panel
+    belgenin yanında, açık kalır.
+  */
+  const sayfaysaKapat = useCallback(() => {
+    if (bicim === "sayfa") panelKapat();
+  }, [bicim, panelKapat]);
   /*
     Odak modu: sayfa başlığı, araç çubuğu dışındaki her şey ve inceleme
     paneli gizlenir, metin ortada kalır. Bilerek hatırlanmıyor: sayfayı
@@ -1015,20 +1070,6 @@ export default function ManuscriptEditor({
   }, [editor, structureOptions, dil]);
 
   const closeIssues = useCallback(() => setIssuesOpen(false), []);
-  const closeChecklist = useCallback(() => {
-    setChecklistOpen(false);
-    setVurguluMadde(null);
-    /*
-      Adres de temizleniyor: parametre kalsaydı sayfa yenilendiğinde
-      pencere kendiliğinden yeniden açılırdı. Olay işleyicisinde,
-      çizim sırasında değil.
-    */
-    const temiz = new URL(window.location.href);
-    if (temiz.searchParams.has("teslim")) {
-      temiz.searchParams.delete("teslim");
-      window.history.replaceState(null, "", temiz.toString());
-    }
-  }, []);
   const closeShare = useCallback(() => setShareOpen(false), []);
 
   // Kılavuzun yeni sürümü kendiliğinden uygulandıysa kalıcı olsun (bir kez).
@@ -1509,6 +1550,7 @@ export default function ManuscriptEditor({
 
   if (!editor) return <div className="manuscript-editor-shell manuscript-editor-loading" aria-busy="true" />;
   const eylemHedefi = document.getElementById("yazma-eylemleri");
+  const durumHedefi = document.getElementById("yazma-durum");
   // Editör oluştuğu ilk çizimde abonelik henüz anlık görüntü üretmemiş olabilir;
   // o an için durum doğrudan okunur (ilk işlemden sonra abonelik devralır).
   const ui = toolbarState ?? selectToolbarState({ editor })!;
@@ -1587,33 +1629,32 @@ export default function ManuscriptEditor({
         window.open(`/dashboard/editor?sec=${encodeURIComponent(projectId)}&kilavuz=1`, "_self");
         break;
       /*
-        ÖNCE PENCERE KAPANIYOR, SONRA EKLENİYOR.
+        ÖNCE BELGE GÖRÜNÜR OLUR, SONRA EKLENİR.
 
         insertSections eklenen ilk bölüme kaydırıp imleci oraya
-        koyuyor — yani öğrenciyi yazacağı yere bırakıyor. Pencere açık
-        kalırken bunun hiçbiri görünmüyordu: kipli pencere belgenin
-        üstünü örtüyor ve odak tuzağı imleci geri çekiyor. Öğrenci
-        "ekle"ye basıyor, iş gerçekten yapılıyor ama ekranda bir şey
-        değişmiyordu.
+        koyuyor — yani öğrenciyi yazacağı yere bırakıyor. Liste eskiden
+        kipli bir penceredeydi ve açık kalırken bunun hiçbiri
+        görünmüyordu: öğrenci "ekle"ye basıyor, iş gerçekten yapılıyor
+        ama ekranda bir şey değişmiyordu. Liste artık yazım panelinde;
+        masaüstünde belge yanında görünür, tablet ve telefonda panel
+        belgenin üstünde olduğu için önce kapanıyor (sayfaysaKapat).
 
-        setTimeout, React pencereyi söküp odak tuzağının temizliğini
-        çalıştırsın diye: aynı olayda çağırsaydık odak son olarak
-        tuzağın geri yüklediği yere giderdi.
+        setTimeout, panel kapanıp odak açan düğmeye döndükten SONRA
+        imleç belgeye gitsin diye: aynı olayda çağırsaydık odak son
+        olarak panelin geri verdiği yere giderdi.
       */
       case "insert-sections": {
         if (!missingSections.length) break;
         const eklenecek = missingSections;
-        setChecklistOpen(false);
-        setVurguluMadde(null);
+        sayfaysaKapat();
         window.setTimeout(() => handleInsertSections(eklenecek), 0);
         break;
       }
       case "open-issues":
-        setChecklistOpen(false);
         setIssuesOpen(true);
         break;
       case "open-cover":
-        setChecklistOpen(false);
+        sayfaysaKapat();
         setCoverPageEnabled(true);
         setShowCoverPageEditor(true);
         break;
@@ -1632,8 +1673,7 @@ export default function ManuscriptEditor({
         break;
       /* Bu da imleci belgeye taşıyor: aynı gerekçeyle önce pencere kapanıyor. */
       case "strip-manual-numbers":
-        setChecklistOpen(false);
-        setVurguluMadde(null);
+        sayfaysaKapat();
         window.setTimeout(() => editor.chain().focus().stripManualHeadingNumbers().run(), 0);
         break;
       case "save":
@@ -2013,6 +2053,14 @@ export default function ManuscriptEditor({
     if (first) jumpToHeading(editor, first);
   };
 
+  /* Panelin sekmeleri; Teslim sekmesi hazır madde sayısını taşır (eskiden başlıktaki "Teslim kontrolü 1/5" düğmesi). */
+  const panelSekmeleri: PanelSekmesi[] = [
+    { id: "asistan", etiket: t({ tr: "Asistan", en: "Assistant" }), ikon: Sparkles },
+    { id: "inceleme", etiket: t({ tr: "İnceleme", en: "Review" }), ikon: FileSearch },
+    { id: "kaynaklar", etiket: t({ tr: "Kaynaklar", en: "Sources" }), ikon: BookMarked },
+    { id: "teslim", etiket: t({ tr: "Teslim", en: "Submission" }), ikon: ClipboardCheck, rozet: `${checklist.done}/${checklist.total}` },
+  ];
+
   const statusLabel =
     saveState === "saving"
       ? t({ tr: "Kaydediliyor…", en: "Saving…" })
@@ -2029,30 +2077,41 @@ export default function ManuscriptEditor({
   return (
     <>
       {/*
-        EYLEM DÜĞMELERİ SAYFA BAŞLIĞINDA (26.10.2026, kurum sahibinin
-        isteği: "butonları çalışma özeti butonunun yanına almalı, yer
-        kazanmak için"). Başlık sunucu bileşeninde (page.tsx) çiziliyor,
-        düğmeler editörün durumuna bağlı; başlıktaki #yazma-eylemleri
-        kutusuna portal ile yerleşiyorlar. Editör yalnızca tarayıcıda
-        kurulduğu için bu satıra gelindiğinde document hep var.
+        BAŞLIK SATIRI (Signature OS Phase 2). Başlık sunucu bileşeninde
+        (page.tsx), kayıt durumu ve belge işlemleri editörün durumuna
+        bağlı; başlıktaki #yazma-durum ve #yazma-eylemleri kutularına
+        portal ile yerleşiyorlar. Editör yalnızca tarayıcıda kurulduğu
+        için bu satıra gelindiğinde document hep var.
+
+        Eskiden burada "Teslim kontrolü 1/5", "Dışa aktar" ve birincil
+        "Kılavuz ve kaynakça kontrolü" vardı; paylaşım "Belge" menüsünün
+        içindeydi. Teslim kontrolü ve kılavuz kontrolü yazım panelinin
+        "Teslim" görünümüne taşındı (listenin yanında, sonucuyla birlikte);
+        başlıkta belgenin kendisiyle yapılanlar kaldı: paylaş, dışa aktar
+        ve paneli açan Arvo AI.
       */}
+      {durumHedefi
+        ? createPortal(
+            /* Kayıt durumu: tıklayınca şimdi kaydeder (Ctrl+S). Eskiden belgenin üstünde ayrı bir şeritteydi. */
+            <button
+              type="button"
+              className="save-status"
+              data-state={saveState}
+              title={t({ tr: "Şimdi kaydet (Ctrl+S)", en: "Save now (Ctrl+S)" })}
+              aria-live="polite"
+              onClick={() => void saveNow()}
+            >
+              {statusLabel}
+            </button>,
+            durumHedefi,
+          )
+        : null}
       {eylemHedefi
         ? createPortal(
             <>
-              <button
-                type="button"
-                className="projects-filter-button"
-                data-tone={checklist.done === checklist.total ? "success" : undefined}
-                onClick={() => setChecklistOpen(true)}
-                title={t({ tr: "Teslimden önce bakılacaklar", en: "What to check before submission" })}
-                aria-label={t({ tr: `Teslim kontrolü ${checklist.done}/${checklist.total}`, en: `Submission checklist ${checklist.done}/${checklist.total}` })}
-              >
-                <ClipboardCheck size={15} aria-hidden="true" />
-                {/* Telefonda yalnızca sayı kalır (Phase 3): başlık satırı 390 pikselde 722 piksele taşıyordu. */}
-                <span className="yazma-etiket">{t({ tr: "Teslim kontrolü", en: "Submission checklist" })}</span> {checklist.done}/{checklist.total}
-                {/* Kuralların kaynağı alt çubukta da görünüyor: pencereyi
-                    açmadan "neye göre hazır" sorusunun cevabı bilinmeli. */}
-                {guideline && !guideline.dogrulandi ? <small className="kural-kaynagi">{t({ tr: "kendi kılavuzunuz", en: "your own guideline" })}</small> : null}
+              <button type="button" className="projects-filter-button" onClick={() => setShareOpen(true)} aria-label={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })} title={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })}>
+                <Share2 size={15} aria-hidden="true" />
+                <span className="yazma-etiket">{t({ tr: "Paylaş", en: "Share" })}</span>
               </button>
               {/* Üç çıktı tek menüde (04.11.2026): başlık satırı tek satıra sığsın. */}
               <AracMenusu
@@ -2075,34 +2134,38 @@ export default function ManuscriptEditor({
                 </button>
               </AracMenusu>
               {/*
-                Adı NE DENETLEDİĞİNİ söylüyor. Alt çubukta üç ayrı "kontrol"
-                vardı ve en kapsamlısının adı en belirsiziydi: soldaki rozet
-                yalnızca YAPIYI denetliyor (canlı), "Teslim kontrolü" bir
-                kontrol listesi, bu düğme ise kılavuz uyumunu ve kaynakça
-                çapraz denetimini çalıştırıyor. Üçü de "kontrol" deyince
-                öğrenci hangisinin neye baktığını ayırt edemiyordu.
+                Birincil eylem: Arvo AI. Yazım asistanını panelde açar; asistan
+                zaten açıksa paneli kapatır. Adı ürünün asistanı; yaptığı iş
+                değişmedi (yazim-paneli.tsx: sohbette yazar, belgeye eklemek
+                öğrencinin düğmesi).
               */}
               <button
                 type="button"
-                className="projects-primary-button"
-                onClick={handleCheck}
-                disabled={checking}
-                title={t({
-                  tr: "Kılavuzun zorunlu bölümleri, atıf stili ve kaynakça–atıf eşleşmesi",
-                  en: "Required guideline sections, citation style and reference–citation matching",
-                })}
+                className="projects-primary-button yazma-ai"
+                aria-expanded={panelAcik && gorunum === "asistan"}
+                aria-controls="yazim-yan-panel"
+                onClick={() => (panelAcik && gorunum === "asistan" ? panelKapat() : panelAc("asistan"))}
               >
-                <ShieldCheck size={15} aria-hidden="true" />
-                <span className="yazma-etiket">
-                  {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
-                </span>
-                <span className="yazma-etiket-kisa">{checking ? t({ tr: "Kontrol…", en: "Checking…" }) : t({ tr: "Kontrol", en: "Check" })}</span>
+                <Sparkles size={15} aria-hidden="true" />
+                <span>{t({ tr: "Arvo AI", en: "Arvo AI" })}</span>
+              </button>
+              <button
+                type="button"
+                className="projects-filter-button yazma-panel-dugmesi"
+                aria-expanded={panelAcik}
+                aria-controls="yazim-yan-panel"
+                aria-label={panelAcik ? t({ tr: "Yazım panelini kapat", en: "Close writing panel" }) : t({ tr: "Yazım panelini aç", en: "Open writing panel" })}
+                title={panelAcik ? t({ tr: "Yazım panelini kapat", en: "Close writing panel" }) : t({ tr: "Yazım panelini aç", en: "Open writing panel" })}
+                onClick={() => (panelAcik ? panelKapat() : panelAc(gorunum))}
+              >
+                {panelAcik ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
               </button>
             </>,
             eylemHedefi,
           )
         : null}
-    <div className="manuscript-layout" data-inceleme={incelemeAcik ? "" : undefined} data-odak={odak ? "" : undefined}>
+    <div className="manuscript-layout" data-inceleme={panelAcik && bicim === "sutun" ? "" : undefined} data-odak={odak ? "" : undefined}>
+    <div className="manuscript-main">
       {/*
         TEK SATIR ARAÇ ÇUBUĞU (04.11.2026, kurum sahibinin isteği: Jenni'nin
         yazım ekranı örnek; "daha elit, daha akışkan").
@@ -2126,7 +2189,14 @@ export default function ManuscriptEditor({
           </ToolbarButton>
           </div>
         </div>
+        {/*
+          Yazı tipi ve punto bir menüde (Signature OS Phase 2): araç çubuğu
+          artık belge sütununun genişliğinde ve iki geniş seçim kutusu onun
+          üçte birini kaplıyordu. Akademik belgede ikisini çoğunlukla kılavuz
+          belirliyor; seçim kutularının kendisi ve "Kılavuz (…)" seçeneği aynı.
+        */}
         <div className="arac-grup arac-grup-yazi">
+          <AracMenusu ikon={<Type size={16} />} etiket={t({ tr: "Yazı", en: "Font" })} aciklama={t({ tr: "Yazı tipi ve boyutu", en: "Font family and size" })}>
           <select
             className="toolbar-select"
             title={t({ tr: "Yazı tipi", en: "Font" })}
@@ -2172,6 +2242,7 @@ export default function ManuscriptEditor({
               </option>
             ))}
           </select>
+          </AracMenusu>
         </div>
         <div className="arac-grup">
           <div className="arac-segment" role="group" aria-label={t({ tr: "Yazı biçimi", en: "Text style" })}>
@@ -2190,27 +2261,27 @@ export default function ManuscriptEditor({
           </div>
         </div>
         <div className="arac-grup">
-          <div className="arac-segment" role="group" aria-label={t({ tr: "Paragraf türü", en: "Paragraph type" })}>
-          {/* "Metin": başlıktan normal paragrafa dönüş. Eskiden yalnızca aynı
-              başlık düğmesine yeniden basarak dönülüyordu; bu belli değildi. */}
-          <ToolbarButton
-            label={t({ tr: "Normal metin (Ctrl+Alt+0)", en: "Normal text (Ctrl+Alt+0)" })}
-            active={!ui.heading}
-            onClick={() => editor.chain().focus().setParagraph().run()}
+          {/*
+            Paragraf stili tek seçim kutusunda (Signature OS Phase 2): eskiden
+            dört düğmeydi (Metin, H1, H2, H3). İşlev ve kısayollar aynı
+            (Ctrl+Alt+0…3); "Metin" başlıktan normal paragrafa dönüş.
+          */}
+          <select
+            className="toolbar-select arac-paragraf-stili"
+            title={t({ tr: "Paragraf stili (Ctrl+Alt+0…3)", en: "Paragraph style (Ctrl+Alt+0…3)" })}
+            aria-label={t({ tr: "Paragraf stili", en: "Paragraph style" })}
+            value={ui.heading ? String(ui.heading) : "0"}
+            onChange={(e) => {
+              const level = Number(e.target.value);
+              if (level === 1 || level === 2 || level === 3) editor.chain().focus().setHeading({ level }).run();
+              else editor.chain().focus().setParagraph().run();
+            }}
           >
-            {t({ tr: "Metin", en: "Text" })}
-          </ToolbarButton>
-          {([1, 2, 3] as const).map((level) => (
-            <ToolbarButton
-              key={level}
-              label={t({ tr: `Başlık ${level} (Ctrl+Alt+${level})`, en: `Heading ${level} (Ctrl+Alt+${level})` })}
-              active={ui.heading === level}
-              onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
-            >
-              H{level}
-            </ToolbarButton>
-          ))}
-          </div>
+            <option value="0">{t({ tr: "Normal metin", en: "Normal text" })}</option>
+            <option value="1">{t({ tr: "Başlık 1", en: "Heading 1" })}</option>
+            <option value="2">{t({ tr: "Başlık 2", en: "Heading 2" })}</option>
+            <option value="3">{t({ tr: "Başlık 3", en: "Heading 3" })}</option>
+          </select>
         </div>
         <div className="arac-grup">
           <div className="arac-segment" role="group" aria-label={t({ tr: "Liste ve alıntı", en: "Lists and quotes" })}>
@@ -2363,55 +2434,29 @@ export default function ManuscriptEditor({
             </AracMenusu>
           ) : null}
         </div>
+        {/*
+          Atıf çubukta kalıyor: yazarken imlece en sık eklenen şey. Asistan,
+          satır içi öneri ve "cümleye kaynak bul" yazım paneline taşındı
+          (Asistan ve Kaynaklar görünümleri); başlıktaki Arvo AI düğmesi
+          asistanı açıyor. Eskiden dördü de burada etiketliydi ve çubuk
+          dar ekranda yatay kayıyordu.
+        */}
         <div className="arac-grup arac-grup-asistan">
-          {/* Yazım asistanı (03.11.2026): sohbette yazar, ekleme öğrencinin (yazim-paneli.tsx). */}
-          <ToolbarButton label={t({ tr: "Yazım asistanı", en: "Writing assistant" })} metin={t({ tr: "Asistan", en: "Assistant" })} onClick={() => setYazimAcik((acik) => !acik)}>
-            <Sparkles size={16} />
-          </ToolbarButton>
-          <ToolbarButton
-            label={t({
-              tr: otomatikOneri
-                ? "Otomatik öneri açık: yazma durunca gri öneri gelir, Tab ile kabul edersiniz. Kapatmak için tıklayın. (Her öneri bir asistan hakkı kullanır; Alt+/ ile istediğiniz an isteyebilirsiniz.)"
-                : "Otomatik öneri kapalı. Alt+/ ile imlece öneri isteyin; Tab kabul eder, Esc vazgeçer. Açmak için tıklayın.",
-              en: otomatikOneri
-                ? "Automatic suggestions on: a grey suggestion appears when you pause; press Tab to accept. Click to turn off. (Each suggestion uses an assistant credit; press Alt+/ any time.)"
-                : "Automatic suggestions off. Press Alt+/ for a suggestion at the cursor; Tab accepts, Esc dismisses. Click to turn on.",
-            })}
-            metin={t({ tr: "Öneri", en: "Suggest" })}
-            active={otomatikOneri}
-            onClick={() => otomatikOneriAyarla(!otomatikOneri)}
-          >
-            <WandSparkles size={16} />
-          </ToolbarButton>
-          <ToolbarButton
-            label={t({ tr: "Seçili cümleye kaynak bul", en: "Find a source for the selected sentence" })}
-            metin={t({ tr: "Kaynak bul", en: "Find source" })}
-            onClick={() => {
-              /* Seçim yoksa imlecin paragrafı: öğrenci cümleyi seçmeyi bilmeyebilir. */
-              const { from, to, $from } = editor.state.selection;
-              setKaynakBulCumle(from !== to ? editor.state.doc.textBetween(from, to, " ") : $from.parent.textContent);
-              setKaynakBulAcik(true);
-            }}
-          >
-            <SearchCheck size={16} />
-          </ToolbarButton>
           <ToolbarButton label={t({ tr: "Kaynaktan atıf ekle", en: "Cite a source" })} metin={t({ tr: "Atıf", en: "Citation" })} onClick={() => setCiteOpen(true)}>
             <BookMarked size={16} />
           </ToolbarButton>
         </div>
         <div className="arac-grup arac-grup-son">
-          <ToolbarButton label={t({ tr: "Bul ve değiştir (Ctrl+F)", en: "Find and replace (Ctrl+F)" })} metin={t({ tr: "Bul", en: "Find" })} active={findOpen} onClick={() => setFindOpen((open) => !open)}>
+          {/* Bul ve değiştir menüde (kısayolu Ctrl+F her yerde çalışıyor); çubuk belge sütununa sığsın. */}
+          <AracMenusu ikon={<MoreHorizontal size={16} />} etiket={t({ tr: "Belge", en: "Document" })} aciklama={t({ tr: "Bul, sayfa ayarı, kapak, sürümler, kısayollar", en: "Find, page setup, cover, versions, shortcuts" })} etiketiGizle>
+          <ToolbarButton label={t({ tr: "Bul ve değiştir (Ctrl+F)", en: "Find and replace (Ctrl+F)" })} metin={t({ tr: "Bul ve değiştir", en: "Find and replace" })} active={findOpen} onClick={() => setFindOpen((open) => !open)}>
             <Search size={16} />
           </ToolbarButton>
-          <AracMenusu ikon={<MoreHorizontal size={16} />} etiket={t({ tr: "Belge", en: "Document" })} aciklama={t({ tr: "Sayfa ayarı, kapak, paylaş, sürümler, kısayollar", en: "Page setup, cover, share, versions, shortcuts" })} etiketiGizle>
           <ToolbarButton label={t({ tr: "Sayfa ayarları", en: "Page settings" })} metin={t({ tr: "Sayfa ayarı", en: "Page setup" })} active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
             <Settings2 size={16} />
           </ToolbarButton>
           <ToolbarButton label={t({ tr: "Kapak sayfası", en: "Cover page" })} metin={t({ tr: "Kapak", en: "Cover" })} active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
             <FileBadge size={16} />
-          </ToolbarButton>
-          <ToolbarButton label={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })} metin={t({ tr: "Paylaş", en: "Share" })} onClick={() => setShareOpen(true)}>
-            <Share2 size={16} />
           </ToolbarButton>
           <ToolbarButton label={t({ tr: "Sürüm geçmişi", en: "Version history" })} metin={t({ tr: "Sürümler", en: "Versions" })} onClick={() => setVersionsOpen(true)}>
             <History size={16} />
@@ -2421,13 +2466,6 @@ export default function ManuscriptEditor({
           </ToolbarButton>
           </AracMenusu>
           <ToolbarButton
-            label={incelemeAcik ? t({ tr: "İnceleme panelini kapat", en: "Close review panel" }) : t({ tr: "İnceleme panelini aç", en: "Open review panel" })}
-            active={incelemeAcik}
-            onClick={() => tercihYaz(INCELEME_TERCIHI, !incelemeAcik)}
-          >
-            {incelemeAcik ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-          </ToolbarButton>
-          <ToolbarButton
             label={odak ? t({ tr: "Odak modundan çık (Esc)", en: "Exit focus mode (Esc)" }) : t({ tr: "Odak modu: yalnızca metin", en: "Focus mode: just the text" })}
             active={odak}
             onClick={() => setOdak((o) => !o)}
@@ -2436,23 +2474,13 @@ export default function ManuscriptEditor({
           </ToolbarButton>
         </div>
       </div>
-
-    <div className="manuscript-main">
     <div className="manuscript-editor-shell">
-      {/* Kayıt durumu ve bul-değiştir belgenin üstünde, yapışık */}
-      <div className="manuscript-toolbar manuscript-ust">
-        <button
-          type="button"
-          className="save-status"
-          data-state={saveState}
-          title={t({ tr: "Şimdi kaydet (Ctrl+S)", en: "Save now (Ctrl+S)" })}
-          aria-live="polite"
-          onClick={() => void saveNow()}
-        >
-          {statusLabel}
-        </button>
-        {findOpen ? <FindReplaceBar editor={editor} onClose={() => setFindOpen(false)} /> : null}
-      </div>
+      {/* Bul-değiştir belgenin üstünde, yapışık. Kayıt durumu başlık satırında (Signature OS Phase 2). */}
+      {findOpen ? (
+        <div className="manuscript-toolbar manuscript-ust">
+          <FindReplaceBar editor={editor} onClose={() => setFindOpen(false)} />
+        </div>
+      ) : null}
 
       {icerikUyumsuz ? (
         <div className="callout editor-notice cluster" data-tone="danger" role="alert">
@@ -2859,16 +2887,32 @@ export default function ManuscriptEditor({
 
     </div>{/* .manuscript-editor-shell */}
 
-      <ShareDialog open={shareOpen} onClose={closeShare} projectId={projectId} />
+      {/*
+        DURUM ÇUBUĞU (Signature OS Phase 2): kelime, karakter, tahmini sayfa
+        ve otomatik kaydın durumu belgenin altında, hep görünür. Kelime ve
+        sayfa eskiden yalnızca İncele panelindeydi; panel kapalıyken ya da
+        telefonda hiç görünmüyordu. Kayıt durumunun kendisi (ve "şimdi
+        kaydet") başlık satırında; burada otomatik kaydın açık mı DURMUŞ mu
+        olduğu yazar — oturum ya da abonelik bitince "açık" demek yalan olurdu.
+      */}
+      <footer className="yazim-durum-cubugu" aria-label={t({ tr: "Belge durumu", en: "Document status" })}>
+        <span>{t({ tr: `${stats.words.toLocaleString(YEREL[dil])} kelime`, en: `${stats.words.toLocaleString(YEREL[dil])} words` })}</span>
+        <span>{t({ tr: `${stats.characters.toLocaleString(YEREL[dil])} karakter`, en: `${stats.characters.toLocaleString(YEREL[dil])} characters` })}</span>
+        <span>{t({ tr: `≈ ${pages} sayfa`, en: `≈ ${pages} pages` })}</span>
+        {sessionExpired || abonelikBitti ? (
+          <span className="yazim-durum-kayit" data-tone="danger">
+            <CloudOff size={14} aria-hidden="true" />
+            {t({ tr: "Otomatik kayıt durdu", en: "Autosave stopped" })}
+          </span>
+        ) : (
+          <span className="yazim-durum-kayit">
+            <Cloud size={14} aria-hidden="true" />
+            {t({ tr: "Otomatik kayıt açık", en: "Autosave on" })}
+          </span>
+        )}
+      </footer>
 
-      <SubmissionChecklistDialog
-        open={checklistOpen}
-        onClose={closeChecklist}
-        checklist={checklist}
-        onAction={handleChecklistAction}
-        vurgu={vurguluMadde}
-        dogrulanmamis={guideline ? !guideline.dogrulandi : false}
-      />
+      <ShareDialog open={shareOpen} onClose={closeShare} projectId={projectId} />
 
       <Dialog
         open={issuesOpen}
@@ -2895,46 +2939,57 @@ export default function ManuscriptEditor({
     </div>{/* .manuscript-main */}
 
       {/*
-        KONTROL KARTI (26.10.2026): eskiden belgenin altındaki çubuktu —
-        kelime sayısı, sayfa hedefi, canlı yapı uyarısı, teslim kontrolü,
-        kılavuz denetimi ve çıktı düğmeleri. Uzun belgede ancak sona
-        inince görünüyordu; artık sağ panelin başında, her zaman görünür.
+        YAZIM PANELİ (Signature OS Phase 2, yan-panel.tsx). Eskiden burada
+        "İncele" paneli (kontrol kartı + yedi kutu, alt alta) ve ayrıca
+        ekranın sağına sabitlenmiş yazım asistanı vardı; asistan açılınca
+        inceleme panelinin üstüne biniyordu. Artık tek panel, dört görünüm.
+        İçerikler yeni değil: aynı kartlar ve eylemler ihtiyaca göre
+        gruplandı. Hiçbir kart kaldırılmadı.
       */}
-      <ManuscriptOutline
-        onKapat={() => tercihYaz(INCELEME_TERCIHI, false)}
-        ust={
-          /*
-            KONTROL KARTI (26.10.2026, ikinci elden geçiriş: "bu kartı daha
-            kaliteli hale getir"). Kılavuzun adı kesilmiyor, iki satıra
-            iniyor; kelime ve sayfa ayrı ölçü kutularında; sayfa hedefi
-            yerleşik <progress> ile (satır içi stil yok); yapı denetimi
-            satırın tamamı tıklanan bir durum satırı — eskiden küçük bir
-            rozetti ve tıklanabildiği belli değildi.
-          */
-          <section className="outline-card kontrol-karti" aria-label={t({ tr: "Kılavuz ve ilerleme", en: "Guideline and progress" })}>
-            {guideline ? (
-              <header className="kontrol-kilavuz">
-                <span className="kontrol-kilavuz-ust">
-                  <span className="dashboard-kicker">{t({ tr: "Uygulanan kılavuz", en: "Applied guideline" })}</span>
-                  <button type="button" className="projects-filter-button button-compact" onClick={() => setGuidelineOpen(true)}>
-                    <BookOpen size={14} aria-hidden="true" /> {t({ tr: "Kurallar", en: "Rules" })}
-                  </button>
+      <YanPanel
+        acik={panelAcik && !odak}
+        bicim={bicim}
+        gorunum={gorunum}
+        sekmeler={panelSekmeleri}
+        onGorunum={(g) => {
+          setGorunum(g);
+          if (g === "asistan") setAsistanKuruldu(true);
+        }}
+        onKapat={panelKapat}
+        icerik={{
+          asistan: asistanKuruldu ? (
+            <>
+              {/*
+                Satır içi öneri anahtarı (eskiden araç çubuğundaydı): asistanın
+                işi olduğu için burada. Açıkken yazma durunca gri öneri gelir.
+              */}
+              <div className="yan-anahtar">
+                <span>
+                  <b>{t({ tr: "Satır içi öneri", en: "Inline suggestions" })}</b>
+                  <small>
+                    {t({
+                      tr: "Yazma durunca imlecin önüne gri öneri; Tab kabul eder, Esc vazgeçer. Her öneri bir asistan hakkı kullanır. Kapalıyken Alt+/ ile istediğiniz an.",
+                      en: "A grey suggestion appears at the cursor when you pause; Tab accepts, Esc dismisses. Each suggestion uses an assistant credit. When off, press Alt+/ any time.",
+                    })}
+                  </small>
                 </span>
-                <strong title={kilavuzGorunenAdi(guideline.label, dil)}>{kilavuzGorunenAdi(guideline.label, dil)}</strong>
-                <span className="kontrol-etiketler">
-                  <span className="kontrol-etiket">{stilAdi(guideline.citationStyle)}</span>
-                  {formatDate(guideline.version) ? (
-                    <span className="kontrol-etiket">
-                      {t({ tr: `Onay ${formatDate(guideline.version)}`, en: `Approved ${formatDate(guideline.version)}` })}
-                    </span>
-                  ) : null}
-                  {guideline.updatePending ? (
-                    <span className="kontrol-etiket">{t({ tr: "Yeni sürüm inceleniyor", en: "New version under review" })}</span>
-                  ) : null}
-                </span>
-              </header>
-            ) : null}
-
+                <button
+                  type="button"
+                  role="switch"
+                  className="yan-anahtar-dugme"
+                  aria-checked={otomatikOneri}
+                  aria-label={t({ tr: "Otomatik satır içi öneri", en: "Automatic inline suggestions" })}
+                  onClick={() => otomatikOneriAyarla(!otomatikOneri)}
+                >
+                  <span aria-hidden="true" />
+                </button>
+              </div>
+              <YazimPaneli editor={editor} projectId={projectId} acik={panelAcik && gorunum === "asistan"} zorunluBolumler={guideline?.requiredSections ?? []} />
+            </>
+          ) : null,
+          inceleme: (
+            <>
+              <section className="yan-bolum kontrol-karti" aria-label={t({ tr: "Ölçüler ve yapı", en: "Measures and structure" })}>
             <dl className="kontrol-olculer">
               <div>
                 <dt>{t({ tr: "Kelime", en: "Words" })}</dt>
@@ -3006,8 +3061,101 @@ export default function ManuscriptEditor({
                 <ChevronRight size={16} aria-hidden="true" />
               </button>
             ) : null}
-
-            {checkError ? (
+              </section>
+              <div className="yan-kutular">
+                <YazimIpuclariKarti editor={editor} onFind={handleFindText} />
+                <YazarlikRaporuKarti editor={editor} onFind={handleFindText} />
+                <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
+              </div>
+            </>
+          ),
+          kaynaklar: (
+            <>
+              {/* Atıf stili ve iki eylem: imlece atıf ve seçili cümleye kaynak (eskiden araç çubuğunda). */}
+              <section className="yan-bolum" aria-labelledby="yan-kaynaklar-baslik">
+                <header className="yan-bolum-bas">
+                  <h3 id="yan-kaynaklar-baslik">{t({ tr: "Atıflar", en: "Citations" })}</h3>
+                  <span className="kontrol-etiket">{stilAdi(style)}</span>
+                </header>
+                <div className="yan-eylemler">
+                  <button type="button" className="projects-filter-button" onClick={() => setCiteOpen(true)}>
+                    <BookMarked size={15} aria-hidden="true" /> {t({ tr: "Kaynaktan atıf ekle", en: "Cite a source" })}
+                  </button>
+                  <button
+                    type="button"
+                    className="projects-filter-button"
+                    title={t({ tr: "Seçim yoksa imlecin bulunduğu paragraf", en: "If nothing is selected, the paragraph at the cursor" })}
+                    onClick={() => {
+                      /* Seçim yoksa imlecin paragrafı: öğrenci cümleyi seçmeyi bilmeyebilir. */
+                      const { from, to, $from } = editor.state.selection;
+                      setKaynakBulCumle(from !== to ? editor.state.doc.textBetween(from, to, " ") : $from.parent.textContent);
+                      setKaynakBulAcik(true);
+                    }}
+                  >
+                    <SearchCheck size={15} aria-hidden="true" /> {t({ tr: "Seçili cümleye kaynak bul", en: "Find a source for the selection" })}
+                  </button>
+                </div>
+              </section>
+              <div className="yan-kutular">
+                <BekleyenKaynaklarKarti
+                  projectId={projectId}
+                  govdeMetni={govdeMetni}
+                  numarali={NUMERIC_STYLES.includes(style)}
+                  belgeDili={belgeDili}
+                  onCite={(source) => void handleCite(source)}
+                />
+              </div>
+              <Link className="yan-baglanti" href={`/dashboard/literature?calisma=${encodeURIComponent(projectId)}`}>
+                <Library size={15} aria-hidden="true" /> {t({ tr: "Kaynak kütüphanesini aç", en: "Open source library" })}
+                <ChevronRight size={15} aria-hidden="true" />
+              </Link>
+            </>
+          ),
+          teslim: (
+            <>
+              <section className="yan-bolum kontrol-karti" aria-label={t({ tr: "Kılavuz ve kontrol", en: "Guideline and check" })}>
+                {guideline ? (
+              <header className="kontrol-kilavuz">
+                <span className="kontrol-kilavuz-ust">
+                  <span className="dashboard-kicker">{t({ tr: "Uygulanan kılavuz", en: "Applied guideline" })}</span>
+                  <button type="button" className="projects-filter-button button-compact" onClick={() => setGuidelineOpen(true)}>
+                    <BookOpen size={14} aria-hidden="true" /> {t({ tr: "Kurallar", en: "Rules" })}
+                  </button>
+                </span>
+                <strong title={kilavuzGorunenAdi(guideline.label, dil)}>{kilavuzGorunenAdi(guideline.label, dil)}</strong>
+                <span className="kontrol-etiketler">
+                  <span className="kontrol-etiket">{stilAdi(guideline.citationStyle)}</span>
+                  {formatDate(guideline.version) ? (
+                    <span className="kontrol-etiket">
+                      {t({ tr: `Onay ${formatDate(guideline.version)}`, en: `Approved ${formatDate(guideline.version)}` })}
+                    </span>
+                  ) : null}
+                  {guideline.updatePending ? (
+                    <span className="kontrol-etiket">{t({ tr: "Yeni sürüm inceleniyor", en: "New version under review" })}</span>
+                  ) : null}
+                </span>
+              </header>
+            ) : null}
+                {/*
+                  Adı NE DENETLEDİĞİNİ söylüyor: kılavuzun zorunlu bölümleri,
+                  atıf stili ve kaynakça–atıf çapraz denetimi. Eskiden başlığın
+                  birincil düğmesiydi; sonucu ve geçmişi burada, teslim
+                  listesinin yanında okunuyor.
+                */}
+                <button
+                  type="button"
+                  className="projects-primary-button"
+                  onClick={handleCheck}
+                  disabled={checking}
+                  title={t({
+                    tr: "Kılavuzun zorunlu bölümleri, atıf stili ve kaynakça–atıf eşleşmesi",
+                    en: "Required guideline sections, citation style and reference–citation matching",
+                  })}
+                >
+                  <ShieldCheck size={15} aria-hidden="true" />
+                  {checking ? t({ tr: "Kontrol ediliyor...", en: "Checking..." }) : t({ tr: "Kılavuz ve kaynakça kontrolü", en: "Guideline and reference check" })}
+                </button>
+                {checkError ? (
               <p className="alert" data-tone="danger" role="alert">
                 {checkError}
               </p>
@@ -3027,37 +3175,38 @@ export default function ManuscriptEditor({
                 <ChevronRight size={16} aria-hidden="true" />
               </button>
             ) : null}
-          </section>
-        }
-        sections={sections}
-        documentEmpty={stats.empty}
-        onJump={handleJump}
-        onInsert={handleInsertSections}
-        onTemplate={handleTemplate}
-        onImport={() => setImportOpen(true)}
-      >
-        {isThesis ? (
-          <OnSayfalarKarti belge={() => editor.getJSON()} calismaBasligi={coverPage.title} onEkle={handleOnSayfalar} />
-        ) : null}
-        <IcindekilerKarti
-          headings={stats.headings}
-          numaralama={headingNumbering}
-          numarasiz={guideline?.settings.unnumberedSections}
-          onSayfaRomen={guideline?.settings.frontMatterRoman}
-          sayfaBasiKelime={sayfaBasiKelime}
-          onJump={handleJump}
-        />
-        <YazimIpuclariKarti editor={editor} onFind={handleFindText} />
-        <YazarlikRaporuKarti editor={editor} onFind={handleFindText} />
-        <BekleyenKaynaklarKarti
-          projectId={projectId}
-          govdeMetni={govdeMetni}
-          numarali={NUMERIC_STYLES.includes(style)}
-          belgeDili={belgeDili}
-          onCite={(source) => void handleCite(source)}
-        />
-        <ManuscriptComments projectId={projectId} getQuote={() => selectedText(editor)} onFind={handleFindText} />
-      </ManuscriptOutline>
+              </section>
+              <TeslimListesi
+                checklist={checklist}
+                onAction={handleChecklistAction}
+                vurgu={vurguluMadde}
+                dogrulanmamis={guideline ? !guideline.dogrulandi : false}
+              />
+              <div className="yan-kutular">
+                <ManuscriptOutline
+                  sections={sections}
+                  documentEmpty={stats.empty}
+                  onJump={handleJump}
+                  onInsert={handleInsertSections}
+                  onTemplate={handleTemplate}
+                  onImport={() => setImportOpen(true)}
+                />
+                {isThesis ? (
+                  <OnSayfalarKarti belge={() => editor.getJSON()} calismaBasligi={coverPage.title} onEkle={handleOnSayfalar} />
+                ) : null}
+                <IcindekilerKarti
+                  headings={stats.headings}
+                  numaralama={headingNumbering}
+                  numarasiz={guideline?.settings.unnumberedSections}
+                  onSayfaRomen={guideline?.settings.frontMatterRoman}
+                  sayfaBasiKelime={sayfaBasiKelime}
+                  onJump={handleJump}
+                />
+              </div>
+            </>
+          ),
+        }}
+      />
 
       {/*
         Sonuç pencerede. Eskiden belgenin ALTINDA açılıyordu: 150 sayfalık
@@ -3309,15 +3458,6 @@ export default function ManuscriptEditor({
         cumle={kaynakBulCumle.slice(0, 600)}
         onCite={(source) => void handleCite(source)}
       />
-      <YazimPaneli editor={editor} projectId={projectId} acik={yazimAcik} onKapat={() => {
-        setYazimAcik(false);
-        /* Adres temizlenir: "?asistan=1" kalsaydı sayfa yenilenince panel yeniden açılırdı (teslim ile aynı kural). */
-        const temiz = new URL(window.location.href);
-        if (temiz.searchParams.has("asistan")) {
-          temiz.searchParams.delete("asistan");
-          window.history.replaceState(null, "", temiz.toString());
-        }
-      }} zorunluBolumler={guideline?.requiredSections ?? []} />
       <AnalizEkleDialog open={analizOpen} onClose={() => setAnalizOpen(false)} projectId={projectId} onPick={handleAnaliz} />
       <ImportDialog
         open={importOpen}

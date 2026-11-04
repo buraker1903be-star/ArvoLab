@@ -3,7 +3,7 @@ import { calismaAdresi } from "@/lib/calisma-karti";
 import { etikKaydiOku } from "@/lib/etik/oku";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
@@ -109,35 +109,33 @@ export default async function WriteManuscriptPage({
     /* "gb": diğer modül sayfaları gibi tam genişlik. Üç sütunlu düzende
        (araçlar, belge, kontroller) --content-max sınırı belgeyi daraltıyor,
        sayfa öbür ekranlardan dar görünüyordu. */
-    <main className="dashboard-page gb">
+    /* "yazim-sayfasi": başlık satırı, belge ve yazım paneli tek ızgarada (workspace.css, Signature OS Phase 2). */
+    <main className="dashboard-page gb yazim-sayfasi">
       {/* Çalışma kenar çubuğuna bildirilir (Phase 3, os-gezinme.tsx): Yazım bölümü orada etkin görünür. */}
       <CalismaBaglamiYayinla id={project.id} baslik={project.title ?? ""} tur={project.project_type} />
-      {/* İnce başlık (04.11.2026): tek satır, kesilen başlığın tamamı üzerine gelince. Eskiden üç satırlık dev başlık yazı alanını ekranın üçte birine itiyordu. */}
-      <section className="projects-header yazma-basligi">
-        <div>
+      {/*
+        BAŞLIK SATIRI (Signature OS Phase 2): belge simgesi, başlık ve kayıt
+        durumu solda; belge işlemleri (paylaş, dışa aktar, Arvo AI, panel)
+        sağda. Kayıt durumu ve işlemler editörün durumuna bağlı, portal ile
+        #yazma-durum ve #yazma-eylemleri kutularına yerleşiyor
+        (manuscript-editor.tsx).
+
+        "Çalışmalarım" geri düğmesi tablet ve masaüstünde kalktı: üst
+        çubuktaki konum yolu (Çalışmalarım › çalışma › Yazım) aynı yere,
+        çalışmanın kendi merkezine götürüyor. Telefonda konum yolu yok;
+        orada simge olarak duruyor.
+      */}
+      <header className="yazma-basligi">
+        <Link href={calismaAdresi(id)} className="projects-filter-button yazma-geri" aria-label={t({ tr: "Çalışma özetine dön", en: "Back to work overview" })}>
+          <ArrowLeft size={17} aria-hidden="true" />
+        </Link>
+        <div className="yazma-baslik">
+          <FileText size={18} aria-hidden="true" className="yazma-baslik-simge" />
           <h1 title={project.title ?? undefined}>{project.title ?? t({ tr: "Çalışma", en: "Work" })}</h1>
-          {/* Açıklama satırı kaldırıldı: otomatik kaydı belgenin üstündeki
-              kayıt durumu zaten gösteriyor, andığı "Kontrol Et" düğmesinin
-              adı ise artık "Kılavuz ve kaynakça kontrolü". */}
+          <span id="yazma-durum" className="yazma-durum" />
         </div>
-        {/*
-          Çıkış, çalışmanın KENDİ merkezine gidiyor — düz listeye değil.
-          Literatür, kaynakça, belge ve analiz adımlarına oradan
-          geçiliyor (calisma-serit.tsx); listeye dönmek kullanıcıyı
-          bağlamdan çıkarıp aynı çalışmayı yeniden bulmaya zorluyordu.
-          Tezin en uzun sürdüğü ekran, akışın geri kalanına en uzak
-          ekran olmamalı.
-        */}
-        {/* Teslim kontrolü, Word, PDF ve kılavuz kontrolü düğmeleri editörden
-            buraya, "Çalışmalarım" düğmesinin sağına yerleşir (manuscript-editor.tsx). */}
-        <div className="cluster yazma-eylemleri" id="yazma-eylemleri">
-          {/* Telefonda yalnızca simge (Phase 3): adı aria-label taşıyor, yazı gizlenince ekran okuyucu adı kaybetmesin. */}
-          <Link href={calismaAdresi(id)} className="projects-filter-button" aria-label={t({ tr: "Çalışmalarım", en: "My works" })}>
-            <ArrowLeft size={17} aria-hidden="true" />
-            <span className="yazma-etiket">{t({ tr: "Çalışmalarım", en: "My works" })}</span>
-          </Link>
-        </div>
-      </section>
+        <div className="cluster yazma-eylemleri" id="yazma-eylemleri" />
+      </header>
 
       {kilavuzOkunamadi ? (
         /* Geçici arıza: editör kılavuzsuz açılıyor. Söylenmezse öğrenci biçimin

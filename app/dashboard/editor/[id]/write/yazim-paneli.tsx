@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import { ArrowUp, Check, Copy, CornerDownLeft, ListTree, ThumbsDown, MessageSquareText, PenLine, Replace, ShieldCheck, Sparkles, StepForward, X } from "lucide-react";
+import { ArrowUp, Check, Copy, CornerDownLeft, ListTree, ThumbsDown, MessageSquareText, PenLine, Replace, ShieldCheck, Sparkles, StepForward } from "lucide-react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
 import { ASISTAN_IZI } from "@/lib/tiptap-asistan-izi";
@@ -49,13 +49,12 @@ export default function YazimPaneli({
   editor,
   projectId,
   acik,
-  onKapat,
   zorunluBolumler = [],
 }: {
   editor: Editor;
   projectId: string;
+  /** Asistan görünümü şu an görünür mü: görünür olunca istek kutusu odak alır. */
   acik: boolean;
-  onKapat: () => void;
   /** Kılavuzun zorunlu bölümleri: ana hat görevinin omurgası. */
   zorunluBolumler?: string[];
 }) {
@@ -67,7 +66,8 @@ export default function YazimPaneli({
   const girdiRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (acik) window.requestAnimationFrame(() => girdiRef.current?.focus());
+    // preventScroll: panel yapışık bir sütun; odak sayfayı kutunun hizasına kaydırmasın.
+    if (acik) window.requestAnimationFrame(() => girdiRef.current?.focus({ preventScroll: true }));
   }, [acik]);
   useEffect(() => {
     listeRef.current?.scrollTo({ top: listeRef.current.scrollHeight, behavior: "smooth" });
@@ -190,7 +190,7 @@ export default function YazimPaneli({
     void asistanPuanla(kayitId, "faydasiz", "panelde beğenilmedi").catch(() => undefined);
   };
 
-  if (!acik) return null;
+  /* Kapalıyken de kurulu kalır (yazım panelinin görünümleri gizlenir, sökülmez): sohbet sekme değişince kaybolmasın. */
   const hizli: { gorev: YazimGorevi; ad: string }[] = [
     { gorev: "devam", ad: t({ tr: "Devam ettir", en: "Continue" }) },
     { gorev: "paragraf", ad: t({ tr: "Paragraf yaz", en: "Write paragraph" }) },
@@ -241,16 +241,13 @@ export default function YazimPaneli({
   ];
 
   return (
-    <aside className="yazim-paneli" aria-label={t({ tr: "Yazım asistanı", en: "Writing assistant" })}>
-      <header className="yazim-paneli-bas">
-        <span>
-          <Sparkles size={16} aria-hidden="true" />
-          <b>{t({ tr: "Yazım asistanı", en: "Writing assistant" })}</b>
-        </span>
-        <button type="button" className="yazim-ikon" onClick={onKapat} aria-label={t({ tr: "Paneli kapat", en: "Close panel" })}>
-          <X size={16} aria-hidden="true" />
-        </button>
-      </header>
+    /*
+      Signature OS Phase 2: asistan artık yazım panelinin "Asistan"
+      görünümü (yan-panel.tsx). Eskiden ekranın sağına sabitlenmiş ayrı
+      bir kutuydu ve "İncele" panelinin üstüne biniyordu; kendi başlığı ve
+      kapat düğmesi panelin sekmesi ve kapat düğmesiyle yineleniyordu.
+    */
+    <div className="yazim-paneli">
 
       <div className="yazim-paneli-liste" ref={listeRef} aria-live="polite">
         {mesajlar.length === 0 ? (
@@ -430,6 +427,6 @@ export default function YazimPaneli({
           <ArrowUp size={16} aria-hidden="true" />
         </button>
       </form>
-    </aside>
+    </div>
   );
 }
