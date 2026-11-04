@@ -44,7 +44,7 @@ export default async function EtikKurulSayfasi({ params }: { params: Promise<{ i
   if (!calisma) notFound();
 
   return (
-    <main className="dashboard-page">
+    <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header calisma-basligi">
         <div>
           <span className="dashboard-kicker">{t({ tr: "Etik kurul", en: "Ethics committee" })} · {t(ETIK_DURUM_ADI[veri.durum])}</span>

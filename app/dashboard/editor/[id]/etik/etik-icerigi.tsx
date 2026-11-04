@@ -79,8 +79,15 @@ export default async function EtikIcerigi({ projectId, veri }: { projectId: stri
         </div>
       ) : null}
 
+      {/*
+        Sayfada TEK EKRAN (04.11.2026): kartlar kendi içinde kayar, "Kaydet"
+        satırı form kartının altına yapışık. Eskiden form sayfayı aşağı
+        uzatıyordu ve kaydetmek için dock'un arkasına kadar inmek
+        gerekiyordu. Uyarı notu sağ kartın dibine taşındı. Aynı içerik
+        pencerede de çiziliyor (etik-penceresi.tsx); orada akış normal.
+      */}
       <section className="gb-sutunlar etik-izgara" aria-label={t({ tr: "Etik kurul", en: "Ethics committee" })}>
-        <article className="gb-kart">
+        <article className="gb-kart gb-sutun">
           <header className="gb-kart-bas">
             <div>
               <h2>{t({ tr: "Başvuru ve karar", en: "Application and decision" })}</h2>
@@ -125,13 +132,13 @@ export default async function EtikIcerigi({ projectId, veri }: { projectId: stri
               <span>{t({ tr: "Notlar", en: "Notes" })}</span>
               <textarea name="notlar" rows={3} maxLength={4000} defaultValue={kayit?.notlar ?? ""} placeholder={t({ tr: "Kurulun istediği düzeltmeler, toplantı tarihi…", en: "Revisions requested by the committee, meeting date…" })} />
             </label>
-            <div className="project-form-full cluster">
+            <div className="project-form-full cluster etik-kaydet">
               <button type="submit" className="projects-primary-button">{t({ tr: "Kaydet", en: "Save" })}</button>
             </div>
           </ActionForm>
         </article>
 
-        <article className="gb-kart">
+        <article className="gb-kart gb-sutun">
           <header className="gb-kart-bas">
             <div>
               <h2>{t({ tr: "Başvuru belgeleri", en: "Application documents" })}</h2>
@@ -139,22 +146,22 @@ export default async function EtikIcerigi({ projectId, veri }: { projectId: stri
             </div>
           </header>
           <EtikBelgeleri projectId={projectId} baslangic={belgeler} yonergeAdi={kayit?.yonerge_adi ?? null} />
+          <aside className="etik-not">
+            <ShieldCheck size={16} aria-hidden="true" />
+            <p>
+              {t({
+                tr: "Başvuru formunu, araştırma protokolünü ve onam formunu siz yazarsınız; ArvoLab bu belgeleri yazmaz ve kurulun kararı hakkında öngörüde bulunmaz. Onam formunuza ya da başvurunuza bir uzmanın bakmasını isterseniz ",
+                en: "You write the application form, research protocol and consent form; ArvoLab doesn't write these documents or predict the committee's decision. If you'd like an expert to review your consent form or application, ",
+              })}
+              <Link href="/dashboard/expert-requests">
+                <LifeBuoy size={13} aria-hidden="true" /> {t({ tr: "Destek'ten uzmana sorun", en: "ask an expert via Support" })}
+              </Link>
+              .
+            </p>
+          </aside>
         </article>
       </section>
 
-      <aside className="etik-not">
-        <ShieldCheck size={16} aria-hidden="true" />
-        <p>
-          {t({
-            tr: "Başvuru formunu, araştırma protokolünü ve onam formunu siz yazarsınız; ArvoLab bu belgeleri yazmaz ve kurulun kararı hakkında öngörüde bulunmaz. Onam formunuza ya da başvurunuza bir uzmanın bakmasını isterseniz ",
-            en: "You write the application form, research protocol and consent form; ArvoLab doesn't write these documents or predict the committee's decision. If you'd like an expert to review your consent form or application, ",
-          })}
-          <Link href="/dashboard/expert-requests">
-            <LifeBuoy size={13} aria-hidden="true" /> {t({ tr: "Destek'ten uzmana sorun", en: "ask an expert via Support" })}
-          </Link>
-          .
-        </p>
-      </aside>
     </>
   );
 }

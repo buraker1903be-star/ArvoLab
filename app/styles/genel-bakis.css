@@ -1271,3 +1271,13 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 /* Dar kartta iddia ve kaynak sütunları ikişer sözcükte kırılıyordu; tablo yatay kayar. */
 .kanit-ikili .kanit-matris :is(th, td):first-child { min-width: 260px; }
 .kanit-ikili .kanit-matris :is(th, td):nth-child(3) { min-width: 220px; }
+/* Etik kurul (04.11.2026): uyarı notu sağ kartın dibinde; tek ekranda Kaydet satırı form kartına yapışık. */
+.etik-izgara .etik-not { margin-top: auto; }
+@media (min-width: 901px) and (min-height: 640px) {
+  .gb-tek-ekran .etik-izgara { align-items: stretch; }
+  .gb-tek-ekran .etik-kaydet {
+    position: sticky; bottom: -14px; z-index: 1;
+    margin: 0 -18px -14px; padding: 10px 18px 14px;
+    border-top: 1px solid var(--line-soft); background: var(--surface);
+  }
+}
