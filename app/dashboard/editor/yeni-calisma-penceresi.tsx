@@ -9,6 +9,7 @@ import { yeniCalisma } from "@/app/actions/projects";
 import StilSecici from "@/app/dashboard/_components/stil-secici";
 import PanelDrawer from "../_components/panel-drawer";
 import KilavuzYukle from "./[id]/kilavuz-yukle";
+import { useAdrestenAcilis } from "./adresten-acilis";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 
 /*
@@ -59,6 +60,8 @@ export default function YeniCalismaPenceresi({
   const [bekleniyor, basla] = useTransition();
   /* Her açılışta form sıfırdan kurulsun diye anahtar; kapanınca artar. */
   const [surum, setSurum] = useState(0);
+  // Adresteki ?yeni=1 sonradan da pencereyi açar (adresten-acilis.ts).
+  const { acik, setAcik, adresiTemizle } = useAdrestenAcilis(acikBasla);
 
   const gonder = (formData: FormData) => {
     setHata(null);
@@ -75,9 +78,11 @@ export default function YeniCalismaPenceresi({
   };
 
   /* Kapanınca yeni çalışma kartta seçili açılır: öğrenci onu listede aramasın. */
-  const kapandi = (acik: boolean) => {
-    if (acik) return;
+  const kapandi = (simdiAcik: boolean) => {
+    setAcik(simdiAcik);
+    if (simdiAcik) return;
     if (olusan) router.push(`/dashboard/editor?sec=${olusan.id}`);
+    else adresiTemizle();
     setOlusan(null);
     setKilavuzTamam(false);
     setHata(null);
@@ -107,7 +112,7 @@ export default function YeniCalismaPenceresi({
       }
       boy="tam"
       basaridaKapan={false}
-      acikBasla={acikBasla}
+      acik={acik}
       onAcikDegis={kapandi}
     >
       <div className="pencere-iki-kart" key={surum}>

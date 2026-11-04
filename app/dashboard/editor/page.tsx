@@ -251,6 +251,9 @@ export default async function ProjectsPage({
     );
   };
 
+  // Boş durum yalnızca liste OKUNDUĞUNDA çiziliyor (aşağıda); okunamadıysa başlıktaki düğme ana eylem kalır.
+  const bosListe = !okunamadi && projects.length === 0;
+
   return (
     <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header">
@@ -269,13 +272,20 @@ export default async function ProjectsPage({
           </p>
         </div>
         {/* İkisi de pencere (02.11.2026): öğrenci kendi kılavuzunu ekler, personel kurumu katalogdan seçer. */}
+        {/*
+          Liste boşken başlıktaki düğme İKİNCİL (Phase 3 stabilizasyonu):
+          boş durumun "İlk çalışmayı oluştur"u ile yan yana iki koyu düğme
+          aynı pencereyi açıyordu. Pencere ve işlevi aynı; değişen yalnızca
+          görünüm. Liste okunamadığında boş durum çizilmiyor, düğme ana kalır.
+        */}
         {ogrenciDuzeni ? (
-          <YeniCalismaPenceresi acikBasla={params.yeni === "1"} />
+          <YeniCalismaPenceresi acikBasla={params.yeni === "1"} triggerClassName={bosListe ? "projects-filter-button" : undefined} />
         ) : universiteListesi ? (
           <PersonelYeniCalismaPenceresi
             universities={universiteListesi.satirlar}
             universiteOkunamadi={universiteListesi.okunamadi}
             acikBasla={params.yeni === "1"}
+            triggerClassName={bosListe ? "projects-filter-button" : undefined}
           />
         ) : null}
       </section>
