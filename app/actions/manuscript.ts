@@ -67,10 +67,18 @@ export interface ManuscriptData {
 // yazıyordu. Hata artık dashboard/error.tsx ekranına düşer.
 export async function getManuscript(projectId: string): Promise<ManuscriptData | null> {
   const supabase = await createClient();
-  // "*": kılavuz senkron kolonları henüz eklenmemiş veritabanlarında da çalışır.
+  /*
+    Yalnızca editörün kullandığı sütunlar (Phase 2, 04.11.2026). Eskiden
+    "*" okunuyordu — kılavuz senkron sütunları her veritabanında yokken
+    düşmesin diye; o sütunlar 20260915090000'den beri migration'da. "*"
+    editörün hiç kullanmadığı plain_text'i de getiriyordu: uzun bir tezde
+    yüzlerce KB, her editör açılışında.
+  */
   const { data, error } = await supabase
     .from("project_manuscripts")
-    .select("*")
+    .select(
+      "content, word_count, updated_at, margin_top_cm, margin_bottom_cm, margin_left_cm, margin_right_cm, page_size, show_page_numbers, cover_page, settings_guideline_id, settings_guideline_version, settings_customized, include_toc, heading_numbering",
+    )
     .eq("project_id", projectId)
     .maybeSingle();
 
@@ -357,24 +365,33 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
   }
   if ("eksik" in result) return failed;
 
-  // Sürüm geçmişi: en fazla 10 dakikada bir otomatik anlık görüntü (başarısızlığı kaydı etkilemez).
+  /*
+    Kayıttan sonraki iki yan iş birbirini beklemiyor (Phase 2, 04.11.2026):
+    sürüm anlık görüntüsü (en fazla 10 dakikada bir; başarısızlığı kaydı
+    etkilemez) ve kartlardaki ilerleme. Eskiden sırayla bekleniyordu ve her
+    otomatik kayıt iki tur daha uzuyordu.
+  */
   if (result.success) {
-    await snapshotManuscript(ctx.supabase, projectId, ctx.user.id, {
-      kind: "auto",
-      onlyIfOlderThanMs: AUTO_VERSION_INTERVAL_MS,
-    });
-    // Kartlardaki ilerleme çubuğu yazdıkça kendiliğinden güncellenir. Yalnızca değer değiştiyse
-    // yazılır; teslime hazır/teslim edilmiş/arşivlenmiş çalışmalarda elle verilen değer korunur.
     const { progress } = input;
-    if (typeof progress === "number" && Number.isInteger(progress) && progress >= 0 && progress <= 100) {
-      const { error: progressError } = await ctx.supabase
-        .from("academic_projects")
-        .update({ progress })
-        .eq("id", projectId)
-        .neq("progress", progress)
-        .not("status", "in", "(ready,delivered,archived)");
-      if (progressError) console.error(progressError);
-    }
+    await Promise.all([
+      snapshotManuscript(ctx.supabase, projectId, ctx.user.id, {
+        kind: "auto",
+        onlyIfOlderThanMs: AUTO_VERSION_INTERVAL_MS,
+      }),
+      // Kartlardaki ilerleme çubuğu yazdıkça kendiliğinden güncellenir. Yalnızca değer değiştiyse
+      // yazılır; teslime hazır/teslim edilmiş/arşivlenmiş çalışmalarda elle verilen değer korunur.
+      typeof progress === "number" && Number.isInteger(progress) && progress >= 0 && progress <= 100
+        ? ctx.supabase
+            .from("academic_projects")
+            .update({ progress })
+            .eq("id", projectId)
+            .neq("progress", progress)
+            .not("status", "in", "(ready,delivered,archived)")
+            .then(({ error: progressError }) => {
+              if (progressError) console.error(progressError);
+            })
+        : Promise.resolve(),
+    ]);
   }
   return result;
 }

@@ -37,58 +37,72 @@ export default async function WriteManuscriptPage({
   const supabase = await createClient();
   const t = await ceviri();
 
-  const { data: project } = await supabase
-    .from("academic_projects")
-    .select("id, title, guideline_id, university, institute, department, project_type, citation_style, owner_id, assignee_id, due_date, status, ornek_atif")
-    .eq("id", id)
-    .maybeSingle();
-
-  // Çalışma yoksa ya da kullanıcının erişimi yoksa (RLS) boş editör yerine 404.
-  if (!project) notFound();
-
-  const [{ kilavuz: guideline, okunamadi: kilavuzOkunamadi }, manuscript, userResult, gecmisYaniti, dokumanDili, etik] = await Promise.all([
-    /* Katalogda eşleşme yoksa öğrencinin kendi yüklediği kılavuz
-       uygulanıyor (lib/guideline-rules.ts: calismaKilavuzu). */
-    calismaKilavuzuOku(supabase, id, project.guideline_id),
+  /*
+    İKİ AŞAMA (Phase 2, 04.11.2026). Eskiden beş sıralı bekleme vardı:
+    çalışma → ana grup → son kontrolün tam sonucu → resim bağlantıları →
+    yazar adı. Çalışma satırına ihtiyacı olmayanlar (müsvedde, kullanıcı ve
+    adı, kontrol geçmişi ve en yenisinin sonucu, belge dili, etik) artık
+    çalışma satırıyla AYNI anda okunuyor; zincir halinde olanlar (.then)
+    kendi kolunda bekliyor. Çalışma bulunamazsa sonuç yine 404: öbür
+    okumalar RLS altında boş döner, kullanılmaz.
+  */
+  const [{ data: project }, manuscript, { user, authorFullName }, kontrolYaniti, dokumanDili, etik] = await Promise.all([
+    supabase
+      .from("academic_projects")
+      .select("id, title, guideline_id, university, institute, department, project_type, citation_style, owner_id, assignee_id, due_date, status, ornek_atif")
+      .eq("id", id)
+      .maybeSingle(),
     getManuscript(id),
-    supabase.auth.getUser(),
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return { user: null, authorFullName: "" };
+      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", data.user.id).single();
+      return { user: data.user, authorFullName: profile?.full_name ?? "" };
+    }),
     /* Kılavuz ve kaynakça kontrolü geçmişi: son 10 çalıştırma; en
        yenisinin tamamı açılışta gösteriliyor (migration 20261026202222).
-       Okunamazsa editör geçmişsiz açılır, akış düşmez. */
+       Okunamazsa editör geçmişsiz açılır, akış düşmez. Tam sonuç (künye
+       listesi büyük olabilir) yalnızca en yenisi için okunuyor. */
     supabase
       .from("yazim_kontrolleri")
       .select("id, created_at, hata, uyari, eksik_bolum, kelime")
       .eq("project_id", id)
       .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(10)
+      .then(async (gecmisYaniti) => {
+        const ilk = gecmisYaniti.data?.[0];
+        const { data: sonSatir } = ilk
+          ? await supabase.from("yazim_kontrolleri").select("sonuc, yapi").eq("id", ilk.id).maybeSingle()
+          : { data: null };
+        return { gecmisYaniti, sonSatir };
+      }),
     /* Şekil/tablo etiketleri, içindekiler ve kapak BELGENİN dilinde (lib/belge-dili.ts). */
     aktifDil().then((arayuz) => belgeDili(supabase, id, arayuz)),
     /* Etik kurul kaydı: teslim kontrolünün etik satırı (lib/etik/durum.ts). */
     etikKaydiOku(supabase, id),
   ]);
+
+  // Çalışma yoksa ya da kullanıcının erişimi yoksa (RLS) boş editör yerine 404.
+  if (!project) notFound();
+
+  const { gecmisYaniti, sonSatir } = kontrolYaniti;
   if (gecmisYaniti.error) console.error("[kontrol] geçmiş okunamadı", gecmisYaniti.error.message);
   const gecmisSatirlari = gecmisYaniti.data ?? [];
   const kontrolGecmisi = gecmisSatirlari.map(ozetOku);
-  // Tam sonuç (künye listesi büyük olabilir) yalnızca en yenisi için okunuyor.
-  const { data: sonSatir } = gecmisSatirlari[0]
-    ? await supabase.from("yazim_kontrolleri").select("sonuc, yapi").eq("id", gecmisSatirlari[0].id).maybeSingle()
-    : { data: null };
   const sonKontrol = sonSatir
     ? { sonuc: sonSatir.sonuc as ManuscriptCheckResult, yapi: yapiSorunlariniTemizle(sonSatir.yapi) }
     : null;
+
+  const [{ kilavuz: guideline, okunamadi: kilavuzOkunamadi }, content] = await Promise.all([
+    /* Katalogda eşleşme yoksa öğrencinin kendi yüklediği kılavuz
+       uygulanıyor (lib/guideline-rules.ts: calismaKilavuzu). */
+    calismaKilavuzuOku(supabase, id, project.guideline_id),
+    // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
+    // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
+    manuscript ? refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : Promise.resolve(null),
+  ]);
   const sync = resolveGuidelineSync(guideline, manuscript, await aktifDil());
-  // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
-  // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
-  const content = manuscript ? await refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : null;
   // Eski kayıt hatasından etkilenen belge: kullanıcıya neyin kaybolduğu gösterilir.
   const formatLoss = manuscript ? detectFormatLoss(manuscript.content) : null;
-
-  const user = userResult.data.user;
-  let authorFullName = "";
-  if (user) {
-    const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
-    authorFullName = profile?.full_name ?? "";
-  }
 
   return (
     /* "gb": diğer modül sayfaları gibi tam genişlik. Üç sütunlu düzende
@@ -135,7 +149,7 @@ export default async function WriteManuscriptPage({
       <ManuscriptEditor
         projectId={id}
         etik={etik}
-        kullaniciId={userResult.data.user?.id ?? null}
+        kullaniciId={user?.id ?? null}
         belgeDili={dokumanDili}
         acilacakMadde={teslim ?? null}
         kurumGirili={Boolean(project.university)}
