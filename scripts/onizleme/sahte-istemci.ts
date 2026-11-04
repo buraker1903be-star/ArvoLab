@@ -30,6 +30,14 @@ import { ORNEK, ORNEK_KULLANICI, ORNEK_RPC } from "./veri";
 const ortam: Record<string, string | undefined> = typeof process === "undefined" ? {} : process.env;
 const GECIKME = Number(ortam.ONIZLEME_GECIKME_MS ?? 0) || 0;
 const OLCUM = ortam.ONIZLEME_OLCUM === "1";
+/*
+  İLK KULLANIM (Phase 3). ONIZLEME_BOS=1 kullanıcının hiç çalışması yokmuş
+  gibi davranır: yeni kullanıcının ana sayfası ve boş durum ekranları
+  örnek veriyle hiç görülemiyordu. Yalnızca çalışma ve çalışmaya bağlı
+  tablolar boşalır; profil ve abonelik yerinde.
+*/
+const BOS = ortam.ONIZLEME_BOS === "1";
+const BOS_TABLOLAR = new Set(["academic_projects", "project_manuscripts", "literature_sources", "document_uploads", "manuscript_comments", "citation_checks", "kanit_kayitlari"]);
 function tur<T>(etiket: string, deger: T): Promise<T> {
   if (OLCUM) console.log(`[olcum] ${Date.now()} ${etiket}`);
   return GECIKME ? new Promise((coz) => setTimeout(() => coz(deger), GECIKME)) : Promise.resolve(deger);
@@ -39,7 +47,7 @@ type Satir = Record<string, unknown>;
 type Sonuc = { data: unknown; error: null; count?: number | null };
 
 function sorgu(tablo: string) {
-  let satirlar: Satir[] = [...((ORNEK as Record<string, Satir[]>)[tablo] ?? [])];
+  let satirlar: Satir[] = BOS && BOS_TABLOLAR.has(tablo) ? [] : [...((ORNEK as Record<string, Satir[]>)[tablo] ?? [])];
   let tek: "single" | "maybe" | null = null;
   let sayim = false;
   let yalnizSayim = false;

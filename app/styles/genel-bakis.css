@@ -116,6 +116,31 @@
 
 /* Başlangıç kartı (hiç çalışması olmayan kullanıcı) */
 .gb-baslangic .baslangic-adimlari { margin: 0; }
+/*
+  Adımlar yan yana numaralı kutular (Phase 3). Eskiden kart genişliğinde
+  üç uzun paragraftı; geniş ekranda satır 150 karakteri geçiyor, hangi
+  adımın nerede bittiği okunmuyordu. Numara listenin sayacından gelir
+  (elle yazılmaz, araya adım eklenince kaymasın).
+*/
+@media (min-width: 761px) {
+  .gb-baslangic .baslangic-adimlari {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3);
+    padding: 0; list-style: none; counter-reset: adim;
+  }
+  .gb-baslangic .baslangic-adimlari li {
+    counter-increment: adim;
+    padding: var(--s-4); border: 1px solid var(--line); border-radius: var(--radius-md);
+    background: var(--surface-2);
+  }
+  .gb-baslangic .baslangic-adimlari li::before {
+    content: counter(adim); display: grid; place-items: center;
+    width: 28px; height: 28px; margin-bottom: var(--s-2); border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; font-size: var(--fs-sm);
+  }
+  .gb-baslangic .baslangic-adimlari strong { display: block; margin-bottom: var(--s-1); }
+}
+.gb-baslangic-eylemler { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.gb-baslangic-eylemler > a { width: auto; }
 
 @media (max-width: 1200px) {
   .gb-sutunlar { grid-template-columns: repeat(2, minmax(0, 1fr)); }

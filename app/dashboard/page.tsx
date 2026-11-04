@@ -665,7 +665,8 @@ export default async function DashboardPage() {
               {resumeStats ? t({ tr: "Yazmaya devam et", en: "Continue writing" }) : t({ tr: "Yazmaya başla", en: "Start writing" })}
             </Link>
           ) : null}
-          {ogrenciGorunumu ? null : (
+          {/* Yeni kullanıcıda başlangıç kartının "İlk çalışmayı oluştur"u tek ana eylem (Phase 3); üstte ikinci koyu düğme aynı yere gidiyordu. */}
+          {ogrenciGorunumu || yeniKullanici ? null : (
             <Link href={yeniCalismaHref} className={resume || isStaff ? "projects-filter-button" : "projects-primary-button"}>
               <Plus size={16} aria-hidden="true" />
               {t({ tr: "Yeni çalışma", en: "New work" })}
@@ -757,15 +758,18 @@ export default async function DashboardPage() {
               })}
             </li>
           </ol>
-          <Link href={yeniCalismaHref} className="projects-primary-button">
-            <Plus size={16} aria-hidden="true" />
-            {t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" })}
-          </Link>
-          {/* Yeni kullanıcı için Kullanım Kılavuzu (30.10.2026): üç adımın ötesini merak eden buradan okur. */}
-          <Link href={KILAVUZ_ADRESI} className="projects-filter-button button-compact">
-            <BookOpen size={15} aria-hidden="true" />
-            {t({ tr: "Kullanım Kılavuzu'nu okuyun", en: "Read the User Guide" })}
-          </Link>
+          {/* Düğmeler yan yana ve içerik genişliğinde (Phase 3): kart boyu uzanan iki şerit düğme form gibi duruyordu. */}
+          <div className="gb-baslangic-eylemler">
+            <Link href={yeniCalismaHref} className="projects-primary-button">
+              <Plus size={16} aria-hidden="true" />
+              {t({ tr: "İlk çalışmayı oluştur", en: "Create your first work" })}
+            </Link>
+            {/* Yeni kullanıcı için Kullanım Kılavuzu (30.10.2026): üç adımın ötesini merak eden buradan okur. */}
+            <Link href={KILAVUZ_ADRESI} className="projects-filter-button">
+              <BookOpen size={15} aria-hidden="true" />
+              {t({ tr: "Kullanım Kılavuzu'nu okuyun", en: "Read the User Guide" })}
+            </Link>
+          </div>
         </article>
       ) : ogrenciGorunumu && resume ? (
         <>
