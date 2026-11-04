@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { aktifDil, aktifSaatDilimi, ceviri, tarihler } from "@/lib/dil-sunucu";
-import { YEREL } from "@/lib/dil";
+import { YEREL, type Metin } from "@/lib/dil";
 import Link from "next/link";
 import { BookOpen, LayoutList, PenLine, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -44,6 +44,22 @@ import TeslimTarihiFormu from "./_components/teslim-tarihi-formu";
 import DanismanaGonder from "./_components/danismana-gonder";
 import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
 import { KILAVUZ_ADRESI } from "@/lib/yardim/kullanim-kilavuzu";
+
+/* Son eklenenler kartlarının satır sayısı: kart uzamasın, tek bakışta okunsun. */
+const SON_EKLENEN_SATIR = 4;
+type KaynakDurumu = "to_review" | "read" | "used";
+// Kaynaklar sayfasındaki etiketlerle aynı (kaynak-listesi.tsx); öğrenci iki yerde iki ad görmesin.
+const KAYNAK_DURUMU: Record<KaynakDurumu, { ad: Metin; ton: string }> = {
+  to_review: { ad: { tr: "Okunacak", en: "To read" }, ton: "neutral" },
+  read: { ad: { tr: "Okundu", en: "Read" }, ton: "info" },
+  used: { ad: { tr: "Metinde", en: "Cited" }, ton: "success" },
+};
+type BelgeDurumu = "processing" | "analyzed" | "failed";
+const BELGE_DURUMU: Record<BelgeDurumu, { ad: Metin; ton: string }> = {
+  processing: { ad: { tr: "İşleniyor", en: "Processing" }, ton: "neutral" },
+  analyzed: { ad: { tr: "Denetlendi", en: "Checked" }, ton: "success" },
+  failed: { ad: { tr: "Okunamadı", en: "Failed" }, ton: "danger" },
+};
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -201,6 +217,7 @@ export default async function DashboardPage() {
     takvim,
     { data: krediSatiri, error: krediHatasi },
     { data: sonBaglanti },
+    [{ data: sonKaynaklar }, { data: sonBelgeler }],
   ] = await Promise.all([
     /*
       calismaKilavuzu kullanılıyor, loadAppliedGuidelines DEĞİL: ikincisi
@@ -310,6 +327,28 @@ export default async function DashboardPage() {
           .limit(1)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    /*
+      SON EKLENENLER (Phase 3): tezin son dört kaynağı ve son dört belge
+      kontrolü. Aynı Promise.all'da: ana sayfaya tur eklemiyor (Phase 2'de
+      21'den 12'ye indirildi). Okuma RLS'ten geçer; okunamazsa kart boş
+      görünmüyor, "okunamadı" yazıyor (aşağıda).
+    */
+    ogrenciGorunumu
+      ? Promise.all([
+          supabase
+            .from("literature_sources")
+            .select("id, title, year, status, created_at")
+            .eq("project_id", resume!.id)
+            .order("created_at", { ascending: false })
+            .limit(SON_EKLENEN_SATIR),
+          supabase
+            .from("document_uploads")
+            .select("id, file_name, status, created_at")
+            .eq("project_id", resume!.id)
+            .order("created_at", { ascending: false })
+            .limit(SON_EKLENEN_SATIR),
+        ])
+      : Promise.resolve([{ data: null }, { data: null }] as const),
   ]);
   const resumeReadiness =
     resume && resumeManuscript
@@ -557,8 +596,16 @@ export default async function DashboardPage() {
     : null;
 
   return (
-    <main className="dashboard-page gb gb-tek-ekran">
+    <main className="dashboard-page gb gb-ana-sayfa">
       {/*
+        TEK EKRAN KURALI ANA SAYFADA KALDIRILDI (Phase 3, 04.11.2026).
+        Eskiden sayfa görünüm yüksekliğine kilitleniyordu (gb-tek-ekran):
+        dört kart kalan yüksekliği paylaşıyor, sığmayan satır kartın
+        İÇİNDE kayıyordu. 1440×900'de "Bölümlerim"in dördüncü satırı yarıda
+        kesik görünüyordu, öğrenci altında bir şey olduğunu anlamıyordu.
+        Ana sayfa artık doğal akışta; kartlar en fazla altı satır olduğu
+        için uzamıyor. Öteki modüllerin tek ekranı yerinde.
+
         ANA SAYFA ArvoOS'UN GENEL BAKIŞ DÜZENİNDE (26.10.2026, kurum
         sahibinin isteği: "ArvoOS gibi, bir ürün gibi").
 
@@ -659,8 +706,6 @@ export default async function DashboardPage() {
 
       {/* Öğrencide abonelik tez kartının yanındaki kartta; ayrıca üstte tekrar edilmiyor. */}
       {ogrenciGorunumu && resume ? null : <LicenseCard access={access} />}
-
-      {geriBildirim.sorulsun ? <GeriBildirimKarti baglam={geriBildirim.baglam} /> : null}
 
       {yeniKullanici ? (
         <article className="gb-kart gb-baslangic">
@@ -880,7 +925,8 @@ export default async function DashboardPage() {
                   <b>{sirada.baslik}</b>
                   <span>{sirada.aciklama}</span>
                 </div>
-                <Link href={sirada.href} className="projects-primary-button button-compact">
+                {/* İkincil düğme: ekranın tek ana eylemi "Yazmaya devam et" (Phase 3); iki koyu düğme hangisinin asıl olduğunu söylemiyordu. */}
+                <Link href={sirada.href} className="projects-filter-button button-compact">
                   {sirada.eylem}
                 </Link>
               </div>
@@ -1054,6 +1100,80 @@ export default async function DashboardPage() {
             </ListeKarti>
           </ListeIzgarasi>
 
+          {/*
+            SON EKLENENLER VE HIZLI EYLEMLER (Phase 3). Kaynaklar ve kanıt
+            kartı SAYILARI veriyor; öğrencinin "en son ne eklemiştim"
+            sorusunun cevabı yoktu. Hızlı eylemler Ctrl+K'daki eylemlerin
+            aynısı: komut paletini bilmeyen de bir tıkla ulaşsın.
+          */}
+          <ListeIzgarasi etiket={t({ tr: "Son eklenenler", en: "Recently added" })}>
+            <ListeKarti
+              baslik={t({ tr: "Son kaynaklar", en: "Recent sources" })}
+              alt={t({ tr: "Bu çalışmaya en son eklenenler", en: "Most recently added to this work" })}
+              bos={
+                sonKaynaklar
+                  ? t({ tr: "Henüz kaynak yok. DOI yapıştırarak ilk kaynağınızı ekleyin.", en: "No sources yet. Paste a DOI to add your first source." })
+                  : t({ tr: "Kaynaklar okunamadı; sayfayı yenileyin.", en: "Couldn't load sources; refresh the page." })
+              }
+              sayi={sonKaynaklar?.length ?? 0}
+              href={`/dashboard/literature?calisma=${resume.id}`}
+              hrefEtiket={t({ tr: "Bütün kaynaklar", en: "All sources" })}
+            >
+              {(sonKaynaklar ?? []).map((k) => (
+                <ListeSatiri
+                  key={k.id}
+                  href={`/dashboard/literature?calisma=${resume.id}`}
+                  baslik={k.title}
+                  alt={k.year ? String(k.year) : undefined}
+                  sag={
+                    <span className="status-pill" data-tone={KAYNAK_DURUMU[k.status as KaynakDurumu]?.ton}>
+                      {t(KAYNAK_DURUMU[k.status as KaynakDurumu]?.ad ?? { tr: "—", en: "—" })}
+                    </span>
+                  }
+                />
+              ))}
+            </ListeKarti>
+
+            <ListeKarti
+              baslik={t({ tr: "Son belge kontrolleri", en: "Recent document checks" })}
+              alt={t({ tr: "Yüklediğiniz dosyalar", en: "Files you uploaded" })}
+              bos={
+                sonBelgeler
+                  ? t({ tr: "Henüz belge kontrolü yok. Word ya da PDF dosyanızı yükleyip kaynakçasını denetletebilirsiniz.", en: "No document checks yet. Upload your Word or PDF file to check its references." })
+                  : t({ tr: "Belgeler okunamadı; sayfayı yenileyin.", en: "Couldn't load documents; refresh the page." })
+              }
+              sayi={sonBelgeler?.length ?? 0}
+              href={`/dashboard/documents?calisma=${resume.id}`}
+              hrefEtiket={t({ tr: "Belge Kontrol", en: "Document Check" })}
+            >
+              {(sonBelgeler ?? []).map((b) => (
+                <ListeSatiri
+                  key={b.id}
+                  href={`/dashboard/documents?calisma=${resume.id}`}
+                  baslik={b.file_name}
+                  sag={
+                    <span className="status-pill" data-tone={BELGE_DURUMU[b.status as BelgeDurumu]?.ton}>
+                      {t(BELGE_DURUMU[b.status as BelgeDurumu]?.ad ?? { tr: "—", en: "—" })}
+                    </span>
+                  }
+                  zaman={once(b.created_at, simdiAn)}
+                />
+              ))}
+            </ListeKarti>
+
+            <ListeKarti
+              baslik={t({ tr: "Hızlı eylemler", en: "Quick actions" })}
+              alt={t({ tr: "Ctrl+K ile de açılır", en: "Also available with Ctrl+K" })}
+              bos=""
+              sayi={4}
+            >
+              <ListeSatiri href={`/dashboard/literature?calisma=${resume.id}&ekle=1`} baslik={t({ tr: "DOI ile kaynak ekle", en: "Add a source by DOI" })} />
+              <ListeSatiri href={`/dashboard/editor/${resume.id}/write?asistan=1`} baslik={t({ tr: "Yazım asistanını aç", en: "Open the writing assistant" })} />
+              <ListeSatiri href="/dashboard/analysis" baslik={t({ tr: "Veri analizi", en: "Data analysis" })} />
+              <ListeSatiri href={`/dashboard/documents?calisma=${resume.id}`} baslik={t({ tr: "Belge kontrolü", en: "Document check" })} />
+            </ListeKarti>
+          </ListeIzgarasi>
+
           {/* Birden çok çalışması olan öğrenci için: odak tek tezde, diğerleri bir tık uzakta. */}
           {activeProjects.length > 1 ? (
             <nav className="diger-calismalar" aria-label={t({ tr: "Diğer çalışmalarınız", en: "Your other works" })}>
@@ -1221,6 +1341,13 @@ export default async function DashboardPage() {
           </ListeIzgarasi>
         </>
       )}
+      {/*
+        Geri bildirim sorusu SAYFANIN SONUNDA (Phase 3). Eskiden selamlamanın
+        hemen altındaydı: telefonda ilk ekranın tamamını kaplıyor, tez kartı
+        ve "Yazmaya devam et" kaydırmadan görünmüyordu. Soru kaybolmuyor,
+        yalnızca öğrencinin asıl işinin önüne geçmiyor.
+      */}
+      {geriBildirim.sorulsun ? <GeriBildirimKarti baglam={geriBildirim.baglam} /> : null}
     </main>
   );
 }

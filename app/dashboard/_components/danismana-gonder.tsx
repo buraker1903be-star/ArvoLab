@@ -122,7 +122,8 @@ export default function DanismanaGonder({
         </div>
       ) : (
         <div className="danisman-gonder">
-          <button type="button" className="projects-primary-button button-compact" onClick={olustur} disabled={bekleniyor}>
+          {/* İkincil: ana sayfanın tek ana eylemi "Yazmaya devam et" (Phase 3). */}
+          <button type="button" className="projects-filter-button button-compact" onClick={olustur} disabled={bekleniyor}>
             <Link2 size={15} aria-hidden="true" />
             {bekleniyor ? t({ tr: "Hazırlanıyor…", en: "Preparing…" }) : t({ tr: "Okuma bağlantısı oluştur", en: "Create read-only link" })}
           </button>
