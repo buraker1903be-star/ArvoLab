@@ -126,3 +126,52 @@ test("İngilizce I/i büyük-küçük harf duyarsız eşleşir, Türkçe İ de",
   assert.equal(findMatches(belge(paragraf("İstanbul ve istanbul")), "istanbul").length, 2);
   assert.equal(findMatches(belge(paragraf("Işık")), "ışık").length, 1);
 });
+
+/*
+  Phase 2 (04.11.2026): arama açıkken metne yazılınca bütün belge değil,
+  yalnızca değişen bloklar taranıyor. Sonuç tam taramayla BİREBİR aynı
+  olmalı: yazma, silme, bölme, biçim ve sorgunun kendisini ekleme ile.
+*/
+import { EditorState } from "@tiptap/pm/state";
+import { eslesmeleriGuncelle } from "@/lib/tiptap-search";
+
+test("artımlı arama güncellemesi tam taramayla aynı", () => {
+  let s = 7;
+  const r = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  const sorgu = "enflasyon";
+  const parcalar = [];
+  for (let i = 0; i < 30; i++) parcalar.push(paragraf(`Enflasyon ${i} ve işsizlik; enflasyon beklentisi ENFLASYON dönemi ${i}.`));
+  let state = EditorState.create({ doc: belge(...parcalar) });
+  let eslesmeler = findMatches(state.doc, sorgu);
+  let calisti = 0;
+  for (let adim = 0; adim < 500; adim++) {
+    const boyut = state.doc.content.size;
+    const konum = 1 + Math.floor(r() * (boyut - 2));
+    const tr = state.tr;
+    const tur = r();
+    try {
+      if (tur < 0.35) tr.insertText(r() < 0.3 ? "Enflasyon" : r() < 0.5 ? "x" : "ena", konum);
+      else if (tur < 0.6) tr.delete(konum, Math.min(boyut - 1, konum + 1 + Math.floor(r() * 12)));
+      else if (tur < 0.75) tr.split(konum);
+      else if (tur < 0.9) tr.addMark(konum, Math.min(boyut - 1, konum + 1 + Math.floor(r() * 8)), state.schema.marks.bold.create());
+      else tr.removeMark(0, boyut, state.schema.marks.bold);
+    } catch {
+      continue;
+    }
+    if (!tr.docChanged) continue;
+    const artimli = eslesmeleriGuncelle(eslesmeler, sorgu, tr);
+    const tam = findMatches(tr.doc, sorgu);
+    assert.ok(artimli, `adım ${adim}: artımlı güncelleme vazgeçti`);
+    assert.deepEqual(artimli, tam, `adım ${adim}: artımlı sonuç tam taramadan farklı`);
+    calisti++;
+    eslesmeler = artimli;
+    state = state.apply(tr);
+  }
+  assert.ok(calisti > 300, `sınama yeterince adım koşmadı (${calisti})`);
+});
+
+test("eşleşme sınırına ulaşılmışsa artımlı güncelleme vazgeçer (tam tarama)", () => {
+  const state = EditorState.create({ doc: belge(paragraf("aa")) });
+  const tr = state.tr.insertText("a", 1);
+  assert.equal(eslesmeleriGuncelle(new Array(MAX_MATCHES).fill({ from: 1, to: 2 }), "a", tr), null);
+});
