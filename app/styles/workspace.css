@@ -1407,3 +1407,32 @@
   }
   .manuscript-araclar button { min-width: 40px; min-height: 40px; }
 }
+
+/*
+  DOKUNMATİK EKRANDA EDİTÖR DOKUNMA HEDEFLERİ (Phase 3 stabilizasyonu,
+  04.11.2026). Telefonda 39 hedefin 15'i 40 pikselin altındaydı: araç
+  çubuğu düğmeleri 30 piksel genişlikte kalıyordu, çünkü yukarıdaki
+  ".manuscript-araclar button { min-width: 40px }" kuralı
+  ".manuscript-araclar .arac-segment button { min-width: 30px }"
+  kuralına özgüllükte yeniliyordu. Kayıt durumu düğmesi 32 piksel
+  yüksekti. Simgeler aynı boyda; büyüyen yalnızca basılabilen alan.
+  Tablette ve dokunmatik her ekranda da geçerli; fareli masaüstünde
+  sıkı araç çubuğu yerinde.
+*/
+@media (max-width: 1199px), (pointer: coarse) {
+  .manuscript-araclar .arac-segment button,
+  .manuscript-araclar button { min-width: 40px; min-height: 40px; }
+  .manuscript-araclar .arac-segment button { height: auto; }
+  .save-status { min-height: 40px; }
+  :is(.manuscript-toolbar, .manuscript-araclar) .toolbar-select { height: 40px; }
+  /* Panel kapatma ve öneri simgeleri: simge aynı, basılan kutu 40 piksel. */
+  .yazim-ikon,
+  .yazim-oneri-bas .yazim-ikon { width: 40px; height: 40px; }
+}
+/* Büyüyen düğmelerle araç çubuğu tablette de kendi içinde kayıyor; sağ kenardaki solma kaydığını söyler (telefondakiyle aynı). */
+@media (min-width: 761px) and (max-width: 1199px) {
+  .manuscript-araclar {
+    -webkit-mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, black calc(100% - 28px), transparent);
+  }
+}

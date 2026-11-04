@@ -68,6 +68,10 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   cursor: pointer;
   transition: transform .34s var(--ease-spring), border-color .2s ease, color .2s ease, background-color .2s ease;
 }
+/* Dokunmatikte üst çubuk düğmeleri 40 piksel (Phase 3 stabilizasyonu): 38 piksel önerilen en küçük dokunma alanının altındaydı. */
+@media (max-width: 1199px), (pointer: coarse) {
+  .dashboard-icon-button { width: 40px; height: 40px; }
+}
 @media (hover: hover) and (pointer: fine) {
   .dashboard-icon-button:hover { border-color: color-mix(in srgb, var(--accent-bright) 45%, var(--line)); color: var(--accent); }
 }
