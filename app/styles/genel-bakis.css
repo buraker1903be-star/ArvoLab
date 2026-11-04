@@ -394,7 +394,11 @@
 .pencere-kart .project-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 /* Penceredeki iç formların kaydet çubuğu YAPIŞIK değil: yapışık çubuk
    sonuç listesinin üstüne biniyordu ("Dizinlerde ara" düğmesi sonuçları
-   örtüyordu). Yapışık çubuk yalnızca pencerenin kendi tek formunda. */
+   örtüyordu). Yapışık çubuk yalnızca pencerenin kendi tek formunda.
+   Asistan kartı da öyle (04.11.2026): Tarama asistanında "Tarama
+   Stratejisi Kur" satırı kaydırınca üstte kalıp "Arama dizeleri"
+   başlığını ve ilk sonucu örtüyordu. */
+.drawer-body .asistan-kart .project-form-actions,
 .drawer-body .pencere-kart .project-form-actions,
 .drawer-body details .project-form-actions,
 .drawer-body .analiz-pencere-govde .project-form-actions {
@@ -1233,3 +1237,37 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .belge-geri-bildirim-liste { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; counter-reset: madde; }
 .belge-geri-bildirim-liste li { position: relative; padding: 8px 10px 8px 36px; border-radius: var(--r-sm); background: var(--surface-2); color: var(--ink); font-size: var(--fs-base); line-height: var(--lh-metin); counter-increment: madde; }
 .belge-geri-bildirim-liste li::before { content: counter(madde); position: absolute; top: 8px; left: 10px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent); font-size: var(--fs-micro); font-weight: 700; }
+/*
+  Makale ve kanıt çalışma alanları (04.11.2026): tek ekran, iki kart.
+  Makalede kontrol listesi geniş, araçlar dar; kanıtta durum dar,
+  matris geniş. Telefonda tek sütun ve normal akış (gb-tek-ekran kuralı).
+*/
+.makale-ikili { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); }
+.kanit-ikili { grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); }
+@media (max-width: 900px) { .makale-ikili, .kanit-ikili { grid-template-columns: minmax(0, 1fr); } }
+:is(.makale-ikili, .kanit-ikili) .gb-kart-bas { flex-wrap: wrap; }
+:is(.makale-ikili, .kanit-ikili) .gb-kart-bas > div:first-child { flex: 1 1 240px; min-width: 0; }
+:is(.makale-ikili, .kanit-ikili) .gb-kart-bas h2 { display: flex; align-items: center; gap: 6px; }
+:is(.makale-ikili, .kanit-ikili) .gb-kart-bas h2 svg { color: var(--accent); }
+.makale-araclari { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.gb-tek-ekran > .callout, .gb-tek-ekran > .alert { margin: 0; }
+/* Esnek sütunda sekme çubuğu tam genişliğe yayılıyordu; içeriği kadar kalsın. */
+.gb-tek-ekran > .calisma-sekmeleri { align-self: flex-start; }
+/* Kanıt durumu (sol kart): üç sayı alt alta, bakılacak varsa renkli kenar. */
+.kanit-durum { display: grid; gap: 8px; margin: 0; }
+.kanit-durum > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0 10px; padding: 10px 12px; border: 1px solid var(--line-soft); border-left: 3px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+.kanit-durum > div[data-tone="warning"] { border-left-color: var(--warning); }
+.kanit-durum > div[data-tone="danger"] { border-left-color: var(--danger); }
+.kanit-durum dt { color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.kanit-durum dd { grid-row: span 2; margin: 0; color: var(--ink); font-size: var(--fs-xl); font-weight: 750; font-variant-numeric: tabular-nums; }
+.kanit-durum span { color: var(--ink-soft); font-size: var(--fs-sm); }
+.kanit-zincir-baslik { margin: 6px 0 0; color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.kanit-zincir-ozet { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.kanit-zincir-ozet li { padding: 3px 8px; border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent); font-size: var(--fs-micro); font-weight: 600; }
+.kanit-zincir-ozet li + li::before { content: "→"; margin-right: 6px; color: var(--ink-soft); }
+.kanit-bos { display: grid; place-content: center; gap: 6px; flex: 1 1 auto; max-width: 520px; margin: 0 auto; text-align: center; }
+.kanit-bos b { color: var(--ink); }
+.kanit-ikili .kanit-matris-sarici { box-shadow: none; }
+/* Dar kartta iddia ve kaynak sütunları ikişer sözcükte kırılıyordu; tablo yatay kayar. */
+.kanit-ikili .kanit-matris :is(th, td):first-child { min-width: 260px; }
+.kanit-ikili .kanit-matris :is(th, td):nth-child(3) { min-width: 220px; }

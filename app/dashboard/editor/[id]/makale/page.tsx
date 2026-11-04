@@ -161,8 +161,17 @@ export default async function MakaleCalismaAlani({
   const aile = yontemAilesi(calisma.research_method, profil.makale_turu);
   const yontem = aile ? yontemDenetimi(aile, dil) : null;
 
+  const durumSayisi = (d: keyof typeof MADDE_TONU) => maddeler.filter((m) => m.durum === d).length;
+
+  /*
+    TEK EKRAN, İKİ KART (04.11.2026). Sayfa Belge Kontrol ve Kaynaklar
+    ile aynı iskelete geçti: solda gönderim öncesi kontrol, sağda araç
+    karoları; sayfa kaymıyor, uzun kontrol listesi kendi kartında kayıyor.
+    Eskiden kontrol listesi tam genişlikte alt alta diziliyordu ve araçlara
+    ulaşmak için dokuz maddenin altına inmek gerekiyordu.
+  */
   return (
-    <main className="dashboard-page">
+    <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header calisma-basligi">
         <div>
           <span className="dashboard-kicker">
@@ -315,17 +324,31 @@ export default async function MakaleCalismaAlani({
         </p>
       )}
 
-      <section className="section">
-        <h2 className="section-title">
-          <ListChecks size={18} aria-hidden="true" /> {t({ tr: "Gönderim öncesi kontrol", en: "Pre-submission checklist" })}
-        </h2>
-        <p className="muted text-base">
-          {t({
-            tr: "Kaydedilmiş müsveddeden ve kanıt matrisinden hesaplanır. Kabul olasılığı ya da dergiye uygunluk hükmü verilmez; bunları hiçbir veri doğrulayamaz.",
-            en: "Calculated from the saved manuscript and the evidence matrix. No acceptance probability or journal-fit verdict is given; no data can verify these.",
-          })}
-        </p>
-        <ul className="asistan-bulgular mt-sm">
+      <section className="gb-sutunlar makale-ikili" aria-label={t({ tr: "Gönderim kontrolü ve araçlar", en: "Submission checklist and tools" })}>
+      <article className="gb-kart gb-sutun">
+        <header className="gb-kart-bas">
+          <div>
+            <h2>
+              <ListChecks size={16} aria-hidden="true" /> {t({ tr: "Gönderim öncesi kontrol", en: "Pre-submission checklist" })}
+            </h2>
+            <p>
+              {t({
+                tr: "Kaydedilmiş müsveddeden ve kanıt matrisinden hesaplanır. Kabul olasılığı ya da dergiye uygunluk hükmü verilmez; bunları hiçbir veri doğrulayamaz.",
+                en: "Calculated from the saved manuscript and the evidence matrix. No acceptance probability or journal-fit verdict is given; no data can verify these.",
+              })}
+            </p>
+          </div>
+          <span className="asistan-bulgu-sayilari">
+            {(["eksik", "dikkat", "tamam"] as const).map((d) =>
+              durumSayisi(d) ? (
+                <span key={d} data-tone={MADDE_TONU[d]}>
+                  {durumSayisi(d)} {t(MADDE_ETIKETI[d]).toLocaleLowerCase(dil === "en" ? "en-US" : "tr-TR")}
+                </span>
+              ) : null,
+            )}
+          </span>
+        </header>
+        <ul className="asistan-bulgular">
           {maddeler.map((m) => (
             <li className="asistan-bulgu" data-tone={MADDE_TONU[m.durum]} key={m.anahtar}>
               <span className="asistan-bulgu-etiket">{t(MADDE_ETIKETI[m.durum])}</span>
@@ -336,7 +359,7 @@ export default async function MakaleCalismaAlani({
             </li>
           ))}
         </ul>
-      </section>
+      </article>
 
       {/*
         ARAÇLAR KAROLARDA (26.10.2026, kurum sahibinin isteği: ArvoOS
@@ -347,9 +370,14 @@ export default async function MakaleCalismaAlani({
         kapak mektubu ikinci satırında ne içerdiğini söyleyen karolar.
         Dışa aktarma karosu kalktı: "Yazım" sekmesinin kendisi.
       */}
-      <section className="section">
-        <h2 className="section-title">{t({ tr: "Araçlar", en: "Tools" })}</h2>
-        <div className="calisma-karolari">
+      <article className="gb-kart gb-sutun">
+        <header className="gb-kart-bas">
+          <div>
+            <h2>{t({ tr: "Araçlar", en: "Tools" })}</h2>
+            <p>{t({ tr: "Her araç kendi penceresinde açılır.", en: "Each tool opens in its own window." })}</p>
+          </div>
+        </header>
+        <div className="calisma-karolari makale-araclari">
           <PanelDrawer
             triggerLabel={t({ tr: "Bölüm denetimi", en: "Section review" })}
             triggerNote={
@@ -565,6 +593,7 @@ export default async function MakaleCalismaAlani({
             </ul>
           </PanelDrawer>
         </div>
+      </article>
       </section>
     </main>
   );

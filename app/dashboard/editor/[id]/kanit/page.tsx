@@ -42,8 +42,14 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
   const kaynakHaritasi = new Map(kaynaklar.map((k) => [k.id, k]));
   const ozet = matrisOzeti(kayitlar);
 
+  /*
+    TEK EKRAN, İKİ KART (04.11.2026). Solda durum (üç sayı ve iddianın
+    zinciri), sağda matris kendi kartında kayıyor; sayfa kaymıyor. Eskiden
+    üç sayı kutusu tam genişlikte, matris altında ayrı bir bölümdü ve
+    uzun matriste özet ekrandan çıkıyordu.
+  */
   return (
-    <main className="dashboard-page">
+    <main className="dashboard-page gb gb-tek-ekran">
       <section className="projects-header calisma-basligi">
         <div>
           <span className="dashboard-kicker">{t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}</span>
@@ -83,49 +89,75 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
         </p>
       )}
 
-      <section className="merkez-ozet">
-        <article className="merkez-kutu">
-          <small>{t({ tr: "İddia", en: "Claims" })}</small>
-          <strong>{ozet.toplam}</strong>
-          <span>{t({ tr: `${ozet.dogrudan} doğrudan destekleniyor`, en: `${ozet.dogrudan} directly supported` })}</span>
-        </article>
-        <article className="merkez-kutu">
-          <small>{t({ tr: "Bakılması gereken", en: "Needs attention" })}</small>
-          <strong>{ozet.celisen + ozet.zayif + ozet.degerlendirilmemis}</strong>
-          <span>
+      <section className="gb-sutunlar kanit-ikili" aria-label={t({ tr: "Kanıt durumu ve matris", en: "Evidence status and matrix" })}>
+        <article className="gb-kart gb-sutun">
+          <header className="gb-kart-bas">
+            <div>
+              <h2>{t({ tr: "Durum", en: "Status" })}</h2>
+              <p>{t({ tr: "Destek düzeyi nihai akademik hüküm değildir.", en: "Support levels are not a final academic judgment." })}</p>
+            </div>
+          </header>
+          <dl className="kanit-durum">
+            <div>
+              <dt>{t({ tr: "İddia", en: "Claims" })}</dt>
+              <dd>{ozet.toplam}</dd>
+              <span>{t({ tr: `${ozet.dogrudan} doğrudan destekleniyor`, en: `${ozet.dogrudan} directly supported` })}</span>
+            </div>
+            <div data-tone={ozet.celisen + ozet.zayif + ozet.degerlendirilmemis ? "warning" : undefined}>
+              <dt>{t({ tr: "Bakılması gereken", en: "Needs attention" })}</dt>
+              <dd>{ozet.celisen + ozet.zayif + ozet.degerlendirilmemis}</dd>
+              <span>
+                {t({
+                  tr: `${ozet.celisen} çelişen · ${ozet.zayif} kısmi/dolaylı · ${ozet.degerlendirilmemis} değerlendirilmedi`,
+                  en: `${ozet.celisen} contradicting · ${ozet.zayif} partial/indirect · ${ozet.degerlendirilmemis} not assessed`,
+                })}
+              </span>
+            </div>
+            <div data-tone={ozet.incelemeBekleyen ? "danger" : undefined}>
+              <dt>{t({ tr: "İnsan incelemesi", en: "Human review" })}</dt>
+              <dd>{ozet.incelemeBekleyen}</dd>
+              <span>{t({ tr: `${ozet.kunyeSorunlu} kaynakta künye sorunu`, en: `${ozet.kunyeSorunlu} sources with reference issues` })}</span>
+            </div>
+          </dl>
+          <h3 className="kanit-zincir-baslik">{t({ tr: "Her iddianın zinciri", en: "Each claim's chain" })}</h3>
+          <ol className="kanit-zincir-ozet">
+            <li>{t({ tr: "İddia", en: "Claim" })}</li>
+            <li>{t({ tr: "Atıf", en: "Citation" })}</li>
+            <li>{t({ tr: "Kaynak kaydı", en: "Source record" })}</li>
+            <li>{t({ tr: "Özgün yayın", en: "Original publication" })}</li>
+            <li>{t({ tr: "Kanıt", en: "Evidence" })}</li>
+            <li>{t({ tr: "Sonuç", en: "Result" })}</li>
+          </ol>
+          <p className="hint">
             {t({
-              tr: `${ozet.celisen} çelişen · ${ozet.zayif} kısmi/dolaylı · ${ozet.degerlendirilmemis} değerlendirilmedi`,
-              en: `${ozet.celisen} contradicting · ${ozet.zayif} partial/indirect · ${ozet.degerlendirilmemis} not assessed`,
-            })}
-          </span>
-        </article>
-        <article className="merkez-kutu">
-          <small>{t({ tr: "İnsan incelemesi", en: "Human review" })}</small>
-          <strong>{ozet.incelemeBekleyen}</strong>
-          <span>{t({ tr: `${ozet.kunyeSorunlu} kaynakta künye sorunu`, en: `${ozet.kunyeSorunlu} sources with reference issues` })}</span>
-        </article>
-      </section>
-
-      {kayitlar.length === 0 ? (
-        <section className="empty-state mt-lg">
-          <p className="empty-state-baslik">{t({ tr: "Matriste henüz iddia yok", en: "No claims in the matrix yet" })}</p>
-          <p className="muted">
-            {t({
-              tr: "Çalışmanızın kaynak gerektiren temel iddialarını ekleyin. Her iddia için künye doğrulaması, kaynaktan incelenen metin ve iddia–kanıt uyumu ayrı ayrı kaydedilir.",
-              en: "Add the key claims in your work that need sources. For each claim, reference verification, the text reviewed from the source and claim–evidence fit are recorded separately.",
+              tr: "Matristeki bir iddiaya tıklayın: zincir ve bütün işlemler tek pencerede açılır; eksik halkalar kesik çizgiyle gösterilir.",
+              en: "Click a claim in the matrix: its chain and all actions open in one window; missing links are shown with a dashed line.",
             })}
           </p>
-        </section>
-      ) : (
-        <>
-          <section className="section mt-lg">
-            <h2 className="section-title">{t({ tr: "Matris", en: "Matrix" })}</h2>
-            <p className="muted text-base">
-              {t({
-                tr: "Bir iddiaya tıklayın: zinciri (iddia → atıf → kaynak kaydı → özgün yayın → kanıt → sonuç) ve bütün işlemler tek pencerede açılır. Eksik halkalar kesik çizgiyle gösterilir.",
-                en: "Click a claim: its chain (claim → citation → source record → original publication → evidence → result) and all actions open in one window. Missing links are shown with a dashed line.",
-              })}
-            </p>
+        </article>
+
+        <article className="gb-kart gb-sutun">
+          <header className="gb-kart-bas">
+            <div>
+              <h2>{t({ tr: "Matris", en: "Matrix" })}</h2>
+              <p>
+                {kayitlar.length
+                  ? t({ tr: `${kayitlar.length} iddia`, en: `${kayitlar.length} ${kayitlar.length === 1 ? "claim" : "claims"}` })
+                  : t({ tr: "Henüz iddia yok", en: "No claims yet" })}
+              </p>
+            </div>
+          </header>
+          {kayitlar.length === 0 ? (
+            <div className="gb-bos kanit-bos">
+              <b>{t({ tr: "Matriste henüz iddia yok", en: "No claims in the matrix yet" })}</b>
+              <span>
+                {t({
+                  tr: "Çalışmanızın kaynak gerektiren temel iddialarını sağ üstteki “İddia ekle” ile ekleyin. Her iddia için künye doğrulaması, kaynaktan incelenen metin ve iddia–kanıt uyumu ayrı ayrı kaydedilir.",
+                  en: "Add the key claims in your work that need sources with “Add claim” at the top right. For each claim, reference verification, the text reviewed from the source and claim–evidence fit are recorded separately.",
+                })}
+              </span>
+            </div>
+          ) : (
             <div className="kanit-matris-sarici">
               <table className="kanit-matris">
                 <thead>
@@ -175,10 +207,9 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
                 </tbody>
               </table>
             </div>
-          </section>
-
-        </>
-      )}
+          )}
+        </article>
+      </section>
     </main>
   );
 }

@@ -91,7 +91,10 @@ export const ORNEK: Record<string, Record<string, unknown>[]> = {
   ],
   manuscript_comments: [],
   manuscript_share_links: [],
-  kanit_kayitlari: [],
+  kanit_kayitlari: [
+    { id: "i1", project_id: PROJE, created_at: gunOnce(3), iddia: "Türkiye'de kısa dönemde enflasyon ile işsizlik arasında ters yönlü ilişki vardır.", bolum: "Giriş", atif: "(Önder, 2009)", kaynak_id: "l1", kunye_durumu: "dogrulandi", erisim_durumu: "acik_erisim", incelenen_metin: "…", konum: "s. 12", alinti: "ters yönlü ilişki", destek_duzeyi: "dogrudan", degerlendiren: "kullanici", insan_incelemesi: "yapildi", celisen: null, eksik_kanit: null, kunye_kaynagi: null, kunye_bakildi: null, erisim_adresi: null, incelenen_kapsam: null, incelenen_surum: null, degerlendirildi: null, duzeltme: null, gerekce: null },
+    { id: "i2", project_id: PROJE, created_at: gunOnce(2), iddia: "Sınır testi, değişkenlerin bütünleşme derecesinden bağımsız uygulanabilir.", bolum: "Yöntem", atif: "(Pesaran vd., 2001)", kaynak_id: "l3", kunye_durumu: "bakilmadi", erisim_durumu: "bilinmiyor", incelenen_metin: null, konum: null, alinti: null, destek_duzeyi: "degerlendirilmedi", degerlendiren: null, insan_incelemesi: "bekliyor", celisen: null, eksik_kanit: "Kaynaktan metin incelenmedi", kunye_kaynagi: null, kunye_bakildi: null, erisim_adresi: null, incelenen_kapsam: null, incelenen_surum: null, degerlendirildi: null, duzeltme: null, gerekce: null },
+  ],
   calisma_takvimi: [],
   calisma_kilavuzu: [],
   thesis_guidelines: [],

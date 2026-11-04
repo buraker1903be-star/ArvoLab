@@ -1502,8 +1502,10 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   color: var(--ink-soft); font-size: var(--fs-sm); text-decoration: none;
 }
 .merkez-baglanti svg { color: var(--accent); flex: none; }
-/* Karo bir düğme de olabiliyor (açılır pencere tetikleyicisi). */
-button.merkez-baglanti { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+/* Karo bir düğme de olabiliyor (açılır pencere tetikleyicisi). "font: inherit"
+   yazı boyunu da sıfırlıyordu: pencere açan karonun alt satırı bağlantı
+   karosununkinden büyük görünüyordu (04.11.2026); boyut yeniden yazılıyor. */
+button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
 .merkez-baglanti .drawer-tetik-metin { display: block; min-width: 0; }
 .merkez-baglanti .drawer-tetik-metin b { display: block; margin-bottom: 2px; color: var(--ink); font-size: var(--fs-body); font-weight: 500; }
 .merkez-baglanti b { display: block; margin-bottom: 2px; color: var(--ink); font-size: var(--fs-body); font-weight: 500; }
