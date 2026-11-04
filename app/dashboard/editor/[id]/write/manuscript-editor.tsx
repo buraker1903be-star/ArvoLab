@@ -5,13 +5,14 @@ import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import { kayitHatasiMetni, TASLAK_GUVENDE_METIN, TASLAK_YAZILAMADI_METIN } from "@/lib/taslak-durumu";
 import { useCeviri, useDil, useSaatDilimi, useTarihler } from "@/app/_components/dil-saglayici";
 import { saatEtiketi } from "@/lib/tr-time";
 import { YEREL, type Dil, type Metin } from "@/lib/dil";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
 import { olc } from "@/lib/editor-olcum";
-import OlcumPaneli from "./olcum-paneli";
+
 import { editorExtensions } from "@/lib/tiptap-extensions";
 import { hasManualNumber } from "@/lib/heading-numbering";
 import { describeAbstractRules } from "@/lib/guideline-editor-settings";
@@ -76,22 +77,22 @@ import {
   TableCellsSplit,
   Sparkles,
 } from "lucide-react";
-import FindReplaceBar from "./find-replace-bar";
-import ImportDialog, { type ImportMode } from "./import-dialog";
+
+import type { ImportMode } from "./import-dialog";
 import type { DocxImportStats } from "@/lib/docx-import";
-import ImageLibraryDialog from "./image-library-dialog";
-import ShortcutsDialog from "./shortcuts-dialog";
+
+
 import type { FormatLossReport } from "@/lib/format-loss";
 import { checkStructure, sorunlariGrupla, type StructureIssue } from "@/lib/structure-check";
 import { describeParagraphFormat, type ParagraphFormatRules } from "@/lib/paragraph-format";
-import VersionsDialog from "./versions-dialog";
-import SubmissionChecklistDialog from "./submission-checklist";
-import ShareDialog from "./share-dialog";
+
+
+
 import { buildSubmissionChecklist, missingCoverFields, type ChecklistAction } from "@/lib/submission-checklist";
 import { etikTeslimSatiri, type EtikKaydi } from "@/lib/etik/durum";
 import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
-import CiteDialog from "./cite-dialog";
-import AnalizEkleDialog from "./analiz-ekle-dialog";
+
+
 import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import type { CitationStyle } from "@/lib/citation-format";
@@ -99,7 +100,7 @@ import { STIL_SECENEKLERI, stilAdi } from "@/lib/atif/stiller";
 import { cslCoz, type CslKodu } from "@/lib/atif/csl-kimlik";
 import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
-import KaynakBulPenceresi from "./kaynak-bul-penceresi";
+
 import { useSatirIciOneri } from "./satir-ici-oneri";
 import AracMenusu from "./arac-menusu";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
@@ -127,7 +128,7 @@ import { splitBodyAndReferences } from "@/lib/text-split";
 import type { KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import IcindekilerKarti from "./icindekiler-karti";
 import OnSayfalarKarti from "./on-sayfalar-karti";
-import YazimPaneli from "./yazim-paneli";
+
 import { kilavuzOnSayfaAdlari, kilavuzOnSayfalari, onSayfaAdiKimligi, type OnSayfaKimligi } from "@/lib/on-sayfalar";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
@@ -155,6 +156,27 @@ import {
   clearManualTextFormat,
   type OutlineHeading,
 } from "./editor-navigation";
+
+/*
+  SEYREK AÇILAN PENCERELER TEMBEL YÜKLENİR (Phase 2, 04.11.2026). Editörün
+  ilk yüklemesinde indirilen JS'e bu on iki pencere/panelin kodu da
+  giriyordu; hepsi kapalıyken hiçbir şey çizmiyor. Artık sayfa
+  etkileşime açıldıktan sonra ayrı parçalar olarak iniyor (ssr: false:
+  kapalı pencerenin sunucuda çizilecek bir hâli yok). Davranış aynı:
+  bileşenler eskisi gibi her zaman yerinde, `open` ile açılıyor.
+*/
+const FindReplaceBar = dynamic(() => import("./find-replace-bar"), { ssr: false });
+const ImportDialog = dynamic(() => import("./import-dialog"), { ssr: false });
+const ImageLibraryDialog = dynamic(() => import("./image-library-dialog"), { ssr: false });
+const ShortcutsDialog = dynamic(() => import("./shortcuts-dialog"), { ssr: false });
+const VersionsDialog = dynamic(() => import("./versions-dialog"), { ssr: false });
+const SubmissionChecklistDialog = dynamic(() => import("./submission-checklist"), { ssr: false });
+const ShareDialog = dynamic(() => import("./share-dialog"), { ssr: false });
+const CiteDialog = dynamic(() => import("./cite-dialog"), { ssr: false });
+const AnalizEkleDialog = dynamic(() => import("./analiz-ekle-dialog"), { ssr: false });
+const KaynakBulPenceresi = dynamic(() => import("./kaynak-bul-penceresi"), { ssr: false });
+const YazimPaneli = dynamic(() => import("./yazim-paneli"), { ssr: false });
+const OlcumPaneli = dynamic(() => import("./olcum-paneli"), { ssr: false });
 
 // Liste tek kaynaktan (lib/atif/stiller.ts): eskiden burada elle yazılıydı
 // ve yeni stil eklendiğinde "Kaynak ekle" penceresi sessizce APA biçiminde
