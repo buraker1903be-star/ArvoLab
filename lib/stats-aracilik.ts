@@ -71,6 +71,38 @@ export function ols(y: number[], X: number[][]): OlsSonucu | null {
   return { b, se: kov.map((r, i) => Math.sqrt(r[i])), kov, sse, df, rKare: sst > 0 ? 1 - sse / sst : NaN };
 }
 
+/*
+  YALNIZCA KATSAYILAR (Phase 2, 04.11.2026). Bootstrap her örnekte
+  yalnızca katsayıya bakıyor, ama ols() her seferinde tasarım matrisini
+  (n satır dizisi) yeniden kuruyor, kovaryans, standart hata, SSE ve R²
+  hesaplıyordu. 5000 örnekte bu, tarayıcının ana iş parçacığını kilitledi:
+  n = 1.000'de basit aracılık ~3,9 s, n = 10.000'de ~53 s ekran donuyordu.
+
+  Toplamlar ols(y, tasarim(sutunlar)) ile AYNI sırada ve aynı formülle
+  biriktiriliyor (sabit terim 1 ile çarpım değeri değiştirmez), aynı
+  tersAl kullanılıyor: katsayılar bit bit aynı, tohumlu bootstrap sonucu
+  değişmez (tests/unit/stats-aracilik.test.ts sınar).
+*/
+export function olsKatsayilari(y: number[], sutunlar: number[][]): number[] | null {
+  const n = y.length;
+  const p = sutunlar.length + 1;
+  if (n <= p) return null;
+  const xtx = Array.from({ length: p }, () => new Array<number>(p).fill(0));
+  const xty = new Array<number>(p).fill(0);
+  const satir = new Array<number>(p);
+  satir[0] = 1;
+  for (let i = 0; i < n; i += 1) {
+    for (let j = 1; j < p; j += 1) satir[j] = sutunlar[j - 1][i];
+    for (let j = 0; j < p; j += 1) {
+      xty[j] += satir[j] * y[i];
+      for (let k = 0; k < p; k += 1) xtx[j][k] += satir[j] * satir[k];
+    }
+  }
+  const ters = tersAl(xtx);
+  if (!ters) return null;
+  return ters.map((r) => r.reduce((t, v, j) => t + v * xty[j], 0));
+}
+
 const tasarim = (sutunlar: number[][]) => sutunlar[0].map((_, i) => [1, ...sutunlar.map((s) => s[i])]);
 
 /* Tohumlu üretici (mulberry32): aynı tohum, aynı örnekler. */
@@ -160,9 +192,9 @@ export function aracilik(
       ys[i] = y[s];
       kovaryatlar.forEach((k, j) => (ks[j][i] = k[s]));
     }
-    const rm = ols(ms, tasarim([xs, ...ks]));
-    const ry = ols(ys, tasarim([xs, ms, ...ks]));
-    if (rm && ry) dagilim.push(rm.b[1] * ry.b[2]);
+    const rm = olsKatsayilari(ms, [xs, ...ks]);
+    const ry = olsKatsayilari(ys, [xs, ms, ...ks]);
+    if (rm && ry) dagilim.push(rm[1] * ry[2]);
   }
   dagilim.sort((p, q) => p - q);
   const bootOrt = mean(dagilim);
@@ -266,11 +298,31 @@ function cokluKatsayilar(x: number[], ms: number[][], y: number[], kovaryatlar: 
   }
   const modelY = ols(y, tasarim([x, ...ms, ...kovaryatlar]));
   if (!modelY) return null;
-  const a = modeller.map((r) => r.b[1]);
+  return { modeller, modelY, ...yollar(modeller.map((r) => r.b), modelY.b, k, tur) };
+}
+
+/* Katsayılardan a, d, b (asıl veri ve bootstrap ortak). */
+function yollar(mKatsayilari: number[][], yKatsayilari: number[], k: number, tur: "paralel" | "seri") {
+  const a = mKatsayilari.map((b) => b[1]);
   /* d[j][i] = M_i'nin M_j modelindeki katsayısı (sütun 2 + i). */
-  const d = modeller.map((r, j) => Array.from({ length: k }, (_, i) => (tur === "seri" && i < j ? r.b[2 + i] : 0)));
-  const b = Array.from({ length: k }, (_, j) => modelY.b[2 + j]);
-  return { modeller, modelY, a, d, b };
+  const d = mKatsayilari.map((b, j) => Array.from({ length: k }, (_, i) => (tur === "seri" && i < j ? b[2 + i] : 0)));
+  const b = Array.from({ length: k }, (_, j) => yKatsayilari[2 + j]);
+  return { a, d, b };
+}
+
+/* Bootstrap örneğinde yalnızca katsayılar (olsKatsayilari; asıl veriyle aynı sayılar). */
+function cokluBootKatsayilar(x: number[], ms: number[][], y: number[], kovaryatlar: number[][], tur: "paralel" | "seri") {
+  const k = ms.length;
+  const mKatsayilari: number[][] = [];
+  for (let j = 0; j < k; j += 1) {
+    const oncekiler = tur === "seri" ? ms.slice(0, j) : [];
+    const b = olsKatsayilari(ms[j], [x, ...oncekiler, ...kovaryatlar]);
+    if (!b) return null;
+    mKatsayilari.push(b);
+  }
+  const yKatsayilari = olsKatsayilari(y, [x, ...ms, ...kovaryatlar]);
+  if (!yKatsayilari) return null;
+  return yollar(mKatsayilari, yKatsayilari, k, tur);
 }
 
 function yolEtkisi(kume: number[], a: number[], d: number[][], b: number[]) {
@@ -317,7 +369,7 @@ export function cokluAracilik(
       for (let j = 0; j < k; j += 1) mss[j][i] = ms[j][s];
       for (let j = 0; j < kovaryatlar.length; j += 1) kss[j][i] = kovaryatlar[j][s];
     }
-    const kt = cokluKatsayilar(xs, mss, yss, kss, tur);
+    const kt = cokluBootKatsayilar(xs, mss, yss, kss, tur);
     if (!kt) continue;
     const e = kumeler.map((km) => yolEtkisi(km, kt.a, kt.d, kt.b));
     e.forEach((v, i) => dagYol[i].push(v));

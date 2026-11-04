@@ -147,3 +147,22 @@ describe("çoklu aracı (paralel ve seri)", () => {
     assert.equal(cokluAracilik(C.x, [C.m1, C.m2, C.m3, C.m1, C.m2], C.y, "seri"), null);
   });
 });
+
+/*
+  Phase 2 (04.11.2026): bootstrap yalnızca katsayı hesaplayan hızlı yoldan
+  geçiyor. Katsayılar ols() ile BİT BİT aynı olmalı; yoksa tohumlu
+  bootstrap aralıkları sessizce değişir.
+*/
+test("olsKatsayilari, ols(tasarim) katsayılarıyla birebir aynı", async () => {
+  const { ols, olsKatsayilari } = await import("@/lib/stats-aracilik");
+  let s = 11;
+  const r = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  for (const p of [1, 2, 4]) {
+    const n = 60;
+    const sutunlar = Array.from({ length: p }, () => Array.from({ length: n }, () => r() * 10 - 5));
+    const y = Array.from({ length: n }, (_, i) => sutunlar.reduce((t, c, j) => t + c[i] * (j + 1), 0) + r());
+    const tasarimli = ols(y, sutunlar[0].map((_, i) => [1, ...sutunlar.map((c) => c[i])]));
+    assert.deepStrictEqual(olsKatsayilari(y, sutunlar), tasarimli!.b);
+  }
+  assert.equal(olsKatsayilari([1, 2], [[1, 2]]), null); // n <= p
+});
