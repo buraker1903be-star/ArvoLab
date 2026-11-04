@@ -59,3 +59,19 @@ export function tarihBicimleri(dil: "tr" | "en", saatDilimi: string): TarihBicim
     uzunTarih: (value) => b({ month: "long", day: "numeric", year: "numeric" }).format(new Date(value)),
   };
 }
+
+/*
+  Saat:dakika, kullanıcının saat diliminde (Phase 2, 04.11.2026). Editörün
+  "Kaydedildi · 09:31" etiketi dilimsiz toLocaleTimeString kullanıyordu:
+  sunucu çiziminde UTC, tarayıcıda tarayıcının saati. Panelin geri kalanı
+  Türkçede İstanbul saatine sabit olduğu için yurt dışındaki öğrenci ya da
+  saati yanlış ayarlı bir makine, üst çubukta 09:31 görürken kayıt
+  etiketinde 06:31 görüyordu: "üç saattir kaydedilmemiş" izlenimi.
+*/
+export function saatEtiketi(value: string | number | Date, dil: "tr" | "en", saatDilimi: string): string {
+  return new Intl.DateTimeFormat(dil === "en" ? "en-US" : "tr-TR", {
+    timeZone: dil === "tr" ? TR : saatDilimi,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}

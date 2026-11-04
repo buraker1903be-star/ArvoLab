@@ -36,6 +36,11 @@ export function useDil(): Dil {
 }
 
 /** İstemcide tarih biçimleri, sunucuyla aynı dil ve saat dilimiyle. */
+/** Kullanıcının saat dilimi (Türkçede İstanbul, İngilizcede tarayıcınınki; lib/dil-sunucu.ts). */
+export function useSaatDilimi(): string {
+  return useContext(DilBaglami).saatDilimi;
+}
+
 export function useTarihler(): TarihBicimleri {
   const { dil, saatDilimi } = useContext(DilBaglami);
   return useMemo(() => tarihBicimleri(dil, saatDilimi), [dil, saatDilimi]);

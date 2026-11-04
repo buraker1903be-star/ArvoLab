@@ -6,7 +6,8 @@ import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { kayitHatasiMetni, TASLAK_GUVENDE_METIN, TASLAK_YAZILAMADI_METIN } from "@/lib/taslak-durumu";
-import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
+import { useCeviri, useDil, useSaatDilimi, useTarihler } from "@/app/_components/dil-saglayici";
+import { saatEtiketi } from "@/lib/tr-time";
 import { YEREL, type Dil, type Metin } from "@/lib/dil";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
 import { olc } from "@/lib/editor-olcum";
@@ -364,7 +365,6 @@ function clearDraft(projectId: string, kullaniciId: string | null) {
   }
 }
 
-const timeLabel = (date: Date, dil: Dil) => date.toLocaleTimeString(YEREL[dil], { hour: "2-digit", minute: "2-digit" });
 
 type FootnoteDialogState = { mode: "insert"; text: string } | { mode: "edit"; pos: number; text: string } | null;
 
@@ -458,6 +458,7 @@ export default function ManuscriptEditor({
 }: ManuscriptEditorProps) {
   const t = useCeviri();
   const dil = useDil();
+  const saatDilimi = useSaatDilimi();
   const { tarih, tarihSaat } = useTarihler();
   const formatDate = (value: string | null | undefined) => {
     const date = value ? new Date(value) : null;
@@ -1996,7 +1997,7 @@ export default function ManuscriptEditor({
           : saveState === "conflict"
             ? t({ tr: "Çakışma var", en: "Conflict" })
             : lastSavedAt
-              ? t({ tr: `Kaydedildi · ${timeLabel(lastSavedAt, dil)}`, en: `Saved · ${timeLabel(lastSavedAt, dil)}` })
+              ? t({ tr: `Kaydedildi · ${saatEtiketi(lastSavedAt, dil, saatDilimi)}`, en: `Saved · ${saatEtiketi(lastSavedAt, dil, saatDilimi)}` })
               : t({ tr: "Otomatik kayıt açık", en: "Autosave on" });
 
   return (
