@@ -108,7 +108,16 @@
 }
 .gb-satir:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
 .gb-satir-govde { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.gb-satir-govde b { overflow: hidden; font-size: var(--fs-sm); font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+/*
+  Başlık iki satıra kadar (Phase 3 stabilizasyonu). Tek satırdayken dört
+  sütunlu personel kartlarında durum rozeti yanında çalışma adı
+  "TÜRKİYE'D…" diye dokuz harfe iniyordu; personel hangi çalışma olduğunu
+  okuyamıyordu. Üçüncü satır kesilir, tam ad bağlantının hedefinde.
+*/
+.gb-satir-govde b {
+  display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  font-size: var(--fs-sm); font-weight: 550; overflow-wrap: anywhere;
+}
 .gb-satir-govde small { overflow: hidden; color: var(--muted); font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
 .gb-satir .status-pill { flex: none; }
 .gb-zaman { flex: none; align-self: flex-start; margin-top: 2px; color: var(--muted); font-size: var(--fs-micro); white-space: nowrap; }
@@ -868,6 +877,21 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .ana-sayaclar { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .ana-sayaclar .personel-sayac { padding: 8px 12px; }
 .ana-sayaclar .personel-sayac b { font-size: 20px; }
+/*
+  Tablette beş-altı sayaç 5+1 kırılıyordu (Phase 3 stabilizasyonu):
+  auto-fit 698 piksele beş sütun sığdırıp altıncıyı tek başına alt
+  satıra bırakıyordu. Sayaç sayısı role göre değiştiği için sütun sayısı
+  sabit yazılmıyor; beş ve üstünde üç sütun (3+3, 3+2), azında auto-fit.
+*/
+@media (min-width: 561px) and (max-width: 1199px) {
+  .ana-sayaclar:has(> :nth-child(5)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* Yönetici yedi-sekiz sayaç görüyor (destek kuyruğu): dört sütun, 4+3 / 4+4. */
+  .ana-sayaclar:has(> :nth-child(7)) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+/* Telefonda iki sütun; tek sayıda sayaçta sonuncu tek başına yarım kalmasın, satırı kaplasın. */
+@media (max-width: 560px) {
+  .ana-sayaclar > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
 
 /* Destek yazışması (expert-requests/yazisma.tsx): kendi mesajı sağda, karşı tarafınki solda. */
 .yazisma { display: grid; gap: 10px; }

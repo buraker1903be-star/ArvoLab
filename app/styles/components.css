@@ -1758,6 +1758,8 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent-400) 6%, var(--surface)), var(--surface));
   box-shadow: var(--shadow-sm);
 }
+/* Genel bakış sayfalarında kartlar arası boşluk sayfanın kendi aralığından gelir; 22 piksel üstüne ekleniyor, kartın üstünde iki kat boşluk açıyordu. */
+.gb > .geri-bildirim-karti { margin-top: 0; }
 .geri-bildirim-bas { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .geri-bildirim-karti .dashboard-kicker { display: inline-flex; align-items: center; gap: 6px; }
 .geri-bildirim-karti h2 { margin: 0; font-size: var(--fs-lg); font-weight: 650; line-height: var(--lh-baslik); }
