@@ -106,7 +106,7 @@ html.drawer-open { overflow: hidden; }
   /* --katman: iç içe pencerede açılış sırası (panel-drawer.tsx). İç
      pencerenin kökü belgede dıştakinden ÖNCE durduğu için eskiden
      arkada kalıyor, hiç görünmüyordu. */
-  z-index: calc(1000 + var(--katman, 0));
+  z-index: calc(var(--z-pencere) + var(--katman, 0));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -201,7 +201,7 @@ html.drawer-open { overflow: hidden; }
 .drawer-body .project-form-actions {
   position: sticky;
   bottom: -26px;
-  z-index: 2;
+  z-index: var(--z-ust);
   margin: 18px -26px -26px;
   padding: 14px 26px;
   border-top: 1px solid var(--line-soft);
@@ -260,7 +260,8 @@ html.drawer-open { overflow: hidden; }
 .nav-progress {
   position: fixed;
   inset: 0 0 auto;
-  z-index: 90;
+  /* En üst katman: eskiden 90'dı, dock'un (210) ve pencerelerin altında kalıyordu. */
+  z-index: var(--z-toast);
   height: 2px;
   pointer-events: none;
 }
@@ -279,7 +280,8 @@ html.drawer-open { overflow: hidden; }
   position: fixed;
   left: 50%;
   bottom: max(24px, env(safe-area-inset-bottom));
-  z-index: 85;
+  /* Eskiden 85: açılır pencerede (1000) gönderilen formun kapsülü pencerenin ARKASINDA kalıyordu. */
+  z-index: var(--z-toast);
   display: inline-flex;
   align-items: center;
   gap: 9px;

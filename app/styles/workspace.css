@@ -407,7 +407,7 @@
   background: var(--surface);
   box-shadow: 1px 0 0 var(--line-soft);
 }
-.stats-result-table th:first-child { z-index: 1; background: var(--surface-2); }
+.stats-result-table th:first-child { z-index: var(--z-taban); background: var(--surface-2); }
 .stats-result-table tbody tr:last-child td { border-bottom: 0; }
 @media (hover: hover) and (pointer: fine) {
   /* --accent-bright tema ile döner; --accent-100 her iki temada aynı kalıp
@@ -1045,7 +1045,7 @@
   /* Dock'un üstünde: panel sabit 12px'teyken dock onu örtüyordu ve
      tam da okunması istenen sayılar görünmüyordu. */
   bottom: calc(var(--dock-alani) + 12px);
-  z-index: 60;
+  z-index: var(--z-panel);
   min-width: 320px;
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -1239,7 +1239,7 @@
   top: 72px;
   right: 16px;
   bottom: 16px;
-  z-index: 40;
+  z-index: var(--z-topbar);
   display: flex;
   flex-direction: column;
   width: min(400px, calc(100vw - 32px));

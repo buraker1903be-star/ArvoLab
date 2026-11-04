@@ -131,7 +131,7 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
 .os-kullanici > summary::-webkit-details-marker { display: none; }
 .os-kullanici > summary:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
 .os-kullanici-menu {
-  position: absolute; top: calc(100% + 8px); right: 0; z-index: 70;
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: var(--z-menu);
   width: 280px; max-width: calc(100vw - 24px); padding: 8px;
   border: 1px solid var(--line); border-radius: var(--r-lg);
   background: var(--surface-raised); box-shadow: var(--shadow-lg);

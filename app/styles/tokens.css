@@ -185,20 +185,58 @@
   --lh-metin: 1.55;
   --lh-baslik: 1.3;
 
-  /* ---- Katmanlar ---- */
+  /* ---- Boşluk ölçeği (Phase 3, 04.11.2026) ----
+     4 piksellik adım. Yeni kod boşluğu buradan alır; eski dosyalardaki
+     ham piksel değerleri dokunuldukça buraya taşınır (toplu değişim
+     görünümü farkında olmadan kaydırırdı). */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+
+  /* ---- Katmanlar ----
+     Tek ölçek: dosyalara dağılmış ham değerler (1, 2, 5, 30, 40, 60, 70, 85, 90)
+     birbirini bilmeden seçilmişti; bir açılır menünün yapışık çubuğun
+     altında kalması gibi hatalar buradan doğuyor. Sıra aşağıdan yukarı. */
+  --z-taban: 1;
+  --z-ust: 2;
   --z-sticky: 20;
+  --z-acilir: 30;
   --z-topbar: 40;
+  --z-panel: 60;
+  --z-menu: 70;
+  --z-gezinme: 200;
   --z-dock: 210;
+  --z-pencere: 1000;
   --z-toast: 1100;
 
-  /* ---- Hareket ve malzeme ---- */
+  /* ---- Hareket ve malzeme ----
+     Süreler üç kademe: geri bildirim (üzerine gelme, basma), yerleşim
+     (açılır menü, panel), sahne (sayfa geçişi, alt sayfa). Hareketi
+     azaltmak isteyen kullanıcıda base.css hepsini sıfırlar. */
+  --sure-hizli: 120ms;
+  --sure-orta: 200ms;
+  --sure-yavas: 320ms;
   --ease-spring: cubic-bezier(.22, 1, .36, 1);
   --ease-sheet: cubic-bezier(.32, .72, 0, 1);
   --glass-bg: color-mix(in srgb, var(--surface) 72%, transparent);
   --glass-strong: color-mix(in srgb, var(--surface) 86%, transparent);
   --glass-blur: saturate(180%) blur(22px);
 
-  /* ---- Yerleşim ---- */
+  /* ---- Yerleşim ----
+     KIRILIMLAR (CSS değişkeni medya sorgusunda kullanılamıyor; değerler
+     lib/os/kirilimlar.ts'te sabit, CSS'te elle aynı yazılır):
+       telefon  ≤ 760px   alt çubuk
+       tablet   761–1199px dar ray
+       masaüstü ≥ 1200px  geniş kenar çubuğu */
+  --gezinme-genislik: 248px;
+  --gezinme-ray: 76px;
+  --alt-cubuk-h: 64px;
   --sidebar-width: 264px;
   --topbar-height: 64px;
   /* Dock'un ekranın altında kapladığı yer (os-shell.css): içerik,

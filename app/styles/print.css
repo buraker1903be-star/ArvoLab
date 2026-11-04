@@ -180,7 +180,7 @@ html[data-sayfali="hazirlaniyor"] .print-page > .print-sheet { opacity: .35; }
 .pagedjs_pages .print-toc a { display: flex; align-items: baseline; }
 .print-toc-noktalar { display: none; }
 .pagedjs_pages .print-toc-noktalar { display: block; flex: 1; min-width: 1em; margin: 0 .3em; border-bottom: 1px dotted currentColor; }
-.sayfali-durum { position: sticky; top: 64px; z-index: 5; width: fit-content; margin: 12px auto 0; padding: 8px 14px; border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--shadow-sm); color: var(--ink-soft); font-size: var(--fs-sm); }
+.sayfali-durum { position: sticky; top: 64px; z-index: var(--z-sticky); width: fit-content; margin: 12px auto 0; padding: 8px 14px; border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--shadow-sm); color: var(--ink-soft); font-size: var(--fs-sm); }
 
 /* Proforma fatura (app/print/proforma/[id]): makbuzun düzeni üstüne kalem tablosu ve taraflar */
 .proforma h2 { margin: 0 0 .3em; font-size: 10pt; text-transform: uppercase; letter-spacing: .04em; }
