@@ -281,6 +281,33 @@
   --fs-xl: 20px;
   --fs-title: clamp(26px, 2.3vw, 32px);
 
+  /* ---- Editoryal başlık sistemi (Phase 4.4, 04.11.2026) ----
+     Newsreader (--font-display) YALNIZCA şu rollerde: karşılama, modül
+     sayfa başlığı, akademik çalışmanın adı, giriş ekranı başlıkları.
+     Kart başlıkları, menüler, düğmeler, formlar, tablolar Inter'de
+     kalır; belge içeriği hiç etkilenmez (başlıklar element seçiciyle
+     değil, rol sınıflarıyla seçiliyor — editördeki h1/h2 bunlara girmez).
+
+     Ölçek bilerek DAR: serif gövdesi Inter'den küçük göründüğü için
+     boyutlar eski başlıklarla aynı aralıkta kaldı, ağırlık 700'den 500'e
+     indi. Ağır ve büyük bir "üniversite portalı" başlığı istenmiyor. */
+  --fs-display: clamp(28px, 2.4vw, 34px);
+  --fs-sayfa: clamp(24px, 2vw, 30px);
+  --fs-sayfa-telefon: 26px;
+  --fs-calisma: clamp(20px, 1.6vw, 24px);
+  --fs-calisma-sik: clamp(17px, 1.25vw, 19px);
+  --fs-tanitim: clamp(32px, 3.4vw, 48px);
+  /* Ağırlık ölçeği: yeni kod buradan alır (eski 650/750 değerleri 4.5'te). */
+  --fw-normal: 400;
+  --fw-orta: 500;
+  --fw-yari: 600;
+  --fw-kalin: 700;
+  --fw-display: var(--fw-orta);
+  /* Serif başlıkta Inter'deki -0,025em sıkıştırma harfleri birbirine
+     yapıştırıyordu (özellikle büyük harfli Türkçe tez adlarında İ, Ş, Ğ). */
+  --lh-display: 1.15;
+  --ls-display: -.01em;
+
   /* ---- Satır ritmi ----
      Gövde metni ÜÇ ayrı değerle yazılıyordu (1,5 / 1,55 / 1,6): aynı
      rolde duran iki paragraf farklı ritimde okunuyordu. Kart ve bölüm

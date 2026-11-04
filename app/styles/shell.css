@@ -185,8 +185,9 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   .dashboard-main-content {
     padding: 8px max(16px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
+  /* Telefonda sayfa başlığı 26px (Phase 4.4): eskiden 30px'ti, masaüstü en küçük değerinden büyüktü. */
   .projects-header h1,
-  .dashboard-hero h1 { font-size: 30px; }
+  .dashboard-hero h1 { font-size: var(--fs-sayfa-telefon); }
 }
 
 /* Saydamlığı azaltmayı seçen kullanıcı: cam yüzeyler düz */

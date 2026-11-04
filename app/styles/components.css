@@ -29,12 +29,19 @@
   margin: 4px 0 22px;
 }
 .projects-header > div:first-child { max-width: 720px; }
+/*
+  Sayfa başlığı EDİTORYAL (Phase 4.4): Newsreader, orta ağırlık. Rakamlar
+  satır hizasında (lining): Newsreader'ın varsayılanı eski usul rakam,
+  "(2000–2025)" gibi yıllar satırdan aşağı sarkıyordu.
+*/
 .projects-header h1 {
   margin: 6px 0;
-  font-size: var(--fs-title);
-  font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -.025em;
+  font-family: var(--font-display);
+  font-size: var(--fs-sayfa);
+  font-weight: var(--fw-display);
+  font-variant-numeric: lining-nums;
+  line-height: var(--lh-display);
+  letter-spacing: var(--ls-display);
 }
 .projects-header p { margin: 0; color: var(--muted); font-size: var(--fs-body); line-height: var(--lh-metin); }
 
@@ -1050,7 +1057,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   flex-wrap: wrap;
   margin: 4px 0 22px;
 }
-.dashboard-hero h1 { margin: 6px 0; font-size: var(--fs-title); font-weight: 700; line-height: 1.12; letter-spacing: -.025em; }
+.dashboard-hero h1 { margin: 6px 0; font-family: var(--font-display); font-size: var(--fs-sayfa); font-weight: var(--fw-display); font-variant-numeric: lining-nums; line-height: var(--lh-display); letter-spacing: var(--ls-display); }
 .dashboard-hero p { margin: 0; color: var(--muted); }
 
 /* Abonelik planları (aylık / yıllık) */

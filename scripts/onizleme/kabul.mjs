@@ -289,6 +289,23 @@ const tarayici = await chromium.launch();
     await ctx.close();
   });
 
+  await senaryo("tipografi: Newsreader yalnızca rol başlıklarında; belge içeriği ve kart başlıkları etkilenmez (Phase 4.4)", async () => {
+    const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+    const sayfa = await ctx.newPage();
+    const aile = (sec) => sayfa.$eval(sec, (e) => getComputedStyle(e).fontFamily);
+    await git(sayfa, "/dashboard/editor");
+    bekle(/newsreader/i.test(await aile(".projects-header h1")), "sayfa başlığı Newsreader değil");
+    await git(sayfa, `/dashboard/editor/${TEZ}/write`);
+    await sayfa.locator(".manuscript-editor-content.kagit h1").first().waitFor({ state: "visible", timeout: 30000 });
+    bekle(/newsreader/i.test(await aile(".yazma-basligi h1")), "çalışma adı Newsreader değil");
+    // Belgenin kendi başlığı ve paragrafı arayüz başlık yazısını ALMAMALI (element seçiciyle sızma olmasın).
+    bekle(!/newsreader/i.test(await aile(".manuscript-editor-content.kagit h1")), "belge başlığına Newsreader sızmış");
+    bekle(!/newsreader/i.test(await aile(".manuscript-editor-content.kagit p")), "belge paragrafına Newsreader sızmış");
+    await git(sayfa, "/dashboard");
+    bekle(!/newsreader/i.test(await aile(".gb-kart-bas h2")), "kart başlığına Newsreader uygulanmış");
+    await ctx.close();
+  });
+
   await senaryo("tema: ilk boyama doğru temada (JS paketleri gecikse bile parlama yok)", async () => {
     // Eskiden betik Next'in kuyruğundaydı ve JS gelene kadar data-theme yoktu: koyu tercihli kullanıcı açık zemin görüyordu.
     const ctx = await tarayici.newContext({ colorScheme: "light" });

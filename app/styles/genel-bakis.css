@@ -16,10 +16,12 @@
 .gb-selam h1 {
   margin: 0;
   color: var(--ink);
-  font-size: clamp(26px, 2.2vw, 32px);
-  font-weight: 650;
-  line-height: 1.15;
-  letter-spacing: -.02em;
+  /* Karşılama editoryal (Phase 4.4): Newsreader, orta ağırlık. */
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-weight: var(--fw-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--ls-display);
 }
 .gb-selam p { margin: 6px 0 0; max-width: 640px; color: var(--muted); font-size: var(--fs-base); line-height: var(--lh-metin); }
 .gb-selam-eylemler { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -177,7 +179,8 @@
 .tez-kart { gap: 16px; padding: 20px 24px; }
 .tez-kart-ust { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .tez-kart-ust small { display: block; color: var(--muted); font-size: var(--fs-sm); }
-.tez-kart-ust h2 { margin: 4px 0 0; color: var(--ink); font-size: clamp(20px, 1.6vw, 24px); font-weight: 650; letter-spacing: -.015em; line-height: 1.25; overflow-wrap: anywhere; }
+/* Akademik çalışmanın adı editoryal (Phase 4.4). Uzun Türkçe tez adları satır kırar; balance satırları dengeler. */
+.tez-kart-ust h2 { margin: 4px 0 0; color: var(--ink); font-family: var(--font-display); font-size: var(--fs-calisma); font-weight: var(--fw-display); font-variant-numeric: lining-nums; letter-spacing: var(--ls-display); line-height: 1.25; overflow-wrap: anywhere; }
 .tez-kart-rozetler { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .tez-kart-eylemler { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -338,7 +341,7 @@
 .gb-tek-ekran > .projects-header p { margin-top: 2px; font-size: var(--fs-base); }
 .calisma-durum-bas { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .calisma-durum-bas > div { min-width: 0; }
-.calisma-durum-bas h2 { margin: 6px 0 0; color: var(--ink); font-size: var(--fs-lg); font-weight: 700; letter-spacing: -.015em; line-height: 1.25; }
+.calisma-durum-bas h2 { margin: 6px 0 0; color: var(--ink); font-family: var(--font-display); font-size: var(--fs-calisma-sik); font-weight: var(--fw-display); font-variant-numeric: lining-nums; letter-spacing: var(--ls-display); line-height: 1.25; overflow-wrap: anywhere; }
 .calisma-durum-bas .projects-primary-button { flex: none; }
 .calisma-durum-ust { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); font-size: var(--fs-sm); }
 .calisma-olcumler .tez-olcu dd { font-size: 22px; }
@@ -1210,7 +1213,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 */
 .calisma-basligi { margin-bottom: 12px; }
 .calisma-basligi > div:first-child { min-width: 0; max-width: none; }
-.calisma-basligi h1 { overflow: hidden; font-size: clamp(20px, 1.6vw, 24px); text-overflow: ellipsis; white-space: nowrap; }
+.calisma-basligi h1 { overflow: hidden; font-size: var(--fs-calisma); text-overflow: ellipsis; white-space: nowrap; }
 .calisma-basligi p { font-size: var(--fs-base); }
 
 /* Belge Kontrol: belge yokken ne denetlendiği (documents/page.tsx) */

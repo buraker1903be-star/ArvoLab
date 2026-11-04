@@ -28,18 +28,26 @@ const inter = Inter({
   Editoryal başlık yazısı (Phase 4.1, kurum sahibinin kararı 04.11.2026):
   yalnızca sayfa ve çalışma başlıkları, bazı içerik kartı başlıkları.
   Gövde, form, tablo, menü ve düğmeler Inter'de kalır; akademik belge
-  editörü kendi biçim sistemini kullanır. Değişken yazı: ağırlık ve
-  optik boyut (opsz) eksenleri tek dosyada; büyük başlıkta ince, küçükte
-  dolgun çizilir. preload kapalı: dosya ancak bir başlık --font-display
-  kullandığında iner — 4.1'de hiçbir öğe kullanmıyor, ziyaretçi boşuna
-  indirmez. latin-ext: Türkçe harfler (ş, ğ, İ).
+  editörü kendi biçim sistemini kullanır. latin-ext: Türkçe harfler (ş, ğ, İ).
+
+  TEK AĞIRLIK, STATİK (Phase 4.4). 4.1'de değişken dosya (ağırlık +
+  optik boyut eksenleri) seçilmişti; başlıklar ona bağlanınca ölçüldü:
+  sayfa başına +214 KB (latin 129 + latin-ext 85). Başlıkların hepsi
+  tek ağırlıkta (500, --fw-display); statik 500 dosyası +38 KB (15 + 23).
+  Başka bir ağırlık istenirse buraya eklenir — yoksa tarayıcı kalını
+  kendisi üretir (sahte kalın).
+
+  ÖNCEDEN YÜKLENİR (Phase 4.4): editoryal başlık neredeyse her sayfada
+  (karşılama, modül başlıkları, çalışma adı, giriş). Yüklenmezken
+  başlık önce yedek yazıyla çizilip sonra değişiyordu: giriş ekranında
+  düzen kayması (CLS) 0,0126 ölçüldü; önceden yüklemeyle 0.
 */
 const newsreader = Newsreader({
   subsets: ["latin", "latin-ext"],
   variable: "--font-newsreader",
   display: "swap",
-  axes: ["opsz"],
-  preload: false,
+  weight: "500",
+  preload: true,
 });
 
 // Yalnızca marka yazısı ve logo işareti için.
