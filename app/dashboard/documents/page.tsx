@@ -7,8 +7,8 @@ import {
   reanalyzeDocument,
   type DocumentUploadRecord,
 } from "@/app/actions/document-upload";
-import { runOriginalityCheck, getOriginalityChecksForDocument } from "@/app/actions/originality";
-import { getLatestFeedback } from "@/app/actions/ai-feedback";
+import { runOriginalityCheck, sonOrijinallikTaramalari } from "@/app/actions/originality";
+import { sonGeriBildirimler } from "@/app/actions/ai-feedback";
 import { aiFeedbackConfigured } from "@/lib/ai-feedback";
 import { similarityTone } from "@/lib/status-tone";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
@@ -94,17 +94,24 @@ export default async function DocumentsPage({
 
   /* Orijinallik ve geri bildirim yalnızca bu çalışmanın denetlenmiş belgeleri için. */
   const denetlenen = belgeler.filter((b) => b.status === "analyzed");
-  const [orijinallikler, geriBildirimler] = await Promise.all([
-    Promise.all(denetlenen.map(async (b) => [b.id, await getOriginalityChecksForDocument(b.id)] as const)),
-    Promise.all(denetlenen.map(async (b) => [b.id, await getLatestFeedback(b.id)] as const)),
-  ]);
   /*
-    "Tarama yapılmamış" ile "sonucu okuyamadım" ayrı taşınıyor: ikincisinde
-    ekran taranmamış bir belge gibi görünüp kullanıcıyı temiz sanmaya
+    Belge başına iki sorgu yerine tablo başına iki sorgu (Phase 2,
+    04.11.2026): 10 denetlenmiş belgede 20 sorgu → 4. "Tarama yapılmamış"
+    ile "sonucu okuyamadım" yine ayrı taşınıyor: ikincisinde ekran
+    taranmamış bir belge gibi görünüp kullanıcıyı temiz sanmaya
     bırakıyordu (app/actions/originality.ts).
   */
-  const orijinallik = new Map(orijinallikler.map(([id, s]) => [id, { kayit: s.satirlar[0] ?? null, okunamadi: s.okunamadi }]));
-  const geriBildirim = new Map(geriBildirimler);
+  const denetlenenIdleri = denetlenen.map((b) => b.id);
+  const [orijinallikler, geriBildirimler] = await Promise.all([
+    sonOrijinallikTaramalari(denetlenenIdleri),
+    sonGeriBildirimler(denetlenenIdleri),
+  ]);
+  const orijinallik = new Map(
+    denetlenenIdleri.map((id) => [id, { kayit: orijinallikler.kayitlar.get(id) ?? null, okunamadi: orijinallikler.okunamadi }]),
+  );
+  const geriBildirim = new Map(
+    denetlenenIdleri.map((id) => [id, { kayit: geriBildirimler.kayitlar.get(id) ?? null, okunamadi: geriBildirimler.okunamadi }]),
+  );
 
   async function orijinallikTara(documentId: string) {
     "use server";

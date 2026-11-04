@@ -14,7 +14,7 @@ import {
   computeComplianceScore,
 } from "@/lib/apa7";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
-import { oturumYokMesaji } from "@/lib/auth-guards";
+import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
 
@@ -444,11 +444,10 @@ export async function deleteDocumentUpload(documentId: string): Promise<{ error?
   ve silinemiyordu.
 */
 export async function getMyDocumentUploads(): Promise<ListeSonucu<DocumentUploadRecord>> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return listeBasarili([]);
+  /* İstek başına önbellekli oturum (lib/auth-guards.ts): her yardımcının ayrı getUser'ı Auth sunucusuna ayrı bir tur demekti. */
+  const ctx = await getAuthContext();
+  if (!ctx) return listeBasarili([]);
+  const { supabase, user } = ctx;
 
   const { data, error } = await supabase
     .from("document_uploads")
@@ -471,11 +470,10 @@ export async function getMyDocumentUploads(): Promise<ListeSonucu<DocumentUpload
   Sınırsız: çalışma başına belge sayısı küçük, sayı da bu listeden.
 */
 export async function calismaBelgeleri(projectId: string): Promise<ListeSonucu<DocumentUploadRecord>> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return listeBasarili([]);
+  /* İstek başına önbellekli oturum (lib/auth-guards.ts): her yardımcının ayrı getUser'ı Auth sunucusuna ayrı bir tur demekti. */
+  const ctx = await getAuthContext();
+  if (!ctx) return listeBasarili([]);
+  const { supabase, user } = ctx;
 
   const { data, error } = await supabase
     .from("document_uploads")

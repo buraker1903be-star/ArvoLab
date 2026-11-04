@@ -4,6 +4,7 @@ import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-son
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { belgeBasinaEnYeni } from "@/lib/en-yeni-kayit";
 import { buildShingles, computeSimilarity } from "@/lib/similarity-check";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { oturumYokMesaji } from "@/lib/auth-guards";
@@ -132,6 +133,38 @@ export interface OriginalityCheckRecord {
   orijinallik taramasının sonucunu gizlemek, kullanıcının belgesini temiz
   sanmasına yol açabilirdi — burada "bilinmeyen" en pahalı yanlıştır.
 */
+/*
+  Birden çok belgenin SON taraması, iki sorguda (Phase 2, 04.11.2026).
+  Belgeler sayfası belge başına getOriginalityChecksForDocument çağırıyordu;
+  önce hafif sütunlar, sonra yalnızca en yeni satırların tamamı (eşleşme
+  listesi ağır). Okuma hatası "taranmamış" ile karışmasın: okunamadi döner.
+*/
+export async function sonOrijinallikTaramalari(
+  documentIds: string[],
+): Promise<{ kayitlar: Map<string, OriginalityCheckRecord>; okunamadi: boolean }> {
+  if (!documentIds.length) return { kayitlar: new Map(), okunamadi: false };
+  const supabase = await createClient();
+  const { data: hafif, error } = await supabase
+    .from("originality_checks")
+    .select("id, document_id, created_at")
+    .in("document_id", documentIds);
+  if (error) {
+    console.error(error);
+    return { kayitlar: new Map(), okunamadi: true };
+  }
+  const enYeni = belgeBasinaEnYeni(hafif ?? []);
+  if (!enYeni.size) return { kayitlar: new Map(), okunamadi: false };
+  const { data, error: tamHata } = await supabase
+    .from("originality_checks")
+    .select("id, document_id, overall_similarity, compared_document_count, matches, created_at")
+    .in("id", [...enYeni.values()]);
+  if (tamHata) {
+    console.error(tamHata);
+    return { kayitlar: new Map(), okunamadi: true };
+  }
+  return { kayitlar: new Map((data ?? []).map((k) => [k.document_id as string, k as OriginalityCheckRecord])), okunamadi: false };
+}
+
 export async function getOriginalityChecksForDocument(documentId: string): Promise<ListeSonucu<OriginalityCheckRecord>> {
   const supabase = await createClient();
   const { data, error } = await supabase

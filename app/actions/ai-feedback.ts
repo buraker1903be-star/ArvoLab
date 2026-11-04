@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { belgeBasinaEnYeni } from "@/lib/en-yeni-kayit";
 import { getDocumentFeedback } from "@/lib/ai-feedback";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
@@ -159,4 +160,39 @@ export async function getLatestFeedback(
     return { kayit: null, okunamadi: true };
   }
   return { kayit: data, okunamadi: false };
+}
+
+/*
+  Birden çok belgenin SON geri bildirimi, TEK sorguda (Phase 2, 04.11.2026);
+  getLatestFeedback'in toplu hâli. Satırlar hafif (yalnızca metin) ve her
+  biri ücretli bir asistan çalıştırması, yani belge başına az: hepsi
+  okunup en yenisi burada seçiliyor. Okunamazsa okunamadi: ekran "hiç
+  değerlendirilmemiş" demesin, kullanıcı asistanı boşuna yeniden çalıştırmasın.
+*/
+export async function sonGeriBildirimler(
+  documentIds: string[],
+): Promise<{ kayitlar: Map<string, AiFeedbackRecord>; okunamadi: boolean }> {
+  if (!documentIds.length) return { kayitlar: new Map(), okunamadi: false };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_feedback_requests")
+    .select("id, document_id, feedback_text, status, error_message, created_at")
+    .in("document_id", documentIds);
+  if (error) {
+    console.error(error);
+    return { kayitlar: new Map(), okunamadi: true };
+  }
+  const satirlar = data ?? [];
+  const enYeni = belgeBasinaEnYeni(satirlar);
+  const kimlikle = new Map(satirlar.map((k) => [k.id as string, k]));
+  return {
+    kayitlar: new Map(
+      [...enYeni].map(([belge, id]) => {
+        const { document_id: _belge, ...kayit } = kimlikle.get(id)!;
+        void _belge;
+        return [belge, kayit as AiFeedbackRecord];
+      }),
+    ),
+    okunamadi: false,
+  };
 }
