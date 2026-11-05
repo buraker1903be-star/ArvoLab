@@ -260,7 +260,7 @@ const tarayici = await chromium.launch();
     };
     await topla(".yazma-basligi");
     await topla(".manuscript-araclar");
-    for (const menu of await sayfa.locator(".manuscript-araclar .arac-menu-dugme, .yazma-eylemleri button[aria-expanded][aria-controls]").all()) {
+    for (const menu of await sayfa.locator(".manuscript-araclar .arac-menu-dugme, .yazma-eylemleri button[aria-expanded][aria-controls]:not([aria-controls=yazim-yan-panel])").all()) {
       await menu.click();
       await sayfa.waitForTimeout(150);
       await topla(".arac-menu-pencere:not([hidden])");
@@ -388,6 +388,65 @@ const tarayici = await chromium.launch();
     bekle(eksik.length === 0, `çalışmalarımda ulaşılamayan: ${eksik.join(", ")}`);
     await sayfa.keyboard.press("Escape");
   });
+  await senaryo("kaynaklar: kaynağın adı ayrıntıyı açar, bütün künye ve not; Esc odağı satıra geri verir (Signature OS 4.1)", async () => {
+    await git(sayfa, "/dashboard/literature");
+    const ad = sayfa.locator(".kaynak-ad").first();
+    await ad.waitFor({ state: "visible", timeout: 30000 });
+    const baslik = (await ad.textContent()).trim();
+    await ad.focus();
+    await sayfa.keyboard.press("Enter");
+    const pencere = sayfa.locator(".drawer-root.open[data-boy='yan']");
+    await pencere.waitFor({ state: "visible", timeout: 10000 });
+    const metin = await pencere.textContent();
+    for (const g of ["Okuma durumu", "Künye", "Notlarım", baslik]) bekle(metin.includes(g), `ayrıntıda yok: ${g}`);
+    await sayfa.keyboard.press("Escape");
+    await sayfa.waitForTimeout(500);
+    const odak = await sayfa.evaluate(() => document.activeElement?.className ?? "");
+    bekle(odak.includes("kaynak-ad"), `odak satıra dönmedi: ${odak}`);
+  });
+  await senaryo("kaynaklar: tek birincil eylem; seyrek eylemler ⋯ menüsünde, menüden açılan pencere kapanınca odak menü düğmesinde", async () => {
+    await git(sayfa, "/dashboard/literature");
+    // DOI kutusunun "Ekle"si boşken devre dışı: alanın kendi gönder düğmesi, sayfa eylemi değil.
+    const birincil = await sayfa.locator("main .projects-primary-button:not(:disabled)").evaluateAll((el) => el.filter((e) => e.checkVisibility()).map((e) => e.textContent.trim()));
+    bekle(birincil.length === 1 && /Kaynak bul/.test(birincil[0]), `birincil düğmeler: ${birincil.join(", ")}`);
+    const menu = sayfa.locator(".sayfa-tasma-dugme").first();
+    await menu.focus();
+    await sayfa.keyboard.press("ArrowDown");
+    await sayfa.waitForTimeout(200);
+    const ogeler = await sayfa.locator(".sayfa-tasma-menu:not([hidden]) button").allTextContents();
+    for (const g of ["Tarama asistanı", "Dışa aktar"]) bekle(ogeler.some((o) => o.includes(g)), `menüde yok: ${g}`);
+    await sayfa.keyboard.press("Enter");
+    await sayfa.locator(".drawer-root.open").waitFor({ state: "visible", timeout: 10000 });
+    await sayfa.keyboard.press("Escape");
+    await sayfa.waitForTimeout(500);
+    const odak = await sayfa.evaluate(() => document.activeElement?.className ?? "");
+    bekle(odak.includes("sayfa-tasma-dugme"), `odak menü düğmesine dönmedi: ${odak}`);
+  });
+  await senaryo("kanıt matrisi: tablo taşıyorsa söylüyor, iddia sütunu yapışık, sıralama aria-sort ile; sayfa kaymıyor (Signature OS 4.1)", async () => {
+    await git(sayfa, `/dashboard/editor/${TEZ}/kanit`);
+    const tablo = sayfa.locator(".veri-tablo");
+    await tablo.waitFor({ state: "visible", timeout: 30000 });
+    bekle((await tablo.locator("thead th").count()) === 9, "dokuz sütun yok");
+    const tasma = await sayfa.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+    bekle(tasma <= 0, `sayfa ${tasma}px taşıyor`);
+    const tasiyor = await sayfa.locator(".veri-tablo-sarici[data-tasiyor]").count();
+    if (tasiyor) bekle(await sayfa.locator(".veri-tablo-ipucu").isVisible(), "taşan tablo bunu söylemiyor");
+    await tablo.locator("thead button", { hasText: "Destek" }).click();
+    bekle((await tablo.locator("th[aria-sort='ascending']").count()) === 1, "aria-sort yazılmadı");
+  });
+  await senaryo("dört temsilî ekran 820 ve 1440 pikselde yatay kaymıyor (Signature OS 4.1)", async () => {
+    for (const w of [820, 1440]) {
+      const c = await tarayici.newContext({ viewport: { width: w, height: 1000 } });
+      const s2 = await c.newPage();
+      for (const yol of ["/dashboard/literature", `/dashboard/editor/${TEZ}/kanit`, "/dashboard/analysis", "/dashboard/documents"]) {
+        await git(s2, yol);
+        await s2.locator("main h1").first().waitFor({ state: "visible", timeout: 30000 });
+        const tasma = await s2.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+        bekle(tasma <= 0, `${w}px ${yol}: ${tasma}px taşıyor`);
+      }
+      await c.close();
+    }
+  });
   await ctx.close();
 }
 
@@ -472,6 +531,33 @@ const tarayici = await chromium.launch();
     await sayfa.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 30000 });
     const tasma = await sayfa.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     bekle(tasma <= 1, `sayfa ${tasma}px taşıyor`);
+  });
+  await senaryo("telefon: kanıt matrisi kart listesi, dokuz sütunun hepsi başlığıyla; sütun gizlenmiyor (Signature OS 4.1)", async () => {
+    await git(sayfa, `/dashboard/editor/${TEZ}/kanit`);
+    const kart = sayfa.locator(".veri-karti").first();
+    await kart.waitFor({ state: "visible", timeout: 30000 });
+    bekle((await sayfa.locator(".veri-tablo").count()) === 0, "telefonda tablo çizildi");
+    const basliklar = await kart.locator("dt").allTextContents();
+    bekle(basliklar.length === 8, `kartta ${basliklar.length} alan (8 beklenirdi: iddia başlıkta)`);
+    for (const g of ["Destek düzeyi", "Eksik kanıt", "Önerilen düzeltme"]) bekle(basliklar.includes(g), `kartta yok: ${g}`);
+  });
+  await senaryo("telefon: kaynaklarda ikinci eylemler ⋯ menüsünde, birincil görünür; temsilî ekranlarda taşma ve 40 pikselden küçük hedef yok", async () => {
+    await git(sayfa, "/dashboard/literature");
+    await sayfa.locator(".kaynak-bul-tetik").waitFor({ state: "visible", timeout: 30000 });
+    bekle(!(await sayfa.locator("main button", { hasText: "İçe aktar" }).first().isVisible()), "İçe aktar telefonda satırda kaldı");
+    for (const yol of ["/dashboard/literature", `/dashboard/editor/${TEZ}/kanit`, "/dashboard/analysis", "/dashboard/documents"]) {
+      await git(sayfa, yol);
+      await sayfa.locator("main h1").first().waitFor({ state: "visible", timeout: 30000 });
+      const tasma = await sayfa.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+      bekle(tasma <= 0, `${yol}: ${tasma}px taşıyor`);
+      const kucuk = await sayfa.evaluate(() =>
+        [...document.querySelectorAll(".sayfa-basligi :is(a, button, select), .sayfa-eylemleri button, .liste-araclari :is(button, select, .kaynak-arama), .veri-karti button, .kaynak-ad")]
+          .filter((e) => e.checkVisibility())
+          .filter((e) => { const r = e.getBoundingClientRect(); return r.height < 39.5; })
+          .map((e) => (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 30)),
+      );
+      bekle(kucuk.length === 0, `${yol}: küçük hedef: ${kucuk.join(", ")}`);
+    }
   });
   await sayfa.close();
 }

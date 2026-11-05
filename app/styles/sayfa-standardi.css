@@ -68,7 +68,9 @@
 :is(.liste-sirala, .veri-sirala) { display: inline-flex; flex: none; align-items: center; gap: var(--s-2); color: var(--muted); font-size: var(--fs-sm); }
 :is(.liste-sirala, .veri-sirala) select { width: auto; max-width: 220px; }
 @media (max-width: 1199px), (pointer: coarse) {
-  .liste-araclari .kaynak-arama input { min-height: calc(var(--kontrol-h) - 2px); }
+  .liste-araclari .kaynak-arama input { min-height: var(--kontrol-h); padding-block: 0; }
+  /* "↶ geri al" yalnızca simge: dokunmatikte kare 40 piksel. */
+  .kaynak-satiri-eylem .projects-filter-button { min-width: var(--kontrol-h); min-height: var(--kontrol-h); }
   .liste-araclari .projects-filter-button { min-height: var(--kontrol-h); }
   :is(.liste-sirala, .veri-sirala) select { min-height: var(--kontrol-h); }
 }
@@ -191,7 +193,7 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
 }
 .kaynak-ad:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 @media (hover: hover) and (pointer: fine) { .kaynak-ad:hover { color: var(--primary-ink); text-decoration: underline; text-underline-offset: 3px; } }
-@media (max-width: 1199px), (pointer: coarse) { .kaynak-ad { padding-block: 9px; margin-block: -9px; } }
+@media (max-width: 1199px), (pointer: coarse) { .kaynak-ad { padding-block: 12px; margin-block: -12px; } }
 .ayrinti-govde { display: grid; gap: var(--s-4); }
 .ayrinti-govde .kaynak-eksik { margin: 0; font-size: var(--fs-sm); }
 
@@ -200,7 +202,7 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
    boşluğuyla 40 piksele genişler (kaynak adıyla aynı yöntem). */
 .veri-karti-bas .kanit-iddia-dugmesi { font-weight: 600; }
 @media (max-width: 1199px), (pointer: coarse) {
-  .kanit-iddia-dugmesi { display: block; padding-block: 9px; margin-block: -9px; }
+  .kanit-iddia-dugmesi { display: block; padding-block: 10px; margin-block: -10px; }
 }
 .kanit-iddia-dugmesi:focus-visible { outline: none; border-radius: var(--r-xs); box-shadow: var(--odak-halkasi); }
 
@@ -210,3 +212,15 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
 .secim-ayrinti:focus { outline: none; }
 .secim-ayrinti:focus-visible { box-shadow: var(--odak-halkasi); }
 .secim-listeye-don { justify-self: start; align-self: flex-start; min-height: var(--kontrol-h); }
+
+/* Dokunmatikte başlık bağlamı (çalışma seçici) ve tablo sıralama düğmeleri
+   de 40 piksel. Sıralama düğmesi negatif dikey boşlukla büyür: başlık
+   satırı uzamasın. */
+@media (max-width: 1199px), (pointer: coarse) {
+  .sayfa-basligi-sag :is(button, summary) { min-height: var(--kontrol-h); }
+  .veri-tablo-sirala { min-height: var(--kontrol-h); margin-block: -8px; }
+}
+/* DOI kutusunun iç alanı 36 pikseldi (genel-bakis.css); dokunmatikte 40. */
+@media (max-width: 1199px), (pointer: coarse) {
+  .doi-kutusu-satir input { height: var(--kontrol-h); }
+}
