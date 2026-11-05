@@ -3,6 +3,9 @@ import OturumGozcusu from "./_components/oturum-gozcusu";
 import SozlesmeOnayi from "./_components/sozlesme-onayi";
 import { sozlesmeOnayGerekli } from "@/lib/sozlesme/onay-durumu";
 import { Suspense } from "react";
+import { headers } from "next/headers";
+import { ekranTahmini } from "@/lib/os/kirilimlar";
+import { EkranIpucuSaglayici } from "./_components/ekran-sinifi";
 import { logout } from "@/app/actions/auth";
 import { getCurrentProfile } from "@/app/actions/profile";
 import { ROLE_LABELS, STAFF_ROLES } from "@/lib/project-labels";
@@ -88,7 +91,12 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const [kurumListesi, kurum] = icEkip ? await Promise.all([getOrganizations(), seciliKurum()]) : [null, null];
   const kurumlar = kurumListesi && !kurumListesi.okunamadi ? kurumListesi.satirlar : [];
 
+  /* İlk çizimin ekran tahmini (ekran-sinifi.ts): telefonda tablo → kart sıçraması olmasın. */
+  const istek = await headers();
+  const ekran = ekranTahmini({ chMobile: istek.get("sec-ch-ua-mobile"), ua: istek.get("user-agent") });
+
   return (
+    <EkranIpucuSaglayici tahmin={ekran}>
     <div className="dashboard-shell os-root">
       {/* Klavye kullanıcısı her sayfada dock'taki bağlantıları geçmek
           zorunda kalmasın; bağlantı yalnızca odaklanınca görünür. */}
@@ -204,5 +212,6 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       <OturumGozcusu />
       <Toaster />
     </div>
+    </EkranIpucuSaglayici>
   );
 }
