@@ -17,7 +17,7 @@ import {
 } from "@/lib/os/uygulamalar";
 import { OsSimge } from "./os-simge";
 import { useCalismaBaglami } from "./calisma-baglami";
-import { ArvoLabIsareti } from "./header-title";
+import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import { KENAR_ANAHTARI, kenarOku } from "@/lib/os/kenar";
 
 /*
@@ -119,10 +119,8 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
         */}
         <div className="os-gezinme-bas">
           <Link href="/dashboard" className="os-gezinme-marka" aria-label={t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })}>
-            <ArvoLabIsareti />
-            <b aria-hidden="true">
-              Arvo<em>Lab</em>
-            </b>
+            {/* Orijinal logo (05.11.2026); eskiden "A" işareti + "ArvoLab" yazısı. Ad bağlantının etiketinde. */}
+            <ArvoLabLogosu alt="" />
           </Link>
           <button
             type="button"

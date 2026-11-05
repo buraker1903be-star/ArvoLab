@@ -66,9 +66,8 @@
   display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 40px; padding: 0 var(--s-1);
   border-radius: var(--r-sm); color: var(--ink); text-decoration: none;
 }
-.os-gezinme-marka .os-marka-isaret { width: 30px; height: 30px; }
-.os-gezinme-marka b { overflow: hidden; font-size: var(--fs-md); font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
-.os-gezinme-marka b em { color: var(--brand-green); font-style: normal; }
+/* Kenar çubuğunda orijinal logo (arvolab-logosu.tsx); dar rayda (88 px) aynı logo küçük. */
+.os-gezinme-marka { --logo-h: 26px; }
 .os-gezinme-daralt {
   display: grid; place-items: center; flex: none; width: 32px; height: 32px;
   border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer;
@@ -119,7 +118,8 @@
   .os-gezinme .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
   .os-gezinme .os-gezinme-ad { display: none; }
   .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
-  .os-gezinme-diger, .os-gezinme-marka b, .os-gezinme-daralt { display: none; }
+  .os-gezinme-diger, .os-gezinme-daralt { display: none; }
+  .os-gezinme-marka { --logo-h: 15px; }
   .os-gezinme-yeni { align-self: center; width: 44px; padding: 0; }
   .os-gezinme-marka { justify-content: center; min-width: 44px; min-height: 44px; }
 }
@@ -141,7 +141,8 @@
   html[data-kenar="dar"] .os-gezinme .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
   html[data-kenar="dar"] .os-gezinme .os-gezinme-ad { display: none; }
   html[data-kenar="dar"] .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
-  html[data-kenar="dar"] .os-gezinme-diger, html[data-kenar="dar"] .os-gezinme-marka b { display: none; }
+  html[data-kenar="dar"] .os-gezinme-diger { display: none; }
+  html[data-kenar="dar"] .os-gezinme-marka { --logo-h: 15px; }
   html[data-kenar="dar"] .os-gezinme-yeni { align-self: center; width: 44px; padding: 0; }
   html[data-kenar="dar"] .os-gezinme-marka { justify-content: center; min-width: 44px; min-height: 44px; }
 }

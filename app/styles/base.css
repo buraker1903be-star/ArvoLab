@@ -84,3 +84,11 @@ code, pre, kbd { font-family: var(--font-mono); }
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- ArvoLab logosu (app/_components/arvolab-logosu.tsx) ----------
+   Kutu logonun GÖRÜNÜR oranında (4,22 : 1); dosyanın üst ve altındaki
+   saydam boşluğu object-fit kırpar, logonun kendisi kırpılmaz ve
+   esnemez. Boy --logo-h ile, en ondan türetilir. */
+.arvolab-logo { display: block; flex: none; width: calc(var(--logo-h, 28px) * 4.22); height: var(--logo-h, 28px); object-fit: cover; }
+/* Koyu tema: giriş ekranının baştan beri kullandığı tek renk beyaz uygulama. */
+html[data-theme="dark"] .arvolab-logo { filter: brightness(0) invert(1); }

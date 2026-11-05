@@ -43,16 +43,9 @@
   backdrop-filter: var(--glass-blur);
 }
 /* Marka + açık uygulama (ArvoOS'taki os-brand) */
-.os-marka { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 44px; color: var(--ink); text-decoration: none; }
-.os-marka-isaret { flex: none; width: 34px; height: 34px; }
-.os-marka-zemin { fill: var(--brand-navy); }
-.os-marka-harf { fill: var(--on-brand); fill-rule: evenodd; }
-.os-marka-nokta { fill: var(--brand-green); }
-html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
-.os-marka > span { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-.os-marka b { overflow: hidden; font-size: var(--fs-md); font-weight: 650; letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
-.os-marka b em { color: var(--brand-green); font-style: normal; }
-.os-marka small { overflow: hidden; color: var(--muted); font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+/* Telefonun üst çubuğu: orijinal logo, altında açık uygulamanın adı (header-title.tsx). */
+.os-marka { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; min-width: 0; min-height: 44px; color: var(--ink); text-decoration: none; --logo-h: 22px; }
+.os-marka small { max-width: 52vw; overflow: hidden; color: var(--muted); font-size: var(--fs-sm); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-header-actions { display: flex; align-items: center; gap: 8px; }
 
 /* Konum yolu (Signature OS, konum-yolu.tsx). Tablet ve masaüstünde marka
@@ -212,7 +205,6 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   }
   /* Telefonda tarih/saat yer kaplamasın: saat telefonun kendi çubuğunda zaten var. */
   .os-saat { display: none; }
-  .os-marka b { font-size: var(--fs-lg); max-width: 52vw; }
 
   .dashboard-main-content {
     padding: 8px max(16px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar";
+import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 
 /*
   ÜST ÇUBUĞUN SOLU: marka ve açık uygulama (ArvoOS'taki os-brand).
@@ -23,6 +24,11 @@ import { etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar
   (shell.css). Tablet ve masaüstünde marka kenar çubuğunun başında,
   üst çubukta konum yolu (konum-yolu.tsx) duruyor; telefonda üç öğelik
   bir yol sığmıyor ve kenar çubuğu yok.
+
+  Logo (05.11.2026): kodla çizilmiş "A" işareti ve "ArvoLab" yazısı
+  kalktı; yerinde orijinal logo (app/_components/arvolab-logosu.tsx).
+  Altında açık uygulamanın adı kalıyor: telefonda kullanıcının nerede
+  olduğunu söyleyen tek yer.
 */
 export default function HeaderTitle() {
   const pathname = usePathname();
@@ -34,28 +40,8 @@ export default function HeaderTitle() {
 
   return (
     <Link href="/dashboard" className="os-marka" aria-label={`${t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })} · ${label}`}>
-      <ArvoLabIsareti />
-      <span>
-        <b>
-          Arvo<em>Lab</em>
-        </b>
-        <small>{label}</small>
-      </span>
+      <ArvoLabLogosu alt="" />
+      <small aria-hidden="true">{label}</small>
     </Link>
-  );
-}
-
-/*
-  Markanın kare işareti: logodaki lacivert "A" ve yeşil nokta. Logonun
-  kendisi (public/arvolab-logo.png) 16:9 yatay; 34 piksellik kareye
-  sığdırınca okunmuyordu. Renkler CSS'ten (tokens.css), TSX'te ham renk yok.
-*/
-export function ArvoLabIsareti() {
-  return (
-    <svg className="os-marka-isaret" viewBox="0 0 34 34" aria-hidden="true">
-      <rect className="os-marka-zemin" width="34" height="34" rx="10" />
-      <path className="os-marka-harf" d="M10.2 25 15.4 9h3.2L23.8 25h-3.3l-1.2-3.8h-4.6L13.5 25Zm5.4-6.6h2.8L17 13.8Z" />
-      <circle className="os-marka-nokta" cx="26.2" cy="23.6" r="2.2" />
-    </svg>
   );
 }

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import { BookOpenCheck, ChartNoAxesCombined, FileCheck2, PenLine, ShieldCheck, Sparkles } from "lucide-react";
 import ThemeToggle from "@/app/_components/theme-toggle";
 import DilSecici from "@/app/_components/dil-secici";
@@ -133,7 +133,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   return (
     <div className="giris">
       <header className="giris-ust">
-        <Image className="giris-logo" src="/arvolab-logo.png" alt="ArvoLab" width={1920} height={1080} priority />
+        <ArvoLabLogosu className="giris-logo" oncelikli />
         <div className="giris-ust-araclar">
           {/* Çeviri bitene kadar gizli (lib/dil.ts, INGILIZCE_YAYINDA). */}
           {INGILIZCE_YAYINDA ? <DilSecici sinif="giris-dil" /> : null}

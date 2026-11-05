@@ -17,8 +17,8 @@
 }
 .giris-ust { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 /* Logo dosyası 16:9 ve geniş boşluklu: kutu yalnızca yazının şeridini gösterir. */
-.giris-logo { width: 168px; height: 40px; object-fit: cover; }
-html[data-theme="dark"] .giris-logo { filter: brightness(0) invert(1); }
+/* Logo ortak bileşenden (base.css .arvolab-logo: oran, kırpma, koyu tema); burada yalnızca boy. */
+.giris-logo { --logo-h: 40px; }
 .giris-ust-araclar { display: flex; align-items: center; gap: 8px; }
 .giris-dil { display: flex; align-items: center; gap: 6px; }
 .giris-dil small { display: none; }
@@ -305,7 +305,7 @@ html[data-theme="dark"] .giris-logo { filter: brightness(0) invert(1); }
   .kayit-formu { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 420px) {
-  .giris-logo { width: 132px; height: 32px; }
+  .giris-logo { --logo-h: 32px; }
   .giris-dil button { padding: 0 9px; }
   .giris-kayit { grid-template-columns: minmax(0, 1fr); }
   .giris-kayit-ikon { display: none; }
