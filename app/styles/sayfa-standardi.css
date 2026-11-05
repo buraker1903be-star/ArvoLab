@@ -224,3 +224,21 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
 @media (max-width: 1199px), (pointer: coarse) {
   .doi-kutusu-satir input { height: var(--kontrol-h); }
 }
+
+/* ---------- Kaynak ayrıntısı (Signature OS 4.2) ---------- */
+.ayrinti-form { margin: 0; }
+.ayrinti-form .project-form-actions { justify-content: flex-end; }
+.ayrinti-liste { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+.ayrinti-liste li { display: grid; gap: 2px; }
+.ayrinti-liste small { color: var(--muted); font-size: var(--fs-sm); }
+.ayrinti-liste .link-button { justify-self: start; text-align: left; }
+/* Alan alan karşılaştırma: dar panelde dört sütun; uzun değer kırılır, sayfa kaymaz. */
+.ayrinti-karsilastirma { width: 100%; margin-top: var(--s-2); border-collapse: collapse; font-size: var(--fs-sm); table-layout: fixed; }
+.ayrinti-karsilastirma :is(th, td) { padding: 6px 6px 6px 0; border-top: 1px solid var(--line-soft); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.ayrinti-karsilastirma thead th { border-top: 0; color: var(--muted); font-weight: 600; }
+.ayrinti-karsilastirma tbody th { color: var(--muted); font-weight: 500; }
+.ayrinti-karsilastirma .status-pill { white-space: normal; }
+.kaynak-sil { color: var(--danger); }
+@media (max-width: 1199px), (pointer: coarse) {
+  .ayrinti-govde :is(.projects-filter-button, .projects-primary-button, .link-button) { min-height: var(--kontrol-h); }
+}

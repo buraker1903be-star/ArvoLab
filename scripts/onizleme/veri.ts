@@ -41,6 +41,8 @@ export const ORNEK: Record<string, Record<string, unknown>[]> = {
   ],
   project_manuscripts: [
     {
+      /* plain_text: Kaynaklar'ın "metinde atıf" bilgisi buradan okunur (4.2). */
+      plain_text: "Giriş\nKısa dönemde enflasyon ile işsizlik ters yönlüdür (Önder, 2009). Sınır testi yaklaşımı kullanılmıştır (Pesaran vd., 2001).\nKaynakça\nÖnder, A. Ö. (2009). Türkiye'de Phillips eğrisinin istikrarı.\n",
       project_id: PROJE, content: tez, word_count: 6172, updated_at: gunOnce(0), page_size: "A4",
       margin_top_cm: 2.5, margin_bottom_cm: 2.5, margin_left_cm: 3, margin_right_cm: 2.5,
     },
@@ -48,7 +50,7 @@ export const ORNEK: Record<string, Record<string, unknown>[]> = {
   literature_sources: [
     { id: "l1", project_id: PROJE, owner_id: KULLANICI, title: "Türkiye'de Phillips eğrisinin istikrarı", authors: "Önder, A. Ö.", year: "2009", status: "used", source_type: "article", created_at: gunOnce(10) },
     { id: "l2", project_id: PROJE, owner_id: KULLANICI, title: "Inflation and unemployment in emerging markets", authors: "Smith, J., & Brown, K.", year: "2019", status: "read", source_type: "article", created_at: gunOnce(8) },
-    { id: "l3", project_id: PROJE, owner_id: KULLANICI, title: "ARDL sınır testi yaklaşımı", authors: "Pesaran, M. H., Shin, Y., & Smith, R. J.", year: "2001", status: "to_review", source_type: "article", created_at: gunOnce(3) },
+    { id: "l3", project_id: PROJE, owner_id: KULLANICI, title: "ARDL sınır testi yaklaşımı", authors: "Pesaran, M. H., Shin, Y., & Smith, R. J.", year: "2001", status: "to_review", source_type: "article", doi_or_url: "https://doi.org/10.0000/ornek.2", created_at: gunOnce(3) },
   ],
   citation_checks: [
     {

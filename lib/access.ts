@@ -132,7 +132,7 @@ export async function abonelikKapaliMesaji(): Promise<string> {
  * addScoreEntry, createProject, yeniCalisma, kilavuzuTara ve kilavuzuKaydet (öğrencinin
  * kılavuz yüklemesi; PDF/OCR çözümlemesi), tasEkle ve taslakTakvimOlustur (tez takvimi;
  * tamamlama, tarih değiştirme, silme ve teslimTarihiKaydet kapısız: mevcut kayıt), createShareLink, kanitEkle, kunyeyiDogrula
- * (Crossref/OpenAlex), makaleProfiliKaydet, yapilacaklaraEkle,
+ * (Crossref/OpenAlex), kaynakKunyesiniKarsilastir (aynı dizinler; sonuç yazılmaz), makaleProfiliKaydet, yapilacaklaraEkle,
  * kaynakPdfleriniBul (dış sunuculardan indirme), kaynakPdfiYuklendi,
  * etikBilgileriniKaydet, etikBelgeleriniKaydet ve etikYonergesiniTara (etik
  * kurul sekmesi; tarama PDF/OCR çözümlemesi),

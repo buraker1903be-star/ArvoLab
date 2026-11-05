@@ -422,6 +422,50 @@ const tarayici = await chromium.launch();
     const odak = await sayfa.evaluate(() => document.activeElement?.className ?? "");
     bekle(odak.includes("sayfa-tasma-dugme"), `odak menü düğmesine dönmedi: ${odak}`);
   });
+  await senaryo("kaynak ayrıntısı: çalışmadaki yeri metinden, kanıttan ve DOI'den; künye aynı formla düzenlenir (Signature OS 4.2)", async () => {
+    await git(sayfa, "/dashboard/literature");
+    await sayfa.locator(".kaynak-ad", { hasText: "ARDL" }).click();
+    const pencere = sayfa.locator(".drawer-root.open[data-boy='yan']");
+    await pencere.waitFor({ state: "visible", timeout: 10000 });
+    const yeri = (await pencere.locator("section[aria-labelledby$='-yeri']").textContent()).replace(/\s+/g, " ");
+    bekle(/Evet: ilk yazarın soyadı ve yıl metinde/.test(yeri), `metinde atıf okunmadı: ${yeri}`);
+    bekle(/1 iddiada kaynak olarak bağlı/.test(yeri), "kanıt matrisi bağı yok");
+    bekle(/DOI'si aynı bir PDF var/.test(yeri), "PDF eşleşmesi yok");
+    await pencere.getByRole("button", { name: "Düzenle" }).click();
+    for (const ad of ["title", "authors", "year", "doiOrUrl", "containerTitle", "volume", "issue", "pages", "notes"]) {
+      bekle((await pencere.locator(`[name=${ad}]`).count()) === 1, `düzenleme formunda alan yok: ${ad}`);
+    }
+    await pencere.getByRole("button", { name: "Vazgeç" }).click();
+    bekle((await pencere.locator("[name=title]").count()) === 0, "Vazgeç formu kapatmadı");
+    await sayfa.keyboard.press("Escape");
+  });
+  await senaryo("kaynak ayrıntısı: dizin karşılaştırması ulaşılamayınca 'doğrulanamadı' demez, sonuç kaydedilmez (Signature OS 4.2)", async () => {
+    await git(sayfa, "/dashboard/literature");
+    await sayfa.locator(".kaynak-ad", { hasText: "Inflation" }).click();
+    const bolum = sayfa.locator(".drawer-root.open section[aria-labelledby$='-dogrulama']");
+    await bolum.getByRole("button", { name: /Karşılaştır/ }).click();
+    await bolum.locator(".alert, table, .status-pill").first().waitFor({ state: "visible", timeout: 45000 });
+    const metin = (await bolum.textContent()).replace(/\s+/g, " ");
+    // Önizleme ortamında dış ağ kapalı: ulaşılamadı yolu. Ağ açıksa tablo gelir; ikisinde de "Doğrulanamadı" hükmü ULAŞILAMAMADAN çıkmamalı.
+    bekle(/ulaşılamıyor|Eşleşti|Farklı|Doğrulanamadı/.test(metin), `beklenmeyen sonuç: ${metin.slice(0, 200)}`);
+    if (/ulaşılamıyor/.test(metin)) bekle(!/Doğrulanamadı/.test(metin), "geçici arıza 'doğrulanamadı' diye gösterildi");
+    await sayfa.keyboard.press("Escape");
+  });
+  await senaryo("elle eklenen tekrar kaynak: eklenir ve UYARI bildirimi çıkar, 'İşlem tamamlanamadı' değil (Signature OS 4.2)", async () => {
+    await git(sayfa, "/dashboard/literature");
+    await sayfa.locator(".kaynak-bul-tetik").click();
+    await sayfa.locator(".drawer-root.open button", { hasText: "Manuel kaynak ekle" }).click();
+    const form = sayfa.locator(".drawer-root.open").filter({ has: sayfa.getByRole("heading", { name: "Manuel kaynak ekle" }) });
+    await form.locator("input[name=title]").fill("ARDL Sınır Testi Yaklaşımı");
+    await form.locator("input[name=year]").fill("2001");
+    await form.locator("button[type=submit]", { hasText: "Ekle" }).click();
+    const bildirim = sayfa.locator(".toast.is-uyari");
+    await bildirim.waitFor({ state: "visible", timeout: 15000 });
+    const metin = await bildirim.textContent();
+    bekle(/Olası tekrar/.test(metin) && !/tamamlanamadı/.test(metin), `bildirim: ${metin}`);
+    await sayfa.keyboard.press("Escape");
+    await sayfa.keyboard.press("Escape");
+  });
   await senaryo("kanıt matrisi: tablo taşıyorsa söylüyor, iddia sütunu yapışık, sıralama aria-sort ile; sayfa kaymıyor (Signature OS 4.1)", async () => {
     await git(sayfa, `/dashboard/editor/${TEZ}/kanit`);
     const tablo = sayfa.locator(".veri-tablo");
@@ -531,6 +575,13 @@ const tarayici = await chromium.launch();
     await sayfa.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 30000 });
     const tasma = await sayfa.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     bekle(tasma <= 1, `sayfa ${tasma}px taşıyor`);
+  });
+  await senaryo("telefon: sunucu ilk çizimde de kart listesi çiziyor (hidrasyonda tablo → kart sıçraması yok, Signature OS 4.2)", async () => {
+    const yanit = await sayfa.request.get(`${TABAN}/dashboard/editor/${TEZ}/kanit`, {
+      headers: { "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" },
+    });
+    const html = await yanit.text();
+    bekle(html.includes("veri-karti") && !html.includes('class="veri-tablo"'), "sunucu çıktısında telefon için tablo var");
   });
   await senaryo("telefon: kanıt matrisi kart listesi, dokuz sütunun hepsi başlığıyla; sütun gizlenmiyor (Signature OS 4.1)", async () => {
     await git(sayfa, `/dashboard/editor/${TEZ}/kanit`);

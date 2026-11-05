@@ -6,7 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork, type DoiMetadata } from "@/lib/doi";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
-import { ceviri } from "@/lib/dil-sunucu";
+import { aktifDil, ceviri } from "@/lib/dil-sunucu";
+import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
+import { kunyeDogrula, type DogrulamaSonucu } from "@/lib/kanit/dizin";
+import { kaynakAnahtarlari } from "@/lib/kaynak-aktarim";
 
 const PAGE_PATH = "/dashboard/literature";
 /* Literatür, Çalışmalarım'daki durum kartından da pencere olarak açılıyor;
@@ -109,6 +112,24 @@ export async function createLiteratureSource(formData: FormData): Promise<Action
     status: STATUSES.includes(status) ? status : "to_review",
     notes: String(formData.get("notes") ?? "").trim() || null,
   };
+  /*
+    TEKRAR BİLGİSİ (Signature OS 4.2). İçe aktarma ve DOI ile ekleme tekrarı
+    hiç eklemiyor; elle eklemede kullanıcı bilerek ikinci bir kayıt açıyor
+    olabilir (aynı kitabın başka baskısı), bu yüzden ENGELLENMİYOR,
+    söyleniyor. Ölçüt içe aktarmanınki (kaynakAnahtarlari). Ekleme ÖNCESİ
+    bakılıyor; liste okunamazsa uyarı yazılmaz ("tekrar yok" da denmiyor).
+  */
+  let tekrarVar = false;
+  if (row.project_id) {
+    const { data: ayni } = await ctx.supabase
+      .from("literature_sources")
+      .select("title, year, doi_or_url")
+      .eq("owner_id", ctx.user.id)
+      .eq("project_id", row.project_id);
+    const yeni = new Set(kaynakAnahtarlari(row).filter((a) => a !== "b::"));
+    tekrarVar = (ayni ?? []).some((k) => kaynakAnahtarlari(k).some((a) => yeni.has(a)));
+  }
+
   let { error } = await ctx.supabase.from("literature_sources").insert({ ...row, ...publicationFields((name) => formData.get(name)) });
   // Migration öncesi veritabanı: yayın bilgileri olmadan kaydet.
   if (isMissingColumn(error)) ({ error } = await ctx.supabase.from("literature_sources").insert(row));
@@ -119,6 +140,15 @@ export async function createLiteratureSource(formData: FormData): Promise<Action
   }
 
   yenile();
+  if (tekrarVar) {
+    return {
+      success: true,
+      warning: t({
+        tr: "Kaynak eklendi. Bu çalışmada aynı DOI ya da aynı başlık ve yıl ile bir kayıt daha var; Kaynaklar listesinde “Olası tekrar” süzgeciyle görebilirsiniz.",
+        en: "Source added. This work already has a record with the same DOI, or the same title and year; you can see it with the “Possible duplicates” filter in Sources.",
+      }),
+    };
+  }
   return { success: true };
 }
 
@@ -281,4 +311,54 @@ export async function createCitationSource(input: CitationSourceInput): Promise<
   }
   yenile();
   return { source: data as LiteratureSource };
+}
+
+/*
+  KÜNYEYİ DİZİNLERLE KARŞILAŞTIR (Signature OS 4.2, 05.11.2026).
+  Kaynaklar sayfasındaki ayrıntı panelinin "Dizinlerde karşılaştır"
+  düğmesi. Kanıt matrisindeki künye doğrulamasıyla AYNI mantık
+  (lib/kanit/dizin.ts kunyeDogrula: Crossref, sonra OpenAlex; alan alan
+  karşılaştırma) ve aynı saatlik hak (kunye-dogrulama anahtarı; iki
+  yerden ayrı ayrı hak kazanılmasın).
+
+  Sonuç YAZILMAZ: literature_sources'ta doğrulama sütunu yok ve bu aşamada
+  migration yapılmıyor. Ekranda "şu an karşılaştırıldı" diye gösterilir;
+  kalıcı bir "doğrulandı" rozeti yok. Dizine ulaşılamazsa sonuç
+  "doğrulanamadı" DEĞİL, hata döner (geçici arıza kalıcı hüküm değildir).
+  Kapı: dış sunuculara istek atıyor (lib/access.ts listesi).
+*/
+const SAATLIK_KUNYE_HAKKI = 60;
+const KAYNAK_KIMLIGI = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|^[a-z0-9]{1,40}$/i;
+
+export async function kaynakKunyesiniKarsilastir(sourceId: string): Promise<{ error?: string; sonuc?: Exclude<DogrulamaSonucu, { tur: "ulasilamadi" }> }> {
+  const ctx = await getAuthContext();
+  if (!ctx) return { error: await oturumYokMesaji() };
+  const t = await ceviri();
+  if (await isSubscriptionBlocked()) return { error: await abonelikKapaliMesaji() };
+  if (!KAYNAK_KIMLIGI.test(String(sourceId))) return { error: t({ tr: "Kaynak bulunamadı.", en: "Source not found." }) };
+
+  const admin = adminIstemcisiVarsa();
+  if (admin) {
+    const { data: izin, error } = await admin.rpc("rate_limit_hit", { p_key: `kunye-dogrulama:${ctx.user.id}`, p_limit: SAATLIK_KUNYE_HAKKI, p_window: "1 hour" });
+    if (error) console.error("[literatur] hız sınırı okunamadı:", error.message);
+    else if (izin === false) {
+      return { error: t({ tr: `Saatlik künye doğrulama hakkınız doldu (${SAATLIK_KUNYE_HAKKI}).`, en: `You have used up your hourly reference verification limit (${SAATLIK_KUNYE_HAKKI}).` }) };
+    }
+  }
+
+  const { data: kaynak, error } = await ctx.supabase
+    .from("literature_sources")
+    .select("title, authors, year, container_title, volume, issue, pages, doi_or_url")
+    .eq("id", sourceId)
+    .eq("owner_id", ctx.user.id)
+    .maybeSingle();
+  if (error) {
+    console.error(error);
+    return { error: t({ tr: "Kaynak okunamadı; tekrar deneyin.", en: "Couldn't read the source; please try again." }) };
+  }
+  if (!kaynak) return { error: t({ tr: "Kaynak bulunamadı ya da size ait değil.", en: "Source not found or it doesn't belong to you." }) };
+
+  const sonuc = await kunyeDogrula(kaynak, undefined, await aktifDil());
+  if (sonuc.tur === "ulasilamadi") return { error: sonuc.neden };
+  return { sonuc };
 }
