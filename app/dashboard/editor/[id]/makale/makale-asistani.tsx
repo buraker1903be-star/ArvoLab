@@ -1,6 +1,8 @@
 "use client";
 
 import { asistanCagir } from "@/lib/asistan-istemci";
+import Link from "next/link";
+import { PenLine } from "lucide-react";
 import { useState, useTransition } from "react";
 import { makaleBolumDenetle, type MakaleDenetimYaniti } from "@/app/actions/ai-makale";
 import AsistanSonuc from "@/app/dashboard/_components/asistan-sonuc";
@@ -13,6 +15,15 @@ import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
   çıkarılıyor, yani ekranda görülen bölüm denetlenen bölümdür.
 */
 type Bolum = { sira: number; baslik: string; sozcuk: number; denetim: string[] };
+
+/** Yazım sekmesinin adresi; başlık varsa editör oraya gider (?baslik=), asistan istenirse panel açık gelir (?asistan=1). */
+function yazimAdresi(projectId: string, baslik: string, asistan = false): string {
+  const sorgu = new URLSearchParams();
+  if (baslik) sorgu.set("baslik", baslik);
+  if (asistan) sorgu.set("asistan", "1");
+  const q = sorgu.toString();
+  return `/dashboard/editor/${encodeURIComponent(projectId)}/write${q ? `?${q}` : ""}`;
+}
 
 export default function MakaleAsistani({ projectId, bolumler, asistanAcik }: { projectId: string; bolumler: Bolum[]; asistanAcik: boolean }) {
   const t = useCeviri();
@@ -48,12 +59,21 @@ export default function MakaleAsistani({ projectId, bolumler, asistanAcik }: { p
       </div>
 
       {bolumler.length === 0 ? (
-        <p className="asistan-uyari" data-tone="neutral">
-          {t({
-            tr: "Müsveddede başlıklı bölüm bulunamadı. Editörde bölüm başlıklarını ekleyip kaydedin.",
-            en: "No headed sections were found in the manuscript. Add section headings in the editor and save.",
-          })}
-        </p>
+        <>
+          <p className="asistan-uyari" data-tone="neutral">
+            {t({
+              tr: "Müsveddede başlıklı bölüm bulunamadı. Editörde bölüm başlıklarını ekleyip kaydedin.",
+              en: "No headed sections were found in the manuscript. Add section headings in the editor and save.",
+            })}
+          </p>
+          {/* Başlık yoksa gidilecek bölüm de yok: Yazım sekmesi olduğu gibi açılır. */}
+          <div className="project-form-actions mt-sm">
+            <Link className="projects-filter-button" href={yazimAdresi(projectId, "")}>
+              <PenLine size={15} aria-hidden="true" />
+              {t({ tr: "Yazım'a git", en: "Go to Writing" })}
+            </Link>
+          </div>
+        </>
       ) : (
         <>
           <div className="project-form-grid">
@@ -83,7 +103,30 @@ export default function MakaleAsistani({ projectId, bolumler, asistanAcik }: { p
             <button type="button" className="projects-primary-button" disabled={!asistanAcik || bekleniyor || !bolum} onClick={() => denetle(false)}>
               {bekleniyor ? t({ tr: "Denetleniyor…", en: "Reviewing…" }) : t({ tr: "Bölümü denetle", en: "Review section" })}
             </button>
+            {/*
+              Yazım'a geçiş (Makale Aşama 2, 05.11.2026). Başlık metni adrese
+              konur; editör aynı başlığı bulup oraya gider, bulamazsa yalnızca
+              açılır (lib/makale/bolumler.ts, baslikSirasi). "Başlıksız giriş
+              metni" için başlık yok: düz Yazım sekmesi.
+            */}
+            {bolum ? (
+              <Link className="projects-filter-button" href={yazimAdresi(projectId, bolum.baslik)}>
+                <PenLine size={15} aria-hidden="true" />
+                {t({ tr: "Bölümü Yazım'da aç", en: "Open section in Writing" })}
+              </Link>
+            ) : null}
           </div>
+          <p className="makale-denetim-ayrim">
+            {t({
+              tr: "Bölüm denetimi yalnızca eksikleri söyler. Metni yazmak ya da geliştirmek için Yazım sekmesindeki Arvo AI yazım asistanını kullanın; önerdiği metin belgeye ancak siz eklerseniz girer.",
+              en: "Section review only points out what is missing. To write or improve the text, use the Arvo AI writing assistant in the Writing tab; its suggestions enter the document only if you add them.",
+            })}{" "}
+            {bolum ? (
+              <Link className="link-accent" href={yazimAdresi(projectId, bolum.baslik, true)}>
+                {t({ tr: "Yazım asistanıyla aç", en: "Open with the writing assistant" })}
+              </Link>
+            ) : null}
+          </p>
         </>
       )}
 

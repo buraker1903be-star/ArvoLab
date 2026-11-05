@@ -148,7 +148,8 @@ test("İngilizce arayüz: tür tanımı, denetim listesi ve gönderim kontrolü 
   // Bölüm adı MÜSVEDDENİN dilinde (profil.dil = tr), cümle arayüzün dilinde.
   assert.match(bul("bolumler").aciklama, /^Sections in the template .*: Yöntem, Bulgular/);
   assert.match(bul("kelime").aciklama, /words over\. Abstract and references were excluded/);
-  assert.equal(bul("anahtar").aciklama, "1 keyword; the journal requires at least 3.");
+  // Kaynak da söyleniyor (05.11.2026, lib/makale/ozet-ve-sinirlar.ts): müsveddede satır yok, form esas.
+  assert.equal(bul("anahtar").aciklama, "1 keyword (from the article details); the journal requires at least 3.");
   assert.match(bul("dergi").aciklama, /^You checked the guidelines 300 days ago/);
   assert.equal(bul("kanit").aciklama, "Of 2 claims: 1 with contradicting evidence, 1 record awaiting human review.");
   assert.ok(maddeler.every((m) => !/[ğışçöü]/i.test(m.baslik)));

@@ -77,7 +77,8 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
   if (!kapi.ok) return { hata: kapi.hata, odemeGerekli: kapi.odemeGerekli };
 
   // RLS: başkasının çalışması okunmaz; bağlam da kayıt da ona iliştirilmez.
-  const calisma = await calismaBaglami(girdi.projectId);
+  /* Makale türünde profil de gelir (Makale Aşama 2): soru, tür, dil, dergi sınırları. */
+  const calisma = await calismaBaglami(girdi.projectId, { makale: true });
   if (!calisma) return { hata: t({ tr: "Çalışma okunamadı; sayfayı yenileyin.", en: "The work could not be read; refresh the page." }) };
 
   const supabase = await createClient();
@@ -117,6 +118,7 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
   const oncesi = temizle(girdi.oncesi, SINIR.oncesi * 2) || null;
   const { mesajlar, kaynak } = yazimIstemi({
     calisma: calisma.metin,
+    makale: calisma.makale ?? null,
     belgeDili: dili,
     atifStili: stil.ad,
     bolum,

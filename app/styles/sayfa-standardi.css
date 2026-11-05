@@ -782,3 +782,8 @@ details[open] > summary > .kk-ok { transform: rotate(180deg); }
   .makale-kontrol-liste li { padding: 10px 12px 10px 11px; }
   .makale-araclari { gap: var(--s-2); }
 }
+
+/* Bölüm denetimi ile yazım asistanının farkı (Makale Aşama 2): pencerenin altında tek satır not. */
+.makale-denetim-ayrim { margin: var(--s-2) 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.makale-denetim-ayrim .link-accent { display: inline-flex; align-items: center; min-height: 40px; }
+.makale-durumlar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--s-2); }

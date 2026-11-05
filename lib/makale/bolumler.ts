@@ -114,3 +114,28 @@ export function anaMetinSozcukSayisi(bolumler: MakaleBolumu[]): number {
     .filter((b) => b.tur !== "kaynakca" && b.tur !== "ozet")
     .reduce((toplam, b) => toplam + b.sozcuk + sozcukSayisi(b.baslik), 0);
 }
+
+/*
+  Bölüm denetiminden Yazım'a geçiş (Makale Aşama 2, 05.11.2026): Makale
+  sekmesi bölümün BAŞLIK METNİNİ adrese koyar (?baslik=…), editör aynı
+  başlığı belgede bulup oraya gider. Önce birebir, sonra büyük-küçük harf,
+  boşluk ve baştaki numara ("2.", "2.1") farkı yok sayılarak aranır;
+  bulunamazsa -1 (editör yalnızca açılır, imleç yerinden oynamaz).
+  Kullanıcı başlığı denetimden sonra değiştirmiş olabilir: tahminle başka
+  bir başlığa gitmek, hiç gitmemekten kötü.
+*/
+const baslikBicimi = (metin: string) =>
+  metin
+    .replace(/^\s*(?:\d+(?:\.\d+)*\.?|[IVXLC]+\.)\s+/i, "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/\s+/g, " ")
+    .trim();
+
+export function baslikSirasi(basliklar: { text: string }[], aranan: string): number {
+  const hedef = aranan.trim();
+  if (!hedef) return -1;
+  const birebir = basliklar.findIndex((b) => b.text.trim() === hedef);
+  if (birebir >= 0) return birebir;
+  const bicim = baslikBicimi(hedef);
+  return bicim ? basliklar.findIndex((b) => baslikBicimi(b.text) === bicim) : -1;
+}

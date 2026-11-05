@@ -348,7 +348,27 @@ export default async function MakaleCalismaAlani({
             }
           />
         }
-      />
+      >
+        {/*
+          DURUM GÖSTERGELERİ (Makale Aşama 2, 05.11.2026). Profil girilmemişse
+          altta zaten bir uyarı var; göstergeler yalnızca kayıtlı profilde.
+          Dergi bilgileri her zaman "sizin beyanınız" olarak etiketlenir:
+          ArvoLab onları doğrulamıyor ve asistan da öyle kullanıyor.
+        */}
+        {kayitliProfil ? (
+          <div className="makale-durumlar" role="group" aria-label={t({ tr: "Makale bilgilerinin durumu", en: "Status of the article details" })}>
+            <DurumGostergesi ton="success">{t({ tr: "Makale profili tanımlı", en: "Article profile set" })}</DurumGostergesi>
+            {profil.kelime_siniri || profil.ozet_siniri || profil.anahtar_en_az || profil.anahtar_en_cok ? (
+              <DurumGostergesi ton="success">{t({ tr: "Dergi sınırları girildi", en: "Journal limits entered" })}</DurumGostergesi>
+            ) : (
+              <DurumGostergesi ton="neutral">{t({ tr: "Dergi sınırı girilmedi", en: "No journal limits" })}</DurumGostergesi>
+            )}
+            {profil.hedef_dergi || profil.dergi_kurallari_adresi || kayitliProfil.dergi_kurallari_notu ? (
+              <DurumGostergesi ton="info">{t({ tr: "Dergi bilgileri sizin beyanınız · doğrulanmadı", en: "Journal details as you entered them · not verified" })}</DurumGostergesi>
+            ) : null}
+          </div>
+        ) : null}
+      </SayfaBasligi>
 
       <CalismaSekmeleri calisma={calisma} aktif="makale" />
 

@@ -6,6 +6,7 @@ import { sayfaDuzeniOzeti, type SayfaDuzeniFarki } from "@/lib/sayfa-duzeni";
 import type { CoverPage } from "@/app/actions/manuscript";
 import type { Dil, Metin } from "@/lib/dil";
 import type { EtikTeslimSatiri } from "@/lib/etik/durum";
+import type { KontrolMaddesi } from "@/lib/makale/gonderim-kontrolu";
 
 /** Kapak alanlarının adı iki dilde (28.10.2026); eski liste Türkçe değerle kalıyor. */
 export const COVER_FIELD_LABELS: [keyof CoverPage, Metin][] = [
@@ -38,6 +39,8 @@ export type ChecklistAction =
   | "apply-numbering"
   | "apply-page-setup"
   | "strip-manual-numbers"
+  /* Makale: dergi sınırları Makale sekmesindeki "Makale bilgileri"nde. */
+  | "open-article-details"
   | "save";
 
 export interface ChecklistItem {
@@ -89,6 +92,14 @@ export interface ChecklistInput {
     henüz belirlemedi ya da kayıt okunamadı).
   */
   etik?: EtikTeslimSatiri;
+  /*
+    MAKALE (05.11.2026, lib/makale/ozet-ve-sinirlar.ts → makaleTeslimGirdisi).
+    Verilirse kelime sınırı ÜNİVERSİTE KILAVUZUNDAN DEĞİL dergi profilinden
+    gelir: eskiden makalede de kılavuzun tez kelime sınırına (thesisWords)
+    bakılıyordu. Maddeler Makale sekmesindeki kontrolle aynı fonksiyondan.
+    Tez, proje ve doçentlikte verilmez; onların davranışı değişmedi.
+  */
+  makale?: { profilVar: boolean; maddeler: KontrolMaddesi[] };
 }
 
 /*
@@ -167,7 +178,34 @@ export function buildSubmissionChecklist(input: ChecklistInput, dil: Dil = "tr")
     UYARI ve cümle bunu açıkça söylüyor — öğrenci kaynakçası yüzünden
     gereksiz yere metin silmesin.
   */
-  if (input.wordLimit && (input.wordLimit.min || input.wordLimit.max) && input.words !== undefined) {
+  if (input.makale) {
+    const dergiEylemi = { id: "open-article-details" as const, label: t("Makale bilgileri", "Article details") };
+    if (!input.makale.profilVar) {
+      items.push({
+        id: "makale-profil",
+        label: t("Makale bilgileri", "Article details"),
+        status: "todo",
+        detail: t(
+          "Hedef dergi ve sınırlar girilmedi; kelime, özet ve anahtar kelime sınırları karşılaştırılamıyor. Varsayılan bir sınır kullanılmıyor.",
+          "No target journal or limits entered; word, abstract and keyword limits cannot be compared. No default limit is used.",
+        ),
+        action: dergiEylemi,
+      });
+    }
+    for (const madde of input.makale.maddeler) {
+      /* "bilgi": karşılaştırılacak sınır yok. Kelime sınırının yokluğu uyarıdır;
+         özet ve anahtar kelimede yalnızca sayı söyleniyor. */
+      const status: ChecklistStatus =
+        madde.durum === "tamam" ? "ok" : madde.durum === "eksik" ? "todo" : madde.durum === "dikkat" ? "warning" : madde.anahtar === "kelime" ? "warning" : "ok";
+      items.push({
+        id: `makale-${madde.anahtar}`,
+        label: madde.baslik,
+        status,
+        detail: madde.aciklama,
+        ...(status !== "ok" && input.makale.profilVar ? { action: dergiEylemi } : {}),
+      });
+    }
+  } else if (input.wordLimit && (input.wordLimit.min || input.wordLimit.max) && input.words !== undefined) {
     const { min, max } = input.wordLimit;
     const sayi = (n: number) => n.toLocaleString(en ? "en-US" : "tr-TR");
     const w = sayi(input.words);

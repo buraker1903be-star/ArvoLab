@@ -14,13 +14,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { projectTypeLabel } from "@/lib/project-labels";
 import { STIL_ETIKETLERI } from "@/lib/atif/stiller";
+import { makaleProfiliMetni, type MakaleBaglami, type MakaleProfilSatiri } from "./makale-baglami";
+
+const MAKALE_SUTUNLARI =
+  "makale_turu, dil, arastirma_problemi, arastirma_sorusu, arastirma_tasarimi, disiplin, hedef_dergi, dergi_kurallari_adresi, dergi_kurallari_notu, raporlama_standardi, kelime_siniri, ozet_siniri, anahtar_en_az, anahtar_en_cok, veri_durumu";
 
 export type CalismaBaglami = {
   id: string;
   metin: string;
   /** Çalışmanın atıf sistemi; sistem istemine giriyor. */
   atifStili: string | null;
+  /**
+   * Makale profili (yalnızca `makale: true` istenince ve çalışma makale
+   * türündeyse). null: makale ama profil kayıtlı değil ya da okunamadı.
+   */
+  makale?: MakaleBaglami | null;
 };
+
+
 
 const YONTEM: Record<string, string> = {
   quantitative: "Nicel",
@@ -59,7 +70,7 @@ export function calismaMetni(calisma: CalismaSatiri): string {
  * çalışmasının kimliği gönderilse bile satır dönmez, bağlam da kurulmaz.
  * Bu aynı zamanda kaydın yabancı bir çalışmaya iliştirilmesini engeller.
  */
-export async function calismaBaglami(projectId?: string | null): Promise<CalismaBaglami | null> {
+export async function calismaBaglami(projectId?: string | null, secenek: { makale?: boolean } = {}): Promise<CalismaBaglami | null> {
   if (!projectId) return null;
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -77,9 +88,23 @@ export async function calismaBaglami(projectId?: string | null): Promise<Calisma
   /* Atıf stili AYRICA dönüyor: sistem istemi modelin kimliğini
      belirliyor ve bağlam metnindeki bir satır onu ezmiyor
      (lib/ai/kaynakca-denetimi'deki gerekçe). */
-  return {
+  const sonuc: CalismaBaglami = {
     id: data.id,
     metin: calismaMetni(data as CalismaSatiri),
     atifStili: (data as CalismaSatiri).citation_style ?? null,
   };
+  /*
+    Makale profili yalnızca İSTEYEN yetenekte okunur (bugün yazım
+    asistanı). Analiz, kaynakça ve kanıt denetimleri sayı denetimiyle
+    çalışıyor; profilin sınır sayıları onların denetim kaynağına girerse
+    uydurma bir değeri "bağlamda var" diye geçirebilirdi.
+    Profil AYNI çalışma kimliğiyle okunur (RLS de çalışmayı görebilene
+    sınırlar): başka bir çalışmanın profili bağlama giremez.
+  */
+  if (secenek.makale && data.project_type === "article") {
+    const { data: profil, error: profilHatasi } = await supabase.from("makale_profili").select(MAKALE_SUTUNLARI).eq("project_id", data.id).maybeSingle();
+    if (profilHatasi) console.error("[ai] makale profili okunamadı:", profilHatasi.message);
+    sonuc.makale = profil ? makaleProfiliMetni(profil as MakaleProfilSatiri) : null;
+  }
+  return sonuc;
 }

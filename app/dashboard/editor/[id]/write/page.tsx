@@ -15,6 +15,7 @@ import type { ManuscriptCheckResult } from "@/app/actions/manuscript";
 import ManuscriptEditor from "./manuscript-editor";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { belgeDili } from "@/lib/belge-dili";
+import type { SinirProfili } from "@/lib/makale/ozet-ve-sinirlar";
 
 // Bu sayfanın sunucu eylemleri (Word'den aktarma, resimli dönüştürme) büyük dosyalarda zaman alabilir.
 export const maxDuration = 60;
@@ -31,10 +32,10 @@ export default async function WriteManuscriptPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ teslim?: string; asistan?: string }>;
+  searchParams: Promise<{ teslim?: string; asistan?: string; baslik?: string }>;
 }) {
   const { id } = await params;
-  const { teslim, asistan } = await searchParams;
+  const { teslim, asistan, baslik } = await searchParams;
   const supabase = await createClient();
   const t = await ceviri();
 
@@ -93,14 +94,38 @@ export default async function WriteManuscriptPage({
     ? { sonuc: sonSatir.sonuc as ManuscriptCheckResult, yapi: yapiSorunlariniTemizle(sonSatir.yapi) }
     : null;
 
-  const [{ kilavuz: guideline, okunamadi: kilavuzOkunamadi }, content] = await Promise.all([
+  /*
+    MAKALE PROFİLİ (Makale Aşama 2, 05.11.2026): editörün teslim listesi
+    makalede kelime/özet/anahtar kelime sınırlarını buradan alır, üniversite
+    kılavuzundan değil. Yalnızca makale türünde okunur; RLS çalışmayı
+    görebilene sınırlar. Okunamazsa liste "profil yok" gibi davranır
+    (sınır uydurulmaz), hata günlüğe yazılır.
+  */
+  const makaleProfiliSorgusu =
+    project.project_type === "article"
+      ? supabase
+          .from("makale_profili")
+          .select("dil, kelime_siniri, ozet_siniri, anahtar_en_az, anahtar_en_cok, ozet, anahtar_kelimeler")
+          .eq("project_id", id)
+          .maybeSingle()
+      : null;
+
+  const [{ kilavuz: guideline, okunamadi: kilavuzOkunamadi }, content, makaleProfiliYaniti] = await Promise.all([
     /* Katalogda eşleşme yoksa öğrencinin kendi yüklediği kılavuz
        uygulanıyor (lib/guideline-rules.ts: calismaKilavuzu). */
     calismaKilavuzuOku(supabase, id, project.guideline_id),
     // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
     // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
     manuscript ? refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : Promise.resolve(null),
+    makaleProfiliSorgusu,
   ]);
+  if (makaleProfiliYaniti?.error) console.error("[makale] editörde profil okunamadı:", makaleProfiliYaniti.error.message);
+  const makaleProfili: SinirProfili | null | undefined =
+    project.project_type === "article"
+      ? makaleProfiliYaniti?.data
+        ? { ...(makaleProfiliYaniti.data as SinirProfili), anahtar_kelimeler: (makaleProfiliYaniti.data as SinirProfili).anahtar_kelimeler ?? [] }
+        : null
+      : undefined;
   const sync = resolveGuidelineSync(guideline, manuscript, await aktifDil());
   // Eski kayıt hatasından etkilenen belge: kullanıcıya neyin kaybolduğu gösterilir.
   const formatLoss = manuscript ? detectFormatLoss(manuscript.content) : null;
@@ -155,6 +180,8 @@ export default async function WriteManuscriptPage({
         belgeDili={dokumanDili}
         acilacakMadde={teslim ?? null}
         asistanAcikBasla={asistan === "1"}
+        /* Makale sekmesindeki bölüm denetiminden gelinen başlık (Makale Aşama 2). */
+        acilacakBaslik={typeof baslik === "string" ? baslik.slice(0, 300) : null}
         kurumGirili={Boolean(project.university)}
         initialContent={content}
         formatLoss={formatLoss?.affected ? formatLoss : null}
@@ -177,6 +204,7 @@ export default async function WriteManuscriptPage({
         projectStatus={project.status ?? null}
         citationStyle={project.citation_style ?? "apa7"}
         ornekAtif={project.ornek_atif ?? null}
+        makaleProfili={makaleProfili}
         projectDefaults={{
           title: project.title ?? "",
           university: project.university ?? "",

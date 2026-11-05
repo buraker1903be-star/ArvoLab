@@ -16,6 +16,8 @@
     istekte "UYDURMA_SAYI"  → bağlamda olmayan bir sayı yazar (cevap düşmeli)
     istekte "UZUN"          → 160 kelimelik paragraf (otomatik sürüm eşiği)
     istekte "YAVAS"         → 3 sn bekler (cevap beklerken düzenleme senaryosu)
+    istekte "PROFIL"        → makale profilinin istemde olup olmadığını söyler
+                              (Makale Aşama 2; sayı yazmaz, yalnızca soruyu yankılar)
 */
 import type { Mesaj, SorSecenek, Yanit } from "../../lib/ai/saglayici";
 
@@ -42,6 +44,17 @@ export function testCevabi(mesajlar: Mesaj[]): { yanit: string; metin: string } 
   const gorev = /GÖREV: (.*)/.exec(baglam)?.[1] ?? "";
   const secim = bolum(baglam, "SEÇİLİ METİN");
 
+  if (istek.includes("PROFIL")) {
+    const soru = /Araştırma sorusu: (.*)/.exec(baglam)?.[1]?.trim();
+    const sinir = mesajlar.some((m) => m.rol === "sistem" && m.metin.startsWith("DERGİ SINIRLARI"));
+    return {
+      /* İşaret bloğun BAŞLIĞI: sistem isteminin 9. kuralı da "MAKALE PROFİLİ" diyor. */
+      yanit: baglam.includes("MAKALE PROFİLİ (öğrencinin girdiği bilgiler)")
+        ? `Test: makale profili VAR · soru: ${soru ?? "yok"} · dergi sınırları: ${sinir ? "istemde" : "yok"}`
+        : "Test: makale profili YOK",
+      metin: "",
+    };
+  }
   if (istek.includes("UYDURMA_SAYI")) return { yanit: "Test: bağlamda olmayan sayı.", metin: "Katılımcıların yüzde 73'ü bu görüşe katılmaktadır." };
   if (istek.includes("UZUN")) {
     const kelimeler = "akademik yazım sürecinde kavramsal tutarlılık kaynak kullanımı ve yöntemsel açıklık birlikte değerlendirilmelidir".split(" ");

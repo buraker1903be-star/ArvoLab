@@ -25,6 +25,7 @@ export default function TeslimListesi({
   onAction,
   vurgu,
   dogrulanmamis,
+  makale = false,
 }: {
   checklist: SubmissionChecklist;
   onAction: (action: ChecklistAction) => void;
@@ -43,6 +44,12 @@ export default function TeslimListesi({
     aynı güveni taşımaz.
   */
   dogrulanmamis?: boolean;
+  /*
+    Makale (Makale Aşama 2, 05.11.2026): sınırlar dergi profilinden;
+    açıklama "kılavuza göre" demez, dergi bilgilerinin doğrulanmadığını
+    söyler. Eskiden makalede de tez kılavuzu cümlesi yazıyordu.
+  */
+  makale?: boolean;
 }) {
   const t = useCeviri();
   const ready = checklist.done === checklist.total;
@@ -57,7 +64,12 @@ export default function TeslimListesi({
         </span>
       </header>
       <p className="yan-not">
-        {dogrulanmamis
+        {makale
+          ? t({
+              tr: "Gönderimden önce bakılması gerekenler. Kelime, özet ve anahtar kelime sınırları Makale bilgilerindeki dergi beyanınızdan gelir; ArvoLab dergi kurallarını doğrulamaz ve uygunluk hükmü vermez.",
+              en: "What to check before submission. Word, abstract and keyword limits come from the journal details you entered under Article details; ArvoLab does not verify journal rules or judge suitability.",
+            })
+          : dogrulanmamis
           ? t({
               tr: "Kendi yüklediğiniz kılavuzdan çıkarılan ve sizin onayladığınız kurallara göre denetlenir — kurumunuzun onayından GEÇMEMİŞTİR. Otomatik denetimdir; danışman ve jüri kontrolünün yerini tutmaz.",
               en: "Checked against rules extracted from the guideline you uploaded and approved yourself — they have NOT been approved by your institution. This is an automated check; it does not replace review by your advisor or committee.",

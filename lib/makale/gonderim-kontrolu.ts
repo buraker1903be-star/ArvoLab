@@ -18,7 +18,8 @@
 
 import { MAKALE_TURLERI, bolumAdi, standartUyarisi, type MakaleTuru } from "./sablonlar";
 import type { Dil } from "@/lib/dil";
-import { anaMetinSozcukSayisi, sozcukSayisi, type MakaleBolumu } from "./bolumler";
+import type { MakaleBolumu } from "./bolumler";
+import { makaleSinirMaddeleri } from "./ozet-ve-sinirlar";
 import type { MatrisOzeti } from "@/lib/kanit/durum";
 
 export type MakaleProfili = {
@@ -101,80 +102,12 @@ export function gonderimKontrolu(
       : { anahtar: "bolumler", baslik: planBaslik, durum: "tamam", aciklama: t("Şablondaki bütün bölümler müsveddede başlık olarak var.", "Every section in the template appears as a heading in the manuscript.") },
   );
 
-  // Kelime sınırı.
-  const anaMetin = anaMetinSozcukSayisi(bolumler);
-  const kelimeBaslik = t("Kelime sınırı", "Word limit");
-  if (profil.kelime_siniri) {
-    const asim = anaMetin - profil.kelime_siniri;
-    maddeler.push({
-      anahtar: "kelime",
-      baslik: kelimeBaslik,
-      durum: asim > 0 ? "eksik" : "tamam",
-      aciklama: en
-        ? (asim > 0
-            ? `The main text is about ${anaMetin} words; the limit is ${profil.kelime_siniri}, about ${asim} words over.`
-            : `The main text is about ${anaMetin} words; the limit is ${profil.kelime_siniri}.`) +
-          " Abstract and references were excluded; check the journal's counting rule."
-        : (asim > 0
-            ? `Ana metin yaklaşık ${anaMetin} sözcük; sınır ${profil.kelime_siniri}, yaklaşık ${asim} sözcük fazla.`
-            : `Ana metin yaklaşık ${anaMetin} sözcük; sınır ${profil.kelime_siniri}.`) +
-          " Özet ve kaynakça hariç sayıldı; derginin sayma kuralını kontrol edin.",
-    });
-  } else {
-    maddeler.push({
-      anahtar: "kelime",
-      baslik: kelimeBaslik,
-      durum: "bilgi",
-      aciklama: en
-        ? `The main text is about ${anaMetin} words. Enter the target journal's limit to compare.`
-        : `Ana metin yaklaşık ${anaMetin} sözcük. Hedef derginin sınırını girerseniz karşılaştırılır.`,
-    });
-  }
-
-  // Özet.
-  const ozetSozcuk = sozcukSayisi(profil.ozet ?? "");
-  const ozetBaslik = t("Özet", "Abstract");
-  const ozetSinirli = en
-    ? `The abstract is ${ozetSozcuk} words; the limit is ${profil.ozet_siniri ?? ""}.`
-    : `Özet ${ozetSozcuk} sözcük; sınır ${profil.ozet_siniri ?? ""}.`;
-  if (!ozetSozcuk) {
-    maddeler.push({ anahtar: "ozet", baslik: ozetBaslik, durum: "eksik", aciklama: t("Özet girilmedi.", "No abstract entered.") });
-  } else if (profil.ozet_siniri && ozetSozcuk > profil.ozet_siniri) {
-    maddeler.push({ anahtar: "ozet", baslik: ozetBaslik, durum: "eksik", aciklama: ozetSinirli });
-  } else {
-    maddeler.push({
-      anahtar: "ozet",
-      baslik: ozetBaslik,
-      durum: profil.ozet_siniri ? "tamam" : "bilgi",
-      aciklama: profil.ozet_siniri
-        ? ozetSinirli
-        : en
-          ? `The abstract is ${ozetSozcuk} words. Enter the journal's abstract limit to compare.`
-          : `Özet ${ozetSozcuk} sözcük. Derginin özet sınırını girerseniz karşılaştırılır.`,
-    });
-  }
-
-  // Anahtar kelimeler.
-  const anahtar = profil.anahtar_kelimeler.filter((k) => k.trim()).length;
-  const enAz = profil.anahtar_en_az;
-  const enCok = profil.anahtar_en_cok;
-  const anahtarBaslik = t("Anahtar kelimeler", "Keywords");
-  if (!anahtar) maddeler.push({ anahtar: "anahtar", baslik: anahtarBaslik, durum: "eksik", aciklama: t("Anahtar kelime girilmedi.", "No keywords entered.") });
-  else if ((enAz && anahtar < enAz) || (enCok && anahtar > enCok)) {
-    const aralik = [enAz ? t(`en az ${enAz}`, `at least ${enAz}`) : "", enCok ? t(`en çok ${enCok}`, `at most ${enCok}`) : ""].filter(Boolean).join(", ");
-    maddeler.push({
-      anahtar: "anahtar",
-      baslik: anahtarBaslik,
-      durum: "eksik",
-      aciklama: en ? `${anahtar} ${anahtar === 1 ? "keyword" : "keywords"}; the journal requires ${aralik}.` : `${anahtar} anahtar kelime var; dergi ${aralik} istiyor.`,
-    });
-  } else
-    maddeler.push({
-      anahtar: "anahtar",
-      baslik: anahtarBaslik,
-      durum: enAz || enCok ? "tamam" : "bilgi",
-      aciklama: en ? `${anahtar} ${anahtar === 1 ? "keyword" : "keywords"}.` : `${anahtar} anahtar kelime.`,
-    });
+  /*
+    Kelime sınırı, özet ve anahtar kelimeler (05.11.2026): editörün teslim
+    listesiyle AYNI fonksiyon (ozet-ve-sinirlar.ts). Özet artık müsveddedeki
+    "Özet" bölümünden de okunuyor; eskiden yalnızca forma bakılıyordu.
+  */
+  maddeler.push(...makaleSinirMaddeleri({ profil, bolumler }, dil));
 
   // Dergi kuralları: doğrulanmıyor, kontrol tarihi hatırlatılıyor.
   const kurallarBaslik = t("Dergi yazım kuralları", "Journal author guidelines");

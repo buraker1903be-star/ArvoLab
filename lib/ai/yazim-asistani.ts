@@ -63,6 +63,16 @@ export type YazimGirdisi = {
   gorev: YazimGorevi;
   /** Kılavuzun zorunlu bölümleri (ana hat görevinde iskeletin omurgası). */
   zorunluBolumler?: string[];
+  /*
+    Makale profili (Makale Aşama 2, 05.11.2026; lib/ai/calisma-baglami.ts →
+    makaleProfiliMetni). İki parça, çünkü sayı denetimi bağlamdaki sayıları
+    "izinli" sayıyor:
+      baglam      → istemde ve denetim kaynağında (soru, tür, tasarım…)
+      yalnizIstem → YALNIZCA istemde (kelime/özet sınırları, dergi notu,
+                    adres). Sınırlar denetim kaynağına girseydi "250" gibi
+                    bir sınır, uydurulmuş "250 katılımcı"yı geçirirdi.
+  */
+  makale?: { baglam: string; yalnizIstem: string } | null;
 };
 
 export const SINIR = {
@@ -109,7 +119,9 @@ KESİN KURALLAR:
 4. Öğrencinin bulgularını, verisini ya da yöntemini değiştirme ve yorumunu abartma; bağlamda yazanın ötesine geçme.
 5. Metni, belgenin dilinde ve çalışmanın akademik üslubunda yaz: edilgen ya da birinci çoğul şahıs, ölçülü, gereksiz süssüz. Başlık, madde işareti ya da Markdown kullanma; paragraflar arasında boş satır bırak.
 6. Kullanıcı yalnızca bir şey soruyorsa (metin istemiyorsa) "metin" alanını boş bırak.
-7. GÖREV satırı 5. kuraldan farklı bir biçim tarif ediyorsa (ana hat) o biçimi kullan.`;
+7. GÖREV satırı 5. kuraldan farklı bir biçim tarif ediyorsa (ana hat) o biçimi kullan.
+8. KAYNAKLARIN TAM METNİNİ GÖRMÜYORSUN. Kütüphanede yalnızca künye ve öğrencinin notu var; PDF'lerin içeriği sana verilmiyor. Bir kaynağı okuduğunu, içinde ne yazdığını ya da sayfa numarasını iddia etme; notta yazanın ötesine geçme.
+9. MAKALE PROFİLİ ve DERGİ bilgileri (varsa) öğrencinin kendi beyanıdır, doğrulanmamıştır. Derginin güncel resmî kuralı olduğunu, metnin dergiye uygun olduğunu ya da kabul edileceğini söyleme.`;
 
 const kirp = (metin: string | null | undefined, n: number) => {
   const m = (metin ?? "").trim();
@@ -132,6 +144,7 @@ export function yazimIstemi(g: YazimGirdisi): { mesajlar: Mesaj[]; kaynak: strin
   const kutuphane = g.kutuphane.slice(0, SINIR.kutuphane).map((k, i) => kutuphaneSatiri(k, i + 1));
   const baglam = [
     g.calisma ? `ÇALIŞMA:\n${bastanKirp(g.calisma, 1_500)}` : "",
+    g.makale?.baglam ? bastanKirp(g.makale.baglam, 3_000) : "",
     `BELGENİN DİLİ: ${g.belgeDili === "en" ? "İngilizce (metni İngilizce yaz; atıfta 've' yerine 'and', 'vd.' yerine 'et al.')" : "Türkçe"}`,
     `ATIF STİLİ: ${g.atifStili}`,
     `KÜTÜPHANE (atıf yapılabilecek TEK kaynaklar):\n${kutuphane.length ? kutuphane.join("\n") : "(boş — hiçbir atıf yapma)"}`,
@@ -151,6 +164,8 @@ export function yazimIstemi(g: YazimGirdisi): { mesajlar: Mesaj[]; kaynak: strin
   const mesajlar: Mesaj[] = [
     { rol: "sistem", metin: YAZIM_ISTEMI },
     { rol: "sistem", metin: baglam },
+    /* Denetim kaynağının (aşağıda "kaynak") DIŞINDA: bkz. YazimGirdisi.makale. */
+    ...(g.makale?.yalnizIstem ? [{ rol: "sistem" as const, metin: bastanKirp(g.makale.yalnizIstem, 4_500) }] : []),
     ...gecmis,
     { rol: "kullanici", metin: istek },
   ];

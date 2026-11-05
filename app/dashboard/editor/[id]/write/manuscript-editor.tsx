@@ -92,6 +92,8 @@ import { describeParagraphFormat, type ParagraphFormatRules } from "@/lib/paragr
 
 
 import { buildSubmissionChecklist, missingCoverFields, type ChecklistAction } from "@/lib/submission-checklist";
+import { makaleTeslimGirdisi, type SinirProfili } from "@/lib/makale/ozet-ve-sinirlar";
+import { baslikSirasi } from "@/lib/makale/bolumler";
 import { etikTeslimSatiri, type EtikKaydi } from "@/lib/etik/durum";
 import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
 
@@ -272,6 +274,8 @@ interface ManuscriptEditorProps {
     alınacak işe çevirirdi.
   */
   acilacakMadde?: string | null;
+  /** Açılışta gidilecek başlığın metni (Makale → Bölüm denetimi, ?baslik=). Bulunamazsa editör yalnızca açılır. */
+  acilacakBaslik?: string | null;
   /** "?asistan=1" ile gelinirse yazım asistanı açık başlar (Ctrl+K'daki "Yazım asistanını aç", Phase 3). */
   asistanAcikBasla?: boolean;
   /* Çalışmada kurum girili mi: teslim kontrolünde "kılavuz yok"un iki
@@ -309,6 +313,13 @@ interface ManuscriptEditorProps {
   ornekAtif?: string | null;
   /** Eski kayıt hatasından etkilenmişse neyin kaybolduğu (etkilenmediyse null) */
   formatLoss: FormatLossReport | null;
+  /*
+    Makale çalışmasının dergi sınırları (Makale Aşama 2, 05.11.2026).
+    undefined: makale değil. null: makale ama profil kaydedilmemiş.
+    Teslim listesi kelime/özet/anahtar kelimeyi Makale sekmesiyle AYNI
+    fonksiyonla hesaplar (lib/makale/ozet-ve-sinirlar.ts).
+  */
+  makaleProfili?: SinirProfili | null;
 }
 
 
@@ -469,6 +480,7 @@ export default function ManuscriptEditor({
   kullaniciId,
   belgeDili = "tr",
   acilacakMadde = null,
+  acilacakBaslik = null,
   asistanAcikBasla = false,
   kurumGirili = false,
   initialContent,
@@ -489,6 +501,7 @@ export default function ManuscriptEditor({
   projectStatus = null,
   citationStyle,
   ornekAtif = null,
+  makaleProfili,
   formatLoss,
 }: ManuscriptEditorProps) {
   const t = useCeviri();
@@ -569,6 +582,8 @@ export default function ManuscriptEditor({
     alınacak iş hâline getirirdi.
   */
   const [vurguluMadde, setVurguluMadde] = useState<string | null>(acilacakMadde);
+  /* Bölüm denetiminden gelinen başlığa BİR KEZ gidilir; sonraki çizimler imleci oynatmaz. */
+  const acilacakBaslikRef = useRef(acilacakBaslik);
   const [shareOpen, setShareOpen] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [footnoteDialog, setFootnoteDialog] = useState<FootnoteDialogState>(null);
@@ -1513,6 +1528,20 @@ export default function ManuscriptEditor({
     stili Kaynaklar sayfasıyla aynı yerden sınıflandırır. Eskiden yalnızca
     IEEE/Vancouver numaralı sayılıyor, dipnotlu stil yazar-tarih sanılıyordu.
   */
+  useEffect(() => {
+    const aranan = acilacakBaslikRef.current;
+    if (!editor || !aranan) return;
+    acilacakBaslikRef.current = null;
+    const basliklar = collectHeadings(editor.state.doc);
+    const sira = baslikSirasi(basliklar, aranan);
+    if (sira >= 0) window.requestAnimationFrame(() => !editor.isDestroyed && jumpToHeading(editor, basliklar[sira]));
+  }, [editor]);
+
+  /* Makale: dergi sınırı maddeleri canlı belgeden; belge değiştikçe (docStats) yeniden. */
+  const makaleTeslim = useMemo(
+    () => (editor && docStats && makaleProfili !== undefined ? makaleTeslimGirdisi(makaleProfili, editor.getJSON(), dil) : undefined),
+    [editor, docStats, makaleProfili, dil],
+  );
   const dipnotMetinleri = useMemo(() => (docStats ? docStats.footnotes.map((f) => f.text) : []), [docStats]);
   const govdeMetni = useMemo(
     () => (editor && docStats ? splitBodyAndReferences(`\n${editor.getText({ blockSeparator: "\n" })}\n`).bodyText : ""),
@@ -1631,6 +1660,8 @@ export default function ManuscriptEditor({
     maxPages: guideline?.maxPages ?? null,
     words: stats.words,
     wordLimit: guideline?.settings.thesisWords,
+    /* Makalede kelime sınırı kılavuzdan değil dergi profilinden (makaleTeslim). */
+    makale: makaleTeslim,
     issues: liveIssues
       ? {
           danger: liveIssues.filter((issue) => issue.tone === "danger").length,
@@ -1706,6 +1737,9 @@ export default function ManuscriptEditor({
       case "strip-manual-numbers":
         sayfaysaKapat();
         window.setTimeout(() => editor.chain().focus().stripManualHeadingNumbers().run(), 0);
+        break;
+      case "open-article-details":
+        window.open(`/dashboard/editor/${encodeURIComponent(projectId)}/makale`, "_self");
         break;
       case "save":
         void saveNow();
@@ -3238,6 +3272,7 @@ export default function ManuscriptEditor({
                 onAction={handleChecklistAction}
                 vurgu={vurguluMadde}
                 dogrulanmamis={guideline ? !guideline.dogrulandi : false}
+                makale={makaleProfili !== undefined}
               />
               <div className="yan-kutular">
                 <ManuscriptOutline
