@@ -65,7 +65,7 @@ describe("çalışmanın birimleri", () => {
       musvedde: { kelime: 5400, guncellendi: "2026-09-20T09:00:00Z" },
     });
     assert.equal(adim(o, "literatur").tamam, true);
-    assert.match(adim(o, "literatur").aciklama, /12 kaynak kayıtlı, 7 okundu, 3 kullanıldı/);
+    assert.match(adim(o, "literatur").aciklama, /12 kaynak kayıtlı, 7 okundu, 3 kullandım olarak işaretli/);
     assert.equal(adim(o, "yazim").tamam, true);
     assert.match(adim(o, "yazim").aciklama, /5\.400 kelime/);
   });
@@ -222,7 +222,7 @@ describe("İngilizce", () => {
       "en",
     );
     assert.equal(adimlar[0].baslik, "Gather literature");
-    assert.equal(adimlar[0].aciklama, "1 source saved, 0 read, 0 used.");
+    assert.equal(adimlar[0].aciklama, "1 source saved, 0 read, 0 marked as cited.");
     assert.equal(adimlar[1].aciklama, "1,500 words written.");
     assert.equal(birimEtiketi("kaynakca", "en"), "References");
   });

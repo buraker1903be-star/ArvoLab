@@ -195,8 +195,9 @@ export function siradakiAdimlar(ozet: AdimGirdisi, dil: Dil = "tr"): Adim[] {
     literatur: {
       aciklama: literatur.toplam
         ? t({
-            tr: `${literatur.toplam} kaynak kayıtlı, ${literatur.okunan} okundu, ${literatur.kullanilan} kullanıldı.`,
-            en: `${literatur.toplam} ${literatur.toplam === 1 ? "source" : "sources"} saved, ${literatur.okunan} read, ${literatur.kullanilan} used.`,
+            // "kullandım olarak işaretli" (4.3.5, B4): durum alanıdır, metindeki atıf değil.
+            tr: `${literatur.toplam} kaynak kayıtlı, ${literatur.okunan} okundu, ${literatur.kullanilan} kullandım olarak işaretli.`,
+            en: `${literatur.toplam} ${literatur.toplam === 1 ? "source" : "sources"} saved, ${literatur.okunan} read, ${literatur.kullanilan} marked as cited.`,
           })
         : t({
             tr: "Bu çalışmaya bağlı kaynak yok. Tarama asistanı arama stratejisi kurabilir.",

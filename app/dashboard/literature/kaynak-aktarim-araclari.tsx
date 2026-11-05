@@ -207,7 +207,7 @@ export function DisaAktarma({
     okunan: kaynaklar.filter((k) => k.status !== "to_review").length,
     hepsi: kaynaklar.length,
   };
-  /* Kaynakçaya girecekler varsayılan olarak metinde kullanılanlar; yoksa hepsi. */
+  /* Kaynakçaya girecekler varsayılan olarak "Kullandım" işaretliler (durum alanı; metinden okunmaz); yoksa hepsi. */
   const [kapsam, setKapsam] = useState<Kapsam>(sayilar.used ? "used" : "hepsi");
   const secili = kaynaklar.filter((k) => (kapsam === "used" ? k.status === "used" : kapsam === "okunan" ? k.status !== "to_review" : true));
   /*
@@ -285,7 +285,7 @@ export function DisaAktarma({
       <label>
         <span>{t({ tr: "Hangi kaynaklar?", en: "Which sources?" })}</span>
         <select value={kapsam} onChange={(e) => setKapsam(e.target.value as Kapsam)}>
-          <option value="used">{t({ tr: "Metinde kullanılanlar", en: "Cited in the text" })} ({sayilar.used})</option>
+          <option value="used">{t({ tr: "Kullandım olarak işaretliler", en: "Marked as cited" })} ({sayilar.used})</option>
           <option value="okunan">{t({ tr: "Okunanlar ve metindekiler", en: "Read and cited" })} ({sayilar.okunan})</option>
           <option value="hepsi">{t({ tr: "Hepsi", en: "All" })} ({sayilar.hepsi})</option>
         </select>

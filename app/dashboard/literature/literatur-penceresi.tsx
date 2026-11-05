@@ -29,7 +29,7 @@ import type { Metin } from "@/lib/dil";
      kaynak ekle", pencere içinde pencere; dört alan (başlık, yazar,
      yıl, DOI), gerisi "Yayın bilgileri" altında.
   3. Okuduğunu işaretlemek → kaynağa tıklayınca TEK düğme: sıradaki
-     adım ("Okudum", "Metinde kullandım"). Geri almak ikincil.
+     adım ("Okudum", "Kullandım olarak işaretle"). Geri almak ikincil.
 
   Literatür sayfasına bağlantı ve boş liste açıklaması kaldırıldı:
   arama bu pencerede yapılıyor, boş liste kendini anlatıyor.
@@ -44,11 +44,11 @@ const SIRA: Durum[] = ["to_review", "read", "used"];
 const ETIKET: Record<Durum, { ad: Metin; ton: string }> = {
   to_review: { ad: { tr: "Okunacak", en: "To read" }, ton: "neutral" },
   read: { ad: { tr: "Okundu", en: "Read" }, ton: "info" },
-  used: { ad: { tr: "Metinde", en: "Cited" }, ton: "success" },
+  used: { ad: { tr: "Kullandım", en: "Marked cited" }, ton: "success" }, // 4.3.5 (B4): kullanıcının işareti, metinden okunmaz
 };
 const ILERI: Record<Durum, { durum: Durum; etiket: Metin } | null> = {
   to_review: { durum: "read", etiket: { tr: "Okudum", en: "I've read it" } },
-  read: { durum: "used", etiket: { tr: "Metinde kullandım", en: "I cited it" } },
+  read: { durum: "used", etiket: { tr: "Kullandım olarak işaretle", en: "Mark as cited" } },
   used: null,
 };
 const GERI: Record<Durum, { durum: Durum; etiket: Metin } | null> = {
@@ -86,7 +86,7 @@ export default async function LiteraturPenceresi({
       description={
         kaynaklar.length
           ? t({
-              tr: `${kaynaklar.length} kaynak · ${say("to_review")} okunacak · ${say("read")} okundu · ${say("used")} metinde kullanıldı`,
+              tr: `${kaynaklar.length} kaynak · ${say("to_review")} okunacak · ${say("read")} okundu · ${say("used")} kullandım olarak işaretli`,
               en: `${kaynaklar.length} ${kaynaklar.length === 1 ? "source" : "sources"} · ${say("to_review")} to read · ${say("read")} read · ${say("used")} cited in the text`,
             })
           : t({

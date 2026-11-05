@@ -204,8 +204,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Upload a RIS or BibTeX file from Zotero, Mendeley or EndNote with \"Import\" (up to 5 MB), or add a single DOI.",
       },
       {
-        tr: "Her kaynağın durumunu ilerletin: Okunacak → \"Okudum\" → \"Metinde kullandım\". Ana sayfadaki sayılar buradan gelir.",
-        en: "Move each source along: To read → \"Read\" → \"Used in text\". The numbers on Home come from here.",
+        tr: "Her kaynağın durumunu ilerletin: Okunacak → \"Okudum\" → \"Kullandım olarak işaretle\". Ana sayfadaki sayılar buradan gelir. Bu sizin işaretinizdir; metinde atıf olup olmadığı ayrıca metinden okunur ve ikisi ayrışırsa kaynağın satırında yazar.",
+        en: "Move each source along: To read → \"Read\" → \"Mark as cited\". The numbers on Home come from here. This is your own mark; whether the text actually cites the source is read from the text separately, and the source's row says so if the two differ.",
       },
       {
         tr: "\"Kaynakçamı denetle\" editördeki kaynakçanızı (ya da yapıştırdığınız metni) biçim, atıf eşleşmesi ve dizin kaydı açısından kontrol eder.",

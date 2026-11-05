@@ -32,7 +32,7 @@ import { KunyeAlanlari, NotAlani, SOURCE_TYPE_LABELS } from "./kaynak-parcalari"
   öğrenci Kaynak bul penceresini açıp kaynağı orada arıyordu. Şimdi
   sayfada:
   - arama (başlık, yazar, dergi) ve durum süzgeci, sayılarıyla;
-  - satırda TEK düğme: sıradaki adım ("Okudum", "Metinde kullandım"),
+  - satırda TEK düğme: sıradaki adım ("Okudum", "Kullandım olarak işaretle"),
     geri almak ikincil (Literatür penceresiyle aynı kural);
   - DOI/adres bağlantısı;
   - EKSİK KÜNYE uyarısı: kaynakçaya girecek bilgisi eksik kaynaklar
@@ -65,11 +65,17 @@ type Durum = "to_review" | "read" | "used";
 const ETIKET: Record<Durum, { ad: Metin; ton: DurumTonu }> = {
   to_review: { ad: { tr: "Okunacak", en: "To read" }, ton: "neutral" },
   read: { ad: { tr: "Okundu", en: "Read" }, ton: "info" },
-  used: { ad: { tr: "Metinde", en: "Cited" }, ton: "success" },
+  /*
+    "Kullandım" (4.3.5, B4): bu kullanıcının işaretidir, metinden okunmaz.
+    Eskiden "Metinde" yazıyordu; atıf silinse de işaret kalıyor ve editör
+    metinden "atıf bekliyor" derken burada "Metinde" görünüyordu. Metinden
+    okunan atıf ayrı gösterilir (ayrıntıdaki "Metinde atıf").
+  */
+  used: { ad: { tr: "Kullandım", en: "Marked cited" }, ton: "success" },
 };
 const ILERI: Record<Durum, { durum: Durum; etiket: Metin } | null> = {
   to_review: { durum: "read", etiket: { tr: "Okudum", en: "I've read it" } },
-  read: { durum: "used", etiket: { tr: "Metinde kullandım", en: "I cited it" } },
+  read: { durum: "used", etiket: { tr: "Kullandım olarak işaretle", en: "Mark as cited" } },
   used: null,
 };
 const GERI: Record<Durum, Durum | null> = { to_review: null, read: "to_review", used: "read" };
@@ -239,9 +245,17 @@ export default function KaynakListesi({ kaynaklar, projectId, baglam }: { kaynak
                   </small>
                   {eksik.length ? <small className="kaynak-eksik">{t({ tr: "Kaynakça için eksik:", en: "Missing for the reference list:" })} {eksik.join(", ")}</small> : null}
                   {tekrarlar.has(k.id) ? <small className="kaynak-eksik">{t({ tr: "Olası tekrar: listede aynı DOI ya da aynı başlık ve yıl var", en: "Possible duplicate: same DOI, or same title and year, in the list" })}</small> : null}
+                  {/*
+                    İşaret ile metin ayrışınca (4.3.5, B4): "Kullandım" kullanıcının işareti,
+                    metinde atıf ise metinden okunur. İkisi farklıysa ayrıca söylenir;
+                    durum alanı DEĞİŞTİRİLMEZ (atıf sonradan silinmiş ya da başka biçimde yazılmış olabilir).
+                  */}
+                  {k.status === "used" && baglam?.satirlar[k.id]?.metinde === false ? (
+                    <small className="kaynak-eksik">{t({ tr: "“Kullandım” işaretli ama metinde atfı bulunamadı", en: "Marked as cited, but no citation was found in the text" })}</small>
+                  ) : null}
                 </span>
                 <span className="kaynak-satiri-eylem">
-                  <DurumGostergesi ton={ETIKET[durum].ton} ne={t({ tr: "Okuma durumu", en: "Reading status" })}>
+                  <DurumGostergesi ton={ETIKET[durum].ton} ne={t({ tr: "Okuma durumu (sizin işaretiniz)", en: "Reading status (your mark)" })}>
                     {t(ETIKET[durum].ad)}
                   </DurumGostergesi>
                   {durumDugmeleri(k)}

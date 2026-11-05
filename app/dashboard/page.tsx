@@ -52,7 +52,7 @@ type KaynakDurumu = "to_review" | "read" | "used";
 const KAYNAK_DURUMU: Record<KaynakDurumu, { ad: Metin; ton: string }> = {
   to_review: { ad: { tr: "Okunacak", en: "To read" }, ton: "neutral" },
   read: { ad: { tr: "Okundu", en: "Read" }, ton: "info" },
-  used: { ad: { tr: "Metinde", en: "Cited" }, ton: "success" },
+  used: { ad: { tr: "Kullandım", en: "Marked cited" }, ton: "success" }, // 4.3.5 (B4): kullanıcının işareti, metinden okunmaz
 };
 type BelgeDurumu = "processing" | "analyzed" | "failed";
 const BELGE_DURUMU: Record<BelgeDurumu, { ad: Metin; ton: string }> = {
@@ -1006,8 +1006,8 @@ export default async function DashboardPage() {
                     alt={
                       resumeKaynakSayisi
                         ? t({
-                            tr: `${resumeOkunan ?? 0} okundu · ${resumeKullanilan ?? 0} metinde kullanıldı`,
-                            en: `${resumeOkunan ?? 0} read · ${resumeKullanilan ?? 0} used in text`,
+                            tr: `${resumeOkunan ?? 0} okundu · ${resumeKullanilan ?? 0} kullandım olarak işaretli`,
+                            en: `${resumeOkunan ?? 0} read · ${resumeKullanilan ?? 0} marked as cited`,
                           })
                         : t({ tr: "Henüz kaynak eklenmedi", en: "No sources added yet" })
                     }
