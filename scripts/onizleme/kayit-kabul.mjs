@@ -12,6 +12,9 @@
   Production'a bağlanmaz. CI'da DEĞİL.
     ARVOLAB_ONIZLEME=1 ONIZLEME_YAZ=1 npx next dev -p 3123
     NODE_PATH=$(npm root -g) node scripts/onizleme/kayit-kabul.mjs [taban-adres]
+  Veri senaryoları (scripts/onizleme/veri.ts) ayrı sunucu başlatmasıyla:
+    ONIZLEME_SENARYO=kilavuz-eski … next dev  →  kayit-kabul.mjs --senaryo=kilavuz-eski
+    ONIZLEME_SENARYO=uyumsuz      … next dev  →  kayit-kabul.mjs --senaryo=uyumsuz
   Sunucu yeni başlatılmış olmalı (yazmalar bellekte birikir; senaryolar
   sırayla çalışır ve son senaryo örnek metni değiştirir).
   Kayıt isteği = gövdesinde belge ("type":"doc") taşıyan sunucu eylemi.
@@ -22,7 +25,9 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 
-const TABAN = process.argv[2] ?? "http://localhost:3123";
+const TABAN = process.argv.slice(2).find((a) => !a.startsWith("--")) ?? "http://localhost:3123";
+/* Sunucu hangi ONIZLEME_SENARYO ile başlatıldıysa aynısı verilmeli; yalnızca o grubun senaryoları çalışır. */
+const SENARYO = process.argv.find((a) => a.startsWith("--senaryo="))?.slice("--senaryo=".length) ?? "varsayilan";
 const PROJE = "00000000-0000-4000-8000-0000000000b1";
 const KULLANICI = "00000000-0000-4000-8000-0000000000a1";
 const EDITOR = `${TABAN}/dashboard/editor/${PROJE}/write`;
@@ -30,7 +35,8 @@ const EDITOR = `${TABAN}/dashboard/editor/${PROJE}/write`;
 const KAYIT_BEKLEME = 6500;
 
 const sonuclar = [];
-async function senaryo(ad, govde) {
+async function senaryo(ad, govde, grup = "varsayilan") {
+  if (grup !== SENARYO) return;
   try {
     await govde();
     sonuclar.push({ ad, tamam: true });
@@ -169,6 +175,83 @@ await senaryo("7) taslağı geri yüklemek gerçek değişikliktir ve kaydedilir
   bekle(/Kaydedilmemiş eski taslak/.test(await sayfa.locator(".ProseMirror").first().innerText()), "taslak editöre gelmedi");
   await ctx.close();
 });
+
+/*
+  KILAVUZUN YENİ SÜRÜMÜ (ONIZLEME_SENARYO=kilavuz-eski). Hayalet kayıt
+  süzgeci bu kaydı ENGELLEMEMELİ: ayarlar kılavuzdan kendiliğinden
+  güncellenir ve kalıcı olması için kaydedilir (bir kez).
+*/
+await senaryo("K1) kılavuzun yeni sürümü açılışta uygulanır ve tek kayıtla kalıcı olur", async () => {
+  const { ctx, sayfa } = await sekme();
+  const govdeler = [];
+  sayfa.on("request", (r) => {
+    if (r.method() === "POST" && r.headers()["next-action"] && /"type":"doc"/.test(r.postData() ?? "")) govdeler.push(r.postData() ?? "");
+  });
+  await editoruAc(sayfa);
+  await sayfa.waitForTimeout(KAYIT_BEKLEME);
+  bekle(govdeler.length === 1, `${govdeler.length} kayıt isteği (beklenen 1)`);
+  bekle(govdeler[0].includes("2026-11-01T09:00:00.000Z#2"), "kayıtta kılavuzun yeni sürüm damgası yok");
+  bekle(/"left":4\b/.test(govdeler[0]), "kayıtta kılavuzun yeni kenar boşluğu (sol 4 cm) yok");
+  await ctx.close();
+}, "kilavuz-eski");
+
+await senaryo("K2) uygulandıktan sonra yeniden açmak kayıt göndermez (sürüm güncel)", async () => {
+  const { ctx, sayfa, kayitlar } = await sekme();
+  await editoruAc(sayfa);
+  await sayfa.waitForTimeout(KAYIT_BEKLEME);
+  bekle(kayitlar.length === 0, `${kayitlar.length} kayıt isteği gitti`);
+  await ctx.close();
+}, "kilavuz-eski");
+
+/*
+  UYUMSUZ İÇERİK (ONIZLEME_SENARYO=uyumsuz). Kayıtlı metinde editörün
+  tanımadığı bir düğüm var; Tiptap böyle bir belgeyi açamayınca editörü BOŞ
+  başlatıyor. Eskiden "Yedekle ve devam et"ten sonra hayalet kayıt bu BOŞ
+  belgeyi sunucuya yazıyordu (512 bayt): tezin canlı metni sessizce
+  boşalıyor, sonraki açılışta uyarı da çıkmıyordu (05.11.2026, ölçüldü).
+  Doğru davranış: yedek alınır, kayıt kullanıcı gerçekten yazana kadar
+  GİTMEZ; yazmadan ayrılırsa sunucudaki metin olduğu gibi kalır ve uyarı
+  sonraki açılışta yine görünür.
+*/
+await senaryo("U1) uyumsuz metin açılınca kayıt kilitli: uyarı var, editör salt okunur, kayıt yok", async () => {
+  const { ctx, sayfa, kayitlar } = await sekme();
+  await editoruAc(sayfa);
+  await sayfa.waitForTimeout(KAYIT_BEKLEME);
+  bekle(/editörde açılamadı/.test(await durum(sayfa)), "uyumsuz içerik uyarısı yok");
+  bekle((await sayfa.locator(".ProseMirror").first().getAttribute("contenteditable")) === "false", "editör yazılabilir açıldı");
+  bekle(kayitlar.length === 0, `${kayitlar.length} kayıt isteği gitti`);
+  await ctx.close();
+}, "uyumsuz");
+
+await senaryo("U2) 'Yedekle ve devam et': yedek alınır, belge KAYDEDİLMEZ; yazmadan ayrılınca da kaydedilmez", async () => {
+  const { ctx, sayfa, kayitlar } = await sekme();
+  const yedekler = [];
+  sayfa.on("request", (r) => {
+    if (r.method() === "POST" && r.headers()["next-action"] && /Uyumsuz içerik düzenlenmeden önce/.test(r.postData() ?? "")) yedekler.push(1);
+  });
+  await editoruAc(sayfa);
+  await sayfa.getByRole("button", { name: "Yedekle ve devam et" }).click();
+  await sayfa.waitForTimeout(KAYIT_BEKLEME);
+  bekle(yedekler.length === 1, `${yedekler.length} yedek isteği (beklenen 1)`);
+  bekle((await sayfa.locator(".ProseMirror").first().getAttribute("contenteditable")) === "true", "editör açılmadı");
+  bekle(kayitlar.length === 0, `devam edince ${kayitlar.length} kayıt gitti (boş belge sunucuya yazılır)`);
+  await sayfa.locator('a[href="/dashboard/editor"]').first().click();
+  await sayfa.waitForURL(/\/dashboard\/editor$/, { timeout: 60000 });
+  await sayfa.waitForTimeout(KAYIT_BEKLEME);
+  bekle(kayitlar.length === 0, `ayrılırken ${kayitlar.length} kayıt gitti`);
+  await ctx.close();
+}, "uyumsuz");
+
+await senaryo("U3) sunucudaki metin korunur: liste eski kelime sayısını gösterir, uyarı yeniden açılışta yine görünür", async () => {
+  const { ctx, sayfa, kayitlar } = await sekme();
+  await sayfa.goto(`${TABAN}/dashboard/editor`, { waitUntil: "networkidle", timeout: 180000 });
+  bekle(/\b11 kelime/.test(await durum(sayfa)), "listede sunucudaki 11 kelime görünmüyor (metin boşaltılmış olabilir)");
+  await editoruAc(sayfa);
+  await sayfa.waitForTimeout(KAYIT_BEKLEME);
+  bekle(/editörde açılamadı/.test(await durum(sayfa)), "uyumsuz içerik uyarısı yeniden çıkmadı");
+  bekle(kayitlar.length === 0, `${kayitlar.length} kayıt isteği gitti`);
+  await ctx.close();
+}, "uyumsuz");
 
 await tarayici.close();
 for (const s of sonuclar) console.log(`${s.tamam ? "✓" : "✗"} ${s.ad}${s.tamam ? "" : `\n    ${s.neden}`}`);

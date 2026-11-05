@@ -129,3 +129,46 @@ export const ORNEK: Record<string, Record<string, unknown>[]> = {
 export const ORNEK_RPC: Record<string, unknown> = {
   ai_kredi_durumum: { kullanilan_karakter: 182_000, limit_kredi: 500, aylik_kalan: 318, ek_bakiye: 0, bildirildi: true, ic_ekip: false, bireysel: true },
 };
+
+/*
+  KAYIT SENARYOLARI (05.11.2026, scripts/onizleme/kayit-kabul.mjs).
+  ONIZLEME_SENARYO verilmezse örnek veri DEĞİŞMEZ; öteki kabul testleri
+  aynı veriye göre yazılmış.
+    kilavuz-eski   Öğrencinin yüklediği kılavuzun yeni bir sürümü var; metnin
+                   ayarları önceki sürümden geliyor ve elle değiştirilmemiş.
+                   Editör yeni sürümü kendiliğinden uygular ve KAYDETMELİ
+                   (lib/guideline-sync.ts "auto-applied").
+    uyumsuz        Kayıtlı metinde editörün tanımadığı bir düğüm var
+                   (kaldırılmış bir eklentiden kalma gibi). Editör kaydı
+                   kilitler; "Yedekle ve devam et" ile açılır.
+*/
+const SENARYO = typeof process === "undefined" ? undefined : process.env.ONIZLEME_SENARYO;
+const ornekMusvedde = ORNEK.project_manuscripts[0];
+if (SENARYO === "kilavuz-eski") {
+  ORNEK.calisma_kilavuzu.push({
+    project_id: PROJE,
+    kaynak_adres: null,
+    depo_yolu: null,
+    belge_basligi: "Örnek Enstitü Tez Yazım Kılavuzu",
+    kurallar: { citation_style: "apa7", extracted_rules: { margins_cm: { top: 3, bottom: 2.5, left: 4, right: 2.5 } } },
+    olusturuldu: "2026-10-01T09:00:00.000Z",
+    guncellendi: "2026-11-01T09:00:00.000Z",
+  });
+  /* Önceki sürümün damgası (kaynakSutunlari: "calisma:<id>@<sürüm>"); kenar boşlukları o sürümden (sol 3 cm). */
+  Object.assign(ornekMusvedde, {
+    settings_guideline_id: null,
+    settings_guideline_version: `calisma:${PROJE}@2026-10-01T09:00:00.000Z#2`,
+    settings_customized: false,
+  });
+}
+if (SENARYO === "uyumsuz") {
+  ornekMusvedde.content = {
+    type: "doc",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "Uyumsuz örnek metnin ilk paragrafı." }] },
+      { type: "kaldirilmisEklentiDugumu", attrs: { id: "x1" }, content: [{ type: "text", text: "Editörün tanımadığı içerik." }] },
+      { type: "paragraph", content: [{ type: "text", text: "Son paragraf." }] },
+    ],
+  };
+  ornekMusvedde.word_count = 11;
+}
