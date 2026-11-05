@@ -1,4 +1,4 @@
-import ThemeToggle from "@/app/_components/theme-toggle";
+import KimlikKabugu from "@/app/_components/kimlik-kabugu";
 import { ceviri } from "@/lib/dil-sunucu";
 import { safeConfirmNext } from "@/lib/auth-link";
 
@@ -32,14 +32,12 @@ export default async function DogrulaPage({
         : t({ tr: "E-posta adresinizi doğrulayın", en: "Verify your email address" });
 
   return (
-    <main className="auth-simple-page">
-      <div className="auth-theme-toggle">
-        <ThemeToggle />
-      </div>
+    /* Logo, dil ve tema ortak kabukta (kimlik-kabugu.tsx); eskiden yalnızca köşede yüzen bir tema düğmesi vardı. */
+    <KimlikKabugu>
       <div className="login-card">
         <div className="login-heading">
           <span className="login-kicker">ArvoLab</span>
-          <h2>{gecerli ? baslik : t({ tr: "Bağlantı geçersiz", en: "Invalid link" })}</h2>
+          <h1>{gecerli ? baslik : t({ tr: "Bağlantı geçersiz", en: "Invalid link" })}</h1>
           <p>
             {gecerli
               ? t({
@@ -63,6 +61,6 @@ export default async function DogrulaPage({
           </form>
         ) : null}
       </div>
-    </main>
+    </KimlikKabugu>
   );
 }

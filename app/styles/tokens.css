@@ -264,6 +264,9 @@
      tek global eylemi, o daha açık --primary'de (os-shell.css). */
   --dugme-birincil: var(--primary-strong);
   --dugme-birincil-hover: var(--primary-hover);
+  /* Giriş ailesinin yumuşak lacivert yüzeyi (auth.css, Signature OS 05.11.2026). */
+  --giris-vurgu-zemin: var(--brand-50);
+  --giris-vurgu-cizgi: var(--brand-100);
   --dugme-agirlik: 600;
   /* İkincil düğme ve satır üstü: imleç gelince yüzey bir ton koyulaşır;
      eskiden kenarlık ve yazı maviye dönüyordu, her düğme bağlantı gibi
@@ -501,6 +504,8 @@ html[data-theme="dark"] {
   --primary-focus: 0 0 0 3px color-mix(in srgb, var(--mavi-400) 70%, transparent);
   --secondary: var(--accent-400);
   --secondary-strong: var(--accent-300);
+  --giris-vurgu-zemin: color-mix(in srgb, var(--brand-700) 30%, var(--surface));
+  --giris-vurgu-cizgi: color-mix(in srgb, var(--brand-300) 22%, transparent);
   --secondary-bright: var(--accent-400);
   --secondary-soft: #1d2a14;
 

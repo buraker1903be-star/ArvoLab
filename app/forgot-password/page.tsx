@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { requestPasswordReset } from "@/app/actions/auth";
-import ThemeToggle from "@/app/_components/theme-toggle";
+import KimlikKabugu from "@/app/_components/kimlik-kabugu";
 import { ceviri } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
 
@@ -30,17 +30,12 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
   const sent = params.sent === "1";
 
   return (
-    <main className="auth-simple-page">
-      {/* Giriş sayfasında tema düğmesi vardı, kardeş sayfalarında yoktu:
-          koyu temadaki kullanıcı buraya gelince değiştiremiyordu. Stil
-          (auth.css .auth-theme-toggle) zaten yazılmıştı, bağlanmamıştı. */}
-      <div className="auth-theme-toggle">
-        <ThemeToggle />
-      </div>
+    /* Logo, dil ve tema ortak kabukta (kimlik-kabugu.tsx); eskiden yalnızca köşede yüzen bir tema düğmesi vardı. */
+    <KimlikKabugu>
       <div className="login-card">
         <div className="login-heading">
           <span className="login-kicker">{t({ tr: "Şifre sıfırlama", en: "Password reset" })}</span>
-          <h2>{t({ tr: "Şifrenizi mi unuttunuz?", en: "Forgot your password?" })}</h2>
+          <h1>{t({ tr: "Şifrenizi mi unuttunuz?", en: "Forgot your password?" })}</h1>
           <p>
             {t({
               tr: "Hesabınıza bağlı e-posta adresini girin, şifrenizi yenilemeniz için bir bağlantı gönderelim.",
@@ -81,6 +76,6 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
           {t({ tr: "Giriş sayfasına dön", en: "Back to sign in" })}
         </Link>
       </div>
-    </main>
+    </KimlikKabugu>
   );
 }

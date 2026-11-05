@@ -1,62 +1,123 @@
 /* ============================================================
-   Giriş ve tek kartlı sayfalar (şifre sıfırlama, 404)
-   Mobilde form ilk ekranda: tanıtım alanı formun altına iner.
+   Giriş ailesi: giriş, kayıt, şifremi unuttum, yeni şifre,
+   e-posta doğrulama (ve 404).
+
+   SIGNATURE OS (05.11.2026). Eskiden giriş sayfasının sağ yarısı
+   her iki temada da koyu lacivert bir bloktu ve formdan daha ağır
+   duruyordu; kart cam bulanıklığıyla çiziliyordu, öteki dört sayfa
+   ise markasız tek bir karttan ibaretti. Artık:
+    - beş sayfa aynı üst çubuğu ve alt bilgiyi taşır
+      (app/_components/kimlik-kabugu.tsx);
+    - kart düz yüzey + ince çizgi (panelle aynı malzeme), cam yok;
+    - tanıtım alanı yumuşak lacivert bir yüzey (--giris-vurgu-zemin),
+      vurgu yalnızca başlıkta, ikonlarda ve düğmede;
+    - dokunma hedefleri en az 40px (tema, dil, "Şifremi unuttum",
+      geri bağlantısı).
+   Telefonda form ilk ekranda: tanıtım formun altına iner.
    ============================================================ */
 
-/* ---------- Giriş sayfası (app/page.tsx, 02.11.2026'da yeniden yazıldı) ----------
-   Üst çubuk (logo + dil + tema) her genişlikte aynı; eskiden telefonda
-   logo yerine boş bir "A" kutusu çıkıyor, dil düğmeleri markanın üstüne
-   biniyordu. Geniş ekranda solda giriş + kayıt, sağda koyu tanıtım;
-   telefonda giriş önce, tanıtım altta. */
 .giris {
+  --giris-genislik: 1180px;
   display: grid;
   grid-template-rows: auto 1fr auto;
   min-height: 100dvh;
-  padding: max(16px, env(safe-area-inset-top)) clamp(16px, 3vw, 28px) max(16px, env(safe-area-inset-bottom));
-  gap: 16px;
+  padding: max(16px, env(safe-area-inset-top)) clamp(16px, 3vw, 32px) max(16px, env(safe-area-inset-bottom));
+  gap: clamp(12px, 2vw, 24px);
+  background: var(--bg);
 }
-.giris-ust { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-/* Logo dosyası 16:9 ve geniş boşluklu: kutu yalnızca yazının şeridini gösterir. */
-/* Logo ortak bileşenden (base.css .arvolab-logo: oran, kırpma, koyu tema); burada yalnızca boy. */
-.giris-logo { --logo-h: 40px; }
-.giris-ust-araclar { display: flex; align-items: center; gap: 8px; }
-.giris-dil { display: flex; align-items: center; gap: 6px; }
-.giris-dil small { display: none; }
-.giris-dil button { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface); color: var(--ink); font-size: var(--fs-sm); cursor: pointer; }
-.giris-dil button[aria-pressed="true"] { border-color: var(--primary); }
+.giris > * { width: 100%; max-width: var(--giris-genislik); margin-inline: auto; }
 
+/* ---------- Üst çubuk ---------- */
+.giris-ust { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.giris-logo-baglanti { display: inline-flex; align-items: center; min-height: 44px; border-radius: var(--r-sm); }
+.giris-logo-baglanti:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+/* Logo ortak bileşenden (base.css .arvolab-logo: oran, kırpma, koyu tema); burada yalnızca boy. */
+.giris-logo { --logo-h: 36px; }
+.giris-ust-araclar { display: flex; align-items: center; gap: 8px; }
+.giris-ust .giris-tema { width: 40px; height: 40px; }
+.giris-dil { display: flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid var(--line-soft); border-radius: var(--r-pill); background: var(--surface); }
+.giris-dil small { display: none; }
+.giris-dil button { display: inline-flex; align-items: center; gap: 4px; min-height: 34px; padding: 0 12px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; transition: background-color var(--sure-hizli) ease, color var(--sure-hizli) ease; }
+.giris-dil button:hover { color: var(--ink); }
+.giris-dil button[aria-pressed="true"] { background: var(--giris-vurgu-zemin); color: var(--primary-ink); }
+.giris-dil button:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+
+/* ---------- Giriş sayfası gövdesi ---------- */
 .giris-govde {
   display: grid;
-  grid-template-columns: minmax(360px, 480px) minmax(0, 1fr);
-  gap: 16px;
-  align-items: stretch;
+  grid-template-columns: minmax(360px, 440px) minmax(0, 1fr);
+  gap: clamp(20px, 3.5vw, 56px);
+  align-items: center;
 }
+.giris-panel { display: flex; flex-direction: column; justify-content: center; gap: 12px; }
 
-.giris-panel { display: flex; flex-direction: column; justify-content: center; gap: 14px; }
-.giris-panel .login-card {
-  width: 100%;
-  padding: clamp(24px, 3.5vw, 36px);
+/* ---------- Kart (giriş ve tek kartlı sayfalar) ---------- */
+.login-card {
+  width: min(100%, 440px);
+  padding: clamp(24px, 3.2vw, 36px);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-xl);
-  background: var(--glass-strong);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+  background: var(--surface);
   box-shadow: var(--shadow-md);
-  animation: ui-rise .55s var(--ease-spring) backwards;
+  animation: ui-rise .5s var(--ease-spring) backwards;
 }
+.giris-panel .login-card { width: 100%; }
+
+.login-heading { display: grid; gap: 8px; margin-bottom: 24px; }
+.login-kicker { color: var(--primary-ink); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.login-heading h1, .login-heading h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(24px, 2.2vw, 28px);
+  font-weight: var(--fw-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--ls-display);
+}
+/* "pretty": dengeli sarma telefonda kısa paragrafı yarım genişliğe sıkıştırıyordu. */
+.login-heading p { margin: 0; color: var(--muted); font-size: var(--fs-body); line-height: var(--lh-metin); text-wrap: pretty; }
+/* "Hesabınız var mı? Giriş yapın": bağlantı gri metnin içinde kayboluyordu. */
+.login-card .muted a { color: var(--primary-ink); font-weight: 600; }
+.login-card .alert { margin: 0 0 16px; }
+
+/* ---------- Form ---------- */
+.login-form { display: grid; gap: 8px; }
+.login-form label { color: var(--ink-soft); font-size: var(--fs-base); font-weight: 600; }
+.login-form > label:not(:first-child), .login-form > .password-label-row { margin-top: 8px; }
+.password-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* "Şifremi unuttum" bir dokunma hedefi: eskiden 17px yüksekliğinde bir yazıydı. */
+.password-label-row a { display: inline-flex; align-items: center; min-height: 40px; margin-block: -10px; padding-inline: 4px; border-radius: var(--r-sm); color: var(--primary-ink); font-size: var(--fs-sm); font-weight: 600; text-decoration: none; }
+.password-label-row a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.password-label-row a:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.login-form input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  outline: none;
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-inset);
+  font-size: var(--fs-md);
+  transition: border-color var(--sure-hizli) ease, box-shadow var(--sure-hizli) ease;
+}
+.login-form input:hover { border-color: color-mix(in srgb, var(--primary-ink) 35%, var(--line)); }
+.login-form input::placeholder { color: var(--dim); }
+.login-form input:focus { border-color: var(--primary-ink); box-shadow: var(--odak-halkasi); }
 
 .giris-sifre { position: relative; }
 .giris-sifre input { padding-right: 52px; }
 .giris-sifre-goster {
   position: absolute;
   top: 50%;
-  right: 6px;
+  right: 4px;
   display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -67,160 +128,13 @@
 .giris-donen { animation: giris-don 1s linear infinite; }
 @keyframes giris-don { to { transform: rotate(360deg); } }
 
-.giris-kayit {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 14px;
-  padding: 18px 20px;
-  border: 1px solid color-mix(in srgb, var(--primary-ink) 35%, var(--line-soft));
-  border-radius: var(--r-xl);
-  background: color-mix(in srgb, var(--primary-soft) 70%, var(--surface));
-  animation: ui-rise .55s var(--ease-spring) .08s backwards;
-}
-.giris-kayit-ikon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: var(--surface); color: var(--primary-ink); box-shadow: var(--shadow-sm); }
-.giris-kayit-govde { display: grid; gap: 6px; min-width: 0; }
-.giris-kayit h2 { margin: 0; color: var(--ink); font-size: var(--fs-md); font-weight: 700; letter-spacing: -.01em; }
-.giris-kayit p { margin: 0; color: var(--ink-soft); font-size: var(--fs-base); line-height: var(--lh-metin); }
-.giris-kayit small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
-.giris-kayit-dugme {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  justify-self: start;
-  gap: 8px;
-  min-height: 42px;
-  margin: 6px 0 4px;
-  padding: 0 18px;
-  border: 1px solid var(--primary-ink);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--primary-ink);
-  font-size: var(--fs-body);
-  font-weight: 700;
-  text-decoration: none;
-  transition: background .15s ease, transform .3s var(--ease-spring);
-}
-.giris-kayit-dugme:hover { background: var(--primary-soft); }
-.giris-kayit-dugme:active { transform: scale(.975); }
-.giris-kayit-dugme:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
-
-/* Tanıtım alanı (kenar çubuğuyla aynı koyu malzeme) */
-.giris-tanitim {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 18px;
-  padding: clamp(28px, 4.5vw, 64px);
-  overflow: hidden;
-  border-radius: var(--r-xl);
-  /* Düz lacivert (Signature OS): üç katmanlı degrade ve renkli haleler kaldırıldı. */
-  background: var(--brand-900);
-  color: var(--sidebar-ink);
-  box-shadow: var(--shadow-lg);
-}
-.giris-ust-yazi { color: var(--accent-300); font-size: var(--fs-sm); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-/* Tanıtım ve giriş başlıkları editoryal (Phase 4.4): Newsreader, orta ağırlık. */
-.giris-tanitim h2 {
-  max-width: 640px;
-  margin: 0;
-  color: var(--sidebar-ink);
-  font-family: var(--font-display);
-  font-size: var(--fs-tanitim);
-  font-weight: var(--fw-display);
-  line-height: 1.08;
-  letter-spacing: var(--ls-display);
-}
-.giris-tanitim-ozet { max-width: 560px; margin: 0; color: var(--sidebar-muted); font-size: var(--fs-md); line-height: 1.65; }
-.giris-ozellikler { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 8px 0 0; padding: 0; list-style: none; }
-.giris-ozellikler li {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--sidebar-line);
-  border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--n-0) 6%, transparent);
-  color: var(--sidebar-muted);
-  font-size: var(--fs-base);
-  line-height: var(--lh-metin);
-}
-.giris-ozellikler b { display: block; margin-bottom: 2px; color: var(--sidebar-ink); font-size: var(--fs-body); font-weight: 650; }
-.giris-ozellik-ikon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: color-mix(in srgb, var(--secondary-bright) 22%, transparent); color: var(--accent-300); }
-.giris-baslangic { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px; margin-top: 6px; padding: 14px 16px; border: 1px solid var(--sidebar-line); border-radius: var(--r-lg); background: color-mix(in srgb, var(--n-0) 4%, transparent); }
-.giris-adimlar { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; color: var(--sidebar-ink); font-size: var(--fs-base); font-weight: 600; }
-.giris-adimlar li { display: inline-flex; align-items: center; gap: 8px; }
-.giris-adimlar span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--secondary-bright) 26%, transparent); color: var(--accent-300); font-size: var(--fs-sm); font-weight: 700; }
-.giris-tanitim-dugme {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 0 18px;
-  border-radius: 12px;
-  /* Koyu tanıtım panelinde birincil eylem (Phase 4.2): lacivert zeminde
-     lacivert düğme görünmez; eskiden yeşildi, artık birincilin tersi —
-     beyaz zemin, lacivert yazı. Panel her iki temada da koyu. */
-  background: var(--on-primary);
-  color: var(--brand-900);
-  font-size: var(--fs-body);
-  font-weight: 700;
-  text-decoration: none;
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--primary-ink) 25%, transparent);
-  transition: transform .3s var(--ease-spring), filter .15s ease;
-}
-.giris-tanitim-dugme:hover { filter: brightness(1.06); }
-.giris-tanitim-dugme:active { transform: scale(.975); }
-.giris-tanitim-dugme:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
-.giris-ilkeler { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 6px 0 0; padding: 0; list-style: none; color: var(--sidebar-muted); font-size: var(--fs-sm); }
-.giris-ilkeler li { display: inline-flex; align-items: center; gap: 7px; }
-.giris-ilkeler svg { color: var(--accent-300); flex: none; }
-
-.giris-alt { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; color: var(--muted); font-size: var(--fs-sm); }
-.giris-alt a { color: var(--muted); }
-.giris-alt a:hover { color: var(--primary-ink); }
-
-/* ---------- Giriş formu ---------- */
-.login-card { width: min(100%, 420px); }
-.login-heading { margin-bottom: 28px; }
-.login-kicker { color: var(--secondary); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-.login-heading h1, .login-heading h2 {
-  margin: 10px 0 8px;
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: var(--fw-display);
-  line-height: var(--lh-display);
-  letter-spacing: var(--ls-display);
-}
-.login-heading p { margin: 0; color: var(--muted); line-height: var(--lh-metin); }
-
-.login-form { display: grid; gap: 10px; }
-.login-form label { color: var(--ink-soft); font-size: var(--fs-base); font-weight: 650; }
-.password-label-row { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
-.password-label-row a { color: var(--primary-ink); font-size: var(--fs-sm); font-weight: 700; }
-.login-form input {
-  width: 100%;
-  min-height: 50px;
-  padding: 0 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  outline: none;
-  background: var(--surface-raised);
-  color: var(--ink);
-  box-shadow: var(--shadow-inset);
-  font-size: var(--fs-md);
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-.login-form input::placeholder { color: var(--dim); }
-.login-form input:focus { border-color: var(--primary-ink); box-shadow: var(--odak-halkasi); }
-
 .login-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  min-height: 50px;
-  margin-top: 10px;
+  gap: 8px;
+  min-height: 48px;
+  margin-top: 12px;
   border: 1px solid transparent;
   border-radius: var(--r-md);
   /* Paneldeki birincil düğmeyle aynı düz renk (tokens.css --dugme-birincil). */
@@ -237,33 +151,119 @@
 .login-button:active { transform: scale(.98); transition-duration: .08s; }
 .login-button:disabled { opacity: .6; cursor: not-allowed; }
 
+/* ---------- Kayıt kartı (girişin altında) ---------- */
+.giris-kayit {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--giris-vurgu-cizgi);
+  border-radius: var(--r-xl);
+  background: var(--giris-vurgu-zemin);
+  animation: ui-rise .5s var(--ease-spring) .06s backwards;
+}
+.giris-kayit-ikon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-md); background: var(--surface); color: var(--primary-ink); box-shadow: var(--shadow-sm); }
+.giris-kayit-govde { display: grid; gap: 6px; min-width: 0; }
+.giris-kayit h2 { margin: 0; color: var(--ink); font-size: var(--fs-md); font-weight: 650; letter-spacing: -.01em; }
+.giris-kayit p { margin: 0; color: var(--ink-soft); font-size: var(--fs-base); line-height: var(--lh-metin); }
+.giris-kayit small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+
+/* İkincil (çerçeveli) lacivert düğme: kayıt kartında ve tanıtımda aynı.
+   Sayfanın tek dolu düğmesi "Giriş yap"; iki dolu düğme yan yana göz
+   için yarışıyordu. */
+.giris-kayit-dugme, .giris-tanitim-dugme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--primary-ink);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--primary-ink);
+  font-size: var(--fs-body);
+  font-weight: 650;
+  text-decoration: none;
+  transition: background-color var(--sure-hizli) ease, transform .3s var(--ease-spring);
+}
+.giris-kayit-dugme { margin: 6px 0 4px; }
+.giris-kayit-dugme:hover, .giris-tanitim-dugme:hover { background: var(--primary-soft); }
+.giris-kayit-dugme:active, .giris-tanitim-dugme:active { transform: scale(.975); }
+.giris-kayit-dugme:focus-visible, .giris-tanitim-dugme:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+
+/* ---------- Tanıtım alanı ---------- */
+.giris-tanitim {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(24px, 3.2vw, 44px);
+  border: 1px solid var(--giris-vurgu-cizgi);
+  border-radius: calc(var(--r-xl) + 4px);
+  background: var(--giris-vurgu-zemin);
+  color: var(--ink-soft);
+}
+.giris-ust-yazi { color: var(--primary-ink); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.giris-tanitim h2 {
+  max-width: 620px;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: var(--fw-display);
+  line-height: 1.1;
+  letter-spacing: var(--ls-display);
+}
+.giris-tanitim-ozet { max-width: 580px; margin: 0; color: var(--ink-soft); font-size: var(--fs-md); line-height: 1.65; }
+/* Özellikler kutu kutu değil, ince çizgili bir liste: dört koyu kart metni boğuyordu. */
+.giris-ozellikler { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 28px; margin: 4px 0 0; padding: 0; list-style: none; }
+.giris-ozellikler li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--giris-vurgu-cizgi);
+  color: var(--muted);
+  font-size: var(--fs-base);
+  line-height: var(--lh-metin);
+}
+.giris-ozellikler b { display: block; margin-bottom: 2px; color: var(--ink); font-size: var(--fs-body); font-weight: 650; }
+.giris-ozellik-ikon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--r-md); background: var(--surface); color: var(--primary-ink); box-shadow: var(--shadow-sm); }
+.giris-baslangic { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px; padding: 14px 16px; border: 1px solid var(--giris-vurgu-cizgi); border-radius: var(--r-lg); background: var(--surface); }
+.giris-adimlar { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; color: var(--ink); font-size: var(--fs-base); font-weight: 600; }
+.giris-adimlar li { display: inline-flex; align-items: center; gap: 8px; }
+.giris-adimlar span { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--giris-vurgu-cizgi); border-radius: var(--r-pill); background: var(--giris-vurgu-zemin); color: var(--primary-ink); font-size: var(--fs-sm); font-weight: 700; }
+.giris-ilkeler { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-sm); }
+.giris-ilkeler li { display: inline-flex; align-items: center; gap: 7px; }
+.giris-ilkeler svg { color: var(--primary-ink); flex: none; }
+
+/* ---------- Alt bilgi ---------- */
+.giris-alt { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0 14px; color: var(--muted); font-size: var(--fs-sm); }
+.giris-alt a { display: inline-flex; align-items: center; min-height: 40px; color: var(--muted); text-decoration: none; }
+.giris-alt a:hover { color: var(--primary-ink); text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---------- Tek kartlı sayfalar ---------- */
+/* Kabuklu (kimlik-kabugu.tsx) sayfalar: kart üst çubukla alt bilginin arasında ortalanır. */
+.kimlik-tek { display: grid; place-items: center; padding-block: clamp(8px, 4vh, 48px); }
+/* 404 (app/not-found.tsx) hâlâ kabuksuz eski düzende. */
 .auth-simple-page {
   display: grid;
   place-items: center;
   min-height: 100dvh;
   padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  background: var(--bg);
 }
-.auth-simple-page .login-card {
-  padding: clamp(26px, 5vw, 40px);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-xl);
-  background: var(--glass-strong);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-lg);
-  animation: ui-rise .55s var(--ease-spring) backwards;
-}
-.auth-back-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 20px; color: var(--muted); font-size: var(--fs-base); font-weight: 650; }
+.auth-back-link { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin-top: 16px; color: var(--muted); font-size: var(--fs-base); font-weight: 600; text-decoration: none; }
 .auth-back-link:hover { color: var(--primary-ink); }
+.auth-back-link:focus-visible { outline: none; box-shadow: var(--odak-halkasi); border-radius: var(--r-sm); }
 .auth-theme-toggle { position: fixed; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); z-index: var(--z-topbar); }
 
 /* ---------- Kayıt formu (app/kayit/kayit-formu.tsx, 02.11.2026) ----------
    Aynı form hem giriş sayfasındaki pencerede hem /kayit sayfasında. Alanlar
    ikişerli (e-posta + telefon, şifre + tekrar); dar ekranda tek sütun. */
 .kayit-formu { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
-.auth-simple-page .login-card.kayit-kart { width: min(100%, 560px); }
+.login-card.kayit-kart { width: min(100%, 580px); }
 .kayit-alan { display: grid; gap: 6px; min-width: 0; align-content: start; }
 .kayit-alan-genis { grid-column: 1 / -1; }
 .kayit-ipucu { display: block; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
@@ -295,17 +295,23 @@
   .giris-ozellikler { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 860px) {
-  .giris-govde { grid-template-columns: minmax(0, 1fr); }
+  .giris-govde { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .giris-panel .login-card { max-width: 560px; margin-inline: auto; }
+  .giris-kayit { width: 100%; max-width: 560px; margin-inline: auto; }
   .giris-tanitim { padding: 26px 22px; }
+  .giris-ozellikler { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .giris-tanitim h2 { font-size: 26px; }
-  .login-heading h1, .login-heading h2 { font-size: 26px; }
+  /* iOS 16px altındaki kutuya odaklanınca sayfayı büyütüyor. */
   .login-form input { font-size: 16px; }
+}
+@media (max-width: 640px) {
+  .giris-ozellikler { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
   .kayit-formu { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 420px) {
-  .giris-logo { --logo-h: 32px; }
+  .giris-logo { --logo-h: 30px; }
   .giris-dil button { padding: 0 9px; }
   .giris-kayit { grid-template-columns: minmax(0, 1fr); }
   .giris-kayit-ikon { display: none; }

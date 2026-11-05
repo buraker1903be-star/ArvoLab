@@ -54,6 +54,14 @@ const ROL = ortam.ONIZLEME_ROL || null;
   tests/db sınıyor.
 */
 const YAZ = ortam.ONIZLEME_YAZ === "1";
+/*
+  OTURUMSUZ (Signature OS giriş ekranları, 05.11.2026). ONIZLEME_OTURUM=yok
+  iken auth.getUser oturum yok der: giriş, kayıt ve şifremi unuttum
+  ekranları önizlemede hiç görülemiyordu (proxy oturumu olanı /dashboard'a
+  yönlendiriyor). Gerçek kullanıcı oluşturulmaz, e-posta gitmez; bu
+  istemcide auth yazma yöntemi yok.
+*/
+const OTURUMSUZ = ortam.ONIZLEME_OTURUM === "yok";
 const BOS_TABLOLAR = new Set(["academic_projects", "project_manuscripts", "literature_sources", "document_uploads", "manuscript_comments", "citation_checks", "kanit_kayitlari", "consultancy_requests", "app_support_requests", "destek_mesajlari"]);
 function tur<T>(etiket: string, deger: T): Promise<T> {
   if (OLCUM) console.log(`[olcum] ${Date.now()} ${etiket}`);
@@ -139,8 +147,8 @@ export function sahteIstemci() {
       return kurucu;
     },
     auth: {
-      getUser: () => tur("auth:getUser", { data: { user: ORNEK_KULLANICI }, error: null }),
-      getSession: () => tur("auth:getSession", { data: { session: { user: ORNEK_KULLANICI } }, error: null }),
+      getUser: () => tur("auth:getUser", { data: { user: OTURUMSUZ ? null : ORNEK_KULLANICI }, error: null }),
+      getSession: () => tur("auth:getSession", { data: { session: OTURUMSUZ ? null : { user: ORNEK_KULLANICI } }, error: null }),
       signOut: async () => ({ error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     },

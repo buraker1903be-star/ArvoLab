@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import ThemeToggle from "@/app/_components/theme-toggle";
+import KimlikKabugu from "@/app/_components/kimlik-kabugu";
 import KayitFormu from "./kayit-formu";
 import { ceviri } from "@/lib/dil-sunucu";
 
@@ -18,10 +18,8 @@ export async function generateMetadata() {
 export default async function KayitPage() {
   const t = await ceviri();
   return (
-    <main className="auth-simple-page">
-      <div className="auth-theme-toggle">
-        <ThemeToggle />
-      </div>
+    /* Logo, dil ve tema ortak kabukta (kimlik-kabugu.tsx); eskiden yalnızca köşede yüzen bir tema düğmesi vardı. */
+    <KimlikKabugu>
       {/* Kayıt formu iki sütunlu (02.11.2026): giriş kartından geniş. */}
       <div className="login-card kayit-kart">
         <KayitFormu />
@@ -30,6 +28,6 @@ export default async function KayitPage() {
           {t({ tr: "Giriş ekranı", en: "Sign-in page" })}
         </Link>
       </div>
-    </main>
+    </KimlikKabugu>
   );
 }
