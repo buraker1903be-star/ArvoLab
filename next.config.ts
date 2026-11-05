@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { guvenlikBasliklari } from "./lib/guvenlik-basliklari";
 import { onizlemeTakmalari } from "./lib/onizleme-takmalari";
+import { anahtarAyrimiKarari, ortamGirdisi, supabaseOrtamKarari } from "./lib/supabase/ortam-guvenligi";
 
 const PDF_WORKER = "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs";
 
@@ -79,8 +80,43 @@ const OCR_ISCISI = [
 /* Takmalar ve üretim yasağı tek yerde, testli (lib/onizleme-takmalari.ts); 4.3'te test asistanı eklendi. */
 const ONIZLEME_TAKMALARI = onizlemeTakmalari(process.env);
 
+/*
+  SUPABASE ORTAM GÜVENLİĞİ — DERLEME ANI (Güvenli Test Ortamı, Aşama 1).
+  Karar lib/supabase/ortam-guvenligi.ts'te. Ret varsa derleme (ve `next
+  dev`, `next start`) DURUR: Vercel'de başarısız bir dağıtım öncekini
+  canlıda bırakır, yani yanlış yapılandırılmış bir ortam hiç yayına
+  çıkmaz. Tarayıcı istemcisi adresi derlemede gömdüğü için onun asıl
+  korunması da budur; çalışma anındaki denetim (sunucu, ara katman,
+  yönetim istemcisi) ikinci savunma hattı.
+  Denetim yalnızca Next'in yapılandırmayı KULLANDIĞI evrelerde çalışır;
+  dosyayı okuyan birim testleri (ocr-paketi) etkilenmez.
+*/
+// next/constants'taki PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD, PHASE_PRODUCTION_SERVER (test yükleyicisi alt yolu çözemediği için metin olarak).
+const DENETLENEN_EVRELER = new Set<string>(["phase-development-server", "phase-production-build", "phase-production-server"]);
+function ortamDenetimi() {
+  const karar = supabaseOrtamKarari(ortamGirdisi(process.env));
+  if (karar.tur === "red") throw new Error(`Supabase ortam güvenliği: ${karar.mesaj} (${karar.neden}). Ayrıntı: docs/test-ortami.md`);
+  if (karar.uyari) console.warn(`[supabase-ortam] ${karar.uyari}`);
+  /* Test ortamında üretimin AI, e-posta, cron ve köprü anahtarları kullanılmasın (beyan kuralı, aynı modül). */
+  const anahtar = anahtarAyrimiKarari(process.env);
+  if (anahtar.tur === "red") throw new Error(`Anahtar ayrımı: ${anahtar.mesaj} Ayrıntı: docs/test-ortami.md`);
+}
+
 const nextConfig: NextConfig = {
   ...(ONIZLEME_TAKMALARI ? { turbopack: { resolveAlias: ONIZLEME_TAKMALARI } } : {}),
+  /*
+    Tarayıcı istemcisinin ortam denetimi için gömülen değerler (lib/supabase/client.ts).
+    YALNIZCA gizli olmayanlar: dağıtım türü, etiket ve proje kimlikleri (adresin
+    parçası). Anahtarlar buraya ASLA eklenmez — burada yazılan her şey istemci
+    paketine girer.
+  */
+  env: {
+    ARVOLAB_DAGITIM_ORTAMI: process.env.VERCEL_ENV ?? "",
+    ARVOLAB_SUPABASE_ORTAMI: process.env.ARVOLAB_SUPABASE_ORTAMI ?? "",
+    ARVOLAB_URETIM_SUPABASE_REF: process.env.ARVOLAB_URETIM_SUPABASE_REF ?? "",
+    ARVOLAB_TEST_SUPABASE_REF: process.env.ARVOLAB_TEST_SUPABASE_REF ?? "",
+    ARVOLAB_ONIZLEME: process.env.ARVOLAB_ONIZLEME ?? "",
+  },
   poweredByHeader: false,
   /* Güvenlik başlıkları her yanıtta; ne zorlandığı, ne yalnızca raporlandığı ve nedeni lib/guvenlik-basliklari.ts'te. */
   async headers() {
@@ -141,4 +177,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/* Next yapılandırmayı evresiyle birlikte çağırır; ortam denetimi burada. */
+export default function yapilandirma(evre: string): NextConfig {
+  if (DENETLENEN_EVRELER.has(evre)) ortamDenetimi();
+  return nextConfig;
+}

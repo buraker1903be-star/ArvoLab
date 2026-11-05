@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { supabaseOrtaminiDogrula } from "./ortam-guvenligi";
 
 export async function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,6 +11,9 @@ export async function createClient() {
       "Supabase ortam değişkenleri eksik. NEXT_PUBLIC_SUPABASE_URL ve NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY değerlerini tanımlayın.",
     );
   }
+
+  /* Ortam güvenliği (lib/supabase/ortam-guvenligi.ts): yanlış projeye bağlanmadan önce durur. */
+  supabaseOrtaminiDogrula(process.env);
 
   const cookieStore = await cookies();
 

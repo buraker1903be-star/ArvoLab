@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { anahtarUyusmazligi, supabaseOrtaminiDogrula } from "./ortam-guvenligi";
 
 /** Yalnızca güvenilir sunucu görevlerinde ve doğrulanmış sunucu aksiyonlarında kullanılmalıdır. */
 export function createAdminClient() {
@@ -8,6 +9,15 @@ export function createAdminClient() {
   if (!url || !secret) {
     throw new Error("Supabase sunucu anahtarı eksik.");
   }
+  /*
+    Servis anahtarı RLS'i atlar: yanlış projeye bağlanmanın en pahalı yolu.
+    Ortam kararı + anahtarın (JWT ise) adresteki projeye ait olması.
+    adminIstemcisiVarsa() bu hatayı da "istemci yok" sayar; ret sessizce
+    başka projeye geçmek değil, işlemi yapmamaktır.
+  */
+  supabaseOrtaminiDogrula(process.env);
+  const uyusmazlik = anahtarUyusmazligi(url, secret);
+  if (uyusmazlik) throw new Error(`Supabase ortam güvenliği: ${uyusmazlik}`);
 
   return createClient(url, secret, {
     auth: { persistSession: false, autoRefreshToken: false },
