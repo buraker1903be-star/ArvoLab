@@ -14,6 +14,7 @@ const tarayiciOrtami = () => ({
   ARVOLAB_URETIM_SUPABASE_REF: process.env.ARVOLAB_URETIM_SUPABASE_REF,
   ARVOLAB_TEST_SUPABASE_REF: process.env.ARVOLAB_TEST_SUPABASE_REF,
   ARVOLAB_ONIZLEME: process.env.ARVOLAB_ONIZLEME,
+  ARVOLAB_TEK_PROJE: process.env.ARVOLAB_TEK_PROJE,
 });
 
 export function createClient() {

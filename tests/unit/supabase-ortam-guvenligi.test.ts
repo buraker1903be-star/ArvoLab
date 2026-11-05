@@ -12,6 +12,7 @@ import {
   supabaseOrtamKarari,
   supabaseOrtaminiDogrula,
   SupabaseOrtamHatasi,
+  TEK_PROJE_UYARISI,
   veritabaniAdresiProjesi,
 } from "@/lib/supabase/ortam-guvenligi";
 import { hedefDenetimi } from "../../scripts/supabase-hedef.mjs";
@@ -127,7 +128,7 @@ describe("yardımcılar", () => {
 
   test("ortamGirdisi: Vercel değişkenleri ve etiketler", () => {
     assert.deepEqual(ortamGirdisi({ VERCEL_ENV: "preview", NEXT_PUBLIC_SUPABASE_URL: "u", ARVOLAB_SUPABASE_ORTAMI: "test" }), {
-      vercelOrtami: "preview", derlemeOrtami: null, supabaseUrl: "u", etiket: "test", uretimRef: null, testRef: null, onizleme: null,
+      vercelOrtami: "preview", derlemeOrtami: null, supabaseUrl: "u", etiket: "test", uretimRef: null, testRef: null, onizleme: null, tekProje: null,
     });
   });
 });
@@ -257,6 +258,58 @@ describe("dağıtım ortamı: çalışma anı + derleme yedeği", () => {
     const evreler = /DENETLENEN_EVRELER = new Set<string>\(\[([^\]]*)\]/.exec(readFileSync("next.config.ts", "utf8"))?.[1] ?? "";
     assert.ok(evreler.includes("phase-production-build") && evreler.includes("phase-development-server"));
     assert.equal(evreler.includes("phase-production-server"), false);
+  });
+});
+
+/*
+  TEK PROJE BEYANI (05.11.2026). Kurum sahibi ayrı test projesi açmamaya
+  karar verdi; önizleme bilerek üretim projesine bağlanıyor. Beyan yalnızca
+  adres TANIMLI üretim kimliğini gösteriyorsa geçerli; betik kuralları
+  (şema kurulumu, sentetik veri) bundan etkilenmez.
+*/
+describe("tek proje beyanı (ARVOLAB_TEK_PROJE=1)", () => {
+  test("Preview/Development/yerel: beyan + adres tanımlı üretim projesi → izin, uyarıyla", () => {
+    for (const vercelOrtami of ["preview", "development", null]) {
+      assert.deepEqual(supabaseOrtamKarari({ vercelOrtami, supabaseUrl: adres(URETIM), uretimRef: URETIM, tekProje: "1" }), {
+        tur: "izin", ortam: "uretim-disi", hedef: "uretim", uyari: TEK_PROJE_UYARISI,
+      });
+    }
+  });
+  test("beyan yoksa ya da '1' değilse eski kural: üretime bağlantı reddedilir", () => {
+    for (const tekProje of [undefined, "", "0", "evet"]) {
+      const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(URETIM), uretimRef: URETIM, tekProje });
+      assert.equal(k.tur === "red" && k.neden, "uretim-disi-uretime-bagli");
+    }
+  });
+  test("beyan kimliği bilinmeyen ya da başka bir projeye izin VERMEZ", () => {
+    // Üretim kimliği tanımlı değil: hangi projeye bağlanıldığı doğrulanamıyor.
+    assert.equal(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(URETIM), tekProje: "1" }).tur, "red");
+    // Adres başka bir projeyi gösteriyor.
+    const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(BASKA), uretimRef: URETIM, tekProje: "1" });
+    assert.equal(k.tur, "red");
+    // Kimlik biçimi bozuk.
+    assert.equal(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(URETIM), uretimRef: "kisa", tekProje: "1" }).tur, "red");
+  });
+  test("üretimde beyanın etkisi yok: kurallar aynı", () => {
+    const k = supabaseOrtamKarari({ vercelOrtami: "production", supabaseUrl: adres(TEST), uretimRef: URETIM, testRef: TEST, tekProje: "1" });
+    assert.equal(k.tur === "red" && k.neden, "uretim-test-projesine-bagli");
+  });
+  test("ortamGirdisi beyanı okur; tarayıcı paketine gömülür", () => {
+    assert.equal(ortamGirdisi({ ARVOLAB_TEK_PROJE: "1" }).tekProje, "1");
+    assert.ok(readFileSync("lib/supabase/client.ts", "utf8").includes("ARVOLAB_TEK_PROJE: process.env.ARVOLAB_TEK_PROJE"));
+    assert.ok(/ARVOLAB_TEK_PROJE:\s*process\.env\.ARVOLAB_TEK_PROJE/.test(readFileSync("next.config.ts", "utf8")));
+  });
+  test("anahtar ayrımı: beyanla üretim anahtarları kabul edilir ama uyarı yazılır; beyansız ret sürer", () => {
+    const env = { VERCEL_ENV: "preview", OPENAI_API_KEY: "x", CRON_SECRET: "x" };
+    assert.equal(anahtarAyrimiKarari(env).tur, "red");
+    const k = anahtarAyrimiKarari({ ...env, ARVOLAB_TEK_PROJE: "1" });
+    assert.equal(k.tur, "izin");
+    assert.ok(k.tur === "izin" && k.uyari?.includes("OPENAI_API_KEY") && !k.uyari.includes('"x"'));
+  });
+  test("betik kuralları değişmez: şema kurulumu ve sentetik veri üretimde yine reddedilir", () => {
+    for (const tur of ["sema-kurulumu", "sentetik-veri"] as const) {
+      assert.equal(betikHedefKarari({ tur, hedefRef: URETIM, uretimRef: URETIM, testRef: TEST, uretimIstendi: true, onayMetni: `ÜRETİME UYGULA ${URETIM}` }).tur, "red");
+    }
   });
 });
 

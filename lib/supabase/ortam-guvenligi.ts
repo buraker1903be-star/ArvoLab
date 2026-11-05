@@ -52,6 +52,8 @@ export type OrtamGirdisi = {
   testRef?: string | null;
   /** ARVOLAB_ONIZLEME: "1" ise sahte istemci (gerçek bağlantı yok). */
   onizleme?: string | null;
+  /** ARVOLAB_TEK_PROJE: "1" ise üretim dışı ortamın ÜRETİM projesine bağlanması bilerek kabul edilir (supabaseOrtamKarari, "TEK PROJE BEYANI"). */
+  tekProje?: string | null;
 };
 
 export type RedNedeni =
@@ -123,6 +125,9 @@ export function projeKimligi(url: string | null | undefined): string | null {
 
 const temiz = (s: string | null | undefined) => (typeof s === "string" ? s.trim() : "");
 
+export const TEK_PROJE_UYARISI =
+  "Tek proje beyanı (ARVOLAB_TEK_PROJE=1): üretim dışı ortam ÜRETİM Supabase projesine bağlı. Burada yapılan her işlem canlı veriye yazılır.";
+
 export function supabaseOrtamKarari(g: OrtamGirdisi): OrtamKarari {
   const cozum = dagitimOrtamiCoz(g.vercelOrtami, g.derlemeOrtami);
   if (cozum.tur === "celiski") {
@@ -153,8 +158,22 @@ export function supabaseOrtamKarari(g: OrtamGirdisi): OrtamKarari {
   }
 
   if (ortam === "uretim-disi") {
+    /*
+      TEK PROJE BEYANI (05.11.2026, kurum sahibinin kararı). Ayrı test
+      projesi açılmadı; önizleme ve yerel geliştirme bilerek ÜRETİM
+      projesine bağlanıyor. Beyan yalnızca adres tanımlı üretim kimliğini
+      gösteriyorsa geçerli: kimlik bilinmeden ya da başka bir projeye karşı
+      işe yaramaz, yani "rastgele bir projeye bağlan" demek değildir.
+      Betiklerin kuralı (betikHedefKarari) bundan etkilenmez: şema kurulumu
+      ve sentetik veri üretimde yine hiçbir koşulda çalışmaz.
+    */
+    if (uretimRef && ref === uretimRef && temiz(g.tekProje) === "1") {
+      return { tur: "izin", ortam, hedef: "uretim", uyari: TEK_PROJE_UYARISI };
+    }
     // Önce üretime bağlantı: yapılandırma eksik olsa da kimlik biliniyorsa en açık ret budur.
-    if (uretimRef && ref === uretimRef) return red("uretim-disi-uretime-bagli", "Üretim dışı ortam üretim Supabase projesine bağlanamaz.");
+    if (uretimRef && ref === uretimRef) {
+      return red("uretim-disi-uretime-bagli", "Üretim dışı ortam üretim Supabase projesine bağlanamaz (bilerek isteniyorsa ARVOLAB_TEK_PROJE=1).");
+    }
     if (ref === "yerel") {
       return vercelde ? red("yerel-supabase-vercelde", "Vercel dağıtımı yerel Supabase adresine bağlanamaz.") : { tur: "izin", ortam, hedef: "yerel" };
     }
@@ -229,6 +248,7 @@ export function ortamGirdisi(env: Record<string, string | undefined>, derlemeOrt
     uretimRef: env.ARVOLAB_URETIM_SUPABASE_REF ?? null,
     testRef: env.ARVOLAB_TEST_SUPABASE_REF ?? null,
     onizleme: env.ARVOLAB_ONIZLEME ?? null,
+    tekProje: env.ARVOLAB_TEK_PROJE ?? null,
   };
 }
 
@@ -318,11 +338,20 @@ export function veritabaniAdresiProjesi(adres: string | null | undefined): strin
 */
 export const DIS_ANAHTARLAR = ["AI_ANAHTAR", "OPENAI_API_KEY", "RESEND_API_KEY", "CRON_SECRET", "PRODUCT_BRIDGE_SECRET"] as const;
 
-export function anahtarAyrimiKarari(env: Record<string, string | undefined>): { tur: "izin" } | { tur: "red"; mesaj: string } {
+export function anahtarAyrimiKarari(env: Record<string, string | undefined>): { tur: "izin"; uyari?: string } | { tur: "red"; mesaj: string } {
   if (dagitimOrtami(env.VERCEL_ENV) === "uretim") return { tur: "izin" };
   if (temiz(env.ARVOLAB_ONIZLEME) === "1") return { tur: "izin" };
   const tanimli = DIS_ANAHTARLAR.filter((ad) => temiz(env[ad]));
   if (!tanimli.length || temiz(env.ARVOLAB_TEST_ANAHTARLARI) === "1") return { tur: "izin" };
+  /*
+    Tek proje beyanı veritabanıyla birlikte dış anahtarları da kapsar: ayrı
+    test anahtarı yok, önizleme üretimin anahtarlarını kullanıyor. Bu bir
+    "test anahtarıdır" beyanı DEĞİL (o yalan olurdu); bilinen bir durumun
+    kabulü. Uyarı derleme günlüğüne düşer.
+  */
+  if (temiz(env.ARVOLAB_TEK_PROJE) === "1") {
+    return { tur: "izin", uyari: `Tek proje beyanı: üretim dışı ortam üretim anahtarlarını kullanıyor (${tanimli.join(", ")}).` };
+  }
   return {
     tur: "red",
     mesaj: `Üretim dışı ortamda ${tanimli.join(", ")} tanımlı ama test anahtarı olduğu beyan edilmemiş (ARVOLAB_TEST_ANAHTARLARI=1). Üretim anahtarlarını bu ortamdan kaldırın ya da test anahtarlarıyla değiştirip beyan edin.`,

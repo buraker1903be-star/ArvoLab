@@ -110,6 +110,7 @@ function ortamDenetimi() {
   /* Test ortamında üretimin AI, e-posta, cron ve köprü anahtarları kullanılmasın (beyan kuralı, aynı modül). */
   const anahtar = anahtarAyrimiKarari(process.env);
   if (anahtar.tur === "red") throw new Error(`Anahtar ayrımı: ${anahtar.mesaj} Ayrıntı: docs/test-ortami.md`);
+  if (anahtar.uyari) console.warn(`[supabase-ortam] ${anahtar.uyari}`);
 }
 
 const nextConfig: NextConfig = {
@@ -131,6 +132,7 @@ const nextConfig: NextConfig = {
     ARVOLAB_URETIM_SUPABASE_REF: process.env.ARVOLAB_URETIM_SUPABASE_REF ?? "",
     ARVOLAB_TEST_SUPABASE_REF: process.env.ARVOLAB_TEST_SUPABASE_REF ?? "",
     ARVOLAB_ONIZLEME: process.env.ARVOLAB_ONIZLEME ?? "",
+    ARVOLAB_TEK_PROJE: process.env.ARVOLAB_TEK_PROJE ?? "",
   },
   poweredByHeader: false,
   /* Güvenlik başlıkları her yanıtta; ne zorlandığı, ne yalnızca raporlandığı ve nedeni lib/guvenlik-basliklari.ts'te. */

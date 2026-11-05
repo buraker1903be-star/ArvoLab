@@ -13,6 +13,45 @@ Production **ve** Preview için aynıydı. Her dal önizlemesi canlı
 veritabanına bağlanıyordu. Önizlemede `OPENAI_API_KEY` ve `CRON_SECRET`
 de üretim değerlerini alıyordu.
 
+## Güncel karar: tek proje (05.11.2026)
+
+Kurum sahibi ayrı bir test projesi açmamaya karar verdi. Önizleme ve yerel
+geliştirme bilerek ÜRETİM projesine (`zpfpocyajnxcketdjbxm`) bağlanıyor;
+projede gerçek müşteri yok, iki deneme çalışması var. Kod bunu ancak açık
+bir beyanla kabul eder:
+
+| Değişken (Vercel, yalnızca **Preview**) | Değer |
+|---|---|
+| `ARVOLAB_TEK_PROJE` | `1` |
+| `ARVOLAB_URETIM_SUPABASE_REF` | `zpfpocyajnxcketdjbxm` |
+
+- Beyan yalnızca adres bu kimliği gösteriyorsa geçerli; kimlik tanımlı
+  değilse ya da adres başka bir projeyi gösteriyorsa ret sürer.
+- Beyan üretim anahtarlarının (OpenAI, cron) önizlemede kullanılmasını da
+  kabul eder ve derleme günlüğüne uyarı yazar. Bu bir "test anahtarıdır"
+  beyanı değildir.
+- Betik kuralları değişmez: şema kurulumu ve sentetik veri üretimde hiçbir
+  koşulda çalışmaz; üretime migration yine `--uretim` + onay cümlesi ister.
+- İki değişken eklenmeden dala gönderilen kodun önizleme derlemesi bilerek
+  durur (`uretim-disi-uretime-bagli`); canlı site etkilenmez.
+- Önizlemede yapılan her işlem canlı veriye yazılır. Önizlemede gerçek
+  hesaplarla deneme yapılmaz; tasarım doğrulaması yerel sahte önizlemede
+  (`npm run onizleme`) yapılır.
+
+Aşağıdaki test projesi planı, ileride ayrı bir test projesi açılırsa
+geçerlidir; o gün `ARVOLAB_TEK_PROJE` Preview'dan kaldırılır.
+
+### Migration geçmişi (05.11.2026, salt okunur ölçüm)
+
+Üretimin `supabase_migrations.schema_migrations` tablosunda 12 kayıt var
+(Ağustos 2026); depoda 104 migration var ve son migration'ın nesneleri
+veritabanında mevcut. Migration'lar geçmiş kaydı tutulmadan uygulanmış.
+Supabase GitHub entegrasyonunda "deploy to production" AÇILMAMALI: açılırsa
+104 migration'ı yeniden uygulamaya kalkar. Yeni bir migration uygulamadan
+önce geçmiş, gerçekte uygulanmış olanlarla eşitlenmeli (ayrı onayla).
+Şema da depodan kurulana göre farklı: üretimde 50 tablo / 121 politika,
+depodan kurulumda 47 / 122.
+
 ## Kural (kodda: `lib/supabase/ortam-guvenligi.ts`)
 
 | Ortam | Kabul edilen bağlantı | Reddedilen |
