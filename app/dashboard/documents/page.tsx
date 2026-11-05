@@ -22,6 +22,10 @@ import AiFeedbackButton from "./ai-feedback-button";
 import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import BosDurum from "../_components/bos-durum";
+import SayfaBasligi from "../_components/sayfa/sayfa-basligi";
+import SayfaEylemleri from "../_components/sayfa/sayfa-eylemleri";
+import Bolum from "../_components/sayfa/bolum";
+import DurumGostergesi, { type DurumTonu } from "../_components/sayfa/durum-gostergesi";
 import IkiKartSecim from "../_components/iki-kart-secim";
 import CalismaSecici from "../_components/calisma-secici";
 
@@ -50,7 +54,7 @@ export const maxDuration = 60;
   belgeler başlıktaki ayrı pencerede, kaybolmasınlar diye.
 */
 
-const DURUM: Record<DocumentUploadRecord["status"], { ad: Metin; ton: string }> = {
+const DURUM: Record<DocumentUploadRecord["status"], { ad: Metin; ton: DurumTonu }> = {
   analyzed: { ad: { tr: "Denetlendi", en: "Checked" }, ton: "success" },
   failed: { ad: { tr: "Hata", en: "Error" }, ton: "danger" },
   processing: { ad: { tr: "İşleniyor", en: "Processing" }, ton: "neutral" },
@@ -182,11 +186,12 @@ export default async function DocumentsPage({
             ) : null}
 
             {farklar && onceki ? (
-              <>
-                <h4 className="calisma-durum-alt">{t({ tr: "Önceki sürüme göre", en: "Compared with the previous version" })}</h4>
-                <p className="muted text-sm">
-                  {onceki.file_name} · {tarih(onceki.created_at)}
-                </p>
+              <Bolum
+                id={`belge-${b.id}-fark`}
+                duzey={4}
+                baslik={t({ tr: "Önceki sürüme göre", en: "Compared with the previous version" })}
+                aciklama={`${onceki.file_name} · ${tarih(onceki.created_at)}`}
+              >
                 {farklar.length ? (
                   <ul className="belge-farklar">
                     {farklar.map((f) => (
@@ -198,7 +203,7 @@ export default async function DocumentsPage({
                 ) : (
                   <p className="muted text-sm">{t({ tr: "Denetlenen ölçülerde değişiklik yok.", en: "No changes in the checked measures." })}</p>
                 )}
-              </>
+              </Bolum>
             ) : null}
 
             {a.referenceSectionFound ? (
@@ -217,15 +222,17 @@ export default async function DocumentsPage({
 
             {/* Kılavuz uygunluğu: her zorunlu bölüm ayrı satır, var ya da eksik. */}
             {a.guidelineCompliance ? (
-              <>
-                <h4 className="calisma-durum-alt">{t({ tr: "Kılavuzdaki zorunlu bölümler", en: "Required sections in the guideline" })}</h4>
-                {a.kilavuz ? (
-                  <p className="muted text-sm">
-                    {a.kilavuz.ad}
-                    {/* Öğrencinin yüklediği kılavuz onaydan geçmedi; editördeki ayrımın aynısı. */}
-                    {a.kilavuz.dogrulandi ? "" : t({ tr: " · sizin yüklediğiniz kılavuzdan çıkarıldı, onaylanmadı", en: " · extracted from the guideline you uploaded, not approved" })}
-                  </p>
-                ) : null}
+              <Bolum
+                id={`belge-${b.id}-kilavuz`}
+                duzey={4}
+                baslik={t({ tr: "Kılavuzdaki zorunlu bölümler", en: "Required sections in the guideline" })}
+                aciklama={
+                  a.kilavuz
+                    ? /* Öğrencinin yüklediği kılavuz onaydan geçmedi; editördeki ayrımın aynısı. */
+                      `${a.kilavuz.ad}${a.kilavuz.dogrulandi ? "" : t({ tr: " · sizin yüklediğiniz kılavuzdan çıkarıldı, onaylanmadı", en: " · extracted from the guideline you uploaded, not approved" })}`
+                    : undefined
+                }
+              >
                 {a.guidelineCompliance.sections.length ? (
                   <ul className="gb-liste">
                     {a.guidelineCompliance.sections.map((s, i) => (
@@ -233,9 +240,9 @@ export default async function DocumentsPage({
                         <span className="gb-satir-govde">
                           <b>{s.section}</b>
                         </span>
-                        <span className="status-pill" data-tone={s.found ? "success" : "danger"}>
+                        <DurumGostergesi ton={s.found ? "success" : "danger"} ne={s.section}>
                           {s.found ? t({ tr: "Var", en: "Present" }) : t({ tr: "Eksik", en: "Missing" })}
-                        </span>
+                        </DurumGostergesi>
                       </li>
                     ))}
                   </ul>
@@ -255,7 +262,7 @@ export default async function DocumentsPage({
                     {sayfa.metin}
                   </p>
                 ) : null}
-              </>
+              </Bolum>
             ) : a.kilavuzOkunamadi ? (
               <p className="tone-text text-sm" data-tone="warning">
                 {t({
@@ -275,8 +282,7 @@ export default async function DocumentsPage({
             ) : null}
 
             {a.referenceSectionFound ? (
-              <>
-                <h4 className="calisma-durum-alt">{t({ tr: "Kaynakça", en: "Reference list" })}</h4>
+              <Bolum id={`belge-${b.id}-kaynakca`} duzey={4} baslik={t({ tr: "Kaynakça", en: "Reference list" })}>
                 <ul className="gb-liste">
                   {[
                     { ad: t({ tr: "Biçim sorunu olan künye", en: "References with formatting issues" }), sayi: sorunluKunyeler.length },
@@ -287,9 +293,9 @@ export default async function DocumentsPage({
                       <span className="gb-satir-govde">
                         <b>{satir.ad}</b>
                       </span>
-                      <span className="status-pill" data-tone={satir.sayi ? "warning" : "success"}>
+                      <DurumGostergesi ton={satir.sayi ? "warning" : "success"} ne={satir.ad}>
                         {satir.sayi || t({ tr: "Yok", en: "None" })}
-                      </span>
+                      </DurumGostergesi>
                     </li>
                   ))}
                 </ul>
@@ -335,44 +341,47 @@ export default async function DocumentsPage({
                     </ul>
                   </details>
                 ) : null}
-              </>
+              </Bolum>
             ) : null}
 
-            <h4 className="calisma-durum-alt">{t({ tr: "ArvoLab ön kontrolü (orijinallik)", en: "ArvoLab originality pre-check" })}</h4>
-            {o?.kayit ? (
-              <>
-                <p className="tone-text text-sm" data-tone={similarityTone(o.kayit.overall_similarity)}>
-                  {t({
-                    tr: `En yüksek örtüşme %${o.kayit.overall_similarity} (${o.kayit.compared_document_count} belgeyle karşılaştırıldı)`,
-                    en: `Highest overlap ${o.kayit.overall_similarity}% (compared with ${o.kayit.compared_document_count} ${o.kayit.compared_document_count === 1 ? "document" : "documents"})`,
-                  })}
-                </p>
-                {o.kayit.matches.slice(0, 3).map((m, i) => (
-                  <p key={i} className="muted text-sm">
-                    {t({ tr: `%${m.similarity}`, en: `${m.similarity}%` })} — {m.fileName}
-                    {m.sampleOverlap ? t({ tr: ` · örnek: "${m.sampleOverlap}"`, en: ` · sample: "${m.sampleOverlap}"` }) : ""}
-                  </p>
-                ))}
-              </>
-            ) : o?.okunamadi ? (
-              <p className="alert" data-tone="warning" role="alert">
-                {t({
-                  tr: "Orijinallik sonucu okunamadı. Taranmadığı ya da temiz çıktığı anlamına gelmez — sayfayı yenileyin.",
-                  en: "The originality result couldn't be loaded. That doesn't mean it wasn't scanned or came back clean — refresh the page.",
-                })}
-              </p>
-            ) : null}
-            <ActionForm action={orijinallikTara.bind(null, b.id)} successMessage={t({ tr: "Orijinallik taraması tamamlandı.", en: "Originality pre-check completed." })}>
-              <button type="submit" className="projects-filter-button button-compact">
-                <ShieldQuestion size={14} aria-hidden="true" /> {o?.kayit ? t({ tr: "Yeniden tara", en: "Scan again" }) : t({ tr: "Ön kontrolü çalıştır", en: "Run pre-check" })}
-              </button>
-            </ActionForm>
-            <p className="hint">
-              {t({
+            <Bolum
+              id={`belge-${b.id}-ortusme`}
+              duzey={4}
+              baslik={t({ tr: "ArvoLab ön kontrolü (orijinallik)", en: "ArvoLab originality pre-check" })}
+              aciklama={t({
                 tr: "Yalnızca erişiminiz olan ArvoLab belge havuzuyla karşılaştırır; Turnitin'in yerini tutmaz.",
                 en: "Compares only against the ArvoLab document pool you have access to; it isn't a substitute for Turnitin.",
               })}
-            </p>
+            >
+              {o?.kayit ? (
+                <>
+                  <p className="tone-text text-sm" data-tone={similarityTone(o.kayit.overall_similarity)}>
+                    {t({
+                      tr: `En yüksek örtüşme %${o.kayit.overall_similarity} (${o.kayit.compared_document_count} belgeyle karşılaştırıldı)`,
+                      en: `Highest overlap ${o.kayit.overall_similarity}% (compared with ${o.kayit.compared_document_count} ${o.kayit.compared_document_count === 1 ? "document" : "documents"})`,
+                    })}
+                  </p>
+                  {o.kayit.matches.slice(0, 3).map((m, i) => (
+                    <p key={i} className="muted text-sm">
+                      {t({ tr: `%${m.similarity}`, en: `${m.similarity}%` })} — {m.fileName}
+                      {m.sampleOverlap ? t({ tr: ` · örnek: "${m.sampleOverlap}"`, en: ` · sample: "${m.sampleOverlap}"` }) : ""}
+                    </p>
+                  ))}
+                </>
+              ) : o?.okunamadi ? (
+                <p className="alert" data-tone="warning" role="alert">
+                  {t({
+                    tr: "Orijinallik sonucu okunamadı. Taranmadığı ya da temiz çıktığı anlamına gelmez — sayfayı yenileyin.",
+                    en: "The originality result couldn't be loaded. That doesn't mean it wasn't scanned or came back clean — refresh the page.",
+                  })}
+                </p>
+              ) : null}
+              <ActionForm action={orijinallikTara.bind(null, b.id)} className="ayrinti-eylemler" successMessage={t({ tr: "Orijinallik taraması tamamlandı.", en: "Originality pre-check completed." })}>
+                <button type="submit" className="projects-filter-button button-compact">
+                  <ShieldQuestion size={14} aria-hidden="true" /> {o?.kayit ? t({ tr: "Yeniden tara", en: "Scan again" }) : t({ tr: "Ön kontrolü çalıştır", en: "Run pre-check" })}
+                </button>
+              </ActionForm>
+            </Bolum>
 
             <AiFeedbackButton
               documentId={b.id}
@@ -385,7 +394,7 @@ export default async function DocumentsPage({
 
         <ActionForm
           action={sil.bind(null, b.id)}
-          className="mt-sm"
+          className="mt-sm ayrinti-eylemler"
           confirmMessage={t({
             tr: `"${b.file_name}" belgesini silmek istediğinize emin misiniz? Dosya, denetim sonuçları, orijinallik taramaları ve asistan geri bildirimleri kalıcı olarak silinir.`,
             en: `Are you sure you want to delete "${b.file_name}"? The file, check results, originality scans and assistant feedback will be permanently deleted.`,
@@ -404,63 +413,71 @@ export default async function DocumentsPage({
     <main className="dashboard-page gb gb-tek-ekran">
       {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
       {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
-      <section className="projects-header">
-        <div>
-          <h1>{t({ tr: "Belge Kontrol", en: "Document Check" })}</h1>
-          <p>
-            {calisma
-              ? t({
-                  tr: `“${calisma.title}” çalışmasının belgeleri. Word ya da PDF dosyanızı yükleyin; kılavuz uygunluğu, kaynakça ve örtüşme denetlenir. İçerik üretilmez.`,
-                  en: `Documents for “${calisma.title}”. Upload your Word or PDF file; guideline compliance, the reference list and overlap are checked. No content is generated.`,
-                })
-              : t({
-                  tr: "Tez ya da makale dosyanızı (.docx/.pdf) yükleyin; kılavuz uygunluğu, kaynakça ve örtüşme denetlenir.",
-                  en: "Upload your thesis or article file (.docx/.pdf); guideline compliance, the reference list and overlap are checked.",
-                })}
-          </p>
-        </div>
-        <div className="pencere-dugmeler">
-          {bagsizlar.length ? (
-            <PanelDrawer
-              triggerLabel={t({ tr: "Bağlı olmayan belgeler", en: "Unlinked documents" })}
-              triggerClassName="projects-filter-button button-compact"
-              kicker={t({ tr: "Belge Kontrol", en: "Document Check" })}
-              title={t({ tr: "Çalışmaya bağlı olmayan belgeler", en: "Documents not linked to a work" })}
-              description={t({
-                tr: "Eski Belge Kontrol sayfasında çalışma seçilmeden yüklenmiş belgeler. Gerekmiyorsa silin; yeni belgeyi çalışmanıza yükleyin.",
-                en: "Documents uploaded on the old Document Check page without selecting a work. Delete them if you don't need them; upload new documents to your work.",
-              })}
-              boy="genis"
-              basaridaKapan={false}
-            >
-              <ul className="gb-liste">
-                {bagsizlar.map((b) => (
-                  <li key={b.id} className="gb-satir">
-                    <span className="gb-satir-govde">
-                      <b>{b.file_name}</b>
-                      <small>
-                        {[b.project_title, tarih(b.created_at), b.analysis?.referenceSectionFound ? `${b.analysis.complianceScore}/100` : null]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </small>
-                    </span>
-                    <ActionForm
-                      action={sil.bind(null, b.id)}
-                      confirmMessage={t({ tr: `"${b.file_name}" belgesi kalıcı olarak silinsin mi?`, en: `Permanently delete "${b.file_name}"?` })}
-                      successMessage={t({ tr: "Belge silindi.", en: "Document deleted." })}
-                    >
-                      <button type="submit" className="projects-filter-button button-compact" aria-label={t({ tr: `${b.file_name}: sil`, en: `${b.file_name}: delete` })}>
-                        <Trash2 size={14} aria-hidden="true" />
-                      </button>
-                    </ActionForm>
-                  </li>
-                ))}
-              </ul>
-            </PanelDrawer>
-          ) : null}
-          {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/documents" /> : null}
-        </div>
-      </section>
+      {/* Ortak sayfa başlığı (Signature OS 4.1). Birincil eylem ("Belge yükle")
+          belge listesinin başında: iş orada. Eski sayfadan kalan bağsız
+          belgeler seyrek, "⋯" menüsünde. */}
+      <SayfaBasligi
+        baslik={t({ tr: "Belge Kontrol", en: "Document Check" })}
+        aciklama={
+          calisma
+            ? t({
+                tr: "Word ya da PDF dosyanızı yükleyin; kılavuz uygunluğu, kaynakça ve örtüşme denetlenir. İçerik üretilmez.",
+                en: "Upload your Word or PDF file; guideline compliance, the reference list and overlap are checked. No content is generated.",
+              })
+            : t({
+                tr: "Tez ya da makale dosyanızı (.docx/.pdf) yükleyin; kılavuz uygunluğu, kaynakça ve örtüşme denetlenir.",
+                en: "Upload your thesis or article file (.docx/.pdf); guideline compliance, the reference list and overlap are checked.",
+              })
+        }
+        baglam={calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/documents" /> : null}
+        eylemler={
+          bagsizlar.length ? (
+            <SayfaEylemleri
+              tasma={[
+                bagsizlar.length ? (
+                <PanelDrawer
+                  key="bagsiz-belgeler"
+                  triggerLabel={t({ tr: "Bağlı olmayan belgeler", en: "Unlinked documents" })}
+                  triggerClassName="projects-filter-button button-compact"
+                  kicker={t({ tr: "Belge Kontrol", en: "Document Check" })}
+                  title={t({ tr: "Çalışmaya bağlı olmayan belgeler", en: "Documents not linked to a work" })}
+                  description={t({
+                    tr: "Eski Belge Kontrol sayfasında çalışma seçilmeden yüklenmiş belgeler. Gerekmiyorsa silin; yeni belgeyi çalışmanıza yükleyin.",
+                    en: "Documents uploaded on the old Document Check page without selecting a work. Delete them if you don't need them; upload new documents to your work.",
+                  })}
+                  boy="genis"
+                  basaridaKapan={false}
+                >
+                  <ul className="gb-liste">
+                    {bagsizlar.map((b) => (
+                      <li key={b.id} className="gb-satir">
+                        <span className="gb-satir-govde">
+                          <b>{b.file_name}</b>
+                          <small>
+                            {[b.project_title, tarih(b.created_at), b.analysis?.referenceSectionFound ? `${b.analysis.complianceScore}/100` : null]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </small>
+                        </span>
+                        <ActionForm
+                          action={sil.bind(null, b.id)}
+                          confirmMessage={t({ tr: `"${b.file_name}" belgesi kalıcı olarak silinsin mi?`, en: `Permanently delete "${b.file_name}"?` })}
+                          successMessage={t({ tr: "Belge silindi.", en: "Document deleted." })}
+                        >
+                          <button type="submit" className="projects-filter-button button-compact" aria-label={t({ tr: `${b.file_name}: sil`, en: `${b.file_name}: delete` })}>
+                            <Trash2 size={14} aria-hidden="true" />
+                          </button>
+                        </ActionForm>
+                      </li>
+                    ))}
+                  </ul>
+                </PanelDrawer>
+              ) : null,
+              ]}
+            />
+          ) : null
+        }
+      />
 
       {calismaOkunamadi || belgeOkunamadi || bagsizOkunamadi ? (
         <p className="alert" role="alert">
@@ -539,9 +556,9 @@ export default async function DocumentsPage({
                     {b.status === "analyzed" && b.analysis?.referenceSectionFound ? ` · ${b.analysis.complianceScore}/100` : ""}
                   </small>
                 </span>
-                <span className="status-pill" data-tone={DURUM[b.status].ton}>
+                <DurumGostergesi ton={DURUM[b.status].ton} ne={t({ tr: "Durum", en: "Status" })}>
                   {t(DURUM[b.status].ad)}
-                </span>
+                </DurumGostergesi>
               </>
             ),
             ayrinti: ayrinti(b),

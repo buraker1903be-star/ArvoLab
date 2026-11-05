@@ -203,3 +203,10 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
   .kanit-iddia-dugmesi { display: block; padding-block: 9px; margin-block: -9px; }
 }
 .kanit-iddia-dugmesi:focus-visible { outline: none; border-radius: var(--r-xs); box-shadow: var(--odak-halkasi); }
+
+/* ---------- Ayrıntı "yanında" (iki-kart-secim.tsx) ---------- */
+/* Telefonda seçim odağı ayrıntıya taşıyor; fareyle/dokunuşla gelen odak
+   halka çizmez, klavyeyle gelen çizer. */
+.secim-ayrinti:focus { outline: none; }
+.secim-ayrinti:focus-visible { box-shadow: var(--odak-halkasi); }
+.secim-listeye-don { justify-self: start; align-self: flex-start; min-height: var(--kontrol-h); }
