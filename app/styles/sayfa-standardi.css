@@ -385,3 +385,98 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
 .ayar-kredi-ayrinti dd { margin: 2px 0 0; color: var(--ink); font-size: var(--fs-body); font-weight: 500; font-variant-numeric: tabular-nums; }
 .ayar-not { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
 .ayar-bolum .license-card { margin: 0; }
+
+/* ============================================================
+   DESTEK (Signature OS 4.4, 05.11.2026)
+   Üstte iki kanal (uzman, uygulama), altta talepler: solda liste,
+   sağda seçilenin ayrıntısı ve yazışması (IkiKartSecim, sayfa).
+   Sayfa doğal yüksekliğinde kayar; eskiden sabit yükseklikteki iki
+   kart kendi içinde kayıyor, uzun yazışma kesiliyordu.
+   ============================================================ */
+.destek-sayfa { display: grid; gap: var(--s-5); align-content: start; }
+.destek-kanallar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); }
+@media (max-width: 900px) { .destek-kanallar { grid-template-columns: minmax(0, 1fr); gap: var(--s-3); } }
+.destek-kanal {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.destek-kanal-ikon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
+.destek-kanal-govde { flex: 1; min-width: 0; }
+.destek-kanal-govde h2 { margin: 0; color: var(--ink); font-size: var(--fs-md); font-weight: 600; letter-spacing: -.01em; }
+.destek-kanal-govde p { margin: 4px 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.destek-kanal-govde .link-accent { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; text-decoration: none; }
+.destek-kanal > :last-child { flex: none; }
+@media (max-width: 520px) {
+  .destek-kanal { flex-wrap: wrap; padding: var(--s-4); }
+  .destek-kanal > :last-child { flex-basis: 100%; }
+  .destek-kanal > :last-child :is(button, a) { width: 100%; justify-content: center; }
+}
+
+.destek-sayfa .kaynaklar-ikili { align-items: start; }
+@media (min-width: 901px) {
+  .destek-sayfa .kaynaklar-ikili { grid-template-columns: minmax(300px, 2fr) minmax(0, 3fr); }
+  /* Liste uzarsa kendi içinde kayar; ayrıntı sayfayla birlikte. */
+  .destek-sayfa .kaynaklar-ikili > .gb-sutun:first-child { position: sticky; top: var(--s-4); max-height: calc(100dvh - 120px); }
+}
+.destek-sayfa .kaynaklar-ikili > .gb-sutun { max-height: none; }
+.destek-sayfa .secim-satir { align-items: flex-start; gap: var(--s-3); }
+.destek-satir-ikon { display: inline-flex; flex: none; margin-top: 2px; color: var(--muted); }
+.secim-satir[aria-pressed="true"] .destek-satir-ikon { color: var(--primary-ink); }
+.destek-sayfa .kanit-kayit-govde[data-kapali="true"] b { color: var(--ink-soft); font-weight: 500; }
+
+/* Seçili talebin ayrıntısı */
+.destek-ayrinti { display: grid; gap: var(--s-5); min-width: 0; }
+.destek-ayrinti-bas { display: grid; gap: var(--s-1); padding-bottom: var(--s-4); border-bottom: 1px solid var(--line-soft); }
+.destek-ayrinti-bas h2 { margin: 0; color: var(--ink); font-size: var(--fs-lg); font-weight: 600; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.destek-ayrinti-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-3); margin: var(--s-1) 0 0; color: var(--muted); font-size: var(--fs-sm); }
+.destek-ayrinti .sayfa-bolum { padding-top: 0; border-top: 0; }
+.destek-ayrinti .sayfa-bolum + .sayfa-bolum { margin-top: 0; }
+.destek-ayrinti-alt { padding-top: var(--s-3); border-top: 1px solid var(--line-soft); }
+
+/* Yazışma: baloncuklar daha sakin; kendi mesajı lacivert tonlu, karşı taraf yüzey. */
+.destek-ayrinti .yazisma-mesaj { padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-2); }
+.destek-ayrinti .yazisma-mesaj[data-benim="true"] { background: var(--primary-soft); }
+.destek-ayrinti .yazisma-ust b { font-size: var(--fs-sm); }
+.destek-ayrinti .yazisma-mesaj p { font-size: var(--fs-body); }
+.destek-ayrinti .yazisma-form { padding-top: var(--s-2); }
+
+/* Henüz talep yokken sağ kart: nasıl işler, üç adım. */
+.destek-nasil { display: grid; gap: var(--s-4); margin: 0; padding: var(--s-2) 0 0; list-style: none; counter-reset: destek-adim; text-align: left; }
+.destek-nasil li { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: var(--s-3); counter-increment: destek-adim; }
+.destek-nasil li::before {
+  content: counter(destek-adim);
+  grid-row: span 2;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.destek-nasil b { color: var(--ink); font-size: var(--fs-base); font-weight: 600; }
+.destek-nasil small { color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+
+@media (max-width: 1199px), (pointer: coarse) {
+  .destek-sayfa .secim-satir { min-height: 56px; }
+  .destek-ayrinti .link-button, .destek-kanal-govde .link-accent { min-height: 40px; }
+  .destek-ayrinti .yazisma-form .projects-primary-button { min-height: 40px; }
+}
+/* Ortaklık şeridindeki logo bağlantısı dokunmatikte 39 piksel kalıyordu (görsel yüksekliği); 40'a çıkar. */
+@media (max-width: 1199px), (pointer: coarse) { .partner-logo { display: inline-flex; align-items: center; min-height: 40px; } }

@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  talepSirasi,
   uzmanYazismaDurumu,
   yanitBekliyor,
   yanitGeldi,
@@ -59,4 +60,29 @@ test("İngilizce yazan etiketi ve kapalı talep gerekçesi", () => {
   assert.equal(yazanEtiketi(m("a", "destek", "x"), "talep_sahibi", "en"), "Support team");
   assert.equal(yazanEtiketi(m("a", "talep_sahibi", "x"), "talep_sahibi", "en"), "You");
   assert.deepEqual(uzmanYazismaDurumu("cancelled", "talep_sahibi", "en"), { yazabilir: false, neden: "This request was canceled." });
+});
+
+/*
+  Taleplerim sırası (Signature OS 4.4): açıklar kapananlardan önce, yanıt
+  gelen açık talep en başta, aynı grupta yeniden eskiye. İlk talep açılışta
+  seçili geldiği için bu sıra "yanıtı aramadan görür" kararıdır.
+*/
+test("talepSirasi: açık + yanıt gelen başta, kapananlar sonda, grup içinde yeniden eskiye", () => {
+  const sirali = talepSirasi([
+    { id: "eski-kapali", kapali: true, yeni: false, zaman: "2026-11-01T10:00:00Z" },
+    { id: "yeni-acik", kapali: false, yeni: false, zaman: "2026-11-05T10:00:00Z" },
+    { id: "yanitli", kapali: false, yeni: true, zaman: "2026-11-02T10:00:00Z" },
+    { id: "eski-acik", kapali: false, yeni: false, zaman: "2026-11-03T10:00:00Z" },
+    { id: "yeni-kapali", kapali: true, yeni: false, zaman: "2026-11-04T10:00:00Z" },
+  ]);
+  assert.deepEqual(sirali.map((x) => x.id), ["yanitli", "yeni-acik", "eski-acik", "yeni-kapali", "eski-kapali"]);
+});
+
+test("talepSirasi girdiyi değiştirmez", () => {
+  const girdi = [
+    { kapali: true, yeni: false, zaman: "a" },
+    { kapali: false, yeni: false, zaman: "b" },
+  ];
+  talepSirasi(girdi);
+  assert.equal(girdi[0].kapali, true);
 });

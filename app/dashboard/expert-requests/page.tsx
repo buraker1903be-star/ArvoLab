@@ -22,7 +22,7 @@ import {
   updateSupportRequestStatus,
 } from "@/app/actions/support";
 import { destekMesajiGonder, yazismalariOku } from "@/app/actions/destek-yazisma";
-import { uzmanYazismaDurumu, yanitGeldi, yazismaKur } from "@/lib/destek-yazisma";
+import { talepSirasi, uzmanYazismaDurumu, yanitGeldi, yazismaKur } from "@/lib/destek-yazisma";
 import { tumGeriBildirimler, type GeriBildirimSatiri } from "@/app/actions/geri-bildirim";
 import { getMyProjects } from "@/app/actions/citation-check";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -37,6 +37,10 @@ import ActionForm from "../action-form";
 import PanelDrawer from "../_components/panel-drawer";
 import BosDurum from "../_components/bos-durum";
 import PartnerSeridi from "../_components/partner-seridi";
+import SayfaBasligi from "../_components/sayfa/sayfa-basligi";
+import Bolum from "../_components/sayfa/bolum";
+import DurumGostergesi, { type DurumTonu } from "../_components/sayfa/durum-gostergesi";
+import IkiKartSecim from "../_components/iki-kart-secim";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await ceviri();
@@ -44,8 +48,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /*
-  DESTEK — TEK SAYFA, İKİ EŞİT KART (26.10.2026, Kaynaklar'la aynı karar:
-  dock'tan girince iki sekme çıkmasın).
+  DESTEK — TEK SAYFA (26.10.2026, Kaynaklar'la aynı karar: dock'tan
+  girince iki sekme çıkmasın). 4.4'teki düzen için return'ün üstündeki not.
 
   Eskiden iki ayrı sayfaydı (Uzman Desteği, Uygulama Desteği) ve her
   biri "bu sayfa öteki değildir" diye açıklama yazıyordu: öğrenci
@@ -187,29 +191,291 @@ export default async function DestekPage({
     return updateSupportRequestStatus(id, "in_progress");
   }
 
-  return (
-    <main className="dashboard-page gb gb-tek-ekran">
-      <section className="projects-header">
-        <div>
-          <h1>{t({ tr: "Destek", en: "Support" })}</h1>
-          <p>
-            {t({
-              tr: "Akademik bir konuda takıldıysanız uzmana, uygulamayla ilgili bir sorununuz varsa bize yazın.",
-              en: "Stuck on something academic? Ask an expert. Having a problem with the app? Write to us.",
-            })}
-          </p>
+  /*
+    SIGNATURE OS 4.4 (05.11.2026): KANALLAR ÜSTTE, TALEPLER TEK LİSTEDE.
+    Eskiden iki kart yan yanaydı (Uzman desteği, Uygulama desteği) ve her
+    talebin yazışması kendi kartının İÇİNDE açılıyordu: sayfa sabit
+    yükseklikte olduğu için kartlar kendi içinde kayıyor, uzun bir
+    yazışma listeyi aşağı itiyor ve iki kartta açık iki yazışma aynı anda
+    okunamıyordu. Şimdi üstte iki kanal (ne zaman hangisine yazılır, tek
+    düğme), altta personel kuyruğu ve Belge Kontrol'le aynı düzen
+    (IkiKartSecim): solda bütün taleplerim, sağda seçilenin ayrıntısı ve
+    yazışması. Yanıt gelen talepler başta; kapananlar sonda. Telefonda
+    seçim ayrıntıya kaydırır, başında "Listeye dön" var.
+  */
+  type Talep =
+    | { tur: "uzman"; r: ConsultancyRequest; mesajlar: ReturnType<typeof uzmanYazismasi>; yeni: boolean; kapali: boolean; zaman: string }
+    | { tur: "destek"; r: AppSupportRequest; mesajlar: ReturnType<typeof uzmanYazismasi>; yeni: boolean; kapali: boolean; zaman: string };
+  const talepler: Talep[] = talepSirasi([
+    ...uzmanTaleplerim.map((r): Talep => {
+      const mesajlar = uzmanYazismasi(r.id);
+      return { tur: "uzman", r, mesajlar, yeni: yanitGeldi(mesajlar) && r.status === "accepted", kapali: r.status === "completed" || r.status === "cancelled", zaman: r.created_at };
+    }),
+    ...destekTaleplerim.map((r): Talep => {
+      const mesajlar = destekYazismasi(r);
+      return { tur: "destek", r, mesajlar, yeni: yanitGeldi(mesajlar) && r.status !== "resolved", kapali: r.status === "resolved", zaman: r.created_at };
+    }),
+  ]);
+  const acikSayisi = talepler.filter((x) => !x.kapali).length;
+
+  const durumHapi = (x: Talep) =>
+    x.tur === "uzman"
+      ? { ton: x.yeni ? "success" : statusTone(x.r.status), ad: x.yeni ? t({ tr: "Yanıt var", en: "New reply" }) : UZMAN_DURUMU[x.r.status] ? t(UZMAN_DURUMU[x.r.status]) : x.r.status }
+      : {
+          ton: x.kapali ? statusTone(x.r.status) : x.yeni ? "success" : statusTone(x.r.status),
+          ad: x.kapali
+            ? t(DESTEK_DURUMU.resolved)
+            : x.yeni
+              ? t({ tr: "Yanıtlandı", en: "Answered" })
+              : t(DESTEK_DURUMU[x.r.status] ?? { tr: x.r.status, en: x.r.status }),
+        };
+
+  const uzmanFormu = (
+    <PanelDrawer
+      triggerLabel={t({ tr: "Uzmana sor", en: "Ask an expert" })}
+      triggerIcon={<GraduationCap size={15} aria-hidden="true" />}
+      triggerClassName="projects-primary-button button-compact"
+      kicker={t({ tr: "Uzman desteği", en: "Expert support" })}
+      title={t({ tr: "Uzmana sorun", en: "Ask an expert" })}
+      description={t({
+        tr: "Hangi konuda desteğe ihtiyacınız var, kısaca yazın. Talebiniz kurumunuzun uzmanına, kurumunuz yoksa ArvoLab ekibine iletilir.",
+        en: "Briefly describe what you need help with. Your request goes to your institution's expert, or to the ArvoLab team if you have no institution.",
+      })}
+    >
+      <ActionForm
+        className="project-form-grid"
+        action={createConsultancyRequest}
+        successMessage={t({ tr: "Talebiniz uzmanlara iletildi.", en: "Your request has been sent to the experts." })}
+      >
+        {calismalar.length > 0 ? (
+          <label>
+            <span>{t({ tr: "Çalışma", en: "Project" })}</span>
+            <select name="projectId" defaultValue={calismalar[0].id}>
+              <option value="">{t({ tr: "Çalışmaya bağlı değil", en: "Not linked to a project" })}</option>
+              {calismalar.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <label>
+            <span>{t({ tr: "Çalışma başlığı (isteğe bağlı)", en: "Project title (optional)" })}</span>
+            <input name="projectTitle" type="text" placeholder={t({ tr: "Örn. Eğitim Bilimleri Tezi", en: "E.g. Education Sciences Thesis" })} />
+          </label>
+        )}
+        <label>
+          <span>{t({ tr: "Konu", en: "Topic" })}</span>
+          <select name="requestType" defaultValue="analysis">
+            <option value="analysis">{t({ tr: "Analiz desteği", en: "Analysis support" })}</option>
+            <option value="statistics">{t({ tr: "İstatistik desteği", en: "Statistics support" })}</option>
+            <option value="methodology">{t({ tr: "Metodoloji danışmanlığı", en: "Methodology consulting" })}</option>
+            <option value="editing">{t({ tr: "Dil/biçim düzenleme", en: "Language/format editing" })}</option>
+            <option value="full_review">{t({ tr: "Kapsamlı inceleme", en: "Comprehensive review" })}</option>
+            <option value="ethics">{t({ tr: "Etik kurul başvurusu", en: "Ethics committee application" })}</option>
+            <option value="other">{t({ tr: "Diğer", en: "Other" })}</option>
+          </select>
+        </label>
+        <label className="project-form-full">
+          <span>{t({ tr: "Mesajınız", en: "Your message" })}</span>
+          <textarea name="message" rows={4} placeholder={t({ tr: "Nerede takıldığınızı kısaca anlatın", en: "Briefly describe where you are stuck" })} />
+        </label>
+        <div className="project-form-actions">
+          <button type="submit" className="projects-primary-button">
+            <Send size={16} aria-hidden="true" /> {t({ tr: "Gönder", en: "Send" })}
+          </button>
         </div>
-        {personel ? (
-          <nav className="segment-secici" aria-label={t({ tr: "Destek görünümü", en: "Support view" })}>
-            <Link href={kuyrukAdresi(erisilebilir[0])} aria-current={!taleplerim ? "page" : undefined}>
-              <Inbox size={15} aria-hidden="true" /> {t({ tr: "Kuyruklar", en: "Queues" })}
-            </Link>
-            <Link href={TALEPLERIM_ADRESI} aria-current={taleplerim ? "page" : undefined}>
-              <LifeBuoy size={15} aria-hidden="true" /> {t({ tr: "Kendi taleplerim", en: "My requests" })}
-            </Link>
-          </nav>
-        ) : null}
-      </section>
+      </ActionForm>
+    </PanelDrawer>
+  );
+
+  const destekFormu = (
+    <PanelDrawer
+      triggerLabel={t({ tr: "Bize yaz", en: "Write to us" })}
+      triggerIcon={<LifeBuoy size={15} aria-hidden="true" />}
+      triggerClassName="projects-filter-button button-compact"
+      kicker={t({ tr: "Uygulama desteği", en: "App support" })}
+      title={t({ tr: "Bize yazın", en: "Write to us" })}
+      description={t({
+        tr: "Sorununuzu ya da isteğinizi kısaca anlatın; yanıtımız Taleplerim listesinde görünür.",
+        en: "Briefly describe your problem or request; our reply will appear in My requests.",
+      })}
+    >
+      <ActionForm
+        className="project-form-grid"
+        action={createSupportRequest}
+        successMessage={t({ tr: "Destek talebiniz iletildi.", en: "Your support request has been sent." })}
+      >
+        <label className="project-form-full">
+          <span>{t({ tr: "Konu", en: "Subject" })}</span>
+          <input name="subject" type="text" placeholder={t({ tr: "Kısa bir başlık", en: "A short title" })} required />
+        </label>
+        <label>
+          <span>{t({ tr: "Kategori", en: "Category" })}</span>
+          <select name="category" defaultValue="other">
+            {Object.entries(KATEGORI).map(([deger, ad]) => (
+              <option key={deger} value={deger}>
+                {t(ad)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>{t({ tr: "Öncelik", en: "Priority" })}</span>
+          <select name="priority" defaultValue="normal">
+            {Object.entries(ONCELIK).map(([deger, ad]) => (
+              <option key={deger} value={deger}>
+                {t(ad)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="project-form-full">
+          <span>{t({ tr: "Mesajınız", en: "Your message" })}</span>
+          <textarea name="message" rows={5} placeholder={t({ tr: "Ne oldu, ne bekliyordunuz?", en: "What happened, and what did you expect?" })} required />
+        </label>
+        <div className="project-form-actions">
+          <button type="submit" className="projects-primary-button">
+            <Send size={16} aria-hidden="true" /> {t({ tr: "Gönder", en: "Send" })}
+          </button>
+        </div>
+      </ActionForm>
+    </PanelDrawer>
+  );
+
+  const ayrinti = (x: Talep) => {
+    const hap = durumHapi(x);
+    if (x.tur === "uzman") {
+      const r = x.r;
+      const yazma = uzmanYazismaDurumu(r.status, "talep_sahibi", dil);
+      // Uzmanın adı yazışmadan: bireysel öğrenci iç ekip uzmanının profilini okuyamaz.
+      const uzmanAdi = x.mesajlar.find((m) => m.taraf === "uzman")?.yazanAdi ?? null;
+      return (
+        <article className="destek-ayrinti">
+          <header className="destek-ayrinti-bas">
+            <span className="dashboard-kicker">{t({ tr: "Uzman desteği", en: "Expert support" })}</span>
+            <h2>{t(requestTypeLabel(r.request_type))}</h2>
+            <p className="destek-ayrinti-meta">
+              <DurumGostergesi ton={hap.ton as DurumTonu} ne={t({ tr: "Durum", en: "Status" })}>
+                {hap.ad}
+              </DurumGostergesi>
+              <span>{r.project_title || t({ tr: "Çalışmaya bağlı değil", en: "Not linked to a project" })}</span>
+              <span>{tarihSaat(r.created_at)}</span>
+            </p>
+          </header>
+          <Bolum id={`talep-${r.id}`} baslik={t({ tr: "Talebiniz", en: "Your request" })}>
+            <p className="destek-mesaj destek-mesaj-kutu">{r.message || t({ tr: "Ek mesaj yazılmadı.", en: "No additional message." })}</p>
+          </Bolum>
+          <Bolum
+            id={`yazisma-${r.id}`}
+            baslik={t({ tr: "Yazışma", en: "Conversation" })}
+            aciklama={
+              r.status === "open"
+                ? t({
+                    tr: "Talebiniz bir uzmanın üstlenmesini bekliyor. Bu arada ek bilgi yazabilirsiniz.",
+                    en: "Your request is waiting for an expert to take it on. Meanwhile, you can add more information.",
+                  })
+                : r.status === "accepted"
+                  ? uzmanAdi
+                    ? t({ tr: `${uzmanAdi} talebinizi üstlendi.`, en: `${uzmanAdi} has taken on your request.` })
+                    : t({ tr: "Bir uzman talebinizi üstlendi.", en: "An expert has taken on your request." })
+                  : undefined
+            }
+          >
+            <Yazisma
+              mesajlar={x.mesajlar}
+              benimTarafim="talep_sahibi"
+              okunamadi={yazismaOkunamadi}
+              gonder={yazma.yazabilir ? destekMesajiGonder.bind(null, "uzman", r.id) : null}
+              kapaliNedeni={yazma.yazabilir ? undefined : yazma.neden}
+              yerTutucu={t({
+                tr: "Uzmana yazın: ek bilgi, soru ya da dosyanın neresinde takıldığınız",
+                en: "Write to the expert: more information, a question, or where in the file you are stuck",
+              })}
+            />
+          </Bolum>
+          {r.status === "open" ? (
+            <ActionForm
+              action={iptal.bind(null, r.id)}
+              confirmMessage={t({ tr: "Bu destek talebini iptal etmek istediğinize emin misiniz?", en: "Are you sure you want to cancel this support request?" })}
+              successMessage={t({ tr: "Talep iptal edildi.", en: "The request was canceled." })}
+              className="destek-ayrinti-alt"
+            >
+              <button type="submit" className="link-button">
+                <XCircle size={14} aria-hidden="true" /> {t({ tr: "Talebi iptal et", en: "Cancel request" })}
+              </button>
+            </ActionForm>
+          ) : null}
+        </article>
+      );
+    }
+    const r = x.r;
+    return (
+      <article className="destek-ayrinti">
+        <header className="destek-ayrinti-bas">
+          <span className="dashboard-kicker">{t({ tr: "Uygulama desteği", en: "App support" })}</span>
+          <h2>{r.subject}</h2>
+          <p className="destek-ayrinti-meta">
+            <DurumGostergesi ton={hap.ton as DurumTonu} ne={t({ tr: "Durum", en: "Status" })}>
+              {hap.ad}
+            </DurumGostergesi>
+            <span>{KATEGORI[r.category] ? t(KATEGORI[r.category]) : r.category}</span>
+            {ONCELIK[r.priority] && r.priority !== "normal" ? <span>{t({ tr: `Öncelik: ${t(ONCELIK[r.priority])}`, en: `Priority: ${t(ONCELIK[r.priority])}` })}</span> : null}
+            <span>{tarihSaat(r.created_at)}</span>
+          </p>
+        </header>
+        {/* Kendi yazdığını da görsün: kullanıcı ne bildirdiğini hatırlamıyordu. */}
+        <Bolum id={`talep-${r.id}`} baslik={t({ tr: "Talebiniz", en: "Your request" })}>
+          <p className="destek-mesaj destek-mesaj-kutu">{r.message}</p>
+        </Bolum>
+        <Bolum
+          id={`yazisma-${r.id}`}
+          baslik={t({ tr: "Yazışma", en: "Conversation" })}
+          aciklama={
+            r.status === "resolved"
+              ? t({
+                  tr: "Talep çözüldü olarak işaretlendi. Sorun sürüyorsa yazın; talep yeniden açılır.",
+                  en: "This request was marked as resolved. If the problem continues, write here; the request will reopen.",
+                })
+              : !x.mesajlar.length
+                ? t({ tr: "Talebiniz alındı. Yanıtlandığında burada görünecek.", en: "Your request was received. The reply will appear here." })
+                : undefined
+          }
+        >
+          <Yazisma
+            mesajlar={x.mesajlar}
+            benimTarafim="talep_sahibi"
+            okunamadi={yazismaOkunamadi}
+            gonder={destekMesajiGonder.bind(null, "destek", r.id)}
+            yerTutucu={t({ tr: "Ek bilgi yazın ya da yanıta cevap verin", en: "Add more information or reply to the answer" })}
+          />
+        </Bolum>
+      </article>
+    );
+  };
+
+  return (
+    <main className="dashboard-page destek-sayfa">
+      <SayfaBasligi
+        baslik={t({ tr: "Destek", en: "Support" })}
+        aciklama={t({
+          tr: "Akademik bir konuda takıldıysanız uzmana, uygulamayla ilgili bir sorununuz varsa bize yazın.",
+          en: "Stuck on something academic? Ask an expert. Having a problem with the app? Write to us.",
+        })}
+        baglam={
+          personel ? (
+            <nav className="segment-secici" aria-label={t({ tr: "Destek görünümü", en: "Support view" })}>
+              <Link href={kuyrukAdresi(erisilebilir[0])} aria-current={!taleplerim ? "page" : undefined}>
+                <Inbox size={15} aria-hidden="true" /> {t({ tr: "Kuyruklar", en: "Queues" })}
+              </Link>
+              <Link href={TALEPLERIM_ADRESI} aria-current={taleplerim ? "page" : undefined}>
+                <LifeBuoy size={15} aria-hidden="true" /> {t({ tr: "Kendi taleplerim", en: "My requests" })}
+              </Link>
+            </nav>
+          ) : undefined
+        }
+      />
 
       {!taleplerim ? (
         <DestekKuyruklari
@@ -233,292 +499,112 @@ export default async function DestekPage({
           isleAl={isleAl}
         />
       ) : (
-      <section className="gb-sutunlar kaynaklar-ikili" aria-label={t({ tr: "Destek", en: "Support" })}>
-        <article className="gb-kart gb-sutun kayan-kart">
-          <header className="gb-kart-bas">
-            <div>
-              <h2>{t({ tr: "Uzman desteği", en: "Expert support" })}</h2>
-              <p>{t({ tr: "Yöntem, analiz, istatistik ya da yazım konusunda akademik danışmanlık.", en: "Academic guidance on methodology, analysis, statistics or writing." })}</p>
-            </div>
-            <PanelDrawer
-              triggerLabel={t({ tr: "Uzmana sor", en: "Ask an expert" })}
-              triggerIcon={<GraduationCap size={15} aria-hidden="true" />}
-              triggerClassName="projects-primary-button button-compact"
-              kicker={t({ tr: "Uzman desteği", en: "Expert support" })}
-              title={t({ tr: "Uzmana sorun", en: "Ask an expert" })}
-              description={t({
-                tr: "Hangi konuda desteğe ihtiyacınız var, kısaca yazın. Talebiniz kurumunuzun uzmanına, kurumunuz yoksa ArvoLab ekibine iletilir.",
-                en: "Briefly describe what you need help with. Your request goes to your institution's expert, or to the ArvoLab team if you have no institution.",
-              })}
-            >
-              <ActionForm
-                className="project-form-grid"
-                action={createConsultancyRequest}
-                successMessage={t({ tr: "Talebiniz uzmanlara iletildi.", en: "Your request has been sent to the experts." })}
-              >
-                {calismalar.length > 0 ? (
-                  <label>
-                    <span>{t({ tr: "Çalışma", en: "Project" })}</span>
-                    <select name="projectId" defaultValue={calismalar[0].id}>
-                      <option value="">{t({ tr: "Çalışmaya bağlı değil", en: "Not linked to a project" })}</option>
-                      {calismalar.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : (
-                  <label>
-                    <span>{t({ tr: "Çalışma başlığı (isteğe bağlı)", en: "Project title (optional)" })}</span>
-                    <input name="projectTitle" type="text" placeholder={t({ tr: "Örn. Eğitim Bilimleri Tezi", en: "E.g. Education Sciences Thesis" })} />
-                  </label>
-                )}
-                <label>
-                  <span>{t({ tr: "Konu", en: "Topic" })}</span>
-                  <select name="requestType" defaultValue="analysis">
-                    <option value="analysis">{t({ tr: "Analiz desteği", en: "Analysis support" })}</option>
-                    <option value="statistics">{t({ tr: "İstatistik desteği", en: "Statistics support" })}</option>
-                    <option value="methodology">{t({ tr: "Metodoloji danışmanlığı", en: "Methodology consulting" })}</option>
-                    <option value="editing">{t({ tr: "Dil/biçim düzenleme", en: "Language/format editing" })}</option>
-                    <option value="full_review">{t({ tr: "Kapsamlı inceleme", en: "Comprehensive review" })}</option>
-                    <option value="ethics">{t({ tr: "Etik kurul başvurusu", en: "Ethics committee application" })}</option>
-                    <option value="other">{t({ tr: "Diğer", en: "Other" })}</option>
-                  </select>
-                </label>
-                <label className="project-form-full">
-                  <span>{t({ tr: "Mesajınız", en: "Your message" })}</span>
-                  <textarea name="message" rows={4} placeholder={t({ tr: "Nerede takıldığınızı kısaca anlatın", en: "Briefly describe where you are stuck" })} />
-                </label>
-                <div className="project-form-actions">
-                  <button type="submit" className="projects-primary-button">
-                    <Send size={16} aria-hidden="true" /> {t({ tr: "Gönder", en: "Send" })}
-                  </button>
-                </div>
-              </ActionForm>
-            </PanelDrawer>
-          </header>
+        <>
+          <section className="destek-kanallar" aria-label={t({ tr: "Destek kanalları", en: "Support channels" })}>
+            <article className="destek-kanal">
+              <span className="destek-kanal-ikon" aria-hidden="true">
+                <GraduationCap size={18} />
+              </span>
+              <div className="destek-kanal-govde">
+                <h2>{t({ tr: "Uzman desteği", en: "Expert support" })}</h2>
+                <p>{t({ tr: "Yöntem, analiz, istatistik ya da yazım konusunda akademik danışmanlık.", en: "Academic guidance on methodology, analysis, statistics or writing." })}</p>
+              </div>
+              {uzmanFormu}
+            </article>
+            <article className="destek-kanal">
+              <span className="destek-kanal-ikon" aria-hidden="true">
+                <LifeBuoy size={18} />
+              </span>
+              <div className="destek-kanal-govde">
+                <h2>{t({ tr: "Uygulama desteği", en: "App support" })}</h2>
+                <p>
+                  {t({ tr: "Hata, erişim, ödeme sorunu ya da bir özellik isteği.", en: "A bug, an access or payment problem, or a feature request." })}{" "}
+                  {/* Yazmadan önce cevabı belki kılavuzda vardır (30.10.2026). */}
+                  <Link href="/dashboard/yardim" className="link-accent">
+                    <BookOpen size={13} aria-hidden="true" /> {t({ tr: "Önce Kullanım Kılavuzu'na bakın", en: "Check the User Guide first" })}
+                  </Link>
+                </p>
+              </div>
+              {destekFormu}
+            </article>
+          </section>
 
           {/* Okunamadı ile "talebiniz yok" ayrı: boş görünen öğrenci açık bir talebi yeniden açabilirdi. */}
-          {uzmanOkunamadi ? (
+          {uzmanOkunamadi || destekOkunamadi ? (
             <p className="alert" data-tone="danger" role="alert">
               {t({
-                tr: "Talepleriniz yüklenemedi. Açık bir talebiniz olabilir; yeni talep açmadan önce sayfayı yenileyin.",
-                en: "Your requests could not be loaded. You may have an open request; refresh the page before opening a new one.",
+                tr: "Taleplerinizin bir kısmı yüklenemedi. Açık bir talebiniz olabilir; yeni talep açmadan önce sayfayı yenileyin.",
+                en: "Some of your requests could not be loaded. You may have an open request; refresh the page before opening a new one.",
               })}
             </p>
-          ) : uzmanTaleplerim.length ? (
-            <ul className="kanit-kayitlari">
-              {uzmanTaleplerim.map((r) => {
-                const mesajlar = uzmanYazismasi(r.id);
-                const yeniYanit = yanitGeldi(mesajlar) && r.status === "accepted";
-                const yazma = uzmanYazismaDurumu(r.status, "talep_sahibi", dil);
-                // Uzmanın adı yazışmadan: bireysel öğrenci iç ekip uzmanının profilini okuyamaz.
-                const uzmanAdi = mesajlar.find((m) => m.taraf === "uzman")?.yazanAdi ?? null;
-                return (
-                <li key={r.id}>
-                  <details className="kanit-kayit" open={yeniYanit}>
-                    <summary>
-                      <span className="kanit-kayit-govde">
-                        <b>{t(requestTypeLabel(r.request_type))}</b>
-                        <small>
-                          {r.project_title || t({ tr: "Çalışmaya bağlı değil", en: "Not linked to a project" })} · {tarihSaat(r.created_at)}
-                        </small>
-                      </span>
-                      <span className="status-pill" data-tone={yeniYanit ? "success" : statusTone(r.status)}>
-                        {yeniYanit ? t({ tr: "Yanıt var", en: "New reply" }) : UZMAN_DURUMU[r.status] ? t(UZMAN_DURUMU[r.status]) : r.status}
-                      </span>
-                    </summary>
-                    <div className="kanit-kayit-ic">
-                      <p className="destek-mesaj">{r.message || t({ tr: "Ek mesaj yazılmadı.", en: "No additional message." })}</p>
-                      {r.status === "open" ? (
-                        <p className="hint">
-                          {t({
-                            tr: "Talebiniz bir uzmanın üstlenmesini bekliyor. Bu arada ek bilgi yazabilirsiniz.",
-                            en: "Your request is waiting for an expert to take it on. Meanwhile, you can add more information.",
-                          })}
-                        </p>
-                      ) : r.status === "accepted" ? (
-                        <p className="hint">
-                          {uzmanAdi
-                            ? t({ tr: `${uzmanAdi} talebinizi üstlendi.`, en: `${uzmanAdi} has taken on your request.` })
-                            : t({ tr: "Bir uzman talebinizi üstlendi.", en: "An expert has taken on your request." })}{" "}
-                          {t({ tr: "Yazışma aşağıda.", en: "The conversation is below." })}
-                        </p>
-                      ) : null}
-                      <Yazisma
-                        mesajlar={mesajlar}
-                        benimTarafim="talep_sahibi"
-                        okunamadi={yazismaOkunamadi}
-                        gonder={yazma.yazabilir ? destekMesajiGonder.bind(null, "uzman", r.id) : null}
-                        kapaliNedeni={yazma.yazabilir ? undefined : yazma.neden}
-                        yerTutucu={t({
-                          tr: "Uzmana yazın: ek bilgi, soru ya da dosyanın neresinde takıldığınız",
-                          en: "Write to the expert: more information, a question, or where in the file you are stuck",
-                        })}
-                      />
-                      {r.status === "open" ? (
-                        <ActionForm
-                          action={iptal.bind(null, r.id)}
-                          confirmMessage={t({ tr: "Bu destek talebini iptal etmek istediğinize emin misiniz?", en: "Are you sure you want to cancel this support request?" })}
-                          successMessage={t({ tr: "Talep iptal edildi.", en: "The request was canceled." })}
-                        >
-                          <button type="submit" className="link-button">
-                            <XCircle size={14} aria-hidden="true" /> {t({ tr: "Talebi iptal et", en: "Cancel request" })}
-                          </button>
-                        </ActionForm>
-                      ) : null}
-                    </div>
-                  </details>
+          ) : null}
+
+          <IkiKartSecim
+            key={talepler[0]?.r.id ?? "bos"}
+            sayfa
+            solBaslik={
+              talepler.length
+                ? t({ tr: `Taleplerim · ${acikSayisi} açık`, en: `My requests · ${acikSayisi} open` })
+                : t({ tr: "Taleplerim", en: "My requests" })
+            }
+            solAlt={
+              talepler.length ? null : (
+                <BosDurum
+                  kompakt
+                  ikon={Inbox}
+                  aciklama={t({
+                    tr: "Henüz talebiniz yok. Akademik bir sorunuz için “Uzmana sor”, uygulamayla ilgili bir sorun için “Bize yaz”.",
+                    en: "You have no requests yet. Use “Ask an expert” for an academic question, “Write to us” for a problem with the app.",
+                  })}
+                />
+              )
+            }
+            secenekler={talepler.map((x) => {
+              const hap = durumHapi(x);
+              return {
+                id: x.r.id,
+                satir: (
+                  <>
+                    <span className="destek-satir-ikon" aria-hidden="true">
+                      {x.tur === "uzman" ? <GraduationCap size={16} /> : <LifeBuoy size={16} />}
+                    </span>
+                    <span className="kanit-kayit-govde" data-kapali={x.kapali ? "true" : undefined}>
+                      <b>{x.tur === "uzman" ? t(requestTypeLabel(x.r.request_type)) : x.r.subject}</b>
+                      <small>
+                        {x.tur === "uzman" ? t({ tr: "Uzman", en: "Expert" }) : t({ tr: "Uygulama", en: "App" })} ·{" "}
+                        {x.tur === "uzman"
+                          ? x.r.project_title || t({ tr: "Çalışmaya bağlı değil", en: "Not linked to a project" })
+                          : KATEGORI[x.r.category]
+                            ? t(KATEGORI[x.r.category])
+                            : x.r.category}{" "}
+                        · {tarihSaat(x.r.created_at)}
+                      </small>
+                    </span>
+                    <DurumGostergesi ton={hap.ton as DurumTonu}>{hap.ad}</DurumGostergesi>
+                  </>
+                ),
+                ayrinti: ayrinti(x),
+              };
+            })}
+            bos={
+              <ol className="destek-nasil">
+                <li>
+                  <b>{t({ tr: "Yazın", en: "Write" })}</b>
+                  <small>{t({ tr: "Akademik soru uzmana, uygulama sorunu bize.", en: "Academic questions to an expert, app problems to us." })}</small>
                 </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <BosDurum
-              kompakt
-              ikon={GraduationCap}
-              aciklama={t({
-                tr: "Henüz uzman talebiniz yok. Yöntem, analiz ya da yazımda takıldığınızda “Uzmana sor” ile yazın.",
-                en: "You have no expert requests yet. When you get stuck on methodology, analysis or writing, write via “Ask an expert”.",
-              })}
-            />
-          )}
+                <li>
+                  <b>{t({ tr: "Yanıt burada görünür", en: "The reply appears here" })}</b>
+                  <small>{t({ tr: "Yanıt gelen talep listenin başına çıkar.", en: "Requests with a reply move to the top of the list." })}</small>
+                </li>
+                <li>
+                  <b>{t({ tr: "Yazışarak sürdürün", en: "Keep the conversation going" })}</b>
+                  <small>{t({ tr: "Çözülen talebe yazarsanız talep yeniden açılır.", en: "Writing to a resolved request reopens it." })}</small>
+                </li>
+              </ol>
+            }
+          />
           <PartnerSeridi />
-        </article>
-
-        <article className="gb-kart gb-sutun kayan-kart">
-          <header className="gb-kart-bas">
-            <div>
-              <h2>{t({ tr: "Uygulama desteği", en: "App support" })}</h2>
-              <p>{t({ tr: "Hata, erişim, ödeme sorunu ya da bir özellik isteği.", en: "A bug, an access or payment problem, or a feature request." })}</p>
-              {/* Yazmadan önce cevabı belki kılavuzda vardır (30.10.2026). */}
-              <p className="text-sm">
-                <Link href="/dashboard/yardim">
-                  <BookOpen size={13} aria-hidden="true" /> {t({ tr: "Kullanım Kılavuzu", en: "User Guide" })}
-                </Link>
-              </p>
-            </div>
-            <PanelDrawer
-              triggerLabel={t({ tr: "Bize yaz", en: "Write to us" })}
-              triggerIcon={<LifeBuoy size={15} aria-hidden="true" />}
-              triggerClassName="projects-primary-button button-compact"
-              kicker={t({ tr: "Uygulama desteği", en: "App support" })}
-              title={t({ tr: "Bize yazın", en: "Write to us" })}
-              description={t({
-                tr: "Sorununuzu ya da isteğinizi kısaca anlatın; yanıtımız bu kartta görünür.",
-                en: "Briefly describe your problem or request; our reply will appear on this card.",
-              })}
-            >
-              <ActionForm
-                className="project-form-grid"
-                action={createSupportRequest}
-                successMessage={t({ tr: "Destek talebiniz iletildi.", en: "Your support request has been sent." })}
-              >
-                <label className="project-form-full">
-                  <span>{t({ tr: "Konu", en: "Subject" })}</span>
-                  <input name="subject" type="text" placeholder={t({ tr: "Kısa bir başlık", en: "A short title" })} required />
-                </label>
-                <label>
-                  <span>{t({ tr: "Kategori", en: "Category" })}</span>
-                  <select name="category" defaultValue="other">
-                    {Object.entries(KATEGORI).map(([deger, ad]) => (
-                      <option key={deger} value={deger}>
-                        {t(ad)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>{t({ tr: "Öncelik", en: "Priority" })}</span>
-                  <select name="priority" defaultValue="normal">
-                    {Object.entries(ONCELIK).map(([deger, ad]) => (
-                      <option key={deger} value={deger}>
-                        {t(ad)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="project-form-full">
-                  <span>{t({ tr: "Mesajınız", en: "Your message" })}</span>
-                  <textarea name="message" rows={5} placeholder={t({ tr: "Ne oldu, ne bekliyordunuz?", en: "What happened, and what did you expect?" })} required />
-                </label>
-                <div className="project-form-actions">
-                  <button type="submit" className="projects-primary-button">
-                    <Send size={16} aria-hidden="true" /> {t({ tr: "Gönder", en: "Send" })}
-                  </button>
-                </div>
-              </ActionForm>
-            </PanelDrawer>
-          </header>
-
-          {destekOkunamadi ? (
-            <p className="alert" data-tone="danger" role="alert">
-              {t({
-                tr: "Talepleriniz yüklenemedi. Açık bir talebiniz olabilir; yeni talep açmadan önce sayfayı yenileyin.",
-                en: "Your requests could not be loaded. You may have an open request; refresh the page before opening a new one.",
-              })}
-            </p>
-          ) : destekTaleplerim.length ? (
-            <ul className="kanit-kayitlari">
-              {destekTaleplerim.map((r) => {
-                const mesajlar = destekYazismasi(r);
-                const yanitlandi = yanitGeldi(mesajlar);
-                return (
-                  <li key={r.id}>
-                    <details className="kanit-kayit" open={yanitlandi && r.status !== "resolved"}>
-                      <summary>
-                        <span className="kanit-kayit-govde">
-                          <b>{r.subject}</b>
-                          <small>
-                            {KATEGORI[r.category] ? t(KATEGORI[r.category]) : r.category} · {tarihSaat(r.created_at)}
-                          </small>
-                        </span>
-                        <span className="status-pill" data-tone={yanitlandi ? "success" : statusTone(r.status)}>
-                          {r.status === "resolved"
-                            ? t(DESTEK_DURUMU.resolved)
-                            : yanitlandi
-                              ? t({ tr: "Yanıtlandı", en: "Answered" })
-                              : t(DESTEK_DURUMU[r.status] ?? { tr: r.status, en: r.status })}
-                        </span>
-                      </summary>
-                      <div className="kanit-kayit-ic">
-                        {/* Kendi yazdığını da görsün: kullanıcı ne bildirdiğini hatırlamıyordu. */}
-                        <p className="destek-mesaj">{r.message}</p>
-                        {!mesajlar.length ? <p className="hint">{t({ tr: "Talebiniz alındı. Yanıtlandığında burada görünecek.", en: "Your request was received. The reply will appear here." })}</p> : null}
-                        {r.status === "resolved" ? (
-                          <p className="hint">
-                            {t({
-                              tr: "Talep çözüldü olarak işaretlendi. Sorun sürüyorsa yazın; talep yeniden açılır.",
-                              en: "This request was marked as resolved. If the problem continues, write here; the request will reopen.",
-                            })}
-                          </p>
-                        ) : null}
-                        <Yazisma
-                          mesajlar={mesajlar}
-                          benimTarafim="talep_sahibi"
-                          okunamadi={yazismaOkunamadi}
-                          gonder={destekMesajiGonder.bind(null, "destek", r.id)}
-                          yerTutucu={t({ tr: "Ek bilgi yazın ya da yanıta cevap verin", en: "Add more information or reply to the answer" })}
-                        />
-                      </div>
-                    </details>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <BosDurum
-              kompakt
-              ikon={LifeBuoy}
-              aciklama={t({
-                tr: "Henüz destek talebiniz yok. Uygulamada bir sorun yaşarsanız ya da bir özellik isterseniz “Bize yaz” ile iletin.",
-                en: "You have no support requests yet. If you run into a problem with the app or want a feature, send it via “Write to us”.",
-              })}
-            />
-          )}
-        </article>
-      </section>
+        </>
       )}
     </main>
   );

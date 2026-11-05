@@ -75,3 +75,15 @@ export function yazanEtiketi(m: YazismaMesaji, benimTarafim: Taraf, dil: Dil = "
   const rol = m.taraf === "uzman" ? (en ? "Expert" : "Uzman") : en ? "Support team" : "Destek ekibi";
   return m.yazanAdi ? `${m.yazanAdi} · ${rol}` : rol;
 }
+
+/*
+  "Taleplerim" listesinin sırası (Signature OS 4.4, Destek ekranı):
+  açık talepler kapananlardan önce; açıkların içinde yanıt gelenler
+  başta; aynı gruptakiler yeniden eskiye. Liste açılınca ilk talep seçili
+  geldiği için bu sıra aynı zamanda "ekran açılınca ne görünür" kararı:
+  yanıt bekleyen öğrenci yazışmayı aramadan görür. Eskiden iki ayrı
+  kartta, her birinde açılış sırasıyla duruyordu.
+*/
+export function talepSirasi<T extends { kapali: boolean; yeni: boolean; zaman: string }>(talepler: T[]): T[] {
+  return [...talepler].sort((a, b) => Number(a.kapali) - Number(b.kapali) || Number(b.yeni) - Number(a.yeni) || b.zaman.localeCompare(a.zaman));
+}

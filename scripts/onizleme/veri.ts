@@ -101,8 +101,28 @@ export const ORNEK: Record<string, Record<string, unknown>[]> = {
   calisma_kilavuzu: [],
   thesis_guidelines: [],
   etik_kurul: [],
-  consultancy_requests: [],
-  app_support_requests: [],
+  /*
+    DESTEK (Signature OS 4.4, 05.11.2026): her durumdan bir örnek. Eskiden
+    iki tablo da boştu; Destek ekranı önizlemede yalnızca boş hâliyle
+    görülebiliyordu, yazışma ve durum hapları hiç çizilmiyordu.
+    ONIZLEME_BOS=1 boş hâli yine gösterir (sahte-istemci.ts BOS_TABLOLAR).
+  */
+  consultancy_requests: [
+    { id: "u1", project_id: PROJE, project_title: "TÜRKİYE'DE ENFLASYON VE İŞSİZLİK İLİŞKİSİNİN EKONOMETRİK ANALİZİ (2000–2025)", requested_by: KULLANICI, request_type: "analysis", message: "ARDL sınır testinde gecikme uzunluğunu nasıl seçmeliyim? AIC ve SIC farklı sonuç veriyor.", status: "accepted", assigned_expert_id: "00000000-0000-4000-8000-0000000000e1", created_at: gunOnce(3) },
+    { id: "u2", project_id: null, project_title: null, requested_by: KULLANICI, request_type: "editing", message: "Özet bölümünün İngilizce çevirisini kontrol eder misiniz?", status: "completed", assigned_expert_id: "00000000-0000-4000-8000-0000000000e1", created_at: gunOnce(18) },
+  ],
+  app_support_requests: [
+    { id: "d1", requested_by: KULLANICI, subject: "Word çıktısında dipnotlar kayıyor", message: "Dışa aktarılan dosyada 3. bölümden sonra dipnot numaraları bir kayıyor.", category: "bug", priority: "high", status: "in_progress", created_at: gunOnce(2), admin_note: null, answered_at: null },
+    { id: "d2", requested_by: KULLANICI, subject: "Fatura bilgisini güncelleme", message: "Fatura adresimi nereden değiştirebilirim?", category: "billing", priority: "normal", status: "open", created_at: gunOnce(0), admin_note: null, answered_at: null },
+    { id: "d3", requested_by: KULLANICI, subject: "Kaynak içe aktarımı", message: "BibTeX dosyasındaki Türkçe karakterler bozuk geliyordu.", category: "other", priority: "low", status: "resolved", created_at: gunOnce(12), admin_note: null, answered_at: null },
+  ],
+  destek_mesajlari: [
+    { id: "m1", uzman_talebi_id: "u1", destek_talebi_id: null, taraf: "uzman", yazan_adi: "Dr. Selin Aksoy", metin: "Merhaba Deniz, örneklem 26 yıllık olduğu için SIC'i öneririm; AIC küçük örneklemde fazla gecikme seçme eğiliminde. Seçtiğiniz gecikmeyle otokorelasyon testini de ekleyin.", created_at: gunOnce(2) },
+    { id: "m2", uzman_talebi_id: "u1", destek_talebi_id: null, taraf: "talep_sahibi", yazan_adi: "Deniz Yıldız", metin: "Teşekkürler, SIC ile (1, 2) çıktı. Breusch-Godfrey sonucunu da ekledim.", created_at: gunOnce(1) },
+    { id: "m3", uzman_talebi_id: "u1", destek_talebi_id: null, taraf: "uzman", yazan_adi: "Dr. Selin Aksoy", metin: "Güzel. Bulgular tablosuna testin p değerini yazmayı unutmayın.", created_at: gunOnce(0) },
+    { id: "m4", uzman_talebi_id: null, destek_talebi_id: "d1", taraf: "destek", yazan_adi: "ArvoLab Destek", metin: "Bildiriminiz için teşekkürler. Sorunu yeniden ürettik; düzeltme bu hafta içinde yayında olacak.", created_at: gunOnce(1) },
+    { id: "m5", uzman_talebi_id: null, destek_talebi_id: "d3", taraf: "destek", yazan_adi: "ArvoLab Destek", metin: "İçe aktarma artık UTF-8 dışındaki kodlamaları da tanıyor. Dosyanızı yeniden yükleyebilirsiniz.", created_at: gunOnce(11) },
+  ],
   organizations: [],
 };
 
