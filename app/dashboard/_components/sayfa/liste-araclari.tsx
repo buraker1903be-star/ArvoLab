@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { ArrowUpDown, Search } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 
 /*
@@ -51,7 +51,9 @@ export default function ListeAraclari<K extends string, S extends string>({
         </label>
         {siralamalar?.length && sira && onSira ? (
           <label className="liste-sirala">
-            <span>{t({ tr: "Sırala", en: "Sort" })}</span>
+            {/* Telefonda yazı yerine simge (sayfa-standardi.css); erişilebilir ad yazıdan gelir. */}
+            <ArrowUpDown size={15} aria-hidden="true" className="liste-sirala-simge" />
+            <span className="liste-sirala-metin">{t({ tr: "Sırala", en: "Sort" })}</span>
             <select className="compact-select" value={sira} onChange={(e) => onSira(e.target.value as S)}>
               {siralamalar.map((s) => (
                 <option key={s.kod} value={s.kod}>

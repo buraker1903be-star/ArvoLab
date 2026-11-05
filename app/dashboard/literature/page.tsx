@@ -243,7 +243,7 @@ export default async function KaynaklarPage({
             {/* Kart başlığı yalnızca ad (4.2): sayıların hepsi hemen alttaki süzgeç
                 düğmelerinde; "3 kaynak · 1 okunacak…" alt başlığı onları tekrar
                 ediyordu. Eylemler sayfa başlığında. */}
-            <header className="gb-kart-bas">
+            <header className="gb-kart-bas kaynak-kart-bas">
               <h2>{t({ tr: "Literatür", en: "Literature" })}</h2>
             </header>
             {/* DOI ile ekleme görünür (Phase 3): eskiden "İçe aktar" penceresinin içindeydi. */}
