@@ -1316,9 +1316,6 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .kanit-zincir-ozet { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .kanit-zincir-ozet li { padding: 3px 8px; border-radius: var(--r-pill); background: var(--primary-soft); color: var(--primary-ink); font-size: var(--fs-micro); font-weight: 600; }
 .kanit-zincir-ozet li + li::before { content: "→"; margin-right: 6px; color: var(--ink-soft); }
-.kanit-bos { display: grid; place-content: center; gap: 6px; flex: 1 1 auto; max-width: 520px; margin: 0 auto; text-align: center; }
-.kanit-bos b { color: var(--ink); }
-.kanit-ikili .kanit-matris-sarici { box-shadow: none; }
 /* Dar kartta iddia ve kaynak sütunları ikişer sözcükte kırılıyordu; tablo yatay kayar. */
 .kanit-ikili .kanit-matris :is(th, td):first-child { min-width: 260px; }
 .kanit-ikili .kanit-matris :is(th, td):nth-child(3) { min-width: 220px; }

@@ -3,9 +3,14 @@ import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { kanitMatrisiOku } from "@/app/actions/kanit";
 import { kanitAsistaniAcik } from "@/app/actions/ai-kanit";
-import { DESTEK_ETIKETI_METIN, DESTEK_TONU, KUNYE_ETIKETI_METIN, gecerliDestek, matrisOzeti, sonrakiAdim } from "@/lib/kanit/durum";
+import { DESTEK_ETIKETI_METIN, DESTEK_TONU, KUNYE_ETIKETI_METIN, gecerliDestek, matrisOzeti, sonrakiAdim, type DestekDuzeyi, type KunyeDurumu } from "@/lib/kanit/durum";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
+import BosDurum from "@/app/dashboard/_components/bos-durum";
+import SayfaBasligi from "@/app/dashboard/_components/sayfa/sayfa-basligi";
+import SayfaEylemleri from "@/app/dashboard/_components/sayfa/sayfa-eylemleri";
+import VeriTablosu from "@/app/dashboard/_components/sayfa/veri-tablosu";
+import DurumGostergesi from "@/app/dashboard/_components/sayfa/durum-gostergesi";
 import CalismaSekmeleri from "../calisma-sekmeleri";
 import { IddiaEkleFormu, KanitPenceresi, kunyeMetni } from "./kanit-parcalari";
 
@@ -20,6 +25,10 @@ import { IddiaEkleFormu, KanitPenceresi, kunyeMetni } from "./kanit-parcalari";
   nihai akademik hüküm değildir; sayfanın başında ve her otomatik hükmün
   yanında bu söyleniyor.
 */
+
+/* Sıralamada "bakılması gereken önce" (artan): en zayıf hüküm başta. */
+const DESTEK_SIRASI: DestekDuzeyi[] = ["celisiyor", "dogrulanamadi", "degerlendirilmedi", "dolayli", "kismen", "dogrudan"];
+const KUNYE_SIRASI: KunyeDurumu[] = ["uyusmuyor", "dogrulanamadi", "kismen", "bakilmadi", "dogrulandi"];
 
 export default async function KanitMatrisiSayfasi({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -50,33 +59,36 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
   */
   return (
     <main className="dashboard-page gb gb-tek-ekran">
-      <section className="projects-header calisma-basligi">
-        <div>
-          <span className="dashboard-kicker">{t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}</span>
-          <h1 title={calisma.title}>{calisma.title}</h1>
-          <p>
-            {t({
-              tr: "Önemli iddialarınızı, dayandıkları kaynakları ve kanıt durumlarını tek yerde izleyin. Destek düzeyleri otomatik sistemin ya da sizin değerlendirmenizdir; nihai akademik hüküm değildir.",
-              en: "Track your key claims, the sources they rely on and their evidence status in one place. Support levels are assessments by the automated system or by you; they are not a final academic judgment.",
-            })}
-          </p>
-        </div>
-        <div className="merkez-ust-eylemler">
-          <PanelDrawer
-            triggerLabel={t({ tr: "İddia ekle", en: "Add claim" })}
-            triggerIcon={<Plus size={16} aria-hidden="true" />}
-            triggerClassName="projects-primary-button"
-            kicker={t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}
-            title={t({ tr: "Yeni iddia", en: "New claim" })}
-            description={t({
-              tr: "Çalışmanızda kaynakla desteklenmesi gereken bir iddia. Kaynak listenizden bağlayın; künye ve kanıt kontrolleri ayrı ayrı yapılır.",
-              en: "A claim in your work that needs to be supported by a source. Link it from your source list; reference and evidence checks are done separately.",
-            })}
-          >
-            <IddiaEkleFormu projectId={id} kaynaklar={kaynaklar} />
-          </PanelDrawer>
-        </div>
-      </section>
+      {/* Ortak sayfa başlığı (Signature OS 4.1). Tek birincil eylem: "İddia ekle". */}
+      <SayfaBasligi
+        sinif="calisma-basligi"
+        ust={t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}
+        baslik={calisma.title}
+        baslikTitle={calisma.title}
+        aciklama={t({
+          tr: "Önemli iddialarınız, dayandıkları kaynaklar ve kanıt durumları. Destek düzeyleri otomatik sistemin ya da sizin değerlendirmenizdir; nihai akademik hüküm değildir.",
+          en: "Your key claims, the sources they rely on and their evidence status. Support levels are assessments by the automated system or by you; they are not a final academic judgment.",
+        })}
+        eylemler={
+          <SayfaEylemleri
+            birincil={
+              <PanelDrawer
+                triggerLabel={t({ tr: "İddia ekle", en: "Add claim" })}
+                triggerIcon={<Plus size={16} aria-hidden="true" />}
+                triggerClassName="projects-primary-button"
+                kicker={t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}
+                title={t({ tr: "Yeni iddia", en: "New claim" })}
+                description={t({
+                  tr: "Çalışmanızda kaynakla desteklenmesi gereken bir iddia. Kaynak listenizden bağlayın; künye ve kanıt kontrolleri ayrı ayrı yapılır.",
+                  en: "A claim in your work that needs to be supported by a source. Link it from your source list; reference and evidence checks are done separately.",
+                })}
+              >
+                <IddiaEkleFormu projectId={id} kaynaklar={kaynaklar} />
+              </PanelDrawer>
+            }
+          />
+        }
+      />
 
       <CalismaSekmeleri calisma={calisma} aktif="kanit" />
 
@@ -148,65 +160,79 @@ export default async function KanitMatrisiSayfasi({ params }: { params: Promise<
             </div>
           </header>
           {kayitlar.length === 0 ? (
-            <div className="gb-bos kanit-bos">
-              <b>{t({ tr: "Matriste henüz iddia yok", en: "No claims in the matrix yet" })}</b>
-              <span>
-                {t({
-                  tr: "Çalışmanızın kaynak gerektiren temel iddialarını sağ üstteki “İddia ekle” ile ekleyin. Her iddia için künye doğrulaması, kaynaktan incelenen metin ve iddia–kanıt uyumu ayrı ayrı kaydedilir.",
-                  en: "Add the key claims in your work that need sources with “Add claim” at the top right. For each claim, reference verification, the text reviewed from the source and claim–evidence fit are recorded separately.",
-                })}
-              </span>
-            </div>
+            /* Boş durum (4.1): yönü yazan cümle ("sağ üstteki") kalktı —
+               telefonda düğme sağ üstte değil, başlığın altında. */
+            <BosDurum
+              kompakt
+              baslik={t({ tr: "Matriste henüz iddia yok", en: "No claims in the matrix yet" })}
+              aciklama={t({
+                tr: "Çalışmanızın kaynak gerektiren temel iddialarını “İddia ekle” ile ekleyin. Her iddia için künye doğrulaması, kaynaktan incelenen metin ve iddia–kanıt uyumu ayrı ayrı kaydedilir.",
+                en: "Add the key claims in your work that need sources with “Add claim”. For each claim, reference verification, the text reviewed from the source and claim–evidence fit are recorded separately.",
+              })}
+            />
           ) : (
-            <div className="kanit-matris-sarici">
-              <table className="kanit-matris">
-                <thead>
-                  <tr>
-                    <th>{t({ tr: "İddia", en: "Claim" })}</th>
-                    <th>{t({ tr: "Bölüm", en: "Section" })}</th>
-                    <th>{t({ tr: "Kaynak", en: "Source" })}</th>
-                    <th>{t({ tr: "Kaynak doğrulaması", en: "Source verification" })}</th>
-                    <th>{t({ tr: "Kanıt konumu", en: "Evidence location" })}</th>
-                    <th>{t({ tr: "Destek düzeyi", en: "Support level" })}</th>
-                    <th>{t({ tr: "Çelişen çalışmalar", en: "Contradicting studies" })}</th>
-                    <th>{t({ tr: "Eksik kanıt", en: "Missing evidence" })}</th>
-                    <th>{t({ tr: "Önerilen düzeltme", en: "Suggested fix" })}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {kayitlar.map((k) => {
-                    const destek = gecerliDestek(k);
-                    return (
-                      <tr key={k.id}>
-                        <td>
-                          <KanitPenceresi
-                            kayit={k}
-                            kaynak={kaynakHaritasi.get(k.kaynak_id ?? "") ?? null}
-                            projectId={id}
-                            asistanAcik={asistanAcik}
-                            kaynaklar={kaynaklar}
-                          />
-                        </td>
-                        <td>{k.bolum ?? "—"}</td>
-                        <td>
-                          {kunyeMetni(kaynakHaritasi.get(k.kaynak_id ?? "")) ??
-                            (k.kaynak_id ? t({ tr: "Erişilemiyor", en: "Not accessible" }) : t({ tr: "Bağlanmadı", en: "Not linked" }))}
-                        </td>
-                        <td>{t(KUNYE_ETIKETI_METIN[k.kunye_durumu])}</td>
-                        <td>{k.alinti ? (k.konum ?? t({ tr: "Konum belirtilmedi", en: "Location not specified" })) : "—"}</td>
-                        <td>
-                          <span className="status-pill" data-tone={DESTEK_TONU[destek]}>{t(DESTEK_ETIKETI_METIN[destek])}</span>
-                          {k.degerlendiren === "asistan" && <small>{t({ tr: "otomatik", en: "automatic" })}</small>}
-                        </td>
-                        <td>{k.celisen ?? "—"}</td>
-                        <td>{k.eksik_kanit ?? "—"}</td>
-                        <td>{sonrakiAdim(k, dil)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            /*
+              Ortak veri tablosu (4.1). Eskiden tablo 960 piksele sabitti ve
+              telefonda yalnızca "İddia" ile "Bölüm" görünüyordu; destek
+              düzeyi, eksik kanıt ve önerilen düzeltme ekranın dışında
+              kalıyordu. Telefonda artık her iddia, dokuz sütunun hepsi
+              başlıklarıyla bir kart. Sıralama değerleri "bakılması
+              gereken önce": artan sırada çelişen ve doğrulanamayan başta.
+            */
+            <VeriTablosu
+              etiket={t({ tr: "Kanıt matrisi", en: "Evidence matrix" })}
+              sutunlar={[
+                { anahtar: "iddia", baslik: t({ tr: "İddia", en: "Claim" }), birincil: true, siralanabilir: true },
+                { anahtar: "bolum", baslik: t({ tr: "Bölüm", en: "Section" }), siralanabilir: true },
+                { anahtar: "kaynak", baslik: t({ tr: "Kaynak", en: "Source" }), siralanabilir: true },
+                { anahtar: "kunye", baslik: t({ tr: "Kaynak doğrulaması", en: "Source verification" }), siralanabilir: true },
+                { anahtar: "konum", baslik: t({ tr: "Kanıt konumu", en: "Evidence location" }) },
+                { anahtar: "destek", baslik: t({ tr: "Destek düzeyi", en: "Support level" }), siralanabilir: true },
+                { anahtar: "celisen", baslik: t({ tr: "Çelişen çalışmalar", en: "Contradicting studies" }) },
+                { anahtar: "eksik", baslik: t({ tr: "Eksik kanıt", en: "Missing evidence" }) },
+                { anahtar: "duzeltme", baslik: t({ tr: "Önerilen düzeltme", en: "Suggested fix" }) },
+              ]}
+              satirlar={kayitlar.map((k) => {
+                const destek = gecerliDestek(k);
+                const kunye = kunyeMetni(kaynakHaritasi.get(k.kaynak_id ?? ""));
+                return {
+                  id: k.id,
+                  degerler: {
+                    iddia: k.iddia,
+                    bolum: k.bolum,
+                    kaynak: kunye,
+                    kunye: KUNYE_SIRASI.indexOf(k.kunye_durumu),
+                    destek: DESTEK_SIRASI.indexOf(destek),
+                  },
+                  hucreler: {
+                    iddia: (
+                      <KanitPenceresi
+                        kayit={k}
+                        kaynak={kaynakHaritasi.get(k.kaynak_id ?? "") ?? null}
+                        projectId={id}
+                        asistanAcik={asistanAcik}
+                        kaynaklar={kaynaklar}
+                      />
+                    ),
+                    bolum: k.bolum ?? "—",
+                    kaynak: kunye ?? (k.kaynak_id ? t({ tr: "Erişilemiyor", en: "Not accessible" }) : t({ tr: "Bağlanmadı", en: "Not linked" })),
+                    kunye: t(KUNYE_ETIKETI_METIN[k.kunye_durumu]),
+                    konum: k.alinti ? (k.konum ?? t({ tr: "Konum belirtilmedi", en: "Location not specified" })) : "—",
+                    destek: (
+                      <>
+                        <DurumGostergesi ton={DESTEK_TONU[destek]} ne={t({ tr: "Destek düzeyi", en: "Support level" })}>
+                          {t(DESTEK_ETIKETI_METIN[destek])}
+                        </DurumGostergesi>
+                        {k.degerlendiren === "asistan" && <small>{t({ tr: "otomatik", en: "automatic" })}</small>}
+                      </>
+                    ),
+                    celisen: k.celisen ?? "—",
+                    eksik: k.eksik_kanit ?? "—",
+                    duzeltme: sonrakiAdim(k, dil),
+                  },
+                };
+              })}
+            />
           )}
         </article>
       </section>

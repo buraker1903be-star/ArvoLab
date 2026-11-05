@@ -82,9 +82,14 @@
 }
 
 /* ---------- Veri tablosu ---------- */
-.veri-tablo-kap { display: grid; gap: 6px; min-width: 0; }
+.veri-tablo-kap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
 .veri-tablo-ipucu { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+/* position: relative ŞART. Hücredeki ekran okuyucu öneki (.sr-only,
+   mutlak konumlu) en yakın konumlu atasına göre yerleşiyor; kaydırma
+   alanı konumlu değilken o ata alanın DIŞINDA kalıyor, önek kırpılmıyor
+   ve sayfayı 124 piksel yatay kaydırıyordu (05.11.2026, Kanıt Matrisi). */
 .veri-tablo-sarici {
+  position: relative;
   min-width: 0;
   overflow-x: auto;
   border: 1px solid var(--line-soft);
@@ -189,3 +194,12 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
 @media (max-width: 1199px), (pointer: coarse) { .kaynak-ad { padding-block: 9px; margin-block: -9px; } }
 .ayrinti-govde { display: grid; gap: var(--s-4); }
 .ayrinti-govde .kaynak-eksik { margin: 0; font-size: var(--fs-sm); }
+
+/* ---------- Kanıt matrisi: iddia, satırın penceresini açan düğme ---------- */
+/* Telefonda kartın başlığı; dokunmatikte dikey dolgu negatif kenar
+   boşluğuyla 40 piksele genişler (kaynak adıyla aynı yöntem). */
+.veri-karti-bas .kanit-iddia-dugmesi { font-weight: 600; }
+@media (max-width: 1199px), (pointer: coarse) {
+  .kanit-iddia-dugmesi { display: block; padding-block: 9px; margin-block: -9px; }
+}
+.kanit-iddia-dugmesi:focus-visible { outline: none; border-radius: var(--r-xs); box-shadow: var(--odak-halkasi); }
