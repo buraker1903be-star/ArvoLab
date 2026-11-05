@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calismaSec, secimAdresi } from "@/lib/calisma-secimi";
+import { calismaSec, kaynakEklemeAdresi, secimAdresi } from "@/lib/calisma-secimi";
 
 /*
   MODÜL SAYFASININ ÇALIŞMASI (Signature OS 4.3.5, B1). Eskiden
@@ -37,4 +37,22 @@ test("liste okunamadıysa karar verilmez (bulunamadı da denmez)", () => {
 
 test("seçim bağlantısı sayfanın ek parametrelerini (DOI) korur", () => {
   assert.equal(secimAdresi("/dashboard/literature", A.id, { doi: "10.1000/abc", ekle: undefined }), `/dashboard/literature?calisma=${A.id}&doi=10.1000%2Fabc`);
+});
+
+/*
+  Komut paletinden kaynak ekleme (4.3.5, B2). Eskiden adres çalışmasızdı
+  ve kütüphane en son oluşturulan çalışmayı açıyordu: B tezinde
+  yapıştırılan DOI A çalışmasına ekleniyordu.
+*/
+
+test("palet: aktif çalışma varsa adreste o çalışma, DOI korunur", () => {
+  assert.equal(kaynakEklemeAdresi(B.id, { doi: "10.1000/abc" }), `/dashboard/literature?calisma=${B.id}&doi=10.1000%2Fabc`);
+  assert.equal(kaynakEklemeAdresi(B.id, { ekle: true }), `/dashboard/literature?calisma=${B.id}&ekle=1`);
+});
+
+test("palet: aktif çalışma yoksa adres çalışmasız kalır → sayfa seçtirir (varsayılan hedef yok)", () => {
+  const adres = kaynakEklemeAdresi(null, { doi: "10.1000/abc" });
+  assert.equal(adres, "/dashboard/literature?doi=10.1000%2Fabc");
+  // Sayfanın kararı: iki çalışmada seçim gerekli, ilk çalışma AÇILMAZ.
+  assert.deepEqual(calismaSec([A, B], new URL(adres, "http://x").searchParams.get("calisma") ?? undefined), { tur: "secim-gerekli" });
 });

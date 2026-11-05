@@ -264,6 +264,7 @@ export default async function KaynaklarPage({
             {/* DOI ile ekleme görünür (Phase 3): eskiden "İçe aktar" penceresinin içindeydi. */}
             <DoiEkleKutusu
               projectId={calisma.id}
+              calismaAdi={calisma.title}
               ilkDeger={typeof gelenDoi === "string" ? gelenDoi.slice(0, 300) : ""}
               odakla={ekle === "1" || typeof gelenDoi === "string"}
               aramaTetikleyicisi=".kaynak-bul-tetik"

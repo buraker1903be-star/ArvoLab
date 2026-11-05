@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookPlus, ChartNoAxesCombined, Monitor, Moon, Plus, Search, Sparkles, Sun, type LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
-import { aramaAnahtari, osSayfalari, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
+import { aramaAnahtari, calismaIcindeMi, osSayfalari, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
+import { kaynakEklemeAdresi } from "@/lib/calisma-secimi";
+import { useCalismaBaglami } from "./calisma-baglami";
 import { normalizeDoi } from "@/lib/doi";
 import { calismaAdresi } from "@/lib/calisma-karti";
 import { projectTypeLabel } from "@/lib/project-labels";
@@ -56,11 +58,21 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
   const [secili, setSecili] = useState(0);
   const [calismalar, setCalismalar] = useState<Calisma[] | null>(null);
   const yuklendi = useRef(false);
+  /*
+    Aktif çalışma (4.3.5, B2): sayfanın yayınladığı bağlam, ama yalnızca
+    adres hâlâ o çalışmanın içindeyse (bağlam sayfa kapanınca silinmiyor).
+    Adres palet AÇILIRKEN okunur (render sırasında window okumak sunucu
+    çizimiyle uyuşmazlık üretirdi).
+  */
+  const baglam = useCalismaBaglami();
+  const [adres, setAdres] = useState<{ yol: string; sorgu: string } | null>(null);
+  const aktifCalisma = baglam && adres && calismaIcindeMi(baglam.id, adres.yol, new URLSearchParams(adres.sorgu)) ? baglam : null;
 
   const kapat = () => pencere.current?.close();
 
   useEffect(() => {
     const ac = () => {
+      setAdres({ yol: window.location.pathname, sorgu: window.location.search });
       setSorgu("");
       setSecili(0);
       if (!yuklendi.current) {
@@ -90,15 +102,17 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
 
   const ikonu = new Map(uygulamalar.map((u) => [u.key, u.ikon]));
   const hizli = t({ tr: "Hızlı işlemler", en: "Quick actions" });
-  const sonCalisma = calismalar?.[0];
+  // Asistan kısayolu da önce aktif çalışmaya gider; yoksa en son çalışma (ipucunda adı yazar, veri yazmaz).
+  const sonCalisma = aktifCalisma ? { id: aktifCalisma.id, title: aktifCalisma.baslik } : calismalar?.[0];
+  const hedefIpucu = aktifCalisma ? aktifCalisma.baslik : t({ tr: "çalışmayı sayfada seçeceksiniz", en: "you'll choose the work on the page" });
   const doi = normalizeDoi(sorgu);
   const ogeler: Oge[] = [
     /* Kutuya DOI yapıştırıldıysa en üstte: tek Enter ile kaynak eklemeye. */
     ...(doi
-      ? [{ id: "doi", grup: hizli, label: t({ tr: `DOI ile kaynak ekle: ${doi}`, en: `Add source by DOI: ${doi}` }), ikon: "literatur" as const, simge: BookPlus, tur: "git" as const, href: `/dashboard/literature?doi=${encodeURIComponent(doi)}` }]
+      ? [{ id: "doi", grup: hizli, label: t({ tr: `DOI ile kaynak ekle: ${doi}`, en: `Add source by DOI: ${doi}` }), ipucu: hedefIpucu, ikon: "literatur" as const, simge: BookPlus, tur: "git" as const, href: kaynakEklemeAdresi(aktifCalisma?.id ?? null, { doi }) }]
       : []),
     { id: "yeni", grup: hizli, label: t({ tr: "Yeni çalışma oluştur", en: "Create a new work" }), ikon: "tez", simge: Plus, tur: "git", href: "/dashboard/editor?yeni=1" },
-    { id: "kaynak", grup: hizli, label: t({ tr: "Kaynak ekle (DOI ya da arama)", en: "Add a source (DOI or search)" }), ikon: "literatur", simge: BookPlus, tur: "git", href: "/dashboard/literature?ekle=1" },
+    { id: "kaynak", grup: hizli, label: t({ tr: "Kaynak ekle (DOI ya da arama)", en: "Add a source (DOI or search)" }), ipucu: hedefIpucu, ikon: "literatur", simge: BookPlus, tur: "git", href: kaynakEklemeAdresi(aktifCalisma?.id ?? null, { ekle: true }) },
     { id: "analiz", grup: hizli, label: t({ tr: "Veri analizi başlat", en: "Start a data analysis" }), ikon: "analiz", simge: ChartNoAxesCombined, tur: "git", href: "/dashboard/analysis" },
     ...(sonCalisma
       ? [{ id: "asistan", grup: hizli, label: t({ tr: "Yazım asistanını aç", en: "Open the writing assistant" }), ipucu: sonCalisma.title, ikon: "tez" as const, simge: Sparkles, tur: "git" as const, href: `/dashboard/editor/${sonCalisma.id}/write?asistan=1` }]

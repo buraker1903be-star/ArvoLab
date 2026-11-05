@@ -49,3 +49,22 @@ export function secimAdresi(yol: string, calismaId: string, ek: Record<string, s
   for (const [k, v] of Object.entries(ek)) if (v) p.set(k, v);
   return `${yol}?${p.toString()}`;
 }
+
+/*
+  Komut paletinden kaynak ekleme adresi (4.3.5, B2). Eskiden palet
+  `/dashboard/literature?doi=…` açıyordu: çalışma kimliği yoktu, sayfa en
+  son oluşturulan çalışmayı seçiyordu ve öğrenci B tezinin editöründe
+  yapıştırdığı DOI'yi A çalışmasına ekliyordu. Aktif çalışma (adresten
+  doğrulanmış bağlam) varsa onun kimliği gider; yoksa adres çalışmasız
+  kalır ve sayfa "Hangi çalışma?" diye sorar (calismaSec). Kimlik yine de
+  YETKİ KANITI DEĞİL: sayfa çalışmayı kullanıcının listesinde arar, ekleme
+  sunucuda yeniden doğrulanır (lib/kaynak-hedefi.ts).
+*/
+export function kaynakEklemeAdresi(aktifCalismaId: string | null, ek: { doi?: string; ekle?: boolean } = {}): string {
+  const ekler = { doi: ek.doi || undefined, ekle: ek.ekle ? "1" : undefined };
+  if (aktifCalismaId) return secimAdresi("/dashboard/literature", aktifCalismaId, ekler);
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(ekler)) if (v) p.set(k, v);
+  const q = p.toString();
+  return q ? `/dashboard/literature?${q}` : "/dashboard/literature";
+}

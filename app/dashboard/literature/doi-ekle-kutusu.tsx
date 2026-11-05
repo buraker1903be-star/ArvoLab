@@ -37,11 +37,14 @@ type Durum =
 
 export default function DoiEkleKutusu({
   projectId,
+  calismaAdi,
   ilkDeger = "",
   odakla = false,
   aramaTetikleyicisi,
 }: {
   projectId: string;
+  /** Hedef çalışmanın adı (4.3.5, B2): kullanıcı Ekle'ye basmadan nereye ekleneceğini görür. */
+  calismaAdi: string;
   ilkDeger?: string;
   odakla?: boolean;
   /** "Kaynak bul" düğmesinin seçicisi: konu araması o pencerede. */
@@ -107,6 +110,11 @@ export default function DoiEkleKutusu({
           {durum.tur === "bekliyor" ? t({ tr: "Ekleniyor…", en: "Adding…" }) : t({ tr: "Ekle", en: "Add" })}
         </button>
       </label>
+      {/* Paletten DOI ile gelindiğinde kutu dolu açılır; hedef açıkça yazılı, ekleme yine kullanıcının düğmesi. */}
+      <p className="doi-kutusu-hedef">
+        {t({ tr: "Eklenecek çalışma: ", en: "Adding to: " })}
+        <b>{calismaAdi}</b>
+      </p>
 
       <div id="doi-kutusu-durum" className="doi-kutusu-durum" role="status" aria-live="polite">
         {durum.tur === "bekliyor" ? (
