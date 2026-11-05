@@ -76,8 +76,8 @@ export default function YazarlikRaporuKarti({ editor, onFind }: { editor: Editor
             : t({ tr: "Yazarlık raporu", en: "Authorship report" })
         }
         description={t({
-          tr: "Yazım asistanından \"İmlece ekle\" ya da \"Seçilenin yerine koy\" ile eklenip hâlâ belgede duran metin. Kopyala–yapıştır ile alınan metin ve ArvoLab dışındaki araçlar bu sayıya girmez; bu bir yapay zekâ tespit puanı değildir. Asistan metninin içine yazdığınız sözcükler de asistanınki sayılır.",
-          en: "Text inserted from the writing assistant with \"Insert at cursor\" or \"Replace selection\" that is still in the document. Text taken by copy–paste and tools outside ArvoLab are not counted; this is not an AI-detection score. Words you type inside assistant text also count as the assistant's.",
+          tr: "Yazım asistanından \"Paragrafın altına ekle\" ya da \"Seçilenin yerine koy\" ile eklenip hâlâ belgede duran metin. Kopyala–yapıştır ile alınan metin ve ArvoLab dışındaki araçlar bu sayıya girmez; bu bir yapay zekâ tespit puanı değildir. Asistan metninin içine yazdığınız sözcükler de asistanınki sayılır.",
+          en: "Text inserted from the writing assistant with \"Insert below paragraph\" or \"Replace selection\" that is still in the document. Text taken by copy–paste and tools outside ArvoLab are not counted; this is not an AI-detection score. Words you type inside assistant text also count as the assistant's.",
         })}
       >
         {rapor ? (

@@ -471,12 +471,12 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Inline suggestions: in the editor, Alt+/ shows a grey continuation at the cursor; Tab accepts, Esc or continuing to type dismisses. With \"Suggest\" on the toolbar turned on, a suggestion appears when you pause. Each suggestion uses one assistant credit; suggestions also can't cite sources outside your library or write numbers that aren't in your text.",
       },
       {
-        tr: "Paneldeki \"Ana hat\" kılavuzunuzun zorunlu bölümlerini omurga alarak bir başlık iskeleti ve her başlık altına ne yazılacağına dair kısa notlar önerir; \"İmlece ekle\" ile başlıklar ve köşeli parantezli notlar belgeye girer, notların yerine kendi metninizi yazarsınız.",
-        en: "\"Outline\" in the panel proposes a heading skeleton built on your guideline's required sections, with a short note under each heading on what to write; \"Insert at cursor\" adds the headings and bracketed notes, which you replace with your own text.",
+        tr: "Paneldeki \"Ana hat\" kılavuzunuzun zorunlu bölümlerini omurga alarak bir başlık iskeleti ve her başlık altına ne yazılacağına dair kısa notlar önerir; \"Paragrafın altına ekle\" ile başlıklar ve köşeli parantezli notlar belgeye girer, notların yerine kendi metninizi yazarsınız.",
+        en: "\"Outline\" in the panel proposes a heading skeleton built on your guideline's required sections, with a short note under each heading on what to write; \"Insert below paragraph\" adds the headings and bracketed notes, which you replace with your own text.",
       },
       {
-        tr: "Asistanın yazdığı metin belgenize kendiliğinden girmez: \"İmlece ekle\", \"Seçilenin yerine koy\" ya da \"Kopyala\" ile siz eklersiniz. Eklemeden önce okuyun ve kendi sözcüklerinizle düzenleyin.",
-        en: "Text the assistant writes never enters your document by itself: you insert it with \"Insert at cursor\", \"Replace selection\" or \"Copy\". Read it and edit it in your own words before inserting.",
+        tr: "Asistanın yazdığı metin belgenize kendiliğinden girmez: \"Paragrafın altına ekle\", \"Seçilenin yerine koy\" ya da \"Kopyala\" ile siz eklersiniz. Eklemeden önce okuyun ve kendi sözcüklerinizle düzenleyin.",
+        en: "Text the assistant writes never enters your document by itself: you insert it with \"Insert below paragraph\", \"Replace selection\" or \"Copy\". Read it and edit it in your own words before inserting.",
       },
       {
         tr: "Asistan; kaynakça, analiz sonucu, kanıt, belge ve makale bölümleri gibi ekranlarda ilgili düğmeyle çalışır ve bulgularını kısa maddeler hâlinde verir.",

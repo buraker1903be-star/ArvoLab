@@ -21,7 +21,7 @@ import { aiAdimiBaslat, aiAdiminiKapat } from "@/lib/ai-duzenleme";
 
   Modal DEĞİL, sağa yaslı kalıcı panel: öğrenci metnini görerek konuşuyor,
   panel açıkken editörde yazmaya devam edebiliyor. Asistanın yazdığı metin
-  belgeye kendiliğinden girmez; her cevabın altında "İmlece ekle" /
+  belgeye kendiliğinden girmez; her cevabın altında "Paragrafın altına ekle" /
   "Seçilenin yerine koy" / "Kopyala" var ve hangisinin yapılacağına
   öğrenci karar veriyor. Ekleme, kaydın "faydalı" değerlendirmesi olarak
   yazılıyor: eğitim verisinin en güçlü işareti, öğrencinin metni
@@ -30,6 +30,11 @@ import { aiAdimiBaslat, aiAdiminiKapat } from "@/lib/ai-duzenleme";
   Seçim, istek GÖNDERİLDİĞİ anda alınır ve o cevabın eklenme yeri olur:
   öğrenci bu arada imleci başka yere götürse bile "Seçilenin yerine koy"
   isteğin yapıldığı metnin yerine koyar.
+
+  "Paragrafın altına ekle" (4.3): eskiden "İmlece ekle" yazıyordu ama metin
+  imlecin olduğu yere değil, imlecin bulunduğu paragrafın ALTINA giriyordu
+  (paragrafı ikiye bölmemek için; boş paragraftaysa onun yerine). Davranış
+  aynı kaldı, ad yaptığı işi söylüyor.
 
   KONUM GÜVENLİĞİ (Signature OS 4.3, 05.11.2026). Eskiden o yer istek
   anındaki iki SAYIYDI (from, to) ve belge arada değişince güncellenmiyordu:
@@ -431,7 +436,7 @@ export default function YazimPaneli({
                     <div className="yazim-oneri-eylem">
                       <button type="button" className="projects-primary-button button-compact" onClick={() => ekle(i, false)} disabled={m.eklendi}>
                         {m.eklendi ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}
-                        {m.eklendi ? t({ tr: "Eklendi", en: "Inserted" }) : t({ tr: "İmlece ekle", en: "Insert at cursor" })}
+                        {m.eklendi ? t({ tr: "Eklendi", en: "Inserted" }) : t({ tr: "Paragrafın altına ekle", en: "Insert below paragraph" })}
                       </button>
                       {m.secimVardi ? (
                         <button type="button" className="projects-filter-button button-compact" onClick={() => ekle(i, true)} disabled={m.eklendi}>

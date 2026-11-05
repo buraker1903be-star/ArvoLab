@@ -2,7 +2,7 @@ import { Mark, mergeAttributes } from "@tiptap/core";
 
 /*
   ASİSTAN İZİ (03.11.2026, yazarlık raporu). Yazım asistanının metni
-  ("İmlece ekle" / "Seçilenin yerine koy") belgeye bu işaretle girer;
+  ("Paragrafın altına ekle" / "Seçilenin yerine koy") belgeye bu işaretle girer;
   rapor (lib/yazarlik-raporu.ts) belgede hâlâ duran işaretli metni sayar.
 
   GÖRÜNMEZ: editörde yalnızca rapor penceresinde "Vurgula" açıkken
