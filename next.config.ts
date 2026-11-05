@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { guvenlikBasliklari } from "./lib/guvenlik-basliklari";
+import { onizlemeTakmalari } from "./lib/onizleme-takmalari";
 
 const PDF_WORKER = "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs";
 
@@ -75,23 +76,11 @@ const OCR_ISCISI = [
   bayrak açıksa derleme DURUR: sahte istemcinin canlıya çıkması, her
   sorgunun "başarılı" görünüp hiçbir şey yazmaması demek.
 */
-const ONIZLEME = process.env.ARVOLAB_ONIZLEME === "1";
-if (ONIZLEME && process.env.NODE_ENV === "production") {
-  throw new Error("ARVOLAB_ONIZLEME üretim derlemesinde açık olamaz.");
-}
+/* Takmalar ve üretim yasağı tek yerde, testli (lib/onizleme-takmalari.ts); 4.3'te test asistanı eklendi. */
+const ONIZLEME_TAKMALARI = onizlemeTakmalari(process.env);
 
 const nextConfig: NextConfig = {
-  ...(ONIZLEME
-    ? {
-        turbopack: {
-          resolveAlias: {
-            "@/lib/supabase/server": "./scripts/onizleme/server.ts",
-            "@/lib/supabase/client": "./scripts/onizleme/client.ts",
-            "@/lib/supabase/admin": "./scripts/onizleme/admin.ts",
-          },
-        },
-      }
-    : {}),
+  ...(ONIZLEME_TAKMALARI ? { turbopack: { resolveAlias: ONIZLEME_TAKMALARI } } : {}),
   poweredByHeader: false,
   /* Güvenlik başlıkları her yanıtta; ne zorlandığı, ne yalnızca raporlandığı ve nedeni lib/guvenlik-basliklari.ts'te. */
   async headers() {
