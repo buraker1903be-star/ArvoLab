@@ -122,7 +122,7 @@ const tarayici = await chromium.launch();
     bekle(((await sayfa.locator("nav.os-gezinme").boundingBox())?.width ?? 0) >= 200, "geri genişlemedi");
     bekle((await sayfa.evaluate(() => localStorage.getItem("arvolab.kenar"))) === "genis", "genişletme kaydedilmedi");
   });
-  await senaryo("Ctrl+K: açılır, yazılan DOI tanınır, Enter Kaynaklar'a götürür, ekleme yapılmaz", async () => {
+  await senaryo("Ctrl+K: açılır, yazılan DOI tanınır, Enter Kaynaklar'a götürür, çalışma seçtirilir, ekleme yapılmaz", async () => {
     await git(sayfa, "/dashboard");
     await sayfa.keyboard.press("Control+k");
     const girdi = sayfa.locator(".os-palette-input input");
@@ -134,6 +134,16 @@ const tarayici = await chromium.launch();
     await sayfa.keyboard.press("Enter");
     await sayfa.waitForURL(/\/dashboard\/literature\?doi=/, { timeout: 60000 });
     await sayfa.waitForLoadState("networkidle");
+    /*
+      Ana sayfada aktif çalışma yok (4.3.5, B2): kütüphane en son oluşturulan
+      çalışmayı SEÇMEZ, "Hangi çalışma?" diye sorar; seçim DOI'yi korur.
+    */
+    bekle((await sayfa.locator(".empty-state-baslik").textContent()) === "Hangi çalışma?", "çalışma seçimi istenmedi");
+    bekle(!(await sayfa.locator(".doi-kutusu").count()), "seçimden önce ekleme kutusu açıldı");
+    await sayfa.locator(`.calisma-secim-listesi a[href*="${TEZ}"]`).click();
+    await sayfa.waitForURL(new RegExp(`calisma=${TEZ}.*doi=|doi=.*calisma=${TEZ}`), { timeout: 60000 });
+    await sayfa.waitForLoadState("networkidle");
+    bekle(/Eklenecek çalışma/.test(await sayfa.locator(".doi-kutusu-hedef").textContent()), "hedef çalışma yazmıyor");
     const kutu = sayfa.locator(".doi-kutusu input");
     await kutu.waitFor({ state: "visible", timeout: 10000 });
     bekle((await kutu.inputValue()).includes("10.1002/jae.616"), "DOI kutuya gelmedi");
@@ -389,7 +399,7 @@ const tarayici = await chromium.launch();
     await sayfa.keyboard.press("Escape");
   });
   await senaryo("kaynaklar: kaynağın adı ayrıntıyı açar, bütün künye ve not; Esc odağı satıra geri verir (Signature OS 4.1)", async () => {
-    await git(sayfa, "/dashboard/literature");
+    await git(sayfa, `/dashboard/literature?calisma=${TEZ}`);
     const ad = sayfa.locator(".kaynak-ad").first();
     await ad.waitFor({ state: "visible", timeout: 30000 });
     const baslik = (await ad.textContent()).trim();
@@ -405,7 +415,7 @@ const tarayici = await chromium.launch();
     bekle(odak.includes("kaynak-ad"), `odak satıra dönmedi: ${odak}`);
   });
   await senaryo("kaynaklar: tek birincil eylem; seyrek eylemler ⋯ menüsünde, menüden açılan pencere kapanınca odak menü düğmesinde", async () => {
-    await git(sayfa, "/dashboard/literature");
+    await git(sayfa, `/dashboard/literature?calisma=${TEZ}`);
     // DOI kutusunun "Ekle"si boşken devre dışı: alanın kendi gönder düğmesi, sayfa eylemi değil.
     const birincil = await sayfa.locator("main .projects-primary-button:not(:disabled)").evaluateAll((el) => el.filter((e) => e.checkVisibility()).map((e) => e.textContent.trim()));
     bekle(birincil.length === 1 && /Kaynak bul/.test(birincil[0]), `birincil düğmeler: ${birincil.join(", ")}`);
@@ -423,12 +433,12 @@ const tarayici = await chromium.launch();
     bekle(odak.includes("sayfa-tasma-dugme"), `odak menü düğmesine dönmedi: ${odak}`);
   });
   await senaryo("kaynak ayrıntısı: çalışmadaki yeri metinden, kanıttan ve DOI'den; künye aynı formla düzenlenir (Signature OS 4.2)", async () => {
-    await git(sayfa, "/dashboard/literature");
+    await git(sayfa, `/dashboard/literature?calisma=${TEZ}`);
     await sayfa.locator(".kaynak-ad", { hasText: "ARDL" }).click();
     const pencere = sayfa.locator(".drawer-root.open[data-boy='yan']");
     await pencere.waitFor({ state: "visible", timeout: 10000 });
     const yeri = (await pencere.locator("section[aria-labelledby$='-yeri']").textContent()).replace(/\s+/g, " ");
-    bekle(/Evet: ilk yazarın soyadı ve yıl metinde/.test(yeri), `metinde atıf okunmadı: ${yeri}`);
+    bekle(/Evet: ilk yazarın adı ve yıl metinde/.test(yeri), `metinde atıf okunmadı: ${yeri}`);
     bekle(/1 iddiada kaynak olarak bağlı/.test(yeri), "kanıt matrisi bağı yok");
     bekle(/DOI'si aynı bir PDF var/.test(yeri), "PDF eşleşmesi yok");
     await pencere.getByRole("button", { name: "Düzenle" }).click();
@@ -440,7 +450,7 @@ const tarayici = await chromium.launch();
     await sayfa.keyboard.press("Escape");
   });
   await senaryo("kaynak ayrıntısı: dizin karşılaştırması ulaşılamayınca 'doğrulanamadı' demez, sonuç kaydedilmez (Signature OS 4.2)", async () => {
-    await git(sayfa, "/dashboard/literature");
+    await git(sayfa, `/dashboard/literature?calisma=${TEZ}`);
     await sayfa.locator(".kaynak-ad", { hasText: "Inflation" }).click();
     const bolum = sayfa.locator(".drawer-root.open section[aria-labelledby$='-dogrulama']");
     await bolum.getByRole("button", { name: /Karşılaştır/ }).click();
@@ -452,7 +462,7 @@ const tarayici = await chromium.launch();
     await sayfa.keyboard.press("Escape");
   });
   await senaryo("elle eklenen tekrar kaynak: eklenir ve UYARI bildirimi çıkar, 'İşlem tamamlanamadı' değil (Signature OS 4.2)", async () => {
-    await git(sayfa, "/dashboard/literature");
+    await git(sayfa, `/dashboard/literature?calisma=${TEZ}`);
     await sayfa.locator(".kaynak-bul-tetik").click();
     await sayfa.locator(".drawer-root.open button", { hasText: "Manuel kaynak ekle" }).click();
     const form = sayfa.locator(".drawer-root.open").filter({ has: sayfa.getByRole("heading", { name: "Manuel kaynak ekle" }) });
@@ -482,7 +492,7 @@ const tarayici = await chromium.launch();
     for (const w of [820, 1440]) {
       const c = await tarayici.newContext({ viewport: { width: w, height: 1000 } });
       const s2 = await c.newPage();
-      for (const yol of ["/dashboard/literature", `/dashboard/editor/${TEZ}/kanit`, "/dashboard/analysis", "/dashboard/documents"]) {
+      for (const yol of [`/dashboard/literature?calisma=${TEZ}`, `/dashboard/editor/${TEZ}/kanit`, `/dashboard/analysis?calisma=${TEZ}`, `/dashboard/documents?calisma=${TEZ}`]) {
         await git(s2, yol);
         await s2.locator("main h1").first().waitFor({ state: "visible", timeout: 30000 });
         const tasma = await s2.evaluate(() => document.documentElement.scrollWidth - innerWidth);
@@ -593,10 +603,10 @@ const tarayici = await chromium.launch();
     for (const g of ["Destek düzeyi", "Eksik kanıt", "Önerilen düzeltme"]) bekle(basliklar.includes(g), `kartta yok: ${g}`);
   });
   await senaryo("telefon: kaynaklarda ikinci eylemler ⋯ menüsünde, birincil görünür; temsilî ekranlarda taşma ve 40 pikselden küçük hedef yok", async () => {
-    await git(sayfa, "/dashboard/literature");
+    await git(sayfa, `/dashboard/literature?calisma=${TEZ}`);
     await sayfa.locator(".kaynak-bul-tetik").waitFor({ state: "visible", timeout: 30000 });
     bekle(!(await sayfa.locator("main button", { hasText: "İçe aktar" }).first().isVisible()), "İçe aktar telefonda satırda kaldı");
-    for (const yol of ["/dashboard/literature", `/dashboard/editor/${TEZ}/kanit`, "/dashboard/analysis", "/dashboard/documents"]) {
+    for (const yol of [`/dashboard/literature?calisma=${TEZ}`, `/dashboard/editor/${TEZ}/kanit`, `/dashboard/analysis?calisma=${TEZ}`, `/dashboard/documents?calisma=${TEZ}`]) {
       await git(sayfa, yol);
       await sayfa.locator("main h1").first().waitFor({ state: "visible", timeout: 30000 });
       const tasma = await sayfa.evaluate(() => document.documentElement.scrollWidth - innerWidth);
