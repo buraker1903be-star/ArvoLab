@@ -177,6 +177,7 @@ const ImportDialog = dynamic(() => import("./import-dialog"), { ssr: false });
 const ImageLibraryDialog = dynamic(() => import("./image-library-dialog"), { ssr: false });
 const ShortcutsDialog = dynamic(() => import("./shortcuts-dialog"), { ssr: false });
 import SecimAi from "./secim-ai";
+import { oncekiUygulamalar, oncekiUygulamalariUnut } from "@/lib/ai-kararlari";
 const VersionsDialog = dynamic(() => import("./versions-dialog"), { ssr: false });
 const ShareDialog = dynamic(() => import("./share-dialog"), { ssr: false });
 const CiteDialog = dynamic(() => import("./cite-dialog"), { ssr: false });
@@ -609,6 +610,14 @@ export default function ManuscriptEditor({
   const [importOpen, setImportOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [formatLossDismissed, setFormatLossDismissed] = useState(false);
+  /*
+    Önceki sayfa yüklemesinde uygulanmış AI değişiklikleri (4.3 ek). Panelin
+    "Geri al"ı ve AI adımının ayrı Ctrl+Z'si bellekteydi; yenilemeyle
+    kayboldu. Kullanıcıya Ctrl+Z'nin eski AI işlemine ulaşamayacağı söylenir
+    ve belge geçmişine (Sürümler) yönlendirilir. Editör yalnızca tarayıcıda
+    kurulduğu için oturum deposu burada okunabilir (sunucuda editor null).
+  */
+  const [oncekiAiUnutuldu, setOncekiAiUnutuldu] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [margins, setMargins] = useState<PageMargins>(
     initialMargins ?? { top: 2.5, bottom: 2.5, left: 2.5, right: 2.5 }
@@ -2702,6 +2711,35 @@ export default function ManuscriptEditor({
           )}
         </div>
       )}
+
+      {!oncekiAiUnutuldu && oncekiUygulamalar(projectId).length > 0 ? (
+        <div className="guideline-applied-banner" data-tone="muted" role="status">
+          <div>
+            <strong>{t({ tr: "Asistan değişiklikleri artık buradan geri alınamaz", en: "Assistant changes can no longer be undone here" })}</strong>
+            <span>
+              {t({
+                tr: "Sayfa yenilendiği için asistanın önceki değişiklikleri Geri al düğmesiyle ya da Ctrl+Z ile geri alınamaz; belgedeki öteki düzenlemeleriniz olduğu gibi duruyor. Önceki hâle Sürümler'den dönebilirsiniz.",
+                en: "Because the page was reloaded, the assistant's earlier changes can't be undone with the Undo button or Ctrl+Z; your other edits are unchanged. You can return to an earlier state from Versions.",
+              })}
+            </span>
+          </div>
+          <div className="cluster">
+            <button type="button" className="projects-filter-button" onClick={() => setVersionsOpen(true)}>
+              {t({ tr: "Sürümleri aç", en: "Open versions" })}
+            </button>
+            <button
+              type="button"
+              className="projects-filter-button"
+              onClick={() => {
+                oncekiUygulamalariUnut(projectId);
+                setOncekiAiUnutuldu(true);
+              }}
+            >
+              {t({ tr: "Anladım", en: "Got it" })}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Kılavuzun adı ve "Kuralları gör" sağdaki kontrol kartında; belgenin
           üstünde yalnızca yeni sürümün UYGULANDIĞI haberi kalıyor. */}

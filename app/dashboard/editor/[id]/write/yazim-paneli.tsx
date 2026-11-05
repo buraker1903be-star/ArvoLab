@@ -17,7 +17,7 @@ import { collectHeadings } from "./editor-navigation";
 import MetinFarki from "./metin-farki";
 import { aralikMetni, araligiBirak, araligiDogrula, araligiIzle, izlenenAralik } from "@/lib/tiptap-asistan-araligi";
 import { ASISTAN_GOREV_OLAYI, aiAdimiBaslat, bekleyenGoreviAl, aiAdiminiKapat, geriAlmaIslemi, surumGerekir, yeniAralik } from "@/lib/ai-duzenleme";
-import { kararKaydet } from "@/lib/ai-kararlari";
+import { kararKaydet, uygulamaIziEkle, uygulamaIziSil } from "@/lib/ai-kararlari";
 
 /*
   YAZIM ASİSTANI PANELİ (03.11.2026, kurum sahibinin kararı: "paragrafı
@@ -42,8 +42,10 @@ import { kararKaydet } from "@/lib/ai-kararlari";
     aynıysa geri alır; değilse yapmaz ve Sürümler'e yönlendirir
     (lib/ai-duzenleme.ts).
   - Ana hattan ve 150 kelimeyi aşan değişiklikten önce adlı sürüm alınır.
-    Sürüm alınamazsa değişiklik UYGULANMAZ; "Sürüm almadan uygula"
-    kullanıcının açık seçimidir.
+    Sürüm alınamazsa değişiklik UYGULANMAZ; kullanıcı yalnızca yeniden
+    deneyebilir ya da vazgeçebilir. 4.3'ün ilk sürümünde bir de "Sürüm
+    almadan uygula" vardı; kurum sahibi kaldırttı (4.3 ek): büyük değişiklik
+    geri dönüş noktası olmadan belgeye girmemeli.
   - Karar puan DEĞİLDİR (kurum sahibinin kararı, 4.3): yalnızca bu
     oturumda tutulur (lib/ai-kararlari.ts). Puan yalnızca "Beğenmedim".
 
@@ -90,7 +92,7 @@ type Kayit = SohbetMesaji & {
   duzenMetni?: string;
   /** Uygulanamadığında ya da geri alınamadığında kartta kalan açıklama. */
   uyari?: string;
-  /** Sürüm alınamadı: aynı değişiklik yeniden denenebilir ya da açıkça sürümsüz uygulanabilir. */
+  /** Sürüm alınamadı: aynı değişiklik yalnızca yeniden denenebilir ya da vazgeçilir (sürümsüz uygulama YOK). */
   surumHatasi?: { mod: Mod; metin: string };
   isleniyor?: boolean;
 };
@@ -172,7 +174,8 @@ export default function YazimPaneli({
       }[gorev];
     if (!gorunen) return;
     /* Aralık İSTEK ANINDA izlemeye alınır; cevap gelene kadar yazılanlara göre kayar. */
-    const oneriId = `oneri-${++oneriSayaci}`;
+    // Kimlik yüklemeler arasında da tekil: uygulama izi sayfa yenilense de karışmasın (lib/ai-kararlari.ts).
+    const oneriId = `oneri-${Date.now().toString(36)}-${++oneriSayaci}`;
     editor.view.dispatch(araligiIzle(editor.state.tr, oneriId, from, to));
     const gecmis: SohbetMesaji[] = mesajlar.map((m) => ({ rol: m.rol, metin: m.rol === "asistan" ? `${m.metin}\n${m.ekMetin ?? ""}`.trim() : m.metin }));
     setMesajlar((onceki) => [...onceki, { rol: "kullanici", metin: gorunen }]);
@@ -220,7 +223,7 @@ export default function YazimPaneli({
   const izliMetin = (text: string, kayit: string | null | undefined) => ({ type: "text", text, marks: [{ type: ASISTAN_IZI, attrs: { kayit: kayit ?? null } }] });
   const dugumler = (metin: string, kayit?: string | null) => paragraflara(metin).map((p) => ({ type: "paragraph", content: [izliMetin(p, kayit)] }));
 
-  const uygula = async (indeks: number, mod: Mod, secenek: { metin?: string; surumsuz?: boolean } = {}) => {
+  const uygula = async (indeks: number, mod: Mod, secenek: { metin?: string } = {}) => {
     const kayit = mesajlar[indeks];
     if (!kayit?.ekMetin || !kayit.oneriId || kayit.isleniyor) return;
     const metin = (secenek.metin ?? kayit.ekMetin).trim();
@@ -233,7 +236,8 @@ export default function YazimPaneli({
     };
 
     /* 1) Büyük değişiklikten ÖNCE adlı sürüm. Alınamazsa değişiklik sessizce uygulanmaz. */
-    if (!secenek.surumsuz && surumGerekir(gorev, degistir ? (kayit.secimMetni ?? "") : "", metin)) {
+    let surumAlindi = false;
+    if (surumGerekir(gorev, degistir ? (kayit.secimMetni ?? "") : "", metin)) {
       kartGuncelle(indeks, { isleniyor: true });
       const etiket = gorev === "anahat" ? t({ tr: "Ana hat eklenmeden önce", en: "Before outline insert" }) : t({ tr: "Asistan değişikliğinden önce", en: "Before assistant change" });
       let alindi = false;
@@ -245,13 +249,14 @@ export default function YazimPaneli({
       if (!alindi) {
         uyar(
           t({
-            tr: "Bu büyük bir değişiklik ve öncesinde sürüm alınamadı; değişiklik uygulanmadı. Tekrar deneyin ya da sürüm almadan uygulamayı açıkça seçin.",
-            en: "This is a large change and a version couldn't be saved first; the change wasn't applied. Try again, or explicitly choose to apply without a version.",
+            tr: "Bu büyük bir değişiklik ve öncesinde sürüm alınamadı; belgeniz korunsun diye değişiklik uygulanmadı. Bağlantınızı kontrol edip tekrar deneyin ya da vazgeçin.",
+            en: "This is a large change and a version couldn't be saved first; the change wasn't applied to protect your document. Check your connection and try again, or cancel.",
           }),
           { surumHatasi: { mod, metin } },
         );
         return;
       }
+      surumAlindi = true;
     }
 
     /*
@@ -333,6 +338,7 @@ export default function YazimPaneli({
     const a = izlenenAralik(editor.state, eklenenId);
     const eklenenMetin = a ? aralikMetni(editor.state.doc, a.from, a.to) : "";
     kartGuncelle(indeks, { durum: "uygulandi", uyari: undefined, surumHatasi: undefined, duzenMetni: undefined, isleniyor: false, uygulama: { eklenenId, eklenenMetin, ozgun } });
+    uygulamaIziEkle(projectId, eklenenId, surumAlindi);
     kararKaydet(kayit.kayitId, secenek.metin !== undefined && secenek.metin.trim() !== kayit.ekMetin.trim() ? "duzenleyerek_kabul" : mod === "altina" && kayit.secimVardi ? "altina_eklendi" : "kabul");
     showToast("success", t({ tr: "Metin eklendi; okuyup kendi sözcüklerinizle düzenleyin.", en: "Text inserted; read it and edit it in your own words." }));
   };
@@ -355,6 +361,7 @@ export default function YazimPaneli({
     editor.view.dispatch(aiAdiminiKapat(editor.state));
     editor.commands.focus();
     kartGuncelle(indeks, { durum: "geri_alindi", uyari: undefined, uygulama: undefined });
+    uygulamaIziSil(projectId, kayit.uygulama.eklenenId);
     kararKaydet(kayit.kayitId, "geri_alindi");
     showToast("success", t({ tr: "Asistanın değişikliği geri alındı.", en: "The assistant's change was undone." }));
   };
@@ -503,6 +510,7 @@ export default function YazimPaneli({
                     m={m}
                     t={t}
                     uygula={(mod, secenek) => void uygula(i, mod, secenek)}
+                    surumdenVazgec={() => kartGuncelle(i, { surumHatasi: undefined, uyari: undefined })}
                     duzenle={(duzenMetni) => kartGuncelle(i, { duzenMetni })}
                     reddet={() => reddet(i)}
                     geriAl={() => geriAl(i)}
@@ -601,6 +609,7 @@ function OneriKarti({
   m,
   t,
   uygula,
+  surumdenVazgec,
   duzenle,
   reddet,
   geriAl,
@@ -610,7 +619,8 @@ function OneriKarti({
 }: {
   m: Kayit;
   t: ReturnType<typeof useCeviri>;
-  uygula: (mod: Mod, secenek?: { metin?: string; surumsuz?: boolean }) => void;
+  uygula: (mod: Mod, secenek?: { metin?: string }) => void;
+  surumdenVazgec: () => void;
   duzenle: (metin: string | undefined) => void;
   reddet: () => void;
   geriAl: () => void;
@@ -710,11 +720,8 @@ function OneriKarti({
               <RotateCcw size={14} aria-hidden="true" />
               {t({ tr: "Tekrar dene", en: "Try again" })}
             </button>
-            <button type="button" className="projects-filter-button button-compact" disabled={mesgul} onClick={() => uygula(m.surumHatasi!.mod, { metin: m.surumHatasi!.metin, surumsuz: true })}>
-              {t({ tr: "Sürüm almadan uygula", en: "Apply without a version" })}
-            </button>
-            <button type="button" className="yazim-reddet" disabled={mesgul} onClick={reddet}>
-              {t({ tr: "Reddet", en: "Reject" })}
+            <button type="button" className="projects-filter-button button-compact" disabled={mesgul} onClick={surumdenVazgec}>
+              {t({ tr: "Vazgeç", en: "Cancel" })}
             </button>
           </>
         ) : oneri ? (

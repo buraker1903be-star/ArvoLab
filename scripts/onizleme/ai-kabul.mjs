@@ -7,8 +7,9 @@
   tarayıcısız sınıyor; panelin düğmeleri, seçimin DOM'dan gelmesi,
   odak ve sürüm eyleminin ağ hatası yalnızca burada görünür.
 
-  CI'da DEĞİL: önizleme sunucusu (test asistanı açık) ve Chromium ister.
-    npm run onizleme:ai
+  CI'da DEĞİL: önizleme sunucusu (test asistanı açık, yazma kipi açık:
+  yenileme senaryosu kaydın kalıcı olmasını ister) ve Chromium ister.
+    ONIZLEME_YAZ=1 npm run onizleme:ai
     NODE_PATH=$(npm root -g) node scripts/onizleme/ai-kabul.mjs [taban-adres]
   Bir senaryo düşerse çıkış kodu 1.
 */
@@ -192,18 +193,23 @@ const iste = async (s, metin) => {
   await ctx.close();
 }
 
-// ---- Otomatik sürüm: alınamazsa uygulanmaz ----
+// ---- Otomatik sürüm ZORUNLU: alınamazsa uygulanmaz, sürümsüz seçenek yok (4.3 ek) ----
 {
   let dusur = true;
+  let surumIstegi = 0;
   const { ctx, sayfa } = await editorAc(undefined, (s) =>
     s.route("**/*", (route) => {
       const r = route.request();
-      if (dusur && r.method() === "POST" && r.headers()["next-action"] && (r.postData() ?? "").includes("Asistan değişikliğinden önce")) return route.fulfill({ status: 500, body: "x" });
+      if (r.method() === "POST" && r.headers()["next-action"] && /Asistan değişikliğinden önce|Ana hat eklenmeden önce/.test(r.postData() ?? "")) {
+        surumIstegi++;
+        if (dusur) return route.fulfill({ status: 500, body: "x" });
+      }
       return route.continue();
     }),
   );
   await asistaniAc(sayfa);
-  await senaryo("150 kelimeyi aşan değişiklikte sürüm alınamazsa değişiklik UYGULANMAZ", async () => {
+  const eylemler = () => kart(sayfa).locator(".yazim-oneri-eylem button").allTextContents();
+  await senaryo("150 kelimeyi aşan değişiklikte sürüm alınamazsa UYGULANMAZ; yalnızca Tekrar dene / Vazgeç", async () => {
     await sayfa.evaluate(() => getSelection().collapse(document.querySelector(".ProseMirror p"), 0));
     await iste(sayfa, "UZUN paragraf yaz");
     await kartBekle(sayfa, 1);
@@ -211,9 +217,31 @@ const iste = async (s, metin) => {
     await kart(sayfa).getByRole("button", { name: "Paragrafın altına ekle" }).click();
     await sayfa.waitForFunction(() => document.querySelector(".yazim-oneri .yazim-oneri-uyari"), null, { timeout: 15000 });
     bekle((await belgeJson(sayfa)) === once, "sürümsüz büyük değişiklik uygulandı");
-    bekle(await kart(sayfa).getByRole("button", { name: "Sürüm almadan uygula" }).count(), "açık seçenek yok");
+    const d = (await eylemler()).map((x) => x.trim());
+    bekle(JSON.stringify(d) === JSON.stringify(["Tekrar dene", "Vazgeç"]), `düğmeler: ${d.join(", ")}`);
+    bekle(!(await sayfa.getByText("Sürüm almadan uygula").count()), "sürümsüz seçenek görünüyor");
   });
-  await senaryo("Tekrar dene: sürüm alınınca değişiklik uygulanır", async () => {
+  await senaryo("Tekrar dene yine başarısızsa yine uygulanmaz", async () => {
+    const once = await belgeJson(sayfa);
+    const istek = surumIstegi;
+    await kart(sayfa).getByRole("button", { name: "Tekrar dene" }).click();
+    await sayfa.waitForTimeout(1500);
+    bekle(surumIstegi > istek, "sürüm yeniden denenmedi");
+    bekle((await belgeJson(sayfa)) === once, "ikinci hatada uygulandı");
+    bekle((await kart(sayfa).getAttribute("data-durum")) === "oneri", "durum değişti");
+  });
+  await senaryo("Vazgeç: işlem iptal, belge aynı, öneri kararı bekler", async () => {
+    const once = await belgeJson(sayfa);
+    await kart(sayfa).getByRole("button", { name: "Vazgeç" }).click();
+    bekle((await belgeJson(sayfa)) === once, "vazgeçince belge değişti");
+    bekle(!(await kart(sayfa).locator(".yazim-oneri-uyari").count()), "uyarı kalmadı olmalı");
+    bekle((await eylemler()).some((x) => x.includes("Paragrafın altına ekle")), "öneri eylemleri dönmedi");
+  });
+  await senaryo("Yeniden uygulamada sürüm yine ZORUNLU; sürüm alınınca uygulanır", async () => {
+    const istek = surumIstegi;
+    await kart(sayfa).getByRole("button", { name: "Paragrafın altına ekle" }).click();
+    await sayfa.waitForFunction(() => document.querySelector(".yazim-oneri .yazim-oneri-uyari"), null, { timeout: 15000 });
+    bekle(surumIstegi === istek + 1, "sürüm denenmeden geçildi");
     dusur = false;
     await kart(sayfa).getByRole("button", { name: "Tekrar dene" }).click();
     await sayfa.waitForFunction(() => document.querySelector(".yazim-oneri")?.dataset.durum === "uygulandi", null, { timeout: 15000 });
@@ -267,6 +295,48 @@ for (const [ad, secenek] of [
       for (const t of ["/", "Tab", "Enter"]) bekle(metin.includes(t), `${t} yok`);
     });
   }
+  await ctx.close();
+}
+
+// ---- Sayfa yenilenince AI geri alması (4.3 ek; ONIZLEME_YAZ=1 gerekir: kayıt bellekte kalıcı olsun) ----
+{
+  const { ctx, sayfa } = await editorAc();
+  await senaryo("Yenilemeden sonra Ctrl+Z eski AI işlemini ALMAZ; kullanıcı Sürümler'e yönlendirilir, öteki düzenlemeler kalır", async () => {
+    bekle(!(await sayfa.locator(".guideline-applied-banner", { hasText: "Asistan değişiklikleri" }).count()), "yenilemeden önce uyarı var");
+    await sec(sayfa, 1);
+    await asistaniAc(sayfa);
+    await sayfa.locator(".yazim-hizli-dugme", { hasText: "Kısalt" }).click();
+    await kartBekle(sayfa, 1);
+    await kart(sayfa).getByRole("button", { name: "Kabul et", exact: true }).click();
+    await sayfa.waitForTimeout(300);
+    // Kullanıcının başka bir yerdeki düzenlemesi
+    await imlec(sayfa, 0, 0);
+    await sayfa.locator(".ProseMirror").first().focus();
+    await sayfa.keyboard.type("KULLANICI ");
+    await sayfa.waitForFunction(() => /Kaydedildi|Saved/.test(document.querySelector(".save-status")?.textContent ?? ""), null, { timeout: 30000 });
+    const kayitli = await belgeJson(sayfa);
+    bekle(kayitli.includes("KULLANICI"), "kullanıcı düzenlemesi yok");
+    await sayfa.reload({ waitUntil: "networkidle", timeout: 150000 });
+    await sayfa.locator(".ProseMirror").first().waitFor();
+    const yenidenJson = await belgeJson(sayfa);
+    bekle(yenidenJson === kayitli, "yenilemeden sonra belge farklı (kayıt kalıcı değil mi? ONIZLEME_YAZ=1)");
+    const uyari = sayfa.locator(".guideline-applied-banner", { hasText: "Asistan değişiklikleri" });
+    await uyari.waitFor({ timeout: 10000 });
+    // Ctrl+Z: yeni yüklemede geçmiş boş; eski AI işlemi ve kullanıcı düzenlemesi yerinde kalır.
+    await sayfa.locator(".ProseMirror").first().focus();
+    await sayfa.keyboard.press("Control+z");
+    await sayfa.keyboard.press("Control+z");
+    await sayfa.waitForTimeout(200);
+    bekle((await belgeJson(sayfa)) === kayitli, "Ctrl+Z yenilemeden sonra belgeyi değiştirdi");
+    await uyari.getByRole("button", { name: "Sürümleri aç" }).click();
+    await sayfa.getByRole("dialog").first().waitFor({ timeout: 10000 });
+    await sayfa.keyboard.press("Escape");
+    await uyari.getByRole("button", { name: "Anladım" }).click();
+    bekle(!(await uyari.count()), "Anladım uyarıyı kapatmadı");
+    await sayfa.reload({ waitUntil: "networkidle", timeout: 150000 });
+    await sayfa.locator(".ProseMirror").first().waitFor();
+    bekle(!(await sayfa.locator(".guideline-applied-banner", { hasText: "Asistan değişiklikleri" }).count()), "Anladım'dan sonra uyarı geri geldi");
+  });
   await ctx.close();
 }
 

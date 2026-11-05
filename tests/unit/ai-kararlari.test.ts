@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { kararKaydet, oturumKararlari } from "@/lib/ai-kararlari";
+import { kararKaydet, oncekiUygulamalar, oncekiUygulamalariUnut, oturumKararlari, uygulamaIziEkle, uygulamaIziSil } from "@/lib/ai-kararlari";
 
 /*
   AI KARARLARI (Signature OS 4.3): kabul/ret bir İŞLEM KARARI, memnuniyet
@@ -44,4 +44,42 @@ test("panel ve satır içi öneri kabulde puan yazmaz (yalnızca açık 'Beğenm
   assert.equal(/asistanPuanla\([^)]*"faydali"/.test(panel), false);
   assert.equal(/asistanPuanla/.test(satirIci), false);
   assert.equal((panel.match(/asistanPuanla\(/g) ?? []).length, 1, "yalnızca Beğenmedim");
+});
+
+/*
+  Sayfa yenilenince AI geri alması (4.3 ek): panelin Geri al'ı ve AI
+  adımının Ctrl+Z'si bellekteydi, yenilemeyle kaybolur. Önceki yüklemenin
+  izleri ayrı görünmeli ki editör kullanıcıyı Sürümler'e yönlendirsin.
+*/
+
+test("önceki yüklemenin AI değişiklikleri ayrılır; bu yüklemeninkiler sayılmaz", () => {
+  (globalThis as { sessionStorage?: unknown }).sessionStorage = sahteDepo();
+  uygulamaIziEkle("p1", "a", true, "yukleme-1");
+  uygulamaIziEkle("p1", "b", false, "yukleme-1");
+  uygulamaIziEkle("p2", "c", false, "yukleme-1");
+  // Aynı yüklemede uyarı yok: geri alma hâlâ panelde mümkün.
+  assert.equal(oncekiUygulamalar("p1", "yukleme-1").length, 0);
+  // Yenilemeden sonra (yeni yükleme kimliği) yalnızca bu çalışmanın izleri.
+  assert.deepEqual(oncekiUygulamalar("p1", "yukleme-2").map((i) => i.id), ["a", "b"]);
+});
+
+test("geri alınan değişikliğin izi silinir; 'Anladım' yalnızca önceki yüklemeleri unutur", () => {
+  (globalThis as { sessionStorage?: unknown }).sessionStorage = sahteDepo();
+  uygulamaIziEkle("p1", "a", false, "y1");
+  uygulamaIziEkle("p1", "b", false, "y1");
+  uygulamaIziSil("p1", "a");
+  assert.deepEqual(oncekiUygulamalar("p1", "y2").map((i) => i.id), ["b"]);
+  uygulamaIziEkle("p1", "c", false, "y2");
+  oncekiUygulamalariUnut("p1", "y2");
+  assert.deepEqual(oncekiUygulamalar("p1", "y2"), []);
+  assert.deepEqual(oncekiUygulamalar("p1", "y3").map((i) => i.id), ["c"]);
+});
+
+test("sürüm zorunlu: panelde sürümsüz uygulama yolu yok", async () => {
+  const { readFileSync } = await import("node:fs");
+  const panel = readFileSync("app/dashboard/editor/[id]/write/yazim-paneli.tsx", "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+  assert.equal(/surumsuz|Sürüm almadan uygula|Apply without a version/.test(panel), false);
+  // Sürüm gerekiyorsa koşulsuz denenir; başarısızsa dönülür (uygulama satırına inilmez).
+  assert.match(panel, /if \(surumGerekir\(/);
+  assert.match(panel, /if \(!alindi\) \{[\s\S]*?return;\s*\}/);
 });
