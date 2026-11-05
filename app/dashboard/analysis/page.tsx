@@ -12,6 +12,8 @@ import { analizSonucuSil, calismaAnalizleri, getAnalizSonuclari } from "@/app/ac
 import { analizEtiketi } from "@/lib/analiz-turleri";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import PanelDrawer from "../_components/panel-drawer";
+import SayfaBasligi from "../_components/sayfa/sayfa-basligi";
+import SayfaEylemleri from "../_components/sayfa/sayfa-eylemleri";
 import CalismaSecici from "../_components/calisma-secici";
 import ActionForm from "../action-form";
 import BosDurum from "../_components/bos-durum";
@@ -66,91 +68,102 @@ export default async function AnalysisPage({
     <main className="dashboard-page gb gb-tek-ekran">
       {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
       {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
-      <section className="projects-header">
-        <div>
-          <h1>{t({ tr: "Analiz Merkezi", en: "Analysis Centre" })}</h1>
-          <p>
-            {calisma
-              ? t({
-                  tr: `“${calisma.title}” çalışmasının analizleri. Testleri ArvoLab hesaplar; asistan sonucu okur, sayı üretmez.`,
-                  en: `Analyses for “${calisma.title}”. ArvoLab computes the tests; the assistant reads the result and never produces numbers.`,
-                })
-              : t({ tr: "Verinizi yükleyin, analizi seçin; testleri ArvoLab hesaplar.", en: "Upload your data and choose an analysis; ArvoLab computes the tests." })}
+      {/*
+        Ortak sayfa başlığı (Signature OS 4.1). Başlıkta BİRİNCİL eylem yok:
+        Analiz Merkezi'nin ana işi sayfanın içindeki veri yükleme alanı;
+        başlığa bir "yükle" düğmesi daha koymak aynı işi iki yerde
+        gösterirdi. "Hazır çıktıyı biçimlendir" ikincil (SPSS'te yapılmış
+        analizin çıktısı ve kod kitabı denetimi: ayrı iş, sayfayı uzatmasın
+        diye pencerede); eski Analiz Merkezi'nden kalan bağsız sonuçlar
+        seyrek, "⋯" menüsünde.
+      */}
+      <SayfaBasligi
+        baslik={t({ tr: "Analiz Merkezi", en: "Analysis Centre" })}
+        aciklama={
+          calisma
+            ? t({ tr: "Testleri ArvoLab hesaplar; asistan sonucu okur, sayı üretmez.", en: "ArvoLab computes the tests; the assistant reads the result and never produces numbers." })
+            : t({ tr: "Verinizi yükleyin, analizi seçin; testleri ArvoLab hesaplar.", en: "Upload your data and choose an analysis; ArvoLab computes the tests." })
+        }
+        baglam={calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/analysis" /> : null}
+        eylemler={
+          <SayfaEylemleri
+            ikincil={[
+              <PanelDrawer
+                key="hazir-cikti"
+                triggerLabel={t({ tr: "Hazır çıktıyı biçimlendir", en: "Format existing output" })}
+                triggerIcon={<FileText size={15} aria-hidden="true" />}
+                triggerClassName="projects-filter-button button-compact"
+                kicker={t({ tr: "Analiz", en: "Analysis" })}
+                title={t({ tr: "SPSS çıktısını biçimlendirin", en: "Format SPSS output" })}
+                description={t({
+                  tr: "Analizi başka programda yaptıysanız çıktıdaki değerleri yapıştırın; çalışmanızın kılavuzuna göre raporlama biçimine çevrilir.",
+                  en: "If you ran the analysis in another program, paste the values from its output; they are converted to the reporting style required by your project's guideline.",
+                })}
+                boy="genis"
+                basaridaKapan={false}
+              >
+                <AnalysisTools
+                  key={calisma?.id ?? ""}
+                  asistanAcik={asistanAcik}
+                  calismalar={calismalar}
+                  secilenCalisma={calisma?.id ?? ""}
+                />
+              </PanelDrawer>,
+            ]}
+            tasma={[
+              bagsizlar.length ? (
+                <PanelDrawer
+                  key="bagsiz-sonuclar"
+                  triggerLabel={t({ tr: "Bağlı olmayan sonuçlar", en: "Unlinked results" })}
+                  triggerClassName="projects-filter-button button-compact"
+                  kicker={t({ tr: "Analiz", en: "Analysis" })}
+                  title={t({ tr: "Çalışmaya bağlı olmayan sonuçlar", en: "Results not linked to a project" })}
+                  description={t({
+                    tr: "Eski Analiz Merkezi'nde çalışma seçilmeden kaydedilmiş sonuçlar. Kayıtlar düzenlenemez; gerekmiyorsa silin.",
+                    en: "Results saved in the old Analysis Centre without choosing a project. Records cannot be edited; delete them if you no longer need them.",
+                  })}
+                  boy="genis"
+                  basaridaKapan={false}
+                >
+                  <ul className="gb-liste">
+                    {bagsizlar.map((s) => (
+                      <li key={s.id} className="analiz-satiri">
+                        <details>
+                          <summary>
+                            <span className="kanit-kayit-govde">
+                              <b>{s.baslik}</b>
+                              <small>
+                                {analizEtiketi(s.analiz_turu, dil)} · {tarih(s.created_at)}
+                              </small>
+                            </span>
+                          </summary>
+                          <p className="analiz-apa">{s.apa_metni}</p>
+                        </details>
+                        <ActionForm
+                          action={analizSonucuSil.bind(null, s.id)}
+                          confirmMessage={t({ tr: `"${s.baslik}" kaydı silinsin mi? Geri alınamaz.`, en: `Delete "${s.baslik}"? This cannot be undone.` })}
+                          successMessage={t({ tr: "Sonuç silindi.", en: "Result deleted." })}
+                        >
+                          <button type="submit" className="projects-filter-button button-compact" aria-label={t({ tr: `${s.baslik}: sil`, en: `${s.baslik}: delete` })}>
+                            <Trash2 size={14} aria-hidden="true" />
+                          </button>
+                        </ActionForm>
+                      </li>
+                    ))}
+                  </ul>
+                </PanelDrawer>
+              ) : null,
+            ]}
+          />
+        }
+      >
+        {etikUyarisi && calisma ? (
+          <p className="alert" data-tone={etikUyarisi.ton} role={etikUyarisi.ton === "danger" ? "alert" : "status"}>
+            {t(etikUyarisi.metin)}{" "}
+            <Link href={`/dashboard/editor/${calisma.id}/etik`}>{t({ tr: "Etik kurul sekmesi", en: "Ethics tab" })}</Link>
           </p>
-          {etikUyarisi && calisma ? (
-            <p className="alert" data-tone={etikUyarisi.ton} role={etikUyarisi.ton === "danger" ? "alert" : "status"}>
-              {t(etikUyarisi.metin)}{" "}
-              <Link href={`/dashboard/editor/${calisma.id}/etik`}>{t({ tr: "Etik kurul sekmesi", en: "Ethics tab" })}</Link>
-            </p>
-          ) : null}
-        </div>
-        <div className="pencere-dugmeler">
-          {bagsizlar.length ? (
-            <PanelDrawer
-              triggerLabel={t({ tr: "Bağlı olmayan sonuçlar", en: "Unlinked results" })}
-              triggerClassName="projects-filter-button button-compact"
-              kicker={t({ tr: "Analiz", en: "Analysis" })}
-              title={t({ tr: "Çalışmaya bağlı olmayan sonuçlar", en: "Results not linked to a project" })}
-              description={t({
-                tr: "Eski Analiz Merkezi'nde çalışma seçilmeden kaydedilmiş sonuçlar. Kayıtlar düzenlenemez; gerekmiyorsa silin.",
-                en: "Results saved in the old Analysis Centre without choosing a project. Records cannot be edited; delete them if you no longer need them.",
-              })}
-              boy="genis"
-              basaridaKapan={false}
-            >
-              <ul className="gb-liste">
-                {bagsizlar.map((s) => (
-                  <li key={s.id} className="analiz-satiri">
-                    <details>
-                      <summary>
-                        <span className="kanit-kayit-govde">
-                          <b>{s.baslik}</b>
-                          <small>
-                            {analizEtiketi(s.analiz_turu, dil)} · {tarih(s.created_at)}
-                          </small>
-                        </span>
-                      </summary>
-                      <p className="analiz-apa">{s.apa_metni}</p>
-                    </details>
-                    <ActionForm
-                      action={analizSonucuSil.bind(null, s.id)}
-                      confirmMessage={t({ tr: `"${s.baslik}" kaydı silinsin mi? Geri alınamaz.`, en: `Delete "${s.baslik}"? This cannot be undone.` })}
-                      successMessage={t({ tr: "Sonuç silindi.", en: "Result deleted." })}
-                    >
-                      <button type="submit" className="projects-filter-button button-compact" aria-label={t({ tr: `${s.baslik}: sil`, en: `${s.baslik}: delete` })}>
-                        <Trash2 size={14} aria-hidden="true" />
-                      </button>
-                    </ActionForm>
-                  </li>
-                ))}
-              </ul>
-            </PanelDrawer>
-          ) : null}
-          {/* SPSS'te yapılmış analizin çıktısını biçimlendirme ve kod kitabı
-              denetimi: ayrı iş, sayfayı uzatmasın diye pencerede. */}
-          <PanelDrawer
-            triggerLabel={t({ tr: "Hazır çıktıyı biçimlendir", en: "Format existing output" })}
-            triggerIcon={<FileText size={15} aria-hidden="true" />}
-            triggerClassName="projects-filter-button button-compact"
-            kicker={t({ tr: "Analiz", en: "Analysis" })}
-            title={t({ tr: "SPSS çıktısını biçimlendirin", en: "Format SPSS output" })}
-            description={t({
-              tr: "Analizi başka programda yaptıysanız çıktıdaki değerleri yapıştırın; çalışmanızın kılavuzuna göre raporlama biçimine çevrilir.",
-              en: "If you ran the analysis in another program, paste the values from its output; they are converted to the reporting style required by your project's guideline.",
-            })}
-            boy="genis"
-            basaridaKapan={false}
-          >
-            <AnalysisTools
-              key={calisma?.id ?? ""}
-              asistanAcik={asistanAcik}
-              calismalar={calismalar}
-              secilenCalisma={calisma?.id ?? ""}
-            />
-          </PanelDrawer>
-          {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/analysis" /> : null}
-        </div>
-      </section>
+        ) : null}
+      </SayfaBasligi>
 
       {calismaOkunamadi || analizOkunamadi || sonucOkunamadi ? (
         <p className="alert" role="alert">
