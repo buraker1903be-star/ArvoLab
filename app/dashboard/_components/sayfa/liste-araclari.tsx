@@ -44,24 +44,15 @@ export default function ListeAraclari<K extends string, S extends string>({
   const t = useCeviri();
   return (
     <div className="liste-araclari">
-      <label className="kaynak-arama">
-        <Search size={14} aria-hidden="true" />
-        <input type="search" placeholder={aramaIpucu} value={arama} onChange={(e) => onArama(e.target.value)} aria-label={aramaEtiketi} />
-      </label>
-      <div className="liste-araclari-alt">
-        <div className="cluster" role="group" aria-label={t({ tr: "Süzgeç", en: "Filter" })}>
-          {suzgecler
-            .filter((s) => s.herZaman || s.sayi > 0)
-            .map((s) => (
-              <button key={s.kod} type="button" className="projects-filter-button button-compact" aria-pressed={secili === s.kod} onClick={() => onSuzgec(s.kod)}>
-                {s.ad} <small>{s.sayi}</small>
-              </button>
-            ))}
-        </div>
+      <div className="liste-araclari-ust">
+        <label className="kaynak-arama">
+          <Search size={14} aria-hidden="true" />
+          <input type="search" placeholder={aramaIpucu} value={arama} onChange={(e) => onArama(e.target.value)} aria-label={aramaEtiketi} />
+        </label>
         {siralamalar?.length && sira && onSira ? (
           <label className="liste-sirala">
             <span>{t({ tr: "Sırala", en: "Sort" })}</span>
-            <select value={sira} onChange={(e) => onSira(e.target.value as S)}>
+            <select className="compact-select" value={sira} onChange={(e) => onSira(e.target.value as S)}>
               {siralamalar.map((s) => (
                 <option key={s.kod} value={s.kod}>
                   {s.ad}
@@ -70,6 +61,15 @@ export default function ListeAraclari<K extends string, S extends string>({
             </select>
           </label>
         ) : null}
+      </div>
+      <div className="cluster liste-suzgecler" role="group" aria-label={t({ tr: "Süzgeç", en: "Filter" })}>
+        {suzgecler
+          .filter((s) => s.herZaman || s.sayi > 0)
+          .map((s) => (
+            <button key={s.kod} type="button" className="projects-filter-button button-compact" aria-pressed={secili === s.kod} onClick={() => onSuzgec(s.kod)}>
+              {s.ad} <small>{s.sayi}</small>
+            </button>
+          ))}
       </div>
     </div>
   );

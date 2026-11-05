@@ -960,7 +960,6 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .dfa-faktor .cluster { align-items: flex-end; }
 
 /* Kaynaklar: işlenebilir liste, içe/dışa aktarma (kaynak-listesi.tsx, kaynak-aktarim-araclari.tsx) */
-.kaynak-suzgec { display: grid; gap: 8px; margin-bottom: 8px; }
 .kaynak-arama { display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); color: var(--muted); }
 .kaynak-arama input { flex: 1 1 auto; min-width: 0; padding: 7px 0; border: 0; background: transparent; color: var(--ink); }
 .kaynak-arama input:focus { outline: none; }

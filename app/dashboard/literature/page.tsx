@@ -13,6 +13,8 @@ import LiteraturPenceresi from "./literatur-penceresi";
 import LiteraturAsistani from "./literatur-asistani";
 import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
 import CalismaSecici from "../_components/calisma-secici";
+import SayfaBasligi from "../_components/sayfa/sayfa-basligi";
+import SayfaEylemleri from "../_components/sayfa/sayfa-eylemleri";
 import KaynakListesi from "./kaynak-listesi";
 import { DisaAktarma, IceAktarma } from "./kaynak-aktarim-araclari";
 import { STIL_ETIKETLERI, stilAdi } from "@/lib/atif/stiller";
@@ -103,20 +105,20 @@ export default async function KaynaklarPage({
     <main className="dashboard-page gb gb-tek-ekran">
       {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
       {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
-      <section className="projects-header">
-        <div>
-          <h1>{t({ tr: "Kaynaklar", en: "Sources" })}</h1>
-          <p>
-            {calisma
-              ? t({
-                  tr: `“${calisma.title}” çalışmasının literatürü ve kaynakçası. Kaynak özeti ya da yorum üretilmez; künyeler dizinlerde doğrulanır.`,
-                  en: `Literature and reference list for “${calisma.title}”. No source summaries or commentary are generated; references are verified against the indexes.`,
-                })
-              : t({ tr: "Çalışmalarınızın literatürü ve kaynakçası tek yerde.", en: "Your works' literature and reference lists in one place." })}
-          </p>
-        </div>
-        {calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/literature" /> : null}
-      </section>
+      {/* Ortak sayfa başlığı (Signature OS 4.1). Açıklama artık çalışmanın
+          adını tekrar etmiyor: ad çalışma seçicide yazıyor. */}
+      <SayfaBasligi
+        baslik={t({ tr: "Kaynaklar", en: "Sources" })}
+        aciklama={
+          calisma
+            ? t({
+                tr: "Literatür ve kaynakça. Kaynak özeti ya da yorum üretilmez; künyeler dizinlerde doğrulanır.",
+                en: "Literature and reference list. No source summaries or commentary are generated; references are verified against the indexes.",
+              })
+            : t({ tr: "Çalışmalarınızın literatürü ve kaynakçası tek yerde.", en: "Your works' literature and reference lists in one place." })
+        }
+        baglam={calisma ? <CalismaSecici calismalar={calismalar} secili={calisma.id} yol="/dashboard/literature" /> : null}
+      />
 
       {calismaOkunamadi || kaynakOkunamadi ? (
         <p className="alert" role="alert">
@@ -157,76 +159,90 @@ export default async function KaynaklarPage({
                     : t({ tr: "Bu çalışmaya bağlı kaynak yok", en: "No sources linked to this work" })}
                 </p>
               </div>
-              <div className="pencere-dugmeler">
-                {asistanAcik ? (
+              {/* Eylem düzeni (Signature OS 4.1, sayfa-eylemleri.tsx): birincil
+                  "Kaynak bul"; sık kullanılan "İçe aktar" satırda; tarama
+                  asistanı ve dışa aktarma "⋯" menüsünde. Eskiden dört düğme
+                  yan yana duruyordu ve telefonda iki satıra sarıyordu. Toplu
+                  ekleme ve dışa aktarma (27.10.2026): Zotero/Mendeley dosyası,
+                  DOI listesi; RIS/BibTeX indirme ve stilinde kaynakça kopyalama. */}
+              <SayfaEylemleri
+                etiket={t({ tr: "Literatür eylemleri", en: "Literature actions" })}
+                birincil={
+                  <LiteraturPenceresi
+                    projectId={calisma.id}
+                    projeAdi={calisma.title}
+                    triggerLabel={t({ tr: "Kaynak bul", en: "Find sources" })}
+                    triggerClassName="projects-primary-button button-compact kaynak-bul-tetik"
+                  />
+                }
+                ikincil={[
                   <PanelDrawer
-                    triggerLabel={t({ tr: "Tarama asistanı", en: "Search assistant" })}
-                    triggerIcon={<Sparkles size={15} aria-hidden="true" />}
+                    key="ice-aktar"
+                    triggerLabel={t({ tr: "İçe aktar", en: "Import" })}
+                    triggerIcon={<FileUp size={15} aria-hidden="true" />}
                     triggerClassName="projects-filter-button button-compact"
                     kicker={t({ tr: "Literatür", en: "Literature" })}
-                    title={t({ tr: "Tarama asistanı", en: "Search assistant" })}
+                    title={t({ tr: "Kaynakları toplu ekleyin", en: "Add sources in bulk" })}
                     description={t({
-                      tr: "Asistan kaynak önermez: araştırma sorunuzdan veri tabanlarına yapıştırabileceğiniz arama dizeleri kurar ve listenizdeki boşlukları gösterir.",
-                      en: "The assistant doesn't recommend sources: it builds search strings from your research question that you can paste into databases, and shows gaps in your list.",
+                      tr: "Zotero, Mendeley ya da EndNote kütüphanenizi dosyayla aktarın ya da DOI'leri yapıştırın. Kaynaklar bu çalışmaya “Okunacak” olarak eklenir.",
+                      en: "Import your Zotero, Mendeley or EndNote library from a file, or paste DOIs. Sources are added to this work as “To read”.",
                     })}
                     boy="genis"
                     basaridaKapan={false}
                   >
-                    <LiteraturAsistani
-                      projeler={[{ id: calisma.id, title: calisma.title }]}
-                      asistanAcik={asistanAcik}
-                      secilenCalisma={calisma.id}
-                    />
-                  </PanelDrawer>
-                ) : null}
-                {/* Toplu ekleme ve dışa aktarma (27.10.2026): Zotero/Mendeley dosyası,
-                    DOI listesi; RIS/BibTeX indirme ve stilinde kaynakça kopyalama. */}
-                <PanelDrawer
-                  triggerLabel={t({ tr: "İçe aktar", en: "Import" })}
-                  triggerIcon={<FileUp size={15} aria-hidden="true" />}
-                  triggerClassName="projects-filter-button button-compact"
-                  kicker={t({ tr: "Literatür", en: "Literature" })}
-                  title={t({ tr: "Kaynakları toplu ekleyin", en: "Add sources in bulk" })}
-                  description={t({
-                    tr: "Zotero, Mendeley ya da EndNote kütüphanenizi dosyayla aktarın ya da DOI'leri yapıştırın. Kaynaklar bu çalışmaya “Okunacak” olarak eklenir.",
-                    en: "Import your Zotero, Mendeley or EndNote library from a file, or paste DOIs. Sources are added to this work as “To read”.",
-                  })}
-                  boy="genis"
-                  basaridaKapan={false}
-                >
-                  <IceAktarma projectId={calisma.id} mevcut={kaynaklar} />
-                </PanelDrawer>
-                {kaynaklar.length ? (
-                  <PanelDrawer
-                    triggerLabel={t({ tr: "Dışa aktar", en: "Export" })}
-                    triggerIcon={<Download size={15} aria-hidden="true" />}
-                    triggerClassName="projects-filter-button button-compact"
-                    kicker={t({ tr: "Literatür", en: "Literature" })}
-                    title={t({ tr: "Kaynakça ve dışa aktarma", en: "Reference list and export" })}
-                    description={t({
-                      tr: "Kaynakçanızı çalışmanızın atıf stilinde kopyalayın ya da kaynaklarınızı başka bir programa aktarın.",
-                      en: "Copy your reference list in your work's citation style, or export your sources to another program.",
-                    })}
-                    boy="genis"
-                    basaridaKapan={false}
-                  >
-                    <DisaAktarma
-                      kaynaklar={kaynaklar}
-                      dil={kaynakcaDili}
-                      stil={(calisma.citation_style && calisma.citation_style in STIL_ETIKETLERI ? calisma.citation_style : "apa7") as CitationStyle}
-                      stilAdi={cslMi(calisma.citation_style) ? stilAdi(calisma.citation_style) : STIL_ETIKETLERI[calisma.citation_style ?? "apa7"] ?? "APA 7"}
-                      cslStil={cslMi(calisma.citation_style) ? calisma.citation_style : null}
-                      calismaAdi={calisma.title}
-                    />
-                  </PanelDrawer>
-                ) : null}
-                <LiteraturPenceresi
-                  projectId={calisma.id}
-                  projeAdi={calisma.title}
-                  triggerLabel={t({ tr: "Kaynak bul", en: "Find sources" })}
-                  triggerClassName="projects-primary-button button-compact kaynak-bul-tetik"
-                />
-              </div>
+                    <IceAktarma projectId={calisma.id} mevcut={kaynaklar} />
+                  </PanelDrawer>,
+                ]}
+                tasma={[
+                  asistanAcik ? (
+                    <PanelDrawer
+                      key="tarama-asistani"
+                      triggerLabel={t({ tr: "Tarama asistanı", en: "Search assistant" })}
+                      triggerIcon={<Sparkles size={15} aria-hidden="true" />}
+                      triggerClassName="projects-filter-button button-compact"
+                      kicker={t({ tr: "Literatür", en: "Literature" })}
+                      title={t({ tr: "Tarama asistanı", en: "Search assistant" })}
+                      description={t({
+                        tr: "Asistan kaynak önermez: araştırma sorunuzdan veri tabanlarına yapıştırabileceğiniz arama dizeleri kurar ve listenizdeki boşlukları gösterir.",
+                        en: "The assistant doesn't recommend sources: it builds search strings from your research question that you can paste into databases, and shows gaps in your list.",
+                      })}
+                      boy="genis"
+                      basaridaKapan={false}
+                    >
+                      <LiteraturAsistani
+                        projeler={[{ id: calisma.id, title: calisma.title }]}
+                        asistanAcik={asistanAcik}
+                        secilenCalisma={calisma.id}
+                      />
+                    </PanelDrawer>
+                  ) : null,
+                  kaynaklar.length ? (
+                    <PanelDrawer
+                      key="disa-aktar"
+                      triggerLabel={t({ tr: "Dışa aktar", en: "Export" })}
+                      triggerIcon={<Download size={15} aria-hidden="true" />}
+                      triggerClassName="projects-filter-button button-compact"
+                      kicker={t({ tr: "Literatür", en: "Literature" })}
+                      title={t({ tr: "Kaynakça ve dışa aktarma", en: "Reference list and export" })}
+                      description={t({
+                        tr: "Kaynakçanızı çalışmanızın atıf stilinde kopyalayın ya da kaynaklarınızı başka bir programa aktarın.",
+                        en: "Copy your reference list in your work's citation style, or export your sources to another program.",
+                      })}
+                      boy="genis"
+                      basaridaKapan={false}
+                    >
+                      <DisaAktarma
+                        kaynaklar={kaynaklar}
+                        dil={kaynakcaDili}
+                        stil={(calisma.citation_style && calisma.citation_style in STIL_ETIKETLERI ? calisma.citation_style : "apa7") as CitationStyle}
+                        stilAdi={cslMi(calisma.citation_style) ? stilAdi(calisma.citation_style) : STIL_ETIKETLERI[calisma.citation_style ?? "apa7"] ?? "APA 7"}
+                        cslStil={cslMi(calisma.citation_style) ? calisma.citation_style : null}
+                        calismaAdi={calisma.title}
+                      />
+                    </PanelDrawer>
+                  ) : null,
+                ]}
+              />
             </header>
             {/* DOI ile ekleme görünür (Phase 3): eskiden "İçe aktar" penceresinin içindeydi. */}
             <DoiEkleKutusu
@@ -272,7 +288,8 @@ export default async function KaynaklarPage({
                 calisma={{ ...calisma, citation_style: calisma.citation_style ?? "apa7" }}
                 sonDenetim={sonDenetim ? { skor, tarih: sonDenetim.tarih } : null}
                 triggerLabel={sonDenetim ? t({ tr: "Sonuçları aç", en: "Open results" }) : t({ tr: "Kaynakçamı denetle", en: "Check my reference list" })}
-                triggerClassName="projects-primary-button button-compact"
+                /* İkincil (4.1): ekranın tek birincil eylemi "Kaynak bul". */
+                triggerClassName="projects-filter-button button-compact"
               />
             </header>
             {sonDenetim ? (

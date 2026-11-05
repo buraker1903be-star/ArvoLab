@@ -61,21 +61,24 @@
 .sayfa-bolum-bas p { margin: 2px 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
 .sayfa-bolum > :is(p, ul, ol, dl, details, form) { margin: 0; }
 
-/* ---------- Liste araçları (arama · süzgeç · sıralama) ---------- */
+/* ---------- Liste araçları (arama · sıralama · süzgeç) ---------- */
 .liste-araclari { display: grid; gap: var(--s-2); margin-bottom: var(--s-2); }
-.liste-araclari-alt { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
-:is(.liste-sirala, .veri-sirala) { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--muted); font-size: var(--fs-sm); }
-:is(.liste-sirala, .veri-sirala) select { width: auto; min-height: var(--kontrol-h-sik); }
+.liste-araclari-ust { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.liste-araclari-ust > .kaynak-arama { flex: 1 1 240px; min-width: 0; }
+:is(.liste-sirala, .veri-sirala) { display: inline-flex; flex: none; align-items: center; gap: var(--s-2); color: var(--muted); font-size: var(--fs-sm); }
+:is(.liste-sirala, .veri-sirala) select { width: auto; max-width: 220px; }
 @media (max-width: 1199px), (pointer: coarse) {
   .liste-araclari .kaynak-arama input { min-height: calc(var(--kontrol-h) - 2px); }
   .liste-araclari .projects-filter-button { min-height: var(--kontrol-h); }
   :is(.liste-sirala, .veri-sirala) select { min-height: var(--kontrol-h); }
 }
 @media (max-width: 760px) {
-  /* Süzgeçler telefonda tek satırda yatay kayar; iki satıra sarıp listeyi aşağı itmesin. */
-  .liste-araclari .cluster { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -2px; padding: 2px; }
-  .liste-araclari .cluster > * { flex: none; }
-  .liste-araclari-alt { display: grid; grid-template-columns: minmax(0, 1fr); }
+  /* Süzgeçler telefonda tek satırda yatay kayar; iki satıra sarıp listeyi
+     aşağı itmesin. Sağ kenardaki yarım düğme kaydırılabileceğini söylüyor. */
+  .liste-suzgecler { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -2px; padding: 2px; }
+  .liste-suzgecler > * { flex: none; }
+  .liste-araclari-ust > .liste-sirala { flex: 1 1 100%; }
+  :is(.liste-sirala, .veri-sirala) select { flex: 1 1 auto; max-width: none; }
 }
 
 /* ---------- Veri tablosu ---------- */
@@ -155,8 +158,34 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
 .ayrinti-alanlar > div { display: contents; }
 .ayrinti-alanlar dt { color: var(--muted); }
 .ayrinti-alanlar dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
-.ayrinti-eylemler { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.ayrinti-eylemler { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
 .ayrinti-not { margin: 0; color: var(--ink); font-size: var(--fs-sm); line-height: var(--lh-metin); white-space: pre-wrap; }
 @media (max-width: 1199px), (pointer: coarse) {
   .ayrinti-eylemler :is(.projects-filter-button, .projects-primary-button, .link-button) { min-height: var(--kontrol-h); }
 }
+
+/* ---------- Kaynaklar: kaynağın adı ayrıntıyı açan düğme ---------- */
+/* Görünüm listenin satır başlığıyla aynı (.gb-satir-govde b); dokunmatikte
+   dikey dolgu negatif kenar boşluğuyla 40 piksele genişler, satırın
+   yüksekliği değişmez. Alttaki DOI bağlantısı belgede sonra geldiği için
+   üstte kalır ve tıklamayı o alır. */
+.kaynak-ad {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.kaynak-ad:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+@media (hover: hover) and (pointer: fine) { .kaynak-ad:hover { color: var(--primary-ink); text-decoration: underline; text-underline-offset: 3px; } }
+@media (max-width: 1199px), (pointer: coarse) { .kaynak-ad { padding-block: 9px; margin-block: -9px; } }
+.ayrinti-govde { display: grid; gap: var(--s-4); }
+.ayrinti-govde .kaynak-eksik { margin: 0; font-size: var(--fs-sm); }

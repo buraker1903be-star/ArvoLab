@@ -87,6 +87,7 @@ export default function VeriTablosu({
           <label className="veri-sirala">
             <span>{t({ tr: "Sırala", en: "Sort" })}</span>
             <select
+              className="compact-select"
               value={sira ? `${sira.anahtar}:${sira.yon}` : ""}
               onChange={(e) => {
                 const [anahtar, yon] = e.target.value.split(":");
