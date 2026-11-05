@@ -38,7 +38,7 @@ export async function proxy(request: NextRequest) {
     bağlantıdır. Ret varsa hiçbir istek Supabase'e gitmez; 503 ve ayrıntısız
     metin (değişken adları ve kimlikler yalnızca sunucu günlüğünde).
   */
-  const ortamKarari = supabaseOrtamKarari(ortamGirdisi(process.env));
+  const ortamKarari = supabaseOrtamKarari(ortamGirdisi(process.env, process.env.ARVOLAB_DAGITIM_ORTAMI));
   if (ortamKarari.tur === "red") {
     console.error(`[supabase-ortam] ${ortamKarari.mesaj} (${ortamKarari.neden})`);
     return new NextResponse("Hizmet yapılandırması doğrulanamadı. / Service configuration could not be verified.", { status: 503, headers: { "content-type": "text/plain; charset=utf-8" } });

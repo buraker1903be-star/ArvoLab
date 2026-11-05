@@ -6,6 +6,7 @@ import {
   anahtarProjesi,
   anahtarUyusmazligi,
   betikHedefKarari,
+  dagitimOrtamiCoz,
   ortamGirdisi,
   projeKimligi,
   supabaseOrtamKarari,
@@ -126,7 +127,7 @@ describe("yardımcılar", () => {
 
   test("ortamGirdisi: Vercel değişkenleri ve etiketler", () => {
     assert.deepEqual(ortamGirdisi({ VERCEL_ENV: "preview", NEXT_PUBLIC_SUPABASE_URL: "u", ARVOLAB_SUPABASE_ORTAMI: "test" }), {
-      vercelOrtami: "preview", supabaseUrl: "u", etiket: "test", uretimRef: null, testRef: null, onizleme: null,
+      vercelOrtami: "preview", derlemeOrtami: null, supabaseUrl: "u", etiket: "test", uretimRef: null, testRef: null, onizleme: null,
     });
   });
 });
@@ -186,6 +187,76 @@ describe("bugünkü Vercel yapılandırmasının şekli (değerler uydurma)", ()
   test("Preview bugünkü hâliyle REDDEDİLİR — bu kod, panel adımlarından önce önizlemeye gönderilmemeli", () => {
     assert.equal(supabaseOrtamKarari(ortamGirdisi(onizleme)).tur, "red");
     assert.equal(anahtarAyrimiKarari(onizleme).tur, "red");
+  });
+});
+
+/*
+  ÇALIŞMA ANINDA VERCEL_ENV YOKSA (Durak 0). Eskiden ortam yalnızca çalışma
+  anındaki VERCEL_ENV'den okunuyordu: değer gelmezse üretim kendini önizleme
+  sanıyor, test yapılandırması arıyor ve her isteğe 503 dönüyordu. Artık
+  derlemede gömülen değer (ARVOLAB_DAGITIM_ORTAMI) yedek; ikisi çelişirse ret.
+*/
+describe("dağıtım ortamı: çalışma anı + derleme yedeği", () => {
+  const uretimTam = { supabaseUrl: adres(URETIM), etiket: "uretim", uretimRef: URETIM, testRef: TEST };
+  const testTam = { supabaseUrl: adres(TEST), ...tam };
+
+  test("çözüm tablosu: ikisi aynı / yalnızca biri / hiçbiri / çelişki; boş metin yok sayılır", () => {
+    assert.deepEqual(dagitimOrtamiCoz("production", "production"), { tur: "tamam", ortam: "uretim", kaynak: "calisma" });
+    assert.deepEqual(dagitimOrtamiCoz(undefined, "production"), { tur: "tamam", ortam: "uretim", kaynak: "derleme" });
+    assert.deepEqual(dagitimOrtamiCoz("", "production"), { tur: "tamam", ortam: "uretim", kaynak: "derleme" });
+    assert.deepEqual(dagitimOrtamiCoz("preview", null), { tur: "tamam", ortam: "uretim-disi", kaynak: "calisma" });
+    assert.deepEqual(dagitimOrtamiCoz(null, ""), { tur: "tamam", ortam: "uretim-disi", kaynak: "yok" });
+    assert.deepEqual(dagitimOrtamiCoz("preview", "production"), { tur: "celiski", calisma: "preview", derleme: "production" });
+  });
+
+  test("REGRESYON — Production: çalışma anında VERCEL_ENV yok, derleme 'production' → üretim kuralları, izin (503 YOK)", () => {
+    assert.deepEqual(supabaseOrtamKarari({ vercelOrtami: undefined, derlemeOrtami: "production", ...uretimTam }), { tur: "izin", ortam: "uretim", hedef: "uretim" });
+    // Bugünkü Production (yeni değişkenler yok) da aynı yoldan uyarıyla geçer.
+    const bugun = supabaseOrtamKarari({ vercelOrtami: undefined, derlemeOrtami: "production", supabaseUrl: adres(URETIM) });
+    assert.equal(bugun.tur, "izin");
+    assert.equal(bugun.ortam, "uretim");
+  });
+  test("Production: derleme yedeği üretim kurallarını gevşetmez — test projesine bağlıysa yine ret", () => {
+    const k = supabaseOrtamKarari({ vercelOrtami: undefined, derlemeOrtami: "production", ...uretimTam, supabaseUrl: adres(TEST) });
+    assert.equal(k.tur === "red" && k.neden, "uretim-test-projesine-bagli");
+  });
+  test("Preview: çalışma anında yok, derleme 'preview' → üretim dışı kuralları; üretim projesine bağlıysa ret", () => {
+    assert.deepEqual(supabaseOrtamKarari({ vercelOrtami: undefined, derlemeOrtami: "preview", ...testTam }), { tur: "izin", ortam: "uretim-disi", hedef: "test" });
+    const k = supabaseOrtamKarari({ vercelOrtami: undefined, derlemeOrtami: "preview", ...tam, supabaseUrl: adres(URETIM) });
+    assert.equal(k.tur === "red" && k.neden, "uretim-disi-uretime-bagli");
+  });
+  test("Development: derleme 'development' → üretim dışı; yerel Supabase Vercel'de sayılır ve reddedilir", () => {
+    assert.equal(supabaseOrtamKarari({ derlemeOrtami: "development", ...testTam }).tur, "izin");
+    const k = supabaseOrtamKarari({ derlemeOrtami: "development", supabaseUrl: "http://127.0.0.1:54321" });
+    assert.equal(k.tur === "red" && k.neden, "yerel-supabase-vercelde");
+    // Hiçbir kaynak yoksa (yerel `next dev`) yerel Supabase serbest.
+    assert.equal(supabaseOrtamKarari({ supabaseUrl: "http://127.0.0.1:54321" }).tur, "izin");
+  });
+  test("çelişki → ret, her iki yönde; üretimi ilgilendiriyorsa ortam 'uretim' yazılır", () => {
+    for (const [calisma, derleme, ortam] of [["production", "preview", "uretim"], ["preview", "production", "uretim"], ["preview", "development", "uretim-disi"]] as const) {
+      const k = supabaseOrtamKarari({ vercelOrtami: calisma, derlemeOrtami: derleme, ...uretimTam });
+      assert.equal(k.tur, "red");
+      assert.equal(k.tur === "red" && k.neden, "dagitim-ortami-celiskili");
+      assert.equal(k.ortam, ortam);
+    }
+  });
+  test("ortamGirdisi ve supabaseOrtaminiDogrula derleme değerini ikinci argümandan alır", () => {
+    const env = { NEXT_PUBLIC_SUPABASE_URL: adres(URETIM), ARVOLAB_SUPABASE_ORTAMI: "uretim", ARVOLAB_URETIM_SUPABASE_REF: URETIM, ARVOLAB_TEST_SUPABASE_REF: TEST };
+    assert.equal(ortamGirdisi(env, "production").derlemeOrtami, "production");
+    assert.equal(supabaseOrtaminiDogrula(env, "production").hedef, "uretim");
+    // Yedek olmadan aynı yapılandırma üretim dışı sayılır ve reddedilir (eski davranış).
+    assert.throws(() => supabaseOrtaminiDogrula(env), SupabaseOrtamHatasi);
+  });
+  test("sunucu, yönetim istemcisi ve ara katman gömülü değeri DÜZ yazımla verir (Next yalnızca onu derlemede değiştirir)", () => {
+    for (const dosya of ["lib/supabase/server.ts", "lib/supabase/admin.ts", "proxy.ts"]) {
+      assert.ok(readFileSync(dosya, "utf8").includes("process.env.ARVOLAB_DAGITIM_ORTAMI)"), `${dosya} derleme yedeğini vermiyor`);
+    }
+    assert.ok(/ARVOLAB_DAGITIM_ORTAMI:\s*process\.env\.VERCEL_ENV/.test(readFileSync("next.config.ts", "utf8")));
+  });
+  test("next.config `next start` evresinde denetlemez: çalışma anı kararının tek sahibi derleme yedeğini gören üç yol", () => {
+    const evreler = /DENETLENEN_EVRELER = new Set<string>\(\[([^\]]*)\]/.exec(readFileSync("next.config.ts", "utf8"))?.[1] ?? "";
+    assert.ok(evreler.includes("phase-production-build") && evreler.includes("phase-development-server"));
+    assert.equal(evreler.includes("phase-production-server"), false);
   });
 });
 

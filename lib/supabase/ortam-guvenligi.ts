@@ -37,6 +37,12 @@ export type DagitimOrtami = "uretim" | "uretim-disi";
 export type OrtamGirdisi = {
   /** Vercel'in VERCEL_ENV'i: "production" | "preview" | "development"; Vercel dışında boş. */
   vercelOrtami?: string | null;
+  /**
+   * DERLEME anında okunup koda gömülen VERCEL_ENV (next.config `env` →
+   * ARVOLAB_DAGITIM_ORTAMI). Çalışma anındaki değer gelmezse bu kullanılır;
+   * ikisi farklıysa ret. Bkz. dagitimOrtamiCoz.
+   */
+  derlemeOrtami?: string | null;
   supabaseUrl?: string | null;
   /** ARVOLAB_SUPABASE_ORTAMI: "uretim" | "test". */
   etiket?: string | null;
@@ -59,7 +65,8 @@ export type RedNedeni =
   | "ref-bicimi-gecersiz"
   | "uretim-test-projesine-bagli"
   | "uretim-etiket-yanlis"
-  | "uretim-projesi-degil";
+  | "uretim-projesi-degil"
+  | "dagitim-ortami-celiskili";
 
 export type OrtamKarari =
   | { tur: "izin"; ortam: DagitimOrtami; hedef: "uretim" | "test" | "yerel" | "sahte"; uyari?: string }
@@ -70,6 +77,34 @@ const REF = /^[a-z0-9]{20}$/;
 
 export function dagitimOrtami(vercelOrtami: string | null | undefined): DagitimOrtami {
   return vercelOrtami === "production" ? "uretim" : "uretim-disi";
+}
+
+/*
+  ÇALIŞMA ANI + DERLEME ANI ORTAMI (Durak 0, 05.11.2026).
+  Eskiden ortam yalnızca çalışma anındaki VERCEL_ENV'den okunuyordu. Vercel
+  bu değişkeni normalde verir; ama bir gün çalışma anında gelmezse üretim
+  sunucusu kendini "üretim dışı" sayar, test yapılandırması arar, bulamaz
+  ve HER isteğe 503 döner. Önizleme bu hatayı göstermez: orada "yok" ile
+  "preview" aynı sonucu verir. Derleme sırasında doğrulanan değer koda
+  gömülüdür (next.config `env`); çalışma anı boşsa o kullanılır.
+
+  - İkisi de var ve aynı      → o ortam.
+  - Yalnızca biri var          → o ortam.
+  - İkisi de yok               → üretim dışı (yerel geliştirme).
+  - İkisi de var ve FARKLI     → çelişki, RET. Örnek: önizleme için
+    derlenmiş (tarayıcı paketine test değerleri gömülü) bir paket üretim
+    olarak çalışıyor. Hangisinin doğru olduğu bilinemez; bağlantı kurulmaz.
+  Boş metin "yok" sayılır.
+*/
+export type DagitimCozumu = { tur: "tamam"; ortam: DagitimOrtami; kaynak: "calisma" | "derleme" | "yok" } | { tur: "celiski"; calisma: string; derleme: string };
+
+export function dagitimOrtamiCoz(calisma: string | null | undefined, derleme: string | null | undefined): DagitimCozumu {
+  const c = typeof calisma === "string" ? calisma.trim() : "";
+  const d = typeof derleme === "string" ? derleme.trim() : "";
+  if (c && d && c !== d) return { tur: "celiski", calisma: c, derleme: d };
+  if (c) return { tur: "tamam", ortam: dagitimOrtami(c), kaynak: "calisma" };
+  if (d) return { tur: "tamam", ortam: dagitimOrtami(d), kaynak: "derleme" };
+  return { tur: "tamam", ortam: "uretim-disi", kaynak: "yok" };
 }
 
 /** Adresten proje kimliği: https://<ref>.supabase.co → ref; yerel Supabase → "yerel"; başka bir şey → null. */
@@ -89,7 +124,20 @@ export function projeKimligi(url: string | null | undefined): string | null {
 const temiz = (s: string | null | undefined) => (typeof s === "string" ? s.trim() : "");
 
 export function supabaseOrtamKarari(g: OrtamGirdisi): OrtamKarari {
-  const ortam = dagitimOrtami(g.vercelOrtami);
+  const cozum = dagitimOrtamiCoz(g.vercelOrtami, g.derlemeOrtami);
+  if (cozum.tur === "celiski") {
+    /* Taraflardan biri üretim diyorsa ortam "uretim" yazılır: günlükte üretimin etkilendiği görünsün. */
+    const ortam: DagitimOrtami = cozum.calisma === "production" || cozum.derleme === "production" ? "uretim" : "uretim-disi";
+    return {
+      tur: "red",
+      ortam,
+      neden: "dagitim-ortami-celiskili",
+      mesaj: `Dağıtım ortamı çelişkili: çalışma anı "${cozum.calisma}", derleme "${cozum.derleme}". Paket başka bir ortam için derlenmiş; yeniden dağıtın.`,
+    };
+  }
+  const ortam = cozum.ortam;
+  /* Vercel'de olup olmadığımız da iki kaynaktan: yerel Supabase yalnızca Vercel dışında. */
+  const vercelde = Boolean(temiz(g.vercelOrtami) || temiz(g.derlemeOrtami));
   const red = (neden: RedNedeni, mesaj: string): OrtamKarari => ({ tur: "red", ortam, neden, mesaj });
   const uretimRef = temiz(g.uretimRef);
   const testRef = temiz(g.testRef);
@@ -108,7 +156,7 @@ export function supabaseOrtamKarari(g: OrtamGirdisi): OrtamKarari {
     // Önce üretime bağlantı: yapılandırma eksik olsa da kimlik biliniyorsa en açık ret budur.
     if (uretimRef && ref === uretimRef) return red("uretim-disi-uretime-bagli", "Üretim dışı ortam üretim Supabase projesine bağlanamaz.");
     if (ref === "yerel") {
-      return g.vercelOrtami ? red("yerel-supabase-vercelde", "Vercel dağıtımı yerel Supabase adresine bağlanamaz.") : { tur: "izin", ortam, hedef: "yerel" };
+      return vercelde ? red("yerel-supabase-vercelde", "Vercel dağıtımı yerel Supabase adresine bağlanamaz.") : { tur: "izin", ortam, hedef: "yerel" };
     }
     if (!uretimRef || !testRef || !etiket) {
       return red(
@@ -166,10 +214,16 @@ export function anahtarUyusmazligi(supabaseUrl: string | null | undefined, anaht
   return a.ref === ref ? null : "Supabase anahtarı adresteki projeye ait değil.";
 }
 
-/** process.env'den girdi; Next istemci paketinde de çalışır (değerler next.config'de gömülür). */
-export function ortamGirdisi(env: Record<string, string | undefined>): OrtamGirdisi {
+/**
+ * process.env'den girdi; Next istemci paketinde de çalışır (değerler next.config'de gömülür).
+ * `derlemeOrtami`: çağıran `process.env.ARVOLAB_DAGITIM_ORTAMI` yazarak verir — Next
+ * yalnızca bu DÜZ yazımı derlemede değerle değiştirir; buradaki `env.X` okuması
+ * çalışma anındaki nesneye bakar ve gömülü değeri GÖRMEZ.
+ */
+export function ortamGirdisi(env: Record<string, string | undefined>, derlemeOrtami?: string | null): OrtamGirdisi {
   return {
     vercelOrtami: env.VERCEL_ENV ?? env.NEXT_PUBLIC_VERCEL_ENV ?? null,
+    derlemeOrtami: derlemeOrtami ?? null,
     supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL ?? null,
     etiket: env.ARVOLAB_SUPABASE_ORTAMI ?? null,
     uretimRef: env.ARVOLAB_URETIM_SUPABASE_REF ?? null,
@@ -194,8 +248,8 @@ export class SupabaseOrtamHatasi extends Error {
  * fonksiyonu kullanır.
  */
 let uyarildi = false;
-export function supabaseOrtaminiDogrula(env: Record<string, string | undefined>): Extract<OrtamKarari, { tur: "izin" }> {
-  const karar = supabaseOrtamKarari(ortamGirdisi(env));
+export function supabaseOrtaminiDogrula(env: Record<string, string | undefined>, derlemeOrtami?: string | null): Extract<OrtamKarari, { tur: "izin" }> {
+  const karar = supabaseOrtamKarari(ortamGirdisi(env, derlemeOrtami));
   if (karar.tur === "red") throw new SupabaseOrtamHatasi(karar);
   if (karar.uyari && !uyarildi) {
     uyarildi = true;

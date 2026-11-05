@@ -1,9 +1,10 @@
 # Güvenli test ortamı ve Supabase ortam güvenliği
 
-Aşama 1 (05.11.2026). Kod hazır; **hiçbir ortama dağıtılmadı, hiçbir betik
-çalıştırılmadı.** Bu belge, kodu kesinti olmadan devreye almanın sırasını
-anlatır. Sıra önemlidir: kod, panel adımlarından ÖNCE önizlemeye giderse
-önizleme derlemesi (bilerek) durur.
+Aşama 1 ve Durak 0 düzeltmeleri (05.11.2026). Kod hazır; **hiçbir ortama
+dağıtılmadı, hiçbir betik bir Supabase projesine karşı çalıştırılmadı.** Bu
+belge, kodu kesinti olmadan devreye almanın sırasını anlatır. Sıra önemlidir:
+kod, panel adımlarından ÖNCE önizlemeye giderse önizleme derlemesi (bilerek)
+durur.
 
 ## Neden
 
@@ -33,13 +34,53 @@ edilmiş olmalı; yoksa derleme durur. Önerilen: önizlemede bu anahtarları
 hiç tanımlamamak; AI denemesi gerekiyorsa ayrı, harcama sınırlı bir test
 anahtarı ve beyan.
 
+## Hangi ortamda olduğumuz nasıl anlaşılır (Durak 0)
+
+Ortam Vercel'in `VERCEL_ENV` değişkeninden okunur. Değer iki yerden gelir:
+
+- **Derleme anı:** `next build` sırasındaki `VERCEL_ENV`. Derleme denetimi
+  onunla karar verir ve değer koda gömülür (`ARVOLAB_DAGITIM_ORTAMI`,
+  `next.config.ts` → `env`).
+- **Çalışma anı:** sunucu, yönetim istemcisi ve ara katman o anki
+  `VERCEL_ENV`'e bakar; yoksa gömülü değeri yedek olarak kullanır.
+
+Eskiden yalnızca çalışma anındaki değere bakılıyordu: o değer bir gün
+gelmeseydi üretim kendini önizleme sanacak, test yapılandırması arayacak ve
+her isteğe 503 dönecekti. Önizleme bu hatayı gösteremezdi; orada "yok" ile
+"preview" aynı sonucu verir.
+
+### Eksik ya da çelişkili yapılandırma
+
+| Çalışma anı `VERCEL_ENV` | Derlemede gömülü | Karar |
+|---|---|---|
+| `production` | `production` | Üretim kuralları |
+| yok | `production` | Üretim kuralları (yedek) — eskiden 503 |
+| `preview` / `development` | aynısı | Üretim dışı kuralları |
+| yok | `preview` / `development` | Üretim dışı kuralları (yedek) |
+| yok | yok | Üretim dışı (yerel geliştirme); yerel Supabase serbest |
+| **farklı** (ör. `preview` / `production`) | — | **RET** (`dagitim-ortami-celiskili`): paket başka bir ortam için derlenmiş, hangi tarafın doğru olduğu bilinemez; 503, sunucu günlüğünde nedeni |
+| herhangi bir Vercel değeri + yerel Supabase adresi | | RET (`yerel-supabase-vercelde`) |
+
+Boş metin "yok" sayılır. Yedek, kuralları gevşetmez: üretim için derlenmiş
+bir paket test projesine bağlıysa yine reddedilir. Bu davranış üretim
+derlemesiyle (`next build` + `next start`) uçtan uca denendi: çalışma
+anında `VERCEL_ENV` yokken 200, `preview` iken 503 (çelişki), `production`
+iken 200.
+
+`next start` evresinde `next.config.ts` denetim YAPMAZ: o dosya gömülü
+değeri göremiyor ve çalışma anı kararıyla ayrışıyordu (üretim paketi
+`VERCEL_ENV`'siz başlatılınca açılmayı reddediyordu). Çalışma anının tek
+sahibi yedeği gören üç yol. Vercel bu dosyayı çalışma anında zaten
+çalıştırmaz.
+
 ## Denetimin kapsadığı bağlantı yolları
 
-1. **Derleme** (`next.config.ts`): ret → `next build` / `next dev` durur.
-   Vercel'de başarısız dağıtım öncekini canlıda bırakır.
+1. **Derleme ve `next dev`** (`next.config.ts`): ret → `next build` /
+   `next dev` durur. Vercel'de başarısız dağıtım öncekini canlıda bırakır.
 2. **Tarayıcı istemcisi** (`lib/supabase/client.ts`): derlemede gömülen
    gizli olmayan değerlerle aynı karar.
-3. **Sunucu istemcisi** (`lib/supabase/server.ts`): her istemci kurulumunda.
+3. **Sunucu istemcisi** (`lib/supabase/server.ts`): her istemci kurulumunda,
+   derleme yedeğiyle.
 4. **Servis anahtarlı yönetim istemcisi** (`lib/supabase/admin.ts`): karar
    + anahtar–proje uyumu. Cron, yetkilendirme, dışa aktarma, paylaşım,
    kayıt ve kota yolları buradan geçer.
@@ -52,11 +93,36 @@ anahtarı ve beyan.
 Birim testi `tests/unit/supabase-ortam-guvenligi.test.ts` istemci kuran
 dosyaların bu dördüyle sınırlı kaldığını da denetler.
 
+## Test projesi kurulumu ve migration geçmişi (Durak 0)
+
+`npm run test-ortami:kur` (kur.mjs → `scripts/test-ortami/kurulum.mjs`):
+hedef denetimi, boş veritabanı denetimi, `schema.sql`, `project-files`
+kovası, ardından her migration **Supabase CLI'ın geçmiş tablosuna
+(`supabase_migrations.schema_migrations`) kaydıyla birlikte, tek işlemde**.
+
+Eskiden geçmiş yazılmıyordu: kurulumdan sonraki ilk `npm run
+db:push:test` tabloyu boş görüp 104 migration'ın hepsini yeniden uygulamaya
+kalkar ve ilk `create table`'da düşerdi. Artık kurulumun son adımı geçmişi
+dosyalarla karşılaştırır; tek bir bekleyen ya da fazladan sürüm varsa durur.
+
+Sınandığı yerler (hiçbiri bir Supabase projesine bağlanmaz):
+
+- `tests/db/test-ortami-kurulum.test.mjs` (CI): gerçek kurulum çekirdeği
+  PGlite'ta; 104 kayıt, bekleyen yok, yeni migration yalnızca kendisi
+  bekleyen, ikinci kurulum reddedilir, migration düşerse kaydı da yazılmaz.
+- Tek seferlik (05.11.2026): yerel Postgres 16 + kur.mjs'in psql yürütücüsü
+  + gerçek Supabase CLI (2.122) `db push --dry-run` → "Remote database is
+  up to date". Geçmişi boşaltılmış aynı şemada CLI 104 migration'ı yeniden
+  uygulamaya kalkıyor (eski davranış).
+
+Kurulum yarıda hata verirse betik ikinci kez kurmayı reddeder (dolu
+veritabanı). En temiz çözüm: boş test projesini silip yeniden açmak.
+
 ## Üretime test verisi yazılmasını önleyen kontroller
 
 - Sentetik veri betiği üç kapıdan geçer: proje kimliği (test olmalı,
   üretim olmamalı), anahtarın projesi, veritabanındaki ortam işareti
-  (`public.arvolab_test_ortami()` — yalnızca `kur.mjs` test projesinde
+  (`public.arvolab_test_ortami()` — yalnızca kurulum betiği test projesinde
   oluşturur; üretimde yok).
 - Kurulum betiği dolu bir veritabanına (academic_projects var) kurmaz.
 - Test hesapları `arvolab-test-*@example.com`, `test_hesabi: true`; veriler
@@ -64,42 +130,110 @@ dosyaların bu dördüyle sınırlı kaldığını da denetler.
 - Tasarım (uygulanmadı, migration ister): üretimde `@example.com`
   kayıtlarını reddeden bir Auth kancası.
 
+## Vercel'in değişken kuralları (geçiş sırasını bunlar belirler)
+
+- **Aynı ad aynı ortamda iki kez olamaz.** Bugün Supabase üçlüsü
+  Production + Preview hedefli tek kayıt; Preview'a test değeri eklemek
+  için ÖNCE mevcut kayıttan Preview işareti kaldırılmalı. (Belgenin ilk
+  sürümü test değerlerini önce eklemeyi söylüyordu; Vercel bunu "zaten
+  var" diye reddeder.)
+- **Değişken değişikliği çalışan dağıtımı etkilemez**, yalnızca sonraki
+  dağıtımı. Yeniden dağıtım (Redeploy) yapılmadıkça canlı site aynı
+  değerlerle çalışır.
+- Projedeki değişkenlerin hepsi **Sensitive**: değer sonradan görüntülenemez
+  ve Sensitive değişken Development ortamına verilemez.
+- Preview zaten Vercel Authentication ile korumalı ("custom domain dışında
+  hepsi").
+
+Bugünkü Production listesi (05.11.2026, yalnızca adlar): **12 değişken.**
+Yalnızca Production: `AI_ANAHTAR`, `AI_MODEL`, `AI_MODEL_LITERATUR`,
+`AI_TABAN_URL`, `RESEND_API_KEY`, `ARVOOS_BRIDGE_URL`,
+`PRODUCT_BRIDGE_SECRET`. Production + Preview (daraltılacak):
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+`SUPABASE_SECRET_KEY`, `CRON_SECRET`, `OPENAI_API_KEY`.
+
 ## Kesintisiz devreye alma sırası
 
+Her ⏸ işaretinde durulur ve onay alınır.
+
 1. **[SİZ · Supabase]** `arvolab-test` projesini açın (üretimle aynı
-   bölge). Auth → URL Configuration: Site URL = önizleme adresi;
-   Redirect URLs = önizleme alan adı deseni, `http://localhost:3000/**`,
-   `http://localhost:3123/**`. E-posta onayı kapalı ya da yerleşik e-posta;
+   bölge). Auth → URL Configuration: Site URL `http://localhost:3000`;
+   Redirect URLs `http://localhost:3000/**`, `http://localhost:3123/**`,
+   `https://arvo-lab-*-arvo-os.vercel.app/**`. E-posta onayı kapalı;
    üretimin SMTP/Resend bilgileri GİRİLMEZ.
-2. **[SİZ · kendi makineniz]** Test projesinin bağlantı adresi ve kimliklerle:
-   `npm run test-ortami:kur` (psql gerekir). Ardından
+2. **[SİZ · kendi makineniz]** Depoyu yedekten geri yükleyin; test
+   projesinin "Session pooler" bağlantı adresi ve iki kimlikle
+   `npm run test-ortami:kur` (psql gerekir), ardından
    `TEST_HESAP_PAROLASI=… npm run test-ortami:veri`.
-3. **[SİZ · Vercel]** Preview ve Development için (Production'a
-   DOKUNMADAN) şunları **ekleyin**:
+   **Kontrol:** "Kurulum tamam … 104 migration" ve özet satırında
+   `geçmiş` = 104. ⏸
+3. **[SİZ · Vercel] Önce fotoğraf.** Settings → Environment Variables,
+   süzgeç "Production": 12 değişken (yukarıdaki liste). Bu listeyi not
+   edin. İsterseniz bana "kontrol et" deyin, değer okumadan (yalnızca ad ve
+   hedef) aynı listeyi doğrularım.
+4. **[SİZ · Vercel] Daraltma.** Production + Preview olan beş değişkenin
+   her birinde ⋯ → Edit → yalnızca **Preview** işaretini kaldırın;
+   **Production işaretli kalsın, değere dokunmayın** → Save.
+   - Pencere değeri yeniden girmenizi isterse: İPTAL edin, durun, bana
+     yazın (özellikle `CRON_SECRET`'ın değeri hiçbir yerden geri alınamaz).
+   - Delete'e basmayın; Redeploy'a basmayın.
+   **Kontrol (her değişkenden sonra):** süzgeç "Production" → hâlâ 12;
+   süzgeç "Preview" → bu beşi yok. lab.arvo-os.com normal açılıyor
+   (değişiklik çalışan dağıtımı etkilemez). Bir şey eksikse: aynı
+   değişkende Edit → Production'ı yeniden işaretleyin. ⏸
+5. **[SİZ · Vercel] Preview'a test değerleri.** Add New, Environment
+   yalnızca **Preview**:
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-   `SUPABASE_SECRET_KEY` → TEST projesinin değerleri;
+   `SUPABASE_SECRET_KEY` (Sensitive) → TEST projesinin değerleri;
    `ARVOLAB_SUPABASE_ORTAMI=test`; `ARVOLAB_TEST_SUPABASE_REF`;
-   `ARVOLAB_URETIM_SUPABASE_REF`.
-4. **[SİZ · Vercel]** Bugün Production + Preview hedefli olan Supabase
-   üçlüsü, `OPENAI_API_KEY`, `CRON_SECRET` ve diğer paylaşılan değişkenleri
-   düzenleyip hedefini yalnızca **Production** yapın (değer DEĞİŞMEZ).
-   Önizlemede AI gerekiyorsa ayrı test anahtarı + `ARVOLAB_TEST_ANAHTARLARI=1`.
-5. **[SİZ · Vercel]** Preview için Deployment Protection açık.
-6. **[BEN, sizin onayınızla]** Kodu dala gönderirim → otomatik önizleme
+   `ARVOLAB_URETIM_SUPABASE_REF`. AI, e-posta, cron eklenmez; Development
+   seçilmez (yerel çalışma `.env.local` ile).
+   **Kontrol:** süzgeç "Preview" → tam bu 6; süzgeç "Production" → hâlâ
+   12 ve değişmemiş. ⏸
+6. **[SİZ · Vercel]** Settings → Deployment Protection: Vercel
+   Authentication açık (bugün açık; yalnızca bakın).
+7. **[BEN, ayrı onayla]** Kodu dala gönderirim → otomatik önizleme
    dağıtımı. Beklenen: derleme geçer, önizleme TEST projesine bağlanır.
-   Duman testi + "önizleme üretime bağlanamıyor" negatif testi.
-7. **[SİZ · Vercel]** Production'a yalnızca iki gizli olmayan değişken
-   ekleyin: `ARVOLAB_SUPABASE_ORTAMI=uretim`,
-   `ARVOLAB_URETIM_SUPABASE_REF=<üretim kimliği>` (isterseniz
-   `ARVOLAB_TEST_SUPABASE_REF` de). Bu adım kod üretime gitmeden önce de
-   sonra da güvenlidir: kod yokken değişkenler etkisiz; kod varken üretim
-   zaten doğru projeye bağlı olduğu için karar "izin".
-8. **[SİZ, ayrı onay]** main'e birleştirme ve üretim dağıtımı. Üretim
+   Duman testi + "önizleme üretime bağlanamıyor" negatif testi. ⏸
+8. **[SİZ · Vercel]** Production'a yalnızca gizli olmayan üç değişken:
+   `ARVOLAB_SUPABASE_ORTAMI=uretim`,
+   `ARVOLAB_URETIM_SUPABASE_REF=<üretim kimliği>`,
+   `ARVOLAB_TEST_SUPABASE_REF=<test kimliği>`. Redeploy yok.
+   Bu adım kod üretime gitmeden önce de sonra da güvenlidir: kod yokken
+   değişkenler etkisiz; yanlış yazılırsa yalnızca sonraki üretim derlemesi
+   durur ve canlı sürüm yerinde kalır.
+   **Kontrol:** süzgeç "Production" → 15. ⏸
+9. **[SİZ, ayrı onay]** Güvenlik commit'lerinin main'e bağımsız taşınması
+   (aşağıdaki plan), main'e birleştirme ve üretim dağıtımı. Üretim
    derlemesi bir uyuşmazlık görürse durur ve önceki dağıtım canlıda kalır.
+   Önizleme dağıtımını "Promote to Production" ile üretime TAŞIMAYIN;
+   üretime çıkış yalnızca main üzerinden.
 
 Geri dönüş: kod değişikliği tek commit dizisi; geri almak için önceki
 dağıtıma dönmek yeterli. Değişken değişiklikleri Vercel panelinden
 geri alınabilir; üretim değerleri hiçbir adımda değiştirilmez.
+
+## Güvenlik değişikliklerinin main'e bağımsız taşınması
+
+Bu dal (`claude/signature-os-phase-1`) main'in önünde ve tamamlanmamış
+Signature OS commit'lerini taşıyor; dalı main'e birleştirmek tasarımı da
+üretime çıkarır. Güvenlik değişiklikleri dört commit ve Signature OS'a
+bağımlı değil:
+
+```
+git switch -c guvenli-test-ortami origin/main
+git cherry-pick 9a093dd 6f4bb32 f0e6dc0 <Durak 0 commit'i>
+```
+
+Tek çakışma `next.config.ts`'te ve mekanik: main'de sahte önizleme
+takmaları satır içinde (`ONIZLEME` + `resolveAlias`), bu dalda
+`lib/onizleme-takmalari.ts`'ten geliyor (Signature OS 4.3). Çözüm: main'in
+takma kodunu OLDUĞU GİBİ bırakıp yalnızca güvenlik parçalarını eklemek —
+ortam modülünün içe aktarımı, `DENETLENEN_EVRELER` + `ortamDenetimi()`,
+`env` bloğu ve `export default function yapilandirma(evre)`. Ardından:
+`npx tsc --noEmit`, `npm run lint`, `npm run test:unit`, `npm run test:db`.
+Bu plan 05.11.2026'da main üzerinde geçici bir çalışma kopyasında prova
+edildi (sonuç rapordadır); main'e hiçbir şey yazılmadı.
 
 ## Kapsanmayan riskler
 
@@ -108,6 +242,14 @@ geri alınabilir; üretim değerleri hiçbir adımda değiştirilmez.
   Supabase'in kendisi tarafından reddedilir.
 - Bir anahtarın üretim mi test mi olduğu değerinden anlaşılamaz;
   `ARVOLAB_TEST_ANAHTARLARI` bir beyandır.
+- Production'da kimlik değişkenleri eklenene kadar (adım 8) yalnızca uyarı
+  vardır; bu süre kısa tutulmalı.
+- Test şeması depodaki `schema.sql` + migration'lardan kurulur; üretime
+  panelden elle yapılmış bir değişiklik varsa test şeması onu içermez.
+  Kurulum özetindeki sayılar üretimdeki salt okunur bir sayımla
+  karşılaştırılarak sapma görülebilir.
 - ArvoOS tarafındaki köprü üretim ArvoLab veritabanına kendi anahtarıyla
   yazar; bu denetim ArvoOS'u kapsamaz.
 - Supabase panelinde (SQL Editor) elle yapılan işlemler bu denetimin dışında.
+- Ayar yapılmamış bir makinede `npm run dev` açılmaz; yerelde test
+  değişkenleri ya da `ARVOLAB_ONIZLEME=1` gerekir.

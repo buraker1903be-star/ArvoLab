@@ -83,16 +83,26 @@ const ONIZLEME_TAKMALARI = onizlemeTakmalari(process.env);
 /*
   SUPABASE ORTAM GÜVENLİĞİ — DERLEME ANI (Güvenli Test Ortamı, Aşama 1).
   Karar lib/supabase/ortam-guvenligi.ts'te. Ret varsa derleme (ve `next
-  dev`, `next start`) DURUR: Vercel'de başarısız bir dağıtım öncekini
+  dev`) DURUR: Vercel'de başarısız bir dağıtım öncekini
   canlıda bırakır, yani yanlış yapılandırılmış bir ortam hiç yayına
   çıkmaz. Tarayıcı istemcisi adresi derlemede gömdüğü için onun asıl
   korunması da budur; çalışma anındaki denetim (sunucu, ara katman,
   yönetim istemcisi) ikinci savunma hattı.
   Denetim yalnızca Next'in yapılandırmayı KULLANDIĞI evrelerde çalışır;
   dosyayı okuyan birim testleri (ocr-paketi) etkilenmez.
+
+  `next start` (phase-production-server) BİLEREK listede değil (Durak 0).
+  Eskiden oradaydı: bu dosya o evrede yeniden çalışıyor ama derlemede
+  gömülen ortamı (ARVOLAB_DAGITIM_ORTAMI) GÖREMİYOR — yalnızca o anki
+  process.env'e bakıyor. Üretim için derlenmiş paket, çalışma anında
+  VERCEL_ENV olmadan başlatılınca kendini üretim dışı sanıp açılmayı
+  reddediyordu; çalışma anı denetimi (sunucu, yönetim istemcisi, ara
+  katman) ise derleme yedeğiyle doğru karar veriyordu. İki karar
+  ayrışmasın diye çalışma anının tek sahibi o üç yol. Vercel bu dosyayı
+  çalışma anında zaten çalıştırmıyor (yapılandırma derlemede sabitlenir).
 */
-// next/constants'taki PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD, PHASE_PRODUCTION_SERVER (test yükleyicisi alt yolu çözemediği için metin olarak).
-const DENETLENEN_EVRELER = new Set<string>(["phase-development-server", "phase-production-build", "phase-production-server"]);
+// next/constants'taki PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD (test yükleyicisi alt yolu çözemediği için metin olarak).
+const DENETLENEN_EVRELER = new Set<string>(["phase-development-server", "phase-production-build"]);
 function ortamDenetimi() {
   const karar = supabaseOrtamKarari(ortamGirdisi(process.env));
   if (karar.tur === "red") throw new Error(`Supabase ortam güvenliği: ${karar.mesaj} (${karar.neden}). Ayrıntı: docs/test-ortami.md`);
@@ -109,6 +119,11 @@ const nextConfig: NextConfig = {
     YALNIZCA gizli olmayanlar: dağıtım türü, etiket ve proje kimlikleri (adresin
     parçası). Anahtarlar buraya ASLA eklenmez — burada yazılan her şey istemci
     paketine girer.
+    ARVOLAB_DAGITIM_ORTAMI sunucu paketine de gömülür ve çalışma anında
+    VERCEL_ENV gelmezse YEDEK olarak kullanılır (server.ts, admin.ts, proxy.ts;
+    ortam-guvenligi.ts → dagitimOrtamiCoz). Eskiden yalnızca çalışma anındaki
+    değere bakılıyordu; o değer eksik gelse üretim kendini önizleme sanıp 503
+    dönerdi.
   */
   env: {
     ARVOLAB_DAGITIM_ORTAMI: process.env.VERCEL_ENV ?? "",

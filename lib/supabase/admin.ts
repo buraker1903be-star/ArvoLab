@@ -15,7 +15,7 @@ export function createAdminClient() {
     adminIstemcisiVarsa() bu hatayı da "istemci yok" sayar; ret sessizce
     başka projeye geçmek değil, işlemi yapmamaktır.
   */
-  supabaseOrtaminiDogrula(process.env);
+  supabaseOrtaminiDogrula(process.env, process.env.ARVOLAB_DAGITIM_ORTAMI);
   const uyusmazlik = anahtarUyusmazligi(url, secret);
   if (uyusmazlik) throw new Error(`Supabase ortam güvenliği: ${uyusmazlik}`);
 

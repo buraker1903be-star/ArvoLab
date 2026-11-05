@@ -47,6 +47,17 @@ alter default privileges in schema public grant all on sequences to anon, authen
 alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
 `;
 
+/**
+ * Yalnızca Supabase kabuğu (roller, auth, storage) kurulu, şemasız veritabanı.
+ * Test projesi kurulum betiğinin çekirdeği (scripts/test-ortami/kurulum.mjs)
+ * kendi adımlarını bunun üstüne kurar.
+ */
+export async function kabukVeritabani() {
+  const db = new PGlite({ extensions: { pgcrypto } });
+  await db.exec(SUPABASE_KABUGU);
+  return db;
+}
+
 /** schema.sql + bütün migration'lar uygulanmış, boş bir veritabanı. */
 export async function veritabani() {
   const db = new PGlite({ extensions: { pgcrypto } });

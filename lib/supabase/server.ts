@@ -13,7 +13,7 @@ export async function createClient() {
   }
 
   /* Ortam güvenliği (lib/supabase/ortam-guvenligi.ts): yanlış projeye bağlanmadan önce durur. */
-  supabaseOrtaminiDogrula(process.env);
+  supabaseOrtaminiDogrula(process.env, process.env.ARVOLAB_DAGITIM_ORTAMI);
 
   const cookieStore = await cookies();
 
