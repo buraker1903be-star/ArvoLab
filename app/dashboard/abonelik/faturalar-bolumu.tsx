@@ -43,11 +43,7 @@ export default async function FaturalarBolumu({ veri, kurum }: { veri: Faturalam
   const { tarih } = await tarihler();
   return (
     <>
-      <h3 className="calisma-durum-alt">
-        <Receipt size={14} aria-hidden="true" /> {kurum
-          ? t({ tr: "Kurumun faturaları ve ödemeleri", en: "Institution invoices and payments" })
-          : t({ tr: "Faturalar ve ödemeler", en: "Invoices and payments" })}
-      </h3>
+      {/* Başlık sayfadaki bölümde (Signature OS 4.4, abonelik/page.tsx). */}
       {!veri ? (
         <p className="gb-bos">
           {t({

@@ -1,9 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
-import { YEREL } from "@/lib/dil";
 import { redirect } from "next/navigation";
-import { Cpu, Download, FileCheck2, Keyboard, KeyRound, Languages, LogOut, Palette, Save, Sparkles, Trash2 } from "lucide-react";
+import { Cpu, Download, FileCheck2, Keyboard, KeyRound, Languages, LogOut, Palette, Save, Trash2 } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { ADMIN_ROLES, ROLE_LABELS, STAFF_ROLES } from "@/lib/project-labels";
 import { sayfaGorunumu } from "@/lib/onizleme-sunucu";
@@ -16,6 +15,7 @@ import LicenseCard from "../_components/license-card";
 import SayfaBasligi from "../_components/sayfa/sayfa-basligi";
 import Bolum from "../_components/sayfa/bolum";
 import TemaSecimi from "./tema-secimi";
+import KrediOzetKarti from "../_components/kredi-ozet-karti";
 import { licenseSummary } from "@/lib/license-summary";
 import { changePassword, digerOturumlariKapat } from "@/app/actions/auth";
 import { KisayolListesi } from "../editor/[id]/write/shortcuts-dialog";
@@ -38,7 +38,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SettingsPage() {
   const t = await ceviri();
   const dil = await aktifDil();
-  const sayi = (deger: number) => new Intl.NumberFormat(YEREL[dil]).format(deger);
   const ctx = await getAuthContext();
   if (!ctx) redirect("/");
   const [sozlesmeOnaylari, { tarihSaat }] = await Promise.all([sozlesmeOnaylarim(ctx.user.id), tarihler()]);
@@ -151,7 +150,6 @@ export default async function SettingsPage() {
     ...(icEkip && gorunum.personel && kurulum ? [{ id: "ayar-kurulum", ad: t({ tr: "Kurulum", en: "Setup" }) }] : []),
     ...(!icEkip ? [{ id: "ayar-hesap", ad: t({ tr: "Hesap", en: "Account" }) }] : []),
   ];
-  const krediYuzde = kredi.goster && kredi.aylikLimit > 0 ? Math.min(100, Math.round((kredi.aylikKalan / kredi.aylikLimit) * 100)) : 0;
 
   return (
     <main className="dashboard-page ayarlar-sayfa">
@@ -304,41 +302,7 @@ export default async function SettingsPage() {
               <div className="ayar-bolum-icerik">
                 <LicenseCard access={access} />
                 {kredi.goster ? (
-                  <div className="ayar-kredi">
-                    <div className="ayar-kredi-bas">
-                      <span className="ayar-kredi-ad">
-                        <Sparkles size={16} aria-hidden="true" />
-                        {t({ tr: "Asistan krediniz", en: "Your assistant credits" })}
-                      </span>
-                      <span className="ayar-kredi-sayi">
-                        <b>{sayi(kredi.toplam)}</b> {t({ tr: "kullanılabilir", en: "available" })}
-                      </span>
-                    </div>
-                    <progress
-                      className="ayar-kredi-cubuk"
-                      data-tone={kredi.tukendi ? "danger" : kredi.oran >= 80 ? "warning" : undefined}
-                      value={kredi.aylikKalan}
-                      max={Math.max(kredi.aylikLimit, 1)}
-                      aria-label={t({ tr: `Bu ayın kalan hakkı: yüzde ${krediYuzde}`, en: `Remaining this month: ${krediYuzde} percent` })}
-                    />
-                    <dl className="ayar-kredi-ayrinti">
-                      <div>
-                        <dt>{t({ tr: "Bu ay kalan", en: "Left this month" })}</dt>
-                        <dd>
-                          {sayi(kredi.aylikKalan)} / {sayi(kredi.aylikLimit)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>{t({ tr: "Satın alınan bakiye", en: "Purchased balance" })}</dt>
-                        <dd>{sayi(kredi.ekBakiye)}</dd>
-                      </div>
-                    </dl>
-                    <p className="ayar-not">
-                      {t({
-                        tr: "1 kredi = 1.000 karakter. Aylık hak ayın başında yenilenir; satın alınan bakiye yanmaz.",
-                        en: "1 credit = 1,000 characters. The monthly allowance renews at the start of each month; purchased credits never expire.",
-                      })}
-                    </p>
+                  <KrediOzetKarti kredi={kredi}>
                     {/* Bireysel abone krediyi Abonelik ve kredi sayfasından alır; kurum üyesi için kurum yöneticisi aynı sayfadan (28.10.2026'ya kadar ArvoOS panelindendi). */}
                     {kredi.tukendi || (kredi.ekBakiye === 0 && kredi.oran >= 80) ? (
                       <p className="tone-text text-sm" data-tone={kredi.tukendi ? "danger" : "warning"}>
@@ -350,7 +314,7 @@ export default async function SettingsPage() {
                           : t({ tr: "Kurum yöneticiniz Abonelik ve kredi sayfasından ek kredi satın alabilir.", en: "Your institution administrator can buy more credits on the Subscription and credits page." })}
                       </p>
                     ) : null}
-                  </div>
+                  </KrediOzetKarti>
                 ) : null}
               </div>
             </Bolum>

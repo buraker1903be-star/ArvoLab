@@ -3,7 +3,7 @@ import { odemeSonrasiOnayVar, sozlesmeOnayGerekli } from "@/lib/sozlesme/onay-du
 import { logout } from "@/app/actions/auth";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { redirect } from "next/navigation";
-import { Gift, History, Infinity as Sinirsiz, Lock, Plus, RefreshCw, Sparkles, Wallet } from "lucide-react";
+import { Gift, Lock, Plus, RefreshCw, Sparkles } from "lucide-react";
 import { getAuthContext } from "@/lib/auth-guards";
 import { getAccessState } from "@/lib/access";
 import { getCurrentProfile } from "@/app/actions/profile";
@@ -26,6 +26,10 @@ import OdemeButonu from "../_components/odeme-butonu";
 import YasalNot from "../_components/yasal-not";
 import FaturalarBolumu from "./faturalar-bolumu";
 import KartBolumu from "./kart-bolumu";
+import SayfaBasligi from "../_components/sayfa/sayfa-basligi";
+import Bolum from "../_components/sayfa/bolum";
+import KrediOzetKarti from "../_components/kredi-ozet-karti";
+import { PLAN_ADI, planKatmani } from "@/lib/plan-katmani";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await ceviri();
@@ -38,9 +42,9 @@ export async function generateMetadata(): Promise<Metadata> {
   sayfa").
 
   Bireysel abonenin ArvoOS paneli yok; aboneliğini ve kredisini buradan
-  yönetiyor. Solda abonelik (ana sayfadaki kartın aynısı, plan ve ödeme
-  düğmeleriyle), sağda asistan kredisi: bu ay kalan hak, satın alınan
-  bakiye, paketler ve son hareketler.
+  yönetiyor: plan (ana sayfadaki kartın aynısı, ödeme düğmeleriyle),
+  asistan kredisi, paketler, son hareketler, faturalar. Düzen için
+  return'ün üstündeki 4.4 notu.
 
   Model (migration 20261026181929): aboneliğe her ay 1.000 kredi dahil,
   kullanılmayan yanar; satın alınan kredi yanmaz. Paketler ve fiyatlar
@@ -201,15 +205,35 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
     !(await sozlesmeOnayGerekli({ id: ctx.user.id, role: ctx.role })) &&
     !(await odemeSonrasiOnayVar(ctx.user.id));
 
+  /*
+    SIGNATURE OS 4.4 (05.11.2026): AYARLAR'LA AYNI DÜZEN. Eskiden iki kart
+    yan yanaydı ve sayfa sabit yükseklikteydi: sağdaki koyu "Kullanılabilir
+    kredi" sayacı paketlerin altında sıkışıp kesiliyor (sayı okunmuyordu),
+    faturalar sol kartın içinde kayıyordu. Şimdi tek yüzeyde adlı bölümler
+    (başlık solda, içerik sağda; geniş ekranda soldaki dizin): Planınız,
+    Asistan kredisi, Ek kredi paketleri, Son hareketler, Faturalar ve
+    ödemeler, Kayıtlı kart. Kredi gösterimi Ayarlar'la AYNI bileşen
+    (KrediOzetKarti). Hiçbir okuma, karar, ödeme ya da köprü çağrısı
+    değişmedi; yalnızca yerleri.
+  */
+  const katman = planKatmani(access);
+  const kartBolumuVar = Boolean(kartSaklama && kartDurumu?.ok && (kartDurumu.veri.cards.length || kartDurumu.veri.autoRenew?.active));
+  const bolumler: { id: string; ad: string }[] = [
+    { id: "abonelik-plan", ad: t({ tr: "Planınız", en: "Your plan" }) },
+    { id: "abonelik-kredi", ad: t({ tr: "Asistan kredisi", en: "Assistant credits" }) },
+    ...(satis ? [{ id: "abonelik-paketler", ad: t({ tr: "Ek kredi paketleri", en: "Extra credit packages" }) }] : []),
+    ...(sonHareketler.length ? [{ id: "abonelik-hareketler", ad: t({ tr: "Son hareketler", en: "Recent activity" }) }] : []),
+    ...(kapsam ? [{ id: "abonelik-faturalar", ad: t({ tr: "Faturalar ve ödemeler", en: "Invoices and payments" }) }] : []),
+    ...(kartBolumuVar ? [{ id: "abonelik-kart", ad: t({ tr: "Kayıtlı kart", en: "Saved card" }) }] : []),
+  ];
+
   return (
-    <main className="dashboard-page gb gb-tek-ekran">
+    <main className="dashboard-page ayarlar-sayfa abonelik-sayfa">
       {odemeSonrasiOnay ? <SozlesmeOnayi olay="odeme_sonrasi" cikis={logout} /> : null}
-      <section className="projects-header">
-        <div>
-          <h1>{t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}</h1>
-          <p>{t({ tr: "Aboneliğiniz, asistan kullanım hakkınız ve ek kredi paketleri.", en: "Your subscription, assistant allowance and extra credit packages." })}</p>
-        </div>
-      </section>
+      <SayfaBasligi
+        baslik={t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}
+        aciklama={t({ tr: "Aboneliğiniz, asistan kullanım hakkınız, ek kredi paketleri ve ödemeleriniz.", en: "Your subscription, assistant allowance, extra credit packages and payments." })}
+      />
 
       {hata && HATA[hata] ? (
         <p className="alert" data-tone="danger" role="alert">
@@ -222,252 +246,237 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
         </p>
       ) : null}
 
-      <section className="gb-sutunlar kaynaklar-ikili" aria-label={t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}>
-        <article className="gb-kart gb-sutun kayan-kart">
-          <header className="gb-kart-bas">
-            <div>
-              <h2>{t({ tr: "Aboneliğim", en: "My subscription" })}</h2>
-              <p>
-                {access.kind === "organization"
-                  ? t({ tr: "Aboneliğinizi kurumunuz yönetiyor.", en: "Your subscription is managed by your institution." })
-                  : access.kind === "individual"
-                    ? t({ tr: "Bireysel abonelik; ödeme kartla, otomatik çekim yok.", en: "Individual subscription; paid by card, no automatic charges." })
-                    : t({ tr: "İç ekip hesabı.", en: "Internal team account." })}
-              </p>
-            </div>
-          </header>
+      <div className="ayarlar-govde">
+        <nav className="ayarlar-dizin" aria-label={t({ tr: "Abonelik bölümleri", en: "Subscription sections" })}>
+          <ul>
+            {bolumler.map((b) => (
+              <li key={b.id}>
+                <a href={`#${b.id}`}>{b.ad}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
-          <LicenseCard access={access} />
-
-          {/*
-            Kartla ödeme, kart kaydetme seçeneğiyle (28.10.2026). Ödeme kaydı
-            düğmenin sunucu işleminde açılır, sayfa çiziminde değil. Tutarı
-            ArvoOS belirler; buradan plan ya da tutar gitmez.
-          */}
-          {kartlaOdenebilir ? (
-            <form action={kartlaOdemeBaslat} className="cluster">
-              <OdemeButonu birincil={false} etiket={t({ tr: "Kartla öde · kartı kaydetme seçeneğiyle", en: "Pay by card · with option to save card" })} />
-            </form>
-          ) : null}
-
-          {access.kind === "individual" ? (
-            <p className="hint">
-              {t({
-                tr: "Aboneliğe her ay 1.000 asistan kredisi dahil (1 kredi = 1.000 karakter); kullanılmayan aylık hak devretmez. Satın alınan kredi yanmaz, aylık hak bitince kullanılır.",
-                en: "Your subscription includes 1,000 assistant credits each month (1 credit = 1,000 characters); unused monthly credits do not roll over. Purchased credits never expire and are used once the monthly allowance runs out.",
-              })}
-            </p>
-          ) : null}
-
-          {access.kind === "staff" && kapsam && faturaKurumu ? (
-            <p className="hint">
-              {t({ tr: "", en: "Showing invoices for " })}
-              <b>{faturaKurumu}</b>
-              {t({
-                tr: " faturaları gösteriliyor. Diğer kurumunuzunkiler için profil menüsündeki Kurum seçimini değiştirin.",
-                en: ". For another institution's, change the Institution selection in the profile menu.",
-              })}
-            </p>
-          ) : null}
-          {/* Otomatik yenileme kaldırıldıktan sonra (29.10.2026) yeni kart kaydedilmiyor;
-              bölüm yalnızca eskiden kaydedilmiş bir kart (silebilsin) ya da açık kalmış
-              bir yenileme varsa çizilir. Boş "kayıtlı kartınız yok" kutusu yalnızca gürültüydü. */}
-          {kartSaklama && kartDurumu?.ok && (kartDurumu.veri.cards.length || kartDurumu.veri.autoRenew?.active) ? (
-            <KartBolumu durum={kartDurumu.veri} />
-          ) : null}
-          {kapsam ? <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} /> : null}
-        </article>
-
-        <article className="gb-kart gb-sutun kayan-kart">
-          <header className="gb-kart-bas">
-            <div>
-              <h2>{t({ tr: "Asistan kredisi", en: "Assistant credits" })}</h2>
-              <p>
-                {bireysel
-                  ? t({ tr: "Bu ayki hakkınız ve satın aldığınız bakiye", en: "This month's allowance and your purchased balance" })
-                  : t({ tr: "Kurumunuzun bu ayki kredisi", en: "Your institution's credits this month" })}
-              </p>
-            </div>
-          </header>
-
-          {/*
-            DENEME HAKKI (02.11.2026): deneme süresinde asistan ayda 1.000
-            krediyle değil, 2 kullanımla sınırlı. Kredi göstergesi bu
-            kullanıcıya "1.000 kredi" gösterseydi ikinci kullanımdan sonraki
-            kilit ona bir hata gibi görünürdü.
-          */}
-          {deneme.denemede ? (
-            <p className="alert" data-tone={deneme.kalan > 0 ? "info" : "warning"} role="status">
-              {deneme.kalan > 0
-                ? t({
-                    tr: `Deneme süresince asistanı ${DENEME_ASISTAN_HAKKI} kez kullanabilirsiniz; kalan hakkınız: ${deneme.kalan}. Aboneliğinizi başlattığınızda aylık kredi tanımlanır.`,
-                    en: `During the trial you can use the assistant ${DENEME_ASISTAN_HAKKI} times; uses left: ${deneme.kalan}. Monthly credits are added when you start your subscription.`,
-                  })
-                : t({
-                    tr: `Deneme süresindeki ${DENEME_ASISTAN_HAKKI} asistan hakkınızı kullandınız. Aboneliğinizi başlattığınızda asistan aylık krediyle yeniden açılır.`,
-                    en: `You've used your ${DENEME_ASISTAN_HAKKI} trial assistant runs. The assistant reopens with monthly credits once you start your subscription.`,
-                  })}
-            </p>
-          ) : null}
-
-          {/*
-            Sayı üretilemiyorsa (okunamadı, hak bildirilmemiş, iç ekip) kutu
-            çizilmiyor: "0 kredi" yazmak, hakkı olmayanla ölçümü okunamayanı
-            aynı göstermek olurdu (lib/ai/kredi-ozeti.ts).
-          */}
-          {deneme.denemede ? null : kredi.goster ? (
-            <>
+        <div className="ayarlar-yuzey">
+          <Bolum
+            id="abonelik-plan"
+            duzey={2}
+            sinif="ayar-bolum"
+            baslik={t({ tr: "Planınız", en: "Your plan" })}
+            aciklama={
+              access.kind === "organization"
+                ? t({ tr: "Aboneliğinizi kurumunuz yönetiyor.", en: "Your subscription is managed by your institution." })
+                : access.kind === "individual"
+                  ? t({ tr: "Bireysel abonelik; ödeme kartla, otomatik çekim yok.", en: "Individual subscription; paid by card, no automatic charges." })
+                  : t({ tr: "İç ekip hesabı.", en: "Internal team account." })
+            }
+            eylem={<span className="abonelik-katman">{t(PLAN_ADI[katman])}</span>}
+          >
+            <div className="ayar-bolum-icerik">
+              <LicenseCard access={access} />
               {/*
-                Kredi göstergesi: büyük sayı toplam kullanılabilir kredi; şerit
-                iki parçalı — aylık hak (yanar) ile satın alınan bakiye (yanmaz)
-                ayrı renkte, çünkü kullanıcının "hangisi önce biter" sorusu
-                tam bu ayrım. Yerleşik <progress> aylık oranı erişilebilir
-                biçimde taşıyor; satır içi genişlik stili yazılmıyor.
+                Köprüye ulaşılamadığında (access.status "unreachable") lisans kartı
+                hiç çizilmiyor; eskiden bölüm sessizce boş kalıyordu. Erişim bu
+                durumda ENGELLENMEZ (lib/access.ts: geçici arıza kimseyi dışarıda
+                bırakmamalı); kullanıcıya bunu söylüyoruz.
               */}
-              <div className="kredi-sayac" data-tone={kredi.tukendi ? "danger" : kredi.ekBakiye === 0 && kredi.oran >= 80 ? "warning" : "success"}>
-                <div className="kredi-sayac-ust">
-                  <span className="kredi-sayac-etiket">
-                    <Wallet size={15} aria-hidden="true" /> {t({ tr: "Kullanılabilir kredi", en: "Available credits" })}
-                  </span>
-                  {kredi.ekBakiye > 0 ? (
-                    <span className="kredi-sayac-rozet">
-                      <Sinirsiz size={13} aria-hidden="true" /> {t({ tr: `${sayi(kredi.ekBakiye)} yanmaz`, en: `${sayi(kredi.ekBakiye)} never expire` })}
-                    </span>
-                  ) : null}
-                </div>
-                <b className="kredi-sayac-sayi">{sayi(kredi.toplam)}</b>
-                <progress
-                  className="kredi-cubugu"
-                  max={Math.max(1, kredi.aylikLimit)}
-                  value={kredi.aylikKalan}
-                  aria-label={t({
-                    tr: `Aylık hakkın ${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} kredisi kaldı`,
-                    en: `${sayi(kredi.aylikKalan)} / ${sayi(kredi.aylikLimit)} monthly credits left`,
+              {access.kind === "individual" && katman === "bilinmiyor" ? (
+                <p className="abonelik-bos" role="status">
+                  {t({
+                    tr: "Abonelik bilginize şu an ulaşılamıyor. Bu süre içinde erişiminiz kapanmaz; sayfayı biraz sonra yenileyin.",
+                    en: "Your subscription details can't be reached right now. Your access is not closed in the meantime; refresh the page shortly.",
                   })}
-                />
-                <dl className="kredi-sayac-ayrinti">
-                  <div>
-                    <dt>
-                      <span className="kredi-nokta" data-tur="aylik" aria-hidden="true" /> {t({ tr: "Bu ay kalan hak", en: "Left this month" })}
-                    </dt>
-                    <dd>
-                      {sayi(kredi.aylikKalan)} <small>/ {sayi(kredi.aylikLimit)}</small>
-                    </dd>
-                    <small>{t({ tr: "Ayın başında yenilenir", en: "Renews at the start of the month" })}</small>
-                  </div>
-                  <div>
-                    <dt>
-                      <span className="kredi-nokta" data-tur="ek" aria-hidden="true" /> {t({ tr: "Satın alınan bakiye", en: "Purchased balance" })}
-                    </dt>
-                    <dd>{sayi(kredi.ekBakiye)}</dd>
-                    <small>{t({ tr: "Yanmaz; aylık hak bitince kullanılır", en: "Never expires; used after the monthly allowance" })}</small>
-                  </div>
-                </dl>
-              </div>
-              {kredi.tukendi ? (
-                <p className="tone-text text-sm" data-tone="danger">
-                  {t({ tr: "Krediniz bitti; asistan yeni çalışma yapmıyor.", en: "You are out of credits; the assistant will not run new checks." })}{" "}
-                  {bireysel
-                    ? t({ tr: "Aşağıdan ek kredi alabilir ya da ayın başını bekleyebilirsiniz.", en: "You can buy more credits below or wait for the start of the month." })
-                    : satis === "kurum"
-                      ? t({ tr: "Aşağıdan kurum için ek kredi alabilirsiniz.", en: "You can buy more credits for the institution below." })
-                      : t({ tr: "Kurum yöneticiniz ek kredi alabilir.", en: "Your institution administrator can buy more credits." })}
                 </p>
               ) : null}
-            </>
-          ) : (
-            <p className="gb-bos kredi-bos">
-              {access.kind === "staff" ? <Gift size={18} aria-hidden="true" /> : null}
-              {access.kind === "staff"
-                ? t({ tr: "İç ekip hesapları asistan kredisine tabi değil.", en: "Internal team accounts are not subject to assistant credits." })
-                : t({
-                    tr: "Kredi durumu şu an okunamadı. Asistanı kullanmaya devam edebilirsiniz; sayfayı sonra yenileyin.",
-                    en: "Your credit status could not be loaded right now. You can keep using the assistant; refresh the page later.",
-                  })}
-            </p>
-          )}
 
-          {platformKurumu ? (
-            <p className="hint">
-              {t({
-                tr: "Seçili kurum ArvoOS'un kendisi; kendi kredisi satılmaz. Bir müşteri kurumu adına kredi almak için profil menüsündeki Kurum seçiminden o kurumu seçin.",
-                en: "The selected institution is ArvoOS itself; its own credits are not sold. To buy credits for a customer institution, select it under Institution in the profile menu.",
-              })}
-            </p>
-          ) : null}
+              {/*
+                Kartla ödeme, kart kaydetme seçeneğiyle (28.10.2026). Ödeme kaydı
+                düğmenin sunucu işleminde açılır, sayfa çiziminde değil. Tutarı
+                ArvoOS belirler; buradan plan ya da tutar gitmez.
+              */}
+              {kartlaOdenebilir ? (
+                <form action={kartlaOdemeBaslat} className="cluster">
+                  <OdemeButonu birincil={false} etiket={t({ tr: "Kartla öde · kartı kaydetme seçeneğiyle", en: "Pay by card · with option to save card" })} />
+                </form>
+              ) : null}
 
-          {access.kind === "organization" && !satis ? (
-            <p className="hint">
-              {t({
-                tr: "Kurumunuzun kredisini kurum yöneticiniz bu sayfadan alır.",
-                en: "Your institution administrator buys your institution's credits on this page.",
-              })}
-            </p>
-          ) : null}
-
-          {satis ? (
-            <>
-              <h3 className="calisma-durum-alt">
-                {satis === "kurum"
-                  ? t({ tr: "Kurum için ek kredi paketleri", en: "Extra credit packages for the institution" })
-                  : t({ tr: "Ek kredi paketleri", en: "Extra credit packages" })}
-              </h3>
-              {paketler.length ? (
-                <div className="kredi-paketleri">
-                  {paketler.map((paket) => {
-                    const birim = binKrediFiyati(paket);
-                    const indirim = enUcuzBirim > birim ? Math.round((1 - birim / enUcuzBirim) * 100) : 0;
-                    const oneCikan = paket.kod === enAvantajli;
-                    return (
-                      <form action={satis === "kurum" ? kurumKrediSatinAl : krediSatinAl} key={paket.kod} className="kredi-paketi" data-one-cikan={oneCikan || undefined}>
-                        <input type="hidden" name="paket" value={paket.kod} />
-                        {oneCikan ? <span className="kredi-paketi-serit">{t({ tr: "En avantajlı", en: "Best value" })}</span> : null}
-                        {/* Paket adını ArvoOS Türkçe gönderiyor ("2.500 kredi"); İngilizce arayüzde adı krediden kuruyoruz. */}
-                        <span className="kredi-paketi-ad">{dil === "en" ? `${sayi(paket.kredi)} credits` : paket.ad}</span>
-                        <span className="kredi-paketi-fiyat">{fiyat(paket.fiyat)}</span>
-                        <span className="kredi-paketi-birim">
-                          {t({ tr: `1.000 kredi ${fiyat(birim)}`, en: `${fiyat(birim)} per 1,000 credits` })}
-                        </span>
-                        {indirim ? (
-                          <span className="kredi-paketi-indirim">{t({ tr: `%${indirim} tasarruf`, en: `Save ${indirim}%` })}</span>
-                        ) : (
-                          <span className="kredi-paketi-indirim" data-bos="true">{t({ tr: "Başlangıç paketi", en: "Starter pack" })}</span>
-                        )}
-                        <OdemeButonu birincil={oneCikan} etiket={t({ tr: "Satın al", en: "Buy" })} />
-                      </form>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="muted text-sm">
+              {access.kind === "individual" ? (
+                <p className="ayar-not">
                   {t({
-                    tr: "Kredi paketleri şu an yüklenemedi. Ödeme sistemine ulaşılamıyor olabilir; biraz sonra sayfayı yenileyin.",
-                    en: "Credit packages could not be loaded right now. The payment system may be unreachable; refresh the page shortly.",
+                    tr: "Aboneliğe her ay 1.000 asistan kredisi dahil (1 kredi = 1.000 karakter); kullanılmayan aylık hak devretmez. Satın alınan kredi yanmaz, aylık hak bitince kullanılır.",
+                    en: "Your subscription includes 1,000 assistant credits each month (1 credit = 1,000 characters); unused monthly credits do not roll over. Purchased credits never expire and are used once the monthly allowance runs out.",
                   })}
                 </p>
+              ) : null}
+
+              {access.kind === "staff" && kapsam && faturaKurumu ? (
+                <p className="ayar-not">
+                  {t({ tr: "", en: "Showing invoices for " })}
+                  <b>{faturaKurumu}</b>
+                  {t({
+                    tr: " faturaları gösteriliyor. Diğer kurumunuzunkiler için profil menüsündeki Kurum seçimini değiştirin.",
+                    en: ". For another institution's, change the Institution selection in the profile menu.",
+                  })}
+                </p>
+              ) : null}
+            </div>
+          </Bolum>
+
+          <Bolum
+            id="abonelik-kredi"
+            duzey={2}
+            sinif="ayar-bolum"
+            baslik={t({ tr: "Asistan kredisi", en: "Assistant credits" })}
+            aciklama={
+              bireysel
+                ? t({ tr: "Bu ayki hakkınız ve satın aldığınız bakiye.", en: "This month's allowance and your purchased balance." })
+                : t({ tr: "Kurumunuzun bu ayki kredisi.", en: "Your institution's credits this month." })
+            }
+          >
+            <div className="ayar-bolum-icerik">
+              {/*
+                DENEME HAKKI (02.11.2026): deneme süresinde asistan ayda 1.000
+                krediyle değil, 2 kullanımla sınırlı. Kredi göstergesi bu
+                kullanıcıya "1.000 kredi" gösterseydi ikinci kullanımdan sonraki
+                kilit ona bir hata gibi görünürdü.
+              */}
+              {deneme.denemede ? (
+                <p className="alert" data-tone={deneme.kalan > 0 ? "info" : "warning"} role="status">
+                  {deneme.kalan > 0
+                    ? t({
+                        tr: `Deneme süresince asistanı ${DENEME_ASISTAN_HAKKI} kez kullanabilirsiniz; kalan hakkınız: ${deneme.kalan}. Aboneliğinizi başlattığınızda aylık kredi tanımlanır.`,
+                        en: `During the trial you can use the assistant ${DENEME_ASISTAN_HAKKI} times; uses left: ${deneme.kalan}. Monthly credits are added when you start your subscription.`,
+                      })
+                    : t({
+                        tr: `Deneme süresindeki ${DENEME_ASISTAN_HAKKI} asistan hakkınızı kullandınız. Aboneliğinizi başlattığınızda asistan aylık krediyle yeniden açılır.`,
+                        en: `You've used your ${DENEME_ASISTAN_HAKKI} trial assistant runs. The assistant reopens with monthly credits once you start your subscription.`,
+                      })}
+                </p>
+              ) : null}
+
+              {/*
+                Sayı üretilemiyorsa (okunamadı, hak bildirilmemiş, iç ekip) kutu
+                çizilmiyor: "0 kredi" yazmak, hakkı olmayanla ölçümü okunamayanı
+                aynı göstermek olurdu (lib/ai/kredi-ozeti.ts).
+              */}
+              {deneme.denemede ? null : kredi.goster ? (
+                <KrediOzetKarti kredi={kredi} ayrintili>
+                  {kredi.tukendi ? (
+                    <p className="tone-text text-sm" data-tone="danger">
+                      {t({ tr: "Krediniz bitti; asistan yeni çalışma yapmıyor.", en: "You are out of credits; the assistant will not run new checks." })}{" "}
+                      {bireysel
+                        ? t({ tr: "Aşağıdan ek kredi alabilir ya da ayın başını bekleyebilirsiniz.", en: "You can buy more credits below or wait for the start of the month." })
+                        : satis === "kurum"
+                          ? t({ tr: "Aşağıdan kurum için ek kredi alabilirsiniz.", en: "You can buy more credits for the institution below." })
+                          : t({ tr: "Kurum yöneticiniz ek kredi alabilir.", en: "Your institution administrator can buy more credits." })}
+                    </p>
+                  ) : null}
+                </KrediOzetKarti>
+              ) : (
+                <p className="abonelik-bos">
+                  {access.kind === "staff" ? <Gift size={18} aria-hidden="true" /> : null}
+                  {access.kind === "staff"
+                    ? t({ tr: "İç ekip hesapları asistan kredisine tabi değil.", en: "Internal team accounts are not subject to assistant credits." })
+                    : t({
+                        tr: "Kredi durumu şu an okunamadı. Asistanı kullanmaya devam edebilirsiniz; sayfayı sonra yenileyin.",
+                        en: "Your credit status could not be loaded right now. You can keep using the assistant; refresh the page later.",
+                      })}
+                </p>
               )}
-              {paketler.length ? <YasalNot /> : null}
-              <p className="hint kredi-guvence">
-                <Lock size={14} aria-hidden="true" />
-                {satis === "kurum"
-                  ? t({
-                      tr: "Ödeme ArvoOS üzerinden kartla alınır (PayTR) ve kurumunuz adına kaydedilir; ödeme geçmişinde ve faturalarda görünür. Onaylanınca kredi birkaç dakika içinde kurumun bakiyesine eklenir ve bütün üyeler kullanır.",
-                      en: "Payment is taken by card through ArvoOS (PayTR) and recorded for your institution; it appears in the payment history and invoices. Once approved, the credits are added to the institution's balance within a few minutes and every member can use them.",
-                    })
-                  : t({
-                      tr: "Ödeme ArvoOS üzerinden kartla alınır (PayTR). Ödeme onaylanınca kredi birkaç dakika içinde bakiyenize eklenir; aboneliğiniz kapalıyken kredi satılmaz.",
-                      en: "Payment is taken by card through ArvoOS (PayTR). Once the payment is approved, the credits are added to your balance within a few minutes; credits cannot be bought while your subscription is inactive.",
+
+              {platformKurumu ? (
+                <p className="ayar-not">
+                  {t({
+                    tr: "Seçili kurum ArvoOS'un kendisi; kendi kredisi satılmaz. Bir müşteri kurumu adına kredi almak için profil menüsündeki Kurum seçiminden o kurumu seçin.",
+                    en: "The selected institution is ArvoOS itself; its own credits are not sold. To buy credits for a customer institution, select it under Institution in the profile menu.",
+                  })}
+                </p>
+              ) : null}
+
+              {access.kind === "organization" && !satis ? (
+                <p className="ayar-not">
+                  {t({
+                    tr: "Kurumunuzun kredisini kurum yöneticiniz bu sayfadan alır.",
+                    en: "Your institution administrator buys your institution's credits on this page.",
+                  })}
+                </p>
+              ) : null}
+            </div>
+          </Bolum>
+
+          {satis ? (
+            <Bolum
+              id="abonelik-paketler"
+              duzey={2}
+              sinif="ayar-bolum"
+              baslik={
+                satis === "kurum"
+                  ? t({ tr: "Kurum için ek kredi", en: "Extra credits for the institution" })
+                  : t({ tr: "Ek kredi paketleri", en: "Extra credit packages" })
+              }
+              aciklama={t({ tr: "Satın alınan kredi yanmaz; aylık hak bitince kullanılır.", en: "Purchased credits never expire; they are used after the monthly allowance." })}
+            >
+              <div className="ayar-bolum-icerik">
+                {paketler.length ? (
+                  <div className="kredi-paketleri">
+                    {paketler.map((paket) => {
+                      const birim = binKrediFiyati(paket);
+                      const indirim = enUcuzBirim > birim ? Math.round((1 - birim / enUcuzBirim) * 100) : 0;
+                      const oneCikan = paket.kod === enAvantajli;
+                      return (
+                        <form action={satis === "kurum" ? kurumKrediSatinAl : krediSatinAl} key={paket.kod} className="kredi-paketi" data-one-cikan={oneCikan || undefined}>
+                          <input type="hidden" name="paket" value={paket.kod} />
+                          {oneCikan ? <span className="kredi-paketi-serit">{t({ tr: "En avantajlı", en: "Best value" })}</span> : null}
+                          {/* Paket adını ArvoOS Türkçe gönderiyor ("2.500 kredi"); İngilizce arayüzde adı krediden kuruyoruz. */}
+                          <span className="kredi-paketi-ad">{dil === "en" ? `${sayi(paket.kredi)} credits` : paket.ad}</span>
+                          <span className="kredi-paketi-fiyat">{fiyat(paket.fiyat)}</span>
+                          <span className="kredi-paketi-birim">
+                            {t({ tr: `1.000 kredi ${fiyat(birim)}`, en: `${fiyat(birim)} per 1,000 credits` })}
+                          </span>
+                          {indirim ? (
+                            <span className="kredi-paketi-indirim">{t({ tr: `%${indirim} tasarruf`, en: `Save ${indirim}%` })}</span>
+                          ) : (
+                            <span className="kredi-paketi-indirim" data-bos="true">{t({ tr: "Başlangıç paketi", en: "Starter pack" })}</span>
+                          )}
+                          <OdemeButonu birincil={oneCikan} etiket={t({ tr: "Satın al", en: "Buy" })} />
+                        </form>
+                      );
                     })}
-              </p>
-            </>
+                  </div>
+                ) : (
+                  <p className="abonelik-bos">
+                    {t({
+                      tr: "Kredi paketleri şu an yüklenemedi. Ödeme sistemine ulaşılamıyor olabilir; biraz sonra sayfayı yenileyin.",
+                      en: "Credit packages could not be loaded right now. The payment system may be unreachable; refresh the page shortly.",
+                    })}
+                  </p>
+                )}
+                {paketler.length ? <YasalNot /> : null}
+                <p className="ayar-not kredi-guvence">
+                  <Lock size={14} aria-hidden="true" />
+                  {satis === "kurum"
+                    ? t({
+                        tr: "Ödeme ArvoOS üzerinden kartla alınır (PayTR) ve kurumunuz adına kaydedilir; ödeme geçmişinde ve faturalarda görünür. Onaylanınca kredi birkaç dakika içinde kurumun bakiyesine eklenir ve bütün üyeler kullanır.",
+                        en: "Payment is taken by card through ArvoOS (PayTR) and recorded for your institution; it appears in the payment history and invoices. Once approved, the credits are added to the institution's balance within a few minutes and every member can use them.",
+                      })
+                    : t({
+                        tr: "Ödeme ArvoOS üzerinden kartla alınır (PayTR). Ödeme onaylanınca kredi birkaç dakika içinde bakiyenize eklenir; aboneliğiniz kapalıyken kredi satılmaz.",
+                        en: "Payment is taken by card through ArvoOS (PayTR). Once the payment is approved, the credits are added to your balance within a few minutes; credits cannot be bought while your subscription is inactive.",
+                      })}
+                </p>
+              </div>
+            </Bolum>
           ) : null}
 
           {sonHareketler.length ? (
-            <>
-              <h3 className="calisma-durum-alt">
-                <History size={14} aria-hidden="true" /> {t({ tr: "Son hareketler", en: "Recent activity" })}
-              </h3>
-              <ul className="kredi-hareketleri">
+            <Bolum
+              id="abonelik-hareketler"
+              duzey={2}
+              sinif="ayar-bolum"
+              baslik={t({ tr: "Son hareketler", en: "Recent activity" })}
+              aciklama={t({ tr: "Kredinize eklenenler ve asistanın kullandıkları.", en: "Credits added and used by the assistant." })}
+            >
+              <ul className="kredi-hareketleri ayar-bolum-icerik">
                 {sonHareketler.map((h, i) => {
                   const tur = HAREKET[h.tur];
                   const Ikon = tur?.ikon ?? Sparkles;
@@ -488,10 +497,45 @@ export default async function AbonelikPage({ searchParams }: { searchParams: Pro
                   );
                 })}
               </ul>
-            </>
+            </Bolum>
           ) : null}
-        </article>
-      </section>
+
+          {kapsam ? (
+            <Bolum
+              id="abonelik-faturalar"
+              duzey={2}
+              sinif="ayar-bolum"
+              baslik={
+                kapsam.tur === "kurum"
+                  ? t({ tr: "Kurumun faturaları ve ödemeleri", en: "Institution invoices and payments" })
+                  : t({ tr: "Faturalar ve ödemeler", en: "Invoices and payments" })
+              }
+              aciklama={t({ tr: "Proformalar, ödemeler, faturalar ve makbuzlar.", en: "Pro forma invoices, payments, invoices and receipts." })}
+            >
+              <div className="ayar-bolum-icerik">
+                <FaturalarBolumu veri={faturalama} kurum={kapsam.tur === "kurum"} />
+              </div>
+            </Bolum>
+          ) : null}
+
+          {/* Otomatik yenileme kaldırıldıktan sonra (29.10.2026) yeni kart kaydedilmiyor;
+              bölüm yalnızca eskiden kaydedilmiş bir kart (silebilsin) ya da açık kalmış
+              bir yenileme varsa çizilir. Boş "kayıtlı kartınız yok" kutusu yalnızca gürültüydü. */}
+          {kartBolumuVar && kartDurumu?.ok ? (
+            <Bolum
+              id="abonelik-kart"
+              duzey={2}
+              sinif="ayar-bolum"
+              baslik={t({ tr: "Kayıtlı kart", en: "Saved card" })}
+              aciklama={t({ tr: "Eskiden kaydedilmiş kartınız ve otomatik yenileme.", en: "Your previously saved card and automatic renewal." })}
+            >
+              <div className="ayar-bolum-icerik">
+                <KartBolumu durum={kartDurumu.veri} />
+              </div>
+            </Bolum>
+          ) : null}
+        </div>
+      </div>
     </main>
   );
 }

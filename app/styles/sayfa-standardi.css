@@ -594,3 +594,56 @@ details[open] > summary > .kk-ok { transform: rotate(180deg); }
   .kk-git, .kk-destek > a { min-height: 40px; }
   .kk-arama-temizle { width: 40px; height: 40px; right: 4px; }
 }
+
+/* ============================================================
+   ABONELİK VE KREDİ (Signature OS 4.4, 05.11.2026)
+   Ayarlar'ın düzeni (ayarlar-govde / ayarlar-yuzey / ayar-bolum) ve kredi
+   gösterimi (ayar-kredi) aynen; burada yalnızca bu sayfaya özgü parçalar.
+   Lisans kartı ana sayfada da kullanılıyor: görünümü YALNIZCA bu sayfada
+   sadeleşir (.abonelik-sayfa altında).
+   ============================================================ */
+.abonelik-katman {
+  display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px;
+  background: var(--primary-soft); color: var(--primary-ink); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .02em;
+}
+.abonelik-bos {
+  display: flex; align-items: center; gap: var(--s-2); margin: 0; padding: var(--s-4);
+  border: 1px dashed var(--line); border-radius: var(--r-md); color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin);
+}
+.abonelik-sayfa .ayar-kredi-ayrinti small { display: block; margin-top: 2px; color: var(--muted); font-size: var(--fs-micro); }
+
+/* Lisans kartı: bölümün içinde ikinci bir "kart" gibi değil, sade bir blok. */
+.abonelik-sayfa .license-card { margin: 0; padding: var(--s-4); border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); box-shadow: none; }
+.abonelik-sayfa .license-card .dashboard-kicker { display: none; }
+.abonelik-sayfa .license-card { position: relative; }
+.abonelik-sayfa .license-card-head { position: absolute; top: var(--s-4); right: var(--s-4); }
+.abonelik-sayfa .license-card h2 { padding-right: 96px; }
+.abonelik-sayfa .license-card h2 { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -.01em; }
+.abonelik-sayfa .license-card > p { line-height: var(--lh-metin); }
+
+/* Paketler: bölüm genişliğinde üçlü ızgara; dar ekranda tek sütun. */
+.abonelik-sayfa .kredi-paketleri { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s-3); margin: 0; }
+.abonelik-sayfa .kredi-paketi { box-shadow: none; }
+.abonelik-sayfa .kredi-guvence { display: flex; align-items: flex-start; gap: var(--s-2); }
+.abonelik-sayfa .kredi-guvence svg { flex: none; margin-top: 2px; color: var(--muted); }
+
+/* Hareketler ve faturalar: bölümün içinde kartsız liste. */
+.abonelik-sayfa .kredi-hareketleri { margin: calc(-1 * var(--s-2)) 0; }
+.abonelik-sayfa .cari-ozet { margin: 0; }
+.abonelik-sayfa .fatura-listesi { margin: 0; }
+@media (max-width: 1199px), (pointer: coarse) {
+  .abonelik-sayfa .fatura-belgeler a, .abonelik-sayfa .kredi-paketi button { min-height: 40px; display: inline-flex; align-items: center; }
+}
+/* Fatura satırı: geniş ekranda başlık | tutar | durum; dar ekranda başlık tam satır, altında tutar ve durum (başlık kesilmesin). */
+.abonelik-sayfa .fatura-satir { padding: var(--s-3) 0; border-bottom-color: var(--line-soft); }
+.abonelik-sayfa .fatura-satir .gb-satir-govde small { white-space: normal; }
+@media (max-width: 600px) {
+  .abonelik-sayfa .fatura-satir { grid-template-columns: auto minmax(0, 1fr); }
+  .abonelik-sayfa .fatura-satir > .gb-satir-govde { grid-column: 1 / -1; }
+  .abonelik-sayfa .fatura-satir > .status-pill { justify-self: start; }
+}
+/* Bölüm içindeki "okunamadı" metinleri (faturalar, kayıtlı kart) aynı sakin kutuda; eskiden ortalanmış büyük boş alan. */
+.abonelik-sayfa .ayar-bolum .gb-bos {
+  display: flex; align-items: center; gap: var(--s-2); min-height: 0; margin: 0; padding: var(--s-4); text-align: left;
+  border: 1px dashed var(--line); border-radius: var(--r-md); color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin);
+}

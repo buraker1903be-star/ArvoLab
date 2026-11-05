@@ -18,6 +18,11 @@ import { yazimDenetle, yazimIstemi, type YazimGorevi } from "@/lib/ai/yazim-asis
 test("takma: üretimde ARVOLAB_ONIZLEME ya da ONIZLEME_AI açıksa derleme durur", () => {
   assert.throws(() => onizlemeTakmalari({ NODE_ENV: "production", ARVOLAB_ONIZLEME: "1" }), /üretim/);
   assert.throws(() => onizlemeTakmalari({ NODE_ENV: "production", ONIZLEME_AI: "1" }), /üretim/);
+  // Abonelik köprüsü taklidi (4.4): üretimde ve önizleme dışında açılamaz; açıkken yalnızca köprü modülü değişir.
+  assert.throws(() => onizlemeTakmalari({ NODE_ENV: "production", ONIZLEME_ABONELIK: "aktif" }), /üretim/);
+  assert.throws(() => onizlemeTakmalari({ ONIZLEME_ABONELIK: "aktif" }), /ARVOLAB_ONIZLEME/);
+  assert.equal(onizlemeTakmalari({ ARVOLAB_ONIZLEME: "1", ONIZLEME_ABONELIK: "aktif" })?.["@/lib/subscription"], "./scripts/onizleme/abonelik.ts");
+  assert.equal(onizlemeTakmalari({ ARVOLAB_ONIZLEME: "1" })?.["@/lib/subscription"], undefined);
   assert.throws(() => onizlemeTakmalari({ NODE_ENV: "production", ARVOLAB_ONIZLEME: "1", ONIZLEME_AI: "1" }), /üretim/);
 });
 

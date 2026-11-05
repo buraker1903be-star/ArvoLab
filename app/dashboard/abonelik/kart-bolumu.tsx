@@ -1,4 +1,4 @@
-import { CreditCard, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { kayitliKartiSil, otomatikYenilemeyiKapat } from "@/app/actions/kart-odeme";
 import { ceviri, tarihler } from "@/lib/dil-sunucu";
 import type { KartDurumu, KayitliKart } from "@/lib/kart-odeme";
@@ -21,9 +21,7 @@ export default async function KartBolumu({ durum }: { durum: KartDurumu | null }
 
   return (
     <>
-      <h3 className="calisma-durum-alt">
-        <CreditCard size={14} aria-hidden="true" /> {t({ tr: "Kayıtlı kart", en: "Saved card" })}
-      </h3>
+      {/* Başlık sayfadaki bölümde (Signature OS 4.4, abonelik/page.tsx). */}
       {!durum ? (
         <p className="gb-bos">
           {t({
