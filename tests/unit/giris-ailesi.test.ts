@@ -54,3 +54,22 @@ test("kayıt: sözleşme okunmadan işaretlenmez, okundu bilgisi sunucuya gider"
   assert.match(form, /if \(!okundu\) \{\s*e\.preventDefault\(\);\s*setOkuyor\(true\);/);
   assert.match(form, /name="sozlesmeOkundu" value=\{okundu \? "1" : ""\}/);
 });
+
+/*
+  Arvo AI cümlesi (05.11.2026). Eskiden giriş sayfası "Asistan metninizi
+  yazmaz, denetler" diyordu; yazım asistanı 03.11.2026'dan beri sohbette
+  taslak yazıyor. Değişmeyen söz: ekleme kararı kullanıcının.
+*/
+test("giriş sayfası Arvo AI'ı güncel anlatır, iki dilde de ekleme kararı kullanıcıda", () => {
+  const sayfa = oku("app/page.tsx");
+  assert.ok(!sayfa.includes(`tr: "Asistan metninizi yazmaz`), "eski cümle kalmamalı");
+  assert.ok(!sayfa.includes(`en: "The assistant reviews your text`), "eski İngilizce cümle kalmamalı");
+  assert.ok(sayfa.includes("Önerileri belgenize ekleme kararı size aittir."));
+  assert.ok(sayfa.includes("The decision to add its suggestions to your document is yours."));
+});
+
+test("telefon biçimi özelliklerin hiçbirini düşürmez: iki liste de aynı diziden", () => {
+  const sayfa = oku("app/page.tsx");
+  assert.equal((sayfa.match(/OZELLIKLER\.map\(/g) ?? []).length, 2);
+  assert.match(sayfa, /<details>\s*<summary>/);
+});

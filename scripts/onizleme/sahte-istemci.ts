@@ -150,6 +150,23 @@ export function sahteIstemci() {
       getUser: () => tur("auth:getUser", { data: { user: OTURUMSUZ ? null : ORNEK_KULLANICI }, error: null }),
       getSession: () => tur("auth:getSession", { data: { session: OTURUMSUZ ? null : { user: ORNEK_KULLANICI } }, error: null }),
       signOut: async () => ({ error: null }),
+      /*
+        E-POSTA DOĞRULAMA TAKLİDİ (05.11.2026). /auth/confirm'ün başarılı,
+        geçersiz ve süresi dolmuş hâllerini önizlemede sınamak için
+        (scripts/onizleme/dogrulama-kabul.mjs). Gerçek belirteç yok,
+        Supabase'e istek yok. Hata gövdeleri Supabase'in döndürdüğü kodlarla
+        aynı (otp_expired); rota yalnızca `error` var mı diye bakıyor.
+      */
+      verifyOtp: async ({ token_hash }: { token_hash: string }) =>
+        token_hash.startsWith("onizleme-gecerli")
+          ? { data: { user: ORNEK_KULLANICI, session: {} }, error: null }
+          : token_hash.startsWith("onizleme-suresi-dolmus")
+            ? { data: { user: null, session: null }, error: { code: "otp_expired", status: 403, message: "Email link is invalid or has expired" } }
+            : { data: { user: null, session: null }, error: { code: "otp_disabled", status: 403, message: "Token has expired or is invalid" } },
+      exchangeCodeForSession: async (kod: string) =>
+        kod === "onizleme-gecerli-kod"
+          ? { data: { session: {} }, error: null }
+          : { data: { session: null }, error: { code: "bad_code_verifier", status: 400, message: "invalid flow state" } },
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     },
     storage: {

@@ -1,4 +1,4 @@
-import { BookOpenCheck, ChartNoAxesCombined, FileCheck2, PenLine, ShieldCheck, Sparkles } from "lucide-react";
+import { BookOpenCheck, ChartNoAxesCombined, ChevronDown, FileCheck2, PenLine, ShieldCheck, Sparkles } from "lucide-react";
 import KimlikKabugu from "@/app/_components/kimlik-kabugu";
 import GirisFormu from "@/app/_components/giris-formu";
 import KayitPenceresi from "@/app/_components/kayit-penceresi";
@@ -16,7 +16,8 @@ import { BASKA_CIHAZ_BILGISI } from "@/lib/tek-oturum";
   olmayan öğrenci ve araştırmacı. Bu yüzden:
    - kayıt, girişin hemen altında kendi kartında ve düğme olarak duruyor;
    - tanıtım, ekranın NE YAPTIĞINI somut olarak anlatıyor ve ürünün iki
-     temel sözünü (asistan yazmaz, kaynak uydurmaz) açıkça söylüyor.
+     temel sözünü (öneriyi belgeye ekleme kararı kullanıcının, kaynak
+     uydurulmaz) açıkça söylüyor.
   Telefonda eski sürümde logo yerine boş bir "A" kutusu çıkıyor, dil
   düğmeleri markanın üstüne biniyordu; üst çubuk artık her genişlikte aynı.
 
@@ -73,8 +74,19 @@ const ADIMLAR: Metin[] = [
   { tr: "Yazmaya başlayın", en: "Start writing" },
 ];
 
+/*
+  ARVO AI CÜMLESİ (05.11.2026, kurum sahibinin metni). Eskiden ilkelerin
+  ilki "Asistan metninizi yazmaz, denetler" idi; 03.11.2026'dan beri yazım
+  asistanı sohbette taslak yazıyor (AGENTS.md, "Asistan yalnızca SOHBETTE
+  yazar") ve cümle ürünün yaptığını yanlış anlatıyordu. Değişmeyen söz son
+  cümlede: metin belgeye kendiliğinden girmez, eklemek kullanıcının eylemi.
+*/
+const ARVO_AI: Metin = {
+  tr: "Arvo AI, araştırma ve yazım sürecinizde yanınızda. Taslak oluşturabilir, metninizi geliştirebilir ve akademik inceleme yapabilir. Önerileri belgenize ekleme kararı size aittir.",
+  en: "Arvo AI is with you throughout your research and writing. It can draft, improve your text and carry out an academic review. The decision to add its suggestions to your document is yours.",
+};
+
 const ILKELER: Metin[] = [
-  { tr: "Asistan metninizi yazmaz, denetler", en: "The assistant reviews your text, it doesn't write it" },
   { tr: "Kaynak uydurmaz, gerçek dizinlerde arar", en: "It never invents sources; it searches real indexes" },
   { tr: "Çalışmanız yalnızca size ve yetki verdiklerinize açık", en: "Your work is visible only to you and those you authorize" },
 ];
@@ -195,6 +207,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           })}
         </p>
 
+        {/*
+          Özellikler iki biçimde (05.11.2026). Geniş ekranda onaylanmış liste;
+          telefonda (auth.css, ≤640px) aynı dört özellik başlık olarak görünür,
+          açıklama <details> ile isteğe bağlı açılır. Eskiden telefonda
+          tanıtım dört uzun paragrafla 1100px'i aşıyordu. Biri display:none
+          olduğu için ekran okuyucu yalnızca görünen biçimi okur; <details>
+          klavyeyle ve JavaScript'siz açılır.
+        */}
         <ul className="giris-ozellikler">
           {OZELLIKLER.map(({ ikon: Ikon, baslik, aciklama }) => (
             <li key={baslik.tr}>
@@ -205,6 +225,22 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <b>{t(baslik)}</b>
                 {t(aciklama)}
               </span>
+            </li>
+          ))}
+        </ul>
+        <ul className="giris-ozellikler-kisa" aria-label={t({ tr: "Neler sunar", en: "What it offers" })}>
+          {OZELLIKLER.map(({ ikon: Ikon, baslik, aciklama }) => (
+            <li key={baslik.tr}>
+              <details>
+                <summary>
+                  <span className="giris-ozellik-ikon" aria-hidden="true">
+                    <Ikon size={16} strokeWidth={1.8} />
+                  </span>
+                  <b>{t(baslik)}</b>
+                  <ChevronDown className="giris-ozellik-ok" size={16} aria-hidden="true" />
+                </summary>
+                <p>{t(aciklama)}</p>
+              </details>
             </li>
           ))}
         </ul>
@@ -221,6 +257,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           {/* Aynı kayıt penceresi; tanıtımı okuyup ikna olan, forma geri dönmeden başlasın. */}
           <KayitPenceresi sinif="giris-tanitim-dugme" etiket={{ tr: "Ücretsiz denemeye başla", en: "Start your free trial" }} />
         </div>
+
+        <p className="giris-ai-notu">
+          <Sparkles size={16} aria-hidden="true" />
+          <span>{t(ARVO_AI)}</span>
+        </p>
 
         <ul className="giris-ilkeler" aria-label={t({ tr: "İlkelerimiz", en: "Our principles" })}>
           {ILKELER.map((ilke) => (

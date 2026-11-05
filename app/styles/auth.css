@@ -150,6 +150,8 @@
 .login-button:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 .login-button:active { transform: scale(.98); transition-duration: .08s; }
 .login-button:disabled { opacity: .6; cursor: not-allowed; }
+/* Doğrulama sayfasının "Devam et"i grid olmayan bir formda: düğme içeriği kadar daralıyordu. */
+.login-card form > .login-button { width: 100%; }
 
 /* ---------- Kayıt kartı (girişin altında) ---------- */
 .giris-kayit {
@@ -197,8 +199,9 @@
 .giris-tanitim {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: clamp(24px, 3.2vw, 44px);
+  /* 14px: Arvo AI cümlesi eklenince 1440x900'de sayfa kaydırmasız kalsın. */
+  gap: 14px;
+  padding: clamp(24px, 2.8vw, 40px);
   border: 1px solid var(--giris-vurgu-cizgi);
   border-radius: calc(var(--r-xl) + 4px);
   background: var(--giris-vurgu-zemin);
@@ -222,7 +225,7 @@
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 12px;
-  padding: 12px 0;
+  padding: 11px 0;
   border-top: 1px solid var(--giris-vurgu-cizgi);
   color: var(--muted);
   font-size: var(--fs-base);
@@ -234,6 +237,23 @@
 .giris-adimlar { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; color: var(--ink); font-size: var(--fs-base); font-weight: 600; }
 .giris-adimlar li { display: inline-flex; align-items: center; gap: 8px; }
 .giris-adimlar span { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--giris-vurgu-cizgi); border-radius: var(--r-pill); background: var(--giris-vurgu-zemin); color: var(--primary-ink); font-size: var(--fs-sm); font-weight: 700; }
+/* Arvo AI cümlesi (05.11.2026): ilkelerden uzun, kendi satırında. */
+.giris-ai-notu { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; max-width: 640px; margin: 0; color: var(--ink-soft); font-size: var(--fs-base); line-height: var(--lh-metin); }
+.giris-ai-notu svg { margin-top: 2px; color: var(--primary-ink); }
+
+/* Telefon biçimi: başlıklar görünür, açıklama isteğe bağlı (page.tsx). Geniş ekranda gizli. */
+.giris-ozellikler-kisa { display: none; margin: 0; padding: 0; list-style: none; }
+.giris-ozellikler-kisa li { border-top: 1px solid var(--giris-vurgu-cizgi); }
+.giris-ozellikler-kisa li:last-child { border-bottom: 1px solid var(--giris-vurgu-cizgi); }
+.giris-ozellikler-kisa summary { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; min-height: 48px; padding: 4px 2px; color: var(--ink); font-size: var(--fs-body); cursor: pointer; list-style: none; border-radius: var(--r-sm); }
+.giris-ozellikler-kisa summary::-webkit-details-marker { display: none; }
+.giris-ozellikler-kisa summary:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.giris-ozellikler-kisa b { font-weight: 650; }
+.giris-ozellikler-kisa .giris-ozellik-ikon { width: 30px; height: 30px; }
+.giris-ozellik-ok { color: var(--muted); transition: transform var(--sure-hizli) ease; }
+.giris-ozellikler-kisa details[open] .giris-ozellik-ok { transform: rotate(180deg); }
+.giris-ozellikler-kisa p { margin: 0; padding: 0 2px 14px 42px; color: var(--muted); font-size: var(--fs-base); line-height: var(--lh-metin); }
+
 .giris-ilkeler { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-sm); }
 .giris-ilkeler li { display: inline-flex; align-items: center; gap: 7px; }
 .giris-ilkeler svg { color: var(--primary-ink); flex: none; }
@@ -305,7 +325,15 @@
   .login-form input { font-size: 16px; }
 }
 @media (max-width: 640px) {
-  .giris-ozellikler { grid-template-columns: minmax(0, 1fr); }
+  /* Telefon: özellik açıklamaları isteğe bağlı; tanıtım kısalır (05.11.2026). */
+  .giris-ozellikler { display: none; }
+  .giris-ozellikler-kisa { display: block; }
+  .giris-tanitim { gap: 14px; padding: 22px 18px; }
+  .giris-tanitim h2 { font-size: 24px; }
+  .giris-tanitim-ozet { font-size: var(--fs-body); }
+  .giris-baslangic { padding: 12px 14px; }
+  .giris-adimlar { gap: 6px 14px; }
+  .giris-tanitim-dugme { justify-self: stretch; width: 100%; }
 }
 @media (max-width: 520px) {
   .kayit-formu { grid-template-columns: minmax(0, 1fr); }
