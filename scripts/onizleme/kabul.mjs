@@ -260,7 +260,7 @@ const tarayici = await chromium.launch();
     };
     await topla(".yazma-basligi");
     await topla(".manuscript-araclar");
-    for (const menu of await sayfa.locator(".manuscript-araclar .arac-menu-dugme, .yazma-eylemleri [aria-haspopup=menu]").all()) {
+    for (const menu of await sayfa.locator(".manuscript-araclar .arac-menu-dugme, .yazma-eylemleri button[aria-expanded][aria-controls]").all()) {
       await menu.click();
       await sayfa.waitForTimeout(150);
       await topla(".arac-menu-pencere:not([hidden])");

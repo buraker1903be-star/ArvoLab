@@ -13,6 +13,7 @@ import "./styles/auth.css";
 import "./styles/workspace.css";
 import "./styles/overlays.css";
 import "./styles/genel-bakis.css";
+import "./styles/sayfa-standardi.css";
 import "./styles/print.css";
 
 /*

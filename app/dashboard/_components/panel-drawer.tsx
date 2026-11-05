@@ -9,6 +9,27 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 
 const subscribeNothing = () => () => undefined;
 
+const gorunur = (el: HTMLElement | null | undefined): boolean =>
+  Boolean(el?.isConnected && (typeof el.checkVisibility === "function" ? el.checkVisibility() : el.offsetParent !== null));
+
+/*
+  KAPANINCA ODAK NEREYE (Signature OS 4.1, 05.11.2026). Eskiden yalnızca
+  tetikleyici düğmeye dönüyordu. İki durumda o düğme görünmüyor:
+  pencere sayfa başlığının TAŞMA MENÜSÜNDEN açıldıysa (menü kapandı,
+  düğme gizli) ve pencere dışarıdan yönetiliyorsa (`tetiksiz`: kaynak
+  ayrıntısı listedeki satırdan açılıyor). Gizli öğeye focus() sessizce
+  hiçbir şey yapmıyor, odak sayfanın başına düşüyor ve klavye kullanıcısı
+  yerini kaybediyordu. Sıra: tetikleyici → içinde durduğu menünün düğmesi
+  → açılış anında odaklı olan öğe.
+*/
+function odagiGeriVer(tetik: HTMLElement | null, acan: HTMLElement | null) {
+  if (tetik && gorunur(tetik)) return tetik.focus();
+  const grup = tetik?.closest<HTMLElement>(".arac-menu-pencere[id]");
+  const menuDugmesi = grup ? document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(grup.id)}"]`) : null;
+  if (menuDugmesi && gorunur(menuDugmesi)) return menuDugmesi.focus();
+  if (acan && gorunur(acan)) acan.focus();
+}
+
 
 type PanelDrawerProps = {
   triggerLabel: string;
@@ -24,9 +45,11 @@ type PanelDrawerProps = {
   triggerNote?: string;
   /**
    * Pencere genişliği: form için "orta", tablo ve zincir için "genis",
-   * yan yana iki kartlı çalışma pencereleri (arama + sonuçlar) için "tam".
+   * yan yana iki kartlı çalışma pencereleri (arama + sonuçlar) için "tam",
+   * listede seçilen kaydın ayrıntısı için "yan" (sağdan açılan sütun;
+   * sayfa/ayrinti-paneli.tsx).
    */
-  boy?: "onay" | "orta" | "genis" | "tam";
+  boy?: "onay" | "orta" | "genis" | "tam" | "yan";
   /**
    * Bir işlem başarıyla bitince pencere kapansın mı?
    *
@@ -95,6 +118,7 @@ export default function PanelDrawer({
   const dialogRef = useRef<HTMLElement>(null);
   const kokRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const acanRef = useRef<HTMLElement | null>(null);
   const wasOpen = useRef(false);
 
   // aria-modal tek başına odağı hapsetmez; Tab arka plana kaçıyordu.
@@ -103,11 +127,12 @@ export default function PanelDrawer({
   useEffect(() => {
     if (!open) {
       // Kapanınca odak, pencereyi açan düğmeye geri döner
-      if (wasOpen.current) triggerRef.current?.focus();
+      if (wasOpen.current) odagiGeriVer(triggerRef.current, acanRef.current);
       wasOpen.current = false;
       return;
     }
     wasOpen.current = true;
+    acanRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     /*
       İÇ İÇE PENCERE (Literatür → Manuel kaynak ekle): Escape yalnızca en
       üstteki pencereyi kapatır. Eskiden her açık pencere kendi dinleyicisiyle

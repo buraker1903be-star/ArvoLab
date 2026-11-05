@@ -1,0 +1,162 @@
+/* ============================================================
+   ORTAK SAYFA STANDARDI (Signature OS 4.1, 05.11.2026)
+   Bileşenler: app/dashboard/_components/sayfa/*
+   Kararlar:   lib/os/sayfa-standardi.ts
+
+   Bu dosya yalnızca YENİ yapı parçalarının görünümü. Başlığın kendisi
+   (.projects-header), düğmeler, hap (.status-pill) ve boş durum
+   (.empty-state) components.css'te kaldı: bileşenler onları kullanıyor,
+   ikinci bir düğme ya da başlık stili yazılmadı.
+
+   Dokunma hedefi: tablet ve dokunmatikte en az 40 piksel (proje
+   standardı; WCAG 2.5.8 AA'nın 24 pikselinin üstünde). Masaüstünde
+   ince imleçle sık düğme (36) kalır.
+   ============================================================ */
+
+/* ---------- Sayfa başlığı: sağ taraf (bağlam + eylemler) ---------- */
+.sayfa-basligi-sag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-2);
+}
+.sayfa-basligi-metin > .alert { margin-top: var(--s-2); }
+
+/* ---------- Sayfa eylemleri ---------- */
+.sayfa-eylemleri { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.sayfa-tasma-dugme { min-width: var(--kontrol-h-sik); padding-inline: 10px; }
+
+/* Taşma menüsündeki öğeler sayfa düğmesi olarak çizilmiş olabilir
+   (PanelDrawer'ın tetikleyicisi): menü öğesi gibi görünsünler. Menü
+   öğesinin kendi görünümü overlays.css'te (.arac-menu-pencere button). */
+.sayfa-tasma-menu :is(.projects-filter-button, .projects-primary-button) {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  font-weight: 550;
+}
+
+@media (max-width: 1199px), (pointer: coarse) {
+  .sayfa-eylemleri :is(.projects-filter-button, .projects-primary-button) { min-height: var(--kontrol-h); }
+  .sayfa-tasma-dugme { min-width: var(--kontrol-h); }
+}
+
+@media (max-width: 760px) {
+  .sayfa-basligi-sag { width: 100%; justify-content: stretch; }
+  .sayfa-basligi-sag > * { flex: 1 1 auto; }
+  .sayfa-eylemleri { width: 100%; }
+  .sayfa-eylemleri > .projects-primary-button { flex: 1 1 auto; }
+}
+
+/* ---------- Bölüm (kartsız gruplama) ---------- */
+.sayfa-bolum { display: grid; gap: var(--s-2); padding-top: var(--s-3); border-top: 1px solid var(--line-soft); }
+.sayfa-bolum:first-child,
+:is(.dashboard-kicker, .pencere-kart-baslik) + .sayfa-bolum { padding-top: 0; border-top: 0; }
+.sayfa-bolum + .sayfa-bolum { margin-top: var(--s-2); }
+.sayfa-bolum-bas { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-2) var(--s-3); flex-wrap: wrap; }
+.sayfa-bolum-bas :is(h2, h3, h4) { margin: 0; color: var(--ink); font-size: var(--fs-md); font-weight: 600; letter-spacing: -.01em; }
+.sayfa-bolum-bas h4 { font-size: var(--fs-base); }
+.sayfa-bolum-bas p { margin: 2px 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.sayfa-bolum > :is(p, ul, ol, dl, details, form) { margin: 0; }
+
+/* ---------- Liste araçları (arama · süzgeç · sıralama) ---------- */
+.liste-araclari { display: grid; gap: var(--s-2); margin-bottom: var(--s-2); }
+.liste-araclari-alt { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+:is(.liste-sirala, .veri-sirala) { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--muted); font-size: var(--fs-sm); }
+:is(.liste-sirala, .veri-sirala) select { width: auto; min-height: var(--kontrol-h-sik); }
+@media (max-width: 1199px), (pointer: coarse) {
+  .liste-araclari .kaynak-arama input { min-height: calc(var(--kontrol-h) - 2px); }
+  .liste-araclari .projects-filter-button { min-height: var(--kontrol-h); }
+  :is(.liste-sirala, .veri-sirala) select { min-height: var(--kontrol-h); }
+}
+@media (max-width: 760px) {
+  /* Süzgeçler telefonda tek satırda yatay kayar; iki satıra sarıp listeyi aşağı itmesin. */
+  .liste-araclari .cluster { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -2px; padding: 2px; }
+  .liste-araclari .cluster > * { flex: none; }
+  .liste-araclari-alt { display: grid; grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Veri tablosu ---------- */
+.veri-tablo-kap { display: grid; gap: 6px; min-width: 0; }
+.veri-tablo-ipucu { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+.veri-tablo-sarici {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  scrollbar-width: thin;
+}
+.veri-tablo-sarici:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.veri-tablo { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--fs-sm); }
+.veri-tablo :is(th, td) {
+  min-width: 14ch;
+  max-width: 34ch;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+  line-height: var(--lh-metin);
+}
+.veri-tablo thead th { border-top: 0; background: var(--surface-2); color: var(--muted); font-weight: 600; white-space: nowrap; }
+.veri-tablo tbody th { color: var(--ink); font-weight: 500; }
+.veri-tablo td small { display: block; color: var(--muted); }
+.veri-tablo a { color: var(--primary-ink); }
+/* Birincil sütun yapışık: tablo kayarken satırın adı görünür kalır. */
+.veri-tablo .veri-tablo-birincil { position: sticky; left: 0; z-index: 1; min-width: 24ch; background: var(--surface); }
+.veri-tablo thead .veri-tablo-birincil { z-index: 2; background: var(--surface-2); }
+.veri-tablo-sarici[data-tasiyor] .veri-tablo-birincil { box-shadow: 1px 0 0 var(--line); }
+.veri-tablo-sirala {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  margin: -2px -4px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.veri-tablo-sirala:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+@media (hover: hover) and (pointer: fine) { .veri-tablo-sirala:hover { color: var(--ink); } }
+th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
+
+/* Telefonda tablo yerine kart listesi: her sütun başlığıyla birlikte. */
+.veri-kartlari-kap { display: grid; gap: var(--s-2); }
+.veri-kartlari { display: grid; margin: 0; padding: 0; list-style: none; }
+.veri-karti { display: grid; gap: var(--s-2); padding: var(--s-3) 0; border-top: 1px solid var(--line-soft); }
+.veri-karti:first-child { border-top: 0; padding-top: 0; }
+.veri-karti-bas { color: var(--ink); font-size: var(--fs-base); font-weight: 600; line-height: var(--lh-metin); }
+.veri-karti dl { display: grid; grid-template-columns: minmax(104px, 40%) minmax(0, 1fr); gap: 6px var(--s-3); margin: 0; font-size: var(--fs-sm); }
+.veri-karti dl > div { display: contents; }
+.veri-karti dt { color: var(--muted); }
+.veri-karti dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.veri-karti dd small { display: block; color: var(--muted); }
+
+/* ---------- Ayrıntı paneli: masaüstü ve tablette sağdan açılan sütun ---------- */
+@media (min-width: 761px) {
+  .drawer-root[data-boy="yan"] { justify-content: flex-end; align-items: stretch; padding: 0; }
+  .drawer-root[data-boy="yan"] .drawer {
+    width: min(480px, 100%);
+    max-height: none;
+    border-width: 0 0 0 1px;
+    border-radius: 0;
+    transform: translateX(24px);
+  }
+  .drawer-root[data-boy="yan"].open .drawer { transform: none; }
+}
+
+/* Ayrıntı içeriği: künye alanları (ad · değer) */
+.ayrinti-alanlar { display: grid; grid-template-columns: minmax(96px, 34%) minmax(0, 1fr); gap: 8px var(--s-3); margin: 0; font-size: var(--fs-sm); }
+.ayrinti-alanlar > div { display: contents; }
+.ayrinti-alanlar dt { color: var(--muted); }
+.ayrinti-alanlar dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.ayrinti-eylemler { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.ayrinti-not { margin: 0; color: var(--ink); font-size: var(--fs-sm); line-height: var(--lh-metin); white-space: pre-wrap; }
+@media (max-width: 1199px), (pointer: coarse) {
+  .ayrinti-eylemler :is(.projects-filter-button, .projects-primary-button, .link-button) { min-height: var(--kontrol-h); }
+}

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { X, type LucideIcon } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
-import { ekranSinifi, type EkranSinifi } from "@/lib/os/kirilimlar";
 import { PANEL_GORUNUMLERI, type PanelBicimi, type PanelGorunumu } from "@/lib/yazim-yan-panel";
 
 /*
@@ -24,16 +23,7 @@ import { PANEL_GORUNUMLERI, type PanelBicimi, type PanelGorunumu } from "@/lib/y
 
 export type PanelSekmesi = { id: PanelGorunumu; etiket: string; ikon: LucideIcon; rozet?: string };
 
-function ekranAbone(degisti: () => void) {
-  const sorgular = [window.matchMedia("(max-width: 760px)"), window.matchMedia("(min-width: 1200px)")];
-  sorgular.forEach((s) => s.addEventListener("change", degisti));
-  return () => sorgular.forEach((s) => s.removeEventListener("change", degisti));
-}
-
-/** Ekran sınıfı (kırılımlar lib/os/kirilimlar.ts). Sunucuda ve ilk çizimde masaüstü. */
-export function useEkranSinifi(): EkranSinifi {
-  return useSyncExternalStore(ekranAbone, () => ekranSinifi(window.innerWidth), () => "masaustu");
-}
+/* Ekran sınıfı kancası 4.1'de ortak bileşenlere taşındı (_components/ekran-sinifi.ts). */
 
 export default function YanPanel({
   acik,

@@ -106,7 +106,7 @@ import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
 
 import { useSatirIciOneri } from "./satir-ici-oneri";
-import AracMenusu from "./arac-menusu";
+import AracMenusu from "@/app/dashboard/_components/acilir-menu";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
@@ -140,7 +140,8 @@ import { writingPace } from "@/lib/writing-pace";
 import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni } from "@/lib/kilavuz-bicim";
 import ManuscriptOutline from "./manuscript-outline";
 import TeslimListesi from "./submission-checklist";
-import YanPanel, { useEkranSinifi, type PanelSekmesi } from "./yan-panel";
+import YanPanel, { type PanelSekmesi } from "./yan-panel";
+import { useEkranSinifi } from "@/app/dashboard/_components/ekran-sinifi";
 import { acilisGorunumu, panelAcikMi, panelBicimi, type PanelGorunumu } from "@/lib/yazim-yan-panel";
 import {
   applyTemplate,

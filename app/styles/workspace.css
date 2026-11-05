@@ -521,7 +521,7 @@
 /*
   Araç çubuğu: tek satır, gruplar ince çizgiyle ayrık, sayfa kayarken
   üst çubuğun hemen altında yapışık. Seyrek araçlar menülerde
-  (arac-menusu.tsx). Dar ekranda yatay kayar, satır sarmaz.
+  (_components/acilir-menu.tsx). Dar ekranda yatay kayar, satır sarmaz.
 */
 .manuscript-araclar {
   display: flex;

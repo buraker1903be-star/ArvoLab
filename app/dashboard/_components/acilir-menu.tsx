@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
-import { useAcilirKonum } from "@/app/dashboard/_components/acilir-konum";
+import { useAcilirKonum } from "./acilir-konum";
 
 /*
   ARAÇ ÇUBUĞUNUN AÇILIR MENÜSÜ (04.11.2026, editörün yeni düzeni).
@@ -13,6 +13,18 @@ import { useAcilirKonum } from "@/app/dashboard/_components/acilir-konum";
   sık kullanılanlar çubukta, seyrek kullanılanlar (tablo, resim, dipnot,
   sayfa ayarı, sürümler…) adı yazan bir menüde. Kırk düğme sorunu
   çubuğu uzatarak değil, menüye gruplayarak çözülüyor.
+
+  Signature OS 4.1 (05.11.2026): editörün klasöründen ortak bileşenlere
+  taşındı; sayfa başlıklarındaki taşma menüsü (sayfa/sayfa-eylemleri.tsx)
+  de bunu kullanıyor. İkinci bir menü bileşeni yazılmadı: konumlama, Esc
+  ve dışarı tıklama davranışı iki yerde ayrı ayrı bozulmasın.
+
+  ERİŞİLEBİLİRLİK (05.11.2026): eskiden pencere role="menu" taşıyordu ama
+  içindeki düğmeler menü öğesi değildi ve ok tuşları çalışmıyordu — ekran
+  okuyucu "menü" diyor, menü gibi davranmıyordu. Artık açılır panel
+  (disclosure) deseni: düğme aria-expanded taşır, panel adlı bir grup;
+  Tab ile içeri girilir, ok tuşları ve Home/End öğeler arasında gezer,
+  ↓ kapalı menüyü açıp ilk öğeye gider.
 
   Pencere tarayıcının üst katmanında açılır (useAcilirKonum): yapışık ve
   bulanık araç çubuğunun içinde position:fixed bir çocuk ekrana göre
@@ -26,6 +38,7 @@ export default function AracMenusu({
   children,
   etiketiGizle = false,
   dugmeSinifi = "arac-menu-dugme",
+  pencereSinifi,
 }: {
   ikon: ReactNode;
   etiket: string;
@@ -36,12 +49,15 @@ export default function AracMenusu({
   etiketiGizle?: boolean;
   /** Sayfa başlığındaki "Dışa aktar" gibi, araç çubuğu dışında kullanılan düğmenin sınıfı. */
   dugmeSinifi?: string;
+  /** Pencerenin ek sınıfı (sayfa eylemlerinin taşma menüsü). */
+  pencereSinifi?: string;
 }) {
   const [acik, setAcik] = useState(false);
   const dugme = useRef<HTMLButtonElement>(null);
   const pencere = useRef<HTMLDivElement>(null);
   const kimlik = useId();
   useAcilirKonum(acik, dugme, pencere);
+  const ogeler = () => [...(pencere.current?.querySelectorAll<HTMLElement>("button:not(:disabled), a[href], select") ?? [])];
 
   useEffect(() => {
     if (!acik) return;
@@ -70,7 +86,6 @@ export default function AracMenusu({
         type="button"
         className={dugmeSinifi}
         data-acik={acik || undefined}
-        aria-haspopup="menu"
         aria-expanded={acik}
         aria-controls={kimlik}
         title={aciklama ?? etiket}
@@ -78,6 +93,12 @@ export default function AracMenusu({
         // Düğmeye basınca editör seçimini kaybetmesin (ToolbarButton ile aynı).
         onMouseDown={(olay) => olay.preventDefault()}
         onClick={() => setAcik((a) => !a)}
+        onKeyDown={(olay) => {
+          if (olay.key !== "ArrowDown" || acik) return;
+          olay.preventDefault();
+          setAcik(true);
+          requestAnimationFrame(() => ogeler()[0]?.focus());
+        }}
       >
         {ikon}
         {etiketiGizle ? null : <span className="arac-metin">{etiket}</span>}
@@ -86,10 +107,24 @@ export default function AracMenusu({
       <div
         ref={pencere}
         id={kimlik}
-        className="arac-menu-pencere"
-        role="menu"
+        className={pencereSinifi ? `arac-menu-pencere ${pencereSinifi}` : "arac-menu-pencere"}
+        role="group"
+        aria-label={etiket}
         popover="manual"
         hidden={!acik}
+        onKeyDown={(olay) => {
+          const liste = ogeler();
+          const i = liste.indexOf(document.activeElement as HTMLElement);
+          const hedef =
+            olay.key === "ArrowDown" ? liste[(i + 1) % liste.length]
+            : olay.key === "ArrowUp" ? liste[(i - 1 + liste.length) % liste.length]
+            : olay.key === "Home" ? liste[0]
+            : olay.key === "End" ? liste[liste.length - 1]
+            : null;
+          if (!hedef) return;
+          olay.preventDefault();
+          hedef.focus();
+        }}
         // Öğe tıklanınca menü kapanır; tıklama öğenin kendi işini yaptıktan sonra.
         onClick={(olay) => {
           if ((olay.target as Element).closest("button:not([data-acik-kalir])")) setAcik(false);
