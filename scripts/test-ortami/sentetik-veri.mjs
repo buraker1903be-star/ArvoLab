@@ -32,7 +32,7 @@
 */
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { anahtarUyusmazligi, betikHedefKarari, projeKimligi } from "../../lib/supabase/ortam-guvenligi.ts";
+import { anahtarProjesi, anahtarUyusmazligi, betikHedefKarari, projeKimligi, SABIT_URETIM_SUPABASE_REF, uretimProjesiniGosteriyor } from "../../lib/supabase/ortam-guvenligi.ts";
 
 const require = createRequire(import.meta.url);
 const { createClient } = require("@supabase/supabase-js");
@@ -46,6 +46,13 @@ const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANAHTAR = process.env.SUPABASE_SECRET_KEY;
 const PAROLA = process.env.TEST_HESAP_PAROLASI ?? "";
 
+// Kapı 0: kodda sabit üretim kimliği — ortam değişkenlerine bakmaz. Adres ya
+// da (eski biçim) anahtarın projesi üretimi gösteriyorsa hiçbir şey yazılmaz.
+// Eskiden test/üretim kimlikleri yer değiştirince Kapı 1 üretime izin veriyor,
+// zararı yalnızca Kapı 3 (ortam işareti) önlüyordu.
+if (uretimProjesiniGosteriyor(URL_, anahtarProjesi(ANAHTAR)?.ref)) {
+  durdur(`Hedef üretim projesi (${SABIT_URETIM_SUPABASE_REF}); sentetik veri üretimde hiçbir koşulda yazılmaz.`);
+}
 // Kapı 1: proje kimliği
 const karar = betikHedefKarari({
   tur: "sentetik-veri",

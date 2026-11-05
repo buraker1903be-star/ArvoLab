@@ -9,10 +9,12 @@ import {
   dagitimOrtamiCoz,
   ortamGirdisi,
   projeKimligi,
+  SABIT_URETIM_SUPABASE_REF,
   supabaseOrtamKarari,
   supabaseOrtaminiDogrula,
   SupabaseOrtamHatasi,
   TEK_PROJE_UYARISI,
+  uretimProjesiniGosteriyor,
   veritabaniAdresiProjesi,
 } from "@/lib/supabase/ortam-guvenligi";
 import { hedefDenetimi } from "../../scripts/supabase-hedef.mjs";
@@ -350,5 +352,186 @@ describe("gizli değerler istemciye gitmez (durağan denetim)", () => {
     tara("lib");
     if (kurar(readFileSync("proxy.ts", "utf8"))) bulunan.push("proxy.ts");
     assert.deepEqual(bulunan.sort(), ["lib/supabase/admin.ts", "lib/supabase/client.ts", "lib/supabase/server.ts", "proxy.ts"]);
+  });
+});
+
+/*
+  KODDA SABİT ÜRETİM KİMLİĞİ (05.11.2026). Betiklerin kararı eskiden yalnızca
+  ortam değişkenlerine dayanıyordu: ARVOLAB_TEST_SUPABASE_REF ile
+  ARVOLAB_URETIM_SUPABASE_REF yer değiştirince üretim projesi "test" sayılıyor
+  ve şema kurulumu izin alıyordu. Burada GERÇEK kimlikler kullanılıyor;
+  yukarıdaki uydurma kimliklerle bu kuralın hiçbir şeyi sınanamaz.
+*/
+describe("kodda sabit üretim kimliği: kimlikler yer değiştirse de üretime yazılmaz", () => {
+  const PROD = "zpfpocyajnxcketdjbxm";
+  const TEST_GERCEK = "kyvjftrsweqjlgjeobnq";
+  const TURLER = ["migration", "sema-kurulumu", "sentetik-veri"] as const;
+  const onayli = (ref: string) => ({ uretimIstendi: true, onayMetni: `ÜRETİME UYGULA ${ref}` });
+  const havuz = (ref: string) => `postgresql://postgres.${ref}:x@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`;
+  const dogruEnv = { ARVOLAB_URETIM_SUPABASE_REF: PROD, ARVOLAB_TEST_SUPABASE_REF: TEST_GERCEK };
+  const tersEnv = { ARVOLAB_URETIM_SUPABASE_REF: TEST_GERCEK, ARVOLAB_TEST_SUPABASE_REF: PROD };
+
+  test("sabit, ortam değişkeninden okunmuyor ve gerçek üretim kimliği", () => {
+    assert.equal(SABIT_URETIM_SUPABASE_REF, PROD);
+    const kaynak = readFileSync("lib/supabase/ortam-guvenligi.ts", "utf8");
+    assert.match(kaynak, /export const SABIT_URETIM_SUPABASE_REF = "zpfpocyajnxcketdjbxm";/);
+  });
+
+  test("kimlikler yer değiştirmiş: üretim hedefi hiçbir betikte, onaylı bile olsa, izin almaz", () => {
+    for (const tur of TURLER) {
+      assert.equal(betikHedefKarari({ tur, hedefRef: PROD, uretimRef: TEST_GERCEK, testRef: PROD }).tur, "red", tur);
+      for (const ref of [PROD, TEST_GERCEK]) {
+        assert.equal(betikHedefKarari({ tur, hedefRef: PROD, uretimRef: TEST_GERCEK, testRef: PROD, ...onayli(ref) }).tur, "red", `${tur} onay ${ref}`);
+      }
+    }
+  });
+
+  test("kimlikler yer değiştirmiş: gerçek test projesine de izin verilmez (yapılandırma yanlış)", () => {
+    for (const tur of TURLER) {
+      const k = betikHedefKarari({ tur, hedefRef: TEST_GERCEK, uretimRef: TEST_GERCEK, testRef: PROD });
+      assert.ok(k.tur === "red" && /yer değiştirmiş/.test(k.mesaj), tur);
+    }
+  });
+
+  test("test kimliği değişkeni üretimi gösteriyorsa (büyük harf, boşluk) ret; öteki değişken ne derse desin", () => {
+    for (const testRef of [PROD, ` ${PROD} `, PROD.toUpperCase()]) {
+      for (const uretimRef of [null, "", "aaaaaaaaaaaaaaaaaaaa", PROD]) {
+        assert.equal(betikHedefKarari({ tur: "sema-kurulumu", hedefRef: TEST_GERCEK, uretimRef, testRef }).tur, "red", `${testRef}/${uretimRef}`);
+      }
+    }
+  });
+
+  test("şema kurulumu ve sentetik veri: hedef üretimse değişkenler eksik, uydurma ya da DOĞRU olsa da ret", () => {
+    const ortamlar = [
+      { uretimRef: null, testRef: null },
+      { uretimRef: "aaaaaaaaaaaaaaaaaaaa", testRef: "bbbbbbbbbbbbbbbbbbbb" },
+      { uretimRef: PROD, testRef: TEST_GERCEK },
+      { uretimRef: PROD, testRef: PROD },
+    ];
+    for (const tur of ["sema-kurulumu", "sentetik-veri"] as const) {
+      for (const o of ortamlar) {
+        assert.equal(betikHedefKarari({ tur, hedefRef: PROD, ...o, ...onayli(PROD) }).tur, "red", `${tur} ${JSON.stringify(o)}`);
+      }
+    }
+  });
+
+  test("migration: üretime YALNIZCA doğru değişkenler + --uretim + tam onayla; değişkenler uydurmaysa bilinmeyen proje", () => {
+    assert.equal(betikHedefKarari({ tur: "migration", hedefRef: PROD, uretimRef: PROD, testRef: TEST_GERCEK }).tur, "red");
+    assert.equal(betikHedefKarari({ tur: "migration", hedefRef: PROD, uretimRef: PROD, testRef: TEST_GERCEK, ...onayli(TEST_GERCEK) }).tur, "red");
+    assert.equal(betikHedefKarari({ tur: "migration", hedefRef: PROD, uretimRef: "aaaaaaaaaaaaaaaaaaaa", testRef: "bbbbbbbbbbbbbbbbbbbb", ...onayli(PROD) }).tur, "red");
+    /* Bilinçli yol değişmedi (ayrı onay gerektiren üretim migration'ı). */
+    assert.deepEqual(betikHedefKarari({ tur: "migration", hedefRef: PROD, uretimRef: PROD, testRef: TEST_GERCEK, ...onayli(PROD) }), { tur: "izin", hedef: "uretim" });
+  });
+
+  test("beklenmeyen proje kimliği ve doğru yapılandırmada test projesi", () => {
+    for (const tur of TURLER) {
+      assert.equal(betikHedefKarari({ tur, hedefRef: "cccccccccccccccccccc", uretimRef: PROD, testRef: TEST_GERCEK }).tur, "red", tur);
+      assert.deepEqual(betikHedefKarari({ tur, hedefRef: TEST_GERCEK, uretimRef: PROD, testRef: TEST_GERCEK }), { tur: "izin", hedef: "test" }, tur);
+    }
+  });
+
+  test("uretimProjesiniGosteriyor: adres biçimleri, kodlama, harf; başka proje yakalanmaz", () => {
+    for (const m of [
+      PROD,
+      `https://${PROD}.supabase.co`,
+      havuz(PROD),
+      `postgresql://postgres:x@db.${PROD}.supabase.co:5432/postgres`,
+      `postgresql://postgres%2E${PROD}:x@aws-0-eu-west-1.pooler.supabase.com:6543/postgres`,
+      `postgresql://postgres.${PROD.toUpperCase()}:x@AWS-0-EU-WEST-1.POOLER.SUPABASE.COM/postgres`,
+      `postgresql://postgres.${PROD}:x@beklenmedik-vekil.example.com/postgres`,
+    ]) {
+      assert.equal(uretimProjesiniGosteriyor(m), true, m);
+    }
+    for (const m of [null, undefined, "", TEST_GERCEK, havuz(TEST_GERCEK), "%E0%A4%A"]) assert.equal(uretimProjesiniGosteriyor(m), false, String(m));
+    assert.equal(uretimProjesiniGosteriyor(null, havuz(TEST_GERCEK), PROD), true);
+  });
+
+  test("hedefDenetimi: kimlikler yer değiştirmiş ve adres üretim → ret (üç betik türü)", () => {
+    for (const tur of TURLER) {
+      assert.equal(hedefDenetimi(["--tur", tur], { ...tersEnv, SUPABASE_DB_URL: havuz(PROD) }).tur, "red", tur);
+      assert.equal(hedefDenetimi(["--tur", tur, "--uretim"], { ...tersEnv, SUPABASE_DB_URL: havuz(PROD), ARVOLAB_URETIM_ONAYI: `ÜRETİME UYGULA ${PROD}` }).tur, "red", tur);
+    }
+  });
+
+  test("hedefDenetimi: --ref test derken adres üretim → ret (karar ile bağlantı ayrışamaz)", () => {
+    for (const tur of TURLER) {
+      const k = hedefDenetimi(["--tur", tur, "--ref", TEST_GERCEK], { ...dogruEnv, SUPABASE_DB_URL: havuz(PROD) });
+      assert.equal(k.tur, "red", tur);
+    }
+  });
+
+  test("hedefDenetimi: ayrıştırılamayan ama üretimi içeren adres, ve NEXT_PUBLIC adresi üretim → kurulum/veri reddedilir", () => {
+    const garip = `postgresql://postgres.${PROD}:x@beklenmedik-vekil.example.com:5432/postgres`;
+    assert.equal(hedefDenetimi(["--tur", "sema-kurulumu"], { ...dogruEnv, SUPABASE_DB_URL: garip }).tur, "red");
+    assert.equal(hedefDenetimi(["--tur", "sentetik-veri", "--ref", TEST_GERCEK], { ...dogruEnv, NEXT_PUBLIC_SUPABASE_URL: `https://${PROD}.supabase.co` }).tur, "red");
+  });
+
+  test("hedefDenetimi: doğru yapılandırma ve test adresi → izin (kurulumun beklenen yolu)", () => {
+    for (const adresi of [havuz(TEST_GERCEK), `postgresql://postgres.${TEST_GERCEK}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require`]) {
+      const k = hedefDenetimi(["--tur", "sema-kurulumu"], { ...dogruEnv, SUPABASE_DB_URL: adresi });
+      assert.equal(k.tur, "izin");
+    }
+  });
+
+  test("uygulamanın çalışma anı kararı değişmedi: önizleme tek proje beyanıyla üretime bağlanmaya devam eder", () => {
+    const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: `https://${PROD}.supabase.co`, uretimRef: PROD, tekProje: "1" });
+    assert.equal(k.tur === "izin" && k.hedef, "uretim");
+    const u = supabaseOrtamKarari({ vercelOrtami: "production", supabaseUrl: `https://${PROD}.supabase.co`, uretimRef: PROD, testRef: TEST_GERCEK });
+    assert.equal(u.tur === "izin" && u.hedef, "uretim");
+  });
+});
+
+/*
+  Betiklerin kendisi: ortam değişkenleri yanlışken üretim adresiyle başlatılır.
+  PATH yalnızca node'u içerir: psql yoktur. Denetim düşseydi betik psql'i
+  çalıştırmaya kalkıp "psql çalıştırılamadı" derdi; beklenen ise üretim
+  mesajıyla, veritabanına hiç uzanmadan çıkmasıdır. Ağa çıkılmaz.
+*/
+describe("kurulum ve sentetik veri betikleri üretim adresiyle başlamaz", () => {
+  const PROD = "zpfpocyajnxcketdjbxm";
+  const TEST_GERCEK = "kyvjftrsweqjlgjeobnq";
+  const calistir = async (betik: string, env: Record<string, string>) => {
+    const { spawnSync } = await import("node:child_process");
+    const { dirname } = await import("node:path");
+    return spawnSync(process.execPath, [betik], {
+      encoding: "utf8",
+      env: { PATH: dirname(process.execPath), HTTPS_PROXY: "http://127.0.0.1:9", HTTP_PROXY: "http://127.0.0.1:9", ...env } as unknown as NodeJS.ProcessEnv,
+      timeout: 30_000,
+    });
+  };
+
+  test("kur.mjs: kimlikler yer değiştirmiş + üretim havuz adresi → çıkış 1, psql'e ulaşılmaz", async () => {
+    const s = await calistir("scripts/test-ortami/kur.mjs", {
+      ARVOLAB_TEST_SUPABASE_REF: PROD,
+      ARVOLAB_URETIM_SUPABASE_REF: TEST_GERCEK,
+      SUPABASE_DB_URL: `postgresql://postgres.${PROD}:sahte@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`,
+    });
+    assert.equal(s.status, 1);
+    assert.match(s.stderr, /üretim projesini/);
+    assert.doesNotMatch(s.stderr + s.stdout, /psql|Hedef test projesi/);
+    assert.doesNotMatch(s.stderr + s.stdout, /sahte/, "parola yazdırılmamalı");
+  });
+
+  test("kur.mjs: doğru değişkenler + üretim doğrudan adresi → çıkış 1", async () => {
+    const s = await calistir("scripts/test-ortami/kur.mjs", {
+      ARVOLAB_TEST_SUPABASE_REF: TEST_GERCEK,
+      ARVOLAB_URETIM_SUPABASE_REF: PROD,
+      SUPABASE_DB_URL: `postgresql://postgres:sahte@db.${PROD}.supabase.co:5432/postgres`,
+    });
+    assert.equal(s.status, 1);
+    assert.match(s.stderr, /üretim projesini/);
+  });
+
+  test("sentetik-veri.mjs: kimlikler yer değiştirmiş + üretim adresi → çıkış 1, istemci kurulmaz", async () => {
+    const s = await calistir("scripts/test-ortami/sentetik-veri.mjs", {
+      ARVOLAB_TEST_SUPABASE_REF: PROD,
+      ARVOLAB_URETIM_SUPABASE_REF: TEST_GERCEK,
+      NEXT_PUBLIC_SUPABASE_URL: `https://${PROD}.supabase.co`,
+      SUPABASE_SECRET_KEY: "sb_secret_sahte",
+      TEST_HESAP_PAROLASI: "sahte-parola-123",
+    });
+    assert.equal(s.status, 1);
+    assert.match(s.stderr, /üretim projesi/);
+    assert.doesNotMatch(s.stderr + s.stdout, /Test projesi doğrulandı|sb_secret_sahte|sahte-parola/);
   });
 });

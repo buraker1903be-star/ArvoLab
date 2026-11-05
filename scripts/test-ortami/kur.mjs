@@ -28,6 +28,7 @@
 */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { SABIT_URETIM_SUPABASE_REF, uretimProjesiniGosteriyor } from "../../lib/supabase/ortam-guvenligi.ts";
 import { hedefDenetimi } from "../supabase-hedef.mjs";
 import { kur, OZET_SQL } from "./kurulum.mjs";
 
@@ -38,7 +39,16 @@ function durdur(mesaj) {
   process.exit(1);
 }
 
-/* Denetim, veritabanına dokunan her şeyden ÖNCE. */
+/*
+  Denetimler, veritabanına dokunan her şeyden ÖNCE. İlki ortam
+  değişkenlerine hiç bakmaz: bağlantı adresi kodda sabit üretim kimliğini
+  içeriyorsa kurulum durur. Eskiden tek denetim değişkenlere dayanıyordu ve
+  test/üretim kimlikleri yer değiştirince üretim "test" sayılıyordu; o gün
+  zararı yalnızca kur()'un dolu veritabanı denetimi önlüyordu.
+*/
+if (uretimProjesiniGosteriyor(process.env.SUPABASE_DB_URL)) {
+  durdur(`Kurulum durduruldu: SUPABASE_DB_URL üretim projesini (${SABIT_URETIM_SUPABASE_REF}) gösteriyor. Şema kurulumu üretimde hiçbir koşulda çalışmaz.`);
+}
 const denetim = hedefDenetimi(["--tur", "sema-kurulumu"], process.env);
 if (denetim.tur !== "izin") durdur(`Kurulum durduruldu: ${denetim.mesaj}`);
 console.log(`✓ Hedef test projesi: ${denetim.ref}`);

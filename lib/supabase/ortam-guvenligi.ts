@@ -288,6 +288,44 @@ export function supabaseOrtaminiDogrula(env: Record<string, string | undefined>,
 export type BetikTuru = "migration" | "sema-kurulumu" | "sentetik-veri";
 export type HedefKarari = { tur: "izin"; hedef: "test" | "uretim" } | { tur: "red"; mesaj: string };
 
+/*
+  KODDA SABİT ÜRETİM KİMLİĞİ (05.11.2026). Betiklerin kararı eskiden
+  YALNIZCA ortam değişkenlerine dayanıyordu: ARVOLAB_TEST_SUPABASE_REF ile
+  ARVOLAB_URETIM_SUPABASE_REF yer değiştirirse üretim projesi "test"
+  sayılıyor, şema kurulumu ve sentetik veri izin alıyordu. O gün zararı
+  yalnızca ikinci bir kapı önlüyordu (kurulum dolu veritabanına kurmaz,
+  sentetik veri ortam işaretini ister). Bu kimlik değişkenden OKUNMAZ;
+  hangi değişken ne derse desin üretim projesi tanınır. Proje kimliği bir
+  sır değildir (her istemcinin adresinde görünür).
+
+  Kapsam BİLEREK betiklerle sınırlı: uygulamanın çalışma anı kararı
+  (supabaseOrtamKarari) değişmedi — önizleme bugün ARVOLAB_TEK_PROJE=1
+  beyanıyla bu projeye bağlanıyor. Üretim projesi bir gün değişirse bu
+  satır da değişmeli; değişmezse yeni üretim projesi bu korumayı kaybeder
+  (ama ortam değişkenli eski koruma sürer).
+*/
+export const SABIT_URETIM_SUPABASE_REF = "zpfpocyajnxcketdjbxm";
+
+/**
+ * Metinlerden herhangi biri (adres, kimlik, `supabase link` dosyası) sabit
+ * üretim kimliğini İÇERİYOR mu. Ayrıştırmaya güvenmeyen ikinci denetim:
+ * adres beklenmedik bir biçimdeyse ayrıştırıcı kimliği okuyamayabilir,
+ * metin araması yine yakalar. Büyük/küçük harf ve URL kodlaması gözetilmez.
+ */
+export function uretimProjesiniGosteriyor(...metinler: (string | null | undefined)[]): boolean {
+  return metinler.some((m) => {
+    const ham = temiz(m).toLowerCase();
+    if (!ham) return false;
+    let cozulmus = ham;
+    try {
+      cozulmus = decodeURIComponent(ham);
+    } catch {
+      /* bozuk kodlama: ham metne bakılır */
+    }
+    return ham.includes(SABIT_URETIM_SUPABASE_REF) || cozulmus.includes(SABIT_URETIM_SUPABASE_REF);
+  });
+}
+
 export function betikHedefKarari(g: {
   tur: BetikTuru;
   hedefRef: string | null | undefined;
@@ -299,6 +337,13 @@ export function betikHedefKarari(g: {
   const hedef = temiz(g.hedefRef);
   const uretim = temiz(g.uretimRef);
   const test = temiz(g.testRef);
+  /* Sabit kimlik denetimleri ortam değişkenli kurallardan ÖNCE: değişkenler yanlış olsa da sonuç değişmez. */
+  if (uretimProjesiniGosteriyor(test)) {
+    return { tur: "red", mesaj: "ARVOLAB_TEST_SUPABASE_REF üretim projesini gösteriyor; test ve üretim kimlikleri yer değiştirmiş olabilir." };
+  }
+  if (uretimProjesiniGosteriyor(hedef) && (g.tur === "sema-kurulumu" || g.tur === "sentetik-veri")) {
+    return { tur: "red", mesaj: "Hedef üretim projesi (kodda sabit kimlik); bu betik üretimde hiçbir koşulda çalışmaz." };
+  }
   if (!REF.test(hedef)) return { tur: "red", mesaj: "Hedef proje kimliği okunamadı ya da geçersiz." };
   if (!REF.test(uretim) || !REF.test(test)) return { tur: "red", mesaj: "ARVOLAB_URETIM_SUPABASE_REF ve ARVOLAB_TEST_SUPABASE_REF geçerli biçimde tanımlı olmalı." };
   if (uretim === test) return { tur: "red", mesaj: "Test ve üretim proje kimlikleri aynı olamaz." };

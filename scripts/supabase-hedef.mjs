@@ -20,7 +20,7 @@
   Hiçbir anahtar ya da parola okunmaz ve yazdırılmaz.
 */
 import { existsSync, readFileSync } from "node:fs";
-import { betikHedefKarari, veritabaniAdresiProjesi } from "../lib/supabase/ortam-guvenligi.ts";
+import { betikHedefKarari, SABIT_URETIM_SUPABASE_REF, uretimProjesiniGosteriyor, veritabaniAdresiProjesi } from "../lib/supabase/ortam-guvenligi.ts";
 
 export function hedefRefOku(argv = process.argv.slice(2), env = process.env) {
   const i = argv.indexOf("--ref");
@@ -35,6 +35,29 @@ export function hedefDenetimi(argv = process.argv.slice(2), env = process.env) {
   const tur = turIndeks >= 0 ? argv[turIndeks + 1] : "migration";
   if (!["migration", "sema-kurulumu", "sentetik-veri"].includes(tur)) return { tur: "red", mesaj: `Bilinmeyen --tur: ${tur}` };
   const { ref, kaynak } = hedefRefOku(argv, env);
+  /*
+    Bağımsız ikinci denetim: kararın okuduğu TEK kaynağa değil, hedefi
+    gösterebilecek BÜTÜN kaynaklara metin olarak bakılır. Eskiden --ref
+    test kimliğini verirken SUPABASE_DB_URL üretimi gösterebiliyordu: karar
+    --ref'e bakıp izin veriyor, psql ise adrese bağlanıyordu.
+    Migration'da üretim yalnızca açık yoldan (--uretim + onay) gider; o yolda
+    da kaynaklar birbiriyle çelişmemeli.
+  */
+  const refIndeks = argv.indexOf("--ref");
+  const kaynaklar = [
+    refIndeks >= 0 ? argv[refIndeks + 1] : null,
+    env.SUPABASE_DB_URL,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    existsSync("supabase/.temp/project-ref") ? readFileSync("supabase/.temp/project-ref", "utf8") : null,
+  ];
+  if (uretimProjesiniGosteriyor(...kaynaklar)) {
+    if (tur !== "migration") {
+      return { tur: "red", mesaj: `Hedef kaynaklarından biri üretim projesini (${SABIT_URETIM_SUPABASE_REF}) gösteriyor; ${tur} üretimde hiçbir koşulda çalışmaz.`, ref, kaynak, betik: tur };
+    }
+    if (ref !== SABIT_URETIM_SUPABASE_REF) {
+      return { tur: "red", mesaj: "Hedef kaynakları çelişiyor: biri üretim projesini gösteriyor, karar başka bir kimliğe bakıyor.", ref, kaynak, betik: tur };
+    }
+  }
   const karar = betikHedefKarari({
     tur,
     hedefRef: ref,

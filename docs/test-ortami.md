@@ -159,6 +159,18 @@ veritabanı). En temiz çözüm: boş test projesini silip yeniden açmak.
 
 ## Üretime test verisi yazılmasını önleyen kontroller
 
+- **Kodda sabit üretim kimliği** (`SABIT_URETIM_SUPABASE_REF`,
+  `lib/supabase/ortam-guvenligi.ts`, 05.11.2026): ortam değişkenlerinden
+  bağımsızdır. `ARVOLAB_TEST_SUPABASE_REF` üretimi gösteriyorsa (kimlikler
+  yer değiştirmiş) her betik durur; adres, `--ref`, `NEXT_PUBLIC_SUPABASE_URL`
+  ya da `supabase link` dosyasından biri üretimi gösteriyorsa şema kurulumu
+  ve sentetik veri durur. `kur.mjs` ve `sentetik-veri.mjs` aynı denetimi
+  hedef kararından ayrı olarak bir kez daha yapar. Üretime migration
+  yalnızca eski açık yoldan (doğru değişkenler + `--uretim` + onay cümlesi)
+  gider. Eskiden kimlikler yer değiştirince üretim "test" sayılıyordu ve
+  zararı yalnızca dolu veritabanı / ortam işareti denetimleri önlüyordu.
+  Not: makinede eski bir `supabase link` üretime bağlıysa kurulum da
+  durur; `supabase/.temp/project-ref` dosyasını kontrol edin.
 - Sentetik veri betiği üç kapıdan geçer: proje kimliği (test olmalı,
   üretim olmamalı), anahtarın projesi, veritabanındaki ortam işareti
   (`public.arvolab_test_ortami()` — yalnızca kurulum betiği test projesinde
