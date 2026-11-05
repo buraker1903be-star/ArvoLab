@@ -3,6 +3,7 @@ import DoiEkleKutusu from "./doi-ekle-kutusu";
 import { BookMarked, Download, FileUp, Sparkles } from "lucide-react";
 import { getLiteratureSources, type LiteratureSource } from "@/app/actions/literature";
 import { kaynakBaglamlari } from "@/lib/kaynak-kutuphanesi";
+import { dipnotMetinleri } from "@/lib/tiptap-text";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import { stilTanimi } from "@/lib/atif/stiller";
 import { getMyCitationChecks, getMyProjects, sonKaynakcaDenetimi } from "@/app/actions/citation-check";
@@ -370,7 +371,8 @@ export default async function KaynaklarPage({
 async function kaynaklarinYeri(projectId: string, atifStili: string | null, kaynaklar: LiteratureSource[]) {
   const supabase = await createClient();
   const [musvedde, kanit, pdf] = await Promise.all([
-    supabase.from("project_manuscripts").select("plain_text").eq("project_id", projectId).maybeSingle(),
+    /* content: dipnot metinleri için (4.3.5) — dipnotlu stilde atıf orada; plain_text dipnotları bilerek dışarıda bırakır. */
+    supabase.from("project_manuscripts").select("plain_text, content").eq("project_id", projectId).maybeSingle(),
     supabase.from("kanit_kayitlari").select("kaynak_id").eq("project_id", projectId),
     supabase.from("kaynak_pdfleri").select("doi").eq("project_id", projectId).in("durum", ["indirildi", "yuklendi"]),
   ]);
@@ -384,11 +386,13 @@ async function kaynaklarinYeri(projectId: string, atifStili: string | null, kayn
     satirlar: kaynakBaglamlari(kaynaklar, {
       govdeMetni,
       atifTuru,
+      dipnotlar: musvedde.error ? null : dipnotMetinleri(musvedde.data?.content ?? null),
       kanitKaynaklari: (kanit.data ?? []).map((k) => k.kaynak_id as string | null),
       pdfDoileri: (pdf.data ?? []).map((p) => p.doi as string | null),
     }),
     /* Metinden okunamamanın sebebi: ayrıntıda tek cümleyle söylenir. */
-    metinSebebi: musvedde.error ? ("okunamadi" as const) : atifTuru === "numara" || atifTuru === "dipnot" ? atifTuru : !govdeMetni?.trim() ? ("bos" as const) : null,
+    /* Dipnotlu stil artık dipnot metinlerinden okunuyor (4.3.5); metinden okunamayan yalnızca numaralı stil. */
+    metinSebebi: musvedde.error ? ("okunamadi" as const) : atifTuru === "numara" ? atifTuru : !govdeMetni?.trim() ? ("bos" as const) : null,
     kanitOkunamadi: Boolean(kanit.error),
     pdfOkunamadi: Boolean(pdf.error),
   };

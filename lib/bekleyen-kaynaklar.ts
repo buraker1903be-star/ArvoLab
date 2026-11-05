@@ -5,29 +5,45 @@
 
   "Kullanıldı" metinden okunuyor, kaynağın durum alanından değil: durum
   atıf penceresinden eklenince "used" oluyor, sonra atıf silinse de öyle
-  kalıyor. Yazar-tarih stillerinde ilk yazarın soyadı ve yıl GÖVDE
-  metninde birlikte geçiyorsa kaynak kullanılmış sayılır. Kaynakça
-  bölümü gövdeye katılmıyor (çağıran ayırır): kaynakçada durması, metinde
-  atıf yapıldığı anlamına gelmez.
+  kalıyor. Eşleştirme kuralı ve stil sınıflandırması Kaynaklar sayfasıyla
+  ORTAK (lib/atif-eslesmesi.ts, 4.3.5). Kaynakça bölümü gövdeye katılmaz
+  (çağıran ayırır): kaynakçada durması metinde atıf yapıldığı anlamına
+  gelmez.
 
-  Numaralı stillerde ([1]) metinde soyad geçmiyor; orada yalnızca durum
-  alanına bakılabiliyor.
+  4.3.5'e kadar dipnotlu stil yazar-tarih sanılıyordu ve dipnotta atfı
+  olan her kaynak "bekliyor" çıkıyordu; yazarsız kaynak da durum alanına
+  bakılarak "bekliyor" sayılıyordu. Artık metinden DOĞRULANAMAYAN kaynak
+  "bekliyor" değil, ayrı sayılır ("dogrulanamayan").
+
+  Numaralı stillerde ([1]) atıf metinden kaynağa bağlanamıyor; orada liste
+  bilerek durum alanına göre ("Kullandım" işaretli değilse) ve kart bunu
+  açıkça söyler (kural: "durum").
 
   Saf modül; testi tests/unit/bekleyen-kaynaklar.test.ts.
 */
-import { splitAuthors, surname } from "@/lib/citation-format";
+import { atifDurumlari } from "@/lib/atif-eslesmesi";
+import type { AtifTuru } from "@/lib/atif/stiller";
 
 type Kaynak = { id: string; authors: string | null; year: string | null; title: string; status: string };
 
-const kucuk = (s: string) => s.toLocaleLowerCase("tr-TR");
+export type BekleyenSonucu<T> = {
+  /** Metinden okunarak atfı bulunamayanlar (numaralı stilde: "Kullandım" işaretli olmayanlar). */
+  bekleyen: T[];
+  /** Metinden doğrulanamayanlar (yazarsız kaynak, dipnot okunamadı): "bekliyor" sayılmaz. */
+  dogrulanamayan: T[];
+  /** Listenin neye göre kurulduğu: metin mi, durum alanı mı (numaralı stil). */
+  kural: "metin" | "durum";
+};
 
-export function bekleyenKaynaklar<T extends Kaynak>(kaynaklar: T[], govdeMetni: string, numarali: boolean): T[] {
-  const metin = kucuk(govdeMetni);
-  return kaynaklar.filter((k) => {
-    if (numarali) return k.status !== "used";
-    const soyad = splitAuthors(k.authors).map(surname)[0];
-    if (!soyad) return k.status !== "used";
-    const yil = (k.year ?? "").match(/\d{4}/)?.[0];
-    return !(metin.includes(kucuk(soyad)) && (!yil || metin.includes(yil)));
-  });
+export function bekleyenKaynaklar<T extends Kaynak>(
+  kaynaklar: T[],
+  girdi: { govdeMetni: string; atifTuru: AtifTuru; dipnotlar?: string[] | null },
+): BekleyenSonucu<T> {
+  if (girdi.atifTuru === "numara") return { bekleyen: kaynaklar.filter((k) => k.status !== "used"), dogrulanamayan: [], kural: "durum" };
+  const durum = atifDurumlari(kaynaklar, girdi);
+  return {
+    bekleyen: kaynaklar.filter((k) => durum[k.id] === "bekliyor"),
+    dogrulanamayan: kaynaklar.filter((k) => durum[k.id] === "okunamaz"),
+    kural: "metin",
+  };
 }

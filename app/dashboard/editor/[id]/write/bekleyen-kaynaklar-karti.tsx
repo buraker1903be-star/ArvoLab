@@ -10,6 +10,7 @@ import { authorLabel } from "@/lib/citation-format";
 import { bekleyenKaynaklar } from "@/lib/bekleyen-kaynaklar";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import type { Dil } from "@/lib/dil";
+import type { AtifTuru } from "@/lib/atif/stiller";
 
 /*
   Sağ paneldeki "Kullanılmayı bekleyen kaynaklar" kartı (26.10.2026).
@@ -19,18 +20,27 @@ import type { Dil } from "@/lib/dil";
 
   Kaynaklar okunamazsa sayı yazılmıyor: "0 kaynak bekliyor" bilinmeyeni
   temiz rapor gibi göstermek olurdu.
+
+  4.3.5: stil türü Kaynaklar sayfasıyla aynı yerden (stilTanimi) gelir;
+  dipnotlu stilde dipnot metinleri de taranır. Metinden doğrulanamayan
+  kaynak "bekliyor" sayılmaz, ayrıca söylenir; numaralı stilde listenin
+  "Kullandım" işaretine göre kurulduğu açıkça yazılır.
 */
 export default function BekleyenKaynaklarKarti({
   projectId,
   govdeMetni,
-  numarali,
+  atifTuru,
+  dipnotlar,
   belgeDili = "tr",
   onCite,
 }: {
   projectId: string;
   /** Kaynakça bölümü hariç metin. */
   govdeMetni: string;
-  numarali: boolean;
+  /** Çalışmanın atıf türü: stilTanimi(stil).tur — Kaynaklar sayfasıyla aynı sınıflandırma. */
+  atifTuru: AtifTuru;
+  /** Belgedeki dipnot metinleri (dipnotlu stilde eşleşmeye katılır). */
+  dipnotlar: string[];
   /** Belgenin dili: yazar etiketi ("vd." / "et al.") atıfla aynı dilde görünsün. */
   belgeDili?: Dil;
   onCite: (source: LiteratureSource) => void;
@@ -59,10 +69,12 @@ export default function BekleyenKaynaklarKarti({
     };
   }, [projectId, surum]);
 
-  const bekleyen = useMemo(
-    () => (kaynaklar ? bekleyenKaynaklar(kaynaklar, govdeMetni, numarali) : null),
-    [kaynaklar, govdeMetni, numarali],
+  const sonuc = useMemo(
+    () => (kaynaklar ? bekleyenKaynaklar(kaynaklar, { govdeMetni, atifTuru, dipnotlar }) : null),
+    [kaynaklar, govdeMetni, atifTuru, dipnotlar],
   );
+  const bekleyen = sonuc?.bekleyen ?? null;
+  const dogrulanamayan = sonuc?.dogrulanamayan.length ?? 0;
 
   return (
     <>
@@ -76,11 +88,15 @@ export default function BekleyenKaynaklarKarti({
             ? okunamadi
               ? t({ tr: "okunamadı", en: "could not be read" })
               : t({ tr: "yükleniyor", en: "loading" })
-            : bekleyen.length
-              ? t({ tr: "atıf bekliyor", en: "awaiting citation" })
-              : kaynaklar?.length
-                ? t({ tr: "hepsine atıf var", en: "all cited" })
-                : t({ tr: "kaynak eklenmedi", en: "no sources added" })
+            : sonuc?.kural === "durum"
+              ? t({ tr: "“Kullandım” işaretsiz", en: "not marked “cited”" })
+              : bekleyen.length
+                ? t({ tr: "atıf bekliyor", en: "awaiting citation" })
+                : dogrulanamayan
+                  ? t({ tr: `${dogrulanamayan} doğrulanamadı`, en: `${dogrulanamayan} unverifiable` })
+                  : kaynaklar?.length
+                    ? t({ tr: "hepsine atıf var", en: "all cited" })
+                    : t({ tr: "kaynak eklenmedi", en: "no sources added" })
         }
         ton={bekleyen && bekleyen.length ? "warning" : undefined}
         onClick={() => {
@@ -99,6 +115,26 @@ export default function BekleyenKaynaklarKarti({
           en: "Sources you added to this work but have not cited in the text. Place the cursor where the citation should go and click “Cite”.",
         })}
       >
+        {sonuc?.kural === "durum" ? (
+          <p className="muted text-sm">
+            {t({
+              tr: "Numaralı stilde ([1]) metindeki atıflar kaynağa metinden bağlanamıyor. Liste, “Kullandım” olarak işaretlenmemiş kaynaklardır; metinde atıf olup olmadığı buradan doğrulanamaz.",
+              en: "In a numbered style ([1]) in-text citations can't be linked to sources from the text. The list shows sources not marked “cited”; whether they are cited can't be verified here.",
+            })}
+          </p>
+        ) : dogrulanamayan ? (
+          <p className="muted text-sm">
+            {atifTuru === "dipnot"
+              ? t({
+                  tr: `${dogrulanamayan} kaynak metinden doğrulanamadı (yazarı yok ya da dipnotlar okunamadı); bunlar “atıf bekliyor” sayılmadı.`,
+                  en: `${dogrulanamayan} sources couldn't be verified from the text (no author, or footnotes couldn't be read); they aren't counted as awaiting citation.`,
+                })
+              : t({
+                  tr: `${dogrulanamayan} kaynağın yazarı olmadığı için metinde aranamadı; bunlar “atıf bekliyor” sayılmadı.`,
+                  en: `${dogrulanamayan} sources have no author and couldn't be searched for in the text; they aren't counted as awaiting citation.`,
+                })}
+          </p>
+        ) : null}
         {bekleyen?.length ? (
           <ul className="bekleyen-kaynaklar">
             {bekleyen.map((k) => (
@@ -134,7 +170,8 @@ export default function BekleyenKaynaklarKarti({
                 : t({ tr: "Bu çalışmaya henüz kaynak eklenmedi.", en: "No sources have been added to this work yet." })}
           </p>
         )}
-        <Link href="/dashboard/literature" className="muted text-sm">
+        {/* Bu çalışmanın kütüphanesine (4.3.5): eskiden çalışmasız bağlantıydı ve kütüphane en son oluşturulan çalışmayı açıyordu. */}
+        <Link href={`/dashboard/literature?calisma=${encodeURIComponent(projectId)}`} className="muted text-sm">
           {t({ tr: "Kaynakları yönet →", en: "Manage sources →" })}
         </Link>
       </Dialog>

@@ -1,7 +1,7 @@
 "use client";
 
 import { ornekKalibi } from "@/lib/atif/tyk";
-import { eksikAlanlar, NUMERIC_STYLES } from "@/lib/citation-format";
+import { eksikAlanlar } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
 import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
@@ -99,7 +99,7 @@ import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
 import ManuscriptComments from "./manuscript-comments";
 import { updateLiteratureStatus, type LiteratureSource } from "@/app/actions/literature";
 import type { CitationStyle } from "@/lib/citation-format";
-import { STIL_SECENEKLERI, stilAdi } from "@/lib/atif/stiller";
+import { STIL_SECENEKLERI, stilAdi, stilTanimi } from "@/lib/atif/stiller";
 import { cslCoz, type CslKodu } from "@/lib/atif/csl-kimlik";
 import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
@@ -1508,6 +1508,12 @@ export default function ManuscriptEditor({
 
   /* Bekleyen kaynaklar için kaynakça HARİÇ metin; istatistikle birlikte
      (250 ms beklemeyle) yenilenir, her tuşta değil. */
+  /*
+    Atıf türü ve dipnot metinleri (4.3.5, B5): "bekleyen kaynaklar" kartı
+    stili Kaynaklar sayfasıyla aynı yerden sınıflandırır. Eskiden yalnızca
+    IEEE/Vancouver numaralı sayılıyor, dipnotlu stil yazar-tarih sanılıyordu.
+  */
+  const dipnotMetinleri = useMemo(() => (docStats ? docStats.footnotes.map((f) => f.text) : []), [docStats]);
   const govdeMetni = useMemo(
     () => (editor && docStats ? splitBodyAndReferences(`\n${editor.getText({ blockSeparator: "\n" })}\n`).bodyText : ""),
     [editor, docStats],
@@ -3150,7 +3156,8 @@ export default function ManuscriptEditor({
                 <BekleyenKaynaklarKarti
                   projectId={projectId}
                   govdeMetni={govdeMetni}
-                  numarali={NUMERIC_STYLES.includes(style)}
+                  atifTuru={stilTanimi(style).tur}
+                  dipnotlar={dipnotMetinleri}
                   belgeDili={belgeDili}
                   onCite={(source) => void handleCite(source)}
                 />

@@ -79,7 +79,8 @@ type Siralama = "durum" | "yeni" | "yil" | "baslik" | "yazar";
 
 export type KaynakYeri = {
   satirlar: Record<string, KaynakBaglami>;
-  metinSebebi: "okunamadi" | "numara" | "dipnot" | "bos" | null;
+  /* "dipnot" 4.3.5'te kalktı: dipnotlu stilde atıf dipnot metinlerinden okunuyor. */
+  metinSebebi: "okunamadi" | "numara" | "bos" | null;
   kanitOkunamadi: boolean;
   pdfOkunamadi: boolean;
 };
@@ -484,11 +485,10 @@ function metindeMetni(t: ReturnType<typeof useCeviri>, yeri: (KaynakYeri & { sat
   if (!yeri) return t({ tr: "Bilinmiyor", en: "Unknown" });
   if (yeri.metinSebebi === "okunamadi") return t({ tr: "Bilinmiyor: çalışmanın metni okunamadı", en: "Unknown: the work's text couldn't be read" });
   if (yeri.metinSebebi === "numara") return t({ tr: "Numaralı stilde metinden okunamıyor; okuma durumuna bakın", en: "Can't be read from the text in a numbered style; see the reading status" });
-  if (yeri.metinSebebi === "dipnot") return t({ tr: "Dipnotlu stilde metinden okunamıyor; okuma durumuna bakın", en: "Can't be read from the text in a footnote style; see the reading status" });
   if (yeri.metinSebebi === "bos") return t({ tr: "Çalışmada henüz metin yok", en: "The work has no text yet" });
   const m = yeri.satir?.metinde;
-  if (m === true) return t({ tr: "Evet: ilk yazarın soyadı ve yıl metinde geçiyor", en: "Yes: the first author's surname and the year appear in the text" });
-  if (m === false) return t({ tr: "Hayır: ilk yazarın soyadı ve yıl metinde birlikte geçmiyor", en: "No: the first author's surname and the year don't appear together in the text" });
+  if (m === true) return t({ tr: "Evet: ilk yazarın adı ve yıl metinde (ya da dipnotlarda) geçiyor", en: "Yes: the first author's name and the year appear in the text (or footnotes)" });
+  if (m === false) return t({ tr: "Hayır: ilk yazarın adı ve yıl metinde (ya da dipnotlarda) birlikte geçmiyor", en: "No: the first author's name and the year don't appear together in the text (or footnotes)" });
   return t({ tr: "Bilinmiyor: kaynakta yazar yok", en: "Unknown: the source has no author" });
 }
 

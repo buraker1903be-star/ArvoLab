@@ -1,4 +1,4 @@
-import { splitAuthors, surname } from "@/lib/citation-format";
+import { atifDurumlari } from "@/lib/atif-eslesmesi";
 import { kaynakAnahtarlari } from "@/lib/kaynak-aktarim";
 import { doiAyikla } from "@/lib/kanit/kunye-karsilastirma";
 import type { AtifTuru } from "@/lib/atif/stiller";
@@ -74,26 +74,23 @@ export function kaynakBaglamlari(
     /** Kaynakça bölümü HARİÇ metin; null: okunamadı. */
     govdeMetni: string | null;
     atifTuru: AtifTuru;
+    /** Dipnot metinleri (dipnotlu stilde eşleşmeye katılır); verilmezse dipnotlu stilde bilinmiyor. */
+    dipnotlar?: string[] | null;
     /** kanit_kayitlari.kaynak_id değerleri (çalışmanın bütün iddiaları). */
     kanitKaynaklari: (string | null)[];
     /** Çalışma klasöründe dosyası OLAN PDF kayıtlarının DOI'leri. */
     pdfDoileri: (string | null)[];
   },
 ): Record<string, KaynakBaglami> {
-  const metin = girdi.govdeMetni?.trim() ? girdi.govdeMetni.toLocaleLowerCase("tr-TR") : null;
-  const metindenOkunur = metin !== null && (girdi.atifTuru === "yazar-tarih" || girdi.atifTuru === "yazar-sayfa");
+  /* Metindeki atıf: editörün "bekleyen kaynaklar" kartıyla AYNI fonksiyon (lib/atif-eslesmesi.ts, 4.3.5). */
+  const atif = atifDurumlari(kaynaklar, { atifTuru: girdi.atifTuru, govdeMetni: girdi.govdeMetni, dipnotlar: girdi.dipnotlar });
   const kanit = new Map<string, number>();
   for (const id of girdi.kanitKaynaklari) if (id) kanit.set(id, (kanit.get(id) ?? 0) + 1);
   const pdfler = new Set(girdi.pdfDoileri.map((d) => doiAyikla(d)).filter((d): d is string => Boolean(d)));
 
   const sonuc: Record<string, KaynakBaglami> = {};
   for (const k of kaynaklar) {
-    let metinde: boolean | null = null;
-    if (metindenOkunur && metin) {
-      const soyad = splitAuthors(k.authors).map(surname)[0];
-      const yil = (k.year ?? "").match(/\d{4}/)?.[0];
-      if (soyad) metinde = metin.includes(soyad.toLocaleLowerCase("tr-TR")) && (!yil || metin.includes(yil));
-    }
+    const metinde = atif[k.id] === "okunamaz" ? null : atif[k.id] === "metinde";
     const doi = doiAyikla(k.doi_or_url);
     sonuc[k.id] = { metinde, kanitSayisi: kanit.get(k.id) ?? 0, pdf: Boolean(doi && pdfler.has(doi)) };
   }
