@@ -12,6 +12,8 @@ import type { YazimGorevi } from "@/lib/ai/yazim-asistani";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { collectHeadings } from "./editor-navigation";
+import { aralikMetni, araligiBirak, araligiDogrula, araligiIzle, izlenenAralik } from "@/lib/tiptap-asistan-araligi";
+import { aiAdimiBaslat, aiAdiminiKapat } from "@/lib/ai-duzenleme";
 
 /*
   YAZIM ASİSTANI PANELİ (03.11.2026, kurum sahibinin kararı: "paragrafı
@@ -28,6 +30,16 @@ import { collectHeadings } from "./editor-navigation";
   Seçim, istek GÖNDERİLDİĞİ anda alınır ve o cevabın eklenme yeri olur:
   öğrenci bu arada imleci başka yere götürse bile "Seçilenin yerine koy"
   isteğin yapıldığı metnin yerine koyar.
+
+  KONUM GÜVENLİĞİ (Signature OS 4.3, 05.11.2026). Eskiden o yer istek
+  anındaki iki SAYIYDI (from, to) ve belge arada değişince güncellenmiyordu:
+  öğrenci cevabı beklerken seçimin önüne yazdıysa YANLIŞ metin
+  değiştiriliyordu. Artık aralık editörde izleniyor (belge değiştikçe
+  kayıyor, lib/tiptap-asistan-araligi.ts) ve değiştirmeden hemen önce
+  aralıktaki metnin istekteki seçimle birebir aynı olduğu doğrulanıyor;
+  değilse değiştirme yapılmıyor, öğrenciden yeniden seçmesi isteniyor.
+  AI değişikliği geçmişte kendi adımıdır: Ctrl+Z öncesi ya da sonrası
+  yazılanla birlikte geri almaz (lib/ai-duzenleme.ts).
 */
 
 type Aralik = { from: number; to: number };
@@ -43,7 +55,21 @@ const ONERI_ADI: Record<YazimGorevi, { tr: string; en: string }> = {
   anahat: { tr: "Ana hat", en: "Outline" },
   tamamla: { tr: "Öneri", en: "Suggestion" },
 };
-type Kayit = SohbetMesaji & { ekMetin?: string; kayitId?: string | null; aralik?: Aralik; secimVardi?: boolean; eklendi?: boolean; gorev?: YazimGorevi; begenilmedi?: boolean };
+type Kayit = SohbetMesaji & {
+  ekMetin?: string;
+  kayitId?: string | null;
+  aralik?: Aralik;
+  /** İzlenen aralığın kimliği (lib/tiptap-asistan-araligi.ts) ve istekteki seçimin metni. */
+  oneriId?: string;
+  secimMetni?: string;
+  secimVardi?: boolean;
+  eklendi?: boolean;
+  gorev?: YazimGorevi;
+  begenilmedi?: boolean;
+  /** Uygulanamadığında kartta kalan açıklama (seçim değişti, silindi…). */
+  uyari?: string;
+};
+let oneriSayaci = 0;
 
 export default function YazimPaneli({
   editor,
@@ -77,7 +103,8 @@ export default function YazimPaneli({
     if (bekliyor) return;
     const { from, to } = editor.state.selection;
     const doc = editor.state.doc;
-    const secim = from !== to ? doc.textBetween(from, to, "\n\n") : "";
+    /* Doğrulamayla AYNI okuma (aralikMetni): uygulamadan önce bu metinle karşılaştırılır. */
+    const secim = from !== to ? aralikMetni(doc, from, to) : "";
     if ((gorev === "akademik" || gorev === "kisalt" || gorev === "genislet") && !secim) {
       showToast("error", t({ tr: "Önce editörde bir metin seçin.", en: "Select some text in the editor first." }));
       return;
@@ -97,6 +124,9 @@ export default function YazimPaneli({
         tamamla: "",
       }[gorev];
     if (!gorunen) return;
+    /* Aralık İSTEK ANINDA izlemeye alınır; cevap gelene kadar yazılanlara göre kayar. */
+    const oneriId = `oneri-${++oneriSayaci}`;
+    editor.view.dispatch(araligiIzle(editor.state.tr, oneriId, from, to));
     const gecmis: SohbetMesaji[] = mesajlar.map((m) => ({ rol: m.rol, metin: m.rol === "asistan" ? `${m.metin}\n${m.ekMetin ?? ""}`.trim() : m.metin }));
     setMesajlar((onceki) => [...onceki, { rol: "kullanici", metin: gorunen }]);
     setIstek("");
@@ -110,7 +140,7 @@ export default function YazimPaneli({
       if (cevap.krediUyarisi) showToast("error", cevap.krediUyarisi);
       setMesajlar((onceki) => [
         ...onceki,
-        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, secimVardi: from !== to, gorev },
+        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, oneriId, secimMetni: secim, secimVardi: from !== to, gorev },
       ]);
     } catch (hata) {
       console.error(hata);
@@ -131,10 +161,45 @@ export default function YazimPaneli({
 
   const ekle = (indeks: number, yerineKoy: boolean) => {
     const kayit = mesajlar[indeks];
-    if (!kayit?.ekMetin || !kayit.aralik) return;
-    const boyut = editor.state.doc.content.size;
-    const from = Math.min(kayit.aralik.from, boyut);
-    const to = Math.min(kayit.aralik.to, boyut);
+    if (!kayit?.ekMetin || !kayit.aralik || !kayit.oneriId) return;
+    const uyar = (uyari: string) => {
+      setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, uyari } : m)));
+      showToast("error", uyari);
+    };
+    /*
+      Hedef: izlenen aralık (belge değiştikçe kaymış hâli). Değiştirmede
+      aralığın metni istekteki seçimle BİREBİR aynı olmalı; ekleme yalnızca
+      bir konum istediği için izlenen aralığın sonunu kullanır.
+    */
+    let from: number;
+    let to: number;
+    if (yerineKoy && kayit.secimVardi) {
+      const d = araligiDogrula(editor.state, kayit.oneriId, kayit.secimMetni ?? "");
+      if (!d.tamam) {
+        uyar(
+          d.neden === "degisti"
+            ? t({ tr: "Seçtiğiniz metin siz beklerken değişti; yanlış metni değiştirmemek için uygulanmadı. Metni yeniden seçip tekrar isteyin.", en: "The text you selected changed while you waited; it wasn't applied so the wrong text isn't replaced. Select the text again and ask again." })
+            : t({ tr: "Seçtiğiniz metin artık belgede yok ya da bulunamıyor; değiştirme yapılmadı. Metni yeniden seçip tekrar isteyin.", en: "The text you selected is no longer in the document or can't be found; nothing was replaced. Select the text again and ask again." }),
+        );
+        return;
+      }
+      ({ from, to } = d);
+    } else {
+      const a = izlenenAralik(editor.state, kayit.oneriId);
+      const boyut = editor.state.doc.content.size;
+      from = Math.min(a?.from ?? kayit.aralik.from, boyut);
+      to = Math.min(a?.to ?? kayit.aralik.to, boyut);
+    }
+    /* Uygulanan aralık izlemeden bırakılır; AI değişikliği geçmişte kendi adımı (aiAdimiBaslat/aiAdiminiKapat). */
+    const zincir = () =>
+      editor
+        .chain()
+        .focus()
+        .command(({ tr }) => {
+          aiAdimiBaslat(tr);
+          araligiBirak(tr, kayit.oneriId!);
+          return true;
+        });
     let tamam: boolean;
     const anaHat = kayit.gorev === "anahat" ? anaHattiCozumle(kayit.ekMetin) : [];
     if (anaHat.length) {
@@ -148,28 +213,30 @@ export default function YazimPaneli({
         ...s.notlar.map((n) => ({ type: "paragraph", content: [izliMetin(`[${n}]`, kayit.kayitId)] })),
       ]);
       const $pos = editor.state.doc.resolve(to);
-      tamam = editor.chain().focus().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumlerAnaHat).run();
+      tamam = zincir().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumlerAnaHat).run();
     } else if (yerineKoy && from !== to) {
       const paragraflar = paragraflara(kayit.ekMetin);
       // Tek paragraf seçimin yerine satır içi girer; çok paragraf blok olarak.
       tamam =
         paragraflar.length === 1
-          ? editor.chain().focus().insertContentAt({ from, to }, izliMetin(paragraflar[0], kayit.kayitId)).run()
-          : editor.chain().focus().insertContentAt({ from, to }, dugumler(kayit.ekMetin, kayit.kayitId)).run();
+          ? zincir().insertContentAt({ from, to }, izliMetin(paragraflar[0], kayit.kayitId)).run()
+          : zincir().insertContentAt({ from, to }, dugumler(kayit.ekMetin, kayit.kayitId)).run();
     } else {
       /* İmlecin bulunduğu bloğun SONUNA: paragrafın ortasına blok eklemek onu ikiye bölerdi. Boş paragraftaysa onun yerine. */
       const $pos = editor.state.doc.resolve(to);
       const blok = $pos.depth >= 1 ? $pos.node(1) : null;
       const bosParagraf = blok?.type.name === "paragraph" && blok.textContent.trim() === "";
       tamam = bosParagraf
-        ? editor.chain().focus().insertContentAt({ from: $pos.before(1), to: $pos.after(1) }, dugumler(kayit.ekMetin, kayit.kayitId)).run()
-        : editor.chain().focus().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumler(kayit.ekMetin, kayit.kayitId)).run();
+        ? zincir().insertContentAt({ from: $pos.before(1), to: $pos.after(1) }, dugumler(kayit.ekMetin, kayit.kayitId)).run()
+        : zincir().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumler(kayit.ekMetin, kayit.kayitId)).run();
     }
     if (!tamam) {
       showToast("error", t({ tr: "Metin eklenemedi; imleci metnin içine koyup tekrar deneyin.", en: "Couldn't insert the text; place the cursor in the text and try again." }));
       return;
     }
-    setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, eklendi: true } : m)));
+    /* Sonraki yazım AI adımına eklenmesin: Ctrl+Z ikisini birden geri almasın. */
+    editor.view.dispatch(aiAdiminiKapat(editor.state));
+    setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, eklendi: true, uyari: undefined } : m)));
     if (kayit.kayitId) void asistanPuanla(kayit.kayitId, "faydali", "metne eklendi").catch(() => undefined);
     showToast("success", t({ tr: "Metin eklendi; okuyup kendi sözcüklerinizle düzenleyin.", en: "Text inserted; read it and edit it in your own words." }));
   };
@@ -356,6 +423,11 @@ export default function YazimPaneli({
                         paragraflara(m.ekMetin).map((p, j) => <p key={j}>{p}</p>)
                       )}
                     </div>
+                    {m.uyari ? (
+                      <p className="yazim-oneri-uyari" role="alert">
+                        {m.uyari}
+                      </p>
+                    ) : null}
                     <div className="yazim-oneri-eylem">
                       <button type="button" className="projects-primary-button button-compact" onClick={() => ekle(i, false)} disabled={m.eklendi}>
                         {m.eklendi ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}

@@ -1588,3 +1588,5 @@
   .yazma-basligi, .yan-panel, .yan-panel-ortu, .yazim-durum-cubugu { display: none !important; }
 }
 
+/* Asistan önerisi uygulanamadığında kartta kalan açıklama (yazim-paneli.tsx, 4.3). */
+.yazim-oneri-uyari { margin: 0; padding: 8px 10px; border-left: 3px solid var(--warning); border-radius: var(--r-xs); background: var(--warning-soft); color: var(--ink); font-size: var(--fs-sm); line-height: var(--lh-metin); }
