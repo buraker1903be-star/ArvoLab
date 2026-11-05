@@ -103,24 +103,30 @@ const errorMessages: Record<string, Metin> = {
     en: "Too many failed attempts. Try again in 15 minutes or reset your password.",
   },
   "email-not-confirmed": {
-    tr: "E-posta adresiniz henüz doğrulanmadı. Kayıtta gönderdiğimiz bağlantıya tıklayın; e-postayı bulamıyorsanız \"Şifremi unuttum\" ile yeni bir bağlantı isteyin — o bağlantı adresinizi de doğrular.",
-    en: "Your email address is not verified yet. Click the link we sent when you signed up; if you can't find the email, request a new link with \"Forgot password\" — that link also verifies your address.",
+    tr: "E-posta adresiniz henüz doğrulanmadı. Kayıtta gönderdiğimiz bağlantıya tıklayın; e-postayı bulamıyorsanız \"Şifremi unuttum\" ile yeni bir bağlantı isteyin.",
+    en: "Your email address is not verified yet. Click the link we sent when you signed up; if you can't find the email, request a new link with \"Forgot password\".",
   },
   /*
     Doğrulama bağlantısı hataları (05.11.2026). Eskiden tek metin vardı ve
     her durumda "yeniden şifre sıfırlama isteyin" diyordu. Tür
     /auth/confirm'de belirleniyor (lib/auth-link.ts, dogrulamaHataKodu);
     belirlenemezse genel metin. Ayrı bir "doğrulama e-postasını yeniden
-    gönder" işlevi YOK: kayıt metni var olan yolu tarif ediyor — sıfırlama
-    bağlantısı adresi de doğruluyor (email-not-confirmed metniyle aynı söz).
+    gönder" işlevi YOK: kayıt metni var olan yolu ("Şifremi unuttum")
+    gösteriyor ama sonucunu GARANTİ ETMİYOR. Supabase Auth'un açık kaynak
+    kodunda kurtarma doğrulaması onaysız kullanıcıyı onaylıyor
+    (internal/api/verify.go, recoverVerify → user.Confirm) ve kayıtta
+    verilen onaysız şifreyi siliyor (ClearUnconfirmedPassword) — kullanıcı
+    yeni şifre sayfasına iner. Bu davranış bu projenin barındırılan
+    sürümünde sınanmadı; sınanana kadar metin "adresinizi doğrular" demez
+    (eskiden bu metin ve email-not-confirmed diyordu).
   */
   "link-invalid": {
     tr: "Bağlantı geçersiz ya da süresi dolmuş. E-postadaki bağlantıyı yeniden açın ya da yeni bir bağlantı isteyin.",
     en: "The link is invalid or has expired. Open the link in the email again or request a new one.",
   },
   "signup-link-invalid": {
-    tr: "Doğrulama bağlantınız geçersiz ya da süresi dolmuş. Yeni bir doğrulama bağlantısı için \"Şifremi unuttum\" ile e-posta adresinizi girin; gönderdiğimiz bağlantı adresinizi doğrular ve yeni şifrenizi belirlemenizi sağlar.",
-    en: "Your verification link is invalid or has expired. To get a new verification link, enter your email address under \"Forgot password\"; the link we send verifies your address and lets you set a new password.",
+    tr: "Doğrulama bağlantınız geçersiz ya da süresi dolmuş. Yeni bir bağlantı almak için \"Şifremi unuttum\" ile kayıtta kullandığınız e-posta adresini girin.",
+    en: "Your verification link is invalid or has expired. To get a new link, enter the email address you signed up with under \"Forgot password\".",
   },
   "recovery-link-invalid": {
     tr: "Şifre sıfırlama bağlantınız geçersiz ya da süresi dolmuş. \"Şifremi unuttum\" ile yeni bir sıfırlama bağlantısı isteyin.",

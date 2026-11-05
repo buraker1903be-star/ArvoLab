@@ -92,8 +92,14 @@ export async function proxy(request: NextRequest) {
   if (!user && pathname.startsWith("/dashboard")) {
     return redirectTo("/", { next: `${pathname}${search}` });
   }
+  /*
+    Yeni şifre sayfasına oturumsuz gelinmesi her zaman bir şifre sıfırlama
+    bağlamıdır (sayfaya yalnızca kurtarma bağlantısıyla oturum açılarak
+    gelinir): uyarı sıfırlamaya özel (05.11.2026). Eskiden genel
+    "link-invalid" metnine düşüyordu. Yönlendirme hedefi aynı.
+  */
   if (!user && pathname === "/reset-password") {
-    return redirectTo("/", { error: "link-invalid" });
+    return redirectTo("/", { error: "recovery-link-invalid" });
   }
   if (user && SIGNED_OUT_ONLY_PATHS.includes(pathname)) {
     return redirectTo("/dashboard");

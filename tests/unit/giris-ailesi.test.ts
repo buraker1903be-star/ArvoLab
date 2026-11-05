@@ -88,8 +88,8 @@ test("doğrulama hataları türe göre, genel metin türü varsaymaz", () => {
     return sayfa.slice(i, sayfa.indexOf("},", i));
   };
   assert.ok(!/şifre sıfırlama|password reset/i.test(metin("link-invalid")), "genel metin sıfırlama demez");
-  assert.match(metin("signup-link-invalid"), /Yeni bir doğrulama bağlantısı/);
-  assert.match(metin("signup-link-invalid"), /new verification link/);
+  assert.match(metin("signup-link-invalid"), /Doğrulama bağlantınız/);
+  assert.match(metin("signup-link-invalid"), /verification link/);
   assert.match(metin("recovery-link-invalid"), /yeni bir sıfırlama bağlantısı/);
   assert.match(metin("recovery-link-invalid"), /new reset link/);
   const rota = oku("app/auth/confirm/route.ts");
@@ -104,4 +104,27 @@ test("hoş geldiniz e-postası Arvo AI'ı güncel anlatır, iki dilde", () => {
   assert.ok(!eposta.includes("<p ${NOT}>ArvoLab does not write your text for you"));
   assert.ok(eposta.includes("Oluşturulan içerikleri değerlendirme ve çalışmanıza ekleme kararı size aittir."));
   assert.ok(eposta.includes("The decision to evaluate generated content and add it to your work is yours."));
+});
+
+/*
+  Yeni şifre sayfası (05.11.2026): oturumsuz gelen giriş sayfasına iner
+  (değişmedi), uyarı artık sıfırlamaya özel. Eskiden genel "link-invalid".
+*/
+test("proxy: oturumsuz /reset-password giriş sayfasına sıfırlama uyarısıyla döner", () => {
+  const proxy = oku("proxy.ts");
+  assert.match(proxy, /if \(!user && pathname === "\/reset-password"\) \{\s*return redirectTo\("\/", \{ error: "recovery-link-invalid" \}\);/);
+  assert.ok(oku("app/page.tsx").includes(`"recovery-link-invalid": {`));
+});
+
+/*
+  Kanıtlanmamış söz yok (05.11.2026): "Şifremi unuttum" bağlantısının
+  onaysız adresi doğruladığı bu projede sınanmadı; ekran bunu garanti etmez.
+*/
+test("giriş uyarıları sıfırlama bağlantısının adresi doğruladığını garanti etmez", () => {
+  const sayfa = oku("app/page.tsx");
+  const metinler = sayfa.slice(sayfa.indexOf("const errorMessages"), sayfa.indexOf("const bilgiMesajlari"));
+  const yalnizMetin = metinler.replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const soz of ["adresinizi de doğrular", "adresinizi doğrular", "also verifies", "verifies your address"]) {
+    assert.ok(!yalnizMetin.includes(soz), soz);
+  }
 });

@@ -89,7 +89,8 @@ await senaryo("SÜRESİ DOLMUŞ kayıt bağlantısı: yeni doğrulama bağlantı
   esit(yer(y), "/?error=signup-link-invalid", "hedef");
   const html = await (await fetch(`${TABAN}/?error=signup-link-invalid`)).text();
   esit(html.includes("Doğrulama bağlantınız geçersiz ya da süresi dolmuş"), true, "uyarı metni");
-  esit(html.includes("Yeni bir doğrulama bağlantısı"), true, "yönlendirme");
+  esit(html.includes("Yeni bir bağlantı almak için"), true, "yönlendirme");
+  esit(html.includes("adresinizi doğrular"), false, "kanıtlanmamış söz yok");
   esit(html.includes('role="alert"'), true, "uyarı rolü");
 });
 
@@ -99,6 +100,14 @@ await senaryo("SÜRESİ DOLMUŞ sıfırlama bağlantısı: yeni sıfırlama bağ
   const html = await (await fetch(`${TABAN}/?error=recovery-link-invalid`)).text();
   esit(html.includes("Şifre sıfırlama bağlantınız geçersiz ya da süresi dolmuş"), true, "uyarı metni");
 });
+
+/*
+  Oturumsuz /reset-password → /?error=recovery-link-invalid kararı proxy.ts'te.
+  Önizlemede proxy çalışmıyor (Supabase adresi tanımlı değil, proxy kendini
+  atlıyor; @supabase/ssr sahtesiyle değiştirilmiyor), bu yüzden burada
+  SINANMIYOR: satırı tests/unit/giris-ailesi.test.ts sabitliyor, davranışı
+  Vercel Preview'da oturumsuz bir GET ile ölçülüyor.
+*/
 
 await senaryo("tür tanınmıyorsa GENEL uyarı (davet, e-posta değişikliği): tür tahmin edilmez", async () => {
   for (const type of ["invite", "email_change", "magiclink"]) {
