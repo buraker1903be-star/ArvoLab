@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { HEDEF_MESAJI, kaynakHedefi } from "@/lib/kaynak-hedefi";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
@@ -236,10 +237,13 @@ export async function aramaKaydiniEkle(kayit: {
 
   const baslik = String(kayit.baslik ?? "").trim().slice(0, 500);
   if (!baslik) return { error: t({ tr: "Kaynak başlığı okunamadı.", en: "Couldn't read the source title." }) };
+  /* Hedef çalışma sunucuda doğrulanır (lib/kaynak-hedefi.ts). */
+  const hedef = await kaynakHedefi(ctx.supabase, ctx.user.id, kayit.projectId);
+  if (hedef.durum === "yetkisiz" || hedef.durum === "okunamadi") return { error: t(HEDEF_MESAJI[hedef.durum]) };
 
   const satir = {
     owner_id: ctx.user.id,
-    project_id: String(kayit.projectId ?? "").trim() || null,
+    project_id: hedef.durum === "tamam" ? hedef.projectId : null,
     title: baslik,
     authors: (kayit.yazarlar ?? []).join(", ").slice(0, 500) || null,
     year: kayit.yil ? String(kayit.yil) : null,

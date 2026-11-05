@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { HEDEF_MESAJI, kaynakHedefi } from "@/lib/kaynak-hedefi";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork } from "@/lib/doi";
@@ -39,14 +40,13 @@ async function hazirlik(projectId: string) {
   if (!ctx) return { hata: (await oturumYokMesaji()) } as const;
   if (await isSubscriptionBlocked()) return { hata: (await abonelikKapaliMesaji()) } as const;
   const t = await ceviri();
-  const { data: proje, error: projeHatasi } = await ctx.supabase
-    .from("academic_projects")
-    .select("id")
-    .eq("id", projectId)
-    .eq("owner_id", ctx.user.id)
-    .maybeSingle();
-  if (projeHatasi) return { hata: t({ tr: "Çalışma okunamadı; yeniden deneyin.", en: "Couldn't read the work; please try again." }) } as const;
-  if (!proje) return { hata: t({ tr: "Çalışma bulunamadı ya da size ait değil.", en: "Work not found or it doesn't belong to you." }) } as const;
+  /*
+    Toplu yollar çalışmasız kayıt açmaz: bu ekranlar her zaman bir çalışma
+    için açılır. Denetim öteki ekleme yollarıyla aynı (lib/kaynak-hedefi.ts).
+  */
+  const hedef = await kaynakHedefi(ctx.supabase, ctx.user.id, projectId);
+  if (hedef.durum === "okunamadi") return { hata: t(HEDEF_MESAJI.okunamadi) } as const;
+  if (hedef.durum !== "tamam") return { hata: t(HEDEF_MESAJI.yetkisiz) } as const;
   const { data: mevcut, error } = await ctx.supabase
     .from("literature_sources")
     .select("title, year, doi_or_url")

@@ -3,6 +3,7 @@
 import { listeBasarili, listeOkunamadi, type ListeSonucu } from "@/lib/liste-sonucu";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { HEDEF_MESAJI, kaynakHedefi } from "@/lib/kaynak-hedefi";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork, type DoiMetadata } from "@/lib/doi";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
@@ -92,10 +93,13 @@ export async function createLiteratureSource(formData: FormData): Promise<Action
 
   const sourceType = String(formData.get("sourceType") ?? "article");
   const status = String(formData.get("status") ?? "to_review");
+  /* Hedef çalışma sunucuda doğrulanır (lib/kaynak-hedefi.ts): istemcinin gönderdiği kimliğe güvenilmez. */
+  const hedef = await kaynakHedefi(ctx.supabase, ctx.user.id, formData.get("projectId"));
+  if (hedef.durum === "yetkisiz" || hedef.durum === "okunamadi") return { error: t(HEDEF_MESAJI[hedef.durum]) };
 
   const row = {
     owner_id: ctx.user.id,
-    project_id: String(formData.get("projectId") ?? "").trim() || null,
+    project_id: hedef.durum === "tamam" ? hedef.projectId : null,
     title,
     authors: String(formData.get("authors") ?? "").trim() || null,
     year: String(formData.get("year") ?? "").trim() || null,
@@ -270,10 +274,13 @@ export async function createCitationSource(input: CitationSourceInput): Promise<
   if (!title) return { error: t({ tr: "Kaynak başlığı zorunludur.", en: "Source title is required." }) };
   const sourceType = SOURCE_TYPES.includes(input.sourceType ?? "") ? input.sourceType! : "article";
   const fields = input as unknown as Record<string, unknown>;
+  /* Atıf penceresinin çalışması da doğrulanır: atanmış kişi ya da yabancı kimlik öksüz kaynak üretmesin. */
+  const hedef = await kaynakHedefi(ctx.supabase, ctx.user.id, input.projectId);
+  if (hedef.durum === "yetkisiz" || hedef.durum === "okunamadi") return { error: t(HEDEF_MESAJI[hedef.durum]) };
 
   const row = {
     owner_id: ctx.user.id,
-    project_id: text(input.projectId, 64),
+    project_id: hedef.durum === "tamam" ? hedef.projectId : null,
     title,
     authors: text(input.authors, 1000),
     year: text(input.year, 20),
