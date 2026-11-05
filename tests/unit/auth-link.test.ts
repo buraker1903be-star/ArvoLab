@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { authConfirmLink, safeConfirmNext } from "../../lib/auth-link";
+import { authConfirmLink, dogrulamaHataKodu, safeConfirmNext } from "../../lib/auth-link";
 
 test("e-posta bağlantısı doğrudan /auth/confirm'e token_hash ile gider", () => {
   const url = new URL(authConfirmLink("https://arvolab.com", "abc123", "recovery"));
@@ -19,4 +19,16 @@ test("dönüş yalnızca panel yolları; dış alan adına çözülen biçimler 
   }
   // Reddedilenlerin gerçekten dışarı çıkabildiğini sabitle (eski denetim bunları geçiriyordu).
   assert.equal(new URL("/\\evil.example", "https://arvolab.com").host, "evil.example");
+});
+
+/*
+  Doğrulama hatasının metni (05.11.2026): yalnızca iki tür tanınır, gerisi
+  genel metne düşer — tür tahmin edilmez.
+*/
+test("dogrulamaHataKodu: kayıt ve sıfırlama ayrı, gerisi genel", () => {
+  assert.equal(dogrulamaHataKodu("signup"), "signup-link-invalid");
+  assert.equal(dogrulamaHataKodu("recovery"), "recovery-link-invalid");
+  for (const tur of ["invite", "magiclink", "email_change", "email", "", "SIGNUP", "signup ", null, undefined]) {
+    assert.equal(dogrulamaHataKodu(tur), "link-invalid", String(tur));
+  }
 });

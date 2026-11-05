@@ -36,3 +36,26 @@ export function safeConfirmNext(raw: string | null | undefined): string {
   if (/[\\\s]|%5c|%09|%0a|%0d/i.test(value) || value.includes("//")) return "/dashboard";
   return value;
 }
+
+/*
+  DOĞRULAMA HATASININ METNİ (05.11.2026, kurum sahibinin isteği). Eskiden
+  her başarısız bağlantı "/?error=link-invalid"e düşüyor ve ekran HER
+  durumda "yeniden şifre sıfırlama isteyin" diyordu: süresi dolmuş kayıt
+  bağlantısıyla gelen kullanıcıya şifre sıfırlamasını söylemek kafa
+  karıştırıyordu.
+
+  Tür yalnızca bizim ürettiğimiz bağlantıdan gelir (authConfirmLink →
+  /auth/dogrula'nın gizli alanı) ve yalnızca iki değer TANINIR; başka her
+  şey (davet, e-posta değişikliği, boş, bilinmeyen, başka kökenden gelen
+  istek, PKCE ?code=) genel metne düşer — tür tahmin edilmez. Bu karar
+  yalnızca MESAJI seçer: doğrulama, köken denetimi ve yönlendirme hedefi
+  (giriş sayfası) aynı kalır. Supabase süresi dolmuş ile geçersiz
+  belirteci ayırmıyor (ikisi de otp_expired), metinler de ayırmıyor.
+*/
+export type DogrulamaHatasi = "signup-link-invalid" | "recovery-link-invalid" | "link-invalid";
+
+export function dogrulamaHataKodu(tur: string | null | undefined): DogrulamaHatasi {
+  if (tur === "signup") return "signup-link-invalid";
+  if (tur === "recovery") return "recovery-link-invalid";
+  return "link-invalid";
+}

@@ -228,7 +228,14 @@ export function denemeBittiEmail(aboneligimAdresi: string, dil: Dil = "tr") {
   };
 }
 
-/** Hesabını doğrulayan kullanıcıya ilk selam. */
+/**
+ * Hesabını doğrulayan kullanıcıya ilk selam.
+ *
+ * Alttaki not 05.11.2026'da kurum sahibinin metniyle değişti. Eskiden
+ * "ArvoLab metninizi sizin yerinize yazmaz" diyordu; yazım asistanı
+ * 03.11.2026'dan beri sohbette taslak yazıyor. Değişmeyen söz: içeriği
+ * çalışmaya ekleme kararı kullanıcının (giriş sayfasıyla aynı).
+ */
 export function hosgeldinizEmail(panelAdresi: string, dil: Dil = "tr") {
   if (dil === "en") {
     return {
@@ -238,7 +245,7 @@ export function hosgeldinizEmail(panelAdresi: string, dil: Dil = "tr") {
         `<p ${P}>Your workspace is open. The quickest start: create a work, add your university's guideline and start writing — the guideline check runs as you write.</p>
          <p ${P}>Your free trial has started. During the trial every screen is open and you can try the assistant ${DENEME_ASISTAN_HAKKI} times; we'll email you before it ends.</p>
          ${button(panelAdresi, "Go to my workspace")}
-         <p ${NOT}>ArvoLab does not write your text for you; it checks what you write against your guideline and reference rules, and searches real indexes for sources.</p>`,
+         <p ${NOT}>Arvo AI supports your academic research and writing with drafting, text improvement and academic review. The decision to evaluate generated content and add it to your work is yours.</p>`,
         dil,
       ),
     };
@@ -250,7 +257,7 @@ export function hosgeldinizEmail(panelAdresi: string, dil: Dil = "tr") {
       `<p ${P}>Çalışma alanınız açıldı. En hızlı başlangıç: bir çalışma oluşturun, üniversitenizin kılavuzunu ekleyin ve yazmaya başlayın — kılavuz denetimi siz yazarken çalışır.</p>
        <p ${P}>Ücretsiz deneme süreniz başladı. Deneme boyunca bütün ekranlar açık, asistanı ${DENEME_ASISTAN_HAKKI} kez deneyebilirsiniz; süre bitmeden önce size e-postayla haber veririz.</p>
        ${button(panelAdresi, "Çalışma alanıma git")}
-       <p ${NOT}>ArvoLab metninizi sizin yerinize yazmaz; yazdığınızı kılavuza ve kaynakça kurallarına göre denetler, kaynakları gerçek dizinlerde arar.</p>`,
+       <p ${NOT}>Arvo AI, akademik araştırma ve yazım sürecinizde taslak oluşturma, metin geliştirme ve akademik inceleme desteği sunar. Oluşturulan içerikleri değerlendirme ve çalışmanıza ekleme kararı size aittir.</p>`,
       dil,
     ),
   };

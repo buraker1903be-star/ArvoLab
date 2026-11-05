@@ -106,9 +106,25 @@ const errorMessages: Record<string, Metin> = {
     tr: "E-posta adresiniz henüz doğrulanmadı. Kayıtta gönderdiğimiz bağlantıya tıklayın; e-postayı bulamıyorsanız \"Şifremi unuttum\" ile yeni bir bağlantı isteyin — o bağlantı adresinizi de doğrular.",
     en: "Your email address is not verified yet. Click the link we sent when you signed up; if you can't find the email, request a new link with \"Forgot password\" — that link also verifies your address.",
   },
+  /*
+    Doğrulama bağlantısı hataları (05.11.2026). Eskiden tek metin vardı ve
+    her durumda "yeniden şifre sıfırlama isteyin" diyordu. Tür
+    /auth/confirm'de belirleniyor (lib/auth-link.ts, dogrulamaHataKodu);
+    belirlenemezse genel metin. Ayrı bir "doğrulama e-postasını yeniden
+    gönder" işlevi YOK: kayıt metni var olan yolu tarif ediyor — sıfırlama
+    bağlantısı adresi de doğruluyor (email-not-confirmed metniyle aynı söz).
+  */
   "link-invalid": {
-    tr: "Bağlantı geçersiz ya da süresi dolmuş. Lütfen yeniden şifre sıfırlama isteyin.",
-    en: "The link is invalid or has expired. Please request a new password reset.",
+    tr: "Bağlantı geçersiz ya da süresi dolmuş. E-postadaki bağlantıyı yeniden açın ya da yeni bir bağlantı isteyin.",
+    en: "The link is invalid or has expired. Open the link in the email again or request a new one.",
+  },
+  "signup-link-invalid": {
+    tr: "Doğrulama bağlantınız geçersiz ya da süresi dolmuş. Yeni bir doğrulama bağlantısı için \"Şifremi unuttum\" ile e-posta adresinizi girin; gönderdiğimiz bağlantı adresinizi doğrular ve yeni şifrenizi belirlemenizi sağlar.",
+    en: "Your verification link is invalid or has expired. To get a new verification link, enter your email address under \"Forgot password\"; the link we send verifies your address and lets you set a new password.",
+  },
+  "recovery-link-invalid": {
+    tr: "Şifre sıfırlama bağlantınız geçersiz ya da süresi dolmuş. \"Şifremi unuttum\" ile yeni bir sıfırlama bağlantısı isteyin.",
+    en: "Your password reset link is invalid or has expired. Request a new reset link with \"Forgot password\".",
   },
   "session-missing": { tr: "Oturumunuz sona ermiş. Lütfen tekrar giriş yapın.", en: "Your session has expired. Please sign in again." },
 };

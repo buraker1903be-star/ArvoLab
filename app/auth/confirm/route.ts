@@ -2,7 +2,7 @@ import { aktifDil } from "@/lib/dil-sunucu";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { safeConfirmNext } from "@/lib/auth-link";
+import { dogrulamaHataKodu, safeConfirmNext } from "@/lib/auth-link";
 import { ayniKokenMi } from "@/lib/istek-koken";
 import { sendEmail } from "@/lib/email/resend";
 import { hosgeldinizEmail } from "@/lib/email/auth-emails";
@@ -105,6 +105,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  /*
+    Başarısızlıkta hedef yine giriş sayfası; yalnızca hata KODU türe göre
+    (lib/auth-link.ts, dogrulamaHataKodu). Belirteç boşsa bağlantı bozuk,
+    süresi dolmuş değil: genel metin. Köken denetiminden dönen ret (yukarıda)
+    bilerek genel kalıyor — başka siteden gelen türe güvenilmez.
+  */
+  const hata = tokenHash ? dogrulamaHataKodu(type) : "link-invalid";
   // 303: POST'tan sonra hedef GET ile açılsın.
-  return NextResponse.redirect(new URL(verified ? next : "/?error=link-invalid", origin), 303);
+  return NextResponse.redirect(new URL(verified ? next : `/?error=${hata}`, origin), 303);
 }

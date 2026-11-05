@@ -44,7 +44,7 @@ test("doğrulama sayfası belirteci yalnızca POST ile /auth/confirm'e gönderir
 test("giriş sayfası yalnızca /dashboard altına geri döner ve hata metinleri yerinde", () => {
   const sayfa = oku("app/page.tsx");
   assert.match(sayfa, /params\.next\?\.startsWith\("\/dashboard"\)/);
-  for (const anahtar of ["missing-credentials", "invalid-credentials", "too-many-attempts", "email-not-confirmed", "link-invalid", "session-missing"]) {
+  for (const anahtar of ["missing-credentials", "invalid-credentials", "too-many-attempts", "email-not-confirmed", "link-invalid", "signup-link-invalid", "recovery-link-invalid", "session-missing"]) {
     assert.ok(sayfa.includes(`"${anahtar}"`), anahtar);
   }
 });
@@ -72,4 +72,36 @@ test("telefon biçimi özelliklerin hiçbirini düşürmez: iki liste de aynı d
   const sayfa = oku("app/page.tsx");
   assert.equal((sayfa.match(/OZELLIKLER\.map\(/g) ?? []).length, 2);
   assert.match(sayfa, /<details>\s*<summary>/);
+});
+
+/*
+  Doğrulama hatası metinleri (05.11.2026): kayıt bağlantısı şifre
+  sıfırlamayı değil yeni doğrulama bağlantısını söyler; genel metin
+  türü varsaymaz. Ayrı bir "yeniden gönder" işlevi olmadığı için hiçbir
+  metin olmayan bir düğmeyi tarif etmez.
+*/
+test("doğrulama hataları türe göre, genel metin türü varsaymaz", () => {
+  const sayfa = oku("app/page.tsx");
+  const metin = (anahtar: string) => {
+    const i = sayfa.indexOf(`"${anahtar}": {`);
+    assert.ok(i >= 0, anahtar);
+    return sayfa.slice(i, sayfa.indexOf("},", i));
+  };
+  assert.ok(!/şifre sıfırlama|password reset/i.test(metin("link-invalid")), "genel metin sıfırlama demez");
+  assert.match(metin("signup-link-invalid"), /Yeni bir doğrulama bağlantısı/);
+  assert.match(metin("signup-link-invalid"), /new verification link/);
+  assert.match(metin("recovery-link-invalid"), /yeni bir sıfırlama bağlantısı/);
+  assert.match(metin("recovery-link-invalid"), /new reset link/);
+  const rota = oku("app/auth/confirm/route.ts");
+  assert.match(rota, /const hata = tokenHash \? dogrulamaHataKodu\(type\) : "link-invalid";/);
+  // Köken reddi ve PKCE dalı genel kalır.
+  assert.equal((rota.match(/"\/\?error=link-invalid"/g) ?? []).length, 2);
+});
+
+test("hoş geldiniz e-postası Arvo AI'ı güncel anlatır, iki dilde", () => {
+  const eposta = oku("lib/email/auth-emails.ts");
+  assert.ok(!eposta.includes("<p ${NOT}>ArvoLab metninizi sizin yerinize yazmaz"));
+  assert.ok(!eposta.includes("<p ${NOT}>ArvoLab does not write your text for you"));
+  assert.ok(eposta.includes("Oluşturulan içerikleri değerlendirme ve çalışmanıza ekleme kararı size aittir."));
+  assert.ok(eposta.includes("The decision to evaluate generated content and add it to your work is yours."));
 });

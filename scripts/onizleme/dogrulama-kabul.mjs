@@ -83,26 +83,44 @@ await senaryo("BAŞARILI: şifre sıfırlama yeni şifre sayfasına gider", asyn
   esit(yer(y), "/reset-password", "hedef");
 });
 
-await senaryo("SÜRESİ DOLMUŞ: giriş sayfasında link-invalid uyarısı", async () => {
+await senaryo("SÜRESİ DOLMUŞ kayıt bağlantısı: yeni doğrulama bağlantısına yönlendiren uyarı", async () => {
   const y = await onayla({ token_hash: "onizleme-suresi-dolmus-1", type: "signup", next: "/dashboard" });
   esit(y.status, 303, "durum");
-  esit(yer(y), "/?error=link-invalid", "hedef");
-  const html = await (await fetch(`${TABAN}/?error=link-invalid`)).text();
-  esit(html.includes("Bağlantı geçersiz ya da süresi dolmuş"), true, "uyarı metni");
+  esit(yer(y), "/?error=signup-link-invalid", "hedef");
+  const html = await (await fetch(`${TABAN}/?error=signup-link-invalid`)).text();
+  esit(html.includes("Doğrulama bağlantınız geçersiz ya da süresi dolmuş"), true, "uyarı metni");
+  esit(html.includes("Yeni bir doğrulama bağlantısı"), true, "yönlendirme");
   esit(html.includes('role="alert"'), true, "uyarı rolü");
 });
 
-await senaryo("GEÇERSİZ: tanınmayan belirteç link-invalid'e düşer", async () => {
-  const y = await onayla({ token_hash: "baska-bir-belirtec", type: "invite", next: "/dashboard" });
-  esit(yer(y), "/?error=link-invalid", "hedef");
+await senaryo("SÜRESİ DOLMUŞ sıfırlama bağlantısı: yeni sıfırlama bağlantısına yönlendiren uyarı", async () => {
+  const y = await onayla({ token_hash: "onizleme-suresi-dolmus-2", type: "recovery", next: "/reset-password" });
+  esit(yer(y), "/?error=recovery-link-invalid", "hedef");
+  const html = await (await fetch(`${TABAN}/?error=recovery-link-invalid`)).text();
+  esit(html.includes("Şifre sıfırlama bağlantınız geçersiz ya da süresi dolmuş"), true, "uyarı metni");
+});
+
+await senaryo("tür tanınmıyorsa GENEL uyarı (davet, e-posta değişikliği): tür tahmin edilmez", async () => {
+  for (const type of ["invite", "email_change", "magiclink"]) {
+    esit(yer(await onayla({ token_hash: "onizleme-suresi-dolmus-3", type, next: "/dashboard" })), "/?error=link-invalid", type);
+  }
+  const html = await (await fetch(`${TABAN}/?error=link-invalid`)).text();
+  esit(html.includes("Bağlantı geçersiz ya da süresi dolmuş"), true, "genel metin");
+  esit(html.includes("şifre sıfırlama isteyin"), false, "genel metin sıfırlama demez");
+});
+
+await senaryo("GEÇERSİZ: tanınmayan belirteç türün uyarısına düşer", async () => {
+  esit(yer(await onayla({ token_hash: "baska-bir-belirtec", type: "signup", next: "/dashboard" })), "/?error=signup-link-invalid", "kayıt");
+  esit(yer(await onayla({ token_hash: "baska-bir-belirtec", type: "invite", next: "/dashboard" })), "/?error=link-invalid", "davet");
 });
 
 await senaryo("GEÇERSİZ: eksik alanlar doğrulamaya hiç gitmez", async () => {
+  // Belirteç yoksa bağlantı bozuk, süresi dolmuş değil: tür bilinse de genel metin.
   esit(yer(await onayla({ token_hash: "", type: "signup" })), "/?error=link-invalid", "boş belirteç");
   esit(yer(await onayla({ token_hash: "onizleme-gecerli-3", type: "" })), "/?error=link-invalid", "boş tür");
 });
 
-await senaryo("başka kökenden POST reddedilir (giriş CSRF'i), geçerli belirteç olsa bile", async () => {
+await senaryo("başka kökenden POST reddedilir (giriş CSRF'i), geçerli belirteç olsa bile; uyarı genel", async () => {
   const y = await onayla({ token_hash: "onizleme-gecerli-4", type: "signup" }, { origin: "https://saldirgan.example", "sec-fetch-site": "cross-site" });
   esit(yer(y), "/?error=link-invalid", "hedef");
 });
