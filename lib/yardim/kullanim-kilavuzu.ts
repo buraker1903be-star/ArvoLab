@@ -134,8 +134,8 @@ const BOLUMLER: KilavuzBolumu[] = [
     id: "yazim",
     baslik: { tr: "Yazım editörü", en: "The writing editor" },
     ozet: {
-      tr: "Çalışmanızı \"Yazmaya devam et\" ile açın. Editör yazdıklarınızı kendiliğinden kaydeder. Üstteki tek satırlık araç çubuğunda biçim, asistan ve atıf; \"Paragraf\", \"Ekle\" ve ⋯ menülerinde seyrek kullanılanlar var. Sağdaki \"İncele\" paneli bölümleri, kaynakları ve canlı kontrolleri taşır; kapatabilir ya da odak moduyla yalnızca metni bırakabilirsiniz (Esc çıkar).",
-      en: "Open your work with \"Continue writing\". The editor saves automatically. The single-row toolbar at the top has formatting, the assistant and citations; less frequent tools are in the \"Paragraph\", \"Insert\" and ⋯ menus. The \"Review\" panel on the right holds sections, sources and live checks; you can close it, or use focus mode to keep only the text (Esc exits).",
+      tr: "Çalışmanızı \"Yazmaya devam et\" ile açın. Editör yazdıklarınızı kendiliğinden kaydeder. Üstteki tek satırlık araç çubuğunda biçim, asistan ve atıf; \"Paragraf\", \"Ekle\" ve ⋯ menülerinde seyrek kullanılanlar var. Sağ üstteki panel düğmesi yazım panelini açar; dört sekmesi var: Asistan, İnceleme (bölümler ve canlı kontroller), Kaynaklar ve Teslim. Paneli kapatabilir ya da odak moduyla yalnızca metni bırakabilirsiniz (Esc çıkar).",
+      en: "Open your work with \"Continue writing\". The editor saves automatically. The single-row toolbar at the top has formatting, the assistant and citations; less frequent tools are in the \"Paragraph\", \"Insert\" and ⋯ menus. The panel button at the top right opens the writing panel with four tabs: Assistant, Review (sections and live checks), Sources and Submission. You can close it, or use focus mode to keep only the text (Esc exits).",
     },
     adimlar: [
       {
@@ -455,20 +455,20 @@ const BOLUMLER: KilavuzBolumu[] = [
     },
     adimlar: [
       {
-        tr: "Editörde araç çubuğundaki \"Asistan\" düğmesi yazım asistanını sağda açar. Ne yazmak istediğinizi anlatın ya da metin seçip \"Devam ettir\", \"Akademikleştir\", \"Kısalt\", \"Genişlet\" düğmelerini kullanın.",
-        en: "In the editor, the \"Assistant\" button on the toolbar opens the writing assistant on the right. Describe what you want to write, or select text and use \"Continue\", \"Make academic\", \"Shorten\", \"Expand\".",
+        tr: "Editörde araç çubuğundaki \"Arvo AI\" düğmesi yazım panelinin Asistan sekmesini açar. Ne yazmak istediğinizi anlatın ya da \"Devam ettir\" ile yazdığınızı sürdürün. Metin seçince yanında çıkan \"Arvo AI\" menüsünde (Alt+Enter) \"Akademikleştir\", \"Kısalt\" ve \"Genişlet\" vardır.",
+        en: "In the editor, the \"Arvo AI\" button on the toolbar opens the Assistant tab of the writing panel. Describe what you want to write, or use \"Continue\" to carry on from your text. When you select text, the \"Arvo AI\" menu next to it (Alt+Enter) has \"Make academic\", \"Shorten\" and \"Expand\".",
       },
       {
-        tr: "Sağ paneldeki \"Yazım ipuçları\" yazarken kendiliğinden güncellenir: atıfsız iddia (\"çalışmalar göstermektedir\" deyip atıf vermeyen cümle), aşırı kesin dil (\"kanıtlamaktadır\"), kişisel görüş kalıbı (\"bence\") ve çok uzun cümle/paragraf. \"Göster\" metindeki yeri seçer. Yapay zekâ kullanmaz, kredi harcamaz.",
-        en: "\"Writing tips\" in the right panel update as you write: uncited claims (a sentence saying \"studies have shown\" with no citation), overstated language (\"proves\"), personal-opinion phrases (\"I think\") and very long sentences/paragraphs. \"Show\" selects the spot in the text. It doesn't use AI or credits.",
+        tr: "İnceleme sekmesindeki \"Yazım ipuçları\" yazarken kendiliğinden güncellenir: atıfsız iddia (\"çalışmalar göstermektedir\" deyip atıf vermeyen cümle), aşırı kesin dil (\"kanıtlamaktadır\"), kişisel görüş kalıbı (\"bence\") ve çok uzun cümle/paragraf. \"Göster\" metindeki yeri seçer. Yapay zekâ kullanmaz, kredi harcamaz.",
+        en: "\"Writing tips\" in the Review tab update as you write: uncited claims (a sentence saying \"studies have shown\" with no citation), overstated language (\"proves\"), personal-opinion phrases (\"I think\") and very long sentences/paragraphs. \"Show\" selects the spot in the text. It doesn't use AI or credits.",
       },
       {
-        tr: "Sağ paneldeki \"Yazarlık\" kartı gövdenin yüzde kaçının yazım asistanından eklendiğini gösterir; pencerede eklemeler listelenir ve istenirse editörde vurgulanır. Kopyala–yapıştırla alınan metin bu sayıya girmez; bu bir yapay zekâ tespit puanı değildir.",
-        en: "The \"Authorship\" card in the right panel shows what percentage of the body was inserted from the writing assistant; the window lists the insertions and can highlight them in the editor. Text taken by copy–paste isn't counted; this is not an AI-detection score.",
+        tr: "İnceleme sekmesindeki \"Yazarlık\" kartı gövdenin yüzde kaçının yazım asistanından eklendiğini gösterir; pencerede eklemeler listelenir ve istenirse editörde vurgulanır. Kopyala–yapıştırla alınan metin bu sayıya girmez; bu bir yapay zekâ tespit puanı değildir.",
+        en: "The \"Authorship\" card in the Review tab shows what percentage of the body was inserted from the writing assistant; the window lists the insertions and can highlight them in the editor. Text taken by copy–paste isn't counted; this is not an AI-detection score.",
       },
       {
-        tr: "Satır içi öneri: editörde Alt+/ imlecin önüne gri bir devam önerir; Tab kabul eder, Esc ya da yazmaya devam etmek vazgeçer. Araç çubuğundaki \"Öneri\" açıksa yazma durduğunda öneri kendiliğinden gelir. Her öneri bir asistan hakkı kullanır; öneri de kütüphanenizde olmayan kaynağa atıf yapamaz ve metninizde olmayan sayı yazamaz.",
-        en: "Inline suggestions: in the editor, Alt+/ shows a grey continuation at the cursor; Tab accepts, Esc or continuing to type dismisses. With \"Suggest\" on the toolbar turned on, a suggestion appears when you pause. Each suggestion uses one assistant credit; suggestions also can't cite sources outside your library or write numbers that aren't in your text.",
+        tr: "Satır içi öneri: editörde Alt+/ imlecin önüne gri bir devam önerir; Tab kabul eder, Esc ya da yazmaya devam etmek vazgeçer. Asistan sekmesindeki \"Satır içi öneri\" anahtarı açıksa yazma durduğunda öneri kendiliğinden gelir. Her öneri bir asistan hakkı kullanır; öneri de kütüphanenizde olmayan kaynağa atıf yapamaz ve metninizde olmayan sayı yazamaz.",
+        en: "Inline suggestions: in the editor, Alt+/ shows a grey continuation at the cursor; Tab accepts, Esc or continuing to type dismisses. With the \"Inline suggestions\" switch in the Assistant tab turned on, a suggestion appears when you pause. Each suggestion uses one assistant credit; suggestions also can't cite sources outside your library or write numbers that aren't in your text.",
       },
       {
         tr: "Paneldeki \"Ana hat\" kılavuzunuzun zorunlu bölümlerini omurga alarak bir başlık iskeleti ve her başlık altına ne yazılacağına dair kısa notlar önerir; \"Paragrafın altına ekle\" ile başlıklar ve köşeli parantezli notlar belgeye girer, notların yerine kendi metninizi yazarsınız.",
@@ -523,8 +523,12 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "Use \"Ask an expert\" to choose your work and the topic (analysis, statistics, methodology, language/format) and write your message. The reply arrives in the same thread and the bell notifies you.",
       },
       {
-        tr: "Bir hata, erişim sorunu ya da ödeme sorusu için \"Bize yaz\"ı kullanın.",
-        en: "For a bug, an access problem or a payment question, use \"Write to us\".",
+        tr: "Bir hata, erişim sorunu ya da ödeme sorusu için \"Bize yaz\"ı kullanın; yazmadan önce bu kılavuzda aramak çoğu zaman daha hızlıdır.",
+        en: "For a bug, an access problem or a payment question, use \"Write to us\"; searching this guide first is often faster.",
+      },
+      {
+        tr: "İki türün talepleri aynı \"Taleplerim\" listesinde durur; yanıt gelen talep listenin başına çıkar ve sayfa açılınca seçili gelir. Seçtiğiniz talebin yazışması sağda (telefonda listenin altında) açılır; oradan yanıt yazarsınız. Çözülmüş bir talebe yazarsanız talep yeniden açılır.",
+        en: "Requests of both kinds sit in the same \"My requests\" list; a request with a new reply moves to the top and is selected when the page opens. The conversation of the selected request opens on the right (below the list on a phone), where you reply. Writing to a resolved request reopens it.",
       },
     ],
     notlar: [
@@ -539,13 +543,13 @@ const BOLUMLER: KilavuzBolumu[] = [
     id: "hesap",
     baslik: { tr: "Hesabınız, abonelik ve ayarlar", en: "Your account, subscription and settings" },
     ozet: {
-      tr: "Ad, dil, şifre, oturumlar, verileriniz ve aboneliğiniz.",
-      en: "Name, language, password, sessions, your data and your subscription.",
+      tr: "Ad, dil, görünüm, şifre, oturumlar, verileriniz ve aboneliğiniz.",
+      en: "Name, language, appearance, password, sessions, your data and your subscription.",
     },
     adimlar: [
       {
-        tr: "Ayarlar'da ad soyadınızı düzenleyin (kapak sayfasında kullanılır) ve arayüz dilini seçin.",
-        en: "In Settings, edit your full name (used on the cover page) and choose the interface language.",
+        tr: "Ayarlar'da ad soyadınızı düzenleyin (kapak sayfasında kullanılır). \"Tercihler\" bölümünde arayüz dilini ve görünümü (Açık, Koyu ya da cihazınızı izleyen Sistem) seçin.",
+        en: "In Settings, edit your full name (used on the cover page). In \"Preferences\", choose the interface language and the appearance (Light, Dark, or System to follow your device).",
       },
       {
         tr: "Şifrenizi \"Değiştir\" ile güncelleyin. Hesabınız aynı anda tek cihazda açık kalır: başka bir cihazdan giriş yapınca öncekindeki oturum uyarıyla kapanır. \"Diğer cihazlar\" → \"Kapat\" aynı işi hemen yapar.",
@@ -651,8 +655,8 @@ const SORULAR: KilavuzSorusu[] = [
   {
     soru: { tr: "Asistan tezimi benim yerime yazar mı?", en: "Will the assistant write my thesis for me?" },
     cevap: {
-      tr: "Hayır. Asistan eksikleri ve nedenlerini gösterir; cümleyi siz kurarsınız. Bu, çalışmanızın size ait kalması içindir.",
-      en: "No. The assistant shows what is missing and why; you write the sentences. This keeps your work your own.",
+      tr: "Hayır. Yazım asistanı sohbette taslak yazabilir, ama metin belgenize kendiliğinden girmez: eklemek sizin kararınızdır ve eklenen pay \"Yazarlık\" kartında görünür. Öteki ekranlardaki asistan yalnızca eksikleri ve nedenlerini gösterir. Asistan kaynak önermez ve kütüphanenizde olmayan bir kaynağa atıf yapamaz.",
+      en: "No. The writing assistant can draft text in the chat, but nothing enters your document on its own: adding it is your decision, and the inserted share appears on the \"Authorship\" card. On other screens the assistant only shows what is missing and why. The assistant does not recommend sources and cannot cite a source outside your library.",
     },
   },
   {
