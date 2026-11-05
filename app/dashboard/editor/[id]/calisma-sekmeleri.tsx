@@ -2,6 +2,7 @@ import { calismaAdresi } from "@/lib/calisma-karti";
 import Link from "next/link";
 import { ceviri } from "@/lib/dil-sunucu";
 import { CalismaBaglamiYayinla } from "../../_components/calisma-baglami";
+import SekmeSeridi from "./sekme-seridi";
 
 /*
   ÇALIŞMANIN SEKMELERİ: Özet · Yazım · Kanıt · Makale.
@@ -45,13 +46,14 @@ export default async function CalismaSekmeleri({
   return (
     <>
     <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title ?? ""} tur={calisma.project_type} />
-    <nav className="segmented calisma-sekmeleri" aria-label={t({ tr: "Çalışma bölümleri", en: "Work sections" })}>
+    {/* Şerit etkin sekmeyi görünür kılar (sekme-seridi.tsx): telefonda Makale sekmesi "Maka…" diye kesiliyordu. */}
+    <SekmeSeridi etiket={t({ tr: "Çalışma bölümleri", en: "Work sections" })}>
       {sekmeler.map((sekme) => (
         <Link key={sekme.anahtar} href={sekme.href} aria-current={sekme.anahtar === aktif ? "page" : undefined}>
           {sekme.etiket}
         </Link>
       ))}
-    </nav>
+    </SekmeSeridi>
     </>
   );
 }

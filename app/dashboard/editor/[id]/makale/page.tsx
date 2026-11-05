@@ -2,7 +2,7 @@ import { calismaAdresi } from "@/lib/calisma-karti";
 import { trGunAnahtari } from "@/lib/tr-time";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ExternalLink, FileText, ListChecks, Mail, Microscope, Search, Settings2, Sparkles } from "lucide-react";
+import { ChevronDown, ExternalLink, FileText, ListChecks, Mail, Microscope, Search, Settings2, Sparkles } from "lucide-react";
 import TarihSecici from "@/app/dashboard/_components/tarih-secici";
 import { createClient } from "@/lib/supabase/server";
 import { makaleProfiliKaydet, makaleProfiliOku } from "@/app/actions/makale";
@@ -23,6 +23,9 @@ import {
 import { denetimListesi } from "@/lib/ai/makale-denetimi";
 import { matrisOzeti } from "@/lib/kanit/durum";
 import ActionForm from "@/app/dashboard/action-form";
+import SayfaBasligi from "@/app/dashboard/_components/sayfa/sayfa-basligi";
+import SayfaEylemleri from "@/app/dashboard/_components/sayfa/sayfa-eylemleri";
+import DurumGostergesi from "@/app/dashboard/_components/sayfa/durum-gostergesi";
 import PanelDrawer from "@/app/dashboard/_components/panel-drawer";
 import { aktifDil, ceviri, tarihler } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
@@ -67,6 +70,23 @@ const MADDE_ETIKETI: Record<keyof typeof MADDE_TONU, Metin> = {
   eksik: { tr: "Eksik", en: "Missing" },
   dikkat: { tr: "Bakılacak", en: "Review" },
   bilgi: { tr: "Not", en: "Note" },
+};
+
+/*
+  Kontrol listesi DURUMA GÖRE GRUPLU (Signature OS, Makale Aşama 1,
+  05.11.2026). Eskiden dokuz madde hesaplandığı sırayla, her biri sol
+  kenarı renkli ayrı bir kart olarak diziliyordu: "neyi yapmam gerekiyor"
+  sorusunun cevabı (eksikler) "tamam" maddelerinin arasına dağılıyordu.
+  Maddeler, metinleri ve hesapları AYNI (lib/makale/gonderim-kontrolu.ts);
+  değişen yalnızca sıra ve görünüm. Tamamlananlar kapalı bir grupta: sayısı
+  görünür, açınca maddeler.
+*/
+const GRUP_SIRASI = ["eksik", "dikkat", "bilgi", "tamam"] as const;
+const GRUP_BASLIGI: Record<(typeof GRUP_SIRASI)[number], Metin> = {
+  eksik: { tr: "Eksik", en: "Missing" },
+  dikkat: { tr: "Bakılacak", en: "To review" },
+  bilgi: { tr: "Notlar", en: "Notes" },
+  tamam: { tr: "Tamamlanan", en: "Done" },
 };
 
 const KAPAK_MEKTUBU: Metin[] = [
@@ -172,137 +192,163 @@ export default async function MakaleCalismaAlani({
   */
   return (
     <main className="dashboard-page gb gb-tek-ekran">
-      <section className="projects-header calisma-basligi">
-        <div>
-          <span className="dashboard-kicker">
-            {t({ tr: "Makale çalışma alanı", en: "Article workspace" })} · {tur.etiket}
-          </span>
-          <h1 title={calisma.title}>{calisma.title}</h1>
-          <p>
-            {profil.hedef_dergi
-              ? t({ tr: `Hedef: ${profil.hedef_dergi}`, en: `Target: ${profil.hedef_dergi}` })
-              : t({ tr: "Hedef dergi seçilmedi", en: "No target journal selected" })}
-            {profil.arastirma_sorusu ? ` · ${profil.arastirma_sorusu}` : ""}
-          </p>
-        </div>
-        <div className="merkez-ust-eylemler">
-          <PanelDrawer
-            triggerLabel={
-              kayitliProfil ? t({ tr: "Makale bilgileri", en: "Article details" }) : t({ tr: "Makale bilgilerini girin", en: "Enter article details" })
+      {/* Ortak sayfa başlığı (Signature OS 4.1). Tek birincil eylem: makale bilgileri. */}
+      <SayfaBasligi
+        sinif="calisma-basligi makale-basligi"
+        ust={`${t({ tr: "Makale çalışma alanı", en: "Article workspace" })} · ${tur.etiket}`}
+        baslik={calisma.title}
+        baslikTitle={calisma.title}
+        aciklama={`${
+          profil.hedef_dergi
+            ? t({ tr: `Hedef: ${profil.hedef_dergi}`, en: `Target: ${profil.hedef_dergi}` })
+            : t({ tr: "Hedef dergi seçilmedi", en: "No target journal selected" })
+        }${profil.arastirma_sorusu ? ` · ${profil.arastirma_sorusu}` : ""}`}
+        eylemler={
+          <SayfaEylemleri
+            birincil={
+              <PanelDrawer
+                triggerLabel={
+                  kayitliProfil ? t({ tr: "Makale bilgileri", en: "Article details" }) : t({ tr: "Makale bilgilerini girin", en: "Enter article details" })
+                }
+                triggerIcon={<Settings2 size={16} aria-hidden="true" />}
+                triggerClassName={kayitliProfil ? "projects-filter-button" : "projects-primary-button"}
+                kicker={t({ tr: "Makale", en: "Article" })}
+                title={t({ tr: "Makale bilgileri", en: "Article details" })}
+                description={t({
+                  tr: "Tür, araştırma sorusu ve hedef derginin sınırları. Dergi bilgilerini derginin kendi sayfasından kontrol edin; ArvoLab bunları doğrulamıyor.",
+                  en: "Type, research question and the target journal's limits. Check the journal details on the journal's own website; ArvoLab does not verify them.",
+                })}
+                boy="genis"
+                /* Yeni makale buraya ?dergi=1 ile geliyor (createProject): kılavuzun
+                   makaledeki karşılığı derginin kuralları, ilk iş onları girmek. */
+                acikBasla={sorgu.dergi === "1" && !kayitliProfil}
+              >
+                <ActionForm className="project-form-grid" action={makaleProfiliKaydet} successMessage={t({ tr: "Makale bilgileri kaydedildi.", en: "Article details saved." })}>
+                  <input type="hidden" name="project_id" value={id} />
+                  {/*
+                    DÖRT GRUP (Signature OS, Makale Aşama 1). Eskiden on sekiz alan
+                    tek düz ızgaradaydı. Alanların adı, sınırı ve kaydı AYNI
+                    (app/actions/makale.ts, makaleProfiliKaydet); yalnızca yerleri
+                    ve gruplamaları değişti. Her grup bir fieldset: ekran okuyucu
+                    alanı grubun adıyla birlikte okur.
+                  */}
+                  <fieldset className="makale-form-grup project-form-full" aria-describedby="makale-grup-makale">
+                    <legend>{t({ tr: "Makale", en: "Article" })}</legend>
+                    <p id="makale-grup-makale">{t({ tr: "Tür, dil, özet ve anahtar kelimeler.", en: "Type, language, abstract and keywords." })}</p>
+                    <label>
+                      <span>{t({ tr: "Makale türü", en: "Article type" })}</span>
+                      <select name="makale_turu" defaultValue={profil.makale_turu}>
+                        {MAKALE_TURU_SIRASI.map((k) => (
+                          <option key={k} value={k}>{makaleTuruTanimi(k, dil).etiket}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Makale dili", en: "Article language" })}</span>
+                      <select name="dil" defaultValue={profil.dil}>
+                        <option value="tr">{t({ tr: "Türkçe", en: "Turkish" })}</option>
+                        <option value="en">{t({ tr: "İngilizce", en: "English" })}</option>
+                        <option value="diger">{t({ tr: "Diğer", en: "Other" })}</option>
+                      </select>
+                    </label>
+                    <label className="project-form-full">
+                      <span>{t({ tr: "Özet", en: "Abstract" })}</span>
+                      <textarea name="ozet" rows={5} maxLength={8000} defaultValue={profil.ozet ?? ""} />
+                    </label>
+                    <label className="project-form-full">
+                      <span>{t({ tr: "Anahtar kelimeler (virgülle ayırın)", en: "Keywords (separate with commas)" })}</span>
+                      <input name="anahtar_kelimeler" type="text" defaultValue={profil.anahtar_kelimeler.join(", ")} />
+                    </label>
+                  </fieldset>
+                  <fieldset className="makale-form-grup project-form-full" aria-describedby="makale-grup-arastirma">
+                    <legend>{t({ tr: "Araştırma", en: "Research" })}</legend>
+                    <p id="makale-grup-arastirma">{t({ tr: "Problem, soru, tasarım ve verinin durumu.", en: "Problem, question, design and data status." })}</p>
+                    <label className="project-form-full">
+                      <span>{t({ tr: "Araştırma problemi", en: "Research problem" })}</span>
+                      <textarea name="arastirma_problemi" rows={2} maxLength={2000} defaultValue={profil.arastirma_problemi ?? ""} />
+                    </label>
+                    <label className="project-form-full">
+                      <span>{t({ tr: "Araştırma sorusu", en: "Research question" })}</span>
+                      <textarea name="arastirma_sorusu" rows={2} maxLength={1000} defaultValue={profil.arastirma_sorusu ?? ""} />
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Araştırma tasarımı", en: "Research design" })}</span>
+                      <input
+                        name="arastirma_tasarimi"
+                        type="text"
+                        maxLength={500}
+                        defaultValue={kayitliProfil?.arastirma_tasarimi ?? ""}
+                        placeholder={t({ tr: "Kesitsel, yarı deneysel, fenomenoloji…", en: "Cross-sectional, quasi-experimental, phenomenology…" })}
+                      />
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Hedef disiplin", en: "Target discipline" })}</span>
+                      <input name="disiplin" type="text" maxLength={200} defaultValue={kayitliProfil?.disiplin ?? ""} />
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Veri ve analiz durumu", en: "Data and analysis status" })}</span>
+                      <select name="veri_durumu" defaultValue={profil.veri_durumu}>
+                        <option value="yok">{t({ tr: "Veri yok", en: "No data" })}</option>
+                        <option value="toplaniyor">{t({ tr: "Veri toplanıyor", en: "Collecting data" })}</option>
+                        <option value="toplandi">{t({ tr: "Veri toplandı", en: "Data collected" })}</option>
+                        <option value="analiz_edildi">{t({ tr: "Analiz tamamlandı", en: "Analysis completed" })}</option>
+                        <option value="gerekmiyor">{t({ tr: "Veri gerekmiyor (derleme vb.)", en: "No data needed (review, etc.)" })}</option>
+                      </select>
+                    </label>
+                  </fieldset>
+                  <fieldset className="makale-form-grup project-form-full" aria-describedby="makale-grup-dergi">
+                    <legend>{t({ tr: "Dergi", en: "Journal" })}</legend>
+                    <p id="makale-grup-dergi">{t({ tr: "Hedef dergi ve yazım kuralları; bunları derginin kendi sayfasından kontrol edin.", en: "Target journal and author guidelines; check them on the journal's own website." })}</p>
+                    <label>
+                      <span>{t({ tr: "Hedef dergi / yayın", en: "Target journal / venue" })}</span>
+                      <input name="hedef_dergi" type="text" maxLength={300} defaultValue={profil.hedef_dergi ?? ""} />
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Yazım kuralları adresi", en: "Author guidelines URL" })}</span>
+                      <input name="dergi_kurallari_adresi" type="url" maxLength={1000} defaultValue={profil.dergi_kurallari_adresi ?? ""} placeholder="https://" />
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Kuralları kontrol ettiğim tarih", en: "Date I checked the guidelines" })}</span>
+                      <TarihSecici name="dergi_kurallari_kontrol" deger={profil.dergi_kurallari_kontrol} etiket={t({ tr: "Kuralları kontrol ettiğim tarih", en: "Date I checked the guidelines" })} />
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Raporlama standardı", en: "Reporting standard" })}</span>
+                      <input name="raporlama_standardi" type="text" maxLength={100} defaultValue={profil.raporlama_standardi ?? ""} placeholder={tur.standartlar[0]?.ad ?? ""} />
+                    </label>
+                    <label className="project-form-full">
+                      <span>{t({ tr: "Dergi kuralları notları", en: "Journal guideline notes" })}</span>
+                      <textarea name="dergi_kurallari_notu" rows={3} maxLength={4000} defaultValue={kayitliProfil?.dergi_kurallari_notu ?? ""} />
+                    </label>
+                  </fieldset>
+                  <fieldset className="makale-form-grup project-form-full" aria-describedby="makale-grup-sinirlar">
+                    <legend>{t({ tr: "Sınırlar", en: "Limits" })}</legend>
+                    <p id="makale-grup-sinirlar">{t({ tr: "Derginin sözcük ve anahtar kelime sınırları.", en: "The journal's word and keyword limits." })}</p>
+                    <label>
+                      <span>{t({ tr: "Kelime sınırı", en: "Word limit" })}</span>
+                      <input name="kelime_siniri" type="number" min={100} max={100000} defaultValue={profil.kelime_siniri ?? ""} />
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Özet sınırı (sözcük)", en: "Abstract limit (words)" })}</span>
+                      <input name="ozet_siniri" type="number" min={30} max={2000} defaultValue={profil.ozet_siniri ?? ""} />
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Anahtar kelime (en az)", en: "Keywords (minimum)" })}</span>
+                      <input name="anahtar_en_az" type="number" min={1} max={20} defaultValue={profil.anahtar_en_az ?? ""} />
+                    </label>
+                    <label>
+                      <span>{t({ tr: "Anahtar kelime (en çok)", en: "Keywords (maximum)" })}</span>
+                      <input name="anahtar_en_cok" type="number" min={1} max={20} defaultValue={profil.anahtar_en_cok ?? ""} />
+                    </label>
+                  </fieldset>
+                  <div className="project-form-actions project-form-full">
+                    <button type="submit" className="projects-primary-button">{t({ tr: "Kaydet", en: "Save" })}</button>
+                  </div>
+                </ActionForm>
+              </PanelDrawer>
             }
-            triggerIcon={<Settings2 size={16} aria-hidden="true" />}
-            triggerClassName={kayitliProfil ? "projects-filter-button" : "projects-primary-button"}
-            kicker={t({ tr: "Makale", en: "Article" })}
-            title={t({ tr: "Makale bilgileri", en: "Article details" })}
-            description={t({
-              tr: "Tür, araştırma sorusu ve hedef derginin sınırları. Dergi bilgilerini derginin kendi sayfasından kontrol edin; ArvoLab bunları doğrulamıyor.",
-              en: "Type, research question and the target journal's limits. Check the journal details on the journal's own website; ArvoLab does not verify them.",
-            })}
-            /* Yeni makale buraya ?dergi=1 ile geliyor (createProject): kılavuzun
-               makaledeki karşılığı derginin kuralları, ilk iş onları girmek. */
-            acikBasla={sorgu.dergi === "1" && !kayitliProfil}
-          >
-            <ActionForm className="project-form-grid" action={makaleProfiliKaydet} successMessage={t({ tr: "Makale bilgileri kaydedildi.", en: "Article details saved." })}>
-              <input type="hidden" name="project_id" value={id} />
-              <label>
-                <span>{t({ tr: "Makale türü", en: "Article type" })}</span>
-                <select name="makale_turu" defaultValue={profil.makale_turu}>
-                  {MAKALE_TURU_SIRASI.map((k) => (
-                    <option key={k} value={k}>{makaleTuruTanimi(k, dil).etiket}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>{t({ tr: "Makale dili", en: "Article language" })}</span>
-                <select name="dil" defaultValue={profil.dil}>
-                  <option value="tr">{t({ tr: "Türkçe", en: "Turkish" })}</option>
-                  <option value="en">{t({ tr: "İngilizce", en: "English" })}</option>
-                  <option value="diger">{t({ tr: "Diğer", en: "Other" })}</option>
-                </select>
-              </label>
-              <label className="project-form-full">
-                <span>{t({ tr: "Araştırma problemi", en: "Research problem" })}</span>
-                <textarea name="arastirma_problemi" rows={2} maxLength={2000} defaultValue={profil.arastirma_problemi ?? ""} />
-              </label>
-              <label className="project-form-full">
-                <span>{t({ tr: "Araştırma sorusu", en: "Research question" })}</span>
-                <textarea name="arastirma_sorusu" rows={2} maxLength={1000} defaultValue={profil.arastirma_sorusu ?? ""} />
-              </label>
-              <label>
-                <span>{t({ tr: "Araştırma tasarımı", en: "Research design" })}</span>
-                <input
-                  name="arastirma_tasarimi"
-                  type="text"
-                  maxLength={500}
-                  defaultValue={kayitliProfil?.arastirma_tasarimi ?? ""}
-                  placeholder={t({ tr: "Kesitsel, yarı deneysel, fenomenoloji…", en: "Cross-sectional, quasi-experimental, phenomenology…" })}
-                />
-              </label>
-              <label>
-                <span>{t({ tr: "Hedef disiplin", en: "Target discipline" })}</span>
-                <input name="disiplin" type="text" maxLength={200} defaultValue={kayitliProfil?.disiplin ?? ""} />
-              </label>
-              <label>
-                <span>{t({ tr: "Hedef dergi / yayın", en: "Target journal / venue" })}</span>
-                <input name="hedef_dergi" type="text" maxLength={300} defaultValue={profil.hedef_dergi ?? ""} />
-              </label>
-              <label>
-                <span>{t({ tr: "Yazım kuralları adresi", en: "Author guidelines URL" })}</span>
-                <input name="dergi_kurallari_adresi" type="url" maxLength={1000} defaultValue={profil.dergi_kurallari_adresi ?? ""} placeholder="https://" />
-              </label>
-              <label>
-                <span>{t({ tr: "Kuralları kontrol ettiğim tarih", en: "Date I checked the guidelines" })}</span>
-                <TarihSecici name="dergi_kurallari_kontrol" deger={profil.dergi_kurallari_kontrol} etiket={t({ tr: "Kuralları kontrol ettiğim tarih", en: "Date I checked the guidelines" })} />
-              </label>
-              <label>
-                <span>{t({ tr: "Raporlama standardı", en: "Reporting standard" })}</span>
-                <input name="raporlama_standardi" type="text" maxLength={100} defaultValue={profil.raporlama_standardi ?? ""} placeholder={tur.standartlar[0]?.ad ?? ""} />
-              </label>
-              <label>
-                <span>{t({ tr: "Kelime sınırı", en: "Word limit" })}</span>
-                <input name="kelime_siniri" type="number" min={100} max={100000} defaultValue={profil.kelime_siniri ?? ""} />
-              </label>
-              <label>
-                <span>{t({ tr: "Özet sınırı (sözcük)", en: "Abstract limit (words)" })}</span>
-                <input name="ozet_siniri" type="number" min={30} max={2000} defaultValue={profil.ozet_siniri ?? ""} />
-              </label>
-              <label>
-                <span>{t({ tr: "Anahtar kelime (en az)", en: "Keywords (minimum)" })}</span>
-                <input name="anahtar_en_az" type="number" min={1} max={20} defaultValue={profil.anahtar_en_az ?? ""} />
-              </label>
-              <label>
-                <span>{t({ tr: "Anahtar kelime (en çok)", en: "Keywords (maximum)" })}</span>
-                <input name="anahtar_en_cok" type="number" min={1} max={20} defaultValue={profil.anahtar_en_cok ?? ""} />
-              </label>
-              <label>
-                <span>{t({ tr: "Veri ve analiz durumu", en: "Data and analysis status" })}</span>
-                <select name="veri_durumu" defaultValue={profil.veri_durumu}>
-                  <option value="yok">{t({ tr: "Veri yok", en: "No data" })}</option>
-                  <option value="toplaniyor">{t({ tr: "Veri toplanıyor", en: "Collecting data" })}</option>
-                  <option value="toplandi">{t({ tr: "Veri toplandı", en: "Data collected" })}</option>
-                  <option value="analiz_edildi">{t({ tr: "Analiz tamamlandı", en: "Analysis completed" })}</option>
-                  <option value="gerekmiyor">{t({ tr: "Veri gerekmiyor (derleme vb.)", en: "No data needed (review, etc.)" })}</option>
-                </select>
-              </label>
-              <label className="project-form-full">
-                <span>{t({ tr: "Özet", en: "Abstract" })}</span>
-                <textarea name="ozet" rows={5} maxLength={8000} defaultValue={profil.ozet ?? ""} />
-              </label>
-              <label className="project-form-full">
-                <span>{t({ tr: "Anahtar kelimeler (virgülle ayırın)", en: "Keywords (separate with commas)" })}</span>
-                <input name="anahtar_kelimeler" type="text" defaultValue={profil.anahtar_kelimeler.join(", ")} />
-              </label>
-              <label className="project-form-full">
-                <span>{t({ tr: "Dergi kuralları notları", en: "Journal guideline notes" })}</span>
-                <textarea name="dergi_kurallari_notu" rows={3} maxLength={4000} defaultValue={kayitliProfil?.dergi_kurallari_notu ?? ""} />
-              </label>
-              <div className="project-form-actions project-form-full">
-                <button type="submit" className="projects-primary-button">{t({ tr: "Kaydet", en: "Save" })}</button>
-              </div>
-            </ActionForm>
-          </PanelDrawer>
-        </div>
-      </section>
+          />
+        }
+      />
 
       <CalismaSekmeleri calisma={calisma} aktif="makale" />
 
@@ -325,43 +371,14 @@ export default async function MakaleCalismaAlani({
       )}
 
       <section className="gb-sutunlar makale-ikili" aria-label={t({ tr: "Gönderim kontrolü ve araçlar", en: "Submission checklist and tools" })}>
-      <article className="gb-kart gb-sutun">
-        <header className="gb-kart-bas">
-          <div>
-            <h2>
-              <ListChecks size={16} aria-hidden="true" /> {t({ tr: "Gönderim öncesi kontrol", en: "Pre-submission checklist" })}
-            </h2>
-            <p>
-              {t({
-                tr: "Kaydedilmiş müsveddeden ve kanıt matrisinden hesaplanır. Kabul olasılığı ya da dergiye uygunluk hükmü verilmez; bunları hiçbir veri doğrulayamaz.",
-                en: "Calculated from the saved manuscript and the evidence matrix. No acceptance probability or journal-fit verdict is given; no data can verify these.",
-              })}
-            </p>
-          </div>
-          <span className="asistan-bulgu-sayilari">
-            {(["eksik", "dikkat", "tamam"] as const).map((d) =>
-              durumSayisi(d) ? (
-                <span key={d} data-tone={MADDE_TONU[d]}>
-                  {durumSayisi(d)} {t(MADDE_ETIKETI[d]).toLocaleLowerCase(dil === "en" ? "en-US" : "tr-TR")}
-                </span>
-              ) : null,
-            )}
-          </span>
-        </header>
-        <ul className="asistan-bulgular">
-          {maddeler.map((m) => (
-            <li className="asistan-bulgu" data-tone={MADDE_TONU[m.durum]} key={m.anahtar}>
-              <span className="asistan-bulgu-etiket">{t(MADDE_ETIKETI[m.durum])}</span>
-              <span className="asistan-bulgu-metin">
-                <b>{m.baslik}</b>
-                {m.aciklama}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </article>
-
       {/*
+        ARAÇLAR ÖNCE (Signature OS, Makale Aşama 1, 05.11.2026). DOM'da
+        araçlar kontrol listesinden ÖNCE: telefonda bölüm denetimi ve
+        şablon, dokuz maddelik listenin altında 1500 pikselden sonra
+        geliyordu. Masaüstünde ızgara onları yine sağ sütuna koyuyor
+        (genel-bakis.css, .makale-ikili); klavye sırası da araçlarla
+        başlıyor — sayfanın eylemleri onlar.
+
         ARAÇLAR KAROLARDA (26.10.2026, kurum sahibinin isteği: ArvoOS
         gibi açılır pencereler). Sayfa eskiden yedi bölümü alt alta
         diziyordu; gönderim kontrolü — makalenin asıl sorusu, "gönderebilir
@@ -370,10 +387,10 @@ export default async function MakaleCalismaAlani({
         kapak mektubu ikinci satırında ne içerdiğini söyleyen karolar.
         Dışa aktarma karosu kalktı: "Yazım" sekmesinin kendisi.
       */}
-      <article className="gb-kart gb-sutun">
+      <article className="gb-kart gb-sutun makale-araclar-kart" aria-labelledby="makale-araclar-baslik">
         <header className="gb-kart-bas">
           <div>
-            <h2>{t({ tr: "Araçlar", en: "Tools" })}</h2>
+            <h2 id="makale-araclar-baslik">{t({ tr: "Araçlar", en: "Tools" })}</h2>
             <p>{t({ tr: "Her araç kendi penceresinde açılır.", en: "Each tool opens in its own window." })}</p>
           </div>
         </header>
@@ -592,6 +609,69 @@ export default async function MakaleCalismaAlani({
               ))}
             </ul>
           </PanelDrawer>
+        </div>
+      </article>
+
+      <article className="gb-kart gb-sutun makale-kontrol-kart" aria-labelledby="makale-kontrol-baslik">
+        <header className="gb-kart-bas">
+          <div>
+            <h2 id="makale-kontrol-baslik">
+              <ListChecks size={16} aria-hidden="true" /> {t({ tr: "Gönderim öncesi kontrol", en: "Pre-submission checklist" })}
+            </h2>
+            <p>
+              {t({
+                tr: "Kaydedilmiş müsveddeden ve kanıt matrisinden hesaplanır. Kabul olasılığı ya da dergiye uygunluk hükmü verilmez; bunları hiçbir veri doğrulayamaz.",
+                en: "Calculated from the saved manuscript and the evidence matrix. No acceptance probability or journal-fit verdict is given; no data can verify these.",
+              })}
+            </p>
+          </div>
+          <span className="makale-kontrol-ozet">
+            {(["eksik", "dikkat", "tamam"] as const).map((d) =>
+              durumSayisi(d) ? (
+                <DurumGostergesi key={d} ton={MADDE_TONU[d]}>
+                  {durumSayisi(d)} {t(MADDE_ETIKETI[d]).toLocaleLowerCase(dil === "en" ? "en-US" : "tr-TR")}
+                </DurumGostergesi>
+              ) : null,
+            )}
+          </span>
+        </header>
+        <div className="makale-kontrol">
+          {GRUP_SIRASI.map((durum) => {
+            const grup = maddeler.filter((m) => m.durum === durum);
+            if (!grup.length) return null;
+            const liste = (
+              <ul className="makale-kontrol-liste">
+                {grup.map((m) => (
+                  <li key={m.anahtar}>
+                    <b>{m.baslik}</b>
+                    <span>{m.aciklama}</span>
+                  </li>
+                ))}
+              </ul>
+            );
+            const baslik = (
+              <>
+                <span className="makale-kontrol-nokta" aria-hidden="true" />
+                {t(GRUP_BASLIGI[durum])}
+                <span className="makale-kontrol-sayi">{grup.length}</span>
+              </>
+            );
+            /* Tamamlananlar kapalı: yapılacak bir şey yok, sayı yeter. */
+            return durum === "tamam" ? (
+              <details key={durum} className="makale-kontrol-grup" data-tone={MADDE_TONU[durum]}>
+                <summary>
+                  <h3>{baslik}</h3>
+                  <ChevronDown className="makale-kontrol-ok" size={16} aria-hidden="true" />
+                </summary>
+                {liste}
+              </details>
+            ) : (
+              <section key={durum} className="makale-kontrol-grup" data-tone={MADDE_TONU[durum]} aria-labelledby={`makale-kontrol-${durum}`}>
+                <h3 id={`makale-kontrol-${durum}`}>{baslik}</h3>
+                {liste}
+              </section>
+            );
+          })}
         </div>
       </article>
       </section>

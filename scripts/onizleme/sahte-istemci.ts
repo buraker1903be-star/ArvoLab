@@ -75,7 +75,12 @@ function sorgu(tablo: string) {
   let satirlar: Satir[] = BOS && BOS_TABLOLAR.has(tablo) ? [] : [...((ORNEK as Record<string, Satir[]>)[tablo] ?? [])];
   if (ROL && tablo === "profiles") satirlar = satirlar.map((r) => ({ ...r, role: ROL }));
   let tek: "single" | "maybe" | null = null;
-  let yazma: { tur: "update"; deger: Satir } | { tur: "insert"; deger: Satir | Satir[] } | { tur: "delete" } | null = null;
+  let yazma:
+    | { tur: "update"; deger: Satir }
+    | { tur: "insert"; deger: Satir | Satir[] }
+    | { tur: "upsert"; deger: Satir; anahtar: string }
+    | { tur: "delete" }
+    | null = null;
   let sayim = false;
   let yalnizSayim = false;
   const ham: Record<string, unknown> = {};
@@ -109,13 +114,26 @@ function sorgu(tablo: string) {
     // Yazmalar: varsayılan olarak kalıcı değil, başarılı görünür (YAZ kipi yukarıda).
     insert: (deger: Satir | Satir[]) => ((yazma = { tur: "insert", deger }), kurucu),
     update: (deger: Satir) => ((yazma = { tur: "update", deger }), kurucu),
-    upsert: () => kurucu,
+    /*
+      upsert (Makale Aşama 1, 05.11.2026): eskiden hiçbir şey yazmıyordu;
+      Makale bilgileri formu YAZ kipinde "kaydedildi" deyip sayfa
+      yenilenince boş geliyordu. onConflict sütunu eşleşen satırı günceller,
+      yoksa ekler. Tek satırlık upsert yeter (uygulamadaki kullanım bu).
+    */
+    upsert: (deger: Satir, o?: { onConflict?: string }) => ((yazma = { tur: "upsert", deger, anahtar: o?.onConflict ?? "id" }), kurucu),
     delete: () => ((yazma = { tur: "delete" }), kurucu),
     then: (coz: (s: Sonuc) => unknown) => {
       if (YAZ && yazma) {
         const tablo_ = ((ORNEK as Record<string, Satir[]>)[tablo] ??= []);
         if (yazma.tur === "update") for (const r of satirlar) Object.assign(r, yazma.deger);
         else if (yazma.tur === "delete") for (const r of satirlar) tablo_.splice(tablo_.indexOf(r), 1);
+        else if (yazma.tur === "upsert") {
+          const { deger: yeniDeger, anahtar } = yazma;
+          const var_ = tablo_.find((r) => r[anahtar] === yeniDeger[anahtar]);
+          if (var_) Object.assign(var_, yeniDeger);
+          else tablo_.push({ olusturuldu: new Date().toISOString(), ...yeniDeger });
+          satirlar = [var_ ?? tablo_[tablo_.length - 1]];
+        }
         else {
           const yeni = (Array.isArray(yazma.deger) ? yazma.deger : [yazma.deger]).map((d, i) => ({ id: `yeni-${Date.now()}-${i}`, created_at: new Date().toISOString(), ...d }));
           tablo_.push(...yeni);
