@@ -16,7 +16,7 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 import { collectHeadings } from "./editor-navigation";
 import MetinFarki from "./metin-farki";
 import { aralikMetni, araligiBirak, araligiDogrula, araligiIzle, izlenenAralik } from "@/lib/tiptap-asistan-araligi";
-import { ASISTAN_GOREV_OLAYI, type AsistanGorevOlayi, aiAdimiBaslat, aiAdiminiKapat, geriAlmaIslemi, surumGerekir, yeniAralik } from "@/lib/ai-duzenleme";
+import { ASISTAN_GOREV_OLAYI, aiAdimiBaslat, bekleyenGoreviAl, aiAdiminiKapat, geriAlmaIslemi, surumGerekir, yeniAralik } from "@/lib/ai-duzenleme";
 import { kararKaydet } from "@/lib/ai-kararlari";
 
 /*
@@ -203,7 +203,11 @@ export default function YazimPaneli({
     gonderRef.current = gonder;
   });
   useEffect(() => {
-    const dinle = (e: Event) => void gonderRef.current((e as AsistanGorevOlayi).detail.gorev, "");
+    const dinle = () => {
+      const gorev = bekleyenGoreviAl();
+      if (gorev) void gonderRef.current(gorev, "");
+    };
+    dinle();
     window.addEventListener(ASISTAN_GOREV_OLAYI, dinle);
     return () => window.removeEventListener(ASISTAN_GOREV_OLAYI, dinle);
   }, []);

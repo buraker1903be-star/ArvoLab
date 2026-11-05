@@ -76,6 +76,20 @@ const GRUPLAR: { baslik: Metin; satirlar: Kisayol[] }[] = [
     ],
   },
   {
+    /*
+      Arvo AI (4.3): satır içi öneri ve seçim menüsünün tuşları hiçbir
+      listede yoktu; Alt+/ yalnızca panelin küçük açıklamasında yazıyordu.
+    */
+    baslik: { tr: "Arvo AI", en: "Arvo AI" },
+    satirlar: [
+      [["Alt", "/"], { tr: "İmlecin önüne satır içi öneri iste (otomatik öneri kapalıyken de)", en: "Ask for an inline suggestion at the cursor (also when automatic suggestions are off)" }],
+      [["Tab"], { tr: "Gri satır içi öneri görünürken: öneriyi kabul et", en: "While a grey inline suggestion is shown: accept it" }],
+      [["Esc"], { tr: "Satır içi öneriden vazgeç", en: "Dismiss the inline suggestion" }],
+      [["Alt", "Enter"], { tr: "Seçili metin için Arvo AI menüsünü aç (Akademikleştir, Kısalt, Genişlet)", en: "Open the Arvo AI menu for selected text (Make academic, Shorten, Expand)" }],
+      [["Mod", "Enter"], { tr: "Öneriyi düzenlerken: düzenlenmiş hâlini kabul et", en: "While editing a suggestion: accept the edited version" }],
+    ],
+  },
+  {
     baslik: { tr: "Pencereler", en: "Dialogs" },
     satirlar: [
       [["Enter"], { tr: "Bul kutusunda sonraki eşleşme (Shift+Enter: önceki)", en: "In the find box: next match (Shift+Enter: previous)" }],

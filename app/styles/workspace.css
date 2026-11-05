@@ -1613,3 +1613,64 @@
 
 /* Asistan önerisi uygulanamadığında kartta kalan açıklama (yazim-paneli.tsx, 4.3). */
 .yazim-oneri-uyari { margin: 0; padding: 8px 10px; border-left: 3px solid var(--warning); border-radius: var(--r-xs); background: var(--warning-soft); color: var(--ink); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+
+/*
+  Seçimdeki Arvo AI (4.3, secim-ai.tsx). Üst katmanda (popover), ekrana
+  göre konumlu; konum --acilir-x/y'den. Seçimi örtmez (lib/secim-dugmesi-
+  konumu.ts). Hareket yok: belirme ve kaybolma anında. Gölge yalnızca
+  belgenin üstünde ayırt edilsin diye, menülerle aynı.
+*/
+.secim-ai {
+  position: fixed;
+  inset: auto;
+  top: var(--acilir-y, 0);
+  left: var(--acilir-x, 0);
+  z-index: var(--z-menu);
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+.secim-ai[hidden]:not(:popover-open) { display: none; }
+.secim-ai:popover-open { display: grid; justify-items: start; gap: 4px; }
+.secim-ai[data-yukari][data-acik] { align-content: end; }
+.secim-ai-dugme {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface-raised);
+  color: var(--primary-ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.secim-ai-dugme:hover,
+.secim-ai-dugme[aria-expanded="true"] { border-color: var(--primary-ink); }
+.secim-ai-menu {
+  display: grid;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+.secim-ai-menu .arac-menu-oge svg { flex: none; color: var(--muted); }
+@media (hover: hover) and (pointer: fine) {
+  .secim-ai-menu .arac-menu-oge:hover { background: var(--surface-2); }
+}
+.secim-ai-menu .arac-menu-oge:focus-visible { outline: none; background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--focus); }
+/* Yukarı açıldığında menü düğmenin üstünde: seçimden uzaklaşan yön. */
+.secim-ai[data-yukari] .secim-ai-menu { order: -1; }
+@media (pointer: coarse) {
+  .secim-ai-dugme { min-height: 44px; padding: 6px 14px; }
+  .secim-ai-menu .arac-menu-oge { min-height: 44px; }
+}

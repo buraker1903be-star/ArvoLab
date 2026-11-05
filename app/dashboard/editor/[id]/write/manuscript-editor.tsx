@@ -78,7 +78,6 @@ import {
   Sparkles,
   FileSearch,
   Library,
-  Cloud,
   CloudOff,
 } from "lucide-react";
 
@@ -177,6 +176,7 @@ const FindReplaceBar = dynamic(() => import("./find-replace-bar"), { ssr: false 
 const ImportDialog = dynamic(() => import("./import-dialog"), { ssr: false });
 const ImageLibraryDialog = dynamic(() => import("./image-library-dialog"), { ssr: false });
 const ShortcutsDialog = dynamic(() => import("./shortcuts-dialog"), { ssr: false });
+import SecimAi from "./secim-ai";
 const VersionsDialog = dynamic(() => import("./versions-dialog"), { ssr: false });
 const ShareDialog = dynamic(() => import("./share-dialog"), { ssr: false });
 const CiteDialog = dynamic(() => import("./cite-dialog"), { ssr: false });
@@ -2587,9 +2587,7 @@ export default function ManuscriptEditor({
             <button type="button" className="projects-filter-button" onClick={() => setLibraryOpen(true)}>
               {t({ tr: "Resimlerim", en: "My images" })}
             </button>
-            <button type="button" className="projects-filter-button" onClick={() => setImportOpen(true)}>
-              {t({ tr: "Word'den aktar", en: "Import Word" })}
-            </button>
+            {/* Word'den aktar burada ayrıca bir düğme DEĞİL (4.3): yolu yukarıdaki maddede yazılı; düğme Ekle menüsünde ve boş belgenin ana hat kartında. */}
             <button type="button" className="projects-filter-button" onClick={() => setFormatLossDismissed(true)}>
               {t({ tr: "Anladım", en: "Got it" })}
             </button>
@@ -2882,6 +2880,7 @@ export default function ManuscriptEditor({
       )}
 
       <EditorContent editor={editor} />
+      <SecimAi editor={editor} panelAc={() => panelAc("asistan")} />
       <OlcumPaneli editor={editor} />
 
       {stats.footnotes.length > 0 ? (
@@ -2908,8 +2907,10 @@ export default function ManuscriptEditor({
         ve otomatik kaydın durumu belgenin altında, hep görünür. Kelime ve
         sayfa eskiden yalnızca İncele panelindeydi; panel kapalıyken ya da
         telefonda hiç görünmüyordu. Kayıt durumunun kendisi (ve "şimdi
-        kaydet") başlık satırında; burada otomatik kaydın açık mı DURMUŞ mu
-        olduğu yazar — oturum ya da abonelik bitince "açık" demek yalan olurdu.
+        kaydet") başlık satırında; burada yalnızca otomatik kayıt DURDUYSA
+        yazar (oturum ya da abonelik bitti). 4.3'e kadar burada bir de
+        "Otomatik kayıt açık" yazıyordu: başlıktaki "Kaydedildi · 11:54" ile
+        aynı bilgiyi ikinci kez veriyordu.
       */}
       <footer className="yazim-durum-cubugu" aria-label={t({ tr: "Belge durumu", en: "Document status" })}>
         <span>{t({ tr: `${stats.words.toLocaleString(YEREL[dil])} kelime`, en: `${stats.words.toLocaleString(YEREL[dil])} words` })}</span>
@@ -2920,12 +2921,7 @@ export default function ManuscriptEditor({
             <CloudOff size={14} aria-hidden="true" />
             {t({ tr: "Otomatik kayıt durdu", en: "Autosave stopped" })}
           </span>
-        ) : (
-          <span className="yazim-durum-kayit">
-            <Cloud size={14} aria-hidden="true" />
-            {t({ tr: "Otomatik kayıt açık", en: "Autosave on" })}
-          </span>
-        )}
+        ) : null}
       </footer>
 
       <ShareDialog open={shareOpen} onClose={closeShare} projectId={projectId} />

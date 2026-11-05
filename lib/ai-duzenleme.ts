@@ -65,9 +65,23 @@ export function surumGerekir(gorev: string, eski: string, yeni: string): boolean
 }
 
 /*
-  Panelin dışından (seçim üstündeki Arvo AI düğmesi, kısayol) asistana görev
-  göndermenin olayı. Panel dinamik yüklendiği için sabit burada: düğme
-  paneli içe aktarırsa panel ilk açılıştan önce yüklenirdi.
+  Panelin dışından (seçim üstündeki Arvo AI düğmesi) asistana görev
+  göndermek. Panel dinamik yüklenir: düğmeye ilk basıldığında panel henüz
+  kurulmamış olabilir, olayı dinleyen yoktur. Bu yüzden görev bir kez
+  BEKLETİLİR; panel kurulunca (ya da zaten kuruluysa olayla) alır. Sabit
+  burada, çünkü düğme paneli içe aktarırsa panel ilk açılıştan önce
+  yüklenirdi.
 */
 export const ASISTAN_GOREV_OLAYI = "arvolab:asistan-gorev";
-export type AsistanGorevOlayi = CustomEvent<{ gorev: "akademik" | "kisalt" | "genislet" | "serbest" | "paragraf" | "devam" | "anahat" }>;
+export type DisGorev = "akademik" | "kisalt" | "genislet";
+let bekleyenGorev: DisGorev | null = null;
+export function asistanaGorevGonder(gorev: DisGorev) {
+  bekleyenGorev = gorev;
+  window.dispatchEvent(new Event(ASISTAN_GOREV_OLAYI));
+}
+/** Bekleyen görevi alır ve siler: aynı görev iki kez gönderilmesin. */
+export function bekleyenGoreviAl(): DisGorev | null {
+  const g = bekleyenGorev;
+  bekleyenGorev = null;
+  return g;
+}
