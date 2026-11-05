@@ -32,10 +32,8 @@ export async function ensureSubscription(): Promise<SubscriptionState> {
     access: !bitti,
     trialEndsAt: null,
     currentPeriodEnd: bitti ? gun(-3) : gun(18),
-    plans: [
-      { code: "ornek-aylik", interval: "month", price: 29_900 },
-      { code: "ornek-yillik", interval: "year", price: 299_000 },
-    ],
+    /* Yalnızca aylık: ArvoOS köprüsü bugün yıllık plan bildirmiyor ve tahsil etmiyor (lib/billing-plan.ts). */
+    plans: [{ code: "ornek-aylik", interval: "month", price: 29_900 }],
     krediPaketleri: PAKETLER,
     cardStorage: false,
   };

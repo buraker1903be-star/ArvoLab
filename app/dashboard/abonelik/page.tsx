@@ -80,6 +80,11 @@ const HATA: Record<string, Metin> = {
     tr: "Deneme süresinde ek kredi satılmaz: deneme hakkı krediyle değil kullanım sayısıyla ölçülür. Aboneliğinizi başlattıktan sonra ek kredi alabilirsiniz.",
     en: "Extra credits aren't sold during the trial: trial use is counted in runs, not credits. You can buy extra credits after you start your subscription.",
   },
+  /* Ödeme başlatılırken yıllık ya da tanınmayan plan kodu (app/actions/subscription.ts → planKoduKarari). */
+  plan: {
+    tr: "Seçilen abonelik planıyla ödeme başlatılamadı. Şu an yalnızca aylık ödeme alınabiliyor; sayfayı yenileyip aylık planla tekrar deneyin.",
+    en: "Payment could not be started with the selected subscription plan. Only monthly payment is available right now; refresh the page and try again with the monthly plan.",
+  },
   sahip: {
     tr: "Kurumunuzun ArvoOS'ta etkin bir sahibi bulunamadığı için ödeme açılamadı. Arvo destek ekibiyle iletişime geçin.",
     en: "Payment could not be started because your institution has no active owner in ArvoOS. Contact Arvo support.",

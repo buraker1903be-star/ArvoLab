@@ -130,3 +130,44 @@ export function planButtonLabel(plan: BillingPlan, dil: Dil = "tr"): string {
   }
   return `${plan.interval ? INTERVAL_LABEL[plan.interval][dil] : ""} ${formatTry(plan.price, dil)}`.trim();
 }
+
+/*
+  ÖDENEBİLİR PLANLAR VE PLAN KODU KARARI (05.11.2026, yanlış tahsilat
+  önlemi). ArvoOS'un abonelik köprüsü bugün YALNIZCA aylık ücreti
+  tahsil ediyor: checkout isteğindeki plan kodunu okumuyor, tutarı her
+  zaman aylık ücretten alıyor (ArvoOS app/api/bridge/subscription,
+  checkout → amountKurus: monthlyFee). ArvoOS ileride plan listesine
+  yıllık bir plan eklerse ArvoLab "Yıllık" düğmesini gösterir, kullanıcı
+  yıllık ödediğini sanar ama aylık tutar tahsil edilir ve dönem bir ay
+  uzar. Bu iki fonksiyon, köprü dönem seçimini gerçekten uygulayana
+  kadar ödemeyi aylık planlarla sınırlar. Bugün canlıda yalnızca aylık
+  plan var; kullanıcının gördüğü hiçbir şey değişmez.
+
+  Köprü yıllık planı uyguladığında: ODENEBILIR_DONEMLER'e "year" eklenir.
+*/
+export const ODENEBILIR_DONEMLER: readonly BillingInterval[] = ["month"];
+
+/** Ödeme düğmesi gösterilecek planlar: dönemi köprünün tahsil ettiği dönem olanlar. */
+export function odenebilirPlanlar(plans: BillingPlan[]): BillingPlan[] {
+  return plans.filter((plan) => plan.interval !== null && ODENEBILIR_DONEMLER.includes(plan.interval));
+}
+
+export type PlanKoduKarari =
+  | { tur: "izin"; kod: string | null }
+  | { tur: "red"; neden: "desteklenmeyen-donem" | "bilinmeyen-plan" };
+
+/**
+ * Ödeme başlatırken formdan gelen plan kodu. Kod yoksa izin, kod null
+ * (bugünkü akış: ArvoOS aylık ücreti kullanır, istekte plan alanı yok).
+ * Kod varsa ArvoOS'un bildirdiği planlarda olmalı ve dönemi ödenebilir
+ * olmalı; yıllık (ya da dönemi bilinmeyen) plan ve listede olmayan kod
+ * reddedilir. Kabul edilen kod DEĞİŞTİRİLMEDEN geri döner.
+ */
+export function planKoduKarari(kod: string | null | undefined, plans: BillingPlan[]): PlanKoduKarari {
+  const temiz = typeof kod === "string" ? kod.trim() : "";
+  if (!temiz) return { tur: "izin", kod: null };
+  const plan = plans.find((p) => p.code === temiz);
+  if (!plan) return { tur: "red", neden: "bilinmeyen-plan" };
+  if (!odenebilirPlanlar([plan]).length) return { tur: "red", neden: "desteklenmeyen-donem" };
+  return { tur: "izin", kod: temiz };
+}

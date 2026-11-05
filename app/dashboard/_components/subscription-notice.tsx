@@ -1,6 +1,6 @@
 import { payArvolabSubscription } from "@/app/actions/subscription";
 import type { AccessState } from "@/lib/access";
-import { describePlan, planButtonLabel } from "@/lib/billing-plan";
+import { describePlan, odenebilirPlanlar, planButtonLabel } from "@/lib/billing-plan";
 import OdemeButonu from "./odeme-butonu";
 import Link from "next/link";
 import { aktifDil } from "@/lib/dil-sunucu";
@@ -19,6 +19,8 @@ import { kapaliErisimCumlesi } from "@/lib/abonelik-kapisi";
 
 export default async function SubscriptionNotice({ access }: { access: AccessState }) {
   const individual = access.kind === "individual";
+  // Yalnızca köprünün gerçekten tahsil ettiği dönem (lib/billing-plan.ts → odenebilirPlanlar).
+  const odenebilir = odenebilirPlanlar(access.plans);
   const dil = await aktifDil();
   const t = ceviriciKur(dil);
   return (
@@ -35,17 +37,17 @@ export default async function SubscriptionNotice({ access }: { access: AccessSta
             })}
           </p>
           {individual ? (
-            access.plans.length > 0 ? (
+            odenebilir.length > 0 ? (
               <>
                 <p>
                   {t({
                     tr: "Güvenli PayTR ödeme sayfasına yönlendirilirsiniz; ödeme onaylanınca erişiminiz hemen açılır.",
                     en: "You will be taken to the secure PayTR payment page; access opens as soon as the payment is confirmed.",
                   })}
-                  {access.plans.length > 1 ? t({ tr: " Size uygun dönemi seçin.", en: " Choose the period that suits you." }) : ""}
+                  {odenebilir.length > 1 ? t({ tr: " Size uygun dönemi seçin.", en: " Choose the period that suits you." }) : ""}
                 </p>
                 <ul className="subscription-plans">
-                  {access.plans.map((plan, index) => (
+                  {odenebilir.map((plan, index) => (
                     <li key={plan.code ?? plan.interval ?? index}>
                       <span>{describePlan(plan, dil)}</span>
                       <form action={payArvolabSubscription}>

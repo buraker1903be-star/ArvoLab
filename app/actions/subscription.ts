@@ -7,6 +7,8 @@ import { getCurrentProfile } from "@/app/actions/profile";
 import { kurumKrediOdemesiBaslat, startCreditCheckout, startSubscriptionCheckout } from "@/lib/subscription";
 import { faturalamaKapsamim } from "@/lib/faturalama-sunucu";
 import { kurumKrediHataAnahtari } from "@/lib/kart-odeme";
+import { planKoduKarari } from "@/lib/billing-plan";
+import { getAccessState } from "@/lib/access";
 
 // Bireysel abonenin "Aboneliği başlat / yenile" düğmesi. Tutar ArvoOS'ta
 // belirlenir; buradan tutar gönderilmez, yalnızca kim olduğu ve kullanıcının
@@ -23,8 +25,19 @@ export async function payArvolabSubscription(formData: FormData) {
     redirect("/dashboard?error=kurum-aboneligi");
   }
 
-  // Plan kodu ArvoOS'un bildirdiği listeden gelir; doğrulaması ArvoOS'ta.
-  const planCode = String(formData.get("plan") ?? "").trim().slice(0, 64) || null;
+  /*
+    Plan kodu ArvoOS'un bildirdiği listeden gelir. 05.11.2026'ya kadar
+    doğrulaması tamamen ArvoOS'a bırakılmıştı; ama ArvoOS kodu okumuyor ve
+    her zaman AYLIK ücreti tahsil ediyor (lib/billing-plan.ts →
+    planKoduKarari). Kod gelmezse (bugünkü akış) hiçbir şey değişmez ve
+    köprüye ek çağrı yapılmaz. Kod gelirse ArvoOS'un bildirdiği planlarda
+    aylık olarak bulunmalı; yıllık ya da bilinmeyen kodla ödeme başlatılmaz.
+    Plan listesi okunamazsa kod doğrulanamaz: ödeme yine başlatılmaz.
+  */
+  const istenenPlan = String(formData.get("plan") ?? "").trim().slice(0, 64) || null;
+  const karar = istenenPlan ? planKoduKarari(istenenPlan, (await getAccessState(profile)).plans) : ({ tur: "izin", kod: null } as const);
+  if (karar.tur === "red") redirect("/dashboard/abonelik?hata=plan");
+  const planCode = karar.kod;
   const result = await startSubscriptionCheckout({ id: user.id, email: user.email, fullName: profile?.full_name }, planCode);
   // Kurum yolundaki gibi yalnızca https: köprü yanıtı bozulursa başka bir şemaya gidilmesin.
   if (!result?.checkoutUrl || !/^https:\/\//i.test(result.checkoutUrl)) redirect("/dashboard?error=odeme-baslatilamadi");

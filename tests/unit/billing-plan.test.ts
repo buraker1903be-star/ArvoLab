@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { describePlan, formatTry, normalizeInterval, normalizePlans, planButtonLabel } from "../../lib/billing-plan";
+import fs from "node:fs";
+import { describePlan, formatTry, normalizeInterval, normalizePlans, odenebilirPlanlar, planButtonLabel, planKoduKarari, type BillingPlan } from "../../lib/billing-plan";
 
 describe("ArvoOS sözleşmesi", () => {
   /*
@@ -87,5 +88,59 @@ describe("gösterim", () => {
   test("fiyat bilinmiyorsa uydurulmuyor", () => {
     assert.equal(describePlan({ code: "y", interval: "year", price: null }), "Yıllık");
     assert.equal(planButtonLabel({ code: "y", interval: "year", price: null }), "Yıllık abone ol");
+  });
+});
+
+/*
+  YANLIŞ TAHSİLAT ÖNLEMİ (05.11.2026). ArvoOS köprüsü bugün yalnızca aylık
+  ücreti tahsil ediyor ve checkout'taki plan kodunu okumuyor. Ödeme düğmesi
+  yalnızca aylık planlara çıkar; sunucu işlemi yıllık ve bilinmeyen kodu
+  reddeder, kodsuz isteği (bugünkü akış) aynen geçirir.
+*/
+describe("ödenebilir planlar ve plan kodu kararı", () => {
+  const aylik: BillingPlan = { code: "arvolab-aylik", interval: "month", price: 29_900 };
+  const yillik: BillingPlan = { code: "arvolab-yillik", interval: "year", price: 299_000 };
+  const donemsiz: BillingPlan = { code: "arvolab-ozel", interval: null, price: 10_000 };
+
+  test("bugünkü canlı yanıt (yalnızca monthlyFee) tek bir ödenebilir aylık plan üretir", () => {
+    const planlar = normalizePlans({ monthlyFee: 29_900 });
+    assert.deepEqual(planlar, [{ code: null, interval: "month", price: 29_900 }]);
+    assert.deepEqual(odenebilirPlanlar(planlar), planlar);
+  });
+
+  test("ödeme düğmesi yalnızca aylık plana çıkar; yıllık ve dönemi bilinmeyen gizlenir", () => {
+    assert.deepEqual(odenebilirPlanlar([aylik, yillik, donemsiz]), [aylik]);
+    assert.deepEqual(odenebilirPlanlar([yillik]), []);
+  });
+
+  test("geçerli aylık plan kodu: izin, kod DEĞİŞMEDEN geri döner", () => {
+    assert.deepEqual(planKoduKarari("arvolab-aylik", [aylik, yillik]), { tur: "izin", kod: "arvolab-aylik" });
+    assert.deepEqual(planKoduKarari("  arvolab-aylik  ", [aylik]), { tur: "izin", kod: "arvolab-aylik" });
+  });
+
+  test("yıllık plan kodu: ret (köprü yıllık tahsil etmiyor)", () => {
+    assert.deepEqual(planKoduKarari("arvolab-yillik", [aylik, yillik]), { tur: "red", neden: "desteklenmeyen-donem" });
+    assert.deepEqual(planKoduKarari("arvolab-ozel", [donemsiz]), { tur: "red", neden: "desteklenmeyen-donem" });
+  });
+
+  test("bilinmeyen plan kodu: ret; plan listesi okunamadıysa (boş) da ret", () => {
+    assert.deepEqual(planKoduKarari("uydurma-plan", [aylik, yillik]), { tur: "red", neden: "bilinmeyen-plan" });
+    assert.deepEqual(planKoduKarari("arvolab-aylik", []), { tur: "red", neden: "bilinmeyen-plan" });
+  });
+
+  test("eksik plan kodu: izin, kod null (bugünkü akış; istekte plan alanı yok)", () => {
+    for (const kod of [null, undefined, "", "   "]) {
+      assert.deepEqual(planKoduKarari(kod, [aylik, yillik]), { tur: "izin", kod: null });
+    }
+  });
+
+  test("sunucu işlemi kararı köprü çağrısından ÖNCE uygular ve köprüye giden istek biçimi değişmedi", () => {
+    const islem = fs.readFileSync("app/actions/subscription.ts", "utf8");
+    const govde = islem.slice(islem.indexOf("export async function payArvolabSubscription"), islem.indexOf("export async function krediSatinAl"));
+    assert.ok(govde.indexOf("planKoduKarari(") > 0 && govde.indexOf("planKoduKarari(") < govde.indexOf("startSubscriptionCheckout("));
+    assert.match(govde, /if \(karar\.tur === "red"\) redirect\(/);
+    assert.match(govde, /startSubscriptionCheckout\(\{ id: user\.id, email: user\.email, fullName: profile\?\.full_name \}, planCode\)/);
+    // Köprü çağrısı: plan alanı yalnızca kod varken eklenir (05.11.2026 öncesiyle aynı).
+    assert.ok(fs.readFileSync("lib/subscription.ts", "utf8").includes("...(planCode ? { plan: planCode } : {})"));
   });
 });

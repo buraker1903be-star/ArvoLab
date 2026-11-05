@@ -1,7 +1,7 @@
 import { BadgeCheck, CalendarClock } from "lucide-react";
 import { payArvolabSubscription } from "@/app/actions/subscription";
 import { licenseSummary } from "@/lib/license-summary";
-import { planButtonLabel } from "@/lib/billing-plan";
+import { odenebilirPlanlar, planButtonLabel } from "@/lib/billing-plan";
 import type { AccessState } from "@/lib/access";
 import OdemeButonu from "./odeme-butonu";
 import YasalNot from "./yasal-not";
@@ -15,6 +15,8 @@ export default async function LicenseCard({ access }: { access: AccessState }) {
   const dil = await aktifDil();
   const summary = licenseSummary(access, new Date(), dil);
   if (!summary) return null;
+  // Yalnızca köprünün gerçekten tahsil ettiği dönem (lib/billing-plan.ts → odenebilirPlanlar).
+  const odenebilir = odenebilirPlanlar(access.plans);
 
   return (
     <section className="license-card" data-tone={summary.tone} aria-label={t({ tr: "Lisans durumu", en: "License status" })}>
@@ -35,10 +37,10 @@ export default async function LicenseCard({ access }: { access: AccessState }) {
       {summary.paymentNote ? <p className="tone-text text-sm" data-tone={summary.tone}>{summary.paymentNote}</p> : null}
       {summary.yenilemeNotu ? <p className="muted text-sm">{summary.yenilemeNotu}</p> : null}
       {summary.showPayment ? (
-        access.plans.length > 0 ? (
+        odenebilir.length > 0 ? (
           <>
           <div className="cluster">
-            {access.plans.map((plan, index) => (
+            {odenebilir.map((plan, index) => (
               <form action={payArvolabSubscription} key={plan.code ?? plan.interval ?? index}>
                 {plan.code ? <input type="hidden" name="plan" value={plan.code} /> : null}
                 <OdemeButonu birincil={index === 0} etiket={`${t({ tr: "Kartla öde", en: "Pay by card" })} · ${planButtonLabel(plan, dil)}`} />
