@@ -15,6 +15,8 @@ import PanelDrawer from "../_components/panel-drawer";
 import SayfaBasligi from "../_components/sayfa/sayfa-basligi";
 import SayfaEylemleri from "../_components/sayfa/sayfa-eylemleri";
 import CalismaSecici from "../_components/calisma-secici";
+import CalismaSecimDurumu from "../_components/calisma-secim-durumu";
+import { calismaSec } from "@/lib/calisma-secimi";
 import ActionForm from "../action-form";
 import BosDurum from "../_components/bos-durum";
 
@@ -56,8 +58,13 @@ export default async function AnalysisPage({
     getAnalizSonuclari(),
   ]);
 
-  /* Adresteki çalışma listede yoksa yok sayılır; yoksa en son açılan. */
-  const calisma = calismalar.find((c) => c.id === istenen) ?? calismalar[0] ?? null;
+  /*
+    Adresteki çalışma yoksa BAŞKA ÇALIŞMAYA GEÇİLMEZ (4.3.5, B1; lib/calisma-secimi.ts).
+    Eskiden listedeki ilk çalışma sessizce açılıyordu: başka bir çalışmanın
+    verisi görünüyor, oraya ekleme yapılabiliyordu.
+  */
+  const secim = calismaSec(calismalar, istenen, calismaOkunamadi);
+  const calisma = secim.tur === "secili" ? secim.calisma : null;
   const [{ satirlar: analizler, okunamadi: analizOkunamadi }, etik] = calisma
     ? await Promise.all([calismaAnalizleri(calisma.id), createClient().then((s) => etikKaydiOku(s, calisma.id))])
     : [{ satirlar: [], okunamadi: false }, null];
@@ -67,7 +74,7 @@ export default async function AnalysisPage({
   return (
     <main className="dashboard-page gb gb-tek-ekran">
       {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
-      {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
+      {calisma && secim.tur === "secili" && secim.adrestenMi ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       {/*
         Ortak sayfa başlığı (Signature OS 4.1). Başlıkta BİRİNCİL eylem yok:
         Analiz Merkezi'nin ana işi sayfanın içindeki veri yükleme alanı;
@@ -187,6 +194,13 @@ export default async function AnalysisPage({
           asistanAcik={asistanAcik}
           analizler={analizler}
           sayfa
+        />
+      ) : secim.tur === "bulunamadi" || secim.tur === "secim-gerekli" ? (
+        <CalismaSecimDurumu
+          tur={secim.tur}
+          calismalar={calismalar}
+          yol="/dashboard/analysis"
+          bolum={{ ad: { tr: "Analizler", en: "Analyses" }, hal: { tr: "analizlerini", en: "analyses" } }}
         />
       ) : (
         <BosDurum

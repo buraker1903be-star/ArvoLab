@@ -28,6 +28,8 @@ import Bolum from "../_components/sayfa/bolum";
 import DurumGostergesi, { type DurumTonu } from "../_components/sayfa/durum-gostergesi";
 import IkiKartSecim from "../_components/iki-kart-secim";
 import CalismaSecici from "../_components/calisma-secici";
+import CalismaSecimDurumu from "../_components/calisma-secim-durumu";
+import { calismaSec } from "@/lib/calisma-secimi";
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -91,8 +93,13 @@ export default async function DocumentsPage({
     getMyDocumentUploads(),
   ]);
 
-  /* Adresteki çalışma listede yoksa yok sayılır; yoksa en son açılan. */
-  const calisma = calismalar.find((c) => c.id === istenen) ?? calismalar[0] ?? null;
+  /*
+    Adresteki çalışma yoksa BAŞKA ÇALIŞMAYA GEÇİLMEZ (4.3.5, B1; lib/calisma-secimi.ts).
+    Eskiden listedeki ilk çalışma sessizce açılıyordu: başka bir çalışmanın
+    verisi görünüyor, oraya ekleme yapılabiliyordu.
+  */
+  const secim = calismaSec(calismalar, istenen, calismaOkunamadi);
+  const calisma = secim.tur === "secili" ? secim.calisma : null;
   const { satirlar: belgeler, okunamadi: belgeOkunamadi } = calisma
     ? await calismaBelgeleri(calisma.id)
     : { satirlar: [] as DocumentUploadRecord[], okunamadi: false };
@@ -412,7 +419,7 @@ export default async function DocumentsPage({
   return (
     <main className="dashboard-page gb gb-tek-ekran">
       {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
-      {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
+      {calisma && secim.tur === "secili" && secim.adrestenMi ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       {/* Ortak sayfa başlığı (Signature OS 4.1). Birincil eylem ("Belge yükle")
           belge listesinin başında: iş orada. Eski sayfadan kalan bağsız
           belgeler seyrek, "⋯" menüsünde. */}
@@ -573,6 +580,13 @@ export default async function DocumentsPage({
               })}
             </span>
           }
+        />
+      ) : secim.tur === "bulunamadi" || secim.tur === "secim-gerekli" ? (
+        <CalismaSecimDurumu
+          tur={secim.tur}
+          calismalar={calismalar}
+          yol="/dashboard/documents"
+          bolum={{ ad: { tr: "Belgeler", en: "Documents" }, hal: { tr: "belgelerini", en: "documents" } }}
         />
       ) : (
         <BosDurum

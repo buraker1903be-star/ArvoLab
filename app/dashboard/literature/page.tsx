@@ -16,6 +16,8 @@ import LiteraturPenceresi from "./literatur-penceresi";
 import LiteraturAsistani from "./literatur-asistani";
 import KaynakcaPenceresi from "../citations/kaynakca-penceresi";
 import CalismaSecici from "../_components/calisma-secici";
+import CalismaSecimDurumu from "../_components/calisma-secim-durumu";
+import { calismaSec } from "@/lib/calisma-secimi";
 import SayfaBasligi from "../_components/sayfa/sayfa-basligi";
 import SayfaEylemleri from "../_components/sayfa/sayfa-eylemleri";
 import KaynakListesi from "./kaynak-listesi";
@@ -76,8 +78,13 @@ export default async function KaynaklarPage({
     asistanAcik,
   ] = await Promise.all([getMyProjects(), getLiteratureSources(), getMyCitationChecks(), literaturAsistaniAcik()]);
 
-  /* Adresteki çalışma listede yoksa yok sayılır; yoksa en son açılan. */
-  const calisma = calismalar.find((c) => c.id === istenen) ?? calismalar[0] ?? null;
+  /*
+    Adresteki çalışma yoksa BAŞKA ÇALIŞMAYA GEÇİLMEZ (4.3.5, B1; lib/calisma-secimi.ts).
+    Eskiden listedeki ilk çalışma sessizce açılıyordu: başka bir çalışmanın
+    verisi görünüyor, oraya ekleme yapılabiliyordu.
+  */
+  const secim = calismaSec(calismalar, istenen, calismaOkunamadi);
+  const calisma = secim.tur === "secili" ? secim.calisma : null;
   const sonDenetim = calisma ? await sonKaynakcaDenetimi(calisma.id) : null;
   /* Kopyalanan kaynakça çalışmanın diliyle ("n.d." mi "t.y." mi): editörün
      eklediği atıflarla aynı dil (lib/belge-dili.ts). */
@@ -107,7 +114,7 @@ export default async function KaynaklarPage({
   return (
     <main className="dashboard-page gb gb-tek-ekran">
       {/* Adreste çalışma seçiliyse (?calisma=) gezinme o çalışmanın bölümlerini gösterir (Phase 3, os-gezinme.tsx). */}
-      {calisma && istenen === calisma.id ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
+      {calisma && secim.tur === "secili" && secim.adrestenMi ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       {/* Ortak sayfa başlığı (Signature OS 4.1). Açıklama artık çalışmanın
           adını tekrar etmiyor: ad çalışma seçicide yazıyor. */}
       <SayfaBasligi
@@ -227,7 +234,15 @@ export default async function KaynaklarPage({
         </p>
       ) : null}
 
-      {!calisma ? (
+      {secim.tur === "bulunamadi" || secim.tur === "secim-gerekli" ? (
+        <CalismaSecimDurumu
+          tur={secim.tur}
+          calismalar={calismalar}
+          yol="/dashboard/literature"
+          ek={{ doi: typeof gelenDoi === "string" ? gelenDoi.slice(0, 300) : undefined, ekle }}
+          bolum={{ ad: { tr: "Kaynaklar", en: "Sources" }, hal: { tr: "kaynaklarını", en: "sources" } }}
+        />
+      ) : !calisma ? (
         <BosDurum
           ikon={BookMarked}
           baslik={t({ tr: "Önce bir çalışma başlatın", en: "Start a work first" })}
