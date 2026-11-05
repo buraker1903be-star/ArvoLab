@@ -449,6 +449,33 @@ yukarıdaki iki ortam değişkenini ekleyin, deploy edin.
 - [x] **Kritik hata düzeltmesi:** "Panelde Yaz" sayfası `DOMMatrix is not defined` hatasıyla çöküyordu. Sebep: `pdf-parse` kütüphanesi statik import edildiği için, onu hiç kullanmayan sayfalar bile (Turbopack'in paylaşılan derleme parçaları yüzünden) onu yükleyip tarayıcıya özgü API'leri (DOMMatrix) polyfill etmeye çalışıyordu. Çözüm: `pdf-parse` ve `mammoth` artık yalnızca gerçekten çağrıldıkları anda dinamik `import()` ile yükleniyor.
 - [x] **Gerçek veri analizi motoru:** Analiz Merkezi'ne Excel/CSV yükleyip gerçek istatistiksel testler (betimsel istatistik, bağımsız örneklem t-testi, tek yönlü ANOVA, Pearson korelasyonu, ki-kare bağımsızlık testi, Cronbach Alpha güvenilirlik analizi) çalıştırma özelliği eklendi. Tüm hesaplama motoru sıfırdan yazıldı (Lanczos log-gamma, tamamlanmamış beta/gamma fonksiyonları) ve bilinen kritik tablo değerleri + elle hesaplanmış örneklerle doğrulandı (bkz. aşağıdaki "Doğrulama Notu"). Hesaplama tamamen tarayıcıda yapılır, veri sunucuya yüklenmez.
 
+### Planlanan (05.11.2026)
+
+- [ ] **Signature OS 4.4 (4/4):** kalan ekranların ortak tasarım sistemiyle
+  bütünleştirilmesi (Abonelik ve Kredi, Kılavuzlar, Atıflar, Doçentlik,
+  Ekip, Etik ve Makale alt sayfaları, giriş/kayıt).
+- [ ] **ArvoOS destek entegrasyonu.** Bugün ArvoLab destek talepleri yalnızca
+  ArvoLab'da duruyor; ArvoOS Kurucu Konsolu onları görmüyor ve yeni talep
+  açıldığında konsola bildirim düşmüyor. ArvoOS'ta ürün bildirimi için bir
+  köprü uç noktası (`/api/bridge/bildirim`) var, ArvoLab onu çağırmıyor.
+  Mimari karar (yalnızca bildirim mi, konsolda yanıtlama mı) kurum
+  sahibinin onayını bekliyor; kodlanmadı.
+- [ ] **Makale Bul modülü** (kodlanmadı, plan). Hedefler: akademik
+  veritabanlarında arama, erişilebilir (açık erişim) PDF'leri çalışmaya
+  ekleme, AI ile makale analizi, Kaynaklar ile bütünleşme.
+  - Arama kaynakları: resmî API'si olanlar (OpenAlex, Crossref, Semantic
+    Scholar, CORE, Unpaywall; Türkçe için DergiPark ve TR Dizin
+    araştırılacak). Google Akademik'in resmî bir API'si yok ve otomatik
+    sorgulamayı kullanım koşulları yasaklıyor; ancak kullanıcının kendi
+    tarayıcısında açılan bir "Google Akademik'te ara" bağlantısı olarak
+    yer alabilir.
+  - PDF: yalnızca yasal açık erişim kopyaları (Unpaywall/OpenAlex
+    `oa_url`); kopyalar mevcut kaynak PDF deposu (`kaynak_pdfleri`)
+    üzerinden.
+  - AI analizi mevcut kurallara bağlı: asistan kaynak önermez, künye
+    uydurmaz; analiz yalnızca kullanıcının eklediği metin üzerinde ve
+    alıntıyla doğrulanır (kanıt zinciri kuralları).
+
 ## Doğrulama Notu — Veri Analizi Motoru
 
 `lib/stats-math.ts` ve `lib/stats-tests-core.ts` içindeki tüm istatistiksel
