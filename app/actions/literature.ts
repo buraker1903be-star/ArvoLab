@@ -10,6 +10,7 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { kunyeDogrula, type DogrulamaSonucu } from "@/lib/kanit/dizin";
 import { kaynakAnahtarlari } from "@/lib/kaynak-aktarim";
+import { kaynakDuzenlemeSatiri, yayinAlanlari } from "@/lib/kaynak-formu";
 
 const PAGE_PATH = "/dashboard/literature";
 /* Literatür, Çalışmalarım'daki durum kartından da pencere olarak açılıyor;
@@ -73,17 +74,8 @@ const text = (value: unknown, max: number) => {
   return result || null;
 };
 
-/** Yayın bilgisi alanları (formdan ya da atıf penceresinden) */
-function publicationFields(get: (name: string) => unknown) {
-  return {
-    container_title: text(get("containerTitle"), 500),
-    volume: text(get("volume"), 40),
-    issue: text(get("issue"), 40),
-    pages: text(get("pages"), 40),
-    publisher: text(get("publisher"), 300),
-    publication_place: text(get("publicationPlace"), 200),
-  };
-}
+/* Yayın bilgisi alanları: lib/kaynak-formu.ts (düzenleme satırıyla aynı yerde, testli). */
+const publicationFields = yayinAlanlari;
 
 const isMissingColumn = (error: { code?: string } | null) => error?.code === "PGRST204" || error?.code === "42703";
 
@@ -180,22 +172,14 @@ export async function updateLiteratureSource(sourceId: string, formData: FormDat
   if (!ctx) return { error: await oturumYokMesaji() };
   const t = await ceviri();
 
-  const title = String(formData.get("title") ?? "").trim();
-  if (!title) return { error: t({ tr: "Kaynak başlığı zorunludur.", en: "Source title is required." }) };
-  const sourceType = String(formData.get("sourceType") ?? "article");
-
-  const row = {
-    title,
-    authors: String(formData.get("authors") ?? "").trim() || null,
-    year: String(formData.get("year") ?? "").trim() || null,
-    source_type: SOURCE_TYPES.includes(sourceType) ? sourceType : "other",
-    doi_or_url: String(formData.get("doiOrUrl") ?? "").trim() || null,
-    notes: String(formData.get("notes") ?? "").trim() || null,
-  };
+  /* Form → satır dönüşümü tek yerde ve testli (lib/kaynak-formu.ts, tests/db/kaynak-duzenleme). */
+  const satir = kaynakDuzenlemeSatiri((ad) => formData.get(ad));
+  if ("hata" in satir) return { error: t({ tr: "Kaynak başlığı zorunludur.", en: "Source title is required." }) };
+  const row = satir.temel;
   const update = (values: Record<string, unknown>) =>
     ctx.supabase.from("literature_sources").update(values).eq("id", sourceId).eq("owner_id", ctx.user.id).select("id");
 
-  let { data, error } = await update({ ...row, ...publicationFields((name) => formData.get(name)) });
+  let { data, error } = await update({ ...row, ...satir.yayin });
   if (isMissingColumn(error)) ({ data, error } = await update(row));
 
   if (error) {

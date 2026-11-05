@@ -44,6 +44,16 @@ const BOS = ortam.ONIZLEME_BOS === "1";
   profil satırı değişir; uygulamanın rol kararları aynı koddan geçer.
 */
 const ROL = ortam.ONIZLEME_ROL || null;
+/*
+  YAZMA KİPİ (Signature OS 4.2, 05.11.2026). ONIZLEME_YAZ=1 iken update,
+  insert ve delete örnek tabloyu BELLEKTE değiştirir (sunucu süreci
+  yaşadıkça kalır, yeniden başlatınca veri.ts'e döner). Varsayılan kapalı:
+  kabul senaryoları sabit veriye göre yazılmış. Düzenleme gibi bir akışın
+  ekranda uçtan uca (form → sunucu işlemi → sayfanın yenilenmesi → yeni
+  değer) görülebilmesi için. Yetki ve kısıtlar burada YOK; onları
+  tests/db sınıyor.
+*/
+const YAZ = ortam.ONIZLEME_YAZ === "1";
 const BOS_TABLOLAR = new Set(["academic_projects", "project_manuscripts", "literature_sources", "document_uploads", "manuscript_comments", "citation_checks", "kanit_kayitlari"]);
 function tur<T>(etiket: string, deger: T): Promise<T> {
   if (OLCUM) console.log(`[olcum] ${Date.now()} ${etiket}`);
@@ -57,6 +67,7 @@ function sorgu(tablo: string) {
   let satirlar: Satir[] = BOS && BOS_TABLOLAR.has(tablo) ? [] : [...((ORNEK as Record<string, Satir[]>)[tablo] ?? [])];
   if (ROL && tablo === "profiles") satirlar = satirlar.map((r) => ({ ...r, role: ROL }));
   let tek: "single" | "maybe" | null = null;
+  let yazma: { tur: "update"; deger: Satir } | { tur: "insert"; deger: Satir | Satir[] } | { tur: "delete" } | null = null;
   let sayim = false;
   let yalnizSayim = false;
   const ham: Record<string, unknown> = {};
@@ -87,12 +98,23 @@ function sorgu(tablo: string) {
     range: (a: number, b: number) => zincir((s) => s.slice(a, b + 1)),
     single: () => ((tek = "single"), kurucu),
     maybeSingle: () => ((tek = "maybe"), kurucu),
-    // Yazmalar: önizlemede kalıcı değil, başarılı görünür.
-    insert: () => kurucu,
-    update: () => kurucu,
+    // Yazmalar: varsayılan olarak kalıcı değil, başarılı görünür (YAZ kipi yukarıda).
+    insert: (deger: Satir | Satir[]) => ((yazma = { tur: "insert", deger }), kurucu),
+    update: (deger: Satir) => ((yazma = { tur: "update", deger }), kurucu),
     upsert: () => kurucu,
-    delete: () => kurucu,
+    delete: () => ((yazma = { tur: "delete" }), kurucu),
     then: (coz: (s: Sonuc) => unknown) => {
+      if (YAZ && yazma) {
+        const tablo_ = ((ORNEK as Record<string, Satir[]>)[tablo] ??= []);
+        if (yazma.tur === "update") for (const r of satirlar) Object.assign(r, yazma.deger);
+        else if (yazma.tur === "delete") for (const r of satirlar) tablo_.splice(tablo_.indexOf(r), 1);
+        else {
+          const yeni = (Array.isArray(yazma.deger) ? yazma.deger : [yazma.deger]).map((d, i) => ({ id: `yeni-${Date.now()}-${i}`, created_at: new Date().toISOString(), ...d }));
+          tablo_.push(...yeni);
+          satirlar = yeni;
+        }
+      }
+      if (OLCUM && yazma) console.log(`[olcum] yazma ${tablo} ${yazma.tur}`);
       const sonuc: Sonuc = yalnizSayim
         ? { data: null, error: null, count: satirlar.length }
         : { data: tek ? (satirlar[0] ?? null) : satirlar, error: null, count: sayim ? satirlar.length : null };
