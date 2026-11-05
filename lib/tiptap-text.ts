@@ -1,3 +1,4 @@
+import { kelimeSay } from "@/lib/kelime-sayimi";
 /**
  * Tiptap/ProseMirror JSON İçeriğinden Düz Metin Çıkarma
  * ------------------------------------------------------------
@@ -76,10 +77,24 @@ export function extractHeadings(doc: TiptapDoc | null | undefined): HeadingInfo[
   return headings;
 }
 
+/*
+  Kelime sayımının metni (4.3.5, B7): editörün CharacterCount'uyla AYNI —
+  ProseMirror textBetween(0, boyut, " ", " "): her blok ve her yaprak
+  düğüm (satır sonu, resim, dipnot işareti) bir boşluk; dipnotun METNİ
+  girmez. extractPlainText'ten ayrı, çünkü o kaydedilen düz metni üretir
+  ve satır yapısı (kaynakça ayrımı) ona dayanır. Eskiden sayım
+  extractPlainText üzerinden yapılıyor, satır sonu iki sözcüğü
+  birleştiriyordu.
+*/
+function sayimMetni(node: TiptapNode): string {
+  if (node.type === "text") return node.text ?? "";
+  if (!node.content?.length) return " ";
+  return ` ${node.content.map(sayimMetni).join("")} `;
+}
+
 export function countWords(doc: TiptapDoc | null | undefined): number {
-  const text = extractPlainText(doc);
-  if (!text) return 0;
-  return text.split(/\s+/).filter(Boolean).length;
+  if (!doc || !Array.isArray(doc.content)) return 0;
+  return kelimeSay(doc.content.map(sayimMetni).join(""));
 }
 
 /*

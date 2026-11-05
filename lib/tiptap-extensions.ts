@@ -2,6 +2,7 @@ import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
+import { kelimeSay } from "@/lib/kelime-sayimi";
 import TiptapImage from "@tiptap/extension-image";
 import { Superscript } from "@tiptap/extension-superscript";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
@@ -60,7 +61,8 @@ export function editorExtensions(secenek: {
     TextAlign.configure({ types: ["heading", "paragraph"] }),
     ParagraphFormatting,
     Placeholder.configure({ placeholder: EDITOR_PLACEHOLDER_METIN[secenek.dil ?? "tr"] }),
-    CharacterCount,
+    // Sözcük sayımı kayıttaki sayıyla aynı kural (lib/kelime-sayimi.ts, 4.3.5): eskiden yalnızca düz boşlukta bölüyordu.
+    CharacterCount.configure({ wordCounter: kelimeSay }),
     Superscript,
     TiptapImage,
     Table.configure({ resizable: true }),
