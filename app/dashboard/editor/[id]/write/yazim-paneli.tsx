@@ -2,52 +2,64 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import { ArrowUp, Check, Copy, CornerDownLeft, ListTree, ThumbsDown, MessageSquareText, PenLine, Replace, ShieldCheck, Sparkles, StepForward } from "lucide-react";
+import { Slice } from "@tiptap/pm/model";
+import { ArrowUp, Check, Copy, CornerDownLeft, History, ListTree, MessageSquareText, Pencil, PenLine, RotateCcw, ShieldCheck, Sparkles, StepForward, ThumbsDown } from "lucide-react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
 import { asistanPuanla } from "@/app/actions/ai-puan";
 import { ASISTAN_IZI } from "@/lib/tiptap-asistan-izi";
 import { anaHattiCozumle } from "@/lib/ai/yazim-metni";
 import { paragraflara, type SohbetMesaji } from "@/lib/ai/yazim-metni";
 import type { YazimGorevi } from "@/lib/ai/yazim-asistani";
+import { diffTexts } from "@/lib/text-diff";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { collectHeadings } from "./editor-navigation";
+import MetinFarki from "./metin-farki";
 import { aralikMetni, araligiBirak, araligiDogrula, araligiIzle, izlenenAralik } from "@/lib/tiptap-asistan-araligi";
-import { aiAdimiBaslat, aiAdiminiKapat } from "@/lib/ai-duzenleme";
+import { ASISTAN_GOREV_OLAYI, type AsistanGorevOlayi, aiAdimiBaslat, aiAdiminiKapat, geriAlmaIslemi, surumGerekir, yeniAralik } from "@/lib/ai-duzenleme";
+import { kararKaydet } from "@/lib/ai-kararlari";
 
 /*
   YAZIM ASİSTANI PANELİ (03.11.2026, kurum sahibinin kararı: "paragrafı
   sohbette yazarız, ekleme konusunu kullanıcıya bırakırız").
 
-  Modal DEĞİL, sağa yaslı kalıcı panel: öğrenci metnini görerek konuşuyor,
-  panel açıkken editörde yazmaya devam edebiliyor. Asistanın yazdığı metin
-  belgeye kendiliğinden girmez; her cevabın altında "Paragrafın altına ekle" /
-  "Seçilenin yerine koy" / "Kopyala" var ve hangisinin yapılacağına
-  öğrenci karar veriyor. Ekleme, kaydın "faydalı" değerlendirmesi olarak
-  yazılıyor: eğitim verisinin en güçlü işareti, öğrencinin metni
-  kullanmasıdır (lib/ai/kayit.ts).
+  Modal DEĞİL, yazım panelinin "Asistan" görünümü: öğrenci metnini görerek
+  konuşuyor, panel açıkken editörde yazmaya devam edebiliyor. Asistanın
+  yazdığı metin belgeye kendiliğinden girmez.
 
-  Seçim, istek GÖNDERİLDİĞİ anda alınır ve o cevabın eklenme yeri olur:
-  öğrenci bu arada imleci başka yere götürse bile "Seçilenin yerine koy"
-  isteğin yapıldığı metnin yerine koyar.
+  KARARLAR (Signature OS 4.3, 05.11.2026). Eskiden kartın altında yalnızca
+  "Paragrafın altına ekle" ve "Seçilenin yerine koy" vardı; seçili metni
+  yeniden yazan görevlerde (Akademikleştir, Kısalt, Genişlet, seçimle
+  serbest istek) yalnızca YENİ metin görünüyordu, neyin değiştiğini
+  öğrenci satır satır kendisi karşılaştırıyordu. Eklenen metin geri
+  alınamıyordu (yalnızca Ctrl+Z) ve ekleme kayda OTOMATİK "faydalı" puanı
+  olarak yazılıyordu. Şimdi:
+  - Yeniden yazımda kelime düzeyinde önce/sonra farkı (MetinFarki,
+    lib/text-diff.ts). Fark yalnızca bu panelde çizilir; belgeye, kayda,
+    sürümlere ve çıktılara girmez.
+  - Kabul et / Düzenleyerek kabul et / Reddet; uygulandıktan sonra
+    Geri al. Geri al yalnızca asistanın yazdığı aralığı, o metin hâlâ
+    aynıysa geri alır; değilse yapmaz ve Sürümler'e yönlendirir
+    (lib/ai-duzenleme.ts).
+  - Ana hattan ve 150 kelimeyi aşan değişiklikten önce adlı sürüm alınır.
+    Sürüm alınamazsa değişiklik UYGULANMAZ; "Sürüm almadan uygula"
+    kullanıcının açık seçimidir.
+  - Karar puan DEĞİLDİR (kurum sahibinin kararı, 4.3): yalnızca bu
+    oturumda tutulur (lib/ai-kararlari.ts). Puan yalnızca "Beğenmedim".
 
   "Paragrafın altına ekle" (4.3): eskiden "İmlece ekle" yazıyordu ama metin
   imlecin olduğu yere değil, imlecin bulunduğu paragrafın ALTINA giriyordu
   (paragrafı ikiye bölmemek için; boş paragraftaysa onun yerine). Davranış
   aynı kaldı, ad yaptığı işi söylüyor.
 
-  KONUM GÜVENLİĞİ (Signature OS 4.3, 05.11.2026). Eskiden o yer istek
-  anındaki iki SAYIYDI (from, to) ve belge arada değişince güncellenmiyordu:
-  öğrenci cevabı beklerken seçimin önüne yazdıysa YANLIŞ metin
-  değiştiriliyordu. Artık aralık editörde izleniyor (belge değiştikçe
-  kayıyor, lib/tiptap-asistan-araligi.ts) ve değiştirmeden hemen önce
-  aralıktaki metnin istekteki seçimle birebir aynı olduğu doğrulanıyor;
-  değilse değiştirme yapılmıyor, öğrenciden yeniden seçmesi isteniyor.
-  AI değişikliği geçmişte kendi adımıdır: Ctrl+Z öncesi ya da sonrası
-  yazılanla birlikte geri almaz (lib/ai-duzenleme.ts).
+  KONUM GÜVENLİĞİ (4.3). Eskiden hedef istek anındaki iki SAYIYDI (from,
+  to) ve belge arada değişince güncellenmiyordu: öğrenci cevabı beklerken
+  seçimin önüne yazdıysa YANLIŞ metin değiştiriliyordu. Artık aralık
+  editörde izleniyor (lib/tiptap-asistan-araligi.ts) ve değiştirmeden hemen
+  önce aralıktaki metnin istekteki seçimle birebir aynı olduğu
+  doğrulanıyor; değilse değiştirme yapılmıyor. AI değişikliği geçmişte
+  kendi adımıdır: Ctrl+Z öncesi ya da sonrası yazılanla birlikte geri almaz.
 */
-
-type Aralik = { from: number; to: number };
 
 /* Öneri kartının başlığı: kartın ne olduğu, istek metni değil. */
 const ONERI_ADI: Record<YazimGorevi, { tr: string; en: string }> = {
@@ -60,27 +72,41 @@ const ONERI_ADI: Record<YazimGorevi, { tr: string; en: string }> = {
   anahat: { tr: "Ana hat", en: "Outline" },
   tamamla: { tr: "Öneri", en: "Suggestion" },
 };
+
+type Mod = "degistir" | "altina";
 type Kayit = SohbetMesaji & {
   ekMetin?: string;
   kayitId?: string | null;
-  aralik?: Aralik;
   /** İzlenen aralığın kimliği (lib/tiptap-asistan-araligi.ts) ve istekteki seçimin metni. */
   oneriId?: string;
   secimMetni?: string;
   secimVardi?: boolean;
-  eklendi?: boolean;
   gorev?: YazimGorevi;
   begenilmedi?: boolean;
-  /** Uygulanamadığında kartta kalan açıklama (seçim değişti, silindi…). */
+  durum?: "oneri" | "uygulandi" | "reddedildi" | "geri_alindi";
+  /** Uygulanan değişikliğin geri alma bilgisi: eklenen aralığın kimliği, metni ve önceki içerik. */
+  uygulama?: { eklenenId: string; eklenenMetin: string; ozgun: Slice };
+  /** Düzenleyerek kabulde kutudaki metin; tanımlıysa kart düzenleme kipinde. */
+  duzenMetni?: string;
+  /** Uygulanamadığında ya da geri alınamadığında kartta kalan açıklama. */
   uyari?: string;
+  /** Sürüm alınamadı: aynı değişiklik yeniden denenebilir ya da açıkça sürümsüz uygulanabilir. */
+  surumHatasi?: { mod: Mod; metin: string };
+  isleniyor?: boolean;
 };
 let oneriSayaci = 0;
+
+/* Seçili metni yeniden yazan görevler: kartta fark gösterilir, birincil eylem "yerine koy". */
+const SECIM_GOREVLERI = new Set<YazimGorevi>(["akademik", "kisalt", "genislet"]);
+const yenidenYazim = (m: Kayit) => Boolean(m.secimVardi && m.gorev !== "anahat" && (m.gorev === "serbest" || SECIM_GOREVLERI.has(m.gorev ?? "serbest")));
 
 export default function YazimPaneli({
   editor,
   projectId,
   acik,
   zorunluBolumler = [],
+  surumAl,
+  surumleriAc,
 }: {
   editor: Editor;
   projectId: string;
@@ -88,11 +114,15 @@ export default function YazimPaneli({
   acik: boolean;
   /** Kılavuzun zorunlu bölümleri: ana hat görevinin omurgası. */
   zorunluBolumler?: string[];
+  /** Büyük değişiklikten önce adlı sürüm: önce kaydeder, sonra sürüm alır. Başarısızsa false. */
+  surumAl: (etiket: string) => Promise<boolean>;
+  surumleriAc: () => void;
 }) {
   const t = useCeviri();
   const [mesajlar, setMesajlar] = useState<Kayit[]>([]);
   const [istek, setIstek] = useState("");
   const [bekliyor, setBekliyor] = useState(false);
+  const [seciliVar, setSeciliVar] = useState(() => !editor.state.selection.empty);
   const listeRef = useRef<HTMLDivElement>(null);
   const girdiRef = useRef<HTMLTextAreaElement>(null);
 
@@ -102,7 +132,19 @@ export default function YazimPaneli({
   }, [acik]);
   useEffect(() => {
     listeRef.current?.scrollTo({ top: listeRef.current.scrollHeight, behavior: "smooth" });
-  }, [mesajlar, bekliyor]);
+  }, [mesajlar.length, bekliyor]);
+  /* "Seçili metni düzenle" grubu seçim yokken pasif görünür; seçim editörde değişir. */
+  useEffect(() => {
+    const guncelle = () => setSeciliVar(!editor.state.selection.empty);
+    editor.on("selectionUpdate", guncelle);
+    editor.on("transaction", guncelle);
+    return () => {
+      editor.off("selectionUpdate", guncelle);
+      editor.off("transaction", guncelle);
+    };
+  }, [editor]);
+
+  const kartGuncelle = (indeks: number, degisim: Partial<Kayit>) => setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, ...degisim } : m)));
 
   const gonder = async (gorev: YazimGorevi, metin = istek) => {
     if (bekliyor) return;
@@ -110,7 +152,7 @@ export default function YazimPaneli({
     const doc = editor.state.doc;
     /* Doğrulamayla AYNI okuma (aralikMetni): uygulamadan önce bu metinle karşılaştırılır. */
     const secim = from !== to ? aralikMetni(doc, from, to) : "";
-    if ((gorev === "akademik" || gorev === "kisalt" || gorev === "genislet") && !secim) {
+    if (SECIM_GOREVLERI.has(gorev) && !secim) {
       showToast("error", t({ tr: "Önce editörde bir metin seçin.", en: "Select some text in the editor first." }));
       return;
     }
@@ -145,7 +187,7 @@ export default function YazimPaneli({
       if (cevap.krediUyarisi) showToast("error", cevap.krediUyarisi);
       setMesajlar((onceki) => [
         ...onceki,
-        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, aralik: { from, to }, oneriId, secimMetni: secim, secimVardi: from !== to, gorev },
+        { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, oneriId, secimMetni: secim, secimVardi: from !== to, gorev, durum: cevap.metin ? "oneri" : undefined },
       ]);
     } catch (hata) {
       console.error(hata);
@@ -155,31 +197,69 @@ export default function YazimPaneli({
     }
   };
 
-  /* Eklenen metin paragraf düğümleri olarak girer; boş satırlar paragraf sınırıdır. */
+  /* Seçim üstündeki Arvo AI düğmesi ve kısayol görevi bu olayla gönderir (panel dinamik yüklenir). */
+  const gonderRef = useRef(gonder);
+  useEffect(() => {
+    gonderRef.current = gonder;
+  });
+  useEffect(() => {
+    const dinle = (e: Event) => void gonderRef.current((e as AsistanGorevOlayi).detail.gorev, "");
+    window.addEventListener(ASISTAN_GOREV_OLAYI, dinle);
+    return () => window.removeEventListener(ASISTAN_GOREV_OLAYI, dinle);
+  }, []);
+
   /*
     Eklenen metin asistan iziyle girer (lib/tiptap-asistan-izi.ts):
     yazarlık raporu belgede duran asistan metnini buradan sayıyor.
+    Düzenleyerek kabul edilen metin de izli girer: çıkış noktası asistan.
   */
   const izliMetin = (text: string, kayit: string | null | undefined) => ({ type: "text", text, marks: [{ type: ASISTAN_IZI, attrs: { kayit: kayit ?? null } }] });
-  const dugumler = (metin: string, kayit?: string | null) =>
-    paragraflara(metin).map((p) => ({ type: "paragraph", content: [izliMetin(p, kayit)] }));
+  const dugumler = (metin: string, kayit?: string | null) => paragraflara(metin).map((p) => ({ type: "paragraph", content: [izliMetin(p, kayit)] }));
 
-  const ekle = (indeks: number, yerineKoy: boolean) => {
+  const uygula = async (indeks: number, mod: Mod, secenek: { metin?: string; surumsuz?: boolean } = {}) => {
     const kayit = mesajlar[indeks];
-    if (!kayit?.ekMetin || !kayit.aralik || !kayit.oneriId) return;
-    const uyar = (uyari: string) => {
-      setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, uyari } : m)));
+    if (!kayit?.ekMetin || !kayit.oneriId || kayit.isleniyor) return;
+    const metin = (secenek.metin ?? kayit.ekMetin).trim();
+    if (!metin) return;
+    const degistir = mod === "degistir" && Boolean(kayit.secimVardi);
+    const gorev = kayit.gorev ?? "serbest";
+    const uyar = (uyari: string, ek: Partial<Kayit> = {}) => {
+      kartGuncelle(indeks, { uyari, isleniyor: false, ...ek });
       showToast("error", uyari);
     };
+
+    /* 1) Büyük değişiklikten ÖNCE adlı sürüm. Alınamazsa değişiklik sessizce uygulanmaz. */
+    if (!secenek.surumsuz && surumGerekir(gorev, degistir ? (kayit.secimMetni ?? "") : "", metin)) {
+      kartGuncelle(indeks, { isleniyor: true });
+      const etiket = gorev === "anahat" ? t({ tr: "Ana hat eklenmeden önce", en: "Before outline insert" }) : t({ tr: "Asistan değişikliğinden önce", en: "Before assistant change" });
+      let alindi = false;
+      try {
+        alindi = await surumAl(etiket);
+      } catch {
+        alindi = false;
+      }
+      if (!alindi) {
+        uyar(
+          t({
+            tr: "Bu büyük bir değişiklik ve öncesinde sürüm alınamadı; değişiklik uygulanmadı. Tekrar deneyin ya da sürüm almadan uygulamayı açıkça seçin.",
+            en: "This is a large change and a version couldn't be saved first; the change wasn't applied. Try again, or explicitly choose to apply without a version.",
+          }),
+          { surumHatasi: { mod, metin } },
+        );
+        return;
+      }
+    }
+
     /*
-      Hedef: izlenen aralık (belge değiştikçe kaymış hâli). Değiştirmede
+      2) Hedef: izlenen aralık (belge değiştikçe kaymış hâli). Değiştirmede
       aralığın metni istekteki seçimle BİREBİR aynı olmalı; ekleme yalnızca
       bir konum istediği için izlenen aralığın sonunu kullanır.
     */
-    let from: number;
-    let to: number;
-    if (yerineKoy && kayit.secimVardi) {
-      const d = araligiDogrula(editor.state, kayit.oneriId, kayit.secimMetni ?? "");
+    const state = editor.state;
+    let hFrom: number;
+    let hTo: number;
+    if (degistir) {
+      const d = araligiDogrula(state, kayit.oneriId, kayit.secimMetni ?? "");
       if (!d.tamam) {
         uyar(
           d.neden === "degisti"
@@ -188,62 +268,99 @@ export default function YazimPaneli({
         );
         return;
       }
-      ({ from, to } = d);
+      ({ from: hFrom, to: hTo } = d);
     } else {
-      const a = izlenenAralik(editor.state, kayit.oneriId);
-      const boyut = editor.state.doc.content.size;
-      from = Math.min(a?.from ?? kayit.aralik.from, boyut);
-      to = Math.min(a?.to ?? kayit.aralik.to, boyut);
-    }
-    /* Uygulanan aralık izlemeden bırakılır; AI değişikliği geçmişte kendi adımı (aiAdimiBaslat/aiAdiminiKapat). */
-    const zincir = () =>
-      editor
-        .chain()
-        .focus()
-        .command(({ tr }) => {
-          aiAdimiBaslat(tr);
-          araligiBirak(tr, kayit.oneriId!);
-          return true;
-        });
-    let tamam: boolean;
-    const anaHat = kayit.gorev === "anahat" ? anaHattiCozumle(kayit.ekMetin) : [];
-    if (anaHat.length) {
-      /*
-        Ana hat başlık ve not olarak girer; not köşeli parantezde: öğrencinin
-        yerine yazacağı yer tutucu olduğu görülsün. Hepsi asistan izli
-        (yazarlık raporu başlıkları da sayar).
-      */
-      const dugumlerAnaHat = anaHat.flatMap((s) => [
-        { type: "heading", attrs: { level: s.duzey }, content: [izliMetin(s.baslik, kayit.kayitId)] },
-        ...s.notlar.map((n) => ({ type: "paragraph", content: [izliMetin(`[${n}]`, kayit.kayitId)] })),
-      ]);
-      const $pos = editor.state.doc.resolve(to);
-      tamam = zincir().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumlerAnaHat).run();
-    } else if (yerineKoy && from !== to) {
-      const paragraflar = paragraflara(kayit.ekMetin);
-      // Tek paragraf seçimin yerine satır içi girer; çok paragraf blok olarak.
-      tamam =
-        paragraflar.length === 1
-          ? zincir().insertContentAt({ from, to }, izliMetin(paragraflar[0], kayit.kayitId)).run()
-          : zincir().insertContentAt({ from, to }, dugumler(kayit.ekMetin, kayit.kayitId)).run();
-    } else {
+      const a = izlenenAralik(state, kayit.oneriId);
+      if (!a) {
+        uyar(t({ tr: "Önerinin yeri bulunamadı; uygulanmadı. İmleci istediğiniz yere koyup yeniden isteyin.", en: "The suggestion's place couldn't be found; it wasn't applied. Place the cursor and ask again." }));
+        return;
+      }
       /* İmlecin bulunduğu bloğun SONUNA: paragrafın ortasına blok eklemek onu ikiye bölerdi. Boş paragraftaysa onun yerine. */
-      const $pos = editor.state.doc.resolve(to);
+      const $pos = state.doc.resolve(Math.min(a.to, state.doc.content.size));
       const blok = $pos.depth >= 1 ? $pos.node(1) : null;
-      const bosParagraf = blok?.type.name === "paragraph" && blok.textContent.trim() === "";
-      tamam = bosParagraf
-        ? zincir().insertContentAt({ from: $pos.before(1), to: $pos.after(1) }, dugumler(kayit.ekMetin, kayit.kayitId)).run()
-        : zincir().insertContentAt($pos.depth >= 1 ? $pos.after(1) : to, dugumler(kayit.ekMetin, kayit.kayitId)).run();
+      const bosParagraf = gorev !== "anahat" && blok?.type.name === "paragraph" && blok.textContent.trim() === "";
+      if (bosParagraf) {
+        hFrom = $pos.before(1);
+        hTo = $pos.after(1);
+      } else {
+        hFrom = hTo = $pos.depth >= 1 ? $pos.after(1) : $pos.pos;
+      }
     }
+
+    const anaHat = gorev === "anahat" ? anaHattiCozumle(metin) : [];
+    const paragraflar = paragraflara(metin);
+    /*
+      Ana hat başlık ve not olarak girer; not köşeli parantezde: öğrencinin
+      yerine yazacağı yer tutucu olduğu görülsün. Tek paragraflık yeniden
+      yazım seçimin yerine satır içi girer; çok paragraf blok olarak.
+    */
+    const icerik = anaHat.length
+      ? anaHat.flatMap((s) => [
+          { type: "heading", attrs: { level: s.duzey }, content: [izliMetin(s.baslik, kayit.kayitId)] },
+          ...s.notlar.map((n) => ({ type: "paragraph", content: [izliMetin(`[${n}]`, kayit.kayitId)] })),
+        ])
+      : degistir && paragraflar.length === 1
+        ? izliMetin(paragraflar[0], kayit.kayitId)
+        : dugumler(metin, kayit.kayitId);
+
+    /* 3) Önceki içerik ve eklenen aralık: "Geri al" yalnızca bunu geri koyar. */
+    const ozgun = hTo > hFrom ? state.doc.slice(hFrom, hTo) : Slice.empty;
+    const eklenenId = `${kayit.oneriId}:eklenen`;
+    const tamam = editor
+      .chain()
+      .focus()
+      .command(({ tr }) => {
+        aiAdimiBaslat(tr);
+        return true;
+      })
+      .insertContentAt({ from: hFrom, to: hTo }, icerik)
+      .command(({ tr }) => {
+        const y = yeniAralik(tr, hFrom, hTo);
+        araligiIzle(tr, eklenenId, y.from, y.to);
+        return true;
+      })
+      .run();
     if (!tamam) {
-      showToast("error", t({ tr: "Metin eklenemedi; imleci metnin içine koyup tekrar deneyin.", en: "Couldn't insert the text; place the cursor in the text and try again." }));
+      uyar(t({ tr: "Metin eklenemedi; imleci metnin içine koyup tekrar deneyin.", en: "Couldn't insert the text; place the cursor in the text and try again." }));
       return;
     }
-    /* Sonraki yazım AI adımına eklenmesin: Ctrl+Z ikisini birden geri almasın. */
-    editor.view.dispatch(aiAdiminiKapat(editor.state));
-    setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, eklendi: true, uyari: undefined } : m)));
-    if (kayit.kayitId) void asistanPuanla(kayit.kayitId, "faydali", "metne eklendi").catch(() => undefined);
+    /* Sonraki yazım AI adımına eklenmesin (Ctrl+Z ikisini birden geri almasın); istek aralığı izlemeden çıkar. */
+    editor.view.dispatch(araligiBirak(aiAdiminiKapat(editor.state), kayit.oneriId));
+    const a = izlenenAralik(editor.state, eklenenId);
+    const eklenenMetin = a ? aralikMetni(editor.state.doc, a.from, a.to) : "";
+    kartGuncelle(indeks, { durum: "uygulandi", uyari: undefined, surumHatasi: undefined, duzenMetni: undefined, isleniyor: false, uygulama: { eklenenId, eklenenMetin, ozgun } });
+    kararKaydet(kayit.kayitId, secenek.metin !== undefined && secenek.metin.trim() !== kayit.ekMetin.trim() ? "duzenleyerek_kabul" : mod === "altina" && kayit.secimVardi ? "altina_eklendi" : "kabul");
     showToast("success", t({ tr: "Metin eklendi; okuyup kendi sözcüklerinizle düzenleyin.", en: "Text inserted; read it and edit it in your own words." }));
+  };
+
+  const geriAl = (indeks: number) => {
+    const kayit = mesajlar[indeks];
+    if (!kayit?.uygulama) return;
+    const sonuc = geriAlmaIslemi(editor.state, kayit.uygulama.eklenenId, kayit.uygulama.eklenenMetin, kayit.uygulama.ozgun);
+    if ("hata" in sonuc) {
+      /* Güvenli geri alma yoksa hiçbir şey yapılmaz: kullanıcının sonraki emeği silinmesin. */
+      const uyari =
+        sonuc.hata === "duzenlendi"
+          ? t({ tr: "Asistanın eklediği metni sonradan düzenlediniz; düzenlemeniz kaybolmasın diye geri alınmadı. Önceki hâle Sürümler'den dönebilirsiniz.", en: "You edited the inserted text afterwards; it wasn't undone so your edits aren't lost. You can go back from Versions." })
+          : t({ tr: "Eklenen metin artık belgede bulunamıyor; güvenle geri alınamadı. Önceki hâle Sürümler'den dönebilirsiniz.", en: "The inserted text can no longer be found; it couldn't be undone safely. You can go back from Versions." });
+      kartGuncelle(indeks, { uyari });
+      showToast("error", uyari);
+      return;
+    }
+    editor.view.dispatch(sonuc.tr);
+    editor.view.dispatch(aiAdiminiKapat(editor.state));
+    editor.commands.focus();
+    kartGuncelle(indeks, { durum: "geri_alindi", uyari: undefined, uygulama: undefined });
+    kararKaydet(kayit.kayitId, "geri_alindi");
+    showToast("success", t({ tr: "Asistanın değişikliği geri alındı.", en: "The assistant's change was undone." }));
+  };
+
+  const reddet = (indeks: number) => {
+    const kayit = mesajlar[indeks];
+    if (!kayit) return;
+    if (kayit.oneriId) editor.view.dispatch(araligiBirak(editor.state.tr, kayit.oneriId));
+    kartGuncelle(indeks, { durum: "reddedildi", duzenMetni: undefined, uyari: undefined, surumHatasi: undefined });
+    kararKaydet(kayit.kayitId, "reddedildi");
   };
 
   const kopyala = async (metin: string) => {
@@ -255,25 +372,31 @@ export default function YazimPaneli({
     }
   };
 
+  /* Puan yalnızca kullanıcının AÇIK değerlendirmesi (4.3): kabul ve ret puan yazmaz. */
   const begenmedim = (indeks: number) => {
     const kayitId = mesajlar[indeks]?.kayitId;
     if (!kayitId) return;
-    setMesajlar((onceki) => onceki.map((m, j) => (j === indeks ? { ...m, begenilmedi: true } : m)));
+    kartGuncelle(indeks, { begenilmedi: true });
     void asistanPuanla(kayitId, "faydasiz", "panelde beğenilmedi").catch(() => undefined);
   };
 
-  /* Kapalıyken de kurulu kalır (yazım panelinin görünümleri gizlenir, sökülmez): sohbet sekme değişince kaybolmasın. */
-  const hizli: { gorev: YazimGorevi; ad: string }[] = [
-    { gorev: "devam", ad: t({ tr: "Devam ettir", en: "Continue" }) },
+  /*
+    İKİ GRUP (4.3): "Yaz" (imleçte yeni metin) ve "Seçili metni düzenle".
+    Eskiden altı çip tek sırada karışıktı ve boş panelde yalnızca seçim
+    isteyenler görünüyordu. Seçim yokken düzenleme grubu odaklanabilir
+    kalır (klavye kullanıcısı ulaşabilsin) ama pasif görünür; basılınca ne
+    gerektiği söylenir.
+  */
+  const yazGrubu: { gorev: YazimGorevi; ad: string }[] = [
     { gorev: "paragraf", ad: t({ tr: "Paragraf yaz", en: "Write paragraph" }) },
+    { gorev: "devam", ad: t({ tr: "Devam ettir", en: "Continue" }) },
+    { gorev: "anahat", ad: t({ tr: "Ana hat", en: "Outline" }) },
+  ];
+  const duzenGrubu: { gorev: YazimGorevi; ad: string }[] = [
     { gorev: "akademik", ad: t({ tr: "Akademikleştir", en: "Make academic" }) },
     { gorev: "kisalt", ad: t({ tr: "Kısalt", en: "Shorten" }) },
     { gorev: "genislet", ad: t({ tr: "Genişlet", en: "Expand" }) },
-    { gorev: "anahat", ad: t({ tr: "Ana hat", en: "Outline" }) },
   ];
-  /* Boşken çiplerde yalnızca seçim isteyenler kalır; ötekiler kartlarda. */
-  const seciliIcin = new Set<YazimGorevi>(["akademik", "kisalt", "genislet"]);
-  const gorunenCipler = mesajlar.length ? hizli : hizli.filter((h) => seciliIcin.has(h.gorev));
   const ornekIstek = t({ tr: "Şu konuda bir paragraf yaz: ", en: "Write a paragraph about: " });
   /* "Kendi isteğini yaz": kutuya başlangıç koyup imleci sona götürür. */
   const kendiIstegi = () => {
@@ -311,24 +434,15 @@ export default function YazimPaneli({
       gorev: null,
     },
   ];
+  const secimIpucu = t({ tr: "Bunlar için önce editörde metin seçin.", en: "Select text in the editor first for these." });
 
   return (
-    /*
-      Signature OS Phase 2: asistan artık yazım panelinin "Asistan"
-      görünümü (yan-panel.tsx). Eskiden ekranın sağına sabitlenmiş ayrı
-      bir kutuydu ve "İncele" panelinin üstüne biniyordu; kendi başlığı ve
-      kapat düğmesi panelin sekmesi ve kapat düğmesiyle yineleniyordu.
-    */
     <div className="yazim-paneli">
-
       <div className="yazim-paneli-liste" ref={listeRef} aria-live="polite">
         {mesajlar.length === 0 ? (
           /*
-            Boş panel bir BAŞLANGIÇ menüsü (04.11.2026). Eskiden burada iki
-            paragraf kural metni vardı ve düğmeler en altta küçük çipler
-            hâlindeydi: öğrenci ne isteyebileceğini metinden çıkarmak
-            zorundaydı. Kartlar en sık dört işi doğrudan başlatıyor; kural
-            metni (atıf ve sayı sınırı) dipnota indi ama kaybolmadı.
+            Boş panel bir BAŞLANGIÇ menüsü (04.11.2026): "Yaz" grubu kartlar
+            hâlinde; kural metni (atıf ve sayı sınırı) dipnotta.
           */
           <div className="yazim-paneli-bos">
             <div className="yazim-bos-bas">
@@ -343,7 +457,7 @@ export default function YazimPaneli({
                 })}
               </small>
             </div>
-            <div className="yazim-baslangic">
+            <div className="yazim-baslangic" role="group" aria-label={t({ tr: "Yaz", en: "Write" })}>
               {baslangic.map((b) => (
                 <button key={b.ad} type="button" className="yazim-baslangic-kart" onClick={() => (b.gorev ? void gonder(b.gorev) : kendiIstegi())} disabled={bekliyor}>
                   <b.ikon size={16} aria-hidden="true" />
@@ -365,15 +479,6 @@ export default function YazimPaneli({
             </p>
           </div>
         ) : (
-          /*
-            DOLU SOHBET (04.11.2026). Asistanın önerisi artık başlıklı bir
-            kart: ne olduğu yazıyor ("Önerilen paragraf", "Ana hat"…),
-            metin belge yazısıyla, eylemler kartın altında. Eskiden
-            asistanın açıklaması ile önerdiği metin aynı düz akıştaydı ve
-            hangisinin belgeye gireceği ilk bakışta seçilmiyordu.
-            "Beğenmedim" eğitim verisine olumsuz işaret yazıyor
-            (lib/ai/kayit.ts); eklemek zaten olumlu işaret.
-          */
           mesajlar.map((m, i) =>
             m.rol === "kullanici" ? (
               <div key={i} className="yazim-mesaj" data-rol="kullanici">
@@ -390,62 +495,17 @@ export default function YazimPaneli({
                   </div>
                 ) : null}
                 {m.ekMetin ? (
-                  <div className="yazim-oneri" data-eklendi={m.eklendi || undefined}>
-                    <div className="yazim-oneri-bas">
-                      <small>{t(ONERI_ADI[m.gorev ?? "serbest"])}</small>
-                      <span>
-                        <button type="button" className="yazim-ikon" onClick={() => void kopyala(m.ekMetin!)} aria-label={t({ tr: "Kopyala", en: "Copy" })} title={t({ tr: "Kopyala", en: "Copy" })}>
-                          <Copy size={14} aria-hidden="true" />
-                        </button>
-                        {m.kayitId ? (
-                          <button
-                            type="button"
-                            className="yazim-ikon"
-                            data-secili={m.begenilmedi || undefined}
-                            disabled={m.begenilmedi || m.eklendi}
-                            onClick={() => begenmedim(i)}
-                            aria-label={t({ tr: "Beğenmedim", en: "Not helpful" })}
-                            title={m.begenilmedi ? t({ tr: "Bildirildi, teşekkürler", en: "Noted, thanks" }) : t({ tr: "Beğenmedim", en: "Not helpful" })}
-                          >
-                            <ThumbsDown size={14} aria-hidden="true" />
-                          </button>
-                        ) : null}
-                      </span>
-                    </div>
-                    <div className="yazim-oneri-metin">
-                      {m.gorev === "anahat" && anaHattiCozumle(m.ekMetin).length ? (
-                        <ul className="yazim-anahat">
-                          {anaHattiCozumle(m.ekMetin).map((s, j) => (
-                            <li key={j} data-duzey={s.duzey}>
-                              <b>{s.baslik}</b>
-                              {s.notlar.map((n, k) => (
-                                <small key={k}>{n}</small>
-                              ))}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        paragraflara(m.ekMetin).map((p, j) => <p key={j}>{p}</p>)
-                      )}
-                    </div>
-                    {m.uyari ? (
-                      <p className="yazim-oneri-uyari" role="alert">
-                        {m.uyari}
-                      </p>
-                    ) : null}
-                    <div className="yazim-oneri-eylem">
-                      <button type="button" className="projects-primary-button button-compact" onClick={() => ekle(i, false)} disabled={m.eklendi}>
-                        {m.eklendi ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}
-                        {m.eklendi ? t({ tr: "Eklendi", en: "Inserted" }) : t({ tr: "Paragrafın altına ekle", en: "Insert below paragraph" })}
-                      </button>
-                      {m.secimVardi ? (
-                        <button type="button" className="projects-filter-button button-compact" onClick={() => ekle(i, true)} disabled={m.eklendi}>
-                          <Replace size={14} aria-hidden="true" />
-                          {t({ tr: "Seçilenin yerine koy", en: "Replace selection" })}
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
+                  <OneriKarti
+                    m={m}
+                    t={t}
+                    uygula={(mod, secenek) => void uygula(i, mod, secenek)}
+                    duzenle={(duzenMetni) => kartGuncelle(i, { duzenMetni })}
+                    reddet={() => reddet(i)}
+                    geriAl={() => geriAl(i)}
+                    kopyala={() => void kopyala(m.duzenMetni ?? m.ekMetin!)}
+                    begenmedim={() => begenmedim(i)}
+                    surumleriAc={surumleriAc}
+                  />
                 ) : null}
               </div>
             ),
@@ -468,12 +528,30 @@ export default function YazimPaneli({
       </div>
 
       <div className="yazim-hizli">
-        {mesajlar.length ? null : <small className="yazim-hizli-etiket">{t({ tr: "Seçili metin için", en: "For selected text" })}</small>}
-        {gorunenCipler.map((h) => (
-          <button key={h.gorev} type="button" className="yazim-hizli-dugme" onClick={() => void gonder(h.gorev)} disabled={bekliyor}>
-            {h.ad}
-          </button>
-        ))}
+        {mesajlar.length ? (
+          <div className="yazim-hizli-grup" role="group" aria-label={t({ tr: "Yaz", en: "Write" })}>
+            {yazGrubu.map((h) => (
+              <button key={h.gorev} type="button" className="yazim-hizli-dugme" onClick={() => void gonder(h.gorev)} disabled={bekliyor}>
+                {h.ad}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <div className="yazim-hizli-grup" role="group" aria-labelledby="yazim-duzen-etiket" aria-describedby={seciliVar ? undefined : "yazim-duzen-ipucu"}>
+          <small id="yazim-duzen-etiket" className="yazim-hizli-etiket">
+            {t({ tr: "Seçili metni düzenle", en: "Edit selected text" })}
+          </small>
+          {duzenGrubu.map((h) => (
+            <button key={h.gorev} type="button" className="yazim-hizli-dugme" data-pasif={seciliVar ? undefined : true} aria-disabled={!seciliVar || undefined} onClick={() => void gonder(h.gorev)} disabled={bekliyor}>
+              {h.ad}
+            </button>
+          ))}
+          {seciliVar ? null : (
+            <small id="yazim-duzen-ipucu" className="yazim-hizli-ipucu">
+              {secimIpucu}
+            </small>
+          )}
+        </div>
       </div>
       <form
         className="yazim-girdi"
@@ -488,6 +566,7 @@ export default function YazimPaneli({
           rows={3}
           value={istek}
           maxLength={1500}
+          aria-label={t({ tr: "Asistana isteğiniz", en: "Your request to the assistant" })}
           placeholder={t({
             tr: "Örn. Giriş için Phillips eğrisinin Türkiye'deki önemini anlatan bir paragraf yaz",
             en: "E.g. Write a paragraph for the introduction on why the Phillips curve matters for Turkey",
@@ -504,6 +583,191 @@ export default function YazimPaneli({
           <ArrowUp size={16} aria-hidden="true" />
         </button>
       </form>
+    </div>
+  );
+}
+
+/*
+  ÖNERİ KARTI (4.3). Başlık kartın ne olduğunu söyler; gövde yeniden
+  yazımda kelime farkı, yeni metinde düz metin, düzenlemede metin kutusu.
+  Eylemler kartın durumuna göre: öneri → kabul/düzenle/reddet;
+  uygulandı → geri al. Renk tek başına durum taşımaz: durum metinle de yazılır.
+*/
+function OneriKarti({
+  m,
+  t,
+  uygula,
+  duzenle,
+  reddet,
+  geriAl,
+  kopyala,
+  begenmedim,
+  surumleriAc,
+}: {
+  m: Kayit;
+  t: ReturnType<typeof useCeviri>;
+  uygula: (mod: Mod, secenek?: { metin?: string; surumsuz?: boolean }) => void;
+  duzenle: (metin: string | undefined) => void;
+  reddet: () => void;
+  geriAl: () => void;
+  kopyala: () => void;
+  begenmedim: () => void;
+  surumleriAc: () => void;
+}) {
+  const kutuRef = useRef<HTMLTextAreaElement>(null);
+  const duzenleniyor = m.duzenMetni !== undefined;
+  useEffect(() => {
+    if (duzenleniyor) kutuRef.current?.focus();
+  }, [duzenleniyor]);
+  const ekMetin = m.ekMetin ?? "";
+  const yeniden = yenidenYazim(m);
+  const birincil: Mod = yeniden ? "degistir" : "altina";
+  const fark = yeniden && !duzenleniyor && m.durum === "oneri" ? diffTexts(m.secimMetni ?? "", ekMetin) : null;
+  const anaHat = m.gorev === "anahat" ? anaHattiCozumle(ekMetin) : [];
+  const oneri = m.durum === "oneri";
+  const mesgul = Boolean(m.isleniyor);
+
+  return (
+    <div className="yazim-oneri" data-durum={m.durum}>
+      <div className="yazim-oneri-bas">
+        <small>{t(ONERI_ADI[m.gorev ?? "serbest"])}</small>
+        <span>
+          <button type="button" className="yazim-ikon" onClick={kopyala} aria-label={t({ tr: "Kopyala", en: "Copy" })} title={t({ tr: "Kopyala", en: "Copy" })}>
+            <Copy size={14} aria-hidden="true" />
+          </button>
+          {m.kayitId ? (
+            <button
+              type="button"
+              className="yazim-ikon"
+              data-secili={m.begenilmedi || undefined}
+              disabled={m.begenilmedi}
+              onClick={begenmedim}
+              aria-label={t({ tr: "Beğenmedim", en: "Not helpful" })}
+              title={m.begenilmedi ? t({ tr: "Bildirildi, teşekkürler", en: "Noted, thanks" }) : t({ tr: "Beğenmedim", en: "Not helpful" })}
+            >
+              <ThumbsDown size={14} aria-hidden="true" />
+            </button>
+          ) : null}
+        </span>
+      </div>
+
+      <div className="yazim-oneri-metin">
+        {duzenleniyor ? (
+          <textarea
+            ref={kutuRef}
+            className="field-control yazim-oneri-duzen"
+            rows={Math.min(12, Math.max(4, Math.ceil(ekMetin.length / 60)))}
+            value={m.duzenMetni}
+            aria-label={t({ tr: "Öneriyi düzenleyin", en: "Edit the suggestion" })}
+            onChange={(e) => duzenle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                uygula(birincil, { metin: m.duzenMetni });
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                duzenle(undefined);
+              }
+            }}
+          />
+        ) : fark ? (
+          <>
+            <MetinFarki fark={fark} kompakt />
+            <small className="yazim-oneri-ozet">
+              {t({ tr: `+${fark.stats.addedWords} kelime · −${fark.stats.removedWords} kelime`, en: `+${fark.stats.addedWords} words · −${fark.stats.removedWords} words` })}
+            </small>
+          </>
+        ) : anaHat.length ? (
+          <ul className="yazim-anahat">
+            {anaHat.map((s, j) => (
+              <li key={j} data-duzey={s.duzey}>
+                <b>{s.baslik}</b>
+                {s.notlar.map((n, k) => (
+                  <small key={k}>{n}</small>
+                ))}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          paragraflara(ekMetin).map((p, j) => <p key={j}>{p}</p>)
+        )}
+      </div>
+
+      {m.uyari ? (
+        <p className="yazim-oneri-uyari" role="alert">
+          {m.uyari}
+        </p>
+      ) : null}
+
+      <div className="yazim-oneri-eylem">
+        {oneri && m.surumHatasi ? (
+          <>
+            <button type="button" className="projects-primary-button button-compact" disabled={mesgul} onClick={() => uygula(m.surumHatasi!.mod, { metin: m.surumHatasi!.metin })}>
+              <RotateCcw size={14} aria-hidden="true" />
+              {t({ tr: "Tekrar dene", en: "Try again" })}
+            </button>
+            <button type="button" className="projects-filter-button button-compact" disabled={mesgul} onClick={() => uygula(m.surumHatasi!.mod, { metin: m.surumHatasi!.metin, surumsuz: true })}>
+              {t({ tr: "Sürüm almadan uygula", en: "Apply without a version" })}
+            </button>
+            <button type="button" className="yazim-reddet" disabled={mesgul} onClick={reddet}>
+              {t({ tr: "Reddet", en: "Reject" })}
+            </button>
+          </>
+        ) : oneri ? (
+          <>
+            <button type="button" className="projects-primary-button button-compact" disabled={mesgul} onClick={() => uygula(birincil, duzenleniyor ? { metin: m.duzenMetni } : {})}>
+              {yeniden ? <Check size={14} aria-hidden="true" /> : <CornerDownLeft size={14} aria-hidden="true" />}
+              {duzenleniyor
+                ? yeniden
+                  ? t({ tr: "Düzenlenmiş hâlini kabul et", en: "Accept edited version" })
+                  : t({ tr: "Düzenlenmiş hâlini ekle", en: "Insert edited version" })
+                : yeniden
+                  ? t({ tr: "Kabul et", en: "Accept" })
+                  : t({ tr: "Paragrafın altına ekle", en: "Insert below paragraph" })}
+            </button>
+            {yeniden && !duzenleniyor ? (
+              <button type="button" className="projects-filter-button button-compact" disabled={mesgul} onClick={() => uygula("altina")}>
+                <CornerDownLeft size={14} aria-hidden="true" />
+                {t({ tr: "Paragrafın altına ekle", en: "Insert below paragraph" })}
+              </button>
+            ) : null}
+            {duzenleniyor ? (
+              <button type="button" className="projects-filter-button button-compact" disabled={mesgul} onClick={() => duzenle(undefined)}>
+                {t({ tr: "Düzenlemeyi bırak", en: "Stop editing" })}
+              </button>
+            ) : (
+              <button type="button" className="projects-filter-button button-compact" disabled={mesgul} onClick={() => duzenle(ekMetin)}>
+                <Pencil size={14} aria-hidden="true" />
+                {yeniden ? t({ tr: "Düzenleyerek kabul et", en: "Edit, then accept" }) : t({ tr: "Düzenleyerek ekle", en: "Edit, then insert" })}
+              </button>
+            )}
+            <button type="button" className="yazim-reddet" disabled={mesgul} onClick={reddet}>
+              {t({ tr: "Reddet", en: "Reject" })}
+            </button>
+          </>
+        ) : m.durum === "uygulandi" ? (
+          <>
+            <span className="yazim-oneri-durum">
+              <Check size={14} aria-hidden="true" />
+              {t({ tr: "Uygulandı", en: "Applied" })}
+            </span>
+            <button type="button" className="projects-filter-button button-compact" onClick={geriAl}>
+              <RotateCcw size={14} aria-hidden="true" />
+              {t({ tr: "Geri al", en: "Undo" })}
+            </button>
+            {m.uyari ? (
+              <button type="button" className="projects-filter-button button-compact" onClick={surumleriAc}>
+                <History size={14} aria-hidden="true" />
+                {t({ tr: "Sürümleri aç", en: "Open versions" })}
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <span className="yazim-oneri-durum">
+            {m.durum === "reddedildi" ? t({ tr: "Reddedildi; belgeye eklenmedi.", en: "Rejected; not added to the document." }) : t({ tr: "Geri alındı; belge önceki hâlinde.", en: "Undone; the document is as it was." })}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

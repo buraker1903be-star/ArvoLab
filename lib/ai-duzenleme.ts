@@ -63,3 +63,11 @@ export const SURUM_ESIGI = 150;
 export function surumGerekir(gorev: string, eski: string, yeni: string): boolean {
   return gorev === "anahat" || degisimOzeti(eski, yeni).toplam > SURUM_ESIGI;
 }
+
+/*
+  Panelin dışından (seçim üstündeki Arvo AI düğmesi, kısayol) asistana görev
+  göndermenin olayı. Panel dinamik yüklendiği için sabit burada: düğme
+  paneli içe aktarırsa panel ilk açılıştan önce yüklenirdi.
+*/
+export const ASISTAN_GOREV_OLAYI = "arvolab:asistan-gorev";
+export type AsistanGorevOlayi = CustomEvent<{ gorev: "akademik" | "kisalt" | "genislet" | "serbest" | "paragraf" | "devam" | "anahat" }>;

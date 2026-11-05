@@ -475,8 +475,8 @@ const BOLUMLER: KilavuzBolumu[] = [
         en: "\"Outline\" in the panel proposes a heading skeleton built on your guideline's required sections, with a short note under each heading on what to write; \"Insert below paragraph\" adds the headings and bracketed notes, which you replace with your own text.",
       },
       {
-        tr: "Asistanın yazdığı metin belgenize kendiliğinden girmez: \"Paragrafın altına ekle\", \"Seçilenin yerine koy\" ya da \"Kopyala\" ile siz eklersiniz. Eklemeden önce okuyun ve kendi sözcüklerinizle düzenleyin.",
-        en: "Text the assistant writes never enters your document by itself: you insert it with \"Insert below paragraph\", \"Replace selection\" or \"Copy\". Read it and edit it in your own words before inserting.",
+        tr: "Asistanın yazdığı metin belgenize kendiliğinden girmez: \"Kabul et\", \"Düzenleyerek kabul et\", \"Paragrafın altına ekle\" ya da \"Kopyala\" ile siz eklersiniz; \"Reddet\" öneriyi bırakır. Seçili metni yeniden yazan önerilerde neyin değiştiği kelime kelime gösterilir (silinen üstü çizili, eklenen vurgulu). Uyguladığınız değişikliği \"Geri al\" ile geri alabilirsiniz; metni sonradan düzenlediyseniz geri alma yapılmaz, önceki hâle Sürümler'den dönersiniz. Ana hattan ve 150 kelimeyi aşan değişiklikten önce otomatik sürüm alınır.",
+        en: "Text the assistant writes never enters your document by itself: you add it with \"Accept\", \"Edit, then accept\", \"Insert below paragraph\" or \"Copy\"; \"Reject\" drops the suggestion. Suggestions that rewrite selected text show what changed word by word (deleted struck through, added highlighted). \"Undo\" reverts an applied change; if you edited the text afterwards it is not undone and you go back from Versions. A version is saved automatically before an outline or a change of more than 150 words.",
       },
       {
         tr: "Asistan; kaynakça, analiz sonucu, kanıt, belge ve makale bölümleri gibi ekranlarda ilgili düğmeyle çalışır ve bulgularını kısa maddeler hâlinde verir.",

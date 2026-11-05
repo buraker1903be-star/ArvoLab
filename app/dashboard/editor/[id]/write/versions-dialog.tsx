@@ -14,6 +14,7 @@ import {
   type ManuscriptVersion,
 } from "@/app/actions/manuscript-versions";
 import { diffTexts, type TextDiff } from "@/lib/text-diff";
+import MetinFarki from "./metin-farki";
 import { useCeviri, useDil, useTarihler } from "@/app/_components/dil-saglayici";
 import { YEREL, type Metin } from "@/lib/dil";
 
@@ -280,36 +281,8 @@ function ComparePanel({ compare, onBack }: { compare: CompareState; onBack: () =
               })}
             </span>
           </div>
-          <ol className="diff-list" aria-label={t({ tr: "Değişiklikler", en: "Changes" })}>
-            {diff.blocks.slice(0, MAX_BLOCKS_SHOWN).map((block, index) =>
-              block.kind === "same" ? (
-                <li key={index} className="diff-same">
-                  {t({ tr: `… ${block.count} paragraf aynı …`, en: `… ${block.count} paragraphs unchanged …` })}
-                </li>
-              ) : block.kind === "added" ? (
-                <li key={index} className="diff-added"><ins>{block.text}</ins></li>
-              ) : block.kind === "removed" ? (
-                <li key={index} className="diff-removed"><del>{block.text}</del></li>
-              ) : (
-                <li key={index} className="diff-changed">
-                  {block.parts.map((part, partIndex) =>
-                    part.type === "same" ? (
-                      <span key={partIndex}>{part.text}</span>
-                    ) : part.type === "added" ? (
-                      <ins key={partIndex}>{part.text}</ins>
-                    ) : (
-                      <del key={partIndex}>{part.text}</del>
-                    )
-                  )}
-                </li>
-              )
-            )}
-          </ol>
-          {diff.blocks.length > MAX_BLOCKS_SHOWN ? (
-            <p className="muted text-sm">
-              {t({ tr: `İlk ${MAX_BLOCKS_SHOWN} fark gösteriliyor.`, en: `Showing the first ${MAX_BLOCKS_SHOWN} differences.` })}
-            </p>
-          ) : null}
+          {/* Fark çizimi ortak bileşende (metin-farki.tsx, 4.3): asistanın önerisi de aynısını kullanıyor. */}
+          <MetinFarki fark={diff} enFazla={MAX_BLOCKS_SHOWN} />
         </>
       )}
     </div>

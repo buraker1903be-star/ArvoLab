@@ -1212,7 +1212,10 @@
 .yazim-mesaj[data-rol="kullanici"] { justify-self: end; max-width: 85%; padding: 8px 12px; border-radius: var(--r-md) var(--r-md) 4px var(--r-md); background: var(--primary-soft); color: var(--ink); }
 .yazim-mesaj[data-rol="asistan"] { color: var(--ink-soft); }
 .yazim-oneri { display: grid; overflow: hidden; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); transition: border-color .2s ease; }
-.yazim-oneri[data-eklendi] { border-color: var(--success); }
+.yazim-oneri[data-durum="uygulandi"] { border-color: var(--success); }
+/* Reddedilen ya da geri alınan öneri sohbette kalır ama geri plana çekilir; durum metinle de yazılı. */
+.yazim-oneri[data-durum="reddedildi"] .yazim-oneri-metin,
+.yazim-oneri[data-durum="geri_alindi"] .yazim-oneri-metin { color: var(--ink-soft); }
 /* Dolu sohbet (04.11.2026): asistan satırı simgeli, öneri başlıklı kart. */
 .yazim-asistan-satir { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; }
 .yazim-asistan-ikon { display: grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; border-radius: var(--r-pill); background: var(--primary-soft); color: var(--primary-ink); }
@@ -1236,6 +1239,17 @@
 .yazim-anahat li[data-duzey="3"] { padding-left: 28px; }
 .yazim-anahat small { color: var(--muted); font-size: var(--fs-sm); }
 .yazim-oneri-eylem { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 12px 12px; }
+/* Öneri kararları (4.3): fark kartın içinde kayar, panel içinde ikinci bir kaydırma şeridi açmaz. */
+.diff-list.is-kompakt { max-height: none; overflow: visible; font-size: var(--fs-body); }
+.diff-list.is-kompakt li { padding: 0; background: none; border-left: 0; }
+.yazim-oneri-ozet { color: var(--ink-soft); font-size: var(--fs-micro); font-variant-numeric: tabular-nums; }
+.yazim-oneri-duzen { width: 100%; resize: vertical; font-size: var(--fs-body); line-height: 1.6; }
+.yazim-oneri-durum { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 600; }
+.yazim-oneri[data-durum="uygulandi"] .yazim-oneri-durum { color: var(--success); }
+/* Reddet ikincil bir karar: düğme kalabalığına dördüncü kutu eklemek yerine bağlantı görünümünde. */
+.yazim-reddet { min-height: 32px; margin-left: auto; padding: 4px 6px; border: 0; background: none; color: var(--ink-soft); font: inherit; font-size: var(--fs-sm); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.yazim-reddet:hover:not(:disabled) { color: var(--danger); }
+.yazim-reddet:disabled { opacity: .6; cursor: default; }
 .yazim-hizli { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 0; border-top: 1px solid var(--line-soft); }
 /* Sohbet doluyken çipler tek satır ve yatay kayar: iki satıra sarınca sohbetten yer çalıyordu. */
 .yazim-paneli-liste:not(:has(.yazim-paneli-bos)) + .yazim-hizli { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
@@ -1253,6 +1267,15 @@
 }
 .yazim-hizli-dugme:hover:not(:disabled) { color: var(--primary-ink); border-color: var(--primary-ink); }
 .yazim-hizli-dugme:disabled { opacity: .6; cursor: default; }
+/* İki grup (4.3): "Yaz" ve "Seçili metni düzenle". Seçim yokken düzenleme grubu odaklanabilir ama pasif görünür. */
+.yazim-hizli-grup { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.yazim-paneli-liste:not(:has(.yazim-paneli-bos)) + .yazim-hizli .yazim-hizli-grup { flex: 0 0 auto; flex-wrap: nowrap; }
+.yazim-paneli-liste:not(:has(.yazim-paneli-bos)) + .yazim-hizli .yazim-hizli-grup + .yazim-hizli-grup { padding-left: 8px; border-left: 1px solid var(--line-soft); }
+/* Dolu sohbette grup etiketi görünmez (ayırıcı çizgi ayırır); erişilebilir adı aria-labelledby ile kalır. */
+.yazim-paneli-liste:not(:has(.yazim-paneli-bos)) + .yazim-hizli .yazim-hizli-etiket { display: none; }
+.yazim-hizli-dugme[data-pasif] { opacity: .6; }
+.yazim-hizli-ipucu { flex-basis: 100%; color: var(--ink-soft); font-size: var(--fs-micro); }
+.yazim-paneli-liste:not(:has(.yazim-paneli-bos)) + .yazim-hizli .yazim-hizli-ipucu { display: none; }
 .yazim-girdi { display: flex; align-items: flex-end; gap: 8px; padding: 10px 14px 14px; }
 .yazim-girdi textarea { flex: 1 1 auto; min-width: 0; resize: none; }
 

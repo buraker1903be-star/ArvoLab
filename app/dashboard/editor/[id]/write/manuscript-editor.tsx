@@ -824,6 +824,21 @@ export default function ManuscriptEditor({
     [projectId, kullaniciId, guideline, persistDraft, scheduleSave, hataYaz, t]
   );
 
+  /*
+    AI DEĞİŞİKLİĞİNDEN ÖNCE SÜRÜM (Signature OS 4.3): önce KAYDET (sürüm
+    sunucudaki metinden alınıyor; kaydedilmemiş son yazılar dışarıda
+    kalmasın), sonra adlı sürüm. İkisinden biri olmazsa false: büyük AI
+    değişikliği uygulanmaz (yazim-paneli.tsx).
+  */
+  const asistanSurumuAl = useCallback(
+    async (etiket: string) => {
+      if (!(await saveNow())) return false;
+      const sonuc = await saveNamedVersion(projectId, etiket);
+      return Boolean(sonuc.success);
+    },
+    [saveNow, projectId],
+  );
+
   const markDirty = useCallback(() => {
     revisionRef.current += 1;
     setSaveState((state) => (state === "conflict" || state === "saving" ? state : "dirty"));
@@ -2985,7 +3000,7 @@ export default function ManuscriptEditor({
                   <span aria-hidden="true" />
                 </button>
               </div>
-              <YazimPaneli editor={editor} projectId={projectId} acik={panelAcik && gorunum === "asistan"} zorunluBolumler={guideline?.requiredSections ?? []} />
+              <YazimPaneli editor={editor} projectId={projectId} acik={panelAcik && gorunum === "asistan"} zorunluBolumler={guideline?.requiredSections ?? []} surumAl={asistanSurumuAl} surumleriAc={() => setVersionsOpen(true)} />
             </>
           ) : null,
           inceleme: (

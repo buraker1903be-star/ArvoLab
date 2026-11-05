@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { Editor } from "@tiptap/react";
 import { yazimAsistani } from "@/app/actions/ai-yazim";
-import { asistanPuanla } from "@/app/actions/ai-puan";
+import { kararKaydet } from "@/lib/ai-kararlari";
 import { oneriTemizle } from "@/lib/ai/yazim-metni";
 import { kabulEdilenOneri, oneriGoster } from "@/lib/tiptap-satir-ici-oneri";
 import { collectHeadings } from "./editor-navigation";
@@ -92,7 +92,7 @@ export function useSatirIciOneri({
     [editor, projectId, otomatigiKapat, t],
   );
 
-  // Kısayol ve kabul kaydı: her zaman.
+  // Kısayol ve kabul kararı (oturumda): her zaman.
   useEffect(() => {
     if (!editor) return;
     const tus = (e: KeyboardEvent) => {
@@ -103,7 +103,8 @@ export function useSatirIciOneri({
     };
     const islem = ({ transaction }: { transaction: Parameters<typeof kabulEdilenOneri>[0] }) => {
       const kabul = kabulEdilenOneri(transaction);
-      if (kabul?.kayit) void asistanPuanla(kabul.kayit, "faydali", "satır içi öneri kabul edildi").catch(() => undefined);
+      /* Kabul bir İŞLEM KARARI, memnuniyet puanı değil (4.3): kayda "faydalı" yazılmaz, yalnızca oturumda tutulur (lib/ai-kararlari.ts). */
+      if (kabul) kararKaydet(kabul.kayit, "satir_ici_kabul");
     };
     const kok = editor.view.dom;
     kok.addEventListener("keydown", tus);

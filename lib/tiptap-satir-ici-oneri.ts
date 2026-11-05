@@ -44,7 +44,7 @@ export function oneriKabulEt(state: EditorState): Transaction | null {
 
 export const oneriTemizleIslem = (state: EditorState): Transaction => state.tr.setMeta(oneriAnahtari, { temizle: true } satisfies Meta);
 
-/** Bir işlem öneriyi kabul ettiyse onu döndürür (çağıran "faydalı" puanı yazar). */
+/** Bir işlem öneriyi kabul ettiyse onu döndürür (çağıran kararı oturuma yazar; puan DEĞİL, 4.3). */
 export const kabulEdilenOneri = (tr: Transaction): Oneri | null => {
   const meta = tr.getMeta(oneriAnahtari) as Meta | undefined;
   return meta && "kabul" in meta ? meta.kabul : null;
