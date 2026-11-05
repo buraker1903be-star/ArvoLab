@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { bibtexOku, bibtexYaz, doiAyikla, kaynakAnahtari, kaynakcaMetni, kaynakDosyasiOku, risOku, risYaz } from "@/lib/kaynak-aktarim";
+import { bibtexOku, bibtexYaz, doiAyikla, kaynakAnahtari, kaynakAnahtarlari as anahtarlar, kaynakcaMetni, kaynakDosyasiOku, risOku, risYaz } from "@/lib/kaynak-aktarim";
 
 /* Zotero ve Mendeley'in gerçek dışa aktarma biçimiyle (alan sırası, boşluklar, BOM). */
 const RIS = `﻿TY  - JOUR
@@ -171,4 +171,12 @@ describe("İngilizce kaynakça metni (28.10.2026)", () => {
     assert.equal(kaynakcaMetni([k], "apa7", {}, "en").metin, "Smith, J. (n.d.). Writing well. Academic Press.");
     assert.equal(kaynakcaMetni([k], "apa7").metin, "Smith, J. (t.y.). Writing well. Academic Press.");
   });
+});
+
+/* 05.11.2026: Türkçe küçültmede "I" → "ı"; İngilizce başlığın büyük/küçük harf farkı tekrarı gizliyordu. */
+test("tekrar anahtarı: büyük I ile başlayan İngilizce başlık küçük harfli yazımıyla aynı", () => {
+  const a = anahtarlar({ title: "Inflation and Unemployment", year: "2019", doiOrUrl: null });
+  const b = anahtarlar({ title: "inflation and unemployment", year: "2019", doiOrUrl: null });
+  assert.deepEqual(a, b);
+  assert.deepEqual(anahtarlar({ title: "İşsizlik", year: "2020" }), anahtarlar({ title: "işsizlik", year: "2020" }));
 });

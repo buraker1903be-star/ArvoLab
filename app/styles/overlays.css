@@ -517,3 +517,7 @@ html.drawer-open { overflow: hidden; }
 }
 /* Menüsü açıkken ipucu menünün üstüne binmesin. */
 [data-ipucu][aria-haspopup][aria-expanded="true"]::after { content: none; }
+/* Uyarı: işlem tamamlandı ama bir not var (toast-events.ts "warning"). */
+.toast.is-uyari { border-color: color-mix(in srgb, var(--warning) 32%, var(--line)); }
+.toast.is-uyari .toast-icon { background: var(--warning-soft); color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
+.toast.is-uyari .toast-body strong { color: var(--ink); }

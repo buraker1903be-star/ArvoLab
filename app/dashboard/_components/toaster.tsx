@@ -71,12 +71,13 @@ export default function Toaster() {
     <div className="toast-yigini">
       {toasts.map((toast) => {
         const success = toast.kind === "success";
+        const uyari = toast.kind === "warning";
         return (
           <div
             key={toast.id}
-            className={success ? "toast is-success" : "toast"}
-            role={success ? "status" : "alert"}
-            aria-live={success ? "polite" : "assertive"}
+            className={success ? "toast is-success" : uyari ? "toast is-uyari" : "toast"}
+            role={success || uyari ? "status" : "alert"}
+            aria-live={success || uyari ? "polite" : "assertive"}
           >
             <span className="toast-icon" aria-hidden="true">
               {success ? (
@@ -88,7 +89,7 @@ export default function Toaster() {
               )}
             </span>
             <div className="toast-body">
-              <strong>{success ? toast.text : t({ tr: "İşlem tamamlanamadı", en: "Action failed" })}</strong>
+              <strong>{success ? toast.text : uyari ? t({ tr: "Tamamlandı, bir not var", en: "Done, with a note" }) : t({ tr: "İşlem tamamlanamadı", en: "Action failed" })}</strong>
               <span>{success ? t({ tr: "İşlem başarıyla tamamlandı.", en: "Completed successfully." }) : toast.text}</span>
             </div>
             <button className="toast-close" type="button" onClick={() => kapat(toast.id)} aria-label={t({ tr: "Bildirimi kapat", en: "Dismiss notification" })}>

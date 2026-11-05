@@ -34,7 +34,7 @@ export default function ActionForm({ action, children, className, style, confirm
     if (result?.success) {
       // Uyarı varsa onu gösteriyoruz: işlem tamamlandı ama kullanıcının
       // görmesi gereken bir şey var, başarı bildirimi onu gizlemesin.
-      if (result.warning) showToast("error", result.warning);
+      if (result.warning) showToast("warning", result.warning);
       // Eylemin kendi metni, sayfanın sabit metninin önüne geçer.
       else showToast("success", result.message ?? successMessage ?? t({ tr: "İşlem tamamlandı.", en: "Done." }));
       /*

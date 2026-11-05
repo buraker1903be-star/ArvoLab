@@ -338,7 +338,14 @@ export function kaynakAnahtarlari(k: { title: string; year: string | null; doiOr
   const ham = (k.doiOrUrl ?? k.doi_or_url ?? "").trim();
   const doi = ham ? (normalizeDoi(ham) ?? ham.match(/10\.\d{4,9}\/\S+/)?.[0].replace(/[.,;]+$/, "") ?? null) : null;
   if (doi) anahtarlar.push(`doi:${doi.toLowerCase()}`);
-  const baslik = k.title.toLocaleLowerCase("tr-TR").replace(/[^\p{L}\p{N}]+/gu, "");
+  /*
+    I/ı/i/İ tek harf sayılır (05.11.2026). Türkçe küçültmede büyük "I"
+    noktasız "ı" oluyor: "Inflation" ile "inflation" iki ayrı anahtar
+    üretiyor, aynı İngilizce eser büyük/küçük harf farkıyla ikinci kez
+    ekleniyordu. Bedeli: yalnızca ı/i ile ayrışan iki Türkçe başlık aynı
+    sayılır — tekrar denetiminde kabul edilebilir yanılgı.
+  */
+  const baslik = k.title.toLocaleLowerCase("tr-TR").replace(/ı/g, "i").replace(/[^\p{L}\p{N}]+/gu, "");
   if (baslik) anahtarlar.push(`b:${baslik}:${k.year ?? ""}`);
   return anahtarlar.length ? anahtarlar : [`b::${k.year ?? ""}`];
 }
