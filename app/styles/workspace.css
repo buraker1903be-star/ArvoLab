@@ -1674,3 +1674,26 @@
   .secim-ai-dugme { min-height: 44px; padding: 6px 14px; }
   .secim-ai-menu .arac-menu-oge { min-height: 44px; }
 }
+
+/*
+  Öneri paneli ve seçim menüsü, dokunmatik ekran (4.3 ek). Ölçüm (iPhone
+  13): Reddet 32, çipler 33, kopyala 40, Gönder 36 piksel genişti; Phase 4.3
+  ilkesi 44. Görünüm aynı, yalnızca basılan kutu büyüdü.
+*/
+@media (pointer: coarse) {
+  .yazim-ikon,
+  .yazim-oneri-bas .yazim-ikon { width: 44px; height: 44px; }
+  .yazim-reddet { min-height: 44px; padding-inline: 10px; }
+  .yazim-hizli-dugme { min-height: 44px; }
+  .yazim-girdi button[type="submit"] { min-width: 44px; min-height: 44px; }
+  .yazim-oneri-eylem .button-compact { min-height: 44px; }
+}
+/*
+  Telefonda seçim menüsü belgeyi kapatmasın (4.3 ek): alt alta dört satır
+  190 piksel tutup seçimin altındaki dört satırı örtüyordu. Dar ekranda
+  öğeler yan yana sarılır (iki sıra, ~100 piksel); seçimi yine örtmez.
+*/
+@media (max-width: 640px) {
+  .secim-ai-menu { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; max-width: calc(100vw - 32px); }
+  .secim-ai-menu .arac-menu-oge { width: auto; flex: 1 1 auto; justify-content: center; }
+}
