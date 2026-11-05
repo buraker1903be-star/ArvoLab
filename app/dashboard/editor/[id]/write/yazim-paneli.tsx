@@ -230,9 +230,14 @@ export default function YazimPaneli({
     if (!metin) return;
     const degistir = mod === "degistir" && Boolean(kayit.secimVardi);
     const gorev = kayit.gorev ?? "serbest";
+    /*
+      Uyarı yalnızca KARTTA (role="alert": ekran okuyucu duyurur). 4.3 ekine
+      kadar aynı metin bir de hata bildirimi olarak çıkıyordu; telefonda
+      bildirim ekranın altında kartın "Tekrar dene / Vazgeç" düğmelerinin
+      üstüne biniyordu.
+    */
     const uyar = (uyari: string, ek: Partial<Kayit> = {}) => {
       kartGuncelle(indeks, { uyari, isleniyor: false, ...ek });
-      showToast("error", uyari);
     };
 
     /* 1) Büyük değişiklikten ÖNCE adlı sürüm. Alınamazsa değişiklik sessizce uygulanmaz. */
@@ -353,8 +358,8 @@ export default function YazimPaneli({
         sonuc.hata === "duzenlendi"
           ? t({ tr: "Asistanın eklediği metni sonradan düzenlediniz; düzenlemeniz kaybolmasın diye geri alınmadı. Önceki hâle Sürümler'den dönebilirsiniz.", en: "You edited the inserted text afterwards; it wasn't undone so your edits aren't lost. You can go back from Versions." })
           : t({ tr: "Eklenen metin artık belgede bulunamıyor; güvenle geri alınamadı. Önceki hâle Sürümler'den dönebilirsiniz.", en: "The inserted text can no longer be found; it couldn't be undone safely. You can go back from Versions." });
+      // Kart içi uyarı yeter (uygula'daki uyar ile aynı gerekçe).
       kartGuncelle(indeks, { uyari });
-      showToast("error", uyari);
       return;
     }
     editor.view.dispatch(sonuc.tr);
