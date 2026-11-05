@@ -94,6 +94,7 @@ import { describeParagraphFormat, type ParagraphFormatRules } from "@/lib/paragr
 import { buildSubmissionChecklist, missingCoverFields, type ChecklistAction } from "@/lib/submission-checklist";
 import { makaleTeslimGirdisi, type SinirProfili } from "@/lib/makale/ozet-ve-sinirlar";
 import { baslikSirasi } from "@/lib/makale/bolumler";
+import { belgeGercektenDegisti } from "@/lib/tiptap-belge-degisti";
 import { etikTeslimSatiri, type EtikKaydi } from "@/lib/etik/durum";
 import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
 
@@ -911,7 +912,16 @@ export default function ManuscriptEditor({
         clearDraft(projectId, kullaniciId);
       }
     },
-    onUpdate: () => markDirtyRef.current(),
+    /*
+      Yalnızca belge GERÇEKTEN değiştiyse kirli say (lib/tiptap-belge-degisti.ts).
+      Eskiden her "update" olayı kaydı tetikliyordu; setEditable'ın belgeye
+      dokunmadan yayınladığı olay da dahil, yani editörü açmak kayıttı.
+      Ayar, kapak, kılavuz uygulaması ve içe aktarma markDirty'yi doğrudan
+      çağırıyor; bu süzgeç onları etkilemez.
+    */
+    onUpdate: ({ transaction, appendedTransactions }) => {
+      if (belgeGercektenDegisti({ transaction, appendedTransactions })) markDirtyRef.current();
+    },
     editorProps: {
       attributes: {
         // "kagit": belge alanı her temada açık kâğıt (tokens.css `:root, .kagit`, Phase 4.3).
@@ -1227,10 +1237,13 @@ export default function ManuscriptEditor({
     Taslak teklifi ya da uyumsuz içerik uyarısı yanıtlanana kadar editör salt
     okunur. Eskiden teklif açıkken yazılan ilk harf kaydedilip taslağı
     siliyordu; "Geri yükle"ye basılırsa da arada yazılan metin gidiyordu.
+    emitUpdate = false: setEditable varsayılan olarak belgeye dokunmadan
+    "update" olayı yayınlıyor. Eskiden bu olay her açılışta (ve taslak
+    teklifi reddedilince) belgenin tamamını kaydettiriyordu.
   */
   useEffect(() => {
     draftOfferRef.current = draftOffer;
-    if (editor && !editor.isDestroyed) editor.setEditable(!draftOffer && !icerikUyumsuz);
+    if (editor && !editor.isDestroyed) editor.setEditable(!draftOffer && !icerikUyumsuz, false);
   }, [editor, draftOffer, icerikUyumsuz]);
 
   const [uyumsuzYedekleniyor, setUyumsuzYedekleniyor] = useState(false);

@@ -32,6 +32,7 @@
 */
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { musveddeSatiri } from "./sentetik-musvedde.mjs";
 import { anahtarProjesi, anahtarUyusmazligi, betikHedefKarari, projeKimligi, SABIT_URETIM_SUPABASE_REF, uretimProjesiniGosteriyor } from "../../lib/supabase/ortam-guvenligi.ts";
 
 const require = createRequire(import.meta.url);
@@ -142,9 +143,16 @@ const tezB = await calisma(B, { title: "[TEST] Kentsel dönüşüm ve konut fiya
 // Müsvedde: depodaki örnek tez (tests/fixtures; uydurma içerik, kişisel veri yok).
 const tez = JSON.parse(readFileSync(new URL("../../tests/fixtures/tez-enflasyon-issizlik.json", import.meta.url), "utf8"));
 const varMi = beklet(await db.from("project_manuscripts").select("project_id").eq("project_id", tezA).maybeSingle(), "müsvedde okuma");
+/*
+  Yalnızca YOKSA eklenir; var olan müsveddeye dokunulmaz (yeniden çalıştırma
+  güvenli: silme, çoğaltma ya da üzerine yazma yok). Kelime sayısı ve düz
+  metin editörün kaydıyla aynı fonksiyonlardan (sentetik-musvedde.mjs).
+  Eskiden ikisi boş yazılıyordu ve liste tezi "0 kelime" gösteriyordu.
+*/
 if (!varMi) {
-  beklet(await db.from("project_manuscripts").insert({ project_id: tezA, content: tez, plain_text: "", word_count: 0, updated_by: A }), "müsvedde");
-  console.log("  + müsvedde (A, tez) — kelime sayısı ilk kayıtta hesaplanır");
+  const satir = await musveddeSatiri(tez, { projeId: tezA, sahipId: A });
+  beklet(await db.from("project_manuscripts").insert(satir), "müsvedde");
+  console.log(`  + müsvedde (A, tez) — ${satir.word_count} kelime`);
 }
 
 async function kaynaklar(sahip, proje, liste) {
