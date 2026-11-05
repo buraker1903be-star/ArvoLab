@@ -15,22 +15,25 @@ import Image from "next/image";
   object-fit: cover yalnızca saydam boşluğu kırpar — pikseller ve oran
   değişmez (base.css .arvolab-logo).
 
-  Koyu tema: lacivert "ARVO" koyu zeminde okunmuyor. Giriş ekranında
-  baştan beri kullanılan tek renk beyaz uygulama (filter) her yerde
-  aynı; ikinci bir dosya ya da arka plan kutusu eklenmedi.
+  Koyu tema (Signature OS 4.3, kurum sahibinin kuralı): ARVO beyaz, LAB
+  orijinal yeşilinde. 4.3'e kadar koyu temada `filter: brightness(0)
+  invert(1)` logonun TAMAMINI beyaza çeviriyordu; LAB'ın yeşili
+  kayboluyordu. Resmî koyu varyant yok; public/arvolab-logo-koyu.png
+  orijinalden teknik olarak üretildi (scripts/logo-koyu-varyant.py):
+  yalnızca lacivert pikseller beyaza kaydı, yeşil pikseller ve saydamlık
+  birebir aynı. Yeni bir logo çizilmedi. İki dosya da çizilir, tema
+  hangisinin görüneceğini CSS'te seçer (base.css): tema sunucuda
+  bilinmediği için JS ile seçmek ilk boyamada yanlış logoyu gösterirdi.
+  Gizli olan `display: none` olduğu için ekran okuyucu tek logo okur.
 
   Logo bir bağlantının içindeyse adı bağlantı taşır: alt="" verin.
 */
 export default function ArvoLabLogosu({ className, alt = "ArvoLab", oncelikli = false }: { className?: string; alt?: string; oncelikli?: boolean }) {
+  const sinif = (tema: string) => (className ? `arvolab-logo ${tema} ${className}` : `arvolab-logo ${tema}`);
   return (
-    <Image
-      className={className ? `arvolab-logo ${className}` : "arvolab-logo"}
-      src="/arvolab-logo.png"
-      alt={alt}
-      width={1920}
-      height={1080}
-      sizes="(max-width: 760px) 140px, 180px"
-      priority={oncelikli}
-    />
+    <>
+      <Image className={sinif("arvolab-logo-acik")} src="/arvolab-logo.png" alt={alt} width={1920} height={1080} sizes="(max-width: 760px) 140px, 180px" priority={oncelikli} />
+      <Image className={sinif("arvolab-logo-koyu")} src="/arvolab-logo-koyu.png" alt={alt} width={1920} height={1080} sizes="(max-width: 760px) 140px, 180px" priority={oncelikli} />
+    </>
   );
 }

@@ -90,5 +90,8 @@ code, pre, kbd { font-family: var(--font-mono); }
    saydam boşluğu object-fit kırpar, logonun kendisi kırpılmaz ve
    esnemez. Boy --logo-h ile, en ondan türetilir. */
 .arvolab-logo { display: block; flex: none; width: calc(var(--logo-h, 28px) * 4.22); height: var(--logo-h, 28px); object-fit: cover; }
-/* Koyu tema: giriş ekranının baştan beri kullandığı tek renk beyaz uygulama. */
-html[data-theme="dark"] .arvolab-logo { filter: brightness(0) invert(1); }
+/* Koyu tema (4.3): ARVO beyaz, LAB yeşil — ayrı dosya (arvolab-logo-koyu.png). Filtre YOK: eskiden
+   `filter: brightness(0) invert(1)` logonun tamamını beyaza çeviriyor, LAB'ın yeşilini siliyordu. */
+.arvolab-logo-koyu { display: none; }
+html[data-theme="dark"] .arvolab-logo-acik { display: none; }
+html[data-theme="dark"] .arvolab-logo-koyu { display: block; }
