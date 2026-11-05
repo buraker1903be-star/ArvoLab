@@ -25,7 +25,8 @@ import type { Metin } from "@/lib/dil";
   orada yok. Klavye: ↑/↓/Home/End seçenekler arasında, Escape odağı
   düğmeye geri verir.
 */
-const SECENEK: Record<TemaTercihi, { ad: Metin; ipucu?: Metin; simge: LucideIcon }> = {
+/* Ayarlar'daki Görünüm seçimi (settings/tema-secimi.tsx) aynı adları ve simgeleri kullanır. */
+export const SECENEK: Record<TemaTercihi, { ad: Metin; ipucu?: Metin; simge: LucideIcon }> = {
   light: { ad: { tr: "Açık", en: "Light" }, simge: Sun },
   dark: { ad: { tr: "Koyu", en: "Dark" }, simge: Moon },
   system: { ad: { tr: "Sistem", en: "System" }, ipucu: { tr: "Cihazınızın ayarını izler", en: "Follows your device" }, simge: Monitor },

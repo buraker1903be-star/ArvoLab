@@ -272,3 +272,116 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
   .liste-araclari-ust { flex-wrap: wrap; }
   .liste-araclari-ust > .kaynak-arama { flex: 1 1 100%; }
 }
+
+/* ============================================================
+   AYARLAR (Signature OS 4.4, 05.11.2026)
+   Tek yüzey, adlı bölümler (settings/page.tsx). Masaüstünde bölüm
+   başlığı solda, içerik sağda; dar ekranda alt alta. Soldaki dizin
+   yalnızca geniş ekranda (dar ekranda bölümler zaten kısa bir sütun).
+   ============================================================ */
+.ayarlar-govde { display: grid; gap: var(--s-6); align-items: start; }
+.ayarlar-dizin { display: none; }
+.ayarlar-yuzey {
+  display: grid;
+  min-width: 0;
+  padding: var(--s-2) var(--s-6);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.ayarlar-yuzey > .ayar-bolum {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-3);
+  padding-block: var(--s-6);
+  scroll-margin-top: var(--s-8);
+}
+.ayarlar-yuzey > .ayar-bolum + .ayar-bolum { margin-top: 0; }
+.ayarlar-yuzey > .ayar-bolum:first-child { padding-top: var(--s-6); }
+.ayar-bolum-icerik { display: grid; gap: var(--s-4); min-width: 0; }
+.ayar-bolum .ayar-listesi { margin: calc(-1 * var(--s-3)) 0; }
+.ayar-bolum-tehlike .sayfa-bolum-bas h2 { color: var(--danger); }
+
+@media (min-width: 900px) {
+  .ayarlar-yuzey > .ayar-bolum { grid-template-columns: minmax(180px, 240px) minmax(0, 1fr); column-gap: var(--s-8); }
+  /* Başlık bloğu sol sütunun ÜSTÜNDE; eylem ("Ayrıntı") başlığın altında, bölümün dibinde değil. */
+  .ayarlar-yuzey > .ayar-bolum > .sayfa-bolum-bas { flex-direction: column; align-items: flex-start; justify-content: flex-start; align-self: start; }
+}
+@media (min-width: 1200px) {
+  .ayarlar-govde { grid-template-columns: 180px minmax(0, 1fr); max-width: 1200px; }
+  .ayarlar-dizin { display: block; position: sticky; top: var(--s-6); }
+  .ayarlar-dizin ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  .ayarlar-dizin a {
+    display: block;
+    padding: 7px 10px;
+    border-radius: var(--r-sm);
+    color: var(--muted);
+    font-size: var(--fs-base);
+    text-decoration: none;
+  }
+  .ayarlar-dizin a:hover { background: var(--surface-2); color: var(--ink); }
+  .ayarlar-dizin a:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+}
+@media (max-width: 760px) {
+  .ayarlar-yuzey { padding: 0 var(--s-4); }
+  .ayarlar-yuzey > .ayar-bolum { padding-block: var(--s-5); }
+}
+
+/* Profil bilgileri: gri kutu yerine etiket–değer satırları. */
+.ayar-bilgiler { display: grid; margin: 0; }
+.ayar-bilgiler > div {
+  display: grid;
+  grid-template-columns: minmax(96px, 140px) minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.ayar-bilgiler > div:first-child { padding-top: 0; }
+.ayar-bilgiler dt { color: var(--muted); font-size: var(--fs-sm); }
+.ayar-bilgiler dd { margin: 0; color: var(--ink); font-size: var(--fs-body); font-weight: 500; overflow-wrap: anywhere; }
+.ayar-bolum .ayar-ad-formu .projects-primary-button { min-height: var(--kontrol-h); }
+
+/* Seçim satırı (dil, görünüm): seçici satırın sağında; dar ekranda alta iner. */
+.ayar-satir-secim { flex-wrap: wrap; }
+.ayar-satir-secim > :is(.ayar-dil, .ayar-tema) { flex: none; }
+@media (max-width: 760px) {
+  .ayar-satir-secim > :is(.ayar-dil, .ayar-tema) { flex-basis: 100%; margin-left: 30px; }
+}
+.ayar-tema > button { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; }
+.ayar-tema > button svg { color: var(--muted); }
+.ayar-tema > [aria-checked="true"] svg { color: var(--primary); }
+@media (max-width: 1199px), (pointer: coarse) {
+  .ayar-dil button { min-height: 40px; }
+  .ayar-bolum .ayar-satir > :is(a, button, .drawer-trigger, form > button),
+  .ayar-bolum .ayar-satir .drawer-trigger { min-height: 40px; }
+  .ayar-bolum :is(.projects-filter-button, .projects-primary-button) { min-height: 40px; min-width: 44px; justify-content: center; }
+}
+
+/* Asistan kredisi: kalan hak bir ölçü çubuğunda, ayrıntı altında. */
+.ayar-kredi { display: grid; gap: var(--s-3); padding: var(--s-4); border: 1px solid var(--line-soft); border-radius: var(--r-md); }
+.ayar-kredi-bas { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s-2); }
+.ayar-kredi-ad { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-size: var(--fs-base); font-weight: 600; }
+.ayar-kredi-ad svg { color: var(--muted); }
+.ayar-kredi-sayi { color: var(--muted); font-size: var(--fs-sm); }
+.ayar-kredi-sayi b { color: var(--ink); font-size: var(--fs-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ayar-kredi-cubuk {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  appearance: none;
+  color: var(--primary);
+}
+.ayar-kredi-cubuk::-webkit-progress-bar { border-radius: 999px; background: var(--surface-sunken); }
+.ayar-kredi-cubuk::-webkit-progress-value { border-radius: 999px; background: var(--primary); }
+.ayar-kredi-cubuk::-moz-progress-bar { border-radius: 999px; background: var(--primary); }
+.ayar-kredi-cubuk[data-tone="warning"]::-webkit-progress-value { background: var(--warning); }
+.ayar-kredi-cubuk[data-tone="warning"]::-moz-progress-bar { background: var(--warning); }
+.ayar-kredi-cubuk[data-tone="danger"]::-webkit-progress-value { background: var(--danger); }
+.ayar-kredi-cubuk[data-tone="danger"]::-moz-progress-bar { background: var(--danger); }
+.ayar-kredi-ayrinti { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-6); margin: 0; }
+.ayar-kredi-ayrinti dt { color: var(--muted); font-size: var(--fs-sm); }
+.ayar-kredi-ayrinti dd { margin: 2px 0 0; color: var(--ink); font-size: var(--fs-body); font-weight: 500; font-variant-numeric: tabular-nums; }
+.ayar-not { margin: 0; color: var(--muted); font-size: var(--fs-sm); line-height: var(--lh-metin); }
+.ayar-bolum .license-card { margin: 0; }

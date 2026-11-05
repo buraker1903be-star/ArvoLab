@@ -1050,7 +1050,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
 }
 .segmented > :is(a, button):hover { color: var(--ink); }
 .segmented > :is(a, button):focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
-.segmented > :is(.active, [aria-current="page"], [aria-selected="true"]) {
+.segmented > :is(.active, [aria-current="page"], [aria-selected="true"], [aria-checked="true"]) {
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-sm), 0 0 0 1px var(--line-soft);
