@@ -2,18 +2,21 @@
 
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, FileCheck2, MailCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileCheck2, MailCheck } from "lucide-react";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { yasalAdres } from "@/lib/yasal-baglantilar";
 import { signUp } from "@/app/actions/auth";
 import type { ActionResult } from "@/lib/auth-guards";
-import { EN_KISA_SIFRE } from "@/lib/kayit";
 import { kullanimSozlesmesi, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
 
 /*
   KAYIT FORMU (02.11.2026'da yeniden yazıldı, kurum sahibinin isteği:
-  açılır pencerede ad soyad, e-posta, telefon, şifre, şifre tekrarı ve
-  yasal metin kutuları).
+  açılır pencerede ad soyad, e-posta, telefon ve yasal metin kutuları).
+
+  ŞİFRE BURADA ALINMIYOR (G1, 06.11.2026): kayıtta alınan şifreyi adresin
+  sahibi olmayan biri de koyabiliyordu ve gerçek sahip e-postasını
+  doğrulayınca hesap o şifreyle açılıyordu. Şifre, doğrulama bağlantısından
+  sonra açılan "Şifrenizi belirleyin" sayfasında belirleniyor.
 
   Aynı bileşen iki yerde: giriş sayfasındaki "Ücretsiz hesap oluştur"
   penceresi ve /kayit sayfası (sitedeki "Ücretsiz deneyin" bağlantıları
@@ -38,15 +41,10 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
     async (_onceki, formData) => (await signUp(_onceki, formData)) ?? null,
     null,
   );
-  const [sifreGoster, setSifreGoster] = useState(false);
-  const [sifre, setSifre] = useState("");
-  const [tekrar, setTekrar] = useState("");
   const [okuyor, setOkuyor] = useState(false);
   const [okundu, setOkundu] = useState(false);
   const [sozlesme, setSozlesme] = useState(false);
   const sozlesmeKutusu = useRef<HTMLInputElement>(null);
-
-  const eslesmiyor = tekrar.length > 0 && tekrar !== sifre;
 
   if (durum?.success) {
     return (
@@ -58,8 +56,8 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
         <h2>{t({ tr: "Posta kutunuza bakın", en: "Check your inbox" })}</h2>
         <p>
           {t({
-            tr: "Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve doğrudan çalışma alanınıza girersiniz. Bağlantı 24 saat geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.",
-            en: "We sent a verification link to your address. Clicking it activates your account and takes you straight to your workspace. The link is valid for 24 hours; if you don't see the email, check your spam folder.",
+            tr: "Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve şifrenizi belirlersiniz. Bağlantı 24 saat geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.",
+            en: "We sent a verification link to your address. Clicking it activates your account and lets you set your password. The link is valid for 24 hours; if you don't see the email, check your spam folder.",
           })}
         </p>
         <p className="muted text-sm">
@@ -152,51 +150,12 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
             />
           </div>
 
-          <div className="kayit-alan">
-            <label htmlFor="kayit-sifre">{t({ tr: "Şifre", en: "Password" })}</label>
-            <div className="giris-sifre">
-              <input
-                id="kayit-sifre"
-                name="password"
-                type={sifreGoster ? "text" : "password"}
-                autoComplete="new-password"
-                minLength={EN_KISA_SIFRE}
-                value={sifre}
-                onChange={(e) => setSifre(e.target.value)}
-                aria-describedby="kayit-sifre-ipucu"
-                required
-              />
-              <button
-                type="button"
-                className="giris-sifre-goster"
-                onClick={() => setSifreGoster((g) => !g)}
-                aria-pressed={sifreGoster}
-                aria-label={sifreGoster ? t({ tr: "Şifreleri gizle", en: "Hide passwords" }) : t({ tr: "Şifreleri göster", en: "Show passwords" })}
-              >
-                {sifreGoster ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
-              </button>
-            </div>
-            <small id="kayit-sifre-ipucu" className="kayit-ipucu">{t({ tr: `En az ${EN_KISA_SIFRE} karakter.`, en: `At least ${EN_KISA_SIFRE} characters.` })}</small>
-          </div>
-
-          <div className="kayit-alan">
-            <label htmlFor="kayit-sifre-tekrar">{t({ tr: "Şifre tekrarı", en: "Repeat password" })}</label>
-            <input
-              id="kayit-sifre-tekrar"
-              name="passwordRepeat"
-              type={sifreGoster ? "text" : "password"}
-              autoComplete="new-password"
-              minLength={EN_KISA_SIFRE}
-              value={tekrar}
-              onChange={(e) => setTekrar(e.target.value)}
-              aria-invalid={eslesmiyor}
-              aria-describedby="kayit-tekrar-ipucu"
-              required
-            />
-            <small id="kayit-tekrar-ipucu" className="kayit-ipucu" data-tone={eslesmiyor ? "danger" : undefined} aria-live="polite">
-              {eslesmiyor ? t({ tr: "Şifreler aynı değil.", en: "Passwords don't match." }) : " "}
-            </small>
-          </div>
+          <p className="kayit-ipucu kayit-alan-genis">
+            {t({
+              tr: "Şifrenizi, e-posta adresinizi doğruladıktan sonra belirleyeceksiniz.",
+              en: "You will set your password after verifying your email address.",
+            })}
+          </p>
 
           <fieldset className="kayit-onaylar kayit-alan-genis">
             <legend className="sr-only">{t({ tr: "Yasal onaylar", en: "Legal consents" })}</legend>
@@ -263,7 +222,7 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
             </label>
           </fieldset>
 
-          <button className="login-button kayit-alan-genis" type="submit" disabled={bekliyor || eslesmiyor}>
+          <button className="login-button kayit-alan-genis" type="submit" disabled={bekliyor}>
             {bekliyor ? t({ tr: "Hesabınız oluşturuluyor…", en: "Creating your account…" }) : t({ tr: "Ücretsiz hesabımı oluştur", en: "Create my free account" })}
             <ArrowRight size={18} aria-hidden="true" />
           </button>

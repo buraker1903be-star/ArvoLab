@@ -10,8 +10,15 @@ export async function generateMetadata() {
 
 // Proxy, oturumu olmayan ziyaretçiyi bu sayfadan giriş sayfasına yönlendirir;
 // buraya yalnızca /auth/confirm üzerinden doğrulanmış bağlantıyla gelinir.
-export default async function ResetPasswordPage() {
+export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ ilk?: string }> }) {
   const t = await ceviri();
+  /*
+    ?ilk=1: kayıt doğrulamasından gelen yeni kullanıcı (G1, 06.11.2026).
+    Kayıt artık şifre almıyor; şifre burada, adresin sahibi olduğu
+    kanıtlanmış oturumda ilk kez belirleniyor. Akış sıfırlamayla aynı,
+    yalnızca metin farklı.
+  */
+  const ilk = (await searchParams).ilk === "1";
   return (
     <main className="auth-simple-page">
       {/* Giriş sayfasında tema düğmesi vardı, kardeş sayfalarında yoktu:
@@ -22,8 +29,8 @@ export default async function ResetPasswordPage() {
       </div>
       <div className="login-card">
         <div className="login-heading">
-          <span className="login-kicker">{t({ tr: "Şifre sıfırlama", en: "Password reset" })}</span>
-          <h2>{t({ tr: "Yeni şifrenizi belirleyin", en: "Set your new password" })}</h2>
+          <span className="login-kicker">{ilk ? t({ tr: "E-postanız doğrulandı", en: "Email verified" }) : t({ tr: "Şifre sıfırlama", en: "Password reset" })}</span>
+          <h2>{ilk ? t({ tr: "Şifrenizi belirleyin", en: "Set your password" }) : t({ tr: "Yeni şifrenizi belirleyin", en: "Set your new password" })}</h2>
           <p>
             {t({
               tr: "En az 8 karakterlik yeni bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz.",
