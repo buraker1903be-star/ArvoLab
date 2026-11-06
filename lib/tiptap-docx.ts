@@ -475,10 +475,60 @@ async function blockToDocx(node: TiptapNode, ctx: ConversionContext, opts: Block
       ];
     }
 
-    default:
-      // Bilinmeyen kapsayıcılar içeriğini kaybetmesin
-      return node.content ? convertAll(node.content, opts) : [];
+    default: {
+      /*
+        Bilinmeyen düğüm (kaldırılmış bir eklentiden ya da başka bir
+        sürümden kalan; S1.3'ten beri editör onu olduğu gibi korur ve
+        kaydeder). İçeriği kaybolmasın: ardışık SATIR İÇİ çocuklar (metin,
+        satır sonu, dipnot, bilinmeyen satır içi sarmalayıcı) bir paragrafa
+        toplanır, blok çocuklar blok olarak dönüştürülür.
+
+        Eskiden bütün çocuklar blok sayılıyordu: blockToDocx metin düğümü
+        için [] döndürdüğünden bilinmeyen bloğun doğrudan metni Word'de
+        hiç çıkmıyordu, yazdırma ve paylaşım ise aynı metni gösteriyordu
+        (S1.3 Preview kabul testi, 06.11.2026). Öznitelikleri bilinmediği
+        için yok sayılır; metin textRun'dan geçer, yani Word'e düz metin
+        olarak (XML kaçışıyla) yazılır.
+      */
+      if (!node.content) return [];
+      const out: (Paragraph | Table)[] = [];
+      let satirIci: TiptapNode[] = [];
+      const satirIciniYaz = () => {
+        if (satirIci.length === 0) return;
+        out.push(new Paragraph({ indent: indentFromAttrs(undefined, opts.quoteDepth), children: inlineChildren(satirIci, ctx) }));
+        satirIci = [];
+      };
+      for (const cocuk of node.content) {
+        if (satirIciMi(cocuk)) {
+          satirIci.push(cocuk);
+        } else {
+          satirIciniYaz();
+          out.push(...(await blockToDocx(cocuk, ctx, opts)));
+        }
+      }
+      satirIciniYaz();
+      return out;
+    }
   }
+}
+
+/*
+  Bilinmeyen bir düğümün çocuğu satır içi mi? Tanınan satır içi türler
+  (metin, satır sonu, dipnot) kesin; tanınmayan bir çocuk yalnızca kendi
+  içeriğinin TAMAMI satır içiyse satır içi sayılır (ör. içinde yalnızca
+  metin olan eski bir "formül" sarmalayıcısı). Emin olunamayan blok sayılır:
+  blok yolu da içeriği bu kuralla yeniden açtığı için metin yine kaybolmaz.
+*/
+const SATIR_ICI_TURLER = new Set(["text", "hardBreak", "footnoteReference"]);
+const BILINEN_BLOK_TURLER = new Set([
+  "paragraph", "heading", "bulletList", "orderedList", "listItem", "blockquote", "codeBlock",
+  "horizontalRule", "image", "table", "tableRow", "tableCell", "tableHeader",
+]);
+function satirIciMi(node: TiptapNode): boolean {
+  const tur = node.type ?? "";
+  if (SATIR_ICI_TURLER.has(tur)) return true;
+  if (BILINEN_BLOK_TURLER.has(tur)) return false;
+  return Array.isArray(node.content) && node.content.length > 0 && node.content.every(satirIciMi);
 }
 
 function kalinlastir(nodes: TiptapNode[]): TiptapNode[] {

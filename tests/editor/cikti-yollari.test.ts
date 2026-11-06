@@ -293,3 +293,74 @@ test("belge düzeyi seçenekler yazdırma ile Word arasında tutuyor", async (t)
     assert.ok(/w:pageBreakBefore|w:br w:type="page"/.test(acik), "Word'de sayfa sonu işareti yok");
   });
 });
+
+/*
+  BİLİNMEYEN DÜĞÜMÜN METNİ ÜÇ ÇIKTIDA DA (S1.3, 06.11.2026).
+
+  Editör tanımadığı düğümü artık olduğu gibi koruyup kaydediyor
+  (lib/tiptap-korunan-icerik.ts). Yazdırma ve paylaşım böyle bir düğümün
+  çocuklarını çiziyordu, Word ise doğrudan metin çocuklarını DÜŞÜRÜYORDU:
+  Preview kabul testinde "S13 korunan metin" baskıda vardı, .docx'te yoktu.
+  Burada aynı belgenin düz metni (sunucunun kelime saydığı metin) üç yolda
+  aynı sırayla aranıyor; zararlı öznitelik ve "<script>" metni hiçbir
+  çıktıda işaretleme olarak görünmemeli.
+*/
+test("bilinmeyen düğümün metni üç çıktıda da aynı sırayla var; işaretlemeye dönüşmüyor", async () => {
+  const { extractPlainText } = await import("@/lib/tiptap-text");
+  const metin = (t: string, marks?: unknown[]) => ({ type: "text", text: t, ...(marks ? { marks } : {}) });
+  const par = (...c: unknown[]) => ({ type: "paragraph", content: c });
+  const belge = {
+    type: "doc",
+    content: [
+      { type: "heading", attrs: { level: 1 }, content: [metin("Giriş")] },
+      par(metin("Önce gelen paragraf (Yılmaz, 2023).")),
+      {
+        type: "eskiEklenti",
+        attrs: { zararli: "\"><img src=x onerror=alert(1)>" },
+        content: [
+          metin("<script>alert(2)</script> korunan metin"),
+          { type: "hardBreak" },
+          metin("ikinci satır"),
+          { type: "footnoteReference", attrs: { id: "fn-1", text: "dipnot metni" } },
+        ],
+      },
+      { type: "eskiKapsayici", content: [par(metin("iç paragraf")), { type: "eskiFormul", content: [metin("x kare")] }] },
+      { type: "bulletList", content: [{ type: "listItem", content: [par(metin("liste maddesi"))] }] },
+      { type: "table", content: [{ type: "tableRow", content: [{ type: "tableCell", content: [par(metin("tablo hücresi"))] }] }] },
+      par(metin("işaretli metin", [{ type: "eskiVurgu", attrs: { stil: "</span><img src=x onerror=alert(3)>" } }])),
+      par(metin("Son paragraf.")),
+    ],
+  };
+  const PARCALAR = [
+    "Giriş", "Önce gelen paragraf (Yılmaz, 2023).", "<script>alert(2)</script> korunan metin", "ikinci satır",
+    "iç paragraf", "x kare", "liste maddesi", "tablo hücresi", "işaretli metin", "Son paragraf.",
+  ];
+  const coz = (s: string) =>
+    s.replace(/<[^>]+>/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, "&");
+  const sirali = (yol: string, duz: string) => {
+    let konum = -1;
+    for (const parca of PARCALAR) {
+      const yeni = duz.indexOf(parca, konum + 1);
+      assert.ok(yeni > konum, `${yol}: "${parca}" yok ya da sırası bozuk`);
+      konum = yeni;
+    }
+  };
+
+  // Sunucunun düz metni (kelime sayısı buradan) — karşılaştırmanın dayanağı.
+  sirali("düz metin", extractPlainText(belge as never));
+
+  // Dipnot metni sayfa altı listesine gider (dipnotSatirIci kapalıyken HTML'nin içinde değil).
+  const { html, footnotes } = renderTiptapHtml(belge as never, {});
+  sirali("yazdırma/paylaşım", coz(html));
+  assert.ok(footnotes.some((f) => /dipnot metni/.test(f)), "bilinmeyen bloktaki dipnot yazdırmada yok");
+  assert.doesNotMatch(html, /<script|<img[^>]*onerror|onerror=alert/i, "yazdırma çıktısına işaretleme sızdı");
+
+  const doc = await buildDocxFromTiptap({ title: "Test", doc: belge as never, fetchImage: async () => null } as never);
+  const zip = await JSZip.loadAsync(await Packer.toBuffer(doc));
+  const xml = await zip.file("word/document.xml")!.async("string");
+  sirali("Word", coz(xml));
+  assert.match(await zip.file("word/footnotes.xml")!.async("string"), /dipnot metni/, "bilinmeyen bloktaki dipnot Word'de yok");
+  assert.match(xml, /<w:br\/>/, "bilinmeyen bloktaki satır sonu Word'de yok");
+  assert.doesNotMatch(xml, /<script|onerror/i, "Word çıktısına işaretleme ya da öznitelik sızdı");
+  assert.match(xml, /&lt;script&gt;/, "script metni düz metin olarak (kaçışla) yazılmalı");
+});
