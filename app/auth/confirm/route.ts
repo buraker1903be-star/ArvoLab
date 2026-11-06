@@ -70,7 +70,13 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const tokenHash = String(form.get("token_hash") ?? "");
   const type = String(form.get("type") ?? "") as EmailOtpType;
-  const next = safeConfirmNext(String(form.get("next") ?? ""));
+  /*
+    Kayıt doğrulamasından sonra HER ZAMAN şifre belirleme (G1, 06.11.2026):
+    kayıt artık şifre almıyor, veritabanı da onay anında öncesinden kalan
+    şifreyi siliyor. Bağlantıdaki next'e güvenilmiyor — eski (next=/dashboard)
+    postalar ve elle değiştirilmiş bağlantılar da şifre sayfasına gider.
+  */
+  const next = type === "signup" ? "/reset-password?ilk=1" : safeConfirmNext(String(form.get("next") ?? ""));
 
   const supabase = await createClient();
   let verified = false;

@@ -22,7 +22,13 @@ create table auth.users (
   id uuid primary key default gen_random_uuid(),
   email text,
   raw_user_meta_data jsonb default '{}'::jsonb,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  -- G1 (20261106184046): onay anı ve şifre. Gerçek GoTrue'da varsayılan NULL;
+  -- burada now(): mevcut testlerin "insert into auth.users (id, email)"
+  -- satırları onaylı hesabı (ArvoOS'un email_confirm ile açtığı hesap)
+  -- temsil ediyor. Onaysız hesap testi NULL'u açıkça yazar.
+  email_confirmed_at timestamptz default now(),
+  encrypted_password text
 );
 create function auth.jwt() returns jsonb language sql stable as
   $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;

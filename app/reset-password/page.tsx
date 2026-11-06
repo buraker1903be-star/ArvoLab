@@ -10,20 +10,30 @@ export async function generateMetadata() {
 
 // Proxy, oturumu olmayan ziyaretçiyi bu sayfadan giriş sayfasına yönlendirir;
 // buraya yalnızca /auth/confirm üzerinden doğrulanmış bağlantıyla gelinir.
-// Signature OS 5 / Phase 2: yalnızca yerleşim değişti. Şifre kuralı ve
-// eylem (resetPassword) aynı; "en az 8" metni sunucudaki kuralı
-// (app/actions/auth.ts MIN_PASSWORD_LENGTH) aynen söylüyor.
-export default async function ResetPasswordPage() {
+// Signature OS 5 / Phase 2: yalnızca yerleşim değişti.
+export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ ilk?: string }> }) {
   const t = await ceviri();
+  /*
+    ?ilk=1: kayıt doğrulamasından gelen yeni kullanıcı (G1, 06.11.2026).
+    Kayıt artık şifre almıyor; şifre burada, adresin sahibi olduğu
+    kanıtlanmış oturumda ilk kez belirleniyor. Akış sıfırlamayla aynı,
+    yalnızca metin farklı.
+  */
+  const ilk = (await searchParams).ilk === "1";
   return (
     <KimlikYerlesimi>
       <header className="os5-kimlik-baslik">
-        <h1>{t({ tr: "Yeni şifrenizi belirleyin", en: "Set your new password" })}</h1>
+        <h1>{ilk ? t({ tr: "Şifrenizi belirleyin", en: "Set your password" }) : t({ tr: "Yeni şifrenizi belirleyin", en: "Set your new password" })}</h1>
         <p>
-          {t({
-            tr: "En az 8 karakterlik yeni bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz.",
-            en: "Enter a new password of at least 8 characters. After saving you will be taken to your dashboard.",
-          })}
+          {ilk
+            ? t({
+                tr: "E-postanız doğrulandı. En az 8 karakterlik bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz.",
+                en: "Your email is verified. Enter a password of at least 8 characters. After saving you will be taken to your dashboard.",
+              })
+            : t({
+                tr: "En az 8 karakterlik yeni bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz.",
+                en: "Enter a new password of at least 8 characters. After saving you will be taken to your dashboard.",
+              })}
         </p>
       </header>
 
