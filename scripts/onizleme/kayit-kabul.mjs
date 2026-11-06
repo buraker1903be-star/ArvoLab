@@ -15,6 +15,7 @@
   Veri senaryoları (scripts/onizleme/veri.ts) ayrı sunucu başlatmasıyla:
     ONIZLEME_SENARYO=kilavuz-eski … next dev  →  kayit-kabul.mjs --senaryo=kilavuz-eski
     ONIZLEME_SENARYO=uyumsuz      … next dev  →  kayit-kabul.mjs --senaryo=uyumsuz
+    ONIZLEME_SENARYO=acilamadi    … next dev  →  kayit-kabul.mjs --senaryo=acilamadi
   Sunucu yeni başlatılmış olmalı (yazmalar bellekte birikir; senaryolar
   sırayla çalışır ve son senaryo örnek metni değiştirir).
   Kayıt isteği = gövdesinde belge ("type":"doc") taşıyan sunucu eylemi.
@@ -56,10 +57,14 @@ async function sekme(initScript) {
   if (initScript) await ctx.addInitScript(initScript.fn, initScript.arg);
   const sayfa = await ctx.newPage();
   const kayitlar = [];
+  const govdeler = [];
   sayfa.on("request", (r) => {
-    if (r.method() === "POST" && r.headers()["next-action"] && /"type":"doc"/.test(r.postData() ?? "")) kayitlar.push(Date.now());
+    if (r.method() === "POST" && r.headers()["next-action"] && /"type":"doc"/.test(r.postData() ?? "")) {
+      kayitlar.push(Date.now());
+      govdeler.push(r.postData() ?? "");
+    }
   });
-  return { ctx, sayfa, kayitlar };
+  return { ctx, sayfa, kayitlar, govdeler };
 }
 async function editoruAc(sayfa) {
   await sayfa.goto(EDITOR, { waitUntil: "networkidle", timeout: 180000 });
@@ -205,53 +210,89 @@ await senaryo("K2) uygulandıktan sonra yeniden açmak kayıt göndermez (sürü
 
 /*
   UYUMSUZ İÇERİK (ONIZLEME_SENARYO=uyumsuz). Kayıtlı metinde editörün
-  tanımadığı bir düğüm var; Tiptap böyle bir belgeyi açamayınca editörü BOŞ
-  başlatıyor. Eskiden "Yedekle ve devam et"ten sonra hayalet kayıt bu BOŞ
-  belgeyi sunucuya yazıyordu (512 bayt): tezin canlı metni sessizce
-  boşalıyor, sonraki açılışta uyarı da çıkmıyordu (05.11.2026, ölçüldü).
-  Doğru davranış: yedek alınır, kayıt kullanıcı gerçekten yazana kadar
-  GİTMEZ; yazmadan ayrılırsa sunucudaki metin olduğu gibi kalır ve uyarı
-  sonraki açılışta yine görünür.
+  tanımadığı bir düğüm var. Eskiden Tiptap böyle bir belgeyi BOŞ açıyordu;
+  önce hayalet kayıt boş belgeyi yazdı (05.11.2026), sonra kilit eklendi ama
+  "Yedekle ve devam et" yine boş editörü açtı ve yazılan ilk harf tezin
+  yerine "boş + yazılan"ı kaydediyordu.
+  S1.3 (lib/tiptap-korunan-icerik.ts): metin açılır, tanınmayan düğüm kesik
+  çerçeveli kutuda korunur, geri kalanı düzenlenir; kayıt gövdesi özgün
+  düğümü taşır, editörün iç biçimini (korunanBlok) taşımaz.
 */
-await senaryo("U1) uyumsuz metin açılınca kayıt kilitli: uyarı var, editör salt okunur, kayıt yok", async () => {
+await senaryo("U1) uyumsuz metin BOŞ açılmaz: metin ve korunan kutu görünür, editör yazılabilir, açılışta kayıt yok", async () => {
   const { ctx, sayfa, kayitlar } = await sekme();
   await editoruAc(sayfa);
   await sayfa.waitForTimeout(KAYIT_BEKLEME);
-  bekle(/editörde açılamadı/.test(await durum(sayfa)), "uyumsuz içerik uyarısı yok");
-  bekle((await sayfa.locator(".ProseMirror").first().getAttribute("contenteditable")) === "false", "editör yazılabilir açıldı");
+  const editorMetni = await sayfa.locator(".ProseMirror").first().innerText();
+  bekle(/ilk paragrafı/.test(editorMetni) && /Son paragraf/.test(editorMetni), "editörde kayıtlı metin yok (boş açılmış)");
+  bekle((await sayfa.locator(".ProseMirror .korunan-oge").count()) === 1, "korunan kutu görünmüyor");
+  bekle(/Editörün tanımadığı içerik/.test(editorMetni), "korunan kutuda özgün metnin önizlemesi yok");
+  bekle((await sayfa.locator("[data-korunan-uyari]").count()) === 1, "korunan öğe uyarısı yok");
+  bekle((await sayfa.locator(".ProseMirror").first().getAttribute("contenteditable")) === "true", "editör salt okunur açıldı");
   bekle(kayitlar.length === 0, `${kayitlar.length} kayıt isteği gitti`);
   await ctx.close();
 }, "uyumsuz");
 
-await senaryo("U2) 'Yedekle ve devam et': yedek alınır, belge KAYDEDİLMEZ; yazmadan ayrılınca da kaydedilmez", async () => {
-  const { ctx, sayfa, kayitlar } = await sekme();
-  const yedekler = [];
-  sayfa.on("request", (r) => {
-    if (r.method() === "POST" && r.headers()["next-action"] && /Uyumsuz içerik düzenlenmeden önce/.test(r.postData() ?? "")) yedekler.push(1);
-  });
+await senaryo("U2) yazınca tek kayıt; gövde özgün düğümü ve yazılanı taşır, iç biçimi taşımaz", async () => {
+  const { ctx, sayfa, kayitlar, govdeler } = await sekme();
   await editoruAc(sayfa);
-  await sayfa.getByRole("button", { name: "Yedekle ve devam et" }).click();
+  await sayfa.locator(".ProseMirror p").last().click();
+  await sayfa.keyboard.press("End");
+  await sayfa.keyboard.type(" Eklenen cümle.");
   await sayfa.waitForTimeout(KAYIT_BEKLEME);
-  bekle(yedekler.length === 1, `${yedekler.length} yedek isteği (beklenen 1)`);
-  bekle((await sayfa.locator(".ProseMirror").first().getAttribute("contenteditable")) === "true", "editör açılmadı");
-  bekle(kayitlar.length === 0, `devam edince ${kayitlar.length} kayıt gitti (boş belge sunucuya yazılır)`);
-  await sayfa.locator('a[href="/dashboard/editor"]').first().click();
-  await sayfa.waitForURL(/\/dashboard\/editor$/, { timeout: 60000 });
-  await sayfa.waitForTimeout(KAYIT_BEKLEME);
-  bekle(kayitlar.length === 0, `ayrılırken ${kayitlar.length} kayıt gitti`);
+  bekle(kayitlar.length === 1, `${kayitlar.length} kayıt isteği (beklenen 1)`);
+  const govde = govdeler[0];
+  bekle(/kaldirilmisEklentiDugumu/.test(govde), "kayıtta özgün düğüm yok (metin kaybolur)");
+  bekle(/Editörün tanımadığı içerik\./.test(govde), "kayıtta özgün düğümün metni yok");
+  bekle(/ilk paragrafı/.test(govde) && /Eklenen cümle/.test(govde), "kayıtta düzenlenen metin eksik");
+  bekle(!/korunanBlok|korunanSatirIci|korunanIsaret/.test(govde), "kayda editörün iç biçimi sızdı");
+  bekle(!/Kaydedilemedi|Çakışma var/.test(await durum(sayfa)), "kayıt hata verdi");
   await ctx.close();
 }, "uyumsuz");
 
-await senaryo("U3) sunucudaki metin korunur: liste eski kelime sayısını gösterir, uyarı yeniden açılışta yine görünür", async () => {
+await senaryo("U3) yeniden açılışta korunan öğe ve eklenen metin yerinde (kayıpsız gidiş-dönüş)", async () => {
   const { ctx, sayfa, kayitlar } = await sekme();
+  await editoruAc(sayfa);
+  await sayfa.waitForTimeout(KAYIT_BEKLEME);
+  const editorMetni = await sayfa.locator(".ProseMirror").first().innerText();
+  bekle(/Eklenen cümle/.test(editorMetni), "kaydedilen metin yeniden açılışta yok");
+  bekle((await sayfa.locator(".ProseMirror .korunan-oge").count()) === 1, "korunan kutu yeniden açılışta kayboldu");
+  bekle(kayitlar.length === 0, `${kayitlar.length} kayıt isteği gitti`);
+  await ctx.close();
+}, "uyumsuz");
+
+/*
+  AÇILAMAYAN İÇERİK (ONIZLEME_SENARYO=acilamadi). Kök düğüm tanınmıyor:
+  hiçbir hazırlık belgeyi kuramaz, editör boş açılmak zorunda. Kayıt hiçbir
+  yoldan (yazma, devam düğmesi) açılmamalı; kurtarma seçenekleri görünmeli.
+*/
+await senaryo("A1) açılamayan metin: uyarı + kurtarma seçenekleri, 'Yedekle ve devam et' yok, editör salt okunur, kayıt yok", async () => {
+  const { ctx, sayfa, kayitlar } = await sekme();
+  await editoruAc(sayfa);
+  await sayfa.waitForTimeout(KAYIT_BEKLEME);
+  bekle((await sayfa.locator("[data-acilamadi-uyari]").count()) === 1, "açılamadı uyarısı yok");
+  bekle((await sayfa.getByRole("button", { name: "Yedekle ve devam et" }).count()) === 0, "boş editörün kilidini açan düğme görünüyor");
+  bekle((await sayfa.getByRole("button", { name: "Ham kopyayı indir" }).count()) === 1, "ham kopya düğmesi yok");
+  bekle((await sayfa.locator(".ProseMirror").first().getAttribute("contenteditable")) === "false", "boş editör yazılabilir");
+  // Yazmayı denemek de bir şey kaydetmemeli.
+  await sayfa.locator(".ProseMirror").first().click({ force: true });
+  await sayfa.keyboard.type("deneme");
+  await sayfa.waitForTimeout(KAYIT_BEKLEME);
+  bekle(kayitlar.length === 0, `${kayitlar.length} kayıt isteği gitti`);
+  await ctx.close();
+}, "acilamadi");
+
+await senaryo("A2) ham kopya sunucudaki özgün metni indirir; listede kelime sayısı değişmemiş", async () => {
+  const { ctx, sayfa } = await sekme();
+  await editoruAc(sayfa);
+  const [indirme] = await Promise.all([sayfa.waitForEvent("download"), sayfa.getByRole("button", { name: "Ham kopyayı indir" }).click()]);
+  const yol = await indirme.path();
+  const { readFileSync } = await import("node:fs");
+  const json = readFileSync(yol, "utf8");
+  bekle(/eskiKokBelge/.test(json) && /Açılamayan örnek metnin paragrafı/.test(json), "indirilen kopya özgün metin değil");
   await sayfa.goto(`${TABAN}/dashboard/editor`, { waitUntil: "networkidle", timeout: 180000 });
-  bekle(/\b11 kelime/.test(await durum(sayfa)), "listede sunucudaki 11 kelime görünmüyor (metin boşaltılmış olabilir)");
-  await editoruAc(sayfa);
-  await sayfa.waitForTimeout(KAYIT_BEKLEME);
-  bekle(/editörde açılamadı/.test(await durum(sayfa)), "uyumsuz içerik uyarısı yeniden çıkmadı");
-  bekle(kayitlar.length === 0, `${kayitlar.length} kayıt isteği gitti`);
+  bekle(/\b5 kelime/.test(await durum(sayfa)), "listede sunucudaki 5 kelime görünmüyor (metin ezilmiş olabilir)");
   await ctx.close();
-}, "uyumsuz");
+}, "acilamadi");
 
 await tarayici.close();
 for (const s of sonuclar) console.log(`${s.tamam ? "✓" : "✗"} ${s.ad}${s.tamam ? "" : `\n    ${s.neden}`}`);

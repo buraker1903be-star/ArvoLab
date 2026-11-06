@@ -139,8 +139,11 @@ export const ORNEK_RPC: Record<string, unknown> = {
                    Editör yeni sürümü kendiliğinden uygular ve KAYDETMELİ
                    (lib/guideline-sync.ts "auto-applied").
     uyumsuz        Kayıtlı metinde editörün tanımadığı bir düğüm var
-                   (kaldırılmış bir eklentiden kalma gibi). Editör kaydı
-                   kilitler; "Yedekle ve devam et" ile açılır.
+                   (kaldırılmış bir eklentiden kalma gibi). S1.3'ten beri
+                   düğüm "korunan öğe" olarak gösterilir, geri kalanı
+                   düzenlenir, kayıtta özgün düğüm yerinde kalır.
+    acilamadi      Kök düğümü bile tanınmayan metin: editör boş açılmak
+                   zorunda. Kayıt hiçbir koşulda açılmamalı.
 */
 const SENARYO = typeof process === "undefined" ? undefined : process.env.ONIZLEME_SENARYO;
 const ornekMusvedde = ORNEK.project_manuscripts[0];
@@ -171,4 +174,11 @@ if (SENARYO === "uyumsuz") {
     ],
   };
   ornekMusvedde.word_count = 11;
+}
+if (SENARYO === "acilamadi") {
+  ornekMusvedde.content = {
+    type: "eskiKokBelge",
+    content: [{ type: "paragraph", content: [{ type: "text", text: "Açılamayan örnek metnin paragrafı." }] }],
+  } as unknown as typeof ornekMusvedde.content;
+  ornekMusvedde.word_count = 5;
 }

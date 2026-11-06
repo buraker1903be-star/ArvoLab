@@ -16,6 +16,7 @@ import { WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
 import { AsistanIzi } from "@/lib/tiptap-asistan-izi";
 import { SatirIciOneri } from "@/lib/tiptap-satir-ici-oneri";
 import { AsistanAraligi } from "@/lib/tiptap-asistan-araligi";
+import { KorunanBlok, KorunanIsaret, KorunanSatirIci } from "@/lib/tiptap-korunan-dugum";
 import type { Dil, Metin } from "@/lib/dil";
 
 /*
@@ -70,6 +71,14 @@ export function editorExtensions(secenek: {
     TableHeader,
     TableCell,
     FootnoteReference,
+    /*
+      Editörün tanımadığı içerik bu düğümlerde özgün JSON'uyla korunur (S1.3,
+      lib/tiptap-korunan-icerik.ts). Kayıt onları geri sarar; veritabanına
+      ve çıktılara girmezler.
+    */
+    KorunanBlok.configure({ dil: secenek.dil ?? "tr" }),
+    KorunanSatirIci.configure({ dil: secenek.dil ?? "tr" }),
+    KorunanIsaret,
     // Yazım asistanından eklenen metin (yazarlık raporu); çıktılarda görünmez.
     AsistanIzi,
     // Satır içi öneri: yalnızca süsleme, şemaya düğüm eklemiyor; Tab ile kabul.

@@ -95,6 +95,8 @@ import { buildSubmissionChecklist, missingCoverFields, type ChecklistAction } fr
 import { makaleTeslimGirdisi, type SinirProfili } from "@/lib/makale/ozet-ve-sinirlar";
 import { baslikSirasi } from "@/lib/makale/bolumler";
 import { belgeGercektenDegisti } from "@/lib/tiptap-belge-degisti";
+import { getSchema } from "@tiptap/core";
+import { korunacakIcerigiHazirla, korunanIcerigiGeriSar, type AcilisDurumu, type HazirlikSonucu } from "@/lib/tiptap-korunan-icerik";
 import { etikTeslimSatiri, type EtikKaydi } from "@/lib/etik/durum";
 import { sayfaDuzeniFarklari } from "@/lib/sayfa-duzeni";
 
@@ -530,14 +532,26 @@ export default function ManuscriptEditor({
   const [taslakYukleniyor, setTaslakYukleniyor] = useState(false);
   const draftOfferRef = useRef<LocalDraft | null>(null);
   /*
-    Kayıtlı içerik editörün şemasına uymuyorsa (eski/bozuk düğüm) Tiptap onu
-    sessizce budayarak açar. Eskiden ilk tuşta otomatik kayıt bu budanmış
-    hâli sunucuya yazıyor ve tezin bir kısmı geri dönüşsüz gidiyordu.
-    Artık kayıt kilitlenir; kullanıcı sunucudaki hâli yedekleyip açıkça
-    "devam et" demeden hiçbir şey yazılmaz.
+    Kayıtlı içerik editörün şemasına uymuyorsa (eski/bozuk/tanınmayan düğüm)
+    Tiptap onu BOŞ açar (@tiptap/core createNodeFromContent). Eskiden ilk
+    tuşta otomatik kayıt bu boş hâli sunucuya yazıyordu; 8fb36dc'den sonra
+    kayıt kilitlendi ama "Yedekle ve devam et" yine BOŞ editörü açıyordu ve
+    yazılan ilk harf tezin yerine "boş + yazılan"ı kaydediyordu.
+
+    S1.3 (lib/tiptap-korunan-icerik.ts): belge editöre verilmeden önce
+    hazırlanır. Tanınmayan parçalar "korunan öğe" olarak özgün JSON'larıyla
+    taşınır ve kayıtta yerine geri konur; belgenin geri kalanı düzenlenir
+    (durum "korundu"). Yalnızca ProseMirror'ın içerik kuralı tutmuyorsa
+    (yapi-hatasi) eski kilit + "Yedekle ve devam et" geçerli — orada Tiptap
+    belgeyi boşaltmadan gösteriyor. Belge hiç kurulamıyorsa (acilamadi)
+    editör boş açılır ve kayıt HİÇBİR koşulda açılmaz.
   */
   const [icerikUyumsuz, setIcerikUyumsuz] = useState(false);
   const icerikUyumsuzRef = useRef(false);
+  const [acilis] = useState<HazirlikSonucu | null>(() =>
+    initialContent ? korunacakIcerigiHazirla(initialContent, getSchema(editorExtensions({ headingNumbering: true }))) : null
+  );
+  const [acilisDurumu, setAcilisDurumu] = useState<AcilisDurumu>(acilis?.durum ?? "temiz");
   /*
     Son kontrol açılışta veritabanından geliyor (yazim_kontrolleri).
     Eskiden yalnızca bellekteydi: sayfa yenilenince sonuç kayboluyordu.
@@ -742,7 +756,8 @@ export default function ManuscriptEditor({
           // eylemi kodlayıcısı bunları düz nesne saymayıp "$T" (geçici referans) olarak gönderir ve
           // sunucuya hiçbir şey ulaşmaz: başlık düzeyi, resim adresi, dipnot metni vb. kaybolurdu.
           // Düz JSON'a çevirerek gönderiyoruz; boyutu otomatik kayıt aralığını belirler.
-          const serialized = olc("kayıt: JSON üretimi", () => JSON.stringify(editor.getJSON()));
+          // Korunan öğeler özgün düğümlerine geri sarılır (S1.3): veritabanına editörün iç biçimi yazılmaz.
+          const serialized = olc("kayıt: JSON üretimi", () => JSON.stringify(korunanIcerigiGeriSar(editor.getJSON())));
           payloadBytesRef.current = serialized.length;
           // Kartlardaki ilerleme çubuğu: kılavuzun bölümleri ve sayfa alt sınırına göre.
           const progress = guideline
@@ -891,21 +906,36 @@ export default function ManuscriptEditor({
         altGirinti: guideline?.settings.subheadingIndent,
       },
     }),
-    content: initialContent ?? "",
+    content: acilis && acilis.durum !== "acilamadi" ? (acilis.icerik as object) : "",
     onCreate: ({ editor: created }) => {
       editorRef.current = created;
-      if (initialContent) {
+      let durum: AcilisDurumu = acilis?.durum ?? "temiz";
+      if (acilis && durum !== "acilamadi") {
+        /*
+          Son söz editörün KENDİ şemasında: hazırlık ayrı kurulan bir şemayla
+          yapıldı. Verilen belge burada kurulamıyorsa Tiptap onu boş açmıştır.
+        */
         try {
-          created.schema.nodeFromJSON(initialContent).check();
-        } catch (hata) {
-          console.error("[editor] kayıtlı içerik şemaya uymuyor", hata);
-          icerikUyumsuzRef.current = true;
-          blockedRef.current = true;
-          setIcerikUyumsuz(true);
+          created.schema.nodeFromJSON(acilis.icerik).check();
+        } catch {
+          try {
+            created.schema.nodeFromJSON(acilis.icerik);
+            durum = "yapi-hatasi";
+          } catch {
+            durum = "acilamadi";
+          }
         }
       }
+      if (durum === "yapi-hatasi" || durum === "acilamadi") {
+        console.error(`[editor] kayıtlı içerik şemaya uymuyor (${durum})`, acilis?.hata ?? "");
+        icerikUyumsuzRef.current = true;
+        blockedRef.current = true;
+        setIcerikUyumsuz(true);
+      }
+      setAcilisDurumu(durum);
       // Önceki oturumdan kalan, kaydedilememiş taslak varsa geri yüklemeyi öner.
-      const draft = readDraft(projectId, kullaniciId);
+      // Belge açılamadıysa önerilmez: geri yükleme kaydı gerektirir ve kayıt kapalı (taslak silinmez).
+      const draft = durum === "acilamadi" ? null : readDraft(projectId, kullaniciId);
       if (draft && JSON.stringify(draft.content) !== JSON.stringify(created.getJSON())) {
         setDraftOffer(draft);
       } else if (draft) {
@@ -1218,7 +1248,17 @@ export default function ManuscriptEditor({
         showToast("error", yedek.error);
         return;
       }
-      editor.commands.setContent(draftOffer.content);
+      /*
+        Taslak editörün kendi biçiminde yazılıyor, ama başka bir sürümden
+        kalmış olabilir: setContent tanımadığı düğümde belgeyi BOŞALTIR.
+        Önce hazırlanır; kurulamıyorsa geri yükleme yapılmaz.
+      */
+      const hazir = korunacakIcerigiHazirla(draftOffer.content, editor.schema);
+      if (hazir.durum === "acilamadi") {
+        showToast("error", t({ tr: "Taslak bu editörde açılamadı; geri yüklenmedi. Sunucudaki metin değişmedi.", en: "The draft could not be opened in this editor and was not restored. The server copy is unchanged." }));
+        return;
+      }
+      editor.commands.setContent(hazir.icerik as object);
       setDraftOffer(null);
       showToast("success", t({ tr: "Kaydedilmemiş değişiklikleriniz geri yüklendi.", en: "Your unsaved changes were restored." }));
     } catch {
@@ -1248,6 +1288,8 @@ export default function ManuscriptEditor({
 
   const [uyumsuzYedekleniyor, setUyumsuzYedekleniyor] = useState(false);
   const uyumsuzIcerikleDevam = useCallback(async () => {
+    // Açılamayan belgede editör BOŞ: kilidi açmak boş belgeyi kaydettirmek demek (düğme de gösterilmiyor).
+    if (acilisDurumu === "acilamadi") return;
     setUyumsuzYedekleniyor(true);
     try {
       const yedek = await saveNamedVersion(projectId, t({ tr: "Uyumsuz içerik düzenlenmeden önce", en: "Before editing incompatible content" }));
@@ -1263,7 +1305,18 @@ export default function ManuscriptEditor({
     } finally {
       setUyumsuzYedekleniyor(false);
     }
-  }, [projectId, t]);
+  }, [projectId, t, acilisDurumu]);
+
+  /* Açılamayan belgenin sunucudan gelen hâli, kullanıcının kendi bilgisayarına (kurtarma için). */
+  const hamIcerigiIndir = useCallback(() => {
+    const blob = new Blob([JSON.stringify(initialContent ?? null, null, 2)], { type: "application/json" });
+    const adres = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = adres;
+    a.download = `arvolab-calisma-${projectId}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(adres), 1000);
+  }, [initialContent, projectId]);
 
   const handleCheck = useCallback(async () => {
     setChecking(true);
@@ -2560,7 +2613,48 @@ export default function ManuscriptEditor({
         </div>
       ) : null}
 
-      {icerikUyumsuz ? (
+      {acilisDurumu === "korundu" && acilis ? (
+        <div className="callout editor-notice cluster" data-tone="warning" role="status" data-korunan-uyari="">
+          <span>
+            {t({
+              tr: `Bu metinde editörün tanımadığı ${acilis.korunan.reduce((t2, k) => t2 + k.sayi, 0)} öğe var (${acilis.korunan.map((k) => k.tur).join(", ")}). Kesik çerçeveli kutularda olduğu gibi korunuyor ve kayıtta yerinde kalıyor; metnin geri kalanını düzenleyebilirsiniz.`,
+              en: `This text has ${acilis.korunan.reduce((t2, k) => t2 + k.sayi, 0)} item(s) the editor does not recognise (${acilis.korunan.map((k) => k.tur).join(", ")}). They are preserved as-is in the dashed boxes and kept on save; you can edit the rest of the text.`,
+            })}
+          </span>
+          <span className="cluster">
+            <button type="button" className="projects-filter-button" onClick={() => setVersionsOpen(true)}>
+              {t({ tr: "Sürüm geçmişi", en: "Version history" })}
+            </button>
+            <Link href="/dashboard/support" className="projects-filter-button">
+              {t({ tr: "Destek", en: "Support" })}
+            </Link>
+          </span>
+        </div>
+      ) : null}
+
+      {icerikUyumsuz && acilisDurumu === "acilamadi" ? (
+        <div className="callout editor-notice cluster" data-tone="danger" role="alert" data-acilamadi-uyari="">
+          <span>
+            {t({
+              tr: "Kayıtlı metin bu editörde açılamadı. Metniniz sunucuda olduğu gibi duruyor ve bu ekrandan üzerine hiçbir şey yazılmayacak. Önceki bir sürümü geri yükleyebilir, metnin ham kopyasını indirebilir ya da destekten yardım isteyebilirsiniz.",
+              en: "The saved text could not be opened in this editor. Your text is unchanged on the server and nothing will be written over it from this screen. You can restore an earlier version, download a raw copy of the text, or ask support for help.",
+            })}
+          </span>
+          <span className="cluster">
+            <button type="button" className="projects-filter-button" onClick={() => setVersionsOpen(true)}>
+              {t({ tr: "Sürüm geçmişi", en: "Version history" })}
+            </button>
+            <button type="button" className="projects-filter-button" onClick={hamIcerigiIndir}>
+              {t({ tr: "Ham kopyayı indir", en: "Download raw copy" })}
+            </button>
+            <Link href="/dashboard/support" className="projects-filter-button">
+              {t({ tr: "Destek", en: "Support" })}
+            </Link>
+          </span>
+        </div>
+      ) : null}
+
+      {icerikUyumsuz && acilisDurumu !== "acilamadi" ? (
         <div className="callout editor-notice cluster" data-tone="danger" role="alert">
           <span>
             {t({

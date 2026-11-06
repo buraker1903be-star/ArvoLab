@@ -191,6 +191,20 @@
 .manuscript-editor-content .footnote-marker::after { content: counter(footnote); }
 .manuscript-editor-content .footnote-marker:hover { background: var(--primary-soft); }
 
+/* Editörün tanımadığı içerik (S1.3): özgün hâliyle korunuyor, düzenlenemez; kesik çerçeve "dokunulmadı" der */
+.manuscript-editor-content .korunan-oge {
+  margin: .5em 0;
+  padding: 6px 10px;
+  border: 1px dashed var(--warning);
+  border-radius: 6px;
+  background: var(--warning-soft);
+  color: var(--muted);
+  font-size: .85em;
+  user-select: none;
+}
+.manuscript-editor-content .korunan-oge-satir { display: inline-block; margin: 0 2px; padding: 0 6px; }
+.manuscript-editor-content .korunan-oge.ProseMirror-selectednode { outline: 2px solid var(--warning); }
+
 /* Şekil/tablo başlıkları: numara belge sırasına göre otomatik (Word'de SEQ alanı) */
 .manuscript-editor-content p[data-caption] { text-align: center; font-size: .95em; }
 .manuscript-editor-content p[data-caption="figure"] { counter-increment: figure; }

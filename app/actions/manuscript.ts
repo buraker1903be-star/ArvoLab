@@ -12,6 +12,7 @@ import { checkGuidelineCompliance } from "@/lib/guideline-check";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { AUTO_VERSION_INTERVAL_MS, snapshotManuscript } from "@/lib/manuscript-versions";
 import { hasNonPlainAttributes } from "@/lib/format-loss";
+import { korunanIcerigiGeriSar, korunanOgeSayisi } from "@/lib/tiptap-korunan-icerik";
 import { kontrolSayilari, ozetOku, yapiSorunlariniTemizle, type KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import type { StructureIssue } from "@/lib/structure-check";
 import { kagitMi, kagitOku, type KagitBoyutu } from "@/lib/kagit-boyutu";
@@ -178,7 +179,25 @@ export async function saveManuscript(projectId: string, input: SaveManuscriptInp
     return { error: (await abonelikKapaliMesaji()), forbidden: true, abonelik: true };
   }
 
-  const { content, margins, pageSize, showPageNumbers, coverPage, settingsSource, includeToc, headingNumbering } = input;
+  const { content: gelenIcerik, margins, pageSize, showPageNumbers, coverPage, settingsSource, includeToc, headingNumbering } = input;
+  /*
+    Editörün tanımadığı içerik editörde "korunan öğe" olarak taşınır ve
+    istemci kayıttan önce özgün düğüme geri sarar (S1.3,
+    lib/tiptap-korunan-icerik.ts). Sunucu da sarar: eski bir sekmeden ya da
+    doğrudan çağrıdan gelen korunan öğe veritabanına yazılırsa yazdırma ve
+    Word çıktısı onu tanımaz. Geri sarılamayan (bozulmuş) öğe varsa kayıt
+    yapılmaz — özgün içerik bilinmiyorsa üzerine yazmak veri kaybıdır.
+  */
+  const content = gelenIcerik ? korunanIcerigiGeriSar(gelenIcerik) : gelenIcerik;
+  if (content && korunanOgeSayisi(content) > 0) {
+    console.error("saveManuscript: geri sarılamayan korunan öğe, kayıt durduruldu");
+    return {
+      error: t({
+        tr: "Metindeki desteklenmeyen bir öğe okunamadı; üzerine yazmamak için kaydı durdurduk. Sayfayı yenileyin.",
+        en: "An unsupported item in the text could not be read; we stopped the save so nothing is overwritten. Refresh the page.",
+      }),
+    };
+  }
   // Biçim bilgisi (başlık düzeyi, resim adresi, dipnot metni…) sunucuya eksik ulaştıysa
   // kaydetme: eksik metni üzerine yazmak yerine hata göster, taslak tarayıcıda kalır.
   if (!content || content.type !== "doc" || hasNonPlainAttributes(content)) {
