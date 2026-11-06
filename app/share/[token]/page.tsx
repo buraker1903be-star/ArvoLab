@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hashShareToken, isShareTokenFormat } from "@/lib/share-token";
 import { recordShareView } from "@/lib/share-views";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
-import { refreshImageUrls } from "@/lib/manuscript-images";
+import { calismaResimKlasorleri, refreshImageUrls } from "@/lib/manuscript-images";
 import { buildPrintSheet } from "@/lib/print-sheet";
 import type { CoverPage } from "@/app/actions/manuscript";
 import type { TiptapDoc } from "@/lib/tiptap-text";
@@ -133,8 +133,8 @@ export default async function SharedManuscriptPage({ params }: { params: Promise
         includeToc: row.include_toc ?? false,
       }
     : null;
-  // Resimler yalnızca bu çalışmaya ait depo klasörlerinden imzalanır (çalışma, sahibi, atanan uzman).
-  const doc = row ? await refreshImageUrls(row.content as TiptapDoc, [link.project_id, project.owner_id, project.assignee_id], admin) : null;
+  // Resimler yalnızca bu çalışmaya ait depo klasörlerinden imzalanır (lib/manuscript-images.ts: calismaResimKlasorleri).
+  const doc = row ? await refreshImageUrls(row.content as TiptapDoc, calismaResimKlasorleri({ id: link.project_id, owner_id: project.owner_id }), admin) : null;
 
   // Görüntülenme sayısı; ilk açılışta bağlantıyı oluşturana panel içi bildirim (en iyi çaba)
   // Önizleme botları (WhatsApp, Slack…) sayılmaz: danışman açmadan "açıldı" bildirimi gidiyordu.
