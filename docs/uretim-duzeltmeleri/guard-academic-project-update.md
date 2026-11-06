@@ -168,3 +168,55 @@ Test projesi henüz yok; kurulumu ayrı onay bekliyor
 - RLS politikaları değişmez. Canlı ile depo arasındaki iki politika farkı
   (`universities` çift okuma politikası, `organizations` eşdeğer ifade)
   güvenlik açısından nötrdür.
+
+## S1.1 — Atama zinciri ve editör resimleri (06.11.2026)
+
+**Bulgu (Production, salt okumayla doğrulandı 06.11.2026):** tetikleyici ve
+fonksiyon yok; migration geçmişi 12 satır. Bu yüzden sahip ve atanan kişi
+`assignee_id`'yi kendisi yazabiliyor. Resim imzalama (yönetici istemcisi,
+RLS'siz) atanan kişinin `<kimlik>/editor-images/` klasörünü de kabul
+ediyordu. İkisi birlikte: A, B'yi kendi çalışmasına atayıp metnine B'nin
+resim yolunu yazarsa, editör/yazdırma/Word/paylaşım yolları o dosyayı
+imzalıyordu; paylaşım bağlantısıyla oturumsuz birine de. Ön koşul: B'nin
+kullanıcı kimliğini ve dosya adını (`<zaman damgası>-<özgün ad>`) bilmek.
+İstismar izi yok: Production'da atanmış çalışma 0.
+
+**Düzeltme 1 — veritabanı (bu belge, onay bekliyor):** tetikleyici geri
+gelince sahip ve atanan kişi `assignee_id`'yi yazamaz. Test projesinde
+06.11.2026'da işlem içinde denendi ve geri alındı: A'nın denemesi 42501
+ile reddedildi, B'nin A'nın çalışmasına denemesi RLS'te 0 satır.
+
+**Düzeltme 2 — uygulama (bağımsız savunma katmanı, kodda):**
+`calismaResimKlasorleri` (`lib/editor-resim-yolu.ts`) yalnızca çalışma
+klasörünü ve sahibin klasörünü kabul eder; dört imzalama noktası
+(`app/share/[token]`, `app/api/manuscripts/[projectId]/export`,
+`app/dashboard/editor/[id]/write`, `app/print/manuscript/[id]`) bu
+listeyi kullanır. Tetikleyici olmasa da zincir kapanır. Testi:
+`tests/unit/editor-resim-yolu.test.ts`.
+
+**Eski resimlerin geçişi:** atanan kişinin eski yükleme yolundaki
+(`<atanan kimliği>/editor-images/…`) resimler artık imzalanmaz. Production'da
+böyle resim yok (06.11.2026: tek editör resmi çalışma klasöründe; metinlerdeki
+bütün resim bağlantıları kendi çalışma klasörüne gidiyor). Uygulamadan
+hemen önce aynı salt okuma sorgusu yeniden çalıştırılmalı; sonuç sıfır
+değilse önce o dosyalar çalışma klasörüne kopyalanır ve metindeki yol
+güncellenir (ayrı onayla), sonra kod yayına alınır.
+
+Doğrulama sorgusu (salt okuma, dosya adı yazdırmaz):
+
+```sql
+select count(*) as atanan_klasorunden_resim
+from public.project_manuscripts m
+join public.academic_projects p on p.id = m.project_id
+where p.assignee_id is not null
+  and m.content::text ~ ('/project-files/' || p.assignee_id::text || '/editor-images/');
+```
+
+Beklenen: 0.
+
+**Not (düşük, güvenlik açığı değil):** depo okuma politikasındaki
+`gozetim_kapsami(kullanici_kurumu(calisma_klasoru(name)), …)` ifadesi
+`kullanici_kurumu`'na çalışma kimliği veriyor; o fonksiyon kullanıcı
+kimliği bekliyor ve her zaman NULL döner. Bu dal hiç eşleşmez (kapalı
+tarafa düşer); gözetim rolleri dosyaya zaten `can_view_project` dalından
+ulaşıyor. Ayrı bir migration'la düzeltilebilir; acil değil.

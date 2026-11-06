@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
 import { calismaKilavuzuOku } from "@/lib/guideline-rules";
 import { resolveGuidelineSync } from "@/lib/guideline-sync";
-import { refreshImageUrls } from "@/lib/manuscript-images";
+import { calismaResimKlasorleri, refreshImageUrls } from "@/lib/manuscript-images";
 import { detectFormatLoss } from "@/lib/format-loss";
 import { ozetOku, yapiSorunlariniTemizle } from "@/lib/kontrol-gecmisi";
 import type { ManuscriptCheckResult } from "@/app/actions/manuscript";
@@ -116,7 +116,7 @@ export default async function WriteManuscriptPage({
     calismaKilavuzuOku(supabase, id, project.guideline_id),
     // Resim bağlantılarının süresi dolmasın: açılışta depo yolundan yeniden imzalanır.
     // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
-    manuscript ? refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : Promise.resolve(null),
+    manuscript ? refreshImageUrls(manuscript.content, calismaResimKlasorleri(project)) : Promise.resolve(null),
     makaleProfiliSorgusu,
   ]);
   if (makaleProfiliYaniti?.error) console.error("[makale] editörde profil okunamadı:", makaleProfiliYaniti.error.message);
