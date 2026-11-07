@@ -538,6 +538,15 @@
 /* Kaynaklar sayfası: solda literatür, sağda kaynakça — iki eşit kart */
 .kaynaklar-ikili { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 900px) { .kaynaklar-ikili { grid-template-columns: minmax(0, 1fr); } }
+/*
+  Kaynakça kartı içeriği kadar (UX S7, 07.11.2026). Eskiden ızgara satırı
+  iki kartı da Literatür kartının boyuna geriyordu: denetim yokken iki
+  satırlık kart ekranın dibine kadar boş bir kutu oluyordu. Kart artık
+  üstten hizalanıyor; sonuç geldikçe büyüyor, satırı aşınca (tek ekran
+  düzeninde) kendi içinde kayıyor (.gb-tek-ekran .gb-sutun). Literatür
+  kartı ve öteki sayfaların kartları değişmedi.
+*/
+.kaynaklar-ikili > .kaynakca-kart { align-self: start; max-height: 100%; }
 .kaynaklar-ikili .gb-kart-bas { flex-wrap: wrap; }
 /* Başlık metni yer kaplar, düğmeler sağa yaslanır (sarınca alta iner). */
 .kaynaklar-ikili .gb-kart-bas > div:first-child { flex: 1 1 240px; min-width: 0; }

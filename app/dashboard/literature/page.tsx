@@ -290,7 +290,7 @@ export default async function KaynaklarPage({
             ) : null}
           </article>
 
-          <article className="gb-kart gb-sutun">
+          <article className="gb-kart gb-sutun kaynakca-kart">
             <header className="gb-kart-bas">
               <div>
                 <h2>{t({ tr: "Kaynakça", en: "Reference list" })}</h2>
