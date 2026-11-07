@@ -53,3 +53,58 @@ silinmez; "Kapandı" satırıyla tarihlenir.
   kendisi algılayıp 2 koduyla durur; `kabul.mjs` ve `ai-kabul.mjs`
   algılamaz — her betikten önce sunucu yeniden başlatılmalı (başlık
   açıklamalarında yazılı).
+
+## N5 — `kayit-kabul` sonrası `ai-kabul` aynı sunucuda düşüyor (AÇIK, teknik borç)
+
+- **Belirti (07.11.2026):** aynı önizleme sunucusunda `kayit-kabul.mjs`'ten
+  sonra koşan `ai-kabul.mjs` 21 senaryonun 13'ünde düşüyor
+  (`selectNodeContents ... parameter 1 is not of type 'Node'`, seçim
+  düğmesi tıklanamıyor). Taze sunucuda `ai-kabul` 21/21.
+- **Neden:** N4'ün özel bir hâli. `kayit-kabul` yazma kipinde belgeyi
+  BELLEKTE değiştiriyor (kılavuz uygulaması, kayıt); `ai-kabul` örnek
+  tezin belirli paragraflarını varsayıyor ve bulamıyor. Ürün hatası değil.
+- **Öneri (bu turda uygulanmadı):**
+  1. Sahte istemciye betik başına sıfırlama ucu: yalnızca `ARVOLAB_ONIZLEME=1`
+     ve üretim dışında açık bir `POST /api/onizleme/sifirla` (ya da
+     `ONIZLEME_YAZ=1` iken her betiğin başında çağrılan bir sunucu işlemi)
+     ORNEK verisini ilk hâline döndürür. Betikler başlarken bunu çağırır.
+  2. Yazan betikler kendi çalışmalarını açar (ikinci örnek tez kimliği);
+     okuyan betikler örnek teze dokunmaz.
+  3. Birden çok betik koşan bir yürütücü (`scripts/onizleme/hepsi.mjs`)
+     her betikten önce sıfırlar ve özet tablo basar; sıra bağımlılığı
+     böylece görünür olur.
+  4. Kısa vadede: betik başlığına "yazan betik" / "okuyan betik" etiketi ve
+     `cikti-kabul`'daki gibi "veri ilk hâlinde değil" algılaması (2 koduyla dur).
+
+## N6 — Kelime sayısı: kalan tutarlılık riski ve B planı (AÇIK)
+
+- **Uygulanan (A, 07.11.2026, `lib/kelime-gosterimi.ts`):** içerik okunan
+  ekranlarda (Özet, teslim hazırlığı, ana sayfa ve Çalışmalarım'da
+  öğrencinin en son düzenlenen 12 çalışması) sayı içerikten, editörle aynı
+  `countWords` ile. Veritabanına yazma yok.
+- **Kalan risk:** personel listeleri (Kontrolör, Akademik Yönetici, Uzman;
+  kurumun bütün tezleri) ve öğrencinin 13. ve sonraki çalışmaları kayıttaki
+  `word_count`'u gösterir. 4.3.5 (B7) kuralından önce kaydedilmiş ve o
+  günden beri kaydedilmemiş bir metinde bu sayı editörden farklı olabilir
+  (örnek tezde 6.304 / 6.354). Metin bir kez kaydedilince fark kapanır.
+  Sürüm geçmişindeki sayılar o anın kaydıdır, bilerek değişmez.
+- **B — tek seferlik yeniden hesaplama, YALNIZCA PLAN (onay yok, uygulanmadı):**
+  1. Kuru koşu betiği (salt okunur, servis anahtarıyla, önce Test):
+     `project_manuscripts`'ten `project_id, word_count, updated_at, content`
+     sayfalı okunur (500'er satır, `project_id` sırasıyla; satır tavanına
+     takılmamak için). Her satırda `countWords(content)` hesaplanır.
+  2. Çıktı yalnızca bir rapor: toplam satır, farklı çıkan satır sayısı,
+     farkın dağılımı (min/medyan/max, yüzde), en büyük 20 fark (yalnızca
+     `project_id` ve iki sayı; içerik yazılmaz), `updated_at` aralığı.
+  3. Kuru koşu hiçbir şey yazmaz; betik `--uygula` olmadan güncelleme
+     kodunu hiç çağırmaz. Üretimde ayrıca betik hedef kuralı
+     (`betikHedefKarari`, onay cümlesi) geçerli.
+  4. Uygulama (ayrı onayla): yalnızca `word_count` güncellenir, koşullu
+     (`where word_count = <okunan>`; arada kaydedilen satır atlanır).
+     `updated_at` ve `updated_by` DEĞİŞMEMELİ: tablonun güncelleme
+     tetikleyicisi bunları yazıyorsa önce o doğrulanmalı (yoksa her satır
+     "az önce düzenlendi" görünür ve otomatik sürüm ritmi bozulur).
+     Sürüm tablosuna ve yazım ritmi kayıtlarına dokunulmaz.
+  5. Yazım ritmi: düzeltilen bir satırın ertesi kaydı, önceki günün eski
+     kurallı sayısıyla karşılaştırılır; o gün için tek seferlik küçük bir
+     artış/azalış görünebilir (doğal kayıtta da aynısı olur).
