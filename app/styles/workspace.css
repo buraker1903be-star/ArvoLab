@@ -1948,3 +1948,68 @@
 .yan-panel .kontrol-olculer { gap: var(--s-4); }
 .yan-panel .kontrol-olculer > div { padding: 0; background: transparent; }
 .yan-panel .kontrol-olculer dd { font-size: var(--fs-lg); }
+
+/* ============================================================
+   PHASE 4.5 — 3. DİLİM: ODAKLI AKADEMİK YAZIM
+   Belgenin kendisine (kâğıt, tipografi, sayfa ölçüsü, yazdırma) dokunmaz.
+   ============================================================ */
+
+/*
+  Kılavuz bilgi bandı: telefonda daraltılabilir. Masaüstünde düğme yok,
+  bant 2. dilimdeki gibi tam görünür — orada yer sorunu yok ve bant
+  sağdaki panelle birlikte okunuyor. Daraltılmış hâlde yalnızca başlık
+  ve "ayrıntılar" düğmesi kalır; "Kılavuzumu yükle" ve "Kurumu seç" tek
+  dokunuşla geri gelir. Sınıf yalnızca "kılavuz yok" bandında var:
+  "yeni sürüm uygulandı" ve "kılavuza göre güncelle" daralmaz.
+*/
+.kilavuz-bandi-dugme { display: none; }
+@media (max-width: 760px) {
+  .kilavuz-bandi-dugme { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 40px; min-width: 40px; padding: 0; }
+  .kilavuz-bandi > .cluster { flex-wrap: wrap; align-items: center; }
+  /* Açıkken düğme başlığın hizasında, sağ üst köşede: eylem satırına
+     girince 320 px'te kendi satırına kayıyor ve bandı 48 px uzatıyordu. */
+  .manuscript-main .kilavuz-bandi:not([data-dar]) { position: relative; }
+  .kilavuz-bandi:not([data-dar]) > div:first-child { padding-right: 36px; }
+  .kilavuz-bandi:not([data-dar]) .kilavuz-bandi-dugme { position: absolute; top: 2px; right: 2px; }
+  .manuscript-main .kilavuz-bandi[data-dar] { flex-direction: row; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; }
+  .kilavuz-bandi[data-dar] > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .kilavuz-bandi[data-dar] strong { overflow: hidden; font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+  .kilavuz-bandi[data-dar] .kilavuz-bandi-ayrinti,
+  .kilavuz-bandi[data-dar] > .cluster > a { display: none; }
+  .kilavuz-bandi[data-dar] > .cluster { flex: 0 0 auto; }
+}
+
+/*
+  Başlık → araç çubuğu → belge hiyerarşisi (telefon): başlık bloğuyla araç
+  çubuğu arasındaki boşluk daraldı, araç çubuğu belgeye yapışık tek bir
+  "yazım yüzeyi" olarak okunuyor. Kâğıdın iç ölçüleri değişmiyor.
+*/
+@media (max-width: 760px) {
+  .yazma-basligi { margin-bottom: 6px; }
+}
+
+/*
+  Arvo AI başlangıç eylemleri: dört ayrı çerçeveli kart yerine tek
+  çerçeveli, ayraçlı bir liste. Aynı dört düğme, aynı sıra ve etiketler;
+  yalnızca görsel ağırlık azaldı.
+*/
+.yazim-baslangic { gap: 0; overflow: hidden; border: 1px solid var(--line-soft); border-radius: var(--r-md); }
+.yazim-baslangic-kart { border: 0; border-radius: 0; }
+.yazim-baslangic-kart + .yazim-baslangic-kart { border-top: 1px solid var(--line-soft); }
+.yazim-baslangic-kart:focus-visible { position: relative; z-index: 1; }
+
+/*
+  Teslim: "Kılavuz ve kaynakça kontrolü" sekmenin tek dolu düğmesiydi ve
+  listedeki maddelerin önüne geçiyordu. Kaynaklar sekmesindeki eylem
+  düğmeleriyle aynı çerçeveli biçime indi; yeri, adı ve işlevi aynı.
+*/
+.yan-bolum.kontrol-karti > .kontrol-calistir { width: 100%; justify-content: center; }
+
+/* Kayıt durumunun noktası dar ekranda sıkışıp çubuğa dönüyordu (metin
+   sığmadığında flex onu da küçültüyordu); nokta sabit, kısalan metin. */
+.save-status::before { flex: none; }
+@media (max-width: 400px) {
+  /* Nokta artık küçülmediği için "Kaydedildi · ss:dd" 320 px'te 3 px
+     taşıyordu; durum ile düğmeler arası 8 → 4 px. */
+  .yazma-basligi { column-gap: 4px; }
+}

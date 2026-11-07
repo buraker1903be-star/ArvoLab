@@ -3,7 +3,7 @@
 import { ornekKalibi } from "@/lib/atif/tyk";
 import { eksikAlanlar } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
-import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, useId } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { kayitHatasiMetni, TASLAK_GUVENDE_METIN, TASLAK_YAZILAMADI_METIN } from "@/lib/taslak-durumu";
@@ -79,6 +79,8 @@ import {
   FileSearch,
   Library,
   CloudOff,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 import type { ImportMode } from "./import-dialog";
@@ -205,6 +207,16 @@ const CITATION_STYLES = STIL_SECENEKLERI.map((secenek) => secenek.deger) as Cita
 */
 const ONERI_TERCIHI = "arvolab:otomatik-oneri";
 const INCELEME_TERCIHI = "arvolab:inceleme-paneli";
+/*
+  Telefonda "Bu çalışmaya bağlı kılavuz yok" bandının daraltılması
+  (Phase 4.5, 07.11.2026). Bant yazım alanının üstünde ~120 px tutuyordu;
+  ilk açılışta bilgilendirmek için AÇIK gelir, öğrenci kapatırsa bütün
+  çalışmalarında kapalı kalır (bir kez okunan bilgi). Yalnızca bu bilgi
+  bandı daralır: "yeni sürüm uygulandı" ve "kılavuza göre güncelle"
+  uyarıları akademik uyumluluk bildirdiği için hiçbir zaman daralmaz.
+  Masaüstünde düğme yok ve bant her zaman tam görünür (CSS).
+*/
+const KILAVUZ_BANDI_TERCIHI = "arvolab:kilavuz-bandi-dar";
 const TERCIH_OLAYI = "arvolab:editor-tercihi";
 function tercihAboneligi(degisti: () => void) {
   window.addEventListener(TERCIH_OLAYI, degisti);
@@ -1003,6 +1015,8 @@ export default function ManuscriptEditor({
     "?asistan=1" ve "?teslim=<madde>" ilgili görünümü açık başlatır.
   */
   const panelTercihi = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, true), () => true);
+  const kilavuzBandiDar = useSyncExternalStore(tercihAboneligi, () => tercihOku(KILAVUZ_BANDI_TERCIHI, false), () => false);
+  const kilavuzBandiAyrintiId = useId();
   const ekran = useEkranSinifi();
   const bicim = panelBicimi(ekran);
   const ilkGorunum = acilisGorunumu({ asistan: asistanAcikBasla, teslim: acilacakMadde });
@@ -2919,13 +2933,13 @@ export default function ManuscriptEditor({
           </div>
         </div>
       ) : !guideline && isThesis ? (
-        <div className="guideline-applied-banner" data-tone="muted" role="status">
+        <div className="guideline-applied-banner kilavuz-bandi" data-tone="muted" data-dar={kilavuzBandiDar ? "" : undefined} role="status">
           <div>
             <strong>{t({ tr: "Bu çalışmaya bağlı kılavuz yok", en: "No guideline is linked to this work" })}</strong>
             {/* Eskiden yalnızca "kurumu seçin" deniyordu: kataloğunda kılavuzu
                 olmayan (yurt dışındaki her) öğrenci kurumu seçse de bir şey
                 değişmiyordu. Asıl yol kendi kılavuzunu yüklemek. */}
-            <span>
+            <span id={kilavuzBandiAyrintiId} className="kilavuz-bandi-ayrinti">
               {t({
                 tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
                 en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
@@ -2939,6 +2953,16 @@ export default function ManuscriptEditor({
             <Link href={editHref} className="projects-filter-button">
               {t({ tr: "Kurumu seç", en: "Select institution" })}
             </Link>
+            <button
+              type="button"
+              className="projects-filter-button kilavuz-bandi-dugme"
+              aria-expanded={!kilavuzBandiDar}
+              aria-controls={kilavuzBandiAyrintiId}
+              aria-label={kilavuzBandiDar ? t({ tr: "Kılavuz uyarısının ayrıntılarını göster", en: "Show guideline notice details" }) : t({ tr: "Kılavuz uyarısını daralt", en: "Collapse guideline notice" })}
+              onClick={() => tercihYaz(KILAVUZ_BANDI_TERCIHI, !kilavuzBandiDar)}
+            >
+              {kilavuzBandiDar ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
+            </button>
           </div>
         </div>
       ) : null}
@@ -3342,7 +3366,7 @@ export default function ManuscriptEditor({
                 */}
                 <button
                   type="button"
-                  className="projects-primary-button"
+                  className="projects-filter-button kontrol-calistir"
                   onClick={handleCheck}
                   disabled={checking}
                   title={t({
