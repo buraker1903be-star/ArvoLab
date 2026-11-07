@@ -731,8 +731,9 @@ const tarayici = await chromium.launch();
     await ctx.close();
   });
 
-  await senaryo("tema: belge kâğıdı koyu temada da beyaz ve koyu mürekkepli (Phase 4.3)", async () => {
+  await senaryo("tema: belge kâğıdı koyu temada açık (#ECE9E2) ve koyu mürekkepli (Phase 4.3, UX S8)", async () => {
     // Akademik belgenin sayfası uygulama temasından bağımsız: .kagit açık tokenları kendi üzerinde kurar.
+    // UX S8 (07.11.2026): koyu temada ekrandaki kâğıt saf beyaz değil #ECE9E2 (ayrıntı: kagit-kabul.mjs).
     const ctx = await tarayici.newContext({ colorScheme: "dark" });
     const sayfa = await ctx.newPage();
     await git(sayfa, `/dashboard/editor/${TEZ}/write`);
@@ -740,7 +741,7 @@ const tarayici = await chromium.launch();
     await kagit.waitFor({ state: "visible", timeout: 30000 });
     const renk = await kagit.evaluate((el) => ({ zemin: getComputedStyle(el).backgroundColor, yazi: getComputedStyle(el).color, tema: document.documentElement.getAttribute("data-theme") }));
     bekle(renk.tema === "dark", `tema ${renk.tema}`);
-    bekle(renk.zemin === "rgb(255, 255, 255)", `kâğıt zemini ${renk.zemin}`);
+    bekle(renk.zemin === "rgb(236, 233, 226)", `kâğıt zemini ${renk.zemin}`);
     const [r, g, b] = renk.yazi.match(/\d+/g).map(Number);
     bekle(r + g + b < 150, `kâğıt yazısı koyu değil: ${renk.yazi}`);
     await ctx.close();
