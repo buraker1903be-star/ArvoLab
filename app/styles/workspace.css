@@ -196,8 +196,8 @@
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
   background:
-    linear-gradient(to right, var(--kagit), color-mix(in srgb, var(--kagit) 0%, transparent)) left center / 28px 100% no-repeat local,
-    linear-gradient(to left, var(--kagit), color-mix(in srgb, var(--kagit) 0%, transparent)) right center / 28px 100% no-repeat local,
+    linear-gradient(to right, var(--kagit) 14px, color-mix(in srgb, var(--kagit) 0%, transparent)) left center / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--kagit) 14px, color-mix(in srgb, var(--kagit) 0%, transparent)) right center / 28px 100% no-repeat local,
     radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--ink) 22%, transparent), transparent) left center / 12px 100% no-repeat scroll,
     radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--ink) 22%, transparent), transparent) right center / 12px 100% no-repeat scroll;
 }
