@@ -10,7 +10,8 @@ import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { kunyeDogrula, type DogrulamaSonucu } from "@/lib/kanit/dizin";
-import { kaynakAnahtarlari } from "@/lib/kaynak-aktarim";
+import { doiTekrariMesaji, TEKRAR_DENETLENEMEDI, kaynakDoiAnahtari, tekrarBul } from "@/lib/kaynak-ekleme";
+import { kapsamdakiKaynaklar } from "@/lib/kaynak-kapsami";
 import { kaynakDuzenlemeSatiri, yayinAlanlari } from "@/lib/kaynak-formu";
 
 const PAGE_PATH = "/dashboard/literature";
@@ -109,21 +110,26 @@ export async function createLiteratureSource(formData: FormData): Promise<Action
     notes: String(formData.get("notes") ?? "").trim() || null,
   };
   /*
-    TEKRAR BİLGİSİ (Signature OS 4.2). İçe aktarma ve DOI ile ekleme tekrarı
-    hiç eklemiyor; elle eklemede kullanıcı bilerek ikinci bir kayıt açıyor
-    olabilir (aynı kitabın başka baskısı), bu yüzden ENGELLENMİYOR,
-    söyleniyor. Ölçüt içe aktarmanınki (kaynakAnahtarlari). Ekleme ÖNCESİ
-    bakılıyor; liste okunamazsa uyarı yazılmaz ("tekrar yok" da denmiyor).
+    TEKRAR (Signature OS 4.2; A1 07.11.2026). Kural lib/kaynak-ekleme.ts'te,
+    kapsam lib/kaynak-kapsami.ts'te: çalışmaya bağlıysa o çalışma, değilse
+    kullanıcının genel kütüphanesi (K2, K6).
+      • Aynı DOI ENGELDİR (K2). Eskiden elle eklemede aynı DOI de yalnızca
+        uyarıyla ikinci kez ekleniyordu.
+      • Yalnızca başlık + yıl eşleşmesi UYARIDIR: kullanıcı bilerek ikinci
+        bir kayıt açıyor olabilir (aynı kitabın başka baskısı). Eskiden
+        uyarı yalnızca çalışmaya bağlı kaynakta veriliyordu.
+    Kapsam okunamazsa: DOI'li kayıt EKLENMEZ (engelin sorgusu hata yutmaz);
+    DOI'siz kayıt eklenir ama uyarı yazılmaz ("tekrar yok" da denmiyor) —
+    eski davranış.
   */
   let tekrarVar = false;
-  if (row.project_id) {
-    const { data: ayni } = await ctx.supabase
-      .from("literature_sources")
-      .select("title, year, doi_or_url")
-      .eq("owner_id", ctx.user.id)
-      .eq("project_id", row.project_id);
-    const yeni = new Set(kaynakAnahtarlari(row).filter((a) => a !== "b::"));
-    tekrarVar = (ayni ?? []).some((k) => kaynakAnahtarlari(k).some((a) => yeni.has(a)));
+  const kapsam = await kapsamdakiKaynaklar(ctx.supabase, ctx.user.id, row.project_id);
+  if ("hata" in kapsam) {
+    if (kaynakDoiAnahtari(row.doi_or_url)) return { error: t(TEKRAR_DENETLENEMEDI) };
+  } else {
+    const tekrar = tekrarBul(row, kapsam.kaynaklar);
+    if (tekrar.tur === "doi") return { error: t(doiTekrariMesaji(Boolean(row.project_id), tekrar.mevcut.title)) };
+    tekrarVar = tekrar.tur === "baslik";
   }
 
   let { error } = await ctx.supabase.from("literature_sources").insert({ ...row, ...publicationFields((name) => formData.get(name)) });
@@ -140,8 +146,8 @@ export async function createLiteratureSource(formData: FormData): Promise<Action
     return {
       success: true,
       warning: t({
-        tr: "Kaynak eklendi. Bu çalışmada aynı DOI ya da aynı başlık ve yıl ile bir kayıt daha var; Kaynaklar listesinde “Olası tekrar” süzgeciyle görebilirsiniz.",
-        en: "Source added. This work already has a record with the same DOI, or the same title and year; you can see it with the “Possible duplicates” filter in Sources.",
+        tr: "Kaynak eklendi. Aynı başlık ve yılla bir kayıt daha var; Kaynaklar listesinde “Olası tekrar” süzgeciyle görebilirsiniz.",
+        en: "Source added. Another record has the same title and year; you can see it with the “Possible duplicates” filter in Sources.",
       }),
     };
   }
@@ -289,6 +295,24 @@ export async function createCitationSource(input: CitationSourceInput): Promise<
     status: "used",
     notes: null,
   };
+  /*
+    Aynı DOI kapsamda zaten varsa (A1, K2/K6) YENİ SATIR YAZILMAZ: mevcut
+    kaynak döner ve atıf ona yapılır — öğrencinin akışı kesilmez. Eskiden
+    bu yolda tekrar denetimi yoktu; atıf penceresinden ve "Cümleye kaynak
+    bul"dan aynı DOI her seferinde yeni bir kayıt açıyordu. Kapsam
+    okunamazsa DOI'li kayıt eklenmez (engelin sorgusu hata yutmaz).
+    Başlık + yıl eşleşmesine burada bakılmaz (eski davranış).
+  */
+  if (kaynakDoiAnahtari(row.doi_or_url)) {
+    const kapsam = await kapsamdakiKaynaklar(ctx.supabase, ctx.user.id, row.project_id);
+    if ("hata" in kapsam) return { error: t(TEKRAR_DENETLENEMEDI) };
+    const tekrar = tekrarBul(row, kapsam.kaynaklar);
+    if (tekrar.tur === "doi") {
+      const { data: mevcut, error: okumaHatasi } = await ctx.supabase.from("literature_sources").select("*").eq("id", tekrar.mevcut.id).single();
+      if (okumaHatasi || !mevcut) return { error: t(TEKRAR_DENETLENEMEDI) };
+      return { source: mevcut as LiteratureSource };
+    }
+  }
   let { data, error } = await ctx.supabase
     .from("literature_sources")
     .insert({ ...row, ...publicationFields((name) => fields[name]) })

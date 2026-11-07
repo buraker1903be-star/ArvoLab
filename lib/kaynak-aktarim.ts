@@ -16,7 +16,7 @@
 
   Saf modül; testi tests/unit/kaynak-aktarim.test.ts.
 */
-import { formatAuthors, normalizeDoi } from "@/lib/doi";
+import { doiAnahtari, formatAuthors, metindekiDoiler } from "@/lib/doi";
 import type { Dil } from "@/lib/dil";
 import { formatReferenceParts, splitAuthors, surname, NUMERIC_STYLES, type CitableSource, type CitationStyle } from "@/lib/citation-format";
 
@@ -336,8 +336,10 @@ export function kaynakAnahtari(k: { title: string; year: string | null; doiOrUrl
 export function kaynakAnahtarlari(k: { title: string; year: string | null; doiOrUrl?: string | null; doi_or_url?: string | null }): string[] {
   const anahtarlar: string[] = [];
   const ham = (k.doiOrUrl ?? k.doi_or_url ?? "").trim();
-  const doi = ham ? (normalizeDoi(ham) ?? ham.match(/10\.\d{4,9}\/\S+/)?.[0].replace(/[.,;]+$/, "") ?? null) : null;
-  if (doi) anahtarlar.push(`doi:${doi.toLowerCase()}`);
+  /* Tek kural (lib/doi.ts, A1): eskiden yedek yol "\S+" ile kapanışı da
+     alıyordu, "(doi: 10.1/abc)" ile "10.1/abc" iki ayrı anahtardı. */
+  const doi = ham ? (doiAnahtari(ham) ?? metindekiDoiler(ham)[0]?.toLowerCase() ?? null) : null;
+  if (doi) anahtarlar.push(`doi:${doi}`);
   /*
     I/ı/i/İ tek harf sayılır (05.11.2026). Türkçe küçültmede büyük "I"
     noktasız "ı" oluyor: "Inflation" ile "inflation" iki ayrı anahtar
@@ -357,14 +359,10 @@ export const DOI_TOPLU_EN_COK = 50;
 /** Yapıştırılan metindeki DOI'ler (bağlantı, "doi:" ya da çıplak), benzersiz ve sırasıyla. */
 export function doiAyikla(metin: string): string[] {
   /* Eski Wiley SICI DOI'leri "<693::AID-ASI4>" gibi açılı parantez taşıyor;
-     eskiden "<"da kesiliyor, kesik DOI dizinde bulunamıyordu. */
-  const bulunan = metin.match(/10\.\d{4,9}\/(?:[^\s"'<>]|<[^\s"'<>]*>)+/g) ?? [];
-  const sonuc: string[] = [];
-  for (const ham of bulunan) {
-    const doi = ham.replace(/[.,;)\]]+$/, "");
-    if (!sonuc.some((d) => d.toLowerCase() === doi.toLowerCase())) sonuc.push(doi);
-  }
-  return sonuc;
+     eskiden "<"da kesiliyor, kesik DOI dizinde bulunamıyordu. Tek kural
+     lib/doi.ts metindekiDoiler'de (A1): eskiden burada sondaki ")" koşulsuz
+     atılıyor, "10.1000/abc(1)" "10.1000/abc(1" diye kesiliyordu. */
+  return metindekiDoiler(metin);
 }
 
 /* ---------- Dışa aktarma ---------- */

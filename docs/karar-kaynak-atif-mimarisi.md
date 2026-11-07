@@ -359,7 +359,7 @@ K5 ve K4 migration istemez; K4, M5'ten sonra en doğru hâlini alır
 
 | Dilim | İçerik | Migration | Kabul |
 |---|---|---|---|
-| A1 | Tek normalleştirici + karar modülü + `kaynakEkleDoi`; `lookupDoi` kapısı ve `lib/access.ts`; durum kuralı; iki arayüz aynı işlemi çağırır | yok (tekrar denetimi uygulamada) | 7.1, kabul.mjs DOI |
+| A1 | Tek DOI kuralı + tekrar karar modülü; bütün ekleme yolları aynı kurala bağlı. **UYGULANDI (07.11.2026, yerel)** — ayrıntı 8.1 | yok (tekrar denetimi uygulamada) | 7.1, `kaynak-ekleme-kabul.mjs`, `tests/db/kaynak-ekleme` |
 | A2 | M1 + yumuşak silme akışı, uyarı, "Kaldırılanlar", tek sorgu yardımcısı | M1 | 7.3, 7.5 silme |
 | A3 | M2 + M3 + M4: DOI sütunu, geri doldurma raporu, veritabanı tekrar engeli | M2–M4 | 7.2, 7.3 |
 | A4 | K5: `atif` işareti, ekleme yolları, okuma kuralı (bağlama aracı YOK) | yok (TipTap şeması — **TipTap mimarisine dokunur**) | 7.4, cikti-kabul |
@@ -370,6 +370,32 @@ K5 ve K4 migration istemez; K4, M5'ten sonra en doğru hâlini alır
 
 A3 ile A4 bağımsız; A2, A4'ten önce gelirse silme uyarısı ilk günde yalnızca
 metin eşleşmesine dayanır ("olası" etiketiyle) — kabul edilebilir.
+
+### 8.1 A1'in uygulanan kapsamı ve bilerek dışarıda bırakılanlar
+
+Uygulanan (veri modeli, migration, `doi_or_url` değerleri, PDF bağları ve
+TipTap yapısı DEĞİŞMEDİ):
+- **Tek DOI kuralı** `lib/doi.ts` (`normalizeDoi`, `doiAnahtari`,
+  `metindekiDoiler`); `lib/kaynak-aktarim.ts` ve `lib/kanit/kunye-karsilastirma.ts`'teki
+  `doiAyikla`'lar ve editördeki yerel anahtar ona bağlandı.
+- **Tekrar kararı** `lib/kaynak-ekleme.ts` (saf), **kapsam sorgusu**
+  `lib/kaynak-kapsami.ts` (çalışma / genel kütüphane, yalnızca kendi kaynakları).
+- Yollar: elle ekleme (aynı DOI artık engel), atıf penceresi ve "Cümleye
+  kaynak bul" (aynı DOI yeni satır açmaz, mevcut kaynak döner), arama
+  sonucundan ekleme (istemci DOI'si doğrulanır, aynı DOI engel), DOI
+  listesi (başlık+yıl ile atlanan künye artık "vardı" raporlanır).
+- Kapsam okunamazsa DOI'li kayıt eklenmez (engelin sorgusu hata yutmaz).
+
+Bilerek dışarıda bırakılan (karar ya da ayrı dilim gerekir):
+- `lookupDoi` abonelik kapısı / saat hakkı — kullanım politikası (bölüm 10).
+- `createCitationSource`'un kaynağı `used` olarak açması — durum kuralı
+  (bölüm 4 K1-5) ayrı karar; A1 yalnızca doğrulama/tekrar/kapı/yetki.
+- `lib/academic-reference-verification.ts`'teki özel DOI temizleyici —
+  kullanıcı girdisi değil, dizin cevabı okuyor; katılaştırmak kaynakça
+  denetiminin sonucunu değiştirebilir. Ayrı dilimde, önce/sonra
+  karşılaştırmasıyla.
+- Uygulama düzeyi tekrar denetimi kapsamı PostgREST satır tavanıyla
+  sınırlı (lib/kaynak-kapsami.ts notu); kesin çözüm M3/M4.
 
 ## 9. Riskler
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { HEDEF_MESAJI, kaynakHedefi } from "@/lib/kaynak-hedefi";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
-import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork } from "@/lib/doi";
+import { CROSSREF_USER_AGENT, crossrefWorkUrl, doiAnahtari, normalizeDoi, parseCrossrefWork } from "@/lib/doi";
 import { DOI_TOPLU_EN_COK, ICE_AKTARMA_EN_COK, kaynakAnahtari, kaynakAnahtarlari, type KaynakTaslagi } from "@/lib/kaynak-aktarim";
 import { ceviri } from "@/lib/dil-sunucu";
 
@@ -84,6 +84,8 @@ async function ekle(
   anahtarlar: Set<string>,
   taslaklar: KaynakTaslagi[],
   projectId: string,
+  /** Tekrar diye atlanan taslaklar buraya eklenir (DOI listesi sonucu doğru raporlasın). */
+  tekrarlar?: KaynakTaslagi[],
 ): Promise<Sonuc> {
   const satirlar: ReturnType<typeof satira>[] = [];
   let atlanan = 0;
@@ -95,6 +97,7 @@ async function ekle(
     const anahtarlari = kaynakAnahtarlari(taslak);
     if (anahtarlari.some((a) => anahtarlar.has(a))) {
       atlanan += 1;
+      tekrarlar?.push(taslak);
       continue;
     }
     for (const a of anahtarlari) anahtarlar.add(a);
@@ -187,8 +190,19 @@ export async function doiIleEkle(projectId: string, doilar: string[]): Promise<{
   for (let i = 0; i < temiz.length; i += 5) await Promise.all(temiz.slice(i, i + 5).map(getir));
 
   if (taslaklar.length) {
-    const r = await ekle(h.ctx, h.anahtarlar, taslaklar, projectId);
+    /*
+      Crossref'ten gelen künye ekleme adımında BAŞLIK + YIL ile mevcut bir
+      kayda eşleşip atlanabiliyor (ön denetim yalnızca DOI'ye bakıyor).
+      Eskiden o DOI yine "eklendi" diye raporlanıyordu (A1 denetimi,
+      07.11.2026): kullanıcı eklenmemiş kaynağı eklendi sanıyordu.
+    */
+    const tekrarlar: KaynakTaslagi[] = [];
+    const r = await ekle(h.ctx, h.anahtarlar, taslaklar, projectId, tekrarlar);
     if (r.error) return { error: r.error };
+    const tekrarDoilari = new Set(tekrarlar.map((tk) => doiAnahtari(tk.doiOrUrl)).filter(Boolean));
+    for (const s of sonuclar) {
+      if (s.durum === "eklendi" && tekrarDoilari.has(doiAnahtari(s.doi))) s.durum = "vardi";
+    }
   }
   /* Kullanıcının yapıştırdığı sırayla dönsün. */
   sonuclar.sort((a, b) => temiz.indexOf(a.doi) - temiz.indexOf(b.doi));

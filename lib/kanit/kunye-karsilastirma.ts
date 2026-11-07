@@ -20,6 +20,7 @@
 */
 
 import type { Dil, Metin } from "@/lib/dil";
+import { metindekiDoiler } from "@/lib/doi";
 
 export type DizinKaydi = {
   dizin: "crossref" | "openalex";
@@ -154,8 +155,8 @@ const ilkSayfa = (deger: string | null | undefined) => {
 
 export function doiAyikla(deger: string | null | undefined): string | null {
   // Eski Wiley SICI DOI'leri "<…>" taşıyor; eskiden "<"da kesilip kalıcı "doğrulanamadı" yazılıyordu.
-  const m = /10\.\d{4,9}\/(?:[^\s"<>]|<[^\s"<>]*>)+/i.exec(deger ?? "");
-  return m ? m[0].replace(/[.,;)\]]+$/, "").toLowerCase() : null;
+  // Tek kural lib/doi.ts'te (A1): eskiden sondaki ")" koşulsuz atılıyor, "10.1/abc(1)" kesiliyordu.
+  return metindekiDoiler(deger)[0]?.toLowerCase() ?? null;
 }
 
 function alan(

@@ -6,6 +6,8 @@ import Dialog from "@/app/dashboard/_components/dialog";
 import { createCitationSource, getLiteratureSources, lookupDoi, type LiteratureSource } from "@/app/actions/literature";
 import { literaturAramasiYap, type AramaYaniti } from "@/app/actions/literatur-arama";
 import { cumleSorgusu, kutuphanedenEslesenler } from "@/lib/cumle-kaynak";
+import { doiAnahtari } from "@/lib/doi";
+import { kaynakDoiAnahtari } from "@/lib/kaynak-ekleme";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 
@@ -73,9 +75,10 @@ export default function KaynakBulPenceresi({
 
   const ekleVeAtifYap = async (kayit: NonNullable<AramaYaniti["kayitlar"]>[number]) => {
     /* Zaten kütüphanede: aynı kaynağı ikinci kez eklemek yerine var olana atıf. */
-    const doiAnahtari = (d: string | null | undefined) => (d ?? "").toLowerCase().replace(/^https?:\/\/(?:dx\.)?doi\.org\//, "");
+    /* Tek DOI kuralı (lib/doi.ts, A1): eskiden burada dördüncü bir yerel kural vardı ("doi:" öneki ve sondaki noktalamayı tanımıyordu). */
+    const kayitDoisi = doiAnahtari(kayit.doi);
     const mevcut = kayit.listede
-      ? kutuphane?.find((k) => (kayit.doi && doiAnahtari(k.doi_or_url) === kayit.doi.toLowerCase()) || k.title.trim().toLocaleLowerCase("tr-TR") === kayit.baslik.trim().toLocaleLowerCase("tr-TR"))
+      ? kutuphane?.find((k) => (kayitDoisi && kaynakDoiAnahtari(k.doi_or_url) === kayitDoisi) || k.title.trim().toLocaleLowerCase("tr-TR") === kayit.baslik.trim().toLocaleLowerCase("tr-TR"))
       : undefined;
     if (mevcut) {
       onClose();

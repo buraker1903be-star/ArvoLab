@@ -10,17 +10,86 @@ export const CROSSREF_USER_AGENT = "ArvoLab/1.0 (academic reference lookup)";
 export const crossrefWorkUrl = (doi: string) =>
   `https://api.crossref.org/works/${doi.split("/").map(encodeURIComponent).join("/")}`;
 
-/** "https://doi.org/10.1/abc", "doi: 10.1/abc", "10.1/abc." → "10.1/abc" (geçersizse null) */
+/*
+  TEK DOI KURALI (A1, 07.11.2026). DOI'yi okuyan her yol buradan geçer:
+  editörde DOI ile arama (lookupDoi), DOI listesi (doiIleEkle), içe aktarma
+  ve tekrar anahtarı (lib/kaynak-aktarim.ts), arama sonucundan ekleme,
+  künye karşılaştırması (lib/kanit/kunye-karsilastirma.ts).
+
+  Eskiden üç ayrı kural vardı ve aynı DOI'yi farklı okuyordu (önce/sonra
+  dökümü A1 raporunda):
+    • "(doi: 10.1/abc)", "[10.1/abc]", "<10.1/abc>", tırnaklı ya da
+      sonu ":" ile biten yazım tekrar anahtarında kapanışı taşıyordu
+      ("doi:10.1/abc)") — aynı eser ikinci kez eklenebiliyordu;
+    • şemasız "doi.org/…" ve "www.doi.org/…" adresi reddediliyordu;
+    • metinden ayıklayıcı "10.1/abc(1)"i "10.1/abc(1" diye KESİYORDU
+      (sondaki ")" koşulsuz atılıyordu) ve "%2F" kodlu adresi hiç
+      bulamıyordu.
+  Kural: önek ve sarmalayıcı (parantez, köşeli parantez, açılı parantez,
+  tırnak) atılır; yüzde kodu çözülür; sondaki noktalama (. , ; :) ve
+  sondaki eğik çizgi atılır; sondaki ")", "]", ">" YALNIZCA açılışı yoksa
+  atılır — eski Wiley SICI DOI'leri "(SICI)…<693::AID-ASI4>…" ve
+  "…(77)90194-3" gibi DOI'ler parantezli ve bozulmamalı.
+  Büyük/küçük harf KORUNUR (Crossref'e ve ekrana giden değer); DOI büyük/küçük
+  harfe duyarsız olduğu için karşılaştırma doiAnahtari ile yapılır.
+*/
+const DOI_ONEKI = /^(?:https?:\/\/)?(?:www\.|dx\.)?doi\.org\//i;
+const SARMALAYICI_BAS = /^["'“”‘’(\[<]+/;
+const ACILIS: Record<string, string> = { ")": "(", "]": "[", ">": "<" };
+
+function dengesizKapanisAt(deger: string): string {
+  let v = deger;
+  for (;;) {
+    const onceki = v;
+    v = v.replace(/[.,;:]+$/, "").replace(/["'“”‘’]+$/, "").replace(/\/+$/, "");
+    const son = v.at(-1);
+    if (son && ACILIS[son]) {
+      const acilan = v.split(ACILIS[son]).length - 1;
+      const kapanan = v.split(son).length - 1;
+      if (kapanan > acilan) v = v.slice(0, -1);
+    }
+    if (v === onceki) return v;
+  }
+}
+
+/** "https://doi.org/10.1/abc", "doi: 10.1/abc", "(doi: 10.1/abc)", "10.1/abc." → "10.1/abc" (geçersizse null) */
 export function normalizeDoi(input: string): string | null {
-  let value = input.trim();
-  value = value.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").replace(/^doi:\s*/i, "");
+  let value = String(input ?? "").trim().replace(SARMALAYICI_BAS, "").trim();
+  value = value.replace(DOI_ONEKI, "").replace(/^doi:\s*/i, "");
   try {
     value = decodeURIComponent(value);
   } catch {
     // geçersiz kodlama: olduğu gibi denenir
   }
-  value = value.replace(/[.,;]+$/, "");
+  value = dengesizKapanisAt(value.trim());
   return DOI_PATTERN.test(value) ? value : null;
+}
+
+/** Karşılaştırma anahtarı: DOI büyük/küçük harfe duyarsızdır. Geçersizse null. */
+export function doiAnahtari(input: string | null | undefined): string | null {
+  return input ? (normalizeDoi(input)?.toLowerCase() ?? null) : null;
+}
+
+/*
+  Serbest metindeki DOI'ler (künye, yapıştırılan liste, doi_or_url alanı),
+  sırasıyla ve büyük/küçük harfe duyarsız benzersiz. Yüzde kodlu adres
+  ("https://doi.org/10.1000%2Fxyz") önce çözülür; her aday normalizeDoi'den
+  geçer, yani metindeki DOI ile tek DOI girişi AYNI kuralla okunur.
+*/
+const METINDE_DOI = /10\.\d{4,9}\/(?:[^\s"'<>]|<[^\s"'<>]*>)+/g;
+export function metindekiDoiler(metin: string | null | undefined): string[] {
+  let kaynak = String(metin ?? "");
+  kaynak = kaynak.replace(/10\.\d{4,9}%2F/gi, (m) => m.replace(/%2F/i, "/"));
+  const sonuc: string[] = [];
+  const gorulen = new Set<string>();
+  for (const ham of kaynak.match(METINDE_DOI) ?? []) {
+    const doi = normalizeDoi(ham);
+    if (doi && !gorulen.has(doi.toLowerCase())) {
+      gorulen.add(doi.toLowerCase());
+      sonuc.push(doi);
+    }
+  }
+  return sonuc;
 }
 
 export interface DoiMetadata {

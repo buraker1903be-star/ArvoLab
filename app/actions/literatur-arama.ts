@@ -7,6 +7,8 @@ import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { literaturAra, type AramaKaydi } from "@/lib/literatur-arama";
 import { ceviri } from "@/lib/dil-sunucu";
+import { doiTekrariMesaji, guvenliDoi, TEKRAR_DENETLENEMEDI, tekrarBul } from "@/lib/kaynak-ekleme";
+import { kapsamdakiKaynaklar } from "@/lib/kaynak-kapsami";
 
 const PAGE_PATH = "/dashboard/literature";
 /* Literatür, Çalışmalarım'daki durum kartından da pencere olarak açılıyor;
@@ -241,6 +243,12 @@ export async function aramaKaydiniEkle(kayit: {
   const hedef = await kaynakHedefi(ctx.supabase, ctx.user.id, kayit.projectId);
   if (hedef.durum === "yetkisiz" || hedef.durum === "okunamadi") return { error: t(HEDEF_MESAJI[hedef.durum]) };
 
+  /*
+    DOI istemciden geliyor (A1, 07.11.2026): eskiden doğrulanmadan
+    "https://doi.org/<değer>" diye yazılıyordu. Artık tek DOI kuralından
+    geçer (lib/doi.ts); geçersizse DOI yok sayılır ve kaydın adresi kullanılır.
+  */
+  const doi = guvenliDoi(kayit.doi);
   const satir = {
     owner_id: ctx.user.id,
     project_id: hedef.durum === "tamam" ? hedef.projectId : null,
@@ -248,10 +256,21 @@ export async function aramaKaydiniEkle(kayit: {
     authors: (kayit.yazarlar ?? []).join(", ").slice(0, 500) || null,
     year: kayit.yil ? String(kayit.yil) : null,
     source_type: TURLER.includes(String(kayit.tur)) ? String(kayit.tur) : "other",
-    doi_or_url: (kayit.doi ? `https://doi.org/${kayit.doi}` : String(kayit.url ?? "")).slice(0, 500) || null,
+    doi_or_url: (doi ? `https://doi.org/${doi}` : String(kayit.url ?? "")).slice(0, 500) || null,
     status: "to_review" as const,
     notes: null,
   };
+  /*
+    Aynı DOI kapsamda zaten varsa eklenmez (A1, K2/K6); eskiden bu yolda
+    tekrar denetimi yoktu ve aynı dizin kaydı her tıklamada yeniden
+    ekleniyordu. Kapsam okunamazsa DOI'li kayıt eklenmez.
+  */
+  if (doi) {
+    const kapsam = await kapsamdakiKaynaklar(ctx.supabase, ctx.user.id, satir.project_id);
+    if ("hata" in kapsam) return { error: t(TEKRAR_DENETLENEMEDI) };
+    const tekrar = tekrarBul(satir, kapsam.kaynaklar);
+    if (tekrar.tur === "doi") return { error: t(doiTekrariMesaji(Boolean(satir.project_id), tekrar.mevcut.title)) };
+  }
   // Dergi adı sonradan eklenen bir kolon; yoksa kaynak yine kaydedilir.
   let { error } = await ctx.supabase
     .from("literature_sources")
