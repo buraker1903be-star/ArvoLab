@@ -19,11 +19,24 @@
     NODE_PATH=$(npm root -g) node scripts/onizleme/cikti-kabul.mjs [taban-adres] [--referans-yaz]
   Bir denetim düşerse çıkış kodu 1.
 
-  Önizleme verisi YAZMA kipinde değişebilir (başka bir betik belgeye
-  yazdıysa çıktı da değişir): karşılaştırmadan önce sunucuyu yeniden
-  başlatın. Belge kimliği sabit (önizleme tezi).
+  KARARLILIK (R0 kapanışı, 07.11.2026). Karşılaştırılan çıktı yalnızca
+  sabit girdilere bağlı olmalı:
+    • Belge: önizleme tezi = tests/fixtures/tez-enflasyon-issizlik.json.
+      Yazma kipinde başka bir betik belgeyi değiştirdiyse karşılaştırma
+      yanlış alarm verir; betik editördeki metni fikstürle karşılaştırır ve
+      farklıysa karşılaştırmaya girmeden 2 koduyla durur.
+    • Tarih/kullanıcı: referansta tarih, saat, ad, e-posta yok (denetlendi;
+      "İzmir, 2026" fikstürün kendi metni). Word dosya adı başlıktan türer.
+    • PDF sayfa düzeni ORTAMA bağlıdır: Chromium sürümü ve yazı tipleri
+      (Times New Roman bu kapsayıcıda metrik eşdeğeri Liberation Serif'e
+      düşüyor). Referans üretildiği ortamın parmak izini taşır; ortam
+      farklıysa PDF düzen denetimleri FAIL değil UNVERIFIED sayılır,
+      Word ve metin denetimleri her ortamda geçerlidir.
+  Çıkış kodu: 0 temiz, 1 bir denetim düştü, 2 önkoşul yok (veri değişmiş).
 */
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -44,9 +57,16 @@ const REF = join(KOK, "scripts/onizleme/referans");
 const fikstur = JSON.parse(readFileSync(join(KOK, "tests/fixtures/tez-enflasyon-issizlik.json"), "utf8"));
 
 let hata = 0;
+let belirsiz = 0;
 const bekle = (kosul, mesaj) => {
   if (!kosul) hata++;
   console.log(`${kosul ? "✓" : "✗"} ${mesaj}`);
+};
+/* Ortam farklıyken düzen denetimi: düşerse hata değil, doğrulanamadı. */
+const bekleOrtam = (ayniOrtam, kosul, mesaj) => {
+  if (kosul || ayniOrtam) return bekle(kosul, mesaj);
+  belirsiz++;
+  console.log(`? ${mesaj} — UNVERIFIED: referans başka bir ortamda üretildi`);
 };
 
 /* Kaynak belgedeki başlıklar ve metin içi atıflar (cikti-referans.test.ts ile aynı kural). */
@@ -61,6 +81,31 @@ const duz = (s) => s.replace(/\s+/g, " ").replace(/-\s+/g, "-").trim();
 
 const tarayici = await chromium.launch();
 const ozet = {};
+
+/* Ortam parmak izi: PDF düzenini belirleyen şeyler. */
+const yaziTipi = (ad) => { try { return execFileSync("fc-match", [ad], { encoding: "utf8" }).trim(); } catch { return "fc-match yok"; } };
+const ortam = {
+  chromium: tarayici.version(),
+  yaziTipleri: Object.fromEntries(["Times New Roman", "serif", "sans-serif", "monospace"].map((ad) => [ad, yaziTipi(ad)])),
+};
+
+/* Önkoşul: önizlemedeki belge fikstürle aynı mı (yazma kipi veriyi değiştirmiş olabilir). */
+{
+  const metinleri = (n, out = []) => { if (n.text) out.push(n.text); (n.content ?? []).forEach((c) => metinleri(c, out)); return out; };
+  const beklenen = createHash("sha1").update(metinleri(fikstur).join("\u0001")).digest("hex");
+  const s = await tarayici.newPage({ viewport: { width: 1440, height: 900 } });
+  await s.goto(`${TABAN}/dashboard/editor/${TEZ}/write`, { waitUntil: "networkidle", timeout: 150000 });
+  await s.locator(".ProseMirror").waitFor({ timeout: 30000 });
+  const json = await s.evaluate(() => document.querySelector(".ProseMirror").editor.getJSON());
+  await s.close();
+  const bulunan = createHash("sha1").update(metinleri(json).join("\u0001")).digest("hex");
+  if (bulunan !== beklenen) {
+    console.log("ÖNKOŞUL YOK: önizlemedeki belge fikstürden farklı (yazma kipinde başka bir betik değiştirmiş olabilir). Sunucuyu yeniden başlatıp tekrar çalıştırın.");
+    await tarayici.close();
+    process.exit(2);
+  }
+  console.log("✓ önkoşul: önizlemedeki belge fikstürle aynı");
+}
 
 /* ---- Word: editörün indirme düğmesi ---- */
 {
@@ -134,7 +179,7 @@ for (const ad of ["word", "pdf"]) {
   const dosya = join(REF, `tez-${ad}.json`);
   const yeni = ozet[ad];
   if (YAZ) {
-    writeFileSync(dosya, JSON.stringify(yeni, null, 1) + "\n");
+    writeFileSync(dosya, JSON.stringify(ad === "pdf" ? { ortam, ...yeni } : yeni, null, 1) + "\n");
     console.log(`• referans yazıldı: ${dosya}`);
     continue;
   }
@@ -150,13 +195,15 @@ for (const ad of ["word", "pdf"]) {
     bekle(farkli.length === 0, `Word: yapı referansla aynı (${n} blok)${farkli.length ? ` — ${farkli.length} blok farklı, ilki #${farkli[0]}: ${JSON.stringify(eski.bloklar[farkli[0]])?.slice(0, 120)} → ${JSON.stringify(yeni.bloklar[farkli[0]])?.slice(0, 120)}` : ""}`);
     bekle(JSON.stringify(eski.dipnotlar) === JSON.stringify(yeni.dipnotlar) && eski.resim === yeni.resim && eski.bolum === yeni.bolum, "Word: dipnot, resim ve bölüm sayısı aynı");
   } else {
-    bekle(eski.sayfa === yeni.sayfa, `PDF: sayfa sayısı ${yeni.sayfa} (referans ${eski.sayfa})`);
+    const ayni = JSON.stringify(eski.ortam) === JSON.stringify(ortam);
+    console.log(ayni ? "✓ PDF ortamı referansla aynı (Chromium + yazı tipleri)" : `? PDF ortamı farklı: referans ${JSON.stringify(eski.ortam)} · bu koşu ${JSON.stringify(ortam)}`);
+    bekleOrtam(ayni, eski.sayfa === yeni.sayfa, `PDF: sayfa sayısı ${yeni.sayfa} (referans ${eski.sayfa})`);
     const kayan = yeni.basliklar.filter((b, i) => b.sayfa !== eski.basliklar[i]?.sayfa);
-    bekle(kayan.length === 0, `PDF: başlıkların sayfaları referansla aynı${kayan.length ? " — kayan: " + kayan.slice(0, 3).map((b) => `${b.metin}→${b.sayfa}`).join(" | ") : ""}`);
+    bekleOrtam(ayni, kayan.length === 0, `PDF: başlıkların sayfaları referansla aynı${kayan.length ? " — kayan: " + kayan.slice(0, 3).map((b) => `${b.metin}→${b.sayfa}`).join(" | ") : ""}`);
     const farkSayfa = yeni.sayfalar.filter((s, i) => s.metin !== eski.sayfalar[i]?.metin).map((s) => s.no);
-    bekle(farkSayfa.length === 0, `PDF: sayfa metinleri referansla aynı${farkSayfa.length ? " — farklı sayfalar: " + farkSayfa.slice(0, 8).join(", ") : ""}`);
+    bekleOrtam(ayni, farkSayfa.length === 0, `PDF: sayfa metinleri referansla aynı${farkSayfa.length ? " — farklı sayfalar: " + farkSayfa.slice(0, 8).join(", ") : ""}`);
   }
 }
 
-console.log(hata ? `\n${hata} denetim düştü` : "\nÇıktı kabulü temiz");
+console.log(hata ? `\n${hata} denetim düştü` : belirsiz ? `\nÇıktı kabulü: düşen yok, ${belirsiz} düzen denetimi UNVERIFIED (ortam farklı)` : "\nÇıktı kabulü temiz");
 process.exit(hata ? 1 : 0);

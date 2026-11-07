@@ -1,4 +1,13 @@
 {
+ "ortam": {
+  "chromium": "153.0.8010.12",
+  "yaziTipleri": {
+   "Times New Roman": "LiberationSerif-Regular.ttf: \"Liberation Serif\" \"Regular\"",
+   "serif": "DejaVuSerif.ttf: \"DejaVu Serif\" \"Book\"",
+   "sans-serif": "Inter-Regular.otf: \"Inter\" \"Regular\"",
+   "monospace": "DejaVuSansMono.ttf: \"DejaVu Sans Mono\" \"Book\""
+  }
+ },
  "sayfa": 29,
  "sayfalar": [
   {
