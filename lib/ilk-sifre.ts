@@ -5,36 +5,31 @@
   anında öncesinden kalan şifreyi siliyor (migration 20261106184046). Şifreyi
   belirlemeden panele geçen oturum adresin sahibine ait (yetki açığı değil),
   ama hesap oturum bitince kilitli kalıyor ve kişi şifre belirlemeden silme,
-  ödeme gibi kritik işlemlere geçebiliyordu. Kapı: bu tür oturumda şifre
-  yoksa panelin her yolu (sunucu işlemleri dahil) şifre sayfasına gider.
+  ödeme gibi kritik işlemlere geçebiliyordu. Kapı: şifre belirlemesi gereken
+  oturumda panelin her yolu (sunucu işlemleri dahil) şifre sayfasına gider.
 
-  Kime SORULMAZ: ArvoOS'tan magic link ile gelen kurum üyeleri (otp,
-  magiclink) ve şifreyle girenler. ArvoOS üyesinin şifresi bilerek yok; giriş
-  ArvoOS üzerinden yapılıyor. Bu yöntemlerden biri oturumda yazılıysa kapı
-  sorgu bile yapmaz (her istekte bir veritabanı çağrısı olmasın).
+  KARAR VERİDE, AMR'DE DEĞİL. İlk sürüm AMR'ye bakıp ArvoOS magic link
+  oturumunu (otp) muaf tutuyordu; Test'te görüldü ki token_hash ile yapılan
+  her doğrulama (kayıt dahil) AMR'ye "otp" yazıyor ve şifresiz kayıt
+  kullanıcısı kapıdan geçiyordu. Karar public.ilk_sifre_gerekli()'de
+  (migration 20261107120542): şifre yok VE ArvoOS üyesi değil.
+  AMR yalnızca sorgudan kaçınmak için: oturum şifreyle açıldıysa hesapta
+  şifre vardır, sorulmaz.
 
-  AMR eksik ya da tanınmayan bir değerse sorulur: yöntemi bilinmeyen oturumu
-  serbest bırakmak, şifresiz kayıt kullanıcısını kapının dışında bırakabilirdi.
   Sorgu okunamazsa kapı KAPANMAZ (null): geçici bir arıza kimseyi panelden
-  atmamalı; kişinin oturumu zaten adresin sahibine ait.
+  atmamalı; oturum zaten adresin sahibine ait.
 */
 
 export const ILK_SIFRE_YOLU = "/reset-password?ilk=1";
-/** Şifresi olduğu bir kez doğrulanan oturumda kapı tekrar sorgu yapmasın diye: değeri kullanıcı kimliği. */
+/** İlk şifre gerekmediği bir kez görülen oturumda kapı tekrar sorgu yapmasın diye: değeri kullanıcı kimliği. */
 export const SIFRE_VAR_CEREZI = "arvo_sifre_var";
 
-/** Şifre olmadan meşru olan girişler: kapı bunlarda hiç sormaz. */
-const SIFRESIZ_MESRU = ["otp", "magiclink"];
-/** Şifrenin kendisiyle ya da güçlü bir yöntemle girilmiş oturum. */
-const SIFRELI_GIRIS = ["password", "oauth", "sso/saml", "totp", "mfa/totp", "mfa/phone", "mfa/webauthn", "web3"];
-
+/** Oturum şifreyle açıldıysa hesapta şifre vardır: veritabanına sormaya gerek yok. */
 export function ilkSifreSorulmali(yontemler: readonly string[]): boolean {
-  if (yontemler.some((y) => y === "email/signup" || y === "invite" || y === "recovery")) return true;
-  if (yontemler.some((y) => SIFRESIZ_MESRU.includes(y) || SIFRELI_GIRIS.includes(y))) return false;
-  return true; // eksik ya da tanınmayan AMR
+  return !yontemler.includes("password");
 }
 
-/** sifreVar: sifre_durumum() sonucu; null = okunamadı (kapı kapanmaz). */
-export function ilkSifreGerekli(yontemler: readonly string[], sifreVar: boolean | null): boolean {
-  return sifreVar === false && ilkSifreSorulmali(yontemler);
+/** gerekli: ilk_sifre_gerekli() sonucu; null = okunamadı (kapı kapanmaz). */
+export function ilkSifreGerekli(gerekli: boolean | null): boolean {
+  return gerekli === true;
 }

@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { amrYontemleri, dogrulamaSonrasiYol, safeConfirmNext } from "@/lib/auth-link";
 import { ilkSifreSorulmali } from "@/lib/ilk-sifre";
-import { sifreDurumu } from "@/lib/supabase/sifre-durumu";
+import { ilkSifreDurumu } from "@/lib/supabase/sifre-durumu";
 import { ayniKokenMi } from "@/lib/istek-koken";
 import { sendEmail } from "@/lib/email/resend";
 import { hosgeldinizEmail } from "@/lib/email/auth-emails";
@@ -51,9 +51,9 @@ export async function GET(request: NextRequest) {
     // Kayıt/davet/kurtarma ise şifre sayfası (lib/auth-link.ts dogrulamaSonrasiYol).
     if (verified) {
       const yontemler = amrYontemleri(data.session?.access_token);
-      // Şifre durumu yalnızca AMR karar veremiyorsa sorulur (lib/ilk-sifre.ts).
-      const sifreVar = ilkSifreSorulmali(yontemler) ? await sifreDurumu(supabase) : null;
-      hedef = dogrulamaSonrasiYol(yontemler, next, sifreVar);
+      // Oturum şifreyle açılmadıysa ilk şifre durumu sorulur (lib/ilk-sifre.ts).
+      const ilkSifre = ilkSifreSorulmali(yontemler) ? await ilkSifreDurumu(supabase) : null;
+      hedef = dogrulamaSonrasiYol(yontemler, next, ilkSifre);
     }
   }
   return NextResponse.redirect(new URL(verified ? hedef : "/?error=link-invalid", origin));

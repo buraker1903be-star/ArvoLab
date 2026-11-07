@@ -50,14 +50,15 @@ export function safeConfirmNext(raw: string | null | undefined): string {
   yöntemini oturuma yazar). Kayıt → ilk şifre; davet ve kurtarma → şifre
   sayfası; geri kalan (magic link, e-posta değişimi) → next.
 */
-export function dogrulamaSonrasiYol(yontemler: readonly string[], next: string, sifreVar: boolean | null = null): string {
+export function dogrulamaSonrasiYol(yontemler: readonly string[], next: string, ilkSifre: boolean | null = null): string {
   if (yontemler.includes("email/signup")) return "/reset-password?ilk=1";
   if (yontemler.includes("invite") || yontemler.includes("recovery")) return "/reset-password";
   /*
-    AMR eksik ya da tanınmayan (07.11.2026): şifresiz hesap şifre sayfasına.
-    Karar lib/ilk-sifre.ts ile aynı; panel kapısı da aynı kuralı uyguluyor.
+    AMR eksik ya da tanınmayan (07.11.2026): ilk şifre gerekiyorsa (şifre
+    yok ve ArvoOS üyesi değil) şifre sayfasına. Karar lib/ilk-sifre.ts ile
+    aynı; panel kapısı da aynı kuralı uyguluyor.
   */
-  if (ilkSifreGerekli(yontemler, sifreVar)) return ILK_SIFRE_YOLU;
+  if (ilkSifreGerekli(ilkSifre)) return ILK_SIFRE_YOLU;
   return next;
 }
 

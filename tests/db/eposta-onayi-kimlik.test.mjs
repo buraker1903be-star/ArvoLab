@@ -155,17 +155,22 @@ describe("G1: yetki yüzeyi", () => {
     }));
 });
 
-describe("G1: sifre_durumum (20261107113542)", () => {
-  test("yalnızca çağıranın kendi hesabı için var/yok; anon çağıramaz", () =>
+describe("G1: ilk_sifre_gerekli (20261107120542)", () => {
+  test("şifresiz ve ArvoOS üyesi değilse evet; üyeyse ya da şifresi varsa hayır; anon çağıramaz", () =>
     islem(db, async () => {
       await rol(db, "postgres");
-      await db.query(`insert into auth.users (id, email, encrypted_password) values ($1, 'a@x.co', 'ozet'), ($2, 'b@x.co', null)`, [ONAYLI, KURBAN]);
-      await rol(db, "authenticated", ONAYLI);
-      assert.equal((await tek(`select public.sifre_durumum() as v`)).v, true);
-      await rol(db, "authenticated", KURBAN);
-      assert.equal((await tek(`select public.sifre_durumum() as v`)).v, false);
+      await db.query(`insert into public.organizations (id, name) values ($1, 'K') on conflict do nothing`, [KURUM]);
+      await db.query(`insert into public.arvoos_members (email, organization_id) values ('uye@x.co', $1)`, [KURUM]);
+      await db.query(
+        `insert into auth.users (id, email, encrypted_password) values ($1, 'a@x.co', 'ozet'), ($2, 'b@x.co', null), ($3, 'uye@x.co', null)`,
+        [ONAYLI, KURBAN, DAVETLI],
+      );
+      const sor = async (id) => { await rol(db, "authenticated", id); return (await tek(`select public.ilk_sifre_gerekli() as v`)).v; };
+      assert.equal(await sor(ONAYLI), false);
+      assert.equal(await sor(KURBAN), true);
+      assert.equal(await sor(DAVETLI), false);
       await rol(db, "postgres");
-      const r = await tek(`select has_function_privilege('anon', 'public.sifre_durumum()', 'execute') as anon`);
-      assert.equal(r.anon, false);
+      assert.equal((await tek(`select has_function_privilege('anon', 'public.ilk_sifre_gerekli()', 'execute') as v`)).v, false);
+      assert.equal((await tek(`select count(*)::int as n from pg_proc where proname = 'sifre_durumum'`)).n, 0);
     }));
 });
