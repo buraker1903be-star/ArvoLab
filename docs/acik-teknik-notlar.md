@@ -7,12 +7,12 @@ silinmez; "Kapandı" satırıyla tarihlenir.
 
 - **Yer:** `scripts/onizleme/ai-kabul.mjs`, senaryo "Seçim düğmesi
   (telefon): seçimi örtmez, ekranda kalır" (iPhone 13 öykünmesi).
-- **Belirti:** 07.11.2026'da 5 koşunun 2'sinde "düğme görünmüyor".
+- **Belirti:** 07.11.2026'da 3 tam `ai-kabul.mjs` koşusunun 2'sinde "düğme görünmüyor".
 - **Ölçülen neden:** sentetik dokunmanın (`tap`) hemen ardından JavaScript ile
   kurulan DOM seçimi bazen ProseMirror'a geçmiyor; editör dokunmanın
   bıraktığı boş imleçte kalıyor (`selection` 1013–1013, `empty: true`),
   odak editörde. Düğme yalnızca boş olmayan metin seçiminde çizildiği için
-  çıkmıyor. 5 tekrarın 2'sinde seçim geçmedi.
+  çıkmıyor. Ayrı bir ölçüm betiğinde 5 denemenin 2'sinde seçim editöre geçmedi.
 - **Alınan önlem:** test seçimin editöre geçmesini bekliyor, geçmediyse
   seçimi bir kez daha kuruyor; geçmezse "seçim editöre geçmedi (test
   kurgusu)" mesajıyla düşüyor. Ardından iki tam koşu 21/21.
