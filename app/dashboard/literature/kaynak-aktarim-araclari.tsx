@@ -11,6 +11,7 @@ import {
   DOI_TOPLU_EN_COK,
   doiAyikla,
   ICE_AKTARMA_EN_COK,
+  kaynakAnahtari,
   kaynakAnahtarlari,
   kaynakcaMetni,
   kaynakDosyasiOku,
@@ -18,6 +19,8 @@ import {
   type KaynakTaslagi,
 } from "@/lib/kaynak-aktarim";
 import type { CitationStyle } from "@/lib/citation-format";
+import { DIZIN_SAATLIK_HAK, KOTA_DENETLENEMEDI, KOTA_DOLDU } from "@/lib/dizin-kotasi-kurali";
+import type { TopluDoiNeden } from "@/lib/toplu-doi";
 import { showToast } from "../_components/toast-events";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { YEREL, type Dil, type Metin } from "@/lib/dil";
@@ -50,6 +53,14 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
     yeni.push(k);
   }
   const doilar = doiAyikla(doiMetni);
+  /*
+    Olası kota tüketimi (DOI kotası, 07.11.2026): çalışmada zaten olan DOI
+    dışarı sorulmaz, hak düşürmez; kalan her DOI bir hak. Sunucu aynı kuralı
+    uygular (lib/toplu-doi.ts); burası yalnızca başlamadan önce söyler.
+  */
+  const kutuphaneAnahtarlari = new Set(mevcut.flatMap((k) => kaynakAnahtarlari(k)));
+  const kutuphanedekiDoi = doilar.filter((d) => kutuphaneAnahtarlari.has(kaynakAnahtari({ title: "", year: null, doiOrUrl: d }))).length;
+  const disariGidecek = doilar.length - kutuphanedekiDoi;
 
   const dosyaSecildi = async (f: File | undefined) => {
     setDosya(null);
@@ -84,9 +95,19 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
       if (r.error) return showToast("error", r.error);
       setDoiSonuclari(r.sonuclar ?? []);
       const eklenen = (r.sonuclar ?? []).filter((s) => s.durum === "eklendi").length;
-      if (eklenen) {
+      const islenmedi = (r.sonuclar ?? []).filter((s) => s.durum === "islenmedi").length;
+      if (eklenen) router.refresh();
+      /* Hak biterse işlem durur: eklenenler ve sorulamayanlar AYRI söylenir. */
+      if (r.durdu) {
+        showToast(
+          "error",
+          `${t(r.durdu === "kota" ? KOTA_DOLDU : KOTA_DENETLENEMEDI)} ${t({
+            tr: `${eklenen} kaynak eklendi; ${islenmedi} DOI işlenmedi.`,
+            en: `${eklenen} ${eklenen === 1 ? "source" : "sources"} added; ${islenmedi} ${islenmedi === 1 ? "DOI was" : "DOIs were"} not processed.`,
+          })}`,
+        );
+      } else if (eklenen) {
         showToast("success", t({ tr: `${eklenen} kaynak eklendi.`, en: `${eklenen} ${eklenen === 1 ? "source" : "sources"} added.` }));
-        router.refresh();
       }
     });
 
@@ -95,6 +116,15 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
     vardi: { tr: "zaten listede", en: "already in your list" },
     bulunamadi: { tr: "Crossref'te bulunamadı", en: "not found in Crossref" },
     hata: { tr: "şu an alınamadı, yeniden deneyin", en: "couldn't be fetched right now, try again" },
+    islenmedi: { tr: "işlenmedi (hak bitti)", en: "not processed (limit reached)" },
+  };
+  /* "hata" ve "islenmedi" nedenleri ayrı: 429, sunucu hatası, zaman aşımı ve kota birbirine karışmasın. */
+  const NEDEN_ADI: Record<TopluDoiNeden, Metin> = {
+    dis_servis_yogun: { tr: "Crossref yoğun (429), birazdan yeniden deneyin", en: "Crossref is busy (429), try again shortly" },
+    dis_servis_hatasi: { tr: "Crossref hatası, birazdan yeniden deneyin", en: "Crossref error, try again shortly" },
+    zaman_asimi: { tr: "Crossref'e ulaşılamadı (zaman aşımı)", en: "couldn't reach Crossref (timeout)" },
+    kota: { tr: "işlenmedi: saatlik dizin hakkı doldu", en: "not processed: hourly index limit reached" },
+    kota_denetlenemedi: { tr: "işlenmedi: hak denetlenemedi", en: "not processed: limit couldn't be checked" },
   };
 
   return (
@@ -156,6 +186,14 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
             en: `Paste one or more DOIs (one per line; link format works too). Reference details come from Crossref; at most ${DOI_TOPLU_EN_COK} DOIs.`,
           })}
         </p>
+        {doilar.length ? (
+          <p className="hint" role="status">
+            {t({
+              tr: `${disariGidecek} DOI Crossref'e sorulacak: en çok ${disariGidecek} dizin hakkı kullanılır${kutuphanedekiDoi ? `; ${kutuphanedekiDoi} DOI bu çalışmada zaten var, hak harcamaz` : ""}. Saatlik ${DIZIN_SAATLIK_HAK} hak Kaynaklar araması ve DOI ile künye getirmeyle ortaktır; hak biterse işlem durur ve işlenmeyen DOI'ler ayrıca listelenir.`,
+              en: `${disariGidecek} ${disariGidecek === 1 ? "DOI" : "DOIs"} will be looked up in Crossref: at most ${disariGidecek} index ${disariGidecek === 1 ? "lookup" : "lookups"} will be used${kutuphanedekiDoi ? `; ${kutuphanedekiDoi} already in this work and won't use any` : ""}. The hourly limit of ${DIZIN_SAATLIK_HAK} is shared with source search and fetching details by DOI; if it runs out, the process stops and unprocessed DOIs are listed separately.`,
+            })}
+          </p>
+        ) : null}
         <textarea rows={6} value={doiMetni} onChange={(e) => { setDoiMetni(e.target.value); setDoiSonuclari(null); }} placeholder={"10.1037/0003-066X.59.1.29\nhttps://doi.org/10.15390/EB.2021.9876"} aria-label={t({ tr: "DOI listesi", en: "DOI list" })} />
         <button type="button" className="projects-primary-button" disabled={bekliyor || !doilar.length} onClick={doileriEkle}>
           {bekliyor
@@ -171,7 +209,7 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
               <li key={s.doi}>
                 <b>{s.baslik ?? s.doi}</b>
                 <small data-tone={s.durum === "eklendi" ? "success" : s.durum === "vardi" ? undefined : "warning"} className="tone-text">
-                  {s.doi} · {t(DURUM_ADI[s.durum])}
+                  {s.doi} · {t(s.neden ? NEDEN_ADI[s.neden] : DURUM_ADI[s.durum])}
                 </small>
               </li>
             ))}

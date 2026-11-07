@@ -162,7 +162,8 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
     if (!form.doi.trim()) return;
     setLooking(true);
     try {
-      const result = await lookupDoi(form.doi);
+      // Çalışma verilir: DOI bu çalışmada (ya da genel kütüphanede) varsa künye oradan gelir, hak düşmez.
+      const result = await lookupDoi(form.doi, projectId);
       if (result.error || !result.metadata) {
         showToast("error", result.error ?? t({ tr: "Kaynak bilgileri alınamadı.", en: "Source details could not be retrieved." }));
         return;
@@ -181,7 +182,12 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
         publisher: meta.publisher ?? "",
         publicationPlace: meta.publicationPlace ?? "",
       });
-      showToast("success", t({ tr: "Kaynak bilgileri dolduruldu; kontrol edip kaydedin.", en: "Source details filled in; check them and save." }));
+      showToast(
+        "success",
+        result.kaynak === "kutuphane"
+          ? t({ tr: "Bu DOI kütüphanenizde zaten var; bilgiler oradan dolduruldu. Kaydederseniz atıf mevcut kaynağa yapılır.", en: "This DOI is already in your library; details were filled in from there. If you save, the citation will point to the existing source." })
+          : t({ tr: "Kaynak bilgileri dolduruldu; kontrol edip kaydedin.", en: "Source details filled in; check them and save." }),
+      );
     } finally {
       setLooking(false);
     }

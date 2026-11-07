@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { HEDEF_MESAJI, kaynakHedefi } from "@/lib/kaynak-hedefi";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
-import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork, type DoiMetadata } from "@/lib/doi";
+import { normalizeDoi, type DoiMetadata } from "@/lib/doi";
+import { crossrefKunyesi, DOI_SORGU_MESAJI, doiSorgula, type DoiSorguHatasi } from "@/lib/doi-sorgu";
+import { dizinHakkiDus } from "@/lib/dizin-kotasi";
+import { KOTA_DENETLENEMEDI, KOTA_DOLDU } from "@/lib/dizin-kotasi-kurali";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
@@ -224,33 +227,76 @@ export async function deleteLiteratureSource(sourceId: string): Promise<ActionRe
   return { success: true };
 }
 
-/**
- * DOI ile kaynak bilgilerini Crossref'ten getirir. Sunucu yalnızca sabit Crossref adresine
- * istek atar (kullanıcı adresi değil, yalnızca doğrulanmış DOI gönderilir).
- */
-export async function lookupDoi(input: string): Promise<{ error?: string; metadata?: DoiMetadata }> {
+/*
+  DOI ile künye (DOI kotası, 07.11.2026). Sıra ve sınıflandırma saf
+  modülde (lib/doi-sorgu.ts): biçim → çalışma yetkisi → kütüphane →
+  abonelik → ortak dizin kotası (lib/dizin-kotasi.ts) → Crossref.
+
+  Eskiden abonelik kapısı ve kota yoktu: aboneliği biten kullanıcı da
+  Crossref'e sınırsız istek gönderebiliyordu; kullanıcının kütüphanesinde
+  zaten olan DOI de her seferinde dışarı soruluyordu. Hata mesajları da
+  ayırt edilemiyordu (429 ile 500 aynı metindi).
+
+  Sunucu yalnızca sabit Crossref adresine, doğrulanmış DOI ile gider.
+*/
+export async function lookupDoi(
+  input: string,
+  projectId?: string | null,
+): Promise<{ error?: string; hata?: DoiSorguHatasi; metadata?: DoiMetadata; kaynak?: "kutuphane" | "crossref" }> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   const t = await ceviri();
 
-  const doi = normalizeDoi(input);
-  if (!doi) return { error: t({ tr: "Geçerli bir DOI girin (ör. 10.1000/xyz123 ya da https://doi.org/…).", en: "Enter a valid DOI (e.g. 10.1000/xyz123 or https://doi.org/…)." }) };
+  const sonuc = await doiSorgula(input, {
+    async calismaYetkisi() {
+      const hedef = await kaynakHedefi(ctx.supabase, ctx.user.id, projectId);
+      return hedef.durum === "yetkisiz" ? "yetkisiz" : hedef.durum === "okunamadi" ? "okunamadi" : "tamam";
+    },
+    /* Yalnızca kullanıcının KENDİ kapsamı (owner_id süzgeci, lib/kaynak-kapsami.ts):
+       gözetim rolünün RLS ile okuyabildiği başkasının kaynağı buraya girmez. */
+    async kutuphanedeBul(anahtar) {
+      const kapsamlar = projectId ? [String(projectId), null] : [null];
+      for (const kapsam of kapsamlar) {
+        const k = await kapsamdakiKaynaklar(ctx.supabase, ctx.user.id, kapsam);
+        if ("hata" in k) continue; // okunamayan kütüphane engel değil: dışarı sorulur (hak düşer)
+        const eslesen = k.kaynaklar.find((m) => kaynakDoiAnahtari(m.doi_or_url) === anahtar);
+        if (!eslesen) continue;
+        const { data, error } = await ctx.supabase
+          .from("literature_sources")
+          .select("title, authors, year, source_type, doi_or_url, container_title, volume, issue, pages, publisher, publication_place")
+          .eq("id", eslesen.id)
+          .eq("owner_id", ctx.user.id)
+          .maybeSingle();
+        if (error || !data) continue;
+        return {
+          doi: normalizeDoi(data.doi_or_url ?? "") ?? anahtar,
+          title: data.title,
+          authors: data.authors,
+          year: data.year,
+          sourceType: (SOURCE_TYPES.includes(data.source_type) ? data.source_type : "other") as DoiMetadata["sourceType"],
+          containerTitle: data.container_title,
+          volume: data.volume,
+          issue: data.issue,
+          pages: data.pages,
+          publisher: data.publisher,
+          publicationPlace: data.publication_place,
+        };
+      }
+      return null;
+    },
+    abonelikKapali: () => isSubscriptionBlocked(),
+    hakDus: () => dizinHakkiDus(ctx.user.id),
+    crossref: (doi) => crossrefKunyesi(doi),
+  });
 
-  try {
-    const response = await fetch(crossrefWorkUrl(doi), {
-      headers: { "User-Agent": CROSSREF_USER_AGENT },
-      signal: AbortSignal.timeout(8000),
-      cache: "no-store",
-    });
-    if (response.status === 404) return { error: t({ tr: "Bu DOI Crossref kayıtlarında bulunamadı.", en: "This DOI wasn't found in Crossref." }) };
-    if (!response.ok) return { error: t({ tr: "Kaynak bilgileri şu an alınamadı; birazdan yeniden deneyin.", en: "Couldn't fetch source details right now; please try again shortly." }) };
-    const body = (await response.json()) as { message?: unknown };
-    const metadata = parseCrossrefWork(body.message as Parameters<typeof parseCrossrefWork>[0], doi);
-    return metadata ? { metadata } : { error: t({ tr: "Bu DOI için başlık bilgisi bulunamadı.", en: "No title information was found for this DOI." }) };
-  } catch (error) {
-    console.error(error);
-    return { error: t({ tr: "Kaynak bilgileri alınamadı (bağlantı zaman aşımı). Bilgileri elle de girebilirsiniz.", en: "Couldn't fetch source details (connection timed out). You can also enter them manually." }) };
-  }
+  if (sonuc.tur === "tamam") return { metadata: sonuc.metadata, kaynak: sonuc.kaynak };
+  const h = sonuc.hata;
+  const mesaj =
+    h === "abonelik" ? await abonelikKapaliMesaji()
+    : h === "kota" ? t(KOTA_DOLDU)
+    : h === "kota_denetlenemedi" ? t(KOTA_DENETLENEMEDI)
+    : t(DOI_SORGU_MESAJI[h]);
+  return { error: mesaj, hata: h };
 }
 
 export interface CitationSourceInput {

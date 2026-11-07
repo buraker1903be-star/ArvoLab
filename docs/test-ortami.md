@@ -286,6 +286,35 @@ ortam modülünün içe aktarımı, `DENETLENEN_EVRELER` + `ortamDenetimi()`,
 Bu plan 05.11.2026'da main üzerinde geçici bir çalışma kopyasında prova
 edildi (sonuç rapordadır); main'e hiçbir şey yazılmadı.
 
+## Ortak dizin kotası ortama göre (DOI kotası, 07.11.2026)
+
+Kaynaklar araması, DOI ile künye getirme (`lookupDoi`) ve toplu DOI ekleme
+(`doiIleEkle`) kullanıcı başına AYNI saatlik 60 hakkı paylaşır
+(`lib/dizin-kotasi-kurali.ts`, sayaç `rate_limit_hit`, anahtar
+`literatur-arama:<kullanıcı>`). Hak yalnızca dış dizine gidecek istek için
+ve istekten ÖNCE düşer. Sayaç servis anahtarıyla çağrılır; anahtar yoksa
+ya da sayaç hata verirse davranış ortama göre değişir:
+
+| Ortam | `VERCEL_ENV` / `ARVOLAB_DAGITIM_ORTAMI` | Sayaç yok / hata verirse |
+|---|---|---|
+| Üretim | `production` | **Dış istek gönderilmez** ("hak denetlenemedi"). Fail-closed. |
+| Vercel Preview (Test) | `preview` | İstek gider, günlüğe `[dizin-kotasi] üretim dışı ortam` uyarısı. Servis anahtarı tanımlıysa sayaç GERÇEKTEN çalışır ve 60 sınırı uygulanır. |
+| Yerel geliştirme | (yok) | İstek gider, günlüğe uyarı. |
+| Sahte önizleme (`npm run onizleme`) | (yok) | Servis anahtarı hiç yok: her deneme uyarı yazar; kabul betiği (`scripts/onizleme/doi-kotasi-kabul.mjs`) hak denemelerini bu satırlardan sayar. Ağ kapalı olduğundan dış istek "Crossref'e ulaşılamadı" ile döner. |
+| Çelişki | iki değer farklı | ÜRETİM sayılır (fail-closed). |
+
+Üretimdeki davranış bilerek gevşetilmedi: eskiden Kaynaklar araması sayaç
+olmadan üretimde de açık geçiyordu. Üretim dışındaki açıklık yalnızca
+geliştirmenin denenebilmesi için; Preview'da sınır sınanacaksa servis
+anahtarının Preview kapsamında tanımlı olduğu dağıtımdan önce doğrulanır.
+
+Yerelde gerçek sayaçla sınanamayanlar ve neden: servis anahtarını yerel
+sunucuya vermek bütün isteklerini servis rolüne yükseltir; bu yüzden
+60 sınırı, eşzamanlı sayım ve üretimde fail-closed yerelde birim
+(`tests/unit/dizin-kotasi`, `doi-sorgu`, `toplu-doi`) ve veritabanı
+(`tests/db/dizin-kotasi.test.mjs`, PGlite: sorgular sıralı işler, gerçek
+eşzamanlı bağlantı ölçülmez) testleriyle sınanır.
+
 ## Kapsanmayan riskler
 
 - Opak (yeni biçim) Supabase anahtarlarının hangi projeye ait olduğu

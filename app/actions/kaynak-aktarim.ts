@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { HEDEF_MESAJI, kaynakHedefi } from "@/lib/kaynak-hedefi";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
-import { CROSSREF_USER_AGENT, crossrefWorkUrl, doiAnahtari, normalizeDoi, parseCrossrefWork } from "@/lib/doi";
+import { doiAnahtari } from "@/lib/doi";
+import { crossrefKunyesi } from "@/lib/doi-sorgu";
+import { dizinHakkiDus } from "@/lib/dizin-kotasi";
+import { topluDoiAyikla, topluDoiGetir, type TopluDoiNeden } from "@/lib/toplu-doi";
 import { DOI_TOPLU_EN_COK, ICE_AKTARMA_EN_COK, kaynakAnahtari, kaynakAnahtarlari, type KaynakTaslagi } from "@/lib/kaynak-aktarim";
 import { ceviri } from "@/lib/dil-sunucu";
 
@@ -130,44 +133,47 @@ export async function kaynaklariIceAktar(projectId: string, taslaklar: KaynakTas
   return ekle(h.ctx, h.anahtarlar, taslaklar, projectId);
 }
 
-export type DoiSonucu = { doi: string; durum: "eklendi" | "vardi" | "bulunamadi" | "hata"; baslik?: string };
+export type DoiSonucu = {
+  doi: string;
+  durum: "eklendi" | "vardi" | "bulunamadi" | "hata" | "islenmedi";
+  baslik?: string;
+  /** "hata" ve "islenmedi" için: kullanıcıya ayrı ayrı söylenir (lib/toplu-doi.ts). */
+  neden?: TopluDoiNeden;
+};
 
 /*
   DOI listesinden ekleme: künye Crossref'ten (lib/doi.ts). Sunucu yalnızca
   sabit Crossref adresine, doğrulanmış DOI ile gider. Aynı anda en çok
   beş istek: Crossref'in "kibar havuz" sınırı.
+
+  ORTAK DİZİN KOTASI (07.11.2026): dışarı giden her DOI bir hak
+  (lib/toplu-doi.ts). Aynı listedeki tekrarlar ve çalışmada zaten olanlar
+  sorulmaz. Hak biterse işlem durur; sorulamayanlar "islenmedi" raporlanır.
+  Eskiden bu yol hiç saymıyordu.
 */
-export async function doiIleEkle(projectId: string, doilar: string[]): Promise<{ error?: string; sonuclar?: DoiSonucu[] }> {
-  /* DOI büyük/küçük harfe duyarsız: eskiden yalnızca harfi farklı iki DOI
-     ikisi de getirilip ikisi de "eklendi" raporlanıyor, biri ekleniyordu. */
-  const gorulen = new Set<string>();
-  const temiz = (Array.isArray(doilar) ? doilar : [])
-    .map((d) => normalizeDoi(String(d)))
-    .filter((d): d is string => !!d && !gorulen.has(d.toLowerCase()) && !!gorulen.add(d.toLowerCase()));
+export async function doiIleEkle(
+  projectId: string,
+  doilar: string[],
+): Promise<{ error?: string; sonuclar?: DoiSonucu[]; tekrar?: number; gecersiz?: number; durdu?: "kota" | "kota_denetlenemedi" | null }> {
+  const { doilar: temiz, tekrar, gecersiz } = topluDoiAyikla(doilar);
   const t = await ceviri();
   if (!temiz.length) return { error: t({ tr: "Geçerli bir DOI bulunamadı (ör. 10.1000/xyz123 ya da https://doi.org/…).", en: "No valid DOI was found (e.g. 10.1000/xyz123 or https://doi.org/…)." }) };
   if (temiz.length > DOI_TOPLU_EN_COK) return { error: t({ tr: `Tek seferde en çok ${DOI_TOPLU_EN_COK} DOI eklenebilir.`, en: `You can add at most ${DOI_TOPLU_EN_COK} DOIs at once.` }) };
+  // Oturum, abonelik, çalışma sahipliği ve kütüphane: hepsi hak düşmeden önce.
   const h = await hazirlik(projectId);
   if ("hata" in h) return { error: h.hata };
 
+  const { satirlar, durdu } = await topluDoiGetir(temiz, {
+    kutuphanede: (anahtar) => h.anahtarlar.has(kaynakAnahtari({ title: "", year: null, doiOrUrl: anahtar })),
+    hakDus: () => dizinHakkiDus(h.ctx.user.id),
+    crossref: (doi) => crossrefKunyesi(doi),
+  });
+
   const sonuclar: DoiSonucu[] = [];
   const taslaklar: KaynakTaslagi[] = [];
-  const getir = async (doi: string) => {
-    if (h.anahtarlar.has(kaynakAnahtari({ title: "", year: null, doiOrUrl: doi }))) {
-      sonuclar.push({ doi, durum: "vardi" });
-      return;
-    }
-    try {
-      const yanit = await fetch(crossrefWorkUrl(doi), {
-        headers: { "User-Agent": CROSSREF_USER_AGENT },
-        signal: AbortSignal.timeout(8000),
-        cache: "no-store",
-      });
-      if (yanit.status === 404) return void sonuclar.push({ doi, durum: "bulunamadi" });
-      if (!yanit.ok) return void sonuclar.push({ doi, durum: "hata" });
-      const govde = (await yanit.json()) as { message?: unknown };
-      const m = parseCrossrefWork(govde.message as Parameters<typeof parseCrossrefWork>[0], doi);
-      if (!m) return void sonuclar.push({ doi, durum: "bulunamadi" });
+  for (const s of satirlar) {
+    if (s.durum === "getirildi") {
+      const m = s.metadata;
       taslaklar.push({
         title: m.title,
         authors: m.authors,
@@ -181,13 +187,13 @@ export async function doiIleEkle(projectId: string, doilar: string[]): Promise<{
         publisher: m.publisher,
         publicationPlace: m.publicationPlace,
       });
-      sonuclar.push({ doi, durum: "eklendi", baslik: m.title });
-    } catch (error) {
-      console.error("[kaynak-aktarim] Crossref", doi, error instanceof Error ? error.message : error);
-      sonuclar.push({ doi, durum: "hata" });
+      sonuclar.push({ doi: s.doi, durum: "eklendi", baslik: m.title });
+    } else if (s.durum === "hata" || s.durum === "islenmedi") {
+      sonuclar.push({ doi: s.doi, durum: s.durum, neden: s.neden });
+    } else {
+      sonuclar.push({ doi: s.doi, durum: s.durum });
     }
-  };
-  for (let i = 0; i < temiz.length; i += 5) await Promise.all(temiz.slice(i, i + 5).map(getir));
+  }
 
   if (taslaklar.length) {
     /*
@@ -204,7 +210,5 @@ export async function doiIleEkle(projectId: string, doilar: string[]): Promise<{
       if (s.durum === "eklendi" && tekrarDoilari.has(doiAnahtari(s.doi))) s.durum = "vardi";
     }
   }
-  /* Kullanıcının yapıştırdığı sırayla dönsün. */
-  sonuclar.sort((a, b) => temiz.indexOf(a.doi) - temiz.indexOf(b.doi));
-  return { sonuclar };
+  return { sonuclar, tekrar, gecersiz, durdu };
 }

@@ -88,7 +88,7 @@ export default function KaynakBulPenceresi({
     setEkleniyor(kayit.kimlik);
     try {
       // DOI varsa künye Crossref'ten tam gelir; yoksa dizin kaydındaki bilgiyle (eksikler atıfta söylenir).
-      const meta = kayit.doi ? (await lookupDoi(kayit.doi).catch(() => ({ metadata: undefined }))).metadata : undefined;
+      const meta = kayit.doi ? (await lookupDoi(kayit.doi, projectId).catch(() => ({ metadata: undefined }))).metadata : undefined;
       const sonuc = await createCitationSource({
         title: meta?.title ?? kayit.baslik,
         authors: meta?.authors ?? (kayit.yazarlar.length ? kayit.yazarlar.join("; ") : null),

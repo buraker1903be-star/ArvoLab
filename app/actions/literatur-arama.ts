@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { HEDEF_MESAJI, kaynakHedefi } from "@/lib/kaynak-hedefi";
 import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
-import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
+import { dizinHakkiDus } from "@/lib/dizin-kotasi";
+import { KOTA_DENETLENEMEDI, KOTA_DOLDU } from "@/lib/dizin-kotasi-kurali";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { literaturAra, type AramaKaydi } from "@/lib/literatur-arama";
 import { ceviri } from "@/lib/dil-sunucu";
@@ -20,12 +21,10 @@ const yenile = () => {
 const EN_KISA_SORGU = 3;
 const EN_UZUN_SORGU = 300;
 /*
-  Saatlik arama hakkı. Sebebi kota değil nezaket: OpenAlex ve Crossref
-  ücretsiz ve açık; sunucumuz üzerinden sınırsız sorgu, onların kapısında
-  bizim adımıza gürültü demek. Bir oturumda 60 arama, en yoğun literatür
-  gününde bile fazlasıyla yeter.
+  Saatlik arama hakkı artık ORTAK dizin kotası (lib/dizin-kotasi-kurali.ts,
+  60/saat). Sebebi nezaket: OpenAlex ve Crossref ücretsiz ve açık; sunucumuz
+  üzerinden sınırsız sorgu, onların kapısında bizim adımıza gürültü demek.
 */
-const SAATLIK_HAK = 60;
 /* Veritabanının kabul ettiği türler (literature_sources CHECK). İstemciden
    gelen değer doğrulanmazsa kayıt veritabanında reddedilir ve kullanıcı
    sebebini anlamadan "eklenemedi" görür. */
@@ -68,18 +67,15 @@ export async function literaturAramasiYap(girdi: {
   const sorgu = String(girdi.sorgu ?? "").trim().slice(0, EN_UZUN_SORGU);
   if (sorgu.length < EN_KISA_SORGU) return { hata: t({ tr: "Aramak için en az birkaç harf yazın.", en: "Type at least a few letters to search." }) };
 
-  // Sayaç kurulamıyorsa arama engellenmiyor (bkz. adminIstemcisiVarsa).
-  const admin = adminIstemcisiVarsa();
-  if (admin) {
-    const { data: izin, error } = await admin.rpc("rate_limit_hit", {
-      p_key: `literatur-arama:${ctx.user.id}`,
-      p_limit: SAATLIK_HAK,
-      p_window: "1 hour",
-    });
-    // Sayaç okunamazsa akış durmaz; kapı sert kapanmamalı (lib/ai/erisim.ts ile aynı ilke).
-    if (error) console.error("[literatur-arama] hız sınırı okunamadı:", error.message);
-    else if (izin === false) return { hata: t({ tr: `Saatlik arama hakkınız doldu (${SAATLIK_HAK}). Bir süre sonra tekrar deneyin.`, en: `You've used up your hourly search limit (${SAATLIK_HAK}). Please try again later.` }) };
-  }
+  /*
+    Ortak dizin kotası (lib/dizin-kotasi.ts): DOI ile künye getirme ve
+    toplu DOI ekleme ile AYNI saatlik hak. Eskiden sayaç yoksa ya da hata
+    verirse üretimde de arama açık geçiyordu; artık üretimde dış istek
+    gönderilmez (ortam davranışı lib/dizin-kotasi-kurali.ts).
+  */
+  const kota = await dizinHakkiDus(ctx.user.id);
+  if (kota.tur === "doldu") return { hata: t(KOTA_DOLDU) };
+  if (kota.tur === "denetlenemedi") return { hata: t(KOTA_DENETLENEMEDI) };
 
   const filtreler = {
     yilDan: sayi(girdi.yilDan),

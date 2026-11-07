@@ -6,6 +6,7 @@ import { CircleAlert, CircleCheck, Info, Link2, LoaderCircle, Search } from "luc
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { doiIleEkle } from "@/app/actions/kaynak-aktarim";
 import { normalizeDoi } from "@/lib/doi";
+import { topluDoiNedenMesaji } from "@/lib/toplu-doi";
 
 /*
   DOI İLE KAYNAK EKLE — GÖRÜNÜR KUTU (Phase 3, 04.11.2026).
@@ -33,7 +34,8 @@ type Durum =
   | { tur: "eklendi"; baslik: string }
   | { tur: "vardi" }
   | { tur: "bulunamadi" }
-  | { tur: "hata"; mesaj?: string };
+  /* yenidenDene: 429, Crossref hatası ve zaman aşımında düğme kalır; kota ve abonelikte anlamsız. */
+  | { tur: "hata"; mesaj?: string; yenidenDene?: boolean };
 
 export default function DoiEkleKutusu({
   projectId,
@@ -74,6 +76,9 @@ export default function DoiEkleKutusu({
         router.refresh();
       } else if (s.durum === "vardi") setDurum({ tur: "vardi" });
       else if (s.durum === "bulunamadi") setDurum({ tur: "bulunamadi" });
+      /* Eskiden her başarısızlık "Crossref'e ulaşılamadı" diyordu: dolan
+         kota, 429 ve zaman aşımı birbirinden ayırt edilemiyordu (DOI kotası, 07.11.2026). */
+      else if (s.neden) setDurum({ tur: "hata", mesaj: t(topluDoiNedenMesaji(s.neden)), yenidenDene: s.durum === "hata" });
       else setDurum({ tur: "hata" });
     } catch {
       setDurum({ tur: "hata" });
@@ -148,7 +153,7 @@ export default function DoiEkleKutusu({
           <p data-tone="danger">
             <CircleAlert size={14} aria-hidden="true" />
             <span>{durum.mesaj ?? t({ tr: "Crossref'e şu an ulaşılamadı. Biraz sonra yeniden deneyin.", en: "Couldn't reach Crossref right now. Try again shortly." })}</span>
-            {durum.mesaj ? null : (
+            {durum.mesaj && !durum.yenidenDene ? null : (
               <button type="submit" className="projects-filter-button button-compact">
                 {t({ tr: "Yeniden dene", en: "Try again" })}
               </button>
