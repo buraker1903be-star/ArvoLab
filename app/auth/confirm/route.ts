@@ -2,7 +2,7 @@ import { aktifDil } from "@/lib/dil-sunucu";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { safeConfirmNext } from "@/lib/auth-link";
+import { amrYontemleri, dogrulamaSonrasiYol, safeConfirmNext } from "@/lib/auth-link";
 import { ayniKokenMi } from "@/lib/istek-koken";
 import { sendEmail } from "@/lib/email/resend";
 import { hosgeldinizEmail } from "@/lib/email/auth-emails";
@@ -40,13 +40,16 @@ export async function GET(request: NextRequest) {
   }
 
   let verified = false;
+  let hedef = next;
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     verified = !error;
     if (error) console.error(error);
+    // Kayıt/davet/kurtarma ise şifre sayfası (lib/auth-link.ts dogrulamaSonrasiYol).
+    if (verified) hedef = dogrulamaSonrasiYol(amrYontemleri(data.session?.access_token), next);
   }
-  return NextResponse.redirect(new URL(verified ? next : "/?error=link-invalid", origin));
+  return NextResponse.redirect(new URL(verified ? hedef : "/?error=link-invalid", origin));
 }
 
 /* Onay sayfasındaki düğme (app/auth/dogrula/page.tsx). */
