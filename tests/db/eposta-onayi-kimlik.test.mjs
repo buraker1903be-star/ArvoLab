@@ -154,3 +154,18 @@ describe("G1: yetki yüzeyi", () => {
       }
     }));
 });
+
+describe("G1: sifre_durumum (20261107113542)", () => {
+  test("yalnızca çağıranın kendi hesabı için var/yok; anon çağıramaz", () =>
+    islem(db, async () => {
+      await rol(db, "postgres");
+      await db.query(`insert into auth.users (id, email, encrypted_password) values ($1, 'a@x.co', 'ozet'), ($2, 'b@x.co', null)`, [ONAYLI, KURBAN]);
+      await rol(db, "authenticated", ONAYLI);
+      assert.equal((await tek(`select public.sifre_durumum() as v`)).v, true);
+      await rol(db, "authenticated", KURBAN);
+      assert.equal((await tek(`select public.sifre_durumum() as v`)).v, false);
+      await rol(db, "postgres");
+      const r = await tek(`select has_function_privilege('anon', 'public.sifre_durumum()', 'execute') as anon`);
+      assert.equal(r.anon, false);
+    }));
+});
