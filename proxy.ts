@@ -2,6 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { DIL_CEREZI, ilkZiyaretDili } from "@/lib/dil";
 import { BASKA_CIHAZ_BILGISI, baskaCihazdanKapatildiMi, oturumCereziMi } from "@/lib/tek-oturum";
+import { amrYontemleri } from "@/lib/auth-link";
+import { SIFRE_VAR_CEREZI, ilkSifreGerekli, ilkSifreSorulmali } from "@/lib/ilk-sifre";
+import { sifreDurumu } from "@/lib/supabase/sifre-durumu";
 
 // Next.js 16 "proxy" katmanı (eski adıyla middleware):
 // 1) Supabase oturum çerezini her istekte yeniler (Server Component'ler çerez yazamaz).
@@ -86,6 +89,29 @@ export async function proxy(request: NextRequest) {
   }
   if (user && SIGNED_OUT_ONLY_PATHS.includes(pathname)) {
     return redirectTo("/dashboard");
+  }
+
+  /*
+    İLK ŞİFRE KAPISI (G1, 07.11.2026; lib/ilk-sifre.ts). Kayıt/davet
+    doğrulamasıyla (ya da yöntemi bilinmeyen bir bağlantıyla) açılmış ve
+    hesabında şifre olmayan oturum, panelin hiçbir yolunu (sunucu işlemleri
+    de bu yollara POST ediliyor) açamadan şifre sayfasına gider. ArvoOS
+    magic link oturumu ve şifreyle giriş hiç sorgulanmaz; şifresi olduğu bir
+    kez görülen oturum çerezle işaretlenir, sonraki isteklerde sorgu yok.
+    Çerezi taklit etmek yalnızca kişinin KENDİ kapısını atlatır.
+  */
+  if (user && pathname.startsWith("/dashboard") && request.cookies.get(SIFRE_VAR_CEREZI)?.value !== user.id) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const yontemler = amrYontemleri(session?.access_token);
+    if (ilkSifreSorulmali(yontemler)) {
+      const sifreVar = await sifreDurumu(supabase);
+      if (ilkSifreGerekli(yontemler, sifreVar)) return redirectTo("/reset-password", { ilk: "1" });
+      if (sifreVar === true) {
+        response.cookies.set(SIFRE_VAR_CEREZI, user.id, { path: "/", httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 30 });
+      }
+    }
   }
 
   return dilCereziniYaz(response);

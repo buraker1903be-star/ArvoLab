@@ -13,6 +13,7 @@ import { kayitGirdisiniDenetle } from "@/lib/kayit";
 import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
+import { SIFRE_VAR_CEREZI } from "@/lib/ilk-sifre";
 import { after } from "next/server";
 import { randomBytes } from "node:crypto";
 import { onayKaydiYaz, onayKopyasiGonder } from "@/lib/sozlesme/onay-yaz";
@@ -426,6 +427,8 @@ async function applyNewPassword(formData: FormData): Promise<ActionResult> {
     console.error(error);
     return { error: t(passwordErrorMessage(error.code)) };
   }
+  // İlk şifre kapısı bu oturumda artık sorgu yapmasın (proxy.ts, lib/ilk-sifre.ts).
+  (await cookies()).set(SIFRE_VAR_CEREZI, user.id, { path: "/", httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 30 });
   return { success: true };
 }
 
