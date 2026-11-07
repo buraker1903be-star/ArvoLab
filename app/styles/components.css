@@ -1546,6 +1546,10 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
    okunmuyordu. --accent-strong tema ile döner. */
 .picker-kapsam button.is-active { border-color: var(--primary-ink); background: var(--primary-soft); color: var(--primary-ink); }
 .picker-kapsam button:disabled { opacity: .5; cursor: default; }
+/* Dokunmatikte 40 piksel (UX M2): kapsam düğmeleri 31 piksel yüksekti. */
+@media (max-width: 1199px), (pointer: coarse) {
+  .picker-kapsam button { min-height: 40px; }
+}
 .picker-rozet { display: block; margin-top: 2px; color: var(--muted); font-size: var(--fs-sm); font-style: normal; }
 
 /* ---- Çalışma bağlam şeridi (birim sayfalarının üstünde) ----

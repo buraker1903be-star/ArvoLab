@@ -229,9 +229,12 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
   .sayfa-basligi-sag :is(button, summary) { min-height: var(--kontrol-h); }
   .veri-tablo-sirala { min-height: var(--kontrol-h); margin-block: -8px; }
 }
-/* DOI kutusunun iç alanı 36 pikseldi (genel-bakis.css); dokunmatikte 40. */
+/* DOI kutusunun iç alanı 36 pikseldi (genel-bakis.css); dokunmatikte 40.
+   Aynı satırdaki "Ekle" ve Kaynakça kartındaki "Sonuçları aç" / "Kaynakçamı
+   denetle" sık düğmeydi (36): UX M2'de (07.11.2026) onlar da 40. */
 @media (max-width: 1199px), (pointer: coarse) {
   .doi-kutusu-satir input { height: var(--kontrol-h); }
+  .kaynaklar-ikili .button-compact { min-height: var(--kontrol-h); }
 }
 
 /* ---------- Kaynak ayrıntısı (Signature OS 4.2) ---------- */

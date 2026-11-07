@@ -909,10 +909,11 @@
 .import-modes { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
 .import-modes legend { margin-bottom: 4px; padding: 0; }
 
-/* Seçim listeleri (sürüm geçmişi, kaynaktan atıf) */
+/* Seçim listeleri (sürüm geçmişi, kaynaktan atıf). Yükseklik --kontrol-h
+   (40): eskiden 38'di, atıf penceresinde telefonda dokunma hedefinin altında. */
 .picker-search {
   width: 100%;
-  height: 38px;
+  height: var(--kontrol-h);
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
@@ -1560,8 +1561,10 @@
   padding: 0 5px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-soft);
   font-size: var(--fs-micro); font-weight: 600; line-height: 16px; font-variant-numeric: tabular-nums;
 }
+/* 40×40 (UX M2, 07.11.2026): eskiden 36×36'ydı, telefonda panelin tek
+   kapatma yolu (Esc yok) dokunma hedefinin altında kalıyordu. */
 .yan-panel-kapat {
-  display: grid; flex: none; place-items: center; width: 36px; height: 36px;
+  display: grid; flex: none; place-items: center; width: 40px; height: 40px;
   border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer;
 }
 .yan-panel-kapat:hover { background: var(--dugme-hover-zemin); color: var(--ink); }
