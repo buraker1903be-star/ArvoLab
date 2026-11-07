@@ -14,6 +14,9 @@ uygulanabilir ayrıntıya indirir.
 | K3 | Atıflı kaynaklarda **yumuşak silme ve açık uyarı** | Belgede atfı olan kaynak kalıcı silinmez |
 | K4 | ZIP paketinde **DOCX, RIS, BibTeX, kaynak PDF'leri ve eksik dosya raporu** | Teslim paketi |
 | K5 | Atıflar **kaynak kimlikleriyle** bağlanır; **eski belgeler otomatik değiştirilmez** | Editör |
+| K6 | Çalışmaya bağlı OLMAYAN kaynakta tekrar kontrolü **kullanıcının genel kütüphanesi** kapsamında; farklı kullanıcıların kaynakları birbirinden bağımsız (07.11.2026) | Anahtar `(owner_id, doi)`, `project_id is null` |
+| K7 | Kaldırılan kaynak için varsayılan **geri alma süresi 30 gün**; belge, atıf, kanıt ya da başka bir kayıtla ilişkili kaynak **otomatik kalıcı silinmez** (07.11.2026) | Yumuşak silme (K3) |
+| K8 | Eski belgelerin atıflarını kaynak kimliklerine bağlama aracı **A4'ten ayrı bir dilim**; **otomatik belge değişikliği yok** (07.11.2026) | K5 |
 
 ## 1. İlkeler (bütün dilimler)
 
@@ -150,9 +153,16 @@ Kaynak yumuşak silinince bağ kalır (PDF kaybolmaz); kalıcı silinince NULL.
 
 ### K2 — Çalışma kapsamında mükerrer DOI
 
-- Anahtar: `(project_id, doi)`, `silindi_at is null`. `project_id` NULL
-  (çalışmasız kaynak) için anahtar `(owner_id, doi)` — tetikleyici iki
-  durumu ayırır.
+- Anahtar: çalışmaya bağlı kaynakta `(project_id, doi)`; çalışmaya bağlı
+  OLMAYAN kaynakta **kullanıcının genel kütüphanesi**: `(owner_id, doi)`
+  ve `project_id is null` (K6). Farklı kullanıcıların kaynakları birbirini
+  etkilemez. Her iki kapsamda `silindi_at is null`.
+- Uygulama düzeyinde (A1) "çalışma kapsamı" = sahip + çalışma: kaynak
+  yalnızca kullanıcının SAHİBİ olduğu çalışmaya bağlanabiliyor
+  (`lib/kaynak-hedefi.ts`), yani bugün bir çalışmanın bütün kaynakları
+  tek kullanıcınındır ve sahip+çalışma denetimi çalışma kapsamının
+  tamamıdır. Atanmış kişinin kaynak eklemesi açılırsa (RLS kararı) bu
+  varsayım düşer; veritabanı denetimi (M4) o yüzden çalışmaya bakar.
 - Veritabanı: `kaynak_doi_esle` tetikleyicisi yeni tekrarı reddeder
   (`23505`, mesaj Türkçe). Uygulama tetikleyiciye güvenmez, karar modülüyle
   önceden yakalar; tetikleyici doğrudan REST'e karşı son çizgi.
@@ -174,6 +184,17 @@ Kaynak yumuşak silinince bağ kalır (PDF kaybolmaz); kalıcı silinince NULL.
 - Atıf yoksa kalıcı silme (bugünkü davranış).
 - **Engelin sorgusu hata yutmaz:** atıf sayısı okunamazsa silme yapılmaz
   (yumuşak dahil), "denetlenemedi" denir.
+- **Geri alma süresi 30 gün (K7).** Süre dolan kaynak yalnızca hiçbir
+  kayıtla ilişkili DEĞİLSE kalıcı silinebilir: belgede atıf (işaret ya da
+  metin eşleşmesi), kanıt kaydı (`kanit_kayitlari.kaynak_id`), PDF bağı
+  (`kaynak_pdfleri.kaynak_id`) ya da başka bir yabancı anahtar varsa
+  **otomatik kalıcı silme yapılmaz**; kaynak "Kaldırılanlar"da süresiz
+  kalır ve yalnızca kullanıcının açık eylemiyle (ilişkiler gösterilerek)
+  silinebilir. Otomatik temizlik ayrı bir zamanlanmış iş olur ve ilişki
+  denetimi okunamazsa HİÇBİR şeyi silmez (engelin sorgusu hata yutmaz).
+  Belgedeki atıf JSON'da olduğu için ilişki denetimi müsveddeyi de okur;
+  bu yüzden temizlik veritabanında tek bir sorguyla değil, uygulama
+  tarafında yapılır (ayrı dilim, A2'nin parçası değil).
 - Yumuşak silinmiş kaynak: listede ve sayaçlarda görünmez (tek yardımcı
   `kaynakSorgusu()` her okumaya `silindi_at is null` ekler — iki yerde
   kurulan süzgeç, `check:rakamlar` sınıfı bir sayı hatasının kaynağı);
@@ -224,7 +245,8 @@ yüzünden sunucuda kurulmaz). İçerik:
 - **Eski belgeler otomatik değiştirilmez.** İsteğe bağlı araç "Atıfları
   kaynaklara bağla": mevcut eşleştirici aday gösterir, kullanıcı her birini
   onaylar; yalnızca onaylanan yer işaretlenir ve bu bir kullanıcı
-  düzenlemesi gibi sürüm geçmişine girer.
+  düzenlemesi gibi sürüm geçmişine girer. **Bu araç A4'te DEĞİL, ayrı bir
+  dilimde (A4b) gelir (K8).**
 - Okuma kuralı: önce işaret; yoksa metin eşleşmesi; "bilinmiyor" ile "yok"
   ayrımı korunur.
 - Yabancı kimlik: başka çalışmadan yapıştırılan işaretin kimliği bu
@@ -340,7 +362,9 @@ K5 ve K4 migration istemez; K4, M5'ten sonra en doğru hâlini alır
 | A1 | Tek normalleştirici + karar modülü + `kaynakEkleDoi`; `lookupDoi` kapısı ve `lib/access.ts`; durum kuralı; iki arayüz aynı işlemi çağırır | yok (tekrar denetimi uygulamada) | 7.1, kabul.mjs DOI |
 | A2 | M1 + yumuşak silme akışı, uyarı, "Kaldırılanlar", tek sorgu yardımcısı | M1 | 7.3, 7.5 silme |
 | A3 | M2 + M3 + M4: DOI sütunu, geri doldurma raporu, veritabanı tekrar engeli | M2–M4 | 7.2, 7.3 |
-| A4 | K5: `atif` işareti, ekleme yolları, okuma kuralı, isteğe bağlı bağlama aracı | yok (TipTap şeması — **TipTap mimarisine dokunur**) | 7.4, cikti-kabul |
+| A4 | K5: `atif` işareti, ekleme yolları, okuma kuralı (bağlama aracı YOK) | yok (TipTap şeması — **TipTap mimarisine dokunur**) | 7.4, cikti-kabul |
+| A4b | K8: eski belgeler için onaylı bağlama aracı; otomatik değişiklik yok | yok | 7.4, kabul (her bağlama kullanıcı onayıyla, sürüm geçmişinde) |
+| A2b | K7: 30 günlük süre ve ilişkisiz kaynakların temizliği (zamanlanmış iş) | yok (M1'in sütunları) | birim: ilişki denetimi; ilişki okunamazsa hiçbir şey silinmez |
 | A5 | M5 + K4 ZIP (DOCX, RIS, BibTeX, PDF, eksik dosya raporu) | M5 | 7.1 manifest, 7.5 ZIP |
 | A6 | M6 (tekrar sayısı sıfırsa) | M6 | 7.3 |
 
@@ -360,11 +384,12 @@ metin eşleşmesine dayanır ("olası" etiketiyle) — kabul edilebilir.
 | Önizleme sahte istemcisi tetikleyici taklit etmez | önizlemede kural görünmez | veritabanı kuralı `tests/db` + Test'te sınanır (7.5 notu) |
 | Mevcut tekrarlar M6'yı süresiz erteler | benzersizlik yalnızca tetikleyicide kalır | tetikleyici yeterli koruma; M6 iyileştirme |
 
-## 10. Açık sorular (kararı gerekenler)
+## 10. Açık sorular
 
-1. Çalışmasız kaynakta (`project_id` NULL) tekrar anahtarı `(owner_id, doi)`
-   olsun mu, yoksa çalışmasız kaynakta tekrar serbest mi?
-2. "Kaldırılanlar" görünümünde yumuşak silinmiş kaynak ne kadar süre kalır
-   (süresiz mi, N gün sonra kalıcı silme mi)? Kalıcı silme yalnızca atıfsız
-   kaynakta mümkün olmalı.
-3. K5 bağlama aracı A4'te mi, ayrı bir dilimde mi?
+Önceki üç soru K6, K7, K8 ile kapandı (07.11.2026). Açık olan:
+
+1. **`lookupDoi` (editörde DOI ile künye arama) abonelik kapısı ve saat
+   hakkı.** Bugün kapısız ve hak sınırı yok (A1 denetimi); Kaynaklar'daki
+   dizin araması (`literaturAramasiYap`) hem kapılı hem saatlik haklı.
+   Kullanım politikası değişikliği olduğu için A1'de DEĞİŞTİRİLMEDİ;
+   karar bekliyor.
