@@ -1,241 +1,370 @@
-# Mimari karar taslağı: kaynak ↔ atıf ↔ PDF bütünlüğü
+# Kaynak ↔ atıf ↔ PDF bütünlüğü — karar ve uygulanabilir teknik plan
 
-Durum: **ÖNERİ — onay bekliyor.** Bu belge kod, migration ya da veri değişikliği
-İÇERMEZ. Her bölümün sonundaki "gerekli değişiklik" ayrı onayla, ayrı dilimde
-yapılır. Tarih: 07.11.2026. Dayanak: Araştırma ve Kaynaklar salt okunur
-envanteri (Phase 4.5 sonrası) ve aşağıda dosya:satır ile anılan kod.
+**Durum:** Ürün kararları VERİLDİ (07.11.2026). Teknik plan **onay bekliyor**;
+bu belge kod, migration ya da veri değişikliği İÇERMEZ. Her dilim ayrı
+onayla uygulanır. İlk sürüm: `8e0e56b`; bu sürüm kararları işler ve planı
+uygulanabilir ayrıntıya indirir.
 
-İlkeler (bütün bölümler için):
-1. **Mevcut veri kaybolmaz, sessizce yeniden yazılmaz.** Öğrencinin müsveddesi
-   (`project_manuscripts.content`) hiçbir geri doldurma (backfill) işleminde
-   otomatik değiştirilmez; bağ kurmak kullanıcının onayıyla olur.
-2. **Eski belge, eski kayıt çalışmaya devam eder.** Yeni alanlar boş (NULL)
-   olabilir; her okuma yolu "bağ yok" durumunu bugünkü davranışla karşılar.
-3. **Çıktı değişmez.** Word, yazdırma/PDF ve paylaşım çıktısı bu kararların
-   hiçbiriyle değişmemeli; `tests/editor/cikti-referans.test.ts` ve
-   `scripts/onizleme/cikti-kabul.mjs` (R0) bunu her dilimde sınar.
-4. Değişmezlikler (AGENTS.md) geçerli: abonelik kapısı, RLS asıl katman, her
-   yeni fonksiyonda `revoke … from public, anon, authenticated`, yeni
-   tabloda RLS aynı migration'da, migration `npm run db:new` ile.
+## 0. Verilen ürün kararları
 
----
-
-## 1. Editör atıflarının kaynak kimliğiyle ilişkilendirilmesi
-
-**Bugün.** `insertCitation` (`app/dashboard/editor/[id]/write/editor-navigation.ts:236-290`)
-atıfı **düz metin** olarak yazar; dipnotlu stilde `footnoteReference`
-düğümüne yalnızca `text` özniteliği koyar. Belgede kaynak kimliği yok.
-"Metinde atıf var mı" sorusu soyad + yıl metin eşleşmesiyle cevaplanıyor
-(`lib/atif-eslesmesi.ts`, `lib/kaynak-kutuphanesi.ts`); numaralı stilde
-cevap "bilinmiyor".
-
-**Öneri.** Atıf metnini saran bir satır içi **işaret (mark)**: `atif`,
-öznitelikleri `{ kaynaklar: uuid[], sayfa?: string }`. Dipnotlu stilde aynı
-bilgi `footnoteReference`'a ek öznitelik olarak (`kaynaklar`).
-- Neden düğüm değil işaret: atıf metni öğrencinin düzenleyebildiği metin
-  kalmalı (sayfa numarası ekleme, "ve ark." düzeltme). Düğüm onu tek parça
-  yapar, kopyala-yapıştırı ve bul-değiştiri bozar.
-- Çıktılar işareti **yok sayar**: metin aynen çizilir. Word/yazdırma
-  çıktısı değişmez (ilke 3; referans testleri sınar).
-- `insertCitation` ve atıf penceresi işareti koyar. Yazım asistanı zaten
-  yalnızca kütüphanedeki kaynaklara atıf yapabiliyor (AGENTS.md): eşleşen
-  kaynağın kimliği işarete yazılabilir (ayrı dilim).
-- "Metinde atıf" hesabı önce işarete bakar, işaret yoksa bugünkü metin
-  eşleşmesine düşer. "Bilinmiyor" ile "yok" ayrımı korunur.
-
-**Geriye dönük uyumluluk.** Eski belgelerde işaret yok → bugünkü davranış.
-İsteğe bağlı "atıfları kaynaklara bağla" aracı: mevcut eşleştirici aday
-gösterir, öğrenci onaylar, yalnızca onaylanan yer işaretlenir (ilke 1).
-
-**Gerekli değişiklik.** TipTap şeması (`lib/tiptap-extensions.ts`) — **TipTap
-mimarisine dokunur, ayrı onay gerekir.** Veritabanı migration'ı yok
-(belge JSON'u `jsonb`). `tests/editor/sema.test.ts`'e işaret, kopyala-yapıştır
-ve çıktı testleri; `cikti-yollari.test.ts`'e "işaret çıktıyı değiştirmez"
-satırı.
-
-**Riskler.**
-- Başka bir çalışmadan yapıştırılan atıf yabancı kaynak kimliği taşır →
-  okurken kimlik o çalışmanın kaynağı değilse yok sayılır (ve uyarılır).
-- Kullanıcı atıf metnini tamamen silip yeniden yazarsa işaret kaybolur →
-  metin eşleşmesi yedeği bu yüzden kalıcı.
-- Word'den içe aktarılan belgede işaret yok (docx-import kaynak üretmiyor).
-
----
-
-## 2. DOI ekleme yollarının tek iş kuralına bağlanması
-
-**Bugün iki yol var, kuralları farklı:**
-
-| | Kaynaklar (`doiIleEkle`, `app/actions/kaynak-aktarim.ts:137-194`) | Editör (`lookupDoi` + `createCitationSource`, `app/actions/literature.ts:225-320`) |
+| # | Karar | Kapsam |
 |---|---|---|
-| Abonelik kapısı | var | arama: yok (`lib/access.ts` listesinde de yok); kayıt: var |
-| Tekrar | aynı DOI eklenmez ("vardı") | denetim yok |
-| Durum | varsayılan (`to_review`) | doğrudan `used` |
-| Zaman aşımı | 8 sn | 8 sn |
+| K1 | DOI ekleme yollarında **ortak doğrulama ve abonelik kuralları** | Kaynaklar sayfası, editör atıf penceresi, toplu DOI/içe aktarma |
+| K2 | **Çalışma kapsamında** mükerrer DOI kontrolü | Aynı çalışmada aynı DOI ikinci kez eklenemez; başka çalışmada eklenebilir |
+| K3 | Atıflı kaynaklarda **yumuşak silme ve açık uyarı** | Belgede atfı olan kaynak kalıcı silinmez |
+| K4 | ZIP paketinde **DOCX, RIS, BibTeX, kaynak PDF'leri ve eksik dosya raporu** | Teslim paketi |
+| K5 | Atıflar **kaynak kimlikleriyle** bağlanır; **eski belgeler otomatik değiştirilmez** | Editör |
 
-**Öneri.** Tek saf karar modülü (`lib/kaynak-ekleme.ts`) + tek sunucu işlemi:
-`kaynakEkle({ projectId, giris: { doi } | { kunye } | { arama } , baglam: "kutuphane" | "editor" })`.
-- DOI normalleştirme tek yerde (`lib/doi.ts`; `doiAyikla`'nın ikinci kopyası
-  `lib/kanit/kunye-karsilastirma.ts`'ten kaldırılır ya da birine bağlanır).
-- Abonelik kapısı her yolda; `lookupDoi` ya kapıya alınır ya da `lib/access.ts`
-  listesine gerekçesiyle "bilerek kapısız" yazılır (karar gerekli: arama
-  maliyetsiz ama dış servise gidiyor).
-- Tekrar kuralı bölüm 3'teki anahtarla.
-- Durum kuralı: kaynak `to_review` doğar; `used` olması **atıfın belgeye
-  girmesiyle** olur (bugün editör yolu kayıtta `used` yazıyor, atıf
-  iptal edilse bile kalıyor).
-- Hata sınıfları tek: bulunamadı / zaman aşımı / dizin hatası / geçersiz.
+## 1. İlkeler (bütün dilimler)
 
-**Gerekli değişiklik.** Sunucu işlemleri ve iki arayüzün çağrısı. Migration
-yok. Birim testleri: karar modülü; zaman aşımı ve 404 için `fetch` taklidiyle
-eylem testi (bugün yok).
+1. **Mevcut veri kaybolmaz, sessizce yeniden yazılmaz.** Hiçbir migration ya
+   da geri doldurma `project_manuscripts.content`'i değiştirmez; hiçbir
+   kaynak satırı silinmez ya da birleştirilmez. Kullanıcıya ait veride
+   değişiklik yalnızca kullanıcının eylemiyle olur.
+2. **Eski kayıt, eski belge çalışmaya devam eder.** Yeni sütunlar NULL
+   olabilir; her okuma yolu "bağ yok" hâlini bugünkü davranışla karşılar.
+3. **Çıktı değişmez.** Word, yazdırma/PDF ve danışman paylaşımı hiçbir
+   dilimde değişmemeli: `tests/editor/cikti-referans.test.ts` ve
+   `scripts/onizleme/cikti-kabul.mjs` (R0) her dilimin kabul ölçütüdür.
+4. **RLS "kim"i, tetikleyici "ne"yi söyler.** Oturum belirteci tarayıcıda;
+   uygulamadaki kural doğrudan REST isteğiyle atlanabilir. Veri bütünlüğü
+   kuralları (mükerrer DOI, PDF–kaynak eşleşmesi) veritabanında da
+   uygulanır; uygulama yalnızca anlaşılır mesajı verir.
+5. AGENTS.md değişmezleri: abonelik kapısı, `gozetim_kapsami`, her yeni
+   fonksiyonda `revoke all … from public, anon, authenticated` + gereken
+   `grant`, yeni tabloda RLS aynı migration'da, migration `npm run db:new`.
 
-**Risk.** Editör yolunda kaynak artık `used` doğmadığı için "kullanılan
-kaynak" sayıları ilk günlerde düşük görünebilir — bu doğru sayıdır;
-sürüm notunda yazılmalı.
+## 2. Bugünkü durum (salt okunur envanter, Test kataloğu ile doğrulandı)
 
----
+- `literature_sources`: `id, owner_id, project_id (→ academic_projects, set null), title, authors, year, source_type, doi_or_url, status (to_review|read|used), notes, created_at, container_title, volume, issue, pages, publisher, publication_place`.
+  - RLS: sahip okur/yazar/siler; gözetim rolleri `gozetim_kapsami(kullanici_kurumu(owner_id), {controller, academic_manager})` ile okur.
+  - Tetikleyici: `guard_subscription_trigger` — **yazma yolları veritabanında zaten abonelik kapısından geçiyor.**
+  - Dizinler: `owner_id`, `(project_id, status)`. **Tekrar kısıtı yok.**
+  - DOI ayrı sütun değil: `doi_or_url` içinde, adreslerle karışık.
+  - Ona bağlı tek yabancı anahtar: `kanit_kayitlari.kaynak_id` (`set null`).
+- `kaynak_pdfleri`: `(project_id, kunye_anahtari)` benzersiz; `literature_sources`'a
+  bağı **yok**; RLS `can_write_project` / çalışmayı gören okur. "PDF sil" işlemi yok.
+- DOI normalleştirme **üç yerde**: `lib/doi.ts → normalizeDoi`,
+  `lib/kaynak-aktarim.ts → doiAyikla` (metinden liste),
+  `lib/kanit/kunye-karsilastirma.ts → doiAyikla` (tek değer).
+- DOI ekleme yolları: `doiIleEkle` (`app/actions/kaynak-aktarim.ts`, kapı var,
+  tekrarı atlar) ve `lookupDoi` + `createCitationSource`
+  (`app/actions/literature.ts`; arama kapısız ve `lib/access.ts` listesinde yok,
+  kayıt `used` doğar, tekrar denetimi yok).
+- Atıf: `insertCitation` (`editor-navigation.ts:236-290`) düz metin yazar;
+  dipnotta `footnoteReference.attrs.text`. Belgede kaynak kimliği yok.
+- ZIP: `teslimPaketi` (`app/actions/kaynak-pdf.ts`) imzalı PDF bağlantıları +
+  kaynak raporu; ZIP tarayıcıda kurulur; abonelik kapısı var. Belge ve
+  kaynakça dosyaları yok.
 
-## 3. Mükerrer kaynakların yönetimi
+## 3. Veri modeli
 
-**Bugün.** Dört ekleme yolunda dört davranış: içe aktarma ve DOI listesi
-atlıyor, elle ekleme uyarıyor, editör yolu denetlemiyor; aramadan ekleme
-doğrulanamadı. Veritabanında tekrar kısıtı yok.
+### 3.1 `literature_sources` — yeni sütunlar (K2, K3)
 
-**Öneri.**
-- **Kimlik anahtarı:** normalleştirilmiş DOI varsa o; yoksa künye anahtarı
-  (ilk yazar soyadı + yıl + başlığın normal hâli; `lib/kaynak-pdf.ts`'teki
-  `kunyeAnahtari` ile aynı kural, tek fonksiyon).
-- **Kapsam:** kullanıcı + çalışma. (Aynı kaynağın iki çalışmada ayrı kaydı
-  meşru: notlar ve durum çalışmaya özgü.)
-- **Ekleme anında:** DOI eşleşmesi → eklenmez, mevcut kayıt döner. Künye
-  eşleşmesi → uyarı + "yine de ekle" (künye anahtarı kesin değil).
-- **Mevcut tekrarlar:** "Olası tekrar" süzgeci zaten var. "Birleştir" eylemi:
-  bir kayıt kalır, ötekinin notu eklenir; kanıt kayıtları
-  (`kanit_kayitlari.kaynak_id`) ve PDF bağı (bölüm 4) kalan kayda taşınır.
-  Belgedeki atıf işaretleri **yeniden yazılmaz**; bunun yerine bir
-  `kaynak_birlesmeleri(eski_id → yeni_id)` tablosu okurken çözülür (ilke 1).
+| Sütun | Tür | Anlam | Mevcut satırlar |
+|---|---|---|---|
+| `doi` | `text null`, `check (doi is null or doi ~ '^10\.\d{4,9}/\S+$' and doi = lower(doi))` | Normalleştirilmiş DOI (küçük harf, `https://doi.org/` öneksiz). Tek doğruluk kaynağı. | Geri doldurma: `doi_or_url`'den `public.doi_normallestir()` ile; çıkarılamayan NULL kalır |
+| `silindi_at` | `timestamptz null` | Yumuşak silme zamanı | NULL |
+| `silen` | `uuid null references auth.users(id) on delete set null` | Kim sildi | NULL |
 
-**Gerekli migration'lar.**
-- M2a: `literature_sources.doi_normal` (üretilmiş sütun, `doi_or_url`'den)
-  + **benzersiz OLMAYAN** dizin `(owner_id, project_id, doi_normal)`.
-  Benzersiz dizin mevcut tekrarlar yüzünden ilk gün kurulamaz; önce
-  rapor + birleştirme, sonra ayrı bir migration'la benzersizlik (M2b).
-- M2c: `kaynak_birlesmeleri` tablosu, RLS (sahip okur/yazar), tetikleyiciyle
-  birleştirme işlemi `security definer` değil invoker.
+- `doi_or_url` **kalır ve değişmez** (geriye dönük uyumluluk; künye
+  gösterimi ve dışa aktarma onu okuyor). Yeni yollar ikisini birlikte yazar:
+  `doi` normal biçim, `doi_or_url` kullanıcının gördüğü biçim.
+- Neden üretilmiş (generated) sütun değil: normalleştirme kuralı
+  değiştiğinde üretilmiş sütun bütün tabloyu yeniden yazar ve dizini
+  yeniden kurar; ayrıca SQL'deki kural TS ikiziyle aynı örnek tablosuna
+  karşı sınanmalı (bkz. 7.2). Tetikleyici yazar, kural tek fonksiyonda.
 
-**Riskler.** Künye anahtarının yanlış pozitifi (aynı yazar + yıl + benzer
-başlık) → bu yüzden yalnızca DOI otomatik, künye yalnızca uyarı. Birleştirme
-geri alınamaz olmamalı: `kaynak_birlesmeleri` aynı zamanda geri alma kaydı.
+### 3.2 Yeni fonksiyonlar
 
----
+| Fonksiyon | Tür | Neden | Yetki |
+|---|---|---|---|
+| `public.doi_normallestir(text) returns text` | `immutable`, SQL | TS `normalizeDoi`'nin ikizi; geri doldurma ve tetikleyici kullanır | `revoke all … from public, anon, authenticated`; tetikleyici sahibi çağırır |
+| `public.kaynak_doi_esle()` | tetikleyici, **security invoker** | `BEFORE INSERT OR UPDATE OF doi_or_url, doi, silindi_at, project_id`: `doi`'yi `doi_or_url`'den doldurur; aynı çalışmada silinmemiş aynı DOI varsa `unique_violation` ile reddeder (K2) | tetikleyici fonksiyonu; çağrılamaz |
+| `public.kaynak_pdf_kaynak_esle()` | tetikleyici, security invoker | `kaynak_pdfleri.kaynak_id` doluysa kaynağın `project_id`'si satırınkiyle aynı olmalı (başka çalışmanın kaynağına bağlanamaz) | aynı |
 
-## 4. PDF dosyalarının kaynak kayıtlarına kalıcı bağlanması
+Tetikleyici **invoker**: çağıranın görebildiği satırlara bakar. Aynı
+çalışmada iki kullanıcının (öğrenci + atanmış uzman) ayrı kaynakları
+olabileceği için mükerrer denetimi sahibin satırlarıyla sınırlı değil,
+**çalışmanın** satırlarıyla. İnvoker iken başka kullanıcının satırını RLS
+yüzünden göremezse tekrar kaçabilir → denetim sorgusu tek amaçlı,
+`security definer` bir yardımcıda (`kaynak_doi_var_mi(project_id, doi, haric_id)`,
+yalnızca `boolean` döner, satır sızdırmaz; `authenticated`'a `grant execute`).
+Bu, AGENTS.md'deki "anon'a açılan fonksiyon kendi yetkisini denetler"
+kuralına uyar: yardımcı yalnızca çağıranın yazabildiği çalışma için
+cevap verir (`can_write_project(project_id)` değilse `false` değil HATA).
 
-**Bugün.** `kaynak_pdfleri` (`supabase/migrations/20261026110024_kaynak_pdfleri.sql`)
-çalışma + **künye anahtarı** ile anahtarlı (`unique (project_id, kunye_anahtari)`);
-`literature_sources`'a yabancı anahtarı yok. Kütüphanedeki kayıtla bağ
-yalnızca ekranda DOI eşleşmesiyle kuruluyor
-(`app/dashboard/literature/page.tsx:377`). Ayrı "PDF sil" işlemi yok.
+### 3.3 Dizinler
 
-**Öneri.**
-- M3: `kaynak_pdfleri.kaynak_id uuid null references literature_sources(id) on delete set null`.
-  `kunye_anahtari` KALIR: kaynakçada olup kütüphanede olmayan künyenin de
-  PDF'i olabiliyor (bugünkü kullanım).
-- Tetikleyici: `kaynak_id` doluysa kaynağın `project_id`'si satırınkiyle
-  aynı olmalı (başka çalışmanın kaynağına bağlanamaz).
-- Geri doldurma (yalnızca rapor + onaylı uygulama): önce DOI tam eşleşmesi,
-  sonra künye anahtarı tam eşleşmesi; belirsiz (birden çok aday) satırlar
-  bağlanmaz, listelenir. İdempotent; Test'te çalıştırılıp sayıları
-  raporlanır, Production ayrı onay.
-- Arayüz bağı "kalıcı" olarak yalnızca `kaynak_id` doluyken gösterir; DOI ile
-  tahmin edilen bağ "eşleşme" olarak etiketlenir (envanter riski 6).
-- "PDF'i kaldır" işlemi: depolamadaki dosya + satırın durumu
-  (`bulunamadi`'ya döner); kanıt kaydı etkilenmez.
+- `create index … on literature_sources (project_id, doi) where doi is not null and silindi_at is null` — tekrar denetimi ve DOI araması.
+- **Kısmi benzersiz dizin** `unique (project_id, doi) where doi is not null and silindi_at is null`
+  YALNIZCA mevcut tekrarlar sıfırken (bkz. 6.2). O güne kadar tetikleyici
+  yalnızca **yeni** tekrarı reddeder; eski tekrarlar durur.
 
-**Riskler.** Depolama yolu değişmiyor (`project-files/<çalışma>/kaynak-pdf/…`),
-storage politikası etkilenmez. Kaynak silinince PDF satırı kalır
-(`set null`) — bilinçli: dosya kaybolmasın.
+### 3.4 `kaynak_pdfleri.kaynak_id` (K4 için gerekli)
 
----
+`kaynak_id uuid null references literature_sources(id) on delete set null`.
+`kunye_anahtari` ve `(project_id, kunye_anahtari)` benzersizliği **kalır**:
+kütüphanede karşılığı olmayan kaynakça satırının da PDF'i olabiliyor.
+Kaynak yumuşak silinince bağ kalır (PDF kaybolmaz); kalıcı silinince NULL.
 
-## 5. Kaynak silindiğinde belge ve kaynakça tutarlılığı
+### 3.5 Belge içi atıf (K5) — veritabanı değişikliği yok
 
-**Bugün.** Kaynak silinince metindeki atıf ve kaynakça satırı olduğu gibi
-kalıyor; `kanit_kayitlari.kaynak_id` NULL oluyor; PDF satırı etkilenmiyor.
-Uyarı yok.
+- Yeni TipTap **işareti** `atif` (`lib/tiptap-extensions.ts`), öznitelikleri:
+  `{ kaynaklar: string[] /* literature_sources.id */, sayfa: string | null }`.
+  `footnoteReference`'a aynı adlı ek öznitelik `kaynaklar`.
+- Belge JSON'u `jsonb`; şema değişikliği yok, migration yok.
+- **Çıktılar işareti yok sayar**: `lib/tiptap-html.ts`, `lib/tiptap-docx.ts`,
+  `lib/latex*`, paylaşım — metin aynen çizilir. R0 referans testleri bunu
+  kanıtlar (ilke 3).
+- Neden düğüm değil işaret: atıf metni düzenlenebilir kalmalı (sayfa
+  numarası, "ve ark."); düğüm onu tek parça yapar, bul-değiştiri ve
+  kopyala-yapıştırı bozar.
 
-**Öneri.**
-- Silme öncesi denetim: kaynak belgede (bölüm 1 işaretiyle, yoksa metin
-  eşleşmesiyle) kaç yerde atıflı, kanıt kaydı ve PDF'i var mı → onay
-  penceresi bunları sayar. AGENTS (ArvoOS) kuralı burada da geçerli:
-  **engel sorgusu hata yutmaz**, okunamazsa silme yapılmaz.
-- Atıflı kaynak için önerilen varsayılan **yumuşak silme**: M4
-  `literature_sources.silindi_at timestamptz`. Liste ve sayaçlar silinmişi
-  göstermez; belge ve kaynakça üretimi atıflı kaydı okumaya devam eder;
-  "geri al" mümkün. Atıfsız kaynak doğrudan silinebilir.
-- Belgedeki atıf metni ve kaynakça satırı **asla otomatik silinmez**; yapı
-  denetimi (`lib/structure-check.ts`) "kütüphanede olmayan kaynağa atıf"
-  uyarısı verir.
+## 4. Kararların uygulanması
 
-**Gerekli değişiklik.** M4 + RLS seçim politikalarında değişiklik YOK
-(süzme uygulamada; RLS sahiplik sınırı aynı). Sayaçları üreten her sorguya
-`silindi_at is null` — `npm run check:rakamlar` sınıfı bir hata riski;
-sorgular tek yardımcıdan geçmeli.
+### K1 — DOI yollarında ortak doğrulama ve abonelik kuralı
 
----
+1. **Tek normalleştirici:** `lib/doi.ts → normalizeDoi` kanonik. Öteki iki
+   `doiAyikla` ona bağlanır (metinden liste çıkaran sarmalayıcı kalır,
+   normalleştirmeyi `normalizeDoi`'ye bırakır). SQL ikizi
+   `doi_normallestir` aynı örnek tablosuyla sınanır (7.2).
+2. **Tek karar modülü** `lib/kaynak-ekleme.ts` (saf, `tests/unit`):
+   `doiKarari({ girdi, mevcutDoilar }) → { tur: "gecersiz" | "tekrar" | "ekle", doi }`
+   ve sonuç sınıfları: `gecersiz | tekrar | bulunamadi | zaman_asimi | dizin_hatasi | eklendi`.
+3. **Tek sunucu işlemi** `kaynakEkleDoi({ projectId, doi, baglam: "kutuphane" | "editor" })`.
+   Sıra: oturum → `isSubscriptionBlocked()` → çalışmaya yazma yetkisi →
+   karar modülü (geçersiz/tekrar dış servise gitmeden döner) → Crossref
+   (8 sn) → insert. `doiIleEkle` (toplu) ve editör yolu bunu çağırır.
+4. **Abonelik:** `lookupDoi` (yalnızca arama) de kapıya alınır ve
+   `lib/access.ts` listesine yazılır — dış servise giden ve içerik
+   eklemeye hazırlayan bir yol; kapısız kalması iki yol arasındaki tek
+   tutarsızlık. Veritabanı kapısı (`guard_subscription_trigger`) zaten yazma
+   yollarını kapsıyor; uygulama kapısı anlaşılır mesaj için.
+5. **Durum kuralı:** kaynak `to_review` doğar; editörden eklenip atıf
+   belgeye girince `used` olur (bugün kayıt anında `used` yazılıyor ve
+   atıf iptal edilse de kalıyor).
+6. Tekrar → yeni satır YAZILMAZ; mevcut kaynağın kimliği döner ve editör
+   o kaynağa atıf yapar (kullanıcı akışı kesilmez, mesaj: "Bu DOI bu
+   çalışmada zaten var: <başlık>").
 
-## 6. Belge + kaynakça + referans PDF'leri tek ZIP
+### K2 — Çalışma kapsamında mükerrer DOI
 
-**Bugün.** `teslimPaketi` (`app/actions/kaynak-pdf.ts:262-310`) kaynak
-PDF'leri için kısa ömürlü imzalı bağlantılar ve bir kaynak raporu döndürür;
-ZIP **tarayıcıda** kurulur (sunucunun ~4,5 MB yanıt sınırı yüzünden).
-Abonelik kapısı var. Belgenin kendisi ve kaynakça pakete girmiyor.
+- Anahtar: `(project_id, doi)`, `silindi_at is null`. `project_id` NULL
+  (çalışmasız kaynak) için anahtar `(owner_id, doi)` — tetikleyici iki
+  durumu ayırır.
+- Veritabanı: `kaynak_doi_esle` tetikleyicisi yeni tekrarı reddeder
+  (`23505`, mesaj Türkçe). Uygulama tetikleyiciye güvenmez, karar modülüyle
+  önceden yakalar; tetikleyici doğrudan REST'e karşı son çizgi.
+- Künye eşleşmesi (DOI'siz kaynak) **zorlanmaz**, yalnızca uyarı ("Olası
+  tekrar" süzgeci bugünkü gibi). Yanlış pozitif riski DOI'de yok, künyede var.
+- **Mevcut tekrarlar** engellenmez, silinmez, birleştirilmez (ilke 1):
+  6.2'deki rapor + kullanıcı eylemiyle "birini sil (yumuşak)" yolu.
 
-**Öneri.** Aynı tarayıcı tarafı ZIP'e eklenecekler:
-- `belge.docx` — editörün Word düğmesinin kullandığı aynı
-  `buildDocxFromTiptap` çağrısı (tarayıcıda; ek sunucu maliyeti yok).
-- `kaynakca.ris` ve `kaynakca.bib` — Kaynaklar'ın mevcut dışa aktarma
-  kodu (`kaynak-aktarim-araclari.tsx`), yalnızca bu çalışmanın kaynakları.
-- `kaynakca.txt` — kaynakçanın biçimlenmiş metni (`kaynakcaMetni`).
-- `kaynak-pdf/…` ve `rapor.txt` — bugünkü içerik.
-- Belgenin PDF'i: **önerilmez (şimdilik).** Sunucuda başsız tarayıcı Vercel'de
-  pahalı ve yavaş; tarayıcıda yazdırma kullanıcı etkileşimi ister. Pakete
-  "PDF için Yazdır → PDF olarak kaydet" notu yazılır.
+### K3 — Atıflı kaynakta yumuşak silme ve açık uyarı
 
-**Gerekli değişiklik.** Yalnızca istemci kodu; migration yok. Kabul:
-`cikti-kabul.mjs`'nin Word özetleyicisi ZIP'teki `belge.docx`'e de uygulanır
-(paketteki belge, düğmeden inen belgeyle aynı yapıda olmalı).
+- Silme işlemi önce **atıf sayısını** hesaplar: belgedeki `atif`
+  işaretleri + dipnot `kaynaklar` özniteliği (K5) + işareti olmayan eski
+  belgeler için bugünkü metin eşleşmesi (`lib/atif-eslesmesi.ts`, "olası"
+  olarak etiketli) + kanıt kayıtları + PDF.
+- **Atıf ya da kanıt kaydı varsa** kalıcı silme sunulmaz; onay penceresi
+  açıkça yazar: "Bu kaynağa belgede N yerde atıf var (M'si kesin, K'sı
+  metin eşleşmesi). Kaynak kütüphaneden kaldırılır ama silinmez; atıflar
+  ve kaynakça satırı belgede kalır. Geri alınabilir." → `silindi_at = now()`.
+- Atıf yoksa kalıcı silme (bugünkü davranış).
+- **Engelin sorgusu hata yutmaz:** atıf sayısı okunamazsa silme yapılmaz
+  (yumuşak dahil), "denetlenemedi" denir.
+- Yumuşak silinmiş kaynak: listede ve sayaçlarda görünmez (tek yardımcı
+  `kaynakSorgusu()` her okumaya `silindi_at is null` ekler — iki yerde
+  kurulan süzgeç, `check:rakamlar` sınıfı bir sayı hatasının kaynağı);
+  "Kaldırılanlar" görünümünde geri alınır; belge ve kaynakça üretimi
+  atıflı kaydı okumaya devam eder; yapı denetimi "kütüphaneden
+  kaldırılmış kaynağa atıf" uyarısı verir.
+- RLS: seçim politikası değişmez (sahip ve gözetim yine görür; süzme
+  uygulamada). `silindi_at`/`silen` yalnızca sahip tarafından yazılır
+  (mevcut UPDATE politikası); `silen` tetikleyicide `auth.uid()`'den
+  yazılır, istemciden gelmez.
+- Belgedeki metin **asla otomatik silinmez**.
 
-**Riskler.** Tarayıcı belleği (büyük PDF'ler); imzalı bağlantıların 10
-dakikalık ömrü (paket yavaş kurulursa süre dolar → kurulum sırasında
-yenileme). Dosya adlarında Türkçe karakter ve çakışma (bugünkü
-`paketDosyalari` kuralı korunur).
+### K4 — ZIP: DOCX + RIS + BibTeX + kaynak PDF'leri + eksik dosya raporu
 
----
+Tarayıcıda kurulan mevcut pakete eklenir (sunucunun ~4,5 MB yanıt sınırı
+yüzünden sunucuda kurulmaz). İçerik:
 
-## Migration özeti (hiçbiri oluşturulmadı)
+```
+<çalışma-adı>/
+  belge.docx              editörün Word düğmesiyle AYNI buildDocxFromTiptap çağrısı
+  kaynakca.ris            bu çalışmanın kaynakları (silinmemiş + atıflı yumuşak silinmiş)
+  kaynakca.bib            aynı küme
+  kaynak-pdf/<ad>.pdf     indirilebilen her PDF (bugünkü adlandırma: paketDosyalari)
+  eksik-dosyalar.txt      her kaynak için: PDF var/yok + neden
+  rapor.txt               bugünkü kaynak raporu
+```
 
-| Kod | Tablo | Değişiklik | Veri etkisi | Geri alma |
-|---|---|---|---|---|
-| M2a | literature_sources | `doi_normal` üretilmiş sütun + benzersiz olmayan dizin | yok (türetilmiş) | sütunu düşür |
-| M2b | literature_sources | benzersiz kısıt `(owner_id, project_id, doi_normal)` | mevcut tekrarlar birleştirilmeden kurulamaz | kısıtı düşür |
-| M2c | kaynak_birlesmeleri (yeni) | eski→yeni eşlemesi, RLS | yok | tabloyu düşür |
-| M3 | kaynak_pdfleri | `kaynak_id` (set null) + proje eşleşmesi tetikleyicisi | geri doldurma ayrı, raporlu, onaylı | sütunu düşür |
-| M4 | literature_sources | `silindi_at` | yok | sütunu düşür |
+- **Eksik dosya raporu**, her kaynak için bir satır: `bulunamadi` (açık
+  erişim yok), `erisilemedi`, `kayit_yok`, `pdf_hic_aranmadi`, ve paket
+  kurulurken **inmeyen** dosya (`imzali_baglanti_alinamadi`,
+  `indirme_basarisiz`, `boyut_siniri`). Paketin kendisi eksik dosya
+  yüzünden düşmez; eksik olan raporda yazar.
+- Kaynak kümesi `kaynak_id` ile (3.4); bağı olmayan PDF satırları künye
+  anahtarıyla eklenir ve raporda "kütüphanede karşılığı yok" diye işaretlenir.
+- Belgenin PDF'i pakete girmez (sunucuda başsız tarayıcı Vercel'de pahalı;
+  tarayıcıda yazdırma kullanıcı etkileşimi ister); `rapor.txt` "PDF için
+  Yazdır → PDF olarak kaydet" der.
+- Abonelik kapısı bugünkü gibi `teslimPaketi`'nde.
+- İmzalı bağlantılar 10 dk; büyük paket için bağlantılar parça parça istenir.
 
-Sıra önerisi: M3 → M4 → M2a → (birleştirme aracı) → M2c → M2b. Her biri:
-Test'te uygula, `tests/db` meşru akış + saldırı senaryoları, anlık görüntü
-yenile, Production ayrı onay. Bölüm 1 (TipTap işareti) ve 2 (tek DOI kuralı)
-migration gerektirmez ama ayrı onay gerektirir (TipTap mimarisi, sunucu
-işlemleri).
+### K5 — Atıfların kaynak kimliğiyle bağlanması
 
-## Açık kararlar
+- `insertCitation` ve atıf penceresi `atif` işaretini koyar; dipnotlu
+  stilde `footnoteReference.attrs.kaynaklar`.
+- Yazım asistanının eklediği atıflar: asistan zaten yalnızca kütüphanedeki
+  kaynaklara atıf yapabiliyor; eşleşen kaynağın kimliği işarete yazılır
+  (ayrı dilim, asistan izi `lib/tiptap-asistan-izi.ts` ile birlikte).
+- **Eski belgeler otomatik değiştirilmez.** İsteğe bağlı araç "Atıfları
+  kaynaklara bağla": mevcut eşleştirici aday gösterir, kullanıcı her birini
+  onaylar; yalnızca onaylanan yer işaretlenir ve bu bir kullanıcı
+  düzenlemesi gibi sürüm geçmişine girer.
+- Okuma kuralı: önce işaret; yoksa metin eşleşmesi; "bilinmiyor" ile "yok"
+  ayrımı korunur.
+- Yabancı kimlik: başka çalışmadan yapıştırılan işaretin kimliği bu
+  çalışmanın kaynağı değilse yok sayılır ve yapı denetimi uyarır.
+- Yumuşak silinmiş kaynağın işareti geçerli kalır (K3).
 
-1. `lookupDoi` abonelik kapısına mı alınsın, yoksa gerekçeli istisna mı?
-2. Tekrar kapsamı kullanıcı + çalışma mı, yoksa kullanıcı geneli mi?
-3. Atıflı kaynak silinince varsayılan yumuşak silme mi, engel mi?
-4. ZIP'te belgenin PDF'i ileride sunucuda üretilecek mi?
-5. Atıf işareti (bölüm 1) Phase 4.6 tasarım dilimlerinden ÖNCE mi sonra mı?
-   (Önce yapılırsa Kaynaklar ekranı "metinde atıf" bilgisini kesin
-   gösterebilir; sonra yapılırsa tasarım dilimleri bugünkü tahmini gösterir.)
+## 5. Migration sırası (hiçbiri oluşturulmadı)
+
+Her adım: önce **salt okunur ön rapor** (Test, sonra onayla Production),
+sonra migration, sonra `tests/db` meşru akış + saldırı senaryoları, anlık
+görüntü (`supabase/schema.sql`) yenilemesi. Production her adımda ayrı onay.
+
+| Sıra | Ad (öneri) | İçerik | Ön rapor | Veri etkisi | Geri alma |
+|---|---|---|---|---|---|
+| M1 | `kaynak_yumusak_silme` | `literature_sources.silindi_at`, `silen` + `silen`'i yazan tetikleyici | yok | yok (NULL) | sütunları düşür |
+| M2 | `doi_normallestir` | `doi_normallestir()` + yetki satırları | TS ↔ SQL örnek tablosu (7.2) | yok | fonksiyonu düşür |
+| M3 | `kaynak_doi_sutunu` | `literature_sources.doi` + check + kısmi dizin; tetikleyici `kaynak_doi_esle` (yalnızca DOLDURUR, henüz reddetmez) | `doi_or_url`'den kaç satırın DOI'si çıkıyor, kaçı geçersiz | `doi` geri doldurulur (yalnızca yeni sütun; `doi_or_url` değişmez) | sütunu düşür |
+| M4 | `kaynak_doi_tekrar_engeli` | `kaynak_doi_var_mi()` yardımcısı + tetikleyicinin reddetme kolu (yalnızca YENİ tekrar) | çalışma başına mevcut tekrar sayısı (6.2) | yok | tetikleyiciyi önceki sürüme döndür |
+| M5 | `kaynak_pdf_kaynak_bagi` | `kaynak_pdfleri.kaynak_id` + `kaynak_pdf_kaynak_esle` | DOI ve künye anahtarı tam eşleşme sayıları, belirsizler | geri doldurma yalnızca **tek** adaylı eşleşmeler; belirsizler NULL ve raporlu | sütunu düşür |
+| M6 | `kaynak_doi_benzersiz` | kısmi benzersiz dizin | tekrar sayısı **0** olmalı; değilse ertelenir | yok | dizini düşür |
+
+M1–M2 bağımsız; M3, M2'ye; M4, M3'e; M6, M4'e ve sıfır tekrara bağlı.
+K5 ve K4 migration istemez; K4, M5'ten sonra en doğru hâlini alır
+(öncesinde künye anahtarıyla çalışır).
+
+## 6. Mevcut kaynakların korunması
+
+### 6.1 Genel
+- Hiçbir adım satır silmez ya da birleştirmez. Geri doldurmalar yalnızca
+  **yeni** sütunlara yazar, idempotent'tir (`where doi is null` gibi) ve
+  her koşu sonunda "yazılan / atlanan / belirsiz" sayısını döker.
+- `doi_or_url`, `kunye_anahtari`, belge JSON'u ve kanıt kayıtları
+  değişmez.
+- Geri doldurma Test'te koşulur, sayıları raporlanır; Production için
+  önce aynı sorgunun **salt okunur** sürümü, sonra ayrı onay.
+
+### 6.2 Mevcut mükerrer DOI'ler
+- Ön rapor sorgusu (M4 öncesi): `project_id, doi, count(*)` > 1 olan
+  gruplar ve her gruptaki kaynakların atıf/kanıt/PDF bağı.
+- Bu gruplar **durur**; tetikleyici yalnızca yeni ekleme ve DOI
+  değişikliğinde denetler (mevcut satırın notunu güncellemek reddedilmez).
+- Kaynaklar sayfası "Olası tekrar" süzgecine "aynı DOI" nedeni eklenir;
+  kullanıcı birini (yumuşak) siler. Tekrar sayısı sıfırlanınca M6.
+- Otomatik birleştirme YOK (ilk sürümdeki `kaynak_birlesmeleri` önerisi
+  bu kararla düştü: birleştirme yerine kullanıcı tarafından yumuşak silme).
+
+### 6.3 Eski belgeler
+- İşaretsiz belge bugünkü gibi çalışır (metin eşleşmesi). Bağlama aracı
+  isteğe bağlı ve onaylıdır (K5).
+
+## 7. Test stratejisi
+
+### 7.1 Birim (`tests/unit`, CI)
+- `normalizeDoi` ve `doiAyikla` sarmalayıcısı: önek, büyük/küçük harf,
+  sondaki noktalama, SICI açılı parantez, geçersiz girdiler.
+- `lib/kaynak-ekleme.ts` karar modülü: geçersiz / tekrar / ekle; çalışmasız
+  kaynak; yumuşak silinmiş kaynak tekrar sayılmaz.
+- Silme kararı: atıf kesin / olası / yok × kanıt × PDF → kalıcı mı yumuşak mı,
+  okunamadıysa "denetlenemedi".
+- ZIP manifesti (saf fonksiyon): kaynak kümesi, dosya adları, eksik dosya
+  raporu satırları — inmeyen dosya raporda, paket düşmez.
+
+### 7.2 TS ↔ SQL ikizi
+- Ortak örnek tablosu `tests/fixtures/doi-normallestirme.json`: aynı
+  girdiler hem `normalizeDoi`'de (`tests/unit`) hem `doi_normallestir`'de
+  (`tests/db`) aynı çıktıyı vermeli (AGENTS.md: kanıt metni
+  normalleştirmesinin deseni).
+
+### 7.3 Veritabanı (`tests/db`, PGlite, CI)
+- **Meşru akışlar** (kuralın önce yazılması gereken kısım):
+  ekleme, not güncelleme, durum değiştirme, aynı DOI'yi başka çalışmaya
+  ekleme, yumuşak silme ve geri alma, yumuşak silinmiş DOI'yi yeniden
+  ekleme, mevcut tekrar satırının notunu güncelleme, PDF'i kendi
+  çalışmasının kaynağına bağlama.
+- **Reddedilmesi gerekenler:** aynı çalışmaya aynı DOI (farklı yazımla:
+  büyük harf, `https://doi.org/` önekli), başka çalışmanın kaynağına PDF
+  bağlama, `silen`'i istemciden yazma, başkasının kaynağını yumuşak silme,
+  `kaynak_doi_var_mi`'yi yazamadığı çalışma için çağırma, anon erişimi.
+- Abonelik tetikleyicisinin yeni sütunlarla da çalıştığı.
+- `tests/db/guvenlik.test.mjs`: yeni fonksiyonların kime açık olduğu.
+- Test dosyalarının migration listesinde eski gövde sorunu: tetikleyiciyi
+  değiştiren migration listeye SONDAN eklenir (eski bir
+  `create or replace` yeni gövdeyi ezer ve test sessizce eski kuralı sınar);
+  kuralın yürürlükte olduğu reddedilme bekleyen bir senaryoyla kanıtlanır.
+
+### 7.4 Editör (`tests/editor`, CI)
+- `atif` işareti şemada; kaydedilip geri yüklenir; bul-değiştir ve
+  kopyala-yapıştırda korunur; yabancı kimlik okunurken yok sayılır.
+- `cikti-yollari.test.ts`: işaretli ve işaretsiz belge üç çıktıda **aynı**.
+- `cikti-referans.test.ts`: referans DEĞİŞMEZ (işaret çıktıya girmez).
+
+### 7.5 Tarayıcı kabulü (önizleme, CI dışı)
+- `kabul.mjs`: aynı DOI ikinci kez → mesaj ve mevcut kaynağa yönlendirme
+  (iki yol: Kaynaklar ve editör); atıflı kaynakta silme uyarısı ve geri
+  alma; "Kaldırılanlar".
+- `cikti-kabul.mjs`: Word/PDF referansla aynı (her dilimde).
+- ZIP: paket indirilir, içindekiler listelenir, `belge.docx` Word
+  özetleyicisinden geçip düğmeden inen belgeyle aynı yapıda, eksik dosya
+  raporu beklenen satırları taşıyor.
+- Sahte istemci (`scripts/onizleme/sahte-istemci.ts`) tetikleyicileri
+  taklit etmez → mükerrer DOI reddi önizlemede uygulama kuralıyla görülür;
+  veritabanı kuralı yalnızca `tests/db` ve Test ortamında sınanır.
+
+### 7.6 Test ortamı (Supabase Test)
+- Her migration Test'te uygulanır; ön rapor + son durum sayıları;
+  uygulamanın meşru akışları Preview'da elle (ekleme, tekrar, silme,
+  geri alma, ZIP).
+
+## 8. Uygulama dilimleri (her biri ayrı onay)
+
+| Dilim | İçerik | Migration | Kabul |
+|---|---|---|---|
+| A1 | Tek normalleştirici + karar modülü + `kaynakEkleDoi`; `lookupDoi` kapısı ve `lib/access.ts`; durum kuralı; iki arayüz aynı işlemi çağırır | yok (tekrar denetimi uygulamada) | 7.1, kabul.mjs DOI |
+| A2 | M1 + yumuşak silme akışı, uyarı, "Kaldırılanlar", tek sorgu yardımcısı | M1 | 7.3, 7.5 silme |
+| A3 | M2 + M3 + M4: DOI sütunu, geri doldurma raporu, veritabanı tekrar engeli | M2–M4 | 7.2, 7.3 |
+| A4 | K5: `atif` işareti, ekleme yolları, okuma kuralı, isteğe bağlı bağlama aracı | yok (TipTap şeması — **TipTap mimarisine dokunur**) | 7.4, cikti-kabul |
+| A5 | M5 + K4 ZIP (DOCX, RIS, BibTeX, PDF, eksik dosya raporu) | M5 | 7.1 manifest, 7.5 ZIP |
+| A6 | M6 (tekrar sayısı sıfırsa) | M6 | 7.3 |
+
+A3 ile A4 bağımsız; A2, A4'ten önce gelirse silme uyarısı ilk günde yalnızca
+metin eşleşmesine dayanır ("olası" etiketiyle) — kabul edilebilir.
+
+## 9. Riskler
+
+| Risk | Etki | Önlem |
+|---|---|---|
+| `doi_or_url`'den DOI çıkarma hatalı (adres, kısaltılmış DOI) | yanlış tekrar reddi | M3 yalnızca doldurur, reddetmez; ön rapor; M4 ayrı |
+| İnvoker tetikleyici başkasının satırını göremez | tekrar kaçar | `kaynak_doi_var_mi` definer yardımcısı, yalnızca boolean, yazma yetkisi şartlı |
+| Yumuşak silinmiş kaynak sayılara karışır | sayaç hatası | tek sorgu yardımcısı + `check:rakamlar` kapsamı |
+| Atıf işareti çıktıya sızar | teslim belgesi değişir | R0 referans testleri, `cikti-yollari` satırı |
+| Yapıştırılan yabancı kimlik | yanlış bağ | okurken çalışma denetimi + yapı uyarısı |
+| ZIP'te büyük PDF / dolan imzalı bağlantı | eksik paket | parça parça bağlantı, eksik dosya raporu, paket düşmez |
+| Önizleme sahte istemcisi tetikleyici taklit etmez | önizlemede kural görünmez | veritabanı kuralı `tests/db` + Test'te sınanır (7.5 notu) |
+| Mevcut tekrarlar M6'yı süresiz erteler | benzersizlik yalnızca tetikleyicide kalır | tetikleyici yeterli koruma; M6 iyileştirme |
+
+## 10. Açık sorular (kararı gerekenler)
+
+1. Çalışmasız kaynakta (`project_id` NULL) tekrar anahtarı `(owner_id, doi)`
+   olsun mu, yoksa çalışmasız kaynakta tekrar serbest mi?
+2. "Kaldırılanlar" görünümünde yumuşak silinmiş kaynak ne kadar süre kalır
+   (süresiz mi, N gün sonra kalıcı silme mi)? Kalıcı silme yalnızca atıfsız
+   kaynakta mümkün olmalı.
+3. K5 bağlama aracı A4'te mi, ayrı bir dilimde mi?
