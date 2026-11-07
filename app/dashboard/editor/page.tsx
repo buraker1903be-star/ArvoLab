@@ -64,10 +64,17 @@ export default async function ProjectsPage({
     getCurrentProfile(),
     searchParams,
   ]);
+  /*
+    Kelime sayısı öğrencinin kendi çalışmalarında içerikten (editörle aynı,
+    UX S1-A); personel listesinde kayıttaki (kurumun bütün içerikleri
+    yüklenmez). Düzen kararı aşağıda (sayfaGorunumu); burada rol yeter.
+  */
+  const personelListesi = profile?.role ? STAFF_ROLES.includes(profile.role) : false;
   const [{ stats, openComments }, guidelines] = await Promise.all([
     getWritingStats(
       projects.map((project) => project.id),
-      profile?.id
+      profile?.id,
+      personelListesi ? [] : projects.filter((project) => project.owner_id === profile?.id).map((project) => project.id),
     ),
     // Kartlardaki yazım temposu için uygulanan kılavuzlar (yüklenenler dahil), çalışma kimliğine göre
     createClient().then((supabase) => calismaKilavuzlari(supabase, projects)),

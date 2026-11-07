@@ -130,7 +130,9 @@ export default async function DashboardPage() {
        "Açık yorumlu" filtresinde çıkıyor). */
     getWritingStats(
       (isStaff ? projects : activeProjects).map((p) => p.id),
-      user.id
+      user.id,
+      // Öğrencide kelime sayısı içerikten (editörle aynı, UX S1-A); personelde kayıttaki.
+      isStaff ? [] : activeProjects.map((p) => p.id),
     ),
     // Kullanım geri bildirimi: yalnızca sistemi gerçekten kullanmış kişiye,
     // yalnızca bir kez sorulur (lib/geri-bildirim.ts).
@@ -492,7 +494,7 @@ export default async function DashboardPage() {
   if (yorumYaniti.error) console.error("[ana sayfa] yorumlar okunamadı:", yorumYaniti.error.message);
   const simdiAn = simdi();
   const seri = hareketSerisi((hareketYaniti.data ?? []) as { gun: string; tur: string; adet: number }[], simdiAn, 14, dil);
-  const ritim = yazimRitmi((ritimYaniti.data ?? []) as { gun: string; kelime: number }[], simdiAn, 14, resumeStats?.words ?? null, dil);
+  const ritim = yazimRitmi((ritimYaniti.data ?? []) as { gun: string; kelime: number }[], simdiAn, 14, resumeStats?.kayitliKelime ?? null, dil);
   /*
     Hedef kelime ve günlük tempo kılavuzun sayfa sınırından
     (lib/writing-pace.ts). Kılavuz yoksa hedef de yok; uydurma bir

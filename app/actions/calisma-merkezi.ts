@@ -1,5 +1,6 @@
 "use server";
 
+import { gosterilecekKelime } from "@/lib/kelime-gosterimi";
 import { CALISMA_OKUNAMADI } from "@/lib/calisma-ozeti";
 import { createClient } from "@/lib/supabase/server";
 import type { AsistanBulgusu, CalismaOzeti } from "@/lib/calisma-ozeti";
@@ -151,7 +152,8 @@ export async function calismaOzeti(
     calisma,
     hazirlik,
     uygulanan,
-    musvedde: musvedde.data ? { kelime: musvedde.data.word_count ?? 0, guncellendi: musvedde.data.updated_at } : null,
+    /* Özet içeriği zaten okuyor: editörle aynı sayım (UX S1-A, lib/kelime-gosterimi.ts). */
+    musvedde: musvedde.data ? { kelime: gosterilecekKelime(musvedde.data), guncellendi: musvedde.data.updated_at } : null,
     literatur: {
       toplam: literatur.count ?? 0,
       okunan: okunan.count ?? 0,

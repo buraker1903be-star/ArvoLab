@@ -12,6 +12,7 @@ import type { AppliedGuideline } from "@/lib/guideline-rules";
 import type { CoverPage } from "@/app/actions/manuscript";
 import type { Dil } from "@/lib/dil";
 import { kagitOku } from "@/lib/kagit-boyutu";
+import { gosterilecekKelime } from "@/lib/kelime-gosterimi";
 
 interface JsonNode {
   type?: string;
@@ -91,7 +92,9 @@ export function manuscriptReadiness(input: {
     right: manuscript.margin_right_cm ?? 2.5,
   };
   const pageSize = kagitOku(manuscript.page_size);
-  const pages = estimatePages(manuscript.word_count ?? 0, {
+  // Kayıtlı sayı eski kuralla yazılmış olabilir; içerik elde: editörle aynı sayım (UX S1-A).
+  const kelime = gosterilecekKelime(manuscript);
+  const pages = estimatePages(kelime, {
     fontSizePt: guideline?.settings.fontSizePt,
     lineSpacing: guideline?.settings.lineSpacing,
     margins,
@@ -109,7 +112,7 @@ export function manuscriptReadiness(input: {
     pages,
     minPages: guideline?.minPages ?? null,
     maxPages: guideline?.maxPages ?? null,
-    words: manuscript.word_count ?? 0,
+    words: kelime,
     wordLimit: guideline?.settings.thesisWords,
     issues: {
       danger: issues.filter((issue) => issue.tone === "danger").length,

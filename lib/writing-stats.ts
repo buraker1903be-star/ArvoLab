@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tarihBicimleri, trTarihSaat } from "./tr-time";
 import { VARSAYILAN_SAAT_DILIMI, type Dil } from "./dil";
 import { kagitOku, type KagitBoyutu } from "./kagit-boyutu";
+import { gosterilecekKelime, icerikleSayilacaklar } from "./kelime-gosterimi";
 
 /**
  * "3 saat önce", "dün", "12 Eylül 14:05" — İngilizcede "3 hours ago", "yesterday".
@@ -31,7 +32,10 @@ export function editedAgo(dateStr: string, now = Date.now(), dil: Dil = "tr", sa
 }
 
 export interface WritingStats {
+  /** Ekranda gösterilen sayı: içerik okunduysa editörle aynı sayım (lib/kelime-gosterimi.ts), değilse kayıttaki. */
   words: number;
+  /** Kayıttaki word_count: yazım ritmi bununla çalışır (sahte artış olmasın). */
+  kayitliKelime: number;
   updatedAt: string;
   /*
     Metnin KENDİ sayfa düzeni. Kartlardaki hedef kelime eskiden kılavuzun
@@ -45,7 +49,17 @@ export interface WritingStats {
 
 // Çalışma kartları ve ana sayfa için yazım durumu: kelime sayısı, son düzenleme ve
 // başkalarından gelen açık yorumlar (RLS: yalnızca görülebilen çalışmalar döner).
-export async function getWritingStats(projectIds: string[], currentUserId: string | undefined) {
+export async function getWritingStats(
+  projectIds: string[],
+  currentUserId: string | undefined,
+  /**
+   * İçerikten sayılabilecek çalışmalar (UX S1-A): öğrencinin kendi
+   * çalışmaları. En son düzenlenen ICERIKTEN_SAYIM_SINIRI tanesinin içeriği
+   * ikinci bir sorguyla okunur. Personel listelerinde VERİLMEZ: kurumun
+   * bütün tezlerinin içeriğini yüklemek liste başına megabaytlar demek.
+   */
+  icerikAdaylari: readonly string[] = [],
+) {
   const stats = new Map<string, WritingStats>();
   const openComments = new Map<string, number>();
   if (projectIds.length === 0) return { stats, openComments };
@@ -62,12 +76,26 @@ export async function getWritingStats(projectIds: string[], currentUserId: strin
     const kenar = [row.margin_top_cm, row.margin_bottom_cm, row.margin_left_cm, row.margin_right_cm];
     stats.set(row.project_id, {
       words: row.word_count ?? 0,
+      kayitliKelime: row.word_count ?? 0,
       updatedAt: row.updated_at,
       margins: kenar.every((d) => typeof d === "number")
         ? { top: row.margin_top_cm, bottom: row.margin_bottom_cm, left: row.margin_left_cm, right: row.margin_right_cm }
         : null,
       pageSize: kagitOku(row.page_size),
     });
+  }
+  const aday = new Set(icerikAdaylari);
+  const sayilacak = icerikleSayilacaklar(
+    [...stats.entries()].filter(([id]) => aday.has(id)).map(([id, st]) => ({ id, guncellendi: st.updatedAt })),
+  );
+  if (sayilacak.length) {
+    const { data, error } = await supabase.from("project_manuscripts").select("project_id, content").in("project_id", sayilacak);
+    // Okunamazsa kayıttaki sayı kalır: liste düşmez, yalnızca eski kayıt farklı görünebilir.
+    if (error) console.error("[yazim-durumu] içerik okunamadı:", error.message);
+    for (const row of data ?? []) {
+      const st = stats.get(row.project_id);
+      if (st) st.words = gosterilecekKelime({ content: row.content, word_count: st.kayitliKelime });
+    }
   }
   for (const row of comments.data ?? []) {
     if (row.author_id === currentUserId) continue;
