@@ -177,6 +177,34 @@
 .manuscript-editor-content blockquote { margin: 0 0 10px; padding-left: 14px; border-left: 3px solid var(--primary-hover); color: var(--muted); }
 .manuscript-editor-content img { max-width: 100%; margin: 10px 0; border-radius: var(--r-xs); }
 .manuscript-editor-content table { width: 100%; margin: 10px 0; border-collapse: collapse; }
+/*
+  TABLO SARMALAYICISI (UX M1, 07.11.2026). Tiptap (resizable) tabloyu
+  .tableWrapper içine koyar. Eskiden sarmalayıcının kaydırması yoktu ve
+  editör kabuğu (overflow: clip) taşanı KESİYORDU: 360 pikselde 4–6
+  sütunlu tabloların sağ sütunları görünmüyor, ulaşılamıyordu (örnek
+  tezde 14 tablonun 9'u). Artık tablo kendi içinde yana kayar; sayfa ve
+  belge taşmaz. Kenardaki gölge kaydırılacak içerik olduğunu söyler:
+  "local" örtüler içerikle birlikte kayar, "scroll" gölgeler yerinde
+  kalır; başta yalnız sağda, sonda yalnız solda gölge görünür.
+  Yalnızca ekranda: yazdırma, Word ve PDF ayrı çiziliyor (lib/tiptap-html.ts,
+  lib/tiptap-docx.ts) ve bu sınıfı hiç görmüyor.
+*/
+.manuscript-editor-content .tableWrapper {
+  max-width: 100%;
+  margin: 10px 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  background:
+    linear-gradient(to right, var(--kagit), color-mix(in srgb, var(--kagit) 0%, transparent)) left center / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--kagit), color-mix(in srgb, var(--kagit) 0%, transparent)) right center / 28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--ink) 22%, transparent), transparent) left center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--ink) 22%, transparent), transparent) right center / 12px 100% no-repeat scroll;
+}
+.manuscript-editor-content .tableWrapper > table { margin: 0; }
+@media print {
+  .manuscript-editor-content .tableWrapper { overflow: visible; background: none; }
+}
 .manuscript-editor-content :is(td, th) { padding: 6px 10px; border: 1px solid var(--line); }
 .manuscript-editor-content th { background: var(--surface-2); }
 /* Dipnot numaraları belge sırasına göre otomatik (1, 2, 3…); tıklayınca düzenlenir */
