@@ -1,0 +1,3834 @@
+{
+ "word": {
+  "bloklar": [
+   {
+    "metin": "1. Türkiye'de Enflasyon ve İşsizlik İlişkisinin Ekonometrik Analizi",
+    "stil": "Heading1"
+   },
+   {
+    "metin": "Taslak"
+   },
+   {
+    "metin": "1.1. Kapak",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "T.C. DOKUZ EYLÜL ÜNİVERSİTESİ",
+    "bicim": [
+     [
+      "b",
+      29
+     ]
+    ]
+   },
+   {
+    "metin": "İKTİSADİ VE İDARİ BİLİMLER FAKÜLTESİ",
+    "bicim": [
+     [
+      "b",
+      36
+     ]
+    ]
+   },
+   {
+    "metin": "EKONOMETRİ BÖLÜMÜ",
+    "bicim": [
+     [
+      "b",
+      17
+     ]
+    ]
+   },
+   {
+    "metin": "BİTİRME TEZİ (DENEME SÜRÜMÜ)",
+    "bicim": [
+     [
+      "b",
+      28
+     ]
+    ]
+   },
+   {
+    "metin": "TÜRKİYE'DE ENFLASYON VE İŞSİZLİK İLİŞKİSİNİN EKONOMETRİK ANALİZİ (2000–2025)",
+    "bicim": [
+     [
+      "b",
+      76
+     ]
+    ]
+   },
+   {
+    "metin": "Hazırlayan: [Ad SOYAD] — Öğrenci No: [.........]"
+   },
+   {
+    "metin": "Danışman: [Unvan Ad SOYAD]"
+   },
+   {
+    "metin": "İzmir, 2026"
+   },
+   {
+    "metin": "Yemin Metni",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Bitirme tezi olarak sunduğum “Türkiye'de Enflasyon ve İşsizl… [368·7038d57b5e]"
+   },
+   {
+    "metin": "Tarih: ..../..../2026"
+   },
+   {
+    "metin": "[Ad SOYAD]"
+   },
+   {
+    "metin": "İmza: ...................."
+   },
+   {
+    "metin": "Özet",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Bu çalışmada Türkiye'de enflasyon ile işsizlik arasındaki il… [698·5d31dbf7d6]"
+   },
+   {
+    "metin": "Statik Phillips regresyonunda işsizlik katsayısı negatif ve … [910·d1236f5eb3]"
+   },
+   {
+    "metin": "Anahtar Kelimeler: Phillips eğrisi, enflasyon, işsizlik, ARD… [109·b1a706b574]",
+    "bicim": [
+     [
+      "b",
+      18
+     ],
+     [
+      "",
+      91
+     ]
+    ]
+   },
+   {
+    "metin": "JEL Kodları: E24, E31, C22",
+    "bicim": [
+     [
+      "b",
+      12
+     ],
+     [
+      "",
+      14
+     ]
+    ]
+   },
+   {
+    "metin": "Abstract",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "This study examines the relationship between inflation and u… [1031·df369e2411]"
+   },
+   {
+    "metin": "Keywords: Phillips curve, inflation, unemployment, ARDL boun… [100·1f47541f22]",
+    "bicim": [
+     [
+      "b",
+      9
+     ],
+     [
+      "",
+      91
+     ]
+    ]
+   },
+   {
+    "metin": "İçindekiler",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Yemin Metni",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Özet",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Abstract",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Kısaltmalar",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablolar Listesi",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Şekiller Listesi",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Giriş",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Kuramsal Çerçeve",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Literatür Taraması",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Türkiye'de Enflasyon ve İşsizliğin Seyri (2000–2025)",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Veri Seti ve Yöntem",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Ampirik Bulgular",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Sonuç ve Öneriler",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Kaynakça",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Ek 1. Veri Seti",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Ek 2. Analiz Kodunun Özeti",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Kısaltmalar",
+    "stil": "Heading2"
+   },
+   {
+    "tablo": {
+     "satir": 29,
+     "hucre": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "metin": "Kısaltma Açıklama ADF Genişletilmiş Dickey–Fuller (Augmented… [969·f260c6eaf7]"
+    }
+   },
+   {
+    "metin": "Tablolar Listesi",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Tablo 1. Türkiye üzerine seçilmiş ampirik çalışmalar",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 2. Modelde kullanılan değişkenler",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 3. Tanımlayıcı istatistikler",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 4. ADF, PP ve KPSS birim kök testi sonuçları",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 5. Zivot–Andrews yapısal kırılmalı birim kök testi",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 6. Statik ve beklentilerle genişletilmiş Phillips denklemleri",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 7. Model 2 için tanısal testler",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 8. ARDL(1,1) sınır testi ve katsayı tahminleri",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 9. VAR gecikme uzunluğu seçimi",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 10. Toda–Yamamoto nedensellik testi sonuçları",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 11. Alt dönemlere göre enflasyon–işsizlik ilişkisi",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo 12. Hipotez testlerinin özeti",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Şekiller Listesi",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Şekil 1. Türkiye'de enflasyon ve işsizlik oranının seyri (2000–2025)",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "1.2. 1. Giriş",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Fiyat istikrarı ve tam istihdam, makroekonomi politikasının … [592·7a77c9dd8d]"
+   },
+   {
+    "metin": "Türkiye, bu tartışmayı sınamak için oldukça öğretici bir örn… [496·2b8f3757be]"
+   },
+   {
+    "metin": "Son yıllarda gözlenen tablo, konunun güncelliğini artırmakta… [545·d5d2684974]"
+   },
+   {
+    "metin": "1.2.1. 1.1. Çalışmanın Amacı ve Araştırma Soruları",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Bu çalışmanın amacı, Türkiye'de 2000–2025 döneminde enflasyo… [179·b8a6a7c6f9]"
+   },
+   {
+    "metin": "Enflasyon ve işsizlik serileri durağan mıdır; yapısal kırılm… [111·e84e3ffa50]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "İki değişken arasında uzun dönemli bir eşbütünleşme ilişkisi var mıdır?",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Beklentiler (enflasyon ataleti) modele eklendiğinde işsizliğ… [111·9487b545bd]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Değişkenler arasındaki nedensellik ilişkisinin yönü nedir?",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "1.2.2. 1.2. Araştırma Hipotezleri",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "H₁: İşsizlik oranı ile enflasyon arasında kısa dönemde negat… [87·28b3ecbffb]",
+    "stil": "ListParagraph",
+    "liste": 0,
+    "bicim": [
+     [
+      "b",
+      3
+     ],
+     [
+      "",
+      84
+     ]
+    ]
+   },
+   {
+    "metin": "H₂: Enflasyon ile işsizlik arasında uzun dönemli bir eşbütün… [82·6e63dca15d]",
+    "stil": "ListParagraph",
+    "liste": 0,
+    "bicim": [
+     [
+      "b",
+      3
+     ],
+     [
+      "",
+      79
+     ]
+    ]
+   },
+   {
+    "metin": "H₃: İşsizlik oranı enflasyonun Granger nedenidir.",
+    "stil": "ListParagraph",
+    "liste": 0,
+    "bicim": [
+     [
+      "b",
+      3
+     ],
+     [
+      "",
+      46
+     ]
+    ]
+   },
+   {
+    "metin": "1.2.3. 1.3. Çalışmanın Katkısı ve Planı",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Çalışma, mevcut yazına üç noktada katkı sunmayı hedeflemekte… [502·ff228a24b6]"
+   },
+   {
+    "metin": "Tezin geri kalanı şöyle düzenlenmiştir: İkinci bölümde Phill… [462·a3e4d738ad]"
+   },
+   {
+    "metin": "1.3. 2. Kuramsal Çerçeve",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Phillips eğrisi, tek bir model olmaktan çok, altmış yılı aşk… [239·1796af5553]"
+   },
+   {
+    "metin": "1.3.1. 2.1. Orijinal ve Modifiye Phillips Eğrisi",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Phillips (1958), İngiltere'de 1861–1957 döneminde nominal üc… [346·9a1bfdebb3]"
+   },
+   {
+    "metin": "Samuelson ve Solow (1960), ücret artışının verimlilik artışı… [259·5c93752e13]"
+   },
+   {
+    "metin": "\\pi_t = \\alpha - \\beta u_t + \\varepsilon_t, \\qquad \\beta > 0"
+   },
+   {
+    "metin": "Burada π enflasyon oranını, u işsizlik oranını, ε ise hata t… [231·c39bcba0ac]"
+   },
+   {
+    "metin": "1.3.2. 2.2. Beklentilerle Genişletilmiş Phillips Eğrisi ve Doğal İşsizlik Oranı",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "1970'lerde enflasyon ile işsizliğin birlikte yükselmesi (sta… [322·5cd70e5811]"
+   },
+   {
+    "metin": "\\pi_t = \\pi_t^{e} - \\beta \\left( u_t - u^{*} \\right) + \\varepsilon_t"
+   },
+   {
+    "metin": "Bu denklemde πᵉ beklenen enflasyonu, u* ise doğal işsizlik o… [230·c0d44686d3]"
+   },
+   {
+    "metin": "\\Delta \\pi_t = \\beta u^{*} - \\beta u_t + \\varepsilon_t"
+   },
+   {
+    "metin": "Bu yapının temel politika sonucu, uzun dönem Phillips eğrisi… [462·f5308a29f3]"
+   },
+   {
+    "metin": "Ampirik çalışmalarda beklentiler genellikle gecikmeli enflas… [122·5e49260061]"
+   },
+   {
+    "metin": "\\pi_t = \\alpha + \\rho \\, \\pi_{t-1} - \\beta u_t + \\varepsilon_t"
+   },
+   {
+    "metin": "ρ katsayısı enflasyon ataletinin ölçüsüdür. ρ = 1 katı hızla… [260·f5f536c1c8]"
+   },
+   {
+    "metin": "1.3.3. 2.3. Rasyonel Beklentiler ve Lucas Eleştirisi",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Lucas (1972), ekonomik birimlerin mevcut tüm bilgiyi kullana… [602·52b188e4cd]"
+   },
+   {
+    "metin": "1.3.4. 2.4. Yeni Keynesyen Phillips Eğrisi",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Yeni Keynesyen yaklaşım, fiyat yapışkanlığını mikro temeller… [488·9ab8352893]"
+   },
+   {
+    "metin": "\\pi_t = \\gamma_f \\, E_t \\pi_{t+1} + \\gamma_b \\, \\pi_{t-1} + … [91·d9ab833c57]"
+   },
+   {
+    "metin": "Hibrit modelde γ_b katsayısının büyüklüğü, enflasyon ataleti… [187·ffaf7c82e6]"
+   },
+   {
+    "metin": "1.3.5. 2.5. Phillips Eğrisinin Yassılaşması Tartışması",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "2000'li yıllardan itibaren gelişmiş ekonomilerde işsizlik be… [485·e2011ef104]"
+   },
+   {
+    "metin": "Yükselen piyasa ekonomilerinde ise kur geçişkenliği, enerji … [280·f43b2a30b3]"
+   },
+   {
+    "metin": "1.4. 3. Literatür Taraması",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Ampirik yazın, Phillips eğrisinin geçerliliği konusunda orta… [263·cad88ebaf8]"
+   },
+   {
+    "metin": "1.4.1. 3.1. Uluslararası Yazın",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Phillips (1958) ve Samuelson ile Solow'un (1960) çalışmaları… [587·b884fa64f2]"
+   },
+   {
+    "metin": "Yeni Keynesyen çerçevede Galí ve Gertler (1999), ABD veriler… [527·f79afe3900]"
+   },
+   {
+    "metin": "1.4.2. 3.2. Türkiye Üzerine Yapılan Çalışmalar",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Türkiye üzerine yapılan çalışmalar, özellikle uzun dönem ili… [704·583f1b9bb8]"
+   },
+   {
+    "metin": "Eşbütünleşme temelli çalışmalar da farklı sonuçlar vermekted… [913·b04d501226]"
+   },
+   {
+    "metin": "Tablo . Türkiye üzerine seçilmiş ampirik çalışmalar",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      43
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 8,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Çalışma Dönem ve veri Yöntem Temel bulgu Aydın (2025) 1939–2… [873·784c1ba9d3]"
+    }
+   },
+   {
+    "metin": "1.4.3. 3.3. Yazına İlişkin Değerlendirme",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Yazın incelendiğinde üç genel eğilim göze çarpmaktadır. Biri… [570·f39e11bc33]"
+   },
+   {
+    "metin": "1.5. 4. Türkiye'de Enflasyon ve İşsizliğin Seyri (2000–2025)",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "2000–2025 döneminde enflasyon %6,2 ile %68,5 arasında dalgal… [391·f6d538e431]"
+   },
+   {
+    "metin": ""
+   },
+   {
+    "metin": "Şekil . Kaynak: TÜİK verilerinden derlenmiştir · 2000–2025, … [128·28e563c71e]",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      120
+     ]
+    ]
+   },
+   {
+    "metin": "Şekil 1'de enflasyondaki büyük sıçramaların 2001 ve 2021–202… [182·a71af85f8f]"
+   },
+   {
+    "metin": "1.5.1. 4.1. Kriz ve Dezenflasyon Dönemi (2000–2008)",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Şubat 2001'de sabit kur sisteminin terk edilmesiyle Türk lir… [509·d73a18892f]"
+   },
+   {
+    "metin": "Bu alt dönemin dikkat çekici özelliği, enflasyon düşerken iş… [339·e89c5b3b86]"
+   },
+   {
+    "metin": "1.5.2. 4.2. Küresel Kriz ve Toparlanma (2009–2017)",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "2008–2009 küresel finans krizi Türkiye'de işsizliği 2009'da … [405·9a2ce3c629]"
+   },
+   {
+    "metin": "1.5.3. 4.3. Kur Şokları ve Salgın (2018–2020)",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Ağustos 2018'deki kur şoku, yıllık enflasyonu %20,3'e yüksel… [462·67d82677c5]"
+   },
+   {
+    "metin": "1.5.4. 4.4. Yüksek Enflasyon ve Dezenflasyon (2021–2025)",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "2021'in son çeyreğinde politika faizinin indirilmesi ve ardı… [413·bb9c8d1980]"
+   },
+   {
+    "metin": "Aynı dönemde işsizlik oranı 2021'deki %12,0'dan 2025'te %8,3… [549·d13284d7f3]"
+   },
+   {
+    "metin": "1.6. 5. Veri Seti ve Yöntem",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Analiz, 2000–2025 dönemine ait 26 yıllık gözlemle yürütülmüş… [429·d282563cee]"
+   },
+   {
+    "metin": "1.6.1. 5.1. Veri Seti",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Tablo . Modelde kullanılan değişkenler",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      30
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 6,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Değişken Tanım Birim Kaynak ENF TÜFE, bir önceki yılın Aralı… [377·5b0f2deb7a]"
+    }
+   },
+   {
+    "metin": "Enflasyon, 2003 yılına kadar 1994 bazlı, sonrasında 2003 baz… [456·4b1629c982]"
+   },
+   {
+    "metin": "İşsizlik serisinde iki yöntem değişikliği bulunmaktadır. TÜİ… [374·e5c6629876]"
+   },
+   {
+    "metin": "1.6.2. 5.2. Birim Kök Testleri",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Durağan olmayan serilerle kurulan regresyonlar, değişkenler … [312·ae91c13fd5]"
+   },
+   {
+    "metin": "\\Delta y_t = \\mu + \\delta t + \\gamma \\, y_{t-1} + \\sum_{i=1}… [95·1bfee341dd]"
+   },
+   {
+    "metin": "Sıfır hipotezi H₀: γ = 0 (birim kök vardır) biçimindedir. Ge… [478·8aba7e0979]"
+   },
+   {
+    "metin": "Türkiye verilerinde krizlerin yol açtığı yapısal kırılmalar,… [325·05b9d5da83]"
+   },
+   {
+    "metin": "1.6.3. 5.3. Phillips Eğrisi Modelleri",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "İlk olarak karşılaştırma amacıyla statik bir Phillips denkle… [81·074a34bf50]"
+   },
+   {
+    "metin": "LENF_t = \\alpha_0 + \\alpha_1 \\, ISS_t + \\varepsilon_t"
+   },
+   {
+    "metin": "Ana model, uyarlamalı beklentileri gecikmeli enflasyonla tem… [170·aa2d3a3c76]"
+   },
+   {
+    "metin": "LENF_t = \\beta_0 + \\rho \\, LENF_{t-1} + \\beta_1 \\, ISS_t + \\… [116·7d6932d335]"
+   },
+   {
+    "metin": "Model, en küçük kareler yöntemiyle tahmin edilmiş; standart … [311·f0f4dd2a1f]"
+   },
+   {
+    "metin": "1.6.4. 5.4. ARDL Sınır Testi",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Pesaran, Shin ve Smith (2001) tarafından geliştirilen ARDL s… [339·a3cc99a714]"
+   },
+   {
+    "metin": "\\Delta LENF_t = c + \\lambda_1 LENF_{t-1} + \\lambda_2 ISS_{t-… [163·831e09feed]"
+   },
+   {
+    "metin": "Eşbütünleşme olmadığını ileri süren sıfır hipotezi H₀: λ₁ = … [487·58ca638833]"
+   },
+   {
+    "metin": "1.6.5. 5.5. Toda–Yamamoto Nedensellik Testi",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Standart Granger (1969) testi, durağan olmayan seriler düzey… [390·ee57ea26b7]"
+   },
+   {
+    "metin": "LENF_t = a_0 + \\sum_{i=1}^{k+d_{max}} a_{1i} LENF_{t-i} + \\s… [106·6c797fc021]"
+   },
+   {
+    "metin": "ISS_t = b_0 + \\sum_{i=1}^{k+d_{max}} b_{1i} ISS_{t-i} + \\sum… [105·d0fb1182dd]"
+   },
+   {
+    "metin": "İlk denklemde H₀: a₂₁ = … = a₂ₖ = 0 hipotezi işsizliğin enfl… [292·a312637853]"
+   },
+   {
+    "metin": "1.7. 6. Ampirik Bulgular",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Ampirik bulgular, Türkiye'de işsizliğin enflasyon üzerinde k… [264·9bf7d5cb1c]"
+   },
+   {
+    "metin": "1.7.1. 6.1. Tanımlayıcı İstatistikler",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Tablo . Tanımlayıcı istatistikler (2000–2025, n = 26)",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      45
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 7,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "İstatistik ENF (%) ISS (%) LENF Ortalama 21,63 10,44 2,742 M… [253·3f5a3fbe9e]"
+    }
+   },
+   {
+    "metin": "Enflasyonun ortalaması (%21,6) medyanının (%11,1) neredeyse … [460·eee3e360e0]"
+   },
+   {
+    "metin": "1.7.2. 6.2. Birim Kök Testi Sonuçları",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Tablo . ADF, PP ve KPSS birim kök testi sonuçları",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      41
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 9,
+     "hucre": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6
+     ],
+     "metin": "Seri Model ADF (p) PP (p) KPSS Karar LENF Sabitli −2,315 (0,… [559·e43f1f8b5d]"
+    }
+   },
+   {
+    "metin": "Not: KPSS %5 kritik değerleri sabitli modelde 0,463, sabitli… [244·e78b620f8d]"
+   },
+   {
+    "metin": "Logaritmik enflasyon düzeyde ADF ve PP testlerine göre birim… [568·c4dd606a9f]"
+   },
+   {
+    "metin": "Tablo . Zivot–Andrews yapısal kırılmalı birim kök testi",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      47
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 5,
+     "hucre": [
+      6,
+      6,
+      6,
+      6,
+      6
+     ],
+     "metin": "Seri Model Test istatistiği %5 kritik değer Kırılma yılı Kar… [314·87dc3b3a4c]"
+    }
+   },
+   {
+    "metin": "Kırılmaya izin verildiğinde de logaritmik enflasyonun birim … [528·601ba84a14]"
+   },
+   {
+    "metin": "1.7.3. 6.3. Phillips Eğrisi Tahminleri",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Tablo . Statik ve beklentilerle genişletilmiş Phillips denkl… [91·2115199fe0]",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      83
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 10,
+     "hucre": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+     ],
+     "metin": "Değişken Model 1: Statik Model 2: Genişletilmiş (HAC) Sabit … [295·a62b13fd3f]"
+    }
+   },
+   {
+    "metin": "Not: Parantez içinde standart hatalar verilmiştir. ***, **, … [185·e1db3e65b1]"
+   },
+   {
+    "metin": "Statik modelde işsizlik katsayısı −0,205 ve %5 düzeyinde anl… [456·0a3e131adb]"
+   },
+   {
+    "metin": "Gecikmeli enflasyonun ve şok gölge değişkenlerinin eklendiği… [667·3516b08d33]"
+   },
+   {
+    "metin": "Alternatif olarak tahmin edilen hızlanan enflasyon biçiminde… [377·1628d7fe13]"
+   },
+   {
+    "metin": "Tablo . Model 2 için tanısal testler",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      28
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 6,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Test İstatistik p değeri Sonuç Breusch–Godfrey LM (1 gecikme… [287·d8222a371e]"
+    }
+   },
+   {
+    "metin": "Model 2 tüm tanısal testlerden geçmektedir. Bu durum, şok dö… [197·9e714cf4d2]"
+   },
+   {
+    "metin": "1.7.4. 6.4. ARDL Sınır Testi Sonuçları",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "AIC'ye göre seçilen model ARDL(1,1)'dir. Sınır testi sonuçla… [86·791de4007f]"
+   },
+   {
+    "metin": "Tablo . ARDL(1,1) sınır testi ve katsayı tahminleri",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      43
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 6,
+     "hucre": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "metin": "Panel A: Sınır testi Değer F istatistiği 0,891 %10 kritik de… [271·f58ec9d50e]"
+    }
+   },
+   {
+    "tablo": {
+     "satir": 7,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Panel B: Katsayılar Katsayı Std. hata p değeri LENF(t−1) 0,6… [218·b9ee9833c2]"
+    }
+   },
+   {
+    "metin": "F istatistiği (0,891), en düşük anlamlılık düzeyi olan %10'd… [381·220492adfd]"
+   },
+   {
+    "metin": "Kısa dönem dinamiklerine bakıldığında, cari işsizliğin katsa… [557·28d8e7244d]"
+   },
+   {
+    "metin": "1.7.5. 6.5. Toda–Yamamoto Nedensellik Sonuçları",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Tablo . VAR gecikme uzunluğu seçimi",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      27
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 5,
+     "hucre": [
+      5,
+      5,
+      5,
+      5,
+      5
+     ],
+     "metin": "Gecikme AIC SC (BIC) FPE HQ 0 0,133 0,232 1,142 0,158 1 −1,5… [144·3437413438]"
+    }
+   },
+   {
+    "metin": "Not: * ilgili ölçütün seçtiği gecikmeyi gösterir."
+   },
+   {
+    "metin": "Dört ölçütün tamamı k = 2 gecikmeyi seçmektedir. d_max = 1 e… [153·25647bcbb5]"
+   },
+   {
+    "metin": "Tablo . Toda–Yamamoto nedensellik testi sonuçları (k = 2, d_max = 1)",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      60
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 3,
+     "hucre": [
+      4,
+      4,
+      4
+     ],
+     "metin": "Sıfır hipotezi Wald χ²(2) p değeri Karar ISS, LENF'nin Grang… [169·3ddc21c838]"
+    }
+   },
+   {
+    "metin": "Sonuçlar, işsizlikten enflasyona doğru tek yönlü bir nedense… [519·fe1991c671]"
+   },
+   {
+    "metin": "1.7.6. 6.6. Alt Dönem Analizi",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Lucas eleştirisi ve Zivot–Andrews bulguları dikkate alınarak… [119·c9ea51ef41]"
+   },
+   {
+    "metin": "Tablo . Alt dönemlere göre enflasyon–işsizlik ilişkisi",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      46
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 5,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Dönem Korelasyon (ENF, ISS) ISS katsayısı (LENF denklemi) p … [213·0ba65c8326]"
+    }
+   },
+   {
+    "metin": "Alt dönem sonuçları çarpıcıdır. Negatif ve anlamlı ilişki ya… [518·9e00415009]"
+   },
+   {
+    "metin": "1.7.7. 6.7. Bulguların Genel Değerlendirmesi",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Tablo . Hipotez testlerinin özeti",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      25
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 4,
+     "hucre": [
+      3,
+      3,
+      3,
+      3
+     ],
+     "metin": "Hipotez Kullanılan test Sonuç H₁: Kısa dönemde negatif ilişk… [301·54a968a27e]"
+    }
+   },
+   {
+    "metin": "Bu sonuçlar, yazındaki uzun dönemli yıllık verilerle yapılan… [400·20e5aa692f]"
+   },
+   {
+    "metin": "1.8. 7. Sonuç ve Öneriler",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Bu tez, Türkiye'de 2000–2025 döneminde istikrarlı bir uzun d… [276·c87d249c11]"
+   },
+   {
+    "metin": "1.8.1. 7.1. Temel Bulgular",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Logaritmik enflasyon I(1), işsizlik oranı ise sabitli modeld… [240·f684237fda]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Statik Phillips regresyonundaki negatif ve anlamlı katsayı (… [165·0db8b9a622]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Enflasyonun en güçlü belirleyicisi kendi geçmişidir (ρ = 0,5… [199·159c7f3df8]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "ARDL sınır testi ve Engle–Granger testi uzun dönem eşbütünle… [97·d881c13404]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Toda–Yamamoto testi, işsizlikten enflasyona tek yönlü bir ne… [140·18991221c9]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Negatif ilişki ağırlıklı olarak kriz ve şok dönemlerinde ort… [125·bf732b4485]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "1.8.2. 7.2. Politika Çıkarımları",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Bulgular, enflasyonla mücadelede işsizliği artıran talep dar… [428·521269ac13]"
+   },
+   {
+    "metin": "Bunun yerine politika önceliği beklentilerin çıpalanmasına v… [308·b2c11e20df]"
+   },
+   {
+    "metin": "Para politikasında öngörülebilirlik ve tutarlı ileriye dönük… [146·33399dbf64]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Ücret, kira ve yönetilen fiyatlarda geçmiş enflasyona dayalı… [161·d22053bfcd]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Kur ve enerji fiyat şoklarının enflasyon üzerindeki büyük et… [189·15810b5a9b]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "İşgücü piyasası açısından ise düşük işsizlik oranının tek ba… [296·ac5c6521d8]"
+   },
+   {
+    "metin": "1.8.3. 7.3. Çalışmanın Sınırlılıkları",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Örneklem 26 yıllık gözlemden oluşmaktadır. Küçük örneklem, t… [159·080e0a501f]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "İşsizlik serisi, TÜİK'in 2004 ve 2021 yöntem güncellemeleri … [110·95ed437546]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Beklentiler uyarlamalı biçimde temsil edilmiştir. TCMB Piyas… [132·c5ba03ba3f]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Model iki değişkenlidir. Döviz kuru, enerji fiyatları ve çık… [145·8e95992b89]",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "1.8.4. 7.4. Gelecek Çalışmalar İçin Öneriler",
+    "stil": "Heading3"
+   },
+   {
+    "metin": "Sonraki çalışmalarda TCMB EVDS'den elde edilecek aylık veya … [518·ac8eddc4c7]"
+   },
+   {
+    "metin": "Kaynakça",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Arabacı, Ö., & Eryiğit, K. Y. (2012). A thresold regression … [193·f565aaa735]",
+    "bicim": [
+     [
+      "",
+      102
+     ],
+     [
+      "i",
+      70
+     ],
+     [
+      "",
+      21
+     ]
+    ]
+   },
+   {
+    "metin": "Aydın, A. (2025). Türkiye ekonomisinde Phillips eğrisi anali… [216·670b33ab09]",
+    "bicim": [
+     [
+      "",
+      114
+     ],
+     [
+      "i",
+      77
+     ],
+     [
+      "",
+      25
+     ]
+    ]
+   },
+   {
+    "metin": "Bayrak, M., & Kanca, O. C. (2013). Türkiye'de Phillips eğris… [166·3759e660a0]",
+    "bicim": [
+     [
+      "",
+      84
+     ],
+     [
+      "i",
+      70
+     ],
+     [
+      "",
+      12
+     ]
+    ]
+   },
+   {
+    "metin": "Blanchard, O. (2016). The Phillips curve: Back to the '60s? … [100·64e72e40d9]",
+    "bicim": [
+     [
+      "",
+      60
+     ],
+     [
+      "i",
+      29
+     ],
+     [
+      "",
+      11
+     ]
+    ]
+   },
+   {
+    "metin": "Buyrukoğlu, A., & Altunakar Mercan, Ş. (2022). Enflasyon ve … [196·84049ec4d9]",
+    "bicim": [
+     [
+      "",
+      124
+     ],
+     [
+      "i",
+      17
+     ],
+     [
+      "",
+      55
+     ]
+    ]
+   },
+   {
+    "metin": "Calvo, G. A. (1983). Staggered prices in a utility-maximizin… [119·38b914b691]",
+    "bicim": [
+     [
+      "",
+      73
+     ],
+     [
+      "i",
+      33
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Dickey, D. A., & Fuller, W. A. (1979). Distribution of the e… [185·ba72f34099]",
+    "bicim": [
+     [
+      "",
+      119
+     ],
+     [
+      "i",
+      51
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "metin": "Engle, R. F., & Granger, C. W. J. (1987). Co-integration and… [149·68d40be3ac]",
+    "bicim": [
+     [
+      "",
+      120
+     ],
+     [
+      "i",
+      16
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Friedman, M. (1968). The role of monetary policy. American E… [88·7919660502]",
+    "bicim": [
+     [
+      "",
+      50
+     ],
+     [
+      "i",
+      28
+     ],
+     [
+      "",
+      10
+     ]
+    ]
+   },
+   {
+    "metin": "Galí, J., & Gertler, M. (1999). Inflation dynamics: A struct… [133·677cf4e1d0]",
+    "bicim": [
+     [
+      "",
+      87
+     ],
+     [
+      "i",
+      33
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Gordon, R. J. (1997). The time-varying NAIRU and its implica… [134·d1e66f73e5]",
+    "bicim": [
+     [
+      "",
+      87
+     ],
+     [
+      "i",
+      36
+     ],
+     [
+      "",
+      11
+     ]
+    ]
+   },
+   {
+    "metin": "Granger, C. W. J. (1969). Investigating causal relations by … [136·801165a76e]",
+    "bicim": [
+     [
+      "",
+      107
+     ],
+     [
+      "i",
+      16
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Granger, C. W. J., & Newbold, P. (1974). Spurious regression… [118·e422483810]",
+    "bicim": [
+     [
+      "",
+      79
+     ],
+     [
+      "i",
+      26
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Hazell, J., Herreño, J., Nakamura, E., & Steinsson, J. (2022… [173·4d967aa9f1]",
+    "bicim": [
+     [
+      "",
+      123
+     ],
+     [
+      "i",
+      35
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "metin": "Hepsağ, A. (2009). Türkiye'de enflasyon ile işsizlik arasınd… [171·f0d369cd5f]",
+    "bicim": [
+     [
+      "",
+      106
+     ],
+     [
+      "i",
+      52
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Kuştepeli, Y. (2005). A comprehensive short-run analysis of … [174·02b2afb078]",
+    "bicim": [
+     [
+      "",
+      97
+     ],
+     [
+      "i",
+      21
+     ],
+     [
+      "",
+      56
+     ]
+    ]
+   },
+   {
+    "metin": "Kwiatkowski, D., Phillips, P. C. B., Schmidt, P., & Shin, Y.… [195·d64c8bece6]",
+    "bicim": [
+     [
+      "",
+      153
+     ],
+     [
+      "i",
+      27
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "metin": "Lucas, R. E. (1972). Expectations and the neutrality of mone… [105·29d1be0eef]",
+    "bicim": [
+     [
+      "",
+      63
+     ],
+     [
+      "i",
+      29
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Mangır, F., & Erdoğan, S. (2012). Türkiye'de enflasyon ile i… [152·f359a4c6a9]",
+    "bicim": [
+     [
+      "",
+      99
+     ],
+     [
+      "i",
+      35
+     ],
+     [
+      "",
+      18
+     ]
+    ]
+   },
+   {
+    "metin": "Narayan, P. K. (2005). The saving and investment nexus for C… [138·770939878b]",
+    "bicim": [
+     [
+      "",
+      101
+     ],
+     [
+      "i",
+      21
+     ],
+     [
+      "",
+      16
+     ]
+    ]
+   },
+   {
+    "metin": "Newey, W. K., & West, K. D. (1987). A simple, positive semi-… [168·a4ede61dc1]",
+    "bicim": [
+     [
+      "",
+      139
+     ],
+     [
+      "i",
+      16
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Önder, A. Ö. (2009). The stability of the Turkish Phillips c… [142·18dd4c2058]",
+    "bicim": [
+     [
+      "",
+      105
+     ],
+     [
+      "i",
+      21
+     ],
+     [
+      "",
+      16
+     ]
+    ]
+   },
+   {
+    "metin": "Pesaran, M. H., Shin, Y., & Smith, R. J. (2001). Bounds test… [163·afe95cb16e]",
+    "bicim": [
+     [
+      "",
+      115
+     ],
+     [
+      "i",
+      35
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Phelps, E. S. (1967). Phillips curves, expectations of infla… [129·46f0e3e389]",
+    "bicim": [
+     [
+      "",
+      101
+     ],
+     [
+      "i",
+      13
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "metin": "Phillips, A. W. (1958). The relation between unemployment an… [163·c003c3f1df]",
+    "bicim": [
+     [
+      "",
+      135
+     ],
+     [
+      "i",
+      13
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "metin": "Phillips, P. C. B., & Perron, P. (1988). Testing for a unit … [119·35fbae8650]",
+    "bicim": [
+     [
+      "",
+      92
+     ],
+     [
+      "i",
+      14
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Samuelson, P. A., & Solow, R. M. (1960). Analytical aspects … [127·41e65eb43e]",
+    "bicim": [
+     [
+      "",
+      86
+     ],
+     [
+      "i",
+      28
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Staiger, D., Stock, J. H., & Watson, M. W. (1997). The NAIRU… [143·551d58c6ba]",
+    "bicim": [
+     [
+      "",
+      96
+     ],
+     [
+      "i",
+      36
+     ],
+     [
+      "",
+      11
+     ]
+    ]
+   },
+   {
+    "metin": "Toda, H. Y., & Yamamoto, T. (1995). Statistical inference in… [162·e4fcf36b5e]",
+    "bicim": [
+     [
+      "",
+      120
+     ],
+     [
+      "i",
+      27
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "metin": "TÜİK. (2026a). Tüketici Fiyat Endeksi, Aralık 2025 [Haber bü… [131·e97f07cdbf]",
+    "bicim": [
+     [
+      "",
+      15
+     ],
+     [
+      "i",
+      35
+     ],
+     [
+      "",
+      81
+     ]
+    ]
+   },
+   {
+    "metin": "TÜİK. (2026b). İşgücü İstatistikleri, 2025 [Haber bülteni]. … [140·c8a0c99f8e]",
+    "bicim": [
+     [
+      "",
+      15
+     ],
+     [
+      "i",
+      27
+     ],
+     [
+      "",
+      98
+     ]
+    ]
+   },
+   {
+    "metin": "Yağmur, M. (2022). Türkiye'de işsizlik ve ekonomik büyüme ar… [170·aa9756d6c0]",
+    "bicim": [
+     [
+      "",
+      19
+     ],
+     [
+      "i",
+      78
+     ],
+     [
+      "",
+      73
+     ]
+    ]
+   },
+   {
+    "metin": "Zivot, E., & Andrews, D. W. K. (1992). Further evidence on t… [185·b314e219fc]",
+    "bicim": [
+     [
+      "",
+      127
+     ],
+     [
+      "i",
+      45
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "metin": "Ek 1. Veri Seti",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Enflasyon: TÜFE, Aralık–Aralık yıllık değişim (%). İşsizlik:… [299·ce5c18ce45]"
+   },
+   {
+    "metin": "Yil,ENF,ISS 2000,39.03,6.5 2001,68.53,8.4 2002,29.75,10.3 20… [407·1d79ae4767]"
+   },
+   {
+    "metin": "Ek 2. Analiz Kodunun Özeti (Python)",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "import numpy as np, pandas as pd, statsmodels.api as sm from… [1287·4ba4a2da43]"
+   }
+  ],
+  "dipnotlar": [],
+  "resim": 0,
+  "bolum": 1
+ },
+ "yazdirma": {
+  "bloklar": [
+   {
+    "etiket": "h1",
+    "metin": "1. Türkiye'de Enflasyon ve İşsizlik İlişkisinin Ekonometrik Analizi"
+   },
+   {
+    "etiket": "p",
+    "metin": "Taslak"
+   },
+   {
+    "etiket": "h2",
+    "metin": "1.1. Kapak"
+   },
+   {
+    "etiket": "p",
+    "metin": "T.C. DOKUZ EYLÜL ÜNİVERSİTESİ",
+    "bicim": [
+     [
+      "b",
+      29
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "İKTİSADİ VE İDARİ BİLİMLER FAKÜLTESİ",
+    "bicim": [
+     [
+      "b",
+      36
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "EKONOMETRİ BÖLÜMÜ",
+    "bicim": [
+     [
+      "b",
+      17
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "BİTİRME TEZİ (DENEME SÜRÜMÜ)",
+    "bicim": [
+     [
+      "b",
+      28
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "TÜRKİYE'DE ENFLASYON VE İŞSİZLİK İLİŞKİSİNİN EKONOMETRİK ANALİZİ (2000–2025)",
+    "bicim": [
+     [
+      "b",
+      76
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Hazırlayan: [Ad SOYAD] — Öğrenci No: [.........]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Danışman: [Unvan Ad SOYAD]"
+   },
+   {
+    "etiket": "p",
+    "metin": "İzmir, 2026"
+   },
+   {
+    "etiket": "h2",
+    "metin": "Yemin Metni"
+   },
+   {
+    "etiket": "p",
+    "metin": "Bitirme tezi olarak sunduğum “Türkiye'de Enflasyon ve İşsizl… [368·7038d57b5e]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Tarih: ..../..../2026"
+   },
+   {
+    "etiket": "p",
+    "metin": "[Ad SOYAD]"
+   },
+   {
+    "etiket": "p",
+    "metin": "İmza: ...................."
+   },
+   {
+    "etiket": "h2",
+    "metin": "Özet"
+   },
+   {
+    "etiket": "p",
+    "metin": "Bu çalışmada Türkiye'de enflasyon ile işsizlik arasındaki il… [698·5d31dbf7d6]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Statik Phillips regresyonunda işsizlik katsayısı negatif ve … [910·d1236f5eb3]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Anahtar Kelimeler: Phillips eğrisi, enflasyon, işsizlik, ARD… [109·b1a706b574]",
+    "bicim": [
+     [
+      "b",
+      18
+     ],
+     [
+      "",
+      91
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "JEL Kodları: E24, E31, C22",
+    "bicim": [
+     [
+      "b",
+      12
+     ],
+     [
+      "",
+      14
+     ]
+    ]
+   },
+   {
+    "etiket": "h2",
+    "metin": "Abstract"
+   },
+   {
+    "etiket": "p",
+    "metin": "This study examines the relationship between inflation and u… [1031·df369e2411]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Keywords: Phillips curve, inflation, unemployment, ARDL boun… [100·1f47541f22]",
+    "bicim": [
+     [
+      "b",
+      9
+     ],
+     [
+      "",
+      91
+     ]
+    ]
+   },
+   {
+    "etiket": "h2",
+    "metin": "İçindekiler"
+   },
+   {
+    "etiket": "p",
+    "metin": "Yemin Metni",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Özet",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Abstract",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Kısaltmalar",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablolar Listesi",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Şekiller Listesi",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Giriş",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Kuramsal Çerçeve",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Literatür Taraması",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Türkiye'de Enflasyon ve İşsizliğin Seyri (2000–2025)",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Veri Seti ve Yöntem",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Ampirik Bulgular",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Sonuç ve Öneriler",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Kaynakça",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Ek 1. Veri Seti",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Ek 2. Analiz Kodunun Özeti",
+    "liste": 0
+   },
+   {
+    "etiket": "h2",
+    "metin": "Kısaltmalar"
+   },
+   {
+    "tablo": {
+     "satir": 29,
+     "hucre": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "metin": "Kısaltma Açıklama ADF Genişletilmiş Dickey–Fuller (Augmented… [969·f260c6eaf7]"
+    }
+   },
+   {
+    "etiket": "h2",
+    "metin": "Tablolar Listesi"
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 1. Türkiye üzerine seçilmiş ampirik çalışmalar",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 2. Modelde kullanılan değişkenler",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 3. Tanımlayıcı istatistikler",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 4. ADF, PP ve KPSS birim kök testi sonuçları",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 5. Zivot–Andrews yapısal kırılmalı birim kök testi",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 6. Statik ve beklentilerle genişletilmiş Phillips denklemleri",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 7. Model 2 için tanısal testler",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 8. ARDL(1,1) sınır testi ve katsayı tahminleri",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 9. VAR gecikme uzunluğu seçimi",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 10. Toda–Yamamoto nedensellik testi sonuçları",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 11. Alt dönemlere göre enflasyon–işsizlik ilişkisi",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Tablo 12. Hipotez testlerinin özeti",
+    "liste": 0
+   },
+   {
+    "etiket": "h2",
+    "metin": "Şekiller Listesi"
+   },
+   {
+    "etiket": "p",
+    "metin": "Şekil 1. Türkiye'de enflasyon ve işsizlik oranının seyri (2000–2025)",
+    "liste": 0
+   },
+   {
+    "etiket": "h2",
+    "metin": "1.2. 1. Giriş"
+   },
+   {
+    "etiket": "p",
+    "metin": "Fiyat istikrarı ve tam istihdam, makroekonomi politikasının … [592·7a77c9dd8d]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Türkiye, bu tartışmayı sınamak için oldukça öğretici bir örn… [496·2b8f3757be]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Son yıllarda gözlenen tablo, konunun güncelliğini artırmakta… [545·d5d2684974]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.2.1. 1.1. Çalışmanın Amacı ve Araştırma Soruları"
+   },
+   {
+    "etiket": "p",
+    "metin": "Bu çalışmanın amacı, Türkiye'de 2000–2025 döneminde enflasyo… [179·b8a6a7c6f9]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Enflasyon ve işsizlik serileri durağan mıdır; yapısal kırılm… [111·e84e3ffa50]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "İki değişken arasında uzun dönemli bir eşbütünleşme ilişkisi var mıdır?",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Beklentiler (enflasyon ataleti) modele eklendiğinde işsizliğ… [111·9487b545bd]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Değişkenler arasındaki nedensellik ilişkisinin yönü nedir?",
+    "liste": 0
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.2.2. 1.2. Araştırma Hipotezleri"
+   },
+   {
+    "etiket": "p",
+    "metin": "H₁: İşsizlik oranı ile enflasyon arasında kısa dönemde negat… [87·28b3ecbffb]",
+    "liste": 0,
+    "bicim": [
+     [
+      "b",
+      3
+     ],
+     [
+      "",
+      84
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "H₂: Enflasyon ile işsizlik arasında uzun dönemli bir eşbütün… [82·6e63dca15d]",
+    "liste": 0,
+    "bicim": [
+     [
+      "b",
+      3
+     ],
+     [
+      "",
+      79
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "H₃: İşsizlik oranı enflasyonun Granger nedenidir.",
+    "liste": 0,
+    "bicim": [
+     [
+      "b",
+      3
+     ],
+     [
+      "",
+      46
+     ]
+    ]
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.2.3. 1.3. Çalışmanın Katkısı ve Planı"
+   },
+   {
+    "etiket": "p",
+    "metin": "Çalışma, mevcut yazına üç noktada katkı sunmayı hedeflemekte… [502·ff228a24b6]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Tezin geri kalanı şöyle düzenlenmiştir: İkinci bölümde Phill… [462·a3e4d738ad]"
+   },
+   {
+    "etiket": "h2",
+    "metin": "1.3. 2. Kuramsal Çerçeve"
+   },
+   {
+    "etiket": "p",
+    "metin": "Phillips eğrisi, tek bir model olmaktan çok, altmış yılı aşk… [239·1796af5553]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.3.1. 2.1. Orijinal ve Modifiye Phillips Eğrisi"
+   },
+   {
+    "etiket": "p",
+    "metin": "Phillips (1958), İngiltere'de 1861–1957 döneminde nominal üc… [346·9a1bfdebb3]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Samuelson ve Solow (1960), ücret artışının verimlilik artışı… [259·5c93752e13]"
+   },
+   {
+    "etiket": "p",
+    "metin": "\\pi_t = \\alpha - \\beta u_t + \\varepsilon_t, \\qquad \\beta > 0"
+   },
+   {
+    "etiket": "p",
+    "metin": "Burada π enflasyon oranını, u işsizlik oranını, ε ise hata t… [231·c39bcba0ac]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.3.2. 2.2. Beklentilerle Genişletilmiş Phillips Eğrisi ve Doğal İşsizlik Oranı"
+   },
+   {
+    "etiket": "p",
+    "metin": "1970'lerde enflasyon ile işsizliğin birlikte yükselmesi (sta… [322·5cd70e5811]"
+   },
+   {
+    "etiket": "p",
+    "metin": "\\pi_t = \\pi_t^{e} - \\beta \\left( u_t - u^{*} \\right) + \\varepsilon_t"
+   },
+   {
+    "etiket": "p",
+    "metin": "Bu denklemde πᵉ beklenen enflasyonu, u* ise doğal işsizlik o… [230·c0d44686d3]"
+   },
+   {
+    "etiket": "p",
+    "metin": "\\Delta \\pi_t = \\beta u^{*} - \\beta u_t + \\varepsilon_t"
+   },
+   {
+    "etiket": "p",
+    "metin": "Bu yapının temel politika sonucu, uzun dönem Phillips eğrisi… [462·f5308a29f3]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Ampirik çalışmalarda beklentiler genellikle gecikmeli enflas… [122·5e49260061]"
+   },
+   {
+    "etiket": "p",
+    "metin": "\\pi_t = \\alpha + \\rho \\, \\pi_{t-1} - \\beta u_t + \\varepsilon_t"
+   },
+   {
+    "etiket": "p",
+    "metin": "ρ katsayısı enflasyon ataletinin ölçüsüdür. ρ = 1 katı hızla… [260·f5f536c1c8]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.3.3. 2.3. Rasyonel Beklentiler ve Lucas Eleştirisi"
+   },
+   {
+    "etiket": "p",
+    "metin": "Lucas (1972), ekonomik birimlerin mevcut tüm bilgiyi kullana… [602·52b188e4cd]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.3.4. 2.4. Yeni Keynesyen Phillips Eğrisi"
+   },
+   {
+    "etiket": "p",
+    "metin": "Yeni Keynesyen yaklaşım, fiyat yapışkanlığını mikro temeller… [488·9ab8352893]"
+   },
+   {
+    "etiket": "p",
+    "metin": "\\pi_t = \\gamma_f \\, E_t \\pi_{t+1} + \\gamma_b \\, \\pi_{t-1} + … [91·d9ab833c57]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Hibrit modelde γ_b katsayısının büyüklüğü, enflasyon ataleti… [187·ffaf7c82e6]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.3.5. 2.5. Phillips Eğrisinin Yassılaşması Tartışması"
+   },
+   {
+    "etiket": "p",
+    "metin": "2000'li yıllardan itibaren gelişmiş ekonomilerde işsizlik be… [485·e2011ef104]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Yükselen piyasa ekonomilerinde ise kur geçişkenliği, enerji … [280·f43b2a30b3]"
+   },
+   {
+    "etiket": "h2",
+    "metin": "1.4. 3. Literatür Taraması"
+   },
+   {
+    "etiket": "p",
+    "metin": "Ampirik yazın, Phillips eğrisinin geçerliliği konusunda orta… [263·cad88ebaf8]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.4.1. 3.1. Uluslararası Yazın"
+   },
+   {
+    "etiket": "p",
+    "metin": "Phillips (1958) ve Samuelson ile Solow'un (1960) çalışmaları… [587·b884fa64f2]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Yeni Keynesyen çerçevede Galí ve Gertler (1999), ABD veriler… [527·f79afe3900]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.4.2. 3.2. Türkiye Üzerine Yapılan Çalışmalar"
+   },
+   {
+    "etiket": "p",
+    "metin": "Türkiye üzerine yapılan çalışmalar, özellikle uzun dönem ili… [704·583f1b9bb8]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Eşbütünleşme temelli çalışmalar da farklı sonuçlar vermekted… [913·b04d501226]"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 1. Türkiye üzerine seçilmiş ampirik çalışmalar",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      44
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 8,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Çalışma Dönem ve veri Yöntem Temel bulgu Aydın (2025) 1939–2… [873·784c1ba9d3]"
+    }
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.4.3. 3.3. Yazına İlişkin Değerlendirme"
+   },
+   {
+    "etiket": "p",
+    "metin": "Yazın incelendiğinde üç genel eğilim göze çarpmaktadır. Biri… [570·f39e11bc33]"
+   },
+   {
+    "etiket": "h2",
+    "metin": "1.5. 4. Türkiye'de Enflasyon ve İşsizliğin Seyri (2000–2025)"
+   },
+   {
+    "etiket": "p",
+    "metin": "2000–2025 döneminde enflasyon %6,2 ile %68,5 arasında dalgal… [391·f6d538e431]"
+   },
+   {
+    "etiket": "p",
+    "metin": ""
+   },
+   {
+    "resim": true
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Şekil 1. Kaynak: TÜİK verilerinden derlenmiştir · 2000–2025,… [129·4429202f0f]",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      121
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Şekil 1'de enflasyondaki büyük sıçramaların 2001 ve 2021–202… [182·a71af85f8f]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.5.1. 4.1. Kriz ve Dezenflasyon Dönemi (2000–2008)"
+   },
+   {
+    "etiket": "p",
+    "metin": "Şubat 2001'de sabit kur sisteminin terk edilmesiyle Türk lir… [509·d73a18892f]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Bu alt dönemin dikkat çekici özelliği, enflasyon düşerken iş… [339·e89c5b3b86]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.5.2. 4.2. Küresel Kriz ve Toparlanma (2009–2017)"
+   },
+   {
+    "etiket": "p",
+    "metin": "2008–2009 küresel finans krizi Türkiye'de işsizliği 2009'da … [405·9a2ce3c629]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.5.3. 4.3. Kur Şokları ve Salgın (2018–2020)"
+   },
+   {
+    "etiket": "p",
+    "metin": "Ağustos 2018'deki kur şoku, yıllık enflasyonu %20,3'e yüksel… [462·67d82677c5]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.5.4. 4.4. Yüksek Enflasyon ve Dezenflasyon (2021–2025)"
+   },
+   {
+    "etiket": "p",
+    "metin": "2021'in son çeyreğinde politika faizinin indirilmesi ve ardı… [413·bb9c8d1980]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Aynı dönemde işsizlik oranı 2021'deki %12,0'dan 2025'te %8,3… [549·d13284d7f3]"
+   },
+   {
+    "etiket": "h2",
+    "metin": "1.6. 5. Veri Seti ve Yöntem"
+   },
+   {
+    "etiket": "p",
+    "metin": "Analiz, 2000–2025 dönemine ait 26 yıllık gözlemle yürütülmüş… [429·d282563cee]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.6.1. 5.1. Veri Seti"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 2. Modelde kullanılan değişkenler",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      31
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 6,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Değişken Tanım Birim Kaynak ENF TÜFE, bir önceki yılın Aralı… [377·5b0f2deb7a]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Enflasyon, 2003 yılına kadar 1994 bazlı, sonrasında 2003 baz… [456·4b1629c982]"
+   },
+   {
+    "etiket": "p",
+    "metin": "İşsizlik serisinde iki yöntem değişikliği bulunmaktadır. TÜİ… [374·e5c6629876]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.6.2. 5.2. Birim Kök Testleri"
+   },
+   {
+    "etiket": "p",
+    "metin": "Durağan olmayan serilerle kurulan regresyonlar, değişkenler … [312·ae91c13fd5]"
+   },
+   {
+    "etiket": "p",
+    "metin": "\\Delta y_t = \\mu + \\delta t + \\gamma \\, y_{t-1} + \\sum_{i=1}… [95·1bfee341dd]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Sıfır hipotezi H₀: γ = 0 (birim kök vardır) biçimindedir. Ge… [478·8aba7e0979]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Türkiye verilerinde krizlerin yol açtığı yapısal kırılmalar,… [325·05b9d5da83]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.6.3. 5.3. Phillips Eğrisi Modelleri"
+   },
+   {
+    "etiket": "p",
+    "metin": "İlk olarak karşılaştırma amacıyla statik bir Phillips denkle… [81·074a34bf50]"
+   },
+   {
+    "etiket": "p",
+    "metin": "LENF_t = \\alpha_0 + \\alpha_1 \\, ISS_t + \\varepsilon_t"
+   },
+   {
+    "etiket": "p",
+    "metin": "Ana model, uyarlamalı beklentileri gecikmeli enflasyonla tem… [170·aa2d3a3c76]"
+   },
+   {
+    "etiket": "p",
+    "metin": "LENF_t = \\beta_0 + \\rho \\, LENF_{t-1} + \\beta_1 \\, ISS_t + \\… [116·7d6932d335]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Model, en küçük kareler yöntemiyle tahmin edilmiş; standart … [311·f0f4dd2a1f]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.6.4. 5.4. ARDL Sınır Testi"
+   },
+   {
+    "etiket": "p",
+    "metin": "Pesaran, Shin ve Smith (2001) tarafından geliştirilen ARDL s… [339·a3cc99a714]"
+   },
+   {
+    "etiket": "p",
+    "metin": "\\Delta LENF_t = c + \\lambda_1 LENF_{t-1} + \\lambda_2 ISS_{t-… [163·831e09feed]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Eşbütünleşme olmadığını ileri süren sıfır hipotezi H₀: λ₁ = … [487·58ca638833]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.6.5. 5.5. Toda–Yamamoto Nedensellik Testi"
+   },
+   {
+    "etiket": "p",
+    "metin": "Standart Granger (1969) testi, durağan olmayan seriler düzey… [390·ee57ea26b7]"
+   },
+   {
+    "etiket": "p",
+    "metin": "LENF_t = a_0 + \\sum_{i=1}^{k+d_{max}} a_{1i} LENF_{t-i} + \\s… [106·6c797fc021]"
+   },
+   {
+    "etiket": "p",
+    "metin": "ISS_t = b_0 + \\sum_{i=1}^{k+d_{max}} b_{1i} ISS_{t-i} + \\sum… [105·d0fb1182dd]"
+   },
+   {
+    "etiket": "p",
+    "metin": "İlk denklemde H₀: a₂₁ = … = a₂ₖ = 0 hipotezi işsizliğin enfl… [292·a312637853]"
+   },
+   {
+    "etiket": "h2",
+    "metin": "1.7. 6. Ampirik Bulgular"
+   },
+   {
+    "etiket": "p",
+    "metin": "Ampirik bulgular, Türkiye'de işsizliğin enflasyon üzerinde k… [264·9bf7d5cb1c]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.7.1. 6.1. Tanımlayıcı İstatistikler"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 3. Tanımlayıcı istatistikler (2000–2025, n = 26)",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      46
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 7,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "İstatistik ENF (%) ISS (%) LENF Ortalama 21,63 10,44 2,742 M… [253·3f5a3fbe9e]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Enflasyonun ortalaması (%21,6) medyanının (%11,1) neredeyse … [460·eee3e360e0]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.7.2. 6.2. Birim Kök Testi Sonuçları"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 4. ADF, PP ve KPSS birim kök testi sonuçları",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      42
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 9,
+     "hucre": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6
+     ],
+     "metin": "Seri Model ADF (p) PP (p) KPSS Karar LENF Sabitli −2,315 (0,… [559·e43f1f8b5d]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Not: KPSS %5 kritik değerleri sabitli modelde 0,463, sabitli… [244·e78b620f8d]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Logaritmik enflasyon düzeyde ADF ve PP testlerine göre birim… [568·c4dd606a9f]"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 5. Zivot–Andrews yapısal kırılmalı birim kök testi",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      48
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 5,
+     "hucre": [
+      6,
+      6,
+      6,
+      6,
+      6
+     ],
+     "metin": "Seri Model Test istatistiği %5 kritik değer Kırılma yılı Kar… [314·87dc3b3a4c]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Kırılmaya izin verildiğinde de logaritmik enflasyonun birim … [528·601ba84a14]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.7.3. 6.3. Phillips Eğrisi Tahminleri"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 6. Statik ve beklentilerle genişletilmiş Phillips denk… [92·7fa059bf33]",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      84
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 10,
+     "hucre": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+     ],
+     "metin": "Değişken Model 1: Statik Model 2: Genişletilmiş (HAC) Sabit … [295·a62b13fd3f]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Not: Parantez içinde standart hatalar verilmiştir. ***, **, … [185·e1db3e65b1]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Statik modelde işsizlik katsayısı −0,205 ve %5 düzeyinde anl… [456·0a3e131adb]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Gecikmeli enflasyonun ve şok gölge değişkenlerinin eklendiği… [667·3516b08d33]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Alternatif olarak tahmin edilen hızlanan enflasyon biçiminde… [377·1628d7fe13]"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 7. Model 2 için tanısal testler",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      29
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 6,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Test İstatistik p değeri Sonuç Breusch–Godfrey LM (1 gecikme… [287·d8222a371e]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Model 2 tüm tanısal testlerden geçmektedir. Bu durum, şok dö… [197·9e714cf4d2]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.7.4. 6.4. ARDL Sınır Testi Sonuçları"
+   },
+   {
+    "etiket": "p",
+    "metin": "AIC'ye göre seçilen model ARDL(1,1)'dir. Sınır testi sonuçla… [86·791de4007f]"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 8. ARDL(1,1) sınır testi ve katsayı tahminleri",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      44
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 6,
+     "hucre": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "metin": "Panel A: Sınır testi Değer F istatistiği 0,891 %10 kritik de… [271·f58ec9d50e]"
+    }
+   },
+   {
+    "tablo": {
+     "satir": 7,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Panel B: Katsayılar Katsayı Std. hata p değeri LENF(t−1) 0,6… [218·b9ee9833c2]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "F istatistiği (0,891), en düşük anlamlılık düzeyi olan %10'd… [381·220492adfd]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Kısa dönem dinamiklerine bakıldığında, cari işsizliğin katsa… [557·28d8e7244d]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.7.5. 6.5. Toda–Yamamoto Nedensellik Sonuçları"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 9. VAR gecikme uzunluğu seçimi",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      28
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 5,
+     "hucre": [
+      5,
+      5,
+      5,
+      5,
+      5
+     ],
+     "metin": "Gecikme AIC SC (BIC) FPE HQ 0 0,133 0,232 1,142 0,158 1 −1,5… [144·3437413438]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Not: * ilgili ölçütün seçtiği gecikmeyi gösterir."
+   },
+   {
+    "etiket": "p",
+    "metin": "Dört ölçütün tamamı k = 2 gecikmeyi seçmektedir. d_max = 1 e… [153·25647bcbb5]"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 10. Toda–Yamamoto nedensellik testi sonuçları (k = 2, d_max = 1)",
+    "bicim": [
+     [
+      "b",
+      9
+     ],
+     [
+      "",
+      61
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 3,
+     "hucre": [
+      4,
+      4,
+      4
+     ],
+     "metin": "Sıfır hipotezi Wald χ²(2) p değeri Karar ISS, LENF'nin Grang… [169·3ddc21c838]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Sonuçlar, işsizlikten enflasyona doğru tek yönlü bir nedense… [519·fe1991c671]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.7.6. 6.6. Alt Dönem Analizi"
+   },
+   {
+    "etiket": "p",
+    "metin": "Lucas eleştirisi ve Zivot–Andrews bulguları dikkate alınarak… [119·c9ea51ef41]"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 11. Alt dönemlere göre enflasyon–işsizlik ilişkisi",
+    "bicim": [
+     [
+      "b",
+      9
+     ],
+     [
+      "",
+      47
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 5,
+     "hucre": [
+      4,
+      4,
+      4,
+      4,
+      4
+     ],
+     "metin": "Dönem Korelasyon (ENF, ISS) ISS katsayısı (LENF denklemi) p … [213·0ba65c8326]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Alt dönem sonuçları çarpıcıdır. Negatif ve anlamlı ilişki ya… [518·9e00415009]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.7.7. 6.7. Bulguların Genel Değerlendirmesi"
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 12. Hipotez testlerinin özeti",
+    "bicim": [
+     [
+      "b",
+      9
+     ],
+     [
+      "",
+      26
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 4,
+     "hucre": [
+      3,
+      3,
+      3,
+      3
+     ],
+     "metin": "Hipotez Kullanılan test Sonuç H₁: Kısa dönemde negatif ilişk… [301·54a968a27e]"
+    }
+   },
+   {
+    "etiket": "p",
+    "metin": "Bu sonuçlar, yazındaki uzun dönemli yıllık verilerle yapılan… [400·20e5aa692f]"
+   },
+   {
+    "etiket": "h2",
+    "metin": "1.8. 7. Sonuç ve Öneriler"
+   },
+   {
+    "etiket": "p",
+    "metin": "Bu tez, Türkiye'de 2000–2025 döneminde istikrarlı bir uzun d… [276·c87d249c11]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.8.1. 7.1. Temel Bulgular"
+   },
+   {
+    "etiket": "p",
+    "metin": "Logaritmik enflasyon I(1), işsizlik oranı ise sabitli modeld… [240·f684237fda]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Statik Phillips regresyonundaki negatif ve anlamlı katsayı (… [165·0db8b9a622]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Enflasyonun en güçlü belirleyicisi kendi geçmişidir (ρ = 0,5… [199·159c7f3df8]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "ARDL sınır testi ve Engle–Granger testi uzun dönem eşbütünle… [97·d881c13404]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Toda–Yamamoto testi, işsizlikten enflasyona tek yönlü bir ne… [140·18991221c9]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Negatif ilişki ağırlıklı olarak kriz ve şok dönemlerinde ort… [125·bf732b4485]",
+    "liste": 0
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.8.2. 7.2. Politika Çıkarımları"
+   },
+   {
+    "etiket": "p",
+    "metin": "Bulgular, enflasyonla mücadelede işsizliği artıran talep dar… [428·521269ac13]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Bunun yerine politika önceliği beklentilerin çıpalanmasına v… [308·b2c11e20df]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Para politikasında öngörülebilirlik ve tutarlı ileriye dönük… [146·33399dbf64]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Ücret, kira ve yönetilen fiyatlarda geçmiş enflasyona dayalı… [161·d22053bfcd]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Kur ve enerji fiyat şoklarının enflasyon üzerindeki büyük et… [189·15810b5a9b]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "İşgücü piyasası açısından ise düşük işsizlik oranının tek ba… [296·ac5c6521d8]"
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.8.3. 7.3. Çalışmanın Sınırlılıkları"
+   },
+   {
+    "etiket": "p",
+    "metin": "Örneklem 26 yıllık gözlemden oluşmaktadır. Küçük örneklem, t… [159·080e0a501f]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "İşsizlik serisi, TÜİK'in 2004 ve 2021 yöntem güncellemeleri … [110·95ed437546]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Beklentiler uyarlamalı biçimde temsil edilmiştir. TCMB Piyas… [132·c5ba03ba3f]",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "metin": "Model iki değişkenlidir. Döviz kuru, enerji fiyatları ve çık… [145·8e95992b89]",
+    "liste": 0
+   },
+   {
+    "etiket": "h3",
+    "metin": "1.8.4. 7.4. Gelecek Çalışmalar İçin Öneriler"
+   },
+   {
+    "etiket": "p",
+    "metin": "Sonraki çalışmalarda TCMB EVDS'den elde edilecek aylık veya … [518·ac8eddc4c7]"
+   },
+   {
+    "etiket": "h2",
+    "metin": "Kaynakça"
+   },
+   {
+    "etiket": "p",
+    "metin": "Arabacı, Ö., & Eryiğit, K. Y. (2012). A thresold regression … [193·f565aaa735]",
+    "bicim": [
+     [
+      "",
+      102
+     ],
+     [
+      "i",
+      70
+     ],
+     [
+      "",
+      12
+     ],
+     [
+      "a",
+      9
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Aydın, A. (2025). Türkiye ekonomisinde Phillips eğrisi anali… [216·670b33ab09]",
+    "bicim": [
+     [
+      "",
+      114
+     ],
+     [
+      "i",
+      77
+     ],
+     [
+      "",
+      14
+     ],
+     [
+      "a",
+      11
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Bayrak, M., & Kanca, O. C. (2013). Türkiye'de Phillips eğris… [166·3759e660a0]",
+    "bicim": [
+     [
+      "",
+      84
+     ],
+     [
+      "i",
+      70
+     ],
+     [
+      "",
+      12
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Blanchard, O. (2016). The Phillips curve: Back to the '60s? … [100·64e72e40d9]",
+    "bicim": [
+     [
+      "",
+      60
+     ],
+     [
+      "i",
+      29
+     ],
+     [
+      "",
+      11
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Buyrukoğlu, A., & Altunakar Mercan, Ş. (2022). Enflasyon ve … [196·84049ec4d9]",
+    "bicim": [
+     [
+      "",
+      124
+     ],
+     [
+      "i",
+      17
+     ],
+     [
+      "",
+      16
+     ],
+     [
+      "a",
+      39
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Calvo, G. A. (1983). Staggered prices in a utility-maximizin… [119·38b914b691]",
+    "bicim": [
+     [
+      "",
+      73
+     ],
+     [
+      "i",
+      33
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Dickey, D. A., & Fuller, W. A. (1979). Distribution of the e… [185·ba72f34099]",
+    "bicim": [
+     [
+      "",
+      119
+     ],
+     [
+      "i",
+      51
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Engle, R. F., & Granger, C. W. J. (1987). Co-integration and… [149·68d40be3ac]",
+    "bicim": [
+     [
+      "",
+      120
+     ],
+     [
+      "i",
+      16
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Friedman, M. (1968). The role of monetary policy. American E… [88·7919660502]",
+    "bicim": [
+     [
+      "",
+      50
+     ],
+     [
+      "i",
+      28
+     ],
+     [
+      "",
+      10
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Galí, J., & Gertler, M. (1999). Inflation dynamics: A struct… [133·677cf4e1d0]",
+    "bicim": [
+     [
+      "",
+      87
+     ],
+     [
+      "i",
+      33
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Gordon, R. J. (1997). The time-varying NAIRU and its implica… [134·d1e66f73e5]",
+    "bicim": [
+     [
+      "",
+      87
+     ],
+     [
+      "i",
+      36
+     ],
+     [
+      "",
+      11
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Granger, C. W. J. (1969). Investigating causal relations by … [136·801165a76e]",
+    "bicim": [
+     [
+      "",
+      107
+     ],
+     [
+      "i",
+      16
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Granger, C. W. J., & Newbold, P. (1974). Spurious regression… [118·e422483810]",
+    "bicim": [
+     [
+      "",
+      79
+     ],
+     [
+      "i",
+      26
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Hazell, J., Herreño, J., Nakamura, E., & Steinsson, J. (2022… [173·4d967aa9f1]",
+    "bicim": [
+     [
+      "",
+      123
+     ],
+     [
+      "i",
+      35
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Hepsağ, A. (2009). Türkiye'de enflasyon ile işsizlik arasınd… [171·f0d369cd5f]",
+    "bicim": [
+     [
+      "",
+      106
+     ],
+     [
+      "i",
+      52
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Kuştepeli, Y. (2005). A comprehensive short-run analysis of … [174·02b2afb078]",
+    "bicim": [
+     [
+      "",
+      97
+     ],
+     [
+      "i",
+      21
+     ],
+     [
+      "",
+      14
+     ],
+     [
+      "a",
+      42
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Kwiatkowski, D., Phillips, P. C. B., Schmidt, P., & Shin, Y.… [195·d64c8bece6]",
+    "bicim": [
+     [
+      "",
+      153
+     ],
+     [
+      "i",
+      27
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Lucas, R. E. (1972). Expectations and the neutrality of mone… [105·29d1be0eef]",
+    "bicim": [
+     [
+      "",
+      63
+     ],
+     [
+      "i",
+      29
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Mangır, F., & Erdoğan, S. (2012). Türkiye'de enflasyon ile i… [152·f359a4c6a9]",
+    "bicim": [
+     [
+      "",
+      99
+     ],
+     [
+      "i",
+      35
+     ],
+     [
+      "",
+      9
+     ],
+     [
+      "a",
+      9
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Narayan, P. K. (2005). The saving and investment nexus for C… [138·770939878b]",
+    "bicim": [
+     [
+      "",
+      101
+     ],
+     [
+      "i",
+      21
+     ],
+     [
+      "",
+      16
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Newey, W. K., & West, K. D. (1987). A simple, positive semi-… [168·a4ede61dc1]",
+    "bicim": [
+     [
+      "",
+      139
+     ],
+     [
+      "i",
+      16
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Önder, A. Ö. (2009). The stability of the Turkish Phillips c… [142·18dd4c2058]",
+    "bicim": [
+     [
+      "",
+      105
+     ],
+     [
+      "i",
+      21
+     ],
+     [
+      "",
+      16
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Pesaran, M. H., Shin, Y., & Smith, R. J. (2001). Bounds test… [163·afe95cb16e]",
+    "bicim": [
+     [
+      "",
+      115
+     ],
+     [
+      "i",
+      35
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Phelps, E. S. (1967). Phillips curves, expectations of infla… [129·46f0e3e389]",
+    "bicim": [
+     [
+      "",
+      101
+     ],
+     [
+      "i",
+      13
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Phillips, A. W. (1958). The relation between unemployment an… [163·c003c3f1df]",
+    "bicim": [
+     [
+      "",
+      135
+     ],
+     [
+      "i",
+      13
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Phillips, P. C. B., & Perron, P. (1988). Testing for a unit … [119·35fbae8650]",
+    "bicim": [
+     [
+      "",
+      92
+     ],
+     [
+      "i",
+      14
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Samuelson, P. A., & Solow, R. M. (1960). Analytical aspects … [127·41e65eb43e]",
+    "bicim": [
+     [
+      "",
+      86
+     ],
+     [
+      "i",
+      28
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Staiger, D., Stock, J. H., & Watson, M. W. (1997). The NAIRU… [143·551d58c6ba]",
+    "bicim": [
+     [
+      "",
+      96
+     ],
+     [
+      "i",
+      36
+     ],
+     [
+      "",
+      11
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Toda, H. Y., & Yamamoto, T. (1995). Statistical inference in… [162·e4fcf36b5e]",
+    "bicim": [
+     [
+      "",
+      120
+     ],
+     [
+      "i",
+      27
+     ],
+     [
+      "",
+      15
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "TÜİK. (2026a). Tüketici Fiyat Endeksi, Aralık 2025 [Haber bü… [131·e97f07cdbf]",
+    "bicim": [
+     [
+      "",
+      15
+     ],
+     [
+      "i",
+      35
+     ],
+     [
+      "",
+      69
+     ],
+     [
+      "a",
+      11
+     ],
+     [
+      "",
+      1
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "TÜİK. (2026b). İşgücü İstatistikleri, 2025 [Haber bülteni]. … [140·c8a0c99f8e]",
+    "bicim": [
+     [
+      "",
+      15
+     ],
+     [
+      "i",
+      27
+     ],
+     [
+      "",
+      86
+     ],
+     [
+      "a",
+      11
+     ],
+     [
+      "",
+      1
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Yağmur, M. (2022). Türkiye'de işsizlik ve ekonomik büyüme ar… [170·aa9756d6c0]",
+    "bicim": [
+     [
+      "",
+      19
+     ],
+     [
+      "i",
+      78
+     ],
+     [
+      "",
+      73
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "Zivot, E., & Andrews, D. W. K. (1992). Further evidence on t… [185·b314e219fc]",
+    "bicim": [
+     [
+      "",
+      127
+     ],
+     [
+      "i",
+      45
+     ],
+     [
+      "",
+      13
+     ]
+    ]
+   },
+   {
+    "etiket": "h2",
+    "metin": "Ek 1. Veri Seti"
+   },
+   {
+    "etiket": "p",
+    "metin": "Enflasyon: TÜFE, Aralık–Aralık yıllık değişim (%). İşsizlik:… [299·ce5c18ce45]"
+   },
+   {
+    "etiket": "p",
+    "metin": "Yil,ENF,ISS 2000,39.03,6.5 2001,68.53,8.4 2002,29.75,10.3 20… [407·1d79ae4767]"
+   },
+   {
+    "etiket": "h2",
+    "metin": "Ek 2. Analiz Kodunun Özeti (Python)"
+   },
+   {
+    "etiket": "p",
+    "metin": "import numpy as np, pandas as pd, statsmodels.api as sm from… [1287·4ba4a2da43]"
+   }
+  ],
+  "dipnotlar": []
+ }
+}

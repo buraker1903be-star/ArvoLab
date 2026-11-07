@@ -6,8 +6,16 @@
 // ayrı: onlar sabit veriye göre yazılmış, bu betik veriyi değiştiriyor.
 // Yetki ve kısıtlar burada değil, tests/db/kaynak-duzenleme.test.mjs'te.
 //
-//   ONIZLEME_YAZ=1 ile sunucuyu başlatın, sonra:
+//   ONIZLEME_YAZ=1 ile sunucuyu başlatın (temiz veriyle: betik veriyi
+//   değiştirir, ikinci koşu için sunucuyu yeniden başlatın), sonra:
 //   NODE_PATH=$(npm root -g) node scripts/onizleme/yazma.mjs [taban-adres]
+//
+// Sayfa ÇALIŞMA KİMLİĞİYLE açılır (R0, 07.11.2026). Eskiden adres
+// `?calisma=` olmadan açılıyordu; önizlemede iki çalışma olduğu için
+// Kaynaklar listeyi değil çalışma seçiciyi çiziyor (lib/calisma-secimi.ts,
+// "secim-gerekli") ve betik "Inflation" kaynağını hiç bulamayıp 10 sn'de
+// zaman aşımına düşüyordu. Ürün doğru davranıyordu; o davranışın kendisi
+// artık kabul.mjs'de ayrı bir senaryoyla sınanıyor.
 import { createRequire } from "node:module";
 
 // playwright projenin bağımlılığı değil; genel kurulumdan NODE_PATH ile gelir (kabul.mjs ile aynı).
@@ -15,6 +23,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 
 const TABAN = process.argv[2] ?? "http://localhost:3123";
+const TEZ = "00000000-0000-4000-8000-0000000000b1"; // önizleme tezi (scripts/onizleme/veri.ts)
 const tarayici = await chromium.launch();
 const sayfa = await tarayici.newPage({ viewport: { width: 1440, height: 900 } });
 let hata = 0;
@@ -25,7 +34,8 @@ const bekle = (kosul, mesaj) => {
   } else console.log(`✓ ${mesaj}`);
 };
 
-await sayfa.goto(`${TABAN}/dashboard/literature`, { waitUntil: "networkidle", timeout: 150000 });
+await sayfa.goto(`${TABAN}/dashboard/literature?calisma=${TEZ}`, { waitUntil: "networkidle", timeout: 150000 });
+bekle(new URL(sayfa.url()).searchParams.get("calisma") === TEZ && (await sayfa.locator("ul.calisma-secim-listesi").count()) === 0, "sayfa çalışmanın listesiyle açıldı (seçici değil)");
 const panel = () => sayfa.locator(".drawer-root.open[data-boy='yan']");
 const ac = async (baslik) => {
   await sayfa.locator(".kaynak-ad", { hasText: baslik }).click();
@@ -54,6 +64,7 @@ bekle(/2018/.test(satir) && /Journal of Macroeconomics/.test(satir), "listedeki 
 
 // 2) Sayfa yeniden yüklenince değer kalır (sunucudan okunur, istemci önbelleği değil)
 await sayfa.reload({ waitUntil: "networkidle" });
+bekle(new URL(sayfa.url()).searchParams.get("calisma") === TEZ, "yeniden yüklemede çalışma adreste kaldı");
 await ac("Inflation");
 const yeniden = (await panel().locator("section[aria-labelledby$='-kunye']").textContent()).replace(/\s+/g, " ");
 bekle(/Yıl\s*2018/.test(yeniden), "yeniden yüklemede değer kalıcı");

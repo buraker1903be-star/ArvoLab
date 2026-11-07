@@ -7,7 +7,14 @@
   hangi biçimin hangi genişlikte göründüğü, klavyenin çalışıp çalışmadığı
   CSS ve tarayıcı işi, onlar yalnızca burada görünür.
 
-  CI'da DEĞİL: önizleme sunucusu ve Chromium ister. Kullanım:
+  CI'da DEĞİL: önizleme sunucusu ve Chromium ister. Sunucu TEST
+  ASİSTANI AÇIK başlatılmalı (`npm run onizleme:ai`): Kaynaklar ⋯
+  menüsündeki "Tarama asistanı" yalnızca asistan yapılandırılmışsa
+  çizilir ve düz `npm run onizleme` ile o senaryo düşer (R0, 07.11.2026'ya
+  kadar burada `npm run onizleme` yazıyordu). Yazma kipi GEREKMEZ;
+  açıksa sunucu temiz veriyle başlatılmış olmalı, çünkü senaryolar sabit
+  veriye göre yazıldı ve başka bir betiğin yazdığı veri onları bozar. Kullanım:
+    npm run onizleme:ai
     NODE_PATH=$(npm root -g) node scripts/onizleme/kabul.mjs [taban-adres]
   Bir senaryo düşerse çıkış kodu 1.
 
@@ -398,6 +405,33 @@ const tarayici = await chromium.launch();
     bekle(eksik.length === 0, `çalışmalarımda ulaşılamayan: ${eksik.join(", ")}`);
     await sayfa.keyboard.press("Escape");
   });
+  /*
+    R0 (07.11.2026): birden çok çalışma varken adreste ?calisma= yoksa
+    Kaynaklar listeyi DEĞİL çalışma seçiciyi çizer (lib/calisma-secimi.ts →
+    "secim-gerekli"). yazma.mjs bu yüzden aylarca "Inflation" kaynağını
+    bulamayıp zaman aşımına düşüyordu: betik adressiz açıyordu, önizlemede
+    iki çalışma var. Bu senaryo davranışın kendisini sabitler: seçici
+    görünür, her çalışma için doğru adres (DOI kutuya taşınır), seçince
+    o çalışmanın listesi gelir.
+  */
+  await senaryo("kaynaklar: iki çalışma varken adressiz açılış çalışma seçiciyi gösterir, seçim doğru listeyi açar (R0)", async () => {
+    const DOI = "10.1086/261725";
+    await git(sayfa, `/dashboard/literature?doi=${encodeURIComponent(DOI)}`);
+    const liste = sayfa.locator("ul.calisma-secim-listesi");
+    await liste.waitFor({ state: "visible", timeout: 30000 });
+    bekle((await sayfa.locator(".kaynak-ad").count()) === 0, "seçim yapılmadan kaynak listesi çizilmemeli");
+    const adresler = await liste.locator("a[href]").evaluateAll((a) => a.map((x) => x.getAttribute("href")));
+    bekle(adresler.length === 2, `iki çalışma bekleniyordu, ${adresler.length} bağlantı var`);
+    for (const kimlik of [TEZ, "00000000-0000-4000-8000-0000000000b2"]) {
+      const adres = adresler.find((h) => h.includes(`calisma=${kimlik}`));
+      bekle(adres, `çalışma bağlantısı yok: ${kimlik}`);
+      bekle(new URL(adres, TABAN).searchParams.get("doi") === DOI, `DOI seçim bağlantısına taşınmadı: ${adres}`);
+    }
+    await liste.locator(`a[href*="calisma=${TEZ}"]`).click();
+    await sayfa.waitForURL((u) => u.searchParams.get("calisma") === TEZ, { timeout: 30000 });
+    await sayfa.locator(".kaynak-ad", { hasText: "Inflation" }).waitFor({ state: "visible", timeout: 30000 });
+    bekle((await sayfa.locator("ul.calisma-secim-listesi").count()) === 0, "seçimden sonra seçici kalmamalı");
+  });
   await senaryo("kaynaklar: kaynağın adı ayrıntıyı açar, bütün künye ve not; Esc odağı satıra geri verir (Signature OS 4.1)", async () => {
     await git(sayfa, `/dashboard/literature?calisma=${TEZ}`);
     const ad = sayfa.locator(".kaynak-ad").first();
@@ -424,7 +458,7 @@ const tarayici = await chromium.launch();
     await sayfa.keyboard.press("ArrowDown");
     await sayfa.waitForTimeout(200);
     const ogeler = await sayfa.locator(".sayfa-tasma-menu:not([hidden]) button").allTextContents();
-    for (const g of ["Tarama asistanı", "Dışa aktar"]) bekle(ogeler.some((o) => o.includes(g)), `menüde yok: ${g}`);
+    for (const g of ["Tarama asistanı", "Dışa aktar"]) bekle(ogeler.some((o) => o.includes(g)), `menüde yok: ${g}${g === "Tarama asistanı" ? " (test asistanı kapalı mı? sunucu `npm run onizleme:ai` ile başlatılmalı)" : ""}`);
     await sayfa.keyboard.press("Enter");
     await sayfa.locator(".drawer-root.open").waitFor({ state: "visible", timeout: 10000 });
     await sayfa.keyboard.press("Escape");

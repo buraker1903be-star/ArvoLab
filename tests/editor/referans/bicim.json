@@ -1,0 +1,378 @@
+{
+ "word": {
+  "bloklar": [
+   {
+    "metin": "1. Giriş",
+    "stil": "Heading1"
+   },
+   {
+    "metin": "Enflasyon ile işsizlik arasındaki ilişki Phillips eğrisi ile… [160·b3b9fa1a15]",
+    "hiza": "both",
+    "girinti": {
+     "firstLine": "708"
+    },
+    "aralik": "360/auto",
+    "bicim": [
+     [
+      "",
+      41
+     ],
+     [
+      "i",
+      15
+     ],
+     [
+      "",
+      45
+     ],
+     [
+      "b",
+      7
+     ],
+     [
+      "",
+      6
+     ],
+     [
+      "u",
+      4
+     ],
+     [
+      "",
+      22
+     ],
+     [
+      "sup",
+      1
+     ],
+     [
+      "",
+      19
+     ]
+    ],
+    "dipnot": [
+     1
+    ]
+   },
+   {
+    "metin": "1.1. Kuramsal Çerçeve",
+    "stil": "Heading2"
+   },
+   {
+    "metin": "Ortalanmış kısa paragraf.",
+    "hiza": "center"
+   },
+   {
+    "metin": "Uzun doğrudan alıntı; kırk sözcüğü aşan alıntılar blok olara… [105·0a137a4295]",
+    "girinti": {
+     "left": "576"
+    }
+   },
+   {
+    "metin": "Birinci hipotez kalın",
+    "stil": "ListParagraph",
+    "liste": 0,
+    "bicim": [
+     [
+      "",
+      16
+     ],
+     [
+      "b",
+      5
+     ]
+    ]
+   },
+   {
+    "metin": "İkinci hipotez",
+    "stil": "ListParagraph",
+    "liste": 0
+   },
+   {
+    "metin": "Tablo . Değişkenlerin tanımlayıcı istatistikleri",
+    "hiza": "center",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      40
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 2,
+     "hucre": [
+      2,
+      2
+     ],
+     "metin": "Değişken Ortalama Enflasyon 12,4"
+    }
+   },
+   {
+    "metin": "Kaynakça",
+    "stil": "Heading1"
+   },
+   {
+    "metin": "Friedman, M. (1968). The role of monetary policy. American E… [88·7919660502]",
+    "girinti": {
+     "left": "708",
+     "hanging": "708"
+    },
+    "bicim": [
+     [
+      "",
+      50
+     ],
+     [
+      "i",
+      24
+     ],
+     [
+      "",
+      14
+     ]
+    ]
+   },
+   {
+    "metin": "Phillips, A. W. (1958). The relation between unemployment an… [130·dec6394a4a]",
+    "girinti": {
+     "left": "708",
+     "hanging": "708"
+    },
+    "bicim": [
+     [
+      "",
+      102
+     ],
+     [
+      "i",
+      9
+     ],
+     [
+      "",
+      19
+     ]
+    ]
+   },
+   {
+    "metin": "Samuelson, P. A. ve Solow, R. M. (1960). Analytical aspects … [127·5342fe8d02]",
+    "girinti": {
+     "left": "708",
+     "hanging": "708"
+    },
+    "bicim": [
+     [
+      "",
+      86
+     ],
+     [
+      "i",
+      24
+     ],
+     [
+      "",
+      17
+     ]
+    ]
+   }
+  ],
+  "dipnotlar": [
+   {
+    "id": 1,
+    "metin": "Ayrıntılı tartışma için bkz. Friedman, M. (1968). The role o… [117·e116f9d467]"
+   }
+  ],
+  "resim": 0,
+  "bolum": 1
+ },
+ "yazdirma": {
+  "bloklar": [
+   {
+    "etiket": "h1",
+    "metin": "1. Giriş"
+   },
+   {
+    "etiket": "p",
+    "stil": "line-height:1.5;text-align:justify;text-indent:1.25cm",
+    "metin": "Enflasyon ile işsizlik arasındaki ilişki Phillips eğrisi ile… [161·80aaf907e2]",
+    "bicim": [
+     [
+      "",
+      41
+     ],
+     [
+      "i",
+      15
+     ],
+     [
+      "",
+      45
+     ],
+     [
+      "b",
+      7
+     ],
+     [
+      "",
+      6
+     ],
+     [
+      "u",
+      4
+     ],
+     [
+      "",
+      19
+     ],
+     [
+      "sup",
+      1
+     ],
+     [
+      "",
+      3
+     ],
+     [
+      "sup",
+      1
+     ],
+     [
+      "",
+      19
+     ]
+    ]
+   },
+   {
+    "etiket": "h2",
+    "metin": "1.1. Kuramsal Çerçeve"
+   },
+   {
+    "etiket": "p",
+    "stil": "text-align:center",
+    "metin": "Ortalanmış kısa paragraf."
+   },
+   {
+    "etiket": "p",
+    "metin": "Uzun doğrudan alıntı; kırk sözcüğü aşan alıntılar blok olara… [105·0a137a4295]",
+    "alinti": true
+   },
+   {
+    "etiket": "p",
+    "metin": "Birinci hipotez kalın",
+    "liste": 0,
+    "bicim": [
+     [
+      "",
+      16
+     ],
+     [
+      "b",
+      5
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "metin": "İkinci hipotez",
+    "liste": 0
+   },
+   {
+    "etiket": "p",
+    "sinif": "print-caption",
+    "metin": "Tablo 1. Değişkenlerin tanımlayıcı istatistikleri",
+    "bicim": [
+     [
+      "b",
+      8
+     ],
+     [
+      "",
+      41
+     ]
+    ]
+   },
+   {
+    "tablo": {
+     "satir": 2,
+     "hucre": [
+      2,
+      2
+     ],
+     "metin": "Değişken Ortalama Enflasyon 12,4"
+    }
+   },
+   {
+    "etiket": "h1",
+    "sinif": "print-new-page",
+    "metin": "Kaynakça"
+   },
+   {
+    "etiket": "p",
+    "stil": "padding-left:1.25cm;text-indent:-1.25cm",
+    "metin": "Friedman, M. (1968). The role of monetary policy. American E… [88·7919660502]",
+    "bicim": [
+     [
+      "",
+      50
+     ],
+     [
+      "i",
+      24
+     ],
+     [
+      "",
+      14
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "stil": "padding-left:1.25cm;text-indent:-1.25cm",
+    "metin": "Phillips, A. W. (1958). The relation between unemployment an… [130·dec6394a4a]",
+    "bicim": [
+     [
+      "",
+      102
+     ],
+     [
+      "i",
+      9
+     ],
+     [
+      "",
+      19
+     ]
+    ]
+   },
+   {
+    "etiket": "p",
+    "stil": "padding-left:1.25cm;text-indent:-1.25cm",
+    "metin": "Samuelson, P. A. ve Solow, R. M. (1960). Analytical aspects … [127·5342fe8d02]",
+    "bicim": [
+     [
+      "",
+      86
+     ],
+     [
+      "i",
+      24
+     ],
+     [
+      "",
+      17
+     ]
+    ]
+   }
+  ],
+  "dipnotlar": [
+   {
+    "id": 1,
+    "metin": "Ayrıntılı tartışma için bkz. Friedman, M. (1968). The role o… [117·e116f9d467]"
+   }
+  ]
+ }
+}

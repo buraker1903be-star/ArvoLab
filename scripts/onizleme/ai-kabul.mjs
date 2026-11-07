@@ -7,11 +7,20 @@
   tarayıcısız sınıyor; panelin düğmeleri, seçimin DOM'dan gelmesi,
   odak ve sürüm eyleminin ağ hatası yalnızca burada görünür.
 
-  CI'da DEĞİL: önizleme sunucusu (test asistanı açık, yazma kipi açık:
-  yenileme senaryosu kaydın kalıcı olmasını ister) ve Chromium ister.
+  CI'da DEĞİL. ÖNKOŞULLAR (ikisi de gerekli):
+    1. Test asistanı açık: `npm run onizleme:ai` (ARVOLAB_ONIZLEME=1,
+       ONIZLEME_AI=1, AI_ANAHTAR=onizleme). Düz `npm run onizleme` ile
+       asistan yapılandırılmamış sayılır ve asistan düğmeleri hiç çıkmaz.
+    2. Yazma kipi açık: ONIZLEME_YAZ=1. Yenileme senaryosu kaydın bellekte
+       kalıcı olmasını ister; kapalıyken "kayıt kalıcı değil" diye düşer.
+  Sunucu temiz veriyle başlamalı: yazma kipi veriyi bellekte değiştirir ve
+  önceki bir koşunun metni belgede kalır (yeniden başlatınca veri.ts'e
+  döner). Chromium ve NODE_PATH ile genel playwright gerekir.
     ONIZLEME_YAZ=1 npm run onizleme:ai
     NODE_PATH=$(npm root -g) node scripts/onizleme/ai-kabul.mjs [taban-adres]
-  Bir senaryo düşerse çıkış kodu 1.
+  Çıkış kodu: 0 temiz, 1 bir senaryo düştü, 2 önkoşul yok (senaryolara
+  girilmedi). Önkoşul 1 başta denetlenir; 2'nin dışarıdan görünen bir
+  işareti yok, yalnızca ilgili senaryonun mesajı söyler.
 */
 import { createRequire } from "node:module";
 
@@ -34,6 +43,36 @@ function bekle(kosul, mesaj) {
 }
 
 const tarayici = await chromium.launch();
+
+/*
+  Önkoşul: test asistanı açık mı? Ürünün kendi işaretine bakılır —
+  Kaynaklar'ın ⋯ menüsündeki "Tarama asistanı" yalnızca asistan
+  yapılandırılmışsa çizilir (literaturAsistaniAcik → aiYapilandirildi).
+  Eskiden yanlış sunucuya karşı koşunca her senaryo ayrı ayrı ve
+  anlaşılmaz biçimde (düğme bulunamadı, zaman aşımı) düşüyordu.
+*/
+{
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await ctx.newPage();
+  let asistanAcik = false;
+  try {
+    await s.goto(`${TABAN}/dashboard/literature?calisma=${TEZ}`, { waitUntil: "networkidle", timeout: 150000 });
+    await s.locator(".sayfa-tasma-dugme").first().click({ timeout: 30000 });
+    await s.waitForTimeout(300);
+    asistanAcik = (await s.locator(".sayfa-tasma-menu:not([hidden]) button", { hasText: "Tarama asistanı" }).count()) > 0;
+  } catch (hata) {
+    console.log(`Önkoşul denetlenemedi (${TABAN} açılmıyor mu?): ${String(hata?.message ?? hata).slice(0, 160)}`);
+    await tarayici.close();
+    process.exit(2);
+  }
+  await ctx.close();
+  if (!asistanAcik) {
+    console.log("ÖNKOŞUL YOK: test asistanı kapalı. Sunucuyu `ONIZLEME_YAZ=1 npm run onizleme:ai` ile başlatın.");
+    await tarayici.close();
+    process.exit(2);
+  }
+  console.log("✓ önkoşul: test asistanı açık");
+}
 async function editorAc(secenek = { viewport: { width: 1440, height: 900 } }, hazirla) {
   const ctx = await tarayici.newContext(secenek);
   const sayfa = await ctx.newPage();
@@ -260,8 +299,24 @@ for (const [ad, secenek] of [
     await par.scrollIntoViewIfNeeded();
     if (ad === "telefon") await par.tap();
     else await par.click();
+    /*
+      Telefonda bu senaryo aralıklı düşüyordu ("düğme görünmüyor"; R0,
+      07.11.2026: 3 koşunun 2'sinde). Neden ÜRÜN değil, test kurgusu:
+      sentetik dokunmanın hemen ardından JavaScript ile kurulan DOM seçimi
+      bazen ProseMirror'a geçmiyor, editör dokunmanın bıraktığı boş imleçte
+      kalıyor (ölçüldü: seçim 1013–1013, boş) ve düğme doğal olarak
+      çıkmıyor. Gerçek kullanıcı seçimi uzun basarak, dokunmadan çok sonra
+      yapar. Bu yüzden seçimin EDİTÖRE geçtiği beklenir, geçmediyse bir kez
+      daha kurulur; düğmenin görünürlük ve örtme denetimi aynen kalır.
+    */
+    const edSecimi = () => sayfa.evaluate(() => !document.querySelector(".ProseMirror").editor.state.selection.empty);
     await sec(sayfa, 2, 60);
-    await sayfa.waitForTimeout(300);
+    for (let deneme = 0; deneme < 2 && !(await edSecimi()); deneme++) {
+      await sayfa.waitForTimeout(400);
+      await sec(sayfa, 2, 60);
+    }
+    bekle(await edSecimi(), "seçim editöre geçmedi (test kurgusu)");
+    await sayfa.locator(".secim-ai-dugme").waitFor({ state: "visible", timeout: 3000 }).catch(() => {});
     const k = await sayfa.evaluate(() => {
       const d = document.querySelector(".secim-ai-dugme")?.getBoundingClientRect();
       if (!d || !d.width) return null;
