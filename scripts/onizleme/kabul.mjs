@@ -230,7 +230,7 @@ const tarayici = await chromium.launch();
     await sayfa.locator(".yazma-ai").click();
     const panel = sayfa.locator("#yazim-yan-panel");
     await sayfa.waitForTimeout(300);
-    bekle((await panel.getByRole("tab", { selected: true }).innerText()).includes("Asistan"), "Arvo AI asistan görünümünü açmadı");
+    bekle((await panel.getByRole("tab", { selected: true }).innerText()).includes("Arvo AI"), "Arvo AI asistan görünümünü açmadı");
     // Asistan ayrı bir paket (dynamic import): soğuk sunucuda ilk derleme birkaç saniye sürebilir.
     await panel.locator(".yazim-paneli textarea").waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
     bekle(await panel.locator(".yazim-paneli textarea").isVisible(), "asistanın istek kutusu görünmüyor");
@@ -277,7 +277,7 @@ const tarayici = await chromium.launch();
       await sayfa.keyboard.press("Escape");
     }
     const panel = sayfa.locator("#yazim-yan-panel");
-    for (const sekme of ["Asistan", "İnceleme", "Kaynaklar", "Teslim"]) {
+    for (const sekme of ["Arvo AI", "İnceleme", "Kaynaklar", "Teslim"]) {
       await panel.getByRole("tab", { name: new RegExp(sekme) }).click();
       await sayfa.waitForTimeout(250);
       await topla("#yazim-yan-panel");

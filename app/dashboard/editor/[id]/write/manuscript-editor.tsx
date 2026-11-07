@@ -2186,7 +2186,7 @@ export default function ManuscriptEditor({
 
   /* Panelin sekmeleri; Teslim sekmesi hazır madde sayısını taşır (eskiden başlıktaki "Teslim kontrolü 1/5" düğmesi). */
   const panelSekmeleri: PanelSekmesi[] = [
-    { id: "asistan", etiket: t({ tr: "Asistan", en: "Assistant" }), ikon: Sparkles },
+    { id: "asistan", etiket: "Arvo AI", ikon: Sparkles },
     { id: "inceleme", etiket: t({ tr: "İnceleme", en: "Review" }), ikon: FileSearch },
     { id: "kaynaklar", etiket: t({ tr: "Kaynaklar", en: "Sources" }), ikon: BookMarked },
     { id: "teslim", etiket: t({ tr: "Teslim", en: "Submission" }), ikon: ClipboardCheck, rozet: `${checklist.done}/${checklist.total}` },

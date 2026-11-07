@@ -1711,3 +1711,95 @@
   .secim-ai-menu { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; max-width: calc(100vw - 32px); }
   .secim-ai-menu .arac-menu-oge { width: auto; flex: 1 1 auto; justify-content: center; }
 }
+
+/* ============================================================
+   PHASE 4.5 — SIGNATURE ACADEMIC EDITOR: EDİTÖR KABUĞU (1. dilim)
+   Yalnızca kabuk: başlık hiyerarşisi, belge masası, sağ panelin dış
+   kabuğu. Araç çubuğu, belge tipografisi, kayıt ve AI mantığı bu
+   dilimde değişmez. Kurallar dosyanın sonunda: aynı özgüllükteki eski
+   kuralları sırayla geçer, eskiler silinmedi (dilim geri alınırsa bu
+   blok tek başına kaldırılır).
+   ============================================================ */
+
+/* ---- Başlık satırı ---- */
+/*
+  Eskiden başlık tek satırda kesiliyordu: 1440 pikselde panel açıkken
+  "TÜRKİYE'DE ENFLA…" kalıyor, çalışmanın adı okunamıyordu. Artık başlık KENDİ satırında, altında kayıt durumu (solda) ve eylemler
+  (sağda). İlk denemede başlık düğmelerle aynı satırda iki satıra
+  kırılıyordu ama düğmeler yine ~300 pikseli bırakıyordu ("TÜRKİYE'DE /
+  ENFLASYON VE…"). Telefonda eski düzen (aşağıdaki 760 piksel kuralı).
+*/
+@media (min-width: 761px) {
+  .yazma-basligi { flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); margin-bottom: var(--s-4); }
+  .yazma-baslik { align-items: flex-start; flex: 1 1 100%; }
+  .yazma-baslik-simge { margin-top: 5px; }
+  .yazma-baslik h1 { font-size: var(--fs-xl); }
+}
+/* İki satıra kadar kırılır, sonra kesilir (her genişlikte). */
+.yazma-baslik h1 {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  white-space: normal; text-wrap: balance; overflow-wrap: anywhere;
+  font-weight: 650; letter-spacing: -.018em; line-height: 1.25;
+}
+.yazma-durum, .yazma-eylemleri { align-self: center; }
+/*
+  Kayıt durumu: olağan hâlde (kaydedildi / kaydediliyor / değişti)
+  sakin — renkli nokta ve gri yazı, çerçevesiz. Eskiden "Kaydedildi"
+  yeşil çerçeveli bir hap olarak başlıkla yarışıyordu. Hata ve çakışma
+  dikkat çekmeye devam eder (kırmızı zemin ve çerçeve, workspace.css
+  üstündeki kurallar). Düğme olarak kalır: tıklayınca şimdi kaydeder.
+*/
+.yazma-durum .save-status:not([data-state="error"]):not([data-state="conflict"]) {
+  border-color: transparent; background: transparent; color: var(--muted); font-weight: 500;
+}
+.yazma-durum .save-status:not([data-state="error"]):not([data-state="conflict"]):hover { background: var(--dugme-hover-zemin); color: var(--ink); }
+.yazma-durum .save-status::before { background: var(--tone, currentColor); }
+
+/* ---- Belge masası ---- */
+/*
+  Açık temada beyaz kâğıt beyaz kartın içinde kayboluyordu; koyu temada
+  da kâğıt sütunun tamamını kaplayan beyaz bir levhaydı. Kâğıdın yazı
+  alanı (860 piksel sütun, .manuscript-editor-content dolgusu) aynen
+  kalır; yalnızca ARKA PLAN katmanlanır: ortada kenarlı beyaz sayfa,
+  iki yanda masa. Sütun daralınca sayfa tüm genişliği alır (masa
+  görünmez). Yalnızca ekranda: yazdırma ve Word kendi yollarından
+  çizilir, baskıda bu kural hiç uygulanmaz.
+*/
+@media screen {
+  .manuscript-editor-content {
+    /* 860 piksel sütun + kenar boşluğu; sütun daralınca kenardan 20 piksel içeride. */
+    --sayfa-yari: min(494px, calc(50% - 20px));
+    /* Zemin rengi kâğıt olarak kalır (Phase 4.3 kabul testi bunu ölçer); masa yalnızca üstteki görüntü katmanı. */
+    background-color: var(--kagit);
+    background-image:
+      linear-gradient(90deg,
+        var(--belge-masa) calc(50% - var(--sayfa-yari) - 1px),
+        var(--belge-kenar) calc(50% - var(--sayfa-yari) - 1px), var(--belge-kenar) calc(50% - var(--sayfa-yari)),
+        var(--kagit) calc(50% - var(--sayfa-yari)), var(--kagit) calc(50% + var(--sayfa-yari)),
+        var(--belge-kenar) calc(50% + var(--sayfa-yari)), var(--belge-kenar) calc(50% + var(--sayfa-yari) + 1px),
+        var(--belge-masa) calc(50% + var(--sayfa-yari) + 1px));
+  }
+}
+/* Telefonda masa yok: sayfa ekranın tamamı (her piksel yazıya). */
+@media screen and (max-width: 760px) {
+  .manuscript-editor-content { --sayfa-yari: 50%; }
+}
+
+/* ---- Sağ panel kabuğu ---- */
+@media (min-width: 1400px) {
+  .dashboard-page.yazim-sayfasi { --yan-panel-genislik: var(--yan-panel-genis); }
+}
+.yan-panel { border-color: var(--line-soft); background: var(--surface); box-shadow: var(--shadow-sm); }
+.yan-panel-bas { gap: var(--s-2); padding: var(--s-2); }
+/*
+  Sekmeler tek bir bölmeli denetim: zemin hafif gömük, seçili görünüm
+  kabarık yüzey + ince gölge. Eskiden seçili sekme mavi zeminliydi ve
+  başlık satırındaki ana düğmeyle (Arvo AI) aynı ağırlıkta görünüyordu.
+*/
+.yan-panel-sekmeler { padding: 3px; border-radius: var(--r-md); background: var(--surface-2); }
+.yan-panel-sekmeler [role="tab"] { border-radius: calc(var(--r-md) - 3px); transition: background-color var(--sure-hizli, .15s) ease, color var(--sure-hizli, .15s) ease; }
+.yan-panel-sekmeler [role="tab"][aria-selected="true"] { background: var(--surface-raised); color: var(--ink); box-shadow: var(--shadow-sm); }
+.yan-panel-sekmeler [role="tab"][aria-selected="true"] svg { color: var(--primary); }
+@media (prefers-reduced-motion: reduce) {
+  .yan-panel-sekmeler [role="tab"] { transition: none; }
+}

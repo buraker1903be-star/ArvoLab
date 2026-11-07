@@ -529,3 +529,21 @@ html[data-theme="dark"] {
 
   color-scheme: dark;
 }
+
+/*
+  EDİTÖR KABUĞU (Phase 4.5, Signature Academic Editor). Kâğıdın çevresindeki
+  "masa" ve sayfa kenarı. BİLEREK `:root, .kagit` bloğunda değil: .kagit
+  açık tokenları belgenin içinde yeniden kurar; masa rengi oraya konsaydı
+  koyu temada da açık kalırdı. Burada tanımlanınca .kagit'e temanın
+  çözülmüş değeriyle miras geçer. Belgenin yazısına ve çıktılara dokunmaz
+  (yalnızca ekranda, workspace.css'teki Phase 4.5 bölümü).
+*/
+:root {
+  --belge-masa: var(--gri-100);
+  --belge-kenar: var(--gri-200);
+  --yan-panel-genis: 360px;
+}
+html[data-theme="dark"] {
+  --belge-masa: var(--gece-950);
+  --belge-kenar: var(--gece-600);
+}
