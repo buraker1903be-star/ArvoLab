@@ -1,10 +1,10 @@
 # Güvenli test ortamı ve Supabase ortam güvenliği
 
-Aşama 1 ve Durak 0 düzeltmeleri (05.11.2026). Kod hazır; **hiçbir ortama
-dağıtılmadı, hiçbir betik bir Supabase projesine karşı çalıştırılmadı.** Bu
-belge, kodu kesinti olmadan devreye almanın sırasını anlatır. Sıra önemlidir:
-kod, panel adımlarından ÖNCE önizlemeye giderse önizleme derlemesi (bilerek)
-durur.
+Aşama 1 ve Durak 0 düzeltmeleri (05.11.2026). Bu belge, kodu kesinti
+olmadan devreye almanın sırasını anlatır. Sıra önemlidir: kod, panel
+adımlarından ÖNCE önizlemeye giderse önizleme derlemesi (bilerek) durur.
+Güncel yapılandırma ve açık güvenlik notu hemen aşağıda; sıranın hangi
+adımlarının yapıldığı "Kesintisiz devreye alma sırası"nda işaretli.
 
 ## Neden
 
@@ -13,33 +13,71 @@ Production **ve** Preview için aynıydı. Her dal önizlemesi canlı
 veritabanına bağlanıyordu. Önizlemede `OPENAI_API_KEY` ve `CRON_SECRET`
 de üretim değerlerini alıyordu.
 
-## Güncel karar: tek proje (05.11.2026)
+## Güncel durum: ayrı Test projesi (07.11.2026, salt okunur doğrulama)
 
-Kurum sahibi ayrı bir test projesi açmamaya karar verdi. Önizleme ve yerel
-geliştirme bilerek ÜRETİM projesine (`zpfpocyajnxcketdjbxm`) bağlanıyor;
-projede gerçek müşteri yok, iki deneme çalışması var. Kod bunu ancak açık
-bir beyanla kabul eder:
+Preview artık ayrı TEST projesine bağlı; üretim projesine bağlanmıyor.
+07.11.2026'da Vercel ve Supabase'ten salt okunur doğrulandı (değişken
+değeri yazılmadan; gizli anahtar hiç okunmadı):
 
-| Değişken (Vercel, yalnızca **Preview**) | Değer |
+| Kimlik | Proje |
 |---|---|
-| `ARVOLAB_TEK_PROJE` | `1` |
-| `ARVOLAB_URETIM_SUPABASE_REF` | `zpfpocyajnxcketdjbxm` |
+| Test | `kyvjftrsweqjlgjeobnq` |
+| Üretim | `zpfpocyajnxcketdjbxm` |
 
-- Beyan yalnızca adres bu kimliği gösteriyorsa geçerli; kimlik tanımlı
-  değilse ya da adres başka bir projeyi gösteriyorsa ret sürer.
-- Beyan üretim anahtarlarının (OpenAI, cron) önizlemede kullanılmasını da
-  kabul eder ve derleme günlüğüne uyarı yazar. Bu bir "test anahtarıdır"
-  beyanı değildir.
-- Betik kuralları değişmez: şema kurulumu ve sentetik veri üretimde hiçbir
-  koşulda çalışmaz; üretime migration yine `--uretim` + onay cümlesi ister.
-- İki değişken eklenmeden dala gönderilen kodun önizleme derlemesi bilerek
-  durur (`uretim-disi-uretime-bagli`); canlı site etkilenmez.
-- Önizlemede yapılan her işlem canlı veriye yazılır. Önizlemede gerçek
-  hesaplarla deneme yapılmaz; tasarım doğrulaması yerel sahte önizlemede
-  (`npm run onizleme`) yapılır.
+**Preview** (yalnızca `preview` hedefli, tam altı değişken):
 
-Aşağıdaki test projesi planı, ileride ayrı bir test projesi açılırsa
-geçerlidir; o gün `ARVOLAB_TEK_PROJE` Preview'dan kaldırılır.
+| Değişken | Değer / doğrulama |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://kyvjftrsweqjlgjeobnq.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Test projesinin publishable anahtarıyla birebir aynı; üretiminkinden farklı |
+| `SUPABASE_SECRET_KEY` (Sensitive) | Değer okunamaz. Test'in istek günlüğünde tek bir gizli anahtar var, bütün çağrıları 2xx, hiç 401 yok; çağrılar Preview dağıtımının sunucu isteğiyle aynı anda. Dolaylı ama tutarlı kanıt. |
+| `ARVOLAB_SUPABASE_ORTAMI` | `test` |
+| `ARVOLAB_TEST_SUPABASE_REF` | `kyvjftrsweqjlgjeobnq` |
+| `ARVOLAB_URETIM_SUPABASE_REF` | `zpfpocyajnxcketdjbxm` (bağlantı değil: koruma bu kimliği tanıyıp reddetmek için kullanır) |
+
+- `ARVOLAB_TEK_PROJE` TANIMLI DEĞİL. Preview adresi üretimi gösterirse
+  bağlantı reddedilir (`uretim-disi-uretime-bagli`).
+- AI, Resend, cron ve köprü anahtarları yalnızca Production'da; Preview
+  bunları almıyor (Preview günlüğü: "RESEND_API_KEY tanımlı değil").
+- **Production** (yalnızca `production` hedefli, 12 değişken): Supabase
+  üçlüsü, AI, Resend, cron, köprü. `ARVOLAB_*` değişkenlerinin HİÇBİRİ yok
+  → aşağıdaki P1.
+- Ekip düzeyinde paylaşılan (shared) değişkenler bu araçlarla
+  listelenemedi. Etkin değerler çalışan dağıtımın gerçek trafiğinden
+  doğrulandı (Supabase trafiği Test'e gidiyor); listenin kendisi panelden
+  (Team Settings → Environment Variables) bakılmalı.
+
+### P1 — Production'da ortam güvenliği değişkenleri yok (AÇIK, 07.11.2026)
+
+Aşağıdaki "Kesintisiz devreye alma sırası" adım 8 yapılmadı: Production'da
+`ARVOLAB_SUPABASE_ORTAMI`, `ARVOLAB_URETIM_SUPABASE_REF` ve
+`ARVOLAB_TEST_SUPABASE_REF` tanımlı değil. Kod bu durumda üretimi
+geriye dönük uyumlulukla çalıştırıyor (`supabaseOrtamKarari`: üretim
+kimliği yoksa bağlantı kesilmez, yalnızca uyarı). Sonuç: Production'ın
+adresi YANLIŞLIKLA test projesine çevrilse bağlantı REDDEDİLMEZ;
+`uretim-test-projesine-bagli` ve `uretim-projesi-degil` denetimleri ancak
+bu kimlikler tanımlıyken çalışır.
+
+Etkilemediği: Preview'ın güvenliği (Preview kendi değişkenleriyle tam
+denetimde) ve ortak dizin kotası (o karar yalnızca `VERCEL_ENV` ile derleme
+ortamına bakar; Production'da sayaç yoksa yine fail-closed).
+
+Düzeltme bir Production değişikliğidir; ayrı plan ve onayla yapılır. Plan
+taslağı adım 8'de: üç gizli olmayan değişken, Redeploy yok; yanlış yazılırsa
+yalnızca sonraki üretim derlemesi durur.
+
+### Eski karar: tek proje (05.11.2026 — artık geçerli değil)
+
+05.11.2026'da ayrı test projesi açılmaması kararlaştırılmış, Preview
+`ARVOLAB_TEK_PROJE=1` beyanıyla ÜRETİM projesine bağlanacaktı. Sonra
+Test projesi kuruldu; Preview'ın test değişkenleri Vercel kayıtlarına göre
+05.11.2026 20:50–20:58 UTC'de girildi (adım 4–5) ve beyan bugün Preview'da
+tanımlı değil. Beyanın kodu (`ARVOLAB_TEK_PROJE`)
+yerinde duruyor: tanımlanırsa üretim dışı ortamın üretim projesine
+bağlanmasını yeniden açar, bu yüzden Preview'a geri eklenmemeli.
+`lib/supabase/ortam-guvenligi.ts`'teki bir yorum hâlâ "önizleme bugün
+ARVOLAB_TEK_PROJE=1 beyanıyla bu projeye bağlanıyor" diyor; o yorum
+eskidi (kod değişikliği ayrı turda).
 
 ### Migration geçmişi (05.11.2026, salt okunur ölçüm)
 
@@ -196,7 +234,10 @@ veritabanı). En temiz çözüm: boş test projesini silip yeniden açmak.
 - Preview zaten Vercel Authentication ile korumalı ("custom domain dışında
   hepsi").
 
-Bugünkü Production listesi (05.11.2026, yalnızca adlar): **12 değişken.**
+07.11.2026 durumu: adım 4–5 yapıldı (Production 12 değişken, hepsi
+yalnızca Production; Preview tam 6 test değişkeni), adım 8 YAPILMADI (P1).
+
+05.11.2026'daki Production listesi (yalnızca adlar): **12 değişken.**
 Yalnızca Production: `AI_ANAHTAR`, `AI_MODEL`, `AI_MODEL_LITERATUR`,
 `AI_TABAN_URL`, `RESEND_API_KEY`, `ARVOOS_BRIDGE_URL`,
 `PRODUCT_BRIDGE_SECRET`. Production + Preview (daraltılacak):
