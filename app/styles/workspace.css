@@ -1453,8 +1453,8 @@
   background: var(--surface);
 }
 .manuscript-main > .manuscript-editor-shell { border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); box-shadow: none; }
-/* Bul-değiştir şeridi araç çubuğunun hemen altına yapışır (çubuk 46 piksel). */
-.manuscript-main .manuscript-ust { top: calc(var(--topbar-height) + 46px); z-index: calc(var(--z-sticky) - 1); background: var(--surface); }
+/* Bul-değiştir şeridi araç çubuğunun hemen altına yapışır (çubuk 54 piksel: 40 düğme + 12 dolgu + 2 kenar; UX S4 öncesi 46). */
+.manuscript-main .manuscript-ust { top: calc(var(--topbar-height) + 54px); z-index: calc(var(--z-sticky) - 1); background: var(--surface); }
 /* Seçim kutuları çubukta kenarlıksız; mockup'taki "Normal Metin" gibi. */
 .manuscript-araclar .toolbar-select { border-color: transparent; background-color: transparent; font-weight: 600; }
 .manuscript-araclar .toolbar-select:hover { background-color: var(--dugme-hover-zemin); }
@@ -2016,3 +2016,33 @@
      taşıyordu; durum ile düğmeler arası 8 → 4 px. */
   .yazma-basligi { column-gap: 4px; }
 }
+
+/* ============================================================
+   ARAÇ ÇUBUĞU: 40×40 HEDEF VE DARALMA (UX S3+S4, 07.11.2026)
+   Karar lib/arac-cubugu.ts, ölçüm manuscript-editor.tsx.
+   - Her basılabilir öğe en az 40×40; simgeler 16 piksel kaldı.
+     Eskiden fareli masaüstünde 34×32 (bitişik gruplarda 30×28).
+   - Sığmayan grup çubuktan çıkar, "⋯" menüsünün başına gelir; çubuk
+     artık yana kaymıyor, kaydırma solması da kalktı (son düğmeyi,
+     yani "⋯"yi soluklaştırıyordu).
+   Dosyanın sonunda: önceki 32 piksellik masaüstü kuralını ve dokunmatik
+   kuralını eşit özgüllükte geçersiz kılar.
+   ============================================================ */
+.manuscript-araclar button,
+.manuscript-araclar .arac-segment button { min-width: 40px; height: 40px; min-height: 40px; }
+.manuscript-araclar .toolbar-select { height: 40px; }
+.manuscript-araclar .arac-grup[hidden] { display: none; }
+.manuscript-araclar {
+  overflow-x: auto; /* güvenlik ağı: ölçüm olmadan taşarsa sayfa değil çubuk kayar */
+  -webkit-mask-image: none;
+  mask-image: none;
+  animation: none;
+}
+/* Menü öğeleri de 40 piksel (çubukta kalmayan düğmeler buraya geliyor). */
+.arac-menu-pencere button,
+.arac-menu-pencere .arac-segment button { min-height: 40px; }
+.arac-menu-pencere .toolbar-select { height: 40px; }
+.arac-menu-bolum { display: grid; gap: 2px; }
+.arac-menu-bolum .arac-segment { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 0; }
+.arac-menu-baslik { padding: 6px 10px 2px; color: var(--muted); font-size: var(--fs-micro); font-weight: 650; letter-spacing: .03em; text-transform: uppercase; }
+.arac-menu-ayrac { margin: 4px 2px; border: 0; border-top: 1px solid var(--line-soft); }
