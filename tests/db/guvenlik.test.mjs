@@ -222,15 +222,15 @@ describe("fonksiyon yetkileri", () => {
         gozetim_kapsami(kurum, '{academic_manager}'), yani faturaları
         görmekle aynı kural. Yetkisiz çağıran boş liste alır
         (tests/db/kurum-kredi-hareketleri.test.mjs).
-      sifre_durumum            — PARAMETRE ALMIYOR; yalnızca çağıranın KENDİ
-        hesabında şifre olup olmadığını (var/yok) döndürür, şifreyi ya da
-        özetini değil. İlk şifre kapısı (proxy.ts, G1) oturumla çağırıyor.
+      ilk_sifre_gerekli        — PARAMETRE ALMIYOR; yalnızca çağıranın KENDİ
+        hesabı için evet/hayır (şifre yok ve ArvoOS üyesi değil); şifre,
+        özet ya da üye listesi döndürmez. İlk şifre kapısı (proxy.ts, G1).
   */
   test("authenticated ek olarak yalnızca kendi kapsamındaki on bir fonksiyon", async () => {
     assert.deepEqual(await acik("authenticated"),
       [...POLITIKA, "resync_project_guidelines", "arvoos_uyeligimi_bagla", "arvoos_uyeligimi_bagla_kurum", "ai_kredi_durumum", "olcum_ozeti",
        "asistan_model_ozetleri", "calisma_hareketlerim", "yazim_ritmi", "ai_bireysel_kredi_hareketlerim",
-       "ai_kurum_kredi_hareketleri", "sifre_durumum"].sort());
+       "ai_kurum_kredi_hareketleri", "ilk_sifre_gerekli"].sort());
   });
 
   test("notify anonim ve oturumlu kullanıcıya kapalı (sahte bildirim)", () =>
