@@ -329,3 +329,31 @@ export function etkinBaglanti(baglantilar: BaglamBaglantisi[], yol: string): Bag
   return null;
 }
 
+
+/*
+  TEK "BURASI" (UX S5, 07.11.2026). Kenar çubuğunda iki ayrı etkinlik
+  hesabı vardı: genel menü yalnızca adrese bakıyor (Kaynaklar sayfası →
+  "Kaynaklar"), açık çalışma bölümü de adrese ve ?calisma= değerine
+  (aynı sayfa → çalışmanın "Kaynaklar"ı). İkisi birden
+  aria-current="page" alıyor ve ikisi birden vurgulu görünüyordu;
+  yazım ekranında da "Çalışmalarım" ile "Yazım" aynı anda etkindi.
+
+  Kural: sayfa tek yerde "page". Çalışma bölümünde etkin bir bağlantı
+  varsa sayfa O'dur; genel uygulama yalnızca "içinde bulunulan bölüm"dür
+  (aria-current="true", sönük vurgu). Çalışma bölümü görünmüyorsa
+  (daraltılmış menü, tablet, telefon: CSS gizliyor, `baglantilar` boş
+  geliyor ya da hiçbiri etkin değil) genel uygulama "page" kalır.
+  Rol bazlı görünürlüğe dokunmaz: hangi uygulamaların listede olduğu
+  gorunenUygulamalar'ın işi, burası yalnızca vurguyu seçer.
+*/
+export type GezinmeVurgusu = {
+  uygulama: OsUygulama | null;
+  uygulamaAriaCurrent: "page" | "true" | undefined;
+  baglanti: BaglamBaglantisi | null;
+};
+
+export function gezinmeVurgusu(uygulamalar: OsUygulama[], yol: string, baglantilar: BaglamBaglantisi[]): GezinmeVurgusu {
+  const uygulama = etkinUygulama(uygulamalar, yol);
+  const baglanti = baglantilar.length ? etkinBaglanti(baglantilar, yol) : null;
+  return { uygulama, baglanti, uygulamaAriaCurrent: !uygulama ? undefined : baglanti ? "true" : "page" };
+}

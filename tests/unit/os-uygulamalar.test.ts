@@ -16,6 +16,7 @@ import {
   docktakiler,
   etkinBolum,
   etkinUygulama,
+  gezinmeVurgusu,
   gorunenUygulamalar,
   labUygulamalari,
 } from "@/lib/os/uygulamalar";
@@ -237,4 +238,62 @@ test("bağlamda etkin bağlantı", () => {
   assert.equal(etkinBaglanti(b, "/dashboard/editor/c1/kanit")?.key, "kanit");
   assert.equal(etkinBaglanti(b, "/dashboard/editor")?.key, "merkez");
   assert.equal(etkinBaglanti(b, "/dashboard/analysis")?.key, "analiz");
+});
+
+describe("tek \"burası\" (UX S5): sayfa tek yerde aria-current=page", () => {
+  const C = { id: "c1", baslik: "Tez", tur: "thesis" };
+  const baglantilar = calismaBaglantilari(C);
+  const pageSayisi = (v: ReturnType<typeof gezinmeVurgusu>) => Number(v.uygulamaAriaCurrent === "page") + Number(Boolean(v.baglanti));
+
+  test("çalışmanın Kaynaklar'ı: sayfa çalışma bölümünde, genel Kaynaklar yalnızca bölüm", () => {
+    /* Eskiden ikisi de "page" idi ve ikisi de dolgulu vurgulanıyordu. */
+    const v = gezinmeVurgusu(uygulamalar, "/dashboard/literature", baglantilar);
+    assert.equal(v.baglanti?.key, "kaynaklar");
+    assert.equal(v.uygulama?.key, "kaynaklar");
+    assert.equal(v.uygulamaAriaCurrent, "true");
+    assert.equal(pageSayisi(v), 1);
+  });
+
+  test("yazım ekranı: Yazım page, Çalışmalarım yalnızca bölüm", () => {
+    const v = gezinmeVurgusu(uygulamalar, "/dashboard/editor/c1/write", baglantilar);
+    assert.equal(v.baglanti?.key, "yazim");
+    assert.equal(v.uygulama?.key, "tez");
+    assert.equal(v.uygulamaAriaCurrent, "true");
+    assert.equal(pageSayisi(v), 1);
+  });
+
+  test("çalışma bölümü görünmüyorsa (daraltılmış, tablet, telefon, başka çalışma) genel uygulama page", () => {
+    const v = gezinmeVurgusu(uygulamalar, "/dashboard/literature", []);
+    assert.equal(v.uygulama?.key, "kaynaklar");
+    assert.equal(v.uygulamaAriaCurrent, "page");
+    assert.equal(v.baglanti, null);
+  });
+
+  test("çalışma bölümü görünür ama etkin bağlantısı yoksa genel uygulama page kalır", () => {
+    // /dashboard/editor/c1 (ayrıntı) ne Özet ne bir bölüm: sayfa sahipsiz kalmamalı.
+    const v = gezinmeVurgusu(uygulamalar, "/dashboard/editor/c1", baglantilar);
+    assert.equal(v.baglanti, null);
+    assert.equal(v.uygulamaAriaCurrent, "page");
+  });
+
+  test("tanınmayan yolda hiçbir şey page değil", () => {
+    const v = gezinmeVurgusu(uygulamalar, "/baska/yer", []);
+    assert.equal(v.uygulama, null);
+    assert.equal(v.uygulamaAriaCurrent, undefined);
+  });
+
+  test("bütün bağlam bağlantıları ve uygulamalar için en fazla bir page", () => {
+    const yollar = [...baglantilar.map((b) => b.href.split("?")[0]), ...uygulamalar.map((u) => u.href.split("?")[0])];
+    for (const yol of yollar) {
+      for (const bl of [baglantilar, []]) assert.ok(pageSayisi(gezinmeVurgusu(uygulamalar, yol, bl)) <= 1, yol);
+    }
+  });
+
+  test("rol bazlı liste değişmiyor: vurgu yalnızca verilen listeden seçer", () => {
+    for (const rol of ["student", "controller", "system_admin", undefined]) {
+      const liste = gorunenUygulamalar(uygulamalar, rol);
+      const v = gezinmeVurgusu(liste, "/dashboard/literature", baglantilar);
+      assert.ok(v.uygulama === null || liste.includes(v.uygulama));
+    }
+  });
 });

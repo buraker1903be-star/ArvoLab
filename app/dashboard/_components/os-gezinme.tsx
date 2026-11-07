@@ -11,12 +11,13 @@ import {
   calismaIcindeMi,
   dahaFazlasi,
   etkinBaglanti,
-  etkinUygulama,
+  gezinmeVurgusu,
   gezinmeGruplari,
   type OsUygulama,
 } from "@/lib/os/uygulamalar";
 import { OsSimge } from "./os-simge";
 import { useCalismaBaglami } from "./calisma-baglami";
+import { useEkranSinifi } from "./ekran-sinifi";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import { KENAR_ANAHTARI, kenarOku } from "@/lib/os/kenar";
 
@@ -78,13 +79,22 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
   const pencere = useRef<HTMLDialogElement>(null);
   const baglam = useCalismaBaglami();
   const dar = useSyncExternalStore(kenarAbone, kenarDarMi, () => false);
-  const etkin = etkinUygulama(uygulamalar, yol);
+  const baglamGorunur = baglam && calismaIcindeMi(baglam.id, yol, new URLSearchParams(sorgu.toString()));
+  const baglantilar = baglamGorunur ? calismaBaglantilari(baglam, t) : [];
+  /*
+    Tek "burası" (UX S5): sayfa ya çalışma bölümünde ya genel menüde "page",
+    ikisinde birden değil. Çalışma bölümü yalnızca geniş masaüstünde görünür
+    (CSS: ≥1200 ve daraltılmamış); tablet, telefon ve daraltılmış menüde
+    gizliyken genel uygulama "page" kalmalı, yoksa menüde hiç "burası" olmaz.
+  */
+  const ekran = useEkranSinifi();
+  const baglamGoruntuleniyor = Boolean(baglamGorunur) && ekran === "masaustu" && !dar;
+  const vurgu = gezinmeVurgusu(uygulamalar, yol, baglamGoruntuleniyor ? baglantilar : []);
+  const etkin = vurgu.uygulama;
+  const baglamEtkin = baglamGorunur ? etkinBaglanti(baglantilar, yol) : null;
   const { ana, diger, ayarlar } = gezinmeGruplari(uygulamalar);
   const cubukta = new Set<string>(ALT_CUBUK);
 
-  const baglamGorunur = baglam && calismaIcindeMi(baglam.id, yol, new URLSearchParams(sorgu.toString()));
-  const baglantilar = baglamGorunur ? calismaBaglantilari(baglam, t) : [];
-  const baglamEtkin = baglamGorunur ? etkinBaglanti(baglantilar, yol) : null;
 
   const oge = (u: OsUygulama) => {
     const acik = etkin?.key === u.key;
@@ -93,7 +103,7 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
         <Link
           href={u.href}
           className={acik ? "os-gezinme-oge is-active" : "os-gezinme-oge"}
-          aria-current={acik ? "page" : undefined}
+          aria-current={acik ? vurgu.uygulamaAriaCurrent : undefined}
           title={u.label}
         >
           <OsSimge ad={u.ikon} boyut={20} />
@@ -207,7 +217,7 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
               <Link
                 href={u.href}
                 className={etkin?.key === u.key ? "os-gezinme-oge is-active" : "os-gezinme-oge"}
-                aria-current={etkin?.key === u.key ? "page" : undefined}
+                aria-current={etkin?.key === u.key ? vurgu.uygulamaAriaCurrent : undefined}
                 onClick={() => pencere.current?.close()}
               >
                 <OsSimge ad={u.ikon} boyut={20} />

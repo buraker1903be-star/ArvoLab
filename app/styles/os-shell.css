@@ -136,6 +136,11 @@
   /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin.
      Daraltılınca bölümler kenar çubuğundan çıkar, sekmeler geri gelir. */
   html:not([data-kenar="dar"]) .os-root .calisma-sekmeleri { display: none; }
+  /* Tek "burası" (UX S5): çalışma bölümünde sayfa etkinken genel uygulama
+     yalnızca "içinde bulunulan bölüm" (aria-current="true"): dolgusuz, simgesi
+     renkli. Eskiden ikisi de aynı dolgulu vurguyu taşıyordu. */
+  html:not([data-kenar="dar"]) .os-gezinme .os-gezinme-oge.is-active[aria-current="true"] { background: transparent; color: var(--ink); }
+  html:not([data-kenar="dar"]) .os-gezinme .os-gezinme-oge.is-active[aria-current="true"] > svg { color: var(--primary-ink); }
 
   /* Daraltılmış: tabletteki rayın aynısı (yukarıdaki notu okuyun) */
   html[data-kenar="dar"] .os-gezinme .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
