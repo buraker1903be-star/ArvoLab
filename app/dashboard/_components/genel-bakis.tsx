@@ -184,7 +184,13 @@ export function ListeSatiri({
   kelime; eksi gün (silme, taşıma) çubuğun altında kendi rengiyle.
   Üstte öğrencinin asıl sorusunun cevabı: "bu hafta ne kadar yazdım".
 */
-export async function RitimKarti({ ritim, href }: { ritim: YazimRitmi; href: string }) {
+/*
+  Kartın altında eylem YOK (UX S6, 07.11.2026). Eskiden "Yazmaya devam et"
+  bağlantısı vardı: aynı sayfada tez kartının birincil düğmesiyle aynı yere
+  gidiyordu, ana eylem ekranda iki kez görünüyor ve hiyerarşiyi
+  bulandırıyordu. Kart bilgi verir; yazmaya geçiş tez kartındadır.
+*/
+export async function RitimKarti({ ritim }: { ritim: YazimRitmi }) {
   const yazildi = ritim.gunler.some((g) => g.net !== 0);
   const t = await ceviri();
   const dil = await aktifDil();
@@ -235,9 +241,6 @@ export async function RitimKarti({ ritim, href }: { ritim: YazimRitmi; href: str
           })}
         </p>
       )}
-      <Link className="gb-kart-baglanti" href={href}>
-        {t({ tr: "Yazmaya devam et", en: "Continue writing" })} <ChevronRight size={14} aria-hidden="true" />
-      </Link>
     </article>
   );
 }

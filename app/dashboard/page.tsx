@@ -993,7 +993,7 @@ export default async function DashboardPage() {
                     />
                   ))}
                 </ListeKarti>
-                <RitimKarti ritim={ritim} href={`/dashboard/editor/${resume.id}/write`} />
+                <RitimKarti ritim={ritim} />
             </div>
             <div className="ana-sutun">
                 <ListeKarti
