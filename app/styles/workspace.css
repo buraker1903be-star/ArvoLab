@@ -1190,6 +1190,9 @@
 }
 .yazim-ikon:hover { color: var(--primary-ink); }
 .yazim-paneli-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px; display: grid; align-content: start; gap: 12px; }
+/* Asistan yüklenirken iskelet (UX S2): istem kutusunun yerini ve boyunu tutar. */
+.yazim-paneli-iskelet .skeleton-line { width: 80%; margin-bottom: 0; }
+.yazim-iskelet-kutu { display: block; flex: 1 1 auto; height: 78px; border-radius: var(--r-md); }
 .yazim-paneli-bos { display: grid; gap: 14px; align-content: start; color: var(--ink-soft); line-height: 1.55; }
 .yazim-paneli-bos p { margin: 0; }
 /* Boş panelin başlangıç menüsü (04.11.2026). */

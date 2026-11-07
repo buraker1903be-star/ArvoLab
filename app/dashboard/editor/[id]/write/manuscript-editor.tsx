@@ -148,7 +148,7 @@ import ManuscriptOutline from "./manuscript-outline";
 import TeslimListesi from "./submission-checklist";
 import YanPanel, { type PanelSekmesi } from "./yan-panel";
 import { useEkranSinifi } from "@/app/dashboard/_components/ekran-sinifi";
-import { acilisGorunumu, panelAcikMi, panelBicimi, type PanelGorunumu } from "@/lib/yazim-yan-panel";
+import { acilisGorunumu, ASISTAN_AC_OLAYI, panelAcikMi, panelBicimi, type PanelGorunumu } from "@/lib/yazim-yan-panel";
 import {
   applyTemplate,
   collectHeadings,
@@ -184,13 +184,16 @@ const ImportDialog = dynamic(() => import("./import-dialog"), { ssr: false });
 const ImageLibraryDialog = dynamic(() => import("./image-library-dialog"), { ssr: false });
 const ShortcutsDialog = dynamic(() => import("./shortcuts-dialog"), { ssr: false });
 import SecimAi from "./secim-ai";
+import YazimPaneliIskeleti from "./yazim-paneli-iskelet";
 import { oncekiUygulamalar, oncekiUygulamalariUnut } from "@/lib/ai-kararlari";
 const VersionsDialog = dynamic(() => import("./versions-dialog"), { ssr: false });
 const ShareDialog = dynamic(() => import("./share-dialog"), { ssr: false });
 const CiteDialog = dynamic(() => import("./cite-dialog"), { ssr: false });
 const AnalizEkleDialog = dynamic(() => import("./analiz-ekle-dialog"), { ssr: false });
 const KaynakBulPenceresi = dynamic(() => import("./kaynak-bul-penceresi"), { ssr: false });
-const YazimPaneli = dynamic(() => import("./yazim-paneli"), { ssr: false });
+/* Yüklenirken iskelet (UX S2): eskiden boş kalıyor, istem kutusu sonradan beliriyordu. */
+const yazimPaneliYukle = () => import("./yazim-paneli");
+const YazimPaneli = dynamic(yazimPaneliYukle, { ssr: false, loading: () => <YazimPaneliIskeleti /> });
 const OlcumPaneli = dynamic(() => import("./olcum-paneli"), { ssr: false });
 
 // Liste tek kaynaktan (lib/atif/stiller.ts): eskiden burada elle yazılıydı
@@ -1034,6 +1037,38 @@ export default function ManuscriptEditor({
     },
     [bicim],
   );
+  /*
+    Asistanı açmanın öteki yolları (UX S2): komut paleti aynı çalışmanın
+    yazım ekranındayken olay yayınlıyor; adres editör kurulduktan sonra
+    "?asistan=1" olursa (aynı sayfaya bağlantı) o da asistanı açar. Eskiden
+    ikisi de hiçbir şey yapmıyordu: görünüm yalnızca ilk kurulumda okunuyordu.
+    Açmak üretim isteği BAŞLATMAZ; yalnızca seçim düğmesinin bıraktığı görev
+    (lib/ai-duzenleme.ts) panel kurulunca gönderilir.
+  */
+  useEffect(() => {
+    const ac = () => panelAc("asistan");
+    window.addEventListener(ASISTAN_AC_OLAYI, ac);
+    return () => window.removeEventListener(ASISTAN_AC_OLAYI, ac);
+  }, [panelAc]);
+  const oncekiAsistanIstegi = useRef(asistanAcikBasla);
+  useEffect(() => {
+    if (asistanAcikBasla && !oncekiAsistanIstegi.current) panelAc("asistan");
+    oncekiAsistanIstegi.current = asistanAcikBasla;
+  }, [asistanAcikBasla, panelAc]);
+  /*
+    Asistan paketi editör boşta kalınca önceden indirilir: ilk tıklamada
+    iskelet çoğu zaman hiç görünmez. Yalnızca indirme; asistan kurulmaz,
+    istek gönderilmez.
+  */
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(() => void yazimPaneliYukle(), { timeout: 5000 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const zaman = window.setTimeout(() => void yazimPaneliYukle(), 3000);
+    return () => window.clearTimeout(zaman);
+  }, []);
   const panelKapat = useCallback(() => {
     setPanelOturumda(false);
     if (bicim === "sutun") tercihYaz(INCELEME_TERCIHI, false);

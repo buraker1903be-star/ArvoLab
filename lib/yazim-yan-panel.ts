@@ -60,3 +60,20 @@ export function acilisGorunumu(girdi: { asistan: boolean; teslim: string | null 
   if (girdi.asistan) return "asistan";
   return null;
 }
+
+/*
+  ASİSTANI AÇMA YOLLARI (UX S2, 07.11.2026). Üç giriş var: başlıktaki
+  Arvo AI düğmesi, paneldeki sekme ve komut paleti (Ctrl+K). Palet eskiden
+  her zaman "/dashboard/editor/<id>/write?asistan=1" adresine gidiyordu;
+  yazım ekranındayken bu AYNI sayfaya gidiş, editör kurulduktan sonra
+  adresi okuyan bir kod olmadığı için hiçbir şey açmıyordu (adres değişti,
+  panel İnceleme'de kaldı). Artık palet aynı çalışmanın yazım ekranındaysa
+  sayfaya gitmez, olay yayınlar; editör olayı dinleyip asistanı açar.
+  Başka sayfadaysa eskisi gibi adrese gider (editör açılırken okur).
+*/
+export const ASISTAN_AC_OLAYI = "arvolab:asistan-ac";
+
+export function asistanKomutHedefi(calismaId: string, yol: string): { tur: "olay" } | { tur: "git"; href: string } {
+  const yazim = `/dashboard/editor/${calismaId}/write`;
+  return yol === yazim ? { tur: "olay" } : { tur: "git", href: `${yazim}?asistan=1` };
+}

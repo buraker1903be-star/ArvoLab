@@ -8,6 +8,7 @@ import { LogOut } from "lucide-react";
 import { aramaAnahtari, calismaIcindeMi, osSayfalari, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
 import { kaynakEklemeAdresi } from "@/lib/calisma-secimi";
 import { useCalismaBaglami } from "./calisma-baglami";
+import { ASISTAN_AC_OLAYI, asistanKomutHedefi } from "@/lib/yazim-yan-panel";
 import { normalizeDoi } from "@/lib/doi";
 import { calismaAdresi } from "@/lib/calisma-karti";
 import { projectTypeLabel } from "@/lib/project-labels";
@@ -150,6 +151,11 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
     }
     kapat();
     if (oge.tur === "git") {
+      /* Asistan komutu aynı çalışmanın yazım ekranındayken sayfaya gitmez, editöre olay yayınlar (UX S2, lib/yazim-yan-panel.ts). */
+      if (oge.id === "asistan" && sonCalisma && adres && asistanKomutHedefi(sonCalisma.id, adres.yol).tur === "olay") {
+        window.dispatchEvent(new Event(ASISTAN_AC_OLAYI));
+        return;
+      }
       router.push(oge.href);
       return;
     }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { acilisGorunumu, gorunumOku, panelAcikMi, panelBicimi, PANEL_GORUNUMLERI } from "@/lib/yazim-yan-panel";
+import { acilisGorunumu, ASISTAN_AC_OLAYI, asistanKomutHedefi, gorunumOku, panelAcikMi, panelBicimi, PANEL_GORUNUMLERI } from "@/lib/yazim-yan-panel";
 
 /*
   Yazım ekranının tek sağ paneli (Signature OS Phase 2). Eskiden iki
@@ -38,4 +38,17 @@ test("açılış: ?teslim teslim görünümünü, ?asistan asistanı açar; ikis
   assert.equal(acilisGorunumu({ asistan: true, teslim: null }), "asistan");
   assert.equal(acilisGorunumu({ asistan: false, teslim: "kaynakca" }), "teslim");
   assert.equal(acilisGorunumu({ asistan: true, teslim: "kaynakca" }), "teslim");
+});
+
+/*
+  Komut paleti → asistan (UX S2): aynı çalışmanın yazım ekranındayken
+  sayfaya GİTMEZ, olay yayınlar. Eskiden aynı adrese gidiyor, editör
+  adresi yalnızca kurulurken okuduğu için hiçbir şey açılmıyordu.
+*/
+test("palet: aynı çalışmanın yazım ekranında olay, başka yerde adres", () => {
+  assert.deepEqual(asistanKomutHedefi("c1", "/dashboard/editor/c1/write"), { tur: "olay" });
+  assert.deepEqual(asistanKomutHedefi("c1", "/dashboard/editor/c1/kanit"), { tur: "git", href: "/dashboard/editor/c1/write?asistan=1" });
+  assert.deepEqual(asistanKomutHedefi("c1", "/dashboard/editor/c2/write"), { tur: "git", href: "/dashboard/editor/c1/write?asistan=1" });
+  assert.deepEqual(asistanKomutHedefi("c1", "/dashboard"), { tur: "git", href: "/dashboard/editor/c1/write?asistan=1" });
+  assert.equal(ASISTAN_AC_OLAYI, "arvolab:asistan-ac");
 });
