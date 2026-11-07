@@ -2297,15 +2297,24 @@ export default function ManuscriptEditor({
     kayıyor, panel açıkken sondaki araçlar görünür alanın dışında kalıyordu.
   */
   const gizliAraclar = new Set(gizliGruplar);
-  const aracGeri = (
-<div className="arac-segment" role="group" aria-label={t({ tr: "Geri al ve yinele", en: "Undo and redo" })}>
-          <ToolbarButton label={t({ tr: "Geri al (Ctrl+Z)", en: "Undo (Ctrl+Z)" })} disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
-            <Undo2 size={16} />
-          </ToolbarButton>
-          <ToolbarButton label={t({ tr: "Yinele (Ctrl+Y)", en: "Redo (Ctrl+Y)" })} disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
-            <Redo2 size={16} />
-          </ToolbarButton>
-          </div>
+  /*
+    Geri al ve Yinele ayrı gruplar (UX mobil, 07.11.2026): telefonda (360,
+    390) ikisi birlikte "⋯"ye gidiyordu. Geri al en son çıkanlardan; Yinele
+    daha seyrek, dar ekranda "⋯"de (masaüstünde Ctrl+Y her yerde çalışıyor).
+  */
+  const aracGeriAl = (
+    <div className="arac-segment" role="group" aria-label={t({ tr: "Geri al", en: "Undo" })}>
+      <ToolbarButton label={t({ tr: "Geri al (Ctrl+Z)", en: "Undo (Ctrl+Z)" })} disabled={!ui.canUndo} onClick={() => editor.chain().focus().undo().run()}>
+        <Undo2 size={16} />
+      </ToolbarButton>
+    </div>
+  );
+  const aracYinele = (
+    <div className="arac-segment" role="group" aria-label={t({ tr: "Yinele", en: "Redo" })}>
+      <ToolbarButton label={t({ tr: "Yinele (Ctrl+Y)", en: "Redo (Ctrl+Y)" })} disabled={!ui.canRedo} onClick={() => editor.chain().focus().redo().run()}>
+        <Redo2 size={16} />
+      </ToolbarButton>
+    </div>
   );
   const aracYazi = (
     <>
@@ -2536,7 +2545,8 @@ export default function ManuscriptEditor({
           </ToolbarButton>
   );
   const tumAraclar: { anahtar: AracGrubuAnahtari; baslik: string; icerik: React.ReactNode }[] = [
-    { anahtar: "geri", baslik: t({ tr: "Geri al", en: "Undo" }), icerik: aracGeri },
+    { anahtar: "geriAl", baslik: t({ tr: "Geri al", en: "Undo" }), icerik: aracGeriAl },
+    { anahtar: "yinele", baslik: t({ tr: "Yinele", en: "Redo" }), icerik: aracYinele },
     { anahtar: "yazi", baslik: t({ tr: "Yazı", en: "Font" }), icerik: aracYazi },
     { anahtar: "bicim", baslik: t({ tr: "Yazı biçimi", en: "Text style" }), icerik: aracBicim },
     { anahtar: "ust", baslik: t({ tr: "Üst simge", en: "Superscript" }), icerik: aracUst },
@@ -2675,8 +2685,11 @@ export default function ManuscriptEditor({
               e.target.value = "";
             }}
           />
-        <div className="arac-grup" data-arac-grup="geri" hidden={gizliAraclar.has("geri")}>
-          {aracGeri}
+        <div className="arac-grup" data-arac-grup="geriAl" hidden={gizliAraclar.has("geriAl")}>
+          {aracGeriAl}
+        </div>
+        <div className="arac-grup" data-arac-grup="yinele" hidden={gizliAraclar.has("yinele")}>
+          {aracYinele}
         </div>
         {/*
           Yazı tipi ve punto bir menüde (Signature OS Phase 2): araç çubuğu

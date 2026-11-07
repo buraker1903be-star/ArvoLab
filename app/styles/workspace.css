@@ -2046,3 +2046,9 @@
 .arac-menu-bolum .arac-segment { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 0; }
 .arac-menu-baslik { padding: 6px 10px 2px; color: var(--muted); font-size: var(--fs-micro); font-weight: 650; letter-spacing: .03em; text-transform: uppercase; }
 .arac-menu-ayrac { margin: 4px 2px; border: 0; border-top: 1px solid var(--line-soft); }
+/* Dar telefonda (≤420) grup aralığı daralır: 360 pikselde Geri al, B/İ/A ve
+   atıf birlikte sığsın (UX mobil, 07.11.2026); düğmeler yine 40×40. */
+@media (max-width: 420px) {
+  .manuscript-araclar { padding-inline: 4px; }
+  .manuscript-araclar .arac-grup { padding: 0 2px; }
+}

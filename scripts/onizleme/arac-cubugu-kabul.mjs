@@ -81,6 +81,12 @@ const olc = (sayfa) =>
       disarida,
       gizli,
       atifCubukta: Boolean([...bar.querySelectorAll('[aria-label="Kaynaktan atıf ekle"]')].find(gorunur)),
+      geriAl: (() => {
+        const e = [...bar.querySelectorAll('[aria-label="Geri al (Ctrl+Z)"]')].find(gorunur);
+        if (!e) return null;
+        const r = e.getBoundingClientRect();
+        return { w: Math.round(r.width), h: Math.round(r.height) };
+      })(),
       ucNokta: Boolean([...bar.querySelectorAll('button[aria-label^="Bul, sayfa ayarı"]')].find(gorunur)),
       panelSutun: Boolean(document.querySelector('#yazim-yan-panel[data-bicim="sutun"]:not([hidden])')),
     };
@@ -121,8 +127,10 @@ async function editoruAc(ctx) {
   return { sayfa, istekler };
 }
 
-async function durum(sayfa, ad, { dokunmatik }) {
+async function durum(sayfa, ad, { dokunmatik, genislik }) {
   const o = await olc(sayfa);
+  // Telefonda Geri al çubukta ve en az 40×40 (kurum sahibinin kararı, 07.11.2026); Yinele "⋯"de olabilir.
+  if (genislik <= 390) bekle(o.geriAl && o.geriAl.w >= 40 && o.geriAl.h >= 40, `${ad}: Geri al çubukta görünmüyor ya da 40×40 altı (${JSON.stringify(o.geriAl)})`);
   bekle(!o.kayiyor, `${ad}: çubuk yana kayıyor`);
   bekle(o.kucuk.length === 0, `${ad}: 40×40 altı: ${o.kucuk.join(", ")}`);
   bekle(o.disarida.length === 0, `${ad}: çubuğun dışında: ${o.disarida.join(", ")}`);
@@ -139,6 +147,7 @@ async function durum(sayfa, ad, { dokunmatik }) {
   await sayfa.waitForTimeout(200);
   const p = await pencereEkranda(sayfa);
   bekle(p.var && p.ekranda, `${ad}: "⋯" menüsü ekranın içinde açılmadı`);
+  if (o.gizli.includes("yinele")) bekle(/Yinele/.test(p.metin ?? ""), `${ad}: Yinele ne çubukta ne "⋯" menüsünde`);
   if (!o.atifCubukta) bekle(/Atıf|Citation/.test(p.metin ?? ""), `${ad}: atıf ne çubukta ne "⋯" menüsünde`);
   bekle(o.gizli.length === 0 || /Bul ve değiştir/.test(p.metin ?? ""), `${ad}: "⋯" belge araçlarını kaybetti`);
   if (!dokunmatik) {
@@ -162,7 +171,7 @@ for (const genislik of [1440, 1366, 1280, 1024, 768, 390, 360]) {
       const { sayfa, istekler } = await editoruAc(ctx);
       const ad = `${genislik} ${tema} panel-${panel ? "açık" : "kapalı"}`;
       const once = istekler.length;
-      const o = await durum(sayfa, ad, { dokunmatik: genislik < 1200 });
+      const o = await durum(sayfa, ad, { dokunmatik: genislik < 1200, genislik });
       if (genislik >= 1200) bekle(o.panelSutun === panel, `${ad}: panel durumu beklenen değil`);
       if (tema === "light") {
         // Salt açma: açılış okumalarından sonra boşta hiçbir sunucu işlemi (kayıt, sürüm dahil).
@@ -194,7 +203,7 @@ for (const genislik of [1440, 390]) {
   await sayfa.waitForTimeout(400);
   const bos = await sayfa.evaluate(() => (document.querySelector(".ProseMirror")?.textContent ?? "").trim().length === 0);
   bekle(bos, `${genislik} boş: belge boşaltılamadı`);
-  await durum(sayfa, `${genislik} boş çalışma`, { dokunmatik: genislik < 1200 });
+  await durum(sayfa, `${genislik} boş çalışma`, { dokunmatik: genislik < 1200, genislik });
   await ctx.close();
 }
 

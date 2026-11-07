@@ -16,11 +16,17 @@
   (liste düğmeleri, hizalama) tek yerde bulur.
 */
 
-export type AracGrubuAnahtari = "geri" | "yazi" | "bicim" | "ust" | "stil" | "liste" | "paragraf" | "ekle" | "atif" | "odak";
+export type AracGrubuAnahtari = "geriAl" | "yinele" | "yazi" | "bicim" | "ust" | "stil" | "liste" | "paragraf" | "ekle" | "atif" | "odak";
 
 /** Çubuktaki sırayla; öncelik büyüdükçe çubukta daha uzun kalır. */
 export const ARAC_GRUPLARI: readonly { anahtar: AracGrubuAnahtari; oncelik: number }[] = [
-  { anahtar: "geri", oncelik: 7 },
+  /*
+    Geri al ile Yinele ayrı (07.11.2026, kurum sahibinin kararı): Geri al
+    telefonda (360/390) da çubukta kalmalı; biçimden sonra, atıftan önce
+    çıkar. Yinele seyrek: dar ekranda "⋯"de.
+  */
+  { anahtar: "geriAl", oncelik: 9.5 },
+  { anahtar: "yinele", oncelik: 2.5 },
   { anahtar: "yazi", oncelik: 1 },
   { anahtar: "bicim", oncelik: 9 },
   { anahtar: "ust", oncelik: 2 },
