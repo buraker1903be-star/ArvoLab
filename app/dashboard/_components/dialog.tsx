@@ -17,6 +17,7 @@ export default function Dialog({
   kicker,
   description,
   children,
+  dokunmatikteAlanaOdak = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -24,6 +25,11 @@ export default function Dialog({
   kicker?: string;
   description?: string;
   children: ReactNode;
+  /**
+   * false: dokunmatik ekranda açılınca ilk alana değil pencerenin kendisine
+   * odaklanır (sanal klavye açılmaz). Masaüstünde davranış aynı kalır.
+   */
+  dokunmatikteAlanaOdak?: boolean;
 }) {
   const t = useCeviri();
   const titleId = useId();
@@ -41,8 +47,10 @@ export default function Dialog({
     kaçıyor, sonraki harfler oraya yazılıyordu.
   */
   const kapatRef = useRef(onClose);
+  const alanaOdakRef = useRef(dokunmatikteAlanaOdak);
   useEffect(() => {
     kapatRef.current = onClose;
+    alanaOdakRef.current = dokunmatikteAlanaOdak;
   });
 
   useEffect(() => {
@@ -55,7 +63,15 @@ export default function Dialog({
     document.addEventListener("keydown", onKeyDown);
     document.documentElement.classList.add("drawer-open");
     window.requestAnimationFrame(() => {
-      const firstField = dialogRef.current?.querySelector<HTMLElement>("textarea, input, select");
+      /*
+        UX M3 (07.11.2026): atıf penceresi telefonda açılır açılmaz isteğe
+        bağlı Sayfa kutusuna odaklanıyor, sanal klavye pencerenin yarısını
+        örtüyordu; kullanıcı önce kaynak seçmek istiyor. Böyle pencerelerde
+        dokunmatik ekranda odak pencerenin kendisine verilir: Tab sırası ve
+        ekran okuyucu yine pencerenin başından başlar.
+      */
+      const dokunmatik = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+      const firstField = dokunmatik && !alanaOdakRef.current ? null : dialogRef.current?.querySelector<HTMLElement>("textarea, input, select");
       (firstField ?? dialogRef.current)?.focus();
     });
     return () => {

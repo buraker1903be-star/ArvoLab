@@ -213,6 +213,7 @@ export default function CiteDialog({ open, onClose, projectId, style, belgeDili 
     <Dialog
       open={open}
       onClose={close}
+      dokunmatikteAlanaOdak={false}
       kicker={t({ tr: "Kaynaktan atıf", en: "Cite a source" })}
       title={t({ tr: "Atıf ekle", en: "Insert citation" })}
       description={
