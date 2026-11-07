@@ -1738,7 +1738,9 @@
 /* İki satıra kadar kırılır, sonra kesilir (her genişlikte). */
 .yazma-baslik h1 {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
-  white-space: normal; text-wrap: balance; overflow-wrap: anywhere;
+  white-space: normal; text-wrap: balance;
+  /* "anywhere" (1. dilim) telefonda kelimeyi ortasından bölüyordu ("TÜRKİYE'D / E…"); yalnızca sığmayan tek kelime bölünür. */
+  overflow-wrap: break-word;
   font-weight: 650; letter-spacing: -.018em; line-height: 1.25;
 }
 .yazma-durum, .yazma-eylemleri { align-self: center; }
@@ -1803,3 +1805,146 @@
 @media (prefers-reduced-motion: reduce) {
   .yan-panel-sekmeler [role="tab"] { transition: none; }
 }
+
+/* ============================================================
+   PHASE 4.5 — 2. DİLİM: AKADEMİK ARAÇ ÇUBUĞU VE MOBİL YAZIM
+   Yalnızca görünüm: düğmeler, komutlar, kısayollar, odak ve belge
+   aynı. Kurallar bu bloğun içinde; dilim geri alınırsa blok
+   tek başına kaldırılır.
+   ============================================================ */
+
+/* ---- Araç çubuğu: gruplar ve ayraçlar ---- */
+/*
+  Eskiden gruplar tam yükseklikte sol çizgiyle ayrılıyordu ve bitişik
+  gruplar (geri al/yinele, B/İ/A) ayrı bir gömük zeminde, düğmeleri
+  öteki düğmelerden 4 piksel kısaydı (28 / 32). Artık her düğme aynı
+  boyda, ayraç ortada kısa bir çizgi; gruplar boşlukla okunur.
+*/
+.manuscript-araclar { gap: 2px; }
+.manuscript-araclar .arac-grup { position: relative; gap: 2px; padding: 0 7px; border-left: 0; }
+.manuscript-araclar .arac-grup + .arac-grup::before {
+  content: ""; position: absolute; top: 50%; left: 0;
+  width: 1px; height: 20px; transform: translateY(-50%);
+  background: var(--line);
+}
+.manuscript-araclar .arac-segment { gap: 2px; padding: 0; border-radius: 0; background: transparent; }
+.manuscript-araclar button > svg:not(.arac-menu-ok) { width: 16px; height: 16px; }
+
+/* Fareli masaüstünde sıkı ve eşit: 32 piksel, aynı köşe. Dokunmatikte 40 piksel kuralı (yukarıda) geçerli kalır. */
+@media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
+  .manuscript-araclar button,
+  .manuscript-araclar .arac-segment button { min-width: 32px; height: 32px; padding: 0 8px; border-radius: var(--r-sm); }
+  .manuscript-araclar .toolbar-select { height: 32px; border-radius: var(--r-sm); }
+}
+
+/* ---- Araç çubuğu: durumlar (açık/koyu aynı tokenlarla) ---- */
+.manuscript-araclar button,
+.manuscript-araclar .toolbar-select { border-color: transparent; color: var(--ink-soft); }
+@media (hover: hover) and (pointer: fine) {
+  .manuscript-araclar button:hover:not(:disabled),
+  .manuscript-araclar .toolbar-select:hover { border-color: transparent; background-color: var(--dugme-hover-zemin); color: var(--ink); }
+}
+/* Etkin biçim (kalın, H1, liste…): mavi yumuşak zemin; segment içinde de aynı (eskiden orada beyaz yüzey + gölge). */
+.manuscript-araclar button.is-active,
+.manuscript-araclar .arac-segment button.is-active { border-color: transparent; background: var(--primary-soft); color: var(--primary-ink); box-shadow: none; }
+.manuscript-araclar .arac-menu-dugme[data-acik] { border-color: transparent; background: var(--dugme-hover-zemin); color: var(--ink); }
+.manuscript-araclar button:focus-visible,
+.manuscript-araclar .toolbar-select:focus-visible { position: relative; z-index: 1; outline: none; box-shadow: var(--odak-halkasi); }
+.manuscript-araclar button:disabled { opacity: .38; background: transparent; color: var(--ink-soft); }
+@media (prefers-reduced-motion: reduce) {
+  .manuscript-araclar button:active { transform: none; }
+}
+
+/*
+  Kaydırılabilirlik ipucu: dar ekranda çubuk kendi içinde yana kayar.
+  Eskiden yalnızca sağ kenar soluktu (sona gelince de). Destekleyen
+  tarayıcıda solma kaydırmayı izler: başta sağda, ortada iki yanda,
+  sonda solda. Desteklemeyende eski sabit solma kalır.
+*/
+@property --arac-sol-solma { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --arac-sag-solma { syntax: "<length>"; inherits: false; initial-value: 28px; }
+@keyframes arac-kaydirma-solma {
+  0% { --arac-sol-solma: 0px; --arac-sag-solma: 28px; }
+  10%, 90% { --arac-sol-solma: 28px; --arac-sag-solma: 28px; }
+  100% { --arac-sol-solma: 28px; --arac-sag-solma: 0px; }
+}
+@supports (animation-timeline: scroll()) {
+  @media (max-width: 1199px), (pointer: coarse) {
+    .manuscript-araclar {
+      -webkit-mask-image: linear-gradient(90deg, transparent, black var(--arac-sol-solma), black calc(100% - var(--arac-sag-solma)), transparent);
+      mask-image: linear-gradient(90deg, transparent, black var(--arac-sol-solma), black calc(100% - var(--arac-sag-solma)), transparent);
+      animation: arac-kaydirma-solma linear both;
+      animation-timeline: scroll(self inline);
+    }
+  }
+}
+
+/* ---- Telefon: belgeye daha kısa yol ---- */
+/*
+  Ölçüldü (320 piksel): belgenin ilk satırına kadar ~490 piksel vardı —
+  başlık satırı, ayrı satırda dört düğme, araç çubuğu, kılavuz kutusu.
+  Başlık artık geri düğmesiyle tek satırda (iki satıra kadar), kayıt
+  durumu ve eylemler altında aynı satırda. Belgenin kendisi (kâğıt
+  dolgusu, yazı) değişmez.
+*/
+@media (max-width: 760px) {
+  .yazma-basligi { gap: 6px 8px; margin-bottom: var(--s-2); }
+  /* Kayıt durumu bir portal: başlık kutusunun İÇİNE çiziliyor, yani
+     sırası yalnızca o kutuda değişebiliyordu ve dar ekranda başlığın
+     yanında "Kayd…" diye kırpılıyordu. Kutu telefonda "contents" olur:
+     başlık ile durum doğrudan satırın öğeleri hâline gelir, durum
+     eylem düğmeleriyle aynı (ikinci) satıra iner. Kutunun rolü yok,
+     erişilebilirlik ağacında bir şey kaybolmuyor. */
+  .yazma-baslik { display: contents; }
+  .yazma-baslik h1 { flex: 1 1 calc(100% - 52px); min-width: 0; align-self: center; font-size: var(--fs-md); line-height: 1.3; }
+  .yazma-durum { order: 3; flex: 1 1 88px; min-width: 0; }
+  .yazma-durum .save-status { max-width: 100%; min-height: 40px; padding-inline: 6px; overflow: hidden; font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
+  .yazma-eylemleri { order: 4; width: auto; margin-left: auto; gap: 6px; }
+  .yazma-eylemleri .yazma-ai { flex: 0 0 auto; }
+  .yazma-eylemleri > * { min-width: 40px; min-height: 40px; }
+  .yazma-eylemleri .projects-filter-button,
+  .yazma-eylemleri .projects-primary-button { min-width: 40px; min-height: 40px; }
+  .yazma-eylemleri .yazma-panel-dugmesi { width: 40px; }
+
+  /* Kılavuz uyarısı: aynı başlık, metin ve iki eylem; daha sıkı. */
+  .manuscript-main .guideline-applied-banner { flex-direction: column; gap: 8px; margin: 8px 0; padding: 10px 12px; }
+  .manuscript-main .guideline-applied-banner > div:first-child { gap: 2px; }
+  .manuscript-main .guideline-applied-banner span { font-size: var(--fs-micro); line-height: 1.45; }
+  .manuscript-main .guideline-applied-banner > .cluster { flex-wrap: wrap; gap: 8px; }
+  .manuscript-main .guideline-applied-banner > .cluster > * { min-height: 40px; padding: 0 14px; font-size: var(--fs-sm); }
+}
+/*
+  En dar ekranlarda Arvo AI düğmesi yalnızca simge; ad ekran okuyucu
+  için yerinde kalır (görsel gizleme, aria adı aynı). 375 pikselde ad
+  yazılı kalırsa kayıt durumu ve dört düğme aynı satıra sığmıyordu.
+*/
+@media (max-width: 400px) {
+  .yazma-eylemleri .yazma-ai > span {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .yazma-eylemleri .yazma-ai { width: 40px; padding: 0; }
+  /* 320'de kayıt saati kırpılıyordu ("16:2"); düğmeler arası 2 px
+     daralınca "Kaydedildi · 16:24" sığıyor, dokunma hedefi 40 px kalıyor. */
+  .yazma-eylemleri { gap: 4px; }
+  .yazma-durum .save-status { gap: 4px; padding-inline: 2px; }
+}
+
+/* ---- Sağ panel: bilgi hiyerarşisi ---- */
+/*
+  Arvo AI görünümünün dört başlangıç kartı gri dolgulu ağır kutulardı ve
+  başlıkla aynı ağırlıkta okunuyordu; paneli aşağı itiyor, başlangıç
+  simgesinin üstü kaydırma kabında kesiliyordu. Artık ince çerçeveli
+  sade satırlar; başlık bir kademe küçük. İnceleme'deki kelime/sayfa
+  kutucukları alttaki durum çubuğunu tekrarladığı için kutusuz.
+  İşlevler, sıralar ve metinler aynı.
+*/
+.yazim-bos-bas b { font-size: var(--fs-md); }
+.yazim-bos-ikon { width: 28px; height: 28px; margin-bottom: 2px; border-radius: var(--r-sm); }
+.yazim-baslangic { gap: 6px; }
+.yazim-baslangic-kart { padding: 9px 12px; border-color: var(--line-soft); background: transparent; }
+.yazim-baslangic-kart:hover:not(:disabled) { border-color: var(--line); background: var(--dugme-hover-zemin); transform: none; }
+.yazim-baslangic-kart:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.yan-panel .kontrol-olculer { gap: var(--s-4); }
+.yan-panel .kontrol-olculer > div { padding: 0; background: transparent; }
+.yan-panel .kontrol-olculer dd { font-size: var(--fs-lg); }
