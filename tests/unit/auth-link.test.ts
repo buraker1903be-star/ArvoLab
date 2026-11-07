@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { authConfirmLink, safeConfirmNext } from "../../lib/auth-link";
+import { amrYontemleri, authConfirmLink, dogrulamaSonrasiYol, safeConfirmNext } from "../../lib/auth-link";
 
 test("e-posta bağlantısı doğrudan /auth/confirm'e token_hash ile gider", () => {
   const url = new URL(authConfirmLink("https://arvolab.com", "abc123", "recovery"));
@@ -19,4 +19,20 @@ test("dönüş yalnızca panel yolları; dış alan adına çözülen biçimler 
   }
   // Reddedilenlerin gerçekten dışarı çıkabildiğini sabitle (eski denetim bunları geçiriyordu).
   assert.equal(new URL("/\\evil.example", "https://arvolab.com").host, "evil.example");
+});
+
+/* G1 (07.11.2026): PKCE ile doğrulanan kayıt şifre sayfasına gitmeli; DB onay anında eski şifreyi siliyor. */
+test("PKCE sonrası hedef AMR yöntemine göre", () => {
+  assert.equal(dogrulamaSonrasiYol(["email/signup"], "/dashboard"), "/reset-password?ilk=1");
+  assert.equal(dogrulamaSonrasiYol(["invite"], "/dashboard"), "/reset-password");
+  assert.equal(dogrulamaSonrasiYol(["recovery"], "/dashboard"), "/reset-password");
+  assert.equal(dogrulamaSonrasiYol(["magiclink"], "/dashboard/x"), "/dashboard/x");
+  assert.equal(dogrulamaSonrasiYol([], "/dashboard"), "/dashboard");
+});
+
+test("AMR erişim belirtecinden okunur; bozuk belirteç boş liste", () => {
+  const yuk = (o: object) => `x.${Buffer.from(JSON.stringify(o)).toString("base64url")}.y`;
+  assert.deepEqual(amrYontemleri(yuk({ amr: [{ method: "email/signup", timestamp: 1 }] })), ["email/signup"]);
+  assert.deepEqual(amrYontemleri(yuk({ amr: ["otp"] })), ["otp"]);
+  for (const kotu of [null, "", "abc", "a.!!!.b", yuk({})]) assert.deepEqual(amrYontemleri(kotu), []);
 });

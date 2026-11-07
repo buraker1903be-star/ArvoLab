@@ -36,3 +36,36 @@ export function safeConfirmNext(raw: string | null | undefined): string {
   if (/[\\\s]|%5c|%09|%0a|%0d/i.test(value) || value.includes("//")) return "/dashboard";
   return value;
 }
+
+/*
+  PKCE (?code=) DOĞRULAMASINDAN SONRA NEREYE (G1, 07.11.2026).
+
+  ?code= bağlantısı Supabase'in KENDİ e-posta şablonundan gelir (örn.
+  doğrudan /auth/v1/signup ile açılmış hesabın onay postası) ve türünü
+  taşımaz; eskiden her durumda bağlantının next'ine (varsayılan /dashboard)
+  gidiliyordu. G1'den beri veritabanı onay anında öncesinden kalan şifreyi
+  siliyor: kaydını PKCE ile doğrulayan kullanıcı şifresiz panele düşerdi.
+  Tür, değişimden dönen oturumun AMR kaydında yazıyor (GoTrue akışın
+  yöntemini oturuma yazar). Kayıt → ilk şifre; davet ve kurtarma → şifre
+  sayfası; geri kalan (magic link, e-posta değişimi) → next.
+*/
+export function dogrulamaSonrasiYol(yontemler: readonly string[], next: string): string {
+  if (yontemler.includes("email/signup")) return "/reset-password?ilk=1";
+  if (yontemler.includes("invite") || yontemler.includes("recovery")) return "/reset-password";
+  return next;
+}
+
+/** Erişim belirtecinin (JWT) AMR yöntemleri. Çözülemezse boş liste: hedef next'e düşer. */
+export function amrYontemleri(erisimBelirteci: string | null | undefined): string[] {
+  try {
+    const govde = String(erisimBelirteci ?? "").split(".")[1];
+    if (!govde) return [];
+    const yuk = JSON.parse(Buffer.from(govde, "base64url").toString("utf8")) as { amr?: unknown };
+    if (!Array.isArray(yuk.amr)) return [];
+    return yuk.amr
+      .map((k: unknown) => (typeof k === "string" ? k : k && typeof k === "object" && "method" in k ? String((k as { method: unknown }).method) : ""))
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
