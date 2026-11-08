@@ -11,13 +11,11 @@ const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 const KOK = path.dirname(new URL(import.meta.url).pathname);
 const V2 = path.resolve(KOK, "..");
-const ISLER = [
-  ["v2", V2, "dashboard", 1440], ["v3", KOK, "dashboard", 1440], ["v2", V2, "dashboard", 390], ["v3", KOK, "dashboard", 390], ["v3", KOK, "dashboard", 360],
-  ["v2", V2, "calismalarim", 1440], ["v3", KOK, "calismalarim", 1440], ["v2", V2, "calismalarim", 390], ["v3", KOK, "calismalarim", 390],
-  ["v2", V2, "calismalarim-ayrinti", 390], ["v3", KOK, "calisma-ayrinti", 390], ["v3", KOK, "calisma-ayrinti", 360],
-  ["v3", KOK, "editor", 1440], ["v3", KOK, "editor", 390], ["v3", KOK, "editor", 360], ["v3", KOK, "editor-ai", 1440], ["v3", KOK, "editor-ai", 390],
-  ["v3", KOK, "kaynaklar", 1440], ["v3", KOK, "kaynaklar", 390], ["v3", KOK, "kaynaklar", 360],
-];
+/* Kullanım: node olc.mjs [kök-klasör] [etiket] — kök verilmezse bu klasör. */
+const HEDEF = path.resolve(process.argv[2] ?? KOK);
+const ETIKET = process.argv[3] ?? "v3";
+const ISLER = [["dashboard", 1440], ["dashboard", 390], ["dashboard", 360], ["calismalarim", 1440], ["calismalarim", 390], ["calisma-ayrinti", 390], ["calisma-ayrinti", 360],
+  ["editor", 1440], ["editor", 390], ["editor-ai", 1440], ["editor-ai", 390], ["kaynaklar", 1440], ["kaynaklar", 390], ["kaynaklar", 360]].map(([p, w]) => [ETIKET, HEDEF, p, w]);
 const b = await chromium.launch();
 const sonuc = [];
 for (const [surum, kok, sayfa, w] of ISLER) for (const tema of ["light", "dark"]) {
@@ -59,7 +57,25 @@ for (const [surum, kok, sayfa, w] of ISLER) for (const tema of ["light", "dark"]
       const r = e.getBoundingClientRect(); const m = Math.min(r.width, r.height);
       if (m < 44) { kucuk++; enKucuk = Math.min(enKucuk, Math.round(m)); }
     }
+    // En büyük boş dikey aralık: ana içeriğin doğrudan çocukları arasında.
+    const ana = kok.querySelector("main") ?? kok.querySelector(".tel-sayfa, .ed-govde") ?? kok;
+    const bloklar = [...ana.querySelectorAll(":scope > *, :scope > div > *")].filter(gorunur).map((e) => e.getBoundingClientRect()).sort((a, b) => a.top - b.top);
+    let bosluk = 0;
+    for (let i = 1; i < bloklar.length; i++) bosluk = Math.max(bosluk, Math.round(bloklar[i].top - Math.max(...bloklar.slice(0, i).map((r) => r.bottom))));
+    // Yerleşim imzası (tema karşılaştırması için).
+    // Temaya özgü öğeler (açık/koyu logo, güneş/ay simgesi) aynı yerde birbirinin yerine geçer; karşılaştırmaya girmez.
+    const imza = [...kok.querySelectorAll("*")].filter((e) => gorunur(e) && !e.closest(".logo-acik, .logo-koyu, .tema-gunes, .tema-ay")).map((e) => { const r = e.getBoundingClientRect(); return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}`; });
+    // Telefon: sayfa sonuna kaydırınca son içerik alt çubuğun ÜSTÜNDE mi?
+    let altta = null;
+    const ac = kok.querySelector(".ac");
+    if (tel && ac) {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      const son = [...ana.querySelectorAll("*")].filter(gorunur).reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), 0);
+      altta = Math.round(ac.getBoundingClientRect().top - son);
+      window.scrollTo(0, 0);
+    }
     return {
+      bosluk, imza, altta,
       cta: cta ? Math.round(cta.getBoundingClientRect().bottom) : null,
       yuzey: yuzeyler.length, golgeli,
       baslik: bs ? `${bs.fontSize}/${Math.round(baslik.getBoundingClientRect().height / parseFloat(bs.lineHeight))} satır` : "—",
@@ -74,4 +90,9 @@ for (const [surum, kok, sayfa, w] of ISLER) for (const tema of ["light", "dark"]
   await ctx.close();
 }
 await b.close();
-for (const x of sonuc) console.log(JSON.stringify(x));
+// Tema tutarlılığı: açık ve koyu yerleşim imzası aynı mı?
+for (const x of sonuc) {
+  const es = sonuc.find((y) => y.sayfa === x.sayfa && y.w === x.w && y.tema !== x.tema);
+  x.temaFarki = es ? x.imza.filter((v, i) => v !== es.imza[i]).length + Math.abs(x.imza.length - es.imza.length) : null;
+}
+for (const x of sonuc) { delete x.imza; console.log(JSON.stringify(x)); }

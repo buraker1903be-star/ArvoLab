@@ -26,7 +26,17 @@ for (const [sayfa, w, tam] of ISLER) for (const tema of ["light", "dark"]) {
   await s.evaluate(([tel, tema]) => { document.body.classList.add(tel ? "telefon" : "masaustu"); document.documentElement.dataset.theme = tema; }, [w < 761, tema]);
   await s.evaluate(() => document.fonts.ready);
   const ad = `${sayfa}-${w}-${tema === "light" ? "acik" : "koyu"}.png`;
-  await s.screenshot({ path: path.join(CIKTI, ad), fullPage: tam });
+  /*
+    Telefonda alt gezinme position: fixed. Playwright'ın tam sayfa çekimi
+    sabit öğeyi İLK görünümün altına (844 px) çiziyor ve çubuk sayfanın
+    ortasında görünüyordu. Görünümü sayfanın tam boyuna büyütüp tek kare
+    çekmek, çubuğu gerçekte durduğu yere (en alta) koyar.
+  */
+  if (tam && w < 761) {
+    const boy = await s.evaluate(() => document.documentElement.scrollHeight);
+    await s.setViewportSize({ width: w, height: boy });
+    await s.screenshot({ path: path.join(CIKTI, ad) });
+  } else await s.screenshot({ path: path.join(CIKTI, ad), fullPage: tam });
   await ctx.close();
 }
 await tarayici.close();

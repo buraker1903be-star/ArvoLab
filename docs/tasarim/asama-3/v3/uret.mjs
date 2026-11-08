@@ -52,12 +52,13 @@ const kaydet = (ad, html) => fs.writeFileSync(path.join(KOK, ad), html);
 /* ---------------- Kabuk ---------------- */
 
 function kenar({ etkin, bolum }) {
-  const o = (k, ad, ik) => `<a class="kc-oge${etkin === k ? (bolum ? " etkin-ust" : " etkin") : ""}" href="#">${ikon(ik, 18)}<span>${ad}</span></a>`;
+  const yalnizSecici = bolum === "*";
+  const o = (k, ad, ik) => `<a class="kc-oge${etkin === k ? (bolum && !yalnizSecici ? " etkin-ust" : " etkin") : ""}" href="#"${etkin === k ? ' aria-current="page"' : ""}>${ikon(ik, 18)}<span>${ad}</span></a>`;
   const alt = (ad) => `<a class="kc-alt${bolum === ad ? " etkin" : ""}" href="#">${ad}</a>`;
   const calisma = bolum
     ? `<div class="kc-calisma"><p class="etiket">Açık çalışma</p>
         <button class="kc-secici" type="button" title="${OZGUN}">${ikon("book-open", 16)}<span>${KISA}</span>${ikon("chevrons-up-down", 14)}</button>
-        ${["Özet", "Yazım", "Kanıt matrisi", "Etik kurul", "Kaynaklar", "Analiz", "Belge Kontrol"].map(alt).join("")}
+        ${yalnizSecici ? "" : ["Özet", "Yazım", "Kanıt matrisi", "Etik kurul", "Kaynaklar", "Analiz", "Belge Kontrol"].map(alt).join("")}
       </div>`
     : "";
   return `<nav class="kc" aria-label="Uygulama"><div class="kc-ic">
@@ -80,11 +81,14 @@ function ust(yol) {
 const yolParca = (...p) => p.map((x, i) => (i === p.length - 1 ? `<b title="${OZGUN}">${x}</b>` : `<span>${x}</span>${ikon("chevron-right", 14)}`)).join("");
 const masaustu = (etkin, bolum, yol, govde) => `<div class="kabuk">${kenar({ etkin, bolum })}<div class="govde">${ust(yol)}${govde}</div></div>`;
 
-function telUst({ geri } = {}) {
+function telUst({ geri, menu } = {}) {
   const sol = geri
     ? `<a class="tu-geri" href="#">${ikon("arrow-left", 18)}${geri}</a><span class="bosluk"></span>`
     : `<img class="logo-acik" src="../../../../public/arvolab-logo.png" alt="ArvoLAB"/><img class="logo-koyu" src="../../../../public/arvolab-logo-koyu.png" alt="ArvoLAB"/><span class="bosluk"></span>`;
-  return `<header class="tu">${sol}<button class="uc-simge" aria-label="Ara">${ikon("search", 20)}</button><button class="uc-simge" aria-label="Bildirimler">${ikon("bell", 20)}</button><span class="avatar">DY</span></header>`;
+  const sag = menu
+    ? `<button class="uc-simge" aria-label="${menu}">${ikon("ellipsis", 20)}</button>`
+    : `<button class="uc-simge" aria-label="Ara">${ikon("search", 20)}</button><button class="uc-simge" aria-label="Bildirimler">${ikon("bell", 20)}</button>`;
+  return `<header class="tu">${sol}${sag}<span class="avatar" aria-label="Hesap">DY</span></header>`;
 }
 function altCubuk(etkin) {
   const o = (k, ad, ik) => `<a class="${etkin === k ? "etkin" : ""}" href="#">${ikon(ik, 20)}<span>${ad}</span></a>`;
@@ -127,13 +131,19 @@ const bag = (t) => `<a class="bag" href="#">${t}${ikon("chevron-right", 14)}</a>
 /* ---------------- DASHBOARD ---------------- */
 
 function dashboardMasa() {
+  /*
+    Revize v3 (kurum sahibi §2): iki DENGELİ sütun (sol: Teslim durumu +
+    Diğer çalışmalar; sağ: Kaynaklar ve kanıt). Abonelik, danışmana gönderme
+    ve yazım ritmi ikincil şeritte; geri bildirim en altta. "Çalışma özeti"
+    ikinci bir düğme değil, metin bağlantısı (tekrarlanan düğme yok).
+  */
   return masaustu("home", null, yolParca("Ana Sayfa"), `<main class="icerik">
     <header class="selam"><h1 class="sayfa-baslik">İyi günler, Deniz</h1><p class="yardim">Çalışmana kaldığın yerden devam et.</p></header>
     <section class="ana-yuzey dash-ana" aria-labelledby="ac-b">
       <p class="etiket">Aktif çalışma</p>
       <h2 id="ac-b" class="calisma-baslik" title="${OZGUN}">${BASLIK}</h2>
-      ${meta("Tez · Dokuz Eylül Üniversitesi", rozet("r-mavi", "Yazım aşamasında"), "Bugün düzenlendi")}
-      <div class="eylemler"><a class="d d-birincil" href="#">${ikon("pen-line", 18)}Yazmaya devam et</a><a class="d d-ikincil" href="#">Çalışma özeti</a></div>
+      ${meta("Tez", "Dokuz Eylül Üniversitesi", rozet("r-mavi", "Yazım aşamasında"))}
+      <div class="eylemler"><a class="d d-birincil" href="#">${ikon("pen-line", 18)}Yazmaya devam et</a><a class="bag bag-yan" href="#">Çalışma özeti${ikon("chevron-right", 14)}</a></div>
       ${simdi(false)}
       ${olcuSeridi()}
     </section>
@@ -142,45 +152,55 @@ function dashboardMasa() {
       <a class="d d-ucuncul d-sik" href="#">${ikon("sparkles", 16)}Yazım asistanı</a>
       <a class="d d-ucuncul d-sik" href="#">${ikon("message-square-quote", 16)}Kaynağa sor</a>
       <kbd>Ctrl K</kbd></nav>
-    <div class="ikili">
+    <div class="ikili esit">
       <div>
         <section>${bolumBas("Teslim durumu", "1/5 hazır", bag("Teslim listesi"))}<ul class="satirlar">${teslimSatirlari(false)}</ul></section>
-        <section>${bolumBas("Yazım ritmi", "son 14 gün")}<p class="yardim" style="padding-top:12px">Son iki haftada kaydedilmiş yazım yok. Editörde yazdıkça günlük ilerlemeniz burada birikir.</p></section>
         <section>${bolumBas("Diğer çalışmalarınız", "", bag("Tüm çalışmalar"))}<ul class="satirlar">${satir("Öğrenci öğretmen farkı", "Makale · henüz yazılmadı · 20 gün önce", rozet("r-gri", "Yeni"))}</ul></section>
       </div>
       <div>
-        <section>${bolumBas("Kaynaklar ve kanıt")}<ul class="satirlar">
+        <section>${bolumBas("Kaynaklar ve kanıt", "", bag("Kaynak Kütüphanesi"))}<ul class="satirlar">
           ${satir("Literatür", "1 okundu · 1 kullandım", "3 kaynak")}
           ${satir("Kaynakça denetimi", "Son denetim 1 gün önce", rozet("r-yesil", "%94"))}
           ${satir("Kanıt matrisi", "1 iddia doğrudan destekleniyor", "2 iddia")}
           ${satir("Etik kurul", "Başvuru ve belgeleriniz", "")}
           ${satir("Belge kontrolü", "Kılavuz uyumu, orijinallik ön-kontrolü", "1 belge")}
         </ul></section>
-        <section>${bolumBas("Danışmanıma gönder", "son kaydedilmiş hâl")}<div class="metin-eylemler"><a class="d d-ucuncul d-sik" href="#">${ikon("link-2", 16)}Okuma bağlantısı oluştur</a><a class="d d-ucuncul d-sik" href="#">${ikon("file-down", 16)}Dosya olarak gönder${ikon("chevron-down", 14)}</a></div></section>
-        <section>${bolumBas("Abonelik ve kredi", "", bag("Ayrıntı"))}
-          <div class="kredi"><p><span class="sayi">318</span> <span class="yardim">kredi kullanılabilir</span></p><a class="bag" href="#">${ikon("sparkles", 14)}Kredi satın al</a></div>
-          <div class="cubuk"><span style="--oran:63.6%"></span></div>
-          <div class="kredi-satir"><div>Bu ay kalan <b>318 / 500</b></div><div>Satın alınan bakiye <b>0</b></div></div></section>
       </div>
     </div>
-    <details class="dipler"><summary><b>Daha fazla</b> bölümler, son eklenenler, çalışma hareketi<span>· 3 kaynak · 1 belge kontrolü</span>${ikon("chevron-down", 18)}</summary></details>
+    <section class="ikincil-serit" aria-label="Diğer bilgiler">
+      <div><p class="bolum-baslik">Danışmanıma gönder</p><p class="yardim">Son kaydedilmiş hâl</p><div class="metin-eylemler"><a class="bag" href="#">${ikon("link-2", 14)}Okuma bağlantısı</a><a class="bag" href="#">${ikon("file-down", 14)}Dosya olarak gönder</a></div></div>
+      <div><p class="bolum-baslik">Abonelik ve kredi</p><p class="yardim"><b class="vurgu-sayi">318</b> kredi · bu ay 318/500 · bakiye 0</p><div class="metin-eylemler"><a class="bag" href="#">Ayrıntı</a><a class="bag" href="#">${ikon("sparkles", 14)}Kredi satın al</a></div></div>
+      <div><p class="bolum-baslik">Yazım ritmi</p><p class="yardim">Son 14 günde kaydedilmiş yazım yok. Yazdıkça günlük ilerlemeniz burada birikir.</p></div>
+    </section>
+    <details class="dipler"><summary><b>Daha fazla</b> bölümler, son eklenenler, çalışma hareketi${ikon("chevron-down", 18)}</summary></details>
     <aside class="gb">${ikon("message-square-heart", 16)}ArvoLab işinizi kolaylaştırdı mı?<span class="puan">${[1, 2, 3, 4, 5].map((n) => `<button>${n}</button>`).join("")}</span><span class="sonra"><a class="d d-ucuncul d-sik">Sonra</a><a class="d d-ucuncul d-sik">Bir daha sorma</a></span></aside>
   </main>`);
 }
 
+function acilir(baslik, ozet, govde, acik = false) {
+  return `<details class="acilir"${acik ? " open" : ""}><summary><span class="satir-govde"><strong>${baslik}</strong>${ozet ? `<span class="yardim">${ozet}</span>` : ""}</span>${ikon("chevron-down", 18, "acilir-ok")}</summary>${govde ? `<div class="acilir-ic">${govde}</div>` : ""}</details>`;
+}
+
 function dashboardTel() {
+  /*
+    Revize v3 (kurum sahibi §3): ilk ekranda çalışma, tam genişlikte
+    "Yazmaya devam et", altında metin bağlantısı "Çalışma özeti", kısa
+    "Şimdi", alt alta üç ölçü; sonra Teslim durumu ve Kaynaklar; geri kalanı
+    açılır bölümlerde. Alt gezinme sabit (position: fixed) ve içerik onun
+    yüksekliği kadar alttan boşluk bırakır: hiçbir şey altında kalmaz.
+  */
   return telefon("home", `<main class="icerik">
     <h1 class="sayfa-baslik">İyi günler, Deniz</h1>
-    <section class="ana-yuzey" style="margin-top:16px" aria-labelledby="act-b">
+    <section class="ana-yuzey tel-ana" aria-labelledby="act-b">
       <p class="etiket">Aktif çalışma</p>
-      <h2 id="act-b" class="calisma-baslik" style="margin-top:8px" title="${OZGUN}">${BASLIK}</h2>
-      ${meta("Tez", rozet("r-mavi", "Yazım aşamasında"), "Bugün")}
-      <div class="eylemler" style="flex-direction:column;gap:4px"><a class="d d-birincil" href="#">${ikon("pen-line", 18)}Yazmaya devam et</a><a class="bag" href="#" style="justify-content:center">Çalışma özeti</a></div>
+      <h2 id="act-b" class="calisma-baslik dort-satir" title="${OZGUN}" aria-label="${BASLIK}">${BASLIK}</h2>
+      ${meta("Tez", "Dokuz Eylül Üniversitesi")}<p class="meta">${rozet("r-mavi", "Yazım aşamasında")}</p>
+      <a class="d d-birincil tam" href="#">${ikon("pen-line", 18)}Yazmaya devam et</a>
+      <a class="bag ortala" href="#">Çalışma özeti</a>
       ${simdi(true)}
       ${olcuSatirlari()}
     </section>
-    <nav class="hizli-tel" aria-label="Hızlı erişim"><a href="#">${ikon("link-2", 18)}DOI ile ekle</a><a href="#">${ikon("sparkles", 18)}Yazım asistanı</a><a href="#">${ikon("message-square-quote", 18)}Kaynağa sor</a></nav>
-    <section class="tel-bolum">${bolumBas("Teslim listesi", "1/5 hazır", bag("Tümü"))}<ul class="satirlar">${teslimSatirlari(false)}</ul></section>
+    <section class="tel-bolum">${bolumBas("Teslim durumu", "1/5 hazır", bag("Tümü"))}<ul class="satirlar">${teslimSatirlari(false)}</ul></section>
     <section class="tel-bolum">${bolumBas("Kaynaklar ve kanıt")}<ul class="satirlar">
       ${satir("Literatür", "1 okundu · 1 kullandım", "3 kaynak", true)}
       ${satir("Kaynakça denetimi", "Son denetim 1 gün önce", rozet("r-yesil", "%94"), true)}
@@ -188,14 +208,15 @@ function dashboardTel() {
       ${satir("Etik kurul", "", "", true)}
       ${satir("Belge kontrolü", "", "1 belge", true)}
     </ul></section>
-    <section class="tel-bolum">${bolumBas("Diğer bilgiler")}<ul class="satirlar">
-      ${satir("Danışmanıma gönder", "Okuma bağlantısı ya da dosya", "", true)}
-      ${satir("Abonelik ve kredi", "Bu ay 318/500 · bakiye 0", "318 kredi", true)}
-      ${satir("Yazım ritmi", "Son 14 günde kayıt yok", "", true)}
-      ${satir("Diğer çalışmalarınız", "Öğrenci öğretmen farkı", "", true)}
-      ${satir("Daha fazla", "Bölümler, son eklenenler, çalışma hareketi", "", true)}
-    </ul></section>
-    <aside class="gb" style="flex-wrap:wrap">${ikon("message-square-heart", 16)}ArvoLab işinizi kolaylaştırdı mı?<span class="puan" style="width:100%;justify-content:space-between">${[1, 2, 3, 4, 5].map((n) => `<button style="width:48px;height:44px">${n}</button>`).join("")}</span><span class="sonra" style="margin-left:0"><a class="d d-ucuncul" style="height:44px">Sonra</a><a class="d d-ucuncul" style="height:44px">Bir daha sorma</a></span></aside>
+    <section class="tel-bolum">${bolumBas("Diğer bilgiler")}
+      ${acilir("Hızlı erişim", "DOI, yazım asistanı, kaynağa sor", `<div class="metin-eylemler dikey"><a class="bag" href="#">${ikon("link-2", 16)}DOI ile kaynak ekle</a><a class="bag" href="#">${ikon("sparkles", 16)}Yazım asistanı</a><a class="bag" href="#">${ikon("message-square-quote", 16)}Kaynağa sor</a></div>`)}
+      ${acilir("Danışmanıma gönder", "Okuma bağlantısı ya da dosya", "")}
+      ${acilir("Abonelik ve kredi", "318 kredi · bu ay 318/500", "")}
+      ${acilir("Yazım ritmi", "Son 14 günde kayıt yok", "")}
+      ${acilir("Diğer çalışmalarınız", "Öğrenci öğretmen farkı", "")}
+      ${acilir("Daha fazla", "Bölümler, son eklenenler, hareket", "")}
+    </section>
+    <aside class="gb tel-gb">${ikon("message-square-heart", 16)}ArvoLab işinizi kolaylaştırdı mı?<span class="puan">${[1, 2, 3, 4, 5].map((n) => `<button>${n}</button>`).join("")}</span><span class="sonra"><a class="d d-ucuncul">Sonra</a><a class="d d-ucuncul">Bir daha sorma</a></span></aside>
   </main>`);
 }
 
@@ -204,19 +225,19 @@ function dashboardTel() {
 function liste(tel) {
   const ok = tel ? ikon("chevron-right", 16) : "";
   return `<ul class="cl">
-    <li class="${tel ? "" : "secili"}"><a href="#" ${tel ? "" : 'aria-current="true"'}>
+    <li class="${tel ? "" : "secili"}"><a href="?sec=b1" ${tel ? "" : 'aria-current="true"'}>
       <div class="ok-sag"><strong title="${OZGUN}">${BASLIK}</strong>${ok}</div>
       <p class="yardim">Tez · 6.354 kelime · bugün</p>
       <div class="cl-alt">${rozet("r-mavi", "Yazım aşamasında")}<span class="yardim">41 gün kaldı</span></div>
       <div class="cubuk"><span style="--oran:55%"></span></div></a></li>
-    <li><a href="#"><div class="ok-sag"><strong>Öğrenci öğretmen farkı</strong>${ok}</div>
-      <p class="yardim">Makale · henüz yazılmadı · 20 gün önce</p>
-      <div class="cl-alt">${rozet("r-gri", "Yeni")}<span class="yardim">Tarih yok</span></div></a></li>
+    <li><a href="?sec=b2"><div class="ok-sag"><strong>Öğrenci öğretmen farkı</strong>${ok}</div>
+      <p class="yardim">Makale · 0 kelime · 20 gün önce</p>
+      <div class="cl-alt">${rozet("r-gri", "Yeni")}<span class="yardim">Teslim tarihi yok</span></div></a></li>
   </ul>`;
 }
 const SEKMELER = [["Özet", ""], ["Yazım", ""], ["Kaynaklar", "3"], ["Kanıt", "2"], ["Analiz", ""]];
 function calismalarimMasa() {
-  return masaustu("calisma", "Özet", yolParca("Çalışmalarım", BASLIK), `<main class="icerik">
+  return masaustu("calisma", "*", yolParca("Çalışmalarım", BASLIK), `<main class="icerik">
     <header class="sayfa-bas"><div><h1 class="sayfa-baslik">Çalışmalarım</h1><p class="yardim">Bir çalışma seçin; özeti, teslim durumu ve araçları sağda.</p></div><a class="d d-ikincil" href="#">${ikon("plus", 16)}Yeni çalışma</a></header>
     <div class="liste-ayrinti">
       <section aria-label="Tüm çalışmalar"><p class="etiket">Tüm çalışmalar · 2</p>${liste(false)}</section>
@@ -224,9 +245,9 @@ function calismalarimMasa() {
         <div class="ayr-bas"><div><p class="etiket">Tez · Dokuz Eylül Üniversitesi</p><h2 id="ayr-b" class="calisma-baslik" title="${OZGUN}">${BASLIK}</h2>${meta(rozet("r-mavi", "Yazım aşamasında"), "Bugün düzenlendi")}</div>
           <div class="eylemler" style="margin-top:0"><a class="d d-birincil" href="#">${ikon("pen-line", 18)}Yazmaya devam et</a><button class="d d-ikincil d-simge" aria-label="Diğer işlemler: teslim paketi, düzenle, belge yükle, sil">${ikon("ellipsis", 18)}</button></div></div>
         <nav class="sekmeler" aria-label="Çalışmanın bölümleri ve araçları">
-          ${SEKMELER.map(([a, s], i) => `<a class="sekme${i === 0 ? " etkin" : ""}" href="#">${a}${s ? `<em>${s}</em>` : ""}</a>`).join("")}
+          ${SEKMELER.map(([a, s], i) => `<a class="sekme${i === 0 ? " etkin" : ""}" href="#"${i === 0 ? ' aria-current="page"' : ""}>${a}${s ? `<em>${s}</em>` : ""}</a>`).join("")}
           <span class="ayrac komut"></span>
-          <a class="sekme" href="#">${ikon("calendar-days", 15)}Takvim</a><a class="sekme" href="#">${ikon("quote", 15)}Kaynakça<em>%94</em></a><a class="sekme" href="#">${ikon("ellipsis", 15)}Diğer araçlar</a>
+          <button class="sekme" type="button" aria-haspopup="menu" aria-label="Diğer araçlar: Takvim, Kaynakça, Etik kurul, Belge Kontrol">${ikon("ellipsis", 15)}Diğer araçlar${ikon("chevron-down", 13)}</button>
         </nav>
         ${olcuSeridi()}
         ${simdi(false)}
@@ -243,19 +264,25 @@ function calismalarimTel() {
   </main>`);
 }
 function ayrintiTel() {
-  const arac = (ik, ad, d) => satir(`<span style="display:inline-flex;align-items:center;gap:10px">${ikon(ik, 18)}${ad}</span>`, "", d, true);
+  /*
+    Revize v3 (kurum sahibi §6): araçlarda yalnız dört öğe (Yazım,
+    Kaynaklar, Kanıt matrisi, Analiz); Takvim, Kaynakça ve kalanlar "Diğer
+    araçlar"da. "⋯ Diğer işlemler" (teslim paketi, düzenle, belge yükle,
+    sil) üst çubukta; birincil düğme tam genişlikte, yanında ikinci düğme yok.
+  */
+  const arac = (ik, ad, d) => satir(`<span class="arac-ad">${ikon(ik, 18)}${ad}</span>`, "", d, true);
   return telefon("calisma", `<main class="icerik">
     <p class="etiket">Tez · Dokuz Eylül Üniversitesi</p>
     <h1 class="calisma-baslik" style="margin-top:8px" title="${OZGUN}">${BASLIK}</h1>
     ${meta(rozet("r-mavi", "Yazım aşamasında"), "Bugün düzenlendi")}
-    <div class="eylemler"><a class="d d-birincil" href="#" style="flex:1">${ikon("pen-line", 18)}Yazmaya devam et</a><button class="d d-ikincil" style="width:48px;height:48px;padding:0" aria-label="Diğer işlemler">${ikon("ellipsis", 18)}</button></div>
-    <section class="tel-bolum" style="margin-top:24px"><div class="grup-bas"><p class="etiket">Durum</p></div><div class="grup">${olcuSatirlari().replace('class="olcu-satirlari"', 'class="olcu-satirlari" style="margin:0;border:0;padding:0"')}</div></section>
+    <a class="d d-birincil tam" href="#" style="margin-top:16px">${ikon("pen-line", 18)}Yazmaya devam et</a>
+    <section class="tel-bolum ilk"><div class="grup-bas"><p class="etiket">Durum</p></div><div class="grup">${olcuSatirlari().replace('class="olcu-satirlari"', 'class="olcu-satirlari grup-ici"')}</div></section>
     ${simdi(true)}
-    <section class="tel-bolum"><div class="grup-bas"><p class="etiket">Teslim için bakılacaklar · 3</p></div><ul class="grup satirlar">${teslimSatirlari(true)}</ul></section>
+    <section class="tel-bolum"><div class="grup-bas"><p class="etiket">Teslim kontrol listesi · 1/5</p></div><ul class="grup satirlar">${teslimSatirlari(true)}</ul></section>
     <section class="tel-bolum"><div class="grup-bas"><p class="etiket">Araçlar</p></div><ul class="grup satirlar">
-      ${arac("pen-line", "Yazım", "")}${arac("library", "Kaynaklar", "3")}${arac("table-2", "Kanıt matrisi", "2")}${arac("chart-no-axes-combined", "Analiz", "")}${arac("calendar-days", "Takvim", "")}${arac("quote", "Kaynakça", "%94")}${arac("ellipsis", "Diğer araçlar", "")}
+      ${arac("pen-line", "Yazım", "")}${arac("library", "Kaynaklar", "3")}${arac("table-2", "Kanıt matrisi", "2")}${arac("chart-no-axes-combined", "Analiz", "")}${arac("ellipsis", "Diğer araçlar", "Takvim, Kaynakça…")}
     </ul></section>
-  </main>`, { geri: "Çalışmalarım" });
+  </main>`, { geri: "Çalışmalarım", menu: "Diğer işlemler: teslim paketi, düzenle, belge yükle, sil" });
 }
 
 /* ---------------- EDİTÖR ---------------- */
@@ -319,7 +346,7 @@ function editorTelUst() {
 }
 function editorTel(ai) {
   const govde = `${arac(true)}<article class="tel-sayfa"><h2>1. Giriş</h2><p>${P[0]}</p><p>${P[1]}</p></article>
-    ${ai ? `<div class="ortu"></div><section class="alt-sayfa" aria-label="Yazım paneli"><div class="tutamak"></div><div class="ai-bas" style="height:44px"><p class="bolum-baslik">Yazım paneli</p><button class="a" style="width:44px;height:44px" aria-label="Paneli kapat">${ikon("x", 18)}</button></div>${aiPanel()}</section>` : ""}`;
+    ${ai ? `<div class="ortu"></div><section class="alt-sayfa" role="dialog" aria-modal="true" aria-label="Yazım paneli"><div class="tutamak"></div><div class="ai-bas" style="height:44px"><p class="bolum-baslik">Yazım paneli</p><button class="a" style="width:44px;height:44px" aria-label="Paneli kapat">${ikon("x", 18)}</button></div>${aiPanel()}</section>` : ""}`;
   return telefon("calisma", govde, { ust: editorTelUst(), alt: !ai });
 }
 
@@ -331,12 +358,13 @@ const KAYNAKLAR = [
   { b: "Türkiye'de Phillips eğrisinin istikrarı", y: "Önder, A. Ö.", yil: "2009", doi: null, pdf: false, d: ["r-yesil", "Kullandım"], s: "" },
 ];
 function kaynakSatiri(k, tel) {
-  const metaHtml = `<div class="kaynak-meta"><span>${k.y}</span><span>${k.yil}</span>${k.doi ? `<span>${ikon("link-2", 12)}DOI ${k.doi}</span>` : ""}<span>${ikon(k.pdf ? "file-check-2" : "file-x-2", 12)}${k.pdf ? "PDF var" : "PDF yok"}</span></div>`;
+  const metaHtml = `<div class="kaynak-meta"><span>${k.y}</span><span>${k.yil}</span>${k.doi ? `<span>${ikon("link-2", 12)}DOI ${k.doi}</span>` : ""}<span>${ikon(k.pdf ? "file-check-2" : "file-x-2", 12)}${k.pdf ? "PDF var" : "PDF yok"}</span>${k.pdf ? `<a class="bag" href="#">${ikon("message-square-quote", 12)}Kaynağa sor</a>` : ""}</div>`;
   if (tel) {
-    return `<li><a class="kaynak" href="#"><div><strong>${k.b}</strong>${metaHtml}<div style="margin-top:8px">${rozet(k.d[0], k.d[1])}</div></div>${ikon("chevron-right", 16, "satir-ok")}</a></li>`;
+    return `<li><div class="kaynak"><div><a class="kaynak-baslik" href="#"><strong>${k.b}</strong></a>${metaHtml}<div style="margin-top:8px">${rozet(k.d[0], k.d[1])}</div></div>${ikon("chevron-right", 16, "satir-ok")}</div></li>`;
   }
-  return `<li class="${k.sec ? "secili" : ""}"><a class="kaynak" href="#"><div><strong>${k.b}</strong>${metaHtml}</div>
-    <div class="kaynak-sag">${rozet(k.d[0], k.d[1])}${k.s ? `<span class="d d-ucuncul d-sik">${k.s}</span>` : ""}</div></a></li>`;
+  /* Satır bir kapsayıcı; bağlantılar (başlık, DOI, Kaynağa sor, sonraki adım) iç içe değil, yan yana. */
+  return `<li class="${k.sec ? "secili" : ""}"><div class="kaynak"><div><a class="kaynak-baslik" href="#"${k.sec ? ' aria-current="true"' : ""}><strong>${k.b}</strong></a>${metaHtml}</div>
+    <div class="kaynak-sag">${rozet(k.d[0], k.d[1])}${k.s ? `<button class="d d-ucuncul d-sik" type="button">${k.s}</button>` : ""}</div></div></li>`;
 }
 function kaynaklarMasa() {
   return masaustu("lit", null, yolParca("Kaynak Kütüphanesi"), `<main class="icerik">
@@ -366,7 +394,7 @@ function kaynaklarTel() {
     <h1 class="sayfa-baslik">Kaynak Kütüphanesi</h1><p class="yardim" style="margin-top:4px">Künyeler dizinlerde doğrulanır.</p>
     <div class="eylemler"><a class="d d-birincil" href="#" style="flex:1">${ikon("search", 18)}Kaynak bul</a><button class="d d-ikincil" style="width:48px;height:48px;padding:0" aria-label="İçe aktar, tarama asistanı, dışa aktar">${ikon("ellipsis", 18)}</button></div>
     <span class="girdi" style="margin-top:16px;height:44px">${ikon("search", 16)}Kaynaklarda ara</span>
-    <div class="suzgecler" style="flex-wrap:nowrap;overflow:hidden"><span class="suzgec etkin" style="height:36px">Hepsi <em>3</em></span><span class="suzgec" style="height:36px">Okunacak <em>1</em></span><span class="suzgec" style="height:36px">Okundu <em>1</em></span><span class="suzgec" style="height:36px">Kullandım <em>1</em></span></div>
+    <div class="suzgecler"><span class="suzgec etkin" style="height:36px">Hepsi <em>3</em></span><span class="suzgec" style="height:36px">Okunacak <em>1</em></span><span class="suzgec" style="height:36px">Okundu <em>1</em></span><span class="suzgec" style="height:36px">Kullandım <em>1</em></span></div>
     <section class="tel-bolum" style="margin-top:16px"><ul class="grup kaynaklar">${KAYNAKLAR.map((k) => kaynakSatiri(k, true)).join("")}</ul></section>
     <section class="tel-bolum"><ul class="satirlar">${satir("Kaynakça uyumu", "Son denetim 1 gün önce · 3 künye", "94/100", true)}${satir("DOI ile kaynak ekle", "", "", true)}</ul></section>
   </main>`);

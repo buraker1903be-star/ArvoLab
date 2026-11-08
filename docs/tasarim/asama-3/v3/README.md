@@ -100,3 +100,68 @@ kart benzeri kutular (gölgeli olanlar parantezde).
 | kaynaklar 1440 | v3 | 140 | 1 (0) | — | 1204 | 1030 | 0 | 4.5 / 4.51 | — |
 | kaynaklar 390 | v3 | 197 | 1 (0) | — | 390 | 932 | 0 | 4.54 / 4.51 | 0 öğe <44 (en küçük —) |
 | kaynaklar 360 | v3 | 197 | 1 (0) | — | 360 | 1002 | 0 | 4.54 / 4.51 | 0 öğe <44 (en küçük —) |
+
+## Son revizyon (kurum sahibinin "Son tasarım revizyonu ve onay kapısı")
+
+- **Ana Sayfa masaüstü:** iki dengeli sütun (sol: Teslim durumu, Diğer
+  çalışmalar; sağ: Kaynaklar ve kanıt). Danışmanıma gönder, Abonelik ve
+  kredi, Yazım ritmi ikincil şeritte; geri bildirim en altta. "Çalışma
+  özeti" düğme değil metin bağlantısı (tekrarlanan düğme yok). Meta satırı
+  yalnız tür, kurum, durum.
+- **Ana Sayfa telefon:** başlık en çok 4 satır (tamamı `title` ve
+  `aria-label`'da); tam genişlikte "Yazmaya devam et", altında "Çalışma
+  özeti" bağlantısı; Teslim durumu ve Kaynaklardan sonra "Diğer bilgiler"
+  açılır bölümlerde (Hızlı erişim dahil).
+- **Alt gezinme sabit** (`position: fixed`); içerik onun yüksekliği kadar
+  alttan boşluk bırakır. Eski tam sayfa çekimi çubuğu ilk görünümün altına
+  (sayfanın ortasına) çiziyordu; `cek.mjs` artık telefonda görünümü sayfa
+  boyuna büyütüp tek kare çekiyor.
+- **Çalışmalarım masaüstü:** bu sayfada kenar çubuğundaki çalışma bağlamı
+  yalnız seçici (ikinci bir gezinme sistemi olmasın; bölümler sağ paneldeki
+  sekmelerde). Takvim ve Kaynakça "Diğer araçlar" menüsünde. Liste
+  öğeleri `?sec=` bağlantısı ve `aria-current`; seçili olmayanlarda sınır yok.
+- **Çalışma ayrıntısı telefon:** araçlarda dört öğe (Yazım, Kaynaklar, Kanıt
+  matrisi, Analiz) + "Diğer araçlar"; "Diğer işlemler" (teslim paketi,
+  düzenle, belge yükle, sil) üst çubukta; birincil düğme tam genişlik.
+- **Kaynak Kütüphanesi:** PDF'i olan kaynakta satırda "Kaynağa sor"; satır
+  artık iç içe bağlantı içermiyor (başlık, DOI ve eylemler yan yana).
+- **Editör telefon AI:** alt sayfa `role="dialog"`, `aria-modal="true"`.
+
+### Ölçüm: önceki v3 ve revize v3
+
+`node docs/tasarim/asama-3/v3/olc.mjs [kök] [etiket]`. "Son içerik ile alt
+çubuk arası": sayfa sonuna kaydırınca son içeriğin alt kenarı ile sabit alt
+çubuğun üst kenarı arasındaki pay (pozitif = hiçbir şey çubuğun altında
+kalmıyor). "Açık/koyu yerleşim farkı": iki temada konumu ya da boyutu farklı
+öğe sayısı (temaya özgü logo ve güneş/ay simgesi hariç).
+
+| Ekran | Sürüm | Ana eylem alt kenarı (px) | İçerik yüksekliği | En büyük boşluk | Taşma (açık/koyu) | En düşük kontrast (açık/koyu) | Dokunma <44 px | Son içerik ile alt çubuk arası | Açık/koyu yerleşim farkı |
+|---|---|---|---|---|---|---|---|---|---|
+| dashboard 1440 | önceki | 335 | 1477 | 32 | 0/0 | 4.5 / 4.51 | — | — | 0 öğe |
+| dashboard 1440 | revize | 335 | 1328 | 32 | 0/0 | 4.5 / 4.51 | — | — | 0 öğe |
+| dashboard 390 | önceki | 378 | 2127 | 28 | 0/0 | 4.52 / 4.51 | 0 | 28 px | 0 öğe |
+| dashboard 390 | revize | 405 | 2096 | 28 | 0/0 | 4.52 / 4.51 | 0 | 28 px | 0 öğe |
+| dashboard 360 | önceki | 378 | 2127 | 28 | 0/0 | 4.52 / 4.51 | 0 | 28 px | 0 öğe |
+| dashboard 360 | revize | 405 | 2096 | 28 | 0/0 | 4.52 / 4.51 | 0 | 28 px | 0 öğe |
+| calismalarim 1440 | önceki | 233 | 902 | 24 | 0/0 | 4.5 / 4.51 | — | — | 0 öğe |
+| calismalarim 1440 | revize | 233 | 902 | 24 | 0/0 | 4.5 / 4.51 | — | — | 0 öğe |
+| calismalarim 390 | önceki | — | 844 | 24 | 0/0 | 4.59 / 4.51 | 0 | 305 px | 0 öğe |
+| calismalarim 390 | revize | — | 844 | 24 | 0/0 | 4.59 / 4.51 | 0 | 305 px | 0 öğe |
+| calisma-ayrinti 390 | önceki | 282 | 1472 | 28 | 0/0 | 4.52 / 4.51 | 0 | 28 px | 0 öğe |
+| calisma-ayrinti 390 | revize | 278 | 1342 | 28 | 0/0 | 4.52 / 4.51 | 0 | 28 px | 0 öğe |
+| calisma-ayrinti 360 | önceki | 282 | 1472 | 28 | 0/0 | 4.52 / 4.51 | 0 | 28 px | 0 öğe |
+| calisma-ayrinti 360 | revize | 278 | 1342 | 28 | 0/0 | 4.52 / 4.51 | 0 | 28 px | 0 öğe |
+| editor 1440 | önceki | — | 1103 | 0 | 0/0 | 4.68 / 4.51 | — | — | 0 öğe |
+| editor 1440 | revize | — | 1103 | 0 | 0/0 | 4.68 / 4.51 | — | — | 0 öğe |
+| editor 390 | önceki | — | 993 | 14 | 0/0 | 5.16 / 4.51 | 0 | 46 px | 0 öğe |
+| editor 390 | revize | — | 993 | 14 | 0/0 | 5.16 / 4.51 | 0 | 46 px | 0 öğe |
+| editor-ai 1440 | önceki | — | 1159 | 0 | 0/0 | 4.68 / 4.51 | — | — | 0 öğe |
+| editor-ai 1440 | revize | — | 1159 | 0 | 0/0 | 4.68 / 4.51 | — | — | 0 öğe |
+| editor-ai 390 | önceki | — | 929 | 14 | 0/0 | 4.93 / 4.51 | 0 | — | 0 öğe |
+| editor-ai 390 | revize | — | 993 | 14 | 0/0 | 4.93 / 4.51 | 0 | — | 0 öğe |
+| kaynaklar 1440 | önceki | 140 | 1030 | 24 | 0/0 | 4.5 / 4.51 | — | — | 0 öğe |
+| kaynaklar 1440 | revize | 140 | 1030 | 24 | 0/0 | 4.5 / 4.51 | — | — | 0 öğe |
+| kaynaklar 390 | önceki | 197 | 932 | 28 | 0/0 | 4.54 / 4.51 | 0 | 28 px | 0 öğe |
+| kaynaklar 390 | revize | 197 | 1074 | 28 | 0/0 | 4.54 / 4.51 | 0 | 28 px | 0 öğe |
+| kaynaklar 360 | önceki | 197 | 1002 | 28 | 0/0 | 4.54 / 4.51 | 0 | 28 px | 0 öğe |
+| kaynaklar 360 | revize | 197 | 1099 | 28 | 0/0 | 4.54 / 4.51 | 0 | 28 px | 0 öğe |
