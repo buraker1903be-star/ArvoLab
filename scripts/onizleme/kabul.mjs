@@ -278,7 +278,8 @@ const tarayici = await chromium.launch();
     await topla(".yazma-basligi");
     await topla(".manuscript-araclar");
     // Yalnızca çubukta görünen gruplar (UX S3+S4): sığmayan grubun araçları "⋯" menüsünde, o da bu döngüde açılıyor.
-    for (const menu of await sayfa.locator(".manuscript-araclar > .arac-grup:not([hidden]) .arac-menu-dugme, .yazma-eylemleri button[aria-expanded][aria-controls]:not([aria-controls=yazim-yan-panel])").all()) {
+    // Yalnızca GÖRÜNEN menüler: telefonun "Belge" menüsü masaüstünde gizli (Premium Simplicity Aşama 1); aynı işlevler masaüstünde başlıkta.
+    for (const menu of await sayfa.locator(".manuscript-araclar > .arac-grup:not([hidden]) .arac-menu-dugme:visible, .yazma-eylemleri button[aria-expanded][aria-controls]:not([aria-controls=yazim-yan-panel]):visible").all()) {
       await menu.click();
       await sayfa.waitForTimeout(150);
       await topla(".arac-menu-pencere:not([hidden])");
