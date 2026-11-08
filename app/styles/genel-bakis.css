@@ -351,6 +351,15 @@
 @media (max-width: 900px) {
   .calismalar-ikili { grid-template-columns: minmax(0, 1fr); }
   .calisma-durum-bas { flex-wrap: wrap; }
+  /*
+    Tek sütunda seçili çalışmanın ayrıntısı listenin ÜSTÜNDE (Aşama 2/A2-10).
+    Eskiden altındaydı: telefonda sayfa açılınca önce liste görünüyor,
+    "Yazmaya devam et" ~1000 px aşağıda kalıyordu. Yalnızca görsel sıra
+    değişiyor (DOM'da liste önce): masaüstünde liste solda kalsın diye.
+    Listeden başka çalışma seçilince sayfa kaydırılmıyor ve odak dokunulan
+    satırda kalıyor (Link scroll={false}); ayrıntı yerinde yenileniyor.
+  */
+  .calismalar-ikili > .calisma-durum { order: -1; }
 }
 
 /* Kanıt matrisi penceresi: özet, açılır iddia satırları (kanit-matrisi-penceresi.tsx) */

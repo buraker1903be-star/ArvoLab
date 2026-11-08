@@ -2174,6 +2174,10 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   color: var(--ink-soft); list-style: none; cursor: pointer;
   transition: background-color var(--sure-hizli) ease, border-color var(--sure-hizli) ease;
 }
+/* Dokunmatikte 44 px (Aşama 2/A2-10): 38 px dokunma hedefi kuralının (≥ 40) altındaydı. */
+@media (max-width: 1199px), (pointer: coarse) {
+  .kart-menu > summary { width: var(--kontrol-h-dokunma); height: var(--kontrol-h-dokunma); }
+}
 .kart-menu > summary:hover { background: var(--dugme-hover-zemin); }
 .kart-menu > summary::-webkit-details-marker { display: none; }
 .kart-menu > summary:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
