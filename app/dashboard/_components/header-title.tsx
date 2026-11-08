@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
@@ -36,7 +36,21 @@ export default function HeaderTitle() {
   const uygulamalar = labUygulamalari(t);
   const uygulama = etkinUygulama(uygulamalar, pathname);
   const bolum = uygulama?.bolumler ? etkinBolum(uygulama.bolumler, pathname) : null;
-  const label = bolum?.label ?? uygulama?.label ?? t({ tr: "Çalışma alanı", en: "Workspace" });
+  const sorgu = useSearchParams();
+  /*
+    Kaynak Kütüphanesi / Kaynaklar ayrımı (Signature OS 2.0 Aşama 2):
+    bir çalışmanın içinden açılmış Kaynaklar sayfasında (?calisma=) üst
+    çubuk da "Kaynaklar" der — sayfa başlığı, kenar çubuğu bağlamı ve
+    konum yoluyla aynı ad. Eskiden telefonda başlık "Kaynaklar" derken
+    üst çubuk "Kaynak Kütüphanesi" diyordu. Karar adresten (calisma
+    değişkeni), sayfanın yayınladığı bağlamdan değil: bağlam yalnızca
+    tarayıcıda var ve sunucu çizimi önce yanlış adı gösterip sonra
+    değiştiriyordu.
+  */
+  const calismaKaynaklari = uygulama?.key === "kaynaklar" && Boolean(sorgu.get("calisma"));
+  const label = calismaKaynaklari
+    ? t({ tr: "Kaynaklar", en: "Sources" })
+    : (bolum?.label ?? uygulama?.label ?? t({ tr: "Çalışma alanı", en: "Workspace" }));
 
   return (
     <Link href="/dashboard" className="os-marka" aria-label={`${t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })} · ${label}`}>

@@ -110,7 +110,10 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       <div className="dashboard-content-shell" inert={sozlesmeGerekli || undefined}>
         <header className="dashboard-header">
           {/* Telefonda marka; tablet ve masaüstünde marka kenar çubuğunda, burada konum yolu (shell.css). */}
-          <HeaderTitle />
+          {/* Sorgu değişkenini okuyor (Kaynaklar / Kaynak Kütüphanesi): konum yolu gibi Suspense içinde. */}
+          <Suspense>
+            <HeaderTitle />
+          </Suspense>
           <Suspense>
             <KonumYolu uygulamalar={uygulamalar} />
           </Suspense>
