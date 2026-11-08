@@ -17,6 +17,7 @@ import {
 } from "@/lib/os/uygulamalar";
 import { OsSimge } from "./os-simge";
 import { useCalismaBaglami } from "./calisma-baglami";
+import { ProjeSecici } from "./proje-secici";
 import { useEkranSinifi } from "./ekran-sinifi";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import { KENAR_ANAHTARI, kenarOku } from "@/lib/os/kenar";
@@ -152,8 +153,8 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
 
         {baglamGorunur ? (
           <section className="os-gezinme-baglam" aria-label={t({ tr: `Açık çalışma: ${baglam.baslik}`, en: `Open work: ${baglam.baslik}` })}>
-            <span className="os-gezinme-baslik">{t({ tr: "Açık çalışma", en: "Open work" })}</span>
-            <b className="os-gezinme-calisma" title={baglam.baslik}>{baglam.baslik}</b>
+            {/* Çalışmanın adı bir düğme: son çalışmalara geçiş, aynı bölüm korunur (Signature OS 2.0, proje-secici.tsx). */}
+            <ProjeSecici baglam={baglam} yol={yol} sorgu={sorgu.toString()} />
             <ul className="os-gezinme-liste">
               {baglantilar.map((b) => (
                 <li key={b.key} className={b.grup === "arac" && baglantilar.find((x) => x.grup === "arac")?.key === b.key ? "os-gezinme-ayrac" : undefined}>

@@ -49,6 +49,37 @@
   -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   color: var(--ink); font-size: var(--fs-body); font-weight: 650; line-height: var(--lh-baslik);
 }
+/*
+  PROJECT SWITCHER (Signature OS 2.0 Aşama 2, proje-secici.tsx). Açık
+  çalışmanın adı bir düğme; liste kenar çubuğunun içinde açılır (kayan
+  kapta açılır pencere kırpılırdı). Başlıklar listede kesilmeden sarar.
+*/
+.proje-secici { display: grid; gap: var(--s-1); margin-bottom: var(--s-2); }
+.proje-secici-dugme {
+  display: flex; align-items: center; gap: var(--s-1); width: 100%; padding: var(--s-2) var(--s-2) var(--s-2) 0;
+  border: 1px solid transparent; border-radius: var(--r-md); background: transparent; color: var(--ink);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.proje-secici-dugme > svg { flex: none; color: var(--muted); }
+.proje-secici-dugme[aria-expanded="true"] { border-color: var(--line); background: var(--surface-2); }
+@media (hover: hover) and (pointer: fine) { .proje-secici-dugme:hover { background: var(--surface-2); } }
+.proje-secici-govde { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.proje-secici-dugme .os-gezinme-calisma { margin: 0 var(--s-3); }
+.proje-secici-pencere { display: grid; gap: var(--s-1); padding: var(--s-1); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--yuzey-ust); box-shadow: var(--yuzey-acilir-golge); }
+.proje-secici-liste { display: grid; gap: 2px; max-height: 50vh; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.proje-secici-oge { display: flex; align-items: flex-start; gap: var(--s-2); padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); color: var(--ink-soft); cursor: pointer; }
+.proje-secici-oge:focus-visible { outline: none; background: var(--surface-2); color: var(--ink); box-shadow: inset var(--odak-halkasi); }
+@media (hover: hover) and (pointer: fine) { .proje-secici-oge:hover { background: var(--surface-2); color: var(--ink); } }
+.proje-secici-oge[aria-selected="true"] { color: var(--ink); font-weight: 600; }
+.proje-secici-oge > svg { flex: none; margin-top: 2px; color: var(--primary-ink); }
+.proje-secici-oge-govde { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.proje-secici-ad { font-size: var(--tip-arayuz); line-height: var(--lh-baslik); overflow-wrap: anywhere; }
+.proje-secici-oge small { color: var(--muted); font-size: var(--tip-mikro); font-weight: 400; }
+.proje-secici-not { margin: 0; padding: var(--s-2) var(--s-3); color: var(--muted); font-size: var(--tip-meta); }
+.proje-secici-tumu { display: block; padding: var(--s-2) var(--s-3); border-top: 1px solid var(--line-soft); border-radius: 0 0 var(--r-sm) var(--r-sm); color: var(--primary-ink); font-size: var(--tip-meta); font-weight: 600; text-decoration: none; }
+.proje-secici-tumu:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+@media (pointer: coarse) { .proje-secici-dugme, .proje-secici-oge, .proje-secici-tumu { min-height: var(--kontrol-h-dokunma); } }
+
 .os-gezinme-alt {
   display: flex; align-items: center; min-height: 34px; padding: 0 var(--s-3) 0 calc(var(--s-3) + 10px);
   border-radius: var(--r-sm); color: var(--ink-soft); font-size: var(--fs-base); text-decoration: none;

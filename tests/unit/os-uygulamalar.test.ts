@@ -190,7 +190,7 @@ test("doçentlik yalnızca Türkçe arayüzde (28.10.2026)", () => {
 });
 
 /* Phase 3 (04.11.2026): uyarlanır gezinme tek listeden üç biçim; çalışma bağlamı. */
-import { ALT_CUBUK, calismaBaglantilari, calismaIcindeMi, dahaFazlasi, etkinBaglanti, gezinmeGruplari } from "@/lib/os/uygulamalar";
+import { ALT_CUBUK, calismaBaglantilari, calismaDegistirAdresi, calismaIcindeMi, dahaFazlasi, etkinBaglanti, gezinmeGruplari } from "@/lib/os/uygulamalar";
 import { ekranSinifi } from "@/lib/os/kirilimlar";
 
 test("gezinme grupları: her uygulama tam olarak bir yerde, hiçbiri kaybolmuyor", () => {
@@ -295,5 +295,38 @@ describe("tek \"burası\" (UX S5): sayfa tek yerde aria-current=page", () => {
       const v = gezinmeVurgusu(liste, "/dashboard/literature", baglantilar);
       assert.ok(v.uygulama === null || liste.includes(v.uygulama));
     }
+  });
+});
+
+describe("calismaDegistirAdresi (Project Switcher)", () => {
+  const git = (yol: string, sorgu: string, eski: string | null, yeni = { id: "b2", tur: "thesis" }) =>
+    calismaDegistirAdresi({ yol, sorgu: new URLSearchParams(sorgu) }, eski, yeni);
+
+  test("çalışmanın bölümündeyken öteki çalışmanın AYNI bölümüne gider", () => {
+    assert.equal(git("/dashboard/editor/a1/write", "", "a1"), "/dashboard/editor/b2/write");
+    assert.equal(git("/dashboard/editor/a1/kanit", "", "a1"), "/dashboard/editor/b2/kanit");
+    assert.equal(git("/dashboard/editor/a1/etik/", "", "a1"), "/dashboard/editor/b2/etik");
+  });
+  test("eski çalışmanın anlık sorgu durumu taşınmaz", () => {
+    assert.equal(git("/dashboard/editor/a1/write", "asistan=1&teslim=kapak", "a1"), "/dashboard/editor/b2/write");
+    assert.equal(git("/dashboard/literature", "calisma=a1&ekle=1", "a1"), "/dashboard/literature?calisma=b2");
+  });
+  test("Makale bölümü yalnız makalede: tezde Özet'e düşer", () => {
+    assert.equal(git("/dashboard/editor/a1/makale", "", "a1", { id: "b2", tur: "thesis" }), "/dashboard/editor?sec=b2");
+    assert.equal(git("/dashboard/editor/a1/makale", "", "a1", { id: "b2", tur: "article" }), "/dashboard/editor/b2/makale");
+  });
+  test("Özet ve çalışmaya süzülmüş araçlar", () => {
+    assert.equal(git("/dashboard/editor", "sec=a1", "a1"), "/dashboard/editor?sec=b2");
+    assert.equal(git("/dashboard/analysis", "calisma=a1", "a1"), "/dashboard/analysis?calisma=b2");
+    assert.equal(git("/dashboard/documents", "calisma=a1", "a1"), "/dashboard/documents?calisma=b2");
+  });
+  test("çalışmaya bağlı olmayan sayfadan ya da bağlamsız: yeni çalışmanın Özet'i", () => {
+    assert.equal(git("/dashboard", "", "a1"), "/dashboard/editor?sec=b2");
+    assert.equal(git("/dashboard/editor/a1/write", "", null), "/dashboard/editor?sec=b2");
+    // Başka bir çalışmanın sayfası eski çalışma sayılmaz (önek eşleşmesi kimliğin tamamına bakar).
+    assert.equal(git("/dashboard/editor/a12/write", "", "a1"), "/dashboard/editor?sec=b2");
+  });
+  test("kimlik adreste kaçışlanır", () => {
+    assert.equal(git("/dashboard/editor/a1/write", "", "a1", { id: "x y", tur: "thesis" }), "/dashboard/editor/x%20y/write");
   });
 });

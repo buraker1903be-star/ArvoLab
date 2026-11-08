@@ -357,3 +357,36 @@ export function gezinmeVurgusu(uygulamalar: OsUygulama[], yol: string, baglantil
   const baglanti = baglantilar.length ? etkinBaglanti(baglantilar, yol) : null;
   return { uygulama, baglanti, uygulamaAriaCurrent: !uygulama ? undefined : baglanti ? "true" : "page" };
 }
+
+/*
+  ÇALIŞMA DEĞİŞTİRİNCE NEREYE (Signature OS 2.0 Aşama 2, Project Switcher).
+  Kullanıcı bir çalışmanın Kanıt matrisindeyken öteki çalışmaya geçiyorsa
+  öteki çalışmanın Kanıt matrisine gider; Özet'e atılıp aynı yere yeniden
+  yürümesi gerekmez. Kural:
+    /dashboard/editor/<eski>/<bölüm>  → /dashboard/editor/<yeni>/<bölüm>
+    /dashboard/editor?sec=<eski>      → /dashboard/editor?sec=<yeni>
+    …?calisma=<eski> (Kaynaklar, Analiz, Belge, Kaynakça) → aynı sayfa, yeni çalışma
+  Makale bölümü yalnızca makalede var: makale olmayan çalışmaya geçerken
+  Özet'e düşülür. Öteki sorgu değişkenleri (asistan=1, teslim=…, ekle=1…)
+  ESKİ çalışmanın anlık durumuydu; taşınmaz. Çalışmaya bağlı olmayan bir
+  sayfadaysa (Ana Sayfa gibi) yeni çalışmanın Özet'i açılır.
+*/
+export function calismaDegistirAdresi(
+  girdi: { yol: string; sorgu: URLSearchParams },
+  eskiId: string | null,
+  yeni: { id: string; tur: string },
+): string {
+  const id = encodeURIComponent(yeni.id);
+  const ozet = `/dashboard/editor?sec=${id}`;
+  if (eskiId) {
+    const onek = `/dashboard/editor/${eskiId}`;
+    if (girdi.yol === onek || girdi.yol.startsWith(`${onek}/`)) {
+      const alt = girdi.yol.slice(onek.length).replace(/\/+$/, "");
+      if (alt === "/makale" && yeni.tur !== "article") return ozet;
+      return alt ? `/dashboard/editor/${id}${alt}` : ozet;
+    }
+    if (girdi.yol === "/dashboard/editor" && girdi.sorgu.get("sec") === eskiId) return ozet;
+    if (girdi.sorgu.get("calisma") === eskiId) return `${girdi.yol}?calisma=${id}`;
+  }
+  return ozet;
+}

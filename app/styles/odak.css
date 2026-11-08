@@ -30,7 +30,8 @@
   .arac-menu-oge,
   .kart-menu > summary,
   .gb-ozet-satiri,
-  .drawer-close
+  .drawer-close,
+  .proje-secici-dugme
 ):focus-visible {
   outline: none !important;
   box-shadow: var(--odak-halkasi) !important;
