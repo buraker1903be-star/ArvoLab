@@ -6,6 +6,8 @@
 //      bileşenler anlamsal katmanı (--surface, --ink, --primary…) okur.
 //   3) Yedeksiz var(--x) kullanımı tanımlı bir değişkene işaret etmelidir.
 //   4) En küçük yazı boyutu 11px (font-size ve font kısayolu).
+//   7) Tema eşitliği: açık temada palet/ham renkten değer alan her anlamsal token
+//      koyu temada da tanımlanır ya da TEMADAN_BAGIMSIZ listesinde gerekçesiyle durur.
 //   6) Medya sorgusu genişliği yalnızca sistemin kırılımları (760/761, 1199/1200;
 //      lib/os/kirilimlar.ts); başkaları KIRILIM_BORCU listesindekiler.
 //   5) Köşe yarıçapı token'dan (--r-*, --kart-r, --menu-r…); ham px/rem yalnızca
@@ -155,6 +157,51 @@ for (const { file, text } of files) {
   }
   for (const [deger, izin] of Object.entries(KIRILIM_BORCU[goreli] ?? {})) {
     if ((sayac[deger] ?? 0) < izin) problems.push(`${goreli}  kırılım borcu "${deger}" azaldı (${sayac[deger] ?? 0}/${izin}) — KIRILIM_BORCU listesinden düşün`);
+  }
+}
+
+/*
+  TEMA EŞİTLİĞİ (Signature OS 2.0 Aşama 1, 08.11.2026). Açık temada
+  paletten ya da ham renkten değer alan bir anlamsal token koyu temada
+  yeniden tanımlanmazsa koyu temada AÇIK değeriyle kalır. Bu bazen doğru
+  (beyaz yazı, kâğıt, koyu panel), bazen unutulmuştur; denetim ikisini
+  ayırt edemez, bu yüzden bilerek temadan bağımsız olanlar burada
+  gerekçesiyle yazılı. Başka bir anlamsal token'dan türeyenler (ör.
+  --accent: var(--primary-ink)) kendiliğinden temayla döner, sayılmaz.
+*/
+const TEMADAN_BAGIMSIZ = {
+  "--kagit": "belge kâğıdı her temada açık (koyu temadaki ton .kagit kuralında)",
+  "--on-brand": "lacivert zemin üstünde beyaz yazı",
+  "--on-primary": "birincil düğme üstünde beyaz yazı",
+  "--sidebar-ink": "giriş sayfasının her temada koyu tanıtım paneli",
+  "--sidebar-muted": "giriş sayfasının her temada koyu tanıtım paneli",
+  "--sidebar-line": "giriş sayfasının her temada koyu tanıtım paneli",
+  "--sidebar-hover": "giriş sayfasının her temada koyu tanıtım paneli",
+  "--koyu-panel-zemin": "kredi sayacı ve işlem kapsülü her temada koyu",
+  "--koyu-panel-cizgi": "kredi sayacı her temada koyu",
+  "--golge-tonu": "gölge rengi koyu temada da lacivert-siyah",
+  "--golge-tonu-derin": "gölge rengi koyu temada da lacivert-siyah",
+  "--grafik-cubuk": "veri rengi, iki temada da okunur (ölçüldü: Signature OS)",
+  "--grafik-cubuk-acik": "veri rengi, iki temada da okunur",
+  "--ilerleme-parlak": "ilerleme çubuğunun yeşil ucu, iki temada aynı",
+  "--logo-plaka": "lacivert yazılı ortak logoların koyu temadaki beyaz zemini",
+  "--brand-navy": "eski ad (marka rengi), temadan bağımsız",
+  "--brand-green": "eski ad (marka rengi), temadan bağımsız",
+};
+{
+  const tokensMetni = files.find((f) => f.file === TOKENS_FILE)?.text ?? "";
+  const tanimlar = (blok) => Object.fromEntries([...blok.matchAll(/^\s*(--[a-z0-9-]+)\s*:\s*([^;]+);/gm)].map((m) => [m[1], m[2].trim()]));
+  const acik = tanimlar(tokensMetni.match(/:root, \.kagit \{([\s\S]*?)\n\}/)?.[1] ?? "");
+  const koyu = tanimlar([...tokensMetni.matchAll(/html\[data-theme="dark"\] \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n"));
+  const paletten = /var\(--(?:brand|accent|n|mavi|gri|yazi|gece|gece-yazi)-\d+\)|#[0-9a-f]{3,8}\b|\brgba?\(/i;
+  // Palet adımlarının kendisi ve renk taşımayan ölçü/süre/yazı token'ları sayılmaz.
+  const renkDisi = /^--(?:brand|accent|n|mavi|gri|yazi|gece|gece-yazi)-\d+$|^--(?:r-|s-|z-|fs-|fw-|lh-|ls-|tip-|sure|ease|font|print|kontrol-h|kontrol-dolgu|kontrol-r|menu-oge-h|menu-dolgu|menu-r|menu-oge-r|pencere-r|kart-dolgu|kart-r|karo-dolgu|karo-r|kart-araligi|gezinme|alt-cubuk|sidebar-width|topbar|dock|content|hap-|dugme-agirlik|glass-blur|radius|yan-panel-genis)/;
+  for (const [ad, deger] of Object.entries(acik)) {
+    if (renkDisi.test(ad) || ad in koyu || !paletten.test(deger)) continue;
+    if (!TEMADAN_BAGIMSIZ[ad]) problems.push(`app/styles/tokens.css  ${ad} (${deger}) koyu temada tanımlı değil — html[data-theme="dark"] bloğuna ekleyin ya da bilerek temadan bağımsızsa TEMADAN_BAGIMSIZ listesine gerekçesiyle yazın`);
+  }
+  for (const ad of Object.keys(TEMADAN_BAGIMSIZ)) {
+    if (!(ad in acik) || ad in koyu) problems.push(`app/styles/tokens.css  ${ad} TEMADAN_BAGIMSIZ listesinde ama artık öyle değil — listeden düşün`);
   }
 }
 
