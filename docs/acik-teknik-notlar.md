@@ -108,3 +108,19 @@ silinmez; "Kapandı" satırıyla tarihlenir.
   5. Yazım ritmi: düzeltilen bir satırın ertesi kaydı, önceki günün eski
      kurallı sayısıyla karşılaştırılır; o gün için tek seferlik küçük bir
      artış/azalış görünebilir (doğal kayıtta da aynısı olur).
+
+## N7 — Tarayıcının geri/ileri düğmesi gezinme korumasının dışında (AÇIK)
+
+- **Yer:** `lib/gezinme-korumasi.ts`, `app/dashboard/_components/gezinme-korumasi.tsx`
+  (Signature OS 2.0 Aşama 2, 08.11.2026).
+- **Durum:** uygulama içi bağlantılar, komut paleti, Project Switcher ve
+  çıkış formu kaydedilmemiş metin varken kayıt bitmeden geçmez
+  (`gezinme-korumasi-kabul.mjs` 7/7; koruma kapatılınca 4'ü düşüyor).
+  Tarayıcının geri/ileri düğmesi bunun DIŞINDA: Next `popstate`'i kendisi
+  dinliyor ve olay engellenemiyor. Orada editörün eski davranışı sürüyor:
+  kapanırken taslak bu tarayıcıya yazılıyor ve kayıt başlatılıyor, ama
+  sonucu beklenmiyor.
+- **Kapanış ölçütü:** geri düğmesiyle çıkışta da kayıt sonucunun
+  beklendiğini (ya da geçişin durdurulduğunu) gösteren bir senaryo; olası
+  yol: yazım sayfasında kirliyken bir geçmiş kaydı tutmak ve popstate'te
+  kayıt bitene kadar geri ileri almak. Gerçek cihazda da denenmeli.
