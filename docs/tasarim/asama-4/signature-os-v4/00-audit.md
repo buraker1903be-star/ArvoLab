@@ -3,7 +3,7 @@
 Kapsam: `docs/tasarim/asama-3/v3/` paketi ve revizyon notları, önceki/revize
 v3 karşılaştırmaları, uygulamanın Ana Sayfa, Çalışmalarım, Editör, Arvo AI ve
 Kaynak Kütüphanesi ekranları (Aşama 2.1 ekran görüntüleri ve kod, salt
-okunur), `app/styles/` (12 dosya, ~9.300 satır; `tokens.css`'te 290 token).
+okunur), `app/styles/` (12 dosya, ~9.300 satır; `tokens.css`'te 242 ayrı token — 290, koyu tema tekrarlarıyla tanım satırı sayısıydı).
 Uygulama kodu, veritabanı, Supabase ve v3 paketi değişmedi.
 
 ## 1. Korunacak güçlü yönler
