@@ -57,6 +57,8 @@ const TEMALAR = ["light", "dark"];
 */
 const SAKIN = `*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}.os-saat{visibility:hidden!important}nextjs-portal{display:none!important}`;
 const GORELI_ZAMAN = String.raw`(az önce|şimdi|\d+\s*(sn|dk|dakika|sa|saat|gün|hafta|ay|yıl)\s*(önce|sonra)|just now|\d+\s*\w+\s+ago)`;
+// Örnek veri zamanları "şimdi"den türetiyor: "Kaydedildi · 15:45" iki çekim arasında 15:52 oluyordu (08.11.2026, 44 görüntü).
+const SAAT = String.raw`\b([01]?\d|2[0-3]):[0-5]\d\b`;
 const ESIK = 24;
 
 async function cek(klasor, suzgec, taban) {
@@ -79,11 +81,15 @@ async function cek(klasor, suzgec, taban) {
         try {
           await sayfa.goto(taban + yol, { waitUntil: "networkidle", timeout: 180000 });
           await sayfa.addStyleTag({ content: SAKIN });
-          await sayfa.evaluate((kalip) => {
-            const re = new RegExp(kalip, "gi");
+          await sayfa.evaluate((kaliplar) => {
+            const re = new RegExp(kaliplar[0], "gi");
             const yuruyucu = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-            for (let d = yuruyucu.nextNode(); d; d = yuruyucu.nextNode()) if (d.nodeValue.search(re) >= 0) d.nodeValue = d.nodeValue.replace(re, "— önce");
-          }, GORELI_ZAMAN);
+            const saat = new RegExp(kaliplar[1], "g");
+            for (let d = yuruyucu.nextNode(); d; d = yuruyucu.nextNode()) {
+              if (d.nodeValue.search(re) >= 0) d.nodeValue = d.nodeValue.replace(re, "— önce");
+              if (d.nodeValue.search(saat) >= 0) d.nodeValue = d.nodeValue.replace(saat, "00:00");
+            }
+          }, [GORELI_ZAMAN, SAAT]);
           await sayfa.evaluate(() => document.fonts.ready);
           await sayfa.waitForTimeout(600);
           await sayfa.screenshot({ path: path.join(klasor, `${ad}-${w}-${tema}.png`), fullPage: true });
