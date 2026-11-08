@@ -62,6 +62,14 @@ const SAKIN = `*,*::before,*::after{animation:none!important;transition:none!imp
 const GORELI_ZAMAN = String.raw`(az önce|şimdi|\d+\s*(sn|dk|dakika|sa|saat|gün|hafta|ay|yıl)\s*(önce|sonra)|just now|\d+\s*\w+\s+ago)`;
 // Örnek veri zamanları "şimdi"den türetiyor: "Kaydedildi · 15:45" iki çekim arasında 15:52 oluyordu (08.11.2026, 44 görüntü).
 const SAAT = String.raw`\b([01]?\d|2[0-3]):[0-5]\d\b`;
+/*
+  Ana Sayfa selamlaması günün saatine bağlı (lib/genel-bakis.ts, selamlama).
+  V4.3-A1'de taban "İyi akşamlar", sonraki çekim "İyi geceler" dönemine
+  denk geldi: 12 görüntü, görünüm değişikliği olmadan "farklı" çıktı.
+  Dört kalıp tek bir sabit metne indirilir; sözcük uzunluğu da sabitlenir.
+*/
+// \b kullanılmaz: JS'te (u bayraksız) "İ" sözcük karakteri sayılmıyor ve "İyi …" hiç eşleşmiyordu.
+const SELAMLAMA = String.raw`(Günaydın|İyi günler|İyi akşamlar|İyi geceler|Good morning|Good afternoon|Good evening)`;
 const ESIK = 24;
 
 async function cek(klasor, suzgec, taban) {
@@ -88,11 +96,13 @@ async function cek(klasor, suzgec, taban) {
             const re = new RegExp(kaliplar[0], "gi");
             const yuruyucu = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
             const saat = new RegExp(kaliplar[1], "g");
+            const selam = new RegExp(kaliplar[2], "g");
             for (let d = yuruyucu.nextNode(); d; d = yuruyucu.nextNode()) {
               if (d.nodeValue.search(re) >= 0) d.nodeValue = d.nodeValue.replace(re, "— önce");
               if (d.nodeValue.search(saat) >= 0) d.nodeValue = d.nodeValue.replace(saat, "00:00");
+              if (d.nodeValue.search(selam) >= 0) d.nodeValue = d.nodeValue.replace(selam, "İyi günler");
             }
-          }, [GORELI_ZAMAN, SAAT]);
+          }, [GORELI_ZAMAN, SAAT, SELAMLAMA]);
           await sayfa.evaluate(() => document.fonts.ready);
           await sayfa.waitForTimeout(600);
           await sayfa.screenshot({ path: path.join(klasor, `${ad}-${w}-${tema}.png`), fullPage: true });
