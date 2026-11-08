@@ -2134,3 +2134,24 @@
   .manuscript-araclar { padding-inline: 4px; }
   .manuscript-araclar .arac-grup { padding: 0 2px; }
 }
+
+/*
+  MASAÜSTÜNDE TEKRARLANAN BAŞLIK (Premium Simplicity Aşama 1, 08.11.2026).
+  ≥1200 px'te çalışmanın adı üç yerde görünüyordu: üst çubuktaki konum
+  yolu, kenar çubuğunun "Açık çalışma" başlığı ve bu başlık satırı (iki
+  satıra kadar, fs-xl). Başlık satırı ekran okuyucuda sayfanın h1'i
+  olarak kalır; gözle görünen yeri konum yolu ve kenar çubuğu. Kayıt
+  durumu ve eylemler tek satırda: kâğıt ~40 px yukarı gelir.
+  Kenar çubuğu daraltılmışsa (html[data-kenar="dar"]) adı orada görünmez:
+  o durumda başlık satırı eskisi gibi kalır. 761–1199 px'te kenar
+  çubuğunda başlık yok, kural uygulanmaz. Tam ad belgenin kendi
+  başlığında da duruyor.
+*/
+@media (min-width: 1200px) {
+  html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-basligi { flex-wrap: nowrap; }
+  html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-baslik { flex: 1 1 auto; align-items: center; }
+  html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-baslik-simge { display: none; }
+  html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-baslik h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+/* Yazım sayfasında üst çubuk saati yok: yazarken bilgi vermiyor, göz çekiyordu (saat sistemde zaten görünür). */
+body:has(.yazim-sayfasi) .os-saat { display: none; }
