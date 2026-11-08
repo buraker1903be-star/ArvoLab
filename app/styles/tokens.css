@@ -354,6 +354,28 @@
   --fs-xl: 20px;
   --fs-title: clamp(26px, 2.3vw, 32px);
 
+  /* ---- TİPOGRAFİ ROLLERİ (Signature OS 2.0, 08.11.2026) ----
+     Yukarıdaki boyut adımları (micro…xl) bir CETVEL; aşağıdakiler ROL.
+     Yeni kod rolü okur: "bu metin okunacak uzun bir paragraf mı, bir
+     arayüz etiketi mi?" sorusu boyuttan önce cevaplansın. Cetvel 11–17 px
+     arasında 6 adıma sıkışmıştı ve her dosya kendi adımını seçiyordu.
+       okuma   15/24 — birkaç cümlelik düzyazı: kılavuz, asistan cevabı
+       arayüz  14    — denetim, liste satırı, form
+       meta    13    — yardımcı metin, tarih, sayaç açıklaması
+       mikro   12    — rozet, küçük etiket (11 px yalnız sayaç rozetinde)
+       h2      17    — bölüm başlığı
+       h1 / display  — sayfa ve karşılama başlıkları (aşağıdaki başlık sistemi)
+     Belge yazısı bu ölçeğin DIŞINDA: kâğıt --font-belge ve kılavuzun
+     kendi boyutlarıyla çizilir, çıktılar değişmez. */
+  --tip-okuma: var(--fs-md);
+  --tip-okuma-satir: 1.6;
+  --tip-arayuz: var(--fs-body);
+  --tip-meta: var(--fs-base);
+  --tip-mikro: var(--fs-sm);
+  --tip-h2: var(--fs-lg);
+  --tip-h1: var(--fs-sayfa);
+  --tip-display: var(--fs-display);
+
   /* ---- Başlık sistemi ----
      Sayfa/çalışma/karşılama başlıklarının ölçeği. Rol sınıflarıyla
      seçilir (element seçiciyle değil): belge editöründeki h1/h2'ye
