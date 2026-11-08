@@ -1458,6 +1458,10 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 }
 .calisma-araclari :is(.projects-filter-button, .projects-primary-button):hover { background: var(--dugme-hover-zemin); color: var(--ink); }
 .calisma-araclari :is(.projects-filter-button, .projects-primary-button) svg { color: var(--muted); }
+/* Odak halkası geri (Aşama 2): yukarıdaki "box-shadow: none" düğmenin kendi
+   :focus-visible halkasını da eziyordu; Tab ile araçlarda gezen kullanıcı
+   hangi araçta olduğunu göremiyordu. */
+.calisma-araclari :is(.projects-filter-button, .projects-primary-button):focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 .calisma-araclari .takvim-dugme-geciken { color: var(--danger); }
 /* "⋯" simgesi zaten menü olduğunu söylüyor; ok, 128 px'lik hücrede adı "Diğer araç…" diye kesiyordu. */
 .calisma-diger-araclar .arac-menu-ok { display: none; }
