@@ -1,0 +1,108 @@
+/*
+  SIGNATURE OS v3 — TASARIM TOKEN SÖZLEŞMESİ (kurum sahibinin talimatı, 08.11.2026).
+  Değerler talimattaki tablodan. Erişilebilirlik için değiştirilenler
+  "AA:" notuyla işaretli; gerekçe README'de (WCAG 2.2 AA: küçük metin 4,5:1,
+  büyük metin ve arayüz öğesi 3:1). Bileşenler YALNIZCA bu adları okur.
+*/
+:root, html[data-theme="light"] {
+  --canvas: #F7F8FA;
+  --sidebar: #F2F4F7;
+  --surface: #FFFFFF;
+  --surface-subtle: #F8FAFC;
+  --border: #E4E8EF;
+  --text-primary: #17243A;
+  /* AA: talimatta #667389 — accent-soft ve sidebar üstünde 4,19 / 4,35. */
+  --text-secondary: #616E84;
+  /* AA: talimattaki #8994A5 metinde 2,9–3,1. Yalnız simge, ayraç ve
+     devre dışı öğede kalır; yardımcı METİN text-secondary kullanır. */
+  --text-tertiary: #8994A5;
+  --accent: #244A83;
+  --accent-hover: #1B3967;
+  --accent-soft: #EAF0F9;
+  --accent-ink: #244A83;          /* bağlantı ve vurgulu metin */
+  --on-accent: #FFFFFF;
+  --success: #6B9150;             /* ilerleme çubuğu (arayüz öğesi, 3,6:1) */
+  --success-ink: #587742;         /* AA: rozet metni */
+  --success-soft: #EEF4E8;
+  --danger: #BD4C45;
+  --danger-ink: #B74A43;          /* AA: tonal zeminde metin */
+  --danger-soft: #FBEDEC;
+  --warning: #A97828;
+  --warning-ink: #916722;         /* AA: talimattaki #A97828 metinde 3,9 */
+  --warning-soft: #FBF3E6;
+  --neutral-soft: #EFF2F6;
+  --shadow-ana: 0 1px 2px rgba(23, 36, 58, .04), 0 8px 24px -16px rgba(23, 36, 58, .18);
+  --belge: #FFFFFF;
+  --belge-masa: #EEF1F5;
+  --secim: #D8E3F5;
+  --ortu: rgba(13, 19, 29, .40);
+}
+html[data-theme="dark"] {
+  --canvas: #0D131D;
+  --sidebar: #101925;
+  --surface: #151F2D;
+  --surface-subtle: #192535;
+  --border: #283548;
+  --text-primary: #F0F3F8;
+  --text-secondary: #A2AEC0;
+  /* AA: talimatta #78869A — surface-subtle üstünde 4,18. */
+  --text-tertiary: #7F8DA0;
+  /* AA: talimattaki #4779CE beyaz yazıyla 4,29 (dolgu) ve surface üstünde
+     metin olarak 3,87. Dolgu bir ton koyu, metin bir ton açık. Hover
+     koyu temada AÇILMAZ (beyaz yazının kontrastı düşerdi), koyulaşır. */
+  --accent: #4575C8;
+  --accent-hover: #3D69B5;
+  --accent-soft: #192E4E;
+  --accent-ink: #6E95D8;
+  --on-accent: #FFFFFF;
+  --success: #8BAF69;
+  --success-ink: #8BAF69;
+  --success-soft: #1A2A1C;
+  --danger: #E07A72;
+  --danger-ink: #E8877F;
+  --danger-soft: #331A1C;
+  --warning: #D6A75A;
+  --warning-ink: #DDB06A;
+  --warning-soft: #2E2416;
+  --neutral-soft: #1E2A3B;
+  --shadow-ana: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 10px 28px -18px rgba(0, 0, 0, .7);
+  /* Koyu temada belge: göz yormayan, kâğıt hissi veren ayrı yüzey. */
+  --belge: #172231;
+  --belge-masa: #0D131D;
+  --secim: #24406B;
+  --ortu: rgba(0, 0, 0, .55);
+}
+:root {
+  --font-ui: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Tipografi (talimat §1) */
+  --t-sayfa: 650 28px/34px var(--font-ui);
+  --t-calisma: 650 24px/30px var(--font-ui);
+  --t-bolum: 650 13px/18px var(--font-ui);
+  --t-metin: 400 14px/21px var(--font-ui);
+  --t-yardim: 400 12px/18px var(--font-ui);
+  --t-etiket: 600 11px/14px var(--font-ui);
+  --t-sayi: 650 28px/32px var(--font-ui);
+  --t-sayfa-tel: 650 25px/31px var(--font-ui);
+  --t-calisma-tel: 650 22px/28px var(--font-ui);
+  --t-belge: 400 16px/28px var(--font-ui);
+  /* Boyutlar (talimat §1) */
+  --kenar: 236px;
+  --kenar-dar: 64px;
+  --ust: 56px;
+  --icerik-max: 1320px;
+  --dolgu-masa: 32px;
+  --dolgu-tablet: 24px;
+  --dolgu-tel: 20px;
+  --alt-cubuk: 64px;
+  --kontrol: 40px;
+  --kontrol-sik: 36px;
+  --kontrol-tel: 48px;
+  --dokunma: 44px;
+  --r: 8px;
+  --r-orta: 10px;
+  --r-ana: 12px;
+  --bolum-arasi: 32px;
+  --satir-arasi: 12px;
+  --ai-panel: 340px;
+  --baglam-panel: 360px;
+}
