@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { aktifDil, aktifSaatDilimi, ceviri, tarihler } from "@/lib/dil-sunucu";
 import { YEREL, type Metin } from "@/lib/dil";
 import Link from "next/link";
-import { BookOpen, LayoutList, PenLine, Plus } from "lucide-react";
+import { BookOpen, ChevronRight, LayoutList, PenLine, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { siradakiAdimlar } from "@/lib/calisma-ozeti";
 import { siradakiIs } from "@/lib/siradaki-is";
@@ -840,7 +840,7 @@ export default async function DashboardPage() {
                         tr: `Kılavuz hedefi ~${sayi(tempo.targetWords)} kelime · %${yazilanYuzde}`,
                         en: `Guideline target ~${sayi(tempo.targetWords)} words · ${yazilanYuzde}%`,
                       })
-                    : t({ tr: "Kılavuzda sayfa sınırı yok; hedef hesaplanmadı", en: "The guideline sets no page limit; no target calculated" })}
+                    : /* Hedef yoksa alt yazı yok: "hedef hesaplanmadı" öğrenciye bir şey söylemiyordu (Aşama 2). */ null}
                 </span>
                 {yazilanYuzde !== null ? (
                   <div className="tez-cubuk" role="progressbar" aria-valuenow={yazilanYuzde} aria-valuemin={0} aria-valuemax={100} aria-label={t({ tr: "Kılavuz hedefine göre yazılan", en: "Written against the guideline target" })}>
@@ -872,52 +872,71 @@ export default async function DashboardPage() {
                 {tempo.detail}
               </p>
             ) : null}
-            {sirada ? (
-              <div className="tez-simdi" data-aciliyet={sirada.aciliyet} data-bitti={sirada.bitti ? "true" : undefined}>
-                <span className="sirada-etiket">{sirada.bitti ? t({ tr: "Durum", en: "Status" }) : t({ tr: "Şimdi", en: "Now" })}</span>
+            {/*
+              TEK "SIRADAKİ ADIM" (Premium Simplicity Aşama 2, 08.11.2026).
+              Eskiden "Şimdi" satırı ve "Tez takvimi" satırı alt alta, ikisi
+              de kendi düğmesiyle çiziliyordu: tez kartı dört eylem
+              taşıyordu (Yazmaya devam et, Çalışma özeti, Kılavuzumu yükle,
+              Takvim kur) ve hangisinin "şimdi" olduğu belirsizdi. Artık tek
+              satır, öncelik sırasıyla: açık "Şimdi" maddesi → sıradaki
+              kilometre taşı → takvim kurulumu → tamamlanmış durum. Eylem
+              düğme değil bağlantı: kartın düğmeleri yalnız "Yazmaya devam
+              et" ve "Çalışma özeti". Takvim her zaman Çalışmalarım'daki
+              çalışmanın araçlarında.
+            */}
+            {sirada && !sirada.bitti ? (
+              <div className="tez-simdi" data-aciliyet={sirada.aciliyet}>
+                <span className="sirada-etiket">{t({ tr: "Şimdi", en: "Now" })}</span>
                 <div className="sirada-govde">
                   <b>{sirada.baslik}</b>
                   <span>{sirada.aciklama}</span>
                 </div>
-                {/* İkincil düğme: ekranın tek ana eylemi "Yazmaya devam et" (Phase 3); iki koyu düğme hangisinin asıl olduğunu söylemiyordu. */}
-                <Link href={sirada.href} className="projects-filter-button button-compact">
-                  {sirada.eylem}
+                <Link href={sirada.href} className="link-accent sirada-eylem">
+                  {sirada.eylem} <ChevronRight size={14} aria-hidden="true" />
                 </Link>
               </div>
-            ) : null}
-            {takvim ? (
-              siradakiKilometre ? (
-                <p className="takvim-sirada" data-durum={siradakiKilometre.durum}>
-                  <span>{t({ tr: "Sıradaki kilometre taşı", en: "Next milestone" })}</span>
-                  <b>{siradakiKilometre.tas.baslik}</b>
-                  <small>
-                    {tarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun, dil)}
-                    {takvimSayilari
-                      ? t({
-                          tr: ` · takvim ${takvimSayilari.tamam}/${takvimSayilari.toplam}`,
-                          en: ` · schedule ${takvimSayilari.tamam}/${takvimSayilari.toplam}`,
-                        })
-                      : ""}
-                  </small>
-                  <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
-                    {t({ tr: "Takvim", en: "Schedule" })}
-                  </Link>
-                </p>
-              ) : resume.due_date && !takvim.length ? (
-                <p className="takvim-sirada">
-                  <span>{t({ tr: "Tez takvimi", en: "Thesis schedule" })}</span>
-                  <b>{t({ tr: "Teslime kadar bölüm bölüm hedef tarih koyun", en: "Set target dates chapter by chapter until submission" })}</b>
-                  <small>
-                    {t({
-                      tr: "Teslim tarihinize göre taslak takvim önerilir; her tarihi değiştirebilirsiniz.",
-                      en: "A draft schedule is suggested from your due date; you can change every date.",
-                    })}
-                  </small>
-                  <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
-                    {t({ tr: "Takvim kur", en: "Set up schedule" })}
-                  </Link>
-                </p>
-              ) : null
+            ) : takvim && siradakiKilometre ? (
+              <p className="takvim-sirada" data-durum={siradakiKilometre.durum}>
+                <span>{t({ tr: "Sıradaki kilometre taşı", en: "Next milestone" })}</span>
+                <b>{siradakiKilometre.tas.baslik}</b>
+                <small>
+                  {tarih(siradakiKilometre.tas.hedef_tarih)} · {kalanMetni(siradakiKilometre.durum, siradakiKilometre.kalanGun, dil)}
+                  {takvimSayilari
+                    ? t({
+                        tr: ` · takvim ${takvimSayilari.tamam}/${takvimSayilari.toplam}`,
+                        en: ` · schedule ${takvimSayilari.tamam}/${takvimSayilari.toplam}`,
+                      })
+                    : ""}
+                </small>
+                <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
+                  {t({ tr: "Takvim", en: "Schedule" })}
+                </Link>
+              </p>
+            ) : takvim && resume.due_date && !takvim.length ? (
+              <p className="takvim-sirada">
+                <span>{t({ tr: "Tez takvimi", en: "Thesis schedule" })}</span>
+                <b>{t({ tr: "Teslime kadar bölüm bölüm hedef tarih koyun", en: "Set target dates chapter by chapter until submission" })}</b>
+                <small>
+                  {t({
+                    tr: "Teslim tarihinize göre taslak takvim önerilir; her tarihi değiştirebilirsiniz.",
+                    en: "A draft schedule is suggested from your due date; you can change every date.",
+                  })}
+                </small>
+                <Link href={calismaAdresi(resume.id, { takvim: true })} className="link-accent">
+                  {t({ tr: "Takvim kur", en: "Set up schedule" })}
+                </Link>
+              </p>
+            ) : sirada ? (
+              <div className="tez-simdi" data-aciliyet={sirada.aciliyet} data-bitti="true">
+                <span className="sirada-etiket">{t({ tr: "Durum", en: "Status" })}</span>
+                <div className="sirada-govde">
+                  <b>{sirada.baslik}</b>
+                  <span>{sirada.aciklama}</span>
+                </div>
+                <Link href={sirada.href} className="link-accent sirada-eylem">
+                  {sirada.eylem} <ChevronRight size={14} aria-hidden="true" />
+                </Link>
+              </div>
             ) : null}
           </section>
 

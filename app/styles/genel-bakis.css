@@ -1565,3 +1565,13 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 /* Danışmanıma gönder: bağlantı düğmesi içerik genişliğinde, dosya satırı hemen altında (kartın dibine itilmiyor). */
 .gb-ana-sayfa .danisman-gonder > .projects-filter-button { align-self: flex-start; }
 .gb-ana-sayfa .danisman-dosyalar { margin-top: 0; }
+
+/*
+  Tez kartının tek "sıradaki adım" bağlantısı (Premium Simplicity Aşama 2):
+  eskiden ikincil düğmeydi, kart dört eylem taşıyordu. Bağlantı satırın
+  sağında; dokunmatikte 40 piksel hedef.
+*/
+.tez-simdi .sirada-eylem { display: inline-flex; flex: none; align-items: center; gap: 4px; align-self: center; font-weight: 600; white-space: nowrap; }
+@media (max-width: 1199px), (pointer: coarse) {
+  .tez-simdi .sirada-eylem { min-height: 40px; }
+}
