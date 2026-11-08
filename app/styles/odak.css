@@ -1,0 +1,37 @@
+/*
+  ODAK HALKASI KORUMASI (Signature OS 2.0 Aşama 1, 08.11.2026).
+
+  Ortak bileşenlerin odak halkası tanımlı (components.css, os-shell.css,
+  overlays.css), ama sayfa CSS'leri global ve aynı özgüllükteki bir sayfa
+  kuralı halkayı sessizce eziyordu. İki kez oldu:
+    - Çalışmalarım'ın araçları: ".calisma-araclari … { box-shadow: none }"
+      yedi düğmenin halkasını yok etti (Aşama 2'de bulundu).
+    - Editördeki Arvo AI düğmesi: ".yazma-eylemleri .yazma-ai { box-shadow:
+      none }" (UX Aşama 1/C4) — odak-kabul.mjs ilk koşusunda bulundu.
+  Klavye kullanıcısı için halka, nerede olduğunu gösteren TEK işaret;
+  bu yüzden burada !important ile korunuyor ve dosya en SON yükleniyor
+  (app/layout.tsx). Değer bütün bileşenlerin bugün kullandığı değerin
+  aynısı: halkası çalışan hiçbir öğenin görünümü değişmez.
+
+  Bir bileşen bilerek farklı bir odak biçimi kullanıyorsa (içeriden halka,
+  alt çizgi…) bu listeye EKLENMEZ; kendi kuralında kalır. Denetim:
+  scripts/onizleme/odak-kabul.mjs.
+*/
+:is(
+  .projects-primary-button,
+  .projects-filter-button,
+  .button-danger,
+  .button-success,
+  .os-gezinme-oge,
+  .os-gezinme-alt,
+  .os-gezinme-marka,
+  .os-gezinme-daralt,
+  .os-gezinme-yeni,
+  .arac-menu-oge,
+  .kart-menu > summary,
+  .gb-ozet-satiri,
+  .drawer-close
+):focus-visible {
+  outline: none !important;
+  box-shadow: var(--odak-halkasi) !important;
+}

@@ -15,6 +15,8 @@ import "./styles/overlays.css";
 import "./styles/genel-bakis.css";
 import "./styles/sayfa-standardi.css";
 import "./styles/print.css";
+// Odak halkası koruması EN SONDA: sayfa kuralları ortak bileşenin halkasını ezemesin (odak.css).
+import "./styles/odak.css";
 
 /*
   ARAYÜZ YAZISI HER PLATFORMDA INTER (Signature OS, 04.11.2026). Eskiden
