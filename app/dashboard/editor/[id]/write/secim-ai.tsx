@@ -34,6 +34,18 @@ export default function SecimAi({ editor, panelAc }: { editor: Editor; panelAc: 
   const [acik, setAcik] = useState(false);
   const kok = useRef<HTMLDivElement>(null);
   const surukleniyor = useRef(false);
+  /*
+    Alt+Enter ile açıldıysa odak, menü ÇİZİLDİKTEN SONRA ilk öğeye verilir.
+    Eskiden bir sonraki karede (requestAnimationFrame) veriliyordu; menü
+    yalnızca açıkken çizildiği için React o kareye kadar çizmezse
+    odaklanacak öğe yoktu ve odak editörde kalıyordu.
+  */
+  const klavyeIleAcildi = useRef(false);
+  useEffect(() => {
+    if (!acik || !klavyeIleAcildi.current) return;
+    klavyeIleAcildi.current = false;
+    kok.current?.querySelector<HTMLElement>(".secim-ai-menu button")?.focus();
+  }, [acik]);
 
   const menuOgeleri = () => [...(kok.current?.querySelectorAll<HTMLElement>(".secim-ai-menu button") ?? [])];
 
@@ -59,12 +71,37 @@ export default function SecimAi({ editor, panelAc }: { editor: Editor; panelAc: 
       surukleniyor.current = false;
       window.requestAnimationFrame(guncelle);
     };
+    /*
+      SEÇİM EŞİTLEME YARIŞI (Aşama 1 takip R3, 08.11.2026). ProseMirror DOM
+      seçimini eşzamansız okur (selectionchange). Seçim kurulur kurulmaz
+      Alt+Enter gelirse (yük altında, programla kurulan seçimde ya da çok
+      hızlı klavyede) editor.state henüz BOŞ seçim tutuyordu ve işleyici
+      sessizce çıkıyordu: menü açılmıyordu. Ölçüldü: CPU 6× yavaşken
+      20 denemenin 1–10'unda; düşenlerin hepsinde keydown anında DOM seçimi
+      dolu, ProseMirror seçimi boştu. Karar vermeden önce DOM seçimi
+      editörün içindeyse ProseMirror'a aktarılır (genel posAtDOM API'si).
+    */
+    const domSeciminiAktar = () => {
+      if (!editor.state.selection.empty) return;
+      const dom = window.getSelection();
+      if (!dom || dom.isCollapsed || !dom.anchorNode || !dom.focusNode) return;
+      if (!editor.view.dom.contains(dom.anchorNode) || !editor.view.dom.contains(dom.focusNode)) return;
+      try {
+        const a = editor.view.posAtDOM(dom.anchorNode, dom.anchorOffset);
+        const b = editor.view.posAtDOM(dom.focusNode, dom.focusOffset);
+        if (a !== b) editor.commands.setTextSelection({ from: Math.min(a, b), to: Math.max(a, b) });
+      } catch {
+        // Konum çözülemezse (şema dışı düğüm) eski davranış: seçim yok sayılır.
+      }
+    };
     const tus = (olay: KeyboardEvent) => {
-      if (!(olay.altKey && olay.key === "Enter") || editor.state.selection.empty) return;
+      if (!(olay.altKey && olay.key === "Enter")) return;
+      domSeciminiAktar();
+      if (editor.state.selection.empty) return;
       olay.preventDefault();
       setGorunur(true);
+      klavyeIleAcildi.current = true;
       setAcik(true);
-      window.requestAnimationFrame(() => menuOgeleri()[0]?.focus());
     };
     /* Odak editörden menüye geçerken blur gelir; bir kare bekleyip asıl odağa bakılır. */
     const bulanik = () => window.requestAnimationFrame(guncelle);

@@ -83,9 +83,16 @@ async function editorAc(secenek = { viewport: { width: 1440, height: 900 } }, ha
 }
 const paragraflar = (s) => s.evaluate(() => [...document.querySelectorAll(".ProseMirror p")].map((e) => e.textContent));
 const belgeJson = (s) => s.evaluate(() => JSON.stringify(document.querySelector(".ProseMirror").editor.getJSON()));
-/** n. uzun paragrafın tamamını (ya da ilk `uzunluk` karakterini) DOM seçimiyle seçer. */
-const sec = (s, n = 0, uzunluk) =>
-  s.evaluate(
+/**
+ * n. uzun paragrafın tamamını (ya da ilk `uzunluk` karakterini) DOM seçimiyle seçer
+ * ve ProseMirror'ın bu seçimi OKUMASINI bekler (koşul, sabit süre değil).
+ * Eskiden DOM seçimi kurulur kurulmaz dönülüyordu; ProseMirror seçimi
+ * eşzamansız (selectionchange) okuduğu için hemen gelen tuş boş seçim
+ * görebiliyordu (R3, 08.11.2026). Ürün tarafı da artık bu yarışa dayanıklı
+ * (secim-ai.tsx); yardımcı, kullanıcı gibi seçimin yerleşmesini bekler.
+ */
+const sec = async (s, n = 0, uzunluk) => {
+  const metin = await s.evaluate(
     ([n, uzunluk]) => {
       const par = [...document.querySelectorAll(".ProseMirror p")].filter((e) => e.textContent.trim().length > 60)[n];
       const r = document.createRange();
@@ -101,6 +108,13 @@ const sec = (s, n = 0, uzunluk) =>
     },
     [n, uzunluk],
   );
+  await s.waitForFunction(() => {
+    const ed = document.querySelector(".ProseMirror")?.editor;
+    const dom = getSelection();
+    return Boolean(ed) && !ed.state.selection.empty && dom && !dom.isCollapsed;
+  }, null, { timeout: 5000 });
+  return metin;
+};
 const imlec = (s, n, ofset) =>
   s.evaluate(
     ([n, ofset]) => {
@@ -333,12 +347,13 @@ for (const [ad, secenek] of [
       await sayfa.locator(".ProseMirror").first().focus();
       await sec(sayfa, 2, 60);
       await sayfa.keyboard.press("Alt+Enter");
-      await sayfa.waitForTimeout(150);
+      // Sabit bekleme yerine: odak menüye girene kadar (en çok 3 sn); girmezse aşağıdaki denetim düşer.
+      await sayfa.waitForFunction(() => Boolean(document.activeElement?.closest(".secim-ai-menu")), null, { timeout: 3000 }).catch(() => {});
       bekle((await sayfa.evaluate(() => document.activeElement.textContent)) === "Akademikleştir", "ilk öğe odakta değil");
       await sayfa.keyboard.press("Escape");
       bekle(await sayfa.evaluate(() => document.activeElement.classList.contains("ProseMirror")), "Esc editöre dönmedi");
       await sayfa.keyboard.press("Alt+Enter");
-      await sayfa.waitForTimeout(100);
+      await sayfa.waitForFunction(() => Boolean(document.activeElement?.closest(".secim-ai-menu")), null, { timeout: 3000 }).catch(() => {});
       await sayfa.keyboard.press("ArrowDown");
       await sayfa.keyboard.press("Enter");
       await sayfa.locator(".yazim-oneri").last().waitFor({ timeout: 30000 });
