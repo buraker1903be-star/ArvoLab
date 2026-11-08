@@ -4,7 +4,7 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useEffect, useRef, useState } from "react";
 import { BookPlus, ChartNoAxesCombined, Monitor, Moon, Plus, Search, Sparkles, Sun, type LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
-import { aramaAnahtari, calismaIcindeMi, osSayfalari, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
+import { aramaAnahtari, calismaBaglantilari, calismaDegistirAdresi, calismaIcindeMi, osSayfalari, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
 import { kaynakEklemeAdresi } from "@/lib/calisma-secimi";
 import { useCalismaBaglami } from "./calisma-baglami";
 import { ASISTAN_AC_OLAYI, asistanKomutHedefi } from "@/lib/yazim-yan-panel";
@@ -119,15 +119,40 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
     ...(sonCalisma
       ? [{ id: "asistan", grup: hizli, label: t({ tr: "Yazım asistanını aç", en: "Open the writing assistant" }), ipucu: sonCalisma.title, ikon: "tez" as const, simge: Sparkles, tur: "git" as const, href: `/dashboard/editor/${sonCalisma.id}/write?asistan=1` }]
       : []),
-    ...(calismalar ?? []).map((c): Oge => ({
-      id: `calisma:${c.id}`,
-      grup: t({ tr: "Çalışmalarım", en: "My works" }),
-      label: c.title,
-      ipucu: t(projectTypeLabel(c.project_type)),
-      ikon: "tez",
-      tur: "git",
-      href: calismaAdresi(c.id),
-    })),
+    /*
+      ÇALIŞMA BAĞLAMI (Signature OS 2.0 Aşama 2). Bir çalışmanın içindeyken
+      palet iki şey daha bilir: (1) "Bu çalışmada" — kenar çubuğundaki
+      bölümlerin aynısı (calismaBaglantilari), tablet ve telefonda kenar
+      çubuğu bağlamı görünmediği için klavyeyle oraya en kısa yol;
+      (2) çalışma listesi "Çalışma değiştir" olur ve seçilen çalışmanın AYNI
+      bölümüne gider (Project Switcher ile aynı kural:
+      calismaDegistirAdresi). Bağlam dışında liste eskisi gibi Özet'i açar.
+    */
+    ...(aktifCalisma
+      ? calismaBaglantilari(aktifCalisma, t).map((b): Oge => ({
+          id: `bu:${b.key}`,
+          grup: t({ tr: "Bu çalışmada", en: "In this work" }),
+          label: b.label,
+          ipucu: aktifCalisma.baslik,
+          ikon: b.key === "kaynaklar" ? "literatur" : b.key === "analiz" ? "analiz" : b.key === "belge" ? "belge" : "tez",
+          tur: "git",
+          href: b.href,
+        }))
+      : []),
+    ...(calismalar ?? [])
+      .filter((c) => c.id !== aktifCalisma?.id)
+      .map((c): Oge => ({
+        id: `calisma:${c.id}`,
+        grup: aktifCalisma ? t({ tr: "Çalışma değiştir", en: "Switch work" }) : t({ tr: "Çalışmalarım", en: "My works" }),
+        label: c.title,
+        ipucu: t(projectTypeLabel(c.project_type)),
+        ikon: "tez",
+        tur: "git",
+        href:
+          aktifCalisma && adres
+            ? calismaDegistirAdresi({ yol: adres.yol, sorgu: new URLSearchParams(adres.sorgu) }, aktifCalisma.id, { id: c.id, tur: c.project_type })
+            : calismaAdresi(c.id),
+      })),
     ...uygulamalar.map((u): Oge => ({ id: `app:${u.key}`, grup: t({ tr: "Uygulamalar", en: "Apps" }), label: u.label, ikon: u.ikon, tur: "git", href: u.href })),
     ...osSayfalari(uygulamalar).map((s): Oge => ({
       id: `sayfa:${s.href}`,
