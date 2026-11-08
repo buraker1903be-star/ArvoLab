@@ -72,7 +72,8 @@ const tarayici = await chromium.launch();
     const nav = sayfa.locator("nav.os-gezinme");
     const kutu = await nav.boundingBox();
     bekle(kutu && kutu.x === 0 && kutu.width >= 200 && kutu.height > 600, `kenar çubuğu beklenen yerde değil: ${JSON.stringify(kutu)}`);
-    bekle(await nav.getByText("Kaynaklar", { exact: true }).first().isVisible(), "Kaynaklar adı görünmüyor");
+    // Genel bölümün adı "Kaynak Kütüphanesi" (Signature OS 2.0); çalışma bağlamındaki bağlantı "Kaynaklar".
+    bekle(await nav.getByText("Kaynak Kütüphanesi", { exact: true }).first().isVisible(), "Kaynak Kütüphanesi adı görünmüyor");
     bekle(!(await sayfa.locator(".os-gezinme-daha").isVisible()), "masaüstünde 'Daha fazla' görünmemeli");
   });
   await senaryo("masaüstü: çalışmanın içinde bağlam bölümü ve tek etkin bağlantı", async () => {

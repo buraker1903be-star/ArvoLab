@@ -118,8 +118,17 @@ export default async function KaynaklarPage({
       {calisma && secim.tur === "secili" && secim.adrestenMi ? <CalismaBaglamiYayinla id={calisma.id} baslik={calisma.title} tur={calisma.project_type} /> : null}
       {/* Ortak sayfa başlığı (Signature OS 4.1). Açıklama artık çalışmanın
           adını tekrar etmiyor: ad çalışma seçicide yazıyor. */}
+      {/*
+        Ad bağlama göre (Signature OS 2.0 Aşama 2): bir çalışmanın içinden
+        gelindiyse (?calisma=) o çalışmanın "Kaynaklar"ı; genel girişten
+        gelindiyse "Kaynak Kütüphanesi" — kenar çubuğundaki adlarla aynı.
+      */}
       <SayfaBasligi
-        baslik={t({ tr: "Kaynaklar", en: "Sources" })}
+        baslik={
+          secim.tur === "secili" && secim.adrestenMi
+            ? t({ tr: "Kaynaklar", en: "Sources" })
+            : t({ tr: "Kaynak Kütüphanesi", en: "Source Library" })
+        }
         aciklama={
           calisma
             ? t({

@@ -91,7 +91,17 @@ export function labUygulamalari(t: Cevirici = ceviriciKur("tr")): OsUygulama[] {
     */
     {
       key: "kaynaklar",
-      label: t({ tr: "Kaynaklar", en: "Sources" }),
+      /*
+        AD AYRIMI (Signature OS 2.0 Aşama 2, kurum sahibinin kararı): genel
+        bölüm "Kaynak Kütüphanesi", çalışmanın içindeki bağlantı
+        "Kaynaklar" (calismaBaglantilari). Eskiden ikisi de "Kaynaklar"dı
+        ve masaüstünde kenar çubuğunda alt alta iki "Kaynaklar" duruyordu:
+        biri o çalışmanın kaynakları, öteki bütün kütüphane. Kısa ad
+        (telefonun alt çubuğu, tabletin rayı) "Kaynaklar" kalır: orada
+        bağlam bölümü yok, karışacak ikinci bir ad da yok.
+      */
+      label: t({ tr: "Kaynak Kütüphanesi", en: "Source Library" }),
+      kisa: t({ tr: "Kaynaklar", en: "Sources" }),
       href: "/dashboard/literature",
       ikon: "literatur",
       yollar: ["/dashboard/literature", "/dashboard/citations"],
