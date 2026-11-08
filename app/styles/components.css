@@ -106,7 +106,7 @@
   border: 1px solid transparent;
   background: var(--dugme-birincil);
   color: var(--on-brand);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--kontrol-golge);
 }
 .projects-filter-button {
   border: 1px solid var(--line);
@@ -114,7 +114,7 @@
   color: var(--ink);
   /* Token kullanılıyor: brand-900'den türetilen ham gölge koyu temada
      görünmez kalıyordu, oysa yanındaki kartların gölgesi vardı. */
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--kontrol-golge);
 }
 .button-danger {
   border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
@@ -151,7 +151,7 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
 .dashboard-stat-card {
   border: 1px solid var(--line-soft);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
 }
 .project-form-card { padding: var(--kart-dolgu); border-radius: var(--kart-r); }
 .projects-list { display: grid; gap: var(--kart-araligi); }
@@ -278,7 +278,7 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   border: 1px solid var(--line-soft);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
 }
 .resume-card { border-color: color-mix(in srgb, var(--primary-ink) 30%, var(--line-soft)); }
 .resume-heading h2 { margin: 8px 0 4px; font-size: var(--fs-lg); font-weight: 650; line-height: var(--lh-baslik); overflow-wrap: anywhere; }
@@ -321,7 +321,7 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   border: 1px solid var(--line-soft);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
 }
 /* Lisans ve abonelik durumu (ana sayfa) */
 .license-card {
@@ -331,7 +331,7 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   border: 1px solid color-mix(in srgb, var(--line-soft) 100%, transparent);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
 }
 .license-card[data-tone="warning"] { border-color: color-mix(in srgb, var(--warning) 40%, var(--line-soft)); }
 .license-card[data-tone="danger"] { border-color: color-mix(in srgb, var(--danger) 40%, var(--line-soft)); }
@@ -1614,7 +1614,7 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   border: 1px solid var(--line-soft);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
   overflow: hidden;
 }
 .kaynak-satiri {
@@ -1656,7 +1656,7 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   border: 1px solid var(--line-soft);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
   overflow: hidden;
 }
 .denetim-satiri {
@@ -1775,7 +1775,7 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   border: 1px solid color-mix(in srgb, var(--primary-ink) 35%, var(--line-soft));
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
 }
 /* Genel bakış sayfalarında kartlar arası boşluk sayfanın kendi aralığından gelir; 22 piksel üstüne ekleniyor, kartın üstünde iki kat boşluk açıyordu. */
 .gb > .geri-bildirim-karti { margin-top: 0; }
@@ -2001,7 +2001,7 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   border: 1px solid var(--line-soft);
   border-radius: var(--karo-r);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
   color: var(--ink-soft);
   text-decoration: none;
   transition: transform .18s var(--ease-spring), border-color .2s ease, box-shadow .2s ease;
@@ -2030,7 +2030,7 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   border-left: 3px solid var(--primary-ink);
   border-radius: var(--kart-r);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
 }
 .sirada-etiket {
   flex: none; color: var(--primary-ink);
@@ -2106,7 +2106,7 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   border: 1px solid var(--line-soft);
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
 }
 .kanit-matris { width: 100%; min-width: 960px; border-collapse: collapse; font-size: var(--fs-sm); }
 .kanit-matris th,
@@ -2236,3 +2236,27 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 }
 @keyframes tema-menu-ac { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .tema-menu { animation: none; } }
+
+/*
+  YÜZEY SINIFLARI (Signature OS 2.0 Aşama 1, 08.11.2026). Yüzey
+  hiyerarşisinin (tokens.css) bileşen karşılığı. Bugün hiçbir sayfa
+  bunları kullanmıyor: sayfa dönüşümleri (Dashboard, Çalışmalarım…)
+  ayrı aşamalar ve kendi onaylarıyla bu sınıflara geçecek. Burada
+  durmalarının sebebi, o aşamaların her birinin kendi "kart" tanımını
+  yeniden yazmaması — bugünkü 15 ayrı kart kuralı böyle oluştu.
+*/
+.yuzey-kart {
+  border: 1px solid var(--yuzey-kart-cizgi);
+  border-radius: var(--kart-r);
+  background: var(--yuzey-kart);
+  box-shadow: var(--yuzey-kart-golge);
+}
+/* Düzlem çerçevesizdir; ardışık iki düzlemi yalnız ince ayraç ayırır. */
+.yuzey-duzlem { border: 0; background: transparent; box-shadow: none; }
+.yuzey-duzlem + .yuzey-duzlem { border-top: 1px solid var(--yuzey-duzlem-ayrac); }
+.yuzey-ust {
+  border: 1px solid var(--line);
+  border-radius: var(--menu-r);
+  background: var(--yuzey-ust);
+  box-shadow: var(--yuzey-acilir-golge);
+}

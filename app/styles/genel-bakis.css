@@ -36,7 +36,7 @@
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
 }
 .gb-kart-bas { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .gb-kart-bas h2 { margin: 0; color: var(--ink); font-size: var(--fs-md); font-weight: 650; letter-spacing: -.01em; }
@@ -811,7 +811,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   border: 1px solid var(--line-soft);
   border-radius: var(--karo-r);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
   color: var(--ink);
   text-decoration: none;
   transition: border-color .15s ease, transform .2s var(--ease-spring);

@@ -775,7 +775,7 @@
      değil. Eskiden büyük kartın yarıçapını (18px) taşıyordu. */
   border-radius: var(--karo-r);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
 }
 .outline-card p { margin: 0; }
 .outline-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -1138,7 +1138,7 @@
   border: 1px solid var(--line-soft);
   border-radius: var(--karo-r);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--yuzey-kart-golge);
   color: var(--ink);
   text-align: left;
   cursor: pointer;

@@ -226,6 +226,33 @@
   --shadow-lg: 0 16px 40px -8px rgba(15,23,42,.16);
   --shadow-inset: inset 0 1px 1px #0f233c06;
 
+  /* ---- YÜZEY HİYERARŞİSİ (Signature OS 2.0, 08.11.2026) ----
+     Dört düzey; bileşen hangisinde durduğunu bu adlarla söyler:
+       0 Kanvas   (--yuzey-kanvas)   sayfa zemini
+       1 Düzlem   (Plane)            zeminin üstünde ÇERÇEVESİZ bölüm;
+                                     bölümleri yalnız ince ayraç
+                                     (--yuzey-duzlem-ayrac) ve boşluk ayırır
+       2 Kart     (Surface)          ekranın birincil nesnesi: zemin,
+                                     1 px çizgi, hafif gölge
+       3 Üst      (Raised)           menü, açılır pencere, çekmece, toast
+     Değerler bugünkü görünümün AYNISI: kart gölgesi bugün --shadow-sm.
+     Tasarım planındaki "gölge yalnız üst düzeyde" kuralı tek satırla
+     (--yuzey-kart-golge: none) uygulanabilir; görünümü değiştirdiği için
+     ayrı onaya bırakıldı. Kartlar bu adı okuduğu için o gün dosya dosya
+     dolaşmak gerekmeyecek. */
+  --yuzey-kanvas: var(--bg);
+  --yuzey-duzlem-ayrac: var(--line-soft);
+  --yuzey-kart: var(--surface);
+  --yuzey-kart-cizgi: var(--line);
+  --yuzey-kart-golge: var(--shadow-sm);
+  --yuzey-ust: var(--surface-raised);
+  /* Üst düzeyin iki kademesi: yerinde açılan menü (hafif) ve sayfanın
+     önüne geçen pencere/çekmece (derin). */
+  --yuzey-acilir-golge: var(--shadow-md);
+  --yuzey-pencere-golge: var(--shadow-lg);
+  /* Düğmenin kendi hafif gölgesi: yüzey değil, denetim. */
+  --kontrol-golge: var(--shadow-sm);
+
   /* ---- Yarıçaplar ---- */
   --r-xs: 6px;
   --r-sm: 8px;
@@ -273,12 +300,12 @@
   /* Açılır menüler: kullanıcı menüsü, kart menüsü, tema menüsü, araç menüleri. */
   --menu-r: var(--r-md);
   --menu-dolgu: var(--s-1);
-  --menu-golge: var(--shadow-md);
+  --menu-golge: var(--yuzey-acilir-golge);
   --menu-oge-h: 36px;
   --menu-oge-r: var(--r-sm);
   /* Pencere (PanelDrawer, Dialog, yerel <dialog>) */
   --pencere-r: var(--r-xl);
-  --pencere-golge: var(--shadow-lg);
+  --pencere-golge: var(--yuzey-pencere-golge);
   /* Durum etiketi */
   --hap-agirlik: 600;
 
