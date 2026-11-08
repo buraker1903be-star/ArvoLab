@@ -610,3 +610,225 @@ html[data-theme="dark"] {
 @media screen {
   html[data-theme="dark"] .kagit { --kagit: #ece9e2; }
 }
+
+/* ============================================================
+   SIGNATURE ACADEMIC OS v4 — TOKEN ALTYAPISI (V4.3-A1, 08.11.2026)
+
+   Kaynak: docs/tasarim/asama-4/signature-os-v4/tokens-v4.css (V4.1,
+   onaylı). Bu adımda HİÇBİR bileşen bu adları okumuyor: görünüm
+   değişmez (gorsel-fark: 144 görüntüde 0 piksel). Bileşenler V4.3-A2'den
+   itibaren aşamalı olarak bağlanır (03-token-goc-haritasi.md).
+
+   ÇAKIŞAN ADLAR EKLENMEDİ: v4 tasarımındaki dokuz ad (--kagit,
+   --tip-meta, --yuzey-ust, --z-taban, --z-ust, --z-panel, --z-menu,
+   --z-gezinme, --z-pencere) uygulamada zaten tanımlı ve kullanılıyor.
+   v4 değeriyle yeniden tanımlamak mevcut görünümü sessizce değiştirirdi
+   (ör. --kagit koyu temada belgeyi loş kâğıda, --z-* katman sırasını).
+   Bunların v4 karşılığı A2'de, eşleme kararıyla ve görsel farkla gelir.
+
+   Ham palet (--p-*) yalnız bu dosyada tanımlanır ve OKUNUR
+   (scripts/check-css-tokens.mjs, kural 2). Açık rollerin her biri koyu
+   temada da tanımlı (kural 7, tema eşitliği).
+
+   .kagit bu rolleri yeniden kurmaz (yukarıdaki `:root, .kagit`
+   bloğunun aksine): v4'te koyu temada belge "loş kâğıt" (K-5) olacak.
+   ============================================================ */
+/* ---------------- 1. Ham palet ---------------- */
+:root {
+  /* Lacivert (vurgu) */
+  --p-lacivert-050: #ECF1F8;
+  --p-lacivert-100: #D9E3F2;
+  --p-lacivert-300: #7FA3E2;
+  --p-lacivert-500: #3F6DBE;
+  --p-lacivert-600: #355FA8;
+  --p-lacivert-650: #2F5DA8;
+  --p-secim-acik: #D3DFF3;
+  --p-secim-koyu: #29467A;
+  --p-lacivert-700: #23457A;
+  --p-lacivert-800: #1A355F;
+  --p-lacivert-900: #182A45;
+  /* Arduvaz (açık tema nötrleri) */
+  --p-arduvaz-000: #FFFFFF;
+  --p-arduvaz-025: #F8F9FB;
+  --p-arduvaz-050: #F6F7F9;
+  --p-arduvaz-075: #F0F2F5;
+  --p-arduvaz-100: #EEF1F5;
+  --p-arduvaz-150: #E9EDF2;
+  --p-arduvaz-200: #E3E7ED;
+  --p-arduvaz-300: #C9D1DC;
+  --p-arduvaz-400: #8793A5;
+  --p-arduvaz-600: #5C687C;
+  --p-arduvaz-900: #15233A;
+  /* Gece (koyu tema nötrleri: saf siyah değil, derin lacivert-kömür) */
+  --p-gece-950: #0A0F16;
+  --p-gece-900: #0C1119;
+  --p-gece-875: #0F1621;
+  --p-gece-850: #141C28;
+  --p-gece-800: #18212F;
+  --p-gece-775: #182231;
+  --p-gece-700: #263244;
+  --p-gece-600: #34425A;
+  --p-gece-400: #8592A7;
+  --p-gece-300: #A6B1C2;
+  --p-gece-100: #EEF2F7;
+  --p-gece-kagit-metin: #E4E9F0;
+  /* Anlam renkleri */
+  --p-yesil-600: #4F7038; --p-yesil-500: #6B9150; --p-yesil-300: #8DB46C; --p-yesil-050: #EEF4E8; --p-yesil-900: #1A2A1C;
+  --p-amber-600: #8A6120; --p-amber-300: #DDB06A; --p-amber-050: #FBF3E6; --p-amber-900: #2E2416;
+  --p-kiremit-600: #B3433C; --p-kiremit-300: #EC8A82; --p-kiremit-050: #FBEDEC; --p-kiremit-900: #331A1C;
+}
+
+/* ---------------- 2. Anlamsal roller — AÇIK ---------------- */
+:root {
+  /* Yüzey hiyerarşisi: zemin < kenar < yüzey-1 < yüzey-üst. Çöküş: girdiler, kod, masa. */
+  --yuzey-zemin: var(--p-arduvaz-050); /* uygulama kanvası */
+  --yuzey-kenar: var(--p-arduvaz-075); /* kenar çubuğu, ray */
+  --yuzey-1: var(--p-arduvaz-000); /* ana içerik yüzeyi */
+  --yuzey-2: var(--p-arduvaz-025); /* ikincil satır, sekme zemini */
+  --yuzey-cokuk: var(--p-arduvaz-100); /* girdi içi, belge masası */
+  --yuzey-vurgu: var(--p-lacivert-050); /* seçili öğe, "Şimdi" */
+  --kagit-metin: var(--p-arduvaz-900);
+  --masa: var(--p-arduvaz-150); /* kâğıdın altındaki masa */
+
+  --metin-1: var(--p-arduvaz-900); /* başlık, gövde (15,8:1) */
+  --metin-2: var(--p-arduvaz-600); /* yardımcı metin (≥4,97:1 her yüzeyde) */
+  --metin-3: var(--p-arduvaz-400); /* YALNIZ simge/ayraç/devre dışı (metin değil) */
+  --metin-ters: var(--p-arduvaz-000);
+
+  --cizgi: var(--p-arduvaz-200); /* 1 px ayraç ve kart sınırı */
+  --cizgi-guclu: var(--p-arduvaz-300); /* girdi sınırı, odak dışı kontrol */
+
+  --vurgu: var(--p-lacivert-700); /* birincil dolgu (beyaz yazı 9,5:1) */
+  --vurgu-uzerine: var(--p-lacivert-800); /* hover */
+  --vurgu-metin: var(--p-lacivert-700); /* bağlantı, etkin sekme */
+  --vurgu-yumusak: var(--p-lacivert-050);
+  --vurgu-yazi: var(--p-arduvaz-000); /* birincil dolgu üstündeki yazı */
+  --odak: var(--p-lacivert-650); /* odak halkası (zeminde 6:1) */
+
+  --basari: var(--p-yesil-600); --basari-yumusak: var(--p-yesil-050); --ilerleme: var(--p-yesil-500);
+  --uyari: var(--p-amber-600); --uyari-yumusak: var(--p-amber-050);
+  --hata: var(--p-kiremit-600); --hata-yumusak: var(--p-kiremit-050);
+  --notr-yumusak: var(--p-arduvaz-100);
+
+  --ortu: rgba(21, 35, 58, .36);
+  --secim: var(--p-secim-acik);
+  --golge-1: 0 1px 2px rgba(21, 35, 58, .05);
+  --golge-2: 0 1px 2px rgba(21, 35, 58, .04), 0 10px 28px -14px rgba(21, 35, 58, .20);
+  --golge-3: 0 24px 64px -20px rgba(21, 35, 58, .32);
+}
+
+/* ---------------- 2. Anlamsal roller — KOYU ---------------- */
+html[data-theme="dark"] {
+  --yuzey-zemin: var(--p-gece-900);
+  --yuzey-kenar: var(--p-gece-875);
+  --yuzey-1: var(--p-gece-850);
+  --yuzey-2: var(--p-gece-800);
+  --yuzey-cokuk: var(--p-gece-950);
+  --yuzey-vurgu: var(--p-lacivert-900);
+  /* Koyu temada belge "loş kâğıt": saf beyaz göz yorar, saf siyah kâğıt hissini kaybeder. */
+  --kagit-metin: var(--p-gece-kagit-metin);
+  --masa: var(--p-gece-950);
+
+  --metin-1: var(--p-gece-100);
+  --metin-2: var(--p-gece-300);
+  --metin-3: var(--p-gece-400);
+  --metin-ters: var(--p-gece-900);
+
+  --cizgi: var(--p-gece-700);
+  --cizgi-guclu: var(--p-gece-600);
+
+  --vurgu: var(--p-lacivert-500); /* beyaz yazı 5,07:1 */
+  --vurgu-uzerine: var(--p-lacivert-600); /* koyuda hover KOYULAŞIR (beyaz yazının kontrastı korunur) */
+  --vurgu-metin: var(--p-lacivert-300);
+  --vurgu-yumusak: var(--p-lacivert-900);
+  --vurgu-yazi: var(--p-arduvaz-000);
+  --odak: var(--p-lacivert-300);
+
+  --basari: var(--p-yesil-300); --basari-yumusak: var(--p-yesil-900); --ilerleme: var(--p-yesil-300);
+  --uyari: var(--p-amber-300); --uyari-yumusak: var(--p-amber-900);
+  --hata: var(--p-kiremit-300); --hata-yumusak: var(--p-kiremit-900);
+  --notr-yumusak: var(--p-gece-800);
+
+  --ortu: rgba(0, 0, 0, .56);
+  --secim: var(--p-secim-koyu);
+  --golge-1: 0 0 0 1px rgba(255, 255, 255, .02);
+  --golge-2: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 12px 32px -16px rgba(0, 0, 0, .72);
+  --golge-3: 0 28px 72px -20px rgba(0, 0, 0, .8);
+}
+
+/* ---------------- 3. Tipografi ---------------- */
+:root {
+  /* Arayüz Inter; editoryal ses Newsreader (yalnız çalışma ve sayfa başlıkları, alıntı).
+     Belge metni BU token'ları okumaz: kılavuzun yazı tipi (--belge-yazi) uygulanır. */
+  /* Arayüz yazısı uygulamanınkiyle AYNI kaynak (--font-body: next/font Inter); ikinci bir Inter yığını sapardı. */
+  --yazi-arayuz: var(--font-body);
+  /*
+    Newsreader next/font ile (app/layout.tsx, --font-newsreader); yalnız
+    editoryal başlıklar (K-6). Yedek ad ŞART: --font-newsreader <body>'de
+    tanımlı, bu token :root'ta çözülüyor. Yedeksiz yazımda kökte değişken
+    yok sayılıp token TÜMDEN geçersiz kalıyordu (ölçüldü, V4.3-A1);
+    --font-body de aynı nedenle var(--font-inter, "Inter") yazılı.
+  */
+  --yazi-editoryal: var(--font-newsreader, "Newsreader"), "Iowan Old Style", Georgia, serif;
+  --yazi-kod: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --tip-gosterim: 500 34px/40px var(--yazi-editoryal); /* Ana Sayfa'da aktif çalışma */
+  --tip-sayfa: 500 30px/36px var(--yazi-editoryal); /* sayfa başlığı */
+  --tip-calisma: 500 24px/30px var(--yazi-editoryal); /* çalışma ve kaynak başlığı */
+  --tip-bolum: 600 15px/22px var(--yazi-arayuz); /* bölüm başlığı */
+  --tip-govde: 400 14px/21px var(--yazi-arayuz);
+  --tip-govde-guclu: 600 14px/21px var(--yazi-arayuz);
+  --tip-yardim: 400 12px/17px var(--yazi-arayuz);
+  --tip-etiket: 600 11px/14px var(--yazi-arayuz); /* yalnız bölüm etiketi; büyük harf, .06em */
+  --tip-sayi: 600 26px/30px var(--yazi-arayuz); /* eşit genişlikli rakam */
+  --tip-sayi-kucuk: 600 18px/24px var(--yazi-arayuz);
+  --tip-alinti: 400 italic 16px/26px var(--yazi-editoryal); /* kaynaktan birebir alıntı */
+
+  /* Telefon */
+  --tip-sayfa-tel: 500 26px/32px var(--yazi-editoryal);
+  --tip-calisma-tel: 500 21px/27px var(--yazi-editoryal);
+  --tip-govde-tel: 400 15px/22px var(--yazi-arayuz);
+
+  /* Okuma ölçüsü: belge sütunu ve uzun AI yanıtları */
+  --olcu-belge-min: 600px;
+  --olcu-belge-ideal: 720px; /* ≈ 70–80 karakter */
+  --olcu-belge-max: 760px;
+  --olcu-metin: 68ch;
+}
+
+/* ---------------- 4. Boşluk, yoğunluk, yarıçap, hareket ---------------- */
+:root {
+  --b-1: 4px; --b-2: 8px; --b-3: 12px; --b-4: 16px; --b-5: 20px; --b-6: 24px;
+  --b-8: 32px; --b-10: 40px; --b-12: 48px; --b-16: 64px;
+
+  /* Yoğunluk: rahat (varsayılan) / sık (editör araçları, kaynak listesi) */
+  --kontrol: 40px; --kontrol-sik: 32px; --kontrol-tel: 48px; --dokunma: 44px;
+  --satir: 52px; --satir-sik: 40px; --satir-tel: 56px;
+
+  --r-1: 6px; /* rozet, araç düğmesi */
+  --r-2: 8px; /* düğme, girdi */
+  --r-3: 10px; /* panel, liste kabı */
+  --r-4: 12px; /* ana yüzey */
+  --r-5: 16px; /* alt sayfa üst köşeleri */
+
+  --sure-1: 120ms; --sure-2: 200ms; --sure-3: 320ms;
+  --egri: cubic-bezier(.2, .8, .2, 1);
+  --egri-sayfa: cubic-bezier(.32, .72, 0, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --sure-1: 0ms; --sure-2: 0ms; --sure-3: 0ms; }
+}
+
+/* ---------------- 5. Yerleşim ve kırılımlar ---------------- */
+:root {
+  --kenar-genis: 236px; /* ≥1200: etiketli kenar çubuğu */
+  --ray: 64px; /* 761–1199: simge rayı (öneri; uygulama bugün 88 px) */
+  --ust: 56px;
+  --alt-cubuk: 64px; /* ≤760: sabit alt gezinme (+ güvenli alan) */
+  --icerik-max: 1320px;
+  --dolgu-masa: 32px; --dolgu-tablet: 24px; --dolgu-tel: 20px;
+  --baglam-panel: 360px; /* AI / İnceleme / Kaynak paneli */
+  --baglam-panel-min: 320px;
+  --bolme-pdf: 45%; /* Önerilen yeni işlev: belge %55 / PDF %45 */
+  --z-yapiskan: 20; --z-ortu: 900; --z-bildirim: 1100;
+}

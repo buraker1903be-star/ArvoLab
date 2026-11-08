@@ -21,7 +21,7 @@ const APP_DIR = path.join(root, "app");
 const TOKENS_FILE = path.join(APP_DIR, "styles", "tokens.css");
 const MIN_FONT_PX = 11;
 // next/font ile gövdeye eklenen değişkenler
-const KNOWN_EXTERNAL = new Set(["--font-inter", "--font-montserrat"]);
+const KNOWN_EXTERNAL = new Set(["--font-inter", "--font-montserrat", "--font-newsreader"]);
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -55,6 +55,13 @@ for (const { file, text } of files) {
     }
     for (const match of text.matchAll(/(--(?:brand|accent|n|mavi|gri|yazi|gece|gece-yazi)-\d+)\s*:/gi)) {
       report(file, text, match.index, `palet değişkeni ${match[1]} yalnızca tokens.css'te tanımlanabilir`);
+    }
+    /* Signature OS v4 ham paleti (--p-*, V4.3-A1): aynı kural, ayrı ad biçimi (--p-lacivert-650, --p-secim-acik). */
+    for (const match of text.matchAll(/(--p-[a-z0-9-]+)\s*:/gi)) {
+      report(file, text, match.index, `v4 palet değişkeni ${match[1]} yalnızca tokens.css'te tanımlanabilir`);
+    }
+    for (const match of text.matchAll(/var\(\s*(--p-[a-z0-9-]+)\s*[,)]/gi)) {
+      report(file, text, match.index, `v4 palet adımı ${match[1]} doğrudan okunuyor — anlamsal rolü (--yuzey-*, --metin-*, --vurgu…) kullanın`);
     }
     /*
       Palet OKUMA da yalnızca tokens.css'te (Signature OS 2.0, 08.11.2026).
@@ -191,11 +198,16 @@ const TEMADAN_BAGIMSIZ = {
 {
   const tokensMetni = files.find((f) => f.file === TOKENS_FILE)?.text ?? "";
   const tanimlar = (blok) => Object.fromEntries([...blok.matchAll(/^\s*(--[a-z0-9-]+)\s*:\s*([^;]+);/gm)].map((m) => [m[1], m[2].trim()]));
-  const acik = tanimlar(tokensMetni.match(/:root, \.kagit \{([\s\S]*?)\n\}/)?.[1] ?? "");
+  /*
+    Açık tema: `:root, .kagit` bloğu VE Signature OS v4'ün `:root` blokları
+    (V4.3-A1). Eskiden yalnızca ilk blok okunuyordu; v4 rolleri ayrı bloğa
+    yazıldığında koyu karşılığı unutulsa denetim görmezdi.
+  */
+  const acik = tanimlar([...tokensMetni.matchAll(/^(?::root, \.kagit|:root) \{([\s\S]*?)\n\}/gm)].map((m) => m[1]).join("\n"));
   const koyu = tanimlar([...tokensMetni.matchAll(/html\[data-theme="dark"\] \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n"));
-  const paletten = /var\(--(?:brand|accent|n|mavi|gri|yazi|gece|gece-yazi)-\d+\)|#[0-9a-f]{3,8}\b|\brgba?\(/i;
+  const paletten = /var\(--(?:brand|accent|n|mavi|gri|yazi|gece|gece-yazi)-\d+\)|var\(--p-[a-z0-9-]+\)|#[0-9a-f]{3,8}\b|\brgba?\(/i;
   // Palet adımlarının kendisi ve renk taşımayan ölçü/süre/yazı token'ları sayılmaz.
-  const renkDisi = /^--(?:brand|accent|n|mavi|gri|yazi|gece|gece-yazi)-\d+$|^--(?:r-|s-|z-|fs-|fw-|lh-|ls-|tip-|sure|ease|font|print|kontrol-h|kontrol-dolgu|kontrol-r|menu-oge-h|menu-dolgu|menu-r|menu-oge-r|pencere-r|kart-dolgu|kart-r|karo-dolgu|karo-r|kart-araligi|gezinme|alt-cubuk|sidebar-width|topbar|dock|content|hap-|dugme-agirlik|glass-blur|radius|yan-panel-genis)/;
+  const renkDisi = /^--(?:brand|accent|n|mavi|gri|yazi|gece|gece-yazi)-\d+$|^--p-|^--(?:r-|s-|z-|fs-|fw-|lh-|ls-|tip-|sure|ease|font|print|kontrol-h|kontrol-dolgu|kontrol-r|menu-oge-h|menu-dolgu|menu-r|menu-oge-r|pencere-r|kart-dolgu|kart-r|karo-dolgu|karo-r|kart-araligi|gezinme|alt-cubuk|sidebar-width|topbar|dock|content|hap-|dugme-agirlik|glass-blur|radius|yan-panel-genis)/;
   for (const [ad, deger] of Object.entries(acik)) {
     if (renkDisi.test(ad) || ad in koyu || !paletten.test(deger)) continue;
     if (!TEMADAN_BAGIMSIZ[ad]) problems.push(`app/styles/tokens.css  ${ad} (${deger}) koyu temada tanımlı değil — html[data-theme="dark"] bloğuna ekleyin ya da bilerek temadan bağımsızsa TEMADAN_BAGIMSIZ listesine gerekçesiyle yazın`);

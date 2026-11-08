@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { DilSaglayici } from "./_components/dil-saglayici";
-import { Inter } from "next/font/google";
+import { Inter, Newsreader } from "next/font/google";
 import { TEMA_BETIGI, TEMA_RENGI } from "@/lib/tema";
 import { KENAR_BETIGI } from "@/lib/os/kenar";
 import "./styles/tokens.css";
@@ -36,6 +36,29 @@ const inter = Inter({
   variable: "--font-inter",
   display: "swap",
   preload: true,
+});
+
+/*
+  NEWSREADER GERİ GELİYOR, DAR KAPSAMLA (V4.3-A1, 08.11.2026; kurum
+  sahibinin K-6 kararı). Phase 4.4'te her başlıkta kullanılıyordu ve
+  kaldırılmıştı (yukarıda). Signature OS v4'te YALNIZ editoryal başlıklar
+  (sayfa ve çalışma başlığı, kaynak adı, birebir alıntı) Newsreader'dır;
+  arayüzün geri kalanı Inter, belge metni kılavuzun yazısı.
+
+  preload: false — bu adımda hiçbir öğe kullanmıyor (görünüm değişmez,
+  tasarım token'ı --yazi-editoryal tanımlı ama bağlı değil). Tarayıcı
+  @font-face'i yalnızca bir öğe isteyince indirir; böylece kullanılmayan
+  yazı için bayt ödenmez. Başlıklar bağlandığında (V4.3-A2/C) LCP için
+  preload yeniden değerlendirilir. Ağırlıklar: 400/500 ve 400 italik
+  (alıntı); başka ağırlık yüklenmez.
+*/
+const newsreader = Newsreader({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-newsreader",
+  display: "swap",
+  preload: false,
 });
 
 // Montserrat kaldırıldı (Signature OS): her sayfada önceden yükleniyordu
@@ -96,7 +119,7 @@ export default async function RootLayout({
         {/* Kenar çubuğunun geniş/dar tercihi de boyamadan önce (lib/os/kenar.ts): aynı sebep, düzen kayması. */}
         <script id="kenar-init" dangerouslySetInnerHTML={{ __html: KENAR_BETIGI }} />
       </head>
-      <body className={inter.variable}>
+      <body className={`${inter.variable} ${newsreader.variable}`}>
         <DilSaglayici dil={dil} saatDilimi={saatDilimi}>
           {children}
         </DilSaglayici>
