@@ -44,7 +44,8 @@ test("başka çalışmanın sayfasında eski bağlam gösterilmez", () => {
 test("genel sayfalar: uygulamanın adı tek öğe, bağlantısız", () => {
   assert.deepEqual(yolu("/dashboard"), [{ label: "Ana Sayfa", href: null }]);
   assert.deepEqual(yolu("/dashboard/analysis"), [{ label: "Analiz Merkezi", href: null }]);
-  assert.deepEqual(yolu("/dashboard/citations"), [{ label: "Kaynaklar", href: null }]);
+  // Genel bölümün adı "Kaynak Kütüphanesi" (Signature OS 2.0 Aşama 2); çalışmanın içinde "Kaynaklar".
+  assert.deepEqual(yolu("/dashboard/citations"), [{ label: "Kaynak Kütüphanesi", href: null }]);
 });
 
 test("tanınmayan yol: genel bir ad, çökme yok", () => {
