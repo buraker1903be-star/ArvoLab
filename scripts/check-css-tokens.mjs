@@ -6,6 +6,8 @@
 //      bileşenler anlamsal katmanı (--surface, --ink, --primary…) okur.
 //   3) Yedeksiz var(--x) kullanımı tanımlı bir değişkene işaret etmelidir.
 //   4) En küçük yazı boyutu 11px (font-size ve font kısayolu).
+//   5) Köşe yarıçapı token'dan (--r-*, --kart-r, --menu-r…); ham px/rem yalnızca
+//      HAM_YARICAP_BORCU listesindekiler (borç, muafiyet değil).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -84,6 +86,37 @@ for (const { file, text } of files) {
   }
   for (const match of text.matchAll(/\bfont\s*:[^;{}]*?(\d+(?:\.\d+)?)px/gi)) {
     if (Number(match[1]) < MIN_FONT_PX) report(file, text, match.index, `yazı boyutu ${match[1]}px < ${MIN_FONT_PX}px`);
+  }
+}
+
+/*
+  HAM YARIÇAP BORCU (Signature OS 2.0 Aşama 1, 08.11.2026). 73 ham
+  border-radius vardı; token'a birebir eşit olan 45'i taşındı (kalan 16'nın dördü
+  token içinde ham px: calc(…+4px) gibi) (görsel fark
+  144/144 aynı). Aşağıdakiler hiçbir token'a eşit DEĞİL: taşımak görünümü
+  değiştirir, ayrı onay bekliyor. Yenisi eklenemez; biri token'a geçince
+  denetim "listeden çıkar" der. 0 (sıfırlama) ham sayılmaz.
+*/
+const HAM_YARICAP_BORCU = {
+  "app/styles/auth.css": { "4px": 1, "13px": 1, "calc(var(--r-xl) + 4px)": 1 },
+  "app/styles/components.css": { "18px": 1, "0 0 2px 2px": 1 },
+  "app/styles/genel-bakis.css": { "8px 8px 5px 5px": 1, "20px": 1, "2px": 1 },
+  "app/styles/overlays.css": { "22px 22px 0 0": 1 },
+  "app/styles/workspace.css": { "4px": 1, "2px": 4, "var(--r-md) var(--r-md) 4px var(--r-md)": 1, "calc(var(--r-md) - 3px)": 1 },
+};
+for (const { file, text } of files) {
+  if (file === TOKENS_FILE) continue;
+  const goreli = path.relative(root, file);
+  const sayac = {};
+  for (const match of text.matchAll(/border-radius\s*:\s*([^;{}]+?)\s*(?:!important\s*)?(?=[;}])/gi)) {
+    const deger = match[1].trim();
+    if (!/\d(?:px|rem|em)\b/.test(deger)) continue;
+    sayac[deger] = (sayac[deger] ?? 0) + 1;
+    const izin = HAM_YARICAP_BORCU[goreli]?.[deger] ?? 0;
+    if (sayac[deger] > izin) report(file, text, match.index, `ham köşe yarıçapı "${deger}" — --r-xs/sm/md/lg/xl/pill, --r-daire ya da bileşen token'ı (--kart-r, --menu-r…) kullanın`);
+  }
+  for (const [deger, izin] of Object.entries(HAM_YARICAP_BORCU[goreli] ?? {})) {
+    if ((sayac[deger] ?? 0) < izin) problems.push(`${goreli}  ham yarıçap borcu "${deger}" azaldı (${sayac[deger] ?? 0}/${izin}) — HAM_YARICAP_BORCU listesinden düşün`);
   }
 }
 

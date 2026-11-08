@@ -145,7 +145,7 @@
   }
   .gb-baslangic .baslangic-adimlari li::before {
     content: counter(adim); display: grid; place-items: center;
-    width: 28px; height: 28px; margin-bottom: var(--s-2); border-radius: 50%;
+    width: 28px; height: 28px; margin-bottom: var(--s-2); border-radius: var(--r-daire);
     background: var(--primary-soft); color: var(--primary-ink); font-weight: 700; font-size: var(--fs-sm);
   }
   .gb-baslangic .baslangic-adimlari strong { display: block; margin-bottom: var(--s-1); }
@@ -322,13 +322,13 @@
   height: 3px;
   overflow: hidden;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   appearance: none;
 }
 .calisma-ilerleme::-webkit-progress-bar { background: var(--surface-2); }
-.calisma-ilerleme::-webkit-progress-value { border-radius: 999px; background: var(--secondary); }
-.calisma-ilerleme::-moz-progress-bar { border-radius: 999px; background: var(--secondary); }
+.calisma-ilerleme::-webkit-progress-value { border-radius: var(--r-pill); background: var(--secondary); }
+.calisma-ilerleme::-moz-progress-bar { border-radius: var(--r-pill); background: var(--secondary); }
 /*
   İnce sayfa başlığı, BÜTÜN tek ekran modül sayfalarında (04.11.2026):
   Çalışmalarım, Kaynaklar, Analiz, Belge… Her sayfanın 34 piksellik
@@ -616,10 +616,10 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 /* Doçentlik: grup başına puanlar toplamın altında tek satır çip */
 .analiz-kartlari[data-boy="tur"] { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
 /* Abonelik ve kredi: aylık hak çubuğu ve paket kartları */
-.kredi-cubugu { width: 100%; height: 8px; border: 0; border-radius: 999px; overflow: hidden; background: var(--surface-2); appearance: none; }
-.kredi-cubugu::-webkit-progress-bar { background: var(--surface-2); border-radius: 999px; }
-.kredi-cubugu::-webkit-progress-value { background: var(--primary-ink); border-radius: 999px; }
-.kredi-cubugu::-moz-progress-bar { background: var(--primary-ink); border-radius: 999px; }
+.kredi-cubugu { width: 100%; height: 8px; border: 0; border-radius: var(--r-pill); overflow: hidden; background: var(--surface-2); appearance: none; }
+.kredi-cubugu::-webkit-progress-bar { background: var(--surface-2); border-radius: var(--r-pill); }
+.kredi-cubugu::-webkit-progress-value { background: var(--primary-ink); border-radius: var(--r-pill); }
+.kredi-cubugu::-moz-progress-bar { background: var(--primary-ink); border-radius: var(--r-pill); }
 /*
   ABONELİK VE KREDİ (28.10.2026, yeniden tasarım). Kredi göstergesi lacivert
   bir kart: sayfanın tek "cüzdan" anı, öteki her şey sakin yüzeyde kalıyor.
@@ -680,7 +680,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .kredi-sayac-ayrinti dd { margin: 0; font-size: var(--fs-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
 .kredi-sayac-ayrinti dd small { color: color-mix(in srgb, var(--on-brand) 60%, transparent); font-size: var(--fs-sm); font-weight: 500; }
 .kredi-sayac-ayrinti > div > small { color: color-mix(in srgb, var(--on-brand) 60%, transparent); font-size: var(--fs-micro); }
-.kredi-nokta { width: 8px; height: 8px; border-radius: 50%; background: var(--sayac-vurgu); }
+.kredi-nokta { width: 8px; height: 8px; border-radius: var(--r-daire); background: var(--sayac-vurgu); }
 .kredi-nokta[data-tur="ek"] { background: var(--on-brand); }
 @media (max-width: 420px) { .kredi-sayac-ayrinti { grid-template-columns: minmax(0, 1fr); } }
 .kredi-bos { display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -749,7 +749,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   place-items: center;
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   background: var(--surface-2);
   color: var(--muted);
 }
@@ -768,7 +768,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   border-radius: var(--r-lg);
   text-align: center;
 }
-.fatura-bos-ikon { display: inline-grid; place-items: center; width: 44px; height: 44px; margin-bottom: 6px; border-radius: 50%; background: var(--surface-2); color: var(--muted); }
+.fatura-bos-ikon { display: inline-grid; place-items: center; width: 44px; height: 44px; margin-bottom: 6px; border-radius: var(--r-daire); background: var(--surface-2); color: var(--muted); }
 .fatura-bos b { color: var(--ink); font-size: var(--fs-body); }
 .fatura-bos small { color: var(--muted); font-size: var(--fs-sm); }
 /* Ana sayfa: tez kartı ve yanında Abonelik ve kredi kartı tek sırada */
@@ -849,7 +849,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   background: var(--primary-soft);
   color: var(--primary-ink);
   font-size: var(--fs-micro);
@@ -1012,7 +1012,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .takvim-satir { display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
 .takvim-satir .gb-satir-govde { flex: 1 1 auto; min-width: 0; }
 .takvim-satir[data-durum="tamam"] .gb-satir-govde b { color: var(--muted); text-decoration: line-through; }
-.takvim-onay { display: inline-grid; flex: none; place-items: center; width: 22px; height: 22px; padding: 0; border: 1.5px solid var(--line-soft); border-radius: 50%; background: transparent; color: var(--success); cursor: pointer; }
+.takvim-onay { display: inline-grid; flex: none; place-items: center; width: 22px; height: 22px; padding: 0; border: 1.5px solid var(--line-soft); border-radius: var(--r-daire); background: transparent; color: var(--success); cursor: pointer; }
 .takvim-onay[aria-pressed="true"] { border-color: var(--success); background: var(--success-soft); }
 .takvim-onay:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
 .takvim-tarih .tarih-secici-dugme { min-width: 0; min-height: 30px; padding: 0 9px; font-size: var(--fs-sm); }
@@ -1030,7 +1030,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .ayar-dil small { display: none; }
 .ayar-dil button {
   display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
-  border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface);
   color: var(--ink); font-size: var(--fs-sm); cursor: pointer;
 }
 .ayar-dil button[aria-pressed="true"] { border-color: var(--primary); font-weight: 600; }
@@ -1169,7 +1169,7 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
   content: counter(adim);
   position: absolute; top: 12px; left: 14px;
   display: grid; place-items: center; width: 26px; height: 26px;
-  border-radius: 50%; background: var(--primary-soft); color: var(--primary-ink);
+  border-radius: var(--r-daire); background: var(--primary-soft); color: var(--primary-ink);
   font-size: var(--fs-sm); font-weight: 700;
 }
 .analiz-akis b { font-size: var(--fs-sm); }

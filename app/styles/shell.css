@@ -140,7 +140,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
-.notification-dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--primary-ink); }
+.notification-dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: var(--r-daire); background: var(--primary-ink); }
 
 /* Tarih ve saat (ArvoOS'taki os-clock) */
 .os-saat { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; min-width: 44px; padding: 0 6px; line-height: 1.2; }
@@ -150,13 +150,13 @@
 /* Kullanıcı menüsü (ArvoOS'taki os-user): yuvarlak baş harf, açılır kart */
 .os-avatar {
   display: grid; place-items: center; flex: none;
-  width: 34px; height: 34px; border-radius: 50%;
+  width: 34px; height: 34px; border-radius: var(--r-daire);
   background: var(--ink); color: var(--surface);
   font-size: var(--fs-micro); font-weight: 650; letter-spacing: .02em;
 }
 .os-avatar-buyuk { width: 44px; height: 44px; font-size: var(--fs-sm); }
 .os-kullanici { position: relative; }
-.os-kullanici > summary { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; list-style: none; cursor: pointer; }
+.os-kullanici > summary { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-daire); list-style: none; cursor: pointer; }
 .os-kullanici > summary::-webkit-details-marker { display: none; }
 .os-kullanici > summary:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 .os-kullanici-menu {

@@ -260,6 +260,8 @@
   --r-lg: 12px;
   --r-xl: 16px;
   --r-pill: 999px;
+  /* Daire (simge düğmesi, nokta, avatar): ölçeğin parçası değil, şekil. */
+  --r-daire: 50%;
 
   /* ---- Denetim ölçeği: düğme, giriş, seçici, tarih alanı ----
      Hepsi TEK yükseklik ailesinden gelir. Ölçüldü (26.10.2026): aynı

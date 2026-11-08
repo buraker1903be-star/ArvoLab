@@ -371,14 +371,14 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
   height: 6px;
   overflow: hidden;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-sunken);
   appearance: none;
   color: var(--primary);
 }
-.ayar-kredi-cubuk::-webkit-progress-bar { border-radius: 999px; background: var(--surface-sunken); }
-.ayar-kredi-cubuk::-webkit-progress-value { border-radius: 999px; background: var(--primary); }
-.ayar-kredi-cubuk::-moz-progress-bar { border-radius: 999px; background: var(--primary); }
+.ayar-kredi-cubuk::-webkit-progress-bar { border-radius: var(--r-pill); background: var(--surface-sunken); }
+.ayar-kredi-cubuk::-webkit-progress-value { border-radius: var(--r-pill); background: var(--primary); }
+.ayar-kredi-cubuk::-moz-progress-bar { border-radius: var(--r-pill); background: var(--primary); }
 .ayar-kredi-cubuk[data-tone="warning"]::-webkit-progress-value { background: var(--warning); }
 .ayar-kredi-cubuk[data-tone="warning"]::-moz-progress-bar { background: var(--warning); }
 .ayar-kredi-cubuk[data-tone="danger"]::-webkit-progress-value { background: var(--danger); }
@@ -467,7 +467,7 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
   place-items: center;
   width: 28px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--primary-soft);
   color: var(--primary-ink);
   font-size: var(--fs-sm);
@@ -508,7 +508,7 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
 .kk-icindekiler { display: none; }
 .kk-icerik { display: grid; gap: var(--s-6); min-width: 0; }
 .kk-sira {
-  display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 999px;
+  display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: var(--r-pill);
   background: var(--primary-soft); color: var(--primary-ink); font-size: var(--fs-micro); font-weight: 600; font-variant-numeric: tabular-nums;
 }
 .kk-icindekiler ol, .kk-icindekiler-dar ol { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
@@ -607,7 +607,7 @@ details[open] > summary > .kk-ok { transform: rotate(180deg); }
    sadeleşir (.abonelik-sayfa altında).
    ============================================================ */
 .abonelik-katman {
-  display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px;
+  display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: var(--r-pill);
   background: var(--primary-soft); color: var(--primary-ink); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .02em;
 }
 .abonelik-bos {

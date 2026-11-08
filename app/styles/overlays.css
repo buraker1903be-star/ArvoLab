@@ -50,7 +50,7 @@
   width: 30px;
   height: 30px;
   flex: none;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   background: var(--danger-soft);
   color: var(--danger);
   font-size: var(--fs-md);
@@ -66,7 +66,7 @@
   width: 28px;
   height: 28px;
   flex: none;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   background: var(--surface-2);
   color: var(--muted);
   cursor: pointer;
@@ -177,7 +177,7 @@ html.drawer-open { overflow: hidden; }
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   background: var(--surface-sunken);
   color: var(--ink-soft);
   cursor: pointer;
@@ -268,7 +268,7 @@ html.drawer-open { overflow: hidden; }
 .nav-progress > i {
   display: block;
   height: 100%;
-  border-radius: 0 999px 999px 0;
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
   background: linear-gradient(90deg, var(--primary-ink), var(--primary-hover));
   box-shadow: 0 0 12px color-mix(in srgb, var(--primary-ink) 55%, transparent);
   transition: width .18s ease-out;
@@ -286,7 +286,7 @@ html.drawer-open { overflow: hidden; }
   align-items: center;
   gap: 9px;
   padding: 9px 16px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--on-brand);
   background: color-mix(in srgb, var(--koyu-panel-zemin) 92%, transparent);
   border: 1px solid color-mix(in srgb, var(--primary-ink) 30%, transparent);
@@ -301,7 +301,7 @@ html.drawer-open { overflow: hidden; }
 .action-capsule > i {
   width: 13px;
   height: 13px;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   border: 2px solid var(--primary-hover);
   border-right-color: transparent;
   animation: capsule-spin .8s linear infinite;

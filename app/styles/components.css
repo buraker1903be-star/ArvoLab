@@ -408,7 +408,7 @@ fieldset:disabled :is(.projects-primary-button, .projects-filter-button, .button
   width: 6px;
   height: 6px;
   flex: none;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   background: currentColor;
 }
 .status-pill[data-tone="success"] { --tone: var(--success); --tone-soft: var(--success-soft); }
@@ -634,7 +634,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   flex: none;
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   /* Tonsuz seçenekte ("Tüm durumlar") nokta boş yer tutar, hizayı korur. */
   background: var(--tone, transparent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone, transparent) 18%, transparent);
@@ -779,7 +779,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   left: 50%;
   width: 4px;
   height: 4px;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   background: currentColor;
   transform: translateX(-50%);
   content: "";
@@ -933,7 +933,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   min-height: 0; padding: 20px 16px; gap: 7px;
   border-style: solid; border-color: var(--line-soft);
 }
-.empty-state.is-kompakt .empty-state-icon { width: 38px; height: 38px; border-radius: 12px; }
+.empty-state.is-kompakt .empty-state-icon { width: 38px; height: 38px; border-radius: var(--r-lg); }
 .empty-state.is-kompakt p { font-size: var(--fs-base); }
 /* Çalışma seçimi / bulunamadı (4.3.5, calisma-secim-durumu.tsx): boş kutunun içinde kullanıcının kendi çalışmaları. */
 .empty-state .calisma-secim-listesi { justify-self: stretch; width: min(520px, 100%); margin: 4px auto 0; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); text-align: left; }
@@ -1141,7 +1141,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   background: var(--primary-soft);
   color: var(--primary-ink);
 }
-.dashboard-stat-icon { width: 42px; height: 42px; border-radius: 12px; }
+.dashboard-stat-icon { width: 42px; height: 42px; border-radius: var(--r-lg); }
 .dashboard-stat-card strong,
 .dashboard-stat-card span { display: block; }
 .dashboard-stat-card strong {
@@ -1269,7 +1269,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   inset: auto -28% -58% auto;
   width: 132px;
   height: 132px;
-  border-radius: 50%;
+  border-radius: var(--r-daire);
   background: var(--tone-soft, var(--primary-soft));
   opacity: .5;
   pointer-events: none;
@@ -1296,7 +1296,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
 /* Teslim hazırlığı: metnin üstünde dolan çubuk (kaç madde hazır). */
 .readiness-bar {
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-sunken);
   overflow: hidden;
 }
@@ -2062,7 +2062,7 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .kilavuz-bekleme strong { color: var(--ink); font-size: var(--fs-md); font-weight: 650; }
 .kilavuz-bekleme p { margin: 0; }
 .kilavuz-bekleme-nokta {
-  width: 10px; height: 10px; border-radius: 50%; background: var(--primary-ink);
+  width: 10px; height: 10px; border-radius: var(--r-daire); background: var(--primary-ink);
   animation: kilavuz-nabiz 1.4s ease-in-out infinite;
 }
 @keyframes kilavuz-nabiz {
