@@ -11,8 +11,8 @@
       seçenek doğru adreslerle; "Gizle" → bant kalkar, yenilemede gizli
       kalır, masaüstünde durum çubuğundan, her genişlikte "⋯"den geri gelir;
     - telefonda başlık satırı tek satır (≤ 48 px), Belge menüsünde beş
-      öğe (paylaş, Word, PDF, LaTeX, yazım paneli), başlıktaki her hedef
-      ≥ 40×40;
+      öğe (paylaş, Word, PDF, LaTeX, yazım paneli) ve başında çalışmanın
+      tam adı (salt okunur, R1), başlıktaki her hedef ≥ 40×40;
     - ≥1200 px'te başlık satırındaki ad görünmez ama h1 olarak yerinde;
       kenar çubuğu daraltılınca görünür;
     - yazım sayfasında üst çubuk saati yok, ana sayfada (masaüstü) var;
@@ -162,6 +162,14 @@ for (const w of [1440, 390]) {
   await bas(sayfa.locator("button.yazma-belge-menu"));
   await sayfa.waitForTimeout(250);
   const ogeler = await sayfa.evaluate(() => [...document.querySelectorAll(".arac-menu-pencere:popover-open button")].map((b) => b.textContent.trim()));
+  // R1: menünün başında çalışmanın TAM adı; salt okunur (odak almaz), kesilmeden.
+  const ad = await sayfa.evaluate(() => {
+    const p = document.querySelector(".arac-menu-pencere:popover-open .yazma-belge-ad");
+    const h1 = document.querySelector(".yazma-baslik h1")?.textContent.trim() ?? "";
+    return p ? { tam: p.textContent.includes(h1) && h1.length > 0, kesik: p.scrollWidth > p.clientWidth + 1 || getComputedStyle(p).textOverflow === "ellipsis", odaklanabilir: p.tabIndex >= 0 || p.matches("a, button") } : null;
+  });
+  bekle(ad && ad.tam && !ad.kesik && !ad.odaklanabilir, `390: Belge menüsünde tam çalışma adı satırı yok ya da kesik/odaklanabilir (${JSON.stringify(ad)})`);
+  bekle((await sayfa.locator(".yazma-basligi").evaluate((e) => e.getBoundingClientRect().height)) <= 48, "390: başlık satırı yüksekliği değişti");
   bekle(ogeler.length === 5 && /paylaş/i.test(ogeler[0]) && /Word/.test(ogeler[1]) && /PDF/.test(ogeler[2]) && /LaTeX/.test(ogeler[3]) && /panel/i.test(ogeler[4]), `390: Belge menüsü beklenen beş öğe değil (${ogeler.join(" | ")})`);
   await bas(sayfa.locator(".arac-menu-pencere:popover-open button", { hasText: "Yazım paneli" }));
   await sayfa.waitForTimeout(500);

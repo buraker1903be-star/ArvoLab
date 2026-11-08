@@ -2676,6 +2676,19 @@ export default function ManuscriptEditor({
                 etiket={t({ tr: "Belge: paylaş, dışa aktar, yazım paneli", en: "Document: share, export, writing panel" })}
                 etiketiGizle
               >
+                {/*
+                  Çalışmanın TAM adı (Aşama 1 takip, R1, 08.11.2026): telefonda
+                  başlık tek satırda kesiliyor ve tam ad yalnız title'daydı
+                  (dokunmatikte görünmez). Salt okunur bilgi satırı: odak
+                  almaz, ok tuşlarıyla gezilen öğelerden değil; ekran okuyucu
+                  menünün başında okur, metin seçilip kopyalanabilir.
+                */}
+                {projectDefaults?.title ? (
+                  <p className="yazma-belge-ad">
+                    <span className="sr-only">{t({ tr: "Çalışma: ", en: "Work: " })}</span>
+                    {projectDefaults.title}
+                  </p>
+                ) : null}
                 <button type="button" className="arac-menu-oge" onClick={() => setShareOpen(true)}>
                   <Share2 size={16} aria-hidden="true" />
                   <span>{t({ tr: "Danışmana paylaş", en: "Share with advisor" })}</span>
