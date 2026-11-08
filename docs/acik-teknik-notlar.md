@@ -124,11 +124,19 @@ silinmez; "Kapandı" satırıyla tarihlenir.
   vardığı sayfada kalıcı uyarı (taslağın gerçek yeri, "Yeniden dene",
   "Çalışmaya dön"). Belgeler arası geri, yenileme ve sekme kapatmada
   tarayıcının "ayrılmak istiyor musunuz" uyarısı ve tarayıcı taslağı.
-  Senaryolar: `gezinme-korumasi-kabul.mjs` (16).
+  Devir bekler, sürer ya da düşmüşken kabuk da bu uyarıyı kurar (ilk
+  sürümde yalnızca editördeydi; geri düğmesinden sonra sekme sessizce
+  kapanabiliyordu). Senaryolar: `gezinme-korumasi-kabul.mjs` (21; zaman
+  aşımı, taslağın depoda gerçekten bulunması ve belgeler arası ileri
+  dahil).
 - **Neden hâlâ açık:** (1) sahte veriyle sınandı; gerçek Supabase Test'te
   ağ hatası, oturum kapanması ve sürüm çakışması doğrulanmadı. (2) Gerçek
   mobil tarayıcıda (iOS Safari geri kaydırma hareketi, Android geri tuşu)
   denenmedi; yalnızca iPhone 13 öykünmesi. (3) Kullanıcı tarayıcı
   uyarısını onaylayıp ayrılırsa metin yalnız o tarayıcının taslağındadır
-  (başka cihazda yok); bu, kullanıcının açık seçimi.
+  (başka cihazda yok); bu, kullanıcının açık seçimi. (4) Mobil
+  tarayıcılar `beforeunload`'u güvenilir çalıştırmıyor (iOS Safari
+  sekme kapatma ve uygulama değiştirmede hiç uyarmaz): orada koruma
+  yalnızca tarayıcı taslağı (`visibilitychange`'te yazılır), sunucu
+  kaydı garanti değil.
 - **Kapanış ölçütü:** (1) ve (2) gerçek ortamda.

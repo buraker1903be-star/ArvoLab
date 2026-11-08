@@ -207,6 +207,24 @@ function BekleyenKayitlar() {
     return () => window.clearTimeout(z);
   }, [liste, yol]);
 
+  /*
+    Devir bekliyor, gönderiliyor ya da düştüyse sekme kapatma/yenileme
+    tarayıcının uyarısını alır. Eskiden (Aşama 2.1 ilk sürümü) bu uyarı
+    yalnızca editördeydi: geri düğmesinden sonra editör kapandığı için
+    kayıt sürerken ya da düşmüşken sekme sessizce kapanabiliyordu ve
+    metin (yazılabildiyse) yalnızca tarayıcı taslağında kalıyordu.
+  */
+  const korunacak = liste.length > 0;
+  useEffect(() => {
+    if (!korunacak) return;
+    const uyar = (olay: BeforeUnloadEvent) => {
+      olay.preventDefault();
+      olay.returnValue = "";
+    };
+    window.addEventListener("beforeunload", uyar);
+    return () => window.removeEventListener("beforeunload", uyar);
+  }, [korunacak]);
+
   // Gönderilip listeden düşen devir: kısa bir başarı bildirimi.
   useEffect(() => {
     for (const d of onceki.current) {
