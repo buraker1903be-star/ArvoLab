@@ -1518,7 +1518,7 @@
   padding: var(--s-2) var(--s-1);
   color: var(--muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums;
 }
-.yazim-durum-cubugu > span + span:not(.yazim-durum-kayit)::before { content: ""; display: inline-block; width: 1px; height: 12px; margin-right: var(--s-4); background: var(--line); vertical-align: -1px; }
+.yazim-durum-cubugu > span + span:not(.yazim-durum-kayit, .yazim-durum-kilavuz)::before { content: ""; display: inline-block; width: 1px; height: 12px; margin-right: var(--s-4); background: var(--line); vertical-align: -1px; }
 .yazim-durum-kayit { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 .yazim-durum-kayit[data-tone="danger"] { color: var(--danger); }
 @media (min-width: 761px) {
@@ -1989,28 +1989,52 @@
    ============================================================ */
 
 /*
-  Kılavuz bilgi bandı: telefonda daraltılabilir. Masaüstünde düğme yok,
-  bant 2. dilimdeki gibi tam görünür — orada yer sorunu yok ve bant
-  sağdaki panelle birlikte okunuyor. Daraltılmış hâlde yalnızca başlık
-  ve "ayrıntılar" düğmesi kalır; "Kılavuzumu yükle" ve "Kurumu seç" tek
-  dokunuşla geri gelir. Sınıf yalnızca "kılavuz yok" bandında var:
-  "yeni sürüm uygulandı" ve "kılavuza göre güncelle" daralmaz.
+  Kılavuz bilgi bandı (Premium Simplicity Aşama 1, 08.11.2026): her
+  genişlikte TEK SATIR ve ikincil. Eskiden masaüstünde iki satır açıklama
+  + dolgu "Kılavuzumu yükle" (66–85 px), telefonda 122 px'ti ve yazıyı
+  aşağı itiyordu. Zemin kâğıttan değil kabuktan (surface-2): belgenin bir
+  parçası gibi okunmasın. "Gizle" ile kalkar; seçenekler durum
+  çubuğundaki "Kılavuz bağlı değil"den açılır. Sınıf yalnızca "kılavuz
+  yok" bandında: "yeni sürüm uygulandı" ve "kılavuza göre güncelle"
+  uyarıları bu kuraldan etkilenmez.
 */
-.kilavuz-bandi-dugme { display: none; }
+.kilavuz-bandi {
+  display: flex; align-items: center; gap: var(--s-2);
+  margin: 8px 0; padding: 3px 3px 3px 12px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-md);
+  background: var(--surface-2); color: var(--ink-soft); font-size: var(--fs-sm);
+}
+.kilavuz-bandi-simge { flex: none; color: var(--muted); }
+.kilavuz-bandi-metin { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kilavuz-bandi-menu { flex: none; }
+.kilavuz-bandi-kisa { display: none; }
 @media (max-width: 760px) {
-  .kilavuz-bandi-dugme { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 40px; min-width: 40px; padding: 0; }
-  .kilavuz-bandi > .cluster { flex-wrap: wrap; align-items: center; }
-  /* Açıkken düğme başlığın hizasında, sağ üst köşede: eylem satırına
-     girince 320 px'te kendi satırına kayıyor ve bandı 48 px uzatıyordu. */
-  .manuscript-main .kilavuz-bandi:not([data-dar]) { position: relative; }
-  .kilavuz-bandi:not([data-dar]) > div:first-child { padding-right: 36px; }
-  .kilavuz-bandi:not([data-dar]) .kilavuz-bandi-dugme { position: absolute; top: 2px; right: 2px; }
-  .manuscript-main .kilavuz-bandi[data-dar] { flex-direction: row; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; }
-  .kilavuz-bandi[data-dar] > div:first-child { flex: 1 1 auto; min-width: 0; }
-  .kilavuz-bandi[data-dar] strong { overflow: hidden; font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
-  .kilavuz-bandi[data-dar] .kilavuz-bandi-ayrinti,
-  .kilavuz-bandi[data-dar] > .cluster > a { display: none; }
-  .kilavuz-bandi[data-dar] > .cluster { flex: 0 0 auto; }
+  .kilavuz-bandi-uzun { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .kilavuz-bandi-kisa { display: inline; }
+}
+.kilavuz-bandi-gizle {
+  display: inline-grid; flex: none; place-items: center;
+  width: var(--kontrol-h-sik); height: var(--kontrol-h-sik);
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer;
+}
+.kilavuz-bandi-gizle:hover { background: var(--dugme-hover-zemin); color: var(--ink); }
+.kilavuz-bandi-gizle:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.kilavuz-secenek > span { display: grid; gap: 2px; }
+.kilavuz-secenek small { color: var(--muted); font-size: var(--fs-micro); font-weight: 400; line-height: 1.4; }
+.kilavuz-secenek svg { flex: none; align-self: flex-start; margin-top: 2px; color: var(--muted); }
+/* Bant gizlenince: durum çubuğunda sessiz bir düğme (aynı menü). */
+.yazim-durum-kilavuz { display: inline-flex; margin-left: auto; }
+.yazim-durum-kilavuz-dugme {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 8px;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted);
+  font: inherit; cursor: pointer;
+}
+.yazim-durum-kilavuz-dugme:hover { background: var(--dugme-hover-zemin); color: var(--ink); }
+.yazim-durum-kilavuz-dugme:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+@media (max-width: 1199px), (pointer: coarse) {
+  .kilavuz-bandi-gizle { width: 40px; height: 40px; }
+  .kilavuz-bandi .kilavuz-bandi-menu { min-height: 40px; }
+  .yazim-durum-kilavuz-dugme { min-height: 40px; }
 }
 
 /*

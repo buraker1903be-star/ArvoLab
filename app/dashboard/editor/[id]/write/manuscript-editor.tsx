@@ -3,7 +3,7 @@
 import { ornekKalibi } from "@/lib/atif/tyk";
 import { eksikAlanlar } from "@/lib/citation-format";
 import { wordDosyasiniIndir } from "@/app/dashboard/_components/word-indir";
-import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, useId } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { kayitHatasiMetni, TASLAK_GUVENDE_METIN, TASLAK_YAZILAMADI_METIN } from "@/lib/taslak-durumu";
@@ -79,8 +79,7 @@ import {
   FileSearch,
   Library,
   CloudOff,
-  ChevronDown,
-  ChevronUp,
+  X,
 } from "lucide-react";
 
 import type { ImportMode } from "./import-dialog";
@@ -212,13 +211,16 @@ const CITATION_STYLES = STIL_SECENEKLERI.map((secenek) => secenek.deger) as Cita
 const ONERI_TERCIHI = "arvolab:otomatik-oneri";
 const INCELEME_TERCIHI = "arvolab:inceleme-paneli";
 /*
-  Telefonda "Bu çalışmaya bağlı kılavuz yok" bandının daraltılması
-  (Phase 4.5, 07.11.2026). Bant yazım alanının üstünde ~120 px tutuyordu;
-  ilk açılışta bilgilendirmek için AÇIK gelir, öğrenci kapatırsa bütün
-  çalışmalarında kapalı kalır (bir kez okunan bilgi). Yalnızca bu bilgi
-  bandı daralır: "yeni sürüm uygulandı" ve "kılavuza göre güncelle"
-  uyarıları akademik uyumluluk bildirdiği için hiçbir zaman daralmaz.
-  Masaüstünde düğme yok ve bant her zaman tam görünür (CSS).
+  "Bu çalışmaya bağlı kılavuz yok" bandının gizlenmesi. Phase 4.5'te
+  (07.11.2026) yalnızca telefonda daralıyordu; Premium Simplicity
+  Aşama 1'de (08.11.2026) bant her genişlikte tek satır ve ikincil oldu,
+  öğrenci "Gizle" derse bant kalkar ve aynı seçenekler durum çubuğundaki
+  "Kılavuz bağlı değil" düğmesinden açılır (bilgi kaybolmaz, yazının
+  önünden çekilir). Tercih tarayıcıda, bütün çalışmalar için; veritabanı
+  alanı yok (bir kez okunan bilgi). Anahtar eski adıyla kaldı: telefonda
+  bandı daraltmış öğrenci aynı tercihle gizlenmiş olarak görür.
+  Yalnızca bu bilgi bandı gizlenir: "yeni sürüm uygulandı" ve "kılavuza
+  göre güncelle" uyarıları akademik uyumluluk bildirdiği için gizlenmez.
 */
 const KILAVUZ_BANDI_TERCIHI = "arvolab:kilavuz-bandi-dar";
 const TERCIH_OLAYI = "arvolab:editor-tercihi";
@@ -1019,8 +1021,7 @@ export default function ManuscriptEditor({
     "?asistan=1" ve "?teslim=<madde>" ilgili görünümü açık başlatır.
   */
   const panelTercihi = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, true), () => true);
-  const kilavuzBandiDar = useSyncExternalStore(tercihAboneligi, () => tercihOku(KILAVUZ_BANDI_TERCIHI, false), () => false);
-  const kilavuzBandiAyrintiId = useId();
+  const kilavuzBandiGizli = useSyncExternalStore(tercihAboneligi, () => tercihOku(KILAVUZ_BANDI_TERCIHI, false), () => false);
   const ekran = useEkranSinifi();
   const bicim = panelBicimi(ekran);
   const ilkGorunum = acilisGorunumu({ asistan: asistanAcikBasla, teslim: acilacakMadde });
@@ -2796,6 +2797,16 @@ export default function ManuscriptEditor({
           <ToolbarButton label={t({ tr: "Klavye kısayolları", en: "Keyboard shortcuts" })} metin={t({ tr: "Kısayollar", en: "Shortcuts" })} onClick={() => setShortcutsOpen(true)}>
             <Keyboard size={16} />
           </ToolbarButton>
+          {/*
+            Gizlenen kılavuz bandını geri getirir. Durum çubuğundaki düğme
+            telefonda belgenin SONUNDA ve alt çubuğun altında kalıyor; "⋯"
+            her genişlikte elin altında.
+          */}
+          {!guideline && isThesis && kilavuzBandiGizli ? (
+            <ToolbarButton label={t({ tr: "Kılavuz uyarısını göster", en: "Show guideline notice" })} metin={t({ tr: "Kılavuz bağla", en: "Link guideline" })} onClick={() => tercihYaz(KILAVUZ_BANDI_TERCIHI, false)}>
+              <BookMarked size={16} />
+            </ToolbarButton>
+          ) : null}
           </AracMenusu>
         </div>
       </div>
@@ -3112,38 +3123,34 @@ export default function ManuscriptEditor({
             </button>
           </div>
         </div>
-      ) : !guideline && isThesis ? (
-        <div className="guideline-applied-banner kilavuz-bandi" data-tone="muted" data-dar={kilavuzBandiDar ? "" : undefined} role="status">
-          <div>
-            <strong>{t({ tr: "Bu çalışmaya bağlı kılavuz yok", en: "No guideline is linked to this work" })}</strong>
-            {/* Eskiden yalnızca "kurumu seçin" deniyordu: kataloğunda kılavuzu
-                olmayan (yurt dışındaki her) öğrenci kurumu seçse de bir şey
-                değişmiyordu. Asıl yol kendi kılavuzunu yüklemek. */}
-            <span id={kilavuzBandiAyrintiId} className="kilavuz-bandi-ayrinti">
-              {t({
-                tr: "Tez yazım kılavuzunuzu (PDF ya da web adresi) yükleyin; onayladığınız kurallar editöre uygulanır.",
-                en: "Upload your thesis writing guideline (PDF or web address); the rules you approve are applied to the editor.",
-              })}
-            </span>
-          </div>
-          <div className="cluster">
-            <Link href={calismaAdresi(projectId, { kilavuz: true })} className="projects-primary-button">
-              {t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}
-            </Link>
-            <Link href={editHref} className="projects-filter-button">
-              {t({ tr: "Kurumu seç", en: "Select institution" })}
-            </Link>
-            <button
-              type="button"
-              className="projects-filter-button kilavuz-bandi-dugme"
-              aria-expanded={!kilavuzBandiDar}
-              aria-controls={kilavuzBandiAyrintiId}
-              aria-label={kilavuzBandiDar ? t({ tr: "Kılavuz uyarısının ayrıntılarını göster", en: "Show guideline notice details" }) : t({ tr: "Kılavuz uyarısını daralt", en: "Collapse guideline notice" })}
-              onClick={() => tercihYaz(KILAVUZ_BANDI_TERCIHI, !kilavuzBandiDar)}
-            >
-              {kilavuzBandiDar ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
-            </button>
-          </div>
+      ) : !guideline && isThesis && !kilavuzBandiGizli ? (
+        /*
+          KOMPAKT VE İKİNCİL (Premium Simplicity Aşama 1, 08.11.2026).
+          Eskiden iki satırlık açıklama ve DOLGU (birincil) "Kılavuzumu
+          yükle" düğmesiyle yazının üstünde 66–122 px tutuyor, başlıktaki
+          Arvo AI ile ekranın ikinci birincil eylemi oluyordu. Şimdi tek
+          satır: durum cümlesi, iki seçeneği tek menüde toplayan ikincil
+          "Kılavuz bağla" ve "Gizle". Açıklama menü öğelerinde. Kataloğunda
+          kılavuzu olmayan öğrenci için asıl yol yine kendi kılavuzunu
+          yüklemek (ilk öğe).
+        */
+        <div className="kilavuz-bandi" role="status">
+          <BookMarked size={16} aria-hidden="true" className="kilavuz-bandi-simge" />
+          <span className="kilavuz-bandi-metin">
+            {/* Telefonda kısa biçim: uzun cümle 390 px'te yarıda kesiliyordu. */}
+            <span className="kilavuz-bandi-uzun">{t({ tr: "Bu çalışmaya bağlı kılavuz yok", en: "No guideline is linked to this work" })}</span>
+            <span className="kilavuz-bandi-kisa" aria-hidden="true">{t({ tr: "Kılavuz bağlı değil", en: "No guideline" })}</span>
+          </span>
+          <KilavuzSecenekleri projectId={projectId} editHref={editHref} dugmeSinifi="projects-filter-button button-compact kilavuz-bandi-menu" />
+          <button
+            type="button"
+            className="kilavuz-bandi-gizle"
+            aria-label={t({ tr: "Kılavuz uyarısını gizle (durum çubuğundan yeniden açılır)", en: "Hide guideline notice (reopen it from the status bar)" })}
+            title={t({ tr: "Gizle", en: "Hide" })}
+            onClick={() => tercihYaz(KILAVUZ_BANDI_TERCIHI, true)}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
         </div>
       ) : null}
 
@@ -3305,6 +3312,12 @@ export default function ManuscriptEditor({
         <span>{t({ tr: `${stats.words.toLocaleString(YEREL[dil])} kelime`, en: `${stats.words.toLocaleString(YEREL[dil])} words` })}</span>
         <span>{t({ tr: `${stats.characters.toLocaleString(YEREL[dil])} karakter`, en: `${stats.characters.toLocaleString(YEREL[dil])} characters` })}</span>
         <span>{t({ tr: `≈ ${pages} sayfa`, en: `≈ ${pages} pages` })}</span>
+        {/* Gizlenen kılavuz bandının yeri: aynı iki seçenek, yazının önünde değil. */}
+        {!guideline && isThesis && kilavuzBandiGizli ? (
+          <span className="yazim-durum-kilavuz">
+            <KilavuzSecenekleri projectId={projectId} editHref={editHref} dugmeSinifi="yazim-durum-kilavuz-dugme" etiket={t({ tr: "Kılavuz bağlı değil", en: "No guideline linked" })} />
+          </span>
+        ) : null}
         {sessionExpired || abonelikBitti ? (
           <span className="yazim-durum-kayit" data-tone="danger">
             <CloudOff size={14} aria-hidden="true" />
@@ -4219,5 +4232,37 @@ function CoverField({
       <span>{label}</span>
       <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
     </label>
+  );
+}
+
+/*
+  Kılavuz bağlama seçenekleri: kılavuz bandında ve (bant gizlenince)
+  durum çubuğunda AYNI menü. İki yerde ayrı yazılsaydı biri öbüründen
+  sapardı.
+*/
+function KilavuzSecenekleri({ projectId, editHref, dugmeSinifi, etiket }: { projectId: string; editHref: string; dugmeSinifi: string; etiket?: string }) {
+  const t = useCeviri();
+  return (
+    <AracMenusu
+      dugmeSinifi={dugmeSinifi}
+      ikon={<BookMarked size={15} aria-hidden="true" />}
+      etiket={etiket ?? t({ tr: "Kılavuz bağla", en: "Link guideline" })}
+      aciklama={t({ tr: "Tez yazım kılavuzunu bağla: yükle ya da kurumunu seç", en: "Link a thesis guideline: upload it or select your institution" })}
+    >
+      <Link href={calismaAdresi(projectId, { kilavuz: true })} className="arac-menu-oge kilavuz-secenek">
+        <FileUp size={16} aria-hidden="true" />
+        <span>
+          {t({ tr: "Kılavuzumu yükle", en: "Upload my guideline" })}
+          <small>{t({ tr: "PDF ya da web adresi; onayladığınız kurallar editöre uygulanır", en: "PDF or web address; the rules you approve are applied to the editor" })}</small>
+        </span>
+      </Link>
+      <Link href={editHref} className="arac-menu-oge kilavuz-secenek">
+        <Settings2 size={16} aria-hidden="true" />
+        <span>
+          {t({ tr: "Kurumumu seç", en: "Select my institution" })}
+          <small>{t({ tr: "Çalışma ayarlarında; kurumun onaylı kılavuzu varsa kullanılır", en: "In the work settings; your institution's approved guideline is used if there is one" })}</small>
+        </span>
+      </Link>
+    </AracMenusu>
   );
 }
