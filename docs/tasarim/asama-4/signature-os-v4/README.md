@@ -6,8 +6,9 @@ token dosyası (`app/styles/tokens.css`), veritabanı ve v3 paketi değişmez.
 | Faz | Durum | Dosya |
 |---|---|---|
 | V4.0 Audit | kabul edildi | `00-audit.md` |
-| V4.1 Görsel yön ve tasarım sistemi | **onay bekliyor** | `01-tasarim-kimligi.md`, `02-tasarim-sistemi.md`, `03-token-goc-haritasi.md`, `04-uygulama-riskleri.md`, `tokens-v4.css`, `ornek/` |
-| V4.2 Yüksek kaliteli ekranlar | başlamadı (açık onay gerekir) | — |
+| V4.1 Görsel yön ve tasarım sistemi | kabul edildi | `01-tasarim-kimligi.md`, `02-tasarim-sistemi.md`, `03-token-goc-haritasi.md`, `04-uygulama-riskleri.md`, `tokens-v4.css`, `ornek/` |
+| V4.2 Yüksek kaliteli ekranlar | **görsel onay bekliyor** | `05-ekranlar-v4-2.md`, `ekranlar/`, `ekran-goruntuleri/` (22 + 6), `karsilastirma/` (12) |
+| V4.3 Entegrasyon | başlamadı (açık onay gerekir) | — |
 
 ## Kararlar (kurum sahibi, V4.0 sonrası)
 
@@ -26,4 +27,8 @@ token dosyası (`app/styles/tokens.css`), veritabanı ve v3 paketi değişmez.
 node docs/tasarim/asama-4/signature-os-v4/araclar/goc-haritasi.mjs   # 03 göç haritasını yeniden üretir
 node docs/tasarim/asama-4/signature-os-v4/ornek/uret.mjs              # örnek bileşen sayfası
 node docs/tasarim/asama-4/signature-os-v4/ornek/cek.mjs <klasör>      # açık/koyu PNG (1440)
+node docs/tasarim/asama-4/signature-os-v4/ekranlar/uret.mjs           # V4.2 ekranları (9 HTML)
+node docs/tasarim/asama-4/signature-os-v4/ekranlar/cek.mjs <klasör>   # 22 ekran + 6 konsept
+node docs/tasarim/asama-4/signature-os-v4/ekranlar/olc.mjs            # ölçüm (JSON)
+node docs/tasarim/asama-4/signature-os-v4/ekranlar/karsilastir.mjs <v3-klasör> <çıktı>  # v3 ↔ v4
 ```
