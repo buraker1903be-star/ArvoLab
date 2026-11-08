@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { BookOpen, Check, ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { komutCalismalari } from "@/app/actions/projects";
 import { calismaDegistirAdresi, type CalismaBaglami } from "@/lib/os/uygulamalar";
 import { projectTypeLabel } from "@/lib/project-labels";
 import { useGuvenliGezinme } from "./gezinme-korumasi";
+import { useAcilirKonum } from "./acilir-konum";
 
 /*
   PROJECT SWITCHER (Signature OS 2.0 Aşama 2, 08.11.2026).
@@ -17,8 +18,14 @@ import { useGuvenliGezinme } from "./gezinme-korumasi";
   yürümeyi gerektiriyordu (3 adım). Şimdi ad bir düğme: son çalışmalar
   açılır, seçilen çalışmanın AYNI bölümüne gidilir (calismaDegistirAdresi).
 
-  - Liste kenar çubuğunun İÇİNDE açılır (açılır pencere değil): kenar
-    çubuğu kayan bir kap, içinde konumlanan pencere kırpılırdı.
+  - Liste ÜST KATMANDA açılan bir pencere (Aşama 2.1): ilk sürümde kenar
+    çubuğunun içinde açılıyor ve altındaki bölüm ve uygulama bağlantılarını
+    aşağı itiyordu. Konum ortak menülerle aynı yardımcıdan
+    (acilir-konum.ts): kayan kenar çubuğu pencereyi kırpmaz.
+  - Düğme kompakt: "Açık çalışma" etiketi görünmez (ekran okuyucu adında
+    duruyor), başlık en çok iki satır; tam başlık listede ve ipucunda.
+  - Daraltılmış kenar çubuğunda yalnızca simge (44 px) ve aynı pencere;
+    bölüm bağlantıları orada gizli, sayfadaki sekmeler görünür.
   - Erişilebilirlik: düğme aria-haspopup="listbox"; liste role="listbox",
     öğeler role="option" ve açık olan aria-selected. ↑↓ / Home / End /
     harfle atlama, Enter ya da Boşluk seçer, Esc kapatır ve odağı düğmeye
@@ -42,6 +49,7 @@ export function ProjeSecici({ baglam, yol, sorgu }: { baglam: CalismaBaglami; yo
   const [etkin, setEtkin] = useState(0);
   const dugme = useRef<HTMLButtonElement>(null);
   const kok = useRef<HTMLDivElement>(null);
+  const pencere = useRef<HTMLDivElement>(null);
   const yuklendi = useRef(false);
   const listeId = useId();
   const ara = useRef({ metin: "", zaman: 0 });
@@ -82,6 +90,8 @@ export function ProjeSecici({ baglam, yol, sorgu }: { baglam: CalismaBaglami; yo
     if (!acik) return;
     kok.current?.querySelector<HTMLElement>(`[data-sira="${etkin}"]`)?.focus();
   }, [acik, etkin, liste]);
+
+  useAcilirKonum(acik, dugme, pencere);
 
   // Dışarı tıklama kapatır.
   useEffect(() => {
@@ -147,15 +157,15 @@ export function ProjeSecici({ baglam, yol, sorgu }: { baglam: CalismaBaglami; yo
           }
         }}
       >
-        <span className="proje-secici-govde">
-          <span className="os-gezinme-baslik">{t({ tr: "Açık çalışma", en: "Open work" })}</span>
-          <b className="os-gezinme-calisma">{baglam.baslik}</b>
-        </span>
-        <ChevronsUpDown size={16} aria-hidden="true" />
+        <BookOpen className="proje-secici-simge" size={18} aria-hidden="true" />
+        <span className="proje-secici-ad-kisa">{baglam.baslik}</span>
+        <ChevronsUpDown className="proje-secici-ok" size={16} aria-hidden="true" />
       </button>
 
-      {acik ? (
-        <div className="proje-secici-pencere">
+      {/* Pencere hep DOM'da (popover="manual"), açık değilken gizli: üst katmana alma acilir-konum.ts'te. */}
+      <div ref={pencere} className="proje-secici-pencere" popover="manual" hidden={!acik} role="presentation">
+        {acik ? (
+          <>
           {liste === null ? (
             <p className="proje-secici-not" role="status">{t({ tr: "Çalışmalar yükleniyor…", en: "Loading works…" })}</p>
           ) : liste === "hata" ? (
@@ -191,8 +201,9 @@ export function ProjeSecici({ baglam, yol, sorgu }: { baglam: CalismaBaglami; yo
           <Link href="/dashboard/editor" className="proje-secici-tumu" onClick={() => setAcik(false)}>
             {t({ tr: "Tüm çalışmalar", en: "All works" })}
           </Link>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -42,31 +42,42 @@
 .os-gezinme-kisa { display: none; }
 .os-gezinme-baslik { display: block; padding: 0 var(--s-3) var(--s-1); color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 
-/* Çalışmanın içindeyken: o çalışmanın bölümleri (yalnızca masaüstünde görünür). */
-.os-gezinme-baglam { display: none; }
-.os-gezinme-calisma {
-  display: -webkit-box; margin: 0 var(--s-3) var(--s-2); overflow: hidden;
-  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  color: var(--ink); font-size: var(--fs-body); font-weight: 650; line-height: var(--lh-baslik);
-}
 /*
-  PROJECT SWITCHER (Signature OS 2.0 Aşama 2, proje-secici.tsx). Açık
-  çalışmanın adı bir düğme; liste kenar çubuğunun içinde açılır (kayan
-  kapta açılır pencere kırpılırdı). Başlıklar listede kesilmeden sarar.
+  ÇALIŞMA BAĞLAMI: genel gezinmeden AYRI bir kap (Signature OS 2.0 Aşama
+  2.1). Eskiden bağlam, genel uygulama bağlantılarıyla aynı zeminde ve aynı
+  yazı ağırlığında duruyordu; yalnızca alttaki ince çizgi ayırıyordu ve
+  "Kaynaklar" ile "Kaynak Kütüphanesi" gibi ikiler aynı listenin parçası
+  gibi okunuyordu. Şimdi bağlam kenar çubuğu zemininde açık bir yüzey:
+  başında Project Switcher, altında o çalışmanın bölümleri ve süzülü
+  araçları, daha küçük ve simgesiz. Genel gezinme altında simgeli kalır.
+  Yalnızca masaüstünde (≥1200) görünür; daraltılınca yalnızca switcher'ın
+  simgesi kalır, bölümler sayfadaki sekmelere geçer.
 */
-.proje-secici { display: grid; gap: var(--s-1); margin-bottom: var(--s-2); }
+.os-gezinme-baglam { display: none; }
+
+/* PROJECT SWITCHER (proje-secici.tsx): kompakt düğme + üst katmanda pencere. */
 .proje-secici-dugme {
-  display: flex; align-items: center; gap: var(--s-1); width: 100%; padding: var(--s-2) var(--s-2) var(--s-2) 0;
+  display: flex; align-items: flex-start; gap: var(--s-2); width: 100%; padding: var(--s-2);
   border: 1px solid transparent; border-radius: var(--r-md); background: transparent; color: var(--ink);
   font: inherit; text-align: left; cursor: pointer;
 }
-.proje-secici-dugme > svg { flex: none; color: var(--muted); }
+.proje-secici-simge { flex: none; margin-top: 1px; color: var(--primary-ink); }
+.proje-secici-ok { flex: none; margin-top: 1px; color: var(--muted); }
+.proje-secici-ad-kisa {
+  display: -webkit-box; flex: 1; min-width: 0; overflow: hidden;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  font-size: var(--tip-meta); font-weight: 600; line-height: 1.35; overflow-wrap: anywhere;
+}
 .proje-secici-dugme[aria-expanded="true"] { border-color: var(--line); background: var(--surface-2); }
 @media (hover: hover) and (pointer: fine) { .proje-secici-dugme:hover { background: var(--surface-2); } }
-.proje-secici-govde { display: grid; flex: 1; gap: 2px; min-width: 0; }
-.proje-secici-dugme .os-gezinme-calisma { margin: 0 var(--s-3); }
-.proje-secici-pencere { display: grid; gap: var(--s-1); padding: var(--s-1); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--yuzey-ust); box-shadow: var(--yuzey-acilir-golge); }
-.proje-secici-liste { display: grid; gap: 2px; max-height: 50vh; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.proje-secici-pencere {
+  position: fixed; inset: auto; top: var(--acilir-y, 0); left: var(--acilir-x, 0); z-index: var(--z-toast);
+  display: grid; gap: var(--s-1); min-width: max(var(--acilir-w, 0px), 280px); max-width: min(340px, calc(100vw - 32px));
+  margin: 0; padding: var(--s-1); border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--yuzey-ust); color: var(--ink); box-shadow: var(--yuzey-acilir-golge);
+}
+.proje-secici-pencere[hidden] { display: none; }
+.proje-secici-liste { display: grid; gap: 2px; max-height: min(60vh, 420px); margin: 0; padding: 0; overflow: auto; list-style: none; }
 .proje-secici-oge { display: flex; align-items: flex-start; gap: var(--s-2); padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); color: var(--ink-soft); cursor: pointer; }
 .proje-secici-oge:focus-visible { outline: none; background: var(--surface-2); color: var(--ink); box-shadow: inset var(--odak-halkasi); }
 @media (hover: hover) and (pointer: fine) { .proje-secici-oge:hover { background: var(--surface-2); color: var(--ink); } }
@@ -80,13 +91,14 @@
 .proje-secici-tumu:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 @media (pointer: coarse) { .proje-secici-dugme, .proje-secici-oge, .proje-secici-tumu { min-height: var(--kontrol-h-dokunma); } }
 
+/* Bağlamın bağlantıları: switcher'ın başlığıyla hizalı, genel gezinmeden küçük ve simgesiz. */
 .os-gezinme-alt {
-  display: flex; align-items: center; min-height: 34px; padding: 0 var(--s-3) 0 calc(var(--s-3) + 10px);
-  border-radius: var(--r-sm); color: var(--ink-soft); font-size: var(--fs-base); text-decoration: none;
+  display: flex; align-items: center; min-height: 32px; padding: 0 var(--s-2) 0 calc(2 * var(--s-2) + 18px);
+  border-radius: var(--r-sm); color: var(--ink-soft); font-size: var(--tip-meta); text-decoration: none;
 }
 .os-gezinme-alt:hover { background: var(--surface-2); color: var(--ink); }
 .os-gezinme-alt.is-active { background: var(--primary-soft); color: var(--primary-ink); font-weight: 600; }
-.os-gezinme-ayrac { margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--line-soft); }
+.os-gezinme-ayrac { margin-top: var(--s-1); padding-top: var(--s-1); border-top: 1px solid var(--line-soft); }
 
 /* ---------- Kenar çubuğunun başı ve ana eylem (Signature OS) ----------
    Marka, daraltma düğmesi ve "Yeni çalışma" tablet ve masaüstünde kenar
@@ -162,7 +174,10 @@
   /* Geniş */
   html:not([data-kenar="dar"]) .os-gezinme { gap: var(--s-4); padding: var(--s-3) var(--s-3) var(--s-4); scrollbar-width: thin; }
   html:not([data-kenar="dar"]) .os-gezinme-bas { flex-direction: row; justify-content: space-between; }
-  html:not([data-kenar="dar"]) .os-gezinme-baglam { display: block; padding-bottom: var(--s-4); border-bottom: 1px solid var(--line-soft); }
+  html:not([data-kenar="dar"]) .os-gezinme-baglam {
+    display: grid; gap: 2px; padding: var(--s-1);
+    border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface);
+  }
   html:not([data-kenar="dar"]) .os-gezinme-daha-li { display: none; }
   /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin.
      Daraltılınca bölümler kenar çubuğundan çıkar, sekmeler geri gelir. */
@@ -178,6 +193,12 @@
   html[data-kenar="dar"] .os-gezinme .os-gezinme-ad { display: none; }
   html[data-kenar="dar"] .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
   html[data-kenar="dar"] .os-gezinme-diger { display: none; }
+  /* Daraltılmış (Aşama 2.1): bağlamdan yalnızca switcher'ın simgesi kalır; aynı pencereyi açar. Bölümler sayfadaki sekmelerde. */
+  html[data-kenar="dar"] .os-gezinme-baglam { display: block; padding-bottom: var(--s-2); border-bottom: 1px solid var(--line-soft); }
+  html[data-kenar="dar"] .os-gezinme-baglam .os-gezinme-liste,
+  html[data-kenar="dar"] .proje-secici-ad-kisa,
+  html[data-kenar="dar"] .proje-secici-ok { display: none; }
+  html[data-kenar="dar"] .proje-secici-dugme { justify-content: center; width: 44px; height: 44px; margin: 0 auto; padding: 0; align-items: center; }
   html[data-kenar="dar"] .os-gezinme-marka { --logo-h: 15px; }
   html[data-kenar="dar"] .os-gezinme-yeni { align-self: center; width: 44px; padding: 0; }
   html[data-kenar="dar"] .os-gezinme-marka { justify-content: center; min-width: 44px; min-height: 44px; }

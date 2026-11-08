@@ -77,11 +77,20 @@ for (const w of [1440, 1200]) {
   });
 }
 
-await senaryo("1440: daraltılınca bağlam kenar çubuğundan çıkar, sekmeler GERİ gelir; tercih sayfa değişince korunur", async () => {
+/*
+  Aşama 2.1: daraltılmışken bağlamdan YALNIZCA switcher simgesi kalır
+  (44 px); bölüm bağlantıları gizlenir, sayfadaki sekmeler geri gelir.
+  Eskiden (Aşama 2) bağlamın tamamı kayboluyordu ve daraltılmış kenar
+  çubuğundan çalışma değiştirilemiyordu.
+*/
+await senaryo("1440: daraltılınca bölüm bağlantıları gizlenir, switcher simgesi kalır (≥44 px), sekmeler GERİ gelir; tercih sayfa değişince korunur", async () => {
   const { ctx, sayfa } = await ac(1440, `/dashboard/editor/${TEZ}/kanit`);
   await sayfa.locator(".os-gezinme-daralt").click();
   await sayfa.waitForTimeout(300);
-  bekle(!(await gorunur(sayfa, ".os-gezinme-baglam")), "daraltılmışken bağlam hâlâ görünüyor");
+  bekle(!(await gorunur(sayfa, ".os-gezinme-baglam a[href*='/kanit']")), "daraltılmışken bölüm bağlantıları hâlâ görünüyor");
+  const simge = await sayfa.locator(".proje-secici-dugme").boundingBox();
+  bekle(simge && simge.width >= 44 && simge.height >= 44, `daraltılmış switcher: ${JSON.stringify(simge)}`);
+  bekle(!(await gorunur(sayfa, ".proje-secici-ad-kisa")), "daraltılmışken başlık metni görünüyor");
   bekle(await gorunur(sayfa, ".calisma-sekmeleri"), "daraltılmışken sekmeler geri gelmedi (bölümlere ulaşılamaz)");
   await sayfa.locator('#os-gezinme a[href="/dashboard"]').first().click();
   await sayfa.waitForURL(`${TABAN}/dashboard`);
@@ -104,7 +113,41 @@ await senaryo("switcher: ↓ açar (odak açık çalışmada, işaretli), ↓ ge
   bekle((await sayfa.evaluate(() => document.activeElement?.getAttribute("aria-selected"))) === "false", "↓ sonraki çalışmaya geçmedi");
   await sayfa.keyboard.press("Escape");
   bekle(await sayfa.evaluate(() => document.activeElement?.classList.contains("proje-secici-dugme")), "Esc sonrası odak düğmede değil");
-  bekle((await sayfa.locator(".proje-secici-pencere").count()) === 0, "Esc listeyi kapatmadı");
+  bekle(!(await sayfa.locator(".proje-secici-pencere").isVisible()), "Esc listeyi kapatmadı");
+  await ctx.close();
+});
+
+/*
+  Aşama 2.1: liste üst katmanda açılır. Eskiden kenar çubuğunun içinde
+  açılıp altındaki bölüm ve uygulama bağlantılarını aşağı itiyordu.
+*/
+await senaryo("switcher: liste açılınca kenar çubuğundaki bağlantılar YERİNDE kalır; dışarı tıklama kapatır", async () => {
+  const { ctx, sayfa } = await ac(1440, `/dashboard/editor/${TEZ}/kanit`);
+  const ana = sayfa.locator('.os-gezinme-ana a[href="/dashboard"]').first();
+  const bolum = sayfa.locator(".os-gezinme-baglam a[aria-current='page']").first();
+  const once = [(await ana.boundingBox()).y, (await bolum.boundingBox()).y];
+  await sayfa.locator(".proje-secici-dugme").click();
+  await sayfa.locator(".proje-secici-oge").first().waitFor({ timeout: 20000 });
+  const sonra = [(await ana.boundingBox()).y, (await bolum.boundingBox()).y];
+  bekle(once[0] === sonra[0] && once[1] === sonra[1], `bağlantılar kaydı: ${once} → ${sonra}`);
+  const ust = await sayfa.evaluate(() => document.querySelector(".proje-secici-pencere")?.matches(":popover-open"));
+  bekle(ust, "liste üst katmanda değil");
+  await sayfa.mouse.click(900, 500);
+  await sayfa.waitForTimeout(200);
+  bekle(!(await sayfa.locator(".proje-secici-pencere").isVisible()), "dışarı tıklama listeyi kapatmadı");
+  bekle((await tasma(sayfa)) <= 0, "yatay taşma");
+  await ctx.close();
+});
+
+await senaryo("switcher: daraltılmış kenar çubuğunda simge listeyi açar, liste ekranın içinde; seçim aynı bölüme gider", async () => {
+  const { ctx, sayfa } = await ac(1440, `/dashboard/editor/${TEZ}/kanit`, { dar: true });
+  await sayfa.locator(".proje-secici-dugme").click();
+  await sayfa.locator(".proje-secici-oge").nth(1).waitFor({ timeout: 20000 });
+  const k = await sayfa.locator(".proje-secici-pencere").boundingBox();
+  bekle(k && k.x >= 0 && k.x + k.width <= 1440 && k.width >= 260, `pencere: ${JSON.stringify(k)}`);
+  await sayfa.locator(".proje-secici-oge").nth(1).click();
+  await sayfa.waitForURL((u) => u.pathname.includes(MAKALE), { timeout: 30000 });
+  bekle(new URL(sayfa.url()).pathname === `/dashboard/editor/${MAKALE}/kanit`, sayfa.url());
   await ctx.close();
 });
 
