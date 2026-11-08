@@ -1467,6 +1467,13 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .calisma-diger-araclar .arac-menu-ok { display: none; }
 @media (max-width: 1199px), (pointer: coarse) {
   .calisma-araclari :is(.projects-filter-button, .projects-primary-button) { min-height: var(--kontrol-h-dokunma); }
+  /*
+    Genel bakış sayfalarındaki kompakt düğmeler de (Yazmaya devam et,
+    Kılavuzumu yükle, Okuma bağlantısı, Dosya olarak gönder, Kredi satın
+    al) dokunmatikte 44 px. 1024'lük tablette 36 px kalıyorlardı; dokunma
+    hedefi kuralı ≥ 40 (Aşama 2 ölçümü).
+  */
+  .gb :is(.projects-filter-button, .projects-primary-button).button-compact { min-height: var(--kontrol-h-dokunma); }
 }
 @media (max-width: 760px) {
   .calisma-araclari { grid-template-columns: repeat(2, minmax(0, 1fr)); }
