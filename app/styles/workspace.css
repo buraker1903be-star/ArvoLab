@@ -2155,3 +2155,10 @@
 }
 /* Yazım sayfasında üst çubuk saati yok: yazarken bilgi vermiyor, göz çekiyordu (saat sistemde zaten görünür). */
 body:has(.yazim-sayfasi) .os-saat { display: none; }
+
+/* Arvo AI yumuşak vurgu (Premium Simplicity Aşama 1; manuscript-editor.tsx'teki not). */
+.yazma-eylemleri .yazma-ai { border-color: transparent; background: var(--primary-soft); color: var(--primary-ink); box-shadow: none; }
+.yazma-eylemleri .yazma-ai[aria-expanded="true"] { background: color-mix(in srgb, var(--primary-ink) 16%, var(--primary-soft)); }
+@media (hover: hover) and (pointer: fine) {
+  .yazma-eylemleri .yazma-ai:hover { border-color: transparent; background: color-mix(in srgb, var(--primary-ink) 12%, var(--primary-soft)); }
+}

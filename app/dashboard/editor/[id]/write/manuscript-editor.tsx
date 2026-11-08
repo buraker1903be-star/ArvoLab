@@ -2631,14 +2631,17 @@ export default function ManuscriptEditor({
                 </button>
               </AracMenusu>
               {/*
-                Birincil eylem: Arvo AI. Yazım asistanını panelde açar; asistan
-                zaten açıksa paneli kapatır. Adı ürünün asistanı; yaptığı iş
-                değişmedi (yazim-paneli.tsx: sohbette yazar, belgeye eklemek
-                öğrencinin düğmesi).
+                Arvo AI: yazım asistanını panelde açar; asistan zaten açıksa
+                paneli kapatır. Yaptığı iş değişmedi (yazim-paneli.tsx:
+                sohbette yazar, belgeye eklemek öğrencinin düğmesi).
+                YUMUŞAK VURGU (Premium Simplicity Aşama 1, 08.11.2026): eskiden
+                dolgu birincil düğmeydi ve yazım sayfasında gözü belgeden
+                çeken en koyu öğeydi. Şimdi açık mavi zemin + mavi yazı:
+                her yerde bulunur ama kâğıtla yarışmaz (workspace.css).
               */}
               <button
                 type="button"
-                className="projects-primary-button yazma-ai"
+                className="projects-filter-button yazma-ai"
                 aria-expanded={panelAcik && gorunum === "asistan"}
                 aria-controls="yazim-yan-panel"
                 onClick={() => (panelAcik && gorunum === "asistan" ? panelKapat() : panelAc("asistan"))}
