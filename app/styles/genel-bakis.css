@@ -232,7 +232,6 @@
 .danisman-baglanti svg { flex: none; color: var(--primary-ink); }
 .danisman-dugmeler { display: flex; flex-wrap: wrap; gap: 6px; }
 .danisman-dosyalar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line-soft); }
-.danisman-not { margin: 0; color: var(--muted); font-size: var(--fs-micro); line-height: var(--lh-metin); }
 
 /* "Şimdi" tez kartının içinde: sıradaki tek iş, kartın alt satırı */
 .tez-simdi {

@@ -7,6 +7,7 @@ import { danismanMesaji, epostaAdresi, whatsappAdresi } from "@/lib/danismana-go
 import { showToast } from "./toast-events";
 import { wordDosyasiniIndir } from "./word-indir";
 import TeslimPaketi from "./teslim-paketi";
+import AracMenusu from "./acilir-menu";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 
 /*
@@ -136,23 +137,30 @@ export default function DanismanaGonder({
         </div>
       )}
 
+      {/*
+        DOSYA OLARAK TEK MENÜDE (Premium Simplicity Aşama 2, 08.11.2026).
+        Eskiden "Dosya olarak:" etiketi ve üç ayrı düğme (Word, PDF, ZIP +
+        kaynaklar) ile altında kurum notu vardı: kart beş denetim ve iki
+        açıklama taşıyordu. Üç çıktı aynı, tek ikincil menüde. "Danışmanın
+        yorum yazması için kurumunuzun ArvoLab kullanması gerekir" notu
+        kalktı: bir karar ya da eylem doğurmuyordu.
+      */}
       <div className="danisman-dosyalar">
-        <span className="muted text-sm">{t({ tr: "Dosya olarak:", en: "As a file:" })}</span>
-        <button type="button" className="projects-filter-button button-compact" onClick={wordIndir} disabled={wordHazirlaniyor}>
-          <FileDown size={14} aria-hidden="true" /> {wordHazirlaniyor ? t({ tr: "Hazırlanıyor…", en: "Preparing…" }) : "Word"}
-        </button>
-        <a className="projects-filter-button button-compact" href={`/print/manuscript/${projectId}?auto=1`} target="_blank" rel="noopener noreferrer">
-          <FileText size={14} aria-hidden="true" /> PDF
-        </a>
-        <TeslimPaketi projectId={projectId} etiket={t({ tr: "ZIP + kaynaklar", en: "ZIP + sources" })} />
+        <AracMenusu
+          dugmeSinifi="projects-filter-button button-compact"
+          ikon={<FileDown size={14} aria-hidden="true" />}
+          etiket={t({ tr: "Dosya olarak gönder", en: "Send as a file" })}
+          aciklama={t({ tr: "Word, PDF ya da kaynaklarıyla ZIP", en: "Word, PDF or ZIP with sources" })}
+        >
+          <button type="button" className="arac-menu-oge" onClick={wordIndir} disabled={wordHazirlaniyor}>
+            <FileDown size={16} aria-hidden="true" /> <span>{wordHazirlaniyor ? t({ tr: "Hazırlanıyor…", en: "Preparing…" }) : t({ tr: "Word (.docx)", en: "Word (.docx)" })}</span>
+          </button>
+          <a className="arac-menu-oge" href={`/print/manuscript/${projectId}?auto=1`} target="_blank" rel="noopener noreferrer">
+            <FileText size={16} aria-hidden="true" /> <span>PDF</span>
+          </a>
+          <TeslimPaketi projectId={projectId} className="arac-menu-oge" etiket={t({ tr: "ZIP + kaynaklar", en: "ZIP + sources" })} />
+        </AracMenusu>
       </div>
-
-      <p className="danisman-not">
-        {t({
-          tr: "Danışmanın metninize yorum yazması için kurumunuzun ArvoLab kullanması gerekir.",
-          en: "For your advisor to comment on your text, your institution needs to use ArvoLab.",
-        })}
-      </p>
     </article>
   );
 }
