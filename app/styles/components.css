@@ -1845,18 +1845,20 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .geri-bildirim-tek-satir .geri-bildirim-form { grid-column: 2; grid-row: 1; }
 .geri-bildirim-tek-satir .geri-bildirim-kapat { grid-column: 3; grid-row: 1; }
 .geri-bildirim-tek-satir .geri-bildirim-puanlar { gap: 6px; }
+/* 40 px tabanı korunuyor: A2-7'nin ilk hâli 36 px idi ve telefonda (duyarlılık
+   ölçümü, ince işaretçi) beş puan 40 px kuralının altına düştü. */
 .geri-bildirim-tek-satir .geri-bildirim-puan {
   justify-content: center;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 40px;
+  min-height: 40px;
   padding: 4px 10px;
 }
 /* Detay alanı inince satırın tamamını alır; puanlar yerinde kalır. */
 .geri-bildirim-tek-satir .geri-bildirim-detay { grid-column: 1 / -1; }
 .geri-bildirim-tek-satir:has(.geri-bildirim-detay) .geri-bildirim-form { grid-column: 1 / -1; grid-row: 2; }
-@media (pointer: coarse) {
-  .geri-bildirim-tek-satir .geri-bildirim-puan { min-width: 44px; min-height: 44px; }
-  .geri-bildirim-kapat button { min-height: 44px; padding: 0 4px; }
+@media (max-width: 1199px), (pointer: coarse) {
+  .geri-bildirim-tek-satir .geri-bildirim-puan { min-width: var(--kontrol-h-dokunma); min-height: var(--kontrol-h-dokunma); }
+  .geri-bildirim-kapat button { min-width: var(--kontrol-h-dokunma); min-height: var(--kontrol-h-dokunma); padding: 0 4px; }
 }
 @media (max-width: 760px) {
   .geri-bildirim-tek-satir { grid-template-columns: 1fr auto; }
