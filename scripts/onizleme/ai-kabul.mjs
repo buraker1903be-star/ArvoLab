@@ -324,10 +324,18 @@ for (const [ad, secenek] of [
       daha kurulur; düğmenin görünürlük ve örtme denetimi aynen kalır.
     */
     const edSecimi = () => sayfa.evaluate(() => !document.querySelector(".ProseMirror").editor.state.selection.empty);
-    await sec(sayfa, 2, 60);
+    /*
+      sec() seçim editöre geçmezse 5 sn sonra FIRLATIR (R3, 07.11.2026).
+      O değişiklikten beri aşağıdaki "bir kez daha kur" döngüsüne hiç sıra
+      gelmiyordu: ilk kurulum geçmeyince senaryo zaman aşımıyla düşüyordu
+      (08.11.2026, taban kodda 6 koşunun 3'ü). Burada fırlatma yakalanır,
+      döngü çalışır; üç denemede de geçmezse alttaki denetim yine düşer.
+    */
+    const kur = () => sec(sayfa, 2, 60).catch(() => null);
+    await kur();
     for (let deneme = 0; deneme < 2 && !(await edSecimi()); deneme++) {
       await sayfa.waitForTimeout(400);
-      await sec(sayfa, 2, 60);
+      await kur();
     }
     bekle(await edSecimi(), "seçim editöre geçmedi (test kurgusu)");
     await sayfa.locator(".secim-ai-dugme").waitFor({ state: "visible", timeout: 3000 }).catch(() => {});
@@ -351,6 +359,14 @@ for (const [ad, secenek] of [
       await sayfa.waitForFunction(() => Boolean(document.activeElement?.closest(".secim-ai-menu")), null, { timeout: 3000 }).catch(() => {});
       bekle((await sayfa.evaluate(() => document.activeElement.textContent)) === "Akademikleştir", "ilk öğe odakta değil");
       await sayfa.keyboard.press("Escape");
+      /*
+        TipTap'in focus() komutu odağı bir SONRAKİ karede verir
+        (@tiptap/core commands/focus.ts: requestAnimationFrame). Esc'ten
+        hemen sonra bakmak bu kareyle yarışıyordu: taze sunucuda 4 koşunun
+        2'sinde "Esc editöre dönmedi" (08.11.2026). Koşul beklenir; odak
+        hiç dönmezse 2 sn sonra senaryo yine düşer.
+      */
+      await sayfa.waitForFunction(() => document.activeElement?.classList.contains("ProseMirror"), null, { timeout: 2000 }).catch(() => {});
       bekle(await sayfa.evaluate(() => document.activeElement.classList.contains("ProseMirror")), "Esc editöre dönmedi");
       await sayfa.keyboard.press("Alt+Enter");
       await sayfa.waitForFunction(() => Boolean(document.activeElement?.closest(".secim-ai-menu")), null, { timeout: 3000 }).catch(() => {});
