@@ -412,7 +412,16 @@ const tarayici = await chromium.launch();
     const menuKutu = await menu.boundingBox();
     const ozet = await kart.locator(".kart-menu-asagi > summary").boundingBox();
     bekle(menuKutu.y > ozet.y, "menü aşağı açılmadı");
-    const hepsi = await adlar(".calisma-durum");
+    let hepsi = await adlar(".calisma-durum");
+    await sayfa.keyboard.press("Escape");
+    /*
+      Aşama 2/A2-9: Kılavuz, Etik kurul ve Analiz "Diğer araçlar" menüsünde.
+      Liste değişmedi; yalnızca o menü de açılıp sayılıyor. Menüde
+      bulunamayan araç yine "ulaşılamayan" olarak düşer.
+    */
+    await kart.locator(".calisma-diger-araclar > button").click();
+    await sayfa.waitForTimeout(200);
+    hepsi += " | " + (await adlar(".calisma-diger-araclar"));
     const GEREKEN = ["Teslim paketi", "Bilgileri düzenle", "Belge yükle", "Çalışmayı sil", "Kılavuz", "Takvim", "Literatür", "Kaynakça", "Kanıt matrisi", "Etik kurul", "Analiz", "Başka neler var"];
     const eksik = GEREKEN.filter((g) => !hepsi.includes(g));
     bekle(eksik.length === 0, `çalışmalarımda ulaşılamayan: ${eksik.join(", ")}`);

@@ -7,6 +7,7 @@ import { acikYapilacaklar, yapilacakTamamla } from "@/app/actions/yapilacaklar";
 import { calismaAnalizleri } from "@/app/actions/analiz-sonuclari";
 import { atifStiliniKilavuzaUydur } from "@/app/actions/projects";
 import ActionForm from "../action-form";
+import AracMenusu from "../_components/acilir-menu";
 import KilavuzPenceresi from "./[id]/kilavuz-penceresi";
 import KanitMatrisiPenceresi from "./[id]/kanit/kanit-matrisi-penceresi";
 import EtikKurulPenceresi from "./[id]/etik/etik-penceresi";
@@ -353,27 +354,6 @@ export default async function CalismaDurumKarti({
         satır. Araçlar ve pencereleri aynı; değişen yalnızca görünüm.
       */}
       <footer className="calisma-durum-alt-serit calisma-araclari" aria-label={t({ tr: "Çalışmanın araçları", en: "Work tools" })}>
-        {/*
-          Tezde kılavuz penceresi; makalede kılavuzun karşılığı derginin
-          kuralları ve onların yeri makale çalışma alanı (orada doğrulama
-          değil, kontrol tarihi tutuluyor — lib/makale/).
-        */}
-        {makale ? (
-          <Link href={`${merkez}/makale`} className="projects-filter-button button-compact">
-            <FileText size={15} aria-hidden="true" /> {t({ tr: "Makale ve dergi", en: "Article and journal" })}
-          </Link>
-        ) : (
-          <KilavuzPenceresi
-            calisma={calisma}
-            uygulanan={uygulanan}
-            kilavuzOkunamadi={kilavuzOkunamadi}
-            /* Kılavuz yoksa bunu "Şimdi" satırı zaten söylüyor; ikinci koyu düğme gerekmiyor (Signature OS Phase 3). */
-            triggerClassName="projects-filter-button button-compact"
-            kisa
-            /* "Kılavuzu değiştir" bağlantısı (editör) kılavuz varken de buraya gelir. */
-            acikBasla={kilavuzAc}
-          />
-        )}
         {takvim ? (
           <TezTakvimiPenceresi
             projectId={calisma.id}
@@ -389,9 +369,42 @@ export default async function CalismaDurumKarti({
         <LiteraturPenceresi projectId={calisma.id} projeAdi={calisma.title} />
         <KaynakcaPenceresi calisma={calisma} sonDenetim={ozet.kaynakca} />
         <KanitMatrisiPenceresi projectId={calisma.id} />
-        {/* Etik kurul (02.11.2026): öteki birimler gibi pencere (etik-penceresi.tsx). */}
-        <EtikKurulPenceresi projectId={calisma.id} />
-        <AnalizPenceresi projectId={calisma.id} projeAdi={calisma.title} />
+        {/*
+          DİĞER ARAÇLAR (Aşama 2/A2-9). Eskiden yedi araç yan yana duruyordu
+          ve açık çalışmanın kenar menüsüyle aynı hedeflerdi; kılavuz da iki
+          kez çağrılıyordu ("Şimdi" satırı + kısayol). Sık kullanılan dördü
+          görünür, seyrek olanlar (kılavuz/dergi, etik kurul, analiz) bu
+          menüde. Pencereler kaybolmuyor: menünün paneli kapalıyken de DOM'da
+          (hidden), pencereler body'ye portal ile açılıyor; ?kilavuz=1 ile
+          gelen kullanıcı için KilavuzPenceresi yine kendiliğinden açılır.
+          Kapanınca odak menünün düğmesine döner (panel-drawer odagiGeriVer).
+        */}
+        <div className="calisma-diger-araclar">
+          <AracMenusu
+            ikon={<MoreHorizontal size={15} aria-hidden="true" />}
+            etiket={t({ tr: "Diğer araçlar", en: "More tools" })}
+            dugmeSinifi="projects-filter-button button-compact"
+          >
+            {makale ? (
+              <Link href={`${merkez}/makale`} className="arac-menu-oge">
+                <FileText size={15} aria-hidden="true" /> {t({ tr: "Makale ve dergi", en: "Article and journal" })}
+              </Link>
+            ) : (
+              <KilavuzPenceresi
+                calisma={calisma}
+                uygulanan={uygulanan}
+                kilavuzOkunamadi={kilavuzOkunamadi}
+                /* Kılavuz yoksa bunu "Şimdi" satırı zaten söylüyor; ikinci koyu düğme gerekmiyor (Signature OS Phase 3). */
+                triggerClassName="arac-menu-oge"
+                kisa
+                /* "Kılavuzu değiştir" bağlantısı (editör) kılavuz varken de buraya gelir. */
+                acikBasla={kilavuzAc}
+              />
+            )}
+            <EtikKurulPenceresi projectId={calisma.id} triggerClassName="arac-menu-oge" />
+            <AnalizPenceresi projectId={calisma.id} projeAdi={calisma.title} triggerClassName="arac-menu-oge" />
+          </AracMenusu>
+        </div>
       </footer>
     </article>
   );

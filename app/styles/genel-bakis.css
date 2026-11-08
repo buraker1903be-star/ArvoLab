@@ -1441,7 +1441,8 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .calisma-durum-bas h2 { font-size: var(--fs-calisma-sik); font-weight: 600; }
 
 /* Araç ızgarası: çerçevesiz simgeli satırlar, eşit sütunlar */
-.calisma-araclari { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 2px var(--s-2); }
+/* 128 px (Aşama 2/A2-9): dört araç + "Diğer araçlar" 1440'ta tek satıra sığsın; 156 px'te beşincisi alt satıra düşüyordu. */
+.calisma-araclari { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 2px var(--s-2); }
 .calisma-araclari :is(.projects-filter-button, .projects-primary-button) {
   justify-content: flex-start; width: 100%; min-height: 36px; padding: 0 var(--s-2);
   border-color: transparent; background: transparent; box-shadow: none; color: var(--ink-soft); font-weight: 500;
@@ -1449,6 +1450,8 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .calisma-araclari :is(.projects-filter-button, .projects-primary-button):hover { background: var(--dugme-hover-zemin); color: var(--ink); }
 .calisma-araclari :is(.projects-filter-button, .projects-primary-button) svg { color: var(--muted); }
 .calisma-araclari .takvim-dugme-geciken { color: var(--danger); }
+/* "⋯" simgesi zaten menü olduğunu söylüyor; ok, 128 px'lik hücrede adı "Diğer araç…" diye kesiyordu. */
+.calisma-diger-araclar .arac-menu-ok { display: none; }
 @media (max-width: 1199px), (pointer: coarse) {
   .calisma-araclari :is(.projects-filter-button, .projects-primary-button) { min-height: var(--kontrol-h-dokunma); }
 }
