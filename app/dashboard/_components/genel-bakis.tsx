@@ -220,9 +220,14 @@ export async function RitimKarti({ ritim }: { ritim: YazimRitmi }) {
   */
   if (!yazildi) {
     return (
-      <article className="gb-kart gb-ozet-satiri gb-ritim-bos" aria-label={t({ tr: "Yazım ritmi", en: "Writing rhythm" })}>
+      /*
+        Başlık <h2>: dolu kartta da öyle. İlk sürümde <b> idi ve kart
+        başlıklarla gezinen ekran okuyucuda kayboluyordu (kabul.mjs işlev
+        matrisi "Yazım ritmi"ni bulamadı).
+      */
+      <article className="gb-kart gb-ozet-satiri gb-ritim-bos" aria-labelledby="gb-ritim-bos-baslik">
         <span className="gb-ozet-satiri-govde">
-          <b>{t({ tr: "Yazım ritmi", en: "Writing rhythm" })}</b>
+          <h2 id="gb-ritim-bos-baslik">{t({ tr: "Yazım ritmi", en: "Writing rhythm" })}</h2>
           <small>{t({ tr: "Son 14 günde kaydedilmiş yazım yok", en: "No saved writing in the last 14 days" })}</small>
         </span>
       </article>
