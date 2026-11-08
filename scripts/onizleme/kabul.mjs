@@ -378,7 +378,8 @@ const tarayici = await chromium.launch();
       "Teslim listesi", "Bölümlerim", "Editörde aç", "Yazım ritmi",
       "Literatür", "Kaynakça denetimi", "Kanıt matrisi", "Etik kurul", "Belge kontrolü",
       "Danışman", "Abonelik ve kredi", "Ayrıntı", "Kredi satın al",
-      "Son kaynaklar", "Bütün kaynaklar", "Son belge kontrolleri", "DOI ile kaynak ekle", "Yazım asistanını aç", "Veri analizi",
+      // "Veri analizi" hızlı eylemi kalktı (Aşama 2/A2-3): kenar çubuğundaki Analiz Merkezi'nin tekrarıydı; genel-bakis-sadelik-kabul.mjs kenar çubuğunda arar.
+      "Son kaynaklar", "Bütün kaynaklar", "Son belge kontrolleri", "DOI ile kaynak ekle", "Yazım asistanını aç", "Kaynağa sor",
     ];
     const eksik = GEREKEN.filter((g) => !hepsi.includes(g));
     bekle(eksik.length === 0, `ana sayfada ulaşılamayan: ${eksik.join(", ")}`);

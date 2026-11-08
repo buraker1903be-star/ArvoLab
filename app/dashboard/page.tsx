@@ -976,51 +976,7 @@ export default async function DashboardPage() {
                 href={`/dashboard/editor/${resume.id}/write?teslim=1`}
                 ton={dikkatListesi.length ? "warning" : "success"}
               />
-                <ListeKarti
-                  baslik={t({ tr: "Bölümlerim", en: "My sections" })}
-                  alt={[
-                    eksikZorunlu.length
-                      ? t({
-                          tr: `${eksikZorunlu.length} zorunlu bölümün başlığı yok`,
-                          en: `${eksikZorunlu.length} required section${eksikZorunlu.length === 1 ? " has" : "s have"} no heading`,
-                        })
-                      : t({ tr: "Müsveddenin bölümleri", en: "Sections of the manuscript" }),
-                    metinBolumleri.length + eksikZorunlu.length > BOLUM_SATIRI
-                      ? t({ tr: `ilk ${BOLUM_SATIRI} gösteriliyor`, en: `showing first ${BOLUM_SATIRI}` })
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                  bos={t({
-                    tr: "Henüz bölüm başlığı yok. Editörde başlıklarla bölüm açın; kılavuzunuzun istediği bölümler burada izlenir.",
-                    en: "No section headings yet. Create sections with headings in the editor; the sections your guideline requires are tracked here.",
-                  })}
-                  sayi={metinBolumleri.length + eksikZorunlu.length}
-                  href={`/dashboard/editor/${resume.id}/write`}
-                  hrefEtiket={t({ tr: "Editörde aç", en: "Open in editor" })}
-                >
-                  {metinBolumleri.slice(0, BOLUM_SATIRI).map((bolum, sira) => (
-                    <ListeSatiri
-                      key={`${sira}-${bolum.baslik}`}
-                      href={`/dashboard/editor/${resume.id}/write`}
-                      baslik={bolum.baslik}
-                      sag={<span className="gb-sayi">{t({ tr: `${sayi(bolum.sozcuk)} kelime`, en: `${sayi(bolum.sozcuk)} words` })}</span>}
-                    />
-                  ))}
-                  {eksikZorunlu.slice(0, Math.max(0, BOLUM_SATIRI - metinBolumleri.length)).map((bolum) => (
-                    <ListeSatiri
-                      key={`eksik-${bolum}`}
-                      href={`/dashboard/editor/${resume.id}/write?teslim=sections`}
-                      baslik={bolum}
-                      alt={t({ tr: "Kılavuzunuz istiyor", en: "Required by your guideline" })}
-                      sag={
-                        <span className="status-pill" data-tone="warning">
-                          {t({ tr: "Henüz yok", en: "Not yet" })}
-                        </span>
-                      }
-                    />
-                  ))}
-                </ListeKarti>
+
                 <RitimKarti ritim={ritim} />
             </div>
             <div className="ana-sutun">
@@ -1163,7 +1119,7 @@ export default async function DashboardPage() {
           */}
           <details className="ana-detay">
             <summary>
-              <span>{t({ tr: "Son eklenenler ve hızlı eylemler", en: "Recently added and quick actions" })}</span>
+              <span>{t({ tr: "Daha fazla: bölümler, son eklenenler, hızlı eylemler", en: "More: sections, recently added, quick actions" })}</span>
               <small>
                 {t({
                   tr: `${sayi(sonKaynaklar?.length ?? 0)} kaynak · ${sayi(sonBelgeler?.length ?? 0)} belge kontrolü`,
@@ -1172,6 +1128,56 @@ export default async function DashboardPage() {
               </small>
             </summary>
             <ListeIzgarasi etiket={t({ tr: "Son eklenenler", en: "Recently added" })}>
+            {/*
+              Bölümlerim katlı alanda (Premium Simplicity Aşama 2, 08.11.2026):
+              ilk üç bölümün kelime sayısı ana sayfada bir karar doğurmuyordu
+              ve editöre üç ayrı bağlantı daha ekliyordu. Kart ve içeriği aynı.
+            */}
+            <ListeKarti
+              baslik={t({ tr: "Bölümlerim", en: "My sections" })}
+              alt={[
+                eksikZorunlu.length
+                  ? t({
+                      tr: `${eksikZorunlu.length} zorunlu bölümün başlığı yok`,
+                      en: `${eksikZorunlu.length} required section${eksikZorunlu.length === 1 ? " has" : "s have"} no heading`,
+                    })
+                  : t({ tr: "Müsveddenin bölümleri", en: "Sections of the manuscript" }),
+                metinBolumleri.length + eksikZorunlu.length > BOLUM_SATIRI
+                  ? t({ tr: `ilk ${BOLUM_SATIRI} gösteriliyor`, en: `showing first ${BOLUM_SATIRI}` })
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              bos={t({
+                tr: "Henüz bölüm başlığı yok. Editörde başlıklarla bölüm açın; kılavuzunuzun istediği bölümler burada izlenir.",
+                en: "No section headings yet. Create sections with headings in the editor; the sections your guideline requires are tracked here.",
+              })}
+              sayi={metinBolumleri.length + eksikZorunlu.length}
+              href={`/dashboard/editor/${resume.id}/write`}
+              hrefEtiket={t({ tr: "Editörde aç", en: "Open in editor" })}
+            >
+              {metinBolumleri.slice(0, BOLUM_SATIRI).map((bolum, sira) => (
+                <ListeSatiri
+                  key={`${sira}-${bolum.baslik}`}
+                  href={`/dashboard/editor/${resume.id}/write`}
+                  baslik={bolum.baslik}
+                  sag={<span className="gb-sayi">{t({ tr: `${sayi(bolum.sozcuk)} kelime`, en: `${sayi(bolum.sozcuk)} words` })}</span>}
+                />
+              ))}
+              {eksikZorunlu.slice(0, Math.max(0, BOLUM_SATIRI - metinBolumleri.length)).map((bolum) => (
+                <ListeSatiri
+                  key={`eksik-${bolum}`}
+                  href={`/dashboard/editor/${resume.id}/write?teslim=sections`}
+                  baslik={bolum}
+                  alt={t({ tr: "Kılavuzunuz istiyor", en: "Required by your guideline" })}
+                  sag={
+                    <span className="status-pill" data-tone="warning">
+                      {t({ tr: "Henüz yok", en: "Not yet" })}
+                    </span>
+                  }
+                />
+              ))}
+            </ListeKarti>
             <ListeKarti
               baslik={t({ tr: "Son kaynaklar", en: "Recent sources" })}
               alt={t({ tr: "Bu çalışmaya en son eklenenler", en: "Most recently added to this work" })}
@@ -1226,19 +1232,23 @@ export default async function DashboardPage() {
               ))}
             </ListeKarti>
 
+            {/*
+              Hızlı eylemler yalnız BAŞKA YERDE OLMAYANLAR (Aşama 2, 08.11.2026).
+              Eskiden altı satırdı; "Literatür taraması" (Kaynaklar ve kanıt →
+              Literatür), "Veri analizi" (kenar çubuğu → Analiz Merkezi) ve
+              "Belge kontrolü" (Kaynaklar ve kanıt → Belge kontrolü, Son belge
+              kontrolleri) aynı hedeflerin tekrarıydı. Hepsi Ctrl+K'da da var.
+            */}
             <ListeKarti
               baslik={t({ tr: "Hızlı eylemler", en: "Quick actions" })}
               alt={t({ tr: "Ctrl+K ile de açılır", en: "Also available with Ctrl+K" })}
               bos=""
-              sayi={6}
+              sayi={3}
             >
               <ListeSatiri href={`/dashboard/literature?calisma=${resume.id}&ekle=1`} baslik={t({ tr: "DOI ile kaynak ekle", en: "Add a source by DOI" })} />
               <ListeSatiri href={`/dashboard/editor/${resume.id}/write?asistan=1`} baslik={t({ tr: "Yazım asistanını aç", en: "Open the writing assistant" })} />
               {/* Abonelik kartından taşındı (Signature OS 4.0): kart yalnızca abonelik ve krediyi söylüyor. */}
               <ListeSatiri href={`/dashboard/citations?calisma=${resume.id}`} baslik={t({ tr: "Kaynağa sor (PDF'e soru, birebir alıntıyla)", en: "Ask a source (PDF, exact quotes)" })} />
-              <ListeSatiri href={`/dashboard/literature?calisma=${resume.id}`} baslik={t({ tr: "Literatür taraması", en: "Literature search" })} />
-              <ListeSatiri href="/dashboard/analysis" baslik={t({ tr: "Veri analizi", en: "Data analysis" })} />
-              <ListeSatiri href={`/dashboard/documents?calisma=${resume.id}`} baslik={t({ tr: "Belge kontrolü", en: "Document check" })} />
             </ListeKarti>
             </ListeIzgarasi>
           </details>
