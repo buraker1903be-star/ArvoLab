@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { YEREL } from "@/lib/dil";
-import { AlertTriangle, FileText, Search, MessageSquare, ShieldAlert, ShieldCheck, Plus, CalendarClock } from "lucide-react";
+import { AlertTriangle, FileText, Search, MessageSquare, ShieldAlert, ShieldCheck, CalendarClock } from "lucide-react";
 import { simdi } from "@/lib/genel-bakis";
 import { editedAgo, getWritingStats } from "@/lib/writing-stats";
 import { createClient } from "@/lib/supabase/server";
@@ -271,17 +271,20 @@ export default async function ProjectsPage({
       <section className="projects-header">
         <div>
           <h1>{t({ tr: "Çalışmalarım", en: "My works" })}</h1>
-          <p>
-            {canApprove
-              ? t({
-                  tr: "Kurumunuzdaki tez, makale ve proje çalışmaları. Bir çalışma seçin; onay ve sorumlu ataması sağdaki kartta.",
-                  en: "Thesis, article and project works in your institution. Select a work; approval and assignment are on the card on the right.",
-                })
-              : t({
-                  tr: "Tezinizi ve diğer çalışmalarınızı buradan açın; yazmaya kaldığınız yerden devam edin.",
-                  en: "Open your thesis and other works here; continue writing where you left off.",
-                })}
-          </p>
+          {/*
+            Öğrencide alt başlık yok (Aşama 2/A2-8): "Tezinizi ve diğer
+            çalışmalarınızı buradan açın…" sayfanın adını tekrar ediyordu ve
+            listeyi telefonda bir satır aşağı itiyordu. Personelde kalıyor:
+            orada onay ve atamanın sağdaki kartta olduğunu söyleyen tek yer.
+          */}
+          {canApprove ? (
+            <p>
+              {t({
+                tr: "Kurumunuzdaki tez, makale ve proje çalışmaları. Bir çalışma seçin; onay ve sorumlu ataması sağdaki kartta.",
+                en: "Thesis, article and project works in your institution. Select a work; approval and assignment are on the card on the right.",
+              })}
+            </p>
+          ) : null}
         </div>
         {/* İkisi de pencere (02.11.2026): öğrenci kendi kılavuzunu ekler, personel kurumu katalogdan seçer. */}
         {/*
@@ -399,14 +402,11 @@ export default async function ProjectsPage({
                 tamamlananlar kapalı bir grupta, seçiliyse açık.
               */}
               <ul className="gb-liste calisma-secim">{ogrenciAktif.map(ogrenciSatiri)}</ul>
-              {/* Listenin hemen altında yeni çalışma: sağ üstteki düğmeyle aynı pencere (?yeni=1). */}
-              <Link href="/dashboard/editor?yeni=1" className="calisma-yeni-kutu" scroll={false}>
-                <Plus size={16} aria-hidden="true" />
-                <span>
-                  <b>{t({ tr: "Yeni çalışma", en: "New work" })}</b>
-                  <small>{t({ tr: "Tez, makale ya da proje; kılavuzunuz ve kaynaklarınızla", en: "Thesis, article or project, with your guideline and sources" })}</small>
-                </span>
-              </Link>
+              {/*
+                Listenin altındaki kesikli "Yeni çalışma" kutusu kalktı (Aşama 2/A2-8):
+                aynı pencere başlıkta ve kenar çubuğunda zaten var; üçüncü kopya
+                listenin sonunu bir eylem gibi gösteriyordu.
+              */}
               {ogrenciBiten.length ? (
                 <details className="calisma-tamamlanan" open={ogrenciBiten.some((p) => p.id === seciliId) || !ogrenciAktif.length}>
                   <summary>
