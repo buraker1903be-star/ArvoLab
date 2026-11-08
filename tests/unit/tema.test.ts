@@ -183,17 +183,29 @@ test("betik: tarayıcı çubuğu (theme-color) UYGULANAN temanın renginde, sist
 */
 test("TEMA_RENGI tokens.css'teki --bg ile aynı (açık ve koyu)", () => {
   const css = fs.readFileSync(path.join(process.cwd(), "app/styles/tokens.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-  const palet = new Map([...css.matchAll(/(--[a-z0-9-]+):\s*(#[0-9a-f]{3,8})\s*;/gi)].map((m) => [m[1], m[2].toLowerCase()]));
-  const coz = (deger: string): string => {
-    const v = deger.trim().match(/^var\((--[a-z0-9-]+)\)$/i);
-    return v ? (palet.get(v[1]) ?? `çözülemedi:${v[1]}`) : deger.trim().toLowerCase();
+  /*
+    V4.3-A2'den beri --bg bir zincir: --bg → --yuzey-zemin → --p-arduvaz-050.
+    Koyu değer de eski koyu bloktan değil v4 koyu rollerinden geliyor.
+    Bu yüzden iki tema için ayrı tanım haritası kurulur (açık: bütün
+    :root bloklarının birleşimi; koyu: onun üstüne bütün koyu bloklar)
+    ve var() zinciri sona kadar izlenir. Eskiden yalnız İLK bloklar
+    okunuyordu; zincir eklenince test "çözülemedi" diye düştü.
+  */
+  const tanimlar = (secici: RegExp) => {
+    const m = new Map<string, string>();
+    for (const blok of css.matchAll(secici)) for (const d of blok[1].matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) m.set(d[1], d[2].trim());
+    return m;
   };
-  // Açık blok `:root, .kagit` seçicisiyle yazılı (Phase 4.3: belge kâğıdı her temada açık).
-  const kok = css.match(/:root(?:,\s*\.kagit)?\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
-  const koyu = css.match(/html\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
-  const bg = (blok: string) => coz(blok.match(/--bg:\s*([^;]+);/)?.[1] ?? "yok");
-  assert.equal(bg(kok), TEMA_RENGI.light.toLowerCase());
-  assert.equal(bg(koyu), TEMA_RENGI.dark.toLowerCase());
+  const acik = tanimlar(/^:root(?:,\s*\.kagit)?\s*\{([\s\S]*?)\n\}/gm);
+  const koyu = new Map([...acik, ...tanimlar(/^html\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/gm)]);
+  const coz = (harita: Map<string, string>, ad: string, derinlik = 0): string => {
+    const d = harita.get(ad);
+    if (!d || derinlik > 10) return `çözülemedi:${ad}`;
+    const v = d.match(/^var\((--[a-z0-9-]+)\)$/i);
+    return v ? coz(harita, v[1], derinlik + 1) : d.toLowerCase();
+  };
+  assert.equal(coz(acik, "--bg"), TEMA_RENGI.light.toLowerCase());
+  assert.equal(coz(koyu, "--bg"), TEMA_RENGI.dark.toLowerCase());
 });
 
 test("betik: Next'in sonradan eklediği theme-color etiketi de uygulanan temaya boyanır", () => {

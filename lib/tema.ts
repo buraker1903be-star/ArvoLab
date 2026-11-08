@@ -40,8 +40,10 @@ export const KOYU_SORGUSU = "(prefers-color-scheme: dark)";
   Değerler tokens.css'teki --bg'nin aynısı olmalı; CSS değişkeni ilk
   boyamadan önce okunamadığı için burada sabit. tema.test.ts ikisini
   karşılaştırır: zemin değişince (4.3, Warm Ivory) test bunu söyler.
+  V4.3-A2: --bg artık v4'ün --yuzey-zemin rolüne bağlı (açık
+  --p-arduvaz-050, koyu --p-gece-900); eski #fafbfd / #0d1219 bırakıldı.
 */
-export const TEMA_RENGI: Record<Tema, string> = { light: "#fafbfd", dark: "#0d1219" };
+export const TEMA_RENGI: Record<Tema, string> = { light: "#f6f7f9", dark: "#0c1119" };
 
 /** Depodan gelen ham değer → tercih. Bilinmeyen her şey "system". */
 export function tercihOku(ham: unknown): TemaTercihi {

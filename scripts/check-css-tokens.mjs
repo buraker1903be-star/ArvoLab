@@ -178,8 +178,6 @@ for (const { file, text } of files) {
 */
 const TEMADAN_BAGIMSIZ = {
   "--kagit": "belge kâğıdı her temada açık (koyu temadaki ton .kagit kuralında)",
-  "--on-brand": "lacivert zemin üstünde beyaz yazı",
-  "--on-primary": "birincil düğme üstünde beyaz yazı",
   "--sidebar-ink": "giriş sayfasının her temada koyu tanıtım paneli",
   "--sidebar-muted": "giriş sayfasının her temada koyu tanıtım paneli",
   "--sidebar-line": "giriş sayfasının her temada koyu tanıtım paneli",
@@ -190,7 +188,6 @@ const TEMADAN_BAGIMSIZ = {
   "--golge-tonu-derin": "gölge rengi koyu temada da lacivert-siyah",
   "--grafik-cubuk": "veri rengi, iki temada da okunur (ölçüldü: Signature OS)",
   "--grafik-cubuk-acik": "veri rengi, iki temada da okunur",
-  "--ilerleme-parlak": "ilerleme çubuğunun yeşil ucu, iki temada aynı",
   "--logo-plaka": "lacivert yazılı ortak logoların koyu temadaki beyaz zemini",
   "--brand-navy": "eski ad (marka rengi), temadan bağımsız",
   "--brand-green": "eski ad (marka rengi), temadan bağımsız",

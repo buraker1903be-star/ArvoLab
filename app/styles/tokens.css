@@ -97,35 +97,35 @@
      Hiyerarşi: zemin < ikincil yüzey < kart < yükseltilmiş (menü,
      açılır pencere, modal). Çökük yüzey giriş kutusu ve iz alanı.
      Kâğıt (--kagit) AYRI: belge sayfası her temada saf beyaz. */
-  --bg: var(--gri-25);
-  --surface: var(--gri-0);
-  --surface-2: var(--gri-75);
-  --surface-sunken: var(--gri-100);
-  --surface-raised: var(--gri-0);
+  --bg: var(--yuzey-zemin);
+  --surface: var(--yuzey-1);
+  --surface-2: var(--yuzey-2);
+  --surface-sunken: var(--yuzey-cokuk);
+  --surface-raised: var(--yuzey-ust);
   --kagit: var(--n-0);
   /* Kenar çubuğu zeminden bir ton koyu (Signature OS): tam boy olunca
      içerikle aynı renkte kalsaydı ayrımı yalnızca 1 piksellik çizgi taşırdı. */
-  --kenar-zemin: var(--gri-50);
-  --overlay: #0f172a59;
+  --kenar-zemin: var(--yuzey-kenar);
+  --overlay: var(--ortu);
 
   /* ---- Anlamsal: yazı ----
-     Ölçüldü (Signature OS, zemin/kart/ikincil/çökük/kenar çubuğu):
-     ink 15,9–17,9; ink-soft 9,2–10,4; muted 5,3–6,0 (AA); bağlantı
-     (primary-ink) 7,1–8,0. dim yalnızca simge ve süs yazısı: 3,4–3,8
-     (≥3:1, metin dışı öğe eşiği). */
-  --ink: var(--yazi-900);
-  --ink-soft: var(--yazi-700);
-  --muted: var(--yazi-500);
-  --dim: var(--yazi-400);
-  --on-brand: var(--n-0);
+     V4.3-A2: v4'ün iki metin kademesine bağlı. ink-soft metin-1'e iner
+     (v4'te ayrı ara ton yok). dim BİLEREK metin-2'ye: v4'ün metin-3'ü
+     yalnız simge/ayraç içindir (3:1 altı), dim ise bugün yazı olarak
+     da kullanılıyor; metin-3'e bağlamak o yazıları AA altına düşürürdü. */
+  --ink: var(--metin-1);
+  --ink-soft: var(--metin-1);
+  --muted: var(--metin-2);
+  --dim: var(--metin-2);
+  --on-brand: var(--vurgu-yazi);
 
   /* ---- Anlamsal: çizgiler (çok hafif sıcak gri) ---- */
-  --line: var(--gri-200);
-  --line-soft: var(--gri-150);
+  --line: var(--cizgi);
+  --line-soft: var(--cizgi);
 
   /* ---- Anlamsal: marka ---- */
-  --primary: var(--mavi-600);
-  --primary-strong: var(--mavi-800);
+  --primary: var(--vurgu);
+  --primary-strong: var(--vurgu);
   /* ESKİ ADLAR (Phase 4.2, 04.11.2026). --accent* eskiden YEŞİLDİ ve hem
      etkileşim hem başarı anlamında kullanılıyordu (301 yer). 4.2'de her
      kullanım işlevine göre --primary-* (lacivert) ya da --secondary-*
@@ -133,13 +133,13 @@
      `npm run check:css` yenisini engelliyor. Adlar yalnızca geriye dönük
      uyumluluk için duruyor ve ArvoOS'taki anlamlarına (panel-tokens.css:
      --accent = --primary) eşlendi; ileride ortak katmanda tek ad kalır. */
-  --accent: var(--primary-ink);
-  --accent-strong: var(--primary-ink);
-  --accent-bright: var(--primary);
-  --accent-soft: var(--primary-soft);
+  --accent: var(--vurgu-metin);
+  --accent-strong: var(--vurgu-metin);
+  --accent-bright: var(--vurgu);
+  --accent-soft: var(--vurgu-yumusak);
   /* Odak rengi LACİVERT (Phase 4.2): odak bir etkileşim durumu. Eskiden
      yeşildi (#6f954866); "seçili" ile "başarılı" aynı renkte okunuyordu. */
-  --focus: color-mix(in srgb, var(--mavi-600) 70%, transparent);
+  --focus: var(--odak);
 
   /* ============================================================
      ANLAMSAL KATMAN: BİRİNCİL (lacivert) ve İKİNCİL (yeşil)
@@ -167,34 +167,34 @@
      kicker etiketleri ve logo. Uyarı/hata/bilgi tonları (--warning,
      --danger, --info) değişmedi.
      ============================================================ */
-  --primary-hover: var(--mavi-700);
-  --primary-soft: var(--mavi-100);
+  --primary-hover: var(--vurgu-uzerine);
+  --primary-soft: var(--vurgu-yumusak);
   /* Lacivert yazı: bağlantı, seçili menü öğesinin metni. Zeminde AA. */
-  --primary-ink: var(--mavi-700);
-  --on-primary: var(--n-0);
+  --primary-ink: var(--vurgu-metin);
+  --on-primary: var(--vurgu-yazi);
   /* Odak halkası metin dışı öğe kontrastını (WCAG 1.4.11, ≥3:1) karşılar:
      mavi-600 %70 → bütün açık yüzeylerde (seçili menü zemini dahil) ≥3,0
      (Signature OS ölçümü). Eskiden yeşil %20'ydi: 1,24:1. */
-  --primary-focus: 0 0 0 3px color-mix(in srgb, var(--mavi-600) 70%, transparent);
+  --primary-focus: 0 0 0 3px var(--odak);
 
-  --secondary: var(--accent-700);
+  --secondary: var(--basari);
   --secondary-strong: var(--accent-800);
   --secondary-bright: var(--accent-500);
-  --secondary-soft: var(--accent-100);
+  --secondary-soft: var(--basari-yumusak);
 
   /* ---- Anlamsal: durum tonları (metin + yumuşak zemin) ----
      Hepsi kendi rozetinde ve bütün açık yüzeylerde AA (≥4,5): başarı
      4,8; uyarı 4,7; hata 5,8; bilgi 5,9 (Signature OS ölçümü). */
-  --success: #1f7a45;
-  --success-soft: #e8f7ee;
-  --warning: #8f6212;
-  --warning-soft: #faf0dc;
-  --danger: #b42318;
-  --danger-soft: #fdecea;
-  --info: var(--mavi-600);
-  --info-soft: var(--mavi-50);
-  --neutral: var(--yazi-600);
-  --neutral-soft: var(--gri-100);
+  --success: var(--basari);
+  --success-soft: var(--basari-yumusak);
+  --warning: var(--uyari);
+  --warning-soft: var(--uyari-yumusak);
+  --danger: var(--hata);
+  --danger-soft: var(--hata-yumusak);
+  --info: var(--vurgu-metin);
+  --info-soft: var(--vurgu-yumusak);
+  --neutral: var(--metin-2);
+  --neutral-soft: var(--notr-yumusak);
 
   /* ---- Giriş sayfasının koyu tanıtım paneli (her iki temada koyu) ----
      Degrade uçları (--sidebar-from/-to) Signature OS'ta kalktı: panel düz. */
@@ -215,15 +215,15 @@
   --golge-tonu-derin: var(--brand-950);
   --grafik-cubuk: var(--brand-500);
   --grafik-cubuk-acik: var(--brand-400);
-  --ilerleme-parlak: var(--accent-300);
+  --ilerleme-parlak: var(--ilerleme);
   --logo-plaka: var(--n-0);
 
   /* ---- Gölgeler ---- */
   /* Gölgeler serin nötrle birlikte sıkılaştırıldı: eski değerler
      geniş ve yayvandı, açık zeminde kart "yüzüyor" gibi görünüyordu. */
-  --shadow-sm: 0 1px 2px rgba(15,23,42,.05);
-  --shadow-md: 0 4px 12px -2px rgba(15,23,42,.08), 0 2px 4px -2px rgba(15,23,42,.04);
-  --shadow-lg: 0 16px 40px -8px rgba(15,23,42,.16);
+  --shadow-sm: var(--golge-1);
+  --shadow-md: var(--golge-2);
+  --shadow-lg: var(--golge-3);
   --shadow-inset: inset 0 1px 1px #0f233c06;
 
   /* ---- YÜZEY HİYERARŞİSİ (Signature OS 2.0, 08.11.2026) ----
@@ -240,24 +240,23 @@
      (--yuzey-kart-golge: none) uygulanabilir; görünümü değiştirdiği için
      ayrı onaya bırakıldı. Kartlar bu adı okuduğu için o gün dosya dosya
      dolaşmak gerekmeyecek. */
-  --yuzey-kanvas: var(--bg);
-  --yuzey-duzlem-ayrac: var(--line-soft);
-  --yuzey-kart: var(--surface);
-  --yuzey-kart-cizgi: var(--line);
-  --yuzey-kart-golge: var(--shadow-sm);
-  --yuzey-ust: var(--surface-raised);
+  --yuzey-kanvas: var(--yuzey-zemin);
+  --yuzey-duzlem-ayrac: var(--cizgi);
+  --yuzey-kart: var(--yuzey-1);
+  --yuzey-kart-cizgi: var(--cizgi);
+  --yuzey-kart-golge: var(--golge-1);
   /* Üst düzeyin iki kademesi: yerinde açılan menü (hafif) ve sayfanın
      önüne geçen pencere/çekmece (derin). */
-  --yuzey-acilir-golge: var(--shadow-md);
-  --yuzey-pencere-golge: var(--shadow-lg);
+  --yuzey-acilir-golge: var(--golge-2);
+  --yuzey-pencere-golge: var(--golge-3);
   /* Düğmenin kendi hafif gölgesi: yüzey değil, denetim. */
-  --kontrol-golge: var(--shadow-sm);
+  --kontrol-golge: var(--golge-1);
 
   /* ---- Yarıçaplar ---- */
-  --r-xs: 6px;
-  --r-sm: 8px;
-  --r-md: 10px;
-  --r-lg: 12px;
+  --r-xs: var(--r-1);
+  --r-sm: var(--r-2);
+  --r-md: var(--r-3);
+  --r-lg: var(--r-4);
   --r-xl: 16px;
   --r-pill: 999px;
   /* Daire (simge düğmesi, nokta, avatar): ölçeğin parçası değil, şekil. */
@@ -270,10 +269,10 @@
      Dokunmada 44px: iOS'un en küçük dokunma hedefi.
      Odak halkası da üç ayrı değerdeydi (3px, 4px ve base.css'in kendi
      anahattı); tek token oldu. */
-  --kontrol-h: 40px;
+  --kontrol-h: var(--kontrol);
   --kontrol-h-sik: 36px;
-  --kontrol-h-dokunma: 44px;
-  --kontrol-r: var(--r-sm);
+  --kontrol-h-dokunma: var(--dokunma);
+  --kontrol-r: var(--r-2);
   --kontrol-dolgu: 14px;
   --kontrol-dolgu-sik: 10px;
   /* Odak halkası birincil (lacivert) odak tokenının kendisi (Phase 4.2). */
@@ -288,10 +287,10 @@
      Birincil düğme DÜZ ve koyu lacivert: mockup'taki sayfa eylemi
      ("AI Sohbet") gibi. Kenar çubuğundaki "Yeni çalışma" uygulamanın
      tek global eylemi, o daha açık --primary'de (os-shell.css). */
-  --dugme-birincil: var(--primary-strong);
-  --dugme-birincil-hover: var(--primary-hover);
+  --dugme-birincil: var(--vurgu);
+  --dugme-birincil-hover: var(--vurgu-uzerine);
   /* Giriş ailesinin yumuşak lacivert yüzeyi (auth.css, Signature OS 05.11.2026). */
-  --giris-vurgu-zemin: var(--brand-50);
+  --giris-vurgu-zemin: var(--yuzey-vurgu);
   --giris-vurgu-cizgi: var(--brand-100);
   --dugme-agirlik: 600;
   /* İkincil düğme ve satır üstü: imleç gelince yüzey bir ton koyulaşır;
@@ -300,14 +299,14 @@
   --dugme-hover-zemin: var(--surface-2);
   --kenarlik-hover: color-mix(in srgb, var(--ink) 22%, var(--line));
   /* Açılır menüler: kullanıcı menüsü, kart menüsü, tema menüsü, araç menüleri. */
-  --menu-r: var(--r-md);
+  --menu-r: var(--r-3);
   --menu-dolgu: var(--s-1);
-  --menu-golge: var(--yuzey-acilir-golge);
+  --menu-golge: var(--golge-2);
   --menu-oge-h: 36px;
-  --menu-oge-r: var(--r-sm);
+  --menu-oge-r: var(--r-2);
   /* Pencere (PanelDrawer, Dialog, yerel <dialog>) */
-  --pencere-r: var(--r-xl);
-  --pencere-golge: var(--yuzey-pencere-golge);
+  --pencere-r: var(--r-5);
+  --pencere-golge: var(--golge-3);
   /* Durum etiketi */
   --hap-agirlik: 600;
 
@@ -325,9 +324,9 @@
      Büyük kademe içerik kabı (form kartı, çalışma kartı), küçük kademe
      sayı/bağlantı karosu. */
   --kart-dolgu: 20px 24px;
-  --kart-r: var(--r-lg);
+  --kart-r: var(--r-4);
   --karo-dolgu: 14px 16px;
-  --karo-r: var(--r-md);
+  --karo-r: var(--r-3);
 
   /* ---- Tipografi ----
      Apple cihazlarda sistemin SF Pro'su, diğerlerinde Inter (app/layout.tsx). */
@@ -415,15 +414,15 @@
      4 piksellik adım. Yeni kod boşluğu buradan alır; eski dosyalardaki
      ham piksel değerleri dokunuldukça buraya taşınır (toplu değişim
      görünümü farkında olmadan kaydırırdı). */
-  --s-1: 4px;
-  --s-2: 8px;
-  --s-3: 12px;
-  --s-4: 16px;
-  --s-5: 20px;
-  --s-6: 24px;
-  --s-8: 32px;
-  --s-10: 40px;
-  --s-12: 48px;
+  --s-1: var(--b-1);
+  --s-2: var(--b-2);
+  --s-3: var(--b-3);
+  --s-4: var(--b-4);
+  --s-5: var(--b-5);
+  --s-6: var(--b-6);
+  --s-8: var(--b-8);
+  --s-10: var(--b-10);
+  --s-12: var(--b-12);
 
   /* ---- Katmanlar ----
      Tek ölçek: dosyalara dağılmış ham değerler (1, 2, 5, 30, 40, 60, 70, 85, 90)
@@ -462,11 +461,11 @@
        masaüstü ≥ 1200px  geniş kenar çubuğu */
   --gezinme-genislik: 248px;
   --gezinme-ray: 88px;
-  --alt-cubuk-h: 64px;
+  --alt-cubuk-h: var(--alt-cubuk);
   --sidebar-width: 264px;
   /* Üst çubuk 56 piksel (Signature OS): marka kenar çubuğuna geçti, çubukta
      yalnızca konum yolu ve eylemler kaldı. Eskiden 64'tü. */
-  --topbar-height: 56px;
+  --topbar-height: var(--ust);
   /* Sabit alt gezinmenin ekranın altında kapladığı yer: içerik,
      bildirimler, "İşleniyor…" kapsülü ve editörün yan paneli bunun
      üstünde durur. Phase 3'ten (04.11.2026) beri yalnızca telefonda
@@ -482,16 +481,16 @@
   color-scheme: light;
 
   /* ---- Eski adlar (satır içi stillerde ve eski sınıflarda kullanılıyor) ---- */
-  --background: var(--bg);
-  --foreground: var(--ink);
-  --muted-foreground: var(--muted);
-  --border: var(--line);
-  --surface-muted: var(--surface-sunken);
-  --primary-foreground: var(--on-brand);
+  --background: var(--yuzey-zemin);
+  --foreground: var(--metin-1);
+  --muted-foreground: var(--metin-2);
+  --border: var(--cizgi);
+  --surface-muted: var(--yuzey-cokuk);
+  --primary-foreground: var(--vurgu-yazi);
   --brand-navy: var(--brand-800);
   --brand-green: var(--accent-500);
-  --radius-sm: var(--r-sm);
-  --radius-md: var(--r-md);
+  --radius-sm: var(--r-2);
+  --radius-md: var(--r-3);
   --radius-lg: var(--r-xl);
 }
 
@@ -514,65 +513,20 @@
 }
 
 /*
-  KOYU TEMA: derin lacivert-gri (Signature OS). Ölçüldü: ink 13,0–16,0;
-  ink-soft 9,4–11,6; muted 6,0–7,4; bağlantı 8,3–10,2; dim 3,8–4,6;
-  ana düğme beyaz yazıyla 5,3, üzerine gelince 6,3. Kâğıt (.kagit) burada
-  yeniden tanımlanmaz: belge her temada açık kalır (`:root, .kagit`).
+  KOYU TEMA — ESKİ ADLAR (V4.3-A2, 08.11.2026). Yüzey, metin, çizgi,
+  vurgu, durum ve gölge adlarının koyu değerleri artık v4 rollerinden
+  gelir (aşağıdaki "Anlamsal roller — KOYU"): eski ad :root'ta v4 rolüne
+  bağlı, koyu temada yeniden tanımlanmaz. Eskiden iki tema iki ayrı
+  palet tutuyordu ve v4 ile eski adlar yan yana sapabiliyordu. Burada
+  yalnızca v4'te karşılığı olmayan adlar kalır. Kâğıt (.kagit) burada
+  tanımlanmaz: v4 açık rolleri de `:root, .kagit` ile kâğıtta yeniden
+  kurulur.
 */
 html[data-theme="dark"] {
-  --bg: var(--gece-900);
-  --surface: var(--gece-850);
-  --surface-2: var(--gece-800);
-  --surface-sunken: var(--gece-950);
-  --surface-raised: var(--gece-750);
-  /* Koyuda kenar çubuğu zeminden bir ton AÇIK: zeminden koyusu (950) çökük yüzeyle karışırdı. */
-  --kenar-zemin: var(--gece-875);
-  /* Örtü saf siyah değil: pencerenin arkası kararır, kapkara olmaz. */
-  --overlay: #05080db3;
-
-  --ink: var(--gece-yazi-100);
-  --ink-soft: var(--gece-yazi-300);
-  --muted: var(--gece-yazi-400);
-  --dim: var(--gece-yazi-500);
-
-  /* Düşük kontrastlı, zarif ayrım: çizgi karttan 1,35:1. */
-  --line: var(--gece-600);
-  --line-soft: var(--gece-700);
-
-  --primary: #3a68c8;
-  --primary-strong: var(--mavi-700);
-  /* Eski --accent* adları :root'ta birincile eşli; koyu değerleri oradan gelir. */
-  --focus: color-mix(in srgb, var(--mavi-400) 70%, transparent);
-
-  /* Anlamsal katman, koyu (Phase 4.1; açıklama :root'ta). */
-  --primary-hover: #2f5cb8;
-  --primary-soft: color-mix(in srgb, var(--mavi-400) 16%, transparent);
-  --primary-ink: var(--mavi-300);
-  /* Koyu: brand-300 %65 → kartta 3,33, zeminde 3,44 (≥3:1). */
-  --primary-focus: 0 0 0 3px color-mix(in srgb, var(--mavi-400) 70%, transparent);
-  --secondary: var(--accent-400);
   --secondary-strong: var(--accent-300);
-  --giris-vurgu-zemin: color-mix(in srgb, var(--brand-700) 30%, var(--surface));
   --giris-vurgu-cizgi: color-mix(in srgb, var(--brand-300) 22%, transparent);
   --secondary-bright: var(--accent-400);
-  --secondary-soft: #1d2a14;
-
-  --success: #4cc38a;
-  --success-soft: #11291c;
-  --warning: #e0b056;
-  --warning-soft: #33270f;
-  --danger: #f07a6f;
-  --danger-soft: #351615;
-  --info: var(--mavi-300);
-  --info-soft: #13233d;
-  --neutral: var(--gece-yazi-400);
-  --neutral-soft: var(--gece-700);
-
-
   /* Gölgeler en az (Signature OS): ayrım çizgiden gelir, gölgeden değil. */
-  --shadow-sm: 0 1px 2px #00000033;
-  --shadow-md: 0 8px 24px -4px #00000059;
-  --shadow-lg: 0 24px 60px -12px #00000080;
   --shadow-inset: inset 0 1px 1px #00000033;
 
   color-scheme: dark;
@@ -587,13 +541,9 @@ html[data-theme="dark"] {
   (yalnızca ekranda, workspace.css'teki Phase 4.5 bölümü).
 */
 :root {
-  --belge-masa: var(--gri-100);
-  --belge-kenar: var(--gri-200);
-  --yan-panel-genis: 360px;
-}
-html[data-theme="dark"] {
-  --belge-masa: var(--gece-950);
-  --belge-kenar: var(--gece-600);
+  --belge-masa: var(--masa);
+  --belge-kenar: var(--cizgi-guclu);
+  --yan-panel-genis: var(--baglam-panel);
 }
 /*
   KOYU TEMADA KÂĞIT (UX S8, 07.11.2026, kurum sahibinin kararı): ekrandaki
@@ -630,8 +580,9 @@ html[data-theme="dark"] {
    (scripts/check-css-tokens.mjs, kural 2). Açık rollerin her biri koyu
    temada da tanımlı (kural 7, tema eşitliği).
 
-   .kagit bu rolleri yeniden kurmaz (yukarıdaki `:root, .kagit`
-   bloğunun aksine): v4'te koyu temada belge "loş kâğıt" (K-5) olacak.
+   V4.3-A2: açık roller `:root, .kagit` ile kâğıtta da kurulur. Eski
+   adlar artık bu rollere bağlı; kâğıt kendi açık rollerini kurmasaydı
+   koyu temada belgenin mürekkebi açık renge döner, yazdırma da bozulurdu.
    ============================================================ */
 /* ---------------- 1. Ham palet ---------------- */
 :root {
@@ -679,11 +630,12 @@ html[data-theme="dark"] {
 }
 
 /* ---------------- 2. Anlamsal roller — AÇIK ---------------- */
-:root {
+:root, .kagit {
   /* Yüzey hiyerarşisi: zemin < kenar < yüzey-1 < yüzey-üst. Çöküş: girdiler, kod, masa. */
   --yuzey-zemin: var(--p-arduvaz-050); /* uygulama kanvası */
   --yuzey-kenar: var(--p-arduvaz-075); /* kenar çubuğu, ray */
   --yuzey-1: var(--p-arduvaz-000); /* ana içerik yüzeyi */
+  --yuzey-ust: var(--p-arduvaz-000); /* açılır menü, pencere, alt sayfa */
   --yuzey-2: var(--p-arduvaz-025); /* ikincil satır, sekme zemini */
   --yuzey-cokuk: var(--p-arduvaz-100); /* girdi içi, belge masası */
   --yuzey-vurgu: var(--p-lacivert-050); /* seçili öğe, "Şimdi" */
@@ -723,6 +675,7 @@ html[data-theme="dark"] {
   --yuzey-kenar: var(--p-gece-875);
   --yuzey-1: var(--p-gece-850);
   --yuzey-2: var(--p-gece-800);
+  --yuzey-ust: var(--p-gece-800);
   --yuzey-cokuk: var(--p-gece-950);
   --yuzey-vurgu: var(--p-lacivert-900);
   /* Koyu temada belge "loş kâğıt": saf beyaz göz yorar, saf siyah kâğıt hissini kaybeder. */
