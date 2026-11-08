@@ -130,6 +130,7 @@ import { kilavuzGorunenAdi, type AppliedGuideline } from "@/lib/guideline-rules"
 import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-sync";
 import Link from "next/link";
 import { calismaAdresi } from "@/lib/calisma-karti";
+import { kilavuzBandiAnahtari } from "@/lib/kilavuz-bandi";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
@@ -212,18 +213,15 @@ const CITATION_STYLES = STIL_SECENEKLERI.map((secenek) => secenek.deger) as Cita
 const ONERI_TERCIHI = "arvolab:otomatik-oneri";
 const INCELEME_TERCIHI = "arvolab:inceleme-paneli";
 /*
-  "Bu çalışmaya bağlı kılavuz yok" bandının gizlenmesi. Phase 4.5'te
-  (07.11.2026) yalnızca telefonda daralıyordu; Premium Simplicity
-  Aşama 1'de (08.11.2026) bant her genişlikte tek satır ve ikincil oldu,
-  öğrenci "Gizle" derse bant kalkar ve aynı seçenekler durum çubuğundaki
-  "Kılavuz bağlı değil" düğmesinden açılır (bilgi kaybolmaz, yazının
-  önünden çekilir). Tercih tarayıcıda, bütün çalışmalar için; veritabanı
-  alanı yok (bir kez okunan bilgi). Anahtar eski adıyla kaldı: telefonda
-  bandı daraltmış öğrenci aynı tercihle gizlenmiş olarak görür.
-  Yalnızca bu bilgi bandı gizlenir: "yeni sürüm uygulandı" ve "kılavuza
-  göre güncelle" uyarıları akademik uyumluluk bildirdiği için gizlenmez.
+  "Bu çalışmaya bağlı kılavuz yok" bandı (Premium Simplicity Aşama 1):
+  her genişlikte tek satır ve ikincil; öğrenci "Gizle" derse bant kalkar,
+  aynı seçenekler durum çubuğundan ve "⋯" menüsünden açılır. Gizleme
+  tercihi ÇALIŞMA başına ve yalnız tarayıcıda (lib/kilavuz-bandi.ts;
+  08.11.2026'ya kadar tek genel anahtardı, bir tezde gizlenen bant bütün
+  tezlerde gizleniyordu). Yalnızca bu bilgi bandı gizlenir: "yeni sürüm
+  uygulandı" ve "kılavuza göre güncelle" uyarıları akademik uyumluluk
+  bildirdiği için bu tercihi okumaz.
 */
-const KILAVUZ_BANDI_TERCIHI = "arvolab:kilavuz-bandi-dar";
 const TERCIH_OLAYI = "arvolab:editor-tercihi";
 function tercihAboneligi(degisti: () => void) {
   window.addEventListener(TERCIH_OLAYI, degisti);
@@ -1022,7 +1020,11 @@ export default function ManuscriptEditor({
     "?asistan=1" ve "?teslim=<madde>" ilgili görünümü açık başlatır.
   */
   const panelTercihi = useSyncExternalStore(tercihAboneligi, () => tercihOku(INCELEME_TERCIHI, true), () => true);
-  const kilavuzBandiGizli = useSyncExternalStore(tercihAboneligi, () => tercihOku(KILAVUZ_BANDI_TERCIHI, false), () => false);
+  const kilavuzBandiTercihi = kilavuzBandiAnahtari(projectId);
+  const kilavuzBandiGizli = useSyncExternalStore(tercihAboneligi, () => (kilavuzBandiTercihi ? tercihOku(kilavuzBandiTercihi, false) : false), () => false);
+  const kilavuzBandiniGizle = useCallback((gizli: boolean) => {
+    if (kilavuzBandiTercihi) tercihYaz(kilavuzBandiTercihi, gizli);
+  }, [kilavuzBandiTercihi]);
   const ekran = useEkranSinifi();
   const bicim = panelBicimi(ekran);
   const ilkGorunum = acilisGorunumu({ asistan: asistanAcikBasla, teslim: acilacakMadde });
@@ -2859,7 +2861,7 @@ export default function ManuscriptEditor({
             her genişlikte elin altında.
           */}
           {!guideline && isThesis && kilavuzBandiGizli ? (
-            <ToolbarButton label={t({ tr: "Kılavuz uyarısını göster", en: "Show guideline notice" })} metin={t({ tr: "Kılavuz bağla", en: "Link guideline" })} onClick={() => tercihYaz(KILAVUZ_BANDI_TERCIHI, false)}>
+            <ToolbarButton label={t({ tr: "Kılavuz uyarısını göster", en: "Show guideline notice" })} metin={t({ tr: "Kılavuz bağla", en: "Link guideline" })} onClick={() => kilavuzBandiniGizle(false)}>
               <BookMarked size={16} />
             </ToolbarButton>
           ) : null}
@@ -3203,7 +3205,7 @@ export default function ManuscriptEditor({
             className="kilavuz-bandi-gizle"
             aria-label={t({ tr: "Kılavuz uyarısını gizle (durum çubuğundan yeniden açılır)", en: "Hide guideline notice (reopen it from the status bar)" })}
             title={t({ tr: "Gizle", en: "Hide" })}
-            onClick={() => tercihYaz(KILAVUZ_BANDI_TERCIHI, true)}
+            onClick={() => kilavuzBandiniGizle(true)}
           >
             <X size={16} aria-hidden="true" />
           </button>

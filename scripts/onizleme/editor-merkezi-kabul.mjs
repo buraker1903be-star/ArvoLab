@@ -10,6 +10,8 @@
     - kılavuz bandı tek satır (≤ 52 px), "Kılavuz bağla" menüsünde iki
       seçenek doğru adreslerle; "Gizle" → bant kalkar, yenilemede gizli
       kalır, masaüstünde durum çubuğundan, her genişlikte "⋯"den geri gelir;
+      tercih ÇALIŞMA başına: eski genel anahtar ve başka çalışmanın
+      tercihi bu çalışmanın bandını gizlemez (R2);
     - telefonda başlık satırı tek satır (≤ 48 px), Belge menüsünde beş
       öğe (paylaş, Word, PDF, LaTeX, yazım paneli) ve başında çalışmanın
       tam adı (salt okunur, R1), başlıktaki her hedef ≥ 40×40;
@@ -48,11 +50,11 @@ async function ac(genislik, yukseklik, { tema = "light", panel = false, bantGizl
       try {
         localStorage.setItem("arvolab.theme", t);
         localStorage.setItem("arvolab:inceleme-paneli", p ? "1" : "0");
-        if (g) localStorage.setItem("arvolab:kilavuz-bandi-dar", "1");
+        if (g) localStorage.setItem(`arvolab:kilavuz-bandi-gizli:${g}`, "1");
         if (k) localStorage.setItem("arvolab.kenar", k);
       } catch {}
     },
-    [tema, panel, bantGizli, kenar],
+    [tema, panel, bantGizli ? TEZ : null, kenar],
   );
   const sayfa = await ctx.newPage();
   await sayfa.goto(YAZIM, { waitUntil: "networkidle", timeout: 150000 });
@@ -153,6 +155,28 @@ for (const w of [1440, 390]) {
   await bas(sayfa.locator('.arac-menu-pencere:popover-open button[aria-label="Kılavuz uyarısını göster"]'));
   await sayfa.waitForTimeout(300);
   bekle((await sayfa.locator(".kilavuz-bandi").count()) === 1, `${w}: "⋯" menüsünden bant geri gelmedi`);
+  await ctx.close();
+}
+
+// 2b) R2: gizleme tercihi ÇALIŞMA başına; eski genel anahtar taşınmaz.
+{
+  // Eski genel anahtar ve BAŞKA bir çalışmanın tercihi bu çalışmanın bandını gizlemez.
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  await ctx.addInitScript(() => {
+    try {
+      localStorage.setItem("arvolab:kilavuz-bandi-dar", "1");
+      localStorage.setItem("arvolab:kilavuz-bandi-gizli:00000000-0000-4000-8000-0000000000b9", "1");
+    } catch {}
+  });
+  const sayfa = await ctx.newPage();
+  await sayfa.goto(YAZIM, { waitUntil: "networkidle", timeout: 150000 });
+  await sayfa.locator(".ProseMirror p").first().waitFor({ timeout: 30000 });
+  await sayfa.waitForTimeout(500);
+  bekle((await sayfa.locator(".kilavuz-bandi").count()) === 1, "R2: eski genel anahtar ya da başka çalışmanın tercihi bu çalışmanın bandını gizledi");
+  await sayfa.locator(".kilavuz-bandi-gizle").click();
+  await sayfa.waitForTimeout(250);
+  const depo = await sayfa.evaluate((id) => ({ bu: localStorage.getItem(`arvolab:kilavuz-bandi-gizli:${id}`), eski: localStorage.getItem("arvolab:kilavuz-bandi-dar"), baska: localStorage.getItem("arvolab:kilavuz-bandi-gizli:00000000-0000-4000-8000-0000000000b9") }), TEZ);
+  bekle(depo.bu === "1" && depo.eski === "1" && depo.baska === "1", `R2: Gizle yalnız bu çalışmanın anahtarını yazmalı (${JSON.stringify(depo)})`);
   await ctx.close();
 }
 
