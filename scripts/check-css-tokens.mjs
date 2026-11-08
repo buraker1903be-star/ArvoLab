@@ -1,7 +1,9 @@
 // CSS token denetimi — derlemeden önce çalışır ("npm run build").
 // ArvoOS'taki scripts/check-css-tokens.mjs kurallarının ArvoLab uyarlaması:
 //   1) Ham renk (hex, rgb(), hsl()) yalnızca app/styles/tokens.css'te olabilir.
-//   2) Palet değişkenleri (--brand-N, --accent-N, --n-N) yalnızca tokens.css'te tanımlanır.
+//   2) Palet değişkenleri (--brand-N, --accent-N, --n-N, --mavi-N, --gri-N, --yazi-N,
+//      --gece-N, --gece-yazi-N) yalnızca tokens.css'te tanımlanır VE okunur;
+//      bileşenler anlamsal katmanı (--surface, --ink, --primary…) okur.
 //   3) Yedeksiz var(--x) kullanımı tanımlı bir değişkene işaret etmelidir.
 //   4) En küçük yazı boyutu 11px (font-size ve font kısayolu).
 import fs from "node:fs";
@@ -45,8 +47,18 @@ for (const { file, text } of files) {
     for (const match of text.matchAll(/#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\(/gi)) {
       report(file, text, match.index, `ham renk "${match[0]}" — tokens.css'te bir değişken tanımlayıp onu kullanın`);
     }
-    for (const match of text.matchAll(/(--(?:brand|accent|n)-\d+)\s*:/gi)) {
+    for (const match of text.matchAll(/(--(?:brand|accent|n|mavi|gri|yazi|gece|gece-yazi)-\d+)\s*:/gi)) {
       report(file, text, match.index, `palet değişkeni ${match[1]} yalnızca tokens.css'te tanımlanabilir`);
+    }
+    /*
+      Palet OKUMA da yalnızca tokens.css'te (Signature OS 2.0, 08.11.2026).
+      Eskiden sekiz yerde bileşen CSS'i --brand-900, --accent-300, --n-0
+      gibi adımları doğrudan okuyordu: hangi rolde oldukları okunmuyor,
+      koyu temada karşılıkları düşünülmüyordu. Hepsi anlamsal bir ada
+      taşındı (--koyu-panel-zemin, --ilerleme-parlak, --logo-plaka…).
+    */
+    for (const match of text.matchAll(/var\(\s*(--(?:brand|accent|n|mavi|gri|yazi|gece|gece-yazi)-\d+)\s*[,)]/gi)) {
+      report(file, text, match.index, `palet adımı ${match[1]} doğrudan okunuyor — tokens.css'te anlamsal bir değişken tanımlayıp onu kullanın`);
     }
     /*
       Eski --accent* adları (Phase 4.2). Eskiden yeşildi ve hem "seçili"

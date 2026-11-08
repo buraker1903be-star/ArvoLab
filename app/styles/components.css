@@ -1305,7 +1305,7 @@ select:is(.compact-select, .field-control, .toolbar-select):not([multiple]):hove
   height: 100%;
   width: var(--w, 0%); /* satır içinde verilir (page.tsx) */
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--secondary-bright), var(--accent-300));
+  background: linear-gradient(90deg, var(--secondary-bright), var(--ilerleme-parlak));
   animation: readiness-fill .9s var(--ease-spring) both;
 }
 .readiness-bar[data-ready="true"] > i { background: linear-gradient(90deg, var(--success), color-mix(in srgb, var(--success) 55%, var(--surface))); }
