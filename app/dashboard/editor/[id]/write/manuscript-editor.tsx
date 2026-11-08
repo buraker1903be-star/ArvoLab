@@ -34,6 +34,7 @@ import {
   SearchCheck,
   Plus,
   MoreHorizontal,
+  MoreVertical,
   PanelRightOpen,
   PanelRightClose,
   Maximize2,
@@ -2596,7 +2597,8 @@ export default function ManuscriptEditor({
               aria-live="polite"
               onClick={() => void saveNow()}
             >
-              {statusLabel}
+              {/* Telefonda yalnız renkli nokta görünür; metin ekran okuyucuda kalır (workspace.css). */}
+              <span className="save-status-metin">{statusLabel}</span>
             </button>,
             durumHedefi,
           )
@@ -2604,13 +2606,13 @@ export default function ManuscriptEditor({
       {eylemHedefi
         ? createPortal(
             <>
-              <button type="button" className="projects-filter-button" onClick={() => setShareOpen(true)} aria-label={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })} title={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })}>
+              <button type="button" className="projects-filter-button yazma-paylas" onClick={() => setShareOpen(true)} aria-label={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })} title={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })}>
                 <Share2 size={15} aria-hidden="true" />
                 <span className="yazma-etiket">{t({ tr: "Paylaş", en: "Share" })}</span>
               </button>
               {/* Üç çıktı tek menüde (04.11.2026): başlık satırı tek satıra sığsın. */}
               <AracMenusu
-                dugmeSinifi="projects-filter-button"
+                dugmeSinifi="projects-filter-button yazma-disa-aktar"
                 ikon={<FileDown size={15} aria-hidden="true" />}
                 etiket={exporting || latexHazirlaniyor ? t({ tr: "Hazırlanıyor...", en: "Preparing..." }) : t({ tr: "Dışa aktar", en: "Export" })}
                 aciklama={t({ tr: "Word, PDF ya da LaTeX olarak indir", en: "Download as Word, PDF or LaTeX" })}
@@ -2655,6 +2657,44 @@ export default function ManuscriptEditor({
               >
                 {panelAcik ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
               </button>
+              {/*
+                TELEFONDA BELGE MENÜSÜ (Premium Simplicity Aşama 1, 08.11.2026).
+                Eskiden telefonda başlığın altında dört simge düğme (paylaş,
+                dışa aktar, Arvo AI, panel) ayrı bir satır kaplıyordu; başlık
+                da iki satırdı ve yazı ekranın ortasında başlıyordu. Şimdi
+                başlık tek satır ve yanında yalnızca Arvo AI ile bu menü:
+                paylaşım, üç çıktı ve yazım paneli burada. İşlev kalkmadı;
+                masaüstünde menü yok, düğmeler eskisi gibi (CSS).
+              */}
+              <AracMenusu
+                dugmeSinifi="projects-filter-button yazma-belge-menu"
+                /* Dikey üç nokta: hemen altındaki araç çubuğunun "⋯"si ile karışmasın. */
+                ikon={<MoreVertical size={18} aria-hidden="true" />}
+                etiket={t({ tr: "Belge: paylaş, dışa aktar, yazım paneli", en: "Document: share, export, writing panel" })}
+                etiketiGizle
+              >
+                <button type="button" className="arac-menu-oge" onClick={() => setShareOpen(true)}>
+                  <Share2 size={16} aria-hidden="true" />
+                  <span>{t({ tr: "Danışmana paylaş", en: "Share with advisor" })}</span>
+                </button>
+                <button type="button" className="arac-menu-oge" onClick={handleExport} disabled={exporting}>
+                  <FileDown size={16} aria-hidden="true" />
+                  <span>{t({ tr: "Word (.docx)", en: "Word (.docx)" })}</span>
+                </button>
+                <button type="button" className="arac-menu-oge" onClick={() => void handlePrint()}>
+                  <Printer size={16} aria-hidden="true" />
+                  <span>{t({ tr: "PDF / Yazdır", en: "PDF / Print" })}</span>
+                </button>
+                <button type="button" className="arac-menu-oge" onClick={() => void handleLatex()} disabled={latexHazirlaniyor}>
+                  <FileCode size={16} aria-hidden="true" />
+                  <span>{t({ tr: "LaTeX (Overleaf)", en: "LaTeX (Overleaf)" })}</span>
+                </button>
+                <hr className="arac-menu-ayrac" />
+                <button type="button" className="arac-menu-oge" aria-controls="yazim-yan-panel" onClick={() => (panelAcik ? panelKapat() : panelAc(gorunum))}>
+                  {panelAcik ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
+                  <span>{panelAcik ? t({ tr: "Yazım panelini kapat", en: "Close writing panel" }) : t({ tr: "Yazım paneli (inceleme, kaynaklar, teslim)", en: "Writing panel (review, sources, submission)" })}</span>
+                </button>
+              </AracMenusu>
             </>,
             eylemHedefi,
           )

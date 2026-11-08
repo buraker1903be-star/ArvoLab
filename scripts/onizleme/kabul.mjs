@@ -320,7 +320,9 @@ const tarayici = await chromium.launch();
 
   await senaryo("stüdyo: telefonda panel alttan açılan sayfa, yatay kayma yok", async () => {
     const { ctx, sayfa } = await yeniSayfa({ width: 390, height: 844 }, YAZ, { hasTouch: true, isMobile: true });
-    await sayfa.locator(".yazma-panel-dugmesi").click();
+    // Telefonda panel düğmesi "Belge" menüsünde (Premium Simplicity Aşama 1, 08.11.2026).
+    await sayfa.locator("button.yazma-belge-menu").click();
+    await sayfa.locator(".arac-menu-pencere:popover-open button", { hasText: "Yazım paneli" }).click();
     await sayfa.waitForTimeout(400);
     const kutu = await sayfa.locator("#yazim-yan-panel").boundingBox();
     bekle(kutu && kutu.width >= 389 && kutu.y + kutu.height >= 843, `alttan açılan sayfa değil: ${JSON.stringify(kutu)}`);

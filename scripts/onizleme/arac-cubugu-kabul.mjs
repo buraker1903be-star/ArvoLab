@@ -187,7 +187,11 @@ for (const genislik of [1440, 1366, 1280, 1024, 768, 390, 360]) {
 for (const genislik of [1024, 390]) {
   const ctx = await baglam(genislik, "light", false);
   const { sayfa } = await editoruAc(ctx);
-  await sayfa.locator("button.yazma-panel-dugmesi").first().tap();
+  // Telefonda panel düğmesi "Belge" menüsünde (Premium Simplicity Aşama 1, 08.11.2026).
+  if (genislik <= 760) {
+    await sayfa.locator("button.yazma-belge-menu").tap();
+    await sayfa.locator(".arac-menu-pencere:popover-open button", { hasText: "Yazım paneli" }).tap();
+  } else await sayfa.locator("button.yazma-panel-dugmesi").first().tap();
   await sayfa.waitForTimeout(400);
   const o = await olc(sayfa);
   bekle(!o.kayiyor && o.kucuk.length === 0, `${genislik} panel-açık (sayfa): çubuk bozuldu`);

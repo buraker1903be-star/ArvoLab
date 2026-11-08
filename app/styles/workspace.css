@@ -1651,6 +1651,33 @@
   .yazma-eylemleri .arac-menu-ok { display: none; }
   .yazma-eylemleri .yazma-ai { flex: 1 1 auto; }
 }
+
+/*
+  TELEFONDA TEK SATIR BAŞLIK (Premium Simplicity Aşama 1, 08.11.2026).
+  Eskiden: geri + iki satır başlık, altında kayıt durumu ve dört simge
+  düğme ayrı satırda (≈ 90 px + boşluklar); yazının ilk satırı 390 px
+  ekranda 351. pikseldeydi. Şimdi tek satır: geri, tek satır başlık
+  (tam adı title'da ve belgenin kendi başlığında), kayıt noktası,
+  Arvo AI ve Belge menüsü (paylaş, dışa aktar, yazım paneli).
+  Yukarıdaki 760 px kuralını EZER; masaüstüne dokunmaz.
+*/
+.yazma-belge-menu { display: none; }
+@media (max-width: 760px) {
+  .yazma-basligi { flex-wrap: nowrap; gap: 6px; }
+  .yazma-baslik { flex: 1 1 auto; gap: 6px; }
+  /* Seçici bilerek ağır: dosyanın sonundaki "iki satıra kadar kırılır" kuralını ezer. */
+  .yazma-basligi .yazma-baslik h1 { display: block; overflow: hidden; font-size: var(--fs-md); text-overflow: ellipsis; white-space: nowrap; }
+  .yazma-eylemleri { width: auto; flex: none; gap: 6px; }
+  .yazma-eylemleri .yazma-paylas,
+  .yazma-eylemleri .yazma-disa-aktar,
+  .yazma-eylemleri .yazma-panel-dugmesi { display: none; }
+  .yazma-eylemleri .yazma-belge-menu { display: inline-flex; width: 44px; padding: 0; }
+  .yazma-eylemleri .yazma-ai { flex: none; width: 44px; padding: 0; }
+  .yazma-eylemleri .yazma-ai > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* Kayıt durumu: yalnız nokta, 40×40 dokunma alanı; metin ekran okuyucuda. */
+  .yazma-durum .save-status { justify-content: center; width: 40px; min-width: 40px; padding: 0; border-color: transparent; background: transparent; }
+  .yazma-durum .save-status-metin { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 @media (prefers-reduced-motion: reduce) {
   .yan-panel[data-bicim="sayfa"] { animation: none; }
   .yan-anahtar-dugme, .yan-anahtar-dugme > span { transition: none; }
