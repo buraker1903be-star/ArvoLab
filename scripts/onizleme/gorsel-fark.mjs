@@ -53,9 +53,12 @@ const TEMALAR = ["light", "dark"];
   Görüntüyü rastgele yapan her şey sabitlenir: animasyon, geçiş, imleç,
   saat, Next'in geliştirme göstergesi (sol alttaki "N") ve göreli
   zamanlar ("11 dk önce" iki çekim arasında "12 dk önce" oluyordu;
-  ilk gürültü ölçümünde 144 görüntünün 25'i bu yüzden farklı çıktı).
+  ilk gürültü ölçümünde 144 görüntünün 25'i bu yüzden farklı çıktı) ve
+  editörün content-visibility'si (ekran dışındaki paragraflar tam sayfa
+  çekimde bazen boş çiziliyordu: 08.11.2026, editör 1440 açıkta bir kez
+  508 bin piksel sahte fark).
 */
-const SAKIN = `*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}.os-saat{visibility:hidden!important}nextjs-portal{display:none!important}`;
+const SAKIN = `*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}.os-saat{visibility:hidden!important}nextjs-portal{display:none!important}*{content-visibility:visible!important}`;
 const GORELI_ZAMAN = String.raw`(az önce|şimdi|\d+\s*(sn|dk|dakika|sa|saat|gün|hafta|ay|yıl)\s*(önce|sonra)|just now|\d+\s*\w+\s+ago)`;
 // Örnek veri zamanları "şimdi"den türetiyor: "Kaydedildi · 15:45" iki çekim arasında 15:52 oluyordu (08.11.2026, 44 görüntü).
 const SAAT = String.raw`\b([01]?\d|2[0-3]):[0-5]\d\b`;
