@@ -29,6 +29,7 @@ import NavProgress from "./_components/nav-progress";
 import OsSaat from "./_components/os-saat";
 import KullaniciMenusu from "./_components/kullanici-menusu";
 import { OsGezinme } from "./_components/os-gezinme";
+import GezinmeKorumasi from "./_components/gezinme-korumasi";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
 import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
@@ -210,6 +211,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       <AcilirKapatici />
       {/* Başka cihazdan girişle kapatılan oturumu bekleyen sekmede de fark eder (lib/tek-oturum.ts). */}
       <OturumGozcusu />
+      {/* Kaydedilmemiş metin varken geçişi kayıt bitene kadar bekletir (lib/gezinme-korumasi.ts). */}
+      <GezinmeKorumasi />
       <Toaster />
     </div>
     </EkranIpucuSaglayici>

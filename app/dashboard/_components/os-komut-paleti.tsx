@@ -2,7 +2,6 @@
 
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { BookPlus, ChartNoAxesCombined, Monitor, Moon, Plus, Search, Sparkles, Sun, type LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
 import { aramaAnahtari, calismaIcindeMi, osSayfalari, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
@@ -14,6 +13,7 @@ import { calismaAdresi } from "@/lib/calisma-karti";
 import { projectTypeLabel } from "@/lib/project-labels";
 import { komutCalismalari } from "@/app/actions/projects";
 import { OsSimge } from "./os-simge";
+import { useGuvenliGezinme } from "./gezinme-korumasi";
 import { temaTercihiniUygula } from "@/app/_components/tema";
 import type { TemaTercihi } from "@/lib/tema";
 
@@ -51,7 +51,8 @@ type Calisma = { id: string; title: string; project_type: string };
 
 export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[]; cikis: () => Promise<void> }) {
   const t = useCeviri();
-  const router = useRouter();
+  // Kaydedilmemiş metin varken palet de kayıt bitmeden sayfa değiştirmez (Signature OS 2.0).
+  const guvenliGit = useGuvenliGezinme();
   const pencere = useRef<HTMLDialogElement>(null);
   const kutu = useRef<HTMLInputElement>(null);
   const cikisFormu = useRef<HTMLFormElement>(null);
@@ -156,7 +157,7 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
         window.dispatchEvent(new Event(ASISTAN_AC_OLAYI));
         return;
       }
-      router.push(oge.href);
+      void guvenliGit(oge.href);
       return;
     }
     temaTercihiniUygula(oge.tercih);
@@ -259,7 +260,7 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
         <span>{t({ tr: "Esc kapat", en: "Esc close" })}</span>
       </footer>
       {/* Çıkış bir sunucu eylemi: paletten de formla tetikleniyor. */}
-      <form ref={cikisFormu} action={cikis} hidden />
+      <form ref={cikisFormu} action={cikis} hidden data-gezinme-korumali />
     </dialog>
   );
 }

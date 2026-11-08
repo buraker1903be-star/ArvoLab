@@ -521,3 +521,27 @@ html.drawer-open { overflow: hidden; }
 .toast.is-uyari { border-color: color-mix(in srgb, var(--warning) 32%, var(--line)); }
 .toast.is-uyari .toast-icon { background: var(--warning-soft); color: color-mix(in srgb, var(--warning) 85%, var(--ink)); }
 .toast.is-uyari .toast-body strong { color: var(--ink); }
+
+/*
+  GEZİNME KORUMASI (Signature OS 2.0 Aşama 2): kaydedilmemiş metin varken
+  geçiş, kayıt bitene kadar bekler. Bekleme görünür olmalı: tıklamanın
+  "çalışmadığını" sanan kullanıcı ikinci kez tıklar. Alt çubuğun ve
+  güvenli alanın üstünde, ortada küçük bir etiket.
+*/
+.gecis-durumu {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--dock-alani) + var(--s-4));
+  z-index: var(--z-toast);
+  max-width: min(92vw, 460px);
+  margin: 0;
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--yuzey-ust);
+  box-shadow: var(--yuzey-acilir-golge);
+  color: var(--ink);
+  font-size: var(--tip-meta);
+  transform: translateX(-50%);
+}
+.gecis-hatasi-eylemler { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-4); }

@@ -142,6 +142,7 @@ import OnSayfalarKarti from "./on-sayfalar-karti";
 
 import { kilavuzOnSayfaAdlari, kilavuzOnSayfalari, onSayfaAdiKimligi, type OnSayfaKimligi } from "@/lib/on-sayfalar";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
+import { koruyucuKaydet } from "@/lib/gezinme-korumasi";
 import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
 import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni } from "@/lib/kilavuz-bicim";
@@ -908,6 +909,22 @@ export default function ManuscriptEditor({
     saveNowRef.current = saveNow;
     markDirtyRef.current = markDirty;
   }, [saveNow, markDirty]);
+
+  /*
+    GEZİNME KORUMASI (Signature OS 2.0 Aşama 2). Kabuk, uygulama içi bir
+    geçişten önce buraya sorar: kaydedilmemiş ya da kaydı süren değişiklik
+    varsa önce kayıt yapılır, SONUCU beklenir; kayıt düşerse geçiş olmaz
+    (lib/gezinme-korumasi.ts). Eskiden kapanırken kayıt yalnızca başlatılıyor,
+    sonucu beklenmiyordu.
+  */
+  useEffect(
+    () =>
+      koruyucuKaydet({
+        kirliMi: () => revisionRef.current !== savedRevisionRef.current || inFlightRef.current !== null,
+        kaydet: () => saveNowRef.current(),
+      }),
+    [],
+  );
 
   const editor = useEditor({
     immediatelyRender: false,

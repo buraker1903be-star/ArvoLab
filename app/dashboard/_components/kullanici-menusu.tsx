@@ -113,7 +113,8 @@ export default async function KullaniciMenusu({
             {t({ tr: "Destek", en: "Support" })}
           </Link>
         </nav>
-        <form action={cikis} className="os-kullanici-cikis">
+        {/* Çıkış da bir geçiş: kaydedilmemiş metin varken kayıt bitmeden gönderilmez (gezinme-korumasi.tsx). */}
+        <form action={cikis} className="os-kullanici-cikis" data-gezinme-korumali>
           <button type="submit">
             <LogOut size={16} aria-hidden="true" />
             {t({ tr: "Çıkış yap", en: "Sign out" })}
