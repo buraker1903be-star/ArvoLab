@@ -353,7 +353,6 @@
   --fs-md: 15px;
   --fs-lg: 17px;
   --fs-xl: 20px;
-  --fs-title: clamp(26px, 2.3vw, 32px);
 
   /* ---- TİPOGRAFİ ROLLERİ (Signature OS 2.0, 08.11.2026) ----
      Yukarıdaki boyut adımları (micro…xl) bir CETVEL; aşağıdakiler ROL.
@@ -387,7 +386,6 @@
   --fs-sayfa-telefon: 22px;
   --fs-calisma: clamp(18px, 1.4vw, 22px);
   --fs-calisma-sik: clamp(16px, 1.15vw, 18px);
-  --fs-tanitim: clamp(30px, 3.2vw, 44px);
   /* Ağırlık ölçeği: yeni kod buradan alır (eski 650/750 değerleri 4.5'te). */
   --fw-normal: 400;
   --fw-orta: 500;
@@ -710,6 +708,20 @@ html[data-theme="dark"] {
 }
 
 /* ---------------- 3. Tipografi ---------------- */
+/*
+  V4.3-A2-2 (birleşir, YERLEŞİM-NÖTR KISIM): v4 bileşiklerinde boyutu ve
+  ağırlığı uygulamanın cetveliyle BİREBİR aynı olanlar (11/12/14/15 px;
+  400/600) artık o cetvelden okunur: aynı sayı iki yerde yazılı değil.
+  Kullanılmayan iki boyut (--fs-title, --fs-tanitim) silindi.
+  Eski boyut kullanımlarını (font-size: var(--fs-sm) …) bu bileşiklere
+  KATLAMAK satır yüksekliğini ve kimi yerde boyutu değiştirir (ör.
+  --lh-metin 1.55 ↔ bileşiklerin sabit satırı; --fs-lg 17 ve --fs-xl 20'nin
+  v4'te karşılığı yok; başlık clamp'leri v4'te sabit). Bu kural gereği
+  (göçte yalnız renk ve yüzey değişir) onlar ekran aşamalarına (B–D)
+  bırakıldı. --tip-meta v4'te bileşik (400 13px/19px); uygulamada 7 yerde
+  font-size olarak okunduğu için boyut (13px) olarak kaldı: bileşiğe
+  çevirmek o yerlerin satır yüksekliğini değiştirirdi.
+*/
 :root {
   /* Arayüz Inter; editoryal ses Newsreader (yalnız çalışma ve sayfa başlıkları, alıntı).
      Belge metni BU token'ları okumaz: kılavuzun yazı tipi (--belge-yazi) uygulanır. */
@@ -728,11 +740,11 @@ html[data-theme="dark"] {
   --tip-gosterim: 500 34px/40px var(--yazi-editoryal); /* Ana Sayfa'da aktif çalışma */
   --tip-sayfa: 500 30px/36px var(--yazi-editoryal); /* sayfa başlığı */
   --tip-calisma: 500 24px/30px var(--yazi-editoryal); /* çalışma ve kaynak başlığı */
-  --tip-bolum: 600 15px/22px var(--yazi-arayuz); /* bölüm başlığı */
-  --tip-govde: 400 14px/21px var(--yazi-arayuz);
-  --tip-govde-guclu: 600 14px/21px var(--yazi-arayuz);
-  --tip-yardim: 400 12px/17px var(--yazi-arayuz);
-  --tip-etiket: 600 11px/14px var(--yazi-arayuz); /* yalnız bölüm etiketi; büyük harf, .06em */
+  --tip-bolum: var(--fw-yari) var(--fs-md)/22px var(--yazi-arayuz); /* bölüm başlığı */
+  --tip-govde: var(--fw-normal) var(--fs-body)/21px var(--yazi-arayuz);
+  --tip-govde-guclu: var(--fw-yari) var(--fs-body)/21px var(--yazi-arayuz);
+  --tip-yardim: var(--fw-normal) var(--fs-sm)/17px var(--yazi-arayuz);
+  --tip-etiket: var(--fw-yari) var(--fs-micro)/14px var(--yazi-arayuz); /* yalnız bölüm etiketi; büyük harf, .06em */
   --tip-sayi: 600 26px/30px var(--yazi-arayuz); /* eşit genişlikli rakam */
   --tip-sayi-kucuk: 600 18px/24px var(--yazi-arayuz);
   --tip-alinti: 400 italic 16px/26px var(--yazi-editoryal); /* kaynaktan birebir alıntı */

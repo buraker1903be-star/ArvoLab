@@ -100,6 +100,16 @@ async function cek(klasor, suzgec, taban, kip = "goruntu") {
             const saat = new RegExp(kaliplar[1], "g");
             const selam = new RegExp(kaliplar[2], "g");
             for (let d = yuruyucu.nextNode(); d; d = yuruyucu.nextNode()) {
+              /*
+                Üst çubuktaki tarih (görünmez ama yer kaplar): gün değişince
+                "8 Kasım Pazar" → "9 Kasım Pazartesi" genişliği değiştirip
+                konum yolunu ve arama kutusunu kaydırıyordu (V4.3-A2-2'de
+                78 sayfada sahte "yerleşim değişti"). Sabit metne indirilir.
+              */
+              if (d.parentElement?.closest(".os-saat") && d.nodeValue.trim()) {
+                d.nodeValue = /\d{1,2}:\d{2}/.test(d.nodeValue) ? "00:00" : "1 Ocak Pazartesi";
+                continue;
+              }
               if (d.nodeValue.search(re) >= 0) d.nodeValue = d.nodeValue.replace(re, "— önce");
               if (d.nodeValue.search(saat) >= 0) d.nodeValue = d.nodeValue.replace(saat, "00:00");
               if (d.nodeValue.search(selam) >= 0) d.nodeValue = d.nodeValue.replace(selam, "İyi günler");
