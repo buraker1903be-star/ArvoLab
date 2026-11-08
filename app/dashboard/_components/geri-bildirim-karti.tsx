@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { MessageSquareHeart } from "lucide-react";
 import ActionForm from "../action-form";
 import { geriBildirimErtele, geriBildirimGonder, geriBildirimIstemiyorum } from "@/app/actions/geri-bildirim";
@@ -23,6 +23,8 @@ export default function GeriBildirimKarti({ baglam }: { baglam: string | null })
   const [puan, setPuan] = useState<number | null>(null);
   const [gizli, setGizli] = useState(false);
   const [bekliyor, startTransition] = useTransition();
+  const baslikId = useId();
+  const aciklamaId = useId();
 
   if (gizli) return null;
 
@@ -40,29 +42,21 @@ export default function GeriBildirimKarti({ baglam }: { baglam: string | null })
 
   const baglamMetni = baglam && BAGLAM_METNI_METIN[baglam] ? t(BAGLAM_METNI_METIN[baglam]) : null;
 
+  /*
+    Tek satır (Aşama 2/A2-7): soru + beş küçük puan + "Sonra / Bir daha
+    sorma". Eskiden üst bilgi şeridi, başlık ve iki cümlelik açıklamayla
+    ana sayfanın sonunda 1440'ta ~190, telefonda ~330 piksel tutuyordu;
+    tez kartından daha ağır görünüyordu. Açıklama kaybolmadı: ekran
+    okuyucuya soru ile birlikte okunur, gören kullanıcıya puanların
+    ipucundadır. Bölüm ve yorum alanı yine puan seçilince iner.
+  */
   return (
-    <section className="geri-bildirim-karti" aria-label={t({ tr: "Kullanım geri bildirimi", en: "Usage feedback" })}>
-      <div className="geri-bildirim-bas">
-        <span className="dashboard-kicker">
-          <MessageSquareHeart size={14} aria-hidden="true" />
-          {t({ tr: "Sizden bir dakika", en: "One minute of your time" })}
-        </span>
-        <div className="geri-bildirim-kapat">
-          <button type="button" onClick={() => kapat(geriBildirimErtele, t({ tr: "Sonra soracağız.", en: "We'll ask later." }))} disabled={bekliyor}>
-            {t({ tr: "Sonra", en: "Later" })}
-          </button>
-          <button
-            type="button"
-            onClick={() => kapat(geriBildirimIstemiyorum, t({ tr: "Bir daha sormayacağız.", en: "We won't ask again." }))}
-            disabled={bekliyor}
-          >
-            {t({ tr: "Bir daha sorma", en: "Don't ask again" })}
-          </button>
-        </div>
-      </div>
-
-      <h2>{t({ tr: "ArvoLab işinizi kolaylaştırdı mı?", en: "Has ArvoLab made your work easier?" })}</h2>
-      <p className="muted text-sm">
+    <section className="geri-bildirim-karti geri-bildirim-tek-satir" aria-labelledby={baslikId} aria-describedby={aciklamaId}>
+      <h2 id={baslikId}>
+        <MessageSquareHeart size={16} aria-hidden="true" />
+        {t({ tr: "ArvoLab işinizi kolaylaştırdı mı?", en: "Has ArvoLab made your work easier?" })}
+      </h2>
+      <p id={aciklamaId} className="sr-only">
         {baglamMetni
           ? t({
               tr: `Az önceki kullanımınız (${baglamMetni}) için soruyoruz. `,
@@ -74,6 +68,18 @@ export default function GeriBildirimKarti({ baglam }: { baglam: string | null })
           en: "Your answer goes only to the ArvoLab team and decides what we improve first.",
         })}
       </p>
+      <div className="geri-bildirim-kapat">
+        <button type="button" onClick={() => kapat(geriBildirimErtele, t({ tr: "Sonra soracağız.", en: "We'll ask later." }))} disabled={bekliyor}>
+          {t({ tr: "Sonra", en: "Later" })}
+        </button>
+        <button
+          type="button"
+          onClick={() => kapat(geriBildirimIstemiyorum, t({ tr: "Bir daha sormayacağız.", en: "We won't ask again." }))}
+          disabled={bekliyor}
+        >
+          {t({ tr: "Bir daha sorma", en: "Don't ask again" })}
+        </button>
+      </div>
 
       <ActionForm
         className="geri-bildirim-form"
@@ -95,7 +101,8 @@ export default function GeriBildirimKarti({ baglam }: { baglam: string | null })
               onClick={() => setPuan(deger)}
             >
               <strong>{deger}</strong>
-              <span>{t(PUAN_ETIKETLERI_METIN[deger])}</span>
+              {/* Etiket görsel olarak gizli ama ekran okuyucu "3, Kısmen" gibi okur. */}
+              <span className="sr-only">{t(PUAN_ETIKETLERI_METIN[deger])}</span>
             </button>
           ))}
         </div>

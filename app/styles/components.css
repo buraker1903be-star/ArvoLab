@@ -1824,6 +1824,47 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
   .geri-bildirim-puan:hover { border-color: var(--primary-ink); }
 }
 
+/* Tek satır (Aşama 2/A2-7): soru solda, puanlar ortada, "Sonra / Bir
+   daha sorma" sağda. Dar ekranda alt satıra kayar ama başlık, puan ve
+   kapatma ayrı satırlarda üç blok olmuyor; form (puanlar + detay) satırın
+   kalanını alıyor. */
+.geri-bildirim-tek-satir {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 16px;
+}
+.geri-bildirim-tek-satir h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.geri-bildirim-tek-satir h2 svg { color: var(--primary-ink); flex: none; }
+.geri-bildirim-tek-satir .geri-bildirim-form { grid-column: 2; grid-row: 1; }
+.geri-bildirim-tek-satir .geri-bildirim-kapat { grid-column: 3; grid-row: 1; }
+.geri-bildirim-tek-satir .geri-bildirim-puanlar { gap: 6px; }
+.geri-bildirim-tek-satir .geri-bildirim-puan {
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 4px 10px;
+}
+/* Detay alanı inince satırın tamamını alır; puanlar yerinde kalır. */
+.geri-bildirim-tek-satir .geri-bildirim-detay { grid-column: 1 / -1; }
+.geri-bildirim-tek-satir:has(.geri-bildirim-detay) .geri-bildirim-form { grid-column: 1 / -1; grid-row: 2; }
+@media (pointer: coarse) {
+  .geri-bildirim-tek-satir .geri-bildirim-puan { min-width: 44px; min-height: 44px; }
+  .geri-bildirim-kapat button { min-height: 44px; padding: 0 4px; }
+}
+@media (max-width: 760px) {
+  .geri-bildirim-tek-satir { grid-template-columns: 1fr auto; }
+  .geri-bildirim-tek-satir .geri-bildirim-form,
+  .geri-bildirim-tek-satir:has(.geri-bildirim-detay) .geri-bildirim-form { grid-column: 1 / -1; grid-row: 2; }
+  .geri-bildirim-tek-satir .geri-bildirim-kapat { grid-column: 2; grid-row: 1; gap: 10px; }
+}
+
 /* Puan seçilince iner. prefers-reduced-motion'da hareket yok, alan yine açılır. */
 .geri-bildirim-detay { display: grid; gap: 12px; animation: geri-bildirim-in .18s ease-out; }
 .geri-bildirim-detay label { display: grid; gap: 6px; font-size: var(--fs-sm); }
