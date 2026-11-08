@@ -135,6 +135,24 @@ export function ListeKarti({
   );
 }
 
+/*
+  TEK SATIRLIK ÖZET (Premium Simplicity Aşama 2, 08.11.2026). Ayrıntısı
+  başka bir ekranda tam olan bir listenin ana sayfadaki yeri: başlık,
+  bir cümlelik durum ve oraya giden tek bağlantı. Bütün satır bağlantı
+  (dokunma hedefi satırın tamamı).
+*/
+export function OzetSatiri({ baslik, durum, href, ton }: { baslik: string; durum: string; href: string; ton?: "warning" | "success" }) {
+  return (
+    <Link className="gb-kart gb-ozet-satiri" href={href} data-tone={ton}>
+      <span className="gb-ozet-satiri-govde">
+        <b>{baslik}</b>
+        <small>{durum}</small>
+      </span>
+      <ChevronRight className="gb-ok" size={16} aria-hidden="true" />
+    </Link>
+  );
+}
+
 export function ListeIzgarasi({ children, etiket }: { children: ReactNode; etiket: string }) {
   return (
     <section className="gb-sutunlar" aria-label={etiket}>

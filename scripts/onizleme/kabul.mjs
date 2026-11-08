@@ -365,9 +365,17 @@ const tarayici = await chromium.launch();
     await sayfa.locator("details.ana-detay > summary").click();
     await sayfa.waitForTimeout(200);
     const hepsi = await adlar("main");
+    /*
+      Premium Simplicity Aşama 2 (08.11.2026): "Dikkat isteyenler" kartı tek
+      satırlık "Teslim listesi"ne indi (aynı hedef: write?teslim=1; maddeler
+      editörün Teslim sekmesinde ve Çalışmalarım'da). "Takvim" tez kartında
+      yalnız sıradaki adım oysa görünür; her zaman Çalışmalarım'daki
+      çalışmanın araçlarında (o senaryonun listesinde). Taşınan her hedefin
+      erişilebilirliğini genel-bakis-sadelik-kabul.mjs sınar.
+    */
     const GEREKEN = [
-      "Yazmaya devam et", "Çalışma özeti", "Takvim",
-      "Dikkat isteyenler", "Teslim kontrolünü aç", "Bölümlerim", "Editörde aç", "Yazım ritmi",
+      "Yazmaya devam et", "Çalışma özeti",
+      "Teslim listesi", "Bölümlerim", "Editörde aç", "Yazım ritmi",
       "Literatür", "Kaynakça denetimi", "Kanıt matrisi", "Etik kurul", "Belge kontrolü",
       "Danışman", "Abonelik ve kredi", "Ayrıntı", "Kredi satın al",
       "Son kaynaklar", "Bütün kaynaklar", "Son belge kontrolleri", "DOI ile kaynak ekle", "Yazım asistanını aç", "Veri analizi",

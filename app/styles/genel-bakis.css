@@ -1575,3 +1575,18 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 @media (max-width: 1199px), (pointer: coarse) {
   .tez-simdi .sirada-eylem { min-height: 40px; }
 }
+
+/* Tek satırlık özet (OzetSatiri, Aşama 2): kart görünümünde ama tek satır, bütün satır bağlantı. */
+.gb-ozet-satiri {
+  display: flex; flex-direction: row; align-items: center; gap: var(--s-3);
+  min-height: 56px; padding: 10px 16px; color: var(--ink); text-decoration: none;
+}
+.gb-ozet-satiri-govde { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
+.gb-ozet-satiri-govde b { font-size: var(--fs-base); font-weight: 650; }
+.gb-ozet-satiri-govde small { overflow: hidden; color: var(--muted); font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+.gb-ozet-satiri[data-tone="warning"] .gb-ozet-satiri-govde small { color: color-mix(in srgb, var(--warning) 70%, var(--ink)); }
+.gb-ozet-satiri .gb-ok { flex: none; color: var(--muted); }
+@media (hover: hover) and (pointer: fine) {
+  .gb-ozet-satiri:hover { border-color: var(--kenarlik-hover); }
+}
+.gb-ozet-satiri:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }

@@ -42,7 +42,7 @@ import { kalanMetni, siradakiTas, takvimOzeti } from "@/lib/tez-takvimi";
 import { calismaAdresi } from "@/lib/calisma-karti";
 import TeslimTarihiFormu from "./_components/teslim-tarihi-formu";
 import DanismanaGonder from "./_components/danismana-gonder";
-import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
+import { GENEL_BAKIS_SATIR, ListeIzgarasi, ListeKarti, ListeSatiri, OzetSatiri, RitimKarti, SeriKarti } from "./_components/genel-bakis";
 import { KILAVUZ_ADRESI } from "@/lib/yardim/kullanim-kilavuzu";
 
 /* Son eklenenler kartlarının satır sayısı: kart uzamasın, tek bakışta okunsun. */
@@ -955,18 +955,27 @@ export default async function DashboardPage() {
                 ana sayfasında liste vardı; öğrenci eksikleri "1/5 madde"
                 sayısından tahmin ediyordu.
               */}
-              <ListeKarti
-                baslik={t({ tr: "Dikkat isteyenler", en: "Needs attention" })}
-                alt={t({ tr: "Teslim listesi ve kaynakça uyumu", en: "Submission checklist and reference consistency" })}
-                bos={t({ tr: "Teslim listesinde başka eksik görünmüyor.", en: "Nothing else appears to be missing from the submission checklist." })}
-                sayi={dikkatListesi.length}
+              {/*
+                TESLİM LİSTESİ TEK SATIR (Premium Simplicity Aşama 2, 08.11.2026).
+                Eskiden "Dikkat isteyenler" kartı teslim listesinin eksiklerini
+                tek tek sıralıyordu; aynı liste Çalışmalarım'daki "Başka neler
+                var"da ve editörün Teslim sekmesinde de vardı (üç yerde).
+                Maddeler ve bağlantıları o iki yerde; ana sayfada durum
+                cümlesi ve listeye giden tek bağlantı.
+              */}
+              <OzetSatiri
+                baslik={t({ tr: "Teslim listesi", en: "Submission checklist" })}
+                durum={
+                  dikkatListesi.length
+                    ? t({
+                        tr: `${dikkatListesi.length} madde bakılmayı bekliyor: ${dikkatListesi.slice(0, 2).map((m) => m.baslik).join(", ")}${dikkatListesi.length > 2 ? "…" : ""}`,
+                        en: `${dikkatListesi.length} item${dikkatListesi.length === 1 ? "" : "s"} need${dikkatListesi.length === 1 ? "s" : ""} attention: ${dikkatListesi.slice(0, 2).map((m) => m.baslik).join(", ")}${dikkatListesi.length > 2 ? "…" : ""}`,
+                      })
+                    : t({ tr: "Başka eksik görünmüyor", en: "Nothing else appears to be missing" })
+                }
                 href={`/dashboard/editor/${resume.id}/write?teslim=1`}
-                hrefEtiket={t({ tr: "Teslim kontrolünü aç", en: "Open submission checklist" })}
-              >
-                {dikkatListesi.map((madde) => (
-                  <ListeSatiri key={madde.anahtar} href={madde.href} baslik={madde.baslik} alt={madde.alt} />
-                ))}
-              </ListeKarti>
+                ton={dikkatListesi.length ? "warning" : "success"}
+              />
                 <ListeKarti
                   baslik={t({ tr: "Bölümlerim", en: "My sections" })}
                   alt={[
