@@ -1,0 +1,183 @@
+/*
+  AŞAMA 3.0 MAKET STİLİ — REVİZYON 2 (kurum sahibinin 7 maddesi).
+  maket.css'in üstüne biner; kabuk (kenar çubuğu, üst/alt çubuk) aynı.
+
+  Ana fikir: "kart ızgarası" yerine iki katman.
+  1. ODAK BANDI — sayfanın tek yükseltilmiş yüzeyi: açık çalışma, tek
+     birincil eylem ve uygulamanın "Şimdi" önerdiği sıradaki adım.
+  2. ÇALIŞMA MASASI — ikincil bilgi kartsız, kanvasın üstünde; bölümler
+     ince bir çizgi ve küçük bir başlıkla ayrılır, satırlar sık.
+  Telefonda aynı hiyerarşi kendi düzeninde: ilk ekranda çalışma, "Yazmaya
+  devam et" ve "Şimdi"; geri kalanı gruplanmış listeler.
+*/
+
+/* ---------------- Ortak ---------------- */
+.ust-etiket.vurgu { color: var(--primary-ink); }
+.selam h1 { font-size: 22px; font-weight: 650; letter-spacing: -.015em; }
+.selam p { margin-top: 2px; color: var(--muted); font-size: var(--fs-body); }
+.bag-ok { font-size: var(--fs-base); }
+
+.bolum-bas { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-2); }
+.bolum-bas h3, .grup-bas {
+  font-size: var(--fs-micro); font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-soft);
+}
+.bolum-bas h3 span, .grup-bas span { margin-left: 6px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); font-size: var(--fs-base); }
+
+/* Satırlar: ikincil katmanda sık ve sakin. */
+.satir-bag li a { padding: 10px 0; }
+.satir-bag li:first-child a { padding-top: 10px; }
+.satirlar li { border-top: 1px solid var(--m-cizgi); }
+.satirlar li:first-child { border-top: 0; }
+.satirlar strong { font-size: var(--fs-body); }
+.satirlar p { font-size: var(--fs-base); }
+.sik li a { padding: 8px 0; }
+
+/* "Şimdi": uygulamanın önerdiği sıradaki adım. Renk yalnız burada yumuşak mavi. */
+.simdi {
+  display: flex; align-items: center; gap: var(--s-4);
+  margin-top: var(--s-6); padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--info-soft);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+}
+.simdi-simge { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-md); background: var(--surface); color: var(--primary-ink); flex: none; }
+.simdi-metin { flex: 1; min-width: 0; }
+.simdi-baslik { margin-top: 2px; font-size: var(--fs-md); font-weight: 650; }
+.simdi-aciklama { margin-top: 2px; color: var(--ink-soft); font-size: var(--fs-base); }
+.simdi .dugme { flex: none; }
+
+/* Ölçüler */
+.olculer { margin: 0; }
+.olculer .olcu { padding: 0; border: 0; }
+.olculer dt { font-size: var(--fs-micro); font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--m-ust-etiket); }
+.olculer dd { margin: var(--s-1) 0 0; display: flex; align-items: baseline; gap: 6px; }
+.olculer dd b { font-size: 32px; font-weight: 600; letter-spacing: -.035em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.olculer dd small { font-size: var(--fs-base); color: var(--muted); font-weight: 500; }
+.olculer p { margin-top: var(--s-1); color: var(--muted); font-size: var(--fs-base); }
+.olculer .olcu-cubuk { margin-top: var(--s-2); }
+
+/* ---------------- DASHBOARD masaüstü ---------------- */
+.dash.icerik { gap: var(--s-5); padding-top: var(--s-6); }
+.odak {
+  display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: var(--s-10);
+  padding: var(--s-10);
+  background: var(--surface);
+  border: 1px solid var(--m-cizgi);
+  border-radius: var(--r-xl);
+  box-shadow: var(--m-kart-golge);
+}
+.odak-adi { margin-top: var(--s-3); font-size: 30px; letter-spacing: -.024em; line-height: 1.18; max-width: 30ch; }
+.odak .hero-eylem { margin-top: var(--s-6); }
+.olculer-dikey { display: flex; flex-direction: column; padding-left: var(--s-8); border-left: 1px solid var(--m-cizgi); }
+.olculer-dikey .olcu { padding: var(--s-4) 0; border-top: 1px solid var(--m-cizgi); }
+.olculer-dikey .olcu:first-child { padding-top: 0; border-top: 0; }
+.olculer-dikey .olcu:last-child { padding-bottom: 0; }
+
+/* Hızlı eylemler: tek satır, kompakt (karar: revizyon). */
+.hizli { display: flex; align-items: center; gap: var(--s-1); padding: 0 var(--s-1); }
+.hizli-etiket { margin-right: var(--s-3); font-size: var(--fs-micro); font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.hizli a { display: inline-flex; align-items: center; gap: var(--s-2); height: 34px; padding: 0 var(--s-3); border-radius: var(--r-md); color: var(--ink-soft); font-weight: 500; font-size: var(--fs-base); border: 1px solid transparent; }
+.hizli a .ikon { color: var(--primary-ink); }
+.hizli a:first-of-type { border-color: var(--m-cizgi); background: var(--surface); }
+.hizli a { border-color: var(--m-cizgi); background: var(--surface); }
+.hizli kbd { margin-left: auto; font: 500 var(--fs-micro)/1 var(--font-mono); padding: 5px 7px; border: 1px solid var(--line); border-radius: var(--r-xs); color: var(--muted); }
+
+.ikincil { display: grid; grid-template-columns: 7fr 5fr; gap: var(--s-12); margin-top: var(--s-3); }
+.ikincil .sutun { display: flex; flex-direction: column; gap: var(--s-8); }
+.bolum { padding-top: var(--s-3); border-top: 1px solid var(--line); }
+.metin-dugmeler { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5); padding-top: var(--s-2); }
+.metin-dugmeler a { display: inline-flex; align-items: center; gap: 6px; color: var(--primary-ink); font-weight: 600; font-size: var(--fs-base); }
+.bolum .not { margin-top: var(--s-2); }
+.kredi-sik { display: flex; align-items: baseline; justify-content: space-between; padding-top: var(--s-2); }
+.kredi-sik .kredi-toplam b { font-size: 28px; }
+.bolum .olcu-cubuk { margin-top: var(--s-3); }
+.bolum .kredi-ayrinti { margin: var(--s-3) 0 0; }
+.bolum .kredi-ayrinti dd { font-size: var(--fs-body); }
+.dash .daha-fazla { margin-top: var(--s-4); }
+
+/* ---------------- ÇALIŞMALARIM masaüstü ---------------- */
+.liste-ayrinti { grid-template-columns: 340px minmax(0, 1fr); gap: var(--s-8); }
+.liste-panel { position: sticky; top: calc(var(--topbar-height) + var(--s-6)); padding-top: var(--s-3); border-top: 1px solid var(--line); }
+.liste-panel .calisma-listesi { gap: var(--s-1); margin-top: var(--s-1); }
+.liste-panel .calisma-listesi a { padding: var(--s-3) var(--s-4) var(--s-4); border: 1px solid transparent; border-radius: var(--r-lg); }
+.liste-panel .calisma-listesi li.secili a { background: var(--surface); border-color: var(--m-cizgi); box-shadow: var(--m-kart-golge); }
+.liste-panel .calisma-listesi li.secili a::before { top: 16px; bottom: 16px; }
+.cl-ust strong { font-size: var(--fs-body); line-height: 1.38; }
+.cl-meta { font-size: var(--fs-sm); }
+.cl-alt { margin-top: var(--s-2); }
+.cl-alt .durum { height: 22px; font-size: var(--fs-micro); }
+.cl-teslim { font-size: var(--fs-sm); }
+
+.ayrinti {
+  padding: var(--s-8) var(--s-8) var(--s-6);
+  background: var(--surface); border: 1px solid var(--m-cizgi); border-radius: var(--r-xl); box-shadow: var(--m-kart-golge);
+}
+.ay-bas { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s-6); align-items: start; }
+.ay-bas .calisma-adi { font-size: 24px; margin-top: var(--s-2); }
+.ay-bas .hero-eylem { position: static; }
+.ayrinti .araclar { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: var(--s-5); padding: var(--s-2) 0; border-top: 1px solid var(--m-cizgi); border-bottom: 1px solid var(--m-cizgi); }
+.ayrinti .arac { flex: none; height: 34px; padding: 0 var(--s-3); border: 0; border-radius: var(--r-md); }
+.ayrinti .arac em { margin-left: 4px; }
+.olculer-serit { display: grid; grid-template-columns: repeat(3, 1fr); padding: var(--s-5) 0; border-bottom: 1px solid var(--m-cizgi); }
+.olculer-serit .olcu { padding: 0 var(--s-5); border-left: 1px solid var(--m-cizgi); }
+.olculer-serit .olcu:first-child { padding-left: 0; border-left: 0; }
+.olculer-serit dd b { font-size: 28px; }
+.ayrinti .simdi { margin-top: var(--s-5); }
+.grup { margin-top: var(--s-6); }
+.grup-bas { margin-bottom: var(--s-1); }
+
+/* ---------------- TELEFON ---------------- */
+.telefon .selam h1 { font-size: 20px; }
+.telefon .selam p { display: none; }
+.telefon .dash.icerik { gap: var(--s-4); padding-top: var(--s-4); }
+.telefon .odak { grid-template-columns: 1fr; gap: 0; padding: var(--s-5); border-radius: var(--r-lg); }
+.telefon .odak-adi { font-size: 20px; line-height: 1.24; margin-top: var(--s-2); }
+.telefon .hero-durum { margin-top: var(--s-2); }
+.telefon .odak .hero-eylem { margin-top: var(--s-4); flex-direction: row; }
+.telefon .odak .hero-eylem .dugme-birincil { flex: 1; width: auto; }
+.telefon .odak .hero-eylem .dugme-ikincil { flex: none; width: auto; padding: 0 var(--s-4); }
+.telefon .simdi { flex-wrap: wrap; align-items: flex-start; gap: var(--s-3); margin-top: var(--s-4); padding: var(--s-4); }
+.telefon .simdi-metin { flex: 1 1 calc(100% - 52px); }
+.telefon .simdi-aciklama { display: none; }
+.telefon .simdi .dugme { width: 100%; height: 44px; }
+.telefon .olculer-dikey { padding: 0; border: 0; margin-top: var(--s-4); }
+.telefon .olculer-dikey .olcu, .telefon .olculer-satir .olcu { padding: var(--s-3) 0; border-top: 1px solid var(--m-cizgi); }
+.telefon .olculer-dikey .olcu:last-child { padding-bottom: 0; }
+
+/* Hızlı eylemler telefonda: üç kısa simge düğmesi, tek satır (~64 px). */
+.telefon .hizli { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); padding: 0; }
+.telefon .hizli-etiket { display: none; }
+.telefon .hizli a { flex-direction: column; justify-content: center; gap: 4px; height: 64px; padding: 0 var(--s-1); text-align: center; font-size: var(--fs-sm); line-height: 1.25; border-radius: var(--r-lg); }
+
+.telefon .ikincil { display: flex; flex-direction: column; gap: var(--s-6); margin-top: var(--s-2); }
+.telefon .bolum { padding-top: var(--s-3); }
+.telefon .satir-bag li a { min-height: 48px; }
+.telefon .metin-dugmeler { flex-direction: column; gap: 0; }
+.telefon .metin-dugmeler a { height: 44px; }
+.telefon .kredi-sik .bag-ok { height: 44px; }
+.telefon .dash .daha-fazla { margin-top: 0; }
+
+/* Çalışmalarım telefon: liste sade kalır (onaylı), ayrıntı gruplanmış listeler. */
+.telefon .liste-panel { position: static; border-top: 0; padding-top: 0; }
+.telefon .liste-panel .calisma-listesi { background: var(--surface); border: 1px solid var(--m-cizgi); border-radius: var(--r-lg); overflow: hidden; gap: 0; }
+.telefon .liste-panel .calisma-listesi a { border: 0; border-top: 1px solid var(--m-cizgi); border-radius: 0; padding: var(--s-4); }
+.telefon .liste-panel .calisma-listesi li:first-child a { border-top: 0; }
+
+.ayrinti-tel { display: flex; flex-direction: column; }
+.ayrinti-tel .ay-bas { display: block; }
+.ayrinti-tel .calisma-adi { font-size: 21px; line-height: 1.24; }
+.ayrinti-tel .hero-eylem { display: flex; margin-top: var(--s-4); }
+.ayrinti-tel .hero-eylem .dugme-birincil { flex: 1; }
+.ayrinti-tel .grup { margin-top: var(--s-6); }
+.ayrinti-tel .grup-bas { padding: 0 var(--s-1); margin-bottom: var(--s-2); }
+.ayrinti-tel .grup > ul, .ayrinti-tel .grup > dl {
+  background: var(--surface); border: 1px solid var(--m-cizgi); border-radius: var(--r-lg); padding: 0 var(--s-4);
+}
+.ayrinti-tel .grup .olculer-satir .olcu:first-child { border-top: 0; }
+.ayrinti-tel .grup .satir-bag li a { padding: var(--s-3) 0; }
+.ayrinti-tel .simdi { margin-top: var(--s-5); }
+.ayrinti-tel .satir-simge { width: 30px; height: 30px; }
+
+.kredi-sik .bag-ok { gap: 6px; }
+.telefon .ayrinti-tel .hero-eylem { flex-direction: row; width: 100%; }
+.telefon .ayrinti-tel .hero-eylem .dugme-birincil { flex: 1; width: auto; height: 44px; }

@@ -42,3 +42,22 @@ Var olmayan bir özellik çizilmedi. Sağ sütun bugün hangi bileşenden geliyo
 3. Çalışmalarım başlığının altına kısa açıklama: "Bir çalışma seçin; özeti,
    teslim durumu ve araçları sağda."
 4. Telefonda üç ölçü yan yana değil, satır listesi.
+
+## Revizyon 2 (kurum sahibinin 7 maddesi)
+
+`maket-v2.css` + `uret.mjs`'teki sayfa parçaları. Kabuk aynı.
+
+- **Dashboard iki katman:** tek yükseltilmiş yüzey "odak bandı" (açık
+  çalışma, tek birincil eylem, uygulamanın kendi "Şimdi" önerisi, sağda üç
+  ölçü); ikincil bilgi kartsız "çalışma masası"nda, ince çizgi ve küçük
+  başlıkla ayrılmış sık satırlar.
+- **Hızlı eylemler:** masaüstünde tek satır (34 px), telefonda üç kısa
+  simge düğmesi (64 px). Aynı üç eylem; "Yazım asistanını aç" etiketi
+  "Yazım asistanı" olarak kısaldı.
+- **Telefon Dashboard:** ilk ekranda çalışma, "Yazmaya devam et" (alt
+  kenarı 360 px) ve "Şimdi" adımı (509 px). Sayfa boyu 3270 → 2469 px.
+- **Çalışmalarım masaüstü:** liste kanvasta ve sakin (340 px), seçili
+  çalışma tek kart olarak öne çıkar; ayrıntıda araçlar başlığın altında
+  araç çubuğu, ölçüler sık şerit, "Şimdi" ve teslim listesi.
+- **Telefon ayrıntı:** tek uzun kart yerine başlık + gruplanmış listeler
+  (Durum, Şimdi, Teslim için bakılacaklar, Araçlar).
