@@ -6,6 +6,8 @@
 //      bileşenler anlamsal katmanı (--surface, --ink, --primary…) okur.
 //   3) Yedeksiz var(--x) kullanımı tanımlı bir değişkene işaret etmelidir.
 //   4) En küçük yazı boyutu 11px (font-size ve font kısayolu).
+//   6) Medya sorgusu genişliği yalnızca sistemin kırılımları (760/761, 1199/1200;
+//      lib/os/kirilimlar.ts); başkaları KIRILIM_BORCU listesindekiler.
 //   5) Köşe yarıçapı token'dan (--r-*, --kart-r, --menu-r…); ham px/rem yalnızca
 //      HAM_YARICAP_BORCU listesindekiler (borç, muafiyet değil).
 import fs from "node:fs";
@@ -117,6 +119,42 @@ for (const { file, text } of files) {
   }
   for (const [deger, izin] of Object.entries(HAM_YARICAP_BORCU[goreli] ?? {})) {
     if ((sayac[deger] ?? 0) < izin) problems.push(`${goreli}  ham yarıçap borcu "${deger}" azaldı (${sayac[deger] ?? 0}/${izin}) — HAM_YARICAP_BORCU listesinden düşün`);
+  }
+}
+
+/*
+  KIRILIM BORCU (Signature OS 2.0 Aşama 1, 08.11.2026). Sistemin üç ekran
+  sınıfı var (telefon ≤760, tablet 761–1199, masaüstü ≥1200;
+  lib/os/kirilimlar.ts), ama CSS'te 20'yi aşkın farklı genişlik vardı.
+  Her birini sisteme çekmek o aralıktaki ekranlarda davranışı değiştirir
+  (ör. max-width:1200px Dashboard ızgarasını TAM 1200'de, masaüstü
+  kabuğunun içinde 2 sütuna indiriyor); bu yüzden hiçbiri bu aşamada
+  taşınmadı, her biri ayrı onayla görsel doğrulamadan geçecek. Yeni
+  kırılım eklenemez; biri sisteme taşınınca denetim "listeden çıkar" der.
+*/
+const SISTEM_KIRILIMLARI = new Set(["max-width:760px", "min-width:761px", "max-width:1199px", "min-width:1200px"]);
+const KIRILIM_BORCU = {
+  "app/styles/auth.css": { "max-width:1100px": 1, "max-width:420px": 1, "max-width:520px": 1, "max-width:640px": 1, "max-width:860px": 1 },
+  "app/styles/components.css": { "max-width:1100px": 1, "max-width:380px": 1, "max-width:640px": 7, "max-width:900px": 2 },
+  "app/styles/genel-bakis.css": { "max-width:1100px": 2, "max-width:1200px": 1, "max-width:420px": 1, "max-width:520px": 1, "max-width:560px": 6, "max-width:640px": 2, "max-width:700px": 2, "max-width:900px": 8, "min-width:1100px": 1, "min-width:561px": 1, "min-width:901px": 6 },
+  "app/styles/overlays.css": { "max-width:560px": 1, "max-width:900px": 1 },
+  "app/styles/sayfa-standardi.css": { "max-width:359px": 1, "max-width:520px": 2, "max-width:600px": 1, "max-width:640px": 1, "max-width:900px": 1, "min-width:1100px": 1, "min-width:900px": 1, "min-width:901px": 2 },
+  "app/styles/shell.css": { "max-width:900px": 2 },
+  "app/styles/workspace.css": { "max-width:1640px": 1, "max-width:400px": 2, "max-width:420px": 1, "max-width:640px": 5, "max-width:900px": 1, "min-width:1400px": 1, "min-width:1700px": 1 }
+};
+for (const { file, text } of files) {
+  const goreli = path.relative(root, file);
+  const sayac = {};
+  for (const sorgu of text.matchAll(/@media[^{]*/g)) {
+    for (const k of sorgu[0].matchAll(/((?:max|min)-width)\s*:\s*(\d+)px/g)) {
+      const deger = `${k[1]}:${k[2]}px`;
+      if (SISTEM_KIRILIMLARI.has(deger)) continue;
+      sayac[deger] = (sayac[deger] ?? 0) + 1;
+      if (sayac[deger] > (KIRILIM_BORCU[goreli]?.[deger] ?? 0)) report(file, text, sorgu.index, `sistem dışı kırılım "${deger}" — 760/761 (telefon), 1199/1200 (masaüstü) kullanın (lib/os/kirilimlar.ts)`);
+    }
+  }
+  for (const [deger, izin] of Object.entries(KIRILIM_BORCU[goreli] ?? {})) {
+    if ((sayac[deger] ?? 0) < izin) problems.push(`${goreli}  kırılım borcu "${deger}" azaldı (${sayac[deger] ?? 0}/${izin}) — KIRILIM_BORCU listesinden düşün`);
   }
 }
 
