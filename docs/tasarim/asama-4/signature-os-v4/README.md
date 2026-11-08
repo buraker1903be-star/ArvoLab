@@ -7,7 +7,8 @@ token dosyası (`app/styles/tokens.css`), veritabanı ve v3 paketi değişmez.
 |---|---|---|
 | V4.0 Audit | kabul edildi | `00-audit.md` |
 | V4.1 Görsel yön ve tasarım sistemi | kabul edildi | `01-tasarim-kimligi.md`, `02-tasarim-sistemi.md`, `03-token-goc-haritasi.md`, `04-uygulama-riskleri.md`, `tokens-v4.css`, `ornek/` |
-| V4.2 Yüksek kaliteli ekranlar | **görsel onay bekliyor** | `05-ekranlar-v4-2.md`, `ekranlar/`, `ekran-goruntuleri/` (22 + 6), `karsilastirma/` (12) |
+| V4.2 Yüksek kaliteli ekranlar | yön kabul edildi, nihai onay verilmedi (HTML'i: `b5db4ec`) | `05-ekranlar-v4-2.md`, `ekranlar/`, `ekran-goruntuleri/` (22 + 6), `karsilastirma/` (12) |
+| V4.2R Hedefli görsel revizyon | **görsel onay bekliyor** | `07-v42r-revizyon.md`, `06-terim-sozlugu.md`, `ekran-goruntuleri-v42r/` (20), `karsilastirma-v42r/` (16) |
 | V4.3 Entegrasyon | başlamadı (açık onay gerekir) | — |
 
 ## Kararlar (kurum sahibi, V4.0 sonrası)
@@ -31,4 +32,6 @@ node docs/tasarim/asama-4/signature-os-v4/ekranlar/uret.mjs           # V4.2 ekr
 node docs/tasarim/asama-4/signature-os-v4/ekranlar/cek.mjs <klasör>   # 22 ekran + 6 konsept
 node docs/tasarim/asama-4/signature-os-v4/ekranlar/olc.mjs            # ölçüm (JSON)
 node docs/tasarim/asama-4/signature-os-v4/ekranlar/karsilastir.mjs <v3-klasör> <çıktı>  # v3 ↔ v4
+node docs/tasarim/asama-4/signature-os-v4/ekranlar/revizyon-olc.mjs <eski-ekranlar>     # V4.2 ↔ V4.2R ölçüm
+node docs/tasarim/asama-4/signature-os-v4/ekranlar/karsilastir-r.mjs                    # V4.2 ↔ V4.2R yan yana
 ```

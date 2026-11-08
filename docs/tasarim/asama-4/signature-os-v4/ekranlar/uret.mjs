@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
-  SIGNATURE OS v4 — V4.2 YÜKSEK KALİTELİ EKRANLAR (tasarım; uygulama kodu değil).
+  SIGNATURE OS v4 — V4.2R (V4.2 üzerine hedefli görsel revizyon) (tasarım; uygulama kodu değil).
   İçerik sentetik önizleme verisi (scripts/onizleme/veri.ts ve tez fikstürü);
   simgeler lucide; logo public/. Var olmayan işlev "Önerilen yeni işlev",
   mevcut verinin yeni sunumu "Sunum önerisi" etiketi taşır.
@@ -77,8 +77,11 @@ function telUst({ geri, baslik, menu } = {}) {
   const sag = menu ? `<button class="uc-simge" aria-label="${menu}">${ikon("ellipsis", 20)}</button>` : `<button class="uc-simge" aria-label="Ara">${ikon("search", 20)}</button><button class="uc-simge" aria-label="Bildirimler">${ikon("bell", 20)}</button>`;
   return `<header class="tu">${sol}${sag}<span class="avatar">DY</span></header>`;
 }
-const SERIT = ["Özet", "Yazım", "Kanıt", "Kaynaklar", "Analiz", "Etik kurul", "Belge Kontrol"];
-const serit = (etkin) => `<nav class="serit" aria-label="Çalışmanın bölümleri">${SERIT.map((a) => `<a href="#" class="${a === etkin ? "etkin" : ""}"${a === etkin ? ' aria-current="page"' : ""}>${a}</a>`).join("")}</nav>`;
+/* V4.2R: şerit kayıyordu ve 360-390 px'te son sekme kesik görünüyordu
+   ("Etik"). Artık beş bölüm + "Diğer" sığar, kaydırma yok; sıra masaüstü
+   sekmeleriyle aynı (Özet / Yazım / Kaynaklar / Kanıt / Analiz). */
+const SERIT = ["Özet", "Yazım", "Kaynaklar", "Kanıt", "Analiz"];
+const serit = (etkin) => `<nav class="serit serit-r" aria-label="Çalışmanın bölümleri">${SERIT.map((a) => `<a href="#" class="${a === etkin ? "etkin" : ""}"${a === etkin ? ' aria-current="page"' : ""}>${a}</a>`).join("")}<button class="serit-diger" aria-label="Diğer bölümler: Etik kurul, Belge Kontrol, Takvim, Kaynakça">${ikon("ellipsis", 18)}</button></nav>`;
 const altCubuk = (etkin) => `<nav class="ac" aria-label="Uygulama">${[["home", "Ana Sayfa", "layout-dashboard"], ["calisma", "Çalışmalar", "pen-line"], ["lit", "Kaynaklar", "book-open-check"], ["analiz", "Analiz", "chart-no-axes-combined"], ["daha", "Daha fazla", "ellipsis"]].map(([k, a, ik]) => `<a href="#" class="${etkin === k ? "etkin" : ""}"${etkin === k ? ' aria-current="page"' : ""}>${ikon(ik, 22)}<span>${a}</span></a>`).join("")}</nav>`;
 const telefon = (etkin, govde, ustHtml, alt = true) => `<div class="tel">${ustHtml ?? telUst()}${govde}${alt ? altCubuk(etkin) : ""}</div>`;
 
@@ -89,13 +92,26 @@ const teslim = (ok) => [
   ["Yapı ve atıflar", "27 uyarı var.", rozet("r-uyari", "Bakılacak")],
   ["İçindekiler", "Word ve PDF çıktısında içindekiler yok.", rozet("r-uyari", "Bakılacak")],
 ].map(([a, y, s]) => `<li><a class="satir" href="#"><span class="satir-g"><strong>${a}</strong><span class="yardim">${y}</span></span>${s}${ok ? ikon("chevron-right", 16).replace('class="ikon"', 'class="ikon ok"') : ""}</a></li>`).join("");
-const KANIT_OZET = `
-  <div class="kanit-satir"><span>Kaynakça</span>${iz([["94/100", "kismen", "uyum · 4 künye · dün"], ["1", "sorun", "dizinde bulunamayan kaynak"], ["1", "sorun", "kaynakçada karşılığı olmayan atıf"], ["1", "kismen", "metinde atfı olmayan kaynak"]])}<a class="bag" href="#">Sonuçlar</a></div>
-  <div class="kanit-satir"><span>Kanıt matrisi</span>${iz([["1", "tamam", "iddia doğrudan destekleniyor"], ["1", "bekliyor", "iddia değerlendirilmedi"]])}<a class="bag" href="#">Matris</a></div>
-  <div class="kanit-satir"><span>Literatür</span><span style="display:grid;gap:8px"><span class="adim"><b>3 kaynak</b> · Okunacak 1 · Okundu 1 · Kullandım 1</span>${iz([["PDF", "tamam", "1 indirildi"], ["Künye", "kismen", "3 kaynakta eksik alan"]])}</span><a class="bag" href="#">Kütüphane</a></div>
-  <div class="kanit-satir"><span>Belge kontrolü</span><span class="meta">1 belge · kılavuz uyumu ve orijinallik ön-kontrolü</span><a class="bag" href="#">Aç</a></div>`;
+/* V4.2'nin anahtar-değer kanıt tablosu (KANIT_OZET) V4.2R'de KANIT_IZGARA'ya geçti. */
 
 /* ---------------- 1-2. ANA SAYFA ---------------- */
+/* V4.2R: alt bölüm tablo/ayar ekranı gibi okunuyordu (satır + sağda rozet,
+   anahtar-değer tablosu, üç sütunlu ayar bloğu). Teslim maddeleri artık
+   eylem fiiliyle biten bir yol; akademik kanıt dört eksenli tek yüzey (A1);
+   ikincil bilgiler tek satırlık sessiz şerit. */
+const TESLIM_ADIM = [
+  ["sorun", "Eksik", "Kapak sayfası", "Word ve PDF çıktısında kapak sayfası yok.", "Kapağı ekle"],
+  ["kismen", "Bakılacak", "Yapı ve atıflar", "27 uyarı var.", "Uyarılara bak"],
+  ["kismen", "Bakılacak", "İçindekiler", "Word ve PDF çıktısında içindekiler yok.", "İçindekileri ekle"],
+];
+const teslimYolu = () => `<ol class="teslim-yolu">${TESLIM_ADIM.map(([t, d, a, y, e]) => `<li><span class="ty-isaret">${I[t]}</span><div class="ty-g"><p class="ty-ad"><strong>${a}</strong><span class="ty-durum ${t}">${d}</span></p><p class="yardim">${y}</p></div><a class="bag" href="#">${e}${ikon("chevron-right", 14)}</a></li>`).join("")}</ol>`;
+const parcali = (dolu, toplam) => `<span class="parcali" role="img" aria-label="${toplam} maddeden ${dolu} hazır">${Array.from({ length: toplam }, (_, i) => `<i class="${i < dolu ? "dolu" : ""}"></i>`).join("")}</span>`;
+const KANIT_IZGARA = `<div class="kanit-izgara">
+  <a class="eksen" href="#"><span class="eksen-ad">Kaynakça</span><span class="eksen-sayi"><b>94</b>/100 uyum</span><span class="yardim">4 künye · dün denetlendi</span>${iz([["2", "sorun", "atıf ile kaynak eşleşmiyor"], ["1", "kismen", "metinde atfı yok"]])}<span class="eksen-git">Sonuçlar${ikon("chevron-right", 14)}</span></a>
+  <a class="eksen" href="#"><span class="eksen-ad">Kanıt matrisi</span><span class="eksen-sayi"><b>2</b> iddia</span><span class="yardim">kaynakla eşlenen iddialar</span>${iz([["1", "tamam", "doğrudan destekleniyor"], ["1", "bekliyor", "değerlendirilmedi"]])}<span class="eksen-git">Matris${ikon("chevron-right", 14)}</span></a>
+  <a class="eksen" href="#"><span class="eksen-ad">Literatür</span><span class="eksen-sayi"><b>3</b> kaynak</span><span class="yardim">Okunacak 1 · Okundu 1 · Kullandım 1</span>${iz([["1", "tamam", "PDF indirildi"], ["3", "kismen", "künyede eksik alan"]])}<span class="eksen-git">Kütüphane${ikon("chevron-right", 14)}</span></a>
+  <a class="eksen" href="#"><span class="eksen-ad">Belge kontrolü</span><span class="eksen-sayi"><b>1</b> belge</span><span class="yardim">kılavuz uyumu ve orijinallik ön-kontrolü</span><span class="eksen-git">Aç${ikon("chevron-right", 14)}</span></a>
+</div>`;
 function anaSayfaMasa() {
   return masaustu("home", null, yol("Ana Sayfa"), `<main class="icerik">
     <header class="selam"><h1 class="t-sayfa">İyi günler, Deniz</h1><p>Çalışmana kaldığın yerden devam et.</p></header>
@@ -109,26 +125,26 @@ function anaSayfaMasa() {
       </div>
       <dl class="hazirlik" aria-label="Teslime hazırlık">
         <div class="hz"><dt>Teslime kalan</dt><dd><span class="sayi">41</span><small>gün</small></dd><p class="yardim">19 Aralık 2026</p></div>
-        <div class="hz"><dt>Teslim hazırlığı</dt><dd><span class="sayi">1/5</span><small>madde hazır</small></dd><p class="yardim">3 madde bakılmayı bekliyor</p></div>
+        <div class="hz"><dt>Teslim hazırlığı</dt><dd><span class="sayi">1/5</span><small>madde hazır</small></dd>${parcali(1, 5)}<p class="yardim" style="margin-top:6px">3 madde bakılmayı bekliyor</p></div>
         <div class="hz"><dt>Yazılan</dt><dd><span class="sayi">6.354</span><small>kelime</small></dd><div class="cubuk"><span style="--oran:55%"></span></div><p class="yardim" style="margin-top:6px">%55 ilerleme</p></div>
       </dl>
     </section>
     <nav class="hizli" aria-label="Hızlı erişim"><span class="etiket">Hızlı erişim</span>
       <a class="d d-ucuncul d-sik" href="#">${ikon("link-2", 16)}DOI ile kaynak ekle</a><a class="d d-ucuncul d-sik" href="#">${ikon("sparkles", 16)}Yazım asistanı</a><a class="d d-ucuncul d-sik" href="#">${ikon("message-square-quote", 16)}Kaynağa sor</a><kbd>Ctrl K</kbd></nav>
-    <div class="iki">
-      <section>${`<header class="bolum-bas"><h2>Teslim için bakılacaklar<small>1/5 hazır</small></h2><a class="bag" href="#">Teslim listesi${ikon("chevron-right", 14)}</a></header>`}<ul class="satirlar">${teslim(false)}</ul>
-        <header class="bolum-bas" style="margin-top:32px"><h2>Diğer çalışmalarınız</h2><a class="bag" href="#">Tüm çalışmalar${ikon("chevron-right", 14)}</a></header>
-        <ul class="satirlar"><li><a class="satir" href="#"><span class="satir-g"><strong class="ed-ses" style="font-size:16px">Öğrenci öğretmen farkı</strong><span class="yardim">Makale · henüz yazılmadı · 20 gün önce</span></span>${rozet("r-notr", "Yeni")}</a></li></ul></section>
-      <section><header class="bolum-bas"><h2>Akademik kanıt</h2>${sunum}</header><div class="kanit-ozet">${KANIT_OZET}</div></section>
+    <div class="iki-r">
+      <section aria-labelledby="ty-b"><header class="bolum-bas-r"><h2 id="ty-b">Teslime giden yol</h2><span class="yardim">3 madde bakılmayı bekliyor</span><a class="bag" href="#">Teslim listesi${ikon("chevron-right", 14)}</a></header>${teslimYolu()}
+        <div class="diger-calisma"><span class="yardim">Diğer çalışmanız</span><a href="#"><strong class="ed-ses">Öğrenci öğretmen farkı</strong><span class="yardim">Makale · 20 gün önce</span></a><a class="bag" href="#">Tüm çalışmalar${ikon("chevron-right", 14)}</a></div></section>
+      <section aria-labelledby="ak-b"><header class="bolum-bas-r"><h2 id="ak-b">Akademik kanıt</h2><span class="yardim">dört eksen ayrı; tek puan yok</span></header>${KANIT_IZGARA}</section>
     </div>
-    <section class="dip" aria-label="Diğer bilgiler">
-      <div><h3>Danışmanıma gönder</h3><p class="yardim">Son kaydedilmiş hâl; danışmanınız giriş yapmadan okur.</p><a class="bag" href="#">${ikon("link-2", 14)}Okuma bağlantısı</a><a class="bag" href="#">${ikon("file-down", 14)}Dosya olarak gönder</a></div>
-      <div><h3>Abonelik ve kredi</h3><p class="yardim"><b style="color:var(--metin-1)">318</b> kredi kullanılabilir · bu ay 318/500 · satın alınan 0</p><a class="bag" href="#">Ayrıntı</a><a class="bag" href="#">${ikon("sparkles", 14)}Kredi satın al</a></div>
-      <div><h3>Yazım ritmi</h3><p class="yardim">Son 14 günde kaydedilmiş yazım yok. Yazdıkça günlük ilerlemeniz burada birikir.</p></div>
+    <section class="dip-serit" aria-label="Diğer bilgiler">
+      <span>${ikon("send", 15)}<b>Danışmanıma gönder</b><a class="bag" href="#">Okuma bağlantısı</a><a class="bag" href="#">Dosya</a></span>
+      <span>${ikon("credit-card", 15)}<b>318 kredi</b><span class="yardim">bu ay 318/500</span><a class="bag" href="#">Ayrıntı</a><a class="bag" href="#">Kredi al</a></span>
+      <span>${ikon("activity", 15)}<b>Yazım ritmi</b><span class="yardim">son 14 günde kayıt yok</span></span>
     </section>
     <aside class="gb" aria-label="Geri bildirim">${ikon("message-square-heart", 16)}ArvoLab işinizi kolaylaştırdı mı?<span class="puan">${[1, 2, 3, 4, 5].map((n) => `<button>${n}</button>`).join("")}</span><span class="sonra"><a class="d d-ucuncul d-sik">Sonra</a><a class="d d-ucuncul d-sik">Bir daha sorma</a></span></aside>
   </main>`);
 }
+
 function anaSayfaTel() {
   const ac = (b, o) => `<details class="acilir"><summary><span class="satir-g"><strong>${b}</strong><span class="yardim">${o}</span></span>${ikon("chevron-down", 18).replace('class="ikon"', 'class="ikon ok"')}</summary></details>`;
   return telefon("home", `<main class="icerik">
@@ -160,31 +176,38 @@ function anaSayfaTel() {
 }
 
 /* ---------------- 3-5. ÇALIŞMALARIM ---------------- */
+/* V4.2R: liste ve ayrıntı iki ayrı yüzeydi; iki çalışmada liste sütununun
+   altı sayfa zemininde boşta kalıyordu. Artık tek bölünmüş yüzey: liste
+   sütunu ayrıntıyla aynı boyda kendi zemininde durur, "Yeni çalışma" listenin
+   son satırıdır. Boşluk sahte içerikle doldurulmaz. */
 function liste(tel) {
-  const ok = tel ? ikon("chevron-right", 18) : "";
+  const satir = (sec, href, baslik, title, meta, durum, kalan, cubuk, sonraki) => tel
+    ? `<li><a class="cl-tel" href="${href}"><strong${title ? ` title="${title}"` : ""}>${baslik}</strong><p class="yardim">${meta}</p><div class="cl-alt">${durum}<span class="yardim">${kalan}</span></div>${cubuk}${sonraki ? `<p class="cl-sonraki"><span class="yardim">Sıradaki</span>${sonraki}</p>` : ""}<span class="cl-gec">Özet, teslim ve bölümler${ikon("chevron-right", 18)}</span></a></li>`
+    : `<li class="${sec ? "secili" : ""}"><a href="${href}"${sec ? ' aria-current="true"' : ""}><strong${title ? ` title="${title}"` : ""}>${baslik}</strong><p class="yardim">${meta}</p><div class="cl-alt">${durum}<span class="yardim">${kalan}</span></div>${cubuk}</a></li>`;
   return `<ul class="cl">
-    <li class="${tel ? "" : "secili"}"><a href="?sec=b1"${tel ? "" : ' aria-current="true"'}><div class="ok-sag"><strong title="${OZGUN}">${BASLIK}</strong>${ok}</div>
-      <p class="yardim">Tez · 6.354 kelime · bugün</p><div class="cl-alt">${rozet("r-vurgu", "Yazım aşamasında")}<span class="yardim">41 gün kaldı</span></div><div class="cubuk"><span style="--oran:55%"></span></div></a></li>
-    <li><a href="?sec=b2"><div class="ok-sag"><strong>Öğrenci öğretmen farkı</strong>${ok}</div>
-      <p class="yardim">Makale · 0 kelime · 20 gün önce</p><div class="cl-alt">${rozet("r-notr", "Yeni")}<span class="yardim">Teslim tarihi yok</span></div></a></li>
+    ${satir(true, "?sec=b1", BASLIK, OZGUN, "Tez · 6.354 kelime · bugün", rozet("r-vurgu", "Yazım aşamasında"), "41 gün kaldı", `<div class="cubuk"><span style="--oran:55%"></span></div>`, "Tez yazım kılavuzunuzu ekleyin")}
+    ${satir(false, "?sec=b2", "Öğrenci öğretmen farkı", "", "Makale · 0 kelime · 20 gün önce", rozet("r-notr", "Yeni"), "Teslim tarihi yok", "", "")}
   </ul>`;
 }
+const AYR_SEKME = `<nav class="sekmeler" aria-label="Çalışmanın bölümleri"><a class="sekme etkin" href="#" aria-current="page">Özet</a><a class="sekme" href="#">Yazım</a><a class="sekme" href="#">Kaynaklar<em>3</em></a><a class="sekme" href="#">Kanıt<em>2</em></a><a class="sekme" href="#">Analiz</a><button class="sekme sag" aria-haspopup="menu">${ikon("ellipsis", 15)}Diğer araçlar${ikon("chevron-down", 13)}</button></nav>`;
 function calismalarimMasa() {
   return masaustu("calisma", "*", yol("Çalışmalarım", BASLIK), `<main class="icerik">
-    <header class="sayfa-bas"><div><h1 class="t-sayfa">Çalışmalarım</h1><p>Bir çalışma seçin; özeti, teslim durumu ve bölümleri sağda.</p></div><a class="d d-ikincil" href="#">${ikon("plus", 16)}Yeni çalışma</a></header>
-    <div class="liste-ayrinti">
-      <section aria-label="Tüm çalışmalar"><div class="cl-bas"><span class="etiket">Tüm çalışmalar</span><span class="yardim">2</span></div>${liste(false)}</section>
-      <article class="ayr" aria-labelledby="ayr-b">
+    <header class="sayfa-bas"><div><h1 class="t-sayfa">Çalışmalarım</h1><p>Bir çalışma seçin; özeti, teslim durumu ve bölümleri yanında açılır.</p></div></header>
+    <div class="bolunmus-yuzey">
+      <section class="liste-sutun" aria-label="Tüm çalışmalar"><div class="ls-bas"><span class="t-bolum">Tüm çalışmalar</span><span class="yardim">2</span></div>${liste(false)}
+        <a class="yeni-satir" href="#">${ikon("plus", 16)}Yeni çalışma</a></section>
+      <article class="ayr-r" aria-labelledby="ayr-b">
         <div class="ayr-bas"><div><p class="etiket">Tez · Dokuz Eylül Üniversitesi</p><h2 id="ayr-b" class="t-calisma" title="${OZGUN}">${BASLIK}</h2><p class="meta">${rozet("r-vurgu", "Yazım aşamasında")}<span class="nokta-ayr"></span>Bugün düzenlendi</p></div>
           <div style="display:flex;gap:8px;align-items:flex-start"><a class="d d-birincil" href="#">${ikon("pen-line", 18)}Yazmaya devam et</a><button class="d d-ikincil d-simge" aria-label="Diğer işlemler: teslim paketi, düzenle, belge yükle, sil">${ikon("ellipsis", 18)}</button></div></div>
-        <nav class="sekmeler" aria-label="Çalışmanın bölümleri"><a class="sekme etkin" href="#" aria-current="page">Özet</a><a class="sekme" href="#">Yazım</a><a class="sekme" href="#">Kaynaklar<em>3</em></a><a class="sekme" href="#">Kanıt<em>2</em></a><a class="sekme" href="#">Analiz</a><button class="sekme sag" aria-haspopup="menu">${ikon("ellipsis", 15)}Diğer araçlar${ikon("chevron-down", 13)}</button></nav>
+        ${AYR_SEKME}
         <div class="ayr-ic">
           <div>${simdiNotu(false).replace('class="kenar-notu"', 'class="kenar-notu" style="margin-top:0"')}
-            <header class="bolum-bas" style="margin-top:28px"><h2>Teslim için bakılacaklar<small>1/5 hazır</small></h2><a class="bag" href="#">Teslim listesi</a></header><ul class="satirlar">${teslim(false)}</ul></div>
+            <header class="bolum-bas-r" style="margin-top:28px"><h2>Teslime giden yol</h2><span class="yardim">1/5 hazır</span><a class="bag" href="#">Teslim listesi${ikon("chevron-right", 14)}</a></header>${teslimYolu()}</div>
           <dl class="ozet-olcu">
             <div class="hz"><dt class="meta">Teslime kalan</dt><dd style="display:flex;align-items:baseline;gap:6px"><span class="sayi-k">41</span><small class="meta">gün · 19.12.2026</small></dd></div>
+            <div class="hz"><dt class="meta">Teslim hazırlığı</dt><dd style="display:flex;align-items:baseline;gap:6px"><span class="sayi-k">1/5</span><small class="meta">hazır</small></dd>${parcali(1, 5)}</div>
             <div class="hz"><dt class="meta">Yazılan</dt><dd style="display:flex;align-items:baseline;gap:6px"><span class="sayi-k">6.354</span><small class="meta">kelime</small></dd><div class="cubuk"><span style="--oran:55%"></span></div><p class="yardim" style="margin-top:6px">%55 ilerleme</p></div>
-            <div class="hz"><dt class="meta">Kaynak durumu</dt><dd style="margin-top:8px">${iz([["3", "kismen", "künyede eksik alan"], ["1", "tamam", "PDF indirildi"], ["1", "tamam", "doğrudan destek"]]).replace('class="iz"', 'class="iz" style="flex-direction:column;gap:8px"')}</dd></div>
+            <div class="hz"><dt class="meta">Kaynak durumu</dt><dd style="margin-top:8px">${iz([["3", "kismen", "künyede eksik alan"], ["1", "tamam", "PDF indirildi"], ["1", "tamam", "iddia doğrudan destekli"]]).replace('class="iz"', 'class="iz" style="flex-direction:column;gap:8px"')}</dd></div>
           </dl>
         </div>
       </article>
@@ -193,10 +216,18 @@ function calismalarimMasa() {
 }
 function calismalarimTel() {
   return telefon("calisma", `<main class="icerik">
-    <h1 class="t-sayfa">Çalışmalarım</h1><p class="meta" style="margin-top:4px">Bir çalışma seçin; özeti ve bölümleri açılır.</p>
-    <a class="d d-ikincil" href="#" style="width:100%;margin-top:16px">${ikon("plus", 16)}Yeni çalışma</a>
-    <section class="tel-bolum" style="margin-top:24px"><div class="grup-bas"><span class="etiket">Tüm çalışmalar</span><span class="yardim">2</span></div><div class="grup" style="padding:0;overflow:hidden">${liste(true)}</div></section>
+    <h1 class="t-sayfa">Çalışmalarım</h1><p class="meta" style="margin-top:4px">2 çalışma · birine dokununca özeti açılır.</p>
+    <section class="tel-bolum" style="margin-top:20px"><div class="grup cl-grup">${liste(true)}<a class="yeni-satir" href="#">${ikon("plus", 16)}Yeni çalışma</a></div></section>
   </main>`);
+}
+/* Gerçek ilk kullanım: hiç çalışma yokken (A3). Genel rehber değil; tek eylem. */
+function calismalarimBos(tel) {
+  const govde = `<div class="bos-durum"><span class="bos-simge">${ikon("file-pen-line", 28)}</span><h2 class="t-calisma">Henüz bir çalışmanız yok</h2>
+    <p class="meta">Tez, makale ya da ödevinizi oluşturun. Kurumunuzu seçerseniz kılavuzu varsa sayfa düzeni ve atıf sistemi editöre kendiliğinden uygulanır.</p>
+    <a class="d d-birincil" href="#">${ikon("plus", 18)}İlk çalışmanızı oluşturun</a>
+    <p class="yardim">Word belgeniz varsa oluştururken içe aktarabilirsiniz.</p></div>`;
+  return tel ? telefon("calisma", `<main class="icerik"><h1 class="t-sayfa">Çalışmalarım</h1>${govde}</main>`)
+    : masaustu("calisma", null, yol("Çalışmalarım"), `<main class="icerik"><header class="sayfa-bas"><div><h1 class="t-sayfa">Çalışmalarım</h1></div></header><div class="bolunmus-yuzey bos">${govde}</div></main>`);
 }
 function ayrintiTel() {
   return telefon("calisma", `${serit("Özet")}<main class="icerik">
@@ -210,10 +241,8 @@ function ayrintiTel() {
       <div><dt>Yazılan<span class="yardim">%55 ilerleme</span></dt><dd><span class="sayi-k">6.354</span><small>kelime</small></dd></div>
     </dl>
     ${simdiNotu(true).replace('class="kenar-notu"', 'class="kenar-notu" style="margin-top:20px"')}
-    <section class="tel-bolum"><div class="grup-bas"><span class="etiket">Teslim kontrol listesi</span><span class="yardim">1/5</span></div><ul class="grup satirlar">${teslim(true)}</ul></section>
-    <section class="tel-bolum"><ul class="grup satirlar"><li><a class="satir" href="#"><span class="satir-g"><strong>Diğer araçlar</strong><span class="yardim">Takvim, Kaynakça %94, Etik kurul</span></span>${ikon("chevron-right", 16).replace('class="ikon"', 'class="ikon ok"')}</a></li></ul>
-      <p class="yardim" style="margin-top:8px">Yazım, Kanıt, Kaynaklar ve Analiz yukarıdaki çalışma şeridinde (tek gezinme).</p></section>
-  </main>`, telUst({ geri: "Çalışmalar", menu: "Diğer işlemler: teslim paketi, düzenle, belge yükle, sil" }));
+    <section class="tel-bolum"><header class="bolum-bas-r"><h2>Teslime giden yol</h2><span class="yardim">1/5</span></header>${teslimYolu()}</section>
+  </main>`, telUst({ geri: "Çalışmalarım", menu: "Diğer işlemler: teslim paketi, düzenle, belge yükle, sil" }));
 }
 
 /* ---------------- 6-9. EDİTÖR ---------------- */
@@ -238,25 +267,38 @@ function belge(secim) {
   const p1 = P[0].replace("Phillips'in (1958)", `<span class="atif-ok" title="Kütüphanede eşleşti">Phillips'in (1958)</span>`).replace("Friedman (1968)", `<span class="atif-yok" title="Kütüphanede karşılığı yok">Friedman (1968)</span>`);
   return `<h2>1. Giriş</h2><p>${p1}</p><p>${p2}</p><p>${P[2]}</p><h3>${H11}</h3><p>${P[3]}</p>`;
 }
+/* V4.2R: panel akışı iç içe kartlardı (bağlam çipleri, uygulandı kutusu,
+   çerçeveli yanıt kartı, başlık şeridi, ayrı uyarı kartı). Artık her istek
+   bir "tur": istem → önerilen metin (fark) → dayanak (kenar notu) → karar.
+   Ayrım çizgi ve başlıkla yapılır, çerçeveyle değil. Uyarı da kenar notudur
+   (hata çizgisi). Davranış aynı: kabul/düzenleyerek kabul/reddet/geri al. */
+const KARAR = `<div class="karar" role="group" aria-label="Öneri kararı"><a class="d d-birincil d-sik" href="#">Kabul et</a><a class="d d-ikincil d-sik" href="#">Düzenleyerek kabul et</a><a class="d d-ucuncul d-sik" href="#">Reddet</a></div>`;
 function aiAkis(tel) {
-  return `${tel ? "" : `<div class="baglam-satiri"><span class="cip">${ikon("map-pin", 13)}1. Giriş</span><span class="cip">${ikon("text-select", 13)}seçili 1 cümle</span>${sunum}</div>`}
-    ${tel ? "" : `<div class="uygulandi">${ikon("circle-check", 15)}Paragraf belgeye eklendi · 14:12<a class="bag" href="#">${ikon("undo-2", 13)}Geri al</a></div>`}
-    <p class="istem">Seçili cümleyi akademikleştir.</p>
-    <article class="yanit" aria-label="Asistan önerisi">
-      <header class="yanit-bas"><span class="etiket">Akademik hâli</span><span class="yardim">+5 kelime · −3 kelime</span></header>
-      <p class="yanit-govde fark">Bu kadar farklı rejimin tek bir örneklem içinde yer alması, <del>enflasyon–işsizlik ilişkisinin hem varlığını hem de istikrarını sorgulamayı gerekli kılmaktadır</del> <ins>enflasyon ile işsizlik arasındaki ilişkinin hem varlığının hem de dönemler arası istikrarının ayrı ayrı sınanmasını gerektirmektedir</ins>.</p>
-      <p class="dayanak"><b>Dayanak</b> · yalnız seçili metin; yeni atıf ve sayı yok</p>
-      <div class="yanit-eylem"><a class="d d-birincil d-sik" href="#">Kabul et</a><a class="d d-ikincil d-sik" href="#">Düzenleyerek kabul et</a><a class="d d-ucuncul d-sik" href="#">Reddet</a></div>
-    </article>
-    <div class="uyari-kart" role="note">${I.sorun}<div><strong>Bir yanıt gösterilmedi</strong><p>Önerilen paragraf kütüphanenizde olmayan bir atıf içeriyordu (Friedman, 1968). Kaynağı kütüphanenize ekleyip yeniden isteyin.</p><a class="bag" href="#" style="margin-top:6px">${ikon("link-2", 13)}DOI ile ekle</a></div></div>`;
+  const onceki = tel
+    ? `<p class="olay olay-hata">${I.sorun}<span>Önceki yanıt gösterilmedi: kütüphanenizde olmayan atıf (Friedman, 1968).</span><a class="bag" href="#">Ayrıntı</a></p>`
+    : `<div class="tur"><p class="istem">Friedman'ın eleştirisini anlatan bir paragraf yaz.</p>
+      <div class="not-hata" role="note"><p class="not-bas">${I.sorun}<b>Yanıt gösterilmedi</b></p><p>Önerilen paragraf kütüphanenizde olmayan bir atıf içeriyordu (Friedman, 1968). Kaynağı kütüphanenize ekleyip yeniden isteyin.</p><a class="bag" href="#">${ikon("link-2", 13)}DOI ile ekle</a></div></div>
+    <p class="olay">${ikon("circle-check", 15)}<span>Ana hat önerisi belgeye eklendi · 14:12</span><a class="bag" href="#">${ikon("undo-2", 13)}Geri al</a></p>`;
+  return `${onceki}
+    <div class="tur tur-son"><p class="istem">Seçili cümleyi akademikleştir.</p>${tel ? "" : `<p class="istem-baglam">${ikon("map-pin", 12)}1. Giriş · seçili 1 cümle</p>`}
+      <section class="oneri" aria-label="Asistan önerisi">
+        <header class="oneri-bas"><span class="oneri-ad">Önerilen metin</span><span class="yardim">${tel ? "" : `<del class="lejant">silinen</del> <ins class="lejant">eklenen</ins> · `}+5 / −3 kelime</span></header>
+        <p class="fark oneri-metin">Bu kadar farklı rejimin tek bir örneklem içinde yer alması, <del>enflasyon–işsizlik ilişkisinin hem varlığını hem de istikrarını sorgulamayı gerekli kılmaktadır</del> <ins>enflasyon ile işsizlik arasındaki ilişkinin hem varlığının hem de dönemler arası istikrarının ayrı ayrı sınanmasını gerektirmektedir</ins>.</p>
+        ${tel ? `<p class="dayanak-not"><b>Dayanak</b> · yalnız seçili cümle; yeni atıf ve sayı yok</p>` : `<div class="dayanak-not"><p class="not-bas"><b>Dayanak</b>${sunum}</p><p>Yalnız seçili cümle. Yeni atıf yok, yeni sayı yok.</p></div>`}
+        ${tel ? "" : KARAR}
+      </section></div>`;
 }
 const besteci = (tel) => `<div class="besteci"><p>Phillips eğrisinin Türkiye'de neden tartışmalı olduğunu iki cümleyle açıkla</p><div class="besteci-alt"><span class="yardim">${tel ? "Kütüphanenizden atıf yapar." : "Yalnız kütüphanenizdeki kaynaklara atıf yapar; metinde olmayan sayı yazmaz."}</span><button class="gonder" aria-label="Gönder">${ikon("arrow-up", 16)}</button></div></div>`;
+/* Kâğıt her iki durumda AYNI genişlikte (760, metin 640): panel açılınca
+   satırlar yeniden kırılmaz, kâğıt yalnızca ortalandığı alan daraldığı
+   için kayar. Eskiden metin sütunu 654 → 618 px oluyor, her satır yeniden
+   kırılıyordu. */
 function editorMasa(ai) {
   return masaustu("calisma", "Yazım", yol("Çalışmalarım", "Türkiye'de Enflasyon ve İşsizlik…", "Yazım"), `<div class="ed-govde">
     ${aracCubugu(ai)}
     <div class="ed-alan">
-      <div class="masa"><article class="kagit belge-metin" aria-label="Belge">${belge(ai)}</article></div>
-      ${ai ? `<aside class="bolme" aria-label="Yazım paneli"><nav class="bolme-sekme" role="tablist"><a class="etkin" role="tab" aria-selected="true">${ikon("sparkles", 14)}Arvo AI</a><a role="tab">İnceleme</a><a role="tab">Kaynaklar</a><a role="tab">Teslim <em>1/5</em></a></nav><div class="akis">${aiAkis(false)}</div>${besteci(false)}</aside>` : ""}
+      <div class="masa masa-r"><article class="kagit kagit-r belge-metin" aria-label="Belge">${belge(ai)}</article></div>
+      ${ai ? `<aside class="bolme bolme-r" aria-label="Yazım paneli"><nav class="bolme-sekme" role="tablist"><a class="etkin" role="tab" aria-selected="true">${ikon("sparkles", 14)}Arvo AI</a><a role="tab">İnceleme</a><a role="tab">Kaynaklar</a><a role="tab">Teslim <em>1/5</em></a></nav><div class="akis akis-r">${aiAkis(false)}</div>${besteci(false)}</aside>` : ""}
     </div>
     <footer class="ed-durum" aria-label="Belge durumu"><span>6.354 kelime</span><span>49.041 karakter</span><span>≈ 20 sayfa</span><span class="sag">Kılavuz bağlı değil · varsayılan belge yazısı</span></footer>
   </div>`);
@@ -267,54 +309,71 @@ function editorTelUst() {
     <a class="d d-tonal d-sik" style="height:44px" href="#">${ikon("sparkles", 16)}Arvo AI</a><button class="uc-simge" style="width:44px;height:44px" aria-label="Belge: paylaş, dışa aktar, yazım paneli">${ikon("ellipsis-vertical", 20)}</button></header>`;
 }
 const telArac = `<div class="ed-tel-arac" role="toolbar" aria-label="Biçimlendirme"><button class="a" aria-label="Geri al">${ikon("undo-2", 18)}</button><span class="ayr"></span><button class="a" aria-label="Kalın"><b>B</b></button><button class="a" aria-label="İtalik"><em>I</em></button><button class="a" aria-label="Altı çizili"><u>U</u></button><span class="ayr"></span><button class="a" aria-label="Kaynaktan atıf ekle">${ikon("quote", 18)}Atıf</button><span style="flex:1"></span><button class="a" aria-label="Diğer araçlar">${ikon("ellipsis", 18)}</button></div>`;
+/* V4.2R telefon: alt sayfa 86 vh'ten 58 vh'e indi ve örtü kalktı; belge
+   üstte görünür, seçili cümle görünür alanda tutulur. Öneri beklerken
+   karar düğmeleri sayfanın dibine sabitlenir (besteci yerine); karar
+   verilince besteci geri gelir. */
 function editorTel(ai) {
-  const g = `${telArac}<article class="tel-kagit belge-metin" aria-label="Belge"><h2>1. Giriş</h2><p>${P[0]}</p><p>${P[1]}</p></article>
-    ${ai ? `<div class="ortu"></div><section class="alt-sayfa" role="dialog" aria-modal="true" aria-label="Yazım paneli"><div class="tutamak"></div><div class="as-bas"><span class="t-bolum">Arvo AI</span><button class="uc-simge" style="width:44px;height:44px" aria-label="Paneli kapat">${ikon("x", 18)}</button></div>
-      <nav class="bolme-sekme" role="tablist"><a class="etkin" role="tab">Arvo AI</a><a role="tab">İnceleme</a><a role="tab">Kaynaklar</a><a role="tab">Teslim <em>1/5</em></a></nav><div class="akis">${aiAkis(true)}</div>${besteci(true)}</section>` : ""}`;
+  const p1 = P[0].replace("Phillips'in (1958)", `<span class="atif-ok">Phillips'in (1958)</span>`).replace("Friedman (1968)", `<span class="atif-yok">Friedman (1968)</span>`);
+  const secimli = `<p class="kaydirildi">…yüksek enflasyon dönemini birlikte içermektedir. <span class="secili-metin">Bu kadar farklı rejimin tek bir örneklem içinde yer alması, enflasyon–işsizlik ilişkisinin hem varlığını hem de istikrarını sorgulamayı gerekli kılmaktadır.</span></p><p>${P[2]}</p>`;
+  const g = `${telArac}<article class="tel-kagit belge-metin" aria-label="Belge">${ai ? secimli : `<h2>1. Giriş</h2><p>${p1}</p><p>${P[1]}</p>`}</article>
+    ${ai ? `<section class="alt-sayfa alt-sayfa-r" role="dialog" aria-label="Yazım paneli"><div class="tutamak"></div>
+      <nav class="bolme-sekme as-sekme" role="tablist"><a class="etkin" role="tab">${ikon("sparkles", 14)}Arvo AI</a><a role="tab">İnceleme</a><a role="tab">Kaynaklar</a><a role="tab">Teslim <em>1/5</em></a><button class="uc-simge" style="width:44px;height:44px" aria-label="Paneli kapat">${ikon("x", 18)}</button></nav>
+      <div class="akis akis-r">${aiAkis(true)}</div><div class="karar-sabit">${KARAR}</div></section>` : ""}`;
   return telefon("calisma", g, editorTelUst() + (ai ? "" : serit("Yazım")), !ai);
 }
 
 /* ---------------- 10-11. KAYNAK KÜTÜPHANESİ ---------------- */
+/* V4.2R: eksenler her satırda farklı yerde başlıyordu (sarılan "iz" satırı),
+   satır 140 px'e çıkıyordu. Masaüstünde eksenler artık hizalı sütunlar:
+   başlık satırında bir kez adlandırılır, hücrede işaret + kelime kalır.
+   Telefonda eski satır düzeni sürer (orada sütun sığmaz). */
 const KAYNAK = [
-  { b: "ARDL sınır testi yaklaşımı", y: "Pesaran, M. H., Shin, Y., & Smith, R. J. · 2001 · DOI 10.0000/ornek.2", iz: [["Künye", "bekliyor", "bakılmadı"], ["PDF", "tamam", "indirildi"], ["Kanıt", "bekliyor", "1 iddia · değerlendirilmedi"]], okuma: 0, s: "Okudum", sec: true, pdf: true },
-  { b: "Inflation and unemployment in emerging markets", y: "Smith, J., & Brown, K. · 2019", iz: [["Künye", "kismen", "eksik: dergi, cilt, sayfa"], ["PDF", "bekliyor", "bakılmadı"], ["Kanıt", "bekliyor", "iddiaya bağlı değil"]], okuma: 1, s: "Kullandım olarak işaretle" },
-  { b: "Türkiye'de Phillips eğrisinin istikrarı", y: "Önder, A. Ö. · 2009", iz: [["Künye", "kismen", "eksik: dergi, cilt, DOI"], ["PDF", "bekliyor", "bakılmadı"], ["Kanıt", "tamam", "1 iddia · doğrudan"]], okuma: 2, s: "" },
+  { b: "ARDL sınır testi yaklaşımı", y: "Pesaran, M. H., Shin, Y., & Smith, R. J. · 2001 · DOI 10.0000/ornek.2", yk: "Pesaran, Shin & Smith · 2001", iz: [["Künye", "bekliyor", "bakılmadı"], ["PDF", "tamam", "indirildi"], ["Kanıt", "bekliyor", "1 iddia · değerlendirilmedi"]], h: [["bekliyor", "bakılmadı", ""], ["tamam", "indirildi", ""], ["bekliyor", "1 iddia", "değerlendirilmedi"]], okuma: 0, s: "Okudum", sec: true, pdf: true },
+  { b: "Inflation and unemployment in emerging markets", y: "Smith, J., & Brown, K. · 2019", yk: "Smith & Brown · 2019", iz: [["Künye", "kismen", "eksik: dergi, cilt, sayfa"], ["PDF", "bekliyor", "bakılmadı"], ["Kanıt", "bekliyor", "iddiaya bağlı değil"]], h: [["kismen", "3 alan eksik", "dergi, cilt, sayfa"], ["bekliyor", "bakılmadı", ""], ["bekliyor", "bağlı değil", ""]], okuma: 1, s: "Kullandım olarak işaretle" },
+  { b: "Türkiye'de Phillips eğrisinin istikrarı", y: "Önder, A. Ö. · 2009", yk: "Önder · 2009", iz: [["Künye", "kismen", "eksik: dergi, cilt, DOI"], ["PDF", "bekliyor", "bakılmadı"], ["Kanıt", "tamam", "1 iddia · doğrudan"]], h: [["kismen", "3 alan eksik", "dergi, cilt, DOI"], ["bekliyor", "bakılmadı", ""], ["tamam", "1 iddia", "doğrudan"]], okuma: 2, s: "" },
 ];
 const okuma = (n) => `<span class="adim">${["Okunacak", "Okundu", "Kullandım"].map((a, i) => `<i class="${i <= n ? "dolu" : ""}"></i>${i === n ? `<b>${a}</b>` : a}`).join("<s></s>")}</span>`;
+const okumaKisa = (n) => `<span class="okuma-k"><span class="noktalar" aria-hidden="true">${[0, 1, 2].map((i) => `<i class="${i <= n ? "dolu" : ""}"></i>`).join("")}</span><b>${["Okunacak", "Okundu", "Kullandım"][n]}</b></span>`;
+const hucre = ([t, a, b]) => `<span class="kt-h" role="cell">${I[t]}<span><b>${a}</b>${b ? `<small>${b}</small>` : ""}</span></span>`;
 function kaynakSatiri(k, tel) {
-  return `<li class="${k.sec && !tel ? "secili" : ""} ks-satir"><div class="ks"><div><a class="ks-baslik" href="#"${k.sec && !tel ? ' aria-current="true"' : ""}>${k.b}</a><p class="meta">${k.y}</p>${iz(k.iz)}</div>
-    ${tel ? `<div class="ks-tel-alt">${okuma(k.okuma)}${k.pdf ? `<a class="d d-ikincil d-sik" href="#">${ikon("message-square-quote", 14)}Kaynağa sor</a>` : ""}</div>` : `<div class="ks-sag">${okuma(k.okuma)}${k.s ? `<button class="d d-ikincil d-sik">${k.s}</button>` : `<span class="yardim">son adım</span>`}</div>`}</div></li>`;
+  if (tel) return `<li class="ks-satir"><div class="ks"><div><a class="ks-baslik" href="#">${k.b}</a><p class="meta">${k.y}</p>${iz(k.iz)}</div>
+    <div class="ks-tel-alt">${okuma(k.okuma)}${k.pdf ? `<a class="d d-ikincil d-sik" href="#">${ikon("message-square-quote", 14)}Kaynağa sor</a>` : ""}</div></div></li>`;
+  return `<li class="kt-satir${k.sec ? " secili" : ""}" role="row"><span class="kt-kaynak" role="cell"><a class="ks-baslik" href="#"${k.sec ? ' aria-current="true"' : ""}>${k.b}</a><span class="meta">${k.yk}</span>${k.pdf ? `<a class="bag kt-sor" href="#">${ikon("message-square-quote", 13)}Kaynağa sor</a>` : ""}</span>${k.h.map(hucre).join("")}<span class="kt-h" role="cell">${okumaKisa(k.okuma)}</span></li>`;
 }
 function kaynaklarMasa() {
-  return masaustu("lit", null, yol("Kaynak Kütüphanesi"), `<main class="icerik">
+  return masaustu("lit", null, yol("Kaynak Kütüphanesi"), `<main class="icerik kk-r">
     <header class="kk-ust"><div><h1 class="t-sayfa">Kaynak Kütüphanesi</h1><p class="meta" style="margin-top:6px">Literatür ve kaynakça. Kaynak özeti ya da yorum üretilmez; künyeler dizinlerde doğrulanır.</p></div>
       <div style="display:flex;gap:8px"><span class="d d-ikincil">${ikon("book-open", 16)}Türkiye'de Enflasyon…${ikon("chevron-down", 14)}</span><a class="d d-ikincil" href="#">İçe aktar</a><button class="d d-ikincil d-simge" aria-label="Tarama asistanı, dışa aktar">${ikon("ellipsis", 18)}</button><a class="d d-birincil" href="#">${ikon("search", 16)}Kaynak bul</a></div></header>
-    <section class="kk-ozet" aria-label="Kaynakça denetimi">
-      <div><p class="etiket">Kaynakça denetimi</p><p class="puan-blok" style="margin-top:6px"><span class="sayi">94</span><span class="meta">/100 uyum · 4 künye · dün</span></p></div>
-      ${iz([["1", "sorun", "Dizinlerde bulunamayan kaynak"], ["1", "sorun", "Kaynakçada karşılığı olmayan atıf"], ["1", "kismen", "Metinde atfı olmayan kaynak"]])}
-      <div style="display:flex;gap:8px"><a class="d d-ikincil d-sik" href="#">${ikon("quote", 15)}Sonuçları aç</a><a class="d d-ucuncul d-sik" href="#">Yeniden denetle</a></div>
-    </section>
+    <section class="kk-serit" aria-label="Kaynakça denetimi"><span class="kk-puan"><span class="t-bolum">Kaynakça denetimi</span><b>94</b><span class="meta">/100 uyum · 4 künye · dün</span></span>
+      ${iz([["1", "sorun", "dizinlerde bulunamayan"], ["1", "sorun", "karşılığı olmayan atıf"], ["1", "kismen", "atfı olmayan kaynak"]])}
+      <span class="kk-eylem"><a class="d d-ikincil d-sik" href="#">${ikon("quote", 15)}Sonuçları aç</a><a class="d d-ucuncul d-sik" href="#">Yeniden denetle</a></span></section>
     <div class="kk-izgara">
       <section aria-label="Literatür">
-        <div class="arama"><span class="girdi">${ikon("search", 16)}Başlık, yazar, dergi, yayınevi ya da DOI ara</span><span class="girdi" style="flex:0 0 280px">${ikon("link-2", 16)}DOI yapıştırın — ör. 10.1002/jae.616</span><button class="d d-ikincil">Okuma durumu${ikon("chevron-down", 14)}</button></div>
+        <div class="arama"><span class="girdi">${ikon("search", 16)}Başlık, yazar, dergi, yayınevi ya da DOI ara</span><span class="girdi" style="flex:0 0 250px">${ikon("link-2", 16)}DOI yapıştırın</span></div>
         <div class="suzgecler"><span class="suzgec etkin">Hepsi <em>3</em></span><span class="suzgec">Okunacak <em>1</em></span><span class="suzgec">Okundu <em>1</em></span><span class="suzgec">Kullandım <em>1</em></span><span class="suzgec">${I.kismen}Eksik künye <em>3</em></span></div>
-        <ul class="ks-liste">${KAYNAK.map((k) => kaynakSatiri(k, false)).join("")}</ul>
+        <div class="kt" role="table" aria-label="Kaynaklar"><div class="kt-bas" role="row"><span role="columnheader">Kaynak</span><span role="columnheader">Künye</span><span role="columnheader">PDF</span><span role="columnheader">Kanıt</span><span role="columnheader">Okuma</span></div>
+          <ul class="kt-liste" role="rowgroup">${KAYNAK.map((k) => kaynakSatiri(k, false)).join("")}</ul></div>
       </section>
-      <aside class="kaynak-ayr" aria-label="Seçili kaynak">
-        <p class="etiket">Kaynak · makale</p><h2>ARDL sınır testi yaklaşımı</h2><p class="meta" style="margin-top:4px">Pesaran, M. H., Shin, Y., & Smith, R. J. · 2001</p>
-        <div class="dugmeler" style="margin-top:14px"><a class="d d-ikincil d-sik" href="#">${ikon("message-square-quote", 15)}Kaynağa sor</a><a class="d d-ucuncul d-sik" href="#">${ikon("external-link", 15)}PDF'i aç</a><a class="d d-ucuncul d-sik" href="#">${ikon("quote", 15)}Atıf ekle</a></div>
-        <div class="ka-bolum"><div class="ka-bolum-bas"><span class="t-bolum">Doğrulama</span><span class="yardim">eksenler ayrı</span></div>
-          <dl class="dogrulama"><dt>Künye</dt><dd>${I.bekliyor}<span>Dizinlerde karşılaştırılmadı · <a class="bag">Karşılaştır</a></span></dd>
-            <dt>PDF</dt><dd>${I.tamam}<span>Hazır · açık erişim (indirildi, dün)</span></dd>
-            <dt>Kanıt</dt><dd>${I.bekliyor}<span>1 iddia: "Sınır testi, değişkenlerin bütünleşme derecesinden bağımsız…" · değerlendirilmedi</span></dd></dl></div>
-        <div class="ka-bolum"><div class="ka-bolum-bas"><span class="t-bolum">Okuma</span></div>${okuma(0)}<button class="d d-ikincil d-sik" style="margin-top:10px">Okudum</button></div>
-        <div class="ka-bolum"><div class="ka-bolum-bas"><span class="t-bolum">Künye</span><a class="bag">Düzenle</a></div>
-          <dl class="kunye"><dt>Tür</dt><dd>Makale</dd><dt>Yazarlar</dt><dd>Pesaran, M. H., Shin, Y., & Smith, R. J.</dd><dt>Yıl</dt><dd>2001</dd><dt>DOI</dt><dd><a class="bag" style="font-weight:500">10.0000/ornek.2</a></dd><dt>Eksik</dt><dd class="meta">dergi adı, cilt, sayı, sayfa aralığı</dd></dl></div>
-        <div class="ka-bolum" style="display:flex;justify-content:space-between;align-items:center"><span class="meta">Notlarım · not yok</span><a class="d d-ucuncul d-sik tehlike" href="#">${ikon("trash-2", 15)}Kaynağı sil</a></div>
+      <aside class="kaynak-ayr kaynak-ayr-r" aria-label="Seçili kaynak">
+        <div class="kar-bas"><p class="etiket">Kaynak · makale</p><h2>ARDL sınır testi yaklaşımı</h2><p class="meta" style="margin-top:4px">Pesaran, M. H., Shin, Y., & Smith, R. J. · 2001</p>
+          <div class="dugmeler" style="margin-top:12px"><a class="d d-ikincil d-sik" href="#">${ikon("message-square-quote", 15)}Kaynağa sor</a><a class="d d-ucuncul d-sik" href="#">${ikon("external-link", 15)}PDF'i aç</a><a class="d d-ucuncul d-sik" href="#">${ikon("quote", 15)}Atıf ekle</a></div></div>
+        <div class="kar-govde" tabindex="0" aria-label="Kaynak ayrıntısı (kaydırılabilir)">
+          <div class="ka-bolum"><div class="ka-bolum-bas"><span class="t-bolum">Doğrulama</span><span class="yardim">eksenler ayrı</span></div>
+            <dl class="dogrulama"><dt>Künye</dt><dd>${I.bekliyor}<span>Dizinlerde karşılaştırılmadı · <a class="bag">Dizinlerde karşılaştır</a></span></dd>
+              <dt>PDF</dt><dd>${I.tamam}<span>Hazır · açık erişim (indirildi, dün)</span></dd>
+              <dt>Kanıt</dt><dd>${I.bekliyor}<span>1 iddia: "Sınır testi, değişkenlerin bütünleşme derecesinden bağımsız…" · değerlendirilmedi</span></dd></dl></div>
+          <div class="ka-bolum"><div class="ka-bolum-bas"><span class="t-bolum">Okuma</span><button class="d d-ikincil d-sik">Okudum</button></div>${okuma(0)}</div>
+          <div class="ka-bolum"><div class="ka-bolum-bas"><span class="t-bolum">Künye</span><a class="bag">Düzenle</a></div>
+            <dl class="kunye"><dt>Tür</dt><dd>Makale</dd><dt>Yazarlar</dt><dd>Pesaran, M. H., Shin, Y., & Smith, R. J.</dd><dt>Yıl</dt><dd>2001</dd><dt>DOI</dt><dd><a class="bag" style="font-weight:500">10.0000/ornek.2</a></dd><dt>Eksik</dt><dd class="meta">dergi adı, cilt, sayı, sayfa aralığı</dd></dl></div>
+          <div class="ka-bolum"><div class="ka-bolum-bas"><span class="t-bolum">Notlarım</span><a class="bag">Not ekle</a></div><p class="meta">Henüz not yok.</p></div>
+        </div>
+        <div class="kar-alt"><span class="yardim">${ikon("arrow-down-up", 13)}Panel kendi içinde kayar</span><a class="d d-ucuncul d-sik tehlike" href="#">${ikon("trash-2", 15)}Kaynağı sil</a></div>
       </aside>
     </div>
   </main>`);
 }
+
 function kaynaklarTel() {
   return telefon("lit", `<main class="icerik">
     <h1 class="t-sayfa">Kaynak Kütüphanesi</h1>
@@ -372,8 +431,9 @@ yaz("calismalarim.html", sayfa("v4 · Çalışmalarım", calismalarimMasa(), cal
 yaz("calisma-ayrinti.html", sayfa("v4 · Çalışma ayrıntısı", calismalarimMasa(), ayrintiTel()));
 yaz("editor.html", sayfa("v4 · Editör", editorMasa(false), editorTel(false)));
 yaz("editor-ai.html", sayfa("v4 · Editör + Arvo AI", editorMasa(true), editorTel(true)));
+yaz("calismalarim-bos.html", sayfa("v4 · Çalışmalarım (ilk kullanım)", calismalarimBos(false), calismalarimBos(true)));
 yaz("kaynaklar.html", sayfa("v4 · Kaynak Kütüphanesi", kaynaklarMasa(), kaynaklarTel()));
 yaz("konsept-editor-pdf.html", sayfa("v4 konsept · Editör + PDF", konseptPdf(false, 1440), ""));
 yaz("konsept-editor-pdf-ai.html", sayfa("v4 konsept · Editör + PDF + AI", konseptPdf(true, 1440), ""));
 yaz("konsept-editor-pdf-ai-1024.html", sayfa("v4 konsept · Editör + PDF + AI (1024)", konseptPdf(true, 1024), ""));
-console.log("v4: 9 sayfa yazıldı");
+console.log("v4: 10 sayfa yazıldı");

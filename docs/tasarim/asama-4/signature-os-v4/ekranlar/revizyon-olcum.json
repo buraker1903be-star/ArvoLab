@@ -1,0 +1,138 @@
+{
+ "eski": {
+  "edAiMasa": {
+   "panelKutu": 4,
+   "icIceDerinlik": 1,
+   "metinSutunu": 618,
+   "p1Satir": 8,
+   "kagitSol": 268
+  },
+  "edMasa": {
+   "metinSutunu": 654,
+   "p1Satir": 7,
+   "kagitSol": 430
+  },
+  "edAiTel": {
+   "altSayfaYuksekligi": 726,
+   "gorunurBelge": 14,
+   "ortu": true,
+   "seciliCumleGorunur": false,
+   "dayanakGorunur": true,
+   "kararGorunur": true,
+   "panelKutu": 3
+  },
+  "calMasa": {
+   "listeGenislik": 300,
+   "ayrintiGenislik": 812,
+   "oran": "0.37",
+   "yuzeySayisi": 1,
+   "yuzeyDisiBosluk": 351,
+   "yeniCalismaYeri": "sayfa başlığında düğme"
+  },
+  "calTel390": {
+   "satir": 2,
+   "acikGecisBolgesi": 0
+  },
+  "ayrTel390": {
+   "seritOgesi": 7,
+   "kesikSekme": 2,
+   "kayan": true
+  },
+  "calTel360": {
+   "satir": 2,
+   "acikGecisBolgesi": 0
+  },
+  "ayrTel360": {
+   "seritOgesi": 7,
+   "kesikSekme": 2,
+   "kayan": true
+  },
+  "ana": {
+   "altRozet": 4,
+   "anahtarDegerSatiri": 4,
+   "ayarBlogu": 3,
+   "eylemFiilliMadde": 0,
+   "altBolumYuksekligi": 602,
+   "sayfa": 1265,
+   "birincil": 1
+  },
+  "kay": {
+   "ortSatir": 110,
+   "pdfEkseniXSapma": 32,
+   "panelYukseklik": 800,
+   "panelGorunumeSigar": false,
+   "panelIcKaydirma": false,
+   "sayfa": 1134,
+   "kaynagaSor": 1,
+   "pdfAc": 1
+  }
+ },
+ "yeni": {
+  "edAiMasa": {
+   "panelKutu": 2,
+   "icIceDerinlik": 1,
+   "metinSutunu": 638,
+   "p1Satir": 8,
+   "kagitSol": 278
+  },
+  "edMasa": {
+   "metinSutunu": 638,
+   "p1Satir": 8,
+   "kagitSol": 458
+  },
+  "edAiTel": {
+   "altSayfaYuksekligi": 523,
+   "gorunurBelge": 217,
+   "ortu": false,
+   "seciliCumleGorunur": true,
+   "dayanakGorunur": true,
+   "kararGorunur": true,
+   "panelKutu": 1
+  },
+  "calMasa": {
+   "listeGenislik": 320,
+   "ayrintiGenislik": 818,
+   "oran": "0.39",
+   "yuzeySayisi": 1,
+   "yuzeyDisiBosluk": 0,
+   "yeniCalismaYeri": "listenin son satırı"
+  },
+  "calTel390": {
+   "satir": 2,
+   "acikGecisBolgesi": 2
+  },
+  "ayrTel390": {
+   "seritOgesi": 6,
+   "kesikSekme": 0,
+   "kayan": false
+  },
+  "calTel360": {
+   "satir": 2,
+   "acikGecisBolgesi": 2
+  },
+  "ayrTel360": {
+   "seritOgesi": 6,
+   "kesikSekme": 0,
+   "kayan": false
+  },
+  "ana": {
+   "altRozet": 0,
+   "anahtarDegerSatiri": 0,
+   "ayarBlogu": 0,
+   "eylemFiilliMadde": 3,
+   "altBolumYuksekligi": 545,
+   "sayfa": 1207,
+   "birincil": 1
+  },
+  "kay": {
+   "ortSatir": 95,
+   "pdfEkseniXSapma": 0,
+   "panelYukseklik": 640,
+   "panelGorunumeSigar": true,
+   "panelIcKaydirma": true,
+   "sayfa": 934,
+   "kaynagaSor": 2,
+   "pdfAc": 1
+  }
+ }
+}

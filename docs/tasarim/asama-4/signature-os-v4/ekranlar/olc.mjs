@@ -12,7 +12,7 @@ const { chromium } = require("playwright");
 const KOK = path.dirname(new URL(import.meta.url).pathname);
 const ISLER = [["ana-sayfa", 1440], ["ana-sayfa", 390], ["ana-sayfa", 360], ["calismalarim", 1440], ["calismalarim", 390], ["calismalarim", 360],
   ["calisma-ayrinti", 390], ["calisma-ayrinti", 360], ["editor", 1440], ["editor", 390], ["editor", 360], ["editor-ai", 1440], ["editor-ai", 390], ["editor-ai", 360],
-  ["kaynaklar", 1440], ["kaynaklar", 390], ["kaynaklar", 360],
+  ["kaynaklar", 1440], ["kaynaklar", 390], ["kaynaklar", 360], ["calismalarim-bos", 1440], ["calismalarim-bos", 390], ["calismalarim-bos", 360],
   ["konsept-editor-pdf", 1440], ["konsept-editor-pdf-ai", 1440], ["konsept-editor-pdf-ai-1024", 1024]];
 const b = await chromium.launch();
 const sonuc = [];

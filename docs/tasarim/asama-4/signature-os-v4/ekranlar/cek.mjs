@@ -18,6 +18,7 @@ export const ISLER = [
   ["06", "editor", 1440, false], ["07", "editor", 390, false],
   ["08", "editor-ai", 1440, false], ["09", "editor-ai", 390, false],
   ["10", "kaynaklar", 1440, true], ["11", "kaynaklar", 390, true],
+  ["12", "calismalarim-bos", 1440, true], ["13", "calismalarim-bos", 390, true],
   ["K1", "konsept-editor-pdf", 1440, false],
   ["K2", "konsept-editor-pdf-ai", 1440, false],
   ["K3", "konsept-editor-pdf-ai-1024", 1024, false],
