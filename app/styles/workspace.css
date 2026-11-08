@@ -1254,7 +1254,8 @@
 .yazim-bos-not > svg { flex: 0 0 auto; margin-top: 1px; color: var(--success); }
 .yazim-hizli-etiket { flex-basis: 100%; color: var(--ink-soft); font-size: var(--fs-micro); font-weight: 600; }
 .yazim-mesaj { display: grid; gap: 8px; max-width: 100%; }
-.yazim-mesaj p { margin: 0; line-height: 1.55; white-space: pre-wrap; }
+/* Asistanın cevabı okunacak düzyazı: 15/24 (Signature OS 2.0). Eskiden panelin 13–14 px arayüz boyunu alıyordu. */
+.yazim-mesaj p { margin: 0; font-size: var(--tip-okuma); line-height: var(--tip-okuma-satir); white-space: pre-wrap; }
 .yazim-mesaj[data-rol="kullanici"] { justify-self: end; max-width: 85%; padding: 8px 12px; border-radius: var(--r-md) var(--r-md) 4px var(--r-md); background: var(--primary-soft); color: var(--ink); }
 .yazim-mesaj[data-rol="asistan"] { color: var(--ink-soft); }
 .yazim-oneri { display: grid; overflow: hidden; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); transition: border-color .2s ease; }

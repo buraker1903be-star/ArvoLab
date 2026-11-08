@@ -555,7 +555,8 @@ th[aria-sort] .veri-tablo-sirala { color: var(--ink); }
 details[open] > summary > .kk-ok { transform: rotate(180deg); }
 @media (hover: hover) and (pointer: fine) { .kk-bolum > summary:hover { background: var(--surface-2); } }
 .kk-bolum-govde { display: grid; gap: var(--s-4); padding: 0 var(--s-5) var(--s-5) calc(var(--s-5) + 24px + var(--s-3)); }
-.kk-adimlar { display: grid; gap: var(--s-2); margin: 0; padding-left: 20px; color: var(--ink); font-size: var(--fs-body); line-height: var(--lh-metin); }
+/* Okuma metni 15/24 (Signature OS 2.0): adımlar ve SSS cevapları baştan sona okunan düzyazı; eskiden 14 px arayüz boyundaydı. */
+.kk-adimlar { display: grid; gap: var(--s-2); margin: 0; padding-left: 20px; color: var(--ink); font-size: var(--tip-okuma); line-height: var(--tip-okuma-satir); }
 .kk-adimlar li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
 .kk-notlar { display: grid; gap: var(--s-2); margin: 0; padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--surface-2); list-style: none; }
 .kk-notlar li { display: flex; align-items: flex-start; gap: var(--s-2); color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-metin); }
@@ -579,7 +580,7 @@ details[open] > summary > .kk-ok { transform: rotate(180deg); }
 .kk-sss-liste summary::-webkit-details-marker { display: none; }
 .kk-sss-liste summary:focus-visible { outline: none; box-shadow: inset var(--odak-halkasi); }
 @media (hover: hover) and (pointer: fine) { .kk-sss-liste summary:hover { background: var(--surface-2); } }
-.kk-sss-liste p { margin: 0; padding: 0 var(--s-5) var(--s-4); color: var(--ink-soft); font-size: var(--fs-body); line-height: var(--lh-metin); }
+.kk-sss-liste p { margin: 0; padding: 0 var(--s-5) var(--s-4); color: var(--ink-soft); font-size: var(--tip-okuma); line-height: var(--tip-okuma-satir); }
 
 /* Destek yönlendirmesi */
 .kk-destek {
