@@ -544,7 +544,15 @@ html.drawer-open { overflow: hidden; }
   font-size: var(--tip-meta);
   transform: translateX(-50%);
 }
-.gecis-hatasi-eylemler { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-4); }
+.gecis-hatasi { display: grid; gap: var(--s-3); }
+.gecis-hatasi p { margin: 0; color: var(--ink-soft); font-size: var(--tip-arayuz); line-height: var(--lh-metin); }
+.gecis-hatasi-not { padding-left: var(--s-3); border-left: 2px solid var(--line); }
+.gecis-hatasi-dikkat { border-left-color: var(--danger); color: var(--ink); font-weight: 600; }
+.gecis-hatasi-eylemler { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-1); }
+/* Telefonda iki düğme eşit genişlikte, alt alta değil yan yana sığmazsa sarar; dokunma hedefi 44. */
+@media (max-width: 760px) {
+  .gecis-hatasi-eylemler > * { flex: 1 1 140px; min-height: var(--kontrol-h-dokunma); }
+}
 
 /*
   DEVREDİLEN KAYIT UYARILARI (Aşama 2.1, gezinme-korumasi.tsx). Sayfa

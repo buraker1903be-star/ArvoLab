@@ -4,6 +4,7 @@ import {
   _koruyuculariSifirla,
   kaydiTamamla,
   korumaGerekliMi,
+  koruyucuDurumu,
   koruyucuKaydet,
   uygulamaIciGecisMi,
   type BaglantiTiklamasi,
@@ -57,6 +58,22 @@ describe("kaydiTamamla", () => {
     const sil = koruyucuKaydet({ kirliMi: () => true, kaydet: async () => false });
     sil();
     assert.equal(await kaydiTamamla(), "temiz");
+  });
+});
+
+describe("koruyucuDurumu (kayıt hatası penceresinin sözü)", () => {
+  it("kirli koruyucunun taslak durumu ve nedeni okunur", () => {
+    koruyucuKaydet({ kirliMi: () => true, kaydet: async () => false, durum: () => ({ taslakYazildi: false, neden: "Oturum kapandı" }) });
+    assert.deepEqual(koruyucuDurumu(), { taslakYazildi: false, neden: "Oturum kapandı" });
+  });
+  it("temiz koruyucu sayılmaz", () => {
+    koruyucuKaydet({ kirliMi: () => false, kaydet: async () => true, durum: () => ({ taslakYazildi: false, neden: "eski" }) });
+    koruyucuKaydet({ kirliMi: () => true, kaydet: async () => false, durum: () => ({ taslakYazildi: true, neden: null }) });
+    assert.deepEqual(koruyucuDurumu(), { taslakYazildi: true, neden: null });
+  });
+  it("durumunu söylemeyen kirli koruyucu için taslak güvencesi VERİLMEZ", () => {
+    koruyucuKaydet({ kirliMi: () => true, kaydet: async () => false });
+    assert.deepEqual(koruyucuDurumu(), { taslakYazildi: false, neden: null });
   });
 });
 

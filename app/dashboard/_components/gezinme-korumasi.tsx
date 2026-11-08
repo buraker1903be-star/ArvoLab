@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCeviri } from "@/app/_components/dil-saglayici";
-import { kaydiTamamla, korumaGerekliMi, uygulamaIciGecisMi } from "@/lib/gezinme-korumasi";
+import { kaydiTamamla, korumaGerekliMi, koruyucuDurumu, uygulamaIciGecisMi } from "@/lib/gezinme-korumasi";
 import Dialog from "./dialog";
 import { showToast } from "./toast-events";
 import { bekleyenleriGonder, devirAbone, devirler, yenidenDene, type DevirDurumu } from "@/lib/bekleyen-kayit";
@@ -33,7 +33,7 @@ const BOS_LISTE: readonly DevirDurumu[] = [];
   tarayıcının kendi uyarısıyla ve tarayıcı taslağıyla korunur.
 */
 
-type Durum = { tur: "bos" } | { tur: "kaydediliyor" } | { tur: "hata"; devam: () => void };
+type Durum = { tur: "bos" } | { tur: "kaydediliyor" } | { tur: "hata"; devam: () => void; taslakYazildi: boolean; neden: string | null };
 
 let durum: Durum = { tur: "bos" };
 const dinleyiciler = new Set<() => void>();
@@ -63,7 +63,7 @@ async function koruyarakCalistir(devam: () => void) {
   try {
     const sonuc = await kaydiTamamla();
     if (sonuc === "kaydedilemedi") {
-      durumYaz({ tur: "hata", devam: () => void koruyarakCalistir(devam) });
+      durumYaz({ tur: "hata", devam: () => void koruyarakCalistir(devam), ...koruyucuDurumu() });
       return;
     }
     durumYaz({ tur: "bos" });
@@ -141,33 +141,45 @@ export default function GezinmeKorumasi() {
           {t({ tr: "Son değişiklikler kaydediliyor; kayıt bitince geçilecek…", en: "Saving your latest changes; you'll move on once saved…" })}
         </p>
       ) : null}
+      {/*
+        Aşama 2.1 (P2): açıklama başlık bölümünden gövdeye alındı; başlık
+        ile düğmeler arasındaki boş gövde kalktı. Taslak cümlesi taslağın
+        GERÇEK durumundan (lib/taslak-durumu.ts), neden sunucudan. Kapatma
+        (×, Esc) ve "Sayfada kal" aynı şey: editörde kalınır, hiçbir şey
+        silinmez; kayıtsız ayrılma seçeneği bilerek yok.
+      */}
       <Dialog
         open={simdiki.tur === "hata"}
         onClose={() => durumYaz({ tur: "bos" })}
         title={t({ tr: "Son değişiklikler kaydedilemedi", en: "Your latest changes couldn't be saved" })}
-        description={t({
-          tr: "Metniniz sunucuya yazılamadığı için sayfadan ayrılmanız durduruldu. Değişiklikler bu tarayıcıda taslak olarak tutuluyor. Bağlantınızı kontrol edin; oturumunuz kapandıysa başka bir sekmede giriş yapıp yeniden deneyin.",
-          en: "Leaving the page was stopped because your text couldn't be saved to the server. Your changes are kept as a draft in this browser. Check your connection; if your session ended, sign in on another tab and try again.",
-        })}
       >
-        <div className="gecis-hatasi-eylemler">
-          <button
-            type="button"
-            className="projects-primary-button"
-            onClick={() => {
-              if (simdiki.tur === "hata") {
-                const devam = simdiki.devam;
-                durumYaz({ tur: "bos" });
-                devam();
-              }
-            }}
-          >
-            {t({ tr: "Kaydetmeyi yeniden dene", en: "Try saving again" })}
-          </button>
-          <button type="button" className="projects-filter-button" onClick={() => durumYaz({ tur: "bos" })}>
-            {t({ tr: "Sayfada kal", en: "Stay on this page" })}
-          </button>
-        </div>
+        {simdiki.tur === "hata" ? (
+          <div className="gecis-hatasi">
+            <p>
+              {simdiki.neden ? `${simdiki.neden.replace(/[.!?]?\s*$/, ".")} ` : ""}
+              {t({ tr: "Kayıt tamamlanmadığı için sayfadan ayrılmadınız; metniniz editörde.", en: "You haven't left the page because saving didn't finish; your text is in the editor." })}
+            </p>
+            <p className={simdiki.taslakYazildi ? "gecis-hatasi-not" : "gecis-hatasi-not gecis-hatasi-dikkat"}>
+              {t(simdiki.taslakYazildi ? TASLAK_GUVENDE_METIN : TASLAK_YAZILAMADI_METIN)}
+            </p>
+            <div className="gecis-hatasi-eylemler">
+              <button
+                type="button"
+                className="projects-primary-button"
+                onClick={() => {
+                  const devam = simdiki.devam;
+                  durumYaz({ tur: "bos" });
+                  devam();
+                }}
+              >
+                {t({ tr: "Kaydetmeyi yeniden dene", en: "Try saving again" })}
+              </button>
+              <button type="button" className="projects-filter-button" onClick={() => durumYaz({ tur: "bos" })}>
+                {t({ tr: "Sayfada kal", en: "Stay on this page" })}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </Dialog>
     </>
   );

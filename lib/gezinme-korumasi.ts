@@ -26,6 +26,13 @@ export type Koruyucu = {
   kirliMi: () => boolean;
   /** Şimdi kaydet; sunucu kabul ettiyse true. */
   kaydet: () => Promise<boolean>;
+  /*
+    Kayıt düşünce kullanıcıya NE söyleneceği (Aşama 2.1, P2): taslak bu
+    tarayıcıya gerçekten yazılabildi mi ve sunucunun verdiği neden. Pencere
+    eskiden "taslak bu tarayıcıda tutuluyor" diyordu, depolama dolu ya da
+    kapalıyken de — tam da sunucu kaydının başarısız olduğu anda.
+  */
+  durum?: () => { taslakYazildi: boolean; neden: string | null };
 };
 
 export type KayitSonucu = "temiz" | "kaydedildi" | "kaydedilemedi";
@@ -74,6 +81,20 @@ export async function kaydiTamamla(zamanAsimiMs = KAYIT_ZAMAN_ASIMI_MS): Promise
   } finally {
     clearTimeout(zamanlayici);
   }
+}
+
+/** Kirli koruyucuların kayıt durumu: kayıt düşünce pencere bunu söyler. */
+export function koruyucuDurumu(): { taslakYazildi: boolean; neden: string | null } {
+  let taslakYazildi = true;
+  let neden: string | null = null;
+  for (const k of koruyucular) {
+    if (!k.kirliMi()) continue;
+    // Durumunu söylemeyen koruyucu için taslak güvencesi VERİLMEZ: bilinmeyen, "yazıldı" değildir.
+    const d = k.durum?.() ?? { taslakYazildi: false, neden: null };
+    taslakYazildi &&= d.taslakYazildi;
+    neden ??= d.neden;
+  }
+  return { taslakYazildi, neden };
 }
 
 /** Testler için: kayıtlı koruyucuları temizler. */

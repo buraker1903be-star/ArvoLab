@@ -737,8 +737,11 @@ export default function ManuscriptEditor({
   }, [projectId, kullaniciId]);
 
   /* Hata metnine taslağın GERÇEK durumunu ekler (lib/taslak-durumu.ts). */
+  /* Son sunucu kayıt hatasının yalın metni: gezinme korumasının penceresi gösterir (Aşama 2.1). */
+  const sonKayitHatasiRef = useRef<string | null>(null);
   const hataYaz = useCallback(
     (mesaj: string) => {
+      sonKayitHatasiRef.current = mesaj;
       setSaveError(kayitHatasiMetni(mesaj, !taslakYazilamadiRef.current, dil));
     },
     [dil]
@@ -926,6 +929,7 @@ export default function ManuscriptEditor({
       koruyucuKaydet({
         kirliMi: () => revisionRef.current !== savedRevisionRef.current || inFlightRef.current !== null,
         kaydet: () => saveNowRef.current(),
+        durum: () => ({ taslakYazildi: !taslakYazilamadiRef.current, neden: sonKayitHatasiRef.current }),
       }),
     [],
   );

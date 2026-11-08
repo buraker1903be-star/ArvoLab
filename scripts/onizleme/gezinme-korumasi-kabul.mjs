@@ -193,6 +193,29 @@ await senaryo("yeni sekmede açma (Ctrl+tık) araya girmez: editör yerinde kal�
   await ctx.close();
 });
 
+await senaryo("kayıt hatası penceresi taslağın GERÇEK durumunu söyler: depo doluyken 'tarayıcıya da kaydedilemedi'", async () => {
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await editorAc(ctx);
+  await s.evaluate(() => {
+    Storage.prototype.setItem = function () {
+      throw new DOMException("dolu", "QuotaExceededError");
+    };
+  });
+  await s.route("**/*", (route) => (kayitIstegiMi(route.request()) ? route.abort("failed") : route.continue()));
+  await yaz(s);
+  await s.locator('#os-gezinme a[href="/dashboard/literature"]').first().click();
+  const pencere = s.getByRole("dialog").filter({ hasText: /kaydedilemedi/ });
+  await pencere.waitFor({ state: "visible", timeout: 30000 });
+  const metin = await pencere.innerText();
+  bekle(/tarayıcıya da kaydedilemedi/.test(metin), `depo doluyken yanlış güvence: ${metin.slice(0, 200)}`);
+  bekle(!/bu tarayıcıda saklanıyor/.test(metin), "depo doluyken 'saklanıyor' deniyor");
+  await s.unroute("**/*");
+  await pencere.getByRole("button", { name: /Sayfada kal/ }).click();
+  await s.keyboard.press("Control+s");
+  await s.waitForTimeout(1500);
+  await ctx.close();
+});
+
 // ---------------- GEÇMİŞ HAREKETLERİ (Aşama 2.1) ----------------
 
 /** Editöre UYGULAMA İÇİNDEN (bağlantıyla) gelinir: geri/ileri Next'in popstate'iyle işlenir. */
