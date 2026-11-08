@@ -545,3 +545,47 @@ html.drawer-open { overflow: hidden; }
   transform: translateX(-50%);
 }
 .gecis-hatasi-eylemler { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-4); }
+
+/*
+  DEVREDİLEN KAYIT UYARILARI (Aşama 2.1, gezinme-korumasi.tsx). Sayfa
+  değişince kaydı kabuk gönderiyor; kayıt düşerse uyarı kullanıcının
+  vardığı sayfada kalıcı durur. Alt köşede, alt çubuğun ve güvenli alanın
+  üstünde; telefonda tam genişlik.
+*/
+.devir-uyarilari {
+  position: fixed;
+  right: var(--s-4);
+  bottom: calc(var(--dock-alani) + var(--s-4));
+  z-index: var(--z-toast);
+  display: grid;
+  gap: var(--s-2);
+  width: min(420px, calc(100vw - 2 * var(--s-4)));
+}
+.devir-durum {
+  margin: 0;
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--yuzey-ust);
+  box-shadow: var(--yuzey-acilir-golge);
+  color: var(--ink-soft);
+  font-size: var(--tip-meta);
+}
+.devir-uyari {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line));
+  border-left-width: 3px;
+  border-radius: var(--r-md);
+  background: var(--yuzey-ust);
+  box-shadow: var(--yuzey-pencere-golge);
+}
+.devir-uyari p { margin: 0; }
+.devir-uyari-baslik { color: var(--ink); font-size: var(--tip-arayuz); line-height: var(--lh-baslik); }
+.devir-uyari-metin { color: var(--ink-soft); font-size: var(--tip-meta); line-height: var(--lh-metin); }
+.devir-uyari-eylemler { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+@media (max-width: 760px) {
+  .devir-uyarilari { right: var(--s-4); left: var(--s-4); width: auto; }
+  .devir-uyari-eylemler > * { flex: 1 1 0; min-height: var(--kontrol-h-dokunma); }
+}

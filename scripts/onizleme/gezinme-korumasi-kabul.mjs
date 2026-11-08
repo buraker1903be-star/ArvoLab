@@ -12,6 +12,17 @@
   yavaşlatılır ya da düşürülür (yalnızca belge kaydı: gövdesinde "content"
   olan sunucu eylemi).
 
+  GEÇMİŞ HAREKETLERİ (Aşama 2.1). Tarayıcının geri/ileri düğmesi
+  DURDURULAMAZ (Next popstate'i kendisi işliyor); onun yerine kayıt kabuğa
+  devredilir (lib/bekleyen-kayit.ts) ve gezinme bitince gönderilir; düşerse
+  vardığı sayfada kalıcı uyarı. İki ayrı durum sınanır:
+    - uygulama içi geçmiş (editöre bağlantıyla gelinmiş): devir;
+    - belgeler arası geçmiş (editör doğrudan adresle açılmış), yenileme ve
+      sekme kapatma: tarayıcının "ayrılmak istiyor musunuz" uyarısı ve
+      tarayıcı taslağı.
+  Sahte veriyle sınanır: gerçek Supabase'teki oturum kapanması ve sürüm
+  çakışması bu betiğin DIŞINDA (UNVERIFIED).
+
   ÖNKOŞUL: yazma modu önizlemesi (ONIZLEME_YAZ=1 npm run onizleme:ai) ve
   TAZE sunucu (sahte veri bellekte; yazılan işaretler birikir ama
   benzersiz oldukları için senaryolar birbirini etkilemez).
@@ -180,6 +191,184 @@ await senaryo("yeni sekmede açma (Ctrl+tık) araya girmez: editör yerinde kal�
   await s.keyboard.press("Control+s");
   await s.waitForTimeout(1500);
   await ctx.close();
+});
+
+// ---------------- GEÇMİŞ HAREKETLERİ (Aşama 2.1) ----------------
+
+/** Editöre UYGULAMA İÇİNDEN (bağlantıyla) gelinir: geri/ileri Next'in popstate'iyle işlenir. */
+async function editoreBaglantiyla(ctx) {
+  const sayfa = await ctx.newPage();
+  await sayfa.goto(`${TABAN}/dashboard`, { waitUntil: "networkidle", timeout: 180000 });
+  await sayfa.locator('main a[href$="/write"]').first().click();
+  await sayfa.waitForURL(/\/write/, { timeout: 60000 });
+  await sayfa.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
+  await sayfa.waitForTimeout(800);
+  return sayfa;
+}
+
+await senaryo("geçmiş: yaz → hemen GERİ (uygulama içi) → kayıt devredilir, metin sunucuda", async () => {
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await editoreBaglantiyla(ctx);
+  const isaret = await yaz(s);
+  await s.goBack();
+  await s.waitForURL(`${TABAN}/dashboard`, { timeout: 30000 });
+  await s.waitForTimeout(4000);
+  bekle(!(await s.locator(".devir-uyari").isVisible().catch(() => false)), "başarılı devirde hata uyarısı görünüyor");
+  await ctx.close();
+  bekle(await sunucudaMi(isaret), "geri sonrası metin sunucuda yok");
+});
+
+await senaryo("geçmiş: yaz → hemen İLERİ (uygulama içi) → metin sunucuda", async () => {
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await editoreBaglantiyla(ctx);
+  await s.locator('#os-gezinme a[href="/dashboard"]').first().click();
+  await s.waitForURL(`${TABAN}/dashboard`);
+  await s.goBack();
+  await s.waitForURL(/\/write/);
+  await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
+  await s.waitForTimeout(800);
+  const isaret = await yaz(s);
+  await s.goForward();
+  await s.waitForURL(`${TABAN}/dashboard`, { timeout: 30000 });
+  await s.waitForTimeout(4000);
+  await ctx.close();
+  bekle(await sunucudaMi(isaret), "ileri sonrası metin sunucuda yok");
+});
+
+await senaryo("geçmiş: otomatik kayıt SÜRERKEN geri → süren kayıt ve devir çakışmaz, metin sunucuda, uyarı yok", async () => {
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await editoreBaglantiyla(ctx);
+  await s.route("**/*", async (route) => {
+    if (kayitIstegiMi(route.request())) await new Promise((r) => setTimeout(r, 3000));
+    await route.continue();
+  });
+  const istek = s.waitForRequest(kayitIstegiMi, { timeout: 15000 });
+  const isaret = await yaz(s);
+  await istek; // otomatik kayıt başladı ve yavaş sürüyor
+  await s.keyboard.type(" sonra", { delay: 5 }); // kayıt sürerken yeni harfler
+  await s.goBack();
+  await s.waitForURL(`${TABAN}/dashboard`, { timeout: 30000 });
+  await s.waitForTimeout(9000);
+  bekle(!(await s.locator(".devir-uyari").isVisible().catch(() => false)), `çakışma ya da hata uyarısı: ${await s.locator(".devir-uyari").innerText().catch(() => "")}`);
+  await s.unroute("**/*");
+  await ctx.close();
+  bekle(await sunucudaMi(`${isaret} sonra`), "süren kayıtla geri sonrası son metin sunucuda yok");
+});
+
+await senaryo("geçmiş: kayıt HATASI varken geri → vardığı sayfada kalıcı uyarı (taslak yeri doğru), 'Yeniden dene' kaydeder", async () => {
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await editoreBaglantiyla(ctx);
+  await s.route("**/*", (route) => (kayitIstegiMi(route.request()) ? route.abort("failed") : route.continue()));
+  const isaret = await yaz(s);
+  await s.goBack();
+  await s.waitForURL(`${TABAN}/dashboard`, { timeout: 30000 });
+  const uyari = s.locator(".devir-uyari[role='alert']");
+  await uyari.waitFor({ state: "visible", timeout: 30000 });
+  const metin = await uyari.innerText();
+  bekle(/bu tarayıcıda/i.test(metin), `uyarı taslağın yerini söylemiyor: ${metin}`);
+  bekle((await uyari.getByRole("link", { name: /Çalışmaya dön/ }).getAttribute("href"))?.endsWith("/write"), "Çalışmaya dön bağlantısı yok");
+  await s.waitForTimeout(1500);
+  bekle(await uyari.isVisible(), "uyarı kendiliğinden kalktı (sessiz kayıp)");
+  await s.unroute("**/*");
+  await uyari.getByRole("button", { name: /Yeniden dene/ }).click();
+  // Uyarı önce "kaydediliyor" satırına döner; kayıt BİTENE kadar (ikisi de kalkana kadar) beklenir.
+  await s.waitForFunction(() => !document.querySelector(".devir-uyari, .devir-durum"), null, { timeout: 30000 });
+  await ctx.close();
+  bekle(await sunucudaMi(isaret), "yeniden denemeden sonra metin sunucuda yok");
+});
+
+await senaryo("çalışma DEĞİŞTİRİRKEN kayıt: switcher kaydı bekler, metin sunucuda ve aynı bölüme gidilir", async () => {
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await editorAc(ctx);
+  await s.route("**/*", async (route) => {
+    if (kayitIstegiMi(route.request())) await new Promise((r) => setTimeout(r, 2000));
+    await route.continue();
+  });
+  const isaret = await yaz(s);
+  await s.locator(".proje-secici-dugme").click();
+  await s.locator(".proje-secici-oge").nth(1).click();
+  await s.waitForTimeout(600);
+  bekle(s.url().startsWith(YAZIM), "kayıt bitmeden çalışma değişti");
+  await s.waitForURL(/0000000000b2\/write/, { timeout: 30000 });
+  await s.unroute("**/*");
+  await ctx.close();
+  bekle(await sunucudaMi(isaret), "çalışma değiştirdikten sonra metin sunucuda yok");
+});
+
+await senaryo("YENİLEME: tarayıcı uyarır; reddedilince metin yerinde, kabul edilince taslak geri yükleme önerilir", async () => {
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await editorAc(ctx);
+  await s.route("**/*", (route) => (kayitIstegiMi(route.request()) ? route.abort("failed") : route.continue()));
+  const isaret = await yaz(s);
+  await s.waitForTimeout(800); // taslak tarayıcıya yazılsın
+  let kabul = false;
+  const diyaloglar = [];
+  s.on("dialog", async (d) => {
+    diyaloglar.push(d.type());
+    if (kabul) await d.accept();
+    else await d.dismiss();
+  });
+  await s.reload({ timeout: 5000 }).catch(() => {});
+  await s.waitForTimeout(800);
+  bekle(diyaloglar.includes("beforeunload"), "yenilemede tarayıcı uyarısı çıkmadı");
+  bekle(await s.locator(".ProseMirror").first().evaluate((e, i) => e.textContent.includes(i), isaret), "uyarı reddedildiği hâlde metin gitti");
+  kabul = true;
+  await s.reload({ waitUntil: "networkidle" });
+  await s.unroute("**/*");
+  await s.getByText(/Bu tarayıcıda kaydedilmemiş değişiklikleriniz bulundu|unsaved changes in this browser/).waitFor({ timeout: 30000 });
+  await ctx.close();
+});
+
+await senaryo("SEKME KAPATMA: kaydedilmemiş metin varken tarayıcı uyarır", async () => {
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await editorAc(ctx);
+  await s.route("**/*", (route) => (kayitIstegiMi(route.request()) ? route.abort("failed") : route.continue()));
+  await yaz(s);
+  const diyalog = new Promise((coz) => s.once("dialog", async (d) => { coz(d.type()); await d.dismiss(); }));
+  await s.close({ runBeforeUnload: true });
+  bekle((await Promise.race([diyalog, new Promise((r) => setTimeout(() => r("yok"), 5000))])) === "beforeunload", "sekme kapatmada uyarı çıkmadı");
+  await ctx.close();
+});
+
+await senaryo("belgeler arası GERİ (editör doğrudan adresle açılmış): tarayıcı uyarır, reddedilince metin yerinde", async () => {
+  const ctx = await tarayici.newContext({ viewport: { width: 1440, height: 900 } });
+  const s = await ctx.newPage();
+  await s.goto(`${TABAN}/dashboard`, { waitUntil: "networkidle" });
+  await s.goto(YAZIM, { waitUntil: "networkidle" });
+  await s.locator(".ProseMirror").first().waitFor();
+  await s.waitForTimeout(800);
+  await s.route("**/*", (route) => (kayitIstegiMi(route.request()) ? route.abort("failed") : route.continue()));
+  const isaret = await yaz(s);
+  const diyaloglar = [];
+  s.on("dialog", async (d) => { diyaloglar.push(d.type()); await d.dismiss(); });
+  await s.goBack({ timeout: 5000 }).catch(() => {});
+  await s.waitForTimeout(800);
+  bekle(diyaloglar.includes("beforeunload"), "belgeler arası geride uyarı çıkmadı");
+  bekle(s.url().startsWith(YAZIM), "uyarı reddedildiği hâlde sayfa değişti");
+  bekle(await s.locator(".ProseMirror").first().evaluate((e, i) => e.textContent.includes(i), isaret), "metin gitti");
+  await s.unroute("**/*");
+  await s.keyboard.press("Control+s");
+  await s.waitForTimeout(1500);
+  await ctx.close();
+});
+
+await senaryo("TELEFON (iPhone 13 öykünmesi): yaz → hemen geri (uygulama içi) → metin sunucuda", async () => {
+  const { devices } = require("playwright");
+  const ctx = await tarayici.newContext({ ...devices["iPhone 13"] });
+  const s = await ctx.newPage();
+  await s.goto(`${TABAN}/dashboard`, { waitUntil: "networkidle", timeout: 180000 });
+  await s.locator('main a[href$="/write"]').first().tap();
+  await s.waitForURL(/\/write/, { timeout: 60000 });
+  await s.locator(".ProseMirror").first().waitFor({ state: "visible", timeout: 60000 });
+  await s.waitForTimeout(800);
+  const isaret = `KORUMA${Date.now().toString(36)}`;
+  await s.locator(".ProseMirror").first().tap();
+  await s.keyboard.type(` ${isaret}`, { delay: 5 });
+  await s.goBack();
+  await s.waitForURL(`${TABAN}/dashboard`, { timeout: 30000 });
+  await s.waitForTimeout(4000);
+  await ctx.close();
+  bekle(await sunucudaMi(isaret), "telefonda geri sonrası metin sunucuda yok");
 });
 
 await tarayici.close();

@@ -1,10 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { kaydiTamamla, korumaGerekliMi, uygulamaIciGecisMi } from "@/lib/gezinme-korumasi";
 import Dialog from "./dialog";
+import { showToast } from "./toast-events";
+import { bekleyenleriGonder, devirAbone, devirler, yenidenDene, type DevirDurumu } from "@/lib/bekleyen-kayit";
+import { TASLAK_GUVENDE_METIN, TASLAK_YAZILAMADI_METIN } from "@/lib/taslak-durumu";
+
+const BOS_LISTE: readonly DevirDurumu[] = [];
 
 /*
   GEZİNME KORUMASININ KABUK TARAFI (Signature OS 2.0 Aşama 2). Karar
@@ -19,10 +25,12 @@ import Dialog from "./dialog";
   Koruma gerekmiyorsa (editör kapalı ya da her şey kaydedilmiş) hiçbirine
   dokunulmaz; tıklama olduğu gibi Next'e gider.
 
-  Kapsam DIŞI ve bilerek: tarayıcının geri/ileri düğmesi. Next onu kendi
-  dinliyor ve popstate engellenemiyor; orada editörün kapanırken taslak
-  yazıp kaydı başlatması (manuscript-editor.tsx) eskisi gibi sürer.
-  Sekme kapatma ve yenileme tarayıcının kendi uyarısıyla korunur.
+  Tarayıcının geri/ileri düğmesi DURDURULAMAZ (Next popstate'i kendisi
+  işliyor, olay iptal edilemiyor). Orada kayıt KABUĞA DEVREDİLİR
+  (lib/bekleyen-kayit.ts): editör kapanırken içeriğin anlık görüntüsünü
+  bırakır, bu bileşen gezinme bitince gönderir, düşerse kalıcı uyarı
+  gösterir (BekleyenKayitlar, aşağıda). Sekme kapatma ve yenileme
+  tarayıcının kendi uyarısıyla ve tarayıcı taslağıyla korunur.
 */
 
 type Durum = { tur: "bos" } | { tur: "kaydediliyor" } | { tur: "hata"; devam: () => void };
@@ -127,6 +135,7 @@ export default function GezinmeKorumasi() {
 
   return (
     <>
+      <BekleyenKayitlar />
       {simdiki.tur === "kaydediliyor" ? (
         <p className="gecis-durumu" role="status">
           {t({ tr: "Son değişiklikler kaydediliyor; kayıt bitince geçilecek…", en: "Saving your latest changes; you'll move on once saved…" })}
@@ -161,5 +170,73 @@ export default function GezinmeKorumasi() {
         </div>
       </Dialog>
     </>
+  );
+}
+
+/*
+  DEVREDİLEN KAYITLAR (Aşama 2.1). Sayfa değişince editör yok; kayıt
+  işini burada, gezinme BİTTİKTEN sonra göndeririz: bağlantıyla geçişte
+  gezinme sürerken başlatılan kayıt sunucuya ulaşmıyordu (Aşama 2,
+  ölçüldü); geçiş bittikten sonra gönderilen kayıt o yarışa girmiyor. Kayıt
+  sürerken bir durum satırı, düşerse kalıcı bir uyarı (role=alert): uyarı
+  kayıt olana ya da kullanıcı çalışmaya dönüp editör taslağı devralana
+  kadar kalkmaz — kapatma düğmesi bilerek yok, sessiz kayıp olmasın.
+*/
+function BekleyenKayitlar() {
+  const t = useCeviri();
+  const yol = usePathname();
+  const liste = useSyncExternalStore(devirAbone, devirler, () => BOS_LISTE);
+  const onceki = useRef<readonly DevirDurumu[]>(BOS_LISTE);
+
+  useEffect(() => {
+    if (!liste.some((d) => d.durum === "bekliyor")) return;
+    // Bir tık sonra: geçişin kendi işleri (Next'in eylem kuyruğu) bitsin.
+    const z = window.setTimeout(() => void bekleyenleriGonder(), 250);
+    return () => window.clearTimeout(z);
+  }, [liste, yol]);
+
+  // Gönderilip listeden düşen devir: kısa bir başarı bildirimi.
+  useEffect(() => {
+    for (const d of onceki.current) {
+      if (d.durum === "gonderiliyor" && !liste.some((x) => x.anahtar === d.anahtar)) {
+        showToast("success", t({ tr: `${d.baslik || "Çalışma"}: son değişiklikler kaydedildi.`, en: `${d.baslik || "Work"}: your latest changes were saved.` }));
+      }
+    }
+    onceki.current = liste;
+  }, [liste, t]);
+
+  if (!liste.length) return null;
+  return (
+    <div className="devir-uyarilari">
+      {liste.map((d) =>
+        d.durum === "hata" ? (
+          <section key={d.anahtar} className="devir-uyari" role="alert" aria-label={t({ tr: "Kaydedilemeyen değişiklikler", en: "Unsaved changes" })}>
+            <p className="devir-uyari-baslik">
+              <b>{d.baslik || t({ tr: "Çalışma", en: "Work" })}</b>
+              {t({ tr: ": son değişiklikler sunucuya kaydedilemedi.", en: ": the latest changes couldn't be saved to the server." })}
+            </p>
+            <p className="devir-uyari-metin">
+              {d.neden ? `${d.neden.replace(/[.!?]?\s*$/, ".")} ` : ""}
+              {t(d.taslakYazildi ? TASLAK_GUVENDE_METIN : TASLAK_YAZILAMADI_METIN)}{" "}
+              {d.taslakYazildi
+                ? t({ tr: "Çalışmaya dönünce geri yüklemeniz önerilir.", en: "When you return to the work, you'll be offered to restore it." })
+                : ""}
+            </p>
+            <div className="devir-uyari-eylemler">
+              <button type="button" className="projects-primary-button button-compact" onClick={() => yenidenDene(d.anahtar)}>
+                {t({ tr: "Yeniden dene", en: "Try again" })}
+              </button>
+              <Link href={d.adres} className="projects-filter-button button-compact">
+                {t({ tr: "Çalışmaya dön", en: "Back to the work" })}
+              </Link>
+            </div>
+          </section>
+        ) : (
+          <p key={d.anahtar} className="devir-durum" role="status">
+            {t({ tr: `${d.baslik || "Çalışma"}: son değişiklikler kaydediliyor…`, en: `${d.baslik || "Work"}: saving your latest changes…` })}
+          </p>
+        ),
+      )}
+    </div>
   );
 }

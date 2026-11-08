@@ -109,18 +109,26 @@ silinmez; "Kapandı" satırıyla tarihlenir.
      kurallı sayısıyla karşılaştırılır; o gün için tek seferlik küçük bir
      artış/azalış görünebilir (doğal kayıtta da aynısı olur).
 
-## N7 — Tarayıcının geri/ileri düğmesi gezinme korumasının dışında (AÇIK)
+## N7 — Tarayıcının geri/ileri düğmesi gezinme korumasının dışında (KISMEN KAPANDI)
 
-- **Yer:** `lib/gezinme-korumasi.ts`, `app/dashboard/_components/gezinme-korumasi.tsx`
-  (Signature OS 2.0 Aşama 2, 08.11.2026).
-- **Durum:** uygulama içi bağlantılar, komut paleti, Project Switcher ve
-  çıkış formu kaydedilmemiş metin varken kayıt bitmeden geçmez
-  (`gezinme-korumasi-kabul.mjs` 7/7; koruma kapatılınca 4'ü düşüyor).
-  Tarayıcının geri/ileri düğmesi bunun DIŞINDA: Next `popstate`'i kendisi
-  dinliyor ve olay engellenemiyor. Orada editörün eski davranışı sürüyor:
-  kapanırken taslak bu tarayıcıya yazılıyor ve kayıt başlatılıyor, ama
-  sonucu beklenmiyor.
-- **Kapanış ölçütü:** geri düğmesiyle çıkışta da kayıt sonucunun
-  beklendiğini (ya da geçişin durdurulduğunu) gösteren bir senaryo; olası
-  yol: yazım sayfasında kirliyken bir geçmiş kaydı tutmak ve popstate'te
-  kayıt bitene kadar geri ileri almak. Gerçek cihazda da denenmeli.
+- **Yer:** `lib/gezinme-korumasi.ts`, `lib/bekleyen-kayit.ts`,
+  `app/dashboard/_components/gezinme-korumasi.tsx`.
+- **Neden durdurulamıyor:** Next App Router geçmiş hareketini `popstate`
+  ile kendisi işliyor; olay iptal edilemiyor. Navigation API'nin iptal
+  desteği tarayıcılar arasında tutarsız ve Next'le çakışıyor; geçmiş kaydı
+  hileleri (sahte kayıt itmek) kullanıcıyı geri/ileri döngüsüne sokar.
+  Bu yüzden geçiş DURDURULMUYOR.
+- **Ne yapıldı (Aşama 2.1, 08.11.2026):** uygulama içi geri/ileride editör
+  kapanırken içeriğin anlık görüntüsünü alır ve kaydı kabuğa devreder;
+  kabuk gezinme bitince gönderir, geçici hatada yeniden dener, düşerse
+  vardığı sayfada kalıcı uyarı (taslağın gerçek yeri, "Yeniden dene",
+  "Çalışmaya dön"). Belgeler arası geri, yenileme ve sekme kapatmada
+  tarayıcının "ayrılmak istiyor musunuz" uyarısı ve tarayıcı taslağı.
+  Senaryolar: `gezinme-korumasi-kabul.mjs` (16).
+- **Neden hâlâ açık:** (1) sahte veriyle sınandı; gerçek Supabase Test'te
+  ağ hatası, oturum kapanması ve sürüm çakışması doğrulanmadı. (2) Gerçek
+  mobil tarayıcıda (iOS Safari geri kaydırma hareketi, Android geri tuşu)
+  denenmedi; yalnızca iPhone 13 öykünmesi. (3) Kullanıcı tarayıcı
+  uyarısını onaylayıp ayrılırsa metin yalnız o tarayıcının taslağındadır
+  (başka cihazda yok); bu, kullanıcının açık seçimi.
+- **Kapanış ölçütü:** (1) ve (2) gerçek ortamda.

@@ -143,6 +143,7 @@ import OnSayfalarKarti from "./on-sayfalar-karti";
 import { kilavuzOnSayfaAdlari, kilavuzOnSayfalari, onSayfaAdiKimligi, type OnSayfaKimligi } from "@/lib/on-sayfalar";
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { koruyucuKaydet } from "@/lib/gezinme-korumasi";
+import { hataliDevriBirak, kayitDevret, type DevirSonucu } from "@/lib/bekleyen-kayit";
 import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
 import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni } from "@/lib/kilavuz-bicim";
@@ -917,6 +918,9 @@ export default function ManuscriptEditor({
     (lib/gezinme-korumasi.ts). Eskiden kapanırken kayıt yalnızca başlatılıyor,
     sonucu beklenmiyordu.
   */
+  // Bu çalışmanın hatalı bir devri varsa artık taslak teklifi buradan yürür (lib/bekleyen-kayit.ts).
+  useEffect(() => hataliDevriBirak(projectId), [projectId]);
+
   useEffect(
     () =>
       koruyucuKaydet({
@@ -1293,14 +1297,62 @@ export default function ManuscriptEditor({
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      // Panel içinde başka sayfaya geçerken (beforeunload tetiklenmez) son değişiklikler gönderilir.
+      /*
+        Sayfadan çıkarken (uygulama içi gezinme korumasının yakalamadığı
+        yollar: tarayıcının geri/ileri düğmesi, yönlendirme) kaydedilmemiş
+        değişiklik varsa iş KABUĞA DEVREDİLİR (lib/bekleyen-kayit.ts).
+        ESKİDEN burada kayıt başlatılıyor ama sonucu beklenmiyordu: kayıt
+        düşerse metin yalnızca tarayıcı taslağında kalıyor, kullanıcı başka
+        sayfadaydı ve kimse bunu bilmiyordu. Şimdi kabuk gezinme bitince
+        gönderir, geçici hatada yeniden dener, düşerse vardığı sayfada
+        kalıcı uyarı gösterir (gezinme-korumasi-kabul.mjs, negatif kontrol).
+        İçerik ŞİMDİ alınır: editör bileşen kapandıktan hemen sonra yok
+        ediliyor (Tiptap scheduleDestroy).
+      */
       if (isDirty()) {
-        persistDraft();
-        void saveNowRef.current();
+        const taslakYazildi = persistDraft();
+        const kapanan = editorRef.current;
+        if (kapanan && !kapanan.isDestroyed) {
+          const icerik = JSON.stringify(korunanIcerigiGeriSar(kapanan.getJSON()));
+          const hedefRevizyon = revisionRef.current;
+          const ayarlar = { ...settingsRef.current };
+          kayitDevret({
+            anahtar: projectId,
+            baslik: projectDefaults?.title ?? "",
+            adres: `/dashboard/editor/${projectId}/write`,
+            taslakYazildi,
+            gonder: async (): Promise<DevirSonucu> => {
+              /*
+                Süren bir otomatik kayıt varsa önce o bitsin (en çok 15 sn):
+                ikisi aynı sürüm damgasıyla yazmaya kalkarsa ikincisi
+                "başka yerde değiştirildi" çakışmasına düşerdi.
+              */
+              if (inFlightRef.current) await Promise.race([inFlightRef.current.catch(() => false), new Promise((r) => setTimeout(r, 15_000))]);
+              if (savedRevisionRef.current === hedefRevizyon) {
+                clearDraft(projectId, kullaniciId);
+                return { tur: "kaydedildi" };
+              }
+              const res = await saveManuscript(projectId, {
+                content: JSON.parse(icerik) as TiptapDoc,
+                ...ayarlar,
+                expectedUpdatedAt: updatedAtRef.current,
+                force: false,
+                progress: null,
+              });
+              if (res.success) {
+                updatedAtRef.current = res.updatedAt;
+                savedRevisionRef.current = hedefRevizyon;
+                clearDraft(projectId, kullaniciId);
+                return { tur: "kaydedildi" };
+              }
+              return { tur: "hata", neden: res.error, kalici: Boolean(res.conflict || res.sessionExpired || res.forbidden) };
+            },
+          });
+        }
       }
     };
-    // projectId sayfa boyunca değişmez; Ctrl+P'nin baskı adresi için.
-  }, [persistDraft, projectId, t]);
+    // projectId, kullanıcı ve başlık sayfa boyunca değişmez (Ctrl+P adresi, kayıt devri).
+  }, [persistDraft, projectId, t, kullaniciId, projectDefaults?.title]);
 
   /*
     Geri yüklemeden önce sunucudaki metin geçmişe yedeklenir. Eskiden taslak
