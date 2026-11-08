@@ -213,6 +213,21 @@ export async function RitimKarti({ ritim }: { ritim: YazimRitmi }) {
   const t = await ceviri();
   const dil = await aktifDil();
   const isaret = (n: number) => `${n > 0 ? "+" : ""}${n.toLocaleString(YEREL[dil])}`;
+  /*
+    BOŞ HÂL TEK SATIR (Premium Simplicity Aşama 2, 08.11.2026). Eskiden son
+    14 günde yazım yokken kart üç tire ("0 · — · 0/14") ve iki satırlık
+    açıklama çiziyordu: bilgi tek cümleydi. Doluyken kart aynı.
+  */
+  if (!yazildi) {
+    return (
+      <article className="gb-kart gb-ozet-satiri gb-ritim-bos" aria-label={t({ tr: "Yazım ritmi", en: "Writing rhythm" })}>
+        <span className="gb-ozet-satiri-govde">
+          <b>{t({ tr: "Yazım ritmi", en: "Writing rhythm" })}</b>
+          <small>{t({ tr: "Son 14 günde kaydedilmiş yazım yok", en: "No saved writing in the last 14 days" })}</small>
+        </span>
+      </article>
+    );
+  }
   return (
     <article className="gb-kart gb-sutun">
       <header className="gb-kart-bas">
