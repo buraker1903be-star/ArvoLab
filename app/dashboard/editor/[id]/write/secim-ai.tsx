@@ -5,7 +5,9 @@ import type { Editor } from "@tiptap/react";
 import { TextSelection } from "@tiptap/pm/state";
 import { MessageSquareText, Sparkles } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
-import { asistanaGorevGonder, type DisGorev } from "@/lib/ai-duzenleme";
+import { asistanaGorevGonder, yeniOneriId, type DisGorev } from "@/lib/ai-duzenleme";
+import { aralikMetni, araligiBirak, araligiIzle } from "@/lib/tiptap-asistan-araligi";
+import { showToast } from "@/app/dashboard/_components/toast-events";
 import { secimDugmesiKonumu } from "@/lib/secim-dugmesi-konumu";
 
 /*
@@ -171,9 +173,30 @@ export default function SecimAi({ editor, panelAc }: { editor: Editor; panelAc: 
     setAcik(false);
     if (editoreDon) editor.commands.focus();
   };
+  /*
+    V4.3-0 (P0-1): görev, menüye basıldığı ANDAKİ seçimi taşır. Seçim
+    hemen izlemeye alınır (lib/tiptap-asistan-araligi.ts): önceki yanıt
+    beklenirken görev sıraya girer ve kullanıcı arada başka bir yeri seçse
+    ya da yazsa bile sırası gelince BU metin işlenir. Sıra doluysa ya da
+    aynı görev zaten sıradaysa izleme bırakılır ve kullanıcıya söylenir;
+    eskiden görev sessizce kayboluyordu.
+  */
   const gorev = (g: DisGorev) => {
+    const { from, to } = editor.state.selection;
+    if (from === to) return;
+    const oneriId = yeniOneriId();
+    editor.view.dispatch(araligiIzle(editor.state.tr, oneriId, from, to));
+    const sonuc = asistanaGorevGonder({ gorev: g, oneriId, secimMetni: aralikMetni(editor.state.doc, from, to) });
+    if (sonuc !== "eklendi") {
+      editor.view.dispatch(araligiBirak(editor.state.tr, oneriId));
+      showToast(
+        "warning",
+        sonuc === "dolu"
+          ? t({ tr: "Sırada zaten üç istek var; önceki yanıtlar gelince yeniden deneyin.", en: "Three requests are already queued; try again once the earlier answers arrive." })
+          : t({ tr: "Bu metin için aynı istek zaten sırada.", en: "The same request for this text is already queued." }),
+      );
+    }
     panelAc();
-    asistanaGorevGonder(g);
     setAcik(false);
     setGorunur(false);
   };

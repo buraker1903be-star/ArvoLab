@@ -50,7 +50,16 @@ export function asistanAraligiEklentisi() {
             const bas = tr.mapping.mapResult(a.from, 1);
             const son = tr.mapping.mapResult(a.to, -1);
             const bosaldi = a.to > a.from && son.pos <= bas.pos;
-            durum[id] = { from: bas.pos, to: Math.max(bas.pos, son.pos), silindi: a.silindi || bosaldi };
+            /*
+              Nokta aralık (seçimsiz, imleçte istenen öneri): içinde metin
+              olmadığı için "boşaldı" hiç doğru olmaz. V4.3-0'a kadar imlecin
+              bulunduğu paragraf silinse bile nokta komşu paragrafa kayıyor
+              ve "Paragrafın altına ekle" oraya ekliyordu. Noktanın İKİ
+              yanı birden silindiyse (deletedAcross: bulunduğu yer silindi)
+              silinmiş sayılır. Önüne yazmak ya da tek harf silmek saymaz.
+            */
+            const noktaSilindi = a.to === a.from && bas.deletedAcross;
+            durum[id] = { from: bas.pos, to: Math.max(bas.pos, son.pos), silindi: a.silindi || bosaldi || noktaSilindi };
           }
         }
         const meta = tr.getMeta(asistanAraligiAnahtari) as Meta | undefined;

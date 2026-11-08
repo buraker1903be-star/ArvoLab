@@ -246,16 +246,140 @@ const iste = async (s, metin) => {
   await ctx.close();
 }
 
+// ---- V4.3-0: görev sırası, "altına ekle" doğrulaması, aralık bırakma, kabul kilidi ----
+{
+  const { ctx, sayfa } = await editorAc();
+  await asistaniAc(sayfa);
+  /* İzlenen aralık sayısı: editörün eklenti durumundan (lib/tiptap-asistan-araligi.ts). */
+  const izlenen = () =>
+    sayfa.evaluate(() => {
+      const ed = document.querySelector(".ProseMirror").editor;
+      const e = ed.state.plugins.find((x) => x.key.startsWith("asistanAraligi"));
+      return Object.keys(e.getState(ed.state) ?? {}).length;
+    });
+  const bos = () => sayfa.waitForFunction(() => !document.querySelector(".yazim-yaziyor"), null, { timeout: 30000 });
+  const sonKart = () => sayfa.locator(".yazim-oneri").last();
+  const kisaltilmis = (metin) => {
+    const k = metin.split(/\s+/);
+    return k.slice(0, Math.max(3, Math.ceil(k.length / 2))).join(" ").replace(/[.,;:]?$/, ".");
+  };
+
+  await senaryo("V4.3-0 P0-1: yanıt beklenirken menüden seçilen görev KAYBOLMAZ; menüye basıldığı andaki seçim işlenir", async () => {
+    const kartlar = await sayfa.locator(".yazim-oneri").count();
+    await sayfa.locator(".ProseMirror").first().focus();
+    await imlec(sayfa, 0, 0);
+    await iste(sayfa, "YAVAS paragraf yaz");
+    await sayfa.locator(".yazim-yaziyor").waitFor({ timeout: 5000 });
+    await sayfa.locator(".ProseMirror").first().focus();
+    const secilen = await sec(sayfa, 1);
+    await sayfa.keyboard.press("Alt+Enter");
+    await sayfa.waitForFunction(() => Boolean(document.activeElement?.closest(".secim-ai-menu")), null, { timeout: 3000 });
+    await sayfa.keyboard.press("ArrowDown");
+    await sayfa.keyboard.press("Enter");
+    // İstek sürerken görev sırada ve görünür.
+    await sayfa.locator(".yazim-sira").waitFor({ timeout: 3000 });
+    // Kullanıcı başka yeri seçiyor: sıradaki görev yine İLK seçimi işlemeli.
+    await sayfa.locator(".ProseMirror").first().focus();
+    await sec(sayfa, 2);
+    await kartBekle(sayfa, kartlar + 2);
+    await bos();
+    bekle(/Kısaltılmış/.test(await sonKart().locator(".yazim-oneri-bas small").textContent()), "ikinci kart Kısalt değil");
+    const ilk = secilen.split(/\s+/).slice(0, 4).join(" ");
+    bekle((await sonKart().textContent()).includes(ilk), "menüdeki seçim değil başka metin işlendi");
+    bekle(!(await sayfa.locator(".yazim-sira").count()), "sıra göstergesi kalmadı olmalı");
+  });
+
+  await senaryo("V4.3-0 P0-2: yanıt beklenirken imlecin paragrafı silinirse 'Paragrafın altına ekle' EKLEMEZ", async () => {
+    await bos();
+    const kartlar = await sayfa.locator(".yazim-oneri").count();
+    await sayfa.locator(".ProseMirror").first().focus();
+    await imlec(sayfa, 3, 5);
+    await iste(sayfa, "YAVAS paragraf yaz");
+    await sayfa.locator(".yazim-yaziyor").waitFor({ timeout: 5000 });
+    // Beklerken kullanıcı o paragrafın metnini siliyor.
+    await sayfa.locator(".ProseMirror").first().focus();
+    await sec(sayfa, 3);
+    await sayfa.keyboard.press("Backspace");
+    await kartBekle(sayfa, kartlar + 1);
+    await bos();
+    const once = await belgeJson(sayfa);
+    await sonKart().getByRole("button", { name: "Paragrafın altına ekle" }).click();
+    await sayfa.waitForTimeout(300);
+    bekle((await belgeJson(sayfa)) === once, "silinmiş bağlama eklendi");
+    bekle(/artık belgede yok/.test(await sonKart().locator(".yazim-oneri-uyari").textContent()), "uyarı yok ya da yanlış");
+    bekle((await sonKart().getAttribute("data-durum")) === "oneri", "durum değişti");
+  });
+
+  await senaryo("V4.3-0 P0-3: hatayla dönen istekte ve reddedilen öneride izlenen aralık bırakılır", async () => {
+    await bos();
+    const once = await izlenen();
+    await sayfa.locator(".ProseMirror").first().focus();
+    await sec(sayfa, 0);
+    await iste(sayfa, "UYDURMA_SAYI yaz");
+    await bos();
+    await sayfa.waitForTimeout(200);
+    const sonra = await izlenen();
+    bekle(sonra === once, `hata yolunda aralık kaldı: ${once} → ${sonra}`);
+    // Bekleyen kartların hepsi reddedilince istek aralıkları kalmaz.
+    // Her reddedilen kart "oneri" olmaktan çıkar: liste bayatlamasın diye her seferinde ilk kalan.
+    const bekleyen = sayfa.locator('.yazim-oneri[data-durum="oneri"]');
+    for (let i = 0; i < 10 && (await bekleyen.count()); i++) await bekleyen.first().getByRole("button", { name: "Reddet" }).click();
+    await sayfa.waitForTimeout(200);
+    const kalan = await sayfa.evaluate(() => {
+      const ed = document.querySelector(".ProseMirror").editor;
+      const e = ed.state.plugins.find((x) => x.key.startsWith("asistanAraligi"));
+      return Object.keys(e.getState(ed.state) ?? {}).filter((k) => !k.endsWith(":eklenen"));
+    });
+    bekle(kalan.length === 0, `reddedilen önerilerin aralıkları kaldı: ${kalan.length}`);
+  });
+
+  await senaryo("V4.3-0 P0-4: 'Kabul et'e aynı anda iki kez basmak belgeyi BİR kez değiştirir, uyarı çıkmaz; 'Geri al' da", async () => {
+    await bos();
+    const ilkJson = await belgeJson(sayfa);
+    await sayfa.locator(".ProseMirror").first().focus();
+    const secilen = await sec(sayfa, 0);
+    await sayfa.locator(".yazim-hizli-dugme", { hasText: "Kısalt" }).click();
+    const kartlar = await sayfa.locator(".yazim-oneri").count();
+    await kartBekle(sayfa, kartlar + 1);
+    await bos();
+    await sayfa.evaluate(() => {
+      const b = [...document.querySelectorAll(".yazim-oneri")].at(-1).querySelector(".yazim-oneri-eylem button");
+      b.click();
+      b.click();
+    });
+    await sayfa.waitForTimeout(400);
+    bekle((await sonKart().getAttribute("data-durum")) === "uygulandi", "uygulanmadı");
+    bekle(!(await sonKart().locator(".yazim-oneri-uyari").count()), "ikinci tıklama uyarı üretti");
+    const kisa = kisaltilmis(secilen);
+    const metin = await sayfa.evaluate(() => document.querySelector(".ProseMirror").editor.state.doc.textContent);
+    bekle(metin.split(kisa).length - 1 === 1, `kısaltılmış metin ${metin.split(kisa).length - 1} kez`);
+    await sayfa.evaluate(() => {
+      const b = [...document.querySelectorAll(".yazim-oneri")].at(-1).querySelectorAll(".yazim-oneri-eylem button");
+      const geri = [...b].find((x) => x.textContent.includes("Geri al"));
+      geri.click();
+      geri.click();
+    });
+    await sayfa.waitForTimeout(400);
+    bekle((await sonKart().getAttribute("data-durum")) === "geri_alindi", "geri alınmadı");
+    bekle(!(await sonKart().locator(".yazim-oneri-uyari").count()), "ikinci geri al uyarı üretti");
+    bekle((await belgeJson(sayfa)) === ilkJson, "geri alma belgeyi eski hâline döndürmedi");
+  });
+  await ctx.close();
+}
+
 // ---- Otomatik sürüm ZORUNLU: alınamazsa uygulanmaz, sürümsüz seçenek yok (4.3 ek) ----
 {
   let dusur = true;
   let surumIstegi = 0;
+  /* V4.3-0 P0-4: sürüm isteğini geciktirmek; ikinci tıklama sürüm beklenirken gelsin. */
+  let gecikme = 0;
   const { ctx, sayfa } = await editorAc(undefined, (s) =>
-    s.route("**/*", (route) => {
+    s.route("**/*", async (route) => {
       const r = route.request();
       if (r.method() === "POST" && r.headers()["next-action"] && /Asistan değişikliğinden önce|Ana hat eklenmeden önce/.test(r.postData() ?? "")) {
         surumIstegi++;
         if (dusur) return route.fulfill({ status: 500, body: "x" });
+        if (gecikme) await new Promise((coz) => setTimeout(coz, gecikme));
       }
       return route.continue();
     }),
@@ -298,6 +422,32 @@ const iste = async (s, metin) => {
     dusur = false;
     await kart(sayfa).getByRole("button", { name: "Tekrar dene" }).click();
     await sayfa.waitForFunction(() => document.querySelector(".yazim-oneri")?.dataset.durum === "uygulandi", null, { timeout: 15000 });
+  });
+  await senaryo("V4.3-0 P0-4: sürüm beklenirken ikinci tıklama İKİNCİ sürüm ve ikinci ekleme başlatmaz", async () => {
+    await sayfa.waitForFunction(() => !document.querySelector(".yazim-yaziyor"), null, { timeout: 30000 });
+    await sayfa.evaluate(() => getSelection().collapse(document.querySelector(".ProseMirror p"), 0));
+    const kartlar = await sayfa.locator(".yazim-oneri").count();
+    await iste(sayfa, "UZUN paragraf yaz");
+    await kartBekle(sayfa, kartlar + 1);
+    const metinOnce = await sayfa.evaluate(() => document.querySelector(".ProseMirror").editor.state.doc.textContent);
+    const istek = surumIstegi;
+    gecikme = 1500;
+    await sayfa.evaluate(() => {
+      const b = [...document.querySelectorAll(".yazim-oneri")].at(-1).querySelector(".yazim-oneri-eylem button");
+      // Aynı olay döngüsünde iki tıklama: React yeniden çizmeden (isleniyor görünmeden) ikincisi gelir.
+      b.click();
+      b.click();
+    });
+    await sayfa.waitForFunction(() => [...document.querySelectorAll(".yazim-oneri")].at(-1)?.dataset.durum === "uygulandi", null, { timeout: 15000 });
+    await sayfa.waitForTimeout(1800);
+    gecikme = 0;
+    bekle(surumIstegi === istek + 1, `sürüm isteği ${surumIstegi - istek} kez`);
+    const metinSonra = await sayfa.evaluate(() => document.querySelector(".ProseMirror").editor.state.doc.textContent);
+    // Test asistanının uzun paragrafı bu ifadeyi 12-13 kez içerir; iki ekleme ~25 yapar.
+    const say = (m) => m.split("akademik yazım sürecinde kavramsal").length - 1;
+    const fark = say(metinSonra) - say(metinOnce);
+    bekle(fark >= 10 && fark <= 16, `uzun paragraf ifadesi ${fark} kez eklendi (tek ekleme ≈12-13)`);
+    bekle(!(await kart(sayfa).locator(".yazim-oneri-uyari").count()), "ikinci tıklama uyarı üretti");
   });
   await ctx.close();
 }

@@ -16,7 +16,7 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 import { collectHeadings } from "./editor-navigation";
 import MetinFarki from "./metin-farki";
 import { aralikMetni, araligiBirak, araligiDogrula, araligiIzle, izlenenAralik } from "@/lib/tiptap-asistan-araligi";
-import { ASISTAN_GOREV_OLAYI, aiAdimiBaslat, bekleyenGoreviAl, aiAdiminiKapat, geriAlmaIslemi, surumGerekir, yeniAralik } from "@/lib/ai-duzenleme";
+import { ASISTAN_GOREV_OLAYI, aiAdimiBaslat, aiAdiminiKapat, altinaEklemeHedefi, geriAlmaIslemi, kuyruguBosalt, siradakiGorev, siradakiSayisi, surumGerekir, yeniAralik, yeniOneriId, type KuyrukGorevi } from "@/lib/ai-duzenleme";
 import { kararKaydet, uygulamaIziEkle, uygulamaIziSil } from "@/lib/ai-kararlari";
 
 /*
@@ -96,7 +96,6 @@ type Kayit = SohbetMesaji & {
   surumHatasi?: { mod: Mod; metin: string };
   isleniyor?: boolean;
 };
-let oneriSayaci = 0;
 
 /* Seçili metni yeniden yazan görevler: kartta fark gösterilir, birincil eylem "yerine koy". */
 const SECIM_GOREVLERI = new Set<YazimGorevi>(["akademik", "kisalt", "genislet"]);
@@ -124,6 +123,18 @@ export default function YazimPaneli({
   const [mesajlar, setMesajlar] = useState<Kayit[]>([]);
   const [istek, setIstek] = useState("");
   const [bekliyor, setBekliyor] = useState(false);
+  /*
+    V4.3-0: "istek sürüyor" bilgisi state'te geç güncelleniyordu; aynı anda
+    gelen iki gönderim (Enter'a iki kez basmak, menü görevi + istek kutusu)
+    ikisi de bekliyor=false görüp iki istek açabiliyordu. Ref eşzamanlı.
+  */
+  const bekliyorRef = useRef(false);
+  /* Seçim menüsünden gelip sırasını bekleyen görev sayısı (lib/ai-gorev-kuyrugu.ts). */
+  const [siradaki, setSiradaki] = useState(0);
+  /* Kabul ve geri alma kilidi (P0-4): öneri kimliği başına; render beklemeden eşzamanlı. */
+  const islemKilidi = useRef(new Set<string>());
+  /* En güncel kartlar: sürüm beklerken kart reddedildiyse uygula bunu görmeli. */
+  const mesajlarRef = useRef<Kayit[]>([]);
   const [seciliVar, setSeciliVar] = useState(() => !editor.state.selection.empty);
   const listeRef = useRef<HTMLDivElement>(null);
   const girdiRef = useRef<HTMLTextAreaElement>(null);
@@ -146,14 +157,49 @@ export default function YazimPaneli({
     };
   }, [editor]);
 
-  const kartGuncelle = (indeks: number, degisim: Partial<Kayit>) => setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, ...degisim } : m)));
+  useEffect(() => {
+    mesajlarRef.current = mesajlar;
+  }, [mesajlar]);
+  /* Ref de HEMEN güncellenir: aynı olay döngüsündeki ikinci tıklama yeni durumu görsün (P0-4). */
+  const kartGuncelle = (indeks: number, degisim: Partial<Kayit>) => {
+    mesajlarRef.current = mesajlarRef.current.map((m, i) => (i === indeks ? { ...m, ...degisim } : m));
+    setMesajlar((onceki) => onceki.map((m, i) => (i === indeks ? { ...m, ...degisim } : m)));
+  };
 
-  const gonder = async (gorev: YazimGorevi, metin = istek) => {
-    if (bekliyor) return;
-    const { from, to } = editor.state.selection;
+  /*
+    `hedef`: seçim menüsünden gelen görevin, menüye basıldığı anda izlemeye
+    alınmış aralığı (P0-1). Verilmezse o anki seçim kullanılır.
+  */
+  const gonder = async (gorev: YazimGorevi, metin = istek, hedef?: KuyrukGorevi) => {
+    if (bekliyorRef.current) return;
+    let from: number;
+    let to: number;
+    let secim: string;
+    if (hedef) {
+      /* Sırası gelen görev: kullanıcının seçtiği metin hâlâ orada mı? Değilse işlenmez ve söylenir. */
+      const d = araligiDogrula(editor.state, hedef.oneriId, hedef.secimMetni);
+      if (!d.tamam) {
+        editor.view.dispatch(araligiBirak(editor.state.tr, hedef.oneriId));
+        setMesajlar((onceki) => [
+          ...onceki,
+          {
+            rol: "asistan",
+            metin: t({
+              tr: "Sıradaki isteğiniz gönderilmedi: seçtiğiniz metin siz beklerken değişti ya da silindi. Metni yeniden seçip tekrar isteyin.",
+              en: "Your queued request wasn't sent: the text you selected changed or was deleted while you waited. Select the text again and ask again.",
+            }),
+          },
+        ]);
+        return;
+      }
+      ({ from, to } = d);
+      secim = hedef.secimMetni;
+    } else {
+      ({ from, to } = editor.state.selection);
+      /* Doğrulamayla AYNI okuma (aralikMetni): uygulamadan önce bu metinle karşılaştırılır. */
+      secim = from !== to ? aralikMetni(editor.state.doc, from, to) : "";
+    }
     const doc = editor.state.doc;
-    /* Doğrulamayla AYNI okuma (aralikMetni): uygulamadan önce bu metinle karşılaştırılır. */
-    const secim = from !== to ? aralikMetni(doc, from, to) : "";
     if (SECIM_GOREVLERI.has(gorev) && !secim) {
       showToast("error", t({ tr: "Önce editörde bir metin seçin.", en: "Select some text in the editor first." }));
       return;
@@ -173,29 +219,40 @@ export default function YazimPaneli({
         tamamla: "",
       }[gorev];
     if (!gorunen) return;
-    /* Aralık İSTEK ANINDA izlemeye alınır; cevap gelene kadar yazılanlara göre kayar. */
+    /* Aralık İSTEK ANINDA izlemeye alınır; cevap gelene kadar yazılanlara göre kayar. Menü görevinde zaten izleniyor. */
     // Kimlik yüklemeler arasında da tekil: uygulama izi sayfa yenilense de karışmasın (lib/ai-kararlari.ts).
-    const oneriId = `oneri-${Date.now().toString(36)}-${++oneriSayaci}`;
-    editor.view.dispatch(araligiIzle(editor.state.tr, oneriId, from, to));
+    const oneriId = hedef?.oneriId ?? yeniOneriId();
+    if (!hedef) editor.view.dispatch(araligiIzle(editor.state.tr, oneriId, from, to));
+    /*
+      P0-3: öneri kartı oluşmazsa (hata, ağ istisnası, metinsiz yanıt) aralığı
+      izleyen kalmaz. V4.3-0'a kadar bırakılmıyordu; her biri her işlemde
+      eşlenmeye devam ediyordu.
+    */
+    const birak = () => editor.view.dispatch(araligiBirak(editor.state.tr, oneriId));
     const gecmis: SohbetMesaji[] = mesajlar.map((m) => ({ rol: m.rol, metin: m.rol === "asistan" ? `${m.metin}\n${m.ekMetin ?? ""}`.trim() : m.metin }));
     setMesajlar((onceki) => [...onceki, { rol: "kullanici", metin: gorunen }]);
-    setIstek("");
+    if (!hedef) setIstek("");
+    bekliyorRef.current = true;
     setBekliyor(true);
     try {
       const cevap = await yazimAsistani({ projectId, istek: gorunen, gorev, bolum, oncesi, secim: secim || null, gecmis, zorunluBolumler });
       if (cevap.hata) {
+        birak();
         setMesajlar((onceki) => [...onceki, { rol: "asistan", metin: cevap.hata! }]);
         return;
       }
       if (cevap.krediUyarisi) showToast("error", cevap.krediUyarisi);
+      if (!cevap.metin) birak();
       setMesajlar((onceki) => [
         ...onceki,
         { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, oneriId, secimMetni: secim, secimVardi: from !== to, gorev, durum: cevap.metin ? "oneri" : undefined },
       ]);
     } catch (hata) {
       console.error(hata);
+      birak();
       setMesajlar((onceki) => [...onceki, { rol: "asistan", metin: t({ tr: "Asistana ulaşılamadı; bağlantınızı kontrol edin.", en: "Couldn't reach the assistant; check your connection." }) }]);
     } finally {
+      bekliyorRef.current = false;
       setBekliyor(false);
     }
   };
@@ -205,15 +262,35 @@ export default function YazimPaneli({
   useEffect(() => {
     gonderRef.current = gonder;
   });
+  /*
+    P0-1: görev yalnızca panel BOŞKEN alınır; istek sürerken sırada kalır ve
+    sayısı panelde görünür. Eskiden görev alınıp silindikten sonra gonder
+    erken dönüyor, görev sessizce kayboluyordu.
+  */
+  const siradakiniIsle = useRef(() => {});
   useEffect(() => {
-    const dinle = () => {
-      const gorev = bekleyenGoreviAl();
-      if (gorev) void gonderRef.current(gorev, "");
+    siradakiniIsle.current = () => {
+      if (!bekliyorRef.current) {
+        const g = siradakiGorev();
+        if (g) void gonderRef.current(g.gorev, "", g);
+      }
+      setSiradaki(siradakiSayisi());
     };
+  });
+  useEffect(() => {
+    const dinle = () => siradakiniIsle.current();
     dinle();
     window.addEventListener(ASISTAN_GOREV_OLAYI, dinle);
-    return () => window.removeEventListener(ASISTAN_GOREV_OLAYI, dinle);
-  }, []);
+    return () => {
+      window.removeEventListener(ASISTAN_GOREV_OLAYI, dinle);
+      /* Editörden çıkılıyor: sıradaki görevler bu belgeye aitti; aralıkları bırakılır. */
+      for (const g of kuyruguBosalt()) if (!editor.isDestroyed) editor.view.dispatch(araligiBirak(editor.state.tr, g.oneriId));
+    };
+  }, [editor]);
+  /* Yanıt gelince (bekliyor → false) sıradaki görev gönderilir. */
+  useEffect(() => {
+    if (!bekliyor) siradakiniIsle.current();
+  }, [bekliyor]);
 
   /*
     Eklenen metin asistan iziyle girer (lib/tiptap-asistan-izi.ts):
@@ -223,9 +300,28 @@ export default function YazimPaneli({
   const izliMetin = (text: string, kayit: string | null | undefined) => ({ type: "text", text, marks: [{ type: ASISTAN_IZI, attrs: { kayit: kayit ?? null } }] });
   const dugumler = (metin: string, kayit?: string | null) => paragraflara(metin).map((p) => ({ type: "paragraph", content: [izliMetin(p, kayit)] }));
 
+  /*
+    P0-4: kabul KİLİDİ. V4.3-0'a kadar tek koruma kartın `isleniyor`
+    alanıydı; o yalnızca sürüm yolunda ve React yeniden çizdikten SONRA
+    görünüyordu. Sürüm beklerken ikinci tıklama ikinci bir kayıt ve sürüm
+    başlatıyordu; kartın durumu da hiç denetlenmiyordu. Şimdi öneri kimliği
+    başına eşzamanlı kilit + yalnızca "oneri" durumundaki kart uygulanır.
+  */
   const uygula = async (indeks: number, mod: Mod, secenek: { metin?: string } = {}) => {
-    const kayit = mesajlar[indeks];
-    if (!kayit?.ekMetin || !kayit.oneriId || kayit.isleniyor) return;
+    const kayit = mesajlarRef.current[indeks] ?? mesajlar[indeks];
+    const { ekMetin, oneriId } = kayit ?? {};
+    if (!kayit || !ekMetin || !oneriId || kayit.isleniyor) return;
+    if (kayit.durum !== "oneri") return;
+    const kilit = oneriId;
+    if (islemKilidi.current.has(kilit)) return;
+    islemKilidi.current.add(kilit);
+    try {
+      await uygulaKilitli(indeks, { ...kayit, ekMetin, oneriId }, mod, secenek);
+    } finally {
+      islemKilidi.current.delete(kilit);
+    }
+  };
+  const uygulaKilitli = async (indeks: number, kayit: Kayit & { ekMetin: string; oneriId: string }, mod: Mod, secenek: { metin?: string }) => {
     const metin = (secenek.metin ?? kayit.ekMetin).trim();
     if (!metin) return;
     const degistir = mod === "degistir" && Boolean(kayit.secimVardi);
@@ -262,6 +358,11 @@ export default function YazimPaneli({
         return;
       }
       surumAlindi = true;
+      /* Sürüm beklenirken kart reddedildiyse ya da başka yoldan uygulandıysa devam edilmez. */
+      if (mesajlarRef.current[indeks]?.durum !== "oneri") {
+        kartGuncelle(indeks, { isleniyor: false });
+        return;
+      }
     }
 
     /*
@@ -272,9 +373,14 @@ export default function YazimPaneli({
     const state = editor.state;
     let hFrom: number;
     let hTo: number;
+    /* Aralık bir daha bulunamayacaksa (silindi, izlenmiyor) izleme bırakılır (P0-3); "değişti" Ctrl+Z ile dönebilir, izlemede kalır. */
+    const kaliciKayip = (neden: string) => {
+      if (neden !== "degisti") editor.view.dispatch(araligiBirak(editor.state.tr, kayit.oneriId));
+    };
     if (degistir) {
       const d = araligiDogrula(state, kayit.oneriId, kayit.secimMetni ?? "");
       if (!d.tamam) {
+        kaliciKayip(d.neden);
         uyar(
           d.neden === "degisti"
             ? t({ tr: "Seçtiğiniz metin siz beklerken değişti; yanlış metni değiştirmemek için uygulanmadı. Metni yeniden seçip tekrar isteyin.", en: "The text you selected changed while you waited; it wasn't applied so the wrong text isn't replaced. Select the text again and ask again." })
@@ -284,21 +390,22 @@ export default function YazimPaneli({
       }
       ({ from: hFrom, to: hTo } = d);
     } else {
-      const a = izlenenAralik(state, kayit.oneriId);
-      if (!a) {
-        uyar(t({ tr: "Önerinin yeri bulunamadı; uygulanmadı. İmleci istediğiniz yere koyup yeniden isteyin.", en: "The suggestion's place couldn't be found; it wasn't applied. Place the cursor and ask again." }));
+      /*
+        P0-2: "Paragrafın altına ekle" de bağlamını doğrular
+        (altinaEklemeHedefi). Eskiden yalnızca aralığın sonunu kullanıyordu:
+        seçilen paragraf silinmişse öneri komşu paragrafın altına giriyordu.
+      */
+      const h = altinaEklemeHedefi(state, kayit.oneriId, { vardi: Boolean(kayit.secimVardi), metin: kayit.secimMetni ?? "" }, gorev !== "anahat");
+      if (!h.tamam) {
+        kaliciKayip(h.neden);
+        uyar(
+          h.neden === "degisti"
+            ? t({ tr: "Önerinin bağlı olduğu metin siz beklerken değişti; yanlış yere eklememek için eklenmedi. Metni yeniden seçip tekrar isteyin.", en: "The text this suggestion belongs to changed while you waited; it wasn't inserted so it doesn't land in the wrong place. Select the text again and ask again." })
+            : t({ tr: "Önerinin yeri artık belgede yok (silinmiş ya da bulunamıyor); eklenmedi. İmleci istediğiniz yere koyup yeniden isteyin.", en: "The suggestion's place is no longer in the document (deleted or not found); it wasn't inserted. Place the cursor and ask again." }),
+        );
         return;
       }
-      /* İmlecin bulunduğu bloğun SONUNA: paragrafın ortasına blok eklemek onu ikiye bölerdi. Boş paragraftaysa onun yerine. */
-      const $pos = state.doc.resolve(Math.min(a.to, state.doc.content.size));
-      const blok = $pos.depth >= 1 ? $pos.node(1) : null;
-      const bosParagraf = gorev !== "anahat" && blok?.type.name === "paragraph" && blok.textContent.trim() === "";
-      if (bosParagraf) {
-        hFrom = $pos.before(1);
-        hTo = $pos.after(1);
-      } else {
-        hFrom = hTo = $pos.depth >= 1 ? $pos.after(1) : $pos.pos;
-      }
+      ({ from: hFrom, to: hTo } = h);
     }
 
     const anaHat = gorev === "anahat" ? anaHattiCozumle(metin) : [];
@@ -349,8 +456,9 @@ export default function YazimPaneli({
   };
 
   const geriAl = (indeks: number) => {
-    const kayit = mesajlar[indeks];
-    if (!kayit?.uygulama) return;
+    const kayit = mesajlarRef.current[indeks] ?? mesajlar[indeks];
+    /* P0-4: yalnızca uygulanmış kart, bir kez (ikinci tıklama "bulunamıyor" uyarısı vermesin). */
+    if (!kayit?.uygulama || kayit.durum !== "uygulandi") return;
     const sonuc = geriAlmaIslemi(editor.state, kayit.uygulama.eklenenId, kayit.uygulama.eklenenMetin, kayit.uygulama.ozgun);
     if ("hata" in sonuc) {
       /* Güvenli geri alma yoksa hiçbir şey yapılmaz: kullanıcının sonraki emeği silinmesin. */
@@ -372,8 +480,8 @@ export default function YazimPaneli({
   };
 
   const reddet = (indeks: number) => {
-    const kayit = mesajlar[indeks];
-    if (!kayit) return;
+    const kayit = mesajlarRef.current[indeks] ?? mesajlar[indeks];
+    if (!kayit || kayit.durum !== "oneri") return;
     if (kayit.oneriId) editor.view.dispatch(araligiBirak(editor.state.tr, kayit.oneriId));
     kartGuncelle(indeks, { durum: "reddedildi", duzenMetni: undefined, uyari: undefined, surumHatasi: undefined });
     kararKaydet(kayit.kayitId, "reddedildi");
@@ -541,6 +649,14 @@ export default function YazimPaneli({
               </span>
             </div>
           </div>
+        ) : null}
+        {siradaki > 0 ? (
+          /* P0-1: sırada bekleyen menü görevi görünür ve duyurulur; eskiden sessizce kayboluyordu. */
+          <p className="yazim-sira" role="status">
+            {siradaki === 1
+              ? t({ tr: "1 istek sırada: bu yanıt gelince gönderilecek.", en: "1 request queued: it will be sent when this answer arrives." })
+              : t({ tr: `${siradaki} istek sırada: yanıtlar geldikçe gönderilecek.`, en: `${siradaki} requests queued: they will be sent as answers arrive.` })}
+          </p>
         ) : null}
       </div>
 
