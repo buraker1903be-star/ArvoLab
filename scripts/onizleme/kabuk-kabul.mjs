@@ -14,6 +14,8 @@
     6. Editörde ana gezinme ve çalışma bağlamı korunur.
     7. Telefonda alt çubuk beş öğe: Ana Sayfa, Çalışmalar, Kaynaklar,
        Analiz, Daha fazla.
+    8. (V4.3-B1) Ray 64 px, kenar çubuğu 236 px; rayda yalnız simge,
+       erişilebilir ad tam, hedef ≥44 px, klavye odağında ipucu, Esc kapatır.
   Her ekranda yatay taşma yok.
 
   Salt okunur önizleme yeter (npm run onizleme:ai). Daraltma tercihini
@@ -220,6 +222,89 @@ await senaryo("1024/768: rayda 'Çalışmalar' editörde etkin (ana gezinme edit
     await ctx.close();
   }
 });
+
+/*
+  V4.3-B1 (K-1): ray 64 px, kenar çubuğu 236 px (v4 --ray / --kenar-genis).
+  Rayda yalnızca simge: her öğenin ERİŞİLEBİLİR adı tam ad olmalı (eskiden
+  ad display:none idi, "Daha fazla" düğmesinin adı yoktu), dokunma hedefi
+  ≥44 px, adın görünen kopyası klavye odağında çıkan ipucu (ray-ipucu.tsx).
+*/
+const rayDenetle = async (sayfa, w) => {
+  const nav = await sayfa.locator("#os-gezinme").boundingBox();
+  bekle(nav && Math.round(nav.width) === 64, `${w}: ray ${nav?.width} px, beklenen 64`);
+  const ogeler = await sayfa.locator("#os-gezinme :is(.os-gezinme-oge, .os-gezinme-yeni, .os-gezinme-marka)").evaluateAll((l) =>
+    l.filter((e) => e.getClientRects().length).map((e) => { const r = e.getBoundingClientRect(); return { w: r.width, h: r.height, sag: r.right, title: e.getAttribute("title") }; }),
+  );
+  bekle(ogeler.length >= 8, `${w}: rayda ${ogeler.length} öğe`);
+  for (const o of ogeler) {
+    bekle(o.w >= 44 && o.h >= 44, `${w}: rayda 44 px altı öğe ${JSON.stringify(o)}`);
+    bekle(o.sag <= 64.5, `${w}: öğe raydan taşıyor ${JSON.stringify(o)}`);
+    bekle(!o.title, `${w}: öğede title var (ipucuyla iki balon olur)`);
+  }
+  const agac = await sayfa.locator("#os-gezinme").ariaSnapshot();
+  for (const ad of ["Ana Sayfa", "Çalışmalarım", "Kaynak Kütüphanesi", "Analiz Merkezi", "Yeni çalışma"]) bekle(agac.includes(`link "${ad}"`), `${w}: erişilebilir ad yok: ${ad}`);
+  bekle(!/(link|button)\s*(\[|:|$)/m.test(agac.replace(/link "[^"]+"|button "[^"]+"/g, "")), `${w}: adsız bağlantı/düğme var:\n${agac}`);
+};
+for (const w of [1024, 768]) {
+  await senaryo(`${w}: ray 64 px; öğeler ≥44 px, yalnız simge, erişilebilir adı tam`, async () => {
+    const { ctx, sayfa } = await ac(w, "/dashboard");
+    await rayDenetle(sayfa, w);
+    bekle(!(await gorunur(sayfa, "#os-gezinme .os-gezinme-kisa")), "rayda kısa ad hâlâ görünüyor");
+    await ctx.close();
+  });
+}
+await senaryo("1024: klavye odağında ipucu adı gösterir, raydan dışarı çizilir, Esc kapatır; editörde aynı ray", async () => {
+  for (const yol of ["/dashboard", `/dashboard/editor/${TEZ}/write`]) {
+    const { ctx, sayfa } = await ac(1024, yol);
+    let bulundu = false;
+    /*
+      Editörde Tab belgenin içinde girinti/sekme (Word klavyesi, lib/tiptap-klavye.ts)
+      ve odak editörden çıkmıyor; ray oraya ileri Tab'la ulaşılamıyor. Ray DOM'da
+      içerikten sonra: sayfanın başından GERİ (Shift+Tab) ilk durak onun.
+    */
+    const tus = yol.includes("/write") ? "Shift+Tab" : "Tab";
+    for (let i = 0; i < 80 && !bulundu; i++) {
+      await sayfa.keyboard.press(tus);
+      bulundu = await sayfa.evaluate(() => Boolean(document.activeElement?.classList.contains("os-gezinme-oge")));
+    }
+    bekle(bulundu, `${yol}: Tab ile raya ulaşılamadı`);
+    await sayfa.waitForTimeout(150);
+    const ad = await sayfa.evaluate(() => document.activeElement.querySelector(".os-gezinme-ad")?.textContent?.trim());
+    const ip = sayfa.locator(".ray-ipucu");
+    bekle((await ip.textContent().catch(() => null))?.trim() === ad, `${yol}: ipucu "${await ip.textContent().catch(() => null)}", beklenen "${ad}"`);
+    const k = await ip.boundingBox();
+    bekle(k && k.x >= 64 && k.x + k.width <= 1024, `${yol}: ipucu konumu ${JSON.stringify(k)}`);
+    bekle((await ip.getAttribute("aria-hidden")) === "true", "ipucu ikinci kez okunuyor (aria-hidden yok)");
+    await sayfa.keyboard.press("Escape");
+    await sayfa.waitForTimeout(100);
+    bekle((await ip.count()) === 0, `${yol}: Esc ipucunu kapatmadı`);
+    bekle((await sayfa.locator("nav.os-gezinme").count()) === 1, `${yol}: birden fazla ana gezinme`);
+    await ctx.close();
+  }
+});
+await senaryo("1440: kenar çubuğu 236 px; daraltılınca 64 px ray ve aynı denetimler", async () => {
+  {
+    const { ctx, sayfa } = await ac(1440, "/dashboard");
+    const nav = await sayfa.locator("#os-gezinme").boundingBox();
+    bekle(nav && Math.round(nav.width) === 236, `kenar çubuğu ${nav?.width} px, beklenen 236`);
+    bekle(!(await gorunur(sayfa, ".ray-ipucu")), "geniş kenar çubuğunda ipucu çıkıyor");
+    await ctx.close();
+  }
+  const { ctx, sayfa } = await ac(1440, "/dashboard", { dar: true });
+  await rayDenetle(sayfa, "1440 dar");
+  await ctx.close();
+});
+for (const w of [390, 360]) {
+  await senaryo(`${w}: alt çubukta erişilebilir ad tam ad, hedefler ≥44 px`, async () => {
+    const { ctx, sayfa } = await ac(w, "/dashboard");
+    const agac = await sayfa.locator("#os-gezinme").ariaSnapshot();
+    for (const ad of ["Ana Sayfa", "Çalışmalarım", "Kaynak Kütüphanesi", "Analiz Merkezi"]) bekle(agac.includes(`link "${ad}"`), `${w}: erişilebilir ad yok: ${ad}\n${agac}`);
+    bekle(agac.includes('button "Daha fazla"'), `${w}: "Daha fazla" adsız`);
+    const kucuk = await sayfa.locator("#os-gezinme li:visible :is(a, button):visible").evaluateAll((l) => l.map((e) => e.getBoundingClientRect()).filter((r) => r.width < 44 || r.height < 44).length);
+    bekle(kucuk === 0, `${w}: ${kucuk} hedef 44 px altı`);
+    await ctx.close();
+  });
+}
 
 await tarayici.close();
 console.log(`\n${gecen}/${toplam} senaryo geçti`);

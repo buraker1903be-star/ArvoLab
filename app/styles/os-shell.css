@@ -109,7 +109,7 @@
   display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 40px; padding: 0 var(--s-1);
   border-radius: var(--r-sm); color: var(--ink); text-decoration: none;
 }
-/* Kenar çubuğunda orijinal logo (arvolab-logosu.tsx); dar rayda (88 px) aynı logo küçük. */
+/* Kenar çubuğunda orijinal logo (arvolab-logosu.tsx); dar rayda (64 px) aynı logo küçük. */
 .os-gezinme-marka { --logo-h: 26px; }
 .os-gezinme-daralt {
   display: grid; place-items: center; flex: none; width: 32px; height: 32px;
@@ -151,6 +151,14 @@
 }
 
 /* ---------- Dar ray: tablette her zaman, masaüstünde daraltılınca ----------
+   V4.3-B1 (K-1): ray 88 → 64 px (--ray), yalnızca simge; öğe 48×48
+   (dokunma hedefi ≥44). Eskiden simgenin altında 11 px kısa ad vardı;
+   64 px'te "Çalışmalar", "Kaynaklar" kesiliyordu. Tam ad DOM'da görünmez
+   ama erişilebilir (ekran okuyucu okur); görünen kopyası klavye odağında
+   ve imleçte çıkan ipucu (os-gezinme.tsx, RayIpucu). Eskiden ad
+   `display: none` idi: erişilebilir ad yalnızca title'dan geliyordu,
+   "Daha fazla" düğmesinin hiç adı yoktu. Logo resmî dosyanın TAMAMI,
+   küçültülmüş (13 px, ~55 px en); kırpılmaz (K-2).
    Kurallar iki yerde yazılı (aşağıdaki masaüstü bloğunda data-kenar ile
    bir kez daha): CSS değişkeni medya sorgusunda kullanılamıyor ve
    "tablet YA DA daraltılmış masaüstü" tek bir seçiciyle söylenemiyor.
@@ -158,12 +166,11 @@
    .os-gezinme-oge sınıfını kullanıyor ve eskiden tablette oradaki adlar
    da gizleniyordu. */
 @media (min-width: 761px) and (max-width: 1199px) {
-  .os-gezinme .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
-  .os-gezinme .os-gezinme-ad { display: none; }
-  .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
+  .os-gezinme .os-gezinme-oge { justify-content: center; width: 48px; min-height: 48px; margin-inline: auto; padding: 0; }
+  .os-gezinme .os-gezinme-ad { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .os-gezinme-diger, .os-gezinme-daralt { display: none; }
-  .os-gezinme-marka { --logo-h: 15px; }
-  .os-gezinme-yeni { align-self: center; width: 44px; padding: 0; }
+  .os-gezinme-marka { --logo-h: 13px; margin-inline: calc(-1 * var(--s-1)); }
+  .os-gezinme-yeni { align-self: center; width: 44px; min-height: 44px; padding: 0; }
   .os-gezinme-marka { justify-content: center; min-width: 44px; min-height: 44px; }
 }
 
@@ -189,9 +196,8 @@
   html:not([data-kenar="dar"]) .os-gezinme .os-gezinme-oge.is-active[aria-current="true"] > svg { color: var(--primary-ink); }
 
   /* Daraltılmış: tabletteki rayın aynısı (yukarıdaki notu okuyun) */
-  html[data-kenar="dar"] .os-gezinme .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
-  html[data-kenar="dar"] .os-gezinme .os-gezinme-ad { display: none; }
-  html[data-kenar="dar"] .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
+  html[data-kenar="dar"] .os-gezinme .os-gezinme-oge { justify-content: center; width: 48px; min-height: 48px; margin-inline: auto; padding: 0; }
+  html[data-kenar="dar"] .os-gezinme .os-gezinme-ad { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   html[data-kenar="dar"] .os-gezinme-diger { display: none; }
   /* Daraltılmış (Aşama 2.1): bağlamdan yalnızca switcher'ın simgesi kalır; aynı pencereyi açar. Bölümler sayfadaki sekmelerde. */
   html[data-kenar="dar"] .os-gezinme-baglam { display: block; padding-bottom: var(--s-2); border-bottom: 1px solid var(--line-soft); }
@@ -199,8 +205,8 @@
   html[data-kenar="dar"] .proje-secici-ad-kisa,
   html[data-kenar="dar"] .proje-secici-ok { display: none; }
   html[data-kenar="dar"] .proje-secici-dugme { justify-content: center; width: 44px; height: 44px; margin: 0 auto; padding: 0; align-items: center; }
-  html[data-kenar="dar"] .os-gezinme-marka { --logo-h: 15px; }
-  html[data-kenar="dar"] .os-gezinme-yeni { align-self: center; width: 44px; padding: 0; }
+  html[data-kenar="dar"] .os-gezinme-marka { --logo-h: 13px; margin-inline: calc(-1 * var(--s-1)); }
+  html[data-kenar="dar"] .os-gezinme-yeni { align-self: center; width: 44px; min-height: 44px; padding: 0; }
   html[data-kenar="dar"] .os-gezinme-marka { justify-content: center; min-width: 44px; min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -227,7 +233,7 @@
   .os-gezinme .os-gezinme-oge:hover { background: transparent; }
   .os-gezinme .os-gezinme-oge.is-active { background: transparent; }
   .os-gezinme .os-gezinme-oge.is-active > svg { color: var(--primary-ink); }
-  .os-gezinme .os-gezinme-ad { display: none; }
+  .os-gezinme .os-gezinme-ad { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .os-gezinme .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
   /* Klavye açıkken alt çubuk aşağı çekilir: yazarken ekranın altı zaten klavyede. */
   html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-gezinme { transform: translateY(110%); }
@@ -347,3 +353,33 @@
 .os-palette-item small { font-size: var(--fs-micro); color: var(--muted); }
 .os-palette-empty { padding: 24px 8px; text-align: center; color: var(--muted); }
 .os-palette-foot { display: flex; gap: 16px; padding: 8px 16px; border-top: 1px solid var(--line); background: var(--surface-2); font-size: var(--fs-micro); color: var(--muted); }
+
+/* ---------- Ray ipucu (V4.3-B1, ray-ipucu.tsx) ----------
+   64 px rayda simgenin adı. Görünümü ortak ipucuyla (overlays.css,
+   data-ipucu) aynı; konum öğenin sağı, body'ye çizildiği için kenar
+   çubuğunun kaydırma kabı kesmez. */
+.ray-ipucu {
+  position: fixed; top: var(--ray-ipucu-y, 0); left: var(--ray-ipucu-x, 0); z-index: var(--z-toast);
+  padding: 4px 8px; border-radius: var(--r-xs);
+  background: var(--ink); color: var(--surface);
+  font-size: var(--fs-sm); font-weight: 500; line-height: 1.3; white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+/* ---------- Yazım sayfası: belge sütunu GEÇİŞ TELAFİSİ (V4.3-B1) ----------
+   Kabuk daralınca (ray 88 → 64, kenar çubuğu 248 → 236) içerik alanı
+   genişliyor; editörün metin sütunu akışkan olduğu için 12–24 px
+   genişleyip belgenin satır kırılımları değişiyordu (ölçüldü: 1440'ta
+   sütun 654 → 666, 1024'te 774 → 798; 615 bloğun ~600'ü yeniden kırıldı).
+   B1 belge geometrisine dokunmaz: yazım sayfası kabuktan kazanılan genişliği
+   solda boş bırakır, belge sütunu ve konumu B1 öncesiyle AYNI kalır.
+   Kalıcı çözüm C1: onaylı K-4 sabit metin sütunu (kılavuz önce, yoksa 638 px)
+   belgeyi kabuk genişliğinden bağımsız yapınca bu blok ve --gecis-eski-*
+   token'ları silinir. */
+@media (min-width: 761px) {
+  .os-root { --yazim-gecis-telafi: calc(var(--gecis-eski-ray) - var(--gezinme-ray)); }
+}
+@media (min-width: 1200px) {
+  html:not([data-kenar="dar"]) .os-root { --yazim-gecis-telafi: calc(var(--gecis-eski-kenar) - var(--gezinme-genislik)); }
+}
+.os-root .dashboard-page.yazim-sayfasi { margin-left: var(--yazim-gecis-telafi, 0px); }

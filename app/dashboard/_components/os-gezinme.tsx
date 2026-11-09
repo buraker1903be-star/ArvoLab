@@ -19,6 +19,7 @@ import { OsSimge } from "./os-simge";
 import { useCalismaBaglami } from "./calisma-baglami";
 import { ProjeSecici } from "./proje-secici";
 import { useEkranSinifi } from "./ekran-sinifi";
+import { RayIpucu } from "./ray-ipucu";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import { KENAR_ANAHTARI, kenarOku } from "@/lib/os/kenar";
 
@@ -95,6 +96,13 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
   const baglamEtkin = baglamGorunur ? etkinBaglanti(baglantilar, yol) : null;
   const { ana, diger, ayarlar } = gezinmeGruplari(uygulamalar);
   const cubukta = new Set<string>(ALT_CUBUK);
+  /*
+    64 px ray (V4.3-B1): tablette her zaman, masaüstünde daraltılınca.
+    Öğeler yalnızca simge; adın görünen kopyası RayIpucu. Eskiden her öğede
+    title vardı: klavye odağında hiç çıkmıyordu ve ipucuyla birlikte iki
+    balon üst üste binerdi; ad artık metin olarak erişilebilir (CSS).
+  */
+  const ray = ekran === "tablet" || (ekran === "masaustu" && dar);
 
 
   const oge = (u: OsUygulama) => {
@@ -105,7 +113,6 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
           href={u.href}
           className={acik ? "os-gezinme-oge is-active" : "os-gezinme-oge"}
           aria-current={acik ? vurgu.uygulamaAriaCurrent : undefined}
-          title={u.label}
         >
           <OsSimge ad={u.ikon} boyut={20} />
           <span className="os-gezinme-ad">{u.label}</span>
@@ -146,7 +153,7 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
           </button>
         </div>
         {/* Ana eylem: Ctrl+K'daki ve Çalışmalarım'daki "Yeni çalışma" ile aynı pencere (?yeni=1). */}
-        <Link href="/dashboard/editor?yeni=1" className="os-gezinme-yeni" scroll={false} title={t({ tr: "Yeni çalışma", en: "New work" })}>
+        <Link href="/dashboard/editor?yeni=1" className="os-gezinme-yeni" scroll={false}>
           <Plus size={18} aria-hidden="true" />
           <span className="os-gezinme-ad">{t({ tr: "Yeni çalışma", en: "New work" })}</span>
         </Link>
@@ -196,6 +203,7 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
           </li>
         </ul>
       </nav>
+      <RayIpucu etkin={ray} kokId="os-gezinme" />
 
       {/* "Daha fazla": telefonda alt çubukta, tablette rayda olmayan her şey. Esc ve dışarı dokunuş kapatır. */}
       <dialog

@@ -459,8 +459,9 @@
        telefon  ≤ 760px   alt çubuk
        tablet   761–1199px dar ray
        masaüstü ≥ 1200px  geniş kenar çubuğu */
-  --gezinme-genislik: 248px;
-  --gezinme-ray: 88px;
+  /* V4.3-B1: v4 ölçüleri (K-1). Eskiden 248 / 88 px. */
+  --gezinme-genislik: var(--kenar-genis);
+  --gezinme-ray: var(--ray);
   --alt-cubuk-h: var(--alt-cubuk);
   --sidebar-width: 264px;
   /* Üst çubuk 56 piksel (Signature OS): marka kenar çubuğuna geçti, çubukta
@@ -855,7 +856,10 @@ html[data-theme="dark"] {
 /* ---------------- 5. Yerleşim ve kırılımlar ---------------- */
 :root {
   --kenar-genis: 236px; /* ≥1200: etiketli kenar çubuğu */
-  --ray: 64px; /* 761–1199: simge rayı (öneri; uygulama bugün 88 px) */
+  --ray: 64px; /* 761–1199: simge rayı (V4.3-B1'den beri uygulamada) */
+  /* Yalnız yazım sayfasının geçiş telafisi (os-shell.css): B1 öncesi ölçüler. C1'de (K-4 sabit sütun) kalkar. */
+  --gecis-eski-kenar: 248px;
+  --gecis-eski-ray: 88px;
   --ust: 56px;
   --alt-cubuk: 64px; /* ≤760: sabit alt gezinme (+ güvenli alan) */
   --icerik-max: 1320px;
