@@ -1768,6 +1768,8 @@
 @media (pointer: coarse) {
   .secim-ai-dugme { min-height: 44px; padding: 6px 14px; }
   .secim-ai-menu .arac-menu-oge { min-height: 44px; }
+  /* Menüdeki bağlantılar (çalışma bölümleri, V4.3-C1): düğmeler gibi dokunmatikte 44 px; yazının boyu 43,x px bırakıyordu. */
+  .arac-menu-pencere a.arac-menu-oge { min-height: 44px; }
 }
 
 /*
@@ -2185,6 +2187,19 @@
   html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-baslik { flex: 1 1 auto; align-items: center; }
   html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-baslik-simge { display: none; }
   html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-baslik h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+/*
+  "Bölümler" menüsü (V4.3-C1, R18; calisma-seridi.tsx): tablette ve kenar
+  çubuğu ray olduğunda başlıkta. Geniş kenar çubuğunda bölümler zaten
+  orada, telefonda ⋮ menüsünün içinde: ikisinde de düğme gizli. Yazım
+  rayı (data-yazim-ray) burada "ray" sayılır: o sürece kenar çubuğundaki
+  bölüm listesi görünmüyor.
+*/
+@media (min-width: 1200px) {
+  html:not([data-kenar="dar"], [data-yazim-ray]) .yazma-eylemleri .yazma-bolumler { display: none; }
+}
+@media (max-width: 760px) {
+  .yazma-eylemleri .yazma-bolumler { display: none; }
 }
 /* Yazım sayfasında üst çubuk saati yok: yazarken bilgi vermiyor, göz çekiyordu (saat sistemde zaten görünür). */
 body:has(.yazim-sayfasi) .os-saat { display: none; }

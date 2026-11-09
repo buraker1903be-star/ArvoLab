@@ -410,6 +410,79 @@ await senaryo("şerit ve kenar çubuğu aynı bağlantılar (iki ayrı liste yok
   bekle(JSON.stringify(kenar) === JSON.stringify(serit), `kenar ${JSON.stringify(kenar)}\n    şerit ${JSON.stringify(serit)}`);
 });
 
+/*
+  R18 (V4.3-C1): yazım sayfasında çalışma bölümleri editörün MEVCUT başlık
+  satırında — telefonda ⋮ menüsünün başında, tablette ve kenar çubuğu ray
+  olduğunda "Bölümler" menüsünde, geniş kenar çubuğunda hiç (orada zaten).
+  Yeni çubuk yok; liste kenar çubuğuyla aynı.
+*/
+const SERIT_SIRASI = ["Özet", "Yazım", "Kaynaklar", "Kanıt matrisi", "Analiz"];
+const menuOgeleri = (s) => s.locator(".arac-menu-pencere:visible [role=group] a.arac-menu-oge").evaluateAll((l) => l.map((a) => {
+  const r = a.getBoundingClientRect();
+  return { ad: a.textContent.trim(), href: a.getAttribute("href"), w: r.width, h: r.height, etkin: a.getAttribute("aria-current") };
+}));
+await senaryo("telefon yazım: bölümler ⋮ menüsünde, şerit sırası, Yazım etkin, ≥44 px; yeni çubuk yok, taşma yok", async () => {
+  for (const w of [390, 360]) {
+    const { ctx, sayfa } = await ac(w, `/dashboard/editor/${TEZ}/write`);
+    const ilkOnce = await sayfa.locator(".ProseMirror > *").first().boundingBox();
+    bekle((await seritOku(sayfa)).sayi === 0, `${w}: şerit var`);
+    bekle(!(await gorunur(sayfa, ".yazma-bolumler")), `${w}: telefonda ayrı "Bölümler" düğmesi görünmemeli (başlığa sığmıyor)`);
+    const dugme = sayfa.locator(".yazma-belge-menu");
+    bekle(/bölüm/i.test((await dugme.getAttribute("aria-label")) ?? ""), `${w}: ⋮ menüsünün adı bölümleri söylemiyor`);
+    await dugme.click();
+    await sayfa.waitForTimeout(350); // açılış animasyonu (ölçek) bitmeden kutu küçük ölçülür
+    const ogeler = await menuOgeleri(sayfa);
+    bekle(JSON.stringify(ogeler.slice(0, 5).map((o) => o.ad)) === JSON.stringify(SERIT_SIRASI), `${w}: sıra ${ogeler.map((o) => o.ad).join(", ")}`);
+    bekle(ogeler.filter((o) => o.etkin === "page").map((o) => o.ad).join() === "Yazım", `${w}: etkin bölüm Yazım değil`);
+    for (const o of ogeler) bekle(o.h >= 44 && o.w >= 44, `${w}: "${o.ad}" ${Math.round(o.w)}×${Math.round(o.h)}`);
+    bekle((await tasma(sayfa)) <= 0, `${w}: yatay taşma`);
+    await sayfa.keyboard.press("Escape");
+    const ilkSonra = await sayfa.locator(".ProseMirror > *").first().boundingBox();
+    bekle(Math.abs(ilkSonra.y - ilkOnce.y) < 1, `${w}: ilk satır yer değiştirdi (${ilkOnce.y} → ${ilkSonra.y})`);
+    await ctx.close();
+  }
+});
+await senaryo("telefon yazım: ⋮ menüsünden Kanıt matrisine gidilir", async () => {
+  const { ctx, sayfa } = await ac(390, `/dashboard/editor/${TEZ}/write`);
+  await sayfa.locator(".yazma-belge-menu").click();
+  await sayfa.locator(".arac-menu-pencere:visible a", { hasText: "Kanıt matrisi" }).click();
+  await sayfa.waitForURL(/\/kanit$/, { timeout: 60000 });
+  await ctx.close();
+});
+await senaryo("Bölümler menüsü: tablette ve rayda görünür (kardeş düğmelerle aynı boy), geniş kenar çubuğunda gizli; bağlantılar kenar çubuğuyla aynı", async () => {
+  const { ctx: c0, sayfa: s0 } = await ac(1440, `/dashboard/editor/${TEZ}/kanit`);
+  const kenar = (await s0.locator("#os-gezinme .os-gezinme-baglam a[href]").evaluateAll((l) => l.map((a) => a.getAttribute("href")))).filter((h) => !h.includes("/dashboard/editor?yeni")).sort();
+  await c0.close();
+  const durumlar = [
+    { w: 1024, beklenen: true },
+    { w: 1280, beklenen: true, not: "yazım rayı (panel açık)" },
+    { w: 1440, beklenen: false },
+    { w: 1440, dar: true, beklenen: true },
+    { w: 1440, panelKapali: true, beklenen: false },
+  ];
+  for (const d of durumlar) {
+    const { ctx, sayfa } = await ac(d.w, `/dashboard/editor/${TEZ}/write`, { dar: d.dar, panelKapali: d.panelKapali });
+    const ad = `${d.w}${d.dar ? " dar" : ""}${d.panelKapali ? " panel kapalı" : ""}`;
+    const gorunurMu = await gorunur(sayfa, ".yazma-bolumler");
+    bekle(gorunurMu === d.beklenen, `${ad}: "Bölümler" ${gorunurMu ? "görünüyor" : "görünmüyor"} (beklenen ${d.beklenen})`);
+    if (gorunurMu) {
+      const k = await sayfa.locator(".yazma-bolumler").boundingBox();
+      // Başlıktaki kardeş düğmelerle (Paylaş, Dışa aktar) aynı kural: tablette 40 px (workspace.css "dokunma hedefi kuralı"), fareli masaüstünde 36 px (--kontrol-h-sik). Telefonda düğme yok, menü öğeleri 44.
+      const enAz = d.w < 1200 ? 40 : 36;
+      const kardes = await sayfa.locator(".yazma-paylas").boundingBox();
+      bekle(Math.abs(kardes.height - k.height) < 1, `${ad}: "Bölümler" (${k.height}) Paylaş'tan (${kardes.height}) farklı boyda`);
+      bekle(k.height >= enAz - 0.5 && k.width >= 44, `${ad}: düğme ${Math.round(k.width)}×${Math.round(k.height)} (en az ${enAz})`);
+      await sayfa.locator(".yazma-bolumler").click();
+      await sayfa.waitForTimeout(350);
+      const ogeler = await menuOgeleri(sayfa);
+      bekle(JSON.stringify(ogeler.slice(0, 5).map((o) => o.ad)) === JSON.stringify(SERIT_SIRASI), `${ad}: sıra ${ogeler.map((o) => o.ad).join(", ")}`);
+      bekle(JSON.stringify(ogeler.map((o) => o.href).sort()) === JSON.stringify(kenar), `${ad}: bağlantılar kenar çubuğundan farklı\n    menü ${JSON.stringify(ogeler.map((o) => o.href).sort())}\n    kenar ${JSON.stringify(kenar)}`);
+      bekle((await tasma(sayfa)) <= 0, `${ad}: yatay taşma`);
+    }
+    await ctx.close();
+  }
+});
+
 await tarayici.close();
 console.log(`\n${gecen}/${toplam} senaryo geçti`);
 process.exit(gecen === toplam ? 0 : 1);

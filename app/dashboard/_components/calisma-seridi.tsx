@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, LayoutList } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import { calismaBaglantilari, calismaIcindeMi, calismaSeridi, etkinBaglanti } from "@/lib/os/uygulamalar";
 import { useCalismaBaglami } from "./calisma-baglami";
@@ -81,5 +81,59 @@ export function CalismaSeridi() {
         </li>
       </ul>
     </nav>
+  );
+}
+
+/*
+  YAZIM SAYFASINDA ÇALIŞMA BÖLÜMLERİ (V4.3-C1, R18). Şerit yazım
+  sayfasında çizilmiyor (yukarıda: ilk satırı ~45 px aşağı itiyordu) ve
+  yeni bir yapışkan çubuk da eklenmedi; bölümler editörün MEVCUT başlık
+  satırında, aynı listeden (calismaBaglantilari / calismaSeridi) gelir:
+    - telefonda başlıktaki ⋮ menüsünün başında (yeni düğme yok: 360 px'te
+      başlığa bir düğme daha eklemek çalışmanın adına ~74 px bırakıyordu);
+    - tablette ve kenar çubuğu ray olduğunda (daraltılmış ya da yazım rayı)
+      başlıktaki "Bölümler" menüsünde;
+    - geniş kenar çubuğunda hiç (bölümler orada).
+  Sıra şeritle aynı: Özet · Yazım · Kaynaklar · Kanıt · Analiz, sonra
+  "Daha fazla"dakiler. İkinci bir gezinme sistemi değil: liste, etkin
+  bölüm kuralı ve adlar tek kaynaktan.
+  ESKİDEN (B2): yazım sayfasından Kanıt ve Etik'e yalnızca Özet üzerinden
+  gidiliyordu; C1'in yazım rayı (1200–~1340 px) kenar çubuğundaki
+  bölümleri de gizlediği için bu menü masaüstünde de gerekli oldu.
+*/
+export function CalismaBolumOgeleri() {
+  const t = useCeviri();
+  const yol = usePathname();
+  const baglam = useCalismaBaglami();
+  if (!baglam) return null;
+  const hepsi = calismaBaglantilari(baglam, t);
+  const { ana, diger } = calismaSeridi(hepsi);
+  const etkin = etkinBaglanti(hepsi, yol);
+  const baslikKimligi = `calisma-bolumleri-${baglam.id}`;
+  return (
+    <div role="group" aria-labelledby={baslikKimligi} className="arac-menu-bolum">
+      <p id={baslikKimligi} className="arac-menu-baslik">{t({ tr: "Çalışma bölümleri", en: "Work sections" })}</p>
+      {[...ana, ...diger].map((b) => (
+        <Link key={b.key} href={b.href} className="arac-menu-oge" aria-current={etkin?.key === b.key ? "page" : undefined}>
+          {b.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+export function CalismaBolumMenusu() {
+  const t = useCeviri();
+  const baglam = useCalismaBaglami();
+  if (!baglam) return null;
+  return (
+    <AracMenusu
+      dugmeSinifi="projects-filter-button yazma-bolumler"
+      ikon={<LayoutList size={15} aria-hidden="true" />}
+      etiket={t({ tr: "Bölümler", en: "Sections" })}
+      aciklama={t({ tr: "Çalışmanın bölümleri: Özet, Yazım, Kaynaklar, Kanıt, Analiz…", en: "Work sections: Overview, Writing, Sources, Evidence, Analysis…" })}
+    >
+      <CalismaBolumOgeleri />
+    </AracMenusu>
   );
 }

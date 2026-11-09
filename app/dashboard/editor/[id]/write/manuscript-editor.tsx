@@ -113,6 +113,7 @@ import YazimIpuclariKarti from "./yazim-ipuclari-karti";
 
 import { useSatirIciOneri } from "./satir-ici-oneri";
 import AracMenusu from "@/app/dashboard/_components/acilir-menu";
+import { CalismaBolumMenusu, CalismaBolumOgeleri } from "@/app/dashboard/_components/calisma-seridi";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
 import { extractPlainText, type TiptapDoc } from "@/lib/tiptap-text";
 import {
@@ -2746,6 +2747,8 @@ export default function ManuscriptEditor({
       {eylemHedefi
         ? createPortal(
             <>
+              {/* Çalışma bölümleri (V4.3-C1, R18): tablette ve kenar çubuğu ray olduğunda; telefonda ⋮ menüsünde (calisma-seridi.tsx). */}
+              <CalismaBolumMenusu />
               <button type="button" className="projects-filter-button yazma-paylas" onClick={() => setShareOpen(true)} aria-label={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })} title={t({ tr: "Danışmana paylaş (salt okunur bağlantı)", en: "Share with advisor (read-only link)" })}>
                 <Share2 size={15} aria-hidden="true" />
                 <span className="yazma-etiket">{t({ tr: "Paylaş", en: "Share" })}</span>
@@ -2813,7 +2816,7 @@ export default function ManuscriptEditor({
                 dugmeSinifi="projects-filter-button yazma-belge-menu"
                 /* Dikey üç nokta: hemen altındaki araç çubuğunun "⋯"si ile karışmasın. */
                 ikon={<MoreVertical size={18} aria-hidden="true" />}
-                etiket={t({ tr: "Belge: paylaş, dışa aktar, yazım paneli", en: "Document: share, export, writing panel" })}
+                etiket={t({ tr: "Çalışma bölümleri ve belge: paylaş, dışa aktar, yazım paneli", en: "Work sections and document: share, export, writing panel" })}
                 etiketiGizle
               >
                 {/*
@@ -2829,6 +2832,9 @@ export default function ManuscriptEditor({
                     {projectDefaults.title}
                   </p>
                 ) : null}
+                {/* R18 (V4.3-C1): telefonda çalışma bölümleri burada, yeni bir çubuk yerine. */}
+                <CalismaBolumOgeleri />
+                <hr className="arac-menu-ayrac" />
                 <button type="button" className="arac-menu-oge" onClick={() => setShareOpen(true)}>
                   <Share2 size={16} aria-hidden="true" />
                   <span>{t({ tr: "Danışmana paylaş", en: "Share with advisor" })}</span>
