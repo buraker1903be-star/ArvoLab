@@ -11,10 +11,12 @@
    Tema: <html data-theme="light|dark"> (app/layout.tsx ön-boya betiği).
 
    BELGE KÂĞIDI (Phase 4.3): bu blok `:root, .kagit` için yazıldı. Editörün
-   belge alanı (.kagit) koyu temada da bu AÇIK değerleri kendi üzerinde
-   yeniden kurar; akademik belgenin sayfası uygulama temasından bağımsız,
-   her zaman beyaz kâğıt ve koyu mürekkep. Değerler kopyalanmıyor: ikinci
-   bir liste, bir gün birinin unutulduğu liste olurdu.
+   belge alanı (.kagit) bu AÇIK değerleri kendi üzerinde yeniden kurar:
+   yazdırmada ve açık temada sayfa beyaz kâğıt, koyu mürekkep. Koyu temada
+   EKRANDA (V4.3-A2-3) aşağıdaki "loş kâğıt" kuralı bu yeniden kurmayı geri
+   alır. Değerler kopyalanmıyor: ikinci bir liste, bir gün birinin
+   unutulduğu liste olurdu (loş kâğıdın devralma listesi de bu yüzden
+   check-css-tokens ile denetleniyor).
    ============================================================ */
 
 :root, .kagit {
@@ -544,19 +546,85 @@ html[data-theme="dark"] {
   --yan-panel-genis: var(--baglam-panel);
 }
 /*
-  KOYU TEMADA KÂĞIT (UX S8, 07.11.2026, kurum sahibinin kararı): ekrandaki
-  belge sayfası saf beyaz değil, sıcak açık gri (#ECE9E2). Eskiden koyu
-  masanın (#0a0f15) ortasında saf beyaz levha gözü kamaştırıyordu; ölçüldü:
-  mürekkep (--ink) bu kâğıtta 14,7:1, masa ile kâğıt arası 15,9:1. Belge
-  yine AÇIK kâğıt ve koyu mürekkep; yalnızca kâğıdın tonu değişti.
-  Yalnızca ekranda: yazdırma, PDF ve Word kendi yollarından (lib/tiptap-
-  html.ts, lib/tiptap-docx.ts) beyaz kâğıtla çizilir; @media print'te bu
-  kural hiç uygulanmaz. Açık temada kâğıt beyaz kalır. Seçici .kagit'i
-  hedefler: .kagit açık tokenları kendi üzerinde yeniden kurduğu için
-  html'deki bir tanım belgeye ulaşmazdı.
+  KOYU TEMADA KÂĞIT — "LOŞ KÂĞIT" (V4.3-A2-3, 09.11.2026; K-5, V4.1/V4.2R
+  onaylı tasarım: 02-tasarim-sistemi.md, kâğıt #182231, belge metni
+  #E4E9F0, 13,12:1).
+
+  ESKİDEN (UX S8, 07.11.2026): koyu temada da AÇIK kâğıt (#ECE9E2) ve koyu
+  mürekkep. Koyu arayüzün ortasında açık bir levha kalıyordu; v4 tasarımı
+  belgeyi koyu temada loş bir kâğıt olarak çiziyor.
+
+  NASIL: kâğıt (.kagit) açık rolleri `:root, .kagit` bloklarıyla KENDİ
+  üzerinde yeniden kurar; koyu temada ekranda bu kural o yeniden kurmayı
+  geri alır: bloklarda tanımlı HER ad html'nin (koyu temanın) değerini
+  devralır. Liste elle eksiltilmez: scripts/check-css-tokens.mjs açık
+  bloklardaki adlarla bu listeyi iki yönlü karşılaştırır. Eksik bir ad
+  loş kâğıtta AÇIK temanın değeriyle kalır (koyu kâğıtta koyu yazı).
+
+  YALNIZCA EKRANDA (@media screen): yazdırmada bu kural uygulanmaz, kâğıt
+  açık rollerle beyaz kalır; PDF ve Word kendi yollarından (lib/tiptap-
+  html.ts, lib/tiptap-docx.ts, --print-*) çizilir, CSS'e bağlı değil.
+  Yazı tipi, boyut, satır aralığı ve kâğıt ölçüsü bu kurala girmez:
+  yalnızca renk adları devralınır, ölçü adları iki temada aynıdır.
 */
 @media screen {
-  html[data-theme="dark"] .kagit { --kagit: #ece9e2; }
+  html[data-theme="dark"] .kagit {
+    --brand-50: inherit; --brand-100: inherit; --brand-300: inherit; --brand-400: inherit; --brand-500: inherit;
+    --brand-700: inherit; --brand-800: inherit; --brand-900: inherit; --brand-950: inherit; --accent-100: inherit;
+    --accent-300: inherit; --accent-400: inherit; --accent-500: inherit; --accent-700: inherit; --accent-800: inherit;
+    --n-0: inherit; --mavi-50: inherit; --mavi-100: inherit; --mavi-300: inherit; --mavi-400: inherit;
+    --mavi-600: inherit; --mavi-700: inherit; --mavi-800: inherit; --gri-0: inherit; --gri-25: inherit;
+    --gri-50: inherit; --gri-75: inherit; --gri-100: inherit; --gri-150: inherit; --gri-200: inherit;
+    --yazi-900: inherit; --yazi-700: inherit; --yazi-600: inherit; --yazi-500: inherit; --yazi-400: inherit;
+    --gece-950: inherit; --gece-900: inherit; --gece-875: inherit; --gece-850: inherit; --gece-800: inherit;
+    --gece-750: inherit; --gece-700: inherit; --gece-600: inherit; --gece-yazi-100: inherit; --gece-yazi-300: inherit;
+    --gece-yazi-400: inherit; --gece-yazi-500: inherit; --bg: inherit; --surface: inherit; --surface-2: inherit;
+    --surface-sunken: inherit; --surface-raised: inherit; --kagit: inherit; --kenar-zemin: inherit; --overlay: inherit;
+    --ink: inherit; --ink-soft: inherit; --muted: inherit; --dim: inherit; --on-brand: inherit;
+    --line: inherit; --line-soft: inherit; --primary: inherit; --primary-strong: inherit; --accent: inherit;
+    --accent-strong: inherit; --accent-bright: inherit; --accent-soft: inherit; --focus: inherit; --primary-hover: inherit;
+    --primary-soft: inherit; --primary-ink: inherit; --on-primary: inherit; --primary-focus: inherit; --secondary: inherit;
+    --secondary-strong: inherit; --secondary-bright: inherit; --secondary-soft: inherit; --success: inherit; --success-soft: inherit;
+    --warning: inherit; --warning-soft: inherit; --danger: inherit; --danger-soft: inherit; --info: inherit;
+    --info-soft: inherit; --neutral: inherit; --neutral-soft: inherit; --sidebar-ink: inherit; --sidebar-muted: inherit;
+    --sidebar-line: inherit; --sidebar-hover: inherit; --koyu-panel-zemin: inherit; --koyu-panel-cizgi: inherit; --golge-tonu: inherit;
+    --golge-tonu-derin: inherit; --grafik-cubuk: inherit; --grafik-cubuk-acik: inherit; --ilerleme-parlak: inherit; --logo-plaka: inherit;
+    --shadow-sm: inherit; --shadow-md: inherit; --shadow-lg: inherit; --shadow-inset: inherit; --yuzey-kanvas: inherit;
+    --yuzey-duzlem-ayrac: inherit; --yuzey-kart: inherit; --yuzey-kart-cizgi: inherit; --yuzey-kart-golge: inherit; --yuzey-acilir-golge: inherit;
+    --yuzey-pencere-golge: inherit; --kontrol-golge: inherit; --r-xs: inherit; --r-sm: inherit; --r-md: inherit;
+    --r-lg: inherit; --r-xl: inherit; --r-pill: inherit; --r-daire: inherit; --kontrol-h: inherit;
+    --kontrol-h-sik: inherit; --kontrol-h-dokunma: inherit; --kontrol-r: inherit; --kontrol-dolgu: inherit; --kontrol-dolgu-sik: inherit;
+    --odak-halkasi: inherit; --dugme-birincil: inherit; --dugme-birincil-hover: inherit; --giris-vurgu-zemin: inherit; --giris-vurgu-cizgi: inherit;
+    --dugme-agirlik: inherit; --dugme-hover-zemin: inherit; --kenarlik-hover: inherit; --menu-r: inherit; --menu-dolgu: inherit;
+    --menu-golge: inherit; --menu-oge-h: inherit; --menu-oge-r: inherit; --pencere-r: inherit; --pencere-golge: inherit;
+    --hap-agirlik: inherit; --kart-araligi: inherit; --kart-dolgu: inherit; --kart-r: inherit; --karo-dolgu: inherit;
+    --karo-r: inherit; --font-body: inherit; --font-belge: inherit; --font-brand: inherit; --font-display: inherit;
+    --font-mono: inherit; --fs-micro: inherit; --fs-sm: inherit; --fs-base: inherit; --fs-body: inherit;
+    --fs-md: inherit; --fs-lg: inherit; --fs-xl: inherit; --tip-okuma: inherit; --tip-okuma-satir: inherit;
+    --tip-arayuz: inherit; --tip-meta: inherit; --tip-mikro: inherit; --tip-h2: inherit; --tip-h1: inherit;
+    --tip-display: inherit; --fs-display: inherit; --fs-sayfa: inherit; --fs-sayfa-telefon: inherit; --fs-calisma: inherit;
+    --fs-calisma-sik: inherit; --fw-normal: inherit; --fw-orta: inherit; --fw-yari: inherit; --fw-kalin: inherit;
+    --fw-display: inherit; --lh-display: inherit; --ls-display: inherit; --lh-metin: inherit; --lh-baslik: inherit;
+    --s-1: inherit; --s-2: inherit; --s-3: inherit; --s-4: inherit; --s-5: inherit;
+    --s-6: inherit; --s-8: inherit; --s-10: inherit; --s-12: inherit; --z-taban: inherit;
+    --z-ust: inherit; --z-sticky: inherit; --z-acilir: inherit; --z-topbar: inherit; --z-panel: inherit;
+    --z-menu: inherit; --z-gezinme: inherit; --z-dock: inherit; --z-pencere: inherit; --z-toast: inherit;
+    --sure-hizli: inherit; --sure-orta: inherit; --sure-yavas: inherit; --ease-spring: inherit; --ease-sheet: inherit;
+    --glass-bg: inherit; --glass-strong: inherit; --glass-blur: inherit; --gezinme-genislik: inherit; --gezinme-ray: inherit;
+    --alt-cubuk-h: inherit; --sidebar-width: inherit; --topbar-height: inherit; --dock-alani: inherit; --content-max: inherit;
+    --background: inherit; --foreground: inherit; --muted-foreground: inherit; --border: inherit; --surface-muted: inherit;
+    --primary-foreground: inherit; --brand-navy: inherit; --brand-green: inherit; --radius-sm: inherit; --radius-md: inherit;
+    --radius-lg: inherit; --yuzey-zemin: inherit; --yuzey-kenar: inherit; --yuzey-1: inherit; --yuzey-ust: inherit;
+    --yuzey-2: inherit; --yuzey-cokuk: inherit; --yuzey-vurgu: inherit; --kagit-metin: inherit; --masa: inherit;
+    --metin-1: inherit; --metin-2: inherit; --metin-3: inherit; --metin-ters: inherit; --cizgi: inherit;
+    --cizgi-guclu: inherit; --vurgu: inherit; --vurgu-uzerine: inherit; --vurgu-metin: inherit; --vurgu-yumusak: inherit;
+    --vurgu-yazi: inherit; --odak: inherit; --basari: inherit; --basari-yumusak: inherit; --ilerleme: inherit;
+    --uyari: inherit; --uyari-yumusak: inherit; --hata: inherit; --hata-yumusak: inherit; --notr-yumusak: inherit;
+    --ortu: inherit; --secim: inherit; --golge-1: inherit; --golge-2: inherit; --golge-3: inherit;
+    /* Onaylı loş kâğıt ve belge metni (v4 paleti). */
+    --kagit: var(--p-gece-775);
+    --ink: var(--kagit-metin);
+  }
 }
 
 /* ============================================================

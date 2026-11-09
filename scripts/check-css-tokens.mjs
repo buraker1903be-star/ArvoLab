@@ -177,7 +177,7 @@ for (const { file, text } of files) {
   --accent: var(--primary-ink)) kendiliğinden temayla döner, sayılmaz.
 */
 const TEMADAN_BAGIMSIZ = {
-  "--kagit": "belge kâğıdı her temada açık (koyu temadaki ton .kagit kuralında)",
+  "--kagit": "kâğıdın açık değeri; koyu temanın loş kâğıdı ekranda .kagit kuralında (V4.3-A2-3)",
   "--sidebar-ink": "giriş sayfasının her temada koyu tanıtım paneli",
   "--sidebar-muted": "giriş sayfasının her temada koyu tanıtım paneli",
   "--sidebar-line": "giriş sayfasının her temada koyu tanıtım paneli",
@@ -211,6 +211,28 @@ const TEMADAN_BAGIMSIZ = {
   }
   for (const ad of Object.keys(TEMADAN_BAGIMSIZ)) {
     if (!(ad in acik) || ad in koyu) problems.push(`app/styles/tokens.css  ${ad} TEMADAN_BAGIMSIZ listesinde ama artık öyle değil — listeden düşün`);
+  }
+}
+
+/*
+  8) Loş kâğıdın devralma listesi tam olmalı (V4.3-A2-3). Kâğıt (.kagit)
+     açık rolleri `:root, .kagit` bloklarıyla kendi üzerinde yeniden kurar;
+     koyu temada ekranda `html[data-theme="dark"] .kagit` kuralı bu
+     blokların HER adını `inherit` ile geri alır. Listede olmayan bir ad
+     loş kâğıtta açık temanın değeriyle kalır: koyu kâğıtta koyu yazı ya da
+     beyaz yama, hata vermeden. Fazlası da bildirilir (silinmiş adın
+     artığı listeyi okuyanı yanıltır).
+*/
+{
+  const metin = (files.find((f) => f.file === TOKENS_FILE)?.text ?? "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const acikAdlar = new Set();
+  for (const blok of metin.matchAll(/:root, \.kagit\s*\{([^}]*)\}/g)) for (const m of blok[1].matchAll(/(--[a-z0-9-]+)\s*:/g)) acikAdlar.add(m[1]);
+  const kural = metin.match(/@media screen\s*\{\s*html\[data-theme="dark"\] \.kagit\s*\{([^}]*)\}/);
+  if (!kural) problems.push("app/styles/tokens.css  koyu temanın loş kâğıt kuralı (@media screen { html[data-theme=\"dark\"] .kagit { … } }) bulunamadı");
+  else {
+    const devralan = new Set([...kural[1].matchAll(/(--[a-z0-9-]+)\s*:\s*inherit\s*;/g)].map((m) => m[1]));
+    for (const ad of acikAdlar) if (!devralan.has(ad)) problems.push(`app/styles/tokens.css  ${ad} \`:root, .kagit\` bloğunda tanımlı ama loş kâğıt kuralında \`${ad}: inherit;\` yok — koyu temada kâğıtta açık temanın değeriyle kalır`);
+    for (const ad of devralan) if (!acikAdlar.has(ad)) problems.push(`app/styles/tokens.css  ${ad} loş kâğıt kuralında devralınıyor ama hiçbir \`:root, .kagit\` bloğunda yok — listeden düşün`);
   }
 }
 

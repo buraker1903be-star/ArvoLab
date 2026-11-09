@@ -93,6 +93,15 @@ async function cek(klasor, suzgec, taban, kip = "goruntu") {
         const sayfa = await ctx.newPage();
         try {
           await sayfa.goto(taban + yol, { waitUntil: "networkidle", timeout: 180000 });
+          /*
+            Yükleniyor durumunun bitmesi beklenir (en çok 10 sn). Editörün yan
+            kutuları "…" ve "okunuyor" ile açılıp sonra değeri yazıyor; çekim
+            bazen öncesine, bazen sonrasına denk geliyor ve daha uzun metin
+            komşu kutuları kaydırıyordu: aynı CSS'le iki çekim "farklı" (V4.3-A2-3).
+          */
+          await sayfa
+            .waitForFunction(() => ![...document.querySelectorAll("body *")].some((e) => !e.childElementCount && /^(…|okunuyor|reading)$/.test(e.textContent.trim())), null, { timeout: 10000 })
+            .catch(() => console.log(`! ${ad} ${w} ${tema}: yükleniyor durumu 10 sn'de bitmedi`));
           await sayfa.addStyleTag({ content: SAKIN });
           await sayfa.evaluate((kaliplar) => {
             const re = new RegExp(kaliplar[0], "gi");
@@ -147,9 +156,18 @@ const GEOMETRI = () => {
     const r = el.getBoundingClientRect();
     if (!r.width && !r.height) continue;
     const s = getComputedStyle(el);
+    /*
+      Görünmeyen öğe yerleşimin parçası değil. Editörde 18 kapalı pencere
+      (drawer-root, visibility: hidden) sayfada duruyor; içerikleri
+      tembel yüklendiği için kutuları çekimden çekime değişiyor ve AYNI
+      CSS ile iki çekim 12 sayfanın 9'unda "farklı" çıkıyordu (V4.3-A2-3).
+    */
+    if (s.visibility !== "visible") continue;
     const yol = [];
     for (let e = el; e && e !== document.body; e = e.parentElement) yol.unshift(e.tagName.toLowerCase() + (e.classList[0] ? "." + e.classList[0] : ""));
-    satirlar.push([yol.slice(-4).join(">"), y(r.x), y(r.y + window.scrollY), y(r.width), y(r.height), s.fontSize, s.lineHeight, s.fontWeight, s.borderTopWidth, s.borderRadius]);
+    // Öğenin kendi metni de yazılır: bir fark İÇERİKTEN mi (sayaç, tarih) yerleşimden mi, satırın kendisinden okunsun.
+    const metin = [...el.childNodes].filter((d) => d.nodeType === 3).map((d) => d.nodeValue).join("").trim().slice(0, 24);
+    satirlar.push([yol.slice(-4).join(">"), y(r.x), y(r.y + window.scrollY), y(r.width), y(r.height), s.fontSize, s.lineHeight, s.fontWeight, s.borderTopWidth, s.borderRadius, metin]);
   }
   return { genislik: document.documentElement.scrollWidth, yukseklik: document.documentElement.scrollHeight, satirlar };
 };
