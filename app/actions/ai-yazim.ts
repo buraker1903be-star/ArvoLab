@@ -7,10 +7,10 @@ import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
 import { belgeDili } from "@/lib/belge-dili";
-import { atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
+import { adlaEslesir, atifCikarmaStili, stilTanimi } from "@/lib/atif/stiller";
 import {
   SINIR,
-  kutuphaneSatiri,
+  sayiBaglami,
   yazimCozumle,
   yazimDenetle,
   yazimIstemi,
@@ -128,6 +128,7 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
     gecmis: gorev === "tamamla" ? [] : gecmis,
     istek,
     gorev,
+    numaraliStil: !adlaEslesir(stil),
     zorunluBolumler: (Array.isArray(girdi.zorunluBolumler) ? girdi.zorunluBolumler : [])
       .filter((b): b is string => typeof b === "string")
       .map((b) => b.slice(0, 120)),
@@ -151,14 +152,21 @@ export async function yazimAsistani(girdi: YazimIstegi): Promise<YazimYaniti> {
       ama atıf ve sayı yasağı orada da geçerli olmalı — öğrenci açıklamadaki
       bir kaynağı da kullanabilir. İkisi birlikte denetlenir.
     */
-    const baglamMetinleri = [kaynak, istek, secim ?? "", oncesi ?? "", ...gecmis.map((m) => m.metin), ...kutuphane.map((k, i) => kutuphaneSatiri(k, i + 1))];
-    const denetim = yazimDenetle(`${sonuc.metin}\n${sonuc.yanit}`, kutuphane, baglamMetinleri, atifCikarmaStili(stil));
+    const baglamMetinleri = sayiBaglami({ kaynak, istek, secim, oncesi, gecmis, kutuphane });
+    /* C2-1: numaralı stilde stilin metin içi kalıbı; yazar-tarih stillerinde null. */
+    const numaraKalibi = adlaEslesir(stil) ? null : (stil.numara?.metinKalibi ?? null);
+    const denetim = yazimDenetle(`${sonuc.metin}\n${sonuc.yanit}`, kutuphane, baglamMetinleri, atifCikarmaStili(stil), numaraKalibi);
     if (!denetim.gecti) {
       await asistanKaydet({ ...ortak, durum: "rejected", redNedeni: denetim.neden, model: yanit.model, cikti: yanit.metin, bulgular: { ayrinti: denetim.ayrinti } });
       const ayrinti = denetim.ayrinti.slice(0, 3).join(", ");
       return {
         hata:
-          denetim.neden === "kunye"
+          denetim.neden === "kunye" && denetim.numarali
+            ? t({
+                tr: `Asistan doğrulanamayan numaralı bir atıf yazdığı için metin gösterilmedi (${ayrinti}). Numaralı atıf stilinde numarayı Atıf aracıyla siz ekleyin; isteğinizi atıfsız tekrarlayın.`,
+                en: `The text wasn't shown because the assistant wrote a numbered citation that can't be verified (${ayrinti}). In a numbered citation style, add the number yourself with the Citation tool; repeat your request without citations.`,
+              })
+            : denetim.neden === "kunye"
             ? t({
                 tr: `Asistan kütüphanenizde olmayan bir kaynağa atıf yaptığı için metin gösterilmedi (${ayrinti}). Kaynağı Literatür'e ekleyip tekrar deneyin.`,
                 en: `The text wasn't shown because the assistant cited a source that isn't in your library (${ayrinti}). Add the source to Literature and try again.`,
