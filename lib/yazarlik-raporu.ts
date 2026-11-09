@@ -13,7 +13,12 @@ import { aralikta, belgeBolumleri, type Dugum } from "@/lib/kaynakca-bolumu";
     - Başka bir araçtan (ChatGPT vb.) yapıştırılan metni hiçbir şey
       bilemez.
   Rapor bu yüzden bir "yapay zekâ tespit" puanı DEĞİL, ArvoLab içindeki
-  eklemelerin kaydıdır.
+  eklemelerin kaydıdır. İzlenen yollar: Kabul et, Düzenleyerek kabul et,
+  Paragrafın altına ekle ve satır içi öneride Tab (ai-iz-kabul.mjs sınar).
+  İzsiz metin "insan yazımı" DEMEK DEĞİL: kaynağı bilinmiyor, rapor onu
+  ne AI ne insan diye sınıflandırır (C2-3, V4.3). ESKİDEN kartın başlığı
+  "gövdenin %X'i yazım asistanından eklendi" diye kesin konuşuyor, Tab ile
+  kabulü saymıyordu; hesap değişmedi, yalnızca söylediği.
 
   Sayım gövdede: kaynakça ve liste bölümleri (İçindekiler, Kısaltmalar…)
   dışarıda — öteki denetimlerle aynı sınır (lib/kaynakca-bolumu.ts).

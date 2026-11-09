@@ -52,14 +52,14 @@ export default function YazarlikRaporuKarti({ editor, onFind }: { editor: Editor
       <YanKutu
         ikon={Fingerprint}
         baslik={t({ tr: "Yazarlık", en: "Authorship" })}
-        aciklama={t({ tr: "Metnin ne kadarı yazım asistanından eklendi; eklemeleri listeler ve vurgular.", en: "How much of the text came from the writing assistant; lists and highlights it." })}
+        aciklama={t({ tr: "ArvoLab'da kabul ettiğiniz asistan önerilerinin metindeki payı; eklemeleri listeler ve vurgular.", en: "Share of the text from assistant suggestions you accepted in ArvoLab; lists and highlights them." })}
         deger={rapor ? `%${rapor.yuzde}` : "…"}
         alt={
           rapor === null
             ? t({ tr: "okunuyor", en: "reading" })
             : rapor.asistanKelime
-              ? t({ tr: "asistandan eklendi", en: "inserted from the assistant" })
-              : t({ tr: "asistan metni yok", en: "no assistant text" })
+              ? t({ tr: "izlenen asistan eklemesi", en: "tracked assistant insertions" })
+              : t({ tr: "izlenen asistan eklemesi yok", en: "no tracked assistant insertions" })
         }
         onClick={() => setAcik(true)}
       />
@@ -70,14 +70,14 @@ export default function YazarlikRaporuKarti({ editor, onFind }: { editor: Editor
         title={
           rapor
             ? t({
-                tr: `Gövdenin %${rapor.yuzde}'i yazım asistanından eklendi`,
-                en: `${rapor.yuzde}% of the body was inserted from the writing assistant`,
+                tr: `Gövdenin %${rapor.yuzde}'i ArvoLab'da kabul edilen asistan önerilerinden`,
+                en: `${rapor.yuzde}% of the body comes from assistant suggestions accepted in ArvoLab`,
               })
             : t({ tr: "Yazarlık raporu", en: "Authorship report" })
         }
         description={t({
-          tr: "Yazım asistanından \"Kabul et\" ya da \"Paragrafın altına ekle\" ile eklenip (düzenleyerek kabul edilen dahil) hâlâ belgede duran metin. Kopyala–yapıştır ile alınan metin ve ArvoLab dışındaki araçlar bu sayıya girmez; bu bir yapay zekâ tespit puanı değildir. Asistan metninin içine yazdığınız sözcükler de asistanınki sayılır.",
-          en: "Text inserted from the writing assistant with \"Accept\" or \"Insert below paragraph\" (including edited acceptances) that is still in the document. Text taken by copy–paste and tools outside ArvoLab are not counted; this is not an AI-detection score. Words you type inside assistant text also count as the assistant's.",
+          tr: "Yalnızca ArvoLab'ın izleyebildiği eklemeler sayılır: yazım asistanından \"Kabul et\", \"Düzenleyerek kabul et\", \"Paragrafın altına ekle\" ya da satır içi öneride Tab ile eklenip hâlâ belgede duran metin. Kopyala–yapıştırla alınan ya da başka bir yerden eklenen metnin kaynağı bilinemez; bu metin asistanın ya da sizin yazdığınız olarak sınıflandırılmaz, yüzdenin geri kalanı da insan yazımı anlamına gelmez. Bu bir yapay zekâ tespit puanı değildir. Asistan metninin içine yazdığınız sözcükler de asistanınki sayılır.",
+          en: "Only insertions ArvoLab can track are counted: text added from the writing assistant with \"Accept\", \"Edit and accept\", \"Insert below paragraph\" or Tab on an inline suggestion that is still in the document. The origin of copy–pasted text or text added from elsewhere cannot be known; it is not classified as written by the assistant or by you, and the rest of the percentage does not mean human-written. This is not an AI-detection score. Words you type inside assistant text also count as the assistant's.",
         })}
       >
         {rapor ? (
