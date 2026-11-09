@@ -68,11 +68,19 @@
 .manuscript-editor-content {
   min-height: 60vh;
   /*
-    Satır uzunluğu sınırlı (04.11.2026): geniş ekranda metin 1.500 piksele
-    yayılıyor, göz satır başını kaybediyordu. Sütun ~860 piksel (A4
-    sayfanın yazı alanına yakın) ve ortada; dar ekranda eski kenar boşluğu.
+    SABİT METİN SÜTUNU (V4.3-C1, K-4; lib/belge-sutunu.ts). --belge-sutun
+    kılavuzun metin genişliği (editör yazar, cm) ya da tasarımın 638 px'i.
+    Dolgu sütunu ortalar; yer yetmezse dolgu --belge-ic-min'e iner ve
+    ancak o zaman sütun daralır (telefon, dar tablet).
+    ESKİDEN: sütun en çok 860 px ve kalan yer neyse oydu; panel açılınca,
+    kenar çubuğu daralınca, ekran değişince belge yeniden kırılıyordu
+    (C1 öncesi: masaüstünün 20 durumunda 8 ayrı sütun, 434–860 px).
+    B1'in geçiş telafisi (yazım sayfasının sol boşluğu, --gecis-eski-*)
+    bu kuralla kalktı: sütun artık kabuğun genişliğinden bağımsız.
   */
-  padding: 40px max(clamp(18px, 5vw, 48px), calc((100% - 860px) / 2)) 32px;
+  --belge-sutun-etkin: var(--belge-sutun, var(--belge-sutun-varsayilan));
+  --belge-ic-min: clamp(18px, 5vw, 48px);
+  padding: 40px max(var(--belge-ic-min), calc((100% - var(--belge-sutun-etkin)) / 2)) 32px;
   counter-reset: footnote figure table;
   /*
     Belge kâğıdı (Phase 4.3): açık temada ve yazdırmada saf beyaz, koyu
@@ -1842,8 +1850,13 @@
 */
 @media screen {
   .manuscript-editor-content {
-    /* 860 piksel sütun + kenar boşluğu; sütun daralınca kenardan 20 piksel içeride. */
-    --sayfa-yari: min(494px, calc(50% - 20px));
+    /*
+      Kâğıt = sütun + iki yanda --belge-pay (638 + 2 × 61 = 760 px, onaylı
+      tasarım). Yer daralınca kâğıt masadan 20 px içeride kalır, ama metnin
+      iki yanında en az --belge-pay-min pay bırakır (metin kâğıdın kenarına
+      değmez). Eskiden: 860 px sütun + 64 px pay (min(494px, 50% − 20px)).
+    */
+    --sayfa-yari: clamp(calc(var(--belge-sutun-etkin) / 2 + var(--belge-pay-min)), calc(50% - 20px), calc(var(--belge-sutun-etkin) / 2 + var(--belge-pay)));
     /* Zemin rengi kâğıt olarak kalır (Phase 4.3 kabul testi bunu ölçer); masa yalnızca üstteki görüntü katmanı. */
     background-color: var(--kagit);
     background-image:
@@ -1854,6 +1867,14 @@
         var(--belge-kenar) calc(50% + var(--sayfa-yari)), var(--belge-kenar) calc(50% + var(--sayfa-yari) + 1px),
         var(--belge-masa) calc(50% + var(--sayfa-yari) + 1px));
   }
+}
+/*
+  Masaüstünde (≥1200) iç pay en az 24 px: 638 px sütun yerleşik panelle
+  1366 px'te de sığsın (kap 696 = 638 + 2 × 29). 48 px'lik tablet payı
+  orada sütunu 600 px'e indirip panel açılınca belgeyi yeniden kırardı.
+*/
+@media screen and (min-width: 1200px) {
+  .manuscript-editor-content { --belge-ic-min: var(--belge-pay-min); }
 }
 /* Telefonda masa yok: sayfa ekranın tamamı (her piksel yazıya). */
 @media screen and (max-width: 760px) {

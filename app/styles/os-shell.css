@@ -175,39 +175,49 @@
 }
 
 @media (min-width: 1200px) {
+  /*
+    YAZIM RAYI (V4.3-C1, html[data-yazim-ray], manuscript-editor.tsx):
+    yazım sayfasında yerleşik panel açıkken yer yetmezse kenar çubuğu
+    daraltılmış gibi çizilir; aşağıdaki "dar" kuralları ikisini birden
+    okur. Tercih (data-kenar) değişmediği için daraltma düğmesi o sürece
+    gizli. Yazım başlığının kısa hâli (workspace.css, "tekrarlanan
+    başlık") bilerek yalnız tercihe bakar: ray açılınca başlık satırı
+    büyüyüp belgeyi aşağı itmesin.
+  */
+  .os-gezinme-daralt[hidden] { display: none; }
   .os-root { --kenar-genislik: var(--gezinme-genislik); }
-  html[data-kenar="dar"] .os-root { --kenar-genislik: var(--gezinme-ray); }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .os-root { --kenar-genislik: var(--gezinme-ray); }
 
   /* Geniş */
-  html:not([data-kenar="dar"]) .os-gezinme { gap: var(--s-4); padding: var(--s-3) var(--s-3) var(--s-4); scrollbar-width: thin; }
-  html:not([data-kenar="dar"]) .os-gezinme-bas { flex-direction: row; justify-content: space-between; }
-  html:not([data-kenar="dar"]) .os-gezinme-baglam {
+  html:not([data-kenar="dar"], [data-yazim-ray]) .os-gezinme { gap: var(--s-4); padding: var(--s-3) var(--s-3) var(--s-4); scrollbar-width: thin; }
+  html:not([data-kenar="dar"], [data-yazim-ray]) .os-gezinme-bas { flex-direction: row; justify-content: space-between; }
+  html:not([data-kenar="dar"], [data-yazim-ray]) .os-gezinme-baglam {
     display: grid; gap: 2px; padding: var(--s-1);
     border: 1px solid var(--line-soft); border-radius: var(--r-lg); background: var(--surface);
   }
-  html:not([data-kenar="dar"]) .os-gezinme-daha-li { display: none; }
+  html:not([data-kenar="dar"], [data-yazim-ray]) .os-gezinme-daha-li { display: none; }
   /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin.
      Daraltılınca bölümler kenar çubuğundan çıkar, sekmeler geri gelir. */
-  html:not([data-kenar="dar"]) .os-root .calisma-seridi { display: none; }
+  html:not([data-kenar="dar"], [data-yazim-ray]) .os-root .calisma-seridi { display: none; }
   /* Tek "burası" (UX S5): çalışma bölümünde sayfa etkinken genel uygulama
      yalnızca "içinde bulunulan bölüm" (aria-current="true"): dolgusuz, simgesi
      renkli. Eskiden ikisi de aynı dolgulu vurguyu taşıyordu. */
-  html:not([data-kenar="dar"]) .os-gezinme .os-gezinme-oge.is-active[aria-current="true"] { background: transparent; color: var(--ink); }
-  html:not([data-kenar="dar"]) .os-gezinme .os-gezinme-oge.is-active[aria-current="true"] > svg { color: var(--primary-ink); }
+  html:not([data-kenar="dar"], [data-yazim-ray]) .os-gezinme .os-gezinme-oge.is-active[aria-current="true"] { background: transparent; color: var(--ink); }
+  html:not([data-kenar="dar"], [data-yazim-ray]) .os-gezinme .os-gezinme-oge.is-active[aria-current="true"] > svg { color: var(--primary-ink); }
 
   /* Daraltılmış: tabletteki rayın aynısı (yukarıdaki notu okuyun) */
-  html[data-kenar="dar"] .os-gezinme .os-gezinme-oge { justify-content: center; width: 48px; min-height: 48px; margin-inline: auto; padding: 0; }
-  html[data-kenar="dar"] .os-gezinme .os-gezinme-ad { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  html[data-kenar="dar"] .os-gezinme-diger { display: none; }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .os-gezinme .os-gezinme-oge { justify-content: center; width: 48px; min-height: 48px; margin-inline: auto; padding: 0; }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .os-gezinme .os-gezinme-ad { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .os-gezinme-diger { display: none; }
   /* Daraltılmış (Aşama 2.1): bağlamdan yalnızca switcher'ın simgesi kalır; aynı pencereyi açar. Bölümler sayfadaki sekmelerde. */
-  html[data-kenar="dar"] .os-gezinme-baglam { display: block; padding-bottom: var(--s-2); border-bottom: 1px solid var(--line-soft); }
-  html[data-kenar="dar"] .os-gezinme-baglam .os-gezinme-liste,
-  html[data-kenar="dar"] .proje-secici-ad-kisa,
-  html[data-kenar="dar"] .proje-secici-ok { display: none; }
-  html[data-kenar="dar"] .proje-secici-dugme { justify-content: center; width: 44px; height: 44px; margin: 0 auto; padding: 0; align-items: center; }
-  html[data-kenar="dar"] .os-gezinme-marka { --logo-h: 13px; margin-inline: calc(-1 * var(--s-1)); }
-  html[data-kenar="dar"] .os-gezinme-yeni { align-self: center; width: 44px; min-height: 44px; padding: 0; }
-  html[data-kenar="dar"] .os-gezinme-marka { justify-content: center; min-width: 44px; min-height: 44px; }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .os-gezinme-baglam { display: block; padding-bottom: var(--s-2); border-bottom: 1px solid var(--line-soft); }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .os-gezinme-baglam .os-gezinme-liste,
+  html:is([data-kenar="dar"], [data-yazim-ray]) .proje-secici-ad-kisa,
+  html:is([data-kenar="dar"], [data-yazim-ray]) .proje-secici-ok { display: none; }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .proje-secici-dugme { justify-content: center; width: 44px; height: 44px; margin: 0 auto; padding: 0; align-items: center; }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .os-gezinme-marka { --logo-h: 13px; margin-inline: calc(-1 * var(--s-1)); }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .os-gezinme-yeni { align-self: center; width: 44px; min-height: 44px; padding: 0; }
+  html:is([data-kenar="dar"], [data-yazim-ray]) .os-gezinme-marka { justify-content: center; min-width: 44px; min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .os-root .dashboard-content-shell, .os-gezinme { transition: none; }
@@ -366,23 +376,6 @@
   transform: translateY(-50%);
 }
 
-/* ---------- Yazım sayfası: belge sütunu GEÇİŞ TELAFİSİ (V4.3-B1) ----------
-   Kabuk daralınca (ray 88 → 64, kenar çubuğu 248 → 236) içerik alanı
-   genişliyor; editörün metin sütunu akışkan olduğu için 12–24 px
-   genişleyip belgenin satır kırılımları değişiyordu (ölçüldü: 1440'ta
-   sütun 654 → 666, 1024'te 774 → 798; 615 bloğun ~600'ü yeniden kırıldı).
-   B1 belge geometrisine dokunmaz: yazım sayfası kabuktan kazanılan genişliği
-   solda boş bırakır, belge sütunu ve konumu B1 öncesiyle AYNI kalır.
-   Kalıcı çözüm C1: onaylı K-4 sabit metin sütunu (kılavuz önce, yoksa 638 px)
-   belgeyi kabuk genişliğinden bağımsız yapınca bu blok ve --gecis-eski-*
-   token'ları silinir. */
-@media (min-width: 761px) {
-  .os-root { --yazim-gecis-telafi: calc(var(--gecis-eski-ray) - var(--gezinme-ray)); }
-}
-@media (min-width: 1200px) {
-  html:not([data-kenar="dar"]) .os-root { --yazim-gecis-telafi: calc(var(--gecis-eski-kenar) - var(--gezinme-genislik)); }
-}
-.os-root .dashboard-page.yazim-sayfasi { margin-left: var(--yazim-gecis-telafi, 0px); }
 
 /* ---------- Çalışma şeridi (V4.3-B2, calisma-seridi.tsx) ----------
    Telefon, tablet ve daraltılmış masaüstünde çalışmanın bölümleri.

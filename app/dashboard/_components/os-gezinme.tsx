@@ -33,10 +33,17 @@ import { KENAR_ANAHTARI, kenarOku } from "@/lib/os/kenar";
 */
 function kenarAbone(dinle: () => void) {
   const gozcu = new MutationObserver(dinle);
-  gozcu.observe(document.documentElement, { attributes: true, attributeFilter: ["data-kenar"] });
+  gozcu.observe(document.documentElement, { attributes: true, attributeFilter: ["data-kenar", "data-yazim-ray"] });
   return () => gozcu.disconnect();
 }
 const kenarDarMi = () => document.documentElement.getAttribute("data-kenar") === "dar";
+/*
+  Yazım rayı (V4.3-C1, manuscript-editor.tsx): yazım sayfasında yerleşik
+  panel açıkken yer yetmiyorsa kenar çubuğu GEÇİCİ olarak raya iner.
+  Kullanıcının tercihi (data-kenar) değişmez; gezinme o sürece ray gibi
+  çizilir (ipucu açık, çalışma bölümleri sayfada).
+*/
+const yazimRayiMi = () => document.documentElement.hasAttribute("data-yazim-ray");
 
 function kenarDegistir(dar: boolean) {
   if (dar) document.documentElement.setAttribute("data-kenar", "dar");
@@ -80,7 +87,10 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
   const sorgu = useSearchParams();
   const pencere = useRef<HTMLDialogElement>(null);
   const baglam = useCalismaBaglami();
-  const dar = useSyncExternalStore(kenarAbone, kenarDarMi, () => false);
+  const kenarDar = useSyncExternalStore(kenarAbone, kenarDarMi, () => false);
+  const yazimRayi = useSyncExternalStore(kenarAbone, yazimRayiMi, () => false);
+  // Görünen hâl: tercih dar ya da yazım rayı. Daraltma düğmesi yalnız TERCİHİ değiştirir (kenarDar).
+  const dar = kenarDar || yazimRayi;
   const baglamGorunur = baglam && calismaIcindeMi(baglam.id, yol, new URLSearchParams(sorgu.toString()));
   const calismalarimda = yol === "/dashboard/editor";
   // Çalışmalarım'da bölüm listesi çizilmiyor; vurgu hesabı da onu görmesin (sayfa = Çalışmalarım).
@@ -146,12 +156,14 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
             type="button"
             className="os-gezinme-daralt"
             aria-controls="os-gezinme"
-            aria-expanded={!dar}
-            aria-label={dar ? t({ tr: "Kenar çubuğunu genişlet", en: "Expand sidebar" }) : t({ tr: "Kenar çubuğunu daralt", en: "Collapse sidebar" })}
-            title={dar ? t({ tr: "Kenar çubuğunu genişlet", en: "Expand sidebar" }) : t({ tr: "Kenar çubuğunu daralt", en: "Collapse sidebar" })}
-            onClick={() => kenarDegistir(!dar)}
+            aria-expanded={!kenarDar}
+            aria-label={kenarDar ? t({ tr: "Kenar çubuğunu genişlet", en: "Expand sidebar" }) : t({ tr: "Kenar çubuğunu daralt", en: "Collapse sidebar" })}
+            title={kenarDar ? t({ tr: "Kenar çubuğunu genişlet", en: "Expand sidebar" }) : t({ tr: "Kenar çubuğunu daralt", en: "Collapse sidebar" })}
+            /* Yazım rayı sürerken düğme gizli (os-shell.css): basılsaydı tercih değişir ama ray kalırdı. */
+            hidden={yazimRayi && !kenarDar}
+            onClick={() => kenarDegistir(!kenarDar)}
           >
-            {dar ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
+            {kenarDar ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
           </button>
         </div>
         {/* Ana eylem: Ctrl+K'daki ve Çalışmalarım'daki "Yeni çalışma" ile aynı pencere (?yeni=1). */}

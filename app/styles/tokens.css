@@ -857,9 +857,11 @@ html[data-theme="dark"] {
 :root {
   --kenar-genis: 236px; /* ≥1200: etiketli kenar çubuğu */
   --ray: 64px; /* 761–1199: simge rayı (V4.3-B1'den beri uygulamada) */
-  /* Yalnız yazım sayfasının geçiş telafisi (os-shell.css): B1 öncesi ölçüler. C1'de (K-4 sabit sütun) kalkar. */
-  --gecis-eski-kenar: 248px;
-  --gecis-eski-ray: 88px;
+  /* Akademik belge (K-4, V4.3-C1; lib/belge-sutunu.ts): sabit metin sütunu ve kâğıdın iç payı.
+     Kâğıt = sütun + 2 × pay = 760 px. Yer daralınca önce pay (en az --belge-pay-min), sonra sütun küçülür. */
+  --belge-sutun-varsayilan: 638px;
+  --belge-pay: 61px;
+  --belge-pay-min: 24px;
   --ust: 56px;
   --alt-cubuk: 64px; /* ≤760: sabit alt gezinme (+ güvenli alan) */
   --icerik-max: 1320px;

@@ -40,3 +40,44 @@ export function ekranTahmini(basliklar: { chMobile?: string | null; ua?: string 
   if (/iPad|Tablet|Android/i.test(ua)) return "tablet";
   return "masaustu";
 }
+
+/*
+  YAZIM RAYI (V4.3-C1, R23). Yazım sayfasında yerleşik panel açıkken
+  geniş kenar çubuğu (236) + kâğıt + panel (340/360) masaüstünün alt
+  ucunda sığmıyor: 638 px sütun 1200–~1340 px'te panelle birlikte
+  ancak kenar çubuğu RAYA (64) inerse sabit kalır. Tasarım kararı
+  (docs/tasarim/asama-4/signature-os-v4/09-v43-risk-kapatma.md, R23):
+  "≥1200: yerleşik panel; gerekirse kenar çubuğu raya iner".
+
+  Eşik sabit bir kırılım DEĞİL, ölçüm: geniş kenar çubuğuyla belgenin
+  kabı ne olurdu, sütun + iki yanda en az pay sığar mı? Sabit eşik
+  kılavuzun dar sütununu (A4, 4/2,5 cm → 548 px; rayı gerektirmez) ve
+  işletim sisteminin kaydırma çubuğunu (Windows'ta ~17 px) bilemezdi.
+
+  Kullanıcının kenar tercihi DEĞİŞMEZ (localStorage): panel kapanınca ya
+  da yer açılınca kenar çubuğu kendiliğinden geri gelir. Tercih zaten
+  "dar" ise gerek yok. Kap ölçümü raydayken yapılıyorsa geniş hâle
+  çevrilir (kenarFarki); karar iki hâlde de aynı çıkar, ray açılıp
+  kapanarak titremez.
+*/
+export function yazimRayiGerekli(girdi: {
+  panelYerlesik: boolean;
+  kenarDar: boolean;
+  rayAcik: boolean;
+  kap: number;
+  sutun: number;
+  payMin: number;
+  kenarFarki: number;
+}): boolean {
+  if (!girdi.panelYerlesik || girdi.kenarDar) return false;
+  const genisKap = girdi.rayAcik ? girdi.kap - girdi.kenarFarki : girdi.kap;
+  return genisKap < girdi.sutun + 2 * girdi.payMin - 0.5;
+}
+
+/** CSS uzunluğu ("638px", "14.5cm") → piksel; okunamazsa null. */
+export function cssUzunlugu(deger: string): number | null {
+  const m = /^\s*(-?[\d.]+)(px|cm)\s*$/.exec(deger);
+  if (!m) return null;
+  const sayi = Number(m[1]);
+  return m[2] === "cm" ? (sayi * 96) / 2.54 : sayi;
+}

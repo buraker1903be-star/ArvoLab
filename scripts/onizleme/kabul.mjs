@@ -232,9 +232,12 @@ const tarayici = await chromium.launch();
     await ctx.close();
   });
 
-  await senaryo("stüdyo: Arvo AI asistanı panelde açar; panel kapanınca belge sütunu genişler", async () => {
+  await senaryo("stüdyo: Arvo AI asistanı panelde açar; panel kapanınca belge alanı genişler, metin sütunu DEĞİŞMEZ (K-4)", async () => {
     const { ctx, sayfa } = await yeniSayfa({ width: 1440, height: 900 });
     const once = (await sayfa.locator(".manuscript-main").boundingBox()).width;
+    // K-4 (V4.3-C1): yazı sütunu panelden bağımsız; eskiden 654 → 860 px oluyor, belge yeniden kırılıyordu.
+    const sutun = () => sayfa.locator(".ProseMirror").evaluate((pm) => { const s = getComputedStyle(pm); return pm.getBoundingClientRect().width - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight); });
+    const sutunOnce = await sutun();
     await sayfa.locator(".yazma-ai").click();
     const panel = sayfa.locator("#yazim-yan-panel");
     await sayfa.waitForTimeout(300);
@@ -248,7 +251,9 @@ const tarayici = await chromium.launch();
     await sayfa.waitForTimeout(300);
     bekle(!(await panel.isVisible()), "panel kapanmadı");
     const sonra = (await sayfa.locator(".manuscript-main").boundingBox()).width;
-    bekle(sonra > once + 150, `belge sütunu genişlemedi (${Math.round(once)} → ${Math.round(sonra)})`);
+    bekle(sonra > once + 150, `belge alanı genişlemedi (${Math.round(once)} → ${Math.round(sonra)})`);
+    const sutunSonra = await sutun();
+    bekle(Math.abs(sutunSonra - 638) < 0.6 && Math.abs(sutunOnce - 638) < 0.6, `metin sütunu sabit değil (${sutunOnce.toFixed(1)} → ${sutunSonra.toFixed(1)}, beklenen 638)`);
     bekle((await sayfa.evaluate(() => localStorage.getItem("arvolab:inceleme-paneli"))) === "0", "kapalı tercih kaydedilmedi");
     await ctx.close();
   });

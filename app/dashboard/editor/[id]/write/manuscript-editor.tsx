@@ -135,6 +135,8 @@ import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
 import { KAGIT_BOYUTLARI, KAGITLAR, kagitOku, type KagitBoyutu } from "@/lib/kagit-boyutu";
+import { belgeSutunuCm, belgeSutunuDegeri } from "@/lib/belge-sutunu";
+import { cssUzunlugu, yazimRayiGerekli } from "@/lib/os/kirilimlar";
 import { splitBodyAndReferences } from "@/lib/text-split";
 import type { KontrolKaydiOzeti } from "@/lib/kontrol-gecmisi";
 import IcindekilerKarti from "./icindekiler-karti";
@@ -1836,6 +1838,69 @@ export default function ManuscriptEditor({
     return () => gozcu.disconnect();
   }, [editorHazir]);
 
+  /*
+    METİN SÜTUNU (V4.3-C1, K-4; lib/belge-sutunu.ts). Kılavuz kenar
+    boşluklarını tanımlıyorsa sütun belgenin sayfa düzeninden (kâğıt −
+    sol − sağ, cm); tanımlamıyorsa CSS'in 638 px varsayılanı. Değişken
+    satır içi stil yazılmadan (check:css) kabuğa verilir; ölçü değişince
+    (sayfa düzeni penceresi) çizimden önce güncellenir, sütun bir kare
+    bile eski genişlikte görünmez.
+  */
+  const belgeKabiRef = useRef<HTMLDivElement>(null);
+  const sutunDegeri = belgeSutunuDegeri(
+    belgeSutunuCm({ kilavuzOlcusuVar: Boolean(guideline?.settings.margins), margins, pageSize }),
+  );
+  useLayoutEffect(() => {
+    const kap = belgeKabiRef.current;
+    if (!kap) return;
+    if (sutunDegeri) kap.style.setProperty("--belge-sutun", sutunDegeri);
+    else kap.style.removeProperty("--belge-sutun");
+  }, [sutunDegeri, editorHazir]);
+
+  /*
+    YAZIM RAYI (V4.3-C1, lib/os/kirilimlar.ts → yazimRayiGerekli). Panel
+    belgenin yanındayken geniş kenar çubuğuyla sütun sığmıyorsa kenar
+    çubuğu bu sayfada raya iner: <html data-yazim-ray>, gezinme ve CSS
+    (os-shell.css) bunu daraltılmış hâl gibi okur. Kullanıcının tercihi
+    (localStorage) yazılmaz; panel kapanınca, odak modunda, sayfadan
+    çıkınca ya da yer açılınca kendiliğinden kalkar.
+    ESKİDEN: 1280 px'te panel açılınca sütun 860'tan 514'e iniyor, belge
+    yeniden kırılıyordu (C1 öncesi ölçüm).
+  */
+  const panelYerlesik = bicim === "sutun" && panelAcik && !odak;
+  useEffect(() => {
+    const html = document.documentElement;
+    const pm = editor?.view.dom as HTMLElement | undefined;
+    if (!panelYerlesik || !pm) {
+      html.removeAttribute("data-yazim-ray");
+      return;
+    }
+    const hesapla = () => {
+      const kok = getComputedStyle(html);
+      const stil = getComputedStyle(pm);
+      const sutun = cssUzunlugu(stil.getPropertyValue("--belge-sutun-etkin").trim()) ?? 638;
+      const payMin = cssUzunlugu(kok.getPropertyValue("--belge-pay-min").trim()) ?? 24;
+      const kenarFarki = (cssUzunlugu(kok.getPropertyValue("--kenar-genis").trim()) ?? 236) - (cssUzunlugu(kok.getPropertyValue("--ray").trim()) ?? 64);
+      const gerekli = yazimRayiGerekli({
+        panelYerlesik: true,
+        kenarDar: html.getAttribute("data-kenar") === "dar",
+        rayAcik: html.hasAttribute("data-yazim-ray"),
+        kap: pm.getBoundingClientRect().width,
+        sutun,
+        payMin,
+        kenarFarki,
+      });
+      if (gerekli !== html.hasAttribute("data-yazim-ray")) html.toggleAttribute("data-yazim-ray", gerekli);
+    };
+    hesapla();
+    const gozcu = new ResizeObserver(hesapla);
+    gozcu.observe(pm);
+    return () => {
+      gozcu.disconnect();
+      html.removeAttribute("data-yazim-ray");
+    };
+  }, [panelYerlesik, editor, sutunDegeri]);
+
   if (!editor) return <div className="manuscript-editor-shell manuscript-editor-loading" aria-busy="true" />;
   const eylemHedefi = document.getElementById("yazma-eylemleri");
   const durumHedefi = document.getElementById("yazma-durum");
@@ -2941,7 +3006,7 @@ export default function ManuscriptEditor({
           </AracMenusu>
         </div>
       </div>
-    <div className="manuscript-editor-shell">
+    <div className="manuscript-editor-shell" ref={belgeKabiRef}>
       {/* Bul-değiştir belgenin üstünde, yapışık. Kayıt durumu başlık satırında (Signature OS Phase 2). */}
       {findOpen ? (
         <div className="manuscript-toolbar manuscript-ust">

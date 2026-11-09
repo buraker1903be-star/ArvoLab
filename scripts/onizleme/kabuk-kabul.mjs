@@ -50,10 +50,11 @@ async function senaryo(ad, fn) {
 const bekle = (kosul, mesaj) => {
   if (!kosul) throw new Error(mesaj);
 };
-async function ac(w, yol, { dar = false } = {}) {
+async function ac(w, yol, { dar = false, panelKapali = false } = {}) {
   const dokunma = w < 1200;
   const ctx = await tarayici.newContext({ viewport: { width: w, height: w < 761 ? 844 : 900 }, hasTouch: dokunma, isMobile: w < 761 });
   if (dar) await ctx.addInitScript(() => localStorage.setItem("arvolab.kenar", "dar"));
+  if (panelKapali) await ctx.addInitScript(() => localStorage.setItem("arvolab:inceleme-paneli", "0"));
   const sayfa = await ctx.newPage();
   await sayfa.goto(TABAN + yol, { waitUntil: "networkidle", timeout: 180000 });
   return { ctx, sayfa };
@@ -62,8 +63,13 @@ const tasma = (s) => s.evaluate(() => document.documentElement.scrollWidth - doc
 const gorunur = (s, sec) => s.locator(sec).first().isVisible().catch(() => false);
 
 for (const w of [1440, 1200]) {
-  await senaryo(`${w}: kenar çubuğu kalıcı; editörde bağlam, switcher ve "Yazım" etkin`, async () => {
-    const { ctx, sayfa } = await ac(w, `/dashboard/editor/${TEZ}/write`);
+  /*
+    Yazım paneli KAPALI: 1200 px'te panel açıkken kenar çubuğu yazım rayına
+    iner (V4.3-C1, belge-geometri-kabul.mjs sınıyor); kalıcı kenar çubuğu
+    paneli kapalı editörde ve öteki sayfalarda.
+  */
+  await senaryo(`${w}: kenar çubuğu kalıcı; editörde (panel kapalı) bağlam, switcher ve "Yazım" etkin`, async () => {
+    const { ctx, sayfa } = await ac(w, `/dashboard/editor/${TEZ}/write`, { panelKapali: true });
     const nav = await sayfa.locator("nav#os-gezinme").boundingBox();
     bekle(nav && nav.x === 0 && nav.width >= 200, `kenar çubuğu yok/dar: ${JSON.stringify(nav)}`);
     bekle(await gorunur(sayfa, ".os-gezinme-baglam"), "editörde çalışma bağlamı görünmüyor");
