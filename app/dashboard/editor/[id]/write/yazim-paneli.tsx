@@ -138,6 +138,23 @@ export default function YazimPaneli({
   const [seciliVar, setSeciliVar] = useState(() => !editor.state.selection.empty);
   const listeRef = useRef<HTMLDivElement>(null);
   const girdiRef = useRef<HTMLTextAreaElement>(null);
+  /*
+    GEÇ CEVAP (C2-5, V4.3): istek yoldayken öğrenci başka çalışmaya ya da
+    bölüme geçerse panel kaldırılır ve editör yok edilir. ESKİDEN geç gelen
+    cevap (özellikle reddedilen) izlenen aralığı bırakmak için YOK EDİLMİŞ
+    editöre işlem gönderiyordu; TipTap bunu hatasız yutuyordu ama çağrı
+    yapılıyor, editörün iç durumu değişiyordu (gec-yanit-kabul.mjs ölçer).
+    Kaldırılmış panelde cevap sessizce bırakılır: kart, mesaj, editör
+    işlemi yok. İptal mimarisi değil, yalnızca sonucu yok saymak.
+  */
+  const canliRef = useRef(true);
+  useEffect(() => {
+    canliRef.current = true;
+    return () => {
+      canliRef.current = false;
+    };
+  }, []);
+  const gecerliMi = () => canliRef.current && !editor.isDestroyed;
 
   useEffect(() => {
     // preventScroll: panel yapışık bir sütun; odak sayfayı kutunun hizasına kaydırmasın.
@@ -228,7 +245,9 @@ export default function YazimPaneli({
       izleyen kalmaz. V4.3-0'a kadar bırakılmıyordu; her biri her işlemde
       eşlenmeye devam ediyordu.
     */
-    const birak = () => editor.view.dispatch(araligiBirak(editor.state.tr, oneriId));
+    const birak = () => {
+      if (!editor.isDestroyed) editor.view.dispatch(araligiBirak(editor.state.tr, oneriId));
+    };
     const gecmis: SohbetMesaji[] = mesajlar.map((m) => ({ rol: m.rol, metin: m.rol === "asistan" ? `${m.metin}\n${m.ekMetin ?? ""}`.trim() : m.metin }));
     setMesajlar((onceki) => [...onceki, { rol: "kullanici", metin: gorunen }]);
     if (!hedef) setIstek("");
@@ -236,6 +255,7 @@ export default function YazimPaneli({
     setBekliyor(true);
     try {
       const cevap = await yazimAsistani({ projectId, istek: gorunen, gorev, bolum, oncesi, secim: secim || null, gecmis, zorunluBolumler });
+      if (!gecerliMi()) return;
       if (cevap.hata) {
         birak();
         setMesajlar((onceki) => [...onceki, { rol: "asistan", metin: cevap.hata! }]);
@@ -248,6 +268,7 @@ export default function YazimPaneli({
         { rol: "asistan", metin: cevap.yanit ?? "", ekMetin: cevap.metin || undefined, kayitId: cevap.kayitId, oneriId, secimMetni: secim, secimVardi: from !== to, gorev, durum: cevap.metin ? "oneri" : undefined },
       ]);
     } catch (hata) {
+      if (!gecerliMi()) return;
       console.error(hata);
       birak();
       setMesajlar((onceki) => [...onceki, { rol: "asistan", metin: t({ tr: "Asistana ulaşılamadı; bağlantınızı kontrol edin.", en: "Couldn't reach the assistant; check your connection." }) }]);

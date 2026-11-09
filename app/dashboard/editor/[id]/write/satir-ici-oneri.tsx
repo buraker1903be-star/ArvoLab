@@ -67,6 +67,8 @@ export function useSatirIciOneri({
       try {
         const bolum = collectHeadings(doc).filter((h) => h.pos < konum).at(-1)?.text ?? null;
         const cevap = await yazimAsistani({ projectId, istek: "", gorev: "tamamla", bolum, oncesi });
+        /* C2-5: istek yoldayken editör yok edildiyse (çalışma ya da bölüm değişti) sonuç yok sayılır; editöre işlem gönderilmez. */
+        if (editor.isDestroyed) return;
         if (cevap.hata) {
           if (elle) showToast("error", cevap.hata);
           else if (cevap.odemeGerekli || /hak|limit|kredi|credit/i.test(cevap.hata)) {
@@ -84,6 +86,7 @@ export function useSatirIciOneri({
         const tr = oneriGoster(editor.state, { konum, metin, kayit: cevap.kayitId ?? null });
         if (tr) editor.view.dispatch(tr);
       } catch {
+        if (editor.isDestroyed) return;
         if (elle) showToast("error", t({ tr: "Asistana ulaşılamadı.", en: "Couldn't reach the assistant." }));
       } finally {
         istekte.current = false;

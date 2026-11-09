@@ -15,7 +15,9 @@
   yalnızca bağlamdan) aynen geçer. Kabul senaryoları için üç tetik:
     istekte "UYDURMA_SAYI"  → bağlamda olmayan bir sayı yazar (cevap düşmeli)
     istekte "UZUN"          → 160 kelimelik paragraf (otomatik sürüm eşiği)
-    istekte "YAVAS"         → 3 sn bekler (cevap beklerken düzenleme senaryosu)
+    istekte "YAVAS"         → 3 sn bekler (cevap beklerken düzenleme senaryosu);
+                              belgede imleçten önceki metinde "YAVAS" da aynı
+                              (satır içi önerinin isteği boş: geç cevap senaryosu, C2-5)
     istekte "PROFIL"        → makale profilinin istemde olup olmadığını söyler
                               (Makale Aşama 2; sayı yazmaz, yalnızca soruyu yankılar)
 */
@@ -83,6 +85,7 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
     throw new Error("Önizleme test asistanı yalnızca geliştirme önizlemesinde (ARVOLAB_ONIZLEME=1, ONIZLEME_AI=1) çalışır.");
   }
   void secenek;
-  if ((mesajlar.at(-1)?.metin ?? "").includes("YAVAS")) await new Promise((coz) => setTimeout(coz, 3_000));
+  const oncesi = mesajlar.filter((m) => m.rol === "sistem").map((m) => bolum(m.metin, "BELGEDE İMLEÇTEN ÖNCEKİ METİN")).join("");
+  if ((mesajlar.at(-1)?.metin ?? "").includes("YAVAS") || oncesi.includes("YAVAS")) await new Promise((coz) => setTimeout(coz, 3_000));
   return { metin: JSON.stringify(testCevabi(mesajlar)), model: TEST_ASISTANI_MODELI, bitis: "stop" };
 }
