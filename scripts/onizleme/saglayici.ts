@@ -14,6 +14,12 @@
   (lib/ai/yazim-asistani.ts yazimDenetle: atıf yalnızca kütüphaneden, sayı
   yalnızca bağlamdan) aynen geçer. Kabul senaryoları için üç tetik:
     istekte "UYDURMA_SAYI"  → bağlamda olmayan bir sayı yazar (cevap düşmeli)
+    istekte "UYDURMA_KAYNAK"→ kütüphanede olmayan bir kaynağa atıf (cevap düşmeli, C2-7)
+    istekte "UYDURMA_DOI"   → uydurma DOI (cevap düşmeli, C2-7)
+    istekte "UYDURMA_KUNYE" → kaynakça satırı (künye) yazar (cevap düşmeli, C2-7)
+    istekte "SAGLAYICI_HATASI" → sağlayıcı HTTP 500 döndürmüş gibi hata (C2-7)
+    istekte "ZAMAN_ASIMI"   → sağlayıcı zamanında yanıt vermemiş gibi hata; metin
+                              gerçek zaman aşımının metniyle aynı (birim testi eşler)
     istekte "UZUN"          → 160 kelimelik paragraf (otomatik sürüm eşiği)
     istekte "YAVAS"         → 3 sn bekler (cevap beklerken düzenleme senaryosu);
                               belgede imleçten önceki metinde "YAVAS" da aynı
@@ -22,6 +28,7 @@
                               (Makale Aşama 2; sayı yazmaz, yalnızca soruyu yankılar)
 */
 import type { Mesaj, SorSecenek, Yanit } from "../../lib/ai/saglayici";
+import { AiHatasi } from "../../lib/ai/saglayici";
 
 export * from "../../lib/ai/saglayici";
 
@@ -57,6 +64,9 @@ export function testCevabi(mesajlar: Mesaj[]): { yanit: string; metin: string } 
       metin: "",
     };
   }
+  if (istek.includes("UYDURMA_KAYNAK")) return { yanit: "Test: kütüphanede olmayan kaynak.", metin: "Beklentiler bu ilişkiyi uzun dönemde zayıflatmaktadır (Friedman, 1968)." };
+  if (istek.includes("UYDURMA_DOI")) return { yanit: "Test: uydurma DOI.", metin: "Ayrıntılı bulgular için bkz. 10.1234/uydurma.5678." };
+  if (istek.includes("UYDURMA_KUNYE")) return { yanit: "Test: künye satırı.", metin: "Friedman, M. (1968). The role of monetary policy. American Economic Review." };
   if (istek.includes("UYDURMA_SAYI")) return { yanit: "Test: bağlamda olmayan sayı.", metin: "Katılımcıların yüzde 73'ü bu görüşe katılmaktadır." };
   if (istek.includes("UZUN")) {
     const kelimeler = "akademik yazım sürecinde kavramsal tutarlılık kaynak kullanımı ve yöntemsel açıklık birlikte değerlendirilmelidir".split(" ");
@@ -87,5 +97,11 @@ export async function sor(mesajlar: Mesaj[], secenek: SorSecenek = {}): Promise<
   void secenek;
   const oncesi = mesajlar.filter((m) => m.rol === "sistem").map((m) => bolum(m.metin, "BELGEDE İMLEÇTEN ÖNCEKİ METİN")).join("");
   if ((mesajlar.at(-1)?.metin ?? "").includes("YAVAS") || oncesi.includes("YAVAS")) await new Promise((coz) => setTimeout(coz, 3_000));
+  const sonIstek = mesajlar.at(-1)?.metin ?? "";
+  /* Gerçek sağlayıcının attığı hata sınıfı (AiHatasi); metinler lib/ai/saglayici.ts'tekilerle aynı (tests/unit/ai-saglayici-hata.test.ts eşler). */
+  if (sonIstek.includes("ZAMAN_ASIMI"))
+    throw new AiHatasi({ tr: "Yapay zeka zamanında yanıt vermedi. Daha kısa bir metinle tekrar deneyin.", en: "The AI did not respond in time. Try again with a shorter text." });
+  if (sonIstek.includes("SAGLAYICI_HATASI"))
+    throw new AiHatasi({ tr: "Yapay zeka sunucusuna ulaşılamıyor. Sunucu kapalı ya da aşırı yüklü olabilir; birkaç dakika sonra tekrar deneyin.", en: "The AI server cannot be reached. It may be down or overloaded; try again in a few minutes." });
   return { metin: JSON.stringify(testCevabi(mesajlar)), model: TEST_ASISTANI_MODELI, bitis: "stop" };
 }
