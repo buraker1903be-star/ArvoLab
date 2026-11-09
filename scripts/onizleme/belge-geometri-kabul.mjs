@@ -188,6 +188,61 @@ for (const w of [1440, 1280, 1200]) {
   await ctx.close();
 }
 
+/*
+  V3 (Phase 4.5): DARALTILMIŞ KENARDA ÇALIŞMA BAŞLIĞI TEK SATIR. Eskiden
+  başlık "iki satıra kadar" kırılıyordu; panel açılınca başlık satırı
+  daralıp uzun ad ikinci satıra iniyor, belge 24 px aşağı kayıyordu
+  (başlık 70 → 94 px, ilk satır 349 → 373). Panel aç/kapa başlık satırının
+  yüksekliğini ve ilk satırı değiştirmez (±1 px); tam ad erişilebilir metinde
+  (h1'in metni) ve görünür üç noktayla kısalır. Tablet ve telefon değişmez.
+*/
+const baslikOlc = (sayfa) =>
+  sayfa.evaluate(() => {
+    const b = document.querySelector(".yazma-basligi").getBoundingClientRect();
+    const h1 = document.querySelector(".yazma-baslik h1");
+    const hr = h1.getBoundingClientRect();
+    const st = getComputedStyle(h1);
+    return {
+      baslikH: b.height,
+      ilk: document.querySelector(".ProseMirror > *").getBoundingClientRect().top,
+      gorunur: hr.width > 2,
+      satir: Math.round(hr.height / parseFloat(st.lineHeight)),
+      kesik: h1.scrollWidth > h1.clientWidth + 1,
+      uclu: st.textOverflow === "ellipsis",
+      metin: h1.textContent.trim(),
+    };
+  });
+const TAM_AD = "TÜRKİYE'DE ENFLASYON VE İŞSİZLİK İLİŞKİSİNİN EKONOMETRİK ANALİZİ (2000–2025)";
+if (!KILAVUZ) {
+  for (const w of [1440, 1366, 1200]) for (const tema of ["light", "dark"]) {
+    const olcumler = {};
+    for (const panel of ["acik", "kapali"]) {
+      const { ctx, sayfa } = await ac(w, { kenar: "dar", panel });
+      if (tema === "dark") {
+        await sayfa.evaluate(() => { localStorage.setItem("arvolab.theme", "dark"); document.documentElement.setAttribute("data-theme", "dark"); });
+        await sayfa.waitForTimeout(150);
+      }
+      olcumler[panel] = await baslikOlc(sayfa);
+      await ctx.close();
+    }
+    const { acik, kapali } = olcumler;
+    const ad = `${w} dar ${tema}`;
+    denetle(acik.gorunur && kapali.gorunur, `${ad}: başlık görünmüyor (gizlenmemeli)`);
+    denetle(acik.satir === 1 && kapali.satir === 1, `${ad}: başlık tek satır değil (açık ${acik.satir}, kapalı ${kapali.satir})`);
+    denetle(Math.abs(acik.baslikH - kapali.baslikH) <= 1, `${ad}: panel aç/kapa başlık satırını değiştiriyor (${kapali.baslikH} → ${acik.baslikH})`);
+    denetle(Math.abs(acik.ilk - kapali.ilk) <= 1, `${ad}: panel aç/kapa ilk satırı kaydırıyor (${kapali.ilk} → ${acik.ilk})`);
+    denetle(acik.uclu && acik.kesik, `${ad}: uzun başlık üç noktayla kısalmıyor`);
+    denetle(acik.metin === TAM_AD, `${ad}: tam ad erişilebilir metinde değil ("${acik.metin.slice(0, 60)}")`);
+  }
+  // Tablet ve telefon başlığı V3 öncesiyle aynı (ölçüldü: 1024/768 → 98 px, 390/360 → 44 px).
+  for (const [w, eski] of [[1024, 98], [768, 98], [390, 44], [360, 44]]) {
+    const { ctx, sayfa } = await ac(w, { panel: "kapali" });
+    const o = await baslikOlc(sayfa);
+    denetle(Math.abs(o.baslikH - eski) <= 1, `${w}: başlık satırı ${o.baslikH} px (V3 öncesi ${eski}; tablet/telefon değişmemeli)`);
+    await ctx.close();
+  }
+}
+
 // 4: tablet
 for (const w of [1024, 900, 768]) {
   const { ctx, sayfa } = await ac(w);

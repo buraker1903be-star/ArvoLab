@@ -2225,6 +2225,15 @@
   html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-baslik { flex: 1 1 auto; align-items: center; }
   html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-baslik-simge { display: none; }
   html:not([data-kenar="dar"]) .yazim-sayfasi .yazma-baslik h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /*
+    Daraltılmış kenar çubuğunda başlık TEK satır, uzun ad üç noktayla
+    (Phase 4.5 V3, 09.11.2026). Eskiden iki satıra kadar kırılıyordu ve
+    sağ panel açılınca sütun daralıp ad ikinci satıra taşıyordu: başlık
+    satırı 70 → 94 px, kâğıdın ilk satırı 24 px aşağı kayıyordu. Tam ad
+    h1'in kendi metni olarak kalır (ekran okuyucu tamamını okur); title
+    yalnızca fare için ek.
+  */
+  html[data-kenar="dar"] .yazim-sayfasi .yazma-baslik h1 { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; -webkit-line-clamp: unset; }
 }
 /*
   "Bölümler" menüsü (V4.3-C1, R18; calisma-seridi.tsx): tablette ve kenar
