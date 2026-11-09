@@ -25,3 +25,19 @@ export function kilavuzBandiAnahtari(calismaId: string | null | undefined): stri
   const id = (calismaId ?? "").trim();
   return id ? `${ONEK}${id}` : null;
 }
+
+/*
+  "KILAVUZ KURALLARI UYGULANDI" BİLDİRİMİNİN KAPATMA TERCİHİ (Phase 4.5 V2).
+  Çalışma VE kılavuz sürümü başına: aynı sürümde kapatılan bildirim
+  yeniden yüklemede gelmez; yeni bir sürüm uygulandığında anahtar değişir,
+  bildirim yeniden görünür. ESKİDEN bildirim kapatılamıyordu ve uygulanan
+  ayarların listesiyle 157–184 px yazının üstünde duruyordu. Kılavuzun
+  uygulanma mantığı bu tercihi OKUMAZ; yalnızca bildirimin görünürlüğü.
+*/
+const UYGULANDI_ONEK = "arvolab:kilavuz-uygulandi-kapali:";
+
+export function kilavuzUygulandiAnahtari(calismaId: string | null | undefined, surum: string | null | undefined): string | null {
+  const id = (calismaId ?? "").trim();
+  const s = (surum ?? "").trim();
+  return id && s ? `${UYGULANDI_ONEK}${id}:${s}` : null;
+}

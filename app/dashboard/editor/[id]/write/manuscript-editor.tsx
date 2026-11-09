@@ -131,7 +131,7 @@ import { kilavuzGorunenAdi, type AppliedGuideline } from "@/lib/guideline-rules"
 import type { GuidelineSyncChange, GuidelineSyncMode } from "@/lib/guideline-sync";
 import Link from "next/link";
 import { calismaAdresi } from "@/lib/calisma-karti";
-import { kilavuzBandiAnahtari } from "@/lib/kilavuz-bandi";
+import { kilavuzBandiAnahtari, kilavuzUygulandiAnahtari } from "@/lib/kilavuz-bandi";
 import { showToast } from "@/app/dashboard/_components/toast-events";
 import Dialog from "@/app/dashboard/_components/dialog";
 import { estimatePages, pageRangeTone, wordsPerPage } from "@/lib/page-estimate";
@@ -1053,6 +1053,23 @@ export default function ManuscriptEditor({
   const kilavuzBandiniGizle = useCallback((gizli: boolean) => {
     if (kilavuzBandiTercihi) tercihYaz(kilavuzBandiTercihi, gizli);
   }, [kilavuzBandiTercihi]);
+  /*
+    "Kılavuz kuralları uygulandı" bildirimi (Phase 4.5 V2): kompakt özet,
+    ayrıntı "Değişiklikleri gör" ile açılır, "Kapat" bu kılavuz sürümü için
+    hatırlanır (lib/kilavuz-bandi.ts). Ekran okuyucuya bir kez KISA durum
+    söylenir; metin bileşen kurulduktan sonra yazılır, çünkü canlı bölgenin
+    ilk içeriği çoğu ekran okuyucuda anons edilmiyor.
+  */
+  const uygulandiTercihi = kilavuzUygulandiAnahtari(projectId, guideline?.version ?? null);
+  const uygulandiKapali = useSyncExternalStore(tercihAboneligi, () => (uygulandiTercihi ? tercihOku(uygulandiTercihi, false) : false), () => false);
+  const [uygulandiAyrinti, setUygulandiAyrinti] = useState(false);
+  const uygulandiGorunur = Boolean(guideline) && syncMode === "auto-applied" && !uygulandiKapali;
+  const [uygulandiDuyuruHazir, setUygulandiDuyuruHazir] = useState(false);
+  useEffect(() => {
+    if (!uygulandiGorunur) return;
+    const zaman = window.setTimeout(() => setUygulandiDuyuruHazir(true), 400);
+    return () => window.clearTimeout(zaman);
+  }, [uygulandiGorunur]);
   const ekran = useEkranSinifi();
   const bicim = panelBicimi(ekran);
   const ilkGorunum = acilisGorunumu({ asistan: asistanAcikBasla, teslim: acilacakMadde });
@@ -3297,33 +3314,74 @@ export default function ManuscriptEditor({
 
       {/* Kılavuzun adı ve "Kuralları gör" sağdaki kontrol kartında; belgenin
           üstünde yalnızca yeni sürümün UYGULANDIĞI haberi kalıyor. */}
-      {guideline && syncMode === "auto-applied" ? (
-        <div className="guideline-applied-banner" role="status">
-          <div>
+      {guideline && uygulandiGorunur ? (
+        /*
+          KOMPAKT ÖZET (Phase 4.5 V2). ESKİDEN bu bildirim kılavuz adı, stil,
+          sürüm, onay tarihi ve değişen ayarların listesiyle 157–184 px
+          tutuyor, kapatılamıyor ve bütünüyle canlı bölge (role="status")
+          olduğu için ekran okuyucu on bir satırı birden okuyordu. Şimdi tek
+          satır; ayrıntı "Değişiklikleri gör" ile, "Kapat" bu sürüm için
+          hatırlanır. Kılavuzun uygulanması değişmedi (yalnızca gösterim).
+        */
+        <div className="kilavuz-uygulandi" role="note" aria-label={t({ tr: "Kılavuz bildirimi", en: "Guideline notice" })}>
+          <p className="kilavuz-uygulandi-durum sr-only" role="status">
+            {uygulandiDuyuruHazir
+              ? t({
+                  tr: `Kılavuz kuralları uygulandı${guidelineSync.changes.length ? `: ${guidelineSync.changes.length} ayar değişti` : ""}.`,
+                  en: `Guideline rules applied${guidelineSync.changes.length ? `: ${guidelineSync.changes.length} settings changed` : ""}.`,
+                })
+              : ""}
+          </p>
+          <BookMarked size={16} aria-hidden="true" className="kilavuz-uygulandi-simge" />
+          <span className="kilavuz-uygulandi-metin">
             {/* Öğrencinin kendi kılavuzunda "yeni sürüm" yok: kurallar yüklendi ya da yeniden okundu. */}
             <strong>
               {guideline.dogrulandi
                 ? t({ tr: "Kılavuzun yeni sürümü uygulandı", en: "The guideline's new version was applied" })
-                : t({ tr: "Kılavuzunuzun kuralları uygulandı", en: "Your guideline's rules were applied" })}
+                : t({ tr: "Kılavuz kuralları uygulandı", en: "Guideline rules applied" })}
             </strong>
-            <span>{kilavuzGorunenAdi(guideline.label, dil)}</span>
-            <span className="guideline-meta text-sm">
-              {stilAdi(guideline.citationStyle)}
-              {guideline.versionLabel ? ` · ${guideline.versionLabel}` : ""}
-              {formatDate(guideline.version)
-                ? t({ tr: ` · Onay: ${formatDate(guideline.version)}`, en: ` · Approved: ${formatDate(guideline.version)}` })
-                : ""}
-              {guideline.updatePending ? t({ tr: " · Yeni sürüm ekibimizce inceleniyor", en: " · A new version is under review by our team" }) : ""}
-            </span>
-            {syncMode === "auto-applied" && guidelineSync.changes.length > 0 ? (
-              <SyncChangeList title={t({ tr: "Değişen ayarlar:", en: "Changed settings:" })} changes={guidelineSync.changes} />
+            <span className="kilavuz-uygulandi-ad"> · {kilavuzGorunenAdi(guideline.label, dil)}</span>
+          </span>
+          <span className="kilavuz-uygulandi-eylemler">
+            {guidelineSync.changes.length > 0 ? (
+              <button
+                type="button"
+                className="projects-filter-button button-compact"
+                aria-expanded={uygulandiAyrinti}
+                aria-controls="kilavuz-uygulandi-ayrinti"
+                onClick={() => setUygulandiAyrinti((a) => !a)}
+              >
+                {t({ tr: `Değişiklikleri gör (${guidelineSync.changes.length})`, en: `View changes (${guidelineSync.changes.length})` })}
+              </button>
             ) : null}
-          </div>
-          <div className="cluster">
-            <button type="button" className="projects-filter-button" onClick={() => setGuidelineOpen(true)}>
+            <button type="button" className="projects-filter-button button-compact" onClick={() => setGuidelineOpen(true)}>
               {t({ tr: "Kuralları gör", en: "View rules" })}
             </button>
-          </div>
+            <button
+              type="button"
+              className="kilavuz-bandi-gizle kilavuz-uygulandi-kapat"
+              aria-label={t({ tr: "Kapat (bu kılavuz sürümü için bir daha gösterilmez)", en: "Close (not shown again for this guideline version)" })}
+              title={t({ tr: "Kapat", en: "Close" })}
+              onClick={() => {
+                if (uygulandiTercihi) tercihYaz(uygulandiTercihi, true);
+              }}
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </span>
+          {uygulandiAyrinti ? (
+            <div id="kilavuz-uygulandi-ayrinti" className="kilavuz-uygulandi-ayrinti">
+              <span className="guideline-meta text-sm">
+                {stilAdi(guideline.citationStyle)}
+                {guideline.versionLabel ? ` · ${guideline.versionLabel}` : ""}
+                {formatDate(guideline.version)
+                  ? t({ tr: ` · Onay: ${formatDate(guideline.version)}`, en: ` · Approved: ${formatDate(guideline.version)}` })
+                  : ""}
+                {guideline.updatePending ? t({ tr: " · Yeni sürüm ekibimizce inceleniyor", en: " · A new version is under review by our team" }) : ""}
+              </span>
+              <SyncChangeList title={t({ tr: "Değişen ayarlar:", en: "Changed settings:" })} changes={guidelineSync.changes} />
+            </div>
+          ) : null}
         </div>
       ) : !guideline && isThesis && !kilavuzBandiGizli ? (
         /*
@@ -3336,7 +3394,8 @@ export default function ManuscriptEditor({
           kılavuzu olmayan öğrenci için asıl yol yine kendi kılavuzunu
           yüklemek (ilk öğe).
         */
-        <div className="kilavuz-bandi" role="status">
+        /* role="note" (V2): kalıcı bilgi; eskiden role="status" idi ve her açılışta anons ediliyordu. */
+        <div className="kilavuz-bandi" role="note" aria-label={t({ tr: "Kılavuz durumu", en: "Guideline status" })}>
           <BookMarked size={16} aria-hidden="true" className="kilavuz-bandi-simge" />
           <span className="kilavuz-bandi-metin">
             {/* Telefonda kısa biçim: uzun cümle 390 px'te yarıda kesiliyordu. */}

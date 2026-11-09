@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ESKI_KILAVUZ_BANDI_ANAHTARI, kilavuzBandiAnahtari } from "@/lib/kilavuz-bandi";
+import { ESKI_KILAVUZ_BANDI_ANAHTARI, kilavuzBandiAnahtari, kilavuzUygulandiAnahtari } from "@/lib/kilavuz-bandi";
 
 /* Kılavuz bandının gizleme tercihi çalışma başına (Aşama 1 takip R2). */
 test("anahtar çalışma kimliğini taşır; iki çalışma iki ayrı anahtar", () => {
@@ -34,9 +34,27 @@ test("gizleme tercihi yalnızca 'kılavuz yok' dalında okunur", async () => {
   const kullanimlar = kaynak.map((satir, i) => ({ satir, i })).filter(({ satir }) => /kilavuzBandiGizli\b/.test(satir) && !/const kilavuzBandiGizli\b/.test(satir));
   assert.ok(kullanimlar.length >= 3, "beklenen kullanım bulunamadı");
   for (const { satir, i } of kullanimlar) assert.match(satir, /!guideline && isThesis/, `satır ${i + 1}: ${satir.trim()}`);
+  /*
+    V2 (Phase 4.5): "kurallar uygulandı" bildiriminin koşulu ayrı bir satırda
+    (uygulandiGorunur = Boolean(guideline) && syncMode === "auto-applied" &&
+    !uygulandiKapali). Kendi, SÜRÜME bağlı "Kapat" tercihi var (onaylı ürün
+    kararı); "kılavuz yok" bandının tercihine bağlanmamalı. "Kılavuza göre
+    güncelle" (offer) uyarısı hiçbir kapatma tercihine bağlı değil.
+  */
   for (const uyari of ['syncMode === "auto-applied"', 'syncMode === "offer"']) {
-    const satir = kaynak.find((s) => s.includes(uyari) && s.includes("guideline &&"));
+    const satir = kaynak.find((s) => s.includes(uyari) && /guideline\)? &&/.test(s));
     assert.ok(satir, `${uyari} uyarısı bulunamadı`);
     assert.doesNotMatch(satir, /kilavuzBandi/, `${uyari} uyarısı gizleme tercihine bağlanmış`);
+    if (uyari.includes("offer")) assert.doesNotMatch(satir, /Kapali|Gizli/, "'Kılavuza göre güncelle' uyarısı kapatılabilir olmuş");
   }
+});
+
+
+test("V2: 'kurallar uygulandı' kapatma anahtarı çalışma ve sürüm başına; eksikse tutulmaz", () => {
+  const a = kilavuzUygulandiAnahtari("c1", "2026-11-01T09:00:00.000Z");
+  assert.equal(a, "arvolab:kilavuz-uygulandi-kapali:c1:2026-11-01T09:00:00.000Z");
+  assert.notEqual(a, kilavuzUygulandiAnahtari("c1", "2026-12-01T09:00:00.000Z"), "yeni sürüm yeni anahtar");
+  assert.notEqual(a, kilavuzUygulandiAnahtari("c2", "2026-11-01T09:00:00.000Z"), "başka çalışma başka anahtar");
+  assert.equal(kilavuzUygulandiAnahtari("c1", ""), null);
+  assert.equal(kilavuzUygulandiAnahtari("", "s"), null);
 });

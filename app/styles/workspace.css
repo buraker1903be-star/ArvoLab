@@ -2063,10 +2063,15 @@
   yok" bandında: "yeni sürüm uygulandı" ve "kılavuza göre güncelle"
   uyarıları bu kuraldan etkilenmez.
 */
+/*
+  KOMPAKT (Phase 4.5 V2): bandın yüksekliği içindeki denetimin yüksekliği
+  kadar (masaüstü 36, dokunmatik 44). Kenar çizgisi kutuya eklenmesin diye
+  içten gölge; eskiden 1 px kenar + 3 px dolgu 44 / 52 px ediyordu.
+*/
 .kilavuz-bandi {
   display: flex; align-items: center; gap: var(--s-2);
-  margin: 8px 0; padding: 3px 3px 3px 12px;
-  border: 1px solid var(--line-soft); border-radius: var(--r-md);
+  margin: 6px 0; padding: 0 0 0 12px;
+  border: 0; border-radius: var(--r-md); box-shadow: inset 0 0 0 1px var(--line-soft);
   background: var(--surface-2); color: var(--ink-soft); font-size: var(--fs-sm);
 }
 .kilavuz-bandi-simge { flex: none; color: var(--muted); }
@@ -2076,6 +2081,9 @@
 @media (max-width: 760px) {
   .kilavuz-bandi-uzun { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .kilavuz-bandi-kisa { display: inline; }
+  /* Telefonda "Kılavuz bağla" simge düğme (adı aria-label'da): kısa metin bile 360 px'te kesiliyordu (V2). */
+  .kilavuz-bandi .kilavuz-bandi-menu { width: 44px; min-width: 44px; padding: 0; justify-content: center; }
+  .kilavuz-bandi .kilavuz-bandi-menu :is(.arac-metin, .arac-menu-ok) { display: none; }
 }
 .kilavuz-bandi-gizle {
   display: inline-grid; flex: none; place-items: center;
@@ -2084,6 +2092,29 @@
 }
 .kilavuz-bandi-gizle:hover { background: var(--dugme-hover-zemin); color: var(--ink); }
 .kilavuz-bandi-gizle:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+/*
+  "KILAVUZ KURALLARI UYGULANDI" KOMPAKT ÖZETİ (Phase 4.5 V2,
+  manuscript-editor.tsx). Masaüstünde tek satır; telefonda metin üstte,
+  düğmeler altta sarılır. Ayrıntı (stil, sürüm, değişen ayarlar) yalnızca
+  "Değişiklikleri gör" ile açılır. Eskiden 157–184 px ve kapatılamazdı.
+*/
+.kilavuz-uygulandi {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--s-2);
+  margin: 6px 0; padding: 4px 4px 4px 12px;
+  border-radius: var(--r-md); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--secondary-bright) 35%, transparent);
+  background: var(--secondary-soft); color: var(--ink); font-size: var(--fs-sm);
+}
+.kilavuz-uygulandi-simge { flex: none; color: var(--secondary-strong); }
+.kilavuz-uygulandi-metin { flex: 1 1 12rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kilavuz-uygulandi-ad { color: var(--ink-soft); }
+.kilavuz-uygulandi-eylemler { display: flex; flex: none; align-items: center; gap: 4px; margin-left: auto; }
+.kilavuz-uygulandi-ayrinti { display: grid; flex: 1 1 100%; gap: 4px; padding: 4px 0 6px; }
+@media (max-width: 760px) {
+  .kilavuz-uygulandi-metin { flex-basis: calc(100% - 28px); white-space: normal; }
+  .kilavuz-uygulandi-ad { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kilavuz-uygulandi-eylemler { flex: 1 1 100%; justify-content: flex-end; flex-wrap: wrap; }
+  .kilavuz-uygulandi-eylemler > button { min-height: 44px; }
+}
 .kilavuz-secenek > span { display: grid; gap: 2px; }
 .kilavuz-secenek small { color: var(--muted); font-size: var(--fs-micro); font-weight: 400; line-height: 1.4; }
 .kilavuz-secenek svg { flex: none; align-self: flex-start; margin-top: 2px; color: var(--muted); }
@@ -2100,6 +2131,10 @@
   .kilavuz-bandi-gizle { width: 40px; height: 40px; }
   .kilavuz-bandi .kilavuz-bandi-menu { min-height: 40px; }
   .yazim-durum-kilavuz-dugme { min-height: 40px; }
+}
+/* Telefonda kapat/gizle 44×44 (V2): yukarıdaki dokunmatik 40 px kuralından SONRA gelmeli. */
+@media (max-width: 760px) {
+  .kilavuz-bandi-gizle { width: 44px; height: 44px; }
 }
 
 /*
