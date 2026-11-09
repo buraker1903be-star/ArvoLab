@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EditorState, TextSelection } from "@tiptap/pm/state";
-import { etkinOneri, kabulEdilenOneri, oneriEklentisi, oneriGoster, oneriKabulEt, oneriTemizleIslem } from "@/lib/tiptap-satir-ici-oneri";
+import { EditorState, TextSelection, type Transaction } from "@tiptap/pm/state";
+import { history, redo, redoDepth, undo, undoDepth } from "@tiptap/pm/history";
+import { etkinOneri, kabulEdilenOneri, oneriEklentisi, oneriGoster, oneriKabulEt, oneriTemizleIslem, tabIleKabulEt } from "@/lib/tiptap-satir-ici-oneri";
 import { belge, paragraf } from "./ortam";
 
 /*
@@ -53,4 +54,73 @@ test("imleç istekten sonra yer değiştirdiyse öneri gösterilmez", () => {
   const s = durum();
   assert.equal(oneriGoster(s, { konum: 2, metin: " x", kayit: null }), null);
   assert.equal(oneriGoster(s, { konum: s.selection.head, metin: "", kayit: null }), null);
+});
+
+/*
+  C2-4 (V4.3): TAB İLE KABUL KENDİ GERİ ALMA ADIMI. Eskiden kabul işlemi
+  geçmişi kapatmıyordu: öneriden hemen önce (yarım saniye içinde) yazılan
+  harflerle ve hemen sonra yazılanlarla aynı geçmiş olayına düşüyordu;
+  Ctrl+Z öneriyle birlikte öğrencinin kendi yazdığını da siliyordu.
+  Sınanan yol, Tab tuşunun ÜRETİMDEKİ işleyicisi (tabIleKabulEt).
+*/
+function gecmisliDurum() {
+  const doc = belge(paragraf("Enflasyon"));
+  return EditorState.create({ doc, plugins: [history(), oneriEklentisi()], selection: TextSelection.create(doc, doc.content.size - 1) });
+}
+function gorunum(s: EditorState) {
+  const v = { state: s, dispatch: (tr: Transaction) => (v.state = v.state.apply(tr)) };
+  return v;
+}
+const geriAl = (v: { state: EditorState }) => {
+  let sonuc = false;
+  undo(v.state, (tr) => ((v.state = v.state.apply(tr)), (sonuc = true)));
+  return sonuc;
+};
+const yaz = (v: ReturnType<typeof gorunum>, metin: string) => v.dispatch(v.state.tr.insertText(metin));
+const oneriGosterV = (v: ReturnType<typeof gorunum>, metin: string) => v.dispatch(oneriGoster(v.state, { konum: v.state.selection.head, metin, kayit: "k" })!);
+
+test("C2-4 negatif: öneriden ÖNCE yazılan metin Ctrl+Z ile öneriyle birlikte silinmez", () => {
+  const v = gorunum(gecmisliDurum());
+  yaz(v, " ve");
+  oneriGosterV(v, " işsizlik");
+  assert.equal(tabIleKabulEt(v), true);
+  assert.equal(v.state.doc.textContent, "Enflasyon ve işsizlik");
+  assert.equal(geriAl(v), true);
+  assert.equal(v.state.doc.textContent, "Enflasyon ve", "Ctrl+Z yalnızca öneriyi geri almalı");
+  assert.equal(geriAl(v), true);
+  assert.equal(v.state.doc.textContent, "Enflasyon");
+});
+
+test("C2-4 negatif: öneriden SONRA yazılan metin öneri adımına eklenmez", () => {
+  const v = gorunum(gecmisliDurum());
+  oneriGosterV(v, " ve işsizlik");
+  tabIleKabulEt(v);
+  yaz(v, " arasında");
+  assert.equal(geriAl(v), true);
+  assert.equal(v.state.doc.textContent, "Enflasyon ve işsizlik", "Ctrl+Z önce sonraki yazımı geri almalı");
+  assert.equal(geriAl(v), true);
+  assert.equal(v.state.doc.textContent, "Enflasyon");
+});
+
+test("C2-4 geçmişte boş ya da çift adım yok; yineleme öneriyi asistan iziyle geri getirir", () => {
+  const v = gorunum(gecmisliDurum());
+  yaz(v, " ve");
+  const once = undoDepth(v.state);
+  oneriGosterV(v, " işsizlik");
+  assert.equal(undoDepth(v.state), once, "öneriyi göstermek geçmişe adım eklemez");
+  tabIleKabulEt(v);
+  assert.equal(undoDepth(v.state), once + 1, "kabul tam BİR adım");
+  geriAl(v);
+  assert.equal(redoDepth(v.state), 1);
+  redo(v.state, (tr) => (v.state = v.state.apply(tr)));
+  assert.equal(v.state.doc.textContent, "Enflasyon ve işsizlik");
+  assert.equal(v.state.doc.firstChild!.lastChild!.marks[0]?.type.name, "asistanIzi");
+  assert.equal(undoDepth(v.state), once + 1);
+});
+
+test("C2-4 öneri yokken Tab hiçbir şey göndermez (girinti ve odak eskisi gibi)", () => {
+  const v = gorunum(gecmisliDurum());
+  const once = v.state;
+  assert.equal(tabIleKabulEt(v), false);
+  assert.equal(v.state, once);
 });

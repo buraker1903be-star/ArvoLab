@@ -2,6 +2,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { ASISTAN_IZI } from "@/lib/tiptap-asistan-izi";
+import { aiAdimiBaslat, aiAdiminiKapat } from "@/lib/ai-duzenleme";
 
 /*
   SATIR İÇİ ÖNERİ (03.11.2026, Jenni'nin imza özelliği). Yazım asistanının
@@ -38,11 +39,30 @@ export function oneriKabulEt(state: EditorState): Transaction | null {
   const oneri = etkinOneri(state);
   if (!oneri || state.selection.head !== oneri.konum) return null;
   const isaret = state.schema.marks[ASISTAN_IZI]?.create({ kayit: oneri.kayit });
-  const tr = state.tr.insert(oneri.konum, state.schema.text(oneri.metin, isaret ? [isaret] : []));
+  /* Kendi geri alma adımı (C2-4): öncesinde yazılanlarla birleşmez. Sonrası tabIleKabulEt'te kapatılır. */
+  const tr = aiAdimiBaslat(state.tr.insert(oneri.konum, state.schema.text(oneri.metin, isaret ? [isaret] : [])));
   return tr.setMeta(oneriAnahtari, { kabul: oneri } satisfies Meta).scrollIntoView();
 }
 
 export const oneriTemizleIslem = (state: EditorState): Transaction => state.tr.setMeta(oneriAnahtari, { temizle: true } satisfies Meta);
+
+/*
+  TAB TUŞUNUN İŞİ (C2-4, V4.3): görünen öneri varsa kabul eder; yoksa
+  false döner ve Tab girintiye/odağa kalır. Kabul KENDİ geri alma adımı:
+  ESKİDEN geçmiş kapatılmıyordu ve öneri, yarım saniye içinde önce ve
+  sonra yazılan harflerle aynı olaya düşüyordu; Ctrl+Z öneriyle birlikte
+  öğrencinin kendi yazdığını da siliyordu. Önce aiAdimiBaslat (işlemin
+  içinde), sonra adımsız aiAdiminiKapat: geçmişe boş adım EKLEMEZ, yalnızca
+  sonraki yazımın yeni bir olay başlatmasını sağlar (panelin ekleme yoluyla
+  aynı düzen, yazim-paneli.tsx).
+*/
+export function tabIleKabulEt(view: { state: EditorState; dispatch: (tr: Transaction) => void }): boolean {
+  const tr = oneriKabulEt(view.state);
+  if (!tr) return false;
+  view.dispatch(tr);
+  view.dispatch(aiAdiminiKapat(view.state));
+  return true;
+}
 
 /** Bir işlem öneriyi kabul ettiyse onu döndürür (çağıran kararı oturuma yazar; puan DEĞİL, 4.3). */
 export const kabulEdilenOneri = (tr: Transaction): Oneri | null => {
@@ -99,12 +119,7 @@ export const SatirIciOneri = Extension.create({
 
   addKeyboardShortcuts() {
     return {
-      Tab: ({ editor }) => {
-        const tr = oneriKabulEt(editor.state);
-        if (!tr) return false;
-        editor.view.dispatch(tr);
-        return true;
-      },
+      Tab: ({ editor }) => tabIleKabulEt(editor.view),
       Escape: ({ editor }) => {
         if (!etkinOneri(editor.state)) return false;
         editor.view.dispatch(oneriTemizleIslem(editor.state));
