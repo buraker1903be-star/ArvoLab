@@ -35,9 +35,36 @@ const YETENEK_DOSYALARI = readdirSync("app/actions").filter((ad) => /^ai-.*\.ts$
   Okuma yapan dosyalar (ai-gecmis, ai-kayitlar, ai-puan) kimlik yazmıyor ve
   kapıdan geçmiyor — doğru: kayıtlı cevabı göstermek hak yakmamalı.
 */
-const YETENEK_KIMLIKLERI = ["analiz", "kaynakca", "literatur", "belge", "kanit", "makale"];
+/* "yazim" ve "kaynak" C2-6'da eklendi: ikisi de model çağırıyor ama denetimin dışında kalmıştı. */
+const YETENEK_KIMLIKLERI = ["analiz", "kaynakca", "literatur", "belge", "kanit", "makale", "yazim", "kaynak"];
 const yetenekKimligi = (kaynak: string) =>
   YETENEK_KIMLIKLERI.find((kimlik) => new RegExp(`yetenek:\\s*"${kimlik}"`).test(kaynak));
+
+/*
+  C2-6 (V4.3): denetçinin KENDİSİ de sınanır. Eskiden liste yazım asistanı
+  ("yazim") ve kaynakla sohbeti ("kaynak") içermiyordu: iki dosyanın
+  kapı, hak ya da kayıt çağrısı silinse test yeşil kalırdı. Denetçi bir
+  işlev; gerçek dosyada eksik yok, çağrısı silinmiş kopyada eksik bulunur
+  (kör kalan denetim denetlediği hatadan farksızdır).
+*/
+const ZORUNLU_CAGRILAR: [RegExp, string][] = [
+  [/asistanKapisi\(/, "kapı"],
+  [/asistanHakkiVar\(/, "hak"],
+  [/asistanKaydet\(/, "kayıt"],
+];
+const eksikCagrilar = (kaynak: string) => (yetenekKimligi(kaynak) ? ZORUNLU_CAGRILAR.filter(([k]) => !k.test(kaynak)).map(([, ad]) => ad) : null);
+
+test("C2-6 yazım asistanı ve kaynakla sohbet kapı denetiminin içinde; silinen çağrı yakalanır", () => {
+  for (const [dosya, kimlik] of [["app/actions/ai-yazim.ts", "yazim"], ["app/actions/ai-kaynak-sohbeti.ts", "kaynak"]] as const) {
+    const kaynak = readFileSync(dosya, "utf8");
+    assert.equal(yetenekKimligi(kaynak), kimlik, `${dosya}: yetenek denetimin dışında`);
+    assert.deepEqual(eksikCagrilar(kaynak), [], `${dosya}: gerçek dosyada eksik çağrı`);
+    for (const [kalip, ad] of ZORUNLU_CAGRILAR) {
+      const silinmis = kaynak.replace(new RegExp(kalip.source, "g"), "kaldirildi(");
+      assert.deepEqual(eksikCagrilar(silinmis), [ad], `${dosya}: ${ad} çağrısı silinince denetim yakalamadı`);
+    }
+  }
+});
 
 test("asistan kapısının kapsamı", async (t) => {
   const dosyalar = YETENEK_DOSYALARI.map((ad) => ({ ad, kaynak: readFileSync(`app/actions/${ad}`, "utf8") }));

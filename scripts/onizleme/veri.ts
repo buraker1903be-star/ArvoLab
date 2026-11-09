@@ -127,6 +127,8 @@ export const ORNEK: Record<string, Record<string, unknown>[]> = {
 };
 
 export const ORNEK_RPC: Record<string, unknown> = {
+  /* Saatlik hak sayacı: yalnızca ONIZLEME_HAK=bitti iken okunur (admin.ts) ve "hayır" der. */
+  ...(typeof process !== "undefined" && process.env.ONIZLEME_HAK === "bitti" ? { rate_limit_hit: false } : {}),
   ai_kredi_durumum: { kullanilan_karakter: 182_000, limit_kredi: 500, aylik_kalan: 318, ek_bakiye: 0, bildirildi: true, ic_ekip: false, bireysel: true },
 };
 

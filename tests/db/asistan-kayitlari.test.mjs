@@ -211,4 +211,50 @@ describe("asistan kayıtları", () => {
       await reddedilir(db, "select id from public.ai_assistant_runs", [], /permission denied|row-level security/i);
     });
   });
+
+  /*
+    C2-6 (V4.3): YAZIM ASİSTANI ve KAYNAKLA SOHBET kayıtları. İki yetenek
+    kapı testinin dışında kalmıştı; kayıt kuralları onlar için de geçerli
+    olmalı. Ret nedeni kısıtı ayrıca sabitlenir: C2-1'in numaralı atıf
+    reddi yeni bir değer değil "kunye" olarak yazılır, çünkü kısıt yeni
+    değeri almıyor (migration bu dilimin dışında). Sunucu bu değeri yazmaya
+    kalksa kayıt düşerdi — kayıt akışı düşürmez ama kayıt kaybolurdu.
+  */
+  test("C2-6 yazım ve kaynak kaydı: yalnız sunucu yazar, ret nedeni kısıtlı, sahip görür, yabancı görmez, içerik değişmez", async () => {
+    await islem(db, async () => {
+      await tohum();
+      await rol(db, "authenticated", SAHIP);
+      for (const yetenek of ["yazim", "kaynak"]) {
+        await reddedilir(
+          db,
+          `insert into public.ai_assistant_runs (user_id, capability, status) values ('${SAHIP}', '${yetenek}', 'completed')`,
+          [],
+          /permission denied/i,
+        );
+      }
+      await rol(db, "service_role");
+      const [yazim] = (
+        await db.query(
+          `insert into public.ai_assistant_runs (user_id, capability, status, reject_reason, context, output)
+           values ('${SAHIP}', 'yazim', 'rejected', 'kunye', 'bağlam', '[3]') returning id`,
+        )
+      ).rows;
+      await db.query(`insert into public.ai_assistant_runs (user_id, capability, status, reject_reason) values ('${SAHIP}', 'kaynak', 'rejected', 'alinti')`);
+      await db.query(`insert into public.ai_assistant_runs (user_id, capability, status, reject_reason) values ('${SAHIP}', 'yazim', 'rejected', 'uydurma_sayi')`);
+      await reddedilir(
+        db,
+        `insert into public.ai_assistant_runs (user_id, capability, status, reject_reason) values ('${SAHIP}', 'yazim', 'rejected', 'numarali_atif')`,
+        [],
+        /reject_reason|check constraint/i,
+      );
+
+      await rol(db, "authenticated", SAHIP);
+      assert.equal((await say(`select id from public.ai_assistant_runs where capability in ('yazim', 'kaynak')`)).length, 3);
+      await reddedilir(db, `update public.ai_assistant_runs set output = 'degistirildi' where id = '${yazim.id}'`, [], /değiştirilemez/);
+      await reddedilir(db, `update public.ai_assistant_runs set reject_reason = null where id = '${yazim.id}'`, [], /değiştirilemez/);
+
+      await rol(db, "authenticated", YABANCI);
+      assert.equal((await say(`select id from public.ai_assistant_runs where capability in ('yazim', 'kaynak')`)).length, 0);
+    });
+  });
 });
