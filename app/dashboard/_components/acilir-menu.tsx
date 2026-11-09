@@ -126,8 +126,9 @@ export default function AracMenusu({
           hedef.focus();
         }}
         // Öğe tıklanınca menü kapanır; tıklama öğenin kendi işini yaptıktan sonra.
+        // Bağlantı da kapatır (V4.3-B2): kalıcı yerleşimdeki bir menü (çalışma şeridi) sayfa değişince açık kalıyordu.
         onClick={(olay) => {
-          if ((olay.target as Element).closest("button:not([data-acik-kalir])")) setAcik(false);
+          if ((olay.target as Element).closest("button:not([data-acik-kalir]), a[href]")) setAcik(false);
         }}
       >
         {children}

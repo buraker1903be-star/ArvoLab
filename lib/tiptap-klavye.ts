@@ -1,6 +1,7 @@
 import { Extension } from "@tiptap/core";
-import { TextSelection } from "@tiptap/pm/state";
-import { harfCevir, puntoAdimi, siradakiHarfDurumu, tabKarari } from "@/lib/klavye-karari";
+import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
+import { cikisKarari, harfCevir, puntoAdimi, siradakiHarfDurumu, tabKarari } from "@/lib/klavye-karari";
+import { etkinOneri } from "@/lib/tiptap-satir-ici-oneri";
 
 /*
   WORD KLAVYESİ (27.10.2026, kurum sahibinin isteği: "editörde
@@ -122,5 +123,70 @@ export const WordKisayollari = Extension.create({
         return true;
       },
     };
+  },
+});
+
+/*
+  EDİTÖRDEN KLAVYEYLE ÇIKIŞ (V4.3-B2, WCAG 2.1.2). Kural ve gerekçe
+  lib/klavye-karari.ts (cikisKarari). Bu eklenti EN YÜKSEK öncelikte:
+  kuruluyken gelen Tab'ı liste/tablo eklentileri (girinti, sonraki hücre)
+  yutmadan önce yakalamalı. Kurulu değilken hiçbir tuşu tüketmez; Esc'i
+  de tüketmez (odak modu, panel, satır içi öneri kendi Esc'lerini işler).
+
+  Satır içi öneri açıkken Esc çıkışı KURMAZ: o Esc öneriyi kapatır, ikinci
+  Esc kurar. Belgeye, seçime, kayda ve AI kartlarına dokunulmaz; odak
+  tarayıcının kendi sırasıyla bir sonraki / önceki denetime geçer.
+*/
+const cikisAnahtari = new PluginKey("editordenCikis");
+const ODAKLANABILIR = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex], [contenteditable="true"]';
+
+/** Editörün dışındaki sonraki/önceki odaklanabilir öğe (belge sırasıyla; görünmeyen, devre dışı ve inert olan atlanır). */
+function disOdak(editorDom: HTMLElement, yon: 1 | -1): HTMLElement | null {
+  const adaylar = [...document.querySelectorAll<HTMLElement>(ODAKLANABILIR)].filter(
+    (e) => !editorDom.contains(e) && e.tabIndex >= 0 && e.getClientRects().length > 0 && !e.closest("[inert], [hidden]") && getComputedStyle(e).visibility === "visible",
+  );
+  const sonra = adaylar.filter((e) => editorDom.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const once = adaylar.filter((e) => editorDom.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_PRECEDING);
+  return yon === 1 ? (sonra[0] ?? null) : (once[once.length - 1] ?? null);
+}
+
+export const EditordenCikis = Extension.create({
+  name: "editordenCikis",
+  priority: 10000,
+
+  addProseMirrorPlugins() {
+    let kurulu = false;
+    return [
+      new Plugin({
+        key: cikisAnahtari,
+        props: {
+          handleKeyDown(view, olay) {
+            const karar = cikisKarari(kurulu, olay.key, olay.shiftKey);
+            if (karar === "kur") {
+              // Öneri açıkken bu Esc öneriyi kapatır (tiptap-satir-ici-oneri.ts); çıkış kurulmaz.
+              kurulu = !etkinOneri(view.state);
+              return false;
+            }
+            if (karar === "boz") kurulu = false;
+            if (karar !== "cik-ileri" && karar !== "cik-geri") return false;
+            kurulu = false;
+            const hedef = disOdak(view.dom as HTMLElement, karar === "cik-ileri" ? 1 : -1);
+            if (hedef) hedef.focus();
+            else (view.dom as HTMLElement).blur();
+            return true;
+          },
+          handleDOMEvents: {
+            blur: () => {
+              kurulu = false;
+              return false;
+            },
+            mousedown: () => {
+              kurulu = false;
+              return false;
+            },
+          },
+        },
+      }),
+    ];
   },
 });

@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { harfCevir, puntoAdimi, siradakiHarfDurumu, tabKarari } from "@/lib/klavye-karari";
+import { cikisKarari, harfCevir, puntoAdimi, siradakiHarfDurumu, tabKarari } from "@/lib/klavye-karari";
 
 const d = (ek: Partial<Parameters<typeof tabKarari>[0]>) => ({ listede: false, tabloda: false, satirBasinda: false, girintili: false, ...ek });
 
@@ -37,4 +37,23 @@ describe("editörde Tab", () => {
     assert.equal(harfCevir("zlik ve", "baslik", false), "zlik Ve");
     assert.equal(siradakiHarfDurumu("2026 – 15"), "kucuk");
   });
+});
+
+/* V4.3-B2: editörden klavyeyle çıkış (WCAG 2.1.2). */
+test("çıkış: Esc kurar; kuruluyken Tab ileri, Shift+Tab geri çıkar", () => {
+  assert.equal(cikisKarari(false, "Escape", false), "kur");
+  assert.equal(cikisKarari(true, "Tab", false), "cik-ileri");
+  assert.equal(cikisKarari(true, "Tab", true), "cik-geri");
+});
+
+test("çıkış: kurulu değilken Tab editörün kendi işine (girinti) bırakılır", () => {
+  assert.equal(cikisKarari(false, "Tab", false), "dokunma");
+  assert.equal(cikisKarari(false, "Tab", true), "dokunma");
+});
+
+test("çıkış: başka bir tuş kurulumu bozar, değiştirici tuşun kendisi bozmaz", () => {
+  assert.equal(cikisKarari(true, "a", false), "boz");
+  assert.equal(cikisKarari(true, "Enter", false), "boz");
+  assert.equal(cikisKarari(true, "Shift", true), "dokunma");
+  assert.equal(cikisKarari(false, "a", false), "dokunma");
 });

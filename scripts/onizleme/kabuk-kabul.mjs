@@ -16,6 +16,9 @@
        Analiz, Daha fazla.
     8. (V4.3-B1) Ray 64 px, kenar çubuğu 236 px; rayda yalnız simge,
        erişilebilir ad tam, hedef ≥44 px, klavye odağında ipucu, Esc kapatır.
+    9. (V4.3-B2) Çalışma şeridi: telefon, tablet ve daraltılmış masaüstünde
+       Özet · Yazım · Kaynaklar · Kanıt · Analiz · ⋯; kaymaz, kesilmez, ≥44 px;
+       kenar çubuğuyla aynı bağlantılar. Çalışmalarım'da kenar çubuğunda yalnız seçici.
   Her ekranda yatay taşma yok.
 
   Salt okunur önizleme yeter (npm run onizleme:ai). Daraltma tercihini
@@ -73,7 +76,7 @@ for (const w of [1440, 1200]) {
   await senaryo(`${w}: kanıt sayfasında sekme şeridi YOK (bağlam kenar çubuğunda); taşma yok`, async () => {
     const { ctx, sayfa } = await ac(w, `/dashboard/editor/${TEZ}/kanit`);
     bekle(await gorunur(sayfa, ".os-gezinme-baglam"), "bağlam görünmüyor");
-    bekle(!(await gorunur(sayfa, ".calisma-sekmeleri")), "masaüstünde yinelenen sekme şeridi görünüyor");
+    bekle(!(await gorunur(sayfa, ".calisma-seridi")), "masaüstünde yinelenen sekme şeridi görünüyor");
     bekle((await tasma(sayfa)) <= 0, "yatay taşma");
     await ctx.close();
   });
@@ -93,7 +96,7 @@ await senaryo("1440: daraltılınca bölüm bağlantıları gizlenir, switcher s
   const simge = await sayfa.locator(".proje-secici-dugme").boundingBox();
   bekle(simge && simge.width >= 44 && simge.height >= 44, `daraltılmış switcher: ${JSON.stringify(simge)}`);
   bekle(!(await gorunur(sayfa, ".proje-secici-ad-kisa")), "daraltılmışken başlık metni görünüyor");
-  bekle(await gorunur(sayfa, ".calisma-sekmeleri"), "daraltılmışken sekmeler geri gelmedi (bölümlere ulaşılamaz)");
+  bekle(await gorunur(sayfa, ".calisma-seridi"), "daraltılmışken sekmeler geri gelmedi (bölümlere ulaşılamaz)");
   await sayfa.locator('#os-gezinme a[href="/dashboard"]').first().click();
   await sayfa.waitForURL(`${TABAN}/dashboard`);
   bekle((await sayfa.evaluate(() => document.documentElement.getAttribute("data-kenar"))) === "dar", "daraltma sayfa değişince unutuldu");
@@ -192,7 +195,7 @@ for (const w of [1024, 768, 390, 360]) {
   await senaryo(`${w}: bağlam kenar çubuğunda değil; kanıt sayfasında sekme şeridi VAR; Ctrl+K'da 'Bu çalışmada'; taşma yok`, async () => {
     const { ctx, sayfa } = await ac(w, `/dashboard/editor/${TEZ}/kanit`);
     bekle(!(await gorunur(sayfa, ".os-gezinme-baglam")), "bağlam bu ekranda görünmemeli");
-    bekle(await gorunur(sayfa, ".calisma-sekmeleri"), "sekme şeridi yok: çalışma bölümlerine ulaşılamaz");
+    bekle(await gorunur(sayfa, ".calisma-seridi"), "sekme şeridi yok: çalışma bölümlerine ulaşılamaz");
     bekle((await tasma(sayfa)) <= 0, "yatay taşma");
     await sayfa.goto(`${TABAN}/dashboard/editor/${TEZ}/write`, { waitUntil: "networkidle" });
     bekle((await tasma(sayfa)) <= 0, "editörde yatay taşma");
@@ -257,14 +260,9 @@ await senaryo("1024: klavye odağında ipucu adı gösterir, raydan dışarı ç
   for (const yol of ["/dashboard", `/dashboard/editor/${TEZ}/write`]) {
     const { ctx, sayfa } = await ac(1024, yol);
     let bulundu = false;
-    /*
-      Editörde Tab belgenin içinde girinti/sekme (Word klavyesi, lib/tiptap-klavye.ts)
-      ve odak editörden çıkmıyor; ray oraya ileri Tab'la ulaşılamıyor. Ray DOM'da
-      içerikten sonra: sayfanın başından GERİ (Shift+Tab) ilk durak onun.
-    */
-    const tus = yol.includes("/write") ? "Shift+Tab" : "Tab";
+    // V4.3-B2: gezinme DOM'da içerikten ÖNCE; editör sayfasında da ileri Tab'la ilk duraklar onun.
     for (let i = 0; i < 80 && !bulundu; i++) {
-      await sayfa.keyboard.press(tus);
+      await sayfa.keyboard.press("Tab");
       bulundu = await sayfa.evaluate(() => Boolean(document.activeElement?.classList.contains("os-gezinme-oge")));
     }
     bekle(bulundu, `${yol}: Tab ile raya ulaşılamadı`);
@@ -305,6 +303,106 @@ for (const w of [390, 360]) {
     await ctx.close();
   });
 }
+
+/*
+  V4.3-B2: çalışma şeridi (telefon, tablet, daraltılmış masaüstü) ve
+  Çalışmalarım'da yalnız seçici. Şerit kenar çubuğuyla AYNI bağlantılardan;
+  TEK şerit (eski sayfa içi sekmeler yok), kaymaz, etiket kesilmez, hedefler ≥44.
+*/
+const SERIT_SIRA = ["Özet", "Yazım", "Kaynaklar", "Kanıt", "Analiz"];
+const seritOku = (sayfa) =>
+  sayfa.evaluate(() => {
+    const n = [...document.querySelectorAll(".calisma-seridi")].filter((e) => e.getClientRects().length);
+    if (!n.length) return { sayi: 0 };
+    const l = n[0].querySelector(".calisma-seridi-liste");
+    const ogeler = [...n[0].querySelectorAll(".calisma-seridi-oge")].map((a) => {
+      const r = a.getBoundingClientRect();
+      return { metin: [...a.childNodes].filter((d) => d.nodeType === 3).map((d) => d.nodeValue).join("").trim(), w: r.width, h: r.height, kesik: a.scrollWidth > a.clientWidth, guncel: a.getAttribute("aria-current") || (a.classList.contains("is-active") ? "daha" : null) };
+    });
+    return { sayi: n.length, tasma: l.scrollWidth - l.clientWidth, sayfaTasma: document.documentElement.scrollWidth - innerWidth, ogeler, eskiSekme: document.querySelectorAll(".calisma-sekmeleri").length };
+  });
+for (const w of [360, 390, 768, 1024]) {
+  await senaryo(`${w}: çalışma şeridi Özet · Yazım · Kaynaklar · Kanıt · Analiz · ⋯; kaymaz, kesilmez, ≥44 px, tek şerit`, async () => {
+    for (const [yol, etkin] of [[`/dashboard/literature?calisma=${TEZ}`, "Kaynaklar"], [`/dashboard/analysis?calisma=${TEZ}`, "Analiz"], [`/dashboard/editor/${TEZ}/kanit`, "Kanıt"], [`/dashboard/editor/${TEZ}/etik`, "daha"]]) {
+      const { ctx, sayfa } = await ac(w, yol);
+      const s = await seritOku(sayfa);
+      bekle(s.sayi === 1, `${w} ${yol}: ${s.sayi} şerit`);
+      bekle(s.eskiSekme === 0, `${w} ${yol}: eski sayfa içi sekmeler hâlâ var`);
+      bekle(JSON.stringify(s.ogeler.slice(0, 5).map((o) => o.metin)) === JSON.stringify(SERIT_SIRA), `${w}: sıra ${JSON.stringify(s.ogeler.map((o) => o.metin))}`);
+      bekle(s.ogeler.length === 6, `${w}: ${s.ogeler.length} öğe (5 bölüm + ⋯ bekleniyor)`);
+      bekle(s.tasma <= 0 && s.sayfaTasma <= 0, `${w} ${yol}: taşma ${s.tasma}/${s.sayfaTasma}`);
+      for (const o of s.ogeler) bekle(!o.kesik && o.w >= 44 && o.h >= 44, `${w}: öğe ${JSON.stringify(o)}`);
+      const guncel = s.ogeler.filter((o) => o.guncel);
+      bekle(guncel.length === 1 && (guncel[0].metin === etkin || (etkin === "daha" && guncel[0].guncel === "daha")), `${w} ${yol}: etkin ${JSON.stringify(guncel)}, beklenen ${etkin}`);
+      await ctx.close();
+    }
+  });
+}
+await senaryo("390: şeridin erişilebilir adları tam ad; ⋯ menüsü Etik kurul ve Belge Kontrol'ü açar, Esc kapatıp odağı düğmeye verir", async () => {
+  const { ctx, sayfa } = await ac(390, `/dashboard/editor/${TEZ}/kanit`);
+  const agac = await sayfa.locator(".calisma-seridi").ariaSnapshot();
+  for (const ad of ["Özet", "Yazım", "Kaynaklar", "Kanıt matrisi", "Analiz"]) bekle(agac.includes(`link "${ad}"`), `ad yok: ${ad}\n${agac}`);
+  const daha = sayfa.locator(".calisma-seridi .calisma-seridi-daha");
+  bekle((await daha.getAttribute("aria-label")) === "Daha fazla", "⋯ düğmesinin adı yok");
+  await daha.click();
+  const menu = sayfa.locator(".arac-menu-pencere:visible");
+  const ogeler = await menu.locator("a").allInnerTexts();
+  bekle(ogeler.includes("Etik kurul") && ogeler.includes("Belge Kontrol"), `menü: ${JSON.stringify(ogeler)}`);
+  await sayfa.keyboard.press("Escape");
+  await sayfa.waitForTimeout(150);
+  bekle((await menu.count()) === 0, "Esc menüyü kapatmadı");
+  bekle(await sayfa.evaluate(() => document.activeElement?.classList.contains("calisma-seridi-daha")), "Esc sonrası odak ⋯ düğmesinde değil");
+  // Menüden bir bölüme geçince menü kapanır (kalıcı yerleşimde açık kalmasın).
+  await daha.click();
+  await sayfa.locator(".arac-menu-pencere:visible a", { hasText: "Etik kurul" }).click();
+  await sayfa.waitForURL(/\/etik/, { timeout: 30000 });
+  await sayfa.waitForTimeout(300);
+  bekle((await sayfa.locator(".arac-menu-pencere:visible").count()) === 0, "bağlantıya basınca menü açık kaldı");
+  await ctx.close();
+});
+await senaryo("Çalışmalarım: kenar çubuğunda yalnız seçici (bölüm listesi yok), şerit yok; geniş masaüstünde şerit yok, daraltılınca var", async () => {
+  {
+    const { ctx, sayfa } = await ac(1440, `/dashboard/editor?sec=${TEZ}`);
+    bekle(await gorunur(sayfa, "#os-gezinme .proje-secici-dugme"), "Çalışmalarım'da seçici yok");
+    bekle((await sayfa.locator("#os-gezinme .os-gezinme-alt").count()) === 0, "Çalışmalarım'da kenar çubuğunda bölüm listesi var");
+    bekle((await seritOku(sayfa)).sayi === 0, "Çalışmalarım'da şerit var");
+    await ctx.close();
+  }
+  for (const w of [390, 1024]) {
+    const { ctx, sayfa } = await ac(w, `/dashboard/editor?sec=${TEZ}`);
+    bekle((await seritOku(sayfa)).sayi === 0, `${w}: Çalışmalarım'da şerit var`);
+    await ctx.close();
+  }
+  {
+    const { ctx, sayfa } = await ac(1440, `/dashboard/editor/${TEZ}/kanit`);
+    bekle((await seritOku(sayfa)).sayi === 0, "geniş masaüstünde şerit görünüyor (kenar çubuğuyla iki gezinme)");
+    bekle((await sayfa.locator("#os-gezinme .os-gezinme-alt").count()) > 0, "çalışma sayfasında kenar çubuğunun bölüm listesi yok");
+    await ctx.close();
+  }
+  const { ctx, sayfa } = await ac(1440, `/dashboard/editor/${TEZ}/kanit`, { dar: true });
+  bekle((await seritOku(sayfa)).sayi === 1, "daraltılmış masaüstünde şerit yok");
+  await ctx.close();
+});
+await senaryo("yazım sayfasında şerit yok (yazı alanı önceliği); bölümlere geri düğmesi ve Ctrl+K ile ulaşılır", async () => {
+  for (const w of [390, 1024]) {
+    const { ctx, sayfa } = await ac(w, `/dashboard/editor/${TEZ}/write`);
+    bekle((await seritOku(sayfa)).sayi === 0, `${w}: yazım sayfasında şerit var (ilk satırı aşağı iter)`);
+    // Telefonda başlıktaki geri düğmesi, tablette konum yolu (geri düğmesi orada bilerek yok: page.tsx) Özet'e götürür.
+    const ozete = w < 761 ? ".yazma-geri" : `.konum-yolu a[href*="sec=${TEZ}"]`;
+    bekle(await gorunur(sayfa, ozete), `${w}: yazımdan Özet'e yol yok (${ozete})`);
+    await ctx.close();
+  }
+});
+await senaryo("şerit ve kenar çubuğu aynı bağlantılar (iki ayrı liste yok)", async () => {
+  const { ctx: c1, sayfa: s1 } = await ac(1440, `/dashboard/editor/${TEZ}/kanit`);
+  const kenar = (await s1.locator("#os-gezinme .os-gezinme-alt").evaluateAll((l) => l.map((a) => a.getAttribute("href")))).sort();
+  await c1.close();
+  const { ctx: c2, sayfa: s2 } = await ac(390, `/dashboard/editor/${TEZ}/kanit`);
+  await s2.locator(".calisma-seridi .calisma-seridi-daha").click();
+  const serit = (await s2.locator(".calisma-seridi a, .arac-menu-pencere:visible a").evaluateAll((l) => l.map((a) => a.getAttribute("href")))).sort();
+  await c2.close();
+  bekle(JSON.stringify(kenar) === JSON.stringify(serit), `kenar ${JSON.stringify(kenar)}\n    şerit ${JSON.stringify(serit)}`);
+});
 
 await tarayici.close();
 console.log(`\n${gecen}/${toplam} senaryo geçti`);

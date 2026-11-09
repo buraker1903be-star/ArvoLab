@@ -82,7 +82,9 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
   const baglam = useCalismaBaglami();
   const dar = useSyncExternalStore(kenarAbone, kenarDarMi, () => false);
   const baglamGorunur = baglam && calismaIcindeMi(baglam.id, yol, new URLSearchParams(sorgu.toString()));
-  const baglantilar = baglamGorunur ? calismaBaglantilari(baglam, t) : [];
+  const calismalarimda = yol === "/dashboard/editor";
+  // Çalışmalarım'da bölüm listesi çizilmiyor; vurgu hesabı da onu görmesin (sayfa = Çalışmalarım).
+  const baglantilar = baglamGorunur && !calismalarimda ? calismaBaglantilari(baglam, t) : [];
   /*
     Tek "burası" (UX S5): sayfa ya çalışma bölümünde ya genel menüde "page",
     ikisinde birden değil. Çalışma bölümü yalnızca geniş masaüstünde görünür
@@ -162,6 +164,9 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
           <section className="os-gezinme-baglam" aria-label={t({ tr: `Açık çalışma: ${baglam.baslik}`, en: `Open work: ${baglam.baslik}` })}>
             {/* Çalışmanın adı bir düğme: son çalışmalara geçiş, aynı bölüm korunur (Signature OS 2.0, proje-secici.tsx). */}
             <ProjeSecici baglam={baglam} yol={yol} sorgu={sorgu.toString()} />
+            {/* Çalışmalarım'da yalnız seçici (V4.3-B2, onaylı tasarım §2.2): orası çalışma SEÇME ekranı,
+                bölümler sayfanın kendi ayrıntısında. Eskiden aynı bölüm listesi burada da vardı: iki gezinme. */}
+            {calismalarimda ? null : (
             <ul className="os-gezinme-liste">
               {baglantilar.map((b) => (
                 <li key={b.key} className={b.grup === "arac" && baglantilar.find((x) => x.grup === "arac")?.key === b.key ? "os-gezinme-ayrac" : undefined}>
@@ -175,6 +180,7 @@ export function OsGezinme({ uygulamalar }: { uygulamalar: OsUygulama[] }) {
                 </li>
               ))}
             </ul>
+            )}
           </section>
         ) : null}
 

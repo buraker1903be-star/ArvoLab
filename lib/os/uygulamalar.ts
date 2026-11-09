@@ -314,6 +314,22 @@ export function calismaBaglantilari(calisma: CalismaBaglami, t: Cevirici = cevir
   ];
 }
 
+/*
+  TELEFON / TABLET ÇALIŞMA ŞERİDİ (V4.3-B2). Kenar çubuğunun çalışma
+  bölümüyle AYNI bağlantılar (calismaBaglantilari), yalnızca ikiye
+  bölünmüş: şeritte beş ana bölüm, kalanı "Daha fazla" menüsünde. Ayrı bir
+  liste yazılmadı: eskiden telefonda bölümler yalnızca Kanıt/Etik/Makale
+  sayfalarında ve FARKLI bir kümeyle (Özet · Yazım · Kanıt · Etik)
+  görünüyordu, Yazım, Kaynaklar ve Analiz'de hiç yoktu.
+  Sıra onaylı tasarımdan (V4.2R): Özet · Yazım · Kaynaklar · Kanıt · Analiz.
+*/
+export const SERIT_ANA: readonly string[] = ["merkez", "yazim", "kaynaklar", "kanit", "analiz"];
+
+export function calismaSeridi(baglantilar: BaglamBaglantisi[]): { ana: BaglamBaglantisi[]; diger: BaglamBaglantisi[] } {
+  const ana = SERIT_ANA.map((key) => baglantilar.find((b) => b.key === key)).filter((b): b is BaglamBaglantisi => Boolean(b));
+  return { ana, diger: baglantilar.filter((b) => !SERIT_ANA.includes(b.key)) };
+}
+
 /**
  * Bu adres şu çalışmanın içinde mi? Çalışmanın kendi sayfaları
  * (/dashboard/editor/<id>/…), Özet (?sec=<id>) ve ona süzülmüş araçlar

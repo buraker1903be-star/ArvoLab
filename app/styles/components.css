@@ -2164,8 +2164,6 @@ button.merkez-baglanti { width: 100%; font: inherit; font-size: var(--fs-sm); te
 .makale-kontrol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .makale-plan { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .makale-plan li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; padding: 8px 12px; border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--surface); font-size: var(--fs-sm); }
-/* Çalışma sayfalarının sekme sırası: başlığın hemen altında, her sayfada aynı yerde. */
-.calisma-sekmeleri { margin: 4px 0 18px; }
 .calisma-karolari { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--kart-araligi); }
 
 /* Çalışma kartının "⋯" menüsü: ayda bir yapılan işler (düzenle, belge, sil). */

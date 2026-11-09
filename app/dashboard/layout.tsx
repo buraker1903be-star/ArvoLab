@@ -31,6 +31,7 @@ import KullaniciMenusu from "./_components/kullanici-menusu";
 import { OsGezinme } from "./_components/os-gezinme";
 import GezinmeKorumasi from "./_components/gezinme-korumasi";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
+import { CalismaSeridi } from "./_components/calisma-seridi";
 import { OsAramaDugmesi, OsKomutPaleti } from "./_components/os-komut-paleti";
 import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { kurumSec } from "@/app/actions/kurum-secimi";
@@ -107,6 +108,21 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
       {sozlesmeGerekli ? <SozlesmeOnayi olay="giris" cikis={logout} /> : null}
 
+      {/*
+        Ana gezinme İÇERİKTEN ÖNCE (V4.3-B2): klavye ve ekran okuyucu sırası
+        "atla bağlantısı → gezinme → içerik". Eskiden gezinme DOM'da en sondaydı:
+        Tab sayfanın bütün içeriğini geçmeden kenar çubuğuna ulaşmıyordu, Shift+Tab
+        ise sayfanın başından geri gidince önce oraya düşüyordu. Gezinme her
+        genişlikte position: fixed; DOM'daki yeri görünümü değiştirmez.
+        Onay penceresi açıkken gezinme ve komut paleti (Ctrl+K) çizilmez:
+        pencerenin üstüne açılıp odağı çalmasınlar.
+      */}
+      {sozlesmeGerekli ? null : (
+        <Suspense>
+          <OsGezinme uygulamalar={uygulamalar} />
+        </Suspense>
+      )}
+
       <div className="dashboard-content-shell" inert={sozlesmeGerekli || undefined}>
         <header className="dashboard-header">
           {/* Telefonda marka; tablet ve masaüstünde marka kenar çubuğunda, burada konum yolu (shell.css). */}
@@ -136,6 +152,10 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
         <Suspense>
           <OsBolumSeridi uygulamalar={uygulamalar} />
+        </Suspense>
+        {/* Çalışmanın bölümleri (telefon, tablet, daraltılmış masaüstü); kenar çubuğuyla aynı liste. */}
+        <Suspense>
+          <CalismaSeridi />
         </Suspense>
 
         {/*
@@ -200,16 +220,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         </div>
       </div>
 
-      {/* Onay penceresi açıkken gezinme ve komut paleti (Ctrl+K) çizilmez: pencerenin üstüne açılıp odağı çalmasınlar. */}
-      {sozlesmeGerekli ? null : (
-        <>
-          <Suspense>
-            <OsGezinme uygulamalar={uygulamalar} />
-          </Suspense>
-          {/* Çıkış bir sunucu eylemi: istemci bileşenine referans olarak geçilebiliyor. */}
-          <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />
-        </>
-      )}
+      {/* Çıkış bir sunucu eylemi: istemci bileşenine referans olarak geçilebiliyor. */}
+      {sozlesmeGerekli ? null : <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />}
       {/* Kullanıcı menüsü ve kart menüleri dışarı tıklayınca kapansın. */}
       <AcilirKapatici />
       {/* Başka cihazdan girişle kapatılan oturumu bekleyen sekmede de fark eder (lib/tek-oturum.ts). */}

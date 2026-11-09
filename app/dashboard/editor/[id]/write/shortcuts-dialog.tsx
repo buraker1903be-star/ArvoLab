@@ -45,6 +45,7 @@ const GRUPLAR: { baslik: Metin; satirlar: Kisayol[] }[] = [
       [["Mod", "J"], { tr: "İki yana yasla", en: "Justify" }],
       [["Tab"], { tr: "Paragraf başında ilk satır girintisi; metin içinde sekme", en: "At the start of a paragraph: first-line indent; within text: tab" }],
       [["Shift", "Tab"], { tr: "Paragraf başında girintiyi kaldır", en: "At the start of a paragraph: remove indent" }],
+      [["Esc", "Tab"], { tr: "Editörden çık: Esc, ardından Tab sonraki denetime (Shift+Tab öncekine) geçer; belge değişmez", en: "Leave the editor: Esc, then Tab moves to the next control (Shift+Tab to the previous); the document is unchanged" }],
       [["Backspace"], { tr: "Girintili paragrafın başında: önce girintiyi kaldır", en: "At the start of an indented paragraph: remove the indent first" }],
       [["Shift", "Enter"], { tr: "Aynı paragrafta alt satıra geç", en: "Line break within the same paragraph" }],
     ],

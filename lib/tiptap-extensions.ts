@@ -12,7 +12,7 @@ import { SearchHighlight } from "@/lib/tiptap-search";
 import { HeadingNumbers, type BaslikKurallari } from "@/lib/tiptap-heading-numbers";
 import { FootnoteReference } from "@/lib/tiptap-footnote-extension";
 import { ParagraphFormatting } from "@/lib/tiptap-paragraph-formatting";
-import { WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
+import { EditordenCikis, WordKisayollari, WordKlavyesi } from "@/lib/tiptap-klavye";
 import { AsistanIzi } from "@/lib/tiptap-asistan-izi";
 import { SatirIciOneri } from "@/lib/tiptap-satir-ici-oneri";
 import { AsistanAraligi } from "@/lib/tiptap-asistan-araligi";
@@ -91,5 +91,7 @@ export function editorExtensions(secenek: {
     // Tab, hizalama ve punto kısayolları (Word gibi); şemaya düğüm eklemiyor.
     WordKlavyesi,
     WordKisayollari,
+    // Esc, sonra Tab: editörden klavyeyle çıkış (V4.3-B2, WCAG 2.1.2); şemaya düğüm eklemiyor.
+    EditordenCikis,
   ];
 }

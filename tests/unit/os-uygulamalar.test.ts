@@ -190,7 +190,7 @@ test("doçentlik yalnızca Türkçe arayüzde (28.10.2026)", () => {
 });
 
 /* Phase 3 (04.11.2026): uyarlanır gezinme tek listeden üç biçim; çalışma bağlamı. */
-import { ALT_CUBUK, calismaBaglantilari, calismaDegistirAdresi, calismaIcindeMi, dahaFazlasi, etkinBaglanti, gezinmeGruplari } from "@/lib/os/uygulamalar";
+import { ALT_CUBUK, calismaBaglantilari, calismaSeridi, calismaDegistirAdresi, calismaIcindeMi, dahaFazlasi, etkinBaglanti, gezinmeGruplari } from "@/lib/os/uygulamalar";
 import { ekranSinifi } from "@/lib/os/kirilimlar";
 
 test("gezinme grupları: her uygulama tam olarak bir yerde, hiçbiri kaybolmuyor", () => {
@@ -329,4 +329,16 @@ describe("calismaDegistirAdresi (Project Switcher)", () => {
   test("kimlik adreste kaçışlanır", () => {
     assert.equal(git("/dashboard/editor/a1/write", "", "a1", { id: "x y", tur: "thesis" }), "/dashboard/editor/x%20y/write");
   });
+});
+
+/* V4.3-B2: telefon/tablet çalışma şeridi kenar çubuğuyla AYNI bağlantılardan. */
+test("çalışma şeridi: beş ana bölüm onaylı sırada, kalanı Daha fazla'da; hiçbir bağlantı kaybolmaz", () => {
+  for (const tur of ["thesis", "article"]) {
+    const hepsi = calismaBaglantilari({ id: "c1", baslik: "T", tur });
+    const { ana, diger } = calismaSeridi(hepsi);
+    assert.deepEqual(ana.map((b) => b.key), ["merkez", "yazim", "kaynaklar", "kanit", "analiz"]);
+    assert.deepEqual([...ana, ...diger].map((b) => b.key).sort(), hepsi.map((b) => b.key).sort());
+    assert.equal(diger.some((b) => b.key === "makale"), tur === "article");
+    assert.ok(diger.some((b) => b.key === "etik") && diger.some((b) => b.key === "belge"));
+  }
 });

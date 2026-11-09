@@ -70,3 +70,29 @@ export function harfCevir(metin: string, durum: HarfDurumu, kelimeBasi = true): 
   }
   return sonuc;
 }
+
+/*
+  EDİTÖRDEN KLAVYEYLE ÇIKIŞ (V4.3-B2, WCAG 2.1.2 "klavye tuzağı yok").
+
+  27.10.2026'dan beri Tab editörün içinde girinti/sekme ve odak editörden
+  HİÇ çıkmıyordu: yalnız klavye kullanan biri editöre girince sayfanın
+  geri kalanına (kaydet durumu, panel, gezinme) ulaşamıyordu.
+
+  Kural (kod editörlerindeki "Esc, sonra Tab" deseni):
+  - Esc "çıkışı kurar". Belgeye, seçime, kayda ve AI'a dokunmaz; editörü
+    odaktan da çıkarmaz (imleç yerinde kalır).
+  - Kuruluyken gelen Tab / Shift+Tab odağı editörün dışındaki
+    sonraki / önceki denetime taşır.
+  - Başka herhangi bir tuş kurulumu bozar: Tab yine girinti yapar.
+  - Satır içi öneri açıkken Esc onu kapatır ve çıkışı KURMAZ (önce o
+    eklenti çalışır ve tuşu tüketir; bu karara hiç ulaşılmaz).
+*/
+export type CikisKarari = "kur" | "cik-ileri" | "cik-geri" | "boz" | "dokunma";
+
+export function cikisKarari(kurulu: boolean, tus: string, shift: boolean): CikisKarari {
+  if (tus === "Escape") return "kur";
+  if (tus === "Tab") return kurulu ? (shift ? "cik-geri" : "cik-ileri") : "dokunma";
+  // Değiştirici tuşun kendisi (Shift+Tab'ın Shift'i) kurulumu bozmaz.
+  if (tus === "Shift" || tus === "Control" || tus === "Alt" || tus === "Meta") return "dokunma";
+  return kurulu ? "boz" : "dokunma";
+}

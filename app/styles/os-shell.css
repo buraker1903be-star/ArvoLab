@@ -188,7 +188,7 @@
   html:not([data-kenar="dar"]) .os-gezinme-daha-li { display: none; }
   /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin.
      Daraltılınca bölümler kenar çubuğundan çıkar, sekmeler geri gelir. */
-  html:not([data-kenar="dar"]) .os-root .calisma-sekmeleri { display: none; }
+  html:not([data-kenar="dar"]) .os-root .calisma-seridi { display: none; }
   /* Tek "burası" (UX S5): çalışma bölümünde sayfa etkinken genel uygulama
      yalnızca "içinde bulunulan bölüm" (aria-current="true"): dolgusuz, simgesi
      renkli. Eskiden ikisi de aynı dolgulu vurguyu taşıyordu. */
@@ -383,3 +383,31 @@
   html:not([data-kenar="dar"]) .os-root { --yazim-gecis-telafi: calc(var(--gecis-eski-kenar) - var(--gezinme-genislik)); }
 }
 .os-root .dashboard-page.yazim-sayfasi { margin-left: var(--yazim-gecis-telafi, 0px); }
+
+/* ---------- Çalışma şeridi (V4.3-B2, calisma-seridi.tsx) ----------
+   Telefon, tablet ve daraltılmış masaüstünde çalışmanın bölümleri.
+   KAYMAZ: beş bölüm doğal genişliğinde, aralar eşit dağıtılır; 360 px'te
+   sığar (kabuk-kabul ölçer). Etiket kesilmez (ellipsis yok, nowrap):
+   sığmazsa taşma denetimi düşer, sessizce "Kayn…" yazmaz. Yapışkan değil:
+   editörün yapışkan araç çubuğuyla üst üste binerdi. Geniş masaüstünde
+   gizli (yukarıda, ≥1200): aynı bağlantılar kenar çubuğunda. */
+.calisma-seridi { border-bottom: 1px solid var(--line-soft); background: var(--surface); }
+.calisma-seridi-liste {
+  display: flex; align-items: stretch; justify-content: space-between; gap: 2px;
+  max-width: var(--content-max); margin: 0 auto; padding: 0 var(--s-4); list-style: none;
+}
+.calisma-seridi-liste > li { display: flex; }
+.calisma-seridi-oge {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px;
+  padding: 0 var(--s-2); border: 0; border-bottom: 2px solid transparent; background: transparent;
+  color: var(--ink-soft); font: inherit; font-size: var(--fs-base); font-weight: 500; white-space: nowrap;
+  text-decoration: none; cursor: pointer;
+}
+.calisma-seridi-oge:hover { color: var(--ink); }
+.calisma-seridi-oge[aria-current="page"], .calisma-seridi-oge.is-active { border-bottom-color: var(--primary); color: var(--primary-ink); font-weight: 600; }
+.calisma-seridi-oge:focus-visible { outline: none; box-shadow: inset var(--odak-halkasi); }
+@media (max-width: 760px) {
+  .calisma-seridi-liste { padding: 0 var(--s-2); gap: 0; }
+  .calisma-seridi-oge { padding: 0 6px; }
+}
+.arac-menu-pencere a.arac-menu-oge[aria-current="page"] { color: var(--primary-ink); font-weight: 600; }

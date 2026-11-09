@@ -82,7 +82,7 @@ const tarayici = await chromium.launch();
     bekle(await baglam.isVisible(), "çalışma bağlamı görünmüyor");
     const etkin = baglam.locator('[aria-current="page"]');
     bekle((await etkin.count()) === 1, `bağlamda ${await etkin.count()} etkin bağlantı var`);
-    bekle(!(await sayfa.locator(".calisma-sekmeleri").first().isVisible().catch(() => false)), "sayfa içi sekmeler masaüstünde gizlenmeli");
+    bekle(!(await sayfa.locator(".calisma-seridi").first().isVisible().catch(() => false)), "sayfa içi sekmeler masaüstünde gizlenmeli");
   });
   await senaryo("masaüstü: genel sayfada çalışma bağlamı gizli", async () => {
     await git(sayfa, "/dashboard/analysis");
@@ -113,7 +113,7 @@ const tarayici = await chromium.launch();
     bekle((await dugme.getAttribute("aria-expanded")) === "false", "daraltınca aria-expanded false olmadı");
     const genislik = (await sayfa.locator("nav.os-gezinme").boundingBox())?.width ?? 0;
     bekle(genislik <= 100, `daraltılmış kenar çubuğu ${genislik}px`);
-    bekle(await sayfa.locator(".calisma-sekmeleri").first().isVisible(), "daraltınca çalışma sekmeleri sayfaya dönmeli");
+    bekle(await sayfa.locator(".calisma-seridi").first().isVisible(), "daraltınca çalışma sekmeleri sayfaya dönmeli");
     bekle((await sayfa.evaluate(() => localStorage.getItem("arvolab.kenar"))) === "dar", "tercih kaydedilmedi");
     // Yeniden açılış: JS paketleri 3 sn gecikse de ilk boyamada dar.
     await sayfa.route("**/*", async (r) => {
@@ -564,16 +564,18 @@ const tarayici = await chromium.launch();
 // ---- TABLET (820×1180): dar ray, sayfa sekmeleri ----
 {
   const sayfa = await tarayici.newPage({ viewport: { width: 820, height: 1180 } });
-  await senaryo("tablet: ray solda dar, kısa adlar yazılı", async () => {
+  // V4.3-B1 (K-1): ray 64 px ve yalnız simge; kısa ad kalktı, tam ad erişilebilir (ipucu kabuk-kabul'da sınanıyor).
+  await senaryo("tablet: ray solda dar (64 px), yalnız simge, erişilebilir ad tam", async () => {
     await git(sayfa, "/dashboard");
     const kutu = await sayfa.locator("nav.os-gezinme").boundingBox();
-    bekle(kutu && kutu.x === 0 && kutu.width <= 100 && kutu.height > 600, `ray beklenen yerde değil: ${JSON.stringify(kutu)}`);
-    bekle(await sayfa.locator(".os-gezinme-kisa").first().isVisible(), "kısa ad görünmüyor");
+    bekle(kutu && kutu.x === 0 && Math.round(kutu.width) === 64 && kutu.height > 600, `ray beklenen yerde değil: ${JSON.stringify(kutu)}`);
+    bekle(!(await sayfa.locator(".os-gezinme-kisa").first().isVisible()), "rayda kısa ad görünüyor");
+    bekle((await sayfa.locator("nav.os-gezinme").ariaSnapshot()).includes('link "Kaynak Kütüphanesi"'), "rayda erişilebilir ad yok");
   });
   await senaryo("tablet: çalışmada sayfa sekmeleri görünür, bağlam rayda yok", async () => {
     await git(sayfa, `/dashboard/editor/${TEZ}/kanit`);
     bekle(await sayfa.locator("nav.os-gezinme").isVisible(), "gezinme çizilmedi (sayfa açılmadı mı?)");
-    bekle(await sayfa.locator(".calisma-sekmeleri").first().isVisible(), "çalışma sekmeleri görünmüyor");
+    bekle(await sayfa.locator(".calisma-seridi").first().isVisible(), "çalışma sekmeleri görünmüyor");
     bekle(!(await sayfa.locator(".os-gezinme-baglam").isVisible()), "rayda bağlam görünmemeli");
   });
   await senaryo("tablet: Daha fazla penceresinde adlar yazılı (rayın kuralları pencereye sızmıyor)", async () => {
@@ -708,7 +710,8 @@ const tarayici = await chromium.launch();
     bekle((await tema(sayfa)) === "dark/dark", `sistem değişince ${await tema(sayfa)}`);
     // Phase 4.2: cihaz açıkken uygulamada Koyu seçiliyse tarayıcı çubuğu da koyu renkte olmalı.
     const metalar = await sayfa.evaluate(() => [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute("content")));
-    bekle(metalar.length > 0 && metalar.every((r) => r === "#0d1219"), `theme-color ${metalar.join(",")}`);
+    // V4.3-A2-1: zemin v4 rolüne bağlandı (TEMA_RENGI #0c1119; eskiden #0d1219).
+    bekle(metalar.length > 0 && metalar.every((r) => r === "#0c1119"), `theme-color ${metalar.join(",")}`);
     await ctx.close();
   });
 
@@ -753,9 +756,9 @@ const tarayici = await chromium.launch();
     await ctx.close();
   });
 
-  await senaryo("tema: belge kâğıdı koyu temada açık (#ECE9E2) ve koyu mürekkepli (Phase 4.3, UX S8)", async () => {
-    // Akademik belgenin sayfası uygulama temasından bağımsız: .kagit açık tokenları kendi üzerinde kurar.
-    // UX S8 (07.11.2026): koyu temada ekrandaki kâğıt saf beyaz değil #ECE9E2 (ayrıntı: kagit-kabul.mjs).
+  await senaryo("tema: belge kâğıdı koyu temada onaylı loş kâğıt (#182231) ve açık belge metni (V4.3-A2-3)", async () => {
+    // V4.3-A2-3 (K-5, onaylı v4 tasarımı): koyu temada ekranda loş kâğıt #182231, metin #E4E9F0.
+    // 07–09.11.2026 arası #ECE9E2 açık kâğıttı. Ayrıntı ve kontrast: kagit-kabul.mjs.
     const ctx = await tarayici.newContext({ colorScheme: "dark" });
     const sayfa = await ctx.newPage();
     await git(sayfa, `/dashboard/editor/${TEZ}/write`);
@@ -763,9 +766,8 @@ const tarayici = await chromium.launch();
     await kagit.waitFor({ state: "visible", timeout: 30000 });
     const renk = await kagit.evaluate((el) => ({ zemin: getComputedStyle(el).backgroundColor, yazi: getComputedStyle(el).color, tema: document.documentElement.getAttribute("data-theme") }));
     bekle(renk.tema === "dark", `tema ${renk.tema}`);
-    bekle(renk.zemin === "rgb(236, 233, 226)", `kâğıt zemini ${renk.zemin}`);
-    const [r, g, b] = renk.yazi.match(/\d+/g).map(Number);
-    bekle(r + g + b < 150, `kâğıt yazısı koyu değil: ${renk.yazi}`);
+    bekle(renk.zemin === "rgb(24, 34, 49)", `kâğıt zemini ${renk.zemin}`);
+    bekle(renk.yazi === "rgb(228, 233, 240)", `kâğıt yazısı onaylı #E4E9F0 değil: ${renk.yazi}`);
     await ctx.close();
   });
 
