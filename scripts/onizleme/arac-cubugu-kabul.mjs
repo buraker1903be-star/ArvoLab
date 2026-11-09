@@ -76,6 +76,7 @@ const olc = (sayfa) =>
     }
     const gizli = [...bar.querySelectorAll("[data-arac-grup][hidden]")].map((e) => e.dataset.aracGrup);
     return {
+      yukseklik: b.height,
       kayiyor: bar.scrollWidth > bar.clientWidth + 1,
       kucuk,
       disarida,
@@ -132,6 +133,8 @@ async function durum(sayfa, ad, { dokunmatik, genislik }) {
   // Telefonda Geri al çubukta ve en az 40×40 (kurum sahibinin kararı, 07.11.2026); Yinele "⋯"de olabilir.
   if (genislik <= 390) bekle(o.geriAl && o.geriAl.w >= 40 && o.geriAl.h >= 40, `${ad}: Geri al çubukta görünmüyor ya da 40×40 altı (${JSON.stringify(o.geriAl)})`);
   bekle(!o.kayiyor, `${ad}: çubuk yana kayıyor`);
+  // V1 (Phase 4.5): çubuk 48 px (--arac-cubugu-h); denetimler 40×40 kalır. Eskiden 54 px'ti (6 + 6 dolgu).
+  bekle(Math.abs(o.yukseklik - 48) < 0.6, `${ad}: çubuk ${o.yukseklik} px (beklenen 48)`);
   bekle(o.kucuk.length === 0, `${ad}: 40×40 altı: ${o.kucuk.join(", ")}`);
   bekle(o.disarida.length === 0, `${ad}: çubuğun dışında: ${o.disarida.join(", ")}`);
   bekle(o.ucNokta, `${ad}: "⋯" görünmüyor`);
@@ -196,6 +199,31 @@ for (const genislik of [1024, 390]) {
   const o = await olc(sayfa);
   bekle(!o.kayiyor && o.kucuk.length === 0, `${genislik} panel-açık (sayfa): çubuk bozuldu`);
   await ctx.close();
+}
+/*
+  V1 (Phase 4.5): "Bul ve değiştir" şeridi (.manuscript-ust) kaydırınca
+  araç çubuğunun HEMEN altına yapışır: üst üste binmez, arada boşluk
+  kalmaz. Şeridin konumu çubuk yüksekliğinden türer (--arac-cubugu-h);
+  eskiden 54 elle yazılıydı ve çubuk değişince şerit kayardı.
+*/
+for (const genislik of [1440, 1024, 390]) {
+  for (const tema of ["light", "dark"]) {
+    const ctx = await baglam(genislik, tema, false);
+    const { sayfa } = await editoruAc(ctx);
+    const ad = `${genislik} ${tema} bul şeridi`;
+    await sayfa.locator(".ProseMirror").click();
+    await sayfa.keyboard.press("Control+f");
+    await sayfa.locator(".manuscript-ust").waitFor({ timeout: 10000 });
+    await sayfa.evaluate(() => window.scrollTo(0, 3000));
+    await sayfa.waitForTimeout(300);
+    const r = await sayfa.evaluate(() => {
+      const bar = document.querySelector(".manuscript-araclar").getBoundingClientRect();
+      const ust = document.querySelector(".manuscript-ust").getBoundingClientRect();
+      return { barAlt: bar.bottom, ustUst: ust.top, barH: bar.height };
+    });
+    bekle(Math.abs(r.ustUst - r.barAlt) <= 1, `${ad}: şerit çubuğa yapışmıyor (çubuk altı ${r.barAlt.toFixed(1)}, şerit üstü ${r.ustUst.toFixed(1)})`);
+    await ctx.close();
+  }
 }
 // BOŞ çalışma (belge tarayıcıda boşaltılır)
 for (const genislik of [1440, 390]) {

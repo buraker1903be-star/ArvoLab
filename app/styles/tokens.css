@@ -862,6 +862,9 @@ html[data-theme="dark"] {
   --belge-sutun-varsayilan: 638px;
   --belge-pay: 61px;
   --belge-pay-min: 24px;
+  /* Editörün araç çubuğu (Phase 4.5 V1): 40 px dokunma hedefleri + 2 × 3 px dolgu + 2 × 1 px kenar.
+     Bul şeridinin yapışık konumu da buradan türer. Eskiden 54 px (6 px dolgu) ve şeridin konumu elle yazılıydı. */
+  --arac-cubugu-h: 48px;
   --ust: 56px;
   --alt-cubuk: 64px; /* ≤760: sabit alt gezinme (+ güvenli alan) */
   --icerik-max: 1320px;

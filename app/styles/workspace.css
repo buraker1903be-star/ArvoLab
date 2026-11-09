@@ -580,7 +580,10 @@
   align-items: center;
   gap: 0;
   min-width: 0;
-  padding: 6px 8px;
+  /* Yükseklik token'dan (V1, Phase 4.5); denetimler 40 px kalır, yalnızca dikey dolgu 6 → 3 px. */
+  box-sizing: border-box;
+  height: var(--arac-cubugu-h);
+  padding: 0 8px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -1495,8 +1498,8 @@
   background: var(--surface);
 }
 .manuscript-main > .manuscript-editor-shell { border-top: 0; border-radius: 0 0 var(--r-lg) var(--r-lg); box-shadow: none; }
-/* Bul-değiştir şeridi araç çubuğunun hemen altına yapışır (çubuk 54 piksel: 40 düğme + 12 dolgu + 2 kenar; UX S4 öncesi 46). */
-.manuscript-main .manuscript-ust { top: calc(var(--topbar-height) + 54px); z-index: calc(var(--z-sticky) - 1); background: var(--surface); }
+/* Bul-değiştir şeridi araç çubuğunun hemen altına yapışır. Konum çubuğun token'ından (V1, Phase 4.5): eskiden 54 elle yazılıydı, çubuk değişince şerit kayardı. */
+.manuscript-main .manuscript-ust { top: calc(var(--topbar-height) + var(--arac-cubugu-h)); z-index: calc(var(--z-sticky) - 1); background: var(--surface); }
 /* Seçim kutuları çubukta kenarlıksız; mockup'taki "Normal Metin" gibi. */
 .manuscript-araclar .toolbar-select { border-color: transparent; background-color: transparent; font-weight: 600; }
 .manuscript-araclar .toolbar-select:hover { background-color: var(--dugme-hover-zemin); }
