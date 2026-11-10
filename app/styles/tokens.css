@@ -690,6 +690,11 @@ html[data-theme="dark"] {
   --p-gece-300: #A6B1C2;
   --p-gece-100: #EEF2F7;
   --p-gece-kagit-metin: #E4E9F0;
+  /* Yazım ekranının koyu kâğıdı ve masası (Phase 4.6 D3, workspace.css). Onaylı
+     loş kâğıt #182231 masa #0A0F16'dan yalnızca 1,20 kontrastla ayrılıyordu;
+     kâğıt bir tık açık, masa bir tık koyu: 1,30. Metin 13,12 → 12,5 (AAA). */
+  --p-gece-kagit-yazim: #1B2636;
+  --p-gece-masa-yazim: #06090E;
   /* Anlam renkleri */
   --p-yesil-600: #4F7038; --p-yesil-500: #6B9150; --p-yesil-300: #8DB46C; --p-yesil-050: #EEF4E8; --p-yesil-900: #1A2A1C;
   --p-amber-600: #8A6120; --p-amber-300: #DDB06A; --p-amber-050: #FBF3E6; --p-amber-900: #2E2416;
@@ -748,6 +753,9 @@ html[data-theme="dark"] {
   /* Koyu temada belge "loş kâğıt": saf beyaz göz yorar, saf siyah kâğıt hissini kaybeder. */
   --kagit-metin: var(--p-gece-kagit-metin);
   --masa: var(--p-gece-950);
+  /* Yazım ekranının koyu kâğıdı ve masası (D3; yalnızca workspace.css'teki ekran kuralı okur). */
+  --yuzey-kagit-yazim: var(--p-gece-kagit-yazim);
+  --yuzey-masa-yazim: var(--p-gece-masa-yazim);
 
   --metin-1: var(--p-gece-100);
   --metin-2: var(--p-gece-300);

@@ -2,8 +2,9 @@
   KOYU TEMADA EDİTÖR KÂĞIDI KABULÜ (UX S8, 07.11.2026).
 
   1440 ve 390 piksel × açık/koyu:
-    - kâğıt rengi: açıkta beyaz, koyuda loş kâğıt #182231 (yalnızca
-      ekranda; V4.3-A2-3, onaylı v4 tasarımı. 07–09.11.2026 arası #ECE9E2);
+    - kâğıt rengi: açıkta beyaz, koyuda loş kâğıt (yalnızca ekranda;
+      V4.3-A2-3. 07–09.11.2026 arası #ECE9E2, 10.11.2026'ya kadar #182231;
+      Phase 4.6 D3'ten beri yazım ekranında #1B2636, masa #06090E);
     - belgedeki her yazı öğesi kendi zeminiyle en az 4,5:1 (18 px ve üstü
       ya da 14 px kalın üstü için 3:1); zemin saydamsa kâğıt sayılır;
     - koyu temada belgenin içinde saf beyaz zeminli öğe yok (beyaz yama);
@@ -128,7 +129,8 @@ for (const genislik of [1440, 390]) {
         th: th ? oran(rgba(getComputedStyle(th).color), zemin(th)) : null,
       };
     });
-    const beklenen = tema === "dark" ? "24,34,49" : "255,255,255";
+    // Koyu: yazım ekranının kâğıdı #1B2636 (Phase 4.6 D3; 10.11.2026'ya kadar #182231).
+    const beklenen = tema === "dark" ? "27,38,54" : "255,255,255";
     bekle(o.kagit === beklenen, `${ad}: kâğıt ${o.kagit}, beklenen ${beklenen}`);
     bekle(o.dusuk.length === 0, `${ad}: kontrastı düşük yazı: ${o.dusuk.join("; ")}`);
     if (tema === "dark") bekle(o.beyaz.length === 0, `${ad}: kâğıdın içinde beyaz zeminli öğe: ${o.beyaz.join(", ")}`);

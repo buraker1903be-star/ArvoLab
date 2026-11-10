@@ -14,7 +14,9 @@
     - "Yeni çalışma" yazım ekranında dolgusuz; Ana Sayfa'da dolu kalır;
     - etkin bölüm (aria-current) dolgu + sol çizgiyle ötekilerden ayrı;
     - "Yeni çalışma" klavye odağında halka görünür;
-    - yatay taşma yok; belge sütunu 638 px (varsayılan) değişmez.
+    - yatay taşma yok; belge sütunu 638 px (varsayılan) değişmez;
+    - D3: koyu temada kâğıt ile masa arasında en az 1,30 kontrast (eskiden
+      1,20), belge metni kâğıtta ≥ 7 (AAA); açık temada masa değişmez.
   Önizleme: npm run onizleme
     NODE_PATH=$(npm root -g) node scripts/onizleme/yazim-hiyerarsi-kabul.mjs [taban]
   Çıkış: 0 temiz, 1 bir denetim düştü.
@@ -72,7 +74,15 @@ const OLC = () => {
   const uyari = q(".yan-panel .kontrol-yapi[data-tone=warning]");
   const etkin = q(".os-gezinme-alt.is-active"); const etkinOlmayan = q(".os-gezinme-alt:not(.is-active)");
   const ust = q(".dashboard-header");
+  // Kâğıt ve masa: arka plan degradesinin renkleri (.manuscript-editor-content üzerinde çözülen değerler).
+  const kapS = pm ? getComputedStyle(pm) : null;
+  const hex = (v) => { v = (v || "").trim(); if (!v.startsWith("#")) return rgba(v); return [1, 3, 5].map((i) => parseInt(v.slice(i, i + 2), 16)).concat(1); };
+  const kagitRenk = kapS ? hex(kapS.getPropertyValue("--kagit")) : null;
+  const masaRenk = kapS ? hex(kapS.getPropertyValue("--belge-masa")) : null;
   return {
+    kagitMasa: kagitRenk && masaRenk ? kon(kagitRenk, masaRenk) : null,
+    metinKagit: kagitRenk ? kon(rgba(kapS.color), kagitRenk) : null,
+    tema: document.documentElement.getAttribute("data-theme"),
     tasma: document.documentElement.scrollWidth > innerWidth + 1,
     sutun: pm ? pm.getBoundingClientRect().width - parseFloat(ps.paddingLeft) - parseFloat(ps.paddingRight) : null,
     lum: { kagit: pm ? lum(zemin(pm)) : null, kenar: lum(zemin(q(".os-gezinme"))), panel: panel ? lum(zemin(panel)) : null, ust: lum(zemin(ust)) },
@@ -100,6 +110,10 @@ for (const w of [1024, 1200, 1366, 1440]) for (const tema of ["light", "dark"]) 
   denetle(o.dusuk.length === 0, `${ad}: AA altı metin: ${o.dusuk.join(" | ")}`);
   // Kâğıt en açık yüzey (koyu temada loş kâğıt yine kabuktan açık).
   denetle(o.lum.kagit >= o.lum.kenar && o.lum.kagit >= o.lum.ust - 1e-6, `${ad}: kâğıt en açık yüzey değil (${JSON.stringify(o.lum)})`);
+  if (o.tema === "dark") {
+    denetle(o.kagitMasa >= 1.3, `${ad}: koyu temada kâğıt–masa kontrastı ${o.kagitMasa?.toFixed(2)} (≥ 1,30)`);
+    denetle(o.metinKagit >= 7, `${ad}: koyu kâğıtta belge metni ${o.metinKagit?.toFixed(2)} (≥ 7)`);
+  }
   if (o.panelBicim === "sutun") {
     denetle(o.panelKenarAyni, `${ad}: yerleşik panel kenar çubuğunun tonunda değil`);
     denetle(o.lum.kagit > o.lum.panel, `${ad}: panel kâğıt kadar açık (panel ${o.lum.panel.toFixed(3)}, kâğıt ${o.lum.kagit.toFixed(3)})`);

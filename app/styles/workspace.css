@@ -1914,6 +1914,26 @@
 @media screen and (min-width: 1200px) {
   .manuscript-editor-content { --belge-ic-min: var(--belge-pay-min); }
 }
+/*
+  KOYU TEMADA KÂĞIT–MASA AYRIMI (Phase 4.6 D3, 10.11.2026; kurum sahibinin
+  onayı). Eskiden koyu temada loş kâğıt (#182231) ile masa (#0A0F16)
+  arasındaki kontrast 1,20'ydi: sayfanın sınırı neredeyse yalnızca 1 px
+  kenar çizgisinden okunuyordu ve belge kabuğun bir parçası gibi duruyordu.
+  Masa tam siyaha indirilseydi kâğıt aynen kalarak ancak 1,31 olurdu (sert);
+  yalnızca kâğıt açılsaydı metin kontrastı gereğinden çok düşerdi. İkisi
+  birer tık: kâğıt #1B2636, masa #06090E → 1,30; belge metni 13,12 → 12,5.
+  Yalnızca YAZIM ekranında (danışman paylaşımındaki kâğıt değişmez), yalnızca
+  koyu temada ve yalnızca EKRANDA: yazdırma, PDF ve Word kendi yollarından
+  çizilir (lib/tiptap-html.ts, lib/tiptap-docx.ts). Yalnızca renk; kâğıdın
+  ölçüsü, sütun ve satır kırılımı değişmez. Belgenin içindeki --kagit
+  okuyucuları (tablo, şekil zemini) aynı tonu devralır.
+*/
+@media screen {
+  html[data-theme="dark"] .yazim-sayfasi .manuscript-editor-content {
+    --kagit: var(--yuzey-kagit-yazim);
+    --belge-masa: var(--yuzey-masa-yazim);
+  }
+}
 /* Telefonda masa yok: sayfa ekranın tamamı (her piksel yazıya). */
 @media screen and (max-width: 760px) {
   .manuscript-editor-content { --sayfa-yari: 50%; }

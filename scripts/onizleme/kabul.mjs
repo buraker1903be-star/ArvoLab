@@ -761,9 +761,10 @@ const tarayici = await chromium.launch();
     await ctx.close();
   });
 
-  await senaryo("tema: belge kâğıdı koyu temada onaylı loş kâğıt (#182231) ve açık belge metni (V4.3-A2-3)", async () => {
-    // V4.3-A2-3 (K-5, onaylı v4 tasarımı): koyu temada ekranda loş kâğıt #182231, metin #E4E9F0.
-    // 07–09.11.2026 arası #ECE9E2 açık kâğıttı. Ayrıntı ve kontrast: kagit-kabul.mjs.
+  await senaryo("tema: yazım ekranında koyu kâğıt #1B2636 ve açık belge metni (V4.3-A2-3, Phase 4.6 D3)", async () => {
+    // V4.3-A2-3 (K-5): koyu temada ekranda loş kâğıt, metin #E4E9F0. 07–09.11.2026 arası #ECE9E2
+    // açık kâğıttı; 10.11.2026'ya kadar #182231 (masayla kontrast 1,20). D3 (kurum sahibinin onayı):
+    // yazım ekranında kâğıt #1B2636, masa #06090E (1,30). Ayrıntı ve kontrast: kagit-kabul.mjs.
     const ctx = await tarayici.newContext({ colorScheme: "dark" });
     const sayfa = await ctx.newPage();
     await git(sayfa, `/dashboard/editor/${TEZ}/write`);
@@ -771,7 +772,7 @@ const tarayici = await chromium.launch();
     await kagit.waitFor({ state: "visible", timeout: 30000 });
     const renk = await kagit.evaluate((el) => ({ zemin: getComputedStyle(el).backgroundColor, yazi: getComputedStyle(el).color, tema: document.documentElement.getAttribute("data-theme") }));
     bekle(renk.tema === "dark", `tema ${renk.tema}`);
-    bekle(renk.zemin === "rgb(24, 34, 49)", `kâğıt zemini ${renk.zemin}`);
+    bekle(renk.zemin === "rgb(27, 38, 54)", `kâğıt zemini ${renk.zemin}`);
     bekle(renk.yazi === "rgb(228, 233, 240)", `kâğıt yazısı onaylı #E4E9F0 değil: ${renk.yazi}`);
     await ctx.close();
   });
