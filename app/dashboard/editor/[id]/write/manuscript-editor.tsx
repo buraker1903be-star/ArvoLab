@@ -114,6 +114,8 @@ import { cslAtifUret } from "@/app/actions/csl";
 import YazimIpuclariKarti from "./yazim-ipuclari-karti";
 
 import { useSatirIciOneri } from "./satir-ici-oneri";
+import { etkinOneri } from "@/lib/tiptap-satir-ici-oneri";
+import { odakEscKarari } from "@/lib/klavye-karari";
 import AracMenusu from "@/app/dashboard/_components/acilir-menu";
 import { CalismaBolumMenusu, CalismaBolumOgeleri } from "@/app/dashboard/_components/calisma-seridi";
 import YazarlikRaporuKarti from "./yazarlik-raporu-karti";
@@ -1158,15 +1160,34 @@ export default function ManuscriptEditor({
     localStorage; editöre işlem gönderilmez, belge "değişti" olmaz.
   */
   const kagitGorunumu = useSyncExternalStore(kagitAbone, kagitDurumu, () => "acik" as const);
+  /*
+    Odak modundan Esc ile çıkış (TB-3; kural lib/klavye-karari.ts,
+    odakEscKarari). Eskiden kapalı çekmecelerin role="dialog"'u ve
+    ProseMirror'ın koşulsuz preventDefault'u yüzünden Esc hiç çıkarmıyordu.
+    YAKALAMA aşamasında dinlenir: editör ve öteki katmanlar tuşu görmeden
+    karar verilir. Açık bir katman varsa dokunulmaz (Esc onu kapatır);
+    yoksa odaktan çıkılır ve olay durdurulur: aynı Esc editörden çıkışı
+    "kurmaz" (V4.3-B2), sonraki Tab yine girinti yapar. Belgeye, seçime,
+    kayda dokunulmaz; imleç editörde kalır.
+  */
   useEffect(() => {
     if (!odak) return;
     const tus = (e: KeyboardEvent) => {
-      // Açık bir pencere ya da öneri Esc'i kendisi kullanıyor; yalnızca editör boştayken çık.
-      if (e.key === "Escape" && !e.defaultPrevented && !document.querySelector("dialog[open], [role=dialog]")) setOdak(false);
+      const hedef = e.target instanceof Element ? e.target : null;
+      const karar = odakEscKarari({
+        odak: true,
+        tus: e.key,
+        acikKatman: Boolean(document.querySelector(ACIK_KATMAN)),
+        oneriAcik: Boolean(editor && etkinOneri(editor.state)),
+        kendiEscliAlan: Boolean(hedef?.closest("input, textarea, select")),
+      });
+      if (karar !== "cik") return;
+      e.stopPropagation();
+      setOdak(false);
     };
-    window.addEventListener("keydown", tus);
-    return () => window.removeEventListener("keydown", tus);
-  }, [odak]);
+    window.addEventListener("keydown", tus, true);
+    return () => window.removeEventListener("keydown", tus, true);
+  }, [odak, editor]);
   const otomatigiKapat = useCallback(() => otomatikOneriAyarla(false), [otomatikOneriAyarla]);
   useSatirIciOneri({ editor, projectId, otomatik: otomatikOneri, otomatigiKapat });
 
@@ -4455,6 +4476,13 @@ export default function ManuscriptEditor({
   );
 }
 
+
+/*
+  Gerçekten açık katmanlar (TB-3): açık <dialog>, açık çekmece, gizli olmayan
+  açılır kart (araç menüsü, seçim AI kartı: popover) ve gizli olmayan menü.
+  Kapalı çekmeceler DOM'da role="dialog" ile duruyor; o yüzden rol değil durum.
+*/
+const ACIK_KATMAN = 'dialog[open], .drawer-root.open, [popover]:not([hidden]), [role="menu"]:not([hidden])';
 
 function ToolbarButton({
   label,

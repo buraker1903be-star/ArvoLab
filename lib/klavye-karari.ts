@@ -96,3 +96,26 @@ export function cikisKarari(kurulu: boolean, tus: string, shift: boolean): Cikis
   if (tus === "Shift" || tus === "Control" || tus === "Alt" || tus === "Meta") return "dokunma";
   return kurulu ? "boz" : "dokunma";
 }
+
+/*
+  ODAK MODUNDAN Esc İLE ÇIKIŞ (Phase 4.6 TB-3, 10.11.2026).
+
+  Eskiden tablet ve masaüstünde Esc odak modundan HİÇ çıkarmıyordu, iki
+  sebeple (tarayıcıda doğrulandı): kapalı çekmeceler DOM'da role="dialog"
+  taşıdığı için "açık pencere var" sanılıyordu; ProseMirror editördeki HER
+  Esc'te koşulsuz preventDefault çağırdığı için (captureKeyDown, kod 27)
+  "!defaultPrevented" denetimi editörde hiç geçmiyordu.
+
+  Kural: Esc önce en üstteki katmanı kapatır, katman yoksa odaktan çıkar.
+  Katman = gerçekten açık bir pencere/çekmece/menü/açılır kart (çağıran
+  DOM'dan bakar), görünür bir satır içi öneri ya da kendi Esc'i olan bir
+  metin alanı (bul kutusu, AI isteği, kaynak düzenleme). defaultPrevented'a
+  bakılmaz: editörde anlamsız (ProseMirror hep çağırır).
+*/
+export type OdakEscKarari = "cik" | "birak";
+
+export function odakEscKarari(g: { odak: boolean; tus: string; acikKatman: boolean; oneriAcik: boolean; kendiEscliAlan: boolean }): OdakEscKarari {
+  if (!g.odak || g.tus !== "Escape") return "birak";
+  if (g.acikKatman || g.oneriAcik || g.kendiEscliAlan) return "birak";
+  return "cik";
+}

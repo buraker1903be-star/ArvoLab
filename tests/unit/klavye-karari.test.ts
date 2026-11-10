@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { cikisKarari, harfCevir, puntoAdimi, siradakiHarfDurumu, tabKarari } from "@/lib/klavye-karari";
+import { cikisKarari, harfCevir, odakEscKarari, puntoAdimi, siradakiHarfDurumu, tabKarari } from "@/lib/klavye-karari";
 
 const d = (ek: Partial<Parameters<typeof tabKarari>[0]>) => ({ listede: false, tabloda: false, satirBasinda: false, girintili: false, ...ek });
 
@@ -56,4 +56,23 @@ test("çıkış: başka bir tuş kurulumu bozar, değiştirici tuşun kendisi bo
   assert.equal(cikisKarari(true, "Enter", false), "boz");
   assert.equal(cikisKarari(true, "Shift", true), "dokunma");
   assert.equal(cikisKarari(false, "a", false), "dokunma");
+});
+
+/*
+  TB-3 (Phase 4.6): odak modundan Esc. Eskiden kapalı çekmecelerin
+  role="dialog"'u ve ProseMirror'ın koşulsuz preventDefault'u yüzünden Esc
+  hiç çıkarmıyordu; karar artık yalnızca gerçekten açık katmana bakar.
+*/
+describe("odakEscKarari", () => {
+  const g = (ek: Partial<Parameters<typeof odakEscKarari>[0]>) => ({ odak: true, tus: "Escape", acikKatman: false, oneriAcik: false, kendiEscliAlan: false, ...ek });
+  test("odakta, katman yokken Esc çıkar", () => assert.equal(odakEscKarari(g({})), "cik"));
+  test("odak kapalıyken ya da başka tuşta dokunmaz", () => {
+    assert.equal(odakEscKarari(g({ odak: false })), "birak");
+    for (const tus of ["Enter", "Tab", "a", "Esc"]) assert.equal(odakEscKarari(g({ tus })), "birak");
+  });
+  test("açık katman önce kapanır: pencere/menü, satır içi öneri, kendi Esc'i olan alan", () => {
+    assert.equal(odakEscKarari(g({ acikKatman: true })), "birak");
+    assert.equal(odakEscKarari(g({ oneriAcik: true })), "birak");
+    assert.equal(odakEscKarari(g({ kendiEscliAlan: true })), "birak");
+  });
 });
