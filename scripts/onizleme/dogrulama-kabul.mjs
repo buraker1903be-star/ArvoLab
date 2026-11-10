@@ -71,10 +71,16 @@ await senaryo("onay sayfası: bozuk belirteç ya da bilinmeyen tür → 'Bağlan
   }
 });
 
-await senaryo("BAŞARILI: kayıt doğrulaması panele 303 ile gider", async () => {
+/*
+  G1 (06.11.2026): kayıt artık şifre almıyor ve veritabanı onay anında
+  öncesinden kalan şifreyi siliyor; bu yüzden kayıt doğrulaması bağlantının
+  next'inden bağımsız olarak İLK ŞİFRE sayfasına gider. Eskiden bu senaryo
+  "/dashboard" bekliyordu (G1 öncesi davranış).
+*/
+await senaryo("BAŞARILI: kayıt doğrulaması ilk şifre sayfasına 303 ile gider (next yok sayılır)", async () => {
   const y = await onayla({ token_hash: "onizleme-gecerli-1", type: "signup", next: "/dashboard" });
   esit(y.status, 303, "durum");
-  esit(yer(y), "/dashboard", "hedef");
+  esit(yer(y), "/reset-password?ilk=1", "hedef");
 });
 
 await senaryo("BAŞARILI: şifre sıfırlama yeni şifre sayfasına gider", async () => {
@@ -135,8 +141,13 @@ await senaryo("başka kökenden POST reddedilir (giriş CSRF'i), geçerli belirt
 });
 
 await senaryo("açık yönlendirme yok: next başka alana çözülemez", async () => {
+  /*
+    Kayıtta next hiç okunmuyor (G1), bu yüzden süzgeç next'i GERÇEKTEN
+    kullanan türle sınanır (kurtarma); kayıt ise her durumda iç sayfada kalır.
+  */
   for (const next of ["//saldirgan.example", "/\\saldirgan.example", "https://saldirgan.example", "/dashboard//x"]) {
-    esit(yer(await onayla({ token_hash: "onizleme-gecerli-5", type: "signup", next })), "/dashboard", next);
+    esit(yer(await onayla({ token_hash: "onizleme-gecerli-5", type: "recovery", next })), "/dashboard", `kurtarma ${next}`);
+    esit(yer(await onayla({ token_hash: "onizleme-gecerli-6", type: "signup", next })), "/reset-password?ilk=1", `kayıt ${next}`);
   }
 });
 
