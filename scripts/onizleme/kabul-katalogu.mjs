@@ -77,10 +77,16 @@ export const KATALOG = {
       bos: { gerekli: { bos: "1" }, arg: T },
     },
   },
-  "genel-bakis-sadelik-kabul": { kipler: { varsayilan: { gerekli: {}, arg: T } } },
+  "genel-bakis-sadelik-kabul": {
+    kipler: {
+      dolu: { gerekli: { bos: "0" }, arg: T },
+      bos: { gerekli: { bos: "1" }, arg: T },
+    },
+  },
   "gezinme-korumasi-kabul": { kipler: { varsayilan: { gerekli: yazAi, arg: T, taze: true } } },
   "kabuk-kabul": { kipler: { varsayilan: { gerekli: {}, arg: T } } },
-  kabul: { kipler: { varsayilan: { gerekli: {}, arg: T } } },
+  /* Kaynaklar ⋯ menüsündeki "Tarama asistanı" yalnızca asistan açıkken çizilir (betiğin başlığı). */
+  kabul: { kipler: { varsayilan: { gerekli: { ai: "1" }, arg: T } } },
   "kagit-gorunumu-kabul": { kipler: { varsayilan: { gerekli: {}, arg: T } } },
   "kagit-kabul": { kipler: { varsayilan: { gerekli: {}, arg: T } } },
   "kayit-kabul": {
@@ -91,7 +97,7 @@ export const KATALOG = {
       acilamadi: { gerekli: { yaz: "1", senaryo: "acilamadi" }, arg: ["{taban}", "--senaryo=acilamadi"], taze: true },
     },
   },
-  "kaynak-ekleme-kabul": { kipler: { varsayilan: { gerekli: { yaz: "1" }, arg: T } } },
+  "kaynak-ekleme-kabul": { kipler: { varsayilan: { gerekli: { yaz: "1" }, arg: T, taze: true } } },
   "kaynak-kabul": { kipler: { varsayilan: { gerekli: { yaz: "1" }, arg: T } } },
   "kilavuz-bildirim-kabul": {
     kipler: {

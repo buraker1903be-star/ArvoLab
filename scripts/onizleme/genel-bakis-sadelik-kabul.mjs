@@ -48,7 +48,7 @@ const argv = process.argv.slice(2);
 const SADECE_OLC = argv.includes("--olc");
 const TABAN = argv.find((a) => !a.startsWith("--")) ?? "http://localhost:3123";
 /* Ön koşul (scripts/onizleme/onkosul.mjs): yanlış sunucuya karşı sıradan FAIL değil, BLOCKED (2). */
-await onkosul("genel-bakis-sadelik-kabul", TABAN, "varsayilan");
+await onkosul("genel-bakis-sadelik-kabul", TABAN, null);
 const TEZ = "00000000-0000-4000-8000-0000000000b1";
 let hata = 0;
 let denetim = 0;
