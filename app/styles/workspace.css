@@ -2290,3 +2290,45 @@ body:has(.yazim-sayfasi) .os-saat { display: none; }
 @media (hover: hover) and (pointer: fine) {
   .yazma-eylemleri .yazma-ai:hover { border-color: transparent; background: color-mix(in srgb, var(--primary-ink) 12%, var(--primary-soft)); }
 }
+
+/*
+  YAZIM EKRANININ GÖRSEL HİYERARŞİSİ (Phase 4.6 D2, 10.11.2026).
+  Kurum sahibinin kararı: akademik belge her zaman çalışma alanının görsel
+  merkezi. Eskiden (ölçüldü, 1440 px) üç yüzey neredeyse aynı tondaydı
+  (kenar–sayfa 1,05, panel–sayfa 1,07, kâğıt–sayfa 1,07); sağ panel
+  kâğıtla AYNI beyaz kartı kullanıyordu, ekranın en doygun öğesi yazarken
+  gerekmeyen "Yeni çalışma" düğmesiydi (koyu temada parlak mavi dolgu) ve
+  "N yapı uyarısı" sarı dolgulu bir kart olarak kalıcı alarm gibi
+  duruyordu. Şimdi yalnızca bu ekranda:
+    - sağ panel kenar çubuğunun sakin tonunda (--kenar-zemin), gölgesiz,
+      ince çizgiyle ayrılır: ekranda beyaz (koyu temada en açık) tek
+      yüzey kâğıt kalır. Yalnızca yerleşik panel (sütun); tablet ve
+      telefonda belgenin üstüne açılan sayfa kendi gölgesini korur;
+    - kenar çubuğundaki "Yeni çalışma" dolgusuz, ince çerçeveli ikincil
+      düğme: yeri, adı, boyu ve kısayolu aynı. Ana sayfa ve öteki
+      ekranlarda dolu kalır (kural .yazim-sayfasi'na bağlı);
+    - çalışma bağlamı kutusu kenar çubuğunun zemininde (beyaz kart değil);
+      etkin bölüm dolgusuna ek olarak solda 2 px lacivert çizgi taşır, renk
+      tek başına işaret olmasın;
+    - UYARI tonundaki yapı kartı nötr zeminde: simge ve fareyle üzerine
+      gelince çerçeve uyarı rengini korur. TEHLİKE tonu (kritik) bilerek
+      değişmedi: dolgulu ve kırmızı kalır.
+  Belge genişliği, satır kırılımı, sayfa ölçüsü ve hiçbir işlev değişmez:
+  bu blokta yalnızca renk, zemin, gölge ve çizgi var (ölçü yok).
+*/
+.yazim-sayfasi .yan-panel[data-bicim="sutun"] { background: var(--kenar-zemin); box-shadow: none; }
+.yan-panel .kontrol-yapi[data-tone="warning"] { border-color: var(--line-soft); background: var(--surface); color: var(--ink); }
+.yan-panel .kontrol-yapi[data-tone="warning"] > svg:first-child { color: var(--tone); }
+.yan-panel .kontrol-yapi[data-tone="warning"] > svg:last-child { color: var(--muted); }
+@media (hover: hover) and (pointer: fine) {
+  .yan-panel .kontrol-yapi[data-tone="warning"]:hover { border-color: var(--tone); }
+}
+.os-root:has(.yazim-sayfasi) .os-gezinme-yeni { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.os-root:has(.yazim-sayfasi) .os-gezinme-yeni > svg { color: var(--primary-ink); }
+.os-root:has(.yazim-sayfasi) .os-gezinme-yeni:hover { background: var(--surface-2); }
+.os-root:has(.yazim-sayfasi) .os-gezinme-baglam { background: transparent; }
+.os-root:has(.yazim-sayfasi) .os-gezinme-alt.is-active { box-shadow: inset 2px 0 0 var(--primary-ink); }
+/* Panel artık beyaz değil: sayı haplarının yarı saydam tonu gri zeminde kontrastı düşürüyordu ("7": 5,1 → 4,6). Ton aynı, karışım saydamlık yerine yüzeyle. */
+.yazim-sayfasi .yan-panel[data-bicim="sutun"] .yan-kutu[data-tone="warning"] .yan-kutu-deger { background: color-mix(in srgb, var(--warning) 18%, var(--surface)); }
+.yazim-sayfasi .yan-panel[data-bicim="sutun"] .yan-kutu[data-tone="success"] .yan-kutu-deger { background: color-mix(in srgb, var(--success) 14%, var(--surface)); }
+.yazim-sayfasi .yan-panel[data-bicim="sutun"] .yan-kutu[data-tone="danger"] .yan-kutu-deger { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); }
