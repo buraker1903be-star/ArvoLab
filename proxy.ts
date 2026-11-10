@@ -3,6 +3,9 @@ import { ortamGirdisi, supabaseOrtamKarari } from "@/lib/supabase/ortam-guvenlig
 import { NextResponse, type NextRequest } from "next/server";
 import { DIL_CEREZI, ilkZiyaretDili } from "@/lib/dil";
 import { BASKA_CIHAZ_BILGISI, baskaCihazdanKapatildiMi, oturumCereziMi } from "@/lib/tek-oturum";
+import { amrYontemleri } from "@/lib/auth-link";
+import { SIFRE_VAR_CEREZI, ilkSifreGerekli, ilkSifreSorulmali } from "@/lib/ilk-sifre";
+import { ilkSifreDurumu } from "@/lib/supabase/sifre-durumu";
 
 // Next.js 16 "proxy" katmanı (eski adıyla middleware):
 // 1) Supabase oturum çerezini her istekte yeniler (Server Component'ler çerez yazamaz).
@@ -103,6 +106,30 @@ export async function proxy(request: NextRequest) {
   }
   if (user && SIGNED_OUT_ONLY_PATHS.includes(pathname)) {
     return redirectTo("/dashboard");
+  }
+
+  /*
+    İLK ŞİFRE KAPISI (G1, 07.11.2026; lib/ilk-sifre.ts). Hesabında şifre
+    olmayan ve ArvoOS üyesi olmayan oturum (kayıt/davet doğrulamasından sonra
+    şifre belirlemeden çıkan kişi) panelin hiçbir yolunu (sunucu işlemleri de
+    bu yollara POST ediliyor) açamadan şifre sayfasına gider. Karar
+    veritabanında (ilk_sifre_gerekli); şifreyle açılmış oturum hiç
+    sorgulanmaz. Gerekmediği bir kez görülen oturum çerezle işaretlenir,
+    sonraki isteklerde sorgu yok. Çerezi taklit etmek yalnızca kişinin
+    KENDİ kapısını atlatır.
+  */
+  if (user && pathname.startsWith("/dashboard") && request.cookies.get(SIFRE_VAR_CEREZI)?.value !== user.id) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const yontemler = amrYontemleri(session?.access_token);
+    if (ilkSifreSorulmali(yontemler)) {
+      const ilkSifre = await ilkSifreDurumu(supabase);
+      if (ilkSifreGerekli(ilkSifre)) return redirectTo("/reset-password", { ilk: "1" });
+      if (ilkSifre === false) {
+        response.cookies.set(SIFRE_VAR_CEREZI, user.id, { path: "/", httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 30 });
+      }
+    }
   }
 
   return dilCereziniYaz(response);

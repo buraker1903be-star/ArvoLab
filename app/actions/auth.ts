@@ -13,10 +13,14 @@ import { kayitGirdisiniDenetle } from "@/lib/kayit";
 import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
+import { SIFRE_VAR_CEREZI } from "@/lib/ilk-sifre";
 import { after } from "next/server";
+import { randomBytes } from "node:crypto";
 import { onayKaydiYaz, onayKopyasiGonder } from "@/lib/sozlesme/onay-yaz";
 
 const MIN_PASSWORD_LENGTH = 8;
+/* Kayıt doğrulamasından sonra şifrenin belirlendiği sayfa (G1). */
+const ILK_SIFRE_YOLU = "/reset-password?ilk=1";
 
 // Yalnızca panel içi yollara dönülür; dış adrese yönlendirme (open redirect) engellenir.
 function safeNextPath(raw: string) {
@@ -139,8 +143,22 @@ export async function login(formData: FormData) {
   tek parça bu formdu.
 
   Hesap DOĞRULANANA KADAR açılmıyor: generateLink("signup") kullanıcıyı
-  onaysız oluşturuyor, bağlantıya tıklanınca doğrulanıyor. Böylece
-  başkasının e-postasıyla kayıt denemesi kimseye hesap açmıyor.
+  onaysız oluşturuyor, bağlantıya tıklanınca doğrulanıyor.
+
+  ŞİFRE DOĞRULAMADAN SONRA (G1, 06.11.2026). Eskiden şifre kayıtta
+  alınıyordu. Adresi bilen biri, sahibinden önce onaysız hesap açıp kendi
+  şifresini koyabiliyordu; sahibin sonraki kaydı hata vermiyor (GoTrue
+  onaysız hesapta generateLink'e yeni şifreyi YOK SAYIP yalnızca yeni
+  bağlantı üretiyor) ve sahip doğrulayınca hesap SALDIRGANIN şifresiyle
+  açılıyordu (Test'te doğrulandı). Artık:
+   - hesap tahmin edilemez, hiçbir yerde saklanmayan rastgele bir şifreyle
+     açılıyor (GoTrue signup türü şifre istiyor);
+   - doğrulama bağlantısı şifre belirleme sayfasına gidiyor
+     (/reset-password?ilk=1; /auth/confirm signup türünde bunu zorunlu
+     kılıyor);
+   - veritabanı onay anında, onaydan önce konmuş HER şifreyi siliyor
+     (migration 20261106184046) — hesap doğrudan /auth/v1/signup'tan ya da
+     ArvoOS'tan gelse bile.
 
   Şifre sıfırlamadaki iki ilke burada da geçerli:
    - E-postayı biz gönderiyoruz (Supabase'in gönderim sınırı üretim için
@@ -161,8 +179,6 @@ const KAYIT_YAPILAMIYOR: Metin = {
 export async function signUp(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const denetim = kayitGirdisiniDenetle({
     email: formData.get("email"),
-    sifre: formData.get("password"),
-    sifreTekrar: formData.get("passwordRepeat"),
     adSoyad: formData.get("fullName"),
     telefon: formData.get("phone"),
     kvkk: formData.get("kvkk") === "on",
@@ -172,7 +188,7 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
   });
   const t = await ceviri();
   if ("hata" in denetim) return { error: t(denetim.hata) };
-  const { email, sifre, adSoyad, telefon, iletisimIzni } = denetim.deger;
+  const { email, adSoyad, telefon, iletisimIzni } = denetim.deger;
 
   let admin;
   try {
@@ -211,7 +227,8 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
   const { data, error } = await admin.auth.admin.generateLink({
     type: "signup",
     email,
-    password: sifre,
+    // Kimsenin bilmediği tek kullanımlık değer; onay anında veritabanı siler.
+    password: `${randomBytes(32).toString("base64url")}aA1!`,
     options: {
       data: {
         full_name: adSoyad,
@@ -259,7 +276,7 @@ export async function signUp(_previous: ActionResult | null, formData: FormData)
     product_plans tablosunda ve okumak için bir uç nokta yok. Uydurmak
     yerine genel cümle kuruluyor.
   */
-  const gonderim = await sendEmail({ to: email, ...signUpConfirmEmail(authConfirmLink(origin, token, "signup", "/dashboard"), null, await aktifDil()) });
+  const gonderim = await sendEmail({ to: email, ...signUpConfirmEmail(authConfirmLink(origin, token, "signup", ILK_SIFRE_YOLU), null, await aktifDil()) });
   /*
     Gönderim düştüyse "posta kutunuza bakın" demek, hiç gelmeyecek bir
     bağlantıyı bekletmek ve hesabı açılamaz bırakmak demekti. İki dal da
@@ -410,6 +427,8 @@ async function applyNewPassword(formData: FormData): Promise<ActionResult> {
     console.error(error);
     return { error: t(passwordErrorMessage(error.code)) };
   }
+  // İlk şifre kapısı bu oturumda artık sorgu yapmasın (proxy.ts, lib/ilk-sifre.ts).
+  (await cookies()).set(SIFRE_VAR_CEREZI, user.id, { path: "/", httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 30 });
   return { success: true };
 }
 

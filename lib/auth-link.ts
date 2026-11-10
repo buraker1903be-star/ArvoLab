@@ -1,3 +1,4 @@
+import { ILK_SIFRE_YOLU, ilkSifreGerekli } from "./ilk-sifre";
 /*
   Kimlik e-postalarındaki bağlantı ve /auth/confirm'ün dönüş adresi. Saf
   modül; testi tests/unit/auth-link.test.ts.
@@ -58,4 +59,43 @@ export function dogrulamaHataKodu(tur: string | null | undefined): DogrulamaHata
   if (tur === "signup") return "signup-link-invalid";
   if (tur === "recovery") return "recovery-link-invalid";
   return "link-invalid";
+}
+
+/*
+  PKCE (?code=) DOĞRULAMASINDAN SONRA NEREYE (G1, 07.11.2026).
+
+  ?code= bağlantısı Supabase'in KENDİ e-posta şablonundan gelir (örn.
+  doğrudan /auth/v1/signup ile açılmış hesabın onay postası) ve türünü
+  taşımaz; eskiden her durumda bağlantının next'ine (varsayılan /dashboard)
+  gidiliyordu. G1'den beri veritabanı onay anında öncesinden kalan şifreyi
+  siliyor: kaydını PKCE ile doğrulayan kullanıcı şifresiz panele düşerdi.
+  Tür, değişimden dönen oturumun AMR kaydında yazıyor (GoTrue akışın
+  yöntemini oturuma yazar). Kayıt → ilk şifre; davet ve kurtarma → şifre
+  sayfası; geri kalan (magic link, e-posta değişimi) → next.
+*/
+export function dogrulamaSonrasiYol(yontemler: readonly string[], next: string, ilkSifre: boolean | null = null): string {
+  if (yontemler.includes("email/signup")) return "/reset-password?ilk=1";
+  if (yontemler.includes("invite") || yontemler.includes("recovery")) return "/reset-password";
+  /*
+    AMR eksik ya da tanınmayan (07.11.2026): ilk şifre gerekiyorsa (şifre
+    yok ve ArvoOS üyesi değil) şifre sayfasına. Karar lib/ilk-sifre.ts ile
+    aynı; panel kapısı da aynı kuralı uyguluyor.
+  */
+  if (ilkSifreGerekli(ilkSifre)) return ILK_SIFRE_YOLU;
+  return next;
+}
+
+/** Erişim belirtecinin (JWT) AMR yöntemleri. Çözülemezse boş liste: hedef next'e düşer. */
+export function amrYontemleri(erisimBelirteci: string | null | undefined): string[] {
+  try {
+    const govde = String(erisimBelirteci ?? "").split(".")[1];
+    if (!govde) return [];
+    const yuk = JSON.parse(Buffer.from(govde, "base64url").toString("utf8")) as { amr?: unknown };
+    if (!Array.isArray(yuk.amr)) return [];
+    return yuk.amr
+      .map((k: unknown) => (typeof k === "string" ? k : k && typeof k === "object" && "method" in k ? String((k as { method: unknown }).method) : ""))
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
 }
