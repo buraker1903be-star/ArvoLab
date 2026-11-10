@@ -135,6 +135,29 @@ for (const w of MASA) for (const kenar of ["genis", "dar"]) for (const panel of 
   await ctx.close();
 }
 
+/*
+  Yerleşimin durulmasını bekler: belge yüksekliği art arda `kez` ölçümde
+  değişmeyene kadar (üst sınır `azami` ms). Editörde ekran dışı bloklar
+  content-visibility:auto ile TAHMİNİ yükseklikte duruyor; kaydırınca
+  görünür olanlar gerçek yüksekliğe geçiyor (önizleme belgesinde 19928 →
+  22176, sakin makinede ~50 ms). Eskiden kaydırmadan sonra sabit 200 ms
+  bekleniyordu; makine yüklüyken geçiş bu sınırı aşınca "önce" ölçümü
+  tahmini yüksekliği yakalıyor ve panel kapanınca "belge yüksekliği
+  değişti / kenar daralınca yeniden kırıldı" diye düşüyordu (10.11.2026,
+  kabul:hepsi koşularında 4'te 2). Ürün davranışı değil, ölçüm anı.
+*/
+async function yerlesimDurulsun(sayfa, { kez = 4, aralik = 60, azami = 5000 } = {}) {
+  const baslangic = Date.now();
+  let onceki = -1;
+  let ayni = 0;
+  while (Date.now() - baslangic < azami && ayni < kez) {
+    const h = await sayfa.evaluate(() => document.querySelector(".ProseMirror").scrollHeight);
+    ayni = h === onceki ? ayni + 1 : 0;
+    onceki = h;
+    await sayfa.waitForTimeout(aralik);
+  }
+}
+
 // 2: aynı sayfada panel ve kenar değişimi — satırlar ve kaydırma
 for (const w of [1440, 1280, 1200]) {
   const { ctx, sayfa } = await ac(w, { kenar: "genis", panel: "acik" });
@@ -143,11 +166,13 @@ for (const w of [1440, 1280, 1200]) {
     hedef.scrollIntoView({ block: "center" });
   });
   await sayfa.waitForTimeout(200);
+  await yerlesimDurulsun(sayfa);
   const ust = () => sayfa.evaluate(() => document.querySelectorAll(".ProseMirror > p")[30].getBoundingClientRect().top);
   const once = await olc(sayfa);
   const ustOnce = await ust();
   await panelDugmesi(sayfa).click();
   await sayfa.waitForTimeout(400);
+  await yerlesimDurulsun(sayfa);
   const kapali = await olc(sayfa);
   const ustKapali = await ust();
   denetle(!kapali.inceleme, `${w}: panel kapanmadı`);
@@ -157,6 +182,7 @@ for (const w of [1440, 1280, 1200]) {
   // Kenar çubuğu daralt / genişlet (panel kapalıyken düğme görünür)
   await bas(sayfa.locator(".os-gezinme-daralt"));
   await sayfa.waitForTimeout(300);
+  await yerlesimDurulsun(sayfa);
   const dar = await olc(sayfa);
   denetle(JSON.stringify(dar.bloklar) === JSON.stringify(once.bloklar) && dar.yukseklik === once.yukseklik, `${w}: kenar daralınca belge yeniden kırıldı`);
   await bas(sayfa.locator(".os-gezinme-daralt"));
