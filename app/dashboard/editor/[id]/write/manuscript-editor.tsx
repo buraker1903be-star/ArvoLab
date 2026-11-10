@@ -1853,6 +1853,9 @@ export default function ManuscriptEditor({
     const gozcu = new ResizeObserver(hesapla);
     gozcu.observe(kok);
     kok.querySelectorAll("[data-arac-grup]").forEach((el) => gozcu.observe(el));
+    // Sabit grup da izlenir: telefonda odak açılınca "Odaktan çık" ona eklenir ve sığan araç sayısı değişir (Phase 4.6 D1).
+    const sabitGrup = kok.querySelector("[data-arac-sabit]");
+    if (sabitGrup) gozcu.observe(sabitGrup);
     return () => gozcu.disconnect();
   }, [editorHazir]);
 
@@ -2980,6 +2983,25 @@ export default function ManuscriptEditor({
           </ToolbarButton>
         </div>
         <div className="arac-grup arac-grup-son" data-arac-sabit="">
+          {/*
+            "Odaktan çık" (Phase 4.6 D1): telefonda odak açıkken üst çubuk ve
+            alt gezinme gizli; tek çıkış bu düğme ve her an görünür olmalı
+            (telefonda Esc yok, odak grubu da çoğunlukla "⋯" menüsünde).
+            Sabit grupta duruyor: sığmayan araçlar menüye gider, bu gitmez.
+            Yalnızca ≤760 px'te görünür (workspace.css, MOBİL ODAK MODU).
+          */}
+          {odak ? (
+            <button
+              type="button"
+              className="arac-odak-cik"
+              title={t({ tr: "Odaktan çık", en: "Exit focus mode" })}
+              aria-label={t({ tr: "Odaktan çık", en: "Exit focus mode" })}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setOdak(false)}
+            >
+              <Minimize2 size={18} aria-hidden="true" />
+            </button>
+          ) : null}
           {/*
             "⋯": belge araçları ve çubuğa sığmayan gruplar (UX S3+S4). Erişilebilir
             adı "Bul, sayfa ayarı…" ile başlıyor; sığmayan araç varsa sonuna eklenir.

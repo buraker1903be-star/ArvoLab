@@ -1457,6 +1457,39 @@
 .yazim-sayfasi:not(:has(> .manuscript-layout[data-inceleme]:not([data-odak]))) > :is(.yazma-basligi, .alert),
 .yazim-sayfasi:not(:has(> .manuscript-layout[data-inceleme]:not([data-odak]))) .manuscript-main { justify-self: center; width: 100%; max-width: 1040px; }
 .dashboard-page:has(.manuscript-layout[data-odak]) > .yazma-basligi { display: none; }
+/*
+  MOBİL ODAK MODU (Phase 4.6 D1, 10.11.2026). Eskiden telefonda odak
+  yalnızca başlık satırını (44 px) gizliyordu: üst çubuk (61), alt gezinme
+  (64) ve kılavuz bandı yerinde kalıyordu; kaydırınca odak açık ile kapalı
+  arasında hiç fark yoktu (yazım alanı ikisinde de ekranın %80'i, 676 px).
+  Şimdi ≤760 px'te, kullanıcı odağı açtığında:
+    - üst çubuk ve alt gezinme gizlenir; çıkış araç çubuğundaki "Odaktan
+      çık" düğmesidir (.arac-odak-cik, her an görünür, 44×44). Odak
+      hatırlanmadığı için yeniden yükleme de gezinmeyi geri getirir;
+    - kılavuz bildirimleri yalnızca GÖRÜNÜMDEN kalkar: tercih anahtarlarına
+      dokunulmaz, çıkınca bant eski hâliyle döner;
+    - araç çubuğu ve bul şeridi ekranın üstüne yapışır: ikisi de
+      --topbar-height'tan konumlanıyor, değişken güvenli alana iner (çentik
+      altında kalmasınlar diye; viewportFit: "cover");
+    - alt boşluk (--dock-alani → --os-dock-space) yalnızca güvenli alan +
+      24 px: son satır ev çubuğunun altında kalmaz.
+  Kurallar editörün durumuna (:has) bağlı, html'e öznitelik yazılmıyor:
+  editörden çıkılınca (sayfa değişince) gezinmenin gizli kalması
+  imkânsız. Ekran 760'ı aşınca (döndürme) kurallar kendiliğinden düşer ve
+  tablet/masaüstü odağı geçerli olur. Tablet ve masaüstü değişmez.
+*/
+@media (max-width: 760px) {
+  .os-root:has(.manuscript-layout[data-odak]) {
+    --topbar-height: env(safe-area-inset-top, 0px);
+    --dock-alani: env(safe-area-inset-bottom, 0px);
+  }
+  .os-root:has(.manuscript-layout[data-odak]) :is(.dashboard-header, .os-gezinme) { display: none; }
+  .os-root:has(.manuscript-layout[data-odak]) .dashboard-main-content { padding-top: env(safe-area-inset-top, 0px); }
+  .manuscript-layout[data-odak] :is(.kilavuz-bandi, .kilavuz-uygulandi) { display: none; }
+  .manuscript-layout[data-odak] .manuscript-araclar .arac-odak-cik { display: inline-flex; min-width: 44px; min-height: 44px; }
+}
+/* Çıkış düğmesi yalnızca telefonda odak açıkken görünür; geniş ekranda çubuktaki ya da menüdeki odak düğmesi var. */
+.manuscript-araclar .arac-odak-cik { display: none; align-items: center; justify-content: center; }
 
 /* ---- Başlık satırı ---- */
 .yazma-basligi { display: flex; align-items: center; gap: var(--s-3); min-width: 0; margin: 0 0 var(--s-3); }
