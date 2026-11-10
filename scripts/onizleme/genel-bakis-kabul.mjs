@@ -18,11 +18,14 @@
     NODE_PATH=$(npm root -g) node scripts/onizleme/genel-bakis-kabul.mjs [taban-adres]
 */
 import { createRequire } from "node:module";
+import { onkosul } from "./onkosul.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 
 const TABAN = process.argv[2] ?? "http://localhost:3123";
+/* Ön koşul (scripts/onizleme/onkosul.mjs): yanlış sunucuya karşı sıradan FAIL değil, BLOCKED (2). */
+await onkosul("genel-bakis-kabul", TABAN, null);
 let hata = 0;
 let denetim = 0;
 const bekle = (kosul, mesaj) => {

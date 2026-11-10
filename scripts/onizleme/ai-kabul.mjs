@@ -23,11 +23,14 @@
   işareti yok, yalnızca ilgili senaryonun mesajı söyler.
 */
 import { createRequire } from "node:module";
+import { onkosul } from "./onkosul.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require("playwright");
 
 const TABAN = process.argv[2] ?? "http://localhost:3123";
+/* Ön koşul (scripts/onizleme/onkosul.mjs): yanlış sunucuya karşı sıradan FAIL değil, BLOCKED (2). */
+await onkosul("ai-kabul", TABAN, "varsayilan");
 const TEZ = "00000000-0000-4000-8000-0000000000b1";
 const sonuclar = [];
 async function senaryo(ad, govde) {

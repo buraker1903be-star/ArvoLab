@@ -45,3 +45,36 @@ export function onizlemeTakmalari(ortam: Record<string, string | undefined>): Re
     ...(abonelik ? { "@/lib/subscription": "./scripts/onizleme/abonelik.ts" } : {}),
   };
 }
+
+/*
+  ÖNİZLEME BAYRAKLARININ BEYANI (G1 Aşama 5, 10.11.2026). Kabul betikleri
+  sunucuya dışarıdan bakıyor ve hangi bayraklarla başlatıldığını bilmiyordu:
+  yazma kipi kapalı bir sunucuya karşı koşulan otomatik kayıt kabulü
+  "çakışma gösterilmedi" diye düştü ve bu bir gün boyunca ürün hatası
+  sanıldı (sahte istemci yazmayı uygulamadığı için sürüm hiç ilerlemiyordu).
+  Bayrakları davranıştan tahmin etmek her betikte ayrı ve kırılgan bir
+  yoklama demekti. next.config.ts bu değeri YALNIZCA önizlemede bir yanıt
+  başlığına (x-arvolab-onizleme) yazar; betikler oradan okur
+  (scripts/onizleme/onkosul.mjs).
+  Yalnızca gizli olmayan, önizlemeye özgü bayraklar: anahtar, adres ya da
+  kimlik buraya girmez. Önizleme kapalıysa (üretim dahil) null: başlık
+  hiç yazılmaz, yani üretimdeki yanıtlar değişmez.
+*/
+export const ONIZLEME_BASLIGI = "x-arvolab-onizleme";
+
+export function onizlemeBayraklari(ortam: Record<string, string | undefined>): string | null {
+  if (ortam.ARVOLAB_ONIZLEME !== "1" || ortam.NODE_ENV === "production") return null;
+  /* Değerler süzülür: başlığa yalnızca [a-z0-9_-] girer, beklenmeyen metin başlığı bozmasın. */
+  const temiz = (d: string | undefined) => (d ?? "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
+  const ciftler: [string, string][] = [
+    ["yaz", ortam.ONIZLEME_YAZ === "1" ? "1" : "0"],
+    ["ai", ortam.ONIZLEME_AI === "1" ? "1" : "0"],
+    ["senaryo", temiz(ortam.ONIZLEME_SENARYO) || "varsayilan"],
+    ["oturum", ortam.ONIZLEME_OTURUM === "yok" ? "yok" : "var"],
+    ["abonelik", temiz(ortam.ONIZLEME_ABONELIK) || "yok"],
+    ["hak", ortam.ONIZLEME_HAK === "bitti" ? "bitti" : "var"],
+    ["bos", ortam.ONIZLEME_BOS === "1" ? "1" : "0"],
+    ["rol", temiz(ortam.ONIZLEME_ROL) || "varsayilan"],
+  ];
+  return ciftler.map(([a, d]) => `${a}=${d}`).join(";");
+}

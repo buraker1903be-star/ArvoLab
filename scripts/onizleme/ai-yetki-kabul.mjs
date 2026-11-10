@@ -21,11 +21,17 @@
 */
 import { createRequire } from "node:module";
 import { readFileSync, writeFileSync } from "node:fs";
+import { onkosul, onkosulYok, dosyaGerekli } from "./onkosul.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 
 const [KIP, YAKALAMA, TABAN = "http://localhost:3123"] = process.argv.slice(2);
+const KULLANIM = "node scripts/onizleme/ai-yetki-kabul.mjs <yabanci|oturumsuz|abonelik|hak> <yakalama.json> [taban]";
+/* Ön koşul: kip, yakalama dosyası (oynatma kiplerinde var olmalı) ve kipe uygun sunucu bayrakları. */
+if (!KIP || !YAKALAMA) onkosulYok(`kip ve yakalama dosyası gerekli. Kullanım: ${KULLANIM}`);
+if (KIP !== "yabanci") dosyaGerekli(YAKALAMA, "Yakalama dosyası (önce 'yabanci' kipiyle üretilir)", KULLANIM);
+await onkosul("ai-yetki-kabul", TABAN, KIP);
 const TEZ = "00000000-0000-4000-8000-0000000000b1";
 const YABANCI = "00000000-0000-4000-8000-0000000000f9";
 const MODEL_METNI = "kuramsal çerçevesi ele alınmaktadır";
@@ -93,23 +99,35 @@ if (KIP === "yabanci") {
     hak: /Saatlik asistan hakkınız doldu|hourly assistant limit/,
   }[KIP];
   if (!BEKLENEN) throw new Error(`bilinmeyen kip: ${KIP}`);
+  /*
+    Oynatma, senaryodan ÖNCE bir kez yapılır: yakalanan eylem kimliği başka
+    bir derlemeye aitse (sunucu .next önbelleği silinerek yeniden başlatıldı)
+    Next "Server action not found" ile 404 döner. Bu ürünün reddi değil,
+    oynatılacak isteğin geçersiz olması: BLOCKED (2). 10.11.2026'da bu yüzden
+    üç kip "iki sürümde de düşüyor" göründü. Başka her cevap (404 dahil, ama
+    bu metin olmadan) aşağıdaki senaryoda denetlenir ve düşerse FAIL'dir.
+  */
+  const y = JSON.parse(readFileSync(YAKALAMA, "utf8"));
+  const ctx = await tarayici.newContext();
+  const sayfa = await ctx.newPage();
+  // Aynı kökenden bir sayfa (giriş sayfası oturumsuzken de açılır); istek oradan gönderilir.
+  await sayfa.goto(`${TABAN}/login`, { waitUntil: "domcontentloaded", timeout: 180000 });
+  const cevap = await sayfa.evaluate(async (y) => {
+    const basliklar = { "next-action": y.eylem, "content-type": "text/plain;charset=UTF-8", accept: "text/x-component" };
+    if (y.durumAgaci) basliklar["next-router-state-tree"] = y.durumAgaci;
+    const r = await fetch(y.adres, { method: "POST", headers: basliklar, body: y.govde });
+    return { durum: r.status, metin: await r.text() };
+  }, y);
+  await ctx.close();
+  if (cevap.durum === 404 && /Server action not found/i.test(cevap.metin)) {
+    await tarayici.close();
+    onkosulYok("yakalanan sunucu eylemi bu derlemede yok (önbellek silinmiş ya da başka bir sunucudan yakalanmış). 'yabanci' kipini bu sunucunun önbelleğiyle yeniden koşun.");
+  }
   await senaryo(`${KIP}: aynı asistan isteği sunucuda reddedilir; modele ulaşılmaz, eklenebilir metin yok`, async () => {
-    const y = JSON.parse(readFileSync(YAKALAMA, "utf8"));
-    const ctx = await tarayici.newContext();
-    const sayfa = await ctx.newPage();
-    // Aynı kökenden bir sayfa (giriş sayfası oturumsuzken de açılır); istek oradan gönderilir.
-    await sayfa.goto(`${TABAN}/login`, { waitUntil: "domcontentloaded", timeout: 180000 });
-    const cevap = await sayfa.evaluate(async (y) => {
-      const basliklar = { "next-action": y.eylem, "content-type": "text/plain;charset=UTF-8", accept: "text/x-component" };
-      if (y.durumAgaci) basliklar["next-router-state-tree"] = y.durumAgaci;
-      const r = await fetch(y.adres, { method: "POST", headers: basliklar, body: y.govde });
-      return { durum: r.status, metin: await r.text() };
-    }, y);
     bekle(cevap.durum === 200, `HTTP ${cevap.durum}: ${cevap.metin.slice(0, 160)}`);
     bekle(BEKLENEN.test(cevap.metin), `beklenen ret yok; cevap: ${cevap.metin.slice(-300)}`);
     bekle(!cevap.metin.includes(MODEL_METNI), "modele ulaşıldı (sahte sağlayıcının metni cevapta)");
     bekle(!/"metin":"[^"]/.test(cevap.metin), "cevapta eklenebilir metin var");
-    await ctx.close();
   });
 }
 

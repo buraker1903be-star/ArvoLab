@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 import { guvenlikBasliklari } from "./lib/guvenlik-basliklari";
-import { onizlemeTakmalari } from "./lib/onizleme-takmalari";
+import { ONIZLEME_BASLIGI, onizlemeBayraklari, onizlemeTakmalari } from "./lib/onizleme-takmalari";
 import { anahtarAyrimiKarari, ortamGirdisi, supabaseOrtamKarari } from "./lib/supabase/ortam-guvenligi";
 
 const PDF_WORKER = "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs";
@@ -79,6 +79,8 @@ const OCR_ISCISI = [
 */
 /* Takmalar ve üretim yasağı tek yerde, testli (lib/onizleme-takmalari.ts); 4.3'te test asistanı eklendi. */
 const ONIZLEME_TAKMALARI = onizlemeTakmalari(process.env);
+/* Kabul betiklerinin ön koşul denetimi için bayrak beyanı; önizleme dışında null, başlık yazılmaz. */
+const ONIZLEME_BEYANI = onizlemeBayraklari(process.env);
 
 /*
   SUPABASE ORTAM GÜVENLİĞİ — DERLEME ANI (Güvenli Test Ortamı, Aşama 1).
@@ -145,6 +147,7 @@ const nextConfig: NextConfig = {
           gelistirme: process.env.NODE_ENV !== "production",
         }),
       },
+      ...(ONIZLEME_BEYANI ? [{ source: "/:path*", headers: [{ key: ONIZLEME_BASLIGI, value: ONIZLEME_BEYANI }] }] : []),
     ];
   },
   reactStrictMode: true,

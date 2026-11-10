@@ -23,12 +23,15 @@
   ve EKLENMEDEN gelmesi (sayfa yenilenince habersiz kaynak eklenmesin).
 */
 import { createRequire } from "node:module";
+import { onkosul } from "./onkosul.mjs";
 
 // playwright projenin bağımlılığı değil (gereksiz bağımlılık eklenmedi); genel kurulumdan NODE_PATH ile gelir, onu yalnızca require okur.
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 
 const TABAN = process.argv[2] ?? "http://localhost:3123";
+/* Ön koşul (scripts/onizleme/onkosul.mjs): yanlış sunucuya karşı sıradan FAIL değil, BLOCKED (2). */
+await onkosul("kabul", TABAN, "varsayilan");
 const TEZ = "00000000-0000-4000-8000-0000000000b1";
 const sonuclar = [];
 

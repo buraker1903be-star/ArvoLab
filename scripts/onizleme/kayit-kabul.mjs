@@ -22,6 +22,7 @@
   Bir senaryo düşerse çıkış kodu 1.
 */
 import { createRequire } from "node:module";
+import { onkosul } from "./onkosul.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
@@ -29,6 +30,8 @@ const { chromium } = require("playwright");
 const TABAN = process.argv.slice(2).find((a) => !a.startsWith("--")) ?? "http://localhost:3123";
 /* Sunucu hangi ONIZLEME_SENARYO ile başlatıldıysa aynısı verilmeli; yalnızca o grubun senaryoları çalışır. */
 const SENARYO = process.argv.find((a) => a.startsWith("--senaryo="))?.slice("--senaryo=".length) ?? "varsayilan";
+/* Ön koşul (scripts/onizleme/onkosul.mjs): yazma kipi ve senaryo sunucunun beyanıyla aynı olmalı; değilse BLOCKED (2). */
+await onkosul("kayit-kabul", TABAN, SENARYO);
 const PROJE = "00000000-0000-4000-8000-0000000000b1";
 const KULLANICI = "00000000-0000-4000-8000-0000000000a1";
 const EDITOR = `${TABAN}/dashboard/editor/${PROJE}/write`;

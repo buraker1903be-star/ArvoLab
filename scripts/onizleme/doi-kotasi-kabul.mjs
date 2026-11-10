@@ -29,16 +29,20 @@
 */
 import fs from "node:fs";
 import { createRequire } from "node:module";
+import { onkosul, dosyaGerekli } from "./onkosul.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 
 const GUNLUK = process.argv[2];
 const TABAN = process.argv[3] ?? "http://localhost:3123";
-if (!GUNLUK) {
-  console.error("Sunucu günlüğünün yolu gerekli (bkz. dosya başı).");
-  process.exit(2);
-}
+/*
+  Ön koşul: günlük DOSYASI ve yazma kipi. Eskiden yalnızca argümanın varlığına
+  bakılıyordu; adres verilince (argüman sırası karışınca) betik koşup her
+  senaryoda "günlükte deneme yok" diye düşüyordu.
+*/
+dosyaGerekli(GUNLUK, "Sunucu günlüğü", "node scripts/onizleme/doi-kotasi-kabul.mjs <gunluk> [taban-adres]");
+await onkosul("doi-kotasi-kabul", TABAN, "varsayilan");
 const TEZ = "00000000-0000-4000-8000-0000000000b1"; // l3 kaynağının DOI'si 10.0000/ornek.2 (scripts/onizleme/veri.ts)
 let hata = 0;
 const bekle = (kosul, mesaj) => {

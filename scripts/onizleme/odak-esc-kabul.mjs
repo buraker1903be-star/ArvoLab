@@ -25,6 +25,7 @@
   Çıkış: 0 temiz, 1 bir denetim düştü.
 */
 import { createRequire } from "node:module";
+import { onkosul } from "./onkosul.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
@@ -32,6 +33,8 @@ const { chromium } = require("playwright");
 const arg = process.argv.slice(2);
 const AI = arg.includes("--ai");
 const TABAN = arg.find((a) => !a.startsWith("--")) ?? "http://localhost:3123";
+/* Ön koşul (scripts/onizleme/onkosul.mjs): yanlış sunucuya karşı sıradan FAIL değil, BLOCKED (2). */
+await onkosul("odak-esc-kabul", TABAN, AI ? "ai" : "varsayilan");
 const TEZ = "00000000-0000-4000-8000-0000000000b1";
 let toplam = 0;
 const hatalar = [];

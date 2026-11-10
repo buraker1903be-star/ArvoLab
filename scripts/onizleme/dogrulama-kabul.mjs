@@ -18,7 +18,10 @@
     onizleme-suresi-dolmus…  → otp_expired
     başka her şey            → geçersiz
 */
+import { onkosul } from "./onkosul.mjs";
 const TABAN = process.argv[2] ?? "http://localhost:3123";
+/* Ön koşul (scripts/onizleme/onkosul.mjs): yanlış sunucuya karşı sıradan FAIL değil, BLOCKED (2). */
+await onkosul("dogrulama-kabul", TABAN, "varsayilan");
 const HOST = new URL(TABAN).host;
 const sonuclar = [];
 

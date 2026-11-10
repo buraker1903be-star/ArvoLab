@@ -22,11 +22,14 @@
   Çıkış: 0 temiz, 1 bir denetim düştü.
 */
 import { createRequire } from "node:module";
+import { onkosul } from "./onkosul.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 
 const TABAN = process.argv.slice(2).find((a) => !a.startsWith("--")) ?? "http://localhost:3123";
+/* Ön koşul (scripts/onizleme/onkosul.mjs): yanlış sunucuya karşı sıradan FAIL değil, BLOCKED (2). */
+await onkosul("kagit-gorunumu-kabul", TABAN, "varsayilan");
 const TEZ = "00000000-0000-4000-8000-0000000000b1";
 const YOL = `/dashboard/editor/${TEZ}/write`;
 const BEYAZ = "rgb(255, 255, 255)";

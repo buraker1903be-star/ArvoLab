@@ -30,7 +30,8 @@
     "check:rakamlar": "node scripts/check-rakamlar.mjs",
     "test:editor": "node --import ./tests/register.mjs --test 'tests/editor/*.test.ts'",
     "onizleme": "ARVOLAB_ONIZLEME=1 next dev -p 3123",
-    "onizleme:ai": "ARVOLAB_ONIZLEME=1 ONIZLEME_AI=1 AI_ANAHTAR=onizleme next dev -p 3123"
+    "onizleme:ai": "ARVOLAB_ONIZLEME=1 ONIZLEME_AI=1 AI_ANAHTAR=onizleme next dev -p 3123",
+    "kabul:hepsi": "node scripts/onizleme/kabul-hepsi.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

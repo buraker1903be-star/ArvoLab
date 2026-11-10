@@ -23,11 +23,15 @@
     NODE_PATH=$(npm root -g) node scripts/onizleme/arac-cubugu-kabul.mjs [taban-adres]
 */
 import { createRequire } from "node:module";
+import { onkosul } from "./onkosul.mjs";
+import { anlat, eylemIzci, hataMi } from "./eylem-izci.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 
 const TABAN = process.argv[2] ?? "http://localhost:3123";
+/* Ön koşul (scripts/onizleme/onkosul.mjs): yanlış sunucuya karşı sıradan FAIL değil, BLOCKED (2). */
+await onkosul("arac-cubugu-kabul", TABAN, "varsayilan");
 const TEZ = "00000000-0000-4000-8000-0000000000b1";
 let hata = 0;
 let denetim = 0;
@@ -116,16 +120,18 @@ async function menuleriDene(sayfa, ad) {
   }
 }
 
+/*
+  Açılışın bittiği an sabit 700 ms ile değil, açılış okumalarının
+  tamamlanmasıyla belirlenir (scripts/onizleme/eylem-izci.mjs). Eskiden yük
+  altında gecikmiş bir açılış okuması "boştayken sunucu isteği" sayılıyordu.
+*/
 async function editoruAc(ctx) {
   const sayfa = await ctx.newPage();
-  const istekler = [];
-  sayfa.on("request", (r) => {
-    if (r.method() === "POST" && r.headers()["next-action"]) istekler.push(r.url());
-  });
+  const izci = eylemIzci(sayfa);
   await sayfa.goto(`${TABAN}/dashboard/editor/${TEZ}/write`, { waitUntil: "networkidle", timeout: 150000 });
   await sayfa.locator(".ProseMirror").waitFor({ timeout: 30000 });
-  await sayfa.waitForTimeout(700);
-  return { sayfa, istekler };
+  const acilis = await izci.acilisiBekle();
+  return { sayfa, izci, acilis };
 }
 
 async function durum(sayfa, ad, { dokunmatik, genislik }) {
@@ -171,15 +177,23 @@ for (const genislik of [1440, 1366, 1280, 1024, 768, 390, 360]) {
   for (const tema of ["light", "dark"]) {
     for (const panel of genislik >= 1200 ? [true, false] : [false]) {
       const ctx = await baglam(genislik, tema, panel);
-      const { sayfa, istekler } = await editoruAc(ctx);
+      const { sayfa, izci, acilis } = await editoruAc(ctx);
       const ad = `${genislik} ${tema} panel-${panel ? "açık" : "kapalı"}`;
-      const once = istekler.length;
       const o = await durum(sayfa, ad, { dokunmatik: genislik < 1200, genislik });
       if (genislik >= 1200) bekle(o.panelSutun === panel, `${ad}: panel durumu beklenen değil`);
       if (tema === "light") {
-        // Salt açma: açılış okumalarından sonra boşta hiçbir sunucu işlemi (kayıt, sürüm dahil).
+        /*
+          Salt açma: açılış okumalarından sonra boşta belge yazımı ya da
+          açılışta görülmemiş bir sunucu eylemi olmamalı (kayıt, sürüm dahil).
+          Açılış okumasının gecikmiş tekrarı hata değil; bilgi olarak yazılır.
+        */
         await sayfa.waitForTimeout(4000);
-        bekle(istekler.length === once, `${ad}: editör boştayken ${istekler.length - once} sunucu isteği`);
+        const bostaki = izci.bostakiler(acilis);
+        const hatali = bostaki.filter(hataMi);
+        bekle(hatali.length === 0, `${ad}: editör boştayken ${hatali.length} beklenmeyen sunucu eylemi: ${hatali.map(anlat).join(" | ")}`);
+        const tekrar = bostaki.filter((i) => !hataMi(i));
+        if (tekrar.length) console.log(`  bilgi — ${ad}: açılış okumasının gecikmiş tekrarı (hata değil): ${tekrar.map(anlat).join(" | ")}`);
+        if (acilis.bekleyen) console.log(`  bilgi — ${ad}: açılış ${acilis.sure} ms sınırında ${acilis.bekleyen} eylem hâlâ bekliyordu`);
       }
       ozet.push(`${ad}: menüde ${o.gizli.length ? o.gizli.join(",") : "—"}`);
       await ctx.close();

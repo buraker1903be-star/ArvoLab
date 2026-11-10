@@ -40,6 +40,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { onkosul } from "./onkosul.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
@@ -51,6 +52,8 @@ const { PDFParse } = await import(pathToFileURL(projeIste.resolve("pdf-parse")).
 
 const argumanlar = process.argv.slice(2);
 const TABAN = argumanlar.find((a) => !a.startsWith("--")) ?? "http://localhost:3123";
+/* Ön koşul (scripts/onizleme/onkosul.mjs): yanlış sunucuya karşı sıradan FAIL değil, BLOCKED (2). */
+await onkosul("cikti-kabul", TABAN, "varsayilan");
 const YAZ = argumanlar.includes("--referans-yaz");
 const TEZ = "00000000-0000-4000-8000-0000000000b1";
 const REF = join(KOK, "scripts/onizleme/referans");

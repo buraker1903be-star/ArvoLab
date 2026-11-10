@@ -182,6 +182,21 @@ ayrıca verebilir). ArvoARC'ta siparişi "ödendi" yapan fonksiyon bu yüzden
 herkese açık kaldı. `tests/db/guvenlik.test.mjs` hangi fonksiyonun kime açık
 olduğunu sabitler; RLS politikasında kullanılan yardımcılar açık kalır.
 
+**Tarayıcı kabul betikleri** (`scripts/onizleme/*kabul*.mjs`, CI'da DEĞİL)
+sahte önizleme sunucusuna karşı koşar ve her biri belirli bayraklar ister
+(`ONIZLEME_YAZ`, `ONIZLEME_SENARYO`, AI, oturum/abonelik/hak). Hangi betiğin
+hangi kiple, hangi bayrak ve argümanlarla koşulacağı tek yerde:
+`scripts/onizleme/kabul-katalogu.mjs`. Hepsini doğru sunucularla koşmak için
+`npm run kabul:hepsi` (her kip yeni bir sunucuda; PASS / FAIL / BLOCKED).
+Çıkış kodları ortak: 0 PASS, 1 FAIL, 2 BLOCKED (ön koşul yok, betik hiç
+koşmadı). 2 yalnızca senaryolar başlamadan önce verilir; koşu sırasında olan
+her şey 1'dir. Sunucu bayraklarını `x-arvolab-onizleme` başlığıyla bildirir
+(yalnızca önizlemede). 10.11.2026'da yazma kipi kapalı bir sunucuya karşı
+otomatik kayıt kabulü "çakışma gösterilmedi" diye düştü ve bir gün ürün
+hatası sanıldı; sekiz betik daha eksik bayrakla "düşüyor" göründü. Yeni bir
+kabul betiği katalogda olmalı ve `onkosul()` çağırmalı;
+`tests/unit/kabul-katalogu.test.ts` ikisini de denetler.
+
 ## Kontroller
 
 `npx tsc --noEmit`, `npm run lint`, `npm run check:css`,
