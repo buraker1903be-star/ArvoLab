@@ -217,7 +217,7 @@ const TEMADAN_BAGIMSIZ = {
 /*
   8) Loş kâğıdın devralma listesi tam olmalı (V4.3-A2-3). Kâğıt (.kagit)
      açık rolleri `:root, .kagit` bloklarıyla kendi üzerinde yeniden kurar;
-     koyu temada ekranda `html[data-theme="dark"] .kagit` kuralı bu
+     koyu temada ekranda `html[data-theme="dark"][data-kagit="los"] .kagit` kuralı (D4: yalnızca loş kâğıt seçiliyken) bu
      blokların HER adını `inherit` ile geri alır. Listede olmayan bir ad
      loş kâğıtta açık temanın değeriyle kalır: koyu kâğıtta koyu yazı ya da
      beyaz yama, hata vermeden. Fazlası da bildirilir (silinmiş adın
@@ -227,8 +227,9 @@ const TEMADAN_BAGIMSIZ = {
   const metin = (files.find((f) => f.file === TOKENS_FILE)?.text ?? "").replace(/\/\*[\s\S]*?\*\//g, "");
   const acikAdlar = new Set();
   for (const blok of metin.matchAll(/:root, \.kagit\s*\{([^}]*)\}/g)) for (const m of blok[1].matchAll(/(--[a-z0-9-]+)\s*:/g)) acikAdlar.add(m[1]);
-  const kural = metin.match(/@media screen\s*\{\s*html\[data-theme="dark"\] \.kagit\s*\{([^}]*)\}/);
-  if (!kural) problems.push("app/styles/tokens.css  koyu temanın loş kâğıt kuralı (@media screen { html[data-theme=\"dark\"] .kagit { … } }) bulunamadı");
+  // D4 (10.11.2026): loş kâğıt artık kullanıcının seçimi (html[data-kagit="los"]); eskiden yalnızca koyu temaya bağlıydı.
+  const kural = metin.match(/@media screen\s*\{\s*html\[data-theme="dark"\]\[data-kagit="los"\] \.kagit\s*\{([^}]*)\}/);
+  if (!kural) problems.push("app/styles/tokens.css  loş kâğıt kuralı (@media screen { html[data-theme=\"dark\"][data-kagit=\"los\"] .kagit { … } }) bulunamadı");
   else {
     const devralan = new Set([...kural[1].matchAll(/(--[a-z0-9-]+)\s*:\s*inherit\s*;/g)].map((m) => m[1]));
     for (const ad of acikAdlar) if (!devralan.has(ad)) problems.push(`app/styles/tokens.css  ${ad} \`:root, .kagit\` bloğunda tanımlı ama loş kâğıt kuralında \`${ad}: inherit;\` yok — koyu temada kâğıtta açık temanın değeriyle kalır`);

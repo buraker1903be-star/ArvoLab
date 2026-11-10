@@ -4,6 +4,7 @@ import { DilSaglayici } from "./_components/dil-saglayici";
 import { Inter, Newsreader } from "next/font/google";
 import { TEMA_BETIGI, TEMA_RENGI } from "@/lib/tema";
 import { KENAR_BETIGI } from "@/lib/os/kenar";
+import { KAGIT_BETIGI } from "@/lib/kagit-gorunumu";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/components.css";
@@ -118,6 +119,8 @@ export default async function RootLayout({
         <script id="theme-init" dangerouslySetInnerHTML={{ __html: TEMA_BETIGI }} />
         {/* Kenar çubuğunun geniş/dar tercihi de boyamadan önce (lib/os/kenar.ts): aynı sebep, düzen kayması. */}
         <script id="kenar-init" dangerouslySetInnerHTML={{ __html: KENAR_BETIGI }} />
+        {/* Akademik kâğıdın açık/loş görünümü (lib/kagit-gorunumu.ts, D4): koyu temada açılışta kâğıt bir an yanlış tonda görünmesin. */}
+        <script id="kagit-init" dangerouslySetInnerHTML={{ __html: KAGIT_BETIGI }} />
       </head>
       <body className={`${inter.variable} ${newsreader.variable}`}>
         <DilSaglayici dil={dil} saatDilimi={saatDilimi}>

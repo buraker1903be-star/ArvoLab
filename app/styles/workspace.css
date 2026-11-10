@@ -1923,13 +1923,13 @@
   yalnızca kâğıt açılsaydı metin kontrastı gereğinden çok düşerdi. İkisi
   birer tık: kâğıt #1B2636, masa #06090E → 1,30; belge metni 13,12 → 12,5.
   Yalnızca YAZIM ekranında (danışman paylaşımındaki kâğıt değişmez), yalnızca
-  koyu temada ve yalnızca EKRANDA: yazdırma, PDF ve Word kendi yollarından
+  koyu temada LOŞ KÂĞIT seçiliyken (D4, data-kagit) ve yalnızca EKRANDA: yazdırma, PDF ve Word kendi yollarından
   çizilir (lib/tiptap-html.ts, lib/tiptap-docx.ts). Yalnızca renk; kâğıdın
   ölçüsü, sütun ve satır kırılımı değişmez. Belgenin içindeki --kagit
   okuyucuları (tablo, şekil zemini) aynı tonu devralır.
 */
 @media screen {
-  html[data-theme="dark"] .yazim-sayfasi .manuscript-editor-content {
+  html[data-theme="dark"][data-kagit="los"] .yazim-sayfasi .manuscript-editor-content {
     --kagit: var(--yuzey-kagit-yazim);
     --belge-masa: var(--yuzey-masa-yazim);
   }
@@ -2352,3 +2352,13 @@ body:has(.yazim-sayfasi) .os-saat { display: none; }
 .yazim-sayfasi .yan-panel[data-bicim="sutun"] .yan-kutu[data-tone="warning"] .yan-kutu-deger { background: color-mix(in srgb, var(--warning) 18%, var(--surface)); }
 .yazim-sayfasi .yan-panel[data-bicim="sutun"] .yan-kutu[data-tone="success"] .yan-kutu-deger { background: color-mix(in srgb, var(--success) 14%, var(--surface)); }
 .yazim-sayfasi .yan-panel[data-bicim="sutun"] .yan-kutu[data-tone="danger"] .yan-kutu-deger { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); }
+
+/*
+  AKADEMİK KÂĞIT GÖRÜNÜMÜ DÜĞMESİ (Phase 4.6 D4). "⋯" (Belge) menüsünde,
+  yalnızca koyu temada: açık temada kâğıt her zaman açık, seçilecek bir şey
+  yok. Tercih saklı kalır; kullanıcı koyu temaya dönünce seçimi geri gelir.
+  Menüde durur, araç çubuğunda değil: 48 px çubuğun genişliği ve sığan
+  araç sayısı değişmesin.
+*/
+html:not([data-theme="dark"]) .arac-menu .kagit-secici,
+html:not([data-theme="dark"]) .kagit-secici { display: none; }

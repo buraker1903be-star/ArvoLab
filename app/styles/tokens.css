@@ -562,6 +562,12 @@ html[data-theme="dark"] {
   bloklardaki adlarla bu listeyi iki yönlü karşılaştırır. Eksik bir ad
   loş kâğıtta AÇIK temanın değeriyle kalır (koyu kâğıtta koyu yazı).
 
+  YALNIZCA KULLANICI LOŞ KÂĞIDI SEÇTİYSE (Phase 4.6 D4, html[data-kagit="los"],
+  lib/kagit-gorunumu.ts): kâğıt artık temadan bağımsız; koyu temada
+  varsayılan açık kâğıt. Eskiden (09–10.11.2026) koyu temada herkes loş
+  kâğıdı görüyordu. Açık kâğıtta bu kural uygulanmaz ve kâğıt kendi açık
+  rolleriyle kalır (UX S8'deki sınanmış durum).
+
   YALNIZCA EKRANDA (@media screen): yazdırmada bu kural uygulanmaz, kâğıt
   açık rollerle beyaz kalır; PDF ve Word kendi yollarından (lib/tiptap-
   html.ts, lib/tiptap-docx.ts, --print-*) çizilir, CSS'e bağlı değil.
@@ -569,7 +575,7 @@ html[data-theme="dark"] {
   yalnızca renk adları devralınır, ölçü adları iki temada aynıdır.
 */
 @media screen {
-  html[data-theme="dark"] .kagit {
+  html[data-theme="dark"][data-kagit="los"] .kagit {
     --brand-50: inherit; --brand-100: inherit; --brand-300: inherit; --brand-400: inherit; --brand-500: inherit;
     --brand-700: inherit; --brand-800: inherit; --brand-900: inherit; --brand-950: inherit; --accent-100: inherit;
     --accent-300: inherit; --accent-400: inherit; --accent-500: inherit; --accent-700: inherit; --accent-800: inherit;

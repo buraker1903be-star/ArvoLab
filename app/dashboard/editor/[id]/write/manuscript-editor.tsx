@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { kayitHatasiMetni, TASLAK_GUVENDE_METIN, TASLAK_YAZILAMADI_METIN } from "@/lib/taslak-durumu";
 import { useCeviri, useDil, useSaatDilimi, useTarihler } from "@/app/_components/dil-saglayici";
+import { kagitAbone, kagitDurumu, kagitTercihiniUygula } from "@/app/_components/kagit";
 import { saatEtiketi } from "@/lib/tr-time";
 import { YEREL, type Dil, type Metin } from "@/lib/dil";
 import { useEditor, useEditorState, EditorContent, type Editor } from "@tiptap/react";
@@ -39,6 +40,7 @@ import {
   PanelRightClose,
   Maximize2,
   Minimize2,
+  Contrast,
   FileDown,
   AlignLeft,
   AlignCenter,
@@ -1150,6 +1152,12 @@ export default function ManuscriptEditor({
     yeniden açan öğrenci uyarıları görmeden yazmaya devam etmesin. Esc çıkar.
   */
   const [odak, setOdak] = useState(false);
+  /*
+    Akademik kâğıt görünümü (Phase 4.6 D4, lib/kagit-gorunumu.ts): koyu
+    temada açık (varsayılan) ya da loş. Yalnızca <html data-kagit> ve
+    localStorage; editöre işlem gönderilmez, belge "değişti" olmaz.
+  */
+  const kagitGorunumu = useSyncExternalStore(kagitAbone, kagitDurumu, () => "acik" as const);
   useEffect(() => {
     if (!odak) return;
     const tus = (e: KeyboardEvent) => {
@@ -3029,6 +3037,16 @@ export default function ManuscriptEditor({
           <ToolbarButton label={t({ tr: "Sayfa ayarları", en: "Page settings" })} metin={t({ tr: "Sayfa ayarı", en: "Page setup" })} active={showPageSettings} onClick={() => setShowPageSettings((v) => !v)}>
             <Settings2 size={16} />
           </ToolbarButton>
+          {/* Kâğıt görünümü (D4): yalnızca koyu temada görünür (workspace.css .kagit-secici); açık temada kâğıt hep açık. */}
+          <ToolbarButton
+            className="kagit-secici"
+            label={t({ tr: "Loş kâğıt: belgeyi koyu zeminde göster (yalnızca ekranda; çıktıları etkilemez)", en: "Dim paper: show the document on a dark page (screen only; exports unaffected)" })}
+            metin={t({ tr: "Loş kâğıt", en: "Dim paper" })}
+            active={kagitGorunumu === "los"}
+            onClick={() => kagitTercihiniUygula(kagitGorunumu === "los" ? "acik" : "los")}
+          >
+            <Contrast size={16} />
+          </ToolbarButton>
           <ToolbarButton label={t({ tr: "Kapak sayfası", en: "Cover page" })} metin={t({ tr: "Kapak", en: "Cover" })} active={showCoverPageEditor} onClick={() => setShowCoverPageEditor((v) => !v)}>
             <FileBadge size={16} />
           </ToolbarButton>
@@ -4441,6 +4459,7 @@ export default function ManuscriptEditor({
 function ToolbarButton({
   label,
   metin,
+  className,
   genis = false,
   active = false,
   disabled = false,
@@ -4452,6 +4471,8 @@ function ToolbarButton({
   metin?: string;
   /** Izgarada iki sütunu kaplar (uzun ad) */
   genis?: boolean;
+  /** Ek sınıf (ör. yalnızca bir temada görünen düğme) */
+  className?: string;
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -4460,7 +4481,7 @@ function ToolbarButton({
   return (
     <button
       type="button"
-      className={active ? "is-active" : undefined}
+      className={[active ? "is-active" : "", className ?? ""].filter(Boolean).join(" ") || undefined}
       title={label}
       aria-label={label}
       aria-pressed={active}

@@ -1,10 +1,11 @@
 /*
   KOYU TEMADA EDİTÖR KÂĞIDI KABULÜ (UX S8, 07.11.2026).
 
-  1440 ve 390 piksel × açık/koyu:
-    - kâğıt rengi: açıkta beyaz, koyuda loş kâğıt (yalnızca ekranda;
-      V4.3-A2-3. 07–09.11.2026 arası #ECE9E2, 10.11.2026'ya kadar #182231;
-      Phase 4.6 D3'ten beri yazım ekranında #1B2636, masa #06090E);
+  1440 ve 390 piksel × açık tema, koyu tema + açık kâğıt, koyu tema + loş kâğıt:
+    - kâğıt rengi: açık kâğıt her temada beyaz; loş kâğıt yalnızca ekranda
+      (V4.3-A2-3; Phase 4.6 D3'ten beri yazım ekranında #1B2636, masa
+      #06090E). D4'ten (10.11.2026) beri kâğıt temadan bağımsız: koyu
+      temada varsayılan açık kâğıt; eskiden koyu temada herkes loştu;
     - belgedeki her yazı öğesi kendi zeminiyle en az 4,5:1 (18 px ve üstü
       ya da 14 px kalın üstü için 3:1); zemin saydamsa kâğıt sayılır;
     - koyu temada belgenin içinde saf beyaz zeminli öğe yok (beyaz yama);
@@ -38,14 +39,17 @@ const bekle = (kosul, mesaj) => {
 
 const tarayici = await chromium.launch();
 for (const genislik of [1440, 390]) {
-  for (const tema of ["light", "dark"]) {
-    const ad = `${genislik} ${tema}`;
+  /* D4 (10.11.2026): kâğıt temadan bağımsız; koyu temada açık (varsayılan) ve loş kâğıt ayrı ayrı sınanır. */
+  for (const [tema, kagit] of [["light", "acik"], ["dark", "acik"], ["dark", "los"]]) {
+    const ad = `${genislik} ${tema}${tema === "dark" ? ` ${kagit === "los" ? "loş" : "açık"} kâğıt` : ""}`;
     const ctx = await tarayici.newContext({ viewport: { width: genislik, height: 900 }, isMobile: genislik < 761, hasTouch: genislik < 761 });
-    await ctx.addInitScript((t) => {
+    await ctx.addInitScript(([t, k]) => {
       try {
         localStorage.setItem("arvolab.theme", t);
+        localStorage.setItem("arvolab.kagit", k);
+        localStorage.setItem("arvolab.kagit-gocu", "1");
       } catch {}
-    }, tema);
+    }, [tema, kagit]);
     const sayfa = await ctx.newPage();
     await sayfa.goto(`${TABAN}/dashboard/editor/${TEZ}/write`, { waitUntil: "networkidle", timeout: 150000 });
     await sayfa.locator(".ProseMirror table").first().waitFor({ timeout: 30000 });
@@ -129,11 +133,11 @@ for (const genislik of [1440, 390]) {
         th: th ? oran(rgba(getComputedStyle(th).color), zemin(th)) : null,
       };
     });
-    // Koyu: yazım ekranının kâğıdı #1B2636 (Phase 4.6 D3; 10.11.2026'ya kadar #182231).
-    const beklenen = tema === "dark" ? "27,38,54" : "255,255,255";
+    // Loş: yazım ekranının kâğıdı #1B2636 (Phase 4.6 D3; öncesi #182231). Açık kâğıt her temada beyaz (D4).
+    const beklenen = kagit === "los" ? "27,38,54" : "255,255,255";
     bekle(o.kagit === beklenen, `${ad}: kâğıt ${o.kagit}, beklenen ${beklenen}`);
     bekle(o.dusuk.length === 0, `${ad}: kontrastı düşük yazı: ${o.dusuk.join("; ")}`);
-    if (tema === "dark") bekle(o.beyaz.length === 0, `${ad}: kâğıdın içinde beyaz zeminli öğe: ${o.beyaz.join(", ")}`);
+    if (kagit === "los") bekle(o.beyaz.length === 0, `${ad}: kâğıdın içinde beyaz zeminli öğe: ${o.beyaz.join(", ")}`);
     bekle(o.secim >= 4.5, `${ad}: seçimde mürekkep kontrastı ${o.secim.toFixed(2)}`);
     bekle(o.imlec >= 3, `${ad}: imleç kontrastı ${o.imlec.toFixed(2)}`);
     console.log(`${ad}: kâğıt ${o.kagit}, mürekkep ${o.mursakkep.toFixed(1)}:1, seçim ${o.secim.toFixed(1)}:1, imleç ${o.imlec.toFixed(1)}:1, tablo başlığı ${o.th?.toFixed(1)}:1`);

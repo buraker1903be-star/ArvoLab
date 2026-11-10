@@ -761,20 +761,24 @@ const tarayici = await chromium.launch();
     await ctx.close();
   });
 
-  await senaryo("tema: yazım ekranında koyu kâğıt #1B2636 ve açık belge metni (V4.3-A2-3, Phase 4.6 D3)", async () => {
-    // V4.3-A2-3 (K-5): koyu temada ekranda loş kâğıt, metin #E4E9F0. 07–09.11.2026 arası #ECE9E2
-    // açık kâğıttı; 10.11.2026'ya kadar #182231 (masayla kontrast 1,20). D3 (kurum sahibinin onayı):
-    // yazım ekranında kâğıt #1B2636, masa #06090E (1,30). Ayrıntı ve kontrast: kagit-kabul.mjs.
-    const ctx = await tarayici.newContext({ colorScheme: "dark" });
-    const sayfa = await ctx.newPage();
-    await git(sayfa, `/dashboard/editor/${TEZ}/write`);
-    const kagit = sayfa.locator(".manuscript-editor-content.kagit").first();
-    await kagit.waitFor({ state: "visible", timeout: 30000 });
-    const renk = await kagit.evaluate((el) => ({ zemin: getComputedStyle(el).backgroundColor, yazi: getComputedStyle(el).color, tema: document.documentElement.getAttribute("data-theme") }));
-    bekle(renk.tema === "dark", `tema ${renk.tema}`);
-    bekle(renk.zemin === "rgb(27, 38, 54)", `kâğıt zemini ${renk.zemin}`);
-    bekle(renk.yazi === "rgb(228, 233, 240)", `kâğıt yazısı onaylı #E4E9F0 değil: ${renk.yazi}`);
-    await ctx.close();
+  await senaryo("tema: koyu temada varsayılan açık kâğıt; loş kâğıt seçilince #1B2636 (V4.3-A2-3, Phase 4.6 D3/D4)", async () => {
+    // V4.3-A2-3 (K-5): loş kâğıt, metin #E4E9F0. D3: yazım ekranında loş kâğıt #1B2636, masa #06090E.
+    // D4 (10.11.2026, kurum sahibinin kararı): kâğıt temadan bağımsız. Koyu temada VARSAYILAN açık
+    // kâğıt; loş kâğıt kullanıcının seçimi (arvolab.kagit = "los"). Eskiden koyu temada herkes loştu.
+    // Ayrıntı ve kontrast: kagit-kabul.mjs, kagit-gorunumu-kabul.mjs.
+    for (const [kagit, zemin, yazi] of [[null, "rgb(255, 255, 255)", null], ["los", "rgb(27, 38, 54)", "rgb(228, 233, 240)"]]) {
+      const ctx = await tarayici.newContext({ colorScheme: "dark" });
+      if (kagit) await ctx.addInitScript((k) => { localStorage.setItem("arvolab.kagit", k); localStorage.setItem("arvolab.kagit-gocu", "1"); }, kagit);
+      const sayfa = await ctx.newPage();
+      await git(sayfa, `/dashboard/editor/${TEZ}/write`);
+      const el = sayfa.locator(".manuscript-editor-content.kagit").first();
+      await el.waitFor({ state: "visible", timeout: 30000 });
+      const renk = await el.evaluate((e) => ({ zemin: getComputedStyle(e).backgroundColor, yazi: getComputedStyle(e).color, tema: document.documentElement.getAttribute("data-theme") }));
+      bekle(renk.tema === "dark", `tema ${renk.tema}`);
+      bekle(renk.zemin === zemin, `kâğıt (${kagit ?? "varsayılan"}) zemini ${renk.zemin}, beklenen ${zemin}`);
+      if (yazi) bekle(renk.yazi === yazi, `loş kâğıt yazısı onaylı #E4E9F0 değil: ${renk.yazi}`);
+      await ctx.close();
+    }
   });
 
   await senaryo("tipografi: arayüz her yerde Inter; belge kâğıdı kendi yazı yığınında (Signature OS)", async () => {
