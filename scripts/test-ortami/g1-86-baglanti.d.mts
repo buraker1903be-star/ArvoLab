@@ -56,6 +56,19 @@ export function hedefKullaniciDenetle(kayit: Kayit | null, kullanici: KullaniciB
 export function baglantiKur(kok: string, hashedToken: unknown, tur: "signup" | "recovery"): string;
 export function korunanOzetleriTopla(admin: YonetimIstemcisi): Promise<string[]>;
 export function baglantiyiAc(baglanti: string, secenek?: { acici?: (adres: string) => Promise<void>; bekleme?: number }): Promise<void>;
+export const ACICI_DEGISKENLERI: { win32: string[]; darwin: string[]; linux: string[] };
+export function aciciOrtami(env?: Record<string, string | undefined>, platform?: string): Record<string, string>;
+export type AltSurec = { once(olay: "spawn" | "error", f: (...a: unknown[]) => void): unknown; unref(): void };
+export function sistemAcicisiKur(secenek?: {
+  platform?: string;
+  env?: Record<string, string | undefined>;
+  spawnFn?: (komut: string, args: string[], secenek: Record<string, unknown>) => AltSurec;
+}): (adres: string) => Promise<void>;
+export function dogrudanCalistirildiMi(
+  metaUrl: string,
+  argv1: string | undefined,
+  secenek?: { platform?: string; realpath?: (y: string) => string },
+): "ana" | "baska" | "belirsiz";
 export function calistir(
   argv: string[],
   secenek?: {

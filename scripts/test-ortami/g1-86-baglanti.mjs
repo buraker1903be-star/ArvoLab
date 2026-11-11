@@ -90,7 +90,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { anahtarProjesi, projeKimligi, SABIT_URETIM_SUPABASE_REF, uretimProjesiniGosteriyor } from "../../lib/supabase/ortam-guvenligi.ts";
 import { authConfirmLink } from "../../lib/auth-link.ts";
 import { ILK_SIFRE_YOLU } from "../../lib/ilk-sifre.ts";
@@ -335,19 +335,26 @@ export async function korunanOzetleriTopla(admin) {
 
 /**
  * Bağlantıyı 127.0.0.1 üzerinde tek kullanımlık bir yönlendirmeyle açar.
- * Açıcıya (open/xdg-open) yalnızca rastgele yerel adres verilir; gerçek
- * bağlantı işlem listesine, kabuk geçmişine ve diske girmez.
+ * Açıcıya (open/xdg-open/explorer) yalnızca rastgele yerel adres verilir;
+ * gerçek bağlantı işlem listesine, kabuk geçmişine ve diske girmez.
+ *
+ * Kapanış (Ö3, 11.11.2026): eskiden yanıttan sonra sunucu, tarayıcının
+ * açık tuttuğu (keep-alive) bağlantı yüzünden ~6 sn daha yaşıyordu. Her
+ * yanıt artık "Connection: close" taşır; Node soketi yanıt TAMAMEN
+ * gönderildikten sonra kapatır (yanıt yarıda kesilmez). Zaman aşımında
+ * bekleyen bağlantılar da zorla kapatılır.
  */
 export async function baglantiyiAc(baglanti, { acici = sistemAcicisi, bekleme = 120_000 } = {}) {
   const nonce = randomBytes(24).toString("base64url");
   let kullanildi = false;
   const sunucu = http.createServer((istek, yanit) => {
-    const baslik = { "cache-control": "no-store", "referrer-policy": "no-referrer" };
+    const baslik = { "cache-control": "no-store", "referrer-policy": "no-referrer", connection: "close" };
     if (!kullanildi && istek.method === "GET" && istek.url === `/${nonce}`) {
       kullanildi = true;
+      // Yeni bağlantı kabulü HEMEN durur; mevcut yanıt bitince soket kapanır.
+      sunucu.close();
       yanit.writeHead(302, { ...baslik, location: baglanti });
       yanit.end();
-      sunucu.close();
       return;
     }
     yanit.writeHead(404, baslik);
@@ -359,27 +366,77 @@ export async function baglantiyiAc(baglanti, { acici = sistemAcicisi, bekleme = 
   });
   const yerel = `http://127.0.0.1:${sunucu.address().port}/${nonce}`;
   const kapandi = new Promise((coz) => sunucu.once("close", coz));
-  const zaman = setTimeout(() => sunucu.close(), bekleme);
+  const zaman = setTimeout(() => {
+    sunucu.close();
+    sunucu.closeAllConnections();
+  }, bekleme);
   try {
     await acici(yerel);
     await kapandi;
   } finally {
     clearTimeout(zaman);
     if (sunucu.listening) sunucu.close();
+    sunucu.closeAllConnections();
   }
   if (!kullanildi) throw new Dur("Tarayıcı bağlantıyı süresinde açmadı; belirteç kullanılmadı.", 1);
 }
 
-function sistemAcicisi(adres) {
-  const [komut, arg] = process.platform === "darwin" ? ["open", [adres]] : process.platform === "win32" ? ["explorer.exe", [adres]] : ["xdg-open", [adres]];
-  return new Promise((coz, red) => {
-    const c = spawn(komut, arg, { stdio: "ignore", detached: true, shell: false });
-    c.once("error", () => red(new Dur("Tarayıcı açılamadı.", 1)));
-    c.once("spawn", () => {
-      c.unref();
-      coz();
+/*
+  AÇICI ORTAMI (Ö1, 11.11.2026). Eskiden açıcı (explorer/open/xdg-open)
+  betiğin bütün ortamını devralıyordu; açıcı tarayıcıyı başlatırsa
+  SUPABASE_SECRET_KEY tarayıcının ortamında yaşamaya devam ediyordu. Artık
+  açıcıya yalnızca izin listesindeki değişkenler gider; listede olsa bile
+  anahtar/sır biçimli bir ad asla geçmez. Windows'ta ortam adları büyük/küçük
+  harf duyarsızdır (Path = PATH); arama da öyle yapılır.
+*/
+export const ACICI_DEGISKENLERI = {
+  win32: ["SystemRoot", "windir", "SystemDrive", "PATH", "PATHEXT", "ComSpec", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "HOMEDRIVE", "HOMEPATH", "USERNAME", "USERDOMAIN"],
+  darwin: ["PATH", "HOME", "USER", "LOGNAME", "TMPDIR", "LANG", "LC_ALL", "__CF_USER_TEXT_ENCODING"],
+  linux: ["PATH", "HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR", "XDG_CURRENT_DESKTOP", "XDG_DATA_DIRS", "XDG_CONFIG_DIRS", "DBUS_SESSION_BUS_ADDRESS", "BROWSER"],
+};
+/*
+  "SESSION" bilerek listede DEĞİL (8.6B.4): Linux'ta xdg-open'ın tarayıcıyı
+  bulması için gereken DBUS_SESSION_BUS_ADDRESS'i eliyordu. Oturum sırrı
+  taşıyan adlar (SESSION_TOKEN, AUTH_SESSION, SESSION_COOKIE) zaten TOKEN,
+  AUTH ya da COOKIE ile yakalanır; asıl sınır yine açık izin listesidir.
+*/
+const SIR_BICIMI = /SECRET|KEY|TOKEN|PASSWORD|PASSWD|CREDENTIAL|SUPABASE|AUTH|COOKIE/i;
+
+export function aciciOrtami(env = process.env, platform = process.platform) {
+  const liste = ACICI_DEGISKENLERI[platform] ?? ACICI_DEGISKENLERI.linux;
+  const adlar = Object.keys(env);
+  const sonuc = {};
+  for (const istenen of liste) {
+    if (SIR_BICIMI.test(istenen)) continue;
+    const ad = platform === "win32" ? adlar.find((a) => a.toLowerCase() === istenen.toLowerCase()) : adlar.find((a) => a === istenen);
+    if (ad !== undefined && typeof env[ad] === "string") sonuc[istenen] = env[ad];
+  }
+  return sonuc;
+}
+
+/** Platforma göre açıcı. spawnFn ve ortam testte sahtesiyle verilir. */
+export function sistemAcicisiKur({ platform = process.platform, env = process.env, spawnFn = spawn } = {}) {
+  return (adres) => {
+    const komut = platform === "darwin" ? "open" : platform === "win32" ? "explorer.exe" : "xdg-open";
+    return new Promise((coz, red) => {
+      let c;
+      try {
+        c = spawnFn(komut, [adres], { stdio: "ignore", detached: true, shell: false, windowsHide: true, env: aciciOrtami(env, platform) });
+      } catch {
+        red(new Dur("Tarayıcı açılamadı.", 1));
+        return;
+      }
+      c.once("error", () => red(new Dur("Tarayıcı açılamadı.", 1)));
+      c.once("spawn", () => {
+        c.unref();
+        coz();
+      });
     });
-  });
+  };
+}
+
+function sistemAcicisi(adres) {
+  return sistemAcicisiKur()(adres);
 }
 
 /** Gerçek yönetim istemcisi: yalnızca kapılardan ve anahtar okunduktan sonra kurulur. */
@@ -560,7 +617,17 @@ export async function calistir(argv, secenek = {}) {
       planYaz(a, b, url);
       return 0;
     }
-    const anahtar = anahtarOku(env);
+    let anahtar;
+    try {
+      anahtar = anahtarOku(env);
+    } finally {
+      /*
+        Ö1: anahtar okunduktan sonra (geçersiz olsa da) ortamdan silinir; bu
+        süreçten başlayan hiçbir alt süreç onu devralamaz. Yönetim istemcisi
+        anahtarı kendi belleğinde tutar, silme onu etkilemez.
+      */
+      delete env.SUPABASE_SECRET_KEY;
+    }
     b.imza = imzaAnahtari(anahtar);
     const admin = await adminFabrikasi(url, anahtar);
     if (a.islem === "olustur") await olustur(admin, b);
@@ -581,6 +648,48 @@ export async function calistir(argv, secenek = {}) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+/*
+  DOĞRUDAN ÇALIŞTIRMA (Ö2, 11.11.2026). Eskiden `import.meta.url` ile
+  `pathToFileURL(path.resolve(argv[1]))` birebir karşılaştırılıyordu.
+  Windows'ta sürücü harfi (C: / c:), ayraç (\ / /) ya da kısa/uzun yol
+  farkı karşılaştırmayı bozar ve betik HİÇBİR ŞEY YAPMADAN çıkış 0 verirdi.
+  Artık iki yol da gerçek yola çevrilir; Windows'ta büyük/küçük harf ve
+  ayraç farkı yok sayılır. Dosya adı bu betik olduğu hâlde yol
+  eşleşmiyorsa sessizce geçilmez: hata yazılır, çıkış 2.
+*/
+const BETIK_ADI = "g1-86-baglanti.mjs";
+
+function gercekYol(y, platform, realpath) {
+  try {
+    return realpath(y);
+  } catch {
+    return platform === "win32" ? path.win32.resolve(y) : path.posix.resolve(y);
+  }
+}
+
+/** "ana" (doğrudan çalıştırıldı), "baska" (içe aktarıldı), "belirsiz" (adı bu betik ama yol eşleşmiyor). */
+export function dogrudanCalistirildiMi(metaUrl, argv1, { platform = process.platform, realpath = fs.realpathSync.native } = {}) {
+  if (typeof argv1 !== "string" || !argv1) return "baska";
+  const yolu = platform === "win32" ? path.win32 : path.posix;
+  const normal = (y) => {
+    const n = yolu.normalize(gercekYol(y, platform, realpath));
+    return platform === "win32" ? n.replace(/\//g, "\\").toLowerCase() : n;
+  };
+  let modul;
+  try {
+    modul = fileURLToPath(metaUrl, { windows: platform === "win32" });
+  } catch {
+    return "belirsiz";
+  }
+  if (normal(modul) === normal(yolu.resolve(argv1))) return "ana";
+  const ad = yolu.basename(argv1);
+  return (platform === "win32" ? ad.toLowerCase() === BETIK_ADI : ad === BETIK_ADI) ? "belirsiz" : "baska";
+}
+
+const baslangic = dogrudanCalistirildiMi(import.meta.url, process.argv[1]);
+if (baslangic === "ana") {
   process.exitCode = await calistir(process.argv.slice(2));
+} else if (baslangic === "belirsiz") {
+  console.error("✗ Durduruldu: betik doğrudan çalıştırılmış görünüyor ama yolu doğrulanamadı; hiçbir işlem yapılmadı. Betiği depo kökünden göreli yolla çalıştırın.");
+  process.exitCode = 2;
 }

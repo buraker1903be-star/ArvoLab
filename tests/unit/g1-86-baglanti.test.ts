@@ -4,7 +4,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import http from "node:http";
+import { EventEmitter } from "node:events";
+import { spawnSync } from "node:child_process";
 import {
+  ACICI_DEGISKENLERI,
+  aciciOrtami,
+  dogrudanCalistirildiMi,
+  sistemAcicisiKur,
   argumanlariCoz,
   baglantiyiAc,
   calistir,
@@ -785,5 +791,293 @@ describe("kayıt defteri bütünlüğü (imza + canlı doğrulama)", () => {
     assert.match(r.cikti, /durum olusturuldu/);
     assert.equal(r.fabrika.cagrildi, 0);
     assert.equal(fs.readFileSync(kayitYolu, "utf8"), once);
+  });
+});
+
+/*
+  Ö1 — AÇICI ALT SÜRECİNİN ORTAMI (G1 Aşama 8.6B.3). Eskiden açıcı betiğin
+  bütün ortamını (SUPABASE_SECRET_KEY dahil) devralıyordu.
+*/
+describe("Ö1: anahtar hiçbir alt sürece geçmez", () => {
+  const KIRLI: Record<string, string> = {
+    PATH: "/usr/bin",
+    Path: "C:\\Windows\\System32",
+    SYSTEMROOT: "C:\\Windows",
+    HOME: "/home/x",
+    USERPROFILE: "C:\\Users\\x",
+    DISPLAY: ":0",
+    SUPABASE_SECRET_KEY: SAHTE_ANAHTAR,
+    SUPABASE_SERVICE_ROLE_KEY: SAHTE_ANAHTAR,
+    NEXT_PUBLIC_SUPABASE_URL: URL_TEST,
+    GITHUB_TOKEN: "sahte-token",
+    AWS_SECRET_ACCESS_KEY: "sahte",
+    MY_PASSWORD: "sahte",
+    BROWSER: "firefox",
+  };
+  test("üç platformda da yalnızca izin listesi; sır biçimli hiçbir ad yok", () => {
+    for (const platform of ["win32", "darwin", "linux"] as const) {
+      const o = aciciOrtami(KIRLI, platform);
+      sizintiYok(JSON.stringify(o));
+      for (const ad of Object.keys(o)) {
+        assert.ok(ACICI_DEGISKENLERI[platform].includes(ad), `${platform}: ${ad}`);
+        assert.doesNotMatch(ad, /SECRET|KEY|TOKEN|PASSWORD|SUPABASE/i);
+      }
+      assert.ok(!Object.values(o).includes(SAHTE_ANAHTAR));
+      assert.ok(!Object.values(o).includes("sahte-token"));
+    }
+  });
+  test("izin listesine yanlışlıkla sır adı eklense de süzgeç geçirmez (savunma derinliği)", () => {
+    for (const platform of ["win32", "darwin", "linux"] as const) {
+      const liste = ACICI_DEGISKENLERI[platform];
+      liste.push("SUPABASE_SECRET_KEY", "GITHUB_TOKEN");
+      try {
+        const o = aciciOrtami(KIRLI, platform);
+        assert.ok(!("SUPABASE_SECRET_KEY" in o) && !("GITHUB_TOKEN" in o), platform);
+      } finally {
+        liste.splice(liste.length - 2, 2);
+      }
+    }
+  });
+  test("Windows: ad araması büyük/küçük harf duyarsız (Path → PATH, SYSTEMROOT → SystemRoot)", () => {
+    const o = aciciOrtami({ Path: "C:\\Windows\\System32", SYSTEMROOT: "C:\\Windows", SUPABASE_SECRET_KEY: SAHTE_ANAHTAR }, "win32");
+    assert.equal(o.PATH, "C:\\Windows\\System32");
+    assert.equal(o.SystemRoot, "C:\\Windows");
+    assert.equal(Object.keys(o).length, 2);
+  });
+  /*
+    8.6B.4: eskiden süzgeçteki genel "SESSION" sözcüğü Linux izin listesindeki
+    DBUS_SESSION_BUS_ADDRESS'i eliyordu ve test yalnızca DISPLAY/BROWSER'a
+    baktığı için bunu görmüyordu. Artık listedeki HER ad tek tek sınanıyor.
+  */
+  test("üç platformda izin listesindeki HER değişken tek tek geçer (DBUS_SESSION_BUS_ADDRESS dahil)", () => {
+    for (const platform of ["win32", "darwin", "linux"] as const) {
+      for (const ad of ACICI_DEGISKENLERI[platform]) {
+        const o = aciciOrtami({ [ad]: `deger-${ad}`, SUPABASE_SECRET_KEY: SAHTE_ANAHTAR }, platform);
+        assert.deepEqual(o, { [ad]: `deger-${ad}` }, `${platform}: ${ad} geçmeli, başka hiçbir şey geçmemeli`);
+      }
+    }
+    const l = aciciOrtami({ DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/1000/bus", DISPLAY: ":0", SUPABASE_SECRET_KEY: SAHTE_ANAHTAR }, "linux");
+    assert.equal(l.DBUS_SESSION_BUS_ADDRESS, "unix:path=/run/user/1000/bus");
+    assert.ok(!("SUPABASE_SECRET_KEY" in l));
+  });
+  test("oturum sırrı biçimli adlar listede olsalar bile geçmez; liste dışı hiçbir ad geçmez", () => {
+    const sirlar = ["SESSION_TOKEN", "AUTH_SESSION", "SESSION_COOKIE", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "GITHUB_TOKEN", "DB_PASSWORD", "FTP_PASSWD", "AWS_CREDENTIALS", "API_KEY", "MY_SECRET", "BEARER_AUTH", "SESSION_SECRET", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_DB_URL"];
+    // Her koruma sözcüğünü TEK BAŞINA taşıyan en az bir ad olmalı; yoksa sözcüğün kaldırılması ölçülemez.
+    for (const sozcuk of ["SECRET", "KEY", "TOKEN", "PASSWORD", "PASSWD", "CREDENTIAL", "SUPABASE", "AUTH", "COOKIE"]) {
+      const digerleri = ["SECRET", "KEY", "TOKEN", "PASSWORD", "PASSWD", "CREDENTIAL", "SUPABASE", "AUTH", "COOKIE"].filter((d) => d !== sozcuk && !(sozcuk === "PASSWORD" && d === "PASSWD") && !(sozcuk === "PASSWD" && d === "PASSWORD"));
+      assert.ok(sirlar.some((ad) => ad.includes(sozcuk) && !digerleri.some((d) => ad.includes(d))), `${sozcuk} yalnız başına sınanmıyor`);
+    }
+    const kaynak = Object.fromEntries([...sirlar, "RASTGELE_DEGISKEN", "NODE_OPTIONS", "HTTPS_PROXY"].map((a) => [a, `sir-${a}`]));
+    for (const platform of ["win32", "darwin", "linux"] as const) {
+      const liste = ACICI_DEGISKENLERI[platform];
+      // Liste dışı: hiçbiri geçmez.
+      assert.deepEqual(aciciOrtami(kaynak, platform), {}, `${platform}: liste dışı ad geçti`);
+      // Listeye yanlışlıkla eklenmiş olsalar bile sır biçimliler geçmez.
+      liste.push(...sirlar);
+      try {
+        const o = aciciOrtami(kaynak, platform);
+        assert.deepEqual(o, {}, `${platform}: ${Object.keys(o).join(",")}`);
+      } finally {
+        liste.splice(liste.length - sirlar.length, sirlar.length);
+      }
+    }
+  });
+  test("Linux/macOS: ad araması büyük/küçük harf duyarlı; masaüstü oturum değişkenleri geçer", () => {
+    const l = aciciOrtami(KIRLI, "linux");
+    assert.equal(l.PATH, "/usr/bin");
+    assert.equal(l.DISPLAY, ":0");
+    assert.equal(l.BROWSER, "firefox");
+    assert.ok(!("Path" in l));
+    assert.deepEqual(Object.keys(aciciOrtami(KIRLI, "darwin")).sort(), ["HOME", "PATH"]);
+  });
+
+  type Cagri = { komut: string; args: string[]; secenek: { env: Record<string, string>; shell: boolean } };
+  function sahteSpawn(davranis: "spawn" | "error" | "throw") {
+    const cagrilar: Cagri[] = [];
+    const fn = (komut: string, args: string[], secenek: Cagri["secenek"]) => {
+      cagrilar.push({ komut, args, secenek });
+      if (davranis === "throw") throw new Error(`spawn patladı ${SAHTE_ANAHTAR}`);
+      const c = Object.assign(new EventEmitter(), { unref() {} });
+      setImmediate(() => c.emit(davranis === "spawn" ? "spawn" : "error", new Error(`ENOENT ${SAHTE_ANAHTAR}`)));
+      return c;
+    };
+    return { fn, cagrilar };
+  }
+  test("açıcı: doğru komut, tek argüman (yerel adres), kabuksuz, daraltılmış ortam", async () => {
+    for (const [platform, komut] of [["win32", "explorer.exe"], ["darwin", "open"], ["linux", "xdg-open"]] as const) {
+      const sp = sahteSpawn("spawn");
+      await sistemAcicisiKur({ platform, env: KIRLI, spawnFn: sp.fn as never })("http://127.0.0.1:1234/nonce");
+      const c = sp.cagrilar[0];
+      assert.equal(c.komut, komut);
+      assert.deepEqual(c.args, ["http://127.0.0.1:1234/nonce"]);
+      assert.equal(c.secenek.shell, false);
+      assert.ok(!("SUPABASE_SECRET_KEY" in c.secenek.env), platform);
+      sizintiYok(JSON.stringify(c.secenek.env));
+    }
+  });
+  test("açıcı hata yolları (başlatılamadı / spawn istisnası): güvenli durur, ortam yine temiz, hata metninde sır yok", async () => {
+    for (const davranis of ["error", "throw"] as const) {
+      const sp = sahteSpawn(davranis);
+      await assert.rejects(sistemAcicisiKur({ platform: "win32", env: KIRLI, spawnFn: sp.fn as never })("http://127.0.0.1:1/x"), (e: unknown) => {
+        assert.ok(durMu(e, 1));
+        sizintiYok(String((e as Error).message));
+        return true;
+      });
+      assert.ok(!("SUPABASE_SECRET_KEY" in sp.cagrilar[0].secenek.env));
+    }
+  });
+  test("gerçek kipte anahtar okunduktan sonra ortamdan silinir; yönetim istemcisi anahtarı yine alır", async () => {
+    const env: Record<string, string> = { NEXT_PUBLIC_SUPABASE_URL: URL_TEST, SUPABASE_SECRET_KEY: SAHTE_ANAHTAR };
+    let anahtarAcilistaOrtamdaydi: boolean | null = null;
+    const r = await kos(["olustur", "--calistir"], {
+      secenek: {
+        env,
+        adminFabrikasi: async (_u: string, anahtar: string) => {
+          anahtarAcilistaOrtamdaydi = "SUPABASE_SECRET_KEY" in env;
+          assert.equal(anahtar, SAHTE_ANAHTAR);
+          return sahteAdmin().admin;
+        },
+        ac: async () => {
+          assert.ok(!("SUPABASE_SECRET_KEY" in env), "tarayıcı açılırken anahtar ortamda olmamalı");
+        },
+      },
+    });
+    assert.equal(r.kod, 0, r.cikti);
+    assert.equal(anahtarAcilistaOrtamdaydi, false);
+    assert.ok(!("SUPABASE_SECRET_KEY" in env));
+  });
+  test("anahtar geçersizse de ortamdan silinir; hata ve zaman aşımı yollarında ortam temiz kalır", async () => {
+    for (const anahtar of ["sb_publishable_xyz", `x.${Buffer.from(JSON.stringify({ ref: URETIM_REF, role: "service_role" })).toString("base64url")}.y`]) {
+      const env: Record<string, string> = { NEXT_PUBLIC_SUPABASE_URL: URL_TEST, SUPABASE_SECRET_KEY: anahtar };
+      const r = await kos(["durum", "--calistir"], { secenek: { env } });
+      assert.equal(r.kod, 2);
+      assert.ok(!("SUPABASE_SECRET_KEY" in env));
+    }
+    // İşlem sırasında hata (oluşturma yanıtı kayboldu) ve tarayıcı zaman aşımı.
+    for (const ayar of [{ sahte: sahteAdmin({ yanitKaybolur: true }), ac: undefined }, { sahte: sahteAdmin(), ac: async () => { throw new Dur("Tarayıcı bağlantıyı süresinde açmadı; belirteç kullanılmadı.", 1); } }]) {
+      const env: Record<string, string> = { NEXT_PUBLIC_SUPABASE_URL: URL_TEST, SUPABASE_SECRET_KEY: SAHTE_ANAHTAR };
+      const r = await kos(["olustur", "--calistir"], { sahte: ayar.sahte, secenek: { env, ...(ayar.ac ? { ac: ayar.ac } : {}) } });
+      assert.equal(r.kod, 1);
+      assert.ok(!("SUPABASE_SECRET_KEY" in env));
+      sizintiYok(r.cikti);
+      fs.rmSync(kayitYolu, { force: true });
+    }
+  });
+  test("kuru kipte anahtar ne okunur ne silinir (dokunulmaz)", async () => {
+    const env: Record<string, string> = { NEXT_PUBLIC_SUPABASE_URL: URL_TEST, SUPABASE_SECRET_KEY: SAHTE_ANAHTAR };
+    const r = await kos(["olustur"], { secenek: { env } });
+    assert.equal(r.kod, 0);
+    assert.equal(env.SUPABASE_SECRET_KEY, SAHTE_ANAHTAR);
+  });
+});
+
+/*
+  Ö2 — DOĞRUDAN ÇALIŞTIRMA (Windows yol farkları). Eskiden birebir URL
+  karşılaştırması vardı; Windows'ta sürücü harfi/ayraç farkı betiği sessizce
+  çıkış 0 ile bitirebiliyordu.
+*/
+describe("Ö2: doğrudan çalıştırma tespiti", () => {
+  const kimlik = (y: string) => y; // realpath sahte: dosya sistemine dokunulmaz
+  const W = { platform: "win32" as const, realpath: kimlik };
+  const P = { platform: "linux" as const, realpath: kimlik };
+  const winUrl = "file:///C:/Users/Ali%20Veli/Belgeler/ArvoLab/scripts/test-ortami/g1-86-baglanti.mjs";
+  test("Windows: sürücü harfi, ayraç, boşluklu yol ve harf büyüklüğü farkları eşleşir", () => {
+    for (const argv1 of [
+      "C:\\Users\\Ali Veli\\Belgeler\\ArvoLab\\scripts\\test-ortami\\g1-86-baglanti.mjs",
+      "c:\\users\\ali veli\\belgeler\\arvolab\\scripts\\test-ortami\\g1-86-baglanti.mjs",
+      "C:/Users/Ali Veli/Belgeler/ArvoLab/scripts/test-ortami/g1-86-baglanti.mjs",
+      "C:\\Users\\Ali Veli\\Belgeler\\ArvoLab\\scripts\\test-ortami\\..\\test-ortami\\G1-86-BAGLANTI.mjs",
+    ]) {
+      assert.equal(dogrudanCalistirildiMi(winUrl, argv1, W), "ana", argv1);
+    }
+    assert.equal(dogrudanCalistirildiMi("file:///c:/Users/Ali%20Veli/Belgeler/ArvoLab/scripts/test-ortami/g1-86-baglanti.mjs", "C:\\Users\\Ali Veli\\Belgeler\\ArvoLab\\scripts\\test-ortami\\g1-86-baglanti.mjs", W), "ana");
+  });
+  test("Windows: içe aktarıldığında (argv başka dosya) ana blok başlamaz", () => {
+    assert.equal(dogrudanCalistirildiMi(winUrl, "C:\\Users\\Ali Veli\\Belgeler\\ArvoLab\\node_modules\\x\\test.js", W), "baska");
+    assert.equal(dogrudanCalistirildiMi(winUrl, undefined as unknown as string, W), "baska");
+  });
+  test("aynı adlı ama başka yoldaki dosya: sessizce geçmez, 'belirsiz'", () => {
+    assert.equal(dogrudanCalistirildiMi(winUrl, "D:\\kopya\\g1-86-baglanti.mjs", W), "belirsiz");
+    assert.equal(dogrudanCalistirildiMi(winUrl, "C:\\Users\\Baska\\g1-86-BAGLANTI.MJS", W), "belirsiz");
+  });
+  test("Linux/macOS: harf duyarlı; tam eşleşme ana, farklı harf belirsiz", () => {
+    const u = "file:///home/ali%20veli/ArvoLab/scripts/test-ortami/g1-86-baglanti.mjs";
+    assert.equal(dogrudanCalistirildiMi(u, "/home/ali veli/ArvoLab/scripts/test-ortami/g1-86-baglanti.mjs", P), "ana");
+    assert.equal(dogrudanCalistirildiMi(u, "/home/ali veli/ArvoLab/scripts/test-ortami/../test-ortami/g1-86-baglanti.mjs", P), "ana");
+    assert.equal(dogrudanCalistirildiMi(u, "/home/ali veli/arvolab/scripts/test-ortami/g1-86-baglanti.mjs", P), "belirsiz");
+    assert.equal(dogrudanCalistirildiMi(u, "/home/ali veli/ArvoLab/tests/unit/x.test.ts", P), "baska");
+  });
+  test("gerçek süreç: doğrudan çalıştırılınca ana blok başlar (göreli ve mutlak yol), içe aktarılınca başlamaz", () => {
+    const env = { PATH: process.env.PATH ?? "", HOME: dizin, NEXT_PUBLIC_SUPABASE_URL: URL_TEST } as unknown as NodeJS.ProcessEnv;
+    for (const yol of ["scripts/test-ortami/g1-86-baglanti.mjs", "./scripts/test-ortami/../test-ortami/g1-86-baglanti.mjs", path.resolve("scripts/test-ortami/g1-86-baglanti.mjs")]) {
+      const r = spawnSync(process.execPath, ["--import", "./tests/register.mjs", yol, "plan"], { env, encoding: "utf8", timeout: 30_000 });
+      assert.equal(r.status, 0, yol);
+      assert.match(r.stdout, /KURU KİP/, yol);
+    }
+    // İçe aktarma: hiçbir çıktı ve yan etki yok.
+    const ice = spawnSync(process.execPath, ["--import", "./tests/register.mjs", "-e", "await import('./scripts/test-ortami/g1-86-baglanti.mjs')", "--input-type=module"], { env, encoding: "utf8", timeout: 30_000 });
+    assert.equal(ice.status, 0, ice.stderr);
+    assert.equal(ice.stdout, "");
+    assert.equal(fs.existsSync(path.join(dizin, ".arvolab-g1-86")), false);
+  });
+});
+
+/* Ö3 — YÖNLENDİRME SUNUCUSUNUN KAPANIŞI. */
+describe("Ö3: tek kullanımlık yönlendirme hemen kapanır, yanıt yarıda kesilmez", () => {
+  test("keep-alive istemciyle: 302 yanıtı tam alınır, sunucu 1 sn içinde kapanır, aynı bağlantı tekrar kullanılamaz", async () => {
+    const hedef = `https://ornek.invalid/auth/confirm?token_hash=${SAHTE_TOKEN}&type=signup`;
+    const ajan = new http.Agent({ keepAlive: true, maxSockets: 1 });
+    let verilen = "";
+    let yanit: { durum?: number; konum?: string; baglanti?: string; govdeBitti?: boolean } = {};
+    let acildiZaman = 0;
+    const t0 = Date.now();
+    await baglantiyiAc(hedef, {
+      bekleme: 10_000,
+      acici: async (adres: string) => {
+        verilen = adres;
+        await new Promise<void>((coz, red) => {
+          http
+            .get(adres, { agent: ajan }, (y) => {
+              yanit = { durum: y.statusCode, konum: y.headers.location, baglanti: y.headers.connection };
+              y.resume();
+              y.on("end", () => {
+                yanit.govdeBitti = true;
+                acildiZaman = Date.now();
+                coz();
+              });
+            })
+            .on("error", red);
+        });
+      },
+    });
+    const kapanma = Date.now() - t0;
+    assert.equal(yanit.durum, 302);
+    assert.equal(yanit.konum, hedef);
+    assert.equal(yanit.baglanti, "close");
+    assert.equal(yanit.govdeBitti, true, "yanıt yarıda kesilmemeli");
+    assert.ok(kapanma < 1000, `sunucu ${kapanma} ms'de kapandı (eskiden ~6000)`);
+    assert.ok(acildiZaman > 0);
+    await assert.rejects(
+      new Promise((coz, red) => http.get(verilen, { agent: ajan }, coz).on("error", red)),
+      "ikinci istek aynı ajanla da yapılamamalı",
+    );
+    ajan.destroy();
+  });
+  test("zaman aşımında bağlantıyı açık tutan istemci olsa da sunucu kapanır ve güvenli durur", async () => {
+    let soket: import("node:net").Socket | null = null;
+    const net = await import("node:net");
+    await assert.rejects(
+      baglantiyiAc("https://ornek.invalid/x", {
+        bekleme: 300,
+        acici: async (adres: string) => {
+          const u = new URL(adres);
+          // Yarım istek: bağlantı açık kalır, yönlendirme hiç tüketilmez.
+          soket = net.connect(Number(u.port), "127.0.0.1", () => soket!.write("GET /yanlis HTTP/1.1\r\nHost: x\r\n"));
+          soket.on("error", () => {});
+        },
+      }),
+      (e: unknown) => durMu(e, 1),
+    );
+    (soket as import("node:net").Socket | null)?.destroy();
   });
 });
