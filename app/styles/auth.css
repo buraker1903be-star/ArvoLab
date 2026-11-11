@@ -277,6 +277,10 @@
 .auth-back-link { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin-top: 16px; color: var(--muted); font-size: var(--fs-base); font-weight: 600; text-decoration: none; }
 .auth-back-link:hover { color: var(--primary-ink); }
 .auth-back-link:focus-visible { outline: none; box-shadow: var(--odak-halkasi); border-radius: var(--r-sm); }
+/* İlk şifre / sıfırlama ekranının çıkış ve kurtarma düğmeleri (G1 Aşama 8.3). Bağlantı görünümlü <button>: tarayıcı düğme kalıbı sıfırlanır. */
+.auth-kurtarma { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; }
+.auth-kurtarma form { margin: 0; }
+.auth-kurtarma button.auth-back-link { padding: 0; border: 0; background: none; font-family: inherit; cursor: pointer; }
 .auth-theme-toggle { position: fixed; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); z-index: var(--z-topbar); }
 
 /* ---------- Kayıt formu (app/kayit/kayit-formu.tsx, 02.11.2026) ----------

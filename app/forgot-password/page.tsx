@@ -4,6 +4,7 @@ import { requestPasswordReset } from "@/app/actions/auth";
 import KimlikKabugu from "@/app/_components/kimlik-kabugu";
 import { ceviri } from "@/lib/dil-sunucu";
 import type { Metin } from "@/lib/dil";
+import { YENIDEN_DOGRULAMA_NEDENI } from "@/lib/sifre-hatasi";
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -19,7 +20,7 @@ const errorMessages: Record<string, Metin> = {
 };
 
 type ForgotPasswordPageProps = {
-  searchParams: Promise<{ error?: string; sent?: string }>;
+  searchParams: Promise<{ error?: string; sent?: string; neden?: string }>;
 };
 
 export default async function ForgotPasswordPage({ searchParams }: ForgotPasswordPageProps) {
@@ -28,6 +29,8 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
   const hata = params.error ? errorMessages[params.error] : undefined;
   const errorMessage = hata ? t(hata) : null;
   const sent = params.sent === "1";
+  // İlk şifre ekranından "Yeni doğrulama bağlantısı iste" ile gelindi (G1 Aşama 8.3). Değer beyaz listeli; sorgudaki metin yansıtılmaz.
+  const yenidenDogrulama = params.neden === YENIDEN_DOGRULAMA_NEDENI && !sent;
 
   return (
     /* Logo, dil ve tema ortak kabukta (kimlik-kabugu.tsx); eskiden yalnızca köşede yüzen bir tema düğmesi vardı. */
@@ -49,6 +52,14 @@ export default async function ForgotPasswordPage({ searchParams }: ForgotPasswor
             {t({
               tr: "Bu adres kayıtlıysa birkaç dakika içinde bir sıfırlama bağlantısı gelecek. Bağlantıyı bu cihazda ve aynı tarayıcıda açın; spam klasörünü de kontrol edin.",
               en: "If this address is registered, a reset link will arrive within a few minutes. Open it on this device in the same browser, and check your spam folder.",
+            })}
+          </p>
+        ) : null}
+        {yenidenDogrulama ? (
+          <p className="alert" role="status">
+            {t({
+              tr: "Bu cihazdaki oturumunuz kapatıldı. Şifrenizi belirleyebilmek için e-posta adresinizi girin; size yeni bir doğrulama bağlantısı gönderelim.",
+              en: "You have been signed out on this device. Enter your email address and we will send you a new verification link so you can set your password.",
             })}
           </p>
         ) : null}

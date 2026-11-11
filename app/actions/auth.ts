@@ -14,6 +14,7 @@ import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
 import { SIFRE_VAR_CEREZI } from "@/lib/ilk-sifre";
+import { KURTARMA_YOLU, sifreHatasi, type SifreBaglami } from "@/lib/sifre-hatasi";
 import { after } from "next/server";
 import { randomBytes } from "node:crypto";
 import { onayKaydiYaz, onayKopyasiGonder } from "@/lib/sozlesme/onay-yaz";
@@ -378,26 +379,7 @@ async function sifirlamaBaglantisiGonder(email: string): Promise<void> {
   }
 }
 
-function passwordErrorMessage(code: string | undefined): Metin {
-  switch (code) {
-    case "same_password":
-      return { tr: "Yeni şifre mevcut şifrenizden farklı olmalı.", en: "The new password must be different from your current one." };
-    case "weak_password":
-      return {
-        tr: "Şifre yeterince güçlü değil; harf, rakam ve sembolleri birlikte kullanın.",
-        en: "The password is not strong enough; combine letters, numbers and symbols.",
-      };
-    case "reauthentication_needed":
-      return {
-        tr: "Güvenlik nedeniyle çıkış yapıp yeniden giriş yaptıktan sonra tekrar deneyin.",
-        en: "For security reasons, sign out, sign in again and then retry.",
-      };
-    default:
-      return { tr: "Şifre güncellenemedi. Lütfen tekrar deneyin.", en: "The password could not be updated. Please try again." };
-  }
-}
-
-async function applyNewPassword(formData: FormData): Promise<ActionResult> {
+async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promise<ActionResult> {
   const password = String(formData.get("password") ?? "");
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
   const t = await ceviri();
@@ -424,24 +406,64 @@ async function applyNewPassword(formData: FormData): Promise<ActionResult> {
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    console.error(error);
-    return { error: t(passwordErrorMessage(error.code)) };
+    // Yalnızca kod ve durum: hata nesnesinin tamamı günlüğe gitmesin (oturum ayrıntısı taşımamalı).
+    console.error("[sifre] güncellenemedi", error.code, error.status);
+    // reauthentication_needed'da oturum KAPATILMAZ; çıkış kullanıcının düğmesidir (reset-password/page.tsx).
+    return { error: t(sifreHatasi(error.code, baglam)) };
   }
   // İlk şifre kapısı bu oturumda artık sorgu yapmasın (proxy.ts, lib/ilk-sifre.ts).
   (await cookies()).set(SIFRE_VAR_CEREZI, user.id, { path: "/", httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 30 });
   return { success: true };
 }
 
+/*
+  İLK ŞİFRE / SIFIRLAMA EKRANINDAN ÇIKIŞ (G1 Aşama 8.3, R1). Eskiden bu
+  ekranda hiçbir çıkış yolu yoktu: "/" ve "/forgot-password" oturumu olanı
+  panele, panelin ilk şifre kapısı da yine bu ekrana gönderiyordu
+  (proxy.ts). Yeniden doğrulama istenen şifresiz kullanıcı bu döngüde
+  kilitli kalıyordu.
+
+  İkisi de yalnızca formdaki düğmeyle çalışır (sayfa açılınca ya da hata
+  alınınca kendiliğinden çağrılmaz) ve scope "local": yalnızca bu
+  tarayıcının oturumu kapanır, öteki cihazlar dokunulmaz. logout()
+  bilerek değişmedi (panelin genel çıkışı). Yönlendirmeler sabit iç yol;
+  kullanıcıdan hedef alınmaz. Kapı yok (lib/access.ts): engellenen
+  kullanıcı da çıkabilmeli. Kurtarma oturum kapandıktan SONRA açılır;
+  proxy oturumu olanı /forgot-password'den panele göndermeye devam eder.
+*/
+async function yerelOturumuKapat(formData: FormData) {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signOut({ scope: "local" });
+  if (!error) return;
+  /*
+    supabase-js ağ ya da sunucu hatasında yerel oturumu SİLMEZ. Bu durumda
+    "/"e gitmek kullanıcıyı panelden yine buraya döndürür ve sessiz bir
+    döngü olur; ekrana açıklamayla geri dönülür. Değerler beyaz listeli.
+  */
+  console.error("[oturum] yerel çıkış yapılamadı", error.code, error.status);
+  redirect(formData.get("ilk") === "1" ? "/reset-password?ilk=1&cikis=hata" : "/reset-password?cikis=hata");
+}
+
+export async function ilkSifredenCik(formData: FormData) {
+  await yerelOturumuKapat(formData);
+  redirect("/");
+}
+
+export async function yeniDogrulamaIste(formData: FormData) {
+  await yerelOturumuKapat(formData);
+  redirect(KURTARMA_YOLU);
+}
+
 /** E-postadaki sıfırlama bağlantısıyla gelen kullanıcı için; başarıda panele yönlendirir. */
 export async function resetPassword(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  const result = await applyNewPassword(formData);
+  const result = await applyNewPassword(formData, "sifirlama");
   if (result.error) return result;
   redirect("/dashboard");
 }
 
 /** Ayarlar sayfasından, oturumu açık kullanıcı için. */
 export async function changePassword(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  return applyNewPassword(formData);
+  return applyNewPassword(formData, "ayarlar");
 }
 
 /*
