@@ -17,6 +17,15 @@ const escape = (value: string) =>
 
 import type { Dil } from "@/lib/dil";
 import { DENEME_ASISTAN_HAKKI } from "@/lib/ai/deneme-hakki";
+import { baglantiSuresiMetni } from "@/lib/kimlik-kurallari";
+
+/*
+  Bağlantı süresi Supabase'in "Email OTP expiration" ayarına bağlı ve üç
+  e-postada da (kurtarma, davet, kayıt) aynı (lib/kimlik-kurallari.ts). Eskiden kayıt ve davet
+  e-postası elle "24 saat" yazıyordu; ayar 3600 saniye olduğu için bağlantı
+  1 saatte düşüyordu (11.11.2026). Metin artık oradan türetiliyor.
+*/
+const SURE = baglantiSuresiMetni();
 
 const P = `style="margin:0;font-size:14px;line-height:1.65;color:#5b625e;"`;
 const NOT = `style="margin:14px 0 0;font-size:12px;line-height:1.6;color:#878d8a;"`;
@@ -58,7 +67,7 @@ export function resetPasswordEmail(link: string, dil: Dil = "tr") {
         "Reset your password",
         `<p ${P}>Click the link below to set a new password.</p>
          ${button(link, "Set new password")}
-         <p ${NOT}>The link is valid for 1 hour. If you did not make this request, you can ignore this email; your password will not change.</p>`,
+         <p ${NOT}>The link is valid for ${SURE.en}. If you did not make this request, you can ignore this email; your password will not change.</p>`,
         dil,
       ),
     };
@@ -69,7 +78,7 @@ export function resetPasswordEmail(link: string, dil: Dil = "tr") {
       "Şifrenizi sıfırlayın",
       `<p ${P}>Şifrenizi yenilemek için aşağıdaki bağlantıya tıklayın.</p>
        ${button(link, "Yeni şifre belirle")}
-       <p ${NOT}>Bağlantı 1 saat geçerlidir. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.</p>`,
+       <p ${NOT}>Bağlantı ${SURE.tr} geçerlidir. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.</p>`,
       dil,
     ),
   };
@@ -85,7 +94,7 @@ export function inviteEmail(link: string, inviterName?: string | null, dil: Dil 
         "Welcome to ArvoLab",
         `<p ${P}>${davetEden ? `${escape(davetEden)} has invited you to ArvoLab.` : "You have been invited to ArvoLab."} Click the link below to open your account and set your password.</p>
          ${button(link, "Create my account")}
-         <p ${NOT}>The link is valid for 24 hours.</p>`,
+         <p ${NOT}>The link is valid for ${SURE.en}.</p>`,
         dil,
       ),
     };
@@ -96,7 +105,7 @@ export function inviteEmail(link: string, inviterName?: string | null, dil: Dil 
       "ArvoLab'a hoş geldiniz",
       `<p ${P}>${davetEden ? `${escape(davetEden)} sizi ArvoLab'a davet etti.` : "ArvoLab'a davet edildiniz."} Hesabınızı açmak ve şifrenizi belirlemek için aşağıdaki bağlantıya tıklayın.</p>
        ${button(link, "Hesabımı oluştur")}
-       <p ${NOT}>Bağlantı 24 saat geçerlidir.</p>`,
+       <p ${NOT}>Bağlantı ${SURE.tr} geçerlidir.</p>`,
       dil,
     ),
   };
@@ -113,7 +122,7 @@ export function signUpConfirmEmail(link: string, denemeGunu: number | null, dil:
         "Verify your account",
         `<p ${P}>Welcome to ArvoLab. Verify your email address to start using your account. ${escape(deneme)}</p>
          ${button(link, "Verify my email")}
-         <p ${NOT}>The link is valid for 24 hours. If you did not sign up, ignore this email; unverified accounts are not opened.</p>`,
+         <p ${NOT}>The link is valid for ${SURE.en}. If you did not sign up, ignore this email; unverified accounts are not opened.</p>`,
         dil,
       ),
     };
@@ -125,7 +134,7 @@ export function signUpConfirmEmail(link: string, denemeGunu: number | null, dil:
       "Hesabınızı doğrulayın",
       `<p ${P}>ArvoLab'a hoş geldiniz. Hesabınızı kullanmaya başlamak için e-posta adresinizi doğrulayın. ${escape(deneme)}</p>
        ${button(link, "E-postamı doğrula")}
-       <p ${NOT}>Bağlantı 24 saat geçerlidir. Bu kaydı siz yapmadıysanız bu e-postayı yok sayın; doğrulanmayan hesap açılmaz.</p>`,
+       <p ${NOT}>Bağlantı ${SURE.tr} geçerlidir. Bu kaydı siz yapmadıysanız bu e-postayı yok sayın; doğrulanmayan hesap açılmaz.</p>`,
       dil,
     ),
   };

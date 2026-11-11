@@ -14,12 +14,12 @@ import { oturumYokMesaji, type ActionResult } from "@/lib/auth-guards";
 import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
 import { SIFRE_VAR_CEREZI } from "@/lib/ilk-sifre";
-import { KURTARMA_YOLU, sifreHatasi, type SifreBaglami } from "@/lib/sifre-hatasi";
+import { KURTARMA_YOLU, sifreHatasi, zayifSifreNedenleri, type SifreBaglami } from "@/lib/sifre-hatasi";
+import { sifreUzunlukHatasi } from "@/lib/kimlik-kurallari";
 import { after } from "next/server";
 import { randomBytes } from "node:crypto";
 import { onayKaydiYaz, onayKopyasiGonder } from "@/lib/sozlesme/onay-yaz";
 
-const MIN_PASSWORD_LENGTH = 8;
 /* Kayıt doğrulamasından sonra şifrenin belirlendiği sayfa (G1). */
 const ILK_SIFRE_YOLU = "/reset-password?ilk=1";
 
@@ -384,9 +384,9 @@ async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promi
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
   const t = await ceviri();
 
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: t({ tr: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`, en: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }) };
-  }
+  // En az uzunluk lib/kimlik-kurallari.ts'te; form da aynı sabiti kullanır (eskiden burada 8, formda ayrıca 8 yazılıydı).
+  const uzunlukHatasi = sifreUzunlukHatasi(password);
+  if (uzunlukHatasi) return { error: t(uzunlukHatasi) };
   if (password !== passwordConfirm) {
     return { error: t({ tr: "Şifreler eşleşmiyor.", en: "The passwords do not match." }) };
   }
@@ -409,7 +409,8 @@ async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promi
     // Yalnızca kod ve durum: hata nesnesinin tamamı günlüğe gitmesin (oturum ayrıntısı taşımamalı).
     console.error("[sifre] güncellenemedi", error.code, error.status);
     // reauthentication_needed'da oturum KAPATILMAZ; çıkış kullanıcının düğmesidir (reset-password/page.tsx).
-    return { error: t(sifreHatasi(error.code, baglam)) };
+    // Zayıf şifrede yalnızca tanınan neden adları okunur (lib/sifre-hatasi.ts); şifre ve hata iletisi günlüğe de metne de girmez.
+    return { error: t(sifreHatasi(error.code, baglam, zayifSifreNedenleri(error))) };
   }
   // İlk şifre kapısı bu oturumda artık sorgu yapmasın (proxy.ts, lib/ilk-sifre.ts).
   (await cookies()).set(SIFRE_VAR_CEREZI, user.id, { path: "/", httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 30 });

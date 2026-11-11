@@ -7,6 +7,7 @@ import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { yasalAdres } from "@/lib/yasal-baglantilar";
 import { signUp } from "@/app/actions/auth";
 import type { ActionResult } from "@/lib/auth-guards";
+import { baglantiSuresiMetni } from "@/lib/kimlik-kurallari";
 import { kullanimSozlesmesi, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
 
 /*
@@ -56,8 +57,9 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
         <h2>{t({ tr: "Posta kutunuza bakın", en: "Check your inbox" })}</h2>
         <p>
           {t({
-            tr: "Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve şifrenizi belirlersiniz. Bağlantı 24 saat geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.",
-            en: "We sent a verification link to your address. Clicking it activates your account and lets you set your password. The link is valid for 24 hours; if you don't see the email, check your spam folder.",
+            // Süre Supabase ayarının aynası (lib/kimlik-kurallari.ts); eskiden burada "24 saat" yazıyordu, bağlantı 1 saatte düşüyordu.
+            tr: `Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve şifrenizi belirlersiniz. Bağlantı ${baglantiSuresiMetni().tr} geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.`,
+            en: `We sent a verification link to your address. Clicking it activates your account and lets you set your password. The link is valid for ${baglantiSuresiMetni().en}; if you don't see the email, check your spam folder.`,
           })}
         </p>
         <p className="muted text-sm">

@@ -82,7 +82,8 @@ test("hata alınınca oturum kendiliğinden kapanmaz ve hata nesnesi günlüğe 
   const uygula = govde(AUTH, "applyNewPassword");
   assert.doesNotMatch(uygula, /signOut|yerelOturumuKapat|redirect\(/);
   assert.doesNotMatch(uygula, /console\.\w+\(error\)/);
-  assert.match(uygula, /sifreHatasi\(error\.code, baglam\)/);
+  // G1-C A1: zayıf şifre nedenleri de geçer; yalnızca tanınan neden adları (lib/sifre-hatasi.ts).
+  assert.match(uygula, /sifreHatasi\(error\.code, baglam, zayifSifreNedenleri\(error\)\)/);
 });
 
 test("çıkış ve kurtarma yalnızca bu cihazın oturumunu kapatır (öteki oturumlar korunur)", () => {

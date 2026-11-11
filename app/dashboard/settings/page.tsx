@@ -23,6 +23,7 @@ import { updateMyProfile } from "@/app/actions/profile";
 import DilSecici from "@/app/_components/dil-secici";
 import ActionForm from "../action-form";
 import PasswordForm from "./password-form";
+import { EN_KISA_SIFRE } from "@/lib/kimlik-kurallari";
 import HesapSilmeFormu from "./hesap-silme-formu";
 import { hesapSilmeTalebi } from "@/app/actions/hesap";
 import { sozlesmeOnaylarim } from "@/lib/sozlesme/onay-durumu";
@@ -334,8 +335,8 @@ export default async function SettingsPage() {
                   <b>{t({ tr: "Şifre", en: "Password" })}</b>
                   <small>
                     {t({
-                      tr: "En az 8 karakter. Değiştirdikten sonra diğer cihazlardaki oturumları aşağıdan kapatabilirsiniz.",
-                      en: "At least 8 characters. After changing it, you can sign out other devices below.",
+                      tr: `En az ${EN_KISA_SIFRE} karakter. Değiştirdikten sonra diğer cihazlardaki oturumları aşağıdan kapatabilirsiniz.`,
+                      en: `At least ${EN_KISA_SIFRE} characters. After changing it, you can sign out other devices below.`,
                     })}
                   </small>
                 </span>
@@ -344,7 +345,7 @@ export default async function SettingsPage() {
                   triggerClassName="projects-filter-button button-compact"
                   kicker={t({ tr: "Güvenlik", en: "Security" })}
                   title={t({ tr: "Şifrenizi değiştirin", en: "Change your password" })}
-                  description={t({ tr: "Yeni şifreniz en az 8 karakter olmalı.", en: "Your new password must be at least 8 characters." })}
+                  description={t({ tr: `Yeni şifreniz en az ${EN_KISA_SIFRE} karakter olmalı.`, en: `Your new password must be at least ${EN_KISA_SIFRE} characters.` })}
                 >
                   <PasswordForm action={changePassword} variant="panel" submitLabel={t({ tr: "Şifreyi güncelle", en: "Update password" })} />
                 </PanelDrawer>

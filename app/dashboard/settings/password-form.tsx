@@ -4,6 +4,7 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useActionState } from "react";
 import { ArrowRight, KeyRound } from "lucide-react";
 import type { ActionResult } from "@/lib/auth-guards";
+import { EN_KISA_SIFRE } from "@/lib/kimlik-kurallari";
 
 interface PasswordFormProps {
   action: (previous: ActionResult | null, formData: FormData) => Promise<ActionResult>;
@@ -21,9 +22,9 @@ export default function PasswordForm({ action, variant, submitLabel }: PasswordF
       <form className="login-form" action={formAction}>
         {state?.error ? <p className="alert" role="alert">{state.error}</p> : null}
         <label htmlFor="password">{t({ tr: "Yeni şifre", en: "New password" })}</label>
-        <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
+        <input id="password" name="password" type="password" autoComplete="new-password" minLength={EN_KISA_SIFRE} required />
         <label htmlFor="passwordConfirm">{t({ tr: "Yeni şifre (tekrar)", en: "Confirm new password" })}</label>
-        <input id="passwordConfirm" name="passwordConfirm" type="password" autoComplete="new-password" minLength={8} required />
+        <input id="passwordConfirm" name="passwordConfirm" type="password" autoComplete="new-password" minLength={EN_KISA_SIFRE} required />
         <button className="login-button" type="submit" disabled={pending}>
           {pending ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : submitLabel}
           <ArrowRight size={18} aria-hidden="true" />
@@ -36,11 +37,11 @@ export default function PasswordForm({ action, variant, submitLabel }: PasswordF
     <form className="project-form-grid" action={formAction}>
       <label>
         <span>{t({ tr: "Yeni şifre", en: "New password" })}</span>
-        <input name="password" type="password" autoComplete="new-password" minLength={8} required />
+        <input name="password" type="password" autoComplete="new-password" minLength={EN_KISA_SIFRE} required />
       </label>
       <label>
         <span>{t({ tr: "Yeni şifre (tekrar)", en: "Confirm new password" })}</span>
-        <input name="passwordConfirm" type="password" autoComplete="new-password" minLength={8} required />
+        <input name="passwordConfirm" type="password" autoComplete="new-password" minLength={EN_KISA_SIFRE} required />
       </label>
       <div className="project-form-actions">
         <button type="submit" className="projects-primary-button" disabled={pending}>
