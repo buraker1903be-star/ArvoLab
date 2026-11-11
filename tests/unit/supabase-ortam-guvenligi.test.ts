@@ -13,7 +13,6 @@ import {
   supabaseOrtamKarari,
   supabaseOrtaminiDogrula,
   SupabaseOrtamHatasi,
-  TEK_PROJE_UYARISI,
   uretimProjesiniGosteriyor,
   veritabaniAdresiProjesi,
 } from "@/lib/supabase/ortam-guvenligi";
@@ -264,44 +263,45 @@ describe("dağıtım ortamı: çalışma anı + derleme yedeği", () => {
 });
 
 /*
-  TEK PROJE BEYANI (05.11.2026). Kurum sahibi ayrı test projesi açmamaya
-  karar verdi; önizleme bilerek üretim projesine bağlanıyor. Beyan yalnızca
-  adres TANIMLI üretim kimliğini gösteriyorsa geçerli; betik kuralları
-  (şema kurulumu, sentetik veri) bundan etkilenmez.
+  TEK PROJE BEYANI KALDIRILDI (G1 Aşama 8.5D, 11.11.2026). 05.11.2026'dan
+  beri ARVOLAB_TEK_PROJE=1, üretim dışı ortamın üretim projesine
+  bağlanmasına izin veriyordu ve bu blok o izni sabitliyordu. Test projesi
+  kuruldu, beyan Preview'da tanımlı değil; tek bir değişkenle önizlemeyi
+  canlı veriye bağlayan yol kapatıldı. Testler artık izni değil RETTİ
+  sabitliyor.
 */
-describe("tek proje beyanı (ARVOLAB_TEK_PROJE=1)", () => {
-  test("Preview/Development/yerel: beyan + adres tanımlı üretim projesi → izin, uyarıyla", () => {
+describe("tek proje beyanı (ARVOLAB_TEK_PROJE=1) artık üretime bağlantı açmaz", () => {
+  test("Preview/Development/yerel: beyan + adres tanımlı üretim projesi → ret", () => {
     for (const vercelOrtami of ["preview", "development", null]) {
-      assert.deepEqual(supabaseOrtamKarari({ vercelOrtami, supabaseUrl: adres(URETIM), uretimRef: URETIM, tekProje: "1" }), {
-        tur: "izin", ortam: "uretim-disi", hedef: "uretim", uyari: TEK_PROJE_UYARISI,
-      });
+      const k = supabaseOrtamKarari({ vercelOrtami, supabaseUrl: adres(URETIM), uretimRef: URETIM, tekProje: "1" });
+      assert.equal(k.tur === "red" && k.neden, "uretim-disi-uretime-bagli", String(vercelOrtami));
+      assert.ok(k.tur === "red" && !k.mesaj.includes("TEK_PROJE"), "ret mesajı kaçış yolunu önermemeli");
     }
   });
-  test("beyan yoksa ya da '1' değilse eski kural: üretime bağlantı reddedilir", () => {
-    for (const tekProje of [undefined, "", "0", "evet"]) {
+  test("beyan değeri ne olursa olsun üretime bağlantı reddedilir", () => {
+    for (const tekProje of [undefined, "", "0", "evet", "1", " 1 "]) {
       const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(URETIM), uretimRef: URETIM, tekProje });
       assert.equal(k.tur === "red" && k.neden, "uretim-disi-uretime-bagli");
     }
   });
-  test("beyan kimliği bilinmeyen ya da başka bir projeye izin VERMEZ", () => {
-    // Üretim kimliği tanımlı değil: hangi projeye bağlanıldığı doğrulanamıyor.
+  test("beyan kimliği bilinmeyen ya da başka bir projeye izin vermez", () => {
     assert.equal(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(URETIM), tekProje: "1" }).tur, "red");
-    // Adres başka bir projeyi gösteriyor.
-    const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(BASKA), uretimRef: URETIM, tekProje: "1" });
-    assert.equal(k.tur, "red");
-    // Kimlik biçimi bozuk.
+    assert.equal(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(BASKA), uretimRef: URETIM, tekProje: "1" }).tur, "red");
     assert.equal(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(URETIM), uretimRef: "kisa", tekProje: "1" }).tur, "red");
+  });
+  test("beyan doğru test yapılandırmasını bozmaz", () => {
+    assert.deepEqual(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres(TEST), ...tam, tekProje: "1" }), { tur: "izin", ortam: "uretim-disi", hedef: "test" });
   });
   test("üretimde beyanın etkisi yok: kurallar aynı", () => {
     const k = supabaseOrtamKarari({ vercelOrtami: "production", supabaseUrl: adres(TEST), uretimRef: URETIM, testRef: TEST, tekProje: "1" });
     assert.equal(k.tur === "red" && k.neden, "uretim-test-projesine-bagli");
   });
-  test("ortamGirdisi beyanı okur; tarayıcı paketine gömülür", () => {
+  test("ortamGirdisi beyanı okumaya devam eder (anahtar ayrımı için); tarayıcı paketine gömülü kalır", () => {
     assert.equal(ortamGirdisi({ ARVOLAB_TEK_PROJE: "1" }).tekProje, "1");
     assert.ok(readFileSync("lib/supabase/client.ts", "utf8").includes("ARVOLAB_TEK_PROJE: process.env.ARVOLAB_TEK_PROJE"));
     assert.ok(/ARVOLAB_TEK_PROJE:\s*process\.env\.ARVOLAB_TEK_PROJE/.test(readFileSync("next.config.ts", "utf8")));
   });
-  test("anahtar ayrımı: beyanla üretim anahtarları kabul edilir ama uyarı yazılır; beyansız ret sürer", () => {
+  test("anahtar ayrımı (kapsam dışı, değişmedi): beyanla üretim anahtarları uyarıyla kabul; beyansız ret sürer", () => {
     const env = { VERCEL_ENV: "preview", OPENAI_API_KEY: "x", CRON_SECRET: "x" };
     assert.equal(anahtarAyrimiKarari(env).tur, "red");
     const k = anahtarAyrimiKarari({ ...env, ARVOLAB_TEK_PROJE: "1" });
@@ -473,9 +473,15 @@ describe("kodda sabit üretim kimliği: kimlikler yer değiştirse de üretime y
     }
   });
 
-  test("uygulamanın çalışma anı kararı değişmedi: önizleme tek proje beyanıyla üretime bağlanmaya devam eder", () => {
+  /*
+    Eskiden burada "önizleme tek proje beyanıyla üretime bağlanmaya devam
+    eder" sabitleniyordu (05.11.2026 kararı). 11.11.2026'da (G1 Aşama 8.5D)
+    beyan kaldırıldı ve uygulama kararı da sabit kimliği kullanıyor;
+    üretimin kendi kararı aynı kaldı.
+  */
+  test("önizleme beyanla bile üretime bağlanamaz; üretimin kararı değişmedi", () => {
     const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: `https://${PROD}.supabase.co`, uretimRef: PROD, tekProje: "1" });
-    assert.equal(k.tur === "izin" && k.hedef, "uretim");
+    assert.equal(k.tur === "red" && k.neden, "uretim-disi-uretime-bagli");
     const u = supabaseOrtamKarari({ vercelOrtami: "production", supabaseUrl: `https://${PROD}.supabase.co`, uretimRef: PROD, testRef: TEST_GERCEK });
     assert.equal(u.tur === "izin" && u.hedef, "uretim");
   });
@@ -533,5 +539,126 @@ describe("kurulum ve sentetik veri betikleri üretim adresiyle başlamaz", () =>
     assert.equal(s.status, 1);
     assert.match(s.stderr, /üretim projesi/);
     assert.doesNotMatch(s.stderr + s.stdout, /Test projesi doğrulandı|sb_secret_sahte|sahte-parola/);
+  });
+});
+
+/*
+  BAĞIMSIZ ÜRETİM ENGELİ (G1 Aşama 8.5D, 11.11.2026). Eskiden üretim dışı
+  karar yalnızca ortam değişkenlerine dayanıyordu: ARVOLAB_TEST_SUPABASE_REF
+  üretim kimliğine yazılır ve adres de üretimi gösterirse "test projesi"
+  sayılıp İZİN veriliyordu (ilk test bunu sabitliyor). Burada gerçek
+  kimlikler kullanılıyor; uydurma kimliklerle sabit kimlik sınanamaz.
+*/
+describe("bağımsız üretim engeli: sabit üretim kimliği değişkenlerden bağımsız reddedilir", () => {
+  const PROD = "zpfpocyajnxcketdjbxm";
+  const TEST_GERCEK = "kyvjftrsweqjlgjeobnq";
+  const BASKA_GERCEK = "dddddddddddddddddddd";
+  const url = (ref: string) => `https://${ref}.supabase.co`;
+  const ONIZLEME_DISI = ["preview", "development", null] as const;
+  const dogru = { etiket: "test", uretimRef: PROD, testRef: TEST_GERCEK };
+
+  test("doğru Test yapılandırması kabul edilir", () => {
+    for (const vercelOrtami of ONIZLEME_DISI) {
+      assert.deepEqual(supabaseOrtamKarari({ vercelOrtami, supabaseUrl: url(TEST_GERCEK), ...dogru }), { tur: "izin", ortam: "uretim-disi", hedef: "test" });
+    }
+  });
+
+  test("test değişkenine üretim kimliği yazılır ve adres üretimi gösterirse ret (eskiden İZİN veriyordu)", () => {
+    for (const vercelOrtami of ONIZLEME_DISI) {
+      // Değişkenler tutarlı ama yanlış: üretim kimliği "test", başka bir kimlik "üretim" sanılıyor.
+      const k = supabaseOrtamKarari({ vercelOrtami, supabaseUrl: url(PROD), etiket: "test", uretimRef: BASKA_GERCEK, testRef: PROD });
+      assert.equal(k.tur === "red" && k.neden, "uretim-disi-uretime-bagli", String(vercelOrtami));
+    }
+  });
+
+  test("test değişkenine üretim kimliği yazılırsa adres başka olsa da ret", () => {
+    const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: url(TEST_GERCEK), etiket: "test", uretimRef: TEST_GERCEK, testRef: PROD });
+    assert.equal(k.tur === "red" && k.neden, "test-kimligi-uretimi-gosteriyor");
+    const kodlu = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: url(TEST_GERCEK), etiket: "test", uretimRef: BASKA_GERCEK, testRef: PROD.toUpperCase() });
+    assert.equal(kodlu.tur, "red");
+  });
+
+  test("test etiketiyle üretim adresi verilirse ret", () => {
+    const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: url(PROD), ...dogru });
+    assert.equal(k.tur === "red" && k.neden, "uretim-disi-uretime-bagli");
+  });
+
+  test("üretim adresi: değişkenler eksik, boş ya da bozuk olsa da ret (fail-closed, en açık nedenle)", () => {
+    for (const degiskenler of [{}, { etiket: "test" }, { uretimRef: "", testRef: "" }, { uretimRef: "bozuk", testRef: "x" }, { etiket: "uretim" }]) {
+      const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: url(PROD), ...degiskenler });
+      assert.equal(k.tur === "red" && k.neden, "uretim-disi-uretime-bagli", JSON.stringify(degiskenler));
+    }
+  });
+
+  test("kaçış bayrağı açıkken üretim adresi verilirse ret", () => {
+    for (const degiskenler of [{}, dogru, { uretimRef: PROD }, { etiket: "test", uretimRef: BASKA_GERCEK, testRef: PROD }]) {
+      const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: url(PROD), ...degiskenler, tekProje: "1" });
+      assert.equal(k.tur, "red", JSON.stringify(degiskenler));
+    }
+  });
+
+  test("test ve üretim kimlikleri aynıysa ret", () => {
+    assert.equal(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: url(TEST_GERCEK), etiket: "test", uretimRef: TEST_GERCEK, testRef: TEST_GERCEK }).tur, "red");
+    assert.equal(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: url(PROD), etiket: "test", uretimRef: PROD, testRef: PROD }).tur, "red");
+  });
+
+  test("eksik ya da geçersiz değişkenler test adresinde de fail-closed", () => {
+    for (const eksik of [{ etiket: "" }, { uretimRef: "" }, { testRef: "" }, { etiket: "uretim" }, { testRef: "kisa" }]) {
+      assert.equal(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: url(TEST_GERCEK), ...dogru, ...eksik }).tur, "red", JSON.stringify(eksik));
+    }
+    for (const adres of [undefined, "", "http://zpfpocyajnxcketdjbxm.supabase.co", "https://example.com"]) {
+      assert.equal(supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: adres, ...dogru }).tur, "red", String(adres));
+    }
+  });
+
+  test("ret başka projeye geçmez; mesaj anahtar ya da adres içermez", () => {
+    const k = supabaseOrtamKarari({ vercelOrtami: "preview", supabaseUrl: url(PROD), ...dogru, tekProje: "1" });
+    assert.equal(k.tur, "red");
+    assert.ok(k.tur === "red" && !("hedef" in k));
+    assert.ok(k.tur === "red" && !/https?:|supabase\.co|key|anahtar=/i.test(k.mesaj));
+    // Doğrulayıcı fırlatır: çağıran istemci kurmadan durur.
+    assert.throws(() => supabaseOrtaminiDogrula({ VERCEL_ENV: "preview", NEXT_PUBLIC_SUPABASE_URL: url(PROD), ARVOLAB_SUPABASE_ORTAMI: "test", ARVOLAB_URETIM_SUPABASE_REF: BASKA_GERCEK, ARVOLAB_TEST_SUPABASE_REF: PROD }), SupabaseOrtamHatasi);
+  });
+
+  test("derleme anı ortamı preview, çalışma anı boşsa da engel uygulanır (sunucu, ara katman, yönetici)", () => {
+    const k = supabaseOrtamKarari({ vercelOrtami: null, derlemeOrtami: "preview", supabaseUrl: url(PROD), ...dogru, tekProje: "1" });
+    assert.equal(k.tur === "red" && k.neden, "uretim-disi-uretime-bagli");
+  });
+
+  test("sahte önizleme (ARVOLAB_ONIZLEME=1) gerçek bağlantı kurmadığı için değişmedi", () => {
+    assert.deepEqual(supabaseOrtamKarari({ vercelOrtami: "preview", onizleme: "1", supabaseUrl: url(PROD) }), { tur: "izin", ortam: "uretim-disi", hedef: "sahte" });
+  });
+
+  test("üretimin mevcut davranışı değişmedi", () => {
+    // Doğru üretim yapılandırması: izin.
+    assert.deepEqual(supabaseOrtamKarari({ vercelOrtami: "production", supabaseUrl: url(PROD), etiket: "uretim", uretimRef: PROD, testRef: TEST_GERCEK }), { tur: "izin", ortam: "uretim", hedef: "uretim" });
+    // Bugünkü Production: ARVOLAB_* değişkenleri yok → bağlantı KESİLMEZ, yalnızca uyarı (geriye dönük uyumluluk, P1).
+    const bugun = supabaseOrtamKarari({ vercelOrtami: "production", supabaseUrl: url(PROD) });
+    assert.equal(bugun.tur === "izin" && bugun.hedef, "uretim");
+    assert.ok(bugun.tur === "izin" && bugun.uyari?.includes("ARVOLAB_URETIM_SUPABASE_REF"));
+    // Derleme yedeğiyle de aynı.
+    assert.equal(supabaseOrtamKarari({ vercelOrtami: null, derlemeOrtami: "production", supabaseUrl: url(PROD) }).tur, "izin");
+    // Üretimin mevcut retleri aynı.
+    assert.equal(supabaseOrtamKarari({ vercelOrtami: "production", supabaseUrl: url(TEST_GERCEK), testRef: TEST_GERCEK }).tur, "red");
+    assert.equal(supabaseOrtamKarari({ vercelOrtami: "production", supabaseUrl: url(PROD), etiket: "test" }).tur, "red");
+    // Üretim dalı sabit kimlik engeline girmez: test değişkeni yanlışlıkla üretim olsa bile üretimin kararı eskisi gibi.
+    assert.equal(supabaseOrtamKarari({ vercelOrtami: "production", supabaseUrl: url(PROD), testRef: PROD }).tur, "red");
+    // Anahtar ayrımı üretimde her zaman izin.
+    assert.deepEqual(anahtarAyrimiKarari({ VERCEL_ENV: "production", OPENAI_API_KEY: "x" }), { tur: "izin" });
+  });
+
+  test("dört istemci de aynı merkezi kararı kullanır (kaynak sözleşmesi)", () => {
+    const dosyalar = {
+      "lib/supabase/client.ts": /supabaseOrtaminiDogrula\(tarayiciOrtami\(\)\);\s*return createBrowserClient\(/,
+      "lib/supabase/server.ts": /supabaseOrtaminiDogrula\(process\.env, process\.env\.ARVOLAB_DAGITIM_ORTAMI\);[\s\S]*return createServerClient\(/,
+      "lib/supabase/admin.ts": /supabaseOrtaminiDogrula\(process\.env, process\.env\.ARVOLAB_DAGITIM_ORTAMI\);[\s\S]*return createClient\(url, secret/,
+      "proxy.ts": /supabaseOrtamKarari\(ortamGirdisi\(process\.env, process\.env\.ARVOLAB_DAGITIM_ORTAMI\)\);\s*if \(ortamKarari\.tur === "red"\)[\s\S]*createServerClient\(/,
+    };
+    for (const [dosya, desen] of Object.entries(dosyalar)) assert.match(readFileSync(dosya, "utf8"), desen, dosya);
+    // supabaseOrtaminiDogrula aynı kararı çağırır; ayrı bir kopya yok.
+    const modul = readFileSync("lib/supabase/ortam-guvenligi.ts", "utf8");
+    assert.match(modul, /export function supabaseOrtaminiDogrula[\s\S]*?supabaseOrtamKarari\(ortamGirdisi\(env, derlemeOrtami\)\)/);
+    // Derleme anı da aynı kararı çağırır.
+    assert.match(readFileSync("next.config.ts", "utf8"), /supabaseOrtamKarari\(ortamGirdisi\(process\.env\)\)/);
   });
 });

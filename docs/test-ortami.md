@@ -72,12 +72,13 @@ yalnızca sonraki üretim derlemesi durur.
 `ARVOLAB_TEK_PROJE=1` beyanıyla ÜRETİM projesine bağlanacaktı. Sonra
 Test projesi kuruldu; Preview'ın test değişkenleri Vercel kayıtlarına göre
 05.11.2026 20:50–20:58 UTC'de girildi (adım 4–5) ve beyan bugün Preview'da
-tanımlı değil. Beyanın kodu (`ARVOLAB_TEK_PROJE`)
-yerinde duruyor: tanımlanırsa üretim dışı ortamın üretim projesine
-bağlanmasını yeniden açar, bu yüzden Preview'a geri eklenmemeli.
-`lib/supabase/ortam-guvenligi.ts`'teki bir yorum hâlâ "önizleme bugün
-ARVOLAB_TEK_PROJE=1 beyanıyla bu projeye bağlanıyor" diyor; o yorum
-eskidi (kod değişikliği ayrı turda).
+tanımlı değil. 11.11.2026'da (G1 Aşama 8.5D) beyanın veritabanı kısmı
+koddan kaldırıldı: `ARVOLAB_TEK_PROJE=1` artık üretim dışı ortamın üretim
+projesine bağlanmasına izin VERMEZ. Uygulamanın kararı ayrıca kodda sabit
+üretim kimliğini (`SABIT_URETIM_SUPABASE_REF`) değişkenlerden bağımsız
+reddediyor; `ARVOLAB_TEST_SUPABASE_REF` yanlışlıkla üretim kimliğine
+yazılsa da bağlantı kurulmaz. Beyanın anahtar ayrımındaki kısmı
+(`anahtarAyrimiKarari`) değişmedi; ayrı kararla ele alınacak.
 
 ### Migration geçmişi (05.11.2026, salt okunur ölçüm)
 

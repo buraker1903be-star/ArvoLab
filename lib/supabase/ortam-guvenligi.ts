@@ -52,7 +52,12 @@ export type OrtamGirdisi = {
   testRef?: string | null;
   /** ARVOLAB_ONIZLEME: "1" ise sahte istemci (gerçek bağlantı yok). */
   onizleme?: string | null;
-  /** ARVOLAB_TEK_PROJE: "1" ise üretim dışı ortamın ÜRETİM projesine bağlanması bilerek kabul edilir (supabaseOrtamKarari, "TEK PROJE BEYANI"). */
+  /**
+   * ARVOLAB_TEK_PROJE. 11.11.2026'dan beri Supabase kararında ETKİSİZ: üretim
+   * dışı ortamın üretim projesine bağlanmasına artık hiçbir koşulda izin
+   * verilmez (supabaseOrtamKarari, "BAĞIMSIZ ÜRETİM ENGELİ"). Okunmaya devam
+   * ediyor çünkü anahtar ayrımı (anahtarAyrimiKarari) hâlâ bakıyor.
+   */
   tekProje?: string | null;
 };
 
@@ -60,6 +65,7 @@ export type RedNedeni =
   | "adres-yok"
   | "adres-gecersiz"
   | "uretim-disi-uretime-bagli"
+  | "test-kimligi-uretimi-gosteriyor"
   | "uretim-disi-yapilandirma-eksik"
   | "uretim-disi-etiket-yanlis"
   | "uretim-disi-test-projesi-degil"
@@ -125,9 +131,6 @@ export function projeKimligi(url: string | null | undefined): string | null {
 
 const temiz = (s: string | null | undefined) => (typeof s === "string" ? s.trim() : "");
 
-export const TEK_PROJE_UYARISI =
-  "Tek proje beyanı (ARVOLAB_TEK_PROJE=1): üretim dışı ortam ÜRETİM Supabase projesine bağlı. Burada yapılan her işlem canlı veriye yazılır.";
-
 export function supabaseOrtamKarari(g: OrtamGirdisi): OrtamKarari {
   const cozum = dagitimOrtamiCoz(g.vercelOrtami, g.derlemeOrtami);
   if (cozum.tur === "celiski") {
@@ -153,26 +156,41 @@ export function supabaseOrtamKarari(g: OrtamGirdisi): OrtamKarari {
   if (!temiz(g.supabaseUrl)) return red("adres-yok", "NEXT_PUBLIC_SUPABASE_URL tanımlı değil.");
   const ref = projeKimligi(g.supabaseUrl);
   if (!ref) return red("adres-gecersiz", "NEXT_PUBLIC_SUPABASE_URL bir Supabase proje adresi değil (https://<proje>.supabase.co).");
+  /*
+    BAĞIMSIZ ÜRETİM ENGELİ (G1 Aşama 8.5D, 11.11.2026). Eskiden üretim dışı
+    karar yalnızca ortam değişkenlerine dayanıyordu: ARVOLAB_TEST_SUPABASE_REF
+    yanlışlıkla üretim kimliğine yazılır ve adres de üretimi gösterirse
+    kontrol "test projesi" deyip İZİN veriyordu; ARVOLAB_TEK_PROJE=1 ise
+    üretime bağlanmayı açıkça açıyordu. Kodda sabit üretim kimliği
+    (SABIT_URETIM_SUPABASE_REF) hiçbir değişkene bakmadan reddeder ve
+    değişken biçimi denetiminden ÖNCE gelir: değişkenler bozuk olsa da en
+    açık neden budur. Tarayıcı, sunucu, ara katman ve yönetim istemcisi bu
+    fonksiyondan geçer. Ret başka projeye geçmek değildir; bağlantı kurulmaz.
+    Üretim dalı (VERCEL_ENV=production) bilerek değişmedi.
+  */
+  if (ortam === "uretim-disi") {
+    if (ref === SABIT_URETIM_SUPABASE_REF) {
+      return red("uretim-disi-uretime-bagli", "Üretim dışı ortam üretim Supabase projesine bağlanamaz.");
+    }
+    if (uretimProjesiniGosteriyor(testRef)) {
+      return red("test-kimligi-uretimi-gosteriyor", "ARVOLAB_TEST_SUPABASE_REF üretim projesini gösteriyor; test ve üretim kimlikleri karışmış olabilir.");
+    }
+  }
   if ((uretimRef && !REF.test(uretimRef)) || (testRef && !REF.test(testRef))) {
     return red("ref-bicimi-gecersiz", "ARVOLAB_URETIM_SUPABASE_REF / ARVOLAB_TEST_SUPABASE_REF biçimi geçersiz (20 küçük harf ve rakam).");
   }
 
   if (ortam === "uretim-disi") {
     /*
-      TEK PROJE BEYANI (05.11.2026, kurum sahibinin kararı). Ayrı test
-      projesi açılmadı; önizleme ve yerel geliştirme bilerek ÜRETİM
-      projesine bağlanıyor. Beyan yalnızca adres tanımlı üretim kimliğini
-      gösteriyorsa geçerli: kimlik bilinmeden ya da başka bir projeye karşı
-      işe yaramaz, yani "rastgele bir projeye bağlan" demek değildir.
-      Betiklerin kuralı (betikHedefKarari) bundan etkilenmez: şema kurulumu
-      ve sentetik veri üretimde yine hiçbir koşulda çalışmaz.
+      TEK PROJE BEYANI KALDIRILDI (11.11.2026). 05.11.2026'da ayrı test
+      projesi yokken ARVOLAB_TEK_PROJE=1 üretim dışı ortamın üretime
+      bağlanmasına izin veriyordu. Test projesi kuruldu ve beyan Preview'da
+      tanımlı değil (docs/test-ortami.md); yerinde durması, tek bir
+      değişkenle önizlemeyi canlı veriye bağlamayı yeniden açıyordu.
     */
-    if (uretimRef && ref === uretimRef && temiz(g.tekProje) === "1") {
-      return { tur: "izin", ortam, hedef: "uretim", uyari: TEK_PROJE_UYARISI };
-    }
     // Önce üretime bağlantı: yapılandırma eksik olsa da kimlik biliniyorsa en açık ret budur.
     if (uretimRef && ref === uretimRef) {
-      return red("uretim-disi-uretime-bagli", "Üretim dışı ortam üretim Supabase projesine bağlanamaz (bilerek isteniyorsa ARVOLAB_TEK_PROJE=1).");
+      return red("uretim-disi-uretime-bagli", "Üretim dışı ortam üretim Supabase projesine bağlanamaz.");
     }
     if (ref === "yerel") {
       return vercelde ? red("yerel-supabase-vercelde", "Vercel dağıtımı yerel Supabase adresine bağlanamaz.") : { tur: "izin", ortam, hedef: "yerel" };
@@ -298,11 +316,11 @@ export type HedefKarari = { tur: "izin"; hedef: "test" | "uretim" } | { tur: "re
   hangi değişken ne derse desin üretim projesi tanınır. Proje kimliği bir
   sır değildir (her istemcinin adresinde görünür).
 
-  Kapsam BİLEREK betiklerle sınırlı: uygulamanın çalışma anı kararı
-  (supabaseOrtamKarari) değişmedi — önizleme bugün ARVOLAB_TEK_PROJE=1
-  beyanıyla bu projeye bağlanıyor. Üretim projesi bir gün değişirse bu
-  satır da değişmeli; değişmezse yeni üretim projesi bu korumayı kaybeder
-  (ama ortam değişkenli eski koruma sürer).
+  11.11.2026'dan beri uygulamanın çalışma anı kararı da bu kimliği
+  kullanıyor (supabaseOrtamKarari, "BAĞIMSIZ ÜRETİM ENGELİ"); eskiden
+  kapsam betiklerle sınırlıydı. Üretim projesi bir gün değişirse bu satır
+  da değişmeli; değişmezse yeni üretim projesi bu korumayı kaybeder (ama
+  ortam değişkenli eski koruma sürer).
 */
 export const SABIT_URETIM_SUPABASE_REF = "zpfpocyajnxcketdjbxm";
 
@@ -393,6 +411,9 @@ export function anahtarAyrimiKarari(env: Record<string, string | undefined>): { 
     test anahtarı yok, önizleme üretimin anahtarlarını kullanıyor. Bu bir
     "test anahtarıdır" beyanı DEĞİL (o yalan olurdu); bilinen bir durumun
     kabulü. Uyarı derleme günlüğüne düşer.
+    11.11.2026: beyanın VERİTABANI kısmı kaldırıldı (supabaseOrtamKarari);
+    bu anahtar kısmı G1 Aşama 8.5D'nin kapsamı dışında kaldı, ayrı kararla
+    ele alınacak.
   */
   if (temiz(env.ARVOLAB_TEK_PROJE) === "1") {
     return { tur: "izin", uyari: `Tek proje beyanı: üretim dışı ortam üretim anahtarlarını kullanıyor (${tanimli.join(", ")}).` };
