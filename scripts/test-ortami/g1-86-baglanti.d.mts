@@ -39,11 +39,20 @@ export type YonetimIstemcisi = {
   listUsers(p: { page: number; perPage: number }): Promise<{ data: unknown; error: unknown }>;
 };
 
+export const ROLLER: string[];
+export const U2_BEKLEME_SINIRI_MS: number;
+export function sentetikEposta(rol: string, simdi?: Date): string;
+export function epostaRolu(eposta: unknown): "u1" | "u2" | null;
+export function u2SifresiOku(env: Record<string, string | undefined>, anahtar?: string): string;
+export function devamBekleKur(secenek?: {
+  girdi?: NodeJS.ReadableStream;
+  cikti?: NodeJS.WritableStream;
+}): (soru: string) => Promise<"devam" | "iptal" | "kapandi">;
 export function guvenliHata(hata: unknown): string;
 export function kimlikOzeti(id: string): string;
 export function u1Epostasi(simdi?: Date): string;
 export function epostaGecerli(eposta: unknown): boolean;
-export function argumanlariCoz(argv: string[]): { islem: string; calistir: boolean; kok: string };
+export function argumanlariCoz(argv: string[]): { islem: string; calistir: boolean; kok: string; rol: "u1" | "u2" };
 export function hedefDenetle(env: Record<string, string | undefined>): string;
 export function anahtarOku(env: Record<string, string | undefined>): string;
 export function varsayilanKayitYolu(env: Record<string, string | undefined>): string;
@@ -79,5 +88,7 @@ export function calistir(
     simdi?: Date;
     kayitYolu?: string;
     ac?: (baglanti: string) => Promise<void>;
+    bekle?: (soru: string) => Promise<string>;
+    saat?: () => number;
   },
 ): Promise<number>;

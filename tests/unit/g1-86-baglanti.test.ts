@@ -7,6 +7,11 @@ import http from "node:http";
 import { EventEmitter } from "node:events";
 import { spawnSync } from "node:child_process";
 import {
+  devamBekleKur,
+  epostaRolu,
+  sentetikEposta,
+  u2SifresiOku,
+  U2_BEKLEME_SINIRI_MS,
   ACICI_DEGISKENLERI,
   aciciOrtami,
   dogrudanCalistirildiMi,
@@ -263,10 +268,12 @@ describe("hedef kapıları (ağsız, anahtardan önce)", () => {
 });
 
 describe("sentetik e-posta", () => {
-  test("yalnızca arvolab-g1-86-u1-<12 hane>@example.com", () => {
+  /* G1-B (8.6B.7): u2 de geçerli rol oldu; eskiden yalnızca u1 kabul ediliyordu. */
+  test("yalnızca arvolab-g1-86-(u1|u2)-<12 hane>@example.com", () => {
     assert.equal(U1_EPOSTA, "arvolab-g1-86-u1-202611110830@example.com");
     assert.ok(epostaGecerli(U1_EPOSTA));
-    for (const e of ["", "arvolab-test-d@example.com", "arvolab-g1-86-u2-202611110830@example.com", "arvolab-g1-86-u1-202611110830@example.org", "ARVOLAB-G1-86-U1-202611110830@example.com", "arvolab-g1-86-u1-2026111108@example.com", "x+arvolab-g1-86-u1-202611110830@example.com", undefined]) {
+    assert.ok(epostaGecerli("arvolab-g1-86-u2-202611110830@example.com"));
+    for (const e of ["", "arvolab-test-d@example.com", "arvolab-g1-86-u3-202611110830@example.com", "arvolab-g1-86-u1-202611110830@example.org", "ARVOLAB-G1-86-U1-202611110830@example.com", "arvolab-g1-86-u1-2026111108@example.com", "x+arvolab-g1-86-u1-202611110830@example.com", undefined]) {
       assert.equal(epostaGecerli(e), false, String(e));
     }
   });
@@ -1079,5 +1086,285 @@ describe("Ö3: tek kullanımlık yönlendirme hemen kapanır, yanıt yarıda kes
       (e: unknown) => durMu(e, 1),
     );
     (soket as import("node:net").Socket | null)?.destroy();
+  });
+});
+
+/*
+  G1-B — U2 (8.6B.7): bilinen test şifresiyle oluşturma, onay öncesi bekleme,
+  AYNI bağlantının açılması. Gerçek Supabase yok; sahte istemci.
+*/
+describe("G1-B: U2 bilinen şifre ve onay öncesi bekleme", () => {
+  const SAHTE_SIFRE = "Sahte-U2-Sifre-77!x";
+  const U2_EPOSTA = sentetikEposta("u2", SIMDI);
+  const sirlarU2 = [...SIRLAR, SAHTE_SIFRE];
+  const sizintiYokU2 = (m: string) => {
+    for (const sir of sirlarU2) assert.ok(!m.includes(sir), `sızıntı: ${sir.slice(0, 10)}…`);
+  };
+  /** Sahte istemci generateLink parametresini (şifre dahil) yakalar; test yalnızca eşitliği karşılaştırır. */
+  function u2Admin(ayar: Parameters<typeof sahteAdmin>[0] = {}) {
+    const s = sahteAdmin(ayar);
+    const gelenler: Record<string, unknown>[] = [];
+    const asil = s.admin.generateLink;
+    s.admin.generateLink = async (p: { type: string; email: string }) => {
+      gelenler.push(p as unknown as Record<string, unknown>);
+      const r = await asil(p);
+      if (r.data?.user) r.data.user.user_metadata = { ...(r.data.user.user_metadata ?? {}), ...((p as { options?: { data?: object } }).options?.data ?? {}) };
+      return r;
+    };
+    return { ...s, gelenler };
+  }
+  const u2Env = (ek: Record<string, string> = {}) => ({ NEXT_PUBLIC_SUPABASE_URL: URL_TEST, SUPABASE_SECRET_KEY: SAHTE_ANAHTAR, G1_86_U2_SIFRE: SAHTE_SIFRE, ...ek }) as Record<string, string>;
+
+  test("sentetik adres ve rol: u2 deseni, epostaRolu, bilinmeyen rol reddi", () => {
+    assert.equal(U2_EPOSTA, "arvolab-g1-86-u2-202611110830@example.com");
+    assert.equal(epostaRolu(U2_EPOSTA), "u2");
+    assert.equal(epostaRolu(U1_EPOSTA), "u1");
+    assert.equal(epostaRolu("arvolab-g1-86-u3-202611110830@example.com"), null);
+    assert.throws(() => sentetikEposta("u3"), Dur);
+  });
+
+  test("--u2 yalnızca olustur/plan ile; diğer işlemlerde ret", () => {
+    assert.equal(argumanlariCoz(["olustur", "--u2", "--calistir"]).rol, "u2");
+    assert.equal(argumanlariCoz(["olustur"]).rol, "u1");
+    assert.equal(argumanlariCoz(["plan", "--u2"]).rol, "u2");
+    for (const islem of ["temizle", "durum", "dogrulama", "kurtarma", "uzlastir"]) assert.throws(() => argumanlariCoz([islem, "--u2"]), Dur, islem);
+  });
+
+  test("kuru kip: U2 şifresi okunmaz, istemci kurulmaz, bekleme ve tarayıcı yok, ortam değişmez", async () => {
+    const okunan: string[] = [];
+    const ham = u2Env();
+    const env = new Proxy(ham, { get: (h, k) => (okunan.push(String(k)), h[k as string]) });
+    let bekledi = 0;
+    const r = await kos(["olustur", "--u2"], { secenek: { env, bekle: async () => (bekledi++, "devam") } });
+    assert.equal(r.kod, 0);
+    assert.match(r.cikti, /KURU KİP/);
+    assert.match(r.cikti, /arvolab-g1-86-u2-/);
+    assert.ok(!okunan.includes("G1_86_U2_SIFRE") && !okunan.includes("SUPABASE_SECRET_KEY"));
+    assert.equal(r.fabrika.cagrildi, 0);
+    assert.equal(bekledi, 0);
+    assert.equal(r.acilan.length, 0);
+    assert.equal(ham.G1_86_U2_SIFRE, SAHTE_SIFRE);
+    assert.equal(fs.existsSync(kayitYolu), false);
+    sizintiYokU2(r.cikti);
+  });
+
+  test("gerçek kip: bilinen şifre generateLink'e gider; 'devam' gelmeden bağlantı AÇILMAZ; sonra AYNI bağlantı açılır", async () => {
+    const s = u2Admin();
+    const env = u2Env();
+    const sira: string[] = [];
+    const r = await kos(["olustur", "--u2", "--calistir"], {
+      sahte: s,
+      secenek: {
+        env,
+        bekle: async (soru: string) => {
+          sira.push("bekle");
+          assert.ok(fs.existsSync(kayitYolu), "kayıt defteri beklemeden ÖNCE yazılmış olmalı");
+          assert.equal(defter().durum, "olusturuldu");
+          sizintiYokU2(soru);
+          return "devam";
+        },
+        ac: async (l: string) => {
+          sira.push("ac");
+          const u = new URL(l);
+          assert.equal(u.searchParams.get("type"), "signup");
+          assert.equal(u.searchParams.get("token_hash"), SAHTE_TOKEN);
+          assert.ok(!l.includes(SAHTE_SIFRE));
+        },
+      },
+    });
+    assert.equal(r.kod, 0, r.cikti);
+    assert.deepEqual(sira, ["bekle", "ac"]);
+    // Tek generateLink: yeniden üretim yok; şifre bilinen değer; rol işareti u2.
+    assert.equal(s.gelenler.length, 1);
+    assert.equal(s.gelenler[0].password, SAHTE_SIFRE);
+    assert.equal(s.gelenler[0].email, U2_EPOSTA);
+    assert.equal((s.gelenler[0].options as { data: { g1_86_rol: string } }).data.g1_86_rol, "u2");
+    assert.ok(!("G1_86_U2_SIFRE" in env) && !("SUPABASE_SECRET_KEY" in env), "şifre ve anahtar ortamdan silinmeli");
+    assert.match(r.cikti, /email-not-confirmed/);
+    assert.match(r.cikti, /invalid-credentials/);
+    assert.match(r.cikti, /ŞİFRE BELİRLEMEYİN/);
+    sizintiYokU2(r.cikti);
+    sizintiYokU2(fs.readFileSync(kayitYolu, "utf8"));
+  });
+
+  test("G1-B prosedürü ekranda: B0 SQL (U2 kimliğiyle), B1a/B1b karşıt deneme, BLOCKED kuralı, şifre/sözleşme yasağı; hepsi bağlantı açılmadan ÖNCE", async () => {
+    const s = u2Admin();
+    let beklemeAnindaCikti = "";
+    const satirlar: string[] = [];
+    const r = await kos(["olustur", "--u2", "--calistir"], {
+      sahte: s,
+      secenek: {
+        env: u2Env(),
+        cikti: (m: string) => satirlar.push(m),
+        bekle: async () => {
+          beklemeAnindaCikti = satirlar.join("\n");
+          return "iptal";
+        },
+      },
+    });
+    assert.equal(r.kod, 1);
+    const o = beklemeAnindaCikti;
+    assert.match(o, /B0/);
+    assert.match(o, new RegExp(`encrypted_password is null or encrypted_password = '' as sifre_yok from auth\\.users where id = '${U1_ID}'`));
+    assert.match(o, /onayli = false, sifre_yok = false/);
+    assert.match(o, /B1a YANLIŞ[^\n]*invalid-credentials/);
+    assert.match(o, /B1b U2 test şifresiyle[^\n]*email-not-confirmed/);
+    assert.match(o, /FARKLI olmalı/);
+    assert.match(o, /"devam" YAZMAYIN[^\n]*BLOCKED[^\n]*temizle/);
+    assert.ok(o.indexOf("B0") < o.indexOf("B1a") && o.indexOf("B1a") < o.indexOf("B1b"));
+    sizintiYokU2(o);
+    // Kaynakta prosedür ve Ctrl+C notu belgelenmiş.
+    const kaynak = fs.readFileSync("scripts/test-ortami/g1-86-baglanti.mjs", "utf8");
+    assert.match(kaynak, /G1-B KABUL PROSEDÜRÜ/);
+    assert.match(kaynak, /birim testinde DOĞRULANMADI/);
+    assert.match(kaynak, /sözleşme KABUL EDİLMEZ/);
+  });
+
+  test("'iptal' ya da giriş kapanırsa bağlantı açılmaz; U2 kayıt defterinde kalır ve temizlenebilir", async () => {
+    for (const yanit of ["iptal", "kapandi"]) {
+      const s = u2Admin();
+      const r = await kos(["olustur", "--u2", "--calistir"], { sahte: s, secenek: { env: u2Env(), bekle: async () => yanit } });
+      assert.equal(r.kod, 1, yanit);
+      assert.equal(r.acilan.length, 0);
+      assert.equal(defter().durum, "olusturuldu");
+      assert.match(r.cikti, /temizle/);
+      const t = await kos(["temizle", "--calistir"], { sahte: s });
+      assert.equal(t.kod, 0, t.cikti);
+      assert.ok(t.cagrilar.some((c) => c.ad === "deleteUser" && c.arg === U1_ID));
+    }
+  });
+
+  test("bekleme sınırı aşılırsa bağlantı açılmaz ve YENİ bağlantı üretilmez", async () => {
+    const s = u2Admin();
+    let t = 1_000_000;
+    const r = await kos(["olustur", "--u2", "--calistir"], {
+      sahte: s,
+      secenek: { env: u2Env(), saat: () => t, bekle: async () => ((t += U2_BEKLEME_SINIRI_MS + 1), "devam") },
+    });
+    assert.equal(r.kod, 1);
+    assert.equal(r.acilan.length, 0);
+    assert.match(r.cikti, /Yeni bağlantı ÜRETİLMEDİ/);
+    assert.equal(s.gelenler.length, 1, "ikinci generateLink çağrılmamalı");
+  });
+
+  test("U2 için dogrulama (kayıt bağlantısını yeniden üretme) reddedilir; generateLink çağrılmaz", async () => {
+    const s = u2Admin();
+    await kos(["olustur", "--u2", "--calistir"], { sahte: s, secenek: { env: u2Env(), bekle: async () => "iptal" } });
+    const r = await kos(["dogrulama", "--calistir"], { sahte: s });
+    assert.equal(r.kod, 2);
+    assert.match(r.cikti, /şifresini değiştirebilir/);
+    assert.ok(!r.cagrilar.some((c) => c.ad === "generateLink"));
+  });
+
+  test("şifre kuralları: eksik/kısa/uzun/boşluklu/anahtarla aynı → ret; her durumda ortamdan silinir, mesajda şifre yok", () => {
+    const vakalar: [string | undefined, RegExp][] = [
+      [undefined, /tanımlı değil/],
+      ["kisa1!", /en az 8/],
+      ["a".repeat(73), /72 bayt/],
+      [" bosluklu-sifre1 ", /boşluk/],
+      [SAHTE_ANAHTAR, /anahtarla aynı/],
+    ];
+    for (const [sifre, desen] of vakalar) {
+      const env: Record<string, string | undefined> = sifre === undefined ? {} : { G1_86_U2_SIFRE: sifre };
+      assert.throws(() => u2SifresiOku(env, SAHTE_ANAHTAR), (e: unknown) => {
+        assert.ok(durMu(e, 2, desen), String((e as Error).message));
+        if (sifre) assert.ok(!(e as Error).message.includes(sifre));
+        return true;
+      });
+      assert.ok(!("G1_86_U2_SIFRE" in env));
+    }
+    const env = { G1_86_U2_SIFRE: SAHTE_SIFRE } as Record<string, string | undefined>;
+    assert.equal(u2SifresiOku(env, SAHTE_ANAHTAR), SAHTE_SIFRE);
+    assert.ok(!("G1_86_U2_SIFRE" in env));
+  });
+
+  test("geçersiz şifrede hiçbir yönetim çağrısı yapılmaz; şifre ve anahtar ortamdan silinir", async () => {
+    const env = u2Env({ G1_86_U2_SIFRE: "kisa" });
+    const r = await kos(["olustur", "--u2", "--calistir"], { secenek: { env } });
+    assert.equal(r.kod, 2);
+    assert.equal(r.fabrika.cagrildi, 0);
+    assert.ok(!("G1_86_U2_SIFRE" in env) && !("SUPABASE_SECRET_KEY" in env));
+  });
+
+  test("oluşturma hatası ve beklenmeyen istisnada şifre sızmaz", async () => {
+    const hata = { code: "weak_password", status: 422, message: `şifre ${SAHTE_SIFRE} zayıf`, body: SAHTE_SIFRE };
+    const r = await kos(["olustur", "--u2", "--calistir"], { sahte: u2Admin({ hata }), secenek: { env: u2Env(), bekle: async () => "devam" } });
+    assert.equal(r.kod, 1);
+    assert.match(r.cikti, /kod=weak_password http=422/);
+    sizintiYokU2(r.cikti);
+    fs.rmSync(kayitYolu, { force: true });
+    const r2 = await kos(["olustur", "--u2", "--calistir"], {
+      secenek: { env: u2Env(), adminFabrikasi: async () => { throw new Error(`patladı ${SAHTE_SIFRE}`); } },
+    });
+    assert.equal(r2.kod, 1);
+    sizintiYokU2(r2.cikti);
+  });
+
+  test("U1 akışı değişmedi: bekleme yok, bağlantı hemen açılır, şifre okunmaz ama ortamdan temizlenir", async () => {
+    const env = u2Env();
+    let bekledi = 0;
+    const s = u2Admin();
+    const r = await kos(["olustur", "--calistir"], { sahte: s, secenek: { env, bekle: async () => (bekledi++, "devam") } });
+    assert.equal(r.kod, 0, r.cikti);
+    assert.equal(bekledi, 0);
+    assert.equal(r.acilan.length, 1);
+    assert.notEqual(s.gelenler[0].password, SAHTE_SIFRE);
+    assert.equal(s.gelenler[0].email, U1_EPOSTA);
+    assert.ok(!("G1_86_U2_SIFRE" in env));
+  });
+
+  test("rol işareti e-postayla çelişirse silme reddedilir", async () => {
+    const s = u2Admin();
+    await kos(["olustur", "--u2", "--calistir"], { sahte: s, secenek: { env: u2Env(), bekle: async () => "iptal" } });
+    s.kullanicilar.get(U1_ID)!.user_metadata = { g1_86: true, g1_86_rol: "u1" };
+    const r = await kos(["temizle", "--calistir"], { sahte: s });
+    assert.notEqual(r.kod, 0);
+    assert.match(r.cikti, /rol işareti/);
+    assert.ok(!r.cagrilar.some((c) => c.ad === "deleteUser"));
+  });
+
+  test("U2 şifre değişkeni açıcı ortamına hiçbir koşulda geçmez (izin listesi + SIFRE/PAROLA süzgeci)", () => {
+    for (const platform of ["win32", "darwin", "linux"] as const) {
+      const liste = ACICI_DEGISKENLERI[platform];
+      liste.push("G1_86_U2_SIFRE", "MY_PAROLA");
+      try {
+        const o = aciciOrtami({ G1_86_U2_SIFRE: SAHTE_SIFRE, MY_PAROLA: "x", PATH: "/p" }, platform);
+        assert.ok(!("G1_86_U2_SIFRE" in o) && !("MY_PAROLA" in o), platform);
+      } finally {
+        liste.splice(liste.length - 2, 2);
+      }
+    }
+  });
+
+  test("devamBekleKur: yalnızca 'devam'/'iptal' kabul; Enter tek başına yetmez; EOF 'kapandi'", async () => {
+    const { PassThrough } = await import("node:stream");
+    const calistirBekle = async (satirlar: string[], kapat: boolean) => {
+      const girdi = new PassThrough();
+      const cikti = new PassThrough();
+      const yazilan: string[] = [];
+      cikti.on("data", (d) => yazilan.push(String(d)));
+      const p = devamBekleKur({ girdi, cikti })("soru: ");
+      for (const s of satirlar) girdi.write(`${s}\n`);
+      if (kapat) girdi.end();
+      return { sonuc: await p, yazilan: yazilan.join("") };
+    };
+    assert.equal((await calistirBekle(["", "evet", "DEVAM"], false)).sonuc, "devam");
+    assert.equal((await calistirBekle(["", "iptal"], false)).sonuc, "iptal");
+    assert.equal((await calistirBekle(["", ""], true)).sonuc, "kapandi");
+    assert.match((await calistirBekle(["x", "devam"], false)).yazilan, /"devam" ya da "iptal"/);
+  });
+
+  test("uygulamanın gerçek davranışı (kaynak sözleşmesi): giriş hataları beklenen yönlendirmeye ve metne bağlı", () => {
+    const auth = fs.readFileSync("app/actions/auth.ts", "utf8");
+    assert.match(auth, /if \(error\.code === "email_not_confirmed"\) redirect\(`\/\?error=email-not-confirmed\$\{nextQuery\}`\);\s*redirect\(`\/\?error=invalid-credentials\$\{nextQuery\}`\);/);
+    const sayfa = fs.readFileSync("app/page.tsx", "utf8");
+    assert.match(sayfa, /"invalid-credentials": \{ tr: "E-posta adresi veya şifre hatalı\."/);
+    assert.match(sayfa, /"email-not-confirmed": \{\s*tr: "E-posta adresiniz henüz doğrulanmadı\./);
+    // Onay anında şifreyi silen tetikleyici migration'da (G1-B'nin sınadığı kural).
+    const mig = fs.readFileSync("supabase/migrations/20261106184046_eposta_onayi_kimlik_sabitleme.sql", "utf8");
+    assert.match(mig, /if old\.email_confirmed_at is null and new\.email_confirmed_at is not null then\s*new\.encrypted_password := null;/);
+    assert.match(mig, /before update of email_confirmed_at on auth\.users/);
+    // Kayıt doğrulaması ilk şifre ekranına gider (B2).
+    assert.match(fs.readFileSync("app/auth/confirm/route.ts", "utf8"), /type === "signup" \? "\/reset-password\?ilk=1"/);
   });
 });

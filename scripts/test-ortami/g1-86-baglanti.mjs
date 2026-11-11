@@ -17,12 +17,38 @@
   İŞLEMLER (başka hiçbir yönetim çağrısı yok):
     olustur    Önce niyeti deftere yazar, sonra U1'i oluşturur ve kayıt
                doğrulama bağlantısını tarayıcıda açar
+    olustur --u2  G1-B: U2'yi BİLİNEN bir test şifresiyle oluşturur; bağlantıyı
+               AÇMAZ, onay öncesi giriş denemesi için "devam" yazılmasını
+               bekler, sonra AYNI kayıt bağlantısını açar (yeniden üretmez)
     uzlastir   Yarım kalan bir oluşturmayı çözer; HİÇBİR ŞEY SİLMEZ
     dogrulama  U1 onaysızsa yeni kayıt doğrulama bağlantısı açar
     kurtarma   U1 onaylıysa kurtarma (recovery) bağlantısı açar
     durum      U1'in onay durumunu okur; şifre durumu için salt okunur SQL yazar
     temizle    YALNIZCA kayıt defterindeki U1'i siler
   `plan` (varsayılan) ve `--calistir` verilmeyen her işlem KURU kiptir.
+
+  G1-B KABUL PROSEDÜRÜ (U2; betik ekrana da yazar):
+    B0  `olustur --u2 --calistir` U2'yi oluşturur ve BEKLER. Onaydan ÖNCE salt
+        okunur SQL ile `sifre_yok = false` görülmeli (bilinen şifre gerçekten
+        konmuş). Sorguyu betik U2 kimliğiyle yazar.
+    B1  Karşıt giriş denemesi (uygulamanın giriş formu, aynı U2 e-postası):
+        B1a YANLIŞ şifre → "E-posta adresi veya şifre hatalı." (invalid-credentials)
+        B1b DOĞRU şifre  → "E-posta adresiniz henüz doğrulanmadı." (email-not-confirmed)
+        Kanıt değeri: iki sonucun FARKLI olması GoTrue'nun şifreyi denetlediğini
+        ve bilinen şifrenin geçerli olduğunu gösterir. İkisi aynıysa B1 kanıt
+        sayılmaz.
+        B0 ya da B1 tutmazsa "devam" YAZILMAZ: "iptal" yazılır, test BLOCKED
+        olarak kaydedilir ve U2 `temizle --calistir` ile silinir.
+    B2  "devam" → AYNI kayıt bağlantısı açılır (yeniden üretilmez). Beklenen:
+        ilk şifre ekranı (/reset-password?ilk=1). ŞİFRE BELİRLENMEZ; "Çıkış
+        yap" kullanılır. Şifre NULL olduğu sürece ilk şifre kapısı panele
+        geçirmez, yani sözleşme penceresine gelinmez; sözleşme KABUL EDİLMEZ.
+    B3  Gizli pencerede aynı eski şifreyle giriş → "E-posta adresi veya şifre
+        hatalı." (invalid-credentials). Giriş başarılıysa kritik FAIL.
+    B4  `durum --calistir` + salt okunur SQL: `onayli = true`, `sifre_yok = true`.
+    B5  Sözleşme sayıları değişmemiş (toplam, sahipsiz, G1 sentetik).
+    B6  `temizle --calistir`; son denetim: kullanıcı sayısı ve kimlik kümesi
+        özeti başlangıçla aynı, G1 hesap 0, kayıt defteri arşivlenmiş.
 
   KURTARMA PROSEDÜRÜ (yarım kalan ya da belirsiz koşu):
     1. `uzlastir --calistir`. Sonuç üç türlüdür:
@@ -80,7 +106,9 @@
                                 varsayılan ~/.arvolab-g1-86/kayit.json)
 
   Kullanım:
-    node scripts/test-ortami/g1-86-baglanti.mjs [plan|olustur|uzlastir|dogrulama|kurtarma|durum|temizle] [--origin=<izinli kök>] [--calistir]
+    node scripts/test-ortami/g1-86-baglanti.mjs [plan|olustur|uzlastir|dogrulama|kurtarma|durum|temizle] [--u2] [--origin=<izinli kök>] [--calistir]
+  U2 (G1-B) ek ortam: G1_86_U2_SIFRE (yalnızca `olustur --u2 --calistir`; yalnızca
+  bu test için yeni bir şifre, Read-Host -AsSecureString ile girilir).
   Çıkış: 0 tamam, 1 işlem sırasında hata (güvenli durdu), 2 kapı reddetti
   (hiçbir işlem yapılmadı).
 */
@@ -90,6 +118,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { anahtarProjesi, projeKimligi, SABIT_URETIM_SUPABASE_REF, uretimProjesiniGosteriyor } from "../../lib/supabase/ortam-guvenligi.ts";
 import { authConfirmLink } from "../../lib/auth-link.ts";
@@ -100,7 +129,8 @@ export const TEST_REF = "kyvjftrsweqjlgjeobnq";
 export const URETIM_REF = SABIT_URETIM_SUPABASE_REF;
 export const IZINLI_KOKLER = ["https://arvo-lab-git-entegrasyon-g1-tasarim-arvo-os.vercel.app", "http://localhost:3000"];
 export const VARSAYILAN_KOK = IZINLI_KOKLER[0];
-export const EPOSTA_DESENI = /^arvolab-g1-86-u1-\d{12}@example\.com$/;
+export const EPOSTA_DESENI = /^arvolab-g1-86-(u1|u2)-\d{12}@example\.com$/;
+export const ROLLER = ["u1", "u2"];
 export const ISLEMLER = ["plan", "olustur", "uzlastir", "dogrulama", "kurtarma", "durum", "temizle"];
 const SENTETIK_AD = "G1 8.6 Sentetik (silinecek)";
 /* Oluşturma yanıtındaki zaman ile şimdiki zaman arasında kabul edilen en büyük fark. */
@@ -126,10 +156,22 @@ export function guvenliHata(hata) {
 
 export const kimlikOzeti = (id) => createHash("sha256").update(String(id)).digest("hex");
 
-/** UTC damgasıyla U1 adresi (dakika çözünürlüğü). */
-export function u1Epostasi(simdi = new Date()) {
+/** UTC damgasıyla sentetik adres (dakika çözünürlüğü). Rol yalnızca u1 ya da u2. */
+export function sentetikEposta(rol, simdi = new Date()) {
+  if (!ROLLER.includes(rol)) throw new Dur("Bilinmeyen sentetik rol.");
   const d = simdi.toISOString().replace(/[-:T]/g, "").slice(0, 12);
-  return `arvolab-g1-86-u1-${d}@example.com`;
+  return `arvolab-g1-86-${rol}-${d}@example.com`;
+}
+
+/** Geriye dönük: U1 adresi. */
+export function u1Epostasi(simdi = new Date()) {
+  return sentetikEposta("u1", simdi);
+}
+
+/** Adresteki rol (u1/u2); desene uymuyorsa null. */
+export function epostaRolu(eposta) {
+  const m = EPOSTA_DESENI.exec(String(eposta ?? ""));
+  return m ? m[1] : null;
 }
 
 export function epostaGecerli(eposta) {
@@ -142,8 +184,10 @@ export function argumanlariCoz(argv) {
   let calistir = false;
   let kok = VARSAYILAN_KOK;
   let islemVerildi = false;
+  let u2 = false;
   for (const a of argv) {
     if (a === "--calistir") calistir = true;
+    else if (a === "--u2") u2 = true;
     else if (a.startsWith("--origin=")) kok = a.slice("--origin=".length);
     else if (!a.startsWith("-") && !islemVerildi && ISLEMLER.includes(a)) {
       islem = a;
@@ -151,7 +195,9 @@ export function argumanlariCoz(argv) {
     } else throw new Dur(`Bilinmeyen argüman: ${a.slice(0, 40)}`);
   }
   if (!IZINLI_KOKLER.includes(kok)) throw new Dur("Bağlantı kökü izinli listede değil.");
-  return { islem, calistir: calistir && islem !== "plan", kok };
+  // --u2 yalnızca oluşturmayı (ve planını) değiştirir; diğer işlemler rolü kayıt defterinden alır.
+  if (u2 && islem !== "olustur" && islem !== "plan") throw new Dur("--u2 yalnızca `olustur` (ya da `plan`) ile kullanılır.");
+  return { islem, calistir: calistir && islem !== "plan", kok, rol: u2 ? "u2" : "u1" };
 }
 
 /**
@@ -179,6 +225,29 @@ export function anahtarOku(env) {
   if (jwt?.ref && jwt.ref !== TEST_REF) throw new Dur("Anahtar Test projesine ait değil.");
   if (jwt?.rol && jwt.rol !== "service_role") throw new Dur("Anahtar service_role anahtarı değil.");
   return anahtar;
+}
+
+/*
+  U2 TEST ŞİFRESİ (G1-B). Yalnızca `olustur --u2 --calistir` okur; okunduktan
+  hemen sonra (geçersiz olsa da) ortamdan silinir, hiçbir alt sürece geçmez.
+  Değer hiçbir çıktıya, hata mesajına, kayıt defterine ya da URL'ye yazılmaz;
+  hata mesajları yalnızca kuralın adını söyler. 72 bayt sınırı bcrypt'in
+  (GoTrue) okuduğu üst sınırdır: daha uzun bir şifrenin fazlası sessizce
+  yok sayılır ve test yanlış güven verir.
+*/
+export function u2SifresiOku(env, anahtar) {
+  let sifre;
+  try {
+    sifre = String(env.G1_86_U2_SIFRE ?? "");
+  } finally {
+    delete env.G1_86_U2_SIFRE;
+  }
+  if (!sifre) throw new Dur("G1_86_U2_SIFRE tanımlı değil (yalnızca kendi terminalinizde, Read-Host -AsSecureString ile).");
+  if (sifre.length < 8) throw new Dur("U2 test şifresi en az 8 karakter olmalı.");
+  if (Buffer.byteLength(sifre, "utf8") > 72) throw new Dur("U2 test şifresi 72 baytı geçmemeli.");
+  if (sifre !== sifre.trim()) throw new Dur("U2 test şifresi baş/son boşluk içermemeli.");
+  if (anahtar && sifre === anahtar) throw new Dur("U2 test şifresi anahtarla aynı olamaz.");
+  return sifre;
 }
 
 /* ---------------- Kayıt defteri ---------------- */
@@ -290,6 +359,8 @@ export function hedefKullaniciDenetle(kayit, kullanici) {
   if (String(kullanici.email ?? "").toLowerCase() !== kayit.eposta) throw new Dur("Kullanıcının e-postası kayıt defteriyle eşleşmiyor.");
   if (!epostaGecerli(kullanici.email)) throw new Dur("Kullanıcının e-postası sentetik desene uymuyor.");
   if (kullanici.user_metadata?.g1_86 !== true) throw new Dur("Kullanıcı bu betiğin işaretini (g1_86) taşımıyor.");
+  const rolIsareti = kullanici.user_metadata?.g1_86_rol;
+  if (rolIsareti !== undefined && rolIsareti !== epostaRolu(kullanici.email)) throw new Dur("Kullanıcının rol işareti e-postasıyla eşleşmiyor.");
   if (kullanici.created_at !== kayit.olusturuldu) throw new Dur("Kullanıcının oluşturulma zamanı kayıt defteriyle eşleşmiyor.");
   return kullanici;
 }
@@ -304,6 +375,8 @@ export function niyetleEslesir(kullanici, kayit) {
   if (kayit.korunanOzetler.includes(kimlikOzeti(kullanici.id))) return "kimlik başlangıç kümesinde (önceden vardı)";
   if (String(kullanici.email ?? "").toLowerCase() !== kayit.eposta) return "e-posta niyetle eşleşmiyor";
   if (kullanici.user_metadata?.g1_86 !== true) return "g1_86 işareti yok";
+  const rolIsareti = kullanici.user_metadata?.g1_86_rol;
+  if (rolIsareti !== undefined && rolIsareti !== epostaRolu(kayit.eposta)) return "rol işareti e-postayla eşleşmiyor";
   const zaman = Date.parse(kullanici.created_at ?? "");
   const niyet = Date.parse(kayit.niyetZamani);
   if (!Number.isFinite(zaman)) return "oluşturulma zamanı yok ya da okunamıyor";
@@ -400,7 +473,7 @@ export const ACICI_DEGISKENLERI = {
   taşıyan adlar (SESSION_TOKEN, AUTH_SESSION, SESSION_COOKIE) zaten TOKEN,
   AUTH ya da COOKIE ile yakalanır; asıl sınır yine açık izin listesidir.
 */
-const SIR_BICIMI = /SECRET|KEY|TOKEN|PASSWORD|PASSWD|CREDENTIAL|SUPABASE|AUTH|COOKIE/i;
+const SIR_BICIMI = /SECRET|KEY|TOKEN|PASSWORD|PASSWD|CREDENTIAL|SUPABASE|AUTH|COOKIE|SIFRE|PAROLA/i;
 
 export function aciciOrtami(env = process.env, platform = process.platform) {
   const liste = ACICI_DEGISKENLERI[platform] ?? ACICI_DEGISKENLERI.linux;
@@ -439,6 +512,38 @@ function sistemAcicisi(adres) {
   return sistemAcicisiKur()(adres);
 }
 
+/*
+  ONAY ÖNCESİ BEKLEME (G1-B). Kullanıcı "devam" yazana kadar bağlantı
+  AÇILMAZ; Enter tek başına yetmez (yanlışlıkla B1 adımı atlanmasın).
+  "iptal" ya da girişin kapanması (EOF) bağlantıyı açmaz; U2 kayıt defterinde
+  "olusturuldu" olarak kaldığı için `temizle` ile silinebilir. Ctrl+C ve
+  terminalin kapanması bu işleve "kapandi" olarak GELMEZ: süreç sonlanır.
+  Sonuç aynıdır (bağlantı açılmaz, kayıt defteri beklemeden önce yazıldığı
+  için diskte kalır), ama bu yol birim testinde DOĞRULANMADI; yalnızca
+  tasarımdan çıkarılıyor.
+*/
+export function devamBekleKur({ girdi = process.stdin, cikti = process.stdout } = {}) {
+  return (soru) =>
+    new Promise((coz) => {
+      const rl = readline.createInterface({ input: girdi, output: cikti, terminal: false });
+      let bitti = false;
+      const bitir = (sonuc) => {
+        if (bitti) return;
+        bitti = true;
+        rl.close();
+        coz(sonuc);
+      };
+      cikti.write(soru);
+      rl.on("line", (satir) => {
+        const y = satir.trim().toLowerCase();
+        if (y === "devam") bitir("devam");
+        else if (y === "iptal") bitir("iptal");
+        else cikti.write('  "devam" ya da "iptal" yazın: ');
+      });
+      rl.on("close", () => bitir("kapandi"));
+    });
+}
+
 /** Gerçek yönetim istemcisi: yalnızca kapılardan ve anahtar okunduktan sonra kurulur. */
 async function gercekAdmin(url, anahtar) {
   const { createClient } = await import("@supabase/supabase-js");
@@ -463,9 +568,19 @@ async function kullaniciOku(admin, kayit) {
 
 const kullaniciYok = (hata) => Boolean(hata) && (hata.code === "user_not_found" || hata.status === 404);
 
+/*
+  U2 bekleme sınırı. GoTrue'nun e-posta bağlantısı geçerlilik süresi bu
+  projede doğrulanmadı (varsayılan genelde 1 saat). Daha uzun beklenirse
+  bağlantı AÇILMAZ ve yenisi ÜRETİLMEZ: yeni generateLink(signup) bilinen
+  şifreyi değiştirip testi geçersiz kılabilir. Doğrusu temizleyip baştan
+  başlamaktır.
+*/
+export const U2_BEKLEME_SINIRI_MS = 45 * 60 * 1000;
+
 async function olustur(admin, b) {
   if (kayitOku(b.kayitYolu, b.imza)) throw new Dur("Kayıt defteri zaten var; önce `uzlastir` ya da `temizle` (yarım kalan bir koşu olabilir).");
-  const eposta = u1Epostasi(b.simdi);
+  const rol = b.rol;
+  const eposta = sentetikEposta(rol, b.simdi);
   const korunanOzetler = await korunanOzetleriTopla(admin);
   // 1) NİYET: kullanıcı oluşturulmadan önce. Bu yazılamazsa hiçbir şey oluşturulmaz.
   let kayit = kayitYaz(b.kayitYolu, { surum: 2, proje: TEST_REF, durum: "olusturuluyor", eposta, niyetZamani: b.simdi.toISOString(), userId: null, olusturuldu: null, korunanOzetler }, b.imza);
@@ -475,9 +590,10 @@ async function olustur(admin, b) {
     yanit = await admin.generateLink({
       type: "signup",
       email: eposta,
-      // Uygulamanın kayıt işlemiyle aynı: kimsenin bilmediği tek kullanımlık şifre; onayda veritabanı siler.
-      password: `${randomBytes(32).toString("base64url")}aA1!`,
-      options: { data: { full_name: SENTETIK_AD, kvkk_onay_at: b.simdi.toISOString(), test_hesabi: true, g1_86: true } },
+      // U1: uygulamanın kayıt işlemiyle aynı, kimsenin bilmediği şifre. U2 (G1-B): test edenin BİLDİĞİ şifre;
+      // amaç onayın bu şifreyi sildiğini görmek. Her iki durumda da onayda veritabanı siler.
+      password: rol === "u2" ? b.u2Sifre : `${randomBytes(32).toString("base64url")}aA1!`,
+      options: { data: { full_name: SENTETIK_AD, kvkk_onay_at: b.simdi.toISOString(), test_hesabi: true, g1_86: true, g1_86_rol: rol } },
     });
   } catch (e) {
     throw new Dur(`Oluşturma yanıtı alınamadı (${guvenliHata(e)}); kullanıcı oluşmuş olabilir. \`uzlastir\` çalıştırın.`, 1);
@@ -488,9 +604,35 @@ async function olustur(admin, b) {
   if (neden) throw new Dur(`Oluşturma yanıtı doğrulanamadı (${neden}); bağlantı açılmadı. \`uzlastir\` çalıştırın.`, 1);
   // 3) Kimliği deftere bağla, ANCAK ondan sonra bağlantıyı aç.
   kayit = kayitYaz(b.kayitYolu, { ...kayit, durum: "olusturuldu", userId: data.user.id, olusturuldu: data.user.created_at }, b.imza);
-  b.cikti(`✓ U1 oluşturuldu: ${kayit.userId} (${eposta}); kayıt defteri: ${b.kayitYolu}`);
-  await b.ac(baglantiKur(b.kok, data?.properties?.hashed_token, "signup"));
+  const ROL = rol.toUpperCase();
+  b.cikti(`✓ ${ROL} oluşturuldu: ${kayit.userId} (${eposta}); kayıt defteri: ${b.kayitYolu}`);
+  // Bağlantı ŞİMDİ kurulur ve yalnızca bellekte tutulur; yazdırılmaz, diske yazılmaz.
+  const baglanti = baglantiKur(b.kok, data?.properties?.hashed_token, "signup");
+  if (rol === "u2") {
+    const baslangic = b.saat();
+    b.cikti("");
+    b.cikti("  Bağlantı henüz AÇILMADI. Onaydan ÖNCE iki kontrol:");
+    b.cikti("  B0 — Salt okunur SQL (Test projesi, SQL Editor); beklenen: onayli = false, sifre_yok = false");
+    b.cikti(`    select email_confirmed_at is not null as onayli, encrypted_password is null or encrypted_password = '' as sifre_yok from auth.users where id = '${kayit.userId}';`);
+    b.cikti(`  B1 — Karşıt giriş denemesi (uygulamanın giriş sayfası, ${eposta}):`);
+    b.cikti('    B1a YANLIŞ bir şifreyle → beklenen "E-posta adresi veya şifre hatalı." (?error=invalid-credentials)');
+    b.cikti('    B1b U2 test şifresiyle  → beklenen "E-posta adresiniz henüz doğrulanmadı." (?error=email-not-confirmed)');
+    b.cikti("    Kanıt: B1a ile B1b FARKLI olmalı; aynıysa B1 kanıt sayılmaz.");
+    b.cikti('  B0 ya da B1 tutmazsa "devam" YAZMAYIN: "iptal" yazın → test BLOCKED, sonra `temizle --calistir`.');
+    const yanit = await b.bekle('  Sonra buraya "devam" (bağlantıyı aç) ya da "iptal" yazın: ');
+    if (yanit !== "devam") {
+      throw new Dur(`Bağlantı açılmadı (${yanit === "iptal" ? "iptal edildi" : "giriş kapandı"}). U2 kayıt defterinde; silmek için \`temizle --calistir\`.`, 1);
+    }
+    if (b.saat() - baslangic > U2_BEKLEME_SINIRI_MS) {
+      throw new Dur("Bekleme sınırı aşıldı; bağlantının süresi dolmuş olabilir. Yeni bağlantı ÜRETİLMEDİ (şifre değişebilirdi). `temizle --calistir` ile silip baştan başlayın.", 1);
+    }
+  }
+  await b.ac(baglanti);
   b.cikti("✓ Kayıt doğrulama bağlantısı tarayıcıda açıldı (yazdırılmadı).");
+  if (rol === "u2") {
+    b.cikti("  B2: ilk şifre ekranı açılmalı. ŞİFRE BELİRLEMEYİN ve sözleşme KABUL ETMEYİN; \"Çıkış yap\" düğmesini kullanın.");
+    b.cikti('  B3: gizli bir pencerede aynı şifreyle giriş deneyin; beklenen "E-posta adresi veya şifre hatalı." (?error=invalid-credentials).');
+  }
 }
 
 /**
@@ -533,6 +675,9 @@ async function yeniBaglanti(admin, b, tur) {
   const kayit = kayitOku(b.kayitYolu, b.imza);
   const kullanici = await kullaniciOku(admin, kayit);
   const onayli = Boolean(kullanici.email_confirmed_at);
+  if (tur === "signup" && epostaRolu(kayit.eposta) === "u2") {
+    throw new Dur("U2 için yeni kayıt bağlantısı üretilmez: generateLink(signup) bilinen test şifresini değiştirebilir ve G1-B'yi geçersiz kılar. `temizle --calistir` ile silip baştan başlayın.");
+  }
   if (tur === "signup" && onayli) throw new Dur("U1 zaten onaylı; kayıt bağlantısı üretilmez (kurtarma için `kurtarma`).");
   if (tur === "recovery" && !onayli) throw new Dur("U1 onaysız; kurtarma bağlantısı üretilmez (önce `dogrulama`).");
   const parametre = tur === "signup" ? { type: "signup", email: kayit.eposta, password: `${randomBytes(32).toString("base64url")}aA1!` } : { type: "recovery", email: kayit.eposta };
@@ -546,7 +691,7 @@ async function yeniBaglanti(admin, b, tur) {
 async function durum(admin, b) {
   const kayit = kayitOku(b.kayitYolu, b.imza);
   const k = await kullaniciOku(admin, kayit);
-  b.cikti(`U1 ${k.id}`);
+  b.cikti(`${(epostaRolu(k.email) ?? "u1").toUpperCase()} ${k.id}`);
   b.cikti(`  onaylı           : ${k.email_confirmed_at ? `evet (${k.email_confirmed_at})` : "hayır"}`);
   b.cikti(`  son giriş        : ${k.last_sign_in_at ?? "yok"}`);
   b.cikti("  şifre durumu     : yönetim API'si göstermiyor. Salt okunur SQL (Test projesi, SQL Editor):");
@@ -578,7 +723,7 @@ async function temizle(admin, b) {
   // Yalnızca "kullanıcı yok" cevabı silindi sayılır; ağ hatası gibi belirsiz bir sonuçta kayıt defteri korunur.
   if (!kullaniciYok(okumaHatasi) || sonra?.user) throw new Dur("Silme doğrulanamadı; kayıt defteri korunuyor (`temizle` tekrar güvenli).", 1);
   arsivle(b, kayit, "silindi");
-  b.cikti(`✓ U1 silindi: ${k.id}. Kayıt defteri arşivlendi.`);
+  b.cikti(`✓ ${(epostaRolu(k.email) ?? "u1").toUpperCase()} silindi: ${k.id}. Kayıt defteri arşivlendi.`);
   b.cikti("  Kalanlar (bu betiğin kapsamı dışında): auth_rate_limits satırları, Supabase Auth denetim günlükleri.");
 }
 
@@ -595,7 +740,10 @@ function planYaz(a, b, url) {
   b.cikti(`  Bağlantı kökü    : ${a.kok}`);
   b.cikti(`  İşlem            : ${a.islem}`);
   b.cikti(`  Kayıt defteri    : ${b.kayitYolu} (${kayit === null ? "yok" : kayit === "okunamadı" ? "okunamadı" : `durum ${kayit.durum}${kayit.userId ? `, U1 ${kayit.userId}` : ""}; imza kuru kipte doğrulanmaz`})`);
-  if (a.islem === "olustur" || a.islem === "plan") b.cikti(`  Oluşturulacak    : ${u1Epostasi(b.simdi)} (1 kullanıcı, generateLink signup)`);
+  if (a.islem === "olustur" || a.islem === "plan") {
+    b.cikti(`  Oluşturulacak    : ${sentetikEposta(a.rol, b.simdi)} (1 kullanıcı, generateLink signup${a.rol === "u2" ? ", bilinen test şifresiyle; bağlantı \"devam\" yazılınca açılır" : ""})`);
+    if (a.rol === "u2") b.cikti("  U2 şifresi       : kuru kipte okunmaz (G1_86_U2_SIFRE yalnızca --calistir ile)");
+  }
   b.cikti("  Gerçek koşu için : işlem + --calistir (ayrıca onaylandıktan sonra).");
 }
 
@@ -612,7 +760,16 @@ export async function calistir(argv, secenek = {}) {
   try {
     const a = argumanlariCoz(argv);
     const url = hedefDenetle(env);
-    const b = { cikti, simdi, kok: a.kok, kayitYolu: secenek.kayitYolu ?? varsayilanKayitYolu(env), ac: secenek.ac ?? ((l) => baglantiyiAc(l)) };
+    const b = {
+      cikti,
+      simdi,
+      kok: a.kok,
+      rol: a.rol,
+      kayitYolu: secenek.kayitYolu ?? varsayilanKayitYolu(env),
+      ac: secenek.ac ?? ((l) => baglantiyiAc(l)),
+      bekle: secenek.bekle ?? devamBekleKur(),
+      saat: secenek.saat ?? (() => Date.now()),
+    };
     if (!a.calistir) {
       planYaz(a, b, url);
       return 0;
@@ -629,6 +786,8 @@ export async function calistir(argv, secenek = {}) {
       delete env.SUPABASE_SECRET_KEY;
     }
     b.imza = imzaAnahtari(anahtar);
+    if (a.islem === "olustur" && a.rol === "u2") b.u2Sifre = u2SifresiOku(env, anahtar);
+    else delete env.G1_86_U2_SIFRE; // U2 dışında hiç okunmaz; yine de alt süreçlere kalmasın.
     const admin = await adminFabrikasi(url, anahtar);
     if (a.islem === "olustur") await olustur(admin, b);
     else if (a.islem === "uzlastir") await uzlastir(admin, b);
