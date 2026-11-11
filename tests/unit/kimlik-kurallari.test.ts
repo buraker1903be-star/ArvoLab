@@ -1,13 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { EN_KISA_SIFRE, DOGRULAMA_BAGLANTISI_SANIYE, baglantiSuresiMetni, sifreUzunlukHatasi } from "../../lib/kimlik-kurallari";
+import { EN_KISA_SIFRE, EN_UZUN_SIFRE, SIFRE_BAYT_SINIRI, DOGRULAMA_BAGLANTISI_SANIYE, baglantiSuresiMetni, sifreKuraliHatasi } from "../../lib/kimlik-kurallari";
+import { YAYGIN_SIFRE_LISTESI, YAYGIN_SIFRE_SAYISI, yayginSifreMi } from "../../lib/yaygin-sifreler";
 import { ZAYIF_SIFRE_NEDENLERI, sifreHatasi, zayifSifreNedenleri } from "../../lib/sifre-hatasi";
 import { inviteEmail, resetPasswordEmail, signUpConfirmEmail } from "../../lib/email/auth-emails";
 
 /*
-  G1-C A0–A2 (11.11.2026): şifre en az uzunluğu, zayıf şifre nedenleri ve
-  doğrulama bağlantısı süresi.
+  G1-C A0–A2 (11.11.2026) ve G1-D D1 (11.11.2026): şifre politikası, zayıf
+  şifre nedenleri ve doğrulama bağlantısı süresi. D1'de ürün kararıyla en az
+  uzunluk 12'den 8'e indi; en fazla 64 karakter, 72 bayt ve yaygın şifre
+  denetimi eklendi.
 
   Gerçek Supabase'in ne zaman hangi nedeni döndürdüğü burada SINANMIYOR
   (ağsız birim testi). Hata nesnesinin biçimi @supabase/auth-js 2.112.1'den
@@ -18,66 +21,112 @@ import { inviteEmail, resetPasswordEmail, signUpConfirmEmail } from "../../lib/e
 */
 
 const oku = (yol: string) => fs.readFileSync(yol, "utf8");
+/* Yaygın listede olmayan, kurala uyan bir şifre üretir (n karakter). */
+const guclu = (n: number) => "Kq7!mZ2x".repeat(Math.ceil(n / 8)).slice(0, n);
 
-/* ---------- A2: en az uzunluk ---------- */
+/* ---------- D1: şifre politikası ---------- */
 
-test("en az şifre uzunluğu 12", () => {
-  assert.equal(EN_KISA_SIFRE, 12);
+test("politika: en az 8, en fazla 64 karakter, 72 bayt", () => {
+  assert.equal(EN_KISA_SIFRE, 8);
+  assert.equal(EN_UZUN_SIFRE, 64);
+  assert.equal(SIFRE_BAYT_SINIRI, 72);
 });
 
-test("sınır: 11 karakter reddedilir, 12 ve 13 geçer", () => {
-  assert.notEqual(sifreUzunlukHatasi("a".repeat(11)), null);
-  assert.equal(sifreUzunlukHatasi("a".repeat(12)), null);
-  assert.equal(sifreUzunlukHatasi("a".repeat(13)), null);
-  assert.notEqual(sifreUzunlukHatasi(""), null);
-  // Eski sınır (8) artık yetmez.
-  assert.notEqual(sifreUzunlukHatasi("a".repeat(8)), null);
+test("sınır: 7 reddedilir, 8 kabul edilir", () => {
+  assert.deepEqual(sifreKuraliHatasi(guclu(7)), { tr: "Şifre en az 8 karakter olmalı.", en: "Password must be at least 8 characters." });
+  assert.equal(sifreKuraliHatasi(guclu(8)), null);
+  assert.notEqual(sifreKuraliHatasi(""), null);
 });
 
-test("uzunluk hatası iki dilde ve eşiği yazar", () => {
-  const m = sifreUzunlukHatasi("kisa");
+test("sınır: 64 kabul edilir, 65 reddedilir", () => {
+  assert.equal(sifreKuraliHatasi(guclu(64)), null);
+  assert.deepEqual(sifreKuraliHatasi(guclu(65)), { tr: "Şifre en fazla 64 karakter olabilir.", en: "Password can be at most 64 characters." });
+});
+
+test("büyük harf, rakam ya da sembol zorunlu değil", () => {
+  assert.equal(sifreKuraliHatasi("gunesli bir sabah"), null);
+  assert.equal(sifreKuraliHatasi("kirmizibalkon"), null);
+});
+
+test("72 bayt: Türkçe harfler iki bayt; sınır nedeniyle birlikte söylenir", () => {
+  // Tekrar olmayan Türkçe harf dizisi (tek karakter tekrarı "yaygın" sayılır, burada sınanan o değil).
+  // 36 Türkçe harf = 72 bayt (sınırda, kabul); 37 harf = 74 bayt (yalnızca 37 karakter olsa da ret).
+  const tr36 = "çğışöü".repeat(6);
+  assert.equal(tr36.length, 36);
+  assert.equal(new TextEncoder().encode(tr36).length, 72);
+  assert.equal(sifreKuraliHatasi(tr36), null);
+  const m = sifreKuraliHatasi(tr36 + "ç");
   assert.ok(m);
-  assert.equal(m.tr, "Şifre en az 12 karakter olmalı.");
-  assert.equal(m.en, "Password must be at least 12 characters.");
+  assert.match(m.tr, /en fazla 72 bayt/);
+  assert.match(m.tr, /Türkçe harfler/);
+  assert.match(m.en, /at most 72 bytes/);
+  // 64 karakter sınırının içinde ama bayt sınırının dışında: 34 ASCII + 30 "ğ" = 64 karakter, 94 bayt.
+  const karisik = "a".repeat(34) + "ğ".repeat(30);
+  assert.equal(karisik.length, 64);
+  assert.match(sifreKuraliHatasi(karisik)?.tr ?? "", /72 bayt/);
+  // ASCII'de 64 karakter 64 bayt: tam desteklenir.
+  assert.equal(new TextEncoder().encode(guclu(64)).length, 64);
 });
 
-test("uzunluk tarayıcının minLength'iyle aynı birimle ölçülür (UTF-16)", () => {
-  // Türkçe harf tek birim: 12 "ş" geçer, 11 geçmez. Supabase baytı sayar ve
-  // UTF-8 baytı hiçbir zaman UTF-16 biriminden az değildir.
-  assert.equal(sifreUzunlukHatasi("ş".repeat(12)), null);
-  assert.notEqual(sifreUzunlukHatasi("ş".repeat(11)), null);
-  assert.ok(Buffer.byteLength("ş".repeat(12), "utf8") >= 12);
+test("uzunluk tarayıcının minLength/maxLength'iyle aynı birimle ölçülür (UTF-16)", () => {
+  // Türkçe harf tek birim sayılır: 8 Türkçe harf (16 bayt) geçer, 7 geçmez.
+  assert.equal(sifreKuraliHatasi("çğışöüçğ"), null);
+  assert.deepEqual(sifreKuraliHatasi("çğışöüç")?.tr, "Şifre en az 8 karakter olmalı.");
 });
 
-test("sunucu, form ve metinler aynı sabiti kullanır; eski 8 hiçbir yerde kalmadı", () => {
+test("yaygın şifreler reddedilir; büyük/küçük harf ve Türkçe İ/I farkı kurtarmaz", () => {
+  for (const s of ["12345678", "password", "Password1", "PASSWORD123", "qwerty123", "sifre123", "ŞİFRE123", "Galatasaray", "ADMIN123", "aaaaaaaa", "11111111"]) {
+    assert.ok(yayginSifreMi(s), s);
+    assert.deepEqual(sifreKuraliHatasi(s), { tr: "Bu şifre çok yaygın ve kolay tahmin edilir; başka bir şifre seçin.", en: "This password is too common and easy to guess; choose a different one." }, s);
+  }
+  for (const s of [guclu(8), "kirmizibalkon", "password-ama-uzun-ve-ozel"]) assert.equal(yayginSifreMi(s), false, s);
+});
+
+test("yaygın liste: her eleman en az 8 karakter (kısası zaten uzunluktan düşer) ve tekrar yok", () => {
+  assert.ok(YAYGIN_SIFRE_LISTESI.length >= 50);
+  for (const s of YAYGIN_SIFRE_LISTESI) assert.ok(s.length >= EN_KISA_SIFRE, s);
+  assert.ok(YAYGIN_SIFRE_SAYISI <= YAYGIN_SIFRE_LISTESI.length);
+});
+
+test("kural sırası: kısa → uzun → bayt → yaygın", () => {
+  assert.match(sifreKuraliHatasi("1234567")?.tr ?? "", /en az 8/); // hem kısa hem yaygın görünümlü: kısa söylenir
+  assert.match(sifreKuraliHatasi("a".repeat(65))?.tr ?? "", /en fazla 64/); // hem uzun hem tekrar: uzun söylenir
+});
+
+test("sunucu, form ve metinler aynı kuralı kullanır; elle yazılmış sayı yok", () => {
   const auth = oku("app/actions/auth.ts");
-  assert.doesNotMatch(auth, /MIN_PASSWORD_LENGTH/);
-  assert.match(auth, /import \{ sifreUzunlukHatasi \} from "@\/lib\/kimlik-kurallari";/);
-  assert.match(auth, /const uzunlukHatasi = sifreUzunlukHatasi\(password\);/);
+  assert.doesNotMatch(auth, /MIN_PASSWORD_LENGTH|sifreUzunlukHatasi/);
+  assert.match(auth, /import \{ sifreKuraliHatasi \} from "@\/lib\/kimlik-kurallari";/);
+  assert.match(auth, /const kuralHatasi = sifreKuraliHatasi\(password\);/);
+  // Sonuç KULLANILMALI: hesaplanıp bir kenara bırakılan denetim hiçbir şeyi engellemez.
+  assert.match(auth, /if \(kuralHatasi\) return \{ error: t\(kuralHatasi\) \};/);
 
   const form = oku("app/dashboard/settings/password-form.tsx");
-  assert.doesNotMatch(form, /minLength=\{\d+\}/);
-  // İki görünümde ikişer kutu (şifre + tekrar).
-  assert.equal((form.match(/minLength=\{EN_KISA_SIFRE\}/g) ?? []).length, 4);
-  assert.match(form, /import \{ EN_KISA_SIFRE \} from "@\/lib\/kimlik-kurallari";/);
+  assert.doesNotMatch(form, /(minLength|maxLength)=\{\d+\}/);
+  // İki görünümde ikişer kutu (şifre + tekrar): dördü de aynı alt/üst sınır ve aynı kural denetimi.
+  assert.equal((form.match(/minLength=\{EN_KISA_SIFRE\} maxLength=\{EN_UZUN_SIFRE\} onInput=\{kuralDenetle\} required/g) ?? []).length, 4);
+  assert.match(form, /sifreKuraliHatasi\(kutu\.value\)/);
+  assert.match(form, /setCustomValidity/);
 
   for (const yol of ["app/reset-password/page.tsx", "app/dashboard/settings/page.tsx"]) {
     const kaynak = oku(yol);
-    assert.doesNotMatch(kaynak, /\b8 karakter|\b8 characters/, yol);
-    assert.match(kaynak, /\$\{EN_KISA_SIFRE\}/, yol);
+    assert.doesNotMatch(kaynak, /\b(8|12|64) karakter|\b(8|12|64) characters/, yol);
+    assert.match(kaynak, /\$\{EN_KISA_SIFRE\}–\$\{EN_UZUN_SIFRE\}/, yol);
   }
 });
 
 test("ilk şifre, kurtarma ve Ayarlar aynı kuraldan geçer (tek uygulama yolu)", () => {
   const auth = oku("app/actions/auth.ts");
-  // Uzunluk denetimi yalnızca applyNewPassword'de; üç akış da oraya iner.
-  assert.equal((auth.match(/sifreUzunlukHatasi\(/g) ?? []).length, 1);
+  // Kural denetimi yalnızca applyNewPassword'de; üç akış da oraya iner.
+  assert.equal((auth.match(/sifreKuraliHatasi\(/g) ?? []).length, 1);
   assert.match(auth, /export async function resetPassword[\s\S]*?applyNewPassword\(formData, "sifirlama"\)/);
   assert.match(auth, /export async function changePassword[\s\S]*?applyNewPassword\(formData, "ayarlar"\)/);
-  // Kayıt rastgele, saklanmayan bir şifreyle açılır; yeni eşiğin çok üstünde ve karakter türlerini karşılar.
+  // Kayıt rastgele, saklanmayan bir şifreyle açılır: kural fonksiyonundan geçmez, ama 64/72 sınırını da aşmamalı
+  // (Supabase 72 bayttan uzununu reddeder). base64url(32 bayt) = 43 karakter + "aA1!" = 47 ASCII.
   const kayit = auth.match(/password: `\$\{randomBytes\((\d+)\)\.toString\("base64url"\)\}aA1!`/);
   assert.ok(kayit, "kayıttaki rastgele şifre kalıbı değişti");
-  assert.ok(Math.ceil((Number(kayit[1]) * 4) / 3) + 4 > EN_KISA_SIFRE);
+  const uzunluk = Math.ceil((Number(kayit[1]) * 4) / 3) + 4;
+  assert.ok(uzunluk >= EN_KISA_SIFRE && uzunluk <= EN_UZUN_SIFRE && uzunluk <= SIFRE_BAYT_SINIRI);
 });
 
 /* ---------- A1: zayıf şifre nedenleri ---------- */
@@ -99,8 +148,8 @@ test("nedenler yalnızca bilinen üç değerden, sabit sırayla alınır", () =>
 
 test("length: en az uzunluğu söyler", () => {
   const m = sifreHatasi("weak_password", "sifirlama", ["length"]);
-  assert.match(m.tr, /en az 12 karakter/);
-  assert.match(m.en, /at least 12 characters/);
+  assert.match(m.tr, /en az 8 karakter/);
+  assert.match(m.en, /at least 8 characters/);
   assert.doesNotMatch(m.tr, /sızıntı|sembol/);
 });
 
@@ -108,7 +157,7 @@ test("characters: karakter türlerini söyler", () => {
   const m = sifreHatasi("weak_password", "ayarlar", ["characters"]);
   assert.match(m.tr, /karakter türlerini/);
   assert.match(m.en, /character types/);
-  assert.doesNotMatch(m.tr, /sızıntı|en az 12/);
+  assert.doesNotMatch(m.tr, /sızıntı|en az 8/);
 });
 
 test("pwned: veri sızıntısını söyler, sembol eklemeyi önermez", () => {
@@ -120,8 +169,8 @@ test("pwned: veri sızıntısını söyler, sembol eklemeyi önermez", () => {
 
 test("birden çok neden: hepsi, sabit sırayla", () => {
   const m = sifreHatasi("weak_password", "sifirlama", ["pwned", "length"]);
-  assert.ok(m.tr.indexOf("en az 12") < m.tr.indexOf("sızıntı"));
-  assert.ok(m.en.indexOf("at least 12") < m.en.indexOf("breach"));
+  assert.ok(m.tr.indexOf("en az 8") < m.tr.indexOf("sızıntı"));
+  assert.ok(m.en.indexOf("at least 8") < m.en.indexOf("breach"));
 });
 
 test("neden yoksa ya da tanınmıyorsa güvenli genel metin", () => {
@@ -229,7 +278,7 @@ test("neden listesi kurulu @supabase/auth-js ile aynı; 'min_length' yalnızca b
   }
 });
 
-test("üç ekran da 12 karakter kuralından geçer: ilk şifre, kurtarma, Ayarlar", () => {
+test("üç ekran da aynı şifre kuralından geçer: ilk şifre, kurtarma, Ayarlar", () => {
   // İlk şifre (?ilk=1) ve kurtarma AYNI sayfa: tek şifre formu, sunucu işlemi resetPassword.
   const sifirlama = oku("app/reset-password/page.tsx");
   assert.match(sifirlama, /<PasswordForm action=\{resetPassword\} variant="login"/);
@@ -253,5 +302,5 @@ test("üç ekran da 12 karakter kuralından geçer: ilk şifre, kurtarma, Ayarla
   // Sunucu: iki işlem de denetimi yapan tek yola iner (tarayıcı denetimi atlatılsa bile).
   const auth = oku("app/actions/auth.ts");
   const uygula = auth.slice(auth.indexOf("async function applyNewPassword("), auth.indexOf("async function yerelOturumuKapat("));
-  assert.ok(uygula.indexOf("sifreUzunlukHatasi(password)") < uygula.indexOf("updateUser("), "uzunluk, Supabase çağrısından ÖNCE denetlenmeli");
+  assert.ok(uygula.indexOf("sifreKuraliHatasi(password)") < uygula.indexOf("updateUser("), "şifre kuralı, Supabase çağrısından ÖNCE denetlenmeli");
 });

@@ -15,7 +15,7 @@ import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
 import { SIFRE_VAR_CEREZI } from "@/lib/ilk-sifre";
 import { KURTARMA_YOLU, sifreHatasi, zayifSifreNedenleri, type SifreBaglami } from "@/lib/sifre-hatasi";
-import { sifreUzunlukHatasi } from "@/lib/kimlik-kurallari";
+import { sifreKuraliHatasi } from "@/lib/kimlik-kurallari";
 import { after } from "next/server";
 import { randomBytes } from "node:crypto";
 import { onayKaydiYaz, onayKopyasiGonder } from "@/lib/sozlesme/onay-yaz";
@@ -384,9 +384,13 @@ async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promi
   const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
   const t = await ceviri();
 
-  // En az uzunluk lib/kimlik-kurallari.ts'te; form da aynı sabiti kullanır (eskiden burada 8, formda ayrıca 8 yazılıydı).
-  const uzunlukHatasi = sifreUzunlukHatasi(password);
-  if (uzunlukHatasi) return { error: t(uzunlukHatasi) };
+  /*
+    Şifre politikası tek yerde (lib/kimlik-kurallari.ts): 8–64 karakter, 72 bayt,
+    yaygın şifre yok. Form aynı fonksiyonu tarayıcıda da gösterir; burası
+    atlatılamayan denetim (tarayıcı denetimi kapatılsa da Supabase'e gitmeden ret).
+  */
+  const kuralHatasi = sifreKuraliHatasi(password);
+  if (kuralHatasi) return { error: t(kuralHatasi) };
   if (password !== passwordConfirm) {
     return { error: t({ tr: "Şifreler eşleşmiyor.", en: "The passwords do not match." }) };
   }
