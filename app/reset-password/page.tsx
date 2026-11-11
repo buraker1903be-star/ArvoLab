@@ -1,6 +1,7 @@
-import { resetPassword } from "@/app/actions/auth";
+import { ilkSifredenCik, resetPassword, yeniDogrulamaIste } from "@/app/actions/auth";
 import PasswordForm from "@/app/dashboard/settings/password-form";
 import KimlikYerlesimi from "@/app/_components/kimlik/kimlik-yerlesimi";
+import { Bildirim } from "@/app/_components/ui/bildirim";
 import { ceviri } from "@/lib/dil-sunucu";
 
 export async function generateMetadata() {
@@ -11,7 +12,7 @@ export async function generateMetadata() {
 // Proxy, oturumu olmayan ziyaretçiyi bu sayfadan giriş sayfasına yönlendirir;
 // buraya yalnızca /auth/confirm üzerinden doğrulanmış bağlantıyla gelinir.
 // Signature OS 5 / Phase 2: yalnızca yerleşim değişti.
-export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ ilk?: string }> }) {
+export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ ilk?: string; cikis?: string }> }) {
   const t = await ceviri();
   /*
     ?ilk=1: kayıt doğrulamasından gelen yeni kullanıcı (G1, 06.11.2026).
@@ -19,7 +20,10 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
     kanıtlanmış oturumda ilk kez belirleniyor. Akış sıfırlamayla aynı,
     yalnızca metin farklı.
   */
-  const ilk = (await searchParams).ilk === "1";
+  const sorgu = await searchParams;
+  const ilk = sorgu.ilk === "1";
+  // Yalnızca tanınan değer: sorgudaki metin ekrana yansıtılmaz.
+  const cikisHatasi = sorgu.cikis === "hata";
   return (
     <KimlikYerlesimi>
       <header className="os5-kimlik-baslik">
@@ -37,7 +41,35 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
         </p>
       </header>
 
+      {cikisHatasi ? (
+        <div className="os5-kimlik-bildirimler">
+          <Bildirim ton="hata" rol="alert">
+            {t({ tr: "Çıkış yapılamadı. Bağlantınızı kontrol edip tekrar deneyin.", en: "Could not sign out. Check your connection and try again." })}
+          </Bildirim>
+        </div>
+      ) : null}
+
       <PasswordForm action={resetPassword} variant="login" submitLabel={t({ tr: "Şifreyi kaydet ve devam et", en: "Save password and continue" })} />
+
+      {/*
+        R1 (G1 Aşama 8.3): bu ekranın tek çıkışı buydu ve yoktu. İkisi de
+        yalnızca bu tarayıcının oturumunu kapatır (app/actions/auth.ts);
+        kendiliğinden çalışmaz, kullanıcının düğmesidir.
+      */}
+      <div className="os5-kimlik-kurtarma">
+        <form action={yeniDogrulamaIste}>
+          {ilk ? <input type="hidden" name="ilk" value="1" /> : null}
+          <button type="submit" className="os5-kimlik-geri">
+            {t({ tr: "Yeni doğrulama bağlantısı iste", en: "Request a new verification link" })}
+          </button>
+        </form>
+        <form action={ilkSifredenCik}>
+          {ilk ? <input type="hidden" name="ilk" value="1" /> : null}
+          <button type="submit" className="os5-kimlik-geri">
+            {t({ tr: "Çıkış yap", en: "Sign out" })}
+          </button>
+        </form>
+      </div>
     </KimlikYerlesimi>
   );
 }
