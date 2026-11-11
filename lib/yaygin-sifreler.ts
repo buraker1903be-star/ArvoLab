@@ -103,9 +103,18 @@ function normallestir(sifre: string): string {
 
 const KUME: ReadonlySet<string> = new Set(LISTE.map(normallestir));
 
-/** Şifre yaygın listede mi, ya da tek bir karakterin tekrarı mı ("aaaaaaaa"). */
+/*
+  Tek karakterin tekrarı ("aaaaaaaa", 64 tane "A") ayrı bir kural ve ayrı bir
+  mesaj (G1-D, 11.11.2026). Eskiden yayginSifreMi'nin içindeydi ve kullanıcıya
+  "çok yaygın" deniyordu; gerçek testte 64 "A" + "Z" yazan kullanıcı (kutu
+  "Z"yi sessizce kırptığı için) nedenini anlayamadı.
+*/
+export function tekKarakterTekrariMi(sifre: string): boolean {
+  return /^(.)\1+$/u.test(sifre);
+}
+
+/** Şifre yaygın listede mi (büyük/küçük harf ve Türkçe İ/I farkı gözetilmez). */
 export function yayginSifreMi(sifre: string): boolean {
-  if (/^(.)\1+$/u.test(sifre)) return true;
   const n = normallestir(sifre);
   // Türkçe I→ı dönüşümü Latin "password"ü bozmasın diye ikinci bir karşılaştırma: düz küçültme.
   return KUME.has(n) || KUME.has(sifre.normalize("NFC").toLowerCase());

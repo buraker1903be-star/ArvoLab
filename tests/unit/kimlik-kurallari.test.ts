@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { EN_KISA_SIFRE, EN_UZUN_SIFRE, SIFRE_BAYT_SINIRI, DOGRULAMA_BAGLANTISI_SANIYE, baglantiSuresiMetni, sifreKuraliHatasi } from "../../lib/kimlik-kurallari";
-import { YAYGIN_SIFRE_LISTESI, YAYGIN_SIFRE_SAYISI, yayginSifreMi } from "../../lib/yaygin-sifreler";
+import { EN_KISA_SIFRE, EN_UZUN_SIFRE, SIFRE_BAYT_SINIRI, SIFRE_ESLESMEDI, DOGRULAMA_BAGLANTISI_SANIYE, baglantiSuresiMetni, sifreKuraliHatasi } from "../../lib/kimlik-kurallari";
+import { YAYGIN_SIFRE_LISTESI, YAYGIN_SIFRE_SAYISI, tekKarakterTekrariMi, yayginSifreMi } from "../../lib/yaygin-sifreler";
 import { ZAYIF_SIFRE_NEDENLERI, sifreHatasi, zayifSifreNedenleri } from "../../lib/sifre-hatasi";
 import { inviteEmail, resetPasswordEmail, signUpConfirmEmail } from "../../lib/email/auth-emails";
 
@@ -68,18 +68,53 @@ test("72 bayt: Türkçe harfler iki bayt; sınır nedeniyle birlikte söylenir",
   assert.equal(new TextEncoder().encode(guclu(64)).length, 64);
 });
 
-test("uzunluk tarayıcının minLength/maxLength'iyle aynı birimle ölçülür (UTF-16)", () => {
+test("uzunluk tarayıcının minLength'iyle aynı birimle ölçülür (UTF-16)", () => {
   // Türkçe harf tek birim sayılır: 8 Türkçe harf (16 bayt) geçer, 7 geçmez.
   assert.equal(sifreKuraliHatasi("çğışöüçğ"), null);
   assert.deepEqual(sifreKuraliHatasi("çğışöüç")?.tr, "Şifre en az 8 karakter olmalı.");
 });
 
 test("yaygın şifreler reddedilir; büyük/küçük harf ve Türkçe İ/I farkı kurtarmaz", () => {
-  for (const s of ["12345678", "password", "Password1", "PASSWORD123", "qwerty123", "sifre123", "ŞİFRE123", "Galatasaray", "ADMIN123", "aaaaaaaa", "11111111"]) {
+  for (const s of ["12345678", "password", "Password1", "PASSWORD123", "qwerty123", "sifre123", "ŞİFRE123", "Galatasaray", "ADMIN123"]) {
     assert.ok(yayginSifreMi(s), s);
     assert.deepEqual(sifreKuraliHatasi(s), { tr: "Bu şifre çok yaygın ve kolay tahmin edilir; başka bir şifre seçin.", en: "This password is too common and easy to guess; choose a different one." }, s);
   }
   for (const s of [guclu(8), "kirmizibalkon", "password-ama-uzun-ve-ozel"]) assert.equal(yayginSifreMi(s), false, s);
+});
+
+test("tek karakter tekrarı: ayrı kural, ayrı mesaj (\"yaygın\" denmez)", () => {
+  const TEKRAR = { tr: "Şifre tek bir karakterin tekrarından oluşamaz.", en: "The password cannot be a single character repeated." };
+  // Gerçek testteki durum: kırpılmış 64 "A" (eskiden "çok yaygın" deniyordu).
+  for (const s of ["aaaaaaaa", "A".repeat(64), "11111111", "çççççççç", "        "]) {
+    assert.ok(tekKarakterTekrariMi(s), JSON.stringify(s));
+    assert.deepEqual(sifreKuraliHatasi(s), TEKRAR, JSON.stringify(s));
+  }
+  for (const s of ["A".repeat(63) + "Z", "aaaaaaab", guclu(8)]) assert.equal(tekKarakterTekrariMi(s), false, s);
+  // 64 "A" + "Z" (65 karakter) artık "en fazla 64" der: asıl neden uzunluk.
+  assert.match(sifreKuraliHatasi("A".repeat(64) + "Z")?.tr ?? "", /en fazla 64/);
+  // Yaygın liste tekrarı artık kendi saymıyor.
+  assert.equal(yayginSifreMi("aaaaaaaa"), false);
+});
+
+test("65 ve 73 karakter: tamamı değerlendirilir, uzunluk nedeniyle reddedilir", () => {
+  const s65 = guclu(65);
+  const s73 = guclu(73);
+  assert.equal(s65.length, 65);
+  assert.equal(s73.length, 73);
+  for (const s of [s65, s73]) assert.deepEqual(sifreKuraliHatasi(s), { tr: "Şifre en fazla 64 karakter olabilir.", en: "Password can be at most 64 characters." });
+  // İlk 64 karakteri geçerli: kural kırpılmış hâli değil, girilenin tamamını değerlendiriyor.
+  assert.equal(sifreKuraliHatasi(s73.slice(0, 64)), null);
+});
+
+test("şifre eşleşmeme metni tek kaynakta; sunucu ve form aynı metni kullanır", () => {
+  assert.deepEqual(SIFRE_ESLESMEDI, { tr: "Şifreler eşleşmiyor.", en: "The passwords do not match." });
+  const auth = oku("app/actions/auth.ts");
+  assert.match(auth, /if \(password !== passwordConfirm\) \{\s*return \{ error: t\(SIFRE_ESLESMEDI\) \};/);
+  assert.doesNotMatch(auth, /"Şifreler eşleşmiyor\."/);
+  const form = oku("app/dashboard/settings/password-form.tsx");
+  assert.match(form, /tekrar\.setCustomValidity\(tekrar\.value && tekrar\.value !== sifre\.value \? t\(SIFRE_ESLESMEDI\) : ""\)/);
+  // Şifre kutusu değişince de eşleşme yeniden hesaplanır (önce tekrar, sonra şifre düzeltilirse eski mesaj kalmasın).
+  assert.match(form, /const sifreDenetle[\s\S]*?eslesmeyiDenetle\(kutu\.form\);/);
 });
 
 test("yaygın liste: her eleman en az 8 karakter (kısası zaten uzunluktan düşer) ve tekrar yok", () => {
@@ -88,7 +123,7 @@ test("yaygın liste: her eleman en az 8 karakter (kısası zaten uzunluktan dü�
   assert.ok(YAYGIN_SIFRE_SAYISI <= YAYGIN_SIFRE_LISTESI.length);
 });
 
-test("kural sırası: kısa → uzun → bayt → yaygın", () => {
+test("kural sırası: kısa → uzun → bayt → tekrar → yaygın", () => {
   assert.match(sifreKuraliHatasi("1234567")?.tr ?? "", /en az 8/); // hem kısa hem yaygın görünümlü: kısa söylenir
   assert.match(sifreKuraliHatasi("a".repeat(65))?.tr ?? "", /en fazla 64/); // hem uzun hem tekrar: uzun söylenir
 });
@@ -96,15 +131,18 @@ test("kural sırası: kısa → uzun → bayt → yaygın", () => {
 test("sunucu, form ve metinler aynı kuralı kullanır; elle yazılmış sayı yok", () => {
   const auth = oku("app/actions/auth.ts");
   assert.doesNotMatch(auth, /MIN_PASSWORD_LENGTH|sifreUzunlukHatasi/);
-  assert.match(auth, /import \{ sifreKuraliHatasi \} from "@\/lib\/kimlik-kurallari";/);
+  assert.match(auth, /import \{ SIFRE_ESLESMEDI, sifreKuraliHatasi \} from "@\/lib\/kimlik-kurallari";/);
   assert.match(auth, /const kuralHatasi = sifreKuraliHatasi\(password\);/);
   // Sonuç KULLANILMALI: hesaplanıp bir kenara bırakılan denetim hiçbir şeyi engellemez.
   assert.match(auth, /if \(kuralHatasi\) return \{ error: t\(kuralHatasi\) \};/);
 
   const form = oku("app/dashboard/settings/password-form.tsx");
-  assert.doesNotMatch(form, /(minLength|maxLength)=\{\d+\}/);
-  // İki görünümde ikişer kutu (şifre + tekrar): dördü de aynı alt/üst sınır ve aynı kural denetimi.
-  assert.equal((form.match(/minLength=\{EN_KISA_SIFRE\} maxLength=\{EN_UZUN_SIFRE\} onInput=\{kuralDenetle\} required/g) ?? []).length, 4);
+  assert.doesNotMatch(form, /minLength=\{\d+\}/);
+  // maxLength YOK: tarayıcı fazlasını sessizce kırpıyordu (G1-D). 64 sınırı kural fonksiyonuyla söyleniyor.
+  assert.doesNotMatch(form, /maxLength=\{/);
+  // İki görünümde ikişer kutu: şifre kutuları kural denetimi, tekrar kutuları eşleşme denetimi.
+  assert.equal((form.match(/name="password" type="password" autoComplete="new-password" minLength=\{EN_KISA_SIFRE\} onInput=\{sifreDenetle\} required/g) ?? []).length, 2);
+  assert.equal((form.match(/name="passwordConfirm" type="password" autoComplete="new-password" minLength=\{EN_KISA_SIFRE\} onInput=\{tekrarDenetle\} required/g) ?? []).length, 2);
   assert.match(form, /sifreKuraliHatasi\(kutu\.value\)/);
   assert.match(form, /setCustomValidity/);
 

@@ -15,7 +15,7 @@ import { siteOrigin } from "@/lib/site-url";
 import { authConfirmLink } from "@/lib/auth-link";
 import { SIFRE_VAR_CEREZI } from "@/lib/ilk-sifre";
 import { KURTARMA_YOLU, sifreHatasi, zayifSifreNedenleri, type SifreBaglami } from "@/lib/sifre-hatasi";
-import { sifreKuraliHatasi } from "@/lib/kimlik-kurallari";
+import { SIFRE_ESLESMEDI, sifreKuraliHatasi } from "@/lib/kimlik-kurallari";
 import { after } from "next/server";
 import { randomBytes } from "node:crypto";
 import { onayKaydiYaz, onayKopyasiGonder } from "@/lib/sozlesme/onay-yaz";
@@ -392,7 +392,7 @@ async function applyNewPassword(formData: FormData, baglam: SifreBaglami): Promi
   const kuralHatasi = sifreKuraliHatasi(password);
   if (kuralHatasi) return { error: t(kuralHatasi) };
   if (password !== passwordConfirm) {
-    return { error: t({ tr: "Şifreler eşleşmiyor.", en: "The passwords do not match." }) };
+    return { error: t(SIFRE_ESLESMEDI) };
   }
 
   const supabase = await createClient();

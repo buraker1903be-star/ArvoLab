@@ -1,5 +1,5 @@
 import type { Metin } from "./dil";
-import { yayginSifreMi } from "./yaygin-sifreler";
+import { tekKarakterTekrariMi, yayginSifreMi } from "./yaygin-sifreler";
 
 /*
   KİMLİK DOĞRULAMA KURALLARI: TEK KAYNAK (G1-C A0–A2, 11.11.2026). Saf modül;
@@ -34,8 +34,11 @@ import { yayginSifreMi } from "./yaygin-sifreler";
   Supabase'ten ret alır.
 
   Uzunluk JavaScript'in .length'i (UTF-16 birimi) ile ölçülür; tarayıcının
-  minLength/maxLength denetimi de aynı birimi sayar, form ve sunucu aynı
-  sonucu verir.
+  minLength denetimi de aynı birimi sayar, form ve sunucu aynı sonucu verir.
+  Formda maxLength BİLEREK YOK (G1-D, 11.11.2026): tarayıcı fazlasını hiçbir
+  uyarı vermeden kırpıyordu; gerçek testte 73 karakter yazan kullanıcının
+  şifresi ilk 64 karakteriyle kaydedildi ve kullanıcı kaydedilen şifreyi
+  bilmiyordu. 64 sınırı artık bu fonksiyonla, açık mesajla söyleniyor.
 
   72 BAYT: Supabase şifreyi bcrypt ile saklar ve 72 bayttan uzununu kabul
   etmez. Türkçe harfler (ç, ğ, ı, ö, ş, ü ve büyükleri) UTF-8'de 2 bayt:
@@ -50,11 +53,14 @@ export const EN_KISA_SIFRE = 8;
 export const EN_UZUN_SIFRE = 64;
 export const SIFRE_BAYT_SINIRI = 72;
 
+/* "Şifre" ve "tekrar" kutuları farklıysa: sunucu (applyNewPassword) ve form aynı metni gösterir. */
+export const SIFRE_ESLESMEDI: Metin = { tr: "Şifreler eşleşmiyor.", en: "The passwords do not match." };
+
 const sifreBayti = (sifre: string) => new TextEncoder().encode(sifre).length;
 
 /**
  * Şifre politikasını karşılamıyorsa kullanıcıya gösterilecek metin; karşılıyorsa null.
- * Sıra sabit: kısa → uzun → bayt → yaygın (ilk tutan kural söylenir).
+ * Sıra sabit: kısa → uzun → bayt → tek karakter tekrarı → yaygın (ilk tutan kural söylenir).
  */
 export function sifreKuraliHatasi(sifre: string): Metin | null {
   if (sifre.length < EN_KISA_SIFRE) {
@@ -68,6 +74,9 @@ export function sifreKuraliHatasi(sifre: string): Metin | null {
       tr: `Şifre çok uzun: Türkçe harfler (ç, ğ, ı, ö, ş, ü) ve bazı semboller iki ya da daha fazla bayt sayılır ve şifre en fazla ${SIFRE_BAYT_SINIRI} bayt olabilir. Daha kısa bir şifre seçin ya da bu karakterlerin bir kısmını azaltın.`,
       en: `The password is too long: Turkish letters (ç, ğ, ı, ö, ş, ü) and some symbols count as two or more bytes, and the password can be at most ${SIFRE_BAYT_SINIRI} bytes. Choose a shorter password or use fewer of these characters.`,
     };
+  }
+  if (tekKarakterTekrariMi(sifre)) {
+    return { tr: "Şifre tek bir karakterin tekrarından oluşamaz.", en: "The password cannot be a single character repeated." };
   }
   if (yayginSifreMi(sifre)) {
     return { tr: "Bu şifre çok yaygın ve kolay tahmin edilir; başka bir şifre seçin.", en: "This password is too common and easy to guess; choose a different one." };
