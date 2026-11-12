@@ -38,7 +38,12 @@
   display: -webkit-box; margin: 6px 0 12px; overflow: hidden;
   -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   color: var(--os5-kontrol-yazi); font-family: var(--os5-font-vurgu);
-  font-size: clamp(22px, 2.1vw, 30px); font-weight: 500; line-height: 1.22; letter-spacing: -.01em;
+  /*
+    Satır aralığı 1,42: üç satırda kırpılan uzun başlıkta 4. satırın büyük
+    "İ" noktaları 1,22 ve 1,32'de 3. satırın altına taşıyor, kırpılan satırdan
+    parçalar görünüyordu (Türkçe büyük harfle yazılan tez başlıkları).
+  */
+  font-size: clamp(22px, 2.1vw, 30px); font-weight: 500; line-height: 1.42; letter-spacing: -.01em;
   overflow-wrap: anywhere; font-variant-numeric: lining-nums;
 }
 .os5-ana-rozetler { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; }
