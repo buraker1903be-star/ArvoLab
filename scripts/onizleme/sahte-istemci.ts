@@ -44,6 +44,15 @@ const BOS = ortam.ONIZLEME_BOS === "1";
   profil satırı değişir; uygulamanın rol kararları aynı koddan geçer.
 */
 const ROL = ortam.ONIZLEME_ROL || null;
+/*
+  UZUN BAŞLIK (Signature OS 5 / Phase 4). ONIZLEME_UZUN_BASLIK=1 ilk
+  çalışmanın başlığını kurumların gerçekte kabul ettiği uzunlukta bir
+  tez başlığıyla değiştirir: ana sayfanın başlık kırpma ve satır kırma
+  davranışı kısa örnekle görülemiyordu. Yalnızca önizlemedeki satır değişir.
+*/
+const UZUN_BASLIK = ortam.ONIZLEME_UZUN_BASLIK === "1";
+const UZUN_BASLIK_METNI =
+  "TÜRKİYE'DE 2000–2025 DÖNEMİNDE ENFLASYON, İŞSİZLİK VE PARA POLİTİKASI ARASINDAKİ DİNAMİK İLİŞKİLERİN YAPISAL KIRILMALI ZAMAN SERİSİ YÖNTEMLERİYLE EKONOMETRİK OLARAK İNCELENMESİ VE POLİTİKA ÖNERİLERİ";
 const BOS_TABLOLAR = new Set(["academic_projects", "project_manuscripts", "literature_sources", "document_uploads", "manuscript_comments", "citation_checks", "kanit_kayitlari"]);
 function tur<T>(etiket: string, deger: T): Promise<T> {
   if (OLCUM) console.log(`[olcum] ${Date.now()} ${etiket}`);
@@ -56,6 +65,7 @@ type Sonuc = { data: unknown; error: null; count?: number | null };
 function sorgu(tablo: string) {
   let satirlar: Satir[] = BOS && BOS_TABLOLAR.has(tablo) ? [] : [...((ORNEK as Record<string, Satir[]>)[tablo] ?? [])];
   if (ROL && tablo === "profiles") satirlar = satirlar.map((r) => ({ ...r, role: ROL }));
+  if (UZUN_BASLIK && tablo === "academic_projects") satirlar = satirlar.map((r, i) => (i === 0 ? { ...r, title: UZUN_BASLIK_METNI } : r));
   let tek: "single" | "maybe" | null = null;
   let sayim = false;
   let yalnizSayim = false;

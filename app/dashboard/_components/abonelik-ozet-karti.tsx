@@ -23,7 +23,14 @@ export default async function AbonelikOzetKarti({
   kredi,
   bireysel,
   calismaId,
+  sade = false,
 }: {
+  /*
+    sade (Signature OS 5 / Phase 4): asistan kısayolları çizilmez. Ana
+    sayfada kısayollar "Araçlar" bölümünde; abonelik bilgisi ikincil
+    öncelikte, yalnızca durum ve kredi.
+  */
+  sade?: boolean;
   access: AccessState;
   kredi: KrediOzeti;
   bireysel: boolean;
@@ -43,7 +50,7 @@ export default async function AbonelikOzetKarti({
         : "success";
 
   return (
-    <article className="gb-kart abonelik-ozet">
+    <article className={sade ? "gb-kart abonelik-ozet abonelik-ozet--sade" : "gb-kart abonelik-ozet"}>
       <header className="gb-kart-bas">
         <div>
           <h2>{t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}</h2>
@@ -104,7 +111,7 @@ export default async function AbonelikOzetKarti({
         işe yaradığını gösteren üç kısayolla doluyor: öğrenci asistanı
         ararken menüleri dolaşmasın.
       */}
-      {calismaId ? (
+      {calismaId && !sade ? (
         <ul className="abonelik-araclar">
           <li>
             <Link className="gb-satir" href={`/dashboard/editor/${calismaId}/write`}>

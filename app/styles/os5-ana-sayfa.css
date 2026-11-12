@@ -1,0 +1,141 @@
+/*
+  SIGNATURE OS 5 — ANA SAYFA (Phase 4, 12.11.2026).
+
+  Öğrencinin ana sayfası (app/dashboard/page.tsx, `os5-ana`). Referans
+  onaylı Paddle Dashboard'unun disiplini: tek odak (çalışma paneli),
+  düz yüzeyler, gölge yok, ölçüler çizgiyle ayrılmış, tek koyu düğme.
+  Personel ana sayfası bu fazın dışında; `os5-ana` yalnızca öğrenci ve
+  boş hesap görünümüne verilir, bu dosyadaki her seçici ona bağlı
+  (tests/unit/os5-ana-sayfa.test.ts denetler).
+
+  Ortak liste kartları (genel-bakis.tsx) burada os5 yüzeyine çekilir;
+  bileşenler değişmedi, başka sayfalardaki görünüşleri aynı.
+*/
+
+.os5-ana { gap: var(--os5-alan-aralik); max-width: var(--os5-icerik-azami); margin-inline: auto; font-family: var(--os5-font-govde); }
+.os5-ana .gb-selam h1 { font-size: var(--os5-fs-sayfa); }
+.os5-ana .gb-selam p { margin-top: 4px; font-size: var(--os5-fs-govde); }
+
+/* Kartlar: düz yüzey, ince kenarlık, 16 px radius, gölge yok. */
+.os5-ana .gb-kart {
+  gap: 12px; padding: 20px 24px;
+  border: 1px solid var(--os5-yuzey-cizgi); border-radius: var(--os5-r-kart);
+  background: var(--os5-yuzey-kart); box-shadow: none;
+}
+.os5-ana .gb-kart-bas h2 { font-size: var(--os5-fs-govde); font-weight: 600; }
+.os5-ana .gb-kart-bas p { font-size: var(--os5-fs-meta); }
+
+/* ---------- Çalışma paneli: sayfanın odağı ---------- */
+.os5-ana-calisma {
+  display: grid; gap: 20px; padding: 28px 32px;
+  border: 1px solid var(--os5-yuzey-cizgi); border-radius: var(--os5-r-kart);
+  background: var(--os5-yuzey-kart);
+}
+.os5-ana-calisma-ust { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 20px 32px; }
+.os5-ana-kimlik { flex: 1 1 480px; min-width: 0; }
+.os5-ana-ust-yazi { margin: 0; color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-meta); font-weight: 600; letter-spacing: .02em; }
+.os5-ana-kimlik h2 {
+  display: -webkit-box; margin: 6px 0 12px; overflow: hidden;
+  -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  color: var(--os5-kontrol-yazi); font-family: var(--os5-font-vurgu);
+  font-size: clamp(22px, 2.1vw, 30px); font-weight: 500; line-height: 1.22; letter-spacing: -.01em;
+  overflow-wrap: anywhere; font-variant-numeric: lining-nums;
+}
+.os5-ana-rozetler { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; }
+.os5-ana-meta { color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-meta); }
+.os5-ana-eylemler { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Üç ölçü: kutu değil, ince çizgilerle ayrılmış sütunlar. */
+.os5-ana-olcumler {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0; padding-top: 20px; border-top: 1px solid var(--os5-yuzey-cizgi);
+}
+.os5-ana-olcu { display: flex; flex-direction: column; min-width: 0; padding: 0 24px; border-left: 1px solid var(--os5-yuzey-cizgi); }
+.os5-ana-olcu:first-child { padding-left: 0; border-left: 0; }
+.os5-ana-olcu dt { color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-meta); font-weight: 500; }
+.os5-ana-olcu dd { display: flex; align-items: baseline; gap: 6px; margin: 6px 0 10px; }
+.os5-ana-olcu dd b { color: var(--os5-kontrol-yazi); font-size: 28px; font-weight: 600; line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.os5-ana-olcu dd span { color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-govde); }
+.os5-ana-olcu[data-tone="danger"] dd b { color: var(--os5-hata); }
+.os5-ana-olcu[data-tone="warning"] dd b { color: var(--os5-uyari); }
+.os5-ana-olcu[data-tone="success"] dd b { color: var(--os5-basari); }
+.os5-ana-olcu-alt { color: var(--ink-soft); font-size: var(--os5-fs-meta); line-height: 1.45; }
+/* Gerçek veriye bağlı ilerleme çubuğu (hedef ya da kontrol listesi yoksa çizilmez). */
+.os5-ana-cubuk { height: 6px; margin-bottom: 8px; overflow: hidden; border-radius: var(--os5-r-rozet); background: var(--os5-yuzey-cizgi); }
+.os5-ana-cubuk > i { display: block; width: var(--w, 0%); height: 100%; border-radius: inherit; background: var(--os5-dugme-birincil); }
+.os5-ana-olcu[data-tone="success"] .os5-ana-cubuk > i { background: var(--os5-basari); }
+.os5-ana-not { margin: 0; font-size: var(--os5-fs-meta); line-height: 1.45; }
+
+/* Takvim ve "Şimdi" satırları: düz zemin, solda etiket. */
+.os5-ana-satir,
+.os5-ana-simdi {
+  display: grid; grid-template-columns: 160px minmax(0, 1fr) auto; align-items: center; gap: 8px 16px;
+  padding: 12px 16px; border-radius: var(--os5-r-kart-secim); background: var(--os5-yuzey-duz);
+}
+.os5-ana-simdi { box-shadow: inset 3px 0 0 var(--os5-dugme-birincil); }
+.os5-ana-simdi[data-aciliyet="yuksek"] { box-shadow: inset 3px 0 0 var(--os5-uyari); }
+.os5-ana-simdi[data-bitti="true"] { box-shadow: inset 3px 0 0 var(--os5-basari); }
+.os5-ana-satir-etiket { color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.os5-ana-satir-govde { display: grid; gap: 2px; min-width: 0; }
+.os5-ana-satir-govde b { color: var(--os5-kontrol-yazi); font-size: var(--os5-fs-govde); font-weight: 600; }
+.os5-ana-satir-govde small { color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-meta); line-height: 1.45; }
+
+/* ---------- İki sütun: solda yapılacaklar, sağda ikincil bilgiler ---------- */
+.os5-ana-izgara { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); align-items: start; gap: var(--os5-alan-aralik); }
+.os5-ana-sol, .os5-ana-sag { display: grid; gap: var(--os5-alan-aralik); min-width: 0; }
+
+/* Araçlar */
+.os5-ana-arac-liste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.os5-ana-arac {
+  display: flex; align-items: flex-start; gap: 12px; height: 100%; min-height: 64px; padding: 12px;
+  border: 1px solid var(--os5-yuzey-cizgi); border-radius: var(--os5-r-kart-secim);
+  color: var(--os5-kontrol-yazi); text-decoration: none;
+  transition: background-color var(--os5-sure-hizli) var(--os5-egri), border-color var(--os5-sure-hizli) var(--os5-egri);
+}
+.os5-ana-arac:hover { border-color: var(--os5-kontrol-kenarlik); background: var(--os5-yuzey-duz); }
+.os5-ana-arac:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.os5-ana-arac > svg { flex: none; margin-top: 1px; color: var(--primary-ink); }
+.os5-ana-arac > span { display: grid; gap: 2px; min-width: 0; }
+.os5-ana-arac b { font-size: var(--os5-fs-govde); font-weight: 600; }
+.os5-ana-arac small { color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-meta); }
+
+/* Boş hesap: aynı yüzey dili. */
+.os5-ana-baslangic { padding: 28px 32px; }
+
+/* ---------- Tablet ---------- */
+@media (max-width: 1100px) {
+  .os5-ana-izgara { grid-template-columns: minmax(0, 1fr); }
+  .os5-ana-arac-liste { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- Telefon: sıkıştırılmış masaüstü değil, dikey bir akış ---------- */
+@media (max-width: 760px) {
+  .os5-ana-calisma, .os5-ana-baslangic { gap: 16px; padding: 20px; }
+  .os5-ana .gb-kart { padding: 16px; }
+  .os5-ana-kimlik { flex-basis: 100%; }
+  .os5-ana-kimlik h2 { font-size: 22px; -webkit-line-clamp: 4; }
+  /* Birincil eylem başparmağın genişliğinde; özet yanında sessiz bağlantı. */
+  .os5-ana-eylemler { width: 100%; }
+  .os5-ana-eylemler > .os5-dugme--birincil { flex: 1; min-height: var(--os5-kontrol-h-dokunma); }
+  .os5-ana-eylemler > .os5-dugme--sessiz { min-height: var(--os5-kontrol-h-dokunma); }
+  /* Ölçüler satır satır: etiket solda, değer sağda; çubuk ve açıklama altında. */
+  .os5-ana-olcumler { grid-template-columns: minmax(0, 1fr); padding-top: 4px; }
+  .os5-ana-olcu {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 12px;
+    padding: 14px 0; border-top: 1px solid var(--os5-yuzey-cizgi); border-left: 0;
+  }
+  .os5-ana-olcu:first-child { border-top: 0; }
+  .os5-ana-olcu dt { font-size: var(--os5-fs-govde); color: var(--os5-kontrol-yazi); }
+  .os5-ana-olcu dd { margin: 0; }
+  .os5-ana-olcu dd b { font-size: 22px; }
+  .os5-ana-olcu .os5-ana-cubuk, .os5-ana-olcu-alt { grid-column: 1 / -1; }
+  .os5-ana-olcu .os5-ana-cubuk { margin: 10px 0 6px; }
+  .os5-ana-satir, .os5-ana-simdi { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+  .os5-ana-arac-liste { gap: 6px; }
+  .os5-ana-arac { min-height: 56px; padding: 10px; }
+  .os5-ana-arac small { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os5-ana-arac { transition: none; }
+}
