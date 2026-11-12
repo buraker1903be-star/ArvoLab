@@ -81,7 +81,10 @@ test("DOI: bir kullanıcının hakkı bitince öteki etkilenmez (iç içe çağr
     assert.deepEqual(rows.map((r) => [r.key, r.count]), [["doi-sorgu:u2", 121], ["doi-sorgu:u3", 121], ["doi-sorgu:u4", 1]]);
   }));
 
-test("DOI: aynı anda gönderilen çağrılar (Promise.all) sayaçta kaybolmaz", () =>
+/* Ad bilerek "sıralı": PGlite tek bağlantılı, Promise.all burada çağrıları
+   sıraya koyar. Bu senaryo SAYMAYI sınar, yarışı değil; gerçek eşzamanlılık
+   kanıtı scripts/eszamanli-hiz-siniri.sh'ta (CI dışı). */
+test("DOI: art arda 150 çağrı (PGlite'ta sıralı) sayaçta kaybolmaz, 120'si izinli", () =>
   islem(db, async () => {
     await rol(db, "service_role");
     const sonuclar = await Promise.all(Array.from({ length: 150 }, () => doiDene("u5")));
