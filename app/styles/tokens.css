@@ -368,8 +368,6 @@
        telefon  ≤ 760px   alt çubuk
        tablet   761–1199px dar ray
        masaüstü ≥ 1200px  geniş kenar çubuğu */
-  --gezinme-genislik: 248px;
-  --gezinme-ray: 88px;
   --alt-cubuk-h: 64px;
   --sidebar-width: 264px;
   --topbar-height: 64px;

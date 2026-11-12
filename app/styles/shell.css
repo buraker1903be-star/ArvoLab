@@ -42,17 +42,15 @@
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
 }
-/* Marka + açık uygulama (ArvoOS'taki os-brand) */
-.os-marka { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 44px; color: var(--ink); text-decoration: none; }
-.os-marka-isaret { flex: none; width: 34px; height: 34px; }
-.os-marka-zemin { fill: var(--brand-navy); }
-.os-marka-harf { fill: var(--on-brand); fill-rule: evenodd; }
-.os-marka-nokta { fill: var(--brand-green); }
-html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
-.os-marka > span { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-.os-marka b { overflow: hidden; font-size: var(--fs-md); font-weight: 650; letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
-.os-marka b em { color: var(--brand-green); font-style: normal; }
-.os-marka small { overflow: hidden; color: var(--muted); font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+/*
+  Marka + açık sayfa (Signature OS 5 / Phase 3). Resmî logo (ArvoLabLogosu)
+  ve sayfanın adı. Masaüstünde logo kenar çubuğunda; burada gizlenir ve
+  yalnızca sayfa adı kalır (os-shell.css).
+*/
+.os-marka { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 44px; color: var(--ink); }
+.os-marka-logo { --logo-h: 26px; display: flex; align-items: center; min-height: 44px; border-radius: var(--r-xs); }
+.os-marka-logo:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
+.os-marka-sayfa { overflow: hidden; padding-left: 12px; border-left: 1px solid var(--line); color: var(--ink-soft); font-size: var(--fs-body); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-header-actions { display: flex; align-items: center; gap: 8px; }
 
 .dashboard-icon-button {
@@ -118,9 +116,6 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
 .notification-dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--primary-ink); }
 
 /* Tarih ve saat (ArvoOS'taki os-clock) */
-.os-saat { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; min-width: 44px; padding: 0 6px; line-height: 1.2; }
-.os-saat small { color: var(--muted); font-size: var(--fs-micro); white-space: nowrap; }
-.os-saat time { color: var(--ink); font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 /* Kullanıcı menüsü (ArvoOS'taki os-user): yuvarlak baş harf, açılır kart */
 .os-avatar {
@@ -140,6 +135,26 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
   border: 1px solid var(--line); border-radius: var(--r-lg);
   background: var(--surface-raised); box-shadow: var(--shadow-lg);
 }
+/*
+  Kenar çubuğundaki hesap satırı (Signature OS 5 / Phase 3): baş harf,
+  ad ve rol; menü YUKARI açılır. Lacivert zeminde: yazılar beyazın
+  saydamları, odak açık mavi halka (os5-tokens.css --os5-kenar-*).
+*/
+.os-kullanici--kenar > summary {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: auto; min-height: 48px; padding: 6px 8px;
+  border-radius: var(--os5-kontrol-r); color: var(--os5-kenar-yazi-guclu);
+  transition: background-color var(--os5-sure-hizli) var(--os5-egri);
+}
+.os-kullanici--kenar > summary:hover, .os-kullanici--kenar[open] > summary { background: var(--os5-kenar-hover); }
+.os-kullanici--kenar > summary:focus-visible { box-shadow: var(--os5-kenar-odak); }
+.os-kullanici--kenar > summary > svg { flex: none; color: var(--os5-kenar-yazi); }
+.os-kullanici--kenar .os-avatar { background: var(--os5-kenar-etkin); color: var(--os5-kenar-yazi-guclu); }
+.os-kullanici-kimlik { display: flex; flex: 1; flex-direction: column; min-width: 0; line-height: 1.3; text-align: left; }
+.os-kullanici-kimlik b, .os-kullanici-kimlik small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.os-kullanici-kimlik b { font-size: var(--os5-fs-meta); font-weight: 600; }
+.os-kullanici-kimlik small { color: var(--os5-kenar-yazi); font-size: var(--os5-fs-meta); }
+.os-kullanici--kenar .os-kullanici-menu { top: auto; right: auto; bottom: calc(100% + 8px); left: 0; color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .os-kullanici--kenar > summary { transition: none; } }
 .os-kullanici-bas { display: flex; align-items: center; gap: 12px; padding: 12px; }
 .os-kullanici-bas b { display: block; font-weight: 650; }
 .os-kullanici-bas small { display: block; color: var(--muted); font-size: var(--fs-sm); }
@@ -178,9 +193,13 @@ html[data-theme="dark"] .os-marka-zemin { fill: var(--brand-700); }
       to { border-bottom-color: color-mix(in srgb, var(--line) 80%, transparent); background: color-mix(in srgb, var(--surface) 80%, transparent); }
     }
   }
-  /* Telefonda tarih/saat yer kaplamasın: saat telefonun kendi çubuğunda zaten var. */
-  .os-saat { display: none; }
-  .os-marka b { font-size: var(--fs-lg); max-width: 52vw; }
+  /*
+    Telefonda logo biraz küçülür ve sayfa adı üst çubukta yazılmaz:
+    arama, bildirim, tema ve hesap düğmelerinden sonra ad iki-üç harfe
+    kesiliyordu ("An…"); sayfanın kendi başlığı zaten hemen altında.
+  */
+  .os-marka-logo { --logo-h: 22px; }
+  .os-marka-sayfa { display: none; }
 
   .dashboard-main-content {
     padding: 8px max(16px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
