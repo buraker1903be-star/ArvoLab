@@ -18,6 +18,8 @@ import "./styles/os5-tokens.css";
 import "./styles/os5-bilesenler.css";
 /* Phase 2: kimlik ekranları (giriş, kayıt, şifre, bağlantı onayı). */
 import "./styles/os5-kimlik.css";
+/* Phase 4: öğrencinin ana sayfası (yalnızca .os5-ana altında). */
+import "./styles/os5-ana-sayfa.css";
 
 // Tek yazı ailesi: Apple cihazlarında sistemin SF Pro'su (-apple-system),
 // diğerlerinde ona en yakın açık yazı tipi Inter. preload kapalı: Apple
