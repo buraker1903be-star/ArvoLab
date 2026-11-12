@@ -78,3 +78,25 @@ describe("ana sayfa stili yalnızca .os5-ana altında", () => {
     assert.match(sayfa, /className=\{ogrenciGorunumu \|\| yeniKullanici \? "dashboard-page gb gb-ana-sayfa os5-ana" : "dashboard-page gb gb-ana-sayfa"\}/);
   });
 });
+
+describe("bağımsız incelemede yakalananlar (Phase 4 kabulü)", () => {
+  const css = oku("app/styles/os5-ana-sayfa.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  test("'Şimdi' satırının aciliyet seçicileri lib/siradaki-is.ts'teki değerlerle aynı", () => {
+    const tip = oku("lib/siradaki-is.ts").match(/export type Aciliyet = ([^;]+);/)?.[1] ?? "";
+    const degerler = [...tip.matchAll(/"([a-z]+)"/g)].map((m) => m[1]);
+    assert.ok(degerler.includes("yaklasiyor") && degerler.includes("acil"));
+    const css5 = [...css.matchAll(/\.os5-ana-simdi\[data-aciliyet="([a-z]+)"\]/g)].map((m) => m[1]);
+    assert.ok(css5.length >= 2);
+    for (const d of css5) assert.ok(degerler.includes(d), `CSS'te var olmayan aciliyet: ${d}`);
+    assert.ok(css5.includes("yaklasiyor") && css5.includes("acil"));
+  });
+  test("gecikmiş kilometre taşı ayrı tonda", () => {
+    assert.match(css, /\.os5-ana-satir\[data-durum="gecikti"\]/);
+  });
+  test("'Teslim için kalanlar' tam listeden kuruluyor; fazlası notla ve bağlantıyla söyleniyor", () => {
+    assert.match(sayfa, /const teslimKalanlariTam = \[\s*\.\.\.readinessGaps\.map/);
+    assert.match(sayfa, /const teslimKalanSayisi = teslimKalanlariTam\.length;/);
+    assert.match(sayfa, /teslimKalanSayisi > teslimKalanlari\.length \? t\(\{ tr: `ilk \$\{teslimKalanlari\.length\} gösteriliyor`/);
+    assert.match(sayfa, /href=\{teslimKalanSayisi > teslimKalanlari\.length \? `\/dashboard\/editor\/\$\{resume\.id\}\/write\?teslim=liste`/);
+  });
+});

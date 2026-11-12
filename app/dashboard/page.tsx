@@ -537,9 +537,30 @@ export default async function DashboardPage() {
 
   const ad = ilkAd(displayName);
 
-  /* Ana sayfa (Signature OS 5 / Phase 4): "Teslim için kalanlar", "Şimdi"deki madde hariç (siradakiler'den). */
-  const teslimKalanlari = siradakiler.filter((madde) => madde.anahtar !== "sirada");
-  const teslimKalanSayisi = readinessGaps.length + resumeTutarsizliklari.length;
+  /*
+    Ana sayfa (Signature OS 5 / Phase 4): "Teslim için kalanlar". Liste
+    readinessGaps ve tutarsızlıklardan DOĞRUDAN kuruluyor ("Şimdi"deki
+    madde readinessGaps'ten zaten çıkarılmış). İlk sürüm 6 satırla kesilmiş
+    siradakiler'den türetiyordu: başlık 9 madde derken liste 5 satır
+    gösteriyor, kalan maddelere ulaşmanın yolu yoktu (bağımsız inceleme).
+    Fazlası "ilk N" notu ve teslim kontrolüne giden bağlantıyla söyleniyor.
+  */
+  const teslimKalanlariTam = [
+    ...readinessGaps.map((madde) => ({
+      anahtar: madde.id,
+      baslik: madde.label,
+      alt: madde.detail ?? "",
+      href: `/dashboard/editor/${resume?.id}/write?teslim=${madde.id}`,
+    })),
+    ...resumeTutarsizliklari.map((sorun) => ({
+      anahtar: `tutarsizlik-${sorun.tur}`,
+      baslik: sorun.baslik,
+      alt: sorun.aciklama,
+      href: calismaAdresi(resume?.id ?? ""),
+    })),
+  ];
+  const teslimKalanlari = teslimKalanlariTam.slice(0, GENEL_BAKIS_SATIR);
+  const teslimKalanSayisi = teslimKalanlariTam.length;
   const digerCalismalar = resume
     ? activeProjects
         .filter((p) => p.id !== resume.id)
@@ -930,17 +951,23 @@ export default async function DashboardPage() {
               */}
               <ListeKarti
                 baslik={t({ tr: "Teslim için kalanlar", en: "Left before submission" })}
-                alt={
+                alt={[
                   teslimKalanSayisi
                     ? t({ tr: `${teslimKalanSayisi} açık madde`, en: `${teslimKalanSayisi} open item${teslimKalanSayisi === 1 ? "" : "s"}` })
-                    : t({ tr: "Teslim kontrol listesi", en: "Submission checklist" })
-                }
+                    : t({ tr: "Teslim kontrol listesi", en: "Submission checklist" }),
+                  teslimKalanSayisi > teslimKalanlari.length ? t({ tr: `ilk ${teslimKalanlari.length} gösteriliyor`, en: `showing first ${teslimKalanlari.length}` }) : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
                 bos={
                   resumeReadiness
                     ? t({ tr: "Teslim kontrol listesinde başka açık madde yok.", en: "No other open items on the submission checklist." })
                     : t({ tr: "Yazmaya başladığınızda teslim kontrol listesi burada izlenir.", en: "Once you start writing, the submission checklist is tracked here." })
                 }
                 sayi={teslimKalanlari.length}
+                /* Fazlası varsa bütün liste editörün teslim kontrolünde (herhangi bir ?teslim= değeri listeyi açar). */
+                href={teslimKalanSayisi > teslimKalanlari.length ? `/dashboard/editor/${resume.id}/write?teslim=liste` : undefined}
+                hrefEtiket={t({ tr: "Bütün teslim kontrolü", en: "Full submission check" })}
               >
                 {teslimKalanlari.map((madde) => (
                   <ListeSatiri key={madde.anahtar} href={madde.href} baslik={madde.baslik} alt={madde.alt} />

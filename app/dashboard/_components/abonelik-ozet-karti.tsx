@@ -50,7 +50,7 @@ export default async function AbonelikOzetKarti({
         : "success";
 
   return (
-    <article className={sade ? "gb-kart abonelik-ozet abonelik-ozet--sade" : "gb-kart abonelik-ozet"}>
+    <article className="gb-kart abonelik-ozet">
       <header className="gb-kart-bas">
         <div>
           <h2>{t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}</h2>

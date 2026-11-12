@@ -77,9 +77,19 @@
   display: grid; grid-template-columns: 160px minmax(0, 1fr) auto; align-items: center; gap: 8px 16px;
   padding: 12px 16px; border-radius: var(--os5-r-kart-secim); background: var(--os5-yuzey-duz);
 }
+/*
+  Aciliyet lib/siradaki-is.ts'ten: normal | yaklasiyor | acil. İlk sürümde
+  burada var olmayan bir "yuksek" değeri yazılıydı ve teslim yaklaşınca
+  satır rengini değiştirmiyordu (bağımsız incelemede yakalandı; eski
+  .tez-simdi kuralları uyarı ve tehlike tonundaydı).
+*/
 .os5-ana-simdi { box-shadow: inset 3px 0 0 var(--os5-dugme-birincil); }
-.os5-ana-simdi[data-aciliyet="yuksek"] { box-shadow: inset 3px 0 0 var(--os5-uyari); }
-.os5-ana-simdi[data-bitti="true"] { box-shadow: inset 3px 0 0 var(--os5-basari); }
+.os5-ana-simdi[data-aciliyet="yaklasiyor"] { box-shadow: inset 3px 0 0 var(--os5-uyari); background: var(--os5-uyari-zemin); }
+.os5-ana-simdi[data-aciliyet="acil"] { box-shadow: inset 3px 0 0 var(--os5-hata); background: var(--os5-hata-zemin); }
+.os5-ana-simdi[data-bitti="true"] { box-shadow: inset 3px 0 0 var(--os5-basari); background: var(--os5-yuzey-duz); }
+/* Kilometre taşı: gecikmiş kırmızı, yaklaşan sarı (eski .takvim-sirada kuralı). */
+.os5-ana-satir[data-durum="gecikti"] { box-shadow: inset 3px 0 0 var(--os5-hata); }
+.os5-ana-satir[data-durum="yaklasiyor"] { box-shadow: inset 3px 0 0 var(--os5-uyari); }
 .os5-ana-satir-etiket { color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .os5-ana-satir-govde { display: grid; gap: 2px; min-width: 0; }
 .os5-ana-satir-govde b { color: var(--os5-kontrol-yazi); font-size: var(--os5-fs-govde); font-weight: 600; }
