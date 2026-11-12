@@ -95,6 +95,11 @@ export default async function KaynaklarPage({
         { ad: t({ tr: "Metinde atfı olmayan kaynak", en: "Sources not cited in the text" }), sayi: sonDenetim.crossCheck.referencesWithoutCitation.length },
         { ad: t({ tr: "Kaynakçada karşılığı olmayan atıf", en: "Citations missing from the reference list" }), sayi: sonDenetim.crossCheck.citationsWithoutReference.length },
         { ad: t({ tr: "Dizinlerde bulunamayan kaynak", en: "Sources not found in the indexes" }), sayi: sonDenetim.verificationSummary.notFound },
+        /* Dizine ulaşılamayanlar "bulunamayan"a katılmıyor (12.11.2026); ayrı satır, yalnızca varsa.
+           Eski kayıtlarda alan yok. */
+        ...((sonDenetim.verificationSummary.unreachable ?? 0) > 0
+          ? [{ ad: t({ tr: "Dizine ulaşılamayan kaynak (tekrar denetleyin)", en: "Sources whose indexes were unreachable (check again)" }), sayi: sonDenetim.verificationSummary.unreachable ?? 0 }]
+          : []),
         ...(sonDenetim.tyk ? [{ ad: t({ tr: "Kılavuzun atıf örneğine uymayan atıf", en: "Citations that don't match the guideline's example" }), sayi: sonDenetim.tyk.length }] : []),
       ]
     : [];

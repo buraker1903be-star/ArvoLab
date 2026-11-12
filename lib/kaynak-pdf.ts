@@ -106,15 +106,42 @@ export function aranacakMi(durum: DogrulamaDurumu | null | undefined, doi: strin
 }
 
 /*
-  Dizine ulaşılamamış künyede HÜKÜM YAZILMAZ (12.11.2026). DOI varsa PDF
-  yine aranır (açık erişim sorgusu kendi ağ hatasını ayrıca "erişilemedi"
-  diye işliyor). DOI yoksa ortada bakılmış bir şey yok: "kayıt yok" de
-  "açık erişimli sürüm bulunamadı" da aslında yapılmamış bir aramanın
-  sonucu gibi okunurdu. O künye için satır yazılmaz; denetim yeniden
-  çalıştırıldığında dizinler cevap verirse olağan yol işler.
+  PDF ARAMASININ BAŞLANGIÇ KARARI tek yerde, saf (12.11.2026). Eskiden
+  sunucu eyleminin içinde iki ayrı koşuldu ve test edilemiyordu.
+
+  - "ertele": dizine ulaşılamamış künye (ulasilamadi) ve DOI yok. Ortada
+    bakılmış bir şey yok; "kayıt yok" de "açık erişimli sürüm
+    bulunamadı" da yapılmamış bir aramanın sonucu gibi okunurdu. Satır
+    YAZILMAZ; denetim yeniden çalıştırılıp dizinler cevap verince olağan
+    yol işler. (Ekran bugün ulasilamadi künyeyi kuyruğa hiç koymuyor,
+    çünkü onun DOI'si yok: eşleşme yok. Bu dal sunucudaki güvence.)
+  - "kayit_yok": yalnızca İKİ dizinin de cevap verip bulamadığı künye.
+  - "bulunamadi": DOI bilinmiyor; açık erişim konumu sorulamaz.
+  - "ara": DOI var, açık erişim konumları sorulur.
 */
-export function pdfHukmuErtelenirMi(durum: DogrulamaDurumu | null | undefined, doi: string | null | undefined): boolean {
-  return durum === "ulasilamadi" && !doi;
+export type PdfBaslangici = "ertele" | "kayit_yok" | "bulunamadi" | "ara";
+
+export function pdfBaslangicKarari(durum: DogrulamaDurumu | null | undefined, doi: string | null | undefined): PdfBaslangici {
+  if (durum === "ulasilamadi" && !doi) return "ertele";
+  if (durum === "not_found") return "kayit_yok";
+  return aranacakMi(durum, doi) ? "ara" : "bulunamadi";
+}
+
+/*
+  EKRANDA GÖSTERİLECEK PDF DURUMU. 12.11.2026'dan önce bir dizin kesintisi
+  sırasında yazılmış "kayit_yok" satırları veritabanında duruyor (geçmiş
+  kayıtlar silinmiyor). Künyenin GÜNCEL sonucu "ulasilamadi" iken o satırı
+  göstermek, kaldırdığımız yanlış "dizinde yok" işaretini yan yana geri
+  getirirdi; o durumda satır yokmuş gibi davranılır. Satırın kendisine
+  dokunulmaz: dizinler cevap verince yeni arama onu olağan yoldan yeniler.
+*/
+export function gosterilecekPdfDurumu(
+  satirDurumu: PdfDurumu | null | undefined,
+  dogrulama: DogrulamaDurumu | null | undefined,
+): PdfDurumu | null {
+  if (!satirDurumu) return null;
+  if (satirDurumu === "kayit_yok" && dogrulama === "ulasilamadi") return null;
+  return satirDurumu;
 }
 
 /*

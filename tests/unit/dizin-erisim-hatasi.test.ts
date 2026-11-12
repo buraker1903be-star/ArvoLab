@@ -7,7 +7,7 @@ import {
   type DogrulamaOnbellegi,
   type OnbellekKaydi,
 } from "@/lib/academic-reference-verification";
-import { aranacakMi, pdfHukmuErtelenirMi, PDF_EN_FAZLA_BAYT } from "@/lib/kaynak-pdf";
+import { gosterilecekPdfDurumu, pdfBaslangicKarari, PDF_EN_FAZLA_BAYT } from "@/lib/kaynak-pdf";
 import { kaynakOzeti, kaynakcaIstemi } from "@/lib/ai/kaynakca-denetimi";
 
 /*
@@ -137,9 +137,28 @@ describe("dizin erişim hatası: kabul matrisi", () => {
   test("yeterli kısmi eşleşme (yazar tutmuyor) bir dizin düşse de 'possible_match'", async () => {
     crossref = [crossrefKaydi("Taş")];
     openalex = "dus";
-    const { sonuc } = await dogrula();
+    const { sonuc, yazilanlar } = await dogrula();
     assert.equal(sonuc.status, "possible_match");
     assert.equal(sonuc.bestMatch?.provider, "crossref");
+    // Kısmi cevapta olası eşleşme önbelleğe girmez: susan dizin daha güçlü kayıt getirebilirdi.
+    assert.equal(yazilanlar.length, 0);
+  });
+
+  test("iki dizin de cevap verirse olası eşleşme önbelleğe girer (eski davranış)", async () => {
+    crossref = [crossrefKaydi("Taş")];
+    const { sonuc, yazilanlar } = await dogrula();
+    assert.equal(sonuc.status, "possible_match");
+    assert.deepEqual(yazilanlar.map((y) => y.kayit.status), ["possible_match"]);
+  });
+
+  test("'ulasilamadi' sonucunda aday listesi de boş (bestMatch null iken liste dolu değil)", async () => {
+    crossref = "dus";
+    // 3/6 ortak kelime, yıl yok: puan tam 0,50 (0,82 × 0,5 + 0,09). Eşiğin (0,55) altında
+    // ama aday listesine (≥ 0,50) girecek bir kayıt: ulasilamadi'da liste yine boş olmalı.
+    openalex = [{ ...openalexKaydi("Ali Yılmaz"), title: "Öğretmenlerde örgütsel bağlılık stres tükenmişlik yorgunluk kaygı", publication_year: null }];
+    const { sonuc } = await dogrula();
+    assert.equal(sonuc.status, "ulasilamadi");
+    assert.deepEqual(sonuc.matches, []);
   });
 });
 
@@ -177,19 +196,35 @@ describe("önbellek ve eski kayıtlar", () => {
 });
 
 describe("PDF araması geçici arızayı 'kayıt yok' yapmaz", () => {
-  test("'ulasilamadi' + DOI: PDF yine aranır", () => {
-    assert.equal(aranacakMi("ulasilamadi", "10.1234/abc"), true);
-    assert.equal(pdfHukmuErtelenirMi("ulasilamadi", "10.1234/abc"), false);
+  test("başlangıç kararı: ulasilamadi + DOI yok → ertele (satır yazılmaz)", () => {
+    assert.equal(pdfBaslangicKarari("ulasilamadi", null), "ertele");
+    assert.equal(pdfBaslangicKarari("ulasilamadi", ""), "ertele");
   });
-  test("'ulasilamadi' + DOI yok: satır yazılmaz (hüküm ertelenir)", () => {
-    assert.equal(pdfHukmuErtelenirMi("ulasilamadi", null), true);
-    assert.equal(pdfHukmuErtelenirMi("not_found", null), false);
-    assert.equal(pdfHukmuErtelenirMi("insufficient_data", null), false);
+  test("başlangıç kararı: ulasilamadi + DOI → ara (kayit_yok DEĞİL)", () => {
+    assert.equal(pdfBaslangicKarari("ulasilamadi", "10.1234/abc"), "ara");
   });
-  test("'kayit_yok' yalnızca gerçek 'not_found'tan doğar ve ertelenen künye ondan önce atlanır", () => {
+  test("başlangıç kararı: kayit_yok yalnızca gerçek not_found'tan", () => {
+    assert.equal(pdfBaslangicKarari("not_found", null), "kayit_yok");
+    assert.equal(pdfBaslangicKarari("not_found", "10.1234/abc"), "kayit_yok");
+    for (const durum of ["verified", "possible_match", "insufficient_data", "ulasilamadi", null] as const) {
+      for (const doi of [null, "10.1234/abc"]) assert.notEqual(pdfBaslangicKarari(durum, doi), "kayit_yok");
+    }
+  });
+  test("başlangıç kararı: eski davranış korunuyor (DOI'li eşleşme aranır, DOI'siz bulunamadı)", () => {
+    assert.equal(pdfBaslangicKarari("verified", "10.1234/abc"), "ara");
+    assert.equal(pdfBaslangicKarari("possible_match", "10.1234/abc"), "ara");
+    assert.equal(pdfBaslangicKarari("verified", null), "bulunamadi");
+    assert.equal(pdfBaslangicKarari("insufficient_data", null), "bulunamadi");
+  });
+  test("ekran: güncel sonucu ulasilamadi olan künyede eski kayit_yok satırı gösterilmez", () => {
+    assert.equal(gosterilecekPdfDurumu("kayit_yok", "ulasilamadi"), null);
+    assert.equal(gosterilecekPdfDurumu("kayit_yok", "not_found"), "kayit_yok");
+    assert.equal(gosterilecekPdfDurumu("indirildi", "ulasilamadi"), "indirildi");
+    assert.equal(gosterilecekPdfDurumu(null, "verified"), null);
+  });
+  test("sunucu eylemi kararı saf işlevden alıyor ve 'ertele'de satır yazmıyor", () => {
     const eylem = readFileSync("app/actions/kaynak-pdf.ts", "utf8");
-    assert.match(eylem, /if \(k\.dogrulama === "not_found"\) \{\s*durum = "kayit_yok";/);
-    assert.ok(eylem.indexOf("pdfHukmuErtelenirMi(k.dogrulama") < eylem.indexOf('durum = "kayit_yok"'));
+    assert.match(eylem, /const baslangic = pdfBaslangicKarari\(k\.dogrulama \?\? null, doi\);\s*if \(baslangic === "ertele"\) continue;/);
   });
   test("kaynak sohbeti ortak 20 MB sabitini kullanıyor", () => {
     assert.equal(PDF_EN_FAZLA_BAYT, 20 * 1024 * 1024);

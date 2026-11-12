@@ -12,7 +12,7 @@ import { ClipboardPaste, FileSearch, History, Sparkles } from "lucide-react";
 import KaynakPdfSatiri from "./kaynak-pdf-satiri";
 import { showToast } from "../_components/toast-events";
 import { kaynakPdfleriniBul } from "@/app/actions/kaynak-pdf";
-import { kunyeAnahtari, type DogrulamaDurumu, type KaynakPdfSatiri as PdfSatiri } from "@/lib/kaynak-pdf";
+import { gosterilecekPdfDurumu, kunyeAnahtari, type DogrulamaDurumu, type KaynakPdfSatiri as PdfSatiri } from "@/lib/kaynak-pdf";
 import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-check";
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
@@ -279,7 +279,7 @@ export default function CitationCheckForm({
   */
   async function pdfleriBul() {
     if (!result || !projectId) return;
-    const kuyruk = result.references
+    const adaylar = result.references
       .map((kunye) => {
         const dogrulama = dogrulamaHaritasi.get(kunye.raw);
         return { kunye: kunye.raw, doi: dogrulama?.bestMatch?.doi ?? null, dogrulama: dogrulama?.status ?? null };
@@ -289,7 +289,21 @@ export default function CitationCheckForm({
         const mevcut = pdfler.get(kunyeAnahtari(k.kunye));
         return mevcut?.durum !== "indirildi" && mevcut?.durum !== "yuklendi";
       });
+    /* Dizine ulaşılamamış künyenin DOI'si yok (eşleşme yok): PDF aranamaz,
+       "yok" da denemez. Kuyruğa konmaz ve kullanıcıya NEDENİ söylenir;
+       eskiden sessizce atlansaydı ilerleme çubuğu hiçbir şey demeden
+       biterdi. Sunucu da aynı künyeyi atlıyor (lib/kaynak-pdf.ts). */
+    const ertelenen = adaylar.filter((k) => k.dogrulama === "ulasilamadi").length;
+    const kuyruk = adaylar.filter((k) => k.dogrulama !== "ulasilamadi");
+    if (ertelenen) {
+      // Bildirim türü iki: yapılamayan iş "error" (uzun süre görünür).
+      showToast("error", t({
+        tr: `Dizinlere ulaşılamayan ${ertelenen} künye için PDF araması yapılmadı; denetimi tekrar çalıştırın.`,
+        en: `No PDF search for ${ertelenen} ${ertelenen === 1 ? "reference" : "references"} whose indexes couldn't be reached; run the check again.`,
+      }));
+    }
     if (!kuyruk.length) {
+      if (ertelenen) return;
       showToast("success", t({ tr: "Bakılacak yeni kaynak yok; PDF'i olanlar hazır.", en: "No new sources to check; those with PDFs are ready." }));
       return;
     }
@@ -359,7 +373,9 @@ export default function CitationCheckForm({
   const kaynaksizAtif = result?.crossCheck.citationsWithoutReference ?? [];
 
   /* Sol karttaki PDF özeti: kaynakçadaki künyelerin PDF durumları. */
-  const pdfDurumlari = (result?.references ?? []).map((kunye) => pdfler.get(kunyeAnahtari(kunye.raw))?.durum ?? null);
+  /* Güncel sonucu "ulasilamadi" olan künyede eski "kayit_yok" satırı sayılmaz (lib/kaynak-pdf.ts). */
+  const pdfDurumu = (raw: string) => gosterilecekPdfDurumu(pdfler.get(kunyeAnahtari(raw))?.durum, dogrulamaHaritasi.get(raw)?.status);
+  const pdfDurumlari = (result?.references ?? []).map((kunye) => pdfDurumu(kunye.raw));
   const pdfSay = (...durumlar: (string | null)[]) => pdfDurumlari.filter((d) => durumlar.includes(d)).length;
   const pdfOzeti = pdfDurumlari.some(Boolean)
     ? [
@@ -776,7 +792,7 @@ export default function CitationCheckForm({
                         projectId={projectId}
                         kunye={reference.raw}
                         doi={eslesme?.doi ?? null}
-                        satir={pdfler.get(kunyeAnahtari(reference.raw)) ?? null}
+                        satir={pdfDurumu(reference.raw) ? pdfler.get(kunyeAnahtari(reference.raw)) ?? null : null}
                         onGuncelle={(satir) => pdfGuncelle([satir])}
                       />
                     ) : null}

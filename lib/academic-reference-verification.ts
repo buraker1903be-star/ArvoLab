@@ -218,12 +218,20 @@ async function searchOpenAlex(reference: ParsedReference): Promise<AcademicMatch
   });
 }
 
-async function verifyReference(reference: ParsedReference): Promise<ReferenceVerification> {
+/*
+  "kismi": dizinlerden biri cevap vermedi. Sonuç ekranda doğru (olumlu
+  kanıt geçerli) ama önbelleğe olası eşleşme olarak 30 gün yazılmamalı:
+  susan dizin daha güçlü, yazarı tutan bir kayıt getirebilirdi ve önbellek
+  BÜTÜN kullanıcılar için ortak (bağımsız inceleme, 12.11.2026).
+*/
+type DizinSonucu = { sonuc: ReferenceVerification; kismi: boolean };
+
+async function verifyReference(reference: ParsedReference): Promise<DizinSonucu> {
   const scholarQuery = [reference.title, reference.authors?.[0], reference.year].filter(Boolean).join(" ");
   const googleScholarUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(scholarQuery || reference.raw)}`;
 
   if (!reference.title && reference.raw.length < 20) {
-    return { reference: reference.raw, status: "insufficient_data", googleScholarUrl, bestMatch: null, matches: [] };
+    return { sonuc: { reference: reference.raw, status: "insufficient_data", googleScholarUrl, bestMatch: null, matches: [] }, kismi: false };
   }
 
   const settled = await Promise.allSettled([
@@ -285,11 +293,15 @@ async function verifyReference(reference: ParsedReference): Promise<ReferenceVer
   const status: DogrulamaDurumu = eslesmeDurumu === "not_found" && dusenDizin > 0 ? "ulasilamadi" : eslesmeDurumu;
 
   return {
-    reference: reference.raw,
-    status,
-    googleScholarUrl,
-    bestMatch: status === "not_found" || status === "ulasilamadi" ? null : bestMatch,
-    matches: deduplicated.filter((match) => match.confidence >= 0.5).slice(0, 4),
+    sonuc: {
+      reference: reference.raw,
+      status,
+      googleScholarUrl,
+      bestMatch: status === "not_found" || status === "ulasilamadi" ? null : bestMatch,
+      // Hüküm yokken aday listesi de taşınmaz; bestMatch null iken liste dolu olmamalı.
+      matches: status === "ulasilamadi" ? [] : deduplicated.filter((match) => match.confidence >= 0.5).slice(0, 4),
+    },
+    kismi: dusenDizin > 0,
   };
 }
 
@@ -390,7 +402,7 @@ export async function verifyAcademicReferences(
     // yinelenen künyede yanlış eşleşme demekti (aynı raw, iki ayrı kayıt).
     const dilim = bakilacak.slice(index, index + 4);
     const parti = await Promise.all(dilim.map(verifyReference));
-    parti.forEach((sonuc, sira) => {
+    parti.forEach(({ sonuc, kismi }, sira) => {
       sonuclar.push(sonuc);
       const anahtar = anahtarlar.get(dilim[sira]) ?? null;
       /*
@@ -399,7 +411,10 @@ export async function verifyAcademicReferences(
         bu değeri kabul etmiyor (migration 20260924100021); süre tablosunda
         0 olması (lib/dogrulama-onbellegi.ts) ikinci bir güvence.
       */
-      if (anahtar && sonuc.status !== "insufficient_data" && sonuc.status !== "ulasilamadi") {
+      /* Kısmi cevapta yalnızca "verified" saklanır (yazarı da tutan güçlü
+         eşleşme); olası eşleşme bir sonraki denetimde yeniden sorulur. */
+      const saklanir = sonuc.status !== "insufficient_data" && sonuc.status !== "ulasilamadi" && (!kismi || sonuc.status === "verified");
+      if (anahtar && saklanir) {
         yeni.set(anahtar, { status: sonuc.status, bestMatch: sonuc.bestMatch, matches: sonuc.matches });
       }
     });
