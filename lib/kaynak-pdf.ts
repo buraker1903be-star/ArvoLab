@@ -17,9 +17,12 @@
 */
 
 import type { Dil, Metin } from "@/lib/dil";
+/* Doğrulama durumları tek yerde (lib/academic-reference-verification.ts);
+   eskiden burada ayrı bir kopya vardı ve yeni durum eklenince sapacaktı. */
+import type { DogrulamaDurumu } from "@/lib/academic-reference-verification";
+export type { DogrulamaDurumu };
 
 export type PdfDurumu = "indirildi" | "yuklendi" | "bulunamadi" | "erisilemedi" | "kayit_yok";
-export type DogrulamaDurumu = "verified" | "possible_match" | "not_found" | "insufficient_data";
 
 /** kaynak_pdfleri satırı (migration 20261026110024). */
 export type KaynakPdfSatiri = {
@@ -100,6 +103,18 @@ export function pdfAdaylari(kayit: unknown): string[] {
 export function aranacakMi(durum: DogrulamaDurumu | null | undefined, doi: string | null | undefined): boolean {
   if (durum === "not_found") return false;
   return Boolean(doi);
+}
+
+/*
+  Dizine ulaşılamamış künyede HÜKÜM YAZILMAZ (12.11.2026). DOI varsa PDF
+  yine aranır (açık erişim sorgusu kendi ağ hatasını ayrıca "erişilemedi"
+  diye işliyor). DOI yoksa ortada bakılmış bir şey yok: "kayıt yok" de
+  "açık erişimli sürüm bulunamadı" da aslında yapılmamış bir aramanın
+  sonucu gibi okunurdu. O künye için satır yazılmaz; denetim yeniden
+  çalıştırıldığında dizinler cevap verirse olağan yol işler.
+*/
+export function pdfHukmuErtelenirMi(durum: DogrulamaDurumu | null | undefined, doi: string | null | undefined): boolean {
+  return durum === "ulasilamadi" && !doi;
 }
 
 /*

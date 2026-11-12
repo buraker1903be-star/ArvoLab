@@ -10,6 +10,7 @@ import { extractTextFromBuffer } from "@/lib/document-extract";
 import {
   PDF_EN_FAZLA_BAYT,
   aranacakMi,
+  pdfHukmuErtelenirMi,
   baslikPdfteGeciyor,
   kaynakRaporu,
   kunyeAnahtari,
@@ -108,6 +109,8 @@ export async function kaynakPdfleriniBul(
     const anahtar = kunyeAnahtari(k.kunye);
     if (!anahtar || yuklenmis.has(anahtar)) continue;
     const doi = k.doi?.trim().slice(0, 300) || null;
+    // Dizine ulaşılamamış ve DOI'si olmayan künye: hüküm yazılmaz (lib/kaynak-pdf.ts).
+    if (pdfHukmuErtelenirMi(k.dogrulama ?? null, doi)) continue;
     const kayit = {
       project_id: projectId,
       olusturan: user.id,

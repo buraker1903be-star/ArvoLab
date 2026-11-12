@@ -12,7 +12,7 @@ import { ClipboardPaste, FileSearch, History, Sparkles } from "lucide-react";
 import KaynakPdfSatiri from "./kaynak-pdf-satiri";
 import { showToast } from "../_components/toast-events";
 import { kaynakPdfleriniBul } from "@/app/actions/kaynak-pdf";
-import { kunyeAnahtari, type KaynakPdfSatiri as PdfSatiri } from "@/lib/kaynak-pdf";
+import { kunyeAnahtari, type DogrulamaDurumu, type KaynakPdfSatiri as PdfSatiri } from "@/lib/kaynak-pdf";
 import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-check";
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
@@ -51,7 +51,7 @@ interface AcademicMatch {
 
 interface AcademicVerification {
   reference: string;
-  status: "verified" | "possible_match" | "not_found" | "insufficient_data";
+  status: DogrulamaDurumu;
   googleScholarUrl: string;
   bestMatch: AcademicMatch | null;
   matches: AcademicMatch[];
@@ -75,6 +75,8 @@ export interface CheckResult {
     possible: number;
     notFound: number;
     insufficientData: number;
+    /* Bu alan 12.11.2026'dan önceki kayıtlarda yok. */
+    unreachable?: number;
   };
   stil: { id: string; ad: string; tur: AtifTuru };
   dogrulananSayisi: number;
@@ -89,6 +91,8 @@ const STATUS_META: Record<AcademicVerification["status"], { label: Metin; tone: 
   possible_match: { label: { tr: "Olası eşleşme", en: "Possible match" }, tone: "warning" },
   not_found: { label: { tr: "Kayıt bulunamadı", en: "No record found" }, tone: "danger" },
   insufficient_data: { label: { tr: "Yetersiz veri", en: "Insufficient data" }, tone: "neutral" },
+  /* Hüküm değil: kırmızı değil, nötr. "Bulunamadı" ile karışmamalı. */
+  ulasilamadi: { label: { tr: "Dizine ulaşılamadı", en: "Index unreachable" }, tone: "neutral" },
 };
 
 /* Bu turda ağ doğrulamasına sıra gelmemiş künye. "Bulunamadı" DEĞİL. */
@@ -345,6 +349,8 @@ export default function CitationCheckForm({
   /* "Dikkat isteyen": dizinde doğrulanmamış (bakılmamış dahil) ya da biçim sorunu olan künye.
      Öteki sekme "Sorunsuz", "Doğrulandı" değil: doğrulanmış ama biçim sorunu olan
      künye dikkat isteyende sayılıyor ve iki adın çakışması sayıları yalan gösterirdi. */
+  // Eski kayıtlarda alan yok: 0 sayılıyor.
+  const ulasilamayan = result?.verificationSummary.unreachable ?? 0;
   const dikkatIster = (r: { raw: string; issues: unknown[] }) => dogrulamaHaritasi.get(r.raw)?.status !== "verified" || r.issues.length > 0;
   /* Atıf çıkarılamadıysa çapraz kontrol ölçülmemiştir; "Yok" yazmak
      yapılmamış bir denetimi temiz rapor gibi gösterirdi. */
@@ -491,6 +497,18 @@ export default function CitationCheckForm({
               bakılmamışlara harcanıyor; tekrar çalıştırmak sıradakileri
               kapatıyor. Bunu YAZMAK gerekiyor: kullanıcı bilmediği bir
               çözümü kendiliğinden denemez. */}
+          {/* Dizine ulaşılamayan künyeler "Bulunamadı" sayısına KATILMIYOR
+              (12.11.2026). Eskiden geçici bir arıza doğru künyeyi kırmızı
+              "Kayıt bulunamadı" gösteriyordu. Önbelleğe de girmiyorlar:
+              tekrar çalıştırmak onlara yeniden sorar. */}
+          {ulasilamayan > 0 ? (
+            <div className="callout mt-md" data-tone="warning">
+              {t({
+                tr: `${ulasilamayan} künye için akademik dizinlere bu sırada ulaşılamadı. Bu "bulunamadı" demek değil; denetimi birazdan tekrar çalıştırın.`,
+                en: `The academic indexes couldn't be reached for ${ulasilamayan} ${ulasilamayan === 1 ? "reference" : "references"} at the time. That doesn't mean ${ulasilamayan === 1 ? "it wasn't" : "they weren't"} found; run the check again shortly.`,
+              })}
+            </div>
+          ) : null}
           {result.dogrulananSayisi < result.toplamKaynak ? (
             <div className="callout mt-md" data-tone="info">
               {t({
@@ -656,6 +674,8 @@ export default function CitationCheckForm({
                             : ""}
                         </span>
                       </div>
+                    ) : dogrulama?.status === "ulasilamadi" ? (
+                      <p className="hint kunye-not">{t({ tr: "Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın.", en: "Crossref or OpenAlex didn't respond at the time; there is no verdict on this reference. Run the check again." })}</p>
                     ) : dogrulama ? (
                       <p className="hint kunye-not">{t({ tr: "Crossref ve OpenAlex üzerinde yeterince güçlü bir eşleşme bulunamadı.", en: "No sufficiently strong match was found in Crossref or OpenAlex." })}</p>
                     ) : (

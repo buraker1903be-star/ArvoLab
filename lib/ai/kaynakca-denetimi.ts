@@ -33,8 +33,10 @@ import type { Dil } from "@/lib/dil";
 import { baglamKur, type BaglamParca } from "./baglam";
 import { YANIT_BICIMI, cikisDiliMesaji, dilliKaynak } from "./bulgu";
 import type { Mesaj } from "./saglayici";
+import type { DogrulamaDurumu } from "@/lib/academic-reference-verification";
 
-export type KaynakDurumu = "verified" | "possible_match" | "not_found" | "insufficient_data";
+/* Dizin sonucu tek yerde tanımlı (lib/academic-reference-verification.ts). */
+export type KaynakDurumu = DogrulamaDurumu;
 
 export type KaynakSatiri = {
   sira: number;
@@ -70,6 +72,9 @@ const DURUM_ETIKETI: Record<KaynakDurumu, string> = {
   possible_match: "olası eşleşme",
   not_found: "dizinde bulunamadı",
   insufficient_data: "ayrıştırılamadı (veri yetersiz)",
+  /* Hüküm değil. Etiket bunu modele açıkça söylüyor; istemdeki kural da
+     bu kayıtlar için şüphe bulgusu yazılmasını yasaklıyor (12.11.2026). */
+  ulasilamadi: "dizine ulaşılamadı (geçici erişim sorunu; dizinde olup olmadığı BİLİNMİYOR)",
 };
 
 /*
@@ -106,6 +111,7 @@ const KAYNAKCA_ISTEMI_GOVDESI = `{{KIMLIK}} Sana bir araştırmacının kaynakç
 
 GÖREVİN: Listeyi denetlemek ve gerçekten sorun olanları önceliklendirmek.
 - "dizinde bulunamadı" tek başına hata değildir: Türkçe tezler, kurum raporları, kitap bölümleri ve yerel dergiler bu dizinlerde çoğu zaman yer almaz. Böyle kayıtlar için beklenen bir durum olduğunu söyle, şüpheyi gerçekten tuhaf olanlara sakla (ör. uluslararası bir dergi makalesi gibi görünüp bulunamayan kayıt).
+- "dizine ulaşılamadı" bir sonuç DEĞİLDİR: dizin o sırada cevap vermedi. Bu kayıtlar için kaynağın bulunamadığını, şüpheli ya da uydurma olabileceğini ASLA söyleme. Gerekirse tek bir bulguda denetimin tekrar çalıştırılmasını öner.
 - "olası eşleşme" kayıtlarında kullanıcıyı neyin kontrol etmesi gerektiğini söyle (yıl, cilt, yazar sırası gibi ALANIN ADINI söyle, değerini yazma).
 {{BICIM_KURALI}} aynı hata 10 kayıtta varsa tek bir bulgu yaz, kaç kayıtta olduğunu sayı olarak değil "birden çok kayıtta" diye belirt.
 - Metinde geçip kaynakçada olmayan atıflar en ciddi sorundur; varsa ilk bulgu o olsun.

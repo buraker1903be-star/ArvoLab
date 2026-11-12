@@ -15,9 +15,21 @@ export interface AcademicMatch {
   confidence: number;
 }
 
+/*
+  "ulasilamadi" bir HÜKÜM DEĞİL (12.11.2026): dizinlerden en az birine
+  ulaşılamadı ve cevap veren dizin de olumlu kanıt getirmedi. Eskiden bu
+  durum "not_found" yazılıyordu: iki dizin de zaman aşımına uğradığında
+  ya da 429 döndüğünde doğru yazılmış künye "Kayıt bulunamadı" diye
+  kırmızı görünüyor, 7 gün önbellekte kalıyor ve PDF araması onu
+  "künye kontrol edilmeli" diye işaretliyordu. "Doğrulanamadı" kalıcı
+  bir hükümdür, geçici arızaya verilmez (lib/kanit/dizin.ts aynı kuralı
+  kanıt matrisinde uyguluyor).
+*/
+export type DogrulamaDurumu = "verified" | "possible_match" | "not_found" | "insufficient_data" | "ulasilamadi";
+
 export interface ReferenceVerification {
   reference: string;
-  status: "verified" | "possible_match" | "not_found" | "insufficient_data";
+  status: DogrulamaDurumu;
   googleScholarUrl: string;
   bestMatch: AcademicMatch | null;
   matches: AcademicMatch[];
@@ -218,6 +230,18 @@ async function verifyReference(reference: ParsedReference): Promise<ReferenceVer
     searchCrossref(reference),
     searchOpenAlex(reference),
   ]);
+  /*
+    Düşen dizin SAYILIYOR. Eskiden reddedilen istek sessizce boş liste
+    sayılıyordu: "cevap vermedi" ile "cevap verdi, kayıt yok" ayırt
+    edilmiyordu.
+  */
+  const dusenDizin = settled.filter((result) => result.status === "rejected").length;
+  if (dusenDizin) {
+    const nedenler = settled.flatMap((result) =>
+      result.status === "rejected" ? [result.reason instanceof Error ? result.reason.message : String(result.reason)] : [],
+    );
+    console.error("[dogrulama] dizine ulaşılamadı:", nedenler.join(" · "));
+  }
   const matches = settled
     .flatMap((result) => result.status === "fulfilled" ? result.value : [])
     .sort((a, b) => b.confidence - a.confidence);
@@ -245,19 +269,26 @@ async function verifyReference(reference: ParsedReference): Promise<ReferenceVer
     deniyor — bulduğumuz şey duruyor, kesinlik iddiası kalkıyor.
   */
   const yazarSupheli = bestMatch ? yazarTutmuyor(reference, bestMatch.authors) : false;
-  const status = !bestMatch
+  const eslesmeDurumu = !bestMatch
     ? "not_found"
     : bestMatch.confidence >= 0.78 && !yazarSupheli
     ? "verified"
     : bestMatch.confidence >= 0.55
     ? "possible_match"
     : "not_found";
+  /*
+    Olumlu kanıt, bir dizin düşmüş olsa da geçerli: cevap veren dizinin
+    bulduğu kayıt gerçek. "Bulunamadı" ise ancak İKİ dizin de cevap
+    verdiyse söylenebilir; biri sustuysa kaydın orada olup olmadığı
+    bilinmiyor.
+  */
+  const status: DogrulamaDurumu = eslesmeDurumu === "not_found" && dusenDizin > 0 ? "ulasilamadi" : eslesmeDurumu;
 
   return {
     reference: reference.raw,
     status,
     googleScholarUrl,
-    bestMatch: status === "not_found" ? null : bestMatch,
+    bestMatch: status === "not_found" || status === "ulasilamadi" ? null : bestMatch,
     matches: deduplicated.filter((match) => match.confidence >= 0.5).slice(0, 4),
   };
 }
@@ -362,7 +393,13 @@ export async function verifyAcademicReferences(
     parti.forEach((sonuc, sira) => {
       sonuclar.push(sonuc);
       const anahtar = anahtarlar.get(dilim[sira]) ?? null;
-      if (anahtar && sonuc.status !== "insufficient_data") {
+      /*
+        "ulasilamadi" önbelleğe GİRMEZ: geçici bir arızayı saklamak, bir
+        sonraki denetimde dizine hiç sorulmaması demekti. Tablo kısıtı da
+        bu değeri kabul etmiyor (migration 20260924100021); süre tablosunda
+        0 olması (lib/dogrulama-onbellegi.ts) ikinci bir güvence.
+      */
+      if (anahtar && sonuc.status !== "insufficient_data" && sonuc.status !== "ulasilamadi") {
         yeni.set(anahtar, { status: sonuc.status, bestMatch: sonuc.bestMatch, matches: sonuc.matches });
       }
     });

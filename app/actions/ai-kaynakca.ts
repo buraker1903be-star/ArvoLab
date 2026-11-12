@@ -19,7 +19,9 @@ const EN_UZUN_KAYNAK = 600;
 const EN_FAZLA_KAYNAK = 60;
 const EN_FAZLA_LISTE = 40;
 const EN_FAZLA_ATIF = 120;
-const DURUMLAR = new Set<KaynakDurumu>(["verified", "possible_match", "not_found", "insufficient_data"]);
+/* Bilinmeyen durum "veri yetersiz" sayılıyor; "ulasilamadi" listede olmalı,
+   yoksa geçici erişim sorunu modele başka bir şey gibi giderdi. */
+const DURUMLAR = new Set<KaynakDurumu>(["verified", "possible_match", "not_found", "insufficient_data", "ulasilamadi"]);
 
 export type KaynakcaDenetimGirdisi = {
   /** Bağlı akademik çalışma (isteğe bağlı). */

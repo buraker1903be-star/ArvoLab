@@ -6,6 +6,7 @@ import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { belgeMetniOku } from "@/lib/document-extract";
+import { PDF_EN_FAZLA_BAYT } from "@/lib/kaynak-pdf";
 import {
   SORU_EN_UZUN,
   ilgiliSayfalar,
@@ -29,7 +30,11 @@ import {
 */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const EN_BUYUK_PDF = 25 * 1024 * 1024;
+/* Kaynak PDF'leri için tek sınır (lib/kaynak-pdf.ts, kovanın sınırıyla
+   aynı). Eskiden burada 25 MB yazıyordu: PDF'ler en fazla 20 MB
+   indirilebildiği ve yüklenebildiği için denetim hiç tetiklenmiyor,
+   tetiklenseydi de yanlış sınırı söylüyordu. */
+const EN_BUYUK_PDF = PDF_EN_FAZLA_BAYT;
 
 export type KaynakSohbetYaniti = {
   hata?: string;
@@ -77,7 +82,7 @@ export async function kaynaklaSohbet(girdi: {
     console.error("[kaynak-sohbeti] PDF indirilemedi:", indirmeHatasi?.message);
     return { hata: t({ tr: "PDF açılamadı; sayfayı yenileyip tekrar deneyin.", en: "The PDF couldn't be opened; refresh and try again." }) };
   }
-  if (dosya.size > EN_BUYUK_PDF) return { hata: t({ tr: "PDF çok büyük (en fazla 25 MB).", en: "The PDF is too large (25 MB at most)." }) };
+  if (dosya.size > EN_BUYUK_PDF) return { hata: t({ tr: "PDF çok büyük (en fazla 20 MB).", en: "The PDF is too large (20 MB at most)." }) };
 
   let sayfalar: { num: number; text: string }[];
   try {
