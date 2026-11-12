@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCeviri } from "@/app/_components/dil-saglayici";
+import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import { etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar";
 
 /*
@@ -17,6 +18,13 @@ import { etkinBolum, etkinUygulama, labUygulamalari } from "@/lib/os/uygulamalar
   işaretli simge başkasından gelseydi ikisi ayrışırdı. Bölümü olan
   uygulamada bölümün adı yazılıyor ("Kaynaklar" değil "Kaynakça
   doğrulama") — kullanıcının baktığı sayfa odur.
+
+  Signature OS 5 / Phase 3 (12.11.2026): kodla çizilmiş "A" işareti ve
+  "Arvo<em>Lab</em>" yazısı kalktı, yerine resmî logo geldi
+  (ArvoLabLogosu, temaya göre açık/koyu varyant). Logo yeniden çizilmez
+  kuralı (arvolab-logosu.tsx) üst çubukta çiğneniyordu. Masaüstünde logo
+  kenar çubuğunun tepesinde; burada gizlenir (os-shell.css) ve üst
+  çubukta yalnızca açık sayfanın adı kalır.
 */
 export default function HeaderTitle() {
   const pathname = usePathname();
@@ -27,29 +35,11 @@ export default function HeaderTitle() {
   const label = bolum?.label ?? uygulama?.label ?? t({ tr: "Çalışma alanı", en: "Workspace" });
 
   return (
-    <Link href="/dashboard" className="os-marka" aria-label={`${t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })} · ${label}`}>
-      <ArvoLabIsareti />
-      <span>
-        <b>
-          Arvo<em>Lab</em>
-        </b>
-        <small>{label}</small>
-      </span>
-    </Link>
-  );
-}
-
-/*
-  Markanın kare işareti: logodaki lacivert "A" ve yeşil nokta. Logonun
-  kendisi (public/arvolab-logo.png) 16:9 yatay; 34 piksellik kareye
-  sığdırınca okunmuyordu. Renkler CSS'ten (tokens.css), TSX'te ham renk yok.
-*/
-export function ArvoLabIsareti() {
-  return (
-    <svg className="os-marka-isaret" viewBox="0 0 34 34" aria-hidden="true">
-      <rect className="os-marka-zemin" width="34" height="34" rx="10" />
-      <path className="os-marka-harf" d="M10.2 25 15.4 9h3.2L23.8 25h-3.3l-1.2-3.8h-4.6L13.5 25Zm5.4-6.6h2.8L17 13.8Z" />
-      <circle className="os-marka-nokta" cx="26.2" cy="23.6" r="2.2" />
-    </svg>
+    <div className="os-marka">
+      <Link href="/dashboard" className="os-marka-logo" aria-label={t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })}>
+        <ArvoLabLogosu alt="" />
+      </Link>
+      <span className="os-marka-sayfa">{label}</span>
+    </div>
   );
 }

@@ -71,7 +71,21 @@
   --os5-kimlik-marka-cizgi: var(--sidebar-line);
   --os5-kimlik-form-zemin: var(--surface-raised);
 
-  /* Kabuk (Phase 3'te kullanılacak; şimdiden tek yerde). */
+  /*
+    Kabuk (Phase 3): kenar çubuğu iki temada da koyu lacivert. Yazılar
+    beyazın saydamları: etkin olmayan %72, başlık %55; vurgu zemini %10.
+    Etkin satırın solundaki çizgi açık mavi (brand-300): yeşil yalnızca
+    başarı içindir (tasarım anayasası), lacivert zeminde lacivert görünmez.
+  */
+  --os5-kenar-zemin: var(--brand-900);
+  --os5-kenar-cizgi: var(--sidebar-line);
+  --os5-kenar-yazi: color-mix(in srgb, var(--n-0) 72%, transparent);
+  --os5-kenar-yazi-guclu: var(--n-0);
+  --os5-kenar-baslik: color-mix(in srgb, var(--n-0) 55%, transparent);
+  --os5-kenar-hover: color-mix(in srgb, var(--n-0) 7%, transparent);
+  --os5-kenar-etkin: color-mix(in srgb, var(--n-0) 11%, transparent);
+  --os5-kenar-isaret: var(--brand-300);
+  --os5-kenar-odak: 0 0 0 2px var(--brand-300);
   --os5-kenar-genis: 240px;
   --os5-kenar-ray: 64px;
   --os5-gezinme-satir: 42px;
@@ -128,6 +142,9 @@ html[data-theme="dark"] {
   */
   --os5-kimlik-marka-zemin: var(--brand-950);
   --os5-kimlik-form-zemin: var(--bg);
+  /* Kenar çubuğu koyu temada en derin laciverte iner; sayfa zemininden (gece-900) ince çizgiyle ayrılır. */
+  --os5-kenar-zemin: var(--brand-950);
+  --os5-kenar-cizgi: var(--line-soft);
   --os5-golge-katman: 0 16px 40px -12px color-mix(in srgb, var(--n-1000, var(--brand-950)) 60%, transparent);
 }
 

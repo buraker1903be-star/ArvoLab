@@ -1,13 +1,19 @@
 /* ============================================================
-   UYARLANIR GEZİNME (Phase 3, 04.11.2026)
-   Dock'un ve başlatıcının yerini alan tek gezinme
-   (app/dashboard/_components/os-gezinme.tsx). Üç biçim; kırılımlar
-   lib/os/kirilimlar.ts ile aynı:
-     masaüstü ≥ 1200px  solda geniş kenar çubuğu (+ çalışma bağlamı)
-     tablet  761–1199px dar ray (simge + kısa ad)
-     telefon ≤ 760px    alt çubuk (dört uygulama + Daha fazla)
-   Kenar çubuğu üst çubuğun ALTINDAN başlar: logo ve arama üstte kalır,
-   üst çubuk tam genişlikte.
+   UYARLANIR GEZİNME (Phase 3, 04.11.2026; Signature OS 5 / Phase 3,
+   12.11.2026). Tek gezinme (app/dashboard/_components/os-gezinme.tsx),
+   üç biçim; kırılımlar lib/os/kirilimlar.ts ile aynı:
+     masaüstü ≥ 1200px  240 px koyu lacivert kenar çubuğu, tam boy:
+                        üstte logo, ortada liste ve alt menüler,
+                        altta Ayarlar + hesap menüsü. Üst çubuk ve içerik
+                        kenar çubuğunun sağında başlar.
+     tablet  761–1199px 64 px koyu ray (yalnızca simge; ad üzerine
+                        gelince/odakta yanında belirir). Üst çubuğun
+                        altından başlar; logo ve hesap üst çubukta.
+     telefon ≤ 760px    alt çubuk (dört uygulama + Daha fazla).
+                        Signature OS 5'te DEĞİŞMEDİ.
+   Taban kurallar (aşağıdaki ilk blok) telefonun ve "Daha fazla"
+   penceresinin açık görünümüdür; masaüstü ve tablet kuralları
+   `.os-gezinme` altına kapsanır ki pencere etkilenmesin.
    ============================================================ */
 
 .os-root {
@@ -25,6 +31,8 @@
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
 }
 .os-gezinme-liste { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+/* `hidden` özniteliği display:flex'e yenilmesin (kapalı alt menü). */
+.os-gezinme-liste[hidden], .os-gezinme-baglam[hidden] { display: none; }
 .os-gezinme-oge {
   display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 40px; padding: 0 var(--s-3);
   border: 0; border-radius: var(--r-md); background: transparent; color: var(--ink-soft);
@@ -37,56 +45,153 @@
 .os-gezinme-oge:focus-visible, .os-gezinme-alt:focus-visible { outline: none; box-shadow: var(--odak-halkasi); }
 .os-gezinme-ad { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .os-gezinme-kisa { display: none; }
-.os-gezinme-baslik { display: block; padding: 0 var(--s-3) var(--s-1); color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 
-/* Çalışmanın içindeyken: o çalışmanın bölümleri (yalnızca masaüstünde görünür). */
-.os-gezinme-baglam { display: none; }
-.os-gezinme-calisma {
-  display: -webkit-box; margin: 0 var(--s-3) var(--s-2); overflow: hidden;
-  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  color: var(--ink); font-size: var(--fs-body); font-weight: 650; line-height: var(--lh-baslik);
-}
-.os-gezinme-alt {
-  display: flex; align-items: center; min-height: 34px; padding: 0 var(--s-3) 0 calc(var(--s-3) + 10px);
-  border-radius: var(--r-sm); color: var(--ink-soft); font-size: var(--fs-base); text-decoration: none;
-}
-.os-gezinme-alt:hover { background: var(--surface-2); color: var(--ink); }
-.os-gezinme-alt.is-active { background: var(--primary-soft); color: var(--primary-ink); font-weight: 600; }
-.os-gezinme-ayrac { margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--line-soft); }
+/* Yalnızca masaüstünde görünenler: logo, alt menü düğmesi, çalışma alt menüsü, hesap. */
+.os-gezinme-logo, .os-gezinme-ac, .os-gezinme-baglam, .os-gezinme-hesap, .os-gezinme-grup { display: none; }
+/* Sarmalayıcılar telefonda ve tablette düzene karışmaz. */
+.os-gezinme-govde, .os-gezinme-satir { display: contents; }
 
-/* ---------- Masaüstü: geniş kenar çubuğu ---------- */
+/* ---------- Masaüstü: koyu lacivert kenar çubuğu ---------- */
 @media (min-width: 1200px) {
   .os-gezinme {
-    top: var(--topbar-height); left: 0; bottom: 0; width: var(--gezinme-genislik);
-    flex-direction: column; gap: var(--s-4); padding: var(--s-4) var(--s-3);
-    overflow-y: auto; scrollbar-width: thin;
-    border-right: 1px solid var(--line-soft);
+    top: 0; left: 0; bottom: 0; width: var(--os5-kenar-genis);
+    flex-direction: column; padding: 0 var(--s-3) var(--s-3);
+    border-right: 1px solid var(--os5-kenar-cizgi);
+    background: var(--os5-kenar-zemin); color: var(--os5-kenar-yazi);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    font-family: var(--os5-font-govde);
   }
-  .os-gezinme-baglam { display: block; padding-bottom: var(--s-4); border-bottom: 1px solid var(--line-soft); }
-  .os-gezinme-son { margin-top: auto; }
+  .os-gezinme-logo {
+    --logo-h: 26px;
+    display: flex; flex: none; align-items: center;
+    height: var(--topbar-height); margin: 0 calc(-1 * var(--s-3)); padding: 0 calc(var(--s-3) + 10px);
+  }
+  .os-gezinme-logo:focus-visible { outline: none; box-shadow: inset var(--os5-kenar-odak); }
+  .os-gezinme-govde {
+    display: flex; flex: 1; flex-direction: column; gap: var(--s-5); min-height: 0;
+    margin: 0 calc(-1 * var(--s-3)); padding: var(--s-2) var(--s-3);
+    overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--os5-kenar-cizgi) transparent;
+  }
+
+  .os-gezinme .os-gezinme-oge {
+    min-height: var(--os5-gezinme-satir); padding: 0 var(--os5-gezinme-ic);
+    border-radius: var(--os5-kontrol-r); color: var(--os5-kenar-yazi);
+    font-size: var(--os5-fs-govde); font-weight: 500;
+    transition: background-color var(--os5-sure-hizli) var(--os5-egri), color var(--os5-sure-hizli) var(--os5-egri);
+  }
+  .os-gezinme .os-gezinme-oge:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
+  /* Etkin sayfa: açık zemin, beyaz yazı, solda açık mavi çizgi. Renk tek başına taşımasın diye kalınlık da değişir. */
+  .os-gezinme .os-gezinme-oge.is-active {
+    background: var(--os5-kenar-etkin); color: var(--os5-kenar-yazi-guclu); font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--os5-kenar-isaret);
+  }
+  /* Alt menüdeki sayfa etkinken üst öğe ("Çalışmalarım") belirgin ama işaretsiz. */
+  .os-gezinme .os-gezinme-oge.is-ust { color: var(--os5-kenar-yazi-guclu); font-weight: 600; }
+  .os-gezinme .os-gezinme-oge:focus-visible,
+  .os-gezinme .os-gezinme-alt:focus-visible,
+  .os-gezinme-ac:focus-visible,
+  .os-gezinme-grup:focus-visible { outline: none; box-shadow: var(--os5-kenar-odak); }
+  .os-gezinme .os-gezinme-oge.is-active:focus-visible { box-shadow: inset 3px 0 0 var(--os5-kenar-isaret), var(--os5-kenar-odak); }
+
+  /* Üst öğe + alt menü düğmesi */
+  .os-gezinme-satir { display: flex; align-items: center; gap: 2px; }
+  .os-gezinme-satir > .os-gezinme-oge { flex: 1; min-width: 0; }
+  .os-gezinme-ac,
+  .os-gezinme-grup {
+    display: grid; place-items: center; flex: none;
+    border: 0; border-radius: var(--os5-kontrol-r); background: transparent;
+    color: var(--os5-kenar-yazi); font: inherit; cursor: pointer;
+    transition: background-color var(--os5-sure-hizli) var(--os5-egri), color var(--os5-sure-hizli) var(--os5-egri);
+  }
+  .os-gezinme-ac { width: var(--os5-kontrol-h-sik); height: var(--os5-kontrol-h-sik); }
+  .os-gezinme-ac:hover, .os-gezinme-grup:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
+  .os-gezinme-ac > svg, .os-gezinme-grup > svg { transition: transform var(--os5-sure-orta) var(--os5-egri); }
+  .os-gezinme-ac[aria-expanded="false"] > svg, .os-gezinme-grup[aria-expanded="false"] > svg { transform: rotate(-90deg); }
+
+  /* Açık çalışmanın alt menüsü: "Çalışmalarım"ın altında, ince bir çizgiyle girintili. */
+  .os-gezinme-baglam {
+    display: block; margin: 4px 0 6px calc(var(--os5-gezinme-ic) + 9px); padding-left: 10px;
+    border-left: 1px solid var(--os5-kenar-cizgi);
+  }
+  .os-gezinme-calisma {
+    display: -webkit-box; margin: 6px 10px 6px; overflow: hidden;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    color: var(--os5-kenar-yazi-guclu); font-size: var(--os5-fs-meta); font-weight: 600; line-height: 1.35;
+  }
+  .os-gezinme .os-gezinme-alt {
+    display: flex; align-items: center; min-height: var(--os5-gezinme-alt); padding: 0 10px;
+    border-radius: var(--os5-kontrol-r); color: var(--os5-kenar-yazi);
+    font-size: var(--os5-fs-meta); text-decoration: none;
+  }
+  .os-gezinme .os-gezinme-alt:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
+  .os-gezinme .os-gezinme-alt.is-active { background: var(--os5-kenar-etkin); color: var(--os5-kenar-yazi-guclu); font-weight: 600; }
+  .os-gezinme-alt-baslik {
+    display: block; margin: 10px 10px 4px;
+    color: var(--os5-kenar-baslik); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  }
+
+  /* "Diğer" alt menüsü: başlık düğmesi açar/kapatır. */
+  .os-gezinme-grup {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    min-height: var(--os5-kontrol-h-sik); margin-bottom: 2px; padding: 0 var(--os5-gezinme-ic);
+    color: var(--os5-kenar-baslik); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  }
+
+  .os-gezinme-son {
+    flex: none; margin-top: var(--s-2); padding-top: var(--s-2);
+    border-top: 1px solid var(--os5-kenar-cizgi);
+  }
   .os-gezinme-daha-li { display: none; }
-  .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--gezinme-genislik); }
+  .os-gezinme-hesap { display: block; flex: none; margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi); }
+
+  /* İçerik ve üst çubuk kenar çubuğunun sağında. */
+  .os-root .dashboard-content-shell { margin-left: var(--os5-kenar-genis); }
+  /* Logo ve hesap kenar çubuğunda: üst çubukta yalnızca sayfa adı. */
+  .os-root .os-marka-logo, .os-root .os-kullanici--ust { display: none; }
+  .os-root .os-marka-sayfa { padding-left: 0; border-left: 0; color: var(--ink); font-size: var(--os5-fs-govde); }
   /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin. */
   .os-root .calisma-sekmeleri { display: none; }
 }
 
-/* ---------- Tablet: dar ray ---------- */
+/* ---------- Tablet: 64 px koyu ray ---------- */
 @media (min-width: 761px) and (max-width: 1199px) {
   .os-gezinme {
-    top: var(--topbar-height); left: 0; bottom: 0; width: var(--gezinme-ray);
-    flex-direction: column; gap: var(--s-2); padding: var(--s-3) var(--s-2);
-    overflow-y: auto; scrollbar-width: none;
-    border-right: 1px solid var(--line-soft);
+    top: var(--topbar-height); left: 0; bottom: 0; width: var(--os5-kenar-ray);
+    flex-direction: column; align-items: center; gap: var(--s-1); padding: var(--s-3) 0;
+    border-right: 1px solid var(--os5-kenar-cizgi);
+    background: var(--os5-kenar-zemin); color: var(--os5-kenar-yazi);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
   }
-  .os-gezinme-oge { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; text-align: center; }
-  .os-gezinme-ad { display: none; }
-  .os-gezinme-kisa { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-micro); }
+  .os-gezinme-liste { align-items: center; gap: var(--s-1); }
+  .os-gezinme .os-gezinme-oge {
+    position: relative; justify-content: center; width: 44px; min-height: 44px; padding: 0;
+    border-radius: var(--os5-kontrol-r); color: var(--os5-kenar-yazi);
+  }
+  .os-gezinme .os-gezinme-oge:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
+  .os-gezinme .os-gezinme-oge.is-active { background: var(--os5-kenar-etkin); color: var(--os5-kenar-yazi-guclu); box-shadow: inset 3px 0 0 var(--os5-kenar-isaret); }
+  .os-gezinme .os-gezinme-oge:focus-visible { outline: none; box-shadow: var(--os5-kenar-odak); }
+  /*
+    Ad, rayın sağında küçük bir etiket olarak belirir (üzerine gelince ve
+    klavye odağında). Görünmezken de erişilebilirlik ağacında: bağlantının
+    adı odur (display:none olsaydı ekran okuyucu yalnızca title okurdu).
+  */
+  .os-gezinme .os-gezinme-ad {
+    position: absolute; top: 50%; left: calc(100% + 12px); z-index: var(--z-menu);
+    padding: 4px 8px; border-radius: var(--os5-kontrol-r);
+    background: var(--ink); color: var(--surface);
+    font-size: var(--os5-fs-meta); font-weight: 500;
+    opacity: 0; pointer-events: none; transform: translateY(-50%);
+    transition: opacity var(--os5-sure-hizli) var(--os5-egri);
+  }
+  .os-gezinme .os-gezinme-oge:hover .os-gezinme-ad,
+  .os-gezinme .os-gezinme-oge:focus-visible .os-gezinme-ad { opacity: 1; }
+  .os-gezinme .os-gezinme-kisa { display: none; }
   .os-gezinme-diger { display: none; }
-  .os-gezinme-son { margin-top: auto; }
-  .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--gezinme-ray); }
+  .os-gezinme-son { margin-top: auto; padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi); }
+  .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--os5-kenar-ray); }
 }
 
-/* ---------- Telefon: alt çubuk ---------- */
+/* ---------- Telefon: alt çubuk (değişmedi) ---------- */
 @media (max-width: 760px) {
   .os-gezinme {
     left: 0; right: 0; bottom: 0; height: calc(var(--alt-cubuk-h) + env(safe-area-inset-bottom));
@@ -98,7 +203,7 @@
   .os-gezinme-ana { display: contents; }
   .os-gezinme-son { display: contents; }
   .os-gezinme-ana > li:not([data-alt-cubuk]), .os-gezinme-son > li:not(.os-gezinme-daha-li), .os-gezinme-diger { display: none; }
-  .os-gezinme > ul > li, .os-gezinme-daha-li { flex: 1 1 0; min-width: 0; display: flex; }
+  .os-gezinme-ana > li, .os-gezinme-son > li { flex: 1 1 0; min-width: 0; display: flex; }
   .os-gezinme-oge {
     flex-direction: column; justify-content: center; gap: 2px; min-height: var(--alt-cubuk-h); padding: 4px 2px;
     border-radius: 0; background: transparent; text-align: center;
@@ -111,7 +216,9 @@
   /* Klavye açıkken alt çubuk aşağı çekilir: yazarken ekranın altı zaten klavyede. */
   html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-gezinme { transform: translateY(110%); }
 }
-@media (prefers-reduced-motion: reduce) { .os-gezinme { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .os-gezinme, .os-gezinme-oge, .os-gezinme-ac, .os-gezinme-grup, .os-gezinme-ac > svg, .os-gezinme-grup > svg, .os-gezinme .os-gezinme-ad { transition: none; }
+}
 
 /* ---------- "Daha fazla" ---------- */
 .os-daha {

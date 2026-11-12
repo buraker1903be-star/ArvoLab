@@ -22,7 +22,6 @@ import Toaster from "./_components/toaster";
 import NotificationBell from "./_components/notification-bell";
 import ActionErrorToast from "./_components/action-error-toast";
 import NavProgress from "./_components/nav-progress";
-import OsSaat from "./_components/os-saat";
 import KullaniciMenusu from "./_components/kullanici-menusu";
 import { OsGezinme } from "./_components/os-gezinme";
 import { OsBolumSeridi } from "./_components/os-bolum-seridi";
@@ -86,6 +85,16 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   const icEkip = Boolean(profile?.role && ADMIN_ROLES.includes(profile.role));
   const [kurumListesi, kurum] = icEkip ? await Promise.all([getOrganizations(), seciliKurum()]) : [null, null];
   const kurumlar = kurumListesi && !kurumListesi.okunamadi ? kurumListesi.satirlar : [];
+  // Hesap menüsü iki yerde çizilir (üst çubuk ve kenar çubuğu); ikisi AYNI değerleri alır.
+  const hesapMenusu = {
+    ad: userName,
+    rol: roleLabel,
+    basHarf: initials,
+    cikis: logout,
+    gorunum: onizleyebilir(profile?.role) ? (gorunum.onizleme ?? "personel") : undefined,
+    kurumlar: icEkip && kurumlar.length > 1 ? kurumlar : undefined,
+    seciliKurumId: kurum?.id ?? null,
+  };
 
   return (
     <div className="dashboard-shell os-root">
@@ -98,22 +107,20 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       {sozlesmeGerekli ? <SozlesmeOnayi olay="giris" cikis={logout} /> : null}
 
       <div className="dashboard-content-shell" inert={sozlesmeGerekli || undefined}>
+        {/*
+          ÜST ÇUBUK (Signature OS 5 / Phase 3, 12.11.2026): sayfa adı, arama
+          (Ctrl+K), bildirim ve tema. Logo ve hesap menüsü masaüstünde kenar
+          çubuğuna taşındı; tarih-saat göstergesi kaldırıldı (kurum sahibinin
+          "üst çubuk sadeleşsin" kararı; saat işletim sisteminde zaten var).
+          Tablet ve telefonda logo ve hesap menüsü burada kalır.
+        */}
         <header className="dashboard-header">
           <HeaderTitle />
           <OsAramaDugmesi />
           <div className="dashboard-header-actions">
-            <OsSaat />
             <NotificationBell />
             <ThemeToggle />
-            <KullaniciMenusu
-              ad={userName}
-              rol={roleLabel}
-              basHarf={initials}
-              cikis={logout}
-              gorunum={onizleyebilir(profile?.role) ? (gorunum.onizleme ?? "personel") : undefined}
-              kurumlar={icEkip && kurumlar.length > 1 ? kurumlar : undefined}
-              seciliKurumId={kurum?.id ?? null}
-            />
+            <KullaniciMenusu {...hesapMenusu} yerlesim="ust" />
           </div>
         </header>
 
@@ -187,7 +194,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       {sozlesmeGerekli ? null : (
         <>
           <Suspense>
-            <OsGezinme uygulamalar={uygulamalar} />
+            <OsGezinme uygulamalar={uygulamalar} hesap={<KullaniciMenusu {...hesapMenusu} yerlesim="kenar" />} />
           </Suspense>
           {/* Çıkış bir sunucu eylemi: istemci bileşenine referans olarak geçilebiliyor. */}
           <OsKomutPaleti uygulamalar={uygulamalar} cikis={logout} />

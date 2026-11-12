@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Building2, Check, Eye, LifeBuoy, LogOut, Settings, ShieldCheck, CreditCard } from "lucide-react";
+import { BookOpen, Building2, Check, ChevronsUpDown, Eye, LifeBuoy, LogOut, Settings, ShieldCheck, CreditCard } from "lucide-react";
 import ActionForm from "../action-form";
 import { gorunumSec } from "@/app/actions/onizleme";
 import { kurumSec } from "@/app/actions/kurum-secimi";
@@ -16,6 +16,14 @@ import DilSecici from "@/app/_components/dil-secici";
   Şimdi tek bir yuvarlak baş harf; tıklayınca kim olarak oturum
   açıldığı, ayarlar, destek ve çıkış. JavaScript'siz açılır (details),
   sunucuda çizilir. "Güvenli oturum aktif" süsü de buraya taşındı.
+
+  Signature OS 5 / Phase 3 (12.11.2026): masaüstünde menü kenar
+  çubuğunun dibinde (yerlesim="kenar"): ad ve rol yazılı bir satır,
+  menü YUKARI açılır. Tablet ve telefonda üst çubuktaki yuvarlak baş
+  harf kalır (yerlesim="ust"). İkisi de layout'ta çizilir, hangisinin
+  görüneceğini CSS seçer; gizli olan display:none olduğu için ekran
+  okuyucu tek menü okur. İçerik ve eylemler (çıkış, görünüm, kurum)
+  iki yerleşimde birebir aynı.
 */
 export default async function KullaniciMenusu({
   ad,
@@ -25,7 +33,9 @@ export default async function KullaniciMenusu({
   gorunum,
   kurumlar,
   seciliKurumId = null,
+  yerlesim = "ust",
 }: {
+  yerlesim?: "ust" | "kenar";
   ad: string;
   rol: string;
   basHarf: string;
@@ -41,9 +51,18 @@ export default async function KullaniciMenusu({
 }) {
   const t = await ceviri();
   return (
-    <details className="os-kullanici">
+    <details className={yerlesim === "kenar" ? "os-kullanici os-kullanici--kenar" : "os-kullanici os-kullanici--ust"}>
       <summary aria-label={`${t({ tr: "Hesap", en: "Account" })}: ${ad}`}>
         <span className="os-avatar">{basHarf}</span>
+        {yerlesim === "kenar" ? (
+          <>
+            <span className="os-kullanici-kimlik" aria-hidden="true">
+              <b>{ad}</b>
+              <small>{rol}</small>
+            </span>
+            <ChevronsUpDown size={16} aria-hidden="true" />
+          </>
+        ) : null}
       </summary>
       <div className="os-kullanici-menu">
         <div className="os-kullanici-bas">
