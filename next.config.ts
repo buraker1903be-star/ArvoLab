@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { guvenlikBasliklari } from "./lib/guvenlik-basliklari";
+import { anahtarAyrimiKarari, ortamGirdisi, supabaseOrtamKarari } from "./lib/supabase/ortam-guvenligi";
 
 const PDF_WORKER = "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs";
 
@@ -80,6 +81,39 @@ if (ONIZLEME && process.env.NODE_ENV === "production") {
   throw new Error("ARVOLAB_ONIZLEME üretim derlemesinde açık olamaz.");
 }
 
+/*
+  SUPABASE ORTAM GÜVENLİĞİ — DERLEME ANI (Güvenli Test Ortamı, Aşama 1).
+  Karar lib/supabase/ortam-guvenligi.ts'te. Ret varsa derleme (ve `next
+  dev`) DURUR: Vercel'de başarısız bir dağıtım öncekini
+  canlıda bırakır, yani yanlış yapılandırılmış bir ortam hiç yayına
+  çıkmaz. Tarayıcı istemcisi adresi derlemede gömdüğü için onun asıl
+  korunması da budur; çalışma anındaki denetim (sunucu, ara katman,
+  yönetim istemcisi) ikinci savunma hattı.
+  Denetim yalnızca Next'in yapılandırmayı KULLANDIĞI evrelerde çalışır;
+  dosyayı okuyan birim testleri (ocr-paketi) etkilenmez.
+
+  `next start` (phase-production-server) BİLEREK listede değil (Durak 0).
+  Eskiden oradaydı: bu dosya o evrede yeniden çalışıyor ama derlemede
+  gömülen ortamı (ARVOLAB_DAGITIM_ORTAMI) GÖREMİYOR — yalnızca o anki
+  process.env'e bakıyor. Üretim için derlenmiş paket, çalışma anında
+  VERCEL_ENV olmadan başlatılınca kendini üretim dışı sanıp açılmayı
+  reddediyordu; çalışma anı denetimi (sunucu, yönetim istemcisi, ara
+  katman) ise derleme yedeğiyle doğru karar veriyordu. İki karar
+  ayrışmasın diye çalışma anının tek sahibi o üç yol. Vercel bu dosyayı
+  çalışma anında zaten çalıştırmıyor (yapılandırma derlemede sabitlenir).
+*/
+// next/constants'taki PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD (test yükleyicisi alt yolu çözemediği için metin olarak).
+const DENETLENEN_EVRELER = new Set<string>(["phase-development-server", "phase-production-build"]);
+function ortamDenetimi() {
+  const karar = supabaseOrtamKarari(ortamGirdisi(process.env));
+  if (karar.tur === "red") throw new Error(`Supabase ortam güvenliği: ${karar.mesaj} (${karar.neden}). Ayrıntı: docs/test-ortami.md`);
+  if (karar.uyari) console.warn(`[supabase-ortam] ${karar.uyari}`);
+  /* Test ortamında üretimin AI, e-posta, cron ve köprü anahtarları kullanılmasın (beyan kuralı, aynı modül). */
+  const anahtar = anahtarAyrimiKarari(process.env);
+  if (anahtar.tur === "red") throw new Error(`Anahtar ayrımı: ${anahtar.mesaj} Ayrıntı: docs/test-ortami.md`);
+  if (anahtar.uyari) console.warn(`[supabase-ortam] ${anahtar.uyari}`);
+}
+
 const nextConfig: NextConfig = {
   ...(ONIZLEME
     ? {
@@ -92,6 +126,25 @@ const nextConfig: NextConfig = {
         },
       }
     : {}),
+  /*
+    Tarayıcı istemcisinin ortam denetimi için gömülen değerler (lib/supabase/client.ts).
+    YALNIZCA gizli olmayanlar: dağıtım türü, etiket ve proje kimlikleri (adresin
+    parçası). Anahtarlar buraya ASLA eklenmez — burada yazılan her şey istemci
+    paketine girer.
+    ARVOLAB_DAGITIM_ORTAMI sunucu paketine de gömülür ve çalışma anında
+    VERCEL_ENV gelmezse YEDEK olarak kullanılır (server.ts, admin.ts, proxy.ts;
+    ortam-guvenligi.ts → dagitimOrtamiCoz). Eskiden yalnızca çalışma anındaki
+    değere bakılıyordu; o değer eksik gelse üretim kendini önizleme sanıp 503
+    dönerdi.
+  */
+  env: {
+    ARVOLAB_DAGITIM_ORTAMI: process.env.VERCEL_ENV ?? "",
+    ARVOLAB_SUPABASE_ORTAMI: process.env.ARVOLAB_SUPABASE_ORTAMI ?? "",
+    ARVOLAB_URETIM_SUPABASE_REF: process.env.ARVOLAB_URETIM_SUPABASE_REF ?? "",
+    ARVOLAB_TEST_SUPABASE_REF: process.env.ARVOLAB_TEST_SUPABASE_REF ?? "",
+    ARVOLAB_ONIZLEME: process.env.ARVOLAB_ONIZLEME ?? "",
+    ARVOLAB_TEK_PROJE: process.env.ARVOLAB_TEK_PROJE ?? "",
+  },
   poweredByHeader: false,
   /* Güvenlik başlıkları her yanıtta; ne zorlandığı, ne yalnızca raporlandığı ve nedeni lib/guvenlik-basliklari.ts'te. */
   async headers() {
@@ -152,4 +205,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/* Next yapılandırmayı evresiyle birlikte çağırır; ortam denetimi burada. */
+export default function yapilandirma(evre: string): NextConfig {
+  if (DENETLENEN_EVRELER.has(evre)) ortamDenetimi();
+  return nextConfig;
+}

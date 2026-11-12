@@ -1,7 +1,10 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import nextConfig from "../../next.config";
+import yapilandirma from "../../next.config";
+
+// next.config.ts evreyle çağrılan bir fonksiyon (ortam denetimi, Aşama 1); test evresinde denetim çalışmaz.
+const nextConfig = yapilandirma("phase-test");
 
 /*
   OCR çekirdeğinin dağıtım paketine girdiğini sınar.
