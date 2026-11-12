@@ -2,13 +2,17 @@
 
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, FileCheck2, MailCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileCheck2, MailCheck } from "lucide-react";
 import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { yasalAdres } from "@/lib/yasal-baglantilar";
 import { signUp } from "@/app/actions/auth";
 import type { ActionResult } from "@/lib/auth-guards";
 import { EN_KISA_SIFRE } from "@/lib/kayit";
 import { kullanimSozlesmesi, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-sozlesmesi";
+import { Bildirim } from "@/app/_components/ui/bildirim";
+import { Dugme, DugmeBaglanti } from "@/app/_components/ui/dugme";
+import { Girdi } from "@/app/_components/ui/girdi";
+import { SifreGirdisi } from "@/app/_components/ui/sifre-girdisi";
 
 /*
   KAYIT FORMU (02.11.2026'da yeniden yazıldı, kurum sahibinin isteği:
@@ -30,6 +34,13 @@ import { kullanimSozlesmesi, SOZLESME_SURUMU } from "@/lib/sozlesme/kullanim-soz
   Başarıda form YERİNE bir bilgi ekranı geliyor: kullanıcının yapacağı tek
   iş posta kutusuna bakmak, formu tekrar doldurmaya çalışması yalnızca hız
   sınırını yakar.
+
+  Signature OS 5 / Phase 2 (12.11.2026): yalnızca görünüş. Alan adları,
+  kimlikler, autocomplete, minLength (EN_KISA_SIFRE), telefon deseni,
+  sözleşme okuma kuralı, gizli "sozlesmeOkundu" alanı ve signUp eylemi
+  AYNI. Şifre ve tekrarı ayrı göster/gizle düğmeleri taşıyor (ortak
+  SifreGirdisi); eskiden tek düğme ikisini birden açıyordu. Form tek
+  sütun, sayfada da pencerede de (os5-kimlik.css).
 */
 export default function KayitFormu({ pencerede = false }: { pencerede?: boolean }) {
   const t = useCeviri();
@@ -38,7 +49,6 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
     async (_onceki, formData) => (await signUp(_onceki, formData)) ?? null,
     null,
   );
-  const [sifreGoster, setSifreGoster] = useState(false);
   const [sifre, setSifre] = useState("");
   const [tekrar, setTekrar] = useState("");
   const [okuyor, setOkuyor] = useState(false);
@@ -50,28 +60,29 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
 
   if (durum?.success) {
     return (
-      <div className="login-heading kayit-tamam">
-        <span className="kayit-tamam-ikon" aria-hidden="true">
+      <div className="os5-kimlik-tamam">
+        <span className="os5-kimlik-tamam-simge" aria-hidden="true">
           <MailCheck size={22} />
         </span>
-        <span className="login-kicker">{t({ tr: "Son adım", en: "Last step" })}</span>
-        <h2>{t({ tr: "Posta kutunuza bakın", en: "Check your inbox" })}</h2>
-        <p>
-          {t({
-            tr: "Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve doğrudan çalışma alanınıza girersiniz. Bağlantı 24 saat geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.",
-            en: "We sent a verification link to your address. Clicking it activates your account and takes you straight to your workspace. The link is valid for 24 hours; if you don't see the email, check your spam folder.",
-          })}
-        </p>
-        <p className="muted text-sm">
+        <header className="os5-kimlik-baslik">
+          <h2>{t({ tr: "Posta kutunuza bakın", en: "Check your inbox" })}</h2>
+          <p>
+            {t({
+              tr: "Adresinize bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız açılır ve doğrudan çalışma alanınıza girersiniz. Bağlantı 24 saat geçerli; e-postayı göremiyorsanız spam klasörünü kontrol edin.",
+              en: "We sent a verification link to your address. Clicking it activates your account and takes you straight to your workspace. The link is valid for 24 hours; if you don't see the email, check your spam folder.",
+            })}
+          </p>
+        </header>
+        <p className="os5-kimlik-not">
           {t({
             tr: "Bu adresle zaten bir hesabınız varsa yeni hesap açılmaz; bunun yerine giriş bağlantısı gönderilir.",
             en: "If you already have an account with this address, no new account is created; we send you a sign-in link instead.",
           })}
         </p>
         {pencerede ? null : (
-          <Link href="/" className="projects-filter-button">
+          <DugmeBaglanti href="/" tur="ikincil" tamGenislik>
             {t({ tr: "Giriş ekranına dön", en: "Back to sign in" })}
-          </Link>
+          </DugmeBaglanti>
         )}
       </div>
     );
@@ -97,8 +108,7 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
       {/* Okuyucu açıkken form GİZLENİR, sökülmez: doldurulan alanlar kaybolmasın. */}
       <div hidden={okuyor}>
         {pencerede ? null : (
-          <div className="login-heading">
-            <span className="login-kicker">{t({ tr: "Ücretsiz deneme", en: "Free trial" })}</span>
+          <header className="os5-kimlik-baslik">
             <h1>{t({ tr: "ArvoLab hesabı oluşturun", en: "Create your ArvoLab account" })}</h1>
             <p>
               {t({
@@ -106,102 +116,84 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
                 en: "Start writing your thesis, finding sources and checking against your guidelines within minutes.",
               })}
             </p>
-          </div>
+          </header>
         )}
 
         {durum?.error ? (
-          <p className="alert" role="alert">
-            {durum.error}
-          </p>
+          <div className="os5-kimlik-bildirimler">
+            <Bildirim ton="hata" rol="alert">
+              {durum.error}
+            </Bildirim>
+          </div>
         ) : null}
 
-        <form className="login-form kayit-formu" action={gonder}>
+        <form className="os5-kimlik-formu" action={gonder}>
           <input type="hidden" name="sozlesmeOkundu" value={okundu ? "1" : ""} />
 
-          <div className="kayit-alan kayit-alan-genis">
-            <label htmlFor="kayit-ad">{t({ tr: "Ad soyad", en: "Full name" })}</label>
-            <input id="kayit-ad" name="fullName" type="text" autoComplete="name" minLength={2} maxLength={120} required />
-          </div>
+          <Girdi id="kayit-ad" name="fullName" type="text" etiket={t({ tr: "Ad soyad", en: "Full name" })} autoComplete="name" minLength={2} maxLength={120} required />
 
-          <div className="kayit-alan">
-            <label htmlFor="kayit-eposta">{t({ tr: "E-posta adresi", en: "Email address" })}</label>
-            <input
-              id="kayit-eposta"
-              name="email"
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              placeholder={t({ tr: "ornek@universite.edu.tr", en: "name@university.edu" })}
-              required
-            />
-          </div>
+          <Girdi
+            id="kayit-eposta"
+            name="email"
+            type="email"
+            etiket={t({ tr: "E-posta adresi", en: "Email address" })}
+            autoComplete="email"
+            inputMode="email"
+            placeholder={t({ tr: "ornek@universite.edu.tr", en: "name@university.edu" })}
+            required
+          />
 
-          <div className="kayit-alan">
-            <label htmlFor="kayit-telefon">{t({ tr: "Telefon", en: "Phone" })}</label>
-            {/* Desen lib/kayit.ts telefonuTemizle ile aynı aralık: boşluk, tire, parantez serbest. */}
-            <input
-              id="kayit-telefon"
-              name="phone"
-              type="tel"
-              autoComplete="tel"
-              inputMode="tel"
-              placeholder={t({ tr: "05xx xxx xx xx", en: "+44 20 7946 0958" })}
-              pattern="\+?[\d\s().\-]{10,20}"
-              title={t({ tr: "10–15 rakamlı bir telefon numarası", en: "A phone number with 10–15 digits" })}
-              required
-            />
-          </div>
+          {/* Desen lib/kayit.ts telefonuTemizle ile aynı aralık: boşluk, tire, parantez serbest. */}
+          <Girdi
+            id="kayit-telefon"
+            name="phone"
+            type="tel"
+            etiket={t({ tr: "Telefon", en: "Phone" })}
+            autoComplete="tel"
+            inputMode="tel"
+            placeholder={t({ tr: "05xx xxx xx xx", en: "+44 20 7946 0958" })}
+            pattern="\+?[\d\s().\-]{10,20}"
+            title={t({ tr: "10–15 rakamlı bir telefon numarası", en: "A phone number with 10–15 digits" })}
+            required
+          />
 
-          <div className="kayit-alan">
-            <label htmlFor="kayit-sifre">{t({ tr: "Şifre", en: "Password" })}</label>
-            <div className="giris-sifre">
-              <input
-                id="kayit-sifre"
-                name="password"
-                type={sifreGoster ? "text" : "password"}
-                autoComplete="new-password"
-                minLength={EN_KISA_SIFRE}
-                value={sifre}
-                onChange={(e) => setSifre(e.target.value)}
-                aria-describedby="kayit-sifre-ipucu"
-                required
-              />
-              <button
-                type="button"
-                className="giris-sifre-goster"
-                onClick={() => setSifreGoster((g) => !g)}
-                aria-pressed={sifreGoster}
-                aria-label={sifreGoster ? t({ tr: "Şifreleri gizle", en: "Hide passwords" }) : t({ tr: "Şifreleri göster", en: "Show passwords" })}
-              >
-                {sifreGoster ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
-              </button>
-            </div>
-            <small id="kayit-sifre-ipucu" className="kayit-ipucu">{t({ tr: `En az ${EN_KISA_SIFRE} karakter.`, en: `At least ${EN_KISA_SIFRE} characters.` })}</small>
-          </div>
+          <SifreGirdisi
+            id="kayit-sifre"
+            name="password"
+            etiket={t({ tr: "Şifre", en: "Password" })}
+            autoComplete="new-password"
+            minLength={EN_KISA_SIFRE}
+            value={sifre}
+            onChange={(e) => setSifre(e.target.value)}
+            aciklama={t({ tr: `En az ${EN_KISA_SIFRE} karakter.`, en: `At least ${EN_KISA_SIFRE} characters.` })}
+            required
+          />
 
-          <div className="kayit-alan">
-            <label htmlFor="kayit-sifre-tekrar">{t({ tr: "Şifre tekrarı", en: "Repeat password" })}</label>
-            <input
-              id="kayit-sifre-tekrar"
-              name="passwordRepeat"
-              type={sifreGoster ? "text" : "password"}
-              autoComplete="new-password"
-              minLength={EN_KISA_SIFRE}
-              value={tekrar}
-              onChange={(e) => setTekrar(e.target.value)}
-              aria-invalid={eslesmiyor}
-              aria-describedby="kayit-tekrar-ipucu"
-              required
-            />
-            <small id="kayit-tekrar-ipucu" className="kayit-ipucu" data-tone={eslesmiyor ? "danger" : undefined} aria-live="polite">
-              {eslesmiyor ? t({ tr: "Şifreler aynı değil.", en: "Passwords don't match." }) : " "}
-            </small>
-          </div>
+          {/*
+            Eşleşmeme: alan aria-invalid olur ve hata metni aria-describedby ile
+            bağlanır. Duyuru aşağıdaki KALICI canlı bölgeden: sonradan eklenen
+            bir aria-live öğesini ekran okuyucular çoğu zaman okumaz; eskiden
+            de canlı bölge sürekli yerindeydi.
+          */}
+          <SifreGirdisi
+            id="kayit-sifre-tekrar"
+            name="passwordRepeat"
+            etiket={t({ tr: "Şifre tekrarı", en: "Repeat password" })}
+            autoComplete="new-password"
+            minLength={EN_KISA_SIFRE}
+            value={tekrar}
+            onChange={(e) => setTekrar(e.target.value)}
+            hata={eslesmiyor ? t({ tr: "Şifreler aynı değil.", en: "Passwords don't match." }) : undefined}
+            required
+          />
+          <span className="sr-only" aria-live="polite">
+            {eslesmiyor ? t({ tr: "Şifreler aynı değil.", en: "Passwords don't match." }) : ""}
+          </span>
 
-          <fieldset className="kayit-onaylar kayit-alan-genis">
+          <fieldset className="os5-kimlik-onaylar">
             <legend className="sr-only">{t({ tr: "Yasal onaylar", en: "Legal consents" })}</legend>
 
-            <label className="kayit-onay">
+            <label className="os5-onay">
               {/*
                 Kontrollü kutu: okunmadan basılırsa işaretlenmez, okuyucu açılır.
                 Okunduktan sonra kullanıcı kutuyu kaldırıp yeniden işaretleyebilir.
@@ -222,27 +214,27 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
                 required
               />
               <span>
-                <button type="button" className="kayit-metin-baglanti" onClick={() => setOkuyor(true)}>
+                <button type="button" className="os5-kimlik-metin-baglanti" onClick={() => setOkuyor(true)}>
                   {t({ tr: "ArvoLab Kullanım Sözleşmesi'ni", en: "I have read and accept the ArvoLab Terms of Use" })}
                 </button>
-                {t({ tr: " okudum ve kabul ediyorum.", en: "." })} <b className="kayit-zorunlu">{t({ tr: "Zorunlu", en: "Required" })}</b>
+                {t({ tr: " okudum ve kabul ediyorum.", en: "." })} <b className="os5-kimlik-etiketcik">{t({ tr: "Zorunlu", en: "Required" })}</b>
                 {okundu ? null : (
-                  <small className="kayit-ipucu">{t({ tr: "Kutuya basınca metin açılır; sonuna kadar okuyunca onaylayabilirsiniz.", en: "Ticking the box opens the text; you can accept once you've read it to the end." })}</small>
+                  <small className="os5-aciklama">{t({ tr: "Kutuya basınca metin açılır; sonuna kadar okuyunca onaylayabilirsiniz.", en: "Ticking the box opens the text; you can accept once you've read it to the end." })}</small>
                 )}
               </span>
             </label>
 
-            <label className="kayit-onay">
+            <label className="os5-onay">
               <input type="checkbox" name="kvkk" required />
               <span>
-                <a href={yasalAdres("gizlilik", dil)} target="_blank" rel="noreferrer">
+                <a className="os5-kimlik-metin-baglanti" href={yasalAdres("gizlilik", dil)} target="_blank" rel="noreferrer">
                   {t({ tr: "KVKK Aydınlatma Metni'ni", en: "I have read the Privacy Notice" })}
                 </a>
                 {t({
                   tr: " okudum; kişisel verilerimin bu metinde belirtilen amaçlarla işlenmesini onaylıyorum.",
                   en: " and consent to my personal data being processed for the purposes it describes.",
                 })}{" "}
-                <b className="kayit-zorunlu">{t({ tr: "Zorunlu", en: "Required" })}</b>
+                <b className="os5-kimlik-etiketcik">{t({ tr: "Zorunlu", en: "Required" })}</b>
               </span>
             </label>
 
@@ -251,27 +243,30 @@ export default function KayitFormu({ pencerede = false }: { pencerede?: boolean 
               varsayılan İŞARETSİZ. Hizmetin kullanımına dair zorunlu bildirimler
               (doğrulama, deneme süresi, ödeme) bu izne bağlı değil.
             */}
-            <label className="kayit-onay">
+            <label className="os5-onay">
               <input type="checkbox" name="iletisim" />
               <span>
                 {t({
                   tr: "Yenilikler, duyurular ve kampanyalardan e-posta ve SMS ile haberdar olmak istiyorum.",
                   en: "I'd like to hear about new features, announcements and offers by email and SMS.",
                 })}{" "}
-                <span className="kayit-istege-bagli">{t({ tr: "İsteğe bağlı", en: "Optional" })}</span>
+                <span className="os5-kimlik-etiketcik">{t({ tr: "İsteğe bağlı", en: "Optional" })}</span>
               </span>
             </label>
           </fieldset>
 
-          <button className="login-button kayit-alan-genis" type="submit" disabled={bekliyor || eslesmiyor}>
+          <Dugme type="submit" tamGenislik yukleniyor={bekliyor} disabled={bekliyor || eslesmiyor}>
             {bekliyor ? t({ tr: "Hesabınız oluşturuluyor…", en: "Creating your account…" }) : t({ tr: "Ücretsiz hesabımı oluştur", en: "Create my free account" })}
-            <ArrowRight size={18} aria-hidden="true" />
-          </button>
+            {bekliyor ? null : <ArrowRight size={18} aria-hidden="true" />}
+          </Dugme>
         </form>
 
         {pencerede ? null : (
-          <p className="muted text-sm">
-            {t({ tr: "Hesabınız var mı?", en: "Already have an account?" })} <Link href="/">{t({ tr: "Giriş yapın", en: "Sign in" })}</Link>
+          <p className="os5-kimlik-not">
+            {t({ tr: "Hesabınız var mı?", en: "Already have an account?" })}{" "}
+            <Link className="os5-kimlik-baglanti" href="/">
+              {t({ tr: "Giriş yapın", en: "Sign in" })}
+            </Link>
           </p>
         )}
       </div>
@@ -309,15 +304,15 @@ function SozlesmeOkuyucu({ onOnay, onGeri }: { onOnay: () => void; onGeri: () =>
   }, [olc]);
 
   return (
-    <section className="kayit-okuyucu" aria-label={metin.baslik}>
-      <header className="kayit-okuyucu-baslik">
+    <section className="os5-kimlik-okuyucu" aria-label={metin.baslik}>
+      <header className="os5-kimlik-okuyucu-baslik">
         <FileCheck2 size={18} aria-hidden="true" />
         <div>
           <h2>{metin.baslik}</h2>
           <small>{t({ tr: `Sürüm ${SOZLESME_SURUMU}`, en: `Version ${SOZLESME_SURUMU}` })}</small>
         </div>
       </header>
-      <div ref={kutu} className="sozlesme-onay-metin kayit-okuyucu-metin" tabIndex={0} onScroll={olc} aria-label={t({ tr: "Sözleşme metni", en: "Agreement text" })}>
+      <div ref={kutu} className="sozlesme-onay-metin os5-kimlik-okuyucu-metin" tabIndex={0} onScroll={olc} aria-label={t({ tr: "Sözleşme metni", en: "Agreement text" })}>
         <p className="sozlesme-onay-giris">{metin.giris}</p>
         {metin.bolumler.map((b) => (
           <section key={b.baslik}>
@@ -332,18 +327,18 @@ function SozlesmeOkuyucu({ onOnay, onGeri }: { onOnay: () => void; onGeri: () =>
       <div className="sozlesme-onay-ilerleme" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={sona ? 100 : ilerleme} aria-label={t({ tr: "Okuma ilerlemesi", en: "Reading progress" })}>
         <span data-deger={sona ? 100 : Math.round(ilerleme / 10) * 10} />
       </div>
-      <p className="kayit-ipucu" aria-live="polite">
+      <p className="os5-aciklama" aria-live="polite">
         {sona
           ? t({ tr: "Onayınız, hesabınız oluşturulurken tarih-saat, IP adresi ve cihaz bilgisiyle kaydedilir.", en: "Your acceptance is recorded with date and time, IP address and device when your account is created." })
           : t({ tr: "Onaylamak için metni sonuna kadar kaydırın.", en: "Scroll to the end of the text to accept." })}
       </p>
-      <div className="kayit-okuyucu-dugmeler">
-        <button type="button" className="projects-filter-button" onClick={onGeri}>
+      <div className="os5-kimlik-okuyucu-dugmeler">
+        <Dugme tur="ikincil" onClick={onGeri}>
           <ArrowLeft size={15} aria-hidden="true" /> {t({ tr: "Forma dön", en: "Back to the form" })}
-        </button>
-        <button type="button" className="projects-primary-button" disabled={!sona} onClick={onOnay}>
+        </Dugme>
+        <Dugme disabled={!sona} onClick={onOnay}>
           {t({ tr: "Okudum ve onaylıyorum", en: "I have read and agree" })}
-        </button>
+        </Dugme>
       </div>
     </section>
   );

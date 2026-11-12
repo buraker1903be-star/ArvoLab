@@ -4,6 +4,9 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 import { useActionState } from "react";
 import { ArrowRight, KeyRound } from "lucide-react";
 import type { ActionResult } from "@/lib/auth-guards";
+import { Bildirim } from "@/app/_components/ui/bildirim";
+import { Dugme } from "@/app/_components/ui/dugme";
+import { SifreGirdisi } from "@/app/_components/ui/sifre-girdisi";
 
 interface PasswordFormProps {
   action: (previous: ActionResult | null, formData: FormData) => Promise<ActionResult>;
@@ -16,18 +19,26 @@ export default function PasswordForm({ action, variant, submitLabel }: PasswordF
   const t = useCeviri();
   const [state, formAction, pending] = useActionState(action, null);
 
+  /*
+    "login" görünümü yalnızca /reset-password'te (Signature OS 5 / Phase 2:
+    ortak bileşenlerle çiziliyor). Alan adları, kimlikler, minLength ve eylem
+    AYNI; kural sunucuda (resetPassword). "panel" görünümü Ayarlar'da ve bu
+    fazın dışında, dokunulmadı.
+  */
   if (variant === "login") {
     return (
-      <form className="login-form" action={formAction}>
-        {state?.error ? <p className="alert" role="alert">{state.error}</p> : null}
-        <label htmlFor="password">{t({ tr: "Yeni şifre", en: "New password" })}</label>
-        <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
-        <label htmlFor="passwordConfirm">{t({ tr: "Yeni şifre (tekrar)", en: "Confirm new password" })}</label>
-        <input id="passwordConfirm" name="passwordConfirm" type="password" autoComplete="new-password" minLength={8} required />
-        <button className="login-button" type="submit" disabled={pending}>
+      <form className="os5-kimlik-formu" action={formAction}>
+        {state?.error ? (
+          <Bildirim ton="hata" rol="alert">
+            {state.error}
+          </Bildirim>
+        ) : null}
+        <SifreGirdisi id="password" name="password" etiket={t({ tr: "Yeni şifre", en: "New password" })} autoComplete="new-password" minLength={8} required />
+        <SifreGirdisi id="passwordConfirm" name="passwordConfirm" etiket={t({ tr: "Yeni şifre (tekrar)", en: "Confirm new password" })} autoComplete="new-password" minLength={8} required />
+        <Dugme type="submit" tamGenislik yukleniyor={pending} disabled={pending}>
           {pending ? t({ tr: "Kaydediliyor…", en: "Saving…" }) : submitLabel}
-          <ArrowRight size={18} aria-hidden="true" />
-        </button>
+          {pending ? null : <ArrowRight size={18} aria-hidden="true" />}
+        </Dugme>
       </form>
     );
   }

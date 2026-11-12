@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import Dialog from "@/app/dashboard/_components/dialog";
 import KayitFormu from "@/app/kayit/kayit-formu";
 import { useCeviri } from "./dil-saglayici";
 import type { Metin } from "@/lib/dil";
+import { dugmeSinifi } from "@/lib/os5/bilesen";
 
 /*
   Giriş sayfasındaki "Ücretsiz hesap oluştur" penceresi (02.11.2026, kurum
@@ -18,18 +18,23 @@ import type { Metin } from "@/lib/dil";
   açılır — e-postadan ya da reklamdan doğrudan kayda gelinebilsin.
 */
 /*
-  Sayfada iki düğme aynı pencereyi açabilir (giriş kartının altındaki kayıt
-  kartı ve tanıtım alanı); `sinif` ve `etiket` yalnızca düğmenin görünüşü.
-  ?kayit=1 ile açılış yalnızca birinde (acik) verilmeli, yoksa iki pencere açılır.
+  `sinif`, `etiket` ve `sonEk` yalnızca düğmenin görünüşü. ?kayit=1 ile
+  açılış yalnızca bir düğmede (acik) verilmeli: sayfada iki düğme olursa
+  iki pencere açılır. Signature OS 5 / Phase 2'de giriş sayfasındaki ikinci
+  düğme (tanıtım alanı) kalktı; varsayılan görünüş ortak ikincil düğme ve
+  pencere os5 görünümünde (Dialog `gorunum="os5"`: odak tuzağı, Esc ve
+  odak iadesi aynı koddan).
 */
 export default function KayitPenceresi({
   acik: baslangicta = false,
-  sinif = "giris-kayit-dugme",
+  sinif = dugmeSinifi({ tur: "ikincil" }),
   etiket = { tr: "Ücretsiz hesap oluştur", en: "Create a free account" },
+  sonEk,
 }: {
   acik?: boolean;
   sinif?: string;
   etiket?: Metin;
+  sonEk?: ReactNode;
 }) {
   const t = useCeviri();
   const [acik, setAcik] = useState(baslangicta);
@@ -54,10 +59,11 @@ export default function KayitPenceresi({
           setAcik(true);
         }}
       >
-        <UserPlus size={16} aria-hidden="true" />
         {t(etiket)}
+        {sonEk}
       </a>
       <Dialog
+        gorunum="os5"
         open={acik}
         onClose={() => setAcik(false)}
         kicker={t({ tr: "Ücretsiz deneme", en: "Free trial" })}

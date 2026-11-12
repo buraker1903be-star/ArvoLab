@@ -16,6 +16,8 @@ import "./styles/print.css";
 /* Signature OS 5 (Phase 1): yalnızca "os5-" önekli sınıflar; mevcut ekranları etkilemez. */
 import "./styles/os5-tokens.css";
 import "./styles/os5-bilesenler.css";
+/* Phase 2: kimlik ekranları (giriş, kayıt, şifre, bağlantı onayı). */
+import "./styles/os5-kimlik.css";
 
 // Tek yazı ailesi: Apple cihazlarında sistemin SF Pro'su (-apple-system),
 // diğerlerinde ona en yakın açık yazı tipi Inter. preload kapalı: Apple
