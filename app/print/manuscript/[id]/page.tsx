@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getManuscript } from "@/app/actions/manuscript";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
-import { refreshImageUrls } from "@/lib/manuscript-images";
+import { calismaResimKlasorleri, refreshImageUrls } from "@/lib/manuscript-images";
 import { buildPrintSheet } from "@/lib/print-sheet";
 import ManuscriptSheet from "../manuscript-sheet";
 import PrintActions from "./print-actions";
@@ -65,7 +65,7 @@ export default async function PrintManuscriptPage({
     aktifDil().then((arayuz) => belgeDili(supabase, id, arayuz)),
   ]);
   // Resim bağlantıları depo yolundan tazelenir (süresi dolmuş imzalı bağlantılar çıktıda kaybolmasın).
-  const doc = manuscript ? await refreshImageUrls(manuscript.content, [project.id, project.owner_id, project.assignee_id]) : null;
+  const doc = manuscript ? await refreshImageUrls(manuscript.content, calismaResimKlasorleri(project)) : null;
   const sheet = buildPrintSheet(manuscript, guideline, doc, dil);
 
   return (

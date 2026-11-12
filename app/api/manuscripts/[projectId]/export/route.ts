@@ -6,7 +6,7 @@ import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { buildDocxFromTiptap, type DocxImage } from "@/lib/tiptap-docx";
 import { calismaKilavuzu } from "@/lib/guideline-rules";
 import { readImageInfo } from "@/lib/image-info";
-import { downloadWriterImage, storagePathFromUrl } from "@/lib/manuscript-images";
+import { calismaResimKlasorleri, downloadWriterImage, storagePathFromUrl } from "@/lib/manuscript-images";
 import type { TiptapDoc } from "@/lib/tiptap-text";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { belgeDili } from "@/lib/belge-dili";
@@ -126,8 +126,8 @@ export async function GET(
         frontMatterRoman: guideline.settings.frontMatterRoman,
       }
     : {};
-  // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve yazarları (eski yol).
-  const writerIds = [projectId, project.owner_id, project.assignee_id];
+  // Kabul edilen resim klasörleri: çalışmanın kendisi (yeni yol) ve sahibi (eski yol); lib/manuscript-images.ts.
+  const writerIds = calismaResimKlasorleri({ id: projectId, owner_id: project.owner_id });
 
   const dil = await belgeDili(supabase, projectId, await aktifDil());
   const doc = await buildDocxFromTiptap({
