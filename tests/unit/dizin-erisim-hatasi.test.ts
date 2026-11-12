@@ -159,6 +159,12 @@ describe("dizin erişim hatası: kabul matrisi", () => {
     const { sonuc } = await dogrula();
     assert.equal(sonuc.status, "ulasilamadi");
     assert.deepEqual(sonuc.matches, []);
+    /* Kontrol: aynı aday iki dizin de cevap verince aday listesinde görünmeli.
+       Görünmüyorsa puanlama değişmiş demektir ve yukarıdaki iddia boşa sınanıyor. */
+    crossref = "bos";
+    const kontrol = (await dogrula()).sonuc;
+    assert.equal(kontrol.status, "not_found");
+    assert.equal(kontrol.matches.length, 1);
   });
 });
 
