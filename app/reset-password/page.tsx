@@ -2,7 +2,7 @@ import { ilkSifredenCik, resetPassword, yeniDogrulamaIste } from "@/app/actions/
 import PasswordForm from "@/app/dashboard/settings/password-form";
 import KimlikKabugu from "@/app/_components/kimlik-kabugu";
 import { ceviri } from "@/lib/dil-sunucu";
-import { EN_KISA_SIFRE } from "@/lib/kimlik-kurallari";
+import { EN_KISA_SIFRE, EN_UZUN_SIFRE } from "@/lib/kimlik-kurallari";
 
 export async function generateMetadata() {
   const t = await ceviri();
@@ -32,8 +32,8 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
           <h1>{ilk ? t({ tr: "Şifrenizi belirleyin", en: "Set your password" }) : t({ tr: "Yeni şifrenizi belirleyin", en: "Set your new password" })}</h1>
           <p>
             {t({
-              tr: `En az ${EN_KISA_SIFRE} karakterlik yeni bir şifre girin. Kaydettikten sonra panele yönlendirileceksiniz.`,
-              en: `Enter a new password of at least ${EN_KISA_SIFRE} characters. After saving you will be taken to your dashboard.`,
+              tr: `${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} karakterlik yeni bir şifre girin; büyük harf, rakam ya da sembol zorunlu değil. Kaydettikten sonra panele yönlendirileceksiniz.`,
+              en: `Enter a new password of ${EN_KISA_SIFRE}–${EN_UZUN_SIFRE} characters; uppercase letters, numbers or symbols are not required. After saving you will be taken to your dashboard.`,
             })}
           </p>
         </div>

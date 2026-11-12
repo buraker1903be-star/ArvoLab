@@ -17,7 +17,10 @@ import {
   dogrudanCalistirildiMi,
   sistemAcicisiKur,
   argumanlariCoz,
+  baglantiKur,
   baglantiyiAc,
+  IZINLI_KOKLER,
+  VARSAYILAN_KOK,
   calistir,
   Dur,
   epostaGecerli,
@@ -256,6 +259,45 @@ describe("hedef kapıları (ağsız, anahtardan önce)", () => {
     for (const argv of [["--origin=https://kotu.example"], ["--origin=https://arvo-lab-git-entegrasyon-g1-tasarim-arvo-os.vercel.app.kotu.example"], ["sil"], ["olustur", "temizle"], ["--anahtar=x"]]) {
       assert.throws(() => argumanlariCoz(argv), Dur, argv.join(" "));
     }
+  });
+  test("G1-D: izinli kökler tam olarak üç; yalnızca g1d Preview'u eklendi, varsayılan değişmedi", () => {
+    const G1D = "https://arvo-lab-git-g1d-sifre-politikasi-arvo-os.vercel.app";
+    assert.deepEqual(IZINLI_KOKLER, ["https://arvo-lab-git-entegrasyon-g1-tasarim-arvo-os.vercel.app", "http://localhost:3000", G1D]);
+    assert.equal(VARSAYILAN_KOK, "https://arvo-lab-git-entegrasyon-g1-tasarim-arvo-os.vercel.app");
+    assert.equal(argumanlariCoz([]).kok, VARSAYILAN_KOK);
+    assert.equal(argumanlariCoz(["kurtarma", `--origin=${G1D}`]).kok, G1D);
+    // Üretim adresi ve alan adı yok; her kök ya yerel ya da arvo-os ekibinin Vercel Preview'u.
+    for (const k of IZINLI_KOKLER) {
+      const u = new URL(k);
+      assert.ok(u.hostname === "localhost" || (u.protocol === "https:" && /^arvo-lab-git-[a-z0-9-]+-arvo-os\.vercel\.app$/.test(u.hostname)), k);
+      assert.notEqual(u.hostname, "lab.arvo-os.com");
+      assert.equal(u.pathname, "/");
+    }
+    // Birebir eşleşme: benzer, uzatılmış, yollu, eğik çizgili, http ve başka dal adresleri reddedilir.
+    for (const kotu of [
+      `${G1D}/`,
+      `${G1D}/auth`,
+      `${G1D}.kotu.example`,
+      G1D.replace("https://", "http://"),
+      G1D.replace("arvo-os.vercel.app", "arvo-os.vercel.app:8443"),
+      "https://arvo-lab-git-g1d-sifre-politikasi-baska-arvo-os.vercel.app",
+      "https://arvo-lab-git-main-arvo-os.vercel.app",
+      "https://arvo-1ru0f9owj-arvo-os.vercel.app",
+      "https://lab.arvo-os.com",
+      "https://arvo-lab.vercel.app",
+    ]) {
+      assert.throws(() => argumanlariCoz(["kurtarma", `--origin=${kotu}`]), Dur, kotu);
+    }
+  });
+  test("G1-D: g1d kökünde kurtarma bağlantısı aynı kökte kalır ve yalnızca /reset-password'e gider", () => {
+    const G1D = "https://arvo-lab-git-g1d-sifre-politikasi-arvo-os.vercel.app";
+    const u = new URL(baglantiKur(G1D, SAHTE_TOKEN, "recovery"));
+    assert.equal(u.origin, G1D);
+    assert.equal(u.pathname, "/auth/confirm");
+    assert.equal(u.searchParams.get("type"), "recovery");
+    assert.equal(u.searchParams.get("next"), "/reset-password");
+    assert.equal(u.searchParams.get("token_hash"), SAHTE_TOKEN);
+    assert.deepEqual([...u.searchParams.keys()].sort(), ["next", "token_hash", "type"]);
   });
   test("anahtar: publishable ve başka projeye ait JWT reddedilir; eksikse ret", async () => {
     const jwt = (yuk: object) => `x.${Buffer.from(JSON.stringify(yuk)).toString("base64url")}.y`;

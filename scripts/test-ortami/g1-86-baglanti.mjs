@@ -127,7 +127,22 @@ import { ILK_SIFRE_YOLU } from "../../lib/ilk-sifre.ts";
 /* Test projesinin kimliği BİLEREK koda gömülü: ortam değişkeni yanlış girilse de hedef değişmez. */
 export const TEST_REF = "kyvjftrsweqjlgjeobnq";
 export const URETIM_REF = SABIT_URETIM_SUPABASE_REF;
-export const IZINLI_KOKLER = ["https://arvo-lab-git-entegrasyon-g1-tasarim-arvo-os.vercel.app", "http://localhost:3000"];
+/*
+  İZİNLİ BAĞLANTI KÖKLERİ. Doğrulama/kurtarma bağlantısı yalnızca bu
+  adreslerden birine kurulur; eşleşme BİREBİR (önek ya da alt alan adı
+  yetmez) ve varsayılan ilk eleman. Hepsi Supabase Test'e bağlı Vercel
+  Preview'ları ya da yerel geliştirme; üretim adresi (lab.arvo-os.com) yok
+  ve eklenmemeli.
+  G1-D (11.11.2026): g1d/sifre-politikasi dalının Preview'u eklendi. D1'in
+  (8–64 karakter, 72 bayt, yaygın şifre) gerçek Test kurtarma kabulü o
+  dalda; entegrasyon Preview'u hâlâ eski kuralı çalıştırıyor. Yalnızca
+  `--origin=` ile açıkça seçilince kullanılır; varsayılan değişmedi.
+*/
+export const IZINLI_KOKLER = [
+  "https://arvo-lab-git-entegrasyon-g1-tasarim-arvo-os.vercel.app",
+  "http://localhost:3000",
+  "https://arvo-lab-git-g1d-sifre-politikasi-arvo-os.vercel.app",
+];
 export const VARSAYILAN_KOK = IZINLI_KOKLER[0];
 export const EPOSTA_DESENI = /^arvolab-g1-86-(u1|u2)-\d{12}@example\.com$/;
 export const ROLLER = ["u1", "u2"];
