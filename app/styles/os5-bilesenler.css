@@ -152,6 +152,29 @@ html[data-theme="dark"] .arvolab-logo-koyu { display: block; }
    Dialog ve Secici'ye `gorunum="os5"` verilince eklenen sınıflar. Prop
    verilmezse bu sınıflar hiç yazılmaz; davranış (odak tuzağı, Esc, odak
    iadesi, klavye) iki görünümde de aynı koddan gelir. */
+/* Bildirim (Phase 2): formun üstündeki hata / uyarı / başarı kutusu. */
+.os5-bildirim {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--os5-kontrol-kenarlik);
+  border-radius: var(--os5-kontrol-r);
+  background: var(--os5-yuzey-duz);
+  color: var(--os5-kontrol-yazi);
+  font-family: var(--os5-font-govde);
+  font-size: var(--os5-fs-govde);
+  line-height: 1.5;
+}
+.os5-bildirim-simge { flex: none; margin-top: 1px; }
+.os5-bildirim-metin { min-width: 0; }
+.os5-bildirim[data-ton="hata"] { border-color: color-mix(in srgb, var(--os5-hata) 40%, transparent); background: var(--os5-hata-zemin); }
+.os5-bildirim[data-ton="hata"] .os5-bildirim-simge { color: var(--os5-hata); }
+.os5-bildirim[data-ton="uyari"] { border-color: color-mix(in srgb, var(--os5-uyari) 40%, transparent); background: var(--os5-uyari-zemin); }
+.os5-bildirim[data-ton="uyari"] .os5-bildirim-simge { color: var(--os5-uyari); }
+.os5-bildirim[data-ton="basari"] { border-color: color-mix(in srgb, var(--os5-basari) 40%, transparent); background: var(--os5-basari-zemin); }
+.os5-bildirim[data-ton="basari"] .os5-bildirim-simge { color: var(--os5-basari); }
+
 .drawer.os5-pencere { border-radius: var(--os5-r-kart); box-shadow: var(--os5-golge-katman); font-family: var(--os5-font-govde); }
 .drawer.os5-pencere .drawer-header h2 { font-size: var(--os5-fs-form-baslik); font-weight: 600; }
 .secici.os5-secici .secici-dugme { min-height: var(--os5-kontrol-h); border-radius: var(--os5-kontrol-r); border-color: var(--os5-kontrol-kenarlik); background: var(--os5-kontrol-zemin); font-family: var(--os5-font-govde); }

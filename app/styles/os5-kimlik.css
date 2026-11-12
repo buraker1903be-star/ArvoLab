@@ -1,0 +1,278 @@
+/*
+  SIGNATURE OS 5 — KİMLİK EKRANLARI (Phase 2, 12.11.2026).
+
+  Giriş, kayıt, şifremi unuttum, yeni şifre ve bağlantı onayı aynı
+  iskeleti kullanır (app/_components/kimlik/kimlik-yerlesimi.tsx).
+  Referans: onaylı Paddle giriş ekranı. Solda yaklaşık yarım genişlikte
+  lacivert marka alanı, sağda 400 px'lik tek sütun form; kart yok, gölge
+  yok, süs yok. Hiyerarşi tipografiden ve boşluktan gelir.
+
+  Yalnızca "os5-kimlik" önekli sınıflar (tests/unit/os5-kimlik.test.ts
+  denetler): eski auth.css sınıfları 404 sayfasında kullanılmaya devam
+  ediyor ve bu dosya onlara dokunmaz. Renk ve ölçü os5-tokens.css'ten;
+  ham renk yok.
+*/
+
+.os5-kimlik {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--os5-kimlik-form-zemin);
+  color: var(--os5-kontrol-yazi);
+  font-family: var(--os5-font-govde);
+}
+
+/* ---- Marka alanı ---- */
+.os5-kimlik-marka {
+  order: -1;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--os5-bolum-aralik);
+  height: 100vh;
+  height: 100dvh;
+  padding: 40px clamp(32px, 5vw, 72px);
+  background: var(--os5-kimlik-marka-zemin);
+  color: var(--os5-kimlik-marka-yazi);
+}
+/* Logo kutusu base/os5-bilesenler'deki 4,22 : 1 oranını --logo-h'den alır. */
+.os5-kimlik-logo { --logo-h: 38px; }
+.os5-kimlik-marka-govde { display: grid; gap: 16px; max-width: 440px; }
+.os5-kimlik-marka-baslik {
+  margin: 0;
+  font-family: var(--os5-font-vurgu);
+  font-size: clamp(30px, 3.1vw, 42px);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -.012em;
+  text-wrap: balance;
+}
+.os5-kimlik-marka-metin {
+  margin: 0;
+  color: var(--os5-kimlik-marka-soluk);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* ---- Yasal satır: marka alanının dibinde (masaüstü), formun altında (telefon) ---- */
+.os5-kimlik-yasal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: var(--os5-fs-meta);
+  line-height: 1.5;
+}
+.os5-kimlik-yasal a { color: inherit; text-decoration: none; }
+.os5-kimlik-yasal a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.os5-kimlik-yasal a:focus-visible { outline: none; border-radius: 2px; box-shadow: var(--os5-odak-halka); }
+.os5-kimlik-yasal--marka { color: var(--os5-kimlik-marka-soluk); }
+.os5-kimlik-yasal--form { display: none; color: var(--os5-kontrol-ipucu); }
+
+/* ---- Form alanı ---- */
+.os5-kimlik-form {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 20px clamp(20px, 4vw, 48px);
+}
+.os5-kimlik-arac { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: var(--os5-kontrol-h); }
+.os5-kimlik-icerik {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: var(--os5-bolum-aralik) 0;
+}
+.os5-kimlik-kutu { width: min(100%, var(--os5-form-genislik)); }
+
+/* Dil seçici ve tema düğmesi: sessiz, ince kenarlıklı; 40 px. */
+.os5-kimlik-dil { display: flex; align-items: center; gap: 4px; }
+.os5-kimlik-dil small { display: none; }
+.os5-kimlik-dil button,
+.os5-kimlik-simge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--os5-kontrol-h);
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--os5-kontrol-r);
+  background: transparent;
+  color: var(--os5-kontrol-ipucu);
+  font: inherit;
+  font-size: var(--os5-fs-govde);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--os5-sure-hizli) var(--os5-egri), color var(--os5-sure-hizli) var(--os5-egri);
+}
+.os5-kimlik-simge { width: var(--os5-kontrol-h); padding: 0; }
+.os5-kimlik-dil button:hover,
+.os5-kimlik-simge:hover { background: var(--os5-dugme-ikincil-hover); color: var(--os5-kontrol-yazi); }
+.os5-kimlik-dil button[aria-pressed="true"] { border-color: var(--os5-kontrol-kenarlik); color: var(--os5-kontrol-yazi); }
+.os5-kimlik-dil button:focus-visible,
+.os5-kimlik-simge:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.os5-kimlik-dil button:disabled { cursor: progress; opacity: .6; }
+
+/* ---- Başlık ---- */
+.os5-kimlik-baslik { display: grid; gap: 8px; margin-bottom: 28px; }
+.os5-kimlik-baslik h1,
+.os5-kimlik-baslik h2 {
+  margin: 0;
+  color: var(--os5-kontrol-yazi);
+  font-family: var(--os5-font-vurgu);
+  font-size: var(--os5-fs-sayfa);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -.01em;
+}
+.os5-kimlik-baslik p { margin: 0; color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-govde); line-height: 1.55; }
+
+/* ---- Form ---- */
+.os5-kimlik-bildirimler { display: grid; gap: 10px; margin-bottom: var(--os5-alan-aralik); }
+.os5-kimlik-formu { display: grid; gap: var(--os5-alan-aralik); }
+/*
+  Odaklanan alan klavyenin ve üst kenarın altında kalmasın: telefonda
+  klavye açılınca tarayıcı alanı görünür yapar, bu pay hata metnini de
+  (alanın altında) görünür alana alır.
+*/
+.os5-kimlik input,
+.os5-kimlik button { scroll-margin-block: 96px; }
+.os5-kimlik-sifre { display: grid; gap: 8px; }
+.os5-kimlik-satir { display: flex; justify-content: flex-end; }
+
+.os5-kimlik-baglanti,
+.os5-kimlik-geri,
+.os5-kimlik-metin-baglanti {
+  border-radius: 2px;
+  color: var(--primary-ink);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+.os5-kimlik-baglanti { font-size: var(--os5-fs-meta); text-decoration: none; }
+.os5-kimlik-baglanti:hover { text-decoration: underline; }
+.os5-kimlik-baglanti:focus-visible,
+.os5-kimlik-geri:focus-visible,
+.os5-kimlik-metin-baglanti:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.os5-kimlik-geri {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--os5-kontrol-h-dokunma);
+  margin-top: 20px;
+  color: var(--os5-kontrol-ipucu);
+  font-size: var(--os5-fs-govde);
+  text-decoration: none;
+}
+.os5-kimlik-geri:hover { color: var(--primary-ink); }
+.os5-kimlik-metin-baglanti { display: inline; padding: 0; border: 0; background: none; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.os5-kimlik-not { margin: 16px 0 0; color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-govde); line-height: 1.55; }
+
+/* ---- Girişin altındaki kayıt bölümü ---- */
+.os5-kimlik-kayit {
+  display: grid;
+  gap: 10px;
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid var(--os5-yuzey-cizgi);
+}
+.os5-kimlik-kayit h2 { margin: 0; color: var(--os5-kontrol-yazi); font-size: var(--os5-fs-govde); font-weight: 600; }
+.os5-kimlik-kayit p { margin: 0 0 4px; color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-govde); }
+.os5-kimlik-kayit small { color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-meta); line-height: 1.5; }
+
+/* ---- Kayıt formu ---- */
+/*
+  Tek sütun, sayfada da pencerede de (pencere 520 px). Eskiden alanlar
+  ikişerliydi (e-posta + telefon, şifre + tekrar); tek sütun Paddle
+  referansındaki okuma sırasını izliyor ve hata metni hep alanın altında.
+*/
+.os5-kimlik-onaylar {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 0 0;
+  border: 0;
+  border-top: 1px solid var(--os5-yuzey-cizgi);
+}
+/* Uzun onay metni çok satıra kırılır: kutu ilk satırla hizalı kalsın. */
+.os5-kimlik-onaylar .os5-onay { align-items: flex-start; padding: 8px 0; line-height: 1.5; }
+.os5-kimlik-onaylar .os5-onay input { margin-top: 2px; }
+.os5-kimlik-onaylar .os5-onay > span { display: block; min-width: 0; }
+.os5-kimlik-onaylar .os5-aciklama { display: block; margin-top: 4px; }
+.os5-kimlik-etiketcik {
+  color: var(--os5-kontrol-ipucu);
+  font-size: var(--os5-fs-en-kucuk);
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+/* Sözleşme okuyucu: kayıt formunun yerine açılır. */
+.os5-kimlik-okuyucu { display: grid; gap: 12px; }
+.os5-kimlik-okuyucu-baslik { display: flex; align-items: center; gap: 10px; color: var(--primary-ink); }
+.os5-kimlik-okuyucu-baslik h2 { margin: 0; color: var(--os5-kontrol-yazi); font-size: var(--os5-fs-form-baslik); font-weight: 600; }
+.os5-kimlik-okuyucu-baslik small { color: var(--os5-kontrol-ipucu); font-size: var(--os5-fs-meta); }
+.os5-kimlik-okuyucu-metin {
+  max-height: min(52dvh, 460px);
+  border: 1px solid var(--os5-kontrol-kenarlik);
+  border-radius: var(--os5-kontrol-r);
+}
+.os5-kimlik-okuyucu-dugmeler { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+
+/* Kayıt tamamlandı: posta kutusuna bakın. */
+.os5-kimlik-tamam { display: grid; gap: 4px; }
+.os5-kimlik-tamam .os5-kimlik-baslik { margin-bottom: 4px; }
+.os5-kimlik-tamam .os5-dugme { margin-top: 20px; }
+.os5-kimlik-tamam-simge {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 16px;
+  border-radius: var(--os5-r-kart-secim);
+  background: var(--os5-basari-zemin);
+  color: var(--os5-basari);
+}
+
+/* ---- Koyu tema ---- */
+/*
+  Ters çevirme değil: marka alanı en derin laciverte iner (token), iki
+  koyu yüzey arasına ince bir çizgi girer; form zemini sayfa zemini,
+  kontroller bir ton açık (os5-tokens.css --os5-kontrol-zemin).
+*/
+html[data-theme="dark"] .os5-kimlik-marka { border-right: 1px solid var(--os5-yuzey-cizgi); }
+
+/* ---- Tablet ve telefon: tek sütun, marka alanı ince şerit ---- */
+@media (max-width: 900px) {
+  /* Satırlar auto + 1fr: yoksa artan yükseklik iki satıra bölünüyor ve marka şeridi uzuyordu. */
+  .os5-kimlik { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .os5-kimlik-marka {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    height: auto;
+    padding: 14px 20px;
+  }
+  .os5-kimlik-logo { --logo-h: 30px; }
+  .os5-kimlik-marka-govde,
+  .os5-kimlik-yasal--marka { display: none; }
+  html[data-theme="dark"] .os5-kimlik-marka { border-right: 0; border-bottom: 1px solid var(--os5-yuzey-cizgi); }
+
+  .os5-kimlik-form { min-height: 0; padding: 12px 20px 24px; }
+  /* Form ilk ekranda başlasın: dikey ortalama telefonda başlığı aşağı itiyordu. */
+  .os5-kimlik-icerik { align-items: flex-start; padding: 16px 0 32px; }
+  .os5-kimlik-yasal--form { display: flex; justify-content: center; padding-top: 8px; }
+}
+
+@media (max-width: 760px) {
+  .os5-kimlik-form { padding-inline: 16px; }
+  .os5-kimlik-baslik { margin-bottom: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os5-kimlik-dil button,
+  .os5-kimlik-simge { transition: none; }
+}

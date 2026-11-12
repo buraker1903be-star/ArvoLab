@@ -39,6 +39,9 @@
   --os5-hata-zemin: var(--danger-soft);
   --os5-basari: var(--secondary);
   --os5-basari-zemin: var(--secondary-soft);
+  /* Uyarı (Phase 2): hata değil ama dikkat isteyen bilgi (ör. başka cihazdan giriş). */
+  --os5-uyari: var(--warning);
+  --os5-uyari-zemin: var(--warning-soft);
 
   /* Düğmeler */
   --os5-dugme-birincil: var(--primary);
@@ -60,6 +63,13 @@
   --os5-r-kart-secim: 10px;
   --os5-r-kart: 16px;
   --os5-r-rozet: 999px;
+
+  /* Kimlik ekranları (Phase 2): sol marka alanı ve sağ form alanı. */
+  --os5-kimlik-marka-zemin: var(--brand-900);
+  --os5-kimlik-marka-yazi: var(--n-0);
+  --os5-kimlik-marka-soluk: var(--sidebar-muted);
+  --os5-kimlik-marka-cizgi: var(--sidebar-line);
+  --os5-kimlik-form-zemin: var(--surface-raised);
 
   /* Kabuk (Phase 3'te kullanılacak; şimdiden tek yerde). */
   --os5-kenar-genis: 240px;
@@ -109,6 +119,15 @@ html[data-theme="dark"] {
   --os5-dugme-ikincil-hover: var(--surface-raised);
   /* Vurgu kartı koyu temada da koyu, ama sayfa zemininden bir ton açık ki ayrışsın. */
   --os5-vurgu-kart: var(--gece-750);
+  /*
+    Kimlik ekranı koyu temada TERS ÇEVRİLMEZ: marka alanı en derin
+    laciverte iner, form alanı sayfa zeminine. Açık temada form beyazdı ve
+    marka alanı ondan ayrışıyordu; koyuda iki lacivert yan yana kaynaşmasın
+    diye aralarına ince bir çizgi girer (os5-kimlik.css) ve marka alanı
+    form zemininden belirgin biçimde koyu kalır.
+  */
+  --os5-kimlik-marka-zemin: var(--brand-950);
+  --os5-kimlik-form-zemin: var(--bg);
   --os5-golge-katman: 0 16px 40px -12px color-mix(in srgb, var(--n-1000, var(--brand-950)) 60%, transparent);
 }
 

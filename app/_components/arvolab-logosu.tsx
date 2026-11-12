@@ -27,9 +27,27 @@ import Image from "next/image";
   Gizli olan `display: none` olduğu için ekran okuyucu tek logo okur.
 
   Logo bir bağlantının içindeyse adı bağlantı taşır: alt="" verin.
+
+  `zemin="koyu"` (Signature OS 5, Phase 2): logo temadan bağımsız olarak
+  koyu bir yüzeyin üstündeyse (kimlik ekranının lacivert marka alanı)
+  yalnızca koyu varyant çizilir. Tema seçimi burada yanlış olurdu: açık
+  temada lacivert ARVO lacivert zeminde kaybolurdu.
 */
-export default function ArvoLabLogosu({ className, alt = "ArvoLab", oncelikli = false }: { className?: string; alt?: string; oncelikli?: boolean }) {
+export default function ArvoLabLogosu({
+  className,
+  alt = "ArvoLab",
+  oncelikli = false,
+  zemin = "tema",
+}: {
+  className?: string;
+  alt?: string;
+  oncelikli?: boolean;
+  zemin?: "tema" | "koyu";
+}) {
   const sinif = (tema: string) => (className ? `arvolab-logo ${tema} ${className}` : `arvolab-logo ${tema}`);
+  if (zemin === "koyu") {
+    return <Image className={className ? `arvolab-logo ${className}` : "arvolab-logo"} src="/arvolab-logo-koyu.png" alt={alt} width={1920} height={1080} sizes="200px" priority={oncelikli} />;
+  }
   return (
     <>
       <Image className={sinif("arvolab-logo-acik")} src="/arvolab-logo.png" alt={alt} width={1920} height={1080} sizes="(max-width: 760px) 140px, 180px" priority={oncelikli} />

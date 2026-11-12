@@ -8,3 +8,4 @@ export { Secim } from "./secim";
 export { MetinAlani } from "./metin-alani";
 export { Sekmeler, type Sekme } from "./sekmeler";
 export { Durum } from "./durum";
+export { Bildirim, type BildirimTonu } from "./bildirim";
