@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { ortamGirdisi, supabaseOrtamKarari } from "@/lib/supabase/ortam-guvenligi";
 import { NextResponse, type NextRequest } from "next/server";
 import { DIL_CEREZI, ilkZiyaretDili } from "@/lib/dil";
 import { BASKA_CIHAZ_BILGISI, baskaCihazdanKapatildiMi, oturumCereziMi } from "@/lib/tek-oturum";
@@ -32,6 +33,16 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !supabaseKey) return dilCereziniYaz(NextResponse.next({ request }));
+  /*
+    Ortam güvenliği (lib/supabase/ortam-guvenligi.ts): oturum yenileme de bir
+    bağlantıdır. Ret varsa hiçbir istek Supabase'e gitmez; 503 ve ayrıntısız
+    metin (değişken adları ve kimlikler yalnızca sunucu günlüğünde).
+  */
+  const ortamKarari = supabaseOrtamKarari(ortamGirdisi(process.env, process.env.ARVOLAB_DAGITIM_ORTAMI));
+  if (ortamKarari.tur === "red") {
+    console.error(`[supabase-ortam] ${ortamKarari.mesaj} (${ortamKarari.neden})`);
+    return new NextResponse("Hizmet yapılandırması doğrulanamadı. / Service configuration could not be verified.", { status: 503, headers: { "content-type": "text/plain; charset=utf-8" } });
+  }
 
   // getUser oturumu reddedince çerezi kendisi siler; "çerez vardı mı" ondan ÖNCE okunur (lib/tek-oturum.ts).
   const oturumCereziVardi = request.cookies.getAll().some((c) => oturumCereziMi(c.name));
