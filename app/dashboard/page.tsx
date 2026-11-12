@@ -545,18 +545,22 @@ export default async function DashboardPage() {
     gösteriyor, kalan maddelere ulaşmanın yolu yoktu (bağımsız inceleme).
     Fazlası "ilk N" notu ve teslim kontrolüne giden bağlantıyla söyleniyor.
   */
+  // Tutarsızlıklar (en çok 2) BAŞTA: taşan kısım yalnızca teslim kontrol
+  // listesindeki maddelerden oluşsun, "Bütün teslim kontrolü" bağlantısı
+  // gizlenenlerin hepsini açabilsin. Eskiden tutarsızlıklar sondaydı ve
+  // ilk kesilenler onlar oluyordu; o bağlantı onları göstermiyordu.
   const teslimKalanlariTam = [
-    ...readinessGaps.map((madde) => ({
-      anahtar: madde.id,
-      baslik: madde.label,
-      alt: madde.detail ?? "",
-      href: `/dashboard/editor/${resume?.id}/write?teslim=${madde.id}`,
-    })),
     ...resumeTutarsizliklari.map((sorun) => ({
       anahtar: `tutarsizlik-${sorun.tur}`,
       baslik: sorun.baslik,
       alt: sorun.aciklama,
       href: calismaAdresi(resume?.id ?? ""),
+    })),
+    ...readinessGaps.map((madde) => ({
+      anahtar: madde.id,
+      baslik: madde.label,
+      alt: madde.detail ?? "",
+      href: `/dashboard/editor/${resume?.id}/write?teslim=${madde.id}`,
     })),
   ];
   const teslimKalanlari = teslimKalanlariTam.slice(0, GENEL_BAKIS_SATIR);

@@ -93,8 +93,12 @@ describe("bağımsız incelemede yakalananlar (Phase 4 kabulü)", () => {
   test("gecikmiş kilometre taşı ayrı tonda", () => {
     assert.match(css, /\.os5-ana-satir\[data-durum="gecikti"\]/);
   });
+  test("tutarsızlıklar listede başta: taşan kısım yalnızca teslim kontrol listesinde (bağlantı hepsini açar)", () => {
+    const blok = sayfa.slice(sayfa.indexOf("const teslimKalanlariTam = ["), sayfa.indexOf("const teslimKalanlari = "));
+    assert.ok(blok.indexOf("resumeTutarsizliklari") < blok.indexOf("readinessGaps"));
+  });
   test("'Teslim için kalanlar' tam listeden kuruluyor; fazlası notla ve bağlantıyla söyleniyor", () => {
-    assert.match(sayfa, /const teslimKalanlariTam = \[\s*\.\.\.readinessGaps\.map/);
+    assert.match(sayfa, /const teslimKalanlariTam = \[\s*\.\.\.resumeTutarsizliklari\.map[\s\S]*?\.\.\.readinessGaps\.map/);
     assert.match(sayfa, /const teslimKalanSayisi = teslimKalanlariTam\.length;/);
     assert.match(sayfa, /teslimKalanSayisi > teslimKalanlari\.length \? t\(\{ tr: `ilk \$\{teslimKalanlari\.length\} gösteriliyor`/);
     assert.match(sayfa, /href=\{teslimKalanSayisi > teslimKalanlari\.length \? `\/dashboard\/editor\/\$\{resume\.id\}\/write\?teslim=liste`/);
