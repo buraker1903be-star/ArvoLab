@@ -23,7 +23,10 @@
 -- kilit işlem sonuna kadar sürer. Aynı anahtara gelen eşzamanlı çağrı
 -- kendi upsert'ünde bekler ve sırası gelince güncel satırı okur. Böylece
 -- verilen toplam hiçbir koşulda sınırı aşmaz (tests/db ve
--- scripts/eszamanli-hiz-siniri.sh).
+-- scripts/eszamanli-hiz-siniri.sh). Bu, Supabase'in varsayılan READ
+-- COMMITTED yalıtımına dayanır: REPEATABLE READ/SERIALIZABLE altında
+-- eşzamanlı çağrı serileştirme hatası alır; uygulama o durumda hatayı
+-- sayaç arızası sayıp açık kalır ve günlüğe yazar (lib/doi-sorgu-siniri.ts).
 --
 -- Tablo ve mevcut işlevler DEĞİŞMİYOR; şifre sıfırlama ve öteki sınırlar
 -- etkilenmez. Yalnızca service_role çağırabilir.

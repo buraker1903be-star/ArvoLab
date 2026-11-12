@@ -151,7 +151,7 @@ export default function DoiEkleKutusu({
             <CircleAlert size={14} aria-hidden="true" />
             <span>
               {durum.saat
-                ? t({ tr: `Saatlik DOI hakkınız doldu; ${durum.saat}'de yenilenir. Kaynağı elle de ekleyebilirsiniz.`, en: `You've reached your hourly DOI limit; it resets at ${durum.saat}. You can also add the source manually.` })
+                ? t({ tr: `Saatlik DOI hakkınız doldu (yenilenme saati: ${durum.saat}). Kaynağı elle de ekleyebilirsiniz.`, en: `You've reached your hourly DOI limit; it resets at ${durum.saat}. You can also add the source manually.` })
                 : t({ tr: "Saatlik DOI hakkınız doldu; biraz sonra yeniden deneyin. Kaynağı elle de ekleyebilirsiniz.", en: "You've reached your hourly DOI limit; try again a little later. You can also add the source manually." })}
             </span>
           </p>

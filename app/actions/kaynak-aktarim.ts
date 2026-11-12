@@ -252,7 +252,8 @@ export async function doiIleEkle(
   // Çekilenleri listedeki sıraya koy: başlık+yıl çakışmasında "ilk gelen" kullanıcının sırasındaki ilk olsun.
   cekilenler.sort((a, b) => plan.sira.indexOf(a.doi) - plan.sira.indexOf(b.doi));
 
-  const { yazilacak, baslikCakisan } = kayitPlani(cekilenler, h.anahtarlar);
+  const { yazilacak, baslikCakisan, doiCakisan } = kayitPlani(cekilenler, h.anahtarlar);
+  for (const k of doiCakisan) sonuclar.push({ doi: k.doi, durum: "vardi", baslik: k.taslak.title });
   for (const k of baslikCakisan) sonuclar.push({ doi: k.doi, durum: "vardi_baslik", baslik: k.taslak.title });
 
   let kayitHatasi: string | undefined;

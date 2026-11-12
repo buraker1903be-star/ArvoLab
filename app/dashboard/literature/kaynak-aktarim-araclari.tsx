@@ -5,7 +5,7 @@ import { cslKaynakca } from "@/app/actions/csl";
 import { useRouter } from "next/navigation";
 import { Copy, Download, FileUp } from "lucide-react";
 import { doiIleEkle, kaynaklariIceAktar } from "@/app/actions/kaynak-aktarim";
-import { yenilenmeSaati, type DoiOzeti, type DoiSonucu } from "@/lib/doi-toplu";
+import { YENIDEN_DENENEBILIR, yenilenmeSaati, type DoiOzeti, type DoiSonucu } from "@/lib/doi-toplu";
 import type { LiteratureSource } from "@/app/actions/literature";
 import {
   bibtexYaz,
@@ -187,11 +187,33 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
             (T3): hak ortak (tekli + toplu, saatte 120), sıra kullanıcınınki. */}
         {doiOzeti && doiOzeti.ertelenen > 0 ? (
           <p className="callout" data-tone="warning" role="status">
+            {/* Ek kullanılmıyor ("12'si", "14:30'da"): sayıya göre değişen
+                Türkçe ek sabit yazılınca yanlış çıkıyordu. */}
             {t({
-              tr: `${doiOzeti.istenen} DOI'den ${doiOzeti.sorgulanan}'i sorgulandı; kalan ${doiOzeti.ertelenen} DOI bu turda sorgulanmadı.${saat ? ` Saatlik hakkınız ${saat}'de yenilenir.` : ""} Aynı listeyi yeniden ekleyebilirsiniz: eklenenler tekrar eklenmez ve hak harcamaz.`,
-              en: `${doiOzeti.sorgulanan} of ${doiOzeti.istenen} DOIs were looked up; the remaining ${doiOzeti.ertelenen} weren't looked up this time.${saat ? ` Your hourly limit resets at ${saat}.` : ""} You can add the same list again: added sources won't be duplicated and won't use up your limit.`,
+              tr: `Sorgulanan: ${doiOzeti.sorgulanan} / ${doiOzeti.istenen} DOI. Bu turda sorgulanmayan: ${doiOzeti.ertelenen}.${saat ? ` Saatlik hakkın yenilenme saati: ${saat}.` : ""}`,
+              en: `Looked up: ${doiOzeti.sorgulanan} of ${doiOzeti.istenen} DOIs. Not looked up this time: ${doiOzeti.ertelenen}.${saat ? ` Your hourly limit resets at ${saat}.` : ""}`,
             })}
           </p>
+        ) : null}
+        {/* Yeniden denemede YALNIZCA sonucu değişebilecekler gönderilsin:
+            eklenenler zaten atlanır, ama "bulunamadı" ve başlık çakışması
+            tekrar sorgulanıp hak harcar (bağımsız inceleme; eski metin
+            listenin tamamını yeniden eklemenin bütçe tüketmediğini söylüyordu). */}
+        {doiSonuclari && doiSonuclari.some((s) => YENIDEN_DENENEBILIR.has(s.durum)) ? (
+          <button
+            type="button"
+            className="projects-filter-button button-compact"
+            onClick={() => {
+              setDoiMetni(doiSonuclari.filter((s) => YENIDEN_DENENEBILIR.has(s.durum)).map((s) => s.doi).join("\n"));
+              setDoiSonuclari(null);
+              setDoiOzeti(null);
+            }}
+          >
+            {t({
+              tr: `Yeniden denenecek ${doiSonuclari.filter((s) => YENIDEN_DENENEBILIR.has(s.durum)).length} DOI'yi kutuya koy`,
+              en: `Put the ${doiSonuclari.filter((s) => YENIDEN_DENENEBILIR.has(s.durum)).length} DOIs to retry in the box`,
+            })}
+          </button>
         ) : null}
         {doiSonuclari ? (
           <ul className="secim-listesi">

@@ -5,6 +5,7 @@ import {
   doiAnahtari,
   doiListesiniHazirla,
   kayitPlani,
+  YENIDEN_DENENEBILIR,
   rezervasyonuBol,
   sirala,
   yenilenmeSaati,
@@ -112,10 +113,39 @@ describe("D1: başlık+yıl çakışması ayrı durum, farklı DOI'ler birleşti
     ], new Set());
     assert.equal(p.yazilacak.length, 2);
   });
+  test("Crossref farklı (takma ad) bir DOI döndürüp o DOI zaten varsa: başlık çakışması değil, DOI eşleşmesi", () => {
+    const mevcut = new Set([doiAnahtari("10.1000/kanonik")]);
+    const p = kayitPlani([{ doi: "10.1000/takma", taslak: taslak("Başka Başlık", "2020", "10.1000/kanonik") }], mevcut);
+    assert.deepEqual(p.doiCakisan.map((k) => k.doi), ["10.1000/takma"]);
+    assert.equal(p.baslikCakisan.length, 0);
+    assert.equal(p.yazilacak.length, 0);
+  });
+  test("aynı listede iki girdi aynı kanonik DOI'ye çıkarsa ikincisi DOI eşleşmesi", () => {
+    const p = kayitPlani([
+      { doi: "10.1000/a", taslak: taslak("X", "2020", "10.1000/k") },
+      { doi: "10.1000/b", taslak: taslak("Y", "2021", "10.1000/k") },
+    ], new Set());
+    assert.deepEqual(p.yazilacak.map((k) => k.doi), ["10.1000/a"]);
+    assert.deepEqual(p.doiCakisan.map((k) => k.doi), ["10.1000/b"]);
+  });
   test("kayitPlani çağıranın kümesini değiştirmez", () => {
     const mevcut = new Set<string>();
     kayitPlani([{ doi: "10.1000/x", taslak: taslak("A", "2020", "10.1000/x") }], mevcut);
     assert.equal(mevcut.size, 0);
+  });
+});
+
+describe("yeniden deneme", () => {
+  test("yalnızca sonucu değişebilecekler yeniden denenir; bulunamadı ve başlık çakışması hak harcamasın diye dışarıda", () => {
+    assert.deepEqual([...YENIDEN_DENENEBILIR].sort(), ["ertelendi", "hata", "kaydedilemedi"]);
+    for (const d of ["eklendi", "vardi", "vardi_baslik", "bulunamadi"] as const) assert.equal(YENIDEN_DENENEBILIR.has(d), false, d);
+  });
+  test("ekran 'hak harcamaz' sözü vermiyor ve sayıya ek eklemiyor", () => {
+    const ekran = readFileSync("app/dashboard/literature/kaynak-aktarim-araclari.tsx", "utf8");
+    assert.doesNotMatch(ekran, /hak harcamaz/);
+    assert.doesNotMatch(ekran, /\$\{(saat|doiOzeti\.sorgulanan)\}'/);
+    const kutu = readFileSync("app/dashboard/literature/doi-ekle-kutusu.tsx", "utf8");
+    assert.doesNotMatch(kutu, /\$\{durum\.saat\}'/);
   });
 });
 
@@ -159,6 +189,7 @@ describe("doiIleEkle: ortak bütçe, D1 ve D2 (eylem kaynağı)", () => {
     assert.ok(eklendi > yazim, "eklendi kayıttan önce yazılıyor");
     assert.match(govde, /\} else \{\s*for \(const k of yazilacak\) sonuclar\.push\(\{ doi: k\.doi, durum: "eklendi"/);
     assert.match(govde, /for \(const k of baslikCakisan\) sonuclar\.push\(\{ doi: k\.doi, durum: "vardi_baslik"/);
+    assert.match(govde, /for \(const k of doiCakisan\) sonuclar\.push\(\{ doi: k\.doi, durum: "vardi"/);
   });
 
   test("D2: kayıt hatasında DOI başına sonuçlar ve özet de döner", () => {

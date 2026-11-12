@@ -104,8 +104,16 @@ export function kayitPlani(cekilenler: readonly CekilenKayit[], mevcutAnahtarlar
   const anahtarlar = new Set(mevcutAnahtarlar);
   const yazilacak: CekilenKayit[] = [];
   const baslikCakisan: CekilenKayit[] = [];
+  /* Crossref yapıştırılandan FARKLI (kanonik/takma ad) bir DOI döndürebilir
+     ve o DOI çalışmada ya da listede daha önce olabilir: bu bir DOI
+     eşleşmesidir, "aynı başlık ve yıl" değil (bağımsız inceleme). */
+  const doiCakisan: CekilenKayit[] = [];
   for (const kayit of cekilenler) {
     const kendi = kaynakAnahtarlari(kayit.taslak);
+    if (kendi.some((a) => a.startsWith("doi:") && anahtarlar.has(a))) {
+      doiCakisan.push(kayit);
+      continue;
+    }
     if (kendi.some((a) => anahtarlar.has(a))) {
       baslikCakisan.push(kayit);
       continue;
@@ -113,8 +121,11 @@ export function kayitPlani(cekilenler: readonly CekilenKayit[], mevcutAnahtarlar
     kendi.forEach((a) => anahtarlar.add(a));
     yazilacak.push(kayit);
   }
-  return { yazilacak, baslikCakisan };
+  return { yazilacak, baslikCakisan, doiCakisan };
 }
+
+/** Yeniden denendiğinde sonucu değişebilecek durumlar (bulunamadı ve başlık çakışması değişmez). */
+export const YENIDEN_DENENEBILIR: ReadonlySet<DoiDurumu> = new Set(["ertelendi", "hata", "kaydedilemedi"]);
 
 /** Sonuçları kullanıcının yapıştırdığı sıraya göre diz. */
 export function sirala(sonuclar: readonly DoiSonucu[], sira: readonly string[]): DoiSonucu[] {
