@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { cslKaynakca } from "@/app/actions/csl";
 import { useRouter } from "next/navigation";
 import { Copy, Download, FileUp } from "lucide-react";
-import { doiIleEkle, kaynaklariIceAktar, type DoiSonucu } from "@/app/actions/kaynak-aktarim";
+import { doiIleEkle, kaynaklariIceAktar } from "@/app/actions/kaynak-aktarim";
+import { yenilenmeSaati, type DoiOzeti, type DoiSonucu } from "@/lib/doi-toplu";
 import type { LiteratureSource } from "@/app/actions/literature";
 import {
   bibtexYaz,
@@ -38,6 +39,7 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
   const [dosyaHatasi, setDosyaHatasi] = useState<string | null>(null);
   const [doiMetni, setDoiMetni] = useState("");
   const [doiSonuclari, setDoiSonuclari] = useState<DoiSonucu[] | null>(null);
+  const [doiOzeti, setDoiOzeti] = useState<DoiOzeti | null>(null);
   const [bekliyor, basla] = useTransition();
 
   // Sunucuyla aynı kural (app/actions/kaynak-aktarim.ts): DOI ya da başlık+yıl eşleşmesi tekrardır.
@@ -81,8 +83,13 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
   const doileriEkle = () =>
     basla(async () => {
       const r = await doiIleEkle(projectId, doilar);
+      /* Kayıt hatasında da DOI başına sonuçlar gösterilir (D2): eskiden
+         yalnızca hata metni kalıyor, hangi DOI'nin ne olduğu kayboluyordu. */
+      if (r.sonuclar) {
+        setDoiSonuclari(r.sonuclar);
+        setDoiOzeti(r.ozet ?? null);
+      }
       if (r.error) return showToast("error", r.error);
-      setDoiSonuclari(r.sonuclar ?? []);
       const eklenen = (r.sonuclar ?? []).filter((s) => s.durum === "eklendi").length;
       if (eklenen) {
         showToast("success", t({ tr: `${eklenen} kaynak eklendi.`, en: `${eklenen} ${eklenen === 1 ? "source" : "sources"} added.` }));
@@ -95,7 +102,18 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
     vardi: { tr: "zaten listede", en: "already in your list" },
     bulunamadi: { tr: "Crossref'te bulunamadı", en: "not found in Crossref" },
     hata: { tr: "şu an alınamadı, yeniden deneyin", en: "couldn't be fetched right now, try again" },
+    vardi_baslik: { tr: "aynı başlık ve yıl listede var; eklenmedi", en: "same title and year already in your list; not added" },
+    ertelendi: { tr: "bu turda sorgulanmadı; yeniden deneyin", en: "not looked up this time; try again" },
+    kaydedilemedi: { tr: "kaydedilemedi, yeniden deneyin", en: "couldn't be saved, try again" },
   };
+  const DURUM_TONU: Partial<Record<DoiSonucu["durum"], string>> = { eklendi: "success", vardi: undefined, kaydedilemedi: "danger" };
+  const durumAdi = (s: DoiSonucu): Metin =>
+    s.durum === "ertelendi" && s.neden === "hak"
+      ? { tr: "saatlik DOI hakkı doldu; sonra yeniden deneyin", en: "hourly DOI limit reached; try again later" }
+      : s.durum === "ertelendi" && s.neden === "sure"
+        ? { tr: "süre doldu; yeniden deneyin", en: "ran out of time; try again" }
+        : DURUM_ADI[s.durum];
+  const saat = yenilenmeSaati(doiOzeti?.yenilenme, YEREL[dil]);
 
   return (
     <div className="pencere-iki-kart">
@@ -156,7 +174,7 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
             en: `Paste one or more DOIs (one per line; link format works too). Reference details come from Crossref; at most ${DOI_TOPLU_EN_COK} DOIs.`,
           })}
         </p>
-        <textarea rows={6} value={doiMetni} onChange={(e) => { setDoiMetni(e.target.value); setDoiSonuclari(null); }} placeholder={"10.1037/0003-066X.59.1.29\nhttps://doi.org/10.15390/EB.2021.9876"} aria-label={t({ tr: "DOI listesi", en: "DOI list" })} />
+        <textarea rows={6} value={doiMetni} onChange={(e) => { setDoiMetni(e.target.value); setDoiSonuclari(null); setDoiOzeti(null); }} placeholder={"10.1037/0003-066X.59.1.29\nhttps://doi.org/10.15390/EB.2021.9876"} aria-label={t({ tr: "DOI listesi", en: "DOI list" })} />
         <button type="button" className="projects-primary-button" disabled={bekliyor || !doilar.length} onClick={doileriEkle}>
           {bekliyor
             ? t({ tr: "Ekleniyor…", en: "Adding…" })
@@ -165,13 +183,23 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
               /* Kutu boşken "DOI bulunamadı" yazıyordu: hiçbir şey yazmamış kullanıcıya hata gibi görünüyordu (Phase 3). */
               : t({ tr: "DOI'leri ekle", en: "Add DOIs" })}
         </button>
+        {/* Ertelenen varsa NEDENİ ve ne zaman yeniden denenebileceği tek satırda
+            (T3): hak ortak (tekli + toplu, saatte 120), sıra kullanıcınınki. */}
+        {doiOzeti && doiOzeti.ertelenen > 0 ? (
+          <p className="callout" data-tone="warning" role="status">
+            {t({
+              tr: `${doiOzeti.istenen} DOI'den ${doiOzeti.sorgulanan}'i sorgulandı; kalan ${doiOzeti.ertelenen} DOI bu turda sorgulanmadı.${saat ? ` Saatlik hakkınız ${saat}'de yenilenir.` : ""} Aynı listeyi yeniden ekleyebilirsiniz: eklenenler tekrar eklenmez ve hak harcamaz.`,
+              en: `${doiOzeti.sorgulanan} of ${doiOzeti.istenen} DOIs were looked up; the remaining ${doiOzeti.ertelenen} weren't looked up this time.${saat ? ` Your hourly limit resets at ${saat}.` : ""} You can add the same list again: added sources won't be duplicated and won't use up your limit.`,
+            })}
+          </p>
+        ) : null}
         {doiSonuclari ? (
           <ul className="secim-listesi">
             {doiSonuclari.map((s) => (
               <li key={s.doi}>
                 <b>{s.baslik ?? s.doi}</b>
-                <small data-tone={s.durum === "eklendi" ? "success" : s.durum === "vardi" ? undefined : "warning"} className="tone-text">
-                  {s.doi} · {t(DURUM_ADI[s.durum])}
+                <small data-tone={s.durum in DURUM_TONU ? DURUM_TONU[s.durum] : "warning"} className="tone-text">
+                  {s.doi} · {t(durumAdi(s))}
                 </small>
               </li>
             ))}

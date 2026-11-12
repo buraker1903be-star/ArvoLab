@@ -3,9 +3,11 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircleAlert, CircleCheck, Info, Link2, LoaderCircle, Search } from "lucide-react";
-import { useCeviri } from "@/app/_components/dil-saglayici";
+import { useCeviri, useDil } from "@/app/_components/dil-saglayici";
 import { doiIleEkle } from "@/app/actions/kaynak-aktarim";
 import { normalizeDoi } from "@/lib/doi";
+import { YEREL } from "@/lib/dil";
+import { yenilenmeSaati } from "@/lib/doi-toplu";
 
 /*
   DOI İLE KAYNAK EKLE — GÖRÜNÜR KUTU (Phase 3, 04.11.2026).
@@ -33,6 +35,10 @@ type Durum =
   | { tur: "eklendi"; baslik: string }
   | { tur: "vardi" }
   | { tur: "bulunamadi" }
+  /* T3: ortak saatlik DOI hakkı (saatte 120) doldu; ne zaman yenileneceği. */
+  | { tur: "hak"; saat: string | null }
+  /* Aynı başlık ve yıl bu çalışmada var (DOI farklı): eklenmedi, birleştirilmedi. */
+  | { tur: "vardi_baslik"; baslik?: string }
   | { tur: "hata"; mesaj?: string };
 
 export default function DoiEkleKutusu({
@@ -48,6 +54,7 @@ export default function DoiEkleKutusu({
   aramaTetikleyicisi: string;
 }) {
   const t = useCeviri();
+  const dil = useDil();
   const router = useRouter();
   const [deger, setDeger] = useState(ilkDeger);
   const [durum, setDurum] = useState<Durum>({ tur: "bos" });
@@ -62,16 +69,19 @@ export default function DoiEkleKutusu({
     setDurum({ tur: "bekliyor" });
     try {
       const r = await doiIleEkle(projectId, [doi]);
-      if (r.error) return setDurum({ tur: "hata", mesaj: r.error });
       const s = r.sonuclar?.[0];
+      if (r.error && !s) return setDurum({ tur: "hata", mesaj: r.error });
       if (!s) return setDurum({ tur: "hata" });
       if (s.durum === "eklendi") {
         setDurum({ tur: "eklendi", baslik: s.baslik ?? doi });
         setDeger("");
         router.refresh();
       } else if (s.durum === "vardi") setDurum({ tur: "vardi" });
+      else if (s.durum === "vardi_baslik") setDurum({ tur: "vardi_baslik", baslik: s.baslik });
       else if (s.durum === "bulunamadi") setDurum({ tur: "bulunamadi" });
-      else setDurum({ tur: "hata" });
+      else if (s.durum === "ertelendi" && s.neden === "hak") setDurum({ tur: "hak", saat: yenilenmeSaati(r.ozet?.yenilenme, YEREL[dil]) });
+      // kaydedilemedi, hata, süre: yeniden denenebilir; kayıt hatasında sunucunun mesajı.
+      else setDurum({ tur: "hata", mesaj: s.durum === "kaydedilemedi" ? r.error : undefined });
     } catch {
       setDurum({ tur: "hata" });
     }
@@ -135,6 +145,23 @@ export default function DoiEkleKutusu({
             <button type="button" className="projects-filter-button button-compact" onClick={konuylaAra}>
               <Search size={14} aria-hidden="true" /> {t({ tr: "Konu ya da başlıkla ara", en: "Search by topic or title" })}
             </button>
+          </p>
+        ) : durum.tur === "hak" ? (
+          <p data-tone="warning">
+            <CircleAlert size={14} aria-hidden="true" />
+            <span>
+              {durum.saat
+                ? t({ tr: `Saatlik DOI hakkınız doldu; ${durum.saat}'de yenilenir. Kaynağı elle de ekleyebilirsiniz.`, en: `You've reached your hourly DOI limit; it resets at ${durum.saat}. You can also add the source manually.` })
+                : t({ tr: "Saatlik DOI hakkınız doldu; biraz sonra yeniden deneyin. Kaynağı elle de ekleyebilirsiniz.", en: "You've reached your hourly DOI limit; try again a little later. You can also add the source manually." })}
+            </span>
+          </p>
+        ) : durum.tur === "vardi_baslik" ? (
+          <p data-tone="info">
+            <Info size={14} aria-hidden="true" />
+            <span>
+              {t({ tr: "Bu çalışmada aynı başlık ve yılı taşıyan bir kaynak zaten var; DOI farklı olduğu için birleştirilmedi ve eklenmedi", en: "A source with the same title and year is already in this work; since the DOI differs it wasn't merged or added" })}
+              {durum.baslik ? <>: <b>{durum.baslik}</b></> : null}.
+            </span>
           </p>
         ) : durum.tur === "hata" ? (
           <p data-tone="danger">
