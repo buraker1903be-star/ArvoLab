@@ -16,6 +16,7 @@ export default function Dialog({
   title,
   kicker,
   description,
+  gorunum,
   children,
 }: {
   open: boolean;
@@ -23,6 +24,12 @@ export default function Dialog({
   title: string;
   kicker?: string;
   description?: string;
+  /*
+    Signature OS 5 görünümü (isteğe bağlı). Verilmezse pencere eskisi gibi
+    çizilir: ekranlar Phase 3–5'te tek tek geçirilecek. Davranış (odak
+    tuzağı, Esc, odak iadesi) iki görünümde de aynı koddan gelir.
+  */
+  gorunum?: "os5";
   children: ReactNode;
 }) {
   const t = useCeviri();
@@ -72,7 +79,7 @@ export default function Dialog({
       <button className="drawer-backdrop" type="button" aria-label={t({ tr: "Pencereyi kapat", en: "Close window" })} tabIndex={open ? 0 : -1} onClick={onClose} />
       <section
         ref={dialogRef}
-        className="drawer drawer-compact"
+        className={gorunum === "os5" ? "drawer drawer-compact os5-pencere" : "drawer drawer-compact"}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

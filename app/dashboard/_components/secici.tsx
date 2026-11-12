@@ -35,6 +35,7 @@ export default function Secici({
   onEk,
   otomatikGonder = false,
   degisince,
+  gorunum,
 }: {
   /** Gizli alanın adı; verilmezse alan yazılmaz (yalnızca `degisince`). */
   name?: string;
@@ -47,6 +48,8 @@ export default function Secici({
   /** Seçim değişince içinde bulunduğu formu gönderir (süzgeç çubukları). */
   otomatikGonder?: boolean;
   degisince?: (deger: string) => void;
+  /* Signature OS 5 görünümü (isteğe bağlı); verilmezse eski görünüm. Klavye ve liste davranışı aynı. */
+  gorunum?: "os5";
 }) {
   const kimlik = useId();
   const [secili, setSecili] = useState(deger);
@@ -166,7 +169,7 @@ export default function Secici({
   };
 
   return (
-    <div className="secici" ref={kok} data-acik={acik || undefined}>
+    <div className={gorunum === "os5" ? "secici os5-secici" : "secici"} ref={kok} data-acik={acik || undefined}>
       {name ? <input type="hidden" name={name} value={secili} /> : null}
       <button
         ref={dugme}

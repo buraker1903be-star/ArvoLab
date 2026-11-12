@@ -1,0 +1,120 @@
+/*
+  SIGNATURE OS 5 — TOKEN KATMANI (Phase 1, 12.11.2026).
+
+  Neden ayrı bir katman: Phase 1 mevcut ekranların görünümünü DEĞİŞTİRMEZ
+  (kurum sahibinin kararı). tokens.css'teki değerlere dokunulmadı; burada
+  tanımlanan --os5-* adlarını yalnızca yeni bileşenler (app/_components/ui)
+  kullanır. Ekranlar Phase 2–5'te bu katmana geçecek; eski token'lar en
+  sonda ayrı bir "birleştirme" adımında buraya bağlanacak.
+
+  Ölçülerin kaynağı onaylı üç Paddle referansı: kontrol yüksekliği 40,
+  gezinme satırı 42, kenar çubuğu 240, içerik sütunu 1248 görsellerde
+  gözlendi; kontrol radius'u 4 ve kart radius'u 16 başlangıç değeri olarak
+  onaylandı. Renkler ham değer DEĞİL: ArvoLab paletine (tokens.css)
+  başvuruyor. Paddle'ın nötr siyahı ve mavisi alınmadı; marka lacivert.
+
+  Tema: semantik adlar (--primary, --line, --surface...) koyu temada
+  tokens.css'te zaten değişiyor; burada yalnızca o eşlemenin yetmediği
+  yerler koyu tema bloğunda yeniden yazıldı.
+*/
+
+:root {
+  /* Kontroller: girdi, düğme, seçim — üçü de aynı boyda. */
+  --os5-kontrol-h: 40px;
+  --os5-kontrol-h-sik: 32px;
+  --os5-kontrol-h-dokunma: 44px;
+  --os5-kontrol-r: 4px;
+  --os5-kontrol-dolgu: 12px;
+  --os5-kontrol-kenarlik: var(--line);
+  --os5-kontrol-kenarlik-hover: var(--muted);
+  --os5-kontrol-zemin: var(--surface-raised);
+  --os5-kontrol-zemin-pasif: var(--surface-sunken);
+  --os5-kontrol-yazi: var(--ink);
+  --os5-kontrol-ipucu: var(--muted);
+  --os5-kontrol-odak: var(--primary);
+  --os5-odak-halka: 0 0 0 2px var(--surface), 0 0 0 4px var(--os5-kontrol-odak);
+
+  /* Durum renkleri: hata ve başarı (yeşil yalnızca başarı/tamamlanma). */
+  --os5-hata: var(--danger);
+  --os5-hata-zemin: var(--danger-soft);
+  --os5-basari: var(--secondary);
+  --os5-basari-zemin: var(--secondary-soft);
+
+  /* Düğmeler */
+  --os5-dugme-birincil: var(--primary);
+  --os5-dugme-birincil-hover: var(--primary-hover);
+  --os5-dugme-birincil-yazi: var(--on-primary);
+  --os5-dugme-ikincil-hover: var(--surface-2);
+  --os5-dugme-agirlik: 600;
+
+  /* Yüzeyler: zemin → düzlem kart (kenarlıksız) → kenarlıklı kart → koyu vurgu. */
+  --os5-yuzey-zemin: var(--bg);
+  --os5-yuzey-duz: var(--surface-2);
+  --os5-yuzey-kart: var(--surface-raised);
+  --os5-yuzey-cizgi: var(--line-soft);
+  --os5-vurgu-kart: var(--brand-900);
+  --os5-vurgu-kart-yazi: var(--n-0);
+  --os5-vurgu-kart-soluk: color-mix(in srgb, var(--n-0) 72%, transparent);
+
+  /* Radius */
+  --os5-r-kart-secim: 10px;
+  --os5-r-kart: 16px;
+  --os5-r-rozet: 999px;
+
+  /* Kabuk (Phase 3'te kullanılacak; şimdiden tek yerde). */
+  --os5-kenar-genis: 240px;
+  --os5-kenar-ray: 64px;
+  --os5-gezinme-satir: 42px;
+  --os5-gezinme-aktif: 38px;
+  --os5-gezinme-alt: 32px;
+  --os5-gezinme-ic: 12px;
+
+  /* Yerleşim */
+  --os5-icerik-azami: 1248px;
+  --os5-form-genislik: 400px;
+  --os5-bolum-aralik: 40px;
+  --os5-kart-ic: 32px;
+  --os5-alan-aralik: 20px;
+
+  /* Tipografi: gövde Inter; akademik vurgu başlıkları Newsreader (seçici). */
+  --os5-font-govde: var(--font-inter, "Inter"), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --os5-font-vurgu: var(--font-display);
+  --os5-fs-sayfa: 28px;
+  --os5-fs-form-baslik: 20px;
+  --os5-fs-govde: 14px;
+  --os5-fs-meta: 12px;
+  --os5-fs-en-kucuk: 11px;
+
+  /* Gölge: kartlarda YOK (Paddle'da görünür gölge yok); yalnızca açılır katmanlarda. */
+  --os5-golge-katman: 0 12px 32px -12px color-mix(in srgb, var(--brand-950) 28%, transparent);
+
+  /* Hareket: kısa ve ölçülü; azaltılmış harekette aşağıda sıfırlanır. */
+  --os5-sure-hizli: 120ms;
+  --os5-sure-orta: 200ms;
+  --os5-egri: var(--ease-spring);
+}
+
+@media (max-width: 760px) {
+  :root {
+    --os5-kart-ic: 20px;
+    --os5-bolum-aralik: 28px;
+    --os5-fs-sayfa: 24px;
+  }
+}
+
+html[data-theme="dark"] {
+  /* Koyu temada odak halkası açık mavi: lacivert zeminde görünür olsun. */
+  --os5-kontrol-odak: var(--brand-300);
+  --os5-kontrol-zemin: var(--surface-2);
+  --os5-dugme-ikincil-hover: var(--surface-raised);
+  /* Vurgu kartı koyu temada da koyu, ama sayfa zemininden bir ton açık ki ayrışsın. */
+  --os5-vurgu-kart: var(--gece-750);
+  --os5-golge-katman: 0 16px 40px -12px color-mix(in srgb, var(--n-1000, var(--brand-950)) 60%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --os5-sure-hizli: 0ms;
+    --os5-sure-orta: 0ms;
+  }
+}

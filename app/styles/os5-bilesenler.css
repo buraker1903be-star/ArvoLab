@@ -1,0 +1,189 @@
+/*
+  SIGNATURE OS 5 — ORTAK BİLEŞENLER (Phase 1).
+
+  Bu dosyadaki her seçici "os5-" önekli sınıflarla ya da yalnızca yeni
+  logo bileşeninin sınıflarıyla başlar: mevcut ekranların hiçbir öğesine
+  uymaz, dolayısıyla Phase 1 görünümü değiştirmez. Değerler
+  os5-tokens.css'ten; ham renk yok.
+
+  Geometri Paddle referansından: düşük radius, 1 px kenarlık, gölgesiz
+  kontroller, girdi ile düğmenin aynı yükseklikte olması.
+*/
+
+/* ---------- Logo (app/_components/arvolab-logosu.tsx) ----------
+   Kutu logonun GÖRÜNÜR oranında (4,22 : 1); dosyanın üst ve altındaki
+   saydam boşluğu object-fit kırpar, logonun kendisi kırpılmaz ve esnemez.
+   Koyu temada ayrı dosya (ARVO beyaz, LAB yeşil): eskiden filtreyle
+   tümüyle beyaza çevriliyor, LAB'ın yeşili kayboluyordu. */
+.arvolab-logo { display: block; flex: none; width: calc(var(--logo-h, 28px) * 4.22); height: var(--logo-h, 28px); object-fit: cover; }
+.arvolab-logo-koyu { display: none; }
+html[data-theme="dark"] .arvolab-logo-acik { display: none; }
+html[data-theme="dark"] .arvolab-logo-koyu { display: block; }
+
+/* ---------- Düğme ---------- */
+.os5-dugme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--os5-kontrol-h);
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--os5-kontrol-r);
+  font-family: var(--os5-font-govde);
+  font-size: var(--os5-fs-govde);
+  font-weight: var(--os5-dugme-agirlik);
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--os5-sure-hizli) var(--os5-egri), border-color var(--os5-sure-hizli) var(--os5-egri), color var(--os5-sure-hizli) var(--os5-egri);
+}
+.os5-dugme:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.os5-dugme:disabled, .os5-dugme[aria-disabled="true"] { cursor: not-allowed; opacity: .55; }
+.os5-dugme[aria-busy="true"] { cursor: progress; }
+.os5-dugme--sik { min-height: var(--os5-kontrol-h-sik); padding: 0 12px; }
+.os5-dugme--tam { width: 100%; }
+
+.os5-dugme--birincil { background: var(--os5-dugme-birincil); color: var(--os5-dugme-birincil-yazi); }
+.os5-dugme--birincil:hover:not(:disabled, [aria-disabled="true"]) { background: var(--os5-dugme-birincil-hover); }
+
+.os5-dugme--ikincil { background: transparent; border-color: var(--os5-kontrol-kenarlik); color: var(--os5-kontrol-yazi); }
+.os5-dugme--ikincil:hover:not(:disabled, [aria-disabled="true"]) { background: var(--os5-dugme-ikincil-hover); border-color: var(--os5-kontrol-kenarlik-hover); }
+
+.os5-dugme--sessiz { background: transparent; color: var(--primary-ink); }
+.os5-dugme--sessiz:hover:not(:disabled, [aria-disabled="true"]) { background: var(--os5-dugme-ikincil-hover); }
+
+.os5-dugme--tehlike { background: transparent; border-color: color-mix(in srgb, var(--os5-hata) 45%, transparent); color: var(--os5-hata); }
+.os5-dugme--tehlike:hover:not(:disabled, [aria-disabled="true"]) { background: var(--os5-hata-zemin); }
+
+/* Yükleniyor: yazı yerinde kalır (düğme zıplamasın), önünde dönen halka. */
+.os5-dugme-donen {
+  width: 14px; height: 14px; flex: none;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: os5-don .7s linear infinite;
+}
+@keyframes os5-don { to { transform: rotate(360deg); } }
+
+/* ---------- Alan (etiket + kontrol + açıklama/hata) ---------- */
+.os5-alan { display: grid; gap: 6px; min-width: 0; font-family: var(--os5-font-govde); }
+.os5-etiket { font-size: var(--os5-fs-meta); font-weight: 600; color: var(--os5-kontrol-yazi); }
+.os5-zorunlu { color: var(--os5-hata); margin-left: 2px; }
+.os5-aciklama { font-size: var(--os5-fs-meta); color: var(--os5-kontrol-ipucu); line-height: 1.45; }
+.os5-hata-metni { font-size: var(--os5-fs-meta); color: var(--os5-hata); line-height: 1.45; }
+
+.os5-girdi, .os5-secim, .os5-metin {
+  width: 100%;
+  min-height: var(--os5-kontrol-h);
+  padding: 0 var(--os5-kontrol-dolgu);
+  border: 1px solid var(--os5-kontrol-kenarlik);
+  border-radius: var(--os5-kontrol-r);
+  background: var(--os5-kontrol-zemin);
+  color: var(--os5-kontrol-yazi);
+  font-family: var(--os5-font-govde);
+  font-size: var(--os5-fs-govde);
+  transition: border-color var(--os5-sure-hizli) var(--os5-egri), box-shadow var(--os5-sure-hizli) var(--os5-egri);
+}
+.os5-girdi::placeholder, .os5-metin::placeholder { color: var(--os5-kontrol-ipucu); }
+.os5-girdi:hover:not(:disabled, :focus), .os5-secim:hover:not(:disabled, :focus), .os5-metin:hover:not(:disabled, :focus) { border-color: var(--os5-kontrol-kenarlik-hover); }
+.os5-girdi:focus-visible, .os5-secim:focus-visible, .os5-metin:focus-visible { outline: none; border-color: var(--os5-kontrol-odak); box-shadow: var(--os5-odak-halka); }
+.os5-girdi:disabled, .os5-secim:disabled, .os5-metin:disabled { background: var(--os5-kontrol-zemin-pasif); color: var(--os5-kontrol-ipucu); cursor: not-allowed; }
+.os5-girdi[aria-invalid="true"], .os5-secim[aria-invalid="true"], .os5-metin[aria-invalid="true"] { border-color: var(--os5-hata); }
+
+.os5-metin { min-height: calc(var(--os5-kontrol-h) * 2.5); padding: 10px var(--os5-kontrol-dolgu); line-height: 1.5; resize: vertical; }
+.os5-sayac { justify-self: end; font-size: var(--os5-fs-meta); color: var(--os5-kontrol-ipucu); font-variant-numeric: tabular-nums; }
+.os5-sayac[data-yakin="true"] { color: var(--os5-hata); }
+
+/* Seçim: yerel select (telefonda sistem seçicisi ve erişilebilirlik korunur); ok işareti sağda. */
+.os5-secim-kap { position: relative; }
+.os5-secim { appearance: none; padding-right: 36px; cursor: pointer; }
+.os5-secim-ok { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--os5-kontrol-ipucu); pointer-events: none; }
+
+/* Şifre: göster/gizle düğmesi kontrolün içinde, sağda; dokunma alanı 44 px'e tamamlanır. */
+.os5-sifre-kap { position: relative; }
+.os5-sifre-kap .os5-girdi { padding-right: 48px; }
+.os5-sifre-dugme {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  display: grid; place-items: center;
+  width: var(--os5-kontrol-h-dokunma); height: calc(var(--os5-kontrol-h) - 4px);
+  border-radius: var(--os5-kontrol-r);
+  color: var(--os5-kontrol-ipucu); cursor: pointer;
+}
+.os5-sifre-dugme:hover { color: var(--os5-kontrol-yazi); }
+.os5-sifre-dugme:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+
+/* Onay kutusu: yerel input, etiket tıklanabilir; satır en az 44 px dokunma alanı. */
+.os5-onay { display: inline-flex; align-items: center; gap: 10px; min-height: var(--os5-kontrol-h-dokunma); font-family: var(--os5-font-govde); font-size: var(--os5-fs-govde); color: var(--os5-kontrol-yazi); cursor: pointer; }
+.os5-onay input { width: 16px; height: 16px; margin: 0; flex: none; accent-color: var(--os5-dugme-birincil); cursor: pointer; }
+.os5-onay input:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); border-radius: 2px; }
+.os5-onay input:disabled, .os5-onay input:disabled + span { cursor: not-allowed; opacity: .55; }
+
+/* ---------- Sekmeler ---------- */
+.os5-sekme-listesi { display: flex; gap: 4px; border-bottom: 1px solid var(--os5-yuzey-cizgi); overflow-x: auto; scrollbar-width: none; }
+.os5-sekme-listesi::-webkit-scrollbar { display: none; }
+.os5-sekme {
+  position: relative; flex: none;
+  min-height: var(--os5-kontrol-h-dokunma); padding: 0 12px;
+  font-family: var(--os5-font-govde); font-size: var(--os5-fs-govde); font-weight: 500;
+  color: var(--os5-kontrol-ipucu); cursor: pointer;
+  transition: color var(--os5-sure-hizli) var(--os5-egri);
+}
+.os5-sekme:hover { color: var(--os5-kontrol-yazi); }
+.os5-sekme[aria-selected="true"] { color: var(--os5-kontrol-yazi); font-weight: 600; }
+.os5-sekme[aria-selected="true"]::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; background: var(--os5-dugme-birincil); }
+.os5-sekme:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--os5-kontrol-odak); border-radius: var(--os5-kontrol-r); }
+.os5-sekme-paneli { padding-top: var(--os5-alan-aralik); }
+.os5-sekme-paneli:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); border-radius: var(--os5-kontrol-r); }
+
+/* ---------- Durum: boş / yükleniyor / hata ---------- */
+.os5-durum {
+  display: grid; justify-items: center; gap: 8px; text-align: center;
+  padding: var(--os5-kart-ic); border-radius: var(--os5-r-kart);
+  background: var(--os5-yuzey-duz); font-family: var(--os5-font-govde);
+}
+.os5-durum-simge { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--os5-yuzey-kart); color: var(--os5-kontrol-ipucu); }
+.os5-durum[data-tur="hata"] .os5-durum-simge { background: var(--os5-hata-zemin); color: var(--os5-hata); }
+.os5-durum-baslik { margin: 0; font-size: var(--os5-fs-govde); font-weight: 600; color: var(--os5-kontrol-yazi); }
+.os5-durum-aciklama { margin: 0; max-width: 46ch; font-size: var(--os5-fs-meta); line-height: 1.5; color: var(--os5-kontrol-ipucu); }
+.os5-durum-eylem { margin-top: 8px; }
+.os5-durum[data-tur="yukleniyor"] .os5-durum-simge .os5-dugme-donen { width: 18px; height: 18px; }
+
+/* ---------- Mevcut bileşenlerin İSTEĞE BAĞLI os5 görünümü ----------
+   Dialog ve Secici'ye `gorunum="os5"` verilince eklenen sınıflar. Prop
+   verilmezse bu sınıflar hiç yazılmaz; davranış (odak tuzağı, Esc, odak
+   iadesi, klavye) iki görünümde de aynı koddan gelir. */
+.drawer.os5-pencere { border-radius: var(--os5-r-kart); box-shadow: var(--os5-golge-katman); font-family: var(--os5-font-govde); }
+.drawer.os5-pencere .drawer-header h2 { font-size: var(--os5-fs-form-baslik); font-weight: 600; }
+.secici.os5-secici .secici-dugme { min-height: var(--os5-kontrol-h); border-radius: var(--os5-kontrol-r); border-color: var(--os5-kontrol-kenarlik); background: var(--os5-kontrol-zemin); font-family: var(--os5-font-govde); }
+.secici.os5-secici .secici-dugme:focus-visible { outline: none; box-shadow: var(--os5-odak-halka); }
+.secici.os5-secici .secici-liste { border-radius: var(--os5-r-kart-secim); box-shadow: var(--os5-golge-katman); }
+
+@media (prefers-reduced-motion: reduce) {
+  .os5-dugme-donen { animation-duration: 2.4s; }
+  .os5-dugme, .os5-girdi, .os5-secim, .os5-metin, .os5-sekme { transition: none; }
+}
+
+/* ---------- /tasarim vitrini (yalnızca Production dışında açılır) ---------- */
+.os5-vitrin { min-height: 100vh; background: var(--os5-yuzey-zemin); color: var(--os5-kontrol-yazi); font-family: var(--os5-font-govde); padding: 32px 16px 64px; }
+.os5-vitrin-ust { display: flex; align-items: center; gap: 16px; max-width: var(--os5-icerik-azami); margin: 0 auto var(--os5-bolum-aralik); }
+.os5-vitrin-logo { --logo-h: 28px; }
+.os5-vitrin-ust-metin { flex: 1; min-width: 0; }
+.os5-vitrin-baslik { margin: 0; font-size: var(--os5-fs-sayfa); font-weight: 700; letter-spacing: -.01em; }
+.os5-vitrin-alt { margin: 4px 0 0; font-size: var(--os5-fs-govde); color: var(--os5-kontrol-ipucu); }
+.os5-vitrin-govde { display: grid; gap: var(--os5-bolum-aralik); max-width: var(--os5-icerik-azami); margin: 0 auto; }
+.os5-vitrin-bolum { display: grid; gap: 16px; padding: var(--os5-kart-ic); border-radius: var(--os5-r-kart); background: var(--os5-yuzey-duz); }
+.os5-vitrin-bolum-baslik { margin: 0; font-size: var(--os5-fs-form-baslik); font-weight: 600; }
+.os5-vitrin-satir { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.os5-vitrin-form { max-width: var(--os5-form-genislik); }
+.os5-vitrin-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--os5-alan-aralik); align-items: start; }
+.os5-vitrin-yigin { display: grid; gap: 4px; }
+.os5-vitrin-metin { margin: 0; font-size: var(--os5-fs-govde); color: var(--os5-kontrol-ipucu); }
+.os5-vitrin-yuzey { display: grid; gap: 6px; min-height: 96px; align-content: center; padding: 20px; font-size: var(--os5-fs-govde); }
+.os5-vitrin-yuzey--duz { background: var(--os5-yuzey-zemin); border-radius: var(--os5-r-kart); }
+.os5-vitrin-yuzey--kart { background: var(--os5-yuzey-kart); border: 1px solid var(--os5-kontrol-kenarlik); border-radius: var(--os5-r-kart-secim); }
+.os5-vitrin-yuzey--vurgu { background: var(--os5-vurgu-kart); color: var(--os5-vurgu-kart-soluk); border-radius: var(--os5-r-kart); }
+.os5-vitrin-vurgu-baslik { font-family: var(--os5-font-vurgu); font-size: var(--os5-fs-form-baslik); color: var(--os5-vurgu-kart-yazi); }
+@media (max-width: 760px) {
+  .os5-vitrin { padding: 20px 16px 48px; }
+  .os5-vitrin-ust { flex-wrap: wrap; }
+}

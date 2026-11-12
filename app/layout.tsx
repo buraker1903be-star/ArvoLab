@@ -13,6 +13,9 @@ import "./styles/workspace.css";
 import "./styles/overlays.css";
 import "./styles/genel-bakis.css";
 import "./styles/print.css";
+/* Signature OS 5 (Phase 1): yalnızca "os5-" önekli sınıflar; mevcut ekranları etkilemez. */
+import "./styles/os5-tokens.css";
+import "./styles/os5-bilesenler.css";
 
 // Tek yazı ailesi: Apple cihazlarında sistemin SF Pro'su (-apple-system),
 // diğerlerinde ona en yakın açık yazı tipi Inter. preload kapalı: Apple
