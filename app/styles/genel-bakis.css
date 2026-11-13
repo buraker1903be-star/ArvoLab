@@ -1305,6 +1305,8 @@ html[data-theme="dark"] .partner-logo { padding: 8px 12px; border-radius: var(--
 .gb-tek-ekran > .callout, .gb-tek-ekran > .alert { margin: 0; }
 /* Esnek sütunda sekme çubuğu tam genişliğe yayılıyordu; içeriği kadar kalsın. */
 .gb-tek-ekran > .calisma-sekmeleri { align-self: flex-start; }
+/* Yazım sayfası da .gb sütunu (Phase 5.1c): sekme şeridi içeriği kadar geniş, satır boyu uzamaz. */
+.dashboard-page.gb > .calisma-sekmeleri { align-self: flex-start; }
 /* Kanıt durumu (sol kart): üç sayı alt alta, bakılacak varsa renkli kenar. */
 .kanit-durum { display: grid; gap: 8px; margin: 0; }
 .kanit-durum > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0 10px; padding: 10px 12px; border: 1px solid var(--line-soft); border-left: 3px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }

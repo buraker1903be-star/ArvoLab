@@ -527,8 +527,8 @@
 .manuscript-layout[data-odak] .manuscript-outline { display: none; }
 .manuscript-layout:not([data-inceleme]) .manuscript-main,
 .manuscript-layout[data-odak] .manuscript-main { width: 100%; max-width: 980px; margin-inline: auto; }
-/* Odak modu: sayfa başlığı da çekilir, yalnızca araç çubuğu ve metin kalır. */
-.dashboard-page:has(.manuscript-layout[data-odak]) > .projects-header { display: none; }
+/* Odak modu: sayfa başlığı ve çalışma sekmeleri de çekilir, yalnızca araç çubuğu ve metin kalır. */
+.dashboard-page:has(.manuscript-layout[data-odak]) > :is(.projects-header, .calisma-sekmeleri) { display: none; }
 
 /*
   Araç çubuğu: tek satır, gruplar ince çizgiyle ayrık, sayfa kayarken
