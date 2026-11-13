@@ -3,6 +3,7 @@ import { aktifDil, aktifSaatDilimi, ceviri } from "@/lib/dil-sunucu";
 import { DilSaglayici } from "./_components/dil-saglayici";
 import { Inter, Montserrat, Newsreader } from "next/font/google";
 import { TEMA_BETIGI, TEMA_RENGI } from "@/lib/tema";
+import { GEZINME_BETIGI } from "@/lib/os5/gezinme";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/components.css";
@@ -115,6 +116,13 @@ export default async function RootLayout({
     <html lang={dil} suppressHydrationWarning>
       <head>
         <script id="theme-init" dangerouslySetInnerHTML={{ __html: TEMA_BETIGI }} />
+        {/*
+          Kenar çubuğu dar/açık tercihi (Phase 5.1b): temayla aynı yöntem ve
+          aynı nedenle ilk boyamadan önce <html data-gezinme> yazar. Tek
+          başına görünür hiçbir şey değiştirmez; kuralları masaüstü CSS'i
+          taşır (lib/os5/gezinme.ts).
+        */}
+        <script id="gezinme-init" dangerouslySetInnerHTML={{ __html: GEZINME_BETIGI }} />
       </head>
       <body className={`${inter.variable} ${montserrat.variable} ${newsreader.variable}`}>
         <DilSaglayici dil={dil} saatDilimi={saatDilimi}>
