@@ -296,8 +296,9 @@ export default function CitationCheckForm({
     const ertelenen = adaylar.filter((k) => k.dogrulama === "ulasilamadi").length;
     const kuyruk = adaylar.filter((k) => k.dogrulama !== "ulasilamadi");
     if (ertelenen) {
-      // Bildirim türü iki: yapılamayan iş "error" (uzun süre görünür).
-      showToast("error", t({
+      /* Ertelenen iş hata değil: "info" (T2). Eskiden "error" türündeydi ve
+         "İşlem tamamlanamadı" başlığıyla, acil uyarı olarak okunuyordu. */
+      showToast("info", t({
         tr: `Dizinlere ulaşılamayan ${ertelenen} künye için PDF araması yapılmadı; denetimi tekrar çalıştırın.`,
         en: `No PDF search for ${ertelenen} ${ertelenen === 1 ? "reference" : "references"} whose indexes couldn't be reached; run the check again.`,
       }));
@@ -449,6 +450,7 @@ export default function CitationCheckForm({
         </p>
       )}
 
+      <AyiklamaNotu sayi={denetim?.ayiklananSayisi} />
       <AsistanSonuc
         sonuc={denetim}
         yetenek="kaynakca"
@@ -994,6 +996,7 @@ export default function CitationCheckForm({
             {!gecmisGoster && bekleniyor && !denetim ? (
               <p className="gb-bos">{t({ tr: "Asistan denetim sonucunuzu okuyor…", en: "The assistant is reading your check result…" })}</p>
             ) : null}
+            {!gecmisGoster ? <AyiklamaNotu sayi={denetim?.ayiklananSayisi} /> : null}
             <AsistanSonuc
               sonuc={
                 gecmisGoster
@@ -1177,5 +1180,24 @@ export default function CitationCheckForm({
         sonucIcerik
       )}
     </section>
+  );
+}
+
+/*
+  Dizine ulaşılamayan künyeler hakkında hüküm kurduğu için gösterilmeyen
+  bulgular (T1, app/actions/ai-kaynakca.ts). Ayıklandığı söylenmezse kullanıcı
+  listenin eksik olduğunu bilemez; ayıklananın içeriği ise gösterilmez,
+  çünkü doğrulanmamış bir hükümdür.
+*/
+function AyiklamaNotu({ sayi }: { sayi?: number }) {
+  const t = useCeviri();
+  if (!sayi) return null;
+  return (
+    <p className="asistan-uyari" data-tone="neutral" role="status">
+      {t({
+        tr: `Dizinlerine ulaşılamayan kaynaklar hakkında doğrulanmamış hüküm içerdiği için gösterilmeyen bulgu: ${sayi}. Dizinler yanıt verdiğinde denetimi yeniden çalıştırabilirsiniz.`,
+        en: `Findings not shown because they made unverified claims about sources whose indexes couldn't be reached: ${sayi}. You can run the check again once the indexes respond.`,
+      })}
+    </p>
   );
 }

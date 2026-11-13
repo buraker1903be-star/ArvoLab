@@ -31,7 +31,7 @@
 import { stilTanimi } from "@/lib/atif/stiller";
 import type { Dil } from "@/lib/dil";
 import { baglamKur, type BaglamParca } from "./baglam";
-import { YANIT_BICIMI, cikisDiliMesaji, dilliKaynak } from "./bulgu";
+import { YANIT_BICIMI, cikisDiliMesaji, dilliKaynak, jsonOku, type Bulgu } from "./bulgu";
 import type { Mesaj } from "./saglayici";
 import type { DogrulamaDurumu } from "@/lib/academic-reference-verification";
 
@@ -112,6 +112,7 @@ const KAYNAKCA_ISTEMI_GOVDESI = `{{KIMLIK}} Sana bir araştırmacının kaynakç
 GÖREVİN: Listeyi denetlemek ve gerçekten sorun olanları önceliklendirmek.
 - "dizinde bulunamadı" tek başına hata değildir: Türkçe tezler, kurum raporları, kitap bölümleri ve yerel dergiler bu dizinlerde çoğu zaman yer almaz. Böyle kayıtlar için beklenen bir durum olduğunu söyle, şüpheyi gerçekten tuhaf olanlara sakla (ör. uluslararası bir dergi makalesi gibi görünüp bulunamayan kayıt).
 - "dizine ulaşılamadı" bir sonuç DEĞİLDİR: dizin o sırada cevap vermedi. Bu kayıtlar için kaynağın bulunamadığını, şüpheli ya da uydurma olabileceğini ASLA söyleme. Gerekirse tek bir bulguda denetimin tekrar çalıştırılmasını öner.
+- Bir bulgu belirli kaynaklarla ilgiliyse açıklamada sıra numaralarını köşeli parantezle yaz (ör. [3], [7]) ve bulgu nesnesine "kaynaklar" alanını ekle (ör. "kaynaklar": [3, 7]). Belirli bir kaynağa bağlı olmayan bulguda (ör. karşılıksız atıf) "kaynaklar": [] yaz. Öteki alanlar aynen kalır.
 - "olası eşleşme" kayıtlarında kullanıcıyı neyin kontrol etmesi gerektiğini söyle (yıl, cilt, yazar sırası gibi ALANIN ADINI söyle, değerini yazma).
 {{BICIM_KURALI}} aynı hata 10 kayıtta varsa tek bir bulgu yaz, kaç kayıtta olduğunu sayı olarak değil "birden çok kayıtta" diye belirt.
 - Metinde geçip kaynakçada olmayan atıflar en ciddi sorundur; varsa ilk bulgu o olsun.
@@ -171,4 +172,155 @@ export function kaynakcaIstemi(girdi: KaynakcaGirdisi, butce = BAGLAM_BUTCESI) {
     { rol: "kullanici", metin: baglam.metin },
   ];
   return { mesajlar, kaynak: dilliKaynak(baglam.metin, girdi.dil), kirpilanlar: baglam.kirpilanlar };
+}
+
+/*
+  ULAŞILAMAYAN KÜNYE HAKKINDA HÜKÜM: DETERMİNİSTİK SON DOĞRULAMA (T1, 14.11.2026).
+
+  İstem, "dizine ulaşılamadı" kayıtları için "bulunamadı / şüpheli / uydurma"
+  demeyi yasaklıyor; ama yalnızca istem düzeyinde bir yasak, modelin ona
+  uyduğunu kimse denetlemiyordu. Dizin o sırada cevap vermediyse kaynağın
+  dizinde olup olmadığı BİLİNMİYOR; öğrenciye "bu kaynak uydurma olabilir"
+  demek, doğru yazdığı kaynağı jüriden önce şüpheli göstermektir.
+
+  Yalnızca anahtar sözcüğe bakan bir süzgeç geçerli bulguları da silerdi
+  ("kaynakçada bulunamadı" bir atıf–kaynakça bulgusudur, "uydurma olduğu
+  anlamına gelmez" bir uyarıdır). Bu yüzden bir bulgu ancak ÜÇ koşul
+  birlikte sağlanınca ayıklanır:
+    1. Girdide en az bir "ulasilamadi" kaydı var (yoksa hiçbir şey değişmez).
+    2. Bulgunun en az bir cümlesi olumsuz bir dizin/özgünlük hükmü kuruyor
+       ve aynı cümle bu hükmü olumsuzlamıyor ya da erişim sorununa
+       bağlamıyor.
+    3. Hüküm yalnızca ulaşılamayan kayıtlara yöneliyor:
+       - bulgu kaynak numarası veriyorsa ("kaynaklar" alanı ya da metindeki
+         [n]), verdiği numaraların HEPSİ ulaşılamayan kayıt olmalı; karışık
+         atıf (bir de "bulunamadı" kaydı varsa) silinmez, çünkü o kayıt için
+         geçerli bir uyarı olabilir;
+       - numara vermiyorsa, yalnızca güçlü bir hüküm (uydurma, şüpheli,
+         dizinde yok …) sayılır ve yalnızca girdide hükmün yönelebileceği
+         başka bir kayıt (bulunamadı, olası eşleşme, veri yetersiz) yoksa
+         silinir.
+  Ayıklanan bulgu kullanıcıya hiç gösterilmez; ham çıktı kayıtta aynen kalır
+  (lib/ai/kayit.ts), gösterilen bulgular ayrı sütunda.
+*/
+
+/* Güçlü hüküm: kaynağın dizinde olmadığını ya da özgün olmadığını söyler. */
+const GUCLU_HUKUM = [
+  /uydurma/u,
+  /sahte/u,
+  /şüpheli/u,
+  /kuşkulu/u,
+  /güvenilmez/u,
+  /var\s+olmay/u,
+  /gerçek\s+olmay/u,
+  /doğrulanamad/u,
+  /dizin(?:de|lerde)\s+(?:bulunam|bulunmuyor|yer\s+alm|yok)/u,
+  /(?:crossref|openalex)\S*\s+(?:bulunam|bulunmuyor|yer\s+alm|yok)/u,
+  /fabricat/u,
+  /\bfake\b/u,
+  /suspicious/u,
+  /questionable/u,
+  /(?:may|might)\s+not\s+exist/u,
+  /does\s+not\s+exist/u,
+  /could\s*(?:not|n['’]t)\s+be\s+(?:verified|found)/u,
+  /not\s+(?:found|listed)\s+in\s+(?:the\s+)?(?:index|indexes|crossref|openalex)/u,
+  /not\s+indexed/u,
+];
+/* Zayıf hüküm: yalnızca bulgu numarayla ulaşılamayan bir kaydı gösteriyorsa sayılır. */
+const ZAYIF_HUKUM = [/bulunam/u, /bulunmuyor/u, /yer\s+alm[ıi]yor/u, /\bnot\s+found\b/u];
+/* Aynı cümlede bunlar varsa hüküm kurulmamıştır: olumsuzlama ya da erişim sorunu. */
+const HUKUM_DEGIL = [
+  /anlamına\s+gelm/u,
+  /\bdeğil/u,
+  /sayılmaz/u,
+  /denemez/u,
+  /söylenemez/u,
+  /bilinmiyor/u,
+  /ulaşılamad/u,
+  /erişilemed/u,
+  /erişim\s+sorun/u,
+  /yeniden\s+(?:çalıştır|dene)/u,
+  /tekrar\s+(?:çalıştır|dene)/u,
+  /does\s*(?:not|n['’]t)\s+mean/u,
+  /not\s+necessarily/u,
+  /cannot\s+be\s+concluded/u,
+  /\bunknown\b/u,
+  /unreachable/u,
+  /could\s*(?:not|n['’]t)\s+be\s+reached/u,
+  /\bre-?run\b/u,
+];
+/* Atıf–kaynakça bulgusu: "kaynakçada bulunamadı" dizin hükmü değildir. */
+const ATIF_BAGLAMI = /kaynakçada|kaynakça\s+listesinde|in\s+the\s+reference\s+list|reference\s+list/u;
+
+const kucuk = (metin: string) => metin.toLocaleLowerCase("tr");
+const cumleler = (metin: string) => metin.split(/(?<=[.!?;])\s+/u).filter(Boolean);
+
+function hukumKuruyor(bulgu: Bulgu, zayifDahil: boolean): boolean {
+  return cumleler(kucuk(`${bulgu.baslik}. ${bulgu.aciklama}`)).some((cumle) => {
+    if (HUKUM_DEGIL.some((kalip) => kalip.test(cumle))) return false;
+    if (GUCLU_HUKUM.some((kalip) => kalip.test(cumle))) return true;
+    return zayifDahil && !ATIF_BAGLAMI.test(cumle) && ZAYIF_HUKUM.some((kalip) => kalip.test(cumle));
+  });
+}
+
+/** Bulgu metninde geçen kaynak sıra numaraları: [3], "kaynak 3", "3. kaynak", #3. */
+export function metindekiKaynaklar(metin: string): number[] {
+  const bulunan = new Set<number>();
+  const kaliplar = [
+    /\[(\d{1,3})\]/gu,
+    /(?:kaynak|kayıt|reference|source)\s*(?:no\.?\s*)?#?\s*(\d{1,3})\b/giu,
+    /\b(\d{1,3})\.\s*(?:kaynak|kayıt)/giu,
+    /#(\d{1,3})\b/gu,
+  ];
+  for (const kalip of kaliplar) for (const eslesme of metin.matchAll(kalip)) bulunan.add(Number(eslesme[1]));
+  return [...bulunan];
+}
+
+const anahtar = (baslik: unknown, aciklama: unknown) =>
+  `${String(baslik ?? "").replace(/\s+/g, " ").trim().slice(0, 60)}\u0000${String(aciklama ?? "").replace(/\s+/g, " ").trim().slice(0, 400)}`;
+
+/**
+ * Ham yanıttaki "kaynaklar" alanları; anahtar bulgunun başlık+açıklaması
+ * (bulgulariCozumle ile aynı kırpma). Sıraya güvenilmiyor: çözümleyici
+ * eksik satırları atıyor, dizin kayabilir.
+ */
+export function yapisalKaynaklar(ham: string): Map<string, number[]> {
+  const harita = new Map<string, number[]>();
+  const liste = (jsonOku(ham) as { bulgular?: unknown } | null)?.bulgular;
+  if (!Array.isArray(liste)) return harita;
+  for (const satir of liste) {
+    const row = (satir ?? {}) as Record<string, unknown>;
+    if (!Array.isArray(row.kaynaklar)) continue;
+    const numaralar = row.kaynaklar.filter((n): n is number => Number.isInteger(n) && n > 0 && n < 1000);
+    harita.set(anahtar(row.baslik, row.aciklama), numaralar);
+  }
+  return harita;
+}
+
+export type HukumAyiklama = { gecerli: Bulgu[]; ayiklanan: Bulgu[] };
+
+/** Ulaşılamayan künyeler hakkında hüküm kuran bulguları ayıklar (yukarıdaki üç koşul). */
+export function ulasilamadiHukmunuAyikla(
+  bulgular: Bulgu[],
+  kaynaklar: Pick<KaynakSatiri, "sira" | "durum">[],
+  yapisal: Map<string, number[]> = new Map(),
+): HukumAyiklama {
+  const ulasilamayan = new Set(kaynaklar.filter((k) => k.durum === "ulasilamadi").map((k) => k.sira));
+  if (!ulasilamayan.size) return { gecerli: bulgular, ayiklanan: [] };
+  const mevcut = new Set(kaynaklar.map((k) => k.sira));
+  // Numara vermeyen bir hükmün yönelebileceği başka kayıt var mı?
+  const baskaHedefVar = kaynaklar.some((k) => k.durum === "not_found" || k.durum === "possible_match" || k.durum === "insufficient_data");
+
+  const gecerli: Bulgu[] = [];
+  const ayiklanan: Bulgu[] = [];
+  for (const bulgu of bulgular) {
+    const numaralar = [
+      ...new Set([...(yapisal.get(anahtar(bulgu.baslik, bulgu.aciklama)) ?? []), ...metindekiKaynaklar(`${bulgu.baslik} ${bulgu.aciklama}`)]),
+    ].filter((n) => mevcut.has(n));
+    const sil = numaralar.length
+      ? numaralar.every((n) => ulasilamayan.has(n)) && hukumKuruyor(bulgu, true)
+      : !baskaHedefVar && hukumKuruyor(bulgu, false);
+    (sil ? ayiklanan : gecerli).push(bulgu);
+  }
+  return { gecerli, ayiklanan };
 }
