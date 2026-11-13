@@ -13,6 +13,7 @@ import { detectFormatLoss } from "@/lib/format-loss";
 import { ozetOku, yapiSorunlariniTemizle } from "@/lib/kontrol-gecmisi";
 import type { ManuscriptCheckResult } from "@/app/actions/manuscript";
 import ManuscriptEditor from "./manuscript-editor";
+import CalismaSekmeleri from "../calisma-sekmeleri";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { belgeDili } from "@/lib/belge-dili";
 
@@ -138,6 +139,16 @@ export default async function WriteManuscriptPage({
           </Link>
         </div>
       </section>
+
+      {/*
+        Çalışmanın bölümleri (Phase 5.1c): tablette ve masaüstü kenar çubuğu
+        DAR iken çalışma bölümlerine buradan geçilir. Açık masaüstünde gizli
+        (os-shell.css): aynı bölümler kenar çubuğunun alt menüsünde. Odak
+        modunda başlıkla birlikte çekilir (workspace.css). Eskiden yazım
+        ekranında yalnızca "Çalışmalarım" geri düğmesi vardı; tablette Kanıt,
+        Etik ve Makale'ye doğrudan geçiş yoktu.
+      */}
+      <CalismaSekmeleri calisma={project} aktif="yazim" />
 
       {kilavuzOkunamadi ? (
         /* Geçici arıza: editör kılavuzsuz açılıyor. Söylenmezse öğrenci biçimin

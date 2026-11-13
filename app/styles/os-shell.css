@@ -49,7 +49,9 @@
 /* Yalnızca masaüstünde görünenler: logo, alt menü düğmesi, çalışma alt menüsü, hesap. */
 .os-gezinme-logo, .os-gezinme-ac, .os-gezinme-baglam, .os-gezinme-hesap, .os-gezinme-grup { display: none; }
 /* Sarmalayıcılar telefonda ve tablette düzene karışmaz. */
-.os-gezinme-govde, .os-gezinme-satir { display: contents; }
+.os-gezinme-govde, .os-gezinme-satir, .os-gezinme-bas { display: contents; }
+/* Daraltma düğmesi yalnızca masaüstünde (Phase 5.1c): tablet her zaman ray, telefon alt çubuk. */
+.os-gezinme-daralt { display: none; }
 
 /* ---------- Masaüstü: koyu lacivert kenar çubuğu ---------- */
 @media (min-width: 1200px) {
@@ -61,11 +63,25 @@
     -webkit-backdrop-filter: none; backdrop-filter: none;
     font-family: var(--os5-font-govde);
   }
+  /* Tepe satırı: logo + daraltma düğmesi (Phase 5.1c). */
+  .os-gezinme-bas {
+    display: flex; flex: none; align-items: center;
+    height: var(--topbar-height); margin: 0 calc(-1 * var(--s-3)); padding-right: var(--s-2);
+  }
   .os-gezinme-logo {
     --logo-h: 26px;
-    display: flex; flex: none; align-items: center;
-    height: var(--topbar-height); margin: 0 calc(-1 * var(--s-3)); padding: 0 calc(var(--s-3) + 10px);
+    display: flex; flex: 1; align-items: center; min-width: 0;
+    height: 100%; padding: 0 calc(var(--s-3) + 10px);
   }
+  .os-gezinme-daralt {
+    display: grid; place-items: center; flex: none;
+    width: var(--os5-kontrol-h-sik); height: var(--os5-kontrol-h-sik);
+    border: 0; border-radius: var(--os5-kontrol-r); background: transparent;
+    color: var(--os5-kenar-yazi); cursor: pointer;
+    transition: background-color var(--os5-sure-hizli) var(--os5-egri), color var(--os5-sure-hizli) var(--os5-egri);
+  }
+  .os-gezinme-daralt:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
+  .os-gezinme-daralt:focus-visible { outline: none; box-shadow: var(--os5-kenar-odak); }
   .os-gezinme-logo:focus-visible { outline: none; box-shadow: inset var(--os5-kenar-odak); }
   .os-gezinme-govde {
     display: flex; flex: 1; flex-direction: column; gap: var(--s-5); min-height: 0;
@@ -151,6 +167,69 @@
   .os-root .os-marka-sayfa { padding-left: 0; border-left: 0; color: var(--ink); font-size: var(--os5-fs-govde); }
   /* Çalışma bölümleri kenar çubuğunda: sayfadaki sekmeler aynı şeyi ikinci kez göstermesin. */
   .os-root .calisma-sekmeleri { display: none; }
+}
+
+/* ---------- Masaüstü DAR: 64 px ray (Phase 5.1c, 13.11.2026) ----------
+   Kullanıcı masaüstünde kenar çubuğunu daraltınca (<html data-gezinme="dar">,
+   ön boyama betiği ve daraltma düğmesi yazar; lib/os5/gezinme.ts) tablet
+   rayının kuralları geçerli olur: simge, sağda beliren ad etiketi; logo ve
+   hesap menüsü üst çubukta. Ray tam boy kalır, böylece açık/dar geçişinde
+   yalnızca genişlikler değişir. BÜTÜN kurallar bu medya sorgusunun içinde:
+   tablet ve telefonu değiştirmemeli (tests/unit/gezinme-tercihi.test.ts). */
+@media (min-width: 1200px) {
+  html[data-gezinme="dar"] .os-gezinme { width: var(--os5-kenar-ray); align-items: center; padding: 0 0 var(--s-3); }
+  html[data-gezinme="dar"] .os-gezinme-bas { justify-content: center; width: 100%; margin: 0; padding: 0; }
+  /* Resmî logo 4,22:1; 64 px'e sığmaz ve yeniden çizilmez: üst çubuktaki logo görünür. */
+  html[data-gezinme="dar"] .os-gezinme-logo { display: none; }
+  /* Liste kabı taşmayı KESMEZ: ad etiketi rayın sağına açılıyor (kesseydi etiket kırpılırdı). */
+  html[data-gezinme="dar"] .os-gezinme-govde { align-items: center; gap: var(--s-1); width: 100%; margin: 0; padding: var(--s-2) 0; overflow: visible; }
+  html[data-gezinme="dar"] .os-gezinme-liste { align-items: center; gap: var(--s-1); }
+  html[data-gezinme="dar"] .os-gezinme-satir { justify-content: center; }
+  html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge { position: relative; justify-content: center; width: 44px; min-height: 44px; padding: 0; }
+  html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge.is-active { box-shadow: inset 3px 0 0 var(--os5-kenar-isaret); }
+  html[data-gezinme="dar"] .os-gezinme .os-gezinme-ad {
+    position: absolute; top: 50%; left: calc(100% + 12px); z-index: var(--z-menu);
+    padding: 4px 8px; border-radius: var(--os5-kontrol-r);
+    background: var(--ink); color: var(--surface);
+    font-size: var(--os5-fs-meta); font-weight: 500; white-space: nowrap; overflow: visible;
+    opacity: 0; pointer-events: none; transform: translateY(-50%);
+    transition: opacity var(--os5-sure-hizli) var(--os5-egri);
+  }
+  html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge:hover .os-gezinme-ad,
+  html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge:focus-visible .os-gezinme-ad { opacity: 1; }
+  /* Çalışma alt menüsü ve "Diğer" metin başlıklı; 64 px'e sığmazlar. Onların
+     yerine sayfadaki çalışma sekmeleri ve "Daha fazla" (tabletteki gibi). */
+  html[data-gezinme="dar"] .os-gezinme-ac,
+  html[data-gezinme="dar"] .os-gezinme-baglam,
+  html[data-gezinme="dar"] .os-gezinme-diger,
+  html[data-gezinme="dar"] .os-gezinme-hesap { display: none; }
+  html[data-gezinme="dar"] .os-gezinme-daha-li { display: list-item; }
+  html[data-gezinme="dar"] .os-gezinme-son { margin-top: auto; }
+  html[data-gezinme="dar"] .os-root .dashboard-content-shell { margin-left: var(--os5-kenar-ray); }
+  html[data-gezinme="dar"] .os-root .os-marka-logo { display: flex; }
+  html[data-gezinme="dar"] .os-root .os-kullanici--ust { display: block; }
+  html[data-gezinme="dar"] .os-root .os-marka-sayfa { padding-left: 12px; border-left: 1px solid var(--line); }
+  html[data-gezinme="dar"] .os-root .calisma-sekmeleri { display: inline-flex; }
+  /*
+    KÂĞIT GEOMETRİSİ SABİT (kurum sahibinin kararı, Phase 5.1c): daraltmanın
+    kazandırdığı 176 px belgeyi genişletmez. Yazım düzeni açık kenar
+    çubuğundaki genişliğinde kalır (inceleme paneli açık ya da kapalı) ve
+    kazanılan alanda ortalanır.
+  */
+  html[data-gezinme="dar"] .os-root .manuscript-layout {
+    max-width: calc(100% - (var(--os5-kenar-genis) - var(--os5-kenar-ray)));
+    margin-inline: auto;
+  }
+}
+/* Açık/dar geçişi: yalnızca genişlik ve içerik kenar boşluğu; renk ve
+   tema geçişi yok. Azaltılmış harekette süre 0 (os5-tokens.css). İlk
+   boyamada geçiş çalışmaz: tercih CSS uygulanmadan önce <html>'de. */
+@media (min-width: 1200px) {
+  .os-root .os-gezinme { transition: width var(--os5-sure-orta) var(--os5-egri); }
+  .os-root .dashboard-content-shell { transition: margin-left var(--os5-sure-orta) var(--os5-egri); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .os-root .os-gezinme, .os-root .dashboard-content-shell, .os-gezinme-daralt { transition: none; }
 }
 
 /* ---------- Tablet: 64 px koyu ray ---------- */

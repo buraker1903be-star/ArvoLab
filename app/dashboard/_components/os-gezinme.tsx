@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { ChevronDown, Ellipsis, X } from "lucide-react";
+import { ChevronDown, Ellipsis, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { useCeviri } from "@/app/_components/dil-saglayici";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import {
@@ -19,6 +19,7 @@ import {
 import { DIGER_GRUBU_ANAHTARI, grupAcikMi, kayitliTercih, tercihDegeri } from "@/lib/os5/gezinme";
 import { OsSimge } from "./os-simge";
 import { useCalismaBaglami } from "./calisma-baglami";
+import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_components/gezinme";
 
 /*
   UYARLANIR GEZİNME (Phase 3, 04.11.2026; Signature OS 5 / Phase 3,
@@ -93,6 +94,13 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const [calismaSecimi, setCalismaSecimi] = useState<{ yol: string; acik: boolean } | null>(null);
   const [digerSecimi, setDigerSecimi] = useState<{ yol: string; acik: boolean } | null>(null);
   const kayitliDiger = kayitliTercih(useSyncExternalStore(tercihAbone, tercihOku, () => null));
+  /*
+    Masaüstü dar/açık (Phase 5.1c). Durum <html data-gezinme>'den okunur;
+    genişliği yalnızca CSS belirler, bu yüzden sunucu çizimi ("açık") ile
+    istemci arasındaki fark yalnızca düğmenin aria-expanded'ı olur ve
+    hydration'dan hemen sonra düzelir — yerleşim hiç kaymaz.
+  */
+  const dar = useSyncExternalStore(gezinmeAbone, gezinmeDarMi, () => false);
 
   const calismaAcik = grupAcikMi({
     secim: calismaSecimi?.yol === yol ? calismaSecimi.acik : null,
@@ -191,10 +199,28 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
 
   return (
     <>
-      <nav className="os-gezinme" aria-label={t({ tr: "Ana gezinme", en: "Main navigation" })}>
-        <Link href="/dashboard" className="os-gezinme-logo" aria-label={t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })}>
-          <ArvoLabLogosu zemin="koyu" alt="" />
-        </Link>
+      <nav id="os-ana-gezinme" className="os-gezinme" aria-label={t({ tr: "Ana gezinme", en: "Main navigation" })}>
+        <div className="os-gezinme-bas">
+          <Link href="/dashboard" className="os-gezinme-logo" aria-label={t({ tr: "ArvoLab ana sayfa", en: "ArvoLab home" })}>
+            <ArvoLabLogosu zemin="koyu" alt="" />
+          </Link>
+          {/*
+            Daraltma düğmesi yalnızca masaüstünde görünür (os-shell.css): tablet
+            her zaman ray, telefon alt çubuk. Kısayol bilerek yok — Ctrl+B
+            editörde kalın yazı. Tıklayınca odak düğmede kalır.
+          */}
+          <button
+            type="button"
+            className="os-gezinme-daralt"
+            aria-controls="os-ana-gezinme"
+            aria-expanded={!dar}
+            aria-label={dar ? t({ tr: "Kenar çubuğunu genişlet", en: "Expand sidebar" }) : t({ tr: "Kenar çubuğunu daralt", en: "Collapse sidebar" })}
+            title={dar ? t({ tr: "Kenar çubuğunu genişlet", en: "Expand sidebar" }) : t({ tr: "Kenar çubuğunu daralt", en: "Collapse sidebar" })}
+            onClick={() => gezinmeTercihiniUygula(!dar)}
+          >
+            {dar ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}
+          </button>
+        </div>
 
         <div className="os-gezinme-govde">
           <ul className="os-gezinme-liste os-gezinme-ana">{ana.map((u) => (u.key === "tez" && baglamGorunur ? calismaOgesi(u) : oge(u)))}</ul>
