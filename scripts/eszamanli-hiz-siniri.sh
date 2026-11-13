@@ -18,6 +18,12 @@
 # OLARAK sınır kadar, hiçbir toplu çağrı istediğinden fazla almıyor ve
 # başka bir anahtar etkilenmiyor.
 #
+# Üçüncü bölüm (sertleştirme, 13.11.2026): sırayla tekli ve toplu hakkın
+# tam sınırda tükenmesi, sınırdan sonra granted = 0, anahtar izolasyonu,
+# NULL/sıfır/negatif pencerenin ve NULL/boş anahtarın açık hatayla
+# reddedilmesi, search_path = '' (çağıranın yolunda gölge tablo varken)
+# ve anon/authenticated'ın işlevi çağıramaması.
+#
 #   bash scripts/eszamanli-hiz-siniri.sh            # 250 çağrı × 2 anahtar + karışık senaryo, sınır 120
 #   CAGRI=400 SINIR=120 bash scripts/eszamanli-hiz-siniri.sh
 #   MIGRATION_TAKE=… bash …                          # toplu işlevin başka bir gövdesiyle (ör. bilerek yarışlı)
@@ -112,8 +118,75 @@ TOPLAM=$((T50_TOPLAM + T1_TOPLAM + H_IZIN))
 echo "Karışık (C): toplu $T50_TOPLAM (tek çağrıda en çok $T50_EN_COK) + tekli $T1_TOPLAM + eski işlev $H_IZIN = $TOPLAM (beklenen: $SINIR) · yanıt $satir_sayisi/171"
 echo "Bağımsız anahtar (D): $D_VERILEN (beklenen: 50)"
 
-if [ "$satir_sayisi" = "171" ] && [ "$TOPLAM" = "$SINIR" ] && [ "$T50_EN_COK" -le 50 ] && [ "$D_VERILEN" = "50" ] && [ "$BIRINCI" = "0" ]; then
+IKINCI=0
+if [ "$satir_sayisi" = "171" ] && [ "$TOPLAM" = "$SINIR" ] && [ "$T50_EN_COK" -le 50 ] && [ "$D_VERILEN" = "50" ]; then
   echo "GEÇTİ (2): tekli ve toplu çağrılar aynı anda sınırı aşamadı; verilen toplam tam $SINIR."
+else
+  echo "KALDI (2)" >&2
+  IKINCI=1
+fi
+
+# --- Üçüncü bölüm: sıralı kurallar (sertleştirme, 13.11.2026) ---
+# search_path = '', geçersiz anahtar/pencere için açık hata, rol yetkileri
+# ve tekli/toplu hakkın sırayla tükenişi; gerçek PostgreSQL üzerinde.
+UCUNCU=0
+gecti() { echo "  ✓ $1"; }
+kaldi() { echo "  ✗ $1" >&2; UCUNCU=1; }
+esit() { if [ "$2" = "$3" ]; then gecti "$1"; else kaldi "$1 (beklenen '$3', gelen '$2')"; fi; }
+q() { "${PSQL[@]}" -c "$1"; }
+# Reddedilmesi beklenen çağrı: psql başarısız dönmeli ve hata metni desene uymalı.
+reddedilir() {
+  local cikti
+  if cikti=$("${PSQL[@]}" -c "$2" 2>&1); then
+    kaldi "$1 (reddedilmedi: $cikti)"
+  elif printf '%s' "$cikti" | grep -q "$3"; then
+    gecti "$1"
+  else
+    kaldi "$1 (beklenmeyen hata: $cikti)"
+  fi
+}
+take() { echo "select granted from public.rate_limit_take('$1', $SINIR, interval '1 hour', $2);"; }
+
+echo "Kurallar (3):"
+# 1 + 4 + 5: tekli sorgular, sınır+1 kez, ayrı ifadeler.
+TEKLI=$(for i in $(seq 1 $((SINIR + 1))); do take doi-sorgu:E 1; done | "${PSQL[@]}")
+esit "tekli: ilk $SINIR sorgu birer hak alır" "$(printf '%s\n' "$TEKLI" | head -n "$SINIR" | paste -sd+ - | bc)" "$SINIR"
+esit "tekli: sınır aşılınca granted = 0" "$(printf '%s\n' "$TEKLI" | tail -n 1)" "0"
+esit "tekli: sayaç tam sınırda" "$(q "select count from public.auth_rate_limits where key = 'doi-sorgu:E'")" "$SINIR"
+# 2 + 4 + 5: toplu sorgular (50'şer), kısmi verme ve tükeniş.
+TOPLU=$(for i in 1 2 3 4; do take doi-sorgu:F 50; done | "${PSQL[@]}" | paste -sd, -)
+esit "toplu: 50, 50, kalan $((SINIR - 100)), sonra 0" "$TOPLU" "50,50,$((SINIR - 100)),0"
+esit "toplu: sayaç tam sınırda" "$(q "select count from public.auth_rate_limits where key = 'doi-sorgu:F'")" "$SINIR"
+esit "toplu: tükenince kalan 0" "$(q "select remaining from public.rate_limit_take('doi-sorgu:F', $SINIR, interval '1 hour', 1)")" "0"
+# 6: tükenmiş anahtarlar yeni anahtarı etkilemez.
+esit "izolasyon: tükenmiş E/F yanında yeni anahtar tam hak alır" "$(q "$(take doi-sorgu:G 50)")" "50"
+# 7: geçersiz pencere.
+for p in "NULL" "interval '0'" "interval '-1 hour'" "interval '-1 second'"; do
+  reddedilir "pencere $p reddedilir" "select * from public.rate_limit_take('doi-sorgu:E', $SINIR, $p, 1)" "pencere pozitif"
+done
+esit "reddedilen pencere sayacı değiştirmez" "$(q "select count from public.auth_rate_limits where key = 'doi-sorgu:E'")" "$SINIR"
+# 8: geçersiz anahtar.
+for k in "NULL" "''" "'   '"; do
+  reddedilir "anahtar $k reddedilir" "select * from public.rate_limit_take($k, $SINIR, interval '1 hour', 1)" "anahtar boş olamaz"
+done
+esit "boş anahtarlı satır yazılmadı" "$(q "select count(*) from public.auth_rate_limits where key is null or btrim(key) = ''")" "0"
+# 9: search_path = '' ve çağıranın yolunda gölge tablo.
+esit "işlev ayarı search_path=\"\"" "$(q "select array_to_string(proconfig, ',') from pg_proc where oid = 'public.rate_limit_take(text, integer, interval, integer)'::regprocedure")" 'search_path=""'
+esit "işlev SECURITY DEFINER" "$(q "select prosecdef from pg_proc where oid = 'public.rate_limit_take(text, integer, interval, integer)'::regprocedure")" "t"
+q "create schema golge; create table golge.auth_rate_limits (key text primary key, window_start timestamptz, count int);" >/dev/null
+esit "gölge yolda çağrı gerçek tabloyu sayar" "$(q "set search_path = golge; $(take doi-sorgu:H 3)")" "3"
+esit "gölge tabloya yazılmadı" "$(q "select count(*) from golge.auth_rate_limits")" "0"
+esit "gerçek tabloda sayaç 3" "$(q "select count from public.auth_rate_limits where key = 'doi-sorgu:H'")" "3"
+# 10: rol yetkileri.
+reddedilir "anon çağıramaz" "set role anon; $(take doi-sorgu:I 1)" "permission denied for function rate_limit_take"
+reddedilir "authenticated çağıramaz" "set role authenticated; $(take doi-sorgu:I 1)" "permission denied for function rate_limit_take"
+esit "service_role çağırabilir" "$(q "set role service_role; $(take doi-sorgu:I 1)")" "1"
+esit "işlev yetkisi yalnızca sahip ve service_role" "$(q "select proacl::text from pg_proc where oid = 'public.rate_limit_take(text, integer, interval, integer)'::regprocedure")" "{postgres=X/postgres,service_role=X/postgres}"
+
+if [ "$UCUNCU" = "0" ]; then echo "GEÇTİ (3): sıralı kurallar."; else echo "KALDI (3)" >&2; fi
+
+if [ "$BIRINCI" = "0" ] && [ "$IKINCI" = "0" ] && [ "$UCUNCU" = "0" ]; then
+  echo "HEPSİ GEÇTİ."
 else
   echo "KALDI" >&2
   exit 1

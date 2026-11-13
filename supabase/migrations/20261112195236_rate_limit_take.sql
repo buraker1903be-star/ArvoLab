@@ -30,6 +30,21 @@
 --
 -- Tablo ve mevcut işlevler DEĞİŞMİYOR; şifre sıfırlama ve öteki sınırlar
 -- etkilenmez. Yalnızca service_role çağırabilir.
+--
+-- SERTLEŞTİRME (13.11.2026, uygulamadan önce, kurum sahibinin kararı):
+--   - search_path = '' (eskiden "public"). İşlev SECURITY DEFINER; boş yol
+--     ile hiçbir ad çağıranın ya da public'in içeriğine göre çözülmez:
+--     tablo tam nitelikli (public.auth_rate_limits), now/greatest/least/
+--     coalesce/btrim ve işleçler pg_catalog'dan gelir (pg_catalog boş yolda
+--     da her zaman aranır). Bugün public'te kimsenin CREATE yetkisi yok;
+--     bu, o yetki ileride açılırsa doğacak gölge nesne riskini de kapatır.
+--   - Anahtar NULL/boş ya da pencere NULL/sıfır/negatifse AÇIK HATA
+--     (22023). Eskiden NULL pencerede "now() - NULL" NULL çıkıyor, pencere
+--     hiç sıfırlanmıyordu; boş anahtar ise bütün çağıranları tek ortak
+--     sayaçta topluyordu. Sessizce yanlış saymak yerine çağıran hatayı
+--     görür; uygulama hatayı sayaç arızası sayıp açık kalır ve günlüğe
+--     yazar (lib/doi-sorgu-siniri.ts). Tek çağıran sabit anahtar biçimi ve
+--     "1 hour" geçirdiği için meşru akışta bu dal hiç çalışmaz.
 -- ============================================================
 
 create or replace function public.rate_limit_take(
@@ -40,7 +55,7 @@ create or replace function public.rate_limit_take(
 )
 returns table (granted integer, remaining integer, resets_at timestamptz)
 language plpgsql
-security definer set search_path = public
+security definer set search_path = ''
 as $$
 declare
   v_limit integer := greatest(1, coalesce(p_limit, 1));
@@ -50,6 +65,15 @@ declare
   v_start timestamptz;
   v_granted integer;
 begin
+  if p_key is null or pg_catalog.btrim(p_key) = '' then
+    raise exception 'rate_limit_take: anahtar boş olamaz'
+      using errcode = '22023';
+  end if;
+  if p_window is null or p_window <= interval '0' then
+    raise exception 'rate_limit_take: pencere pozitif bir süre olmalı'
+      using errcode = '22023';
+  end if;
+
   insert into public.auth_rate_limits as l (key, window_start, count)
   values (p_key, now(), 0)
   on conflict (key) do update

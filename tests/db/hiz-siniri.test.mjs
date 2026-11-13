@@ -212,6 +212,56 @@ test("rate_limit_take yalnızca service_role'a açık", () =>
     await reddedilir(db, `select * from public.rate_limit_take('doi-sorgu:x', 120, interval '1 hour', 5)`, [], /permission denied/);
   }));
 
+/*
+  Sertleştirme (13.11.2026): search_path = '' ve geçersiz girdide açık hata.
+  Eskiden NULL pencere "now() - NULL" ile pencereyi hiç sıfırlamıyor, boş
+  anahtar bütün çağıranları tek ortak sayaçta topluyordu.
+*/
+test("geçersiz anahtar reddedilir (NULL, boş, yalnızca boşluk) ve sayaca satır yazılmaz", () =>
+  islem(db, async () => {
+    await rol(db, "service_role");
+    for (const anahtar of [null, "", "   "]) {
+      await reddedilir(db, `select * from public.rate_limit_take($1, 120, interval '1 hour', 1)`, [anahtar], /anahtar boş olamaz/);
+    }
+    await rol(db, "postgres");
+    const { rows } = await db.query(`select count(*)::int as n from public.auth_rate_limits where btrim(key) = ''`);
+    assert.equal(rows[0].n, 0);
+  }));
+
+test("geçersiz pencere reddedilir (NULL, sıfır, negatif) ve sayaç değişmez", () =>
+  islem(db, async () => {
+    await rol(db, "service_role");
+    await al("t10", 7);
+    for (const pencere of [null, "0", "0 seconds", "-1 hour", "-1 second"]) {
+      await reddedilir(db, `select * from public.rate_limit_take('doi-sorgu:t10', 120, $1::interval, 5)`, [pencere], /pencere pozitif/);
+    }
+    await rol(db, "postgres");
+    const { rows } = await db.query(`select count from public.auth_rate_limits where key = 'doi-sorgu:t10'`);
+    assert.equal(rows[0].count, 7, "reddedilen çağrı sayaca yazılmaz");
+  }));
+
+test("işlev search_path = '' ile tanımlı ve çağıranın yolundan bağımsız çalışır", () =>
+  islem(db, async () => {
+    await rol(db, "postgres");
+    const { rows } = await db.query(
+      `select p.prosecdef, p.proconfig from pg_proc p where p.oid = 'public.rate_limit_take(text, integer, interval, integer)'::regprocedure`,
+    );
+    assert.equal(rows[0].prosecdef, true);
+    assert.deepEqual(rows[0].proconfig, ['search_path=""']);
+    // Çağıranın yolunda aynı adlı bir gölge tablo olsa bile gerçek tablo sayılır.
+    await db.query(`create schema golge`);
+    await db.query(`create table golge.auth_rate_limits (key text primary key, window_start timestamptz, count int)`);
+    await db.query(`grant usage on schema golge to service_role`);
+    await db.query(`grant all on golge.auth_rate_limits to service_role`);
+    await rol(db, "service_role");
+    await db.query(`set local search_path = golge`);
+    const r = (await db.query(`select granted from public.rate_limit_take('doi-sorgu:t11', 120, interval '1 hour', 3)`)).rows[0];
+    assert.equal(r.granted, 3);
+    await rol(db, "postgres");
+    assert.equal((await db.query(`select count(*)::int as n from golge.auth_rate_limits`)).rows[0].n, 0);
+    assert.equal((await db.query(`select count from public.auth_rate_limits where key = 'doi-sorgu:t11'`)).rows[0].count, 3);
+  }));
+
 test("mevcut şifre sıfırlama sınırı etkilenmez (farklı anahtar, aynı tablo)", () =>
   islem(db, async () => {
     await rol(db, "service_role");
