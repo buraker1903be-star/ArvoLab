@@ -17,9 +17,12 @@
 */
 
 import type { Dil, Metin } from "@/lib/dil";
+/* Doğrulama durumları tek yerde (lib/academic-reference-verification.ts);
+   eskiden burada ayrı bir kopya vardı ve yeni durum eklenince sapacaktı. */
+import type { DogrulamaDurumu } from "@/lib/academic-reference-verification";
+export type { DogrulamaDurumu };
 
 export type PdfDurumu = "indirildi" | "yuklendi" | "bulunamadi" | "erisilemedi" | "kayit_yok";
-export type DogrulamaDurumu = "verified" | "possible_match" | "not_found" | "insufficient_data";
 
 /** kaynak_pdfleri satırı (migration 20261026110024). */
 export type KaynakPdfSatiri = {
@@ -100,6 +103,45 @@ export function pdfAdaylari(kayit: unknown): string[] {
 export function aranacakMi(durum: DogrulamaDurumu | null | undefined, doi: string | null | undefined): boolean {
   if (durum === "not_found") return false;
   return Boolean(doi);
+}
+
+/*
+  PDF ARAMASININ BAŞLANGIÇ KARARI tek yerde, saf (12.11.2026). Eskiden
+  sunucu eyleminin içinde iki ayrı koşuldu ve test edilemiyordu.
+
+  - "ertele": dizine ulaşılamamış künye (ulasilamadi) ve DOI yok. Ortada
+    bakılmış bir şey yok; "kayıt yok" de "açık erişimli sürüm
+    bulunamadı" da yapılmamış bir aramanın sonucu gibi okunurdu. Satır
+    YAZILMAZ; denetim yeniden çalıştırılıp dizinler cevap verince olağan
+    yol işler. (Ekran bugün ulasilamadi künyeyi kuyruğa hiç koymuyor,
+    çünkü onun DOI'si yok: eşleşme yok. Bu dal sunucudaki güvence.)
+  - "kayit_yok": yalnızca İKİ dizinin de cevap verip bulamadığı künye.
+  - "bulunamadi": DOI bilinmiyor; açık erişim konumu sorulamaz.
+  - "ara": DOI var, açık erişim konumları sorulur.
+*/
+export type PdfBaslangici = "ertele" | "kayit_yok" | "bulunamadi" | "ara";
+
+export function pdfBaslangicKarari(durum: DogrulamaDurumu | null | undefined, doi: string | null | undefined): PdfBaslangici {
+  if (durum === "ulasilamadi" && !doi) return "ertele";
+  if (durum === "not_found") return "kayit_yok";
+  return aranacakMi(durum, doi) ? "ara" : "bulunamadi";
+}
+
+/*
+  EKRANDA GÖSTERİLECEK PDF DURUMU. 12.11.2026'dan önce bir dizin kesintisi
+  sırasında yazılmış "kayit_yok" satırları veritabanında duruyor (geçmiş
+  kayıtlar silinmiyor). Künyenin GÜNCEL sonucu "ulasilamadi" iken o satırı
+  göstermek, kaldırdığımız yanlış "dizinde yok" işaretini yan yana geri
+  getirirdi; o durumda satır yokmuş gibi davranılır. Satırın kendisine
+  dokunulmaz: dizinler cevap verince yeni arama onu olağan yoldan yeniler.
+*/
+export function gosterilecekPdfDurumu(
+  satirDurumu: PdfDurumu | null | undefined,
+  dogrulama: DogrulamaDurumu | null | undefined,
+): PdfDurumu | null {
+  if (!satirDurumu) return null;
+  if (satirDurumu === "kayit_yok" && dogrulama === "ulasilamadi") return null;
+  return satirDurumu;
 }
 
 /*

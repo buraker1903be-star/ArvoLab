@@ -12,7 +12,7 @@ import { ClipboardPaste, FileSearch, History, Sparkles } from "lucide-react";
 import KaynakPdfSatiri from "./kaynak-pdf-satiri";
 import { showToast } from "../_components/toast-events";
 import { kaynakPdfleriniBul } from "@/app/actions/kaynak-pdf";
-import { kunyeAnahtari, type KaynakPdfSatiri as PdfSatiri } from "@/lib/kaynak-pdf";
+import { gosterilecekPdfDurumu, kunyeAnahtari, type DogrulamaDurumu, type KaynakPdfSatiri as PdfSatiri } from "@/lib/kaynak-pdf";
 import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-check";
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
@@ -51,7 +51,7 @@ interface AcademicMatch {
 
 interface AcademicVerification {
   reference: string;
-  status: "verified" | "possible_match" | "not_found" | "insufficient_data";
+  status: DogrulamaDurumu;
   googleScholarUrl: string;
   bestMatch: AcademicMatch | null;
   matches: AcademicMatch[];
@@ -75,6 +75,8 @@ export interface CheckResult {
     possible: number;
     notFound: number;
     insufficientData: number;
+    /* Bu alan 12.11.2026'dan önceki kayıtlarda yok. */
+    unreachable?: number;
   };
   stil: { id: string; ad: string; tur: AtifTuru };
   dogrulananSayisi: number;
@@ -89,6 +91,8 @@ const STATUS_META: Record<AcademicVerification["status"], { label: Metin; tone: 
   possible_match: { label: { tr: "Olası eşleşme", en: "Possible match" }, tone: "warning" },
   not_found: { label: { tr: "Kayıt bulunamadı", en: "No record found" }, tone: "danger" },
   insufficient_data: { label: { tr: "Yetersiz veri", en: "Insufficient data" }, tone: "neutral" },
+  /* Hüküm değil: kırmızı değil, nötr. "Bulunamadı" ile karışmamalı. */
+  ulasilamadi: { label: { tr: "Dizine ulaşılamadı", en: "Index unreachable" }, tone: "neutral" },
 };
 
 /* Bu turda ağ doğrulamasına sıra gelmemiş künye. "Bulunamadı" DEĞİL. */
@@ -275,7 +279,7 @@ export default function CitationCheckForm({
   */
   async function pdfleriBul() {
     if (!result || !projectId) return;
-    const kuyruk = result.references
+    const adaylar = result.references
       .map((kunye) => {
         const dogrulama = dogrulamaHaritasi.get(kunye.raw);
         return { kunye: kunye.raw, doi: dogrulama?.bestMatch?.doi ?? null, dogrulama: dogrulama?.status ?? null };
@@ -285,7 +289,22 @@ export default function CitationCheckForm({
         const mevcut = pdfler.get(kunyeAnahtari(k.kunye));
         return mevcut?.durum !== "indirildi" && mevcut?.durum !== "yuklendi";
       });
+    /* Dizine ulaşılamamış künyenin DOI'si yok (eşleşme yok): PDF aranamaz,
+       "yok" da denemez. Kuyruğa konmaz ve kullanıcıya NEDENİ söylenir;
+       eskiden sessizce atlansaydı ilerleme çubuğu hiçbir şey demeden
+       biterdi. Sunucu da aynı künyeyi atlıyor (lib/kaynak-pdf.ts). */
+    const ertelenen = adaylar.filter((k) => k.dogrulama === "ulasilamadi").length;
+    const kuyruk = adaylar.filter((k) => k.dogrulama !== "ulasilamadi");
+    if (ertelenen) {
+      /* Ertelenen iş hata değil: "info" (T2). Eskiden "error" türündeydi ve
+         "İşlem tamamlanamadı" başlığıyla, acil uyarı olarak okunuyordu. */
+      showToast("info", t({
+        tr: `Dizinlere ulaşılamayan ${ertelenen} künye için PDF araması yapılmadı; denetimi tekrar çalıştırın.`,
+        en: `No PDF search for ${ertelenen} ${ertelenen === 1 ? "reference" : "references"} whose indexes couldn't be reached; run the check again.`,
+      }));
+    }
     if (!kuyruk.length) {
+      if (ertelenen) return;
       showToast("success", t({ tr: "Bakılacak yeni kaynak yok; PDF'i olanlar hazır.", en: "No new sources to check; those with PDFs are ready." }));
       return;
     }
@@ -345,6 +364,8 @@ export default function CitationCheckForm({
   /* "Dikkat isteyen": dizinde doğrulanmamış (bakılmamış dahil) ya da biçim sorunu olan künye.
      Öteki sekme "Sorunsuz", "Doğrulandı" değil: doğrulanmış ama biçim sorunu olan
      künye dikkat isteyende sayılıyor ve iki adın çakışması sayıları yalan gösterirdi. */
+  // Eski kayıtlarda alan yok: 0 sayılıyor.
+  const ulasilamayan = result?.verificationSummary.unreachable ?? 0;
   const dikkatIster = (r: { raw: string; issues: unknown[] }) => dogrulamaHaritasi.get(r.raw)?.status !== "verified" || r.issues.length > 0;
   /* Atıf çıkarılamadıysa çapraz kontrol ölçülmemiştir; "Yok" yazmak
      yapılmamış bir denetimi temiz rapor gibi gösterirdi. */
@@ -353,7 +374,9 @@ export default function CitationCheckForm({
   const kaynaksizAtif = result?.crossCheck.citationsWithoutReference ?? [];
 
   /* Sol karttaki PDF özeti: kaynakçadaki künyelerin PDF durumları. */
-  const pdfDurumlari = (result?.references ?? []).map((kunye) => pdfler.get(kunyeAnahtari(kunye.raw))?.durum ?? null);
+  /* Güncel sonucu "ulasilamadi" olan künyede eski "kayit_yok" satırı sayılmaz (lib/kaynak-pdf.ts). */
+  const pdfDurumu = (raw: string) => gosterilecekPdfDurumu(pdfler.get(kunyeAnahtari(raw))?.durum, dogrulamaHaritasi.get(raw)?.status);
+  const pdfDurumlari = (result?.references ?? []).map((kunye) => pdfDurumu(kunye.raw));
   const pdfSay = (...durumlar: (string | null)[]) => pdfDurumlari.filter((d) => durumlar.includes(d)).length;
   const pdfOzeti = pdfDurumlari.some(Boolean)
     ? [
@@ -427,6 +450,7 @@ export default function CitationCheckForm({
         </p>
       )}
 
+      <AyiklamaNotu sayi={denetim?.ayiklananSayisi} />
       <AsistanSonuc
         sonuc={denetim}
         yetenek="kaynakca"
@@ -491,6 +515,18 @@ export default function CitationCheckForm({
               bakılmamışlara harcanıyor; tekrar çalıştırmak sıradakileri
               kapatıyor. Bunu YAZMAK gerekiyor: kullanıcı bilmediği bir
               çözümü kendiliğinden denemez. */}
+          {/* Dizine ulaşılamayan künyeler "Bulunamadı" sayısına KATILMIYOR
+              (12.11.2026). Eskiden geçici bir arıza doğru künyeyi kırmızı
+              "Kayıt bulunamadı" gösteriyordu. Önbelleğe de girmiyorlar:
+              tekrar çalıştırmak onlara yeniden sorar. */}
+          {ulasilamayan > 0 ? (
+            <div className="callout mt-md" data-tone="warning">
+              {t({
+                tr: `${ulasilamayan} künye için akademik dizinlere bu sırada ulaşılamadı. Bu "bulunamadı" demek değil; denetimi birazdan tekrar çalıştırın.`,
+                en: `The academic indexes couldn't be reached for ${ulasilamayan} ${ulasilamayan === 1 ? "reference" : "references"} at the time. That doesn't mean ${ulasilamayan === 1 ? "it wasn't" : "they weren't"} found; run the check again shortly.`,
+              })}
+            </div>
+          ) : null}
           {result.dogrulananSayisi < result.toplamKaynak ? (
             <div className="callout mt-md" data-tone="info">
               {t({
@@ -656,6 +692,8 @@ export default function CitationCheckForm({
                             : ""}
                         </span>
                       </div>
+                    ) : dogrulama?.status === "ulasilamadi" ? (
+                      <p className="hint kunye-not">{t({ tr: "Crossref ya da OpenAlex bu sırada cevap vermedi; künye hakkında bir hüküm yok. Denetimi tekrar çalıştırın.", en: "Crossref or OpenAlex didn't respond at the time; there is no verdict on this reference. Run the check again." })}</p>
                     ) : dogrulama ? (
                       <p className="hint kunye-not">{t({ tr: "Crossref ve OpenAlex üzerinde yeterince güçlü bir eşleşme bulunamadı.", en: "No sufficiently strong match was found in Crossref or OpenAlex." })}</p>
                     ) : (
@@ -756,7 +794,7 @@ export default function CitationCheckForm({
                         projectId={projectId}
                         kunye={reference.raw}
                         doi={eslesme?.doi ?? null}
-                        satir={pdfler.get(kunyeAnahtari(reference.raw)) ?? null}
+                        satir={pdfDurumu(reference.raw) ? pdfler.get(kunyeAnahtari(reference.raw)) ?? null : null}
                         onGuncelle={(satir) => pdfGuncelle([satir])}
                       />
                     ) : null}
@@ -958,6 +996,7 @@ export default function CitationCheckForm({
             {!gecmisGoster && bekleniyor && !denetim ? (
               <p className="gb-bos">{t({ tr: "Asistan denetim sonucunuzu okuyor…", en: "The assistant is reading your check result…" })}</p>
             ) : null}
+            {!gecmisGoster ? <AyiklamaNotu sayi={denetim?.ayiklananSayisi} /> : null}
             <AsistanSonuc
               sonuc={
                 gecmisGoster
@@ -1141,5 +1180,24 @@ export default function CitationCheckForm({
         sonucIcerik
       )}
     </section>
+  );
+}
+
+/*
+  Dizine ulaşılamayan künyeler hakkında hüküm kurduğu için gösterilmeyen
+  bulgular (T1, app/actions/ai-kaynakca.ts). Ayıklandığı söylenmezse kullanıcı
+  listenin eksik olduğunu bilemez; ayıklananın içeriği ise gösterilmez,
+  çünkü doğrulanmamış bir hükümdür.
+*/
+function AyiklamaNotu({ sayi }: { sayi?: number }) {
+  const t = useCeviri();
+  if (!sayi) return null;
+  return (
+    <p className="asistan-uyari" data-tone="neutral" role="status">
+      {t({
+        tr: `Dizinlerine ulaşılamayan kaynaklar hakkında doğrulanmamış hüküm içerdiği için gösterilmeyen bulgu: ${sayi}. Dizinler yanıt verdiğinde denetimi yeniden çalıştırabilirsiniz.`,
+        en: `Findings not shown because they made unverified claims about sources whose indexes couldn't be reached: ${sayi}. You can run the check again once the indexes respond.`,
+      })}
+    </p>
   );
 }

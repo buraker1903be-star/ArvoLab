@@ -4,7 +4,7 @@ import { aiHataMesaji, aiYapilandirildi, sor } from "@/lib/ai/saglayici";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
 import { asistanHakkiVar, asistanKapisi } from "@/lib/ai/erisim";
 import { bulgulariCozumle, bulgulariDogrula, type Bulgu, bosListeMi } from "@/lib/ai/bulgu";
-import { kaynakcaIstemi, type KaynakDurumu, type KaynakSatiri } from "@/lib/ai/kaynakca-denetimi";
+import { kaynakcaIstemi, ulasilamadiHukmunuAyikla, yapisalKaynaklar, type KaynakDurumu, type KaynakSatiri } from "@/lib/ai/kaynakca-denetimi";
 import { asistanKaydet } from "@/lib/ai/kayit";
 import { oncekiCevap } from "@/lib/ai/gecmis";
 import { calismaBaglami } from "@/lib/ai/calisma-baglami";
@@ -19,7 +19,9 @@ const EN_UZUN_KAYNAK = 600;
 const EN_FAZLA_KAYNAK = 60;
 const EN_FAZLA_LISTE = 40;
 const EN_FAZLA_ATIF = 120;
-const DURUMLAR = new Set<KaynakDurumu>(["verified", "possible_match", "not_found", "insufficient_data"]);
+/* Bilinmeyen durum "veri yetersiz" sayılıyor; "ulasilamadi" listede olmalı,
+   yoksa geçici erişim sorunu modele başka bir şey gibi giderdi. */
+const DURUMLAR = new Set<KaynakDurumu>(["verified", "possible_match", "not_found", "insufficient_data", "ulasilamadi"]);
 
 export type KaynakcaDenetimGirdisi = {
   /** Bağlı akademik çalışma (isteğe bağlı). */
@@ -46,6 +48,11 @@ export type KaynakcaDenetimYaniti = {
   kayitId?: string | null;
   /** Kayıtlı cevap gösterildi: model çağrılmadı, hak yanmadı. */
   kayitliCevap?: { tarih: string } | null;
+  /**
+   * Dizine ulaşılamayan künyeler hakkında hüküm kurduğu için gösterilmeyen
+   * bulgu sayısı (lib/ai/kaynakca-denetimi.ts, ulasilamadiHukmunuAyikla).
+   */
+  ayiklananSayisi?: number;
 };
 
 const kisalt = (deger: unknown, sinir: number) => String(deger ?? "").slice(0, sinir).trim();
@@ -53,6 +60,13 @@ const liste = (deger: string[] | undefined, adet: number, sinir: number) =>
   (deger ?? []).slice(0, adet).map((satir) => kisalt(satir, sinir)).filter(Boolean);
 
 export const kaynakcaAsistaniAcik = async () => aiYapilandirildi();
+
+/* Bütün bulgular ulaşılamayan künyeler hakkında hüküm kurduysa gösterilen metin. */
+const hukumHatasi = (t: Awaited<ReturnType<typeof ceviri>>) =>
+  t({
+    tr: "Asistanın bulguları, dizinlerine ulaşılamayan kaynaklar hakkında doğrulanmamış hüküm içerdiği için gösterilmedi. Dizinler yanıt verdiğinde denetimi yeniden çalıştırabilirsiniz.",
+    en: "The assistant's findings weren't shown because they made unverified claims about sources whose indexes couldn't be reached. You can run the check again once the indexes respond.",
+  });
 
 export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<KaynakcaDenetimYaniti> {
   // Girdi istemciden geliyor: uzunluk ve durum değerleri burada sınırlanır,
@@ -101,8 +115,21 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
   */
   if (!girdi.zorla) {
     const onceki = await oncekiCevap(kapi.kullaniciId, "kaynakca", kaynak);
-    if (onceki)
-      return { krediUyarisi: kapi.uyari ?? undefined, bulgular: onceki.bulgular, kirpilanlar, kayitId: onceki.id, kayitliCevap: { tarih: onceki.created_at } };
+    if (onceki) {
+      /* Kayıtlı cevap da aynı son doğrulamadan geçer: bu kural gelmeden
+         önce kaydedilmiş bir cevap ulaşılamayan künye için hüküm taşıyabilir.
+         Kayıtta "kaynaklar" alanı yok; yalnızca metindeki [n] okunur. */
+      const ayiklama = ulasilamadiHukmunuAyikla(onceki.bulgular, kaynaklar);
+      if (ayiklama.ayiklanan.length && !ayiklama.gecerli.length) return { hata: hukumHatasi(t), kirpilanlar };
+      return {
+        krediUyarisi: kapi.uyari ?? undefined,
+        bulgular: ayiklama.gecerli,
+        kirpilanlar,
+        kayitId: onceki.id,
+        kayitliCevap: { tarih: onceki.created_at },
+        ...(ayiklama.ayiklanan.length ? { ayiklananSayisi: ayiklama.ayiklanan.length } : {}),
+      };
+    }
   }
 
   // Hak yalnızca modele gidilecekse yanar.
@@ -142,8 +169,33 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
       };
     }
 
-    const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular, basladi });
-    return { krediUyarisi: kapi.uyari ?? undefined, bulgular, kirpilanlar, model: yanit.model, kayitId };
+    /*
+      Ulaşılamayan künye hakkında hüküm (T1): sayı denetiminden SONRA, çünkü
+      o denetim cevabın tamamına bakıyor — ayıklanacak bir bulgudaki uydurma
+      sayı da cevabı düşürmeli. Ham çıktı kayda aynen gider ("output");
+      "findings" kullanıcıya gösterilen doğrulanmış bulgulardır.
+    */
+    const ayiklama = ulasilamadiHukmunuAyikla(bulgular, kaynaklar, yapisalKaynaklar(yanit.metin));
+    if (ayiklama.ayiklanan.length) {
+      console.error("[ai] kaynakça denetimi ulaşılamayan künye için hüküm içerdi", { model: yanit.model, ayiklanan: ayiklama.ayiklanan.length, kalan: ayiklama.gecerli.length });
+    }
+    if (ayiklama.ayiklanan.length && !ayiklama.gecerli.length) {
+      /* Gösterilecek doğrulanmış bulgu kalmadı: cevap düşer. Red nedeni
+         boş bırakılıyor; yeni bir neden migration ister (reject_reason
+         kısıtı) ve "rejected" zaten kredi düşürmüyor. */
+      await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "rejected", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular: [], basladi });
+      return { hata: hukumHatasi(t), kirpilanlar };
+    }
+
+    const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular: ayiklama.gecerli, basladi });
+    return {
+      krediUyarisi: kapi.uyari ?? undefined,
+      bulgular: ayiklama.gecerli,
+      kirpilanlar,
+      model: yanit.model,
+      kayitId,
+      ...(ayiklama.ayiklanan.length ? { ayiklananSayisi: ayiklama.ayiklanan.length } : {}),
+    };
   } catch (hata) {
     const mesaj = aiHataMesaji(hata, dil) ?? t({ tr: "Asistan yanıt veremedi.", en: "The assistant couldn't respond." });
     console.error("[ai] kaynakça denetimi başarısız", mesaj);

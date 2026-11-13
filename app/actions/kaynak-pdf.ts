@@ -9,7 +9,7 @@ import { guvenliIndir } from "@/lib/guvenli-indir";
 import { extractTextFromBuffer } from "@/lib/document-extract";
 import {
   PDF_EN_FAZLA_BAYT,
-  aranacakMi,
+  pdfBaslangicKarari,
   baslikPdfteGeciyor,
   kaynakRaporu,
   kunyeAnahtari,
@@ -108,6 +108,9 @@ export async function kaynakPdfleriniBul(
     const anahtar = kunyeAnahtari(k.kunye);
     if (!anahtar || yuklenmis.has(anahtar)) continue;
     const doi = k.doi?.trim().slice(0, 300) || null;
+    // Başlangıç kararı saf ve testli (lib/kaynak-pdf.ts). "ertele": hüküm yazılmaz.
+    const baslangic = pdfBaslangicKarari(k.dogrulama ?? null, doi);
+    if (baslangic === "ertele") continue;
     const kayit = {
       project_id: projectId,
       olusturan: user.id,
@@ -122,9 +125,9 @@ export async function kaynakPdfleriniBul(
     let yol: string | null = null;
     let kaynakAdres: string | null = null;
 
-    if (k.dogrulama === "not_found") {
+    if (baslangic === "kayit_yok") {
       durum = "kayit_yok";
-    } else if (!aranacakMi(k.dogrulama ?? null, doi)) {
+    } else if (baslangic === "bulunamadi") {
       durum = "bulunamadi";
     } else {
       // DOI'nin açık erişim konumları OpenAlex'ten; ağ hatası "bulunamadı" sayılmaz.
