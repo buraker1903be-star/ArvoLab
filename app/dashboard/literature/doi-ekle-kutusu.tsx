@@ -69,8 +69,8 @@ export default function DoiEkleKutusu({
     setDurum({ tur: "bekliyor" });
     try {
       const r = await doiIleEkle(projectId, [doi]);
+      if (r.error) return setDurum({ tur: "hata", mesaj: r.error });
       const s = r.sonuclar?.[0];
-      if (r.error && !s) return setDurum({ tur: "hata", mesaj: r.error });
       if (!s) return setDurum({ tur: "hata" });
       if (s.durum === "eklendi") {
         setDurum({ tur: "eklendi", baslik: s.baslik ?? doi });

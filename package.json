@@ -11,6 +11,7 @@
     "build": "node scripts/check-css-tokens.mjs && node scripts/check-migrations.mjs && next build",
     "start": "next start",
     "test:unit": "node --import ./tests/register.mjs --test 'tests/unit/*.test.ts'",
+    "test:doi-runtime": "node --import ./tests/register.mjs --test tests/unit/doi-fail-closed-runtime.test.mjs tests/unit/doi-sayac-arizasi-runtime.test.mjs",
     "test:db": "node --test 'tests/db/*.test.mjs'",
     "lint": "node --max-old-space-size=6144 node_modules/eslint/bin/eslint.js .",
     "check:css": "node scripts/check-css-tokens.mjs",

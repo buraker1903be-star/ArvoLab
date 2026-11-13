@@ -41,8 +41,18 @@ export type DoiSonucu = {
   doi: string;
   durum: DoiDurumu;
   baslik?: string;
-  /** Yalnızca "ertelendi" için: hak mı doldu, süre mi bitti. */
-  neden?: "hak" | "sure";
+  /**
+   * Yalnızca "ertelendi" için, neden sorgulanmadığı:
+   *  - "hak":   saatlik ortak DOI hakkı doldu;
+   *  - "sure":  Crossref aşamasının süre bütçesi bitti;
+   *  - "ariza": sayaç kurulamadı ya da cevabı okunamadı (D5, fail-closed);
+   *             Crossref'e gidilmedi. Hakkın düşülüp düşülmediği BİLİNMEZ:
+   *             RPC rezervasyonu yapmış ama cevabı yolda kaybolmuş olabilir.
+   *             Kullanıcıya bu yüzden "hakkınızdan düşülmedi" denmez.
+   * Ekran üçünü ayrı metinle yazar: arızayı "hak" saymak, hakkı dolmamış
+   * kullanıcıya "kota bitti" demekti.
+   */
+  neden?: "hak" | "sure" | "ariza";
 };
 
 export type DoiHazirligi = {
@@ -148,11 +158,53 @@ export type DoiOzeti = {
   kalanHak: number | null;
   /** Pencerenin yenileneceği an (ISO); bilinmiyorsa null. */
   yenilenme: string | null;
-  /** Sayaç kurulamadı/okunamadı: bu turda sınır uygulanmadı. */
+  /**
+   * Sayaç kurulamadı, RPC hata verdi ya da cevabı eksik/bozuk/tutarsız
+   * (D5, fail-closed, 13.11.2026): bu turda Crossref'e HİÇ istek gitmedi,
+   * aranacak DOI'lerin tamamı "ertelendi" (neden "ariza") ve yeniden
+   * denenebilir. SINIRSIZ SORGU İZNİ DEĞİLDİR. T3'te (12.11.2026) anlamı
+   * tam tersiydi: sayaç olmadan istenen kadar sorgu yapılıyordu. Alanın adı
+   * geriye dönük uyumluluk için korundu.
+   */
   sayacsiz: boolean;
   gecersiz: number;
   listedeTekrar: number;
 };
+
+/**
+ * Sayaç arızasında (D5, fail-closed) dönecek sonuç ve özet. Saf: sunucu
+ * eylemi Crossref'e, veritabanına ve sayaca yeniden gitmeden bunu döndürür.
+ * Aranacak DOI'lerin TAMAMI "ertelendi / ariza" olur ki "yeniden
+ * denenecekleri kutuya koy" düğmesi onları bulsun; çalışmada zaten olanlar
+ * "vardi" kalır. Eskiden (D5'in ilk hâli) yalnızca "vardi" satırları
+ * dönüyordu: aranacak DOI'ler sonuçta hiç görünmüyor, özet "ertelenen: 0"
+ * diyordu ve kullanıcı neyi yeniden göndereceğini bilemiyordu.
+ */
+export function sayacArizasiSonucu(
+  plan: Pick<DoiHazirligi, "sira" | "vardi" | "aranacak" | "gecersiz" | "listedeTekrar">,
+): { sonuclar: DoiSonucu[]; ozet: DoiOzeti } {
+  const sonuclar: DoiSonucu[] = [
+    ...plan.vardi.map((doi) => ({ doi, durum: "vardi" as const })),
+    ...plan.aranacak.map((doi) => ({ doi, durum: "ertelendi" as const, neden: "ariza" as const })),
+  ];
+  return {
+    sonuclar: sirala(sonuclar, plan.sira),
+    ozet: {
+      istenen: plan.aranacak.length,
+      rezerve: 0,
+      sorgulanan: 0,
+      kullanilmayan: 0,
+      // Sabit yazılmaz, sonuçlardan sayılır: ikisi hiçbir koşulda ayrışmasın.
+      ertelenen: sonuclar.filter((s) => s.durum === "ertelendi").length,
+      // Sayaç okunamadı: kalan hak ve yenilenme BİLİNMİYOR, uydurulmaz.
+      kalanHak: null,
+      yenilenme: null,
+      sayacsiz: true,
+      gecersiz: plan.gecersiz,
+      listedeTekrar: plan.listedeTekrar,
+    },
+  };
+}
 
 /**
  * Pencerenin yenileneceği saat, kullanıcının tarayıcısının saatiyle

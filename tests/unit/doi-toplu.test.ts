@@ -197,10 +197,20 @@ describe("doiIleEkle: ortak bütçe, D1 ve D2 (eylem kaynağı)", () => {
     assert.match(govde, /return \{ \.\.\.\(kayitHatasi \? \{ error: kayitHatasi \} : \{\}\), sonuclar: sirala\(sonuclar, plan\.sira\), ozet \};/);
   });
 
-  test("rezervasyon ile gerçek sorgu farkı özette; sayaç arızası günlükte ve özette", () => {
+  test("rezervasyon özeti ve sayaç arızasında fail-closed erken dönüş", () => {
     assert.match(govde, /kullanilmayan: Math\.max\(0, hak\.verilen - sorgulanan\)/);
-    assert.match(govde, /sayacsiz: hak\.tur === "sayacsiz"/);
     assert.match(govde, /console\.error\("\[kaynak-aktarim\] hız sınırı uygulanamadı:"/);
+
+    const ariza = govde.indexOf('if (hak.tur === "ariza")');
+    const crossref = govde.indexOf("fetch(crossrefWorkUrl(doi)");
+    assert.ok(ariza >= 0 && crossref > ariza, "Arıza kontrolü Crossref öncesinde olmalı");
+
+    const hataYolu = govde.slice(ariza, govde.indexOf("const { islenecek, ertelenen }", ariza));
+    assert.match(hataYolu, /return\s*\{/);
+    assert.match(hataYolu, /const ariza = sayacArizasiSonucu\(plan\)/);
+    assert.match(hataYolu, /sonuclar:\s*ariza\.sonuclar/);
+    assert.match(hataYolu, /ozet:\s*ariza\.ozet/);
+    assert.match(govde, /sayacsiz:\s*false/);
   });
 
   test("süre bütçesi sayfanın maxDuration'ı içinde", () => {

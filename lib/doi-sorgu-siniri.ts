@@ -17,13 +17,11 @@
   tekli/toplu çağrılar aynı satırda sıraya girer, verilen toplam sınırı
   aşmaz (tests/db, scripts/eszamanli-hiz-siniri.sh).
 
-  SAYAÇ ARIZASINDA AÇIK KALIR (fail-open), bilerek: lib/ai/erisim.ts ve
-  literatür aramasıyla aynı ilke — bir yapılandırma eksikliği ya da geçici
-  veritabanı arızası, öğrencinin DOI ile kaynak eklemesini durdurmamalı.
-  Bedeli: arıza süresince saatlik sınır UYGULANMAZ. Oturum ve abonelik
-  kapısı yine çalışır; Crossref istekleri 8 sn zaman aşımıyla gider. Arıza
-  her çağrıda günlüğe yazılır ve toplu içe aktarmanın özetinde
-  ("sayacsiz") görünür.
+  SAYAÇ ARIZASINDA KAPALI KALIR (fail-closed): yönetim istemcisi
+  kurulamazsa, RPC hata verirse veya yanıt doğrulanamazsa DOI sorgusu
+  Crossref'e gönderilmez. Oturum ve abonelik kontrolleri korunur.
+  Arıza sunucu günlüğüne yazılır; toplu içe aktarmanın özetinde
+  "sayacsiz" bilgisi yer alır. Bu bilgi sınırsız sorgu izni değildir.
 */
 
 /** Kullanıcı başına saatlik DOI hakkı (kurum sahibinin kararı, 12.11.2026). */
@@ -41,8 +39,8 @@ export function doiSayacAnahtari(kullaniciId: string): string {
 export type DoiRezervasyonu =
   /** Sayaç çalıştı: en çok istenen kadar hak verildi (0 da olabilir). */
   | { tur: "sayacli"; verilen: number; kalan: number; yenilenme: string | null }
-  /** Sayaç kurulamadı ya da cevabı okunamadı: istenen kadar sorgu yapılır, arıza günlüğe yazılır. */
-  | { tur: "sayacsiz"; verilen: number };
+  /** Sayaç arızası: sıfır hak verilir; Crossref sorgusu yapılmaz. */
+  | { tur: "ariza"; verilen: 0 };
 
 const tamsayi = (deger: unknown): number | null =>
   typeof deger === "number" && Number.isInteger(deger) && deger >= 0 ? deger : null;
@@ -50,18 +48,20 @@ const tamsayi = (deger: unknown): number | null =>
 /**
  * rate_limit_take cevabından rezervasyon. Supabase, tablo döndüren işlevin
  * sonucunu satır dizisi olarak verir. Yalnızca ŞEKLİ DOĞRU bir cevap hakkı
- * kısar; okunamayan cevap "hak yok" sayılmaz (yukarıdaki ilke). Verilen hak
- * istenenden fazla görünse bile istenene kırpılır.
+ * belirler. Okunamayan veya tutarsız yanıt arıza sayılır ve hiçbir
+ * sorguya izin verilmez. İstenenden fazla hak veren yanıt reddedilir.
  */
 export function doiRezervasyonu(girdi: { sayacVar: boolean; hata?: unknown; veri?: unknown; istenen: number }): DoiRezervasyonu {
   const istenen = Math.max(0, Math.floor(girdi.istenen));
-  if (!girdi.sayacVar || girdi.hata) return { tur: "sayacsiz", verilen: istenen };
+  if (!girdi.sayacVar || girdi.hata) return { tur: "ariza", verilen: 0 };
+  if (Array.isArray(girdi.veri) && girdi.veri.length !== 1) return { tur: "ariza", verilen: 0 };
   const satir = Array.isArray(girdi.veri) ? girdi.veri[0] : girdi.veri;
-  if (!satir || typeof satir !== "object") return { tur: "sayacsiz", verilen: istenen };
+  if (!satir || typeof satir !== "object" || Array.isArray(satir)) return { tur: "ariza", verilen: 0 };
   const { granted, remaining, resets_at } = satir as Record<string, unknown>;
   const verilen = tamsayi(granted);
   const kalan = tamsayi(remaining);
-  if (verilen === null || kalan === null) return { tur: "sayacsiz", verilen: istenen };
+  if (verilen === null || kalan === null || verilen > istenen || verilen + kalan > DOI_SAATLIK_HAK)
+    return { tur: "ariza", verilen: 0 };
   return {
     tur: "sayacli",
     verilen: Math.min(verilen, istenen),

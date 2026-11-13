@@ -9,6 +9,7 @@ import { DOI_PENCERE, DOI_SAATLIK_HAK, doiRezervasyonu, doiSayacAnahtari } from 
 import {
   doiListesiniHazirla,
   kayitPlani,
+  sayacArizasiSonucu,
   rezervasyonuBol,
   sirala,
   type CekilenKayit,
@@ -197,9 +198,17 @@ export async function doiIleEkle(
       }
     }
     hak = doiRezervasyonu({ sayacVar: Boolean(sayac), hata: cevap?.error, veri: cevap?.data, istenen: plan.aranacak.length });
-    if (hak.tur === "sayacsiz") {
-      // Açık kalır (lib/doi-sorgu-siniri.ts); arıza günlükte ve özette görünür.
+    if (hak.tur === "ariza") {
       console.error("[kaynak-aktarim] hız sınırı uygulanamadı:", sayac ? cevap?.error?.message ?? "beklenmeyen cevap" : "sunucu anahtarı yok");
+      const ariza = sayacArizasiSonucu(plan);
+      return {
+        error: t({
+          tr: "DOI sorgulama hizmeti geçici olarak kullanılamıyor. Lütfen daha sonra tekrar deneyin.",
+          en: "DOI lookup is temporarily unavailable. Please try again later.",
+        }),
+        sonuclar: ariza.sonuclar,
+        ozet: ariza.ozet,
+      };
     }
   }
   const { islenecek, ertelenen } = rezervasyonuBol(plan.aranacak, hak.verilen);
@@ -285,7 +294,7 @@ export async function doiIleEkle(
     // Sayaca hiç sorulmadıysa (aranacak yok) kalan hak BİLİNMİYOR; uydurma bir 120 yazılmaz.
     kalanHak: plan.aranacak.length && hak.tur === "sayacli" ? hak.kalan : null,
     yenilenme: plan.aranacak.length && hak.tur === "sayacli" ? hak.yenilenme : null,
-    sayacsiz: hak.tur === "sayacsiz",
+    sayacsiz: false,
     gecersiz: plan.gecersiz,
     listedeTekrar: plan.listedeTekrar,
   };

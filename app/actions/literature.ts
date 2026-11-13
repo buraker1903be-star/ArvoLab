@@ -247,9 +247,14 @@ export async function lookupDoi(input: string): Promise<{ error?: string; metada
       }),
     };
   }
-  if (hak.tur === "sayacsiz") {
-    // Açık kalır (lib/doi-sorgu-siniri.ts); arıza sessiz geçmesin diye her çağrıda günlüğe.
+  if (hak.tur === "ariza") {
     console.error("[doi] hız sınırı uygulanamadı:", sayac ? sayacCevabi?.error?.message ?? "beklenmeyen cevap" : "sunucu anahtarı yok");
+    return {
+      error: t({
+        tr: "DOI sorgulama hizmeti geçici olarak kullanılamıyor. Lütfen daha sonra tekrar deneyin veya kaynak bilgilerini elle girin.",
+        en: "DOI lookup is temporarily unavailable. Please try again later or enter the source details manually.",
+      }),
+    };
   }
 
   try {

@@ -34,15 +34,30 @@ describe("DOI rezervasyonu (rate_limit_take cevabı)", () => {
     assert.equal(r.verilen, 0);
   });
 
-  test("verilen istenenden fazla görünse bile istenene kırpılır", () => {
-    assert.equal(doiRezervasyonu({ sayacVar: true, veri: satir(99, 21), istenen: 5 }).verilen, 5);
+  test("istenenden fazla verilen hak geçersiz rezervasyondur", () => {
+    assert.deepEqual(doiRezervasyonu({ sayacVar: true, veri: satir(99, 21), istenen: 5 }), { tur: "ariza", verilen: 0 });
   });
 
-  test("sayaç arızasında açık kalır (fail-open): kurulamadı, hata, tuhaf cevap", () => {
-    assert.deepEqual(doiRezervasyonu({ sayacVar: false, istenen: 7 }), { tur: "sayacsiz", verilen: 7 });
-    assert.deepEqual(doiRezervasyonu({ sayacVar: true, hata: { message: "x" }, veri: satir(0, 0), istenen: 3 }), { tur: "sayacsiz", verilen: 3 });
+  test("sayaç arızasında kapalı kalır (fail-closed): kurulamadı, hata, tuhaf cevap", () => {
+    assert.deepEqual(doiRezervasyonu({ sayacVar: false, istenen: 7 }), { tur: "ariza", verilen: 0 });
+    assert.deepEqual(doiRezervasyonu({ sayacVar: true, hata: { message: "x" }, veri: satir(0, 0), istenen: 3 }), { tur: "ariza", verilen: 0 });
     for (const tuhaf of [null, undefined, [], [null], "x", satir("1", 0), satir(1, -1), satir(1.5, 0)]) {
-      assert.equal(doiRezervasyonu({ sayacVar: true, veri: tuhaf, istenen: 2 }).tur, "sayacsiz", JSON.stringify(tuhaf));
+      assert.equal(doiRezervasyonu({ sayacVar: true, veri: tuhaf, istenen: 2 }).tur, "ariza", JSON.stringify(tuhaf));
+    }
+  });
+
+  test("D1 fail-closed: sayaç arızasında hak verilmez", () => {
+    const durumlar = [
+      { sayacVar: false, istenen: 7 },
+      { sayacVar: true, hata: { message: "RPC error" }, istenen: 3 },
+      { sayacVar: true, veri: null, istenen: 2 },
+      { sayacVar: true, veri: [{ granted: "1", remaining: 119 }], istenen: 1 },
+    ];
+
+    for (const durum of durumlar) {
+      const sonuc = doiRezervasyonu(durum);
+      assert.equal(sonuc.tur, "ariza", JSON.stringify(durum));
+      assert.equal(sonuc.verilen, 0, JSON.stringify(durum));
     }
   });
 
@@ -96,7 +111,11 @@ describe("lookupDoi kapıları", () => {
   });
 
   test("sayaç arızası sessiz geçmiyor: günlüğe yazılıyor", () => {
-    assert.match(govde, /if \(hak\.tur === "sayacsiz"\)\s*\{[\s\S]*?console\.error\("\[doi\] hız sınırı uygulanamadı:"/);
+    assert.match(govde, /if \(hak\.tur === "ariza"\)\s*\{[\s\S]*?console\.error\("\[doi\] hız sınırı uygulanamadı:"/);
+    const ariza = govde.indexOf('if (hak.tur === "ariza")');
+    const crossref = govde.indexOf("fetch(crossrefWorkUrl(doi)");
+    assert.ok(ariza >= 0 && crossref > ariza);
+    assert.match(govde.slice(ariza, crossref), /return\s*\{\s*error:/);
   });
 
   test("lib/access.ts kapı envanterinde lookupDoi ve literatür araması var", () => {

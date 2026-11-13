@@ -107,12 +107,19 @@ export function IceAktarma({ projectId, mevcut }: { projectId: string; mevcut: L
     kaydedilemedi: { tr: "kaydedilemedi, yeniden deneyin", en: "couldn't be saved, try again" },
   };
   const DURUM_TONU: Partial<Record<DoiSonucu["durum"], string>> = { eklendi: "success", vardi: undefined, kaydedilemedi: "danger" };
+  /* "ertelendi" satırının nedeni üç ayrı metinle yazılır (D5). Sayaç arızası
+     "hak" sayılsaydı satır "saatlik DOI hakkı doldu" derdi: hakkı dolmamış
+     kullanıcıya kota bitti demek. Arıza metni hak hakkında bir şey SÖYLEMEZ:
+     sayaç rezervasyonu yapıp cevabı kaybolmuş olabilir, hakkın düşülüp
+     düşülmediği bilinmiyor. Record: yeni bir neden eklenip metni
+     yazılmazsa derleme düşer. */
+  const ERTELEME_NEDENI: Record<NonNullable<DoiSonucu["neden"]>, Metin> = {
+    hak: { tr: "saatlik DOI hakkı doldu; sonra yeniden deneyin", en: "hourly DOI limit reached; try again later" },
+    sure: { tr: "süre doldu; yeniden deneyin", en: "ran out of time; try again" },
+    ariza: { tr: "DOI sayacına şu an ulaşılamadı; bu DOI sorgulanmadı, daha sonra yeniden deneyin", en: "the DOI counter is unavailable right now; this DOI was not looked up, try again later" },
+  };
   const durumAdi = (s: DoiSonucu): Metin =>
-    s.durum === "ertelendi" && s.neden === "hak"
-      ? { tr: "saatlik DOI hakkı doldu; sonra yeniden deneyin", en: "hourly DOI limit reached; try again later" }
-      : s.durum === "ertelendi" && s.neden === "sure"
-        ? { tr: "süre doldu; yeniden deneyin", en: "ran out of time; try again" }
-        : DURUM_ADI[s.durum];
+    s.durum === "ertelendi" && s.neden ? ERTELEME_NEDENI[s.neden] : DURUM_ADI[s.durum];
   const saat = yenilenmeSaati(doiOzeti?.yenilenme, YEREL[dil]);
 
   return (
