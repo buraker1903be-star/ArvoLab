@@ -27,6 +27,17 @@ export type Etiketler = { uyari: string; oneri: string; bilgi: string };
 
 export type AsistanSonucVerisi = {
   hata?: string;
+  /*
+    Hata OLMAYAN, sonuçsuz kalmış bir çalışmanın notu (Phase 5.1a,
+    13.11.2026). Kaynakça asistanının bütün bulguları güvenlik süzgecinde
+    ayıklandığında (lib/ai/kaynakca-denetimi.ts) bir şey bozulmuş değil:
+    dizinlere ulaşılamamış, asistan doğrulanmamış hüküm kurmuş, süzgeç
+    düşürmüş. Eskiden bu metin `hata` olarak kırmızı kutuda ve
+    role="alert" ile gösteriliyordu; ekran okuyucuya acil uyarı diye
+    okutuluyordu. Nötr ve kibar duyurulur. `bulgular` ile birlikte
+    verilmez: boş liste "asistan baktı, sorun yok" demektir.
+  */
+  bilgi?: string;
   /** Deneme hakkı bitti (lib/ai/erisim.ts): hata kutusunda Abonelik'e giden düğme. */
   odemeGerekli?: boolean;
   bulgular?: Bulgu[];
@@ -146,11 +157,17 @@ export default function AsistanSonuc({
   const aramalar = sonuc?.aramalar ?? [];
   /* Bilerek boş liste (lib/ai/bulgu.ts, bosListeMi): asistan baktı, işaretlenecek bir şey bulmadı.
      Puanlanabilir bir sonuç; "yanlış alarm vermedi" de eğitim verisi. */
-  const temiz = Boolean(sonuc && !sonuc.hata && sonuc.bulgular && sonuc.bulgular.length === 0 && aramalar.length === 0);
+  const temiz = Boolean(sonuc && !sonuc.hata && !sonuc.bilgi && sonuc.bulgular && sonuc.bulgular.length === 0 && aramalar.length === 0);
   const doluSonuc = bulgular.length > 0 || aramalar.length > 0 || temiz;
 
   return (
     <>
+      {sonuc?.bilgi && !sonuc.hata && (
+        <p className="asistan-uyari" data-tone="neutral" role="status">
+          {sonuc.bilgi}
+        </p>
+      )}
+
       {sonuc?.hata && (
         <p className="asistan-uyari" data-tone="danger" role="alert">
           {sonuc.hata}

@@ -37,6 +37,8 @@ export type KaynakcaDenetimGirdisi = {
 
 export type KaynakcaDenetimYaniti = {
   hata?: string;
+  /** Hata olmayan, gösterilecek bulgusu kalmamış sonuç (AsistanSonucVerisi.bilgi). */
+  bilgi?: string;
   /** Deneme hakkı bitti: hata kutusunda Abonelik düğmesi (lib/ai/erisim.ts). */
   odemeGerekli?: boolean;
   bulgular?: Bulgu[];
@@ -61,8 +63,14 @@ const liste = (deger: string[] | undefined, adet: number, sinir: number) =>
 
 export const kaynakcaAsistaniAcik = async () => aiYapilandirildi();
 
-/* Bütün bulgular ulaşılamayan künyeler hakkında hüküm kurduysa gösterilen metin. */
-const hukumHatasi = (t: Awaited<ReturnType<typeof ceviri>>) =>
+/*
+  Bütün bulgular ulaşılamayan künyeler hakkında hüküm kurduysa gösterilen
+  metin. `bilgi` olarak döner, `hata` olarak değil (Phase 5.1a, 13.11.2026):
+  eskiden kırmızı hata kutusunda ve role="alert" ile gösteriliyordu, oysa
+  bozulan bir şey yok. Kayıt davranışı aynı: çalışma "rejected" yazılır,
+  kredi düşmez, saatlik hak model çağrısından önce zaten kullanılmıştır.
+*/
+const hukumBilgisi = (t: Awaited<ReturnType<typeof ceviri>>) =>
   t({
     tr: "Asistanın bulguları, dizinlerine ulaşılamayan kaynaklar hakkında doğrulanmamış hüküm içerdiği için gösterilmedi. Dizinler yanıt verdiğinde denetimi yeniden çalıştırabilirsiniz.",
     en: "The assistant's findings weren't shown because they made unverified claims about sources whose indexes couldn't be reached. You can run the check again once the indexes respond.",
@@ -120,7 +128,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
          önce kaydedilmiş bir cevap ulaşılamayan künye için hüküm taşıyabilir.
          Kayıtta "kaynaklar" alanı yok; yalnızca metindeki [n] okunur. */
       const ayiklama = ulasilamadiHukmunuAyikla(onceki.bulgular, kaynaklar);
-      if (ayiklama.ayiklanan.length && !ayiklama.gecerli.length) return { hata: hukumHatasi(t), kirpilanlar };
+      if (ayiklama.ayiklanan.length && !ayiklama.gecerli.length) return { bilgi: hukumBilgisi(t), kirpilanlar };
       return {
         krediUyarisi: kapi.uyari ?? undefined,
         bulgular: ayiklama.gecerli,
@@ -184,7 +192,7 @@ export async function kaynakcaDenetle(girdi: KaynakcaDenetimGirdisi): Promise<Ka
          boş bırakılıyor; yeni bir neden migration ister (reject_reason
          kısıtı) ve "rejected" zaten kredi düşürmüyor. */
       await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "rejected", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular: [], basladi });
-      return { hata: hukumHatasi(t), kirpilanlar };
+      return { bilgi: hukumBilgisi(t), kirpilanlar };
     }
 
     const kayitId = await asistanKaydet({ kullaniciId: kapi.kullaniciId, calismaId: calisma?.id ?? null, yetenek: "kaynakca", durum: "completed", model: yanit.model, baglam: kaynak, cikti: yanit.metin, bulgular: ayiklama.gecerli, basladi });
