@@ -43,3 +43,72 @@ test("eski kayıtlar temizlenir", () =>
     const { rows } = await db.query(`select public.prune_auth_rate_limits() as n`);
     assert.equal(rows[0].n, 1);
   }));
+
+/*
+  DOI sorgusu (Phase 5.0b, 12.11.2026): lookupDoi sunucu anahtarıyla
+  (service_role) "doi-sorgu:<kullanıcı>" anahtarına saatte 120 hak sayar
+  (lib/doi-sorgu-siniri.ts). Burada MEŞRU yol service_role ile sınanıyor.
+
+  PGlite tek bağlantılı: aynı anda gönderilen çağrılar burada sıraya girer,
+  yani gerçek yarış koşulu bu dosyada SINANAMAZ. O kanıt
+  scripts/eszamanli-hiz-siniri.sh'ta (yerel PostgreSQL, yüzlerce ayrı
+  bağlantı; bilerek yarışlı bir gövdeyle kaldığı da gösterildi).
+*/
+const doiDene = async (kullanici) =>
+  (await db.query(`select public.rate_limit_hit($1, 120, interval '1 hour') as izin`, [`doi-sorgu:${kullanici}`])).rows[0].izin;
+
+test("DOI: service_role ile tam 120 sorgu, 121'incisi reddedilir", () =>
+  islem(db, async () => {
+    await rol(db, "service_role");
+    const sonuclar = [];
+    for (let i = 0; i < 121; i += 1) sonuclar.push(await doiDene("u1"));
+    assert.equal(sonuclar.filter(Boolean).length, 120);
+    assert.equal(sonuclar[119], true);
+    assert.equal(sonuclar[120], false);
+  }));
+
+test("DOI: bir kullanıcının hakkı bitince öteki etkilenmez (iç içe çağrılar)", () =>
+  islem(db, async () => {
+    await rol(db, "service_role");
+    for (let i = 0; i < 120; i += 1) {
+      assert.equal(await doiDene("u2"), true);
+      assert.equal(await doiDene("u3"), true);
+    }
+    assert.equal(await doiDene("u2"), false);
+    assert.equal(await doiDene("u3"), false);
+    assert.equal(await doiDene("u4"), true);
+    const { rows } = await db.query(`select key, count from public.auth_rate_limits where key like 'doi-sorgu:u%' order by key`);
+    assert.deepEqual(rows.map((r) => [r.key, r.count]), [["doi-sorgu:u2", 121], ["doi-sorgu:u3", 121], ["doi-sorgu:u4", 1]]);
+  }));
+
+/* Ad bilerek "sıralı": PGlite tek bağlantılı, Promise.all burada çağrıları
+   sıraya koyar. Bu senaryo SAYMAYI sınar, yarışı değil; gerçek eşzamanlılık
+   kanıtı scripts/eszamanli-hiz-siniri.sh'ta (CI dışı). */
+test("DOI: art arda 150 çağrı (PGlite'ta sıralı) sayaçta kaybolmaz, 120'si izinli", () =>
+  islem(db, async () => {
+    await rol(db, "service_role");
+    const sonuclar = await Promise.all(Array.from({ length: 150 }, () => doiDene("u5")));
+    assert.equal(sonuclar.filter(Boolean).length, 120);
+    const { rows } = await db.query(`select count from public.auth_rate_limits where key = 'doi-sorgu:u5'`);
+    assert.equal(rows[0].count, 150);
+  }));
+
+test("DOI: saatlik pencere dolunca hak yenilenir", () =>
+  islem(db, async () => {
+    await rol(db, "service_role");
+    for (let i = 0; i < 121; i += 1) await doiDene("u6");
+    assert.equal(await doiDene("u6"), false);
+    await rol(db, "postgres");
+    await db.query(`update public.auth_rate_limits set window_start = now() - interval '61 minutes' where key = 'doi-sorgu:u6'`);
+    await rol(db, "service_role");
+    assert.equal(await doiDene("u6"), true);
+  }));
+
+test("DOI: oturumlu kullanıcı sayacı ne çağırabilir ne başkasının sayacını okuyabilir", () =>
+  islem(db, async () => {
+    await rol(db, "service_role");
+    await doiDene("u7");
+    await rol(db, "authenticated", "00000000-0000-4000-8000-000000000007");
+    await reddedilir(db, `select public.rate_limit_hit('doi-sorgu:u7', 120, interval '1 hour')`, [], /permission denied/);
+    await reddedilir(db, `select count from public.auth_rate_limits where key = 'doi-sorgu:u7'`, [], /permission denied/);
+  }));
