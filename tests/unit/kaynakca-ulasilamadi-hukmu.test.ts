@@ -158,7 +158,11 @@ describe("istem ve eylem bağlantısı", () => {
 
   test("bütün bulgular ayıklanırsa doğrulanmamış hüküm gösterilmez; red nedeni yeni bir değer değil", () => {
     assert.match(govde, /durum: "rejected", model: yanit\.model, baglam: kaynak, cikti: yanit\.metin, bulgular: \[\]/);
-    assert.match(govde, /return \{ hata: hukumHatasi\(t\), kirpilanlar \}/);
+    /* Phase 5.1a: tam ayıklama HATA değil, nötr bilgi. İki dönüş yolu da
+       (yeni cevap ve kayıtlı cevap) `bilgi` döndürür; `bulgular` verilmez,
+       verilseydi boş liste ekranda "sorun yok" diye okunurdu. */
+    assert.equal(govde.match(/return \{ bilgi: hukumBilgisi\(t\), kirpilanlar \}/g)?.length, 2);
+    assert.doesNotMatch(govde, /hata: hukum/);
     // reject_reason kısıtı (migration 20261026065320) yalnızca bilinen değerleri kabul ediyor.
     for (const neden of govde.matchAll(/redNedeni: "([a-z_]+)"/g)) assert.ok(["bos", "uydurma_sayi"].includes(neden[1]), neden[1]);
   });
@@ -167,5 +171,31 @@ describe("istem ve eylem bağlantısı", () => {
     const blok = govde.slice(govde.indexOf("oncekiCevap("), govde.indexOf("asistanHakkiVar("));
     assert.match(blok, /ulasilamadiHukmunuAyikla\(onceki\.bulgular, kaynaklar\)/);
     assert.doesNotMatch(blok, /bulgular: onceki\.bulgular/);
+  });
+});
+
+/*
+  Phase 5.1a (13.11.2026): tam ayıklama notu kırmızı hata kutusunda değil,
+  nötr bilgi olarak çizilir. Bileşen React'e bağlı; sözleşme kaynak
+  metninden okunur (tests/unit kuralı, bildirim-turleri.test.ts ile aynı yol).
+*/
+describe("tam ayıklama notunun görünümü", () => {
+  const bilesen = readFileSync("app/dashboard/_components/asistan-sonuc.tsx", "utf8");
+  const kaynakEylem = readFileSync("app/actions/ai-kaynakca.ts", "utf8");
+
+  test("bilgi nötr tonda ve role=status ile çizilir", () => {
+    assert.match(bilesen, /\{sonuc\?\.bilgi && !sonuc\.hata && \(\s*<p className="asistan-uyari" data-tone="neutral" role="status">\s*\{sonuc\.bilgi\}/);
+  });
+
+  test("gerçek hata kırmızı ve role=alert olarak kalır", () => {
+    assert.match(bilesen, /\{sonuc\?\.hata && \(\s*<p className="asistan-uyari" data-tone="danger" role="alert">/);
+  });
+
+  test("bilgi taşıyan sonuç 'temiz' (sorun bulunmadı) sayılmaz", () => {
+    assert.match(bilesen, /const temiz = Boolean\(sonuc && !sonuc\.hata && !sonuc\.bilgi && sonuc\.bulgular/);
+  });
+
+  test("eylemin yanıt tipi bilgi alanını taşıyor", () => {
+    assert.match(kaynakEylem, /export type KaynakcaDenetimYaniti = \{\s*hata\?: string;[\s\S]*?bilgi\?: string;/);
   });
 });
