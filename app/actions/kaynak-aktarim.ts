@@ -3,8 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
-import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork } from "@/lib/doi";
-import { DOI_TOPLU_EN_COK, ICE_AKTARMA_EN_COK, kaynakAnahtari, kaynakAnahtarlari, type KaynakTaslagi } from "@/lib/kaynak-aktarim";
+import { CROSSREF_USER_AGENT, crossrefWorkUrl, parseCrossrefWork } from "@/lib/doi";
+import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
+import { DOI_PENCERE, DOI_SAATLIK_HAK, doiRezervasyonu, doiSayacAnahtari } from "@/lib/doi-sorgu-siniri";
+import {
+  doiListesiniHazirla,
+  kayitPlani,
+  sayacArizasiSonucu,
+  rezervasyonuBol,
+  sirala,
+  type CekilenKayit,
+  type DoiOzeti,
+  type DoiSonucu,
+} from "@/lib/doi-toplu";
+import { DOI_TOPLU_EN_COK, ICE_AKTARMA_EN_COK, kaynakAnahtarlari, type KaynakTaslagi } from "@/lib/kaynak-aktarim";
 import { ceviri } from "@/lib/dil-sunucu";
 
 /*
@@ -127,33 +139,85 @@ export async function kaynaklariIceAktar(projectId: string, taslaklar: KaynakTas
   return ekle(h.ctx, h.anahtarlar, taslaklar, projectId);
 }
 
-export type DoiSonucu = { doi: string; durum: "eklendi" | "vardi" | "bulunamadi" | "hata"; baslik?: string };
+export type { DoiSonucu, DoiOzeti } from "@/lib/doi-toplu";
+
+/*
+  Crossref aşamasının süre bütçesi. Sayfanın maxDuration'ı 120 sn
+  (app/dashboard/literature/page.tsx); 50 DOI beşerli gruplarla ve istek
+  başına 8 sn zaman aşımıyla en kötü durumda 80 sn sürer. Bütçe dolunca
+  başlanmamış gruplar "ertelendi" (neden: süre) döner — yarıda kesilen bir
+  istekte hiçbir şey yazılmadan cevapsız kalmaktansa.
+*/
+const CROSSREF_SURE_BUTCESI_MS = 70_000;
 
 /*
   DOI listesinden ekleme: künye Crossref'ten (lib/doi.ts). Sunucu yalnızca
   sabit Crossref adresine, doğrulanmış DOI ile gider. Aynı anda en çok
   beş istek: Crossref'in "kibar havuz" sınırı.
+
+  ORTAK SAATLİK BÜTÇE (T3, 12.11.2026): tekli DOI sorgusuyla aynı
+  kullanıcı başına 120 DOI (lib/doi-sorgu-siniri.ts). Eskiden bu yol
+  abonelik kapılıydı ama sınırsızdı: çağrı başına 50 DOI, istenen kadar
+  tekrar. Hak yalnızca Crossref'e gidecek DOI'ler için ve TEK atomik
+  çağrıyla (rate_limit_take) ayrılır; yetmezse ilk N DOI sorgulanır,
+  kalanı "ertelendi" döner (sıra kullanıcınınki). Tekrar denemek
+  güvenli: eklenenler "vardi" olur ve hak harcamaz.
+
+  Sonuçların kuralları lib/doi-toplu.ts'te (D1, D2 düzeltmeleri dahil).
 */
-export async function doiIleEkle(projectId: string, doilar: string[]): Promise<{ error?: string; sonuclar?: DoiSonucu[] }> {
-  /* DOI büyük/küçük harfe duyarsız: eskiden yalnızca harfi farklı iki DOI
-     ikisi de getirilip ikisi de "eklendi" raporlanıyor, biri ekleniyordu. */
-  const gorulen = new Set<string>();
-  const temiz = (Array.isArray(doilar) ? doilar : [])
-    .map((d) => normalizeDoi(String(d)))
-    .filter((d): d is string => !!d && !gorulen.has(d.toLowerCase()) && !!gorulen.add(d.toLowerCase()));
+export async function doiIleEkle(
+  projectId: string,
+  doilar: string[],
+): Promise<{ error?: string; sonuclar?: DoiSonucu[]; ozet?: DoiOzeti }> {
   const t = await ceviri();
-  if (!temiz.length) return { error: t({ tr: "Geçerli bir DOI bulunamadı (ör. 10.1000/xyz123 ya da https://doi.org/…).", en: "No valid DOI was found (e.g. 10.1000/xyz123 or https://doi.org/…)." }) };
-  if (temiz.length > DOI_TOPLU_EN_COK) return { error: t({ tr: `Tek seferde en çok ${DOI_TOPLU_EN_COK} DOI eklenebilir.`, en: `You can add at most ${DOI_TOPLU_EN_COK} DOIs at once.` }) };
+  // Biçim ve adet denetimi oturumdan önce: veritabanına hiç gitmeden.
+  const onHazirlik = doiListesiniHazirla(doilar, new Set());
+  if (!onHazirlik.sira.length) return { error: t({ tr: "Geçerli bir DOI bulunamadı (ör. 10.1000/xyz123 ya da https://doi.org/…).", en: "No valid DOI was found (e.g. 10.1000/xyz123 or https://doi.org/…)." }) };
+  if (onHazirlik.sira.length > DOI_TOPLU_EN_COK) return { error: t({ tr: `Tek seferde en çok ${DOI_TOPLU_EN_COK} DOI eklenebilir.`, en: `You can add at most ${DOI_TOPLU_EN_COK} DOIs at once.` }) };
   const h = await hazirlik(projectId);
   if ("hata" in h) return { error: h.hata };
 
-  const sonuclar: DoiSonucu[] = [];
-  const taslaklar: KaynakTaslagi[] = [];
-  const getir = async (doi: string) => {
-    if (h.anahtarlar.has(kaynakAnahtari({ title: "", year: null, doiOrUrl: doi }))) {
-      sonuclar.push({ doi, durum: "vardi" });
-      return;
+  const plan = doiListesiniHazirla(doilar, h.anahtarlar);
+  const sonuclar: DoiSonucu[] = plan.vardi.map((doi) => ({ doi, durum: "vardi" as const }));
+
+  // Hak: yalnızca Crossref'e gidecekler için, tek atomik çağrıyla.
+  let hak: ReturnType<typeof doiRezervasyonu> = { tur: "sayacli", verilen: 0, kalan: DOI_SAATLIK_HAK, yenilenme: null };
+  if (plan.aranacak.length) {
+    const sayac = adminIstemcisiVarsa();
+    let cevap: { data: unknown; error: { message: string } | null } | null = null;
+    if (sayac) {
+      try {
+        cevap = await sayac.rpc("rate_limit_take", {
+          p_key: doiSayacAnahtari(h.ctx.user.id),
+          p_limit: DOI_SAATLIK_HAK,
+          p_window: DOI_PENCERE,
+          p_requested: plan.aranacak.length,
+        });
+      } catch (hata) {
+        cevap = { data: null, error: { message: hata instanceof Error ? hata.message : String(hata) } };
+      }
     }
+    hak = doiRezervasyonu({ sayacVar: Boolean(sayac), hata: cevap?.error, veri: cevap?.data, istenen: plan.aranacak.length });
+    if (hak.tur === "ariza") {
+      console.error("[kaynak-aktarim] hız sınırı uygulanamadı:", sayac ? cevap?.error?.message ?? "beklenmeyen cevap" : "sunucu anahtarı yok");
+      const ariza = sayacArizasiSonucu(plan);
+      return {
+        error: t({
+          tr: "DOI sorgulama hizmeti geçici olarak kullanılamıyor. Lütfen daha sonra tekrar deneyin.",
+          en: "DOI lookup is temporarily unavailable. Please try again later.",
+        }),
+        sonuclar: ariza.sonuclar,
+        ozet: ariza.ozet,
+      };
+    }
+  }
+  const { islenecek, ertelenen } = rezervasyonuBol(plan.aranacak, hak.verilen);
+  for (const doi of ertelenen) sonuclar.push({ doi, durum: "ertelendi", neden: "hak" });
+
+  const cekilenler: CekilenKayit[] = [];
+  let sorgulanan = 0;
+  const getir = async (doi: string) => {
+    sorgulanan += 1;
     try {
       const yanit = await fetch(crossrefWorkUrl(doi), {
         headers: { "User-Agent": CROSSREF_USER_AGENT },
@@ -165,32 +229,74 @@ export async function doiIleEkle(projectId: string, doilar: string[]): Promise<{
       const govde = (await yanit.json()) as { message?: unknown };
       const m = parseCrossrefWork(govde.message as Parameters<typeof parseCrossrefWork>[0], doi);
       if (!m) return void sonuclar.push({ doi, durum: "bulunamadi" });
-      taslaklar.push({
-        title: m.title,
-        authors: m.authors,
-        year: m.year,
-        sourceType: m.sourceType,
-        doiOrUrl: m.doi,
-        containerTitle: m.containerTitle,
-        volume: m.volume,
-        issue: m.issue,
-        pages: m.pages,
-        publisher: m.publisher,
-        publicationPlace: m.publicationPlace,
+      cekilenler.push({
+        doi,
+        taslak: {
+          title: m.title,
+          authors: m.authors,
+          year: m.year,
+          sourceType: m.sourceType,
+          doiOrUrl: m.doi,
+          containerTitle: m.containerTitle,
+          volume: m.volume,
+          issue: m.issue,
+          pages: m.pages,
+          publisher: m.publisher,
+          publicationPlace: m.publicationPlace,
+        },
       });
-      sonuclar.push({ doi, durum: "eklendi", baslik: m.title });
     } catch (error) {
       console.error("[kaynak-aktarim] Crossref", doi, error instanceof Error ? error.message : error);
       sonuclar.push({ doi, durum: "hata" });
     }
   };
-  for (let i = 0; i < temiz.length; i += 5) await Promise.all(temiz.slice(i, i + 5).map(getir));
-
-  if (taslaklar.length) {
-    const r = await ekle(h.ctx, h.anahtarlar, taslaklar, projectId);
-    if (r.error) return { error: r.error };
+  const bitis = Date.now() + CROSSREF_SURE_BUTCESI_MS;
+  for (let i = 0; i < islenecek.length; i += 5) {
+    if (Date.now() > bitis) {
+      for (const doi of islenecek.slice(i)) sonuclar.push({ doi, durum: "ertelendi", neden: "sure" });
+      break;
+    }
+    await Promise.all(islenecek.slice(i, i + 5).map(getir));
   }
-  /* Kullanıcının yapıştırdığı sırayla dönsün. */
-  sonuclar.sort((a, b) => temiz.indexOf(a.doi) - temiz.indexOf(b.doi));
-  return { sonuclar };
+  // Çekilenleri listedeki sıraya koy: başlık+yıl çakışmasında "ilk gelen" kullanıcının sırasındaki ilk olsun.
+  cekilenler.sort((a, b) => plan.sira.indexOf(a.doi) - plan.sira.indexOf(b.doi));
+
+  const { yazilacak, baslikCakisan, doiCakisan } = kayitPlani(cekilenler, h.anahtarlar);
+  for (const k of doiCakisan) sonuclar.push({ doi: k.doi, durum: "vardi", baslik: k.taslak.title });
+  for (const k of baslikCakisan) sonuclar.push({ doi: k.doi, durum: "vardi_baslik", baslik: k.taslak.title });
+
+  let kayitHatasi: string | undefined;
+  if (yazilacak.length) {
+    // En çok 50 satır, tek ifade: ya hepsi yazılır ya hiçbiri.
+    const { error } = await h.ctx.supabase
+      .from("literature_sources")
+      .insert(yazilacak.map((k) => satira(k.taslak, h.ctx.user.id, projectId)));
+    if (error) {
+      console.error("[kaynak-aktarim] DOI ekleme", error.message);
+      kayitHatasi = t({
+        tr: "Crossref'ten gelen kaynaklar kaydedilemedi; aynı listeyle yeniden deneyin.",
+        en: "The sources fetched from Crossref couldn't be saved; please try again with the same list.",
+      });
+      for (const k of yazilacak) sonuclar.push({ doi: k.doi, durum: "kaydedilemedi", baslik: k.taslak.title });
+    } else {
+      for (const k of yazilacak) sonuclar.push({ doi: k.doi, durum: "eklendi", baslik: k.taslak.title });
+      yenile();
+    }
+  }
+
+  const ertelenenSayi = sonuclar.filter((s) => s.durum === "ertelendi").length;
+  const ozet: DoiOzeti = {
+    istenen: plan.aranacak.length,
+    rezerve: hak.verilen,
+    sorgulanan,
+    kullanilmayan: Math.max(0, hak.verilen - sorgulanan),
+    ertelenen: ertelenenSayi,
+    // Sayaca hiç sorulmadıysa (aranacak yok) kalan hak BİLİNMİYOR; uydurma bir 120 yazılmaz.
+    kalanHak: plan.aranacak.length && hak.tur === "sayacli" ? hak.kalan : null,
+    yenilenme: plan.aranacak.length && hak.tur === "sayacli" ? hak.yenilenme : null,
+    sayacsiz: false,
+    gecersiz: plan.gecersiz,
+    listedeTekrar: plan.listedeTekrar,
+  };
+  return { ...(kayitHatasi ? { error: kayitHatasi } : {}), sonuclar: sirala(sonuclar, plan.sira), ozet };
 }

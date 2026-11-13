@@ -7,7 +7,7 @@ import { getAuthContext, oturumYokMesaji, type ActionResult } from "@/lib/auth-g
 import { CROSSREF_USER_AGENT, crossrefWorkUrl, normalizeDoi, parseCrossrefWork, type DoiMetadata } from "@/lib/doi";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { adminIstemcisiVarsa } from "@/lib/supabase/admin";
-import { DOI_PENCERE, DOI_SAATLIK_HAK, doiHakKarari, doiSayacAnahtari } from "@/lib/doi-sorgu-siniri";
+import { DOI_PENCERE, DOI_SAATLIK_HAK, doiRezervasyonu, doiSayacAnahtari } from "@/lib/doi-sorgu-siniri";
 import { ceviri } from "@/lib/dil-sunucu";
 
 const PAGE_PATH = "/dashboard/literature";
@@ -222,21 +222,24 @@ export async function lookupDoi(input: string): Promise<{ error?: string; metada
   const doi = normalizeDoi(input);
   if (!doi) return { error: t({ tr: "Geçerli bir DOI girin (ör. 10.1000/xyz123 ya da https://doi.org/…).", en: "Enter a valid DOI (e.g. 10.1000/xyz123 or https://doi.org/…)." }) };
 
+  /* Tek DOI, toplu içe aktarmayla ORTAK bütçeden bir birim (T3): aynı
+     anahtar, aynı atomik işlev (rate_limit_take). */
   const sayac = adminIstemcisiVarsa();
   let sayacCevabi: { data: unknown; error: { message: string } | null } | null = null;
   if (sayac) {
     try {
-      sayacCevabi = await sayac.rpc("rate_limit_hit", {
+      sayacCevabi = await sayac.rpc("rate_limit_take", {
         p_key: doiSayacAnahtari(ctx.user.id),
         p_limit: DOI_SAATLIK_HAK,
         p_window: DOI_PENCERE,
+        p_requested: 1,
       });
     } catch (hata) {
       sayacCevabi = { data: null, error: { message: hata instanceof Error ? hata.message : String(hata) } };
     }
   }
-  const karar = doiHakKarari({ sayacVar: Boolean(sayac), hata: sayacCevabi?.error, izin: sayacCevabi?.data });
-  if (karar === "sinir") {
+  const hak = doiRezervasyonu({ sayacVar: Boolean(sayac), hata: sayacCevabi?.error, veri: sayacCevabi?.data, istenen: 1 });
+  if (hak.tur === "sayacli" && hak.verilen === 0) {
     return {
       error: t({
         tr: `Saatlik DOI sorgu hakkınız doldu (${DOI_SAATLIK_HAK}). Bir süre sonra tekrar deneyin; kaynak bilgilerini elle de girebilirsiniz.`,
@@ -244,9 +247,14 @@ export async function lookupDoi(input: string): Promise<{ error?: string; metada
       }),
     };
   }
-  if (karar === "sayacsiz") {
-    // Açık kalır (lib/doi-sorgu-siniri.ts); arıza sessiz geçmesin diye her çağrıda günlüğe.
+  if (hak.tur === "ariza") {
     console.error("[doi] hız sınırı uygulanamadı:", sayac ? sayacCevabi?.error?.message ?? "beklenmeyen cevap" : "sunucu anahtarı yok");
+    return {
+      error: t({
+        tr: "DOI sorgulama hizmeti geçici olarak kullanılamıyor. Lütfen daha sonra tekrar deneyin veya kaynak bilgilerini elle girin.",
+        en: "DOI lookup is temporarily unavailable. Please try again later or enter the source details manually.",
+      }),
+    };
   }
 
   try {
