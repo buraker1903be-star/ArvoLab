@@ -114,6 +114,7 @@ import {
   type CoverPage,
   type SettingsSource,
 } from "@/app/actions/manuscript";
+import { belgeyiKirletirMi } from "@/lib/editor-kirlenme";
 import { saveNamedVersion } from "@/app/actions/manuscript-versions";
 import { createClient } from "@/lib/supabase/client";
 import { kilavuzGorunenAdi, type AppliedGuideline } from "@/lib/guideline-rules";
@@ -865,7 +866,14 @@ export default function ManuscriptEditor({
         clearDraft(projectId, kullaniciId);
       }
     },
-    onUpdate: () => markDirtyRef.current(),
+    /*
+      Yalnızca belgeyi GERÇEKTEN değiştiren işlem kirletir (lib/editor-kirlenme.ts).
+      Eskiden her "update" olayı kirletiyordu; setEditable'ın belge aynıyken
+      yaydığı olay her açılışta bir kayıt gönderiyordu.
+    */
+    onUpdate: (olay) => {
+      if (belgeyiKirletirMi(olay)) markDirtyRef.current();
+    },
     editorProps: {
       attributes: {
         // "kagit": belge alanı her temada açık kâğıt (tokens.css `:root, .kagit`, Phase 4.3).
@@ -1146,10 +1154,16 @@ export default function ManuscriptEditor({
     Taslak teklifi ya da uyumsuz içerik uyarısı yanıtlanana kadar editör salt
     okunur. Eskiden teklif açıkken yazılan ilk harf kaydedilip taslağı
     siliyordu; "Geri yükle"ye basılırsa da arada yazılan metin gidiyordu.
+
+    setEditable'ın ikinci argümanı false: Tiptap aksi hâlde belge aynıyken de
+    "update" yayar. Eskiden (14.11.2026'ya kadar) bu efekt her açılışta ve
+    taslak teklifi yanıtlanınca çalıştığından kayıt (updated_at değişir,
+    ikinci sekmede yanlış çakışma), canlı denetim ve "denetim sonucu eski"
+    işareti belge değişmeden tetikleniyordu.
   */
   useEffect(() => {
     draftOfferRef.current = draftOffer;
-    if (editor && !editor.isDestroyed) editor.setEditable(!draftOffer && !icerikUyumsuz);
+    if (editor && !editor.isDestroyed) editor.setEditable(!draftOffer && !icerikUyumsuz, false);
   }, [editor, draftOffer, icerikUyumsuz]);
 
   const [uyumsuzYedekleniyor, setUyumsuzYedekleniyor] = useState(false);
