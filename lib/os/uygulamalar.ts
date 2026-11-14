@@ -285,9 +285,9 @@ export function komutHedefleri(uygulamalar: OsUygulama[]): OsKomutHedefi[] {
 }
 
 /*
-  HESAP MENÜSÜ SEÇİCİLERİ (Phase 5.1d-2, 14.11.2026). Profil menüsündeki
-  bağlantılar bugün kullanici-menusu.tsx'te elle yazılı; 5.1d-3'te bu
-  seçicilerden okunacak. İkisi de rolle SÜZÜLMÜŞ listeyi alır ve kendi rol
+  HESAP MENÜSÜ SEÇİCİLERİ (Phase 5.1d-2, 14.11.2026). Hesap menüsü
+  (kullanici-menusu.tsx) 5.1d-3'ten beri bağlantılarını bunlardan okuyor;
+  eskiden elle yazılıydı. İkisi de rolle SÜZÜLMÜŞ listeyi alır ve kendi rol
   kararını vermez: görünürlük tek yerde (gorunenUygulamalar), yoksa menü
   ile palet ayrı ayrı karar verip birbirinden sapardı. Sıra uygulama
   listesindeki sıradır.
@@ -313,18 +313,25 @@ export const personelAraclari = (gorunen: OsUygulama[]) => gorunen.filter((u) =>
 /** Telefondaki alt çubukta kalıcı duran uygulamalar (geri kalanı "Daha fazla"da). */
 export const ALT_CUBUK = ["home", "tez", "kaynaklar", "analiz"] as const;
 
-/** Gezinmenin altında, ana listeden ayrı duranlar: ayarlar ve başlatıcıya ayrılmış uygulamalar. */
-export function gezinmeGruplari(uygulamalar: OsUygulama[]) {
-  const ana = uygulamalar.filter((u) => !u.yalnizBaslatici && u.key !== "ayarlar");
-  const diger = uygulamalar.filter((u) => u.yalnizBaslatici);
-  const ayarlar = uygulamalar.find((u) => u.key === "ayarlar") ?? null;
-  return { ana, diger, ayarlar };
-}
+/*
+  ANA GEZİNME (Phase 5.1d-3, 14.11.2026, kurum sahibinin kararı). Kenar
+  çubuğunda ve tablet rayında yalnızca akademik uygulamalar durur; hesap
+  sayfaları (`yer: "hesap"`) ve personel araçları (`yer: "yonetim"`) hesap
+  menüsünde. Eskiden kenar çubuğunun altında bir "Diğer" grubu (Doçentlik,
+  Kılavuz, Abonelik, Asistan Kayıtları, Ekip) ve ayrı bir Ayarlar bağlantısı
+  vardı; aynı sayfalar hesap menüsünde ve Ctrl+K'da da duruyordu.
+*/
+export const anaUygulamalar = (uygulamalar: OsUygulama[]) => uygulamalar.filter((u) => !u.yer && !u.yalnizBaslatici);
 
-/** Telefonda alt çubukta olmayan her şey "Daha fazla" sayfasında (ayarlar dahil). */
+/**
+ * "Daha fazla" (telefon, tablet ve dar masaüstü): alt çubukta olmayan
+ * uygulamalar. Ayarlar, Kılavuz ve Abonelik burada da KALIR (telefonda
+ * kenar çubuğu yok, hesap menüsü tek yol olmasın). Personel araçları
+ * yalnızca hesap menüsünde (5.1d-3); eskiden burada da listeleniyordu.
+ */
 export function dahaFazlasi(uygulamalar: OsUygulama[]): OsUygulama[] {
   const cubukta = new Set<string>(ALT_CUBUK);
-  return uygulamalar.filter((u) => !cubukta.has(u.key));
+  return uygulamalar.filter((u) => !cubukta.has(u.key) && u.yer !== "yonetim");
 }
 
 export type CalismaBaglami = { id: string; baslik: string; tur: string };

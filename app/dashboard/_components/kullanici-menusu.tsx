@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { BookOpen, Building2, Check, ChevronsUpDown, Eye, LifeBuoy, LogOut, Settings, ShieldCheck, CreditCard } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Eye, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
+import { OsSimge } from "./os-simge";
+import type { OsIkon } from "@/lib/os/uygulamalar";
 import ActionForm from "../action-form";
 import { gorunumSec } from "@/app/actions/onizleme";
 import { kurumSec } from "@/app/actions/kurum-secimi";
@@ -24,7 +26,16 @@ import DilSecici from "@/app/_components/dil-secici";
   görüneceğini CSS seçer; gizli olan display:none olduğu için ekran
   okuyucu tek menü okur. İçerik ve eylemler (çıkış, görünüm, kurum)
   iki yerleşimde birebir aynı.
+
+  Phase 5.1d-3 (14.11.2026): hesap bağlantıları (Ayarlar, Kullanım
+  Kılavuzu, Abonelik ve Kredi) ve "Personel Araçları" merkezi listeden
+  gelir (lib/os/uygulamalar.ts: hesapUygulamalari, personelAraclari);
+  eskiden bağlantılar burada elle yazılıydı ve personel sayfaları kenar
+  çubuğunun "Diğer" grubundaydı.
 */
+
+/** Menüde bir bağlantı: merkezi listeden, layout'ta rolle süzülmüş olarak gelir. */
+export type MenuBaglantisi = { key: string; label: string; href: string; ikon: OsIkon };
 export default async function KullaniciMenusu({
   ad,
   rol,
@@ -34,6 +45,8 @@ export default async function KullaniciMenusu({
   kurumlar,
   seciliKurumId = null,
   yerlesim = "ust",
+  hesapBaglantilari = [],
+  personelAraclari = [],
 }: {
   yerlesim?: "ust" | "kenar";
   ad: string;
@@ -48,6 +61,13 @@ export default async function KullaniciMenusu({
   /* Yalnızca iç ekipte ve birden çok kurum varsa verilir (lib/kurum-secimi.ts). */
   kurumlar?: { id: string; name: string }[];
   seciliKurumId?: string | null;
+  hesapBaglantilari?: MenuBaglantisi[];
+  /*
+    Rolüne açık personel araçları; öğrencide boş gelir ve bölüm hiç
+    çizilmez. Bu bir GÖRÜNÜRLÜK kararıdır, güvenlik denetimi değil: her
+    sayfa erişimi kendi sunucu kapısında ve RLS'te denetler.
+  */
+  personelAraclari?: MenuBaglantisi[];
 }) {
   const t = await ceviri();
   return (
@@ -115,23 +135,36 @@ export default async function KullaniciMenusu({
         {/* Çeviri bitene kadar yalnızca iç ekipte (lib/dil.ts, INGILIZCE_YAYINDA). */}
         {INGILIZCE_YAYINDA || gorunum ? <DilSecici /> : null}
         <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Hesap", en: "Account" })}>
-          <Link href="/dashboard/settings">
-            <Settings size={16} aria-hidden="true" />
-            {t({ tr: "Ayarlar", en: "Settings" })}
-          </Link>
-          <Link href="/dashboard/abonelik">
-            <CreditCard size={16} aria-hidden="true" />
-            {t({ tr: "Abonelik ve kredi", en: "Subscription and credits" })}
-          </Link>
-          <Link href="/dashboard/yardim">
-            <BookOpen size={13} aria-hidden="true" />
-            {t({ tr: "Kullanım Kılavuzu", en: "User Guide" })}
-          </Link>
+          {hesapBaglantilari.map((b) => (
+            <Link key={b.key} href={b.href}>
+              <OsSimge ad={b.ikon} boyut={16} />
+              {b.label}
+            </Link>
+          ))}
+          {/* Destek ana gezinmede de var; yardım isteyen kişi önce kendi menüsüne bakıyor. */}
           <Link href="/dashboard/expert-requests">
             <LifeBuoy size={16} aria-hidden="true" />
             {t({ tr: "Destek", en: "Support" })}
           </Link>
         </nav>
+        {personelAraclari.length ? (
+          /*
+            Başlık görünür ama ekran okuyucuya nav'ın adı olarak okunur
+            (aria-label): menü iki yerleşimde çizildiği için id ile
+            bağlamak sayfada aynı id'yi iki kez üretirdi.
+          */
+          <nav className="os-kullanici-baglantilar" aria-label={t({ tr: "Personel Araçları", en: "Staff tools" })}>
+            <small className="os-kullanici-bolum" aria-hidden="true">
+              {t({ tr: "Personel Araçları", en: "Staff tools" })}
+            </small>
+            {personelAraclari.map((b) => (
+              <Link key={b.key} href={b.href}>
+                <OsSimge ad={b.ikon} boyut={16} />
+                {b.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         <form action={cikis} className="os-kullanici-cikis">
           <button type="submit">
             <LogOut size={16} aria-hidden="true" />

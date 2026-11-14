@@ -77,12 +77,14 @@ describe("dar hâlin CSS sözleşmesi (yalnızca masaüstü bloklarında)", () =
     kural("\\.os-gezinme-govde", /overflow: visible/);
   });
 
-  test("logo ve hesap üst çubukta; Diğer ve çalışma alt menüsü gizli, Daha fazla görünür", () => {
+  test("logo ve hesap üst çubukta; çalışma alt menüsü gizli, Daha fazla görünür", () => {
     kural("\\.os-gezinme-logo", /display: none/);
     kural("\\.os-marka-logo", /display: flex/);
     kural("\\.os-kullanici--ust", /display: block/);
     kural("\\.os-gezinme-daha-li", /display: list-item/);
-    assert.match(masaustu, /html\[data-gezinme="dar"\] \.os-gezinme-diger,/);
+    // Açık hâlde gizli olan alt liste ("Daha fazla"yı taşır) dar hâlde görünür (Phase 5.1d-3).
+    kural("\\.os-gezinme-son", /display: flex/);
+    assert.doesNotMatch(masaustu, /os-gezinme-diger/);
     assert.match(masaustu, /html\[data-gezinme="dar"\] \.os-gezinme-baglam,/);
   });
 
