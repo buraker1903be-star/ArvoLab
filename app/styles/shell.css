@@ -132,6 +132,16 @@
 .os-kullanici-menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: var(--z-menu);
   width: 280px; max-width: calc(100vw - 24px); padding: 8px;
+  /*
+    KISA EKRAN (Phase 5.1d-1, 14.11.2026). Eskiden yükseklik sınırı yoktu:
+    iç ekipte menü 583 px ve 600/500 px yükseklikte üst çubuktaki menünün
+    "Çıkış yap"ı ekranın altında kalıyordu, kaydırılamıyordu da. Menü
+    üst çubuğun altından (64 px) açılır; ekranın dibinde 16 px pay kalır,
+    içerik menünün içinde kayar. overscroll: sona gelen tekerlek sayfayı
+    kaydırmasın.
+  */
+  max-height: calc(100dvh - var(--topbar-height) - 16px);
+  overflow-y: auto; overscroll-behavior: contain;
   border: 1px solid var(--line); border-radius: var(--r-lg);
   background: var(--surface-raised); box-shadow: var(--shadow-lg);
 }
@@ -153,7 +163,14 @@
 .os-kullanici-kimlik b, .os-kullanici-kimlik small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .os-kullanici-kimlik b { font-size: var(--os5-fs-meta); font-weight: 600; }
 .os-kullanici-kimlik small { color: var(--os5-kenar-yazi); font-size: var(--os5-fs-meta); }
-.os-kullanici--kenar .os-kullanici-menu { top: auto; right: auto; bottom: calc(100% + 8px); left: 0; color: var(--ink); }
+/*
+  Kenar çubuğunda menü YUKARI açılır ve tetikleyici ekranın dibinde
+  (alt kenarı ekran dibinden ~68 px yukarıda başlıyor). Eskiden menünün
+  üstü 1366×600'de 51 px, 1366×500'de 151 px ekranın dışına taşıyordu:
+  kimlik ve görünüm seçimi görünmüyordu. Sınır: ekran yüksekliğinden
+  tetikleyici payı ve üstte 12 px boşluk.
+*/
+.os-kullanici--kenar .os-kullanici-menu { top: auto; right: auto; bottom: calc(100% + 8px); left: 0; max-height: calc(100dvh - 96px); color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .os-kullanici--kenar > summary { transition: none; } }
 .os-kullanici-bas { display: flex; align-items: center; gap: 12px; padding: 12px; }
 .os-kullanici-bas b { display: block; font-weight: 650; }
