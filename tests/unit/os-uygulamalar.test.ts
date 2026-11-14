@@ -13,6 +13,7 @@ import {
   ANA_SAYFA,
   aramaAnahtari,
   osSayfalari,
+  komutHedefleri,
   docktakiler,
   etkinBolum,
   etkinUygulama,
@@ -134,7 +135,9 @@ describe("Ctrl+K araması", () => {
   });
 
   test("başlatıcıya ayrılmış uygulamalar da aranabiliyor", () => {
-    const sayfalar = osSayfalari(uygulamalar);
+    // Palet uygulamaları komutHedefleri'nden alıyor (osSayfalari artık
+    // yalnızca gerçek alt bölümleri döndürüyor, 14.11.2026).
+    const sayfalar = komutHedefleri(uygulamalar);
     assert.ok(sayfalar.some((s) => s.href === "/dashboard/team"));
     // Yönlenen eski adresler (sekmeli dönemin bölümleri) aramada çıkmıyor:
     // Destek ve Kaynaklar uygulamanın kendisiyle aranıyor.
@@ -164,14 +167,14 @@ describe("sade dock (26.10.2026: modüller birleştirildi)", () => {
     // kaldırıldı: kılavuz her çalışmaya öğrencinin kendisi tarafından yükleniyor.
     assert.equal(uygulamalar.some((u) => u.href === "/dashboard/guidelines"), false);
     const personelSayfalari = ["/dashboard/associate-professorship"];
-    const ogrenci = osSayfalari(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
+    const ogrenci = komutHedefleri(gorunenUygulamalar(uygulamalar, "client")).map((s) => s.href);
     // Önizlemede rol yok sayılır (layout): rolsüz kullanıcı da görmez.
-    const rolsuz = osSayfalari(gorunenUygulamalar(uygulamalar, undefined)).map((s) => s.href);
+    const rolsuz = komutHedefleri(gorunenUygulamalar(uygulamalar, undefined)).map((s) => s.href);
     for (const href of personelSayfalari) {
       assert.ok(!ogrenci.includes(href), href);
       assert.ok(!rolsuz.includes(href), href);
       for (const rol of ["employee", "academic_manager", "controller", "expert", "system_admin", "founder"]) {
-        assert.ok(osSayfalari(gorunenUygulamalar(uygulamalar, rol)).some((s) => s.href === href), `${rol} ${href}`);
+        assert.ok(komutHedefleri(gorunenUygulamalar(uygulamalar, rol)).some((s) => s.href === href), `${rol} ${href}`);
       }
     }
   });

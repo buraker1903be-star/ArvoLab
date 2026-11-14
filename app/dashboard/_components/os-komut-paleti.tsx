@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookPlus, ChartNoAxesCombined, Monitor, Moon, Plus, Search, Sparkles, Sun, type LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
-import { aramaAnahtari, osSayfalari, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
+import { aramaAnahtari, komutHedefleri, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
 import { normalizeDoi } from "@/lib/doi";
 import { calismaAdresi } from "@/lib/calisma-karti";
 import { projectTypeLabel } from "@/lib/project-labels";
@@ -88,7 +88,6 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
     };
   }, []);
 
-  const ikonu = new Map(uygulamalar.map((u) => [u.key, u.ikon]));
   const hizli = t({ tr: "Hızlı işlemler", en: "Quick actions" });
   const sonCalisma = calismalar?.[0];
   const doi = normalizeDoi(sorgu);
@@ -112,16 +111,17 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
       tur: "git",
       href: calismaAdresi(c.id),
     })),
-    ...uygulamalar.map((u): Oge => ({ id: `app:${u.key}`, grup: t({ tr: "Uygulamalar", en: "Apps" }), label: u.label, ikon: u.ikon, tur: "git", href: u.href })),
-    ...osSayfalari(uygulamalar).map((s): Oge => ({
-      id: `sayfa:${s.href}`,
-      grup: t({ tr: "Sayfalar", en: "Pages" }),
-      label: s.label,
-      ipucu: uygulamalar.find((u) => u.key === s.uygulama)?.label,
-      ikon: ikonu.get(s.uygulama) ?? "apps",
-      tur: "git",
-      href: s.href,
-    })),
+    /*
+      Gezinme hedefleri tek seçiciden (komutHedefleri): her adres bir kez.
+      Eskiden uygulamalar ve osSayfalari ayrı ayrı eşleniyordu ve beş
+      uygulama (Doçentlik, Kılavuz, Abonelik, Asistan Kayıtları, Ekip) hem
+      "Uygulamalar" hem "Sayfalar" grubunda çıkıyordu (14.11.2026).
+    */
+    ...komutHedefleri(uygulamalar).map((h): Oge =>
+      h.grup === "uygulama"
+        ? { id: h.key, grup: t({ tr: "Uygulamalar", en: "Apps" }), label: h.label, ikon: h.ikon, tur: "git", href: h.href }
+        : { id: h.key, grup: t({ tr: "Sayfalar", en: "Pages" }), label: h.label, ipucu: uygulamalar.find((u) => u.key === h.uygulama)?.label, ikon: h.ikon, tur: "git", href: h.href },
+    ),
     /* Üç tema seçeneği (Phase 4.1): eskiden tek bir "aydınlık / karanlık geç" vardı ve "sisteme uy"a dönülemiyordu. */
     { id: "komut:tema-acik", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Tema: Açık", en: "Theme: Light" }), ikon: "settings", tur: "tema", tercih: "light" },
     { id: "komut:tema-koyu", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Tema: Koyu", en: "Theme: Dark" }), ikon: "settings", tur: "tema", tercih: "dark" },
