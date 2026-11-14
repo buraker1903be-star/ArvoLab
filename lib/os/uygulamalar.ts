@@ -337,6 +337,9 @@ export function dahaFazlasi(uygulamalar: OsUygulama[]): OsUygulama[] {
 export type CalismaBaglami = { id: string; baslik: string; tur: string };
 export type BaglamBaglantisi = { key: string; label: string; href: string; grup: "calisma" | "arac" };
 
+/** Çalışmanın kendi bölümleri; sayfadaki sekmeler ve kenar çubuğu alt menüsü aynı anahtarları kullanır. */
+export type CalismaBolumu = "merkez" | "yazim" | "kanit" | "etik" | "makale";
+
 /*
   ÇALIŞMANIN İÇİNDEYKEN GEZİNME. Çalışmanın kendi bölümleri (Özet,
   Yazım, Kanıt, Etik, makalede Makale) ve o çalışmaya süzülmüş araçlar
@@ -359,6 +362,16 @@ export function calismaBaglantilari(calisma: CalismaBaglami, t: Cevirici = cevir
     { key: "analiz", label: t({ tr: "Analiz", en: "Analysis" }), href: `/dashboard/analysis?calisma=${id}`, grup: "arac" },
     { key: "belge", label: t({ tr: "Belge Kontrol", en: "Document Check" }), href: `/dashboard/documents?calisma=${id}`, grup: "arac" },
   ];
+}
+
+/**
+ * Yalnızca çalışmanın kendi bölümleri (araçlar hariç), sırasıyla. Sayfadaki
+ * sekmeler (calisma-sekmeleri.tsx) bunu okur; 5.1d-4'e kadar sekmeler aynı
+ * listeyi kendi içinde ayrıca yazıyordu ve bir bölüm eklenince iki yer
+ * birden güncellenmeliydi.
+ */
+export function calismaBolumleri(calisma: CalismaBaglami, t: Cevirici = ceviriciKur("tr")): (BaglamBaglantisi & { key: CalismaBolumu })[] {
+  return calismaBaglantilari(calisma, t).filter((b): b is BaglamBaglantisi & { key: CalismaBolumu } => b.grup === "calisma");
 }
 
 /**

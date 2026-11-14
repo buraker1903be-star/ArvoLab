@@ -79,7 +79,6 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const calismaAcik = grupAcikMi({
     secim: calismaSecimi?.yol === yol ? calismaSecimi.acik : null,
     etkinIcinde: Boolean(baglamEtkin),
-    kayitli: null,
     varsayilan: true,
   });
 

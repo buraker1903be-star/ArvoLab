@@ -1,4 +1,3 @@
-import { CalismaBaglamiYayinla } from "@/app/dashboard/_components/calisma-baglami";
 import { calismaAdresi } from "@/lib/calisma-karti";
 import { etikKaydiOku } from "@/lib/etik/oku";
 import Link from "next/link";
@@ -111,8 +110,6 @@ export default async function WriteManuscriptPage({
        (araçlar, belge, kontroller) --content-max sınırı belgeyi daraltıyor,
        sayfa öbür ekranlardan dar görünüyordu. */
     <main className="dashboard-page gb">
-      {/* Çalışma kenar çubuğuna bildirilir (Phase 3, os-gezinme.tsx): Yazım bölümü orada etkin görünür. */}
-      <CalismaBaglamiYayinla id={project.id} baslik={project.title ?? ""} tur={project.project_type} />
       {/* İnce başlık (04.11.2026): tek satır, kesilen başlığın tamamı üzerine gelince. Eskiden üç satırlık dev başlık yazı alanını ekranın üçte birine itiyordu. */}
       <section className="projects-header yazma-basligi">
         <div>
@@ -124,7 +121,7 @@ export default async function WriteManuscriptPage({
         {/*
           Çıkış, çalışmanın KENDİ merkezine gidiyor — düz listeye değil.
           Literatür, kaynakça, belge ve analiz adımlarına oradan
-          geçiliyor (calisma-serit.tsx); listeye dönmek kullanıcıyı
+          geçiliyor; listeye dönmek kullanıcıyı
           bağlamdan çıkarıp aynı çalışmayı yeniden bulmaya zorluyordu.
           Tezin en uzun sürdüğü ekran, akışın geri kalanına en uzak
           ekran olmamalı.
@@ -148,6 +145,8 @@ export default async function WriteManuscriptPage({
         ekranında yalnızca "Çalışmalarım" geri düğmesi vardı; tablette Kanıt,
         Etik ve Makale'ye doğrudan geçiş yoktu.
       */}
+      {/* Çalışmayı kenar çubuğuna da bu bileşen bildirir (CalismaBaglamiYayinla);
+          5.1d-4'e kadar sayfa aynı bildirimi ayrıca bir kez daha yapıyordu. */}
       <CalismaSekmeleri calisma={project} aktif="yazim" />
 
       {kilavuzOkunamadi ? (
