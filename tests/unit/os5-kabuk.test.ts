@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DIGER_GRUBU_ANAHTARI, grupAcikMi, kayitliTercih, tercihDegeri } from "@/lib/os5/gezinme";
-import { gezinmeGruplari, gorunenUygulamalar, labUygulamalari } from "@/lib/os/uygulamalar";
+import { anaUygulamalar, gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari } from "@/lib/os/uygulamalar";
 
 /*
   Signature OS 5 / Phase 3: uygulama kabuğu ve gezinme. Kimin neyi
@@ -46,16 +46,17 @@ describe("rol bazlı görünürlük değişmedi", () => {
     assert.match(layout, /const uygulamalar = gorunenUygulamalar\(labUygulamalari\(t\), gorunum\.onizleme \? undefined : profile\?\.role/);
     assert.match(layout, /<OsGezinme uygulamalar=\{uygulamalar\}/);
   });
-  test("öğrenci 'Diğer'de personel sayfası görmez; kurucu görür", () => {
-    const ogrenci = gezinmeGruplari(gorunenUygulamalar(labUygulamalari(), "client")).diger.map((u) => u.key);
-    assert.deepEqual(ogrenci.filter((k) => ["ekip", "asistan", "docentlik"].includes(k)), []);
-    const kurucu = gezinmeGruplari(gorunenUygulamalar(labUygulamalari(), "founder")).diger.map((u) => u.key);
+  test("öğrenci personel aracı görmez; kurucu görür (Phase 5.1d-3: hesap menüsünde)", () => {
+    const ogrenci = personelAraclari(gorunenUygulamalar(labUygulamalari(), "client")).map((u) => u.key);
+    assert.deepEqual(ogrenci, []);
+    const kurucu = personelAraclari(gorunenUygulamalar(labUygulamalari(), "founder")).map((u) => u.key);
     assert.ok(kurucu.includes("ekip") && kurucu.includes("asistan"));
   });
-  test("bütün rotalar gezinmede ya da 'Daha fazla'da: hiçbir uygulama düşmüyor", () => {
+  test("hiçbir uygulama düşmüyor: her biri ana gezinmede ya da hesap menüsünde, tam bir yerde", () => {
     const hepsi = gorunenUygulamalar(labUygulamalari(), "founder");
-    const { ana, diger, ayarlar } = gezinmeGruplari(hepsi);
-    assert.equal(ana.length + diger.length + (ayarlar ? 1 : 0), hepsi.length);
+    const yerler = [...anaUygulamalar(hepsi), ...hesapUygulamalari(hepsi), ...personelAraclari(hepsi)].map((u) => u.key);
+    assert.deepEqual([...yerler].sort(), hepsi.map((u) => u.key).sort());
+    assert.equal(new Set(yerler).size, yerler.length);
   });
 });
 
@@ -82,7 +83,8 @@ describe("çalışma bağlamı aynı gezinmede", () => {
   });
   test("alt menü düğmeleri aria-expanded ve aria-controls taşıyor", () => {
     assert.match(gezinme, /aria-expanded=\{calismaAcik\}\s+aria-controls="os-gezinme-calisma"/);
-    assert.match(gezinme, /aria-expanded=\{digerAcik\}\s+aria-controls="os-gezinme-diger"/);
+    // "Diğer" grubu kalktı (Phase 5.1d-3): kenar çubuğunda tek alt menü çalışmanınki.
+    assert.doesNotMatch(gezinme, /os-gezinme-diger|digerAcik/);
   });
   test("araç sayfasında tek etkin işaret: ana listedeki kopya işaretlenmez", () => {
     assert.match(gezinme, /const anaEtkinKey = baglamEtkin \? null : etkin\?\.key;/);

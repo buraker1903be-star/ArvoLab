@@ -121,7 +121,7 @@ for (const [w, h] of [[1366, 768], [1440, 900]]) for (const tema of ["light", "d
     let o = await olcu(sayfa);
     bekle(o.navW === 240 && o.kabukX === 240, `açık: ray ${o.navW}, içerik ${o.kabukX}`);
     bekle(o.expanded === "true" && o.etiket === "Kenar çubuğunu daralt" && o.dugmeGorunur, `düğme: ${o.expanded} / ${o.etiket}`);
-    bekle(o.navLogo && !o.ustLogo && o.kenarHesap && !o.ustHesap && o.diger && !o.daha, `açık hâl öğeleri: ${JSON.stringify(o)}`);
+    bekle(o.navLogo && !o.ustLogo && o.kenarHesap && !o.ustHesap && !o.diger && !o.daha, `açık hâl öğeleri: ${JSON.stringify(o)}`);
     await sayfa.locator(".os-gezinme-daralt").focus();
     await sayfa.keyboard.press("Enter");
     await sayfa.waitForTimeout(450);
@@ -136,7 +136,7 @@ for (const [w, h] of [[1366, 768], [1440, 900]]) for (const tema of ["light", "d
     await ctx.close();
   });
 
-  await senaryo(`${et}: dar hâlde logo üst çubukta (resmî dosya, tema varyantı), hesap üst çubukta, Diğer gizli, Daha fazla erişilebilir`, async () => {
+  await senaryo(`${et}: dar hâlde logo üst çubukta (resmî dosya, tema varyantı), hesap üst çubukta, Diğer yok, Daha fazla erişilebilir`, async () => {
     const { ctx, sayfa } = await baglam({ w, h, tema, dar: "1" });
     await git(sayfa, "/dashboard");
     const o = await olcu(sayfa);

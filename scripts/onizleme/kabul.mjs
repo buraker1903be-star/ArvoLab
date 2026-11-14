@@ -178,21 +178,21 @@ const tarayici = await chromium.launch();
     await sayfa.keyboard.press("Space");
     bekle((await dugme.getAttribute("aria-expanded")) === "false", "Space kapatmadı");
   });
-  await senaryo("os5 kabuk: Diğer alt menüsü açılır, tercih hatırlanır", async () => {
+  /*
+    Phase 5.1d-3 (14.11.2026): kenar çubuğunun "Diğer" grubu ve bağımsız
+    Ayarlar bağlantısı kalktı; o sayfalar hesap menüsünde. Eskiden bu
+    senaryo Diğer'in açılıp tercihinin hatırlandığını sınıyordu.
+  */
+  await senaryo("os5 kabuk: kenar çubuğunda Diğer ve Ayarlar yok; hesap sayfaları hesap menüsünde", async () => {
     await git(sayfa, "/dashboard");
-    await sayfa.evaluate(() => localStorage.removeItem("arvolab.gezinme.diger"));
-    await git(sayfa, "/dashboard");
-    const dugme = sayfa.locator(".os-gezinme-grup");
-    const liste = sayfa.locator("#os-gezinme-diger");
-    bekle((await dugme.getAttribute("aria-expanded")) === "false" && !(await liste.isVisible()), "Diğer kapalı başlamalı");
-    await dugme.click();
-    bekle((await dugme.getAttribute("aria-expanded")) === "true" && (await liste.isVisible()), "Diğer açılmadı");
-    bekle(await liste.getByText("Kullanım Kılavuzu").isVisible(), "Kullanım Kılavuzu görünmüyor");
-    await git(sayfa, "/dashboard/analysis");
-    bekle((await sayfa.locator(".os-gezinme-grup").getAttribute("aria-expanded")) === "true", "açık tercihi hatırlanmadı");
-    await sayfa.locator(".os-gezinme-grup").click();
-    await git(sayfa, "/dashboard/yardim");
-    bekle((await sayfa.locator(".os-gezinme-grup").getAttribute("aria-expanded")) === "true", "etkin sayfa Diğer'deyken grup açık olmalı");
+    bekle(!(await sayfa.locator(".os-gezinme-grup, #os-gezinme-diger").count()), "Diğer grubu hâlâ var");
+    // Hesap menüsü de kenar çubuğunun içinde duruyor; onun Ayarlar bağlantısı sayılmaz.
+    const kenarAyarlar = await sayfa.evaluate(() => [...document.querySelectorAll("nav.os-gezinme a[href='/dashboard/settings']")].filter((a) => !a.closest(".os-kullanici")).length);
+    bekle(!kenarAyarlar, "kenar çubuğunda Ayarlar bağlantısı var");
+    await sayfa.locator("nav.os-gezinme .os-kullanici > summary").click();
+    const menu = sayfa.locator("nav.os-gezinme .os-kullanici-menu");
+    for (const ad of ["Ayarlar", "Kullanım Kılavuzu", "Abonelik ve Kredi", "Destek"]) bekle(await menu.getByRole("link", { name: ad }).isVisible(), `hesap menüsünde yok: ${ad}`);
+    await sayfa.keyboard.press("Escape");
   });
   await senaryo("os5 kabuk: hesap menüsü kenar çubuğunun dibinde, yukarı açılır; üst çubukta yok", async () => {
     await git(sayfa, "/dashboard");

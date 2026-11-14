@@ -12,7 +12,7 @@ import { gorunumSec } from "@/app/actions/onizleme";
 import ActionForm from "./action-form";
 import { getAccessState } from "@/lib/access";
 import { aktifDil, ceviri } from "@/lib/dil-sunucu";
-import { gorunenUygulamalar, labUygulamalari } from "@/lib/os/uygulamalar";
+import { gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari, type OsUygulama } from "@/lib/os/uygulamalar";
 import AbonelikKapisi from "./_components/abonelik-kapisi";
 import SubscriptionNotice from "./_components/subscription-notice";
 import SilmeBekliyor from "./_components/silme-bekliyor";
@@ -30,6 +30,9 @@ import { seciliKurum } from "@/lib/kurum-secimi-sunucu";
 import { kurumSec } from "@/app/actions/kurum-secimi";
 import { getOrganizations } from "@/app/actions/team";
 import { ADMIN_ROLES } from "@/lib/project-labels";
+
+/* Menüye uygulamanın yalnızca bağlantı için gereken alanları gider (roller, yollar gitmez). */
+const menuBaglantisi = ({ key, label, href, ikon }: OsUygulama) => ({ key, label, href, ikon });
 
 function initialsOf(name: string) {
   const letters = name
@@ -94,6 +97,14 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
     gorunum: onizleyebilir(profile?.role) ? (gorunum.onizleme ?? "personel") : undefined,
     kurumlar: icEkip && kurumlar.length > 1 ? kurumlar : undefined,
     seciliKurumId: kurum?.id ?? null,
+    /*
+      Hesap menüsünün bağlantıları gezinmeyle AYNI süzülmüş listeden
+      (uygulamalar): menü ile kenar çubuğu ayrı ayrı rol kararı verip
+      birbirinden sapmasın. Menüde görünmemek erişim yasağı değildir; her
+      sayfa kendi sunucu kapısını uygular.
+    */
+    hesapBaglantilari: hesapUygulamalari(uygulamalar).map(menuBaglantisi),
+    personelAraclari: personelAraclari(uygulamalar).map(menuBaglantisi),
   };
 
   return (

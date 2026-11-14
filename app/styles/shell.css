@@ -187,6 +187,8 @@
   .os-kullanici-cikis button:hover { background: var(--surface-2); }
 }
 .os-kullanici-cikis { padding-top: 4px; border-top: 1px solid var(--line-soft); }
+/* "Personel Araçları" başlığı (Phase 5.1d-3): hesap bağlantılarından ayrı bir bölüm olduğu görünsün. */
+.os-kullanici-bolum { display: block; padding: 6px 12px 2px; color: var(--muted); font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .os-kullanici-cikis button { color: var(--danger); }
 .os-kullanici-alt { display: flex; align-items: center; gap: 6px; margin: 4px 12px 6px; color: var(--muted); font-size: var(--fs-micro); }
 

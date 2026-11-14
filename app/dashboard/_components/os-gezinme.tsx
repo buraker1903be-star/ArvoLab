@@ -8,15 +8,15 @@ import { useCeviri } from "@/app/_components/dil-saglayici";
 import ArvoLabLogosu from "@/app/_components/arvolab-logosu";
 import {
   ALT_CUBUK,
+  anaUygulamalar,
   calismaBaglantilari,
   calismaIcindeMi,
   dahaFazlasi,
   etkinBaglanti,
   etkinUygulama,
-  gezinmeGruplari,
   type OsUygulama,
 } from "@/lib/os/uygulamalar";
-import { DIGER_GRUBU_ANAHTARI, grupAcikMi, kayitliTercih, tercihDegeri } from "@/lib/os5/gezinme";
+import { grupAcikMi } from "@/lib/os5/gezinme";
 import { OsSimge } from "./os-simge";
 import { useCalismaBaglami } from "./calisma-baglami";
 import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_components/gezinme";
@@ -27,11 +27,13 @@ import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_compo
   boyuna göre üç biçim (os-shell.css; kırılımlar lib/os/kirilimlar.ts):
 
   - masaüstü (≥1200): solda 240 px koyu lacivert, sabit kenar çubuğu.
-    Üstte resmî logo, altta Ayarlar ve hesap menüsü. Bir çalışmanın
+    Üstte resmî logo, altta hesap menüsü. Bir çalışmanın
     içindeyken o çalışmanın bölümleri "Çalışmalarım"ın ALT MENÜSÜ olarak
     açılır (eskiden listenin üstünde ayrı bir "Açık çalışma" kutusuydu;
     çalışma bağlamı artık ana gezinmenin bir parçası, ikinci bir sistem
-    değil). Role bağlı ve seyrek açılan sayfalar "Diğer" alt menüsünde.
+    değil). Yalnızca akademik uygulamalar: hesap sayfaları ve personel
+    araçları hesap menüsünde (Phase 5.1d-3; eskiden altta bir "Diğer"
+    grubu ve ayrı bir Ayarlar bağlantısı vardı).
   - tablet (761–1199): 64 px koyu ray, yalnızca simge. Ad, fareyle ya da
     klavyeyle üzerine gelince yanında belirir; ekran okuyucu her zaman
     okur. Çalışma bölümleri sayfanın kendi sekmelerinde kalır.
@@ -43,32 +45,6 @@ import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula } from "@/app/_compo
   geliyor (gorunenUygulamalar). Bu bileşen yalnızca çizer.
 */
 
-/* "Diğer" grubunun kayıtlı tercihi: localStorage, okunamazsa tercih yok. */
-const tercihDinleyicileri = new Set<() => void>();
-function tercihAbone(dinle: () => void) {
-  tercihDinleyicileri.add(dinle);
-  window.addEventListener("storage", dinle);
-  return () => {
-    tercihDinleyicileri.delete(dinle);
-    window.removeEventListener("storage", dinle);
-  };
-}
-function tercihOku(): string | null {
-  try {
-    return window.localStorage.getItem(DIGER_GRUBU_ANAHTARI);
-  } catch {
-    return null;
-  }
-}
-function tercihYaz(acik: boolean) {
-  try {
-    window.localStorage.setItem(DIGER_GRUBU_ANAHTARI, tercihDegeri(acik));
-  } catch {
-    // Gizli pencere ya da kapalı depolama: tercih yalnızca bu oturumda kalır.
-  }
-  tercihDinleyicileri.forEach((d) => d());
-}
-
 export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; hesap?: ReactNode }) {
   const t = useCeviri();
   const yol = usePathname();
@@ -76,7 +52,7 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
   const pencere = useRef<HTMLDialogElement>(null);
   const baglam = useCalismaBaglami();
   const etkin = etkinUygulama(uygulamalar, yol);
-  const { ana, diger, ayarlar } = gezinmeGruplari(uygulamalar);
+  const ana = anaUygulamalar(uygulamalar);
   const cubukta = new Set<string>(ALT_CUBUK);
 
   const baglamGorunur = Boolean(baglam && calismaIcindeMi(baglam.id, yol, new URLSearchParams(sorgu.toString())));
@@ -92,8 +68,6 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
     durum değiştirmeden aynı sonucu verir.
   */
   const [calismaSecimi, setCalismaSecimi] = useState<{ yol: string; acik: boolean } | null>(null);
-  const [digerSecimi, setDigerSecimi] = useState<{ yol: string; acik: boolean } | null>(null);
-  const kayitliDiger = kayitliTercih(useSyncExternalStore(tercihAbone, tercihOku, () => null));
   /*
     Masaüstü dar/açık (Phase 5.1c). Durum <html data-gezinme>'den okunur;
     genişliği yalnızca CSS belirler, bu yüzden sunucu çizimi ("açık") ile
@@ -107,13 +81,6 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
     etkinIcinde: Boolean(baglamEtkin),
     kayitli: null,
     varsayilan: true,
-  });
-  const digerEtkin = diger.some((u) => u.key === etkin?.key);
-  const digerAcik = grupAcikMi({
-    secim: digerSecimi?.yol === yol ? digerSecimi.acik : null,
-    etkinIcinde: digerEtkin,
-    kayitli: kayitliDiger,
-    varsayilan: false,
   });
 
   /*
@@ -224,31 +191,9 @@ export function OsGezinme({ uygulamalar, hesap }: { uygulamalar: OsUygulama[]; h
 
         <div className="os-gezinme-govde">
           <ul className="os-gezinme-liste os-gezinme-ana">{ana.map((u) => (u.key === "tez" && baglamGorunur ? calismaOgesi(u) : oge(u)))}</ul>
-
-          {diger.length ? (
-            <div className="os-gezinme-diger">
-              <button
-                type="button"
-                className="os-gezinme-grup"
-                aria-expanded={digerAcik}
-                aria-controls="os-gezinme-diger"
-                onClick={() => {
-                  setDigerSecimi({ yol, acik: !digerAcik });
-                  tercihYaz(!digerAcik);
-                }}
-              >
-                <span>{t({ tr: "Diğer", en: "More" })}</span>
-                <ChevronDown size={14} aria-hidden="true" />
-              </button>
-              <ul id="os-gezinme-diger" className="os-gezinme-liste" hidden={!digerAcik}>
-                {diger.map(oge)}
-              </ul>
-            </div>
-          ) : null}
         </div>
 
         <ul className="os-gezinme-liste os-gezinme-son">
-          {ayarlar ? oge(ayarlar) : null}
           <li className="os-gezinme-daha-li">
             <button
               type="button"

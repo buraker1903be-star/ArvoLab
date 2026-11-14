@@ -47,7 +47,7 @@
 .os-gezinme-kisa { display: none; }
 
 /* Yalnızca masaüstünde görünenler: logo, alt menü düğmesi, çalışma alt menüsü, hesap. */
-.os-gezinme-logo, .os-gezinme-ac, .os-gezinme-baglam, .os-gezinme-hesap, .os-gezinme-grup { display: none; }
+.os-gezinme-logo, .os-gezinme-ac, .os-gezinme-baglam, .os-gezinme-hesap { display: none; }
 /* Sarmalayıcılar telefonda ve tablette düzene karışmaz. */
 .os-gezinme-govde, .os-gezinme-satir, .os-gezinme-bas { display: contents; }
 /* Daraltma düğmesi yalnızca masaüstünde (Phase 5.1c): tablet her zaman ray, telefon alt çubuk. */
@@ -105,24 +105,22 @@
   .os-gezinme .os-gezinme-oge.is-ust { color: var(--os5-kenar-yazi-guclu); font-weight: 600; }
   .os-gezinme .os-gezinme-oge:focus-visible,
   .os-gezinme .os-gezinme-alt:focus-visible,
-  .os-gezinme-ac:focus-visible,
-  .os-gezinme-grup:focus-visible { outline: none; box-shadow: var(--os5-kenar-odak); }
+  .os-gezinme-ac:focus-visible { outline: none; box-shadow: var(--os5-kenar-odak); }
   .os-gezinme .os-gezinme-oge.is-active:focus-visible { box-shadow: inset 3px 0 0 var(--os5-kenar-isaret), var(--os5-kenar-odak); }
 
   /* Üst öğe + alt menü düğmesi */
   .os-gezinme-satir { display: flex; align-items: center; gap: 2px; }
   .os-gezinme-satir > .os-gezinme-oge { flex: 1; min-width: 0; }
-  .os-gezinme-ac,
-  .os-gezinme-grup {
+  .os-gezinme-ac {
     display: grid; place-items: center; flex: none;
     border: 0; border-radius: var(--os5-kontrol-r); background: transparent;
     color: var(--os5-kenar-yazi); font: inherit; cursor: pointer;
     transition: background-color var(--os5-sure-hizli) var(--os5-egri), color var(--os5-sure-hizli) var(--os5-egri);
   }
   .os-gezinme-ac { width: var(--os5-kontrol-h-sik); height: var(--os5-kontrol-h-sik); }
-  .os-gezinme-ac:hover, .os-gezinme-grup:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
-  .os-gezinme-ac > svg, .os-gezinme-grup > svg { transition: transform var(--os5-sure-orta) var(--os5-egri); }
-  .os-gezinme-ac[aria-expanded="false"] > svg, .os-gezinme-grup[aria-expanded="false"] > svg { transform: rotate(-90deg); }
+  .os-gezinme-ac:hover { background: var(--os5-kenar-hover); color: var(--os5-kenar-yazi-guclu); }
+  .os-gezinme-ac > svg { transition: transform var(--os5-sure-orta) var(--os5-egri); }
+  .os-gezinme-ac[aria-expanded="false"] > svg { transform: rotate(-90deg); }
 
   /* Açık çalışmanın alt menüsü: "Çalışmalarım"ın altında, ince bir çizgiyle girintili. */
   .os-gezinme-baglam {
@@ -146,15 +144,14 @@
     color: var(--os5-kenar-baslik); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
   }
 
-  /* "Diğer" alt menüsü: başlık düğmesi açar/kapatır. */
-  .os-gezinme-grup {
-    display: flex; align-items: center; justify-content: space-between; width: 100%;
-    min-height: var(--os5-kontrol-h-sik); margin-bottom: 2px; padding: 0 var(--os5-gezinme-ic);
-    color: var(--os5-kenar-baslik); font-size: var(--os5-fs-en-kucuk); font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-  }
-
+  /*
+    Alt liste yalnızca "Daha fazla"yı taşır (Phase 5.1d-3: Ayarlar hesap
+    menüsüne geçti). Açık kenar çubuğunda "Daha fazla" gizli, liste de
+    gizli: boş bir liste üst çizgisiyle hesap satırının üstünde ikinci,
+    anlamsız bir ayraç çizerdi. Dar hâlde yeniden görünür (aşağıda).
+  */
   .os-gezinme-son {
-    flex: none; margin-top: var(--s-2); padding-top: var(--s-2);
+    display: none; flex: none; margin-top: var(--s-2); padding-top: var(--s-2);
     border-top: 1px solid var(--os5-kenar-cizgi);
   }
   .os-gezinme-daha-li { display: none; }
@@ -197,14 +194,13 @@
   }
   html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge:hover .os-gezinme-ad,
   html[data-gezinme="dar"] .os-gezinme .os-gezinme-oge:focus-visible .os-gezinme-ad { opacity: 1; }
-  /* Çalışma alt menüsü ve "Diğer" metin başlıklı; 64 px'e sığmazlar. Onların
-     yerine sayfadaki çalışma sekmeleri ve "Daha fazla" (tabletteki gibi). */
+  /* Çalışma alt menüsü metin başlıklı; 64 px'e sığmaz. Onun yerine
+     sayfadaki çalışma sekmeleri ve "Daha fazla" (tabletteki gibi). */
   html[data-gezinme="dar"] .os-gezinme-ac,
   html[data-gezinme="dar"] .os-gezinme-baglam,
-  html[data-gezinme="dar"] .os-gezinme-diger,
   html[data-gezinme="dar"] .os-gezinme-hesap { display: none; }
   html[data-gezinme="dar"] .os-gezinme-daha-li { display: list-item; }
-  html[data-gezinme="dar"] .os-gezinme-son { margin-top: auto; }
+  html[data-gezinme="dar"] .os-gezinme-son { display: flex; margin-top: auto; }
   html[data-gezinme="dar"] .os-root .dashboard-content-shell { margin-left: var(--os5-kenar-ray); }
   html[data-gezinme="dar"] .os-root .os-marka-logo { display: flex; }
   html[data-gezinme="dar"] .os-root .os-kullanici--ust { display: block; }
@@ -265,7 +261,6 @@
   .os-gezinme .os-gezinme-oge:hover .os-gezinme-ad,
   .os-gezinme .os-gezinme-oge:focus-visible .os-gezinme-ad { opacity: 1; }
   .os-gezinme .os-gezinme-kisa { display: none; }
-  .os-gezinme-diger { display: none; }
   .os-gezinme-son { margin-top: auto; padding-top: var(--s-2); border-top: 1px solid var(--os5-kenar-cizgi); }
   .os-root .dashboard-main-content, .os-root .onizleme-serit, .os-root .os-bolum-serit { margin-left: var(--os5-kenar-ray); }
 }
@@ -281,7 +276,7 @@
   .os-gezinme-liste { flex-direction: row; gap: 0; }
   .os-gezinme-ana { display: contents; }
   .os-gezinme-son { display: contents; }
-  .os-gezinme-ana > li:not([data-alt-cubuk]), .os-gezinme-son > li:not(.os-gezinme-daha-li), .os-gezinme-diger { display: none; }
+  .os-gezinme-ana > li:not([data-alt-cubuk]), .os-gezinme-son > li:not(.os-gezinme-daha-li) { display: none; }
   .os-gezinme-ana > li, .os-gezinme-son > li { flex: 1 1 0; min-width: 0; display: flex; }
   .os-gezinme-oge {
     flex-direction: column; justify-content: center; gap: 2px; min-height: var(--alt-cubuk-h); padding: 4px 2px;
@@ -296,7 +291,7 @@
   html:has(:is(input, textarea, select, [contenteditable="true"]):focus) .os-gezinme { transform: translateY(110%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .os-gezinme, .os-gezinme-oge, .os-gezinme-ac, .os-gezinme-grup, .os-gezinme-ac > svg, .os-gezinme-grup > svg, .os-gezinme .os-gezinme-ad { transition: none; }
+  .os-gezinme, .os-gezinme-oge, .os-gezinme-ac, .os-gezinme-ac > svg, .os-gezinme .os-gezinme-ad { transition: none; }
 }
 
 /* ---------- "Daha fazla" ---------- */

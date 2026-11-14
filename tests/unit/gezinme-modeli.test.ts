@@ -5,7 +5,8 @@ import path from "node:path";
 import { ADMIN_ROLES, STAFF_ROLES } from "@/lib/project-labels";
 import { KAYIT_ROLLERI } from "@/lib/ai/kayit-gorunum";
 import {
-  gezinmeGruplari,
+  anaUygulamalar,
+  dahaFazlasi,
   gorunenUygulamalar,
   hesapUygulamalari,
   komutHedefleri,
@@ -133,10 +134,16 @@ describe("hesap menüsü sınıflandırması (yer)", () => {
     assert.deepEqual(anahtar("system_admin"), ["home", "tez", "kaynaklar", "analiz", "belge", "docentlik", "destek", "ayarlar", "yardim", "abonelik", "asistan", "ekip"]);
   });
 
-  test("bu aşamada kenar çubuğu değişmedi: Diğer ve Ayarlar yerinde", () => {
-    const { diger, ayarlar } = gezinmeGruplari(gorunen("system_admin"));
-    assert.deepEqual(diger.map((u) => u.key), ["docentlik", "yardim", "abonelik", "asistan", "ekip"]);
-    assert.equal(ayarlar?.key, "ayarlar");
+  test("5.1d-3: ana gezinmede yalnızca akademik uygulamalar; Ayarlar ve personel araçları yok", () => {
+    for (const rol of ["client", "employee", "system_admin"]) {
+      assert.deepEqual(anaUygulamalar(gorunen(rol)).map((u) => u.key), ["home", "tez", "kaynaklar", "analiz", "belge", "destek"], rol);
+    }
+  });
+
+  test("5.1d-3: Daha fazla hesap sayfalarını korur, personel araçlarını göstermez", () => {
+    for (const rol of ["client", "employee", "system_admin"]) {
+      assert.deepEqual(dahaFazlasi(gorunen(rol)).map((u) => u.key), ["belge", "destek", "ayarlar", "yardim", "abonelik"], rol);
+    }
   });
 });
 
