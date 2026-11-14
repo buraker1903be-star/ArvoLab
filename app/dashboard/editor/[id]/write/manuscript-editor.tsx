@@ -1149,7 +1149,17 @@ export default function ManuscriptEditor({
   */
   useEffect(() => {
     draftOfferRef.current = draftOffer;
-    if (editor && !editor.isDestroyed) editor.setEditable(!draftOffer && !icerikUyumsuz);
+    /*
+      İkinci argüman (emitUpdate) false: Tiptap v3'te setEditable varsayılan
+      olarak belge değişmeden bir "update" olayı yayıyor ve onUpdate bunu
+      kullanıcı değişikliği sayıyor (markDirty → otomatik kayıt). Yalnızca
+      yazılabilirliği değiştirmek belgeyi değiştirmek değildir. Eskiden
+      (14.11.2026'ya kadar) bu efekt her açılışta ~1,5 sn sonra içeriği aynı
+      bir kayıt gönderiyordu: updated_at ileri gidiyor, 10 dakikada bir
+      otomatik sürüm ekleniyor ve ikinci sekme yanlış "başka sekmede
+      değiştirildi" çakışmasına düşebiliyordu.
+    */
+    if (editor && !editor.isDestroyed) editor.setEditable(!draftOffer && !icerikUyumsuz, false);
   }, [editor, draftOffer, icerikUyumsuz]);
 
   const [uyumsuzYedekleniyor, setUyumsuzYedekleniyor] = useState(false);
