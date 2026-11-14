@@ -1,7 +1,8 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { DIGER_GRUBU_ANAHTARI, grupAcikMi, kayitliTercih, tercihDegeri } from "@/lib/os5/gezinme";
+import * as gezinmeModulu from "@/lib/os5/gezinme";
+import { grupAcikMi } from "@/lib/os5/gezinme";
 import { anaUygulamalar, gorunenUygulamalar, hesapUygulamalari, labUygulamalari, personelAraclari } from "@/lib/os/uygulamalar";
 
 /*
@@ -16,25 +17,21 @@ const oku = (yol: string) => readFileSync(yol, "utf8");
 const yorumsuz = (metin: string) => metin.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 describe("alt menü açık mı", () => {
-  test("etkin sayfa grubun içindeyse açık (kayıtlı tercih kapalı olsa bile)", () => {
-    assert.equal(grupAcikMi({ secim: null, etkinIcinde: true, kayitli: false, varsayilan: false }), true);
+  test("etkin sayfa grubun içindeyse açık", () => {
+    assert.equal(grupAcikMi({ secim: null, etkinIcinde: true, varsayilan: false }), true);
   });
   test("bu oturumdaki seçim her şeyin önünde", () => {
-    assert.equal(grupAcikMi({ secim: false, etkinIcinde: true, kayitli: true, varsayilan: true }), false);
-    assert.equal(grupAcikMi({ secim: true, etkinIcinde: false, kayitli: false, varsayilan: false }), true);
+    assert.equal(grupAcikMi({ secim: false, etkinIcinde: true, varsayilan: true }), false);
+    assert.equal(grupAcikMi({ secim: true, etkinIcinde: false, varsayilan: false }), true);
   });
-  test("seçim yoksa kayıtlı tercih, o da yoksa varsayılan", () => {
-    assert.equal(grupAcikMi({ secim: null, etkinIcinde: false, kayitli: true, varsayilan: false }), true);
-    assert.equal(grupAcikMi({ secim: null, etkinIcinde: false, kayitli: null, varsayilan: false }), false);
-    assert.equal(grupAcikMi({ secim: null, etkinIcinde: false, kayitli: null, varsayilan: true }), true);
+  test("seçim yoksa ve etkin sayfa dışarıdaysa varsayılan", () => {
+    assert.equal(grupAcikMi({ secim: null, etkinIcinde: false, varsayilan: false }), false);
+    assert.equal(grupAcikMi({ secim: null, etkinIcinde: false, varsayilan: true }), true);
   });
-  test("kayıtlı değer yalnızca '1' ya da '0'; başka her şey tercih yok", () => {
-    assert.equal(kayitliTercih("1"), true);
-    assert.equal(kayitliTercih("0"), false);
-    for (const d of [null, undefined, "", "true", "acik"]) assert.equal(kayitliTercih(d), null);
-    assert.equal(tercihDegeri(true), "1");
-    assert.equal(tercihDegeri(false), "0");
-    assert.match(DIGER_GRUBU_ANAHTARI, /^arvolab\./);
+  test("eski 'Diğer' tercih yardımcıları kalktı (5.1d-4); dar/açık tercihi yerinde", () => {
+    const disa = Object.keys(gezinmeModulu);
+    for (const ad of ["DIGER_GRUBU_ANAHTARI", "kayitliTercih", "tercihDegeri"]) assert.ok(!disa.includes(ad), ad);
+    for (const ad of ["GEZINME_DAR_ANAHTARI", "GEZINME_BETIGI", "darMi", "darDegeri", "grupAcikMi"]) assert.ok(disa.includes(ad), ad);
   });
 });
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useCeviri } from "@/app/_components/dil-saglayici";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { BookPlus, ChartNoAxesCombined, Monitor, Moon, Plus, Search, Sparkles, Sun, type LucideIcon } from "lucide-react";
+import { BookPlus, ChartNoAxesCombined, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, Sparkles, Sun, type LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
 import { aramaAnahtari, komutHedefleri, type OsIkon, type OsUygulama } from "@/lib/os/uygulamalar";
 import { normalizeDoi } from "@/lib/doi";
@@ -12,6 +12,7 @@ import { projectTypeLabel } from "@/lib/project-labels";
 import { komutCalismalari } from "@/app/actions/projects";
 import { OsSimge } from "./os-simge";
 import { temaTercihiniUygula } from "@/app/_components/tema";
+import { gezinmeAbone, gezinmeDarMi, gezinmeTercihiniUygula, masaustuAbone, masaustuMu } from "@/app/_components/gezinme";
 import type { TemaTercihi } from "@/lib/tema";
 
 /*
@@ -41,6 +42,7 @@ type Oge = { id: string; grup: string; label: string; ipucu?: string; ikon: OsIk
   | { tur: "git"; href: string }
   | { tur: "tema"; tercih: TemaTercihi }
   | { tur: "cikis" }
+  | { tur: "kenar" }
 );
 
 const TEMA_IKONU: Record<TemaTercihi, LucideIcon> = { light: Sun, dark: Moon, system: Monitor };
@@ -88,6 +90,16 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
     };
   }, []);
 
+  /*
+    Kenar çubuğu komutu (Phase 5.1d-4) yalnızca masaüstünde; adı güncel
+    hâle göre. İkisi de mevcut altyapıdan okunur: dar/açık <html
+    data-gezinme>'den (os-gezinme.tsx ile aynı abonelik), masaüstü
+    kırılımı matchMedia'dan. Yeni bir depolama yok: komut, kenar
+    çubuğundaki düğmenin çağırdığı gezinmeTercihiniUygula'yı çağırır.
+    Kısayolu bilerek yok — Ctrl+B editörde kalın yazı.
+  */
+  const dar = useSyncExternalStore(gezinmeAbone, gezinmeDarMi, () => false);
+  const masaustu = useSyncExternalStore(masaustuAbone, masaustuMu, () => false);
   const hizli = t({ tr: "Hızlı işlemler", en: "Quick actions" });
   const sonCalisma = calismalar?.[0];
   const doi = normalizeDoi(sorgu);
@@ -126,6 +138,16 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
     { id: "komut:tema-acik", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Tema: Açık", en: "Theme: Light" }), ikon: "settings", tur: "tema", tercih: "light" },
     { id: "komut:tema-koyu", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Tema: Koyu", en: "Theme: Dark" }), ikon: "settings", tur: "tema", tercih: "dark" },
     { id: "komut:tema-sistem", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Tema: Sistem", en: "Theme: System" }), ipucu: t({ tr: "cihazın ayarını izler", en: "follows your device" }), ikon: "settings", tur: "tema", tercih: "system" },
+    ...(masaustu
+      ? [{
+          id: "komut:kenar",
+          grup: t({ tr: "Komutlar", en: "Commands" }),
+          label: dar ? t({ tr: "Kenar çubuğunu genişlet", en: "Expand sidebar" }) : t({ tr: "Kenar çubuğunu daralt", en: "Collapse sidebar" }),
+          ikon: "settings" as const,
+          simge: dar ? PanelLeftOpen : PanelLeftClose,
+          tur: "kenar" as const,
+        }]
+      : []),
     { id: "komut:cikis", grup: t({ tr: "Komutlar", en: "Commands" }), label: t({ tr: "Çıkış yap", en: "Sign out" }), ikon: "settings", tur: "cikis" },
   ];
 
@@ -137,6 +159,10 @@ export function OsKomutPaleti({ uygulamalar, cikis }: { uygulamalar: OsUygulama[
     kapat();
     if (oge.tur === "git") {
       router.push(oge.href);
+      return;
+    }
+    if (oge.tur === "kenar") {
+      gezinmeTercihiniUygula(!gezinmeDarMi());
       return;
     }
     temaTercihiniUygula(oge.tercih);

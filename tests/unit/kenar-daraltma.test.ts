@@ -113,6 +113,9 @@ describe("yazım sayfasında çalışma sekmeleri", () => {
   });
 
   test("tür kuralı tek yerde: Makale sekmesi yalnızca makale türünde", () => {
-    assert.match(calismaSekmeleri, /calisma\.project_type === "article"/);
+    // 5.1d-4: kural lib'de (calismaBaglantilari); sekmeler listeyi oradan okur.
+    assert.match(calismaSekmeleri, /calismaBolumleri\(\{ id: calisma\.id, baslik: calisma\.title \?\? "", tur: calisma\.project_type \}, t\)/);
+    assert.doesNotMatch(calismaSekmeleri, /"article"/);
+    assert.match(oku("lib/os/uygulamalar.ts"), /calisma\.tur === "article"/);
   });
 });

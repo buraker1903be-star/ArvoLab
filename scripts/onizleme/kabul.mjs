@@ -208,7 +208,6 @@ const tarayici = await chromium.launch();
   });
   await senaryo("os5 kabuk: öğrenci rolünde personel sayfaları gezinmede yok", async () => {
     await git(sayfa, "/dashboard");
-    await sayfa.locator(".os-gezinme-grup").click().catch(() => {});
     const metin = await sayfa.locator("nav.os-gezinme").innerText();
     for (const ad of ["Ekip Yönetimi", "Asistan Kayıtları", "Doçentlik Puanı"]) bekle(!metin.includes(ad), `öğrencide "${ad}" görünüyor`);
   });
