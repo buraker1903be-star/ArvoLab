@@ -12,7 +12,9 @@
     - eşzamanlı sekme: aynı çalışmanın iki sekmesi ayrı taslak anahtarına
       yazar, biri ötekini ezmez; yeniden açılışta en yeni önerilir, "Yok
       say" yalnızca onu siler, öteki bir sonraki açılışta önerilir;
-    - kayıttan sonra yeniden açma: taslak kalmaz, öneri çıkmaz.
+    - kayıttan sonra yeniden açma: taslak kalmaz, öneri çıkmaz;
+    - yazarken geri çekilme: tek hatadan sonra yazmaya devam eden
+      kullanıcıda bekleyen deneme ileri itilmez, ~10 sn'de gelir.
   Hayalet kayıt: scripts/onizleme/hayalet-kayit-kabul.mjs.
 
   Önizlemenin sahte Supabase istemcisi yazmaları uygulamaz: sunucu tarafı
@@ -130,6 +132,33 @@ await senaryo("ağ kesintisi: 10 sn → 20 sn geri çekilme; metin taslakta; ağ
   bekle(kalan.length === 0, `kayıttan sonra ${kalan.length} taslak kaldı`);
   await ctx.close();
   return `aralar ${ara1} ms, ${ara2} ms; kayıt sonrası taslak 0`;
+});
+
+await senaryo("yazarken geri çekilme: tek hatadan sonra 3 sn'de bir yazılsa da deneme ~10 sn'de geliyor (ileri itilmiyor)", async () => {
+  // Eskiden her tuş vuruşu bekleyen 10 sn'lik denemeyi sıfırlıyordu: sürekli yazan kullanıcıda deneme hiç gelmiyordu (Codex incelemesi).
+  const { ctx, durum } = await baglam();
+  const { s } = await ac(ctx);
+  await s.waitForTimeout(2500);
+  durum.kapali = true;
+  await sonaYaz(s, " ILK");
+  const t0 = Date.now();
+  while (!durum.istekler.some((x) => x.dusuruldu) && Date.now() - t0 < 10000) await s.waitForTimeout(100);
+  const ilk = durum.istekler.find((x) => x.dusuruldu);
+  bekle(ilk, "ilk (düşürülen) deneme gelmedi");
+  durum.kapali = false; // bağlantı geri geldi; kullanıcı yazmayı sürdürüyor
+  let yazilan = 0;
+  while (Date.now() - ilk.t < 24000 && !durum.istekler.some((x) => !x.dusuruldu)) {
+    await s.keyboard.type(` Y${yazilan++}`);
+    await s.waitForTimeout(3000);
+  }
+  const basarili = durum.istekler.find((x) => !x.dusuruldu);
+  bekle(basarili, `24 sn boyunca 3 sn'de bir yazılırken (${yazilan} kez) hiç deneme yapılmadı`);
+  const ara = basarili.t - ilk.t;
+  bekle(ara <= 13500, `deneme ${ara} ms sonra geldi (≈10 sn ±%20 beklenir)`);
+  await s.waitForTimeout(2500);
+  bekle(/Kaydedildi|Kaydedilecek/.test(await durumYazisi(s)), `durum: ${await durumYazisi(s)}`);
+  await ctx.close();
+  return `ilk hatadan ${ara} ms sonra deneme; bu sürede ${yazilan} kez yazıldı`;
 });
 
 await senaryo("eşzamanlı sekme: iki sekme ayrı taslağa yazıyor, biri ötekini ezmiyor; öneri en yeniden başlıyor", async () => {

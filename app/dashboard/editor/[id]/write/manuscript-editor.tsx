@@ -141,7 +141,7 @@ import {
   kayitSonucuKarari,
   kurtarilabilirTaslaklar,
   sonrakiTeklif,
-  sonrakiKayitGecikmesi,
+  yazarkenKayitZamani,
   taslakAnahtari,
   taslakAnahtariMi,
   tekUcusluCalistirici,
@@ -674,6 +674,8 @@ export default function ManuscriptEditor({
   const kayitKuyruguRef = useRef(tekUcusluCalistirici<boolean>());
   /* Art arda bağlantı hatası: geri çekilme bundan hesaplanır, başarıda sıfırlanır. */
   const ardisikHataRef = useRef(0);
+  /* Bekleyen geri çekilme denemesinin zamanı; yazarken korunur (markDirty). */
+  const denemeSonuRef = useRef<number | null>(null);
   /* Bu sayfa yüklemesinin taslak anahtarı (sekme başına; ilk yazımda kurulur). */
   const sekmeAnahtariRef = useRef<string | null>(null);
   const sekmeAnahtari = useCallback(
@@ -863,7 +865,11 @@ export default function ManuscriptEditor({
           Bağlantı sorunu: eskiden sabit 10 sn'de bir, sonsuza kadar tam belge
           gönderiliyordu. Artık 10 → 20 → 40 → 80 → 120 sn (lib/otomatik-kayit).
         */
-        if (sonra.sonraki === "geri-cekilme") scheduleSave(tekrarGecikmesi(sonra.ardisikBaglantiHatasi));
+        if (sonra.sonraki === "geri-cekilme") {
+          const gecikme = tekrarGecikmesi(sonra.ardisikBaglantiHatasi);
+          denemeSonuRef.current = Date.now() + gecikme;
+          scheduleSave(gecikme);
+        }
         return false;
       });
     },
@@ -875,8 +881,13 @@ export default function ManuscriptEditor({
     setSaveState((state) => (state === "conflict" || state === "saving" ? state : "dirty"));
     if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
     draftTimerRef.current = window.setTimeout(persistDraft, draftDelay(payloadBytesRef.current));
-    // Bağlantı hatası sürerken her tuş 1,5 sn'lik bir deneme kurmasın: geri çekilme yazarken de geçerli.
-    if (!blockedRef.current) scheduleSave(sonrakiKayitGecikmesi(payloadBytesRef.current, ardisikHataRef.current));
+    // Bağlantı hatası sürerken her tuş 1,5 sn'lik bir deneme kurmasın, ama
+    // bekleyen denemeyi de ileri itmesin (lib/otomatik-kayit: yazarkenKayitZamani).
+    if (!blockedRef.current) {
+      const zaman = yazarkenKayitZamani(Date.now(), payloadBytesRef.current, ardisikHataRef.current, denemeSonuRef.current);
+      denemeSonuRef.current = zaman.denemeSonu;
+      scheduleSave(zaman.gecikme);
+    }
   }, [persistDraft, scheduleSave]);
 
   useEffect(() => {

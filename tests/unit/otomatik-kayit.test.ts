@@ -9,6 +9,7 @@ import {
   onerilecekTaslak,
   sonrakiTeklif,
   sonrakiKayitGecikmesi,
+  yazarkenKayitZamani,
   taslakAnahtari,
   taslakAnahtariMi,
   tekUcusluCalistirici,
@@ -308,5 +309,34 @@ describe("birden çok kurtarılabilir taslak", () => {
     assert.deepEqual(teklifiYokSay(["ORTA", "ESKİ", "YENİ"]), ["ESKİ", "YENİ"]);
     assert.deepEqual(teklifiYokSay(["TEK"]), []);
     assert.deepEqual(teklifiYokSay([]), []);
+  });
+});
+
+describe("yazarkenKayitZamani: geri çekilme sürerken bekleyen deneme korunur", () => {
+  const ORTA_R = () => 0.5;
+  test("bağlantı hatası yokken her tuş normal otomatik kayıt aralığı kurar, deneme zamanı tutulmaz", () => {
+    assert.deepEqual(yazarkenKayitZamani(1_000, 1000, 0, null, ORTA_R), { gecikme: AUTOSAVE_DELAY_MS, denemeSonu: null });
+    assert.deepEqual(yazarkenKayitZamani(1_000, 1000, 0, 50_000, ORTA_R), { gecikme: AUTOSAVE_DELAY_MS, denemeSonu: null });
+  });
+
+  test("bekleyen deneme varsa tuş vuruşu onu ileri itmez: kalan süre kadar beklenir", () => {
+    // Hatadan sonra deneme t=10 sn'de. Kullanıcı t=5 sn'de yazıyor: deneme yine t=10 sn'de.
+    assert.deepEqual(yazarkenKayitZamani(5_000, 1000, 1, 10_000, ORTA_R), { gecikme: 5_000, denemeSonu: 10_000 });
+  });
+
+  test("beş saniyede bir yazan kullanıcı: deneme 10 sn'de gelir (eskiden hiç gelmiyordu)", () => {
+    let denemeSonu: number | null = 10_000; // ilk hatadan sonra kurulan deneme
+    let calisan = denemeSonu;
+    for (const t of [3_000, 6_000, 9_000]) {
+      const z = yazarkenKayitZamani(t, 1000, 1, denemeSonu, ORTA_R);
+      denemeSonu = z.denemeSonu;
+      calisan = t + z.gecikme;
+    }
+    assert.equal(calisan, 10_000);
+  });
+
+  test("bekleyen deneme yoksa ya da süresi geçtiyse yeni geri çekilme aralığı kurulur", () => {
+    assert.deepEqual(yazarkenKayitZamani(20_000, 1000, 2, null, ORTA_R), { gecikme: 20_000, denemeSonu: 40_000 });
+    assert.deepEqual(yazarkenKayitZamani(20_000, 1000, 1, 15_000, ORTA_R), { gecikme: 10_000, denemeSonu: 30_000 });
   });
 });

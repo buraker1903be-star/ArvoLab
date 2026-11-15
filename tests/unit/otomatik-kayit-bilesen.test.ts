@@ -24,8 +24,15 @@ const saveNow = blok("const saveNow = useCallback(", "const markDirty = useCallb
 
 test("sabit 10 sn'lik yeniden deneme kalmadı; bağlantı hatası geri çekilmeyle", () => {
   assert.doesNotMatch(kaynak, /RETRY_DELAY_MS|scheduleSave\(10000\)/);
-  assert.match(saveNow, /if \(sonra\.sonraki === "geri-cekilme"\) scheduleSave\(tekrarGecikmesi\(sonra\.ardisikBaglantiHatasi\)\)/);
-  assert.match(kaynak, /scheduleSave\(sonrakiKayitGecikmesi\(payloadBytesRef\.current, ardisikHataRef\.current\)\)/);
+  assert.match(saveNow, /if \(sonra\.sonraki === "geri-cekilme"\) \{\s*const gecikme = tekrarGecikmesi\(sonra\.ardisikBaglantiHatasi\);\s*denemeSonuRef\.current = Date\.now\(\) \+ gecikme;\s*scheduleSave\(gecikme\);/);
+});
+
+test("yazarken bekleyen geri çekilme denemesi ileri itilmiyor (markDirty denemeSonuRef'i koruyor)", () => {
+  // Eskiden markDirty her tuşta tam geri çekilme aralığını yeniden kuruyordu: sürekli yazan kullanıcıda deneme hiç gelmiyordu.
+  const markDirty = blok("const markDirty = useCallback(", "}, [persistDraft, scheduleSave]);");
+  assert.match(markDirty, /yazarkenKayitZamani\(Date\.now\(\), payloadBytesRef\.current, ardisikHataRef\.current, denemeSonuRef\.current\)/);
+  assert.match(markDirty, /denemeSonuRef\.current = zaman\.denemeSonu;\s*scheduleSave\(zaman\.gecikme\);/);
+  assert.doesNotMatch(markDirty, /scheduleSave\(sonrakiKayitGecikmesi\(/);
 });
 
 test("aynı anda tek kayıt: saveNow tek uçuşlu kuyruktan geçiyor, karar sıra gelince veriliyor", () => {

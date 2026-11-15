@@ -58,6 +58,30 @@ export function sonrakiKayitGecikmesi(bytes: number, ardisikBaglantiHatasi: numb
   return autosaveDelay(bytes);
 }
 
+/*
+  Yazarken kurulan kaydın zamanı (markDirty). Geri çekilme sürerken
+  BEKLEYEN denemenin bitiş zamanı korunur: yeni tuş vuruşu yalnızca
+  gönderilecek metni günceller, deneme saatini ileri itmez. Eskiden
+  (P52a1 ilk hâli) her tuş zamanlayıcıyı sıfırlayıp tam geri çekilme
+  aralığını yeniden kuruyordu: tek bir hatadan sonra beş saniyede bir yazan
+  kullanıcıda otomatik deneme hiç gelmiyor, bağlantı dönse bile kayıt ancak
+  kullanıcı 10–120 sn durunca yapılıyordu (Codex incelemesi, 15.11.2026).
+  Bekleyen deneme yoksa ya da süresi geçtiyse yeni bir aralık kurulur.
+*/
+export function yazarkenKayitZamani(
+  simdi: number,
+  bytes: number,
+  ardisikBaglantiHatasi: number,
+  bekleyenDenemeSonu: number | null,
+  rastgele: () => number = Math.random,
+): { gecikme: number; denemeSonu: number | null } {
+  if (ardisikBaglantiHatasi > 0 && bekleyenDenemeSonu !== null && bekleyenDenemeSonu > simdi) {
+    return { gecikme: bekleyenDenemeSonu - simdi, denemeSonu: bekleyenDenemeSonu };
+  }
+  const gecikme = sonrakiKayitGecikmesi(bytes, ardisikBaglantiHatasi, rastgele);
+  return { gecikme, denemeSonu: ardisikBaglantiHatasi > 0 ? simdi + gecikme : null };
+}
+
 /* ---------- Gönderme kararı ---------- */
 
 export type KayitKarari = "gonder" | "gerek-yok" | "uyumsuz" | "engelli";
