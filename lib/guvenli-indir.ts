@@ -1,6 +1,6 @@
 import { isIP } from "node:net";
 import { resolve4, resolve6 } from "node:dns/promises";
-import { isPrivateAddress, kaynagiOku } from "./safe-official-fetch";
+import { BoyutSiniriHatasi, isPrivateAddress, kaynagiOku } from "./safe-official-fetch";
 
 /*
   GENEL AĞDAN GÜVENLİ İNDİRME: açık erişimli kaynak PDF'leri (arXiv,
@@ -67,6 +67,21 @@ function agHatasiMi(hata: unknown): boolean {
   return hata instanceof TypeError && hata.message === "fetch failed";
 }
 
+/*
+  GÖVDE OKUNURKEN gelen hatalardan yalnızca bilinenler karşı tarafın
+  sonucudur: boyut sınırı (BoyutSiniriHatasi), zaman aşımı/iptal ve
+  bağlantının aktarım ortasında kopması (undici: TypeError "terminated").
+  Eskiden (P52-0'ın ilk hâli, 80ce935) okuma sırasındaki HER hata
+  "erisim"e çevriliyordu; kaynagiOku'daki bir programlama hatası
+  (TypeError, RangeError…) "kaynağa erişilemedi" görünürdü — bu PR'ın
+  düzelttiği sınıfın aynısı. Başka her hata olduğu gibi fırlar ve
+  "beklenmeyen" sayılır.
+*/
+function govdeOkumaKarsiTarafMi(hata: unknown): boolean {
+  if (hata instanceof BoyutSiniriHatasi || agHatasiMi(hata)) return true;
+  return hata instanceof TypeError && hata.message === "terminated";
+}
+
 async function genelAdresMi(url: URL): Promise<void> {
   if (!/^https?:$/.test(url.protocol) || url.username || url.password) throw new IndirmeHatasi("Desteklenmeyen adres.");
   if (url.port && url.port !== "80" && url.port !== "443") throw new IndirmeHatasi("Standart dışı port.");
@@ -117,8 +132,8 @@ export async function guvenliIndir(adres: string, enFazlaBayt: number): Promise<
     try {
       bayt = new Uint8Array(await kaynagiOku(yanit, enFazlaBayt));
     } catch (hata) {
-      // Boyut sınırı (kaynagiOku) ya da yarıda kesilen akış: karşı tarafın sonucu.
-      throw new IndirmeHatasi(hata instanceof Error ? hata.message : "Dosya okunamadı.");
+      if (govdeOkumaKarsiTarafMi(hata)) throw new IndirmeHatasi(hata instanceof Error ? hata.message : "Dosya okunamadı.");
+      throw hata;
     }
     return { bayt, sonAdres: url.toString(), tur: yanit.headers.get("content-type") };
   }

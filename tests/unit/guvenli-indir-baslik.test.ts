@@ -91,3 +91,38 @@ test("başlık sabiti yalnızca yazdırılabilir ASCII", () => {
   assert.match(INDIRME_KULLANICI_AJANI, /^[\x20-\x7e]+$/);
   assert.doesNotThrow(() => new Headers({ "User-Agent": INDIRME_KULLANICI_AJANI }));
 });
+
+/*
+  GÖVDE OKUMA HATALARI. 80ce935'te kaynagiOku'dan gelen HER hata "erisim"e
+  çevriliyordu; okuma kodundaki bir programlama hatası da "kaynağa
+  erişilemedi" görünürdü. Artık yalnızca bilinen nedenler karşı tarafın.
+*/
+const akis = (parcalar: (Uint8Array | Error)[]) =>
+  new ReadableStream<Uint8Array>({
+    pull(denetleyici) {
+      const sonraki = parcalar.shift();
+      if (!sonraki) denetleyici.close();
+      else if (sonraki instanceof Error) denetleyici.error(sonraki);
+      else denetleyici.enqueue(sonraki);
+    },
+  });
+
+test("gövde okunurken: akışla aşılan boyut sınırı, kopan bağlantı ve zaman aşımı 'erisim'", async () => {
+  // Content-Length yok: sınır akış sayılarak aşılıyor (BoyutSiniriHatasi).
+  fetchTaklidi(() => new Response(akis([new Uint8Array(800), new Uint8Array(800)]), { status: 200 }));
+  assert.equal(await turu(() => guvenliIndir(GENEL_ADRES, 1000)), "erisim");
+
+  fetchTaklidi(() => new Response(akis([new Uint8Array(10), new TypeError("terminated")]), { status: 200 }));
+  assert.equal(await turu(() => guvenliIndir(GENEL_ADRES, 1000)), "erisim");
+
+  fetchTaklidi(() => new Response(akis([new DOMException("süre doldu", "TimeoutError")]), { status: 200 }));
+  assert.equal(await turu(() => guvenliIndir(GENEL_ADRES, 1000)), "erisim");
+});
+
+test("gövde okunurken programlama hatası (TypeError, RangeError) 'beklenmeyen' kalır, 'erisim' diye örtülmez", async () => {
+  fetchTaklidi(() => new Response(akis([new TypeError("parca.byteLength is not a function")]), { status: 200 }));
+  assert.equal(await turu(() => guvenliIndir(GENEL_ADRES, 1000)), "beklenmeyen");
+
+  fetchTaklidi(() => new Response(akis([new RangeError("Invalid typed array length")]), { status: 200 }));
+  assert.equal(await turu(() => guvenliIndir(GENEL_ADRES, 1000)), "beklenmeyen");
+});
