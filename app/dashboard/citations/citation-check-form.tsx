@@ -12,7 +12,16 @@ import { ClipboardPaste, FileSearch, History, Sparkles } from "lucide-react";
 import KaynakPdfSatiri from "./kaynak-pdf-satiri";
 import { showToast } from "../_components/toast-events";
 import { kaynakPdfleriniBul } from "@/app/actions/kaynak-pdf";
-import { gosterilecekPdfDurumu, kunyeAnahtari, type DogrulamaDurumu, type KaynakPdfSatiri as PdfSatiri } from "@/lib/kaynak-pdf";
+import {
+  bosIndirmeSorunlari,
+  gosterilecekPdfDurumu,
+  indirmeSorunuBildirimleri,
+  kunyeAnahtari,
+  pdfHazirMi,
+  sorunlariTopla,
+  type DogrulamaDurumu,
+  type KaynakPdfSatiri as PdfSatiri,
+} from "@/lib/kaynak-pdf";
 import { runCitationCheck, calismaMetniOzeti } from "@/app/actions/citation-check";
 import { literaturAramasiYap } from "@/app/actions/literatur-arama";
 import type { AramaKaydi } from "@/lib/literatur-arama";
@@ -287,7 +296,7 @@ export default function CitationCheckForm({
       .filter((k) => k.dogrulama !== null)
       .filter((k) => {
         const mevcut = pdfler.get(kunyeAnahtari(k.kunye));
-        return mevcut?.durum !== "indirildi" && mevcut?.durum !== "yuklendi";
+        return !pdfHazirMi(mevcut?.durum); // sunucu da aynı kuralı uyguluyor
       });
     /* Dizine ulaşılamamış künyenin DOI'si yok (eşleşme yok): PDF aranamaz,
        "yok" da denemez. Kuyruğa konmaz ve kullanıcıya NEDENİ söylenir;
@@ -309,16 +318,27 @@ export default function CitationCheckForm({
       return;
     }
     setPdfIlerleme({ bitti: 0, toplam: kuyruk.length });
+    /* İndirilemeyenlerin NEDENİ (P52-0): satır yalnızca "indirilemedi"
+       diyebiliyor; bizim tarafımızdaki bir hata (eskiden her PDF'i düşüren
+       başlık hatası gibi) ile yayıncının erişimi kısması ayrı bildirilir.
+       Yarıda kesilen turda da o ana kadarki nedenler söylenir. */
+    let sorunlar = bosIndirmeSorunlari();
+    const sorunlariBildir = () => {
+      for (const b of indirmeSorunuBildirimleri(sorunlar)) showToast(b.tur, t(b.metin));
+    };
     try {
       for (let i = 0; i < kuyruk.length; i += 3) {
         const sonuc = await kaynakPdfleriniBul(projectId, kuyruk.slice(i, i + 3));
         if (sonuc.error) {
           showToast("error", sonuc.error);
+          sorunlariBildir(); // önceki partilerin nedenleri de kaybolmasın
           return;
         }
         pdfGuncelle(sonuc.satirlar ?? []);
+        sorunlar = sorunlariTopla(sorunlar, sonuc.sorunlar);
         setPdfIlerleme({ bitti: Math.min(i + 3, kuyruk.length), toplam: kuyruk.length });
       }
+      sorunlariBildir();
       router.refresh();
     } finally {
       setPdfIlerleme(null);

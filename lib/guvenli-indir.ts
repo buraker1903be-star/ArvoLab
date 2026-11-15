@@ -26,12 +26,53 @@ import { isPrivateAddress, kaynagiOku } from "./safe-official-fetch";
 const ZAMAN_ASIMI_MS = 20_000;
 const EN_FAZLA_YONLENDIRME = 5;
 
+/*
+  YALNIZCA ASCII. HTTP başlıkları ByteString (Latin-1) olmak zorunda; Node'un
+  fetch'i başlıkları kurarken Türkçe karakterde (ğ = 287) TypeError fırlatıyor
+  ve istek ağa hiç çıkmıyor. Eskiden (15.11.2026'ya kadar) burada "akademik
+  kaynak doğrulama" yazıyordu: açık erişimli HİÇBİR PDF otomatik inmiyor,
+  hepsi sessizce "indirilemedi" görünüyordu. Aynı tuzak lib/doi.ts'te
+  belgeli (CROSSREF_USER_AGENT). tests/unit/guvenli-indir-baslik.test.ts
+  başlıkları gerçek `new Headers(...)`'tan geçirerek sabitliyor.
+*/
+export const INDIRME_KULLANICI_AJANI = "ArvoLab/1.0 (academic source verification; https://arvolab.app)";
+
+/*
+  KARŞI TARAFIN SONUCU olan hata: adres genel ağa çıkmıyor, sunucu
+  reddetti, zaman aşımı, bağlantı kurulamadı, sınır aşıldı. Öğrenciye
+  "kendiniz yükleyin" denir. Bu sınıfın DIŞINDA kalan her hata (örneğin
+  kodun kendisindeki bir TypeError) BİZİM sorunumuzdur ve öyle bildirilir
+  (indirmeHatasiTuru): eskiden ikisi aynı "indirilemedi"ye düşüyordu ve bu
+  yüzden yukarıdaki hata aylarca fark edilmedi.
+*/
+export class IndirmeHatasi extends Error {
+  constructor(mesaj: string) {
+    super(mesaj);
+    this.name = "IndirmeHatasi";
+  }
+}
+
+/** "erisim": karşı taraf ya da ağ; "beklenmeyen": bizim tarafımızda bir hata. */
+export function indirmeHatasiTuru(hata: unknown): "erisim" | "beklenmeyen" {
+  return hata instanceof IndirmeHatasi ? "erisim" : "beklenmeyen";
+}
+
+/*
+  fetch'in AĞ hatası (undici: TypeError "fetch failed", nedeni cause'da) ve
+  zaman aşımı/iptal karşı tarafın sonucudur. Başka her TypeError (başlık
+  kurulamadı, geçersiz seçenek) bizim hatamızdır ve olduğu gibi fırlar.
+*/
+function agHatasiMi(hata: unknown): boolean {
+  if (hata instanceof Error && (hata.name === "TimeoutError" || hata.name === "AbortError")) return true;
+  return hata instanceof TypeError && hata.message === "fetch failed";
+}
+
 async function genelAdresMi(url: URL): Promise<void> {
-  if (!/^https?:$/.test(url.protocol) || url.username || url.password) throw new Error("Desteklenmeyen adres.");
-  if (url.port && url.port !== "80" && url.port !== "443") throw new Error("Standart dışı port.");
+  if (!/^https?:$/.test(url.protocol) || url.username || url.password) throw new IndirmeHatasi("Desteklenmeyen adres.");
+  if (url.port && url.port !== "80" && url.port !== "443") throw new IndirmeHatasi("Standart dışı port.");
   const ad = url.hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
   if (ad === "localhost" || ad.endsWith(".localhost") || ad.endsWith(".internal") || ad.endsWith(".local")) {
-    throw new Error("İç ağ adresi.");
+    throw new IndirmeHatasi("İç ağ adresi.");
   }
   const adresler = isIP(ad)
     ? [ad]
@@ -39,7 +80,7 @@ async function genelAdresMi(url: URL): Promise<void> {
         Promise.all([resolve4(ad).catch(() => []), resolve6(ad).catch(() => [])]).then(([d, a]) => [...d, ...a]),
         new Promise<string[]>((coz) => setTimeout(() => coz([]), 5_000)),
       ]);
-  if (!adresler.length || adresler.some(isPrivateAddress)) throw new Error("Adres genel ağa çözümlenemedi.");
+  if (!adresler.length || adresler.some(isPrivateAddress)) throw new IndirmeHatasi("Adres genel ağa çözümlenemedi.");
 }
 
 /** Adresi indirir; iç ağa giden, sınırı aşan ya da başarısız istek hata fırlatır. */
@@ -49,25 +90,37 @@ export async function guvenliIndir(adres: string, enFazlaBayt: number): Promise<
   for (let adim = 0; adim <= EN_FAZLA_YONLENDIRME; adim++) {
     await genelAdresMi(url);
     const kalan = bitis - Date.now();
-    if (kalan <= 0) throw new Error("Zaman aşımı.");
-    const yanit = await fetch(url, {
-      redirect: "manual",
-      signal: AbortSignal.timeout(kalan),
-      cache: "no-store",
-      headers: {
-        Accept: "application/pdf,*/*;q=0.5",
-        "User-Agent": "ArvoLab/1.0 (akademik kaynak doğrulama; https://arvolab.app)",
-      },
-    });
+    if (kalan <= 0) throw new IndirmeHatasi("Zaman aşımı.");
+    let yanit: Response;
+    try {
+      yanit = await fetch(url, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(kalan),
+        cache: "no-store",
+        headers: {
+          Accept: "application/pdf,*/*;q=0.5",
+          "User-Agent": INDIRME_KULLANICI_AJANI,
+        },
+      });
+    } catch (hata) {
+      if (agHatasiMi(hata)) throw new IndirmeHatasi(hata instanceof Error ? hata.message : "Bağlantı kurulamadı.");
+      throw hata;
+    }
     if (yanit.status >= 300 && yanit.status < 400) {
       const hedef = yanit.headers.get("location");
-      if (!hedef) throw new Error("Boş yönlendirme.");
+      if (!hedef) throw new IndirmeHatasi("Boş yönlendirme.");
       url = new URL(hedef, url);
       continue;
     }
-    if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
-    const bayt = new Uint8Array(await kaynagiOku(yanit, enFazlaBayt));
+    if (!yanit.ok) throw new IndirmeHatasi(`HTTP ${yanit.status}`);
+    let bayt: Uint8Array;
+    try {
+      bayt = new Uint8Array(await kaynagiOku(yanit, enFazlaBayt));
+    } catch (hata) {
+      // Boyut sınırı (kaynagiOku) ya da yarıda kesilen akış: karşı tarafın sonucu.
+      throw new IndirmeHatasi(hata instanceof Error ? hata.message : "Dosya okunamadı.");
+    }
     return { bayt, sonAdres: url.toString(), tur: yanit.headers.get("content-type") };
   }
-  throw new Error("Çok fazla yönlendirme.");
+  throw new IndirmeHatasi("Çok fazla yönlendirme.");
 }

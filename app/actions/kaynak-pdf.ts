@@ -5,11 +5,14 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { varsayilanGetir } from "@/lib/kanit/dizin";
-import { guvenliIndir } from "@/lib/guvenli-indir";
+import { guvenliIndir, indirmeHatasiTuru } from "@/lib/guvenli-indir";
 import { extractTextFromBuffer } from "@/lib/document-extract";
 import {
   PDF_EN_FAZLA_BAYT,
+  agirSorun,
+  bosIndirmeSorunlari,
   pdfBaslangicKarari,
+  pdfHazirMi,
   baslikPdfteGeciyor,
   kaynakRaporu,
   kunyeAnahtari,
@@ -17,6 +20,8 @@ import {
   pdfAdaylari,
   pdfMi,
   type DogrulamaDurumu,
+  type IndirmeSorunlari,
+  type IndirmeSorunu,
   type KaynakPdfSatiri,
   type PdfDurumu,
 } from "@/lib/kaynak-pdf";
@@ -78,7 +83,7 @@ type Kunye = { kunye: string; doi?: string | null; dogrulama?: DogrulamaDurumu |
 export async function kaynakPdfleriniBul(
   projectId: string,
   kunyeler: Kunye[],
-): Promise<{ error?: string; satirlar?: KaynakPdfSatiri[] }> {
+): Promise<{ error?: string; satirlar?: KaynakPdfSatiri[]; sorunlar?: IndirmeSorunlari }> {
   const ctx = await getAuthContext();
   if (!ctx) return { error: await oturumYokMesaji() };
   // Dış sunuculara gidiyor ve depolamaya yazıyor: kapı burada da.
@@ -98,15 +103,17 @@ export async function kaynakPdfleriniBul(
     console.error("[kaynak-pdf] okunamadı:", okumaHatasi.message);
     return { error: t({ tr: "PDF kayıtları okunamadı; tekrar deneyin.", en: "Couldn't read the PDF records; please try again." }) };
   }
-  const yuklenmis = new Set((mevcut ?? []).filter((m) => m.durum === "yuklendi").map((m) => m.kunye_anahtari));
+  // PDF'i hazır olan (öğrencinin yüklediği YA DA indirilmiş) künyeye dokunulmaz (lib/kaynak-pdf → pdfHazirMi).
+  const hazir = new Set((mevcut ?? []).filter((m) => pdfHazirMi(m.durum as PdfDurumu)).map((m) => m.kunye_anahtari));
   const eskiYol = new Map((mevcut ?? []).map((m) => [m.kunye_anahtari, m.depo_yolu as string | null]));
 
   const satirlar: KaynakPdfSatiri[] = [];
+  const sorunlar = bosIndirmeSorunlari();
   const butceSonu = Date.now() + SURE_BUTCESI_MS;
   for (const k of parti) {
     if (Date.now() > butceSonu) break;
     const anahtar = kunyeAnahtari(k.kunye);
-    if (!anahtar || yuklenmis.has(anahtar)) continue;
+    if (!anahtar || hazir.has(anahtar)) continue;
     const doi = k.doi?.trim().slice(0, 300) || null;
     // Başlangıç kararı saf ve testli (lib/kaynak-pdf.ts). "ertele": hüküm yazılmaz.
     const baslangic = pdfBaslangicKarari(k.dogrulama ?? null, doi);
@@ -124,6 +131,7 @@ export async function kaynakPdfleriniBul(
     let durum: PdfDurumu;
     let yol: string | null = null;
     let kaynakAdres: string | null = null;
+    let sorun: IndirmeSorunu | null = null;
 
     if (baslangic === "kayit_yok") {
       durum = "kayit_yok";
@@ -142,18 +150,28 @@ export async function kaynakPdfleriniBul(
       }
 
       durum = adaylar.length ? "erisilemedi" : dizinHatasi ? "erisilemedi" : "bulunamadi";
+      if (!adaylar.length && dizinHatasi) sorun = "erisim";
       for (const aday of adaylar) {
         if (Date.now() > butceSonu) break;
         try {
           const indirilen = await guvenliIndir(aday, PDF_EN_FAZLA_BAYT);
-          // Yayınevinin giriş sayfası ya da "erişiminiz yok" HTML'i PDF değil.
-          if (!pdfMi(indirilen.bayt)) continue;
+          /* Yayınevinin giriş sayfası ya da "erişiminiz yok" HTML'i PDF değil.
+             Adres yine saklanır: öğrenci "Kaynağa git" ile açıp kendisi
+             indirebilsin (eskiden bu durumda bağlantı da kayboluyordu). */
+          if (!pdfMi(indirilen.bayt)) {
+            sorun = agirSorun(sorun, "pdf_degil");
+            kaynakAdres = indirilen.sonAdres;
+            continue;
+          }
           const hedef = depoYolu(projectId, anahtar);
           const { error: yuklemeHatasi } = await supabase.storage
             .from(KOVA)
             .upload(hedef, indirilen.bayt, { contentType: "application/pdf", upsert: false });
           if (yuklemeHatasi) {
+            // PDF indi ama BİZİM depomuza yazılamadı: öğrenciye "yayıncı izin vermedi" denmez.
             console.error("[kaynak-pdf] depoya yazılamadı:", yuklemeHatasi.message);
+            sorun = agirSorun(sorun, "depo");
+            kaynakAdres = indirilen.sonAdres;
             continue;
           }
           durum = "indirildi";
@@ -161,11 +179,15 @@ export async function kaynakPdfleriniBul(
           kaynakAdres = indirilen.sonAdres;
           break;
         } catch (hata) {
-          console.warn("[kaynak-pdf] indirilemedi:", aday, hata instanceof Error ? hata.message : hata);
+          const tur = indirmeHatasiTuru(hata);
+          // Beklenmeyen hata BİZİM sorunumuz: uyarı değil hata olarak log'a gider.
+          (tur === "beklenmeyen" ? console.error : console.warn)("[kaynak-pdf] indirilemedi:", tur, aday, hata instanceof Error ? hata.message : hata);
+          sorun = agirSorun(sorun, tur);
           kaynakAdres = aday;
         }
       }
     }
+    if (durum !== "indirildi" && sorun) sorunlar[sorun] += 1;
 
     const { data, error } = await supabase
       .from("kaynak_pdfleri")
@@ -183,7 +205,7 @@ export async function kaynakPdfleriniBul(
   }
 
   yenile();
-  return { satirlar };
+  return { satirlar, sorunlar };
 }
 
 /**
