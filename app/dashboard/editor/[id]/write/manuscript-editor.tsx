@@ -133,6 +133,22 @@ import { kilavuzOnSayfaAdlari, kilavuzOnSayfalari, onSayfaAdiKimligi, type OnSay
 import BekleyenKaynaklarKarti from "./bekleyen-kaynaklar-karti";
 import { writingProgress } from "@/lib/writing-progress";
 import { writingPace } from "@/lib/writing-pace";
+import {
+  autosaveDelay,
+  draftDelay,
+  eskiSurumHatasiMi,
+  kayitKarari,
+  kayitSonucuKarari,
+  onerilecekTaslak,
+  sonrakiKayitGecikmesi,
+  taslakAnahtari,
+  taslakAnahtariMi,
+  tekUcusluCalistirici,
+  tekrarGecikmesi,
+  type KayitDurumu,
+  type SunucuSonucu,
+  type YerelTaslak,
+} from "@/lib/otomatik-kayit";
 import { SAYFA_NUMARASI_ADI, altGirintiMetni, bolumHizasiMetni } from "@/lib/kilavuz-bicim";
 import ManuscriptOutline from "./manuscript-outline";
 import {
@@ -322,42 +338,39 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = [9, 10, 10.5, 11, 12, 13, 14, 16, 18, 20, 24];
 
-const AUTOSAVE_DELAY_MS = 1500;
-// Büyük belgelerde (190 sayfalık tez ≈ 0,9 MB) her 1,5 sn'de tüm metni göndermek ve tarayıcı
-// taslağına yazmak bağlantıyı ve cihazı yorar; aralık belgenin boyutuna göre açılır.
-const LARGE_DOC_BYTES = 300_000;
-const autosaveDelay = (bytes: number) => (bytes > LARGE_DOC_BYTES ? 4000 : AUTOSAVE_DELAY_MS);
-const draftDelay = (bytes: number) => (bytes > LARGE_DOC_BYTES ? 3000 : 500);
-const RETRY_DELAY_MS = 10000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif"];
 
-type SaveState = "saved" | "dirty" | "saving" | "error" | "conflict";
+/* Kayıt kararları ve zamanlaması saf modülde (lib/otomatik-kayit.ts, testli). */
+type SaveState = KayitDurumu;
 
-interface LocalDraft {
-  content: TiptapDoc;
-  baseUpdatedAt: string | null;
-  writtenAt: string;
-}
+type LocalDraft = YerelTaslak<TiptapDoc>;
 
 // Kaydedilemeyen değişiklikler (bağlantı kopması, oturum bitmesi, sekme
 // kapanması) bu tarayıcıda saklanır ve sayfa yeniden açılınca önerilir.
 /*
-  Anahtar KULLANICIYA da bağlı (29.10.2026). Eskiden yalnızca çalışmaya
-  bağlıydı ve çıkışta silinmiyordu: ortak bir bilgisayarda aynı çalışmaya
-  erişen danışman ya da uzman, öğrencinin kaydedilmemiş taslağını "sizin
-  kaydedilmemiş değişiklikleriniz" diye görüyor, geri yükleyip öğrencinin
-  sunucudaki metninin üzerine yazabiliyordu. Eski biçimdeki anahtar bir
-  geçiş dönemi okunuyor: içindeki metin kaybolmasın.
+  Anahtar KULLANICIYA (29.10.2026) ve SEKMEYE (P52a1, 15.11.2026) bağlı;
+  biçimler ve eşleşme kuralı lib/otomatik-kayit.ts'te. Eskiden aynı
+  çalışmanın iki sekmesi tek anahtara yazıyordu: son yazan, öteki sekmenin
+  kaydedilememiş metnini siliyordu. Artık her sayfa yüklemesi kendi
+  anahtarına yazar; açılışta bu kullanıcının bu çalışmaya ait bütün
+  taslakları taranır ve en yenisi önerilir (kapanan sekmenin taslağı da
+  bulunur — kurtarma deneyimi aynı). Eski biçimdeki anahtarlar okunmaya
+  devam eder: içlerindeki metin kaybolmasın.
 */
-const draftKey = (projectId: string, kullaniciId: string | null) =>
-  kullaniciId ? `arvolab:manuscript-draft:${projectId}:${kullaniciId}` : `arvolab:manuscript-draft:${projectId}`;
-const eskiDraftKey = (projectId: string) => `arvolab:manuscript-draft:${projectId}`;
+function taslakAnahtarlari(projectId: string, kullaniciId: string | null): string[] {
+  const anahtarlar: string[] = [];
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const anahtar = window.localStorage.key(i);
+    if (anahtar && taslakAnahtariMi(anahtar, projectId, kullaniciId)) anahtarlar.push(anahtar);
+  }
+  return anahtarlar;
+}
 
-function readDraft(projectId: string, kullaniciId: string | null): LocalDraft | null {
+function readDraft(projectId: string, kullaniciId: string | null): { anahtar: string; taslak: LocalDraft } | null {
   try {
-    const raw = window.localStorage.getItem(draftKey(projectId, kullaniciId)) ?? window.localStorage.getItem(eskiDraftKey(projectId));
-    return raw ? (JSON.parse(raw) as LocalDraft) : null;
+    const kayitlar = taslakAnahtarlari(projectId, kullaniciId).map((anahtar) => ({ anahtar, ham: window.localStorage.getItem(anahtar) }));
+    return onerilecekTaslak<TiptapDoc>(kayitlar, projectId, kullaniciId);
   } catch {
     return null;
   }
@@ -371,21 +384,45 @@ function readDraft(projectId: string, kullaniciId: string | null): LocalDraft | 
   olduğunda kullanıcıya metninin güvende olduğu söyleniyor, o da sekmeyi
   kapatıyordu. Bir tez bölümünün kaybolması için bu yeterli.
 */
-function writeDraft(projectId: string, kullaniciId: string | null, draft: LocalDraft): boolean {
+function writeDraft(anahtar: string, draft: LocalDraft): boolean {
   try {
-    window.localStorage.setItem(draftKey(projectId, kullaniciId), JSON.stringify(draft));
+    window.localStorage.setItem(anahtar, JSON.stringify(draft));
     return true;
   } catch {
     return false;
   }
 }
 
-function clearDraft(projectId: string, kullaniciId: string | null) {
+function anahtarlariSil(anahtarlar: (string | null | undefined)[]) {
   try {
-    window.localStorage.removeItem(draftKey(projectId, kullaniciId));
-    window.localStorage.removeItem(eskiDraftKey(projectId));
+    for (const anahtar of anahtarlar) if (anahtar) window.localStorage.removeItem(anahtar);
   } catch {
     // yok say
+  }
+}
+
+/* Bu sekmenin taslağı + eski sürümlerin ortak (sekmesiz) anahtarları: başarılı kayıttan sonra
+   bunlar kaydedilmiş metnin gerisinde kalır. Başka sekmenin taslağına DOKUNULMAZ. */
+function kendiTaslaginiSil(projectId: string, kullaniciId: string | null, sekmeAnahtari: string) {
+  anahtarlariSil([sekmeAnahtari, taslakAnahtari(projectId, kullaniciId, null), taslakAnahtari(projectId, null, null)]);
+}
+
+/* Sürüm geri yüklenince sunucudaki metin baştan değişiyor; bu kullanıcının bu çalışmaya ait
+   bütün taslakları eski metne göre yazılmıştı (eski tek anahtarlı davranışla aynı sonuç). */
+function butunTaslaklariSil(projectId: string, kullaniciId: string | null) {
+  try {
+    anahtarlariSil(taslakAnahtarlari(projectId, kullaniciId));
+  } catch {
+    // yok say
+  }
+}
+
+/* Sayfa yüklemesi başına sekme kimliği (sessionStorage değil: "sekmeyi çoğalt" onu kopyalıyor). */
+function yeniSekmeId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 }
 
@@ -632,7 +669,20 @@ export default function ManuscriptEditor({
   const updatedAtRef = useRef<string | null>(initialUpdatedAt);
   const revisionRef = useRef(0);
   const savedRevisionRef = useRef(0);
-  const inFlightRef = useRef<Promise<boolean> | null>(null);
+  /* Aynı anda tek kayıt (lib/otomatik-kayit → tekUcusluCalistirici). */
+  const kayitKuyruguRef = useRef(tekUcusluCalistirici<boolean>());
+  /* Art arda bağlantı hatası: geri çekilme bundan hesaplanır, başarıda sıfırlanır. */
+  const ardisikHataRef = useRef(0);
+  /* Bu sayfa yüklemesinin taslak anahtarı (sekme başına; ilk yazımda kurulur). */
+  const sekmeAnahtariRef = useRef<string | null>(null);
+  const sekmeAnahtari = useCallback(
+    () => (sekmeAnahtariRef.current ??= taslakAnahtari(projectId, kullaniciId, yeniSekmeId())),
+    [projectId, kullaniciId]
+  );
+  /* Önerilen taslağın anahtarı: "Vazgeç"te silinir; "Geri yükle"de metin bu sekmenin
+     taslağına geçip SUNUCUYA kaydedilince silinir (arada sekme kapanırsa kaybolmasın). */
+  const teklifAnahtariRef = useRef<string | null>(null);
+  const geriYuklenenTaslakRef = useRef<string | null>(null);
   const saveTimerRef = useRef<number | null>(null);
   const draftTimerRef = useRef<number | null>(null);
   const blockedRef = useRef(false);
@@ -660,7 +710,7 @@ export default function ManuscriptEditor({
     const editor = editorRef.current;
     if (!editor || revisionRef.current === savedRevisionRef.current) return true;
     const yazildi = olc("taslak yazımı", () =>
-      writeDraft(projectId, kullaniciId, {
+      writeDraft(sekmeAnahtari(), {
         content: editor.getJSON() as unknown as TiptapDoc,
         baseUpdatedAt: updatedAtRef.current,
         writtenAt: new Date().toISOString(),
@@ -669,7 +719,7 @@ export default function ManuscriptEditor({
     taslakYazilamadiRef.current = !yazildi;
     setTaslakYazilamadi(!yazildi);
     return yazildi;
-  }, [projectId, kullaniciId]);
+  }, [sekmeAnahtari]);
 
   /* Hata metnine taslağın GERÇEK durumunu ekler (lib/taslak-durumu.ts). */
   const hataYaz = useCallback(
@@ -695,16 +745,26 @@ export default function ManuscriptEditor({
         window.clearTimeout(saveTimerRef.current);
         saveTimerRef.current = null;
       }
-      // Aynı anda tek kayıt: öncekinin bitmesi beklenir, sonra en güncel metin gönderilir.
-      while (inFlightRef.current) await inFlightRef.current;
-      // Uyumsuz içerikte "benim sürümümü kaydet" (force) de budanmış metni yazardı.
-      if (icerikUyumsuzRef.current) return false;
-      if (blockedRef.current && !force) return false;
-      if (!force && revisionRef.current === savedRevisionRef.current) return true;
+      /*
+        Aynı anda tek kayıt: öncekinin bitmesi beklenir, sonra karar verilir —
+        önceki zaten en güncel metni kaydettiyse istek gönderilmez
+        (lib/otomatik-kayit → tekUcusluCalistirici, kayitKarari).
+      */
+      return kayitKuyruguRef.current.calistir(async () => {
+        const karar = kayitKarari({
+          // Uyumsuz içerikte "benim sürümümü kaydet" (force) de budanmış metni yazardı.
+          icerikUyumsuz: icerikUyumsuzRef.current,
+          engelli: blockedRef.current,
+          zorla: force,
+          revizyon: revisionRef.current,
+          kaydedilenRevizyon: savedRevisionRef.current,
+        });
+        if (karar === "uyumsuz" || karar === "engelli") return false;
+        if (karar === "gerek-yok") return true;
 
-      const revision = revisionRef.current;
-      const run = (async () => {
+        const revision = revisionRef.current;
         setSaveState("saving");
+        let sonuc: { tur: "cevap"; cevap: SunucuSonucu } | { tur: "hata"; mesaj: string };
         try {
           // ProseMirror öznitelik nesneleri prototipsizdir (Object.create(null)); React'in sunucu
           // eylemi kodlayıcısı bunları düz nesne saymayıp "$T" (geçici referans) olarak gönderir ve
@@ -735,86 +795,79 @@ export default function ManuscriptEditor({
             force,
             progress,
           });
-          if (res.success) {
-            updatedAtRef.current = res.updatedAt;
-            savedRevisionRef.current = revision;
-            blockedRef.current = false;
-            setSessionExpired(false);
-            setAbonelikBitti(false);
-            setSaveError(null);
-            setLastSavedAt(new Date(res.updatedAt));
-            if (revisionRef.current === revision) {
-              setSaveState("saved");
-              // Taslak teklifi henüz yanıtlanmadıysa taslağı silmek kullanıcının
-              // kararını onun yerine vermek olur (eskiden böyleydi).
-              if (!draftOfferRef.current) clearDraft(projectId, kullaniciId);
-            } else {
-              setSaveState("dirty");
-              scheduleSave(autosaveDelay(payloadBytesRef.current));
-            }
-            return true;
-          }
-          persistDraft();
-          hataYaz(res.error);
-          if (res.conflict) {
-            blockedRef.current = true;
-            setSaveState("conflict");
-          } else {
-            setSaveState("error");
-            if (res.sessionExpired) {
-              blockedRef.current = true;
-              setSessionExpired(true);
-            } else if (res.forbidden) {
-              // Yetki ya da abonelik reddi: yeniden denemek asla başarmaz,
-              // 10 saniyede bir sonsuza kadar denenmesin.
-              blockedRef.current = true;
-              if (res.abonelik) setAbonelikBitti(true);
-            } else {
-              scheduleSave(RETRY_DELAY_MS);
-            }
-          }
-          return false;
+          sonuc = { tur: "cevap", cevap: res };
         } catch (hata) {
-          persistDraft();
+          sonuc = { tur: "hata", mesaj: hata instanceof Error ? hata.message : String(hata) };
+        }
+
+        const sonra = kayitSonucuKarari(sonuc, {
+          ardisikBaglantiHatasi: ardisikHataRef.current,
+          araYazildi: revisionRef.current !== revision,
+        });
+        ardisikHataRef.current = sonra.ardisikBaglantiHatasi;
+        /* Kilidi yalnızca başarı açar, kalıcı hata kurar; bağlantı hatası olduğu gibi bırakır
+           (çakışma varken "benim sürümümü kaydet" ağda düşerse çakışma kilidi sürmeli). */
+        if (sonuc.tur === "cevap" && sonuc.cevap.success) blockedRef.current = false;
+        else if (sonra.engelle) blockedRef.current = true;
+
+        if (sonuc.tur === "cevap" && sonuc.cevap.success) {
+          updatedAtRef.current = sonuc.cevap.updatedAt;
+          savedRevisionRef.current = revision;
+          setSessionExpired(false);
+          setAbonelikBitti(false);
+          setSaveError(null);
+          setLastSavedAt(new Date(sonuc.cevap.updatedAt));
+          setSaveState(sonra.durum);
+          if (sonra.sonraki === "yeniden") {
+            scheduleSave(autosaveDelay(payloadBytesRef.current));
+          } else if (!draftOfferRef.current) {
+            // Taslak teklifi henüz yanıtlanmadıysa taslağı silmek kullanıcının
+            // kararını onun yerine vermek olur (eskiden böyleydi). Yalnızca BU
+            // sekmenin taslağı silinir; başka sekmenin kaydedilmemiş metni kalır.
+            kendiTaslaginiSil(projectId, kullaniciId, sekmeAnahtari());
+            anahtarlariSil([geriYuklenenTaslakRef.current]);
+            geriYuklenenTaslakRef.current = null;
+          }
+          return true;
+        }
+
+        persistDraft();
+        if (sonuc.tur === "cevap") {
+          if (!sonuc.cevap.success) hataYaz(sonuc.cevap.error);
+        } else if (eskiSurumHatasiMi(sonuc.mesaj)) {
           /*
             Yeni sürüm yayınlanınca açık sayfadaki server action kimliği
             geçersizleşir ("Failed to find Server Action"). Bu ağ hatası değil:
             yeniden denemek asla başarmaz, sayfa yenilenmelidir. Eskiden 10
             saniyede bir sonsuza kadar deneniyordu.
           */
-          const eskiSurum = /Failed to find Server Action|Server Action .* was not found/i.test(
-            hata instanceof Error ? hata.message : String(hata),
+          hataYaz(
+            t({
+              tr: "Yeni bir sürüm yayınlandı; sayfayı yenileyin, kaldığınız yerden devam edin.",
+              en: "A new version has been released; refresh the page and continue where you left off.",
+            })
           );
-          if (eskiSurum) {
-            blockedRef.current = true;
-            hataYaz(
-              t({
-                tr: "Yeni bir sürüm yayınlandı; sayfayı yenileyin, kaldığınız yerden devam edin.",
-                en: "A new version has been released; refresh the page and continue where you left off.",
-              })
-            );
-            setSaveState("error");
-            return false;
-          }
+        } else {
           hataYaz(
             t({
               tr: "Bağlantı sorunu nedeniyle kaydedilemedi; birazdan yeniden denenecek.",
               en: "Could not save due to a connection problem; it will be retried shortly.",
             })
           );
-          setSaveState("error");
-          scheduleSave(RETRY_DELAY_MS);
-          return false;
         }
-      })();
-      inFlightRef.current = run;
-      try {
-        return await run;
-      } finally {
-        inFlightRef.current = null;
-      }
+        setSaveState(sonra.durum);
+        if (sonra.oturumBitti) setSessionExpired(true);
+        // Yetki ya da abonelik reddi: yeniden denemek asla başarmaz, sonsuza kadar denenmesin.
+        if (sonra.abonelikBitti) setAbonelikBitti(true);
+        /*
+          Bağlantı sorunu: eskiden sabit 10 sn'de bir, sonsuza kadar tam belge
+          gönderiliyordu. Artık 10 → 20 → 40 → 80 → 120 sn (lib/otomatik-kayit).
+        */
+        if (sonra.sonraki === "geri-cekilme") scheduleSave(tekrarGecikmesi(sonra.ardisikBaglantiHatasi));
+        return false;
+      });
     },
-    [projectId, kullaniciId, guideline, persistDraft, scheduleSave, hataYaz, t]
+    [projectId, kullaniciId, guideline, persistDraft, scheduleSave, hataYaz, t, sekmeAnahtari]
   );
 
   const markDirty = useCallback(() => {
@@ -822,7 +875,8 @@ export default function ManuscriptEditor({
     setSaveState((state) => (state === "conflict" || state === "saving" ? state : "dirty"));
     if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
     draftTimerRef.current = window.setTimeout(persistDraft, draftDelay(payloadBytesRef.current));
-    if (!blockedRef.current) scheduleSave(autosaveDelay(payloadBytesRef.current));
+    // Bağlantı hatası sürerken her tuş 1,5 sn'lik bir deneme kurmasın: geri çekilme yazarken de geçerli.
+    if (!blockedRef.current) scheduleSave(sonrakiKayitGecikmesi(payloadBytesRef.current, ardisikHataRef.current));
   }, [persistDraft, scheduleSave]);
 
   useEffect(() => {
@@ -858,11 +912,13 @@ export default function ManuscriptEditor({
         }
       }
       // Önceki oturumdan kalan, kaydedilememiş taslak varsa geri yüklemeyi öner.
-      const draft = readDraft(projectId, kullaniciId);
-      if (draft && JSON.stringify(draft.content) !== JSON.stringify(created.getJSON())) {
-        setDraftOffer(draft);
-      } else if (draft) {
-        clearDraft(projectId, kullaniciId);
+      // Bu kullanıcının bu çalışmaya ait (kapanan sekmeler dahil) en yeni taslağı.
+      const bulunan = readDraft(projectId, kullaniciId);
+      if (bulunan && JSON.stringify(bulunan.taslak.content) !== JSON.stringify(created.getJSON())) {
+        teklifAnahtariRef.current = bulunan.anahtar;
+        setDraftOffer(bulunan.taslak);
+      } else if (bulunan) {
+        anahtarlariSil([bulunan.anahtar]);
       }
     },
     onUpdate: () => markDirtyRef.current(),
@@ -1128,6 +1184,9 @@ export default function ManuscriptEditor({
         return;
       }
       editor.commands.setContent(draftOffer.content);
+      // Önerilen taslak, metin sunucuya kaydedilince silinir (saveNow); o ana kadar yedek olarak durur.
+      geriYuklenenTaslakRef.current = teklifAnahtariRef.current;
+      teklifAnahtariRef.current = null;
       setDraftOffer(null);
       showToast("success", t({ tr: "Kaydedilmemiş değişiklikleriniz geri yüklendi.", en: "Your unsaved changes were restored." }));
     } catch {
@@ -1138,9 +1197,11 @@ export default function ManuscriptEditor({
   }, [editor, draftOffer, initialUpdatedAt, projectId, t]);
 
   const discardDraft = useCallback(() => {
-    clearDraft(projectId, kullaniciId);
+    // Yalnızca önerilen taslak; başka bir sekmenin kaydedilmemiş metni silinmez.
+    anahtarlariSil([teklifAnahtariRef.current]);
+    teklifAnahtariRef.current = null;
     setDraftOffer(null);
-  }, [projectId, kullaniciId]);
+  }, []);
 
   /*
     Taslak teklifi ya da uyumsuz içerik uyarısı yanıtlanana kadar editör salt
@@ -2000,7 +2061,7 @@ export default function ManuscriptEditor({
     else window.open(target, "_self");
   };
   const handleRestored = () => {
-    clearDraft(projectId, kullaniciId);
+    butunTaslaklariSil(projectId, kullaniciId);
     window.location.reload();
   };
   // Word'den gelen içerik: boş belgede ya da "yerine koy"da tüm metin, aksi hâlde sona eklenir.
