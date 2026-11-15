@@ -7,12 +7,29 @@ export type VersionKind = "auto" | "manual" | "restore";
 
 export const AUTO_VERSION_INTERVAL_MS = 10 * 60 * 1000;
 
-export async function snapshotManuscript(
+/**
+ * Yedeğin sonucu. "alindi" yedeklenen satırın `updated_at`'ini taşır: üzerine
+ * yazan akış (zorla kayıt, sürüm geri yükleme) yazmayı bu damgaya KOŞULLU
+ * yapar. Eskiden yalnızca true/false dönüyordu ve iki açık vardı (P52a2):
+ * zorla kayıt sonucu hiç okumuyordu (yedek düşse de üzerine yazıyordu), geri
+ * yükleme de yedekten SONRA arada kaydedilen metni koşulsuz eziyordu — o
+ * metin ne yedekte ne belgede kalıyordu.
+ */
+export type YedekSonucu =
+  | { durum: "alindi"; kaynakUpdatedAt: string }
+  /** Henüz metin satırı yok: üzerine yazılacak bir şey de yok. */
+  | { durum: "satir-yok" }
+  /** onlyIfOlderThanMs: son sürüm yeterince yeni, yedek gerekmedi. */
+  | { durum: "atlandi" }
+  | { durum: "hata" };
+
+/** Sürüm geçmişine yazan tek yol; snapshotManuscript bunun boolean hâli. */
+export async function yedekAl(
   supabase: SupabaseClient,
   projectId: string,
   userId: string,
   options: { kind: VersionKind; label?: string | null; onlyIfOlderThanMs?: number }
-): Promise<boolean> {
+): Promise<YedekSonucu> {
   try {
     if (options.onlyIfOlderThanMs) {
       const { data: last, error } = await supabase
@@ -22,8 +39,8 @@ export async function snapshotManuscript(
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (error) return false;
-      if (last && Date.now() - new Date(last.created_at).getTime() < options.onlyIfOlderThanMs) return false;
+      if (error) return { durum: "hata" };
+      if (last && Date.now() - new Date(last.created_at).getTime() < options.onlyIfOlderThanMs) return { durum: "atlandi" };
     }
 
     const { data: manuscript, error: readError } = await supabase
@@ -31,7 +48,11 @@ export async function snapshotManuscript(
       .select("*")
       .eq("project_id", projectId)
       .maybeSingle();
-    if (readError || !manuscript) return false;
+    if (readError) {
+      console.error(readError);
+      return { durum: "hata" };
+    }
+    if (!manuscript) return { durum: "satir-yok" };
 
     const { error } = await supabase.from("project_manuscript_versions").insert({
       project_id: projectId,
@@ -56,11 +77,20 @@ export async function snapshotManuscript(
     });
     if (error) {
       console.error(error);
-      return false;
+      return { durum: "hata" };
     }
-    return true;
+    return { durum: "alindi", kaynakUpdatedAt: manuscript.updated_at as string };
   } catch (error) {
     console.error(error);
-    return false;
+    return { durum: "hata" };
   }
+}
+
+export async function snapshotManuscript(
+  supabase: SupabaseClient,
+  projectId: string,
+  userId: string,
+  options: { kind: VersionKind; label?: string | null; onlyIfOlderThanMs?: number }
+): Promise<boolean> {
+  return (await yedekAl(supabase, projectId, userId, options)).durum === "alindi";
 }

@@ -2,6 +2,7 @@
 
 import { getAuthContext, oturumYokMesaji } from "@/lib/auth-guards";
 import { snapshotManuscript, type VersionKind } from "@/lib/manuscript-versions";
+import { surumuGeriYukle } from "@/lib/metin-yazimi";
 import { isSubscriptionBlocked, abonelikKapaliMesaji } from "@/lib/access";
 import { ceviri } from "@/lib/dil-sunucu";
 
@@ -111,49 +112,41 @@ export async function restoreManuscriptVersion(
   /* Abonelik kapısı: Geri yükleme metnin üzerine yazar; saveManuscript ile aynı kapı. */
   if (await isSubscriptionBlocked()) return { error: (await abonelikKapaliMesaji()) };
 
-  const { data: version, error: versionError } = await ctx.supabase
-    .from("project_manuscript_versions")
-    .select("project_id, content, plain_text, word_count, settings, created_at")
-    .eq("id", versionId)
-    .maybeSingle();
-  if (versionError || !version || version.project_id !== projectId) return { error: t(SURUM_YOK) };
-
-  const backedUp = await snapshotManuscript(ctx.supabase, projectId, ctx.user.id, {
-    kind: "restore",
-    label: t({ tr: "Geri yüklemeden önceki hâl", en: "Before restore" }),
+  /*
+    Dizi lib/metin-yazimi.ts'te: yedek alınır, sürüm o yedeğin damgasına
+    KOŞULLU yazılır. Eskiden yazma koşulsuzdu: yedekle yazma arasında başka
+    bir sekmenin kaydettiği metin ne yedekte ne belgede kalıyordu. Her ret de
+    "yetkiniz yok" diye bildiriliyordu; çakışma artık ayrı söyleniyor.
+  */
+  const sonuc = await surumuGeriYukle(ctx.supabase, {
+    projectId,
+    userId: ctx.user.id,
+    versionId,
+    yedekEtiketi: t({ tr: "Geri yüklemeden önceki hâl", en: "Before restore" }),
   });
-  if (!backedUp) return {
-      error: t({
-        tr: "Mevcut metin yedeklenemediği için geri yükleme yapılmadı.",
-        en: "The restore was not performed because the current text could not be backed up.",
-      }),
-    };
-
-  const settings = (version.settings ?? {}) as Record<string, unknown>;
-  const pick = (key: string) => (settings[key] === undefined ? {} : { [key]: settings[key] });
-  const { data, error } = await ctx.supabase
-    .from("project_manuscripts")
-    .update({
-      content: version.content,
-      plain_text: version.plain_text,
-      word_count: version.word_count ?? 0,
-      ...pick("margin_top_cm"),
-      ...pick("margin_bottom_cm"),
-      ...pick("margin_left_cm"),
-      ...pick("margin_right_cm"),
-      ...pick("show_page_numbers"),
-      ...pick("cover_page"),
-      ...pick("include_toc"),
-      ...pick("heading_numbering"),
-      ...pick("page_size"),
-      updated_by: ctx.user.id,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("project_id", projectId)
-    .select("updated_at");
-  if (error || !data?.length) {
-    console.error(error);
-    return { error: t({ tr: "Geri yükleme için bu metni düzenleme yetkiniz yok.", en: "You do not have permission to edit this text, so it cannot be restored." }) };
+  switch (sonuc.tur) {
+    case "basarili":
+      return { success: true, updatedAt: sonuc.updatedAt };
+    case "surum-yok":
+      return { error: t(SURUM_YOK) };
+    case "yedek-alinamadi":
+      return {
+        error: t({
+          tr: "Mevcut metin yedeklenemediği için geri yükleme yapılmadı.",
+          en: "The restore was not performed because the current text could not be backed up.",
+        }),
+      };
+    case "cakisma":
+      return {
+        error: t({
+          tr: "Geri yükleme sırasında metin başka bir sekmede ya da başka biri tarafından değiştirildi; geri yükleme yapılmadı. Yeniden deneyin.",
+          en: "The text was changed in another tab or by someone else during the restore, so nothing was restored. Try again.",
+        }),
+      };
+    case "reddedildi":
+      return { error: t({ tr: "Geri yükleme için bu metni düzenleme yetkiniz yok.", en: "You do not have permission to edit this text, so it cannot be restored." }) };
+    default:
+      console.error(sonuc.hata);
+      return { error: t({ tr: "Geri yükleme yapılamadı. Biraz sonra yeniden deneyin.", en: "The restore could not be completed. Try again shortly." }) };
   }
-  return { success: true, updatedAt: data[0].updated_at };
 }
