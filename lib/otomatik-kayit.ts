@@ -219,18 +219,21 @@ export function taslakAnahtariMi(anahtar: string, projectId: string, kullaniciId
 export type YerelTaslak<D> = { content: D; baseUpdatedAt: string | null; writtenAt: string };
 
 /*
-  Açılışta önerilecek taslak: bu kullanıcının bu çalışmaya ait taslakları
-  arasında EN YENİ yazılanı. Bozuk ya da tarihsiz kayıt öneriye girmez (bir
-  sonraki temizlikte silinir). Eşit tarihte anahtar sırası belirleyicidir:
-  aynı girdi her açılışta aynı öneriyi versin.
+  KURTARILABİLİR TASLAKLAR: bu kullanıcının bu çalışmaya ait taslakları,
+  EN YENİDEN eskiye. Açılışta ilki önerilir; ötekiler aynı teklif bandından
+  ("Öncekini göster") erişilebilir kalır. Eskiden yalnızca en yeni görünüyor,
+  öncekine ancak en yeni çözülüp sayfa yeniden açılınca ulaşılıyordu — iki
+  sekmenin ayrı kaydedilmemiş metni varsa biri gözden kaçabiliyordu. Bozuk ya
+  da tarihsiz kayıt listeye girmez. Eşit tarihte anahtar sırası
+  belirleyicidir: aynı girdi her açılışta aynı sırayı versin.
 */
-export function onerilecekTaslak<D>(
+export function kurtarilabilirTaslaklar<D>(
   kayitlar: { anahtar: string; ham: string | null }[],
   projectId: string,
   kullaniciId: string | null,
-): { anahtar: string; taslak: YerelTaslak<D> } | null {
-  let en: { anahtar: string; taslak: YerelTaslak<D>; zaman: number } | null = null;
-  for (const { anahtar, ham } of [...kayitlar].sort((a, b) => a.anahtar.localeCompare(b.anahtar))) {
+): { anahtar: string; taslak: YerelTaslak<D> }[] {
+  const liste: { anahtar: string; taslak: YerelTaslak<D>; zaman: number }[] = [];
+  for (const { anahtar, ham } of kayitlar) {
     if (!ham || !taslakAnahtariMi(anahtar, projectId, kullaniciId)) continue;
     let taslak: YerelTaslak<D>;
     try {
@@ -240,7 +243,30 @@ export function onerilecekTaslak<D>(
     }
     const zaman = Date.parse(taslak?.writtenAt ?? "");
     if (!taslak || taslak.content == null || !Number.isFinite(zaman)) continue;
-    if (!en || zaman > en.zaman) en = { anahtar, taslak, zaman };
+    liste.push({ anahtar, taslak, zaman });
   }
-  return en ? { anahtar: en.anahtar, taslak: en.taslak } : null;
+  liste.sort((a, b) => b.zaman - a.zaman || a.anahtar.localeCompare(b.anahtar));
+  return liste.map(({ anahtar, taslak }) => ({ anahtar, taslak }));
+}
+
+/** Açılışta önerilecek taslak: kurtarilabilirTaslaklar'ın ilki (en yeni). */
+export function onerilecekTaslak<D>(
+  kayitlar: { anahtar: string; ham: string | null }[],
+  projectId: string,
+  kullaniciId: string | null,
+): { anahtar: string; taslak: YerelTaslak<D> } | null {
+  return kurtarilabilirTaslaklar<D>(kayitlar, projectId, kullaniciId)[0] ?? null;
+}
+
+/*
+  TEKLİF SIRASI (teklif bandının iki düğmesi). "Öncekini göster": gösterilen
+  sıranın sonuna gider, sıradaki öne gelir — döngü, hiçbir taslak
+  düşmez. "Yok say": YALNIZCA gösterilen taslak çıkar (çağıran onun
+  anahtarını siler), sıradaki önerilir; liste biterse teklif kapanır.
+*/
+export function sonrakiTeklif<T>(sira: T[]): T[] {
+  return sira.length > 1 ? [...sira.slice(1), sira[0]] : sira;
+}
+export function teklifiYokSay<T>(sira: T[]): T[] {
+  return sira.slice(1);
 }

@@ -139,12 +139,14 @@ import {
   eskiSurumHatasiMi,
   kayitKarari,
   kayitSonucuKarari,
-  onerilecekTaslak,
+  kurtarilabilirTaslaklar,
+  sonrakiTeklif,
   sonrakiKayitGecikmesi,
   taslakAnahtari,
   taslakAnahtariMi,
   tekUcusluCalistirici,
   tekrarGecikmesi,
+  teklifiYokSay,
   type KayitDurumu,
   type SunucuSonucu,
   type YerelTaslak,
@@ -345,6 +347,7 @@ const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif"];
 type SaveState = KayitDurumu;
 
 type LocalDraft = YerelTaslak<TiptapDoc>;
+type TeklifTaslagi = { anahtar: string; taslak: LocalDraft };
 
 // Kaydedilemeyen değişiklikler (bağlantı kopması, oturum bitmesi, sekme
 // kapanması) bu tarayıcıda saklanır ve sayfa yeniden açılınca önerilir.
@@ -367,12 +370,13 @@ function taslakAnahtarlari(projectId: string, kullaniciId: string | null): strin
   return anahtarlar;
 }
 
-function readDraft(projectId: string, kullaniciId: string | null): { anahtar: string; taslak: LocalDraft } | null {
+/* Bu kullanıcının bu çalışmaya ait kurtarılabilir taslakları, en yeniden eskiye (lib/otomatik-kayit). */
+function readDrafts(projectId: string, kullaniciId: string | null): TeklifTaslagi[] {
   try {
     const kayitlar = taslakAnahtarlari(projectId, kullaniciId).map((anahtar) => ({ anahtar, ham: window.localStorage.getItem(anahtar) }));
-    return onerilecekTaslak<TiptapDoc>(kayitlar, projectId, kullaniciId);
+    return kurtarilabilirTaslaklar<TiptapDoc>(kayitlar, projectId, kullaniciId);
   } catch {
-    return null;
+    return [];
   }
 }
 
@@ -405,16 +409,6 @@ function anahtarlariSil(anahtarlar: (string | null | undefined)[]) {
    bunlar kaydedilmiş metnin gerisinde kalır. Başka sekmenin taslağına DOKUNULMAZ. */
 function kendiTaslaginiSil(projectId: string, kullaniciId: string | null, sekmeAnahtari: string) {
   anahtarlariSil([sekmeAnahtari, taslakAnahtari(projectId, kullaniciId, null), taslakAnahtari(projectId, null, null)]);
-}
-
-/* Sürüm geri yüklenince sunucudaki metin baştan değişiyor; bu kullanıcının bu çalışmaya ait
-   bütün taslakları eski metne göre yazılmıştı (eski tek anahtarlı davranışla aynı sonuç). */
-function butunTaslaklariSil(projectId: string, kullaniciId: string | null) {
-  try {
-    anahtarlariSil(taslakAnahtarlari(projectId, kullaniciId));
-  } catch {
-    // yok say
-  }
 }
 
 /* Sayfa yüklemesi başına sekme kimliği (sessionStorage değil: "sekmeyi çoğalt" onu kopyalıyor). */
@@ -539,7 +533,14 @@ export default function ManuscriptEditor({
   */
   const [abonelikBitti, setAbonelikBitti] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(initialUpdatedAt ? new Date(initialUpdatedAt) : null);
-  const [draftOffer, setDraftOffer] = useState<LocalDraft | null>(null);
+  /*
+    Teklif SIRASI (P52a1): ilk eleman önerilen taslak, ötekiler aynı banttan
+    ("Öncekini göster") erişilebilir. Eskiden yalnızca en yeni öneriliyordu;
+    ikinci bir sekmenin kaydedilmemiş metnine ancak sayfa yeniden açılınca
+    ulaşılıyordu.
+  */
+  const [teklifSirasi, setTeklifSirasi] = useState<TeklifTaslagi[]>([]);
+  const draftOffer: LocalDraft | null = teklifSirasi[0]?.taslak ?? null;
   const [taslakYukleniyor, setTaslakYukleniyor] = useState(false);
   const draftOfferRef = useRef<LocalDraft | null>(null);
   /*
@@ -679,9 +680,8 @@ export default function ManuscriptEditor({
     () => (sekmeAnahtariRef.current ??= taslakAnahtari(projectId, kullaniciId, yeniSekmeId())),
     [projectId, kullaniciId]
   );
-  /* Önerilen taslağın anahtarı: "Vazgeç"te silinir; "Geri yükle"de metin bu sekmenin
-     taslağına geçip SUNUCUYA kaydedilince silinir (arada sekme kapanırsa kaybolmasın). */
-  const teklifAnahtariRef = useRef<string | null>(null);
+  /* "Geri yükle"de önerilen taslağın anahtarı: metin bu sekmenin taslağına geçip SUNUCUYA
+     kaydedilince silinir (arada sekme kapanırsa kaybolmasın). */
   const geriYuklenenTaslakRef = useRef<string | null>(null);
   const saveTimerRef = useRef<number | null>(null);
   const draftTimerRef = useRef<number | null>(null);
@@ -912,14 +912,12 @@ export default function ManuscriptEditor({
         }
       }
       // Önceki oturumdan kalan, kaydedilememiş taslak varsa geri yüklemeyi öner.
-      // Bu kullanıcının bu çalışmaya ait (kapanan sekmeler dahil) en yeni taslağı.
-      const bulunan = readDraft(projectId, kullaniciId);
-      if (bulunan && JSON.stringify(bulunan.taslak.content) !== JSON.stringify(created.getJSON())) {
-        teklifAnahtariRef.current = bulunan.anahtar;
-        setDraftOffer(bulunan.taslak);
-      } else if (bulunan) {
-        anahtarlariSil([bulunan.anahtar]);
-      }
+      /* Bu kullanıcının bu çalışmaya ait (kapanan sekmeler dahil) taslakları; en yenisi önerilir.
+         Kayıtlı metinle aynı olan taslak artık bir şey kurtarmıyor: sessizce silinir (eskisi gibi). */
+      const mevcut = JSON.stringify(created.getJSON());
+      const taslaklar = readDrafts(projectId, kullaniciId);
+      anahtarlariSil(taslaklar.filter((x) => JSON.stringify(x.taslak.content) === mevcut).map((x) => x.anahtar));
+      setTeklifSirasi(taslaklar.filter((x) => JSON.stringify(x.taslak.content) !== mevcut));
     },
     onUpdate: () => markDirtyRef.current(),
     editorProps: {
@@ -1184,24 +1182,26 @@ export default function ManuscriptEditor({
         return;
       }
       editor.commands.setContent(draftOffer.content);
-      // Önerilen taslak, metin sunucuya kaydedilince silinir (saveNow); o ana kadar yedek olarak durur.
-      geriYuklenenTaslakRef.current = teklifAnahtariRef.current;
-      teklifAnahtariRef.current = null;
-      setDraftOffer(null);
+      /* Önerilen taslak, metin sunucuya kaydedilince silinir (saveNow); o ana kadar yedek olarak
+         durur. Sıradaki ÖTEKİ taslaklar silinmez: bir sonraki açılışta yine önerilir. */
+      geriYuklenenTaslakRef.current = teklifSirasi[0]?.anahtar ?? null;
+      setTeklifSirasi([]);
       showToast("success", t({ tr: "Kaydedilmemiş değişiklikleriniz geri yüklendi.", en: "Your unsaved changes were restored." }));
     } catch {
       showToast("error", t({ tr: "Bağlantı sorunu nedeniyle geri yüklenemedi.", en: "Could not restore due to a connection problem." }));
     } finally {
       setTaslakYukleniyor(false);
     }
-  }, [editor, draftOffer, initialUpdatedAt, projectId, t]);
+  }, [editor, draftOffer, teklifSirasi, initialUpdatedAt, projectId, t]);
 
   const discardDraft = useCallback(() => {
-    // Yalnızca önerilen taslak; başka bir sekmenin kaydedilmemiş metni silinmez.
-    anahtarlariSil([teklifAnahtariRef.current]);
-    teklifAnahtariRef.current = null;
-    setDraftOffer(null);
-  }, []);
+    // YALNIZCA gösterilen taslak silinir; sıradaki (başka sekmenin) taslak önerilir.
+    anahtarlariSil([teklifSirasi[0]?.anahtar]);
+    setTeklifSirasi(teklifiYokSay);
+  }, [teklifSirasi]);
+
+  // Öteki taslağı göster: hiçbir taslak düşmez, sıra döner (lib/otomatik-kayit → sonrakiTeklif).
+  const oncekiTaslagiGoster = useCallback(() => setTeklifSirasi(sonrakiTeklif), []);
 
   /*
     Taslak teklifi ya da uyumsuz içerik uyarısı yanıtlanana kadar editör salt
@@ -2060,8 +2060,16 @@ export default function ManuscriptEditor({
     if (printWindow) printWindow.location.href = target;
     else window.open(target, "_self");
   };
+  /*
+    Sürüm geri yüklendi: BU sekmenin taslağı (ve sekmesiz eski anahtarlar) eski metne göre
+    yazılmıştı, silinir. Başka sekmelerin taslaklarına DOKUNULMAZ: eskiden hepsi siliniyordu
+    ve o sekmede kaydedilememiş metin varsa, sekme kapandığında kurtarma kopyası kalmıyordu.
+    Ötekilerin güvenliği yerinde: o sekmenin bir sonraki kaydı updated_at çakışmasına düşer
+    (sessizce üzerine yazmaz), taslak önerilirse "metin başka yerde değişmiş" uyarısı çıkar ve
+    geri yükleme önce sunucudaki hâli sürüm geçmişine yedekler.
+  */
   const handleRestored = () => {
-    butunTaslaklariSil(projectId, kullaniciId);
+    kendiTaslaginiSil(projectId, kullaniciId, sekmeAnahtari());
     window.location.reload();
   };
   // Word'den gelen içerik: boş belgede ya da "yerine koy"da tüm metin, aksi hâlde sona eklenir.
@@ -2557,13 +2565,24 @@ export default function ManuscriptEditor({
                   en: " The text has changed elsewhere since this draft; if you restore, the server copy is first backed up to the history.",
                 })
               : ""}{" "}
+            {teklifSirasi.length > 1
+              ? t({
+                  tr: `Bu çalışma için ${teklifSirasi.length - 1} taslak daha var (başka bir sekmeden). `,
+                  en: `There ${teklifSirasi.length - 1 === 1 ? "is" : "are"} ${teklifSirasi.length - 1} more ${teklifSirasi.length - 1 === 1 ? "draft" : "drafts"} for this work (from another tab). `,
+                })
+              : ""}
             {t({ tr: "Karar verene kadar editör salt okunur.", en: "The editor is read-only until you decide." })}
           </span>
           <span className="cluster">
             <button type="button" className="projects-primary-button" disabled={taslakYukleniyor} onClick={() => void restoreDraft()}>
               {t({ tr: "Geri yükle", en: "Restore" })}
             </button>
-            <button type="button" className="projects-filter-button" onClick={discardDraft}>
+            {teklifSirasi.length > 1 ? (
+              <button type="button" className="projects-filter-button" disabled={taslakYukleniyor} onClick={oncekiTaslagiGoster}>
+                {t({ tr: "Öncekini göster", en: "Show the other draft" })}
+              </button>
+            ) : null}
+            <button type="button" className="projects-filter-button" disabled={taslakYukleniyor} onClick={discardDraft}>
               {t({ tr: "Yok say", en: "Discard" })}
             </button>
           </span>

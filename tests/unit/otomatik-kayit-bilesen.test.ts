@@ -53,26 +53,38 @@ test("başarısız kayıtta taslak yazılıyor (içerik kaybolmaz)", () => {
 test("taslak sekmenin kendi anahtarına yazılıyor; başarı yalnızca kendi taslağını siliyor", () => {
   assert.match(kaynak, /writeDraft\(sekmeAnahtari\(\), \{/);
   assert.match(saveNow, /kendiTaslaginiSil\(projectId, kullaniciId, sekmeAnahtari\(\)\)/);
-  assert.doesNotMatch(saveNow, /butunTaslaklariSil/);
-  // Bütün taslakları silen tek yol sürüm geri yükleme (sunucudaki metin baştan değişti).
-  const butun = [...kaynak.matchAll(/butunTaslaklariSil\(projectId, kullaniciId\)/g)].length;
-  assert.equal(butun, 1);
-  assert.match(blok("const handleRestored = () => {", "};"), /butunTaslaklariSil\(projectId, kullaniciId\)/);
 });
 
-test("'Vazgeç' yalnızca önerilen taslağı siliyor; 'Geri yükle' onu kayıttan sonra siliyor", () => {
-  const vazgec = blok("const discardDraft = useCallback(", "}, []);");
-  assert.match(vazgec, /anahtarlariSil\(\[teklifAnahtariRef\.current\]\)/);
-  assert.match(blok("const restoreDraft = useCallback(", "const discardDraft"), /geriYuklenenTaslakRef\.current = teklifAnahtariRef\.current;/);
+test("sürüm geri yükleme yalnızca BU sekmenin taslağını siliyor (başka sekmenin kurtarma kopyası kalır)", () => {
+  // Eskiden butunTaslaklariSil: B'deki geri yükleme A'nın kaydedilmemiş metninin kopyasını siliyordu.
+  assert.doesNotMatch(kaynak, /butunTaslaklariSil/);
+  const geriYukleme = blok("const handleRestored = () => {", "};");
+  assert.match(geriYukleme, /kendiTaslaginiSil\(projectId, kullaniciId, sekmeAnahtari\(\)\)/);
+  assert.doesNotMatch(geriYukleme, /taslakAnahtarlari\(/);
+});
+
+test("'Yok say' yalnızca gösterilen taslağı siliyor ve sıradakini öneriyor; 'Geri yükle' onu kayıttan sonra siliyor", () => {
+  const vazgec = blok("const discardDraft = useCallback(", "}, [teklifSirasi]);");
+  assert.match(vazgec, /anahtarlariSil\(\[teklifSirasi\[0\]\?\.anahtar\]\)/);
+  assert.match(vazgec, /setTeklifSirasi\(teklifiYokSay\)/);
+  const geri = blok("const restoreDraft = useCallback(", "const discardDraft");
+  assert.match(geri, /geriYuklenenTaslakRef\.current = teklifSirasi\[0\]\?\.anahtar \?\? null;/);
+  // Ötekiler depoda kalır: geri yükleme hiçbir anahtar silmiyor.
+  assert.doesNotMatch(geri, /anahtarlariSil|kendiTaslaginiSil/);
   assert.match(saveNow, /anahtarlariSil\(\[geriYuklenenTaslakRef\.current\]\)/);
+});
+
+test("öteki taslaklara teklif bandından ulaşılıyor ('Öncekini göster')", () => {
+  assert.match(kaynak, /const oncekiTaslagiGoster = useCallback\(\(\) => setTeklifSirasi\(sonrakiTeklif\), \[\]\);/);
+  assert.match(kaynak, /teklifSirasi\.length > 1 \? \(\s*<button[^>]*onClick=\{oncekiTaslagiGoster\}/);
 });
 
 test("taslak teklifi yanıtlanmadan başarılı kayıt da taslağı silmiyor (eski kural korunuyor)", () => {
   assert.match(saveNow, /\} else if \(!draftOfferRef\.current\) \{\s*kendiTaslaginiSil/);
 });
 
-test("açılışta en yeni taslak önerilip anahtarı tutuluyor; aynı içerikli taslak siliniyor", () => {
-  assert.match(kaynak, /const bulunan = readDraft\(projectId, kullaniciId\);/);
-  assert.match(kaynak, /teklifAnahtariRef\.current = bulunan\.anahtar;/);
-  assert.match(kaynak, /anahtarlariSil\(\[bulunan\.anahtar\]\)/);
+test("açılışta bütün kurtarılabilir taslaklar sıraya giriyor; kayıtlı metinle aynı olanlar siliniyor", () => {
+  assert.match(kaynak, /const taslaklar = readDrafts\(projectId, kullaniciId\);/);
+  assert.match(kaynak, /anahtarlariSil\(taslaklar\.filter\(\(x\) => JSON\.stringify\(x\.taslak\.content\) === mevcut\)/);
+  assert.match(kaynak, /setTeklifSirasi\(taslaklar\.filter\(\(x\) => JSON\.stringify\(x\.taslak\.content\) !== mevcut\)\)/);
 });

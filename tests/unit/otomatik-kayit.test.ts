@@ -5,12 +5,15 @@ import {
   autosaveDelay,
   kayitKarari,
   kayitSonucuKarari,
+  kurtarilabilirTaslaklar,
   onerilecekTaslak,
+  sonrakiTeklif,
   sonrakiKayitGecikmesi,
   taslakAnahtari,
   taslakAnahtariMi,
   tekUcusluCalistirici,
   tekrarGecikmesi,
+  teklifiYokSay,
   TEKRAR_EN_FAZLA_MS,
   type SunucuSonucu,
 } from "@/lib/otomatik-kayit";
@@ -273,5 +276,37 @@ describe("kayıttan sonra yeniden açma", () => {
   test("zamanlama sabitleri bileşenden taşındı, değerler aynı", () => {
     assert.equal(autosaveDelay(10), 1500);
     assert.equal(autosaveDelay(300_001), 4000);
+  });
+});
+
+describe("birden çok kurtarılabilir taslak", () => {
+  const k = (s: string) => taslakAnahtari(PROJE, KULLANICI, s);
+  const ham = (metin: string, zaman: string) => JSON.stringify({ content: { metin }, baseUpdatedAt: null, writtenAt: zaman });
+  const kayitlar = [
+    { anahtar: k("eski"), ham: ham("ESKİ", "2026-11-15T10:00:00Z") },
+    { anahtar: k("yeni"), ham: ham("YENİ", "2026-11-15T10:10:00Z") },
+    { anahtar: k("orta"), ham: ham("ORTA", "2026-11-15T10:05:00Z") },
+    { anahtar: taslakAnahtari(PROJE, BASKA_KULLANICI, "x"), ham: ham("BAŞKASI", "2026-11-15T11:00:00Z") },
+    { anahtar: taslakAnahtari(BASKA_PROJE, KULLANICI, "y"), ham: ham("BAŞKA ÇALIŞMA", "2026-11-15T11:00:00Z") },
+    { anahtar: k("bozuk"), ham: "{" },
+  ];
+
+  test("hepsi en yeniden eskiye sıralanır; başka kullanıcı ve çalışma ASLA listeye girmez", () => {
+    const liste = kurtarilabilirTaslaklar<{ metin: string }>(kayitlar, PROJE, KULLANICI);
+    assert.deepEqual(liste.map((x) => x.taslak.content.metin), ["YENİ", "ORTA", "ESKİ"]);
+    assert.equal(onerilecekTaslak<{ metin: string }>(kayitlar, PROJE, KULLANICI)?.taslak.content.metin, "YENİ");
+  });
+
+  test("'Öncekini göster' döner, hiçbir taslak düşmez", () => {
+    const sira = ["YENİ", "ORTA", "ESKİ"];
+    assert.deepEqual(sonrakiTeklif(sira), ["ORTA", "ESKİ", "YENİ"]);
+    assert.deepEqual(sonrakiTeklif(sonrakiTeklif(sonrakiTeklif(sira))), sira);
+    assert.deepEqual(sonrakiTeklif(["TEK"]), ["TEK"]);
+  });
+
+  test("'Yok say' yalnızca gösterileni çıkarır; sıradaki önerilir; liste biterse teklif kapanır", () => {
+    assert.deepEqual(teklifiYokSay(["ORTA", "ESKİ", "YENİ"]), ["ESKİ", "YENİ"]);
+    assert.deepEqual(teklifiYokSay(["TEK"]), []);
+    assert.deepEqual(teklifiYokSay([]), []);
   });
 });

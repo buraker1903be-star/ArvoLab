@@ -194,6 +194,94 @@ await senaryo("kayıttan sonra yeniden açma: taslak kalmıyor, öneri çıkmıy
   return "taslak 0, öneri yok, editör yazılabilir";
 });
 
+/* Kayıt isteklerini YALNIZCA bu sekmede düşür (sayfa yönlendirmesi bağlamınkinden önce gelir). */
+const sekmedeAgiKes = (s) => s.route("**/*", (route) => (kayitIstegiMi(route.request()) ? route.abort("internetdisconnected") : route.fallback()));
+
+await senaryo("sürüm geri yükleme: başka sekmenin kaydedilmemiş metni ve kurtarma kopyası korunuyor; o sekme kapanıp açılınca öneriliyor", async () => {
+  const { ctx } = await baglam();
+  // B önce açılır (A'nın taslağı henüz yokken: B'de taslak teklifi çıkmasın).
+  const b = await ac(ctx);
+  const a = await ac(ctx);
+  await sekmedeAgiKes(a.s);
+  await sonaYaz(a.s, " SEKMEAKAYDEDILMEDI");
+  await a.s.waitForTimeout(2500);
+  const once = (await taslaklar(a.s)).filter((x) => x.metin.includes("SEKMEAKAYDEDILMEDI"));
+  bekle(once.length === 1, `A'nın kurtarma kopyası yazılmadı (${once.length})`);
+  // B'de sürüm geri yükleme.
+  b.s.once("dialog", (d) => void d.accept());
+  // "Sürümler" araç çubuğunun taşma menüsünde.
+  await b.s.locator("button[aria-label='Sayfa ayarı, kapak, paylaş, sürümler, kısayollar']").click();
+  await b.s.locator("button[aria-label='Sürüm geçmişi']").click();
+  const surumGeriYukle = b.s.locator("[role=dialog] button", { hasText: /^Geri yükle$/ }).first();
+  await surumGeriYukle.waitFor({ timeout: 15000 });
+  await surumGeriYukle.click();
+  await b.s.waitForLoadState("networkidle").catch(() => {});
+  await b.s.waitForTimeout(3000);
+  const sonra = (await taslaklar(a.s)).filter((x) => x.metin.includes("SEKMEAKAYDEDILMEDI"));
+  bekle(sonra.length === 1, `B'nin sürüm geri yüklemesi A'nın kurtarma kopyasını sildi (${sonra.length})`);
+  const aMetni = await a.s.locator(".ProseMirror").first().textContent();
+  bekle(aMetni.includes("SEKMEAKAYDEDILMEDI"), "A'nın ekrandaki metni kayboldu");
+  // A çöker gibi kapanır (beforeunload çalışmadan): kopya yine de kalmalı ve önerilmeli.
+  await a.s.close({ runBeforeUnload: false });
+  await b.s.close({ runBeforeUnload: false });
+  const c = await ac(ctx);
+  const bant = teklifBandi(c.s);
+  await bant.waitFor({ timeout: 10000 });
+  await bant.getByRole("button", { name: "Geri yükle" }).click();
+  await c.s.waitForFunction(() => document.querySelector(".ProseMirror")?.textContent.includes("SEKMEAKAYDEDILMEDI"), null, { timeout: 10000 }).catch(() => {});
+  bekle((await c.s.locator(".ProseMirror").first().textContent()).includes("SEKMEAKAYDEDILMEDI"), "A'nın metni yeniden açılışta kurtarılamadı");
+  await ctx.close();
+  return "B'nin geri yüklemesinden sonra A'nın kopyası duruyor; A kapanıp açılınca kurtarıldı";
+});
+
+await senaryo("birden çok taslak: en yeni önerilirken öncekine de ulaşılıyor; 'Yok say' yalnızca o taslağı siliyor; başka kullanıcı/çalışma görünmüyor", async () => {
+  const { ctx } = await baglam();
+  const BASKA_KULLANICI = "00000000-0000-4000-8000-0000000000ff";
+  const BASKA_TEZ = "00000000-0000-4000-8000-0000000000fe";
+  const kur = (metin, dakikaOnce) => JSON.stringify({
+    content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: metin }] }] },
+    baseUpdatedAt: null,
+    writtenAt: new Date(Date.now() - dakikaOnce * 60_000).toISOString(),
+  });
+  await ctx.addInitScript((k) => {
+    try {
+      if (sessionStorage.getItem("taslak-kuruldu")) return;
+      sessionStorage.setItem("taslak-kuruldu", "1");
+      for (const [anahtar, deger] of k) localStorage.setItem(anahtar, deger);
+    } catch {}
+  }, [
+    [`${ONEK}:eski-sekme`, kur("ESKITASLAK", 10)],
+    [`${ONEK}:yeni-sekme`, kur("YENITASLAK", 2)],
+    [`arvolab:manuscript-draft:${TEZ}:${BASKA_KULLANICI}:s`, kur("BASKAKULLANICI", 1)],
+    [`arvolab:manuscript-draft:${BASKA_TEZ}:${KULLANICI}:s`, kur("BASKACALISMA", 1)],
+  ]);
+  const { s } = await ac(ctx);
+  const bant = teklifBandi(s);
+  await bant.waitFor({ timeout: 10000 });
+  const bantMetni = async () => (await bant.innerText()).replace(/\s+/g, " ");
+  // En yeni önerilir; öncekine bantın içinden ulaşılır.
+  bekle(/1 taslak daha/.test(await bantMetni()), `bant öteki taslağı söylemiyor: ${await bantMetni()}`);
+  await bant.getByRole("button", { name: "Öncekini göster" }).click();
+  await s.waitForTimeout(200);
+  // Öncekini geri yüklemeden "Yok say": yalnızca ESKİ silinir, YENİ yine önerilir.
+  await bant.getByRole("button", { name: "Yok say" }).click();
+  await s.waitForTimeout(300);
+  const kalan = (await taslaklar(s)).map((x) => (x.metin.includes("YENITASLAK") ? "yeni" : x.metin.includes("ESKITASLAK") ? "eski" : "?"));
+  bekle(JSON.stringify(kalan) === JSON.stringify(["yeni"]), `'Yok say' sonrası kalan: ${kalan}`);
+  bekle(await bant.isVisible(), "kalan taslak önerilmiyor");
+  bekle(!/taslak daha/.test(await bantMetni()), "tek taslak kaldığı hâlde 'daha var' yazıyor");
+  await bant.getByRole("button", { name: "Geri yükle" }).click();
+  await s.waitForFunction(() => document.querySelector(".ProseMirror")?.textContent.includes("YENITASLAK"), null, { timeout: 10000 }).catch(() => {});
+  const metin = await s.locator(".ProseMirror").first().textContent();
+  bekle(metin.includes("YENITASLAK") && !metin.includes("ESKITASLAK"), "yeni taslak geri yüklenmedi");
+  bekle(!metin.includes("BASKAKULLANICI") && !metin.includes("BASKACALISMA"), "başka kullanıcının/çalışmanın taslağı göründü");
+  // Başka kullanıcı ve çalışmanın kaydı ellenmedi.
+  const yabancilar = await s.evaluate((t) => [`arvolab:manuscript-draft:${t[0]}:${t[1]}:s`, `arvolab:manuscript-draft:${t[2]}:${t[3]}:s`].map((k) => localStorage.getItem(k) !== null), [TEZ, BASKA_KULLANICI, BASKA_TEZ, KULLANICI]);
+  bekle(yabancilar.every(Boolean), `yabancı taslaklar silindi: ${yabancilar}`);
+  await ctx.close();
+  return "YENİ önerildi, ESKİ'ye ulaşıldı ve yalnızca o silindi; YENİ geri yüklendi; yabancı taslaklar görünmedi ve silinmedi";
+});
+
 await tarayici.close();
 let dusen = 0;
 for (const r of sonuclar) {
