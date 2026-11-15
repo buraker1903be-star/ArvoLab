@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aranacakMi, baslikPdfteGeciyor, kaynakRaporu, kunyeAnahtari, paketAdi, paketDosyalari, pdfAdaylari, pdfDosyaAdi, pdfMi, tekilAdlar, type KaynakPdfSatiri } from "@/lib/kaynak-pdf";
+import { agirSorun, aranacakMi, baslikPdfteGeciyor, bosIndirmeSorunlari, indirmeSorunuBildirimleri, kaynakRaporu, kunyeAnahtari, paketAdi, paketDosyalari, pdfAdaylari, pdfDosyaAdi, pdfHazirMi, pdfMi, sorunlariTopla, tekilAdlar, type KaynakPdfSatiri } from "@/lib/kaynak-pdf";
 
 const PESARAN =
   "Pesaran, M. H., Shin, Y., & Smith, R. J. (2001). Bounds testing approaches to the analysis of level relationships. Journal of Applied Econometrics, 16(3), 289–326. https://doi.org/10.1002/jae.616";
@@ -69,4 +69,37 @@ test("kaynak raporu ve paket adı İngilizce (28.10.2026)", () => {
   assert.match(kaynakRaporu("Tez", paketDosyalari([satir]), "28.10.2026"), /^KAYNAK RAPORU — Tez/);
   assert.equal(paketAdi("Şehir ve Kültür", "en"), "Sehir-ve-Kultur-submission-package.zip");
   assert.equal(paketAdi("Şehir ve Kültür"), "Sehir-ve-Kultur-teslim-paketi.zip");
+});
+
+/* P52-0 (15.11.2026): indirme hatası mevcut kayıtları bozmaz, nedeni doğru bildirilir. */
+test("PDF'i hazır künyeye yeniden bakılmaz: yüklenen VE indirilen korunur", () => {
+  assert.equal(pdfHazirMi("yuklendi"), true);
+  assert.equal(pdfHazirMi("indirildi"), true, "eskiden sunucu indirilmiş satırı korumuyordu");
+  for (const d of ["bulunamadi", "erisilemedi", "kayit_yok", null, undefined] as const) assert.equal(pdfHazirMi(d), false);
+});
+
+test("bir künyenin birden çok adayında en ağır neden sayılır (bizim sorunumuz örtülmez)", () => {
+  assert.equal(agirSorun(null, "erisim"), "erisim");
+  assert.equal(agirSorun("erisim", "pdf_degil"), "pdf_degil");
+  assert.equal(agirSorun("beklenmeyen", "erisim"), "beklenmeyen");
+  assert.equal(agirSorun("depo", "pdf_degil"), "depo");
+});
+
+test("sorunlar partiler boyunca toplanır; eksik alan sıfır sayılır", () => {
+  const t = sorunlariTopla(sorunlariTopla(bosIndirmeSorunlari(), { erisim: 2 }), { beklenmeyen: 1, erisim: 1 });
+  assert.deepEqual(t, { erisim: 3, pdf_degil: 0, depo: 0, beklenmeyen: 1 });
+  assert.deepEqual(sorunlariTopla(t, undefined), t);
+});
+
+test("bildirim: sorun yoksa hiçbiri; bizim sorunumuz 'error', karşı tarafınki 'info'; başarı asla bildirilmez", () => {
+  assert.deepEqual(indirmeSorunuBildirimleri(bosIndirmeSorunlari()), []);
+  const yalnizKarsi = indirmeSorunuBildirimleri({ erisim: 2, pdf_degil: 1, depo: 0, beklenmeyen: 0 });
+  assert.deepEqual(yalnizKarsi.map((b) => b.tur), ["info"]);
+  assert.match(yalnizKarsi[0].metin.tr, /^3 kaynağın PDF'i otomatik indirilemedi/);
+  assert.match(yalnizKarsi[0].metin.tr, /Kaynağa git/);
+  const ikisi = indirmeSorunuBildirimleri({ erisim: 1, pdf_degil: 0, depo: 1, beklenmeyen: 2 });
+  assert.deepEqual(ikisi.map((b) => b.tur), ["error", "info"]);
+  assert.match(ikisi[0].metin.tr, /^3 kaynağın PDF'i bizim tarafımızdaki bir sorun/);
+  assert.match(ikisi[0].metin.en, /^The PDF for 3 sources/);
+  for (const b of [...yalnizKarsi, ...ikisi]) assert.notEqual(b.tur, "success" as string);
 });
